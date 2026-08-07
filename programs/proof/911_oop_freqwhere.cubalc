@@ -1,0 +1,112 @@
+# FREQWHERE / HISTWHERE — filtered fleet field histogram on match
+# Usability: no GETFWHERE + SYS FREQ glue · subset status/energy rollups
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 30 0
+NEW Cell e 1 20 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+SETF e age 1
+
+# energy where age==1 → 10,20,20 → 10:1 \n 20:2
+FREQWHERE Cell energy age 1
+ASSERT OK == 1
+ASSERT FREQWHERE_N == 2
+ASSERT LAST_N == 2
+ASSERT FREQWHERE_TOTAL == 3
+ASSERT FREQWHERE_SKIP == 0
+SYS LOOKUPN FREQWHERE "10"
+ASSERT LAST_N == 1
+SYS LOOKUPN FREQWHERE "20"
+ASSERT LAST_N == 2
+
+# age==0 → 10,30 → two keys count 1 each
+FREQWHERE Cell energy age 0
+ASSERT FREQWHERE_N == 2
+ASSERT FREQWHERE_TOTAL == 2
+SYS LOOKUPN FREQWHERE "10"
+ASSERT LAST_N == 1
+SYS LOOKUPN FREQWHERE "30"
+ASSERT LAST_N == 1
+
+# WHERE sugar
+FREQWHERE Cell energy WHERE age 1
+ASSERT FREQWHERE_TOTAL == 3
+ASSERT FREQWHERE_N == 2
+
+# OF sugar
+FREQWHERE OF Cell energy age 1
+ASSERT FREQWHERE_N == 2
+
+# aliases
+HISTWHERE Cell energy age 1
+ASSERT HISTWHERE_N == 2
+ASSERT HISTWHERE_TOTAL == 3
+FREQFWHERE Cell energy age 0
+ASSERT FREQFWHERE_N == 2
+WHEREFREQ Cell energy age 1
+ASSERT WHEREFREQ_N == 2
+FREQIF Cell energy age 0
+ASSERT FREQWHERE_TOTAL == 2
+HISTIF Cell energy age 1
+ASSERT FREQWHERE_N == 2
+
+# string match · severity histogram among open tickets
+CLASS Ticket
+  FIELD status "new"
+  FIELD severity "low"
+  METHOD init s sev
+    SETF THIS status s
+    SETF THIS severity sev
+  END
+END
+NEW Ticket t1 "open" "high"
+NEW Ticket t2 "closed" "low"
+NEW Ticket t3 "open" "high"
+NEW Ticket t4 "open" "med"
+NEW Ticket t5 "closed" "high"
+FREQWHERE Ticket severity status "open"
+ASSERT OK == 1
+ASSERT FREQWHERE_N == 2
+ASSERT FREQWHERE_TOTAL == 3
+SYS LOOKUPN FREQWHERE "high"
+ASSERT LAST_N == 2
+SYS LOOKUPN FREQWHERE "med"
+ASSERT LAST_N == 1
+# closed must not pollute open rollup
+SYS LOOKUPN FREQWHERE "low"
+ASSERT LAST_N == 0
+
+FREQWHERE Ticket severity status "closed"
+ASSERT FREQWHERE_N == 2
+ASSERT FREQWHERE_TOTAL == 2
+SYS LOOKUPN FREQWHERE "low"
+ASSERT LAST_N == 1
+SYS LOOKUPN FREQWHERE "high"
+ASSERT LAST_N == 1
+
+# chain TOPKEY on filtered hist (bag survives LOOKUPN of FREQWHERE var)
+FREQWHERE Ticket severity status "open"
+SYS TOPKEY FREQWHERE
+SYS EQS LAST "high"
+ASSERT LAST_N == 1 "dominant open severity"
+
+# no match → empty bag / 0
+FREQWHERE Ticket severity status "missing"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT FREQWHERE_N == 0
+ASSERT FREQWHERE_TOTAL == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+PRINT "proof911_oop_freqwhere" 1
+ASSERT OK == 1
