@@ -5,7 +5,7 @@
   "item": "BOUNDF/LIMITF single-object numeric field clamp",
   "item_id": 396,
   "title": "BOUNDF|LIMITF|CLIPOBJ \u2014 single-object numeric field clamp",
-  "commit": "66e0d8a3a8460dcfcf13e32ac1c66f86c9cf7f1a",
+  "commit": "90150234437d46458e3a1abb91b41daa596d0eae",
   "summary": "Clamp one numeric field into [lo,hi]. METHOD/THIS ready. proof 937 36/36.",
   "proofs": [
     "937_oop_boundf",
@@ -14,6 +14,6 @@
   ],
   "when": "2026-08-07T13:54:42Z",
   "agent": "meaningful_iter_10m",
-  "sha": "66e0d8a3a8460dcfcf13e32ac1c66f86c9cf7f1a",
+  "sha": "90150234437d46458e3a1abb91b41daa596d0eae",
   "note": "CLAMPF remains fleet CLAMPFALL; BOUNDF is single-obj twin of INCF"
 }
