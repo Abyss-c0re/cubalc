@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 396,
-  "version": "1.15.423-usability",
-  "item": "CALL/SEND arity check",
-  "item_id": 432,
-  "title": "CALL/SEND/NEW under-arity → needs N got M + ARITY knobs",
-  "commit": "10fca573e2c774608719b367b9f24c6528efe55e",
-  "summary": "Under-arity errors with params list; soft TRY*; clear unbound formals. proof 973 18/18.",
+  "iter": 397,
+  "version": "1.15.424-usability",
+  "item": "optional THEN / LET =",
+  "item_id": 433,
+  "title": "IF/UNLESS/ELIF optional THEN · LET optional = · better LET errs",
+  "commit": "35b963c94dcec19e0c83c91014009b0f680a3324",
+  "summary": "Optional THEN and LET= glue for agents; classic forms kept. proof 974 8/8.",
   "proofs": [
-    "973_call_send_arity",
-    "asserts 18/18",
-    "smoke CALL needs 2 · SEND needs 1 · NEW init needs 1"
+    "974_optional_then_let",
+    "asserts 8/8",
+    "smoke IF/ELIF/UNLESS no THEN · LET x 1"
   ],
-  "when": "2026-08-07T20:07:09Z",
+  "when": "2026-08-07T20:17:13Z",
   "agent": "meaningful_iter_10m",
-  "sha": "10fca573e2c774608719b367b9f24c6528efe55e",
-  "note": "thrash restored before implement; oop_arity_gate"
+  "sha": "35b963c94dcec19e0c83c91014009b0f680a3324",
+  "note": "reduces mandatory glue; err_line on LET fails"
 }
