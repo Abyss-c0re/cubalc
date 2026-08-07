@@ -1,0 +1,778 @@
+# iso_window_board.cubalc — ADDISO/SHIFTISO schedule + DIFFISO/ISOAGE gate
+#
+# Real use: agents pin a window start ISO, shift end with ADDISO human duration
+# ("1h30m"/"30s"/"-5m"), measure span/age with DIFFISO/ISOAGE (no PARSEISO +
+# TIMEDIFF + FROMTIME glue), and gate work while now is inside [start, end]:
+#   ADDISO / SHIFTISO  — ISO + secs|duration → new UTC ISO
+#   DIFFISO / ISODIFF  — stamp_a − stamp_b seconds
+#   ISOAGE             — now − stamp (one-arg)
+#   DATE / FROMTIME    — wall ISO for pin
+# Distinct from lease_sla_age (PARSEISO+TIMEDIFF age), ttl_due (DEADLINE epoch),
+# artifact_wait (WAITFILE): this board is *ISO window shift + age gate*.
+#
+# Plate under STATE:
+#   START.txt   — window start ISO
+#   END.txt     — window end ISO
+#   SPAN.txt    — end−start seconds
+#   VAL.txt     — last stamp / age / gate
+#   META.txt
+#   ISO_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_IW_ACTION):
+#   list      — plate (default)
+#   pin       — START = DATE or ARG1 ISO
+#   shift     — END = ADDISO START ARG1 duration (default 1h)
+#   span      — DIFFISO END START → SPAN
+#   age       — ISOAGE START → VAL seconds
+#   until     — DIFFISO END DATE → seconds remaining in window
+#   gate      — age>=0 and until>0 admit (REQUIRE hard)
+#   back      — ADDISO START negative duration (e.g. -5m)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_iw_$$
+#   CUBALC_ARG0=pin ...
+#   CUBALC_ARG0=shift CUBALC_ARG1=1h30m ...
+#   CUBALC_ARG0=gate CUBALC_IW_REQUIRE=1 ...
+#
+# Env: CUBALC_IW_REQUIRE=1  CUBALC_IW_DUR=1h  CUBALC_IW_STAMP=ISO
+#
+# Edges:
+#   LOCAL stamp ADDISO forces Z (skew); prefer DATE UTC
+#   TZ offsets in ISO still ignored (PARSEISO heritage)
+#   ADDISO "500ms" → 0s floor (no sub-second shift)
+#   PARSEMS "-30s" now signed (fix); was ULONG wrap → year 292279044
+#   WRITE no NL; REQUIRE non-numeric softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "iso_window_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT SFILE = "START.txt"
+DEFAULT EFILE = "END.txt"
+DEFAULT PFILE = "SPAN.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "ISO_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_DUR = "1h"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_IW_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_IW_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_IW_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_IW_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_IW_DUR" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_DUR = LAST
+ELSE
+  LET ENV_DUR = ""
+END
+SYS ENV "CUBALC_IW_STAMP" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_STAMP = LAST
+ELSE
+  LET ENV_STAMP = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir SFILE
+LET start_meta = LAST
+SYS JOIN state_dir EFILE
+LET end_meta = LAST
+SYS JOIN state_dir PFILE
+LET span_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR start_meta OR ""
+LET start_s = LAST
+CLEAR_ERR
+SYS READ OR end_meta OR ""
+LET end_s = LAST
+CLEAR_ERR
+SYS READ OR span_meta OR ""
+LET span_s = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET span_n = 0
+SYS BLANK span_s
+IF LAST_N == 0 THEN
+  SYS NUM span_s
+  IF OK == 1 THEN
+    LET span_n = LAST_N
+  END
+  CLEAR_ERR
+END
+
+SYS BLANK ENV_STAMP
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pin"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_STAMP
+    END
+  END
+END
+SYS BLANK ENV_DUR
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "shift"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_DUR
+    END
+  END
+END
+SYS BLANK ENV_DUR
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "back"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_DUR
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET start_ch = 0
+LET end_ch = 0
+LET span_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET age_n = 0
+LET until_n = 0
+LET gate_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "isowin" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON start_s
+  PRINT_JSON end_s
+  PRINT_JSON span_s
+  PRINT_JSON val
+  LET note_msg = "list ok"
+END
+
+# --- pin: START = DATE or ARG1 ISO ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS DATE
+    LET start_s = LAST
+    LET start_ch = 1
+    LET val = start_s
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "pin now"
+    LET meta = "pin"
+    SYS PUSH meta "now"
+    LET meta = LAST
+    SYS PUSH meta start_s
+    LET meta = LAST
+    LET meta_ch = 1
+  ELSE
+    # validate via ADDISO +0 (normalize) or DIFFISO self
+    SYS ADDISO NAME 0
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin bad iso"
+      FAIL "pin bad iso"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pin bad iso"
+      END
+    ELSE
+      LET start_s = LAST
+      LET start_ch = 1
+      LET val = start_s
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta start_s
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON start_s
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- shift: END = ADDISO START duration ---
+SYS EQS ACTION "shift"
+IF LAST_N == 1 THEN
+  NOTE "action shift"
+  SYS BLANK start_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "shift no start"
+    FAIL "shift no start"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "shift no start"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = DEF_DUR
+    END
+    SYS ADDISO start_s NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "shift fail"
+      FAIL "shift fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "shift fail"
+      END
+    ELSE
+      LET end_s = LAST
+      LET end_ch = 1
+      LET val = end_s
+      LET val_ch = 1
+      # auto span
+      SYS DIFFISO end_s start_s
+      IF OK == 1 THEN
+        LET span_n = LAST_N
+        SYS STR span_n
+        LET span_s = LAST
+        LET span_ch = 1
+      END
+      CLEAR_ERR
+      LET hit = 1
+      LET note_msg = "shift ok"
+      LET meta = "shift"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "secs"
+      LET meta = LAST
+      SYS STR ADDISO_SECS
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta end_s
+      LET meta = LAST
+      SYS PUSH meta "span"
+      LET meta = LAST
+      SYS STR span_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON span_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- back: ADDISO negative duration on START (rewinds START) ---
+SYS EQS ACTION "back"
+IF LAST_N == 1 THEN
+  NOTE "action back"
+  SYS BLANK start_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "back no start"
+    FAIL "back no start"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "back no start"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = "5m"
+    END
+    # duration → negative secs (prefer PARSEMS sign; bare "5m" rewound)
+    SYS PARSEMS NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "back parse fail"
+      FAIL "back parse fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "back parse fail"
+      END
+    ELSE
+      LET off_ms = LAST_N
+      IF off_ms > 0 THEN
+        LET off_ms = 0 - off_ms
+      END
+      LET off_s = off_ms / 1000
+      SYS ADDISO start_s off_s
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "back fail"
+        FAIL "back fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "back fail"
+        END
+      ELSE
+        LET start_s = LAST
+        LET start_ch = 1
+        LET val = start_s
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "back ok"
+        LET meta = "back"
+        SYS PUSH meta NAME
+        LET meta = LAST
+        SYS STR ADDISO_SECS
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta start_s
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON start_s
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- span: DIFFISO END START ---
+SYS EQS ACTION "span"
+IF LAST_N == 1 THEN
+  NOTE "action span"
+  SYS BLANK start_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "span no start"
+    FAIL "span no start"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "span no start"
+    END
+  ELSE
+    SYS BLANK end_s
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "span no end"
+      FAIL "span no end"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "span no end"
+      END
+    ELSE
+      SYS DIFFISO end_s start_s
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "span fail"
+        FAIL "span fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "span fail"
+        END
+      ELSE
+        LET span_n = LAST_N
+        SYS STR span_n
+        LET span_s = LAST
+        LET span_ch = 1
+        LET val = span_s
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "span ok"
+        LET meta = "span"
+        SYS STR span_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON span_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- age: ISOAGE START ---
+SYS EQS ACTION "age"
+IF LAST_N == 1 THEN
+  NOTE "action age"
+  SYS BLANK start_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "age no start"
+    FAIL "age no start"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "age no start"
+    END
+  ELSE
+    SYS ISOAGE start_s
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "age fail"
+      FAIL "age fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "age fail"
+      END
+    ELSE
+      LET age_n = LAST_N
+      SYS STR age_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "age ok"
+      LET meta = "age"
+      SYS STR age_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON age_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- until: DIFFISO END now ---
+SYS EQS ACTION "until"
+IF LAST_N == 1 THEN
+  NOTE "action until"
+  SYS BLANK end_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "until no end"
+    FAIL "until no end"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "until no end"
+    END
+  ELSE
+    SYS DATE
+    LET now_iso = LAST
+    SYS DIFFISO end_s now_iso
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "until fail"
+      FAIL "until fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "until fail"
+      END
+    ELSE
+      LET until_n = LAST_N
+      SYS STR until_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "until ok"
+      LET meta = "until"
+      SYS STR until_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta now_iso
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON until_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate: inside window (age>=0 and until>0) ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS BLANK start_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate no start"
+    FAIL "gate no start"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no start"
+    END
+  ELSE
+    SYS BLANK end_s
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "gate no end"
+      FAIL "gate no end"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate no end"
+      END
+    ELSE
+      SYS ISOAGE start_s
+      LET age_n = LAST_N
+      CLEAR_ERR
+      SYS DATE
+      LET now_iso = LAST
+      SYS DIFFISO end_s now_iso
+      LET until_n = LAST_N
+      CLEAR_ERR
+      # admit if started (age>=0) and not past end (until>0)
+      IF age_n >= 0 THEN
+        IF until_n > 0 THEN
+          LET gate_n = 1
+          LET hit = 1
+          LET note_msg = "gate admit"
+          LET val = "admit"
+          LET val_ch = 1
+        ELSE
+          LET gate_n = 0
+          LET miss = 1
+          LET note_msg = "gate deny past end"
+          LET val = "deny"
+          LET val_ch = 1
+          FAIL "gate deny past end"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "gate deny past end"
+          END
+        END
+      ELSE
+        LET gate_n = 0
+        LET miss = 1
+        LET note_msg = "gate deny before start"
+        LET val = "deny"
+        LET val_ch = 1
+        FAIL "gate deny before start"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "gate deny before start"
+        END
+      END
+      LET meta = "gate"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR age_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR until_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON gate_n age_n until_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET start_s = ""
+  LET end_s = ""
+  LET span_s = ""
+  LET val = ""
+  LET meta = ""
+  LET span_n = 0
+  LET start_ch = 1
+  LET end_ch = 1
+  LET span_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "shift"
+LET k = k + LAST_N
+SYS EQS ACTION "back"
+LET k = k + LAST_N
+SYS EQS ACTION "span"
+LET k = k + LAST_N
+SYS EQS ACTION "age"
+LET k = k + LAST_N
+SYS EQS ACTION "until"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF start_ch > 0 THEN
+  SYS WRITE start_meta start_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "start write failed"
+  END
+  CLEAR_ERR
+END
+IF end_ch > 0 THEN
+  SYS WRITE end_meta end_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "end write failed"
+  END
+  CLEAR_ERR
+END
+IF span_ch > 0 THEN
+  SYS WRITE span_meta span_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "span write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.iso_window_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "start"
+LET report = LAST
+SYS PUSH report start_s
+LET report = LAST
+SYS PUSH report "end"
+LET report = LAST
+SYS PUSH report end_s
+LET report = LAST
+SYS PUSH report "span"
+LET report = LAST
+SYS STR span_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "age"
+LET report = LAST
+SYS STR age_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "until"
+LET report = LAST
+SYS STR until_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "iso_window_board" ACTION hit miss span_n age_n until_n gate_n note_msg elapsed

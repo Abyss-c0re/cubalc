@@ -1,158 +1,144 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 109,
-  "program": "programs/realworld/artifact_wait_board.cubalc",
-  "theme": "artifact WAITFILE/WAITGONE human timeout + DEADLINE lease gate",
-  "version": "1.15.312-usability",
+  "iter": 110,
+  "program": "programs/realworld/iso_window_board.cubalc",
+  "theme": "ISO window ADDISO+DIFFISO/ISOAGE gate; PARSEMS signed fix",
+  "version": "1.15.315-usability",
   "pass": true,
   "tests": [
     {
-      "name": "arm_path",
-      "cmd": "arm ready.flag under STATE/drop",
+      "name": "pin_shift_1h30m",
+      "cmd": "pin DATE; ADDISO 1h30m span 5400",
       "ok": true,
-      "note": "arm"
+      "note": "shift"
     },
     {
-      "name": "wait_miss",
-      "cmd": "WAITFILE 150ms miss; REQUIRE\u21922",
+      "name": "gate_admit",
+      "cmd": "age0 until~5400 gate admit",
       "ok": true,
-      "note": "timeout"
+      "note": "inside"
     },
     {
-      "name": "wait_hit",
-      "cmd": "touch then WAITFILE 500ms hit abs path",
+      "name": "gate_past",
+      "cmd": "Y2K+1s end past deny REQUIRE2",
       "ok": true,
-      "note": "arrive"
+      "note": "past"
     },
     {
-      "name": "gone_cycle",
-      "cmd": "WAITGONE present miss; rm then gone hit",
+      "name": "gate_future",
+      "cmd": "2099 window deny before start",
       "ok": true,
-      "note": "consume"
+      "note": "future"
     },
     {
-      "name": "lease_30s",
-      "cmd": "DEADLINE 30s remain~30 gate admit",
+      "name": "back_5m",
+      "cmd": "ADDISO -300s \u2192 00:55:00Z",
       "ok": true,
-      "note": "lease"
+      "note": "rewind"
     },
     {
-      "name": "lease_expire",
-      "cmd": "1s+sleep2 gate deny REQUIRE2",
+      "name": "signed_30s",
+      "cmd": "PARSEMS -30s; ADDISO \u2192 00:59:30Z",
       "ok": true,
-      "note": "expired"
+      "note": "sign fix"
     },
     {
-      "name": "lease_compound",
-      "cmd": "DEADLINE 1h30m DEADLINE_SECS=5400",
-      "ok": true,
-      "note": "compound"
-    },
-    {
-      "name": "bad_duration",
-      "cmd": "wait nope \u2192 hit0 ms0 (ambiguous)",
+      "name": "pin_bad",
+      "cmd": "not-iso soft; REQUIRE\u21922",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "sleep_40ms",
-      "cmd": "SLEEP 40ms; reject 5s program cap",
+      "name": "ms_floor",
+      "cmd": "ADDISO 500ms span0",
       "ok": true,
-      "note": "sleep"
+      "note": "floor"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "285/285 pass"
+      "note": "289/289 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|waitfile",
-      "title": "Bad WAITFILE duration indistinguishable from timeout miss",
-      "detail": "WAITFILE path 'nope' \u2192 OK=0 HIT=0 MS=0 same shape as missing file with zero elapsed. Agents cannot tell config error from absence without pre-PARSEMS.",
-      "repro": "WAITFILE existing 'nope' \u2192 hit0 ms0"
+      "area": "host|parseiso|local",
+      "title": "LOCAL stamps reparsed as UTC \u2014 ISOAGE skew by TZ hours",
+      "detail": "ISOAGE on SYS LOCAL yields ~-10800 on UTC+3. ADDISO on LOCAL stamps rewrites with Z. Prefer DATE UTC.",
+      "repro": "LOCAL; ISOAGE LAST \u2192 -TZ*3600"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|deadline",
-      "title": "DEADLINE sub-second human durations floor to 0s (instant expire)",
-      "detail": "DEADLINE '500ms' \u2192 DEADLINE_SECS=0, due\u2248now, EXPIRED immediately. Sub-second wait leases unusable via duration form.",
-      "repro": "DEADLINE 500ms; EXPIRED \u2192 1"
+      "area": "host|parseiso",
+      "title": "ISO offsets still ignored in ADDISO/DIFFISO path",
+      "detail": "DIFFISO +01:00 vs Z same wall \u2192 0 not -3600. Offset stamps normalize to wrong Z.",
+      "repro": "DIFFISO 00:00+01:00 00:00Z \u2192 0"
     },
     {
       "id": "W3",
-      "severity": "high",
-      "area": "host|units",
-      "title": "Bare numeric unit asymmetry: DEADLINE secs vs SLEEP ms",
-      "detail": "DEADLINE 5 = +5 seconds; SLEEP 5 = 5 milliseconds. Same literal, 1000\u00d7 different semantics. Human-string form reduces but bare nums remain traps.",
-      "repro": "DEADLINE 5 vs SLEEP 5"
+      "severity": "med",
+      "area": "host|addiso",
+      "title": "ADDISO duration floors sub-second to 0s",
+      "detail": "ADDISO stamp 500ms \u2192 ADDISO_SECS=0 no shift. Sub-second windows impossible.",
+      "repro": "ADDISO 2020\u2026 500ms \u2192 same stamp"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|waitfile",
-      "title": "WAITFILE hit LAST is path string not 1 alone",
-      "detail": "OK and WAITFILE_HIT are reliable; LAST equals absolute path. Agents comparing LAST_N==1 after hit are wrong (path not numeric).",
-      "repro": "WAITFILE hit; LAST is path"
+      "area": "host|parsems",
+      "title": "Was: PARSEMS -30s ULONG wrap to LONG_MAX (fixed this iter)",
+      "detail": "strtoull('-30') wrapped; ADDISO produced year 292279044. Fixed: leading \u00b1 sign on whole duration. Still document as was/now.",
+      "repro": "was PARSEMS -30s \u2192 9e18; now -30000"
     },
     {
       "id": "W5",
-      "severity": "med",
-      "area": "host|expired",
-      "title": "EXPIRED still clobbers LAST_N before REMAINING",
-      "detail": "Must LET due_save; unchanged from prior iters.",
-      "repro": "EXPIRED due; REMAINING \u2192 uses 0/1"
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "START/END od -c no newline.",
+      "repro": "od -c START.txt"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "PATH/TIMEOUT od -c no newline.",
-      "repro": "od -c PATH.txt"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE softens",
+      "detail": "CUBALC_IW_REQUIRE=abc.",
+      "repro": "REQUIRE=abc pin bad \u2192 rc0"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_AW_REQUIRE=abc.",
-      "repro": "REQUIRE=abc wait miss \u2192 rc0"
-    },
-    {
-      "id": "W8",
-      "severity": "low",
-      "area": "host|waitfile",
-      "title": "No distinct err code for bad timeout vs miss",
-      "detail": "last_err may differ but HIT/MS collapse; need WAITFILE_ERR class.",
-      "repro": "compare last_err after nope vs missing"
+      "area": "host|push",
+      "title": "SYS PUSH is bag not string concat",
+      "detail": "Prefixing '-' via PUSH yields multi-line bag; agents must PARSEMS\u00b1 or numeric negate.",
+      "repro": "PUSH '-' '5m' \u2192 bag lines"
     }
   ],
   "workarounds": [
-    "Pre-PARSEMS timeout labels before WAITFILE",
-    "Use whole-second DEADLINE leases only (\u22651s)",
-    "Prefer duration strings over bare numbers for SLEEP/DEADLINE",
-    "LET due_save before EXPIRED/REMAINING",
-    "Gate on WAITFILE_HIT not LAST_N"
+    "Pin UTC DATE/Z only; never LOCAL for ISOAGE",
+    "Reject offset stamps or require trailing Z",
+    "Whole-second ADDISO durations only",
+    "Use PARSEMS signed or numeric ADDISO for rewind",
+    "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "WAITFILE distinct soft-fail for bad duration vs timeout",
-    "DEADLINE_MS / sub-second lease offsets",
-    "Unified bare-number unit policy or SLEEP_SEC / DEADLINE_MS flags",
-    "EXPIRED side-slot preserving due epoch",
+    "PARSEISO/ADDISO/DIFFISO timezone offset application",
+    "LOCAL-aware ISO dual or zone flag",
+    "ADDISO_MS sub-second shift",
+    "String concat helper distinct from bag PUSH",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "arm/wait miss+hit/gone/lease/gate/sleep green",
-    "bad duration ambiguous with miss is core lesson",
-    "DEADLINE 500ms instant expire + DEADLINE/SLEEP unit asymmetry",
-    "selftest green; no language fix this iter"
+    "pin/shift/span/age/until/gate/back green",
+    "fixed PARSEMS signed duration (ULONG wrap) + proof",
+    "LOCAL/offset/500ms floor remain open",
+    "selftest green"
   ],
-  "commit": "cc72cbb85dcb2ee970770ba7cad5f2db01a376a1",
-  "ts": "2026-08-07T01:28:56Z"
+  "commit": "",
+  "ts": "2026-08-07T01:57:34Z"
 }
