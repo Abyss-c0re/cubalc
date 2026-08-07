@@ -447,6 +447,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 417. ~~**`WORDSF` / `TOKENIZEF`**~~ **done** (whitespace tokenize field → bag · no GETF+SYS WORDS · free-text EACH LINE · no mutate · METHOD/THIS).
 418. ~~**`CUTF` / `COLUMNF`**~~ **done** (Nth sep column peel into field · 0-based CUTF / 1-based COLUMNF · no GETF+SYS CUT+SETF · METHOD/THIS).
 419. ~~**`LINEF` / `LINENOF`**~~ **done** (Nth newline bag line peel into field · 0-based LINEF / 1-based LINENOF · no GETF+SYS NTH+SETF · METHOD/THIS · pairs SPLITF/WORDSF).
+420. ~~**`PUSHF` / `POPF` / `POPHEADF` / `UNSHIFTF`**~~ **done** (bag queue on field · LIFO/FIFO worklist without GETF+SYS PUSH/POP+SETF · METHOD/THIS · not string PREPENDF).
 
 ## Tick protocol
 

@@ -13863,6 +13863,370 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* PUSHF|BAGPUSHF obj field [line|LAST] — append newline field to bag-in-field.
+   * UNSHIFTF|PUSHFRONTF obj field [line|LAST] — insert at front (FIFO enqueue).
+   * POPF|BAGPOPF obj field — peel last line → LAST; field = rest (LIFO).
+   * POPHEADF|DEQUEUEF obj field — peel first line → LAST; field = rest (FIFO).
+   * TRYPUSHF|PUSHF SOFT — soft miss OK=0 sticky LAST_ERR (unknown obj/field).
+   * PUSH: LAST = bag after; LAST_N/PUSHF_N = field count.
+   * POP/POPHEAD: LAST = peeled line; LAST_N/POPF_HIT = 0|1; POPF_N = remaining count.
+   * Empty pop: HIT=0 LAST="" field unchanged. Promotes num→str.
+   * Not PREPENDF/APPENDF (string concat). Complements LINEF/JOINF for work queues.
+   * Usability: agent worklist on objects without GETF+SYS PUSH/POP+SETF
+   * (METHOD/THIS). */
+  if (kw(&L->cur, "PUSHF") || kw(&L->cur, "BAGPUSHF") ||
+      kw(&L->cur, "LINEPUSHF") || kw(&L->cur, "ADDBAGF") ||
+      kw(&L->cur, "UNSHIFTF") || kw(&L->cur, "PUSHFRONTF") ||
+      kw(&L->cur, "BAGPREPENDF") || kw(&L->cur, "ENQUEUEF") ||
+      kw(&L->cur, "POPF") || kw(&L->cur, "BAGPOPF") ||
+      kw(&L->cur, "POPLINEFIELD") || kw(&L->cur, "LINEPOPF") ||
+      kw(&L->cur, "POPHEADF") || kw(&L->cur, "DEQUEUEF") ||
+      kw(&L->cur, "HEADPOPF") || kw(&L->cur, "SHIFTFRONTF") ||
+      kw(&L->cur, "TRYPUSHF") || kw(&L->cur, "PUSHFSOFT") ||
+      kw(&L->cur, "SOFTPUSHF") || kw(&L->cur, "TRYPOPF") ||
+      kw(&L->cur, "TRYPOPHEADF") || kw(&L->cur, "TRYUNSHIFTF")) {
+    char oname[48], fname[48], op[24], hay[256], line[256], out[256], peeled[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, mode = 0; /* 0=push, 1=unshift, 2=pop, 3=pophead */
+    long nfields = 0, found = 0, rest_n = 0;
+    const char *p, *last_nl;
+    size_t blen, llen, o, flen;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "UNSHIFTF") == 0 || strcmp(op, "PUSHFRONTF") == 0 ||
+        strcmp(op, "BAGPREPENDF") == 0 || strcmp(op, "ENQUEUEF") == 0 ||
+        strcmp(op, "TRYUNSHIFTF") == 0)
+      mode = 1;
+    else if (strcmp(op, "POPF") == 0 || strcmp(op, "BAGPOPF") == 0 ||
+             strcmp(op, "POPLINEFIELD") == 0 || strcmp(op, "LINEPOPF") == 0 ||
+             strcmp(op, "TRYPOPF") == 0)
+      mode = 2;
+    else if (strcmp(op, "POPHEADF") == 0 || strcmp(op, "DEQUEUEF") == 0 ||
+             strcmp(op, "HEADPOPF") == 0 || strcmp(op, "SHIFTFRONTF") == 0 ||
+             strcmp(op, "TRYPOPHEADF") == 0)
+      mode = 3;
+    else
+      mode = 0;
+    if (strcmp(op, "TRYPUSHF") == 0 || strcmp(op, "PUSHFSOFT") == 0 ||
+        strcmp(op, "SOFTPUSHF") == 0 || strcmp(op, "TRYPOPF") == 0 ||
+        strcmp(op, "TRYPOPHEADF") == 0 || strcmp(op, "TRYUNSHIFTF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    {
+      const char *usage =
+          (mode == 2) ? "POPF object field"
+        : (mode == 3) ? "POPHEADF object field"
+        : (mode == 1) ? "UNSHIFTF object field [line]"
+                      : "PUSHF object field [line]";
+      if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+        fail(vm, usage); return -1;
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        char id[48];
+        Var *vv;
+        snprintf(id, sizeof id, "%s", L->cur.text);
+        lex_next(L);
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", id);
+      } else {
+        fail(vm, mode >= 2 ? (mode == 3 ? "POPHEADF field" : "POPF field")
+                           : (mode == 1 ? "UNSHIFTF field" : "PUSHF field"));
+        return -1;
+      }
+    }
+    line[0] = 0;
+    if (mode <= 1) {
+      if (kw(&L->cur, "LINE") || kw(&L->cur, "WITH") || kw(&L->cur, "VALUE") ||
+          kw(&L->cur, "ITEM"))
+        lex_next(L);
+      if (resolve_str_arg(vm, L, line, sizeof line) != 0)
+        snprintf(line, sizeof line, "%s", vm->last_str);
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      const char *tag =
+          (mode == 2) ? "POPF" : (mode == 3) ? "POPHEADF"
+          : (mode == 1) ? "UNSHIFTF" : "PUSHF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown object %s", tag, oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "PUSHF_N", 0);
+      var_set_num(vm, "POPF_N", 0);
+      var_set_num(vm, "POPF_HIT", 0);
+      var_set_num(vm, "POPHEADF_HIT", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown object", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      const char *tag =
+          (mode == 2) ? "POPF" : (mode == 3) ? "POPHEADF"
+          : (mode == 1) ? "UNSHIFTF" : "PUSHF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown FIELD %s", tag, fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "PUSHF_N", 0);
+      var_set_num(vm, "POPF_N", 0);
+      var_set_num(vm, "POPF_HIT", 0);
+      var_set_num(vm, "POPHEADF_HIT", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown field", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    blen = strlen(hay);
+    out[0] = 0;
+    peeled[0] = 0;
+    found = 0;
+    nfields = 0;
+    rest_n = 0;
+    if (mode <= 1) {
+      /* push / unshift */
+      llen = strlen(line);
+      o = 0;
+      if (mode == 0) {
+        /* append */
+        if (blen == 0) {
+          if (llen < sizeof out) {
+            memcpy(out, line, llen);
+            o = llen;
+          } else {
+            o = sizeof out - 1;
+            memcpy(out, line, o);
+          }
+          out[o] = 0;
+          if (out[0]) {
+            p = out;
+            while (*p) {
+              while (*p && *p != '\n') p++;
+              nfields++;
+              if (*p == '\n') p++;
+            }
+          } else {
+            nfields = 1; /* empty line into empty bag still one field */
+          }
+        } else {
+          long bag_n = 0;
+          p = hay;
+          while (*p) {
+            while (*p && *p != '\n') p++;
+            bag_n++;
+            if (*p == '\n') p++;
+          }
+          if (blen < sizeof out) {
+            memcpy(out, hay, blen);
+            o = blen;
+          } else {
+            o = sizeof out - 1;
+            memcpy(out, hay, o);
+          }
+          if (o + 1 < sizeof out) out[o++] = '\n';
+          if (o + llen < sizeof out) {
+            memcpy(out + o, line, llen);
+            o += llen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, line, take);
+            o += take;
+          }
+          out[o] = 0;
+          nfields = bag_n + 1;
+        }
+      } else {
+        /* unshift front */
+        if (llen < sizeof out) {
+          memcpy(out, line, llen);
+          o = llen;
+        } else {
+          o = sizeof out - 1;
+          memcpy(out, line, o);
+        }
+        out[o] = 0;
+        if (blen > 0) {
+          if (o + 1 < sizeof out) out[o++] = '\n';
+          if (o + blen < sizeof out) {
+            memcpy(out + o, hay, blen);
+            o += blen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, hay, take);
+            o += take;
+          }
+          out[o] = 0;
+          nfields = 1;
+          p = hay;
+          while (*p) {
+            while (*p && *p != '\n') p++;
+            nfields++;
+            if (*p == '\n') p++;
+          }
+        } else {
+          nfields = 1;
+        }
+      }
+      {
+        size_t cap = sizeof ob->fstr[fi];
+        if (strlen(out) >= cap) {
+          memcpy(ob->fstr[fi], out, cap - 1);
+          ob->fstr[fi][cap - 1] = 0;
+        } else {
+          snprintf(ob->fstr[fi], cap, "%s", out);
+        }
+      }
+      ob->fis_str[fi] = 1;
+      var_set_str(vm, "LAST", ob->fstr[fi]);
+      var_set_str(vm, mode == 1 ? "UNSHIFTF" : "PUSHF", ob->fstr[fi]);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", ob->fstr[fi]);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "PUSHF_N", nfields);
+      var_set_num(vm, "UNSHIFTF_N", nfields);
+      var_set_num(vm, "POPF_HIT", 0);
+      var_set_num(vm, "POPHEADF_HIT", 0);
+    } else if (mode == 2) {
+      /* pop last */
+      if (!hay[0]) {
+        found = 0;
+      } else {
+        last_nl = NULL;
+        for (p = hay; *p; p++)
+          if (*p == '\n') last_nl = p;
+        if (!last_nl) {
+          snprintf(peeled, sizeof peeled, "%s", hay);
+          out[0] = 0;
+          found = 1;
+          rest_n = 0;
+        } else {
+          flen = strlen(last_nl + 1);
+          if (flen >= sizeof peeled) flen = sizeof peeled - 1;
+          memcpy(peeled, last_nl + 1, flen);
+          peeled[flen] = 0;
+          {
+            size_t rlen = (size_t)(last_nl - hay);
+            if (rlen >= sizeof out) rlen = sizeof out - 1;
+            memcpy(out, hay, rlen);
+            out[rlen] = 0;
+          }
+          found = 1;
+          if (out[0]) {
+            p = out;
+            while (*p) {
+              while (*p && *p != '\n') p++;
+              rest_n++;
+              if (*p == '\n') p++;
+            }
+          }
+        }
+      }
+      if (found) {
+        snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", out);
+        ob->fis_str[fi] = 1;
+      }
+      var_set_str(vm, "LAST", peeled);
+      var_set_str(vm, "POPF", peeled);
+      var_set_str(vm, "POPF_REST", out);
+      var_set_str(vm, "REST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", peeled);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "POPF_HIT", found);
+      var_set_num(vm, "POPF_N", rest_n);
+      var_set_num(vm, "POPHEADF_HIT", 0);
+      var_set_num(vm, "PUSHF_N", rest_n);
+    } else {
+      /* pophead first */
+      if (!hay[0]) {
+        found = 0;
+      } else {
+        p = hay;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - hay);
+        if (flen >= sizeof peeled) flen = sizeof peeled - 1;
+        memcpy(peeled, hay, flen);
+        peeled[flen] = 0;
+        found = 1;
+        if (*p == '\n') {
+          snprintf(out, sizeof out, "%s", p + 1);
+          if (out[0]) {
+            const char *q = out;
+            while (*q) {
+              while (*q && *q != '\n') q++;
+              rest_n++;
+              if (*q == '\n') q++;
+            }
+          }
+        } else {
+          out[0] = 0;
+          rest_n = 0;
+        }
+      }
+      if (found) {
+        snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", out);
+        ob->fis_str[fi] = 1;
+      }
+      var_set_str(vm, "LAST", peeled);
+      var_set_str(vm, "POPHEADF", peeled);
+      var_set_str(vm, "POPF_REST", out);
+      var_set_str(vm, "REST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", peeled);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "POPHEADF_HIT", found);
+      var_set_num(vm, "POPHEADF_N", rest_n);
+      var_set_num(vm, "POPF_HIT", found);
+      var_set_num(vm, "POPF_N", rest_n);
+      var_set_num(vm, "PUSHF_N", rest_n);
+    }
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).

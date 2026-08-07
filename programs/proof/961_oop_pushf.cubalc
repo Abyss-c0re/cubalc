@@ -1,0 +1,202 @@
+# PUSHF / POPF / POPHEADF / UNSHIFTF — bag queue on object fields for agents
+# Usability: worklist LIFO/FIFO without GETF+SYS PUSH/POP+SETF
+# Not string PREPENDF/APPENDF (concat)
+
+HOLD_FLASH 1
+
+CLASS Q
+  FIELD work ""
+  FIELD code 3
+  METHOD init
+  END
+  METHOD push_item
+    PUSHF THIS work "m"
+  END
+  METHOD take
+    POPHEADF THIS work
+  END
+END
+
+NEW Q q
+
+# PUSH first item into empty
+PUSHF q work "a"
+ASSERT OK == 1
+ASSERT PUSHF_N == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+GETF q work
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# append second
+PUSHF q work "b"
+ASSERT PUSHF_N == 2
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+GETF q work
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# third
+PUSHF q work "c"
+ASSERT PUSHF_N == 3
+GETF q work
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# LIFO POP last
+POPF q work
+ASSERT POPF_HIT == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+ASSERT POPF_N == 2
+GETF q work
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+SYS EQS REST "a\nb"
+ASSERT LAST_N == 1
+
+# FIFO POPHEAD first
+POPHEADF q work
+ASSERT POPHEADF_HIT == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+ASSERT POPHEADF_N == 1
+GETF q work
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+# pop last remaining
+POPF q work
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+ASSERT POPF_N == 0
+GETF q work
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# empty pop — HIT=0 field stays empty
+POPF q work
+ASSERT POPF_HIT == 0
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+POPHEADF q work
+ASSERT POPHEADF_HIT == 0
+ASSERT LAST_N == 0
+
+# UNSHIFT front
+PUSHF q work "mid"
+UNSHIFTF q work "front"
+ASSERT UNSHIFTF_N == 2
+SYS EQS LAST "front\nmid"
+ASSERT LAST_N == 1
+GETF q work
+SYS EQS LAST "front\nmid"
+ASSERT LAST_N == 1
+PUSHFRONTF q work "top"
+GETF q work
+SYS EQS LAST "top\nfront\nmid"
+ASSERT LAST_N == 1
+DEQUEUEF q work
+SYS EQS LAST "top"
+ASSERT LAST_N == 1
+GETF q work
+SYS EQS LAST "front\nmid"
+ASSERT LAST_N == 1
+
+# PUSH defaults to LAST
+SETF q work "x"
+LET item = "y"
+# use explicit after setting LAST via PRINT path — use string
+PUSHF q work LINE "z"
+GETF q work
+SYS EQS LAST "x\nz"
+ASSERT LAST_N == 1
+
+# num field promote then push
+PUSHF q code "more"
+GETF q code
+SYS EQS LAST "3\nmore"
+ASSERT LAST_N == 1
+ASSERT PUSHF_N == 2
+
+# METHOD / THIS
+SETF q work "p"
+SEND q push_item
+GETF q work
+SYS EQS LAST "p\nm"
+ASSERT LAST_N == 1
+SEND q take
+SYS EQS LAST "p"
+ASSERT LAST_N == 1
+GETF q work
+SYS EQS LAST "m"
+ASSERT LAST_N == 1
+
+# aliases
+SETF q work ""
+BAGPUSHF q work "i1"
+BAGPOPF q work
+SYS EQS LAST "i1"
+ASSERT LAST_N == 1
+SETF q work "a\nb"
+LINEPUSHF q work "c"
+GETF q work
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+BAGPREPENDF q work "0"
+GETF q work
+SYS EQS LAST "0\na\nb\nc"
+ASSERT LAST_N == 1
+HEADPOPF q work
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# soft miss
+TRYPUSHF nosuch work "x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+PUSHF SOFT q nosuch "x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+TRYPOPF nosuch work
+ASSERT OK == 0
+TRYPOPHEADF nosuch work
+ASSERT OK == 0
+
+# recover
+SETF q work "ok"
+PUSHF q work "yes"
+ASSERT OK == 1
+GETF q work
+SYS EQS LAST "ok\nyes"
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF q work "d"
+PUSHF q "work" "e"
+GETF q work
+SYS EQS LAST "d\ne"
+ASSERT LAST_N == 1
+
+# HELP
+HELP PUSHF
+SYS HAS LAST "PUSHF"
+ASSERT LAST_N == 1
+HELP POPF
+SYS HAS LAST "POPF"
+ASSERT LAST_N == 1
+HELP POPHEADF
+SYS HAS LAST "POPHEADF"
+ASSERT LAST_N == 1
+HELP UNSHIFTF
+SYS HAS LAST "UNSHIFTF"
+ASSERT LAST_N == 1
+
+PRINT "oop_pushf ok"
