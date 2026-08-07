@@ -1,0 +1,117 @@
+# COUNTINF / COUNTINFI — count needle hits in one field for agents
+# Usability: path depth / delimiter tally without GETF+loop · METHOD/THIS
+# Complements HASINF (0|1) and FINDF (first index); no mutate
+
+HOLD_FLASH 1
+
+CLASS Doc
+  FIELD path "a/b/c/d"
+  FIELD note "Error: bad ERROR"
+  FIELD code 10101
+  METHOD init
+  END
+  METHOD depth
+    COUNTINF THIS path "/"
+  END
+END
+
+NEW Doc d
+
+# path separators
+COUNTINF d path "/"
+ASSERT OK == 1
+ASSERT COUNTINF_N == 3
+ASSERT LAST_N == 3
+SYS EQS FIELD "path"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "d"
+ASSERT LAST_N == 1
+# LAST keeps field text
+SYS HAS LAST "a/b"
+ASSERT LAST_N == 1
+# field unchanged
+GETF d path
+SYS EQS LAST "a/b/c/d"
+ASSERT LAST_N == 1
+
+# zero hits
+COUNTINF d path "x"
+ASSERT LAST_N == 0
+ASSERT COUNTINF_N == 0
+
+# empty needle → 0
+COUNTINF d path ""
+ASSERT LAST_N == 0
+
+# multi-char non-overlapping
+SETF d path "ababab"
+COUNTINF d path "ab"
+ASSERT LAST_N == 3
+SETF d path "aaaa"
+COUNTINF d path "aa"
+ASSERT LAST_N == 2
+
+# aliases
+SETF d path "x,y,z"
+NCOUNTF d path ","
+ASSERT LAST_N == 2
+OCCURSF d path "y"
+ASSERT LAST_N == 1
+TALLYF d path "z"
+ASSERT LAST_N == 1
+
+# case-insensitive
+COUNTINFI d note "error"
+ASSERT LAST_N == 2
+ASSERT COUNTINF_I == 1
+COUNTINF I d note "error"
+ASSERT LAST_N == 2
+COUNTINF d note "error"
+ASSERT LAST_N == 0
+COUNTINF d note "Error"
+ASSERT LAST_N == 1
+
+# numeric field promoted to text
+COUNTINF d code "1"
+ASSERT LAST_N == 3
+COUNTINF d code "0"
+ASSERT LAST_N == 2
+
+# METHOD + THIS
+SETF d path "root/a/b"
+SEND d depth
+ASSERT LAST_N == 2
+
+# soft miss object
+TRYCOUNTINF nosuch path "/"
+ASSERT OK == 0
+ASSERT COUNTINF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+COUNTINF SOFT d nosuch "/"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# after soft, still works
+SETF d path "p/q"
+COUNTINF d path "/"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF d path "u/v/w"
+COUNTINF d "path" "/"
+ASSERT LAST_N == 2
+
+# HELP
+HELP COUNTINF
+SYS HAS LAST "COUNTINF"
+ASSERT LAST_N == 1
+HELP COUNTINFI
+SYS HAS LAST "COUNTINFI"
+ASSERT LAST_N == 1
+
+PRINT "oop_countinf ok"

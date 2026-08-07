@@ -12656,6 +12656,170 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* COUNTINF|NCOUNTF|OCCURSF obj field needle — count non-overlapping needle hits.
+   * COUNTINFI|NCOUNTFI — case-insensitive.
+   * TRYCOUNTINF|COUNTINF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * No mutate. LAST = field text; LAST_N = count. Empty needle → 0.
+   * Usability: path depth / delimiter tally without GETF+loop (METHOD/THIS;
+   * complements HASINF 0|1 and FINDF first index). Note: fleet COUNTF is hist. */
+  if (kw(&L->cur, "COUNTINF") || kw(&L->cur, "NCOUNTF") ||
+      kw(&L->cur, "OCCURSF") || kw(&L->cur, "OCCURF") ||
+      kw(&L->cur, "TALLYF") || kw(&L->cur, "NMATCHF") ||
+      kw(&L->cur, "COUNTNEEDLEF") || kw(&L->cur, "FIELDCOUNT") ||
+      kw(&L->cur, "COUNTINFI") || kw(&L->cur, "NCOUNTFI") ||
+      kw(&L->cur, "OCCURSFI") || kw(&L->cur, "TALLYFI") ||
+      kw(&L->cur, "ICOUNTINF") || kw(&L->cur, "COUNTINFI") ||
+      kw(&L->cur, "TRYCOUNTINF") || kw(&L->cur, "COUNTINFSOFT") ||
+      kw(&L->cur, "SOFTCOUNTINF") || kw(&L->cur, "TRYNCOUNTF") ||
+      kw(&L->cur, "TRYCOUNTINFI")) {
+    char oname[48], fname[48], op[24], hay[256], needle[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, icase = 0;
+    long hit = 0;
+    size_t hn, nn, i, j;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "COUNTINFI") == 0 || strcmp(op, "NCOUNTFI") == 0 ||
+        strcmp(op, "OCCURSFI") == 0 || strcmp(op, "TALLYFI") == 0 ||
+        strcmp(op, "ICOUNTINF") == 0 || strcmp(op, "TRYCOUNTINFI") == 0)
+      icase = 1;
+    if (strcmp(op, "TRYCOUNTINF") == 0 || strcmp(op, "COUNTINFSOFT") == 0 ||
+        strcmp(op, "SOFTCOUNTINF") == 0 || strcmp(op, "TRYNCOUNTF") == 0 ||
+        strcmp(op, "TRYCOUNTINFI") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (!icase && (kw(&L->cur, "I") || kw(&L->cur, "ICASE") ||
+                   kw(&L->cur, "IGNORECASE") || kw(&L->cur, "-I") ||
+                   kw(&L->cur, "CI"))) {
+      icase = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "COUNTINF object field needle"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "COUNTINF field"); return -1;
+    }
+    if (kw(&L->cur, "OF") || kw(&L->cur, "WITH") || kw(&L->cur, "FOR") ||
+        kw(&L->cur, "NEEDLE") || kw(&L->cur, "AS"))
+      lex_next(L);
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        long v = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", v);
+      } else {
+        fail(vm, "COUNTINF object field needle"); return -1;
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "COUNTINF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "COUNTINF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "COUNTINF: unknown object");
+      var_set_str(vm, "ERR", "COUNTINF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "COUNTINF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "COUNTINF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "COUNTINF: unknown field");
+      var_set_str(vm, "ERR", "COUNTINF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    hn = strlen(hay);
+    nn = strlen(needle);
+    hit = 0;
+    if (nn > 0) {
+      if (!icase) {
+        const char *p = hay;
+        while (p && *p) {
+          const char *q = strstr(p, needle);
+          if (!q) break;
+          hit++;
+          p = q + nn; /* non-overlapping */
+        }
+      } else {
+        for (i = 0; i + nn <= hn; ) {
+          int ok = 1;
+          for (j = 0; j < nn; j++) {
+            char ca = hay[i + j], cb = needle[j];
+            if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+            if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+            if (ca != cb) { ok = 0; break; }
+          }
+          if (ok) {
+            hit++;
+            i += nn;
+          } else {
+            i++;
+          }
+        }
+      }
+    }
+    var_set_str(vm, "LAST", hay);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hay);
+    vm->last_n = hit;
+    var_set_num(vm, "LAST_N", hit);
+    var_set_num(vm, "COUNTINF_N", hit);
+    var_set_num(vm, "NCOUNTF_N", hit);
+    var_set_num(vm, "OCCURSF_N", hit);
+    var_set_num(vm, "COUNTINF_I", icase ? 1 : 0);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).
