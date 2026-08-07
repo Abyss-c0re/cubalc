@@ -1,0 +1,107 @@
+# SHUFFLEOBJS / SHUFOBJS — shuffle live object names
+# Usability: no LISTOBJS + SYS SHUFFLE glue for random fleet order
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+SEED 42
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+NEW Cell d 1 40 0
+
+SHUFFLEOBJS Cell
+ASSERT OK == 1
+ASSERT SHUFFLEOBJS_N == 4
+ASSERT LAST_N == 4
+ASSERT NOBJS == 4
+SYS HASLINE SHUFFLEOBJS "a"
+ASSERT LAST_N == 1
+SYS HASLINE SHUFFLEOBJS "b"
+ASSERT LAST_N == 1
+SYS HASLINE SHUFFLEOBJS "c"
+ASSERT LAST_N == 1
+SYS HASLINE SHUFFLEOBJS "d"
+ASSERT LAST_N == 1
+# not necessarily original order a b c d
+SYS EQS SHUFFLEOBJS "a\nb\nc\nd"
+ASSERT LAST_N == 0 "shuffled (seed 42 ≠ insert order)"
+
+# same seed → same permutation
+SEED 42
+SHUFFLEOBJS Cell
+LET s1 = SHUFFLEOBJS
+SEED 42
+SHUFOBJS Cell
+SYS EQS LAST s1
+ASSERT LAST_N == 1
+SEED 42
+PERMUTEOBJS Cell
+SYS EQS LAST s1
+ASSERT LAST_N == 1
+
+# different seed → likely different order (assert not equal to s1 for seed 7)
+SEED 7
+SHUFFLEOBJS Cell
+SYS EQS LAST s1
+ASSERT LAST_N == 0 "different seed changes order"
+
+# OF sugar
+SEED 1
+SHUFFLEOBJS OF Cell
+ASSERT SHUFFLEOBJS_N == 4
+
+# unfiltered includes other classes
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 1
+NEW Ticket t2 "open" 2
+SEED 3
+SHUFFLEOBJS
+ASSERT SHUFFLEOBJS_N == 6
+SYS HASLINE SHUFFLEOBJS "t1"
+ASSERT LAST_N == 1
+SYS HASLINE SHUFFLEOBJS "a"
+ASSERT LAST_N == 1
+
+# class filter only tickets
+SEED 3
+SHUFFLEOBJS Ticket
+ASSERT SHUFFLEOBJS_N == 2
+SYS HASLINE SHUFFLEOBJS "t1"
+ASSERT LAST_N == 1
+SYS HASLINE SHUFFLEOBJS "t2"
+ASSERT LAST_N == 1
+SYS HASLINE SHUFFLEOBJS "a"
+ASSERT LAST_N == 0
+
+# empty class soft
+CLASS Empty
+  FIELD x 0
+END
+SHUFFLEOBJS Empty
+ASSERT OK == 1
+ASSERT SHUFFLEOBJS_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single object identity
+DELETEALL Ticket
+DELETEALL Cell
+NEW Cell solo 1 1 0
+SEED 99
+SHUFFLEOBJS Cell
+ASSERT SHUFFLEOBJS_N == 1
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+
+PRINT "proof927_oop_shuffleobjs" 1
+ASSERT OK == 1

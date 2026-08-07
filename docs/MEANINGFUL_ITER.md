@@ -413,6 +413,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 383. ~~**`SLICEBYF` / `MIDBYF` / `WINDOWBYF`**~~ **done** (ranked name window [start,count) · no SORTBYF+DROP+TAKE glue).
 384. ~~**`PICKOBJ` / `RANDOBJ` / `SAMPLEOBJ`**~~ **done** (random live object sample · no LISTOBJS+SYS PICK glue).
 385. ~~**`DRAWNOBJ` / `SAMPLEKOBJ` / `PICKNOBJ`**~~ **done** (sample k unique live objs · no LISTOBJS+SYS DRAWN glue).
+386. ~~**`SHUFFLEOBJS` / `SHUFOBJS` / `PERMUTEOBJS`**~~ **done** (shuffle live object names · no LISTOBJS+SYS SHUFFLE glue).
 
 ## Tick protocol
 
