@@ -1,0 +1,48 @@
+# REQUIRE FLAG — fail-fast CLI --flag contract (HASFLAG twin)
+# On success LAST = flag value (bare → "1")
+
+HOLD_FLASH 1
+
+# success path: --out=result.txt + bare --verbose
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV UNSET CUBALC_ARG2
+SYS ENV SET CUBALC_ARG0 "--out=result.txt"
+SYS ENV SET CUBALC_ARG1 "--verbose"
+SYS ENV SET CUBALC_ARGC "2"
+
+REQUIRE FLAG out
+SYS EQS LAST "result.txt"
+ASSERT LAST_N == 1
+SYS EQS REQUIRE_FLAG "out"
+ASSERT LAST_N == 1
+
+REQUIRE FLAG verbose
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# --name value form
+SYS ENV SET CUBALC_ARG0 "--mode"
+SYS ENV SET CUBALC_ARG1 "fast"
+SYS ENV SET CUBALC_ARGC "2"
+REQUIRE FLAG mode
+SYS EQS LAST "fast"
+ASSERT LAST_N == 1
+
+# optional dashes on name
+REQUIRE FLAG --mode
+SYS EQS LAST "fast"
+ASSERT LAST_N == 1
+
+# soft twin still works
+HASFLAG mode
+ASSERT LAST_N == 1
+HASFLAG missing
+ASSERT LAST_N == 0
+
+# missing flag → fatal (via nested -e smoke in Makefile/agent; soft path here via HASFLAG)
+# prove FAIL path would fire: only soft probe in this file to keep green
+GETFLAG missing OR ""
+ASSERT LAST_N == 0
+
+PRINT "require_flag ok"

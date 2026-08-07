@@ -26006,9 +26006,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|PATH|DIR|REG|BIN|FN|CLASS|METHOD — fail-fast gates"},
       {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
+      {"REQUIRE FLAG", "REQUIRE FLAG|OPT name — fail if --name missing · LAST=value (HASFLAG twin)"},
       {"HASARG", "HASARG n|name — soft 0|1 if program arg present (REQUIRE ARG twin)"},
       {"HASARGC", "HASARGC [min] — soft 0|1 if ARGC >= min (default 1)"},
       {"HASFLAG", "HASFLAG name — soft 0|1 if --name / -name / --name= in CUBALC_ARGn"},
@@ -27773,6 +27774,54 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         if (vm->res) vm->res->asserts_ok++;
         bump(vm); return 1;
       }
+    }
+    /* REQUIRE FLAG|OPT name — fail if --name / -name missing in CUBALC_ARGn.
+     * On success: LAST = flag value (bare → "1"), LAST_N=1, FLAG/REQUIRE_FLAG set.
+     * Usability: fail-fast CLI flag contract · twin of HASFLAG / REQUIRE ARG. */
+    if (kw(&L->cur,"FLAG") || kw(&L->cur,"OPT") || kw(&L->cur,"OPTION") ||
+        kw(&L->cur,"SWITCH") || kw(&L->cur,"CLI_FLAG")){
+      char name[96], val[CUBALC_HOST_STR_MAX];
+      int hit;
+      lex_next(L);
+      name[0] = 0;
+      val[0] = 0;
+      while (L->cur.kind == TK_MINUS) lex_next(L);
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        snprintf(name, sizeof name, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail_at(vm, L, "REQUIRE FLAG needs name — REQUIRE FLAG verbose");
+        return -1;
+      }
+      while (name[0] == '-')
+        memmove(name, name + 1, strlen(name));
+      if (!name[0]) {
+        fail_at(vm, L, "REQUIRE FLAG empty name");
+        return -1;
+      }
+      hit = cubalc_scan_cli_flag(name, val, sizeof val);
+      if (!hit) {
+        char msg[180];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE FLAG '%s' missing line %d — pass --%s or --%s=val (HASFLAG)",
+                 name, aln, name, name);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      if (!val[0])
+        snprintf(val, sizeof val, "1");
+      var_set_str(vm, "LAST", val);
+      var_set_str(vm, "FLAG", val);
+      var_set_str(vm, "REQUIRE_FLAG", name);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", val);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require flag %s ok → %s\n", name, val);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
     }
     /* REQUIRE PATH|EXIST path — fail if host path missing.
      * REQUIRE DIR|DIRECTORY path — fail if not a directory.
