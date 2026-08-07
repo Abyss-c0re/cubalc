@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 409,
-  "version": "1.15.436-usability",
-  "item": "LISTFLAGS bag of flag names",
-  "item_id": 445,
-  "title": "LISTFLAGS|FLAGS bag of --flag names \u00b7 LAST_N=count",
-  "commit": "362be5e8a811ab39e83380623d401fb0e8d806a0",
-  "summary": "Discover CLI flag names as bag; no EACH ARGS glue. proof 986 14/14.",
+  "iter": 410,
+  "version": "1.15.437-usability",
+  "item": "NTHPOS Nth non-flag positional",
+  "item_id": 446,
+  "title": "NTHPOS|POSN index [OR fb] peel non-flag positional",
+  "commit": "50df5468dde609d66b91bcede2d3959eca7cea2a",
+  "summary": "0-based file after --flags without RESTARGS+NTH. proof 987 12/12.",
   "proofs": [
-    "986_listflags",
-    "asserts 14/14",
-    "smoke LISTFLAGS -- --mode=fast --verbose a.txt"
+    "987_nthpos",
+    "asserts 12/12",
+    "smoke NTHPOS 0 -- --mode=x in.txt"
   ],
-  "when": "2026-08-07T22:14:22Z",
+  "when": "2026-08-07T22:27:14Z",
   "agent": "meaningful_iter_10m",
-  "sha": "362be5e8a811ab39e83380623d401fb0e8d806a0",
+  "sha": "50df5468dde609d66b91bcede2d3959eca7cea2a",
   "note": "no thrash; EVOLVE_PAUSED"
 }
