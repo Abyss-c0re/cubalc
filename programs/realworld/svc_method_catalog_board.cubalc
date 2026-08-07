@@ -1,0 +1,1349 @@
+# svc_method_catalog_board.cubalc — EACH METHOD + HASMETHOD + TRIMF/LOWERF status
+#
+# Real use: mesh agents catalog service handler methods (init/ping/health/
+# deploy), gate on required method presence, normalize status labels —
+# without LISTMETHODS+EACH LINE glue. HASMETHOD var-name is broken so
+# require-method uses EACH METHOD + EQS walk.
+#
+# Surfaces forced (1.15.418–419 / proof 968 EACH METHOD, 942 TRIMF):
+#   EACH METHOD / MSG / HANDLER / OBJMETHOD OF obj|Class
+#   HASMETHOD (literal only — document var miss)
+#   METHOD_N / EACH_N / NMETHODS · BREAK
+#   PUSHF methods bag · LINESF · TRIMF / LOWERF status
+#   soft miss + REQUIRE wall
+#
+# Distinct from schema_contract (CLASSINFO/METHODINFO arity),
+# field_contract, fn_runbook: this is *method name catalog + require gate*.
+#
+# Slots: s0 s1 s2
+#
+# Plate under STATE:
+#   dump/s0 dump/s1 dump/s2
+#   dump/s0.bag (methods) VAL.txt META.txt OBJS.txt METH_REPORT.txt
+#
+# Actions:
+#   list | open | catalog | has | require | status | normalize | size
+#   gate | probe | dump | clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_smc_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=s0
+#   CUBALC_ARG0=catalog CUBALC_ARG1=s0
+#   CUBALC_FS_METH=ping CUBALC_ARG0=require CUBALC_ARG1=s0
+#   CUBALC_FS_MINN=3 CUBALC_ARG0=gate CUBALC_ARG1=s0
+#
+# Env: CUBALC_FS_REQUIRE NAME METH MINN ACTION
+#
+# Edges:
+#   HASMETHOD obj VAR → always 0 (literal only)
+#   SYS CAT "\\n" does not reliably build bags — use PUSHF
+#   DUMPOBJ multiline methods bag → side file
+#   WRITE NL; NUM softens REQUIRE=abc
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Svc
+  FIELD id ""
+  FIELD methods ""
+  FIELD n 0
+  FIELD status "  Ready  "
+  FIELD tag "svc"
+  METHOD init i
+    SETF THIS id i
+    SETF THIS methods ""
+    SETF THIS n 0
+    SETF THIS status "  Ready  "
+    SETF THIS tag "svc"
+  END
+  METHOD ping
+  END
+  METHOD health
+  END
+  METHOD deploy
+  END
+END
+
+REQUIRE CLASS Svc
+REQUIRE METHOD Svc init
+
+NOTE "svc_method_catalog_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT METH = "ping"
+DEFAULT MINN = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  LET METH = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+    LET METH = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_METH" OR ""
+IF LAST_N > 0 THEN
+  LET METH = LAST
+END
+SYS ENV "CUBALC_FS_MINN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINN = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "METH_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "s0"
+LET d_s0 = LAST
+SYS JOIN dump_dir "s1"
+LET d_s1 = LAST
+SYS JOIN dump_dir "s2"
+LET d_s2 = LAST
+SYS JOIN dump_dir "s0.bag"
+LET b_s0 = LAST
+SYS JOIN dump_dir "s1.bag"
+LET b_s1 = LAST
+SYS JOIN dump_dir "s2.bag"
+LET b_s2 = LAST
+
+LET slot = -1
+SYS EQS NAME "s0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "s1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "s2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "s0"
+END
+IF slot == 1 THEN
+  LET sn = "s1"
+END
+IF slot == 2 THEN
+  LET sn = "s2"
+END
+
+# rehydrate
+SYS READ OR d_s0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ s0
+  IF LAST_N == 1 THEN
+    DELETEOBJ s0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "n"
+  LET rn = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Svc s0 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF s0 id rid
+  END
+  TRYSETF s0 n rn
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF s0 status rst
+  END
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF s0 tag rtag
+  END
+  SYS READ OR b_s0 OR ""
+  TRYSETF s0 methods LAST
+  CLEAR_ERR
+END
+SYS READ OR d_s1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ s1
+  IF LAST_N == 1 THEN
+    DELETEOBJ s1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "n"
+  LET rn = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Svc s1 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF s1 id rid
+  END
+  TRYSETF s1 n rn
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF s1 status rst
+  END
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF s1 tag rtag
+  END
+  SYS READ OR b_s1 OR ""
+  TRYSETF s1 methods LAST
+  CLEAR_ERR
+END
+SYS READ OR d_s2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ s2
+  IF LAST_N == 1 THEN
+    DELETEOBJ s2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "n"
+  LET rn = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Svc s2 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF s2 id rid
+  END
+  TRYSETF s2 n rn
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF s2 status rst
+  END
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF s2 tag rtag
+  END
+  SYS READ OR b_s2 OR ""
+  TRYSETF s2 methods LAST
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET changed = 0
+LET board_rep = "svc_method_catalog_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Svc
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        DELETEOBJ s0
+        CLEAR_ERR
+      END
+      NEW Svc s0 sn
+      DUMPOBJ s0
+      SYS WRITE d_s0 LAST
+      GETF s0 methods
+      SYS WRITE b_s0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        DELETEOBJ s1
+        CLEAR_ERR
+      END
+      NEW Svc s1 sn
+      DUMPOBJ s1
+      SYS WRITE d_s1 LAST
+      GETF s1 methods
+      SYS WRITE b_s1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        DELETEOBJ s2
+        CLEAR_ERR
+      END
+      NEW Svc s2 sn
+      DUMPOBJ s2
+      SYS WRITE d_s2 LAST
+      GETF s2 methods
+      SYS WRITE b_s2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Svc
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- catalog: EACH METHOD → methods bag via PUSHF ---
+SYS EQS ACTION "catalog"
+IF LAST_N == 1 THEN
+  NOTE "action catalog"
+  IF slot < 0 THEN
+    # class-level catalog
+    LET bag = ""
+    LET c = 0
+    # temp object for bag? use string push via LET only
+    # build with PUSH to empty object field needs object — use class walk + plate
+    LET bag = ""
+    EACH METHOD OF Svc AS m
+      LET c = c + 1
+      IF bag == "" THEN
+        LET bag = m
+      ELSE
+        SYS PUSH bag m
+        LET bag = LAST
+      END
+    END
+    LET hit = 1
+    LET note_msg = "catalog class"
+    LET ret_n = c
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "catalog class"
+    SYS STR c
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        SETF s0 methods ""
+        EACH METHOD OF s0 AS m
+          PUSHF s0 methods m
+        END
+        LINESF s0 methods
+        LET ret_n = LAST_N
+        SETF s0 n ret_n
+        GETF s0 methods
+        LET val = LAST
+        LET o_ok = 1
+        DUMPOBJ s0
+        SYS WRITE d_s0 LAST
+        GETF s0 methods
+        SYS WRITE b_s0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        SETF s1 methods ""
+        EACH MSG OF s1 AS m
+          PUSHF s1 methods m
+        END
+        LINESF s1 methods
+        LET ret_n = LAST_N
+        SETF s1 n ret_n
+        GETF s1 methods
+        LET val = LAST
+        LET o_ok = 1
+        DUMPOBJ s1
+        SYS WRITE d_s1 LAST
+        GETF s1 methods
+        SYS WRITE b_s1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        SETF s2 methods ""
+        EACH HANDLER OF s2 AS m
+          PUSHF s2 methods m
+        END
+        LINESF s2 methods
+        LET ret_n = LAST_N
+        SETF s2 n ret_n
+        GETF s2 methods
+        LET val = LAST
+        LET o_ok = 1
+        DUMPOBJ s2
+        SYS WRITE d_s2 LAST
+        GETF s2 methods
+        SYS WRITE b_s2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "catalog miss"
+      FAIL "catalog miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "catalog miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "catalog ok"
+      LET val_ch = 1
+      LET meta = "catalog"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- has: literal HASMETHOD for known methods OR walk ---
+# Prefer walk-based for METH env var
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "has bad slot"
+    FAIL "has bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "has bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET found = 0
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        EACH METHOD OF s0 AS m
+          SYS EQS m METH
+          IF LAST_N == 1 THEN
+            LET found = 1
+          END
+        END
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        EACH METHOD OF s1 AS m
+          SYS EQS m METH
+          IF LAST_N == 1 THEN
+            LET found = 1
+          END
+        END
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        EACH METHOD OF s2 AS m
+          SYS EQS m METH
+          IF LAST_N == 1 THEN
+            LET found = 1
+          END
+        END
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    ELSE
+      LET ret_n = found
+      IF found == 0 THEN
+        LET miss = 1
+        LET note_msg = "has absent"
+        LET val = METH
+        LET val_ch = 1
+        LET meta = "has absent"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta METH
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "has absent"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "has absent"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "has present"
+        LET val = METH
+        LET val_ch = 1
+        LET meta = "has present"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta METH
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- require: same as has but name for SEND-prep wall ---
+SYS EQS ACTION "require"
+IF LAST_N == 1 THEN
+  NOTE "action require"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "require bad slot"
+    FAIL "require bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "require bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET found = 0
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        EACH METHOD OF s0 AS m
+          SYS EQS m METH
+          IF LAST_N == 1 THEN
+            LET found = 1
+          END
+        END
+        # also document literal HASMETHOD for ping
+        HASMETHOD s0 ping
+        LET lit = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        EACH METHOD OF s1 AS m
+          SYS EQS m METH
+          IF LAST_N == 1 THEN
+            LET found = 1
+          END
+        END
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        EACH METHOD OF s2 AS m
+          SYS EQS m METH
+          IF LAST_N == 1 THEN
+            LET found = 1
+          END
+        END
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "require miss"
+      FAIL "require miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "require miss"
+      END
+    ELSE
+      LET ret_n = found
+      IF found == 0 THEN
+        LET miss = 1
+        LET note_msg = "require deny"
+        LET val = METH
+        LET val_ch = 1
+        LET meta = "require deny"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta METH
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "require deny"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "require deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "require ok"
+        LET val = METH
+        LET val_ch = 1
+        LET meta = "require ok"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta METH
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- status: GETF status ---
+SYS EQS ACTION "status"
+IF LAST_N == 1 THEN
+  NOTE "action status"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "status bad slot"
+    FAIL "status bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "status bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        GETF s0 status
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        GETF s1 status
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        GETF s2 status
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "status miss"
+      FAIL "status miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "status miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "status ok"
+      LET val_ch = 1
+      LET meta = "status"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- normalize: TRIMF + LOWERF status ---
+SYS EQS ACTION "normalize"
+IF LAST_N == 1 THEN
+  NOTE "action normalize"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "normalize bad slot"
+    FAIL "normalize bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "normalize bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        TRIMF s0 status
+        LOWERF s0 status
+        LET o_ok = OK
+        GETF s0 status
+        LET val = LAST
+        DUMPOBJ s0
+        SYS WRITE d_s0 LAST
+        GETF s0 methods
+        SYS WRITE b_s0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        TRIMF s1 status
+        UPPERF s1 status
+        LET o_ok = OK
+        GETF s1 status
+        LET val = LAST
+        DUMPOBJ s1
+        SYS WRITE d_s1 LAST
+        GETF s1 methods
+        SYS WRITE b_s1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        LTRIMF s2 status
+        RTRIMF s2 status
+        LOWERF s2 status
+        LET o_ok = OK
+        GETF s2 status
+        LET val = LAST
+        DUMPOBJ s2
+        SYS WRITE d_s2 LAST
+        GETF s2 methods
+        SYS WRITE b_s2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "normalize miss"
+      FAIL "normalize miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "normalize miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "normalize ok"
+      LET val_ch = 1
+      LET meta = "normalize"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- size: NMETHODS via catalog count or LINESF methods ---
+SYS EQS ACTION "size"
+IF LAST_N == 1 THEN
+  NOTE "action size"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "size bad slot"
+    FAIL "size bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "size bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        LET c = 0
+        EACH METHOD OF s0 AS m
+          LET c = c + 1
+        END
+        LET ret_n = c
+        SETF s0 n c
+        LET o_ok = 1
+        DUMPOBJ s0
+        SYS WRITE d_s0 LAST
+        GETF s0 methods
+        SYS WRITE b_s0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        LET c = 0
+        EACH METHOD OF s1 AS m
+          LET c = c + 1
+        END
+        LET ret_n = c
+        SETF s1 n c
+        LET o_ok = 1
+        DUMPOBJ s1
+        SYS WRITE d_s1 LAST
+        GETF s1 methods
+        SYS WRITE b_s1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        LET c = 0
+        EACH METHOD OF s2 AS m
+          LET c = c + 1
+        END
+        LET ret_n = c
+        SETF s2 n c
+        LET o_ok = 1
+        DUMPOBJ s2
+        SYS WRITE d_s2 LAST
+        GETF s2 methods
+        SYS WRITE b_s2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "size miss"
+      FAIL "size miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "size miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "size ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "size"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- gate: method count >= MINN ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET dnow = 0
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        LET c = 0
+        EACH METHOD OF s0 AS m
+          LET c = c + 1
+        END
+        LET dnow = c
+        SETF s0 n c
+        LET o_ok = 1
+        DUMPOBJ s0
+        SYS WRITE d_s0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        LET c = 0
+        EACH METHOD OF s1 AS m
+          LET c = c + 1
+        END
+        LET dnow = c
+        SETF s1 n c
+        LET o_ok = 1
+        DUMPOBJ s1
+        SYS WRITE d_s1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        LET c = 0
+        EACH METHOD OF s2 AS m
+          LET c = c + 1
+        END
+        LET dnow = c
+        SETF s2 n c
+        LET o_ok = 1
+        DUMPOBJ s2
+        SYS WRITE d_s2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss"
+      FAIL "gate miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate miss"
+      END
+    ELSE
+      LET ret_n = dnow
+      IF dnow < MINN THEN
+        LET miss = 1
+        LET note_msg = "gate deny"
+        SYS STR dnow
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate deny"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR dnow
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINN
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "gate deny"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "gate deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate admit"
+        SYS STR dnow
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate admit"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR dnow
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINN
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET p_ok = 1
+  # unknown object EACH soft empty
+  EACH METHOD OF nosuch AS z
+    LET p_ok = 0
+    LET note_msg = "probe EACH nosuch should not enter"
+  END
+  IF EACH_N != 0 THEN
+    LET p_ok = 0
+    LET note_msg = "probe EACH nosuch EACH_N should 0"
+  END
+  CLEAR_ERR
+  HASOBJ s0
+  IF LAST_N == 1 THEN
+    # HASMETHOD var fails
+    LET m = "deploy"
+    HASMETHOD s0 m
+    IF LAST_N == 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe HASMETHOD var should be 0 (literal-only)"
+    END
+    HASMETHOD s0 deploy
+    IF LAST_N != 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe HASMETHOD literal deploy should 1"
+    END
+    CLEAR_ERR
+    # walk finds deploy
+    LET found = 0
+    EACH METHOD OF s0 AS name
+      SYS EQS name m
+      IF LAST_N == 1 THEN
+        LET found = 1
+      END
+    END
+    IF found != 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe walk should find deploy"
+    END
+    CLEAR_ERR
+    # BREAK early
+    LET b = 0
+    EACH METHOD OF s0 AS name
+      LET b = b + 1
+      IF b == 2 THEN
+        BREAK
+      END
+    END
+    IF b != 2 THEN
+      LET p_ok = 0
+      LET note_msg = "probe BREAK should stop at 2"
+    END
+    CLEAR_ERR
+  END
+  IF p_ok == 1 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET val = "probe"
+    LET val_ch = 1
+    LET meta = "probe soft"
+    LET meta_ch = 1
+  ELSE
+    LET miss = 1
+    FAIL note_msg
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        DUMPOBJ s0
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_s0 val
+        GETF s0 methods
+        SYS WRITE b_s0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        DUMPOBJ s1
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_s1 val
+        GETF s1 methods
+        SYS WRITE b_s1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        DUMPOBJ s2
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_s2 val
+        GETF s2 methods
+        SYS WRITE b_s2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ s0
+  IF LAST_N == 1 THEN
+    DELETEOBJ s0
+    CLEAR_ERR
+  END
+  HASOBJ s1
+  IF LAST_N == 1 THEN
+    DELETEOBJ s1
+    CLEAR_ERR
+  END
+  HASOBJ s2
+  IF LAST_N == 1 THEN
+    DELETEOBJ s2
+    CLEAR_ERR
+  END
+  SYS WRITE d_s0 ""
+  SYS WRITE d_s1 ""
+  SYS WRITE d_s2 ""
+  SYS WRITE b_s0 ""
+  SYS WRITE b_s1 ""
+  SYS WRITE b_s2 ""
+  SYS WRITE objs_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "catalog"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "require"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "status"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "normalize"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "size"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR ret_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR changed
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "svc_method_catalog_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

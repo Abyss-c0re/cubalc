@@ -1,47 +1,47 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 152,
-  "program": "programs/realworld/fleet_allowlist_ensure_board.cubalc",
-  "theme": "ENSUREBAGLINE + EACH LINE OF field + EACH PROP fleet allowlist",
-  "version": "1.15.417-usability",
+  "iter": 153,
+  "program": "programs/realworld/svc_method_catalog_board.cubalc",
+  "theme": "EACH METHOD + HASMETHOD literal + TRIMF/LOWERF svc method catalog",
+  "version": "1.15.419-usability",
   "pass": true,
-  "prior_note": "iter 151 SORTBAGF/HASBAGLINE roster; this iter first realworld ENSUREBAGLINE (966) + EACH LINE OF (965) + EACH PROP (967)",
+  "prior_note": "iter 152 ENSUREBAGLINE+EACH PROP; this iter first realworld EACH METHOD (968) + HASMETHOD var-name gap",
   "tests": [
     {
-      "name": "ensure_idempotent",
-      "cmd": "ensure api.prod NEW=1; again NEW=0 N=1; +web/db/staging N=4",
+      "name": "catalog",
+      "cmd": "EACH METHOD → PUSHF bag init/ping/health/deploy N=4",
       "ok": true,
-      "note": "ENSUREBAGLINE"
+      "note": "EACH METHOD"
     },
     {
-      "name": "walk_prefix",
-      "cmd": "EACH LINE OF allow PFX=api \u2192 pref=2 dig api.prod,api.staging",
+      "name": "has_require",
+      "cmd": "walk has ping; require deploy ok; missing REQUIRE→2",
       "ok": true,
-      "note": "EACH LINE OF"
+      "note": "require"
     },
     {
-      "name": "props",
-      "cmd": "EACH PROP OF a0 \u2192 5 names; OF AllowList class \u2192 5",
+      "name": "normalize",
+      "cmd": "TRIMF+LOWERF '  Ready  ' → ready; s1 UPPERF → READY",
       "ok": true,
-      "note": "EACH PROP"
+      "note": "TRIMF"
     },
     {
-      "name": "icase_ensure",
-      "cmd": "ENSUREBAGLINEI Api.Prod then api.prod NEW=0",
-      "ok": true,
-      "note": "ENSUREBAGLINEI"
-    },
-    {
-      "name": "has_gate",
-      "cmd": "has present; missing REQUIRE\u21922; MINN gate admit/deny",
+      "name": "gate",
+      "cmd": "NMETHODS>=3 admit; MINN=99 REQUIRE→2",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "TRYENSURE soft; NEW 1/0; empty ensure NEW=1; empty EACH_N=0",
+      "cmd": "HASMETHOD var→0; literal deploy→1; walk finds; BREAK at 2",
       "ok": true,
       "note": "probe"
+    },
+    {
+      "name": "class_catalog",
+      "cmd": "catalog no-slot → class methods N=4",
+      "ok": true,
+      "note": "class"
     },
     {
       "name": "selftest",
@@ -53,46 +53,38 @@
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "med",
-      "area": "oop|ensurebagline",
-      "title": "Empty-string ENSUREBAGLINE appends blank line (NEW=1)",
-      "detail": "ENSUREBAGLINE allow \"\" is treated as a real membership add. Agents with blank HOST/ENV can pollute allowlists with empty bag lines that LINESF counts.",
-      "repro": "ENSUREBAGLINE a allow \"\" \u2192 NEW=1 N increases"
+      "severity": "high",
+      "area": "oop|hasmethod",
+      "title": "HASMETHOD only accepts literal method names",
+      "detail": "HASMETHOD s0 m with m=\"deploy\" → LAST_N=0 always. HASMETHOD s0 deploy works. Agents cannot gate on ENV/ARG method without EACH METHOD+EQS walk. SEND prep with dynamic names needs dual path.",
+      "repro": "LET m=\"deploy\"; HASMETHOD s m → 0; HASMETHOD s deploy → 1"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|ensurebagline",
-      "title": "Flag is ENSUREBAGLINE_NEW not _HIT",
-      "detail": "Agents reading ENSUREBAGLINE_HIT (pattern from DROP/CUTF) get 0 always. Must use _NEW for append-vs-exists. Easy false soft logic.",
-      "repro": "ENSUREBAGLINE_HIT stays 0; NEW is 1 then 0"
+      "area": "host|str",
+      "title": "SYS CAT bag \"\\\\n\" does not build newline bags reliably",
+      "detail": "PRINT_JSON of CAT-built method list collapses to initpinghealthdeploy. PUSHF into field bag is the working multi-line builder.",
+      "repro": "SYS CAT bag \"\\n\"; SYS CAT bag m → no line split"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "oop|dumpobj|plate",
-      "title": "DUMPOBJ multiline allow still plate-unsafe",
-      "detail": "Same class as roster/queue boards \u2014 dump/aN.bag side files required for rehydrate.",
-      "repro": "LOOKUP allow after DUMPOBJ truncates at first NL"
+      "title": "DUMPOBJ multiline methods bag plate-unsafe",
+      "detail": "Same side-file dump/sN.bag pattern as prior bag boards.",
+      "repro": "LOOKUP methods after DUMPOBJ truncates"
     },
     {
       "id": "W4",
       "severity": "low",
       "area": "oop|each",
-      "title": "INCF local counter fails \u2014 need LET n = n + 1",
-      "detail": "INCF c errors with INCF field when c is a LET var. Field INCF only. Walk loops verbose.",
-      "repro": "LET c=0; INCF c \u2192 err INCF field"
+      "title": "INCF local LET still fails in walks",
+      "detail": "Must LET c = c + 1 inside EACH METHOD. Same as fleet_allowlist iter.",
+      "repro": "INCF c → INCF field"
     },
     {
       "id": "W5",
-      "severity": "low",
-      "area": "oop|ensurebagline",
-      "title": "Exact membership only (no DNS suffix match)",
-      "detail": "ensure api does not satisfy has api.prod; prefix walk needs EACH+STARTS. No ENSUREBAGLINE SUFFIX mode.",
-      "repro": "ensure api; has api.prod \u2192 absent"
-    },
-    {
-      "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE VAL omit trailing NL",
@@ -100,7 +92,7 @@
       "repro": "od -c META.txt after dump"
     },
     {
-      "id": "W7",
+      "id": "W6",
       "severity": "low",
       "area": "host|num",
       "title": "REQUIRE=abc softens",
@@ -109,26 +101,26 @@
     }
   ],
   "workarounds": [
-    "Reject blank HOST before ENSUREBAGLINE",
-    "Read ENSUREBAGLINE_NEW not _HIT",
-    "dump/aN.bag side files for allow bag",
-    "LET n = n + 1 in EACH walks (not INCF local)",
-    "Fixed a0/a1/a2; TRY* soft; numeric REQUIRE only"
+    "EACH METHOD + SYS EQS for dynamic method membership",
+    "HASMETHOD only for compile-time literal names",
+    "PUSHF methods bag not CAT newlines",
+    "dump/sN.bag side files; LET n = n + 1 in walks",
+    "Fixed s0/s1/s2; TRY* soft; numeric REQUIRE only"
   ],
   "language_gaps": [
-    "ENSUREBAGLINE reject empty / soft no-op on blank",
-    "Consistent _HIT vs _NEW naming across bag mutators",
+    "HASMETHOD dynamic string/var method name",
+    "Native newline bag builder without PUSHF object field",
     "DUMPOBJ escape multiline fields",
-    "INCF on LET scalars or INC local form",
+    "INCF on LET scalars",
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "ensure NEW=1 then exists NEW=0; size 4 after multi-host",
-    "walk PFX=api pref=2 dig api.prod,api.staging",
-    "EACH PROP 5 fields; ENSUREBAGLINEI case fold",
-    "empty ENSURE NEW=1 documented; bag side-files",
+    "catalog 4 methods via EACH+PUSHF; size 4",
+    "HASMETHOD var always miss — walked EQS for require/has",
+    "TRIMF+LOWERF Ready→ready; UPPERF READY",
+    "probe documents literal-only HASMETHOD + BREAK",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "3c410e6b6730edefc1f351a8fea883e49aad4649",
-  "ts": "2026-08-07T18:59:28Z"
+  "commit": "",
+  "ts": "2026-08-07T19:24:26Z"
 }
