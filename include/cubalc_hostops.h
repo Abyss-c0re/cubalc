@@ -69,6 +69,11 @@ int cubalc_host_replacetree(const char *root, const char *olds, const char *news
  * Empty needle → 0. Non-overlapping matches (strstr advance). */
 int cubalc_host_countintree(const char *root, const char *needle, int icase,
                             cubalc_host_result *r);
+/* recursive matching-line harvest under root. r->str = newline bag of lines;
+ * r->n = matching lines; r->code = files with hits. Soft miss → -1.
+ * Empty needle → all lines. Case-insensitive when icase!=0. */
+int cubalc_host_greplines_tree(const char *root, const char *needle, int icase,
+                               cubalc_host_result *r);
 /* rename/move path; soft miss if from missing */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */

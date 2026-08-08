@@ -1,0 +1,108 @@
+# GREPLINESTREE / HARVESTTREE / EXTRACTLINETREE — recursive matching-line harvest
+# Log line extract under a tree without WALK+GREPLINES or shell grep -rn.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_glt_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# nested logs
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "ok start\nerror: boom\nerror: again\nok end"
+ASSERT OK == 1
+SYS JOIN base "a/b/note.txt"
+WRITEOUT LAST "all good\nno problem"
+ASSERT OK == 1
+SYS JOIN base "a/b/warn.log"
+WRITEOUT LAST "info\nWARNING: careful\ninfo"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "nothing here"
+ASSERT OK == 1
+
+# harvest error lines (2 from err.log)
+GREPLINESTREE base "error"
+ASSERT OK == 1
+ASSERT GREPLINESTREE_N == 2
+ASSERT LAST_N == 2
+ASSERT GREPLINESTREE_FILES == 1
+SYS HAS LAST "boom"
+ASSERT LAST_N == 1
+SYS HAS LAST "again"
+ASSERT LAST_N == 1
+SYS HAS LAST "good"
+ASSERT LAST_N == 0
+
+# multi-file hits with ":"
+GREPLINESTREE base ":"
+ASSERT OK == 1
+ASSERT GREPLINESTREE_N == 3
+ASSERT GREPLINESTREE_FILES == 2
+
+# case-sensitive WARNING
+GREPLINESTREE base "WARNING"
+ASSERT OK == 1
+ASSERT GREPLINESTREE_N == 1
+SYS HAS LAST "careful"
+ASSERT LAST_N == 1
+
+# GREPLINESTREEI
+GREPLINESTREEI base "warning"
+ASSERT OK == 1
+ASSERT GREPLINESTREE_N == 1
+ASSERT GREPLINESTREE_FILES == 1
+
+# no match
+GREPLINESTREE base "zzzz_nope"
+ASSERT OK == 1
+ASSERT GREPLINESTREE_N == 0
+ASSERT LAST_N == 0
+
+# HARVESTTREE alias
+HARVESTTREE base "good"
+ASSERT OK == 1
+ASSERT HARVESTTREE_N == 1
+SYS HAS LAST "all good"
+ASSERT LAST_N == 1
+
+# SYS form
+SYS GREPLINESTREE base "boom"
+ASSERT OK == 1
+ASSERT GREPLINESTREE_N == 1
+
+# single file root
+SYS JOIN base "a/err.log"
+LET one = LAST
+GREPLINESTREE one "error"
+ASSERT OK == 1
+ASSERT GREPLINESTREE_N == 2
+ASSERT GREPLINESTREE_FILES == 1
+
+# missing soft
+GREPLINESTREE "/no/such/greplinestree" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty path soft
+GREPLINESTREE "" "x"
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+RMTREE base
+ASSERT OK == 1
+
+PRINT "greplinestree ok"
+ASSERT OK == 1
