@@ -1,0 +1,98 @@
+# JSONDELTA / JDELTA / DELTAOBJ — changed keys as plate object (values from new)
+# Sync payload without CHANGED+EACH+JSONSET. Complements JSONCHANGED key bag.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 1 "err" "" "msg" "hello"
+LET a = LAST
+SYS JSONOBJ "ok" true "n" 2 "err" "" "version" "1"
+LET b = LAST
+
+# delta values from b/new
+SYS JSONDELTA a b
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JSONDELTA_N == 3
+LET delta = LAST
+SYS JSONHASALL delta "n" "msg" "version"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM delta
+ASSERT LAST_N == 2
+SYS JSON "msg" FROM delta
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+SYS JSON "version" FROM delta
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+# ok/err stable → not in delta
+SYS JSONHASALL delta "ok"
+ASSERT LAST_N == 0
+SYS JSONHASALL delta "err"
+ASSERT LAST_N == 0
+
+# FROM OLD → values from a
+SYS JSONDELTA a b FROM OLD
+ASSERT LAST_N == 3
+LET dold = LAST
+SYS JSONN "n" FROM dold
+ASSERT LAST_N == 1
+SYS JSON "msg" FROM dold
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# FROM NEW explicit
+SYS JSONDELTA a b FROM NEW
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 2
+
+# identical → empty object
+SYS JSONOBJ "x" 1
+LET c = LAST
+SYS JSONDELTA c c
+ASSERT LAST_N == 0
+SYS JSONEMPTY LAST
+ASSERT LAST_N == 1
+
+# value-only change
+SYS JSONOBJ "k" 1 "m" 2
+LET d = LAST
+SYS JSONOBJ "k" 1 "m" 9
+LET e = LAST
+SYS JSONDELTA d e
+ASSERT LAST_N == 1
+SYS JSONHASALL LAST "m"
+ASSERT LAST_N == 1
+SYS JSONN "m" FROM LAST
+ASSERT LAST_N == 9
+
+# merge delta onto base (agent sync pattern)
+SYS JSONOBJ "ok" true "n" 1
+LET base = LAST
+SYS JSONOBJ "ok" true "n" 5 "trace" 1
+LET next = LAST
+SYS JSONDELTA base next
+LET patch = LAST
+SYS JSONMERGE base patch
+ASSERT OK == 1
+LET merged = LAST
+SYS JSONN "n" FROM merged
+ASSERT LAST_N == 5
+SYS JSONHASALL merged "trace"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JDELTA a b
+ASSERT LAST_N == 3
+SYS DELTAOBJ a b
+ASSERT LAST_N == 3
+SYS CHANGEDOBJ a b
+ASSERT LAST_N == 3
+
+# agent IF no delta
+SYS JSONDELTA c c
+IF LAST_N THEN
+  FAIL "should be empty"
+ELSE
+  PASS "no payload"
+END
+ASSERT OK == 1

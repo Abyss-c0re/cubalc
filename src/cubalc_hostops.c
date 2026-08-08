@@ -5341,6 +5341,57 @@ int cubalc_host_json_changed_keys(const char *a, const char *b, int want_same,
   return 0;
 }
 
+/* Usability: SYS JSONDELTA — changed keys as plate object (values from new/right). */
+int cubalc_host_json_delta_obj(const char *a, const char *b, int prefer_b,
+                               cubalc_host_result *r) {
+  cubalc_host_result ch, gr, setr;
+  const char *p, *line;
+  char cur[CUBALC_HOST_STR_MAX];
+  long count = 0;
+  r_clear(r);
+  r->ok = 1;
+  snprintf(cur, sizeof cur, "%s", "{}");
+  r->str[0] = 0;
+  r->n = 0;
+  memset(&ch, 0, sizeof ch);
+  if (cubalc_host_json_changed_keys(a, b, 0, &ch) != 0 || !ch.str[0]) {
+    snprintf(r->str, sizeof r->str, "%s", "{}");
+    r->n = 0;
+    return 0;
+  }
+  p = ch.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    const char *src_plate;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&gr, 0, sizeof gr);
+    src_plate = prefer_b ? b : a;
+    if (cubalc_host_json_get_raw(src_plate, key, &gr) != 0) {
+      /* key only on the other side */
+      src_plate = prefer_b ? a : b;
+      if (cubalc_host_json_get_raw(src_plate, key, &gr) != 0)
+        continue;
+    }
+    memset(&setr, 0, sizeof setr);
+    if (cubalc_host_json_set(cur, key, gr.str, 1, &setr) != 0)
+      continue;
+    snprintf(cur, sizeof cur, "%s", setr.str);
+    count++;
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  r->n = count;
+  return 0;
+}
+
 /* Usability: SYS JSONTOPKEY/JSONBOTKEY — dominant/min numeric key without TOKV+TOPKEY. */
 int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *r) {
   cubalc_host_result keys, raw;

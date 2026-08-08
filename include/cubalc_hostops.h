@@ -294,6 +294,12 @@ int cubalc_host_json_key_set_op(const char *a, const char *b, int want_inter,
  * Usability: plate sync delta without multi JSONKEYS+JSON peel glue. */
 int cubalc_host_json_changed_keys(const char *a, const char *b, int want_same,
                                   cubalc_host_result *r);
+/* object of changed keys with raw values from prefer_b ? b : a.
+ * Keys only in the other plate still included (value from the side that has it).
+ * r->str = plate · r->n = key count. Soft {}.
+ * Usability: sync payload without CHANGED+EACH+JSONSET glue. */
+int cubalc_host_json_delta_obj(const char *a, const char *b, int prefer_b,
+                               cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

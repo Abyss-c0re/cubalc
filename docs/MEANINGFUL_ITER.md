@@ -574,6 +574,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 544. ~~**`JSONEXACT` / `JSONSCHEMA` · `REQUIRE JSONEXACT`**~~ **done** (exact key-set HASALL+ONLY one-shot · soft LAST_N + fail-fast · miss/extra listed).
 545. ~~**`JSONKEYDIFF` / `KEYSDIFF` · `JSONKEYCOMM` / `KEYSINTER`**~~ **done** (plate key-set diff/intersection bags · no JSONKEYS+DIFF/INTERSECT glue).
 546. ~~**`JSONCHANGED` / `JSONNEQKEYS` · `JSONSTABLE` / `JSONEQKEYS`**~~ **done** (plate keys that differ or stay same by raw value · sync delta without multi peels).
+547. ~~**`JSONDELTA` / `JDELTA` / `DELTAOBJ`**~~ **done** (changed keys as plate object · values from NEW/OLD · sync payload without CHANGED+EACH+JSONSET).
 
 ## Tick protocol
 
