@@ -1,0 +1,91 @@
+# LOGSTAMP / STAMPLOG — ENSUREPARENT + append "ISO msg" line
+# Timestamped agent logs without SYS DATE + CAT + APPENDOUT glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_log_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# nested missing parents
+SYS JOIN root "run/deep/agent.log"
+LET log = LAST
+LOGSTAMP log "tick ok"
+ASSERT OK == 1
+ASSERT LOGSTAMP_CREATED == 1
+ASSERT LAST_N > 0
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "agent.log"
+ASSERT LAST_N == 1
+SYS ENDS LOGSTAMP_PARENT "deep"
+ASSERT LAST_N == 1
+SYS HAS LOGSTAMP_LINE "tick ok"
+ASSERT LAST_N == 1
+SYS HAS LOGSTAMP_ISO "T"
+ASSERT LAST_N == 1
+SYS ENDS LOGSTAMP_ISO "Z"
+ASSERT LAST_N == 1
+SYS STARTS LOGSTAMP_LINE LOGSTAMP_ISO
+ASSERT LAST_N == 1
+SYS ISFILE LAST
+ASSERT LAST_N == 1
+SYS READ log
+SYS HAS LAST "tick ok"
+ASSERT LAST_N == 1
+SYS HAS LAST "T"
+ASSERT LAST_N == 1
+
+# second stamp — CREATED=0, both lines
+LOGSTAMP log "done"
+ASSERT OK == 1
+ASSERT LOGSTAMP_CREATED == 0
+SYS READ log
+SYS HAS LAST "tick ok"
+ASSERT LAST_N == 1
+SYS HAS LAST "done"
+ASSERT LAST_N == 1
+SYS LINES LAST
+ASSERT LAST_N == 2
+
+# STAMPLOG alias + numeric msg
+SYS JOIN root "metrics/count.log"
+LET m = LAST
+STAMPLOG m 99
+ASSERT OK == 1
+ASSERT LOGSTAMP_CREATED == 1
+SYS HAS LOGSTAMP_LINE "99"
+ASSERT LAST_N == 1
+SYS READ LAST
+SYS HAS LAST "99"
+ASSERT LAST_N == 1
+
+# SYS form
+SYS JOIN root "sys/deep/run.log"
+LET sp = LAST
+SYS LOGSTAMP sp "sys-body"
+ASSERT OK == 1
+SYS ENDS LAST "run.log"
+ASSERT LAST_N == 1
+SYS READ sp
+SYS HAS LAST "sys-body"
+ASSERT LAST_N == 1
+
+# empty path soft
+LOGSTAMP "" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS WALK root
+SYS RMALL LAST
+SYS RM root
