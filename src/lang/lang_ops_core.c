@@ -2805,6 +2805,123 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 absdst, abssrc, created);
       bump(vm); return 1;
     }
+    /* SYS TOUCHOUT|MKFILEOUT path — mkdir parent + TOUCH (soft).
+     * Twin of top-level TOUCHOUT. LAST = abs path · LAST_N = 1 if new file. */
+    if (kw(&L->cur,"TOUCHOUT") || kw(&L->cur,"MKFILEOUT") || kw(&L->cur,"ENSURETOUCH") ||
+        kw(&L->cur,"TOUCHPARENT") || kw(&L->cur,"STAMPOUT") || kw(&L->cur,"LEASEOUT") ||
+        kw(&L->cur,"MARKEROUT") || kw(&L->cur,"TOUCHNEST") || kw(&L->cur,"PLATETOUCH")){
+      char path[CUBALC_HOST_STR_MAX], absfile[CUBALC_HOST_STR_MAX];
+      char parent[512], absparent[CUBALC_HOST_STR_MAX];
+      const char *slash;
+      size_t n;
+      int created = 0;
+      cubalc_host_result hr;
+      lex_next(L);
+      path[0] = 0; absfile[0] = 0;
+      parent[0] = 0; absparent[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS TOUCHOUT path");
+        return -1;
+      }
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "TOUCHOUT: empty path");
+        var_set_str(vm, "ERR", "TOUCHOUT: empty path");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TOUCHOUT_N", 0);
+        var_set_num(vm, "TOUCHOUT_CREATED", 0);
+        var_set_num(vm, "TOUCHOUT_NEW", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+        snprintf(absfile, sizeof absfile, "%s", hr.str);
+      else
+        snprintf(absfile, sizeof absfile, "%s", path);
+      {
+        char work[CUBALC_HOST_STR_MAX];
+        snprintf(work, sizeof work, "%s", absfile);
+        n = strlen(work);
+        while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+          work[n - 1] = 0;
+          n--;
+        }
+        slash = cubalc_path_slash(work);
+        if (slash && slash != work) {
+          size_t dn = (size_t)(slash - work);
+          if (dn >= sizeof parent) dn = sizeof parent - 1;
+          memcpy(parent, work, dn);
+          parent[dn] = 0;
+        } else if (slash && slash == work) {
+          snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+        } else {
+          snprintf(parent, sizeof parent, ".");
+        }
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      else
+        snprintf(absparent, sizeof absparent, "%s", parent);
+      created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_mkdir(absparent, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "TOUCHOUT: mkdir parent failed";
+        var_set_str(vm, "LAST", absfile);
+        var_set_str(vm, "TOUCHOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TOUCHOUT_N", 0);
+        var_set_num(vm, "TOUCHOUT_CREATED", 0);
+        var_set_num(vm, "TOUCHOUT_NEW", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      if (hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_touch(absfile, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "TOUCHOUT: touch failed";
+        var_set_str(vm, "LAST", absfile);
+        var_set_str(vm, "TOUCHOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TOUCHOUT_N", 0);
+        var_set_num(vm, "TOUCHOUT_CREATED", (long)created);
+        var_set_num(vm, "TOUCHOUT_NEW", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "TOUCHOUT", absfile);
+      var_set_str(vm, "PATH", absfile);
+      var_set_str(vm, "TOUCHOUT_PARENT", absparent);
+      var_set_str(vm, "DIRNAME", absparent);
+      var_set_str(vm, "PARENT", absparent);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "TOUCHOUT_N", hr.n);
+      var_set_num(vm, "TOUCH_N", hr.n);
+      var_set_num(vm, "TOUCHOUT_NEW", hr.n);
+      var_set_num(vm, "TOUCHOUT_CREATED", (long)created);
+      var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+      var_set_num(vm, "PATH_EXIST", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys touchout → %s new=%ld parent_created=%d\n",
+                absfile, hr.n, created);
+      bump(vm); return 1;
+    }
     /* SYS FSYNC|SYNCFILE|FDATASYNC path — flush file data+metadata to disk.
      * LAST = path; LAST_N = 1 success / 0 soft miss; FSYNC_N mirrors LAST_N.
      * Opens O_RDONLY, fsync(fd), close. Soft miss on empty/open/fsync fail.
@@ -27345,6 +27462,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS COPYOUT", "SYS COPYOUT|CPOUT src dest — mkdir parent + copy · twin of top-level COPYOUT"},
       {"MOVEOUT", "MOVEOUT|MVOUT src dest — ENSUREPARENT dest + RENAME · LAST=abs dest · promote nested plates"},
       {"SYS MOVEOUT", "SYS MOVEOUT|MVOUT src dest — mkdir parent + rename · twin of top-level MOVEOUT"},
+      {"TOUCHOUT", "TOUCHOUT|MKFILEOUT path — ENSUREPARENT + TOUCH · nested lease/marker · TOUCHOUT_NEW"},
+      {"SYS TOUCHOUT", "SYS TOUCHOUT|MKFILEOUT path — mkdir parent + touch · twin of top-level TOUCHOUT"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -31704,6 +31823,125 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# moveout → %s ← %s created=%d\n",
               absdst, abssrc, created);
+    bump(vm); return 1;
+  }
+  /* TOUCHOUT|MKFILEOUT path — ENSUREPARENT + TOUCH one-shot.
+   * LAST = abs path · TOUCHOUT_PARENT · TOUCHOUT_CREATED (parent) · TOUCHOUT_NEW/LAST_N.
+   * Soft empty/mkdir/touch fail → OK=0 sticky LAST_ERR.
+   * Usability: nested lease/marker files without ENSUREPARENT + SYS TOUCH glue. */
+  if (kw(&L->cur,"TOUCHOUT") || kw(&L->cur,"MKFILEOUT") || kw(&L->cur,"ENSURETOUCH") ||
+      kw(&L->cur,"TOUCHPARENT") || kw(&L->cur,"STAMPOUT") || kw(&L->cur,"LEASEOUT") ||
+      kw(&L->cur,"MARKEROUT") || kw(&L->cur,"TOUCHNEST") || kw(&L->cur,"PLATETOUCH")){
+    char path[CUBALC_HOST_STR_MAX], absfile[CUBALC_HOST_STR_MAX];
+    char parent[512], absparent[CUBALC_HOST_STR_MAX];
+    const char *slash;
+    size_t n;
+    int created = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    path[0] = 0; absfile[0] = 0;
+    parent[0] = 0; absparent[0] = 0;
+    if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+      fail_at(vm, L, "TOUCHOUT needs path — TOUCHOUT \"a/b/lease.stamp\"");
+      return -1;
+    }
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "TOUCHOUT: empty path");
+      var_set_str(vm, "ERR", "TOUCHOUT: empty path");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "TOUCHOUT_N", 0);
+      var_set_num(vm, "TOUCHOUT_CREATED", 0);
+      var_set_num(vm, "TOUCHOUT_NEW", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+      snprintf(absfile, sizeof absfile, "%s", hr.str);
+    else
+      snprintf(absfile, sizeof absfile, "%s", path);
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", absfile);
+      n = strlen(work);
+      while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+        work[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else if (slash && slash == work) {
+        snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+      } else {
+        snprintf(parent, sizeof parent, ".");
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "TOUCHOUT: mkdir parent failed";
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "TOUCHOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "TOUCHOUT_N", 0);
+      var_set_num(vm, "TOUCHOUT_CREATED", 0);
+      var_set_num(vm, "TOUCHOUT_NEW", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_touch(absfile, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "TOUCHOUT: touch failed";
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "TOUCHOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "TOUCHOUT_N", 0);
+      var_set_num(vm, "TOUCHOUT_CREATED", (long)created);
+      var_set_num(vm, "TOUCHOUT_NEW", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    var_set_str(vm, "LAST", absfile);
+    var_set_str(vm, "TOUCHOUT", absfile);
+    var_set_str(vm, "PATH", absfile);
+    var_set_str(vm, "TOUCHOUT_PARENT", absparent);
+    var_set_str(vm, "DIRNAME", absparent);
+    var_set_str(vm, "PARENT", absparent);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_num(vm, "TOUCHOUT_N", hr.n);
+    var_set_num(vm, "TOUCH_N", hr.n);
+    var_set_num(vm, "TOUCHOUT_NEW", hr.n);
+    var_set_num(vm, "TOUCHOUT_CREATED", (long)created);
+    var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# touchout → %s new=%ld parent_created=%d\n",
+              absfile, hr.n, created);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]

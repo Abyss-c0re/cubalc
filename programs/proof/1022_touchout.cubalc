@@ -1,0 +1,75 @@
+# TOUCHOUT / MKFILEOUT — ENSUREPARENT + TOUCH one-shot
+# Nested lease/marker files without DIRNAME + MKDIR + TOUCH glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_tou_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# nested missing parents
+SYS JOIN root "run/deep/lease.stamp"
+LET f = LAST
+TOUCHOUT f
+ASSERT OK == 1
+ASSERT TOUCHOUT_CREATED == 1
+ASSERT TOUCHOUT_NEW == 1
+ASSERT LAST_N == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "lease.stamp"
+ASSERT LAST_N == 1
+SYS ENDS TOUCHOUT_PARENT "deep"
+ASSERT LAST_N == 1
+SYS ISFILE LAST
+ASSERT LAST_N == 1
+SYS SIZE LAST
+ASSERT LAST_N == 0
+
+# second touch — parent exists, file refreshed (NEW=0)
+TOUCHOUT f
+ASSERT OK == 1
+ASSERT TOUCHOUT_CREATED == 0
+ASSERT TOUCHOUT_NEW == 0
+ASSERT LAST_N == 0
+SYS ISFILE f
+ASSERT LAST_N == 1
+
+# MKFILEOUT alias
+SYS JOIN root "markers/a/b/ready"
+LET m = LAST
+MKFILEOUT m
+ASSERT OK == 1
+ASSERT TOUCHOUT_CREATED == 1
+ASSERT TOUCHOUT_NEW == 1
+SYS ISFILE LAST
+ASSERT LAST_N == 1
+
+# SYS form
+SYS JOIN root "sys/deep/tick"
+LET sp = LAST
+SYS TOUCHOUT sp
+ASSERT OK == 1
+SYS ENDS LAST "tick"
+ASSERT LAST_N == 1
+SYS ISFILE sp
+ASSERT LAST_N == 1
+
+# empty path soft
+TOUCHOUT ""
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS WALK root
+SYS RMALL LAST
+SYS RM root

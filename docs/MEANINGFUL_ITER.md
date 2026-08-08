@@ -508,6 +508,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 478. ~~**`WRITEOUTATOMIC` / `SAFEWRITEOUT`**~~ **done** (ENSUREPARENT + temp+rename write · multi-agent nested plates).
 479. ~~**`COPYOUT` / `CPOUT`**~~ **done** (ENSUREPARENT dest + COPY · nested plate snapshot without DIRNAME+COPY glue).
 480. ~~**`MOVEOUT` / `MVOUT`**~~ **done** (ENSUREPARENT dest + RENAME · promote temp plates into nested paths without DIRNAME+MV glue).
+481. ~~**`TOUCHOUT` / `MKFILEOUT`**~~ **done** (ENSUREPARENT + TOUCH · nested lease/marker stamps without DIRNAME+TOUCH glue).
 
 ## Tick protocol
 
