@@ -1,57 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 209,
-  "program": "programs/realworld/agent_plate_overlay_board.cubalc",
-  "theme": "JSONFILEMERGE/OVERLAYPLATE multi-key agent status overlay",
-  "version": "1.15.555-usability",
+  "iter": 210,
+  "program": "programs/realworld/agent_plate_boot_flags_board.cubalc",
+  "theme": "JSONFILEDEFAULTS + ENSURE + TOGGLE agent boot and feature flags",
+  "version": "1.15.558-usability",
   "pass": true,
-  "prior_note": "iter 208 BUMP/PEEK/DROP; this iter first realworld JSONFILEMERGE (proof 1104) multi-key overlay",
+  "prior_note": "iter 209 JSONFILEMERGE overlay; this iter first realworld JSONFILEDEFAULTS/ENSURE/TOGGLE (proofs 1106-1108)",
   "tests": [
     {
       "name": "list",
-      "cmd": "list defaults zone/status/role",
+      "cmd": "list defaults",
       "ok": true,
       "note": "list"
     },
     {
-      "name": "seed",
-      "cmd": "SAVEPLATE base schema/role/keep/n/zone",
+      "name": "boot",
+      "cmd": "JSONFILEDEFAULTS retries/role/soft/schema; re-boot no clobber",
       "ok": true,
-      "note": "seed"
+      "note": "DEFAULTS"
     },
     {
-      "name": "apply",
-      "cmd": "JSONFILEMERGE zone+status+n=9 keep role",
+      "name": "ensure",
+      "cmd": "ENSURE phase=boot set; retries ensure 0 keep 3",
       "ok": true,
-      "note": "JSONFILEMERGE"
+      "note": "ENSURE"
     },
     {
-      "name": "ready",
-      "cmd": "OVERLAYPLATE status=ready phase=run",
+      "name": "toggle",
+      "cmd": "debug miss\u21921 then flip\u21920",
       "ok": true,
-      "note": "OVERLAYPLATE"
+      "note": "TOGGLE"
     },
     {
       "name": "reload",
-      "cmd": "LOADPLATE hit peel zone",
+      "cmd": "LOADPLATE hit peel retries/role",
       "ok": true,
       "note": "reload"
     },
     {
       "name": "gate",
-      "cmd": "merge contract + JSONHASALL + ok peel 1",
+      "cmd": "HASALL retries/role/schema",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "MERGE/APPLY/OVERLAY a,b,c,d HASALL",
+      "cmd": "DEFAULTPLATEALL/ENSUREPLATEKEY/FLIP/TOGGLE",
       "ok": true,
       "note": "aliases"
     },
     {
       "name": "probe",
-      "cmd": "keep base; empty {} LAST_N=0; create nested",
+      "cmd": "live 99 survives; ensure no clobber; toggle; mode on\u21920; empty key",
       "ok": true,
       "note": "edges"
     },
@@ -63,7 +63,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_APOL_REQUIRE=1 reload miss \u2192 exit 2",
+      "cmd": "CUBALC_APBF_REQUIRE=1 reload miss \u2192 exit 2",
       "ok": true,
       "note": "hard env"
     },
@@ -1546,6 +1546,38 @@
       "title": "META/REPORT WRITE still omit trailing NL (reconfirm W5/W10)",
       "detail": "cat -A APOL_REPORT ends without $ on last line. Status bag lines intermediate $ only.",
       "repro": "cat -A APOL_REPORT.txt"
+    },
+    {
+      "id": "W185",
+      "severity": "high",
+      "area": "host|num",
+      "title": "SYS NUM parses LAST only; ignores following token as value source",
+      "detail": "SYS NUM val_str does not parse val_str \u2014 it shuttles current LAST. Non-numeric LAST still OK=1 LAST_N=0 (W6 class). Agents that branch IF OK after NUM val_str silently treat any prior LAST; string ensure values like boot became phase:0. Fix: put value in LAST first or pass string through to JSONFILEENSURE.",
+      "repro": "LET v boot; SYS NUM v  # parses LAST not v; OK=1 LAST_N=0"
+    },
+    {
+      "id": "W186",
+      "severity": "med",
+      "area": "host|jsonfileensure",
+      "title": "JSONFILEENSURE LAST_N is set(1)/had(0) not success",
+      "detail": "OK=1 success; LAST_N=1 newly set, 0 key already present (no clobber). Same polarity class as UPDATEPLATE insert/update but inverted meaning from BUMP counters.",
+      "repro": "ENSURE path retries 3 twice \u2192 first LAST_N=1 second 0 keep value"
+    },
+    {
+      "id": "W187",
+      "severity": "med",
+      "area": "host|jsonfiletoggle",
+      "title": "JSONFILETOGGLE LAST_N is new flag value 0|1; miss seeds 1",
+      "detail": "Missing key \u2192 1 (on). Truthy strings (on/true/yes?) flip to 0. LAST_N is not a hit bit \u2014 agents must not treat LAST_N==0 as failure.",
+      "repro": "TOGGLE miss \u2192 LAST_N=1; TOGGLE again \u2192 0; mode on \u2192 TOGGLE \u2192 0"
+    },
+    {
+      "id": "W188",
+      "severity": "low",
+      "area": "host|jsonfiledefaults",
+      "title": "JSONFILEDEFAULTS dual of MERGE: fill-if-missing only",
+      "detail": "LAST_N=keys newly set. Re-boot with same defs \u2192 LAST_N=0 live counters preserved. MERGE overwrites; DEFAULTS never clobbers \u2014 agents must pick form by intent.",
+      "repro": "DEFAULTS retries=3; UPDATE 99; DEFAULTS again \u2192 still 99 LAST_N=0"
     }
   ],
   "workarounds": [
@@ -1606,7 +1638,10 @@
     "EXIT n when require_hit and LAST_N==0 even if OK=1",
     "use LAST_N for applied key count; OK for success",
     "seed SAVEPLATE before apply when base fields required",
-    "prefer JSONFILEMERGE/OVERLAYPLATE for disk; MERGEPLATE for strings"
+    "prefer JSONFILEMERGE/OVERLAYPLATE for disk; MERGEPLATE for strings",
+    "pass string values to JSONFILEENSURE; use (n) paren only for known nums",
+    "read LAST_N immediately; do not use *SET/*HAD knobs under var cap",
+    "DEFAULTS for boot seed; MERGE/UPDATE for intentional overwrite"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1661,7 +1696,10 @@
     "DROPPLATE missing file writes empty plate",
     "JSONFILEMERGE LAST_N = overlay key count \u2260 success",
     "JSONFILEMERGE create-on-miss silent path create",
-    "MERGEPLATE vs JSONFILEMERGE name split (memory vs file)"
+    "MERGEPLATE vs JSONFILEMERGE name split (memory vs file)",
+    "SYS NUM shuttles LAST only \u2014 not a value arg",
+    "ENSURE LAST_N set/had; TOGGLE LAST_N is 0|1 value",
+    "DEFAULTS fill-if-missing dual of MERGE overlay-wins"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1710,8 +1748,10 @@
     "GETFLAG or|fallback and fb|fallback parse errors",
     "cycle/alias/probe failed until LAST_N replaced *HIT knobs",
     "require needed EXIT on OR fallback not only OK==0",
-    "none blocking \u2014 first-shot green after GETFLAG lean pattern from 207/208"
+    "none blocking \u2014 first-shot green after GETFLAG lean pattern from 207/208",
+    "ensure --val=boot stored 0 until dropped SYS NUM val_str false friend",
+    "CLEAR_ERR before OK check would also clear NUM status"
   ],
-  "commit": "97f4a17",
-  "ts": "2026-08-08T18:44:10Z"
+  "commit": "pending",
+  "ts": "2026-08-08T19:09:16Z"
 }

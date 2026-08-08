@@ -1,0 +1,809 @@
+# agent_plate_boot_flags_board.cubalc — JSONFILEDEFAULTS + ENSURE + TOGGLE
+#
+# Real use: agent boot defaults without clobbering live counters, plus
+# feature-flag flip on disk. First realworld of proofs 1106/1107/1108.
+#
+#   SYS JSONFILEDEFAULTS|DEFAULTPLATEALL|ENSUREPLATEALL path defs
+#     LAST=plate · LAST_N=keys newly set · no clobber live fields
+#   SYS JSONFILEENSURE|ENSUREPLATEKEY path key value
+#     LAST_N=1 set | 0 already had · SET/HAD knobs
+#   SYS JSONFILETOGGLE|TOGGLEPLATEKEY|FLIPPLATEKEY path key
+#     LAST_N=new 0|1 · miss→1 · flip 0↔1
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_apbf_$$
+#   ./out/cubalc run programs/realworld/agent_plate_boot_flags_board.cubalc \
+#     boot -- --plate=/tmp/apbf/agent.json
+#   ./out/cubalc run ... ensure -- --plate=... --key=retries --val=3
+#   ./out/cubalc run ... toggle -- --plate=... --key=debug
+#   ./out/cubalc run ... gate -- --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt APBF_REPORT.txt
+# Env: PLATE_PATH KEY_NAME VAL_STR CUBALC_APBF_REQUIRE
+#
+# Edges:
+#   defaults no-clobber; ensure keep live; toggle miss→1; empty key soft;
+#   create-on-miss; LAST_N polarities; 128-var lean LETs
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_plate_boot_flags_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_plate_boot_flags -- boot|ensure|toggle|flag|reload|gate|alias|probe|list -- [--plate=P] [--key=K] [--val=V]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/deep/agent.json"
+LET plate_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+DEFAULT KEY_S = "debug"
+GETFLAG key|k OR ENV KEY_NAME OR KEY_S
+LET key_name = LAST
+CLEAR_ERR
+
+DEFAULT VAL_S = "3"
+GETFLAG val|v OR ENV VAL_STR OR VAL_S
+LET val_str = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_APBF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "APBF_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+# lean LETs under 128-var hard cap (W174/W177)
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET peel_s = ""
+LET defs = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "boot", "ensure", "toggle", "flag", "reload", "gate", "list", "ls", "soft", "clear", "probe", "alias"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "ensure" THEN
+    LET op = "ensure"
+  WHEN "toggle", "flag" THEN
+    LET op = "toggle"
+  WHEN "reload" THEN
+    LET op = "reload"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "alias" THEN
+    LET op = "alias"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src key_name val_str
+  CLEAR_ERR
+END
+
+# boot — multi-key defaults fill (no clobber on re-run)
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JSONOBJ "retries" 3 "role" "worker" "soft" 1 "schema" "cubalc.agent_boot.v1"
+  LET defs = LAST
+  CLEAR_ERR
+  SYS JSONFILEDEFAULTS plate_file defs
+  LET take_n = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "boot soft fail"
+    FAIL "boot soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "boot fail"
+    END
+  ELSE
+    LET out = body
+    SYS JSONN "retries" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSON "role" FROM body
+    SYS EQS LAST "worker"
+    LET has_n = LAST_N
+    CLEAR_ERR
+    # first boot take_n>=1; re-boot take_n=0 (no clobber)
+    LET created = 0
+    IF take_n > 0 THEN
+      LET created = 1
+    END
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot peel"
+      FAIL "boot peel"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "boot:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR created
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":bt"
+  LET row = LAST
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit has_n created p_src note_msg
+  CLEAR_ERR
+END
+
+# ensure — single key seed only if missing
+SYS EQS op "ensure"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # string value always (SYS NUM parses LAST only — not a named arg; W185)
+  SYS JSONFILEENSURE plate_file key_name val_str
+  LET take_n = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "ensure soft fail"
+    FAIL "ensure soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "ensure fail"
+    END
+  ELSE
+    LET out = body
+    # LAST_N 1=set 0=had
+    LET created = take_n
+    SYS PEEKPLATE plate_file key_name OR ""
+    LET peel_hit = LAST_N
+    LET peel_s = LAST
+    CLEAR_ERR
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "ensure ok"
+      LET admit_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "ensure peek"
+      FAIL "ensure peek"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "ensure:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row key_name
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row peel_s
+  LET row = LAST
+  SYS CAT row ":en"
+  LET row = LAST
+  SYS GREPV "ensure:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_s peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# toggle — flip feature flag 0↔1 (miss→1)
+SYS EQS op "toggle"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JSONFILETOGGLE plate_file key_name
+  LET take_n = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "toggle soft fail"
+    FAIL "toggle soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "toggle fail"
+    END
+  ELSE
+    LET out = body
+    SYS PEEKPLATE plate_file key_name OR "x"
+    LET peel_s = LAST
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    # LAST_N from toggle is new value 0|1
+    LET hit = 1
+    LET note_msg = "toggle ok"
+    LET admit_n = take_n
+  END
+  SYS CAT "toggle:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row key_name
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row peel_s
+  LET row = LAST
+  SYS CAT row ":tg"
+  LET row = LAST
+  SYS GREPV "toggle:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_s peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# reload — soft LOADPLATE peel role/retries/debug
+SYS EQS op "reload"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  LET take_n = load_hit
+  LET out = body
+  IF load_hit == 1 THEN
+    SYS JSONN "retries" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSON "role" FROM body
+    LET peel_s = LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "reload hit"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "reload miss"
+    FAIL "reload miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "reload miss"
+    END
+  END
+  SYS CAT "reload:"
+  LET row = LAST
+  SYS STR load_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":rl"
+  LET row = LAST
+  SYS GREPV "reload:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n load_hit peel_hit peel_s p_src note_msg
+  CLEAR_ERR
+END
+
+# gate — boot defaults present + optional debug flag readable
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JSONOBJ "retries" 3 "role" "worker" "schema" "cubalc.agent_boot.v1"
+  LET defs = LAST
+  CLEAR_ERR
+  SYS JSONFILEDEFAULTS plate_file defs
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate miss"
+    FAIL "gate miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate miss"
+    END
+  ELSE
+    SYS JSONHASALL body "retries" "role" "schema"
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    SYS JSONN "retries" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    IF admit_n == 1 THEN
+      IF peel_hit >= 0 THEN
+        LET hit = 1
+        LET note_msg = "gate admit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate retries"
+        FAIL "gate retries"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate need deny"
+      FAIL "gate need deny"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "gate deny"
+      END
+    END
+  END
+  SYS CAT "gate:"
+  LET row = LAST
+  SYS STR admit_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":gt"
+  LET row = LAST
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n admit_n peel_hit load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# alias — DEFAULTPLATEALL / ENSUREPLATEKEY / FLIPPLATEKEY
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JOIN state_dir "sample/alias_boot.json"
+  LET row = LAST
+  SYS RM row
+  CLEAR_ERR
+  SYS JSONOBJ "n" 1 "tag" "a"
+  SYS DEFAULTPLATEALL row LAST
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS ENSUREPLATEKEY row "n" 9
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS FLIPPLATEKEY row "debug"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS TOGGLEPLATEKEY row "debug"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS PEEKPLATE row "n" OR "0"
+  LET peel_s = LAST
+  CLEAR_ERR
+  SYS NUM peel_s
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  # n stayed 1 (ensure no clobber); debug 1 then 0
+  IF take_n == 2 THEN
+    IF has_n == 0 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 0 THEN
+          IF admit_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "alias ok"
+            LET admit_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "alias n"
+            FAIL "alias n"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "alias flip2"
+          FAIL "alias flip2"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "alias flip1"
+        FAIL "alias flip1"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "alias ensure"
+      FAIL "alias ensure"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias defs"
+    FAIL "alias defs"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR has_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":al"
+  LET row = LAST
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n peel_hit load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# soft — empty bag
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — create/no-clobber/toggle cycle/empty key/truthy string
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JOIN state_dir "sample/probe_boot.json"
+  LET row = LAST
+  SYS RM row
+  CLEAR_ERR
+  # defaults create
+  SYS JSONOBJ "retries" 3 "role" "worker"
+  LET defs = LAST
+  SYS JSONFILEDEFAULTS row defs
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # live counter survives
+  SYS UPDATEPLATE row "retries" 99
+  CLEAR_ERR
+  SYS JSONFILEDEFAULTS row defs
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS PEEKPLATE row "retries" OR "0"
+  LET peel_s = LAST
+  CLEAR_ERR
+  SYS NUM peel_s
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # ensure no clobber
+  SYS JSONFILEENSURE row "retries" 0
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # toggle miss→1→0
+  SYS JSONFILETOGGLE row "debug"
+  LET created = LAST_N
+  CLEAR_ERR
+  SYS JSONFILETOGGLE row "debug"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  # truthy "on" → 0
+  SYS UPDATEPLATE row "mode" "on"
+  CLEAR_ERR
+  SYS JSONFILETOGGLE row "mode"
+  LET bag_n = LAST_N
+  CLEAR_ERR
+  # empty key soft
+  SYS JSONFILEENSURE row "" 1
+  LET body = LAST
+  # reuse out as OK capture
+  LET out = ""
+  IF OK == 0 THEN
+    LET out = "0"
+  ELSE
+    LET out = "1"
+  END
+  CLEAR_ERR
+  IF take_n == 2 THEN
+    IF has_n == 0 THEN
+      IF peel_hit == 99 THEN
+        IF load_hit == 0 THEN
+          IF created == 1 THEN
+            IF admit_n == 0 THEN
+              IF bag_n == 0 THEN
+                SYS EQS out "0"
+                IF LAST_N == 1 THEN
+                  LET note_msg = "probe ok"
+                  LET hit = 1
+                  LET admit_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "probe emptykey"
+                  FAIL "probe emptykey"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "probe mode"
+                FAIL "probe mode"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "probe toggle2"
+              FAIL "probe toggle2"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe toggle1"
+            FAIL "probe toggle1"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe ensure"
+          FAIL "probe ensure"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe live"
+        FAIL "probe live"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe reseed"
+      FAIL "probe reseed"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe create"
+    FAIL "probe create"
+    CLEAR_ERR
+  END
+  PRINT_JSON take_n has_n peel_hit load_hit created admit_n bag_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_plate_boot_flags_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "admit"
+LET row = LAST
+SYS STR admit_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "plate"
+LET row = LAST
+SYS PUSH row plate_file
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS CAT "apbf op="
+LET body = LAST
+SYS CAT body op
+LET body = LAST
+SYS CAT body " hit="
+LET body = LAST
+SYS STR hit
+SYS CAT body LAST
+LET body = LAST
+SYS CAT body " miss="
+LET body = LAST
+SYS STR miss
+SYS CAT body LAST
+LET body = LAST
+SYS CAT body " note="
+LET body = LAST
+SYS CAT body note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n created load_hit peel_hit p_src note_msg
+NOTE "agent_plate_boot_flags_board: done"
