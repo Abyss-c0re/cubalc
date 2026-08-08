@@ -26602,7 +26602,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN — fail-fast gates"},
       {"REQUIRE ONEOF", "REQUIRE ONEOF|ONEOFI subject a [,|OR||] b — fail if value not in allowed set · USAGE tip"},
       {"REQUIRE BETWEEN", "REQUIRE BETWEEN|INRANGE x lo [TO] hi — fail if x not in inclusive range · GETFLAGN ports"},
       {"ONEOF", "ONEOF|INLIST subject a [,|OR||] b — soft 0|1 membership · ONEOFI icase · MATCH_ARM hit"},
@@ -26614,12 +26614,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"REQUIRE FLAG", "REQUIRE FLAG|OPT name[,|alt] — fail if none of aliases · FLAG_HIT_NAME · LAST=value"},
+      {"REQUIRE FLAGPATH", "REQUIRE FLAGPATH|FLAGFILE|FLAGDIR name[,|alt] [OR ENV n]* [OR path] — peel+ABSPATH · exist/kind gate"},
       {"REQUIRE RESTARGS", "REQUIRE RESTARGS|POS [min] — fail if non-flag count < min · LAST=bag"},
       {"HASARG", "HASARG n|name — soft 0|1 if program arg present (REQUIRE ARG twin)"},
       {"HASARGC", "HASARGC [min] — soft 0|1 if ARGC >= min (default 1)"},
       {"HASFLAG", "HASFLAG name[,|alt] — soft 0|1 if any alias --name/-name · FLAG_HIT_NAME"},
       {"GETFLAG", "GETFLAG name[,|alt] [OR ENV n]* [OR fb] — string peel · CLI>ENV>default · GETFLAG_SRC"},
-      {"GETFLAGPATH", "GETFLAGPATH|FLAGPATH name[,|alt] [OR ENV n]* [OR path] — path peel + ABSPATH · EXIST"},
+      {"GETFLAGPATH", "GETFLAGPATH|FLAGPATH name[,|alt] [OR ENV n]* [OR path] — path peel + ABSPATH · EXIST · soft twin of REQUIRE FLAGPATH"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -28227,6 +28228,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * REQUIRE LIB|MODULE name — fail-fast if INCLUDE-style path not found.
    * REQUIRE ENV|VAR name — fail-fast if host env missing or empty.
    * REQUIRE ARG n|name / ARGC [min] — fail-fast program CLI args.
+   * REQUIRE FLAGPATH|FLAGFILE|FLAGDIR — peel path flag + ABSPATH + exist/kind (GETFLAGPATH twin).
    * REQUIRE PATH|DIR|REG path — fail-fast if host path missing / wrong kind.
    * REQUIRE BIN|CMD|EXE name — fail-fast if host executable not on PATH.
    * REQUIRE FN|CLASS|METHOD — fail-fast language-plane after INCLUDE (HASFN soft twin).
@@ -28665,6 +28667,187 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       if (vm->trace)
         fprintf(vm->trace, "# require flag %s hit=%s ok → %s\n", name, hitn, val);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
+    /* REQUIRE FLAGPATH|PATHFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT path]
+     * Peel path like GETFLAGPATH, ABSPATH, fail if empty or host path missing.
+     * REQUIRE FLAGFILE|REQFLAGFILE — must be regular file.
+     * REQUIRE FLAGDIR|REQFLAGDIR — must be directory.
+     * On success: LAST = absolute path · GETFLAGPATH_SRC · FLAG_HIT_NAME.
+     * Usability: --conf path without GETFLAGPATH + REQUIRE PATH|REG|DIR glue. */
+    if (kw(&L->cur,"FLAGPATH") || kw(&L->cur,"PATHFLAG") || kw(&L->cur,"REQPATHFLAG") ||
+        kw(&L->cur,"REQUIREPATHFLAG") || kw(&L->cur,"FLAG_PATH") ||
+        kw(&L->cur,"FLAGFILE") || kw(&L->cur,"REQFLAGFILE") || kw(&L->cur,"PATHFLAGFILE") ||
+        kw(&L->cur,"FLAGREG") || kw(&L->cur,"REQFLAGREG") ||
+        kw(&L->cur,"FLAGDIR") || kw(&L->cur,"REQFLAGDIR") || kw(&L->cur,"PATHFLAGDIR") ||
+        kw(&L->cur,"FLAGFOLDER") || kw(&L->cur,"REQFLAGFOLDER")){
+      char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX], fb[512];
+      char env_used[96], src_tag[16], absbuf[CUBALC_HOST_STR_MAX];
+      int hit, have_fb = 0, nac, from_env = 0;
+      int want_file = 0, want_dir = 0;
+      const char *kind = "FLAGPATH";
+      cubalc_host_result hr;
+      if (kw(&L->cur,"FLAGFILE") || kw(&L->cur,"REQFLAGFILE") ||
+          kw(&L->cur,"PATHFLAGFILE") || kw(&L->cur,"FLAGREG") ||
+          kw(&L->cur,"REQFLAGREG")){
+        want_file = 1;
+        kind = "FLAGFILE";
+      } else if (kw(&L->cur,"FLAGDIR") || kw(&L->cur,"REQFLAGDIR") ||
+                 kw(&L->cur,"PATHFLAGDIR") || kw(&L->cur,"FLAGFOLDER") ||
+                 kw(&L->cur,"REQFLAGFOLDER")){
+        want_dir = 1;
+        kind = "FLAGDIR";
+      }
+      lex_next(L);
+      name[0] = 0;
+      aliases[0] = 0;
+      hitnm[0] = 0;
+      val[0] = 0;
+      fb[0] = 0;
+      env_used[0] = 0;
+      absbuf[0] = 0;
+      snprintf(src_tag, sizeof src_tag, "%s", "none");
+      nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+      if (nac <= 0 || !name[0]) {
+        fail_at(vm, L, "REQUIRE FLAGPATH needs name — REQUIRE FLAGPATH conf|c OR ENV CONFIG OR \"cfg.json\"");
+        return -1;
+      }
+      while (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+             kw(&L->cur,"FALLBACK")){
+        lex_next(L);
+        if (kw(&L->cur,"ENV") || kw(&L->cur,"FROMENV") || kw(&L->cur,"ENVOR") ||
+            kw(&L->cur,"GETENV") || kw(&L->cur,"ENV_GET")){
+          char en[96];
+          const char *ev;
+          lex_next(L);
+          en[0] = 0;
+          while (L->cur.kind == TK_MINUS) lex_next(L);
+          if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+            snprintf(en, sizeof en, "%s", L->cur.text);
+            lex_next(L);
+          } else {
+            fail_at(vm, L, "REQUIRE FLAGPATH OR ENV NAME");
+            return -1;
+          }
+          if (!have_fb && en[0]) {
+            ev = getenv(en);
+            if (ev && ev[0]) {
+              snprintf(fb, sizeof fb, "%s", ev);
+              have_fb = 1;
+              from_env = 1;
+              snprintf(env_used, sizeof env_used, "%s", en);
+            }
+          }
+          continue;
+        }
+        {
+          char lit[512];
+          lit[0] = 0;
+          if (resolve_str_arg(vm, L, lit, sizeof lit) != 0) {
+            fail_at(vm, L, "REQUIRE FLAGPATH name OR \"fallback\"");
+            return -1;
+          }
+          if (!have_fb) {
+            snprintf(fb, sizeof fb, "%s", lit);
+            have_fb = 1;
+            from_env = 0;
+          }
+        }
+        break;
+      }
+      hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
+      if (!hit) {
+        if (have_fb)
+          snprintf(val, sizeof val, "%s", fb);
+        else
+          val[0] = 0;
+      }
+      if (hit)
+        snprintf(src_tag, sizeof src_tag, "%s", "cli");
+      else if (have_fb && from_env)
+        snprintf(src_tag, sizeof src_tag, "%s", "env");
+      else if (have_fb)
+        snprintf(src_tag, sizeof src_tag, "%s", "default");
+      else
+        snprintf(src_tag, sizeof src_tag, "%s", "none");
+      if (!val[0]) {
+        char msg[240];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE %s '%s' missing line %d — pass --%s path or OR ENV/default (GETFLAGPATH soft)",
+                 kind, name, aln, name);
+        cubalc_append_usage_tip(vm, msg, sizeof msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(val, &hr) == 0 && hr.str[0])
+        snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+      else
+        snprintf(absbuf, sizeof absbuf, "%s", val);
+      if (want_file || want_dir) {
+        memset(&hr, 0, sizeof hr);
+        if (cubalc_host_path_kind(absbuf, &hr) != 0 ||
+            (want_dir && hr.code != 2) ||
+            (want_file && hr.code != 1)) {
+          char msg[240];
+          const char *why = (!hr.ok && hr.err[0]) ? hr.err
+              : (want_dir ? "not a directory" : "not a regular file");
+          snprintf(msg, sizeof msg,
+                   "REQUIRE %s '%s' failed line %d — %s (%s)",
+                   kind, absbuf, aln, why, name);
+          cubalc_append_usage_tip(vm, msg, sizeof msg);
+          if (vm->res) vm->res->asserts_fail++;
+          fail(vm, msg);
+          return -1;
+        }
+      } else {
+        if (!cubalc_host_exists(absbuf) && !cubalc_host_exists(val)) {
+          char msg[240];
+          snprintf(msg, sizeof msg,
+                   "REQUIRE FLAGPATH '%s' missing line %d — create path or fix --%s (GETFLAGPATH soft)",
+                   absbuf, aln, name);
+          cubalc_append_usage_tip(vm, msg, sizeof msg);
+          if (vm->res) vm->res->asserts_fail++;
+          fail(vm, msg);
+          return -1;
+        }
+      }
+      var_set_str(vm, "LAST", absbuf);
+      var_set_str(vm, "FLAG", absbuf);
+      var_set_str(vm, "FLAGPATH", absbuf);
+      var_set_str(vm, "PATH", absbuf);
+      var_set_str(vm, "REQUIRE_FLAGPATH", absbuf);
+      var_set_str(vm, "REQUIRE_FLAG", name);
+      var_set_str(vm, "GETFLAGPATH", name);
+      var_set_str(vm, "GETFLAGPATH_RAW", val);
+      var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
+      var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+      var_set_str(vm, "GETFLAGPATH_SRC", src_tag);
+      var_set_str(vm, "FLAG_SRC", src_tag);
+      var_set_str(vm, "FLAG_ENV", (!hit && from_env) ? env_used : "");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absbuf);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "GETFLAGPATH_N", (long)strlen(absbuf));
+      var_set_num(vm, "GETFLAGPATH_HIT", hit ? 1L : 0L);
+      var_set_num(vm, "GETFLAGPATH_EXIST", 1L);
+      var_set_num(vm, "PATH_EXIST", 1L);
+      var_set_num(vm, "OK", 1);
+      if (want_dir) {
+        var_set_num(vm, "ISDIR", 1);
+        var_set_str(vm, "REQUIRE_FLAGDIR", absbuf);
+        var_set_str(vm, "REQUIRE_DIR", absbuf);
+      }
+      if (want_file) {
+        var_set_num(vm, "ISFILE", 1);
+        var_set_str(vm, "REQUIRE_FLAGFILE", absbuf);
+        var_set_str(vm, "REQUIRE_REG", absbuf);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# require %s %s hit=%s src=%s → %s\n",
+                kind, name, hitnm, src_tag, absbuf);
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }

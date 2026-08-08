@@ -496,6 +496,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 466. ~~**`FLOORN` / `CAPN`**~~ **done** (one-sided floor/cap → LAST_N · GETFLAGN bounds without full CLAMPN; not stack MINN/MAXN).
 467. ~~**`DIVCEILN` / `PAGESN`**~~ **done** (ceil(a/b) → LAST_N · page/chunk counts after GETFLAGN without shell).
 468. ~~**`GETFLAGPATH` / `FLAGPATH`**~~ **done** (path flag peel + ABSPATH · EXIST · OR ENV · no GETFLAG+REALPATH glue).
+469. ~~**`REQUIRE FLAGPATH` / `FLAGFILE` / `FLAGDIR`**~~ **done** (fail-fast path flag · ABSPATH + exist/kind · twin of GETFLAGPATH).
 
 ## Tick protocol
 
