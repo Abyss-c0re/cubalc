@@ -503,6 +503,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 473. ~~**`ENSUREPARENT` / `MKPARENT`**~~ **done** (dirname + mkdir -p · file WRITE prep after GETFLAGPATH · no DIRNAME+MKDIR glue).
 474. ~~**`GETFLAGOUT` / `FLAGOUT`**~~ **done** (path flag peel + ABSPATH + mkdir parent · LAST=file ready for WRITE).
 475. ~~**`RESTPOSPATHS` / `TAILPATHS`**~~ **done** (files after subcommand → abs path bag · EXIST_N · no RESTPOS+EACH+REALPATH).
+476. ~~**`WRITEOUT` / `PUTOUT`**~~ **done** (ENSUREPARENT + WRITE one-shot · LAST=abs file · plate dumps without DIRNAME glue).
 
 ## Tick protocol
 

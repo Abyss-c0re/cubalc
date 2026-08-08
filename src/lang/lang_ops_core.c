@@ -2033,6 +2033,120 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS WRITEOUT|PUTOUT|SAVEOUT path data — mkdir parent + write (soft).
+     * Twin of top-level WRITEOUT. LAST = abs file path · LAST_N = bytes. */
+    if (kw(&L->cur,"WRITEOUT") || kw(&L->cur,"PUTOUT") || kw(&L->cur,"SAVEOUT") ||
+        kw(&L->cur,"ENSUREWRITE") || kw(&L->cur,"WRITEPARENT") || kw(&L->cur,"PLATEWRITE") ||
+        kw(&L->cur,"SAVEPATH") || kw(&L->cur,"PUTFILE") || kw(&L->cur,"DUMPOUT")){
+      char path[CUBALC_HOST_STR_MAX], data[CUBALC_HOST_STR_MAX];
+      char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+      const char *slash;
+      size_t n;
+      int created = 0;
+      cubalc_host_result hr;
+      lex_next(L);
+      path[0] = 0;
+      data[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS WRITEOUT path data");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, data, sizeof data) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long nv = parse_expr(vm, L);
+          snprintf(data, sizeof data, "%ld", nv);
+        } else
+          data[0] = 0;
+      }
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "WRITEOUT: empty path");
+        var_set_str(vm, "ERR", "WRITEOUT: empty path");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WRITEOUT_N", 0);
+        var_set_num(vm, "WRITEOUT_CREATED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+        snprintf(absfile, sizeof absfile, "%s", hr.str);
+      else
+        snprintf(absfile, sizeof absfile, "%s", path);
+      {
+        char work[CUBALC_HOST_STR_MAX];
+        snprintf(work, sizeof work, "%s", absfile);
+        n = strlen(work);
+        while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+          work[n - 1] = 0;
+          n--;
+        }
+        slash = cubalc_path_slash(work);
+        if (slash && slash != work) {
+          size_t dn = (size_t)(slash - work);
+          if (dn >= sizeof parent) dn = sizeof parent - 1;
+          memcpy(parent, work, dn);
+          parent[dn] = 0;
+        } else if (slash && slash == work) {
+          snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+        } else {
+          snprintf(parent, sizeof parent, ".");
+        }
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      else
+        snprintf(absparent, sizeof absparent, "%s", parent);
+      created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_mkdir(absparent, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "WRITEOUT: mkdir parent failed";
+        var_set_str(vm, "LAST", absfile);
+        var_set_str(vm, "WRITEOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WRITEOUT_N", 0);
+        var_set_num(vm, "WRITEOUT_CREATED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      if (hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_write(absfile, data, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "WRITEOUT: write failed";
+        var_set_str(vm, "LAST", absfile);
+        var_set_str(vm, "WRITEOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WRITEOUT_N", 0);
+        var_set_num(vm, "WRITEOUT_CREATED", (long)created);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "WRITEOUT", absfile);
+      var_set_str(vm, "PATH", absfile);
+      var_set_str(vm, "WRITEOUT_PARENT", absparent);
+      var_set_str(vm, "DIRNAME", absparent);
+      var_set_str(vm, "PARENT", absparent);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "WRITEOUT_N", hr.n);
+      var_set_num(vm, "WRITEOUT_CREATED", (long)created);
+      var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+      var_set_num(vm, "PATH_EXIST", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys writeout → %s bytes=%ld created=%d\n",
+                absfile, hr.n, created);
+      bump(vm); return 1;
+    }
     /* SYS TEE|WRITETEE|SAVEKEEP path [data]
      * — write data to path but leave content in LAST (WRITE leaves path-only).
      * Zero data arg → prior LAST. LAST = data; LAST_N = bytes; TEE_PATH = path.
@@ -26707,6 +26821,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"ENSUREPARENT", "ENSUREPARENT|MKPARENT path|LAST — dirname + mkdir -p · WRITE parent without DIRNAME+MKDIR"},
       {"SYS ENSUREPARENT", "SYS ENSUREPARENT|MKPARENT path — dirname + mkdir -p · twin of top-level ENSUREPARENT"},
       {"GETFLAGOUT", "GETFLAGOUT|FLAGOUT name[,|alt] [OR ENV n]* [OR path] — peel+ABSPATH+mkdir parent · LAST=file path"},
+      {"WRITEOUT", "WRITEOUT|PUTOUT path data — ENSUREPARENT + WRITE · LAST=abs file · bytes in LAST_N"},
+      {"SYS WRITEOUT", "SYS WRITEOUT|PUTOUT path data — mkdir parent + write · twin of top-level WRITEOUT"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -30399,6 +30515,131 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# getflagout %s hit=%s created=%d exist=%d → %s parent=%s src=%s\n",
               name, hitnm, created, exist, absfile, absparent, src_tag);
+    bump(vm); return 1;
+  }
+  /* WRITEOUT|PUTOUT|SAVEOUT path data — ENSUREPARENT + WRITE one-shot.
+   * LAST = absolute file path · WRITEOUT_PARENT · WRITEOUT_CREATED · LAST_N=bytes.
+   * Soft empty path / mkdir / write fail → OK=0 sticky LAST_ERR.
+   * Usability: plate file write without ENSUREPARENT + SYS WRITE glue. */
+  if (kw(&L->cur,"WRITEOUT") || kw(&L->cur,"PUTOUT") || kw(&L->cur,"SAVEOUT") ||
+      kw(&L->cur,"ENSUREWRITE") || kw(&L->cur,"WRITEPARENT") || kw(&L->cur,"PLATEWRITE") ||
+      kw(&L->cur,"SAVEPATH") || kw(&L->cur,"PUTFILE") || kw(&L->cur,"DUMPOUT")){
+    char path[CUBALC_HOST_STR_MAX], data[CUBALC_HOST_STR_MAX];
+    char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+    const char *slash;
+    size_t n;
+    int created = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    path[0] = 0;
+    data[0] = 0;
+    absfile[0] = 0;
+    parent[0] = 0;
+    absparent[0] = 0;
+    if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+      fail_at(vm, L, "WRITEOUT needs path — WRITEOUT \"a/b/c.json\" \"data\"|var");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, data, sizeof data) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(data, sizeof data, "%ld", nv);
+      } else {
+        data[0] = 0; /* empty body allowed */
+      }
+    }
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "WRITEOUT: empty path");
+      var_set_str(vm, "ERR", "WRITEOUT: empty path");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "WRITEOUT_N", 0);
+      var_set_num(vm, "WRITEOUT_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+      snprintf(absfile, sizeof absfile, "%s", hr.str);
+    else
+      snprintf(absfile, sizeof absfile, "%s", path);
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", absfile);
+      n = strlen(work);
+      while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+        work[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else if (slash && slash == work) {
+        snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+      } else {
+        snprintf(parent, sizeof parent, ".");
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "WRITEOUT: mkdir parent failed";
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "WRITEOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "WRITEOUT_N", 0);
+      var_set_num(vm, "WRITEOUT_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_write(absfile, data, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "WRITEOUT: write failed";
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "WRITEOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "WRITEOUT_N", 0);
+      var_set_num(vm, "WRITEOUT_CREATED", (long)created);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    var_set_str(vm, "LAST", absfile);
+    var_set_str(vm, "WRITEOUT", absfile);
+    var_set_str(vm, "PATH", absfile);
+    var_set_str(vm, "WRITEOUT_PARENT", absparent);
+    var_set_str(vm, "DIRNAME", absparent);
+    var_set_str(vm, "PARENT", absparent);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_num(vm, "WRITEOUT_N", hr.n);
+    var_set_num(vm, "WRITEOUT_CREATED", (long)created);
+    var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# writeout → %s bytes=%ld created=%d\n",
+              absfile, hr.n, created);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]

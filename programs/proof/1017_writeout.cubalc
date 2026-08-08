@@ -1,0 +1,91 @@
+# WRITEOUT / PUTOUT — ENSUREPARENT + WRITE one-shot
+# LAST = abs file path; WRITEOUT_PARENT = parent; LAST_N = bytes.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_wo_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# nested missing parents
+SYS JOIN root "a/b/c/plate.json"
+LET f = LAST
+WRITEOUT f "{\"ok\":1}"
+ASSERT OK == 1
+ASSERT WRITEOUT_CREATED == 1
+ASSERT LAST_N > 0
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "plate.json"
+ASSERT LAST_N == 1
+SYS ENDS WRITEOUT_PARENT "c"
+ASSERT LAST_N == 1
+SYS ISFILE LAST
+ASSERT LAST_N == 1
+SYS READ LAST
+SYS HAS LAST "ok"
+ASSERT LAST_N == 1
+
+# second write same path — CREATED=0, overwrite
+WRITEOUT f "{\"v\":2}"
+ASSERT OK == 1
+ASSERT WRITEOUT_CREATED == 0
+SYS READ f
+SYS HAS LAST "v"
+ASSERT LAST_N == 1
+
+# PUTOUT alias + numeric body
+SYS JOIN root "x/y/n.txt"
+LET npath = LAST
+PUTOUT npath 42
+ASSERT OK == 1
+ASSERT WRITEOUT_CREATED == 1
+SYS READ LAST
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+# SYS form
+SYS JOIN root "sys/deep/out.txt"
+LET sp = LAST
+SYS WRITEOUT sp "sys-body"
+ASSERT OK == 1
+SYS ENDS LAST "out.txt"
+ASSERT LAST_N == 1
+SYS READ sp
+SYS EQS LAST "sys-body"
+ASSERT LAST_N == 1
+
+# empty path soft
+WRITEOUT "" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# with GETFLAGOUT — peel then write body without LET/ENSUREPARENT
+SYS ENV SET CUBALC_ARGC "0"
+SYS JOIN root "cli/deep/report.json"
+LET outp = LAST
+GETFLAGOUT out OR outp
+LET dest = LAST
+WRITEOUT dest "{\"src\":\"cli\"}"
+ASSERT OK == 1
+SYS ISFILE dest
+ASSERT LAST_N == 1
+SYS READ dest
+SYS HAS LAST "cli"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS WALK root
+SYS RMALL LAST
+SYS RM root
+
+PRINT "writeout ok"
