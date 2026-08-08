@@ -273,6 +273,11 @@ int cubalc_host_json_has_keys(const char *json, const char *keys_nl, int want_al
  * Usability: after JSONHASALL fail, report WHICH keys without multi JSONHAS. */
 int cubalc_host_json_filter_req_keys(const char *json, const char *keys_nl,
                                      int want_present, cubalc_host_result *r);
+/* filter plate keys vs allow-list: want_extra=1 → not in allowed, 0 → in allowed.
+ * r->str = newline bag · r->n = count. Soft always OK. Non-object → empty.
+ * Usability: schema reject unknown fields without JSONKEYS+EACH+HASLINE glue. */
+int cubalc_host_json_filter_plate_keys(const char *json, const char *allowed_nl,
+                                       int want_extra, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

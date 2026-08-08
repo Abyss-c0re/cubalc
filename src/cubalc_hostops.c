@@ -5039,6 +5039,71 @@ int cubalc_host_json_filter_req_keys(const char *json, const char *keys_nl,
   return 0;
 }
 
+/* Usability: SYS JSONEXTRA/JSONKNOWN — plate keys outside/inside allow-list. */
+int cubalc_host_json_filter_plate_keys(const char *json, const char *allowed_nl,
+                                       int want_extra, cubalc_host_result *r) {
+  cubalc_host_result keys;
+  const char *p, *line;
+  size_t olen = 0;
+  long count = 0;
+  r_clear(r);
+  r->ok = 1;
+  r->str[0] = 0;
+  r->n = 0;
+  memset(&keys, 0, sizeof keys);
+  if (cubalc_host_json_keys(json, &keys) != 0) {
+    /* non-object: no plate keys */
+    return 0;
+  }
+  p = keys.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    int in_allowed = 0;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    /* exact field membership in allow-list bag */
+    if (allowed_nl && allowed_nl[0]) {
+      const char *q = allowed_nl;
+      size_t klen = strlen(key);
+      while (*q) {
+        const char *start;
+        size_t flen;
+        while (*q == '\n' || *q == '\r') q++;
+        if (!*q) break;
+        start = q;
+        while (*q && *q != '\n' && *q != '\r') q++;
+        flen = (size_t)(q - start);
+        if (flen == klen && (klen == 0 || memcmp(start, key, klen) == 0)) {
+          in_allowed = 1;
+          break;
+        }
+      }
+    }
+    if ((want_extra && !in_allowed) || (!want_extra && in_allowed)) {
+      size_t al = strlen(key);
+      if (olen > 0) {
+        if (olen + 1 >= sizeof r->str) break;
+        r->str[olen++] = '\n';
+        r->str[olen] = 0;
+      }
+      if (olen + al + 1 >= sizeof r->str) break;
+      memcpy(r->str + olen, key, al + 1);
+      olen += al;
+      count++;
+    }
+  }
+  r->n = count;
+  return 0;
+}
+
 /* Usability: SYS JSONTOPKEY/JSONBOTKEY — dominant/min numeric key without TOKV+TOPKEY. */
 int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *r) {
   cubalc_host_result keys, raw;

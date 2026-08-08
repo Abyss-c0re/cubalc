@@ -1,0 +1,113 @@
+# JSONEXTRA / JSONUNKNOWN · JSONKNOWN / JSONALLOWED — allow-list key bags
+# Schema: reject unknown plate fields without JSONKEYS+EACH+HASLINE.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" "" "debug" 1 "trace" 0
+LET plate = LAST
+
+# no extras vs full allow
+SYS JSONEXTRA plate "ok" "n" "err" "debug" "trace"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT JSONEXTRA_N == 0
+
+# two unknown
+SYS JSONEXTRA plate "ok" "n" "err"
+ASSERT LAST_N == 2
+ASSERT JSONEXTRA_N == 2
+SYS HASLINE LAST "debug"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "trace"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 0
+
+# known dual
+SYS JSONKNOWN plate "ok" "missing" "n" "debug"
+ASSERT LAST_N == 3
+ASSERT JSONKNOWN_N == 3
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "debug"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "missing"
+ASSERT LAST_N == 0
+
+# bare allow keys on LAST plate
+SYS JSONOBJ "a" 1 "b" 2 "c" 3
+SYS JSONEXTRA "a" "c"
+ASSERT LAST_N == 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+# OF bag form
+SYS JSONOBJ "x" 1 "y" 2 "z" 3 "w" 4
+LET p2 = LAST
+SYS JOIN "" "x\ny\nz"
+LET allow = LAST
+SYS JSONEXTRA p2 OF allow
+ASSERT LAST_N == 1
+SYS EQS LAST "w"
+ASSERT LAST_N == 1
+SYS JSONKNOWN p2 OF allow
+ASSERT LAST_N == 3
+SYS HASLINE LAST "x"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "w"
+ASSERT LAST_N == 0
+
+# empty allow-list → all plate keys are extra
+SYS JSONOBJ "p" 1 "q" 2
+LET p3 = LAST
+SYS JSONEXTRA p3
+ASSERT LAST_N == 2
+SYS HASLINE LAST "p"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "q"
+ASSERT LAST_N == 1
+SYS JSONKNOWN p3
+ASSERT LAST_N == 0
+
+# empty plate
+SYS JSONOBJ
+LET empty = LAST
+SYS JSONEXTRA empty "ok" "n"
+ASSERT LAST_N == 0
+SYS JSONKNOWN empty "ok"
+ASSERT LAST_N == 0
+
+# aliases
+SYS JSONUNKNOWN plate "ok" "n" "err"
+ASSERT LAST_N == 2
+SYS JEXTRA plate "ok" "n" "err" "debug" "trace"
+ASSERT LAST_N == 0
+SYS JSONALLOWED plate "ok" "zzz"
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+SYS JKNOWN plate "ok" "n"
+ASSERT LAST_N == 2
+
+# agent contract: MISS + EXTRA
+SYS JSONOBJ "ok" true "n" 1 "noise" 9
+LET agent = LAST
+SYS JSONMISS agent "ok" "n" "version"
+ASSERT LAST_N == 1
+SYS EQS LAST "version"
+ASSERT LAST_N == 1
+SYS JSONEXTRA agent "ok" "n" "version"
+ASSERT LAST_N == 1
+SYS EQS LAST "noise"
+ASSERT LAST_N == 1
+
+# IF LAST_N for strict schema
+SYS JSONEXTRA plate "ok" "n" "err" "debug" "trace"
+IF LAST_N THEN
+  FAIL "should be clean"
+ELSE
+  PASS "schema clean"
+END
+ASSERT OK == 1
