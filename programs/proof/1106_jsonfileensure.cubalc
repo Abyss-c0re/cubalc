@@ -1,0 +1,83 @@
+# JSONFILEENSURE / ENSUREPLATEKEY — set plate-file key only if missing
+# Usability: seed agent defaults on disk without clobbering live counters.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_jsonfileensure"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS JOIN dir "nested/fresh.json"
+LET deep = LAST
+
+# clean
+SYS RM path
+
+# --- insert on miss ---
+SYS JSONFILEENSURE path "retries" 3
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONFILEENSURE_SET == 1
+ASSERT JSONFILEENSURE_HAD == 0
+ASSERT JSONFILEENSURE_CREATED == 1
+LET plate = LAST
+SYS JSONN "retries" FROM plate
+ASSERT LAST_N == 3
+
+# --- keep live value (no clobber) ---
+SYS UPDATEPLATE path "retries" 99
+SYS JSONFILEENSURE path "retries" 0
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT JSONFILEENSURE_SET == 0
+ASSERT JSONFILEENSURE_HAD == 1
+SYS PEEKPLATE path "retries"
+SYS EQS LAST "99"
+ASSERT LAST_N == 1
+
+# --- insert second key without touching retries ---
+SYS JSONFILEENSURE path "role" "worker"
+ASSERT LAST_N == 1
+ASSERT JSONFILEENSURE_SET == 1
+SYS PEEKPLATE path "retries"
+SYS EQS LAST "99"
+ASSERT LAST_N == 1
+SYS PEEKPLATE path "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# --- aliases ---
+SYS JSONFILEENSURE path "phase" "boot"
+SYS ENSUREPLATEKEY path "phase" "run"
+ASSERT LAST_N == 0
+SYS PEEKPLATE path "phase"
+SYS EQS LAST "boot"
+ASSERT LAST_N == 1
+SYS DEFAULTPLATEKEY path "tag" "a"
+ASSERT LAST_N == 1
+SYS SEEDPLATEKEY path "tag" "b"
+ASSERT LAST_N == 0
+SYS PEEKPLATE path "tag"
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# --- nested create ---
+SYS RM deep
+SYS JSONFILEENSURE deep "n" 1
+ASSERT OK == 1
+ASSERT JSONFILEENSURE_CREATED == 1
+SYS LOADPLATE deep
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 1
+
+# --- empty key soft fail ---
+LET empty = ""
+SYS JSONFILEENSURE path empty 1
+ASSERT OK == 0
+SYS HAS LAST_ERR "empty key"
+ASSERT LAST_N == 1
+
+PRINT "jsonfileensure ok"
