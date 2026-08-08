@@ -492,6 +492,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 462. ~~**`GETFLAGALL` / `MULTIFLAG`**~~ **done** (all --name occurrences → newline bag · LAST_N=count · tags without EACH ARGS).
 463. ~~**`GETFLAGN OR ENV`**~~ **done** (`OR ENV NAME` chains · CLI > env > literal · GETFLAGN_SRC/FLAG_ENV · no shell `${VAR:-n}`).
 464. ~~**flag family OR ENV**~~ **done** (GETFLAG/GETFLAGMS/BOOLFLAG OR ENV · same CLI>env>default · *_SRC/FLAG_ENV).
+465. ~~**`GETFLAGCSV` / `FLAGCSV`**~~ **done** (multi --name + comma-split → bag · OR ENV · tag lists without SPLIT glue).
 
 ## Tick protocol
 

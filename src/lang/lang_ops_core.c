@@ -1267,6 +1267,53 @@ static int cubalc_scan_cli_flag_all(const char *names_bag, char *out, size_t out
   return count;
 }
 
+/* Expand bag fields by comma (CSV): "a,b\nc" → "a\nb\nc". Trim spaces around pieces.
+ * Returns field count written to out. Empty pieces dropped.
+ * Usability: GETFLAGCSV --tags=a,b,c without SYS SPLIT glue. */
+static int cubalc_csv_expand_bag(const char *in, char *out, size_t outn) {
+  const char *p;
+  size_t olen = 0;
+  int count = 0;
+  if (out && outn) out[0] = 0;
+  if (!in || !in[0]) return 0;
+  p = in;
+  while (*p) {
+    const char *line_end = p;
+    const char *q;
+    while (*line_end && *line_end != '\n') line_end++;
+    q = p;
+    while (q < line_end) {
+      const char *cstart, *cend;
+      size_t len;
+      /* skip spaces before piece */
+      while (q < line_end && (*q == ' ' || *q == '\t')) q++;
+      if (q >= line_end) break;
+      cstart = q;
+      while (q < line_end && *q != ',') q++;
+      cend = q;
+      while (cend > cstart && (cend[-1] == ' ' || cend[-1] == '\t')) cend--;
+      len = (size_t)(cend - cstart);
+      if (len > 0 && out && outn) {
+        if (olen > 0 && olen + 1 < outn) {
+          out[olen++] = '\n';
+          out[olen] = 0;
+        }
+        if (olen + len < outn) {
+          memcpy(out + olen, cstart, len);
+          olen += len;
+          out[olen] = 0;
+          count++;
+        }
+      } else if (len > 0)
+        count++;
+      if (q < line_end && *q == ',') q++;
+    }
+    if (*line_end == '\n') p = line_end + 1;
+    else break;
+  }
+  return count;
+}
+
 /* Truthy CLI / plate strings: 1 true yes y on t → 1;
  * empty 0 false no n off f → 0; other non-empty → 1.
  * Usability: BOOLFLAG / TRUTHY without EQS soup. */
@@ -26573,6 +26620,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
       {"GETFLAGALL", "GETFLAGALL|FLAGALL|MULTIFLAG name[,|alt] [OR bag] — all --name values → newline bag · LAST_N=count"},
+      {"GETFLAGCSV", "GETFLAGCSV|FLAGCSV name[,|alt] [OR ENV n]* [OR bag] — multi --name + comma-split → bag · tags"},
       {"FLAG_HIT_NAME", "FLAG_HIT_NAME|FLAG_ALIAS — which flag alias matched after HASFLAG/GETFLAG*"},
       {"TRUTHY", "TRUTHY str|var — soft 0|1 if 1/true/yes/on (or non-empty non-falsy)"},
       {"FALSY", "FALSY str|var — soft 0|1 if empty/0/false/no/off · dual of TRUTHY"},
@@ -29891,6 +29939,107 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# getflagall %s cli=%d count=%d hit=%s\n",
               name, cli_n, count, hitnm[0] ? hitnm : "");
+    bump(vm); return 1;
+  }
+  /* GETFLAGCSV|FLAGCSV|CSVFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT bag]
+   * Collect multi --name values and split each on commas → flat newline bag.
+   * --tags=a,b --tag c,d → a\nb\nc\nd. CLI > ENV (CSV) > literal.
+   * LAST_N=count · GETFLAGCSV_SRC · FLAG_ENV. Usability: tag lists without SPLIT. */
+  if (kw(&L->cur,"GETFLAGCSV") || kw(&L->cur,"FLAGCSV") || kw(&L->cur,"CSVFLAG") ||
+      kw(&L->cur,"GETFLAG_CSV") || kw(&L->cur,"SPLITFLAG") || kw(&L->cur,"FLAGSPLIT") ||
+      kw(&L->cur,"TAGSFLAG") || kw(&L->cur,"LISTFLAG")){
+    char name[96], aliases[384], hitnm[96], raw[CUBALC_HOST_STR_MAX];
+    char bag[CUBALC_HOST_STR_MAX], fb[CUBALC_HOST_STR_MAX];
+    char env_used[96], src_tag[16];
+    int cli_n, count, have_fb = 0, nac, from_env = 0;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    raw[0] = 0;
+    bag[0] = 0;
+    fb[0] = 0;
+    env_used[0] = 0;
+    snprintf(src_tag, sizeof src_tag, "%s", "none");
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      fail_at(vm, L, "GETFLAGCSV needs name — GETFLAGCSV tags|t OR ENV TAGS OR \"\"");
+      return -1;
+    }
+    while (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+           kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (kw(&L->cur,"ENV") || kw(&L->cur,"FROMENV") || kw(&L->cur,"ENVOR") ||
+          kw(&L->cur,"GETENV") || kw(&L->cur,"ENV_GET")){
+        char en[96];
+        const char *ev;
+        lex_next(L);
+        en[0] = 0;
+        while (L->cur.kind == TK_MINUS) lex_next(L);
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          snprintf(en, sizeof en, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail_at(vm, L, "GETFLAGCSV OR ENV NAME");
+          return -1;
+        }
+        if (!have_fb && en[0]) {
+          ev = getenv(en);
+          if (ev && ev[0]) {
+            snprintf(fb, sizeof fb, "%s", ev);
+            have_fb = 1;
+            from_env = 1;
+            snprintf(env_used, sizeof env_used, "%s", en);
+          }
+        }
+        continue;
+      }
+      {
+        char lit[CUBALC_HOST_STR_MAX];
+        lit[0] = 0;
+        if (resolve_str_arg(vm, L, lit, sizeof lit) != 0) {
+          fail_at(vm, L, "GETFLAGCSV name OR \"fallback\"");
+          return -1;
+        }
+        if (!have_fb) {
+          snprintf(fb, sizeof fb, "%s", lit);
+          have_fb = 1;
+          from_env = 0;
+        }
+      }
+      break;
+    }
+    cli_n = cubalc_scan_cli_flag_all(aliases, raw, sizeof raw, hitnm, sizeof hitnm);
+    if (cli_n > 0) {
+      count = cubalc_csv_expand_bag(raw, bag, sizeof bag);
+      snprintf(src_tag, sizeof src_tag, "%s", "cli");
+    } else if (have_fb) {
+      count = cubalc_csv_expand_bag(fb, bag, sizeof bag);
+      snprintf(src_tag, sizeof src_tag, "%s", from_env ? "env" : "default");
+    } else {
+      bag[0] = 0;
+      count = 0;
+      snprintf(src_tag, sizeof src_tag, "%s", "none");
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FLAG", bag);
+    var_set_str(vm, "GETFLAGCSV", name);
+    var_set_str(vm, "FLAGCSV", bag);
+    var_set_str(vm, "FLAG_HIT_NAME", cli_n > 0 ? hitnm : "");
+    var_set_str(vm, "FLAG_ALIAS", cli_n > 0 ? hitnm : "");
+    var_set_str(vm, "GETFLAGCSV_SRC", src_tag);
+    var_set_str(vm, "FLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_ENV", (cli_n <= 0 && from_env) ? env_used : "");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = (long)count;
+    var_set_num(vm, "LAST_N", (long)count);
+    var_set_num(vm, "GETFLAGCSV_N", (long)count);
+    var_set_num(vm, "FLAGCSV_N", (long)count);
+    var_set_num(vm, "GETFLAGCSV_HIT", cli_n > 0 ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# getflagcsv %s cli=%d count=%d src=%s\n",
+              name, cli_n, count, src_tag);
     bump(vm); return 1;
   }
   /* TRUTHY str|var|LAST — soft 0|1 if string is truthy (1/true/yes/on or non-empty).
