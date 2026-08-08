@@ -788,6 +788,6 @@
     "WRITEOUT marker omit final NL (W5)",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "cf0a1eb7421709bff347d0daedeb2f2d48356336",
   "ts": "2026-08-08T06:13:00Z"
 }
