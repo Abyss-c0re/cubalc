@@ -1,0 +1,101 @@
+# CUBALC_VAR_STR_MAX 4096 — agent PLATE vars no longer truncate at 512
+# Usability: plate_boot/SETP/SAVEPLATE round-trip keeps multi-key agent state.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_var_wide"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS RM path
+
+DEFAULT PLATE_PATH = path
+DEFAULT PLATE_SEED = "{}"
+INCLUDE plate_boot
+ASSERT OK == 1
+
+# 800-char blob via CAT of two 400-char chunks (STREPEAT out buf is 512)
+SYS STREPEAT "abcdefghij" 40
+LET part = LAST
+SYS LEN part
+ASSERT LAST_N == 400
+SYS CAT part part
+LET blob = LAST
+SYS LEN blob
+ASSERT LAST_N == 800
+
+SETP "blob" blob
+ASSERT OK == 1
+SETP "n" 1
+SETP "role" "worker"
+# many short keys → full plate object well past old 512-byte var cap
+SETP "k00" "0123456789abcdef"
+SETP "k01" "0123456789abcdef"
+SETP "k02" "0123456789abcdef"
+SETP "k03" "0123456789abcdef"
+SETP "k04" "0123456789abcdef"
+SETP "k05" "0123456789abcdef"
+SETP "k06" "0123456789abcdef"
+SETP "k07" "0123456789abcdef"
+SETP "k08" "0123456789abcdef"
+SETP "k09" "0123456789abcdef"
+
+SYS LEN PLATE
+ASSERT LAST_N > 512
+
+GETP "blob"
+SYS LEN LAST
+ASSERT LAST_N == 800
+GETP "blob"
+SYS EQS LAST blob
+ASSERT LAST_N == 1
+
+INCP "n"
+INCLUDE plate_save
+ASSERT SAVEPLATE_OK == 1
+
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+LET loaded = LAST
+SYS JSON "blob" FROM loaded
+SYS LEN LAST
+ASSERT LAST_N == 800
+SYS JSON "blob" FROM loaded
+SYS EQS LAST blob
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 2
+SYS JSON "role" FROM loaded
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSON "k09" FROM loaded
+SYS EQS LAST "0123456789abcdef"
+ASSERT LAST_N == 1
+
+# re-boot into PLATE var — full width survives
+INCLUDE plate_boot
+SYS LEN PLATE
+ASSERT LAST_N > 512
+GETP "blob"
+SYS LEN LAST
+ASSERT LAST_N == 800
+GETP "k05"
+SYS EQS LAST "0123456789abcdef"
+ASSERT LAST_N == 1
+
+SYS JSONOBJ "phase" "run"
+MERGEP LAST
+GETP "phase"
+SYS EQS LAST "run"
+ASSERT LAST_N == 1
+GETP "blob"
+SYS LEN LAST
+ASSERT LAST_N == 800
+
+SYS SIZE path
+ASSERT LAST_N > 512
+
+PRINT "var_str_wide ok"

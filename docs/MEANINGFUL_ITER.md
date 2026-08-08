@@ -600,6 +600,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 570. ~~**`MERGEP` / `DEFAULTP` / `TOGGLEP`**~~ **done** (multi-key overlay + set-if-missing + flag flip on PLATE · complete mutate surface without LET glue).
 571. ~~**`cubalc plate` CLI**~~ **done** (show/get/set/inc/del/keys JSON agent plate files · no .cubalc for one-shots · cubalc.plate.v1).
 572. ~~**`NEEDP` / `HASP` / `HASPALL` / `KEYSP`**~~ **done** (PLATE contract + soft probes + key bag · no REQUIRE JSONHASALL PLATE glue).
+573. ~~**`CUBALC_VAR_STR_MAX` 4096**~~ **done** (program string vars hold real agent plates · no 512-byte PLATE truncate on SETP/SAVE).
 
 ## Tick protocol
 

@@ -28,7 +28,13 @@ enum {
 
 typedef struct { int kind; long num; char text[8192]; int line; } Tok;
 typedef struct { const char *s; size_t n, i; int line; size_t tok_off; Tok cur; } Lex;
-typedef struct { char name[48]; long val; char sval[512]; int is_str; } Var;
+/* Agent plates (PLATE after plate_boot/SETP) need more than 512 bytes of JSON.
+ * 4096 fits multi-key agent state without truncating SAVEPLATE write-back.
+ * 128 vars × 4K ≈ 0.5MB of the stack VM — acceptable next to last_str/chain. */
+#ifndef CUBALC_VAR_STR_MAX
+#define CUBALC_VAR_STR_MAX 4096
+#endif
+typedef struct { char name[48]; long val; char sval[CUBALC_VAR_STR_MAX]; int is_str; } Var;
 
 typedef struct {
   char name[48];
