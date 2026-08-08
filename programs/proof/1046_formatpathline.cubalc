@@ -1,0 +1,114 @@
+# FORMATPATHLINE / MKPATHLINE / TOPATHLINE — build path:lineno:text cites
+# Inverse of PARSEPATHLINE · evidence without STR+CAT colon glue.
+
+HOLD_FLASH 1
+
+# full three-arg
+FORMATPATHLINE "/tmp/a/err.log" 2 "error: boom"
+ASSERT OK == 1
+ASSERT FORMATPATHLINE_HIT == 1
+ASSERT LAST_N == 1
+ASSERT LAST == "/tmp/a/err.log:2:error: boom"
+ASSERT PATH == "/tmp/a/err.log"
+ASSERT LINE_N == 2
+ASSERT TEXT == "error: boom"
+
+# text may contain colons
+FORMATPATHLINE "/work/x" 10 "a:b:c"
+ASSERT LAST == "/work/x:10:a:b:c"
+PARSEPATHLINE LAST
+ASSERT PARSEPATHLINE_HIT == 1
+ASSERT PATH == "/work/x"
+ASSERT LINE_N == 10
+ASSERT LAST == "a:b:c"
+
+# empty body
+FORMATPATHLINE "/p" 1 ""
+ASSERT LAST == "/p:1:"
+PARSEPATHLINE LAST
+ASSERT LAST == ""
+ASSERT LINE_N == 1
+
+# omitted text uses LAST
+LET body = "from-last"
+# put body into LAST via CAT or assign path...
+SYS CAT body ""
+# safer: explicit third still; test omitted via:
+# After SYS CAT if it sets LAST wrong, use:
+# SET LAST by FORMAT then peel - for omitted:
+LET p = "/bare"
+LET n = 7
+# force LAST = body
+SYS EQS body "from-last"
+# That doesn't set LAST to body. Use:
+# PATHLINETEXTS style - just pass third from var always for reliability
+# and one omitted-text case: after setting LAST with a known form
+SYS STR 0
+# LAST becomes "0" - not useful
+# Use JOIN empty:
+SYS JOIN "" "hello-cite"
+FORMATPATHLINE "/c" 3
+ASSERT OK == 1
+ASSERT LAST == "/c:3:hello-cite"
+ASSERT TEXT == "hello-cite"
+
+# lineno from var
+LET ln = 42
+FORMATPATHLINE "/f" ln "msg"
+ASSERT LAST == "/f:42:msg"
+ASSERT LINE_N == 42
+
+# empty path soft
+FORMATPATHLINE "" 1 "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# aliases
+MKPATHLINE "/z" 4 "yo"
+ASSERT LAST == "/z:4:yo"
+TOPATHLINE "/z" 5 "hi"
+ASSERT LAST == "/z:5:hi"
+
+# SYS form
+SYS FORMATPATHLINE "/sys/p" 5 "from-sys"
+ASSERT OK == 1
+ASSERT LAST == "/sys/p:5:from-sys"
+
+# round-trip with FIRSTLINEINTREE sticky vars
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_fpl_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "noise\nerror first-line\nok"
+ASSERT OK == 1
+FIRSTLINEINTREE base "error"
+ASSERT FIRSTLINEINTREE_HIT == 1
+LET fp = FIRSTLINEINTREE_PATH
+LET fi = FIRSTLINEINTREE_I
+# 0-based I → 1-based cite line
+LET fl = fi + 1
+LET ft = LAST
+FORMATPATHLINE fp fl ft
+ASSERT OK == 1
+SYS HAS LAST "error first-line"
+ASSERT LAST_N == 1
+SYS HAS LAST "err.log"
+ASSERT LAST_N == 1
+PARSEPATHLINE LAST
+ASSERT LAST == "error first-line"
+ASSERT LINE_N == fl
+
+RMTREE base
+ASSERT OK == 1
+
+PRINT "formatpathline ok"
+ASSERT OK == 1
