@@ -1,0 +1,104 @@
+# HASINTREE / ANYINTREE / CONTAINSINTREE — soft content-exists under tree
+# IF guards without FIRSTINTREE+HIT or GREPTREE+EMPTY glue. LAST string kept.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_hit_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "error: boom"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "ok only"
+ASSERT OK == 1
+
+# preserve LAST string across probe
+LET keep = "preserve-me"
+# put keep into a var; HASINTREE must not clobber LAST str for agent workflows
+# (HASLINE pattern). Set LAST via JOIN:
+SYS JOIN "" keep
+ASSERT LAST == "preserve-me"
+
+HASINTREE base "error"
+ASSERT OK == 1
+ASSERT HASINTREE_HIT == 1
+ASSERT HASINTREE_N == 1
+ASSERT LAST_N == 1
+# LAST string still preserve-me
+ASSERT LAST == "preserve-me"
+SYS ENDS PATH "err.log"
+ASSERT LAST_N == 1
+SYS ENDS HASINTREE_PATH "err.log"
+ASSERT LAST_N == 1
+
+# miss
+HASINTREE base "zzzz_nope"
+ASSERT OK == 1
+ASSERT HASINTREE_HIT == 0
+ASSERT LAST_N == 0
+ASSERT PATH == ""
+ASSERT HASINTREE_PATH == ""
+
+# case-insensitive
+HASINTREEI base "ERROR"
+ASSERT HASINTREE_HIT == 1
+
+# aliases
+ANYINTREE base "boom"
+ASSERT ANYINTREE_N == 1
+CONTAINSINTREE base "ok"
+ASSERT HASINTREE_HIT == 1
+CONTAINSINTREE base "missingxyz"
+ASSERT HASINTREE_HIT == 0
+
+# SYS form
+SYS HASINTREE base "error"
+ASSERT OK == 1
+ASSERT HASINTREE_N == 1
+
+# single file root
+SYS JOIN base "plain.txt"
+LET p = LAST
+HASINTREE p "ok"
+ASSERT HASINTREE_HIT == 1
+HASINTREE p "error"
+ASSERT HASINTREE_HIT == 0
+
+# matches FIRSTINTREE_HIT
+FIRSTINTREE base "error"
+ASSERT FIRSTINTREE_HIT == 1
+HASINTREE base "error"
+ASSERT HASINTREE_HIT == 1
+FIRSTINTREE base "zzzz"
+ASSERT FIRSTINTREE_HIT == 0
+HASINTREE base "zzzz"
+ASSERT HASINTREE_HIT == 0
+
+# missing soft
+HASINTREE "/no/such/hasintree" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty soft
+HASINTREE "" "x"
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+RMTREE base
+ASSERT OK == 1
+
+PRINT "hasintree ok"
+ASSERT OK == 1
