@@ -1959,6 +1959,6 @@
     "gate require false-hit via plate_session create; soft+require for EXIT 2",
     "fill/path/digest/alias green with EQS expected builds"
   ],
-  "commit": "pending",
+  "commit": "16f24f5",
   "ts": "2026-08-08T21:14:19Z"
 }
