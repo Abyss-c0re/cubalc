@@ -519,6 +519,6 @@
     "GETFLAGALL+JOINLINES multi-tag rows green; OR ENV cascade green",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "1189f7e4aba54d2f4b079fbad552fbd8798d0cc0",
   "ts": "2026-08-08T01:44:39Z"
 }
