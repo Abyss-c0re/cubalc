@@ -2550,6 +2550,134 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 absfile, hr.n, created);
       bump(vm); return 1;
     }
+    /* SYS COPYOUT|CPOUT src dest — mkdir parent of dest + COPY (soft).
+     * Twin of top-level COPYOUT. LAST = abs dest · LAST_N = bytes. */
+    if (kw(&L->cur,"COPYOUT") || kw(&L->cur,"CPOUT") || kw(&L->cur,"ENSURECOPY") ||
+        kw(&L->cur,"COPYPARENT") || kw(&L->cur,"PLATECOPY") || kw(&L->cur,"SNAPOUT") ||
+        kw(&L->cur,"FILEOUTCOPY") || kw(&L->cur,"COPYNEST") || kw(&L->cur,"STAGECOPY")){
+      char src[CUBALC_HOST_STR_MAX], dst[CUBALC_HOST_STR_MAX];
+      char abssrc[CUBALC_HOST_STR_MAX], absdst[CUBALC_HOST_STR_MAX];
+      char parent[512], absparent[CUBALC_HOST_STR_MAX];
+      const char *slash;
+      size_t n;
+      int created = 0;
+      cubalc_host_result hr;
+      lex_next(L);
+      src[0] = 0; dst[0] = 0;
+      abssrc[0] = 0; absdst[0] = 0;
+      parent[0] = 0; absparent[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0) {
+        fail(vm, "SYS COPYOUT src dest");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, dst, sizeof dst) != 0) {
+        fail(vm, "SYS COPYOUT src dest");
+        return -1;
+      }
+      if (!src[0] || !dst[0]) {
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "COPYOUT: empty path");
+        var_set_str(vm, "ERR", "COPYOUT: empty path");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "COPYOUT_N", 0);
+        var_set_num(vm, "COPYOUT_CREATED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(src, &hr) == 0 && hr.str[0])
+        snprintf(abssrc, sizeof abssrc, "%s", hr.str);
+      else
+        snprintf(abssrc, sizeof abssrc, "%s", src);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(dst, &hr) == 0 && hr.str[0])
+        snprintf(absdst, sizeof absdst, "%s", hr.str);
+      else
+        snprintf(absdst, sizeof absdst, "%s", dst);
+      {
+        char work[CUBALC_HOST_STR_MAX];
+        snprintf(work, sizeof work, "%s", absdst);
+        n = strlen(work);
+        while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+          work[n - 1] = 0;
+          n--;
+        }
+        slash = cubalc_path_slash(work);
+        if (slash && slash != work) {
+          size_t dn = (size_t)(slash - work);
+          if (dn >= sizeof parent) dn = sizeof parent - 1;
+          memcpy(parent, work, dn);
+          parent[dn] = 0;
+        } else if (slash && slash == work) {
+          snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+        } else {
+          snprintf(parent, sizeof parent, ".");
+        }
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      else
+        snprintf(absparent, sizeof absparent, "%s", parent);
+      created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_mkdir(absparent, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "COPYOUT: mkdir parent failed";
+        var_set_str(vm, "LAST", absdst);
+        var_set_str(vm, "COPYOUT_SRC", abssrc);
+        var_set_str(vm, "COPYOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", absdst);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "COPYOUT_N", 0);
+        var_set_num(vm, "COPYOUT_CREATED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      if (hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_copy(abssrc, absdst, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "COPYOUT: copy failed";
+        var_set_str(vm, "LAST", absdst);
+        var_set_str(vm, "COPYOUT_SRC", abssrc);
+        var_set_str(vm, "COPYOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", absdst);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "COPYOUT_N", 0);
+        var_set_num(vm, "COPYOUT_CREATED", (long)created);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", absdst);
+      var_set_str(vm, "COPYOUT", absdst);
+      var_set_str(vm, "CPOUT", absdst);
+      var_set_str(vm, "PATH", absdst);
+      var_set_str(vm, "COPYOUT_SRC", abssrc);
+      var_set_str(vm, "COPYOUT_PARENT", absparent);
+      var_set_str(vm, "DIRNAME", absparent);
+      var_set_str(vm, "PARENT", absparent);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absdst);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "COPYOUT_N", hr.n);
+      var_set_num(vm, "COPY_N", hr.n);
+      var_set_num(vm, "COPYOUT_CREATED", (long)created);
+      var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+      var_set_num(vm, "PATH_EXIST", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys copyout → %s ← %s bytes=%ld created=%d\n",
+                absdst, abssrc, hr.n, created);
+      bump(vm); return 1;
+    }
     /* SYS FSYNC|SYNCFILE|FDATASYNC path — flush file data+metadata to disk.
      * LAST = path; LAST_N = 1 success / 0 soft miss; FSYNC_N mirrors LAST_N.
      * Opens O_RDONLY, fsync(fd), close. Soft miss on empty/open/fsync fail.
@@ -27086,6 +27214,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS APPENDOUT", "SYS APPENDOUT|LOGOUT path data — mkdir parent + append · twin of top-level APPENDOUT"},
       {"WRITEOUTATOMIC", "WRITEOUTATOMIC|SAFEWRITEOUT path data — ENSUREPARENT + temp+rename write · multi-agent plates"},
       {"SYS WRITEOUTATOMIC", "SYS WRITEOUTATOMIC|SAFEWRITEOUT path data — mkdir parent + atomic write twin"},
+      {"COPYOUT", "COPYOUT|CPOUT src dest — ENSUREPARENT dest + COPY · LAST=abs dest · nested plate snapshot"},
+      {"SYS COPYOUT", "SYS COPYOUT|CPOUT src dest — mkdir parent + copy · twin of top-level COPYOUT"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -31186,6 +31316,136 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# writeoutatomic → %s bytes=%ld created=%d\n",
               absfile, hr.n, created);
+    bump(vm); return 1;
+  }
+  /* COPYOUT|CPOUT src dest — ENSUREPARENT dest + COPY one-shot.
+   * LAST = abs dest · COPYOUT_SRC · COPYOUT_PARENT · COPYOUT_CREATED · LAST_N=bytes.
+   * Soft empty/mkdir/copy fail → OK=0 sticky LAST_ERR.
+   * Usability: nested plate snapshot without ENSUREPARENT + SYS COPY glue. */
+  if (kw(&L->cur,"COPYOUT") || kw(&L->cur,"CPOUT") || kw(&L->cur,"ENSURECOPY") ||
+      kw(&L->cur,"COPYPARENT") || kw(&L->cur,"PLATECOPY") || kw(&L->cur,"SNAPOUT") ||
+      kw(&L->cur,"FILEOUTCOPY") || kw(&L->cur,"COPYNEST") || kw(&L->cur,"STAGECOPY")){
+    char src[CUBALC_HOST_STR_MAX], dst[CUBALC_HOST_STR_MAX];
+    char abssrc[CUBALC_HOST_STR_MAX], absdst[CUBALC_HOST_STR_MAX];
+    char parent[512], absparent[CUBALC_HOST_STR_MAX];
+    const char *slash;
+    size_t n;
+    int created = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    src[0] = 0; dst[0] = 0;
+    abssrc[0] = 0; absdst[0] = 0;
+    parent[0] = 0; absparent[0] = 0;
+    if (resolve_str_arg(vm, L, src, sizeof src) != 0) {
+      fail_at(vm, L, "COPYOUT needs src dest — COPYOUT \"src.json\" \"a/b/copy.json\"");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, dst, sizeof dst) != 0) {
+      fail_at(vm, L, "COPYOUT needs dest — COPYOUT \"src.json\" \"a/b/copy.json\"");
+      return -1;
+    }
+    if (!src[0] || !dst[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "COPYOUT: empty path");
+      var_set_str(vm, "ERR", "COPYOUT: empty path");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "COPYOUT_N", 0);
+      var_set_num(vm, "COPYOUT_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(src, &hr) == 0 && hr.str[0])
+      snprintf(abssrc, sizeof abssrc, "%s", hr.str);
+    else
+      snprintf(abssrc, sizeof abssrc, "%s", src);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(dst, &hr) == 0 && hr.str[0])
+      snprintf(absdst, sizeof absdst, "%s", hr.str);
+    else
+      snprintf(absdst, sizeof absdst, "%s", dst);
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", absdst);
+      n = strlen(work);
+      while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+        work[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else if (slash && slash == work) {
+        snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+      } else {
+        snprintf(parent, sizeof parent, ".");
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "COPYOUT: mkdir parent failed";
+      var_set_str(vm, "LAST", absdst);
+      var_set_str(vm, "COPYOUT_SRC", abssrc);
+      var_set_str(vm, "COPYOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absdst);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "COPYOUT_N", 0);
+      var_set_num(vm, "COPYOUT_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_copy(abssrc, absdst, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "COPYOUT: copy failed";
+      var_set_str(vm, "LAST", absdst);
+      var_set_str(vm, "COPYOUT_SRC", abssrc);
+      var_set_str(vm, "COPYOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absdst);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "COPYOUT_N", 0);
+      var_set_num(vm, "COPYOUT_CREATED", (long)created);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    var_set_str(vm, "LAST", absdst);
+    var_set_str(vm, "COPYOUT", absdst);
+    var_set_str(vm, "CPOUT", absdst);
+    var_set_str(vm, "PATH", absdst);
+    var_set_str(vm, "COPYOUT_SRC", abssrc);
+    var_set_str(vm, "COPYOUT_PARENT", absparent);
+    var_set_str(vm, "DIRNAME", absparent);
+    var_set_str(vm, "PARENT", absparent);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absdst);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_num(vm, "COPYOUT_N", hr.n);
+    var_set_num(vm, "COPY_N", hr.n);
+    var_set_num(vm, "COPYOUT_CREATED", (long)created);
+    var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# copyout → %s ← %s bytes=%ld created=%d\n",
+              absdst, abssrc, hr.n, created);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]

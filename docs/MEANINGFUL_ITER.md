@@ -506,6 +506,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 476. ~~**`WRITEOUT` / `PUTOUT`**~~ **done** (ENSUREPARENT + WRITE one-shot · LAST=abs file · plate dumps without DIRNAME glue).
 477. ~~**`APPENDOUT` / `LOGOUT`**~~ **done** (ENSUREPARENT + APPEND line · nested agent logs without DIRNAME+APPEND glue).
 478. ~~**`WRITEOUTATOMIC` / `SAFEWRITEOUT`**~~ **done** (ENSUREPARENT + temp+rename write · multi-agent nested plates).
+479. ~~**`COPYOUT` / `CPOUT`**~~ **done** (ENSUREPARENT dest + COPY · nested plate snapshot without DIRNAME+COPY glue).
 
 ## Tick protocol
 

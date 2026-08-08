@@ -1,0 +1,100 @@
+# COPYOUT / CPOUT — ENSUREPARENT dest + COPY one-shot
+# Nested plate snapshot without DIRNAME + MKDIR + COPY glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_cpo_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# source plate
+SYS JOIN root "src/plate.json"
+LET src = LAST
+WRITEOUT src "{\"src\":1}"
+ASSERT OK == 1
+SYS ISFILE src
+ASSERT LAST_N == 1
+
+# nested missing parents on dest
+SYS JOIN root "out/deep/nest/plate.json"
+LET dst = LAST
+COPYOUT src dst
+ASSERT OK == 1
+ASSERT COPYOUT_CREATED == 1
+ASSERT LAST_N > 0
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "plate.json"
+ASSERT LAST_N == 1
+SYS ENDS COPYOUT_PARENT "nest"
+ASSERT LAST_N == 1
+SYS ENDS COPYOUT_SRC "plate.json"
+ASSERT LAST_N == 1
+SYS ISFILE LAST
+ASSERT LAST_N == 1
+SYS READ dst
+SYS HAS LAST "src"
+ASSERT LAST_N == 1
+SYS EQFILE src dst
+ASSERT LAST_N == 1
+
+# overwrite dest — CREATED=0 (parent exists)
+WRITEOUT src "{\"v\":2}"
+ASSERT OK == 1
+COPYOUT src dst
+ASSERT OK == 1
+ASSERT COPYOUT_CREATED == 0
+SYS READ dst
+SYS HAS LAST "v"
+ASSERT LAST_N == 1
+SYS HAS LAST "src"
+ASSERT LAST_N == 0
+
+# CPOUT alias
+SYS JOIN root "snap/a/b/c.json"
+LET snap = LAST
+CPOUT src snap
+ASSERT OK == 1
+ASSERT COPYOUT_CREATED == 1
+SYS READ LAST
+SYS HAS LAST "v"
+ASSERT LAST_N == 1
+
+# SYS form
+SYS JOIN root "sys/deep/copy.json"
+LET sp = LAST
+SYS COPYOUT src sp
+ASSERT OK == 1
+SYS ENDS LAST "copy.json"
+ASSERT LAST_N == 1
+SYS READ sp
+SYS HAS LAST "v"
+ASSERT LAST_N == 1
+
+# missing source soft fail
+SYS JOIN root "no/such/dest.json"
+LET miss = LAST
+COPYOUT "/no/such/cubalc_missing_src_xyz" miss
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty path soft
+COPYOUT "" "x"
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS WALK root
+SYS RMALL LAST
+SYS RM root
