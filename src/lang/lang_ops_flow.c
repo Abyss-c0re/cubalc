@@ -8216,8 +8216,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         strcmp(op, "TALLYBETWEEN") == 0 || strcmp(op, "TALLYRANGE") == 0)
       mode = 1;
     else if (strcmp(op, "HASBETWEEN") == 0 || strcmp(op, "ANYBETWEEN") == 0 ||
-             strcmp(op, "INRANGE") == 0 || strcmp(op, "HASRANGE") == 0 ||
+             strcmp(op, "HASRANGE") == 0 ||
              strcmp(op, "ANYRANGE") == 0)
+      /* note: free INRANGE is numeric soft range (996); OOP uses HASBETWEEN */
       mode = 2;
     else
       mode = 0;

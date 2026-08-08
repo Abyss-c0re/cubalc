@@ -1,0 +1,788 @@
+# lease_ttl_ms_board.cubalc — GETFLAGMS + INRANGE lease TTL CLI board
+#
+# Real use: lease/ops agents peel --ttl=2m --grace=10s duration flags to ms
+# and gate numeric bands without shell date/+%s or getopt:
+#   GETFLAGMS / FLAGMS / FLAGDUR — CLI duration → milliseconds
+#   INRANGE / REQUIRE BETWEEN / NUMBETWEEN — soft/hard numeric bands
+#   SUBCMD + RESTPOS + ONEOF + CASEI — subcommand + lease id targets
+#
+# Distinct from lease_lock (TOUCH lock), lease_sla_age (AGE/mtime),
+# deadline_budget (PARSEMS budget): this board is *duration flags + range*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_lt_$$
+#   ./out/cubalc run programs/realworld/lease_ttl_ms_board.cubalc \
+#     acquire -- --ttl=2m --grace=10s lease-a lease-b
+#   ./out/cubalc run ... renew -- --ttl=5m lease-a
+#   ./out/cubalc run ... list
+#
+# Plate under STATE:
+#   LEASES.txt     — id:ttl_ms:grace_ms:status rows (exact)
+#   VAL.txt META.txt LT_REPORT.txt
+#
+# Subcommands (SUBCMD — never "run"):
+#   list|ls     — bag depth
+#   acquire     — upsert held rows for RESTPOS ids
+#   renew       — refresh ttl/grace for ids
+#   release     — set status=released
+#   has|count|gate|soft|clear|probe
+#
+# Env: CUBALC_LT_REQUIRE CUBALC_LT_MIN CUBALC_LT_NAME
+#
+# Edges:
+#   GETFLAGMS OR "30s" default; bare number = ms; bare flag → 1 ms
+#   bad duration: HIT=1 LAST_N=0 GETFLAGMS_OK=0 sticky err
+#   INRANGE soft 0|1; REQUIRE BETWEEN hard (exit_code often 0)
+#   INRANGE lo/hi swap via TO; RESTPOS multi-line HASLINE not EQS
+#   CASEI arms only LET op=; known latch; WRITE NL; exact HASLINE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "lease_ttl_ms_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT LFILE = "LEASES.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "LT_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT TTL_MS = 30000
+DEFAULT GRACE_MS = 5000
+DEFAULT TTL_MIN_MS = 1000
+DEFAULT TTL_MAX_MS = 3600000
+DEFAULT USAGE_LINE = "lease_ttl_ms -- acquire|renew|release|list -- [--ttl=DUR] [--grace=DUR] id [id...]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+LET sub_hit = SUBCMD_HIT
+CLEAR_ERR
+IF sub_hit == 0 THEN
+  SYS ENV "CUBALC_LT_ACTION" OR ""
+  IF LAST_N > 0 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+
+LET targets = RESTPOS
+SYS LINES targets
+LET target_n = LAST_N
+CLEAR_ERR
+
+GETFLAGMS ttl OR "30s"
+LET TTL_MS = LAST_N
+LET ttl_hit = GETFLAGMS_HIT
+LET ttl_ok = GETFLAGMS_OK
+CLEAR_ERR
+GETFLAGMS grace OR "5s"
+LET GRACE_MS = LAST_N
+LET grace_hit = GETFLAGMS_HIT
+LET grace_ok = GETFLAGMS_OK
+CLEAR_ERR
+
+SYS ENV "CUBALC_LT_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_LT_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+SYS ENV "CUBALC_LT_NAME" OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+END
+SYS BLANK NAME
+IF LAST_N == 1 THEN
+  SYS NTH 0 targets
+  IF LAST_N > 0 THEN
+    LET NAME = LAST
+  END
+  CLEAR_ERR
+END
+
+# range-check TTL/grace (soft)
+INRANGE TTL_MS TTL_MIN_MS TTL_MAX_MS
+LET ttl_in = LAST_N
+CLEAR_ERR
+INRANGE GRACE_MS 0 600000
+LET grace_in = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir LFILE
+LET leases_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR leases_path OR ""
+LET leases = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET leases_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET lease_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET count_n = 0
+LET op = "unknown"
+
+SYS LINES leases
+LET lease_n = LAST_N
+
+ONEOF ACTION "acquire", "renew", "release", "list", "ls", "has", "count", "gate", "soft", "clear", "probe"
+LET oneof_ok = LAST_N
+CLEAR_ERR
+IF oneof_ok == 0 THEN
+  ONEOFI ACTION "acquire", "renew", "release", "list", "ls", "has", "count", "gate", "soft", "clear", "probe"
+  LET oneof_ok = LAST_N
+  CLEAR_ERR
+END
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "acquire" THEN
+    LET op = "acquire"
+  WHEN "renew" THEN
+    LET op = "renew"
+  WHEN "release" THEN
+    LET op = "release"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "count" THEN
+    LET op = "count"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+# hard range wall for acquire/renew when REQUIRE
+SYS EQS op "acquire"
+LET _need_rng = LAST_N
+SYS EQS op "renew"
+LET _need_rng = _need_rng + LAST_N
+IF _need_rng > 0 THEN
+  IF ttl_in == 0 THEN
+    LET miss = 1
+    LET note_msg = "ttl out of range"
+    FAIL "ttl out of range"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      REQUIRE BETWEEN TTL_MS TTL_MIN_MS TTL_MAX_MS
+    END
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "ttl out of range"
+    END
+  END
+  IF grace_in == 0 THEN
+    LET miss = 1
+    LET note_msg = "grace out of range"
+    FAIL "grace out of range"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "grace out of range"
+    END
+  END
+END
+
+# --- list ---
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action list"
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = leases
+  LET val_ch = 1
+  LET meta = "leases"
+  SYS STR lease_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "ttl_ms"
+  LET meta = LAST
+  SYS STR TTL_MS
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON lease_n TTL_MS GRACE_MS ttl_in grace_in
+  CLEAR_ERR
+END
+
+# --- acquire ---
+SYS EQS op "acquire"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action acquire"
+  IF miss == 1 THEN
+    # range fail already recorded
+    LET val = USAGE
+    LET val_ch = 1
+  ELSE
+    IF target_n < 1 THEN
+      LET miss = 1
+      LET note_msg = "acquire needs ids"
+      FAIL "acquire needs ids"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "acquire needs ids"
+      END
+    ELSE
+      EACH LINE AS id IN targets
+        SYS BLANK id
+        IF LAST_N == 0 THEN
+          SYS GREP id leases
+          LET hits = LAST
+          CLEAR_ERR
+          EACH LINE AS old IN hits
+            SYS REMOVELINE leases old
+            LET leases = LAST
+            CLEAR_ERR
+          END
+          SYS CAT id ":"
+          LET row = LAST
+          SYS STR TTL_MS
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":"
+          LET row = LAST
+          SYS STR GRACE_MS
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":held"
+          LET row = LAST
+          SYS PUSH leases row
+          LET leases = LAST
+          LET admit_n = admit_n + 1
+        END
+      END
+      LET leases_ch = 1
+      SYS LINES leases
+      LET lease_n = LAST_N
+      LET hit = 1
+      LET note_msg = "acquire ok"
+      LET val = leases
+      LET val_ch = 1
+      LET meta = "ttl_ms"
+      SYS STR TTL_MS
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "grace_ms"
+      LET meta = LAST
+      SYS STR GRACE_MS
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "admit"
+      LET meta = LAST
+      SYS STR admit_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON admit_n lease_n TTL_MS GRACE_MS
+  CLEAR_ERR
+END
+
+# --- renew ---
+SYS EQS op "renew"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action renew"
+  IF miss == 1 THEN
+    LET val = USAGE
+    LET val_ch = 1
+  ELSE
+    IF target_n < 1 THEN
+      LET miss = 1
+      LET note_msg = "renew needs ids"
+      FAIL "renew needs ids"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "renew needs ids"
+      END
+    ELSE
+      EACH LINE AS id IN targets
+        SYS BLANK id
+        IF LAST_N == 0 THEN
+          SYS GREP id leases
+          LET hits = LAST
+          CLEAR_ERR
+          EACH LINE AS old IN hits
+            SYS REMOVELINE leases old
+            LET leases = LAST
+            CLEAR_ERR
+          END
+          SYS CAT id ":"
+          LET row = LAST
+          SYS STR TTL_MS
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":"
+          LET row = LAST
+          SYS STR GRACE_MS
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":held"
+          LET row = LAST
+          SYS PUSH leases row
+          LET leases = LAST
+          LET admit_n = admit_n + 1
+        END
+      END
+      LET leases_ch = 1
+      SYS LINES leases
+      LET lease_n = LAST_N
+      LET hit = 1
+      LET note_msg = "renew ok"
+      LET val = leases
+      LET val_ch = 1
+      LET meta = "ttl_ms"
+      SYS STR TTL_MS
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON admit_n lease_n TTL_MS
+  CLEAR_ERR
+END
+
+# --- release ---
+SYS EQS op "release"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action release"
+  IF target_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "release needs ids"
+    FAIL "release needs ids"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "release needs ids"
+    END
+  ELSE
+    EACH LINE AS id IN targets
+      SYS BLANK id
+      IF LAST_N == 0 THEN
+        SYS GREP id leases
+        LET hits = LAST
+        CLEAR_ERR
+        EACH LINE AS old IN hits
+          SYS REMOVELINE leases old
+          LET leases = LAST
+          CLEAR_ERR
+        END
+        SYS CAT id ":0:0:released"
+        LET row = LAST
+        SYS PUSH leases row
+        LET leases = LAST
+        LET admit_n = admit_n + 1
+      END
+    END
+    LET leases_ch = 1
+    SYS LINES leases
+    LET lease_n = LAST_N
+    LET hit = 1
+    LET note_msg = "release ok"
+    LET val = leases
+    LET val_ch = 1
+    LET meta = "release"
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n lease_n
+  CLEAR_ERR
+END
+
+# --- has ---
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs row"
+    FAIL "has needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has needs row"
+    END
+  ELSE
+    SYS HASLINE leases NAME
+    LET has_n = LAST_N
+    IF has_n == 0 THEN
+      SYS GREP NAME leases
+      SYS LINES LAST
+      LET has_n = LAST_N
+      IF has_n > 1 THEN
+        LET has_n = 1
+      END
+      CLEAR_ERR
+    END
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- count ---
+SYS EQS op "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs row"
+    FAIL "count needs row"
+    CLEAR_ERR
+  ELSE
+    SYS COUNTLINE leases NAME
+    LET count_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "count"
+    SYS STR count_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON count_n
+  CLEAR_ERR
+END
+
+# --- gate: lease depth + optional ttl band ---
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action gate"
+  SYS LINES leases
+  LET lease_n = LAST_N
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "ttl_in"
+  LET meta = LAST
+  SYS STR ttl_in
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR lease_n
+  LET val = LAST
+  LET val_ch = 1
+  IF lease_n >= MIN THEN
+    IF ttl_in == 1 THEN
+      LET hit = 1
+      LET note_msg = "gate admit"
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate ttl band"
+      FAIL "gate ttl band"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate ttl band"
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny"
+    END
+  END
+  PRINT_JSON lease_n MIN ttl_in hit miss
+  CLEAR_ERR
+END
+
+# --- soft empty ---
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action soft"
+  SYS LINES leases
+  LET lease_n = LAST_N
+  IF lease_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    SYS PUSH meta "empty"
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft empty wall"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has leases"
+    LET val = leases
+    LET val_ch = 1
+  END
+  PRINT_JSON lease_n miss hit
+  CLEAR_ERR
+END
+
+# --- probe duration/range edges ---
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action probe"
+  # re-peel for edge flags if present
+  GETFLAGMS ttl OR "30s"
+  LET TTL_MS = LAST_N
+  LET ttl_hit = GETFLAGMS_HIT
+  LET ttl_ok = GETFLAGMS_OK
+  CLEAR_ERR
+  INRANGE TTL_MS 1000 TO 3600000
+  LET ttl_in = LAST_N
+  CLEAR_ERR
+  # lo/hi swap form
+  INRANGE 5 10 TO 1
+  LET swap_ok = LAST_N
+  CLEAR_ERR
+  # soft miss OOR
+  INRANGE 0 1 100
+  LET oor = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "ttl_ms"
+  SYS STR TTL_MS
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "ttl_hit"
+  LET meta = LAST
+  SYS STR ttl_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "ttl_ok"
+  LET meta = LAST
+  SYS STR ttl_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "ttl_in"
+  LET meta = LAST
+  SYS STR ttl_in
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "swap_ok"
+  LET meta = LAST
+  SYS STR swap_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "oor"
+  LET meta = LAST
+  SYS STR oor
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR TTL_MS
+  LET val = LAST
+  LET val_ch = 1
+  PRINT_JSON TTL_MS ttl_hit ttl_ok ttl_in swap_ok oor
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action clear"
+  LET leases = ""
+  LET val = ""
+  LET meta = ""
+  LET leases_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET lease_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF leases_ch > 0 THEN
+  SYS WRITE leases_path leases
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "leases write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET meta = "schema=cubalc.lease_ttl_ms_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "ttl_ms"
+LET meta = LAST
+SYS STR TTL_MS
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "grace_ms"
+LET meta = LAST
+SYS STR GRACE_MS
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "ttl_in"
+LET meta = LAST
+SYS STR ttl_in
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "lease_n"
+LET meta = LAST
+SYS STR lease_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+SYS PUSH meta "elapsed_ms"
+LET meta = LAST
+SYS STR elapsed
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "identity"
+LET meta = LAST
+SYS PUSH meta IDENTITY
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "lease_ttl_ms_board" ACTION op hit miss TTL_MS GRACE_MS lease_n note_msg elapsed
+NOTE "lease_ttl_ms_board: done"
