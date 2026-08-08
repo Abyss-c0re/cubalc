@@ -852,6 +852,66 @@ static long cubalc_expand_substenv(VM *vm, const char *tmpl, char *out, size_t o
   return hits;
 }
 
+
+/* Expand {{key}} placeholders from a JSON plate object.
+ * Unset keys → empty; hits = slots seen; miss = missing keys.
+ * Incomplete {{ without }} is copied literally. */
+static long cubalc_expand_fillp(const char *plate, const char *tmpl, char *out,
+                                size_t outcap, long *miss_out) {
+  const char *src = tmpl ? tmpl : "";
+  const char *pl = (plate && plate[0]) ? plate : "{}";
+  size_t o = 0;
+  long hits = 0, miss = 0;
+  char name[96];
+  cubalc_host_result gr;
+  if (!out || outcap == 0) {
+    if (miss_out) *miss_out = 0;
+    return 0;
+  }
+  out[0] = 0;
+  while (*src && o + 1 < outcap) {
+    if (src[0] == '{' && src[1] == '{') {
+      const char *p = src + 2;
+      size_t ni = 0;
+      name[0] = 0;
+      while (*p && !(p[0] == '}' && p[1] == '}') && ni + 1 < sizeof name) {
+        char c = *p;
+        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+            (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.')
+          name[ni++] = c;
+        else
+          break;
+        p++;
+      }
+      name[ni] = 0;
+      if (name[0] && p[0] == '}' && p[1] == '}') {
+        src = p + 2;
+        hits++;
+        memset(&gr, 0, sizeof gr);
+        if (cubalc_host_json_get(pl, name, &gr) == 0) {
+          size_t vn = strlen(gr.str);
+          if (o + vn >= outcap) vn = outcap - 1 - o;
+          if (vn > 0) {
+            memcpy(out + o, gr.str, vn);
+            o += vn;
+          }
+          out[o] = 0;
+        } else {
+          miss++;
+        }
+        continue;
+      }
+      /* incomplete / invalid → copy one '{' and continue */
+      out[o++] = *src++;
+      continue;
+    }
+    out[o++] = *src++;
+  }
+  out[o] = 0;
+  if (miss_out) *miss_out = miss;
+  return hits;
+}
+
 /* FNV-1a 32-bit — fast non-crypto fingerprint for plate/cache stamps. */
 static uint32_t cubalc_fnv1a32(const char *s, size_t n) {
   uint32_t h = 2166136261u;
@@ -35416,6 +35476,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"KEYSP", "KEYSP — PLATE key bag → LAST · LAST_N=count · no JSONKEYS glue"},
       {"DUMPP", "DUMPP|PLATEINFO — cubalc.plate_info.v1 snapshot of PLATE (keys/bytes/path)"},
       {"PLATEINFO", "PLATEINFO alias of DUMPP"},
+      {"FILLP", "FILLP|SUBSTPLATE [template] — expand {{key}} from PLATE · LAST filled · FILLP_MISS"},
+      {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
+      {"EXPANDP", "EXPANDP alias of FILLP"},
+      {"TEMPLATEP", "TEMPLATEP alias of FILLP"},
       {"USAGE", "USAGE [\"text\"] — sticky CLI usage · REQUIRE ARG/ARGC/FLAG fails append tip"},
       {"HELPFLAG", "HELPFLAG|AUTOHELP [name|,|alt] — if --help|-h present print USAGE and EXIT 0 · default help|h|usage"},
       {"VERSIONFLAG", "VERSIONFLAG|VERFLAG [name|,|alt] — if --version|-V print VERSION/PROG_VERSION and EXIT 0 · default version|V|ver"},
@@ -38043,6 +38107,70 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * Bare USAGE re-echoes stored USAGE (or empty). Does not change OK/ERR.
    * REQUIRE ARG / ARGC / FLAG failures append " · usage: …" when set.
    * Usability: one-line help without shell; twin of NOTE for CLI tools. */
+  /* FILLP|SUBSTPLATE|EXPANDP|TEMPLATEP [template]
+   * — expand {{key}} from conventional PLATE var into a message/path template.
+   * Unset key → empty; incomplete {{ left literal. Bare FILLP uses prior LAST.
+   * LAST = expanded; LAST_N/FILLP_N = slots; FILLP_MISS = missing keys.
+   * Does not mutate PLATE. Complements SUBSTENV ($NAME) with plate-local keys:
+   *   SETP "name" "alice"
+   *   SETP "host" "cube1"
+   *   FILLP "peer {{name}}@{{host}} ready"
+   * Usability: agent status/log/path templates without GETP+REPLACEALL chains. */
+  if (kw(&L->cur,"FILLP") || kw(&L->cur,"SUBSTPLATE") || kw(&L->cur,"EXPANDP") ||
+      kw(&L->cur,"TEMPLATEP") || kw(&L->cur,"FILLPLATE") || kw(&L->cur,"RENDERP") ||
+      kw(&L->cur,"PLATE_FILL") || kw(&L->cur,"PLATE_TEMPLATE") ||
+      kw(&L->cur,"MFILLP") || kw(&L->cur,"INTERPP")) {
+    char plate[CUBALC_HOST_STR_MAX], tmpl[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    long hits = 0, miss = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; tmpl[0] = 0; out[0] = 0;
+    pv = var_get(vm, "PLATE", 0);
+    if (pv && pv->is_str && pv->sval[0])
+      snprintf(plate, sizeof plate, "%s", pv->sval);
+    else
+      snprintf(plate, sizeof plate, "%s", "{}");
+
+    /* bare FILLP / next is statement keyword → prior LAST as template */
+    if (L->cur.kind == TK_NL || L->cur.kind == TK_EOF ||
+        (L->cur.kind == TK_IDENT &&
+         (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+          kw(&L->cur,"SYS") || kw(&L->cur,"IF") || kw(&L->cur,"END") ||
+          kw(&L->cur,"INCLUDE") || kw(&L->cur,"SETP") || kw(&L->cur,"INCP") ||
+          kw(&L->cur,"DELP") || kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") ||
+          kw(&L->cur,"DEFAULTP") || kw(&L->cur,"TOGGLEP") || kw(&L->cur,"NEEDP") ||
+          kw(&L->cur,"HASP") || kw(&L->cur,"KEYSP") || kw(&L->cur,"DUMPP") ||
+          kw(&L->cur,"FILLP") || kw(&L->cur,"SUBSTPLATE") || kw(&L->cur,"EXPANDP") ||
+          kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
+          kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
+          kw(&L->cur,"VERSION")))) {
+      snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+    } else if (resolve_str_arg(vm, L, tmpl, sizeof tmpl) != 0) {
+      snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+    }
+
+    hits = cubalc_expand_fillp(plate, tmpl, out, sizeof out, &miss);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = hits;
+    var_set_num(vm, "LAST_N", hits);
+    var_set_str(vm, "FILLP", out);
+    var_set_str(vm, "SUBSTPLATE", out);
+    var_set_str(vm, "EXPANDP", out);
+    var_set_str(vm, "TEMPLATEP", out);
+    var_set_num(vm, "FILLP_N", hits);
+    var_set_num(vm, "SUBSTPLATE_N", hits);
+    var_set_num(vm, "EXPANDP_N", hits);
+    var_set_num(vm, "FILLP_MISS", miss);
+    var_set_num(vm, "SUBSTPLATE_MISS", miss);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# fillp hits=%ld miss=%ld\n", hits, miss);
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"USAGE")||kw(&L->cur,"USEAGE")||kw(&L->cur,"SYNOPSIS")||
       kw(&L->cur,"CLI_USAGE")||kw(&L->cur,"HELP_USAGE")||kw(&L->cur,"PROG_USAGE")){
     int aln = L->cur.line;
