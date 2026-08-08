@@ -239,6 +239,10 @@ int cubalc_host_json_to_kv(const char *json, cubalc_host_result *r);
 /* top-level key count → r->n. Soft 0 if not object (always OK).
  * Usability: empty/size IF without JSONKEYS bag materialize. r->str = decimal. */
 int cubalc_host_json_len(const char *json, cubalc_host_result *r);
+/* sum pure-integer top-level values → r->n. Soft 0 if not object.
+ * Bools via values map (true=1/false=0); strings/null/nested skipped.
+ * Usability: score/status totals without JSONVALUES+SUM glue. r->str = decimal. */
+int cubalc_host_json_sum(const char *json, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

@@ -1,0 +1,67 @@
+# JSONSUMN / JSONSUM / JSUMN — sum integer top-level plate values → LAST_N
+# Score/status totals without JSONVALUES+SUM glue. LAST kept as plate.
+
+HOLD_FLASH 1
+
+# basic sum
+SYS JSONOBJ "a" 1 "b" 2 "c" 3
+LET plate = LAST
+SYS JSONSUMN plate
+ASSERT OK == 1
+ASSERT LAST_N == 6
+ASSERT JSONSUMN_N == 6
+# LAST still plate for chain
+SYS JSONN "a" FROM LAST
+ASSERT LAST_N == 1
+
+# matches VALUES+SUM
+SYS JSONVALUES plate
+SYS SUM LAST
+ASSERT LAST_N == 6
+
+# empty / non-object soft 0
+SYS JSONSUMN "{}"
+ASSERT LAST_N == 0
+ASSERT OK == 1
+SYS JSONSUMN "not-json"
+ASSERT LAST_N == 0
+ASSERT OK == 1
+
+# bare on LAST
+SYS JSONOBJ "x" 10 "y" 20
+SYS JSONSUMN
+ASSERT LAST_N == 30
+
+# aliases
+SYS JSONOBJ "n" 4 "m" 5
+SYS JSONSUM LAST
+ASSERT LAST_N == 9
+SYS JSUMN LAST
+ASSERT LAST_N == 9
+SYS SUMJSON LAST
+ASSERT LAST_N == 9
+
+# skip non-numeric (strings/null) · bools count as 0|1
+SYS JSONOBJ "s" "hi" "nil" null "ok" true "flag" false "n" 7
+LET p2 = LAST
+SYS JSONSUMN p2
+# true=1 false=0 n=7 → 8
+ASSERT LAST_N == 8
+
+# negative + zero
+SYS JSONOBJ "a" -3 "b" 0 "c" 10
+SYS JSONSUMN LAST
+ASSERT LAST_N == 7
+
+# single key
+SYS JSONOBJ "only" 42
+SYS JSONSUMN LAST
+ASSERT LAST_N == 42
+
+# FREQ-style plate totals
+SYS JSONFROMKV "error:5\nwarn:2\nok:1"
+SYS JSONSUMN LAST
+ASSERT LAST_N == 8
+
+PRINT "jsonsumn ok"
+ASSERT OK == 1

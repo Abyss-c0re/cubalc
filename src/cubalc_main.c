@@ -3303,6 +3303,7 @@ int main(int argc, char **argv) {
       {"SYS JSONLEN", "host", "SYS JSONLEN|JLEN [plate] — top-level key count → LAST_N · soft 0"},
       {"SYS JSONEMPTY", "host", "SYS JSONEMPTY|JEMPTY [plate] — soft LAST_N 1 if empty/non-object"},
       {"SYS JSONNONEMPTY", "host", "SYS JSONNONEMPTY|HASKEYS [plate] — soft LAST_N 1 if has keys"},
+      {"SYS JSONSUMN", "host", "SYS JSONSUMN|JSONSUM [plate] — sum integer top-level values → LAST_N"},
       {"SYS JSONKEYS", "host", "SYS JSONKEYS [plate] — top-level keys bag"},
       {"SYS JSONVALUES", "host", "SYS JSONVALUES [plate] — top-level values bag"},
       {"SYS SPAWN", "host", "allowlisted spawn (protect mode tight)"},

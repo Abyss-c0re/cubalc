@@ -4684,6 +4684,44 @@ int cubalc_host_json_len(const char *json, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS JSONSUMN plate — sum integer top-level values without VALUES+SUM. */
+int cubalc_host_json_sum(const char *json, cubalc_host_result *r) {
+  cubalc_host_result vals;
+  const char *p, *line;
+  long sum = 0;
+  r_clear(r);
+  memset(&vals, 0, sizeof vals);
+  if (cubalc_host_json_values(json, &vals) != 0) {
+    r->n = 0;
+    r->ok = 1;
+    snprintf(r->str, sizeof r->str, "0");
+    return 0;
+  }
+  p = vals.str;
+  while (*p) {
+    char field[CUBALC_HOST_STR_MAX];
+    size_t flen;
+    char *end = NULL;
+    long v;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    flen = (size_t)(p - line);
+    if (flen >= sizeof field) flen = sizeof field - 1;
+    memcpy(field, line, flen);
+    field[flen] = 0;
+    if (!field[0]) continue;
+    v = strtol(field, &end, 10);
+    if (end && end != field && *end == 0)
+      sum += v;
+  }
+  r->n = sum;
+  r->ok = 1;
+  snprintf(r->str, sizeof r->str, "%ld", sum);
+  return 0;
+}
+
 /* Usability: SYS JSONTOKV plate — object → key:val bag (dual of JSONFROMKV).
  * Uses ':' so default LOOKUP/FREQ work without sep glue. r->n = pairs. */
 int cubalc_host_json_to_kv(const char *json, cubalc_host_result *r) {
