@@ -1919,6 +1919,6 @@
     "require reload false-hit until removed plate_session from reload path",
     "all primary paths green first pass after that fix"
   ],
-  "commit": "pending",
+  "commit": "9ba1fca",
   "ts": "2026-08-08T20:50:06Z"
 }
