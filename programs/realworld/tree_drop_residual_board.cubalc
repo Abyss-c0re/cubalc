@@ -1,0 +1,544 @@
+# tree_drop_residual_board.cubalc — DROPINTREE residual reprocess queue under tree
+#
+# Real use: triage agents skip the first N known-good / already-paged matching
+# log paths and hand the residual bag to a reprocess or alert queue without
+# GREPTREE+DROP glue:
+#   DROPINTREE / SKIPINTREE / RESTINTREE — skip first n content hits (1051)
+#   TAKEINTREE — dual head for cover-all check
+#   DROPINTREEI — case-insensitive residual
+#   WRITEOUT — seed nested multi-file logs
+#
+# First realworld DROPINTREE board. Distinct from tree_has_slice_page
+# (HAS+window page) and tree_sample_cite (TAKE/NTH/cite).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tdr_$$
+#   ./out/cubalc run programs/realworld/tree_drop_residual_board.cubalc \
+#     seed -- --root=/tmp/tdr/logs
+#   ./out/cubalc run ... rest -- --root=... --skip=1 error
+#   ./out/cubalc run ... dual -- --root=... --skip=1 error
+#
+# Plate: STATUS.txt VAL.txt META.txt TDR_REPORT.txt
+# Env: LOG_ROOT CUBALC_TDR_REQUIRE CUBALC_TDR_MIN CUBALC_TDR_SKIP
+#
+# Edges:
+#   skip 0 = all; skip all / beyond = empty soft; no match empty
+#   dual TAKE+DROP no overlap; matches SLICE start=skip; icase
+#   missing/empty root soft; REQUIRE EXIT n; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "tree_drop_residual_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT SK = 1
+DEFAULT USAGE_LINE = "tree_drop_residual -- seed|rest|dual|list -- [--root=D] [--skip=K] [needle]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/tree"
+LET root_dir = LAST
+CLEAR_ERR
+
+GETFLAGOUT root|r OR ENV LOG_ROOT OR root_dir
+LET root_dir = LAST
+LET r_src = GETFLAGOUT_SRC
+LET r_ok = OK
+CLEAR_ERR
+
+GETFLAGN skip|k OR ENV CUBALC_TDR_SKIP OR SK
+LET SK = LAST_N
+CLEAR_ERR
+
+LET needle = "error"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET needle = LAST
+END
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_TDR_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_TDR_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "TDR_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET line_i = 0
+LET row = ""
+LET out = ""
+LET head = ""
+LET rest = ""
+LET cover = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "seed", "rest", "drop", "skip", "dual", "cover", "icase", "list", "ls", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "seed" THEN
+    LET op = "seed"
+  WHEN "rest", "drop", "skip" THEN
+    LET op = "rest"
+  WHEN "dual", "cover" THEN
+    LET op = "dual"
+  WHEN "icase" THEN
+    LET op = "icase"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n r_src SK
+  CLEAR_ERR
+END
+
+SYS EQS op "seed"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "seed needs root"
+    FAIL "seed needs root"
+    CLEAR_ERR
+  ELSE
+    SYS JOIN root_dir "a/b/mid.txt"
+    WRITEOUT LAST "noise\nerror middle\nok"
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "seed write failed"
+    END
+    CLEAR_ERR
+    SYS JOIN root_dir "a/b/z.txt"
+    WRITEOUT LAST "error z"
+    CLEAR_ERR
+    SYS JOIN root_dir "a/err.log"
+    WRITEOUT LAST "info\nerror last\ntrailer"
+    CLEAR_ERR
+    SYS JOIN root_dir "plain.txt"
+    WRITEOUT LAST "ok only"
+    CLEAR_ERR
+    SYS CAT "seed:"
+    LET row = LAST
+    SYS CAT row root_dir
+    LET row = LAST
+    SYS CAT row ":ok"
+    LET row = LAST
+    SYS GREPV "seed:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "seed ok"
+  END
+  PRINT_JSON admit_n bag_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "rest"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "rest needs root"
+    FAIL "rest needs root"
+    CLEAR_ERR
+  ELSE
+    DROPINTREE root_dir needle SK
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "rest soft miss"
+      FAIL "rest soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "rest failed"
+      END
+    ELSE
+      LET take_n = DROPINTREE_N
+      LET line_i = DROPINTREE_SKIP
+      LET out = LAST
+      LET rest = out
+      CLEAR_ERR
+      SYS CAT "rest:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR take_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR SK
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":dr"
+      LET row = LAST
+      SYS GREPV "rest:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF take_n > 0 THEN
+        LET hit = 1
+        LET note_msg = "rest hit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "rest empty"
+        FAIL "rest empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "rest empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n SK r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "dual"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "dual needs root"
+    FAIL "dual needs root"
+    CLEAR_ERR
+  ELSE
+    TAKEINTREE root_dir needle SK
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "dual take soft"
+      FAIL "dual take soft"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "dual take failed"
+      END
+    ELSE
+      LET head = LAST
+      LET has_n = TAKEINTREE_N
+      CLEAR_ERR
+      DROPINTREE root_dir needle SK
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "dual drop soft"
+        FAIL "dual drop soft"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "dual drop failed"
+        END
+      ELSE
+        LET rest = LAST
+        LET take_n = DROPINTREE_N
+        LET out = rest
+        CLEAR_ERR
+        # cover: head_n + rest_n should equal full residual skip0
+        DROPINTREE root_dir needle 0
+        LET cover = DROPINTREE_N
+        CLEAR_ERR
+        LET peel_hit = has_n + take_n
+        # no overlap: mid from head not in rest when skip>=1
+        SYS HAS rest "mid.txt"
+        LET line_i = LAST_N
+        CLEAR_ERR
+        SYS CAT "dual:"
+        LET row = LAST
+        SYS STR has_n
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS STR take_n
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS STR cover
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":du"
+        LET row = LAST
+        SYS GREPV "dual:" bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+        LET admit_n = 1
+        SYS LINES bag
+        LET bag_n = LAST_N
+        LET hit = 1
+        LET note_msg = "dual ok"
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n has_n take_n cover peel_hit line_i r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "icase"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "icase needs root"
+    FAIL "icase needs root"
+    CLEAR_ERR
+  ELSE
+    DROPINTREEI root_dir needle SK
+    LET take_n = DROPINTREE_N
+    LET out = LAST
+    CLEAR_ERR
+    SYS CAT "icase:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":ic"
+    LET row = LAST
+    SYS GREPV "icase:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    IF take_n > 0 THEN
+      LET hit = 1
+      LET note_msg = "icase hit"
+    ELSE
+      LET miss = 1
+      LET note_msg = "icase empty"
+      FAIL "icase empty"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  DROPINTREE "" "x" 0
+  LET has_n = OK
+  CLEAR_ERR
+  DROPINTREE "/no/such/tdr_root" "x" 0
+  LET peel_hit = OK
+  CLEAR_ERR
+  DROPINTREE root_dir "zzzz_nope" 0
+  LET take_n = DROPINTREE_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON has_n peel_hit take_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.tree_drop_residual_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "tree_drop_residual_board: done"
+PRINT_JSON hit miss bag_n take_n has_n cover SK r_src note_msg
+EXIT 0

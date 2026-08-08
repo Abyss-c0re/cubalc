@@ -1,57 +1,63 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 189,
-  "program": "programs/realworld/agent_json_plate_stamp_board.cubalc",
-  "theme": "JSONOBJ + JSONSET agent STATUS.json mint/stamp/fail/extend plate writes",
-  "version": "1.15.505-usability",
+  "iter": 190,
+  "program": "programs/realworld/tree_drop_residual_board.cubalc",
+  "theme": "DROPINTREE residual reprocess queue after skip N content matches under tree",
+  "version": "1.15.508-usability",
   "pass": true,
-  "prior_note": "iter 188 JSONKEYS+JSONHAS+FROM peels; this iter first realworld JSONOBJ(1055)+JSONSET(1054) write path",
+  "prior_note": "iter 189 JSONOBJ+JSONSET stamp; this iter first realworld DROPINTREE(1051) residual dual of TAKE",
   "tests": [
     {
-      "name": "mint",
-      "cmd": "JSONOBJ 6 pairs WRITEOUT STATUS.json",
+      "name": "seed",
+      "cmd": "WRITEOUT nested mid/z/err/plain",
       "ok": true,
-      "note": "JSONOBJ"
+      "note": "seed"
     },
     {
-      "name": "stamp",
-      "cmd": "JSONSET phase/n/ts/ok/err UPDATED=1",
+      "name": "rest0",
+      "cmd": "DROP skip0 \u2192 3 paths mid z err",
       "ok": true,
-      "note": "JSONSET"
+      "note": "all"
     },
     {
-      "name": "show",
-      "cmd": "JSONKEYS+FROM phase ok after stamp",
+      "name": "rest1",
+      "cmd": "skip1 \u2192 z + err (no mid)",
       "ok": true,
-      "note": "peel"
+      "note": "residual"
     },
     {
-      "name": "fail",
-      "cmd": "ok=0 err=boom phase=fail",
+      "name": "rest2",
+      "cmd": "skip2 \u2192 err.log only",
       "ok": true,
-      "note": "fail stamp"
+      "note": "tail"
     },
     {
-      "name": "extend",
-      "cmd": "JSONOBJ FROM +extra +stamp_n",
+      "name": "empty",
+      "cmd": "skip3/99 \u2192 empty soft shell0",
       "ok": true,
-      "note": "FROM base"
+      "note": "empty"
+    },
+    {
+      "name": "dual",
+      "cmd": "TAKE1+DROP1 cover=3 peel=3 mid not in rest",
+      "ok": true,
+      "note": "dual"
+    },
+    {
+      "name": "icase",
+      "cmd": "DROPINTREEI ERROR skip1 \u2192 2",
+      "ok": true,
+      "note": "icase"
     },
     {
       "name": "probe",
-      "cmd": "empty JSONOBJ {}; empty key soft; quote escape",
+      "cmd": "empty/missing root soft; zzzz N=0",
       "ok": true,
-      "note": "edges"
-    },
-    {
-      "name": "soft",
-      "cmd": "stamp missing plate soft miss exit0",
-      "ok": true,
-      "note": "soft"
+      "note": "soft root"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_AJPS_REQUIRE=1 empty \u2192 shell 2",
+      "cmd": "CUBALC_TDR_REQUIRE=1 missing \u2192 shell 2",
       "ok": true,
       "note": "hard"
     },
@@ -1022,6 +1028,30 @@
       "title": "JSONOBJ FROM base reports only new pair count not total keys",
       "detail": "JSONOBJ FROM body \"extra\" \"yes\" \"stamp_n\" n_str \u2192 JSONOBJ_N=2 (added pairs) not full key count. Agents must JSONKEYS after extend for inventory. Positive for delta tracking.",
       "repro": "extend existing 6-key plate \u2192 JSONOBJ_N 2"
+    },
+    {
+      "id": "W121",
+      "severity": "med",
+      "area": "lang|dropintree",
+      "title": "DROPINTREE negative skip clamps to 0 silently (SKIP knob != arg)",
+      "detail": "DROPINTREE root error -1 \u2192 N=3 SKIP=0 OK=1. No hard err. Board GETFLAGN --skip=-1 leaves SK=-1 while op used 0. Agents comparing SK plate to DROPINTREE_SKIP can disagree. Prefer clamp or hard reject negatives.",
+      "repro": "DROPINTREE root error -1 \u2192 SKIP 0 N all; flag SK still -1"
+    },
+    {
+      "id": "W122",
+      "severity": "low",
+      "area": "lang|tree_needle",
+      "title": "tree content needles are substrings not whole-token (err matches error)",
+      "detail": "DROPINTREE root err 0 hits all three error* files (mid/z/err.log). Same class as GREP substring. Agents wanting whole-word need post-filter or exact line ops. False friend for short needles.",
+      "repro": "DROPINTREE root err 0 \u2192 N=3 same as error"
+    },
+    {
+      "id": "W123",
+      "severity": "low",
+      "area": "lang|dropintree",
+      "title": "skip past end / skip==hitcount both soft empty OK=1 N=0",
+      "detail": "DROP skip 3 or 99 on 3 hits \u2192 empty bag no hard OOR. Dual TAKE+DROP cover works (1+2=3). Residual empty is agent FAIL/REQUIRE EXIT concern not language hard fail.",
+      "repro": "DROPINTREE root error 3 \u2192 N=0 OK=1"
     }
   ],
   "workarounds": [
@@ -1034,7 +1064,8 @@
     "SLICE empty page: check SLICEINTREE_N; pair with EXIT n under REQUIRE (W113)",
     "JSON dynamic keys: EQS-branch literals from known schema; no var keys (W115)",
     "Capture LAST into LET before CLEAR_ERR if probe preserved it (W117)",
-    "JSONOBJ/JSONSET numeric: SYS STR n first (W118); accept string n or use literal numbers"
+    "JSONOBJ/JSONSET numeric: SYS STR n first (W118); accept string n or use literal numbers",
+    "DROPINTREE skip: treat N==0 as empty page; clamp SK>=0 before op (W121)"
   ],
   "language_gaps": [
     "Stable PARSEPATHLINE after FORMAT under agent_boot boards (W108)",
@@ -1047,18 +1078,19 @@
     "JSON peel nested objects / dotted paths for object fields (W116)",
     "CLEAR_ERR optional keep-LAST mode",
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
-    "DROPINTREE still unused in realworld (residual queue board)"
+    "DROPINTREE hard reject or warn on negative skip",
+    "JSONDEL/JSONN/JSONMERGE still unused in realworld"
   ],
   "issues_faced": [
-    "0-based FIRSTLINE I needs +1 for FORMAT lineno (W111)",
-    "selftest 355/355",
     "HASINTREE LAST preserve made VAL=preserve-me until documented W112",
     "selftest 355/355 green v1.15.500",
     "variable JSON keys silently miss \u2014 fixed board with EQS literal branches (W115)",
     "selftest 355/355 green v1.15.503",
     "mint hard-fail missing value until STR shuttle on TN (W118)",
-    "selftest 355/355 green v1.15.505"
+    "selftest 355/355 green v1.15.505",
+    "negative --skip=-1 silently becomes skip0 (W121)",
+    "selftest 355/355 green v1.15.508"
   ],
-  "commit": "e69801c",
-  "ts": "2026-08-08T10:24:34Z"
+  "commit": "pending",
+  "ts": "2026-08-08T10:48:19Z"
 }
