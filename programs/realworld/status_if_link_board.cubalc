@@ -1,0 +1,606 @@
+# status_if_link_board.cubalc — WRITEOUTIF + LOGSTAMP + LINKOUT deploy status
+#
+# Real use: deploy agents stamp timestamped logs, write mtime-stable status
+# plates only when content changes, and publish a latest symlink alias:
+#   LOGSTAMP / STAMPLOG — ISO + msg append (1024)
+#   WRITEOUTIF / PUTIFCHANGED — write only if body differs (1023)
+#   LINKOUT / LNOUT — nested symlink to status (1025)
+#   GETFLAGOUT status|log|link OR ENV · SUBCMD publish|log|set|link|list|...
+#
+# First realworld WRITEOUTIF + LOGSTAMP + LINKOUT board (1023-1025).
+# Distinct from runlog_atomic (APPENDOUT/ATOMIC/COPY) and lease_promote:
+# this board is *stable status mtime + stamped log + latest link*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sil_$$
+#   ./out/cubalc run programs/realworld/status_if_link_board.cubalc \
+#     set -- --status=/tmp/sil/status.txt ready
+#   ./out/cubalc run ... log -- --log=/tmp/sil/run.log deploy-start
+#   ./out/cubalc run ... link -- --status=... --link=/tmp/sil/latest
+#
+# Plate: STATUS.txt VAL.txt META.txt SIL_REPORT.txt
+# Env: STATUS RUNLOG LATEST CUBALC_SIL_REQUIRE CUBALC_SIL_MIN
+#
+# Edges:
+#   WRITEOUTIF CHANGED 1 then 0 on same body; rewrite on change
+#   LOGSTAMP ISO Z lines; CREATED parent vs second append
+#   LINKOUT exists soft fail on re-link; absolute target
+#   W47 lean LET; GREPV plate; known latch
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "status_if_link_board: start"
+DEFAULT ACTION = "list"
+DEFAULT TFILE = "STATUS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "SIL_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "status_if_link -- set|log|link|list -- [--status=F] [--log=F] [--link=F] [msg]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "deploy/status.txt"
+LET def_st = LAST
+SYS JOIN state_dir "deploy/run.log"
+LET def_log = LAST
+SYS JOIN state_dir "deploy/latest.status"
+LET def_link = LAST
+CLEAR_ERR
+
+GETFLAGOUT status|s OR ENV STATUS OR def_st
+LET st_file = LAST
+LET s_src = GETFLAGOUT_SRC
+LET s_ok = OK
+CLEAR_ERR
+GETFLAGOUT log|l OR ENV RUNLOG OR def_log
+LET log_file = LAST
+LET l_src = GETFLAGOUT_SRC
+LET l_ok = OK
+CLEAR_ERR
+GETFLAGOUT link|k OR ENV LATEST OR def_link
+LET link_file = LAST
+LET k_src = GETFLAGOUT_SRC
+LET k_ok = OK
+CLEAR_ERR
+
+LET msg = "tick"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET msg = LAST
+END
+CLEAR_ERR
+
+SYS ENV "CUBALC_SIL_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SIL_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir TFILE
+LET plate_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET row = ""
+LET pref = ""
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET val = ""
+LET meta = ""
+LET changed = 0
+LET created = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "set", "log", "link", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "set" THEN
+    LET op = "set"
+  WHEN "log" THEN
+    LET op = "log"
+  WHEN "link" THEN
+    LET op = "link"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "bag_n"
+  SYS STR bag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON bag_n s_src l_src k_src
+  CLEAR_ERR
+END
+
+SYS EQS op "log"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF l_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "log needs path"
+    FAIL "log needs path"
+    CLEAR_ERR
+  ELSE
+    LOGSTAMP log_file msg
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "LOGSTAMP failed"
+    END
+    LET created = LOGSTAMP_CREATED
+    CLEAR_ERR
+    SYS CAT "log:"
+    LET row = LAST
+    SYS CAT row msg
+    LET row = LAST
+    SYS CAT row ":stamped"
+    LET row = LAST
+    SYS GREPV "log:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "log ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "log"
+    SYS PUSH meta log_file
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n created l_src
+  CLEAR_ERR
+END
+
+SYS EQS op "set"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF s_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "set needs status path"
+    FAIL "set needs status path"
+    CLEAR_ERR
+  ELSE
+    SYS CAT "state="
+    LET row = LAST
+    SYS CAT row msg
+    LET row = LAST
+    WRITEOUTIF st_file row
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "WRITEOUTIF failed"
+    END
+    LET changed = WRITEOUTIF_CHANGED
+    LET created = WRITEOUTIF_CREATED
+    CLEAR_ERR
+    SYS CAT "status:"
+    LET pref = LAST
+    SYS CAT pref msg
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR changed
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":if"
+    LET row = LAST
+    SYS GREPV "status:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "set ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "status"
+    SYS PUSH meta st_file
+    LET meta = LAST
+    SYS PUSH meta "changed"
+    LET meta = LAST
+    SYS STR changed
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n changed created s_src
+  CLEAR_ERR
+END
+
+SYS EQS op "link"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF k_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "link needs path"
+    FAIL "link needs path"
+    CLEAR_ERR
+  ELSE
+    SYS EXIST st_file
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "link needs status first"
+      FAIL "link needs status first"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "link needs status first"
+      END
+    ELSE
+      LINKOUT st_file link_file
+      IF OK == 0 THEN
+        # re-link soft exists — treat as ok for agents if already linked
+        LET miss = 1
+        LET note_msg = "link exists or fail"
+        FAIL "link exists or fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "link failed"
+        END
+      ELSE
+        LET created = LINKOUT_CREATED
+        CLEAR_ERR
+        SYS CAT "link:"
+        LET row = LAST
+        SYS CAT row link_file
+        LET row = LAST
+        SYS CAT row ":ok"
+        LET row = LAST
+        SYS GREPV "link:" bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+        LET admit_n = 1
+        SYS LINES bag
+        LET bag_n = LAST_N
+        LET hit = 1
+        LET note_msg = "link ok"
+        LET val = bag
+        LET val_ch = 1
+        LET meta = "link"
+        SYS PUSH meta link_file
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n created k_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET pref = LAST
+    SYS CAT pref ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "drop"
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET pref = LAST
+  SYS BLANK pref
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs key"
+    FAIL "has needs key"
+    CLEAR_ERR
+  ELSE
+    SYS CAT pref ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    LET val = pref
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  SYS STR bag_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "gate"
+  LET meta_ch = 1
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    LET meta_ch = 1
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has status"
+    LET val = bag
+    LET val_ch = 1
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  WRITEOUTIF "" "x"
+  LET has_n = OK
+  CLEAR_ERR
+  LINKOUT "" "y"
+  LET admit_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  SYS STR has_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON has_n admit_n s_src l_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET val = ""
+  LET meta = ""
+  LET bag_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+LET meta = "schema=cubalc.status_if_link_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "status"
+LET meta = LAST
+SYS PUSH meta st_file
+LET meta = LAST
+SYS PUSH meta "log"
+LET meta = LAST
+SYS PUSH meta log_file
+LET meta = LAST
+SYS PUSH meta "link"
+LET meta = LAST
+SYS PUSH meta link_file
+LET meta = LAST
+SYS PUSH meta "bag_n"
+LET meta = LAST
+SYS STR bag_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+
+NOTE "status_if_link_board: done"
+PRINT_JSON hit miss bag_n changed created s_src l_src note_msg
+EXIT 0

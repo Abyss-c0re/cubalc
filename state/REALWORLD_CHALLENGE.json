@@ -1,45 +1,39 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 175,
-  "program": "programs/realworld/lease_promote_board.cubalc",
-  "theme": "TOUCHOUT + MOVEOUT lease claim and plate promote (marker stamp + rename-into-nest)",
-  "version": "1.15.472-usability",
+  "iter": 176,
+  "program": "programs/realworld/status_if_link_board.cubalc",
+  "theme": "WRITEOUTIF + LOGSTAMP + LINKOUT deploy status (mtime-stable plate + stamped log + latest link)",
+  "version": "1.15.475-usability",
   "pass": true,
-  "prior_note": "iter 174 APPENDOUT+ATOMIC+COPYOUT; this iter first realworld TOUCHOUT(1022)+MOVEOUT(1021)",
+  "prior_note": "iter 175 TOUCHOUT+MOVEOUT; this iter first realworld WRITEOUTIF(1023)+LOGSTAMP(1024)+LINKOUT(1025)",
   "tests": [
     {
-      "name": "claim",
-      "cmd": "claim --lease --src job1 \u2192 TOUCHOUT NEW=1 + stage WRITEOUT",
+      "name": "logstamp",
+      "cmd": "log twice \u2192 ISO lines in nested run.log",
       "ok": true,
-      "note": "TOUCHOUT"
+      "note": "LOGSTAMP"
     },
     {
-      "name": "renew",
-      "cmd": "renew \u2192 NEW=0",
+      "name": "writeoutif",
+      "cmd": "set ready CHANGED1; same CHANGED0 mtime stable; live CHANGED1",
       "ok": true,
-      "note": "renew"
+      "note": "WRITEOUTIF"
     },
     {
-      "name": "promote",
-      "cmd": "promote src\u2192dest; src gone; plate promoted",
+      "name": "linkout",
+      "cmd": "link latest \u2192 symlink; re-link soft exists",
       "ok": true,
-      "note": "MOVEOUT"
+      "note": "LINKOUT"
     },
     {
-      "name": "miss_soft",
-      "cmd": "promote missing src; renew without lease",
+      "name": "link_miss",
+      "cmd": "link without status soft",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "probe",
-      "cmd": "MOVEOUT/TOUCHOUT empty soft OK=0",
-      "ok": true,
-      "note": "probe"
-    },
-    {
       "name": "has_drop_gate",
-      "cmd": "has/drop/gate/soft/clear",
+      "cmd": "has/drop/gate/soft/clear/probe",
       "ok": true,
       "note": "ops"
     },
@@ -658,24 +652,47 @@
       "title": "WRITEOUT body with unquoted {braces} can parse as forms",
       "detail": "WRITEOUT path {\"job\":1} failed unknown form job in -e smoke. Prefer simple key=val plate lines or careful quoting. Board uses job=id claimed=ISO.",
       "repro": "WRITEOUT f {\\\"job\\\":1} \u2192 unknown form job"
+    },
+    {
+      "id": "W77",
+      "severity": "low",
+      "area": "lang|writeoutif",
+      "title": "WRITEOUTIF mtime-stable when body unchanged",
+      "detail": "Positive: first set CHANGED=1; same body CHANGED=0 and mtime unchanged after 1s sleep; different body CHANGED=1. Good for deploy status watchers. CREATED often 0 after GETFLAGOUT parent (W70 class).",
+      "repro": "WRITEOUTIF st state=ready twice \u2192 second CHANGED 0 mtime stable"
+    },
+    {
+      "id": "W78",
+      "severity": "low",
+      "area": "lang|logstamp",
+      "title": "LOGSTAMP appends ISO Z + msg without DATE+CAT+APPENDOUT",
+      "detail": "Positive: multi lines with ISO timestamps; LOGSTAMP_LINE/ISO knobs in proof; CREATED parent-only like APPENDOUT.",
+      "repro": "LOGSTAMP log deploy-start \u2192 2026-\u2026Z deploy-start"
+    },
+    {
+      "id": "W79",
+      "severity": "low",
+      "area": "lang|linkout",
+      "title": "LINKOUT creates abs symlink; re-link soft exists fail",
+      "detail": "Positive: LINKOUT status latest \u2192 ISLINK abs target; second LINKOUT OK=0 sticky exists. Agents must RM link or tolerate soft miss for republish.",
+      "repro": "LINKOUT st link; LINKOUT again \u2192 exists err"
     }
   ],
   "workarounds": [
-    "TOUCHOUT lease; use TOUCHOUT_NEW not CREATED for claim/renew (W74)",
-    "WRITEOUT src body; MOVEOUT src dest (pass both paths each run)",
-    "Avoid raw {json} in WRITEOUT without quoting (W76)",
-    "cubalc run prog claim -- --lease=F --src=F id"
+    "WRITEOUTIF st state=msg; check WRITEOUTIF_CHANGED for watcher noise",
+    "LOGSTAMP log msg for ISO lines",
+    "LINKOUT st link; RM before re-link or accept soft exists (W79)",
+    "cubalc run prog set -- --status=F ready"
   ],
   "language_gaps": [
-    "Cookbook: lease claim + promote with TOUCHOUT/MOVEOUT",
-    "JSON-safe WRITE body form or string literal rules",
-    "Lazy GETFLAGOUT to avoid eager parent trees (W73)"
+    "LINKOUT force/replace form for latest republish",
+    "Cookbook: deploy status WRITEOUTIF+LOGSTAMP+LINKOUT"
   ],
   "issues_faced": [
-    "JSON braces in WRITEOUT parse as forms \u2014 key=val body (W76)",
-    "TOUCHOUT_NEW distinguishes claim vs renew (W74)",
+    "WRITEOUTIF same body preserves mtime (W77)",
+    "LINKOUT re-link soft fails \u2014 document (W79)",
     "selftest 355/355"
   ],
-  "commit": "1b40d8a03566038e3911ed8c15b9be61e8630c59",
-  "ts": "2026-08-08T04:34:09Z"
+  "commit": "",
+  "ts": "2026-08-08T04:59:07Z"
 }
