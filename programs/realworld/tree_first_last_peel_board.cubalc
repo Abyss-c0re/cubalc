@@ -1,0 +1,660 @@
+# tree_first_last_peel_board.cubalc — FIRST/LASTINTREE + FIRST/LASTLINEINTREE peel
+#
+# Real use: incident agents peel the first and last matching file path and the
+# first/last matching log line under a nested tree without GREPTREE+TAKE glue:
+#   FIRSTINTREE / LASTINTREE / GREP1TREE — first/last content match path (1039)
+#   FIRSTLINEINTREE / LASTLINEINTREE — first/last matching line + PATH + I (1040)
+#   *I case-insensitive twins
+#   WRITEOUT — seed nested multi-file multi-line logs
+#
+# First realworld FIRSTINTREE + FIRSTLINEINTREE board. Distinct from
+# logtree_count_harvest (counts/all lines) and greptree_scrub (path bags).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tfl_$$
+#   ./out/cubalc run programs/realworld/tree_first_last_peel_board.cubalc \
+#     seed -- --root=/tmp/tfl/logs
+#   ./out/cubalc run ... first -- --root=... error
+#   ./out/cubalc run ... last -- --root=... error
+#   ./out/cubalc run ... firstline -- --root=... error
+#   ./out/cubalc run ... lastline -- --root=... error
+#
+# Plate: STATUS.txt VAL.txt META.txt TFL_REPORT.txt
+# Env: LOG_ROOT CUBALC_TFL_REQUIRE CUBALC_TFL_MIN
+#
+# Edges:
+#   HIT=0 empty LAST OK=1; missing soft; DFS order first/last path
+#   LINE peel PATH + I; no match I=-1; substring false friends
+#   lean VARS (W81); WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "tree_first_last_peel_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "tree_first_last_peel -- seed|first|last|firstline|lastline|list -- [--root=D] [needle]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "peel/tree"
+LET root_dir = LAST
+CLEAR_ERR
+
+GETFLAGOUT root|r OR ENV LOG_ROOT OR root_dir
+LET root_dir = LAST
+LET r_src = GETFLAGOUT_SRC
+LET r_ok = OK
+CLEAR_ERR
+
+LET needle = "error"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET needle = LAST
+END
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_TFL_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_TFL_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "TFL_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET peel_hit = 0
+LET line_i = -1
+LET row = ""
+LET peel = ""
+LET peel_path = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "seed", "first", "last", "firstline", "lastline", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "seed" THEN
+    LET op = "seed"
+  WHEN "first" THEN
+    LET op = "first"
+  WHEN "last" THEN
+    LET op = "last"
+  WHEN "firstline" THEN
+    LET op = "firstline"
+  WHEN "lastline" THEN
+    LET op = "lastline"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "seed"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "seed needs root"
+    FAIL "seed needs root"
+    CLEAR_ERR
+  ELSE
+    SYS JOIN root_dir "a/b/mid.txt"
+    WRITEOUT LAST "noise\nerror first-line\nok mid"
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "seed write failed"
+    END
+    CLEAR_ERR
+    SYS JOIN root_dir "a/b/z.txt"
+    WRITEOUT LAST "error z-line"
+    CLEAR_ERR
+    SYS JOIN root_dir "a/err.log"
+    WRITEOUT LAST "info\nerror last-line\ntrailer"
+    CLEAR_ERR
+    SYS JOIN root_dir "plain.txt"
+    WRITEOUT LAST "ok only"
+    CLEAR_ERR
+    SYS CAT "seed:"
+    LET row = LAST
+    SYS CAT row root_dir
+    LET row = LAST
+    SYS CAT row ":ok"
+    LET row = LAST
+    SYS GREPV "seed:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "seed ok"
+  END
+  PRINT_JSON admit_n bag_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "first"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "first needs root"
+    FAIL "first needs root"
+    CLEAR_ERR
+  ELSE
+    FIRSTINTREE root_dir needle
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "first soft miss"
+      FAIL "first soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "first failed"
+      END
+    ELSE
+      LET peel_hit = FIRSTINTREE_HIT
+      LET peel = LAST
+      CLEAR_ERR
+      SYS CAT "first:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":fi"
+      LET row = LAST
+      SYS GREPV "first:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "first hit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "first empty"
+        FAIL "first empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "first empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "last"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "last needs root"
+    FAIL "last needs root"
+    CLEAR_ERR
+  ELSE
+    LASTINTREE root_dir needle
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "last soft miss"
+      FAIL "last soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "last failed"
+      END
+    ELSE
+      LET peel_hit = LASTINTREE_HIT
+      LET peel = LAST
+      CLEAR_ERR
+      SYS CAT "last:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":li"
+      LET row = LAST
+      SYS GREPV "last:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "last hit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "last empty"
+        FAIL "last empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "last empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "firstline"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "firstline needs root"
+    FAIL "firstline needs root"
+    CLEAR_ERR
+  ELSE
+    FIRSTLINEINTREE root_dir needle
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "firstline soft miss"
+      FAIL "firstline soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "firstline failed"
+      END
+    ELSE
+      LET peel_hit = FIRSTLINEINTREE_HIT
+      LET peel = LAST
+      LET peel_path = FIRSTLINEINTREE_PATH
+      LET line_i = FIRSTLINEINTREE_I
+      CLEAR_ERR
+      SYS CAT "fline:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":fl"
+      LET row = LAST
+      SYS GREPV "fline:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "firstline hit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "firstline empty"
+        FAIL "firstline empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "firstline empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit line_i r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "lastline"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "lastline needs root"
+    FAIL "lastline needs root"
+    CLEAR_ERR
+  ELSE
+    LASTLINEINTREE root_dir needle
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "lastline soft miss"
+      FAIL "lastline soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "lastline failed"
+      END
+    ELSE
+      LET peel_hit = LASTLINEINTREE_HIT
+      LET peel = LAST
+      LET peel_path = LASTLINEINTREE_PATH
+      LET line_i = LASTLINEINTREE_I
+      CLEAR_ERR
+      SYS CAT "lline:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":ll"
+      LET row = LAST
+      SYS GREPV "lline:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "lastline hit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "lastline empty"
+        FAIL "lastline empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "lastline empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit line_i r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET row = LAST
+    SYS CAT row ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET row = LAST
+  SYS BLANK row
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs key"
+    FAIL "has needs key"
+    CLEAR_ERR
+  ELSE
+    SYS CAT row ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  FIRSTINTREE "" "x"
+  LET has_n = OK
+  CLEAR_ERR
+  FIRSTLINEINTREE "" "x"
+  LET admit_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON has_n admit_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  # VAL: peel result (path or line)
+  SYS BLANK peel
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path peel
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.tree_first_last_peel_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "peel_hit"
+LET row = LAST
+SYS STR peel_hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "line_i"
+LET row = LAST
+SYS STR line_i
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "tree_first_last_peel_board: done"
+PRINT_JSON hit miss bag_n peel_hit line_i r_src note_msg
+EXIT 0
