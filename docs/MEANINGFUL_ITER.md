@@ -613,6 +613,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 583. ~~**`FILLP STRICT`/`NEEDFILLP`/`FILLPKEYS`**~~ **done** (fail-fast missing `{{key}}` · miss key bag · template contract discovery).
 584. ~~**`FILLPFILE STRICT`/`NEEDFILLPFILE`**~~ **done** (fail-fast materialize · no half-filled write · lists missing keys).
 585. ~~**`cubalc plate fill`/`fillkeys`**~~ **done** (CLI FILLP dual · `@file` templates · `--strict` miss gate · no `.cubalc`).
+586. ~~**`FILLP FROM`**~~ **done** (expand `{{key}}` from any plate object/var/LAST · multi-plate agents without `LET PLATE=`).
 
 ## Tick protocol
 

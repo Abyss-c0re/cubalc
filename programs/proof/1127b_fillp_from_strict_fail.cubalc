@@ -1,0 +1,5 @@
+# FILLP STRICT FROM fails when source plate misses keys
+HOLD_FLASH 1
+LET src = "{\"a\":1}"
+FILLP STRICT FROM src "a={{a}} b={{b}}"
+PRINT "should not reach"

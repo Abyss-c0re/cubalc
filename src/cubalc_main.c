@@ -2112,6 +2112,7 @@ int main(int argc, char **argv) {
       {"str_wide", "programs/proof/1123_str_wide.cubalc", "EQS/HAS/STARTS/ENDS/FIND/MID/REPLACE host-wide multi-KB"},
       {"fillp_strict", "programs/proof/1124_fillp_strict.cubalc", "NEEDFILLP/FILLP STRICT + FILLPKEYS template contract"},
       {"fillpfile_strict", "programs/proof/1125_fillpfile_strict.cubalc", "NEEDFILLPFILE fail-fast plate template materialize"},
+      {"fillp_from", "programs/proof/1127_fillp_from.cubalc", "FILLP FROM other plate/var/LAST multi-plate templates"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2356,7 +2357,7 @@ int main(int argc, char **argv) {
       {"HASPALL", "flow", "HASPALL key… — soft 0|1 if PLATE has every key"},
       {"KEYSP", "flow", "KEYSP — PLATE key bag → LAST · LAST_N=count"},
       {"DUMPP", "flow", "DUMPP|PLATEINFO — cubalc.plate_info.v1 PLATE snapshot"},
-      {"FILLP", "flow", "FILLP|SUBSTPLATE [tmpl] — expand {{key}} from PLATE · agent templates"},
+      {"FILLP", "flow", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · multi-plate FROM"},
       {"NEEDFILLP", "flow", "NEEDFILLP|FILLP STRICT [tmpl] — fail if {{key}} missing · lists names"},
       {"FILLPKEYS", "flow", "FILLPKEYS [tmpl] — unique {{key}} names bag · template contract"},
       {"SUBSTPLATE", "flow", "SUBSTPLATE alias of FILLP"},

@@ -35611,7 +35611,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"KEYSP", "KEYSP — PLATE key bag → LAST · LAST_N=count · no JSONKEYS glue"},
       {"DUMPP", "DUMPP|PLATEINFO — cubalc.plate_info.v1 snapshot of PLATE (keys/bytes/path)"},
       {"PLATEINFO", "PLATEINFO alias of DUMPP"},
-      {"FILLP", "FILLP|SUBSTPLATE [template] — expand {{key}} from PLATE · LAST filled · FILLP_MISS"},
+      {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
       {"TEMPLATEP", "TEMPLATEP alias of FILLP"},
@@ -38253,15 +38253,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * Bare USAGE re-echoes stored USAGE (or empty). Does not change OK/ERR.
    * REQUIRE ARG / ARGC / FLAG failures append " · usage: …" when set.
    * Usability: one-line help without shell; twin of NOTE for CLI tools. */
-  /* FILLP|SUBSTPLATE|EXPANDP|TEMPLATEP [STRICT|NEED] [template]
-   * — expand {{key}} from conventional PLATE var into a message/path template.
+  /* FILLP|SUBSTPLATE|EXPANDP|TEMPLATEP [STRICT|NEED] [FROM plate] [template]
+   * — expand {{key}} from PLATE (default) or FROM another object plate/var/LAST.
    * Unset key → empty; incomplete {{ left literal. Bare FILLP uses prior LAST.
-   * LAST = expanded; LAST_N/FILLP_N = slots; FILLP_MISS = missing keys;
-   * FILLP_MISS_KEYS = newline bag of missing key names.
+   * LAST = expanded; LAST_N/FILLP_N = slots; FILLP_MISS; FILLP_MISS_KEYS.
    * FILLP STRICT|NEED / NEEDFILLP — fail-fast if any {{key}} missing (lists names).
    * FILLPKEYS [template] — bag of unique {{key}} names · contract discovery.
-   * Usability: agent status/log/path templates without GETP+REPLACEALL chains;
-   * STRICT gates peer/status renders so agents do not ship half-filled plates. */
+   * FROM: multi-plate agents without LET PLATE = other:
+   *   FILLP FROM peer "hello {{name}}"
+   *   FILLP STRICT FROM LAST "ready={{status}}"
+   *   FILLP "x={{a}}" FROM other_plate
+   * Usability: status/log templates without GETP+REPLACEALL; multi-plate fill. */
   if (kw(&L->cur,"FILLPKEYS") || kw(&L->cur,"TEMPLATEKEYS") ||
       kw(&L->cur,"PLATE_KEYS_TMPL") || kw(&L->cur,"KEYS_IN_TEMPLATE") ||
       kw(&L->cur,"MFILLPKEYS")) {
@@ -38298,9 +38300,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"NEEDFILLP") || kw(&L->cur,"REQUIREFILLP") ||
       kw(&L->cur,"FILLPNEED") || kw(&L->cur,"STRICTFILLP")) {
     char plate[CUBALC_HOST_STR_MAX], tmpl[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
-    char miss_keys[CUBALC_HOST_STR_MAX];
+    char miss_keys[CUBALC_HOST_STR_MAX], from_src[CUBALC_HOST_STR_MAX];
     long hits = 0, miss = 0;
-    int is_strict = 0;
+    int is_strict = 0, have_from = 0, have_tmpl = 0;
     int aln = L->cur.line;
     Var *pv;
     char op0[24];
@@ -38321,14 +38323,33 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lex_next(L);
     }
 
-    plate[0] = 0; tmpl[0] = 0; out[0] = 0; miss_keys[0] = 0;
-    pv = var_get(vm, "PLATE", 0);
-    if (pv && pv->is_str && pv->sval[0])
-      snprintf(plate, sizeof plate, "%s", pv->sval);
-    else
-      snprintf(plate, sizeof plate, "%s", "{}");
+    plate[0] = 0; tmpl[0] = 0; out[0] = 0; miss_keys[0] = 0; from_src[0] = 0;
 
-    /* bare FILLP / next is statement keyword → prior LAST as template */
+    /* optional leading FROM plate_src */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str)
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+        else if (pv)
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+        else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0)
+          from_src[0] = 0;
+        else
+          { /* resolve consumed */ }
+        if (pv) lex_next(L);
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* template (or bare → LAST) */
     if (L->cur.kind == TK_NL || L->cur.kind == TK_EOF ||
         (L->cur.kind == TK_IDENT &&
          (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
@@ -38339,12 +38360,61 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           kw(&L->cur,"HASP") || kw(&L->cur,"KEYSP") || kw(&L->cur,"DUMPP") ||
           kw(&L->cur,"FILLP") || kw(&L->cur,"FILLPKEYS") || kw(&L->cur,"SUBSTPLATE") ||
           kw(&L->cur,"EXPANDP") || kw(&L->cur,"FILLPFILE") ||
+          kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
           kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
           kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
           kw(&L->cur,"VERSION")))) {
+      if (!have_tmpl) {
+        snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+        have_tmpl = 1;
+      }
+    } else if (L->cur.kind == TK_IDENT &&
+               (kw(&L->cur,"FROM") || kw(&L->cur,"USING"))) {
+      /* trailing FROM handled below */
+    } else if (resolve_str_arg(vm, L, tmpl, sizeof tmpl) == 0) {
+      have_tmpl = 1;
+    } else {
       snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
-    } else if (resolve_str_arg(vm, L, tmpl, sizeof tmpl) != 0) {
-      snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+      have_tmpl = 1;
+    }
+
+    /* trailing FROM plate_src if not already */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from && from_src[0]) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
     }
 
     hits = cubalc_expand_fillp(plate, tmpl, out, sizeof out, &miss,
@@ -38392,9 +38462,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "FILLP_MISS", miss);
     var_set_num(vm, "SUBSTPLATE_MISS", miss);
     var_set_str(vm, "FILLP_MISS_KEYS", miss_keys);
+    var_set_num(vm, "FILLP_FROM", have_from ? 1 : 0);
     var_set_num(vm, "OK", 1);
     if (vm->trace)
-      fprintf(vm->trace, "# fillp hits=%ld miss=%ld strict=%d\n", hits, miss, is_strict);
+      fprintf(vm->trace, "# fillp hits=%ld miss=%ld strict=%d from=%d\n",
+              hits, miss, is_strict, have_from);
     if (vm->res)
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
     bump(vm); return 1;

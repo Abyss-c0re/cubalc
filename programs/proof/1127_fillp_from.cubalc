@@ -1,0 +1,67 @@
+# FILLP FROM — expand {{key}} from any plate object, not only PLATE
+# Usability: multi-plate agents without LET PLATE = other / clobber.
+
+HOLD_FLASH 1
+
+# conventional PLATE still works
+LET PLATE = "{}"
+SETP "name" "alice"
+FILLP "hi {{name}}"
+SYS EQS LAST "hi alice"
+ASSERT LAST_N == 1
+ASSERT FILLP_FROM == 0
+
+# FROM named var (object plate string)
+LET peer = "{\"name\":\"bob\",\"role\":\"worker\"}"
+FILLP FROM peer "peer={{name}} role={{role}}"
+SYS EQS LAST "peer=bob role=worker"
+ASSERT LAST_N == 1
+ASSERT FILLP_N == 2
+ASSERT FILLP_MISS == 0
+ASSERT FILLP_FROM == 1
+# PLATE unchanged
+GETP "name"
+SYS EQS LAST "alice"
+ASSERT LAST_N == 1
+
+# trailing FROM
+FILLP "x={{role}}" FROM peer
+SYS EQS LAST "x=worker"
+ASSERT LAST_N == 1
+
+# FROM LAST (snapshot another plate)
+SYS JSONOBJ "host" "cube9" "n" 3
+LET snap = LAST
+# put snap in LAST then fill from LAST — need plate in LAST
+# FILLP FROM LAST uses current LAST as plate JSON
+LET PLATE = "{}"
+SETP "name" "z"
+# load snap into LAST via assignment chain
+SYS CAT "" snap
+FILLP FROM LAST "host={{host}} n={{n}}"
+SYS EQS LAST "host=cube9 n=3"
+ASSERT LAST_N == 1
+ASSERT FILLP_FROM == 1
+
+# FROM literal object string
+FILLP FROM "{\"k\":\"v\"}" "got={{k}}"
+SYS EQS LAST "got=v"
+ASSERT LAST_N == 1
+
+# STRICT FROM still gates misses
+LET peer2 = "{\"a\":1}"
+# expect fail path tested separately; soft miss still works
+FILLP FROM peer2 "a={{a}} b={{b}}"
+ASSERT FILLP_MISS == 1
+SYS HASLINE FILLP_MISS_KEYS "b"
+ASSERT LAST_N == 1
+SYS EQS LAST "a=1 b="
+ASSERT LAST_N == 1
+
+# STRICT success FROM
+FILLP STRICT FROM peer "ok={{name}}"
+ASSERT OK == 1
+SYS EQS LAST "ok=bob"
+ASSERT LAST_N == 1
+
+PRINT "fillp_from ok"
