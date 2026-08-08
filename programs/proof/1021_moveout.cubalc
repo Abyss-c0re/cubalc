@@ -1,0 +1,115 @@
+# MOVEOUT / MVOUT — ENSUREPARENT dest + RENAME one-shot
+# Promote temp plates into nested paths without DIRNAME + MKDIR + MV glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_mvo_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# source plate (flat)
+SYS JOIN root "tmp_plate.json"
+LET src = LAST
+WRITEOUT src "{\"move\":1}"
+ASSERT OK == 1
+SYS ISFILE src
+ASSERT LAST_N == 1
+
+# nested missing parents on dest
+SYS JOIN root "out/deep/nest/final.json"
+LET dst = LAST
+MOVEOUT src dst
+ASSERT OK == 1
+ASSERT MOVEOUT_CREATED == 1
+ASSERT LAST_N == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "final.json"
+ASSERT LAST_N == 1
+SYS ENDS MOVEOUT_PARENT "nest"
+ASSERT LAST_N == 1
+SYS ENDS MOVEOUT_SRC "tmp_plate.json"
+ASSERT LAST_N == 1
+SYS ISFILE LAST
+ASSERT LAST_N == 1
+SYS EXIST src
+ASSERT LAST_N == 0
+SYS READ dst
+SYS HAS LAST "move"
+ASSERT LAST_N == 1
+
+# MVOUT alias into new nest
+SYS JOIN root "stage/a.json"
+LET s2 = LAST
+WRITEOUT s2 "{\"v\":2}"
+ASSERT OK == 1
+SYS JOIN root "archive/deep/a.json"
+LET d2 = LAST
+MVOUT s2 d2
+ASSERT OK == 1
+ASSERT MOVEOUT_CREATED == 1
+SYS EXIST s2
+ASSERT LAST_N == 0
+SYS READ d2
+SYS HAS LAST "v"
+ASSERT LAST_N == 1
+
+# second move into existing parent — CREATED=0
+SYS JOIN root "stage/b.json"
+LET s3 = LAST
+WRITEOUT s3 "{\"b\":1}"
+ASSERT OK == 1
+SYS JOIN root "archive/deep/b.json"
+LET d3 = LAST
+MOVEOUT s3 d3
+ASSERT OK == 1
+ASSERT MOVEOUT_CREATED == 0
+SYS ISFILE d3
+ASSERT LAST_N == 1
+SYS EXIST s3
+ASSERT LAST_N == 0
+
+# SYS form
+SYS JOIN root "sys_src.json"
+LET ss = LAST
+WRITEOUT ss "{\"sys\":1}"
+ASSERT OK == 1
+SYS JOIN root "sys/deep/moved.json"
+LET sd = LAST
+SYS MOVEOUT ss sd
+ASSERT OK == 1
+SYS ENDS LAST "moved.json"
+ASSERT LAST_N == 1
+SYS EXIST ss
+ASSERT LAST_N == 0
+SYS READ sd
+SYS HAS LAST "sys"
+ASSERT LAST_N == 1
+
+# missing source soft fail
+SYS JOIN root "no/such/dest.json"
+LET miss = LAST
+MOVEOUT "/no/such/cubalc_missing_move_src_xyz" miss
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty path soft
+MOVEOUT "" "x"
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS WALK root
+SYS RMALL LAST
+SYS RM root
