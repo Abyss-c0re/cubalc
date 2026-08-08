@@ -1,0 +1,759 @@
+# agent_status_template_fillp_board.cubalc — FILLP/SUBSTPLATE agent templates
+#
+# Real use: expand status/log/path templates from durable agent PLATE
+# without GETP+REPLACEALL chains. First realworld of proof 1120 FILLP.
+#
+#   FILLP|SUBSTPLATE|EXPANDP|TEMPLATEP "…{{key}}…"
+#   LAST = expanded · FILLP_N = slots · FILLP_MISS = missing keys
+#   bare FILLP uses prior LAST as template
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_astf_$$
+#   ./out/cubalc run programs/realworld/agent_status_template_fillp_board.cubalc \
+#     boot -- --plate=/tmp/astf/agent.json
+#   ./out/cubalc run ... fill -- --plate=... --name=alice --host=cube1
+#   ./out/cubalc run ... path -- --plate=...
+#   ./out/cubalc run ... gate -- --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt ASTF_REPORT.txt
+# Env: PLATE_PATH NAME_S HOST_S CUBALC_ASTF_REQUIRE
+#
+# Edges:
+#   miss key → empty + FILLP_MISS; no slots; incomplete brace literal;
+#   empty string present is hit; bare FILLP LAST; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_status_template_fillp_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_status_template_fillp -- boot|fill|path|digest|gate|probe|list -- [--plate=P] [--name=N] [--host=H]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/deep/agent.json"
+LET plate_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+DEFAULT NAME_S = "alice"
+GETFLAG name|n OR ENV NAME_S OR NAME_S
+LET name_s = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cube1"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_ASTF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "ASTF_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET peel_s = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "boot", "fill", "path", "digest", "gate", "list", "ls", "soft", "clear", "probe", "alias"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "fill" THEN
+    LET op = "fill"
+  WHEN "path" THEN
+    LET op = "path"
+  WHEN "digest" THEN
+    LET op = "digest"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "alias" THEN
+    LET op = "alias"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src name_s host_s
+  CLEAR_ERR
+END
+
+LET PLATE_PATH = plate_file
+SYS JSONOBJ "n" 0 "ok" true "role" "worker" "schema" "cubalc.agent_template.v1"
+LET PLATE_SEED = LAST
+CLEAR_ERR
+
+# boot — seed plate + identity fields
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  SETP "name" name_s
+  CLEAR_ERR
+  SETP "host" host_s
+  CLEAR_ERR
+  INCLUDE plate_save
+  CLEAR_ERR
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  SYS JSON "name" FROM body
+  SYS EQS LAST name_s
+  LET has_n = LAST_N
+  CLEAR_ERR
+  LET out = body
+  LET take_n = load_hit
+  IF load_hit == 1 THEN
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET created = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot name"
+      FAIL "boot name"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot load"
+    FAIL "boot load"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "boot fail"
+    END
+  END
+  SYS CAT "boot:"
+  LET row = LAST
+  SYS CAT row name_s
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row host_s
+  LET row = LAST
+  SYS CAT row ":bt"
+  LET row = LAST
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# fill — multi-key status line
+SYS EQS op "fill"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  SETP "name" name_s
+  CLEAR_ERR
+  SETP "host" host_s
+  CLEAR_ERR
+  SETP "n" 7
+  CLEAR_ERR
+  FILLP "peer {{name}}@{{host}} role={{role}} n={{n}}"
+  LET out = LAST
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # capture FILLP_N via LAST_N after FILLP is slots when OK — proof FILLP_N
+  # use EQS for expanded string
+  SYS CAT "peer "
+  LET row = LAST
+  SYS CAT row name_s
+  LET row = LAST
+  SYS CAT row "@"
+  LET row = LAST
+  SYS CAT row host_s
+  LET row = LAST
+  SYS CAT row " role=worker n=7"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS out body
+  LET has_n = LAST_N
+  CLEAR_ERR
+  INCLUDE plate_save
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "fill ok"
+    LET admit_n = 1
+    LET peel_hit = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "fill mismatch"
+    FAIL "fill mismatch"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "fill fail"
+    END
+  END
+  SYS CAT "fill:"
+  LET row = LAST
+  SYS CAT row out
+  LET row = LAST
+  SYS CAT row ":fl"
+  LET row = LAST
+  SYS GREPV "fill:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# path — agent plate path template
+SYS EQS op "path"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  SETP "agent" name_s
+  CLEAR_ERR
+  SETP "tick" 42
+  CLEAR_ERR
+  FILLP "state/{{agent}}/tick-{{tick}}.json"
+  LET out = LAST
+  CLEAR_ERR
+  SYS CAT "state/"
+  LET row = LAST
+  SYS CAT row name_s
+  LET row = LAST
+  SYS CAT row "/tick-42.json"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS out body
+  LET has_n = LAST_N
+  CLEAR_ERR
+  INCLUDE plate_save
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "path ok"
+    LET admit_n = 1
+    LET take_n = 2
+  ELSE
+    LET miss = 1
+    LET note_msg = "path mismatch"
+    FAIL "path mismatch"
+    CLEAR_ERR
+  END
+  SYS CAT "path:"
+  LET row = LAST
+  SYS CAT row out
+  LET row = LAST
+  SYS CAT row ":ph"
+  LET row = LAST
+  SYS GREPV "path:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n p_src note_msg
+  CLEAR_ERR
+END
+
+# digest — miss key + hit mix, then bare FILLP
+SYS EQS op "digest"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  SETP "name" name_s
+  CLEAR_ERR
+  FILLP "x={{missing}} y={{name}}"
+  LET out = LAST
+  CLEAR_ERR
+  SYS CAT "x= y="
+  LET row = LAST
+  SYS CAT row name_s
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS out body
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # bare FILLP from LAST template
+  SYS CAT "host="
+  LET peel_s = LAST
+  SYS CAT peel_s "{{host}}"
+  CLEAR_ERR
+  # put host on plate
+  SETP "host" host_s
+  CLEAR_ERR
+  # template in LAST via CAT of host= + brace form already in peel_s wrong
+  # rebuild: LAST must be template
+  SYS CAT "host={{host}}"
+  FILLP
+  LET peel_s = LAST
+  CLEAR_ERR
+  SYS CAT "host="
+  LET row = LAST
+  SYS CAT row host_s
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS peel_s body
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "digest ok"
+      LET admit_n = 1
+      LET take_n = 2
+    ELSE
+      LET miss = 1
+      LET note_msg = "digest bare"
+      FAIL "digest bare"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "digest missfill"
+    FAIL "digest missfill"
+    CLEAR_ERR
+  END
+  SYS CAT "digest:"
+  LET row = LAST
+  SYS CAT row out
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row peel_s
+  LET row = LAST
+  SYS CAT row ":dg"
+  LET row = LAST
+  SYS GREPV "digest:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# gate — NEEDP name/host + fill non-empty
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  SETP "name" name_s
+  CLEAR_ERR
+  SETP "host" host_s
+  CLEAR_ERR
+  NEEDP "name" "host" "role"
+  LET take_n = OK
+  CLEAR_ERR
+  IF take_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate need"
+    FAIL "gate need"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate need"
+    END
+  ELSE
+    FILLP "{{name}}@{{host}}"
+    LET out = LAST
+    CLEAR_ERR
+    SYS BLANK out
+    LET has_n = LAST_N
+    CLEAR_ERR
+    # has_n 0 means non-blank
+    IF has_n == 0 THEN
+      INCLUDE plate_save
+      CLEAR_ERR
+      LET hit = 1
+      LET note_msg = "gate admit"
+      LET admit_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate blank"
+      FAIL "gate blank"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "gate:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row out
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":gt"
+  LET row = LAST
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n admit_n hit p_src note_msg
+  CLEAR_ERR
+END
+
+# alias — SUBSTPLATE / EXPANDP / TEMPLATEP
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  SETP "name" name_s
+  CLEAR_ERR
+  SETP "n" 7
+  CLEAR_ERR
+  SETP "role" "worker"
+  CLEAR_ERR
+  SUBSTPLATE "hi {{name}}"
+  LET peel_s = LAST
+  CLEAR_ERR
+  SYS CAT "hi "
+  LET row = LAST
+  SYS CAT row name_s
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS peel_s body
+  LET has_n = LAST_N
+  CLEAR_ERR
+  EXPANDP "n={{n}}"
+  LET out = LAST
+  CLEAR_ERR
+  SYS EQS out "n=7"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  TEMPLATEP "{{role}}"
+  SYS EQS LAST "worker"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF take_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "alias ok"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "alias template"
+        FAIL "alias template"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "alias expand"
+      FAIL "alias expand"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias subst"
+    FAIL "alias subst"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:"
+  LET row = LAST
+  SYS CAT row peel_s
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row out
+  LET row = LAST
+  SYS CAT row ":al"
+  LET row = LAST
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# soft
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "soft empty require"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — no slots; incomplete brace; empty present; empty PLATE miss
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE = "{}"
+  CLEAR_ERR
+  SETP "name" "z"
+  CLEAR_ERR
+  SETP "empty" ""
+  CLEAR_ERR
+  # plain
+  FILLP "plain text"
+  SYS EQS LAST "plain text"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # incomplete brace
+  FILLP "keep {{name"
+  SYS HAS LAST "{{name"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # empty string present is hit
+  FILLP "[{{empty}}]{{name}}"
+  SYS EQS LAST "[]z"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # empty plate miss
+  LET PLATE = "{}"
+  CLEAR_ERR
+  FILLP "a={{name}}"
+  SYS EQS LAST "a="
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF take_n == 1 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 1 THEN
+          LET note_msg = "probe ok"
+          LET hit = 1
+          LET admit_n = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe emptyplate"
+          FAIL "probe emptyplate"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe emptystr"
+        FAIL "probe emptystr"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe brace"
+      FAIL "probe brace"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe plain"
+    FAIL "probe plain"
+    CLEAR_ERR
+  END
+  PRINT_JSON take_n has_n peel_hit load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_status_template_fillp_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "admit"
+LET row = LAST
+SYS STR admit_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "plate"
+LET row = LAST
+SYS PUSH row plate_file
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS CAT "astf op="
+LET body = LAST
+SYS CAT body op
+LET body = LAST
+SYS CAT body " hit="
+LET body = LAST
+SYS STR hit
+SYS CAT body LAST
+LET body = LAST
+SYS CAT body " miss="
+LET body = LAST
+SYS STR miss
+SYS CAT body LAST
+LET body = LAST
+SYS CAT body " note="
+LET body = LAST
+SYS CAT body note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n created load_hit peel_hit p_src note_msg
+NOTE "agent_status_template_fillp_board: done"

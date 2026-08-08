@@ -1,51 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 214,
-  "program": "programs/realworld/agent_plate_session_dump_board.cubalc",
-  "theme": "plate_session + DUMPP/PLATEINFO agent plate session snapshot",
-  "version": "1.15.568-usability",
+  "iter": 215,
+  "program": "programs/realworld/agent_status_template_fillp_board.cubalc",
+  "theme": "FILLP/SUBSTPLATE agent status/log/path templates from PLATE",
+  "version": "1.15.570-usability",
   "pass": true,
-  "prior_note": "iter 213 plate_patch+CLI; this iter first realworld plate_session+DUMPP (proofs 1116/1117)",
+  "prior_note": "iter 214 plate_session+DUMPP; this iter first realworld FILLP (proof 1120)",
   "tests": [
     {
-      "name": "session",
-      "cmd": "plate_session version+seed PLATE",
+      "name": "boot",
+      "cmd": "session seed + SETP name/host",
       "ok": true,
-      "note": "plate_session"
+      "note": "boot"
     },
     {
-      "name": "tick",
-      "cmd": "SETP status + INCP n + NEEDP + save",
+      "name": "fill",
+      "cmd": "FILLP peer name@host role n",
       "ok": true,
-      "note": "mutate"
+      "note": "FILLP"
     },
     {
-      "name": "dump",
-      "cmd": "DUMPP cubalc.plate_info.v1 has_plate keys_n",
+      "name": "path",
+      "cmd": "state/{{agent}}/tick-{{tick}}.json",
       "ok": true,
-      "note": "DUMPP"
+      "note": "path"
     },
     {
-      "name": "reload",
-      "cmd": "LOADPLATE only hit peel n",
+      "name": "digest",
+      "cmd": "miss key empty + bare FILLP LAST",
       "ok": true,
-      "note": "reload"
+      "note": "digest"
     },
     {
       "name": "gate",
-      "cmd": "NEEDP + DUMPP + save admit",
+      "cmd": "NEEDP name/host + non-blank fill",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "PLATEINFO schema plate_info",
+      "cmd": "SUBSTPLATE/EXPANDP/TEMPLATEP",
       "ok": true,
-      "note": "PLATEINFO"
+      "note": "aliases"
     },
     {
       "name": "probe",
-      "cmd": "empty DUMPP; session; re-session durable",
+      "cmd": "plain; incomplete brace; empty str hit; empty plate miss",
       "ok": true,
       "note": "edges"
     },
@@ -57,7 +57,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_APSD_REQUIRE=1 reload miss \u2192 exit 2",
+      "cmd": "CUBALC_ASTF_REQUIRE=1 soft empty \u2192 exit 2",
       "ok": true,
       "note": "hard env"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "358/359 pre-existing fail (not this program)"
+      "note": "359/360 pre-existing fail (not this program)"
     }
   ],
   "weaknesses": [
@@ -1708,6 +1708,38 @@
       "title": "APSD_REPORT/META omit trailing NL (W5 reconfirm)",
       "detail": "cat -A REPORT last field without $.",
       "repro": "cat -A APSD_REPORT.txt"
+    },
+    {
+      "id": "W206",
+      "severity": "med",
+      "area": "lang|fillp",
+      "title": "FILLP missing key soft-fills empty; FILLP_MISS counts misses",
+      "detail": "x={{missing}} y={{name}} \u2192 x= y=alice with FILLP_MISS=1 OK=1. Agents must check FILLP_MISS or EQS for contract, not only OK.",
+      "repro": "FILLP x={{missing}} y={{name}} \u2192 empty slot + MISS 1"
+    },
+    {
+      "id": "W207",
+      "severity": "med",
+      "area": "lang|fillp",
+      "title": "Incomplete {{brace stays literal; no slots FILLP_N=0",
+      "detail": "keep {{name without close stays literal. plain text FILLP_N=0. Empty-string plate value is hit not miss ([]z).",
+      "repro": "FILLP keep {{name \u2192 contains {{name; SETP empty \"\"; FILLP [{{empty}}]"
+    },
+    {
+      "id": "W208",
+      "severity": "low",
+      "area": "lang|fillp",
+      "title": "Bare FILLP expands prior LAST as template",
+      "detail": "SYS CAT template; FILLP with no arg uses LAST. Handy for composed templates; easy footgun if LAST is plate JSON.",
+      "repro": "CAT host={{host}}; FILLP \u2192 host=cube1"
+    },
+    {
+      "id": "W209",
+      "severity": "low",
+      "area": "host|write",
+      "title": "ASTF_REPORT omit trailing NL (W5 reconfirm)",
+      "detail": "cat -A REPORT ends without $ on last field.",
+      "repro": "cat -A ASTF_REPORT.txt"
     }
   ],
   "workarounds": [
@@ -1784,7 +1816,10 @@
     "use cubalc plate for shell one-shots; plate_patch for multi-key in-language",
     "LOADPLATE alone for true miss require",
     "DUMPP then peel HAS has_plate / keys_n from LAST JSON",
-    "INCLUDE plate_session once per action after setting PLATE_PATH/SEED"
+    "INCLUDE plate_session once per action after setting PLATE_PATH/SEED",
+    "EQS expanded LAST against built expected string",
+    "NEEDP identity keys before status fill gate",
+    "soft empty + CUBALC_*_REQUIRE for hard miss without plate create"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1855,7 +1890,10 @@
     "plate_patch SAVE leaves LAST=path not plate body",
     "DUMPP empty PLATE still OK with has_plate:false",
     "plate_session create-on-miss masks soft LOAD miss",
-    "DUMPP LAST_N = key count not success"
+    "DUMPP LAST_N = key count not success",
+    "FILLP miss \u2192 empty string not hard fail; check FILLP_MISS",
+    "incomplete braces literal; empty plate value is hit",
+    "bare FILLP uses LAST as template"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1917,8 +1955,10 @@
     "fresh UNSET+plate_patch unknown form PLATE; switched to JSONFILEMERGE",
     "CLI dual path verified get/inc/keys/OR/del/show green",
     "require reload false-hit until removed plate_session from reload path",
-    "all primary paths green first pass after that fix"
+    "all primary paths green first pass after that fix",
+    "gate require false-hit via plate_session create; soft+require for EXIT 2",
+    "fill/path/digest/alias green with EQS expected builds"
   ],
-  "commit": "9ba1fca",
-  "ts": "2026-08-08T20:50:06Z"
+  "commit": "pending",
+  "ts": "2026-08-08T21:14:19Z"
 }
