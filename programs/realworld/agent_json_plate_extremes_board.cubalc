@@ -1,0 +1,750 @@
+# agent_json_plate_extremes_board.cubalc — JSONMAXN+JSONMINN+JSONTOPKEY+JSONBOTKEY
+#
+# Real use: shard/agent LOAD plates — extreme values and hot/cold keys
+# without JSONVALUES+MIN/MAX or JSONTOKV+TOPKEY glue:
+#   JSONMAXN / JMAXN / PLATEMAX — max int value → LAST_N; LAST kept plate (1075)
+#   JSONMINN / JMINN / PLATEMIN — min int value → LAST_N; LAST kept
+#   JSONTOPKEY / JTOPKEY — dominant key LAST=key LAST_N=v (1074)
+#   JSONBOTKEY / JBOTKEY — coldest key dual
+#   gate: max<=ceiling AND min>=floor AND span<=maxspan
+#   span: max-min skew for rebalance admit
+#
+# First realworld MAXN+MINN+TOPKEY+BOTKEY board. Distinct from health
+# (LEN+EMPTY+SUMN) and buffer (COPY/SWAP/TOKV).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajpex_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_extremes_board.cubalc \
+#     mint -- --plate=/tmp/ajpex/load.json
+#   ./out/cubalc run ... maxn -- --plate=...
+#   ./out/cubalc run ... minn -- --plate=...
+#   ./out/cubalc run ... topkey -- --plate=...
+#   ./out/cubalc run ... botkey -- --plate=...
+#   ./out/cubalc run ... gate -- --plate=... --max=50 --min=1 --maxspan=40
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPEX_REPORT.txt
+# Env: PLATE_PATH CUBALC_AJPEX_REQUIRE CUBALC_AJPEX_MAX CUBALC_AJPEX_MIN
+#      CUBALC_AJPEX_MAXSPAN
+#
+# Edges:
+#   empty {}; non-object soft 0/""; bools count as 0|1 (pollute min/bot);
+#   TOPKEY overwrites LAST with key (no plate chain); MAXN keeps plate;
+#   ties → first key wins; negatives; REQUIRE EXIT n; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_extremes_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MAX = 100
+DEFAULT MIN = 0
+DEFAULT MAXSPAN = 100
+DEFAULT USAGE_LINE = "agent_json_plate_extremes -- mint|maxn|minn|topkey|botkey|span|gate|list -- [--plate=P] [--max=N] [--min=N] [--maxspan=N]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/load.json"
+LET plate_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+GETFLAGN max OR ENV CUBALC_AJPEX_MAX OR MAX
+LET MAX = LAST_N
+CLEAR_ERR
+GETFLAGN min OR ENV CUBALC_AJPEX_MIN OR MIN
+LET MIN = LAST_N
+CLEAR_ERR
+GETFLAGN maxspan OR ENV CUBALC_AJPEX_MAXSPAN OR MAXSPAN
+LET MAXSPAN = LAST_N
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPEX_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPEX_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET line_i = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET key_s = ""
+LET bot_s = ""
+LET max_n = 0
+LET min_n = 0
+LET span_n = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "mint", "maxn", "minn", "topkey", "botkey", "span", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "mint" THEN
+    LET op = "mint"
+  WHEN "maxn" THEN
+    LET op = "maxn"
+  WHEN "minn" THEN
+    LET op = "minn"
+  WHEN "topkey" THEN
+    LET op = "topkey"
+  WHEN "botkey" THEN
+    LET op = "botkey"
+  WHEN "span" THEN
+    LET op = "span"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src MAX MIN MAXSPAN
+  CLEAR_ERR
+END
+
+SYS EQS op "mint"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # pure-numeric shard loads + one label string (skipped by extremes)
+  SYS JSONOBJ "s0" 12 "s1" 3 "s2" 40 "s3" 7 "s4" 18 "label" "east"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint soft miss"
+    FAIL "mint soft miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mint failed"
+    END
+  ELSE
+    LET take_n = JSONOBJ_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "mint write failed"
+    END
+    CLEAR_ERR
+    SYS CAT "mint:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mt"
+    LET row = LAST
+    SYS GREPV "mint:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "mint ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "maxn"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "maxn empty plate"
+    FAIL "maxn empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "maxn empty"
+    END
+  ELSE
+    SYS JSONMAXN body
+    LET max_n = JSONMAXN_N
+    LET take_n = max_n
+    # LAST kept as plate — peel s2 after max
+    SYS JSONN "s2" FROM LAST
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    SYS CAT "maxn:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mx"
+    LET row = LAST
+    SYS GREPV "maxn:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "maxn ok"
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit max_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "minn"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "minn empty plate"
+    FAIL "minn empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "minn empty"
+    END
+  ELSE
+    SYS JSONMINN body
+    LET min_n = JSONMINN_N
+    LET take_n = min_n
+    SYS JSONN "s1" FROM LAST
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    SYS CAT "minn:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mn"
+    LET row = LAST
+    SYS GREPV "minn:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "minn ok"
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit min_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "topkey"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "topkey empty plate"
+    FAIL "topkey empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "topkey empty"
+    END
+  ELSE
+    SYS JSONTOPKEY body
+    LET key_s = LAST
+    LET take_n = LAST_N
+    LET max_n = JSONTOPKEY_V
+    CLEAR_ERR
+    # LAST is key not plate — peel must re-bind body
+    SYS JSONN "s2" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    SYS CAT "topkey:"
+    LET row = LAST
+    SYS CAT row key_s
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":tk"
+    LET row = LAST
+    SYS GREPV "topkey:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "topkey ok"
+  END
+  PRINT_JSON admit_n bag_n take_n max_n key_s peel_hit p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "botkey"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "botkey empty plate"
+    FAIL "botkey empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "botkey empty"
+    END
+  ELSE
+    SYS JSONBOTKEY body
+    LET bot_s = LAST
+    LET take_n = LAST_N
+    LET min_n = JSONBOTKEY_V
+    CLEAR_ERR
+    SYS JSONN "s1" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    SYS CAT "botkey:"
+    LET row = LAST
+    SYS CAT row bot_s
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":bk"
+    LET row = LAST
+    SYS GREPV "botkey:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "botkey ok"
+  END
+  PRINT_JSON admit_n bag_n take_n min_n bot_s peel_hit p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "span"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "span empty plate"
+    FAIL "span empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "span empty"
+    END
+  ELSE
+    SYS JSONMAXN body
+    LET max_n = JSONMAXN_N
+    CLEAR_ERR
+    SYS JSONMINN body
+    LET min_n = JSONMINN_N
+    CLEAR_ERR
+    # span = max - min
+    LET span_n = max_n
+    LET span_n = span_n - min_n
+    LET take_n = span_n
+    SYS JSONTOPKEY body
+    LET key_s = LAST
+    CLEAR_ERR
+    SYS JSONBOTKEY body
+    LET bot_s = LAST
+    CLEAR_ERR
+    LET out = body
+    SYS CAT "span:"
+    LET row = LAST
+    SYS STR span_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR max_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR min_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":sp"
+    LET row = LAST
+    SYS GREPV "span:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "span ok"
+  END
+  PRINT_JSON admit_n bag_n take_n span_n max_n min_n key_s bot_s p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate empty plate"
+    FAIL "gate empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate empty"
+    END
+  ELSE
+    SYS JSONMAXN body
+    LET max_n = JSONMAXN_N
+    CLEAR_ERR
+    SYS JSONMINN body
+    LET min_n = JSONMINN_N
+    CLEAR_ERR
+    LET span_n = max_n
+    LET span_n = span_n - min_n
+    LET take_n = span_n
+    SYS JSONTOPKEY body
+    LET key_s = LAST
+    LET has_n = LAST_N
+    CLEAR_ERR
+    SYS JSONBOTKEY body
+    LET bot_s = LAST
+    CLEAR_ERR
+    LET out = body
+    # admit: max<=MAX AND min>=MIN AND span<=MAXSPAN
+    IF max_n > MAX THEN
+      LET miss = 1
+      LET note_msg = "gate max deny"
+      FAIL "gate max deny"
+      CLEAR_ERR
+    ELSE
+      IF min_n < MIN THEN
+        LET miss = 1
+        LET note_msg = "gate min deny"
+        FAIL "gate min deny"
+        CLEAR_ERR
+      ELSE
+        IF span_n > MAXSPAN THEN
+          LET miss = 1
+          LET note_msg = "gate span deny"
+          FAIL "gate span deny"
+          CLEAR_ERR
+        ELSE
+          LET hit = 1
+          LET note_msg = "gate admit"
+        END
+      END
+    END
+    SYS CAT "gate:"
+    LET row = LAST
+    SYS STR max_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR min_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR span_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":gt"
+    LET row = LAST
+    SYS GREPV "gate:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON admit_n bag_n take_n max_n min_n span_n key_s bot_s MAX MIN MAXSPAN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # empty / non-obj soft
+  SYS JSONMAXN "{}"
+  LET max_n = LAST_N
+  CLEAR_ERR
+  SYS JSONMINN "not-json"
+  LET min_n = LAST_N
+  CLEAR_ERR
+  SYS JSONTOPKEY "{}"
+  LET key_s = LAST
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS JSONBOTKEY "[]"
+  LET bot_s = LAST
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # bool pollution: live:true → min 1 not s1=3
+  SYS JSONOBJ "s0" 12 "s1" 3 "live" true "s2" 40
+  LET body = LAST
+  SYS JSONMINN body
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS JSONBOTKEY body
+  LET row = LAST
+  CLEAR_ERR
+  # negatives
+  SYS JSONOBJ "a" -10 "b" -1 "c" 0
+  SYS JSONMAXN LAST
+  LET line_i = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON max_n min_n take_n has_n peel_hit key_s bot_s row line_i p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_extremes_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "max_n"
+LET row = LAST
+SYS STR max_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "min_n"
+LET row = LAST
+SYS STR min_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "span_n"
+LET row = LAST
+SYS STR span_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "key_s"
+LET row = LAST
+SYS PUSH row key_s
+LET row = LAST
+SYS PUSH row "bot_s"
+LET row = LAST
+SYS PUSH row bot_s
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_extremes_board: done"
+PRINT_JSON hit miss bag_n take_n max_n min_n span_n key_s bot_s p_src note_msg
+EXIT 0
