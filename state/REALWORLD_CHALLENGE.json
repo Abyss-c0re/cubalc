@@ -1111,6 +1111,6 @@
     "JSONN OR MAXR hard-fail; fixed OR 10 (W125)",
     "selftest 355/355 green v1.15.510"
   ],
-  "commit": "pending",
+  "commit": "7f57a78",
   "ts": "2026-08-08T11:15:23Z"
 }
