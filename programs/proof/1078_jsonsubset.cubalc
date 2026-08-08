@@ -1,0 +1,93 @@
+# JSONSUBSET / JSUBSET · JSONSUPERSET / JSONCOVERS — required-field plate match
+# Every key in sub matches super raw value. Complements full JSONEQ.
+
+HOLD_FLASH 1
+
+# equal is mutual subset
+SYS JSONOBJ "a" 1 "b" 2
+LET full = LAST
+SYS JSONOBJ "a" 1 "b" 2
+LET same = LAST
+SYS JSONSUBSET same full
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONSUBSET_N == 1
+
+# partial required fields
+SYS JSONOBJ "ok" true "n" 3
+LET req = LAST
+SYS JSONOBJ "ok" true "n" 3 "err" "" "extra" 9
+LET resp = LAST
+SYS JSONSUBSET req resp
+ASSERT LAST_N == 1
+SYS JSONSUBSET resp req
+ASSERT LAST_N == 0
+
+# SUPERSET dual: resp covers req
+SYS JSONSUPERSET resp req
+ASSERT LAST_N == 1
+SYS JSONCOVERS resp req
+ASSERT LAST_N == 1
+SYS JSONSUPERSET req resp
+ASSERT LAST_N == 0
+
+# value mismatch fails
+SYS JSONOBJ "ok" false "n" 3
+LET bad = LAST
+SYS JSONSUBSET req bad
+ASSERT LAST_N == 0
+
+# empty subset of any object
+SYS JSONSUBSET "{}" resp
+ASSERT LAST_N == 1
+SYS JSONSUBSET "{}" "{}"
+ASSERT LAST_N == 1
+
+# non-object soft 0
+SYS JSONSUBSET "not" resp
+ASSERT LAST_N == 0
+ASSERT OK == 1
+SYS JSONSUBSET req "not"
+ASSERT LAST_N == 0
+
+# aliases
+SYS JSUBSET req resp
+ASSERT LAST_N == 1
+SYS JSUPERSET resp req
+ASSERT LAST_N == 1
+
+# order-independent values
+SYS JSONOBJ "b" 2 "a" 1
+LET rev = LAST
+SYS JSONSUBSET rev full
+ASSERT LAST_N == 1
+
+# LAST kept as first arg
+SYS JSONSUBSET req resp
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 3
+
+# missing key fails
+SYS JSONOBJ "ok" true
+LET partial = LAST
+SYS JSONSUBSET req partial
+ASSERT LAST_N == 0
+
+# IF pattern
+SYS JSONSUBSET req resp
+IF LAST_N THEN
+  PASS "required fields ok"
+END
+ASSERT OK == 1
+
+# equal via mutual subset ≈ JSONEQ
+SYS JSONEQ full same
+ASSERT LAST_N == 1
+SYS JSONSUBSET full same
+ASSERT LAST_N == 1
+SYS JSONSUBSET same full
+ASSERT LAST_N == 1
+
+PRINT "jsonsubset ok"
+ASSERT OK == 1

@@ -564,6 +564,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 534. ~~**`JSONMAXN` / `JMAXN` · `JSONMINN` / `JMINN`**~~ **done** (max/min integer top-level value → LAST_N · no JSONVALUES+MIN/MAX).
 535. ~~**`JSONAVGN` / `JAVGN` / `JSONMEAN`**~~ **done** (integer mean of top-level ints → LAST_N · USED count · no JSONVALUES+AVG).
 536. ~~**`JSONEQ` / `JEQ` · `JSONNEQ` / `JNEQ`**~~ **done** (order-independent plate equality · verify WRITE/MERGE without fragile EQS).
+537. ~~**`JSONSUBSET` / `JSUBSET` · `JSONSUPERSET` / `JSONCOVERS`**~~ **done** (required-field plate match · sub keys+values in super · no multi JSONHAS).
 
 ## Tick protocol
 

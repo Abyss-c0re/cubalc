@@ -259,6 +259,10 @@ int cubalc_host_json_avg(const char *json, cubalc_host_result *r);
  * Same keys + same raw values (whitespace-trimmed). Nested compared as raw text.
  * Usability: agent verify after WRITE/MERGE without fragile string EQS. */
 int cubalc_host_json_eq(const char *a, const char *b, cubalc_host_result *r);
+/* every key in sub exists in super with same raw value → r->n 1|0.
+ * Soft: non-object sub/super → 0 (empty {} is subset of any object).
+ * Usability: required-field verify without multi JSONHAS+JSON peels. */
+int cubalc_host_json_subset(const char *sub, const char *super, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

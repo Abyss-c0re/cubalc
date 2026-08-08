@@ -4874,6 +4874,68 @@ int cubalc_host_json_eq(const char *a, const char *b, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS JSONSUBSET sub super — every key in sub matches super raw value. */
+int cubalc_host_json_subset(const char *sub, const char *super, cubalc_host_result *r) {
+  cubalc_host_result ksub, ksup, ra, rb;
+  const char *p, *line;
+  r_clear(r);
+  r->ok = 1;
+  memset(&ksub, 0, sizeof ksub);
+  memset(&ksup, 0, sizeof ksup);
+  /* super must be object; sub must be object (empty {} ok) */
+  if (cubalc_host_json_keys(super, &ksup) != 0) {
+    r->n = 0;
+    snprintf(r->str, sizeof r->str, "0");
+    return 0;
+  }
+  if (cubalc_host_json_keys(sub, &ksub) != 0) {
+    r->n = 0;
+    snprintf(r->str, sizeof r->str, "0");
+    return 0;
+  }
+  /* empty sub is subset of any object */
+  if (ksub.n == 0) {
+    r->n = 1;
+    snprintf(r->str, sizeof r->str, "1");
+    return 0;
+  }
+  p = ksub.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    const char *va, *vb;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&ra, 0, sizeof ra);
+    memset(&rb, 0, sizeof rb);
+    if (cubalc_host_json_get_raw(sub, key, &ra) != 0 ||
+        cubalc_host_json_get_raw(super, key, &rb) != 0) {
+      r->n = 0;
+      snprintf(r->str, sizeof r->str, "0");
+      return 0;
+    }
+    va = ra.str;
+    vb = rb.str;
+    while (*va == ' ' || *va == '\t' || *va == '\n' || *va == '\r') va++;
+    while (*vb == ' ' || *vb == '\t' || *vb == '\n' || *vb == '\r') vb++;
+    if (strcmp(va, vb) != 0) {
+      r->n = 0;
+      snprintf(r->str, sizeof r->str, "0");
+      return 0;
+    }
+  }
+  r->n = 1;
+  snprintf(r->str, sizeof r->str, "1");
+  return 0;
+}
+
 /* Usability: SYS JSONTOPKEY/JSONBOTKEY — dominant/min numeric key without TOKV+TOPKEY. */
 int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *r) {
   cubalc_host_result keys, raw;
