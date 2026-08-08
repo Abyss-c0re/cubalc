@@ -1489,6 +1489,131 @@ int cubalc_host_greplines_tree(const char *root, const char *needle, int icase,
   return 0;
 }
 
+/* Extract matching lines as path:lineno:line (1-based lineno, grep -rn style). */
+static void cubalc_pathlinestree_file(const char *path, const char *needle, int icase,
+                                     char *out, size_t outsz, size_t *olen, long *nlines,
+                                     long *files_hit) {
+  cubalc_host_result hr;
+  const char *p, *ls;
+  long file_hits = 0;
+  int lineno = 0;
+  memset(&hr, 0, sizeof hr);
+  if (!path || !path[0] || !out || !olen || !nlines) return;
+  if (cubalc_host_read(path, &hr) != 0) return;
+  p = hr.str;
+  while (*p) {
+    size_t llen;
+    char line[CUBALC_HOST_STR_MAX];
+    char entry[CUBALC_HOST_STR_MAX];
+    int match = 0;
+    ls = p;
+    while (*p && *p != '\n') p++;
+    llen = (size_t)(p - ls);
+    if (llen >= sizeof line) llen = sizeof line - 1;
+    lineno++;
+    if (llen > 0) {
+      memcpy(line, ls, llen);
+      line[llen] = 0;
+      match = cubalc_line_matches(line, needle, icase);
+    } else if (needle && !needle[0]) {
+      line[0] = 0;
+      match = 1;
+    } else {
+      line[0] = 0;
+      match = 0;
+    }
+    if (match) {
+      /* path:lineno:line — path is absolute and has no newlines */
+      snprintf(entry, sizeof entry, "%s:%d:%s", path, lineno, line);
+      cubalc_bag_push(out, outsz, olen, nlines, entry);
+      file_hits++;
+    }
+    if (*p == '\n') p++;
+  }
+  if (file_hits > 0 && files_hit) (*files_hit)++;
+}
+
+static void cubalc_pathlinestree_rec(const char *dir, const char *needle, int icase,
+                                    char *out, size_t outsz, size_t *olen, long *nlines,
+                                    long *files_hit, int depth) {
+  DIR *d;
+  struct dirent *ent;
+  struct stat st;
+  if (!dir || !dir[0] || depth > 64 || !out || !olen || !nlines) return;
+  if (*olen + 1 >= outsz) return;
+  d = opendir(dir);
+  if (!d) return;
+  while ((ent = readdir(d)) != NULL) {
+    char full[CUBALC_HOST_STR_MAX];
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+    if (cubalc_join_child(dir, ent->d_name, full, sizeof full) != 0)
+      continue;
+    if (lstat(full, &st) != 0) continue;
+    if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+        && !S_ISLNK(st.st_mode)
+#endif
+        ) {
+      cubalc_pathlinestree_rec(full, needle, icase, out, outsz, olen, nlines,
+                               files_hit, depth + 1);
+      continue;
+    }
+    if (!S_ISREG(st.st_mode)) continue;
+    cubalc_pathlinestree_file(full, needle, icase, out, outsz, olen, nlines, files_hit);
+  }
+  closedir(d);
+}
+
+/* Usability: SYS PATHLINETREE|GREPNTREE root needle — recursive path:line:text harvest
+ * (agent grep -rn) without WALK+EACH+READ. r->str bag; r->n lines; r->code files. */
+int cubalc_host_pathlines_tree(const char *root, const char *needle, int icase,
+                               cubalc_host_result *r) {
+  char abs[CUBALC_HOST_STR_MAX];
+  size_t olen = 0;
+  long nlines = 0, files_hit = 0;
+  struct stat st;
+  cubalc_host_result hr;
+  r_clear(r);
+  if (!root || !root[0]) {
+    snprintf(r->err, sizeof r->err, "pathlinestree: empty path");
+    return -1;
+  }
+  if (!needle) needle = "";
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(root, &hr) == 0 && hr.str[0])
+    snprintf(abs, sizeof abs, "%s", hr.str);
+  else
+    snprintf(abs, sizeof abs, "%s", root);
+  if (lstat(abs, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "pathlinestree: missing");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "pathlinestree: %s", strerror(errno));
+    return -1;
+  }
+  r->str[0] = 0;
+  if (S_ISREG(st.st_mode)) {
+    cubalc_pathlinestree_file(abs, needle, icase, r->str, sizeof r->str, &olen,
+                              &nlines, &files_hit);
+  } else if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+             && !S_ISLNK(st.st_mode)
+#endif
+             ) {
+    cubalc_pathlinestree_rec(abs, needle, icase, r->str, sizeof r->str, &olen,
+                             &nlines, &files_hit, 0);
+  } else {
+    snprintf(r->err, sizeof r->err, "pathlinestree: not a file or directory");
+    return -1;
+  }
+  r->n = nlines;
+  r->code = (int)(files_hit > 0x7fffffff ? 0x7fffffff : files_hit);
+  r->ok = 1;
+  return 0;
+}
+
 /* File content contains needle? Empty needle → yes if readable. */
 static int cubalc_file_has_needle(const char *path, const char *needle, int icase) {
   cubalc_host_result hr;

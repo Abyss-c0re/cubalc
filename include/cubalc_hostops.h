@@ -74,6 +74,11 @@ int cubalc_host_countintree(const char *root, const char *needle, int icase,
  * Empty needle → all lines. Case-insensitive when icase!=0. */
 int cubalc_host_greplines_tree(const char *root, const char *needle, int icase,
                                cubalc_host_result *r);
+/* recursive path:lineno:line harvest (grep -rn style, 1-based lineno).
+ * r->str = bag; r->n = lines; r->code = files with hits. Soft miss → -1.
+ * Empty needle → all lines annotated. Case-insensitive when icase!=0. */
+int cubalc_host_pathlines_tree(const char *root, const char *needle, int icase,
+                               cubalc_host_result *r);
 /* first or last regular file under root whose content matches needle.
  * want_last=0 first (DFS), =1 last. r->str=path; r->n=1|0. Soft miss root → -1.
  * Empty needle → first/last readable regular file. */
