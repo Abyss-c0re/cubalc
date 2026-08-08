@@ -1170,6 +1170,75 @@ static int cubalc_match_oneof_list(VM *vm, Lex *L, const char *subject, int icas
   }
   return matched ? 1 : 0;
 }
+/* Read numeric atom for INRANGE/REQUIRE BETWEEN: NUM | LAST_N | LAST | var | expr prim.
+ * Returns 1 and advances. Does not swallow OR (no parse_expr boolean). */
+static int cubalc_read_num_atom(VM *vm, Lex *L, long *out) {
+  if (!out) return 0;
+  if (L->cur.kind == TK_NUM) {
+    *out = L->cur.num;
+    lex_next(L);
+    return 1;
+  }
+  if (L->cur.kind == TK_MINUS) {
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) {
+      *out = -L->cur.num;
+      lex_next(L);
+      return 1;
+    }
+    return 0;
+  }
+  if (L->cur.kind == TK_PLUS) {
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) {
+      *out = L->cur.num;
+      lex_next(L);
+      return 1;
+    }
+    return 0;
+  }
+  if (L->cur.kind == TK_IDENT) {
+    if (strcmp(L->cur.text, "LAST_N") == 0 || strcmp(L->cur.text, "N") == 0) {
+      *out = vm->last_n;
+      lex_next(L);
+      return 1;
+    }
+    if (strcmp(L->cur.text, "LAST") == 0) {
+      Var *lv = var_get(vm, "LAST", 0);
+      if (lv && !lv->is_str) *out = lv->val;
+      else if (lv && lv->is_str) *out = strtol(lv->sval, NULL, 10);
+      else *out = strtol(vm->last_str, NULL, 10);
+      lex_next(L);
+      return 1;
+    }
+    {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && !sv->is_str) {
+        *out = sv->val;
+        lex_next(L);
+        return 1;
+      }
+      if (sv && sv->is_str) {
+        *out = strtol(sv->sval, NULL, 10);
+        lex_next(L);
+        return 1;
+      }
+    }
+    return 0;
+  }
+  if (L->cur.kind == TK_STR) {
+    *out = strtol(L->cur.text, NULL, 10);
+    lex_next(L);
+    return 1;
+  }
+  if (L->cur.kind == TK_LPAREN) {
+    *out = parse_expr(vm, L);
+    return 1;
+  }
+  return 0;
+}
+
+
 
 /* Collect non-flag positionals from CUBALC_ARGn → newline bag.
  * Skips --flag / -flag / --flag=val; bare --flag val skips value too
@@ -26266,9 +26335,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN — fail-fast gates"},
       {"REQUIRE ONEOF", "REQUIRE ONEOF|ONEOFI subject a [,|OR||] b — fail if value not in allowed set · USAGE tip"},
+      {"REQUIRE BETWEEN", "REQUIRE BETWEEN|INRANGE x lo [TO] hi — fail if x not in inclusive range · GETFLAGN ports"},
       {"ONEOF", "ONEOF|INLIST subject a [,|OR||] b — soft 0|1 membership · ONEOFI icase · MATCH_ARM hit"},
+      {"INRANGE", "INRANGE|NUMBETWEEN x lo [TO] hi — soft 0|1 numeric range · twin of REQUIRE BETWEEN"},
       {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"REQUIRE FLAG", "REQUIRE FLAG|OPT name — fail if --name missing · LAST=value (HASFLAG twin)"},
@@ -28401,9 +28472,61 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
+    /* REQUIRE BETWEEN|INRANGE|NUMIN x lo [TO] hi — fail if x outside inclusive range.
+     * Usability: GETFLAGN port then gate 1..65535 without IF+FAIL soup. */
+    if (kw(&L->cur,"BETWEEN") || kw(&L->cur,"INRANGE") || kw(&L->cur,"NUMIN") ||
+        kw(&L->cur,"NUMBETWEEN") || kw(&L->cur,"RANGE") || kw(&L->cur,"WITHIN") ||
+        kw(&L->cur,"IN_RANGE") || kw(&L->cur,"BOUNDS")){
+      long x = 0, lo = 0, hi = 0;
+      int ok;
+      lex_next(L);
+      if (!cubalc_read_num_atom(vm, L, &x)) {
+        fail_at(vm, L, "REQUIRE BETWEEN x lo hi — REQUIRE BETWEEN LAST_N 1 65535");
+        return -1;
+      }
+      if (!cubalc_read_num_atom(vm, L, &lo)) {
+        fail_at(vm, L, "REQUIRE BETWEEN x lo hi — missing lo");
+        return -1;
+      }
+      if (kw(&L->cur,"TO") || kw(&L->cur,"THROUGH") || kw(&L->cur,"THRU") ||
+          kw(&L->cur,"DOTDOT") || kw(&L->cur,".."))
+        lex_next(L);
+      if (!cubalc_read_num_atom(vm, L, &hi)) {
+        fail_at(vm, L, "REQUIRE BETWEEN x lo hi — missing hi");
+        return -1;
+      }
+      if (hi < lo) { long t = lo; lo = hi; hi = t; }
+      ok = (x >= lo && x <= hi) ? 1 : 0;
+      if (!ok) {
+        char msg[200];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE BETWEEN %ld not in [%ld..%ld] line %d — out of allowed range",
+                 x, lo, hi, aln);
+        cubalc_append_usage_tip(vm, msg, sizeof msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      {
+        char nbuf[32];
+        snprintf(nbuf, sizeof nbuf, "%ld", x);
+        var_set_str(vm, "LAST", nbuf);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+      }
+      vm->last_n = x;
+      var_set_num(vm, "LAST_N", x);
+      var_set_num(vm, "BETWEEN_LO", lo);
+      var_set_num(vm, "BETWEEN_HI", hi);
+      var_set_num(vm, "INRANGE_N", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require between %ld in [%ld..%ld]\n", x, lo, hi);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||
@@ -28501,6 +28624,47 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
     if (vm->trace)
       fprintf(vm->trace, "# defined %s → %ld\n", name, n);
+    bump(vm); return 1;
+  }
+  /* INRANGE|NUMBETWEEN|BETWEENN x lo [TO] hi — soft 0|1 inclusive numeric range.
+   * LAST_N = 0|1 · keeps x in INRANGE_X. Not SYS BETWEEN (string peel).
+   * Usability: IF after GETFLAGN without SYS IN glue. */
+  if (kw(&L->cur,"INRANGE") || kw(&L->cur,"NUMBETWEEN") || kw(&L->cur,"BETWEENN") ||
+      kw(&L->cur,"NUMIN") || kw(&L->cur,"IN_RANGE") || kw(&L->cur,"WITHINN") ||
+      kw(&L->cur,"ISBETWEEN") || kw(&L->cur,"NUMRANGE")){
+    long x = 0, lo = 0, hi = 0;
+    int ok;
+    char buf[8];
+    lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &x)) {
+      fail_at(vm, L, "INRANGE x lo hi — INRANGE LAST_N 1 65535");
+      return -1;
+    }
+    if (!cubalc_read_num_atom(vm, L, &lo)) {
+      fail_at(vm, L, "INRANGE x lo hi — missing lo");
+      return -1;
+    }
+    if (kw(&L->cur,"TO") || kw(&L->cur,"THROUGH") || kw(&L->cur,"THRU") ||
+        kw(&L->cur,"DOTDOT"))
+      lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &hi)) {
+      fail_at(vm, L, "INRANGE x lo hi — missing hi");
+      return -1;
+    }
+    if (hi < lo) { long tmp = lo; lo = hi; hi = tmp; }
+    ok = (x >= lo && x <= hi) ? 1 : 0;
+    var_set_num(vm, "LAST_N", ok ? 1L : 0L);
+    vm->last_n = ok ? 1L : 0L;
+    var_set_num(vm, "INRANGE_N", ok ? 1L : 0L);
+    var_set_num(vm, "INRANGE_X", x);
+    var_set_num(vm, "BETWEEN_LO", lo);
+    var_set_num(vm, "BETWEEN_HI", hi);
+    var_set_num(vm, "OK", 1);
+    snprintf(buf, sizeof buf, "%d", ok ? 1 : 0);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (vm->trace)
+      fprintf(vm->trace, "# inrange %ld in [%ld..%ld] → %d\n", x, lo, hi, ok);
     bump(vm); return 1;
   }
   /* ONEOF|INLIST|AMONG subject a [,|OR||] b — soft 0|1 membership.

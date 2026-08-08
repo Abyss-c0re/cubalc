@@ -1,0 +1,6 @@
+# REQUIRE BETWEEN miss — fatal + USAGE tip
+HOLD_FLASH 1
+USAGE "tool --port=1..65535"
+GETFLAGN port OR 0
+REQUIRE BETWEEN LAST_N 1 65535
+PRINT "nope"
