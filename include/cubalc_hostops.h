@@ -59,6 +59,11 @@ int cubalc_host_eqtree(const char *a, const char *b, cubalc_host_result *r);
  * Soft miss root → -1. Empty needle → all readable files. */
 int cubalc_host_greptree(const char *root, const char *needle, int icase, int invert,
                          cubalc_host_result *r);
+/* recursive REPLACEALL old→new under root. r->str = rewritten paths bag.
+ * r->n = files rewritten; r->code = total substitutions. Soft miss root → -1.
+ * Empty old → no-op (n=0). Only rewrites when content changes. */
+int cubalc_host_replacetree(const char *root, const char *olds, const char *news,
+                            cubalc_host_result *r);
 /* rename/move path; soft miss if from missing */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */

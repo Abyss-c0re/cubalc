@@ -1,0 +1,123 @@
+# REPLACETREE / GSUBTREE / SEDTREE — recursive REPLACEALL under root
+# Bulk nested plate rewrites without WALK+REPLACEFILES or shell find|sed.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_rpl_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# nested files
+SYS JOIN base "a/cfg.txt"
+WRITEOUT LAST "host=OLD host"
+ASSERT OK == 1
+SYS JOIN base "a/b/note.txt"
+WRITEOUT LAST "OLD and OLD again"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "no match here"
+ASSERT OK == 1
+SYS JOIN base "a/empty"
+SYS MKDIR LAST
+ASSERT OK == 1
+
+# replace OLD → NEW
+REPLACETREE base "OLD" "NEW"
+ASSERT OK == 1
+ASSERT REPLACETREE_N == 2
+ASSERT LAST_N == 2
+ASSERT REPLACETREE_SUBS == 3
+SYS HAS LAST "cfg.txt"
+ASSERT LAST_N == 1
+SYS HAS LAST "note.txt"
+ASSERT LAST_N == 1
+SYS HAS LAST "plain"
+ASSERT LAST_N == 0
+
+# verify content
+SYS JOIN base "a/cfg.txt"
+SYS READ LAST
+SYS EQS LAST "host=NEW host"
+ASSERT LAST_N == 1
+SYS JOIN base "a/b/note.txt"
+SYS READ LAST
+SYS EQS LAST "NEW and NEW again"
+ASSERT LAST_N == 1
+SYS JOIN base "plain.txt"
+SYS READ LAST
+SYS EQS LAST "no match here"
+ASSERT LAST_N == 1
+
+# second pass no-op (already NEW)
+REPLACETREE base "OLD" "NEW"
+ASSERT OK == 1
+ASSERT REPLACETREE_N == 0
+ASSERT REPLACETREE_SUBS == 0
+
+# GSUBTREE alias
+GSUBTREE base "NEW" "X"
+ASSERT OK == 1
+ASSERT GSUBTREE_N == 2
+ASSERT GSUBTREE_SUBS == 3
+SYS JOIN base "a/cfg.txt"
+SYS READ LAST
+SYS HAS LAST "X"
+ASSERT LAST_N == 1
+
+# SEDTREE alias + single file root
+SYS JOIN base "plain.txt"
+LET p = LAST
+SYS WRITE p "aaa"
+ASSERT OK == 1
+SEDTREE p "a" "b"
+ASSERT OK == 1
+ASSERT SEDTREE_N == 1
+ASSERT REPLACETREE_SUBS == 3
+SYS READ p
+SYS EQS LAST "bbb"
+ASSERT LAST_N == 1
+
+# SYS form
+SYS JOIN base "a/cfg.txt"
+SYS WRITE LAST "ZZZ"
+ASSERT OK == 1
+SYS REPLACETREE base "ZZZ" "ok"
+ASSERT OK == 1
+ASSERT REPLACETREE_N == 1
+SYS JOIN base "a/cfg.txt"
+SYS READ LAST
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+
+# empty old → no-op
+REPLACETREE base "" "x"
+ASSERT OK == 1
+ASSERT REPLACETREE_N == 0
+
+# missing soft
+REPLACETREE "/no/such/replacetree" "a" "b"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty path soft
+REPLACETREE "" "a" "b"
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+RMTREE base
+ASSERT OK == 1
+
+PRINT "replacetree ok"
+ASSERT OK == 1

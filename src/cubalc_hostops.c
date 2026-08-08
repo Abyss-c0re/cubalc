@@ -1085,6 +1085,156 @@ int cubalc_host_greptree(const char *root, const char *needle, int icase, int in
   return 0;
 }
 
+/* REPLACEALL olds→news into out (cap outsz). Returns substitution count. */
+static long cubalc_replaceall_buf(const char *src, const char *olds, const char *news,
+                                  char *out, size_t outsz) {
+  size_t oldn, newn, fo = 0, pre, rest;
+  long subs = 0;
+  const char *p;
+  if (!out || outsz < 1) return 0;
+  out[0] = 0;
+  if (!src) src = "";
+  if (!olds) olds = "";
+  if (!news) news = "";
+  oldn = strlen(olds);
+  newn = strlen(news);
+  if (oldn == 0) {
+    snprintf(out, outsz, "%s", src);
+    return 0;
+  }
+  p = src;
+  for (;;) {
+    const char *hit = strstr(p, olds);
+    if (!hit) {
+      rest = strlen(p);
+      if (fo + rest >= outsz) rest = outsz - 1 - fo;
+      if (rest > 0) memcpy(out + fo, p, rest);
+      fo += rest;
+      out[fo] = 0;
+      break;
+    }
+    pre = (size_t)(hit - p);
+    if (fo + pre >= outsz) pre = outsz - 1 - fo;
+    if (pre > 0) memcpy(out + fo, p, pre);
+    fo += pre;
+    if (fo + newn < outsz) {
+      memcpy(out + fo, news, newn);
+      fo += newn;
+    } else if (fo < outsz - 1) {
+      size_t nt = outsz - 1 - fo;
+      memcpy(out + fo, news, nt);
+      fo += nt;
+    }
+    out[fo] = 0;
+    subs++;
+    p = hit + oldn;
+    if (fo >= outsz - 1) break;
+  }
+  return subs;
+}
+
+/* Apply replace on one regular file; push path if rewritten. */
+static void cubalc_replacetree_file(const char *path, const char *olds, const char *news,
+                                    char *out, size_t outsz, size_t *olen, long *rewritten,
+                                    long *subs_total, long *scan) {
+  cubalc_host_result hr, wr;
+  char nbuf[CUBALC_HOST_STR_MAX];
+  long file_subs;
+  if (scan) (*scan)++;
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_read(path, &hr) != 0) return;
+  file_subs = cubalc_replaceall_buf(hr.str, olds, news, nbuf, sizeof nbuf);
+  if (file_subs <= 0) return;
+  memset(&wr, 0, sizeof wr);
+  if (cubalc_host_write(path, nbuf, &wr) != 0) return;
+  if (subs_total) *subs_total += file_subs;
+  cubalc_bag_push(out, outsz, olen, rewritten, path);
+}
+
+static void cubalc_replacetree_rec(const char *dir, const char *olds, const char *news,
+                                   char *out, size_t outsz, size_t *olen, long *rewritten,
+                                   long *subs_total, long *scan, int depth) {
+  DIR *d;
+  struct dirent *ent;
+  struct stat st;
+  if (!dir || !dir[0] || depth > 64 || !out || !olen || !rewritten) return;
+  if (*olen + 1 >= outsz) return;
+  d = opendir(dir);
+  if (!d) return;
+  while ((ent = readdir(d)) != NULL) {
+    char full[CUBALC_HOST_STR_MAX];
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+    if (cubalc_join_child(dir, ent->d_name, full, sizeof full) != 0)
+      continue;
+    if (lstat(full, &st) != 0) continue;
+    if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+        && !S_ISLNK(st.st_mode)
+#endif
+        ) {
+      cubalc_replacetree_rec(full, olds, news, out, outsz, olen, rewritten,
+                             subs_total, scan, depth + 1);
+      continue;
+    }
+    if (!S_ISREG(st.st_mode)) continue;
+    cubalc_replacetree_file(full, olds, news, out, outsz, olen, rewritten,
+                            subs_total, scan);
+  }
+  closedir(d);
+}
+
+/* Usability: SYS REPLACETREE|SUBTREE root old new — recursive REPLACEALL without
+ * WALK+REPLACEFILES or shell find|sed. r->str rewritten paths; r->n files; r->code subs. */
+int cubalc_host_replacetree(const char *root, const char *olds, const char *news,
+                            cubalc_host_result *r) {
+  char abs[CUBALC_HOST_STR_MAX];
+  size_t olen = 0;
+  long rewritten = 0, subs = 0, scan = 0;
+  struct stat st;
+  cubalc_host_result hr;
+  r_clear(r);
+  if (!root || !root[0]) {
+    snprintf(r->err, sizeof r->err, "replacetree: empty path");
+    return -1;
+  }
+  if (!olds) olds = "";
+  if (!news) news = "";
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(root, &hr) == 0 && hr.str[0])
+    snprintf(abs, sizeof abs, "%s", hr.str);
+  else
+    snprintf(abs, sizeof abs, "%s", root);
+  if (lstat(abs, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "replacetree: missing");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "replacetree: %s", strerror(errno));
+    return -1;
+  }
+  r->str[0] = 0;
+  if (S_ISREG(st.st_mode)) {
+    cubalc_replacetree_file(abs, olds, news, r->str, sizeof r->str, &olen,
+                            &rewritten, &subs, &scan);
+  } else if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+             && !S_ISLNK(st.st_mode)
+#endif
+             ) {
+    cubalc_replacetree_rec(abs, olds, news, r->str, sizeof r->str, &olen,
+                           &rewritten, &subs, &scan, 0);
+  } else {
+    snprintf(r->err, sizeof r->err, "replacetree: not a file or directory");
+    return -1;
+  }
+  r->n = rewritten;
+  r->code = (int)(subs > 0x7fffffff ? 0x7fffffff : subs);
+  (void)scan;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS RENAME|MV from to — move plate without shell. */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) {
   r_clear(r);
