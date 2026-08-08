@@ -830,6 +830,6 @@
     "scani secret also hits 'no secret here' in plain (case-fold substring)",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "c5c23dc9db54c778c36effdaf771a1d91b50b965",
   "ts": "2026-08-08T07:04:00Z"
 }
