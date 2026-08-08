@@ -1,41 +1,41 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 184,
-  "program": "programs/realworld/pathline_evidence_board.cubalc",
-  "theme": "PATHLINETREE + PARSEPATHLINE + PATHLINEPATHS grep -rn evidence citations",
-  "version": "1.15.493-usability",
+  "iter": 185,
+  "program": "programs/realworld/pathline_freq_digest_board.cubalc",
+  "theme": "PATHLINETEXTS + PATHLINEFREQ message digests and per-file hit histogram",
+  "version": "1.15.495-usability",
   "pass": true,
-  "prior_note": "iter 183 FIRST/LAST peels; this iter first realworld PATHLINETREE(1041)+PARSEPATHLINE(1042)+PATHLINEPATHS(1043)",
+  "prior_note": "iter 184 PATHLINETREE+PARSE+PATHS; this iter first realworld PATHLINETEXTS(1044)+PATHLINEFREQ(1045)",
   "tests": [
     {
       "name": "seed",
-      "cmd": "WRITEOUT nested multi-line logs",
+      "cmd": "WRITEOUT nested logs multi error lines",
       "ok": true,
       "note": "seed"
     },
     {
       "name": "harvest",
-      "cmd": "PATHLINETREE error \u2192 2 cites path:line:text",
+      "cmd": "PATHLINETREE error \u2192 4 cites 2 files",
       "ok": true,
       "note": "PATHLINETREE"
     },
     {
-      "name": "peel",
-      "cmd": "PARSEPATHLINE first cite \u2192 text LINE_N=2",
+      "name": "texts",
+      "cmd": "PATHLINETEXTS keep dups 4 texts SKIP 0",
       "ok": true,
-      "note": "PARSEPATHLINE"
+      "note": "PATHLINETEXTS"
     },
     {
-      "name": "files",
-      "cmd": "PATHLINEPATHS unique \u2192 1 err.log",
+      "name": "freq",
+      "cmd": "PATHLINEFREQ unique 2 total 4; VAL path:count",
       "ok": true,
-      "note": "PATHLINEPATHS"
+      "note": "PATHLINEFREQ"
     },
     {
-      "name": "colon",
-      "cmd": "needle ':' multi-file 3 lines (W102)",
+      "name": "budget",
+      "cmd": "MAXT=2 over soft",
       "ok": true,
-      "note": "W102"
+      "note": "budget"
     },
     {
       "name": "empty_req",
@@ -882,27 +882,50 @@
       "title": "PATHLINEPATHS unique first-seen paths; SKIP non-annotated",
       "detail": "Positive: PATHLINEPATHS bag \u2192 unique paths in first-seen order, PATHLINEPATHS_N, SKIP count for lines that fail path:num:text shape. Empty bag OK=1 N=0. Companion to PATHLINETREE for implicated-file lists without EACH+HASLINE glue.",
       "repro": "PATHLINEPATHS three cites two files \u2192 N2; plain line increments SKIP"
+    },
+    {
+      "id": "W105",
+      "severity": "low",
+      "area": "lang|pathlinetexts",
+      "title": "PATHLINETEXTS peels message bodies; keeps duplicates; SKIP plain",
+      "detail": "Positive: PATHLINETEXTS bag \u2192 text-only bag in bag order, PATHLINETEXTS_N, SKIP non-annotated. Duplicates preserved (FREQ-ready). Empty bag OK=1 N=0. Empty body path:N: still counts as one field. Companion to PATHLINEPATHS (unique files) without EACH+PARSEPATHLINE.",
+      "repro": "PATHLINETREE error; PATHLINETEXTS LAST \u2192 3x 'error: boom' + other"
+    },
+    {
+      "id": "W106",
+      "severity": "med",
+      "area": "lang|pathlinefreq",
+      "title": "PATHLINEFREQ path:count bag is first-seen order, not sorted by count",
+      "detail": "PATHLINEFREQ returns unique path:count lines in first-seen pathline order (DFS harvest order), not descending frequency. TOPKEY/LOOKUPN give hottest path and counts. Agents that NTH 0 expecting max heat will get first-seen file (often warn before err). TOTAL counts annotated lines; SKIP plain. Empty bag OK=1 TOTAL 0.",
+      "repro": "err 3 hits warn 1; VAL may list warn:1 before err:3; TOPKEY ends err.log"
+    },
+    {
+      "id": "W107",
+      "severity": "low",
+      "area": "lang|pathlinefreq",
+      "title": "PATHLINEFREQ TOTAL vs N: lines vs unique paths",
+      "detail": "Positive: PATHLINEFREQ_N = unique paths, PATHLINEFREQ_TOTAL = cite lines, SKIP = garbage fields. LOOKUPN path \u2192 count. Good for MAXT budgets on total hits and TOPKEY for hottest file. Distinct from COUNTINTREE (global substring tally without path hist).",
+      "repro": "4 error cites / 2 files \u2192 N2 TOTAL4; LOOKUPN err.log \u2192 3"
     }
   ],
   "workarounds": [
-    "PATHLINETREE root needle; gate on PATHLINETREE_N not OK",
-    "NTH 0 cites; PARSEPATHLINE for PATH/LINE_N/text",
-    "PATHLINEPATHS cites for unique files",
-    "Avoid needle ':' unless intentional (W102); prefer longer tokens",
-    "CUBALC_PLE_REQUIRE=1 for shell-visible missing-root fail",
-    "Keep VARS lean (~91) under 128 (W81)"
+    "PATHLINETREE then PATHLINETEXTS for message digests (dups kept)",
+    "PATHLINEFREQ for path:count; use TOPKEY/LOOKUPN not NTH 0 for hottest (W106)",
+    "CUBALC_PFD_MAXT for total-hit budget; CUBALC_PFD_REQUIRE for missing root",
+    "Gate on TOTAL/N not OK for empty cites (W98)",
+    "Keep VARS lean (~92) under 128 (W81)"
   ],
   "language_gaps": [
-    "PATHLINETREE whole-word / regex (substring family)",
-    "PATHLINETREE relative paths option (currently absolute)",
-    "Cookbook: seed\u2192harvest\u2192peel\u2192files evidence packet"
+    "PATHLINEFREQ sort-by-count / TOPN paths form",
+    "PATHLINETEXTS unique-message mode (currently keeps dups)",
+    "Cookbook: seed\u2192harvest\u2192texts\u2192freq incident digest"
   ],
   "issues_faced": [
-    "PATHLINETREE path:lineno:text harvest works (fills GREPLINESTREE path gap)",
-    "Colon needle multi-hit false friend documented (W102)",
-    "VAL last-line omit NL (W5); plate STATUS cite::: with needle :",
+    "PATHLINEFREQ first-seen order vs TOPKEY hottest (W106) \u2014 documented",
+    "PATHLINETEXTS preserves duplicate messages for rollups (W105)",
+    "VAL last line omit NL (W5)",
     "selftest 355/355"
   ],
-  "commit": "bd6bc5ca43c9ee00e5bb94fed0a59e143c4db38b",
-  "ts": "2026-08-08T08:18:30Z"
+  "commit": "",
+  "ts": "2026-08-08T08:44:00Z"
 }
