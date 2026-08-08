@@ -570,6 +570,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 540. ~~**`JSONEXTRA` / `JSONUNKNOWN` · `JSONKNOWN` / `JSONALLOWED`**~~ **done** (plate keys outside/inside allow-list bag · schema unknown-field reject without JSONKEYS+EACH).
 541. ~~**`JSONPLUCK` / `JSONGETALL` / `JPLUCK`**~~ **done** (multi-key peel → value bag · empty field on miss · HIT=found · no multi JSON+PUSH).
 542. ~~**`REQUIRE JSONHASALL` / `JSONNEED` / `JSONKEYS`**~~ **done** (fail-fast plate key contract · missing listed in error · soft twin SYS JSONHASALL).
+543. ~~**`REQUIRE JSONONLY` / `NOEXTRA` / `JSONSTRICT`**~~ **done** (fail-fast if plate has keys outside allow-list · extras listed · soft twin SYS JSONEXTRA).
 
 ## Tick protocol
 

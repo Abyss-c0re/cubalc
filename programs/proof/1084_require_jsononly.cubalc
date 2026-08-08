@@ -1,0 +1,68 @@
+# REQUIRE JSONONLY / NOEXTRA / JSONSTRICT — fail-fast no unknown plate keys
+# Soft twin: SYS JSONEXTRA. Pair with REQUIRE JSONHASALL for full schema.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" ""
+LET plate = LAST
+
+# success: no extras
+REQUIRE JSONONLY plate "ok" "n" "err"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONEXTRA_N == 0
+ASSERT REQUIRE_JSON_EXTRA == 0
+# LAST kept as plate
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 3
+
+# aliases
+SYS JSONOBJ "a" 1 "b" 2
+LET p2 = LAST
+REQUIRE NOEXTRA p2 "a" "b"
+ASSERT OK == 1
+REQUIRE JSONSTRICT p2 "a" "b"
+ASSERT OK == 1
+REQUIRE JONLY p2 "a" "b"
+ASSERT OK == 1
+
+# two-token form
+REQUIRE JSON ONLY p2 "a" "b"
+ASSERT OK == 1
+
+# OF bag form
+SYS JSONOBJ "x" 1 "y" 2
+LET p3 = LAST
+SYS JOIN "" "x\ny"
+LET allow = LAST
+REQUIRE JSONONLY p3 OF allow
+ASSERT OK == 1
+
+# bare allow on LAST plate
+SYS JSONOBJ "p" 1 "q" 2
+REQUIRE JSONONLY "p" "q"
+ASSERT OK == 1
+
+# soft twin: extras present
+SYS JSONOBJ "ok" true "n" 1 "noise" 9
+LET soft = LAST
+SYS JSONEXTRA soft "ok" "n"
+ASSERT LAST_N == 1
+SYS EQS LAST "noise"
+ASSERT LAST_N == 1
+
+# full schema: HASALL + ONLY
+SYS JSONOBJ "status" "ready" "code" 0
+LET agent = LAST
+REQUIRE JSONHASALL agent "status" "code"
+ASSERT OK == 1
+REQUIRE JSONONLY agent "status" "code"
+ASSERT OK == 1
+PASS "exact schema gated"
+ASSERT OK == 1
+
+# superset allow-list ok (required subset of allow)
+SYS JSONOBJ "a" 1
+LET small = LAST
+REQUIRE JSONONLY small "a" "b" "c"
+ASSERT OK == 1
