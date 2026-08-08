@@ -1,0 +1,90 @@
+# PATHLINEFREQ / COUNTBYPATH / PLFREQ — path:count hist from path:lineno:text bag
+# Hottest files after PATHLINETREE without EACH+PARSEPATHLINE+KVINC.
+
+HOLD_FLASH 1
+
+# literal · a has 2 hits, b has 1
+LET bag = "/tmp/a/err.log:2:error one\n/tmp/a/err.log:3:error two\n/tmp/b/warn.log:1:error three"
+PATHLINEFREQ bag
+ASSERT OK == 1
+ASSERT PATHLINEFREQ_N == 2
+ASSERT LAST_N == 2
+ASSERT PATHLINEFREQ_TOTAL == 3
+ASSERT PATHLINEFREQ_SKIP == 0
+SYS HASLINE LAST "/tmp/a/err.log:2"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "/tmp/b/warn.log:1"
+ASSERT LAST_N == 1
+# first-seen order
+SYS NTH 0 PATHLINEFREQ
+ASSERT LAST == "/tmp/a/err.log:2"
+SYS NTH 1 PATHLINEFREQ
+ASSERT LAST == "/tmp/b/warn.log:1"
+
+# LOOKUP count
+SYS LOOKUP PATHLINEFREQ "/tmp/a/err.log"
+ASSERT LAST == "2"
+SYS LOOKUPN PATHLINEFREQ "/tmp/b/warn.log"
+ASSERT LAST_N == 1
+
+# skip non-annotated
+LET bag2 = "/x:1:h\nplain\n/x:2:h2\n/y:1:y"
+PATHLINEFREQ bag2
+ASSERT PATHLINEFREQ_N == 2
+ASSERT PATHLINEFREQ_TOTAL == 3
+ASSERT PATHLINEFREQ_SKIP == 1
+SYS LOOKUPN PATHLINEFREQ "/x"
+ASSERT LAST_N == 2
+
+# empty soft
+PATHLINEFREQ ""
+ASSERT OK == 1
+ASSERT PATHLINEFREQ_N == 0
+ASSERT PATHLINEFREQ_TOTAL == 0
+ASSERT LAST == ""
+
+# aliases
+COUNTBYPATH bag
+ASSERT COUNTBYPATH_N == 2
+PLFREQ bag
+ASSERT PLFREQ_N == 2
+
+# SYS form
+SYS PATHLINEFREQ bag
+ASSERT OK == 1
+ASSERT PATHLINEFREQ_TOTAL == 3
+
+# live PATHLINETREE → freq
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_plf_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "ok\nerror: a1\nerror: a2"
+ASSERT OK == 1
+SYS JOIN base "a/b/warn.log"
+WRITEOUT LAST "error: w1"
+ASSERT OK == 1
+
+PATHLINETREE base "error"
+ASSERT PATHLINETREE_N == 3
+PATHLINEFREQ LAST
+ASSERT OK == 1
+ASSERT PATHLINEFREQ_N == 2
+ASSERT PATHLINEFREQ_TOTAL == 3
+# TOPKEY should be err.log (2 hits)
+SYS TOPKEY PATHLINEFREQ
+SYS ENDS LAST "err.log"
+ASSERT LAST_N == 1
+
+RMTREE base
+ASSERT OK == 1
+
+PRINT "pathlinefreq ok"
+ASSERT OK == 1

@@ -531,6 +531,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 501. ~~**`PARSEPATHLINE` / `SPLITPATHLINE` / `PEELPATHLINE`**~~ **done** (peel path:lineno:text → PATH · LINE_N · LAST=text · PATHLINETREE companion).
 502. ~~**`PATHLINEPATHS` / `PATHSFROMPL` / `UNIQPATHLINES`**~~ **done** (unique paths from path:lineno:text bag · no EACH+PARSEPATHLINE+HASLINE+PUSH).
 503. ~~**`PATHLINETEXTS` / `TEXTSFROMPL` / `PLTEXTS`**~~ **done** (message texts from path:lineno:text bag · FREQ-ready · no EACH+PARSEPATHLINE+PUSH).
+504. ~~**`PATHLINEFREQ` / `COUNTBYPATH` / `PLFREQ`**~~ **done** (path:count hist from pathline bag · TOPKEY/SORTFREQ · no EACH+PARSEPATHLINE+KVINC).
 
 ## Tick protocol
 
