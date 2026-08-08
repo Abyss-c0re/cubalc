@@ -1,0 +1,124 @@
+# NTHINTREE / INDEXINTREE — 0-based Nth content match under tree
+# Early-stop pick without GREPTREE+NTH or TAKEINTREE+NTH glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_nit_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# sorted DFS hits: mid, z, err
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "error last"
+ASSERT OK == 1
+SYS JOIN base "a/b/mid.txt"
+WRITEOUT LAST "error middle"
+ASSERT OK == 1
+SYS JOIN base "a/b/z.txt"
+WRITEOUT LAST "error z"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "ok only"
+ASSERT OK == 1
+
+# index 0 = first = mid (matches FIRSTINTREE)
+NTHINTREE base "error" 0
+ASSERT OK == 1
+ASSERT NTHINTREE_HIT == 1
+ASSERT LAST_N == 1
+ASSERT NTHINTREE_I == 0
+SYS ENDS LAST "mid.txt"
+ASSERT LAST_N == 1
+FIRSTINTREE base "error"
+LET first = LAST
+NTHINTREE base "error" 0
+SYS EQS LAST first
+ASSERT LAST_N == 1
+
+# index 1 = z
+NTHINTREE base "error" 1
+ASSERT NTHINTREE_HIT == 1
+SYS ENDS LAST "z.txt"
+ASSERT LAST_N == 1
+
+# index 2 = err
+NTHINTREE base "error" 2
+ASSERT NTHINTREE_HIT == 1
+SYS ENDS LAST "err.log"
+ASSERT LAST_N == 1
+
+# out of range soft miss
+NTHINTREE base "error" 9
+ASSERT OK == 1
+ASSERT NTHINTREE_HIT == 0
+ASSERT LAST_N == 0
+ASSERT LAST == ""
+
+# negative soft miss
+NTHINTREE base "error" -1
+ASSERT OK == 1
+ASSERT NTHINTREE_HIT == 0
+
+# case-insensitive
+NTHINTREEI base "ERROR" 0
+ASSERT NTHINTREE_HIT == 1
+SYS ENDS LAST "mid.txt"
+ASSERT LAST_N == 1
+
+# aliases
+INDEXINTREE base "error" 1
+ASSERT NTHINTREE_HIT == 1
+SYS ENDS LAST "z.txt"
+ASSERT LAST_N == 1
+
+# SYS form
+SYS NTHINTREE base "error" 2
+ASSERT OK == 1
+ASSERT NTHINTREE_N == 1
+SYS ENDS LAST "err.log"
+ASSERT LAST_N == 1
+
+# matches TAKEINTREE peel
+TAKEINTREE base "error" 3
+SYS NTH 1 LAST
+LET t1 = LAST
+NTHINTREE base "error" 1
+SYS EQS LAST t1
+ASSERT LAST_N == 1
+
+# single file
+SYS JOIN base "plain.txt"
+LET p = LAST
+NTHINTREE p "ok" 0
+ASSERT NTHINTREE_HIT == 1
+NTHINTREE p "ok" 1
+ASSERT NTHINTREE_HIT == 0
+NTHINTREE p "error" 0
+ASSERT NTHINTREE_HIT == 0
+
+# missing soft
+NTHINTREE "/no/such/nthintree" "x" 0
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty soft
+NTHINTREE "" "x" 0
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+RMTREE base
+ASSERT OK == 1
+
+PRINT "nthintree ok"
+ASSERT OK == 1

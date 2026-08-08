@@ -1825,6 +1825,115 @@ int cubalc_host_takeintree(const char *root, const char *needle, int icase,
   return 0;
 }
 
+/* Sorted DFS: find 0-based Nth matching file path. Returns 1 if found. */
+static int cubalc_nthintree_rec(const char *dir, const char *needle, int icase,
+                                long want_i, long *seen, char *found, size_t foundn,
+                                int depth) {
+  DIR *d;
+  struct dirent *ent;
+  struct stat st;
+  int nnames = 0, i;
+  char names[256][256];
+  if (!dir || !dir[0] || depth > 64 || !found || !seen || want_i < 0) return 0;
+  d = opendir(dir);
+  if (!d) return 0;
+  while ((ent = readdir(d)) != NULL && nnames < 256) {
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+    if (strlen(ent->d_name) >= 256) continue;
+    snprintf(names[nnames], sizeof names[nnames], "%s", ent->d_name);
+    nnames++;
+  }
+  closedir(d);
+  if (nnames > 1)
+    qsort(names, (size_t)nnames, sizeof names[0], cubalc_name_cmp);
+  for (i = 0; i < nnames; i++) {
+    char full[CUBALC_HOST_STR_MAX];
+    if (cubalc_join_child(dir, names[i], full, sizeof full) != 0)
+      continue;
+    if (lstat(full, &st) != 0) continue;
+    if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+        && !S_ISLNK(st.st_mode)
+#endif
+        ) {
+      if (cubalc_nthintree_rec(full, needle, icase, want_i, seen, found, foundn, depth + 1))
+        return 1;
+      continue;
+    }
+    if (!S_ISREG(st.st_mode)) continue;
+    if (cubalc_file_has_needle(full, needle, icase)) {
+      if (*seen == want_i) {
+        snprintf(found, foundn, "%s", full);
+        return 1;
+      }
+      (*seen)++;
+    }
+  }
+  return 0;
+}
+
+/* Usability: SYS NTHINTREE root needle index — 0-based Nth content match under tree
+ * without GREPTREE+NTH or TAKEINTREE+NTH glue. Early-stop walk. Soft miss → -1. */
+int cubalc_host_nthintree(const char *root, const char *needle, int icase,
+                          long index, cubalc_host_result *r) {
+  char abs[CUBALC_HOST_STR_MAX], found[CUBALC_HOST_STR_MAX];
+  struct stat st;
+  cubalc_host_result hr;
+  long seen = 0;
+  int hit = 0;
+  r_clear(r);
+  if (!root || !root[0]) {
+    snprintf(r->err, sizeof r->err, "nthintree: empty path");
+    return -1;
+  }
+  if (!needle) needle = "";
+  if (index < 0) {
+    r->str[0] = 0;
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(root, &hr) == 0 && hr.str[0])
+    snprintf(abs, sizeof abs, "%s", hr.str);
+  else
+    snprintf(abs, sizeof abs, "%s", root);
+  if (lstat(abs, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "nthintree: missing");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "nthintree: %s", strerror(errno));
+    return -1;
+  }
+  found[0] = 0;
+  if (S_ISREG(st.st_mode)) {
+    if (index == 0 && cubalc_file_has_needle(abs, needle, icase)) {
+      snprintf(found, sizeof found, "%s", abs);
+      hit = 1;
+    }
+  } else if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+             && !S_ISLNK(st.st_mode)
+#endif
+             ) {
+    hit = cubalc_nthintree_rec(abs, needle, icase, index, &seen, found, sizeof found, 0);
+  } else {
+    snprintf(r->err, sizeof r->err, "nthintree: not a file or directory");
+    return -1;
+  }
+  if (hit && found[0]) {
+    snprintf(r->str, sizeof r->str, "%s", found);
+    r->n = 1;
+  } else {
+    r->str[0] = 0;
+    r->n = 0;
+  }
+  r->ok = 1;
+  return 0;
+}
+
 /* Peel first/last matching line from one file. Returns 1 if hit.
  * line_out gets line text; *line_idx is 0-based index within file. */
 static int cubalc_file_findline(const char *path, const char *needle, int icase,

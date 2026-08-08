@@ -534,6 +534,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 504. ~~**`PATHLINEFREQ` / `COUNTBYPATH` / `PLFREQ`**~~ **done** (path:count hist from pathline bag · TOPKEY/SORTFREQ · no EACH+PARSEPATHLINE+KVINC).
 505. ~~**`FORMATPATHLINE` / `MKPATHLINE` / `TOPATHLINE`**~~ **done** (build path:lineno:text cite · inverse of PARSEPATHLINE · no STR+CAT glue).
 506. ~~**`TAKEINTREE` / `FIRSTNINTREE` / `HEADINTREE`**~~ **done** (first n content-matching paths under tree · no GREPTREE+TAKE glue).
+507. ~~**`NTHINTREE` / `INDEXINTREE`**~~ **done** (0-based Nth content-matching path under tree · early-stop · no GREPTREE+NTH glue).
 
 ## Tick protocol
 

@@ -88,6 +88,10 @@ int cubalc_host_findintree(const char *root, const char *needle, int icase,
  * r->str=paths; r->n=count (≤maxn); Soft miss root → -1. maxn≤0 → empty bag. */
 int cubalc_host_takeintree(const char *root, const char *needle, int icase,
                            long maxn, cubalc_host_result *r);
+/* 0-based Nth content-matching file under root (sorted DFS, early stop).
+ * r->str=path; r->n=1|0. Soft miss root → -1. index<0 → miss. */
+int cubalc_host_nthintree(const char *root, const char *needle, int icase,
+                          long index, cubalc_host_result *r);
 /* first or last matching *line* under root (sorted DFS).
  * want_last=0 first, =1 last. On hit: r->str = "path\\nline", r->n=1, r->code=0-based line idx.
  * Soft miss root → -1. Empty needle → first/last line of first/last readable file. */
