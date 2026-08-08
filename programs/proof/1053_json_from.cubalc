@@ -1,0 +1,74 @@
+# JSON key FROM plate [OR fallback] — multi-field peel without JOIN "" plate glue
+# Completes agent plate peel after JSONKEYS/JSONHAS/JSON OR.
+
+HOLD_FLASH 1
+
+LET plate = "{\"ok\":true,\"version\":\"1.15.503\",\"err\":\"\",\"n\":7,\"role\":\"agent\"}"
+
+# multi-field peel without reloading LAST
+SYS JSON "version" FROM plate
+ASSERT OK == 1
+ASSERT JSON_HIT == 1
+ASSERT JSON_FROM == 1
+ASSERT JSON_KEY == "version"
+ASSERT LAST == "1.15.503"
+
+SYS JSON "n" FROM plate
+ASSERT OK == 1
+ASSERT LAST == "7"
+ASSERT JSON_FROM == 1
+
+SYS JSON "role" FROM plate
+ASSERT LAST == "agent"
+
+SYS JSON "ok" FROM plate
+ASSERT LAST == "1"
+
+# aliases IN / OF
+SYS JSON "err" IN plate
+ASSERT OK == 1
+ASSERT JSON_HIT == 1
+ASSERT LAST == ""
+
+SYS JSON "version" OF plate
+ASSERT LAST == "1.15.503"
+
+# FROM + OR miss
+SYS JSON "missing" FROM plate OR "fallback"
+ASSERT OK == 1
+ASSERT JSON_OR == 1
+ASSERT JSON_HIT == 0
+ASSERT JSON_FROM == 1
+ASSERT LAST == "fallback"
+
+# FROM + OR hit (ignore fallback)
+SYS JSON "n" FROM plate OR 0
+ASSERT OK == 1
+ASSERT JSON_HIT == 1
+ASSERT JSON_OR == 0
+ASSERT LAST == "7"
+
+# still works from LAST without FROM
+SYS JOIN "" plate
+SYS JSON "role"
+ASSERT JSON_FROM == 0
+ASSERT LAST == "agent"
+
+# miss soft without OR
+SYS JSON "gone" FROM plate
+ASSERT OK == 0
+ASSERT JSON_HIT == 0
+ASSERT LAST == ""
+
+# JGET FROM
+SYS JGET "version" FROM plate OR "x"
+ASSERT LAST == "1.15.503"
+ASSERT JSON_HIT == 1
+
+# numeric OR with FROM
+SYS JSON "absent" FROM plate OR 99
+ASSERT LAST == "99"
+ASSERT JSON_OR == 1
+
+PRINT "json from ok"
+ASSERT OK == 1

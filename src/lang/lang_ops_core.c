@@ -17565,19 +17565,37 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm,"OK",1);
       bump(vm); return 1;
     }
-    /* SYS JSON|JGET "key" [OR fallback] — peel field from LAST JSON plate.
-     * Miss without OR → soft OK=0 empty LAST. OR → LAST=fallback OK=1 (like ENV OR).
-     * Usability: agent plate defaults without IF OK glue. */
+    /* SYS JSON|JGET "key" [FROM|IN|OF src] [OR fallback]
+     * — peel field from explicit plate or LAST. Miss without OR → soft OK=0.
+     * OR → LAST=fallback OK=1 (like ENV OR). FROM avoids reloading LAST each peel.
+     * Usability: multi-field agent plate peel without JOIN "" plate glue. */
     if (kw(&L->cur,"JSON") || kw(&L->cur,"JGET")){
       char key[96]="content";
       char fallback[CUBALC_HOST_STR_MAX];
-      int have_fb = 0;
+      char srcbuf[CUBALC_HOST_STR_MAX];
+      int have_fb = 0, have_src = 0;
       const char *src;
       cubalc_host_result hr;
       lex_next(L);
       fallback[0] = 0;
+      srcbuf[0] = 0;
       if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
         snprintf(key,sizeof key,"%s",L->cur.text); lex_next(L);
+      }
+      /* optional FROM|IN|OF source (before OR so "OR" is never a source name) */
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"IN") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"SRC") || kw(&L->cur,"PLATE")){
+        lex_next(L);
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long nv = parse_expr(vm, L);
+          snprintf(srcbuf, sizeof srcbuf, "%ld", nv);
+          have_src = 1;
+        } else if (resolve_str_arg(vm, L, srcbuf, sizeof srcbuf) == 0) {
+          have_src = 1;
+        } else {
+          fail(vm, "SYS JSON key FROM plate [OR fallback]");
+          return -1;
+        }
       }
       if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
           kw(&L->cur,"SOFT")){
@@ -17589,11 +17607,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         } else if (resolve_str_arg(vm, L, fallback, sizeof fallback) == 0) {
           have_fb = 1;
         } else {
-          fail(vm, "SYS JSON key OR \"fallback\"");
+          fail(vm, "SYS JSON key [FROM plate] OR \"fallback\"");
           return -1;
         }
       }
-      src = vm->last_str;
+      src = have_src ? srcbuf : vm->last_str;
       memset(&hr, 0, sizeof hr);
       if (cubalc_host_json_get(src, key, &hr)!=0){
         if (have_fb) {
@@ -17604,6 +17622,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           var_set_str(vm, "JSON", fallback);
           var_set_num(vm, "JSON_HIT", 0);
           var_set_num(vm, "JSON_OR", 1);
+          var_set_num(vm, "JSON_FROM", have_src ? 1 : 0);
+          var_set_str(vm, "JSON_KEY", key);
           var_set_num(vm, "OK", 1);
           bump(vm); return 1;
         }
@@ -17613,6 +17633,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         vm->last_n = 0;
         var_set_num(vm, "JSON_HIT", 0);
         var_set_num(vm, "JSON_OR", 0);
+        var_set_num(vm, "JSON_FROM", have_src ? 1 : 0);
+        var_set_str(vm, "JSON_KEY", key);
         var_set_num(vm,"OK",0);
         if (hr.err[0]) {
           var_set_str(vm, "LAST_ERR", hr.err);
@@ -17627,7 +17649,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "JSON", hr.str);
       var_set_num(vm, "JSON_HIT", 1);
       var_set_num(vm, "JSON_OR", 0);
+      var_set_num(vm, "JSON_FROM", have_src ? 1 : 0);
+      var_set_str(vm, "JSON_KEY", key);
       var_set_num(vm,"OK",1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys json → key=%s hit=1 from=%d\n", key, have_src);
       bump(vm); return 1;
     }
     /* SYS JSONKEYS|KEYSJSON|JKEYS [json|LAST]
@@ -30577,8 +30603,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SKIPINTREE", "SKIPINTREE alias of DROPINTREE"},
       {"RESTINTREE", "RESTINTREE alias of DROPINTREE — residual after TAKE page"},
       {"DROPINTREEI", "DROPINTREEI case-insensitive DROPINTREE"},
-      {"JSON", "JSON|JGET key [OR fallback] — peel field from LAST JSON plate · OR like ENV"},
-      {"SYS JSON", "SYS JSON|JGET key [OR fallback] — peel JSON field · miss soft or OR default"},
+      {"JSON", "JSON|JGET key [FROM plate] [OR fallback] — peel field · FROM avoids LAST reload · OR like ENV"},
+      {"SYS JSON", "SYS JSON|JGET key [FROM plate] [OR fallback] — peel JSON · FROM|IN|OF src · OR default"},
+      {"JGET", "JGET alias of JSON — peel plate field"},
       {"JSONKEYS", "JSONKEYS|KEYSJSON [json|LAST] — top-level object keys → bag · walk unknown plates"},
       {"SYS JSONKEYS", "SYS JSONKEYS|KEYSJSON [json] — key bag · twin of top-level"},
       {"KEYSJSON", "KEYSJSON alias of JSONKEYS"},
