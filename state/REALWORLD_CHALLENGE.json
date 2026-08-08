@@ -627,6 +627,6 @@
     "RESTPOSPATHS excludes verb; probe shows RESTPATHS inflation (W67)",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "83b65714e567a3f59ce0dd4872c9833af5b72354",
   "ts": "2026-08-08T03:44:18Z"
 }
