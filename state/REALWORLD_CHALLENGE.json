@@ -1,69 +1,69 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 211,
-  "program": "programs/realworld/agent_plate_setp_session_board.cubalc",
-  "theme": "SETP/INCP/GETP/DELP + plate_boot/save agent session mutate",
-  "version": "1.15.561-usability",
+  "iter": 212,
+  "program": "programs/realworld/agent_plate_contract_needp_board.cubalc",
+  "theme": "NEEDP/HASPALL/KEYSP + MERGEP/DEFAULTP/TOGGLEP agent plate contract",
+  "version": "1.15.563-usability",
   "pass": true,
-  "prior_note": "iter 210 JSONFILEDEFAULTS/ENSURE/TOGGLE; this iter first realworld SETP family + plate_boot/save (proofs 1109-1110)",
+  "prior_note": "iter 211 SETP session; this iter first realworld NEEDP+MERGEP family (proofs 1111/1113)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "plate_boot ENSURE seed n/ok/schema",
+      "cmd": "plate_boot seed n/ok/role/schema",
       "ok": true,
-      "note": "plate_boot"
+      "note": "boot"
     },
     {
-      "name": "set",
-      "cmd": "SETP role=worker + plate_save",
+      "name": "merge",
+      "cmd": "MERGEP status+n=9+peer keep role",
       "ok": true,
-      "note": "SETP"
+      "note": "MERGEP"
     },
     {
-      "name": "inc",
-      "cmd": "INCP n +2",
+      "name": "defaults",
+      "cmd": "DEFAULTP retries set then no clobber 99",
       "ok": true,
-      "note": "INCP"
+      "note": "DEFAULTP"
     },
     {
-      "name": "get",
-      "cmd": "GETP hit role; OR miss require exit 2",
+      "name": "toggle",
+      "cmd": "TOGGLEP debug 1\u21920\u21921",
       "ok": true,
-      "note": "GETP"
+      "note": "TOGGLEP"
     },
     {
-      "name": "cycle",
-      "cmd": "set role + inc n + save round-trip",
+      "name": "keys",
+      "cmd": "KEYSP bag has n+role",
       "ok": true,
-      "note": "session"
+      "note": "KEYSP"
+    },
+    {
+      "name": "has",
+      "cmd": "HASP soft miss OK; HASPALL ghost miss bag",
+      "ok": true,
+      "note": "HASP"
+    },
+    {
+      "name": "need",
+      "cmd": "NEEDP n/ok/role/status after fill",
+      "ok": true,
+      "note": "NEEDP"
     },
     {
       "name": "gate",
-      "cmd": "HASALL schema/n/ok",
+      "cmd": "NEEDP+KEYSP+save admit",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "del",
-      "cmd": "DELP role hit",
-      "ok": true,
-      "note": "DELP"
-    },
-    {
-      "name": "save",
-      "cmd": "INCLUDE plate_save load hit",
-      "ok": true,
-      "note": "plate_save"
-    },
-    {
       "name": "alias",
-      "cmd": "PUTP+BUMPP+DROPP ok",
+      "cmd": "PATCHP/ENSUREP/FLIPP/REQUIREP",
       "ok": true,
       "note": "aliases"
     },
     {
       "name": "probe",
-      "cmd": "SETP+INCP+OR+DECP edges",
+      "cmd": "HASPALL miss; MERGE fill; DEFAULTP no clobber",
       "ok": true,
       "note": "edges"
     },
@@ -75,7 +75,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_APSS_REQUIRE=1 get miss \u2192 exit 2",
+      "cmd": "CUBALC_APCN_REQUIRE=1 incomplete \u2192 EXIT 2",
       "ok": true,
       "note": "hard env"
     },
@@ -1630,6 +1630,38 @@
       "title": "GETP key OR \"\" empty fallback confuses hit detection",
       "detail": "OR empty string makes miss path hard to distinguish from empty values; prefer OR \"fb\" sentinel or two-step GETP then GETP OR.",
       "repro": "GETP role OR \"\" after SETP may report miss LAST_N 0"
+    },
+    {
+      "id": "W194",
+      "severity": "high",
+      "area": "lang|needp",
+      "title": "NEEDP missing keys leaves plate exit_code 0 (assert fail only)",
+      "detail": "NEEDP missing status \u2192 ok:false asserts_fail=1 sticky err with soft twin tip, but exit_code 0 and may not halt. Agents cannot rely on process status for contract failures; EXIT n after HASPALL pre-check under env require.",
+      "repro": "NEEDP n status on {n:0} \u2192 exit_code 0 asserts_fail 1"
+    },
+    {
+      "id": "W195",
+      "severity": "med",
+      "area": "lang|haspall",
+      "title": "HASPALL miss returns LAST bag of missing names; LAST_N is 0|1 not count",
+      "detail": "On partial miss LAST_N=0 and LAST lists missing keys (HASPALL_MISS_N). On full hit LAST_N=1. Soft OK=1 always. Dual of JSONHASALL but on PLATE var.",
+      "repro": "HASPALL n ghost_key \u2192 LAST_N 0 LAST contains ghost_key"
+    },
+    {
+      "id": "W196",
+      "severity": "med",
+      "area": "lang|mergep",
+      "title": "MERGEP LAST_N is overlay key count; overlay wins on collide",
+      "detail": "Same class as JSONFILEMERGE W181 but in-memory PLATE. Bare MERGEP uses LAST as overlay. PATCHP alias. DEFAULTP never clobbers (dual of MERGEP).",
+      "repro": "MERGEP {n:9,status:ready} \u2192 LAST_N 2|3; n becomes 9"
+    },
+    {
+      "id": "W197",
+      "severity": "low",
+      "area": "lang|hasp",
+      "title": "HASP soft miss keeps OK=1 LAST_N=0",
+      "detail": "Single-key soft probe: hit LAST_N=1, miss LAST_N=0 with OK=1 (no sticky fail). Safe for IF HASP branches without CLEAR_ERR.",
+      "repro": "HASP missing \u2192 OK 1 LAST_N 0"
     }
   ],
   "workarounds": [
@@ -1697,7 +1729,10 @@
     "GETP hit via OK or two-step without trusting LAST_N",
     "JSONHASALL plate keys for presence",
     "LOADPLATE path after plate_boot when PLATE suspect",
-    "capture OK immediately after SETP/PUTP before CLEAR_ERR"
+    "capture OK immediately after SETP/PUTP before CLEAR_ERR",
+    "HASPALL precheck + EXIT n under env require (do not trust NEEDP rc)",
+    "use ghost_key for intentional HASPALL miss tests",
+    "DEFAULTP for boot seed; MERGEP for intentional overwrite"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1759,7 +1794,10 @@
     "GETP LAST_N is strlen not hit",
     "JSONHAS key-first vs JSONHASALL plate-first order",
     "plate_boot PLATE LET fails under 128-var pressure",
-    "SETP insert LAST_N=0 vs INCP value LAST_N"
+    "SETP insert LAST_N=0 vs INCP value LAST_N",
+    "NEEDP contract fail does not set shell exit_code",
+    "HASPALL LAST_N is 0|1 not missing-count",
+    "MERGEP overlay wins; DEFAULTP fill-if-missing dual"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1814,8 +1852,11 @@
     "boot failed until LOADPLATE path verify (PLATE missing under cap)",
     "GETP role LAST_N=6 broke hit checks; use OK/EQS",
     "JSONHAS body ok false friend",
-    "INCLUDE plate_save unknown form PLATE when var gone"
+    "INCLUDE plate_save unknown form PLATE when var gone",
+    "HASPALL status partial false friend after merge left status present",
+    "NEEDP require path exit_code 0 until EXIT after HASPALL precheck",
+    "plate_boot create-on-miss made missing path keys soft-success"
   ],
-  "commit": "a558fec",
-  "ts": "2026-08-08T19:41:42Z"
+  "commit": "pending",
+  "ts": "2026-08-08T20:00:30Z"
 }
