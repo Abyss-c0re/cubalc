@@ -35593,10 +35593,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
-      {"SETP", "SETP key value — set key on PLATE var · write-back PLATE · no LET glue"},
-      {"INCP", "INCP key [delta] — bump numeric PLATE key · write-back · default +1"},
-      {"DELP", "DELP key — drop key from PLATE var · write-back · soft miss"},
-      {"GETP", "GETP key [OR fallback] — peel key from PLATE · LAST=value · no JSON glue"},
+      {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · write-back · multi-plate"},
+      {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · write-back · default +1"},
+      {"DELP", "DELP [FROM plate] key — drop key · write-back · soft miss · multi-plate"},
+      {"GETP", "GETP [FROM plate] key [OR fallback] — peel key · LAST=value · multi-plate"},
       {"PUTP", "PUTP alias of SETP"},
       {"BUMPP", "BUMPP alias of INCP"},
       {"DROPP", "DROPP alias of DELP"},
@@ -37425,17 +37425,18 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", msg);
     bump(vm); return 1;
   }
-  /* SETP|PUTP|PLATE_SET key value — mutate conventional PLATE var in place.
-   * INCP|BUMPP|PLATE_INC key [delta] — bump numeric PLATE key (default ± via DECP).
-   * DELP|DROPP|PLATE_DEL key — drop PLATE key (soft miss LAST_N=0).
-   * GETP|PEEKP|PLATE_GET key [OR|DEFAULT fb] — peel value from PLATE.
-   * Usability: after plate_boot, set/inc without JSONSET+LET PLATE = LAST glue:
-   *   INCLUDE plate_boot
-   *   SETP "status" "ready"
-   *   INCP "n"
-   *   INCLUDE plate_save
-   * Missing PLATE → treat as {}. Writes PLATE + LAST (object plate text).
-   * GETP hit → LAST=value LAST_N=1; miss+OR → fallback LAST_N=0 OK=1; miss → OK=0. */
+  /* SETP|PUTP|PLATE_SET [FROM plate] key value — mutate PLATE or any plate var.
+   * INCP|BUMPP|PLATE_INC [FROM plate] key [delta] — bump numeric key.
+   * DELP|DROPP|PLATE_DEL [FROM plate] key — drop key (soft miss LAST_N=0).
+   * GETP|PEEKP|PLATE_GET [FROM plate] key [OR|DEFAULT fb] — peel value.
+   * FROM: multi-plate agents without LET PLATE = other (twin of FILLP FROM):
+   *   SETP FROM peer "host" "cubeB"
+   *   GETP "n" FROM peer
+   *   INCP "ticks" 1 FROM session
+   *   SETP "role" "worker" FROM peer
+   * Named FROM write-back updates that var; conventional PLATE stays untouched.
+   * SETP_FROM/GETP_FROM/INCP_FROM/DELP_FROM = 0|1.
+   * Missing default PLATE → {}. GETP hit → LAST=value LAST_N=1; miss+OR → fb. */
   if (kw(&L->cur,"SETP") || kw(&L->cur,"PUTP") || kw(&L->cur,"PLATE_SET") ||
       kw(&L->cur,"MSETP") || kw(&L->cur,"SETPLATEV") ||
       kw(&L->cur,"INCP") || kw(&L->cur,"BUMPP") || kw(&L->cur,"PLATE_INC") ||
@@ -37446,10 +37447,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"GETP") || kw(&L->cur,"PEEKP") || kw(&L->cur,"PLATE_GET") ||
       kw(&L->cur,"MGETP") || kw(&L->cur,"GETPLATEV")) {
     char plate[CUBALC_HOST_STR_MAX], key[96], val[CUBALC_HOST_STR_MAX];
-    char fb[CUBALC_HOST_STR_MAX], raw[32];
+    char fb[CUBALC_HOST_STR_MAX], raw[32], from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr, gr;
     int is_set = 0, is_inc = 0, is_dec = 0, is_del = 0, is_get = 0;
-    int val_kind = 0, have_fb = 0;
+    int val_kind = 0, have_fb = 0, have_from = 0;
     long delta = 1, cur = 0, nv = 0;
     Var *pv;
 
@@ -37471,25 +37472,53 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     lex_next(L);
     plate[0] = 0; key[0] = 0; val[0] = 0; fb[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
 
-    /* load PLATE var (or empty object) */
-    pv = var_get(vm, "PLATE", 0);
-    if (pv && pv->is_str && pv->sval[0])
-      snprintf(plate, sizeof plate, "%s", pv->sval);
-    else
-      snprintf(plate, sizeof plate, "%s", "{}");
+    /* optional leading FROM plate_src (named var write-back, LAST, or raw object) */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
 
     /* key */
     if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
       long kv = parse_expr(vm, L);
       snprintf(key, sizeof key, "%ld", kv);
     } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      /* do not swallow trailing/leading FROM as key */
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+        fail(vm, is_set ? "SETP [FROM plate] key value — need key"
+             : is_inc ? (is_dec ? "DECP [FROM plate] key [delta]" : "INCP [FROM plate] key [delta]")
+             : is_del ? "DELP [FROM plate] key" : "GETP [FROM plate] key [OR fallback]");
+        return -1;
+      }
       if (resolve_str_arg(vm, L, key, sizeof key) != 0)
         key[0] = 0;
     } else {
-      fail(vm, is_set ? "SETP key value — need key"
-           : is_inc ? (is_dec ? "DECP key [delta]" : "INCP key [delta]")
-           : is_del ? "DELP key" : "GETP key [OR fallback]");
+      fail(vm, is_set ? "SETP [FROM plate] key value — need key"
+           : is_inc ? (is_dec ? "DECP [FROM plate] key [delta]" : "INCP [FROM plate] key [delta]")
+           : is_del ? "DELP [FROM plate] key" : "GETP [FROM plate] key [OR fallback]");
       return -1;
     }
     if (!key[0]) {
@@ -37499,9 +37528,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       vm->last_n = 0;
       var_set_num(vm, "LAST_N", 0);
       var_set_num(vm, "OK", 0);
+      var_set_num(vm, "SETP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "GETP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "INCP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "DELP_FROM", have_from ? 1 : 0);
       bump(vm); return 1;
     }
 
+    /* op-specific args before optional trailing FROM */
     if (is_get) {
       if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
           kw(&L->cur,"FALLBACK") || kw(&L->cur,"SOFT")) {
@@ -37510,6 +37544,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           long n = parse_expr(vm, L);
           snprintf(fb, sizeof fb, "%ld", n);
           have_fb = 1;
+        } else if (L->cur.kind == TK_IDENT &&
+                   (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF"))) {
+          fail(vm, "GETP key OR fallback — need fallback");
+          return -1;
         } else if (resolve_str_arg(vm, L, fb, sizeof fb) == 0) {
           have_fb = 1;
         } else {
@@ -37517,6 +37555,86 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           return -1;
         }
       }
+    } else if (is_set) {
+      if (kw(&L->cur,"RAW") || kw(&L->cur,"ASRAW") || kw(&L->cur,"LITERAL")) {
+        val_kind = 1;
+        lex_next(L);
+      }
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long n = parse_expr(vm, L);
+        snprintf(val, sizeof val, "%ld", n);
+        val_kind = 1;
+      } else if (L->cur.kind == TK_IDENT &&
+                 (strcmp(L->cur.text, "true") == 0 || strcmp(L->cur.text, "false") == 0 ||
+                  strcmp(L->cur.text, "null") == 0)) {
+        snprintf(val, sizeof val, "%s", L->cur.text);
+        val_kind = 1;
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT &&
+                 (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+                  kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM"))) {
+        fail(vm, "SETP [FROM plate] key value — need value");
+        return -1;
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+          fail(vm, "SETP [FROM plate] key value — need value");
+          return -1;
+        }
+      } else {
+        fail(vm, "SETP [FROM plate] key value — need value");
+        return -1;
+      }
+    } else if (is_inc) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        delta = parse_expr(vm, L);
+        if (is_dec && delta > 0) delta = -delta; /* DECP 3 means -3 if positive given */
+      }
+    }
+
+    /* trailing FROM plate_src if not already */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* resolve working plate: FROM source or conventional PLATE */
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    if (is_get) {
       memset(&gr, 0, sizeof gr);
       if (cubalc_host_json_get(plate, key, &gr) == 0) {
         var_set_str(vm, "LAST", gr.str);
@@ -37548,35 +37666,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "ERR", "GETP: key miss");
       }
       var_set_str(vm, "GETP_KEY", key);
+      var_set_num(vm, "GETP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "SETP_FROM", have_from ? 1 : 0);
       if (vm->trace)
-        fprintf(vm->trace, "# getp key=%s\n", key);
+        fprintf(vm->trace, "# getp key=%s from=%d\n", key, have_from);
       bump(vm); return 1;
     }
 
     if (is_set) {
-      if (kw(&L->cur,"RAW") || kw(&L->cur,"ASRAW") || kw(&L->cur,"LITERAL")) {
-        val_kind = 1;
-        lex_next(L);
-      }
-      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
-        long n = parse_expr(vm, L);
-        snprintf(val, sizeof val, "%ld", n);
-        val_kind = 1;
-      } else if (L->cur.kind == TK_IDENT &&
-                 (strcmp(L->cur.text, "true") == 0 || strcmp(L->cur.text, "false") == 0 ||
-                  strcmp(L->cur.text, "null") == 0)) {
-        snprintf(val, sizeof val, "%s", L->cur.text);
-        val_kind = 1;
-        lex_next(L);
-      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
-        if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
-          fail(vm, "SETP key value — need value");
-          return -1;
-        }
-      } else {
-        fail(vm, "SETP key value — need value");
-        return -1;
-      }
       memset(&hr, 0, sizeof hr);
       if (cubalc_host_json_set(plate, key, val, val_kind, &hr) != 0) {
         var_set_str(vm, "LAST", "");
@@ -37584,12 +37681,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         vm->last_n = 0;
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "SETP_N", 0);
+        var_set_num(vm, "SETP_FROM", have_from ? 1 : 0);
         var_set_num(vm, "OK", 0);
         var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "SETP: fail");
         var_set_str(vm, "ERR", hr.err[0] ? hr.err : "SETP: fail");
         bump(vm); return 1;
       }
-      var_set_str(vm, "PLATE", hr.str);
+      if (have_from && from_name[0])
+        var_set_str(vm, from_name, hr.str);
+      else if (!have_from)
+        var_set_str(vm, "PLATE", hr.str);
       var_set_str(vm, "LAST", hr.str);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
       vm->last_n = hr.n;
@@ -37597,17 +37698,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "SETP", hr.str);
       var_set_num(vm, "SETP_N", hr.n);
       var_set_str(vm, "SETP_KEY", key);
+      var_set_num(vm, "SETP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# setp key=%s updated=%ld\n", key, hr.n);
+        fprintf(vm->trace, "# setp key=%s updated=%ld from=%d\n", key, hr.n, have_from);
       bump(vm); return 1;
     }
 
     if (is_inc) {
-      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
-        delta = parse_expr(vm, L);
-        if (is_dec && delta > 0) delta = -delta; /* DECP 3 means -3 if positive given */
-      }
       memset(&gr, 0, sizeof gr);
       if (cubalc_host_json_get(plate, key, &gr) == 0) {
         char *end = NULL;
@@ -37625,12 +37723,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         vm->last_n = 0;
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "INCP_N", 0);
+        var_set_num(vm, "INCP_FROM", have_from ? 1 : 0);
         var_set_num(vm, "OK", 0);
         var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "INCP: fail");
         var_set_str(vm, "ERR", hr.err[0] ? hr.err : "INCP: fail");
         bump(vm); return 1;
       }
-      var_set_str(vm, "PLATE", hr.str);
+      if (have_from && from_name[0])
+        var_set_str(vm, from_name, hr.str);
+      else if (!have_from)
+        var_set_str(vm, "PLATE", hr.str);
       var_set_str(vm, "LAST", hr.str);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
       vm->last_n = nv;
@@ -37640,9 +37742,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "INCP_N", 1);
       var_set_num(vm, "INCP_DELTA", delta);
       var_set_str(vm, "INCP_KEY", key);
+      var_set_num(vm, "INCP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "SETP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# incp key=%s v=%ld delta=%ld\n", key, nv, delta);
+        fprintf(vm->trace, "# incp key=%s v=%ld delta=%ld from=%d\n",
+                key, nv, delta, have_from);
       bump(vm); return 1;
     }
 
@@ -37654,12 +37759,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         vm->last_n = 0;
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "DELP_N", 0);
+        var_set_num(vm, "DELP_FROM", have_from ? 1 : 0);
         var_set_num(vm, "OK", 0);
         var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "DELP: fail");
         var_set_str(vm, "ERR", hr.err[0] ? hr.err : "DELP: fail");
         bump(vm); return 1;
       }
-      var_set_str(vm, "PLATE", hr.str);
+      if (have_from && from_name[0])
+        var_set_str(vm, from_name, hr.str);
+      else if (!have_from)
+        var_set_str(vm, "PLATE", hr.str);
       var_set_str(vm, "LAST", hr.str);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
       vm->last_n = hr.n;
@@ -37668,9 +37777,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "DELP_N", hr.n);
       var_set_num(vm, "DELP_HIT", hr.n);
       var_set_str(vm, "DELP_KEY", key);
+      var_set_num(vm, "DELP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "SETP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# delp key=%s removed=%ld\n", key, hr.n);
+        fprintf(vm->trace, "# delp key=%s removed=%ld from=%d\n",
+                key, hr.n, have_from);
       bump(vm); return 1;
     }
 

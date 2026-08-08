@@ -1,0 +1,106 @@
+# SETP/GETP/INCP/DELP FROM — mutate any plate var without clobbering PLATE
+# Usability: multi-plate agents patch peer/session objects (twin of FILLP FROM).
+
+HOLD_FLASH 1
+
+# conventional PLATE seed — must stay untouched across FROM ops
+LET PLATE = "{}"
+SETP "agent" "plate-agent"
+SETP "n" 1
+ASSERT SETP_FROM == 0
+
+# peer plate lives in its own var
+LET peer = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":9,\"tmp\":\"x\"}"
+
+# --- GETP FROM named var ---
+GETP FROM peer "host"
+ASSERT OK == 1
+ASSERT GETP_FROM == 1
+ASSERT GETP_HIT == 1
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+# PLATE not clobbered
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+ASSERT GETP_FROM == 0
+
+# trailing FROM + OR miss
+GETP "missing" OR "fallback" FROM peer
+ASSERT OK == 1
+ASSERT GETP_FROM == 1
+ASSERT GETP_HIT == 0
+ASSERT GETP_OR == 1
+SYS EQS LAST "fallback"
+ASSERT LAST_N == 1
+
+# --- SETP FROM: write-back peer, not PLATE ---
+SETP FROM peer "host" "cubeC"
+ASSERT OK == 1
+ASSERT SETP_FROM == 1
+GETP FROM peer "host"
+SYS EQS LAST "cubeC"
+ASSERT LAST_N == 1
+# peer var updated in place
+SYS JSON "host" FROM peer
+SYS EQS LAST "cubeC"
+ASSERT LAST_N == 1
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# trailing SETP FROM
+SETP "role" "worker" FROM peer
+ASSERT SETP_FROM == 1
+GETP FROM peer "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# --- INCP / DECP FROM ---
+INCP FROM peer "n" 2
+ASSERT OK == 1
+ASSERT INCP_FROM == 1
+ASSERT INCP_V == 11
+ASSERT LAST_N == 11
+SYS JSONN "n" FROM peer
+ASSERT LAST_N == 11
+# PLATE n still 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+
+DECP "n" FROM peer
+ASSERT INCP_FROM == 1
+ASSERT INCP_V == 10
+SYS JSONN "n" FROM peer
+ASSERT LAST_N == 10
+
+# --- DELP FROM ---
+DELP FROM peer "tmp"
+ASSERT OK == 1
+ASSERT DELP_FROM == 1
+ASSERT DELP_HIT == 1
+GETP FROM peer "tmp" OR ""
+ASSERT GETP_HIT == 0
+ASSERT GETP_FROM == 1
+# PLATE still has agent
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# default PLATE path still works
+SETP "status" "ready"
+ASSERT SETP_FROM == 0
+GETP "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+# FROM LAST (snapshot object in LAST)
+SYS JSONOBJ "k" "v" "c" 3
+# LAST is object plate
+SETP FROM LAST "k" "w"
+ASSERT SETP_FROM == 1
+SYS JSON "k" FROM LAST
+SYS EQS LAST "w"
+ASSERT LAST_N == 1
+
+PRINT "setp_from soft ok"
