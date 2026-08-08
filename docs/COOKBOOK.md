@@ -15,6 +15,7 @@ make all
 ./out/cubalc env [pfx]   # host CUBALC_* contract (set/default/hint JSON)
 ./out/cubalc examples    # curated runnable starters (JSON · filterable)
 ./out/cubalc cat agent_boot  # dump lib/program source + meta plate
+./out/cubalc init --plate my_agent   # scaffold plate_session starter
 ./out/cubalc forms SMX   # play-form catalog
 # agents: pipe source without a temp file (no HOLD_FLASH tax)
 printf 'ASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -
