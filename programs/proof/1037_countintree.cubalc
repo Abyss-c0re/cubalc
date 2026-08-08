@@ -1,0 +1,108 @@
+# COUNTINTREE / COUNTTREE / GREPCOUNTTREE — recursive occurrence tally
+# Severity/error rollups without WALK+COUNTINFILES or shell grep -rc.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_cit_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# nested content
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "error error boom"
+ASSERT OK == 1
+# "error" x2
+SYS JOIN base "a/b/note.txt"
+WRITEOUT LAST "all good error"
+ASSERT OK == 1
+# "error" x1
+SYS JOIN base "a/b/warn.log"
+WRITEOUT LAST "WARNING: careful"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "no hits"
+ASSERT OK == 1
+SYS JOIN base "empty"
+SYS MKDIR LAST
+ASSERT OK == 1
+
+# total error = 3 across 2 files
+COUNTINTREE base "error"
+ASSERT OK == 1
+ASSERT COUNTINTREE == 3
+ASSERT LAST_N == 3
+ASSERT COUNTINTREE_FILES == 2
+
+# single occurrence
+COUNTINTREE base "boom"
+ASSERT OK == 1
+ASSERT COUNTINTREE_N == 1
+ASSERT COUNTINTREE_FILES == 1
+
+# no match
+COUNTINTREE base "zzzz_nope"
+ASSERT OK == 1
+ASSERT COUNTINTREE == 0
+ASSERT COUNTINTREE_FILES == 0
+
+# case-sensitive miss
+COUNTINTREE base "WARNING"
+ASSERT OK == 1
+ASSERT COUNTINTREE == 1
+
+# COUNTINTREEI
+COUNTINTREEI base "warning"
+ASSERT OK == 1
+ASSERT COUNTINTREE == 1
+ASSERT COUNTINTREE_FILES == 1
+
+# empty needle → 0
+COUNTINTREE base ""
+ASSERT OK == 1
+ASSERT COUNTINTREE == 0
+
+# COUNTTREE alias
+COUNTTREE base "error"
+ASSERT OK == 1
+ASSERT COUNTTREE_N == 3
+
+# SYS form
+SYS COUNTINTREE base "good"
+ASSERT OK == 1
+ASSERT COUNTINTREE == 1
+
+# single file root
+SYS JOIN base "a/err.log"
+LET one = LAST
+COUNTINTREE one "error"
+ASSERT OK == 1
+ASSERT COUNTINTREE == 2
+ASSERT COUNTINTREE_FILES == 1
+
+# missing soft
+COUNTINTREE "/no/such/countintree" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty path soft
+COUNTINTREE "" "x"
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+RMTREE base
+ASSERT OK == 1
+
+PRINT "countintree ok"
+ASSERT OK == 1

@@ -64,6 +64,11 @@ int cubalc_host_greptree(const char *root, const char *needle, int icase, int in
  * Empty old → no-op (n=0). Only rewrites when content changes. */
 int cubalc_host_replacetree(const char *root, const char *olds, const char *news,
                             cubalc_host_result *r);
+/* recursive needle occurrence count under root. r->n = total hits;
+ * r->code = files with ≥1 hit; r->str = abs root. Soft miss → -1.
+ * Empty needle → 0. Non-overlapping matches (strstr advance). */
+int cubalc_host_countintree(const char *root, const char *needle, int icase,
+                            cubalc_host_result *r);
 /* rename/move path; soft miss if from missing */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */

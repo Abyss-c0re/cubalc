@@ -1235,6 +1235,135 @@ int cubalc_host_replacetree(const char *root, const char *olds, const char *news
   return 0;
 }
 
+/* Count non-overlapping occurrences of needle in hay (ASCII icase optional). */
+static long cubalc_count_hits(const char *hay, const char *needle, int icase) {
+  size_t nlen;
+  long hits = 0;
+  const char *p;
+  if (!hay || !needle) return 0;
+  nlen = strlen(needle);
+  if (nlen == 0) return 0;
+  p = hay;
+  if (!icase) {
+    while ((p = strstr(p, needle)) != NULL) {
+      hits++;
+      p += nlen;
+    }
+    return hits;
+  }
+  /* case-insensitive: scan with cubalc_str_has style advance */
+  {
+    size_t fi, j, hlen = strlen(hay);
+    for (fi = 0; fi < hlen; ) {
+      int match = 1;
+      for (j = 0; j < nlen; j++) {
+        char ca, cb;
+        if (fi + j >= hlen) { match = 0; break; }
+        ca = hay[fi + j];
+        cb = needle[j];
+        if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+        if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+        if (ca != cb) { match = 0; break; }
+      }
+      if (match) {
+        hits++;
+        fi += nlen;
+      } else {
+        fi++;
+      }
+    }
+  }
+  return hits;
+}
+
+static void cubalc_countintree_file(const char *path, const char *needle, int icase,
+                                    long *hits, long *files_hit) {
+  cubalc_host_result hr;
+  long h;
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_read(path, &hr) != 0) return;
+  h = cubalc_count_hits(hr.str, needle, icase);
+  if (h > 0) {
+    if (hits) *hits += h;
+    if (files_hit) (*files_hit)++;
+  }
+}
+
+static void cubalc_countintree_rec(const char *dir, const char *needle, int icase,
+                                   long *hits, long *files_hit, int depth) {
+  DIR *d;
+  struct dirent *ent;
+  struct stat st;
+  if (!dir || !dir[0] || depth > 64) return;
+  d = opendir(dir);
+  if (!d) return;
+  while ((ent = readdir(d)) != NULL) {
+    char full[CUBALC_HOST_STR_MAX];
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+    if (cubalc_join_child(dir, ent->d_name, full, sizeof full) != 0)
+      continue;
+    if (lstat(full, &st) != 0) continue;
+    if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+        && !S_ISLNK(st.st_mode)
+#endif
+        ) {
+      cubalc_countintree_rec(full, needle, icase, hits, files_hit, depth + 1);
+      continue;
+    }
+    if (!S_ISREG(st.st_mode)) continue;
+    cubalc_countintree_file(full, needle, icase, hits, files_hit);
+  }
+  closedir(d);
+}
+
+/* Usability: SYS COUNTINTREE|COUNTTREE root needle — recursive occurrence tally
+ * without WALK+COUNTINFILES or shell grep -rc. r->n=hits; r->code=files with hits. */
+int cubalc_host_countintree(const char *root, const char *needle, int icase,
+                            cubalc_host_result *r) {
+  char abs[CUBALC_HOST_STR_MAX];
+  long hits = 0, files_hit = 0;
+  struct stat st;
+  cubalc_host_result hr;
+  r_clear(r);
+  if (!root || !root[0]) {
+    snprintf(r->err, sizeof r->err, "countintree: empty path");
+    return -1;
+  }
+  if (!needle) needle = "";
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(root, &hr) == 0 && hr.str[0])
+    snprintf(abs, sizeof abs, "%s", hr.str);
+  else
+    snprintf(abs, sizeof abs, "%s", root);
+  if (lstat(abs, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "countintree: missing");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "countintree: %s", strerror(errno));
+    return -1;
+  }
+  if (S_ISREG(st.st_mode)) {
+    cubalc_countintree_file(abs, needle, icase, &hits, &files_hit);
+  } else if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+             && !S_ISLNK(st.st_mode)
+#endif
+             ) {
+    cubalc_countintree_rec(abs, needle, icase, &hits, &files_hit, 0);
+  } else {
+    snprintf(r->err, sizeof r->err, "countintree: not a file or directory");
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", abs);
+  r->n = hits;
+  r->code = (int)(files_hit > 0x7fffffff ? 0x7fffffff : files_hit);
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS RENAME|MV from to — move plate without shell. */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) {
   r_clear(r);
