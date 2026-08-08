@@ -1,57 +1,69 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 210,
-  "program": "programs/realworld/agent_plate_boot_flags_board.cubalc",
-  "theme": "JSONFILEDEFAULTS + ENSURE + TOGGLE agent boot and feature flags",
-  "version": "1.15.558-usability",
+  "iter": 211,
+  "program": "programs/realworld/agent_plate_setp_session_board.cubalc",
+  "theme": "SETP/INCP/GETP/DELP + plate_boot/save agent session mutate",
+  "version": "1.15.561-usability",
   "pass": true,
-  "prior_note": "iter 209 JSONFILEMERGE overlay; this iter first realworld JSONFILEDEFAULTS/ENSURE/TOGGLE (proofs 1106-1108)",
+  "prior_note": "iter 210 JSONFILEDEFAULTS/ENSURE/TOGGLE; this iter first realworld SETP family + plate_boot/save (proofs 1109-1110)",
   "tests": [
     {
-      "name": "list",
-      "cmd": "list defaults",
-      "ok": true,
-      "note": "list"
-    },
-    {
       "name": "boot",
-      "cmd": "JSONFILEDEFAULTS retries/role/soft/schema; re-boot no clobber",
+      "cmd": "plate_boot ENSURE seed n/ok/schema",
       "ok": true,
-      "note": "DEFAULTS"
+      "note": "plate_boot"
     },
     {
-      "name": "ensure",
-      "cmd": "ENSURE phase=boot set; retries ensure 0 keep 3",
+      "name": "set",
+      "cmd": "SETP role=worker + plate_save",
       "ok": true,
-      "note": "ENSURE"
+      "note": "SETP"
     },
     {
-      "name": "toggle",
-      "cmd": "debug miss\u21921 then flip\u21920",
+      "name": "inc",
+      "cmd": "INCP n +2",
       "ok": true,
-      "note": "TOGGLE"
+      "note": "INCP"
     },
     {
-      "name": "reload",
-      "cmd": "LOADPLATE hit peel retries/role",
+      "name": "get",
+      "cmd": "GETP hit role; OR miss require exit 2",
       "ok": true,
-      "note": "reload"
+      "note": "GETP"
+    },
+    {
+      "name": "cycle",
+      "cmd": "set role + inc n + save round-trip",
+      "ok": true,
+      "note": "session"
     },
     {
       "name": "gate",
-      "cmd": "HASALL retries/role/schema",
+      "cmd": "HASALL schema/n/ok",
       "ok": true,
       "note": "gate"
     },
     {
+      "name": "del",
+      "cmd": "DELP role hit",
+      "ok": true,
+      "note": "DELP"
+    },
+    {
+      "name": "save",
+      "cmd": "INCLUDE plate_save load hit",
+      "ok": true,
+      "note": "plate_save"
+    },
+    {
       "name": "alias",
-      "cmd": "DEFAULTPLATEALL/ENSUREPLATEKEY/FLIP/TOGGLE",
+      "cmd": "PUTP+BUMPP+DROPP ok",
       "ok": true,
       "note": "aliases"
     },
     {
       "name": "probe",
-      "cmd": "live 99 survives; ensure no clobber; toggle; mode on\u21920; empty key",
+      "cmd": "SETP+INCP+OR+DECP edges",
       "ok": true,
       "note": "edges"
     },
@@ -63,7 +75,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_APBF_REQUIRE=1 reload miss \u2192 exit 2",
+      "cmd": "CUBALC_APSS_REQUIRE=1 get miss \u2192 exit 2",
       "ok": true,
       "note": "hard env"
     },
@@ -1578,6 +1590,46 @@
       "title": "JSONFILEDEFAULTS dual of MERGE: fill-if-missing only",
       "detail": "LAST_N=keys newly set. Re-boot with same defs \u2192 LAST_N=0 live counters preserved. MERGE overwrites; DEFAULTS never clobbers \u2014 agents must pick form by intent.",
       "repro": "DEFAULTS retries=3; UPDATE 99; DEFAULTS again \u2192 still 99 LAST_N=0"
+    },
+    {
+      "id": "W189",
+      "severity": "high",
+      "area": "lang|getp",
+      "title": "GETP LAST_N is string length not hit bit",
+      "detail": "After GETP \"role\", LAST=worker and LAST_N=6 (strlen). Numeric \"4\" \u2192 LAST_N=1. OR fallback \"fb\" \u2192 LAST_N=2. Agents must use OK / GETP_HIT / EQS for hit, never LAST_N==1 as presence. Same class as other peel strlen footguns.",
+      "repro": "GETP role \u2192 LAST_N 6; GETP n=4 \u2192 LAST_N 1"
+    },
+    {
+      "id": "W190",
+      "severity": "high",
+      "area": "lang|jsonhas",
+      "title": "JSONHAS is key-first: JSONHAS key [plate] not plate key",
+      "detail": "SYS JSONHAS body \"ok\" probes key named body. Correct: JSONHAS \"ok\" body or JSONHASALL body \"ok\". Easy false friend after JSONHASALL plate keys order.",
+      "repro": "JSONHAS body ok \u2192 0; JSONHASALL body n ok \u2192 1"
+    },
+    {
+      "id": "W191",
+      "severity": "med",
+      "area": "lang|vars",
+      "title": "plate_boot LET PLATE may silently fail at 128-var cap",
+      "detail": "After agent_boot+IDENTITY+flags, ENSUREPLATE side-effects fill the table; LET PLATE=LAST can no-op. GETP/SETP then miss or thrash. Workarounds: verify via LOADPLATE path; lean LETs; avoid re-INCLUDE plate_save when PLATE undefined (unknown form PLATE).",
+      "repro": "heavy board INCLUDE plate_boot; GETP may miss until LOADPLATE path check"
+    },
+    {
+      "id": "W192",
+      "severity": "med",
+      "area": "lang|setp",
+      "title": "SETP insert LAST_N=0 update=1; INCP LAST_N is new value",
+      "detail": "SETP_N insert 0 / update 1 (opposite success polarity). INCP/BUMPP LAST_N is counter value. DECP negative ok. Confusing mix when mixing with GETP strlen LAST_N.",
+      "repro": "SETP role worker \u2192 LAST_N 0; INCP n \u2192 LAST_N 1+"
+    },
+    {
+      "id": "W193",
+      "severity": "low",
+      "area": "lang|getp_or",
+      "title": "GETP key OR \"\" empty fallback confuses hit detection",
+      "detail": "OR empty string makes miss path hard to distinguish from empty values; prefer OR \"fb\" sentinel or two-step GETP then GETP OR.",
+      "repro": "GETP role OR \"\" after SETP may report miss LAST_N 0"
     }
   ],
   "workarounds": [
@@ -1641,7 +1693,11 @@
     "prefer JSONFILEMERGE/OVERLAYPLATE for disk; MERGEPLATE for strings",
     "pass string values to JSONFILEENSURE; use (n) paren only for known nums",
     "read LAST_N immediately; do not use *SET/*HAD knobs under var cap",
-    "DEFAULTS for boot seed; MERGE/UPDATE for intentional overwrite"
+    "DEFAULTS for boot seed; MERGE/UPDATE for intentional overwrite",
+    "GETP hit via OK or two-step without trusting LAST_N",
+    "JSONHASALL plate keys for presence",
+    "LOADPLATE path after plate_boot when PLATE suspect",
+    "capture OK immediately after SETP/PUTP before CLEAR_ERR"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1699,7 +1755,11 @@
     "MERGEPLATE vs JSONFILEMERGE name split (memory vs file)",
     "SYS NUM shuttles LAST only \u2014 not a value arg",
     "ENSURE LAST_N set/had; TOGGLE LAST_N is 0|1 value",
-    "DEFAULTS fill-if-missing dual of MERGE overlay-wins"
+    "DEFAULTS fill-if-missing dual of MERGE overlay-wins",
+    "GETP LAST_N is strlen not hit",
+    "JSONHAS key-first vs JSONHASALL plate-first order",
+    "plate_boot PLATE LET fails under 128-var pressure",
+    "SETP insert LAST_N=0 vs INCP value LAST_N"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1750,8 +1810,12 @@
     "require needed EXIT on OR fallback not only OK==0",
     "none blocking \u2014 first-shot green after GETFLAG lean pattern from 207/208",
     "ensure --val=boot stored 0 until dropped SYS NUM val_str false friend",
-    "CLEAR_ERR before OK check would also clear NUM status"
+    "CLEAR_ERR before OK check would also clear NUM status",
+    "boot failed until LOADPLATE path verify (PLATE missing under cap)",
+    "GETP role LAST_N=6 broke hit checks; use OK/EQS",
+    "JSONHAS body ok false friend",
+    "INCLUDE plate_save unknown form PLATE when var gone"
   ],
-  "commit": "a09e09e",
-  "ts": "2026-08-08T19:09:16Z"
+  "commit": "pending",
+  "ts": "2026-08-08T19:41:42Z"
 }
