@@ -1471,6 +1471,6 @@
     "soft-first hard_eq/hard_sub avoids REQUIRE assert-fail",
     "drift load-only keeps SUBSET for gate split demo"
   ],
-  "commit": "pending",
+  "commit": "5160eca",
   "ts": "2026-08-08T16:13:43Z"
 }
