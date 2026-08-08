@@ -1,0 +1,614 @@
+# lease_promote_board.cubalc — TOUCHOUT lease + MOVEOUT plate promote
+#
+# Real use: agents claim nested lease markers and promote staged job plates
+# into live paths without DIRNAME+MKDIR+TOUCH/MV glue:
+#   GETFLAGOUT lease|e OR ENV LEASE — abs lease path + parent (1015)
+#   TOUCHOUT / MKFILEOUT — ENSUREPARENT + TOUCH marker (1022)
+#   GETFLAGOUT src|s + dest|d — stage/live plate paths
+#   WRITEOUT stage body; MOVEOUT / MVOUT promote (1021)
+#   SUBCMD claim|promote|renew|list|drop|has|gate|soft|clear|probe
+#
+# First realworld TOUCHOUT + MOVEOUT board (after 1021-1022).
+# Distinct from runlog_atomic (append/atomic/copy) and seal_writeout:
+# this board is *lease stamp + rename-promote into nested dest*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_lp_$$
+#   ./out/cubalc run programs/realworld/lease_promote_board.cubalc \
+#     claim -- --lease=/tmp/lp/leases/j1.lease --src=/tmp/lp/stage/j1.json job1
+#   ./out/cubalc run ... promote -- --src=... --dest=/tmp/lp/live/j1.json job1
+#
+# Plate: LEASES.txt VAL.txt META.txt LP_REPORT.txt
+# Env: LEASE SRC DEST CUBALC_LP_REQUIRE CUBALC_LP_MIN
+#
+# Edges:
+#   TOUCHOUT NEW 1 then 0; CREATED parent vs file NEW
+#   MOVEOUT removes src; missing src soft OK=0
+#   GETFLAGOUT eager parent mkdir (W73 class)
+#   W47 lean LET; GREPV plate; known latch
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "lease_promote_board: start"
+DEFAULT ACTION = "list"
+DEFAULT TFILE = "LEASES.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "LP_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "lease_promote -- claim|promote|renew|list -- [--lease=F] [--src=F] [--dest=F] [id]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "leases/default.lease"
+LET def_lease = LAST
+SYS JOIN state_dir "stage/default.json"
+LET def_src = LAST
+SYS JOIN state_dir "live/default.json"
+LET def_dest = LAST
+CLEAR_ERR
+
+GETFLAGOUT lease|e OR ENV LEASE OR def_lease
+LET lease_path = LAST
+LET e_src = GETFLAGOUT_SRC
+LET e_ok = OK
+CLEAR_ERR
+GETFLAGOUT src|s OR ENV SRC OR def_src
+LET src_path = LAST
+LET s_src = GETFLAGOUT_SRC
+LET s_ok = OK
+CLEAR_ERR
+GETFLAGOUT dest|d OR ENV DEST OR def_dest
+LET dest_path = LAST
+LET d_src = GETFLAGOUT_SRC
+LET d_ok = OK
+CLEAR_ERR
+
+LET job = "default"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET job = LAST
+END
+CLEAR_ERR
+
+SYS ENV "CUBALC_LP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_LP_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir TFILE
+LET leases_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR leases_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET row = ""
+LET pref = ""
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET val = ""
+LET meta = ""
+LET created = 0
+LET is_new = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "claim", "promote", "renew", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "claim" THEN
+    LET op = "claim"
+  WHEN "promote" THEN
+    LET op = "promote"
+  WHEN "renew" THEN
+    LET op = "renew"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "bag_n"
+  SYS STR bag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON bag_n e_src s_src d_src
+  CLEAR_ERR
+END
+
+SYS EQS op "claim"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF e_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "claim needs lease"
+    FAIL "claim needs lease"
+    CLEAR_ERR
+  ELSE
+    TOUCHOUT lease_path
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "TOUCHOUT failed"
+    END
+    LET created = TOUCHOUT_CREATED
+    LET is_new = TOUCHOUT_NEW
+    CLEAR_ERR
+    # stage empty job body if missing
+    SYS EXIST src_path
+    IF LAST_N == 0 THEN
+      SYS CAT "job="
+      LET row = LAST
+      SYS CAT row job
+      LET row = LAST
+      SYS CAT row " claimed="
+      LET row = LAST
+      SYS CAT row run_date
+      LET row = LAST
+      WRITEOUT src_path row
+      CLEAR_ERR
+    END
+    SYS CAT job ":"
+    LET pref = LAST
+    SYS GREPV pref bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS CAT job ":claimed:"
+    LET row = LAST
+    SYS CAT row lease_path
+    LET row = LAST
+    SYS CAT row ":live"
+    LET row = LAST
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "claim ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "lease"
+    SYS PUSH meta lease_path
+    LET meta = LAST
+    SYS PUSH meta "new"
+    LET meta = LAST
+    SYS STR is_new
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n created is_new e_src
+  CLEAR_ERR
+END
+
+SYS EQS op "renew"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF e_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "renew needs lease"
+    FAIL "renew needs lease"
+    CLEAR_ERR
+  ELSE
+    SYS EXIST lease_path
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "renew needs claim first"
+      FAIL "renew needs claim first"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "renew needs claim first"
+      END
+    ELSE
+      TOUCHOUT lease_path
+      EXPECT OK == 1
+      LET created = TOUCHOUT_CREATED
+      LET is_new = TOUCHOUT_NEW
+      CLEAR_ERR
+      LET hit = 1
+      LET admit_n = 1
+      LET note_msg = "renew ok"
+      LET val = lease_path
+      LET val_ch = 1
+      LET meta = "renew"
+      SYS STR is_new
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON admit_n is_new created
+  CLEAR_ERR
+END
+
+SYS EQS op "promote"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF s_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "promote needs src"
+    FAIL "promote needs src"
+    CLEAR_ERR
+  ELSE
+    IF d_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "promote needs dest"
+      FAIL "promote needs dest"
+      CLEAR_ERR
+    ELSE
+      SYS EXIST src_path
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "promote src missing"
+        FAIL "promote src missing"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "promote src missing"
+        END
+      ELSE
+        MOVEOUT src_path dest_path
+        EXPECT OK == 1
+        IF OK == 0 THEN
+          EXIT 2 "MOVEOUT failed"
+        END
+        LET created = MOVEOUT_CREATED
+        CLEAR_ERR
+        SYS EXIST src_path
+        LET has_n = LAST_N
+        CLEAR_ERR
+        SYS CAT job ":"
+        LET pref = LAST
+        SYS GREPV pref bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS CAT job ":promoted:"
+        LET row = LAST
+        SYS CAT row dest_path
+        LET row = LAST
+        SYS CAT row ":live"
+        LET row = LAST
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+        LET admit_n = 1
+        SYS LINES bag
+        LET bag_n = LAST_N
+        LET hit = 1
+        LET note_msg = "promote ok"
+        LET val = bag
+        LET val_ch = 1
+        LET meta = "dest"
+        SYS PUSH meta dest_path
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n created has_n d_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs id"
+    FAIL "drop needs id"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET pref = LAST
+    SYS CAT pref ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "drop"
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET pref = LAST
+  SYS BLANK pref
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs id"
+    FAIL "has needs id"
+    CLEAR_ERR
+  ELSE
+    SYS CAT pref ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    LET val = pref
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  SYS STR bag_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "gate"
+  LET meta_ch = 1
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    LET meta_ch = 1
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has leases"
+    LET val = bag
+    LET val_ch = 1
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  MOVEOUT "/no/such/cubalc_move_src_xyz" dest_path
+  LET has_n = OK
+  CLEAR_ERR
+  TOUCHOUT ""
+  LET admit_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  SYS STR has_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "move_miss"
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON has_n admit_n e_src d_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET val = ""
+  LET meta = ""
+  LET bag_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE leases_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "leases write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+LET meta = "schema=cubalc.lease_promote_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "job"
+LET meta = LAST
+SYS PUSH meta job
+LET meta = LAST
+SYS PUSH meta "lease"
+LET meta = LAST
+SYS PUSH meta lease_path
+LET meta = LAST
+SYS PUSH meta "dest"
+LET meta = LAST
+SYS PUSH meta dest_path
+LET meta = LAST
+SYS PUSH meta "bag_n"
+LET meta = LAST
+SYS STR bag_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+
+NOTE "lease_promote_board: done"
+PRINT_JSON hit miss bag_n created is_new e_src d_src note_msg
+EXIT 0

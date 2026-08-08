@@ -1,39 +1,39 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 174,
-  "program": "programs/realworld/runlog_atomic_board.cubalc",
-  "theme": "APPENDOUT + WRITEOUTATOMIC + COPYOUT ops journal (append log, atomic status, snap copy)",
-  "version": "1.15.470-usability",
+  "iter": 175,
+  "program": "programs/realworld/lease_promote_board.cubalc",
+  "theme": "TOUCHOUT + MOVEOUT lease claim and plate promote (marker stamp + rename-into-nest)",
+  "version": "1.15.472-usability",
   "pass": true,
-  "prior_note": "iter 173 RESTPOSPATHS+WRITEOUT; this iter first realworld APPENDOUT(1018)+WRITEOUTATOMIC(1019)+COPYOUT(1020)",
+  "prior_note": "iter 174 APPENDOUT+ATOMIC+COPYOUT; this iter first realworld TOUCHOUT(1022)+MOVEOUT(1021)",
   "tests": [
     {
-      "name": "log_append",
-      "cmd": "log twice \u2192 two lines in nested run.log",
+      "name": "claim",
+      "cmd": "claim --lease --src job1 \u2192 TOUCHOUT NEW=1 + stage WRITEOUT",
       "ok": true,
-      "note": "APPENDOUT"
+      "note": "TOUCHOUT"
     },
     {
-      "name": "status_atomic",
-      "cmd": "status ready then live \u2192 only live; no temps",
+      "name": "renew",
+      "cmd": "renew \u2192 NEW=0",
       "ok": true,
-      "note": "WRITEOUTATOMIC"
+      "note": "renew"
     },
     {
-      "name": "snap_copy",
-      "cmd": "snap --status=\u2026 --snap=\u2026 \u2192 dest body match",
+      "name": "promote",
+      "cmd": "promote src\u2192dest; src gone; plate promoted",
       "ok": true,
-      "note": "COPYOUT"
+      "note": "MOVEOUT"
     },
     {
-      "name": "snap_miss",
-      "cmd": "snap without status file soft fail",
+      "name": "miss_soft",
+      "cmd": "promote missing src; renew without lease",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "probe_copy_miss",
-      "cmd": "COPYOUT missing src OK=0",
+      "name": "probe",
+      "cmd": "MOVEOUT/TOUCHOUT empty soft OK=0",
       "ok": true,
       "note": "probe"
     },
@@ -42,12 +42,6 @@
       "cmd": "has/drop/gate/soft/clear",
       "ok": true,
       "note": "ops"
-    },
-    {
-      "name": "env_runlog",
-      "cmd": "RUNLOG=\u2026 log \u2192 l_src env",
-      "ok": true,
-      "note": "ENV"
     },
     {
       "name": "selftest",
@@ -640,24 +634,48 @@
       "title": "Eager multi GETFLAGOUT always mkdirs all default parents",
       "detail": "Board peels log+status+snap every invocation \u2192 creates default run/ trees under STATE even for list/log-only. Lazy peel per action would avoid side-effect dirs; costs more branches.",
       "repro": "list alone creates state/run/agent.log parent via default GETFLAGOUT"
+    },
+    {
+      "id": "W74",
+      "severity": "low",
+      "area": "lang|touchout",
+      "title": "TOUCHOUT NEW vs CREATED: file create vs parent mkdir",
+      "detail": "Positive: first TOUCHOUT NEW=1; renew NEW=0. CREATED often 0 after GETFLAGOUT already mkdirs parent (same class as APPENDOUT_CREATED W70). Prefer TOUCHOUT_NEW for lease claim vs renew.",
+      "repro": "TOUCHOUT lease \u2192 NEW 1; TOUCHOUT again \u2192 NEW 0 CREATED 0"
+    },
+    {
+      "id": "W75",
+      "severity": "low",
+      "area": "lang|moveout",
+      "title": "MOVEOUT promotes src to nested dest; src gone; missing soft",
+      "detail": "Positive: MOVEOUT stage\u2192live removes src; CREATED for dest parent; probe MOVEOUT missing \u2192 OK 0. Pass --src and --dest on promote invocation (fresh peels).",
+      "repro": "MOVEOUT src dest; EXIST src 0; EXIST dest 1"
+    },
+    {
+      "id": "W76",
+      "severity": "med",
+      "area": "lang|json_write",
+      "title": "WRITEOUT body with unquoted {braces} can parse as forms",
+      "detail": "WRITEOUT path {\"job\":1} failed unknown form job in -e smoke. Prefer simple key=val plate lines or careful quoting. Board uses job=id claimed=ISO.",
+      "repro": "WRITEOUT f {\\\"job\\\":1} \u2192 unknown form job"
     }
   ],
   "workarounds": [
-    "GETFLAGOUT log|status|snap peels; APPENDOUT log line; WRITEOUTATOMIC status body",
-    "COPYOUT status snap (pass same --status path on snap invocation)",
-    "Do not treat APPENDOUT_CREATED as first-line flag (W70)",
-    "cubalc run prog log -- --log=PATH msg"
+    "TOUCHOUT lease; use TOUCHOUT_NEW not CREATED for claim/renew (W74)",
+    "WRITEOUT src body; MOVEOUT src dest (pass both paths each run)",
+    "Avoid raw {json} in WRITEOUT without quoting (W76)",
+    "cubalc run prog claim -- --lease=F --src=F id"
   ],
   "language_gaps": [
-    "Optional lazy GETFLAGOUT / no-mkdir-until-write mode",
-    "Cookbook: runbook journal APPENDOUT+ATOMIC+COPYOUT",
-    "APPENDOUT_CREATED vs first-append semantics docs"
+    "Cookbook: lease claim + promote with TOUCHOUT/MOVEOUT",
+    "JSON-safe WRITE body form or string literal rules",
+    "Lazy GETFLAGOUT to avoid eager parent trees (W73)"
   ],
   "issues_faced": [
-    "Snap needs --status on same invocation as source (fresh peels)",
-    "APPENDOUT_CREATED 0 after GETFLAGOUT parent (W70)",
+    "JSON braces in WRITEOUT parse as forms \u2014 key=val body (W76)",
+    "TOUCHOUT_NEW distinguishes claim vs renew (W74)",
     "selftest 355/355"
   ],
-  "commit": "0e150bc24e3ea2a5ec7696e347765dc5eed2ccb8",
-  "ts": "2026-08-08T04:12:00Z"
+  "commit": "",
+  "ts": "2026-08-08T04:34:09Z"
 }
