@@ -1,71 +1,59 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 168,
-  "program": "programs/realworld/tag_multiflag_env_board.cubalc",
-  "theme": "GETFLAGALL multi-tag + GETFLAGN OR ENV deploy label CLI (JOINLINES rows)",
-  "version": "1.15.455-usability",
+  "iter": 169,
+  "program": "programs/realworld/zone_csv_bound_board.cubalc",
+  "theme": "GETFLAGCSV zones + FLOORN/CAPN pool capacity CLI (CSV bag + one-sided bounds)",
+  "version": "1.15.457-usability",
   "pass": true,
-  "prior_note": "iter 167 HELPFLAG/VERSIONFLAG; this iter first realworld GETFLAGALL(1003)+OR ENV(1004/1005)",
+  "prior_note": "iter 168 GETFLAGALL+OR ENV; this iter first realworld GETFLAGCSV(1006)+FLOORN/CAPN(1007)",
   "tests": [
     {
       "name": "list_default",
-      "cmd": "list \u2192 w_src default wcount 4",
+      "cmd": "list \u2192 z_src default rcount 3",
       "ok": true,
       "note": "default"
     },
     {
-      "name": "env_workers",
-      "cmd": "WORKERS=12 src \u2192 w_src env wcount 12",
+      "name": "env_csv",
+      "cmd": "ZONES=eu, us REPLICAS=2 \u2192 zone_n 2 rcount 2 env",
       "ok": true,
-      "note": "OR ENV"
+      "note": "ENV CSV"
     },
     {
-      "name": "tag_multi_cli",
-      "cmd": "tag -- --tag=canary --tag=eu --workers=3 svc-a svc-b",
+      "name": "pin_cap",
+      "cmd": "pin --zones=canary,eu --zone=apac --replicas=100 \u2192 rcount 16 zone_n 3",
       "ok": true,
-      "note": "GETFLAGALL+CLI"
+      "note": "CAPN"
     },
     {
       "name": "row_fmt",
-      "cmd": "TAGS svc-a:canary|eu:3:live",
+      "cmd": "pool-a:canary|eu|apac:16:live",
       "ok": true,
       "note": "JOINLINES"
     },
     {
-      "name": "has_substr",
-      "cmd": "has svc-a hit; has svc miss",
+      "name": "floor",
+      "cmd": "pin --replicas=0 \u2192 rcount 1 FLOORN",
       "ok": true,
-      "note": "GREP"
+      "note": "FLOORN"
     },
     {
-      "name": "drop",
-      "cmd": "drop svc-b",
+      "name": "multi_zone",
+      "cmd": "--zone=a --zone=b,c \u2192 a|b|c",
       "ok": true,
-      "note": "GREPV"
+      "note": "multi+csv"
     },
     {
-      "name": "empty_require",
-      "cmd": "tag empty soft; CUBALC_TME_REQUIRE REQUIRE RESTPOS",
-      "ok": true,
-      "note": "RESTPOS"
-    },
-    {
-      "name": "default_tag",
-      "cmd": "tag without --tag \u2192 untagged",
-      "ok": true,
-      "note": "OR default"
-    },
-    {
-      "name": "probe_or_env",
-      "cmd": "TIMEOUT=5s FORCE=yes probe \u2192 5000ms force1 clamp64",
-      "ok": true,
-      "note": "MS+BOOL"
-    },
-    {
-      "name": "gate_soft_clear",
-      "cmd": "gate/soft/clear green",
+      "name": "has_drop_empty_req",
+      "cmd": "has/drop/empty/REQUIRE RESTPOS",
       "ok": true,
       "note": "ops"
+    },
+    {
+      "name": "probe_mid",
+      "cmd": "probe FLOORN0\u21921 CAPN100\u219216; mid replicas=8",
+      "ok": true,
+      "note": "bounds"
     },
     {
       "name": "selftest",
@@ -498,27 +486,51 @@
       "title": "Short -t alias collision risk across GETFLAGALL tag|t and GETFLAGMS timeout|t",
       "detail": "Prefer no short on tag when timeout also peels -t, or use distinct shorts. Board uses tag without short; timeout long-only in probe.",
       "repro": "GETFLAGALL tag|t with GETFLAGMS timeout|t same -t"
+    },
+    {
+      "id": "W54",
+      "severity": "low",
+      "area": "lang|getflagcsv",
+      "title": "GETFLAGCSV multi+comma+ENV chain with zone|zones|z aliases",
+      "detail": "Positive: --zones=canary,eu --zone=apac \u2192 zone_n=3 JOINLINES canary|eu|apac; ENV ZONES=eu, us \u2192 2 after space trim; CLI beats env; OR default 'default'. Coexists with GETFLAGN replicas.",
+      "repro": "GETFLAGCSV zone|zones|z OR ENV ZONES OR default with multi flags"
+    },
+    {
+      "id": "W55",
+      "severity": "low",
+      "area": "lang|floorn_capn",
+      "title": "FLOORN/CAPN one-sided bounds after GETFLAGN (not CLAMPN)",
+      "detail": "Positive: FLOORN 0 1 \u2192 1; CAPN 100 16 \u2192 16; mid 8 unchanged. Pipeline GETFLAGN then FLOORN then CAPN for replica floor/cap without dual-sided clamp. ATLEASTN/ATMOSTN aliases work in proof.",
+      "repro": "GETFLAGN replicas 100; FLOORN 1; CAPN 16 \u2192 rcount 16"
+    },
+    {
+      "id": "W56",
+      "severity": "med",
+      "area": "lang|getflagcsv",
+      "title": "GETFLAGCSV needs zone|zones aliases for both --zone and --zones",
+      "detail": "GETFLAGCSV zones|z alone does not peel --zone=apac (different stem). Agents must list zone|zones|z for long+short multi forms. Same class as flag alias explicitness.",
+      "repro": "GETFLAGCSV zones|z with --zone=x may miss; zone|zones|z hits"
     }
   ],
   "workarounds": [
-    "GETFLAGALL tag OR untagged; SYS JOINLINES \"|\" tags for row field",
-    "GETFLAGN workers|w OR ENV WORKERS OR 4; LET wcount not WORKERS (W50)",
-    "probe: GETFLAGMS timeout OR ENV TIMEOUT; BOOLFLAG force OR ENV FORCE",
-    "GREPV pref bag upsert; keep unique LET low (W47)",
-    "cubalc run prog tag -- --tag=a --tag=b --workers=N svc..."
+    "GETFLAGCSV zone|zones|z OR ENV ZONES OR default",
+    "GETFLAGN replicas|r OR ENV REPLICAS OR 3; FLOORN rcount 1; CAPN rcount 16",
+    "SYS JOINLINES \"|\" zones for row field",
+    "lean LET (~40 names) for EACH (W47); avoid LET WORKERS (W50)",
+    "cubalc run prog pin -- --zones=a,b --zone=c --replicas=N pool..."
   ],
   "language_gaps": [
-    "SYS STR must prefer user var over host WORKERS knob (W50)",
-    "Document reserved host tokens that shadow LET names",
+    "Document GETFLAGCSV alias stems for multi long names (zone vs zones)",
+    "Cookbook: pool capacity with FLOORN/CAPN one-sided bounds",
     "Raise EACH/var-table limit (W47)",
-    "Cookbook: multi-tag deploy with GETFLAGALL + OR ENV"
+    "SYS STR host knob shadow list (WORKERS) (W50)"
   ],
   "issues_faced": [
-    "SYS STR WORKERS \u2192 nproc 4 despite LET WORKERS=3 (W50) \u2014 rename wcount",
-    "W47 denser boards break EACH \u2014 slim LETs; probe-only GETFLAGMS/BOOLFLAG",
-    "GETFLAGALL+JOINLINES multi-tag rows green; OR ENV cascade green",
+    "W47 denser board (floor_ch/cap_ch/r_raw) broke EACH \u2014 slimmed",
+    "GETFLAGCSV zones|z missed --zone; fixed zone|zones|z (W56)",
+    "FLOORN 0\u21921 CAPN 100\u219216 green; multi --zone=a --zone=b,c green",
     "selftest 355/355"
   ],
-  "commit": "1189f7e4aba54d2f4b079fbad552fbd8798d0cc0",
-  "ts": "2026-08-08T01:44:39Z"
+  "commit": "",
+  "ts": "2026-08-08T02:04:34Z"
 }
