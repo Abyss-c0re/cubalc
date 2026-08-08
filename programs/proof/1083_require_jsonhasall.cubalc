@@ -1,0 +1,77 @@
+# REQUIRE JSONHASALL / JSONNEED / JSONKEYS — fail-fast plate key contract
+# Soft twin: SYS JSONHASALL / JSONMISS. Error lists missing keys.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" "" "version" "1"
+LET plate = LAST
+
+# success: all present
+REQUIRE JSONHASALL plate "ok" "n" "err"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONHASALL_HIT == 3
+ASSERT REQUIRE_JSON_HIT == 3
+# LAST kept as plate for chain
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 3
+
+# aliases
+SYS JSONOBJ "a" 1 "b" 2
+LET p2 = LAST
+REQUIRE JSONNEED p2 "a" "b"
+ASSERT OK == 1
+ASSERT REQUIRE_JSON_HIT == 2
+REQUIRE JSONKEYS p2 "a"
+ASSERT OK == 1
+REQUIRE JHASALL p2 "b"
+ASSERT OK == 1
+
+# OF bag form
+SYS JSONOBJ "x" 1 "y" 2 "z" 3
+LET p3 = LAST
+SYS JOIN "" "x\ny\nz"
+LET kbag = LAST
+REQUIRE JSONHASALL p3 OF kbag
+ASSERT OK == 1
+ASSERT REQUIRE_JSON_HIT == 3
+
+# bare keys on LAST plate
+SYS JSONOBJ "p" 1 "q" 2
+REQUIRE JSONHASALL "p" "q"
+ASSERT OK == 1
+
+# null/false still present
+SYS JSONOBJ "gone" null "flag" false "n" 0
+LET p4 = LAST
+REQUIRE JSONHASALL p4 "gone" "flag" "n"
+ASSERT OK == 1
+ASSERT REQUIRE_JSON_HIT == 3
+
+# soft twin miss path (no fatal)
+SYS JSONOBJ "ok" true "n" 1
+LET soft = LAST
+SYS JSONHASALL soft "ok" "version"
+ASSERT LAST_N == 0
+SYS JSONMISS soft "ok" "version"
+ASSERT LAST_N == 1
+SYS EQS LAST "version"
+ASSERT LAST_N == 1
+
+# REQUIRE JSON HASALL two-token form
+SYS JSONOBJ "m" 1
+LET p5 = LAST
+REQUIRE JSON HASALL p5 "m"
+ASSERT OK == 1
+
+# agent pattern: soft probe then require when ready
+SYS JSONOBJ "status" "ready" "code" 0
+LET agent = LAST
+SYS JSONHASALL agent "status" "code"
+IF LAST_N THEN
+  REQUIRE JSONHASALL agent "status" "code"
+  PASS "contract gated"
+ELSE
+  FAIL "should have keys"
+END
+ASSERT OK == 1

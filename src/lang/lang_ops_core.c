@@ -33043,7 +33043,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL — fail-fast gates"},
+      {"REQUIRE JSONHASALL", "REQUIRE JSONHASALL|JSONNEED [plate] key… — fail-fast plate keys · missing listed · soft SYS JSONHASALL"},
+      {"REQUIRE JSONKEYS", "REQUIRE JSONKEYS alias of REQUIRE JSONHASALL"},
+      {"REQUIRE JSONNEED", "REQUIRE JSONNEED alias of REQUIRE JSONHASALL"},
       {"REQUIRE ONEOF", "REQUIRE ONEOF|ONEOFI subject a [,|OR||] b — fail if value not in allowed set · USAGE tip"},
       {"REQUIRE BETWEEN", "REQUIRE BETWEEN|INRANGE x lo [TO] hi — fail if x not in inclusive range · GETFLAGN ports"},
       {"ONEOF", "ONEOF|INLIST subject a [,|OR||] b — soft 0|1 membership · ONEOFI icase · MATCH_ARM hit"},
@@ -35911,9 +35914,136 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
+    /* REQUIRE JSONHASALL|JSONNEED|JSONKEYS [plate] key [key…]
+     * Fail-fast if any required top-level key missing. Soft twin: SYS JSONHASALL.
+     * On fail: message lists missing keys (JSONMISS). On success: LAST=plate.
+     * OF|KEYS bag after plate. Null/false still present.
+     * Usability: plate contract gate without multi JSONHAS + IF + FAIL glue. */
+    if (kw(&L->cur,"JSONHASALL") || kw(&L->cur,"JSONNEED") || kw(&L->cur,"JSONKEYS") ||
+        kw(&L->cur,"JHASALL") || kw(&L->cur,"NEEDKEYS") || kw(&L->cur,"PLATEKEYS") ||
+        kw(&L->cur,"JSON") || kw(&L->cur,"PLATE")){
+      char plate[CUBALC_HOST_STR_MAX], keys_nl[CUBALC_HOST_STR_MAX];
+      char arg[CUBALC_HOST_STR_MAX], miss[CUBALC_HOST_STR_MAX];
+      int have_plate = 0;
+      size_t olen = 0;
+      cubalc_host_result hr, mr;
+      /* allow REQUIRE JSON HASALL as two tokens after JSON */
+      if (kw(&L->cur,"JSON") || kw(&L->cur,"PLATE")) {
+        lex_next(L);
+        if (kw(&L->cur,"HASALL") || kw(&L->cur,"NEED") || kw(&L->cur,"KEYS") ||
+            kw(&L->cur,"HAS") || kw(&L->cur,"NEEDKEYS"))
+          lex_next(L);
+      } else {
+        lex_next(L);
+      }
+      plate[0] = 0;
+      keys_nl[0] = 0;
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, arg, sizeof arg) == 0) {
+          const char *s = arg;
+          while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r') s++;
+          if (*s == '{') {
+            snprintf(plate, sizeof plate, "%s", arg);
+            have_plate = 1;
+          } else {
+            size_t al = strlen(arg);
+            if (al + 1 < sizeof keys_nl) {
+              memcpy(keys_nl, arg, al + 1);
+              olen = al;
+            }
+          }
+        }
+      }
+      if (have_plate && (kw(&L->cur,"OF") || kw(&L->cur,"KEYS") || kw(&L->cur,"FROM") ||
+                         kw(&L->cur,"NEED") || kw(&L->cur,"REQUIRE"))) {
+        lex_next(L);
+        if (resolve_str_arg(vm, L, arg, sizeof arg) == 0) {
+          snprintf(keys_nl, sizeof keys_nl, "%s", arg);
+          olen = strlen(keys_nl);
+        }
+      } else {
+        while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          if (L->cur.kind == TK_IDENT &&
+              (kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"ELSE") ||
+               kw(&L->cur,"ELIF") || kw(&L->cur,"FOR") || kw(&L->cur,"WHILE") ||
+               kw(&L->cur,"LOOP") || kw(&L->cur,"ASSERT") || kw(&L->cur,"PRINT") ||
+               kw(&L->cur,"LET") || kw(&L->cur,"SYS") || kw(&L->cur,"JSON") ||
+               kw(&L->cur,"REQUIRE") || kw(&L->cur,"PASS") || kw(&L->cur,"FAIL"))) {
+            break;
+          }
+          if (resolve_str_arg(vm, L, arg, sizeof arg) != 0)
+            break;
+          if (!arg[0]) continue;
+          if (olen > 0) {
+            if (olen + 1 >= sizeof keys_nl) break;
+            keys_nl[olen++] = '\n';
+            keys_nl[olen] = 0;
+          }
+          {
+            size_t al = strlen(arg);
+            if (olen + al + 1 >= sizeof keys_nl) break;
+            memcpy(keys_nl + olen, arg, al + 1);
+            olen += al;
+          }
+        }
+      }
+      if (!have_plate)
+        snprintf(plate, sizeof plate, "%s", vm->last_str);
+      if (!plate[0])
+        snprintf(plate, sizeof plate, "%s", "{}");
+      if (!keys_nl[0]) {
+        fail_at(vm, L, "REQUIRE JSONHASALL [plate] key… — need at least one key");
+        return -1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_has_keys(plate, keys_nl, 1, &hr) != 0 || hr.n == 0) {
+        char msg[280];
+        char miss_flat[160];
+        size_t mi = 0;
+        const char *mp;
+        memset(&mr, 0, sizeof mr);
+        cubalc_host_json_filter_req_keys(plate, keys_nl, 0, &mr);
+        /* flatten missing bag newlines → comma list for one-line fail */
+        miss[0] = 0;
+        if (mr.str[0])
+          snprintf(miss, sizeof miss, "%s", mr.str);
+        miss_flat[0] = 0;
+        for (mp = miss; *mp && mi + 1 < sizeof miss_flat; mp++) {
+          if (*mp == '\n' || *mp == '\r') {
+            if (mi > 0 && miss_flat[mi - 1] != ',') {
+              miss_flat[mi++] = ',';
+              if (mi + 1 < sizeof miss_flat) miss_flat[mi++] = ' ';
+            }
+          } else {
+            miss_flat[mi++] = *mp;
+          }
+        }
+        miss_flat[mi] = 0;
+        if (!miss_flat[0])
+          snprintf(miss_flat, sizeof miss_flat, "?");
+        snprintf(msg, sizeof msg,
+                 "REQUIRE JSONHASALL missing line %d: %s — soft twin SYS JSONHASALL / JSONMISS",
+                 aln, miss_flat);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "JSONHASALL_N", 1);
+      var_set_num(vm, "JSONHASALL_HIT", (long)hr.code);
+      var_set_num(vm, "REQUIRE_JSON_HIT", (long)hr.code);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require jsonhasall hit=%d ok\n", hr.code);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||
