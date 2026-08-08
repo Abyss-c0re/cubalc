@@ -35408,6 +35408,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASP", "HASP key — soft 0|1 if PLATE has key · IF guards · no GETP miss ERR"},
       {"HASPALL", "HASPALL key… — soft 0|1 if PLATE has every key · contract probe"},
       {"KEYSP", "KEYSP — PLATE key bag → LAST · LAST_N=count · no JSONKEYS glue"},
+      {"DUMPP", "DUMPP|PLATEINFO — cubalc.plate_info.v1 snapshot of PLATE (keys/bytes/path)"},
+      {"PLATEINFO", "PLATEINFO alias of DUMPP"},
       {"USAGE", "USAGE [\"text\"] — sticky CLI usage · REQUIRE ARG/ARGC/FLAG fails append tip"},
       {"HELPFLAG", "HELPFLAG|AUTOHELP [name|,|alt] — if --help|-h present print USAGE and EXIT 0 · default help|h|usage"},
       {"VERSIONFLAG", "VERSIONFLAG|VERFLAG [name|,|alt] — if --version|-V print VERSION/PROG_VERSION and EXIT 0 · default version|V|ver"},
@@ -37935,6 +37937,101 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         fprintf(vm->trace, "# haspall hit=%ld found=%d\n", hit, hr.code);
       bump(vm); return 1;
     }
+  }
+  /* DUMPP|PLATEINFO|INFO_P — agent snapshot of conventional PLATE var.
+   * LAST = cubalc.plate_info.v1 JSON:
+   *   keys_n · bytes · path (PLATE_PATH if set) · keys (comma list) · has_plate
+   * Does not clobber PLATE. Soft empty plate → keys_n=0 has_plate=0 OK=1.
+   * Usability: one form for agents instead of KEYSP+LEN+JSONLEN+PATH glue:
+   *   INCLUDE plate_boot
+   *   SETP "role" "worker"
+   *   DUMPP
+   *   # LAST = {"schema":"cubalc.plate_info.v1",...}
+   */
+  if (kw(&L->cur,"DUMPP") || kw(&L->cur,"PLATEINFO") || kw(&L->cur,"INFO_P") ||
+      kw(&L->cur,"PLATE_INFO") || kw(&L->cur,"DUMP_PLATE") || kw(&L->cur,"DESCRIBE_PLATE") ||
+      kw(&L->cur,"SHOWPLATE") || kw(&L->cur,"PLATEMETA")) {
+    char plate[CUBALC_HOST_STR_MAX], path[CUBALC_HOST_STR_MAX];
+    char keys_flat[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    char path_esc[CUBALC_HOST_STR_MAX];
+    cubalc_host_result keys;
+    Var *pv, *pp;
+    size_t i, o = 0;
+    long bytes = 0, kn = 0;
+    int has_plate = 0;
+
+    lex_next(L);
+    plate[0] = 0; path[0] = 0; keys_flat[0] = 0; path_esc[0] = 0;
+    pv = var_get(vm, "PLATE", 0);
+    if (pv && pv->is_str && pv->sval[0]) {
+      snprintf(plate, sizeof plate, "%s", pv->sval);
+      has_plate = 1;
+    } else {
+      snprintf(plate, sizeof plate, "%s", "{}");
+    }
+    bytes = (long)strlen(plate);
+    pp = var_get(vm, "PLATE_PATH", 0);
+    if (pp && pp->is_str && pp->sval[0])
+      snprintf(path, sizeof path, "%s", pp->sval);
+
+    memset(&keys, 0, sizeof keys);
+    if (cubalc_host_json_keys(plate, &keys) == 0)
+      kn = keys.n;
+    /* flatten keys bag to comma list for one-line plate (escape " \) */
+    o = 0;
+    for (i = 0; keys.str[i] && o + 2 < sizeof keys_flat; i++) {
+      char c = keys.str[i];
+      if (c == '\n' || c == '\r') {
+        if (o > 0 && keys_flat[o - 1] != ',')
+          keys_flat[o++] = ',';
+      } else if (c == '"' || c == '\\') {
+        keys_flat[o++] = '_';
+      } else if ((unsigned char)c < 32) {
+        /* skip */
+      } else {
+        keys_flat[o++] = c;
+      }
+    }
+    keys_flat[o] = 0;
+
+    o = 0;
+    for (i = 0; path[i] && o + 2 < sizeof path_esc; i++) {
+      char c = path[i];
+      if (c == '"' || c == '\\') {
+        path_esc[o++] = '\\';
+        path_esc[o++] = c;
+      } else if ((unsigned char)c < 32) {
+        path_esc[o++] = ' ';
+      } else {
+        path_esc[o++] = c;
+      }
+    }
+    path_esc[o] = 0;
+
+    snprintf(out, sizeof out,
+             "{\"schema\":\"cubalc.plate_info.v1\",\"ok\":true,"
+             "\"has_plate\":%s,\"keys_n\":%ld,\"bytes\":%ld,"
+             "\"path\":\"%s\",\"keys\":\"%s\",\"version\":\"%s\"}",
+             has_plate ? "true" : "false", kn, bytes, path_esc, keys_flat,
+             CUBALC_LANG_VERSION);
+
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = kn;
+    var_set_num(vm, "LAST_N", kn);
+    var_set_str(vm, "DUMPP", out);
+    var_set_str(vm, "PLATEINFO", out);
+    var_set_num(vm, "DUMPP_N", kn);
+    var_set_num(vm, "DUMPP_BYTES", bytes);
+    var_set_num(vm, "DUMPP_HAS", has_plate ? 1 : 0);
+    var_set_str(vm, "DUMPP_PATH", path);
+    var_set_str(vm, "DUMPP_KEYS", keys_flat);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# dumpp keys_n=%ld bytes=%ld has=%d\n", kn, bytes, has_plate);
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
+    bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.
    * Bare USAGE re-echoes stored USAGE (or empty). Does not change OK/ERR.

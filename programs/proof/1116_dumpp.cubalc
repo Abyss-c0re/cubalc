@@ -1,0 +1,67 @@
+# DUMPP / PLATEINFO — cubalc.plate_info.v1 snapshot of conventional PLATE
+# Usability: one form for agents instead of KEYSP + LEN + path glue.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_dumpp"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS RM path
+
+# empty / missing PLATE
+UNSET PLATE
+DUMPP
+ASSERT OK == 1
+ASSERT DUMPP_HAS == 0
+ASSERT LAST_N == 0
+ASSERT DUMPP_BYTES == 2
+SYS HAS LAST "cubalc.plate_info.v1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"has_plate\":false"
+ASSERT LAST_N == 1
+
+# boot + mutate
+DEFAULT PLATE_PATH = path
+DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true}"
+INCLUDE plate_boot
+SETP "role" "worker"
+INCP "n"
+DUMPP
+ASSERT OK == 1
+ASSERT DUMPP_HAS == 1
+ASSERT LAST_N == 3
+ASSERT DUMPP_N == 3
+ASSERT DUMPP_BYTES > 10
+SYS HAS LAST "\"has_plate\":true"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"keys_n\":3"
+ASSERT LAST_N == 1
+SYS HAS DUMPP_KEYS "n"
+ASSERT LAST_N == 1
+SYS HAS DUMPP_KEYS "ok"
+ASSERT LAST_N == 1
+SYS HAS DUMPP_KEYS "role"
+ASSERT LAST_N == 1
+SYS EQS DUMPP_PATH path
+ASSERT LAST_N == 1
+# PLATE content preserved (not clobbered by DUMPP)
+SYS JSON "role" FROM PLATE
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# alias
+PLATEINFO
+ASSERT DUMPP_N == 3
+SYS HAS LAST "plate_info"
+ASSERT LAST_N == 1
+
+# HELP
+HELP DUMPP
+SYS HAS LAST "plate_info"
+ASSERT LAST_N == 1
+
+PRINT "dumpp ok"
