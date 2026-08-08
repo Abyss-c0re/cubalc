@@ -1525,6 +1525,6 @@
     "LOADPLATE hit peel load=10 positive",
     "REQUIRE JSONTYPE multi-field hard_type green"
   ],
-  "commit": "pending",
+  "commit": "59645ff",
   "ts": "2026-08-08T17:03:49Z"
 }
