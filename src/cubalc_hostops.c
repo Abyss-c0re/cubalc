@@ -4566,6 +4566,107 @@ int cubalc_host_json_values(const char *json, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS JSONFROMKV bag — key=val / key:val lines → JSON object plate.
+ * First '=' or ':' per line is sep (prefer earlier). r->n = pairs set. */
+int cubalc_host_json_from_kv(const char *bag, cubalc_host_result *r) {
+  char cur[CUBALC_HOST_STR_MAX];
+  const char *p, *line;
+  long applied = 0;
+  cubalc_host_result hr;
+  r_clear(r);
+  snprintf(cur, sizeof cur, "%s", "{}");
+  if (!bag || !bag[0]) {
+    snprintf(r->str, sizeof r->str, "%s", "{}");
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  p = bag;
+  while (*p) {
+    char key[256], val[CUBALC_HOST_STR_MAX];
+    size_t kn = 0, vn = 0;
+    const char *sep, *eq, *col, *vstart, *vend;
+    int val_kind = 0;
+    char *end = NULL;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    /* find sep */
+    eq = NULL;
+    col = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (!eq && *s == '=') eq = s;
+        if (!col && *s == ':') col = s;
+        s++;
+      }
+    }
+    if (eq && col)
+      sep = (eq < col) ? eq : col;
+    else if (eq)
+      sep = eq;
+    else if (col)
+      sep = col;
+    else
+      continue; /* skip bad line */
+    kn = (size_t)(sep - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t skip = 0;
+      while (skip < kn && (line[skip] == ' ' || line[skip] == '\t')) skip++;
+      if (skip > 0) {
+        line += skip;
+        kn -= skip;
+      }
+    }
+    if (kn == 0 || kn >= sizeof key) continue;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    vstart = sep + 1;
+    while (vstart < p && (*vstart == ' ' || *vstart == '\t')) vstart++;
+    vend = p;
+    while (vend > vstart && (vend[-1] == ' ' || vend[-1] == '\t')) vend--;
+    vn = (size_t)(vend - vstart);
+    if (vn >= sizeof val) vn = sizeof val - 1;
+    memcpy(val, vstart, vn);
+    val[vn] = 0;
+    /* classify value */
+    if (!val[0]) {
+      val_kind = 0; /* empty string */
+    } else if (strcmp(val, "true") == 0 || strcmp(val, "false") == 0 ||
+               strcmp(val, "null") == 0) {
+      val_kind = 1;
+    } else {
+      (void)strtol(val, &end, 10);
+      if (end && end != val && *end == 0)
+        val_kind = 1; /* pure integer */
+      else {
+        /* allow simple decimals */
+        char *ed = NULL;
+        (void)strtod(val, &ed);
+        if (ed && ed != val && *ed == 0)
+          val_kind = 1;
+        else
+          val_kind = 0;
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_set(cur, key, val, val_kind, &hr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               hr.err[0] ? hr.err : "jsonfromkv: set fail");
+      return -1;
+    }
+    snprintf(cur, sizeof cur, "%s", hr.str);
+    applied++;
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  r->n = applied;
+  r->ok = 1;
+  return 0;
+}
+
 static int load_token(char *out, size_t outn) {
   out[0] = 0;
   const char *e = getenv("XAI_API_KEY");

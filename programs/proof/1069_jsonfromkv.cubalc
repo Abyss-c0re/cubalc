@@ -1,0 +1,103 @@
+# JSONFROMKV / JFROMKV / KVTOJSON — key=val bag → agent plate
+# FREQ/FLAGMAP/LOOKUP bags to plate without EACH+JSONSET glue.
+
+HOLD_FLASH 1
+
+# = sep integers
+SYS PUSH "" "a=1"
+SYS PUSH LAST "b=2"
+SYS PUSH LAST "c=3"
+LET bag = LAST
+SYS JSONFROMKV bag
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JSONFROMKV_N == 3
+LET plate = LAST
+SYS JSONN "a" FROM plate
+ASSERT LAST_N == 1
+SYS JSONN "b" FROM plate
+ASSERT LAST_N == 2
+SYS JSONN "c" FROM plate
+ASSERT LAST_N == 3
+
+# : sep (FREQ-style)
+SYS PUSH "" "error:5"
+SYS PUSH LAST "warn:2"
+SYS JSONFROMKV LAST
+ASSERT LAST_N == 2
+LET p2 = LAST
+SYS JSONN "error" FROM p2
+ASSERT LAST_N == 5
+SYS JSONN "warn" FROM p2
+ASSERT LAST_N == 2
+
+# strings + bool + null
+SYS PUSH "" "role=worker"
+SYS PUSH LAST "ok=true"
+SYS PUSH LAST "gone=null"
+SYS PUSH LAST "flag=false"
+SYS JSONFROMKV LAST
+ASSERT LAST_N == 4
+LET p3 = LAST
+SYS JSON "role" FROM p3
+ASSERT LAST == "worker"
+SYS JSONTYPE p3 "ok"
+ASSERT LAST == "bool"
+SYS JSONTYPE p3 "gone"
+ASSERT LAST == "null"
+SYS JSONTYPE p3 "flag"
+ASSERT LAST == "bool"
+SYS JSONN "ok" FROM p3
+ASSERT LAST_N == 1
+
+# empty bag
+SYS JSONFROMKV ""
+ASSERT LAST_N == 0
+ASSERT LAST == "{}"
+
+# bare on LAST
+SYS JOIN "" "x=9\ny=hello"
+SYS JFROMKV
+ASSERT LAST_N == 2
+LET p4 = LAST
+SYS JSONN "x" FROM p4
+ASSERT LAST_N == 9
+SYS JSON "y" FROM p4
+ASSERT LAST == "hello"
+
+# skip bad lines without sep
+SYS JSONFROMKV "good=1\nnosep\nbad\nok=2"
+ASSERT LAST_N == 2
+SYS JSONN "ok" FROM LAST
+ASSERT LAST_N == 2
+
+# prefer first sep when both (= before : in key=a:b)
+SYS JSONFROMKV "k=a:b"
+ASSERT LAST_N == 1
+SYS JSON "k" FROM LAST
+ASSERT LAST == "a:b"
+
+# aliases
+SYS KVTOJSON "m=3\nn=4"
+ASSERT LAST_N == 2
+SYS JSONFROMBAG "z=7"
+ASSERT LAST_N == 1
+SYS JSONN "z" FROM LAST
+ASSERT LAST_N == 7
+
+# FREQ-style pipeline smoke
+SYS PUSH "" "sev"
+SYS PUSH LAST "sev"
+SYS PUSH LAST "ok"
+SYS FREQ LAST
+# key:count bag
+SYS JSONFROMKV LAST
+ASSERT LAST_N == 2
+LET fr = LAST
+SYS JSONN "sev" FROM fr
+ASSERT LAST_N == 2
+SYS JSONN "ok" FROM fr
+ASSERT LAST_N == 1
+
+PRINT "jsonfromkv ok"
+ASSERT OK == 1
