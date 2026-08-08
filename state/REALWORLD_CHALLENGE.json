@@ -2045,6 +2045,6 @@
     "NEEDP fail path only host-side; board uses HASPALL softmiss for incomplete contract",
     "empty DUMPP still FROM=1 \u2014 gate uses N==4"
   ],
-  "commit": "",
+  "commit": "0ca2e30",
   "ts": "2026-08-08T23:43:47Z"
 }
