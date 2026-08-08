@@ -3711,6 +3711,275 @@ int cubalc_host_json_keys(const char *json, cubalc_host_result *r) {
   return 0;
 }
 
+/* Escape JSON string body into out (no outer quotes). Returns 0 ok. */
+static int cubalc_json_esc_body(const char *in, char *out, size_t outn) {
+  static const char *hx = "0123456789abcdef";
+  size_t i, o = 0, n;
+  if (!out || outn < 1) return -1;
+  if (!in) in = "";
+  n = strlen(in);
+  for (i = 0; i < n; i++) {
+    unsigned char c = (unsigned char)in[i];
+    const char *rep = NULL;
+    char tmp[8];
+    size_t rlen;
+    if (c == '"') rep = "\\\"";
+    else if (c == '\\') rep = "\\\\";
+    else if (c == '/') rep = "\\/";
+    else if (c == '\n') rep = "\\n";
+    else if (c == '\r') rep = "\\r";
+    else if (c == '\t') rep = "\\t";
+    else if (c < 0x20) {
+      tmp[0] = '\\'; tmp[1] = 'u'; tmp[2] = '0'; tmp[3] = '0';
+      tmp[4] = hx[c >> 4]; tmp[5] = hx[c & 0xf]; tmp[6] = 0;
+      rep = tmp;
+    }
+    if (rep) {
+      rlen = strlen(rep);
+      if (o + rlen >= outn) return -1;
+      memcpy(out + o, rep, rlen);
+      o += rlen;
+    } else {
+      if (o + 1 >= outn) return -1;
+      out[o++] = (char)c;
+    }
+  }
+  out[o] = 0;
+  return 0;
+}
+
+/* Skip one JSON value starting at *pp; advance *pp past it. Returns 0 ok. */
+static int cubalc_json_skip_value(const char **pp) {
+  const char *p;
+  int depth;
+  if (!pp || !*pp) return -1;
+  p = *pp;
+  while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+  if (*p == '"') {
+    p++;
+    while (*p) {
+      if (*p == '\\' && p[1]) {
+        p += 2;
+        continue;
+      }
+      if (*p == '"') {
+        p++;
+        break;
+      }
+      p++;
+    }
+    *pp = p;
+    return 0;
+  }
+  if (*p == '{' || *p == '[') {
+    char open = *p, close = (*p == '{') ? '}' : ']';
+    depth = 1;
+    p++;
+    while (*p && depth > 0) {
+      if (*p == '"') {
+        p++;
+        while (*p) {
+          if (*p == '\\' && p[1]) {
+            p += 2;
+            continue;
+          }
+          if (*p == '"') {
+            p++;
+            break;
+          }
+          p++;
+        }
+        continue;
+      }
+      if (*p == open) depth++;
+      else if (*p == close) depth--;
+      p++;
+    }
+    *pp = p;
+    return 0;
+  }
+  if (strncmp(p, "true", 4) == 0) {
+    *pp = p + 4;
+    return 0;
+  }
+  if (strncmp(p, "false", 5) == 0) {
+    *pp = p + 5;
+    return 0;
+  }
+  if (strncmp(p, "null", 4) == 0) {
+    *pp = p + 4;
+    return 0;
+  }
+  if (*p == '-' || (*p >= '0' && *p <= '9')) {
+    if (*p == '-') p++;
+    while (*p && ((*p >= '0' && *p <= '9') || *p == '.' || *p == 'e' || *p == 'E' ||
+                  *p == '+' || *p == '-'))
+      p++;
+    *pp = p;
+    return 0;
+  }
+  return -1;
+}
+
+/* Format encoded value into valout. val_kind 0=string, 1=raw. */
+static int cubalc_json_fmt_val(const char *val, int val_kind, char *valout, size_t vn) {
+  char body[CUBALC_HOST_STR_MAX];
+  if (!valout || vn < 2) return -1;
+  if (!val) val = "";
+  if (val_kind != 0) {
+    if (strlen(val) >= vn) return -1;
+    snprintf(valout, vn, "%s", val);
+    return 0;
+  }
+  if (cubalc_json_esc_body(val, body, sizeof body) != 0) return -1;
+  if (strlen(body) + 3 >= vn) return -1;
+  snprintf(valout, vn, "\"%s\"", body);
+  return 0;
+}
+
+/* Usability: SYS JSONSET plate key value — set/update top-level key for agent plates
+ * without hand string rebuild. r->str=new object; r->n=1 if updated else 0 inserted. */
+int cubalc_host_json_set(const char *json, const char *key, const char *val,
+                         int val_kind, cubalc_host_result *r) {
+  char encoded[CUBALC_HOST_STR_MAX];
+  char keypat[320];
+  const char *p, *base;
+  size_t kn;
+  int depth = 0, in_str = 0, esc = 0;
+  r_clear(r);
+  if (!key || !key[0]) {
+    snprintf(r->err, sizeof r->err, "jsonset: empty key");
+    return -1;
+  }
+  if (!val) val = "";
+  if (cubalc_json_fmt_val(val, val_kind, encoded, sizeof encoded) != 0) {
+    snprintf(r->err, sizeof r->err, "jsonset: value too long");
+    return -1;
+  }
+  kn = strlen(key);
+  if (kn + 3 >= sizeof keypat) {
+    snprintf(r->err, sizeof r->err, "jsonset: key too long");
+    return -1;
+  }
+  snprintf(keypat, sizeof keypat, "\"%s\"", key);
+
+  base = json ? json : "";
+  while (*base == ' ' || *base == '\t' || *base == '\n' || *base == '\r') base++;
+  if (!*base || *base != '{') {
+    /* fresh object */
+    if (snprintf(r->str, sizeof r->str, "{%s:%s}", keypat, encoded) >= (int)sizeof r->str) {
+      snprintf(r->err, sizeof r->err, "jsonset: overflow");
+      return -1;
+    }
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+
+  /* search top-level key */
+  p = base;
+  for (; *p; p++) {
+    unsigned char c = (unsigned char)*p;
+    if (in_str) {
+      if (esc) {
+        esc = 0;
+        continue;
+      }
+      if (c == '\\') {
+        esc = 1;
+        continue;
+      }
+      if (c == '"') in_str = 0;
+      continue;
+    }
+    if (c == '"') {
+      if (depth == 1) {
+        size_t plen = strlen(keypat);
+        if (strncmp(p, keypat, plen) == 0) {
+          const char *after = p + plen;
+          const char *vstart, *vend, *rest;
+          size_t pre_n, mid_n, rest_n;
+          while (*after == ' ' || *after == '\t' || *after == '\n' || *after == '\r')
+            after++;
+          if (*after != ':') {
+            in_str = 1;
+            continue;
+          }
+          after++;
+          while (*after == ' ' || *after == '\t' || *after == '\n' || *after == '\r')
+            after++;
+          vstart = after;
+          vend = vstart;
+          if (cubalc_json_skip_value(&vend) != 0) {
+            snprintf(r->err, sizeof r->err, "jsonset: bad value");
+            return -1;
+          }
+          rest = vend;
+          pre_n = (size_t)(vstart - base);
+          mid_n = strlen(encoded);
+          rest_n = strlen(rest);
+          if (pre_n + mid_n + rest_n + 1 >= sizeof r->str) {
+            snprintf(r->err, sizeof r->err, "jsonset: overflow");
+            return -1;
+          }
+          memcpy(r->str, base, pre_n);
+          memcpy(r->str + pre_n, encoded, mid_n);
+          memcpy(r->str + pre_n + mid_n, rest, rest_n + 1);
+          r->n = 1;
+          r->ok = 1;
+          return 0;
+        }
+      }
+      in_str = 1;
+      continue;
+    }
+    if (c == '{') {
+      depth++;
+      continue;
+    }
+    if (c == '}') {
+      if (depth > 0) depth--;
+      if (depth == 0) {
+        /* insert before this closing brace */
+        const char *scan = base + 1;
+        int nonempty = 0;
+        size_t pre_n, mid_n, rest_n;
+        char mid[CUBALC_HOST_STR_MAX];
+        while (*scan == ' ' || *scan == '\t' || *scan == '\n' || *scan == '\r') scan++;
+        if (*scan && *scan != '}') nonempty = 1;
+        if (nonempty)
+          snprintf(mid, sizeof mid, ",%s:%s", keypat, encoded);
+        else
+          snprintf(mid, sizeof mid, "%s:%s", keypat, encoded);
+        pre_n = (size_t)(p - base);
+        mid_n = strlen(mid);
+        rest_n = strlen(p);
+        if (pre_n + mid_n + rest_n + 1 >= sizeof r->str) {
+          snprintf(r->err, sizeof r->err, "jsonset: overflow");
+          return -1;
+        }
+        memcpy(r->str, base, pre_n);
+        memcpy(r->str + pre_n, mid, mid_n);
+        memcpy(r->str + pre_n + mid_n, p, rest_n + 1);
+        r->n = 0;
+        r->ok = 1;
+        return 0;
+      }
+      continue;
+    }
+    if (c == '[') {
+      depth++;
+      continue;
+    }
+    if (c == ']') {
+      if (depth > 0) depth--;
+      continue;
+    }
+  }
+  snprintf(r->err, sizeof r->err, "jsonset: no closing brace");
+  return -1;
+}
+
 static int load_token(char *out, size_t outn) {
   out[0] = 0;
   const char *e = getenv("XAI_API_KEY");

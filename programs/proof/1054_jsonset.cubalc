@@ -1,0 +1,92 @@
+# JSONSET / JSET / JSONPUT — set/update top-level JSON plate keys
+# Agent plate write without hand string rebuild. Completes JSONKEYS/JSON/FROM peel triad.
+
+HOLD_FLASH 1
+
+# fresh object from empty
+SYS JSONSET "" "ok" 1
+ASSERT OK == 1
+ASSERT JSONSET_UPDATED == 0
+LET plate = LAST
+SYS JSON "ok" FROM plate
+ASSERT LAST == "1"
+
+# insert second key (keep plate as object, not peeled value)
+SYS JSONSET plate "version" "1.15.504"
+ASSERT OK == 1
+ASSERT JSONSET_UPDATED == 0
+LET plate = LAST
+SYS JSON "version" FROM plate
+ASSERT LAST == "1.15.504"
+SYS JSON "ok" FROM plate
+ASSERT LAST == "1"
+
+# update existing
+SYS JSONSET plate "ok" 0
+ASSERT OK == 1
+ASSERT JSONSET_UPDATED == 1
+LET plate = LAST
+SYS JSON "ok" FROM plate
+ASSERT LAST == "0"
+
+# string with quote escape
+SYS JSONSET plate "msg" "say \"hi\""
+LET plate = LAST
+SYS JSON "msg" FROM plate
+ASSERT LAST == "say \"hi\""
+
+# bool / null raw
+SYS JSONSET plate "flag" true
+LET plate = LAST
+SYS JSON "flag" FROM plate
+ASSERT LAST == "1"
+SYS JSONSET plate "gone" null
+LET plate = LAST
+SYS JSONHAS "gone" plate
+ASSERT JSONHAS_HIT == 1
+SYS JSON "gone" FROM plate
+ASSERT LAST == ""
+
+# 2-arg form uses LAST as plate
+SYS JOIN "" plate
+SYS JSONSET "n" 42
+ASSERT OK == 1
+LET plate = LAST
+SYS JSON "n" FROM plate
+ASSERT LAST == "42"
+
+# aliases
+SYS JSET "{\"a\":1}" "b" "x"
+ASSERT OK == 1
+SYS JSON "b" FROM LAST
+ASSERT LAST == "x"
+SYS JSONPUT "{\"z\":9}" "z" 8
+ASSERT JSONSET_UPDATED == 1
+SYS JSON "z" FROM LAST
+ASSERT LAST == "8"
+
+# RAW fragment
+SYS JSONSET "{}" "nested" RAW "{\"x\":1}"
+ASSERT OK == 1
+SYS HAS LAST "\"nested\":{\"x\":1}"
+ASSERT LAST_N == 1
+
+# empty key soft
+SYS JSONSET plate "" "nope"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# round-trip peel after multi-set
+SYS JSONSET "" "schema" "cubalc.plate.v1"
+SYS JSONSET LAST "ok" 1
+SYS JSONSET LAST "err" ""
+LET out = LAST
+SYS JSONKEYS out
+ASSERT JSONKEYS_N == 3
+SYS JSON "schema" FROM out
+ASSERT LAST == "cubalc.plate.v1"
+
+PRINT "jsonset ok"
+ASSERT OK == 1

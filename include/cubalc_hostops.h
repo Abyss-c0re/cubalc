@@ -200,6 +200,11 @@ int cubalc_host_json_get(const char *json, const char *key, cubalc_host_result *
 /* top-level object keys of a JSON object → newline bag in r->str; r->n = count.
  * Nested objects/arrays skipped (depth). Soft fail if no object. */
 int cubalc_host_json_keys(const char *json, cubalc_host_result *r);
+/* set/update top-level key in JSON object → r->str = new object text.
+ * val_kind: 0=string (quote+escape), 1=raw (number/true/false/null/JSON fragment).
+ * Empty/non-object json → new {"key":val}. r->n = 1 updated|0 inserted. */
+int cubalc_host_json_set(const char *json, const char *key, const char *val,
+                         int val_kind, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

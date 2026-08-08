@@ -540,6 +540,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 510. ~~**`DROPINTREE` / `SKIPINTREE` / `RESTINTREE`**~~ **done** (skip first n content matches under tree · residual bag · dual of TAKEINTREE · no GREPTREE+DROP).
 511. ~~**`JSONKEYS` / `JSONHAS` / `JSON … OR`**~~ **done** (top-level key bag + soft key probe + peel default · agent plates without guess/IF glue).
 512. ~~**`JSON key FROM plate`**~~ **done** (peel field from explicit plate · multi-field without JOIN/LAST reload · FROM|IN|OF + OR).
+513. ~~**`JSONSET` / `JSET` / `JSONPUT`**~~ **done** (set/update top-level JSON plate key · agent write without hand rebuild · 2/3-arg).
 
 ## Tick protocol
 
