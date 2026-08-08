@@ -1,0 +1,91 @@
+# WRITEOUTIF / PUTIFCHANGED — write only when content differs
+# Mtime-stable nested plates without READ+EQS+WRITEOUTATOMIC glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_woi_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# first write creates nested parents
+SYS JOIN root "a/b/status.json"
+LET f = LAST
+WRITEOUTIF f "{\"ok\":1}"
+ASSERT OK == 1
+ASSERT WRITEOUTIF_CHANGED == 1
+ASSERT WRITEOUTIF_CREATED == 1
+ASSERT LAST_N > 0
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "status.json"
+ASSERT LAST_N == 1
+SYS ENDS WRITEOUTIF_PARENT "b"
+ASSERT LAST_N == 1
+SYS ISFILE LAST
+ASSERT LAST_N == 1
+SYS READ f
+SYS HAS LAST "ok"
+ASSERT LAST_N == 1
+
+# same body — skip write (CHANGED=0, N=0)
+WRITEOUTIF f "{\"ok\":1}"
+ASSERT OK == 1
+ASSERT WRITEOUTIF_CHANGED == 0
+ASSERT WRITEOUTIF_CREATED == 0
+ASSERT LAST_N == 0
+SYS ENDS LAST "status.json"
+ASSERT LAST_N == 1
+
+# different body — rewrite atomically
+WRITEOUTIF f "{\"v\":2}"
+ASSERT OK == 1
+ASSERT WRITEOUTIF_CHANGED == 1
+ASSERT LAST_N > 0
+SYS READ f
+SYS HAS LAST "v"
+ASSERT LAST_N == 1
+SYS HAS LAST "ok"
+ASSERT LAST_N == 0
+
+# PUTIFCHANGED alias + numeric
+SYS JOIN root "x/y/n.json"
+LET npath = LAST
+PUTIFCHANGED npath 7
+ASSERT OK == 1
+ASSERT WRITEOUTIF_CHANGED == 1
+ASSERT WRITEOUTIF_CREATED == 1
+SYS READ LAST
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+PUTIFCHANGED npath 7
+ASSERT OK == 1
+ASSERT WRITEOUTIF_CHANGED == 0
+
+# SYS form
+SYS JOIN root "sys/deep/plate.json"
+LET sp = LAST
+SYS WRITEOUTIF sp "{\"sys\":1}"
+ASSERT OK == 1
+ASSERT WRITEOUTIF_CHANGED == 1
+SYS WRITEOUTIF sp "{\"sys\":1}"
+ASSERT OK == 1
+ASSERT WRITEOUTIF_CHANGED == 0
+
+# empty path soft
+WRITEOUTIF "" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS WALK root
+SYS RMALL LAST
+SYS RM root
