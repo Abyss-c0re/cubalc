@@ -1,0 +1,642 @@
+# pathline_evidence_board.cubalc — PATHLINETREE + PARSEPATHLINE + PATHLINEPATHS
+#
+# Real use: incident agents harvest path:lineno:text evidence (grep -rn style),
+# peel citation fields, and list unique implicated files without shell glue:
+#   PATHLINETREE / GREPNTREE / RGLINES — annotated line bag (1041)
+#   PARSEPATHLINE / PEELPATHLINE — peel path + LINE_N + text (1042)
+#   PATHLINEPATHS / UNIQPATHLINES — unique paths from bag (1043)
+#   WRITEOUT — seed nested multi-line logs
+#
+# First realworld PATHLINETREE+PARSEPATHLINE+PATHLINEPATHS board.
+# Distinct from GREPLINESTREE (line text only) and FIRSTLINEINTREE (one peel).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ple_$$
+#   ./out/cubalc run programs/realworld/pathline_evidence_board.cubalc \
+#     seed -- --root=/tmp/ple/logs
+#   ./out/cubalc run ... harvest -- --root=... error
+#   ./out/cubalc run ... peel -- --root=... error
+#   ./out/cubalc run ... files -- --root=... error
+#
+# Plate: STATUS.txt VAL.txt META.txt PLE_REPORT.txt
+# Env: LOG_ROOT CUBALC_PLE_REQUIRE CUBALC_PLE_MIN
+#
+# Edges:
+#   PATHLINETREE N/FILES; zero OK=1; missing soft; : in text body
+#   PARSEPATHLINE HIT; plain line soft HIT=0; empty soft OK=0
+#   PATHLINEPATHS unique first-seen; SKIP non-annotated
+#   lean VARS (W81); WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "pathline_evidence_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "pathline_evidence -- seed|harvest|peel|files|list -- [--root=D] [needle]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "evidence/tree"
+LET root_dir = LAST
+CLEAR_ERR
+
+GETFLAGOUT root|r OR ENV LOG_ROOT OR root_dir
+LET root_dir = LAST
+LET r_src = GETFLAGOUT_SRC
+LET r_ok = OK
+CLEAR_ERR
+
+LET needle = "error"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET needle = LAST
+END
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_PLE_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_PLE_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "PLE_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET line_n = 0
+LET files_n = 0
+LET peel_hit = 0
+LET line_i = 0
+LET row = ""
+LET cites = ""
+LET peel = ""
+LET peel_path = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "seed", "harvest", "peel", "files", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "seed" THEN
+    LET op = "seed"
+  WHEN "harvest" THEN
+    LET op = "harvest"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "files" THEN
+    LET op = "files"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "seed"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "seed needs root"
+    FAIL "seed needs root"
+    CLEAR_ERR
+  ELSE
+    SYS JOIN root_dir "a/err.log"
+    WRITEOUT LAST "ok start\nerror: boom\nerror: again\nok end"
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "seed write failed"
+    END
+    CLEAR_ERR
+    SYS JOIN root_dir "a/b/note.txt"
+    WRITEOUT LAST "all good\nno problem"
+    CLEAR_ERR
+    SYS JOIN root_dir "a/b/warn.log"
+    WRITEOUT LAST "info\nWARNING: careful\ninfo"
+    CLEAR_ERR
+    SYS JOIN root_dir "plain.txt"
+    WRITEOUT LAST "nothing here"
+    CLEAR_ERR
+    SYS CAT "seed:"
+    LET row = LAST
+    SYS CAT row root_dir
+    LET row = LAST
+    SYS CAT row ":ok"
+    LET row = LAST
+    SYS GREPV "seed:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "seed ok"
+  END
+  PRINT_JSON admit_n bag_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "harvest"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "harvest needs root"
+    FAIL "harvest needs root"
+    CLEAR_ERR
+  ELSE
+    PATHLINETREE root_dir needle
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "harvest soft miss"
+      FAIL "harvest soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "harvest failed"
+      END
+    ELSE
+      LET line_n = PATHLINETREE_N
+      LET files_n = PATHLINETREE_FILES
+      LET cites = LAST
+      CLEAR_ERR
+      SYS CAT "cite:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR line_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR files_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":pl"
+      LET row = LAST
+      SYS GREPV "cite:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF line_n > 0 THEN
+        LET hit = 1
+        LET note_msg = "harvest hits"
+      ELSE
+        LET miss = 1
+        LET note_msg = "harvest empty"
+        FAIL "harvest empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "harvest empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n line_n files_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "peel needs root"
+    FAIL "peel needs root"
+    CLEAR_ERR
+  ELSE
+    PATHLINETREE root_dir needle
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "peel soft miss"
+      FAIL "peel soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "peel failed"
+      END
+    ELSE
+      LET line_n = PATHLINETREE_N
+      LET cites = LAST
+      CLEAR_ERR
+      IF line_n < 1 THEN
+        LET miss = 1
+        LET note_msg = "peel empty"
+        FAIL "peel empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "peel empty"
+        END
+      ELSE
+        SYS NTH 0 cites
+        PARSEPATHLINE LAST
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "peel parse fail"
+          FAIL "peel parse fail"
+          CLEAR_ERR
+        ELSE
+          LET peel_hit = PARSEPATHLINE_HIT
+          LET peel = LAST
+          LET peel_path = PATH
+          LET line_i = LINE_N
+          CLEAR_ERR
+          SYS CAT "peel:"
+          LET row = LAST
+          SYS CAT row needle
+          LET row = LAST
+          SYS CAT row ":"
+          LET row = LAST
+          SYS STR peel_hit
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":"
+          LET row = LAST
+          SYS STR line_i
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":pp"
+          LET row = LAST
+          SYS GREPV "peel:" bag
+          LET bag = LAST
+          CLEAR_ERR
+          SYS PUSH bag row
+          LET bag = LAST
+          LET bag_ch = 1
+          LET admit_n = 1
+          SYS LINES bag
+          LET bag_n = LAST_N
+          IF peel_hit == 1 THEN
+            LET hit = 1
+            LET note_msg = "peel hit"
+          ELSE
+            LET miss = 1
+            LET note_msg = "peel no hit"
+            FAIL "peel no hit"
+            CLEAR_ERR
+          END
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit line_i r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "files"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "files needs root"
+    FAIL "files needs root"
+    CLEAR_ERR
+  ELSE
+    PATHLINETREE root_dir needle
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "files soft miss"
+      FAIL "files soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "files failed"
+      END
+    ELSE
+      LET line_n = PATHLINETREE_N
+      LET cites = LAST
+      CLEAR_ERR
+      PATHLINEPATHS cites
+      LET files_n = PATHLINEPATHS_N
+      LET peel = LAST
+      CLEAR_ERR
+      SYS CAT "files:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR files_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":fp"
+      LET row = LAST
+      SYS GREPV "files:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF files_n > 0 THEN
+        LET hit = 1
+        LET note_msg = "files hit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "files empty"
+        FAIL "files empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "files empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n files_n line_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET row = LAST
+    SYS CAT row ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET row = LAST
+  SYS BLANK row
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs key"
+    FAIL "has needs key"
+    CLEAR_ERR
+  ELSE
+    SYS CAT row ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  PATHLINETREE "" "x"
+  LET has_n = OK
+  CLEAR_ERR
+  PARSEPATHLINE ""
+  LET admit_n = OK
+  CLEAR_ERR
+  PATHLINEPATHS ""
+  LET files_n = PATHLINEPATHS_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON has_n admit_n files_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  # VAL preference: peel (line text or unique paths) then cites bag then status
+  SYS BLANK peel
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path peel
+    CLEAR_ERR
+  ELSE
+    SYS BLANK cites
+    IF LAST_N == 0 THEN
+      SYS WRITE val_path cites
+      CLEAR_ERR
+    ELSE
+      SYS WRITE val_path bag
+      CLEAR_ERR
+    END
+  END
+END
+
+LET row = "schema=cubalc.pathline_evidence_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "lines"
+LET row = LAST
+SYS STR line_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "files"
+LET row = LAST
+SYS STR files_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "pathline_evidence_board: done"
+PRINT_JSON hit miss bag_n line_n files_n peel_hit line_i r_src note_msg
+EXIT 0

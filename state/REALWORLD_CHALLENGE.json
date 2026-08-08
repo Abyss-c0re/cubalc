@@ -1,53 +1,47 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 183,
-  "program": "programs/realworld/tree_first_last_peel_board.cubalc",
-  "theme": "FIRSTINTREE/LASTINTREE + FIRSTLINEINTREE/LASTLINEINTREE first/last peel",
-  "version": "1.15.490-usability",
+  "iter": 184,
+  "program": "programs/realworld/pathline_evidence_board.cubalc",
+  "theme": "PATHLINETREE + PARSEPATHLINE + PATHLINEPATHS grep -rn evidence citations",
+  "version": "1.15.493-usability",
   "pass": true,
-  "prior_note": "iter 182 COUNTINTREE+GREPLINESTREE all-hits; this iter first realworld FIRSTINTREE(1039)+FIRSTLINEINTREE(1040) one-shot peels",
+  "prior_note": "iter 183 FIRST/LAST peels; this iter first realworld PATHLINETREE(1041)+PARSEPATHLINE(1042)+PATHLINEPATHS(1043)",
   "tests": [
     {
       "name": "seed",
-      "cmd": "WRITEOUT nested multi-line logs DFS order",
+      "cmd": "WRITEOUT nested multi-line logs",
       "ok": true,
       "note": "seed"
     },
     {
-      "name": "first",
-      "cmd": "FIRSTINTREE error \u2192 mid.txt path HIT=1",
+      "name": "harvest",
+      "cmd": "PATHLINETREE error \u2192 2 cites path:line:text",
       "ok": true,
-      "note": "FIRSTINTREE"
+      "note": "PATHLINETREE"
     },
     {
-      "name": "last",
-      "cmd": "LASTINTREE error \u2192 err.log path",
+      "name": "peel",
+      "cmd": "PARSEPATHLINE first cite \u2192 text LINE_N=2",
       "ok": true,
-      "note": "LASTINTREE"
+      "note": "PARSEPATHLINE"
     },
     {
-      "name": "firstline",
-      "cmd": "FIRSTLINEINTREE \u2192 error first-line I=1",
+      "name": "files",
+      "cmd": "PATHLINEPATHS unique \u2192 1 err.log",
       "ok": true,
-      "note": "FIRSTLINEINTREE"
+      "note": "PATHLINEPATHS"
     },
     {
-      "name": "lastline",
-      "cmd": "LASTLINEINTREE \u2192 error last-line",
+      "name": "colon",
+      "cmd": "needle ':' multi-file 3 lines (W102)",
       "ok": true,
-      "note": "LASTLINEINTREE"
+      "note": "W102"
     },
     {
       "name": "empty_req",
-      "cmd": "first empty HIT=0; missing REQUIRE shell 2",
+      "cmd": "harvest empty soft; missing REQUIRE shell 2",
       "ok": true,
       "note": "edges"
-    },
-    {
-      "name": "substr",
-      "cmd": "erro substring peels firstline (W93)",
-      "ok": true,
-      "note": "W93"
     },
     {
       "name": "selftest",
@@ -864,26 +858,51 @@
       "title": "Tree first/last order is sorted DFS path order, not mtime/inode",
       "detail": "FIRST/LASTINTREE and FIRST/LASTLINEINTREE walk sorted DFS (lexical path), not filesystem discovery or chronological mtime. 'Last error' means last path/line in that order, not newest wall-clock event. Incident agents needing recency must use mtime-aware forms or sort plates separately.",
       "repro": "a/b/mid before a/err.log even if err.log written later on disk"
+    },
+    {
+      "id": "W102",
+      "severity": "med",
+      "area": "lang|pathlinetree",
+      "title": "PATHLINETREE is substring grep -rn; colon needle matches any ':' line",
+      "detail": "PATHLINETREE root needle returns path:lineno:text bags (1-based lineno). Needle ':' hits every line containing a colon (error: boom, WARNING: careful) \u2014 useful multi-file count but a false friend if agents mean field separators. Empty hits OK=1 N=0 (W98 class). Text after second colon may itself contain colons (error: boom).",
+      "repro": "PATHLINETREE logs error \u2192 N2; PATHLINETREE logs : \u2192 N3 FILES2"
+    },
+    {
+      "id": "W103",
+      "severity": "low",
+      "area": "lang|parsepathline",
+      "title": "PARSEPATHLINE peels first two colon fields as path and lineno",
+      "detail": "Positive: PARSEPATHLINE path:N:text \u2192 PATH, LINE_N, LAST/TEXT=remainder (colons kept in body). Plain lines HIT=0 OK=1. Empty string soft OK=0. Agents building digests from PATHLINETREE bags must NTH then PARSEPATHLINE; HIT distinguishes annotated vs garbage fields.",
+      "repro": "PARSEPATHLINE /p:10:a:b:c \u2192 PATH /p LINE_N 10 LAST a:b:c; plain \u2192 HIT 0"
+    },
+    {
+      "id": "W104",
+      "severity": "low",
+      "area": "lang|pathlinepaths",
+      "title": "PATHLINEPATHS unique first-seen paths; SKIP non-annotated",
+      "detail": "Positive: PATHLINEPATHS bag \u2192 unique paths in first-seen order, PATHLINEPATHS_N, SKIP count for lines that fail path:num:text shape. Empty bag OK=1 N=0. Companion to PATHLINETREE for implicated-file lists without EACH+HASLINE glue.",
+      "repro": "PATHLINEPATHS three cites two files \u2192 N2; plain line increments SKIP"
     }
   ],
   "workarounds": [
-    "FIRSTINTREE/LASTINTREE for path peels; gate on *_HIT not OK",
-    "FIRSTLINEINTREE/LASTLINEINTREE for line+PATH+I; dump LAST to VAL",
-    "CUBALC_TFL_REQUIRE=1 for shell-visible missing-root fail",
-    "Do not treat DFS last as chronologically latest (W101)",
-    "Keep VARS lean (~88) under 128 (W81)"
+    "PATHLINETREE root needle; gate on PATHLINETREE_N not OK",
+    "NTH 0 cites; PARSEPATHLINE for PATH/LINE_N/text",
+    "PATHLINEPATHS cites for unique files",
+    "Avoid needle ':' unless intentional (W102); prefer longer tokens",
+    "CUBALC_PLE_REQUIRE=1 for shell-visible missing-root fail",
+    "Keep VARS lean (~91) under 128 (W81)"
   ],
   "language_gaps": [
-    "FIRSTINTREE by mtime / reverse chrono order option",
-    "Tree peels with whole-word/regex (substring family W93)",
-    "Cookbook: seed\u2192firstline\u2192lastline incident first/last sighting"
+    "PATHLINETREE whole-word / regex (substring family)",
+    "PATHLINETREE relative paths option (currently absolute)",
+    "Cookbook: seed\u2192harvest\u2192peel\u2192files evidence packet"
   ],
   "issues_faced": [
-    "DFS first=mid last=err confirmed (W101)",
-    "Empty HIT=0 OK=1 \u2014 board gates on peel_hit (W98/W99)",
-    "VAL peel omit trailing NL (W5)",
+    "PATHLINETREE path:lineno:text harvest works (fills GREPLINESTREE path gap)",
+    "Colon needle multi-hit false friend documented (W102)",
+    "VAL last-line omit NL (W5); plate STATUS cite::: with needle :",
     "selftest 355/355"
   ],
-  "commit": "ee1e753cba146c21dd68dd69739b8dbd9aab5d87",
-  "ts": "2026-08-08T07:53:30Z"
+  "commit": "",
+  "ts": "2026-08-08T08:18:30Z"
 }
