@@ -764,6 +764,6 @@
     "WRITE/claim body omit final NL (W5 reconfirm)",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "f89fd1744d958cffe5cf99405e6ec17469d0b8d8",
   "ts": "2026-08-08T05:48:00Z"
 }
