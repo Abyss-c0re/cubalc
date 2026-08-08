@@ -1,0 +1,95 @@
+# PEEKPLATE / JSONFILEGET — one-shot peel field from JSON plate file
+# Usability: agent state field read without LOADPLATE+JSON glue.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_peekplate"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS JOIN dir "missing.json"
+LET miss = LAST
+
+# seed plate
+SYS JSONOBJ "role" "worker" "n" 7 "ok" true
+LET plate = LAST
+SYS SAVEPLATE path plate
+ASSERT OK == 1
+
+# --- hit string field ---
+SYS PEEKPLATE path "role"
+ASSERT OK == 1
+ASSERT PEEKPLATE_HIT == 1
+ASSERT LAST_N == 1
+ASSERT PEEKPLATE_FILE == 1
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS EQS PEEKPLATE_KEY "role"
+ASSERT LAST_N == 1
+
+# --- hit numeric as string peel ---
+SYS PEEKPLATE path "n"
+ASSERT PEEKPLATE_HIT == 1
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+SYS NUM LAST
+ASSERT LAST_N == 7
+
+# --- aliases ---
+SYS JSONFILEGET path "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS PLATEKEYGET path "n"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+SYS PLATEPEEK path "role"
+ASSERT PEEKPLATE_HIT == 1
+SYS GETPLATEKEY path "role"
+ASSERT OK == 1
+
+# --- miss without OR → soft fail ---
+SYS PEEKPLATE path "absent"
+ASSERT OK == 0
+ASSERT PEEKPLATE_HIT == 0
+ASSERT LAST_N == 0
+
+# --- miss with OR fallback ---
+SYS PEEKPLATE path "absent" OR "default"
+ASSERT OK == 1
+ASSERT PEEKPLATE_HIT == 0
+ASSERT PEEKPLATE_OR == 1
+ASSERT LAST_N == 0
+SYS EQS LAST "default"
+ASSERT LAST_N == 1
+
+# --- numeric OR ---
+SYS PEEKPLATE path "absent" OR 42
+ASSERT OK == 1
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+# --- missing file + OR ---
+SYS PEEKPLATE miss "role" OR "none"
+ASSERT OK == 1
+ASSERT PEEKPLATE_FILE == 0
+ASSERT PEEKPLATE_HIT == 0
+SYS EQS LAST "none"
+ASSERT LAST_N == 1
+
+# --- missing file no OR ---
+SYS PEEKPLATE miss "role"
+ASSERT OK == 0
+ASSERT PEEKPLATE_FILE == 0
+ASSERT PEEKPLATE_HIT == 0
+
+# --- empty key soft fail ---
+LET empty = ""
+SYS PEEKPLATE path empty OR "x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "empty key"
+ASSERT LAST_N == 1
+
+PRINT "peekplate ok"
