@@ -302,6 +302,91 @@ int cubalc_host_rmdir(const char *path, cubalc_host_result *r) {
   return 0;
 }
 
+/* Depth-first recursive remove. Does not follow dir symlinks (unlink link).
+ * Caps recursion to avoid cycles. Returns count of removed entries via *count. */
+static int cubalc_rmtree_rec(const char *path, long *count, int depth) {
+  struct stat st;
+  DIR *d;
+  struct dirent *ent;
+  if (!path || !path[0] || !count) return -1;
+  if (depth > 64) {
+    errno = ELOOP;
+    return -1;
+  }
+  /* lstat: treat symlink as leaf (unlink, do not descend) */
+  if (lstat(path, &st) != 0) {
+    if (errno == ENOENT) return 0;
+    return -1;
+  }
+  if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+      && !S_ISLNK(st.st_mode)
+#endif
+      ) {
+    d = opendir(path);
+    if (!d) return -1;
+    while ((ent = readdir(d)) != NULL) {
+      char child[CUBALC_HOST_STR_MAX];
+      size_t pl, nl;
+      if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+        continue;
+      pl = strlen(path);
+      nl = strlen(ent->d_name);
+      if (pl + 1 + nl + 1 >= sizeof child) {
+        closedir(d);
+        errno = ENAMETOOLONG;
+        return -1;
+      }
+      if (pl > 0 && (path[pl - 1] == '/' || path[pl - 1] == '\\'))
+        snprintf(child, sizeof child, "%s%s", path, ent->d_name);
+      else
+        snprintf(child, sizeof child, "%s/%s", path, ent->d_name);
+      if (cubalc_rmtree_rec(child, count, depth + 1) != 0) {
+        closedir(d);
+        return -1;
+      }
+    }
+    closedir(d);
+    if (rmdir(path) != 0) return -1;
+    (*count)++;
+    return 0;
+  }
+  /* file, symlink, fifo, etc. */
+  if (unlink(path) != 0) return -1;
+  (*count)++;
+  return 0;
+}
+
+/* Usability: SYS RMTREE|RMNEST path — recursive plate tree delete without shell rm -rf.
+ * File → unlink; dir → depth-first children then rmdir. Missing → soft ok n=0. */
+int cubalc_host_rmtree(const char *path, cubalc_host_result *r) {
+  long count = 0;
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "rmtree: empty path");
+    return -1;
+  }
+  if (lstat(path, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->str, sizeof r->str, "%s", path);
+      r->n = 0;
+      r->ok = 1;
+      return 0;
+    }
+    snprintf(r->err, sizeof r->err, "rmtree: %s", strerror(errno));
+    return -1;
+  }
+  if (cubalc_rmtree_rec(path, &count, 0) != 0) {
+    snprintf(r->err, sizeof r->err, "rmtree: %s", strerror(errno));
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", path);
+  r->n = count;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS RENAME|MV from to — move plate without shell. */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) {
   r_clear(r);

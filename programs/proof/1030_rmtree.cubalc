@@ -1,0 +1,119 @@
+# RMTREE / RMNEST / RMRF — recursive remove file or directory tree
+# Clean nested agent workspaces without shell rm -rf or WALK+RMALL+RMDIR glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_rmt_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# nested tree: files + empty dirs + deeper files
+SYS JOIN root "a/b/c.txt"
+LET f1 = LAST
+WRITEOUT f1 "deep"
+ASSERT OK == 1
+SYS JOIN root "a/b/d.txt"
+LET f2 = LAST
+WRITEOUT f2 "sib"
+ASSERT OK == 1
+SYS JOIN root "a/e.txt"
+LET f3 = LAST
+WRITEOUT f3 "mid"
+ASSERT OK == 1
+SYS JOIN root "a/empty"
+SYS MKDIR LAST
+ASSERT OK == 1
+SYS JOIN root "leaf.dat"
+LET leaf = LAST
+SYS WRITE leaf "solo"
+ASSERT OK == 1
+
+# file-only rmtree (unlink leaf)
+RMTREE leaf
+ASSERT OK == 1
+ASSERT RMTREE_N == 1
+ASSERT LAST_N == 1
+SYS EXIST leaf
+ASSERT LAST_N == 0
+# missing soft
+RMTREE leaf
+ASSERT OK == 1
+ASSERT RMTREE_N == 0
+
+# rebuild leaf for tree wipe
+SYS WRITE leaf "solo2"
+ASSERT OK == 1
+
+# full tree wipe — top-level form
+RMTREE root
+ASSERT OK == 1
+ASSERT RMTREE_N >= 6
+SYS EXIST root
+ASSERT LAST_N == 0
+SYS ISDIR root
+ASSERT LAST_N == 0
+
+# rebuild nested for SYS form
+SYS MKDIR root
+SYS JOIN root "x/y/z.claim"
+LET z = LAST
+WRITEOUT z "hold"
+ASSERT OK == 1
+SYS ISFILE z
+ASSERT LAST_N == 1
+SYS RMTREE root
+ASSERT OK == 1
+ASSERT RMTREE_N >= 3
+SYS EXIST root
+ASSERT LAST_N == 0
+
+# RMNEST alias + abs path
+SYS MKDIR root
+SYS JOIN root "p/q.txt"
+LET q = LAST
+WRITEOUT q "q"
+ASSERT OK == 1
+SYS JOIN root "p"
+LET p = LAST
+RMNEST p
+ASSERT OK == 1
+ASSERT RMNEST_N >= 2
+SYS EXIST p
+ASSERT LAST_N == 0
+SYS ISDIR root
+ASSERT LAST_N == 1
+
+# RMRF alias
+SYS JOIN root "gone"
+LET g = LAST
+SYS MKDIR g
+SYS JOIN g "f"
+LET gf = LAST
+SYS WRITE gf "1"
+ASSERT OK == 1
+RMRF g
+ASSERT OK == 1
+ASSERT RMRF_N >= 2
+SYS EXIST g
+ASSERT LAST_N == 0
+
+# empty path soft
+RMTREE ""
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# cleanup remnant
+RMTREE root
+ASSERT OK == 1
+
+PRINT "rmtree ok"
+ASSERT OK == 1
