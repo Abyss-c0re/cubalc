@@ -1712,6 +1712,6 @@
     "require needed EXIT on OR fallback not only OK==0",
     "none blocking \u2014 first-shot green after GETFLAG lean pattern from 207/208"
   ],
-  "commit": "pending",
+  "commit": "97f4a17",
   "ts": "2026-08-08T18:44:10Z"
 }
