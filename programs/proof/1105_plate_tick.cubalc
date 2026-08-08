@@ -1,0 +1,75 @@
+# plate_tick lib — ensure + bump + ts stamp + save agent plate
+# Usability: one INCLUDE advances durable counters without glue.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_plate_tick"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+
+# clean slate
+SYS RM path
+
+DEFAULT PLATE_PATH = path
+DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true}"
+DEFAULT PLATE_TICK_KEY = "n"
+DEFAULT PLATE_TS_KEY = "ts"
+INCLUDE plate_tick
+
+ASSERT OK == 1
+# PLATE content after tick
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+ASSERT TICK_N == 1
+SYS JSONHAS "ts" PLATE
+ASSERT LAST_N == 1
+SYS JSON "ts" FROM PLATE
+SYS LEN LAST
+ASSERT LAST_N >= 10
+SYS JSON "ok" FROM PLATE
+# bool peels as "1"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# second tick accumulates
+INCLUDE plate_tick
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 2
+ASSERT TICK_N == 2
+
+# on-disk durable
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+LET loaded = LAST
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 2
+SYS JSONHAS "ts" loaded
+ASSERT LAST_N == 1
+
+# custom tick key (LET forces — DEFAULT skips if already set)
+SYS JOIN dir "retries.json"
+LET rpath = LAST
+SYS RM rpath
+LET PLATE_PATH = rpath
+LET PLATE_SEED = "{}"
+LET PLATE_TICK_KEY = "retries"
+INCLUDE plate_tick
+SYS JSONN "retries" FROM PLATE
+ASSERT LAST_N == 1
+INCLUDE plate_tick
+SYS JSONN "retries" FROM PLATE
+ASSERT LAST_N == 2
+SYS LOADPLATE rpath
+SYS JSONN "retries" FROM LAST
+ASSERT LAST_N == 2
+
+# resolve lib for INCLUDE
+SYS WHICH plate_tick
+SYS HAS LAST "plate_tick"
+ASSERT LAST_N == 1
+
+PRINT "plate_tick ok"

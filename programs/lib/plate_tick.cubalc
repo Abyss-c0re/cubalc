@@ -1,0 +1,29 @@
+# INCLUDE plate_tick — agent state plate tick (ensure + bump + stamp + save)
+# Usability: one INCLUDE advances durable agent counters without glue
+#
+#   DEFAULT PLATE_PATH = "state/my_agent.json"
+#   DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true}"
+#   DEFAULT PLATE_TICK_KEY = "n"
+#   DEFAULT PLATE_TS_KEY = "ts"
+#   INCLUDE plate_tick
+#   # PLATE holds content · TICK_N is new counter · file saved
+#
+# Composes with plate_boot / agent_boot (override knobs before INCLUDE).
+# HOLD_FLASH not required (same policy as plate_boot).
+
+DEFAULT PLATE_PATH = "state/agent_plate.json"
+DEFAULT PLATE_SEED = "{\"n\":0}"
+DEFAULT PLATE_TICK_KEY = "n"
+DEFAULT PLATE_TS_KEY = "ts"
+
+SYS ENSUREPLATE PLATE_PATH OR PLATE_SEED
+LET PLATE = LAST
+SYS JSONINC PLATE PLATE_TICK_KEY
+LET PLATE = LAST
+LET TICK_N = LAST_N
+SYS DATE
+LET PLATE_TS = LAST
+SYS JSONSET PLATE PLATE_TS_KEY PLATE_TS
+LET PLATE = LAST
+SYS SAVEPLATE PLATE_PATH PLATE
+# PLATE keeps content (SAVEPLATE sets LAST=path only)

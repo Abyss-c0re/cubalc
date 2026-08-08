@@ -591,6 +591,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 561. ~~**`PEEKPLATE` / `JSONFILEGET` / `PLATEKEYGET`**~~ **done** (one-shot peel field from plate file · OR fallback · no LOAD+JSON glue).
 562. ~~**`DROPPLATE` / `JSONFILEDEL` / `PLATEKEYDEL`**~~ **done** (one-shot load-del-save plate field · soft miss · no LOAD+JSONDEL+SAVE glue).
 563. ~~**`JSONFILEMERGE` / `OVERLAYPLATE` / `MERGEPLATEFILE`**~~ **done** (multi-key load-merge-save plate · overlay wins · not in-memory MERGEPLATE).
+564. ~~**`programs/lib/plate_tick`**~~ **done** (INCLUDE plate_tick = ENSURE + bump + ts stamp + SAVE · agent tick preamble).
 
 ## Tick protocol
 
