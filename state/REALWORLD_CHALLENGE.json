@@ -1,51 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 215,
-  "program": "programs/realworld/agent_status_template_fillp_board.cubalc",
-  "theme": "FILLP/SUBSTPLATE agent status/log/path templates from PLATE",
-  "version": "1.15.570-usability",
+  "iter": 216,
+  "program": "programs/realworld/agent_report_fillpfile_board.cubalc",
+  "theme": "FILLPFILE materialize agent status report files from PLATE",
+  "version": "1.15.572-usability",
   "pass": true,
-  "prior_note": "iter 214 plate_session+DUMPP; this iter first realworld FILLP (proof 1120)",
+  "prior_note": "iter 215 FILLP strings; this iter first realworld FILLPFILE (proof 1121)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "session seed + SETP name/host",
+      "cmd": "session + UPDATEPLATE agent/tick/host",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "fill",
-      "cmd": "FILLP peer name@host role n",
+      "name": "seedtpl",
+      "cmd": "WRITE status.tpl with {{slots}}",
       "ok": true,
-      "note": "FILLP"
+      "note": "template"
     },
     {
-      "name": "path",
-      "cmd": "state/{{agent}}/tick-{{tick}}.json",
+      "name": "render",
+      "cmd": "FILLPFILE tpl\u2192out miss= empty",
       "ok": true,
-      "note": "path"
+      "note": "FILLPFILE"
     },
     {
-      "name": "digest",
-      "cmd": "miss key empty + bare FILLP LAST",
+      "name": "inplace",
+      "cmd": "FILLPFILE single-arg rewrite n={{tick}}",
       "ok": true,
-      "note": "digest"
+      "note": "inplace"
     },
     {
       "name": "gate",
-      "cmd": "NEEDP name/host + non-blank fill",
+      "cmd": "HASALL + render non-blank",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "SUBSTPLATE/EXPANDP/TEMPLATEP",
+      "cmd": "SUBSTPLATEFILE same body",
       "ok": true,
-      "note": "aliases"
+      "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "plain; incomplete brace; empty str hit; empty plate miss",
+      "cmd": "soft miss tpl OK=0; empty plate x=",
       "ok": true,
       "note": "edges"
     },
@@ -57,7 +57,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_ASTF_REQUIRE=1 soft empty \u2192 exit 2",
+      "cmd": "CUBALC_ARFF_REQUIRE=1 soft empty \u2192 exit 2",
       "ok": true,
       "note": "hard env"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "359/360 pre-existing fail (not this program)"
+      "note": "361/362 pre-existing fail (not this program)"
     }
   ],
   "weaknesses": [
@@ -1740,6 +1740,38 @@
       "title": "ASTF_REPORT omit trailing NL (W5 reconfirm)",
       "detail": "cat -A REPORT ends without $ on last field.",
       "repro": "cat -A ASTF_REPORT.txt"
+    },
+    {
+      "id": "W210",
+      "severity": "med",
+      "area": "lang|fillpfile",
+      "title": "FILLPFILE LAST is out path; FILLPFILE_BODY mirrors content",
+      "detail": "After FILLPFILE tpl out, LAST=out path (EQS path). Expanded body in FILLPFILE_BODY and READ out. Soft miss template \u2192 OK=0 FILLPFILE_N=0 sticky LAST_ERR.",
+      "repro": "FILLPFILE tpl out; EQS LAST out; READ out body"
+    },
+    {
+      "id": "W211",
+      "severity": "med",
+      "area": "lang|fillpfile",
+      "title": "FILLPFILE uses conventional PLATE var not disk plate path",
+      "detail": "UPDATEPLATE disk fields alone does not feed FILLPFILE \u2014 must LET PLATE from LOADPLATE (or SETP on PLATE). Agents that only mutate files without reloading PLATE get empty slot expands.",
+      "repro": "UPDATEPLATE path agent x; FILLPFILE without LOADPLATE\u2192PLATE \u2192 miss slots"
+    },
+    {
+      "id": "W212",
+      "severity": "low",
+      "area": "lang|fillpfile",
+      "title": "Omit out rewrites template in place",
+      "detail": "FILLPFILE inp alone LAST=inp path and file content replaced. Easy to destroy source templates if reused.",
+      "repro": "WRITE n={{tick}}; FILLPFILE inp; READ \u2192 n=42"
+    },
+    {
+      "id": "W213",
+      "severity": "low",
+      "area": "lang|cat",
+      "title": "SYS CAT multi-arg host-wide concat usable for expected builds",
+      "detail": "Positive: SYS CAT a b c avoids nested CAT for render expected strings (feat 361cd8b).",
+      "repro": "SYS CAT agent= hive tick= 42"
     }
   ],
   "workarounds": [
@@ -1819,7 +1851,10 @@
     "INCLUDE plate_session once per action after setting PLATE_PATH/SEED",
     "EQS expanded LAST against built expected string",
     "NEEDP identity keys before status fill gate",
-    "soft empty + CUBALC_*_REQUIRE for hard miss without plate create"
+    "soft empty + CUBALC_*_REQUIRE for hard miss without plate create",
+    "LOADPLATE then LET PLATE=LAST before FILLPFILE",
+    "seed separate tpl and out paths; avoid in-place on shared templates",
+    "SYS CAT multi-arg for EQS expected bodies"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1893,7 +1928,10 @@
     "DUMPP LAST_N = key count not success",
     "FILLP miss \u2192 empty string not hard fail; check FILLP_MISS",
     "incomplete braces literal; empty plate value is hit",
-    "bare FILLP uses LAST as template"
+    "bare FILLP uses LAST as template",
+    "FILLPFILE expands from PLATE var not plate file path",
+    "FILLPFILE LAST=path; body via FILLPFILE_BODY or READ",
+    "in-place FILLPFILE overwrites template source"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1957,8 +1995,11 @@
     "require reload false-hit until removed plate_session from reload path",
     "all primary paths green first pass after that fix",
     "gate require false-hit via plate_session create; soft+require for EXIT 2",
-    "fill/path/digest/alias green with EQS expected builds"
+    "fill/path/digest/alias green with EQS expected builds",
+    "plate_save PLATE unknown under var cap; used UPDATEPLATE+LOADPLATE\u2192PLATE",
+    "probe LAST_ERR FILLPFILE string fragile; OK==0 enough",
+    "multi-arg CAT works for expected line builds"
   ],
-  "commit": "16f24f5",
-  "ts": "2026-08-08T21:14:19Z"
+  "commit": "pending",
+  "ts": "2026-08-08T21:39:56Z"
 }

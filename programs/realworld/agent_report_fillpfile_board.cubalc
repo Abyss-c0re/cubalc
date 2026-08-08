@@ -1,0 +1,720 @@
+# agent_report_fillpfile_board.cubalc — FILLPFILE materialize status reports
+#
+# Real use: WRITE agent status/config reports from template files without
+# READ+FILLP+WRITE glue. First realworld of proof 1121 FILLPFILE.
+#
+#   FILLPFILE|SUBSTPLATEFILE|EXPANDPFILE tmpl [out]
+#   LAST = out path · FILLPFILE_N = slots · FILLPFILE_MISS · FILLPFILE_BODY
+#   omit out → in-place rewrite of tmpl
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_arff_$$
+#   ./out/cubalc run programs/realworld/agent_report_fillpfile_board.cubalc \
+#     boot -- --plate=/tmp/arff/agent.json
+#   ./out/cubalc run ... render -- --plate=... --agent=hive-01 --tick=42
+#   ./out/cubalc run ... gate -- --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt ARFF_REPORT.txt
+# Env: PLATE_PATH AGENT_S TICK_S CUBALC_ARFF_REQUIRE
+#
+# Edges:
+#   miss key soft empty; soft miss template OK=0; in-place; empty plate;
+#   BODY mirror; WRITE omit NL; multi-arg CAT for expected builds
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_report_fillpfile_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_report_fillpfile -- boot|seedtpl|render|inplace|gate|probe|list -- [--plate=P] [--agent=A] [--tick=T]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/deep/agent.json"
+LET plate_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+DEFAULT AGENT_S = "hive-01"
+GETFLAG agent|a OR ENV AGENT_S OR AGENT_S
+LET agent_s = LAST
+CLEAR_ERR
+
+DEFAULT TICK_S = "42"
+GETFLAG tick|t OR ENV TICK_S OR TICK_S
+LET tick_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_ARFF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "ARFF_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "tpl/status.tpl"
+LET tpl_path = LAST
+SYS JOIN state_dir "out/status.out"
+LET out_file = LAST
+SYS JOIN state_dir "tpl"
+LET tpl_dir = LAST
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+
+SYS MKDIR tpl_dir
+CLEAR_ERR
+SYS MKDIR out_dir
+CLEAR_ERR
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET peel_s = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "boot", "seedtpl", "render", "inplace", "gate", "list", "ls", "soft", "clear", "probe", "alias"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "seedtpl" THEN
+    LET op = "seedtpl"
+  WHEN "render" THEN
+    LET op = "render"
+  WHEN "inplace" THEN
+    LET op = "inplace"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "alias" THEN
+    LET op = "alias"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src agent_s tick_s
+  CLEAR_ERR
+END
+
+LET PLATE_PATH = plate_file
+SYS JSONOBJ "n" 0 "ok" true "role" "worker" "schema" "cubalc.agent_report.v1"
+LET PLATE_SEED = LAST
+CLEAR_ERR
+
+# boot — plate_session + identity fields
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  # disk field stamps (avoid plate_save PLATE thrash under var cap)
+  SYS UPDATEPLATE plate_file "agent" agent_s
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "tick" tick_s
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "host" "cubeA"
+  CLEAR_ERR
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  SYS JSON "agent" FROM body
+  SYS EQS LAST agent_s
+  LET has_n = LAST_N
+  CLEAR_ERR
+  LET out = body
+  LET take_n = load_hit
+  IF load_hit == 1 THEN
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET created = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot agent"
+      FAIL "boot agent"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot load"
+    FAIL "boot load"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "boot fail"
+    END
+  END
+  SYS CAT "boot:" agent_s ":" tick_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# seedtpl — write status template
+SYS EQS op "seedtpl"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS WRITE tpl_path "agent={{agent}} tick={{tick}} host={{host}} miss={{nope}}"
+  LET has_n = OK
+  CLEAR_ERR
+  SYS READ tpl_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "{{agent}}"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS HAS body "{{nope}}"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  LET out = body
+  IF has_n == 1 THEN
+    IF take_n == 1 THEN
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "seedtpl ok"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "seedtpl nope"
+        FAIL "seedtpl nope"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "seedtpl agent slot"
+      FAIL "seedtpl agent slot"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "seedtpl write"
+    FAIL "seedtpl write"
+    CLEAR_ERR
+  END
+  SYS CAT "seedtpl:" take_n ":" peel_hit ":st"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "seedtpl:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit has_n p_src note_msg
+  CLEAR_ERR
+END
+
+# render — FILLPFILE tpl → out
+SYS EQS op "render"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "agent" agent_s
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "tick" tick_s
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "host" "cubeA"
+  CLEAR_ERR
+  # PLATE must match disk for FILLPFILE (reads conventional PLATE)
+  SYS LOADPLATE plate_file
+  LET PLATE = LAST
+  CLEAR_ERR
+  # ensure tpl
+  SYS WRITE tpl_path "agent={{agent}} tick={{tick}} host={{host}} miss={{nope}}"
+  CLEAR_ERR
+  FILLPFILE tpl_path out_file
+  LET has_n = OK
+  LET peel_s = LAST
+  CLEAR_ERR
+  IF has_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "render soft fail"
+    FAIL "render soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "render fail"
+    END
+  ELSE
+    SYS READ out_file
+    LET body = LAST
+    CLEAR_ERR
+    SYS CAT "agent=" agent_s " tick=" tick_s " host=cubeA miss="
+    LET row = LAST
+    CLEAR_ERR
+    SYS EQS body row
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS EQS peel_s out_file
+    LET take_n = LAST_N
+    CLEAR_ERR
+    LET out = body
+    IF peel_hit == 1 THEN
+      IF take_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "render ok"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "render last path"
+        FAIL "render last path"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "render body"
+      FAIL "render body"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "render:" agent_s ":" tick_s ":rn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "render:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit has_n p_src note_msg
+  CLEAR_ERR
+END
+
+# inplace — FILLPFILE single arg
+SYS EQS op "inplace"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "tick" tick_s
+  CLEAR_ERR
+  SYS LOADPLATE plate_file
+  LET PLATE = LAST
+  CLEAR_ERR
+  SYS JOIN state_dir "tpl/inplace.tpl"
+  LET row = LAST
+  SYS WRITE row "n={{tick}}"
+  CLEAR_ERR
+  FILLPFILE row
+  LET has_n = OK
+  LET peel_s = LAST
+  CLEAR_ERR
+  SYS READ row
+  LET body = LAST
+  CLEAR_ERR
+  SYS CAT "n=" tick_s
+  LET out = LAST
+  CLEAR_ERR
+  SYS EQS body out
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS EQS peel_s row
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF take_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "inplace ok"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "inplace path"
+        FAIL "inplace path"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "inplace body"
+      FAIL "inplace body"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "inplace fail"
+    FAIL "inplace fail"
+    CLEAR_ERR
+  END
+  SYS CAT "inplace:" body ":ip"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "inplace:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit has_n p_src note_msg
+  CLEAR_ERR
+END
+
+# gate — NEEDP + render non-blank out
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "agent" agent_s
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "tick" tick_s
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "host" "cubeA"
+  CLEAR_ERR
+  SYS LOADPLATE plate_file
+  LET PLATE = LAST
+  CLEAR_ERR
+  SYS JSONHASALL PLATE "agent" "tick" "host"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF take_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate need"
+    FAIL "gate need"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate need"
+    END
+  ELSE
+    SYS WRITE tpl_path "agent={{agent}} tick={{tick}} host={{host}}"
+    CLEAR_ERR
+    FILLPFILE tpl_path out_file
+    CLEAR_ERR
+    SYS READ out_file
+    LET body = LAST
+    CLEAR_ERR
+    SYS BLANK body
+    LET has_n = LAST_N
+    CLEAR_ERR
+    IF has_n == 0 THEN
+      LET hit = 1
+      LET note_msg = "gate admit"
+      LET admit_n = 1
+      LET out = body
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate blank"
+      FAIL "gate blank"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "gate:" take_n ":" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n admit_n hit p_src note_msg
+  CLEAR_ERR
+END
+
+# alias — SUBSTPLATEFILE
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  INCLUDE plate_session
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "agent" agent_s
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "tick" tick_s
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "host" "cubeA"
+  CLEAR_ERR
+  SYS LOADPLATE plate_file
+  LET PLATE = LAST
+  CLEAR_ERR
+  SYS WRITE tpl_path "agent={{agent}} tick={{tick}} host={{host}} miss={{nope}}"
+  CLEAR_ERR
+  SUBSTPLATEFILE tpl_path out_file
+  LET has_n = OK
+  CLEAR_ERR
+  SYS READ out_file
+  LET body = LAST
+  CLEAR_ERR
+  SYS CAT "agent=" agent_s " tick=" tick_s " host=cubeA miss="
+  LET row = LAST
+  CLEAR_ERR
+  SYS EQS body row
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "alias ok"
+      LET admit_n = 1
+      LET take_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "alias body"
+      FAIL "alias body"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias fail"
+    FAIL "alias fail"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:" peel_hit ":al"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit has_n p_src note_msg
+  CLEAR_ERR
+END
+
+# soft
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "soft empty require"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — soft miss tpl; empty plate; miss slot
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JOIN state_dir "tpl/missing.tpl"
+  LET row = LAST
+  SYS RM row
+  CLEAR_ERR
+  FILLPFILE row out_file
+  LET take_n = OK
+  CLEAR_ERR
+  # empty plate still expands
+  LET PLATE = "{}"
+  CLEAR_ERR
+  SYS WRITE tpl_path "x={{agent}}"
+  CLEAR_ERR
+  FILLPFILE tpl_path out_file
+  LET peel_hit = OK
+  CLEAR_ERR
+  SYS READ out_file
+  SYS EQS LAST "x="
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF take_n == 0 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 1 THEN
+        LET note_msg = "probe ok"
+        LET hit = 1
+        LET admit_n = 1
+        LET has_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe emptyplate"
+        FAIL "probe emptyplate"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe empty ok"
+      FAIL "probe empty ok"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe miss soft"
+    FAIL "probe miss soft"
+    CLEAR_ERR
+  END
+  PRINT_JSON take_n has_n peel_hit load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_report_fillpfile_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "admit"
+LET row = LAST
+SYS STR admit_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "plate"
+LET row = LAST
+SYS PUSH row plate_file
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS CAT "arff op=" op " hit="
+LET body = LAST
+SYS STR hit
+SYS CAT body LAST " miss="
+LET body = LAST
+SYS STR miss
+SYS CAT body LAST " note=" note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n created load_hit peel_hit p_src note_msg
+NOTE "agent_report_fillpfile_board: done"
