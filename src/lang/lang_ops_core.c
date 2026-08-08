@@ -6560,6 +6560,88 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS ENSUREPARENT|MKPARENT path — dirname + mkdir -p so file WRITE can land.
+     * LAST = parent dir (abs when possible) · ENSUREPARENT_CREATED 0|1 · soft OK.
+     * Usability: GETFLAGPATH out then ENSUREPARENT without DIRNAME+MKDIR glue. */
+    if (kw(&L->cur,"ENSUREPARENT") || kw(&L->cur,"MKPARENT") || kw(&L->cur,"PARENTMKDIR") ||
+        kw(&L->cur,"MKDIRPARENT") || kw(&L->cur,"ENSURE_PARENT") || kw(&L->cur,"PARENTDIRMK") ||
+        kw(&L->cur,"MAKEDIRPARENT") || kw(&L->cur,"ENSUREDIRPARENT")){
+      char path[512], parent[512], absbuf[CUBALC_HOST_STR_MAX];
+      const char *slash;
+      size_t n;
+      int created = 0;
+      cubalc_host_result hr;
+      lex_next(L);
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS ENSUREPARENT \"path\"|LAST");
+        return -1;
+      }
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "ENSUREPARENT: empty path");
+        var_set_str(vm, "ERR", "ENSUREPARENT: empty path");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "ENSUREPARENT_CREATED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      n = strlen(path);
+      while (n > 1 && (path[n - 1] == '/' || path[n - 1] == '\\')) {
+        path[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(path);
+      if (slash && slash != path) {
+        size_t dn = (size_t)(slash - path);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, path, dn);
+        parent[dn] = 0;
+      } else if (slash && slash == path) {
+        snprintf(parent, sizeof parent, "%c", path[0] == '\\' ? '\\' : '/');
+      } else {
+        snprintf(parent, sizeof parent, ".");
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+        snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+      else
+        snprintf(absbuf, sizeof absbuf, "%s", parent);
+      created = (cubalc_host_exists(absbuf) || cubalc_host_exists(parent)) ? 0 : 1;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_mkdir(absbuf, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "ENSUREPARENT: mkdir failed";
+        var_set_str(vm, "LAST", absbuf);
+        var_set_str(vm, "DIRNAME", absbuf);
+        var_set_str(vm, "PARENT", absbuf);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", absbuf);
+        vm->last_n = (long)strlen(absbuf);
+        var_set_num(vm, "LAST_N", vm->last_n);
+        var_set_num(vm, "ENSUREPARENT_CREATED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      if (hr.str[0])
+        snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+      var_set_str(vm, "LAST", absbuf);
+      var_set_str(vm, "DIRNAME", absbuf);
+      var_set_str(vm, "PARENT", absbuf);
+      var_set_str(vm, "ENSUREPARENT", absbuf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absbuf);
+      vm->last_n = (long)strlen(absbuf);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+      var_set_num(vm, "MKDIR_N", hr.n);
+      var_set_num(vm, "ISDIR", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# ensureparent → %s created=%d\n", absbuf, created);
+      bump(vm); return 1;
+    }
     /* SYS BASENAME|LEAF path — final path component → LAST/BASENAME
      * SYS DIRNAME|PARENT path — parent directory → LAST/DIRNAME
      * Usability: split JOIN/TMP/WHICH paths without shell basename(1). */
@@ -26622,6 +26704,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"GETFLAG", "GETFLAG name[,|alt] [OR ENV n]* [OR fb] — string peel · CLI>ENV>default · GETFLAG_SRC"},
       {"GETFLAGPATH", "GETFLAGPATH|FLAGPATH name[,|alt] [OR ENV n]* [OR path] — path peel + ABSPATH · EXIST · soft twin of REQUIRE FLAGPATH"},
       {"GETFLAGDIR", "GETFLAGDIR|MKFLAGDIR name[,|alt] [OR ENV n]* [OR path] — path peel + ABSPATH + mkdir -p · FLAGDIR"},
+      {"ENSUREPARENT", "ENSUREPARENT|MKPARENT path|LAST — dirname + mkdir -p · WRITE parent without DIRNAME+MKDIR"},
+      {"SYS ENSUREPARENT", "SYS ENSUREPARENT|MKPARENT path — dirname + mkdir -p · twin of top-level ENSUREPARENT"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -26697,6 +26781,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ROOT", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TMP", "SYS TMP|TEMP|TMPDIR — portable temp dir → LAST/TMP"},
       {"SYS MKDIR", "SYS MKDIR path — mkdir -p · OK if dir exists"},
+      {"SYS ENSUREPARENT", "SYS ENSUREPARENT|MKPARENT path — mkdir -p dirname(path) · file WRITE prep"},
       {"SYS JOIN", "SYS JOIN|PATH a b — portable path join a/b → LAST (plate paths)"},
       {"SYS PATH", "SYS PATH a b — alias of SYS JOIN"},
       {"SYS BASENAME", "SYS BASENAME|LEAF path — final component → LAST"},
@@ -30024,6 +30109,88 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# getflagdir %s hit=%s created=%d → %s src=%s\n",
               name, hitnm, created, absbuf, src_tag);
+    bump(vm); return 1;
+  }
+  /* ENSUREPARENT|MKPARENT path — top-level twin of SYS ENSUREPARENT.
+   * dirname(path) then mkdir -p. LAST = parent dir · CREATED 0|1.
+   * Usability: GETFLAGPATH out; ENSUREPARENT LAST; WRITE without SYS soup. */
+  if (kw(&L->cur,"ENSUREPARENT") || kw(&L->cur,"MKPARENT") || kw(&L->cur,"PARENTMKDIR") ||
+      kw(&L->cur,"MKDIRPARENT") || kw(&L->cur,"ENSURE_PARENT") || kw(&L->cur,"PARENTDIRMK") ||
+      kw(&L->cur,"MAKEDIRPARENT") || kw(&L->cur,"ENSUREDIRPARENT")){
+    char path[512], parent[512], absbuf[CUBALC_HOST_STR_MAX];
+    const char *slash;
+    size_t n;
+    int created = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    path[0] = 0;
+    if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+      fail_at(vm, L, "ENSUREPARENT needs path — ENSUREPARENT LAST or \"a/b/c.json\"");
+      return -1;
+    }
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "ENSUREPARENT: empty path");
+      var_set_str(vm, "ERR", "ENSUREPARENT: empty path");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "ENSUREPARENT_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    n = strlen(path);
+    while (n > 1 && (path[n - 1] == '/' || path[n - 1] == '\\')) {
+      path[n - 1] = 0;
+      n--;
+    }
+    slash = cubalc_path_slash(path);
+    if (slash && slash != path) {
+      size_t dn = (size_t)(slash - path);
+      if (dn >= sizeof parent) dn = sizeof parent - 1;
+      memcpy(parent, path, dn);
+      parent[dn] = 0;
+    } else if (slash && slash == path) {
+      snprintf(parent, sizeof parent, "%c", path[0] == '\\' ? '\\' : '/');
+    } else {
+      snprintf(parent, sizeof parent, ".");
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+    else
+      snprintf(absbuf, sizeof absbuf, "%s", parent);
+    created = (cubalc_host_exists(absbuf) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absbuf, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "ENSUREPARENT: mkdir failed";
+      var_set_str(vm, "LAST", absbuf);
+      var_set_str(vm, "DIRNAME", absbuf);
+      var_set_str(vm, "PARENT", absbuf);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absbuf);
+      vm->last_n = (long)strlen(absbuf);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "ENSUREPARENT_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    if (hr.str[0])
+      snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+    var_set_str(vm, "LAST", absbuf);
+    var_set_str(vm, "DIRNAME", absbuf);
+    var_set_str(vm, "PARENT", absbuf);
+    var_set_str(vm, "ENSUREPARENT", absbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absbuf);
+    vm->last_n = (long)strlen(absbuf);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+    var_set_num(vm, "MKDIR_N", hr.n);
+    var_set_num(vm, "ISDIR", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# ensureparent → %s created=%d\n", absbuf, created);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]

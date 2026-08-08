@@ -500,6 +500,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 470. ~~**`GETFLAGDIR` / `MKFLAGDIR`**~~ **done** (path flag peel + ABSPATH + mkdir -p · --out dirs without MKDIR glue).
 471. ~~**`RESTPATHS` / `POSPATHS`**~~ **done** (positional files → absolute path bag · EXIST count · no EACH+REALPATH).
 472. ~~**`NTHPOSPATH` / `POSNPATH`**~~ **done** (Nth positional → absolute path · EXIST · OR fallback · no NTHPOS+REALPATH).
+473. ~~**`ENSUREPARENT` / `MKPARENT`**~~ **done** (dirname + mkdir -p · file WRITE prep after GETFLAGPATH · no DIRNAME+MKDIR glue).
 
 ## Tick protocol
 

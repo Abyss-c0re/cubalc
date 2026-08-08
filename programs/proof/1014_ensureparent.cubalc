@@ -1,0 +1,107 @@
+# ENSUREPARENT / MKPARENT — dirname + mkdir -p for file WRITE prep
+# Usability: GETFLAGPATH out then ENSUREPARENT without DIRNAME + MKDIR glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_ep_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# nested file path under missing dirs
+SYS JOIN root "a/b/c/report.json"
+LET fpath = LAST
+SYS EXIST root
+ASSERT LAST_N == 1
+SYS JOIN root "a"
+SYS EXIST LAST
+ASSERT LAST_N == 0
+
+# top-level ENSUREPARENT creates a/b/c
+ENSUREPARENT fpath
+ASSERT OK == 1
+ASSERT ENSUREPARENT_CREATED == 1
+ASSERT ISDIR == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "c"
+ASSERT LAST_N == 1
+SYS ISDIR LAST
+ASSERT LAST_N == 1
+# intermediate dirs exist
+SYS JOIN root "a/b"
+SYS ISDIR LAST
+ASSERT LAST_N == 1
+
+# WRITE into ensured parent
+SYS WRITE fpath "{\"ok\":1}"
+ASSERT OK == 1
+SYS ISFILE fpath
+ASSERT LAST_N == 1
+
+# second call: already exists → CREATED=0
+ENSUREPARENT fpath
+ASSERT OK == 1
+ASSERT ENSUREPARENT_CREATED == 0
+SYS ENDS LAST "c"
+ASSERT LAST_N == 1
+
+# bare basename after CHDIR → parent abs is cwd
+SYS CHDIR root
+ENSUREPARENT "leaf_only.txt"
+ASSERT OK == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS EQS LAST root
+ASSERT LAST_N == 1
+SYS WRITE "leaf_only.txt" "x"
+ASSERT OK == 1
+
+# MKPARENT alias with absolute nested path
+SYS JOIN root "x/y/z.out"
+LET z = LAST
+MKPARENT z
+ASSERT OK == 1
+ASSERT ENSUREPARENT_CREATED == 1
+SYS ENDS LAST "y"
+ASSERT LAST_N == 1
+SYS WRITE z "z"
+ASSERT OK == 1
+SYS ISFILE z
+ASSERT LAST_N == 1
+
+# empty soft
+ENSUREPARENT ""
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# CLI-style: GETFLAGPATH out then ENSUREPARENT LAST
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV SET CUBALC_ARGC "0"
+SYS JOIN root "cli/deep/out.json"
+LET outp = LAST
+GETFLAGPATH out OR outp
+LET file = LAST
+ENSUREPARENT file
+ASSERT OK == 1
+SYS WRITE file "plate"
+ASSERT OK == 1
+SYS ISFILE file
+ASSERT LAST_N == 1
+
+# cleanup
+SYS CHDIR td
+SYS WALK root
+SYS RMALL LAST
+SYS RM root
+
+PRINT "ensureparent ok"
