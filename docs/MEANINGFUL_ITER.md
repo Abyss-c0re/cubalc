@@ -548,6 +548,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 518. ~~**`JSONINC` / `JINC` / `JSONDEC`**~~ **done** (bump numeric plate key · default ±1 · no JSONN+arith+JSONSET glue).
 519. ~~**`JSONENSURE` / `JDEFAULT` / `JSONDEFAULT`**~~ **done** (set plate key only if missing · agent boot defaults · no clobber).
 520. ~~**`JSONPICK` / `JSONKEEP` / `JKEEP`**~~ **done** (keep listed plate keys · raw values · strip noise for peer/log).
+521. ~~**`JSONRENAME` / `JRENAME` / `JSONMV`**~~ **done** (rename plate key · raw value kept · promote tmp→status).
 
 ## Tick protocol
 

@@ -219,6 +219,10 @@ int cubalc_host_json_get_raw(const char *json, const char *key, cubalc_host_resu
 /* keep only listed top-level keys (newline bag order). r->str=new object · r->n=kept.
  * Missing keys skipped. Raw values preserved. Empty keys bag → {}. */
 int cubalc_host_json_pick(const char *json, const char *keys_nl, cubalc_host_result *r);
+/* rename top-level key old→new preserving raw value. r->n=1 renamed|0 missing (copy).
+ * If new exists, value is overwritten. Same name no-op with n=1 if present. */
+int cubalc_host_json_rename(const char *json, const char *oldk, const char *newk,
+                            cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

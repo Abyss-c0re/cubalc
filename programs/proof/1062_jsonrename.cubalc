@@ -1,0 +1,82 @@
+# JSONRENAME / JRENAME / JSONMV — rename top-level plate key, keep raw value
+# Promote tmp→status without get_raw+JSONDEL+JSONSET glue.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "tmp" "ready" "n" 3 "ok" 1
+LET plate = LAST
+
+# rename present key
+SYS JSONRENAME plate "tmp" "status"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONRENAME_N == 1
+ASSERT JSONRENAME_FROM == "tmp"
+ASSERT JSONRENAME_TO == "status"
+LET plate = LAST
+SYS JSON "status" FROM plate
+ASSERT LAST == "ready"
+SYS JSONHAS "tmp" plate
+ASSERT LAST_N == 0
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 3
+
+# soft miss
+SYS JSONRENAME plate "nope" "x"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+LET plate = LAST
+SYS JSONHAS "x" plate
+ASSERT LAST_N == 0
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 3
+
+# overwrite dest if present
+SYS JSONOBJ "a" 10 "b" 20
+SYS JSONRENAME LAST "a" "b"
+ASSERT LAST_N == 1
+LET p2 = LAST
+SYS JSONN "b" FROM p2
+ASSERT LAST_N == 10
+SYS JSONHAS "a" p2
+ASSERT LAST_N == 0
+
+# same name no-op
+SYS JSONOBJ "k" 7
+SYS JSONRENAME LAST "k" "k"
+ASSERT LAST_N == 1
+SYS JSONN "k" FROM LAST
+ASSERT LAST_N == 7
+
+# 2-arg on LAST
+SYS JSONOBJ "old" "v" "keep" 1
+SYS JSONRENAME "old" "new"
+ASSERT LAST_N == 1
+LET p3 = LAST
+SYS JSON "new" FROM p3
+ASSERT LAST == "v"
+SYS JSONN "keep" FROM p3
+ASSERT LAST_N == 1
+
+# numeric raw preserved
+SYS JSONOBJ "cnt" 42 "tag" "x"
+SYS JSONRENAME LAST "cnt" "count"
+ASSERT LAST_N == 1
+SYS JSONN "count" FROM LAST
+ASSERT LAST_N == 42
+
+# aliases
+SYS JRENAME "{\"t\":1,\"u\":2}" "t" "v"
+ASSERT LAST_N == 1
+LET al = LAST
+SYS JSONN "v" FROM al
+ASSERT LAST_N == 1
+SYS JSONHAS "t" al
+ASSERT LAST_N == 0
+SYS JSONMV "{\"z\":9}" "z" "zz"
+ASSERT LAST_N == 1
+SYS JSONN "zz" FROM LAST
+ASSERT LAST_N == 9
+
+PRINT "jsonrename ok"
+ASSERT OK == 1
