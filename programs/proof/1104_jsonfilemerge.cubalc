@@ -1,0 +1,96 @@
+# JSONFILEMERGE / OVERLAYPLATE — multi-key load-merge-save JSON plate file
+# Usability: apply partial agent status without EACH+UPDATEPLATE or LOAD+MERGE+SAVE.
+# Note: MERGEPLATE remains in-memory JSONMERGE alias.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_jsonfilemerge"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS JOIN dir "nested/fresh.json"
+LET deep = LAST
+
+# seed base plate
+SYS JSONOBJ "role" "worker" "n" 1 "keep" "yes"
+SYS SAVEPLATE path LAST
+ASSERT OK == 1
+
+# --- merge overlay: update n, add status, keep role ---
+SYS JSONOBJ "n" 9 "status" "ready"
+LET over = LAST
+SYS JSONFILEMERGE path over
+ASSERT OK == 1
+ASSERT JSONFILEMERGE_FILE == 1
+ASSERT JSONFILEMERGE_CREATED == 0
+ASSERT LAST_N == 2
+LET plate = LAST
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 9
+SYS JSON "status" FROM plate
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+SYS JSON "role" FROM plate
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSON "keep" FROM plate
+SYS EQS LAST "yes"
+ASSERT LAST_N == 1
+
+# --- aliases ---
+SYS JSONOBJ "phase" "run"
+SYS OVERLAYPLATE path LAST
+ASSERT OK == 1
+SYS PEEKPLATE path "phase"
+SYS EQS LAST "run"
+ASSERT LAST_N == 1
+SYS JSONOBJ "tick" 1
+SYS MERGEPLATEFILE path LAST
+ASSERT JSONFILEMERGE_FILE == 1
+SYS JSONOBJ "tick" 2
+SYS APPLYPLATE path LAST
+SYS PEEKPLATE path "tick"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+SYS JSONOBJ "tag" "a"
+SYS PLATEOVERLAY path LAST
+SYS PEEKPLATE path "tag"
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# --- on-disk verify ---
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+SYS JSONHASALL LAST "role" "n" "keep" "status" "phase" "tick" "tag"
+ASSERT LAST_N == 1
+
+# --- create-on-miss nested path ---
+SYS RM deep
+SYS JSONOBJ "boot" 1 "role" "seed"
+SYS JSONFILEMERGE deep LAST
+ASSERT OK == 1
+ASSERT JSONFILEMERGE_CREATED == 1
+ASSERT JSONFILEMERGE_FILE == 0
+SYS LOADPLATE deep
+ASSERT LOADPLATE_HIT == 1
+LET loaded = LAST
+SYS JSONN "boot" FROM loaded
+ASSERT LAST_N == 1
+SYS JSON "role" FROM loaded
+SYS EQS LAST "seed"
+ASSERT LAST_N == 1
+
+# --- empty overlay {} applies 0 keys, keeps base ---
+SYS JSONOBJ
+LET empty = LAST
+SYS JSONFILEMERGE path empty
+ASSERT OK == 1
+ASSERT LAST_N == 0
+SYS PEEKPLATE path "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+PRINT "jsonfilemerge ok"
