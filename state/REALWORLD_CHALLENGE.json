@@ -584,6 +584,6 @@
     "GETFLAGDIR mkdir -p + RESTPATHS multi abs inventory green",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "1fe2652d684e250f8a95f11dce77cd1328235497",
   "ts": "2026-08-08T02:56:00Z"
 }
