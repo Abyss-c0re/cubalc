@@ -505,6 +505,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 475. ~~**`RESTPOSPATHS` / `TAILPATHS`**~~ **done** (files after subcommand → abs path bag · EXIST_N · no RESTPOS+EACH+REALPATH).
 476. ~~**`WRITEOUT` / `PUTOUT`**~~ **done** (ENSUREPARENT + WRITE one-shot · LAST=abs file · plate dumps without DIRNAME glue).
 477. ~~**`APPENDOUT` / `LOGOUT`**~~ **done** (ENSUREPARENT + APPEND line · nested agent logs without DIRNAME+APPEND glue).
+478. ~~**`WRITEOUTATOMIC` / `SAFEWRITEOUT`**~~ **done** (ENSUREPARENT + temp+rename write · multi-agent nested plates).
 
 ## Tick protocol
 
