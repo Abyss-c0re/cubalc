@@ -1,0 +1,86 @@
+# NEEDP / HASP / HASPALL / KEYSP — PLATE contract + discovery after plate_boot
+# Usability: no REQUIRE JSONHASALL PLATE / JSONKEYS PLATE / GETP miss ERR glue.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_needp"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS RM path
+
+DEFAULT PLATE_PATH = path
+DEFAULT PLATE_SEED = "{\"n\":1,\"ok\":true,\"role\":\"worker\"}"
+INCLUDE plate_boot
+ASSERT OK == 1
+
+# --- KEYSP bag ---
+KEYSP
+ASSERT OK == 1
+ASSERT KEYSP_N == 3
+ASSERT LAST_N == 3
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+KEYSP
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 1
+KEYSP
+SYS HASLINE LAST "role"
+ASSERT LAST_N == 1
+
+# --- HASP soft single ---
+HASP "n"
+ASSERT OK == 1
+ASSERT HASP_HIT == 1
+ASSERT LAST_N == 1
+HASP "missing"
+ASSERT OK == 1
+ASSERT HASP_HIT == 0
+ASSERT LAST_N == 0
+# soft miss keeps OK=1 (no sticky fail)
+ASSERT OK == 1
+
+# --- HASPALL soft multi ---
+HASPALL "n" "ok" "role"
+ASSERT OK == 1
+ASSERT HASPALL_N == 1
+ASSERT LAST_N == 1
+HASPALL "n" "status"
+ASSERT OK == 1
+ASSERT HASPALL_N == 0
+ASSERT LAST_N == 0
+# miss bag names the gap
+SYS HAS LAST "status"
+ASSERT LAST_N == 1
+ASSERT HASPALL_MISS_N == 1
+
+# --- NEEDP success ---
+NEEDP "n" "ok"
+ASSERT OK == 1
+ASSERT NEEDP_N == 1
+
+# REQUIREP alias
+REQUIREP "role"
+ASSERT REQUIREP_N == 1
+
+# IF HASP branch
+HASP "role"
+IF LAST_N THEN
+  SETP "seen" 1
+END
+GETP "seen"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# HELP
+HELP NEEDP
+SYS HAS LAST "PLATE"
+ASSERT LAST_N == 1
+HELP KEYSP
+SYS HAS LAST "key"
+ASSERT LAST_N == 1
+
+PRINT "needp ok"

@@ -35403,6 +35403,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DEFAULTP", "DEFAULTP|ENSUREP key value — set PLATE key only if missing · no clobber"},
       {"ENSUREP", "ENSUREP alias of DEFAULTP"},
       {"TOGGLEP", "TOGGLEP key — flip PLATE flag 0↔1 · miss→1 · write-back"},
+      {"NEEDP", "NEEDP key… — fail-fast if PLATE missing keys · missing listed · soft twin HASPALL"},
+      {"REQUIREP", "REQUIREP alias of NEEDP"},
+      {"HASP", "HASP key — soft 0|1 if PLATE has key · IF guards · no GETP miss ERR"},
+      {"HASPALL", "HASPALL key… — soft 0|1 if PLATE has every key · contract probe"},
+      {"KEYSP", "KEYSP — PLATE key bag → LAST · LAST_N=count · no JSONKEYS glue"},
       {"USAGE", "USAGE [\"text\"] — sticky CLI usage · REQUIRE ARG/ARGC/FLAG fails append tip"},
       {"HELPFLAG", "HELPFLAG|AUTOHELP [name|,|alt] — if --help|-h present print USAGE and EXIT 0 · default help|h|usage"},
       {"VERSIONFLAG", "VERSIONFLAG|VERFLAG [name|,|alt] — if --version|-V print VERSION/PROG_VERSION and EXIT 0 · default version|V|ver"},
@@ -37688,6 +37693,248 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# togglep key=%s %ld→%ld\n", key, cur ? 1L : 0L, nv);
     bump(vm); return 1;
+  }
+  /* NEEDP|REQUIREP key… — fail-fast if conventional PLATE missing any key.
+   * HASP key — soft single-key presence on PLATE → LAST_N 0|1 (no ERR on miss).
+   * HASPALL key… — soft multi-key all-present → LAST_N 0|1 · HIT=found.
+   * KEYSP — bag of PLATE keys → LAST · LAST_N=count (PLATE content kept in var).
+   * Usability: plate contract + discovery after plate_boot without
+   * REQUIRE JSONHASALL PLATE … / JSONKEYS PLATE / GETP miss sticky ERR glue:
+   *   INCLUDE plate_boot
+   *   NEEDP "n" "ok"
+   *   HASP "debug"
+   *   IF LAST_N THEN TOGGLEP "debug" END
+   *   KEYSP
+   * NEEDP lists missing keys in error (soft twin HASPALL / JSONMISS). */
+  if (kw(&L->cur,"NEEDP") || kw(&L->cur,"REQUIREP") || kw(&L->cur,"PLATE_NEED") ||
+      kw(&L->cur,"NEEDPLATEK") || kw(&L->cur,"REQUIRE_P") ||
+      kw(&L->cur,"HASP") || kw(&L->cur,"PLATE_HAS") || kw(&L->cur,"MHASP") ||
+      kw(&L->cur,"HASPALL") || kw(&L->cur,"PLATE_HASALL") || kw(&L->cur,"MHASPALL") ||
+      kw(&L->cur,"KEYSP") || kw(&L->cur,"PLATE_KEYS") || kw(&L->cur,"MKEYSP") ||
+      kw(&L->cur,"KEYS_P") || kw(&L->cur,"LISTPKEYS")) {
+    char plate[CUBALC_HOST_STR_MAX], keys_nl[CUBALC_HOST_STR_MAX];
+    char arg[CUBALC_HOST_STR_MAX], key[96];
+    cubalc_host_result hr, miss;
+    int is_need = 0, is_has = 0, is_hasall = 0, is_keys = 0;
+    size_t olen = 0;
+    int aln = L->cur.line;
+    Var *pv;
+
+    if (kw(&L->cur,"NEEDP") || kw(&L->cur,"REQUIREP") || kw(&L->cur,"PLATE_NEED") ||
+        kw(&L->cur,"NEEDPLATEK") || kw(&L->cur,"REQUIRE_P"))
+      is_need = 1;
+    else if (kw(&L->cur,"HASPALL") || kw(&L->cur,"PLATE_HASALL") || kw(&L->cur,"MHASPALL"))
+      is_hasall = 1;
+    else if (kw(&L->cur,"HASP") || kw(&L->cur,"PLATE_HAS") || kw(&L->cur,"MHASP"))
+      is_has = 1;
+    else
+      is_keys = 1;
+
+    lex_next(L);
+    plate[0] = 0; keys_nl[0] = 0; key[0] = 0;
+    pv = var_get(vm, "PLATE", 0);
+    if (pv && pv->is_str && pv->sval[0])
+      snprintf(plate, sizeof plate, "%s", pv->sval);
+    else
+      snprintf(plate, sizeof plate, "%s", "{}");
+
+    if (is_keys) {
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_keys(plate, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "KEYSP_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "KEYSP: fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "KEYSP: fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "KEYSP", hr.str);
+      var_set_num(vm, "KEYSP_N", hr.n);
+      var_set_num(vm, "JSONKEYS_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# keysp n=%ld\n", hr.n);
+      bump(vm); return 1;
+    }
+
+    if (is_has) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long kv = parse_expr(vm, L);
+        snprintf(key, sizeof key, "%ld", kv);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, key, sizeof key) != 0)
+          key[0] = 0;
+      } else {
+        fail(vm, "HASP key — need key");
+        return -1;
+      }
+      if (!key[0]) {
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "HASP_N", 0);
+        var_set_num(vm, "OK", 1); /* soft probe */
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_get(plate, key, &hr) == 0) {
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_num(vm, "HASP_N", 1);
+        var_set_num(vm, "HASP_HIT", 1);
+        var_set_str(vm, "HASP_KEY", key);
+        var_set_num(vm, "OK", 1);
+        /* LAST kept as probe result "1" for IF LAST_N; value not needed */
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "1");
+      } else {
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASP_N", 0);
+        var_set_num(vm, "HASP_HIT", 0);
+        var_set_str(vm, "HASP_KEY", key);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# hasp key=%s hit=%ld\n", key, vm->last_n);
+      bump(vm); return 1;
+    }
+
+    /* NEEDP / HASPALL: collect keys */
+    while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+           L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"ELSE") ||
+           kw(&L->cur,"ELIF") || kw(&L->cur,"FOR") || kw(&L->cur,"WHILE") ||
+           kw(&L->cur,"LOOP") || kw(&L->cur,"ASSERT") || kw(&L->cur,"PRINT") ||
+           kw(&L->cur,"LET") || kw(&L->cur,"SYS") || kw(&L->cur,"SETP") ||
+           kw(&L->cur,"INCP") || kw(&L->cur,"DELP") || kw(&L->cur,"GETP") ||
+           kw(&L->cur,"MERGEP") || kw(&L->cur,"DEFAULTP") || kw(&L->cur,"TOGGLEP") ||
+           kw(&L->cur,"NEEDP") || kw(&L->cur,"HASP") || kw(&L->cur,"KEYSP") ||
+           kw(&L->cur,"INCLUDE") || kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") ||
+           kw(&L->cur,"PASS") || kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT")))
+        break;
+      arg[0] = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long kv = parse_expr(vm, L);
+        snprintf(arg, sizeof arg, "%ld", kv);
+      } else if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+        break;
+      }
+      if (!arg[0]) continue;
+      if (olen > 0) {
+        if (olen + 1 >= sizeof keys_nl) break;
+        keys_nl[olen++] = '\n';
+        keys_nl[olen] = 0;
+      }
+      {
+        size_t al = strlen(arg);
+        if (olen + al + 1 >= sizeof keys_nl) break;
+        memcpy(keys_nl + olen, arg, al + 1);
+        olen += al;
+      }
+    }
+    if (!keys_nl[0]) {
+      if (is_need) {
+        fail(vm, "NEEDP key… — need at least one required key");
+        return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "HASPALL_N", 0);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_has_keys(plate, keys_nl, 1, &hr) != 0) {
+      if (is_need) {
+        fail(vm, "NEEDP: plate key check failed");
+        return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "HASPALL_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "HASPALL: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "HASPALL: fail");
+      bump(vm); return 1;
+    }
+
+    if (is_need) {
+      if (hr.n == 0) {
+        char msg[320], flat[160];
+        size_t mi = 0;
+        const char *mp;
+        memset(&miss, 0, sizeof miss);
+        cubalc_host_json_filter_req_keys(plate, keys_nl, 0, &miss);
+        flat[0] = 0;
+        for (mp = miss.str; *mp && mi + 1 < sizeof flat; mp++) {
+          if (*mp == '\n' || *mp == '\r') {
+            if (mi > 0 && flat[mi - 1] != ',') {
+              flat[mi++] = ',';
+              if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+            }
+          } else {
+            flat[mi++] = *mp;
+          }
+        }
+        flat[mi] = 0;
+        if (!flat[0])
+          snprintf(flat, sizeof flat, "?");
+        snprintf(msg, sizeof msg,
+                 "NEEDP missing line %d: %s — soft twin HASPALL / JSONMISS",
+                 aln, flat);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "NEEDP_N", 1);
+      var_set_num(vm, "NEEDP_HIT", (long)hr.code);
+      var_set_num(vm, "REQUIREP_N", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->res) vm->res->asserts_ok++;
+      if (vm->trace)
+        fprintf(vm->trace, "# needp hit=%d ok\n", hr.code);
+      bump(vm); return 1;
+    }
+
+    /* HASPALL soft */
+    {
+      long hit = hr.n; /* 0|1 all present */
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "HASPALL_N", hit);
+      var_set_num(vm, "HASPALL_HIT", (long)hr.code);
+      var_set_num(vm, "JSONHASALL_HIT", (long)hr.code);
+      if (hit) {
+        var_set_str(vm, "LAST", plate);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      } else {
+        memset(&miss, 0, sizeof miss);
+        cubalc_host_json_filter_req_keys(plate, keys_nl, 0, &miss);
+        var_set_str(vm, "LAST", miss.str);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", miss.str);
+        var_set_str(vm, "HASPALL_MISS", miss.str);
+        var_set_num(vm, "HASPALL_MISS_N", miss.n);
+      }
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# haspall hit=%ld found=%d\n", hit, hr.code);
+      bump(vm); return 1;
+    }
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.
    * Bare USAGE re-echoes stored USAGE (or empty). Does not change OK/ERR.

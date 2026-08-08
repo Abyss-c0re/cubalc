@@ -1,0 +1,5 @@
+# NEEDP fail-fast when required PLATE keys missing
+HOLD_FLASH 1
+LET PLATE = "{\"n\":0}"
+NEEDP "n" "status"
+PRINT "should not reach"
