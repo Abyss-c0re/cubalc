@@ -1,0 +1,14 @@
+# INCLUDE plate_save — persist agent PLATE to PLATE_PATH
+# Usability: dual of plate_boot — one INCLUDE after mutate without SAVE glue
+#
+#   DEFAULT PLATE_PATH = "state/my_agent.json"
+#   INCLUDE plate_boot
+#   # mutate PLATE …
+#   INCLUDE plate_save
+#   # file written · PLATE content kept · SAVEPLATE_* knobs set
+#
+# Override PLATE_PATH before INCLUDE. HOLD_FLASH not required.
+
+DEFAULT PLATE_PATH = "state/agent_plate.json"
+SYS SAVEPLATE PLATE_PATH PLATE
+# PLATE content remains (SAVEPLATE sets LAST = abs path only)

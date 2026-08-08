@@ -1,0 +1,68 @@
+# plate_save lib — persist PLATE after mutate without SAVE glue
+# Usability: dual of plate_boot for agent state write-back.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_plate_save"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS RM path
+
+# boot seed
+DEFAULT PLATE_PATH = path
+DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true}"
+INCLUDE plate_boot
+ASSERT OK == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 0
+
+# mutate in memory
+SYS JSONINC PLATE "n"
+LET PLATE = LAST
+SYS JSONSET PLATE "role" "worker"
+LET PLATE = LAST
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+
+# persist via INCLUDE
+INCLUDE plate_save
+ASSERT OK == 1
+ASSERT SAVEPLATE_OK == 1
+# PLATE content still available after save
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+SYS JSON "role" FROM PLATE
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# durable on disk
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+LET loaded = LAST
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 1
+SYS JSON "role" FROM loaded
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSON "ok" FROM loaded
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# second mutate + save round-trip
+SYS JSONINC PLATE "n"
+LET PLATE = LAST
+INCLUDE plate_save
+SYS LOADPLATE path
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 2
+
+# which/libs discovery
+SYS WHICH plate_save
+SYS HAS LAST "plate_save"
+ASSERT LAST_N == 1
+
+PRINT "plate_save ok"
