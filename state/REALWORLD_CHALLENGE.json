@@ -1,65 +1,65 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 187,
-  "program": "programs/realworld/tree_has_slice_page_board.cubalc",
-  "theme": "HASINTREE soft content-exists + SLICEINTREE path window page under tree",
-  "version": "1.15.500-usability",
+  "iter": 188,
+  "program": "programs/realworld/agent_json_plate_peel_board.cubalc",
+  "theme": "JSONKEYS + JSONHAS + JSON key FROM multi-field agent STATUS.json peels",
+  "version": "1.15.503-usability",
   "pass": true,
-  "prior_note": "iter 186 TAKEINTREE+NTHINTREE+FORMATPATHLINE; this iter first realworld HASINTREE(1049)+SLICEINTREE(1050)",
+  "prior_note": "iter 187 HASINTREE+SLICEINTREE; this iter first realworld JSONKEYS/JSONHAS(1052)+JSON FROM(1053)",
   "tests": [
     {
       "name": "seed",
-      "cmd": "WRITEOUT nested multi-file logs",
+      "cmd": "WRITEOUT STATUS.json plate",
       "ok": true,
       "note": "seed"
     },
     {
-      "name": "has",
-      "cmd": "HASINTREE error \u2192 HIT=1 path mid.txt; LAST keep preserve-me",
+      "name": "keys",
+      "cmd": "JSONKEYS \u2192 6 top-level; nested not x",
       "ok": true,
-      "note": "HASINTREE"
+      "note": "JSONKEYS"
+    },
+    {
+      "name": "has",
+      "cmd": "JSONHAS version literal EQS branch \u2192 HIT=1",
+      "ok": true,
+      "note": "JSONHAS"
     },
     {
       "name": "has_miss",
-      "cmd": "HASINTREE zzzz \u2192 HIT=0 soft miss exit0",
+      "cmd": "unknown key soft miss shell 0",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "page",
-      "cmd": "SLICEINTREE start0 count2 \u2192 mid.txt z.txt",
+      "name": "peel",
+      "cmd": "JSON version FROM \u2192 1.15.503; n\u21927",
       "ok": true,
-      "note": "SLICEINTREE"
+      "note": "FROM"
     },
     {
-      "name": "page_mid",
-      "cmd": "start1 count1 \u2192 z.txt",
+      "name": "multi",
+      "cmd": "multi-field peel without JOIN reload + OR none",
       "ok": true,
-      "note": "window"
+      "note": "multi"
     },
     {
-      "name": "page_empty",
-      "cmd": "start9 / count0 \u2192 empty soft miss",
+      "name": "or",
+      "cmd": "role hit; missing OR fallback",
       "ok": true,
-      "note": "empty"
-    },
-    {
-      "name": "icase",
-      "cmd": "HASINTREEI+SLICEINTREEI ERROR \u2192 hit",
-      "ok": true,
-      "note": "icase"
+      "note": "OR"
     },
     {
       "name": "probe",
-      "cmd": "empty/missing root OK=0 soft",
+      "cmd": "empty {} N=0; array soft; OR fallback",
       "ok": true,
-      "note": "soft root"
+      "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_THSP_REQUIRE=1 miss/missing \u2192 shell 2",
+      "cmd": "CUBALC_AJPP_REQUIRE=1 peel miss/empty \u2192 shell 2",
       "ok": true,
-      "note": "hard EXIT"
+      "note": "hard"
     },
     {
       "name": "selftest",
@@ -980,6 +980,30 @@
       "title": "HASINTREE/SLICEINTREE walk order is sorted DFS (same family as TAKE/FIRST)",
       "detail": "Hits order mid.txt then z.txt then err.log under nested a/b. No mtime/reverse window. Agents cannot page 'newest first' without sort glue.",
       "repro": "SLICE 0 2 error \u2192 mid then z not err.log first"
+    },
+    {
+      "id": "W115",
+      "severity": "high",
+      "area": "lang|json_key",
+      "title": "JSON / JSONHAS / JSON key FROM reject variable key tokens (literals only)",
+      "detail": "Same class as HASFLAG (W13): SYS JSONHAS k plate with k=version looks for field name k not value. Agents must EQS-branch known keys into literal peels. Breaks dynamic key loops from JSONKEYS bag without CASE glue.",
+      "repro": "LET k version; JSONHAS k plate \u2192 HIT 0; JSONHAS \"version\" \u2192 1"
+    },
+    {
+      "id": "W116",
+      "severity": "med",
+      "area": "lang|json_object",
+      "title": "JSONKEYS lists object-valued keys but JSONHAS/JSON peel miss them",
+      "detail": "Plate nested:{x:1} appears in JSONKEYS bag, but JSONHAS nested and JSON nested FROM both miss (HIT=0/OK=0). Only scalar fields peel. Nested object access needs a separate path or string re-parse. False friend for agent schema discovery\u2192peel pipelines.",
+      "repro": "JSONKEYS has nested; JSONHAS nested \u2192 0; JSON nested FROM \u2192 miss"
+    },
+    {
+      "id": "W117",
+      "severity": "med",
+      "area": "lang|clear_err",
+      "title": "CLEAR_ERR intentionally sets LAST string to cleared",
+      "detail": "var_set_str LAST=cleared after wipe. Conflicts with JSONHAS/HASINTREE LAST-preserve (W112): board that JOIN preserve then CLEAR_ERR after probe loses the token; VAL became cleared. Capture LAST into a LET before CLEAR_ERR.",
+      "repro": "JOIN preserve-me; CLEAR_ERR; LAST is cleared not preserve-me"
     }
   ],
   "workarounds": [
@@ -989,7 +1013,9 @@
     "CUBALC_TSC_REQUIRE=1 for shell-visible missing root",
     "Keep VARS lean (~97) under 128 (W81)",
     "HASINTREE path: use HASINTREE_PATH/PATH not LAST after probe (W112)",
-    "SLICE empty page: check SLICEINTREE_N; pair with EXIT n under REQUIRE (W113)"
+    "SLICE empty page: check SLICEINTREE_N; pair with EXIT n under REQUIRE (W113)",
+    "JSON dynamic keys: EQS-branch literals from known schema; no var keys (W115)",
+    "Capture LAST into LET before CLEAR_ERR if probe preserved it (W117)"
   ],
   "language_gaps": [
     "Stable PARSEPATHLINE after FORMAT under agent_boot boards (W108)",
@@ -997,7 +1023,10 @@
     "Cookbook: seed\u2192take\u2192nth\u2192cite triage sample",
     "HASINTREE optional LAST=PATH mode or OUT knob for agents that want path in LAST",
     "SLICEINTREE by mtime / reverse order (still DFS like TAKEINTREE W101)",
-    "Cookbook: seed\u2192has probe\u2192page window triage under tree"
+    "Cookbook: seed\u2192has probe\u2192page window triage under tree",
+    "JSON key token resolve vars / JSONHAS OF bag-of-keys loop",
+    "JSON peel nested objects / dotted paths for object fields (W116)",
+    "CLEAR_ERR optional keep-LAST mode"
   ],
   "issues_faced": [
     "PARSEPATHLINE round-trip failed in board cite arm (W108) \u2014 trust FORMAT OK",
@@ -1005,8 +1034,10 @@
     "0-based FIRSTLINE I needs +1 for FORMAT lineno (W111)",
     "selftest 355/355",
     "HASINTREE LAST preserve made VAL=preserve-me until documented W112",
-    "selftest 355/355 green v1.15.500"
+    "selftest 355/355 green v1.15.500",
+    "variable JSON keys silently miss \u2014 fixed board with EQS literal branches (W115)",
+    "selftest 355/355 green v1.15.503"
   ],
-  "commit": "4117a32",
-  "ts": "2026-08-08T09:33:31Z"
+  "commit": "pending",
+  "ts": "2026-08-08T10:00:42Z"
 }
