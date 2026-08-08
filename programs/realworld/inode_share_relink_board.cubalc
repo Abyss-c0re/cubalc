@@ -1,0 +1,561 @@
+# inode_share_relink_board.cubalc — HARDLINKOUT + RELINKOUT plate mirror + current alias
+#
+# Real use: multi-worker agents share sealed plates via same-inode hard links into
+# nested share trees, and maintain a retargetable "current" symlink across seal
+# generations without RM+LINKOUT glue:
+#   HARDLINKOUT / HLOUT — nested same-inode plate share (1026)
+#   RELINKOUT / RELINK  — force-update nested symlink alias (1027)
+#   WRITEOUT            — seal source plate body
+#   SAMEINODE · ISLINK  — verify share + alias
+#   GETFLAGOUT src|share · GETFLAG link (see W80) · SUBCMD seal|share|relink|...
+#
+# First realworld HARDLINKOUT + RELINKOUT board (fills LINKOUT re-link gap W79).
+# Distinct from status_if_link (symlink once + soft exists) and plate_share (P2P).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_isr_$$
+#   ./out/cubalc run programs/realworld/inode_share_relink_board.cubalc \
+#     seal -- --src=/tmp/isr/plates/v1.json bodyA
+#   ./out/cubalc run ... share -- --src=... --share=/tmp/isr/share/deep/v1.json
+#   ./out/cubalc run ... relink -- --src=... --link=/tmp/isr/alias/current.json
+#
+# Plate: STATUS.txt VAL.txt META.txt ISR_REPORT.txt
+# Env: PLATE_SRC SHARE_DST CURRENT_LINK CUBALC_ISR_REQUIRE CUBALC_ISR_MIN
+#
+# Edges:
+#   HARDLINKOUT same-inode; re-share soft exists
+#   RELINKOUT first + retarget REPLACED; GETFLAG not GETFLAGOUT for link (W80)
+#   vars[128] ceiling — lean LETs required (W81)
+#   missing src soft; empty path soft; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "inode_share_relink_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "inode_share_relink -- seal|share|relink|list -- [--src=F] [--share=F] [--link=F] [body]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "mirror/plates/v1.json"
+LET src_file = LAST
+SYS JOIN state_dir "mirror/share/deep/v1.json"
+LET share_file = LAST
+SYS JOIN state_dir "mirror/alias/current.json"
+LET link_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT src|s OR ENV PLATE_SRC OR src_file
+LET src_file = LAST
+LET s_src = GETFLAGOUT_SRC
+LET s_ok = OK
+CLEAR_ERR
+GETFLAGOUT share|h OR ENV SHARE_DST OR share_file
+LET share_file = LAST
+LET h_src = GETFLAGOUT_SRC
+LET h_ok = OK
+CLEAR_ERR
+# W80: GETFLAGOUT realpath-follows existing symlinks → would RM plate target on RELINKOUT.
+GETFLAG link|k OR ENV CURRENT_LINK OR link_file
+LET link_file = LAST
+LET k_src = GETFLAG_SRC
+LET k_ok = 1
+SYS BLANK link_file
+IF LAST_N == 1 THEN
+  LET k_ok = 0
+END
+CLEAR_ERR
+
+LET body = "sealed"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET body = LAST
+END
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_ISR_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_ISR_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "ISR_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET created = 0
+LET replaced = 0
+LET same_n = 0
+LET islink_n = 0
+LET row = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "seal", "share", "relink", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "seal" THEN
+    LET op = "seal"
+  WHEN "share" THEN
+    LET op = "share"
+  WHEN "relink" THEN
+    LET op = "relink"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n s_src h_src k_src
+  CLEAR_ERR
+END
+
+SYS EQS op "seal"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF s_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "seal needs src path"
+    FAIL "seal needs src path"
+    CLEAR_ERR
+  ELSE
+    SYS CAT "body="
+    LET row = LAST
+    SYS CAT row body
+    LET row = LAST
+    WRITEOUT src_file row
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "WRITEOUT seal failed"
+    END
+    CLEAR_ERR
+    SYS CAT "seal:"
+    LET row = LAST
+    SYS CAT row body
+    LET row = LAST
+    SYS CAT row ":ok"
+    LET row = LAST
+    SYS GREPV "seal:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "seal ok"
+  END
+  PRINT_JSON admit_n bag_n s_src
+  CLEAR_ERR
+END
+
+SYS EQS op "share"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF s_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "share needs src"
+    FAIL "share needs src"
+    CLEAR_ERR
+  ELSE
+    IF h_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "share needs dest"
+      FAIL "share needs dest"
+      CLEAR_ERR
+    ELSE
+      SYS EXIST src_file
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "share needs seal first"
+        FAIL "share needs seal first"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "share needs seal first"
+        END
+      ELSE
+        HARDLINKOUT src_file share_file
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "share exists or fail"
+          FAIL "share exists or fail"
+          CLEAR_ERR
+          IF require_hit > 0 THEN
+            EXIT 2 "share failed"
+          END
+        ELSE
+          LET created = HARDLINKOUT_CREATED
+          CLEAR_ERR
+          SYS SAMEINODE src_file share_file
+          LET same_n = LAST_N
+          CLEAR_ERR
+          SYS CAT "share:"
+          LET row = LAST
+          SYS CAT row share_file
+          LET row = LAST
+          SYS CAT row ":"
+          LET row = LAST
+          SYS STR same_n
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":hl"
+          LET row = LAST
+          SYS GREPV "share:" bag
+          LET bag = LAST
+          CLEAR_ERR
+          SYS PUSH bag row
+          LET bag = LAST
+          LET bag_ch = 1
+          LET admit_n = 1
+          SYS LINES bag
+          LET bag_n = LAST_N
+          LET hit = 1
+          LET note_msg = "share ok"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n created same_n h_src
+  CLEAR_ERR
+END
+
+SYS EQS op "relink"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF s_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "relink needs src"
+    FAIL "relink needs src"
+    CLEAR_ERR
+  ELSE
+    IF k_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "relink needs link path"
+      FAIL "relink needs link path"
+      CLEAR_ERR
+    ELSE
+      SYS EXIST src_file
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "relink needs seal first"
+        FAIL "relink needs seal first"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "relink needs seal first"
+        END
+      ELSE
+        RELINKOUT src_file link_file
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "relink failed"
+          FAIL "relink failed"
+          CLEAR_ERR
+          IF require_hit > 0 THEN
+            EXIT 2 "relink failed"
+          END
+        ELSE
+          LET created = RELINKOUT_CREATED
+          LET replaced = RELINKOUT_REPLACED
+          CLEAR_ERR
+          SYS ISLINK link_file
+          LET islink_n = LAST_N
+          CLEAR_ERR
+          SYS CAT "cur:"
+          LET row = LAST
+          SYS CAT row link_file
+          LET row = LAST
+          SYS CAT row ":"
+          LET row = LAST
+          SYS STR replaced
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":rl"
+          LET row = LAST
+          SYS GREPV "cur:" bag
+          LET bag = LAST
+          CLEAR_ERR
+          SYS PUSH bag row
+          LET bag = LAST
+          LET bag_ch = 1
+          LET admit_n = 1
+          SYS LINES bag
+          LET bag_n = LAST_N
+          LET hit = 1
+          LET note_msg = "relink ok"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n created replaced islink_n k_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET row = LAST
+    SYS CAT row ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET row = LAST
+  SYS BLANK row
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs key"
+    FAIL "has needs key"
+    CLEAR_ERR
+  ELSE
+    SYS CAT row ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  HARDLINKOUT "" "x"
+  LET has_n = OK
+  CLEAR_ERR
+  RELINKOUT "" "y"
+  LET admit_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON has_n admit_n s_src h_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+# Compact report (reuse row as bag builder for meta lines)
+LET row = "schema=cubalc.inode_share_relink_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "replaced"
+LET row = LAST
+SYS STR replaced
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "same"
+LET row = LAST
+SYS STR same_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "inode_share_relink_board: done"
+PRINT_JSON hit miss bag_n created replaced same_n islink_n s_src note_msg
+EXIT 0

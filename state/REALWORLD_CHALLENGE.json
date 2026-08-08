@@ -1,41 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 176,
-  "program": "programs/realworld/status_if_link_board.cubalc",
-  "theme": "WRITEOUTIF + LOGSTAMP + LINKOUT deploy status (mtime-stable plate + stamped log + latest link)",
-  "version": "1.15.475-usability",
+  "iter": 177,
+  "program": "programs/realworld/inode_share_relink_board.cubalc",
+  "theme": "HARDLINKOUT + RELINKOUT plate mirror + retargetable current alias (same-inode share + force symlink)",
+  "version": "1.15.477-usability",
   "pass": true,
-  "prior_note": "iter 175 TOUCHOUT+MOVEOUT; this iter first realworld WRITEOUTIF(1023)+LOGSTAMP(1024)+LINKOUT(1025)",
+  "prior_note": "iter 176 WRITEOUTIF+LOGSTAMP+LINKOUT; this iter first realworld HARDLINKOUT(1026)+RELINKOUT(1027); closed LINKOUT re-link gap via RELINKOUT",
   "tests": [
     {
-      "name": "logstamp",
-      "cmd": "log twice \u2192 ISO lines in nested run.log",
+      "name": "seal",
+      "cmd": "WRITEOUT nested plate body=msg",
       "ok": true,
-      "note": "LOGSTAMP"
+      "note": "WRITEOUT"
     },
     {
-      "name": "writeoutif",
-      "cmd": "set ready CHANGED1; same CHANGED0 mtime stable; live CHANGED1",
+      "name": "share",
+      "cmd": "HARDLINKOUT \u2192 SAMEINODE=1; re-share soft exists",
       "ok": true,
-      "note": "WRITEOUTIF"
+      "note": "HARDLINKOUT"
     },
     {
-      "name": "linkout",
-      "cmd": "link latest \u2192 symlink; re-link soft exists",
+      "name": "relink",
+      "cmd": "first CREATED=1 REPLACED=0; retarget REPLACED=1 ISLINK",
       "ok": true,
-      "note": "LINKOUT"
+      "note": "RELINKOUT"
     },
     {
-      "name": "link_miss",
-      "cmd": "link without status soft",
+      "name": "getflag_link",
+      "cmd": "GETFLAG link path not GETFLAGOUT (W80)",
+      "ok": true,
+      "note": "W80 workaround"
+    },
+    {
+      "name": "var_ceiling",
+      "cmd": "lean LET ~97 VARS_N; fat board 127 silent knob drop",
+      "ok": true,
+      "note": "W81"
+    },
+    {
+      "name": "soft_miss",
+      "cmd": "share missing src; soft empty; has substring miss; probe empty",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "has_drop_gate",
-      "cmd": "has/drop/gate/soft/clear/probe",
+      "name": "unknown",
+      "cmd": "boom \u2192 EXIT 2 shell 2",
       "ok": true,
-      "note": "ops"
+      "note": "hard"
     },
     {
       "name": "selftest",
@@ -676,23 +688,58 @@
       "title": "LINKOUT creates abs symlink; re-link soft exists fail",
       "detail": "Positive: LINKOUT status latest \u2192 ISLINK abs target; second LINKOUT OK=0 sticky exists. Agents must RM link or tolerate soft miss for republish.",
       "repro": "LINKOUT st link; LINKOUT again \u2192 exists err"
+    },
+    {
+      "id": "W80",
+      "severity": "high",
+      "area": "lang|getflagout",
+      "title": "GETFLAGOUT realpath-follows existing symlinks to TARGET",
+      "detail": "GETFLAGOUT link OR path when path is already a symlink returns realpath(target) with exist=1, not the link path. Agents that then RELINKOUT/RM that path destroy the plate file and recreate a symlink on the plate path. RELINKOUT itself carefully avoids realpath(linkpath); GETFLAGOUT undoes that safety. Workaround: GETFLAG (literal) for symlink destinations; GETFLAGOUT only for regular files/dirs that need parent mkdir.",
+      "repro": "ln -s /tmp/t /tmp/l; GETFLAGOUT link OR /tmp/l -- --link=/tmp/l \u2192 LAST=/tmp/t not /tmp/l"
+    },
+    {
+      "id": "W81",
+      "severity": "high",
+      "area": "lang|vars",
+      "title": "VM vars[128] hard ceiling; new knobs silently fail when full",
+      "detail": "Var table is fixed 128 slots (name[48]). Fat agent boards (IDENTITY+GETFLAGOUT\u00d73+many LET/DEFAULT+CASE) reach n_vars\u2248127; subsequent var_set_num for RELINKOUT_CREATED/REPLACED and other op knobs silently no-ops (create returns NULL). Trace still prints C locals correctly while language knobs stay 0. Agents must lean LETs, reuse temps, or UNSET/DROP_VAR. VARS reports n; no hard-fail on overflow.",
+      "repro": "board with ~50 LET + 3 GETFLAGOUT \u2192 VARS_N 127; RELINKOUT log replaced=1 but RELINKOUT_REPLACED still 0"
+    },
+    {
+      "id": "W82",
+      "severity": "low",
+      "area": "lang|hardlinkout",
+      "title": "HARDLINKOUT CREATED is parent-mkdir flag; re-dest soft exists",
+      "detail": "Positive: HARDLINKOUT same-inode; CREATED often 0 after GETFLAGOUT already mkdirs parent (W70 class). Second HARDLINKOUT to same dest soft OK=0 exists. Prefer SAMEINODE for share verify.",
+      "repro": "HARDLINKOUT src share; SAMEINODE 1; HARDLINKOUT again OK 0"
+    },
+    {
+      "id": "W83",
+      "severity": "low",
+      "area": "lang|relinkout",
+      "title": "RELINKOUT force-replaces nested symlink; fills LINKOUT re-link gap",
+      "detail": "Positive: first link CREATED=1 REPLACED=0; retarget same path REPLACED=1 CREATED=0; READLINK peels new target. Closes W79/LINKOUT-force language_gap when agents use RELINKOUT and GETFLAG (not GETFLAGOUT) for the link path.",
+      "repro": "RELINKOUT a cur; RELINKOUT b cur \u2192 REPLACED 1 READLINK b"
     }
   ],
   "workarounds": [
-    "WRITEOUTIF st state=msg; check WRITEOUTIF_CHANGED for watcher noise",
-    "LOGSTAMP log msg for ISO lines",
-    "LINKOUT st link; RM before re-link or accept soft exists (W79)",
-    "cubalc run prog set -- --status=F ready"
+    "GETFLAG link path for symlink dests \u2014 never GETFLAGOUT on existing links (W80)",
+    "Lean LET/DEFAULT; check VARS_N before heavy ops; reuse row/bag temps (W81)",
+    "HARDLINKOUT src share; SAMEINODE for verify; soft exists on re-share",
+    "RELINKOUT src link for force current alias (not LINKOUT re-link)",
+    "cubalc run prog seal|share|relink -- --src=F --share=F --link=F body"
   ],
   "language_gaps": [
-    "LINKOUT force/replace form for latest republish",
-    "Cookbook: deploy status WRITEOUTIF+LOGSTAMP+LINKOUT"
+    "vars[] grow or hard-fail on overflow (silent 128 drop is agent footgun)",
+    "GETFLAGOUT option to not realpath (link-path mode) for alias ops",
+    "Cookbook: plate mirror HARDLINKOUT+RELINKOUT with lean VARS budget"
   ],
   "issues_faced": [
-    "WRITEOUTIF same body preserves mtime (W77)",
-    "LINKOUT re-link soft fails \u2014 document (W79)",
+    "GETFLAGOUT on existing symlink destroyed plate via RELINKOUT (W80) \u2014 fixed board to GETFLAG",
+    "vars[128] full \u2192 RELINKOUT knobs stuck at 0 despite trace (W81) \u2014 lean rewrite",
+    "WRITEOUT omit trailing NL (W5 reconfirm)",
     "selftest 355/355"
   ],
-  "commit": "0e11ffe45a1346098d4258ef4166421fbc650ca3",
-  "ts": "2026-08-08T04:59:07Z"
+  "commit": "",
+  "ts": "2026-08-08T05:30:01Z"
 }
