@@ -1679,6 +1679,6 @@
     "cycle/alias/probe failed until LAST_N replaced *HIT knobs",
     "require needed EXIT on OR fallback not only OK==0"
   ],
-  "commit": "pending",
+  "commit": "de7620c",
   "ts": "2026-08-08T18:21:05Z"
 }
