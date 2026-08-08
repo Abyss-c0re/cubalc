@@ -4514,6 +4514,358 @@ int main(int argc, char **argv) {
     free(buf);
     return 0;
   }
+  if (strcmp(cmd, "plate") == 0 || strcmp(cmd, "jsonplate") == 0 ||
+      strcmp(cmd, "platefile") == 0 || strcmp(cmd, "agent-plate") == 0) {
+    /* Usability: inspect/mutate JSON agent plate files from the CLI without a
+     * .cubalc program. Complements plate_boot/SETP/SAVEPLATE language surface.
+     *   cubalc plate show path.json
+     *   cubalc plate get  path.json key [OR default]
+     *   cubalc plate set  path.json key value
+     *   cubalc plate inc  path.json key [delta]
+     *   cubalc plate del  path.json key
+     *   cubalc plate keys path.json
+     * Bare: cubalc plate path.json  → show
+     * One JSON plate per call (cubalc.plate.v1) for agents. */
+    const char *op = "show";
+    const char *path = NULL;
+    const char *key = NULL;
+    const char *val = NULL;
+    const char *fb = NULL;
+    long delta = 1;
+    int have_fb = 0, file_hit = 0, val_kind = 0;
+    char plate[CUBALC_HOST_STR_MAX];
+    char parent[512];
+    cubalc_host_result hr, gr, keys, wr;
+    const char *body;
+    const char *slash;
+    int ai = 2;
+
+    plate[0] = 0;
+    if (argc <= 2) {
+      fprintf(stderr,
+              "usage: cubalc plate show|get|set|inc|del|keys <path.json> …\n"
+              "       cubalc plate <path.json>                 # show\n"
+              "       cubalc plate get <path> <key> [OR def]\n"
+              "       cubalc plate set <path> <key> <value>\n"
+              "       cubalc plate inc <path> <key> [delta]\n"
+              "       cubalc plate del <path> <key>\n"
+              "       cubalc plate keys <path>\n");
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+             "\"err\":\"need op and/or path\",\"version\":\"%s\","
+             "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\"]}\n",
+             CUBALC_LANG_VERSION);
+      return 2;
+    }
+
+    /* parse: op path …  OR  path (bare show) */
+    if (strcmp(argv[2], "show") == 0 || strcmp(argv[2], "dump") == 0 ||
+        strcmp(argv[2], "cat") == 0 || strcmp(argv[2], "read") == 0 ||
+        strcmp(argv[2], "get") == 0 || strcmp(argv[2], "peek") == 0 ||
+        strcmp(argv[2], "set") == 0 || strcmp(argv[2], "put") == 0 ||
+        strcmp(argv[2], "inc") == 0 || strcmp(argv[2], "bump") == 0 ||
+        strcmp(argv[2], "del") == 0 || strcmp(argv[2], "rm") == 0 ||
+        strcmp(argv[2], "drop") == 0 || strcmp(argv[2], "keys") == 0 ||
+        strcmp(argv[2], "list") == 0 || strcmp(argv[2], "ls") == 0) {
+      op = argv[2];
+      if (strcmp(op, "dump") == 0 || strcmp(op, "cat") == 0 || strcmp(op, "read") == 0)
+        op = "show";
+      else if (strcmp(op, "peek") == 0)
+        op = "get";
+      else if (strcmp(op, "put") == 0)
+        op = "set";
+      else if (strcmp(op, "bump") == 0)
+        op = "inc";
+      else if (strcmp(op, "rm") == 0 || strcmp(op, "drop") == 0)
+        op = "del";
+      else if (strcmp(op, "list") == 0 || strcmp(op, "ls") == 0)
+        op = "keys";
+      ai = 3;
+      if (argc <= 3) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"err\":\"need path\",\"version\":\"%s\"}\n",
+               op, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      path = argv[3];
+      ai = 4;
+    } else {
+      /* bare path → show */
+      op = "show";
+      path = argv[2];
+      ai = 3;
+    }
+
+    if (!path || !path[0]) {
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+             "\"err\":\"empty path\",\"version\":\"%s\"}\n", CUBALC_LANG_VERSION);
+      return 2;
+    }
+
+    /* load soft object plate */
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_read(path, &hr) == 0 && hr.str[0]) {
+      body = hr.str;
+      while (*body == ' ' || *body == '\t' || *body == '\n' || *body == '\r')
+        body++;
+      if (*body == '{') {
+        memset(&keys, 0, sizeof keys);
+        if (cubalc_host_json_keys(body, &keys) == 0) {
+          snprintf(plate, sizeof plate, "%s", body);
+          file_hit = 1;
+        }
+      }
+    }
+    if (!file_hit)
+      snprintf(plate, sizeof plate, "%s", "{}");
+
+    if (strcmp(op, "show") == 0) {
+      memset(&keys, 0, sizeof keys);
+      cubalc_host_json_keys(plate, &keys);
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"show\",\"path\":\"%s\",\"file\":%s,\"keys_n\":%ld,"
+             "\"version\":\"%s\",\"plate\":%s}\n",
+             path, file_hit ? "true" : "false", keys.n, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    if (strcmp(op, "keys") == 0) {
+      char flat[CUBALC_HOST_STR_MAX];
+      size_t i, o = 0;
+      memset(&keys, 0, sizeof keys);
+      cubalc_host_json_keys(plate, &keys);
+      flat[0] = 0;
+      for (i = 0; keys.str[i] && o + 2 < sizeof flat; i++) {
+        char c = keys.str[i];
+        if (c == '\n' || c == '\r') {
+          if (o > 0 && flat[o - 1] != ',') {
+            flat[o++] = ',';
+          }
+        } else if (c == '"' || c == '\\') {
+          flat[o++] = '_';
+        } else {
+          flat[o++] = c;
+        }
+      }
+      flat[o] = 0;
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"keys\",\"path\":\"%s\",\"file\":%s,\"n\":%ld,"
+             "\"keys\":\"%s\",\"version\":\"%s\"}\n",
+             path, file_hit ? "true" : "false", keys.n, flat, CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+    /* remaining ops need key */
+    if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+             "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"need key\",\"version\":\"%s\"}\n",
+             op, path, CUBALC_LANG_VERSION);
+      return 2;
+    }
+    key = argv[ai++];
+
+    if (strcmp(op, "get") == 0) {
+      if (ai < argc && (strcmp(argv[ai], "OR") == 0 || strcmp(argv[ai], "DEFAULT") == 0 ||
+                        strcmp(argv[ai], "ELSE") == 0)) {
+        ai++;
+        if (ai < argc) {
+          fb = argv[ai++];
+          have_fb = 1;
+        }
+      }
+      memset(&gr, 0, sizeof gr);
+      if (cubalc_host_json_get(plate, key, &gr) == 0) {
+        /* escape value lightly for JSON string field */
+        char esc[CUBALC_HOST_STR_MAX];
+        size_t i, o = 0;
+        for (i = 0; gr.str[i] && o + 2 < sizeof esc; i++) {
+          char c = gr.str[i];
+          if (c == '"' || c == '\\') {
+            esc[o++] = '\\';
+            esc[o++] = c;
+          } else if ((unsigned char)c < 32) {
+            esc[o++] = ' ';
+          } else {
+            esc[o++] = c;
+          }
+        }
+        esc[o] = 0;
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"get\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":true,"
+               "\"value\":\"%s\",\"file\":%s,\"version\":\"%s\"}\n",
+               path, key, esc, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+        return 0;
+      }
+      if (have_fb) {
+        char esc[512];
+        size_t i, o = 0;
+        for (i = 0; fb[i] && o + 2 < sizeof esc; i++) {
+          char c = fb[i];
+          if (c == '"' || c == '\\') {
+            esc[o++] = '\\';
+            esc[o++] = c;
+          } else {
+            esc[o++] = c;
+          }
+        }
+        esc[o] = 0;
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"get\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":false,"
+               "\"or\":true,\"value\":\"%s\",\"file\":%s,\"version\":\"%s\"}\n",
+               path, key, esc, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+        return 0;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+             "\"op\":\"get\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":false,"
+             "\"err\":\"key miss\",\"file\":%s,\"version\":\"%s\"}\n",
+             path, key, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+      return 1;
+    }
+
+    if (strcmp(op, "set") == 0) {
+      size_t i;
+      int allnum = 1;
+      if (ai >= argc) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"set\",\"err\":\"need value\",\"version\":\"%s\"}\n",
+               CUBALC_LANG_VERSION);
+        return 2;
+      }
+      val = argv[ai++];
+      /* raw if integer / true / false / null / starts with { or [ */
+      if (!strcmp(val, "true") || !strcmp(val, "false") || !strcmp(val, "null") ||
+          val[0] == '{' || val[0] == '[')
+        val_kind = 1;
+      else {
+        if (val[0] == '-' && val[1]) i = 1;
+        else i = 0;
+        if (!val[i]) allnum = 0;
+        for (; val[i]; i++) {
+          if (val[i] < '0' || val[i] > '9') {
+            allnum = 0;
+            break;
+          }
+        }
+        if (allnum) val_kind = 1;
+      }
+      memset(&wr, 0, sizeof wr);
+      if (cubalc_host_json_set(plate, key, val, val_kind, &wr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"set\",\"path\":\"%s\",\"key\":\"%s\",\"err\":\"%s\","
+               "\"version\":\"%s\"}\n",
+               path, key, wr.err[0] ? wr.err : "json set fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", wr.str);
+      /* mkdir parent + write */
+      slash = strrchr(path, '/');
+      if (slash && slash != path) {
+        size_t n = (size_t)(slash - path);
+        if (n >= sizeof parent) n = sizeof parent - 1;
+        memcpy(parent, path, n);
+        parent[n] = 0;
+        memset(&hr, 0, sizeof hr);
+        cubalc_host_mkdir(parent, &hr);
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_write(path, plate, &hr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"set\",\"path\":\"%s\",\"key\":\"%s\",\"err\":\"%s\","
+               "\"version\":\"%s\"}\n",
+               path, key, hr.err[0] ? hr.err : "write fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"set\",\"path\":\"%s\",\"key\":\"%s\",\"updated\":%ld,"
+             "\"bytes\":%ld,\"version\":\"%s\",\"plate\":%s}\n",
+             path, key, wr.n, hr.n, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    if (strcmp(op, "inc") == 0) {
+      long cur = 0, nv;
+      char raw[32];
+      if (ai < argc) {
+        char *end = NULL;
+        delta = strtol(argv[ai], &end, 10);
+        if (end == argv[ai]) delta = 1;
+        ai++;
+      }
+      memset(&gr, 0, sizeof gr);
+      if (cubalc_host_json_get(plate, key, &gr) == 0) {
+        char *end = NULL;
+        cur = strtol(gr.str, &end, 10);
+        if (end == gr.str) cur = 0;
+      }
+      nv = cur + delta;
+      snprintf(raw, sizeof raw, "%ld", nv);
+      memset(&wr, 0, sizeof wr);
+      if (cubalc_host_json_set(plate, key, raw, 1, &wr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"inc\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               wr.err[0] ? wr.err : "json set fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", wr.str);
+      slash = strrchr(path, '/');
+      if (slash && slash != path) {
+        size_t n = (size_t)(slash - path);
+        if (n >= sizeof parent) n = sizeof parent - 1;
+        memcpy(parent, path, n);
+        parent[n] = 0;
+        memset(&hr, 0, sizeof hr);
+        cubalc_host_mkdir(parent, &hr);
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_write(path, plate, &hr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"inc\",\"err\":\"write fail\",\"version\":\"%s\"}\n",
+               CUBALC_LANG_VERSION);
+        return 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"inc\",\"path\":\"%s\",\"key\":\"%s\",\"value\":%ld,"
+             "\"delta\":%ld,\"bytes\":%ld,\"version\":\"%s\",\"plate\":%s}\n",
+             path, key, nv, delta, hr.n, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    if (strcmp(op, "del") == 0) {
+      memset(&wr, 0, sizeof wr);
+      if (cubalc_host_json_del(plate, key, &wr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"del\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               wr.err[0] ? wr.err : "json del fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", wr.str);
+      slash = strrchr(path, '/');
+      if (slash && slash != path) {
+        size_t n = (size_t)(slash - path);
+        if (n >= sizeof parent) n = sizeof parent - 1;
+        memcpy(parent, path, n);
+        parent[n] = 0;
+        memset(&hr, 0, sizeof hr);
+        cubalc_host_mkdir(parent, &hr);
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_write(path, plate, &hr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"del\",\"err\":\"write fail\",\"version\":\"%s\"}\n",
+               CUBALC_LANG_VERSION);
+        return 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"del\",\"path\":\"%s\",\"key\":\"%s\",\"removed\":%ld,"
+             "\"bytes\":%ld,\"version\":\"%s\",\"plate\":%s}\n",
+             path, key, wr.n, hr.n, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+           "\"err\":\"unknown op\",\"op\":\"%s\",\"version\":\"%s\"}\n",
+           op, CUBALC_LANG_VERSION);
+    return 2;
+  }
   if (strcmp(cmd, "version") == 0 || strcmp(cmd, "--version") == 0 ||
       strcmp(cmd, "-V") == 0 || strcmp(cmd, "ver") == 0) {
     /* Usability: machine-readable version plate (agents skip parsing help text). */
@@ -6733,6 +7085,7 @@ int main(int argc, char **argv) {
       "    init|new|scaffold [f]  write runnable .cubalc starter (agent_boot)\n"
       "    examples|starters [p]  curated runnable programs (JSON)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
+      "    plate|jsonplate …      agent plate file get/set/inc/keys/show (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib        list programs/lib INCLUDE snippets\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
