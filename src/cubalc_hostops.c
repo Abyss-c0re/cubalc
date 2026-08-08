@@ -1734,6 +1734,97 @@ int cubalc_host_findintree(const char *root, const char *needle, int icase,
   return 0;
 }
 
+/* Sorted DFS: collect up to maxn matching file paths into bag. Stops early. */
+static void cubalc_takeintree_rec(const char *dir, const char *needle, int icase,
+                                 long maxn, char *out, size_t outsz, size_t *olen,
+                                 long *kept, int depth) {
+  DIR *d;
+  struct dirent *ent;
+  struct stat st;
+  int nnames = 0, i;
+  char names[256][256];
+  if (!dir || !dir[0] || depth > 64 || !out || !olen || !kept || maxn <= 0) return;
+  if (*kept >= maxn) return;
+  d = opendir(dir);
+  if (!d) return;
+  while ((ent = readdir(d)) != NULL && nnames < 256) {
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+    if (strlen(ent->d_name) >= 256) continue;
+    snprintf(names[nnames], sizeof names[nnames], "%s", ent->d_name);
+    nnames++;
+  }
+  closedir(d);
+  if (nnames > 1)
+    qsort(names, (size_t)nnames, sizeof names[0], cubalc_name_cmp);
+  for (i = 0; i < nnames && *kept < maxn; i++) {
+    char full[CUBALC_HOST_STR_MAX];
+    if (cubalc_join_child(dir, names[i], full, sizeof full) != 0)
+      continue;
+    if (lstat(full, &st) != 0) continue;
+    if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+        && !S_ISLNK(st.st_mode)
+#endif
+        ) {
+      cubalc_takeintree_rec(full, needle, icase, maxn, out, outsz, olen, kept, depth + 1);
+      continue;
+    }
+    if (!S_ISREG(st.st_mode)) continue;
+    if (cubalc_file_has_needle(full, needle, icase))
+      cubalc_bag_push(out, outsz, olen, kept, full);
+  }
+}
+
+/* Usability: SYS TAKEINTREE|FIRSTNINTREE root needle n — first n content matches under tree
+ * without GREPTREE+TAKE glue. r->str=path bag; r->n=count. Soft miss root → -1. */
+int cubalc_host_takeintree(const char *root, const char *needle, int icase,
+                           long maxn, cubalc_host_result *r) {
+  char abs[CUBALC_HOST_STR_MAX];
+  struct stat st;
+  cubalc_host_result hr;
+  size_t olen = 0;
+  long kept = 0;
+  r_clear(r);
+  if (!root || !root[0]) {
+    snprintf(r->err, sizeof r->err, "takeintree: empty path");
+    return -1;
+  }
+  if (!needle) needle = "";
+  if (maxn < 0) maxn = 0;
+  if (maxn > 100000) maxn = 100000;
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(root, &hr) == 0 && hr.str[0])
+    snprintf(abs, sizeof abs, "%s", hr.str);
+  else
+    snprintf(abs, sizeof abs, "%s", root);
+  if (lstat(abs, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "takeintree: missing");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "takeintree: %s", strerror(errno));
+    return -1;
+  }
+  r->str[0] = 0;
+  if (S_ISREG(st.st_mode)) {
+    if (maxn > 0 && cubalc_file_has_needle(abs, needle, icase))
+      cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, abs);
+  } else if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+             && !S_ISLNK(st.st_mode)
+#endif
+             ) {
+    cubalc_takeintree_rec(abs, needle, icase, maxn, r->str, sizeof r->str, &olen, &kept, 0);
+  } else {
+    snprintf(r->err, sizeof r->err, "takeintree: not a file or directory");
+    return -1;
+  }
+  r->n = kept;
+  r->ok = 1;
+  return 0;
+}
+
 /* Peel first/last matching line from one file. Returns 1 if hit.
  * line_out gets line text; *line_idx is 0-based index within file. */
 static int cubalc_file_findline(const char *path, const char *needle, int icase,

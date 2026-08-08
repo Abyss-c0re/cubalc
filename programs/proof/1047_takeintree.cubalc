@@ -1,0 +1,114 @@
+# TAKEINTREE / FIRSTNINTREE / HEADINTREE — first n content matches under tree
+# Path bag sample without GREPTREE+TAKE glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_tit_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# nested files · sorted DFS hits: a/b/mid, a/b/z, a/err
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "error last"
+ASSERT OK == 1
+SYS JOIN base "a/b/mid.txt"
+WRITEOUT LAST "error middle"
+ASSERT OK == 1
+SYS JOIN base "a/b/z.txt"
+WRITEOUT LAST "error z"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "ok only"
+ASSERT OK == 1
+
+# take 2 of 3 error files
+TAKEINTREE base "error" 2
+ASSERT OK == 1
+ASSERT TAKEINTREE_N == 2
+ASSERT LAST_N == 2
+ASSERT TAKEINTREE_MAX == 2
+SYS NTH 0 LAST
+SYS ENDS LAST "mid.txt"
+ASSERT LAST_N == 1
+SYS NTH 1 TAKEINTREE
+SYS ENDS LAST "z.txt"
+ASSERT LAST_N == 1
+SYS HAS TAKEINTREE "err.log"
+ASSERT LAST_N == 0
+
+# take all 3
+TAKEINTREE base "error" 10
+ASSERT TAKEINTREE_N == 3
+SYS HAS LAST "err.log"
+ASSERT LAST_N == 1
+
+# take 0 → empty
+TAKEINTREE base "error" 0
+ASSERT OK == 1
+ASSERT TAKEINTREE_N == 0
+ASSERT LAST == ""
+
+# no match
+TAKEINTREE base "zzzz" 5
+ASSERT OK == 1
+ASSERT TAKEINTREE_N == 0
+
+# case-insensitive
+TAKEINTREEI base "ERROR" 2
+ASSERT TAKEINTREE_N == 2
+
+# aliases
+FIRSTNINTREE base "error" 1
+ASSERT FIRSTNINTREE_N == 1
+SYS ENDS LAST "mid.txt"
+ASSERT LAST_N == 1
+HEADINTREE base "middle" 3
+ASSERT HEADINTREE_N == 1
+
+# SYS form
+SYS TAKEINTREE base "error" 2
+ASSERT OK == 1
+ASSERT TAKEINTREE_N == 2
+
+# single file root
+SYS JOIN base "plain.txt"
+LET p = LAST
+TAKEINTREE p "ok" 1
+ASSERT TAKEINTREE_N == 1
+TAKEINTREE p "error" 1
+ASSERT TAKEINTREE_N == 0
+
+# missing soft
+TAKEINTREE "/no/such/takeintree" "x" 1
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty soft
+TAKEINTREE "" "x" 1
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# matches FIRSTINTREE order
+FIRSTINTREE base "error"
+LET first = LAST
+TAKEINTREE base "error" 1
+SYS NTH 0 LAST
+SYS EQS LAST first
+ASSERT LAST_N == 1
+
+RMTREE base
+ASSERT OK == 1
+
+PRINT "takeintree ok"
+ASSERT OK == 1
