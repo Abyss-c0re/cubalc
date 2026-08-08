@@ -3370,6 +3370,137 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 abslink, target, created);
       bump(vm); return 1;
     }
+    /* SYS HARDLINKOUT|HLOUT existing newpath — mkdir parent of new + HARDLINK (soft).
+     * Twin of top-level HARDLINKOUT. LAST = abs new · HARDLINKOUT_SRC · LAST_N = 1. */
+    if (kw(&L->cur,"HARDLINKOUT") || kw(&L->cur,"HLOUT") || kw(&L->cur,"ENSUREHARDLINK") ||
+        kw(&L->cur,"HARDLINKPARENT") || kw(&L->cur,"LINKHARDOUT") || kw(&L->cur,"SHAREOUT") ||
+        kw(&L->cur,"HLINKOUT") || kw(&L->cur,"INODEOUT") || kw(&L->cur,"PLATEHLINK")){
+      char existing[CUBALC_HOST_STR_MAX], newpath[CUBALC_HOST_STR_MAX];
+      char abssrc[CUBALC_HOST_STR_MAX], absnew[CUBALC_HOST_STR_MAX];
+      char parent[512], absparent[CUBALC_HOST_STR_MAX];
+      const char *slash;
+      size_t n;
+      int created = 0;
+      cubalc_host_result hr;
+      lex_next(L);
+      existing[0] = 0; newpath[0] = 0;
+      abssrc[0] = 0; absnew[0] = 0;
+      parent[0] = 0; absparent[0] = 0;
+      if (resolve_str_arg(vm, L, existing, sizeof existing) != 0) {
+        fail(vm, "SYS HARDLINKOUT existing newpath");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, newpath, sizeof newpath) != 0) {
+        fail(vm, "SYS HARDLINKOUT existing newpath");
+        return -1;
+      }
+      if (!existing[0] || !newpath[0]) {
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "HARDLINKOUT: empty path");
+        var_set_str(vm, "ERR", "HARDLINKOUT: empty path");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HARDLINKOUT_N", 0);
+        var_set_num(vm, "HARDLINKOUT_CREATED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(existing, &hr) == 0 && hr.str[0])
+        snprintf(abssrc, sizeof abssrc, "%s", hr.str);
+      else
+        snprintf(abssrc, sizeof abssrc, "%s", existing);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(newpath, &hr) == 0 && hr.str[0])
+        snprintf(absnew, sizeof absnew, "%s", hr.str);
+      else
+        snprintf(absnew, sizeof absnew, "%s", newpath);
+      {
+        char work[CUBALC_HOST_STR_MAX];
+        snprintf(work, sizeof work, "%s", absnew);
+        n = strlen(work);
+        while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+          work[n - 1] = 0;
+          n--;
+        }
+        slash = cubalc_path_slash(work);
+        if (slash && slash != work) {
+          size_t dn = (size_t)(slash - work);
+          if (dn >= sizeof parent) dn = sizeof parent - 1;
+          memcpy(parent, work, dn);
+          parent[dn] = 0;
+        } else if (slash && slash == work) {
+          snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+        } else {
+          snprintf(parent, sizeof parent, ".");
+        }
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      else
+        snprintf(absparent, sizeof absparent, "%s", parent);
+      created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_mkdir(absparent, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "HARDLINKOUT: mkdir parent failed";
+        var_set_str(vm, "LAST", absnew);
+        var_set_str(vm, "HARDLINKOUT_SRC", abssrc);
+        var_set_str(vm, "HARDLINKOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", absnew);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HARDLINKOUT_N", 0);
+        var_set_num(vm, "HARDLINKOUT_CREATED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      if (hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_hardlink(abssrc, absnew, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "HARDLINKOUT: hardlink failed";
+        var_set_str(vm, "LAST", absnew);
+        var_set_str(vm, "HARDLINKOUT_SRC", abssrc);
+        var_set_str(vm, "HARDLINKOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", absnew);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HARDLINKOUT_N", 0);
+        var_set_num(vm, "HARDLINKOUT_CREATED", (long)created);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", absnew);
+      var_set_str(vm, "HARDLINKOUT", absnew);
+      var_set_str(vm, "HLOUT", absnew);
+      var_set_str(vm, "PATH", absnew);
+      var_set_str(vm, "HARDLINK", absnew);
+      var_set_str(vm, "HARDLINKOUT_SRC", abssrc);
+      var_set_str(vm, "HARDLINK_SRC", abssrc);
+      var_set_str(vm, "HARDLINKOUT_PARENT", absparent);
+      var_set_str(vm, "DIRNAME", absparent);
+      var_set_str(vm, "PARENT", absparent);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absnew);
+      vm->last_n = hr.n > 0 ? hr.n : 1;
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "HARDLINKOUT_N", vm->last_n);
+      var_set_num(vm, "HARDLINK_N", vm->last_n);
+      var_set_num(vm, "HLINK_N", vm->last_n);
+      var_set_num(vm, "HARDLINKOUT_CREATED", (long)created);
+      var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+      var_set_num(vm, "PATH_EXIST", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys hardlinkout → %s ← %s created=%d\n",
+                absnew, abssrc, created);
+      bump(vm); return 1;
+    }
     /* SYS FSYNC|SYNCFILE|FDATASYNC path — flush file data+metadata to disk.
      * LAST = path; LAST_N = 1 success / 0 soft miss; FSYNC_N mirrors LAST_N.
      * Opens O_RDONLY, fsync(fd), close. Soft miss on empty/open/fsync fail.
@@ -27918,6 +28049,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS LOGSTAMP", "SYS LOGSTAMP|STAMPLOG path msg — mkdir parent + ISO append · twin of top-level LOGSTAMP"},
       {"LINKOUT", "LINKOUT|LNOUT target linkpath — ENSUREPARENT link + SYMLINK · nested plate aliases"},
       {"SYS LINKOUT", "SYS LINKOUT|LNOUT target linkpath — mkdir parent + symlink · twin of top-level LINKOUT"},
+      {"HARDLINKOUT", "HARDLINKOUT|HLOUT existing newpath — ENSUREPARENT new + HARDLINK · nested same-inode share"},
+      {"SYS HARDLINKOUT", "SYS HARDLINKOUT|HLOUT existing newpath — mkdir parent + hardlink · twin of top-level HARDLINKOUT"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -32849,6 +32982,139 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# linkout → %s → %s created=%d\n",
               abslink, target, created);
+    bump(vm); return 1;
+  }
+  /* HARDLINKOUT|HLOUT existing newpath — ENSUREPARENT new + HARDLINK one-shot.
+   * LAST = abs new · HARDLINKOUT_SRC · HARDLINKOUT_PARENT · CREATED · LAST_N=1.
+   * Soft empty/mkdir/link fail → OK=0 sticky LAST_ERR.
+   * Usability: nested same-inode plate shares without ENSUREPARENT + HARDLINK glue. */
+  if (kw(&L->cur,"HARDLINKOUT") || kw(&L->cur,"HLOUT") || kw(&L->cur,"ENSUREHARDLINK") ||
+      kw(&L->cur,"HARDLINKPARENT") || kw(&L->cur,"LINKHARDOUT") || kw(&L->cur,"SHAREOUT") ||
+      kw(&L->cur,"HLINKOUT") || kw(&L->cur,"INODEOUT") || kw(&L->cur,"PLATEHLINK")){
+    char existing[CUBALC_HOST_STR_MAX], newpath[CUBALC_HOST_STR_MAX];
+    char abssrc[CUBALC_HOST_STR_MAX], absnew[CUBALC_HOST_STR_MAX];
+    char parent[512], absparent[CUBALC_HOST_STR_MAX];
+    const char *slash;
+    size_t n;
+    int created = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    existing[0] = 0; newpath[0] = 0;
+    abssrc[0] = 0; absnew[0] = 0;
+    parent[0] = 0; absparent[0] = 0;
+    if (resolve_str_arg(vm, L, existing, sizeof existing) != 0) {
+      fail_at(vm, L, "HARDLINKOUT needs existing newpath — HARDLINKOUT \"src.json\" \"a/b/share.json\"");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, newpath, sizeof newpath) != 0) {
+      fail_at(vm, L, "HARDLINKOUT needs newpath — HARDLINKOUT \"src.json\" \"a/b/share.json\"");
+      return -1;
+    }
+    if (!existing[0] || !newpath[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "HARDLINKOUT: empty path");
+      var_set_str(vm, "ERR", "HARDLINKOUT: empty path");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HARDLINKOUT_N", 0);
+      var_set_num(vm, "HARDLINKOUT_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(existing, &hr) == 0 && hr.str[0])
+      snprintf(abssrc, sizeof abssrc, "%s", hr.str);
+    else
+      snprintf(abssrc, sizeof abssrc, "%s", existing);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(newpath, &hr) == 0 && hr.str[0])
+      snprintf(absnew, sizeof absnew, "%s", hr.str);
+    else
+      snprintf(absnew, sizeof absnew, "%s", newpath);
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", absnew);
+      n = strlen(work);
+      while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+        work[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else if (slash && slash == work) {
+        snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+      } else {
+        snprintf(parent, sizeof parent, ".");
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "HARDLINKOUT: mkdir parent failed";
+      var_set_str(vm, "LAST", absnew);
+      var_set_str(vm, "HARDLINKOUT_SRC", abssrc);
+      var_set_str(vm, "HARDLINKOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absnew);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HARDLINKOUT_N", 0);
+      var_set_num(vm, "HARDLINKOUT_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_hardlink(abssrc, absnew, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "HARDLINKOUT: hardlink failed";
+      var_set_str(vm, "LAST", absnew);
+      var_set_str(vm, "HARDLINKOUT_SRC", abssrc);
+      var_set_str(vm, "HARDLINKOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absnew);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HARDLINKOUT_N", 0);
+      var_set_num(vm, "HARDLINKOUT_CREATED", (long)created);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    var_set_str(vm, "LAST", absnew);
+    var_set_str(vm, "HARDLINKOUT", absnew);
+    var_set_str(vm, "HLOUT", absnew);
+    var_set_str(vm, "PATH", absnew);
+    var_set_str(vm, "HARDLINK", absnew);
+    var_set_str(vm, "HARDLINKOUT_SRC", abssrc);
+    var_set_str(vm, "HARDLINK_SRC", abssrc);
+    var_set_str(vm, "HARDLINKOUT_PARENT", absparent);
+    var_set_str(vm, "DIRNAME", absparent);
+    var_set_str(vm, "PARENT", absparent);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absnew);
+    vm->last_n = hr.n > 0 ? hr.n : 1;
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "HARDLINKOUT_N", vm->last_n);
+    var_set_num(vm, "HARDLINK_N", vm->last_n);
+    var_set_num(vm, "HLINK_N", vm->last_n);
+    var_set_num(vm, "HARDLINKOUT_CREATED", (long)created);
+    var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# hardlinkout → %s ← %s created=%d\n",
+              absnew, abssrc, created);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]

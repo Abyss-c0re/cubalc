@@ -512,6 +512,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 482. ~~**`WRITEOUTIF` / `PUTIFCHANGED`**~~ **done** (write nested plate only if content differs · mtime-stable for watchers · atomic when writing).
 483. ~~**`LOGSTAMP` / `STAMPLOG`**~~ **done** (ENSUREPARENT + append `ISO msg` line · timestamped agent logs without DATE+CAT+APPENDOUT glue).
 484. ~~**`LINKOUT` / `LNOUT`**~~ **done** (ENSUREPARENT link + SYMLINK · nested plate path aliases without DIRNAME+LN glue).
+485. ~~**`HARDLINKOUT` / `HLOUT`**~~ **done** (ENSUREPARENT new + HARDLINK · nested same-inode plate shares without DIRNAME+HLINK glue).
 
 ## Tick protocol
 

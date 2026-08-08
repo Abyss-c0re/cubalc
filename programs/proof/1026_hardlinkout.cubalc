@@ -1,0 +1,91 @@
+# HARDLINKOUT / HLOUT — ENSUREPARENT new + HARDLINK one-shot
+# Nested same-inode plate shares without DIRNAME + MKDIR + HARDLINK glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_hlo_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# source plate
+SYS JOIN root "plates/status.json"
+LET src = LAST
+WRITEOUT src "{\"ok\":1}"
+ASSERT OK == 1
+
+# nested missing parents on dest
+SYS JOIN root "share/deep/status.json"
+LET dst = LAST
+HARDLINKOUT src dst
+ASSERT OK == 1
+ASSERT HARDLINKOUT_CREATED == 1
+ASSERT LAST_N == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "status.json"
+ASSERT LAST_N == 1
+SYS ENDS HARDLINKOUT_PARENT "deep"
+ASSERT LAST_N == 1
+SYS ENDS HARDLINKOUT_SRC "status.json"
+ASSERT LAST_N == 1
+SYS ISFILE LAST
+ASSERT LAST_N == 1
+SYS SAMEINODE src dst
+ASSERT LAST_N == 1
+SYS READ dst
+SYS HAS LAST "ok"
+ASSERT LAST_N == 1
+
+# HLOUT into existing parent
+SYS JOIN root "share/deep/status2.json"
+LET dst2 = LAST
+HLOUT src dst2
+ASSERT OK == 1
+ASSERT HARDLINKOUT_CREATED == 0
+SYS SAMEINODE src dst2
+ASSERT LAST_N == 1
+
+# SYS form
+SYS JOIN root "sys/deep/share.json"
+LET sd = LAST
+SYS HARDLINKOUT src sd
+ASSERT OK == 1
+SYS ENDS LAST "share.json"
+ASSERT LAST_N == 1
+SYS SAMEINODE src sd
+ASSERT LAST_N == 1
+
+# dest exists soft fail
+HARDLINKOUT src dst
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "exists"
+ASSERT LAST_N == 1
+
+# missing source soft fail
+SYS JOIN root "no/such/dest.json"
+LET miss = LAST
+HARDLINKOUT "/no/such/cubalc_missing_hl_src_xyz" miss
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "missing"
+ASSERT LAST_N == 1
+
+# empty path soft
+HARDLINKOUT "" "x"
+ASSERT OK == 0
+LET e3 = LAST_ERR
+SYS HAS e3 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS WALK root
+SYS RMALL LAST
+SYS RM root
