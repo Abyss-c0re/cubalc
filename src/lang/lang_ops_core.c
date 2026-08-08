@@ -33348,9 +33348,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEQ — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEQ|JSONSUBSET — fail-fast gates"},
       {"REQUIRE JSONEQ", "REQUIRE JSONEQ|SAMEJSON a b — fail-fast plate equality · lists changed keys · soft SYS JSONEQ"},
       {"REQUIRE SAMEJSON", "REQUIRE SAMEJSON alias of REQUIRE JSONEQ"},
+      {"REQUIRE JSONSUBSET", "REQUIRE JSONSUBSET|JSUBSET sub super — fail-fast required fields · bad keys listed · soft SYS JSONSUBSET"},
+      {"REQUIRE JSONSUPERSET", "REQUIRE JSONSUPERSET|JSONCOVERS super sub — dual of JSONSUBSET (a ⊇ b)"},
+      {"REQUIRE JSUBSET", "REQUIRE JSUBSET alias of REQUIRE JSONSUBSET"},
+      {"REQUIRE JSONCOVERS", "REQUIRE JSONCOVERS alias of REQUIRE JSONSUPERSET"},
       {"REQUIRE JSONHASALL", "REQUIRE JSONHASALL|JSONNEED [plate] key… — fail-fast plate keys · missing listed · soft SYS JSONHASALL"},
       {"REQUIRE JSONKEYS", "REQUIRE JSONKEYS alias of REQUIRE JSONHASALL"},
       {"REQUIRE JSONNEED", "REQUIRE JSONNEED alias of REQUIRE JSONHASALL"},
@@ -36248,6 +36252,100 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
+    /* REQUIRE JSONSUBSET|JSUBSET sub super — fail-fast required-field match.
+     * REQUIRE JSONSUPERSET|JSONCOVERS super sub — dual (a ⊇ b).
+     * On fail lists bad keys (missing or value≠) via subset_bad_keys.
+     * Soft twin: SYS JSONSUBSET. LAST=first plate arg on success. */
+    if (kw(&L->cur,"JSONSUBSET") || kw(&L->cur,"JSUBSET") || kw(&L->cur,"SUBSETJSON") ||
+        kw(&L->cur,"ISSUBSET") || kw(&L->cur,"PLATESUBSET") || kw(&L->cur,"JSONIN") ||
+        kw(&L->cur,"REQSUBSET") || kw(&L->cur,"NEEDSUBSET") ||
+        kw(&L->cur,"JSONSUPERSET") || kw(&L->cur,"JSUPERSET") || kw(&L->cur,"SUPERSETJSON") ||
+        kw(&L->cur,"ISSUPERSET") || kw(&L->cur,"PLATESUPERSET") || kw(&L->cur,"JSONCOVERS") ||
+        kw(&L->cur,"COVERS") || kw(&L->cur,"REQSUPERSET") || kw(&L->cur,"NEEDCOVER")){
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      char op[32];
+      cubalc_host_result hr, bad;
+      int want_super = 0;
+      const char *sub, *sup;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      {
+        char *q;
+        for (q = op; *q; q++)
+          if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      }
+      if (strcmp(op, "JSONSUPERSET") == 0 || strcmp(op, "JSUPERSET") == 0 ||
+          strcmp(op, "SUPERSETJSON") == 0 || strcmp(op, "ISSUPERSET") == 0 ||
+          strcmp(op, "PLATESUPERSET") == 0 || strcmp(op, "JSONCOVERS") == 0 ||
+          strcmp(op, "COVERS") == 0 || strcmp(op, "REQSUPERSET") == 0 ||
+          strcmp(op, "NEEDCOVER") == 0)
+        want_super = 1;
+      lex_next(L);
+      a[0] = 0;
+      b[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+        b[0] = 0;
+      if (!a[0] || !b[0]) {
+        fail_at(vm, L,
+                want_super
+                    ? "REQUIRE JSONSUPERSET super sub — need two plates"
+                    : "REQUIRE JSONSUBSET sub super — need two plates");
+        return -1;
+      }
+      if (want_super) {
+        sub = b;
+        sup = a;
+      } else {
+        sub = a;
+        sup = b;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_subset(sub, sup, &hr) != 0 || hr.n == 0) {
+        char msg[320];
+        char flat[160];
+        size_t mi = 0;
+        const char *mp;
+        memset(&bad, 0, sizeof bad);
+        cubalc_host_json_subset_bad_keys(sub, sup, &bad);
+        flat[0] = 0;
+        for (mp = bad.str; *mp && mi + 1 < sizeof flat; mp++) {
+          if (*mp == '\n' || *mp == '\r') {
+            if (mi > 0 && flat[mi - 1] != ',') {
+              flat[mi++] = ',';
+              if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+            }
+          } else {
+            flat[mi++] = *mp;
+          }
+        }
+        flat[mi] = 0;
+        if (flat[0])
+          snprintf(msg, sizeof msg,
+                   "REQUIRE JSONSUBSET mismatch line %d: %s — soft twin SYS JSONSUBSET",
+                   aln, flat);
+        else
+          snprintf(msg, sizeof msg,
+                   "REQUIRE JSONSUBSET mismatch line %d — soft twin SYS JSONSUBSET",
+                   aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", a);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", a);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "JSONSUBSET_N", 1);
+      var_set_num(vm, "JSONSUPERSET_N", 1);
+      var_set_num(vm, "REQUIRE_JSONSUBSET", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require %s ok\n",
+                want_super ? "jsonsuperset" : "jsonsubset");
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     /* REQUIRE JSONEQ|SAMEJSON a b — fail-fast order-independent plate equality.
      * On fail lists changed keys (JSONCHANGED). Soft twin: SYS JSONEQ.
      * Usability: verify WRITE/MERGE without fragile EQS + IF + FAIL glue. */
@@ -36340,6 +36438,84 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         lex_next(L);
       } else if (kw(&L->cur,"JSON") || kw(&L->cur,"PLATE")) {
         lex_next(L);
+        /* REQUIRE JSON SUBSET|SUPERSET|COVERS a b — two-token required-field gate */
+        if (kw(&L->cur,"SUBSET") || kw(&L->cur,"ISSUBSET") || kw(&L->cur,"IN") ||
+            kw(&L->cur,"SUPERSET") || kw(&L->cur,"ISSUPERSET") || kw(&L->cur,"COVERS") ||
+            kw(&L->cur,"COVER")) {
+          char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+          cubalc_host_result hr, bad;
+          int want_super = 0;
+          const char *sub, *sup;
+          if (kw(&L->cur,"SUPERSET") || kw(&L->cur,"ISSUPERSET") ||
+              kw(&L->cur,"COVERS") || kw(&L->cur,"COVER"))
+            want_super = 1;
+          lex_next(L);
+          a[0] = 0;
+          b[0] = 0;
+          if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+            snprintf(a, sizeof a, "%s", vm->last_str);
+          if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+            b[0] = 0;
+          if (!a[0] || !b[0]) {
+            fail_at(vm, L,
+                    want_super
+                        ? "REQUIRE JSON SUPERSET super sub — need two plates"
+                        : "REQUIRE JSON SUBSET sub super — need two plates");
+            return -1;
+          }
+          if (want_super) {
+            sub = b;
+            sup = a;
+          } else {
+            sub = a;
+            sup = b;
+          }
+          memset(&hr, 0, sizeof hr);
+          if (cubalc_host_json_subset(sub, sup, &hr) != 0 || hr.n == 0) {
+            char msg[320];
+            char flat[160];
+            size_t mi = 0;
+            const char *mp;
+            memset(&bad, 0, sizeof bad);
+            cubalc_host_json_subset_bad_keys(sub, sup, &bad);
+            flat[0] = 0;
+            for (mp = bad.str; *mp && mi + 1 < sizeof flat; mp++) {
+              if (*mp == '\n' || *mp == '\r') {
+                if (mi > 0 && flat[mi - 1] != ',') {
+                  flat[mi++] = ',';
+                  if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+                }
+              } else {
+                flat[mi++] = *mp;
+              }
+            }
+            flat[mi] = 0;
+            if (flat[0])
+              snprintf(msg, sizeof msg,
+                       "REQUIRE JSONSUBSET mismatch line %d: %s — soft twin SYS JSONSUBSET",
+                       aln, flat);
+            else
+              snprintf(msg, sizeof msg,
+                       "REQUIRE JSONSUBSET mismatch line %d — soft twin SYS JSONSUBSET",
+                       aln);
+            if (vm->res) vm->res->asserts_fail++;
+            fail(vm, msg);
+            return -1;
+          }
+          var_set_str(vm, "LAST", a);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", a);
+          vm->last_n = 1;
+          var_set_num(vm, "LAST_N", 1);
+          var_set_num(vm, "JSONSUBSET_N", 1);
+          var_set_num(vm, "JSONSUPERSET_N", 1);
+          var_set_num(vm, "REQUIRE_JSONSUBSET", 1);
+          var_set_num(vm, "OK", 1);
+          if (vm->trace)
+            fprintf(vm->trace, "# require json %s ok\n",
+                    want_super ? "superset" : "subset");
+          if (vm->res) vm->res->asserts_ok++;
+          bump(vm); return 1;
+        }
         /* REQUIRE JSON EQ a b — two-token equality gate */
         if (kw(&L->cur,"EQ") || kw(&L->cur,"EQUAL") || kw(&L->cur,"SAME") ||
             kw(&L->cur,"EQUALS")) {
@@ -36650,7 +36826,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEXACT|JSONEQ …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEXACT|JSONEQ|JSONSUBSET …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||

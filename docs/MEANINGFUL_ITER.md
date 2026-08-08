@@ -576,6 +576,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 546. ~~**`JSONCHANGED` / `JSONNEQKEYS` · `JSONSTABLE` / `JSONEQKEYS`**~~ **done** (plate keys that differ or stay same by raw value · sync delta without multi peels).
 547. ~~**`JSONDELTA` / `JDELTA` / `DELTAOBJ`**~~ **done** (changed keys as plate object · values from NEW/OLD · sync payload without CHANGED+EACH+JSONSET).
 548. ~~**`REQUIRE JSONEQ` / `SAMEJSON`**~~ **done** (fail-fast plate equality · lists changed keys in error · soft twin SYS JSONEQ).
+549. ~~**`REQUIRE JSONSUBSET` / `JSONSUPERSET` / `JSONCOVERS`**~~ **done** (fail-fast required-field plate match · bad keys listed · soft twin SYS JSONSUBSET).
 
 ## Tick protocol
 

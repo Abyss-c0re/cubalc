@@ -1,0 +1,88 @@
+# REQUIRE JSONSUBSET / JSONSUPERSET — fail-fast required-field plate match
+# Soft twin: SYS JSONSUBSET. Error lists bad keys (missing or value≠).
+
+HOLD_FLASH 1
+
+# required contract fields
+SYS JSONOBJ "ok" true "n" 3 "err" ""
+LET req = LAST
+# response covers req + extras
+SYS JSONOBJ "ok" true "n" 3 "err" "" "extra" 9 "trace" 1
+LET resp = LAST
+
+# subset: req ⊆ resp
+REQUIRE JSONSUBSET req resp
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONSUBSET_N == 1
+ASSERT REQUIRE_JSONSUBSET == 1
+# LAST kept as first plate (sub)
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 3
+
+# aliases
+REQUIRE JSUBSET req resp
+ASSERT OK == 1
+REQUIRE SUBSETJSON req resp
+ASSERT OK == 1
+REQUIRE PLATESUBSET req resp
+ASSERT OK == 1
+
+# two-token form
+REQUIRE JSON SUBSET req resp
+ASSERT OK == 1
+
+# SUPERSET dual: resp ⊇ req
+REQUIRE JSONSUPERSET resp req
+ASSERT OK == 1
+REQUIRE JSONCOVERS resp req
+ASSERT OK == 1
+REQUIRE JSUPERSET resp req
+ASSERT OK == 1
+REQUIRE JSON SUPERSET resp req
+ASSERT OK == 1
+REQUIRE JSON COVERS resp req
+ASSERT OK == 1
+
+# empty subset of any
+SYS JSONSUBSET "{}" resp
+ASSERT LAST_N == 1
+REQUIRE JSONSUBSET "{}" resp
+ASSERT OK == 1
+
+# self subset
+REQUIRE JSONSUBSET req req
+ASSERT OK == 1
+
+# soft twin for miss path (value mismatch)
+SYS JSONOBJ "ok" false "n" 3 "err" ""
+LET bad = LAST
+SYS JSONSUBSET req bad
+ASSERT LAST_N == 0
+ASSERT OK == 1
+
+# soft: missing key
+SYS JSONOBJ "ok" true
+LET partial = LAST
+SYS JSONSUBSET req partial
+ASSERT LAST_N == 0
+
+# agent pattern: soft then require when ready
+SYS JSONSUBSET req resp
+IF LAST_N THEN
+  REQUIRE JSONSUBSET req resp
+  PASS "required fields ok"
+ELSE
+  FAIL "should cover"
+END
+ASSERT OK == 1
+
+# equal is mutual subset
+SYS JSONOBJ "a" 1 "b" 2
+LET x = LAST
+SYS JSONOBJ "b" 2 "a" 1
+LET y = LAST
+REQUIRE JSONSUBSET x y
+ASSERT OK == 1
+REQUIRE JSONSUPERSET y x
+ASSERT OK == 1

@@ -4936,6 +4936,67 @@ int cubalc_host_json_subset(const char *sub, const char *super, cubalc_host_resu
   return 0;
 }
 
+/* Usability: bag of keys in sub that fail subset match (missing in super or raw ≠).
+ * Companion of REQUIRE JSONSUBSET error listing · soft always OK. */
+int cubalc_host_json_subset_bad_keys(const char *sub, const char *super,
+                                     cubalc_host_result *r) {
+  cubalc_host_result ksub, ra, rb;
+  const char *p, *line;
+  size_t olen = 0;
+  long count = 0;
+  r_clear(r);
+  r->ok = 1;
+  r->str[0] = 0;
+  r->n = 0;
+  memset(&ksub, 0, sizeof ksub);
+  if (cubalc_host_json_keys(sub, &ksub) != 0) {
+    /* non-object sub: no key list — report as whole miss via empty bag */
+    snprintf(r->str, sizeof r->str, "");
+    return 0;
+  }
+  p = ksub.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    int bad = 0;
+    const char *va, *vb;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&ra, 0, sizeof ra);
+    memset(&rb, 0, sizeof rb);
+    if (cubalc_host_json_get_raw(sub, key, &ra) != 0) {
+      bad = 1;
+    } else if (cubalc_host_json_get_raw(super, key, &rb) != 0) {
+      bad = 1;
+    } else {
+      va = ra.str;
+      vb = rb.str;
+      while (*va == ' ' || *va == '\t' || *va == '\n' || *va == '\r') va++;
+      while (*vb == ' ' || *vb == '\t' || *vb == '\n' || *vb == '\r') vb++;
+      if (strcmp(va, vb) != 0) bad = 1;
+    }
+    if (bad) {
+      size_t need = kn + (olen ? 1 : 0);
+      if (olen + need + 1 < sizeof r->str) {
+        if (olen) r->str[olen++] = '\n';
+        memcpy(r->str + olen, key, kn);
+        olen += kn;
+        r->str[olen] = 0;
+        count++;
+      }
+    }
+  }
+  r->n = count;
+  return 0;
+}
+
 /* Usability: SYS JSONHASALL/JSONHASANY — multi-key presence without multi JSONHAS. */
 int cubalc_host_json_has_keys(const char *json, const char *keys_nl, int want_all,
                               cubalc_host_result *r) {

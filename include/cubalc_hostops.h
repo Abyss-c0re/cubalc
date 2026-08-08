@@ -263,6 +263,11 @@ int cubalc_host_json_eq(const char *a, const char *b, cubalc_host_result *r);
  * Soft: non-object sub/super → 0 (empty {} is subset of any object).
  * Usability: required-field verify without multi JSONHAS+JSON peels. */
 int cubalc_host_json_subset(const char *sub, const char *super, cubalc_host_result *r);
+/* bag of keys in sub that fail subset match (missing in super or raw value ≠).
+ * r->str newline bag · r->n count. Soft always OK. Non-object sub → empty.
+ * Usability: REQUIRE JSONSUBSET fail lists which required fields broke. */
+int cubalc_host_json_subset_bad_keys(const char *sub, const char *super,
+                                     cubalc_host_result *r);
 /* multi-key presence: keys_nl newline bag. want_all=1 all present, 0=any.
  * r->n 0|1 · r->code = number of listed keys found. Soft non-object → 0.
  * Usability: contract keys without multi JSONHAS glue. */
