@@ -485,6 +485,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 455. ~~**`REQUIRE BETWEEN` / `INRANGE`**~~ **done** (numeric inclusive range gate · GETFLAGN ports/retries · soft twin).
 456. ~~**`GETFLAGMS` / `FLAGMS`**~~ **done** (CLI duration flag to ms via PARSEMS 5s/1m · timeout OR default).
 457. ~~**`REQUIRE RESTPOS` / `HASRESTPOS`**~~ **done** (files after subcommand min gate · not counting cmd · SUBCMD twin).
+458. ~~**`CLAMPN` / `BOUNDN`**~~ **done** (clamp x into [lo,hi] → LAST_N · GETFLAGN/GETFLAGMS caps without SYS CLAMP).
 
 ## Tick protocol
 
