@@ -1492,6 +1492,6 @@
     "DEFAULTS no-clobber load=10 positive",
     "REQUIRE JSONNEQ LAST=prev peel got 10 not 40 (W163)"
   ],
-  "commit": "pending",
+  "commit": "b303781",
   "ts": "2026-08-08T16:39:05Z"
 }
