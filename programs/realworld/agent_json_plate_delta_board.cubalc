@@ -1,0 +1,863 @@
+# agent_json_plate_delta_board.cubalc — JSONKEYDIFF + JSONCHANGED + JSONDELTA sync
+#
+# Real use: agent STATUS peer handoff — key-set and value deltas without
+# JSONKEYS+DIFF or multi peel glue:
+#   JSONKEYDIFF / KEYSDIFF — keys only in left plate (1086)
+#   JSONKEYCOMM / KEYSINTER — key intersection
+#   JSONCHANGED / JSONNEQKEYS — keys that differ by value/structure (1087)
+#   JSONSTABLE / JSONEQKEYS — dual unchanged keys
+#   JSONDELTA / JDELTA — changed keys as plate (values from NEW) (1088)
+#   apply: MERGE prev + delta → sync; gate on changed count
+#
+# First realworld KEYDIFF+CHANGED+DELTA board. Distinct from schema EXACT
+# (key-set admit) and allowlist (EXTRA scrub).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajpdt_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_delta_board.cubalc \
+#     mint -- --prev=/tmp/ajpdt/prev.json --cur=/tmp/ajpdt/cur.json
+#   ./out/cubalc run ... keydiff -- --prev=... --cur=...
+#   ./out/cubalc run ... changed -- --prev=... --cur=...
+#   ./out/cubalc run ... delta -- --prev=... --cur=...
+#   ./out/cubalc run ... gate -- --prev=... --cur=... --maxchg=2
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPDT_REPORT.txt
+# Env: PREV_PATH CUR_PATH CUBALC_AJPDT_REQUIRE CUBALC_AJPDT_MAXCHG
+#
+# Edges:
+#   identical → empty delta; empty vs plate; value-only vs key-only;
+#   DELTA LAST=plate object; KEYDIFF/CHANGED LAST=bag (W147 class);
+#   PRINT_JSON bag collapse (W151); capture LAST_N (W144);
+#   REQUIRE EXIT n; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_delta_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MAXCHG = 10
+DEFAULT USAGE_LINE = "agent_json_plate_delta -- mint|keydiff|changed|stable|delta|apply|gate|list -- [--prev=P] [--cur=P] [--maxchg=N]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/prev.json"
+LET prev_file = LAST
+SYS JOIN state_dir "sample/cur.json"
+LET cur_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT prev OR ENV PREV_PATH OR prev_file
+LET prev_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+GETFLAGOUT cur OR ENV CUR_PATH OR cur_file
+LET cur_file = LAST
+LET c_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+GETFLAGN maxchg OR ENV CUBALC_AJPDT_MAXCHG OR MAXCHG
+LET MAXCHG = LAST_N
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPDT_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPDT_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET prev = ""
+LET cur = ""
+LET key_bag = ""
+LET patch = ""
+LET chg_n = 0
+LET extra_n = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "mint", "keydiff", "changed", "stable", "delta", "apply", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "mint" THEN
+    LET op = "mint"
+  WHEN "keydiff" THEN
+    LET op = "keydiff"
+  WHEN "changed" THEN
+    LET op = "changed"
+  WHEN "stable" THEN
+    LET op = "stable"
+  WHEN "delta" THEN
+    LET op = "delta"
+  WHEN "apply" THEN
+    LET op = "apply"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src c_src MAXCHG
+  CLEAR_ERR
+END
+
+SYS EQS op "mint"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # prev baseline
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 10 "zone" "east"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint soft miss"
+    FAIL "mint soft miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mint failed"
+    END
+  ELSE
+    LET prev = LAST
+    WRITEOUT prev_file prev
+    CLEAR_ERR
+    # cur: load/zone changed + peer key added
+    SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 40 "zone" "west" "peer" "p1"
+    LET cur = LAST
+    LET take_n = JSONOBJ_N
+    WRITEOUT cur_file cur
+    CLEAR_ERR
+    LET out = cur
+    SYS CAT "mint:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mt"
+    LET row = LAST
+    SYS GREPV "mint:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "mint ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src c_src
+  CLEAR_ERR
+END
+
+SYS EQS op "keydiff"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR prev_file OR ""
+  LET prev = LAST
+  CLEAR_ERR
+  SYS READ OR cur_file OR ""
+  LET cur = LAST
+  CLEAR_ERR
+  SYS BLANK prev
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "keydiff empty prev"
+    FAIL "keydiff empty prev"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "keydiff empty"
+    END
+  ELSE
+    SYS BLANK cur
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "keydiff empty cur"
+      FAIL "keydiff empty cur"
+      CLEAR_ERR
+    ELSE
+      # keys only in cur (new keys)
+      SYS JSONKEYDIFF cur prev
+      LET take_n = LAST_N
+      LET key_bag = LAST
+      CLEAR_ERR
+      # keys only in prev
+      SYS JSONKEYDIFF prev cur
+      LET has_n = LAST_N
+      CLEAR_ERR
+      SYS JSONKEYCOMM prev cur
+      LET admit_n = LAST_N
+      CLEAR_ERR
+      LET out = key_bag
+      # expect peer only in cur; none only-prev; 5 common
+      IF take_n == 1 THEN
+        SYS HASLINE key_bag "peer"
+        LET peel_hit = LAST_N
+        CLEAR_ERR
+        IF peel_hit == 1 THEN
+          IF has_n == 0 THEN
+            IF admit_n == 5 THEN
+              LET hit = 1
+              LET note_msg = "keydiff peer"
+            ELSE
+              LET miss = 1
+              LET note_msg = "keydiff comm"
+              FAIL "keydiff comm"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "keydiff only_prev"
+            FAIL "keydiff only_prev"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "keydiff no peer"
+          FAIL "keydiff no peer"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "keydiff count"
+        FAIL "keydiff count"
+        CLEAR_ERR
+      END
+      SYS CAT "keydiff:"
+      LET row = LAST
+      SYS STR take_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR admit_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":kd"
+      LET row = LAST
+      SYS GREPV "keydiff:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+    END
+  END
+  PRINT_JSON bag_n take_n has_n admit_n peel_hit key_bag p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "changed"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR prev_file OR ""
+  LET prev = LAST
+  CLEAR_ERR
+  SYS READ OR cur_file OR ""
+  LET cur = LAST
+  CLEAR_ERR
+  SYS BLANK prev
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "changed empty prev"
+    FAIL "changed empty prev"
+    CLEAR_ERR
+  ELSE
+    SYS BLANK cur
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "changed empty cur"
+      FAIL "changed empty cur"
+      CLEAR_ERR
+    ELSE
+      SYS JSONCHANGED prev cur
+      LET chg_n = LAST_N
+      LET key_bag = LAST
+      LET take_n = chg_n
+      CLEAR_ERR
+      LET out = key_bag
+      # load, zone, peer
+      IF chg_n == 3 THEN
+        SYS HASLINE key_bag "load"
+        LET has_n = LAST_N
+        CLEAR_ERR
+        SYS HASLINE key_bag "zone"
+        LET peel_hit = LAST_N
+        CLEAR_ERR
+        SYS HASLINE key_bag "peer"
+        LET admit_n = LAST_N
+        CLEAR_ERR
+        IF has_n == 1 THEN
+          IF peel_hit == 1 THEN
+            IF admit_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "changed 3"
+            ELSE
+              LET miss = 1
+              LET note_msg = "changed no peer"
+              FAIL "changed no peer"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "changed no zone"
+            FAIL "changed no zone"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "changed no load"
+          FAIL "changed no load"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "changed count"
+        FAIL "changed count"
+        CLEAR_ERR
+      END
+      SYS CAT "changed:"
+      LET row = LAST
+      SYS STR take_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":ch"
+      LET row = LAST
+      SYS GREPV "changed:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+    END
+  END
+  PRINT_JSON bag_n take_n chg_n has_n peel_hit admit_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "stable"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR prev_file OR ""
+  LET prev = LAST
+  CLEAR_ERR
+  SYS READ OR cur_file OR ""
+  LET cur = LAST
+  CLEAR_ERR
+  SYS BLANK prev
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "stable empty prev"
+    FAIL "stable empty prev"
+    CLEAR_ERR
+  ELSE
+    SYS JSONSTABLE prev cur
+    LET take_n = LAST_N
+    LET key_bag = LAST
+    CLEAR_ERR
+    LET out = key_bag
+    # schema, role, ok
+    IF take_n == 3 THEN
+      SYS HASLINE key_bag "schema"
+      LET has_n = LAST_N
+      CLEAR_ERR
+      SYS HASLINE key_bag "load"
+      LET peel_hit = LAST_N
+      CLEAR_ERR
+      IF has_n == 1 THEN
+        IF peel_hit == 0 THEN
+          LET hit = 1
+          LET note_msg = "stable 3"
+        ELSE
+          LET miss = 1
+          LET note_msg = "stable load leak"
+          FAIL "stable load leak"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "stable no schema"
+        FAIL "stable no schema"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "stable count"
+      FAIL "stable count"
+      CLEAR_ERR
+    END
+    SYS CAT "stable:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":st"
+    LET row = LAST
+    SYS GREPV "stable:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n has_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "delta"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR prev_file OR ""
+  LET prev = LAST
+  CLEAR_ERR
+  SYS READ OR cur_file OR ""
+  LET cur = LAST
+  CLEAR_ERR
+  SYS BLANK prev
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "delta empty prev"
+    FAIL "delta empty prev"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "delta empty"
+    END
+  ELSE
+    SYS BLANK cur
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "delta empty cur"
+      FAIL "delta empty cur"
+      CLEAR_ERR
+    ELSE
+      # JSONDELTA old new → values from new
+      SYS JSONDELTA prev cur
+      LET take_n = LAST_N
+      LET patch = LAST
+      CLEAR_ERR
+      LET out = patch
+      # 3 changed keys as object
+      IF take_n == 3 THEN
+        SYS JSONN "load" FROM patch
+        LET peel_hit = LAST_N
+        CLEAR_ERR
+        SYS JSON "zone" FROM patch
+        SYS EQS LAST "west"
+        LET has_n = LAST_N
+        CLEAR_ERR
+        SYS JSONHASALL patch "peer"
+        LET admit_n = LAST_N
+        CLEAR_ERR
+        IF peel_hit == 40 THEN
+          IF has_n == 1 THEN
+            IF admit_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "delta 3ok"
+            ELSE
+              LET miss = 1
+              LET note_msg = "delta no peer"
+              FAIL "delta no peer"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "delta zone"
+            FAIL "delta zone"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "delta load"
+          FAIL "delta load"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "delta count"
+        FAIL "delta count"
+        CLEAR_ERR
+      END
+      SYS CAT "delta:"
+      LET row = LAST
+      SYS STR take_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":dl"
+      LET row = LAST
+      SYS GREPV "delta:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+    END
+  END
+  PRINT_JSON bag_n take_n peel_hit has_n admit_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "apply"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR prev_file OR ""
+  LET prev = LAST
+  CLEAR_ERR
+  SYS READ OR cur_file OR ""
+  LET cur = LAST
+  CLEAR_ERR
+  SYS BLANK prev
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "apply empty prev"
+    FAIL "apply empty prev"
+    CLEAR_ERR
+  ELSE
+    SYS JSONDELTA prev cur
+    LET patch = LAST
+    LET take_n = LAST_N
+    CLEAR_ERR
+    SYS JSONMERGE prev patch
+    LET body = LAST
+    CLEAR_ERR
+    LET out = body
+    # merged should EQ cur
+    SYS JSONEQ body cur
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    IF admit_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "apply eq cur"
+    ELSE
+      LET miss = 1
+      LET note_msg = "apply neq"
+      FAIL "apply neq"
+      CLEAR_ERR
+    END
+    SYS CAT "apply:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR admit_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":ap"
+    LET row = LAST
+    SYS GREPV "apply:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n admit_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR prev_file OR ""
+  LET prev = LAST
+  CLEAR_ERR
+  SYS READ OR cur_file OR ""
+  LET cur = LAST
+  CLEAR_ERR
+  SYS BLANK prev
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate empty prev"
+    FAIL "gate empty prev"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate empty"
+    END
+  ELSE
+    SYS BLANK cur
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "gate empty cur"
+      FAIL "gate empty cur"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "gate empty cur"
+      END
+    ELSE
+      SYS JSONCHANGED prev cur
+      LET chg_n = LAST_N
+      LET take_n = chg_n
+      CLEAR_ERR
+      SYS JSONDELTA prev cur
+      LET patch = LAST
+      CLEAR_ERR
+      LET out = patch
+      IF chg_n > MAXCHG THEN
+        LET miss = 1
+        LET admit_n = 0
+        LET note_msg = "gate maxchg deny"
+        FAIL "gate maxchg deny"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "gate maxchg"
+        END
+      ELSE
+        LET hit = 1
+        LET admit_n = 1
+        LET note_msg = "gate admit"
+      END
+      SYS CAT "gate:"
+      LET row = LAST
+      SYS STR chg_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR MAXCHG
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":gt"
+      LET row = LAST
+      SYS GREPV "gate:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+    END
+  END
+  PRINT_JSON bag_n take_n chg_n MAXCHG admit_n hit miss p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # identical → empty changed
+  SYS JSONOBJ "x" 1 "y" 2
+  LET prev = LAST
+  SYS JSONCHANGED prev prev
+  LET chg_n = LAST_N
+  CLEAR_ERR
+  SYS JSONDELTA prev prev
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS JSONEMPTY LAST
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  # value-only: KEYDIFF empty CHANGED 1
+  SYS JSONOBJ "k" 1 "m" 2
+  LET prev = LAST
+  SYS JSONOBJ "k" 1 "m" 9
+  LET cur = LAST
+  SYS JSONKEYDIFF prev cur
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS JSONCHANGED prev cur
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS JSONDELTA prev cur
+  SYS JSONN "m" FROM LAST
+  LET bag_n = LAST_N
+  CLEAR_ERR
+  # empty vs plate
+  SYS JSONCHANGED "{}" cur
+  LET extra_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON chg_n take_n admit_n has_n peel_hit bag_n extra_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_delta_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "chg_n"
+LET row = LAST
+SYS STR chg_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_delta_board: done"
+PRINT_JSON hit miss bag_n take_n chg_n admit_n p_src note_msg
+EXIT 0

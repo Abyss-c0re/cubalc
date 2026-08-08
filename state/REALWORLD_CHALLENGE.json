@@ -1,65 +1,65 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 201,
-  "program": "programs/realworld/agent_json_plate_schema_board.cubalc",
-  "theme": "JSONEXACT + REQUIRE JSONONLY + REQUIRE JSONEXACT schema key-set gate",
-  "version": "1.15.535-usability",
+  "iter": 202,
+  "program": "programs/realworld/agent_json_plate_delta_board.cubalc",
+  "theme": "JSONKEYDIFF + JSONCHANGED + JSONDELTA peer status sync delta",
+  "version": "1.15.538-usability",
   "pass": true,
-  "prior_note": "iter 200 EXTRA+PLUCK allowlist; this iter first realworld EXACT(1085)+JSONONLY(1084) schema board",
+  "prior_note": "iter 201 EXACT schema; this iter first realworld KEYDIFF(1086)+CHANGED(1087)+DELTA(1088) sync board",
   "tests": [
     {
       "name": "mint",
-      "cmd": "exact 5-key status plate",
+      "cmd": "prev baseline + cur load/zone/peer",
       "ok": true,
-      "note": "mint"
+      "note": "mint pair"
     },
     {
-      "name": "exact",
-      "cmd": "JSONEXACT OF schema → 1 peel load=10",
+      "name": "keydiff",
+      "cmd": "only_cur=peer; only_prev=0; comm=5",
       "ok": true,
-      "note": "EXACT"
+      "note": "KEYDIFF"
     },
     {
-      "name": "only",
-      "cmd": "EXTRA OF schema → 0 clean",
+      "name": "changed",
+      "cmd": "load+zone+peer n=3",
       "ok": true,
-      "note": "ONLY soft"
+      "note": "CHANGED"
+    },
+    {
+      "name": "stable",
+      "cmd": "schema+role+ok n=3",
+      "ok": true,
+      "note": "STABLE"
+    },
+    {
+      "name": "delta",
+      "cmd": "patch load=40 zone=west +peer",
+      "ok": true,
+      "note": "DELTA"
+    },
+    {
+      "name": "apply",
+      "cmd": "MERGE prev+delta EQ cur",
+      "ok": true,
+      "note": "apply"
     },
     {
       "name": "gate",
-      "cmd": "admit clean; deny dirty/thin",
+      "cmd": "admit maxchg5; deny maxchg1",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "hard",
-      "cmd": "REQUIRE JSONEXACT+JSONONLY + peel ok",
-      "ok": true,
-      "note": "hard"
-    },
-    {
-      "name": "dirty",
-      "cmd": "noise key EXACT0 EXTRA1",
-      "ok": true,
-      "note": "dirty"
-    },
-    {
-      "name": "thin",
-      "cmd": "missing zone EXACT0 MISS1",
-      "ok": true,
-      "note": "thin"
-    },
-    {
       "name": "probe",
-      "cmd": "empty exact; dual miss+extra; bare keys",
+      "cmd": "identical empty; value-only; empty vs plate",
       "ok": true,
       "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_AJPSC_REQUIRE=1 empty → shell 2",
+      "cmd": "CUBALC_AJPDT_REQUIRE=1 empty → shell 2",
       "ok": true,
-      "note": "hard env"
+      "note": "hard"
     },
     {
       "name": "selftest",
@@ -1308,6 +1308,30 @@
       "title": "JSONONLY allow-list may be a superset — missing keys still pass ONLY",
       "detail": "REQUIRE JSONONLY {a:1} a b c succeeds (no extras). ONLY ≠ EXACT. Agents needing both must JSONEXACT or HASALL+ONLY dual.",
       "repro": "REQUIRE JSONONLY {a:1} a b c → ok; JSONEXACT same → fail miss b c"
+    },
+    {
+      "id": "W156",
+      "severity": "med",
+      "area": "lang|json_delta",
+      "title": "JSONDELTA arg order is old,new (values from NEW) — silent swap hazard",
+      "detail": "SYS JSONDELTA prev cur peels NEW values; swapped args silently produce OLD values for shared keys and wrong patch payloads. No order-check or keyword default beyond FROM NEW|OLD. Agents must document call site as old,new.",
+      "repro": "JSONDELTA new old → load from old; JSONDELTA old new → load from new"
+    },
+    {
+      "id": "W157",
+      "severity": "low",
+      "area": "lang|json_diff",
+      "title": "KEYDIFF is keys-only; value-only edits leave KEYDIFF empty",
+      "detail": "Same key-set plates with m:2→9: KEYDIFF=0 CHANGED=1. Ops using KEYDIFF alone miss value drift. Pair KEYDIFF+CHANGED or use DELTA.",
+      "repro": "KEYDIFF {k:1,m:2}{k:1,m:9}→0; CHANGED→m"
+    },
+    {
+      "id": "W158",
+      "severity": "med",
+      "area": "lang|json_last",
+      "title": "DELTA keeps LAST as patch plate; KEYDIFF/CHANGED set LAST to key bag",
+      "detail": "Asymmetric LAST (W143/W147 class): after DELTA peel JSONN works; after CHANGED LAST is bag not plate. Capture bags immediately; do not chain peels after KEYDIFF.",
+      "repro": "JSONCHANGED a b; JSONN k FROM LAST → fail; JSONDELTA a b; JSONN k FROM LAST ok"
     }
   ],
   "workarounds": [
@@ -1344,7 +1368,10 @@
     "Hard key contract: soft HASALL then EXIT n; do not trust REQUIRE shell alone (W152)",
     "Schema admit: soft JSONEXACT then value SUBSET/EQ (W153)",
     "Hard schema: soft EXACT + EXIT n; do not rely on REQUIRE shell alone (W154)",
-    "ONLY rejects extras only — use EXACT for full key-set (W155)"
+    "ONLY rejects extras only — use EXACT for full key-set (W155)",
+    "Always JSONDELTA old new (or FROM NEW explicit) (W156)",
+    "Value drift: JSONCHANGED/DELTA not KEYDIFF alone (W157)",
+    "After KEYDIFF/CHANGED: LET bag=LAST before peels (W158)"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1373,7 +1400,10 @@
     "REQUIRE JSONHASALL EXIT code configurable / match EXIT n",
     "JSONEXACT value-mode (types or required value plate)",
     "REQUIRE JSON* configurable shell exit code",
-    "JSONONLY strict=exact alias warning when allow==need list"
+    "JSONONLY strict=exact alias warning when allow==need list",
+    "JSONDELTA named args PREV/CUR to prevent swap",
+    "JSONDIFF unified report: keys only + values + patch object",
+    "JSONCHANGED keep-plate mode optional"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1399,8 +1429,11 @@
     "REQUIRE JSONHASALL shell 1 exit_code 0 documented (W152)",
     "selftest 355/355 green v1.15.535",
     "EXACT OF schema bag + peel chain works",
-    "dirty/thin soft gates positive before remint hard"
+    "dirty/thin soft gates positive before remint hard",
+    "selftest 355/355 green v1.15.538",
+    "MERGE prev+delta EQ cur positive apply path",
+    "gate maxchg deny soft without shell fail"
   ],
-  "commit": "3f6ccbe",
-  "ts": "2026-08-08T15:23:31Z"
+  "commit": "pending",
+  "ts": "2026-08-08T15:48:51Z"
 }
