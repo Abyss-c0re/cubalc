@@ -1,0 +1,89 @@
+# LINKOUT / LNOUT — ENSUREPARENT link + SYMLINK one-shot
+# Nested plate aliases without DIRNAME + MKDIR + SYMLINK glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_lnk_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# real plate
+SYS JOIN root "plates/status.json"
+LET src = LAST
+WRITEOUT src "{\"ok\":1}"
+ASSERT OK == 1
+
+# nested link parents missing — use absolute target for reliable READ via link
+SYS JOIN root "alias/deep/status.json"
+LET link = LAST
+LINKOUT src link
+ASSERT OK == 1
+ASSERT LINKOUT_CREATED == 1
+ASSERT LAST_N == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "status.json"
+ASSERT LAST_N == 1
+SYS ENDS LINKOUT_PARENT "deep"
+ASSERT LAST_N == 1
+SYS EQS LINKOUT_TARGET src
+ASSERT LAST_N == 1
+SYS ISLINK LAST
+ASSERT LAST_N == 1
+SYS READLINK LAST
+SYS EQS LAST src
+ASSERT LAST_N == 1
+SYS READ link
+SYS HAS LAST "ok"
+ASSERT LAST_N == 1
+
+# LNOUT alias into existing parent tree
+SYS JOIN root "alias/deep/status2.json"
+LET link2 = LAST
+LNOUT src link2
+ASSERT OK == 1
+ASSERT LINKOUT_CREATED == 0
+SYS ISLINK LAST
+ASSERT LAST_N == 1
+SYS READ link2
+SYS HAS LAST "ok"
+ASSERT LAST_N == 1
+
+# SYS form
+SYS JOIN root "sys/deep/alias.json"
+LET sl = LAST
+SYS LINKOUT src sl
+ASSERT OK == 1
+SYS ENDS LAST "alias.json"
+ASSERT LAST_N == 1
+SYS ISLINK sl
+ASSERT LAST_N == 1
+
+# duplicate link soft fail
+LINKOUT src link
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "exists"
+ASSERT LAST_N == 1
+
+# empty path soft
+LINKOUT "" "x"
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup — rm links then walk
+SYS RM link
+SYS RM link2
+SYS RM sl
+SYS WALK root
+SYS RMALL LAST
+SYS RM root
