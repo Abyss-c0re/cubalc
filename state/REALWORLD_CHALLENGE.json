@@ -432,6 +432,6 @@
     "flag | alias works on CLI -w; ENV seed flaky",
     "selftest 355/355"
   ],
-  "commit": "pending",
+  "commit": "897ca943da4c8249424bdfb5a1292434acd6bc58",
   "ts": "2026-08-08T00:49:40Z"
 }
