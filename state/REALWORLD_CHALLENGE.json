@@ -1,63 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 188,
-  "program": "programs/realworld/agent_json_plate_peel_board.cubalc",
-  "theme": "JSONKEYS + JSONHAS + JSON key FROM multi-field agent STATUS.json peels",
-  "version": "1.15.503-usability",
+  "iter": 189,
+  "program": "programs/realworld/agent_json_plate_stamp_board.cubalc",
+  "theme": "JSONOBJ + JSONSET agent STATUS.json mint/stamp/fail/extend plate writes",
+  "version": "1.15.505-usability",
   "pass": true,
-  "prior_note": "iter 187 HASINTREE+SLICEINTREE; this iter first realworld JSONKEYS/JSONHAS(1052)+JSON FROM(1053)",
+  "prior_note": "iter 188 JSONKEYS+JSONHAS+FROM peels; this iter first realworld JSONOBJ(1055)+JSONSET(1054) write path",
   "tests": [
     {
-      "name": "seed",
-      "cmd": "WRITEOUT STATUS.json plate",
+      "name": "mint",
+      "cmd": "JSONOBJ 6 pairs WRITEOUT STATUS.json",
       "ok": true,
-      "note": "seed"
+      "note": "JSONOBJ"
     },
     {
-      "name": "keys",
-      "cmd": "JSONKEYS \u2192 6 top-level; nested not x",
+      "name": "stamp",
+      "cmd": "JSONSET phase/n/ts/ok/err UPDATED=1",
       "ok": true,
-      "note": "JSONKEYS"
+      "note": "JSONSET"
     },
     {
-      "name": "has",
-      "cmd": "JSONHAS version literal EQS branch \u2192 HIT=1",
+      "name": "show",
+      "cmd": "JSONKEYS+FROM phase ok after stamp",
       "ok": true,
-      "note": "JSONHAS"
+      "note": "peel"
     },
     {
-      "name": "has_miss",
-      "cmd": "unknown key soft miss shell 0",
+      "name": "fail",
+      "cmd": "ok=0 err=boom phase=fail",
       "ok": true,
-      "note": "soft"
+      "note": "fail stamp"
     },
     {
-      "name": "peel",
-      "cmd": "JSON version FROM \u2192 1.15.503; n\u21927",
+      "name": "extend",
+      "cmd": "JSONOBJ FROM +extra +stamp_n",
       "ok": true,
-      "note": "FROM"
-    },
-    {
-      "name": "multi",
-      "cmd": "multi-field peel without JOIN reload + OR none",
-      "ok": true,
-      "note": "multi"
-    },
-    {
-      "name": "or",
-      "cmd": "role hit; missing OR fallback",
-      "ok": true,
-      "note": "OR"
+      "note": "FROM base"
     },
     {
       "name": "probe",
-      "cmd": "empty {} N=0; array soft; OR fallback",
+      "cmd": "empty JSONOBJ {}; empty key soft; quote escape",
       "ok": true,
       "note": "edges"
     },
     {
+      "name": "soft",
+      "cmd": "stamp missing plate soft miss exit0",
+      "ok": true,
+      "note": "soft"
+    },
+    {
       "name": "require",
-      "cmd": "CUBALC_AJPP_REQUIRE=1 peel miss/empty \u2192 shell 2",
+      "cmd": "CUBALC_AJPS_REQUIRE=1 empty \u2192 shell 2",
       "ok": true,
       "note": "hard"
     },
@@ -1004,6 +998,30 @@
       "title": "CLEAR_ERR intentionally sets LAST string to cleared",
       "detail": "var_set_str LAST=cleared after wipe. Conflicts with JSONHAS/HASINTREE LAST-preserve (W112): board that JOIN preserve then CLEAR_ERR after probe loses the token; VAL became cleared. Capture LAST into a LET before CLEAR_ERR.",
       "repro": "JOIN preserve-me; CLEAR_ERR; LAST is cleared not preserve-me"
+    },
+    {
+      "id": "W118",
+      "severity": "high",
+      "area": "lang|json_value",
+      "title": "JSONOBJ/JSONSET reject bare numeric vars as values",
+      "detail": "LET TN=3; SYS JSONOBJ \"n\" TN \u2192 missing value hard err. SYS JSONSET plate \"n\" TN \u2192 unknown form TN. String vars and literals work. Agents must SYS STR TN; LET n_str=LAST before pair writes. Side effect: n stored as JSON string \"3\" not number.",
+      "repro": "LET TN 3; JSONOBJ \"n\" TN fails; STR then JSONOBJ \"n\" n_str ok"
+    },
+    {
+      "id": "W119",
+      "severity": "med",
+      "area": "lang|json_type",
+      "title": "STR shuttle for W118 demotes numbers to JSON strings",
+      "detail": "After SYS STR TN + JSONSET n n_str, plate has \"n\":\"3\" not \"n\":3. Peers that type-check JSON numbers may fail. No JSONSETN / typed numeric put. Literals 3 in JSONOBJ keep number type.",
+      "repro": "mint with n_str \u2192 cat plate shows \"n\":\"0\""
+    },
+    {
+      "id": "W120",
+      "severity": "low",
+      "area": "lang|jsonobj_n",
+      "title": "JSONOBJ FROM base reports only new pair count not total keys",
+      "detail": "JSONOBJ FROM body \"extra\" \"yes\" \"stamp_n\" n_str \u2192 JSONOBJ_N=2 (added pairs) not full key count. Agents must JSONKEYS after extend for inventory. Positive for delta tracking.",
+      "repro": "extend existing 6-key plate \u2192 JSONOBJ_N 2"
     }
   ],
   "workarounds": [
@@ -1015,7 +1033,8 @@
     "HASINTREE path: use HASINTREE_PATH/PATH not LAST after probe (W112)",
     "SLICE empty page: check SLICEINTREE_N; pair with EXIT n under REQUIRE (W113)",
     "JSON dynamic keys: EQS-branch literals from known schema; no var keys (W115)",
-    "Capture LAST into LET before CLEAR_ERR if probe preserved it (W117)"
+    "Capture LAST into LET before CLEAR_ERR if probe preserved it (W117)",
+    "JSONOBJ/JSONSET numeric: SYS STR n first (W118); accept string n or use literal numbers"
   ],
   "language_gaps": [
     "Stable PARSEPATHLINE after FORMAT under agent_boot boards (W108)",
@@ -1026,18 +1045,20 @@
     "Cookbook: seed\u2192has probe\u2192page window triage under tree",
     "JSON key token resolve vars / JSONHAS OF bag-of-keys loop",
     "JSON peel nested objects / dotted paths for object fields (W116)",
-    "CLEAR_ERR optional keep-LAST mode"
+    "CLEAR_ERR optional keep-LAST mode",
+    "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
+    "DROPINTREE still unused in realworld (residual queue board)"
   ],
   "issues_faced": [
-    "PARSEPATHLINE round-trip failed in board cite arm (W108) \u2014 trust FORMAT OK",
-    "TAKE n=0 empty OK=1; NTH OOR HIT=0 OK=1 (W109/W110)",
     "0-based FIRSTLINE I needs +1 for FORMAT lineno (W111)",
     "selftest 355/355",
     "HASINTREE LAST preserve made VAL=preserve-me until documented W112",
     "selftest 355/355 green v1.15.500",
     "variable JSON keys silently miss \u2014 fixed board with EQS literal branches (W115)",
-    "selftest 355/355 green v1.15.503"
+    "selftest 355/355 green v1.15.503",
+    "mint hard-fail missing value until STR shuttle on TN (W118)",
+    "selftest 355/355 green v1.15.505"
   ],
-  "commit": "fe72f5b",
-  "ts": "2026-08-08T10:00:42Z"
+  "commit": "pending",
+  "ts": "2026-08-08T10:24:34Z"
 }
