@@ -1,57 +1,63 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 207,
-  "program": "programs/realworld/agent_plate_field_patch_board.cubalc",
-  "theme": "UPDATEPLATE/JSONFILESET one-shot agent status field patch board",
-  "version": "1.15.551-usability",
+  "iter": 208,
+  "program": "programs/realworld/agent_plate_counter_field_board.cubalc",
+  "theme": "BUMPPLATE + PEEKPLATE + DROPPLATE agent retry-budget field ops",
+  "version": "1.15.553-usability",
   "pass": true,
-  "prior_note": "iter 206 ENSURE+SAVE+REQUIRE PLATEFILE lifecycle; this iter first realworld UPDATEPLATE (proof 1100) field patch board",
+  "prior_note": "iter 207 UPDATEPLATE field patch; this iter first realworld BUMP/PEEK/DROP plate file ops (proofs 1101-1103)",
   "tests": [
     {
       "name": "list",
-      "cmd": "list defaults key_name=zone val_str=east",
+      "cmd": "list defaults key=retries",
       "ok": true,
       "note": "list"
     },
     {
-      "name": "put",
-      "cmd": "put --key=zone --val=east create; west update LAST_N 0\u21921",
+      "name": "bump",
+      "cmd": "BUMPPLATE retries 1 then +3 \u2192 4",
       "ok": true,
-      "note": "UPDATEPLATE"
+      "note": "BUMPPLATE"
     },
     {
-      "name": "tick",
-      "cmd": "tick load 0\u21921\u21922 via (take_n) paren expr",
+      "name": "peek",
+      "cmd": "hit retries; miss OR fb",
       "ok": true,
-      "note": "heartbeat"
+      "note": "PEEKPLATE"
     },
     {
-      "name": "role_zone",
-      "cmd": "role worker; zone north peel ok",
+      "name": "cycle",
+      "cmd": "bump+tmp stamp+peek+drop tmp ack",
       "ok": true,
-      "note": "string fields"
+      "note": "workflow"
     },
     {
       "name": "gate",
-      "cmd": "multi UPDATEPLATE + JSONHASALL + ok bool peel 1",
+      "cmd": "retries>=min admit; min=99 deny",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "reload",
-      "cmd": "LOADPLATE hit peel load+zone",
+      "name": "drop",
+      "cmd": "drop hit then idempotent miss",
       "ok": true,
-      "note": "reload"
+      "note": "DROPPLATE"
+    },
+    {
+      "name": "decr",
+      "cmd": "DECRPLATE load \u2192 -1 first",
+      "ok": true,
+      "note": "DECRPLATE"
     },
     {
       "name": "alias",
-      "cmd": "JSONFILESET/PLATEKEYSET/PATCHPLATE/PLATEPUT tick=6",
+      "cmd": "JSONFILEINC/TICKPLATE/PLATEKEYGET/JSONFILEDEL",
       "ok": true,
       "note": "aliases"
     },
     {
       "name": "probe",
-      "cmd": "create/update/empty key/non-obj wipe/RAW arr",
+      "cmd": "create/delta/OR/drop/empty key/fresh DROP {}",
       "ok": true,
       "note": "edges"
     },
@@ -63,7 +69,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_APFP_REQUIRE=1 reload miss \u2192 shell 2",
+      "cmd": "CUBALC_APCF_REQUIRE=1 peek OR \u2192 shell 2",
       "ok": true,
       "note": "hard env"
     },
@@ -71,7 +77,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "354/355 pre-existing sys_kvfileensure (not this program)"
+      "note": "354/355 pre-existing sys_kvfileensure"
     }
   ],
   "weaknesses": [
@@ -1474,6 +1480,46 @@
       "title": "UPDATEPLATE LAST_N is insert/update not success; non-object wipe",
       "detail": "LAST_N=0 key-inserted / 1 key-updated (json_set n). OK=1 is success. Non-object file body silently reseeded to {} with CREATED=1 (data loss). Bool true peels as \"1\" via SYS JSON. No multi-key batch \u2014 gate needs N successive calls.",
       "repro": "WRITE junk; UPDATEPLATE k v \u2192 plate {k:v} only; true\u2192JSON peel 1"
+    },
+    {
+      "id": "W176",
+      "severity": "high",
+      "area": "lang|getflag",
+      "title": "GETFLAG rejects flag name 'or' and multi-char |aliases like fb|fallback",
+      "detail": "GETFLAG or|fallback OR \u2026 hard-fails (OR chain keyword). GETFLAG fb|fallback also errs treating fallback as OR clause. Short single-token names (fb, key|k) work. Agents cannot name CLI flags or/fallback without workarounds.",
+      "repro": "GETFLAG or|fallback OR ENV X OR d \u2192 parse err; GETFLAG fb OR \u2026 ok"
+    },
+    {
+      "id": "W177",
+      "severity": "high",
+      "area": "lang|vars",
+      "title": "Plate-file ops flood var table; PEEKPLATE_HIT/DROPPLATE_HIT may be missing",
+      "detail": "Reconfirmed W174 under BUMP+PEEK+DROP: host knobs (PEEKPLATE_HIT, DROPPLATE_HIT, BUMPPLATE_CREATED) often absent after agent_boot+IDENTITY+GETFLAGOUT. Prefer LAST_N immediately after each SYS op (hit=1/0). Late LET of new names still silent-fails at 128.",
+      "repro": "after 2 plate ops LET x = PEEKPLATE_HIT may be 0 always; use LAST_N instead"
+    },
+    {
+      "id": "W178",
+      "severity": "med",
+      "area": "host|peekplate",
+      "title": "PEEKPLATE with OR returns OK=1 on miss/missing file",
+      "detail": "Designed soft fallback: miss key or missing file with OR yields OK=1 HIT=0 LAST=fallback. Agents using OR cannot rely on OK for hard require; must branch LAST_N/HIT and EXIT n under env require.",
+      "repro": "PEEKPLATE miss.json k OR none \u2192 OK=1; REQUIRE path needs EXIT on LAST_N==0"
+    },
+    {
+      "id": "W179",
+      "severity": "med",
+      "area": "host|dropplate",
+      "title": "DROPPLATE missing file creates empty {} plate (side-effect write)",
+      "detail": "DROPPLATE on absent path CREATED=1 writes {}. Soft miss key is OK=1 HIT=0 idempotent. Agents doing field GC must not DROP on paths they never intended to create.",
+      "repro": "RM fresh; DROPPLATE fresh ghost \u2192 file exists JSONEMPTY 1"
+    },
+    {
+      "id": "W180",
+      "severity": "low",
+      "area": "host|bumpplate",
+      "title": "DECRPLATE on missing key seeds 0 then \u22121",
+      "detail": "BUMP 0 + DECR on new key yields load:-1. Useful for signed counters but surprising for 'ensure then dec' budgets without prior seed.",
+      "repro": "DECRPLATE newpath load \u2192 {\"load\":-1}"
     }
   ],
   "workarounds": [
@@ -1528,7 +1574,10 @@
     "GETFLAG for non-path flags; GETFLAGOUT only for paths",
     "UPDATEPLATE numeric via (expr) not bare LET num",
     "JSONPLUCK for dynamic key peel",
-    "literal \"\" empty key; reuse LETs under 128-var cap"
+    "literal \"\" empty key; reuse LETs under 128-var cap",
+    "GETFLAG fb (not or); single-token flag names",
+    "capture LAST_N right after SYS plate-file ops",
+    "EXIT n when require_hit and LAST_N==0 even if OK=1"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1576,7 +1625,11 @@
     "UPDATEPLATE bare num var value hard-fail; need (expr)",
     "SYS JSON key must be literal; use JSONPLUCK for vars",
     "128-var table silent overflow kills late LET",
-    "UPDATEPLATE LAST_N insert/update polarity \u2260 success"
+    "UPDATEPLATE LAST_N insert/update polarity \u2260 success",
+    "GETFLAG flag name 'or' and multi-char |alias parse fail",
+    "PEEK/DROP/BUMP host knobs unreliable under 128-var; use LAST_N",
+    "PEEKPLATE OR soft-success masks require miss",
+    "DROPPLATE missing file writes empty plate"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1621,8 +1674,11 @@
     "put peel failed until JSONPLUCK replaced SYS JSON var-key",
     "tick need value until parenthesized (take_n)",
     "probe empty key hard-fail from 128-var OOM on LET empty",
-    "GETFLAGOUT turned --key=zone into abs path keys"
+    "GETFLAGOUT turned --key=zone into abs path keys",
+    "GETFLAG or|fallback and fb|fallback parse errors",
+    "cycle/alias/probe failed until LAST_N replaced *HIT knobs",
+    "require needed EXIT on OR fallback not only OK==0"
   ],
-  "commit": "366f458",
-  "ts": "2026-08-08T17:58:23Z"
+  "commit": "pending",
+  "ts": "2026-08-08T18:21:05Z"
 }

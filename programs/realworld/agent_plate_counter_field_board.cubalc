@@ -1,0 +1,845 @@
+# agent_plate_counter_field_board.cubalc — BUMPPLATE + PEEKPLATE + DROPPLATE
+#
+# Real use: agent retry-budget plate — bump counters, peek fields without full
+# load, drop temp keys after ack. No LOAD+JSONINC/JSON/JSONDEL+SAVE glue.
+# First realworld of proofs 1101/1102/1103 (BUMP/PEEK/DROP plate file ops).
+#
+#   SYS BUMPPLATE|JSONFILEINC|TICKPLATE path key [delta] — LAST_N=new v
+#   SYS DECRPLATE|JSONFILEDEC path key [delta]
+#   SYS PEEKPLATE|JSONFILEGET path key [OR fallback] — LAST=value · HIT
+#   SYS DROPPLATE|JSONFILEDEL path key — LAST=plate · HIT 0|1 soft miss
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_apcf_$$
+#   ./out/cubalc run programs/realworld/agent_plate_counter_field_board.cubalc \
+#     bump -- --plate=/tmp/apcf/agent.json --key=retries
+#   ./out/cubalc run ... peek -- --plate=... --key=retries --or=0
+#   ./out/cubalc run ... drop -- --plate=... --key=tmp
+#   ./out/cubalc run ... cycle -- --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt APCF_REPORT.txt
+# Env: PLATE_PATH KEY_NAME OR_STR CUBALC_APCF_REQUIRE
+#
+# Edges:
+#   BUMP create-on-miss; PEEK miss soft + OR; DROP idempotent miss;
+#   DROP missing file creates {}; empty key soft; 128-var lean LETs
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_plate_counter_field_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_plate_counter_field -- bump|peek|drop|decr|cycle|gate|probe|list -- [--plate=P] [--key=K] [--delta=N] [--fb=V]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/deep/agent.json"
+LET plate_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+# field id — GETFLAG not GETFLAGOUT (W171 path-absolutize)
+DEFAULT KEY_S = "retries"
+GETFLAG key|k OR ENV KEY_NAME OR KEY_S
+LET key_name = LAST
+CLEAR_ERR
+
+# flag name must not be "or" — collides with GETFLAG … OR chain keyword
+# multi-char |alias also confuses parser (fb|fallback → err on fallback)
+DEFAULT FB_S = "0"
+GETFLAG fb OR ENV OR_STR OR FB_S
+LET or_str = LAST
+CLEAR_ERR
+
+GETFLAGN delta|d OR ENV DELTA_N OR 1
+LET delta_n = LAST_N
+CLEAR_ERR
+
+GETFLAGN min|m OR ENV MIN_N OR 1
+LET min_n = LAST_N
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_APCF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "APCF_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+# lean LETs — stay under 128-var hard cap (W174)
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET peel_s = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "bump", "peek", "drop", "decr", "cycle", "gate", "list", "ls", "soft", "clear", "probe", "alias"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "bump" THEN
+    LET op = "bump"
+  WHEN "peek" THEN
+    LET op = "peek"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "decr" THEN
+    LET op = "decr"
+  WHEN "cycle" THEN
+    LET op = "cycle"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "alias" THEN
+    LET op = "alias"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src key_name delta_n min_n or_str
+  CLEAR_ERR
+END
+
+# bump — one-shot counter (create-or-inc)
+SYS EQS op "bump"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # bare num var may fail some ops; paren expr for delta (W172 class)
+  SYS BUMPPLATE plate_file key_name (delta_n)
+  LET take_n = LAST_N
+  LET body = LAST
+  # avoid BUMPPLATE_* knobs under 128-var pressure — infer create from first bump
+  LET created = 0
+  IF take_n == delta_n THEN
+    LET created = 1
+  END
+  LET load_hit = 0
+  IF take_n > delta_n THEN
+    LET load_hit = 1
+  END
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "bump soft fail"
+    FAIL "bump soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "bump fail"
+    END
+  ELSE
+    LET out = body
+    LET peel_hit = take_n
+    LET hit = 1
+    LET note_msg = "bump ok"
+    LET admit_n = 1
+  END
+  SYS CAT "bump:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR created
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row key_name
+  LET row = LAST
+  SYS CAT row ":bp"
+  LET row = LAST
+  SYS GREPV "bump:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n created load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# peek — one-shot field peel + OR fallback
+SYS EQS op "peek"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS PEEKPLATE plate_file key_name OR or_str
+  # capture LAST_N before knobs (PEEKPLATE_HIT may be missing under 128-var cap)
+  LET peel_hit = LAST_N
+  LET peel_s = LAST
+  LET has_n = 0
+  IF peel_hit == 0 THEN
+    LET has_n = 1
+  END
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "peek soft fail"
+    FAIL "peek soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "peek fail"
+    END
+  ELSE
+    LET out = peel_s
+    LET take_n = peel_hit
+    LET load_hit = 1
+    # hit key or OR fallback both OK=1; LAST_N 1=hit 0=OR
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "peek hit"
+      LET admit_n = 1
+    ELSE
+      LET hit = 1
+      LET note_msg = "peek or"
+      LET admit_n = 0
+      LET miss = 1
+      FAIL "peek or fallback"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "peek or require"
+      END
+    END
+  END
+  SYS CAT "peek:"
+  LET row = LAST
+  SYS CAT row peel_s
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR has_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":pk"
+  LET row = LAST
+  SYS GREPV "peek:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit has_n load_hit peel_s p_src note_msg
+  CLEAR_ERR
+END
+
+# drop — one-shot field delete (soft miss idempotent)
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS DROPPLATE plate_file key_name
+  LET peel_hit = LAST_N
+  LET take_n = LAST_N
+  LET body = LAST
+  LET created = 0
+  LET load_hit = 1
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop soft fail"
+    FAIL "drop soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "drop fail"
+    END
+  ELSE
+    LET out = body
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "drop hit"
+      LET admit_n = 1
+    ELSE
+      # soft miss key still OK=1
+      LET hit = 1
+      LET note_msg = "drop miss ok"
+      LET admit_n = 0
+      LET miss = 1
+      FAIL "drop key miss"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "drop:"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR created
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row key_name
+  LET row = LAST
+  SYS CAT row ":dp"
+  LET row = LAST
+  SYS GREPV "drop:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit created load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# decr — DECRPLATE default −1 (or delta as negative via -delta_n)
+SYS EQS op "decr"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # ensure key exists first
+  SYS BUMPPLATE plate_file key_name 0
+  CLEAR_ERR
+  SYS DECRPLATE plate_file key_name
+  LET take_n = LAST_N
+  LET body = LAST
+  LET created = 0
+  LET load_hit = 1
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "decr soft fail"
+    FAIL "decr soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "decr fail"
+    END
+  ELSE
+    LET out = body
+    LET peel_hit = take_n
+    LET hit = 1
+    LET note_msg = "decr ok"
+    LET admit_n = 1
+  END
+  SYS CAT "decr:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":dc"
+  LET row = LAST
+  SYS GREPV "decr:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n p_src note_msg
+  CLEAR_ERR
+END
+
+# cycle — bump retries + stamp tmp + peek + drop tmp (field ack workflow)
+SYS EQS op "cycle"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS BUMPPLATE plate_file "retries" (delta_n)
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "tmp" "pending"
+  CLEAR_ERR
+  SYS PEEKPLATE plate_file "retries" OR "0"
+  LET peel_hit = LAST_N
+  LET peel_s = LAST
+  CLEAR_ERR
+  SYS DROPPLATE plate_file "tmp"
+  LET has_n = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  SYS JSONHAS body "tmp"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  # admit_n should be 0 (tmp gone); has_n drop hit 1
+  LET out = body
+  IF peel_hit == 1 THEN
+    IF has_n == 1 THEN
+      IF admit_n == 0 THEN
+        LET hit = 1
+        LET note_msg = "cycle ok"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "cycle tmp remain"
+        FAIL "cycle tmp remain"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "cycle drop miss"
+      FAIL "cycle drop miss"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "cycle peek miss"
+    FAIL "cycle peek miss"
+    CLEAR_ERR
+  END
+  SYS CAT "cycle:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row peel_s
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR has_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":cy"
+  LET row = LAST
+  SYS GREPV "cycle:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_s has_n admit_n p_src note_msg
+  CLEAR_ERR
+END
+
+# gate — peek retries and admit if >= min_n
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS PEEKPLATE plate_file "retries" OR "0"
+  LET peel_hit = LAST_N
+  LET peel_s = LAST
+  CLEAR_ERR
+  SYS NUM peel_s
+  LET take_n = LAST_N
+  CLEAR_ERR
+  LET out = peel_s
+  IF take_n >= min_n THEN
+    LET hit = 1
+    LET admit_n = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET admit_n = 0
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate deny"
+    END
+  END
+  SYS CAT "gate:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR min_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR admit_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":gt"
+  LET row = LAST
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n min_n admit_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# alias — JSONFILEINC / TICKPLATE / PLATEKEYGET / JSONFILEDEL
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JOIN state_dir "sample/alias_ctr.json"
+  LET row = LAST
+  SYS RM row
+  CLEAR_ERR
+  SYS JSONFILEINC row "n"
+  LET created = 1
+  CLEAR_ERR
+  SYS TICKPLATE row "n"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS PLATEKEYGET row "n"
+  LET peel_hit = LAST_N
+  LET peel_s = LAST
+  CLEAR_ERR
+  SYS UPDATEPLATE row "tmp" "x"
+  CLEAR_ERR
+  SYS JSONFILEDEL row "tmp"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS NUM peel_s
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF take_n == 2 THEN
+    IF load_hit == 2 THEN
+      IF has_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "alias ok"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "alias drop"
+        FAIL "alias drop"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "alias peek"
+      FAIL "alias peek"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias bump"
+    FAIL "alias bump"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR has_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":al"
+  LET row = LAST
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_s has_n created p_src note_msg
+  CLEAR_ERR
+END
+
+# soft — empty bag
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — create polarity, peek OR, drop miss, empty key, missing file DROP
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JOIN state_dir "sample/probe_ctr.json"
+  LET row = LAST
+  SYS RM row
+  CLEAR_ERR
+  # bump create — LAST_N becomes 1
+  SYS BUMPPLATE row "n"
+  LET take_n = LAST_N
+  LET created = 0
+  IF take_n == 1 THEN
+    LET created = 1
+  END
+  CLEAR_ERR
+  # bump again +3 → 4
+  SYS BUMPPLATE row "n" 3
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # peek
+  SYS PEEKPLATE row "n" OR "0"
+  LET peel_s = LAST
+  CLEAR_ERR
+  # peek miss OR
+  SYS PEEKPLATE row "absent" OR "fb"
+  SYS EQS LAST "fb"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # drop hit — LAST_N 1
+  SYS UPDATEPLATE row "tmp" "x"
+  CLEAR_ERR
+  SYS DROPPLATE row "tmp"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # drop miss soft — LAST_N 0
+  SYS DROPPLATE row "tmp"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  # empty key soft (literal "" — no new LET under var cap)
+  SYS BUMPPLATE row ""
+  LET bag_n = OK
+  CLEAR_ERR
+  # missing file DROP creates empty plate
+  SYS JOIN state_dir "sample/probe_drop_fresh.json"
+  LET body = LAST
+  SYS RM body
+  CLEAR_ERR
+  SYS DROPPLATE body "ghost"
+  LET out = LAST
+  SYS JSONEMPTY out
+  LET hit = LAST_N
+  CLEAR_ERR
+  IF created == 1 THEN
+    IF take_n == 1 THEN
+      IF peel_hit == 4 THEN
+        IF has_n == 1 THEN
+          IF load_hit == 1 THEN
+            IF admit_n == 0 THEN
+              IF bag_n == 0 THEN
+                IF hit == 1 THEN
+                  LET note_msg = "probe ok"
+                  LET hit = 1
+                  LET admit_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "probe fresh"
+                  FAIL "probe fresh"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "probe emptykey"
+                FAIL "probe emptykey"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "probe dropmiss"
+              FAIL "probe dropmiss"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe drophit"
+            FAIL "probe drophit"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe or"
+          FAIL "probe or"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe delta"
+        FAIL "probe delta"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe first"
+      FAIL "probe first"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe create"
+    FAIL "probe create"
+    CLEAR_ERR
+  END
+  PRINT_JSON created take_n peel_hit has_n load_hit admit_n bag_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_plate_counter_field_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "admit"
+LET row = LAST
+SYS STR admit_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "plate"
+LET row = LAST
+SYS PUSH row plate_file
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS CAT "apcf op="
+LET body = LAST
+SYS CAT body op
+LET body = LAST
+SYS CAT body " hit="
+LET body = LAST
+SYS STR hit
+SYS CAT body LAST
+LET body = LAST
+SYS CAT body " miss="
+LET body = LAST
+SYS STR miss
+SYS CAT body LAST
+LET body = LAST
+SYS CAT body " note="
+LET body = LAST
+SYS CAT body note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n created load_hit peel_hit p_src note_msg
+NOTE "agent_plate_counter_field_board: done"
