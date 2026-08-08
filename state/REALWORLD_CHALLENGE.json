@@ -2025,6 +2025,6 @@
     "peer mutations require explicit WRITE peer.json each action",
     "must reload PLATE from agent.json each action for GETP identity checks"
   ],
-  "commit": "",
+  "commit": "cd783de",
   "ts": "2026-08-08T23:18:48Z"
 }
