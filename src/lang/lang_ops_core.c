@@ -1315,6 +1315,42 @@ static long cubalc_collect_restargs(char *out, size_t outn) {
  * --mode=fast / --verbose / -n 3 → "mode\nverbose\nn". Skips bare "--".
  * Value tokens after bare --name are not listed. LAST_N = flag count.
  * Usability: LISTFLAGS discovery without EACH ARGS + STARTS glue. */
+/* Rest positionals after first (subcommand slot). Returns count remaining;
+ * writes newline bag of files after cmd. Empty if 0–1 positionals total.
+ * Usability: REQUIRE RESTPOS / HASRESTPOS after SUBCMD convention. */
+static long cubalc_collect_restpos(char *out, size_t outn) {
+  char bag[CUBALC_HOST_STR_MAX];
+  long rest_n = 0;
+  const char *p, *start;
+  size_t ro = 0;
+  if (out && outn) out[0] = 0;
+  (void)cubalc_collect_restargs(bag, sizeof bag);
+  p = bag;
+  /* skip first field (subcommand) */
+  if (!*p) return 0;
+  while (*p && *p != '\n') p++;
+  if (*p == '\n') p++;
+  else return 0;
+  while (*p) {
+    start = p;
+    while (*p && *p != '\n') p++;
+    {
+      size_t fl = (size_t)(p - start);
+      if (fl > 0) {
+        if (out && outn && ro + fl + 2 < outn) {
+          if (ro) out[ro++] = '\n';
+          memcpy(out + ro, start, fl);
+          ro += fl;
+          out[ro] = 0;
+        }
+        rest_n++;
+      }
+    }
+    if (*p == '\n') p++;
+  }
+  return rest_n;
+}
+
 static long cubalc_collect_listflags(char *out, size_t outn) {
   char envn[32];
   const char *ac;
@@ -26234,7 +26270,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"COUNTINRANGE", "COUNTINRANGE alias of COUNTBETWEEN"},
       {"HASBETWEEN", "HASBETWEEN|ANYBETWEEN [Class] field lo hi — soft 0|1 any in range"},
       {"ANYBETWEEN", "ANYBETWEEN alias of HASBETWEEN"},
-      {"INRANGE", "INRANGE alias of HASBETWEEN"},
+      /* INRANGE now free numeric soft range (not HASBETWEEN alias) */
       {"WHEREOBJ", "WHEREOBJ|FILTEROBJS [Class] field value — bag of objs with field==value"},
       {"FILTEROBJS", "FILTEROBJS alias of WHEREOBJ"},
       {"KEEPOBJS", "KEEPOBJS alias of WHEREOBJ"},
@@ -26363,6 +26399,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
       {"POSN", "POSN alias of NTHPOS — first/second file without RESTARGS+NTH"},
       {"SUBCMD", "SUBCMD|COMMAND [OR def] — first positional → LAST · RESTPOS = remaining files"},
+      {"REQUIRE RESTPOS", "REQUIRE RESTPOS|TAILPOS [min] — files after subcommand · not counting cmd"},
+      {"HASRESTPOS", "HASRESTPOS|HASTAILPOS [min] — soft 0|1 remaining files after first positional"},
       {"REQUIRE BIN", "REQUIRE BIN|CMD|EXE name — fail if tool not X_OK on PATH"},
       {"REQUIRE FN", "REQUIRE FN|FUNC name — fail if FN not defined (after INCLUDE)"},
       {"REQUIRE CLASS", "REQUIRE CLASS|TYPE name — fail if CLASS not defined"},
@@ -28302,6 +28340,52 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
+    /* REQUIRE RESTPOS|TAILPOS|AFTERCMD [min] — fail if files after first
+     * positional (subcommand slot) < min (default 1). LAST = file bag.
+     * Usability: SUBCMD then gate input files without counting the verb. */
+    if (kw(&L->cur,"RESTPOS") || kw(&L->cur,"TAILPOS") || kw(&L->cur,"AFTERCMD") ||
+        kw(&L->cur,"TAILARGS") || kw(&L->cur,"FILEARGS") || kw(&L->cur,"RESTFILES") ||
+        kw(&L->cur,"AFTER_SUBCMD") || kw(&L->cur,"CMDFILES")){
+      long need = 1, have;
+      char bag[CUBALC_HOST_STR_MAX];
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+          (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") && !kw(&L->cur,"END") &&
+           !kw(&L->cur,"REQUIRE") && !kw(&L->cur,"NEED") && !kw(&L->cur,"PATH") &&
+           !kw(&L->cur,"FLAG") && !kw(&L->cur,"ARG") && !kw(&L->cur,"ARGC") &&
+           !kw(&L->cur,"RESTARGS") && !kw(&L->cur,"ONEOF") && !kw(&L->cur,"BETWEEN"))){
+        need = parse_expr(vm, L);
+      }
+      if (need < 0) need = 0;
+      if (need > 32) need = 32;
+      have = cubalc_collect_restpos(bag, sizeof bag);
+      if (have < need) {
+        char msg[180];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE RESTPOS %ld got %ld line %d — pass files after subcommand (SUBCMD)",
+                 need, have, aln);
+        cubalc_append_usage_tip(vm, msg, sizeof msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", bag);
+      var_set_str(vm, "RESTPOS", bag);
+      var_set_str(vm, "TAILPOS", bag);
+      var_set_str(vm, "TAILARGS", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      vm->last_n = have;
+      var_set_num(vm, "LAST_N", have);
+      var_set_num(vm, "RESTPOS_N", have);
+      var_set_num(vm, "TAILPOS_N", have);
+      var_set_num(vm, "REQUIRE_RESTPOS", need);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require restpos >= %ld (have %ld)\n", need, have);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     /* REQUIRE PATH|EXIST path — fail if host path missing.
      * REQUIRE DIR|DIRECTORY path — fail if not a directory.
      * REQUIRE REG|REGFILE|ISFILE path — fail if not a regular file.
@@ -29330,6 +29414,43 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "RESTARGS", bag);
     if (vm->trace)
       fprintf(vm->trace, "# hasrestargs >= %ld (have %ld) → %ld\n", need, have, hit);
+    bump(vm); return 1;
+  }
+  /* HASRESTPOS|HASTAILPOS [min] — soft 0|1 if files after first positional >= min.
+   * LAST "0"|"1" · RESTPOS_N = remaining count · bag stashed in RESTPOS when have>0.
+   * Twin of REQUIRE RESTPOS. Usability: IF after SUBCMD without fatal. */
+  if (kw(&L->cur,"HASRESTPOS") || kw(&L->cur,"HASTAILPOS") || kw(&L->cur,"HASAFTERCMD") ||
+      kw(&L->cur,"HASFILEARGS") || kw(&L->cur,"HASRESTFILES") || kw(&L->cur,"RESTPOS?") ||
+      kw(&L->cur,"HAS_RESTPOS") || kw(&L->cur,"ENOUGHFILES")){
+    long need = 1, have, hit;
+    char bag[CUBALC_HOST_STR_MAX];
+    char buf[8];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") && !kw(&L->cur,"END") &&
+         !kw(&L->cur,"IF") && !kw(&L->cur,"HASARG") && !kw(&L->cur,"HASFLAG") &&
+         !kw(&L->cur,"REQUIRE") && !kw(&L->cur,"RESTARGS") && !kw(&L->cur,"USAGE") &&
+         !kw(&L->cur,"SUBCMD") && !kw(&L->cur,"HASRESTARGS"))){
+      need = parse_expr(vm, L);
+    }
+    if (need < 0) need = 0;
+    if (need > 32) need = 32;
+    have = cubalc_collect_restpos(bag, sizeof bag);
+    hit = (have >= need) ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASRESTPOS_N", hit);
+    var_set_num(vm, "RESTPOS_N", have);
+    var_set_num(vm, "TAILPOS_N", have);
+    var_set_num(vm, "OK", 1);
+    snprintf(buf, sizeof buf, "%ld", hit);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (have > 0)
+      var_set_str(vm, "RESTPOS", bag);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasrestpos >= %ld (have %ld) → %ld\n", need, have, hit);
     bump(vm); return 1;
   }
   /* LISTFLAGS|FLAGS — newline bag of flag names (no dashes) from CUBALC_ARGn.
