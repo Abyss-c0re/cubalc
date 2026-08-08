@@ -1,0 +1,548 @@
+# seal_writeout_board.cubalc — RESTPOSPATHS + WRITEOUT multi-file seal
+#
+# Real use: release agents seal post-subcommand inputs into a nested
+# manifest file without RESTPOS+EACH+REALPATH or DIRNAME+MKDIR+WRITE glue:
+#   RESTPOSPATHS / TAILPATHS — files after SUBCMD → abs bag + EXIST_N (1016)
+#   GETFLAGOUT manifest|m OR ENV MANIFEST — abs report file + parent (1015)
+#   WRITEOUT / PUTOUT — ENSUREPARENT + WRITE one-shot (1017)
+#   SUBCMD seal|list|drop|has|gate|soft|clear|probe
+#
+# First realworld RESTPOSPATHS + WRITEOUT board (after 1016-1017).
+# Distinct from stage_outdir (RESTPATHS+GETFLAGDIR, verb peel W61) and
+# report_out_export (NTHPOSPATH 1 + GETFLAGOUT): this board uses
+# *tail paths after subcmd* and *one-shot WRITEOUT*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sw_$$
+#   export MANIFEST=/tmp/sw_$$/manifest.txt
+#   ./out/cubalc run programs/realworld/seal_writeout_board.cubalc \
+#     seal -- --manifest=/tmp/sw_$$/m.txt Makefile include/cubalc_law.h
+#
+# Plate: SEALS.txt VAL.txt META.txt SW_REPORT.txt (+ external manifest)
+# Env: MANIFEST CUBALC_SW_REQUIRE CUBALC_SW_MIN
+#
+# Edges:
+#   RESTPOSPATHS excludes SUBCMD verb (fixes RESTPATHS W61 class)
+#   missing inputs still abs; EXIST_N soft
+#   WRITEOUT creates parents; CREATED 0|1; LAST=abs file
+#   W47 lean LET; NTH0/1 only (no EACH); GREPV plate
+#   WRITE NL; known latch
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "seal_writeout_board: start"
+DEFAULT ACTION = "list"
+DEFAULT TFILE = "SEALS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "SW_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "seal_writeout -- seal|list|drop -- [--manifest=FILE] file [file...]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+# files after subcommand (not counting verb)
+RESTPOSPATHS
+LET paths = LAST
+LET path_n = LAST_N
+LET exist_n = RESTPOSPATHS_EXIST_N
+CLEAR_ERR
+
+# manifest output file
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "seals/manifest.txt"
+LET def_man = LAST
+CLEAR_ERR
+GETFLAGOUT manifest|m OR ENV MANIFEST OR def_man
+LET man_file = LAST
+LET m_src = GETFLAGOUT_SRC
+LET m_created = GETFLAGOUT_CREATED
+LET m_ok = OK
+CLEAR_ERR
+
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+LET targets = RESTPOS
+
+SYS ENV "CUBALC_SW_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SW_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir TFILE
+LET seals_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR seals_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET row = ""
+LET pref = ""
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET nbytes = 0
+LET op = "unknown"
+LET val = ""
+LET meta = ""
+LET body = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "seal", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "seal" THEN
+    LET op = "seal"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "bag_n"
+  SYS STR bag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON bag_n path_n exist_n m_src m_created
+  CLEAR_ERR
+END
+
+SYS EQS op "seal"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF path_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "seal needs files"
+    FAIL "seal needs files"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      REQUIRE RESTPOS 1
+    END
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "seal needs files"
+    END
+  ELSE
+    IF m_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "seal needs manifest"
+      FAIL "seal needs manifest"
+      CLEAR_ERR
+    ELSE
+      # build plate rows + manifest body (PUSH bag lines; no multiline CAT)
+      LET body = "schema=cubalc.seal_manifest.v1"
+      SYS NTH 0 paths
+      LET pref = LAST
+      SYS SIZE pref
+      LET nbytes = LAST_N
+      CLEAR_ERR
+      SYS BASENAME pref
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR nbytes
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS CAT row pref
+      LET row = LAST
+      SYS CAT row ":sealed"
+      LET row = LAST
+      SYS BASENAME pref
+      SYS CAT LAST ":"
+      SYS GREPV LAST bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      SYS PUSH body row
+      LET body = LAST
+      LET admit_n = 1
+      IF path_n > 1 THEN
+        SYS NTH 1 paths
+        LET pref = LAST
+        SYS SIZE pref
+        LET nbytes = LAST_N
+        CLEAR_ERR
+        SYS BASENAME pref
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS STR nbytes
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS CAT row pref
+        LET row = LAST
+        SYS CAT row ":sealed"
+        LET row = LAST
+        SYS BASENAME pref
+        SYS CAT LAST ":"
+        SYS GREPV LAST bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS PUSH bag row
+        LET bag = LAST
+        SYS PUSH body row
+        LET body = LAST
+        LET admit_n = 2
+      END
+      WRITEOUT man_file body
+      EXPECT OK == 1
+      IF OK == 0 THEN
+        EXIT 2 "WRITEOUT manifest failed"
+      END
+      CLEAR_ERR
+      LET bag_ch = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      LET hit = 1
+      LET note_msg = "seal ok"
+      LET val = bag
+      LET val_ch = 1
+      LET meta = "manifest"
+      SYS PUSH meta man_file
+      LET meta = LAST
+      SYS PUSH meta "paths"
+      LET meta = LAST
+      SYS STR path_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON admit_n bag_n path_n exist_n m_src m_created
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs name"
+    FAIL "drop needs name"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET pref = LAST
+    SYS CAT pref ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "drop"
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET pref = LAST
+  SYS BLANK pref
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs name"
+    FAIL "has needs name"
+    CLEAR_ERR
+  ELSE
+    SYS CAT pref ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    LET val = pref
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  SYS STR bag_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "gate"
+  LET meta_ch = 1
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    LET meta_ch = 1
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has seals"
+    LET val = bag
+    LET val_ch = 1
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # RESTPATHS vs RESTPOSPATHS: verb inflation check
+  RESTPATHS
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  RESTPOSPATHS
+  LET has_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  SYS STR has_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "restpaths_n"
+  SYS STR admit_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "restpospaths_n"
+  LET meta = LAST
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON admit_n has_n path_n exist_n m_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET val = ""
+  LET meta = ""
+  LET bag_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE seals_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "seals write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+LET meta = "schema=cubalc.seal_writeout_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "manifest"
+LET meta = LAST
+SYS PUSH meta man_file
+LET meta = LAST
+SYS PUSH meta "m_src"
+LET meta = LAST
+SYS PUSH meta m_src
+LET meta = LAST
+SYS PUSH meta "path_n"
+LET meta = LAST
+SYS STR path_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "exist_n"
+LET meta = LAST
+SYS STR exist_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "bag_n"
+LET meta = LAST
+SYS STR bag_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+
+NOTE "seal_writeout_board: done"
+PRINT_JSON hit miss bag_n path_n exist_n m_src m_created note_msg
+EXIT 0

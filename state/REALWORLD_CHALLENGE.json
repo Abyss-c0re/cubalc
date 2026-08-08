@@ -1,53 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 172,
-  "program": "programs/realworld/report_out_export_board.cubalc",
-  "theme": "GETFLAGOUT + NTHPOSPATH report export (file WRITE + parent mkdir + abs input)",
-  "version": "1.15.465-usability",
+  "iter": 173,
+  "program": "programs/realworld/seal_writeout_board.cubalc",
+  "theme": "RESTPOSPATHS + WRITEOUT multi-file seal (tail abs paths + one-shot plate WRITE)",
+  "version": "1.15.467-usability",
   "pass": true,
-  "prior_note": "iter 171 GETFLAGDIR+RESTPATHS; this iter first realworld GETFLAGOUT(1015)+NTHPOSPATH(1013)+ENSUREPARENT(1014)",
+  "prior_note": "iter 172 GETFLAGOUT+NTHPOSPATH; this iter first realworld RESTPOSPATHS(1016)+WRITEOUT(1017)",
   "tests": [
     {
       "name": "list_default",
-      "cmd": "list \u2192 o_src default creates exports/latest.json parent",
+      "cmd": "list \u2192 m_src default creates seals/manifest parent",
       "ok": true,
       "note": "GETFLAGOUT"
     },
     {
-      "name": "export_cli",
-      "cmd": "export -- --report=FILE Makefile \u2192 digest + plate",
+      "name": "seal_two",
+      "cmd": "seal -- --manifest=FILE Makefile include/\u2026 \u2192 admit 2 path_n 2",
       "ok": true,
-      "note": "WRITE"
+      "note": "RESTPOSPATHS"
     },
     {
-      "name": "row_abs",
-      "cmd": "EXPORTS Makefile:bytes:abs_report:exported",
+      "name": "writeout_body",
+      "cmd": "manifest multi-line schema+rows via WRITEOUT",
+      "ok": true,
+      "note": "WRITEOUT"
+    },
+    {
+      "name": "plate_rows",
+      "cmd": "SEALS basename:bytes:abs:sealed",
       "ok": true,
       "note": "plate"
     },
     {
-      "name": "has_drop",
-      "cmd": "has/drop Makefile",
+      "name": "probe_peel",
+      "cmd": "RESTPATHS n=2 vs RESTPOSPATHS n=1 after probe file",
       "ok": true,
-      "note": "ops"
+      "note": "W67"
     },
     {
-      "name": "miss_empty_req",
-      "cmd": "missing input soft; empty RESTPOS; REQUIRE",
+      "name": "miss_exist",
+      "cmd": "missing+Makefile exist_n 1 path_n 2",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "env_report",
-      "cmd": "REPORT=... export Makefile \u2192 o_src env",
+      "name": "empty_req_env",
+      "cmd": "empty seal; REQUIRE; ENV MANIFEST",
       "ok": true,
-      "note": "ENV"
-    },
-    {
-      "name": "probe_nth0",
-      "cmd": "probe sub_hit=1; NTHPOSPATH 0 is verb path",
-      "ok": true,
-      "note": "W64"
+      "note": "ops"
     },
     {
       "name": "selftest",
@@ -584,24 +584,49 @@
       "title": "ENSUREPARENT re-ensure after GETFLAGOUT is idempotent CREATED=0",
       "detail": "Positive: GETFLAGOUT already mkdirs parent; ENSUREPARENT out_file OK CREATED often 0. Useful dual for GETFLAGPATH+WRITE paths without FLAGOUT.",
       "repro": "GETFLAGOUT then ENSUREPARENT LAST"
+    },
+    {
+      "id": "W67",
+      "severity": "low",
+      "area": "lang|restpospaths",
+      "title": "RESTPOSPATHS excludes SUBCMD verb (fixes RESTPATHS W61 class)",
+      "detail": "Positive: seal Makefile h \u2192 RESTPOSPATHS_N=2 not 3. Probe: RESTPATHS_N=2 (probe+file) vs RESTPOSPATHS_N=1 (file only). Prefer RESTPOSPATHS after SUBCMD for file intake.",
+      "repro": "SUBCMD seal a b; RESTPOSPATHS \u2192 n=2; RESTPATHS \u2192 n=3"
+    },
+    {
+      "id": "W68",
+      "severity": "low",
+      "area": "lang|writeout",
+      "title": "WRITEOUT one-shot ENSUREPARENT+WRITE nested plates",
+      "detail": "Positive: WRITEOUT nested/manifest body creates parents CREATED=1; second CREATED=0; LAST=abs file; LAST_N=bytes. PUTOUT/SYS WRITEOUT aliases. Coexists with GETFLAGOUT peel.",
+      "repro": "WRITEOUT deep/m.txt body \u2192 ISFILE; parent mkdirs"
+    },
+    {
+      "id": "W69",
+      "severity": "med",
+      "area": "lang|cat_multiline",
+      "title": "SYS CAT with embedded newline in .cubalc source mangles body assembly",
+      "detail": "Building multi-line manifest via SYS CAT body \"\\n\" split across source lines duplicated schema and dropped basenames. Workaround: SYS PUSH body row for newline bags. Same class as REPLACEALL multiline hazard.",
+      "repro": "SYS CAT body newline fragment in file \u2192 corrupt bag; SYS PUSH body row ok"
     }
   ],
   "workarounds": [
-    "GETFLAGOUT report|r OR ENV REPORT OR def nested file",
-    "NTHPOSPATH 1 when SUBCMD_HIT else NTHPOSPATH 0 (W64)",
-    "ENSUREPARENT out_file before WRITE; SIZE input for digest",
-    "cubalc run prog export -- --report=PATH input"
+    "RESTPOSPATHS after SUBCMD (not RESTPATHS \u2014 W61/W67)",
+    "GETFLAGOUT manifest|m OR ENV MANIFEST; WRITEOUT man_file body",
+    "SYS PUSH body row for multi-line (not CAT newline in source \u2014 W69)",
+    "NTH 0/1 only under dense LET (W47)",
+    "cubalc run prog seal -- --manifest=PATH file1 file2"
   ],
   "language_gaps": [
-    "NTHPOSPATH after SUBCMD should skip verb (or NTHPOSPATH REST form)",
-    "Cookbook: report export with GETFLAGOUT+NTHPOSPATH",
-    "RESTPATHS/NTHPOSPATH SUBCMD peel consistency"
+    "Document RESTPOSPATHS vs RESTPATHS after SUBCMD in cookbook",
+    "Safer multi-line string literals for CAT/REPLACEALL",
+    "Cookbook: seal multi-file WRITEOUT"
   ],
   "issues_faced": [
-    "NTHPOSPATH 0 = export verb \u2014 use index 1 (W64)",
-    "GETFLAGOUT WRITE digest + ENSUREPARENT green",
+    "Multiline CAT body broken \u2014 fixed with SYS PUSH (W69)",
+    "RESTPOSPATHS excludes verb; probe shows RESTPATHS inflation (W67)",
     "selftest 355/355"
   ],
-  "commit": "b5d04ae0e1a796a4e3dc93570442185d2c320b3a",
-  "ts": "2026-08-08T03:18:50Z"
+  "commit": "",
+  "ts": "2026-08-08T03:44:18Z"
 }
