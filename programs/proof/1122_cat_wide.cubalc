@@ -1,0 +1,91 @@
+# SYS CAT multi-arg + host-wide buffers
+# Usability: build multi-KB plate messages without nested CAT or 512 truncate.
+
+HOLD_FLASH 1
+
+# --- classic 2-arg still works ---
+SYS CAT "hello" " world"
+SYS EQS LAST "hello world"
+ASSERT LAST_N == 1
+ASSERT CAT_N == 2
+
+# --- multi-arg (old needed nested CAT) ---
+SYS CAT "a" "b" "c" "d"
+SYS EQS LAST "abcd"
+ASSERT LAST_N == 1
+ASSERT CAT_N == 4
+SYS LEN LAST
+ASSERT LAST_N == 4
+
+# --- vars + numbers ---
+LET pre = "peer:"
+LET n = 7
+SYS CAT pre "x=" n "/ok"
+SYS EQS LAST "peer:x=7/ok"
+ASSERT LAST_N == 1
+ASSERT CAT_N == 4
+
+# --- wide blob beyond old 512/1024 ---
+SYS STREPEAT "abcdefghij" 80
+LET blob = LAST
+SYS LEN blob
+ASSERT LAST_N == 800
+SYS CAT "HEAD:" blob ":TAIL"
+SYS LEN LAST
+ASSERT LAST_N == 810
+ASSERT CAT_N == 3
+SYS STARTS LAST "HEAD:abcdefghij"
+ASSERT LAST_N == 1
+# suffix check on short string (ENDS still has 512 hay)
+SYS CAT "zz" ":TAIL"
+SYS ENDS LAST ":TAIL"
+ASSERT LAST_N == 1
+
+# two wide parts (old out[1024] would truncate)
+SYS STREPEAT "xy" 300
+LET a = LAST
+SYS STREPEAT "zw" 300
+LET b = LAST
+SYS CAT a b
+SYS LEN LAST
+ASSERT LAST_N == 1200
+ASSERT CAT_N == 2
+SYS STARTS LAST "xyxyxy"
+ASSERT LAST_N == 1
+SYS LEN b
+ASSERT LAST_N == 600
+SYS STARTS b "zwzwzw"
+ASSERT LAST_N == 1
+
+# --- bare CAT echoes LAST ---
+SYS CAT "solo"
+SYS CAT
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+
+# --- LAST as part ---
+SYS CAT "pre-"
+SYS CAT LAST "post"
+SYS EQS LAST "pre-post"
+ASSERT LAST_N == 1
+
+# --- single arg ---
+SYS CAT "only"
+SYS LEN LAST
+ASSERT LAST_N == 4
+ASSERT CAT_N == 1
+
+# --- agent plate message glue ---
+LET PLATE = "{}"
+SETP "role" "worker"
+SETP "n" 3
+GETP "role"
+LET role = LAST
+GETP "n"
+LET nn = LAST
+SYS CAT "status=" role ";n=" nn
+SYS EQS LAST "status=worker;n=3"
+ASSERT LAST_N == 1
+ASSERT CAT_N == 4
+
+PRINT "cat_wide ok"

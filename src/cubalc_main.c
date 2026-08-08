@@ -2108,6 +2108,7 @@ int main(int argc, char **argv) {
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
+      {"cat_wide", "programs/proof/1122_cat_wide.cubalc", "SYS CAT multi-arg host-wide concat for plate messages"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2364,6 +2365,9 @@ int main(int argc, char **argv) {
       {"SYS SETENV", "host", "SYS SETENV|ENV SET name value — process setenv"},
       {"SYS ENVDEFAULT", "host", "SYS ENVDEFAULT|ENSUREENV name value — setenv if missing/empty"},
       {"SYS UNSETENV", "host", "SYS UNSETENV|ENV UNSET name — process unsetenv · LAST_N was-set"},
+      {"SYS CAT", "host", "SYS CAT|STRCAT parts… — multi-arg concat · host-wide buffers · LAST_N=len"},
+      {"SYS STRCAT", "host", "SYS STRCAT alias of SYS CAT"},
+      {"SYS CONCAT", "host", "SYS CONCAT alias of SYS CAT"},
       {"SYS SUBSTENV", "host", "SYS SUBSTENV|ENVSUBST [tmpl] — expand $NAME/${NAME} from env+vars"},
       {"SYS ENVSUBST", "host", "SYS ENVSUBST alias of SYS SUBSTENV"},
       {"SYS EXPANDENV", "host", "SYS EXPANDENV alias of SYS SUBSTENV"},

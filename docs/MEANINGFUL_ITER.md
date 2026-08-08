@@ -608,6 +608,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 578. ~~**`STREPEAT`/`LPAD`/`RPAD` wide**~~ **done** (host-buffer pad/repeat · multi-KB plate templates without 512 truncate).
 579. ~~**`FILLP`/`SUBSTPLATE`/`EXPANDP`**~~ **done** (expand `{{key}}` from PLATE · agent templates without GETP+REPLACEALL).
 580. ~~**`FILLPFILE`/`SUBSTPLATEFILE`**~~ **done** (materialize template file with `{{key}}` from PLATE · dual of SUBSTFILE).
+581. ~~**`SYS CAT` multi-arg / host-wide**~~ **done** (N-part concat · CUBALC_HOST_STR_MAX · plate messages without nested CAT/512 truncate).
 
 ## Tick protocol
 

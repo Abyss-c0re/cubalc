@@ -27175,19 +27175,84 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS CAT|STRCAT a b — concatenate strings → LAST (digit-3 string plane) */
-    if (kw(&L->cur,"CAT") || kw(&L->cur,"STRCAT") || kw(&L->cur,"CONCAT")){
+    /* SYS CAT|STRCAT|CONCAT parts… — concatenate 1..N strings → LAST.
+     * Host-wide CUBALC_HOST_STR_MAX buffers (no 512/1024 truncate).
+     * Multi-arg: SYS CAT "a" "b" "c" → "abc" without nested CAT chains.
+     * Numbers / numeric vars accepted as decimal parts. Bare CAT echoes LAST.
+     * LAST_N = byte length; CAT_N = part count.
+     * Usability: multi-KB agent plate messages / paths in one form
+     * (pairs STREPEAT/LPAD wide + FILLP). */
+    if (kw(&L->cur,"CAT") || kw(&L->cur,"STRCAT") || kw(&L->cur,"CONCAT") ||
+        kw(&L->cur,"STRCATN") || kw(&L->cur,"JOINSTR") || kw(&L->cur,"SCAT") ||
+        kw(&L->cur,"STRAPPEND") || kw(&L->cur,"CATN")){
       lex_next(L);
-      char a[512]="", b[512]="";
-      if (resolve_str_arg(vm, L, a, sizeof a) != 0)
-        snprintf(a, sizeof a, "%s", vm->last_str);
-      if (resolve_str_arg(vm, L, b, sizeof b) != 0) b[0]=0;
-      char out[1024];
-      snprintf(out, sizeof out, "%s%s", a, b);
+      char out[CUBALC_HOST_STR_MAX], part[CUBALC_HOST_STR_MAX];
+      size_t o = 0;
+      long parts = 0;
+      out[0] = 0;
+      while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+             L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN) {
+        if (L->cur.kind == TK_IDENT &&
+            (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+             kw(&L->cur,"SYS") || kw(&L->cur,"IF") || kw(&L->cur,"END") ||
+             kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") || kw(&L->cur,"FOR") ||
+             kw(&L->cur,"WHILE") || kw(&L->cur,"LOOP") || kw(&L->cur,"INCLUDE") ||
+             kw(&L->cur,"SETP") || kw(&L->cur,"INCP") || kw(&L->cur,"DELP") ||
+             kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") || kw(&L->cur,"FILLP") ||
+             kw(&L->cur,"FILLPFILE") || kw(&L->cur,"DUMPP") || kw(&L->cur,"NEEDP") ||
+             kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
+             kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
+             kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
+             kw(&L->cur,"CLASS") || kw(&L->cur,"NEW") || kw(&L->cur,"SEND") ||
+             kw(&L->cur,"FN") || kw(&L->cur,"RETURN") || kw(&L->cur,"BREAK") ||
+             kw(&L->cur,"CONTINUE") || kw(&L->cur,"EACH")))
+          break;
+        part[0] = 0;
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+            L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(part, sizeof part, "%ld", n);
+        } else if (resolve_str_arg(vm, L, part, sizeof part) != 0) {
+          if (L->cur.kind == TK_IDENT) {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && !v->is_str) {
+              snprintf(part, sizeof part, "%ld", v->val);
+              lex_next(L);
+            } else {
+              /* unknown ident → literal text (path glue helpers) */
+              snprintf(part, sizeof part, "%s", L->cur.text);
+              lex_next(L);
+            }
+          } else {
+            break;
+          }
+        }
+        {
+          size_t pl = strlen(part);
+          if (o + pl >= sizeof out) pl = (o < sizeof out - 1) ? (sizeof out - 1 - o) : 0;
+          if (pl > 0) {
+            memcpy(out + o, part, pl);
+            o += pl;
+          }
+          out[o] = 0;
+          parts++;
+          if (o + 1 >= sizeof out) break; /* full */
+        }
+      }
+      if (parts == 0) {
+        /* bare CAT → echo LAST (agent log mirror) */
+        snprintf(out, sizeof out, "%s", vm->last_str);
+        o = strlen(out);
+        if (out[0]) parts = 1;
+      }
       var_set_str(vm, "LAST", out);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
-      vm->last_n = (long)strlen(out);
+      vm->last_n = (long)o;
       var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "CAT_N", parts);
+      var_set_num(vm, "STRCAT_N", parts);
+      var_set_str(vm, "CAT", out);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
@@ -36386,6 +36451,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS LOG", "SYS LOG path data — alias of SYS APPEND"},
       {"SYS REPLACE", "SYS REPLACE hay old new — first occurrence · LAST_N=1 if replaced"},
       {"SYS REPLACEALL", "SYS REPLACEALL|GSUB hay old new — all occurrences · LAST_N=count"},
+      {"SYS CAT", "SYS CAT|STRCAT parts… — multi-arg concat · host-wide · LAST_N=len CAT_N=parts"},
+      {"SYS STRCAT", "SYS STRCAT alias of SYS CAT"},
+      {"SYS CONCAT", "SYS CONCAT alias of SYS CAT"},
       {"SYS STR", "SYS STR|ITOA|NUMSTR [n|LAST_N] — integer → decimal string LAST · template {{COUNT}}"},
       {"SYS ITOA", "SYS ITOA [n] — alias of SYS STR · dual of SYS NUM/ATOI"},
       {"SYS LENALL", "SYS LENALL|MAPLEN [bag] — length of every field → decimal bag · LENALL_SUM"},
