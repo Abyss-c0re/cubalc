@@ -1,0 +1,101 @@
+# JSONSWAP / JSWAP / JSONXCHG — exchange two plate keys' raw values
+# Dual-buffer without temp+JSONRENAME glue. One miss → move.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "cur" 10 "prev" 3 "ok" 1
+LET plate = LAST
+
+# swap both present
+SYS JSONSWAP plate "cur" "prev"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONSWAP_N == 1
+ASSERT JSONSWAP_A == "cur"
+ASSERT JSONSWAP_B == "prev"
+LET plate = LAST
+SYS JSONN "cur" FROM plate
+ASSERT LAST_N == 3
+SYS JSONN "prev" FROM plate
+ASSERT LAST_N == 10
+SYS JSONN "ok" FROM plate
+ASSERT LAST_N == 1
+
+# swap back
+SYS JSONSWAP plate "cur" "prev"
+LET plate = LAST
+SYS JSONN "cur" FROM plate
+ASSERT LAST_N == 10
+SYS JSONN "prev" FROM plate
+ASSERT LAST_N == 3
+
+# both missing soft
+SYS JSONSWAP plate "ghost" "phantom"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+LET plate = LAST
+SYS JSONN "cur" FROM plate
+ASSERT LAST_N == 10
+
+# one miss → move
+SYS JSONOBJ "a" 7 "keep" 1
+SYS JSONSWAP LAST "a" "b"
+ASSERT LAST_N == 1
+LET p2 = LAST
+SYS JSONHAS "a" p2
+ASSERT LAST_N == 0
+SYS JSONN "b" FROM p2
+ASSERT LAST_N == 7
+SYS JSONN "keep" FROM p2
+ASSERT LAST_N == 1
+
+# move reverse (only b present)
+SYS JSONOBJ "b" 9
+SYS JSONSWAP LAST "a" "b"
+ASSERT LAST_N == 1
+LET p3 = LAST
+SYS JSONN "a" FROM p3
+ASSERT LAST_N == 9
+SYS JSONHAS "b" p3
+ASSERT LAST_N == 0
+
+# same name no-op
+SYS JSONOBJ "k" 5
+SYS JSONSWAP LAST "k" "k"
+ASSERT LAST_N == 1
+SYS JSONN "k" FROM LAST
+ASSERT LAST_N == 5
+
+# 2-arg on LAST
+SYS JSONOBJ "x" "A" "y" "B"
+SYS JSONSWAP "x" "y"
+ASSERT LAST_N == 1
+LET p4 = LAST
+SYS JSON "x" FROM p4
+ASSERT LAST == "B"
+SYS JSON "y" FROM p4
+ASSERT LAST == "A"
+
+# nested raw preserved
+SYS JSONOBJ "m" RAW "{\"n\":1}" "o" RAW "[2]"
+SYS JSONSWAP LAST "m" "o"
+ASSERT LAST_N == 1
+LET p5 = LAST
+SYS JSONTYPE p5 "m"
+ASSERT LAST == "arr"
+SYS JSONTYPE p5 "o"
+ASSERT LAST == "obj"
+
+# aliases
+SYS JSWAP "{\"p\":1,\"q\":2}" "p" "q"
+ASSERT LAST_N == 1
+LET al = LAST
+SYS JSONN "p" FROM al
+ASSERT LAST_N == 2
+SYS JSONXCHG "{\"u\":8,\"v\":9}" "u" "v"
+ASSERT LAST_N == 1
+SYS JSONN "u" FROM LAST
+ASSERT LAST_N == 9
+
+PRINT "jsonswap ok"
+ASSERT OK == 1
