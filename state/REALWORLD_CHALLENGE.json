@@ -375,6 +375,6 @@
     "GETFLAGN non-numeric HIT/ERR dual documented",
     "selftest 355/355; no language fix this iter"
   ],
-  "commit": "3f57c741bb9b64f349c1f5c4819c855103ef7695",
+  "commit": "a6c544feb54a8dff44bc4ecc8b537e94f09c7ed8",
   "ts": "2026-08-07T23:59:39Z"
 }
