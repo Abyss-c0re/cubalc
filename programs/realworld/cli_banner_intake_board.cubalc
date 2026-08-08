@@ -1,0 +1,675 @@
+# cli_banner_intake_board.cubalc — HELPFLAG+VERSIONFLAG ops ticket intake CLI
+#
+# Real use: support/ops agents run a ticket-intake tool that must answer
+# --help|-h and --version|-V without shell getopt glue, then peel subcommands
+# and ticket ids for a priority-clamped intake bag:
+#   USAGE sticky + HELPFLAG / AUTOHELP — print usage, EXIT 0
+#   PROG_VERSION + VERSIONFLAG / VERFLAG — print product version, EXIT 0
+#   SUBCMD + RESTPOS / HASRESTPOS — verb then ticket targets
+#   GETFLAGN priority|p + CLAMPN 1..9 — severity band
+#   ONEOF + CASEI → LET op — allowed subcommands
+#   SYS GREPV LAST — upsert/drop without nested EACH bag LETs
+#
+# First realworld board for HELPFLAG (1001) + VERSIONFLAG (1002) after landing.
+# Distinct from rate_clampn (CLAMPN qps) and shard_subcmd (fleet scale):
+# this board is *CLI banner early-exit + ticket intake plate*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cbi_$$
+#   ./out/cubalc run programs/realworld/cli_banner_intake_board.cubalc -- --help
+#   ./out/cubalc run ... -- --version
+#   ./out/cubalc run ... admit -- --priority=50 tkt-1 tkt-2
+#   ./out/cubalc run ... list
+#   ./out/cubalc run ... drop -- tkt-1
+#
+# Plate under STATE:
+#   TICKETS.txt    — id:priority:status rows (exact)
+#   VAL.txt META.txt CBI_REPORT.txt
+#
+# Subcommands (SUBCMD — never "run"):
+#   list|ls   — bag depth
+#   admit     — upsert RESTPOS tickets with clamped priority
+#   drop      — remove tickets by id (GREPV)
+#   has|gate|soft|clear|probe|banner
+#
+# Env: CUBALC_CBI_REQUIRE CUBALC_CBI_MIN CUBALC_CBI_NAME CUBALC_CBI_ACTION
+#
+# Edges:
+#   HELPFLAG/VERSIONFLAG halt before plate write (no audit on banner path)
+#   Host needs -- before long flags: cubalc run prog -- --help
+#   Dense LET tables + EACH AS / mid-EACH LET → unknown form (predeclare or GREPV LAST)
+#   CLAMPN priority into [1,9]; HASRESTPOS soft; REQUIRE RESTPOS exit_code often 0
+#   WRITE NL; exact HASLINE/GREP; known latch
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "cli_banner_intake_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT TFILE = "TICKETS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "CBI_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT PRI = 5
+DEFAULT USAGE_LINE = "cli_banner_intake -- admit|list|drop -- [--priority=N|-p N] ticket [ticket...]"
+DEFAULT PROG_VERSION = "cli-banner-intake 1.0.0"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+LET PROG_VERSION = "cli-banner-intake 1.0.0"
+CLEAR_ERR
+
+HELPFLAG
+LET help_hit = HELPFLAG_HIT
+CLEAR_ERR
+VERSIONFLAG
+LET ver_hit = VERSIONFLAG_HIT
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+LET sub_hit = SUBCMD_HIT
+CLEAR_ERR
+IF sub_hit == 0 THEN
+  SYS ENV "CUBALC_CBI_ACTION" OR ""
+  IF LAST_N > 0 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+GETFLAGN priority|p OR 5
+LET PRI = LAST_N
+CLEAR_ERR
+LET pri_raw = PRI
+CLAMPN PRI 1 9
+LET PRI = LAST_N
+LET pri_ch = CLAMPN_CHANGED
+CLEAR_ERR
+
+SYS ENV "CUBALC_CBI_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CBI_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+SYS ENV "CUBALC_CBI_NAME" OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+END
+SYS BLANK NAME
+IF LAST_N == 1 THEN
+  SYS NTH 0 targets
+  IF LAST_N > 0 THEN
+    LET NAME = LAST
+  END
+  CLEAR_ERR
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir TFILE
+LET tickets_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR tickets_path OR ""
+LET tickets = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+# loop temps reserved early (EACH reassignment safe; late LET unknown form)
+LET row = ""
+LET pref = ""
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET tickets_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET ticket_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+
+SYS LINES tickets
+LET ticket_n = LAST_N
+
+ONEOF ACTION "admit", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe", "banner"
+LET oneof_ok = LAST_N
+CLEAR_ERR
+IF oneof_ok == 0 THEN
+  ONEOFI ACTION "admit", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe", "banner"
+  LET oneof_ok = LAST_N
+  CLEAR_ERR
+END
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "admit" THEN
+    LET op = "admit"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "banner" THEN
+    LET op = "banner"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+# --- list ---
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action list"
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = tickets
+  LET val_ch = 1
+  LET meta = "tickets"
+  SYS STR ticket_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "priority"
+  LET meta = LAST
+  SYS STR PRI
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ticket_n PRI help_hit ver_hit
+  CLEAR_ERR
+END
+
+# --- banner ---
+SYS EQS op "banner"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action banner"
+  LET hit = 1
+  LET note_msg = "banner ok"
+  LET val = USAGE
+  LET val_ch = 1
+  LET meta = "usage"
+  SYS PUSH meta USAGE
+  LET meta = LAST
+  SYS PUSH meta "prog_version"
+  LET meta = LAST
+  SYS PUSH meta PROG_VERSION
+  LET meta = LAST
+  SYS PUSH meta "help_hit"
+  LET meta = LAST
+  SYS STR help_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "ver_hit"
+  LET meta = LAST
+  SYS STR ver_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON help_hit ver_hit
+  PRINT USAGE
+  PRINT PROG_VERSION
+  CLEAR_ERR
+END
+
+# --- admit ---
+SYS EQS op "admit"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action admit"
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "admit needs tickets"
+    FAIL "admit needs tickets"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      REQUIRE RESTPOS 1
+    END
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "admit needs tickets"
+    END
+  ELSE
+    EACH LINE AS tid IN targets
+      SYS BLANK tid
+      IF LAST_N == 0 THEN
+        SYS CAT tid ":"
+        LET pref = LAST
+        SYS GREPV pref tickets
+        LET tickets = LAST
+        CLEAR_ERR
+        SYS CAT tid ":"
+        LET row = LAST
+        SYS STR PRI
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":open"
+        LET row = LAST
+        SYS PUSH tickets row
+        LET tickets = LAST
+        LET admit_n = admit_n + 1
+      END
+    END
+    LET tickets_ch = 1
+    SYS LINES tickets
+    LET ticket_n = LAST_N
+    LET hit = 1
+    LET note_msg = "admit ok"
+    LET val = tickets
+    LET val_ch = 1
+    LET meta = "priority"
+    SYS STR PRI
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "pri_raw"
+    LET meta = LAST
+    SYS STR pri_raw
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "clamped"
+    LET meta = LAST
+    SYS STR pri_ch
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "admit"
+    LET meta = LAST
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n ticket_n PRI pri_ch
+  CLEAR_ERR
+END
+
+# --- drop ---
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action drop"
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs tickets"
+    FAIL "drop needs tickets"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop needs tickets"
+    END
+  ELSE
+    EACH LINE AS tid IN targets
+      SYS BLANK tid
+      IF LAST_N == 0 THEN
+        SYS CAT tid ":"
+        LET pref = LAST
+        SYS GREPV pref tickets
+        LET tickets = LAST
+        LET admit_n = admit_n + 1
+        CLEAR_ERR
+      END
+    END
+    LET tickets_ch = 1
+    SYS LINES tickets
+    LET ticket_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+    LET val = tickets
+    LET val_ch = 1
+    LET meta = "drop"
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n ticket_n
+  CLEAR_ERR
+END
+
+# --- has ---
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs row"
+    FAIL "has needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has needs row"
+    END
+  ELSE
+    SYS CAT NAME ":"
+    LET pref = LAST
+    SYS GREP pref tickets
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    SYS HASLINE tickets NAME
+    IF LAST_N == 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- gate ---
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action gate"
+  SYS LINES tickets
+  LET ticket_n = LAST_N
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "tickets"
+  LET meta = LAST
+  SYS STR ticket_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR ticket_n
+  LET val = LAST
+  LET val_ch = 1
+  IF ticket_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny"
+    END
+  END
+  PRINT_JSON ticket_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- soft ---
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action soft"
+  SYS LINES tickets
+  LET ticket_n = LAST_N
+  IF ticket_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    SYS PUSH meta "empty"
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft empty wall"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has tickets"
+    LET val = tickets
+    LET val_ch = 1
+  END
+  PRINT_JSON ticket_n miss hit
+  CLEAR_ERR
+END
+
+# --- probe clamp ---
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action probe"
+  CLAMPN 99 1 9
+  LET admit_n = LAST_N
+  LET pri_ch = CLAMPN_CHANGED
+  CLEAR_ERR
+  CLAMPN 0 1 9
+  LET has_n = LAST_N
+  CLEAR_ERR
+  CLAMPN 5 1 9
+  LET ticket_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "high"
+  SYS STR admit_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "below"
+  LET meta = LAST
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "mid"
+  LET meta = LAST
+  SYS STR ticket_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR admit_n
+  LET val = LAST
+  LET val_ch = 1
+  PRINT_JSON admit_n has_n ticket_n pri_ch help_hit ver_hit
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action clear"
+  LET tickets = ""
+  LET val = ""
+  LET meta = ""
+  LET tickets_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET ticket_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF tickets_ch > 0 THEN
+  SYS WRITE tickets_path tickets
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "tickets write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET meta = "schema=cubalc.cli_banner_intake_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "priority"
+LET meta = LAST
+SYS STR PRI
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "pri_raw"
+LET meta = LAST
+SYS STR pri_raw
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "clamped"
+LET meta = LAST
+SYS STR pri_ch
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "ticket_n"
+LET meta = LAST
+SYS STR ticket_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "help_hit"
+LET meta = LAST
+SYS STR help_hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "ver_hit"
+LET meta = LAST
+SYS STR ver_hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "prog_version"
+LET meta = LAST
+SYS PUSH meta PROG_VERSION
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+SYS PUSH meta "elapsed_ms"
+LET meta = LAST
+SYS STR elapsed
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "identity"
+LET meta = LAST
+SYS PUSH meta IDENTITY
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+
+NOTE "cli_banner_intake_board: done"
+PRINT_JSON hit miss ticket_n PRI pri_ch help_hit ver_hit note_msg
+EXIT 0

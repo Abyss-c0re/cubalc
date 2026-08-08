@@ -1,41 +1,71 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 166,
-  "program": "programs/realworld/rate_clampn_board.cubalc",
-  "theme": "CLAMPN + REQUIRE RESTPOS rate-limit route CLI (int flags clamp + target gate)",
-  "version": "1.15.450-usability",
+  "iter": 167,
+  "program": "programs/realworld/cli_banner_intake_board.cubalc",
+  "theme": "HELPFLAG+VERSIONFLAG ops ticket intake CLI (banner early-exit + GREPV upsert + priority CLAMPN)",
+  "version": "1.15.453-usability",
   "pass": true,
-  "prior_note": "iter 165 GETFLAGMS lease; this iter first realworld CLAMPN+HASRESTPOS/REQUIRE RESTPOS (998-999); flag | aliases landing",
+  "prior_note": "iter 166 CLAMPN+RESTPOS; this iter first realworld HELPFLAG(1001)+VERSIONFLAG(1002) with ticket intake plate",
   "tests": [
     {
-      "name": "set_clamp",
-      "cmd": "set --qps=50000 max=1000 \u2192 qps 1000 CLAMPED; routes live",
+      "name": "help_long",
+      "cmd": "cubalc run prog -- --help → helpflag hit=help EXIT 0 USAGE print",
       "ok": true,
-      "note": "CLAMPN"
+      "note": "HELPFLAG"
     },
     {
-      "name": "set_inrange",
-      "cmd": "set --qps=50 in band unchanged",
+      "name": "version_long",
+      "cmd": "cubalc run prog -- --version → PROG_VERSION print versionflag hit EXIT 0",
       "ok": true,
-      "note": "clamp 0"
+      "note": "VERSIONFLAG"
     },
     {
-      "name": "drop_has",
-      "cmd": "drop web; HASLINE exact; substring miss",
+      "name": "help_short_h",
+      "cmd": "-- -h helpflag hit",
+      "ok": true,
+      "note": "short"
+    },
+    {
+      "name": "version_short_V",
+      "cmd": "-- -V versionflag hit",
+      "ok": true,
+      "note": "short"
+    },
+    {
+      "name": "admit_clamp",
+      "cmd": "admit -- --priority=50 tkt-alpha tkt-beta → PRI 9 pri_ch 1; tickets live",
+      "ok": true,
+      "note": "CLAMPN+GREPV"
+    },
+    {
+      "name": "upsert_short_p",
+      "cmd": "admit -- -p 3 tkt-alpha → GREPV upsert priority 3",
+      "ok": true,
+      "note": "alias p"
+    },
+    {
+      "name": "has_substr",
+      "cmd": "has tkt-alpha hit; has tkt miss (prefix false friend ok via id:)",
+      "ok": true,
+      "note": "GREP"
+    },
+    {
+      "name": "drop_list_gate_soft_probe_banner",
+      "cmd": "drop/list/gate/soft/probe/banner/clear green",
       "ok": true,
       "note": "ops"
     },
     {
-      "name": "restpos",
-      "cmd": "empty set soft; REQUIRE RESTPOS exit_code 0",
+      "name": "soft_empty_require",
+      "cmd": "admit empty soft; CUBALC_CBI_REQUIRE=1 REQUIRE RESTPOS sticky (shell may be 0)",
       "ok": true,
       "note": "RESTPOS"
     },
     {
-      "name": "probe",
-      "cmd": "CLAMPN OOR/swap/below edges",
+      "name": "help_without_ddash",
+      "cmd": "cubalc run prog --help strips flag → list default (W11)",
       "ok": true,
-      "note": "probe"
+      "note": "W11"
     },
     {
       "name": "selftest",
@@ -51,14 +81,14 @@
       "area": "host|arg",
       "title": "CUBALC_ARG0 env no longer reaches SYS ARG in 1.15.426",
       "detail": "export CUBALC_ARG0=open leaves SYS ARG 0 and SYS ENV CUBALC_ARG0 empty; python sees the env var. Positional `cubalc run file open s0` works. Breaks all prior host contracts that used CUBALC_ARG* alone.",
-      "repro": "CUBALC_ARG0=open cubalc run prog; SYS ARG 0 \u2192 empty; cubalc run prog open works"
+      "repro": "CUBALC_ARG0=open cubalc run prog; SYS ARG 0 → empty; cubalc run prog open works"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "lang|default",
       "title": "DEFAULT still requires = (optional = is LET-only)",
-      "detail": "DEFAULT ACTION \"list\" \u2192 err DEFAULT name = value. Optional glue from 974 is LET/IF only, not DEFAULT. Agents must keep DEFAULT name = val.",
+      "detail": "DEFAULT ACTION \"list\" → err DEFAULT name = value. Optional glue from 974 is LET/IF only, not DEFAULT. Agents must keep DEFAULT name = val.",
       "repro": "DEFAULT ACTION \"list\" hard-fail"
     },
     {
@@ -99,7 +129,7 @@
       "area": "host|require_arg",
       "title": "REQUIRE ARGC hard-fail leaves process exit_code 0",
       "detail": "REQUIRE ARGC N when short sets ok:false + asserts_fail and sticky err, but plate exit_code stays 0 and shell 0 is 0. Agents cannot rely on process status for CLI contract failures; only EXIT n propagates shell rc.",
-      "repro": "cubalc run -e 'SYS ENV SET CUBALC_ARGC 0; REQUIRE ARGC 1' \u2192 exit_code 0 shell 0"
+      "repro": "cubalc run -e 'SYS ENV SET CUBALC_ARGC 0; REQUIRE ARGC 1' → exit_code 0 shell 0"
     },
     {
       "id": "W8",
@@ -115,23 +145,23 @@
       "area": "host|args_env",
       "title": "export CUBALC_ARG* still dead; only SYS ENV SET or positional works",
       "detail": "Reconfirmed W1: export CUBALC_ARG0=argc CUBALC_ARGC=1 before cubalc run leaves ARGC=0 and defaults ACTION=list. In-process SYS ENV SET CUBALC_ARG* works (proof 976). Host env contract remains broken for outer shells.",
-      "repro": "CUBALC_ARG0=argc cubalc run seal_batch\u2026 \u2192 list/argc0"
+      "repro": "CUBALC_ARG0=argc cubalc run seal_batch… → list/argc0"
     },
     {
       "id": "W10",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE multi-line bag often omits final NL on last field",
-      "detail": "cat -A PATHS.txt shows intermediate lines with $ but last path without trailing newline. Same class as W5 single-line VAL omit NL.",
-      "repro": "args p1 p2 p3; cat -A PATHS.txt"
+      "detail": "cat -A PATHS.txt shows intermediate lines with $ but last path without trailing newline. Same class as W5 single-line VAL omit NL. Reconfirmed TICKETS a\\nb\\nc no final NL.",
+      "repro": "od -c TICKETS.txt ends without \\n after last row"
     },
     {
       "id": "W11",
       "severity": "high",
       "area": "host|cli",
       "title": "cubalc run strips unknown long options unless after host --",
-      "detail": "Program args like --mode=seal never reach SYS ARG/HASFLAG unless invoked as: cubalc run prog ACTION -- --mode=seal files. Without the host double-dash separator, agents silently lose all long options.",
-      "repro": "cubalc run prog parse --mode=seal a (MODE default); cubalc run prog parse -- --mode=seal a (works)"
+      "detail": "Program args like --mode=seal never reach SYS ARG/HASFLAG unless invoked as: cubalc run prog ACTION -- --mode=seal files. Without the host double-dash separator, agents silently lose all long options. Reconfirmed: cubalc run prog --help falls through to list (HELPFLAG never sees --help).",
+      "repro": "cubalc run prog --help → list; cubalc run prog -- --help → helpflag hit"
     },
     {
       "id": "W12",
@@ -163,7 +193,7 @@
       "area": "host|cli",
       "title": "host strips positional token run from program args",
       "detail": "cubalc run prog.cubalc run -- --mode=x leaves ARG0 as --mode=x (token run dropped). Other action names (deploy, dry, list) pass through. Action cannot be named run; use deploy/apply or CUBALC_*_ACTION env.",
-      "repro": "cubalc run -e 'SYS ARG 0; PRINT LAST' run -- --mode=x \u2192 prints --mode=x"
+      "repro": "cubalc run -e 'SYS ARG 0; PRINT LAST' run -- --mode=x → prints --mode=x"
     },
     {
       "id": "W16",
@@ -171,15 +201,15 @@
       "area": "host|require_flag",
       "title": "REQUIRE FLAG miss leaves process exit_code 0",
       "detail": "Same class as REQUIRE ARGC (W7): ok:false + asserts_fail + sticky err with usage tip, but shell $? is 0. Agents must EXIT n after soft probe for shell-visible contract failures.",
-      "repro": "CUBALC_DC_REQUIRE=1 contract without flags \u2192 exit_code 0 shell 0"
+      "repro": "CUBALC_DC_REQUIRE=1 contract without flags → exit_code 0 shell 0"
     },
     {
       "id": "W17",
       "severity": "med",
       "area": "lang|usage",
       "title": "USAGE works; multi-part join and sticky tip on REQUIRE FLAG confirmed",
-      "detail": "Positive note: sticky USAGE appends to REQUIRE FLAG err as \u00b7 usage: \u2026. Unicode ellipsis in USAGE string can mangle plate bytes \u2014 prefer ASCII ....",
-      "repro": "USAGE line with unicode ellipsis \u2192 cat -A shows M-bM-^@M-&"
+      "detail": "Positive note: sticky USAGE appends to REQUIRE FLAG err as · usage: …. Unicode ellipsis in USAGE string can mangle plate bytes — prefer ASCII ....",
+      "repro": "USAGE line with unicode ellipsis → cat -A shows M-bM-^@M-&"
     },
     {
       "id": "W18",
@@ -195,7 +225,7 @@
       "area": "lang|restargs",
       "title": "HASRESTARGS/REQUIRE RESTARGS count action + numeric ARG tokens as files",
       "detail": "RESTARGS is all non-flag positionals. With ARG0=hasrest ARG1=2, raw rest_n=2 and HASRESTARGS 2 passes with zero files. Agents must DROP action (and non-path args) before file gates; raw REQUIRE RESTARGS is a false friend for file intake.",
-      "repro": "hasrest 2 (no files) \u2192 HASRESTARGS 2 hit; peeled file_n may be 1 (the 2)"
+      "repro": "hasrest 2 (no files) → HASRESTARGS 2 hit; peeled file_n may be 1 (the 2)"
     },
     {
       "id": "W20",
@@ -209,9 +239,9 @@
       "id": "W21",
       "severity": "low",
       "area": "lang|listflags",
-      "title": "LISTFLAGS returns names only (no values) \u2014 good inventory, not config",
+      "title": "LISTFLAGS returns names only (no values) — good inventory, not config",
       "detail": "LISTFLAGS bag is mode/verbose/job without values. Pair with GETFLAG for values. Files never listed. Confirmed useful for flag inventory plates.",
-      "repro": "LISTFLAGS with --job=ingest --verbose=1 a.bin \u2192 job\\nverbose"
+      "repro": "LISTFLAGS with --job=ingest --verbose=1 a.bin → job\\nverbose"
     },
     {
       "id": "W22",
@@ -227,7 +257,7 @@
       "area": "lang|nthpos",
       "title": "NTHPOS 0 is the action token when action is positional ARG0",
       "detail": "With register -- --src=x hopA, NTHPOS 0=register and NTHPOS 1=hopA. Agents must peel action or use NTHPOS 1 for first hop. Same class as RESTARGS inflation (W19).",
-      "repro": "nth 0 with hops \u2192 val is action name not first hop"
+      "repro": "nth 0 with hops → val is action name not first hop"
     },
     {
       "id": "W24",
@@ -251,7 +281,7 @@
       "area": "lang|flagmap",
       "title": "FLAGMAP bare --flag value is 1 and does not consume following hops",
       "detail": "Positive: --verbose hopA leaves hopA in RESTARGS; FLAGMAP verbose=1. Prefer --name=val for non-bools. LOOKUP fmap key = works.",
-      "repro": "FLAGMAP with --verbose hopA \u2192 verbose=1; hops keep hopA"
+      "repro": "FLAGMAP with --verbose hopA → verbose=1; hops keep hopA"
     },
     {
       "id": "W27",
@@ -259,14 +289,14 @@
       "area": "lang|case",
       "title": "Heavy multi-statement CASE arms can break WHEN framing",
       "detail": "With large WHEN bodies (nested IF/EACH/PRINT_JSON), subsequent WHEN arms were executed as top-level forms (unknown form WHEN). Workaround: CASE only assigns LET op= synonym canonical; bodies live in SYS EQS op IF after CASE END.",
-      "repro": "CASE with 20+ stmt WHEN list then WHEN admit \u2192 fall into admit / WHEN drain form error"
+      "repro": "CASE with 20+ stmt WHEN list then WHEN admit → fall into admit / WHEN drain form error"
     },
     {
       "id": "W28",
       "severity": "med",
       "area": "lang|case",
       "title": "MATCH_ARM not LET-assignable or SYS PUSH-able",
-      "detail": "LET hit_arm = MATCH_ARM does not create a usable var; SYS PUSH meta MATCH_ARM \u2192 unknown form. PRINT_JSON MATCH_ARM works; SYS EQS MATCH_ARM synonym works after CASE.",
+      "detail": "LET hit_arm = MATCH_ARM does not create a usable var; SYS PUSH meta MATCH_ARM → unknown form. PRINT_JSON MATCH_ARM works; SYS EQS MATCH_ARM synonym works after CASE.",
       "repro": "LET x = MATCH_ARM; SYS EQS x ..."
     },
     {
@@ -275,7 +305,7 @@
       "area": "lang|names",
       "title": "Variable name note collides with NOTE form",
       "detail": "LET note / PRINT note can invoke NOTE. Use note_msg (established board convention).",
-      "repro": "PRINT note \u2192 NOTE form path"
+      "repro": "PRINT note → NOTE form path"
     },
     {
       "id": "W30",
@@ -291,15 +321,15 @@
       "area": "host|grep",
       "title": "SYS GREP argument order is needle then bag (easy to reverse)",
       "detail": "SYS GREP bag needle silently mis-filters (empty or wrong). Correct: SYS GREP needle bag. Broke window status replace until fixed; agents copy IF/LIST order habits.",
-      "repro": "SYS GREP windows night \u2192 empty; SYS GREP night windows \u2192 night:open"
+      "repro": "SYS GREP windows night → empty; SYS GREP night windows → night:open"
     },
     {
       "id": "W32",
       "severity": "low",
       "area": "lang|boolflag",
       "title": "BOOLFLAG_HIT vs truth: present false still HIT=1",
-      "detail": "Positive distinction: --quiet=false \u2192 BOOLFLAG truth 0 but BOOLFLAG_HIT 1 and HASFLAG 1. --dry-run=no same. Agents must use BOOLFLAG not HASFLAG for enable gates.",
-      "repro": "BOOLFLAG quiet with --quiet=false \u2192 LAST_N 0 HIT 1"
+      "detail": "Positive distinction: --quiet=false → BOOLFLAG truth 0 but BOOLFLAG_HIT 1 and HASFLAG 1. --dry-run=no same. Agents must use BOOLFLAG not HASFLAG for enable gates.",
+      "repro": "BOOLFLAG quiet with --quiet=false → LAST_N 0 HIT 1"
     },
     {
       "id": "W33",
@@ -307,15 +337,15 @@
       "area": "lang|casei",
       "title": "CASE exact remains case-sensitive; CASEI matches List/DRAIN",
       "detail": "Positive: CASE List vs list DEFAULT miss; CASEI List hits list arm. Good dual for strict vs CLI-tolerant dispatch.",
-      "repro": "CASE List WHEN list \u2192 miss; CASEI List WHEN list \u2192 hit"
+      "repro": "CASE List WHEN list → miss; CASEI List WHEN list → hit"
     },
     {
       "id": "W34",
       "severity": "med",
       "area": "lang|boolflag",
       "title": "BOOLFLAG truth table: true/yes/on/1 vs false/no/off/0 (case variants)",
-      "detail": "force=yes/ON/true work; dry=0/off/no work. Bare --force \u2192 true. OR default when missing. Document for ops runbooks.",
-      "repro": "BOOLFLAG force with --force=ON \u2192 1"
+      "detail": "force=yes/ON/true work; dry=0/off/no work. Bare --force → true. OR default when missing. Document for ops runbooks.",
+      "repro": "BOOLFLAG force with --force=ON → 1"
     },
     {
       "id": "W35",
@@ -323,14 +353,14 @@
       "area": "host|oneof",
       "title": "REQUIRE ONEOF miss leaves process exit_code 0",
       "detail": "Same class as REQUIRE ARGC/FLAG: ok:false asserts_fail + usage tip, shell $? often 0. Soft ONEOF + EXIT 2 is reliable for agent shell status.",
-      "repro": "CUBALC_SS_REQUIRE=1 cubalc run prog boom \u2192 exit_code 0"
+      "repro": "CUBALC_SS_REQUIRE=1 cubalc run prog boom → exit_code 0"
     },
     {
       "id": "W36",
       "severity": "med",
       "area": "lang|getflagn",
       "title": "GETFLAGN non-numeric: HIT=1 LAST_N=0 sticky LAST_ERR",
-      "detail": "--mode=fast with GETFLAGN mode OR 5 \u2192 HIT 1, LAST_N 0 (default not applied on bad parse), LAST_ERR set. Agents must CLEAR_ERR and treat HIT&&N carefully; missing uses OR default with HIT 0.",
+      "detail": "--mode=fast with GETFLAGN mode OR 5 → HIT 1, LAST_N 0 (default not applied on bad parse), LAST_ERR set. Agents must CLEAR_ERR and treat HIT&&N carefully; missing uses OR default with HIT 0.",
       "repro": "GETFLAGN mode OR 5 with --mode=fast"
     },
     {
@@ -339,15 +369,15 @@
       "area": "lang|restpos",
       "title": "RESTPOS multi-line bag: SYS EQS RESTPOS single token is false friend",
       "detail": "SYS EQS RESTPOS nodeA fails when bag is nodeA\\nnodeB; use HASLINE targets or NTH 0.",
-      "repro": "SUBCMD scale nodeA nodeB; SYS EQS RESTPOS nodeA \u2192 0"
+      "repro": "SUBCMD scale nodeA nodeB; SYS EQS RESTPOS nodeA → 0"
     },
     {
       "id": "W38",
       "severity": "low",
       "area": "lang|getflagn",
       "title": "GETFLAGN --count=0 is valid hit with LAST_N 0",
-      "detail": "Positive: zero is not missing; HIT=1 distinguishes from OR default. Bare --retries \u2192 1.",
-      "repro": "GETFLAGN count OR 9 with --count=0 \u2192 n=0 hit=1"
+      "detail": "Positive: zero is not missing; HIT=1 distinguishes from OR default. Bare --retries → 1.",
+      "repro": "GETFLAGN count OR 9 with --count=0 → n=0 hit=1"
     },
     {
       "id": "W39",
@@ -355,7 +385,7 @@
       "area": "lang|inrange",
       "title": "INRANGE name collision: free numeric vs OOP HASBETWEEN alias",
       "detail": "Free INRANGE (996) stole OOP INRANGE alias of HASBETWEEN; oop_wherebetween selftest failed. Fixed: proof uses HASBETWEEN; removed OOP INRANGE alias from catalog+flow. Agents must use HASBETWEEN for class field soft range, INRANGE for numeric x lo hi.",
-      "repro": "INRANGE Counter n 40 60 \u2192 form tip (pre-fix); HASBETWEEN works"
+      "repro": "INRANGE Counter n 40 60 → form tip (pre-fix); HASBETWEEN works"
     },
     {
       "id": "W40",
@@ -369,9 +399,9 @@
       "id": "W41",
       "severity": "low",
       "area": "lang|getflagms",
-      "title": "GETFLAGMS bare --flag \u2192 1 ms (not default)",
+      "title": "GETFLAGMS bare --flag → 1 ms (not default)",
       "detail": "Bare --tick yields 1ms with HIT=1; missing uses OR default with HIT=0. Compound 1m30s and unit 250ms work.",
-      "repro": "GETFLAGMS tick OR 100 with --tick \u2192 1"
+      "repro": "GETFLAGMS tick OR 100 with --tick → 1"
     },
     {
       "id": "W42",
@@ -379,15 +409,15 @@
       "area": "lang|inrange",
       "title": "INRANGE lo/hi swap via TO works; soft OOR returns 0",
       "detail": "Positive: INRANGE 5 10 TO 1 hits; INRANGE 0 1 100 misses. REQUIRE BETWEEN hard still exit_code 0 class.",
-      "repro": "INRANGE 5 10 TO 1 \u2192 1"
+      "repro": "INRANGE 5 10 TO 1 → 1"
     },
     {
       "id": "W43",
       "severity": "high",
       "area": "host|restpos",
       "title": "REQUIRE RESTPOS miss leaves process exit_code 0",
-      "detail": "Same class as REQUIRE ONEOF/FLAG: ok:false asserts_fail + usage tip; shell $? often 0. Soft HASRESTPOS + EXIT 2 is reliable for agents.",
-      "repro": "CUBALC_RC_REQUIRE=1 set with no routes \u2192 exit_code 0"
+      "detail": "Same class as REQUIRE ONEOF/FLAG: ok:false asserts_fail + usage tip; shell $? often 0. Soft HASRESTPOS + EXIT 2 is reliable for agents. Reconfirmed on admit empty with CUBALC_CBI_REQUIRE=1.",
+      "repro": "CUBALC_CBI_REQUIRE=1 admit no tickets → REQUIRE RESTPOS sticky; exit_code 0"
     },
     {
       "id": "W44",
@@ -395,15 +425,15 @@
       "area": "lang|flag_alias",
       "title": "GETFLAGN name|alias may fail under ENV SET seed; works with CLI -w",
       "detail": "Proof 1000 seeded via SYS ENV SET CUBALC_ARG* hit parse unknown form on workers|w; live cubalc run -e with -- -w 8 peels correctly and FLAG_HIT_NAME=w. Host ENV seed vs CLI argv dual still fragile (related W9).",
-      "repro": "ENV SET CUBALC_ARG0=-w vs cubalc run \u2026 -- -w 8"
+      "repro": "ENV SET CUBALC_ARG0=-w vs cubalc run … -- -w 8"
     },
     {
       "id": "W45",
       "severity": "low",
       "area": "lang|clampn",
       "title": "CLAMPN works with vars/LAST_N; CLAMPN_CHANGED and bounds swap",
-      "detail": "Positive: 50000\u21921000 changed=1; in-band unchanged; CLAMPN 5 10 1 stays 5; below lo clamps up.",
-      "repro": "CLAMPN 50000 10 1000 \u2192 1000 CHANGED 1"
+      "detail": "Positive: 50000→1000 changed=1; in-band unchanged; CLAMPN 5 10 1 stays 5; below lo clamps up. Reconfirmed priority 50→9.",
+      "repro": "CLAMPN 50 1 9 → 9 CHANGED 1"
     },
     {
       "id": "W46",
@@ -411,27 +441,56 @@
       "area": "lang|restpos",
       "title": "HASRESTPOS min wants careful use with SUBCMD (files only, not verb)",
       "detail": "Positive: HASRESTPOS 1 after SUBCMD set with routes; 0 when only verb. Prefer --name=val flags so bare flags do not eat targets.",
-      "repro": "set -- --qps=10 r1 \u2192 HASRESTPOS 1"
+      "repro": "set -- --qps=10 r1 → HASRESTPOS 1"
+    },
+    {
+      "id": "W47",
+      "severity": "high",
+      "area": "lang|each_let",
+      "title": "Dense LET tables break EACH AS and mid-EACH LET (unknown form)",
+      "detail": "With ~10+ extra program LETs beyond a lean board, EACH LINE AS tid IN targets fails at SYS BLANK tid (unknown form tid). Nested EACH + LET hits = LAST fails earlier (unknown form hits). Predeclaring temps at top helps reassignment but steals more slots and can push past the threshold. Workarounds: slim unique LET/DEFAULT count; GREPV LAST chain; predeclare only essential temps (row/pref); avoid nested EACH in large boards. Isolated mini programs with few vars still nest EACH fine.",
+      "repro": "mini2 + 10 LETs: EACH IN hits → unknown form hits; full board without slim: SYS BLANK tid unknown form tid"
+    },
+    {
+      "id": "W48",
+      "severity": "med",
+      "area": "lang|helpflag",
+      "title": "HELPFLAG/VERSIONFLAG halt before STATE write — no audit plate on banner path",
+      "detail": "Correct CLI UX (EXIT 0 early) but ops agents cannot rely on CBI_REPORT for --help/--version invocations. banner subcmd is plate-visible miss-path snapshot of USAGE+PROG_VERSION+HIT knobs.",
+      "repro": "run -- --help → halted stmts~28 no TICKETS/REPORT write"
+    },
+    {
+      "id": "W49",
+      "severity": "low",
+      "area": "lang|helpflag",
+      "title": "HELPFLAG+VERSIONFLAG miss path is quiet-friendly and sticky USAGE survives",
+      "detail": "Positive: miss leaves HELPFLAG_HIT=0 VERSIONFLAG_HIT=0; program continues; USAGE sticky still available for REQUIRE tips and banner action.",
+      "repro": "list after HELPFLAG miss → help_hit 0 ver_hit 0"
     }
   ],
   "workarounds": [
-    "GETFLAGN qps OR 100; CLAMPN QPS LO HI; check CLAMPN_CHANGED",
-    "HASRESTPOS 1 soft; EXIT 2 for shell status (not REQUIRE RESTPOS alone)",
-    "SUBCMD set|list|drop; RESTPOS routes; GREP needle bag for drop",
-    "Prefer CLI argv over ENV SET for short flag aliases",
-    "cubalc run prog.cubalc set -- --qps=N --max=M route..."
+    "USAGE line; HELPFLAG; VERSIONFLAG early after PROG_VERSION",
+    "cubalc run prog -- --help|--version|-h|-V (host -- required, W11)",
+    "GETFLAGN priority|p OR 5; CLAMPN PRI 1 9; CLAMPN_CHANGED",
+    "SYS CAT tid \":\"; SYS GREPV pref tickets — upsert/drop without nested EACH",
+    "Predeclare row/pref before EACH if mid-loop LET needed; keep total unique LET low (W47)",
+    "HASRESTPOS soft + EXIT 2; REQUIRE RESTPOS alone is not shell-rc (W43)",
+    "banner action for plate-visible USAGE/version snapshot without EXIT"
   ],
   "language_gaps": [
+    "Raise or document var-table limit for EACH scopes (W47)",
+    "HELPFLAG/VERSIONFLAG optional plate audit hook without breaking EXIT 0",
+    "Host -- auto-pass-through for --help/--version before strip (W11)",
     "REQUIRE RESTPOS non-zero process exit_code",
-    "Stable GETFLAGN alias parse under ENV SET seed",
-    "Cookbook: rate limit CLI with CLAMPN+RESTPOS"
+    "Cookbook: CLI banner + ticket intake with HELPFLAG/VERSIONFLAG"
   ],
   "issues_faced": [
-    "CLAMPN peels 50k\u21921k; set/drop/has green",
-    "REQUIRE RESTPOS exit_code 0 \u2014 soft+EXIT path",
-    "flag | alias works on CLI -w; ENV seed flaky",
+    "Nested EACH + dense LETs → unknown form hits/tid (W47) — slim board + GREPV LAST + predeclare row/pref",
+    "HELPFLAG/VERSIONFLAG work with host -- ; without -- help strips to list (W11)",
+    "REQUIRE RESTPOS sticky + usage tip; exit_code often 0",
+    "WRITE bag omits final NL (W10)",
     "selftest 355/355"
   ],
-  "commit": "897ca943da4c8249424bdfb5a1292434acd6bc58",
-  "ts": "2026-08-08T00:49:40Z"
+  "commit": "",
+  "ts": "2026-08-08T01:24:03Z"
 }
