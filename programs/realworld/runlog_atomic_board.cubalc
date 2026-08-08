@@ -1,0 +1,602 @@
+# runlog_atomic_board.cubalc — APPENDOUT + WRITEOUTATOMIC + COPYOUT ops journal
+#
+# Real use: oncall/agents append runbook events to a nested log, atomically
+# refresh a status plate, and snapshot a durable copy without DIRNAME glue:
+#   GETFLAGOUT log|l OR ENV RUNLOG — abs log path + parent mkdir (1015)
+#   APPENDOUT / LOGOUT — ENSUREPARENT + APPEND line (1018)
+#   WRITEOUTATOMIC / SAFEWRITEOUT — temp+rename status plate (1019)
+#   COPYOUT / CPOUT — ENSUREPARENT dest + COPY snap (1020)
+#   SUBCMD log|status|snap|list|drop|has|gate|soft|clear|probe
+#
+# First realworld APPENDOUT + WRITEOUTATOMIC + COPYOUT board (1018-1020).
+# Distinct from seal_writeout (WRITEOUT multi-file seal) and report_out_export:
+# this board is *append log + atomic status + snapshot copy*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rab_$$
+#   export RUNLOG=/tmp/rab_$$/agent.log
+#   ./out/cubalc run programs/realworld/runlog_atomic_board.cubalc \
+#     log -- --log=/tmp/rab_$$/nested/run.log deploy-start
+#   ./out/cubalc run ... status -- --status=/tmp/rab_$$/status.json ok
+#   ./out/cubalc run ... snap -- --snap=/tmp/rab_$$/snap/status.json
+#
+# Plate: JOURNAL.txt VAL.txt META.txt RAB_REPORT.txt (+ external log/status/snap)
+# Env: RUNLOG STATUS SNAP CUBALC_RAB_REQUIRE CUBALC_RAB_MIN
+#
+# Edges:
+#   APPENDOUT first line CREATED; second CREATED=0; multi-line log
+#   WRITEOUTATOMIC no leftover *.cubalc-tmp; overwrite replaces body
+#   COPYOUT missing src soft fail; parent mkdir on dest
+#   RESTPOS message tokens after subcmd (not paths)
+#   W47 lean LET; GREPV plate; known latch; WRITE NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "runlog_atomic_board: start"
+DEFAULT ACTION = "list"
+DEFAULT TFILE = "JOURNAL.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "RAB_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "runlog_atomic -- log|status|snap|list -- [--log=F] [--status=F] [--snap=F] [msg]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "run/agent.log"
+LET def_log = LAST
+SYS JOIN state_dir "run/status.json"
+LET def_stat = LAST
+SYS JOIN state_dir "run/snap/status.json"
+LET def_snap = LAST
+CLEAR_ERR
+
+GETFLAGOUT log|l OR ENV RUNLOG OR def_log
+LET log_file = LAST
+LET l_src = GETFLAGOUT_SRC
+LET l_ok = OK
+CLEAR_ERR
+GETFLAGOUT status|s OR ENV STATUS OR def_stat
+LET stat_file = LAST
+LET s_src = GETFLAGOUT_SRC
+LET s_ok = OK
+CLEAR_ERR
+GETFLAGOUT snap|p OR ENV SNAP OR def_snap
+LET snap_file = LAST
+LET p_src = GETFLAGOUT_SRC
+LET p_ok = OK
+CLEAR_ERR
+
+# message from first rest token (or default)
+LET msg = "tick"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET msg = LAST
+END
+CLEAR_ERR
+
+SYS ENV "CUBALC_RAB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_RAB_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir TFILE
+LET jpath = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR jpath OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET row = ""
+LET pref = ""
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET val = ""
+LET meta = ""
+LET created = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "log", "status", "snap", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "log" THEN
+    LET op = "log"
+  WHEN "status" THEN
+    LET op = "status"
+  WHEN "snap" THEN
+    LET op = "snap"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "bag_n"
+  SYS STR bag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON bag_n l_src s_src p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "log"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF l_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "log needs path"
+    FAIL "log needs path"
+    CLEAR_ERR
+  ELSE
+    SYS CAT run_date " "
+    LET row = LAST
+    SYS CAT row msg
+    LET row = LAST
+    APPENDOUT log_file row
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "APPENDOUT failed"
+    END
+    LET created = APPENDOUT_CREATED
+    CLEAR_ERR
+    SYS CAT "log:"
+    LET pref = LAST
+    SYS CAT pref msg
+    LET row = LAST
+    SYS CAT row ":appended"
+    LET row = LAST
+    SYS GREPV "log:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "log ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "log"
+    SYS PUSH meta log_file
+    LET meta = LAST
+    SYS PUSH meta "created"
+    LET meta = LAST
+    SYS STR created
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n created l_src
+  CLEAR_ERR
+END
+
+SYS EQS op "status"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF s_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "status needs path"
+    FAIL "status needs path"
+    CLEAR_ERR
+  ELSE
+    SYS CAT "schema=cubalc.run_status.v1 state="
+    LET row = LAST
+    SYS CAT row msg
+    LET row = LAST
+    SYS CAT row " at="
+    LET row = LAST
+    SYS CAT row run_date
+    LET row = LAST
+    WRITEOUTATOMIC stat_file row
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "WRITEOUTATOMIC failed"
+    END
+    LET created = WRITEOUTATOMIC_CREATED
+    CLEAR_ERR
+    SYS CAT "status:"
+    LET pref = LAST
+    SYS CAT pref msg
+    LET row = LAST
+    SYS CAT row ":atomic"
+    LET row = LAST
+    SYS GREPV "status:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "status ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "status"
+    SYS PUSH meta stat_file
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n created s_src
+  CLEAR_ERR
+END
+
+SYS EQS op "snap"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF p_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "snap needs path"
+    FAIL "snap needs path"
+    CLEAR_ERR
+  ELSE
+    SYS EXIST stat_file
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "snap needs status first"
+      FAIL "snap needs status first"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "snap needs status first"
+      END
+    ELSE
+      COPYOUT stat_file snap_file
+      EXPECT OK == 1
+      IF OK == 0 THEN
+        EXIT 2 "COPYOUT failed"
+      END
+      LET created = COPYOUT_CREATED
+      CLEAR_ERR
+      SYS CAT "snap:"
+      LET row = LAST
+      SYS CAT row snap_file
+      LET row = LAST
+      SYS CAT row ":copied"
+      LET row = LAST
+      SYS GREPV "snap:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      LET hit = 1
+      LET note_msg = "snap ok"
+      LET val = bag
+      LET val_ch = 1
+      LET meta = "snap"
+      SYS PUSH meta snap_file
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON admit_n bag_n created p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET pref = LAST
+    SYS CAT pref ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "drop"
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET pref = LAST
+  SYS BLANK pref
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs key"
+    FAIL "has needs key"
+    CLEAR_ERR
+  ELSE
+    SYS CAT pref ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    LET val = pref
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  SYS STR bag_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "gate"
+  LET meta_ch = 1
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    LET meta_ch = 1
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has journal"
+    LET val = bag
+    LET val_ch = 1
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # soft miss COPYOUT
+  COPYOUT "/no/such/cubalc_src_xyz" snap_file
+  LET has_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  SYS STR has_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "copy_miss"
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON has_n l_src s_src p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET val = ""
+  LET meta = ""
+  LET bag_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE jpath bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "journal write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+LET meta = "schema=cubalc.runlog_atomic_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "log"
+LET meta = LAST
+SYS PUSH meta log_file
+LET meta = LAST
+SYS PUSH meta "status"
+LET meta = LAST
+SYS PUSH meta stat_file
+LET meta = LAST
+SYS PUSH meta "snap"
+LET meta = LAST
+SYS PUSH meta snap_file
+LET meta = LAST
+SYS PUSH meta "bag_n"
+LET meta = LAST
+SYS STR bag_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+
+NOTE "runlog_atomic_board: done"
+PRINT_JSON hit miss bag_n created l_src s_src p_src note_msg
+EXIT 0

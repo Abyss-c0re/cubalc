@@ -1,53 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 173,
-  "program": "programs/realworld/seal_writeout_board.cubalc",
-  "theme": "RESTPOSPATHS + WRITEOUT multi-file seal (tail abs paths + one-shot plate WRITE)",
-  "version": "1.15.467-usability",
+  "iter": 174,
+  "program": "programs/realworld/runlog_atomic_board.cubalc",
+  "theme": "APPENDOUT + WRITEOUTATOMIC + COPYOUT ops journal (append log, atomic status, snap copy)",
+  "version": "1.15.470-usability",
   "pass": true,
-  "prior_note": "iter 172 GETFLAGOUT+NTHPOSPATH; this iter first realworld RESTPOSPATHS(1016)+WRITEOUT(1017)",
+  "prior_note": "iter 173 RESTPOSPATHS+WRITEOUT; this iter first realworld APPENDOUT(1018)+WRITEOUTATOMIC(1019)+COPYOUT(1020)",
   "tests": [
     {
-      "name": "list_default",
-      "cmd": "list \u2192 m_src default creates seals/manifest parent",
+      "name": "log_append",
+      "cmd": "log twice \u2192 two lines in nested run.log",
       "ok": true,
-      "note": "GETFLAGOUT"
+      "note": "APPENDOUT"
     },
     {
-      "name": "seal_two",
-      "cmd": "seal -- --manifest=FILE Makefile include/\u2026 \u2192 admit 2 path_n 2",
+      "name": "status_atomic",
+      "cmd": "status ready then live \u2192 only live; no temps",
       "ok": true,
-      "note": "RESTPOSPATHS"
+      "note": "WRITEOUTATOMIC"
     },
     {
-      "name": "writeout_body",
-      "cmd": "manifest multi-line schema+rows via WRITEOUT",
+      "name": "snap_copy",
+      "cmd": "snap --status=\u2026 --snap=\u2026 \u2192 dest body match",
       "ok": true,
-      "note": "WRITEOUT"
+      "note": "COPYOUT"
     },
     {
-      "name": "plate_rows",
-      "cmd": "SEALS basename:bytes:abs:sealed",
-      "ok": true,
-      "note": "plate"
-    },
-    {
-      "name": "probe_peel",
-      "cmd": "RESTPATHS n=2 vs RESTPOSPATHS n=1 after probe file",
-      "ok": true,
-      "note": "W67"
-    },
-    {
-      "name": "miss_exist",
-      "cmd": "missing+Makefile exist_n 1 path_n 2",
+      "name": "snap_miss",
+      "cmd": "snap without status file soft fail",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "empty_req_env",
-      "cmd": "empty seal; REQUIRE; ENV MANIFEST",
+      "name": "probe_copy_miss",
+      "cmd": "COPYOUT missing src OK=0",
+      "ok": true,
+      "note": "probe"
+    },
+    {
+      "name": "has_drop_gate",
+      "cmd": "has/drop/gate/soft/clear",
       "ok": true,
       "note": "ops"
+    },
+    {
+      "name": "env_runlog",
+      "cmd": "RUNLOG=\u2026 log \u2192 l_src env",
+      "ok": true,
+      "note": "ENV"
     },
     {
       "name": "selftest",
@@ -608,25 +608,56 @@
       "title": "SYS CAT with embedded newline in .cubalc source mangles body assembly",
       "detail": "Building multi-line manifest via SYS CAT body \"\\n\" split across source lines duplicated schema and dropped basenames. Workaround: SYS PUSH body row for newline bags. Same class as REPLACEALL multiline hazard.",
       "repro": "SYS CAT body newline fragment in file \u2192 corrupt bag; SYS PUSH body row ok"
+    },
+    {
+      "id": "W70",
+      "severity": "low",
+      "area": "lang|appendout",
+      "title": "APPENDOUT_CREATED is parent mkdir, not first-line; GETFLAGOUT steals create",
+      "detail": "GETFLAGOUT log already mkdirs parent \u2192 APPENDOUT_CREATED often 0 even on first append. APPENDOUT_CREATED=1 only when parent was missing. Agents must not use CREATED as first-write detector; use ISFILE/LINES before append.",
+      "repro": "GETFLAGOUT log; APPENDOUT log line \u2192 CREATED 0; APPENDOUT alone on fresh nest \u2192 CREATED 1"
+    },
+    {
+      "id": "W71",
+      "severity": "low",
+      "area": "lang|writeoutatomic",
+      "title": "WRITEOUTATOMIC nested status plates; no leftover temps",
+      "detail": "Positive: overwrite replaces body (ready\u2192live); PATHGLOB *.cubalc-tmp empty; CREATED 0 on second write when parent exists.",
+      "repro": "WRITEOUTATOMIC status ready; WRITEOUTATOMIC status live \u2192 only live"
+    },
+    {
+      "id": "W72",
+      "severity": "low",
+      "area": "lang|copyout",
+      "title": "COPYOUT snaps status to nested dest; missing src soft OK=0",
+      "detail": "Positive: COPYOUT status snap creates dest parents; soft fail on missing source. Snap action must pass same --status path as status write (fresh process peels defaults independently).",
+      "repro": "COPYOUT stat_file snap_file; COPYOUT missing dest \u2192 OK 0"
+    },
+    {
+      "id": "W73",
+      "severity": "med",
+      "area": "lang|getflagout",
+      "title": "Eager multi GETFLAGOUT always mkdirs all default parents",
+      "detail": "Board peels log+status+snap every invocation \u2192 creates default run/ trees under STATE even for list/log-only. Lazy peel per action would avoid side-effect dirs; costs more branches.",
+      "repro": "list alone creates state/run/agent.log parent via default GETFLAGOUT"
     }
   ],
   "workarounds": [
-    "RESTPOSPATHS after SUBCMD (not RESTPATHS \u2014 W61/W67)",
-    "GETFLAGOUT manifest|m OR ENV MANIFEST; WRITEOUT man_file body",
-    "SYS PUSH body row for multi-line (not CAT newline in source \u2014 W69)",
-    "NTH 0/1 only under dense LET (W47)",
-    "cubalc run prog seal -- --manifest=PATH file1 file2"
+    "GETFLAGOUT log|status|snap peels; APPENDOUT log line; WRITEOUTATOMIC status body",
+    "COPYOUT status snap (pass same --status path on snap invocation)",
+    "Do not treat APPENDOUT_CREATED as first-line flag (W70)",
+    "cubalc run prog log -- --log=PATH msg"
   ],
   "language_gaps": [
-    "Document RESTPOSPATHS vs RESTPATHS after SUBCMD in cookbook",
-    "Safer multi-line string literals for CAT/REPLACEALL",
-    "Cookbook: seal multi-file WRITEOUT"
+    "Optional lazy GETFLAGOUT / no-mkdir-until-write mode",
+    "Cookbook: runbook journal APPENDOUT+ATOMIC+COPYOUT",
+    "APPENDOUT_CREATED vs first-append semantics docs"
   ],
   "issues_faced": [
-    "Multiline CAT body broken \u2014 fixed with SYS PUSH (W69)",
-    "RESTPOSPATHS excludes verb; probe shows RESTPATHS inflation (W67)",
+    "Snap needs --status on same invocation as source (fresh peels)",
+    "APPENDOUT_CREATED 0 after GETFLAGOUT parent (W70)",
     "selftest 355/355"
   ],
-  "commit": "83b65714e567a3f59ce0dd4872c9833af5b72354",
-  "ts": "2026-08-08T03:44:18Z"
+  "commit": "",
+  "ts": "2026-08-08T04:12:00Z"
 }
