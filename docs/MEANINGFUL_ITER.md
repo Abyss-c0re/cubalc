@@ -545,6 +545,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 515. ~~**`JSONDEL` / `JDEL` / `JSONRM`**~~ **done** (drop top-level JSON plate key · soft miss · agent field ack without hand rebuild).
 516. ~~**`JSONN` / `JGETN` / `JSONNUM`**~~ **done** (peel JSON key as int LAST_N · FROM+OR · plate IF/arith without JSON+NUM glue).
 517. ~~**`JSONMERGE` / `MERGEJSON` / `JMERGE`**~~ **done** (overlay keys onto base plate · raw values · no EACH+JSONSET glue).
+518. ~~**`JSONINC` / `JINC` / `JSONDEC`**~~ **done** (bump numeric plate key · default ±1 · no JSONN+arith+JSONSET glue).
 
 ## Tick protocol
 

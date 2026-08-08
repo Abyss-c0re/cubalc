@@ -1,0 +1,76 @@
+# JSONINC / JINC / JSONDEC — bump numeric plate keys
+# Retry/count counters without JSONN+arith+JSONSET glue. Twin of KVINC for memory plates.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "retries" 0 "ok" 1 "n" 5
+LET plate = LAST
+
+# default +1
+SYS JSONINC plate "retries"
+ASSERT OK == 1
+ASSERT JSONINC_V == 1
+ASSERT LAST_N == 1
+ASSERT JSONINC_DELTA == 1
+LET plate = LAST
+SYS JSONN "retries" FROM plate
+ASSERT LAST_N == 1
+
+# explicit delta
+SYS JSONINC plate "retries" 3
+ASSERT JSONINC_V == 4
+LET plate = LAST
+SYS JSONN "retries" FROM plate
+ASSERT LAST_N == 4
+
+# missing key starts at 0
+SYS JSONINC plate "hits"
+ASSERT JSONINC_V == 1
+LET plate = LAST
+SYS JSONN "hits" FROM plate
+ASSERT LAST_N == 1
+
+# JSONDEC default -1
+SYS JSONDEC plate "retries"
+ASSERT JSONINC_V == 3
+ASSERT JSONINC_DELTA == -1
+LET plate = LAST
+SYS JSONN "retries" FROM plate
+ASSERT LAST_N == 3
+
+# 1-arg on LAST
+SYS JOIN "" plate
+SYS JSONINC "n"
+ASSERT LAST_N == 6
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 6
+
+# key + delta on LAST
+SYS JOIN "" plate
+SYS JSONINC "n" 10
+# plate var is stale; use LAST chain
+SYS JSONOBJ "n" 5
+SYS JSONINC "n" 10
+ASSERT LAST_N == 15
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 15
+
+# aliases
+SYS JINC "{\"c\":2}" "c"
+ASSERT JSONINC_V == 3
+SYS JSONDEC "{\"c\":2}" "c"
+ASSERT JSONINC_V == 1
+SYS JSONINC "{\"c\":5}" "c" -2
+ASSERT JSONINC_V == 3
+
+# other fields preserved
+SYS JSONOBJ "a" 1 "b" 2
+SYS JSONINC LAST "b"
+LET p2 = LAST
+SYS JSON "a" FROM p2
+ASSERT LAST == "1"
+SYS JSONN "b" FROM p2
+ASSERT LAST_N == 3
+
+PRINT "jsoninc ok"
+ASSERT OK == 1
