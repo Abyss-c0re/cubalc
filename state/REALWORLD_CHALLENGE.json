@@ -1,69 +1,63 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 198,
-  "program": "programs/realworld/agent_json_plate_contract_board.cubalc",
-  "theme": "JSONAVGN + JSONEQ + JSONSUBSET peer status contract / mean load gate",
-  "version": "1.15.528-usability",
+  "iter": 199,
+  "program": "programs/realworld/agent_json_plate_presence_board.cubalc",
+  "theme": "JSONHASALL + JSONHASANY + JSONMISS + JSONPRESENT key presence gate",
+  "version": "1.15.530-usability",
   "pass": true,
-  "prior_note": "iter 197 MAXN+TOPKEY extremes; this iter first realworld AVGN(1076)+EQ(1077)+SUBSET(1078) contract board",
+  "prior_note": "iter 198 AVGN+EQ+SUBSET value contract; this iter first realworld HASALL(1079)+MISS(1080) presence board",
   "tests": [
     {
       "name": "mint",
-      "cmd": "status+peer(order-diff)+req schema",
+      "cmd": "full status 7keys + partial incomplete",
       "ok": true,
-      "note": "mint triad"
+      "note": "mint"
     },
     {
-      "name": "avgn",
-      "cmd": "PICK load/err/warn mean=5 used=3 peel load",
+      "name": "hasall",
+      "cmd": "schema role ok zone → 1; peel load=10",
       "ok": true,
-      "note": "AVGN"
+      "note": "HASALL"
     },
     {
-      "name": "eq",
-      "cmd": "order-independent EQ match=1",
+      "name": "hasany",
+      "cmd": "peer|zone|replica → 1 (zone)",
       "ok": true,
-      "note": "EQ"
+      "note": "HASANY"
     },
     {
-      "name": "neq",
-      "cmd": "equal peer → NEQ=0 soft same",
+      "name": "miss",
+      "cmd": "need+peer → miss_bag=peer count1",
       "ok": true,
-      "note": "NEQ same"
+      "note": "MISS"
     },
     {
-      "name": "subset",
-      "cmd": "req ⊆ status =1",
+      "name": "present",
+      "cmd": "4 of 5; peer absent from bag",
       "ok": true,
-      "note": "SUBSET"
-    },
-    {
-      "name": "covers",
-      "cmd": "status ⊇ req SUPERSET=1",
-      "ok": true,
-      "note": "COVERS"
+      "note": "PRESENT"
     },
     {
       "name": "gate",
-      "cmd": "admit avg5∈[2,20]; deny min10; deny max3",
+      "cmd": "admit full; deny partial miss=zone",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "peer",
-      "cmd": "extra key → EQ0 NEQ1 SUBSET1",
+      "name": "partial",
+      "cmd": "install incomplete; HASALL0 MISS zone",
       "ok": true,
-      "note": "diverge"
+      "note": "partial"
     },
     {
       "name": "probe",
-      "cmd": "soft empty; trunc mean1; bool mean3; order EQ",
+      "cmd": "null/false present; empty key list; OF bag",
       "ok": true,
       "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_AJPCT_REQUIRE=1 empty → shell 2",
+      "cmd": "CUBALC_AJPRE_REQUIRE=1 empty → shell 2",
       "ok": true,
       "note": "hard"
     },
@@ -1242,6 +1236,30 @@
       "title": "JSONEQ is exact key-set equality; extra keys fail even if required fields match",
       "detail": "Peer with extra noise fails JSONEQ; use JSONSUBSET for required-field admit and JSONEQ only for full snapshot verify. SUPERSET dual of SUBSET. Documented positive: status⊆peer_with_extra SUBSET=1 EQ=0.",
       "repro": "EQ status vs status+extra → 0; SUBSET status peer → 1"
+    },
+    {
+      "id": "W147",
+      "severity": "med",
+      "area": "lang|json_last",
+      "title": "JSONMISS/PRESENT overwrite LAST with key bag; HASALL keeps plate",
+      "detail": "Asymmetric LAST contract (class of W143 TOPKEY): HASALL/HASANY keep plate for chain peel; MISS/PRESENT set LAST=newline bag of keys and LAST_N=count. Agents that JSONMISS then JSONN FROM LAST fail. Capture miss_bag=LAST then peel FROM body.",
+      "repro": "JSONMISS plate keys; JSONN k FROM LAST → miss; use saved body"
+    },
+    {
+      "id": "W148",
+      "severity": "med",
+      "area": "lang|json_presence",
+      "title": "null and false count as present keys (not missing)",
+      "detail": "JSONHASALL/MISS treat key existence only — gone:null and flag:false are present. Ops handoffs that mean 'unset' via null still pass presence gates. Pair with JSONTYPE or value SUBSET for semantic completeness.",
+      "repro": "JSONHASALL {gone:null,flag:false,n:0} gone flag n → 1; MISS other only"
+    },
+    {
+      "id": "W149",
+      "severity": "low",
+      "area": "lang|json_hasall",
+      "title": "Empty key list: HASALL→1 HASANY→0",
+      "detail": "Vacuous all-of-empty is true; any-of-empty is false. Surprising in dynamic OF bag when need list is blank after GREPV.",
+      "repro": "JSONHASALL plate → 1; JSONHASANY plate → 0"
     }
   ],
   "workarounds": [
@@ -1269,7 +1287,10 @@
     "After TOPKEY/BOTKEY: LET key_s=LAST immediately; peel FROM body not LAST (W143)",
     "After JSONAVGN/EQ/SUBSET: LET x = LAST_N not JSON*_N when near 128 vars (W144)",
     "Mean load: JSONPICK metrics then AVGN; never whole status plate (W145)",
-    "Contract admit: SUBSET req status; full lockstep: JSONEQ (W146)"
+    "Contract admit: SUBSET req status; full lockstep: JSONEQ (W146)",
+    "After JSONMISS/PRESENT: LET bag=LAST; peel FROM body not LAST (W147)",
+    "Presence≠value: JSONTYPE null/false or SUBSET values after HASALL (W148)",
+    "Guard OF need bag: if blank skip HASALL or treat as soft miss (W149)"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1289,7 +1310,10 @@
     "JSONTOPKEY keep-plate mode (LAST=plate LAST_KEY=key) to match MAXN",
     "Raise or warn on n_vars=128; hard-fail var_set instead of silent drop",
     "JSONAVGN numbers-only / skip-bools mode + non-trunc option",
-    "JSONEQ_KEYS optional ignore-extra mode (subset equality)"
+    "JSONEQ_KEYS optional ignore-extra mode (subset equality)",
+    "JSONMISS keep-plate mode (LAST=plate LAST_BAG=keys)",
+    "JSONHASALL require-non-null / require-truthy mode",
+    "JSONMISS hard-fail mode when any required missing"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1306,8 +1330,11 @@
     "TOPKEY LAST=key breaks chain peel (W143)",
     "selftest 355/355 green v1.15.528",
     "JSONAVGN_N silent 0 under 128-var pressure; LAST_N capture fixes gate (W144)",
-    "bool pollution + trunc mean documented (W145)"
+    "bool pollution + trunc mean documented (W145)",
+    "selftest 355/355 green v1.15.530",
+    "HASALL keeps plate chain peel load=10 ok",
+    "partial→gate deny miss_bag=zone positive"
   ],
-  "commit": "cff19e6",
-  "ts": "2026-08-08T14:11:58Z"
+  "commit": "pending",
+  "ts": "2026-08-08T14:33:40Z"
 }

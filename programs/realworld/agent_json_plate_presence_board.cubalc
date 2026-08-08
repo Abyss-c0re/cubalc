@@ -1,0 +1,758 @@
+# agent_json_plate_presence_board.cubalc — JSONHASALL + JSONHASANY + JSONMISS + JSONPRESENT
+#
+# Real use: agent STATUS handoff — multi-key presence contract and
+# "which keys missing" digest without multi JSONHAS glue:
+#   JSONHASALL / JSONNEED — all required keys present → LAST_N 0|1 (1079)
+#   JSONHASANY / JHASANY  — any of optional group present
+#   JSONMISS / JSONMISSING — bag of missing required keys · LAST_N=count (1080)
+#   JSONPRESENT / JSONFOUND — dual present bag
+#   gate: HASALL admit; on fail MISS bag → STATUS row
+#
+# First realworld HASALL+MISS board. Distinct from contract (AVGN+EQ+SUBSET
+# value match) — this board is *key presence only* (null/false still present).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajpre_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_presence_board.cubalc \
+#     mint -- --plate=/tmp/ajpre/status.json
+#   ./out/cubalc run ... hasall -- --plate=...
+#   ./out/cubalc run ... miss -- --plate=...
+#   ./out/cubalc run ... gate -- --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPRE_REPORT.txt
+# Env: PLATE_PATH CUBALC_AJPRE_REQUIRE
+#
+# Edges:
+#   incomplete plate; null/false still present; empty key list;
+#   OF bag keys; MISS overwrites LAST (bag not plate); HASALL keeps plate;
+#   PRINT before MISS loses plate (W4); capture LAST_N not side-channel (W144);
+#   REQUIRE EXIT n; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_presence_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_json_plate_presence -- mint|hasall|hasany|miss|present|gate|list -- [--plate=P]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/status.json"
+LET plate_file = LAST
+SYS JOIN state_dir "sample/partial.json"
+LET partial_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+GETFLAGOUT partial OR ENV PARTIAL_PATH OR partial_file
+LET partial_file = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPRE_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPRE_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET miss_bag = ""
+LET need_bag = ""
+LET miss_n = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "mint", "hasall", "hasany", "miss", "present", "gate", "partial", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "mint" THEN
+    LET op = "mint"
+  WHEN "hasall" THEN
+    LET op = "hasall"
+  WHEN "hasany" THEN
+    LET op = "hasany"
+  WHEN "miss" THEN
+    LET op = "miss"
+  WHEN "present" THEN
+    LET op = "present"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "partial" THEN
+    LET op = "partial"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "mint"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # full status + null/false still-present fields
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 10 "zone" "east" "gone" null "flag" false
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint soft miss"
+    FAIL "mint soft miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mint failed"
+    END
+  ELSE
+    LET take_n = JSONOBJ_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "mint write failed"
+    END
+    CLEAR_ERR
+    # partial: missing zone + peer (incomplete handoff)
+    SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 3
+    LET body = LAST
+    WRITEOUT partial_file body
+    CLEAR_ERR
+    SYS CAT "mint:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mt"
+    LET row = LAST
+    SYS GREPV "mint:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "mint ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "hasall"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "hasall empty plate"
+    FAIL "hasall empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "hasall empty"
+    END
+  ELSE
+    # capture LAST_N immediately (W144 side-channel risk)
+    SYS JSONHASALL body "schema" "role" "ok" "zone"
+    LET admit_n = LAST_N
+    LET take_n = admit_n
+    # LAST kept as plate — peel ok
+    SYS JSONN "load" FROM LAST
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    IF admit_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "hasall ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "hasall miss"
+      FAIL "hasall miss"
+      CLEAR_ERR
+    END
+    SYS CAT "hasall:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":ha"
+    LET row = LAST
+    SYS GREPV "hasall:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n admit_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "hasany"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "hasany empty plate"
+    FAIL "hasany empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "hasany empty"
+    END
+  ELSE
+    # optional peer OR zone — zone present on full plate
+    SYS JSONHASANY body "peer" "zone" "replica"
+    LET admit_n = LAST_N
+    LET take_n = admit_n
+    CLEAR_ERR
+    LET out = body
+    IF admit_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "hasany ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "hasany none"
+      FAIL "hasany none"
+      CLEAR_ERR
+    END
+    SYS CAT "hasany:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":hy"
+    LET row = LAST
+    SYS GREPV "hasany:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n admit_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "miss"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "miss empty plate"
+    FAIL "miss empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "miss empty"
+    END
+  ELSE
+    # full plate vs need list including absent peer
+    SYS JSONMISS body "schema" "role" "ok" "zone" "peer"
+    LET miss_n = LAST_N
+    LET miss_bag = LAST
+    LET take_n = miss_n
+    CLEAR_ERR
+    LET out = miss_bag
+    IF miss_n == 0 THEN
+      LET hit = 1
+      LET note_msg = "miss none"
+    ELSE
+      # expected: only peer missing on full mint
+      SYS HASLINE miss_bag "peer"
+      LET has_n = LAST_N
+      CLEAR_ERR
+      IF has_n == 1 THEN
+        IF miss_n == 1 THEN
+          LET hit = 1
+          LET note_msg = "miss peer only"
+        ELSE
+          LET miss = 1
+          LET note_msg = "miss unexpected count"
+          FAIL "miss unexpected count"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "miss peer absent"
+        FAIL "miss peer absent"
+        CLEAR_ERR
+      END
+    END
+    SYS CAT "miss:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS CAT row miss_bag
+    LET row = LAST
+    SYS CAT row ":ms"
+    LET row = LAST
+    SYS GREPV "miss:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n miss_n has_n miss_bag p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "present"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "present empty plate"
+    FAIL "present empty plate"
+    CLEAR_ERR
+  ELSE
+    SYS JSONPRESENT body "schema" "role" "ok" "zone" "peer"
+    LET miss_n = LAST_N
+    LET miss_bag = LAST
+    LET take_n = miss_n
+    CLEAR_ERR
+    LET out = miss_bag
+    # expect 4 of 5 (no peer)
+    IF miss_n == 4 THEN
+      SYS HASLINE miss_bag "schema"
+      LET has_n = LAST_N
+      CLEAR_ERR
+      SYS HASLINE miss_bag "peer"
+      LET peel_hit = LAST_N
+      CLEAR_ERR
+      IF has_n == 1 THEN
+        IF peel_hit == 0 THEN
+          LET hit = 1
+          LET note_msg = "present 4ok"
+        ELSE
+          LET miss = 1
+          LET note_msg = "present peer leak"
+          FAIL "present peer leak"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "present schema miss"
+        FAIL "present schema miss"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "present count"
+      FAIL "present count"
+      CLEAR_ERR
+    END
+    SYS CAT "present:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":pr"
+    LET row = LAST
+    SYS GREPV "present:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n miss_n has_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "partial"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # force incomplete plate into main path for gate/miss demos
+  SYS READ OR partial_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "partial empty"
+    FAIL "partial empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "partial empty"
+    END
+  ELSE
+    WRITEOUT plate_file body
+    CLEAR_ERR
+    LET out = body
+    SYS JSONHASALL body "schema" "role" "ok" "zone"
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    SYS JSONMISS body "schema" "role" "ok" "zone"
+    LET miss_n = LAST_N
+    LET miss_bag = LAST
+    LET take_n = miss_n
+    CLEAR_ERR
+    # expect HASALL=0 MISS zone
+    IF admit_n == 0 THEN
+      SYS HASLINE miss_bag "zone"
+      LET has_n = LAST_N
+      CLEAR_ERR
+      IF has_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "partial zone miss"
+      ELSE
+        LET miss = 1
+        LET note_msg = "partial no zone in miss"
+        FAIL "partial no zone"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "partial unexpectedly complete"
+      FAIL "partial complete"
+      CLEAR_ERR
+    END
+    SYS CAT "partial:"
+    LET row = LAST
+    SYS STR miss_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS CAT row miss_bag
+    LET row = LAST
+    SYS CAT row ":pt"
+    LET row = LAST
+    SYS GREPV "partial:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n miss_n admit_n has_n miss_bag p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate empty plate"
+    FAIL "gate empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate empty"
+    END
+  ELSE
+    SYS JSONHASALL body "schema" "role" "ok" "zone"
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    LET out = body
+    IF admit_n == 1 THEN
+      LET hit = 1
+      LET take_n = 1
+      LET miss_n = 0
+      LET note_msg = "gate admit"
+    ELSE
+      SYS JSONMISS body "schema" "role" "ok" "zone"
+      LET miss_n = LAST_N
+      LET miss_bag = LAST
+      LET take_n = 0
+      CLEAR_ERR
+      LET miss = 1
+      LET note_msg = "gate deny"
+      FAIL "gate deny"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "gate deny"
+      END
+    END
+    SYS CAT "gate:"
+    LET row = LAST
+    SYS STR admit_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR miss_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":gt"
+    LET row = LAST
+    SYS GREPV "gate:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n admit_n miss_n miss_bag hit miss p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # empty / non-obj soft
+  SYS JSONHASALL "{}" "a"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS JSONMISS "not-json" "a" "b"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # null/false still present
+  SYS JSONOBJ "gone" null "flag" false "n" 0
+  LET body = LAST
+  SYS JSONHASALL body "gone" "flag" "n"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS JSONMISS body "gone" "flag" "other"
+  LET has_n = LAST_N
+  LET miss_bag = LAST
+  CLEAR_ERR
+  # empty key list: HASALL true, HASANY false
+  SYS JSONHASALL body
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS JSONHASANY body
+  LET bag_n = LAST_N
+  CLEAR_ERR
+  # OF bag form
+  SYS JOIN "" "gone\nflag\nmiss"
+  LET need_bag = LAST
+  SYS JSONHASALL body OF need_bag
+  LET hit = LAST_N
+  CLEAR_ERR
+  SYS JSONMISS body OF need_bag
+  LET row = LAST
+  CLEAR_ERR
+  # MISS overwrites LAST — not plate
+  SYS JSONN "n" FROM row
+  LET out = LAST
+  CLEAR_ERR
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON admit_n miss_n take_n has_n peel_hit bag_n hit row p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_presence_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "admit_n"
+LET row = LAST
+SYS STR admit_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss_n"
+LET row = LAST
+SYS STR miss_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_presence_board: done"
+PRINT_JSON hit miss bag_n take_n admit_n miss_n p_src note_msg
+EXIT 0
