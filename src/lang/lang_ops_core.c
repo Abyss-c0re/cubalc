@@ -2282,9 +2282,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 hit, into_name[0] ? into_name : "-", path);
       bump(vm); return 1;
     }
-    /* SYS SAVEPLATE|STOREPLATE|PLATESAVE path [plate]
+    /* SYS SAVEPLATE|STOREPLATE path [FROM plate]|[plate]
      * — validate object plate, mkdir parent, write file.
-     * 2-arg: path plate · 1-arg: path (plate=LAST).
+     * 2-arg: path plate · FROM plate · 1-arg: path (PLATE var if object, else LAST).
+     * SAVEPLATE_FROM=0|1 · multi-plate: SYS SAVEPLATE path FROM peer
      * LAST = abs path · LAST_N = bytes · SAVEPLATE_PATH · SAVEPLATE_N.
      * Soft fail (OK=0) if non-object or empty path; no fatal for agent recovery.
      * Usability: dual of LOADPLATE — persist agent state without WRITEOUT+type glue.
@@ -2294,19 +2295,57 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         kw(&L->cur,"JSONSAVE") || kw(&L->cur,"SAVEJSON") || kw(&L->cur,"WRITEPLATE")){
       char path[CUBALC_HOST_STR_MAX], plate[CUBALC_HOST_STR_MAX];
       char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+      char from_name[96];
       const char *slash, *body;
       size_t n;
-      int created = 0;
+      int created = 0, have_from = 0;
       cubalc_host_result hr, keys;
+      Var *pv;
       lex_next(L);
       path[0] = 0;
       plate[0] = 0;
+      from_name[0] = 0;
       if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
-        fail(vm, "SYS SAVEPLATE path [plate] — need path");
+        fail(vm, "SYS SAVEPLATE path [FROM plate] — need path");
         return -1;
       }
-      if (resolve_str_arg(vm, L, plate, sizeof plate) != 0)
-        snprintf(plate, sizeof plate, "%s", vm->last_str);
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+        lex_next(L);
+        have_from = 1;
+        if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(plate, sizeof plate, "%s", vm->last_str);
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          pv = var_get(vm, L->cur.text, 0);
+          if (pv && pv->is_str) {
+            snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+            snprintf(plate, sizeof plate, "%s", pv->sval);
+            lex_next(L);
+          } else if (pv) {
+            snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+            snprintf(plate, sizeof plate, "%ld", pv->val);
+            lex_next(L);
+          } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+            plate[0] = 0;
+          }
+        } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+          snprintf(plate, sizeof plate, "%s", vm->last_str);
+        }
+      } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+        /* 1-arg: prefer conventional PLATE var, else LAST (legacy) */
+        pv = var_get(vm, "PLATE", 0);
+        if (pv && pv->is_str && pv->sval[0]) {
+          const char *b = pv->sval;
+          while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+          if (*b == '{')
+            snprintf(plate, sizeof plate, "%s", pv->sval);
+          else
+            snprintf(plate, sizeof plate, "%s", vm->last_str);
+        } else {
+          snprintf(plate, sizeof plate, "%s", vm->last_str);
+        }
+      }
       if (!path[0]) {
         var_set_str(vm, "LAST", "");
         var_set_str(vm, "LAST_ERR", "SAVEPLATE: empty path");
@@ -2421,6 +2460,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "SAVEPLATE_PARENT", absparent);
       var_set_num(vm, "SAVEPLATE_N", hr.n);
       var_set_num(vm, "SAVEPLATE_OK", 1);
+      var_set_num(vm, "SAVEPLATE_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "SAVEPLATE_SRC", from_name[0] ? from_name : (have_from ? "" : ""));
       var_set_num(vm, "SAVEPLATE_CREATED", (long)created);
       var_set_num(vm, "WRITE_OK", 1);
       var_set_num(vm, "OK", 1);
@@ -35696,6 +35737,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASP", "HASP [FROM plate] key — soft 0|1 presence · multi-plate · no GETP miss ERR"},
       {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · multi-plate"},
       {"KEYSP", "KEYSP [FROM plate] — key bag → LAST · multi-plate · no JSONKEYS glue"},
+      {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"DUMPP", "DUMPP|PLATEINFO [FROM plate] — cubalc.plate_info.v1 · multi-plate snapshot"},
       {"PLATEINFO", "PLATEINFO alias of DUMPP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
@@ -36379,7 +36421,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PLATEREAD", "PLATEREAD alias of LOADPLATE"},
       {"LOADJSON", "LOADJSON alias of LOADPLATE"},
       {"SAVEPLATE", "SAVEPLATE|STOREPLATE path [plate] — validate object + mkdir parent + write · dual LOADPLATE"},
-      {"SYS SAVEPLATE", "SYS SAVEPLATE path [plate] — persist agent state plate · soft non-object OK=0"},
+      {"SYS SAVEPLATE", "SYS SAVEPLATE path [FROM plate] — persist · multi-plate FROM · soft OK=0"},
       {"STOREPLATE", "STOREPLATE alias of SAVEPLATE"},
       {"PLATESAVE", "PLATESAVE alias of SAVEPLATE"},
       {"WRITEPLATE", "WRITEPLATE alias of SAVEPLATE (object-checked; PLATEWRITE is WRITEOUT)"},
@@ -38621,6 +38663,225 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
   }
+  /* SAVEP [FROM plate] path — persist PLATE (default) or any plate var to disk.
+   * Twin of plate_save INCLUDE + multi-plate dual of LOADPLATE INTO:
+   *   SETP "role" "worker"
+   *   SAVEP "state/agent.json"          # uses PLATE (not LAST footgun)
+   *   SAVEP FROM peer "state/peer.json"
+   *   SAVEP path FROM session
+   * LAST = abs path · LAST_N = bytes · SAVEP_FROM · SAVEPLATE_* knobs.
+   * Soft OK=0 if non-object. Does not clobber plate var content. */
+  if (kw(&L->cur,"SAVEP") || kw(&L->cur,"SAVE_P") || kw(&L->cur,"PLATE_SAVE") ||
+      kw(&L->cur,"MSAVEP") || kw(&L->cur,"WRITE_P") || kw(&L->cur,"PERSIST_P")) {
+    char path[CUBALC_HOST_STR_MAX], plate[CUBALC_HOST_STR_MAX];
+    char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+    char from_name[96];
+    const char *slash, *body;
+    size_t n;
+    int created = 0, have_from = 0;
+    cubalc_host_result hr, keys;
+    Var *pv;
+
+    lex_next(L);
+    path[0] = 0; plate[0] = 0; from_name[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(plate, sizeof plate, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(plate, sizeof plate, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(plate, sizeof plate, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+          plate[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+        plate[0] = 0;
+      }
+    }
+
+    if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+      fail(vm, "SAVEP [FROM plate] path — need path");
+      return -1;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(plate, sizeof plate, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(plate, sizeof plate, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(plate, sizeof plate, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+          plate[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+        plate[0] = 0;
+      }
+    }
+
+    if (!have_from || !plate[0]) {
+      if (!plate[0]) {
+        pv = var_get(vm, "PLATE", 0);
+        if (pv && pv->is_str && pv->sval[0])
+          snprintf(plate, sizeof plate, "%s", pv->sval);
+        else
+          snprintf(plate, sizeof plate, "%s", "{}");
+      }
+    }
+
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "SAVEP: empty path");
+      var_set_str(vm, "ERR", "SAVEP: empty path");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "SAVEP_N", 0);
+      var_set_num(vm, "SAVEPLATE_N", 0);
+      var_set_num(vm, "SAVEP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    body = plate;
+    while (*body == ' ' || *body == '\t' || *body == '\n' || *body == '\r')
+      body++;
+    if (*body != '{') {
+      var_set_str(vm, "LAST", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      var_set_str(vm, "LAST_ERR", "SAVEP: need object plate (starts with {)");
+      var_set_str(vm, "ERR", "SAVEP: need object plate (starts with {)");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "SAVEP_N", 0);
+      var_set_num(vm, "SAVEPLATE_N", 0);
+      var_set_num(vm, "SAVEPLATE_OK", 0);
+      var_set_num(vm, "SAVEP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "SAVEPLATE_PATH", path);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    memset(&keys, 0, sizeof keys);
+    if (cubalc_host_json_keys(body, &keys) != 0) {
+      var_set_str(vm, "LAST", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      var_set_str(vm, "LAST_ERR", "SAVEP: invalid object plate");
+      var_set_str(vm, "ERR", "SAVEP: invalid object plate");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "SAVEP_N", 0);
+      var_set_num(vm, "SAVEPLATE_OK", 0);
+      var_set_num(vm, "SAVEP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+      snprintf(absfile, sizeof absfile, "%s", hr.str);
+    else
+      snprintf(absfile, sizeof absfile, "%s", path);
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", absfile);
+      n = strlen(work);
+      while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+        work[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else {
+        parent[0] = '.';
+        parent[1] = 0;
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "SAVEP: mkdir parent failed";
+      var_set_str(vm, "LAST", absfile);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      var_set_str(vm, "SAVEPLATE_PATH", absfile);
+      var_set_num(vm, "SAVEP_FROM", have_from ? 1 : 0);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "SAVEP_N", 0);
+      var_set_num(vm, "SAVEPLATE_OK", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_write(absfile, body, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "SAVEP: write failed";
+      var_set_str(vm, "LAST", absfile);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      var_set_str(vm, "SAVEPLATE_PATH", absfile);
+      var_set_num(vm, "SAVEP_FROM", have_from ? 1 : 0);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "SAVEP_N", 0);
+      var_set_num(vm, "SAVEPLATE_OK", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    var_set_str(vm, "LAST", absfile);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "SAVEP", absfile);
+    var_set_str(vm, "SAVEPLATE", absfile);
+    var_set_str(vm, "SAVEPLATE_PATH", absfile);
+    var_set_str(vm, "SAVEPLATE_PARENT", absparent);
+    var_set_num(vm, "SAVEP_N", hr.n);
+    var_set_num(vm, "SAVEPLATE_N", hr.n);
+    var_set_num(vm, "SAVEPLATE_OK", 1);
+    var_set_num(vm, "SAVEP_FROM", have_from ? 1 : 0);
+    var_set_num(vm, "SAVEPLATE_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "SAVEP_SRC", from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_str(vm, "SAVEPLATE_SRC", from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "SAVEPLATE_CREATED", (long)created);
+    var_set_num(vm, "WRITE_OK", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# savep → %s n=%ld from=%d src=%s\n",
+              absfile, hr.n, have_from, from_name[0] ? from_name : "PLATE");
+    bump(vm); return 1;
+  }
   /* DUMPP|PLATEINFO [FROM plate] — agent snapshot of PLATE or any plate object.
    * LAST = cubalc.plate_info.v1 JSON:
    *   keys_n · bytes · path (PLATE_PATH if default; var name if FROM named) · keys · has_plate
@@ -38871,7 +39132,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           kw(&L->cur,"INCLUDE") || kw(&L->cur,"SETP") || kw(&L->cur,"INCP") ||
           kw(&L->cur,"DELP") || kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") ||
           kw(&L->cur,"DEFAULTP") || kw(&L->cur,"TOGGLEP") || kw(&L->cur,"NEEDP") ||
-          kw(&L->cur,"HASP") || kw(&L->cur,"KEYSP") || kw(&L->cur,"DUMPP") ||
+          kw(&L->cur,"HASP") || kw(&L->cur,"KEYSP") || kw(&L->cur,"DUMPP") || kw(&L->cur,"SAVEP") ||
           kw(&L->cur,"FILLP") || kw(&L->cur,"FILLPKEYS") || kw(&L->cur,"SUBSTPLATE") ||
           kw(&L->cur,"EXPANDP") || kw(&L->cur,"FILLPFILE") ||
           kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||

@@ -1,0 +1,90 @@
+# SAVEP / SAVEPLATE FROM — persist PLATE or any plate var without LAST footgun
+# Usability: multi-plate disk dual of LOADPLATE INTO + safer than 1-arg SAVEPLATE=LAST.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_savep"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET apath = LAST
+SYS JOIN dir "peer.json"
+LET ppath = LAST
+SYS RM apath
+SYS RM ppath
+
+# conventional PLATE
+LET PLATE = "{}"
+SETP "agent" "plate-agent"
+SETP "n" 1
+
+# GETP clobbers LAST — SAVEP must still use PLATE
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+SAVEP apath
+ASSERT OK == 1
+ASSERT SAVEPLATE_OK == 1
+ASSERT SAVEP_FROM == 0
+SYS EQS SAVEP_SRC "PLATE"
+ASSERT LAST_N == 1
+ASSERT SAVEP_N > 0
+# round-trip
+SYS LOADPLATE INTO loaded apath
+ASSERT LOADPLATE_HIT == 1
+GETP FROM loaded "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+GETP FROM loaded "n"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# multi-plate peer
+LET peer = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":9}"
+SAVEP FROM peer ppath
+ASSERT OK == 1
+ASSERT SAVEP_FROM == 1
+SYS EQS SAVEP_SRC "peer"
+ASSERT LAST_N == 1
+SYS LOADPLATE INTO check ppath
+GETP FROM check "host"
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+# PLATE not changed
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# trailing FROM
+SETP FROM peer "n" 11
+SAVEP ppath FROM peer
+ASSERT SAVEP_FROM == 1
+SYS LOADPLATE INTO check ppath
+GETP FROM check "n"
+SYS EQS LAST "11"
+ASSERT LAST_N == 1
+
+# SYS SAVEPLATE FROM
+SYS JOIN dir "sys.json"
+LET sp = LAST
+SYS SAVEPLATE sp FROM peer
+ASSERT OK == 1
+ASSERT SAVEPLATE_FROM == 1
+SYS LOADPLATE INTO check sp
+GETP FROM check "host"
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+
+# soft fail non-object
+SAVEP FROM "not-json" apath
+ASSERT OK == 0
+ASSERT SAVEPLATE_OK == 0
+# prior agent file intact
+SYS LOADPLATE INTO check apath
+GETP FROM check "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+PRINT "savep soft ok"
