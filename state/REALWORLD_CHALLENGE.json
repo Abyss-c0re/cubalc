@@ -1,59 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 213,
-  "program": "programs/realworld/agent_plate_patch_cli_board.cubalc",
-  "theme": "plate_patch lib + cubalc plate CLI dual agent status patch",
-  "version": "1.15.565-usability",
+  "iter": 214,
+  "program": "programs/realworld/agent_plate_session_dump_board.cubalc",
+  "theme": "plate_session + DUMPP/PLATEINFO agent plate session snapshot",
+  "version": "1.15.568-usability",
   "pass": true,
-  "prior_note": "iter 212 NEEDP/MERGEP; this iter first realworld plate_patch (1115) + cubalc plate CLI (1112)",
+  "prior_note": "iter 213 plate_patch+CLI; this iter first realworld plate_session+DUMPP (proofs 1116/1117)",
   "tests": [
     {
-      "name": "boot",
-      "cmd": "plate_boot seed keep/role/n",
+      "name": "session",
+      "cmd": "plate_session version+seed PLATE",
       "ok": true,
-      "note": "boot"
+      "note": "plate_session"
     },
     {
-      "name": "patch",
-      "cmd": "plate_patch status/zone/n=9 keep base",
+      "name": "tick",
+      "cmd": "SETP status + INCP n + NEEDP + save",
       "ok": true,
-      "note": "plate_patch"
+      "note": "mutate"
     },
     {
-      "name": "ready",
-      "cmd": "patch status=ready phase=run",
+      "name": "dump",
+      "cmd": "DUMPP cubalc.plate_info.v1 has_plate keys_n",
       "ok": true,
-      "note": "ready"
+      "note": "DUMPP"
     },
     {
       "name": "reload",
-      "cmd": "LOADPLATE hit peel status",
+      "cmd": "LOADPLATE only hit peel n",
       "ok": true,
       "note": "reload"
     },
     {
       "name": "gate",
-      "cmd": "HASALL + keep after patch",
+      "cmd": "NEEDP + DUMPP + save admit",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "fresh",
-      "cmd": "JSONFILEMERGE create-on-miss boot/role",
+      "name": "alias",
+      "cmd": "PLATEINFO schema plate_info",
       "ok": true,
-      "note": "fresh"
+      "note": "PLATEINFO"
     },
     {
       "name": "probe",
-      "cmd": "empty {} patch; second phase; keep",
+      "cmd": "empty DUMPP; session; re-session durable",
       "ok": true,
       "note": "edges"
-    },
-    {
-      "name": "cli",
-      "cmd": "plate get/inc/keys/get OR/del/show",
-      "ok": true,
-      "note": "cubalc plate CLI"
     },
     {
       "name": "soft",
@@ -63,7 +57,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_APPC_REQUIRE=1 reload miss \u2192 exit 2",
+      "cmd": "CUBALC_APSD_REQUIRE=1 reload miss \u2192 exit 2",
       "ok": true,
       "note": "hard env"
     },
@@ -71,7 +65,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "354/355 pre-existing sys_kvfileensure"
+      "note": "358/359 pre-existing fail (not this program)"
     }
   ],
   "weaknesses": [
@@ -1682,6 +1676,38 @@
       "title": "STATUS/META/REPORT still omit trailing NL (W5 reconfirm)",
       "detail": "cat -A APPC_REPORT ends without $ on last line after soft.",
       "repro": "cat -A APPC_REPORT.txt"
+    },
+    {
+      "id": "W202",
+      "severity": "med",
+      "area": "lang|dumpp",
+      "title": "DUMPP LAST_N is keys_n; empty PLATE has_plate:false bytes=2",
+      "detail": "DUMPP on missing PLATE still OK=1 with cubalc.plate_info.v1 and has_plate:false LAST_N=0 DUMPP_BYTES=2 (\"{}\"). Populated: LAST_N=keys_n, DUMPP_KEYS bag, DUMPP_PATH. PLATE content not clobbered.",
+      "repro": "UNSET PLATE; DUMPP \u2192 has_plate false; after boot DUMPP_N>=3"
+    },
+    {
+      "id": "W203",
+      "severity": "med",
+      "area": "lib|plate_session",
+      "title": "plate_session always create-on-miss via ENSUREPLATE",
+      "detail": "INCLUDE plate_session seeds missing paths. reload/miss tests must use LOADPLATE alone without session INCLUDE, or require will false-hit. Re-session loads durable; ENSUREPLATE_CREATED=0 on second open.",
+      "repro": "plate_session on missing path creates seed; LOADPLATE alone soft-misses"
+    },
+    {
+      "id": "W204",
+      "severity": "low",
+      "area": "lang|dumpp",
+      "title": "DUMPP/PLATEINFO schema cubalc.plate_info.v1 agent snapshot",
+      "detail": "One-shot instead of KEYSP+LEN+path glue. Alias PLATEINFO. Positive for agent health plates.",
+      "repro": "DUMPP; HAS cubalc.plate_info.v1"
+    },
+    {
+      "id": "W205",
+      "severity": "low",
+      "area": "host|write",
+      "title": "APSD_REPORT/META omit trailing NL (W5 reconfirm)",
+      "detail": "cat -A REPORT last field without $.",
+      "repro": "cat -A APSD_REPORT.txt"
     }
   ],
   "workarounds": [
@@ -1755,7 +1781,10 @@
     "DEFAULTP for boot seed; MERGEP for intentional overwrite",
     "create-on-miss via JSONFILEMERGE when PLATE may be unset",
     "LOADPLATE/PEEK after plate_patch for field peels",
-    "use cubalc plate for shell one-shots; plate_patch for multi-key in-language"
+    "use cubalc plate for shell one-shots; plate_patch for multi-key in-language",
+    "LOADPLATE alone for true miss require",
+    "DUMPP then peel HAS has_plate / keys_n from LAST JSON",
+    "INCLUDE plate_session once per action after setting PLATE_PATH/SEED"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1823,7 +1852,10 @@
     "MERGEP overlay wins; DEFAULTP fill-if-missing dual",
     "plate_patch after UNSET PLATE can hard-fail SAVEPLATE PLATE",
     "cubalc plate CLI dual of SETP/PEEK/BUMP disk ops",
-    "plate_patch SAVE leaves LAST=path not plate body"
+    "plate_patch SAVE leaves LAST=path not plate body",
+    "DUMPP empty PLATE still OK with has_plate:false",
+    "plate_session create-on-miss masks soft LOAD miss",
+    "DUMPP LAST_N = key count not success"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1883,8 +1915,10 @@
     "NEEDP require path exit_code 0 until EXIT after HASPALL precheck",
     "plate_boot create-on-miss made missing path keys soft-success",
     "fresh UNSET+plate_patch unknown form PLATE; switched to JSONFILEMERGE",
-    "CLI dual path verified get/inc/keys/OR/del/show green"
+    "CLI dual path verified get/inc/keys/OR/del/show green",
+    "require reload false-hit until removed plate_session from reload path",
+    "all primary paths green first pass after that fix"
   ],
-  "commit": "3dff9b8",
-  "ts": "2026-08-08T20:24:27Z"
+  "commit": "pending",
+  "ts": "2026-08-08T20:50:06Z"
 }
