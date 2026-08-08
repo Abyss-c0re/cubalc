@@ -209,6 +209,10 @@ int cubalc_host_json_set(const char *json, const char *key, const char *val,
  * r->n = 1 if key was removed, 0 if missing (still OK, object unchanged/copy).
  * Soft fail only on empty key / malformed. Usability: plate field ack/drop. */
 int cubalc_host_json_del(const char *json, const char *key, cubalc_host_result *r);
+/* merge overlay top-level keys into base (overlay wins). r->str = result object.
+ * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
+ * Empty/non-object base → {}. Empty overlay → copy of base. */
+int cubalc_host_json_merge(const char *base, const char *overlay, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

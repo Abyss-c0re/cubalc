@@ -4104,6 +4104,137 @@ int cubalc_host_json_del(const char *json, const char *key, cubalc_host_result *
   return 0;
 }
 
+/* Usability: SYS JSONMERGE base overlay — overlay top-level keys win.
+ * Preserves raw value text (numbers/bools/nested). r->n = applied key count. */
+int cubalc_host_json_merge(const char *base, const char *overlay, cubalc_host_result *r) {
+  char cur[CUBALC_HOST_STR_MAX];
+  const char *ob, *p;
+  int depth = 0, in_str = 0, esc = 0;
+  long applied = 0;
+  cubalc_host_result hr;
+  r_clear(r);
+  /* start from base object or empty */
+  {
+    const char *b = base ? base : "";
+    while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+    if (*b == '{')
+      snprintf(cur, sizeof cur, "%s", b);
+    else
+      snprintf(cur, sizeof cur, "%s", "{}");
+  }
+  ob = overlay ? overlay : "";
+  while (*ob == ' ' || *ob == '\t' || *ob == '\n' || *ob == '\r') ob++;
+  if (*ob != '{') {
+    /* no overlay object — return base copy */
+    snprintf(r->str, sizeof r->str, "%s", cur);
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  p = ob;
+  depth = 0;
+  in_str = 0;
+  esc = 0;
+  for (; *p; p++) {
+    unsigned char c = (unsigned char)*p;
+    if (in_str) {
+      if (esc) {
+        esc = 0;
+        continue;
+      }
+      if (c == '\\') {
+        esc = 1;
+        continue;
+      }
+      if (c == '"') in_str = 0;
+      continue;
+    }
+    if (c == '"') {
+      if (depth == 1) {
+        /* capture key */
+        const char *ks = p + 1, *q = ks;
+        char key[256];
+        char rawval[CUBALC_HOST_STR_MAX];
+        size_t kn = 0;
+        int kesc = 0;
+        const char *after, *vstart, *vend;
+        size_t vn;
+        while (*q) {
+          if (kesc) {
+            kesc = 0;
+            if (kn + 1 < sizeof key) key[kn++] = *q;
+            q++;
+            continue;
+          }
+          if (*q == '\\') {
+            kesc = 1;
+            q++;
+            continue;
+          }
+          if (*q == '"') break;
+          if (kn + 1 < sizeof key) key[kn++] = *q;
+          q++;
+        }
+        if (*q != '"') break;
+        key[kn] = 0;
+        after = q + 1;
+        while (*after == ' ' || *after == '\t' || *after == '\n' || *after == '\r')
+          after++;
+        if (*after != ':') {
+          in_str = 1;
+          continue;
+        }
+        after++;
+        while (*after == ' ' || *after == '\t' || *after == '\n' || *after == '\r')
+          after++;
+        vstart = after;
+        vend = vstart;
+        if (cubalc_json_skip_value(&vend) != 0) {
+          snprintf(r->err, sizeof r->err, "jsonmerge: bad value");
+          return -1;
+        }
+        vn = (size_t)(vend - vstart);
+        if (vn >= sizeof rawval) vn = sizeof rawval - 1;
+        memcpy(rawval, vstart, vn);
+        rawval[vn] = 0;
+        memset(&hr, 0, sizeof hr);
+        if (cubalc_host_json_set(cur, key, rawval, 1, &hr) != 0) {
+          snprintf(r->err, sizeof r->err, "%s",
+                   hr.err[0] ? hr.err : "jsonmerge: set fail");
+          return -1;
+        }
+        snprintf(cur, sizeof cur, "%s", hr.str);
+        applied++;
+        p = vend - 1; /* for loop p++ → vend */
+        continue;
+      }
+      in_str = 1;
+      continue;
+    }
+    if (c == '{') {
+      depth++;
+      continue;
+    }
+    if (c == '}') {
+      if (depth > 0) depth--;
+      if (depth == 0) break;
+      continue;
+    }
+    if (c == '[') {
+      depth++;
+      continue;
+    }
+    if (c == ']') {
+      if (depth > 0) depth--;
+      continue;
+    }
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  r->n = applied;
+  r->ok = 1;
+  return 0;
+}
+
 static int load_token(char *out, size_t outn) {
   out[0] = 0;
   const char *e = getenv("XAI_API_KEY");

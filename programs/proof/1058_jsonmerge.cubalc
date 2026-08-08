@@ -1,0 +1,59 @@
+# JSONMERGE / MERGEJSON / JMERGE — overlay keys onto base agent plate
+# Combine partial plates without EACH+JSONKEYS+JSONSET glue. Overlay wins.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" 1 "version" "1.0" "n" 2
+LET base = LAST
+
+SYS JSONOBJ "n" 9 "err" "" "extra" "yes"
+LET over = LAST
+
+SYS JSONMERGE base over
+ASSERT OK == 1
+ASSERT JSONMERGE_N == 3
+LET m = LAST
+SYS JSON "ok" FROM m
+ASSERT LAST == "1"
+SYS JSON "version" FROM m
+ASSERT LAST == "1.0"
+SYS JSONN "n" FROM m
+ASSERT LAST_N == 9
+SYS JSON "err" FROM m
+ASSERT LAST == ""
+SYS JSON "extra" FROM m
+ASSERT LAST == "yes"
+SYS JSONKEYS m
+ASSERT JSONKEYS_N == 5
+
+# empty overlay → base copy
+SYS JSONMERGE base "{}"
+ASSERT JSONMERGE_N == 0
+SYS JSON "version" FROM LAST
+ASSERT LAST == "1.0"
+
+# non-object base → start fresh from overlay
+SYS JSONMERGE "not-obj" over
+ASSERT OK == 1
+ASSERT JSONMERGE_N >= 1
+SYS JSON "extra" FROM LAST
+ASSERT LAST == "yes"
+
+# nested raw preserved
+SYS JSONOBJ "meta" RAW "{\"a\":1}"
+LET nest = LAST
+SYS JSONMERGE base nest
+LET m2 = LAST
+SYS HAS m2 "\"meta\":{\"a\":1}"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MERGEJSON base over
+ASSERT MERGEJSON_N == 3
+SYS JMERGE "{}" "{\"x\":1}"
+ASSERT JSONMERGE_N == 1
+SYS JSONN "x" FROM LAST
+ASSERT LAST_N == 1
+
+PRINT "jsonmerge ok"
+ASSERT OK == 1

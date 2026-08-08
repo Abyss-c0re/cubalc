@@ -18165,6 +18165,53 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         fprintf(vm->trace, "# sys jsondel → key=%s removed=%ld\n", key, hr.n);
       bump(vm); return 1;
     }
+    /* SYS JSONMERGE|MERGEJSON|JMERGE base overlay
+     * — apply overlay top-level keys onto base (overlay wins) → LAST = plate.
+     * LAST_N / JSONMERGE_N = keys applied. Raw values preserved.
+     * Usability: combine partial agent plates without EACH+JSONSET glue. */
+    if (kw(&L->cur,"JSONMERGE") || kw(&L->cur,"MERGEJSON") || kw(&L->cur,"JMERGE") ||
+        kw(&L->cur,"JSONCOMBINE") || kw(&L->cur,"COMBINEJSON") ||
+        kw(&L->cur,"PLATEMERGE") || kw(&L->cur,"MERGEPLATE")){
+      char base[CUBALC_HOST_STR_MAX], over[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr;
+      lex_next(L);
+      base[0] = 0; over[0] = 0;
+      if (resolve_str_arg(vm, L, base, sizeof base) != 0)
+        snprintf(base, sizeof base, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, over, sizeof over) != 0) {
+        fail(vm, "SYS JSONMERGE base overlay — JSONMERGE base over");
+        return -1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_merge(base, over, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "JSONMERGE_N", 0);
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "JSONMERGE: fail");
+          var_set_str(vm, "ERR", "JSONMERGE: fail");
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "JSONMERGE", hr.str);
+      var_set_str(vm, "MERGEJSON", hr.str);
+      var_set_num(vm, "JSONMERGE_N", hr.n);
+      var_set_num(vm, "MERGEJSON_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys jsonmerge → applied=%ld\n", hr.n);
+      bump(vm); return 1;
+    }
     /* SYS CHAT "local"|"grok" ["model"] — msg from GROKIUM_MSG / CUBALC_MSG env */
     if (kw(&L->cur,"CHAT") || kw(&L->cur,"ASK")){
       lex_next(L);
@@ -31049,6 +31096,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS JSONDEL", "SYS JSONDEL|JDEL [plate] key — delete JSON key · 1-arg uses LAST plate"},
       {"JDEL", "JDEL alias of JSONDEL"},
       {"JSONRM", "JSONRM alias of JSONDEL — plate field drop"},
+      {"JSONMERGE", "JSONMERGE|MERGEJSON base overlay — overlay keys win · combine partial plates"},
+      {"SYS JSONMERGE", "SYS JSONMERGE|MERGEJSON base overlay — merge plates · raw values kept"},
+      {"MERGEJSON", "MERGEJSON alias of JSONMERGE"},
+      {"JMERGE", "JMERGE alias of JSONMERGE"},
       {"FIRSTLINEINTREE", "FIRSTLINEINTREE|GREP1LINETREE root needle — first matching line under tree · PATH+HIT"},
       {"SYS FIRSTLINEINTREE", "SYS FIRSTLINEINTREE|GREP1LINETREE root needle — first line · twin of top-level"},
       {"LASTLINEINTREE", "LASTLINEINTREE|GREP1LINETREEL root needle — last matching line under tree · PATH+HIT"},
