@@ -1,0 +1,6 @@
+# HELPFLAG hit path — run with: cubalc run 1001b_helpflag_hit.cubalc -- --help
+# Expect: print USAGE, plate halted=true exit_code=0 (no PRINT below)
+HOLD_FLASH 1
+USAGE "tool [--workers N] files..."
+HELPFLAG
+PRINT "unreachable"

@@ -487,6 +487,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 457. ~~**`REQUIRE RESTPOS` / `HASRESTPOS`**~~ **done** (files after subcommand min gate · not counting cmd · SUBCMD twin).
 458. ~~**`CLAMPN` / `BOUNDN`**~~ **done** (clamp x into [lo,hi] → LAST_N · GETFLAGN/GETFLAGMS caps without SYS CLAMP).
 459. ~~**flag aliases**~~ **done** (`GETFLAGN workers|w` · `,`/`|` multi-name · `FLAG_HIT_NAME` · short flags without dual HASFLAG).
+460. ~~**`HELPFLAG` / `AUTOHELP`**~~ **done** (if --help|-h print sticky USAGE + EXIT 0 · default help|h|usage · no HASFLAG+IF+EXIT glue).
 
 ## Tick protocol
 

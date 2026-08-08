@@ -1,0 +1,37 @@
+# HELPFLAG / AUTOHELP — print USAGE and EXIT 0 on --help|-h
+
+HOLD_FLASH 1
+
+# miss: no help flag → continue
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV SET CUBALC_ARGC "0"
+USAGE "tool [--workers N] files..."
+HELPFLAG
+ASSERT LAST_N == 0
+ASSERT HELPFLAG_HIT == 0
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# program continues after miss
+GETFLAGN workers|w OR 4
+ASSERT LAST_N == 4
+
+# custom aliases without hit
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARGC "1"
+HELPFLAG help|h|usage
+ASSERT LAST_N == 0
+ASSERT HELPFLAG_HIT == 0
+
+# AUTOHELP alias of HELPFLAG (miss path)
+AUTOHELP
+ASSERT HELPFLAG_HIT == 0
+
+# USAGE sticky still present after HELPFLAG miss
+USAGE
+SYS HAS LAST
+# usage text non-empty
+SYS LEN LAST
+ASSERT LAST_N > 10
+
+PRINT "helpflag miss ok"

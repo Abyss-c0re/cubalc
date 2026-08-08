@@ -26449,6 +26449,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"USAGE", "USAGE [\"text\"] — sticky CLI usage · REQUIRE ARG/ARGC/FLAG fails append tip"},
+      {"HELPFLAG", "HELPFLAG|AUTOHELP [name|,|alt] — if --help|-h present print USAGE and EXIT 0 · default help|h|usage"},
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
@@ -27887,6 +27888,73 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     /* preserve OK — like NOTE */
     if (vm->trace) fprintf(vm->trace, "# usage: %s\n", msg);
     if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", msg);
+    bump(vm); return 1;
+  }
+  /* HELPFLAG|AUTOHELP [name[,|alt...]] — if any help alias is present on CLI,
+   * print sticky USAGE (or a short tip) and EXIT 0. Default aliases: help|h|usage.
+   * Miss → LAST_N=0 HELPFLAG_HIT=0 continue. FLAG_HIT_NAME = matching alias.
+   * Usability: USAGE + HELPFLAG replaces HASFLAG help|h + IF + USAGE + EXIT glue. */
+  if (kw(&L->cur,"HELPFLAG") || kw(&L->cur,"AUTOHELP") || kw(&L->cur,"ONHELP") ||
+      kw(&L->cur,"CLIHELP") || kw(&L->cur,"SHOWHELP") || kw(&L->cur,"HELP_FLAG") ||
+      kw(&L->cur,"IFHELP") || kw(&L->cur,"DOHELP")){
+    char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX], msg[CUBALC_HOST_STR_MAX];
+    int hit, nac;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    val[0] = 0;
+    msg[0] = 0;
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      snprintf(aliases, sizeof aliases, "help\nh\nusage");
+      snprintf(name, sizeof name, "%s", "help");
+    }
+    hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
+    if (!hit) {
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "HELPFLAG_HIT", 0);
+      var_set_num(vm, "HELPFLAG_N", 0);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "HELPFLAG", name);
+      var_set_str(vm, "FLAG_HIT_NAME", "");
+      var_set_str(vm, "FLAG_ALIAS", "");
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      if (vm->trace)
+        fprintf(vm->trace, "# helpflag %s miss\n", name);
+      bump(vm); return 1;
+    }
+    {
+      Var *u = var_get(vm, "USAGE", 0);
+      if (u && u->is_str && u->sval[0])
+        snprintf(msg, sizeof msg, "%s", u->sval);
+      else
+        snprintf(msg, sizeof msg, "usage: pass --%s for help", name);
+    }
+    var_set_str(vm, "LAST", msg);
+    var_set_str(vm, "HELPFLAG", name);
+    var_set_str(vm, "FLAG_HIT_NAME", hitnm);
+    var_set_str(vm, "FLAG_ALIAS", hitnm);
+    var_set_str(vm, "FLAG", val[0] ? val : "1");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+    vm->last_n = 1;
+    var_set_num(vm, "LAST_N", 1);
+    var_set_num(vm, "HELPFLAG_HIT", 1);
+    var_set_num(vm, "HELPFLAG_N", 1);
+    var_set_num(vm, "OK", 1);
+    var_set_num(vm, "EXIT", 0);
+    /* emit usage like PRINT (trace = stdout when not -q) */
+    if (vm->trace) fprintf(vm->trace, "%s\n", msg);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", msg);
+    /* clean halt — EXIT 0 */
+    vm->halt = 1;
+    vm->exit_code = 0;
+    vm->break_loop = 1;
+    vm->return_fn = 1;
+    if (vm->trace)
+      fprintf(vm->trace, "# helpflag hit=%s exit 0\n", hitnm);
     bump(vm); return 1;
   }
   /* CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery.
