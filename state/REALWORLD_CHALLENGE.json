@@ -1,65 +1,65 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 200,
-  "program": "programs/realworld/agent_json_plate_allowlist_board.cubalc",
-  "theme": "JSONEXTRA + JSONKNOWN + JSONPLUCK + REQUIRE JSONHASALL allow-list scrub",
-  "version": "1.15.533-usability",
+  "iter": 201,
+  "program": "programs/realworld/agent_json_plate_schema_board.cubalc",
+  "theme": "JSONEXACT + REQUIRE JSONONLY + REQUIRE JSONEXACT schema key-set gate",
+  "version": "1.15.535-usability",
   "pass": true,
-  "prior_note": "iter 199 HASALL+MISS presence; this iter first realworld EXTRA(1081)+PLUCK(1082)+REQUIRE JSONHASALL(1083) allowlist board",
+  "prior_note": "iter 200 EXTRA+PLUCK allowlist; this iter first realworld EXACT(1085)+JSONONLY(1084) schema board",
   "tests": [
     {
       "name": "mint",
-      "cmd": "8 keys allow+noise+debug",
+      "cmd": "exact 5-key status plate",
       "ok": true,
-      "note": "mint dirty"
+      "note": "mint"
     },
     {
-      "name": "extra",
-      "cmd": "EXTRA OF allow → noise+debug n=2",
+      "name": "exact",
+      "cmd": "JSONEXACT OF schema → 1 peel load=10",
       "ok": true,
-      "note": "EXTRA"
+      "note": "EXACT"
     },
     {
-      "name": "known",
-      "cmd": "KNOWN 6 allow hits no noise",
+      "name": "only",
+      "cmd": "EXTRA OF schema → 0 clean",
       "ok": true,
-      "note": "KNOWN"
-    },
-    {
-      "name": "pluck",
-      "cmd": "load|err|peer → 10|2|empty slots=3",
-      "ok": true,
-      "note": "PLUCK"
+      "note": "ONLY soft"
     },
     {
       "name": "gate",
-      "cmd": "dirty extra deny; after scrub admit",
+      "cmd": "admit clean; deny dirty/thin",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "scrub",
-      "cmd": "PICK allow → EXTRA0 LEN6",
+      "name": "hard",
+      "cmd": "REQUIRE JSONEXACT+JSONONLY + peel ok",
       "ok": true,
-      "note": "scrub"
+      "note": "hard"
     },
     {
-      "name": "req",
-      "cmd": "REQUIRE JSONHASALL + peel load=10",
+      "name": "dirty",
+      "cmd": "noise key EXACT0 EXTRA1",
       "ok": true,
-      "note": "REQUIRE"
+      "note": "dirty"
+    },
+    {
+      "name": "thin",
+      "cmd": "missing zone EXACT0 MISS1",
+      "ok": true,
+      "note": "thin"
     },
     {
       "name": "probe",
-      "cmd": "empty allow all extra; null/false/true pluck",
+      "cmd": "empty exact; dual miss+extra; bare keys",
       "ok": true,
       "note": "edges"
     },
     {
-      "name": "empty",
-      "cmd": "CUBALC_AJPAL_REQUIRE=1 empty → shell 2",
+      "name": "require",
+      "cmd": "CUBALC_AJPSC_REQUIRE=1 empty → shell 2",
       "ok": true,
-      "note": "hard"
+      "note": "hard env"
     },
     {
       "name": "selftest",
@@ -1284,6 +1284,30 @@
       "title": "REQUIRE JSONHASALL fail → shell 1, plate exit_code 0",
       "detail": "Missing keys set asserts_fail+err message listing missing, shell often 1, but exit_code stays 0 (W7 class). Soft twin SYS JSONHASALL + EXIT n under REQUIRE env is more reliable for ops shell contracts.",
       "repro": "REQUIRE JSONHASALL {a:1} a z → asserts_fail 1 exit_code 0 shell 1"
+    },
+    {
+      "id": "W153",
+      "severity": "med",
+      "area": "lang|json_exact",
+      "title": "JSONEXACT is key-set only — values may drift while EXACT=1",
+      "detail": "Exact schema gates presence/absence of keys, not value types or contents. role can change worker→boss, ok 1→0, still EXACT. Pair with JSONSUBSET/EQ for value contracts after EXACT admit.",
+      "repro": "JSONEXACT {schema,role,ok,load,zone} match; mutate ok=0 still EXACT=1"
+    },
+    {
+      "id": "W154",
+      "severity": "high",
+      "area": "host|require_json",
+      "title": "REQUIRE JSONONLY/JSONEXACT fail → shell 1 exit_code 0 (W152 class)",
+      "detail": "Same assert-fail path as REQUIRE JSONHASALL: lists missing/extra in err, asserts_fail=1, shell often 1, plate exit_code 0. Soft JSONEXACT + EXIT n under env is more reliable for ops.",
+      "repro": "REQUIRE JSONONLY {a,noise} a b → shell 1 exit_code 0"
+    },
+    {
+      "id": "W155",
+      "severity": "low",
+      "area": "lang|json_only",
+      "title": "JSONONLY allow-list may be a superset — missing keys still pass ONLY",
+      "detail": "REQUIRE JSONONLY {a:1} a b c succeeds (no extras). ONLY ≠ EXACT. Agents needing both must JSONEXACT or HASALL+ONLY dual.",
+      "repro": "REQUIRE JSONONLY {a:1} a b c → ok; JSONEXACT same → fail miss b c"
     }
   ],
   "workarounds": [
@@ -1317,7 +1341,10 @@
     "Guard OF need bag: if blank skip HASALL or treat as soft miss (W149)",
     "NTH bag fields: re-PLUCK or leave bag in LAST before each NTH (W150)",
     "Log multi-line bags via WRITE/STATUS not PRINT_JSON (W151)",
-    "Hard key contract: soft HASALL then EXIT n; do not trust REQUIRE shell alone (W152)"
+    "Hard key contract: soft HASALL then EXIT n; do not trust REQUIRE shell alone (W152)",
+    "Schema admit: soft JSONEXACT then value SUBSET/EQ (W153)",
+    "Hard schema: soft EXACT + EXIT n; do not rely on REQUIRE shell alone (W154)",
+    "ONLY rejects extras only — use EXACT for full key-set (W155)"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1343,7 +1370,10 @@
     "JSONMISS hard-fail mode when any required missing",
     "SYS NTH i OF bag form (index saved bag without LAST rebind)",
     "PRINT_JSON encode bag as JSON array not collapsed string",
-    "REQUIRE JSONHASALL EXIT code configurable / match EXIT n"
+    "REQUIRE JSONHASALL EXIT code configurable / match EXIT n",
+    "JSONEXACT value-mode (types or required value plate)",
+    "REQUIRE JSON* configurable shell exit code",
+    "JSONONLY strict=exact alias warning when allow==need list"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1366,8 +1396,11 @@
     "partial→gate deny miss_bag=zone positive",
     "selftest 355/355 green v1.15.533",
     "NTH OF bag hard-fail — re-PLUCK workaround (W150)",
-    "REQUIRE JSONHASALL shell 1 exit_code 0 documented (W152)"
+    "REQUIRE JSONHASALL shell 1 exit_code 0 documented (W152)",
+    "selftest 355/355 green v1.15.535",
+    "EXACT OF schema bag + peel chain works",
+    "dirty/thin soft gates positive before remint hard"
   ],
-  "commit": "e4e1401",
-  "ts": "2026-08-08T14:59:50Z"
+  "commit": "pending",
+  "ts": "2026-08-08T15:23:31Z"
 }

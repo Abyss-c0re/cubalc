@@ -1,0 +1,680 @@
+# agent_json_plate_schema_board.cubalc — JSONEXACT + REQUIRE JSONONLY + REQUIRE JSONEXACT
+#
+# Real use: agent STATUS schema gate — exact key-set admit (no miss, no
+# extra) without dual HASALL+EXTRA glue:
+#   JSONEXACT / JSONSCHEMA — soft exact key-set → LAST_N 0|1 (1085)
+#   REQUIRE JSONONLY / NOEXTRA — fail-fast unknown keys (1084)
+#   REQUIRE JSONEXACT — fail-fast exact schema (HASALL+ONLY one-shot)
+#   gate: soft EXACT; hard path uses REQUIRE when env set
+#
+# First realworld EXACT+JSONONLY board. Distinct from allowlist (EXTRA
+# list+PLUCK scrub) and presence (HASALL soft only).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajpsc_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_schema_board.cubalc \
+#     mint -- --plate=/tmp/ajpsc/status.json
+#   ./out/cubalc run ... exact -- --plate=...
+#   ./out/cubalc run ... gate -- --plate=...
+#   ./out/cubalc run ... hard -- --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPSC_REPORT.txt
+# Env: PLATE_PATH CUBALC_AJPSC_REQUIRE
+#
+# Edges:
+#   noise extras; missing keys; empty schema exact {};
+#   OF bag schema; REQUIRE shell 1 exit_code 0 (W152 class);
+#   LAST kept as plate after EXACT/REQUIRE; capture LAST_N (W144);
+#   WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_schema_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_json_plate_schema -- mint|exact|only|gate|hard|dirty|thin|list -- [--plate=P]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/status.json"
+LET plate_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPSC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPSC_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET schema = ""
+LET extra_n = 0
+
+# exact schema key bag
+SYS JOIN "" "schema\nrole\nok\nload\nzone"
+LET schema = LAST
+CLEAR_ERR
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "mint", "exact", "only", "gate", "hard", "dirty", "thin", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "mint" THEN
+    LET op = "mint"
+  WHEN "exact" THEN
+    LET op = "exact"
+  WHEN "only" THEN
+    LET op = "only"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "hard" THEN
+    LET op = "hard"
+  WHEN "dirty" THEN
+    LET op = "dirty"
+  WHEN "thin" THEN
+    LET op = "thin"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "mint"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # exact 5-key schema plate
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 10 "zone" "east"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint soft miss"
+    FAIL "mint soft miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mint failed"
+    END
+  ELSE
+    LET take_n = JSONOBJ_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "mint write failed"
+    END
+    CLEAR_ERR
+    SYS CAT "mint:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mt"
+    LET row = LAST
+    SYS GREPV "mint:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "mint ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "exact"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "exact empty plate"
+    FAIL "exact empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "exact empty"
+    END
+  ELSE
+    SYS JSONEXACT body OF schema
+    LET admit_n = LAST_N
+    LET take_n = admit_n
+    # LAST kept as plate
+    SYS JSONN "load" FROM LAST
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    IF admit_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "exact ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "exact miss"
+      FAIL "exact miss"
+      CLEAR_ERR
+    END
+    SYS CAT "exact:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":ex"
+    LET row = LAST
+    SYS GREPV "exact:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n admit_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "only"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "only empty plate"
+    FAIL "only empty plate"
+    CLEAR_ERR
+  ELSE
+    # soft twin of REQUIRE JSONONLY
+    SYS JSONEXTRA body OF schema
+    LET extra_n = LAST_N
+    CLEAR_ERR
+    LET take_n = extra_n
+    LET out = body
+    IF extra_n == 0 THEN
+      LET hit = 1
+      LET admit_n = 1
+      LET note_msg = "only clean"
+    ELSE
+      LET miss = 1
+      LET admit_n = 0
+      LET note_msg = "only extras"
+      FAIL "only extras"
+      CLEAR_ERR
+    END
+    SYS CAT "only:"
+    LET row = LAST
+    SYS STR extra_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":on"
+    LET row = LAST
+    SYS GREPV "only:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n extra_n admit_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "dirty"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # inject noise key
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 10 "zone" "east" "noise" "x"
+  LET body = LAST
+  WRITEOUT plate_file body
+  CLEAR_ERR
+  LET out = body
+  SYS JSONEXACT body OF schema
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS JSONEXTRA body OF schema
+  LET extra_n = LAST_N
+  LET take_n = extra_n
+  CLEAR_ERR
+  IF admit_n == 0 THEN
+    IF extra_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "dirty extra ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "dirty extra count"
+      FAIL "dirty extra count"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "dirty still exact"
+    FAIL "dirty still exact"
+    CLEAR_ERR
+  END
+  SYS CAT "dirty:"
+  LET row = LAST
+  SYS STR extra_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":dt"
+  LET row = LAST
+  SYS GREPV "dirty:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n extra_n admit_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "thin"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # missing zone
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 3
+  LET body = LAST
+  WRITEOUT plate_file body
+  CLEAR_ERR
+  LET out = body
+  SYS JSONEXACT body OF schema
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS JSONMISS body OF schema
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF admit_n == 0 THEN
+    IF take_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "thin miss zone"
+    ELSE
+      LET miss = 1
+      LET note_msg = "thin miss count"
+      FAIL "thin miss count"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "thin still exact"
+    FAIL "thin still exact"
+    CLEAR_ERR
+  END
+  SYS CAT "thin:"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":th"
+  LET row = LAST
+  SYS GREPV "thin:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n admit_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate empty plate"
+    FAIL "gate empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate empty"
+    END
+  ELSE
+    SYS JSONEXACT body OF schema
+    LET admit_n = LAST_N
+    LET take_n = admit_n
+    CLEAR_ERR
+    LET out = body
+    IF admit_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "gate admit"
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate deny"
+      FAIL "gate deny"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "gate deny"
+      END
+    END
+    SYS CAT "gate:"
+    LET row = LAST
+    SYS STR admit_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":gt"
+    LET row = LAST
+    SYS GREPV "gate:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n admit_n hit miss p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "hard"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "hard empty plate"
+    FAIL "hard empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "hard empty"
+    END
+  ELSE
+    # soft probe first — avoid REQUIRE assert path when dirty
+    SYS JSONEXACT body OF schema
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    IF admit_n == 1 THEN
+      REQUIRE JSONEXACT body OF schema
+      LET take_n = LAST_N
+      SYS JSONN "ok" FROM LAST
+      LET peel_hit = LAST_N
+      CLEAR_ERR
+      # also ONLY for dual-path proof
+      REQUIRE JSONONLY body OF schema
+      CLEAR_ERR
+      LET out = body
+      LET hit = 1
+      LET note_msg = "hard ok"
+    ELSE
+      LET miss = 1
+      LET take_n = 0
+      LET note_msg = "hard soft deny"
+      FAIL "hard soft deny"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "hard soft deny"
+      END
+    END
+    SYS CAT "hard:"
+    LET row = LAST
+    SYS STR admit_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":hd"
+    LET row = LAST
+    SYS GREPV "hard:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n admit_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # empty plate exact empty schema
+  SYS JSONOBJ
+  LET body = LAST
+  SYS JSONEXACT body
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  # both miss and extra
+  SYS JSONOBJ "ok" 1 "noise" 9
+  LET body = LAST
+  SYS JOIN "" "ok\nversion"
+  LET schema = LAST
+  SYS JSONEXACT body OF schema
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # bare keys on LAST
+  SYS JSONOBJ "a" 1 "b" 2
+  SYS JSONEXACT "a" "b"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS JSONEXACT "a" "c"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # non-obj soft 0
+  SYS JSONEXACT "not" "a"
+  LET extra_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON admit_n take_n peel_hit has_n extra_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_schema_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "admit_n"
+LET row = LAST
+SYS STR admit_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "extra_n"
+LET row = LAST
+SYS STR extra_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_schema_board: done"
+PRINT_JSON hit miss bag_n take_n admit_n extra_n p_src note_msg
+EXIT 0
