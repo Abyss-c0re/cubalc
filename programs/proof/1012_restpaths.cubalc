@@ -1,0 +1,94 @@
+# RESTPATHS / POSPATHS — non-flag positionals as absolute path bag
+# Usability: tool a.txt b.txt without EACH + SYS REALPATH glue.
+
+HOLD_FLASH 1
+
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV UNSET CUBALC_ARG2
+SYS ENV UNSET CUBALC_ARG3
+SYS ENV SET CUBALC_ARGC "0"
+
+# empty
+RESTPATHS
+ASSERT LAST_N == 0
+ASSERT RESTPATHS_N == 0
+ASSERT RESTPATHS_EXIST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# flags + two existing files
+SYS ENV SET CUBALC_ARG0 "--mode=fast"
+SYS ENV SET CUBALC_ARG1 "Makefile"
+SYS ENV SET CUBALC_ARG2 "include/cubalc_law.h"
+SYS ENV SET CUBALC_ARGC "3"
+RESTPATHS
+ASSERT LAST_N == 2
+ASSERT RESTPATHS_N == 2
+ASSERT RESTPATHS_EXIST_N == 2
+ASSERT RESTARGS_N == 2
+# each field absolute
+SYS NTH 0
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "Makefile"
+ASSERT LAST_N == 1
+RESTPATHS
+SYS NTH 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "cubalc_law.h"
+ASSERT LAST_N == 1
+# raw RESTARGS still stashed
+SYS HASLINE RESTARGS "Makefile"
+ASSERT LAST_N == 1
+SYS HASLINE RESTARGS "include/cubalc_law.h"
+ASSERT LAST_N == 1
+# abs bag does not keep relative raw as exact field
+SYS HASLINE RESTPATHS "include/cubalc_law.h"
+ASSERT LAST_N == 0
+# but leaf appears in absolute path (substring)
+SYS HAS RESTPATHS "cubalc_law.h"
+ASSERT LAST_N == 1
+
+# missing path still absolute, EXIST count lower
+SYS ENV SET CUBALC_ARG0 "no/such/file_xyz_restpaths.cubalc"
+SYS ENV SET CUBALC_ARG1 "Makefile"
+SYS ENV SET CUBALC_ARGC "2"
+POSPATHS
+ASSERT LAST_N == 2
+ASSERT RESTPATHS_EXIST_N == 1
+SYS NTH 0
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS HAS LAST "no/such/file_xyz_restpaths.cubalc"
+ASSERT LAST_N == 1
+SYS NTH 1 RESTPATHS
+SYS ENDS LAST "Makefile"
+ASSERT LAST_N == 1
+
+# bare -- then files
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARG1 "--"
+SYS ENV SET CUBALC_ARG2 "docs/MEANINGFUL_ITER.md"
+SYS ENV SET CUBALC_ARGC "3"
+RESTPATHS
+ASSERT LAST_N == 1
+ASSERT RESTPATHS_EXIST_N == 1
+SYS ENDS LAST "MEANINGFUL_ITER.md"
+ASSERT LAST_N == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+
+# FILEPATHS alias + only positionals
+SYS ENV SET CUBALC_ARG0 "include"
+SYS ENV SET CUBALC_ARGC "1"
+FILEPATHS
+ASSERT LAST_N == 1
+ASSERT RESTPATHS_EXIST_N == 1
+SYS ENDS LAST "include"
+ASSERT LAST_N == 1
+SYS ISDIR LAST
+ASSERT LAST_N == 1
+
+PRINT "restpaths ok"

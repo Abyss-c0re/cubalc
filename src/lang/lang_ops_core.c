@@ -26632,6 +26632,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FALSY", "FALSY str|var — soft 0|1 if empty/0/false/no/off · dual of TRUTHY"},
       {"RESTARGS", "RESTARGS|POSITIONALS — bag of non-flag CUBALC_ARGn · LAST_N=count"},
       {"POSITIONALS", "POSITIONALS alias of RESTARGS — files after --flags"},
+      {"RESTPATHS", "RESTPATHS|POSPATHS — RESTARGS as absolute paths bag · RESTPATHS_EXIST_N · no EACH+REALPATH"},
       {"HASRESTARGS", "HASRESTARGS|HASPOS [min] — soft 0|1 if non-flag count >= min (default 1)"},
       {"LISTFLAGS", "LISTFLAGS|FLAGS — bag of flag names (no dashes) from CUBALC_ARGn · LAST_N=count"},
       {"FLAGS", "FLAGS alias of LISTFLAGS — discover --flags without EACH ARGS"},
@@ -30723,6 +30724,74 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(nbuf, sizeof nbuf, "%ld", n);
     if (vm->trace)
       fprintf(vm->trace, "# restargs n=%ld\n", n);
+    bump(vm); return 1;
+  }
+  /* RESTPATHS|POSPATHS — RESTARGS with each field ABSPATH-resolved → abs bag.
+   * LAST = abs bag · LAST_N / RESTPATHS_N = count · RESTPATHS_EXIST_N = how many
+   * exist on host · RESTARGS also stashed raw. Usability: tool a.txt b.txt
+   * without EACH + SYS REALPATH glue for portable plate paths. */
+  if (kw(&L->cur,"RESTPATHS") || kw(&L->cur,"POSPATHS") || kw(&L->cur,"ABSPOS") ||
+      kw(&L->cur,"RESTABSPATH") || kw(&L->cur,"FILEPATHS") || kw(&L->cur,"POSPATHBAG") ||
+      kw(&L->cur,"ABSREST") || kw(&L->cur,"REST_PATHS") || kw(&L->cur,"PATHARGS")){
+    char raw[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    char field[CUBALC_HOST_STR_MAX], absbuf[CUBALC_HOST_STR_MAX];
+    const char *p, *start;
+    long n = 0, exist_n = 0;
+    size_t o = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    n = cubalc_collect_restargs(raw, sizeof raw);
+    out[0] = 0;
+    p = raw;
+    while (*p) {
+      size_t fl, room;
+      start = p;
+      while (*p && *p != '\n') p++;
+      fl = (size_t)(p - start);
+      if (fl >= sizeof field) fl = sizeof field - 1;
+      memcpy(field, start, fl);
+      field[fl] = 0;
+      absbuf[0] = 0;
+      if (field[0]) {
+        memset(&hr, 0, sizeof hr);
+        if (cubalc_host_abspath(field, &hr) == 0 && hr.str[0])
+          snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+        else
+          snprintf(absbuf, sizeof absbuf, "%s", field);
+        if (cubalc_host_exists(absbuf) || cubalc_host_exists(field))
+          exist_n++;
+      }
+      if (absbuf[0] && o + 1 < sizeof out) {
+        if (o > 0)
+          out[o++] = '\n';
+        room = sizeof out - o - 1;
+        fl = strlen(absbuf);
+        if (fl > room) fl = room;
+        if (fl > 0) {
+          memcpy(out + o, absbuf, fl);
+          o += fl;
+        }
+        out[o] = 0;
+      }
+      if (*p == '\n') p++;
+    }
+    var_set_str(vm, "LAST", out);
+    var_set_str(vm, "RESTPATHS", out);
+    var_set_str(vm, "POSPATHS", out);
+    var_set_str(vm, "FILEPATHS", out);
+    var_set_str(vm, "RESTARGS", raw);
+    var_set_str(vm, "POSITIONALS", raw);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "RESTPATHS_N", n);
+    var_set_num(vm, "POSPATHS_N", n);
+    var_set_num(vm, "RESTARGS_N", n);
+    var_set_num(vm, "RESTPATHS_EXIST_N", exist_n);
+    var_set_num(vm, "PATH_EXIST_N", exist_n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# restpaths n=%ld exist=%ld\n", n, exist_n);
     bump(vm); return 1;
   }
   /* HASRESTARGS [min] — soft 0|1 if non-flag positional count >= min (default 1).
