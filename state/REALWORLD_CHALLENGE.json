@@ -1885,6 +1885,6 @@
     "fresh UNSET+plate_patch unknown form PLATE; switched to JSONFILEMERGE",
     "CLI dual path verified get/inc/keys/OR/del/show green"
   ],
-  "commit": "pending",
+  "commit": "3dff9b8",
   "ts": "2026-08-08T20:24:27Z"
 }
