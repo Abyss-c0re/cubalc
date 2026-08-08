@@ -2033,6 +2033,59 @@ int cubalc_host_sliceintree(const char *root, const char *needle, int icase,
   return 0;
 }
 
+/* Usability: SYS DROPINTREE|SKIPINTREE root needle n — skip first n content matches
+ * under tree → remaining path bag without GREPTREE+DROP glue. Dual of TAKEINTREE. */
+int cubalc_host_dropintree(const char *root, const char *needle, int icase,
+                           long skipn, cubalc_host_result *r) {
+  char abs[CUBALC_HOST_STR_MAX];
+  struct stat st;
+  cubalc_host_result hr;
+  size_t olen = 0;
+  long seen = 0, kept = 0;
+  long maxn = 100000;
+  r_clear(r);
+  if (!root || !root[0]) {
+    snprintf(r->err, sizeof r->err, "dropintree: empty path");
+    return -1;
+  }
+  if (!needle) needle = "";
+  if (skipn < 0) skipn = 0;
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(root, &hr) == 0 && hr.str[0])
+    snprintf(abs, sizeof abs, "%s", hr.str);
+  else
+    snprintf(abs, sizeof abs, "%s", root);
+  if (lstat(abs, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "dropintree: missing");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "dropintree: %s", strerror(errno));
+    return -1;
+  }
+  r->str[0] = 0;
+  if (S_ISREG(st.st_mode)) {
+    /* single file: drop 0 keeps it; drop ≥1 yields empty when match */
+    if (cubalc_file_has_needle(abs, needle, icase)) {
+      if (skipn == 0)
+        cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, abs);
+    }
+  } else if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+             && !S_ISLNK(st.st_mode)
+#endif
+             ) {
+    cubalc_sliceintree_rec(abs, needle, icase, skipn, maxn, r->str, sizeof r->str,
+                           &olen, &seen, &kept, 0);
+  } else {
+    snprintf(r->err, sizeof r->err, "dropintree: not a file or directory");
+    return -1;
+  }
+  r->n = kept;
+  r->ok = 1;
+  return 0;
+}
+
 /* Peel first/last matching line from one file. Returns 1 if hit.
  * line_out gets line text; *line_idx is 0-based index within file. */
 static int cubalc_file_findline(const char *path, const char *needle, int icase,

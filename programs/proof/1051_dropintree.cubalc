@@ -1,0 +1,142 @@
+# DROPINTREE / SKIPINTREE / RESTINTREE — skip first n content matches under tree
+# Residual path bag after TAKE page without GREPTREE+DROP glue. Dual of TAKEINTREE.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_dit_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# sorted DFS hits: mid, z, err
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "error last"
+ASSERT OK == 1
+SYS JOIN base "a/b/mid.txt"
+WRITEOUT LAST "error middle"
+ASSERT OK == 1
+SYS JOIN base "a/b/z.txt"
+WRITEOUT LAST "error z"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "ok only"
+ASSERT OK == 1
+
+# drop 0 → all 3
+DROPINTREE base "error" 0
+ASSERT OK == 1
+ASSERT DROPINTREE_N == 3
+ASSERT LAST_N == 3
+ASSERT DROPINTREE_SKIP == 0
+SYS HAS LAST "mid.txt"
+ASSERT LAST_N == 1
+SYS HAS LAST "err.log"
+ASSERT LAST_N == 1
+
+# drop 1 → z + err (skip mid)
+DROPINTREE base "error" 1
+ASSERT DROPINTREE_N == 2
+ASSERT DROPINTREE_SKIP == 1
+SYS HAS DROPINTREE "mid.txt"
+ASSERT LAST_N == 0
+SYS NTH 0 DROPINTREE
+SYS ENDS LAST "z.txt"
+ASSERT LAST_N == 1
+SYS NTH 1 DROPINTREE
+SYS ENDS LAST "err.log"
+ASSERT LAST_N == 1
+
+# drop 2 → only err
+DROPINTREE base "error" 2
+ASSERT DROPINTREE_N == 1
+SYS ENDS LAST "err.log"
+ASSERT LAST_N == 1
+
+# drop all → empty
+DROPINTREE base "error" 3
+ASSERT OK == 1
+ASSERT DROPINTREE_N == 0
+ASSERT LAST == ""
+
+# drop beyond → empty
+DROPINTREE base "error" 99
+ASSERT DROPINTREE_N == 0
+
+# dual of TAKE: TAKE 1 + DROP 1 covers all 3, no overlap
+TAKEINTREE base "error" 1
+LET head = LAST
+DROPINTREE base "error" 1
+LET rest = LAST
+SYS LINES head
+ASSERT LAST_N == 1
+SYS LINES rest
+ASSERT LAST_N == 2
+SYS HAS rest "mid.txt"
+ASSERT LAST_N == 0
+SYS HAS head "mid.txt"
+ASSERT LAST_N == 1
+
+# matches SLICEINTREE start=skip count=large
+SLICEINTREE base "error" 1 100
+LET sl = LAST
+DROPINTREE base "error" 1
+SYS EQS LAST sl
+ASSERT LAST_N == 1
+
+# no match
+DROPINTREE base "zzzz" 0
+ASSERT OK == 1
+ASSERT DROPINTREE_N == 0
+
+# case-insensitive
+DROPINTREEI base "ERROR" 1
+ASSERT DROPINTREE_N == 2
+
+# aliases
+SKIPINTREE base "error" 2
+ASSERT SKIPINTREE_N == 1
+SYS ENDS LAST "err.log"
+ASSERT LAST_N == 1
+RESTINTREE base "middle" 0
+ASSERT RESTINTREE_N == 1
+
+# SYS form
+SYS DROPINTREE base "error" 1
+ASSERT OK == 1
+ASSERT DROPINTREE_N == 2
+
+# single file root
+SYS JOIN base "plain.txt"
+LET p = LAST
+DROPINTREE p "ok" 0
+ASSERT DROPINTREE_N == 1
+DROPINTREE p "ok" 1
+ASSERT DROPINTREE_N == 0
+DROPINTREE p "error" 0
+ASSERT DROPINTREE_N == 0
+
+# missing soft
+DROPINTREE "/no/such/dropintree" "x" 0
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty soft
+DROPINTREE "" "x" 0
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+RMTREE base
+ASSERT OK == 1
+
+PRINT "dropintree ok"
+ASSERT OK == 1

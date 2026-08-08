@@ -97,6 +97,10 @@ int cubalc_host_nthintree(const char *root, const char *needle, int icase,
  * Early-stop once count paths kept. Usability: page without GREPTREE+DROP+TAKE. */
 int cubalc_host_sliceintree(const char *root, const char *needle, int icase,
                             long start, long count, cubalc_host_result *r);
+/* skip first skipn content matches under root → remaining path bag (sorted DFS).
+ * Dual of takeintree. r->str=paths; r->n=kept. Soft miss root → -1. skipn≤0 → all. */
+int cubalc_host_dropintree(const char *root, const char *needle, int icase,
+                           long skipn, cubalc_host_result *r);
 /* first or last matching *line* under root (sorted DFS).
  * want_last=0 first, =1 last. On hit: r->str = "path\\nline", r->n=1, r->code=0-based line idx.
  * Soft miss root → -1. Empty needle → first/last line of first/last readable file. */
