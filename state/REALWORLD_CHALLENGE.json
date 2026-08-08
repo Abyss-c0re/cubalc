@@ -884,6 +884,6 @@
     "VAL peel omit trailing NL (W5)",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "ee1e753cba146c21dd68dd69739b8dbd9aab5d87",
   "ts": "2026-08-08T07:53:30Z"
 }
