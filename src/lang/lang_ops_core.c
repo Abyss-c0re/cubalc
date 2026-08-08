@@ -34034,14 +34034,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS REVS|STRREV [str] — reverse string → LAST (not cube REVERSE) */
+    /* SYS REVS|STRREV [str] — reverse string → LAST (not cube REVERSE).
+     * Host-wide CUBALC_HOST_STR_MAX — multi-KB after CAT/STREPEAT. */
     if (kw(&L->cur,"REVS") || kw(&L->cur,"STRREV") || kw(&L->cur,"SREV")){
       lex_next(L);
-      char s[512]; s[0]=0;
+      char s[CUBALC_HOST_STR_MAX]; s[0]=0;
       if (resolve_str_arg(vm, L, s, sizeof s) != 0)
         snprintf(s, sizeof s, "%s", vm->last_str);
       size_t n = strlen(s);
-      char out[512];
+      char out[CUBALC_HOST_STR_MAX];
       if (n >= sizeof out) n = sizeof out - 1;
       for (size_t i=0;i<n;i++) out[i] = s[n-1-i];
       out[n] = 0;
@@ -34052,10 +34053,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS UPPER|UCASE [str] — ASCII upper → LAST */
+    /* SYS UPPER|UCASE [str] — ASCII upper → LAST (host-wide multi-KB). */
     if (kw(&L->cur,"UPPER") || kw(&L->cur,"UCASE") || kw(&L->cur,"TOUPPER")){
       lex_next(L);
-      char s[512]; s[0]=0;
+      char s[CUBALC_HOST_STR_MAX]; s[0]=0;
       if (resolve_str_arg(vm, L, s, sizeof s) != 0)
         snprintf(s, sizeof s, "%s", vm->last_str);
       for (char *p=s; *p; p++)
@@ -34067,10 +34068,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS LOWER|LCASE [str] — ASCII lower → LAST */
+    /* SYS LOWER|LCASE [str] — ASCII lower → LAST (host-wide multi-KB). */
     if (kw(&L->cur,"LOWER") || kw(&L->cur,"LCASE") || kw(&L->cur,"TOLOWER")){
       lex_next(L);
-      char s[512]; s[0]=0;
+      char s[CUBALC_HOST_STR_MAX]; s[0]=0;
       if (resolve_str_arg(vm, L, s, sizeof s) != 0)
         snprintf(s, sizeof s, "%s", vm->last_str);
       for (char *p=s; *p; p++)
@@ -34082,13 +34083,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* digit-7 string plane: TRIM / STARTS / ENDS / REPLACE */
+    /* SYS TRIM|STRIP|LTRIM|RTRIM [str] — host-wide multi-KB whitespace peel.
+     * Usability: clean plate payloads without 512 clip before HAS/EQS. */
     if (kw(&L->cur,"TRIM") || kw(&L->cur,"STRIP") ||
         kw(&L->cur,"LTRIM") || kw(&L->cur,"RTRIM")){
       char op[12]; snprintf(op,sizeof op,"%s",L->cur.text);
       for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
       lex_next(L);
-      char s[512]; s[0]=0;
+      char s[CUBALC_HOST_STR_MAX]; s[0]=0;
       if (resolve_str_arg(vm, L, s, sizeof s) != 0)
         snprintf(s, sizeof s, "%s", vm->last_str);
       char *a = s, *b = s + strlen(s);
@@ -34098,7 +34100,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (do_r){
         while (b > a && (b[-1]==' '||b[-1]=='\t'||b[-1]=='\n'||b[-1]=='\r')) b--;
       }
-      char out[512];
+      char out[CUBALC_HOST_STR_MAX];
       size_t n = (size_t)(b - a);
       if (n >= sizeof out) n = sizeof out - 1;
       memcpy(out, a, n); out[n] = 0;

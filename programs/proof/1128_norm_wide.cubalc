@@ -1,0 +1,85 @@
+# TRIM / UPPER / LOWER / REVS host-wide — multi-KB plate normalize
+# Usability: clean/case-fold long CAT/STREPEAT blobs without 512 silent clip.
+
+HOLD_FLASH 1
+
+# classic small still works
+SYS UPPER "AbC"
+SYS EQS LAST "ABC"
+ASSERT LAST_N == 1
+SYS LOWER "AbC"
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+SYS TRIM "  hi  "
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+SYS REVS "ab"
+SYS EQS LAST "ba"
+ASSERT LAST_N == 1
+
+# multi-KB body (>512)
+SYS STREPEAT "abcdefghij" 80
+LET blob = LAST
+SYS LEN blob
+ASSERT LAST_N == 800
+
+# UPPER full length survives
+SYS UPPER blob
+SYS LEN LAST
+ASSERT LAST_N == 800
+SYS STARTS LAST "ABCDEFGHIJ"
+ASSERT LAST_N == 1
+SYS ENDS LAST "ABCDEFGHIJ"
+ASSERT LAST_N == 1
+LET up = LAST
+
+# LOWER round-trip
+SYS LOWER up
+SYS LEN LAST
+ASSERT LAST_N == 800
+SYS STARTS LAST "abcdefghij"
+ASSERT LAST_N == 1
+SYS EQS LAST blob
+ASSERT LAST_N == 1
+
+# TRIM multi-KB with pad
+SYS CAT "   " blob "   "
+LET padded = LAST
+SYS LEN padded
+ASSERT LAST_N == 806
+SYS TRIM padded
+SYS LEN LAST
+ASSERT LAST_N == 800
+SYS EQS LAST blob
+ASSERT LAST_N == 1
+SYS LTRIM padded
+SYS STARTS LAST "abcdefghij"
+ASSERT LAST_N == 1
+SYS RTRIM padded
+SYS ENDS LAST "abcdefghij"
+ASSERT LAST_N == 1
+
+# REVS multi-KB
+SYS REVS blob
+SYS LEN LAST
+ASSERT LAST_N == 800
+SYS ENDS LAST "jihgfedcba"
+ASSERT LAST_N == 1
+SYS STARTS LAST "jihgfedcba"
+ASSERT LAST_N == 1
+SYS REVS LAST
+SYS EQS LAST blob
+ASSERT LAST_N == 1
+
+# plate payload normalize path
+LET PLATE = "{}"
+SETP "msg" padded
+GETP "msg"
+SYS TRIM LAST
+SYS UPPER LAST
+SYS LEN LAST
+ASSERT LAST_N == 800
+SYS STARTS LAST "ABCDEFGHIJ"
+ASSERT LAST_N == 1
+
+PRINT "norm_wide ok"
