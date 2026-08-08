@@ -1434,6 +1434,6 @@
     "MERGE prev+delta EQ cur positive apply path",
     "gate maxchg deny soft without shell fail"
   ],
-  "commit": "pending",
+  "commit": "3fc0c39",
   "ts": "2026-08-08T15:48:51Z"
 }
