@@ -26376,6 +26376,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"REQUIRE BETWEEN", "REQUIRE BETWEEN|INRANGE x lo [TO] hi — fail if x not in inclusive range · GETFLAGN ports"},
       {"ONEOF", "ONEOF|INLIST subject a [,|OR||] b — soft 0|1 membership · ONEOFI icase · MATCH_ARM hit"},
       {"INRANGE", "INRANGE|NUMBETWEEN x lo [TO] hi — soft 0|1 numeric range · twin of REQUIRE BETWEEN"},
+      {"CLAMPN", "CLAMPN|BOUNDN x lo [TO] hi — clamp x into [lo,hi] → LAST_N · GETFLAGN cap"},
       {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"REQUIRE FLAG", "REQUIRE FLAG|OPT name — fail if --name missing · LAST=value (HASFLAG twin)"},
@@ -28752,6 +28753,56 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# inrange %ld in [%ld..%ld] → %d\n", x, lo, hi, ok);
     bump(vm); return 1;
   }
+  /* CLAMPN|BOUNDN|CLIPN x lo [TO] hi — clamp numeric x into inclusive [lo,hi].
+   * LAST_N = clamped value · LAST = decimal · CLAMPN_CHANGED 1 if moved.
+   * Usability: GETFLAGN workers then CLAMPN LAST_N 1 64 without SYS CLAMP. */
+  if (kw(&L->cur,"CLAMPN") || kw(&L->cur,"BOUNDN") || kw(&L->cur,"CLIPN") ||
+      kw(&L->cur,"NUMCLAMP") || kw(&L->cur,"CLAMPNUM") || kw(&L->cur,"SATN") ||
+      kw(&L->cur,"LIMITN") || kw(&L->cur,"CLAMP_N")){
+    long x = 0, lo = 0, hi = 0, out;
+    int changed;
+    char nbuf[32];
+    lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &x)) {
+      fail_at(vm, L, "CLAMPN x lo hi — CLAMPN LAST_N 1 64");
+      return -1;
+    }
+    if (!cubalc_read_num_atom(vm, L, &lo)) {
+      fail_at(vm, L, "CLAMPN x lo hi — missing lo");
+      return -1;
+    }
+    if (kw(&L->cur,"TO") || kw(&L->cur,"THROUGH") || kw(&L->cur,"THRU") ||
+        kw(&L->cur,"DOTDOT"))
+      lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &hi)) {
+      fail_at(vm, L, "CLAMPN x lo hi — missing hi");
+      return -1;
+    }
+    if (hi < lo) { long tmp = lo; lo = hi; hi = tmp; }
+    out = x;
+    if (out < lo) out = lo;
+    if (out > hi) out = hi;
+    changed = (out != x) ? 1 : 0;
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "CLAMPN", out);
+    var_set_num(vm, "CLAMPN_X", x);
+    var_set_num(vm, "CLAMPN_LO", lo);
+    var_set_num(vm, "CLAMPN_HI", hi);
+    var_set_num(vm, "CLAMPN_CHANGED", changed);
+    var_set_num(vm, "BETWEEN_LO", lo);
+    var_set_num(vm, "BETWEEN_HI", hi);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# clampn %ld → %ld [%ld..%ld] changed=%d\n",
+              x, out, lo, hi, changed);
+    bump(vm); return 1;
+  }
+
   /* ONEOF|INLIST|AMONG subject a [,|OR||] b — soft 0|1 membership.
    * ONEOFI|INLISTI — case-insensitive. LAST_N=0|1 · MATCH_ARM synonym · keeps subject in ONEOF.
    * Usability: validate GETFLAG/NTHPOS action without CASE DEFAULT glue. */

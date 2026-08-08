@@ -1,53 +1,47 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 164,
-  "program": "programs/realworld/shard_subcmd_board.cubalc",
-  "theme": "SUBCMD + RESTPOS + GETFLAGN + ONEOF shard fleet CLI",
-  "version": "1.15.445-usability",
+  "iter": 165,
+  "program": "programs/realworld/lease_ttl_ms_board.cubalc",
+  "theme": "GETFLAGMS + INRANGE lease TTL duration flags and numeric bands",
+  "version": "1.15.448-usability",
   "pass": true,
-  "prior_note": "iter 163 CASEI+BOOLFLAG maint; this iter first realworld SUBCMD/RESTPOS/GETFLAGN/ONEOF (993-995)",
+  "prior_note": "iter 164 SUBCMD fleet; this iter GETFLAGMS+INRANGE (996-997); fixed INRANGE vs HASBETWEEN name collision",
   "tests": [
     {
-      "name": "scale",
-      "cmd": "scale -- --replicas=5 --weight=80 nodeA nodeB",
+      "name": "acquire",
+      "cmd": "acquire -- --ttl=2m --grace=10s lease-a lease-b",
       "ok": true,
-      "note": "GETFLAGN+RESTPOS"
+      "note": "GETFLAGMS"
     },
     {
-      "name": "Scale_CASEI",
-      "cmd": "Scale mixed-case via CASEI+ONEOFI",
-      "ok": true,
-      "note": "CASEI"
-    },
-    {
-      "name": "drain_pin",
-      "cmd": "drain node; pin MOVELINE to front",
+      "name": "renew_release",
+      "cmd": "renew --ttl=5m; release status row",
       "ok": true,
       "note": "ops"
     },
     {
-      "name": "has_gate",
-      "cmd": "HASLINE/prefix has; gate min",
+      "name": "range_gate",
+      "cmd": "ttl=500ms OOR soft; notime bad HIT/OK dual",
       "ok": true,
-      "note": "exact"
+      "note": "INRANGE"
     },
     {
-      "name": "oneof_miss",
-      "cmd": "boom EXIT 2 soft; REQUIRE ONEOF exit_code 0",
+      "name": "probe",
+      "cmd": "INRANGE swap TO; oor miss; 1h in band",
       "ok": true,
-      "note": "ONEOF"
+      "note": "probe"
     },
     {
-      "name": "getflagn",
-      "cmd": "non-numeric HIT1 N0; count=0 valid hit",
+      "name": "soft_unk",
+      "cmd": "soft empty EXIT 2; boom EXIT 2",
       "ok": true,
-      "note": "GETFLAGN"
+      "note": "walls"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "355/355 pass"
+      "note": "355/355 after INRANGE alias fix"
     }
   ],
   "weaknesses": [
@@ -354,27 +348,57 @@
       "title": "GETFLAGN --count=0 is valid hit with LAST_N 0",
       "detail": "Positive: zero is not missing; HIT=1 distinguishes from OR default. Bare --retries \u2192 1.",
       "repro": "GETFLAGN count OR 9 with --count=0 \u2192 n=0 hit=1"
+    },
+    {
+      "id": "W39",
+      "severity": "high",
+      "area": "lang|inrange",
+      "title": "INRANGE name collision: free numeric vs OOP HASBETWEEN alias",
+      "detail": "Free INRANGE (996) stole OOP INRANGE alias of HASBETWEEN; oop_wherebetween selftest failed. Fixed: proof uses HASBETWEEN; removed OOP INRANGE alias from catalog+flow. Agents must use HASBETWEEN for class field soft range, INRANGE for numeric x lo hi.",
+      "repro": "INRANGE Counter n 40 60 \u2192 form tip (pre-fix); HASBETWEEN works"
+    },
+    {
+      "id": "W40",
+      "severity": "med",
+      "area": "lang|getflagms",
+      "title": "GETFLAGMS bad duration: HIT=1 LAST_N=0 GETFLAGMS_OK=0",
+      "detail": "Same class as GETFLAGN non-numeric: --ttl=notime does not fall back to OR default; OK=0 and sticky PARSEMS err. Gate with INRANGE after peel.",
+      "repro": "GETFLAGMS t OR 5s with --t=notime"
+    },
+    {
+      "id": "W41",
+      "severity": "low",
+      "area": "lang|getflagms",
+      "title": "GETFLAGMS bare --flag \u2192 1 ms (not default)",
+      "detail": "Bare --tick yields 1ms with HIT=1; missing uses OR default with HIT=0. Compound 1m30s and unit 250ms work.",
+      "repro": "GETFLAGMS tick OR 100 with --tick \u2192 1"
+    },
+    {
+      "id": "W42",
+      "severity": "low",
+      "area": "lang|inrange",
+      "title": "INRANGE lo/hi swap via TO works; soft OOR returns 0",
+      "detail": "Positive: INRANGE 5 10 TO 1 hits; INRANGE 0 1 100 misses. REQUIRE BETWEEN hard still exit_code 0 class.",
+      "repro": "INRANGE 5 10 TO 1 \u2192 1"
     }
   ],
   "workarounds": [
-    "SUBCMD OR list; LET targets = RESTPOS; GETFLAGN replicas OR 3",
-    "ONEOF soft + CASEI LET op; EXIT 2 for shell status (not REQUIRE ONEOF alone)",
-    "ONEOFI for mixed-case allow-list",
-    "HASLINE bag not EQS for multi-target RESTPOS",
-    "CLEAR_ERR after GETFLAGN non-numeric; check GETFLAGN_HIT",
-    "cubalc run prog.cubalc scale -- --replicas=N nodes..."
+    "GETFLAGMS ttl OR 30s; INRANGE TTL_MS 1000 3600000",
+    "HASBETWEEN Class field lo hi for OOP; numeric uses free INRANGE",
+    "Bad duration: check GETFLAGMS_OK / INRANGE after peel",
+    "SUBCMD acquire|renew|release; RESTPOS ids; EXIT 2 walls",
+    "cubalc run prog.cubalc acquire -- --ttl=2m --grace=10s id..."
   ],
   "language_gaps": [
-    "REQUIRE ONEOF non-zero process exit_code",
-    "GETFLAGN bad value should soft to OR default or clear HIT",
-    "Cookbook: SUBCMD+RESTPOS+GETFLAGN fleet CLI"
+    "Disambiguate INRANGE numeric vs historical OOP alias in docs",
+    "GETFLAGMS bad value should soft to OR default or clear HIT",
+    "REQUIRE BETWEEN non-zero process exit_code"
   ],
   "issues_faced": [
-    "SUBCMD+RESTPOS+GETFLAGN peel green; Scale CASEI+ONEOFI",
-    "REQUIRE ONEOF exit_code 0 \u2014 EXIT 2 path without REQUIRE_HIT",
-    "GETFLAGN non-numeric HIT/ERR dual documented",
-    "selftest 355/355; no language fix this iter"
+    "INRANGE vs HASBETWEEN selftest regression \u2014 fixed proof+alias+rebuild",
+    "GETFLAGMS 2m/10s peel; INRANGE band gate; acquire/renew green",
+    "selftest 355/355 after rebuild"
   ],
   "commit": "a6c544feb54a8dff44bc4ecc8b537e94f09c7ed8",
-  "ts": "2026-08-07T23:59:39Z"
+  "ts": "2026-08-08T00:32:46Z"
 }
