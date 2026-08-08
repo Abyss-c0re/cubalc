@@ -1,0 +1,88 @@
+# REQUIRE JSONNEQ / JNEQ / DIFFJSON — fail-fast if plates still equal
+# Soft twin: SYS JSONNEQ. Mutation/write verify dual of REQUIRE JSONEQ.
+# On success: JSONCHANGED bag + JSONCHANGED_N of keys that differ.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 1 "err" ""
+LET a = LAST
+SYS JSONOBJ "ok" true "n" 2 "err" ""
+LET b = LAST
+
+# differ → pass
+REQUIRE JSONNEQ a b
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONNEQ_N == 1
+ASSERT REQUIRE_JSONNEQ == 1
+ASSERT JSONCHANGED_N == 1
+SYS EQS JSONCHANGED "n"
+ASSERT LAST_N == 1
+# LAST kept as first plate
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 1
+
+# aliases
+REQUIRE JNEQ a b
+ASSERT OK == 1
+REQUIRE DIFFJSON a b
+ASSERT OK == 1
+REQUIRE NEQJSON a b
+ASSERT OK == 1
+REQUIRE DIFFERENT a b
+ASSERT OK == 1
+REQUIRE NOTEQ a b
+ASSERT OK == 1
+
+# two-token form
+REQUIRE JSON NEQ a b
+ASSERT OK == 1
+REQUIRE JSON DIFF a b
+ASSERT OK == 1
+REQUIRE JSON DIFFERENT a b
+ASSERT OK == 1
+
+# multi-key change
+SYS JSONOBJ "x" 1 "y" 2 "z" 3
+LET c = LAST
+SYS JSONOBJ "x" 9 "y" 2 "w" 0
+LET d = LAST
+REQUIRE JSONNEQ c d
+ASSERT OK == 1
+ASSERT JSONCHANGED_N == 3
+SYS HASLINE JSONCHANGED "x"
+ASSERT LAST_N == 1
+SYS HASLINE JSONCHANGED "z"
+ASSERT LAST_N == 1
+SYS HASLINE JSONCHANGED "w"
+ASSERT LAST_N == 1
+
+# soft twin for equal path
+SYS JSONNEQ a a
+ASSERT LAST_N == 0
+ASSERT OK == 1
+SYS JSONNEQ a b
+ASSERT LAST_N == 1
+
+# agent pattern: soft then require when mutation expected
+SYS JSONINC a "n"
+LET next = LAST
+SYS JSONNEQ a next
+IF LAST_N THEN
+  REQUIRE JSONNEQ a next
+  PASS "mutation took effect"
+ELSE
+  FAIL "should have changed"
+END
+ASSERT OK == 1
+ASSERT JSONCHANGED_N == 1
+
+# order-independent equal must fail REQUIRE (tested via soft only here)
+SYS JSONOBJ "p" 1 "q" 2
+LET e = LAST
+SYS JSONOBJ "q" 2 "p" 1
+LET f = LAST
+SYS JSONEQ e f
+ASSERT LAST_N == 1
+SYS JSONNEQ e f
+ASSERT LAST_N == 0

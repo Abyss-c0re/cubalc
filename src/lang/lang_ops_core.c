@@ -33348,9 +33348,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEQ|JSONSUBSET — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEQ|JSONNEQ|JSONSUBSET — fail-fast gates"},
       {"REQUIRE JSONEQ", "REQUIRE JSONEQ|SAMEJSON a b — fail-fast plate equality · lists changed keys · soft SYS JSONEQ"},
       {"REQUIRE SAMEJSON", "REQUIRE SAMEJSON alias of REQUIRE JSONEQ"},
+      {"REQUIRE JSONNEQ", "REQUIRE JSONNEQ|JNEQ|DIFFJSON a b — fail-fast if plates still equal · mutation gate · soft SYS JSONNEQ"},
+      {"REQUIRE JNEQ", "REQUIRE JNEQ alias of REQUIRE JSONNEQ"},
+      {"REQUIRE DIFFJSON", "REQUIRE DIFFJSON alias of REQUIRE JSONNEQ"},
+      {"REQUIRE DIFFERENT", "REQUIRE DIFFERENT alias of REQUIRE JSONNEQ"},
       {"REQUIRE JSONSUBSET", "REQUIRE JSONSUBSET|JSUBSET sub super — fail-fast required fields · bad keys listed · soft SYS JSONSUBSET"},
       {"REQUIRE JSONSUPERSET", "REQUIRE JSONSUPERSET|JSONCOVERS super sub — dual of JSONSUBSET (a ⊇ b)"},
       {"REQUIRE JSUBSET", "REQUIRE JSUBSET alias of REQUIRE JSONSUBSET"},
@@ -36409,6 +36413,61 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
+    /* REQUIRE JSONNEQ|JNEQ|DIFFJSON a b — fail-fast if plates still equal.
+     * Mutation/write verify dual of REQUIRE JSONEQ. On fail: still-equal.
+     * On success lists changed keys in JSONCHANGED_N bag via sticky vars.
+     * Soft twin: SYS JSONNEQ. LAST=first plate; LAST_N=1. */
+    if (kw(&L->cur,"JSONNEQ") || kw(&L->cur,"JNEQ") || kw(&L->cur,"DIFFJSON") ||
+        kw(&L->cur,"NEQJSON") || kw(&L->cur,"PLATENEQ") || kw(&L->cur,"JSONDIFF") ||
+        kw(&L->cur,"NOTEQ") || kw(&L->cur,"DIFFERENT") || kw(&L->cur,"NOTEQUAL") ||
+        kw(&L->cur,"MUSTDIFF") || kw(&L->cur,"REQUIREDIFF")){
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr, ch;
+      lex_next(L);
+      a[0] = 0;
+      b[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+        b[0] = 0;
+      if (!a[0] || !b[0]) {
+        fail_at(vm, L, "REQUIRE JSONNEQ a b — need two plates");
+        return -1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_eq(a, b, &hr) != 0) {
+        /* host error: treat as soft differ? fail closed as need plates */
+        fail_at(vm, L, "REQUIRE JSONNEQ a b — plate compare failed");
+        return -1;
+      }
+      if (hr.n != 0) {
+        /* equal → fail (mutation did not take effect) */
+        char msg[320];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE JSONNEQ still-equal line %d — soft twin SYS JSONNEQ (expect mutation)",
+                 aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      /* differ → ok; surface changed keys for agent follow-up */
+      memset(&ch, 0, sizeof ch);
+      cubalc_host_json_changed_keys(a, b, 0, &ch);
+      var_set_str(vm, "LAST", a);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", a);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "JSONNEQ_N", 1);
+      var_set_num(vm, "JSONEQ_N", 0);
+      var_set_num(vm, "REQUIRE_JSONNEQ", 1);
+      var_set_num(vm, "JSONCHANGED_N", ch.n);
+      var_set_str(vm, "JSONCHANGED", ch.str);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require jsonneq ok · changed=%ld\n", ch.n);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     /* REQUIRE JSONHASALL|JSONNEED|JSONKEYS [plate] key [key…]
      * REQUIRE JSONONLY|NOEXTRA|JSONSTRICT [plate] allow [key…]
      * REQUIRE JSONEXACT|JSONSCHEMA [plate] key [key…] — HASALL + ONLY one-shot.
@@ -36573,6 +36632,53 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           var_set_num(vm, "OK", 1);
           if (vm->trace)
             fprintf(vm->trace, "# require json eq ok\n");
+          if (vm->res) vm->res->asserts_ok++;
+          bump(vm); return 1;
+        }
+        /* REQUIRE JSON NEQ|DIFF|DIFFERENT a b — two-token mutation gate */
+        if (kw(&L->cur,"NEQ") || kw(&L->cur,"DIFF") || kw(&L->cur,"DIFFERENT") ||
+            kw(&L->cur,"NOTEQ") || kw(&L->cur,"NOTEQUAL") || kw(&L->cur,"UNEQUAL")) {
+          char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+          cubalc_host_result hr, ch;
+          lex_next(L);
+          a[0] = 0;
+          b[0] = 0;
+          if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+            snprintf(a, sizeof a, "%s", vm->last_str);
+          if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+            b[0] = 0;
+          if (!a[0] || !b[0]) {
+            fail_at(vm, L, "REQUIRE JSON NEQ a b — need two plates");
+            return -1;
+          }
+          memset(&hr, 0, sizeof hr);
+          if (cubalc_host_json_eq(a, b, &hr) != 0) {
+            fail_at(vm, L, "REQUIRE JSON NEQ a b — plate compare failed");
+            return -1;
+          }
+          if (hr.n != 0) {
+            char msg[320];
+            snprintf(msg, sizeof msg,
+                     "REQUIRE JSONNEQ still-equal line %d — soft twin SYS JSONNEQ (expect mutation)",
+                     aln);
+            if (vm->res) vm->res->asserts_fail++;
+            fail(vm, msg);
+            return -1;
+          }
+          memset(&ch, 0, sizeof ch);
+          cubalc_host_json_changed_keys(a, b, 0, &ch);
+          var_set_str(vm, "LAST", a);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", a);
+          vm->last_n = 1;
+          var_set_num(vm, "LAST_N", 1);
+          var_set_num(vm, "JSONNEQ_N", 1);
+          var_set_num(vm, "JSONEQ_N", 0);
+          var_set_num(vm, "REQUIRE_JSONNEQ", 1);
+          var_set_num(vm, "JSONCHANGED_N", ch.n);
+          var_set_str(vm, "JSONCHANGED", ch.str);
+          var_set_num(vm, "OK", 1);
+          if (vm->trace)
+            fprintf(vm->trace, "# require json neq ok · changed=%ld\n", ch.n);
           if (vm->res) vm->res->asserts_ok++;
           bump(vm); return 1;
         }
@@ -36826,7 +36932,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEXACT|JSONEQ|JSONSUBSET …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEXACT|JSONEQ|JSONNEQ|JSONSUBSET …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||
