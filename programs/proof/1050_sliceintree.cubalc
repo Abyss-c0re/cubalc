@@ -1,0 +1,147 @@
+# SLICEINTREE / MIDINTREE / WINDOWINTREE — path window of content matches under tree
+# Page hits without GREPTREE+DROP+TAKE glue. Early-stop walk.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_sit_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# sorted DFS hits: mid, z, err
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "error last"
+ASSERT OK == 1
+SYS JOIN base "a/b/mid.txt"
+WRITEOUT LAST "error middle"
+ASSERT OK == 1
+SYS JOIN base "a/b/z.txt"
+WRITEOUT LAST "error z"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "ok only"
+ASSERT OK == 1
+
+# start 0 count 2 == TAKEINTREE 2
+SLICEINTREE base "error" 0 2
+ASSERT OK == 1
+ASSERT SLICEINTREE_N == 2
+ASSERT LAST_N == 2
+ASSERT SLICEINTREE_START == 0
+ASSERT SLICEINTREE_COUNT == 2
+SYS NTH 0 LAST
+SYS ENDS LAST "mid.txt"
+ASSERT LAST_N == 1
+SYS NTH 1 SLICEINTREE
+SYS ENDS LAST "z.txt"
+ASSERT LAST_N == 1
+SYS HAS SLICEINTREE "err.log"
+ASSERT LAST_N == 0
+
+TAKEINTREE base "error" 2
+LET take2 = LAST
+SLICEINTREE base "error" 0 2
+SYS EQS LAST take2
+ASSERT LAST_N == 1
+
+# middle page: skip first, take 1 → z
+SLICEINTREE base "error" 1 1
+ASSERT SLICEINTREE_N == 1
+SYS ENDS LAST "z.txt"
+ASSERT LAST_N == 1
+NTHINTREE base "error" 1
+LET nth1 = LAST
+SLICEINTREE base "error" 1 1
+SYS EQS LAST nth1
+ASSERT LAST_N == 1
+
+# skip 2 take rest → err
+SLICEINTREE base "error" 2 10
+ASSERT SLICEINTREE_N == 1
+SYS ENDS LAST "err.log"
+ASSERT LAST_N == 1
+
+# full window
+SLICEINTREE base "error" 0 10
+ASSERT SLICEINTREE_N == 3
+SYS HAS LAST "mid.txt"
+ASSERT LAST_N == 1
+SYS HAS LAST "z.txt"
+ASSERT LAST_N == 1
+SYS HAS LAST "err.log"
+ASSERT LAST_N == 1
+
+# past end → empty
+SLICEINTREE base "error" 9 2
+ASSERT OK == 1
+ASSERT SLICEINTREE_N == 0
+ASSERT LAST == ""
+
+# count 0 → empty
+SLICEINTREE base "error" 0 0
+ASSERT OK == 1
+ASSERT SLICEINTREE_N == 0
+
+# no match
+SLICEINTREE base "zzzz" 0 5
+ASSERT OK == 1
+ASSERT SLICEINTREE_N == 0
+
+# case-insensitive
+SLICEINTREEI base "ERROR" 0 2
+ASSERT SLICEINTREE_N == 2
+
+# aliases
+MIDINTREE base "error" 1 1
+ASSERT MIDINTREE_N == 1
+SYS ENDS LAST "z.txt"
+ASSERT LAST_N == 1
+WINDOWINTREE base "middle" 0 3
+ASSERT WINDOWINTREE_N == 1
+
+# SYS form
+SYS SLICEINTREE base "error" 1 2
+ASSERT OK == 1
+ASSERT SLICEINTREE_N == 2
+SYS NTH 0 LAST
+SYS ENDS LAST "z.txt"
+ASSERT LAST_N == 1
+SYS NTH 1 SLICEINTREE
+SYS ENDS LAST "err.log"
+ASSERT LAST_N == 1
+
+# single file root
+SYS JOIN base "plain.txt"
+LET p = LAST
+SLICEINTREE p "ok" 0 1
+ASSERT SLICEINTREE_N == 1
+SLICEINTREE p "ok" 1 1
+ASSERT SLICEINTREE_N == 0
+SLICEINTREE p "error" 0 1
+ASSERT SLICEINTREE_N == 0
+
+# missing soft
+SLICEINTREE "/no/such/sliceintree" "x" 0 1
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty soft
+SLICEINTREE "" "x" 0 1
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+RMTREE base
+ASSERT OK == 1
+
+PRINT "sliceintree ok"
+ASSERT OK == 1
