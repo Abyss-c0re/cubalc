@@ -171,3 +171,39 @@ Live catalog (set/default/hint JSON): `./out/cubalc env` · filter `cubalc env P
 | `CUBALC_P2P_SOFT` | DIAL soft-fail (SMX_OK=0) |
 | `CUBALC_PROTECT` | tight host SPAWN/HTTP |
 | `CUBALC_STATE` | state directory |
+
+## 8. Agent durable state plates
+
+One INCLUDE starts a version-gated agent program with a durable JSON plate:
+
+```cubalc
+DEFAULT PLATE_PATH = "state/my_agent.json"
+DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true}"
+INCLUDE plate_session          # agent_boot + plate_boot
+
+SETP "status" "ready"          # mutate PLATE (no LET glue)
+INCP "n"
+NEEDP "n" "ok" "status"        # fail-fast contract
+DUMPP                          # cubalc.plate_info.v1 snapshot
+
+SYS JSONOBJ "peer" "a"
+LET PLATE_PATCH = LAST
+INCLUDE plate_patch            # multi-key overlay + save
+
+# or after ad-hoc SETP/MERGEP:
+INCLUDE plate_save
+```
+
+CLI one-shots (no `.cubalc` file):
+
+```bash
+./out/cubalc plate show state/my_agent.json
+./out/cubalc plate get  state/my_agent.json n
+./out/cubalc plate set  state/my_agent.json role worker
+./out/cubalc plate inc  state/my_agent.json n
+./out/cubalc libs | grep plate
+```
+
+Libs: `plate_session` · `plate_boot` · `plate_save` · `plate_patch` · `plate_tick` · `agent_boot`.  
+Forms: `SETP`/`INCP`/`MERGEP`/`NEEDP`/`DUMPP`.  
+Proofs: `1117_plate_session` · `1110_setp` · `1115_plate_patch` · `1116_dumpp` · `1112_cli_plate.sh`.

@@ -1,0 +1,67 @@
+# plate_session lib — agent_boot + plate_boot one INCLUDE
+# Usability: version gate + durable PLATE without dual INCLUDE glue.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_plate_session"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS RM path
+
+DEFAULT PLATE_PATH = path
+DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true,\"role\":\"worker\"}"
+INCLUDE plate_session
+ASSERT OK == 1
+ASSERT INCLUDE_OK == 1
+
+# agent_boot side
+SYS HAS VERSION "1.15"
+ASSERT LAST_N == 1
+
+# plate_boot side
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 0
+SYS JSON "role" FROM PLATE
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS EQS PLATE_PATH path
+ASSERT LAST_N == 1
+
+# mutate + save round-trip
+SETP "status" "ready"
+INCP "n"
+NEEDP "n" "ok" "status"
+DUMPP
+ASSERT DUMPP_HAS == 1
+ASSERT LAST_N >= 3
+INCLUDE plate_save
+ASSERT SAVEPLATE_OK == 1
+
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+LET loaded = LAST
+SYS JSON "status" FROM loaded
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 1
+
+# re-session loads durable state
+INCLUDE plate_session
+ASSERT ENSUREPLATE_CREATED == 0
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+SYS JSON "status" FROM PLATE
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+# discovery
+SYS WHICH plate_session
+SYS HAS LAST "plate_session"
+ASSERT LAST_N == 1
+
+PRINT "plate_session ok"

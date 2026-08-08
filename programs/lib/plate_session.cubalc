@@ -1,0 +1,12 @@
+# INCLUDE plate_session — agent program + durable state plate one-shot
+# Usability: REQUIRE version floor + VERSION + ENSUREPLATE PLATE without two INCLUDEs
+#
+#   DEFAULT PLATE_PATH = "state/my_agent.json"
+#   DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true}"
+#   INCLUDE plate_session
+#   # VERSION set · PLATE loaded/seeded · mutate with SETP/MERGEP · INCLUDE plate_save
+#
+# Composes agent_boot + plate_boot. HOLD_FLASH not required (runtime default 1).
+
+INCLUDE agent_boot
+INCLUDE plate_boot

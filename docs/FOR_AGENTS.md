@@ -24,6 +24,22 @@ Reusable logic: FN name a b … END / CALL; objects: NEW / SEND / GETF / SETF.
 agent → .cubalc source → cubalc run → stdout JSON/board → agent
 ```
 
+## Durable agent state (plates)
+
+Prefer INCLUDE over hand-built JSON:
+
+```cubalc
+INCLUDE plate_session          # REQUIRE VERSION + ENSUREPLATE → PLATE
+SETP "status" "ready"
+INCP "n"
+NEEDP "n" "status"
+INCLUDE plate_save             # or plate_patch with PLATE_PATCH
+DUMPP                          # cubalc.plate_info.v1
+```
+
+Shell: `cubalc plate get|set|inc|show path.json` · `cubalc libs` · `cubalc cat plate_session`.
+See `docs/COOKBOOK.md` §8.
+
 Self-test: `make test` (lang suite + smx).
 
 ## Visual channel (optional, human only)
