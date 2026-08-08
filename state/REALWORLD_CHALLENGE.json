@@ -1,89 +1,83 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 217,
-  "program": "programs/realworld/deploy_manifest_needfillp_board.cubalc",
-  "theme": "NEEDFILLP/FILLP STRICT + FILLPKEYS deploy manifest gate",
-  "version": "1.15.575-usability",
+  "iter": 218,
+  "program": "programs/realworld/incident_priority_bag_board.cubalc",
+  "theme": "COUNTLINE/MOVELINE/SETMATCH/REMOVELINE incident priority bag",
+  "version": "1.15.576-usability",
   "pass": true,
-  "prior_note": "iter 216 FILLPFILE; this iter first realworld NEEDFILLP/FILLP STRICT (proof 1124) + FILLPKEYS contract",
+  "prior_note": "iter 217 NEEDFILLP deploy; this iter exact bag priority queue ops",
   "tests": [
     {
-      "name": "list",
-      "cmd": "list defaults",
-      "ok": true,
-      "note": "list"
-    },
-    {
       "name": "boot",
-      "cmd": "plate_session + UPDATEPLATE rel/wave/host",
+      "cmd": "seed 3 incidents",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "keys",
-      "cmd": "FILLPKEYS n=4 dedupe wave",
+      "name": "admit",
+      "cmd": "PUSH INC-9:crit",
       "ok": true,
-      "note": "FILLPKEYS"
+      "note": "admit"
     },
     {
-      "name": "draft",
-      "cmd": "soft FILLP miss= empty slot",
+      "name": "count",
+      "cmd": "COUNTLINE exact + substring 0",
       "ok": true,
-      "note": "draft"
+      "note": "count"
     },
     {
-      "name": "softship",
-      "cmd": "preflight block on miss= tag=",
+      "name": "promote",
+      "cmd": "FINDLINE+MOVELINE to head",
       "ok": true,
-      "note": "softship blocked"
-    },
-    {
-      "name": "ship",
-      "cmd": "NEEDFILLP+FILLP STRICT complete plate",
-      "ok": true,
-      "note": "ship"
-    },
-    {
-      "name": "alias",
-      "cmd": "SUBSTPLATE==FILLP body",
-      "ok": true,
-      "note": "alias"
+      "note": "promote"
     },
     {
       "name": "gate",
-      "cmd": "out present + miss=ok",
+      "cmd": "head ENDS :crit",
       "ok": true,
       "note": "gate"
     },
     {
+      "name": "demote",
+      "cmd": "MOVELINE to end REVL check",
+      "ok": true,
+      "note": "demote"
+    },
+    {
+      "name": "set",
+      "cmd": "SETMATCH rewrite sev",
+      "ok": true,
+      "note": "set"
+    },
+    {
+      "name": "ack",
+      "cmd": "REMOVELINE exact",
+      "ok": true,
+      "note": "ack"
+    },
+    {
       "name": "probe",
-      "cmd": "empty plate; emptystr hit; incomplete brace",
+      "cmd": "exact COUNTLINE/REMOVELINE/OOR/SETMATCH miss",
       "ok": true,
       "note": "edges"
     },
     {
       "name": "soft",
-      "cmd": "empty bag soft miss",
+      "cmd": "empty bag soft",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_DMNF_REQUIRE=1 soft empty exit 2",
+      "cmd": "CUBALC_IPB_REQUIRE=1 exit 2",
       "ok": true,
       "note": "hard env"
-    },
-    {
-      "name": "needfillp_host",
-      "cmd": "host NEEDFILLP incomplete \u2192 exit 1",
-      "ok": true,
-      "note": "STRICT hard"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "364/365 pre-existing fail (not this program)"
+      "note": "364/365 sys_kvfileensure pre-existing"
     }
   ],
   "weaknesses": [
@@ -1830,6 +1824,38 @@
       "title": "CLEAR_ERR after FILLP can drop LAST before capture",
       "detail": "FILLP; CLEAR_ERR; SYS EQS LAST expected fails because LAST no longer holds expanded body. Capture LET body=LAST before CLEAR_ERR.",
       "repro": "FILLP \"z=\"; CLEAR_ERR; SYS EQS LAST \"z=\" \u2192 0"
+    },
+    {
+      "id": "W219",
+      "severity": "med",
+      "area": "lang|arith",
+      "title": "no SYS DEC/ADD for simple bag_n-1 index math",
+      "detail": "SYS DEC/ADD unknown (suggest DECRPLATE/ADDKV). Demote-to-tail needs REVL+NTH 0 or MOVELINE clamp-to-99 instead of NTH(bag_n-1).",
+      "repro": "SYS DEC bag_n \u2192 unknown; SYS ADD n -1 \u2192 unknown"
+    },
+    {
+      "id": "W220",
+      "severity": "med",
+      "area": "host|findline",
+      "title": "FINDLINE LAST_N=0 ambiguous: miss vs index 0",
+      "detail": "Hit at front returns LAST_N=0 same as miss. Agents must HASLINE first then FINDLINE; promote/demote at head cannot use LAST_N alone as presence.",
+      "repro": "FINDLINE bag headrow \u2192 0; FINDLINE bag missing \u2192 0"
+    },
+    {
+      "id": "W221",
+      "severity": "med",
+      "area": "host|grep",
+      "title": "SYS GREP id prefix is substring (INC-1 matches INC-10)",
+      "detail": "set path uses GREP id_s bag then NTH 0 \u2014 prefix false friends on incident ids. Prefer exact HASLINE id:sev or COUNTLINE full field.",
+      "repro": "bag has INC-10:crit; GREP INC-1 hits INC-10"
+    },
+    {
+      "id": "W222",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE bag STATUS omit trailing NL",
+      "detail": "cat -A STATUS ends without $ on last field when bag has no final blank line.",
+      "repro": "cat -A STATUS.txt after boot"
     }
   ],
   "workarounds": [
@@ -1915,20 +1941,16 @@
     "SYS CAT multi-arg for EQS expected bodies"
   ],
   "language_gaps": [
-    "no soft NEEDFILLP (OK=0 + miss bag without halt)",
-    "no bounds check / soft error on var table overflow",
-    "GREP/GREPV are substring not token-aware",
-    "empty string key counts as present for STRICT",
-    "FILLPFILE STRICT exists (1125) but board used string NEEDFILLP path"
+    "no bag index arithmetic (DEC/SUB on LAST_N)",
+    "FINDLINE presence not distinguishable from index 0",
+    "GREP not field-exact for id prefixes",
+    "still no soft NEEDFILLP (prior); var table 128 (prior)"
   ],
   "issues_faced": [
-    "var table 128: FILLP_MISS_KEYS unknown form under board preamble pressure",
-    "GREPV ship: clobbers softship: rows (substring)",
-    "CLEAR_ERR before EQS LAST lost FILLP body in probe",
-    "SYS EQS keys_n \"4\" unknown form \u2014 numeric IF only",
-    "LET take_n=FILLP_N often 0 under pressure while fillp hits=6 in log",
-    "state/REALWORLD_CHALLENGE.json was deleted in working tree; restored from git"
+    "SYS DEC/ADD missing \u2014 demote tail via REVL+NTH 0",
+    "probe REMOVELINE ERROR hit when third field was exact ERROR \u2014 redesign bag for pure substring trap",
+    "FINDLINE index 0 vs miss both LAST_N=0 \u2014 HASLINE gate required"
   ],
-  "commit": "9b47756",
-  "ts": "2026-08-08T22:11:17Z"
+  "commit": "",
+  "ts": "2026-08-08T22:29:29Z"
 }
