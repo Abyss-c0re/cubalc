@@ -1,47 +1,47 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 165,
-  "program": "programs/realworld/lease_ttl_ms_board.cubalc",
-  "theme": "GETFLAGMS + INRANGE lease TTL duration flags and numeric bands",
-  "version": "1.15.448-usability",
+  "iter": 166,
+  "program": "programs/realworld/rate_clampn_board.cubalc",
+  "theme": "CLAMPN + REQUIRE RESTPOS rate-limit route CLI (int flags clamp + target gate)",
+  "version": "1.15.450-usability",
   "pass": true,
-  "prior_note": "iter 164 SUBCMD fleet; this iter GETFLAGMS+INRANGE (996-997); fixed INRANGE vs HASBETWEEN name collision",
+  "prior_note": "iter 165 GETFLAGMS lease; this iter first realworld CLAMPN+HASRESTPOS/REQUIRE RESTPOS (998-999); flag | aliases landing",
   "tests": [
     {
-      "name": "acquire",
-      "cmd": "acquire -- --ttl=2m --grace=10s lease-a lease-b",
+      "name": "set_clamp",
+      "cmd": "set --qps=50000 max=1000 \u2192 qps 1000 CLAMPED; routes live",
       "ok": true,
-      "note": "GETFLAGMS"
+      "note": "CLAMPN"
     },
     {
-      "name": "renew_release",
-      "cmd": "renew --ttl=5m; release status row",
+      "name": "set_inrange",
+      "cmd": "set --qps=50 in band unchanged",
+      "ok": true,
+      "note": "clamp 0"
+    },
+    {
+      "name": "drop_has",
+      "cmd": "drop web; HASLINE exact; substring miss",
       "ok": true,
       "note": "ops"
     },
     {
-      "name": "range_gate",
-      "cmd": "ttl=500ms OOR soft; notime bad HIT/OK dual",
+      "name": "restpos",
+      "cmd": "empty set soft; REQUIRE RESTPOS exit_code 0",
       "ok": true,
-      "note": "INRANGE"
+      "note": "RESTPOS"
     },
     {
       "name": "probe",
-      "cmd": "INRANGE swap TO; oor miss; 1h in band",
+      "cmd": "CLAMPN OOR/swap/below edges",
       "ok": true,
       "note": "probe"
-    },
-    {
-      "name": "soft_unk",
-      "cmd": "soft empty EXIT 2; boom EXIT 2",
-      "ok": true,
-      "note": "walls"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "355/355 after INRANGE alias fix"
+      "note": "355/355"
     }
   ],
   "weaknesses": [
@@ -380,25 +380,58 @@
       "title": "INRANGE lo/hi swap via TO works; soft OOR returns 0",
       "detail": "Positive: INRANGE 5 10 TO 1 hits; INRANGE 0 1 100 misses. REQUIRE BETWEEN hard still exit_code 0 class.",
       "repro": "INRANGE 5 10 TO 1 \u2192 1"
+    },
+    {
+      "id": "W43",
+      "severity": "high",
+      "area": "host|restpos",
+      "title": "REQUIRE RESTPOS miss leaves process exit_code 0",
+      "detail": "Same class as REQUIRE ONEOF/FLAG: ok:false asserts_fail + usage tip; shell $? often 0. Soft HASRESTPOS + EXIT 2 is reliable for agents.",
+      "repro": "CUBALC_RC_REQUIRE=1 set with no routes \u2192 exit_code 0"
+    },
+    {
+      "id": "W44",
+      "severity": "med",
+      "area": "lang|flag_alias",
+      "title": "GETFLAGN name|alias may fail under ENV SET seed; works with CLI -w",
+      "detail": "Proof 1000 seeded via SYS ENV SET CUBALC_ARG* hit parse unknown form on workers|w; live cubalc run -e with -- -w 8 peels correctly and FLAG_HIT_NAME=w. Host ENV seed vs CLI argv dual still fragile (related W9).",
+      "repro": "ENV SET CUBALC_ARG0=-w vs cubalc run \u2026 -- -w 8"
+    },
+    {
+      "id": "W45",
+      "severity": "low",
+      "area": "lang|clampn",
+      "title": "CLAMPN works with vars/LAST_N; CLAMPN_CHANGED and bounds swap",
+      "detail": "Positive: 50000\u21921000 changed=1; in-band unchanged; CLAMPN 5 10 1 stays 5; below lo clamps up.",
+      "repro": "CLAMPN 50000 10 1000 \u2192 1000 CHANGED 1"
+    },
+    {
+      "id": "W46",
+      "severity": "low",
+      "area": "lang|restpos",
+      "title": "HASRESTPOS min wants careful use with SUBCMD (files only, not verb)",
+      "detail": "Positive: HASRESTPOS 1 after SUBCMD set with routes; 0 when only verb. Prefer --name=val flags so bare flags do not eat targets.",
+      "repro": "set -- --qps=10 r1 \u2192 HASRESTPOS 1"
     }
   ],
   "workarounds": [
-    "GETFLAGMS ttl OR 30s; INRANGE TTL_MS 1000 3600000",
-    "HASBETWEEN Class field lo hi for OOP; numeric uses free INRANGE",
-    "Bad duration: check GETFLAGMS_OK / INRANGE after peel",
-    "SUBCMD acquire|renew|release; RESTPOS ids; EXIT 2 walls",
-    "cubalc run prog.cubalc acquire -- --ttl=2m --grace=10s id..."
+    "GETFLAGN qps OR 100; CLAMPN QPS LO HI; check CLAMPN_CHANGED",
+    "HASRESTPOS 1 soft; EXIT 2 for shell status (not REQUIRE RESTPOS alone)",
+    "SUBCMD set|list|drop; RESTPOS routes; GREP needle bag for drop",
+    "Prefer CLI argv over ENV SET for short flag aliases",
+    "cubalc run prog.cubalc set -- --qps=N --max=M route..."
   ],
   "language_gaps": [
-    "Disambiguate INRANGE numeric vs historical OOP alias in docs",
-    "GETFLAGMS bad value should soft to OR default or clear HIT",
-    "REQUIRE BETWEEN non-zero process exit_code"
+    "REQUIRE RESTPOS non-zero process exit_code",
+    "Stable GETFLAGN alias parse under ENV SET seed",
+    "Cookbook: rate limit CLI with CLAMPN+RESTPOS"
   ],
   "issues_faced": [
-    "INRANGE vs HASBETWEEN selftest regression \u2014 fixed proof+alias+rebuild",
-    "GETFLAGMS 2m/10s peel; INRANGE band gate; acquire/renew green",
-    "selftest 355/355 after rebuild"
+    "CLAMPN peels 50k\u21921k; set/drop/has green",
+    "REQUIRE RESTPOS exit_code 0 \u2014 soft+EXIT path",
+    "flag | alias works on CLI -w; ENV seed flaky",
+    "selftest 355/355"
   ],
-  "commit": "a6c544feb54a8dff44bc4ecc8b537e94f09c7ed8",
-  "ts": "2026-08-08T00:32:46Z"
+  "commit": "pending",
+  "ts": "2026-08-08T00:49:40Z"
 }

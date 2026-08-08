@@ -1,0 +1,704 @@
+# rate_clampn_board.cubalc — CLAMPN + REQUIRE RESTPOS rate-limit route plate
+#
+# Real use: edge/ops agents set per-route QPS/burst with min/max clamps and
+# require file/route targets after the subcommand without shell getopt:
+#   SUBCMD + RESTPOS / HASRESTPOS / REQUIRE RESTPOS — targets after verb
+#   GETFLAGN qps|burst|min|max — integer CLI flags
+#   CLAMPN / BOUNDN / CLIPN — clamp QPS into [min,max] (CHANGED knob)
+#   ONEOF + CASEI → LET op — allowed subcommands
+#
+# Distinct from pool_rate_clamp (OOP clamp) and rate_budget_ledger (budget):
+# this board is *CLI int flags + CLAMPN + RESTPOS gates*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rc_$$
+#   ./out/cubalc run programs/realworld/rate_clampn_board.cubalc \
+#     set -- --qps=50000 --burst=200 --min=10 --max=1000 api web
+#   ./out/cubalc run ... list
+#   ./out/cubalc run ... drop -- api
+#
+# Plate under STATE:
+#   RATES.txt      — route:qps:burst:status rows (exact)
+#   VAL.txt META.txt RC_REPORT.txt
+#
+# Subcommands (SUBCMD — never "run"):
+#   list|ls   — bag depth
+#   set       — upsert RESTPOS routes with clamped qps/burst
+#   drop      — remove routes by name (GREP+REMOVELINE)
+#   has|count|gate|soft|clear|probe
+#
+# Env: CUBALC_RC_REQUIRE CUBALC_RC_MIN CUBALC_RC_NAME
+#
+# Edges:
+#   CLAMPN changes when OOR; CLAMPN_CHANGED 0|1; bounds swap ok
+#   GETFLAGN | alias form may parse-fail (document if broken)
+#   HASRESTPOS 1 soft; REQUIRE RESTPOS hard often exit_code 0
+#   RESTPOS multi-line HASLINE not EQS; CASEI simple op arms
+#   WRITE NL; NUM soft; exact HASLINE; known latch
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "rate_clampn_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT RFILE = "RATES.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "RC_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT QPS = 100
+DEFAULT BURST = 200
+DEFAULT LO = 1
+DEFAULT HI = 10000
+DEFAULT USAGE_LINE = "rate_clampn -- set|list|drop -- [--qps=N] [--burst=N] [--min=N] [--max=N] route [route...]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+LET sub_hit = SUBCMD_HIT
+CLEAR_ERR
+IF sub_hit == 0 THEN
+  SYS ENV "CUBALC_RC_ACTION" OR ""
+  IF LAST_N > 0 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+
+LET targets = RESTPOS
+SYS LINES targets
+LET target_n = LAST_N
+CLEAR_ERR
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+GETFLAGN qps OR 100
+LET QPS = LAST_N
+LET qps_hit = GETFLAGN_HIT
+CLEAR_ERR
+GETFLAGN burst OR 200
+LET BURST = LAST_N
+LET burst_hit = GETFLAGN_HIT
+CLEAR_ERR
+GETFLAGN min OR 1
+LET LO = LAST_N
+CLEAR_ERR
+GETFLAGN max OR 10000
+LET HI = LAST_N
+CLEAR_ERR
+
+# clamp qps into [lo,hi]; burst into [0,hi]
+LET qps_raw = QPS
+CLAMPN QPS LO HI
+LET QPS = LAST_N
+LET qps_ch = CLAMPN_CHANGED
+CLEAR_ERR
+LET burst_raw = BURST
+CLAMPN BURST 0 HI
+LET BURST = LAST_N
+LET burst_ch = CLAMPN_CHANGED
+CLEAR_ERR
+
+SYS ENV "CUBALC_RC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_RC_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+SYS ENV "CUBALC_RC_NAME" OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+END
+SYS BLANK NAME
+IF LAST_N == 1 THEN
+  SYS NTH 0 targets
+  IF LAST_N > 0 THEN
+    LET NAME = LAST
+  END
+  CLEAR_ERR
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir RFILE
+LET rates_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR rates_path OR ""
+LET rates = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET rates_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET rate_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET count_n = 0
+LET op = "unknown"
+
+SYS LINES rates
+LET rate_n = LAST_N
+
+ONEOF ACTION "set", "list", "ls", "drop", "has", "count", "gate", "soft", "clear", "probe"
+LET oneof_ok = LAST_N
+CLEAR_ERR
+IF oneof_ok == 0 THEN
+  ONEOFI ACTION "set", "list", "ls", "drop", "has", "count", "gate", "soft", "clear", "probe"
+  LET oneof_ok = LAST_N
+  CLEAR_ERR
+END
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "set" THEN
+    LET op = "set"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "count" THEN
+    LET op = "count"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+# --- list ---
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action list"
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = rates
+  LET val_ch = 1
+  LET meta = "rates"
+  SYS STR rate_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "qps"
+  LET meta = LAST
+  SYS STR QPS
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON rate_n QPS BURST qps_ch
+  CLEAR_ERR
+END
+
+# --- set (require routes) ---
+SYS EQS op "set"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action set"
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "set needs routes"
+    FAIL "set needs routes"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      REQUIRE RESTPOS 1
+    END
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "set needs routes"
+    END
+  ELSE
+    EACH LINE AS route IN targets
+      SYS BLANK route
+      IF LAST_N == 0 THEN
+        SYS GREP route rates
+        LET hits = LAST
+        CLEAR_ERR
+        EACH LINE AS old IN hits
+          SYS REMOVELINE rates old
+          LET rates = LAST
+          CLEAR_ERR
+        END
+        SYS CAT route ":"
+        LET row = LAST
+        SYS STR QPS
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS STR BURST
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":live"
+        LET row = LAST
+        SYS PUSH rates row
+        LET rates = LAST
+        LET admit_n = admit_n + 1
+      END
+    END
+    LET rates_ch = 1
+    SYS LINES rates
+    LET rate_n = LAST_N
+    LET hit = 1
+    LET note_msg = "set ok"
+    LET val = rates
+    LET val_ch = 1
+    LET meta = "qps"
+    SYS STR QPS
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "qps_raw"
+    LET meta = LAST
+    SYS STR qps_raw
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "clamped"
+    LET meta = LAST
+    SYS STR qps_ch
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "burst"
+    LET meta = LAST
+    SYS STR BURST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "admit"
+    LET meta = LAST
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n rate_n QPS BURST qps_ch
+  CLEAR_ERR
+END
+
+# --- drop ---
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action drop"
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs routes"
+    FAIL "drop needs routes"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop needs routes"
+    END
+  ELSE
+    EACH LINE AS route IN targets
+      SYS BLANK route
+      IF LAST_N == 0 THEN
+        SYS GREP route rates
+        LET hits = LAST
+        CLEAR_ERR
+        EACH LINE AS old IN hits
+          SYS REMOVELINE rates old
+          LET rates = LAST
+          LET admit_n = admit_n + 1
+          CLEAR_ERR
+        END
+      END
+    END
+    LET rates_ch = 1
+    SYS LINES rates
+    LET rate_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+    LET val = rates
+    LET val_ch = 1
+    LET meta = "drop"
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n rate_n
+  CLEAR_ERR
+END
+
+# --- has ---
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs row"
+    FAIL "has needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has needs row"
+    END
+  ELSE
+    SYS HASLINE rates NAME
+    LET has_n = LAST_N
+    IF has_n == 0 THEN
+      SYS GREP NAME rates
+      SYS LINES LAST
+      LET has_n = LAST_N
+      IF has_n > 1 THEN
+        LET has_n = 1
+      END
+      CLEAR_ERR
+    END
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- count ---
+SYS EQS op "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs row"
+    FAIL "count needs row"
+    CLEAR_ERR
+  ELSE
+    SYS COUNTLINE rates NAME
+    LET count_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "count"
+    SYS STR count_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON count_n
+  CLEAR_ERR
+END
+
+# --- gate ---
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action gate"
+  SYS LINES rates
+  LET rate_n = LAST_N
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "rates"
+  LET meta = LAST
+  SYS STR rate_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR rate_n
+  LET val = LAST
+  LET val_ch = 1
+  IF rate_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny"
+    END
+  END
+  PRINT_JSON rate_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- soft ---
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action soft"
+  SYS LINES rates
+  LET rate_n = LAST_N
+  IF rate_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    SYS PUSH meta "empty"
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft empty wall"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rates"
+    LET val = rates
+    LET val_ch = 1
+  END
+  PRINT_JSON rate_n miss hit
+  CLEAR_ERR
+END
+
+# --- probe clamp edges ---
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action probe"
+  GETFLAGN qps OR 100
+  LET qps_raw = LAST_N
+  CLEAR_ERR
+  GETFLAGN min OR 1
+  LET lo = LAST_N
+  CLEAR_ERR
+  GETFLAGN max OR 1000
+  LET hi = LAST_N
+  CLEAR_ERR
+  CLAMPN qps_raw lo hi
+  LET qps_c = LAST_N
+  LET ch = CLAMPN_CHANGED
+  CLEAR_ERR
+  # swap bounds still in range
+  CLAMPN 5 10 1
+  LET swap_v = LAST_N
+  LET swap_ch = CLAMPN_CHANGED
+  CLEAR_ERR
+  # below lo
+  CLAMPN 0 1 100
+  LET below = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "qps_raw"
+  SYS STR qps_raw
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "qps_c"
+  LET meta = LAST
+  SYS STR qps_c
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "changed"
+  LET meta = LAST
+  SYS STR ch
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "swap_v"
+  LET meta = LAST
+  SYS STR swap_v
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "below"
+  LET meta = LAST
+  SYS STR below
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR qps_c
+  LET val = LAST
+  LET val_ch = 1
+  PRINT_JSON qps_raw qps_c ch swap_v below
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action clear"
+  LET rates = ""
+  LET val = ""
+  LET meta = ""
+  LET rates_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET rate_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF rates_ch > 0 THEN
+  SYS WRITE rates_path rates
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "rates write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET meta = "schema=cubalc.rate_clampn_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "qps"
+LET meta = LAST
+SYS STR QPS
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "qps_raw"
+LET meta = LAST
+SYS STR qps_raw
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "clamped"
+LET meta = LAST
+SYS STR qps_ch
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "burst"
+LET meta = LAST
+SYS STR BURST
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "rate_n"
+LET meta = LAST
+SYS STR rate_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+SYS PUSH meta "elapsed_ms"
+LET meta = LAST
+SYS STR elapsed
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "identity"
+LET meta = LAST
+SYS PUSH meta IDENTITY
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "rate_clampn_board" ACTION op hit miss QPS BURST qps_ch rate_n note_msg elapsed
+NOTE "rate_clampn_board: done"
