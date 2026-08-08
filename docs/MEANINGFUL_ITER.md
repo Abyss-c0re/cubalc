@@ -526,6 +526,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 496. ~~**`COUNTINTREE` / `COUNTTREE` / `GREPCOUNTTREE`**~~ **done** (recursive needle occurrence tally · COUNTINTREE_FILES · no WALK+COUNTINFILES or shell grep -rc).
 497. ~~**`GREPLINESTREE` / `HARVESTTREE` / `EXTRACTLINETREE`**~~ **done** (recursive matching-line harvest · line bag · no WALK+GREPLINES or shell grep -rn).
 498. ~~**`FIRSTINTREE` / `LASTINTREE` / `GREP1TREE`**~~ **done** (first/last content-matching file under tree · no GREPTREE+TAKE/REVL glue).
+499. ~~**`FIRSTLINEINTREE` / `LASTLINEINTREE` / `GREP1LINETREE`**~~ **done** (first/last matching line under tree · PATH+HIT+I · no GREPLINESTREE+TAKE/REVL glue).
 
 ## Tick protocol
 

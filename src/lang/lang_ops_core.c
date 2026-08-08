@@ -937,7 +937,7 @@ static int sys_edit_dist(const char *a, const char *b){
 }
 /* Pipe-separated primary SYS op names (aliases included) for typo recovery. */
 static const char *const sys_op_suggest_catalog =
-  "READ|WRITE|RM|RMTREE|RMNEST|RMRF|DELTREE|CPTREE|COPYTREE|CPDIR|TREECOPY|MVTREE|MOVETREE|MVDIR|RENAMETREE|DIRSIZE|DU|TREESIZE|DISKUSAGE|EQTREE|SAMETREE|CMPTREE|EQDIR|GREPTREE|SEARCHTREE|RGREP|TREEGREP|REPLACETREE|GSUBTREE|SEDTREE|TREEREPLACE|COUNTINTREE|COUNTTREE|GREPCOUNTTREE|TREECOUNT|GREPLINESTREE|EXTRACTLINETREE|HARVESTTREE|LINETREE|FIRSTINTREE|GREP1TREE|LASTINTREE|GREP1TREEL|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|DOTENV|LOADENV|ENVFILE|SOURCEENV|DUMPENV|ENVALL|ENVDUMP|LISTENV|WRITEENV|SAVENV|DUMPENVFILE|ENVSAVE|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|LINECOUNTALL|WCALL|MAPLINES|LINESALL|MIDFILE|FILEMID|LINESLICE|SLICEFILE|FILESLICE|LINEAT|FILELINE|ATLINE|NTHFILELINE|SETFILELINE|FILESETLINE|PUTFILELINE|SETLINEAT|INSERTFILELINE|FILEINSERTLINE|INSFILELINE|INSLINEF|DROPFILELINE|FILEDROPLINE|DELFILELINE|DROPLINEF|FINDFILELINE|FILEFINDLINE|LINEINDEXF|FINDLINEF|FINDFILELINEI|LASTFINDFILELINE|FILELASTFIND|LINEINDEXFL|LASTFINDFILELINEI|COUNTFILELINE|FILECOUNTLINE|COUNTMATCHF|COUNTFILELINEI|GREPFILE|FILEGREP|MATCHFILELINES|GREPFILEI|SETMATCHFILE|FILESETMATCH|REPLACEMATCHF|SETMATCHFILEI|DROPMATCHFILE|FILEDROPMATCH|DELMATCHFILE|DROPMATCHFILEI|DROPALLMATCHFILE|FILEDROPALLMATCH|DELALLMATCHFILE|PURGEMATCHFILE|DROPALLMATCHFILEI|SETALLMATCHFILE|FILESETALLMATCH|REPLACEALLMATCHF|SETALLMATCHFILEI|INSERTMATCHFILE|FILEINSERTMATCH|AFTERMATCHFILE|INSERTMATCHFILEI|BEFOREMATCHFILE|INSERTBEFOREMATCH|FILEINSERTBEFORE|BEFOREMATCHFILEI|LOOKUPFILE|FILELOOKUP|KVFILEGET|PLATEGET|LOOKUPFILEI|KVFILESET|FILEKVSET|SETKVFILE|PLATESET|KVFILEDEL|FILEKVDEL|DELKVFILE|PLATEDEL|KVFILEINC|INCKVFILE|FILEKVINC|PLATEINC|ENSURELINE|ENSUREFILELINE|ADDIFMISSING|FILEENSURE|HASFILELINE|FILEHASLINE|HASLINEF|HASFILELINEI|WHICH|WHICHBIN|PATHWHICH|BIN|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|ARGC|ARGS|ARGVALL|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|MONOTONIC|NPROC|CPUS|CORES|ISATTY|TTY|LOADAVG|LOAD|UPTIME|BOOTAGE|MEM|MEMINFO|DF|DISKFREE|FSYNC|SYNCFILE|TRUNCATE|FTRUNCATE|FILETRUNC|DIRSYNC|FSYNCDIR|SYNCDIR|HARDLINK|HLINK|NLINK|LINKCOUNT|SAMEINODE|EQINODE|INODE|TEE|WRITETEE|FILEUID|FILEGID|OWNEDBY|CANREAD|CANWRITE|CANEXEC|UNAME|OS|ARCH|MACHINE|PLATFORM|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|LOCAL|LOCALTIME|LOCALDATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT";
+  "READ|WRITE|RM|RMTREE|RMNEST|RMRF|DELTREE|CPTREE|COPYTREE|CPDIR|TREECOPY|MVTREE|MOVETREE|MVDIR|RENAMETREE|DIRSIZE|DU|TREESIZE|DISKUSAGE|EQTREE|SAMETREE|CMPTREE|EQDIR|GREPTREE|SEARCHTREE|RGREP|TREEGREP|REPLACETREE|GSUBTREE|SEDTREE|TREEREPLACE|COUNTINTREE|COUNTTREE|GREPCOUNTTREE|TREECOUNT|GREPLINESTREE|EXTRACTLINETREE|HARVESTTREE|LINETREE|FIRSTINTREE|GREP1TREE|LASTINTREE|GREP1TREEL|FIRSTLINEINTREE|GREP1LINETREE|LASTLINEINTREE|GREP1LINETREEL|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|DOTENV|LOADENV|ENVFILE|SOURCEENV|DUMPENV|ENVALL|ENVDUMP|LISTENV|WRITEENV|SAVENV|DUMPENVFILE|ENVSAVE|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|LINECOUNTALL|WCALL|MAPLINES|LINESALL|MIDFILE|FILEMID|LINESLICE|SLICEFILE|FILESLICE|LINEAT|FILELINE|ATLINE|NTHFILELINE|SETFILELINE|FILESETLINE|PUTFILELINE|SETLINEAT|INSERTFILELINE|FILEINSERTLINE|INSFILELINE|INSLINEF|DROPFILELINE|FILEDROPLINE|DELFILELINE|DROPLINEF|FINDFILELINE|FILEFINDLINE|LINEINDEXF|FINDLINEF|FINDFILELINEI|LASTFINDFILELINE|FILELASTFIND|LINEINDEXFL|LASTFINDFILELINEI|COUNTFILELINE|FILECOUNTLINE|COUNTMATCHF|COUNTFILELINEI|GREPFILE|FILEGREP|MATCHFILELINES|GREPFILEI|SETMATCHFILE|FILESETMATCH|REPLACEMATCHF|SETMATCHFILEI|DROPMATCHFILE|FILEDROPMATCH|DELMATCHFILE|DROPMATCHFILEI|DROPALLMATCHFILE|FILEDROPALLMATCH|DELALLMATCHFILE|PURGEMATCHFILE|DROPALLMATCHFILEI|SETALLMATCHFILE|FILESETALLMATCH|REPLACEALLMATCHF|SETALLMATCHFILEI|INSERTMATCHFILE|FILEINSERTMATCH|AFTERMATCHFILE|INSERTMATCHFILEI|BEFOREMATCHFILE|INSERTBEFOREMATCH|FILEINSERTBEFORE|BEFOREMATCHFILEI|LOOKUPFILE|FILELOOKUP|KVFILEGET|PLATEGET|LOOKUPFILEI|KVFILESET|FILEKVSET|SETKVFILE|PLATESET|KVFILEDEL|FILEKVDEL|DELKVFILE|PLATEDEL|KVFILEINC|INCKVFILE|FILEKVINC|PLATEINC|ENSURELINE|ENSUREFILELINE|ADDIFMISSING|FILEENSURE|HASFILELINE|FILEHASLINE|HASLINEF|HASFILELINEI|WHICH|WHICHBIN|PATHWHICH|BIN|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|ARGC|ARGS|ARGVALL|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|MONOTONIC|NPROC|CPUS|CORES|ISATTY|TTY|LOADAVG|LOAD|UPTIME|BOOTAGE|MEM|MEMINFO|DF|DISKFREE|FSYNC|SYNCFILE|TRUNCATE|FTRUNCATE|FILETRUNC|DIRSYNC|FSYNCDIR|SYNCDIR|HARDLINK|HLINK|NLINK|LINKCOUNT|SAMEINODE|EQINODE|INODE|TEE|WRITETEE|FILEUID|FILEGID|OWNEDBY|CANREAD|CANWRITE|CANEXEC|UNAME|OS|ARCH|MACHINE|PLATFORM|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|LOCAL|LOCALTIME|LOCALDATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT";
 
 /* Fill out with closest SYS op name (or empty). Prefer prefix, then edit dist ≤2. */
 static void sys_suggest_op(const char *typo, char *out, size_t outn){
@@ -5329,6 +5329,138 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->trace)
         fprintf(vm->trace, "# sys %sintree → hit=%ld path=%s icase=%d\n",
                 want_last ? "last" : "first", hit, hr.str, icase);
+      bump(vm); return 1;
+    }
+    /* SYS FIRSTLINEINTREE|GREP1LINETREE|LASTLINEINTREE root needle —
+     * first/last matching *line* under tree. LAST=line · PATH=file · *_HIT · *_I.
+     * FIRSTLINEINTREEI / LASTLINEINTREEI icase. Soft empty/missing.
+     * Usability: one-shot line peel without GREPLINESTREE+TAKE/REVL glue. */
+    if (kw(&L->cur,"FIRSTLINEINTREE") || kw(&L->cur,"GREP1LINETREE") ||
+        kw(&L->cur,"HITLINEINTREE") || kw(&L->cur,"FINDLINEINTREE") ||
+        kw(&L->cur,"TREEFIRSTLINE") ||
+        kw(&L->cur,"FIRSTLINEINTREEI") || kw(&L->cur,"GREP1LINETREEI") ||
+        kw(&L->cur,"HITLINEINTREEI") ||
+        kw(&L->cur,"LASTLINEINTREE") || kw(&L->cur,"GREP1LINETREEL") ||
+        kw(&L->cur,"HITLINEINTREEL") || kw(&L->cur,"TREELASTLINE") ||
+        kw(&L->cur,"LASTLINEINTREEI") || kw(&L->cur,"GREP1LINETREELI") ||
+        kw(&L->cur,"HITLINEINTREELI")){
+      char root[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+      char path[CUBALC_HOST_STR_MAX], line[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr;
+      int icase = 0, want_last = 0;
+      long hit;
+      char *nl;
+      if (kw(&L->cur,"LASTLINEINTREE") || kw(&L->cur,"GREP1LINETREEL") ||
+          kw(&L->cur,"HITLINEINTREEL") || kw(&L->cur,"TREELASTLINE") ||
+          kw(&L->cur,"LASTLINEINTREEI") || kw(&L->cur,"GREP1LINETREELI") ||
+          kw(&L->cur,"HITLINEINTREELI"))
+        want_last = 1;
+      if (kw(&L->cur,"FIRSTLINEINTREEI") || kw(&L->cur,"GREP1LINETREEI") ||
+          kw(&L->cur,"HITLINEINTREEI") || kw(&L->cur,"LASTLINEINTREEI") ||
+          kw(&L->cur,"GREP1LINETREELI") || kw(&L->cur,"HITLINEINTREELI"))
+        icase = 1;
+      lex_next(L);
+      root[0] = 0; needle[0] = 0;
+      if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+        fail(vm, want_last ? "SYS LASTLINEINTREE root needle"
+                           : "SYS FIRSTLINEINTREE root needle");
+        return -1;
+      }
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long nv = parse_expr(vm, L);
+          snprintf(needle, sizeof needle, "%ld", nv);
+        } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+          needle[0] = 0;
+        }
+      }
+      if (!root[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "FIRSTLINEINTREE_N", 0);
+        var_set_num(vm, "FIRSTLINEINTREE_HIT", 0);
+        var_set_num(vm, "LASTLINEINTREE_N", 0);
+        var_set_num(vm, "LASTLINEINTREE_HIT", 0);
+        var_set_str(vm, "FIRSTLINEINTREE_PATH", "");
+        var_set_str(vm, "LASTLINEINTREE_PATH", "");
+        var_set_num(vm, "FIRSTLINEINTREE_I", -1);
+        var_set_num(vm, "LASTLINEINTREE_I", -1);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR",
+                    want_last ? "LASTLINEINTREE: empty path" : "FIRSTLINEINTREE: empty path");
+        var_set_str(vm, "ERR",
+                    want_last ? "LASTLINEINTREE: empty path" : "FIRSTLINEINTREE: empty path");
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_findlineintree(root, needle, icase, want_last, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "FIRSTLINEINTREE_N", 0);
+        var_set_num(vm, "FIRSTLINEINTREE_HIT", 0);
+        var_set_num(vm, "LASTLINEINTREE_N", 0);
+        var_set_num(vm, "LASTLINEINTREE_HIT", 0);
+        var_set_str(vm, "FIRSTLINEINTREE_PATH", "");
+        var_set_str(vm, "LASTLINEINTREE_PATH", "");
+        var_set_num(vm, "FIRSTLINEINTREE_I", -1);
+        var_set_num(vm, "LASTLINEINTREE_I", -1);
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR",
+                      want_last ? "LASTLINEINTREE: fail" : "FIRSTLINEINTREE: fail");
+          var_set_str(vm, "ERR",
+                      want_last ? "LASTLINEINTREE: fail" : "FIRSTLINEINTREE: fail");
+        }
+        bump(vm); return 1;
+      }
+      path[0] = 0; line[0] = 0;
+      hit = hr.n ? 1 : 0;
+      if (hit && hr.str[0]) {
+        nl = strchr(hr.str, '\n');
+        if (nl) {
+          size_t pl = (size_t)(nl - hr.str);
+          if (pl >= sizeof path) pl = sizeof path - 1;
+          memcpy(path, hr.str, pl);
+          path[pl] = 0;
+          snprintf(line, sizeof line, "%s", nl + 1);
+        } else {
+          snprintf(path, sizeof path, "%s", hr.str);
+          line[0] = 0;
+        }
+      }
+      var_set_str(vm, "LAST", line);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", line);
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      if (want_last) {
+        var_set_str(vm, "LASTLINEINTREE", line);
+        var_set_str(vm, "GREP1LINETREEL", line);
+        var_set_str(vm, "LASTLINEINTREE_PATH", path);
+        var_set_num(vm, "LASTLINEINTREE_N", hit);
+        var_set_num(vm, "LASTLINEINTREE_HIT", hit);
+        var_set_num(vm, "LASTLINEINTREE_I", hit ? (long)hr.code : -1);
+      } else {
+        var_set_str(vm, "FIRSTLINEINTREE", line);
+        var_set_str(vm, "GREP1LINETREE", line);
+        var_set_str(vm, "FIRSTLINEINTREE_PATH", path);
+        var_set_num(vm, "FIRSTLINEINTREE_N", hit);
+        var_set_num(vm, "FIRSTLINEINTREE_HIT", hit);
+        var_set_num(vm, "FIRSTLINEINTREE_I", hit ? (long)hr.code : -1);
+      }
+      var_set_str(vm, "PATH", path);
+      var_set_num(vm, "PATH_EXIST", hit);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys %slineintree → hit=%ld path=%s line=%s icase=%d\n",
+                want_last ? "last" : "first", hit, path, line, icase);
       bump(vm); return 1;
     }
     /* SYS SYMLINK|LN|LINK target linkpath — create symlink (plate alias).
@@ -29339,6 +29471,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS LASTINTREE", "SYS LASTINTREE|GREP1TREEL root needle — last match · twin of top-level"},
       {"FIRSTINTREEI", "FIRSTINTREEI case-insensitive FIRSTINTREE"},
       {"LASTINTREEI", "LASTINTREEI case-insensitive LASTINTREE"},
+      {"FIRSTLINEINTREE", "FIRSTLINEINTREE|GREP1LINETREE root needle — first matching line under tree · PATH+HIT"},
+      {"SYS FIRSTLINEINTREE", "SYS FIRSTLINEINTREE|GREP1LINETREE root needle — first line · twin of top-level"},
+      {"LASTLINEINTREE", "LASTLINEINTREE|GREP1LINETREEL root needle — last matching line under tree · PATH+HIT"},
+      {"SYS LASTLINEINTREE", "SYS LASTLINEINTREE|GREP1LINETREEL root needle — last line · twin of top-level"},
+      {"FIRSTLINEINTREEI", "FIRSTLINEINTREEI case-insensitive FIRSTLINEINTREE"},
+      {"LASTLINEINTREEI", "LASTLINEINTREEI case-insensitive LASTLINEINTREE"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -35639,6 +35777,139 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# %sintree → hit=%ld path=%s icase=%d\n",
               want_last ? "last" : "first", hit, hr.str, icase);
+    bump(vm); return 1;
+  }
+  /* FIRSTLINEINTREE|GREP1LINETREE|LASTLINEINTREE root needle —
+   * Twin of SYS FIRSTLINEINTREE/LASTLINEINTREE. LAST=line · PATH=file · *_HIT · *_I.
+   * FIRSTLINEINTREEI / LASTLINEINTREEI icase. Soft empty/missing.
+   * Usability: one-shot line peel without GREPLINESTREE+TAKE/REVL glue. */
+  if (kw(&L->cur,"FIRSTLINEINTREE") || kw(&L->cur,"GREP1LINETREE") ||
+      kw(&L->cur,"HITLINEINTREE") || kw(&L->cur,"FINDLINEINTREE") ||
+      kw(&L->cur,"TREEFIRSTLINE") ||
+      kw(&L->cur,"FIRSTLINEINTREEI") || kw(&L->cur,"GREP1LINETREEI") ||
+      kw(&L->cur,"HITLINEINTREEI") ||
+      kw(&L->cur,"LASTLINEINTREE") || kw(&L->cur,"GREP1LINETREEL") ||
+      kw(&L->cur,"HITLINEINTREEL") || kw(&L->cur,"TREELASTLINE") ||
+      kw(&L->cur,"LASTLINEINTREEI") || kw(&L->cur,"GREP1LINETREELI") ||
+      kw(&L->cur,"HITLINEINTREELI")){
+    char root[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+    char path[CUBALC_HOST_STR_MAX], line[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int icase = 0, want_last = 0;
+    long hit;
+    char *nl;
+    if (kw(&L->cur,"LASTLINEINTREE") || kw(&L->cur,"GREP1LINETREEL") ||
+        kw(&L->cur,"HITLINEINTREEL") || kw(&L->cur,"TREELASTLINE") ||
+        kw(&L->cur,"LASTLINEINTREEI") || kw(&L->cur,"GREP1LINETREELI") ||
+        kw(&L->cur,"HITLINEINTREELI"))
+      want_last = 1;
+    if (kw(&L->cur,"FIRSTLINEINTREEI") || kw(&L->cur,"GREP1LINETREEI") ||
+        kw(&L->cur,"HITLINEINTREEI") || kw(&L->cur,"LASTLINEINTREEI") ||
+        kw(&L->cur,"GREP1LINETREELI") || kw(&L->cur,"HITLINEINTREELI"))
+      icase = 1;
+    lex_next(L);
+    root[0] = 0; needle[0] = 0;
+    if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+      fail_at(vm, L, want_last
+              ? "LASTLINEINTREE needs root needle — LASTLINEINTREE \"logs\" \"error\""
+              : "FIRSTLINEINTREE needs root needle — FIRSTLINEINTREE \"logs\" \"error\"");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+        L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+    }
+    if (!root[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FIRSTLINEINTREE_N", 0);
+      var_set_num(vm, "FIRSTLINEINTREE_HIT", 0);
+      var_set_num(vm, "LASTLINEINTREE_N", 0);
+      var_set_num(vm, "LASTLINEINTREE_HIT", 0);
+      var_set_str(vm, "FIRSTLINEINTREE_PATH", "");
+      var_set_str(vm, "LASTLINEINTREE_PATH", "");
+      var_set_num(vm, "FIRSTLINEINTREE_I", -1);
+      var_set_num(vm, "LASTLINEINTREE_I", -1);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  want_last ? "LASTLINEINTREE: empty path" : "FIRSTLINEINTREE: empty path");
+      var_set_str(vm, "ERR",
+                  want_last ? "LASTLINEINTREE: empty path" : "FIRSTLINEINTREE: empty path");
+      bump(vm); return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_findlineintree(root, needle, icase, want_last, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FIRSTLINEINTREE_N", 0);
+      var_set_num(vm, "FIRSTLINEINTREE_HIT", 0);
+      var_set_num(vm, "LASTLINEINTREE_N", 0);
+      var_set_num(vm, "LASTLINEINTREE_HIT", 0);
+      var_set_str(vm, "FIRSTLINEINTREE_PATH", "");
+      var_set_str(vm, "LASTLINEINTREE_PATH", "");
+      var_set_num(vm, "FIRSTLINEINTREE_I", -1);
+      var_set_num(vm, "LASTLINEINTREE_I", -1);
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR",
+                    want_last ? "LASTLINEINTREE: fail" : "FIRSTLINEINTREE: fail");
+        var_set_str(vm, "ERR",
+                    want_last ? "LASTLINEINTREE: fail" : "FIRSTLINEINTREE: fail");
+      }
+      bump(vm); return 1;
+    }
+    path[0] = 0; line[0] = 0;
+    hit = hr.n ? 1 : 0;
+    if (hit && hr.str[0]) {
+      nl = strchr(hr.str, '\n');
+      if (nl) {
+        size_t pl = (size_t)(nl - hr.str);
+        if (pl >= sizeof path) pl = sizeof path - 1;
+        memcpy(path, hr.str, pl);
+        path[pl] = 0;
+        snprintf(line, sizeof line, "%s", nl + 1);
+      } else {
+        snprintf(path, sizeof path, "%s", hr.str);
+        line[0] = 0;
+      }
+    }
+    var_set_str(vm, "LAST", line);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", line);
+    vm->last_n = hit;
+    var_set_num(vm, "LAST_N", hit);
+    if (want_last) {
+      var_set_str(vm, "LASTLINEINTREE", line);
+      var_set_str(vm, "GREP1LINETREEL", line);
+      var_set_str(vm, "LASTLINEINTREE_PATH", path);
+      var_set_num(vm, "LASTLINEINTREE_N", hit);
+      var_set_num(vm, "LASTLINEINTREE_HIT", hit);
+      var_set_num(vm, "LASTLINEINTREE_I", hit ? (long)hr.code : -1);
+    } else {
+      var_set_str(vm, "FIRSTLINEINTREE", line);
+      var_set_str(vm, "GREP1LINETREE", line);
+      var_set_str(vm, "FIRSTLINEINTREE_PATH", path);
+      var_set_num(vm, "FIRSTLINEINTREE_N", hit);
+      var_set_num(vm, "FIRSTLINEINTREE_HIT", hit);
+      var_set_num(vm, "FIRSTLINEINTREE_I", hit ? (long)hr.code : -1);
+    }
+    var_set_str(vm, "PATH", path);
+    var_set_num(vm, "PATH_EXIST", hit);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %slineintree → hit=%ld path=%s line=%s icase=%d\n",
+              want_last ? "last" : "first", hit, path, line, icase);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]

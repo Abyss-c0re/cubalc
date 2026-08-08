@@ -79,6 +79,11 @@ int cubalc_host_greplines_tree(const char *root, const char *needle, int icase,
  * Empty needle → first/last readable regular file. */
 int cubalc_host_findintree(const char *root, const char *needle, int icase,
                            int want_last, cubalc_host_result *r);
+/* first or last matching *line* under root (sorted DFS).
+ * want_last=0 first, =1 last. On hit: r->str = "path\\nline", r->n=1, r->code=0-based line idx.
+ * Soft miss root → -1. Empty needle → first/last line of first/last readable file. */
+int cubalc_host_findlineintree(const char *root, const char *needle, int icase,
+                               int want_last, cubalc_host_result *r);
 /* rename/move path; soft miss if from missing */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */

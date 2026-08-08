@@ -1,0 +1,121 @@
+# FIRSTLINEINTREE / LASTLINEINTREE / GREP1LINETREE — first/last matching line under tree
+# One-shot line peel without GREPLINESTREE+TAKE/REVL glue. PATH + HIT + I.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_flit_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# nested files · sorted DFS: a/b/mid before a/err · multi-line content
+SYS JOIN base "a/b/mid.txt"
+WRITEOUT LAST "noise\nerror first-line\nok mid"
+ASSERT OK == 1
+SYS JOIN base "a/b/z.txt"
+WRITEOUT LAST "error z-line"
+ASSERT OK == 1
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "info\nerror last-line\ntrailer"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "ok only"
+ASSERT OK == 1
+
+# first matching line — under a/b/mid.txt line 1 (0-based)
+FIRSTLINEINTREE base "error"
+ASSERT OK == 1
+ASSERT FIRSTLINEINTREE_HIT == 1
+ASSERT LAST_N == 1
+ASSERT LAST == "error first-line"
+SYS ENDS FIRSTLINEINTREE_PATH "mid.txt"
+ASSERT LAST_N == 1
+ASSERT FIRSTLINEINTREE_I == 1
+
+# last matching line — a/err.log after a/b/* → "error last-line"
+LASTLINEINTREE base "error"
+ASSERT OK == 1
+ASSERT LASTLINEINTREE_HIT == 1
+ASSERT LAST == "error last-line"
+SYS ENDS LASTLINEINTREE_PATH "err.log"
+ASSERT LAST_N == 1
+ASSERT LASTLINEINTREE_I == 1
+
+# GREP1LINETREE alias
+GREP1LINETREE base "z-line"
+ASSERT OK == 1
+ASSERT FIRSTLINEINTREE_HIT == 1
+ASSERT LAST == "error z-line"
+SYS ENDS FIRSTLINEINTREE_PATH "z.txt"
+ASSERT LAST_N == 1
+
+# no match
+FIRSTLINEINTREE base "zzzz_nope"
+ASSERT OK == 1
+ASSERT FIRSTLINEINTREE_HIT == 0
+ASSERT LAST_N == 0
+ASSERT LAST == ""
+ASSERT FIRSTLINEINTREE_PATH == ""
+ASSERT FIRSTLINEINTREE_I == -1
+
+# case-insensitive
+FIRSTLINEINTREEI base "ERROR"
+ASSERT OK == 1
+ASSERT FIRSTLINEINTREE_HIT == 1
+ASSERT LAST == "error first-line"
+LASTLINEINTREEI base "ERROR"
+ASSERT OK == 1
+ASSERT LAST == "error last-line"
+
+# single file root
+SYS JOIN base "plain.txt"
+LET p = LAST
+FIRSTLINEINTREE p "ok"
+ASSERT OK == 1
+ASSERT FIRSTLINEINTREE_HIT == 1
+ASSERT LAST == "ok only"
+FIRSTLINEINTREE p "error"
+ASSERT OK == 1
+ASSERT FIRSTLINEINTREE_HIT == 0
+
+# exact line body + SYS form
+FIRSTLINEINTREE base "ok mid"
+ASSERT OK == 1
+ASSERT FIRSTLINEINTREE_HIT == 1
+ASSERT LAST == "ok mid"
+
+SYS FIRSTLINEINTREE base "z-line"
+ASSERT OK == 1
+ASSERT FIRSTLINEINTREE_N == 1
+ASSERT LAST == "error z-line"
+SYS LASTLINEINTREE base "first-line"
+ASSERT OK == 1
+ASSERT LASTLINEINTREE_N == 1
+ASSERT LAST == "error first-line"
+
+# missing soft
+FIRSTLINEINTREE "/no/such/firstlineintree" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty soft
+FIRSTLINEINTREE "" "x"
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+RMTREE base
+ASSERT OK == 1
+
+PRINT "firstlineintree ok"
+ASSERT OK == 1
