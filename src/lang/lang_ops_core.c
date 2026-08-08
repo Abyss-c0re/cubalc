@@ -26619,6 +26619,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASARGC", "HASARGC [min] — soft 0|1 if ARGC >= min (default 1)"},
       {"HASFLAG", "HASFLAG name[,|alt] — soft 0|1 if any alias --name/-name · FLAG_HIT_NAME"},
       {"GETFLAG", "GETFLAG name[,|alt] [OR ENV n]* [OR fb] — string peel · CLI>ENV>default · GETFLAG_SRC"},
+      {"GETFLAGPATH", "GETFLAGPATH|FLAGPATH name[,|alt] [OR ENV n]* [OR path] — path peel + ABSPATH · EXIST"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -29546,6 +29547,124 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", (hit || (have_fb && val[0])) ? 1 : (have_fb ? 1 : 0));
     if (vm->trace)
       fprintf(vm->trace, "# getflag %s hit=%s → %s src=%s\n", name, hitnm, val, src_tag);
+    bump(vm); return 1;
+  }
+  /* GETFLAGPATH|FLAGPATH|PATHFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT path]
+   * Peel CLI path flag then ABSPATH (realpath if exists, else cwd-join).
+   * LAST = absolute path · GETFLAGPATH_EXIST 0|1 · GETFLAGPATH_SRC cli|env|default.
+   * Usability: --conf path without GETFLAG + SYS REALPATH glue. */
+  if (kw(&L->cur,"GETFLAGPATH") || kw(&L->cur,"FLAGPATH") || kw(&L->cur,"PATHFLAG") ||
+      kw(&L->cur,"GETOPTPATH") || kw(&L->cur,"FILEFLAG") || kw(&L->cur,"GETFLAG_PATH") ||
+      kw(&L->cur,"CONFFLAG") || kw(&L->cur,"PATHOPT")){
+    char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX], fb[512];
+    char env_used[96], src_tag[16], absbuf[CUBALC_HOST_STR_MAX];
+    int hit, have_fb = 0, nac, from_env = 0, exist = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    val[0] = 0;
+    fb[0] = 0;
+    env_used[0] = 0;
+    absbuf[0] = 0;
+    snprintf(src_tag, sizeof src_tag, "%s", "none");
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      fail_at(vm, L, "GETFLAGPATH needs name — GETFLAGPATH conf|c OR ENV CONFIG OR \"cfg.json\"");
+      return -1;
+    }
+    while (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+           kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (kw(&L->cur,"ENV") || kw(&L->cur,"FROMENV") || kw(&L->cur,"ENVOR") ||
+          kw(&L->cur,"GETENV") || kw(&L->cur,"ENV_GET")){
+        char en[96];
+        const char *ev;
+        lex_next(L);
+        en[0] = 0;
+        while (L->cur.kind == TK_MINUS) lex_next(L);
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          snprintf(en, sizeof en, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail_at(vm, L, "GETFLAGPATH OR ENV NAME");
+          return -1;
+        }
+        if (!have_fb && en[0]) {
+          ev = getenv(en);
+          if (ev && ev[0]) {
+            snprintf(fb, sizeof fb, "%s", ev);
+            have_fb = 1;
+            from_env = 1;
+            snprintf(env_used, sizeof env_used, "%s", en);
+          }
+        }
+        continue;
+      }
+      {
+        char lit[512];
+        lit[0] = 0;
+        if (resolve_str_arg(vm, L, lit, sizeof lit) != 0) {
+          fail_at(vm, L, "GETFLAGPATH name OR \"fallback\"");
+          return -1;
+        }
+        if (!have_fb) {
+          snprintf(fb, sizeof fb, "%s", lit);
+          have_fb = 1;
+          from_env = 0;
+        }
+      }
+      break;
+    }
+    hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
+    if (!hit) {
+      if (have_fb)
+        snprintf(val, sizeof val, "%s", fb);
+      else
+        val[0] = 0;
+    }
+    if (hit)
+      snprintf(src_tag, sizeof src_tag, "%s", "cli");
+    else if (have_fb && from_env)
+      snprintf(src_tag, sizeof src_tag, "%s", "env");
+    else if (have_fb)
+      snprintf(src_tag, sizeof src_tag, "%s", "default");
+    else
+      snprintf(src_tag, sizeof src_tag, "%s", "none");
+    if (val[0]) {
+      exist = cubalc_host_exists(val) ? 1 : 0;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(val, &hr) == 0 && hr.str[0])
+        snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+      else
+        snprintf(absbuf, sizeof absbuf, "%s", val);
+    } else {
+      exist = 0;
+      absbuf[0] = 0;
+    }
+    var_set_str(vm, "LAST", absbuf);
+    var_set_str(vm, "FLAG", absbuf);
+    var_set_str(vm, "GETFLAGPATH", name);
+    var_set_str(vm, "FLAGPATH", absbuf);
+    var_set_str(vm, "PATH", absbuf);
+    var_set_str(vm, "GETFLAGPATH_RAW", val);
+    var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
+    var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+    var_set_str(vm, "GETFLAGPATH_SRC", src_tag);
+    var_set_str(vm, "FLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_ENV", (!hit && from_env) ? env_used : "");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absbuf);
+    vm->last_n = (long)strlen(absbuf);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "GETFLAGPATH_N", vm->last_n);
+    var_set_num(vm, "GETFLAGPATH_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "GETFLAGPATH_EXIST", (long)exist);
+    var_set_num(vm, "PATH_EXIST", (long)exist);
+    var_set_num(vm, "OK", (hit || (have_fb && val[0])) ? 1 : (have_fb ? 1 : 0));
+    if (vm->trace)
+      fprintf(vm->trace, "# getflagpath %s hit=%s exist=%d → %s src=%s\n",
+              name, hitnm, exist, absbuf, src_tag);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]
