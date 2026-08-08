@@ -1,0 +1,142 @@
+# EQTREE / SAMETREE / CMPTREE — recursive structure + content equality
+# Verify CPTREE snapshots without shell diff -r or EACH+EQFILE glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_eqt_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+SYS JOIN base "a"
+LET ta = LAST
+SYS JOIN base "b"
+LET tb = LAST
+SYS JOIN base "c"
+LET tc = LAST
+
+# build tree a
+SYS JOIN ta "x/y.txt"
+WRITEOUT LAST "hello"
+ASSERT OK == 1
+SYS JOIN ta "x/z.txt"
+WRITEOUT LAST "world"
+ASSERT OK == 1
+SYS JOIN ta "empty"
+SYS MKDIR LAST
+ASSERT OK == 1
+SYS JOIN ta "root.dat"
+SYS WRITE LAST "top"
+ASSERT OK == 1
+
+# identical snapshot via CPTREE
+CPTREE ta tb
+ASSERT OK == 1
+
+# equal trees
+EQTREE ta tb
+ASSERT OK == 1
+ASSERT EQTREE == 1
+ASSERT LAST_N == 1
+ASSERT EQTREE_DIFF == ""
+ASSERT EQTREE_REASON == ""
+
+# self-equal
+EQTREE ta ta
+ASSERT OK == 1
+ASSERT EQTREE == 1
+
+# content differ
+CPTREE ta tc
+ASSERT OK == 1
+SYS JOIN tc "x/y.txt"
+SYS WRITE LAST "HELLO"
+ASSERT OK == 1
+EQTREE ta tc
+ASSERT OK == 1
+ASSERT EQTREE == 0
+ASSERT LAST_N == 0
+SYS HAS EQTREE_DIFF "y.txt"
+ASSERT LAST_N == 1
+SYS EQS EQTREE_REASON "content"
+ASSERT LAST_N == 1
+
+# missing entry in b
+SYS JOIN tc "x/y.txt"
+SYS WRITE LAST "hello"
+ASSERT OK == 1
+SYS JOIN tc "x/z.txt"
+SYS RM LAST
+ASSERT OK == 1
+EQTREE ta tc
+ASSERT OK == 1
+ASSERT EQTREE == 0
+SYS HAS EQTREE_REASON "missing"
+ASSERT LAST_N == 1
+
+# extra entry in b
+SYS JOIN tc "x/z.txt"
+SYS WRITE LAST "world"
+ASSERT OK == 1
+SYS JOIN tc "x/extra.txt"
+SYS WRITE LAST "extra"
+ASSERT OK == 1
+EQTREE ta tc
+ASSERT OK == 1
+ASSERT EQTREE == 0
+SYS EQS EQTREE_REASON "extra_b"
+ASSERT LAST_N == 1
+SYS HAS EQTREE_DIFF "extra"
+ASSERT LAST_N == 1
+
+# file-only compare (dual of EQFILE for single files via tree form)
+SYS JOIN base "f1"
+LET f1 = LAST
+SYS JOIN base "f2"
+LET f2 = LAST
+SYS WRITE f1 "same"
+SYS WRITE f2 "same"
+EQTREE f1 f2
+ASSERT OK == 1
+ASSERT EQTREE == 1
+SYS WRITE f2 "diff"
+EQTREE f1 f2
+ASSERT OK == 1
+ASSERT EQTREE == 0
+SYS EQS EQTREE_REASON "content"
+ASSERT LAST_N == 1
+
+# SYS + SAMETREE alias
+SYS EQTREE ta tb
+ASSERT OK == 1
+ASSERT SAMETREE == 1
+SAMETREE ta tb
+ASSERT OK == 1
+ASSERT EQTREE_N == 1
+
+# missing soft
+EQTREE ta "/no/such/eqtree/b"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty soft
+EQTREE "" tb
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+RMTREE base
+ASSERT OK == 1
+
+PRINT "eqtree ok"
+ASSERT OK == 1

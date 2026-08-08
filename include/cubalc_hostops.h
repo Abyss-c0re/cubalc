@@ -50,6 +50,10 @@ int cubalc_host_mvtree(const char *src, const char *dst, cubalc_host_result *r);
 /* recursive path size: r->n = total file bytes; r->code packs files|(dirs<<16).
  * File → own size; dir → sum children. Soft miss → error. Does not follow dir symlinks. */
 int cubalc_host_dirsize(const char *path, cubalc_host_result *r);
+/* recursive tree equality: structure + file content. r->n = 1 equal / 0 differ.
+ * r->str = first relative path that differs ("" if equal). r->err = reason when differ.
+ * Soft miss either root → return -1. Does not follow dir symlinks. */
+int cubalc_host_eqtree(const char *a, const char *b, cubalc_host_result *r);
 /* rename/move path; soft miss if from missing */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */
