@@ -1,0 +1,543 @@
+# report_out_export_board.cubalc — GETFLAGOUT + NTHPOSPATH report export
+#
+# Real use: ops agents export a one-shot digest from an input path into
+# --report=nested/out.json without shell dirname+mkdir+realpath glue:
+#   GETFLAGOUT / FLAGOUT report|r OR ENV REPORT — abs file + parent mkdir (1015)
+#   NTHPOSPATH / POSNPATH — Nth positional → abs path + EXIST (1013)
+#   ENSUREPARENT optional re-ensure (1014); WRITE digest plate
+#   SUBCMD peels verb — NTHPOSPATH 0 is often the verb (peel index 1)
+#
+# First realworld GETFLAGOUT + NTHPOSPATH + ENSUREPARENT board (1013-1015).
+# Distinct from stage_outdir (GETFLAGDIR+RESTPATHS multi) and chunk_path_pages:
+# this board is *single input + report file WRITE with parent ensure*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_roe_$$
+#   export REPORT=/tmp/roe_$$/digest.json
+#   ./out/cubalc run programs/realworld/report_out_export_board.cubalc \
+#     export -- --report=/tmp/roe_$$/d.json Makefile
+#   ./out/cubalc run ... list
+#
+# Plate: EXPORTS.txt VAL.txt META.txt ROE_REPORT.txt (+ external report file)
+# Subcmds: list|ls export drop has gate soft clear probe
+# Env: REPORT CUBALC_ROE_REQUIRE CUBALC_ROE_MIN
+#
+# Edges:
+#   GETFLAGOUT creates parent; CREATED 0|1; LAST=file not dir; WRITE ready
+#   NTHPOSPATH 0 after SUBCMD = verb path (W61 class) — use index 1 when sub_hit
+#   missing input EXIST=0 soft; REQUIRE wall optional
+#   W47 lean LET; GREPV plate; WRITE NL
+#   known latch
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "report_out_export_board: start"
+DEFAULT ACTION = "list"
+DEFAULT TFILE = "EXPORTS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "ROE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "report_out_export -- export|list|drop -- [--report=FILE] [input]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+LET sub_hit = SUBCMD_HIT
+CLEAR_ERR
+
+# report file path (parent mkdir built-in)
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "exports/latest.json"
+LET def_out = LAST
+CLEAR_ERR
+GETFLAGOUT report|r OR ENV REPORT OR def_out
+LET out_file = LAST
+LET o_src = GETFLAGOUT_SRC
+LET o_created = GETFLAGOUT_CREATED
+LET o_exist = GETFLAGOUT_EXIST
+LET o_ok = OK
+CLEAR_ERR
+
+# input: after SUBCMD first file is NTHPOSPATH 1 (0 is verb)
+LET in_path = ""
+LET in_exist = 0
+LET in_hit = 0
+IF sub_hit == 1 THEN
+  NTHPOSPATH 1 OR ""
+ELSE
+  NTHPOSPATH 0 OR ""
+END
+IF LAST_N > 0 THEN
+  LET in_path = LAST
+  LET in_exist = NTHPOSPATH_EXIST
+  LET in_hit = NTHPOSPATH_HIT
+END
+CLEAR_ERR
+
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+LET targets = RESTPOS
+
+SYS ENV "CUBALC_ROE_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_ROE_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir TFILE
+LET exp_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR exp_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET row = ""
+LET pref = ""
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET nbytes = 0
+LET op = "unknown"
+LET val = ""
+LET meta = ""
+LET name = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "export", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "export" THEN
+    LET op = "export"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "bag_n"
+  SYS STR bag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON bag_n o_src o_created o_exist in_hit in_exist
+  CLEAR_ERR
+END
+
+SYS EQS op "export"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF in_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "export needs input"
+    FAIL "export needs input"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      REQUIRE RESTPOS 1
+    END
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "export needs input"
+    END
+  ELSE
+    IF in_exist == 0 THEN
+      LET miss = 1
+      LET note_msg = "export input missing"
+      FAIL "export input missing"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "export input missing"
+      END
+    ELSE
+      IF o_ok == 0 THEN
+        LET miss = 1
+        LET note_msg = "export needs report path"
+        FAIL "export needs report path"
+        CLEAR_ERR
+      ELSE
+        SYS SIZE in_path
+        LET nbytes = LAST_N
+        CLEAR_ERR
+        SYS BASENAME in_path
+        LET name = LAST
+        # digest line for external report file
+        SYS CAT "schema=cubalc.report_export.v1 name="
+        LET row = LAST
+        SYS CAT row name
+        LET row = LAST
+        SYS CAT row " bytes="
+        LET row = LAST
+        SYS STR nbytes
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row " src="
+        LET row = LAST
+        SYS CAT row in_path
+        LET row = LAST
+        # GETFLAGOUT already ensured parent; optional ENSUREPARENT re-check
+        ENSUREPARENT out_file
+        CLEAR_ERR
+        SYS WRITE out_file row
+        EXPECT OK == 1
+        IF OK == 0 THEN
+          EXIT 2 "report write failed"
+        END
+        CLEAR_ERR
+        # plate inventory: name:bytes:report:exported
+        SYS CAT name ":"
+        LET pref = LAST
+        SYS GREPV pref bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS CAT name ":"
+        LET row = LAST
+        SYS STR nbytes
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS CAT row out_file
+        LET row = LAST
+        SYS CAT row ":exported"
+        LET row = LAST
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+        LET admit_n = 1
+        SYS LINES bag
+        LET bag_n = LAST_N
+        LET hit = 1
+        LET note_msg = "export ok"
+        LET val = bag
+        LET val_ch = 1
+        LET meta = "out"
+        SYS PUSH meta out_file
+        LET meta = LAST
+        SYS PUSH meta "in"
+        LET meta = LAST
+        SYS PUSH meta in_path
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n nbytes o_src o_created in_exist
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs name"
+    FAIL "drop needs name"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET pref = LAST
+    SYS CAT pref ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "drop"
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET pref = LAST
+  SYS BLANK pref
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs name"
+    FAIL "has needs name"
+    CLEAR_ERR
+  ELSE
+    SYS CAT pref ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    LET val = pref
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  SYS STR bag_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "gate"
+  LET meta_ch = 1
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    LET meta_ch = 1
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has exports"
+    LET val = bag
+    LET val_ch = 1
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # NTHPOSPATH 0 is verb when subcmd used — surface the class
+  NTHPOSPATH 0 OR ""
+  LET pref = LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = pref
+  LET val_ch = 1
+  LET meta = "nth0"
+  SYS PUSH meta pref
+  LET meta = LAST
+  SYS PUSH meta "in"
+  LET meta = LAST
+  SYS PUSH meta in_path
+  LET meta = LAST
+  SYS PUSH meta "out"
+  LET meta = LAST
+  SYS PUSH meta out_file
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON sub_hit in_hit in_exist o_created o_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET val = ""
+  LET meta = ""
+  LET bag_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE exp_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "exports write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+LET meta = "schema=cubalc.report_out_export_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "out"
+LET meta = LAST
+SYS PUSH meta out_file
+LET meta = LAST
+SYS PUSH meta "o_src"
+LET meta = LAST
+SYS PUSH meta o_src
+LET meta = LAST
+SYS PUSH meta "in"
+LET meta = LAST
+SYS PUSH meta in_path
+LET meta = LAST
+SYS PUSH meta "bag_n"
+LET meta = LAST
+SYS STR bag_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+
+NOTE "report_out_export_board: done"
+PRINT_JSON hit miss bag_n nbytes o_src o_created in_exist note_msg
+EXIT 0

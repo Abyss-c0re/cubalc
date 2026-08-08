@@ -1,59 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 171,
-  "program": "programs/realworld/stage_outdir_intake_board.cubalc",
-  "theme": "GETFLAGDIR + RESTPATHS staging intake (mkdir -p out + abs path bag)",
-  "version": "1.15.462-usability",
+  "iter": 172,
+  "program": "programs/realworld/report_out_export_board.cubalc",
+  "theme": "GETFLAGOUT + NTHPOSPATH report export (file WRITE + parent mkdir + abs input)",
+  "version": "1.15.465-usability",
   "pass": true,
-  "prior_note": "iter 170 GETFLAGPATH+DIVCEILN; this iter first realworld GETFLAGDIR(1011)+RESTPATHS(1012)",
+  "prior_note": "iter 171 GETFLAGDIR+RESTPATHS; this iter first realworld GETFLAGOUT(1015)+NTHPOSPATH(1013)+ENSUREPARENT(1014)",
   "tests": [
     {
       "name": "list_default",
-      "cmd": "list \u2192 o_src default creates stage_out under STATE",
+      "cmd": "list \u2192 o_src default creates exports/latest.json parent",
       "ok": true,
-      "note": "GETFLAGDIR"
+      "note": "GETFLAGOUT"
     },
     {
-      "name": "stage_cli",
-      "cmd": "stage -- --out=DIR Makefile include/cubalc_law.h \u2192 admit 2",
+      "name": "export_cli",
+      "cmd": "export -- --report=FILE Makefile \u2192 digest + plate",
       "ok": true,
-      "note": "RESTPATHS"
+      "note": "WRITE"
     },
     {
-      "name": "rows_abs",
-      "cmd": "STAGE basename:/abs/path:staged",
+      "name": "row_abs",
+      "cmd": "EXPORTS Makefile:bytes:abs_report:exported",
       "ok": true,
       "note": "plate"
     },
     {
       "name": "has_drop",
-      "cmd": "has Makefile; drop Makefile",
+      "cmd": "has/drop Makefile",
       "ok": true,
       "note": "ops"
     },
     {
-      "name": "empty_require",
-      "cmd": "stage empty soft; REQUIRE RESTPOS",
+      "name": "miss_empty_req",
+      "cmd": "missing input soft; empty RESTPOS; REQUIRE",
       "ok": true,
-      "note": "RESTPOS"
+      "note": "soft"
     },
     {
-      "name": "env_outdir",
-      "cmd": "OUTDIR=... stage Makefile \u2192 o_src env",
+      "name": "env_report",
+      "cmd": "REPORT=... export Makefile \u2192 o_src env",
       "ok": true,
       "note": "ENV"
     },
     {
-      "name": "miss_exist",
-      "cmd": "missing+Makefile \u2192 path_n 2 exist_n 1",
+      "name": "probe_nth0",
+      "cmd": "probe sub_hit=1; NTHPOSPATH 0 is verb path",
       "ok": true,
-      "note": "EXIST"
-    },
-    {
-      "name": "probe_gate_soft",
-      "cmd": "probe/gate/soft/clear",
-      "ok": true,
-      "note": "ops"
+      "note": "W64"
     },
     {
       "name": "selftest",
@@ -566,24 +560,48 @@
       "title": "RESTPATHS missing inputs still absolute; EXIST_N soft",
       "detail": "Positive: no/such/x.bin + Makefile \u2192 path_n=2 exist_n=1 after subcmd peel; abs paths always. Good for inventory plates without hard fail.",
       "repro": "stage --out=D no/such Makefile \u2192 exist_n 1"
+    },
+    {
+      "id": "W64",
+      "severity": "high",
+      "area": "lang|nthpospath",
+      "title": "NTHPOSPATH 0 is SUBCMD verb abs path (same class as RESTPATHS W61)",
+      "detail": "export -- Makefile \u2192 NTHPOSPATH 0 = .../export EXIST=0; first file is NTHPOSPATH 1. Agents must use index 1 when SUBCMD_HIT, or peel verb. Probe confirmed nth0 ends with action name.",
+      "repro": "SUBCMD export file; NTHPOSPATH 0 \u2192 verb; NTHPOSPATH 1 \u2192 file"
+    },
+    {
+      "id": "W65",
+      "severity": "low",
+      "area": "lang|getflagout",
+      "title": "GETFLAGOUT peels --report to abs file + mkdir parent for WRITE",
+      "detail": "Positive: CLI/ENV/default create parent CREATED=1; LAST is file path not dir; WRITE digest works; second call CREATED=0 EXIST=1 when file present. Twin of GETFLAGDIR (dir) vs GETFLAGOUT (file).",
+      "repro": "GETFLAGOUT report OR ENV REPORT OR nested/out.json \u2192 WRITE LAST"
+    },
+    {
+      "id": "W66",
+      "severity": "low",
+      "area": "lang|ensureparent",
+      "title": "ENSUREPARENT re-ensure after GETFLAGOUT is idempotent CREATED=0",
+      "detail": "Positive: GETFLAGOUT already mkdirs parent; ENSUREPARENT out_file OK CREATED often 0. Useful dual for GETFLAGPATH+WRITE paths without FLAGOUT.",
+      "repro": "GETFLAGOUT then ENSUREPARENT LAST"
     }
   ],
   "workarounds": [
-    "GETFLAGDIR out|o OR ENV OUTDIR OR def; check CREATED/ISDIR",
-    "RESTPATHS after SUBCMD; DROPNTH 0 when basename==ACTION (W61)",
-    "stage up to 2 files via NTH (avoid EACH W47); GREPV basename: upsert",
-    "cubalc run prog stage -- --out=DIR file1 file2"
+    "GETFLAGOUT report|r OR ENV REPORT OR def nested file",
+    "NTHPOSPATH 1 when SUBCMD_HIT else NTHPOSPATH 0 (W64)",
+    "ENSUREPARENT out_file before WRITE; SIZE input for digest",
+    "cubalc run prog export -- --report=PATH input"
   ],
   "language_gaps": [
-    "RESTPATHS after SUBCMD should exclude verb (or RESTPATHS AFTER SUBCMD form)",
-    "RESTPATHS_EXIST_N recompute after bag peel",
-    "Cookbook: staging intake with GETFLAGDIR+RESTPATHS"
+    "NTHPOSPATH after SUBCMD should skip verb (or NTHPOSPATH REST form)",
+    "Cookbook: report export with GETFLAGOUT+NTHPOSPATH",
+    "RESTPATHS/NTHPOSPATH SUBCMD peel consistency"
   ],
   "issues_faced": [
-    "RESTPATHS includes stage verb \u2014 DROPNTH peel (W61)",
-    "GETFLAGDIR mkdir -p + RESTPATHS multi abs inventory green",
+    "NTHPOSPATH 0 = export verb \u2014 use index 1 (W64)",
+    "GETFLAGOUT WRITE digest + ENSUREPARENT green",
     "selftest 355/355"
   ],
-  "commit": "1fe2652d684e250f8a95f11dce77cd1328235497",
-  "ts": "2026-08-08T02:56:00Z"
+  "commit": "",
+  "ts": "2026-08-08T03:18:50Z"
 }
