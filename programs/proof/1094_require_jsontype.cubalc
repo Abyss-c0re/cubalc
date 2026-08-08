@@ -1,0 +1,100 @@
+# REQUIRE JSONTYPE / JTYPE — fail-fast plate field type contracts
+# Soft twin: SYS JSONTYPE. Error: key is got, want expected.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "n" 42 "s" "hi" "ok" true "nil" null "meta" RAW "{\"a\":1}" "xs" RAW "[1,2]"
+LET plate = LAST
+
+# num
+REQUIRE JSONTYPE plate "n" num
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONTYPE_N == 1
+ASSERT REQUIRE_JSONTYPE == 1
+SYS EQS JSONTYPE "num"
+ASSERT LAST_N == 1
+SYS EQS JSONTYPE_KEY "n"
+ASSERT LAST_N == 1
+SYS EQS JSONTYPE_WANT "num"
+ASSERT LAST_N == 1
+
+# aliases of kind names
+REQUIRE JSONTYPE plate "n" number
+ASSERT OK == 1
+REQUIRE JSONTYPE plate "n" int
+ASSERT OK == 1
+
+# str
+REQUIRE JSONTYPE plate "s" str
+ASSERT OK == 1
+ASSERT LAST_N == 2
+REQUIRE JSONTYPE plate "s" string
+ASSERT OK == 1
+
+# bool
+REQUIRE JSONTYPE plate "ok" bool
+ASSERT OK == 1
+ASSERT LAST_N == 3
+REQUIRE JSONTYPE plate "ok" boolean
+ASSERT OK == 1
+
+# null
+REQUIRE JSONTYPE plate "nil" null
+ASSERT OK == 1
+ASSERT LAST_N == 4
+
+# obj / arr
+REQUIRE JSONTYPE plate "meta" obj
+ASSERT OK == 1
+ASSERT LAST_N == 5
+REQUIRE JSONTYPE plate "xs" arr
+ASSERT OK == 1
+ASSERT LAST_N == 6
+REQUIRE JSONTYPE plate "xs" array
+ASSERT OK == 1
+REQUIRE JSONTYPE plate "meta" object
+ASSERT OK == 1
+
+# form aliases
+REQUIRE JTYPE plate "n" num
+ASSERT OK == 1
+REQUIRE JSONKIND plate "s" str
+ASSERT OK == 1
+REQUIRE JSON TYPE plate "n" num
+ASSERT OK == 1
+
+# IS keyword
+REQUIRE JSONTYPE plate "n" IS num
+ASSERT OK == 1
+
+# key FROM plate kind
+REQUIRE JSONTYPE "n" FROM plate num
+ASSERT OK == 1
+
+# 2-arg on LAST
+SYS JOIN "" plate
+REQUIRE JSONTYPE "s" str
+ASSERT OK == 1
+ASSERT LAST_N == 2
+
+# LAST kept as plate (can re-peel)
+REQUIRE JSONTYPE plate "n" num
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 42
+
+# soft twin for wrong path
+SYS JSONTYPE plate "n"
+ASSERT LAST == "num"
+SYS JSONTYPE plate "s"
+ASSERT LAST == "str"
+
+# agent pattern: soft then require
+SYS JSONTYPE plate "n"
+IF LAST_N == 1 THEN
+  REQUIRE JSONTYPE plate "n" num
+  PASS "retries is num"
+ELSE
+  FAIL "want num"
+END
+ASSERT OK == 1
