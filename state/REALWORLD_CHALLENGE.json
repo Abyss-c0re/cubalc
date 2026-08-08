@@ -1137,6 +1137,6 @@
     "selftest 355/355 green v1.15.513",
     "PICK var keys work \u2014 positive contrast to W115"
   ],
-  "commit": "pending",
+  "commit": "a4cba1e",
   "ts": "2026-08-08T11:39:21Z"
 }
