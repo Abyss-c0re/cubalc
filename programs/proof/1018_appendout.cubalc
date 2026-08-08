@@ -1,0 +1,79 @@
+# APPENDOUT / LOGOUT — ENSUREPARENT + APPEND line one-shot
+# LAST = abs file path; LAST_N = data+newline bytes; CREATED for parent.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_ao_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# nested log under missing parents
+SYS JOIN root "run/deep/agent.log"
+LET log = LAST
+APPENDOUT log "first"
+ASSERT OK == 1
+ASSERT APPENDOUT_CREATED == 1
+ASSERT LAST_N == 6
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "agent.log"
+ASSERT LAST_N == 1
+SYS ENDS APPENDOUT_PARENT "deep"
+ASSERT LAST_N == 1
+SYS ISFILE LAST
+ASSERT LAST_N == 1
+
+# second append — CREATED=0, both lines present
+APPENDOUT log "second"
+ASSERT OK == 1
+ASSERT APPENDOUT_CREATED == 0
+ASSERT LAST_N == 7
+SYS READ log
+SYS HAS LAST "first"
+ASSERT LAST_N == 1
+SYS HAS LAST "second"
+ASSERT LAST_N == 1
+SYS LINES LAST
+ASSERT LAST_N == 2
+
+# LOGOUT alias + numeric
+SYS JOIN root "metrics/count.log"
+LET m = LAST
+LOGOUT m 99
+ASSERT OK == 1
+ASSERT APPENDOUT_CREATED == 1
+SYS READ LAST
+SYS HAS LAST "99"
+ASSERT LAST_N == 1
+
+# SYS form
+SYS JOIN root "sys/hist.txt"
+LET sp = LAST
+SYS APPENDOUT sp "sys-line"
+ASSERT OK == 1
+SYS ENDS LAST "hist.txt"
+ASSERT LAST_N == 1
+SYS READ sp
+SYS HAS LAST "sys-line"
+ASSERT LAST_N == 1
+
+# empty path soft
+APPENDOUT "" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS WALK root
+SYS RMALL LAST
+SYS RM root
+
+PRINT "appendout ok"
