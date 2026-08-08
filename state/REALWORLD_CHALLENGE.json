@@ -602,6 +602,6 @@
     "GETFLAGOUT WRITE digest + ENSUREPARENT green",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "b5d04ae0e1a796a4e3dc93570442185d2c320b3a",
   "ts": "2026-08-08T03:18:50Z"
 }
