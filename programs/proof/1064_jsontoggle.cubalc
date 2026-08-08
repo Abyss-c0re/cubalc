@@ -1,0 +1,68 @@
+# JSONTOGGLE / JTOGGLE / FLIPJSON — flip plate 0↔1 flags
+# Feature flags without JSONN+IF+JSONSET glue. Missing → on (1).
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "debug" 0 "ok" 1 "mode" "run"
+LET plate = LAST
+
+# 0 → 1
+SYS JSONTOGGLE plate "debug"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONTOGGLE_V == 1
+ASSERT JSONTOGGLE_PREV == 0
+ASSERT JSONTOGGLE_KEY == "debug"
+LET plate = LAST
+SYS JSONN "debug" FROM plate
+ASSERT LAST_N == 1
+
+# 1 → 0
+SYS JSONTOGGLE plate "debug"
+ASSERT LAST_N == 0
+ASSERT JSONTOGGLE_PREV == 1
+LET plate = LAST
+SYS JSONN "debug" FROM plate
+ASSERT LAST_N == 0
+
+# missing → 1
+SYS JSONTOGGLE plate "trace"
+ASSERT LAST_N == 1
+ASSERT JSONTOGGLE_PREV == 0
+LET plate = LAST
+SYS JSONN "trace" FROM plate
+ASSERT LAST_N == 1
+
+# other fields preserved
+SYS JSONN "ok" FROM plate
+ASSERT LAST_N == 1
+SYS JSON "mode" FROM plate
+ASSERT LAST == "run"
+
+# 2-arg on LAST
+SYS JOIN "" plate
+SYS JSONTOGGLE "ok"
+ASSERT LAST_N == 0
+SYS JSONN "ok" FROM LAST
+ASSERT LAST_N == 0
+
+# bool true/false via raw plate
+SYS JSONTOGGLE "{\"flag\":true}" "flag"
+ASSERT LAST_N == 0
+SYS JSONTOGGLE "{\"flag\":false}" "flag"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JTOGGLE "{\"x\":1}" "x"
+ASSERT LAST_N == 0
+SYS FLIPJSON "{\"x\":0}" "x"
+ASSERT LAST_N == 1
+SYS JSONFLIP "{\"y\":5}" "y"
+ASSERT LAST_N == 0
+
+# non-numeric string → truthy → 0
+SYS JSONTOGGLE "{\"tag\":\"on\"}" "tag"
+ASSERT LAST_N == 0
+
+PRINT "jsontoggle ok"
+ASSERT OK == 1

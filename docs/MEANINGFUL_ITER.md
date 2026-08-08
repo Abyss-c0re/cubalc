@@ -550,6 +550,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 520. ~~**`JSONPICK` / `JSONKEEP` / `JKEEP`**~~ **done** (keep listed plate keys · raw values · strip noise for peer/log).
 521. ~~**`JSONRENAME` / `JRENAME` / `JSONMV`**~~ **done** (rename plate key · raw value kept · promote tmp→status).
 522. ~~**`JSONDROP` / `JSONOMIT` / `JDROPK`**~~ **done** (drop listed plate keys · bulk JSONDEL · strip known noise).
+523. ~~**`JSONTOGGLE` / `JTOGGLE` / `FLIPJSON`**~~ **done** (flip plate 0↔1 flag · miss→1 · no JSONN+IF+JSONSET).
 
 ## Tick protocol
 
