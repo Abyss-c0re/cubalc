@@ -740,6 +740,6 @@
     "WRITEOUT omit trailing NL (W5 reconfirm)",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "bd94a7aef66f9ee813dc3bba27ab4f999400261c",
   "ts": "2026-08-08T05:30:01Z"
 }
