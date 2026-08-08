@@ -1,0 +1,99 @@
+# RELINKOUT / RELINK — ENSUREPARENT; RM if exists; SYMLINK
+# Update nested plate aliases without RM + LINKOUT IF glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_rlo_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# two source plates
+SYS JOIN root "plates/a.json"
+LET a = LAST
+WRITEOUT a "{\"a\":1}"
+ASSERT OK == 1
+SYS JOIN root "plates/b.json"
+LET b = LAST
+WRITEOUT b "{\"b\":1}"
+ASSERT OK == 1
+
+# first create (REPLACED=0, CREATED=1)
+SYS JOIN root "alias/deep/cur.json"
+LET link = LAST
+RELINKOUT a link
+ASSERT OK == 1
+ASSERT RELINKOUT_CREATED == 1
+ASSERT RELINKOUT_REPLACED == 0
+ASSERT LAST_N == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS LAST "cur.json"
+ASSERT LAST_N == 1
+SYS ENDS RELINKOUT_PARENT "deep"
+ASSERT LAST_N == 1
+SYS EQS RELINKOUT_TARGET a
+ASSERT LAST_N == 1
+SYS ISLINK LAST
+ASSERT LAST_N == 1
+SYS READ link
+SYS HAS LAST "a"
+ASSERT LAST_N == 1
+
+# retarget same path (REPLACED=1, CREATED=0)
+RELINKOUT b link
+ASSERT OK == 1
+ASSERT RELINKOUT_CREATED == 0
+ASSERT RELINKOUT_REPLACED == 1
+SYS READLINK link
+SYS EQS LAST b
+ASSERT LAST_N == 1
+SYS READ link
+SYS HAS LAST "b"
+ASSERT LAST_N == 1
+SYS HAS LAST "a"
+ASSERT LAST_N == 0
+
+# RELINK alias
+SYS JOIN root "alias/deep/other.json"
+LET o = LAST
+RELINK a o
+ASSERT OK == 1
+ASSERT RELINKOUT_REPLACED == 0
+SYS ISLINK o
+ASSERT LAST_N == 1
+
+# SYS form
+SYS JOIN root "sys/deep/cur.json"
+LET sl = LAST
+SYS RELINKOUT b sl
+ASSERT OK == 1
+SYS ENDS LAST "cur.json"
+ASSERT LAST_N == 1
+SYS RELINKOUT a sl
+ASSERT OK == 1
+ASSERT RELINKOUT_REPLACED == 1
+SYS READ sl
+SYS HAS LAST "a"
+ASSERT LAST_N == 1
+
+# empty path soft
+RELINKOUT "" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM link
+SYS RM o
+SYS RM sl
+SYS WALK root
+SYS RMALL LAST
+SYS RM root

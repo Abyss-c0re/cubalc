@@ -3501,6 +3501,169 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 absnew, abssrc, created);
       bump(vm); return 1;
     }
+    /* SYS RELINKOUT|RELINK target linkpath — mkdir parent; RM if exists; SYMLINK.
+     * Twin of top-level RELINKOUT. LAST = abs link · REPLACED 0|1 · LAST_N = 1. */
+    if (kw(&L->cur,"RELINKOUT") || kw(&L->cur,"RELINK") || kw(&L->cur,"FORCELINKOUT") ||
+        kw(&L->cur,"REPLACELINK") || kw(&L->cur,"UPDATELINK") || kw(&L->cur,"RELINKPARENT") ||
+        kw(&L->cur,"LINKFORCE") || kw(&L->cur,"OVERWRITELINK") || kw(&L->cur,"RELINKNEST")){
+      char target[CUBALC_HOST_STR_MAX], linkpath[CUBALC_HOST_STR_MAX];
+      char abslink[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+      const char *slash;
+      size_t n;
+      int created = 0, replaced = 0;
+      cubalc_host_result hr, trash;
+      lex_next(L);
+      target[0] = 0; linkpath[0] = 0;
+      abslink[0] = 0; parent[0] = 0; absparent[0] = 0;
+      if (resolve_str_arg(vm, L, target, sizeof target) != 0) {
+        fail(vm, "SYS RELINKOUT target linkpath");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, linkpath, sizeof linkpath) != 0) {
+        fail(vm, "SYS RELINKOUT target linkpath");
+        return -1;
+      }
+      if (!target[0] || !linkpath[0]) {
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "RELINKOUT: empty path");
+        var_set_str(vm, "ERR", "RELINKOUT: empty path");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "RELINKOUT_N", 0);
+        var_set_num(vm, "RELINKOUT_CREATED", 0);
+        var_set_num(vm, "RELINKOUT_REPLACED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      /* Never realpath(linkpath): existing symlink would resolve to TARGET and RM it. */
+      if (linkpath[0] == '/' || linkpath[0] == '\\') {
+        snprintf(abslink, sizeof abslink, "%s", linkpath);
+      } else {
+        memset(&hr, 0, sizeof hr);
+        if (cubalc_host_abspath(".", &hr) == 0 && hr.str[0])
+          snprintf(abslink, sizeof abslink, "%s/%s", hr.str, linkpath);
+        else
+          snprintf(abslink, sizeof abslink, "%s", linkpath);
+      }
+      n = strlen(abslink);
+      while (n > 1 && (abslink[n - 1] == '/' || abslink[n - 1] == '\\')) {
+        abslink[n - 1] = 0;
+        n--;
+      }
+      {
+        char work[CUBALC_HOST_STR_MAX];
+        snprintf(work, sizeof work, "%s", abslink);
+        n = strlen(work);
+        slash = cubalc_path_slash(work);
+        if (slash && slash != work) {
+          size_t dn = (size_t)(slash - work);
+          if (dn >= sizeof parent) dn = sizeof parent - 1;
+          memcpy(parent, work, dn);
+          parent[dn] = 0;
+        } else if (slash && slash == work) {
+          snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+        } else {
+          snprintf(parent, sizeof parent, ".");
+        }
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      else
+        snprintf(absparent, sizeof absparent, "%s", parent);
+      created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_mkdir(absparent, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "RELINKOUT: mkdir parent failed";
+        var_set_str(vm, "LAST", abslink);
+        var_set_str(vm, "RELINKOUT_TARGET", target);
+        var_set_str(vm, "RELINKOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", abslink);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "RELINKOUT_N", 0);
+        var_set_num(vm, "RELINKOUT_CREATED", 0);
+        var_set_num(vm, "RELINKOUT_REPLACED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      if (hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      {
+        int present = 0;
+        memset(&trash, 0, sizeof trash);
+        cubalc_host_islink(abslink, &trash);
+        if (trash.n == 1 || cubalc_host_exists(abslink))
+          present = 1;
+        if (present) {
+          memset(&trash, 0, sizeof trash);
+          /* unlink path name (symlink node or file). Prefer unlink for links. */
+          if (unlink(abslink) != 0 && cubalc_host_rm(abslink, &trash) != 0) {
+            const char *err = trash.err[0] ? trash.err : "RELINKOUT: rm existing failed";
+            var_set_str(vm, "LAST", abslink);
+            var_set_str(vm, "RELINKOUT_TARGET", target);
+            var_set_str(vm, "RELINKOUT_PARENT", absparent);
+            var_set_str(vm, "LAST_ERR", err);
+            var_set_str(vm, "ERR", err);
+            snprintf(vm->last_str, sizeof vm->last_str, "%s", abslink);
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "RELINKOUT_N", 0);
+            var_set_num(vm, "RELINKOUT_CREATED", (long)created);
+            var_set_num(vm, "RELINKOUT_REPLACED", 0);
+            var_set_num(vm, "OK", 0);
+            bump(vm); return 1;
+          }
+          replaced = 1;
+        }
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_symlink(target, abslink, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "RELINKOUT: symlink failed";
+        var_set_str(vm, "LAST", abslink);
+        var_set_str(vm, "RELINKOUT_TARGET", target);
+        var_set_str(vm, "RELINKOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", abslink);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "RELINKOUT_N", 0);
+        var_set_num(vm, "RELINKOUT_CREATED", (long)created);
+        var_set_num(vm, "RELINKOUT_REPLACED", (long)replaced);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", abslink);
+      var_set_str(vm, "RELINKOUT", abslink);
+      var_set_str(vm, "LINKOUT", abslink);
+      var_set_str(vm, "PATH", abslink);
+      var_set_str(vm, "SYMLINK", abslink);
+      var_set_str(vm, "RELINKOUT_TARGET", target);
+      var_set_str(vm, "LINKOUT_TARGET", target);
+      var_set_str(vm, "SYMLINK_TARGET", target);
+      var_set_str(vm, "RELINKOUT_PARENT", absparent);
+      var_set_str(vm, "DIRNAME", absparent);
+      var_set_str(vm, "PARENT", absparent);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", abslink);
+      vm->last_n = hr.n > 0 ? hr.n : 1;
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "RELINKOUT_N", vm->last_n);
+      var_set_num(vm, "LINKOUT_N", vm->last_n);
+      var_set_num(vm, "SYMLINK_N", vm->last_n);
+      var_set_num(vm, "RELINKOUT_CREATED", (long)created);
+      var_set_num(vm, "RELINKOUT_REPLACED", (long)replaced);
+      var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+      var_set_num(vm, "PATH_EXIST", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys relinkout → %s → %s replaced=%d created=%d\n",
+                abslink, target, replaced, created);
+      bump(vm); return 1;
+    }
     /* SYS FSYNC|SYNCFILE|FDATASYNC path — flush file data+metadata to disk.
      * LAST = path; LAST_N = 1 success / 0 soft miss; FSYNC_N mirrors LAST_N.
      * Opens O_RDONLY, fsync(fd), close. Soft miss on empty/open/fsync fail.
@@ -28051,6 +28214,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS LINKOUT", "SYS LINKOUT|LNOUT target linkpath — mkdir parent + symlink · twin of top-level LINKOUT"},
       {"HARDLINKOUT", "HARDLINKOUT|HLOUT existing newpath — ENSUREPARENT new + HARDLINK · nested same-inode share"},
       {"SYS HARDLINKOUT", "SYS HARDLINKOUT|HLOUT existing newpath — mkdir parent + hardlink · twin of top-level HARDLINKOUT"},
+      {"RELINKOUT", "RELINKOUT|RELINK target linkpath — ENSUREPARENT; RM if exists; SYMLINK · update nested aliases"},
+      {"SYS RELINKOUT", "SYS RELINKOUT|RELINK target linkpath — mkdir parent + replace symlink · twin of top-level RELINKOUT"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -33115,6 +33280,170 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# hardlinkout → %s ← %s created=%d\n",
               absnew, abssrc, created);
+    bump(vm); return 1;
+  }
+  /* RELINKOUT|RELINK target linkpath — ENSUREPARENT; RM if exists; SYMLINK.
+   * LAST = abs link · RELINKOUT_TARGET · PARENT · CREATED · REPLACED 0|1 · LAST_N=1.
+   * Soft empty/mkdir/rm/symlink fail → OK=0 sticky LAST_ERR.
+   * Usability: update nested plate aliases without RM+LINKOUT IF glue. */
+  if (kw(&L->cur,"RELINKOUT") || kw(&L->cur,"RELINK") || kw(&L->cur,"FORCELINKOUT") ||
+      kw(&L->cur,"REPLACELINK") || kw(&L->cur,"UPDATELINK") || kw(&L->cur,"RELINKPARENT") ||
+      kw(&L->cur,"LINKFORCE") || kw(&L->cur,"OVERWRITELINK") || kw(&L->cur,"RELINKNEST")){
+    char target[CUBALC_HOST_STR_MAX], linkpath[CUBALC_HOST_STR_MAX];
+    char abslink[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+    const char *slash;
+    size_t n;
+    int created = 0, replaced = 0;
+    cubalc_host_result hr, trash;
+    lex_next(L);
+    target[0] = 0; linkpath[0] = 0;
+    abslink[0] = 0; parent[0] = 0; absparent[0] = 0;
+    if (resolve_str_arg(vm, L, target, sizeof target) != 0) {
+      fail_at(vm, L, "RELINKOUT needs target linkpath — RELINKOUT \"src.json\" \"a/b/alias.json\"");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, linkpath, sizeof linkpath) != 0) {
+      fail_at(vm, L, "RELINKOUT needs linkpath — RELINKOUT \"src.json\" \"a/b/alias.json\"");
+      return -1;
+    }
+    if (!target[0] || !linkpath[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "RELINKOUT: empty path");
+      var_set_str(vm, "ERR", "RELINKOUT: empty path");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RELINKOUT_N", 0);
+      var_set_num(vm, "RELINKOUT_CREATED", 0);
+      var_set_num(vm, "RELINKOUT_REPLACED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    /* Never realpath(linkpath): existing symlink would resolve to TARGET and RM it. */
+    if (linkpath[0] == '/' || linkpath[0] == '\\') {
+      snprintf(abslink, sizeof abslink, "%s", linkpath);
+    } else {
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(".", &hr) == 0 && hr.str[0])
+        snprintf(abslink, sizeof abslink, "%s/%s", hr.str, linkpath);
+      else
+        snprintf(abslink, sizeof abslink, "%s", linkpath);
+    }
+    n = strlen(abslink);
+    while (n > 1 && (abslink[n - 1] == '/' || abslink[n - 1] == '\\')) {
+      abslink[n - 1] = 0;
+      n--;
+    }
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", abslink);
+      n = strlen(work);
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else if (slash && slash == work) {
+        snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+      } else {
+        snprintf(parent, sizeof parent, ".");
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "RELINKOUT: mkdir parent failed";
+      var_set_str(vm, "LAST", abslink);
+      var_set_str(vm, "RELINKOUT_TARGET", target);
+      var_set_str(vm, "RELINKOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", abslink);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RELINKOUT_N", 0);
+      var_set_num(vm, "RELINKOUT_CREATED", 0);
+      var_set_num(vm, "RELINKOUT_REPLACED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    {
+      int present = 0;
+      memset(&trash, 0, sizeof trash);
+      cubalc_host_islink(abslink, &trash);
+      if (trash.n == 1 || cubalc_host_exists(abslink))
+        present = 1;
+      if (present) {
+        memset(&trash, 0, sizeof trash);
+        if (unlink(abslink) != 0 && cubalc_host_rm(abslink, &trash) != 0) {
+          const char *err = trash.err[0] ? trash.err : "RELINKOUT: rm existing failed";
+          var_set_str(vm, "LAST", abslink);
+          var_set_str(vm, "RELINKOUT_TARGET", target);
+          var_set_str(vm, "RELINKOUT_PARENT", absparent);
+          var_set_str(vm, "LAST_ERR", err);
+          var_set_str(vm, "ERR", err);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", abslink);
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "RELINKOUT_N", 0);
+          var_set_num(vm, "RELINKOUT_CREATED", (long)created);
+          var_set_num(vm, "RELINKOUT_REPLACED", 0);
+          var_set_num(vm, "OK", 0);
+          bump(vm); return 1;
+        }
+        replaced = 1;
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_symlink(target, abslink, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "RELINKOUT: symlink failed";
+      var_set_str(vm, "LAST", abslink);
+      var_set_str(vm, "RELINKOUT_TARGET", target);
+      var_set_str(vm, "RELINKOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", abslink);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RELINKOUT_N", 0);
+      var_set_num(vm, "RELINKOUT_CREATED", (long)created);
+      var_set_num(vm, "RELINKOUT_REPLACED", (long)replaced);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    var_set_str(vm, "LAST", abslink);
+    var_set_str(vm, "RELINKOUT", abslink);
+    var_set_str(vm, "LINKOUT", abslink);
+    var_set_str(vm, "PATH", abslink);
+    var_set_str(vm, "SYMLINK", abslink);
+    var_set_str(vm, "RELINKOUT_TARGET", target);
+    var_set_str(vm, "LINKOUT_TARGET", target);
+    var_set_str(vm, "SYMLINK_TARGET", target);
+    var_set_str(vm, "RELINKOUT_PARENT", absparent);
+    var_set_str(vm, "DIRNAME", absparent);
+    var_set_str(vm, "PARENT", absparent);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", abslink);
+    vm->last_n = hr.n > 0 ? hr.n : 1;
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "RELINKOUT_N", vm->last_n);
+    var_set_num(vm, "LINKOUT_N", vm->last_n);
+    var_set_num(vm, "SYMLINK_N", vm->last_n);
+    var_set_num(vm, "RELINKOUT_CREATED", (long)created);
+    var_set_num(vm, "RELINKOUT_REPLACED", (long)replaced);
+    var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# relinkout → %s → %s replaced=%d created=%d\n",
+              abslink, target, replaced, created);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]
