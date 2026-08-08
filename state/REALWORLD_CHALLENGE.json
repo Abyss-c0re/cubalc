@@ -1238,6 +1238,6 @@
     "selftest 355/355 green v1.15.523",
     "JSONSUMN=11 matches 1+5+2+3+0; LAST plate chain works"
   ],
-  "commit": "pending",
+  "commit": "f3548bc",
   "ts": "2026-08-08T13:18:47Z"
 }
