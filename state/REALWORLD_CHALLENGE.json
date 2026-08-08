@@ -1220,6 +1220,6 @@
     "selftest 355/355 green v1.15.520",
     "TOKV first-colon split handles ISO ts and http URLs (positive)"
   ],
-  "commit": "pending",
+  "commit": "32035dd",
   "ts": "2026-08-08T12:54:03Z"
 }
