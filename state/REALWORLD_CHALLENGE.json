@@ -1007,6 +1007,6 @@
     "HASINTREE LAST preserve made VAL=preserve-me until documented W112",
     "selftest 355/355 green v1.15.500"
   ],
-  "commit": "pending",
+  "commit": "4117a32",
   "ts": "2026-08-08T09:33:31Z"
 }
