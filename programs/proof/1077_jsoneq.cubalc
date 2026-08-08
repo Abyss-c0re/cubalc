@@ -1,0 +1,94 @@
+# JSONEQ / JEQ · JSONNEQ / JNEQ — order-independent plate equality
+# Verify WRITE/MERGE without fragile string EQS. LAST_N 0|1. LAST=first plate.
+
+HOLD_FLASH 1
+
+# equal same text
+SYS JSONOBJ "a" 1 "b" 2
+LET p1 = LAST
+SYS JSONEQ p1 p1
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONEQ_N == 1
+
+# equal different key order (rebuild reverse)
+SYS JSONOBJ "b" 2 "a" 1
+LET p2 = LAST
+SYS JSONEQ p1 p2
+ASSERT LAST_N == 1
+
+# unequal value
+SYS JSONOBJ "a" 1 "b" 3
+LET p3 = LAST
+SYS JSONEQ p1 p3
+ASSERT LAST_N == 0
+
+# unequal keys
+SYS JSONOBJ "a" 1 "c" 2
+LET p4 = LAST
+SYS JSONEQ p1 p4
+ASSERT LAST_N == 0
+
+# empty equal
+SYS JSONEQ "{}" "{}"
+ASSERT LAST_N == 1
+
+# non-object soft 0
+SYS JSONEQ "not" "{}"
+ASSERT LAST_N == 0
+ASSERT OK == 1
+SYS JSONEQ "[1]" "[1]"
+ASSERT LAST_N == 0
+
+# NEQ inverse
+SYS JSONNEQ p1 p1
+ASSERT LAST_N == 0
+SYS JSONNEQ p1 p3
+ASSERT LAST_N == 1
+
+# aliases
+SYS JEQ p1 p2
+ASSERT LAST_N == 1
+SYS SAMEJSON p1 p2
+ASSERT LAST_N == 1
+SYS JNEQ p1 p3
+ASSERT LAST_N == 1
+SYS DIFFJSON p1 p3
+ASSERT LAST_N == 1
+
+# strings + bool + null
+SYS JSONOBJ "role" "worker" "ok" true "gone" null "n" 9
+LET s1 = LAST
+SYS JSONOBJ "n" 9 "gone" null "ok" true "role" "worker"
+LET s2 = LAST
+SYS JSONEQ s1 s2
+ASSERT LAST_N == 1
+SYS JSONOBJ "role" "boss" "ok" true "gone" null "n" 9
+LET s3 = LAST
+SYS JSONEQ s1 s3
+ASSERT LAST_N == 0
+
+# LAST kept as first plate after EQ
+SYS JSONEQ p1 p2
+ASSERT LAST_N == 1
+SYS JSONN "a" FROM LAST
+ASSERT LAST_N == 1
+
+# MERGE then EQ
+SYS JSONOBJ "x" 1
+LET base = LAST
+SYS JSONMERGE base "{\"y\":2}"
+LET merged = LAST
+SYS JSONOBJ "x" 1 "y" 2
+SYS JSONEQ merged LAST
+ASSERT LAST_N == 1
+
+# IF pattern
+SYS JSONEQ p1 p2
+IF LAST_N THEN
+  PASS "plates match"
+END
+ASSERT OK == 1
+
+PRINT "jsoneq ok"
+ASSERT OK == 1

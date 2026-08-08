@@ -3309,6 +3309,8 @@ int main(int argc, char **argv) {
       {"SYS JSONMAXN", "host", "SYS JSONMAXN|JMAXN [plate] — max int top-level value → LAST_N"},
       {"SYS JSONMINN", "host", "SYS JSONMINN|JMINN [plate] — min int top-level value → LAST_N"},
       {"SYS JSONAVGN", "host", "SYS JSONAVGN|JSONMEAN [plate] — integer mean of top-level ints → LAST_N"},
+      {"SYS JSONEQ", "host", "SYS JSONEQ|JEQ a b — order-independent plate equality → LAST_N 0|1"},
+      {"SYS JSONNEQ", "host", "SYS JSONNEQ|JNEQ a b — plates differ → LAST_N 1"},
       {"SYS JSONKEYS", "host", "SYS JSONKEYS [plate] — top-level keys bag"},
       {"SYS JSONVALUES", "host", "SYS JSONVALUES [plate] — top-level values bag"},
       {"SYS SPAWN", "host", "allowlisted spawn (protect mode tight)"},

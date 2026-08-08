@@ -4811,6 +4811,69 @@ int cubalc_host_json_avg(const char *json, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS JSONEQ a b — order-independent top-level plate equality. */
+int cubalc_host_json_eq(const char *a, const char *b, cubalc_host_result *r) {
+  cubalc_host_result ka, kb, ra, rb;
+  const char *p, *line;
+  r_clear(r);
+  r->ok = 1;
+  memset(&ka, 0, sizeof ka);
+  memset(&kb, 0, sizeof kb);
+  /* both must be objects; non-object soft unequal (even if identical text) */
+  if (cubalc_host_json_keys(a, &ka) != 0 || cubalc_host_json_keys(b, &kb) != 0) {
+    r->n = 0;
+    snprintf(r->str, sizeof r->str, "0");
+    return 0;
+  }
+  /* identical object text fast path after object check */
+  if (a && b && strcmp(a, b) == 0) {
+    r->n = 1;
+    snprintf(r->str, sizeof r->str, "1");
+    return 0;
+  }
+  if (ka.n != kb.n) {
+    r->n = 0;
+    snprintf(r->str, sizeof r->str, "0");
+    return 0;
+  }
+  /* every key in a must exist in b with same raw value */
+  p = ka.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    const char *va, *vb;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&ra, 0, sizeof ra);
+    memset(&rb, 0, sizeof rb);
+    if (cubalc_host_json_get_raw(a, key, &ra) != 0 ||
+        cubalc_host_json_get_raw(b, key, &rb) != 0) {
+      r->n = 0;
+      snprintf(r->str, sizeof r->str, "0");
+      return 0;
+    }
+    va = ra.str;
+    vb = rb.str;
+    while (*va == ' ' || *va == '\t' || *va == '\n' || *va == '\r') va++;
+    while (*vb == ' ' || *vb == '\t' || *vb == '\n' || *vb == '\r') vb++;
+    if (strcmp(va, vb) != 0) {
+      r->n = 0;
+      snprintf(r->str, sizeof r->str, "0");
+      return 0;
+    }
+  }
+  r->n = 1;
+  snprintf(r->str, sizeof r->str, "1");
+  return 0;
+}
+
 /* Usability: SYS JSONTOPKEY/JSONBOTKEY — dominant/min numeric key without TOKV+TOPKEY. */
 int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *r) {
   cubalc_host_result keys, raw;

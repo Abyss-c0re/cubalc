@@ -255,6 +255,10 @@ int cubalc_host_json_minmax(const char *json, int want_min, cubalc_host_result *
  * r->code = count of numeric fields used. Soft 0 if none. r->str = decimal.
  * Usability: typical score without JSONVALUES+AVG glue. */
 int cubalc_host_json_avg(const char *json, cubalc_host_result *r);
+/* order-independent top-level plate equality → r->n 1|0. Soft always OK.
+ * Same keys + same raw values (whitespace-trimmed). Nested compared as raw text.
+ * Usability: agent verify after WRITE/MERGE without fragile string EQS. */
+int cubalc_host_json_eq(const char *a, const char *b, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */
