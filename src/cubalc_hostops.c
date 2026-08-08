@@ -529,6 +529,123 @@ int cubalc_host_cptree(const char *src, const char *dst, cubalc_host_result *r) 
   return 0;
 }
 
+/* Parent directory of path into out (may be "." or "/"). */
+static void cubalc_path_parent(const char *path, char *out, size_t outn) {
+  char work[CUBALC_HOST_STR_MAX];
+  const char *slash;
+  size_t n;
+  if (!out || outn == 0) return;
+  out[0] = 0;
+  if (!path || !path[0]) {
+    snprintf(out, outn, "%s", ".");
+    return;
+  }
+  snprintf(work, sizeof work, "%s", path);
+  n = strlen(work);
+  while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+    work[n - 1] = 0;
+    n--;
+  }
+  slash = strrchr(work, '/');
+#if defined(CUBALC_OS_WINDOWS)
+  {
+    const char *b = strrchr(work, '\\');
+    if (b && (!slash || b > slash)) slash = b;
+  }
+#endif
+  if (slash && slash != work) {
+    size_t dn = (size_t)(slash - work);
+    if (dn >= outn) dn = outn - 1;
+    memcpy(out, work, dn);
+    out[dn] = 0;
+  } else if (slash && slash == work) {
+    snprintf(out, outn, "%c", work[0] == '\\' ? '\\' : '/');
+  } else {
+    snprintf(out, outn, "%s", ".");
+  }
+}
+
+/* Usability: SYS MVTREE|MOVETREE src dest — promote/relocate tree without shell mv -r.
+ * Prefer rename(2); on EXDEV/fail → CPTREE then RMTREE src. Soft miss src.
+ * r->n = entries (1 if rename-hit); r->code = 1 renamed / 0 copy+delete. */
+int cubalc_host_mvtree(const char *src, const char *dst, cubalc_host_result *r) {
+  struct stat st;
+  char asrc[CUBALC_HOST_STR_MAX], adst[CUBALC_HOST_STR_MAX], parent[CUBALC_HOST_STR_MAX];
+  cubalc_host_result hr;
+  r_clear(r);
+  if (!src || !src[0] || !dst || !dst[0]) {
+    snprintf(r->err, sizeof r->err, "mvtree: empty path");
+    return -1;
+  }
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(src, &hr) == 0 && hr.str[0])
+    snprintf(asrc, sizeof asrc, "%s", hr.str);
+  else
+    snprintf(asrc, sizeof asrc, "%s", src);
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(dst, &hr) == 0 && hr.str[0])
+    snprintf(adst, sizeof adst, "%s", hr.str);
+  else
+    snprintf(adst, sizeof adst, "%s", dst);
+  if (lstat(asrc, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "mvtree: missing source");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "mvtree: %s", strerror(errno));
+    return -1;
+  }
+  if (strcmp(asrc, adst) == 0) {
+    snprintf(r->str, sizeof r->str, "%s", adst);
+    r->n = 1;
+    r->code = 1; /* already in place */
+    r->ok = 1;
+    return 0;
+  }
+  if (S_ISDIR(st.st_mode) && cubalc_path_is_under(asrc, adst)) {
+    snprintf(r->err, sizeof r->err, "mvtree: dest inside src");
+    return -1;
+  }
+  /* ensure parent of dest exists */
+  cubalc_path_parent(adst, parent, sizeof parent);
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_mkdir(parent, &hr) != 0) {
+    snprintf(r->err, sizeof r->err, "mvtree: mkdir parent failed");
+    return -1;
+  }
+  /* try atomic rename first */
+  if (rename(asrc, adst) == 0) {
+    snprintf(r->str, sizeof r->str, "%s", adst);
+    r->n = 1;
+    r->code = 1;
+    r->ok = 1;
+    return 0;
+  }
+  /* cross-device or dest conflict: copy then remove source */
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_cptree(asrc, adst, &hr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s",
+             hr.err[0] ? hr.err : "mvtree: copy failed");
+    return -1;
+  }
+  {
+    long n = hr.n;
+    int bytes = hr.code;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_rmtree(asrc, &hr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               hr.err[0] ? hr.err : "mvtree: remove src failed");
+      return -1;
+    }
+    snprintf(r->str, sizeof r->str, "%s", adst);
+    r->n = n;
+    r->code = 0; /* copy+delete path */
+    (void)bytes;
+    r->ok = 1;
+    return 0;
+  }
+}
+
 /* Usability: SYS RENAME|MV from to — move plate without shell. */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) {
   r_clear(r);

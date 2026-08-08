@@ -1,0 +1,151 @@
+# MVTREE / MOVETREE / MVDIR — recursive move (rename or cptree+rmtree)
+# Promote nested agent workspaces without shell mv or CPTREE+RMTREE glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_mvt_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+SYS JOIN base "src"
+LET src = LAST
+SYS JOIN base "dst"
+LET dst = LAST
+SYS JOIN base "deep/nest/out"
+LET nested = LAST
+SYS JOIN base "leaf.txt"
+LET leaf = LAST
+SYS JOIN base "leaf2.txt"
+LET leaf2 = LAST
+
+# nested source tree
+SYS JOIN src "a/b/c.txt"
+LET f1 = LAST
+WRITEOUT f1 "deep"
+ASSERT OK == 1
+SYS JOIN src "a/e.txt"
+WRITEOUT LAST "mid"
+ASSERT OK == 1
+SYS JOIN src "empty"
+SYS MKDIR LAST
+ASSERT OK == 1
+
+# file move
+SYS WRITE leaf "solo"
+ASSERT OK == 1
+MVTREE leaf leaf2
+ASSERT OK == 1
+ASSERT MVTREE_RENAMED == 1
+ASSERT MVTREE_N == 1
+SYS EXIST leaf
+ASSERT LAST_N == 0
+SYS READ leaf2
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+
+# full tree move — top-level (same fs → rename)
+MVTREE src dst
+ASSERT OK == 1
+ASSERT MVTREE_RENAMED == 1
+ASSERT MVTREE_N == 1
+SYS EXIST src
+ASSERT LAST_N == 0
+SYS JOIN dst "a/b/c.txt"
+SYS READ LAST
+SYS EQS LAST "deep"
+ASSERT LAST_N == 1
+SYS JOIN dst "empty"
+SYS ISDIR LAST
+ASSERT LAST_N == 1
+
+# nested dest parents created
+SYS JOIN base "src2"
+LET src2 = LAST
+SYS MKDIR src2
+SYS JOIN src2 "x.txt"
+WRITEOUT LAST "x"
+ASSERT OK == 1
+MVTREE src2 nested
+ASSERT OK == 1
+ASSERT MVTREE_RENAMED == 1
+SYS EXIST src2
+ASSERT LAST_N == 0
+SYS JOIN nested "x.txt"
+SYS READ LAST
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+SYS ENDS MVTREE "out"
+ASSERT LAST_N == 1
+
+# SYS form + MOVETREE alias
+SYS JOIN base "s3"
+LET s3 = LAST
+SYS JOIN base "d3"
+LET d3 = LAST
+SYS MKDIR s3
+SYS JOIN s3 "y.txt"
+WRITEOUT LAST "y"
+ASSERT OK == 1
+SYS MVTREE s3 d3
+ASSERT OK == 1
+SYS EXIST s3
+ASSERT LAST_N == 0
+SYS JOIN d3 "y.txt"
+SYS READ LAST
+SYS EQS LAST "y"
+ASSERT LAST_N == 1
+
+# MVDIR alias
+SYS JOIN base "s4"
+LET s4 = LAST
+SYS JOIN base "d4"
+LET d4 = LAST
+SYS MKDIR s4
+SYS JOIN s4 "z.txt"
+WRITEOUT LAST "z"
+ASSERT OK == 1
+MVDIR s4 d4
+ASSERT OK == 1
+SYS EXIST s4
+ASSERT LAST_N == 0
+
+# missing soft
+MVTREE "/no/such/mvtree/src" d4
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty soft
+MVTREE "" d4
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# dest inside src refused
+SYS JOIN base "s5"
+LET s5 = LAST
+SYS MKDIR s5
+SYS JOIN s5 "inner"
+LET inner = LAST
+SYS WRITE leaf2 "keep"
+MVTREE s5 inner
+ASSERT OK == 0
+LET e3 = LAST_ERR
+SYS HAS e3 "inside"
+ASSERT LAST_N == 1
+
+# cleanup
+RMTREE base
+ASSERT OK == 1
+
+PRINT "mvtree ok"
+ASSERT OK == 1
