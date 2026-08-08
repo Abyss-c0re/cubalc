@@ -1,63 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 190,
-  "program": "programs/realworld/tree_drop_residual_board.cubalc",
-  "theme": "DROPINTREE residual reprocess queue after skip N content matches under tree",
-  "version": "1.15.508-usability",
+  "iter": 191,
+  "program": "programs/realworld/agent_json_plate_hygiene_board.cubalc",
+  "theme": "JSONMERGE+JSONDEL+JSONN+JSONINC+JSONENSURE agent plate merge/scrub/count hygiene",
+  "version": "1.15.510-usability",
   "pass": true,
-  "prior_note": "iter 189 JSONOBJ+JSONSET stamp; this iter first realworld DROPINTREE(1051) residual dual of TAKE",
+  "prior_note": "iter 190 DROPINTREE residual; this iter first realworld MERGE(1058)+DEL(1056)+N(1057)+INC(1059)+ENSURE(1060)",
   "tests": [
     {
-      "name": "seed",
-      "cmd": "WRITEOUT nested mid/z/err/plain",
+      "name": "mint",
+      "cmd": "JSONOBJ base+overlay with token/tmp secrets",
       "ok": true,
-      "note": "seed"
+      "note": "mint"
     },
     {
-      "name": "rest0",
-      "cmd": "DROP skip0 \u2192 3 paths mid z err",
+      "name": "merge",
+      "cmd": "JSONMERGE overlay wins retries=2 +4 keys",
       "ok": true,
-      "note": "all"
+      "note": "MERGE"
     },
     {
-      "name": "rest1",
-      "cmd": "skip1 \u2192 z + err (no mid)",
+      "name": "scrub",
+      "cmd": "JSONDEL token+tmp; absent soft N=0",
       "ok": true,
-      "note": "residual"
+      "note": "DEL"
     },
     {
-      "name": "rest2",
-      "cmd": "skip2 \u2192 err.log only",
+      "name": "ensure",
+      "cmd": "JSONENSURE max SET=1; role keep SET=0",
       "ok": true,
-      "note": "tail"
+      "note": "ENSURE"
     },
     {
-      "name": "empty",
-      "cmd": "skip3/99 \u2192 empty soft shell0",
+      "name": "bump",
+      "cmd": "JSONINC retries +2/+5 literal deltas",
       "ok": true,
-      "note": "empty"
+      "note": "INC"
     },
     {
-      "name": "dual",
-      "cmd": "TAKE1+DROP1 cover=3 peel=3 mid not in rest",
+      "name": "count",
+      "cmd": "JSONN retries/max/n; under max hit; >=max miss",
       "ok": true,
-      "note": "dual"
-    },
-    {
-      "name": "icase",
-      "cmd": "DROPINTREEI ERROR skip1 \u2192 2",
-      "ok": true,
-      "note": "icase"
+      "note": "JSONN"
     },
     {
       "name": "probe",
-      "cmd": "empty/missing root soft; zzzz N=0",
+      "cmd": "empty overlay N=0; DEL miss; JSONN OR 42",
       "ok": true,
-      "note": "soft root"
+      "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_TDR_REQUIRE=1 missing \u2192 shell 2",
+      "cmd": "CUBALC_AJPH_REQUIRE=1 empty \u2192 shell 2",
       "ok": true,
       "note": "hard"
     },
@@ -1052,6 +1046,30 @@
       "title": "skip past end / skip==hitcount both soft empty OK=1 N=0",
       "detail": "DROP skip 3 or 99 on 3 hits \u2192 empty bag no hard OOR. Dual TAKE+DROP cover works (1+2=3). Residual empty is agent FAIL/REQUIRE EXIT concern not language hard fail.",
       "repro": "DROPINTREE root error 3 \u2192 N=0 OK=1"
+    },
+    {
+      "id": "W124",
+      "severity": "high",
+      "area": "lang|json_num_arg",
+      "title": "JSONINC delta and JSONENSURE value reject numeric vars (literal only)",
+      "detail": "SYS JSONINC body \"retries\" DELTA \u2192 unknown form DELTA (partial default +1 then hard fail). SYS JSONENSURE body \"max\" MAXR same. STR shuttle works for ENSURE values (max stored as string \"10\", JSONN peels 10). INC delta cannot use string var either \u2014 only literal 1/2/3/5 EQS branches.",
+      "repro": "LET d 2; JSONINC p retries d \u2192 unknown form d; JSONINC p retries 2 ok"
+    },
+    {
+      "id": "W125",
+      "severity": "high",
+      "area": "lang|jsonn_or",
+      "title": "JSONN OR fallback requires numeric literal not variable",
+      "detail": "SYS JSONN \"max\" FROM body OR MAXR hard-fails usage form. OR 10 works. Same literal-only class as W115/W124. Agents cannot pass CLI --max into OR without branching.",
+      "repro": "JSONN max FROM p OR MAXR fails; OR 10 ok"
+    },
+    {
+      "id": "W126",
+      "severity": "low",
+      "area": "lang|jsonn",
+      "title": "JSONN non-numeric string HIT=1 LAST_N=0 (role\u21920)",
+      "detail": "Positive: peel role as agent string leaves LAST=role LAST_N=0 without soft fail. Distinguish from miss (OK=0). Useful but easy to treat as zero counter.",
+      "repro": "JSONN role FROM plate \u2192 HIT1 LAST_N0 LAST=worker"
     }
   ],
   "workarounds": [
@@ -1065,7 +1083,9 @@
     "JSON dynamic keys: EQS-branch literals from known schema; no var keys (W115)",
     "Capture LAST into LET before CLEAR_ERR if probe preserved it (W117)",
     "JSONOBJ/JSONSET numeric: SYS STR n first (W118); accept string n or use literal numbers",
-    "DROPINTREE skip: treat N==0 as empty page; clamp SK>=0 before op (W121)"
+    "DROPINTREE skip: treat N==0 as empty page; clamp SK>=0 before op (W121)",
+    "JSONINC delta: EQS-branch literals 1/2/3/5 (W124); ENSURE values via STR",
+    "JSONN OR: hardcode literal defaults (W125)"
   ],
   "language_gaps": [
     "Stable PARSEPATHLINE after FORMAT under agent_boot boards (W108)",
@@ -1079,18 +1099,18 @@
     "CLEAR_ERR optional keep-LAST mode",
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
     "DROPINTREE hard reject or warn on negative skip",
-    "JSONDEL/JSONN/JSONMERGE still unused in realworld"
+    "JSONINC/ENSURE/JSONN OR accept num vars without literal-only"
   ],
   "issues_faced": [
-    "HASINTREE LAST preserve made VAL=preserve-me until documented W112",
-    "selftest 355/355 green v1.15.500",
-    "variable JSON keys silently miss \u2014 fixed board with EQS literal branches (W115)",
     "selftest 355/355 green v1.15.503",
     "mint hard-fail missing value until STR shuttle on TN (W118)",
     "selftest 355/355 green v1.15.505",
     "negative --skip=-1 silently becomes skip0 (W121)",
-    "selftest 355/355 green v1.15.508"
+    "selftest 355/355 green v1.15.508",
+    "JSONINC DELTA var hard-fail; fixed with literal EQS branches (W124)",
+    "JSONN OR MAXR hard-fail; fixed OR 10 (W125)",
+    "selftest 355/355 green v1.15.510"
   ],
-  "commit": "97ae7c4",
-  "ts": "2026-08-08T10:48:19Z"
+  "commit": "pending",
+  "ts": "2026-08-08T11:15:23Z"
 }
