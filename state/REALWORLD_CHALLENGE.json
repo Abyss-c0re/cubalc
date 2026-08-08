@@ -2000,6 +2000,6 @@
     "probe LAST_ERR FILLPFILE string fragile; OK==0 enough",
     "multi-arg CAT works for expected line builds"
   ],
-  "commit": "pending",
+  "commit": "f85997b",
   "ts": "2026-08-08T21:39:56Z"
 }
