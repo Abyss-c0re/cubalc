@@ -205,6 +205,10 @@ int cubalc_host_json_keys(const char *json, cubalc_host_result *r);
  * Empty/non-object json → new {"key":val}. r->n = 1 updated|0 inserted. */
 int cubalc_host_json_set(const char *json, const char *key, const char *val,
                          int val_kind, cubalc_host_result *r);
+/* delete top-level key from JSON object → r->str = new object.
+ * r->n = 1 if key was removed, 0 if missing (still OK, object unchanged/copy).
+ * Soft fail only on empty key / malformed. Usability: plate field ack/drop. */
+int cubalc_host_json_del(const char *json, const char *key, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

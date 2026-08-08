@@ -1,0 +1,84 @@
+# JSONDEL / JDEL / JSONRM — drop top-level JSON plate keys
+# Agent field ack/drop without hand string rebuild. Soft miss when key absent.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" 1 "tmp" "x" "n" 3 "keep" "yes"
+LET plate = LAST
+ASSERT JSONOBJ_N == 4
+
+# delete middle key
+SYS JSONDEL plate "tmp"
+ASSERT OK == 1
+ASSERT JSONDEL_N == 1
+ASSERT JSONDEL_HIT == 1
+LET plate = LAST
+SYS JSONHAS "tmp" plate
+ASSERT JSONHAS_HIT == 0
+SYS JSON "ok" FROM plate
+ASSERT LAST == "1"
+SYS JSON "n" FROM plate
+ASSERT LAST == "3"
+SYS JSON "keep" FROM plate
+ASSERT LAST == "yes"
+
+# delete first key
+SYS JSONDEL plate "ok"
+LET plate = LAST
+ASSERT JSONDEL_N == 1
+SYS JSONHAS "ok" plate
+ASSERT JSONHAS_HIT == 0
+SYS JSON "keep" FROM plate
+ASSERT LAST == "yes"
+
+# delete last remaining then leave one
+SYS JSONDEL plate "n"
+LET plate = LAST
+SYS JSONKEYS plate
+ASSERT JSONKEYS_N == 1
+SYS HASLINE LAST "keep"
+ASSERT LAST_N == 1
+
+# soft miss — key absent
+SYS JSONDEL plate "nope"
+ASSERT OK == 1
+ASSERT JSONDEL_N == 0
+SYS JSON "keep" FROM LAST
+ASSERT LAST == "yes"
+
+# 1-arg form uses LAST plate
+SYS JOIN "" plate
+SYS JSONDEL "keep"
+ASSERT JSONDEL_N == 1
+LET empty = LAST
+SYS JSONKEYS empty
+ASSERT JSONKEYS_N == 0
+SYS EQS empty "{}"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JDEL "{\"a\":1,\"b\":2}" "a"
+ASSERT JSONDEL_N == 1
+SYS JSON "b" FROM LAST
+ASSERT LAST == "2"
+SYS JSONRM "{\"z\":9}" "z"
+ASSERT JSONDEL_N == 1
+SYS EQS LAST "{}"
+ASSERT LAST_N == 1
+
+# empty key soft fail
+SYS JSONDEL "{\"a\":1}" ""
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# non-object soft → empty object
+SYS JSONDEL "not-json" "x"
+ASSERT OK == 1
+ASSERT JSONDEL_N == 0
+SYS EQS LAST "{}"
+ASSERT LAST_N == 1
+
+PRINT "jsondel ok"
+ASSERT OK == 1

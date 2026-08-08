@@ -3980,6 +3980,130 @@ int cubalc_host_json_set(const char *json, const char *key, const char *val,
   return -1;
 }
 
+/* Usability: SYS JSONDEL plate key — drop top-level key without hand rebuild.
+ * r->n=1 removed, 0 missing (OK still, LAST=copy). */
+int cubalc_host_json_del(const char *json, const char *key, cubalc_host_result *r) {
+  char keypat[320];
+  const char *base, *p;
+  int depth = 0, in_str = 0, esc = 0;
+  r_clear(r);
+  if (!key || !key[0]) {
+    snprintf(r->err, sizeof r->err, "jsondel: empty key");
+    return -1;
+  }
+  if (strlen(key) + 3 >= sizeof keypat) {
+    snprintf(r->err, sizeof r->err, "jsondel: key too long");
+    return -1;
+  }
+  snprintf(keypat, sizeof keypat, "\"%s\"", key);
+  base = json ? json : "";
+  while (*base == ' ' || *base == '\t' || *base == '\n' || *base == '\r') base++;
+  if (!*base || *base != '{') {
+    /* not an object — return empty object soft */
+    snprintf(r->str, sizeof r->str, "%s", "{}");
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  p = base;
+  for (; *p; p++) {
+    unsigned char c = (unsigned char)*p;
+    if (in_str) {
+      if (esc) {
+        esc = 0;
+        continue;
+      }
+      if (c == '\\') {
+        esc = 1;
+        continue;
+      }
+      if (c == '"') in_str = 0;
+      continue;
+    }
+    if (c == '"') {
+      if (depth == 1) {
+        size_t plen = strlen(keypat);
+        if (strncmp(p, keypat, plen) == 0) {
+          const char *after = p + plen;
+          const char *vstart, *vend;
+          const char *del_lo, *del_hi;
+          const char *scan;
+          size_t pre_n, rest_n;
+          while (*after == ' ' || *after == '\t' || *after == '\n' || *after == '\r')
+            after++;
+          if (*after != ':') {
+            in_str = 1;
+            continue;
+          }
+          after++;
+          while (*after == ' ' || *after == '\t' || *after == '\n' || *after == '\r')
+            after++;
+          vstart = after;
+          vend = vstart;
+          if (cubalc_json_skip_value(&vend) != 0) {
+            snprintf(r->err, sizeof r->err, "jsondel: bad value");
+            return -1;
+          }
+          /* default delete ["key": value] */
+          del_lo = p;
+          del_hi = vend;
+          /* prefer include preceding comma */
+          scan = p;
+          while (scan > base &&
+                 (scan[-1] == ' ' || scan[-1] == '\t' || scan[-1] == '\n' ||
+                  scan[-1] == '\r'))
+            scan--;
+          if (scan > base && scan[-1] == ',') {
+            del_lo = scan - 1;
+          } else {
+            /* first field: drop trailing comma after value if present */
+            scan = vend;
+            while (*scan == ' ' || *scan == '\t' || *scan == '\n' || *scan == '\r')
+              scan++;
+            if (*scan == ',')
+              del_hi = scan + 1;
+          }
+          pre_n = (size_t)(del_lo - base);
+          rest_n = strlen(del_hi);
+          if (pre_n + rest_n + 1 >= sizeof r->str) {
+            snprintf(r->err, sizeof r->err, "jsondel: overflow");
+            return -1;
+          }
+          memcpy(r->str, base, pre_n);
+          memcpy(r->str + pre_n, del_hi, rest_n + 1);
+          r->n = 1;
+          r->ok = 1;
+          return 0;
+        }
+      }
+      in_str = 1;
+      continue;
+    }
+    if (c == '{') {
+      depth++;
+      continue;
+    }
+    if (c == '}') {
+      if (depth > 0) depth--;
+      if (depth == 0) break;
+      continue;
+    }
+    if (c == '[') {
+      depth++;
+      continue;
+    }
+    if (c == ']') {
+      if (depth > 0) depth--;
+      continue;
+    }
+  }
+  /* key missing — copy original */
+  snprintf(r->str, sizeof r->str, "%s", base);
+  r->n = 0;
+  r->ok = 1;
+  return 0;
+}
+
 static int load_token(char *out, size_t outn) {
   out[0] = 0;
   const char *e = getenv("XAI_API_KEY");
