@@ -1,0 +1,92 @@
+# JSONTOPKEY / JTOPKEY · JSONBOTKEY / JBOTKEY — max/min numeric plate key
+# LAST=key · LAST_N=value. Dominant FREQ without JSONTOKV+TOPKEY glue.
+
+HOLD_FLASH 1
+
+# basic top/bot
+SYS JSONOBJ "a" 1 "b" 5 "c" 3
+LET plate = LAST
+SYS JSONTOPKEY plate
+ASSERT OK == 1
+ASSERT LAST == "b"
+ASSERT LAST_N == 5
+ASSERT JSONTOPKEY_V == 5
+SYS JSONBOTKEY plate
+ASSERT LAST == "a"
+ASSERT LAST_N == 1
+ASSERT JSONBOTKEY_V == 1
+
+# matches TOKV+TOPKEY
+SYS JSONTOKV plate
+SYS TOPKEY LAST
+ASSERT LAST == "b"
+ASSERT LAST_N == 5
+
+# bare on LAST
+SYS JSONOBJ "x" 9 "y" 2 "z" 9
+# first max wins ties
+SYS JSONTOPKEY
+ASSERT LAST == "x"
+ASSERT LAST_N == 9
+SYS JSONBOTKEY LAST
+# wait LAST is key "x" not plate — use saved
+SYS JSONOBJ "x" 9 "y" 2 "z" 9
+LET p2 = LAST
+SYS JSONBOTKEY p2
+ASSERT LAST == "y"
+ASSERT LAST_N == 2
+
+# empty / non-object soft
+SYS JSONTOPKEY "{}"
+ASSERT LAST == ""
+ASSERT LAST_N == 0
+ASSERT OK == 1
+SYS JSONBOTKEY "not-json"
+ASSERT LAST == ""
+ASSERT LAST_N == 0
+
+# skip non-numeric · bools count
+SYS JSONOBJ "s" "hi" "ok" true "n" 4 "m" 7
+LET p3 = LAST
+SYS JSONTOPKEY p3
+ASSERT LAST == "m"
+ASSERT LAST_N == 7
+SYS JSONBOTKEY p3
+# true=1 is lowest among true/4/7? false not present. true=1, n=4, m=7 → bot true=1
+ASSERT LAST == "ok"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JSONOBJ "lo" 1 "hi" 10
+LET p4 = LAST
+SYS JTOPKEY p4
+ASSERT LAST == "hi"
+SYS JBOTKEY p4
+ASSERT LAST == "lo"
+SYS JSONMAXKEY p4
+ASSERT LAST == "hi"
+SYS JSONMINKEY p4
+ASSERT LAST == "lo"
+
+# FREQ-style plate
+SYS JSONFROMKV "error:5\nwarn:2\nok:1"
+SYS JSONTOPKEY LAST
+ASSERT LAST == "error"
+ASSERT LAST_N == 5
+SYS JSONFROMKV "error:5\nwarn:2\nok:1"
+SYS JSONBOTKEY LAST
+ASSERT LAST == "ok"
+ASSERT LAST_N == 1
+
+# negatives
+SYS JSONOBJ "a" -10 "b" -1 "c" 0
+LET p5 = LAST
+SYS JSONTOPKEY p5
+ASSERT LAST == "c"
+ASSERT LAST_N == 0
+SYS JSONBOTKEY p5
+ASSERT LAST == "a"
+ASSERT LAST_N == -10
+
+PRINT "jsontopkey ok"
+ASSERT OK == 1

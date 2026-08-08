@@ -243,6 +243,10 @@ int cubalc_host_json_len(const char *json, cubalc_host_result *r);
  * Bools via values map (true=1/false=0); strings/null/nested skipped.
  * Usability: score/status totals without JSONVALUES+SUM glue. r->str = decimal. */
 int cubalc_host_json_sum(const char *json, cubalc_host_result *r);
+/* key with max (want_min=0) or min (want_min=1) pure-integer value.
+ * r->str = key · r->n = value. Soft empty key + n=0 if none. First wins ties.
+ * Usability: dominant FREQ key without JSONTOKV+TOPKEY glue. */
+int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

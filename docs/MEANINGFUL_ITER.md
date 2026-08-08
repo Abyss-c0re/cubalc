@@ -560,6 +560,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 530. ~~**`JSONLEN` / `JLEN` / `JSONCOUNT`**~~ **done** (top-level key count → LAST_N · soft 0 · empty/size IF without JSONKEYS bag).
 531. ~~**`JSONEMPTY` / `JEMPTY` · `JSONNONEMPTY` / `HASKEYS`**~~ **done** (soft empty/nonempty plate probe · IF without JSONLEN+CMP).
 532. ~~**`JSONSUMN` / `JSONSUM` / `JSUMN`**~~ **done** (sum integer top-level plate values → LAST_N · no JSONVALUES+SUM glue).
+533. ~~**`JSONTOPKEY` / `JTOPKEY` · `JSONBOTKEY` / `JBOTKEY`**~~ **done** (max/min numeric plate key · LAST=key LAST_N=v · no TOKV+TOPKEY).
 
 ## Tick protocol
 

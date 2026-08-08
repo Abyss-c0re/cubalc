@@ -4722,6 +4722,85 @@ int cubalc_host_json_sum(const char *json, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS JSONTOPKEY/JSONBOTKEY — dominant/min numeric key without TOKV+TOPKEY. */
+int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *r) {
+  cubalc_host_result keys, raw;
+  const char *p, *line;
+  char best_key[256];
+  long best_v = 0;
+  int found = 0;
+  r_clear(r);
+  best_key[0] = 0;
+  memset(&keys, 0, sizeof keys);
+  if (cubalc_host_json_keys(json, &keys) != 0) {
+    r->str[0] = 0;
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  p = keys.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    const char *v;
+    char *end = NULL;
+    long num = 0;
+    int is_num = 0;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&raw, 0, sizeof raw);
+    if (cubalc_host_json_get_raw(json, key, &raw) != 0)
+      continue;
+    v = raw.str;
+    while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+    if (*v == '"') {
+      /* string — skip (not pure int) */
+      continue;
+    } else if (strncmp(v, "true", 4) == 0 &&
+               (v[4] == 0 || v[4] == ',' || v[4] == '}' || v[4] == ' ' ||
+                v[4] == '\n' || v[4] == '\r' || v[4] == '\t')) {
+      num = 1;
+      is_num = 1;
+    } else if (strncmp(v, "false", 5) == 0 &&
+               (v[5] == 0 || v[5] == ',' || v[5] == '}' || v[5] == ' ' ||
+                v[5] == '\n' || v[5] == '\r' || v[5] == '\t')) {
+      num = 0;
+      is_num = 1;
+    } else if (strncmp(v, "null", 4) == 0) {
+      continue;
+    } else if (*v == '{' || *v == '[') {
+      continue;
+    } else {
+      num = strtol(v, &end, 10);
+      if (end && end != v && *end == 0)
+        is_num = 1;
+    }
+    if (!is_num) continue;
+    if (!found || (want_min ? (num < best_v) : (num > best_v))) {
+      snprintf(best_key, sizeof best_key, "%s", key);
+      best_v = num;
+      found = 1;
+    }
+  }
+  if (!found) {
+    r->str[0] = 0;
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  snprintf(r->str, sizeof r->str, "%s", best_key);
+  r->n = best_v;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS JSONTOKV plate — object → key:val bag (dual of JSONFROMKV).
  * Uses ':' so default LOOKUP/FREQ work without sep glue. r->n = pairs. */
 int cubalc_host_json_to_kv(const char *json, cubalc_host_result *r) {
