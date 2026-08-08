@@ -578,6 +578,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 548. ~~**`REQUIRE JSONEQ` / `SAMEJSON`**~~ **done** (fail-fast plate equality · lists changed keys in error · soft twin SYS JSONEQ).
 549. ~~**`REQUIRE JSONSUBSET` / `JSONSUPERSET` / `JSONCOVERS`**~~ **done** (fail-fast required-field plate match · bad keys listed · soft twin SYS JSONSUBSET).
 550. ~~**`REQUIRE JSONNEQ` / `JNEQ` / `DIFFJSON`**~~ **done** (fail-fast if plates still equal · mutation/write verify · soft twin SYS JSONNEQ · surfaces JSONCHANGED).
+551. ~~**`JSONDEFAULTS` / `JSONENSUREALL` / `JDEFAULTS`**~~ **done** (multi-key fill missing from defaults plate · no clobber · dual of JSONMERGE for agent boot).
 
 ## Tick protocol
 

@@ -4235,6 +4235,69 @@ int cubalc_host_json_merge(const char *base, const char *overlay, cubalc_host_re
   return 0;
 }
 
+/* Usability: SYS JSONDEFAULTS plate defaults — fill missing keys only (no clobber).
+ * Dual of JSONMERGE for agent boot: live plate fields win; defaults fill gaps. */
+int cubalc_host_json_defaults(const char *plate, const char *defaults,
+                              cubalc_host_result *r) {
+  cubalc_host_result kd, gr, setr;
+  char cur[CUBALC_HOST_STR_MAX];
+  const char *p, *line;
+  long applied = 0, had = 0;
+  r_clear(r);
+  r->ok = 1;
+  /* start from plate object or empty */
+  {
+    const char *b = plate ? plate : "";
+    while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+    if (*b == '{')
+      snprintf(cur, sizeof cur, "%s", b);
+    else
+      snprintf(cur, sizeof cur, "%s", "{}");
+  }
+  memset(&kd, 0, sizeof kd);
+  if (cubalc_host_json_keys(defaults, &kd) != 0 || kd.n == 0) {
+    snprintf(r->str, sizeof r->str, "%s", cur);
+    r->n = 0;
+    r->code = 0;
+    return 0;
+  }
+  p = kd.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&gr, 0, sizeof gr);
+    /* present → keep (plate wins) */
+    if (cubalc_host_json_get_raw(cur, key, &gr) == 0) {
+      had++;
+      continue;
+    }
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(defaults, key, &gr) != 0)
+      continue;
+    memset(&setr, 0, sizeof setr);
+    if (cubalc_host_json_set(cur, key, gr.str, 1, &setr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               setr.err[0] ? setr.err : "jsondefaults: set fail");
+      return -1;
+    }
+    snprintf(cur, sizeof cur, "%s", setr.str);
+    applied++;
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  r->n = applied;
+  r->code = (int)had;
+  return 0;
+}
+
 /* Usability: raw top-level value for key (preserves quotes/nested/true/null).
  * Soft miss → -1. Used by JSONPICK / agents that must not re-encode peels. */
 int cubalc_host_json_get_raw(const char *json, const char *key, cubalc_host_result *r) {

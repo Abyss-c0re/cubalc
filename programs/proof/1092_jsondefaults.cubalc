@@ -1,0 +1,112 @@
+# JSONDEFAULTS / JSONENSUREALL / JDEFAULTS — multi-key plate boot defaults
+# Fill missing keys from a defaults plate; live fields never clobbered.
+# Dual of JSONMERGE (overlay wins). Singular JSONDEFAULT stays single-key ENSURE.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "retries" 3 "timeout" 30 "role" "worker" "ok" true
+LET defs = LAST
+
+# partial live plate
+SYS JSONOBJ "retries" 5 "trace" 1
+LET plate = LAST
+
+SYS JSONDEFAULTS plate defs
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JSONDEFAULTS_N == 3
+ASSERT JSONDEFAULTS_SET == 3
+ASSERT JSONDEFAULTS_HAD == 1
+LET out = LAST
+
+# live retries kept (no clobber)
+SYS JSONN "retries" FROM out
+ASSERT LAST_N == 5
+# defaults filled
+SYS JSONN "timeout" FROM out
+ASSERT LAST_N == 30
+SYS JSON "role" FROM out
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+# bool true peels as "1"
+SYS JSON "ok" FROM out
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+SYS JSONHASALL out "ok"
+ASSERT LAST_N == 1
+# live extra kept
+SYS JSONN "trace" FROM out
+ASSERT LAST_N == 1
+
+# aliases
+SYS JSONENSUREALL plate defs
+ASSERT JSONENSUREALL_N == 3
+SYS JDEFAULTS plate defs
+ASSERT LAST_N == 3
+SYS JSONFILL plate defs
+ASSERT LAST_N == 3
+SYS PLATEDEFAULTS plate defs
+ASSERT LAST_N == 3
+
+# FROM form
+SYS JSONDEFAULTS plate FROM defs
+ASSERT LAST_N == 3
+SYS JSONDEFAULTS plate WITH defs
+ASSERT LAST_N == 3
+
+# already complete → 0 inserted
+SYS JSONDEFAULTS out defs
+ASSERT LAST_N == 0
+ASSERT JSONDEFAULTS_HAD == 4
+# plate unchanged values
+SYS JSONN "retries" FROM LAST
+ASSERT LAST_N == 5
+
+# empty plate gets all defaults
+SYS JSONDEFAULTS "{}" defs
+ASSERT LAST_N == 4
+SYS JSONHASALL LAST "retries" "timeout" "role" "ok"
+ASSERT LAST_N == 1
+
+# empty defaults → copy plate, 0 set
+SYS JSONDEFAULTS plate "{}"
+ASSERT LAST_N == 0
+SYS JSONN "retries" FROM LAST
+ASSERT LAST_N == 5
+
+# dual of merge: merge would clobber retries
+SYS JSONMERGE plate defs
+SYS JSONN "retries" FROM LAST
+ASSERT LAST_N == 3
+# defaults path kept 5
+SYS JSONDEFAULTS plate defs
+SYS JSONN "retries" FROM LAST
+ASSERT LAST_N == 5
+
+# 1-arg form: defaults on LAST
+SYS JOIN "" plate
+SYS JSONDEFAULTS defs
+ASSERT JSONDEFAULTS_N == 3
+SYS JSONN "timeout" FROM LAST
+ASSERT LAST_N == 30
+
+# non-object plate → start empty + fill
+SYS JSONDEFAULTS "not-obj" defs
+ASSERT LAST_N == 4
+SYS JSONN "timeout" FROM LAST
+ASSERT LAST_N == 30
+
+# agent boot pattern
+SYS JSONOBJ "status" "running"
+LET boot = LAST
+SYS JSONOBJ "status" "idle" "max" 10 "soft" 1
+LET lib_defs = LAST
+SYS JSONDEFAULTS boot lib_defs
+LET boot = LAST
+SYS JSON "status" FROM boot
+SYS EQS LAST "running"
+ASSERT LAST_N == 1
+SYS JSONN "max" FROM boot
+ASSERT LAST_N == 10
+SYS JSONN "soft" FROM boot
+ASSERT LAST_N == 1

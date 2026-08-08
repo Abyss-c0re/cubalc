@@ -18464,6 +18464,79 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         fprintf(vm->trace, "# sys jsonensure → key=%s inserted\n", key);
       bump(vm); return 1;
     }
+    /* SYS JSONDEFAULTS|JSONENSUREALL|JDEFAULTS plate defaults
+     * — fill missing keys on plate from defaults plate (plate wins when present).
+     * LAST = result · LAST_N / JSONDEFAULTS_N = keys inserted · JSONDEFAULTS_HAD = skipped.
+     * Forms: plate defaults · defaults (plate=LAST) · plate FROM|WITH defaults.
+     * Usability: multi-key agent boot without multi JSONENSURE or clobber live fields.
+     * Dual of JSONMERGE (overlay wins). Singular JSONDEFAULT remains single-key ENSURE. */
+    if (kw(&L->cur,"JSONDEFAULTS") || kw(&L->cur,"JSONENSUREALL") ||
+        kw(&L->cur,"JDEFAULTS") || kw(&L->cur,"ENSUREDEFAULTS") ||
+        kw(&L->cur,"PLATEDEFAULTS") || kw(&L->cur,"FILLDEFAULTS") ||
+        kw(&L->cur,"JSONFILL") || kw(&L->cur,"BOOTDEFAULTS") ||
+        kw(&L->cur,"WITHDEFAULTS") || kw(&L->cur,"DEFAULTSPLACE")){
+      char plate[CUBALC_HOST_STR_MAX], defs[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr;
+      lex_next(L);
+      plate[0] = 0;
+      defs[0] = 0;
+      if (resolve_str_arg(vm, L, plate, sizeof plate) != 0)
+        snprintf(plate, sizeof plate, "%s", vm->last_str);
+      /* optional FROM|WITH|USING|OF before defaults */
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"WITH") || kw(&L->cur,"USING") ||
+          kw(&L->cur,"OF") || kw(&L->cur,"DEFAULTS") || kw(&L->cur,"BASE"))
+        lex_next(L);
+      if (resolve_str_arg(vm, L, defs, sizeof defs) != 0) {
+        /* one-arg form: plate=LAST, defaults=first arg already in plate */
+        if (plate[0] && !defs[0]) {
+          snprintf(defs, sizeof defs, "%s", plate);
+          snprintf(plate, sizeof plate, "%s", vm->last_str);
+        }
+      }
+      if (!defs[0]) {
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "JSONDEFAULTS_N", 0);
+        var_set_num(vm, "JSONDEFAULTS_HAD", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "JSONDEFAULTS: need plate and defaults");
+        var_set_str(vm, "ERR", "JSONDEFAULTS: need plate and defaults");
+        bump(vm); return 1;
+      }
+      if (!plate[0])
+        snprintf(plate, sizeof plate, "%s", "{}");
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_defaults(plate, defs, &hr) != 0) {
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "JSONDEFAULTS_N", 0);
+        var_set_str(vm, "LAST", plate);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "JSONDEFAULTS: fail");
+          var_set_str(vm, "ERR", "JSONDEFAULTS: fail");
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "JSONDEFAULTS", hr.str);
+      var_set_str(vm, "JSONENSUREALL", hr.str);
+      var_set_num(vm, "JSONDEFAULTS_N", hr.n);
+      var_set_num(vm, "JSONENSUREALL_N", hr.n);
+      var_set_num(vm, "JSONDEFAULTS_HAD", hr.code);
+      var_set_num(vm, "JSONDEFAULTS_SET", hr.n);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys jsondefaults → set=%ld had=%d\n", hr.n, hr.code);
+      bump(vm); return 1;
+    }
     /* SYS JSONPICK|JSONKEEP|JKEEP|JSELECT [plate] key [key ...]
      * — keep only listed top-level keys → LAST = subset plate · LAST_N = kept.
      * Missing keys soft-skipped. Raw values preserved (nums/bools/nested).
@@ -33570,6 +33643,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"JDEFAULT", "JDEFAULT alias of JSONENSURE"},
       {"JSONDEFAULT", "JSONDEFAULT alias of JSONENSURE"},
       {"JENSURE", "JENSURE alias of JSONENSURE"},
+      {"JSONDEFAULTS", "JSONDEFAULTS|JSONENSUREALL plate defaults — fill missing keys only · LAST_N=inserted"},
+      {"SYS JSONDEFAULTS", "SYS JSONDEFAULTS|JDEFAULTS plate [FROM] defaults — multi-key boot · no clobber"},
+      {"JSONENSUREALL", "JSONENSUREALL alias of JSONDEFAULTS"},
+      {"JDEFAULTS", "JDEFAULTS alias of JSONDEFAULTS"},
+      {"JSONFILL", "JSONFILL alias of JSONDEFAULTS"},
       {"JSONPICK", "JSONPICK|JSONKEEP [plate] key [key…] — keep listed plate keys · raw values · LAST_N=kept"},
       {"SYS JSONPICK", "SYS JSONPICK|JSONKEEP [plate] key… | plate OF bag — subset plate for peer/log"},
       {"JSONKEEP", "JSONKEEP alias of JSONPICK"},

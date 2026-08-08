@@ -213,6 +213,12 @@ int cubalc_host_json_del(const char *json, const char *key, cubalc_host_result *
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */
 int cubalc_host_json_merge(const char *base, const char *overlay, cubalc_host_result *r);
+/* fill missing keys on plate from defaults (plate wins when present). r->str=result.
+ * r->n = keys inserted · r->code = keys already present (skipped). Soft always OK.
+ * Empty defaults → copy plate. Non-object plate → start {}. Dual of merge for boots.
+ * Usability: multi-key agent defaults without multi JSONENSURE or clobber. */
+int cubalc_host_json_defaults(const char *plate, const char *defaults,
+                              cubalc_host_result *r);
 /* raw top-level value text for key (includes quotes for strings, nested as-is).
  * Soft miss → -1. Usability: rename/pick/copy without re-encoding. */
 int cubalc_host_json_get_raw(const char *json, const char *key, cubalc_host_result *r);
