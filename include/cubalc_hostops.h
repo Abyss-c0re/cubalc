@@ -288,6 +288,12 @@ int cubalc_host_json_pluck(const char *json, const char *keys_nl,
  * Usability: plate key diff/common without JSONKEYS+DIFF/INTERSECT glue. */
 int cubalc_host_json_key_set_op(const char *a, const char *b, int want_inter,
                                 cubalc_host_result *r);
+/* plate value+structure delta: want_same=0 → changed keys (only-a/only-b/value≠);
+ * want_same=1 → keys present in both with same raw value.
+ * r->str bag · r->n count. Soft empty non-object.
+ * Usability: plate sync delta without multi JSONKEYS+JSON peel glue. */
+int cubalc_host_json_changed_keys(const char *a, const char *b, int want_same,
+                                  cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

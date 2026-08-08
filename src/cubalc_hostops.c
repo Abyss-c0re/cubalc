@@ -5244,6 +5244,103 @@ int cubalc_host_json_key_set_op(const char *a, const char *b, int want_inter,
   return 0;
 }
 
+/* Usability: SYS JSONCHANGED/JSONSTABLE — value+structure key delta between plates. */
+int cubalc_host_json_changed_keys(const char *a, const char *b, int want_same,
+                                  cubalc_host_result *r) {
+  cubalc_host_result ka, kb, ra, rb;
+  const char *p, *line;
+  size_t olen = 0;
+  long count = 0;
+  r_clear(r);
+  r->ok = 1;
+  r->str[0] = 0;
+  r->n = 0;
+  memset(&ka, 0, sizeof ka);
+  memset(&kb, 0, sizeof kb);
+  if (cubalc_host_json_keys(a, &ka) != 0)
+    ka.str[0] = 0;
+  if (cubalc_host_json_keys(b, &kb) != 0)
+    kb.str[0] = 0;
+  /* walk keys of a */
+  p = ka.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    int has_a, has_b, same = 0, keep = 0;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    has_a = 1;
+    memset(&ra, 0, sizeof ra);
+    memset(&rb, 0, sizeof rb);
+    has_b = (cubalc_host_json_get_raw(b, key, &rb) == 0) ? 1 : 0;
+    if (cubalc_host_json_get_raw(a, key, &ra) != 0)
+      has_a = 0;
+    if (has_a && has_b) {
+      const char *va = ra.str, *vb = rb.str;
+      while (*va == ' ' || *va == '\t' || *va == '\n' || *va == '\r') va++;
+      while (*vb == ' ' || *vb == '\t' || *vb == '\n' || *vb == '\r') vb++;
+      same = (strcmp(va, vb) == 0) ? 1 : 0;
+    }
+    if (want_same)
+      keep = (has_a && has_b && same) ? 1 : 0;
+    else
+      keep = (!has_b || !same) ? 1 : 0; /* only-a or value differ */
+    if (keep) {
+      size_t al = strlen(key);
+      if (olen > 0) {
+        if (olen + 1 >= sizeof r->str) break;
+        r->str[olen++] = '\n';
+        r->str[olen] = 0;
+      }
+      if (olen + al + 1 >= sizeof r->str) break;
+      memcpy(r->str + olen, key, al + 1);
+      olen += al;
+      count++;
+    }
+  }
+  /* keys only in b (changed); skip for want_same */
+  if (!want_same) {
+    p = kb.str;
+    while (*p) {
+      char key[256];
+      size_t kn = 0;
+      while (*p == '\n' || *p == '\r') p++;
+      if (!*p) break;
+      line = p;
+      while (*p && *p != '\n' && *p != '\r') p++;
+      kn = (size_t)(p - line);
+      if (kn >= sizeof key) kn = sizeof key - 1;
+      memcpy(key, line, kn);
+      key[kn] = 0;
+      if (!key[0]) continue;
+      memset(&ra, 0, sizeof ra);
+      if (cubalc_host_json_get_raw(a, key, &ra) == 0)
+        continue; /* already handled as common/diff */
+      {
+        size_t al = strlen(key);
+        if (olen > 0) {
+          if (olen + 1 >= sizeof r->str) break;
+          r->str[olen++] = '\n';
+          r->str[olen] = 0;
+        }
+        if (olen + al + 1 >= sizeof r->str) break;
+        memcpy(r->str + olen, key, al + 1);
+        olen += al;
+        count++;
+      }
+    }
+  }
+  r->n = count;
+  return 0;
+}
+
 /* Usability: SYS JSONTOPKEY/JSONBOTKEY — dominant/min numeric key without TOKV+TOPKEY. */
 int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *r) {
   cubalc_host_result keys, raw;

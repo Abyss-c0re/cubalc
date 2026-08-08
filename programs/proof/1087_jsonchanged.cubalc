@@ -1,0 +1,85 @@
+# JSONCHANGED / JSONNEQKEYS · JSONSTABLE / JSONEQKEYS — value+structure key delta
+# Plate sync without multi JSONKEYS+JSON peels. Complements JSONKEYDIFF (keys only).
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 1 "err" "" "msg" "hello"
+LET a = LAST
+SYS JSONOBJ "ok" true "n" 2 "err" "" "version" "1"
+LET b = LAST
+
+# changed: n (value), msg (only a), version (only b) — err/ok same
+SYS JSONCHANGED a b
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JSONCHANGED_N == 3
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "msg"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "version"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 0
+SYS HASLINE LAST "err"
+ASSERT LAST_N == 0
+
+# stable dual
+SYS JSONSTABLE a b
+ASSERT LAST_N == 2
+ASSERT JSONSTABLE_N == 2
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "err"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 0
+
+# identical → empty changed, all stable
+SYS JSONOBJ "x" 1 "y" 2
+LET c = LAST
+SYS JSONCHANGED c c
+ASSERT LAST_N == 0
+SYS JSONSTABLE c c
+ASSERT LAST_N == 2
+
+# empty vs plate
+SYS JSONCHANGED "{}" a
+ASSERT LAST_N == 4
+SYS JSONSTABLE "{}" a
+ASSERT LAST_N == 0
+
+# value-only change (same keys)
+SYS JSONOBJ "k" 1 "m" 2
+LET d = LAST
+SYS JSONOBJ "k" 1 "m" 9
+LET e = LAST
+SYS JSONKEYDIFF d e
+ASSERT LAST_N == 0
+SYS JSONCHANGED d e
+ASSERT LAST_N == 1
+SYS EQS LAST "m"
+ASSERT LAST_N == 1
+SYS JSONSTABLE d e
+ASSERT LAST_N == 1
+SYS EQS LAST "k"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JSONNEQKEYS a b
+ASSERT LAST_N == 3
+SYS JCHANGED a b
+ASSERT LAST_N == 3
+SYS JSONEQKEYS a b
+ASSERT LAST_N == 2
+SYS JSTABLE a b
+ASSERT LAST_N == 2
+
+# agent: if nothing changed
+SYS JSONCHANGED c c
+IF LAST_N THEN
+  FAIL "should be identical"
+ELSE
+  PASS "plates in sync"
+END
+ASSERT OK == 1
