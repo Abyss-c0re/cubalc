@@ -1,0 +1,88 @@
+# JSONFILEDEFAULTS / DEFAULTPLATEALL — multi-key disk fill-if-missing
+# Usability: agent boot defaults without multi JSONFILEENSURE or clobber live fields.
+# Dual of JSONFILEMERGE (overlay wins).
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_jsonfiledefaults"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS JOIN dir "nested/fresh.json"
+LET deep = LAST
+
+SYS RM path
+
+# defaults plate
+SYS JSONOBJ "retries" 3 "role" "worker" "soft" 1
+LET defs = LAST
+
+# --- create-on-miss: all defaults applied ---
+SYS JSONFILEDEFAULTS path defs
+ASSERT OK == 1
+ASSERT JSONFILEDEFAULTS_CREATED == 1
+ASSERT JSONFILEDEFAULTS_FILE == 0
+ASSERT LAST_N == 3
+ASSERT JSONFILEDEFAULTS_SET == 3
+LET plate = LAST
+SYS JSONN "retries" FROM plate
+ASSERT LAST_N == 3
+SYS JSON "role" FROM plate
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# --- live counter survives re-seed ---
+SYS UPDATEPLATE path "retries" 99
+SYS JSONFILEDEFAULTS path defs
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT JSONFILEDEFAULTS_SET == 0
+ASSERT JSONFILEDEFAULTS_HAD >= 1
+SYS PEEKPLATE path "retries"
+SYS EQS LAST "99"
+ASSERT LAST_N == 1
+
+# --- partial fill: new key only ---
+SYS JSONOBJ "retries" 0 "role" "x" "phase" "boot"
+LET defs2 = LAST
+SYS JSONFILEDEFAULTS path defs2
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS PEEKPLATE path "phase"
+SYS EQS LAST "boot"
+ASSERT LAST_N == 1
+SYS PEEKPLATE path "retries"
+SYS EQS LAST "99"
+ASSERT LAST_N == 1
+SYS PEEKPLATE path "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# --- aliases ---
+SYS JSONOBJ "tag" "a"
+SYS DEFAULTPLATEALL path LAST
+ASSERT LAST_N == 1
+SYS JSONOBJ "tag" "b"
+SYS ENSUREPLATEALL path LAST
+ASSERT LAST_N == 0
+SYS PEEKPLATE path "tag"
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS JSONOBJ "z" 1
+SYS SEEDPLATEALL path LAST
+ASSERT LAST_N == 1
+
+# --- nested create ---
+SYS RM deep
+SYS JSONOBJ "n" 1 "ok" true
+SYS JSONFILEDEFAULTS deep LAST
+ASSERT JSONFILEDEFAULTS_CREATED == 1
+SYS LOADPLATE deep
+LET loaded = LAST
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 1
+
+PRINT "jsonfiledefaults ok"
