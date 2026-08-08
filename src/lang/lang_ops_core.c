@@ -20706,6 +20706,59 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         fprintf(vm->trace, "# sys jsondelta → n=%ld prefer_b=%d\n", hr.n, prefer_b);
       bump(vm); return 1;
     }
+    /* SYS JSONCHANGELOG|JCHANGELOG|PLATECHANGELOG a b
+     * — newline bag of "key: old → new" lines for each changed key.
+     * Missing side → (missing). LAST_N = line count. Soft empty if identical.
+     * Usability: agent/log plate sync without CHANGED+EACH+JSON+CAT glue.
+     * Complements JSONCHANGED (names) and JSONDELTA (new values only). */
+    if (kw(&L->cur,"JSONCHANGELOG") || kw(&L->cur,"JCHANGELOG") ||
+        kw(&L->cur,"PLATECHANGELOG") || kw(&L->cur,"JSONCHANGES") ||
+        kw(&L->cur,"CHANGELOG") || kw(&L->cur,"PLATELOG") ||
+        kw(&L->cur,"JSONUD") || kw(&L->cur,"DIFFLINES") ||
+        kw(&L->cur,"JSONDIFFLINES") || kw(&L->cur,"JDIFFLINES")){
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr;
+      lex_next(L);
+      a[0] = 0;
+      b[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+        b[0] = 0;
+      if (!a[0])
+        snprintf(a, sizeof a, "%s", "{}");
+      if (!b[0])
+        snprintf(b, sizeof b, "%s", "{}");
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_changelog(a, b, &hr) != 0) {
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "JSONCHANGELOG_N", 0);
+        var_set_str(vm, "LAST", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "JSONCHANGELOG: fail");
+          var_set_str(vm, "ERR", "JSONCHANGELOG: fail");
+        }
+        bump(vm); return 1;
+      }
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "JSONCHANGELOG_N", hr.n);
+      var_set_num(vm, "JCHANGELOG_N", hr.n);
+      var_set_num(vm, "JSONCHANGED_N", hr.n);
+      var_set_str(vm, "JSONCHANGELOG", hr.str);
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys jsonchangelog → n=%ld\n", hr.n);
+      bump(vm); return 1;
+    }
     /* SYS CHAT "local"|"grok" ["model"] — msg from GROKIUM_MSG / CUBALC_MSG env */
     if (kw(&L->cur,"CHAT") || kw(&L->cur,"ASK")){
       lex_next(L);
@@ -33454,6 +33507,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"JSONCHANGED", "JSONCHANGED|JSONNEQKEYS a b — keys that differ (struct or value) → bag"},
       {"SYS JSONCHANGED", "SYS JSONCHANGED a b — plate sync key-name bag without multi peels"},
       {"JSONNEQKEYS", "JSONNEQKEYS alias of JSONCHANGED"},
+      {"JSONCHANGELOG", "JSONCHANGELOG|JCHANGELOG a b — key: old → new lines · agent/log plate sync"},
+      {"SYS JSONCHANGELOG", "SYS JSONCHANGELOG|PLATECHANGELOG a b — readable change bag · dual of CHANGED names"},
+      {"JCHANGELOG", "JCHANGELOG alias of JSONCHANGELOG"},
+      {"PLATECHANGELOG", "PLATECHANGELOG alias of JSONCHANGELOG"},
+      {"JSONDIFFLINES", "JSONDIFFLINES alias of JSONCHANGELOG"},
       {"JSONSTABLE", "JSONSTABLE|JSONEQKEYS a b — keys same in both plates · dual CHANGED"},
       {"SYS JSONSTABLE", "SYS JSONSTABLE a b — unchanged keys bag"},
       {"JSONEQKEYS", "JSONEQKEYS alias of JSONSTABLE"},

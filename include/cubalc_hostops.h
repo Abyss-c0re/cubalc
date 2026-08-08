@@ -311,6 +311,11 @@ int cubalc_host_json_changed_keys(const char *a, const char *b, int want_same,
  * Usability: sync payload without CHANGED+EACH+JSONSET glue. */
 int cubalc_host_json_delta_obj(const char *a, const char *b, int prefer_b,
                                cubalc_host_result *r);
+/* human/agent changelog bag: one line per changed key "key: old → new".
+ * Missing side shown as (missing). Internal newlines collapsed to space.
+ * r->str newline bag · r->n count. Soft empty if identical/non-object.
+ * Usability: log plate sync without CHANGED+EACH+JSON+CAT glue. */
+int cubalc_host_json_changelog(const char *a, const char *b, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

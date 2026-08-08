@@ -5516,6 +5516,95 @@ int cubalc_host_json_delta_obj(const char *a, const char *b, int prefer_b,
   return 0;
 }
 
+/* Usability: SYS JSONCHANGELOG — "key: old → new" bag for agent/log plate sync. */
+int cubalc_host_json_changelog(const char *a, const char *b, cubalc_host_result *r) {
+  cubalc_host_result ch, ra, rb;
+  const char *p, *line;
+  size_t olen = 0;
+  long count = 0;
+  r_clear(r);
+  r->ok = 1;
+  r->str[0] = 0;
+  r->n = 0;
+  memset(&ch, 0, sizeof ch);
+  if (cubalc_host_json_changed_keys(a, b, 0, &ch) != 0 || !ch.str[0]) {
+    snprintf(r->str, sizeof r->str, "%s", "");
+    return 0;
+  }
+  p = ch.str;
+  while (*p) {
+    char key[256];
+    char linebuf[CUBALC_HOST_STR_MAX];
+    char oldv[CUBALC_HOST_STR_MAX / 4];
+    char newv[CUBALC_HOST_STR_MAX / 4];
+    size_t kn = 0, li;
+    int has_a, has_b;
+    const char *va, *vb;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&ra, 0, sizeof ra);
+    memset(&rb, 0, sizeof rb);
+    has_a = (cubalc_host_json_get_raw(a, key, &ra) == 0) ? 1 : 0;
+    has_b = (cubalc_host_json_get_raw(b, key, &rb) == 0) ? 1 : 0;
+    /* flatten raw values to single-line tokens */
+    oldv[0] = 0;
+    newv[0] = 0;
+    if (has_a) {
+      size_t oi = 0;
+      for (va = ra.str; *va && oi + 1 < sizeof oldv; va++) {
+        if (*va == '\n' || *va == '\r') {
+          if (oi > 0 && oldv[oi - 1] != ' ') oldv[oi++] = ' ';
+        } else {
+          oldv[oi++] = *va;
+        }
+      }
+      oldv[oi] = 0;
+      /* trim trailing space */
+      while (oi > 0 && (oldv[oi - 1] == ' ' || oldv[oi - 1] == '\t'))
+        oldv[--oi] = 0;
+    }
+    if (has_b) {
+      size_t ni = 0;
+      for (vb = rb.str; *vb && ni + 1 < sizeof newv; vb++) {
+        if (*vb == '\n' || *vb == '\r') {
+          if (ni > 0 && newv[ni - 1] != ' ') newv[ni++] = ' ';
+        } else {
+          newv[ni++] = *vb;
+        }
+      }
+      newv[ni] = 0;
+      while (ni > 0 && (newv[ni - 1] == ' ' || newv[ni - 1] == '\t'))
+        newv[--ni] = 0;
+    }
+    /* present empty string stays ""; only truly absent sides use (missing) */
+    if (has_a && has_b)
+      snprintf(linebuf, sizeof linebuf, "%s: %s → %s", key, oldv, newv);
+    else if (has_a)
+      snprintf(linebuf, sizeof linebuf, "%s: %s → (missing)", key, oldv);
+    else
+      snprintf(linebuf, sizeof linebuf, "%s: (missing) → %s", key, newv);
+    li = strlen(linebuf);
+    if (olen > 0) {
+      if (olen + 1 >= sizeof r->str) break;
+      r->str[olen++] = '\n';
+      r->str[olen] = 0;
+    }
+    if (olen + li + 1 >= sizeof r->str) break;
+    memcpy(r->str + olen, linebuf, li + 1);
+    olen += li;
+    count++;
+  }
+  r->n = count;
+  return 0;
+}
+
 /* Usability: SYS JSONTOPKEY/JSONBOTKEY — dominant/min numeric key without TOKV+TOPKEY. */
 int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *r) {
   cubalc_host_result keys, raw;

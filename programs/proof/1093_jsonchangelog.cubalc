@@ -1,0 +1,98 @@
+# JSONCHANGELOG / JCHANGELOG / PLATECHANGELOG — key: old → new report bag
+# Complements JSONCHANGED (names) and JSONDELTA (new values only).
+# Soft empty bag when plates identical.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 1 "err" "" "msg" "hello"
+LET a = LAST
+SYS JSONOBJ "ok" true "n" 2 "err" "" "version" "1"
+LET b = LAST
+
+SYS JSONCHANGELOG a b
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JSONCHANGELOG_N == 3
+LET log = LAST
+
+# value change
+SYS HAS log "n: 1 → 2"
+ASSERT LAST_N == 1
+# only in a (removed)
+SYS HAS log "msg:"
+ASSERT LAST_N == 1
+SYS HAS log "(missing)"
+ASSERT LAST_N == 1
+# only in b (added)
+SYS HAS log "version:"
+ASSERT LAST_N == 1
+SYS HAS log "\"1\""
+ASSERT LAST_N == 1
+# stable keys not listed
+SYS HAS log "ok:"
+ASSERT LAST_N == 0
+SYS HAS log "err:"
+ASSERT LAST_N == 0
+
+# aliases
+SYS JCHANGELOG a b
+ASSERT LAST_N == 3
+SYS PLATECHANGELOG a b
+ASSERT LAST_N == 3
+SYS JSONDIFFLINES a b
+ASSERT LAST_N == 3
+SYS DIFFLINES a b
+ASSERT LAST_N == 3
+
+# identical → empty
+SYS JSONCHANGELOG a a
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# value-only change
+SYS JSONOBJ "k" 1 "m" 2
+LET c = LAST
+SYS JSONOBJ "k" 1 "m" 9
+LET d = LAST
+SYS JSONCHANGELOG c d
+ASSERT LAST_N == 1
+SYS HAS LAST "m: 2 → 9"
+ASSERT LAST_N == 1
+
+# add only
+SYS JSONOBJ "x" 1
+LET e = LAST
+SYS JSONOBJ "x" 1 "y" 2
+LET f = LAST
+SYS JSONCHANGELOG e f
+ASSERT LAST_N == 1
+SYS HAS LAST "y: (missing) → 2"
+ASSERT LAST_N == 1
+
+# remove only
+SYS JSONCHANGELOG f e
+ASSERT LAST_N == 1
+SYS HAS LAST "y: 2 → (missing)"
+ASSERT LAST_N == 1
+
+# agent pattern: soft neq then log
+SYS JSONNEQ a b
+IF LAST_N THEN
+  SYS JSONCHANGELOG a b
+  SYS LINES LAST
+  ASSERT LAST_N == 3
+  PASS "changelog ready"
+ELSE
+  FAIL "should differ"
+END
+ASSERT OK == 1
+
+# complements DELTA: names with both values
+SYS JSONDELTA a b
+LET delta = LAST
+SYS JSONHASALL delta "n" "msg" "version"
+ASSERT LAST_N == 1
+SYS JSONCHANGELOG a b
+SYS HASLINE LAST "n: 1 → 2"
+ASSERT LAST_N == 1
