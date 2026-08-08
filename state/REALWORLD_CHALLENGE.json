@@ -1552,6 +1552,6 @@
     "SAVEPLATE LAST=path forced peel-from-body fix (W168)",
     "ENSURE create then load polarity documented (W169)"
   ],
-  "commit": "pending",
+  "commit": "cab2e3d",
   "ts": "2026-08-08T17:29:55Z"
 }
