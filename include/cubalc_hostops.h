@@ -283,6 +283,11 @@ int cubalc_host_json_filter_plate_keys(const char *json, const char *allowed_nl,
  * Usability: multi-field extract without multi JSON+PUSH glue. */
 int cubalc_host_json_pluck(const char *json, const char *keys_nl,
                            cubalc_host_result *r);
+/* plate key-set ops: want_inter=0 → keys in a not in b; 1 → intersection.
+ * r->str = newline bag · r->n = count. Soft empty if non-object.
+ * Usability: plate key diff/common without JSONKEYS+DIFF/INTERSECT glue. */
+int cubalc_host_json_key_set_op(const char *a, const char *b, int want_inter,
+                                cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

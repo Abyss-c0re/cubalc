@@ -1,0 +1,85 @@
+# JSONKEYDIFF / KEYSDIFF · JSONKEYCOMM / KEYSINTER — plate key-set bags
+# Key delta without JSONKEYS+DIFF/INTERSECT glue. (JSONDIFF = JSONNEQ alias.)
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 1 "err" "" "extra" 9
+LET a = LAST
+SYS JSONOBJ "ok" true "n" 2 "version" "1"
+LET b = LAST
+
+# keys only in a
+SYS JSONKEYDIFF a b
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT JSONKEYDIFF_N == 2
+SYS HASLINE LAST "err"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "extra"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 0
+SYS HASLINE LAST "version"
+ASSERT LAST_N == 0
+
+# keys only in b
+SYS JSONKEYDIFF b a
+ASSERT LAST_N == 1
+SYS EQS LAST "version"
+ASSERT LAST_N == 1
+
+# intersection
+SYS JSONKEYCOMM a b
+ASSERT LAST_N == 2
+ASSERT JSONKEYCOMM_N == 2
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "err"
+ASSERT LAST_N == 0
+
+# identical plates → empty diff, full common
+SYS JSONOBJ "x" 1 "y" 2
+LET c = LAST
+SYS JSONKEYDIFF c c
+ASSERT LAST_N == 0
+SYS JSONKEYCOMM c c
+ASSERT LAST_N == 2
+
+# empty / non-object soft
+SYS JSONKEYDIFF "{}" a
+ASSERT LAST_N == 0
+SYS JSONKEYDIFF a "{}"
+ASSERT LAST_N == 4
+
+# aliases
+SYS KEYSDIFF a b
+ASSERT LAST_N == 2
+SYS KEYSINTER a b
+ASSERT LAST_N == 2
+SYS JSONCOMMON a b
+ASSERT LAST_N == 2
+SYS JSONONLYA a b
+ASSERT LAST_N == 2
+
+# agent: what changed in schema
+SYS JSONOBJ "status" "ok" "code" 0
+LET old = LAST
+SYS JSONOBJ "status" "ok" "code" 0 "trace" 1
+LET newp = LAST
+SYS JSONKEYDIFF newp old
+ASSERT LAST_N == 1
+SYS EQS LAST "trace"
+ASSERT LAST_N == 1
+SYS JSONKEYCOMM newp old
+ASSERT LAST_N == 2
+
+# IF no new keys
+SYS JSONKEYDIFF old newp
+IF LAST_N THEN
+  FAIL "old should not add keys"
+ELSE
+  PASS "no keys removed from new view as added-in-old"
+END
+ASSERT OK == 1

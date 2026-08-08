@@ -572,6 +572,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 542. ~~**`REQUIRE JSONHASALL` / `JSONNEED` / `JSONKEYS`**~~ **done** (fail-fast plate key contract · missing listed in error · soft twin SYS JSONHASALL).
 543. ~~**`REQUIRE JSONONLY` / `NOEXTRA` / `JSONSTRICT`**~~ **done** (fail-fast if plate has keys outside allow-list · extras listed · soft twin SYS JSONEXTRA).
 544. ~~**`JSONEXACT` / `JSONSCHEMA` · `REQUIRE JSONEXACT`**~~ **done** (exact key-set HASALL+ONLY one-shot · soft LAST_N + fail-fast · miss/extra listed).
+545. ~~**`JSONKEYDIFF` / `KEYSDIFF` · `JSONKEYCOMM` / `KEYSINTER`**~~ **done** (plate key-set diff/intersection bags · no JSONKEYS+DIFF/INTERSECT glue).
 
 ## Tick protocol
 
