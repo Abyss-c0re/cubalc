@@ -35480,6 +35480,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
       {"TEMPLATEP", "TEMPLATEP alias of FILLP"},
+      {"FILLPFILE", "FILLPFILE|SUBSTPLATEFILE tmpl [out] — expand {{key}} file from PLATE · dual SUBSTFILE"},
+      {"SUBSTPLATEFILE", "SUBSTPLATEFILE alias of FILLPFILE"},
+      {"EXPANDPFILE", "EXPANDPFILE alias of FILLPFILE"},
       {"USAGE", "USAGE [\"text\"] — sticky CLI usage · REQUIRE ARG/ARGC/FLAG fails append tip"},
       {"HELPFLAG", "HELPFLAG|AUTOHELP [name|,|alt] — if --help|-h present print USAGE and EXIT 0 · default help|h|usage"},
       {"VERSIONFLAG", "VERSIONFLAG|VERFLAG [name|,|alt] — if --version|-V print VERSION/PROG_VERSION and EXIT 0 · default version|V|ver"},
@@ -38169,6 +38172,118 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# fillp hits=%ld miss=%ld\n", hits, miss);
     if (vm->res)
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
+    bump(vm); return 1;
+  }
+  /* FILLPFILE|SUBSTPLATEFILE|EXPANDPFILE tmpl_path [out_path]
+   * — read template file, expand {{key}} from PLATE, write result.
+   * Default out = tmpl_path (in-place). Soft miss read/write → OK=0 sticky ERR.
+   * LAST = out path; LAST_N/FILLPFILE_N = slots; FILLPFILE_MISS; FILLPFILE_BYTES;
+   * FILLPFILE_BODY = expanded text.
+   * Usability: materialize status/config from plate without READ+FILLP+WRITE:
+   *   SETP "agent" "hive-01"
+   *   SETP "tick" 42
+   *   FILLPFILE "tpl/status.txt" "state/status.txt"
+   * Complements SYS SUBSTFILE ($NAME) with plate-local {{key}} dual of FILLP. */
+  if (kw(&L->cur,"FILLPFILE") || kw(&L->cur,"SUBSTPLATEFILE") ||
+      kw(&L->cur,"EXPANDPFILE") || kw(&L->cur,"RENDERPFILE") ||
+      kw(&L->cur,"TEMPLATEPFILE") || kw(&L->cur,"PLATE_FILLFILE") ||
+      kw(&L->cur,"FILLPLATEFILE") || kw(&L->cur,"MFILLPFILE") ||
+      kw(&L->cur,"MATERIALIZEP") || kw(&L->cur,"PLATE_RENDERFILE")) {
+    char path[CUBALC_HOST_STR_MAX], outpath[CUBALC_HOST_STR_MAX];
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+    char plate[CUBALC_HOST_STR_MAX], expanded[CUBALC_HOST_STR_MAX];
+    long hits = 0, miss = 0;
+    cubalc_host_result hr, wr;
+    Var *pv;
+
+    lex_next(L);
+    path[0] = 0; outpath[0] = 0; a[0] = 0; b[0] = 0;
+    plate[0] = 0; expanded[0] = 0;
+
+    if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+      fail(vm, "FILLPFILE tmpl_path [out_path]");
+      return -1;
+    }
+    snprintf(path, sizeof path, "%s", a);
+    if (resolve_str_arg(vm, L, b, sizeof b) == 0 && b[0])
+      snprintf(outpath, sizeof outpath, "%s", b);
+    else
+      snprintf(outpath, sizeof outpath, "%s", path);
+
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FILLPFILE_N", 0);
+      var_set_num(vm, "FILLPFILE_MISS", 0);
+      var_set_num(vm, "FILLPFILE_BYTES", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "FILLPFILE: empty path");
+      var_set_str(vm, "ERR", "FILLPFILE: empty path");
+      bump(vm); return 1;
+    }
+
+    pv = var_get(vm, "PLATE", 0);
+    if (pv && pv->is_str && pv->sval[0])
+      snprintf(plate, sizeof plate, "%s", pv->sval);
+    else
+      snprintf(plate, sizeof plate, "%s", "{}");
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_read(path, &hr) != 0) {
+      char ebuf[CUBALC_HOST_ERR_MAX + 32];
+      snprintf(ebuf, sizeof ebuf, "FILLPFILE: %s",
+               hr.err[0] ? hr.err : "read fail");
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FILLPFILE_N", 0);
+      var_set_num(vm, "FILLPFILE_MISS", 0);
+      var_set_num(vm, "FILLPFILE_BYTES", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", ebuf);
+      var_set_str(vm, "ERR", ebuf);
+      bump(vm); return 1;
+    }
+
+    hits = cubalc_expand_fillp(plate, hr.str, expanded, sizeof expanded, &miss);
+
+    memset(&wr, 0, sizeof wr);
+    if (cubalc_host_write(outpath, expanded, &wr) != 0) {
+      char ebuf[CUBALC_HOST_ERR_MAX + 32];
+      snprintf(ebuf, sizeof ebuf, "FILLPFILE: %s",
+               wr.err[0] ? wr.err : "write fail");
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FILLPFILE_N", hits);
+      var_set_num(vm, "FILLPFILE_MISS", miss);
+      var_set_num(vm, "FILLPFILE_BYTES", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", ebuf);
+      var_set_str(vm, "ERR", ebuf);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", outpath);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", outpath);
+    vm->last_n = hits;
+    var_set_num(vm, "LAST_N", hits);
+    var_set_str(vm, "FILLPFILE", outpath);
+    var_set_str(vm, "SUBSTPLATEFILE", outpath);
+    var_set_str(vm, "EXPANDPFILE", outpath);
+    var_set_str(vm, "FILLPFILE_BODY", expanded);
+    var_set_num(vm, "FILLPFILE_N", hits);
+    var_set_num(vm, "SUBSTPLATEFILE_N", hits);
+    var_set_num(vm, "FILLPFILE_MISS", miss);
+    var_set_num(vm, "SUBSTPLATEFILE_MISS", miss);
+    var_set_num(vm, "FILLPFILE_BYTES", (long)strlen(expanded));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# fillpfile hits=%ld miss=%ld out=%s\n", hits, miss, outpath);
     bump(vm); return 1;
   }
   if (kw(&L->cur,"USAGE")||kw(&L->cur,"USEAGE")||kw(&L->cur,"SYNOPSIS")||

@@ -607,6 +607,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 577. ~~**`cubalc init --plate` + selftest plate proofs**~~ **done** (scaffold plate_session starter · selftest runs session/save/setp/dumpp).
 578. ~~**`STREPEAT`/`LPAD`/`RPAD` wide**~~ **done** (host-buffer pad/repeat · multi-KB plate templates without 512 truncate).
 579. ~~**`FILLP`/`SUBSTPLATE`/`EXPANDP`**~~ **done** (expand `{{key}}` from PLATE · agent templates without GETP+REPLACEALL).
+580. ~~**`FILLPFILE`/`SUBSTPLATEFILE`**~~ **done** (materialize template file with `{{key}}` from PLATE · dual of SUBSTFILE).
 
 ## Tick protocol
 

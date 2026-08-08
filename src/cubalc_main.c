@@ -2107,6 +2107,7 @@ int main(int argc, char **argv) {
       {"setp", "programs/proof/1110_setp.cubalc", "SETP/INCP/DELP/GETP PLATE mutate without LET"},
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
+      {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2355,6 +2356,9 @@ int main(int argc, char **argv) {
       {"SUBSTPLATE", "flow", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "flow", "EXPANDP alias of FILLP"},
       {"TEMPLATEP", "flow", "TEMPLATEP alias of FILLP"},
+      {"FILLPFILE", "flow", "FILLPFILE|SUBSTPLATEFILE tmpl [out] — expand {{key}} file from PLATE · write result"},
+      {"SUBSTPLATEFILE", "flow", "SUBSTPLATEFILE alias of FILLPFILE"},
+      {"EXPANDPFILE", "flow", "EXPANDPFILE alias of FILLPFILE"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback] · ENV SET name val · ENV UNSET name"},
       {"SYS SETENV", "host", "SYS SETENV|ENV SET name value — process setenv"},

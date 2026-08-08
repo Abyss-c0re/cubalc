@@ -1,0 +1,80 @@
+# FILLPFILE — materialize {{key}} template file from PLATE
+# Usability: WRITE status/config without READ+FILLP+WRITE glue.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_fillpfile"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "tpl.txt"
+LET tpl = LAST
+SYS JOIN dir "out.txt"
+LET outp = LAST
+SYS JOIN dir "inplace.txt"
+LET inp = LAST
+SYS RM outp
+SYS RM inp
+
+# seed template
+SYS WRITE tpl "agent={{agent}} tick={{tick}} host={{host}} miss={{nope}}"
+ASSERT OK == 1
+
+LET PLATE = "{}"
+SETP "agent" "hive-01"
+SETP "tick" 42
+SETP "host" "cubeA"
+
+# --- fill to separate out ---
+FILLPFILE tpl outp
+ASSERT OK == 1
+ASSERT FILLPFILE_N == 4
+ASSERT FILLPFILE_MISS == 1
+ASSERT FILLPFILE_BYTES > 0
+SYS EQS LAST outp
+ASSERT LAST_N == 1
+SYS READ outp
+SYS EQS LAST "agent=hive-01 tick=42 host=cubeA miss="
+ASSERT LAST_N == 1
+# body mirror
+SYS EQS FILLPFILE_BODY "agent=hive-01 tick=42 host=cubeA miss="
+ASSERT LAST_N == 1
+
+# --- alias ---
+SUBSTPLATEFILE tpl outp
+ASSERT OK == 1
+ASSERT SUBSTPLATEFILE_N == 4
+
+# --- in-place when out omitted ---
+SYS WRITE inp "n={{tick}}"
+FILLPFILE inp
+ASSERT OK == 1
+SYS EQS LAST inp
+ASSERT LAST_N == 1
+SYS READ inp
+SYS EQS LAST "n=42"
+ASSERT LAST_N == 1
+
+# --- soft miss template ---
+SYS JOIN dir "missing_tpl.txt"
+LET missp = LAST
+SYS RM missp
+FILLPFILE missp outp
+ASSERT OK == 0
+ASSERT FILLPFILE_N == 0
+SYS HAS LAST_ERR "FILLPFILE"
+ASSERT LAST_N == 1
+
+# --- empty plate still expands slots as miss ---
+LET PLATE = "{}"
+SYS WRITE tpl "x={{agent}}"
+FILLPFILE tpl outp
+ASSERT OK == 1
+ASSERT FILLPFILE_N == 1
+ASSERT FILLPFILE_MISS == 1
+SYS READ outp
+SYS EQS LAST "x="
+ASSERT LAST_N == 1
+
+PRINT "fillpfile ok"
