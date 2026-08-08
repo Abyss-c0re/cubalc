@@ -1,0 +1,77 @@
+# FILLPFILE FROM — materialize templates from any plate without clobbering PLATE
+# Usability: multi-plate agents write status files from peer/session objects.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_fff"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "tpl.txt"
+LET tpl = LAST
+SYS JOIN dir "out.txt"
+LET outp = LAST
+SYS JOIN dir "out2.txt"
+LET out2 = LAST
+SYS RM outp
+SYS RM out2
+
+SYS WRITE tpl "agent={{agent}} host={{host}} n={{n}}"
+ASSERT OK == 1
+
+# PLATE stays seed; peer is the fill source
+LET PLATE = "{}"
+SETP "agent" "plate-agent"
+LET peer = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":9}"
+
+# FROM named var
+FILLPFILE FROM peer tpl outp
+ASSERT OK == 1
+ASSERT FILLPFILE_FROM == 1
+ASSERT FILLPFILE_MISS == 0
+ASSERT FILLPFILE_N == 3
+SYS READ outp
+SYS EQS LAST "agent=hive-02 host=cubeB n=9"
+ASSERT LAST_N == 1
+# PLATE not clobbered
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# trailing FROM
+FILLPFILE tpl out2 FROM peer
+ASSERT OK == 1
+ASSERT FILLPFILE_FROM == 1
+SYS READ out2
+SYS EQS LAST "agent=hive-02 host=cubeB n=9"
+ASSERT LAST_N == 1
+
+# default PLATE still works (no FROM)
+SETP "agent" "solo"
+SETP "host" "h1"
+SETP "n" 1
+FILLPFILE tpl outp
+ASSERT FILLPFILE_FROM == 0
+SYS READ outp
+SYS EQS LAST "agent=solo host=h1 n=1"
+ASSERT LAST_N == 1
+
+# FROM LAST
+SYS JSONOBJ "agent" "from-last" "host" "cL" "n" 2
+# LAST is object plate
+FILLPFILE FROM LAST tpl outp
+ASSERT FILLPFILE_FROM == 1
+SYS READ outp
+SYS EQS LAST "agent=from-last host=cL n=2"
+ASSERT LAST_N == 1
+
+# STRICT FROM miss
+LET thin = "{\"agent\":\"x\"}"
+# soft still writes
+FILLPFILE FROM thin tpl outp
+ASSERT FILLPFILE_MISS == 2
+SYS HASLINE FILLPFILE_MISS_KEYS "host"
+ASSERT LAST_N == 1
+
+PRINT "fillpfile_from soft ok"

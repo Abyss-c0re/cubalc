@@ -615,6 +615,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 585. ~~**`cubalc plate fill`/`fillkeys`**~~ **done** (CLI FILLP dual · `@file` templates · `--strict` miss gate · no `.cubalc`).
 586. ~~**`FILLP FROM`**~~ **done** (expand `{{key}}` from any plate object/var/LAST · multi-plate agents without `LET PLATE=`).
 587. ~~**`TRIM`/`UPPER`/`LOWER`/`REVS` host-wide**~~ **done** (normalize multi-KB plate text without 512 clip after CAT/STREPEAT).
+588. ~~**`FILLPFILE FROM`**~~ **done** (materialize template file from any plate object/var/LAST · multi-plate without clobbering PLATE).
 
 ## Tick protocol
 

@@ -1,0 +1,16 @@
+# NEEDFILLPFILE FROM fails without write when source plate incomplete
+HOLD_FLASH 1
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_fff_fail"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "tpl.txt"
+LET tpl = LAST
+SYS JOIN dir "out.txt"
+LET outp = LAST
+SYS WRITE outp "UNTOUCHED"
+SYS WRITE tpl "a={{a}} b={{b}}"
+LET src = "{\"a\":1}"
+NEEDFILLPFILE FROM src tpl outp
+PRINT "should not reach"

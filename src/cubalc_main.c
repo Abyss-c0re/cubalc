@@ -2114,6 +2114,7 @@ int main(int argc, char **argv) {
       {"fillpfile_strict", "programs/proof/1125_fillpfile_strict.cubalc", "NEEDFILLPFILE fail-fast plate template materialize"},
       {"fillp_from", "programs/proof/1127_fillp_from.cubalc", "FILLP FROM other plate/var/LAST multi-plate templates"},
       {"norm_wide", "programs/proof/1128_norm_wide.cubalc", "TRIM/UPPER/LOWER/REVS host-wide multi-KB normalize"},
+      {"fillpfile_from", "programs/proof/1129_fillpfile_from.cubalc", "FILLPFILE FROM multi-plate disk materialize"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2364,7 +2365,7 @@ int main(int argc, char **argv) {
       {"SUBSTPLATE", "flow", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "flow", "EXPANDP alias of FILLP"},
       {"TEMPLATEP", "flow", "TEMPLATEP alias of FILLP"},
-      {"FILLPFILE", "flow", "FILLPFILE|SUBSTPLATEFILE tmpl [out] — expand {{key}} file from PLATE · write result"},
+      {"FILLPFILE", "flow", "FILLPFILE [STRICT] [FROM plate] tmpl [out] — multi-plate materialize"},
       {"NEEDFILLPFILE", "flow", "NEEDFILLPFILE|FILLPFILE STRICT tmpl [out] — fail if {{key}} missing · no write"},
       {"SUBSTPLATEFILE", "flow", "SUBSTPLATEFILE alias of FILLPFILE"},
       {"EXPANDPFILE", "flow", "EXPANDPFILE alias of FILLPFILE"},
