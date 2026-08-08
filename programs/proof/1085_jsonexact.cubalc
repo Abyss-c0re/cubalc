@@ -1,0 +1,92 @@
+# JSONEXACT / JSONSCHEMA · REQUIRE JSONEXACT — exact plate key-set
+# One-shot HASALL + ONLY. Soft LAST_N · fail-fast lists miss/extra.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" ""
+LET plate = LAST
+
+# exact match
+SYS JSONEXACT plate "ok" "n" "err"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONEXACT_N == 1
+ASSERT JSONEXACT_HIT == 3
+ASSERT JSONEXACT_EXTRA == 0
+ASSERT JSONEXACT_MISS == 0
+# LAST kept as plate
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 3
+
+# missing only (schema is subset of plate keys → also counts plate-only as extra)
+SYS JSONOBJ "ok" true "n" 3
+LET thin = LAST
+SYS JSONEXACT thin "ok" "n" "version"
+ASSERT LAST_N == 0
+ASSERT JSONEXACT_MISS == 1
+ASSERT JSONEXACT_EXTRA == 0
+ASSERT JSONEXACT_HIT == 2
+
+# extra key only
+SYS JSONOBJ "ok" true "n" 1 "noise" 9
+LET noisy = LAST
+SYS JSONEXACT noisy "ok" "n"
+ASSERT LAST_N == 0
+ASSERT JSONEXACT_EXTRA == 1
+ASSERT JSONEXACT_HIT == 2
+ASSERT JSONEXACT_MISS == 0
+
+# both miss and extra (noise+n not in schema; version missing)
+SYS JSONEXACT noisy "ok" "version"
+ASSERT LAST_N == 0
+ASSERT JSONEXACT_MISS == 1
+ASSERT JSONEXACT_EXTRA == 2
+ASSERT JSONEXACT_HIT == 1
+
+# OF bag
+SYS JSONOBJ "x" 1 "y" 2
+LET p2 = LAST
+SYS JOIN "" "x\ny"
+SYS JSONEXACT p2 OF LAST
+ASSERT LAST_N == 1
+
+# bare keys on LAST
+SYS JSONOBJ "a" 1 "b" 2
+SYS JSONEXACT "a" "b"
+ASSERT LAST_N == 1
+SYS JSONEXACT "a" "c"
+ASSERT LAST_N == 0
+
+# aliases
+SYS JSONSCHEMA plate "ok" "n" "err"
+ASSERT LAST_N == 1
+SYS JEXACT plate "ok" "n" "err"
+ASSERT LAST_N == 1
+
+# REQUIRE success
+REQUIRE JSONEXACT plate "ok" "n" "err"
+ASSERT OK == 1
+ASSERT JSONEXACT_N == 1
+ASSERT REQUIRE_JSON_HIT == 3
+
+# REQUIRE aliases
+REQUIRE JSONSCHEMA p2 "x" "y"
+ASSERT OK == 1
+REQUIRE JSON EXACT p2 "x" "y"
+ASSERT OK == 1
+
+# empty plate exact empty schema
+SYS JSONOBJ
+LET empty = LAST
+SYS JSONEXACT empty
+ASSERT LAST_N == 1
+ASSERT JSONEXACT_LISTED == 0
+
+# agent IF pattern
+SYS JSONEXACT plate "ok" "n" "err"
+IF LAST_N THEN
+  PASS "schema exact"
+ELSE
+  FAIL "should match"
+END
+ASSERT OK == 1
