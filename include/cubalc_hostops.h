@@ -213,6 +213,12 @@ int cubalc_host_json_del(const char *json, const char *key, cubalc_host_result *
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */
 int cubalc_host_json_merge(const char *base, const char *overlay, cubalc_host_result *r);
+/* raw top-level value text for key (includes quotes for strings, nested as-is).
+ * Soft miss → -1. Usability: rename/pick/copy without re-encoding. */
+int cubalc_host_json_get_raw(const char *json, const char *key, cubalc_host_result *r);
+/* keep only listed top-level keys (newline bag order). r->str=new object · r->n=kept.
+ * Missing keys skipped. Raw values preserved. Empty keys bag → {}. */
+int cubalc_host_json_pick(const char *json, const char *keys_nl, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

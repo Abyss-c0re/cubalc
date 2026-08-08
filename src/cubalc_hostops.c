@@ -4235,6 +4235,164 @@ int cubalc_host_json_merge(const char *base, const char *overlay, cubalc_host_re
   return 0;
 }
 
+/* Usability: raw top-level value for key (preserves quotes/nested/true/null).
+ * Soft miss → -1. Used by JSONPICK / agents that must not re-encode peels. */
+int cubalc_host_json_get_raw(const char *json, const char *key, cubalc_host_result *r) {
+  char keypat[320];
+  const char *base, *p;
+  int depth = 0, in_str = 0, esc = 0;
+  r_clear(r);
+  if (!key || !key[0]) {
+    snprintf(r->err, sizeof r->err, "jsonraw: empty key");
+    return -1;
+  }
+  if (strlen(key) + 3 >= sizeof keypat) {
+    snprintf(r->err, sizeof r->err, "jsonraw: key too long");
+    return -1;
+  }
+  snprintf(keypat, sizeof keypat, "\"%s\"", key);
+  base = json ? json : "";
+  while (*base == ' ' || *base == '\t' || *base == '\n' || *base == '\r') base++;
+  if (!*base || *base != '{') {
+    snprintf(r->err, sizeof r->err, "jsonraw: not an object");
+    return -1;
+  }
+  p = base;
+  for (; *p; p++) {
+    unsigned char c = (unsigned char)*p;
+    if (in_str) {
+      if (esc) {
+        esc = 0;
+        continue;
+      }
+      if (c == '\\') {
+        esc = 1;
+        continue;
+      }
+      if (c == '"') in_str = 0;
+      continue;
+    }
+    if (c == '"') {
+      if (depth == 1) {
+        size_t plen = strlen(keypat);
+        if (strncmp(p, keypat, plen) == 0) {
+          const char *after = p + plen;
+          const char *vstart, *vend;
+          size_t vn;
+          while (*after == ' ' || *after == '\t' || *after == '\n' || *after == '\r')
+            after++;
+          if (*after != ':') {
+            in_str = 1;
+            continue;
+          }
+          after++;
+          while (*after == ' ' || *after == '\t' || *after == '\n' || *after == '\r')
+            after++;
+          vstart = after;
+          vend = vstart;
+          if (cubalc_json_skip_value(&vend) != 0) {
+            snprintf(r->err, sizeof r->err, "jsonraw: bad value");
+            return -1;
+          }
+          vn = (size_t)(vend - vstart);
+          if (vn + 1 >= sizeof r->str) {
+            snprintf(r->err, sizeof r->err, "jsonraw: overflow");
+            return -1;
+          }
+          memcpy(r->str, vstart, vn);
+          r->str[vn] = 0;
+          r->n = (long)vn;
+          r->ok = 1;
+          return 0;
+        }
+      }
+      in_str = 1;
+      continue;
+    }
+    if (c == '{') {
+      depth++;
+      continue;
+    }
+    if (c == '}') {
+      if (depth > 0) depth--;
+      if (depth == 0) break;
+      continue;
+    }
+    if (c == '[') {
+      depth++;
+      continue;
+    }
+    if (c == ']') {
+      if (depth > 0) depth--;
+      continue;
+    }
+  }
+  snprintf(r->err, sizeof r->err, "jsonraw: no field %s", key);
+  return -1;
+}
+
+/* Usability: SYS JSONPICK plate keys — keep only listed top-level keys.
+ * keys_nl = newline bag (order preserved). Missing keys skipped. Raw values kept.
+ * r->n = number of keys kept. Empty bag / no hits → {}. */
+int cubalc_host_json_pick(const char *json, const char *keys_nl, cubalc_host_result *r) {
+  char cur[CUBALC_HOST_STR_MAX];
+  const char *p, *line;
+  long kept = 0;
+  cubalc_host_result gr, hr;
+  r_clear(r);
+  snprintf(cur, sizeof cur, "%s", "{}");
+  if (!keys_nl || !keys_nl[0]) {
+    snprintf(r->str, sizeof r->str, "%s", "{}");
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  p = keys_nl;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    /* skip empty lines */
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    /* trim trailing spaces */
+    while (kn > 0 && (key[kn - 1] == ' ' || key[kn - 1] == '\t')) {
+      key[--kn] = 0;
+    }
+    /* trim leading spaces */
+    {
+      char *s = key;
+      while (*s == ' ' || *s == '\t') s++;
+      if (s != key) {
+        size_t n = strlen(s);
+        memmove(key, s, n + 1);
+        kn = n;
+      }
+    }
+    if (!key[0]) continue;
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(json, key, &gr) != 0)
+      continue; /* missing soft skip */
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_set(cur, key, gr.str, 1, &hr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               hr.err[0] ? hr.err : "jsonpick: set fail");
+      return -1;
+    }
+    snprintf(cur, sizeof cur, "%s", hr.str);
+    kept++;
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  r->n = kept;
+  r->ok = 1;
+  return 0;
+}
+
 static int load_token(char *out, size_t outn) {
   out[0] = 0;
   const char *e = getenv("XAI_API_KEY");

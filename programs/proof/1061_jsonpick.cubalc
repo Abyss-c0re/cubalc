@@ -1,0 +1,83 @@
+# JSONPICK / JSONKEEP / JKEEP — keep listed top-level plate keys
+# Strip noisy agent plates for peer/log without EACH+JSONSET rebuild.
+# Raw values preserved (nums/bools/nested). Missing keys soft-skipped.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" 1 "err" "" "n" 5 "noise" "dropme" "role" "worker"
+LET plate = LAST
+
+# multi-key pick
+SYS JSONPICK plate "ok" "n" "role"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JSONPICK_N == 3
+LET slim = LAST
+SYS JSONN "ok" FROM slim
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM slim
+ASSERT LAST_N == 5
+SYS JSON "role" FROM slim
+ASSERT LAST == "worker"
+SYS JSONHAS "noise" slim
+ASSERT LAST_N == 0
+SYS JSONHAS "err" slim
+ASSERT LAST_N == 0
+
+# missing keys skipped
+SYS JSONPICK plate "ok" "missing" "n"
+ASSERT LAST_N == 2
+LET p2 = LAST
+SYS JSONHAS "missing" p2
+ASSERT LAST_N == 0
+
+#  keys-only on LAST
+SYS JOIN "" plate
+SYS JSONKEEP "ok" "role"
+ASSERT JSONKEEP_N == 2
+SYS JSONN "ok" FROM LAST
+ASSERT LAST_N == 1
+
+# bag form: plate OF keys
+SYS PUSH "" "ok"
+SYS PUSH LAST "n"
+LET ks = LAST
+SYS JSONPICK plate OF ks
+ASSERT LAST_N == 2
+LET p3 = LAST
+SYS JSONN "n" FROM p3
+ASSERT LAST_N == 5
+
+# nested raw preserved (object value kept as-is)
+SYS JSONOBJ "meta" RAW "{\"a\":1}" "x" 9
+LET nest = LAST
+SYS JSONPICK nest "meta"
+ASSERT LAST_N == 1
+LET nest2 = LAST
+SYS JSONKEYS nest2
+ASSERT JSONKEYS_N == 1
+# dropped sibling
+SYS JSONPICK nest "x"
+ASSERT LAST_N == 1
+SYS JSONN "x" FROM LAST
+ASSERT LAST_N == 9
+
+# empty pick → {}
+SYS JSONPICK plate "zzz"
+ASSERT LAST_N == 0
+ASSERT LAST == "{}"
+
+# aliases
+SYS JKEEP "{\"a\":1,\"b\":2,\"c\":3}" "b" "c"
+ASSERT LAST_N == 2
+LET al = LAST
+SYS JSONN "b" FROM al
+ASSERT LAST_N == 2
+SYS JSONHAS "a" al
+ASSERT LAST_N == 0
+
+SYS JSELECT "{\"a\":1,\"b\":2}" "a"
+ASSERT LAST_N == 1
+
+PRINT "jsonpick ok"
+ASSERT OK == 1
