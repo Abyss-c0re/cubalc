@@ -1401,6 +1401,6 @@
     "EXACT OF schema bag + peel chain works",
     "dirty/thin soft gates positive before remint hard"
   ],
-  "commit": "pending",
+  "commit": "3f6ccbe",
   "ts": "2026-08-08T15:23:31Z"
 }
