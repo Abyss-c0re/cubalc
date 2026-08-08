@@ -1,0 +1,114 @@
+# SETP / INCP / DELP / GETP — mutate conventional PLATE var without LET glue
+# Usability: after plate_boot, set/inc/del/get keys without JSONSET+LET PLATE=LAST.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_setp"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS RM path
+
+# boot plate via lib
+DEFAULT PLATE_PATH = path
+DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true}"
+INCLUDE plate_boot
+ASSERT OK == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 0
+
+# --- SETP: set string + number without LET ---
+SETP "role" "worker"
+ASSERT OK == 1
+ASSERT SETP_N == 0
+# PLATE updated in place
+SYS JSON "role" FROM PLATE
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SETP "n" 1
+ASSERT OK == 1
+# updated existing key
+ASSERT SETP_N == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+
+# --- INCP: bump without JSONINC+LET ---
+INCP "n"
+ASSERT OK == 1
+ASSERT INCP_V == 2
+ASSERT LAST_N == 2
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 2
+INCP "n" 3
+ASSERT INCP_V == 5
+ASSERT INCP_DELTA == 3
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 5
+
+# --- DECP ---
+DECP "n"
+ASSERT INCP_V == 4
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 4
+
+# --- GETP: peel value ---
+GETP "role"
+ASSERT OK == 1
+ASSERT GETP_HIT == 1
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+
+# miss + OR
+GETP "missing" OR "fallback"
+ASSERT OK == 1
+ASSERT GETP_HIT == 0
+ASSERT GETP_OR == 1
+ASSERT LAST_N == 0
+SYS EQS LAST "fallback"
+ASSERT LAST_N == 1
+
+# --- DELP ---
+DELP "ok"
+ASSERT OK == 1
+ASSERT DELP_HIT == 1
+SYS JSONHAS PLATE "ok"
+ASSERT LAST_N == 0
+# soft miss
+DELP "ok"
+ASSERT OK == 1
+ASSERT DELP_HIT == 0
+
+# aliases
+PUTP "phase" "run"
+BUMPP "n"
+PEEKP "phase"
+SYS EQS LAST "run"
+ASSERT LAST_N == 1
+DROPP "phase"
+SYS JSONHAS PLATE "phase"
+ASSERT LAST_N == 0
+
+# persist via plate_save — PLATE still coherent
+INCLUDE plate_save
+ASSERT SAVEPLATE_OK == 1
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+LET loaded = LAST
+SYS JSON "role" FROM loaded
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 5
+
+# HELP discoverability
+HELP SETP
+SYS HAS LAST "PLATE"
+ASSERT LAST_N == 1
+
+PRINT "setp ok"
