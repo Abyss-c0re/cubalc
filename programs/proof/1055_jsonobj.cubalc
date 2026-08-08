@@ -1,0 +1,78 @@
+# JSONOBJ / MKJSON / JOBJ — one-shot multi-pair agent plate
+# Build JSON objects without chained JSONSET glue.
+
+HOLD_FLASH 1
+
+# multi-pair plate
+SYS JSONOBJ "ok" 1 "version" "1.15.505" "err" "" "n" 3
+ASSERT OK == 1
+ASSERT JSONOBJ_N == 4
+ASSERT LAST_N == 4
+LET plate = LAST
+SYS JSONKEYS plate
+ASSERT JSONKEYS_N == 4
+SYS JSON "ok" FROM plate
+ASSERT LAST == "1"
+SYS JSON "version" FROM plate
+ASSERT LAST == "1.15.505"
+SYS JSON "err" FROM plate
+ASSERT LAST == ""
+SYS JSON "n" FROM plate
+ASSERT LAST == "3"
+
+# bool/null
+SYS JSONOBJ "flag" true "gone" null
+ASSERT JSONOBJ_N == 2
+LET p2 = LAST
+SYS JSON "flag" FROM p2
+ASSERT LAST == "1"
+SYS JSON "gone" FROM p2
+ASSERT LAST == ""
+
+# aliases
+SYS MKJSON "a" "x" "b" 2
+ASSERT MKJSON_N == 2
+SYS JSON "a" FROM LAST
+ASSERT LAST == "x"
+SYS JOBJ "k" 9
+ASSERT JSONOBJ_N == 1
+SYS JSON "k" FROM LAST
+ASSERT LAST == "9"
+
+# FROM base extends existing plate
+SYS JSONOBJ "base" 1
+LET base = LAST
+SYS JSONOBJ FROM base "extra" "yes" "n" 7
+ASSERT JSONOBJ_N == 2
+LET ext = LAST
+SYS JSON "base" FROM ext
+ASSERT LAST == "1"
+SYS JSON "extra" FROM ext
+ASSERT LAST == "yes"
+SYS JSON "n" FROM ext
+ASSERT LAST == "7"
+
+# RAW fragment value
+SYS JSONOBJ "nested" RAW "{\"x\":1}"
+ASSERT OK == 1
+SYS HAS LAST "\"nested\":{\"x\":1}"
+ASSERT LAST_N == 1
+
+# empty pairs → empty object
+SYS JSONOBJ
+ASSERT OK == 1
+ASSERT JSONOBJ_N == 0
+ASSERT LAST == "{}"
+
+# round-trip with JSONSET peel triad
+SYS JSONOBJ "schema" "cubalc.plate.v1" "ok" 1 "err" ""
+LET out = LAST
+SYS JSONSET out "err" "soft"
+LET out = LAST
+SYS JSON "schema" FROM out
+ASSERT LAST == "cubalc.plate.v1"
+SYS JSON "err" FROM out
+ASSERT LAST == "soft"
+
+PRINT "jsonobj ok"
+ASSERT OK == 1
