@@ -1,0 +1,77 @@
+# JSONN / JGETN / JSONNUM — peel JSON key as int LAST_N
+# Plate IF/arith without JSON+NUM glue. Twin of LOOKUPN for agent plates.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "n" 7 "ok" 1 "retries" 3 "flag" true "name" "agent"
+LET plate = LAST
+
+# peel int
+SYS JSONN "n" FROM plate
+ASSERT OK == 1
+ASSERT JSON_HIT == 1
+ASSERT JSONN_N == 1
+ASSERT JSONN_V == 7
+ASSERT LAST_N == 7
+ASSERT LAST == "7"
+
+# IF-style without NUM
+SYS JSONN "retries" FROM plate
+ASSERT LAST_N == 3
+IF LAST_N >= 3
+  PASS "retries high"
+END
+ASSERT OK == 1
+
+# true → 1
+SYS JSONN "flag" FROM plate
+ASSERT LAST_N == 1
+ASSERT JSONN_V == 1
+
+# ok field
+SYS JSONN "ok" FROM plate
+ASSERT LAST_N == 1
+
+# non-numeric string → 0
+SYS JSONN "name" FROM plate
+ASSERT OK == 1
+ASSERT JSON_HIT == 1
+ASSERT LAST_N == 0
+ASSERT LAST == "agent"
+
+# OR on miss
+SYS JSONN "missing" FROM plate OR 42
+ASSERT OK == 1
+ASSERT JSON_OR == 1
+ASSERT JSON_HIT == 0
+ASSERT LAST_N == 42
+ASSERT JSONN_V == 42
+
+# miss soft without OR
+SYS JSONN "gone" FROM plate
+ASSERT OK == 0
+ASSERT JSON_HIT == 0
+ASSERT LAST_N == 0
+
+# aliases
+SYS JGETN "n" FROM plate
+ASSERT LAST_N == 7
+SYS JSONNUM "retries" FROM plate OR 0
+ASSERT LAST_N == 3
+
+# from LAST without FROM
+SYS JOIN "" plate
+SYS JSONN "n"
+ASSERT JSON_FROM == 0
+ASSERT LAST_N == 7
+
+# arith after peel
+SYS JSONN "n" FROM plate
+LET a = LAST_N
+SYS JSONN "retries" FROM plate
+LET b = LAST_N
+LET sum = a + b
+ASSERT sum == 10
+
+PRINT "jsonn ok"
+ASSERT OK == 1
