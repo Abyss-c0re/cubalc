@@ -556,6 +556,6 @@
     "GETFLAGPATH+SIZE+DIVCEILN page plan green; REQUIRE FLAGFILE wall green",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "a4576c8c8824f7419a7fc4fd62e0c53534876a15",
   "ts": "2026-08-08T02:31:47Z"
 }
