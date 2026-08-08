@@ -1,53 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 193,
-  "program": "programs/realworld/agent_json_plate_flag_board.cubalc",
-  "theme": "JSONTOGGLE + JSONTYPE agent feature flags and type-safe peels",
-  "version": "1.15.516-usability",
+  "iter": 194,
+  "program": "programs/realworld/roster_setmatch_promote_board.cubalc",
+  "theme": "SETMATCH + COUNTLINE + MOVELINE peer roster status/promote",
+  "version": "1.15.518-usability",
   "pass": true,
-  "prior_note": "iter 192 PICK/DROP/RENAME project; this iter first realworld JSONTOGGLE(1064)+JSONTYPE(1065)",
+  "prior_note": "iter 193 JSONTOGGLE+TYPE; this iter diversify to bag-line SETMATCH(650)+COUNTLINE(649)+MOVELINE(648) roster ops",
   "tests": [
     {
-      "name": "mint",
-      "cmd": "JSONOBJ mixed flags/counter/str/null/obj",
+      "name": "seed",
+      "cmd": "4-peer idle/busy roster WRITE",
       "ok": true,
-      "note": "mint"
+      "note": "seed"
     },
     {
-      "name": "flip",
-      "cmd": "debug 0\u21921\u21920; missing trace\u21921; tag str\u21920",
+      "name": "count",
+      "cmd": "exact peer1:idle=1; GREP :idle=3; bare idle=0",
       "ok": true,
-      "note": "TOGGLE"
+      "note": "COUNTLINE exact"
     },
     {
-      "name": "type",
-      "cmd": "n\u2192num n=1; role\u2192str n=2; ghost\u2192missing",
+      "name": "set",
+      "cmd": "SETMATCH peer2:idle\u2192peer2:done",
       "ok": true,
-      "note": "TYPE"
+      "note": "SETMATCH"
     },
     {
-      "name": "safe",
-      "cmd": "type-gate JSONN n=7; str role; meta non-scalar",
+      "name": "promote",
+      "cmd": "FINDLINE idx1 + MOVELINE to front",
       "ok": true,
-      "note": "safe"
+      "note": "MOVELINE"
     },
     {
-      "name": "gate",
-      "cmd": "ok=1 arm; after flip ok off deny",
+      "name": "miss",
+      "cmd": "set peer9 soft miss; REQUIRE shell 2",
       "ok": true,
-      "note": "gate"
+      "note": "soft+hard"
     },
     {
       "name": "probe",
-      "cmd": "toggle edges; type missing LAST_N=0",
+      "cmd": "exact ERROR field; COUNTLINE 1; MOVELINE OOR/clamp",
       "ok": true,
       "note": "edges"
     },
     {
-      "name": "require",
-      "cmd": "CUBALC_AJPF_REQUIRE=1 empty \u2192 shell 2",
+      "name": "icase",
+      "cmd": "SETMATCHI idle\u2192done first only",
       "ok": true,
-      "note": "hard"
+      "note": "icase"
     },
     {
       "name": "selftest",
@@ -1112,6 +1112,30 @@
       "title": "JSONTOGGLE treats any non-zero/non-empty as truthy \u2192 0 (can zero counters)",
       "detail": "Toggle on n=7 \u2192 n=0; tag=\"on\" \u2192 0. Missing\u21921 is intentional. Wrong flag name that collides with a counter (or W130 FLAG bug) silently zeros data. Prefer dedicated bool keys only.",
       "repro": "JSONTOGGLE {n:7} n \u2192 n=0 PREV truthy"
+    },
+    {
+      "id": "W133",
+      "severity": "high",
+      "area": "lang|clear_err",
+      "title": "CLEAR_ERR after SETMATCH/MOVELINE before LET bag=LAST stores cleared",
+      "detail": "W117 CLEAR_ERR sets LAST=cleared. Board SETMATCH hit then CLEAR_ERR then LET rost_bag=LAST wrote ROSTER.txt as the word cleared. Must capture LAST into a var immediately after bag mutators, before CLEAR_ERR/CAT.",
+      "repro": "SETMATCH bag a A; CLEAR_ERR; LET bag=LAST \u2192 bag is cleared"
+    },
+    {
+      "id": "W134",
+      "severity": "low",
+      "area": "lang|countline",
+      "title": "COUNTLINE/SETMATCH are exact full-field only (not substring)",
+      "detail": "Positive for peer:status rows: COUNTLINE bag idle \u2192 0 while GREP :idle \u2192 3. SETMATCH ERROR boom bag with needle ERROR misses; needs full field. Agents mixing GREP substring tallies with COUNTLINE exact get false zeros.",
+      "repro": "COUNTLINE peer1:idle\\n... idle \u2192 0; COUNTLINE peer1:idle \u2192 1"
+    },
+    {
+      "id": "W135",
+      "severity": "low",
+      "area": "lang|moveline",
+      "title": "MOVELINE from OOR soft N=0; dest past end clamps to last",
+      "detail": "MOVELINE bag 5 0 on 3 lines \u2192 N=0 bag unchanged. MOVELINE 0 99 clamps to end (success). FINDLINE miss OK=0 LAST_N=-1 (not 0) \u2014 agents must not treat N==0 as only miss.",
+      "repro": "FINDLINE miss LAST_N=-1; MOVELINE 0 99 clamps"
     }
   ],
   "workarounds": [
@@ -1131,11 +1155,10 @@
     "JSONPICK/DROP/RENAME accept string vars for keys (unlike JSONHAS W115); use OF bag for dynamic lists",
     "export: N>0 after PICK before WRITEOUT peer view (W129)",
     "Never name vars FLAG or KEY (W130); use FLAG_S/KEY_S",
-    "After JSONTYPE, peel with literal-key EQS branches for JSONN (W131)"
+    "After JSONTYPE, peel with literal-key EQS branches for JSONN (W131)",
+    "After SETMATCH/MOVELINE/PUSH: LET bag=LAST before CLEAR_ERR (W133)"
   ],
   "language_gaps": [
-    "SLICEINTREE by mtime / reverse order (still DFS like TAKEINTREE W101)",
-    "Cookbook: seed\u2192has probe\u2192page window triage under tree",
     "JSON key token resolve vars / JSONHAS OF bag-of-keys loop",
     "JSON peel nested objects / dotted paths for object fields (W116)",
     "CLEAR_ERR optional keep-LAST mode",
@@ -1145,18 +1168,20 @@
     "JSONRENAME conflict mode (fail/soft when dest exists)",
     "JSONPICK stable original key order option",
     "Unify JSON* key token resolution: vars for JSONN/JSON like TOGGLE/TYPE",
-    "JSONTOGGLE only on bool/0/1 with hard reject for other types"
+    "JSONTOGGLE only on bool/0/1 with hard reject for other types",
+    "CLEAR_ERR keep-LAST option to avoid bag capture footgun (W117/W133)",
+    "JSONCOPY/JSONSWAP/JSONVALUES still unused in realworld"
   ],
   "issues_faced": [
-    "JSONINC DELTA var hard-fail; fixed with literal EQS branches (W124)",
-    "JSONN OR MAXR hard-fail; fixed OR 10 (W125)",
-    "selftest 355/355 green v1.15.510",
     "selftest 355/355 green v1.15.513",
     "PICK var keys work \u2014 positive contrast to W115",
     "FLAG/KEY specials caused flip to zero n until renamed FLAG_S (W130)",
     "JSONN var key failed after type gate \u2014 EQS literals (W131)",
-    "selftest 355/355 green v1.15.516"
+    "selftest 355/355 green v1.15.516",
+    "CLEAR_ERR after SETMATCH wrote ROSTER=cleared until capture-before-clear fix (W133)",
+    "sed rename left SYS WRITE roster_path roster bug",
+    "selftest 355/355 green"
   ],
-  "commit": "dbae1cf",
-  "ts": "2026-08-08T12:05:30Z"
+  "commit": "pending",
+  "ts": "2026-08-08T12:32:04Z"
 }

@@ -1,0 +1,673 @@
+# roster_setmatch_promote_board.cubalc — SETMATCH + COUNTLINE + MOVELINE rost_bag
+#
+# Real use: on-call / mesh agents maintain a peer:status bag — exact-field
+# status replace, tally idle/busy without EACH, and promote a peer to front
+# after FINDLINE without rebuild:
+#   SETMATCH / REPLACEMATCH — replace first exact bag field (650)
+#   COUNTLINE / COUNTFIELD / TALLY — count exact field matches (649)
+#   MOVELINE / MOVEAT — move field to 0-based index (648)
+#   FINDLINE — locate peer row for promote
+#   SETMATCHI / COUNTLINEI — case-insensitive variants
+#
+# Distinct from work_queue_bag (object field bags) and exact_roster_board:
+# this is *line-bag SETMATCH+COUNTLINE+MOVELINE triad* for rost_bag ops.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rsp_$$
+#   ./out/cubalc run programs/realworld/roster_setmatch_promote_board.cubalc seed
+#   ./out/cubalc run ... set -- --peer=peer2 --status=done
+#   ./out/cubalc run ... count -- --status=idle
+#   ./out/cubalc run ... promote -- --peer=peer2
+#
+# Plate: STATUS.txt VAL.txt META.txt RSP_REPORT.txt ROSTER.txt
+# Env: CUBALC_RSP_REQUIRE CUBALC_RSP_MIN CUBALC_RSP_PEER CUBALC_RSP_STATUS
+#
+# Edges:
+#   SETMATCH miss soft; substring false friend (ERROR vs ERROR boom)
+#   COUNTLINE exact-only; MOVELINE OOR soft; past-end clamp
+#   SETMATCHI; empty bag; REQUIRE EXIT n; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "roster_setmatch_promote_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT PEER_S = "peer1"
+DEFAULT STAT_S = "idle"
+DEFAULT USAGE_LINE = "roster_setmatch_promote -- seed|set|count|promote|list -- [--peer=P] [--status=S]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+GETFLAG peer OR ENV CUBALC_RSP_PEER OR PEER_S
+LET PEER_S = LAST
+CLEAR_ERR
+GETFLAG status|s OR ENV CUBALC_RSP_STATUS OR STAT_S
+LET STAT_S = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_RSP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_RSP_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "RSP_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "ROSTER.txt"
+LET roster_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+SYS READ OR roster_path OR ""
+LET rost_bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET line_i = 0
+LET row = ""
+LET out = ""
+LET old_row = ""
+LET new_row = ""
+LET rost_ch = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "seed", "set", "count", "promote", "list", "ls", "show", "icase", "probe", "gate", "soft", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "seed" THEN
+    LET op = "seed"
+  WHEN "set" THEN
+    LET op = "set"
+  WHEN "count" THEN
+    LET op = "count"
+  WHEN "promote" THEN
+    LET op = "promote"
+  WHEN "show" THEN
+    LET op = "show"
+  WHEN "icase" THEN
+    LET op = "icase"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  SYS LINES rost_bag
+  LET take_n = LAST_N
+  PRINT_JSON bag_n take_n PEER_S STAT_S
+  CLEAR_ERR
+END
+
+SYS EQS op "seed"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET rost_bag = "peer1:idle\npeer2:idle\npeer3:busy\npeer4:idle"
+  LET out = rost_bag
+  LET rost_ch = 1
+  SYS CAT "seed:4"
+  LET row = LAST
+  SYS GREPV "seed:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  LET admit_n = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  LET take_n = 4
+  LET hit = 1
+  LET note_msg = "seed ok"
+  PRINT_JSON admit_n bag_n take_n
+  CLEAR_ERR
+END
+
+SYS EQS op "set"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS BLANK rost_bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "set empty rost_bag"
+    FAIL "set empty rost_bag"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "set empty"
+    END
+  ELSE
+    # build exact peer:status keys for SETMATCH (not substring)
+    # try common from-status idle then busy then done
+    SYS CAT PEER_S ":"
+    LET old_row = LAST
+    SYS CAT old_row "idle"
+    LET old_row = LAST
+    CLEAR_ERR
+    SYS CAT PEER_S ":"
+    LET new_row = LAST
+    SYS CAT new_row STAT_S
+    LET new_row = LAST
+    CLEAR_ERR
+    SYS SETMATCH rost_bag old_row new_row
+    LET peel_hit = LAST_N
+    # capture bag BEFORE CLEAR_ERR (W117 LAST=cleared)
+    IF peel_hit == 1 THEN
+      LET rost_bag = LAST
+    END
+    IF peel_hit == 0 THEN
+      CLEAR_ERR
+      SYS CAT PEER_S ":"
+      LET old_row = LAST
+      SYS CAT old_row "busy"
+      LET old_row = LAST
+      CLEAR_ERR
+      SYS SETMATCH rost_bag old_row new_row
+      LET peel_hit = LAST_N
+      IF peel_hit == 1 THEN
+        LET rost_bag = LAST
+      END
+    END
+    IF peel_hit == 0 THEN
+      CLEAR_ERR
+      SYS CAT PEER_S ":"
+      LET old_row = LAST
+      SYS CAT old_row "done"
+      LET old_row = LAST
+      CLEAR_ERR
+      SYS SETMATCH rost_bag old_row new_row
+      LET peel_hit = LAST_N
+      IF peel_hit == 1 THEN
+        LET rost_bag = LAST
+      END
+    END
+    CLEAR_ERR
+    IF peel_hit == 0 THEN
+      LET miss = 1
+      LET note_msg = "set miss"
+      FAIL "set miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "set miss"
+      END
+    ELSE
+      LET out = rost_bag
+      LET rost_ch = 1
+      CLEAR_ERR
+      SYS CAT "set:"
+      LET row = LAST
+      SYS CAT row PEER_S
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS CAT row STAT_S
+      LET row = LAST
+      SYS CAT row ":sm"
+      LET row = LAST
+      SYS GREPV "set:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      LET hit = 1
+      LET note_msg = "set ok"
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit
+  CLEAR_ERR
+END
+
+SYS EQS op "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS BLANK rost_bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count empty rost_bag"
+    FAIL "count empty rost_bag"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "count empty"
+    END
+  ELSE
+    # exact full-row count if peer given as peer:status form via STAT only:
+    # count how many :status suffix — use GREP then COUNTLINE on exact rows
+    # primary: count exact row peer:status when peer is full row
+    SYS CAT PEER_S ":"
+    SYS CAT LAST STAT_S
+    LET row = LAST
+    CLEAR_ERR
+    SYS COUNTLINE rost_bag row
+    LET take_n = LAST_N
+    CLEAR_ERR
+    # also tally all :status via GREP then LINES (substring status class)
+    SYS CAT ":" STAT_S
+    SYS GREP LAST rost_bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    CLEAR_ERR
+    # exact-only false friend probe: COUNTLINE bare STAT_S
+    SYS COUNTLINE rost_bag STAT_S
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = rost_bag
+    SYS CAT "count:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR has_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":ct"
+    LET row = LAST
+    SYS GREPV "count:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON admit_n bag_n take_n has_n peel_hit
+  CLEAR_ERR
+END
+
+SYS EQS op "promote"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS BLANK rost_bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "promote empty rost_bag"
+    FAIL "promote empty rost_bag"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "promote empty"
+    END
+  ELSE
+    # find peer:idle|busy|done then MOVELINE to front (FINDLINE: OK=1 LAST_N=idx; miss OK=0 N=-1)
+    LET peel_hit = 0
+    LET line_i = -1
+    SYS CAT PEER_S ":"
+    SYS CAT LAST "idle"
+    LET old_row = LAST
+    CLEAR_ERR
+    SYS FINDLINE rost_bag old_row
+    IF OK == 1 THEN
+      LET peel_hit = 1
+      LET line_i = LAST_N
+    END
+    CLEAR_ERR
+    IF peel_hit == 0 THEN
+      SYS CAT PEER_S ":"
+      SYS CAT LAST "busy"
+      LET old_row = LAST
+      CLEAR_ERR
+      SYS FINDLINE rost_bag old_row
+      IF OK == 1 THEN
+        LET peel_hit = 1
+        LET line_i = LAST_N
+      END
+      CLEAR_ERR
+    END
+    IF peel_hit == 0 THEN
+      SYS CAT PEER_S ":"
+      SYS CAT LAST "done"
+      LET old_row = LAST
+      CLEAR_ERR
+      SYS FINDLINE rost_bag old_row
+      IF OK == 1 THEN
+        LET peel_hit = 1
+        LET line_i = LAST_N
+      END
+      CLEAR_ERR
+    END
+    IF peel_hit == 0 THEN
+      LET miss = 1
+      LET note_msg = "promote miss"
+      FAIL "promote miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "promote miss"
+      END
+    ELSE
+      SYS MOVELINE rost_bag line_i 0
+      LET peel_hit = LAST_N
+      IF peel_hit == 0 THEN
+        LET miss = 1
+        LET note_msg = "promote move soft"
+        FAIL "promote move soft"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "promote move failed"
+        END
+      ELSE
+        LET rost_bag = LAST
+        LET out = rost_bag
+        LET rost_ch = 1
+        LET take_n = 1
+        CLEAR_ERR
+        SYS CAT "promote:"
+        LET row = LAST
+        SYS CAT row PEER_S
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS STR line_i
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":mv"
+        LET row = LAST
+        SYS GREPV "promote:" bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+        LET admit_n = 1
+        SYS LINES bag
+        LET bag_n = LAST_N
+        LET hit = 1
+        LET note_msg = "promote ok"
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n line_i peel_hit
+  CLEAR_ERR
+END
+
+SYS EQS op "show"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET out = rost_bag
+  SYS LINES rost_bag
+  LET take_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "show ok"
+  PRINT_JSON take_n
+  CLEAR_ERR
+END
+
+SYS EQS op "icase"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # case-insensitive setmatch demo on a small bag
+  LET rost_bag = "Idle\nBusy\nidle"
+  SYS SETMATCHI rost_bag "idle" "done"
+  LET peel_hit = LAST_N
+  LET rost_bag = LAST
+  CLEAR_ERR
+  SYS COUNTLINEI rost_bag "done"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  LET out = rost_bag
+  LET rost_ch = 1
+  SYS CAT "icase:"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR take_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":ic"
+  LET row = LAST
+  SYS GREPV "icase:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  LET admit_n = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  LET hit = 1
+  LET note_msg = "icase ok"
+  PRINT_JSON admit_n peel_hit take_n
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # substring false friend: ERROR boom not ERROR
+  SYS SETMATCH "ERROR boom\nWARN\nERROR" "ERROR" "E"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS COUNTLINE "ERROR boom\nWARN\nERROR" "ERROR"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS MOVELINE "a\nb\nc" 5 0
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS MOVELINE "a\nb\nc" 0 99
+  LET line_i = LAST_N
+  LET out = LAST
+  CLEAR_ERR
+  SYS SETMATCH "a\nb" "z" "Z"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON peel_hit take_n has_n line_i admit_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET rost_bag = ""
+  LET bag_ch = 1
+  LET rost_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF rost_ch > 0 THEN
+  SYS WRITE roster_path rost_bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "roster write failed"
+  END
+  CLEAR_ERR
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.roster_setmatch_promote_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "roster_setmatch_promote_board: done"
+PRINT_JSON hit miss bag_n take_n peel_hit has_n note_msg
+EXIT 0
