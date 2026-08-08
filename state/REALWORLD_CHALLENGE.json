@@ -1,53 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 179,
-  "program": "programs/realworld/workspace_tree_board.cubalc",
-  "theme": "CPTREE + RMTREE workspace snapshot + recursive wipe (no shell cp -r/rm -rf)",
-  "version": "1.15.481-usability",
+  "iter": 180,
+  "program": "programs/realworld/tree_promote_verify_board.cubalc",
+  "theme": "MVTREE + DIRSIZE + EQTREE stage promote + disk budget + gold verify",
+  "version": "1.15.484-usability",
   "pass": true,
-  "prior_note": "iter 178 CLAIMOUT+TEEOUT; this iter first realworld CPTREE(1031)+RMTREE(1030)",
+  "prior_note": "iter 179 CPTREE+RMTREE; this iter first realworld MVTREE(1032)+DIRSIZE(1033)+EQTREE(1034)",
   "tests": [
     {
       "name": "stage",
-      "cmd": "WRITEOUT nested work tree + empty dir",
+      "cmd": "WRITEOUT nested stage tree + empty dir",
       "ok": true,
       "note": "stage"
     },
     {
-      "name": "snap",
-      "cmd": "CPTREE N=6 BYTES=12; marker exists in snap",
+      "name": "size",
+      "cmd": "DIRSIZE 15B 2 files 3 dirs; MAXB=5 over soft",
       "ok": true,
-      "note": "CPTREE"
+      "note": "DIRSIZE"
     },
     {
-      "name": "snap_miss",
-      "cmd": "missing work soft; REQUIRE=1 EXIT 2",
+      "name": "gold",
+      "cmd": "CPTREE stage\u2192gold before promote",
       "ok": true,
-      "note": "soft+hard"
+      "note": "gold"
     },
     {
-      "name": "wipe",
-      "cmd": "RMTREE work N=6 gone; snap kept then wipe snap",
+      "name": "promote",
+      "cmd": "MVTREE RENAMED=1 stage gone live ok",
       "ok": true,
-      "note": "RMTREE"
+      "note": "MVTREE"
     },
     {
-      "name": "wipe_miss",
-      "cmd": "RMTREE missing OK=1 N=0 (idempotent)",
+      "name": "verify_eq",
+      "cmd": "EQTREE live gold EQTREE=1",
       "ok": true,
-      "note": "W87"
+      "note": "EQTREE"
     },
     {
-      "name": "inside",
-      "cmd": "CPTREE dest inside src soft refuse",
+      "name": "verify_diff",
+      "cmd": "mutate live \u2192 EQTREE=0 reason content",
       "ok": true,
-      "note": "W88"
+      "note": "W92"
     },
     {
-      "name": "probe_boom",
-      "cmd": "empty CPTREE/RMTREE soft; boom shell 2",
+      "name": "require",
+      "cmd": "promote missing REQUIRE=1 shell 2",
       "ok": true,
-      "note": "edges"
+      "note": "hard"
     },
     {
       "name": "selftest",
@@ -768,26 +768,50 @@
       "title": "RMTREE removes file or full dir tree; N counts nodes",
       "detail": "Positive: RMTREE work after stage+snap removed 6 nodes; EXIST work 0; sibling snap untouched until separate wipe. RMNEST/RMRF aliases. Pair with CPTREE for stage\u2192snap\u2192wipe sandbox lifecycle.",
       "repro": "RMTREE work \u2192 N 6 EXIST 0; snap still present"
+    },
+    {
+      "id": "W90",
+      "severity": "low",
+      "area": "lang|dirsize",
+      "title": "DIRSIZE recursive file-byte inventory; FILES/DIRS knobs",
+      "detail": "Positive: DIRSIZE stage \u2192 DIRSIZE/LAST_N=bytes, DIRSIZE_FILES, DIRSIZE_DIRS (empty dirs counted). Missing path OK=0 soft. LAST string is abs path after op; agents must read DIRSIZE or LAST_N for bytes not LAST string. Good for deploy size gates with MAXB.",
+      "repro": "DIRSIZE tree \u2192 bytes 15 files 2 dirs 3; DIRSIZE missing \u2192 OK 0"
+    },
+    {
+      "id": "W91",
+      "severity": "med",
+      "area": "lang|mvtree",
+      "title": "MVTREE_N is 1 on same-FS rename, not recursive node count",
+      "detail": "Same-filesystem MVTREE uses rename(2): MVTREE_RENAMED=1 and MVTREE_N=1 even for multi-file trees. Cross-device path may CPTREE+RMTREE with higher N. Agents must not treat MVTREE_N as CPTREE_N-style node inventory; use DIRSIZE/EXIST for post-promote checks. Dest-inside-src and missing soft like CPTREE.",
+      "repro": "MVTREE stage live with 5 nodes \u2192 RENAMED 1 N 1; EXIST stage 0"
+    },
+    {
+      "id": "W92",
+      "severity": "med",
+      "area": "lang|eqtree",
+      "title": "EQTREE OK=1 on both equal and unequal; equality is EQTREE/LAST_N",
+      "detail": "EQTREE always OK=1 when both paths exist; equal \u2192 EQTREE=1 LAST_N=1; differ \u2192 EQTREE=0 LAST_N=0 with EQTREE_REASON content|missing|extra_b and EQTREE_DIFF path fragment. Soft OK=0 only for missing/empty args. Agents that branch on OK alone will false-admit drift. Board uses eq_n + EXIT under REQUIRE.",
+      "repro": "EQTREE a b equal OK1 EQTREE1; mutate b \u2192 OK1 EQTREE0 reason content"
     }
   ],
   "workarounds": [
-    "CPTREE work snap; check CPTREE_N/BYTES; refuse dest-inside handled by lang",
-    "RMTREE path; treat N=0 as no-op wipe; pre EXIST if must fail on missing",
-    "wipe snap via rest tag snap; default wipe is work",
-    "CUBALC_WST_REQUIRE=1 for shell-visible snap-without-stage",
-    "Keep VARS lean (~90) under 128 (W81)"
+    "DIRSIZE path; use DIRSIZE/LAST_N for bytes; MAXB gate in board",
+    "MVTREE stage live; check RENAMED + EXIST stage 0; ignore N as node count on rename (W91)",
+    "EQTREE live gold; branch on EQTREE not OK (W92); EQTREE_REASON for diagnose",
+    "CUBALC_TPV_REQUIRE=1 for shell-visible promote/verify fails",
+    "Keep VARS lean (~97) under 128 (W81)"
   ],
   "language_gaps": [
-    "RMTREE missing could OK=0 for strict GC contracts (opt STRICT flag)",
-    "CPTREE merge/update into existing dest (currently full copy semantics)",
-    "Cookbook: stage+snap+wipe sandbox under VARS budget"
+    "MVTREE_N unified node count even on rename (or document rename N=1 clearly in HELP)",
+    "EQTREE hard mode / REQUIRE EQ that fails process on differ",
+    "Cookbook: stage\u2192size\u2192gold\u2192promote\u2192verify deploy lane"
   ],
   "issues_faced": [
-    "RMTREE missing is OK=1 N=0 \u2014 document as W87 not a bug for GC",
-    "CPTREE dest-inside-src soft refuse (W88)",
-    "WRITEOUT marker omit final NL (W5)",
+    "MVTREE rename N=1 surprising vs CPTREE N (W91)",
+    "EQTREE OK stays 1 on content drift \u2014 must read EQTREE knob (W92)",
+    "WRITEOUT cfg omit final NL (W5)",
     "selftest 355/355"
   ],
-  "commit": "cf0a1eb7421709bff347d0daedeb2f2d48356336",
-  "ts": "2026-08-08T06:13:00Z"
+  "commit": "",
+  "ts": "2026-08-08T06:39:00Z"
 }

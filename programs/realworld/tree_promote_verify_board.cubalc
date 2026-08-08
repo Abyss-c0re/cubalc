@@ -1,0 +1,712 @@
+# tree_promote_verify_board.cubalc — MVTREE + DIRSIZE + EQTREE promote verify
+#
+# Real use: deploy agents stage nested trees, inventory disk budget, promote
+# staging to live via rename/move, and verify live against a gold snapshot:
+#   DIRSIZE / DU / TREESIZE — recursive file bytes (1033)
+#   MVTREE / MOVETREE / MVDIR — recursive promote move (1032)
+#   EQTREE / SAMETREE / CMPTREE — structure+content equality (1034)
+#   CPTREE — seal gold snapshot before promote
+#   WRITEOUT — seed nested stage markers
+#
+# First realworld MVTREE+DIRSIZE+EQTREE board. Distinct from workspace_tree
+# (CPTREE+RMTREE only) and lease_promote (TOUCHOUT+MOVEOUT single files).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tpv_$$
+#   ./out/cubalc run programs/realworld/tree_promote_verify_board.cubalc \
+#     stage -- --stage=/tmp/tpv/stage relA
+#   ./out/cubalc run ... size -- --stage=...
+#   ./out/cubalc run ... gold -- --stage=... --gold=/tmp/tpv/gold
+#   ./out/cubalc run ... promote -- --stage=... --live=/tmp/tpv/live
+#   ./out/cubalc run ... verify -- --live=... --gold=...
+#
+# Plate: STATUS.txt VAL.txt META.txt TPV_REPORT.txt
+# Env: STAGE_ROOT LIVE_ROOT GOLD_ROOT CUBALC_TPV_REQUIRE CUBALC_TPV_MIN CUBALC_TPV_MAXB
+#
+# Edges:
+#   DIRSIZE FILES/DIRS/BYTES; missing soft
+#   MVTREE RENAMED; missing soft; dest-inside refuse
+#   EQTREE equal/content/missing/extra; soft miss path
+#   lean VARS (W81); WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "tree_promote_verify_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT MAXB = 0
+DEFAULT USAGE_LINE = "tree_promote_verify -- stage|size|gold|promote|verify|list -- [--stage=D] [--live=D] [--gold=D] [tag]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "deploy/stage"
+LET stage_dir = LAST
+SYS JOIN state_dir "deploy/live"
+LET live_dir = LAST
+SYS JOIN state_dir "deploy/gold"
+LET gold_dir = LAST
+CLEAR_ERR
+
+GETFLAGOUT stage|t OR ENV STAGE_ROOT OR stage_dir
+LET stage_dir = LAST
+LET t_src = GETFLAGOUT_SRC
+LET t_ok = OK
+CLEAR_ERR
+GETFLAGOUT live|l OR ENV LIVE_ROOT OR live_dir
+LET live_dir = LAST
+LET l_src = GETFLAGOUT_SRC
+LET l_ok = OK
+CLEAR_ERR
+GETFLAGOUT gold|g OR ENV GOLD_ROOT OR gold_dir
+LET gold_dir = LAST
+LET g_src = GETFLAGOUT_SRC
+LET g_ok = OK
+CLEAR_ERR
+
+LET tag = "rel"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET tag = LAST
+END
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_TPV_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_TPV_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+SYS ENV "CUBALC_TPV_MAXB" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAXB = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "TPV_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET bytes_n = 0
+LET files_n = 0
+LET dirs_n = 0
+LET eq_n = 0
+LET renamed = 0
+LET row = ""
+LET path_a = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "stage", "size", "gold", "promote", "verify", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "stage" THEN
+    LET op = "stage"
+  WHEN "size" THEN
+    LET op = "size"
+  WHEN "gold" THEN
+    LET op = "gold"
+  WHEN "promote" THEN
+    LET op = "promote"
+  WHEN "verify" THEN
+    LET op = "verify"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n t_src l_src g_src
+  CLEAR_ERR
+END
+
+SYS EQS op "stage"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF t_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "stage needs path"
+    FAIL "stage needs path"
+    CLEAR_ERR
+  ELSE
+    SYS JOIN stage_dir "app/cfg.txt"
+    LET row = LAST
+    SYS CAT "tag="
+    LET path_a = LAST
+    SYS CAT path_a tag
+    LET path_a = LAST
+    WRITEOUT row path_a
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "stage write failed"
+    END
+    CLEAR_ERR
+    SYS JOIN stage_dir "app/data.bin"
+    WRITEOUT LAST "payload"
+    CLEAR_ERR
+    SYS JOIN stage_dir "empty"
+    SYS MKDIR LAST
+    CLEAR_ERR
+    SYS CAT "stage:"
+    LET row = LAST
+    SYS CAT row tag
+    LET row = LAST
+    SYS CAT row ":ok"
+    LET row = LAST
+    SYS GREPV "stage:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "stage ok"
+  END
+  PRINT_JSON admit_n bag_n t_src
+  CLEAR_ERR
+END
+
+SYS EQS op "size"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET path_a = stage_dir
+  SYS EQS tag "live"
+  IF LAST_N == 1 THEN
+    LET path_a = live_dir
+  END
+  SYS EQS tag "gold"
+  IF LAST_N == 1 THEN
+    LET path_a = gold_dir
+  END
+  CLEAR_ERR
+  DIRSIZE path_a
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "size miss or fail"
+    FAIL "size miss or fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "size failed"
+    END
+  ELSE
+    LET bytes_n = DIRSIZE
+    LET files_n = DIRSIZE_FILES
+    LET dirs_n = DIRSIZE_DIRS
+    CLEAR_ERR
+    # optional budget gate
+    IF MAXB > 0 THEN
+      IF bytes_n > MAXB THEN
+        LET miss = 1
+        LET note_msg = "size over budget"
+        FAIL "size over budget"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "size over budget"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "size ok"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "size ok"
+    END
+    IF hit == 1 THEN
+      SYS CAT "size:"
+      LET row = LAST
+      SYS STR bytes_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR files_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":du"
+      LET row = LAST
+      SYS GREPV "size:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+    END
+  END
+  PRINT_JSON admit_n bag_n bytes_n files_n dirs_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gold"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF t_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "gold needs stage"
+    FAIL "gold needs stage"
+    CLEAR_ERR
+  ELSE
+    IF g_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gold needs dest"
+      FAIL "gold needs dest"
+      CLEAR_ERR
+    ELSE
+      SYS EXIST stage_dir
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "gold needs stage first"
+        FAIL "gold needs stage first"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "gold needs stage first"
+        END
+      ELSE
+        CPTREE stage_dir gold_dir
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "gold cptree fail"
+          FAIL "gold cptree fail"
+          CLEAR_ERR
+          IF require_hit > 0 THEN
+            EXIT 2 "gold failed"
+          END
+        ELSE
+          LET files_n = CPTREE_N
+          CLEAR_ERR
+          SYS CAT "gold:"
+          LET row = LAST
+          SYS CAT row gold_dir
+          LET row = LAST
+          SYS CAT row ":ok"
+          LET row = LAST
+          SYS GREPV "gold:" bag
+          LET bag = LAST
+          CLEAR_ERR
+          SYS PUSH bag row
+          LET bag = LAST
+          LET bag_ch = 1
+          LET admit_n = 1
+          SYS LINES bag
+          LET bag_n = LAST_N
+          LET hit = 1
+          LET note_msg = "gold ok"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n files_n g_src
+  CLEAR_ERR
+END
+
+SYS EQS op "promote"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF t_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "promote needs stage"
+    FAIL "promote needs stage"
+    CLEAR_ERR
+  ELSE
+    IF l_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "promote needs live"
+      FAIL "promote needs live"
+      CLEAR_ERR
+    ELSE
+      SYS EXIST stage_dir
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "promote needs stage first"
+        FAIL "promote needs stage first"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "promote needs stage first"
+        END
+      ELSE
+        MVTREE stage_dir live_dir
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "promote failed"
+          FAIL "promote failed"
+          CLEAR_ERR
+          IF require_hit > 0 THEN
+            EXIT 2 "promote failed"
+          END
+        ELSE
+          LET renamed = MVTREE_RENAMED
+          LET files_n = MVTREE_N
+          CLEAR_ERR
+          SYS EXIST stage_dir
+          LET has_n = LAST_N
+          CLEAR_ERR
+          SYS CAT "promo:"
+          LET row = LAST
+          SYS CAT row live_dir
+          LET row = LAST
+          SYS CAT row ":"
+          LET row = LAST
+          SYS STR renamed
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":mv"
+          LET row = LAST
+          SYS GREPV "promo:" bag
+          LET bag = LAST
+          CLEAR_ERR
+          SYS PUSH bag row
+          LET bag = LAST
+          LET bag_ch = 1
+          LET admit_n = 1
+          SYS LINES bag
+          LET bag_n = LAST_N
+          LET hit = 1
+          LET note_msg = "promote ok"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n renamed files_n has_n l_src
+  CLEAR_ERR
+END
+
+SYS EQS op "verify"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF l_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "verify needs live"
+    FAIL "verify needs live"
+    CLEAR_ERR
+  ELSE
+    IF g_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "verify needs gold"
+      FAIL "verify needs gold"
+      CLEAR_ERR
+    ELSE
+      EQTREE live_dir gold_dir
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "verify soft miss"
+        FAIL "verify soft miss"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "verify failed"
+        END
+      ELSE
+        LET eq_n = EQTREE
+        CLEAR_ERR
+        SYS CAT "eq:"
+        LET row = LAST
+        SYS STR eq_n
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS CAT row EQTREE_REASON
+        LET row = LAST
+        SYS CAT row ":cmp"
+        LET row = LAST
+        SYS GREPV "eq:" bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+        LET admit_n = 1
+        SYS LINES bag
+        LET bag_n = LAST_N
+        IF eq_n == 1 THEN
+          LET hit = 1
+          LET note_msg = "verify equal"
+        ELSE
+          LET miss = 1
+          LET note_msg = "verify differ"
+          FAIL "verify differ"
+          CLEAR_ERR
+          IF require_hit > 0 THEN
+            EXIT 2 "verify differ"
+          END
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n eq_n
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET row = LAST
+    SYS CAT row ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET row = LAST
+  SYS BLANK row
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs key"
+    FAIL "has needs key"
+    CLEAR_ERR
+  ELSE
+    SYS CAT row ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  DIRSIZE ""
+  LET has_n = OK
+  CLEAR_ERR
+  MVTREE "" "x"
+  LET admit_n = OK
+  CLEAR_ERR
+  EQTREE "" "y"
+  LET eq_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON has_n admit_n eq_n t_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+LET row = "schema=cubalc.tree_promote_verify_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bytes"
+LET row = LAST
+SYS STR bytes_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "eq"
+LET row = LAST
+SYS STR eq_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "tree_promote_verify_board: done"
+PRINT_JSON hit miss bag_n bytes_n files_n eq_n renamed t_src note_msg
+EXIT 0
