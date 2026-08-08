@@ -1,0 +1,723 @@
+# agent_json_plate_loadtype_board.cubalc — LOADPLATE + REQUIRE JSONTYPE plate boot
+#
+# Real use: agent STATUS file boot — soft plate-file load with defaults
+# fallback, then field type contracts before SEND/gate:
+#   LOADPLATE / READPLATE — soft file load · miss/non-obj → OR defs (1095)
+#   SYS JSONTYPE — soft kind probe num|str|bool|null|obj|arr|missing
+#   REQUIRE JSONTYPE — fail-fast type contract · got/want in error (1094)
+#
+# First realworld LOADPLATE+REQUIRE JSONTYPE board. Distinct from boot
+# (DEFAULTS fill) and lockstep (EQ/SUBSET).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajplt_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_loadtype_board.cubalc \
+#     mint -- --plate=/tmp/ajplt/status.json
+#   ./out/cubalc run ... load -- --plate=...
+#   ./out/cubalc run ... softload -- --plate=/tmp/missing.json
+#   ./out/cubalc run ... types -- --plate=...
+#   ./out/cubalc run ... hard_type -- --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPLT_REPORT.txt
+# Env: PLATE_PATH DEFS_PATH CUBALC_AJPLT_REQUIRE
+#
+# Edges:
+#   miss → OR defs LAST_N=0 FALLBACK; non-object/array → fallback;
+#   hit ignores OR; REQUIRE JSONTYPE shell 1 exit_code 0 (W152 class);
+#   ok:1 is num not bool; bool true peels type bool;
+#   capture LAST_N (W144); WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_loadtype_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_json_plate_loadtype -- mint|load|softload|types|hard_type|gate|list -- [--plate=P] [--defs=P]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/status.json"
+LET plate_file = LAST
+SYS JOIN state_dir "sample/defs.json"
+LET defs_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+GETFLAGOUT defs OR ENV DEFS_PATH OR defs_file
+LET defs_file = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPLT_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPLT_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET defs = ""
+LET load_hit = 0
+LET kind_s = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "mint", "load", "softload", "types", "hard_type", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "mint" THEN
+    LET op = "mint"
+  WHEN "load" THEN
+    LET op = "load"
+  WHEN "softload" THEN
+    LET op = "softload"
+  WHEN "types" THEN
+    LET op = "types"
+  WHEN "hard_type" THEN
+    LET op = "hard_type"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "mint"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # live plate: load num, role str, ok num, flag bool
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 10 "zone" "east" "live" true
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint soft miss"
+    FAIL "mint soft miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mint failed"
+    END
+  ELSE
+    LET take_n = JSONOBJ_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "mint write failed"
+    END
+    CLEAR_ERR
+    # soft-load defaults catalog
+    SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 0 "load" 0 "zone" "unset" "live" false
+    LET defs = LAST
+    WRITEOUT defs_file defs
+    CLEAR_ERR
+    SYS CAT "mint:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mt"
+    LET row = LAST
+    SYS GREPV "mint:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "mint ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "load"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "load miss"
+    FAIL "load miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "load miss"
+    END
+  ELSE
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    LET take_n = load_hit
+    IF peel_hit == 10 THEN
+      LET hit = 1
+      LET note_msg = "load hit"
+    ELSE
+      LET miss = 1
+      LET note_msg = "load peel"
+      FAIL "load peel"
+      CLEAR_ERR
+    END
+    SYS CAT "load:"
+    LET row = LAST
+    SYS STR load_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":ld"
+    LET row = LAST
+    SYS GREPV "load:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n load_hit peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "softload"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR defs_file OR ""
+  LET defs = LAST
+  CLEAR_ERR
+  SYS BLANK defs
+  IF LAST_N == 1 THEN
+    SYS JSONOBJ "ok" 0 "load" 0 "role" "worker"
+    LET defs = LAST
+    CLEAR_ERR
+  END
+  # deliberate miss path
+  SYS JOIN state_dir "sample/missing_status.json"
+  LET row = LAST
+  SYS LOADPLATE row OR defs
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  LET out = body
+  LET take_n = load_hit
+  # expect FALLBACK: load_hit 0, body has ok from defs
+  IF load_hit == 0 THEN
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSON "role" FROM body
+    SYS EQS LAST "worker"
+    LET has_n = LAST_N
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "softload fallback"
+    ELSE
+      LET miss = 1
+      LET note_msg = "softload no role"
+      FAIL "softload no role"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "softload unexpected hit"
+    FAIL "softload unexpected hit"
+    CLEAR_ERR
+  END
+  SYS CAT "softload:"
+  LET row = LAST
+  SYS STR load_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":sf"
+  LET row = LAST
+  SYS GREPV "softload:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n load_hit peel_hit has_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "types"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "types load miss"
+    FAIL "types load miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "types load miss"
+    END
+  ELSE
+    SYS JSONTYPE "load" FROM body
+    LET kind_s = LAST
+    CLEAR_ERR
+    SYS EQS kind_s "num"
+    LET has_n = LAST_N
+    CLEAR_ERR
+    SYS JSONTYPE "role" FROM body
+    SYS EQS LAST "str"
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSONTYPE "live" FROM body
+    SYS EQS LAST "bool"
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    SYS JSONTYPE "missing" FROM body
+    SYS EQS LAST "missing"
+    LET take_n = LAST_N
+    CLEAR_ERR
+    LET out = body
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF admit_n == 1 THEN
+          IF take_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "types ok"
+          ELSE
+            LET miss = 1
+            LET note_msg = "types missing kind"
+            FAIL "types missing kind"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "types live"
+          FAIL "types live"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "types role"
+        FAIL "types role"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "types load kind"
+      FAIL "types load kind"
+      CLEAR_ERR
+    END
+    SYS CAT "types:"
+    LET row = LAST
+    SYS CAT row kind_s
+    LET row = LAST
+    SYS CAT row ":ty"
+    LET row = LAST
+    SYS GREPV "types:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n has_n peel_hit admit_n take_n kind_s p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "hard_type"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "hard_type load miss"
+    FAIL "hard_type load miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "hard_type load miss"
+    END
+  ELSE
+    # soft probes first
+    SYS JSONTYPE "load" FROM body
+    SYS EQS LAST "num"
+    LET has_n = LAST_N
+    CLEAR_ERR
+    SYS JSONTYPE "role" FROM body
+    SYS EQS LAST "str"
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSONTYPE "ok" FROM body
+    SYS EQS LAST "num"
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF admit_n == 1 THEN
+          REQUIRE JSONTYPE body "load" num
+          CLEAR_ERR
+          REQUIRE JSONTYPE body "role" str
+          CLEAR_ERR
+          REQUIRE JSONTYPE body "ok" num
+          CLEAR_ERR
+          REQUIRE JSONTYPE body "live" bool
+          CLEAR_ERR
+          SYS JSONN "load" FROM LAST
+          LET take_n = LAST_N
+          CLEAR_ERR
+          LET out = body
+          LET hit = 1
+          LET note_msg = "hard_type ok"
+        ELSE
+          LET miss = 1
+          LET note_msg = "hard_type ok kind"
+          FAIL "hard_type ok kind"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "hard_type role kind"
+        FAIL "hard_type role kind"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "hard_type load soft"
+      FAIL "hard_type load soft"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "hard_type soft deny"
+      END
+    END
+    SYS CAT "hard_type:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":ht"
+    LET row = LAST
+    SYS GREPV "hard_type:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n has_n peel_hit admit_n load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate load miss"
+    FAIL "gate load miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate load miss"
+    END
+  ELSE
+    SYS JSONTYPE "load" FROM body
+    SYS EQS LAST "num"
+    LET has_n = LAST_N
+    CLEAR_ERR
+    SYS JSONTYPE "role" FROM body
+    SYS EQS LAST "str"
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSONHASALL body "schema" "role" "ok" "load"
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    LET out = body
+    LET take_n = load_hit
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF admit_n == 1 THEN
+          LET hit = 1
+          LET note_msg = "gate admit"
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate need deny"
+          FAIL "gate need deny"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate role type"
+        FAIL "gate role type"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate load type"
+      FAIL "gate load type"
+      CLEAR_ERR
+    END
+    SYS CAT "gate:"
+    LET row = LAST
+    SYS STR load_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":gt"
+    LET row = LAST
+    SYS GREPV "gate:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n load_hit has_n peel_hit admit_n hit miss p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JSONOBJ "retries" 3 "soft" 1
+  LET defs = LAST
+  # miss default {}
+  SYS LOADPLATE "/tmp/cubalc_ajplt_no_file_$$"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS JSONEMPTY LAST
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # miss OR defs
+  SYS LOADPLATE "/tmp/cubalc_ajplt_no_file_$$" OR defs
+  LET has_n = LAST_N
+  SYS JSONN "retries" FROM LAST
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # non-object
+  SYS JOIN state_dir "sample/notobj.txt"
+  LET row = LAST
+  SYS WRITE row "not a plate"
+  CLEAR_ERR
+  SYS LOADPLATE row OR defs
+  LET admit_n = LAST_N
+  SYS JSONN "soft" FROM LAST
+  LET bag_n = LAST_N
+  CLEAR_ERR
+  # wrong type soft
+  SYS JSONOBJ "n" "str"
+  SYS JSONTYPE "n" FROM LAST
+  SYS EQS LAST "str"
+  LET miss = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON load_hit peel_hit has_n take_n admit_n bag_n miss p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_loadtype_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "load_hit"
+LET row = LAST
+SYS STR load_hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_loadtype_board: done"
+PRINT_JSON hit miss bag_n take_n load_hit p_src note_msg
+EXIT 0

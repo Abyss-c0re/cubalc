@@ -1,57 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 204,
-  "program": "programs/realworld/agent_json_plate_boot_board.cubalc",
-  "theme": "JSONDEFAULTS + JSONCHANGELOG + REQUIRE JSONNEQ agent boot + mutation",
-  "version": "1.15.543-usability",
+  "iter": 205,
+  "program": "programs/realworld/agent_json_plate_loadtype_board.cubalc",
+  "theme": "LOADPLATE + REQUIRE JSONTYPE plate file boot + type contracts",
+  "version": "1.15.545-usability",
   "pass": true,
-  "prior_note": "iter 203 REQUIRE EQ lockstep; this iter first realworld DEFAULTS(1092)+CHANGELOG(1093)+REQUIRE NEQ(1091) boot board",
+  "prior_note": "iter 204 DEFAULTS+CHANGELOG boot; this iter first realworld LOADPLATE(1095)+REQUIRE JSONTYPE(1094) loadtype board",
   "tests": [
     {
       "name": "mint",
-      "cmd": "defs 6keys + partial load-only plate",
+      "cmd": "status plate + defs catalog WRITEOUT",
       "ok": true,
       "note": "mint"
     },
     {
-      "name": "boot",
-      "cmd": "DEFAULTS set=5 load kept 10 role filled",
+      "name": "load",
+      "cmd": "LOADPLATE hit=1 peel load=10",
       "ok": true,
-      "note": "DEFAULTS"
+      "note": "LOADPLATE"
+    },
+    {
+      "name": "softload",
+      "cmd": "miss OR defs hit=0 role=worker",
+      "ok": true,
+      "note": "fallback"
+    },
+    {
+      "name": "types",
+      "cmd": "load num role str live bool missing",
+      "ok": true,
+      "note": "JSONTYPE"
+    },
+    {
+      "name": "hard_type",
+      "cmd": "REQUIRE load num role str ok num live bool",
+      "ok": true,
+      "note": "REQUIRE TYPE"
     },
     {
       "name": "gate",
-      "cmd": "HASALL core + re-DEFAULTS set=0",
+      "cmd": "load hit + types + HASALL admit",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "mutate",
-      "cmd": "load 40 zone east NEQ=1",
-      "ok": true,
-      "note": "mutate"
-    },
-    {
-      "name": "log",
-      "cmd": "CHANGELOG n=2 has load: and →",
-      "ok": true,
-      "note": "CHANGELOG"
-    },
-    {
-      "name": "hard_neq",
-      "cmd": "soft then REQUIRE JSONNEQ",
-      "ok": true,
-      "note": "REQUIRE NEQ"
-    },
-    {
       "name": "probe",
-      "cmd": "empty fill; complete 0; MERGE clobber vs DEFAULTS",
+      "cmd": "miss {}; OR defs; non-obj fallback",
       "ok": true,
       "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_AJPBT_REQUIRE=1 empty → shell 2",
+      "cmd": "CUBALC_AJPLT_REQUIRE=1 miss → shell 2",
       "ok": true,
       "note": "hard env"
     },
@@ -1374,6 +1374,30 @@
       "title": "CHANGELOG is bag LAST not plate; arrow format quotes strings",
       "detail": "LAST becomes multi-line log; HAS/HASLINE for substrings. String values appear quoted in log (zone: \"east\" → \"west\"). PRINT_JSON collapses newlines (W151).",
       "repro": "JSONCHANGELOG; HAS log \"load:\" and \"→\""
+    },
+    {
+      "id": "W165",
+      "severity": "med",
+      "area": "host|loadplate",
+      "title": "LOADPLATE LAST_N is hit polarity (1=file, 0=fallback) not plate size",
+      "detail": "Successful file load → LAST_N=1; miss/non-object → LAST_N=0 with defaults in LAST. Easy to confuse with empty plate (JSONEMPTY). Check LOADPLATE_HIT / FALLBACK or LAST_N==1 for hit.",
+      "repro": "LOADPLATE miss OR defs → LAST_N 0 FALLBACK 1; plate still has keys"
+    },
+    {
+      "id": "W166",
+      "severity": "high",
+      "area": "host|require_json",
+      "title": "REQUIRE JSONTYPE fail → shell 1 exit_code 0 (W152 class)",
+      "detail": "Wrong kind: err 'n is str, want num' (good UX) but asserts_fail path, shell 1, exit_code 0. Soft JSONTYPE + EXIT n under env for ops rc.",
+      "repro": "REQUIRE JSONTYPE {n:\"str\"} n num → shell 1 exit_code 0"
+    },
+    {
+      "id": "W167",
+      "severity": "med",
+      "area": "lang|json_type",
+      "title": "ok:1 is num not bool — type contracts must match encode style",
+      "detail": "JSONOBJ ok 1 yields kind num; live true yields bool. Agents copying HTTP bool flags as 0|1 fail REQUIRE JSONTYPE ok bool. Soft probe first.",
+      "repro": "JSONTYPE ok FROM {ok:1} → num; live true → bool"
     }
   ],
   "workarounds": [
@@ -1418,7 +1442,10 @@
     "Lockstep gate: SUBSET req AND EQ peer (W161)",
     "After DEFAULTS: check HASALL or HAD not only LAST_N==0 (W162)",
     "After REQUIRE JSONNEQ: peel FROM body/cur not LAST (W163)",
-    "CHANGELOG: HAS substrings; WRITE log bag not PRINT_JSON (W164)"
+    "CHANGELOG: HAS substrings; WRITE log bag not PRINT_JSON (W164)",
+    "LOADPLATE: treat LAST_N==1 as file hit; 0 means fallback plate (W165)",
+    "REQUIRE JSONTYPE: soft JSONTYPE EQS kind then REQUIRE; EXIT n for shell (W166)",
+    "Type contracts: probe kinds on mint schema before REQUIRE (W167)"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1455,7 +1482,10 @@
     "REQUIRE JSONEQ return changed-key bag on LAST without assert-fail option",
     "JSONDEFAULTS return plate key count alias JSONDEFAULTS_LEN",
     "REQUIRE JSONNEQ optional LAST=second plate mode",
-    "JSONCHANGELOG structured plate form (not only bag lines)"
+    "JSONCHANGELOG structured plate form (not only bag lines)",
+    "LOADPLATE LAST_N=keycount option / dual HIT flag only",
+    "REQUIRE JSONTYPE EXIT code mode",
+    "JSONTYPE alias bool_or_num for 0|1 flags"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1490,8 +1520,11 @@
     "drift load-only keeps SUBSET for gate split demo",
     "selftest 355/355 green v1.15.543",
     "DEFAULTS no-clobber load=10 positive",
-    "REQUIRE JSONNEQ LAST=prev peel got 10 not 40 (W163)"
+    "REQUIRE JSONNEQ LAST=prev peel got 10 not 40 (W163)",
+    "selftest 355/355 green v1.15.545",
+    "LOADPLATE hit peel load=10 positive",
+    "REQUIRE JSONTYPE multi-field hard_type green"
   ],
-  "commit": "b303781",
-  "ts": "2026-08-08T16:39:05Z"
+  "commit": "pending",
+  "ts": "2026-08-08T17:03:49Z"
 }
