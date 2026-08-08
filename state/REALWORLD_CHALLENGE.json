@@ -1269,6 +1269,6 @@
     "bool live:true pollutes MINN/BOTKEY (W142)",
     "TOPKEY LAST=key breaks chain peel (W143)"
   ],
-  "commit": "pending",
+  "commit": "617b56f",
   "ts": "2026-08-08T13:44:21Z"
 }
