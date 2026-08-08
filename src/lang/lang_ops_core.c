@@ -26610,6 +26610,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"CLAMPN", "CLAMPN|BOUNDN x lo [TO] hi — clamp x into [lo,hi] → LAST_N · GETFLAGN cap"},
       {"FLOORN", "FLOORN|ATLEASTN x lo — raise floor max(x,lo) → LAST_N · one-sided CLAMPN"},
       {"CAPN", "CAPN|ATMOSTN x hi — lower ceiling min(x,hi) → LAST_N · one-sided CLAMPN"},
+      {"DIVCEILN", "DIVCEILN|PAGESN a b — ceil(a/b) → LAST_N · page/chunk count without shell"},
       {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"REQUIRE FLAG", "REQUIRE FLAG|OPT name[,|alt] — fail if none of aliases · FLAG_HIT_NAME · LAST=value"},
@@ -29227,6 +29228,57 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# %s %ld → %ld bound=%ld changed=%d\n",
               is_cap ? "capn" : "floorn", x, out, b, changed);
+    bump(vm); return 1;
+  }
+  /* DIVCEILN|PAGESN|PAGECOUNT a b — integer ceiling division ceil(a/b) → LAST_N.
+   * b==0 soft LAST_N=0 + sticky LAST_ERR. Non-neg exact; mixed uses C trunc.
+   * Not CEILDIVN (stack imm). Usability: pages = DIVCEILN total page without shell.
+   * GETFLAGN total; GETFLAGN size; DIVCEILN total size. */
+  if (kw(&L->cur,"DIVCEILN") || kw(&L->cur,"PAGESN") || kw(&L->cur,"PAGECOUNT") ||
+      kw(&L->cur,"HOWMANY") || kw(&L->cur,"CEIL_DIVN") || kw(&L->cur,"IDIVCEIL") ||
+      kw(&L->cur,"CHUNKCOUNT") || kw(&L->cur,"NPAGES")){
+    long a = 0, b = 0, out = 0;
+    int bad = 0;
+    char nbuf[32];
+    lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &a)) {
+      fail_at(vm, L, "DIVCEILN a b — DIVCEILN total page");
+      return -1;
+    }
+    if (kw(&L->cur,"BY") || kw(&L->cur,"OVER") || kw(&L->cur,"INTO") ||
+        kw(&L->cur,"PER"))
+      lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &b)) {
+      fail_at(vm, L, "DIVCEILN a b — missing divisor");
+      return -1;
+    }
+    if (b == 0) {
+      out = 0;
+      bad = 1;
+      var_set_str(vm, "LAST_ERR", "DIVCEILN: divide by zero");
+      var_set_str(vm, "ERR", "DIVCEILN: divide by zero");
+    } else if (a >= 0 && b > 0) {
+      out = (a + b - 1) / b;
+    } else if (a <= 0 && b < 0) {
+      long aa = -a, bb = -b;
+      out = (aa + bb - 1) / bb;
+    } else {
+      out = a / b; /* mixed signs: C trunc toward 0 */
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "DIVCEILN", out);
+    var_set_num(vm, "PAGESN", out);
+    var_set_num(vm, "DIVCEILN_A", a);
+    var_set_num(vm, "DIVCEILN_B", b);
+    var_set_num(vm, "DIVCEILN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "OK", 1); /* soft form */
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# divceiln %ld/%ld → %ld bad=%d\n", a, b, out, bad);
     bump(vm); return 1;
   }
 

@@ -1,0 +1,66 @@
+# DIVCEILN / PAGESN — integer ceiling division for page/chunk counts
+
+HOLD_FLASH 1
+
+# exact
+DIVCEILN 100 10
+ASSERT LAST_N == 10
+ASSERT DIVCEILN_OK == 1
+
+# ceil remainder
+DIVCEILN 100 16
+ASSERT LAST_N == 7
+ASSERT DIVCEILN_A == 100
+ASSERT DIVCEILN_B == 16
+
+# 1 page when smaller than size
+DIVCEILN 3 16
+ASSERT LAST_N == 1
+
+# zero total
+DIVCEILN 0 16
+ASSERT LAST_N == 0
+
+# divide by zero soft
+DIVCEILN 10 0
+ASSERT LAST_N == 0
+ASSERT DIVCEILN_OK == 0
+LET e = LAST_ERR
+SYS LEN e
+ASSERT LAST_N > 0
+
+# PAGESN / HOWMANY aliases
+PAGESN 50 20
+ASSERT LAST_N == 3
+HOWMANY 1 1
+ASSERT LAST_N == 1
+
+# optional BY
+DIVCEILN 25 BY 10
+ASSERT LAST_N == 3
+
+# pipeline after GETFLAGN
+SYS ENV SET CUBALC_ARG0 "--total=100"
+SYS ENV SET CUBALC_ARG1 "--size=16"
+SYS ENV SET CUBALC_ARGC "2"
+GETFLAGN total OR 0
+LET total = LAST_N
+GETFLAGN size OR 1
+LET size = LAST_N
+FLOORN size 1
+LET size = LAST_N
+DIVCEILN total size
+ASSERT LAST_N == 7
+
+# var subjects
+LET a 17
+LET b 5
+DIVCEILN a b
+ASSERT LAST_N == 4
+
+# LAST decimal
+DIVCEILN 9 4
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+PRINT "divceiln ok"
