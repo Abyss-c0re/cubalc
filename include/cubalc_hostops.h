@@ -278,6 +278,11 @@ int cubalc_host_json_filter_req_keys(const char *json, const char *keys_nl,
  * Usability: schema reject unknown fields without JSONKEYS+EACH+HASLINE glue. */
 int cubalc_host_json_filter_plate_keys(const char *json, const char *allowed_nl,
                                        int want_extra, cubalc_host_result *r);
+/* multi-key peel → newline bag of values (empty field on miss). Order = keys_nl.
+ * r->n = listed keys · r->code = found count. Soft always OK.
+ * Usability: multi-field extract without multi JSON+PUSH glue. */
+int cubalc_host_json_pluck(const char *json, const char *keys_nl,
+                           cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

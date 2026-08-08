@@ -1,0 +1,120 @@
+# JSONPLUCK / JSONGETALL / JPLUCK — multi-key peel → value bag
+# Multi-field extract without multi JSON+PUSH. Empty field on miss. HIT=found.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" "" "msg" "hello"
+LET plate = LAST
+
+# three present
+SYS JSONPLUCK plate "ok" "n" "msg"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JSONPLUCK_N == 3
+ASSERT JSONPLUCK_HIT == 3
+ASSERT JSONPLUCK_MISS == 0
+SYS NTH 0
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+SYS JSONPLUCK plate "ok" "n" "msg"
+SYS NTH 1
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS JSONPLUCK plate "ok" "n" "msg"
+SYS NTH 2
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# miss middle → empty field, indices stable
+SYS JSONPLUCK plate "ok" "missing" "n"
+ASSERT LAST_N == 3
+ASSERT JSONPLUCK_HIT == 2
+ASSERT JSONPLUCK_MISS == 1
+SYS NTH 0
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+SYS JSONPLUCK plate "ok" "missing" "n"
+SYS NTH 1
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+SYS JSONPLUCK plate "ok" "missing" "n"
+SYS NTH 2
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# bare keys on LAST plate
+SYS JSONOBJ "a" 10 "b" 20
+SYS JSONPLUCK "a" "b"
+ASSERT LAST_N == 2
+ASSERT JSONPLUCK_HIT == 2
+SYS NTH 0
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+SYS JSONOBJ "a" 10 "b" 20
+SYS JSONPLUCK "a" "b"
+SYS NTH 1
+SYS EQS LAST "20"
+ASSERT LAST_N == 1
+
+# OF bag form
+SYS JSONOBJ "x" 1 "y" 2 "z" 3
+LET p2 = LAST
+SYS JOIN "" "x\nz\nmiss"
+LET kbag = LAST
+SYS JSONPLUCK p2 OF kbag
+ASSERT LAST_N == 3
+ASSERT JSONPLUCK_HIT == 2
+SYS NTH 0
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+SYS JSONPLUCK p2 OF kbag
+SYS NTH 1
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS JSONPLUCK p2 OF kbag
+SYS NTH 2
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# null peels as empty; false→0; true→1
+SYS JSONOBJ "gone" null "flag" false "yes" true
+LET p3 = LAST
+SYS JSONPLUCK p3 "gone" "flag" "yes"
+ASSERT LAST_N == 3
+ASSERT JSONPLUCK_HIT == 3
+SYS NTH 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+SYS JSONPLUCK p3 "gone" "flag" "yes"
+SYS NTH 1
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+SYS JSONPLUCK p3 "gone" "flag" "yes"
+SYS NTH 2
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JSONGETALL plate "ok" "n"
+ASSERT LAST_N == 2
+ASSERT JSONGETALL_HIT == 2
+SYS JPLUCK plate "ok"
+ASSERT LAST_N == 1
+ASSERT JSONPLUCK_HIT == 1
+
+# empty key list
+SYS JSONPLUCK plate
+ASSERT LAST_N == 0
+ASSERT JSONPLUCK_HIT == 0
+
+# err empty string is present (not miss)
+SYS JSONPLUCK plate "err"
+ASSERT LAST_N == 1
+ASSERT JSONPLUCK_HIT == 1
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# agent: pluck then LINES
+SYS JSONPLUCK plate "ok" "n" "msg"
+SYS LINES LAST
+ASSERT LAST_N == 3

@@ -3319,6 +3319,7 @@ int main(int argc, char **argv) {
       {"SYS JSONPRESENT", "host", "SYS JSONPRESENT|JSONFOUND [plate] key… — bag of present required keys · dual MISS"},
       {"SYS JSONEXTRA", "host", "SYS JSONEXTRA|JSONUNKNOWN [plate] allow… — bag of plate keys not in allow-list · LAST_N=count"},
       {"SYS JSONKNOWN", "host", "SYS JSONKNOWN|JSONALLOWED [plate] allow… — bag of plate keys in allow-list · dual EXTRA"},
+      {"SYS JSONPLUCK", "host", "SYS JSONPLUCK|JSONGETALL [plate] key… — multi-key peel → value bag · HIT=found"},
       {"SYS JSONKEYS", "host", "SYS JSONKEYS [plate] — top-level keys bag"},
       {"SYS JSONVALUES", "host", "SYS JSONVALUES [plate] — top-level values bag"},
       {"SYS SPAWN", "host", "allowlisted spawn (protect mode tight)"},
