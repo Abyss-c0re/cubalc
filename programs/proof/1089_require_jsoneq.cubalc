@@ -1,0 +1,57 @@
+# REQUIRE JSONEQ / SAMEJSON — fail-fast order-independent plate equality
+# Soft twin: SYS JSONEQ. Error lists changed keys via JSONCHANGED.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" ""
+LET a = LAST
+SYS JSONOBJ "err" "" "n" 3 "ok" true
+LET b = LAST
+
+# equal order-independent
+REQUIRE JSONEQ a b
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONEQ_N == 1
+ASSERT REQUIRE_JSONEQ == 1
+# LAST kept as first plate
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 3
+
+# aliases
+REQUIRE SAMEJSON a b
+ASSERT OK == 1
+REQUIRE JEQ a b
+ASSERT OK == 1
+REQUIRE EQJSON a b
+ASSERT OK == 1
+
+# two-token form
+REQUIRE JSON EQ a b
+ASSERT OK == 1
+
+# soft twin still works for miss path
+SYS JSONOBJ "ok" true "n" 1
+LET c = LAST
+SYS JSONOBJ "ok" true "n" 2
+LET d = LAST
+SYS JSONEQ c d
+ASSERT LAST_N == 0
+SYS JSONCHANGED c d
+ASSERT LAST_N == 1
+SYS EQS LAST "n"
+ASSERT LAST_N == 1
+
+# agent pattern: soft then require when ready
+SYS JSONEQ a b
+IF LAST_N THEN
+  REQUIRE JSONEQ a b
+  PASS "plates match"
+ELSE
+  FAIL "should match"
+END
+ASSERT OK == 1
+
+# self equal
+REQUIRE JSONEQ a a
+ASSERT OK == 1

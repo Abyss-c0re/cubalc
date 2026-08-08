@@ -33348,7 +33348,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEQ — fail-fast gates"},
+      {"REQUIRE JSONEQ", "REQUIRE JSONEQ|SAMEJSON a b — fail-fast plate equality · lists changed keys · soft SYS JSONEQ"},
+      {"REQUIRE SAMEJSON", "REQUIRE SAMEJSON alias of REQUIRE JSONEQ"},
       {"REQUIRE JSONHASALL", "REQUIRE JSONHASALL|JSONNEED [plate] key… — fail-fast plate keys · missing listed · soft SYS JSONHASALL"},
       {"REQUIRE JSONKEYS", "REQUIRE JSONKEYS alias of REQUIRE JSONHASALL"},
       {"REQUIRE JSONNEED", "REQUIRE JSONNEED alias of REQUIRE JSONHASALL"},
@@ -36246,6 +36248,69 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
+    /* REQUIRE JSONEQ|SAMEJSON a b — fail-fast order-independent plate equality.
+     * On fail lists changed keys (JSONCHANGED). Soft twin: SYS JSONEQ.
+     * Usability: verify WRITE/MERGE without fragile EQS + IF + FAIL glue. */
+    if (kw(&L->cur,"JSONEQ") || kw(&L->cur,"JEQ") || kw(&L->cur,"SAMEJSON") ||
+        kw(&L->cur,"EQJSON") || kw(&L->cur,"PLATEEQ") || kw(&L->cur,"JSONSAME") ||
+        kw(&L->cur,"SAMEPLATE") || kw(&L->cur,"EQUALJSON")){
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr, ch;
+      lex_next(L);
+      a[0] = 0;
+      b[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+        b[0] = 0;
+      if (!a[0] || !b[0]) {
+        fail_at(vm, L, "REQUIRE JSONEQ a b — need two plates");
+        return -1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_eq(a, b, &hr) != 0 || hr.n == 0) {
+        char msg[320];
+        char flat[160];
+        size_t mi = 0;
+        const char *mp;
+        memset(&ch, 0, sizeof ch);
+        cubalc_host_json_changed_keys(a, b, 0, &ch);
+        flat[0] = 0;
+        for (mp = ch.str; *mp && mi + 1 < sizeof flat; mp++) {
+          if (*mp == '\n' || *mp == '\r') {
+            if (mi > 0 && flat[mi - 1] != ',') {
+              flat[mi++] = ',';
+              if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+            }
+          } else {
+            flat[mi++] = *mp;
+          }
+        }
+        flat[mi] = 0;
+        if (flat[0])
+          snprintf(msg, sizeof msg,
+                   "REQUIRE JSONEQ mismatch line %d: %s — soft twin SYS JSONEQ / JSONCHANGED",
+                   aln, flat);
+        else
+          snprintf(msg, sizeof msg,
+                   "REQUIRE JSONEQ mismatch line %d — soft twin SYS JSONEQ",
+                   aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", a);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", a);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "JSONEQ_N", 1);
+      var_set_num(vm, "REQUIRE_JSONEQ", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require jsoneq ok\n");
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     /* REQUIRE JSONHASALL|JSONNEED|JSONKEYS [plate] key [key…]
      * REQUIRE JSONONLY|NOEXTRA|JSONSTRICT [plate] allow [key…]
      * REQUIRE JSONEXACT|JSONSCHEMA [plate] key [key…] — HASALL + ONLY one-shot.
@@ -36275,6 +36340,66 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         lex_next(L);
       } else if (kw(&L->cur,"JSON") || kw(&L->cur,"PLATE")) {
         lex_next(L);
+        /* REQUIRE JSON EQ a b — two-token equality gate */
+        if (kw(&L->cur,"EQ") || kw(&L->cur,"EQUAL") || kw(&L->cur,"SAME") ||
+            kw(&L->cur,"EQUALS")) {
+          char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+          cubalc_host_result hr, ch;
+          lex_next(L);
+          a[0] = 0;
+          b[0] = 0;
+          if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+            snprintf(a, sizeof a, "%s", vm->last_str);
+          if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+            b[0] = 0;
+          if (!a[0] || !b[0]) {
+            fail_at(vm, L, "REQUIRE JSON EQ a b — need two plates");
+            return -1;
+          }
+          memset(&hr, 0, sizeof hr);
+          if (cubalc_host_json_eq(a, b, &hr) != 0 || hr.n == 0) {
+            char msg[320];
+            char flat[160];
+            size_t mi = 0;
+            const char *mp;
+            memset(&ch, 0, sizeof ch);
+            cubalc_host_json_changed_keys(a, b, 0, &ch);
+            flat[0] = 0;
+            for (mp = ch.str; *mp && mi + 1 < sizeof flat; mp++) {
+              if (*mp == '\n' || *mp == '\r') {
+                if (mi > 0 && flat[mi - 1] != ',') {
+                  flat[mi++] = ',';
+                  if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+                }
+              } else {
+                flat[mi++] = *mp;
+              }
+            }
+            flat[mi] = 0;
+            if (flat[0])
+              snprintf(msg, sizeof msg,
+                       "REQUIRE JSONEQ mismatch line %d: %s — soft twin SYS JSONEQ / JSONCHANGED",
+                       aln, flat);
+            else
+              snprintf(msg, sizeof msg,
+                       "REQUIRE JSONEQ mismatch line %d — soft twin SYS JSONEQ",
+                       aln);
+            if (vm->res) vm->res->asserts_fail++;
+            fail(vm, msg);
+            return -1;
+          }
+          var_set_str(vm, "LAST", a);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", a);
+          vm->last_n = 1;
+          var_set_num(vm, "LAST_N", 1);
+          var_set_num(vm, "JSONEQ_N", 1);
+          var_set_num(vm, "REQUIRE_JSONEQ", 1);
+          var_set_num(vm, "OK", 1);
+          if (vm->trace)
+            fprintf(vm->trace, "# require json eq ok\n");
+          if (vm->res) vm->res->asserts_ok++;
+          bump(vm); return 1;
+        }
         if (kw(&L->cur,"EXACT") || kw(&L->cur,"SCHEMA") || kw(&L->cur,"MATCHKEYS")) {
           want_exact = 1;
           lex_next(L);
@@ -36525,7 +36650,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEXACT …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEXACT|JSONEQ …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||
