@@ -1,0 +1,601 @@
+# agent_json_plate_lifecycle_board.cubalc — ENSUREPLATE + SAVEPLATE + REQUIRE PLATEFILE
+#
+# Real use: agent STATUS lifecycle — first-run seed, mutate+persist,
+# hard gate that object plate file exists:
+#   ENSUREPLATE / TOUCHPLATE — create-or-load · CREATED 0|1 (1097)
+#   SAVEPLATE / STOREPLATE — object-checked write · mkdir parent (1096)
+#   REQUIRE PLATEFILE / HASPLATE — fail-fast object file · LAST=content (1098)
+#   soft LOADPLATE twin for miss paths
+#
+# First realworld ENSURE+SAVE+REQUIRE PLATEFILE board. Distinct from
+# loadtype (LOADPLATE+JSONTYPE) and boot (DEFAULTS fill).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajplc_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_lifecycle_board.cubalc \
+#     ensure -- --plate=/tmp/ajplc/status.json
+#   ./out/cubalc run ... save -- --plate=...
+#   ./out/cubalc run ... hard -- --plate=...
+#   ./out/cubalc run ... gate -- --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPLC_REPORT.txt
+# Env: PLATE_PATH CUBALC_AJPLC_REQUIRE
+#
+# Edges:
+#   ENSURE LAST_N=1 create / 0 load (≠ LOADPLATE hit polarity);
+#   SAVE rejects non-object soft; REQUIRE miss shell 1 exit_code 0;
+#   second ENSURE no clobber; capture LAST_N carefully (W144/W165);
+#   WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_lifecycle_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_json_plate_lifecycle -- ensure|save|reload|hard|gate|list -- [--plate=P]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/deep/status.json"
+LET plate_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPLC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPLC_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET seed = ""
+LET created = 0
+LET load_hit = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "ensure", "save", "reload", "hard", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "ensure" THEN
+    LET op = "ensure"
+  WHEN "save" THEN
+    LET op = "save"
+  WHEN "reload" THEN
+    LET op = "reload"
+  WHEN "hard" THEN
+    LET op = "hard"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "ensure"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 0 "zone" "unset"
+  LET seed = LAST
+  CLEAR_ERR
+  SYS ENSUREPLATE plate_file OR seed
+  LET created = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  # first run created=1; re-run created=0
+  SYS JSONN "load" FROM body
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS JSON "role" FROM body
+  SYS EQS LAST "worker"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  LET out = body
+  LET take_n = created
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "ensure ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "ensure no role"
+    FAIL "ensure no role"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "ensure fail"
+    END
+  END
+  SYS CAT "ensure:"
+  LET row = LAST
+  SYS STR created
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":en"
+  LET row = LAST
+  SYS GREPV "ensure:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n created peel_hit has_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "save"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    # try ensure seed if missing
+    SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 0 "zone" "unset"
+    LET seed = LAST
+    SYS ENSUREPLATE plate_file OR seed
+    LET body = LAST
+    CLEAR_ERR
+  END
+  # rebuild absolute plate (avoid JSONSET LAST footguns after LOADPLATE)
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 40 "zone" "east"
+  LET body = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE plate_file body
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "save soft fail"
+    FAIL "save soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "save fail"
+    END
+  ELSE
+    LET take_n = LAST_N
+    LET out = body
+    # SAVEPLATE leaves LAST=path — reload for hit check; peel from body
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS LOADPLATE plate_file
+    LET load_hit = LAST_N
+    CLEAR_ERR
+    IF peel_hit == 40 THEN
+      IF load_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "save ok"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "save load miss"
+        FAIL "save load miss"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "save peel"
+      FAIL "save peel"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "save:"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR load_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":sv"
+  LET row = LAST
+  SYS GREPV "save:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "reload"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  LET take_n = load_hit
+  LET out = body
+  IF load_hit == 1 THEN
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "reload hit"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "reload miss"
+    FAIL "reload miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "reload miss"
+    END
+  END
+  SYS CAT "reload:"
+  LET row = LAST
+  SYS STR load_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":rl"
+  LET row = LAST
+  SYS GREPV "reload:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n load_hit peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "hard"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF load_hit == 1 THEN
+    REQUIRE PLATEFILE plate_file
+    LET body = LAST
+    LET take_n = LAST_N
+    CLEAR_ERR
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    LET hit = 1
+    LET admit_n = 1
+    LET note_msg = "hard ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "hard soft deny"
+    FAIL "hard soft deny"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "hard soft deny"
+    END
+  END
+  SYS CAT "hard:"
+  LET row = LAST
+  SYS STR load_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":hd"
+  LET row = LAST
+  SYS GREPV "hard:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n load_hit peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate miss"
+    FAIL "gate miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate miss"
+    END
+  ELSE
+    SYS JSONHASALL body "schema" "role" "ok" "load"
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    LET take_n = load_hit
+    IF admit_n == 1 THEN
+      IF peel_hit >= 0 THEN
+        LET hit = 1
+        LET note_msg = "gate admit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate load"
+        FAIL "gate load"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate need deny"
+      FAIL "gate need deny"
+      CLEAR_ERR
+    END
+    SYS CAT "gate:"
+    LET row = LAST
+    SYS STR admit_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":gt"
+    LET row = LAST
+    SYS GREPV "gate:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n admit_n peel_hit load_hit hit miss p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JOIN state_dir "sample/probe_life.json"
+  LET row = LAST
+  SYS JSONOBJ "n" 1 "tag" "p"
+  LET seed = LAST
+  # create
+  SYS ENSUREPLATE row OR seed
+  LET created = LAST_N
+  CLEAR_ERR
+  # second load no create
+  SYS ENSUREPLATE row OR seed
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # SAVE non-object soft fail keep file
+  SYS SAVEPLATE row "not-object"
+  LET has_n = OK
+  CLEAR_ERR
+  SYS LOADPLATE row
+  SYS JSONN "n" FROM LAST
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # empty object still valid PLATEFILE
+  SYS JOIN state_dir "sample/empty_life.json"
+  LET body = LAST
+  SYS SAVEPLATE body "{}"
+  CLEAR_ERR
+  SYS LOADPLATE body
+  SYS JSONEMPTY LAST
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON created take_n has_n peel_hit admit_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_lifecycle_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "created"
+LET row = LAST
+SYS STR created
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "load_hit"
+LET row = LAST
+SYS STR load_hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_lifecycle_board: done"
+PRINT_JSON hit miss bag_n take_n created load_hit p_src note_msg
+EXIT 0

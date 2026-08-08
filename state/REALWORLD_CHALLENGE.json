@@ -1,65 +1,59 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 205,
-  "program": "programs/realworld/agent_json_plate_loadtype_board.cubalc",
-  "theme": "LOADPLATE + REQUIRE JSONTYPE plate file boot + type contracts",
-  "version": "1.15.545-usability",
+  "iter": 206,
+  "program": "programs/realworld/agent_json_plate_lifecycle_board.cubalc",
+  "theme": "ENSUREPLATE + SAVEPLATE + REQUIRE PLATEFILE agent plate lifecycle",
+  "version": "1.15.548-usability",
   "pass": true,
-  "prior_note": "iter 204 DEFAULTS+CHANGELOG boot; this iter first realworld LOADPLATE(1095)+REQUIRE JSONTYPE(1094) loadtype board",
+  "prior_note": "iter 205 LOADPLATE+JSONTYPE; this iter first realworld ENSURE(1097)+SAVE(1096)+REQUIRE PLATEFILE(1098) lifecycle board",
   "tests": [
     {
-      "name": "mint",
-      "cmd": "status plate + defs catalog WRITEOUT",
+      "name": "ensure",
+      "cmd": "first CREATED=1; second CREATED=0 load seed",
       "ok": true,
-      "note": "mint"
+      "note": "ENSUREPLATE"
     },
     {
-      "name": "load",
-      "cmd": "LOADPLATE hit=1 peel load=10",
+      "name": "save",
+      "cmd": "SAVEPLATE load=40; LOADPLATE hit=1",
       "ok": true,
-      "note": "LOADPLATE"
+      "note": "SAVEPLATE"
     },
     {
-      "name": "softload",
-      "cmd": "miss OR defs hit=0 role=worker",
+      "name": "reload",
+      "cmd": "LOADPLATE hit peel 40",
       "ok": true,
-      "note": "fallback"
+      "note": "reload"
     },
     {
-      "name": "types",
-      "cmd": "load num role str live bool missing",
+      "name": "hard",
+      "cmd": "soft hit then REQUIRE PLATEFILE peel 40",
       "ok": true,
-      "note": "JSONTYPE"
-    },
-    {
-      "name": "hard_type",
-      "cmd": "REQUIRE load num role str ok num live bool",
-      "ok": true,
-      "note": "REQUIRE TYPE"
+      "note": "REQUIRE PLATEFILE"
     },
     {
       "name": "gate",
-      "cmd": "load hit + types + HASALL admit",
+      "cmd": "HASALL + load admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "miss {}; OR defs; non-obj fallback",
+      "cmd": "create; second no create; non-obj SAVE soft; empty {}",
       "ok": true,
       "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_AJPLT_REQUIRE=1 miss → shell 2",
+      "cmd": "CUBALC_AJPLC_REQUIRE=1 miss → shell 2",
       "ok": true,
       "note": "hard env"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
-      "ok": true,
-      "note": "355/355"
+      "ok": false,
+      "note": "354/355 pre-existing sys_kvfileensure (not this program)"
     }
   ],
   "weaknesses": [
@@ -1398,6 +1392,30 @@
       "title": "ok:1 is num not bool — type contracts must match encode style",
       "detail": "JSONOBJ ok 1 yields kind num; live true yields bool. Agents copying HTTP bool flags as 0|1 fail REQUIRE JSONTYPE ok bool. Soft probe first.",
       "repro": "JSONTYPE ok FROM {ok:1} → num; live true → bool"
+    },
+    {
+      "id": "W168",
+      "severity": "med",
+      "area": "host|saveplate",
+      "title": "SAVEPLATE leaves LAST as path string, not plate content",
+      "detail": "After SAVEPLATE path body, LAST is path (SAVEPLATE_PATH) and LAST_N is byte size. Chain peel JSONN FROM LAST fails. Agents must peel FROM body or LOADPLATE after save. Dual of LOADPLATE which puts content in LAST.",
+      "repro": "SAVEPLATE p body; JSONN k FROM LAST → miss; peel FROM body or LOADPLATE p"
+    },
+    {
+      "id": "W169",
+      "severity": "med",
+      "area": "host|ensureplate",
+      "title": "ENSUREPLATE LAST_N polarity opposite LOADPLATE hit",
+      "detail": "ENSURE first create LAST_N=1 CREATED=1; second load LAST_N=0 HIT=1. LOADPLATE uses LAST_N=1 for file hit. Mixing without CREATED/HIT flags confuses boot scripts.",
+      "repro": "ENSURE miss→1 create; ENSURE again→0 load; LOADPLATE hit→1"
+    },
+    {
+      "id": "W170",
+      "severity": "high",
+      "area": "host|require_platefile",
+      "title": "REQUIRE PLATEFILE miss → shell 1 exit_code 0 (W152 class)",
+      "detail": "Missing object plate: err lists path + soft twin LOADPLATE/ENSUREPLATE, asserts_fail, shell 1, exit_code 0. Soft LOADPLATE + EXIT n under env for ops rc.",
+      "repro": "REQUIRE PLATEFILE /tmp/none.json → shell 1 exit_code 0"
     }
   ],
   "workarounds": [
@@ -1445,7 +1463,10 @@
     "CHANGELOG: HAS substrings; WRITE log bag not PRINT_JSON (W164)",
     "LOADPLATE: treat LAST_N==1 as file hit; 0 means fallback plate (W165)",
     "REQUIRE JSONTYPE: soft JSONTYPE EQS kind then REQUIRE; EXIT n for shell (W166)",
-    "Type contracts: probe kinds on mint schema before REQUIRE (W167)"
+    "Type contracts: probe kinds on mint schema before REQUIRE (W167)",
+    "After SAVEPLATE: peel FROM body or LOADPLATE (W168)",
+    "ENSURE: use CREATED/HIT flags not raw LAST_N alone (W169)",
+    "REQUIRE PLATEFILE: soft LOADPLATE first + EXIT n (W170)"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1485,7 +1506,10 @@
     "JSONCHANGELOG structured plate form (not only bag lines)",
     "LOADPLATE LAST_N=keycount option / dual HIT flag only",
     "REQUIRE JSONTYPE EXIT code mode",
-    "JSONTYPE alias bool_or_num for 0|1 flags"
+    "JSONTYPE alias bool_or_num for 0|1 flags",
+    "SAVEPLATE keep-plate mode (LAST=content LAST_PATH=path)",
+    "Unify ENSURE/LOAD hit polarity or always set dual HIT+CREATED",
+    "REQUIRE PLATEFILE EXIT code mode"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1523,8 +1547,11 @@
     "REQUIRE JSONNEQ LAST=prev peel got 10 not 40 (W163)",
     "selftest 355/355 green v1.15.545",
     "LOADPLATE hit peel load=10 positive",
-    "REQUIRE JSONTYPE multi-field hard_type green"
+    "REQUIRE JSONTYPE multi-field hard_type green",
+    "selftest 354/355: sys_kvfileensure unknown form status — concurrent/pre-existing, not lifecycle board",
+    "SAVEPLATE LAST=path forced peel-from-body fix (W168)",
+    "ENSURE create then load polarity documented (W169)"
   ],
-  "commit": "59645ff",
-  "ts": "2026-08-08T17:03:49Z"
+  "commit": "pending",
+  "ts": "2026-08-08T17:29:55Z"
 }
