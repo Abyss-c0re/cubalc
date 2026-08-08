@@ -226,6 +226,9 @@ int cubalc_host_json_rename(const char *json, const char *oldk, const char *newk
 /* drop listed top-level keys (newline bag). r->str=new object · r->n=removed count.
  * Missing keys soft-skipped. Dual of JSONPICK when noise fields are known. */
 int cubalc_host_json_drop(const char *json, const char *keys_nl, cubalc_host_result *r);
+/* top-level values as newline bag (JSONKEYS order). Strings decoded; nums/bools raw;
+ * nested obj/arr as raw text. r->n = count. Soft empty if not object. */
+int cubalc_host_json_values(const char *json, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

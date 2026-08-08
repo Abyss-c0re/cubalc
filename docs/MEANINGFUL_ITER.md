@@ -554,6 +554,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 524. ~~**`JSONTYPE` / `JTYPE` / `JSONKIND`**~~ **done** (plate value kind probe · num|str|bool|null|obj|arr|missing).
 525. ~~**`JSONCOPY` / `JCOPY` / `JSONDUP`**~~ **done** (copy plate key raw value · snapshot before mutate).
 526. ~~**`JSONSWAP` / `JSWAP` / `JSONXCHG`**~~ **done** (exchange two plate keys · dual-buffer · move if one miss).
+527. ~~**`JSONVALUES` / `JVALS` / `JSONVALS`**~~ **done** (top-level values bag · twin of JSONKEYS · ZIP/SUM/FREQ).
 
 ## Tick protocol
 

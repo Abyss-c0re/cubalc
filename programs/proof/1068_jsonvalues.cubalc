@@ -1,0 +1,81 @@
+# JSONVALUES / JVALS / JSONVALS — top-level plate values as bag
+# Twin of JSONKEYS. ZIP keys+vals / SUM / FREQ without EACH+JSON peel.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "a" 1 "b" 2 "c" 3
+LET plate = LAST
+
+SYS JSONVALUES plate
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JSONVALUES_N == 3
+LET vals = LAST
+SYS NTH 0 vals
+ASSERT LAST == "1"
+SYS NTH 1 vals
+ASSERT LAST == "2"
+SYS NTH 2 vals
+ASSERT LAST == "3"
+
+# order matches JSONKEYS
+SYS JSONKEYS plate
+LET keys = LAST
+SYS ZIP keys vals
+ASSERT LAST_N == 3
+
+# SUM numeric values bag
+SYS JSONVALUES plate
+SYS SUM LAST
+ASSERT LAST_N == 6
+
+# string + bool + null
+SYS JSONOBJ "s" "hi" "ok" true "nil" null "n" 9
+LET p2 = LAST
+SYS JSONVALUES p2
+ASSERT LAST_N == 4
+LET v2 = LAST
+SYS NTH 0 v2
+ASSERT LAST == "hi"
+SYS NTH 1 v2
+ASSERT LAST == "1"
+SYS NTH 2 v2
+ASSERT LAST == "null"
+SYS NTH 3 v2
+ASSERT LAST == "9"
+
+# empty / non-object soft
+SYS JSONVALUES "{}"
+ASSERT LAST_N == 0
+SYS JSONVALUES "not-json"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# bare on LAST
+SYS JOIN "" plate
+SYS JVALS
+ASSERT LAST_N == 3
+
+# nested raw present as field
+SYS JSONOBJ "meta" RAW "{\"x\":1}" "y" 2
+SYS JSONVALUES LAST
+ASSERT LAST_N == 2
+LET vn = LAST
+SYS NTH 0 vn
+# nested object raw starts with {
+SYS STARTS LAST "{"
+ASSERT LAST_N == 1
+SYS NTH 1 vn
+ASSERT LAST == "2"
+
+# aliases
+SYS JSONVALS "{\"p\":4,\"q\":5}"
+ASSERT LAST_N == 2
+SYS VALSJSON "{\"z\":7}"
+ASSERT LAST_N == 1
+LET one = LAST
+SYS NTH 0 one
+ASSERT LAST == "7"
+
+PRINT "jsonvalues ok"
+ASSERT OK == 1

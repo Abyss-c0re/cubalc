@@ -4505,6 +4505,67 @@ int cubalc_host_json_drop(const char *json, const char *keys_nl, cubalc_host_res
   return 0;
 }
 
+/* Usability: SYS JSONVALUES plate — top-level values bag in JSONKEYS order.
+ * Scalars decoded like JSON peel; nested obj/arr kept as raw text for agents. */
+int cubalc_host_json_values(const char *json, cubalc_host_result *r) {
+  cubalc_host_result keys, gr, raw;
+  const char *p, *line;
+  size_t olen = 0;
+  long kept = 0;
+  r_clear(r);
+  memset(&keys, 0, sizeof keys);
+  if (cubalc_host_json_keys(json, &keys) != 0) {
+    /* not an object — empty bag soft */
+    r->str[0] = 0;
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  r->str[0] = 0;
+  p = keys.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&raw, 0, sizeof raw);
+    if (cubalc_host_json_get_raw(json, key, &raw) != 0)
+      continue;
+    {
+      const char *v = raw.str;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v == '"') {
+        /* decoded string body via get */
+        memset(&gr, 0, sizeof gr);
+        if (cubalc_host_json_get(json, key, &gr) == 0)
+          cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, gr.str);
+        else
+          cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, raw.str);
+      } else if (strncmp(v, "true", 4) == 0) {
+        cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, "1");
+      } else if (strncmp(v, "false", 5) == 0) {
+        cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, "0");
+      } else if (strncmp(v, "null", 4) == 0) {
+        /* bag_push skips empty; keep explicit null token for field alignment */
+        cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, "null");
+      } else {
+        /* num, obj, arr — raw */
+        cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, v);
+      }
+    }
+  }
+  r->n = kept;
+  r->ok = 1;
+  return 0;
+}
+
 static int load_token(char *out, size_t outn) {
   out[0] = 0;
   const char *e = getenv("XAI_API_KEY");
