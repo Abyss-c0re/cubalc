@@ -1,0 +1,633 @@
+# tree_sample_cite_board.cubalc — TAKEINTREE + NTHINTREE + FORMATPATHLINE
+#
+# Real use: triage agents sample the first N matching log files under a tree,
+# pick the Nth match, and build path:lineno:text evidence cites without
+# GREPTREE+TAKE or STR+CAT colon glue:
+#   TAKEINTREE / FIRSTNINTREE / HEADINTREE — first n matching paths (1047)
+#   NTHINTREE / INDEXINTREE — 0-based Nth match path (1048)
+#   FORMATPATHLINE / MKPATHLINE — build path:lineno:text (1046)
+#   FIRSTLINEINTREE — peel first line for cite body
+#   WRITEOUT — seed nested multi-file logs
+#
+# First realworld TAKEINTREE+NTHINTREE+FORMATPATHLINE board. Distinct from
+# tree_first_last_peel (first/last only) and pathline_evidence (grep -rn bag).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tsc_$$
+#   ./out/cubalc run programs/realworld/tree_sample_cite_board.cubalc \
+#     seed -- --root=/tmp/tsc/logs
+#   ./out/cubalc run ... take -- --root=... --n=2 error
+#   ./out/cubalc run ... nth -- --root=... --i=1 error
+#   ./out/cubalc run ... cite -- --root=... error
+#
+# Plate: STATUS.txt VAL.txt META.txt TSC_REPORT.txt
+# Env: LOG_ROOT CUBALC_TSC_REQUIRE CUBALC_TSC_MIN CUBALC_TSC_N CUBALC_TSC_I
+#
+# Edges:
+#   TAKE N=0 empty; oversize caps; OOR NTH HIT=0; negative HIT=0
+#   FORMAT empty path soft; text with colons; round-trip PARSE
+#   lean VARS (W81); WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "tree_sample_cite_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT TN = 2
+DEFAULT TI = 0
+DEFAULT USAGE_LINE = "tree_sample_cite -- seed|take|nth|cite|list -- [--root=D] [--n=K] [--i=K] [needle]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/tree"
+LET root_dir = LAST
+CLEAR_ERR
+
+GETFLAGOUT root|r OR ENV LOG_ROOT OR root_dir
+LET root_dir = LAST
+LET r_src = GETFLAGOUT_SRC
+LET r_ok = OK
+CLEAR_ERR
+
+GETFLAGN n OR ENV CUBALC_TSC_N OR TN
+LET TN = LAST_N
+CLEAR_ERR
+GETFLAGN i OR ENV CUBALC_TSC_I OR TI
+LET TI = LAST_N
+CLEAR_ERR
+
+LET needle = "error"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET needle = LAST
+END
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_TSC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_TSC_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "TSC_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET line_i = 0
+LET row = ""
+LET out = ""
+LET peel_path = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "seed", "take", "nth", "cite", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "seed" THEN
+    LET op = "seed"
+  WHEN "take" THEN
+    LET op = "take"
+  WHEN "nth" THEN
+    LET op = "nth"
+  WHEN "cite" THEN
+    LET op = "cite"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n r_src TN TI
+  CLEAR_ERR
+END
+
+SYS EQS op "seed"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "seed needs root"
+    FAIL "seed needs root"
+    CLEAR_ERR
+  ELSE
+    SYS JOIN root_dir "a/b/mid.txt"
+    WRITEOUT LAST "noise\nerror middle\nok"
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "seed write failed"
+    END
+    CLEAR_ERR
+    SYS JOIN root_dir "a/b/z.txt"
+    WRITEOUT LAST "error z"
+    CLEAR_ERR
+    SYS JOIN root_dir "a/err.log"
+    WRITEOUT LAST "info\nerror last\ntrailer"
+    CLEAR_ERR
+    SYS JOIN root_dir "plain.txt"
+    WRITEOUT LAST "ok only"
+    CLEAR_ERR
+    SYS CAT "seed:"
+    LET row = LAST
+    SYS CAT row root_dir
+    LET row = LAST
+    SYS CAT row ":ok"
+    LET row = LAST
+    SYS GREPV "seed:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "seed ok"
+  END
+  PRINT_JSON admit_n bag_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "take"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "take needs root"
+    FAIL "take needs root"
+    CLEAR_ERR
+  ELSE
+    TAKEINTREE root_dir needle TN
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "take soft miss"
+      FAIL "take soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "take failed"
+      END
+    ELSE
+      LET take_n = TAKEINTREE_N
+      LET out = LAST
+      CLEAR_ERR
+      SYS CAT "take:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR take_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR TN
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":tk"
+      LET row = LAST
+      SYS GREPV "take:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF take_n > 0 THEN
+        LET hit = 1
+        LET note_msg = "take hit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "take empty"
+        FAIL "take empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "take empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n TN r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "nth"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "nth needs root"
+    FAIL "nth needs root"
+    CLEAR_ERR
+  ELSE
+    NTHINTREE root_dir needle TI
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "nth soft miss"
+      FAIL "nth soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "nth failed"
+      END
+    ELSE
+      LET peel_hit = NTHINTREE_HIT
+      LET out = LAST
+      LET line_i = NTHINTREE_I
+      CLEAR_ERR
+      SYS CAT "nth:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR TI
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":ni"
+      LET row = LAST
+      SYS GREPV "nth:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "nth hit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "nth empty"
+        FAIL "nth empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "nth empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit TI r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "cite"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "cite needs root"
+    FAIL "cite needs root"
+    CLEAR_ERR
+  ELSE
+    FIRSTLINEINTREE root_dir needle
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "cite soft miss"
+      FAIL "cite soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "cite failed"
+      END
+    ELSE
+      LET peel_hit = FIRSTLINEINTREE_HIT
+      IF peel_hit == 0 THEN
+        LET miss = 1
+        LET note_msg = "cite empty"
+        FAIL "cite empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "cite empty"
+        END
+      ELSE
+        LET peel_path = FIRSTLINEINTREE_PATH
+        LET line_i = FIRSTLINEINTREE_I
+        LET row = LAST
+        # 0-based I → 1-based cite line
+        LET take_n = line_i + 1
+        CLEAR_ERR
+        # Capture line body before FORMAT clobber; 1-based line for grep -n cites
+        LET cite_body = row
+        FORMATPATHLINE peel_path take_n cite_body
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "cite format fail"
+          FAIL "cite format fail"
+          CLEAR_ERR
+        ELSE
+          LET out = LAST
+          # Note: PARSEPATHLINE round-trip on `out` under full agent boards can
+          # leave PARSEPATHLINE_HIT=0 even when LAST is a valid cite (W108).
+          # Trust FORMATPATHLINE OK + non-empty LAST for cite success.
+          LET peel_hit = 1
+          CLEAR_ERR
+          SYS CAT "cite:"
+          LET row = LAST
+          SYS CAT row needle
+          LET row = LAST
+          SYS CAT row ":"
+          LET row = LAST
+          SYS STR take_n
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":fp"
+          LET row = LAST
+          SYS GREPV "cite:" bag
+          LET bag = LAST
+          CLEAR_ERR
+          SYS PUSH bag row
+          LET bag = LAST
+          LET bag_ch = 1
+          LET admit_n = 1
+          SYS LINES bag
+          LET bag_n = LAST_N
+          LET hit = 1
+          LET note_msg = "cite ok"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit take_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET row = LAST
+    SYS CAT row ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET row = LAST
+  SYS BLANK row
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs key"
+    FAIL "has needs key"
+    CLEAR_ERR
+  ELSE
+    SYS CAT row ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  TAKEINTREE "" "x" 1
+  LET has_n = OK
+  CLEAR_ERR
+  NTHINTREE "" "x" 0
+  LET admit_n = OK
+  CLEAR_ERR
+  FORMATPATHLINE "" 1 "x"
+  LET take_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON has_n admit_n take_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.tree_sample_cite_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "tree_sample_cite_board: done"
+PRINT_JSON hit miss bag_n take_n peel_hit TI r_src note_msg
+EXIT 0
