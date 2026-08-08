@@ -1,0 +1,74 @@
+# JSONFILETOGGLE / TOGGLEPLATEKEY — flip disk plate flag 0↔1
+# Usability: agent feature flags without LOAD+JSONTOGGLE+SAVE glue.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_jsonfiletoggle"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS JOIN dir "nested/flags.json"
+LET deep = LAST
+
+SYS RM path
+
+# --- missing key → 1 ---
+SYS JSONFILETOGGLE path "debug"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONFILETOGGLE_V == 1
+ASSERT JSONFILETOGGLE_PREV == 0
+ASSERT JSONFILETOGGLE_CREATED == 1
+SYS PEEKPLATE path "debug"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# --- flip on → off ---
+SYS JSONFILETOGGLE path "debug"
+ASSERT LAST_N == 0
+ASSERT JSONFILETOGGLE_V == 0
+ASSERT JSONFILETOGGLE_PREV == 1
+ASSERT JSONFILETOGGLE_FILE == 1
+SYS PEEKPLATE path "debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# --- flip off → on ---
+SYS JSONFILETOGGLE path "debug"
+ASSERT LAST_N == 1
+ASSERT JSONFILETOGGLE_V == 1
+
+# --- aliases ---
+SYS TOGGLEPLATEKEY path "debug"
+ASSERT LAST_N == 0
+SYS FLIPPLATEKEY path "debug"
+ASSERT LAST_N == 1
+SYS PLATEFILETOGGLE path "debug"
+ASSERT LAST_N == 0
+
+# --- truthy string → off ---
+SYS UPDATEPLATE path "mode" "on"
+SYS JSONFILETOGGLE path "mode"
+ASSERT LAST_N == 0
+
+# --- nested create ---
+SYS RM deep
+SYS JSONFILETOGGLE deep "enabled"
+ASSERT OK == 1
+ASSERT JSONFILETOGGLE_CREATED == 1
+ASSERT LAST_N == 1
+SYS LOADPLATE deep
+SYS JSONN "enabled" FROM LAST
+ASSERT LAST_N == 1
+
+# --- empty key soft fail ---
+LET empty = ""
+SYS JSONFILETOGGLE path empty
+ASSERT OK == 0
+SYS HAS LAST_ERR "empty key"
+ASSERT LAST_N == 1
+
+PRINT "jsonfiletoggle ok"

@@ -594,6 +594,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 564. ~~**`programs/lib/plate_tick`**~~ **done** (INCLUDE plate_tick = ENSURE + bump + ts stamp + SAVE · agent tick preamble).
 565. ~~**`JSONFILEENSURE` / `ENSUREPLATEKEY` / `DEFAULTPLATEKEY`**~~ **done** (set plate-file key only if missing · seed defaults without clobber).
 566. ~~**`JSONFILEDEFAULTS` / `DEFAULTPLATEALL` / `ENSUREPLATEALL`**~~ **done** (multi-key disk fill-if-missing · agent boot defaults without clobber).
+567. ~~**`JSONFILETOGGLE` / `TOGGLEPLATEKEY` / `FLIPPLATEKEY`**~~ **done** (flip disk plate flag 0↔1 · agent feature flags without LOAD+TOGGLE+SAVE).
 
 ## Tick protocol
 
