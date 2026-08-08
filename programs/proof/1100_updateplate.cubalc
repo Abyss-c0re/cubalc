@@ -1,0 +1,114 @@
+# UPDATEPLATE / JSONFILESET / PLATEKEYSET — one-shot load-set-save JSON plate field
+# Usability: agent state field persist without LOADPLATE+JSONSET+SAVEPLATE glue.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_updateplate"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS JOIN dir "fresh.json"
+LET fresh = LAST
+SYS JOIN dir "nested/deep.json"
+LET deep = LAST
+
+# --- create-on-miss: empty → insert key ---
+SYS RM path
+SYS UPDATEPLATE path "n" 1
+ASSERT OK == 1
+ASSERT UPDATEPLATE_CREATED == 1
+ASSERT UPDATEPLATE_HIT == 0
+ASSERT LAST_N == 0
+# LAST is plate content
+LET plate = LAST
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 1
+SYS EQS UPDATEPLATE_KEY "n"
+ASSERT LAST_N == 1
+
+# --- update existing key ---
+SYS UPDATEPLATE path "n" 7
+ASSERT OK == 1
+ASSERT UPDATEPLATE_HIT == 1
+ASSERT UPDATEPLATE_CREATED == 0
+ASSERT LAST_N == 1
+LET plate = LAST
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 7
+
+# --- add string field + bool ---
+SYS UPDATEPLATE path "role" "worker"
+ASSERT OK == 1
+LET plate = LAST
+SYS JSON "role" FROM plate
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS UPDATEPLATE path "ok" true
+LET plate = LAST
+SYS JSON "ok" FROM plate
+# JSON peels bool true as "1"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# --- aliases ---
+SYS JSONFILESET path "tick" 2
+ASSERT OK == 1
+SYS PLATEKEYSET path "tick" 3
+ASSERT UPDATEPLATE_HIT == 1
+LET plate = LAST
+SYS JSONN "tick" FROM plate
+ASSERT LAST_N == 3
+SYS PATCHPLATE path "tick" 4
+SYS SETJSONFILE path "tick" 5
+SYS PLATEPUT path "tick" 6
+SYS SETPLATEKEY path "tick" 9
+LET plate = LAST
+SYS JSONN "tick" FROM plate
+ASSERT LAST_N == 9
+
+# --- verify on-disk via LOADPLATE ---
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+LET loaded = LAST
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 7
+SYS JSON "role" FROM loaded
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSONN "tick" FROM loaded
+ASSERT LAST_N == 9
+
+# --- fresh path under nested dirs (mkdir parent) ---
+SYS RM deep
+SYS UPDATEPLATE deep "phase" "boot"
+ASSERT OK == 1
+ASSERT UPDATEPLATE_CREATED == 1
+SYS LOADPLATE deep
+ASSERT LOADPLATE_HIT == 1
+SYS JSON "phase" FROM LAST
+SYS EQS LAST "boot"
+ASSERT LAST_N == 1
+
+# --- RAW value (array stored in plate body; JSON peel is scalar-only) ---
+SYS RM fresh
+SYS UPDATEPLATE fresh "arr" RAW "[1,2]"
+ASSERT OK == 1
+SYS HAS LAST "[1,2]"
+ASSERT LAST_N == 1
+SYS LOADPLATE fresh
+ASSERT LOADPLATE_HIT == 1
+SYS HAS LAST "[1,2]"
+ASSERT LAST_N == 1
+
+# --- soft empty key fails ---
+# use empty via var
+LET empty = ""
+SYS UPDATEPLATE path empty 1
+ASSERT OK == 0
+SYS HAS LAST_ERR "empty key"
+ASSERT LAST_N == 1
+
+PRINT "updateplate ok"
