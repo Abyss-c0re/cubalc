@@ -491,6 +491,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 461. ~~**`VERSIONFLAG` / `VERFLAG`**~~ **done** (if --version|-V print VERSION/PROG_VERSION + EXIT 0 · default version|V|ver · twin of HELPFLAG).
 462. ~~**`GETFLAGALL` / `MULTIFLAG`**~~ **done** (all --name occurrences → newline bag · LAST_N=count · tags without EACH ARGS).
 463. ~~**`GETFLAGN OR ENV`**~~ **done** (`OR ENV NAME` chains · CLI > env > literal · GETFLAGN_SRC/FLAG_ENV · no shell `${VAR:-n}`).
+464. ~~**flag family OR ENV**~~ **done** (GETFLAG/GETFLAGMS/BOOLFLAG OR ENV · same CLI>env>default · *_SRC/FLAG_ENV).
 
 ## Tick protocol
 

@@ -26568,10 +26568,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASARG", "HASARG n|name — soft 0|1 if program arg present (REQUIRE ARG twin)"},
       {"HASARGC", "HASARGC [min] — soft 0|1 if ARGC >= min (default 1)"},
       {"HASFLAG", "HASFLAG name[,|alt] — soft 0|1 if any alias --name/-name · FLAG_HIT_NAME"},
-      {"GETFLAG", "GETFLAG name[,|alt] [OR fb] — LAST = flag value · short aliases · FLAG_HIT_NAME"},
-      {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR 0|1] — truthy flag · verbose|v · FLAG_HIT_NAME"},
+      {"GETFLAG", "GETFLAG name[,|alt] [OR ENV n]* [OR fb] — string peel · CLI>ENV>default · GETFLAG_SRC"},
+      {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
-      {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR dur] — ms peel · timeout|t · FLAG_HIT_NAME"},
+      {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
       {"GETFLAGALL", "GETFLAGALL|FLAGALL|MULTIFLAG name[,|alt] [OR bag] — all --name values → newline bag · LAST_N=count"},
       {"FLAG_HIT_NAME", "FLAG_HIT_NAME|FLAG_ALIAS — which flag alias matched after HASFLAG/GETFLAG*"},
       {"TRUTHY", "TRUTHY str|var — soft 0|1 if 1/true/yes/on (or non-empty non-falsy)"},
@@ -29292,29 +29292,68 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# hasflag %s hit=%s → %d\n", name, hitnm, hit ? 1 : 0);
     bump(vm); return 1;
   }
+  /* GETFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT fallback]
+   * Priority: CLI > first non-empty ENV > literal. GETFLAG_SRC cli|env|default|none. */
   if (kw(&L->cur,"GETFLAG") || kw(&L->cur,"GETOPT") || kw(&L->cur,"FLAG") ||
       kw(&L->cur,"OPTARG") || kw(&L->cur,"OPT_GET") || kw(&L->cur,"FLAGVAL")){
     char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX], fb[512];
-    int hit, have_fb = 0, nac;
+    char env_used[96], src_tag[16];
+    int hit, have_fb = 0, nac, from_env = 0;
     lex_next(L);
     name[0] = 0;
     aliases[0] = 0;
     hitnm[0] = 0;
     val[0] = 0;
     fb[0] = 0;
+    env_used[0] = 0;
+    snprintf(src_tag, sizeof src_tag, "%s", "none");
     nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
     if (nac <= 0 || !name[0]) {
-      fail_at(vm, L, "GETFLAG needs name — GETFLAG out|o OR \"a.txt\"");
+      fail_at(vm, L, "GETFLAG needs name — GETFLAG out|o OR ENV OUT OR \"a.txt\"");
       return -1;
     }
-    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
-        kw(&L->cur,"FALLBACK")){
+    while (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+           kw(&L->cur,"FALLBACK")){
       lex_next(L);
-      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
-        fail_at(vm, L, "GETFLAG name OR \"fallback\"");
-        return -1;
+      if (kw(&L->cur,"ENV") || kw(&L->cur,"FROMENV") || kw(&L->cur,"ENVOR") ||
+          kw(&L->cur,"GETENV") || kw(&L->cur,"ENV_GET")){
+        char en[96];
+        const char *ev;
+        lex_next(L);
+        en[0] = 0;
+        while (L->cur.kind == TK_MINUS) lex_next(L);
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          snprintf(en, sizeof en, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail_at(vm, L, "GETFLAG OR ENV NAME — GETFLAG out OR ENV OUT OR \"-\"");
+          return -1;
+        }
+        if (!have_fb && en[0]) {
+          ev = getenv(en);
+          if (ev && ev[0]) {
+            snprintf(fb, sizeof fb, "%s", ev);
+            have_fb = 1;
+            from_env = 1;
+            snprintf(env_used, sizeof env_used, "%s", en);
+          }
+        }
+        continue;
       }
-      have_fb = 1;
+      {
+        char lit[512];
+        lit[0] = 0;
+        if (resolve_str_arg(vm, L, lit, sizeof lit) != 0) {
+          fail_at(vm, L, "GETFLAG name OR \"fallback\"");
+          return -1;
+        }
+        if (!have_fb) {
+          snprintf(fb, sizeof fb, "%s", lit);
+          have_fb = 1;
+          from_env = 0;
+        }
+      }
+      break;
     }
     hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
     if (!hit) {
@@ -29323,55 +29362,102 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       else
         val[0] = 0;
     }
+    if (hit)
+      snprintf(src_tag, sizeof src_tag, "%s", "cli");
+    else if (have_fb && from_env)
+      snprintf(src_tag, sizeof src_tag, "%s", "env");
+    else if (have_fb)
+      snprintf(src_tag, sizeof src_tag, "%s", "default");
+    else
+      snprintf(src_tag, sizeof src_tag, "%s", "none");
     var_set_str(vm, "LAST", val);
     var_set_str(vm, "FLAG", val);
     var_set_str(vm, "GETFLAG", name);
     var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
     var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+    var_set_str(vm, "GETFLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_ENV", (!hit && from_env) ? env_used : "");
     snprintf(vm->last_str, sizeof vm->last_str, "%s", val);
     vm->last_n = hit ? 1L : 0L;
     var_set_num(vm, "LAST_N", hit ? 1L : 0L);
     var_set_num(vm, "GETFLAG_N", hit ? 1L : 0L);
     var_set_num(vm, "OK", (hit || (have_fb && val[0])) ? 1 : (have_fb ? 1 : 0));
     if (vm->trace)
-      fprintf(vm->trace, "# getflag %s hit=%s → %s\n", name, hitnm, val);
+      fprintf(vm->trace, "# getflag %s hit=%s → %s src=%s\n", name, hitnm, val, src_tag);
     bump(vm); return 1;
   }
-  /* BOOLFLAG name[,|alt...] [OR|DEFAULT 0|1]
-   * Soft truthy probe of CLI --name or short alias. LAST_N = 1 if present and
-   * truthy (bare → "1"; --name=false/0/off/no → 0). Missing → 0 or OR default.
-   * FLAG_HIT_NAME = matching alias. Usability: BOOLFLAG verbose|v without dual. */
+  /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]
+   * Soft truthy probe. Priority: CLI > first non-empty ENV > literal default.
+   * BOOLFLAG_SRC cli|env|default|none · FLAG_ENV when from env. */
   if (kw(&L->cur,"BOOLFLAG") || kw(&L->cur,"FLAGBOOL") || kw(&L->cur,"ISFLAG") ||
       kw(&L->cur,"FLAGTRUE") || kw(&L->cur,"BOOL_FLAG") || kw(&L->cur,"GETBOOL") ||
       kw(&L->cur,"FLAG_BOOL")){
     char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX];
-    int hit, have_fb = 0, fb_bool = 0, truth, nac;
+    char env_used[96], src_tag[16];
+    int hit, have_fb = 0, fb_bool = 0, truth, nac, from_env = 0;
     char buf[8];
     lex_next(L);
     name[0] = 0;
     aliases[0] = 0;
     hitnm[0] = 0;
     val[0] = 0;
+    env_used[0] = 0;
+    snprintf(src_tag, sizeof src_tag, "%s", "none");
     nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
     if (nac <= 0 || !name[0]) {
-      fail_at(vm, L, "BOOLFLAG needs name — BOOLFLAG verbose|v");
+      fail_at(vm, L, "BOOLFLAG needs name — BOOLFLAG force|f OR ENV FORCE OR 0");
       return -1;
     }
-    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
-        kw(&L->cur,"FALLBACK")){
+    while (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+           kw(&L->cur,"FALLBACK")){
       lex_next(L);
-      have_fb = 1;
-      if (L->cur.kind == TK_NUM) {
-        fb_bool = L->cur.num ? 1 : 0;
+      if (kw(&L->cur,"ENV") || kw(&L->cur,"FROMENV") || kw(&L->cur,"ENVOR") ||
+          kw(&L->cur,"GETENV") || kw(&L->cur,"ENV_GET")){
+        char en[96];
+        const char *ev;
         lex_next(L);
-      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
-        char fb[64];
-        snprintf(fb, sizeof fb, "%s", L->cur.text);
-        lex_next(L);
-        fb_bool = cubalc_str_truthy(fb);
-      } else {
-        fb_bool = (int)parse_expr(vm, L) ? 1 : 0;
+        en[0] = 0;
+        while (L->cur.kind == TK_MINUS) lex_next(L);
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          snprintf(en, sizeof en, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail_at(vm, L, "BOOLFLAG OR ENV NAME");
+          return -1;
+        }
+        if (!have_fb && en[0]) {
+          ev = getenv(en);
+          if (ev && ev[0]) {
+            fb_bool = cubalc_str_truthy(ev);
+            have_fb = 1;
+            from_env = 1;
+            snprintf(env_used, sizeof env_used, "%s", en);
+            snprintf(val, sizeof val, "%s", ev);
+          }
+        }
+        continue;
       }
+      {
+        int lit = 0;
+        if (L->cur.kind == TK_NUM) {
+          lit = L->cur.num ? 1 : 0;
+          lex_next(L);
+        } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          char tmp[64];
+          snprintf(tmp, sizeof tmp, "%s", L->cur.text);
+          lex_next(L);
+          lit = cubalc_str_truthy(tmp);
+        } else {
+          lit = (int)parse_expr(vm, L) ? 1 : 0;
+        }
+        if (!have_fb) {
+          fb_bool = lit;
+          have_fb = 1;
+          from_env = 0;
+        }
+      }
+      break;
     }
     hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
     if (hit) {
@@ -29383,6 +29469,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       truth = 0;
       val[0] = 0;
     }
+    if (hit)
+      snprintf(src_tag, sizeof src_tag, "%s", "cli");
+    else if (have_fb && from_env)
+      snprintf(src_tag, sizeof src_tag, "%s", "env");
+    else if (have_fb)
+      snprintf(src_tag, sizeof src_tag, "%s", "default");
+    else
+      snprintf(src_tag, sizeof src_tag, "%s", "none");
     var_set_num(vm, "LAST_N", truth ? 1L : 0L);
     vm->last_n = truth ? 1L : 0L;
     var_set_num(vm, "BOOLFLAG_N", truth ? 1L : 0L);
@@ -29392,14 +29486,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_str(vm, "BOOLFLAG", name);
     var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
     var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+    var_set_str(vm, "BOOLFLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_ENV", (!hit && from_env) ? env_used : "");
     var_set_str(vm, "LAST", val[0] ? val : (truth ? "1" : "0"));
     var_set_str(vm, "FLAG", val[0] ? val : (truth ? "1" : "0"));
     snprintf(vm->last_str, sizeof vm->last_str, "%s",
              val[0] ? val : (truth ? "1" : "0"));
     snprintf(buf, sizeof buf, "%d", truth ? 1 : 0);
     if (vm->trace)
-      fprintf(vm->trace, "# boolflag %s hit=%s truth=%d → %s\n",
-              name, hitnm, truth, val);
+      fprintf(vm->trace, "# boolflag %s hit=%s truth=%d src=%s\n",
+              name, hitnm, truth, src_tag);
     bump(vm); return 1;
   }
   /* GETFLAGN|FLAGN|FLAGNUM name[,|alt...] [OR ENV name]* [OR|DEFAULT n]
@@ -29560,16 +29657,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               name, hitnm, num, bad, src_tag, env_used);
     bump(vm); return 1;
   }
-  /* GETFLAGMS|FLAGMS|FLAGDUR name[,|alt...] [OR|DEFAULT duration]
-   * Peel CLI --name or short alias as milliseconds. Value may be bare number (ms)
-   * or PARSEMS human duration ("5s","250ms","1m30s"). OR default same forms.
-   * FLAG_HIT_NAME = matching alias · LAST_N / GETFLAGMS_N = ms · HIT 0|1 · OK=1.
-   * Usability: GETFLAGMS timeout|t OR "30s" without dual HASFLAG glue. */
+  /* GETFLAGMS|FLAGMS|FLAGDUR name[,|alt...] [OR ENV name]* [OR|DEFAULT duration]
+   * Peel duration to ms. Priority: CLI > first non-empty ENV > literal.
+   * GETFLAGMS_SRC cli|env|default|none · FLAG_ENV when from env. */
   if (kw(&L->cur,"GETFLAGMS") || kw(&L->cur,"FLAGMS") || kw(&L->cur,"FLAGDUR") ||
       kw(&L->cur,"GETOPTMS") || kw(&L->cur,"TIMEOUTFLAG") || kw(&L->cur,"DURFLAG") ||
       kw(&L->cur,"FLAG_MS") || kw(&L->cur,"GETFLAG_MS")){
     char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX], nbuf[32], fb[512];
-    int hit, have_fb = 0, bad = 0, nac;
+    char env_used[96], src_tag[16];
+    int hit, have_fb = 0, bad = 0, nac, from_env = 0;
     long ms = 0, fb_ms = 0;
     const char *derr = NULL;
     lex_next(L);
@@ -29578,46 +29674,88 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     hitnm[0] = 0;
     val[0] = 0;
     fb[0] = 0;
+    env_used[0] = 0;
+    snprintf(src_tag, sizeof src_tag, "%s", "none");
     nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
     if (nac <= 0 || !name[0]) {
-      fail_at(vm, L, "GETFLAGMS needs name — GETFLAGMS timeout|t OR \"30s\"");
+      fail_at(vm, L, "GETFLAGMS needs name — GETFLAGMS timeout|t OR ENV TIMEOUT OR \"30s\"");
       return -1;
     }
-    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
-        kw(&L->cur,"FALLBACK")){
+    while (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+           kw(&L->cur,"FALLBACK")){
       lex_next(L);
-      have_fb = 1;
-      if (L->cur.kind == TK_NUM) {
-        fb_ms = L->cur.num;
+      if (kw(&L->cur,"ENV") || kw(&L->cur,"FROMENV") || kw(&L->cur,"ENVOR") ||
+          kw(&L->cur,"GETENV") || kw(&L->cur,"ENV_GET")){
+        char en[96];
+        const char *ev;
         lex_next(L);
-      } else if (L->cur.kind == TK_MINUS) {
-        fb_ms = parse_expr(vm, L);
-      } else if (L->cur.kind == TK_STR) {
-        snprintf(fb, sizeof fb, "%s", L->cur.text);
-        lex_next(L);
-        if (cubalc_parse_duration_ms(fb, &fb_ms, NULL, &derr) != 0) {
-          char *ep = NULL;
-          fb_ms = strtol(fb, &ep, 10);
-          if (!fb[0] || (ep && *ep)) fb_ms = 0;
-        }
-      } else if (L->cur.kind == TK_IDENT) {
-        Var *sv = var_get(vm, L->cur.text, 0);
-        if (sv && !sv->is_str) {
-          fb_ms = sv->val;
-          lex_next(L);
-        } else if (sv && sv->is_str) {
-          if (cubalc_parse_duration_ms(sv->sval, &fb_ms, NULL, &derr) != 0)
-            fb_ms = strtol(sv->sval, NULL, 10);
+        en[0] = 0;
+        while (L->cur.kind == TK_MINUS) lex_next(L);
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          snprintf(en, sizeof en, "%s", L->cur.text);
           lex_next(L);
         } else {
-          snprintf(fb, sizeof fb, "%s", L->cur.text);
-          lex_next(L);
-          if (cubalc_parse_duration_ms(fb, &fb_ms, NULL, &derr) != 0)
-            fb_ms = strtol(fb, NULL, 10);
+          fail_at(vm, L, "GETFLAGMS OR ENV NAME");
+          return -1;
         }
-      } else {
-        fb_ms = parse_expr(vm, L);
+        if (!have_fb && en[0]) {
+          ev = getenv(en);
+          if (ev && ev[0]) {
+            if (cubalc_parse_duration_ms(ev, &fb_ms, NULL, &derr) != 0) {
+              char *ep = NULL;
+              fb_ms = strtol(ev, &ep, 10);
+              if (!ev[0] || (ep && *ep && *ep != ' ' && *ep != '\t')) fb_ms = 0;
+            }
+            have_fb = 1;
+            from_env = 1;
+            snprintf(env_used, sizeof env_used, "%s", en);
+            snprintf(fb, sizeof fb, "%s", ev);
+          }
+        }
+        continue;
       }
+      {
+        long lit = 0;
+        char lfb[512];
+        lfb[0] = 0;
+        if (L->cur.kind == TK_NUM) {
+          lit = L->cur.num;
+          lex_next(L);
+        } else if (L->cur.kind == TK_MINUS) {
+          lit = parse_expr(vm, L);
+        } else if (L->cur.kind == TK_STR) {
+          snprintf(lfb, sizeof lfb, "%s", L->cur.text);
+          lex_next(L);
+          if (cubalc_parse_duration_ms(lfb, &lit, NULL, &derr) != 0) {
+            char *ep = NULL;
+            lit = strtol(lfb, &ep, 10);
+            if (!lfb[0] || (ep && *ep)) lit = 0;
+          }
+        } else if (L->cur.kind == TK_IDENT) {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && !sv->is_str) {
+            lit = sv->val;
+            lex_next(L);
+          } else if (sv && sv->is_str) {
+            if (cubalc_parse_duration_ms(sv->sval, &lit, NULL, &derr) != 0)
+              lit = strtol(sv->sval, NULL, 10);
+            lex_next(L);
+          } else {
+            snprintf(lfb, sizeof lfb, "%s", L->cur.text);
+            lex_next(L);
+            if (cubalc_parse_duration_ms(lfb, &lit, NULL, &derr) != 0)
+              lit = strtol(lfb, NULL, 10);
+          }
+        } else {
+          lit = parse_expr(vm, L);
+        }
+        if (!have_fb) {
+          fb_ms = lit;
+          have_fb = 1;
+          from_env = 0;
+        }
+      }
+      break;
     }
     hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
     if (hit) {
@@ -29655,6 +29793,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_str(vm, "GETFLAGMS", name);
     var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
     var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+    if (hit)
+      snprintf(src_tag, sizeof src_tag, "%s", "cli");
+    else if (have_fb && from_env)
+      snprintf(src_tag, sizeof src_tag, "%s", "env");
+    else if (have_fb)
+      snprintf(src_tag, sizeof src_tag, "%s", "default");
+    else
+      snprintf(src_tag, sizeof src_tag, "%s", "none");
+    var_set_str(vm, "GETFLAGMS_SRC", src_tag);
+    var_set_str(vm, "FLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_ENV", (!hit && from_env) ? env_used : "");
     if (hit && !bad) {
       var_set_str(vm, "LAST", nbuf);
       var_set_str(vm, "FLAG", nbuf);
@@ -29673,8 +29822,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       vm->last_str[0] = 0;
     }
     if (vm->trace)
-      fprintf(vm->trace, "# getflagms %s hit=%s ms=%ld bad=%d\n",
-              name, hitnm, ms, bad);
+      fprintf(vm->trace, "# getflagms %s hit=%s ms=%ld bad=%d src=%s\n",
+              name, hitnm, ms, bad, src_tag);
     bump(vm); return 1;
   }
   /* GETFLAGALL|FLAGALL|MULTIFLAG name[,|alt...] [OR|DEFAULT bag]
