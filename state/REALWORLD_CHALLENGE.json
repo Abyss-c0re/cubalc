@@ -1038,6 +1038,6 @@
     "variable JSON keys silently miss \u2014 fixed board with EQS literal branches (W115)",
     "selftest 355/355 green v1.15.503"
   ],
-  "commit": "pending",
+  "commit": "fe72f5b",
   "ts": "2026-08-08T10:00:42Z"
 }
