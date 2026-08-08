@@ -1,63 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 218,
-  "program": "programs/realworld/incident_priority_bag_board.cubalc",
-  "theme": "COUNTLINE/MOVELINE/SETMATCH/REMOVELINE incident priority bag",
-  "version": "1.15.576-usability",
+  "iter": 219,
+  "program": "programs/realworld/peer_overlay_fillp_from_board.cubalc",
+  "theme": "FILLP FROM peer overlay without PLATE clobber",
+  "version": "1.15.578-usability",
   "pass": true,
-  "prior_note": "iter 217 NEEDFILLP deploy; this iter exact bag priority queue ops",
+  "prior_note": "iter 218 bag priority; this iter first realworld FILLP FROM (proof 1127)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "seed 3 incidents",
+      "cmd": "agent plate alice + empty peer",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "admit",
-      "cmd": "PUSH INC-9:crit",
+      "name": "peer",
+      "cmd": "TRIM/LOWER + JSONOBJ peer disk",
       "ok": true,
-      "note": "admit"
+      "note": "peer"
     },
     {
-      "name": "count",
-      "cmd": "COUNTLINE exact + substring 0",
+      "name": "render",
+      "cmd": "FILLP FROM peer; PLATE alice; miss=nope",
       "ok": true,
-      "note": "count"
+      "note": "FROM"
     },
     {
-      "name": "promote",
-      "cmd": "FINDLINE+MOVELINE to head",
+      "name": "trail",
+      "cmd": "FILLP tpl FROM peer trailing",
       "ok": true,
-      "note": "promote"
+      "note": "trail"
+    },
+    {
+      "name": "strict",
+      "cmd": "FILLP STRICT FROM complete",
+      "ok": true,
+      "note": "strict"
+    },
+    {
+      "name": "snap",
+      "cmd": "FROM LAST + FROM literal",
+      "ok": true,
+      "note": "snap"
     },
     {
       "name": "gate",
-      "cmd": "head ENDS :crit",
+      "cmd": "peer non-{} + FROM + alice",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "demote",
-      "cmd": "MOVELINE to end REVL check",
-      "ok": true,
-      "note": "demote"
-    },
-    {
-      "name": "set",
-      "cmd": "SETMATCH rewrite sev",
-      "ok": true,
-      "note": "set"
-    },
-    {
-      "name": "ack",
-      "cmd": "REMOVELINE exact",
-      "ok": true,
-      "note": "ack"
-    },
-    {
       "name": "probe",
-      "cmd": "exact COUNTLINE/REMOVELINE/OOR/SETMATCH miss",
+      "cmd": "empty peer miss; bare FILLP_FROM=0; TRIM",
       "ok": true,
       "note": "edges"
     },
@@ -69,7 +63,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_IPB_REQUIRE=1 exit 2",
+      "cmd": "CUBALC_POF_REQUIRE=1 exit 2",
       "ok": true,
       "note": "hard env"
     },
@@ -77,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "364/365 sys_kvfileensure pre-existing"
+      "note": "366/367 pre-existing sys_kvfileensure"
     }
   ],
   "weaknesses": [
@@ -1856,6 +1850,38 @@
       "title": "WRITE bag STATUS omit trailing NL",
       "detail": "cat -A STATUS ends without $ on last field when bag has no final blank line.",
       "repro": "cat -A STATUS.txt after boot"
+    },
+    {
+      "id": "W223",
+      "severity": "med",
+      "area": "lang|fillp",
+      "title": "no dual-source FILLP (PLATE+peer merge)",
+      "detail": "FILLP FROM takes one object. Cannot expand {{agent}}/{{peer}} from durable PLATE and peer overlay in one pass without manual merge JSON or two FILLP steps.",
+      "repro": "want peer={{peer.name}} agent={{PLATE.name}} in one template \u2014 must MERGEJSON first"
+    },
+    {
+      "id": "W224",
+      "severity": "med",
+      "area": "lang|fillp",
+      "title": "FILLP FROM LAST fragile on LAST thrash",
+      "detail": "FROM LAST uses current LAST as plate JSON; any intermediate SYS/PRINT overwrites. Pattern SYS CAT \"\" snap; FILLP FROM LAST works only if nothing touches LAST between.",
+      "repro": "JSONOBJ; PRINT x; FILLP FROM LAST \u2192 wrong/empty plate"
+    },
+    {
+      "id": "W225",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS bag omit trailing NL",
+      "detail": "cat -A STATUS last line has no $ after gate row.",
+      "repro": "cat -A STATUS.txt after multi-op bag"
+    },
+    {
+      "id": "W226",
+      "severity": "low",
+      "area": "lang|sanitize",
+      "title": "GETFLAG values not auto-TRIM; manual TRIM/LOWER per field",
+      "detail": "peer --name='  bob  ' needs explicit SYS TRIM; no GETFLAG TRIM glue. Host-wide TRIM works once invoked.",
+      "repro": "GETFLAG name without TRIM leaves spaces in JSON"
     }
   ],
   "workarounds": [
@@ -1941,16 +1967,14 @@
     "SYS CAT multi-arg for EQS expected bodies"
   ],
   "language_gaps": [
-    "no bag index arithmetic (DEC/SUB on LAST_N)",
-    "FINDLINE presence not distinguishable from index 0",
-    "GREP not field-exact for id prefixes",
-    "still no soft NEEDFILLP (prior); var table 128 (prior)"
+    "no multi-object FILLP merge source",
+    "FROM LAST order-sensitive",
+    "still no soft STRICT; var table 128; FINDLINE 0/miss (prior)"
   ],
   "issues_faced": [
-    "SYS DEC/ADD missing \u2014 demote tail via REVL+NTH 0",
-    "probe REMOVELINE ERROR hit when third field was exact ERROR \u2014 redesign bag for pure substring trap",
-    "FINDLINE index 0 vs miss both LAST_N=0 \u2014 HASLINE gate required"
+    "must LOADPLATE agent each action to re-bind PLATE for GETP checks",
+    "name_s after peer TRIM not auto-fed to render defaults \u2014 re-read peer JSON"
   ],
-  "commit": "74bb2ea",
-  "ts": "2026-08-08T22:29:29Z"
+  "commit": "",
+  "ts": "2026-08-08T22:53:43Z"
 }
