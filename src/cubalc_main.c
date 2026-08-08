@@ -3556,6 +3556,7 @@ int main(int argc, char **argv) {
     static const struct { const char *file; const char *hint; } known[] = {
       {"hold_seed.cubalc", "optional device/firmware HOLD_FLASH seed (not program preamble)"},
       {"agent_boot.cubalc", "REQUIRE 1.15 + VERSION agent preamble (no HOLD_FLASH tax)"},
+      {"plate_boot.cubalc", "ENSUREPLATE seed + PLATE var agent state preamble (DEFAULT path/seed)"},
       {"peer_decide.cubalc", "FOLDBITS/SETDIGIT peer0 then DECIDE brain"},
       {"mesh_exchange.cubalc", "SMX KEY + dual EXCHANGE peer0/peer1"},
     };
@@ -3792,8 +3793,12 @@ int main(int argc, char **argv) {
        "INCLUDE hold_seed seed snippet (not a full program)"},
       {"programs/lib/agent_boot.cubalc", "boot",
        "INCLUDE agent_boot REQUIRE+VERSION (HOLD_FLASH default)"},
+      {"programs/lib/plate_boot.cubalc", "plate",
+       "INCLUDE plate_boot ENSUREPLATE + PLATE state preamble"},
       {"programs/proof/587_agent_boot.cubalc", "agent",
        "agent_boot stdlib preamble proof"},
+      {"programs/proof/1099_plate_boot.cubalc", "plate_boot",
+       "plate_boot stdlib state plate preamble proof"},
       {"programs/proof/588_status.cubalc", "status",
        "STATUS cubalc.status.v1 agent health plate"},
       {"programs/proof/589_clear_err.cubalc", "clear_err",
@@ -6519,6 +6524,7 @@ int main(int argc, char **argv) {
       static const struct { const char *file; const char *hint; } known[] = {
         {"hold_seed.cubalc", "optional device/firmware HOLD_FLASH seed (not program preamble)"},
         {"agent_boot.cubalc", "REQUIRE 1.15 + VERSION agent preamble (no HOLD_FLASH tax)"},
+        {"plate_boot.cubalc", "ENSUREPLATE seed + PLATE var agent state preamble (DEFAULT path/seed)"},
         {"peer_decide.cubalc", "FOLDBITS/SETDIGIT peer0 then DECIDE brain"},
         {"mesh_exchange.cubalc", "SMX KEY + dual EXCHANGE peer0/peer1"},
       };

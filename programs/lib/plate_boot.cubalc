@@ -1,0 +1,15 @@
+# INCLUDE plate_boot — agent state plate preamble
+# Usability: ENSUREPLATE seed + PLATE var without load/save boilerplate
+#
+#   DEFAULT PLATE_PATH = "state/my_agent.json"
+#   DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true}"
+#   INCLUDE plate_boot
+#   # PLATE holds content · mutate · SYS SAVEPLATE PLATE_PATH PLATE
+#
+# Paths are relative to CUBALC_STATE / CWD. Override knobs before INCLUDE.
+# HOLD_FLASH not required here (same policy as agent_boot).
+
+DEFAULT PLATE_PATH = "state/agent_plate.json"
+DEFAULT PLATE_SEED = "{}"
+SYS ENSUREPLATE PLATE_PATH OR PLATE_SEED
+LET PLATE = LAST

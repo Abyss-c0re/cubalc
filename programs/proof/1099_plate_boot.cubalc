@@ -1,0 +1,60 @@
+# INCLUDE plate_boot — stdlib agent state plate preamble
+# ENSUREPLATE seed + PLATE var; mutate + SAVEPLATE round-trip.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_plate_boot"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET mypath = LAST
+
+# first run: seed plate via lib knobs
+DEFAULT PLATE_PATH = mypath
+# string seed plate
+DEFAULT PLATE_SEED = "{\"n\":0,\"role\":\"worker\",\"ok\":true}"
+INCLUDE plate_boot
+ASSERT OK == 1
+ASSERT INCLUDE_OK == 1
+ASSERT ENSUREPLATE_CREATED == 1
+# PLATE set by lib
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 0
+SYS JSON "role" FROM PLATE
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS EQS PLATE_PATH mypath
+ASSERT LAST_N == 1
+
+# mutate and persist
+SYS JSONINC PLATE "n"
+LET PLATE = LAST
+SYS JSONDEFAULTS PLATE "{\"max\":10}"
+LET PLATE = LAST
+SYS SAVEPLATE PLATE_PATH PLATE
+ASSERT OK == 1
+ASSERT SAVEPLATE_OK == 1
+
+# re-include: load existing (DEFAULT skips, ENSURE hits)
+INCLUDE plate_boot
+ASSERT ENSUREPLATE_CREATED == 0
+ASSERT ENSUREPLATE_HIT == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+SYS JSONN "max" FROM PLATE
+ASSERT LAST_N == 10
+
+# short name resolve
+INCLUDE plate_boot
+ASSERT OK == 1
+
+# agent_boot + plate_boot compose
+INCLUDE agent_boot
+ASSERT OK == 1
+SYS HAS VERSION "1.15"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RMTREE dir
