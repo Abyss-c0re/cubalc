@@ -1,0 +1,79 @@
+# BUMPPLATE / JSONFILEINC / DECRPLATE — one-shot load-inc-save plate counter
+# Usability: agent tick/retry without LOADPLATE+JSONINC+SAVEPLATE glue.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_bumpplate"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS JOIN dir "nested/ctr.json"
+LET deep = LAST
+
+# --- create-on-miss: missing key → 0+1 ---
+SYS RM path
+SYS BUMPPLATE path "n"
+ASSERT OK == 1
+ASSERT BUMPPLATE_CREATED == 1
+ASSERT BUMPPLATE_HIT == 0
+ASSERT LAST_N == 1
+ASSERT BUMPPLATE_V == 1
+ASSERT BUMPPLATE_DELTA == 1
+SYS EQS BUMPPLATE_KEY "n"
+ASSERT LAST_N == 1
+
+# --- bump existing ---
+SYS BUMPPLATE path "n"
+ASSERT OK == 1
+ASSERT BUMPPLATE_HIT == 1
+ASSERT BUMPPLATE_CREATED == 0
+ASSERT LAST_N == 2
+ASSERT BUMPPLATE_V == 2
+
+# --- explicit delta ---
+SYS BUMPPLATE path "n" 5
+ASSERT LAST_N == 7
+ASSERT BUMPPLATE_DELTA == 5
+
+# --- aliases ---
+SYS JSONFILEINC path "n"
+ASSERT LAST_N == 8
+SYS PLATEKEYINC path "n"
+ASSERT LAST_N == 9
+SYS TICKPLATE path "n"
+ASSERT LAST_N == 10
+
+# --- DECRPLATE default −1 ---
+SYS DECRPLATE path "n"
+ASSERT LAST_N == 9
+ASSERT BUMPPLATE_DELTA == -1
+SYS JSONFILEDEC path "n" -2
+ASSERT LAST_N == 7
+
+# --- on-disk verify ---
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 7
+
+# --- nested mkdir parent + miss key ---
+SYS RM deep
+SYS BUMPPLATE deep "retries" 3
+ASSERT OK == 1
+ASSERT BUMPPLATE_CREATED == 1
+ASSERT LAST_N == 3
+SYS LOADPLATE deep
+SYS JSONN "retries" FROM LAST
+ASSERT LAST_N == 3
+
+# --- empty key soft fail ---
+LET empty = ""
+SYS BUMPPLATE path empty
+ASSERT OK == 0
+SYS HAS LAST_ERR "empty key"
+ASSERT LAST_N == 1
+
+PRINT "bumpplate ok"

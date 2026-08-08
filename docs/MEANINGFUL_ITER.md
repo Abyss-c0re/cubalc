@@ -587,6 +587,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 557. ~~**`REQUIRE PLATEFILE` / `JSONPLATE` / `HASPLATE`**~~ **done** (fail-fast object plate file · LAST=content · soft twin SYS LOADPLATE · note REQUIRE PLATE stays REG-file).
 558. ~~**`programs/lib/plate_boot`**~~ **done** (INCLUDE plate_boot = ENSUREPLATE seed + PLATE var · DEFAULT path/seed · agent state preamble).
 559. ~~**`UPDATEPLATE` / `JSONFILESET` / `PLATEKEYSET`**~~ **done** (one-shot load-set-save JSON plate field · no LOAD+JSONSET+SAVE glue).
+560. ~~**`BUMPPLATE` / `JSONFILEINC` / `DECRPLATE`**~~ **done** (one-shot load-inc/dec-save plate counter · no LOAD+JSONINC+SAVE glue).
 
 ## Tick protocol
 
