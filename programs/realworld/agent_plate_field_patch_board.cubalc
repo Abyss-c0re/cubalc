@@ -1,0 +1,873 @@
+# agent_plate_field_patch_board.cubalc — UPDATEPLATE / JSONFILESET field patch
+#
+# Real use: agent STATUS field stamp without LOADPLATE+JSONSET+SAVEPLATE glue.
+# Ops agents patch one key at a time (zone, load, phase, ok, role) on a JSON
+# plate file under STATE. First realworld UPDATEPLATE board (proof 1100).
+#
+#   SYS UPDATEPLATE|JSONFILESET|PLATEKEYSET|PATCHPLATE|PLATEPUT path key value
+#   LAST = new plate body · LAST_N = 1 key-updated | 0 key-inserted (≠ success)
+#   UPDATEPLATE_HIT=1 prior object file · UPDATEPLATE_CREATED=1 file was new
+#   soft miss: empty path/key → OK=0 · non-object body silently reseeded {}
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_apfp_$$
+#   ./out/cubalc run programs/realworld/agent_plate_field_patch_board.cubalc \
+#     put -- --plate=/tmp/apfp/status.json --key=zone --val=east
+#   ./out/cubalc run ... tick -- --plate=...
+#   ./out/cubalc run ... gate -- --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt APFP_REPORT.txt
+# Env: PLATE_PATH KEY_NAME VAL_STR CUBALC_APFP_REQUIRE
+#
+# Edges:
+#   LAST_N insert/update polarity (W*); CREATED vs HIT; alias PUT;
+#   empty key soft; non-object wipe; bool peel "1"; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_plate_field_patch_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_plate_field_patch -- put|tick|role|zone|reload|gate|probe|list -- [--plate=P] [--key=K] [--val=V]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/deep/status.json"
+LET plate_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+# GETFLAGOUT path-absolutizes bare names (cwd/zone) — use GETFLAG for field ids
+DEFAULT KEY_S = "zone"
+GETFLAG key|k OR ENV KEY_NAME OR KEY_S
+LET key_name = LAST
+CLEAR_ERR
+
+DEFAULT VAL_S = "east"
+GETFLAG val|v OR ENV VAL_STR OR VAL_S
+LET val_str = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_APFP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "APFP_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET up_hit = 0
+LET up_created = 0
+LET up_n = 0
+LET peel_s = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "put", "tick", "role", "zone", "reload", "gate", "list", "ls", "soft", "clear", "probe", "alias"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "put" THEN
+    LET op = "put"
+  WHEN "tick" THEN
+    LET op = "tick"
+  WHEN "role" THEN
+    LET op = "role"
+  WHEN "zone" THEN
+    LET op = "zone"
+  WHEN "reload" THEN
+    LET op = "reload"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "alias" THEN
+    LET op = "alias"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src key_name val_str
+  CLEAR_ERR
+END
+
+# put — one-shot string field patch (create-or-update)
+SYS EQS op "put"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS UPDATEPLATE plate_file key_name val_str
+  LET up_n = LAST_N
+  LET body = LAST
+  LET up_hit = UPDATEPLATE_HIT
+  LET up_created = UPDATEPLATE_CREATED
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "put soft fail"
+    FAIL "put soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "put fail"
+    END
+  ELSE
+    # SYS JSON var-key peels literal "key_name" (miss) — JSONPLUCK resolves vars
+    SYS JSONPLUCK body key_name
+    LET peel_s = LAST
+    CLEAR_ERR
+    SYS EQS peel_s val_str
+    LET has_n = LAST_N
+    CLEAR_ERR
+    LET out = body
+    LET take_n = up_n
+    LET created = up_created
+    LET load_hit = up_hit
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "put ok"
+      LET admit_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "put peel mismatch"
+      FAIL "put peel mismatch"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "put peel"
+      END
+    END
+  END
+  SYS CAT "put:"
+  LET row = LAST
+  SYS STR up_created
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR up_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS CAT row key_name
+  LET row = LAST
+  SYS CAT row ":pt"
+  LET row = LAST
+  SYS GREPV "put:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n created load_hit up_n has_n p_src note_msg
+  CLEAR_ERR
+END
+
+# tick — numeric heartbeat: peel load, +1, UPDATEPLATE (num value)
+SYS EQS op "tick"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  LET peel_hit = 0
+  IF load_hit == 1 THEN
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+  END
+  # bump load (0 if missing). Bare num var is not accepted as value
+  # (need value hard-fail) — parenthesized expr is parsed as num.
+  LET take_n = peel_hit + 1
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "load" (take_n)
+  LET up_n = LAST_N
+  LET body = LAST
+  LET up_hit = UPDATEPLATE_HIT
+  LET up_created = UPDATEPLATE_CREATED
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "tick soft fail"
+    FAIL "tick soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "tick fail"
+    END
+  ELSE
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    LET created = up_created
+    LET load_hit = up_hit
+    IF peel_hit == take_n THEN
+      LET hit = 1
+      LET note_msg = "tick ok"
+      LET admit_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "tick peel"
+      FAIL "tick peel"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "tick:"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR up_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR up_created
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":tk"
+  LET row = LAST
+  SYS GREPV "tick:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit up_n created load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# role — stamp role string field
+SYS EQS op "role"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # default role if val still east/zone default
+  SYS EQS val_str "east"
+  IF LAST_N == 1 THEN
+    LET val_str = "worker"
+  END
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "role" val_str
+  LET up_n = LAST_N
+  LET body = LAST
+  LET up_hit = UPDATEPLATE_HIT
+  LET up_created = UPDATEPLATE_CREATED
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "role soft fail"
+    FAIL "role soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "role fail"
+    END
+  ELSE
+    SYS JSON "role" FROM body
+    LET peel_s = LAST
+    CLEAR_ERR
+    SYS EQS peel_s val_str
+    LET has_n = LAST_N
+    CLEAR_ERR
+    LET out = body
+    LET take_n = up_n
+    LET created = up_created
+    LET load_hit = up_hit
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "role ok"
+      LET admit_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "role peel"
+      FAIL "role peel"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "role:"
+  LET row = LAST
+  SYS CAT row peel_s
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR up_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":rl"
+  LET row = LAST
+  SYS GREPV "role:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n created load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# zone — convenience wrapper around put for zone=
+SYS EQS op "zone"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS UPDATEPLATE plate_file "zone" val_str
+  LET up_n = LAST_N
+  LET body = LAST
+  LET up_hit = UPDATEPLATE_HIT
+  LET up_created = UPDATEPLATE_CREATED
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "zone soft fail"
+    FAIL "zone soft fail"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "zone fail"
+    END
+  ELSE
+    SYS JSON "zone" FROM body
+    LET peel_s = LAST
+    CLEAR_ERR
+    SYS EQS peel_s val_str
+    LET has_n = LAST_N
+    CLEAR_ERR
+    LET out = body
+    LET take_n = up_n
+    LET created = up_created
+    LET load_hit = up_hit
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "zone ok"
+      LET admit_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "zone peel"
+      FAIL "zone peel"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "zone:"
+  LET row = LAST
+  SYS CAT row peel_s
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR up_created
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":zn"
+  LET row = LAST
+  SYS GREPV "zone:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n created load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# reload — soft LOADPLATE peel load+zone
+SYS EQS op "reload"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  LET take_n = load_hit
+  LET out = body
+  IF load_hit == 1 THEN
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSON "zone" FROM body
+    LET peel_s = LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "reload hit"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "reload miss"
+    FAIL "reload miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "reload miss"
+    END
+  END
+  SYS CAT "reload:"
+  LET row = LAST
+  SYS STR load_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":rd"
+  LET row = LAST
+  SYS GREPV "reload:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n load_hit peel_hit peel_s p_src note_msg
+  CLEAR_ERR
+END
+
+# gate — multi-field presence after patches (schema/role/ok/load/zone)
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # seed minimal contract fields via successive UPDATEPLATE
+  SYS UPDATEPLATE plate_file "schema" "cubalc.agent_status.v1"
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "role" "worker"
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "ok" true
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "load" 1
+  CLEAR_ERR
+  SYS UPDATEPLATE plate_file "zone" val_str
+  LET body = LAST
+  LET up_hit = UPDATEPLATE_HIT
+  LET up_created = UPDATEPLATE_CREATED
+  CLEAR_ERR
+  SYS LOADPLATE plate_file
+  LET load_hit = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate miss"
+    FAIL "gate miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate miss"
+    END
+  ELSE
+    SYS JSONHASALL body "schema" "role" "ok" "load" "zone"
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSON "ok" FROM body
+    LET peel_s = LAST
+    CLEAR_ERR
+    LET out = body
+    LET take_n = load_hit
+    LET created = up_created
+    IF admit_n == 1 THEN
+      # bool true peels as "1" (proof 1100)
+      SYS EQS peel_s "1"
+      LET has_n = LAST_N
+      CLEAR_ERR
+      IF has_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "gate admit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate ok peel"
+        FAIL "gate ok peel"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate need deny"
+      FAIL "gate need deny"
+      CLEAR_ERR
+    END
+  END
+  SYS CAT "gate:"
+  LET row = LAST
+  SYS STR admit_n
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":gt"
+  LET row = LAST
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n admit_n peel_hit has_n load_hit hit miss p_src note_msg
+  CLEAR_ERR
+END
+
+# alias — PLATEPUT / PATCHPLATE / JSONFILESET same path
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JOIN state_dir "sample/alias_patch.json"
+  LET row = LAST
+  SYS RM row
+  CLEAR_ERR
+  SYS JSONFILESET row "tick" 2
+  LET up_created = UPDATEPLATE_CREATED
+  CLEAR_ERR
+  SYS PLATEKEYSET row "tick" 3
+  LET up_hit = UPDATEPLATE_HIT
+  CLEAR_ERR
+  SYS PATCHPLATE row "tick" 4
+  CLEAR_ERR
+  SYS PLATEPUT row "tick" 6
+  LET body = LAST
+  LET up_n = LAST_N
+  CLEAR_ERR
+  SYS JSONN "tick" FROM body
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS LOADPLATE row
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  LET out = body
+  LET take_n = peel_hit
+  IF peel_hit == 6 THEN
+    IF load_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "alias ok"
+      LET admit_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "alias load"
+      FAIL "alias load"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias peel"
+    FAIL "alias peel"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:"
+  LET row = LAST
+  SYS STR peel_hit
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":"
+  LET row = LAST
+  SYS STR up_created
+  SYS CAT row LAST
+  LET row = LAST
+  SYS CAT row ":al"
+  LET row = LAST
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit up_created up_hit load_hit p_src note_msg
+  CLEAR_ERR
+END
+
+# soft — empty bag soft miss
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — create polarity, update polarity, empty key soft, non-object wipe, RAW
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JOIN state_dir "sample/probe_patch.json"
+  LET row = LAST
+  SYS RM row
+  CLEAR_ERR
+  # create-on-miss
+  SYS UPDATEPLATE row "n" 1
+  LET created = UPDATEPLATE_CREATED
+  LET load_hit = UPDATEPLATE_HIT
+  LET up_n = LAST_N
+  CLEAR_ERR
+  # update same key → LAST_N=1 (updated) CREATED=0 HIT=1
+  # capture body before LET knobs clobber LAST (W4 class)
+  SYS UPDATEPLATE row "n" 7
+  LET take_n = LAST_N
+  LET body = LAST
+  LET up_created = UPDATEPLATE_CREATED
+  LET up_hit = UPDATEPLATE_HIT
+  CLEAR_ERR
+  SYS JSONN "n" FROM body
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # empty key soft fail — literal "" (new LET may OOM var table 128; W*)
+  SYS UPDATEPLATE row "" 1
+  LET has_n = OK
+  CLEAR_ERR
+  # non-object body: write junk then UPDATEPLATE reseeds {}
+  SYS WRITE row "not-json"
+  CLEAR_ERR
+  SYS UPDATEPLATE row "rescued" "yes"
+  LET body = LAST
+  LET admit_n = UPDATEPLATE_CREATED
+  CLEAR_ERR
+  SYS JSON "rescued" FROM body
+  SYS EQS LAST "yes"
+  LET hit = LAST_N
+  CLEAR_ERR
+  # RAW array value
+  SYS JOIN state_dir "sample/probe_raw.json"
+  LET peel_s = LAST
+  SYS RM peel_s
+  CLEAR_ERR
+  SYS UPDATEPLATE peel_s "arr" RAW "[1,2]"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "[1,2]"
+  LET bag_n = LAST_N
+  CLEAR_ERR
+  IF created == 1 THEN
+    IF take_n == 1 THEN
+      IF peel_hit == 7 THEN
+        IF has_n == 0 THEN
+          IF hit == 1 THEN
+            IF bag_n == 1 THEN
+              LET note_msg = "probe ok"
+              LET hit = 1
+              LET admit_n = admit_n
+            ELSE
+              LET miss = 1
+              LET note_msg = "probe raw"
+              FAIL "probe raw"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe rescue"
+            FAIL "probe rescue"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe emptykey"
+          FAIL "probe emptykey"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe peel"
+        FAIL "probe peel"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe update n"
+      FAIL "probe update n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe create"
+    FAIL "probe create"
+    CLEAR_ERR
+  END
+  PRINT_JSON created take_n peel_hit has_n admit_n bag_n up_hit up_created p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_plate_field_patch_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "admit"
+LET row = LAST
+SYS STR admit_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "plate"
+LET row = LAST
+SYS PUSH row plate_file
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS CAT "apfp op="
+LET body = LAST
+SYS CAT body op
+LET body = LAST
+SYS CAT body " hit="
+LET body = LAST
+SYS STR hit
+SYS CAT body LAST
+LET body = LAST
+SYS CAT body " miss="
+LET body = LAST
+SYS STR miss
+SYS CAT body LAST
+LET body = LAST
+SYS CAT body " note="
+LET body = LAST
+SYS CAT body note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n created load_hit peel_hit p_src note_msg
+NOTE "agent_plate_field_patch_board: done"
