@@ -1,71 +1,59 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 212,
-  "program": "programs/realworld/agent_plate_contract_needp_board.cubalc",
-  "theme": "NEEDP/HASPALL/KEYSP + MERGEP/DEFAULTP/TOGGLEP agent plate contract",
-  "version": "1.15.563-usability",
+  "iter": 213,
+  "program": "programs/realworld/agent_plate_patch_cli_board.cubalc",
+  "theme": "plate_patch lib + cubalc plate CLI dual agent status patch",
+  "version": "1.15.565-usability",
   "pass": true,
-  "prior_note": "iter 211 SETP session; this iter first realworld NEEDP+MERGEP family (proofs 1111/1113)",
+  "prior_note": "iter 212 NEEDP/MERGEP; this iter first realworld plate_patch (1115) + cubalc plate CLI (1112)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "plate_boot seed n/ok/role/schema",
+      "cmd": "plate_boot seed keep/role/n",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "merge",
-      "cmd": "MERGEP status+n=9+peer keep role",
+      "name": "patch",
+      "cmd": "plate_patch status/zone/n=9 keep base",
       "ok": true,
-      "note": "MERGEP"
+      "note": "plate_patch"
     },
     {
-      "name": "defaults",
-      "cmd": "DEFAULTP retries set then no clobber 99",
+      "name": "ready",
+      "cmd": "patch status=ready phase=run",
       "ok": true,
-      "note": "DEFAULTP"
+      "note": "ready"
     },
     {
-      "name": "toggle",
-      "cmd": "TOGGLEP debug 1\u21920\u21921",
+      "name": "reload",
+      "cmd": "LOADPLATE hit peel status",
       "ok": true,
-      "note": "TOGGLEP"
-    },
-    {
-      "name": "keys",
-      "cmd": "KEYSP bag has n+role",
-      "ok": true,
-      "note": "KEYSP"
-    },
-    {
-      "name": "has",
-      "cmd": "HASP soft miss OK; HASPALL ghost miss bag",
-      "ok": true,
-      "note": "HASP"
-    },
-    {
-      "name": "need",
-      "cmd": "NEEDP n/ok/role/status after fill",
-      "ok": true,
-      "note": "NEEDP"
+      "note": "reload"
     },
     {
       "name": "gate",
-      "cmd": "NEEDP+KEYSP+save admit",
+      "cmd": "HASALL + keep after patch",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "alias",
-      "cmd": "PATCHP/ENSUREP/FLIPP/REQUIREP",
+      "name": "fresh",
+      "cmd": "JSONFILEMERGE create-on-miss boot/role",
       "ok": true,
-      "note": "aliases"
+      "note": "fresh"
     },
     {
       "name": "probe",
-      "cmd": "HASPALL miss; MERGE fill; DEFAULTP no clobber",
+      "cmd": "empty {} patch; second phase; keep",
       "ok": true,
       "note": "edges"
+    },
+    {
+      "name": "cli",
+      "cmd": "plate get/inc/keys/get OR/del/show",
+      "ok": true,
+      "note": "cubalc plate CLI"
     },
     {
       "name": "soft",
@@ -75,7 +63,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_APCN_REQUIRE=1 incomplete \u2192 EXIT 2",
+      "cmd": "CUBALC_APPC_REQUIRE=1 reload miss \u2192 exit 2",
       "ok": true,
       "note": "hard env"
     },
@@ -1662,6 +1650,38 @@
       "title": "HASP soft miss keeps OK=1 LAST_N=0",
       "detail": "Single-key soft probe: hit LAST_N=1, miss LAST_N=0 with OK=1 (no sticky fail). Safe for IF HASP branches without CLEAR_ERR.",
       "repro": "HASP missing \u2192 OK 1 LAST_N 0"
+    },
+    {
+      "id": "W198",
+      "severity": "high",
+      "area": "lib|plate_patch",
+      "title": "plate_patch SAVEPLATE PLATE fails after UNSET PLATE / failed LET PLATE",
+      "detail": "When PLATE undefined, JSONFILEMERGE branch runs then LET PLATE=LAST; if LET fails (128-var) or PLATE still bad, SYS SAVEPLATE PLATE_PATH PLATE \u2192 unknown form PLATE. Proof uses UNSET PLATE fresh path; heavy agent boards hit this. Prefer JSONFILEMERGE alone for create-on-miss under load.",
+      "repro": "UNSET PLATE; INCLUDE plate_patch \u2192 unknown form PLATE on SAVE"
+    },
+    {
+      "id": "W199",
+      "severity": "med",
+      "area": "host|cli_plate",
+      "title": "cubalc plate CLI is dual of language plate ops; schema cubalc.plate.v1",
+      "detail": "Shell one-shots: plate set/get/inc/del/keys/show PATH. get missing OR fb sets or:true. No .cubalc needed. Agents should know CLI vs INCLUDE plate_patch for multi-key.",
+      "repro": "cubalc plate get F missing OR fb \u2192 or true value fb"
+    },
+    {
+      "id": "W200",
+      "severity": "low",
+      "area": "lib|plate_patch",
+      "title": "plate_patch empty {} keeps base; overlay wins on collide",
+      "detail": "Same MERGE semantics as MERGEP/JSONFILEMERGE. After SAVE, LAST is path not content (must LOADPLATE/PEEK for peels).",
+      "repro": "empty PLATE_PATCH INCLUDE plate_patch; keep keys; n overlay updates"
+    },
+    {
+      "id": "W201",
+      "severity": "low",
+      "area": "host|write",
+      "title": "STATUS/META/REPORT still omit trailing NL (W5 reconfirm)",
+      "detail": "cat -A APPC_REPORT ends without $ on last line after soft.",
+      "repro": "cat -A APPC_REPORT.txt"
     }
   ],
   "workarounds": [
@@ -1732,7 +1752,10 @@
     "capture OK immediately after SETP/PUTP before CLEAR_ERR",
     "HASPALL precheck + EXIT n under env require (do not trust NEEDP rc)",
     "use ghost_key for intentional HASPALL miss tests",
-    "DEFAULTP for boot seed; MERGEP for intentional overwrite"
+    "DEFAULTP for boot seed; MERGEP for intentional overwrite",
+    "create-on-miss via JSONFILEMERGE when PLATE may be unset",
+    "LOADPLATE/PEEK after plate_patch for field peels",
+    "use cubalc plate for shell one-shots; plate_patch for multi-key in-language"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1797,7 +1820,10 @@
     "SETP insert LAST_N=0 vs INCP value LAST_N",
     "NEEDP contract fail does not set shell exit_code",
     "HASPALL LAST_N is 0|1 not missing-count",
-    "MERGEP overlay wins; DEFAULTP fill-if-missing dual"
+    "MERGEP overlay wins; DEFAULTP fill-if-missing dual",
+    "plate_patch after UNSET PLATE can hard-fail SAVEPLATE PLATE",
+    "cubalc plate CLI dual of SETP/PEEK/BUMP disk ops",
+    "plate_patch SAVE leaves LAST=path not plate body"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1855,8 +1881,10 @@
     "INCLUDE plate_save unknown form PLATE when var gone",
     "HASPALL status partial false friend after merge left status present",
     "NEEDP require path exit_code 0 until EXIT after HASPALL precheck",
-    "plate_boot create-on-miss made missing path keys soft-success"
+    "plate_boot create-on-miss made missing path keys soft-success",
+    "fresh UNSET+plate_patch unknown form PLATE; switched to JSONFILEMERGE",
+    "CLI dual path verified get/inc/keys/OR/del/show green"
   ],
-  "commit": "b24bd83",
-  "ts": "2026-08-08T20:00:30Z"
+  "commit": "pending",
+  "ts": "2026-08-08T20:24:27Z"
 }
