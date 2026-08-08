@@ -486,6 +486,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 456. ~~**`GETFLAGMS` / `FLAGMS`**~~ **done** (CLI duration flag to ms via PARSEMS 5s/1m · timeout OR default).
 457. ~~**`REQUIRE RESTPOS` / `HASRESTPOS`**~~ **done** (files after subcommand min gate · not counting cmd · SUBCMD twin).
 458. ~~**`CLAMPN` / `BOUNDN`**~~ **done** (clamp x into [lo,hi] → LAST_N · GETFLAGN/GETFLAGMS caps without SYS CLAMP).
+459. ~~**flag aliases**~~ **done** (`GETFLAGN workers|w` · `,`/`|` multi-name · `FLAG_HIT_NAME` · short flags without dual HASFLAG).
 
 ## Tick protocol
 
