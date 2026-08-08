@@ -605,6 +605,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 575. ~~**`DUMPP` / `PLATEINFO`**~~ **done** (cubalc.plate_info.v1 snapshot of PLATE · keys/bytes/path · no KEYSP+LEN glue).
 576. ~~**`programs/lib/plate_session` + cookbook §8**~~ **done** (agent_boot+plate_boot one INCLUDE · COOKBOOK/FOR_AGENTS plate recipe).
 577. ~~**`cubalc init --plate` + selftest plate proofs**~~ **done** (scaffold plate_session starter · selftest runs session/save/setp/dumpp).
+578. ~~**`STREPEAT`/`LPAD`/`RPAD` wide**~~ **done** (host-buffer pad/repeat · multi-KB plate templates without 512 truncate).
 
 ## Tick protocol
 

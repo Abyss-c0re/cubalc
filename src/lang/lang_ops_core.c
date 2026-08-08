@@ -34045,7 +34045,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* digit-3 string pad/repeat: LPAD RPAD STREPEAT (SYS REPEAT alias) */
+    /* digit-3 string pad/repeat: LPAD RPAD STREPEAT (SYS REPEAT alias)
+     * Usability: buffers use CUBALC_HOST_STR_MAX so agent plate templates
+     * (long STREPEAT blobs) are not truncated at 512 bytes. */
     if (kw(&L->cur,"LPAD") || kw(&L->cur,"RPAD") || kw(&L->cur,"PADLEFT") ||
         kw(&L->cur,"PADRIGHT") || kw(&L->cur,"STRPAD") ||
         kw(&L->cur,"STREPEAT") || kw(&L->cur,"STRREPEAT") ||
@@ -34057,23 +34059,25 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       int is_left = (strcmp(op,"LPAD")==0 || strcmp(op,"PADLEFT")==0 ||
                      strcmp(op,"STRPAD")==0);
       lex_next(L);
-      char s[512]; s[0]=0;
+      char s[CUBALC_HOST_STR_MAX]; s[0]=0;
       if (resolve_str_arg(vm, L, s, sizeof s) != 0)
         snprintf(s, sizeof s, "%s", vm->last_str);
       if (is_rep){
         long times = 0;
+        long max_times = (long)(CUBALC_HOST_STR_MAX - 1);
         if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
             L->cur.kind==TK_IDENT)
           times = parse_expr(vm, L);
         if (times < 0) times = 0;
-        if (times > 512) times = 512;
-        char out[512]; size_t o = 0;
+        if (times > max_times) times = max_times;
+        char out[CUBALC_HOST_STR_MAX]; size_t o = 0;
         size_t sn = strlen(s);
         if (sn == 0){ out[0]=0; }
         else {
           for (long t=0; t<times && o+1 < sizeof out; t++){
             size_t take = sn;
             if (o + take >= sizeof out) take = sizeof out - 1 - o;
+            if (take == 0) break;
             memcpy(out + o, s, take); o += take;
           }
           out[o] = 0;
@@ -34082,22 +34086,24 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
         vm->last_n = (long)o;
         var_set_num(vm, "LAST_N", vm->last_n);
+        var_set_num(vm, "STREPEAT_N", vm->last_n);
         var_set_num(vm, "OK", 1);
         bump(vm); return 1;
       }
       /* LPAD/RPAD str width [padchar] */
       long width = 0;
+      long max_w = (long)(CUBALC_HOST_STR_MAX - 1);
       if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
           L->cur.kind==TK_IDENT)
         width = parse_expr(vm, L);
       if (width < 0) width = 0;
-      if (width > 511) width = 511;
+      if (width > max_w) width = max_w;
       char padc = ' ';
       char pad[16]; pad[0]=0;
       if (resolve_str_arg(vm, L, pad, sizeof pad) == 0 && pad[0])
         padc = pad[0];
       size_t sn = strlen(s);
-      char out[512];
+      char out[CUBALC_HOST_STR_MAX];
       if ((long)sn >= width){
         size_t take = (size_t)width;
         if (take >= sizeof out) take = sizeof out - 1;

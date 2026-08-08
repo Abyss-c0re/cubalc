@@ -1,0 +1,60 @@
+# STREPEAT / LPAD / RPAD host-wide buffers (no 512-byte truncate)
+# Usability: agent plate templates and long pads without CAT workarounds.
+
+HOLD_FLASH 1
+
+# --- STREPEAT multi-KB (old cap 511) ---
+SYS STREPEAT "abcdefghij" 80
+ASSERT OK == 1
+SYS LEN LAST
+ASSERT LAST_N == 800
+ASSERT STREPEAT_N == 800
+LET blob = LAST
+SYS LEN blob
+ASSERT LAST_N == 800
+
+# plate payload survives
+LET PLATE = "{}"
+SETP "blob" blob
+SETP "n" 1
+GETP "blob"
+SYS LEN LAST
+ASSERT LAST_N == 800
+GETP "blob"
+SYS EQS LAST blob
+ASSERT LAST_N == 1
+
+# larger still (within HOST 8192)
+SYS STREPEAT "xy" 2000
+SYS LEN LAST
+ASSERT LAST_N == 4000
+
+# times produce past old 512 hard cap
+SYS STREPEAT "a" 10000
+SYS LEN LAST
+ASSERT LAST_N > 512
+ASSERT LAST_N <= 8191
+
+# --- LPAD / RPAD wider than 511 ---
+SYS LPAD "id" 600 "0"
+SYS LEN LAST
+ASSERT LAST_N == 600
+SYS RPAD "ok" 700 "*"
+SYS LEN LAST
+ASSERT LAST_N == 700
+
+# old small proofs still hold
+SYS STREPEAT "ab" 3
+SYS EQS LAST "ababab"
+ASSERT LAST_N == 1
+SYS STREPEAT "z" 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+SYS LPAD "7" 3 "0"
+SYS EQS LAST "007"
+ASSERT LAST_N == 1
+SYS RPAD "x" 4 "-"
+SYS EQS LAST "x---"
+ASSERT LAST_N == 1
+
+PRINT "strepeat_wide ok"
