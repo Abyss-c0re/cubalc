@@ -197,6 +197,9 @@ int cubalc_host_join(const char *a, const char *b, cubalc_host_result *r);
 
 /* extract last non-empty JSON string field "key" from json blob → r->str */
 int cubalc_host_json_get(const char *json, const char *key, cubalc_host_result *r);
+/* top-level object keys of a JSON object → newline bag in r->str; r->n = count.
+ * Nested objects/arrays skipped (depth). Soft fail if no object. */
+int cubalc_host_json_keys(const char *json, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

@@ -3599,6 +3599,118 @@ int cubalc_host_json_get(const char *json, const char *key, cubalc_host_result *
   return 0;
 }
 
+/* Usability: SYS JSONKEYS [json] — top-level object keys as newline bag for agents
+ * walking unknown plates without guessing field names. r->n = key count. */
+int cubalc_host_json_keys(const char *json, cubalc_host_result *r) {
+  size_t olen = 0;
+  long kept = 0;
+  int depth = 0, in_str = 0, esc = 0, saw_obj = 0;
+  const char *p;
+  r_clear(r);
+  if (!json) {
+    snprintf(r->err, sizeof r->err, "jsonkeys: empty");
+    return -1;
+  }
+  /* skip leading whitespace */
+  p = json;
+  while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+  if (*p != '{') {
+    snprintf(r->err, sizeof r->err, "jsonkeys: not an object");
+    return -1;
+  }
+  saw_obj = 1;
+  r->str[0] = 0;
+  for (; *p; p++) {
+    unsigned char c = (unsigned char)*p;
+    if (in_str) {
+      if (esc) {
+        esc = 0;
+        continue;
+      }
+      if (c == '\\') {
+        esc = 1;
+        continue;
+      }
+      if (c == '"') {
+        in_str = 0;
+        /* if we just closed a key string at depth 1, check for : and push */
+        /* handled below via key capture path */
+      }
+      continue;
+    }
+    if (c == '"') {
+      if (depth == 1) {
+        /* potential key: capture until closing quote, then require : */
+        const char *ks = p + 1;
+        const char *q = ks;
+        char key[256];
+        size_t kn = 0;
+        int kesc = 0;
+        while (*q) {
+          if (kesc) {
+            kesc = 0;
+            if (kn + 1 < sizeof key) key[kn++] = *q;
+            q++;
+            continue;
+          }
+          if (*q == '\\') {
+            kesc = 1;
+            q++;
+            continue;
+          }
+          if (*q == '"') break;
+          if (kn + 1 < sizeof key) key[kn++] = *q;
+          q++;
+        }
+        if (*q != '"') {
+          /* unclosed string — bail soft empty remainder */
+          break;
+        }
+        key[kn] = 0;
+        /* skip whitespace after key string */
+        {
+          const char *rcolon = q + 1;
+          while (*rcolon == ' ' || *rcolon == '\t' || *rcolon == '\n' || *rcolon == '\r')
+            rcolon++;
+          if (*rcolon == ':') {
+            cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, key);
+            /* advance p to the closing quote of the key; outer loop p++ then
+             * continues into value which may open strings/objects */
+            p = q; /* p++ at end of for → first char after key " */
+            continue;
+          }
+        }
+        /* not a key (string value etc.) — enter string mode from this " */
+        in_str = 1;
+        continue;
+      }
+      in_str = 1;
+      continue;
+    }
+    if (c == '{') {
+      depth++;
+      continue;
+    }
+    if (c == '}') {
+      if (depth > 0) depth--;
+      if (depth == 0) break;
+      continue;
+    }
+    if (c == '[') {
+      depth++;
+      continue;
+    }
+    if (c == ']') {
+      if (depth > 0) depth--;
+      continue;
+    }
+  }
+  (void)saw_obj;
+  r->n = kept;
+  r->ok = 1;
+  return 0;
+}
+
 static int load_token(char *out, size_t outn) {
   out[0] = 0;
   const char *e = getenv("XAI_API_KEY");

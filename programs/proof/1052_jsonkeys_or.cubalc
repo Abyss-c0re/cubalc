@@ -1,0 +1,116 @@
+# JSONKEYS / JSONHAS / JSON key OR — agent plate key discovery + soft peel defaults
+# Walk unknown JSON plates without guessing field names; OR like ENV.
+
+HOLD_FLASH 1
+
+# plate-like object
+LET plate = "{\"ok\":true,\"version\":\"1.15\",\"err\":\"\",\"n\":3,\"nested\":{\"x\":1}}"
+
+# JSONKEYS from arg
+SYS JSONKEYS plate
+ASSERT OK == 1
+ASSERT JSONKEYS_N == 5
+ASSERT LAST_N == 5
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 1
+SYS HASLINE JSONKEYS "version"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "err"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "nested"
+ASSERT LAST_N == 1
+# nested keys not listed
+SYS HASLINE LAST "x"
+ASSERT LAST_N == 0
+
+# JSONKEYS from LAST
+SYS JOIN "" plate
+SYS JSONKEYS
+ASSERT JSONKEYS_N == 5
+
+# aliases
+SYS KEYSJSON plate
+ASSERT KEYSJSON_N == 5
+SYS JKEYS plate
+ASSERT JSONKEYS_N == 5
+
+# empty object
+SYS JSONKEYS "{}"
+ASSERT OK == 1
+ASSERT JSONKEYS_N == 0
+ASSERT LAST == ""
+
+# not an object soft
+SYS JSONKEYS "[1,2]"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "object"
+ASSERT LAST_N == 1
+
+# JSONHAS probe — does not clobber LAST string when probing from plate arg
+SYS JOIN "" "preserve-me"
+ASSERT LAST == "preserve-me"
+SYS JSONHAS "ok" plate
+ASSERT OK == 1
+ASSERT JSONHAS_HIT == 1
+ASSERT LAST_N == 1
+ASSERT LAST == "preserve-me"
+SYS JSONHAS "missing" plate
+ASSERT JSONHAS_HIT == 0
+ASSERT LAST_N == 0
+ASSERT LAST == "preserve-me"
+SYS JSONHAS "version" plate
+ASSERT JSONHAS_HIT == 1
+SYS HASJSON "n" plate
+ASSERT HASJSON_N == 1
+SYS JHAS "nope" plate
+ASSERT JSONHAS_HIT == 0
+
+# JSON peel hit (source is always prior LAST plate)
+SYS JOIN "" plate
+SYS JSON "version"
+ASSERT OK == 1
+ASSERT JSON_HIT == 1
+ASSERT LAST == "1.15"
+SYS JOIN "" plate
+SYS JSON "n"
+ASSERT LAST == "3"
+SYS JOIN "" plate
+SYS JSON "ok"
+ASSERT LAST == "1"
+
+# JSON miss soft
+SYS JOIN "" plate
+SYS JSON "no_such_field"
+ASSERT OK == 0
+ASSERT JSON_HIT == 0
+ASSERT LAST == ""
+
+# JSON OR fallback
+SYS JOIN "" plate
+SYS JSON "no_such_field" OR "default-val"
+ASSERT OK == 1
+ASSERT JSON_OR == 1
+ASSERT JSON_HIT == 0
+ASSERT LAST == "default-val"
+SYS JOIN "" plate
+SYS JSON "version" OR "fallback"
+ASSERT OK == 1
+ASSERT JSON_HIT == 1
+ASSERT JSON_OR == 0
+ASSERT LAST == "1.15"
+SYS JOIN "" plate
+SYS JSON "gone" OR 42
+ASSERT OK == 1
+ASSERT LAST == "42"
+
+# JGET alias + OR
+SYS JOIN "" plate
+SYS JGET "err" OR "(none)"
+ASSERT LAST == ""
+ASSERT JSON_HIT == 1
+
+PRINT "jsonkeys or ok"
+ASSERT OK == 1

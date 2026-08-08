@@ -538,6 +538,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 508. ~~**`HASINTREE` / `ANYINTREE` / `CONTAINSINTREE`**~~ **done** (soft 0|1 content exists under tree · IF guard · LAST string kept · PATH on hit).
 509. ~~**`SLICEINTREE` / `MIDINTREE` / `WINDOWINTREE`**~~ **done** (path window [start,count) of content matches under tree · page without GREPTREE+DROP+TAKE).
 510. ~~**`DROPINTREE` / `SKIPINTREE` / `RESTINTREE`**~~ **done** (skip first n content matches under tree · residual bag · dual of TAKEINTREE · no GREPTREE+DROP).
+511. ~~**`JSONKEYS` / `JSONHAS` / `JSON … OR`**~~ **done** (top-level key bag + soft key probe + peel default · agent plates without guess/IF glue).
 
 ## Tick protocol
 
