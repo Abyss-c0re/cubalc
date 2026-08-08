@@ -531,6 +531,6 @@
     "FLOORN 0\u21921 CAPN 100\u219216 green; multi --zone=a --zone=b,c green",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "1ffd9c789f4769bf4dd3ad18fa2a4b42eb5a41c5",
   "ts": "2026-08-08T02:04:34Z"
 }
