@@ -1,0 +1,745 @@
+# agent_json_plate_boot_board.cubalc — JSONDEFAULTS + JSONCHANGELOG + REQUIRE JSONNEQ
+#
+# Real use: agent STATUS boot + mutation verify — fill missing defaults
+# without clobber, then prove write changed plate and emit readable log:
+#   JSONDEFAULTS / JSONENSUREALL — multi-key fill from defaults plate (1092)
+#   JSONCHANGELOG / JCHANGELOG — key: old → new bag (1093)
+#   REQUIRE JSONNEQ / DIFFJSON — fail-fast if plates still equal (1091)
+#   soft JSONNEQ + CHANGELOG for agent digests
+#
+# First realworld DEFAULTS+CHANGELOG+REQUIRE NEQ board. Distinct from
+# lockstep (REQUIRE EQ), delta (KEYDIFF/DELTA patch), schema EXACT.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajpbt_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_boot_board.cubalc \
+#     mint -- --plate=/tmp/ajpbt/status.json
+#   ./out/cubalc run ... boot -- --plate=...
+#   ./out/cubalc run ... mutate -- --plate=...
+#   ./out/cubalc run ... log -- --prev=... --plate=...
+#   ./out/cubalc run ... hard_neq -- --prev=... --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPBT_REPORT.txt
+# Env: PLATE_PATH PREV_PATH DEFS_PATH CUBALC_AJPBT_REQUIRE
+#
+# Edges:
+#   defaults no-clobber; complete plate 0 inserts; empty plate full fill;
+#   MERGE vs DEFAULTS dual; CHANGELOG bag LAST; REQUIRE NEQ shell 1 exit 0;
+#   capture LAST_N (W144); WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_boot_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_json_plate_boot -- mint|boot|mutate|log|hard_neq|gate|list -- [--plate=P] [--prev=P] [--defs=P]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/status.json"
+LET plate_file = LAST
+SYS JOIN state_dir "sample/prev.json"
+LET prev_file = LAST
+SYS JOIN state_dir "sample/defs.json"
+LET defs_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+GETFLAGOUT prev OR ENV PREV_PATH OR prev_file
+LET prev_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT defs OR ENV DEFS_PATH OR defs_file
+LET defs_file = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPBT_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPBT_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET prev = ""
+LET defs = ""
+LET log_bag = ""
+LET set_n = 0
+LET neq_n = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "mint", "boot", "mutate", "log", "hard_neq", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "mint" THEN
+    LET op = "mint"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "mutate" THEN
+    LET op = "mutate"
+  WHEN "log" THEN
+    LET op = "log"
+  WHEN "hard_neq" THEN
+    LET op = "hard_neq"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "mint"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # defaults catalog
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 0 "zone" "unset" "dry" false
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint soft miss"
+    FAIL "mint soft miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mint failed"
+    END
+  ELSE
+    LET defs = LAST
+    LET take_n = JSONOBJ_N
+    WRITEOUT defs_file defs
+    CLEAR_ERR
+    # partial intake: only load set
+    SYS JSONOBJ "load" 10
+    LET body = LAST
+    WRITEOUT plate_file body
+    CLEAR_ERR
+    # prev empty for first boot
+    SYS JSONOBJ
+    LET prev = LAST
+    WRITEOUT prev_file prev
+    CLEAR_ERR
+    LET out = body
+    SYS CAT "mint:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mt"
+    LET row = LAST
+    SYS GREPV "mint:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "mint ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS READ OR defs_file OR ""
+  LET defs = LAST
+  CLEAR_ERR
+  SYS BLANK defs
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "boot empty defs"
+    FAIL "boot empty defs"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "boot empty defs"
+    END
+  ELSE
+    SYS BLANK body
+    IF LAST_N == 1 THEN
+      LET body = "{}"
+      CLEAR_ERR
+    END
+    # snapshot prev before boot fill
+    WRITEOUT prev_file body
+    CLEAR_ERR
+    SYS JSONDEFAULTS body defs
+    LET set_n = LAST_N
+    LET body = LAST
+    CLEAR_ERR
+    # live load kept 10; role filled
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSON "role" FROM body
+    SYS EQS LAST "worker"
+    LET has_n = LAST_N
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    CLEAR_ERR
+    LET out = body
+    LET take_n = set_n
+    IF peel_hit == 10 THEN
+      IF has_n == 1 THEN
+        IF set_n > 0 THEN
+          LET hit = 1
+          LET note_msg = "boot filled"
+        ELSE
+          LET miss = 1
+          LET note_msg = "boot zero set"
+          FAIL "boot zero set"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot no role"
+        FAIL "boot no role"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot clobber load"
+      FAIL "boot clobber load"
+      CLEAR_ERR
+    END
+    SYS CAT "boot:"
+    LET row = LAST
+    SYS STR set_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":bt"
+    LET row = LAST
+    SYS GREPV "boot:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n set_n peel_hit has_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "mutate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "mutate empty plate"
+    FAIL "mutate empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mutate empty"
+    END
+  ELSE
+    # snapshot prev = current before mutate
+    WRITEOUT prev_file body
+    CLEAR_ERR
+    LET prev = body
+    SYS JSONSET body "load" 40
+    LET body = LAST
+    CLEAR_ERR
+    SYS JSONSET body "zone" "east"
+    LET body = LAST
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    CLEAR_ERR
+    SYS JSONNEQ prev body
+    LET neq_n = LAST_N
+    LET take_n = neq_n
+    CLEAR_ERR
+    SYS JSONN "load" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    IF neq_n == 1 THEN
+      IF peel_hit == 40 THEN
+        LET hit = 1
+        LET note_msg = "mutate ok"
+      ELSE
+        LET miss = 1
+        LET note_msg = "mutate load"
+        FAIL "mutate load"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "mutate still eq"
+      FAIL "mutate still eq"
+      CLEAR_ERR
+    END
+    SYS CAT "mutate:"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR neq_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mu"
+    LET row = LAST
+    SYS GREPV "mutate:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n neq_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "log"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR prev_file OR ""
+  LET prev = LAST
+  CLEAR_ERR
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "log empty plate"
+    FAIL "log empty plate"
+    CLEAR_ERR
+  ELSE
+    SYS JSONCHANGELOG prev body
+    LET take_n = LAST_N
+    LET log_bag = LAST
+    CLEAR_ERR
+    LET out = log_bag
+    IF take_n > 0 THEN
+      SYS HAS log_bag "load:"
+      LET has_n = LAST_N
+      CLEAR_ERR
+      SYS HAS log_bag "→"
+      LET peel_hit = LAST_N
+      CLEAR_ERR
+      IF has_n == 1 THEN
+        IF peel_hit == 1 THEN
+          LET hit = 1
+          LET note_msg = "log ok"
+        ELSE
+          LET miss = 1
+          LET note_msg = "log no arrow"
+          FAIL "log no arrow"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "log no load"
+        FAIL "log no load"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "log empty"
+      FAIL "log empty"
+      CLEAR_ERR
+    END
+    SYS CAT "log:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":lg"
+    LET row = LAST
+    SYS GREPV "log:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n has_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "hard_neq"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR prev_file OR ""
+  LET prev = LAST
+  CLEAR_ERR
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "hard_neq empty plate"
+    FAIL "hard_neq empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "hard_neq empty"
+    END
+  ELSE
+    SYS JSONNEQ prev body
+    LET neq_n = LAST_N
+    CLEAR_ERR
+    IF neq_n == 1 THEN
+      REQUIRE JSONNEQ prev body
+      LET take_n = LAST_N
+      SYS JSONN "load" FROM LAST
+      LET peel_hit = LAST_N
+      CLEAR_ERR
+      LET out = body
+      LET hit = 1
+      LET note_msg = "hard_neq ok"
+    ELSE
+      LET miss = 1
+      LET take_n = 0
+      LET note_msg = "hard_neq soft deny"
+      FAIL "hard_neq soft deny"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "hard_neq soft deny"
+      END
+    END
+    SYS CAT "hard_neq:"
+    LET row = LAST
+    SYS STR neq_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":hn"
+    LET row = LAST
+    SYS GREPV "hard_neq:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n neq_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS READ OR defs_file OR ""
+  LET defs = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate empty plate"
+    FAIL "gate empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate empty"
+    END
+  ELSE
+    # must have core defaults present
+    SYS JSONHASALL body "schema" "role" "ok" "load" "zone"
+    LET admit_n = LAST_N
+    CLEAR_ERR
+    SYS JSONDEFAULTS body defs
+    LET set_n = LAST_N
+    CLEAR_ERR
+    # after full boot, re-apply defaults should set 0
+    LET take_n = set_n
+    LET out = body
+    IF admit_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate need deny"
+      FAIL "gate need deny"
+      CLEAR_ERR
+    ELSE
+      IF set_n > 0 THEN
+        LET miss = 1
+        LET note_msg = "gate incomplete boot"
+        FAIL "gate incomplete boot"
+        CLEAR_ERR
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate admit"
+      END
+    END
+    SYS CAT "gate:"
+    LET row = LAST
+    SYS STR admit_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR set_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":gt"
+    LET row = LAST
+    SYS GREPV "gate:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n admit_n set_n hit miss p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JSONOBJ "retries" 3 "timeout" 30 "role" "worker"
+  LET defs = LAST
+  # empty plate full fill
+  SYS JSONDEFAULTS "{}" defs
+  LET set_n = LAST_N
+  CLEAR_ERR
+  # complete → 0
+  SYS JSONOBJ "retries" 5 "timeout" 30 "role" "worker"
+  LET body = LAST
+  SYS JSONDEFAULTS body defs
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # MERGE clobbers vs DEFAULTS keeps
+  SYS JSONOBJ "retries" 5
+  LET body = LAST
+  SYS JSONMERGE body defs
+  SYS JSONN "retries" FROM LAST
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS JSONOBJ "retries" 5
+  LET body = LAST
+  SYS JSONDEFAULTS body defs
+  SYS JSONN "retries" FROM LAST
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # identical changelog empty
+  SYS JSONCHANGELOG body body
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  # REQUIRE NEQ success path not invoked; soft equal
+  SYS JSONNEQ body body
+  LET neq_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON set_n take_n peel_hit has_n admit_n neq_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_boot_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "set_n"
+LET row = LAST
+SYS STR set_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "neq_n"
+LET row = LAST
+SYS STR neq_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_boot_board: done"
+PRINT_JSON hit miss bag_n take_n set_n neq_n p_src note_msg
+EXIT 0

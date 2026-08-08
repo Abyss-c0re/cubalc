@@ -1,69 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 203,
-  "program": "programs/realworld/agent_json_plate_lockstep_board.cubalc",
-  "theme": "REQUIRE JSONEQ + REQUIRE JSONSUBSET peer lockstep verify",
-  "version": "1.15.540-usability",
+  "iter": 204,
+  "program": "programs/realworld/agent_json_plate_boot_board.cubalc",
+  "theme": "JSONDEFAULTS + JSONCHANGELOG + REQUIRE JSONNEQ agent boot + mutation",
+  "version": "1.15.543-usability",
   "pass": true,
-  "prior_note": "iter 202 KEYDIFF+DELTA sync; this iter first realworld REQUIRE JSONEQ(1089)+SUBSET(1090) lockstep board",
+  "prior_note": "iter 203 REQUIRE EQ lockstep; this iter first realworld DEFAULTS(1092)+CHANGELOG(1093)+REQUIRE NEQ(1091) boot board",
   "tests": [
     {
       "name": "mint",
-      "cmd": "status+order-shuffled peer+req triad",
+      "cmd": "defs 6keys + partial load-only plate",
       "ok": true,
       "note": "mint"
     },
     {
-      "name": "eq",
-      "cmd": "order-independent EQ=1 peel load=10",
+      "name": "boot",
+      "cmd": "DEFAULTS set=5 load kept 10 role filled",
       "ok": true,
-      "note": "EQ"
-    },
-    {
-      "name": "subset",
-      "cmd": "req ⊆ status =1",
-      "ok": true,
-      "note": "SUBSET"
-    },
-    {
-      "name": "covers",
-      "cmd": "status ⊇ req SUPERSET=1",
-      "ok": true,
-      "note": "COVERS"
-    },
-    {
-      "name": "hard_eq",
-      "cmd": "soft then REQUIRE JSONEQ + peel",
-      "ok": true,
-      "note": "REQUIRE EQ"
-    },
-    {
-      "name": "hard_sub",
-      "cmd": "REQUIRE JSONSUBSET+SUPERSET",
-      "ok": true,
-      "note": "REQUIRE SUB"
+      "note": "DEFAULTS"
     },
     {
       "name": "gate",
-      "cmd": "admit lockstep; deny after drift",
+      "cmd": "HASALL core + re-DEFAULTS set=0",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "drift",
-      "cmd": "load 99 → EQ0 CHANGED1 SUBSET1",
+      "name": "mutate",
+      "cmd": "load 40 zone east NEQ=1",
       "ok": true,
-      "note": "drift"
+      "note": "mutate"
+    },
+    {
+      "name": "log",
+      "cmd": "CHANGELOG n=2 has load: and →",
+      "ok": true,
+      "note": "CHANGELOG"
+    },
+    {
+      "name": "hard_neq",
+      "cmd": "soft then REQUIRE JSONNEQ",
+      "ok": true,
+      "note": "REQUIRE NEQ"
     },
     {
       "name": "probe",
-      "cmd": "empty EQ; empty subset; order EQ",
+      "cmd": "empty fill; complete 0; MERGE clobber vs DEFAULTS",
       "ok": true,
       "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_AJPLS_REQUIRE=1 empty → shell 2",
+      "cmd": "CUBALC_AJPBT_REQUIRE=1 empty → shell 2",
       "ok": true,
       "note": "hard env"
     },
@@ -1362,6 +1350,30 @@
       "title": "EQ deny with SUBSET still true is common lockstep split",
       "detail": "Value drift on non-required fields fails EQ while SUBSET/COVERS pass. Gate must compose both for full lockstep; SUBSET alone is not lockstep.",
       "repro": "load 10→99: EQ0 SUBSET1 CHANGED load"
+    },
+    {
+      "id": "W162",
+      "severity": "med",
+      "area": "lang|json_defaults",
+      "title": "JSONDEFAULTS LAST_N is inserted-count not plate size",
+      "detail": "LAST_N/JSONDEFAULTS_N = keys filled this call; complete re-apply yields 0. Agents checking boot success must not treat LAST_N==0 as failure when plate already complete — pair with HASALL or JSONDEFAULTS_HAD.",
+      "repro": "DEFAULTS complete plate → LAST_N 0 HAD>0; empty {} defs → LAST_N full"
+    },
+    {
+      "id": "W163",
+      "severity": "med",
+      "area": "lang|json_last",
+      "title": "REQUIRE JSONNEQ keeps LAST as first plate (prev) not cur",
+      "detail": "After REQUIRE JSONNEQ prev body, peel FROM LAST reads prev. Chain peel of mutated load wrong unless peel FROM body. Same first-arg LAST keep as JSONEQ/SUBSET.",
+      "repro": "REQUIRE JSONNEQ prev body; JSONN load FROM LAST → prev load"
+    },
+    {
+      "id": "W164",
+      "severity": "low",
+      "area": "lang|json_changelog",
+      "title": "CHANGELOG is bag LAST not plate; arrow format quotes strings",
+      "detail": "LAST becomes multi-line log; HAS/HASLINE for substrings. String values appear quoted in log (zone: \"east\" → \"west\"). PRINT_JSON collapses newlines (W151).",
+      "repro": "JSONCHANGELOG; HAS log \"load:\" and \"→\""
     }
   ],
   "workarounds": [
@@ -1403,7 +1415,10 @@
     "Value drift: JSONCHANGED/DELTA not KEYDIFF alone (W157)",
     "After KEYDIFF/CHANGED: LET bag=LAST before peels (W158)",
     "REQUIRE JSON*: soft probe then REQUIRE; on fail EXIT n (W159/W160)",
-    "Lockstep gate: SUBSET req AND EQ peer (W161)"
+    "Lockstep gate: SUBSET req AND EQ peer (W161)",
+    "After DEFAULTS: check HASALL or HAD not only LAST_N==0 (W162)",
+    "After REQUIRE JSONNEQ: peel FROM body/cur not LAST (W163)",
+    "CHANGELOG: HAS substrings; WRITE log bag not PRINT_JSON (W164)"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1437,7 +1452,10 @@
     "JSONDIFF unified report: keys only + values + patch object",
     "JSONCHANGED keep-plate mode optional",
     "REQUIRE JSON* EXIT code / --strict-shell mode",
-    "REQUIRE JSONEQ return changed-key bag on LAST without assert-fail option"
+    "REQUIRE JSONEQ return changed-key bag on LAST without assert-fail option",
+    "JSONDEFAULTS return plate key count alias JSONDEFAULTS_LEN",
+    "REQUIRE JSONNEQ optional LAST=second plate mode",
+    "JSONCHANGELOG structured plate form (not only bag lines)"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1469,8 +1487,11 @@
     "gate maxchg deny soft without shell fail",
     "selftest 355/355 green v1.15.540",
     "soft-first hard_eq/hard_sub avoids REQUIRE assert-fail",
-    "drift load-only keeps SUBSET for gate split demo"
+    "drift load-only keeps SUBSET for gate split demo",
+    "selftest 355/355 green v1.15.543",
+    "DEFAULTS no-clobber load=10 positive",
+    "REQUIRE JSONNEQ LAST=prev peel got 10 not 40 (W163)"
   ],
-  "commit": "5160eca",
-  "ts": "2026-08-08T16:13:43Z"
+  "commit": "pending",
+  "ts": "2026-08-08T16:39:05Z"
 }
