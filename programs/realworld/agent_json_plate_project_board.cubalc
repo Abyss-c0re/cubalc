@@ -1,0 +1,732 @@
+# agent_json_plate_project_board.cubalc — JSONPICK + JSONDROP + JSONRENAME plate project
+#
+# Real use: agent STATUS plates — project public peer views, strip noise/secrets
+# in one shot, and rename keys for schema migrate without hand rebuild:
+#   JSONPICK / JSONKEEP / JKEEP — keep listed keys (1061)
+#   JSONDROP / JSONOMIT / JDROPK — omit listed keys (1063)
+#   JSONRENAME / JRENAME / JSONMV — rename key keep raw value (1062)
+#   JSONOBJ + WRITEOUT — mint / persist
+#   bag form: JSONPICK/DROP plate OF keys
+#
+# First realworld PICK+DROP+RENAME board. Distinct from hygiene (MERGE/DEL/N/INC)
+# and stamp (SET only): this is *export projection + schema migrate*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajpj_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_project_board.cubalc \
+#     mint -- --plate=/tmp/ajpj/status.json
+#   ./out/cubalc run ... pick -- --plate=...
+#   ./out/cubalc run ... drop -- --plate=...
+#   ./out/cubalc run ... rename -- --plate=...
+#   ./out/cubalc run ... export -- --plate=... --out=/tmp/ajpj/public.json
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPJ_REPORT.txt
+# Env: PLATE_PATH OUT_PATH CUBALC_AJPJ_REQUIRE CUBALC_AJPJ_MIN
+#
+# Edges:
+#   pick missing keys soft-skip; pick all-miss → {}; drop miss N=0
+#   rename soft miss; rename overwrite dest; bag OF form
+#   REQUIRE EXIT n; WRITE omit NL; lean VARS
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_project_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "agent_json_plate_project -- mint|pick|drop|rename|export|list -- [--plate=P] [--out=O]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/status.json"
+LET plate_file = LAST
+SYS JOIN state_dir "sample/public.json"
+LET out_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+LET p_ok = OK
+CLEAR_ERR
+
+GETFLAGOUT out|o OR ENV OUT_PATH OR out_file
+LET out_file = LAST
+LET o_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPJ_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_AJPJ_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPJ_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET line_i = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET keys = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "mint", "pick", "drop", "rename", "export", "bag", "list", "ls", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "mint" THEN
+    LET op = "mint"
+  WHEN "pick" THEN
+    LET op = "pick"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "rename" THEN
+    LET op = "rename"
+  WHEN "export" THEN
+    LET op = "export"
+  WHEN "bag" THEN
+    LET op = "bag"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src o_src
+  CLEAR_ERR
+END
+
+SYS EQS op "mint"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # noisy plate: public + secret + tmp + legacy names
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "ok" 1 "err" "" "n" 5 "role" "worker" "token" "sekrit" "noise" "dropme" "tmp" "ready" "cnt" 42 "ts" run_date
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint soft miss"
+    FAIL "mint soft miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mint failed"
+    END
+  ELSE
+    LET take_n = JSONOBJ_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "mint write failed"
+    END
+    CLEAR_ERR
+    SYS CAT "mint:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mt"
+    LET row = LAST
+    SYS GREPV "mint:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "mint ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "pick"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pick empty plate"
+    FAIL "pick empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "pick empty"
+    END
+  ELSE
+    # public peer view: ok n role schema (+ missing soft-skip)
+    SYS JSONPICK body "ok" "n" "role" "schema" "missing_xyz"
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pick soft miss"
+      FAIL "pick soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "pick failed"
+      END
+    ELSE
+      LET take_n = JSONPICK_N
+      LET body = LAST
+      LET out = body
+      CLEAR_ERR
+      SYS JSONHAS "token" body
+      LET peel_hit = JSONHAS_HIT
+      CLEAR_ERR
+      SYS JSONHAS "noise" body
+      LET has_n = JSONHAS_HIT
+      CLEAR_ERR
+      WRITEOUT plate_file body
+      EXPECT OK == 1
+      IF OK == 0 THEN
+        EXIT 2 "pick write failed"
+      END
+      CLEAR_ERR
+      SYS CAT "pick:"
+      LET row = LAST
+      SYS STR take_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":pk"
+      LET row = LAST
+      SYS GREPV "pick:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF take_n > 0 THEN
+        LET hit = 1
+        LET note_msg = "pick ok"
+      ELSE
+        LET miss = 1
+        LET note_msg = "pick empty"
+        FAIL "pick empty"
+        CLEAR_ERR
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit has_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "drop empty plate"
+    FAIL "drop empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "drop empty"
+    END
+  ELSE
+    # multi-omit secrets + noise; ghost soft-skip
+    SYS JSONDROP body "token" "noise" "tmp" "ghost"
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "drop soft miss"
+      FAIL "drop soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "drop failed"
+      END
+    ELSE
+      LET take_n = JSONDROP_N
+      LET body = LAST
+      LET out = body
+      CLEAR_ERR
+      SYS JSONHAS "token" body
+      LET peel_hit = JSONHAS_HIT
+      CLEAR_ERR
+      SYS JSONHAS "cnt" body
+      LET has_n = JSONHAS_HIT
+      CLEAR_ERR
+      WRITEOUT plate_file body
+      EXPECT OK == 1
+      IF OK == 0 THEN
+        EXIT 2 "drop write failed"
+      END
+      CLEAR_ERR
+      SYS CAT "drop:"
+      LET row = LAST
+      SYS STR take_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":dp"
+      LET row = LAST
+      SYS GREPV "drop:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF peel_hit == 0 THEN
+        LET hit = 1
+        LET note_msg = "drop ok"
+      ELSE
+        LET miss = 1
+        LET note_msg = "drop token remain"
+        FAIL "drop token remain"
+        CLEAR_ERR
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit has_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "rename"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "rename empty plate"
+    FAIL "rename empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "rename empty"
+    END
+  ELSE
+    # schema migrate: tmp→status, cnt→count
+    SYS JSONRENAME body "tmp" "status"
+    LET take_n = JSONRENAME_N
+    LET body = LAST
+    CLEAR_ERR
+    SYS JSONRENAME body "cnt" "count"
+    LET has_n = JSONRENAME_N
+    LET body = LAST
+    CLEAR_ERR
+    # soft miss
+    SYS JSONRENAME body "nope" "ghost"
+    LET line_i = JSONRENAME_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    SYS JSONHAS "tmp" body
+    LET peel_hit = JSONHAS_HIT
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "rename write failed"
+    END
+    CLEAR_ERR
+    SYS CAT "rename:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR has_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR line_i
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":rn"
+    LET row = LAST
+    SYS GREPV "rename:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    IF peel_hit == 0 THEN
+      LET hit = 1
+      LET note_msg = "rename ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "rename tmp remain"
+      FAIL "rename tmp remain"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n has_n line_i peel_hit p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "export"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "export empty plate"
+    FAIL "export empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "export empty"
+    END
+  ELSE
+    # full pipeline: drop secrets → rename → pick public → write out
+    SYS JSONDROP body "token" "noise"
+    LET body = LAST
+    CLEAR_ERR
+    SYS JSONRENAME body "tmp" "status"
+    LET body = LAST
+    CLEAR_ERR
+    SYS JSONRENAME body "cnt" "count"
+    LET body = LAST
+    CLEAR_ERR
+    SYS JSONPICK body "schema" "ok" "role" "status" "count" "n" "ts"
+    LET take_n = JSONPICK_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT out_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "export write failed"
+    END
+    CLEAR_ERR
+    # also refresh plate as projected
+    WRITEOUT plate_file body
+    CLEAR_ERR
+    SYS JSONHAS "token" body
+    LET peel_hit = JSONHAS_HIT
+    CLEAR_ERR
+    SYS CAT "export:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":ex"
+    LET row = LAST
+    SYS GREPV "export:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    IF take_n > 0 THEN
+      LET hit = 1
+      LET note_msg = "export ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "export empty"
+      FAIL "export empty"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit p_src o_src
+  CLEAR_ERR
+END
+
+SYS EQS op "bag"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "bag empty plate"
+    FAIL "bag empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "bag empty"
+    END
+  ELSE
+    # OF bag form for pick then drop remainder noise if any
+    SYS PUSH "" "ok"
+    SYS PUSH LAST "n"
+    SYS PUSH LAST "role"
+    LET keys = LAST
+    CLEAR_ERR
+    SYS JSONPICK body OF keys
+    LET take_n = JSONPICK_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "bag write failed"
+    END
+    CLEAR_ERR
+    SYS CAT "bag:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":bg"
+    LET row = LAST
+    SYS GREPV "bag:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "bag ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JSONPICK "{\"a\":1,\"b\":2}" "zzz"
+  LET take_n = JSONPICK_N
+  LET out = LAST
+  CLEAR_ERR
+  SYS JSONDROP "{\"a\":1}" "y" "z"
+  LET has_n = JSONDROP_N
+  CLEAR_ERR
+  SYS JSONRENAME "{\"a\":1}" "nope" "x"
+  LET peel_hit = JSONRENAME_N
+  CLEAR_ERR
+  # overwrite dest
+  SYS JSONRENAME "{\"a\":10,\"b\":20}" "a" "b"
+  LET line_i = JSONRENAME_N
+  LET admit_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON take_n has_n peel_hit line_i admit_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_project_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_project_board: done"
+PRINT_JSON hit miss bag_n take_n peel_hit has_n p_src note_msg
+EXIT 0

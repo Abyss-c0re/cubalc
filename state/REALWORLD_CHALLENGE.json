@@ -1,57 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 191,
-  "program": "programs/realworld/agent_json_plate_hygiene_board.cubalc",
-  "theme": "JSONMERGE+JSONDEL+JSONN+JSONINC+JSONENSURE agent plate merge/scrub/count hygiene",
-  "version": "1.15.510-usability",
+  "iter": 192,
+  "program": "programs/realworld/agent_json_plate_project_board.cubalc",
+  "theme": "JSONPICK + JSONDROP + JSONRENAME agent plate project/export/schema migrate",
+  "version": "1.15.513-usability",
   "pass": true,
-  "prior_note": "iter 190 DROPINTREE residual; this iter first realworld MERGE(1058)+DEL(1056)+N(1057)+INC(1059)+ENSURE(1060)",
+  "prior_note": "iter 191 MERGE/DEL/N/INC/ENSURE hygiene; this iter first realworld PICK(1061)+DROP multi(1063)+RENAME(1062)",
   "tests": [
     {
       "name": "mint",
-      "cmd": "JSONOBJ base+overlay with token/tmp secrets",
+      "cmd": "JSONOBJ noisy plate 10 keys token/noise/tmp/cnt",
       "ok": true,
       "note": "mint"
     },
     {
-      "name": "merge",
-      "cmd": "JSONMERGE overlay wins retries=2 +4 keys",
+      "name": "drop",
+      "cmd": "JSONDROP token noise tmp ghost \u2192 N=3 real",
       "ok": true,
-      "note": "MERGE"
+      "note": "DROP"
     },
     {
-      "name": "scrub",
-      "cmd": "JSONDEL token+tmp; absent soft N=0",
+      "name": "rename",
+      "cmd": "tmp\u2192status cnt\u2192count; nope soft N=0",
       "ok": true,
-      "note": "DEL"
+      "note": "RENAME"
     },
     {
-      "name": "ensure",
-      "cmd": "JSONENSURE max SET=1; role keep SET=0",
+      "name": "pick",
+      "cmd": "JSONPICK ok n role schema (+missing skip) N=4",
       "ok": true,
-      "note": "ENSURE"
+      "note": "PICK"
     },
     {
-      "name": "bump",
-      "cmd": "JSONINC retries +2/+5 literal deltas",
+      "name": "export",
+      "cmd": "drop+rename+pick public \u2192 7 keys out file",
       "ok": true,
-      "note": "INC"
+      "note": "pipeline"
     },
     {
-      "name": "count",
-      "cmd": "JSONN retries/max/n; under max hit; >=max miss",
+      "name": "bag",
+      "cmd": "JSONPICK plate OF keys bag N=3",
       "ok": true,
-      "note": "JSONN"
+      "note": "OF bag"
     },
     {
       "name": "probe",
-      "cmd": "empty overlay N=0; DEL miss; JSONN OR 42",
+      "cmd": "pick miss {}; drop 0; rename miss; overwrite dest",
       "ok": true,
       "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_AJPH_REQUIRE=1 empty \u2192 shell 2",
+      "cmd": "CUBALC_AJPJ_REQUIRE=1 empty \u2192 shell 2",
       "ok": true,
       "note": "hard"
     },
@@ -1070,6 +1070,30 @@
       "title": "JSONN non-numeric string HIT=1 LAST_N=0 (role\u21920)",
       "detail": "Positive: peel role as agent string leaves LAST=role LAST_N=0 without soft fail. Distinguish from miss (OK=0). Useful but easy to treat as zero counter.",
       "repro": "JSONN role FROM plate \u2192 HIT1 LAST_N0 LAST=worker"
+    },
+    {
+      "id": "W127",
+      "severity": "low",
+      "area": "lang|jsonpick",
+      "title": "JSONPICK emits keys in pick-list order not original plate order",
+      "detail": "Pick ok,n,role,schema from plate ordered schema,ok,... yields {\"ok\":1,\"n\":5,\"role\":...,\"schema\":...}. Agents that rely on key order for signatures/diff may break. Prefer JSONKEYS after pick for inventory.",
+      "repro": "JSONPICK plate ok n role schema \u2192 ok first not schema"
+    },
+    {
+      "id": "W128",
+      "severity": "med",
+      "area": "lang|jsonrename",
+      "title": "JSONRENAME overwrites destination key silently",
+      "detail": "RENAME a\u2192b when b exists: new b gets a's value, old b dropped, N=1. No conflict soft flag. Schema migrate can clobber live fields without warning.",
+      "repro": "JSONRENAME {a:10,b:20} a b \u2192 b=10 only"
+    },
+    {
+      "id": "W129",
+      "severity": "low",
+      "area": "lang|jsonpick",
+      "title": "JSONPICK all-missing keys \u2192 {} OK=1 N=0 soft",
+      "detail": "No hard fail when none of listed keys present. DROP all-miss leaves plate unchanged N=0. RENAME miss N=0 plate intact. Agents need N>0 gates for export contracts.",
+      "repro": "JSONPICK {a:1} zzz \u2192 LAST {} N=0 OK=1"
     }
   ],
   "workarounds": [
@@ -1085,11 +1109,11 @@
     "JSONOBJ/JSONSET numeric: SYS STR n first (W118); accept string n or use literal numbers",
     "DROPINTREE skip: treat N==0 as empty page; clamp SK>=0 before op (W121)",
     "JSONINC delta: EQS-branch literals 1/2/3/5 (W124); ENSURE values via STR",
-    "JSONN OR: hardcode literal defaults (W125)"
+    "JSONN OR: hardcode literal defaults (W125)",
+    "JSONPICK/DROP/RENAME accept string vars for keys (unlike JSONHAS W115); use OF bag for dynamic lists",
+    "export: N>0 after PICK before WRITEOUT peer view (W129)"
   ],
   "language_gaps": [
-    "Stable PARSEPATHLINE after FORMAT under agent_boot boards (W108)",
-    "TAKEINTREE by mtime / reverse order (still DFS like FIRSTINTREE W101)",
     "Cookbook: seed\u2192take\u2192nth\u2192cite triage sample",
     "HASINTREE optional LAST=PATH mode or OUT knob for agents that want path in LAST",
     "SLICEINTREE by mtime / reverse order (still DFS like TAKEINTREE W101)",
@@ -1099,18 +1123,20 @@
     "CLEAR_ERR optional keep-LAST mode",
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
     "DROPINTREE hard reject or warn on negative skip",
-    "JSONINC/ENSURE/JSONN OR accept num vars without literal-only"
+    "JSONINC/ENSURE/JSONN OR accept num vars without literal-only",
+    "JSONRENAME conflict mode (fail/soft when dest exists)",
+    "JSONPICK stable original key order option"
   ],
   "issues_faced": [
-    "selftest 355/355 green v1.15.503",
-    "mint hard-fail missing value until STR shuttle on TN (W118)",
     "selftest 355/355 green v1.15.505",
     "negative --skip=-1 silently becomes skip0 (W121)",
     "selftest 355/355 green v1.15.508",
     "JSONINC DELTA var hard-fail; fixed with literal EQS branches (W124)",
     "JSONN OR MAXR hard-fail; fixed OR 10 (W125)",
-    "selftest 355/355 green v1.15.510"
+    "selftest 355/355 green v1.15.510",
+    "selftest 355/355 green v1.15.513",
+    "PICK var keys work \u2014 positive contrast to W115"
   ],
-  "commit": "7f57a78",
-  "ts": "2026-08-08T11:15:23Z"
+  "commit": "pending",
+  "ts": "2026-08-08T11:39:21Z"
 }
