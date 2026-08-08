@@ -1368,6 +1368,6 @@
     "NTH OF bag hard-fail — re-PLUCK workaround (W150)",
     "REQUIRE JSONHASALL shell 1 exit_code 0 documented (W152)"
   ],
-  "commit": "pending",
+  "commit": "e4e1401",
   "ts": "2026-08-08T14:59:50Z"
 }
