@@ -26608,6 +26608,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"ONEOF", "ONEOF|INLIST subject a [,|OR||] b — soft 0|1 membership · ONEOFI icase · MATCH_ARM hit"},
       {"INRANGE", "INRANGE|NUMBETWEEN x lo [TO] hi — soft 0|1 numeric range · twin of REQUIRE BETWEEN"},
       {"CLAMPN", "CLAMPN|BOUNDN x lo [TO] hi — clamp x into [lo,hi] → LAST_N · GETFLAGN cap"},
+      {"FLOORN", "FLOORN|ATLEASTN x lo — raise floor max(x,lo) → LAST_N · one-sided CLAMPN"},
+      {"CAPN", "CAPN|ATMOSTN x hi — lower ceiling min(x,hi) → LAST_N · one-sided CLAMPN"},
       {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"REQUIRE FLAG", "REQUIRE FLAG|OPT name[,|alt] — fail if none of aliases · FLAG_HIT_NAME · LAST=value"},
@@ -29166,6 +29168,65 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# clampn %ld → %ld [%ld..%ld] changed=%d\n",
               x, out, lo, hi, changed);
+    bump(vm); return 1;
+  }
+  /* FLOORN|ATLEASTN x lo — raise floor: LAST_N = max(x, lo).
+   * CAPN|ATMOSTN x hi — lower ceiling: LAST_N = min(x, hi).
+   * Not MINN/MAXN (stack SMINN/SMAXN aliases — inverted sense on stack).
+   * FLOORN_CHANGED / CAPN_CHANGED = 1 if moved. One-sided twin of CLAMPN.
+   * Usability: GETFLAGN n OR 0 then FLOORN LAST_N 1 without full CLAMPN lo..hi. */
+  if (kw(&L->cur,"FLOORN") || kw(&L->cur,"ATLEASTN") || kw(&L->cur,"RAISEFLOOR") ||
+      kw(&L->cur,"FLOOR_N") || kw(&L->cur,"NUMFLOOR") || kw(&L->cur,"LIFTN") ||
+      kw(&L->cur,"CAPN") || kw(&L->cur,"ATMOSTN") || kw(&L->cur,"CEILCAP") ||
+      kw(&L->cur,"CAP_N") || kw(&L->cur,"NUMCAP") || kw(&L->cur,"LIMITCAP")){
+    int is_cap = kw(&L->cur,"CAPN") || kw(&L->cur,"ATMOSTN") || kw(&L->cur,"CEILCAP") ||
+                 kw(&L->cur,"CAP_N") || kw(&L->cur,"NUMCAP") || kw(&L->cur,"LIMITCAP");
+    long x = 0, b = 0, out;
+    int changed;
+    char nbuf[32];
+    lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &x)) {
+      fail_at(vm, L, is_cap ? "CAPN x hi — CAPN LAST_N 64" : "FLOORN x lo — FLOORN LAST_N 1");
+      return -1;
+    }
+    if (kw(&L->cur,"TO") || kw(&L->cur,"AT") || kw(&L->cur,"OF"))
+      lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &b)) {
+      fail_at(vm, L, is_cap ? "CAPN x hi — missing hi" : "FLOORN x lo — missing lo");
+      return -1;
+    }
+    out = x;
+    if (is_cap) {
+      if (out > b) out = b;
+    } else {
+      if (out < b) out = b;
+    }
+    changed = (out != x) ? 1 : 0;
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (is_cap) {
+      var_set_num(vm, "CAPN", out);
+      var_set_num(vm, "CAPN_X", x);
+      var_set_num(vm, "CAPN_HI", b);
+      var_set_num(vm, "CAPN_CHANGED", changed);
+      var_set_num(vm, "ATMOSTN", out);
+      var_set_num(vm, "ATMOSTN_CHANGED", changed);
+    } else {
+      var_set_num(vm, "FLOORN", out);
+      var_set_num(vm, "FLOORN_X", x);
+      var_set_num(vm, "FLOORN_LO", b);
+      var_set_num(vm, "FLOORN_CHANGED", changed);
+      var_set_num(vm, "ATLEASTN", out);
+      var_set_num(vm, "ATLEASTN_CHANGED", changed);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %ld → %ld bound=%ld changed=%d\n",
+              is_cap ? "capn" : "floorn", x, out, b, changed);
     bump(vm); return 1;
   }
 
