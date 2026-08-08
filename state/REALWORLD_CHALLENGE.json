@@ -1,53 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 178,
-  "program": "programs/realworld/claim_tee_queue_board.cubalc",
-  "theme": "CLAIMOUT + TEEOUT nested work claim + receipt tee (exclusive create + LAST=body write)",
-  "version": "1.15.479-usability",
+  "iter": 179,
+  "program": "programs/realworld/workspace_tree_board.cubalc",
+  "theme": "CPTREE + RMTREE workspace snapshot + recursive wipe (no shell cp -r/rm -rf)",
+  "version": "1.15.481-usability",
   "pass": true,
-  "prior_note": "iter 177 HARDLINKOUT+RELINKOUT; this iter first realworld CLAIMOUT(1029)+TEEOUT(1028)",
+  "prior_note": "iter 178 CLAIMOUT+TEEOUT; this iter first realworld CPTREE(1031)+RMTREE(1030)",
   "tests": [
     {
-      "name": "claim",
-      "cmd": "CLAIMOUT nested HIT=1 body written; claim_pid set",
+      "name": "stage",
+      "cmd": "WRITEOUT nested work tree + empty dir",
       "ok": true,
-      "note": "CLAIMOUT"
+      "note": "stage"
     },
     {
-      "name": "claim_held",
-      "cmd": "second CLAIMOUT soft HIT=0; REQUIRE=1 EXIT 2",
+      "name": "snap",
+      "cmd": "CPTREE N=6 BYTES=12; marker exists in snap",
+      "ok": true,
+      "note": "CPTREE"
+    },
+    {
+      "name": "snap_miss",
+      "cmd": "missing work soft; REQUIRE=1 EXIT 2",
       "ok": true,
       "note": "soft+hard"
     },
     {
-      "name": "tee",
-      "cmd": "TEEOUT LAST body HAS without READ; rewrite CREATED=0",
+      "name": "wipe",
+      "cmd": "RMTREE work N=6 gone; snap kept then wipe snap",
       "ok": true,
-      "note": "TEEOUT"
+      "note": "RMTREE"
     },
     {
-      "name": "release",
-      "cmd": "RM claim; re-claim HIT=1; free soft",
+      "name": "wipe_miss",
+      "cmd": "RMTREE missing OK=1 N=0 (idempotent)",
       "ok": true,
-      "note": "release"
+      "note": "W87"
     },
     {
-      "name": "has_gate",
-      "cmd": "has claim ok; has clai miss; gate admit",
+      "name": "inside",
+      "cmd": "CPTREE dest inside src soft refuse",
       "ok": true,
-      "note": "bag"
+      "note": "W88"
     },
     {
       "name": "probe_boom",
-      "cmd": "empty CLAIMOUT/TEEOUT soft; boom shell 2",
+      "cmd": "empty CPTREE/RMTREE soft; boom shell 2",
       "ok": true,
       "note": "edges"
-    },
-    {
-      "name": "vars_lean",
-      "cmd": "peel budget VARS_N~90 < 128",
-      "ok": true,
-      "note": "W81"
     },
     {
       "name": "selftest",
@@ -744,26 +744,50 @@
       "title": "Custom CUBALC_* ENV reach SYS ENV; CUBALC_ARG* host still dead (W1/W9)",
       "detail": "Positive contrast: export CUBALC_CTQ_REQUIRE=1 is visible to SYS ENV and drives EXIT 2 on held claim. export CUBALC_ARG0=claim still does not populate SYS ARG (W1). Agents may use custom env gates but not ARG env contract.",
       "repro": "CUBALC_CTQ_REQUIRE=1 claim held \u2192 shell 2; CUBALC_ARG0=claim alone \u2192 list"
+    },
+    {
+      "id": "W87",
+      "severity": "med",
+      "area": "lang|rmtree",
+      "title": "RMTREE missing path is OK=1 with N=0 (idempotent, not soft-fail)",
+      "detail": "Unlike CPTREE missing (OK=0 sticky missing) or empty path (OK=0 empty), RMTREE on a non-existent path returns OK=1 RMTREE_N=0. Agents cannot use OK alone to detect wipe-of-nothing vs wipe-of-tree; must check RMTREE_N or pre EXIST. Empty path still OK=0. Positive for GC scripts that re-run.",
+      "repro": "RMTREE /no/such \u2192 OK 1 N 0; RMTREE \"\" \u2192 OK 0 empty"
+    },
+    {
+      "id": "W88",
+      "severity": "low",
+      "area": "lang|cptree",
+      "title": "CPTREE recursive snapshot; refuses dest inside src; missing soft",
+      "detail": "Positive: CPTREE work snap \u2192 N/BYTES knobs; nested files+empty dirs; source intact. CPTREE missing src OK=0; dest inside src OK=0 LAST_ERR contains inside. File-only CPTREE works. Agents use CPTREE_N/CPTREE_BYTES not LAST alone (LAST is abs dest path).",
+      "repro": "CPTREE src dst N>=5; CPTREE src src/inside \u2192 dest inside src"
+    },
+    {
+      "id": "W89",
+      "severity": "low",
+      "area": "lang|rmtree",
+      "title": "RMTREE removes file or full dir tree; N counts nodes",
+      "detail": "Positive: RMTREE work after stage+snap removed 6 nodes; EXIST work 0; sibling snap untouched until separate wipe. RMNEST/RMRF aliases. Pair with CPTREE for stage\u2192snap\u2192wipe sandbox lifecycle.",
+      "repro": "RMTREE work \u2192 N 6 EXIST 0; snap still present"
     }
   ],
   "workarounds": [
-    "CLAIMOUT path body; check CLAIM_HIT; RM to release",
-    "TEEOUT out body then HAS LAST without READ; path in TEEOUT_PATH",
-    "CUBALC_CTQ_REQUIRE=1 for shell-visible held-claim fail (not CUBALC_ARG*)",
-    "Keep VARS_N well under 128 (W81)",
-    "cubalc run prog claim|tee|release -- --claim=F --out=F body"
+    "CPTREE work snap; check CPTREE_N/BYTES; refuse dest-inside handled by lang",
+    "RMTREE path; treat N=0 as no-op wipe; pre EXIST if must fail on missing",
+    "wipe snap via rest tag snap; default wipe is work",
+    "CUBALC_WST_REQUIRE=1 for shell-visible snap-without-stage",
+    "Keep VARS lean (~90) under 128 (W81)"
   ],
   "language_gaps": [
-    "CLAIMOUT TTL/lease auto-expire without manual RM",
-    "Cookbook: claim+tee queue worker under VARS budget",
-    "vars[] grow or hard-fail on overflow still open (W81)"
+    "RMTREE missing could OK=0 for strict GC contracts (opt STRICT flag)",
+    "CPTREE merge/update into existing dest (currently full copy semantics)",
+    "Cookbook: stage+snap+wipe sandbox under VARS budget"
   ],
   "issues_faced": [
-    "CLAIMOUT held soft OK + REQUIRE hard EXIT 2 (W84/W86)",
-    "TEEOUT LAST=body enables HAS without READ (W85)",
-    "WRITE/claim body omit final NL (W5 reconfirm)",
+    "RMTREE missing is OK=1 N=0 \u2014 document as W87 not a bug for GC",
+    "CPTREE dest-inside-src soft refuse (W88)",
+    "WRITEOUT marker omit final NL (W5)",
     "selftest 355/355"
   ],
-  "commit": "f89fd1744d958cffe5cf99405e6ec17469d0b8d8",
-  "ts": "2026-08-08T05:48:00Z"
+  "commit": "",
+  "ts": "2026-08-08T06:13:00Z"
 }

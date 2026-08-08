@@ -1,0 +1,543 @@
+# workspace_tree_board.cubalc — CPTREE + RMTREE workspace snapshot + wipe
+#
+# Real use: agent sandboxes stage nested work trees, snapshot them for audit,
+# then recursively wipe staging without shell cp -r / rm -rf glue:
+#   CPTREE / COPYTREE / CPDIR — recursive copy file or dir (1031)
+#   RMTREE / RMNEST / RMRF    — recursive remove file or dir (1030)
+#   WRITEOUT — seed nested markers under work root
+#   GETFLAGOUT work|snap · SUBCMD stage|snap|wipe|list|...
+#
+# First realworld CPTREE + RMTREE board. Distinct from scratch_workspace
+# (MKDIR/CWD stack) and plate_workspace (STATE plates only).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_wst_$$
+#   ./out/cubalc run programs/realworld/workspace_tree_board.cubalc \
+#     stage -- --work=/tmp/wst/work job42
+#   ./out/cubalc run ... snap -- --work=... --snap=/tmp/wst/snap
+#   ./out/cubalc run ... wipe -- --work=... work
+#
+# Plate: STATUS.txt VAL.txt META.txt WST_REPORT.txt
+# Env: WORK_ROOT SNAP_ROOT CUBALC_WST_REQUIRE CUBALC_WST_MIN
+#
+# Edges:
+#   CPTREE N/BYTES; missing src soft; dest-inside-src soft
+#   RMTREE N; missing soft OK=1 N=0; empty soft OK=0
+#   lean VARS (W81); WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "workspace_tree_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "workspace_tree -- stage|snap|wipe|list -- [--work=D] [--snap=D] [tag]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "ws/work"
+LET work_dir = LAST
+SYS JOIN state_dir "ws/snap"
+LET snap_dir = LAST
+CLEAR_ERR
+
+GETFLAGOUT work|w OR ENV WORK_ROOT OR work_dir
+LET work_dir = LAST
+LET w_src = GETFLAGOUT_SRC
+LET w_ok = OK
+CLEAR_ERR
+GETFLAGOUT snap|s OR ENV SNAP_ROOT OR snap_dir
+LET snap_dir = LAST
+LET s_src = GETFLAGOUT_SRC
+LET s_ok = OK
+CLEAR_ERR
+
+LET tag = "job"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET tag = LAST
+END
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_WST_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_WST_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "WST_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET tree_n = 0
+LET tree_bytes = 0
+LET row = ""
+LET wipe_tgt = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "stage", "snap", "wipe", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "stage" THEN
+    LET op = "stage"
+  WHEN "snap" THEN
+    LET op = "snap"
+  WHEN "wipe" THEN
+    LET op = "wipe"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n w_src s_src
+  CLEAR_ERR
+END
+
+SYS EQS op "stage"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF w_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "stage needs work"
+    FAIL "stage needs work"
+    CLEAR_ERR
+  ELSE
+    SYS JOIN work_dir "a/b/marker.txt"
+    LET row = LAST
+    SYS CAT "tag="
+    LET wipe_tgt = LAST
+    SYS CAT wipe_tgt tag
+    LET wipe_tgt = LAST
+    WRITEOUT row wipe_tgt
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "stage write failed"
+    END
+    CLEAR_ERR
+    SYS JOIN work_dir "a/sib.txt"
+    LET row = LAST
+    WRITEOUT row "sib"
+    CLEAR_ERR
+    SYS JOIN work_dir "empty"
+    SYS MKDIR LAST
+    CLEAR_ERR
+    SYS CAT "stage:"
+    LET row = LAST
+    SYS CAT row tag
+    LET row = LAST
+    SYS CAT row ":ok"
+    LET row = LAST
+    SYS GREPV "stage:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "stage ok"
+  END
+  PRINT_JSON admit_n bag_n w_src
+  CLEAR_ERR
+END
+
+SYS EQS op "snap"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF w_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "snap needs work"
+    FAIL "snap needs work"
+    CLEAR_ERR
+  ELSE
+    IF s_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "snap needs snap dest"
+      FAIL "snap needs snap dest"
+      CLEAR_ERR
+    ELSE
+      SYS EXIST work_dir
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "snap needs stage first"
+        FAIL "snap needs stage first"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "snap needs stage first"
+        END
+      ELSE
+        CPTREE work_dir snap_dir
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "snap failed"
+          FAIL "snap failed"
+          CLEAR_ERR
+          IF require_hit > 0 THEN
+            EXIT 2 "snap failed"
+          END
+        ELSE
+          LET tree_n = CPTREE_N
+          LET tree_bytes = CPTREE_BYTES
+          CLEAR_ERR
+          SYS JOIN snap_dir "a/b/marker.txt"
+          SYS EXIST LAST
+          LET has_n = LAST_N
+          CLEAR_ERR
+          SYS CAT "snap:"
+          LET row = LAST
+          SYS CAT row snap_dir
+          LET row = LAST
+          SYS CAT row ":"
+          LET row = LAST
+          SYS STR tree_n
+          SYS CAT row LAST
+          LET row = LAST
+          SYS CAT row ":cp"
+          LET row = LAST
+          SYS GREPV "snap:" bag
+          LET bag = LAST
+          CLEAR_ERR
+          SYS PUSH bag row
+          LET bag = LAST
+          LET bag_ch = 1
+          LET admit_n = 1
+          SYS LINES bag
+          LET bag_n = LAST_N
+          LET hit = 1
+          LET note_msg = "snap ok"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n tree_n tree_bytes has_n s_src
+  CLEAR_ERR
+END
+
+SYS EQS op "wipe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # target: rest tag "snap" wipes snap_dir else work_dir
+  LET wipe_tgt = work_dir
+  SYS EQS tag "snap"
+  IF LAST_N == 1 THEN
+    LET wipe_tgt = snap_dir
+  END
+  CLEAR_ERR
+  SYS BLANK wipe_tgt
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "wipe needs path"
+    FAIL "wipe needs path"
+    CLEAR_ERR
+  ELSE
+    RMTREE wipe_tgt
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "wipe failed"
+      FAIL "wipe failed"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "wipe failed"
+      END
+    ELSE
+      LET tree_n = RMTREE_N
+      CLEAR_ERR
+      SYS EXIST wipe_tgt
+      LET has_n = LAST_N
+      CLEAR_ERR
+      SYS CAT "wipe:"
+      LET row = LAST
+      SYS CAT row wipe_tgt
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR tree_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":rm"
+      LET row = LAST
+      SYS GREPV "wipe:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      LET hit = 1
+      LET note_msg = "wipe ok"
+    END
+  END
+  PRINT_JSON admit_n bag_n tree_n has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET row = LAST
+    SYS CAT row ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET row = LAST
+  SYS BLANK row
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs key"
+    FAIL "has needs key"
+    CLEAR_ERR
+  ELSE
+    SYS CAT row ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  CPTREE "" "x"
+  LET has_n = OK
+  CLEAR_ERR
+  RMTREE ""
+  LET admit_n = OK
+  CLEAR_ERR
+  # missing rmtree soft OK=1 N=0
+  RMTREE "/no/such/cubalc_wst_missing_xyz"
+  LET tree_n = RMTREE_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON has_n admit_n tree_n w_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+LET row = "schema=cubalc.workspace_tree_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "tree_n"
+LET row = LAST
+SYS STR tree_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "workspace_tree_board: done"
+PRINT_JSON hit miss bag_n tree_n tree_bytes has_n w_src note_msg
+EXIT 0
