@@ -1,0 +1,96 @@
+# plate_patch lib — multi-key overlay + save without MERGE+SAVE glue
+# Usability: INCLUDE after building PLATE_PATCH; composes with plate_boot.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_plate_patch"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS JOIN dir "fresh.json"
+LET fresh = LAST
+SYS RM path
+SYS RM fresh
+
+# --- with plate_boot (in-memory MERGEP path) ---
+DEFAULT PLATE_PATH = path
+DEFAULT PLATE_SEED = "{\"n\":1,\"ok\":true,\"keep\":\"yes\"}"
+INCLUDE plate_boot
+ASSERT OK == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+
+SYS JSONOBJ "status" "ready" "n" 9 "peer" "a"
+LET PLATE_PATCH = LAST
+INCLUDE plate_patch
+ASSERT OK == 1
+ASSERT SAVEPLATE_OK == 1
+# PLATE still content after save
+SYS JSON "status" FROM PLATE
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+SYS JSON "peer" FROM PLATE
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 9
+SYS JSON "keep" FROM PLATE
+SYS EQS LAST "yes"
+ASSERT LAST_N == 1
+SYS JSON "ok" FROM PLATE
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# durable
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+LET loaded = LAST
+SYS JSON "status" FROM loaded
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 9
+SYS JSON "keep" FROM loaded
+SYS EQS LAST "yes"
+ASSERT LAST_N == 1
+
+# second patch round
+SYS JSONOBJ "phase" "run"
+LET PLATE_PATCH = LAST
+INCLUDE plate_patch
+SYS PEEKPLATE path "phase"
+SYS EQS LAST "run"
+ASSERT LAST_N == 1
+
+# --- without prior PLATE (JSONFILEMERGE create path) ---
+UNSET PLATE
+LET PLATE_PATH = fresh
+SYS JSONOBJ "boot" 1 "role" "seed"
+LET PLATE_PATCH = LAST
+INCLUDE plate_patch
+ASSERT OK == 1
+SYS JSONN "boot" FROM PLATE
+ASSERT LAST_N == 1
+SYS JSON "role" FROM PLATE
+SYS EQS LAST "seed"
+ASSERT LAST_N == 1
+SYS LOADPLATE fresh
+ASSERT LOADPLATE_HIT == 1
+
+# empty patch keeps base
+SYS JSONOBJ
+LET PLATE_PATCH = LAST
+INCLUDE plate_patch
+SYS JSON "role" FROM PLATE
+SYS EQS LAST "seed"
+ASSERT LAST_N == 1
+
+# discovery
+SYS WHICH plate_patch
+SYS HAS LAST "plate_patch"
+ASSERT LAST_N == 1
+
+PRINT "plate_patch ok"

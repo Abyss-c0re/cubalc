@@ -1,0 +1,27 @@
+# INCLUDE plate_patch — apply PLATE_PATCH overlay then persist
+# Usability: multi-key agent status update without MERGEP/JSONFILEMERGE + SAVE glue
+#
+#   DEFAULT PLATE_PATH = "state/my_agent.json"
+#   DEFAULT PLATE_SEED = "{}"
+#   SYS JSONOBJ "status" "ready" "peer" "a"
+#   LET PLATE_PATCH = LAST
+#   INCLUDE plate_patch
+#   # PLATE = merged · file saved · works with or without prior plate_boot
+#
+# If PLATE is already defined (after plate_boot), MERGEP in-memory then SAVE.
+# If not, JSONFILEMERGE creates/updates the disk plate and loads PLATE.
+# HOLD_FLASH not required (same policy as plate_boot/plate_save).
+
+DEFAULT PLATE_PATH = "state/agent_plate.json"
+DEFAULT PLATE_SEED = "{}"
+DEFAULT PLATE_PATCH = "{}"
+
+DEFINED PLATE
+IF LAST_N == 1 THEN
+  MERGEP PLATE_PATCH
+ELSE
+  SYS JSONFILEMERGE PLATE_PATH PLATE_PATCH
+  LET PLATE = LAST
+END
+SYS SAVEPLATE PLATE_PATH PLATE
+# PLATE content remains (SAVEPLATE sets LAST = abs path only)
