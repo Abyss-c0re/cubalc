@@ -3664,6 +3664,133 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 abslink, target, replaced, created);
       bump(vm); return 1;
     }
+    /* SYS TEEOUT|TEEWOUT path data — mkdir parent + write keep content in LAST.
+     * Twin of top-level TEEOUT. LAST = data · TEEOUT_PATH = abs file · LAST_N=bytes. */
+    if (kw(&L->cur,"TEEOUT") || kw(&L->cur,"TEEWOUT") || kw(&L->cur,"ENSURETEE") ||
+        kw(&L->cur,"TEEPARENT") || kw(&L->cur,"NESTTEE") || kw(&L->cur,"PLATETEE") ||
+        kw(&L->cur,"SAVEKEEPOUT") || kw(&L->cur,"WRITEKEEPOUT") || kw(&L->cur,"KEEPWRITEOUT")){
+      char path[CUBALC_HOST_STR_MAX], data[CUBALC_HOST_STR_MAX];
+      char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+      const char *slash;
+      size_t n;
+      int created = 0;
+      cubalc_host_result hr;
+      lex_next(L);
+      path[0] = 0; data[0] = 0;
+      absfile[0] = 0; parent[0] = 0; absparent[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS TEEOUT path data");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, data, sizeof data) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long nv = parse_expr(vm, L);
+          snprintf(data, sizeof data, "%ld", nv);
+        } else {
+          snprintf(data, sizeof data, "%s", vm->last_str);
+        }
+      }
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "TEEOUT: empty path");
+        var_set_str(vm, "ERR", "TEEOUT: empty path");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TEEOUT_N", 0);
+        var_set_num(vm, "TEEOUT_CREATED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+        snprintf(absfile, sizeof absfile, "%s", hr.str);
+      else
+        snprintf(absfile, sizeof absfile, "%s", path);
+      {
+        char work[CUBALC_HOST_STR_MAX];
+        snprintf(work, sizeof work, "%s", absfile);
+        n = strlen(work);
+        while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+          work[n - 1] = 0;
+          n--;
+        }
+        slash = cubalc_path_slash(work);
+        if (slash && slash != work) {
+          size_t dn = (size_t)(slash - work);
+          if (dn >= sizeof parent) dn = sizeof parent - 1;
+          memcpy(parent, work, dn);
+          parent[dn] = 0;
+        } else if (slash && slash == work) {
+          snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+        } else {
+          snprintf(parent, sizeof parent, ".");
+        }
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      else
+        snprintf(absparent, sizeof absparent, "%s", parent);
+      created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_mkdir(absparent, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "TEEOUT: mkdir parent failed";
+        var_set_str(vm, "LAST", data);
+        var_set_str(vm, "TEEOUT_PATH", absfile);
+        var_set_str(vm, "TEEOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", data);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TEEOUT_N", 0);
+        var_set_num(vm, "TEEOUT_CREATED", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      if (hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_write(absfile, data, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "TEEOUT: write failed";
+        var_set_str(vm, "LAST", data);
+        var_set_str(vm, "TEEOUT_PATH", absfile);
+        var_set_str(vm, "TEEOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", data);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TEEOUT_N", 0);
+        var_set_num(vm, "TEEOUT_CREATED", (long)created);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      /* LAST = body (not path) — chain HAS/GREP without READ back */
+      var_set_str(vm, "LAST", data);
+      var_set_str(vm, "TEE", data);
+      var_set_str(vm, "TEEOUT", data);
+      var_set_str(vm, "TEEOUT_PATH", absfile);
+      var_set_str(vm, "TEE_PATH", absfile);
+      var_set_str(vm, "PATH", absfile);
+      var_set_str(vm, "TEEOUT_PARENT", absparent);
+      var_set_str(vm, "DIRNAME", absparent);
+      var_set_str(vm, "PARENT", absparent);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", data);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "TEEOUT_N", hr.n);
+      var_set_num(vm, "TEE_N", hr.n);
+      var_set_num(vm, "TEEOUT_CREATED", (long)created);
+      var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+      var_set_num(vm, "PATH_EXIST", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys teeout → %s bytes=%ld created=%d\n",
+                absfile, hr.n, created);
+      bump(vm); return 1;
+    }
     /* SYS FSYNC|SYNCFILE|FDATASYNC path — flush file data+metadata to disk.
      * LAST = path; LAST_N = 1 success / 0 soft miss; FSYNC_N mirrors LAST_N.
      * Opens O_RDONLY, fsync(fd), close. Soft miss on empty/open/fsync fail.
@@ -28216,6 +28343,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS HARDLINKOUT", "SYS HARDLINKOUT|HLOUT existing newpath — mkdir parent + hardlink · twin of top-level HARDLINKOUT"},
       {"RELINKOUT", "RELINKOUT|RELINK target linkpath — ENSUREPARENT; RM if exists; SYMLINK · update nested aliases"},
       {"SYS RELINKOUT", "SYS RELINKOUT|RELINK target linkpath — mkdir parent + replace symlink · twin of top-level RELINKOUT"},
+      {"TEEOUT", "TEEOUT|TEEWOUT path data — ENSUREPARENT + write keep body in LAST · TEEOUT_PATH=abs file"},
+      {"SYS TEEOUT", "SYS TEEOUT|TEEWOUT path data — mkdir parent + tee write · twin of top-level TEEOUT"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -33444,6 +33573,134 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# relinkout → %s → %s replaced=%d created=%d\n",
               abslink, target, replaced, created);
+    bump(vm); return 1;
+  }
+  /* TEEOUT|TEEWOUT path data — ENSUREPARENT + write keep content in LAST.
+   * LAST = data body · TEEOUT_PATH = abs file · TEEOUT_PARENT · CREATED · LAST_N=bytes.
+   * Soft empty/mkdir/write fail → OK=0 sticky LAST_ERR (LAST still data when possible).
+   * Usability: nested plate write then GREP/HAS without READ back or path clobber. */
+  if (kw(&L->cur,"TEEOUT") || kw(&L->cur,"TEEWOUT") || kw(&L->cur,"ENSURETEE") ||
+      kw(&L->cur,"TEEPARENT") || kw(&L->cur,"NESTTEE") || kw(&L->cur,"PLATETEE") ||
+      kw(&L->cur,"SAVEKEEPOUT") || kw(&L->cur,"WRITEKEEPOUT") || kw(&L->cur,"KEEPWRITEOUT")){
+    char path[CUBALC_HOST_STR_MAX], data[CUBALC_HOST_STR_MAX];
+    char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+    const char *slash;
+    size_t n;
+    int created = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    path[0] = 0; data[0] = 0;
+    absfile[0] = 0; parent[0] = 0; absparent[0] = 0;
+    if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+      fail_at(vm, L, "TEEOUT needs path — TEEOUT \"a/b/c.json\" \"data\"|var");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, data, sizeof data) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(data, sizeof data, "%ld", nv);
+      } else {
+        snprintf(data, sizeof data, "%s", vm->last_str);
+      }
+    }
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "TEEOUT: empty path");
+      var_set_str(vm, "ERR", "TEEOUT: empty path");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "TEEOUT_N", 0);
+      var_set_num(vm, "TEEOUT_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+      snprintf(absfile, sizeof absfile, "%s", hr.str);
+    else
+      snprintf(absfile, sizeof absfile, "%s", path);
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", absfile);
+      n = strlen(work);
+      while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+        work[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else if (slash && slash == work) {
+        snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+      } else {
+        snprintf(parent, sizeof parent, ".");
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "TEEOUT: mkdir parent failed";
+      var_set_str(vm, "LAST", data);
+      var_set_str(vm, "TEEOUT_PATH", absfile);
+      var_set_str(vm, "TEEOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", data);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "TEEOUT_N", 0);
+      var_set_num(vm, "TEEOUT_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_write(absfile, data, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "TEEOUT: write failed";
+      var_set_str(vm, "LAST", data);
+      var_set_str(vm, "TEEOUT_PATH", absfile);
+      var_set_str(vm, "TEEOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", data);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "TEEOUT_N", 0);
+      var_set_num(vm, "TEEOUT_CREATED", (long)created);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    var_set_str(vm, "LAST", data);
+    var_set_str(vm, "TEE", data);
+    var_set_str(vm, "TEEOUT", data);
+    var_set_str(vm, "TEEOUT_PATH", absfile);
+    var_set_str(vm, "TEE_PATH", absfile);
+    var_set_str(vm, "PATH", absfile);
+    var_set_str(vm, "TEEOUT_PARENT", absparent);
+    var_set_str(vm, "DIRNAME", absparent);
+    var_set_str(vm, "PARENT", absparent);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", data);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_num(vm, "TEEOUT_N", hr.n);
+    var_set_num(vm, "TEE_N", hr.n);
+    var_set_num(vm, "TEEOUT_CREATED", (long)created);
+    var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# teeout → %s bytes=%ld created=%d\n",
+              absfile, hr.n, created);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]

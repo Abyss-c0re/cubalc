@@ -1,0 +1,87 @@
+# TEEOUT / TEEWOUT — ENSUREPARENT + write keep content in LAST
+# Nested plate write then GREP/HAS without READ back or path clobber.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_tee_"
+SYS CAT LAST pid
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+# nested missing parents — LAST is body not path
+SYS JOIN root "a/b/plate.json"
+LET f = LAST
+TEEOUT f "{\"ok\":1,\"v\":2}"
+ASSERT OK == 1
+ASSERT TEEOUT_CREATED == 1
+ASSERT LAST_N > 0
+SYS HAS LAST "ok"
+ASSERT LAST_N == 1
+SYS HAS LAST "v"
+ASSERT LAST_N == 1
+SYS STARTS TEEOUT_PATH "/"
+ASSERT LAST_N == 1
+SYS ENDS TEEOUT_PATH "plate.json"
+ASSERT LAST_N == 1
+SYS ENDS TEEOUT_PARENT "b"
+ASSERT LAST_N == 1
+SYS ISFILE TEEOUT_PATH
+ASSERT LAST_N == 1
+# disk matches body
+SYS READ f
+SYS HAS LAST "ok"
+ASSERT LAST_N == 1
+
+# second write parent exists
+TEEOUT f "{\"ok\":1,\"v\":3}"
+ASSERT OK == 1
+ASSERT TEEOUT_CREATED == 0
+SYS HAS LAST "v"
+ASSERT LAST_N == 1
+SYS HAS LAST "3"
+ASSERT LAST_N == 1
+
+# TEEWOUT alias + numeric body
+SYS JOIN root "x/y/n.txt"
+LET npath = LAST
+TEEWOUT npath 42
+ASSERT OK == 1
+ASSERT TEEOUT_CREATED == 1
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+SYS ENDS TEEOUT_PATH "n.txt"
+ASSERT LAST_N == 1
+SYS READ npath
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+# SYS form
+SYS JOIN root "sys/deep/out.txt"
+LET sp = LAST
+SYS TEEOUT sp "sys-body"
+ASSERT OK == 1
+SYS EQS LAST "sys-body"
+ASSERT LAST_N == 1
+SYS ENDS TEEOUT_PATH "out.txt"
+ASSERT LAST_N == 1
+SYS READ sp
+SYS EQS LAST "sys-body"
+ASSERT LAST_N == 1
+
+# empty path soft
+TEEOUT "" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS WALK root
+SYS RMALL LAST
+SYS RM root
