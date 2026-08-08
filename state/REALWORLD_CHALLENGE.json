@@ -903,6 +903,6 @@
     "VAL last-line omit NL (W5); plate STATUS cite::: with needle :",
     "selftest 355/355"
   ],
-  "commit": "",
+  "commit": "bd6bc5ca43c9ee00e5bb94fed0a59e143c4db38b",
   "ts": "2026-08-08T08:18:30Z"
 }
