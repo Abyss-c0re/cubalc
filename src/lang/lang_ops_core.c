@@ -1166,6 +1166,107 @@ static int cubalc_scan_cli_flag_any(const char *names_bag, char *out, size_t out
   return 0;
 }
 
+/* Collect ALL CLI values for any of names_bag aliases → newline bag.
+ * --name=v / -name=v / --name v / bare --name → "1". Multi-occurrence kept.
+ * first_hit = first matching alias. Returns field count.
+ * Usability: GETFLAGALL tags --tag a --tag b without EACH ARGS. */
+static int cubalc_scan_cli_flag_all(const char *names_bag, char *out, size_t outn,
+                                    char *first_hit, size_t hitn) {
+  char envn[32];
+  const char *ac;
+  int argc = 32, k, count = 0;
+  size_t olen = 0;
+  if (out && outn) out[0] = 0;
+  if (first_hit && hitn) first_hit[0] = 0;
+  if (!names_bag || !names_bag[0]) return 0;
+  ac = getenv("CUBALC_ARGC");
+  if (ac && ac[0]) {
+    argc = (int)strtol(ac, NULL, 10);
+    if (argc < 0) argc = 0;
+    if (argc > 32) argc = 32;
+  } else {
+    argc = 0;
+    for (k = 0; k < 32; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      if (!getenv(envn)) break;
+      argc++;
+    }
+  }
+  for (k = 0; k < argc; k++) {
+    const char *a, *p;
+    char alias[96], valbuf[CUBALC_HOST_STR_MAX];
+    size_t nlen;
+    int matched = 0;
+    snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+    a = getenv(envn);
+    if (!a || a[0] != '-') continue;
+    p = a + 1;
+    if (*p == '-') p++;
+    if (!*p) continue; /* bare -- */
+    /* peel longest matching alias prefix (name or name=val) */
+    {
+      const char *q = names_bag;
+      size_t best = 0;
+      alias[0] = 0;
+      while (*q) {
+        size_t j = 0;
+        char cand[96];
+        while (q[j] && q[j] != '\n' && j + 1 < sizeof cand) {
+          cand[j] = q[j];
+          j++;
+        }
+        cand[j] = 0;
+        if (j > 0 && strncmp(p, cand, j) == 0 && (p[j] == 0 || p[j] == '=')) {
+          if (j > best) {
+            best = j;
+            snprintf(alias, sizeof alias, "%s", cand);
+            matched = 1;
+          }
+        }
+        q += j;
+        if (*q == '\n') q++;
+      }
+      if (!matched) continue;
+      nlen = best;
+    }
+    valbuf[0] = 0;
+    if (p[nlen] == '=') {
+      snprintf(valbuf, sizeof valbuf, "%s", p + nlen + 1);
+    } else if (p[nlen] == 0) {
+      if (k + 1 < argc) {
+        char env2[32];
+        const char *b;
+        snprintf(env2, sizeof env2, "CUBALC_ARG%d", k + 1);
+        b = getenv(env2);
+        if (b && b[0] && b[0] != '-') {
+          snprintf(valbuf, sizeof valbuf, "%s", b);
+          k++; /* skip value arg */
+        } else {
+          snprintf(valbuf, sizeof valbuf, "%s", "1");
+        }
+      } else {
+        snprintf(valbuf, sizeof valbuf, "%s", "1");
+      }
+    } else
+      continue;
+    if (count == 0 && first_hit && hitn)
+      snprintf(first_hit, hitn, "%s", alias);
+    if (out && outn) {
+      size_t vl = strlen(valbuf);
+      if (olen > 0 && olen + 1 < outn) {
+        out[olen++] = '\n';
+        out[olen] = 0;
+      }
+      if (olen + vl < outn) {
+        memcpy(out + olen, valbuf, vl + 1);
+        olen += vl;
+      }
+    }
+    count++;
+  }
+  return count;
+}
+
 /* Truthy CLI / plate strings: 1 true yes y on t → 1;
  * empty 0 false no n off f → 0; other non-empty → 1.
  * Usability: BOOLFLAG / TRUTHY without EQS soup. */
@@ -26471,6 +26572,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR 0|1] — truthy flag · verbose|v · FLAG_HIT_NAME"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR n] — int peel · workers|w OR 4 · FLAG_HIT_NAME"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR dur] — ms peel · timeout|t · FLAG_HIT_NAME"},
+      {"GETFLAGALL", "GETFLAGALL|FLAGALL|MULTIFLAG name[,|alt] [OR bag] — all --name values → newline bag · LAST_N=count"},
       {"FLAG_HIT_NAME", "FLAG_HIT_NAME|FLAG_ALIAS — which flag alias matched after HASFLAG/GETFLAG*"},
       {"TRUTHY", "TRUTHY str|var — soft 0|1 if 1/true/yes/on (or non-empty non-falsy)"},
       {"FALSY", "FALSY str|var — soft 0|1 if empty/0/false/no/off · dual of TRUTHY"},
@@ -29519,6 +29621,73 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# getflagms %s hit=%s ms=%ld bad=%d\n",
               name, hitnm, ms, bad);
+    bump(vm); return 1;
+  }
+  /* GETFLAGALL|FLAGALL|MULTIFLAG name[,|alt...] [OR|DEFAULT bag]
+   * Collect every CLI occurrence of --name / -name into a newline bag.
+   * --name=v / --name v / bare --name → "1". LAST = bag · LAST_N = count.
+   * GETFLAGALL_HIT 0|1 (CLI match, not OR) · FLAG_HIT_NAME first alias.
+   * Usability: --tag a --tag b without EACH RESTARGS/ARGS rebuild. */
+  if (kw(&L->cur,"GETFLAGALL") || kw(&L->cur,"FLAGALL") || kw(&L->cur,"MULTIFLAG") ||
+      kw(&L->cur,"GETFLAGS") || kw(&L->cur,"ALLFLAGS") || kw(&L->cur,"FLAGLIST") ||
+      kw(&L->cur,"COLLECTFLAG") || kw(&L->cur,"GETFLAG_ALL")){
+    char name[96], aliases[384], hitnm[96], bag[CUBALC_HOST_STR_MAX], fb[CUBALC_HOST_STR_MAX];
+    int cli_n, count, have_fb = 0, nac;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    bag[0] = 0;
+    fb[0] = 0;
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      fail_at(vm, L, "GETFLAGALL needs name — GETFLAGALL tags|t");
+      return -1;
+    }
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "GETFLAGALL name OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    cli_n = cubalc_scan_cli_flag_all(aliases, bag, sizeof bag, hitnm, sizeof hitnm);
+    count = cli_n;
+    if (cli_n <= 0) {
+      if (have_fb) {
+        snprintf(bag, sizeof bag, "%s", fb);
+        if (fb[0]) {
+          const char *s = fb;
+          count = 1;
+          while (*s) {
+            if (*s == '\n') count++;
+            s++;
+          }
+        } else
+          count = 0;
+      } else {
+        bag[0] = 0;
+        count = 0;
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FLAG", bag);
+    var_set_str(vm, "GETFLAGALL", name);
+    var_set_str(vm, "FLAGALL", bag);
+    var_set_str(vm, "FLAG_HIT_NAME", cli_n > 0 ? hitnm : "");
+    var_set_str(vm, "FLAG_ALIAS", cli_n > 0 ? hitnm : "");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = (long)count;
+    var_set_num(vm, "LAST_N", (long)count);
+    var_set_num(vm, "GETFLAGALL_N", (long)count);
+    var_set_num(vm, "FLAGALL_N", (long)count);
+    var_set_num(vm, "GETFLAGALL_HIT", cli_n > 0 ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# getflagall %s cli=%d count=%d hit=%s\n",
+              name, cli_n, count, hitnm[0] ? hitnm : "");
     bump(vm); return 1;
   }
   /* TRUTHY str|var|LAST — soft 0|1 if string is truthy (1/true/yes/on or non-empty).

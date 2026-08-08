@@ -489,6 +489,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 459. ~~**flag aliases**~~ **done** (`GETFLAGN workers|w` · `,`/`|` multi-name · `FLAG_HIT_NAME` · short flags without dual HASFLAG).
 460. ~~**`HELPFLAG` / `AUTOHELP`**~~ **done** (if --help|-h print sticky USAGE + EXIT 0 · default help|h|usage · no HASFLAG+IF+EXIT glue).
 461. ~~**`VERSIONFLAG` / `VERFLAG`**~~ **done** (if --version|-V print VERSION/PROG_VERSION + EXIT 0 · default version|V|ver · twin of HELPFLAG).
+462. ~~**`GETFLAGALL` / `MULTIFLAG`**~~ **done** (all --name occurrences → newline bag · LAST_N=count · tags without EACH ARGS).
 
 ## Tick protocol
 
