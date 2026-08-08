@@ -1,0 +1,109 @@
+# FIRSTINTREE / LASTINTREE / GREP1TREE — first/last content match under tree
+# One-shot pick without GREPTREE+TAKE/REVL glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_fit_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# nested files in DFS order: a/err, a/b/mid, a/b/z, plain
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "error first"
+ASSERT OK == 1
+SYS JOIN base "a/b/mid.txt"
+WRITEOUT LAST "error middle"
+ASSERT OK == 1
+SYS JOIN base "a/b/z.txt"
+WRITEOUT LAST "error last"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "ok only"
+ASSERT OK == 1
+
+# first match — sorted DFS: a/b/mid.txt before a/err.log
+FIRSTINTREE base "error"
+ASSERT OK == 1
+ASSERT FIRSTINTREE_HIT == 1
+ASSERT LAST_N == 1
+SYS ENDS LAST "mid.txt"
+ASSERT LAST_N == 1
+
+# last match — a/err.log after a/b/* alphabetically? err.log after b/ so last is err.log
+# under a/: b/ then err.log; under b/: mid then z → hits mid, z, err → last err.log
+LASTINTREE base "error"
+ASSERT OK == 1
+ASSERT LASTINTREE_HIT == 1
+SYS ENDS LAST "err.log"
+ASSERT LAST_N == 1
+
+# GREP1TREE alias
+GREP1TREE base "middle"
+ASSERT OK == 1
+ASSERT FIRSTINTREE_HIT == 1
+SYS HAS LAST "mid.txt"
+ASSERT LAST_N == 1
+
+# no match
+FIRSTINTREE base "zzzz_nope"
+ASSERT OK == 1
+ASSERT FIRSTINTREE_HIT == 0
+ASSERT LAST_N == 0
+ASSERT LAST == ""
+
+# case-insensitive
+FIRSTINTREEI base "ERROR"
+ASSERT OK == 1
+ASSERT FIRSTINTREE_HIT == 1
+SYS ENDS LAST "mid.txt"
+ASSERT LAST_N == 1
+LASTINTREEI base "ERROR"
+ASSERT OK == 1
+SYS ENDS LAST "err.log"
+ASSERT LAST_N == 1
+
+# single file root hit/miss
+SYS JOIN base "plain.txt"
+LET p = LAST
+FIRSTINTREE p "ok"
+ASSERT OK == 1
+ASSERT FIRSTINTREE_HIT == 1
+FIRSTINTREE p "error"
+ASSERT OK == 1
+ASSERT FIRSTINTREE_HIT == 0
+
+# SYS form
+SYS FIRSTINTREE base "middle"
+ASSERT OK == 1
+ASSERT FIRSTINTREE_N == 1
+SYS LASTINTREE base "middle"
+ASSERT OK == 1
+ASSERT LASTINTREE_N == 1
+
+# missing soft
+FIRSTINTREE "/no/such/firstintree" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty soft
+FIRSTINTREE "" "x"
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+RMTREE base
+ASSERT OK == 1
+
+PRINT "firstintree ok"
+ASSERT OK == 1

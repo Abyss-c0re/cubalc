@@ -74,6 +74,11 @@ int cubalc_host_countintree(const char *root, const char *needle, int icase,
  * Empty needle → all lines. Case-insensitive when icase!=0. */
 int cubalc_host_greplines_tree(const char *root, const char *needle, int icase,
                                cubalc_host_result *r);
+/* first or last regular file under root whose content matches needle.
+ * want_last=0 first (DFS), =1 last. r->str=path; r->n=1|0. Soft miss root → -1.
+ * Empty needle → first/last readable regular file. */
+int cubalc_host_findintree(const char *root, const char *needle, int icase,
+                           int want_last, cubalc_host_result *r);
 /* rename/move path; soft miss if from missing */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */

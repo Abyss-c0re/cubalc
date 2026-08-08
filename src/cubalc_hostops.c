@@ -1489,6 +1489,126 @@ int cubalc_host_greplines_tree(const char *root, const char *needle, int icase,
   return 0;
 }
 
+/* File content contains needle? Empty needle → yes if readable. */
+static int cubalc_file_has_needle(const char *path, const char *needle, int icase) {
+  cubalc_host_result hr;
+  size_t nlen;
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_read(path, &hr) != 0) return 0;
+  if (!needle || !needle[0]) return 1;
+  nlen = strlen(needle);
+  (void)nlen;
+  if (!icase) return strstr(hr.str, needle) != NULL;
+  return cubalc_str_has_icase(hr.str, needle);
+}
+
+/* qsort basenames for deterministic FIRST/LAST under tree. */
+static int cubalc_name_cmp(const void *a, const void *b) {
+  return strcmp((const char *)a, (const char *)b);
+}
+
+/* DFS walk with sorted basenames: set found path.
+ * First → stop on first hit; last → keep updating found. */
+static int cubalc_findintree_rec(const char *dir, const char *needle, int icase,
+                                 int want_last, char *found, size_t foundn, int depth) {
+  DIR *d;
+  struct dirent *ent;
+  struct stat st;
+  int any = 0, nnames = 0, i;
+  char names[256][256];
+  if (!dir || !dir[0] || depth > 64 || !found) return 0;
+  d = opendir(dir);
+  if (!d) return 0;
+  while ((ent = readdir(d)) != NULL && nnames < 256) {
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+    if (strlen(ent->d_name) >= 256) continue;
+    snprintf(names[nnames], sizeof names[nnames], "%s", ent->d_name);
+    nnames++;
+  }
+  closedir(d);
+  if (nnames > 1)
+    qsort(names, (size_t)nnames, sizeof names[0], cubalc_name_cmp);
+  for (i = 0; i < nnames; i++) {
+    char full[CUBALC_HOST_STR_MAX];
+    if (cubalc_join_child(dir, names[i], full, sizeof full) != 0)
+      continue;
+    if (lstat(full, &st) != 0) continue;
+    if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+        && !S_ISLNK(st.st_mode)
+#endif
+        ) {
+      if (cubalc_findintree_rec(full, needle, icase, want_last, found, foundn, depth + 1)) {
+        any = 1;
+        if (!want_last) return 1;
+      }
+      continue;
+    }
+    if (!S_ISREG(st.st_mode)) continue;
+    if (cubalc_file_has_needle(full, needle, icase)) {
+      snprintf(found, foundn, "%s", full);
+      any = 1;
+      if (!want_last) return 1;
+    }
+  }
+  return any;
+}
+
+/* Usability: SYS FIRSTINTREE|LASTINTREE root needle — first/last content match under tree
+ * without GREPTREE+TAKE/REVL glue. r->str=path; r->n=1|0. Soft miss root → -1. */
+int cubalc_host_findintree(const char *root, const char *needle, int icase,
+                           int want_last, cubalc_host_result *r) {
+  char abs[CUBALC_HOST_STR_MAX], found[CUBALC_HOST_STR_MAX];
+  struct stat st;
+  cubalc_host_result hr;
+  int hit = 0;
+  r_clear(r);
+  if (!root || !root[0]) {
+    snprintf(r->err, sizeof r->err, "findintree: empty path");
+    return -1;
+  }
+  if (!needle) needle = "";
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(root, &hr) == 0 && hr.str[0])
+    snprintf(abs, sizeof abs, "%s", hr.str);
+  else
+    snprintf(abs, sizeof abs, "%s", root);
+  if (lstat(abs, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "findintree: missing");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "findintree: %s", strerror(errno));
+    return -1;
+  }
+  found[0] = 0;
+  if (S_ISREG(st.st_mode)) {
+    if (cubalc_file_has_needle(abs, needle, icase)) {
+      snprintf(found, sizeof found, "%s", abs);
+      hit = 1;
+    }
+  } else if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+             && !S_ISLNK(st.st_mode)
+#endif
+             ) {
+    hit = cubalc_findintree_rec(abs, needle, icase, want_last, found, sizeof found, 0);
+  } else {
+    snprintf(r->err, sizeof r->err, "findintree: not a file or directory");
+    return -1;
+  }
+  if (hit && found[0]) {
+    snprintf(r->str, sizeof r->str, "%s", found);
+    r->n = 1;
+  } else {
+    r->str[0] = 0;
+    r->n = 0;
+  }
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS RENAME|MV from to — move plate without shell. */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) {
   r_clear(r);
