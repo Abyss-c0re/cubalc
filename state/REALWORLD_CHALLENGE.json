@@ -1,63 +1,69 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 197,
-  "program": "programs/realworld/agent_json_plate_extremes_board.cubalc",
-  "theme": "JSONMAXN + JSONMINN + JSONTOPKEY + JSONBOTKEY load extremes / hot-cold keys",
-  "version": "1.15.525-usability",
+  "iter": 198,
+  "program": "programs/realworld/agent_json_plate_contract_board.cubalc",
+  "theme": "JSONAVGN + JSONEQ + JSONSUBSET peer status contract / mean load gate",
+  "version": "1.15.528-usability",
   "pass": true,
-  "prior_note": "iter 196 LEN+EMPTY+SUMN health; this iter first realworld MAXN(1075)+MINN+TOPKEY(1074)+BOTKEY extremes board",
+  "prior_note": "iter 197 MAXN+TOPKEY extremes; this iter first realworld AVGN(1076)+EQ(1077)+SUBSET(1078) contract board",
   "tests": [
     {
       "name": "mint",
-      "cmd": "JSONOBJ 6 keys s0..s4+label",
+      "cmd": "status+peer(order-diff)+req schema",
       "ok": true,
-      "note": "mint pure-numeric shards"
+      "note": "mint triad"
     },
     {
-      "name": "maxn",
-      "cmd": "JSONMAXN=40; peel s2 after LAST kept",
+      "name": "avgn",
+      "cmd": "PICK load/err/warn mean=5 used=3 peel load",
       "ok": true,
-      "note": "MAXN"
+      "note": "AVGN"
     },
     {
-      "name": "minn",
-      "cmd": "JSONMINN=3; peel s1 chain",
+      "name": "eq",
+      "cmd": "order-independent EQ match=1",
       "ok": true,
-      "note": "MINN"
+      "note": "EQ"
     },
     {
-      "name": "topkey",
-      "cmd": "TOPKEY s2=40; LAST=key not plate",
+      "name": "neq",
+      "cmd": "equal peer → NEQ=0 soft same",
       "ok": true,
-      "note": "TOPKEY"
+      "note": "NEQ same"
     },
     {
-      "name": "botkey",
-      "cmd": "BOTKEY s1=3",
+      "name": "subset",
+      "cmd": "req ⊆ status =1",
       "ok": true,
-      "note": "BOTKEY"
+      "note": "SUBSET"
     },
     {
-      "name": "span",
-      "cmd": "max-min=37 hot=s2 cold=s1",
+      "name": "covers",
+      "cmd": "status ⊇ req SUPERSET=1",
       "ok": true,
-      "note": "span"
+      "note": "COVERS"
     },
     {
       "name": "gate",
-      "cmd": "admit max50 min1 span40; deny max30; deny span20; deny min10",
+      "cmd": "admit avg5∈[2,20]; deny min10; deny max3",
       "ok": true,
       "note": "gate"
     },
     {
+      "name": "peer",
+      "cmd": "extra key → EQ0 NEQ1 SUBSET1",
+      "ok": true,
+      "note": "diverge"
+    },
+    {
       "name": "probe",
-      "cmd": "empty soft0; bool live→min1 bot=live; neg max0",
+      "cmd": "soft empty; trunc mean1; bool mean3; order EQ",
       "ok": true,
       "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_AJPEX_REQUIRE=1 empty → shell 2",
+      "cmd": "CUBALC_AJPCT_REQUIRE=1 empty → shell 2",
       "ok": true,
       "note": "hard"
     },
@@ -1212,6 +1218,30 @@
       "title": "JSONTOPKEY/BOTKEY overwrite LAST with key; MAXN keeps plate",
       "detail": "Asymmetric LAST contract: JSONMAXN/MINN set LAST=plate + LAST_N=v (chain peel ok). JSONTOPKEY/BOTKEY set LAST=key + LAST_N=v so subsequent JSONN FROM LAST fails. Agents must LET key=LAST then peel FROM saved plate body. Easy footgun when mixing value+key extremes in one flow.",
       "repro": "JSONTOPKEY plate; JSONN k FROM LAST → miss; must JSONN k FROM body"
+    },
+    {
+      "id": "W144",
+      "severity": "high",
+      "area": "lang|vars",
+      "title": "Op side-channel vars (JSONAVGN_N/USED etc) silent-fail at n_vars=128",
+      "detail": "VM var table hard-caps at 128 (lang_core var_find create). Host op still computes (trace avg=5 used=3) and sets LAST_N, but var_set_num for new names JSONAVGN_N/JSONAVGN_USED returns without binding when full. LET x = JSONAVGN_N → 0 and gates deny/admit wrongly. Heavy agent_boot+GETFLAG*+locals boards hit this. Prefer LET x = LAST_N immediately; use JSONLEN for field counts instead of JSONAVGN_USED.",
+      "repro": "full contract board gate: trace avg=5 but LET avg_n=JSONAVGN_N → 0 until capture LAST_N"
+    },
+    {
+      "id": "W145",
+      "severity": "med",
+      "area": "lang|json_avgn",
+      "title": "JSONAVGN counts bools 0|1 and truncates toward 0",
+      "detail": "Same bool pollution class as SUMN/MAXN (W141/W142). (1+2)/2→1 trunc. PICK pure metrics before mean for SLO gates.",
+      "repro": "JSONAVGN {ok:true,flag:false,n:9,s:hi} → 3 used 3; {x:1,y:2} → 1"
+    },
+    {
+      "id": "W146",
+      "severity": "low",
+      "area": "lang|json_eq",
+      "title": "JSONEQ is exact key-set equality; extra keys fail even if required fields match",
+      "detail": "Peer with extra noise fails JSONEQ; use JSONSUBSET for required-field admit and JSONEQ only for full snapshot verify. SUPERSET dual of SUBSET. Documented positive: status⊆peer_with_extra SUBSET=1 EQ=0.",
+      "repro": "EQ status vs status+extra → 0; SUBSET status peer → 1"
     }
   ],
   "workarounds": [
@@ -1236,7 +1266,10 @@
     "Presence: JSONNONEMPTY or JSONLEN>0 not JSONEMPTY LAST_N (W139)",
     "Score: PICK numeric counters then SUMN to avoid bool inflation (W141)",
     "Extremes: PICK pure-numeric shard keys before MAXN/MINN/TOPKEY (W142)",
-    "After TOPKEY/BOTKEY: LET key_s=LAST immediately; peel FROM body not LAST (W143)"
+    "After TOPKEY/BOTKEY: LET key_s=LAST immediately; peel FROM body not LAST (W143)",
+    "After JSONAVGN/EQ/SUBSET: LET x = LAST_N not JSON*_N when near 128 vars (W144)",
+    "Mean load: JSONPICK metrics then AVGN; never whole status plate (W145)",
+    "Contract admit: SUBSET req status; full lockstep: JSONEQ (W146)"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1253,7 +1286,10 @@
     "JSONSUMN only-numeric mode excluding bools",
     "JSONMAXN/MINN/TOPKEY skip-bools / numbers-only mode",
     "JSONSPAN max-min peel without agent arithmetic",
-    "JSONTOPKEY keep-plate mode (LAST=plate LAST_KEY=key) to match MAXN"
+    "JSONTOPKEY keep-plate mode (LAST=plate LAST_KEY=key) to match MAXN",
+    "Raise or warn on n_vars=128; hard-fail var_set instead of silent drop",
+    "JSONAVGN numbers-only / skip-bools mode + non-trunc option",
+    "JSONEQ_KEYS optional ignore-extra mode (subset equality)"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1267,8 +1303,11 @@
     "selftest 355/355 green v1.15.525",
     "pipe to tail hid EXIT shell rc; bare cubalc → shell 2 ok",
     "bool live:true pollutes MINN/BOTKEY (W142)",
-    "TOPKEY LAST=key breaks chain peel (W143)"
+    "TOPKEY LAST=key breaks chain peel (W143)",
+    "selftest 355/355 green v1.15.528",
+    "JSONAVGN_N silent 0 under 128-var pressure; LAST_N capture fixes gate (W144)",
+    "bool pollution + trunc mean documented (W145)"
   ],
-  "commit": "617b56f",
-  "ts": "2026-08-08T13:44:21Z"
+  "commit": "pending",
+  "ts": "2026-08-08T14:11:58Z"
 }
