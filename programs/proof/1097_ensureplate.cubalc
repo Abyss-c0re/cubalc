@@ -1,0 +1,102 @@
+# ENSUREPLATE / TOUCHPLATE / SEEDPLATE — create-or-load agent state plate
+# Hit → LAST=content LAST_N=0 CREATED=0 · Miss → write defaults LAST_N=1 CREATED=1
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_ensureplate"
+LET dir = LAST
+SYS JOIN dir "deep/state.json"
+LET path = LAST
+
+SYS JSONOBJ "n" 0 "role" "worker" "ok" true
+LET seed = LAST
+
+# first call creates
+SYS ENSUREPLATE path OR seed
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT ENSUREPLATE_CREATED == 1
+ASSERT ENSUREPLATE_HIT == 0
+LET plate = LAST
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 0
+SYS JSON "role" FROM plate
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS EXIST path
+ASSERT LAST_N == 1
+
+# second call loads (no clobber)
+SYS JSONINC plate "n"
+LET plate = LAST
+SYS SAVEPLATE path plate
+ASSERT OK == 1
+SYS ENSUREPLATE path OR seed
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT ENSUREPLATE_CREATED == 0
+ASSERT ENSUREPLATE_HIT == 1
+LET plate = LAST
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 1
+# seed role not forced back
+SYS JSON "role" FROM plate
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# aliases
+SYS TOUCHPLATE path
+ASSERT ENSUREPLATE_HIT == 1
+SYS NEEDPLATE path
+ASSERT LAST_N == 0
+SYS SEEDPLATE path
+ASSERT ENSUREPLATE_CREATED == 0
+SYS BOOTPLATE path
+ASSERT OK == 1
+SYS INITPLATE path
+ASSERT OK == 1
+SYS HAVEPLATE path
+ASSERT OK == 1
+
+# default {} seed
+SYS JOIN dir "empty.json"
+LET epath = LAST
+SYS ENSUREPLATE epath
+ASSERT ENSUREPLATE_CREATED == 1
+SYS JSONEMPTY LAST
+ASSERT LAST_N == 1
+SYS ENSUREPLATE epath
+ASSERT ENSUREPLATE_HIT == 1
+ASSERT LAST_N == 0
+
+# FROM form
+SYS JOIN dir "from.json"
+LET fpath = LAST
+SYS ENSUREPLATE fpath FROM seed
+ASSERT ENSUREPLATE_CREATED == 1
+LET p = LAST
+SYS JSONHASALL p "n" "role" "ok"
+ASSERT LAST_N == 1
+
+# agent boot pattern
+SYS JOIN dir "boot.json"
+LET bpath = LAST
+SYS ENSUREPLATE bpath OR seed
+LET boot = LAST
+SYS JSONDEFAULTS boot "{\"max\":10}"
+LET boot = LAST
+SYS JSONINC boot "n"
+LET boot = LAST
+SYS SAVEPLATE bpath boot
+ASSERT OK == 1
+SYS ENSUREPLATE bpath OR seed
+LET boot = LAST
+SYS JSONN "n" FROM boot
+ASSERT LAST_N == 1
+SYS JSONN "max" FROM boot
+ASSERT LAST_N == 10
+
+# cleanup
+SYS RMTREE dir

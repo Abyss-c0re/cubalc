@@ -2262,6 +2262,163 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 absfile, hr.n, created);
       bump(vm); return 1;
     }
+    /* SYS ENSUREPLATE|TOUCHPLATE|NEEDPLATE path [OR|FROM defaults]
+     * Create-or-load agent state plate:
+     *   hit  → LAST=plate content · LAST_N=0 · ENSUREPLATE_CREATED=0
+     *   miss → write defaults/{} · LAST=plate · LAST_N=1 · CREATED=1
+     * Always OK=1 when write/load succeeds. Dual of LOAD+SAVE one-shot boot.
+     * Usability: first-run plate seed without IF LOADPLATE_HIT + SAVEPLATE glue. */
+    if (kw(&L->cur,"ENSUREPLATE") || kw(&L->cur,"TOUCHPLATE") || kw(&L->cur,"NEEDPLATE") ||
+        kw(&L->cur,"PLATEENSURE") || kw(&L->cur,"SEEDPLATE") ||
+        kw(&L->cur,"INITPLATE") || kw(&L->cur,"BOOTPLATE") || kw(&L->cur,"HAVEPLATE")){
+      char path[CUBALC_HOST_STR_MAX], defs[CUBALC_HOST_STR_MAX], plate[CUBALC_HOST_STR_MAX];
+      char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+      const char *slash, *body;
+      size_t n;
+      int hit = 0, created = 0;
+      cubalc_host_result hr, keys;
+      lex_next(L);
+      path[0] = 0;
+      defs[0] = 0;
+      plate[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS ENSUREPLATE path [OR defaults] — need path");
+        return -1;
+      }
+      if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+          kw(&L->cur,"FALLBACK") || kw(&L->cur,"FROM") || kw(&L->cur,"WITH") ||
+          kw(&L->cur,"USING") || kw(&L->cur,"SEED")) {
+        lex_next(L);
+        if (resolve_str_arg(vm, L, defs, sizeof defs) != 0)
+          defs[0] = 0;
+      }
+      if (!defs[0])
+        snprintf(defs, sizeof defs, "%s", "{}");
+      {
+        const char *f = defs;
+        while (*f == ' ' || *f == '\t' || *f == '\n' || *f == '\r') f++;
+        if (*f != '{')
+          snprintf(defs, sizeof defs, "%s", "{}");
+      }
+      if (!path[0]) {
+        var_set_str(vm, "LAST_ERR", "ENSUREPLATE: empty path");
+        var_set_str(vm, "ERR", "ENSUREPLATE: empty path");
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        bump(vm); return 1;
+      }
+      /* try load existing object plate */
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_read(path, &hr) == 0 && hr.str[0]) {
+        body = hr.str;
+        while (*body == ' ' || *body == '\t' || *body == '\n' || *body == '\r')
+          body++;
+        if (*body == '{') {
+          memset(&keys, 0, sizeof keys);
+          if (cubalc_host_json_keys(body, &keys) == 0) {
+            snprintf(plate, sizeof plate, "%s", body);
+            hit = 1;
+          }
+        }
+      }
+      if (hit) {
+        var_set_str(vm, "LAST", plate);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "ENSUREPLATE", plate);
+        var_set_str(vm, "TOUCHPLATE", plate);
+        var_set_str(vm, "ENSUREPLATE_PATH", path);
+        var_set_num(vm, "ENSUREPLATE_CREATED", 0);
+        var_set_num(vm, "ENSUREPLATE_HIT", 1);
+        var_set_num(vm, "LOADPLATE_HIT", 1);
+        var_set_num(vm, "READ_OK", 1);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# sys ensureplate → hit path=%s\n", path);
+        bump(vm); return 1;
+      }
+      /* miss/invalid → persist defaults (mkdir parent + write) */
+      body = defs;
+      while (*body == ' ' || *body == '\t' || *body == '\n' || *body == '\r')
+        body++;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+        snprintf(absfile, sizeof absfile, "%s", hr.str);
+      else
+        snprintf(absfile, sizeof absfile, "%s", path);
+      {
+        char work[CUBALC_HOST_STR_MAX];
+        snprintf(work, sizeof work, "%s", absfile);
+        n = strlen(work);
+        while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+          work[n - 1] = 0;
+          n--;
+        }
+        slash = cubalc_path_slash(work);
+        if (slash && slash != work) {
+          size_t dn = (size_t)(slash - work);
+          if (dn >= sizeof parent) dn = sizeof parent - 1;
+          memcpy(parent, work, dn);
+          parent[dn] = 0;
+        } else {
+          parent[0] = '.';
+          parent[1] = 0;
+        }
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      else
+        snprintf(absparent, sizeof absparent, "%s", parent);
+      created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_mkdir(absparent, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "ENSUREPLATE: mkdir parent failed";
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        var_set_str(vm, "ENSUREPLATE_PATH", absfile);
+        var_set_num(vm, "ENSUREPLATE_CREATED", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      if (hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_write(absfile, body, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "ENSUREPLATE: write failed";
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        var_set_str(vm, "ENSUREPLATE_PATH", absfile);
+        var_set_num(vm, "ENSUREPLATE_CREATED", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", body);
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_str(vm, "ENSUREPLATE", plate);
+      var_set_str(vm, "TOUCHPLATE", plate);
+      var_set_str(vm, "ENSUREPLATE_PATH", absfile);
+      var_set_str(vm, "ENSUREPLATE_PARENT", absparent);
+      var_set_num(vm, "ENSUREPLATE_CREATED", 1);
+      var_set_num(vm, "ENSUREPLATE_HIT", 0);
+      var_set_num(vm, "SAVEPLATE_N", hr.n);
+      var_set_num(vm, "SAVEPLATE_OK", 1);
+      var_set_num(vm, "LOADPLATE_HIT", 0);
+      var_set_num(vm, "READ_OK", 0);
+      var_set_num(vm, "WRITE_OK", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys ensureplate → created path=%s bytes=%ld\n",
+                absfile, hr.n);
+      (void)created;
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WRITE")){
       lex_next(L);
       char path[512]; path[0]=0;
@@ -34359,6 +34516,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"STOREPLATE", "STOREPLATE alias of SAVEPLATE"},
       {"PLATESAVE", "PLATESAVE alias of SAVEPLATE"},
       {"WRITEPLATE", "WRITEPLATE alias of SAVEPLATE (object-checked; PLATEWRITE is WRITEOUT)"},
+      {"ENSUREPLATE", "ENSUREPLATE|TOUCHPLATE path [OR defaults] — create-or-load plate · LAST=content · CREATED 0|1"},
+      {"SYS ENSUREPLATE", "SYS ENSUREPLATE path [OR seed] — first-run plate seed without IF LOAD+SAVE glue"},
+      {"TOUCHPLATE", "TOUCHPLATE alias of ENSUREPLATE"},
+      {"NEEDPLATE", "NEEDPLATE alias of ENSUREPLATE"},
+      {"SEEDPLATE", "SEEDPLATE alias of ENSUREPLATE"},
+      {"BOOTPLATE", "BOOTPLATE alias of ENSUREPLATE"},
       {"SYS RM", "SYS RM|UNLINK|DELETE path — remove file · missing soft OK"},
       {"SYS RENAME", "SYS RENAME|MV|MOVE from to — move plate path"},
       {"SYS COPY", "SYS COPY|CP src dst — duplicate file · LAST_N=bytes"},
