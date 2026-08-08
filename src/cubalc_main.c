@@ -3300,6 +3300,7 @@ int main(int argc, char **argv) {
       {"SYS JSON", "host", "SYS JSON \"key\" extract field"},
       {"SYS JSONFROMKV", "host", "SYS JSONFROMKV|JFROMKV bag — key=val bag → plate"},
       {"SYS JSONTOKV", "host", "SYS JSONTOKV|JTOKV plate — plate → key:val bag · dual of JSONFROMKV"},
+      {"SYS JSONLEN", "host", "SYS JSONLEN|JLEN [plate] — top-level key count → LAST_N · soft 0"},
       {"SYS JSONKEYS", "host", "SYS JSONKEYS [plate] — top-level keys bag"},
       {"SYS JSONVALUES", "host", "SYS JSONVALUES [plate] — top-level values bag"},
       {"SYS SPAWN", "host", "allowlisted spawn (protect mode tight)"},

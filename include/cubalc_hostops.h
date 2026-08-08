@@ -236,6 +236,9 @@ int cubalc_host_json_from_kv(const char *bag, cubalc_host_result *r);
  * ':' sep matches LOOKUP/FREQ default. Strings decoded; true/false/null tokens;
  * nums/nested raw. Soft empty if not object. Round-trips with json_from_kv. */
 int cubalc_host_json_to_kv(const char *json, cubalc_host_result *r);
+/* top-level key count → r->n. Soft 0 if not object (always OK).
+ * Usability: empty/size IF without JSONKEYS bag materialize. r->str = decimal. */
+int cubalc_host_json_len(const char *json, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

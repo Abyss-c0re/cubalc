@@ -557,6 +557,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 527. ~~**`JSONVALUES` / `JVALS` / `JSONVALS`**~~ **done** (top-level values bag · twin of JSONKEYS · ZIP/SUM/FREQ).
 528. ~~**`JSONFROMKV` / `JFROMKV` / `KVTOJSON`**~~ **done** (key=val bag → plate · FREQ/FLAGMAP without EACH+JSONSET).
 529. ~~**`JSONTOKV` / `JTOKV` / `JSONTOBAG`**~~ **done** (plate → key:val bag · dual of JSONFROMKV · LOOKUP/FREQ default sep · no ZIP keys+vals).
+530. ~~**`JSONLEN` / `JLEN` / `JSONCOUNT`**~~ **done** (top-level key count → LAST_N · soft 0 · empty/size IF without JSONKEYS bag).
 
 ## Tick protocol
 

@@ -4667,6 +4667,23 @@ int cubalc_host_json_from_kv(const char *bag, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS JSONLEN plate — top-level key count without JSONKEYS bag. */
+int cubalc_host_json_len(const char *json, cubalc_host_result *r) {
+  cubalc_host_result keys;
+  r_clear(r);
+  memset(&keys, 0, sizeof keys);
+  if (cubalc_host_json_keys(json, &keys) != 0) {
+    r->n = 0;
+    r->ok = 1;
+    snprintf(r->str, sizeof r->str, "0");
+    return 0;
+  }
+  r->n = keys.n;
+  r->ok = 1;
+  snprintf(r->str, sizeof r->str, "%ld", keys.n);
+  return 0;
+}
+
 /* Usability: SYS JSONTOKV plate — object → key:val bag (dual of JSONFROMKV).
  * Uses ':' so default LOOKUP/FREQ work without sep glue. r->n = pairs. */
 int cubalc_host_json_to_kv(const char *json, cubalc_host_result *r) {

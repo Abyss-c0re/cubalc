@@ -1,0 +1,84 @@
+# JSONLEN / JLEN / JSONCOUNT — top-level key count → LAST_N
+# Empty/size IF without JSONKEYS bag materialize. LAST kept as plate.
+
+HOLD_FLASH 1
+
+# basic count
+SYS JSONOBJ "a" 1 "b" 2 "c" 3
+LET plate = LAST
+SYS JSONLEN plate
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JSONLEN_N == 3
+# LAST still the plate for chain
+SYS JSONN "a" FROM LAST
+ASSERT LAST_N == 1
+
+# empty object
+SYS JSONLEN "{}"
+ASSERT LAST_N == 0
+ASSERT JSONLEN_N == 0
+ASSERT OK == 1
+
+# non-object soft 0 (not fatal)
+SYS JSONLEN "not-json"
+ASSERT LAST_N == 0
+ASSERT OK == 1
+SYS JSONLEN "[1,2,3]"
+ASSERT LAST_N == 0
+ASSERT OK == 1
+
+# bare on LAST
+SYS JSONOBJ "x" 9 "y" "hi"
+SYS JSONLEN
+ASSERT LAST_N == 2
+# chain: bare JSONTOKV after JSONLEN
+SYS JSONTOKV
+ASSERT LAST_N == 2
+SYS LOOKUP LAST "x"
+ASSERT LAST == "9"
+
+# matches JSONKEYS_N without bag
+SYS JSONOBJ "p" 1 "q" 2 "r" 3 "s" 4
+LET p4 = LAST
+SYS JSONKEYS p4
+ASSERT LAST_N == 4
+SYS JSONLEN p4
+ASSERT LAST_N == 4
+ASSERT JSONLEN_N == 4
+
+# aliases
+SYS JSONOBJ "only" 1
+SYS JLEN LAST
+ASSERT LAST_N == 1
+SYS JSONCOUNT LAST
+ASSERT LAST_N == 1
+SYS NKEYS LAST
+ASSERT LAST_N == 1
+SYS KEYCOUNT LAST
+ASSERT LAST_N == 1
+
+# single key + after DEL
+SYS JSONOBJ "k" 1 "m" 2
+LET p2 = LAST
+SYS JSONLEN p2
+ASSERT LAST_N == 2
+SYS JSONDEL p2 "k"
+LET p2 = LAST
+SYS JSONLEN p2
+ASSERT LAST_N == 1
+
+# FROMKV plate size
+SYS JSONFROMKV "a=1\nb=2\nc=3"
+SYS JSONLEN LAST
+ASSERT LAST_N == 3
+
+# empty-plate IF pattern (soft)
+SYS JSONLEN "{}"
+IF LAST_N == 0 THEN
+  PASS "empty plate"
+END
+ASSERT OK == 1
+
+PRINT "jsonlen ok"
+ASSERT OK == 1
