@@ -1,0 +1,110 @@
+# PARSEPATHLINE / SPLITPATHLINE / PEELPATHLINE — peel path:lineno:text
+# Companion to PATHLINETREE (grep -rn bag) without FIND+MID colon glue.
+
+HOLD_FLASH 1
+
+# literal peel
+PARSEPATHLINE "/tmp/a/err.log:2:error: boom"
+ASSERT OK == 1
+ASSERT PARSEPATHLINE_HIT == 1
+ASSERT LAST_N == 1
+ASSERT LAST == "error: boom"
+ASSERT TEXT == "error: boom"
+ASSERT PATH == "/tmp/a/err.log"
+ASSERT LINE_N == 2
+ASSERT PATHLINE_N == 2
+
+# text may contain colons
+PARSEPATHLINE "/work/x:10:a:b:c"
+ASSERT OK == 1
+ASSERT PARSEPATHLINE_HIT == 1
+ASSERT LAST == "a:b:c"
+ASSERT PATH == "/work/x"
+ASSERT LINE_N == 10
+
+# empty line body
+PARSEPATHLINE "/p:1:"
+ASSERT OK == 1
+ASSERT PARSEPATHLINE_HIT == 1
+ASSERT LAST == ""
+ASSERT PATH == "/p"
+ASSERT LINE_N == 1
+
+# soft miss non-annotated
+PARSEPATHLINE "just a plain line"
+ASSERT OK == 1
+ASSERT PARSEPATHLINE_HIT == 0
+ASSERT LAST_N == 0
+ASSERT LAST == ""
+ASSERT PATH == ""
+ASSERT LINE_N == 0
+
+# empty soft
+PARSEPATHLINE ""
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "empty"
+ASSERT LAST_N == 1
+
+# aliases
+SPLITPATHLINE "/z:3:hi"
+ASSERT OK == 1
+ASSERT LAST == "hi"
+ASSERT LINE_N == 3
+PEELPATHLINE "/z:4:yo"
+ASSERT OK == 1
+ASSERT LAST == "yo"
+ASSERT PATH == "/z"
+
+# bare uses LAST (ident arg)
+LET entry = "/bare:7:body"
+PARSEPATHLINE entry
+ASSERT OK == 1
+ASSERT PARSEPATHLINE_HIT == 1
+ASSERT LAST == "body"
+ASSERT PATH == "/bare"
+ASSERT LINE_N == 7
+
+# SYS form
+SYS PARSEPATHLINE "/sys/p:5:from-sys"
+ASSERT OK == 1
+ASSERT LAST == "from-sys"
+ASSERT PATH == "/sys/p"
+ASSERT LINE_N == 5
+
+# live PATHLINETREE bag → peel first/second hit
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_ppl_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "ok\nerror: one\nerror: two"
+ASSERT OK == 1
+PATHLINETREE base "error"
+ASSERT OK == 1
+ASSERT PATHLINETREE_N == 2
+LET bag = LAST
+SYS NTH 0 bag
+PARSEPATHLINE LAST
+ASSERT OK == 1
+ASSERT PARSEPATHLINE_HIT == 1
+ASSERT LAST == "error: one"
+SYS ENDS PATH "err.log"
+ASSERT LAST_N == 1
+ASSERT LINE_N == 2
+SYS NTH 1 bag
+PARSEPATHLINE LAST
+ASSERT LAST == "error: two"
+ASSERT LINE_N == 3
+
+RMTREE base
+ASSERT OK == 1
+
+PRINT "parsepathline ok"
+ASSERT OK == 1
