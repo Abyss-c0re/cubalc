@@ -1929,6 +1929,6 @@
     "LET take_n=FILLP_N often 0 under pressure while fillp hits=6 in log",
     "state/REALWORLD_CHALLENGE.json was deleted in working tree; restored from git"
   ],
-  "commit": "",
+  "commit": "9b47756",
   "ts": "2026-08-08T22:11:17Z"
 }
