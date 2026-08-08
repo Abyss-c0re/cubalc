@@ -1,0 +1,538 @@
+# chunk_path_pages_board.cubalc — GETFLAGPATH + DIVCEILN artifact page planner
+#
+# Real use: intake/release agents plan chunk/page counts for artifacts without
+# shell realpath + $(( (n+p-1)/p )) glue:
+#   GETFLAGPATH file|f OR ENV ARTIFACT — abs path + EXIST (1009)
+#   GETFLAGN size|s OR ENV CHUNK — page size; FLOORN 1
+#   SYS SIZE path → bytes; DIVCEILN / PAGESN → page count (1008)
+#   Soft EXIST miss vs REQUIRE FLAGFILE when CUBALC_CPP_REQUIRE (1010)
+#   SUBCMD + RESTPOS — optional name keys after verb
+#   GREPV upsert plate rows
+#
+# First realworld GETFLAGPATH + DIVCEILN board (after 1008-1010).
+# Distinct from zone_csv_bound (CSV+FLOORN/CAPN) and path_root_board:
+# this board is *path flag abs + ceil page math on artifact size*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cpp_$$
+#   export ARTIFACT=include/cubalc_law.h CHUNK=64
+#   ./out/cubalc run programs/realworld/chunk_path_pages_board.cubalc \
+#     plan -- --file=Makefile --size=16 art-a
+#   ./out/cubalc run ... list
+#
+# Plate: CHUNKS.txt VAL.txt META.txt CPP_REPORT.txt
+# Subcmds: list|ls plan drop has gate soft clear probe
+# Env: ARTIFACT CHUNK CUBALC_CPP_REQUIRE CUBALC_CPP_MIN
+#
+# Edges:
+#   GETFLAGPATH default/env/cli; EXIST 0|1; abs path always
+#   DIVCEILN 100/16=7; size 0 → 0 pages; div0 soft OK=0
+#   REQUIRE FLAGFILE miss often exit_code 0 (W7 class)
+#   W47 lean LET; no WORKERS name (W50); GREPV upsert
+#   WRITE NL; known latch
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "chunk_path_pages_board: start"
+DEFAULT ACTION = "list"
+DEFAULT TFILE = "CHUNKS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "CPP_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "chunk_path_pages -- plan|list|drop -- [--file=PATH] [--size=N] [name...]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+# path peel (soft); abs always
+GETFLAGPATH file|f OR ENV ARTIFACT OR "include/cubalc_law.h"
+LET fpath = LAST
+LET f_exist = GETFLAGPATH_EXIST
+LET f_src = GETFLAGPATH_SRC
+CLEAR_ERR
+
+GETFLAGN size|s OR ENV CHUNK OR 64
+LET psize = LAST_N
+CLEAR_ERR
+FLOORN psize 1
+LET psize = LAST_N
+CLEAR_ERR
+CAPN psize 1048576
+LET psize = LAST_N
+CLEAR_ERR
+
+# bytes + pages
+LET nbytes = 0
+LET pages = 0
+IF f_exist == 1 THEN
+  SYS SIZE fpath
+  LET nbytes = LAST_N
+  CLEAR_ERR
+  DIVCEILN nbytes psize
+  LET pages = LAST_N
+  CLEAR_ERR
+END
+
+SYS ENV "CUBALC_CPP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CPP_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir TFILE
+LET chunks_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR chunks_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET row = ""
+LET pref = ""
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET val = ""
+LET meta = ""
+LET name = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "plan", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "plan" THEN
+    LET op = "plan"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "bag_n"
+  SYS STR bag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON bag_n pages nbytes psize f_exist f_src
+  CLEAR_ERR
+END
+
+SYS EQS op "plan"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # optional hard file wall
+  IF REQUIRE_HIT > 0 THEN
+    IF f_exist == 0 THEN
+      REQUIRE FLAGFILE file|f OR ENV ARTIFACT OR "include/cubalc_law.h"
+    END
+  END
+  IF f_exist == 0 THEN
+    LET miss = 1
+    LET note_msg = "plan needs file"
+    FAIL "plan needs file"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "plan needs file"
+    END
+  ELSE
+    # name from RESTPOS or basename of path
+    IF has_rest == 1 THEN
+      SYS NTH 0 targets
+      LET name = LAST
+    ELSE
+      SYS BASENAME fpath
+      LET name = LAST
+    END
+    CLEAR_ERR
+    SYS CAT name ":"
+    LET pref = LAST
+    SYS GREPV pref bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS CAT name ":"
+    LET row = LAST
+    SYS STR pages
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR psize
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":planned"
+    LET row = LAST
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "plan ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "pages"
+    SYS STR pages
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "nbytes"
+    LET meta = LAST
+    SYS STR nbytes
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "path"
+    LET meta = LAST
+    SYS PUSH meta fpath
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n pages nbytes psize f_exist f_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs name"
+    FAIL "drop needs name"
+    CLEAR_ERR
+  ELSE
+    # single-target GREPV (no EACH — W47 dense LET + EACH AS fails)
+    SYS NTH 0 targets
+    LET pref = LAST
+    SYS CAT pref ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "drop"
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET pref = LAST
+  SYS BLANK pref
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs name"
+    FAIL "has needs name"
+    CLEAR_ERR
+  ELSE
+    SYS CAT pref ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    LET val = pref
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  SYS STR bag_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "gate"
+  LET meta_ch = 1
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    LET meta_ch = 1
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has chunks"
+    LET val = bag
+    LET val_ch = 1
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  DIVCEILN 100 16
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  DIVCEILN 0 16
+  LET has_n = LAST_N
+  CLEAR_ERR
+  DIVCEILN 10 0
+  LET bag_n = LAST_N
+  CLEAR_ERR
+  PAGESN 50 20
+  LET pages = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  SYS STR admit_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR admit_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR pages
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON admit_n has_n bag_n pages f_exist
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET val = ""
+  LET meta = ""
+  LET bag_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE chunks_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "chunks write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+LET meta = "schema=cubalc.chunk_path_pages_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "pages"
+LET meta = LAST
+SYS STR pages
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "nbytes"
+LET meta = LAST
+SYS STR nbytes
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "psize"
+LET meta = LAST
+SYS STR psize
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "f_exist"
+LET meta = LAST
+SYS STR f_exist
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "f_src"
+LET meta = LAST
+SYS PUSH meta f_src
+LET meta = LAST
+SYS PUSH meta "bag_n"
+LET meta = LAST
+SYS STR bag_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+
+NOTE "chunk_path_pages_board: done"
+PRINT_JSON hit miss bag_n pages nbytes psize f_exist f_src note_msg
+EXIT 0

@@ -1,63 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 169,
-  "program": "programs/realworld/zone_csv_bound_board.cubalc",
-  "theme": "GETFLAGCSV zones + FLOORN/CAPN pool capacity CLI (CSV bag + one-sided bounds)",
-  "version": "1.15.457-usability",
+  "iter": 170,
+  "program": "programs/realworld/chunk_path_pages_board.cubalc",
+  "theme": "GETFLAGPATH + DIVCEILN artifact page planner (abs path + ceil pages)",
+  "version": "1.15.460-usability",
   "pass": true,
-  "prior_note": "iter 168 GETFLAGALL+OR ENV; this iter first realworld GETFLAGCSV(1006)+FLOORN/CAPN(1007)",
+  "prior_note": "iter 169 GETFLAGCSV+FLOORN/CAPN; this iter first realworld GETFLAGPATH(1009)+DIVCEILN(1008)+REQUIRE FLAGFILE(1010); fixed HOWMANY clash",
   "tests": [
     {
       "name": "list_default",
-      "cmd": "list \u2192 z_src default rcount 3",
+      "cmd": "list \u2192 f_src default f_exist 1 pages from SIZE/64",
       "ok": true,
-      "note": "default"
+      "note": "GETFLAGPATH"
     },
     {
-      "name": "env_csv",
-      "cmd": "ZONES=eu, us REPLICAS=2 \u2192 zone_n 2 rcount 2 env",
+      "name": "env_artifact",
+      "cmd": "ARTIFACT=Makefile CHUNK=32 \u2192 env psize 32",
       "ok": true,
-      "note": "ENV CSV"
+      "note": "OR ENV"
     },
     {
-      "name": "pin_cap",
-      "cmd": "pin --zones=canary,eu --zone=apac --replicas=100 \u2192 rcount 16 zone_n 3",
+      "name": "plan_cli",
+      "cmd": "plan --file=docs/MEANINGFUL_ITER.md --size=16 art1 \u2192 pages 3612",
       "ok": true,
-      "note": "CAPN"
+      "note": "DIVCEILN"
     },
     {
-      "name": "row_fmt",
-      "cmd": "pool-a:canary|eu|apac:16:live",
+      "name": "abspath_meta",
+      "cmd": "META path absolute .../docs/MEANINGFUL_ITER.md",
       "ok": true,
-      "note": "JOINLINES"
+      "note": "ABSPATH"
     },
     {
-      "name": "floor",
-      "cmd": "pin --replicas=0 \u2192 rcount 1 FLOORN",
+      "name": "miss_require",
+      "cmd": "soft miss EXIST=0; REQUIRE FLAGFILE sticky",
       "ok": true,
-      "note": "FLOORN"
+      "note": "FLAGFILE"
     },
     {
-      "name": "multi_zone",
-      "cmd": "--zone=a --zone=b,c \u2192 a|b|c",
-      "ok": true,
-      "note": "multi+csv"
-    },
-    {
-      "name": "has_drop_empty_req",
-      "cmd": "has/drop/empty/REQUIRE RESTPOS",
+      "name": "basename_drop",
+      "cmd": "plan Makefile basename; drop m1 GREPV",
       "ok": true,
       "note": "ops"
     },
     {
-      "name": "probe_mid",
-      "cmd": "probe FLOORN0\u21921 CAPN100\u219216; mid replicas=8",
+      "name": "probe",
+      "cmd": "DIVCEILN 100/16=7 PAGESN 50/20=3 div0=0",
       "ok": true,
-      "note": "bounds"
+      "note": "probe"
     },
     {
       "name": "selftest",
-      "cmd": "./out/cubalc selftest",
+      "cmd": "./out/cubalc selftest after HOWMANY unsteal",
       "ok": true,
       "note": "355/355"
     }
@@ -510,27 +504,58 @@
       "title": "GETFLAGCSV needs zone|zones aliases for both --zone and --zones",
       "detail": "GETFLAGCSV zones|z alone does not peel --zone=apac (different stem). Agents must list zone|zones|z for long+short multi forms. Same class as flag alias explicitness.",
       "repro": "GETFLAGCSV zones|z with --zone=x may miss; zone|zones|z hits"
+    },
+    {
+      "id": "W57",
+      "severity": "high",
+      "area": "lang|alias_clash",
+      "title": "DIVCEILN stole HOWMANY from COUNTWHERE (core before flow)",
+      "detail": "DIVCEILN registered HOWMANY as alias in lang_ops_core; COUNTWHERE HOWMANY lives in lang_ops_flow (later). HOWMANY Counter tag 1 failed as DIVCEILN a b. Fixed: remove HOWMANY from DIVCEILN; keep PAGESN/CHUNKCOUNT/NPAGES. Same class as INRANGE/HASBETWEEN (W39).",
+      "repro": "HOWMANY Counter tag 1 \u2192 DIVCEILN tip (pre-fix); COUNTWHERE works"
+    },
+    {
+      "id": "W58",
+      "severity": "low",
+      "area": "lang|getflagpath",
+      "title": "GETFLAGPATH peels abs path + EXIST; CLI>ENV>default",
+      "detail": "Positive: default include/cubalc_law.h EXIST=1 abs; ENV ARTIFACT=Makefile; --file=docs/... cli. Missing path still abs EXIST=0. Soft twin of REQUIRE FLAGFILE.",
+      "repro": "GETFLAGPATH file OR ENV ARTIFACT OR include/cubalc_law.h"
+    },
+    {
+      "id": "W59",
+      "severity": "low",
+      "area": "lang|divceiln",
+      "title": "DIVCEILN/PAGESN page counts; div0 soft OK=0",
+      "detail": "Positive: 100/16=7; 0/16=0; 10/0 \u2192 0 sticky LAST_ERR. Pipeline SYS SIZE + DIVCEILN psize for artifact pages.",
+      "repro": "DIVCEILN 100 16 \u2192 7; DIVCEILN 10 0 \u2192 0 DIVCEILN_OK 0"
+    },
+    {
+      "id": "W60",
+      "severity": "med",
+      "area": "host|require_flagpath",
+      "title": "REQUIRE FLAGFILE miss sticky + usage tip; shell rc may be non-zero or 0",
+      "detail": "Missing path with CUBALC_CPP_REQUIRE=1 sets ok:false + REQUIRE FLAGFILE err with usage tip. Observed shell $?=1 here (stronger than RESTPOS class). Soft GETFLAGPATH EXIST=0 preferred when agents need always-continue.",
+      "repro": "CUBALC_CPP_REQUIRE=1 plan --file=no/such \u2192 REQUIRE FLAGFILE missing"
     }
   ],
   "workarounds": [
-    "GETFLAGCSV zone|zones|z OR ENV ZONES OR default",
-    "GETFLAGN replicas|r OR ENV REPLICAS OR 3; FLOORN rcount 1; CAPN rcount 16",
-    "SYS JOINLINES \"|\" zones for row field",
-    "lean LET (~40 names) for EACH (W47); avoid LET WORKERS (W50)",
-    "cubalc run prog pin -- --zones=a,b --zone=c --replicas=N pool..."
+    "GETFLAGPATH file|f OR ENV ARTIFACT OR path; check GETFLAGPATH_EXIST",
+    "SYS SIZE fpath; DIVCEILN nbytes psize (not HOWMANY \u2014 COUNTWHERE)",
+    "REQUIRE FLAGFILE when CUBALC_CPP_REQUIRE; soft EXIST for continue",
+    "drop via NTH0+GREPV (no EACH under dense LET W47)",
+    "cubalc run prog plan -- --file=PATH --size=N name"
   ],
   "language_gaps": [
-    "Document GETFLAGCSV alias stems for multi long names (zone vs zones)",
-    "Cookbook: pool capacity with FLOORN/CAPN one-sided bounds",
-    "Raise EACH/var-table limit (W47)",
-    "SYS STR host knob shadow list (WORKERS) (W50)"
+    "Guard new form aliases against existing HOWMANY/COUNTWHERE etc. at registration",
+    "Cookbook: artifact pages with GETFLAGPATH+DIVCEILN",
+    "EACH/var-table limit (W47)"
   ],
   "issues_faced": [
-    "W47 denser board (floor_ch/cap_ch/r_raw) broke EACH \u2014 slimmed",
-    "GETFLAGCSV zones|z missed --zone; fixed zone|zones|z (W56)",
-    "FLOORN 0\u21921 CAPN 100\u219216 green; multi --zone=a --zone=b,c green",
+    "HOWMANY alias clash DIVCEILN vs COUNTWHERE \u2014 fixed in core (W57)",
+    "W47 EACH drop \u2192 NTH0 GREPV",
+    "GETFLAGPATH+SIZE+DIVCEILN page plan green; REQUIRE FLAGFILE wall green",
     "selftest 355/355"
   ],
-  "commit": "1ffd9c789f4769bf4dd3ad18fa2a4b42eb5a41c5",
-  "ts": "2026-08-08T02:04:34Z"
+  "commit": "",
+  "ts": "2026-08-08T02:31:47Z"
 }

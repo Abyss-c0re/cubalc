@@ -29417,9 +29417,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* DIVCEILN|PAGESN|PAGECOUNT a b — integer ceiling division ceil(a/b) → LAST_N.
    * b==0 soft LAST_N=0 + sticky LAST_ERR. Non-neg exact; mixed uses C trunc.
    * Not CEILDIVN (stack imm). Usability: pages = DIVCEILN total page without shell.
-   * GETFLAGN total; GETFLAGN size; DIVCEILN total size. */
+   * GETFLAGN total; GETFLAGN size; DIVCEILN total size.
+   * HOWMANY is reserved for COUNTWHERE (oop fleet tally) — do not alias here. */
   if (kw(&L->cur,"DIVCEILN") || kw(&L->cur,"PAGESN") || kw(&L->cur,"PAGECOUNT") ||
-      kw(&L->cur,"HOWMANY") || kw(&L->cur,"CEIL_DIVN") || kw(&L->cur,"IDIVCEIL") ||
+      kw(&L->cur,"CEIL_DIVN") || kw(&L->cur,"IDIVCEIL") ||
       kw(&L->cur,"CHUNKCOUNT") || kw(&L->cur,"NPAGES")){
     long a = 0, b = 0, out = 0;
     int bad = 0;
