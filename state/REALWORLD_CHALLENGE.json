@@ -1975,6 +1975,6 @@
     "must LOADPLATE agent each action to re-bind PLATE for GETP checks",
     "name_s after peer TRIM not auto-fed to render defaults \u2014 re-read peer JSON"
   ],
-  "commit": "",
+  "commit": "5515cf6",
   "ts": "2026-08-08T22:53:43Z"
 }
