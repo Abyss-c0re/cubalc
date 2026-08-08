@@ -3308,6 +3308,7 @@ int main(int argc, char **argv) {
       {"SYS JSONBOTKEY", "host", "SYS JSONBOTKEY|JBOTKEY [plate] — key with min int value · dual of TOPKEY"},
       {"SYS JSONMAXN", "host", "SYS JSONMAXN|JMAXN [plate] — max int top-level value → LAST_N"},
       {"SYS JSONMINN", "host", "SYS JSONMINN|JMINN [plate] — min int top-level value → LAST_N"},
+      {"SYS JSONAVGN", "host", "SYS JSONAVGN|JSONMEAN [plate] — integer mean of top-level ints → LAST_N"},
       {"SYS JSONKEYS", "host", "SYS JSONKEYS [plate] — top-level keys bag"},
       {"SYS JSONVALUES", "host", "SYS JSONVALUES [plate] — top-level values bag"},
       {"SYS SPAWN", "host", "allowlisted spawn (protect mode tight)"},

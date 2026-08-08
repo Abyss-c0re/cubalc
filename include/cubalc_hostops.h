@@ -251,6 +251,10 @@ int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *
  * Soft 0 if none. Bools via values map. r->str = decimal.
  * Usability: score extremes without JSONVALUES+MIN/MAX glue. */
 int cubalc_host_json_minmax(const char *json, int want_min, cubalc_host_result *r);
+/* integer mean of pure-integer top-level values → r->n (trunc toward 0).
+ * r->code = count of numeric fields used. Soft 0 if none. r->str = decimal.
+ * Usability: typical score without JSONVALUES+AVG glue. */
+int cubalc_host_json_avg(const char *json, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

@@ -1,0 +1,83 @@
+# JSONAVGN / JAVGN / JSONMEAN — integer mean of plate values → LAST_N
+# Typical score without JSONVALUES+AVG glue. LAST kept. JSONAVGN_USED = n fields.
+
+HOLD_FLASH 1
+
+# basic mean (1+2+3)/3 = 2
+SYS JSONOBJ "a" 1 "b" 2 "c" 3
+LET plate = LAST
+SYS JSONAVGN plate
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT JSONAVGN_N == 2
+ASSERT JSONAVGN_USED == 3
+# LAST still plate
+SYS JSONN "a" FROM LAST
+ASSERT LAST_N == 1
+
+# matches VALUES+AVG
+SYS JSONVALUES plate
+SYS AVG LAST
+ASSERT LAST_N == 2
+
+# trunc toward 0: (1+2)/2 = 1
+SYS JSONOBJ "x" 1 "y" 2
+SYS JSONAVGN LAST
+ASSERT LAST_N == 1
+ASSERT JSONAVGN_USED == 2
+
+# empty / non-object soft 0
+SYS JSONAVGN "{}"
+ASSERT LAST_N == 0
+ASSERT JSONAVGN_USED == 0
+ASSERT OK == 1
+SYS JSONAVGN "not-json"
+ASSERT LAST_N == 0
+ASSERT JSONAVGN_USED == 0
+
+# bare on LAST
+SYS JSONOBJ "n" 10 "m" 20 "p" 30
+SYS JSONAVGN
+ASSERT LAST_N == 20
+ASSERT JSONAVGN_USED == 3
+
+# aliases
+SYS JSONOBJ "a" 4 "b" 8
+LET p2 = LAST
+SYS JAVGN p2
+ASSERT LAST_N == 6
+SYS JSONMEAN p2
+ASSERT LAST_N == 6
+SYS MEANJSON p2
+ASSERT LAST_N == 6
+SYS PLATEAVG p2
+ASSERT LAST_N == 6
+
+# skip non-numeric · bools count as 0|1
+# true=1 false=0 n=9 → (1+0+9)/3 = 3
+SYS JSONOBJ "ok" true "flag" false "n" 9 "s" "hi"
+LET p3 = LAST
+SYS JSONAVGN p3
+ASSERT LAST_N == 3
+ASSERT JSONAVGN_USED == 3
+
+# single
+SYS JSONOBJ "only" 42
+SYS JSONAVGN LAST
+ASSERT LAST_N == 42
+ASSERT JSONAVGN_USED == 1
+
+# negatives: (-3+3)/2 = 0
+SYS JSONOBJ "a" -3 "b" 3
+SYS JSONAVGN LAST
+ASSERT LAST_N == 0
+ASSERT JSONAVGN_USED == 2
+
+# FREQ plate (5+2+1)/3 = 2
+SYS JSONFROMKV "error:5\nwarn:2\nok:1"
+SYS JSONAVGN LAST
+ASSERT LAST_N == 2
+ASSERT JSONAVGN_USED == 3
+
+PRINT "jsonavgn ok"
+ASSERT OK == 1
