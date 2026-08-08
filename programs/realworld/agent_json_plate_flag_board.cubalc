@@ -1,0 +1,652 @@
+# agent_json_plate_flag_board.cubalc — JSONTOGGLE + JSONTYPE feature flags + type gates
+#
+# Real use: agent STATUS plates — flip 0/1 feature flags without N+IF+SET glue,
+# and probe value kinds before choosing JSONN vs string peel vs nested:
+#   JSONTOGGLE / JTOGGLE / FLIPJSON — flip 0↔1; missing→1 (1064)
+#   JSONTYPE / JTYPE / JSONKIND — kind probe num|str|bool|null|obj|arr|missing (1065)
+#   JSONOBJ + WRITEOUT — mint / persist
+#   JSONN after type gate for safe counters
+#
+# First realworld JSONTOGGLE+JSONTYPE board. Distinct from project (PICK/DROP/RENAME)
+# and hygiene (MERGE/DEL/INC): this is *flag arm/disarm + type-safe peel*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajpf_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_flag_board.cubalc \
+#     mint -- --plate=/tmp/ajpf/status.json
+#   ./out/cubalc run ... flip -- --plate=... --flag=debug
+#   ./out/cubalc run ... type -- --plate=... --key=n
+#   ./out/cubalc run ... gate -- --plate=...
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPF_REPORT.txt
+# Env: PLATE_PATH CUBALC_AJPF_REQUIRE CUBALC_AJPF_MIN CUBALC_AJPF_FLAG CUBALC_AJPF_KEY
+#
+# Edges:
+#   toggle missing→1; string truthy→0; bool flip; PREV knob
+#   type missing; empty plate soft; REQUIRE EXIT n; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_flag_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT FLAG_S = "debug"
+DEFAULT KEY_S = "n"
+DEFAULT USAGE_LINE = "agent_json_plate_flag -- mint|flip|type|safe|list -- [--plate=P] [--flag=F] [--key=K]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/status.json"
+LET plate_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+LET p_ok = OK
+CLEAR_ERR
+
+# NOTE: bare FLAG/KEY names collide with host special knobs (W130) — use FLAG_S/KEY_S
+GETFLAG flag|f OR ENV CUBALC_AJPF_FLAG OR FLAG_S
+LET FLAG_S = LAST
+CLEAR_ERR
+GETFLAG key|k OR ENV CUBALC_AJPF_KEY OR KEY_S
+LET KEY_S = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_AJPF_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPF_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET line_i = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET kind = ""
+LET flag_name = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "mint", "flip", "toggle", "type", "safe", "list", "ls", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "mint" THEN
+    LET op = "mint"
+  WHEN "flip", "toggle" THEN
+    LET op = "flip"
+  WHEN "type" THEN
+    LET op = "type"
+  WHEN "safe" THEN
+    LET op = "safe"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src FLAG_S KEY_S
+  CLEAR_ERR
+END
+
+SYS EQS op "mint"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # mixed kinds: flags, counter, string, null, nested
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "ok" 1 "debug" 0 "dry" 0 "n" 7 "role" "worker" "err" "" "tag" "on" "nil" null "meta" RAW "{\"a\":1}" "ts" run_date
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint soft miss"
+    FAIL "mint soft miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mint failed"
+    END
+  ELSE
+    LET take_n = JSONOBJ_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "mint write failed"
+    END
+    CLEAR_ERR
+    SYS CAT "mint:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mt"
+    LET row = LAST
+    SYS GREPV "mint:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "mint ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "flip"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "flip empty plate"
+    FAIL "flip empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "flip empty"
+    END
+  ELSE
+    # string var flag names work (like PICK; avoid bare FLAG special W130)
+    LET flag_name = FLAG_S
+    SYS JSONTOGGLE body flag_name
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "flip soft miss"
+      FAIL "flip soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "flip failed"
+      END
+    ELSE
+      LET peel_hit = JSONTOGGLE_V
+      LET has_n = JSONTOGGLE_PREV
+      LET body = LAST
+      LET out = body
+      CLEAR_ERR
+      WRITEOUT plate_file body
+      EXPECT OK == 1
+      IF OK == 0 THEN
+        EXIT 2 "flip write failed"
+      END
+      CLEAR_ERR
+      SYS CAT "flip:"
+      LET row = LAST
+      SYS CAT row flag_name
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR has_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":fl"
+      LET row = LAST
+      SYS GREPV "flip:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      LET hit = 1
+      LET note_msg = "flip ok"
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit has_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "type"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "type empty plate"
+    FAIL "type empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "type empty"
+    END
+  ELSE
+    SYS JSONTYPE body KEY_S
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "type soft miss"
+      FAIL "type soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "type failed"
+      END
+    ELSE
+      LET kind = LAST
+      LET take_n = LAST_N
+      LET out = kind
+      CLEAR_ERR
+      SYS EQS kind "missing"
+      LET peel_hit = LAST_N
+      CLEAR_ERR
+      SYS CAT "type:"
+      LET row = LAST
+      SYS CAT row KEY_S
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS CAT row kind
+      LET row = LAST
+      SYS CAT row ":ty"
+      LET row = LAST
+      SYS GREPV "type:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF peel_hit == 1 THEN
+        LET miss = 1
+        LET note_msg = "type missing"
+        FAIL "type missing"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "type missing"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "type ok"
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "safe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "safe empty plate"
+    FAIL "safe empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "safe empty"
+    END
+  ELSE
+    # type-gate: only JSONN when kind is num or bool
+    SYS JSONTYPE body KEY_S
+    LET kind = LAST
+    CLEAR_ERR
+    SYS EQS kind "num"
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS EQS kind "bool"
+    LET has_n = LAST_N
+    CLEAR_ERR
+    LET take_n = peel_hit + has_n
+    IF take_n > 0 THEN
+      # JSONN key is literal-only (W115/W131) — EQS branch known counters
+      LET line_i = 0
+      LET out = ""
+      SYS EQS KEY_S "n"
+      IF LAST_N == 1 THEN
+        SYS JSONN "n" FROM body
+        LET line_i = LAST_N
+        LET out = LAST
+      END
+      CLEAR_ERR
+      SYS EQS KEY_S "ok"
+      IF LAST_N == 1 THEN
+        SYS JSONN "ok" FROM body
+        LET line_i = LAST_N
+        LET out = LAST
+      END
+      CLEAR_ERR
+      SYS EQS KEY_S "debug"
+      IF LAST_N == 1 THEN
+        SYS JSONN "debug" FROM body
+        LET line_i = LAST_N
+        LET out = LAST
+      END
+      CLEAR_ERR
+      SYS EQS KEY_S "dry"
+      IF LAST_N == 1 THEN
+        SYS JSONN "dry" FROM body
+        LET line_i = LAST_N
+        LET out = LAST
+      END
+      CLEAR_ERR
+      LET hit = 1
+      LET note_msg = "safe num"
+    ELSE
+      SYS EQS kind "str"
+      IF LAST_N == 1 THEN
+        # JSON string peel also literal key (W115) — branch role/err/schema
+        LET out = ""
+        SYS EQS KEY_S "role"
+        IF LAST_N == 1 THEN
+          SYS JSON "role" FROM body
+          LET out = LAST
+        END
+        CLEAR_ERR
+        SYS EQS KEY_S "err"
+        IF LAST_N == 1 THEN
+          SYS JSON "err" FROM body
+          LET out = LAST
+        END
+        CLEAR_ERR
+        SYS EQS KEY_S "schema"
+        IF LAST_N == 1 THEN
+          SYS JSON "schema" FROM body
+          LET out = LAST
+        END
+        CLEAR_ERR
+        LET line_i = 0
+        LET hit = 1
+        LET note_msg = "safe str"
+      ELSE
+        LET miss = 1
+        LET note_msg = "safe non-scalar"
+        FAIL "safe non-scalar"
+        CLEAR_ERR
+        LET out = kind
+      END
+    END
+    SYS CAT "safe:"
+    LET row = LAST
+    SYS CAT row KEY_S
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS CAT row kind
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR line_i
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":sf"
+    LET row = LAST
+    SYS GREPV "safe:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit has_n line_i p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    # bag-size gate fallback when no plate
+    SYS LINES bag
+    LET bag_n = LAST_N
+    IF bag_n >= MIN THEN
+      LET hit = 1
+      LET note_msg = "gate admit bag"
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate deny"
+      FAIL "gate deny"
+      CLEAR_ERR
+    END
+  ELSE
+    # arm gate: ok flag must be 1
+    SYS JSONN "ok" FROM body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSONN "debug" FROM body OR 0
+    LET has_n = LAST_N
+    CLEAR_ERR
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "gate ok armed"
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate ok off"
+      FAIL "gate ok off"
+      CLEAR_ERR
+    END
+    LET out = body
+  END
+  PRINT_JSON bag_n peel_hit has_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JSONTOGGLE "{\"debug\":0}" "debug"
+  LET peel_hit = JSONTOGGLE_V
+  CLEAR_ERR
+  SYS JSONTOGGLE "{\"debug\":1}" "debug"
+  LET has_n = JSONTOGGLE_V
+  CLEAR_ERR
+  SYS JSONTOGGLE "{}" "trace"
+  LET take_n = JSONTOGGLE_V
+  CLEAR_ERR
+  SYS JSONTOGGLE "{\"tag\":\"on\"}" "tag"
+  LET line_i = JSONTOGGLE_V
+  CLEAR_ERR
+  SYS JSONTYPE "{\"n\":1,\"s\":\"x\",\"o\":true,\"z\":null,\"m\":{}}" "n"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS JSONTYPE "{\"n\":1}" "ghost"
+  LET bag_n = LAST_N
+  LET out = LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON peel_hit has_n take_n line_i admit_n bag_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_flag_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_flag_board: done"
+PRINT_JSON hit miss bag_n take_n peel_hit has_n p_src note_msg
+EXIT 0

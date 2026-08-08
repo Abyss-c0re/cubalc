@@ -1,57 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 192,
-  "program": "programs/realworld/agent_json_plate_project_board.cubalc",
-  "theme": "JSONPICK + JSONDROP + JSONRENAME agent plate project/export/schema migrate",
-  "version": "1.15.513-usability",
+  "iter": 193,
+  "program": "programs/realworld/agent_json_plate_flag_board.cubalc",
+  "theme": "JSONTOGGLE + JSONTYPE agent feature flags and type-safe peels",
+  "version": "1.15.516-usability",
   "pass": true,
-  "prior_note": "iter 191 MERGE/DEL/N/INC/ENSURE hygiene; this iter first realworld PICK(1061)+DROP multi(1063)+RENAME(1062)",
+  "prior_note": "iter 192 PICK/DROP/RENAME project; this iter first realworld JSONTOGGLE(1064)+JSONTYPE(1065)",
   "tests": [
     {
       "name": "mint",
-      "cmd": "JSONOBJ noisy plate 10 keys token/noise/tmp/cnt",
+      "cmd": "JSONOBJ mixed flags/counter/str/null/obj",
       "ok": true,
       "note": "mint"
     },
     {
-      "name": "drop",
-      "cmd": "JSONDROP token noise tmp ghost \u2192 N=3 real",
+      "name": "flip",
+      "cmd": "debug 0\u21921\u21920; missing trace\u21921; tag str\u21920",
       "ok": true,
-      "note": "DROP"
+      "note": "TOGGLE"
     },
     {
-      "name": "rename",
-      "cmd": "tmp\u2192status cnt\u2192count; nope soft N=0",
+      "name": "type",
+      "cmd": "n\u2192num n=1; role\u2192str n=2; ghost\u2192missing",
       "ok": true,
-      "note": "RENAME"
+      "note": "TYPE"
     },
     {
-      "name": "pick",
-      "cmd": "JSONPICK ok n role schema (+missing skip) N=4",
+      "name": "safe",
+      "cmd": "type-gate JSONN n=7; str role; meta non-scalar",
       "ok": true,
-      "note": "PICK"
+      "note": "safe"
     },
     {
-      "name": "export",
-      "cmd": "drop+rename+pick public \u2192 7 keys out file",
+      "name": "gate",
+      "cmd": "ok=1 arm; after flip ok off deny",
       "ok": true,
-      "note": "pipeline"
-    },
-    {
-      "name": "bag",
-      "cmd": "JSONPICK plate OF keys bag N=3",
-      "ok": true,
-      "note": "OF bag"
+      "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "pick miss {}; drop 0; rename miss; overwrite dest",
+      "cmd": "toggle edges; type missing LAST_N=0",
       "ok": true,
       "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_AJPJ_REQUIRE=1 empty \u2192 shell 2",
+      "cmd": "CUBALC_AJPF_REQUIRE=1 empty \u2192 shell 2",
       "ok": true,
       "note": "hard"
     },
@@ -1094,6 +1088,30 @@
       "title": "JSONPICK all-missing keys \u2192 {} OK=1 N=0 soft",
       "detail": "No hard fail when none of listed keys present. DROP all-miss leaves plate unchanged N=0. RENAME miss N=0 plate intact. Agents need N>0 gates for export contracts.",
       "repro": "JSONPICK {a:1} zzz \u2192 LAST {} N=0 OK=1"
+    },
+    {
+      "id": "W130",
+      "severity": "high",
+      "area": "lang|names",
+      "title": "FLAG and KEY are host specials \u2014 user vars named FLAG/KEY mis-bind",
+      "detail": "DEFAULT FLAG=\"debug\"; GETFLAG flag \u2192 debug; GETFLAG key \u2192 n; then LET flag_name=FLAG binds wrong (toggled n not debug). PRINT FLAG is not the var. Same class as note (W29). Use FLAG_S/KEY_S or other names.",
+      "repro": "LET FLAG debug; GETFLAG key; LET x=FLAG \u2192 not debug; JSONTOGGLE body FLAG hits wrong key"
+    },
+    {
+      "id": "W131",
+      "severity": "med",
+      "area": "lang|json_key",
+      "title": "JSONTYPE/JSONTOGGLE accept string var keys; JSONN/JSON still literal-only",
+      "detail": "SYS JSONTYPE body KEY_S and JSONTOGGLE body flag_name work. SYS JSONN KEY_S FROM body looks for field KEY_S (miss). Agents need EQS branches for peel after type gate. Inconsistent key resolution across JSON family.",
+      "repro": "LET k n; JSONTYPE p k \u2192 num; JSONN k FROM p \u2192 no field KEY_S"
+    },
+    {
+      "id": "W132",
+      "severity": "med",
+      "area": "lang|jsontoggle",
+      "title": "JSONTOGGLE treats any non-zero/non-empty as truthy \u2192 0 (can zero counters)",
+      "detail": "Toggle on n=7 \u2192 n=0; tag=\"on\" \u2192 0. Missing\u21921 is intentional. Wrong flag name that collides with a counter (or W130 FLAG bug) silently zeros data. Prefer dedicated bool keys only.",
+      "repro": "JSONTOGGLE {n:7} n \u2192 n=0 PREV truthy"
     }
   ],
   "workarounds": [
@@ -1111,11 +1129,11 @@
     "JSONINC delta: EQS-branch literals 1/2/3/5 (W124); ENSURE values via STR",
     "JSONN OR: hardcode literal defaults (W125)",
     "JSONPICK/DROP/RENAME accept string vars for keys (unlike JSONHAS W115); use OF bag for dynamic lists",
-    "export: N>0 after PICK before WRITEOUT peer view (W129)"
+    "export: N>0 after PICK before WRITEOUT peer view (W129)",
+    "Never name vars FLAG or KEY (W130); use FLAG_S/KEY_S",
+    "After JSONTYPE, peel with literal-key EQS branches for JSONN (W131)"
   ],
   "language_gaps": [
-    "Cookbook: seed\u2192take\u2192nth\u2192cite triage sample",
-    "HASINTREE optional LAST=PATH mode or OUT knob for agents that want path in LAST",
     "SLICEINTREE by mtime / reverse order (still DFS like TAKEINTREE W101)",
     "Cookbook: seed\u2192has probe\u2192page window triage under tree",
     "JSON key token resolve vars / JSONHAS OF bag-of-keys loop",
@@ -1125,18 +1143,20 @@
     "DROPINTREE hard reject or warn on negative skip",
     "JSONINC/ENSURE/JSONN OR accept num vars without literal-only",
     "JSONRENAME conflict mode (fail/soft when dest exists)",
-    "JSONPICK stable original key order option"
+    "JSONPICK stable original key order option",
+    "Unify JSON* key token resolution: vars for JSONN/JSON like TOGGLE/TYPE",
+    "JSONTOGGLE only on bool/0/1 with hard reject for other types"
   ],
   "issues_faced": [
-    "selftest 355/355 green v1.15.505",
-    "negative --skip=-1 silently becomes skip0 (W121)",
-    "selftest 355/355 green v1.15.508",
     "JSONINC DELTA var hard-fail; fixed with literal EQS branches (W124)",
     "JSONN OR MAXR hard-fail; fixed OR 10 (W125)",
     "selftest 355/355 green v1.15.510",
     "selftest 355/355 green v1.15.513",
-    "PICK var keys work \u2014 positive contrast to W115"
+    "PICK var keys work \u2014 positive contrast to W115",
+    "FLAG/KEY specials caused flip to zero n until renamed FLAG_S (W130)",
+    "JSONN var key failed after type gate \u2014 EQS literals (W131)",
+    "selftest 355/355 green v1.15.516"
   ],
-  "commit": "a4cba1e",
-  "ts": "2026-08-08T11:39:21Z"
+  "commit": "pending",
+  "ts": "2026-08-08T12:05:30Z"
 }
