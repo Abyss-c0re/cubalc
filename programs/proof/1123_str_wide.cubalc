@@ -1,0 +1,101 @@
+# Host-wide string plane — EQS/HAS/STARTS/ENDS/FIND/MID/BEFORE/REPLACE
+# Usability: multi-KB plate text after CAT/STREPEAT without 512 silent truncate.
+
+HOLD_FLASH 1
+
+# build multi-KB payload (>512 and >1024)
+SYS STREPEAT "abcdefghij" 80
+LET blob = LAST
+SYS LEN blob
+ASSERT LAST_N == 800
+SYS CAT "HEAD:" blob ":TAIL"
+LET msg = LAST
+SYS LEN msg
+ASSERT LAST_N == 810
+
+# --- STARTS / ENDS on full 810 (old ENDS failed at 512) ---
+SYS STARTS msg "HEAD:abcdefghij"
+ASSERT LAST_N == 1
+SYS ENDS msg "ij:TAIL"
+ASSERT LAST_N == 1
+SYS ENDS msg ":TAIL"
+ASSERT LAST_N == 1
+SYS STARTS msg "NOPE"
+ASSERT LAST_N == 0
+
+# --- unique needle past old 512 window ---
+# inject marker at end of blob region: HEAD: + 800 + :TAIL
+# place UNIQUE at offset 700 via REPLACE of one cycle later
+SYS MID msg 700 20
+LET slice = LAST
+SYS LEN slice
+ASSERT LAST_N == 20
+SYS HAS msg slice
+ASSERT LAST_N == 1
+# FIND first of repeating pattern is early — use unique TAG far out
+SYS CAT "HEAD:" blob "TAG_FAR" ":TAIL"
+LET far = LAST
+SYS LEN far
+ASSERT LAST_N == 817
+SYS FIND far "TAG_FAR"
+ASSERT LAST_N == 805
+SYS HAS far "TAG_FAR"
+ASSERT LAST_N == 1
+SYS ENDS far "TAG_FAR:TAIL"
+ASSERT LAST_N == 1
+SYS HAS far "ZZZZZ_not_here"
+ASSERT LAST_N == 0
+
+# --- EQS full equality multi-KB ---
+SYS EQS msg msg
+ASSERT LAST_N == 1
+SYS CAT msg "X"
+LET msgx = LAST
+SYS EQS msg msgx
+ASSERT LAST_N == 0
+
+# --- BEFORE / AFTER peel ---
+SYS BEFORE msg ":TAIL"
+SYS ENDS LAST "ij"
+ASSERT LAST_N == 1
+SYS LEN LAST
+ASSERT LAST_N == 805
+SYS AFTER msg "HEAD:"
+SYS STARTS LAST "abcdefghij"
+ASSERT LAST_N == 1
+SYS LEN LAST
+ASSERT LAST_N == 805
+
+# --- REPLACEALL on wide body ---
+SYS REPLACEALL msg "abcdefghij" "ABCDEFGHIJ"
+ASSERT LAST_N == 80
+SYS LEN LAST
+ASSERT LAST_N == 810
+SYS STARTS LAST "HEAD:ABCDEFGHIJ"
+ASSERT LAST_N == 1
+SYS ENDS LAST "IJ:TAIL"
+ASSERT LAST_N == 1
+SYS HAS LAST "abcdefghij"
+ASSERT LAST_N == 0
+
+# --- MID full multi-KB take ---
+SYS MID msg 0 810
+SYS LEN LAST
+ASSERT LAST_N == 810
+SYS EQS LAST msg
+ASSERT LAST_N == 1
+
+# two wide CAT then ENDS (regression from 1122 / old 512 ENDS)
+SYS STREPEAT "xy" 300
+LET a = LAST
+SYS STREPEAT "zw" 300
+LET b = LAST
+SYS CAT a b
+SYS LEN LAST
+ASSERT LAST_N == 1200
+SYS ENDS LAST "zwzwzw"
+ASSERT LAST_N == 1
+SYS STARTS LAST "xyxyxy"
+ASSERT LAST_N == 1
+
+PRINT "str_wide ok"

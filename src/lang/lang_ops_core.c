@@ -27145,9 +27145,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
     /* SYS MID|SUBSTR|SLICE str start [len] — substring → LAST  (I/O codec) */
+    /* SYS MID host-wide CUBALC_HOST_STR_MAX — multi-KB plate peels. */
     if (kw(&L->cur,"MID") || kw(&L->cur,"SUBSTR") || kw(&L->cur,"SLICE")){
       lex_next(L);
-      char s[512]; s[0]=0;
+      char s[CUBALC_HOST_STR_MAX]; s[0]=0;
       if (resolve_str_arg(vm, L, s, sizeof s) != 0)
         snprintf(s, sizeof s, "%s", vm->last_str);
       long start = 0, len = -1;
@@ -27164,7 +27165,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       size_t remain = slen - (size_t)start;
       size_t take = (len < 0) ? remain : (size_t)len;
       if (take > remain) take = remain;
-      char out[512];
+      char out[CUBALC_HOST_STR_MAX];
       if (take >= sizeof out) take = sizeof out - 1;
       memcpy(out, s + (size_t)start, take);
       out[take] = 0;
@@ -27275,7 +27276,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         icase = 1;
         lex_next(L);
       }
-      char hay[512]="", needle[256]="";
+      char hay[CUBALC_HOST_STR_MAX]="", needle[CUBALC_HOST_STR_MAX]="";
       if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
         snprintf(hay, sizeof hay, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
@@ -33785,7 +33786,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         icase = 1;
         lex_next(L);
       }
-      char a[512]="", b[512]="";
+      char a[CUBALC_HOST_STR_MAX]="", b[CUBALC_HOST_STR_MAX]="";
       if (resolve_str_arg(vm, L, a, sizeof a) != 0)
         snprintf(a, sizeof a, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, b, sizeof b) != 0) b[0]=0;
@@ -33824,7 +33825,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         icase = 1;
         lex_next(L);
       }
-      char hay[512]="", needle[256]="";
+      char hay[CUBALC_HOST_STR_MAX]="", needle[CUBALC_HOST_STR_MAX]="";
       if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
         snprintf(hay, sizeof hay, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
@@ -33868,11 +33869,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                         strcmp(op, "RIGHTOF") == 0 ||
                         strcmp(op, "TAILOF") == 0 || strcmp(op, "SPLITRIGHT") == 0);
       lex_next(L);
-      char hay[512] = "", needle[256] = "";
+      char hay[CUBALC_HOST_STR_MAX] = "", needle[CUBALC_HOST_STR_MAX] = "";
       if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
         snprintf(hay, sizeof hay, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
-      char out[512];
+      char out[CUBALC_HOST_STR_MAX];
       long found = 0;
       if (needle[0] == 0) {
         /* empty needle matches at start */
@@ -33912,12 +33913,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         kw(&L->cur,"INSIDE") || kw(&L->cur,"STRBETWEEN") || kw(&L->cur,"BETWEENSTR") ||
         kw(&L->cur,"INNER")){
       lex_next(L);
-      char open[256] = "", close[256] = "", hay[512] = "";
+      char open[CUBALC_HOST_STR_MAX] = "", close[CUBALC_HOST_STR_MAX] = "", hay[CUBALC_HOST_STR_MAX] = "";
       if (resolve_str_arg(vm, L, open, sizeof open) != 0) open[0] = 0;
       if (resolve_str_arg(vm, L, close, sizeof close) != 0) close[0] = 0;
       if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
         snprintf(hay, sizeof hay, "%s", vm->last_str);
-      char out[512];
+      char out[CUBALC_HOST_STR_MAX];
       long found = 0;
       out[0] = 0;
       {
@@ -34070,7 +34071,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         icase = 1;
         lex_next(L);
       }
-      char hay[512]="", pref[256]="";
+      char hay[CUBALC_HOST_STR_MAX]="", pref[CUBALC_HOST_STR_MAX]="";
       if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
         snprintf(hay, sizeof hay, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, pref, sizeof pref) != 0) pref[0]=0;
@@ -34103,6 +34104,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       /* SYS REPLACE hay old new — first occurrence.
        * SYS REPLACE ALL hay old new | SYS REPLACEALL|GSUB — all occurrences.
        * LAST = result; LAST_N = number of replacements (0 if none).
+       * Host-wide CUBALC_HOST_STR_MAX (no 512/1024 truncate on multi-KB plates).
        * Usability: plate templates {{DATE}}/{{HOST}} without shell sed. */
       int do_all = (kw(&L->cur,"REPLACEALL") || kw(&L->cur,"GSUB") ||
                     kw(&L->cur,"SUBSTALL") || kw(&L->cur,"STRREPALL") ||
@@ -34113,12 +34115,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         do_all = 1;
         lex_next(L);
       }
-      char hay[512]="", olds[256]="", news[256]="";
+      char hay[CUBALC_HOST_STR_MAX]="", olds[CUBALC_HOST_STR_MAX]="", news[CUBALC_HOST_STR_MAX]="";
       if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
         snprintf(hay, sizeof hay, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, olds, sizeof olds) != 0) olds[0]=0;
       if (resolve_str_arg(vm, L, news, sizeof news) != 0) news[0]=0;
-      char out[1024];
+      char out[CUBALC_HOST_STR_MAX];
       long did = 0;
       size_t oldn = strlen(olds), newn = strlen(news);
       if (olds[0] == 0){

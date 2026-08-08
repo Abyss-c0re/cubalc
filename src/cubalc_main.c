@@ -2109,6 +2109,7 @@ int main(int argc, char **argv) {
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
       {"cat_wide", "programs/proof/1122_cat_wide.cubalc", "SYS CAT multi-arg host-wide concat for plate messages"},
+      {"str_wide", "programs/proof/1123_str_wide.cubalc", "EQS/HAS/STARTS/ENDS/FIND/MID/REPLACE host-wide multi-KB"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -3079,7 +3080,7 @@ int main(int argc, char **argv) {
       {"SYS JOIN", "host", "SYS JOIN|PATH a b — portable path join a/b → LAST"},
       {"SYS PATH", "host", "SYS PATH a b — alias of SYS JOIN"},
       {"SYS JOINLINES", "host", "SYS JOINLINES|PASTE sep [str] — join lines with sep"},
-      {"SYS REPLACEALL", "host", "SYS REPLACEALL|GSUB hay old new — all replacements"},
+      {"SYS REPLACEALL", "host", /* wide */ "SYS REPLACEALL|GSUB hay old new — all replacements"},
       {"SYS REPLACE", "host", "SYS REPLACE [ALL] hay old new — first or all"},
       {"SYS SUBSTENV", "host", "SYS SUBSTENV|ENVSUBST [tmpl] — expand $NAME/${NAME} env+vars"},
       {"SYS ENVSUBST", "host", "SYS ENVSUBST alias of SYS SUBSTENV"},
