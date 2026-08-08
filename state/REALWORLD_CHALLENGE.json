@@ -1308,6 +1308,6 @@
     "JSONAVGN_N silent 0 under 128-var pressure; LAST_N capture fixes gate (W144)",
     "bool pollution + trunc mean documented (W145)"
   ],
-  "commit": "pending",
+  "commit": "cff19e6",
   "ts": "2026-08-08T14:11:58Z"
 }
