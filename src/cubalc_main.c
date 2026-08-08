@@ -2110,6 +2110,7 @@ int main(int argc, char **argv) {
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
       {"cat_wide", "programs/proof/1122_cat_wide.cubalc", "SYS CAT multi-arg host-wide concat for plate messages"},
       {"str_wide", "programs/proof/1123_str_wide.cubalc", "EQS/HAS/STARTS/ENDS/FIND/MID/REPLACE host-wide multi-KB"},
+      {"fillp_strict", "programs/proof/1124_fillp_strict.cubalc", "NEEDFILLP/FILLP STRICT + FILLPKEYS template contract"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2355,6 +2356,8 @@ int main(int argc, char **argv) {
       {"KEYSP", "flow", "KEYSP — PLATE key bag → LAST · LAST_N=count"},
       {"DUMPP", "flow", "DUMPP|PLATEINFO — cubalc.plate_info.v1 PLATE snapshot"},
       {"FILLP", "flow", "FILLP|SUBSTPLATE [tmpl] — expand {{key}} from PLATE · agent templates"},
+      {"NEEDFILLP", "flow", "NEEDFILLP|FILLP STRICT [tmpl] — fail if {{key}} missing · lists names"},
+      {"FILLPKEYS", "flow", "FILLPKEYS [tmpl] — unique {{key}} names bag · template contract"},
       {"SUBSTPLATE", "flow", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "flow", "EXPANDP alias of FILLP"},
       {"TEMPLATEP", "flow", "TEMPLATEP alias of FILLP"},

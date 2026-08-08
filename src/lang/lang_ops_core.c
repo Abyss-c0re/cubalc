@@ -856,14 +856,18 @@ static long cubalc_expand_substenv(VM *vm, const char *tmpl, char *out, size_t o
 /* Expand {{key}} placeholders from a JSON plate object.
  * Unset keys → empty; hits = slots seen; miss = missing keys.
  * Incomplete {{ without }} is copied literally. */
+/* Expand {{key}} from plate JSON. Optional miss_bag = newline bag of missing keys.
+ * Returns slot count; *miss_out = missing key count. */
 static long cubalc_expand_fillp(const char *plate, const char *tmpl, char *out,
-                                size_t outcap, long *miss_out) {
+                                size_t outcap, long *miss_out,
+                                char *miss_bag, size_t miss_cap) {
   const char *src = tmpl ? tmpl : "";
   const char *pl = (plate && plate[0]) ? plate : "{}";
-  size_t o = 0;
+  size_t o = 0, mo = 0;
   long hits = 0, miss = 0;
   char name[96];
   cubalc_host_result gr;
+  if (miss_bag && miss_cap) miss_bag[0] = 0;
   if (!out || outcap == 0) {
     if (miss_out) *miss_out = 0;
     return 0;
@@ -871,21 +875,21 @@ static long cubalc_expand_fillp(const char *plate, const char *tmpl, char *out,
   out[0] = 0;
   while (*src && o + 1 < outcap) {
     if (src[0] == '{' && src[1] == '{') {
-      const char *p = src + 2;
+      const char *pp = src + 2;
       size_t ni = 0;
       name[0] = 0;
-      while (*p && !(p[0] == '}' && p[1] == '}') && ni + 1 < sizeof name) {
-        char c = *p;
+      while (*pp && !(pp[0] == '}' && pp[1] == '}') && ni + 1 < sizeof name) {
+        char c = *pp;
         if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
             (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.')
           name[ni++] = c;
         else
           break;
-        p++;
+        pp++;
       }
       name[ni] = 0;
-      if (name[0] && p[0] == '}' && p[1] == '}') {
-        src = p + 2;
+      if (name[0] && pp[0] == '}' && pp[1] == '}') {
+        src = pp + 2;
         hits++;
         memset(&gr, 0, sizeof gr);
         if (cubalc_host_json_get(pl, name, &gr) == 0) {
@@ -898,10 +902,18 @@ static long cubalc_expand_fillp(const char *plate, const char *tmpl, char *out,
           out[o] = 0;
         } else {
           miss++;
+          if (miss_bag && miss_cap > 1) {
+            size_t nl = strlen(name);
+            if (mo > 0 && mo + 1 < miss_cap) miss_bag[mo++] = '\n';
+            if (mo + nl < miss_cap) {
+              memcpy(miss_bag + mo, name, nl);
+              mo += nl;
+              miss_bag[mo] = 0;
+            }
+          }
         }
         continue;
       }
-      /* incomplete / invalid → copy one '{' and continue */
       out[o++] = *src++;
       continue;
     }
@@ -910,6 +922,62 @@ static long cubalc_expand_fillp(const char *plate, const char *tmpl, char *out,
   out[o] = 0;
   if (miss_out) *miss_out = miss;
   return hits;
+}
+
+/* List unique {{key}} names in template order → newline bag. */
+static long cubalc_fillp_keys(const char *tmpl, char *out, size_t outcap) {
+  const char *src = tmpl ? tmpl : "";
+  size_t o = 0;
+  long n = 0;
+  char name[96];
+  if (!out || outcap == 0) return 0;
+  out[0] = 0;
+  while (*src) {
+    if (src[0] == '{' && src[1] == '{') {
+      const char *pp = src + 2;
+      size_t ni = 0;
+      name[0] = 0;
+      while (*pp && !(pp[0] == '}' && pp[1] == '}') && ni + 1 < sizeof name) {
+        char c = *pp;
+        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+            (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.')
+          name[ni++] = c;
+        else
+          break;
+        pp++;
+      }
+      name[ni] = 0;
+      if (name[0] && pp[0] == '}' && pp[1] == '}') {
+        size_t nl;
+        int seen = 0;
+        const char *q;
+        src = pp + 2;
+        nl = strlen(name);
+        q = out;
+        while (*q) {
+          size_t ll = 0;
+          while (q[ll] && q[ll] != '\n') ll++;
+          if (ll == nl && memcmp(q, name, nl) == 0) { seen = 1; break; }
+          q += ll;
+          if (*q == '\n') q++;
+        }
+        if (!seen) {
+          if (o > 0 && o + 1 < outcap) out[o++] = '\n';
+          if (o + nl < outcap) {
+            memcpy(out + o, name, nl);
+            o += nl;
+            out[o] = 0;
+            n++;
+          }
+        }
+        continue;
+      }
+      src++;
+      continue;
+    }
+    src++;
+  }
+  return n;
 }
 
 /* FNV-1a 32-bit — fast non-crypto fingerprint for plate/cache stamps. */
@@ -35547,6 +35615,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
       {"TEMPLATEP", "TEMPLATEP alias of FILLP"},
+      {"NEEDFILLP", "NEEDFILLP|FILLP STRICT [tmpl] — fail-fast if {{key}} missing · lists names"},
+      {"FILLP STRICT", "FILLP STRICT alias of NEEDFILLP"},
+      {"FILLPKEYS", "FILLPKEYS [tmpl] — bag of unique {{key}} names · template contract"},
       {"FILLPFILE", "FILLPFILE|SUBSTPLATEFILE tmpl [out] — expand {{key}} file from PLATE · dual SUBSTFILE"},
       {"SUBSTPLATEFILE", "SUBSTPLATEFILE alias of FILLPFILE"},
       {"EXPANDPFILE", "EXPANDPFILE alias of FILLPFILE"},
@@ -38180,25 +38251,75 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * Bare USAGE re-echoes stored USAGE (or empty). Does not change OK/ERR.
    * REQUIRE ARG / ARGC / FLAG failures append " · usage: …" when set.
    * Usability: one-line help without shell; twin of NOTE for CLI tools. */
-  /* FILLP|SUBSTPLATE|EXPANDP|TEMPLATEP [template]
+  /* FILLP|SUBSTPLATE|EXPANDP|TEMPLATEP [STRICT|NEED] [template]
    * — expand {{key}} from conventional PLATE var into a message/path template.
    * Unset key → empty; incomplete {{ left literal. Bare FILLP uses prior LAST.
-   * LAST = expanded; LAST_N/FILLP_N = slots; FILLP_MISS = missing keys.
-   * Does not mutate PLATE. Complements SUBSTENV ($NAME) with plate-local keys:
-   *   SETP "name" "alice"
-   *   SETP "host" "cube1"
-   *   FILLP "peer {{name}}@{{host}} ready"
-   * Usability: agent status/log/path templates without GETP+REPLACEALL chains. */
+   * LAST = expanded; LAST_N/FILLP_N = slots; FILLP_MISS = missing keys;
+   * FILLP_MISS_KEYS = newline bag of missing key names.
+   * FILLP STRICT|NEED / NEEDFILLP — fail-fast if any {{key}} missing (lists names).
+   * FILLPKEYS [template] — bag of unique {{key}} names · contract discovery.
+   * Usability: agent status/log/path templates without GETP+REPLACEALL chains;
+   * STRICT gates peer/status renders so agents do not ship half-filled plates. */
+  if (kw(&L->cur,"FILLPKEYS") || kw(&L->cur,"TEMPLATEKEYS") ||
+      kw(&L->cur,"PLATE_KEYS_TMPL") || kw(&L->cur,"KEYS_IN_TEMPLATE") ||
+      kw(&L->cur,"MFILLPKEYS")) {
+    char tmpl[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    long n = 0;
+    lex_next(L);
+    tmpl[0] = 0; out[0] = 0;
+    if (L->cur.kind == TK_NL || L->cur.kind == TK_EOF ||
+        (L->cur.kind == TK_IDENT &&
+         (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+          kw(&L->cur,"SYS") || kw(&L->cur,"IF") || kw(&L->cur,"END") ||
+          kw(&L->cur,"INCLUDE") || kw(&L->cur,"SETP") || kw(&L->cur,"FILLP") ||
+          kw(&L->cur,"REQUIRE") || kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT")))) {
+      snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+    } else if (resolve_str_arg(vm, L, tmpl, sizeof tmpl) != 0) {
+      snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+    }
+    n = cubalc_fillp_keys(tmpl, out, sizeof out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_str(vm, "FILLPKEYS", out);
+    var_set_num(vm, "FILLPKEYS_N", n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# fillpkeys n=%ld\n", n);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"FILLP") || kw(&L->cur,"SUBSTPLATE") || kw(&L->cur,"EXPANDP") ||
       kw(&L->cur,"TEMPLATEP") || kw(&L->cur,"FILLPLATE") || kw(&L->cur,"RENDERP") ||
       kw(&L->cur,"PLATE_FILL") || kw(&L->cur,"PLATE_TEMPLATE") ||
-      kw(&L->cur,"MFILLP") || kw(&L->cur,"INTERPP")) {
+      kw(&L->cur,"MFILLP") || kw(&L->cur,"INTERPP") ||
+      kw(&L->cur,"NEEDFILLP") || kw(&L->cur,"REQUIREFILLP") ||
+      kw(&L->cur,"FILLPNEED") || kw(&L->cur,"STRICTFILLP")) {
     char plate[CUBALC_HOST_STR_MAX], tmpl[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    char miss_keys[CUBALC_HOST_STR_MAX];
     long hits = 0, miss = 0;
+    int is_strict = 0;
+    int aln = L->cur.line;
     Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "NEEDFILLP") == 0 || strcmp(op0, "REQUIREFILLP") == 0 ||
+        strcmp(op0, "FILLPNEED") == 0 || strcmp(op0, "STRICTFILLP") == 0)
+      is_strict = 1;
 
     lex_next(L);
-    plate[0] = 0; tmpl[0] = 0; out[0] = 0;
+    /* optional STRICT|NEED|REQUIRE after FILLP */
+    if (!is_strict && (kw(&L->cur,"STRICT") || kw(&L->cur,"NEED") ||
+                       kw(&L->cur,"REQUIRE") || kw(&L->cur,"MUST") ||
+                       kw(&L->cur,"ALL") || kw(&L->cur,"COMPLETE"))) {
+      is_strict = 1;
+      lex_next(L);
+    }
+
+    plate[0] = 0; tmpl[0] = 0; out[0] = 0; miss_keys[0] = 0;
     pv = var_get(vm, "PLATE", 0);
     if (pv && pv->is_str && pv->sval[0])
       snprintf(plate, sizeof plate, "%s", pv->sval);
@@ -38214,7 +38335,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           kw(&L->cur,"DELP") || kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") ||
           kw(&L->cur,"DEFAULTP") || kw(&L->cur,"TOGGLEP") || kw(&L->cur,"NEEDP") ||
           kw(&L->cur,"HASP") || kw(&L->cur,"KEYSP") || kw(&L->cur,"DUMPP") ||
-          kw(&L->cur,"FILLP") || kw(&L->cur,"SUBSTPLATE") || kw(&L->cur,"EXPANDP") ||
+          kw(&L->cur,"FILLP") || kw(&L->cur,"FILLPKEYS") || kw(&L->cur,"SUBSTPLATE") ||
+          kw(&L->cur,"EXPANDP") || kw(&L->cur,"FILLPFILE") ||
           kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
           kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
           kw(&L->cur,"VERSION")))) {
@@ -38223,7 +38345,37 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
     }
 
-    hits = cubalc_expand_fillp(plate, tmpl, out, sizeof out, &miss);
+    hits = cubalc_expand_fillp(plate, tmpl, out, sizeof out, &miss,
+                               miss_keys, sizeof miss_keys);
+
+    if (is_strict && miss > 0) {
+      char flat[200], msg[320];
+      size_t mi = 0;
+      const char *mp;
+      flat[0] = 0;
+      for (mp = miss_keys; *mp && mi + 1 < sizeof flat; mp++) {
+        if (*mp == '\n' || *mp == '\r') {
+          if (mi > 0 && flat[mi - 1] != ',') {
+            flat[mi++] = ',';
+            if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+          }
+        } else {
+          flat[mi++] = *mp;
+        }
+      }
+      flat[mi] = 0;
+      if (!flat[0]) snprintf(flat, sizeof flat, "?");
+      snprintf(msg, sizeof msg,
+               "FILLP STRICT missing line %d: %s — soft twin FILLP / FILLP_MISS",
+               aln, flat);
+      var_set_str(vm, "FILLP_MISS_KEYS", miss_keys);
+      var_set_num(vm, "FILLP_MISS", miss);
+      var_set_num(vm, "FILLP_N", hits);
+      if (vm->res) vm->res->asserts_fail++;
+      fail(vm, msg);
+      return -1;
+    }
+
     var_set_str(vm, "LAST", out);
     snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
     vm->last_n = hits;
@@ -38237,9 +38389,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "EXPANDP_N", hits);
     var_set_num(vm, "FILLP_MISS", miss);
     var_set_num(vm, "SUBSTPLATE_MISS", miss);
+    var_set_str(vm, "FILLP_MISS_KEYS", miss_keys);
     var_set_num(vm, "OK", 1);
     if (vm->trace)
-      fprintf(vm->trace, "# fillp hits=%ld miss=%ld\n", hits, miss);
+      fprintf(vm->trace, "# fillp hits=%ld miss=%ld strict=%d\n", hits, miss, is_strict);
     if (vm->res)
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
     bump(vm); return 1;
@@ -38262,13 +38415,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     char path[CUBALC_HOST_STR_MAX], outpath[CUBALC_HOST_STR_MAX];
     char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
     char plate[CUBALC_HOST_STR_MAX], expanded[CUBALC_HOST_STR_MAX];
+    char miss_keys[CUBALC_HOST_STR_MAX];
     long hits = 0, miss = 0;
     cubalc_host_result hr, wr;
     Var *pv;
 
     lex_next(L);
     path[0] = 0; outpath[0] = 0; a[0] = 0; b[0] = 0;
-    plate[0] = 0; expanded[0] = 0;
+    plate[0] = 0; expanded[0] = 0; miss_keys[0] = 0;
 
     if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
       fail(vm, "FILLPFILE tmpl_path [out_path]");
@@ -38318,7 +38472,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
 
-    hits = cubalc_expand_fillp(plate, hr.str, expanded, sizeof expanded, &miss);
+    hits = cubalc_expand_fillp(plate, hr.str, expanded, sizeof expanded, &miss,
+                               miss_keys, sizeof miss_keys);
 
     memset(&wr, 0, sizeof wr);
     if (cubalc_host_write(outpath, expanded, &wr) != 0) {
@@ -38350,6 +38505,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "SUBSTPLATEFILE_N", hits);
     var_set_num(vm, "FILLPFILE_MISS", miss);
     var_set_num(vm, "SUBSTPLATEFILE_MISS", miss);
+    var_set_str(vm, "FILLPFILE_MISS_KEYS", miss_keys);
     var_set_num(vm, "FILLPFILE_BYTES", (long)strlen(expanded));
     var_set_num(vm, "OK", 1);
     if (vm->trace)

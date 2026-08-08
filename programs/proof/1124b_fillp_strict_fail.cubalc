@@ -1,0 +1,6 @@
+# NEEDFILLP fail-fast when PLATE missing template keys
+HOLD_FLASH 1
+LET PLATE = "{}"
+SETP "name" "only"
+NEEDFILLP "hi {{name}} @ {{host}}"
+PRINT "should not reach"

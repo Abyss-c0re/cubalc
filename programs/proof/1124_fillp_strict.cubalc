@@ -1,0 +1,72 @@
+# NEEDFILLP / FILLP STRICT / FILLPKEYS — template contract for agents
+# Usability: fail-fast half-filled peer/status strings; list required {{keys}}.
+
+HOLD_FLASH 1
+
+# --- FILLPKEYS discovers slots ---
+FILLPKEYS "peer {{name}}@{{host}} n={{n}} peer={{name}}"
+ASSERT OK == 1
+ASSERT FILLPKEYS_N == 3
+ASSERT LAST_N == 3
+SYS HASLINE LAST "name"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "host"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+# dedupe name
+SYS LINES LAST
+ASSERT LAST_N == 3
+
+# --- soft FILLP still allows miss ---
+LET PLATE = "{}"
+SETP "name" "alice"
+FILLP "hi {{name}} on {{host}}"
+ASSERT OK == 1
+ASSERT FILLP_N == 2
+ASSERT FILLP_MISS == 1
+SYS HASLINE FILLP_MISS_KEYS "host"
+ASSERT LAST_N == 1
+SYS EQS LAST "hi alice on "
+ASSERT LAST_N == 1
+
+# --- NEEDFILLP / FILLP STRICT fails with listed keys ---
+# (run via EXPECT? no — use subprocess style: only soft path in this proof
+#  for fail-fast we use a nested approach: HASPALL on FILLPKEYS)
+
+# complete plate → STRICT ok
+SETP "host" "cube1"
+SETP "n" 9
+FILLP STRICT "peer {{name}}@{{host}} n={{n}}"
+ASSERT OK == 1
+ASSERT FILLP_MISS == 0
+SYS EQS LAST "peer alice@cube1 n=9"
+ASSERT LAST_N == 1
+
+NEEDFILLP "ready {{name}}/{{host}}"
+ASSERT OK == 1
+SYS EQS LAST "ready alice/cube1"
+ASSERT LAST_N == 1
+
+# miss keys bag present after soft fill with gaps
+SETP "host" ""
+# empty string is still a hit (key present) — del key for true miss
+DELP "host"
+FILLP "x={{host}} y={{missing}}"
+ASSERT FILLP_MISS == 2
+SYS HASLINE FILLP_MISS_KEYS "host"
+ASSERT LAST_N == 1
+SYS HASLINE FILLP_MISS_KEYS "missing"
+ASSERT LAST_N == 1
+
+# contract: FILLPKEYS then HASPALL / NEEDP
+FILLPKEYS "a={{alpha}} b={{beta}}"
+LET need = LAST
+# soft: HASPALL on PLATE for template keys
+# (keys bag from FILLPKEYS is newline fields)
+HASP "alpha"
+ASSERT LAST_N == 0
+HASP "name"
+ASSERT LAST_N == 1
+
+PRINT "fillp_strict soft ok"
