@@ -1,53 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 177,
-  "program": "programs/realworld/inode_share_relink_board.cubalc",
-  "theme": "HARDLINKOUT + RELINKOUT plate mirror + retargetable current alias (same-inode share + force symlink)",
-  "version": "1.15.477-usability",
+  "iter": 178,
+  "program": "programs/realworld/claim_tee_queue_board.cubalc",
+  "theme": "CLAIMOUT + TEEOUT nested work claim + receipt tee (exclusive create + LAST=body write)",
+  "version": "1.15.479-usability",
   "pass": true,
-  "prior_note": "iter 176 WRITEOUTIF+LOGSTAMP+LINKOUT; this iter first realworld HARDLINKOUT(1026)+RELINKOUT(1027); closed LINKOUT re-link gap via RELINKOUT",
+  "prior_note": "iter 177 HARDLINKOUT+RELINKOUT; this iter first realworld CLAIMOUT(1029)+TEEOUT(1028)",
   "tests": [
     {
-      "name": "seal",
-      "cmd": "WRITEOUT nested plate body=msg",
+      "name": "claim",
+      "cmd": "CLAIMOUT nested HIT=1 body written; claim_pid set",
       "ok": true,
-      "note": "WRITEOUT"
+      "note": "CLAIMOUT"
     },
     {
-      "name": "share",
-      "cmd": "HARDLINKOUT \u2192 SAMEINODE=1; re-share soft exists",
+      "name": "claim_held",
+      "cmd": "second CLAIMOUT soft HIT=0; REQUIRE=1 EXIT 2",
       "ok": true,
-      "note": "HARDLINKOUT"
+      "note": "soft+hard"
     },
     {
-      "name": "relink",
-      "cmd": "first CREATED=1 REPLACED=0; retarget REPLACED=1 ISLINK",
+      "name": "tee",
+      "cmd": "TEEOUT LAST body HAS without READ; rewrite CREATED=0",
       "ok": true,
-      "note": "RELINKOUT"
+      "note": "TEEOUT"
     },
     {
-      "name": "getflag_link",
-      "cmd": "GETFLAG link path not GETFLAGOUT (W80)",
+      "name": "release",
+      "cmd": "RM claim; re-claim HIT=1; free soft",
       "ok": true,
-      "note": "W80 workaround"
+      "note": "release"
     },
     {
-      "name": "var_ceiling",
-      "cmd": "lean LET ~97 VARS_N; fat board 127 silent knob drop",
+      "name": "has_gate",
+      "cmd": "has claim ok; has clai miss; gate admit",
+      "ok": true,
+      "note": "bag"
+    },
+    {
+      "name": "probe_boom",
+      "cmd": "empty CLAIMOUT/TEEOUT soft; boom shell 2",
+      "ok": true,
+      "note": "edges"
+    },
+    {
+      "name": "vars_lean",
+      "cmd": "peel budget VARS_N~90 < 128",
       "ok": true,
       "note": "W81"
-    },
-    {
-      "name": "soft_miss",
-      "cmd": "share missing src; soft empty; has substring miss; probe empty",
-      "ok": true,
-      "note": "soft"
-    },
-    {
-      "name": "unknown",
-      "cmd": "boom \u2192 EXIT 2 shell 2",
-      "ok": true,
-      "note": "hard"
     },
     {
       "name": "selftest",
@@ -720,26 +720,50 @@
       "title": "RELINKOUT force-replaces nested symlink; fills LINKOUT re-link gap",
       "detail": "Positive: first link CREATED=1 REPLACED=0; retarget same path REPLACED=1 CREATED=0; READLINK peels new target. Closes W79/LINKOUT-force language_gap when agents use RELINKOUT and GETFLAG (not GETFLAGOUT) for the link path.",
       "repro": "RELINKOUT a cur; RELINKOUT b cur \u2192 REPLACED 1 READLINK b"
+    },
+    {
+      "id": "W84",
+      "severity": "low",
+      "area": "lang|claimout",
+      "title": "CLAIMOUT exclusive nested claim; second soft exists; CREATED parent-only",
+      "detail": "Positive: CLAIMOUT path body \u2192 HIT=1 CLAIM_PID>0 body on disk; second OK=0 HIT=0 soft held. CREATED often 0 after GETFLAGOUT parent mkdir (W70 class). Release via RM enables re-claim with CREATED=0 when parent exists. Body omit trailing NL (W5).",
+      "repro": "CLAIMOUT f worker; CLAIMOUT f other \u2192 OK 0 HIT 0; RM f; CLAIMOUT f \u2192 HIT 1"
+    },
+    {
+      "id": "W85",
+      "severity": "low",
+      "area": "lang|teeout",
+      "title": "TEEOUT writes nested plate and leaves body in LAST (not path)",
+      "detail": "Positive: TEEOUT out body \u2192 LAST=body for HAS/GREP without READ; TEEOUT_PATH abs. CREATED parent-only like APPENDOUT. Distinct from WRITEOUT which leaves path-ish LAST. Agents that need path after write use TEEOUT_PATH not LAST.",
+      "repro": "TEEOUT f rcpt=done; SYS HAS LAST rcpt= \u2192 1; LAST is body not path"
+    },
+    {
+      "id": "W86",
+      "severity": "med",
+      "area": "host|env",
+      "title": "Custom CUBALC_* ENV reach SYS ENV; CUBALC_ARG* host still dead (W1/W9)",
+      "detail": "Positive contrast: export CUBALC_CTQ_REQUIRE=1 is visible to SYS ENV and drives EXIT 2 on held claim. export CUBALC_ARG0=claim still does not populate SYS ARG (W1). Agents may use custom env gates but not ARG env contract.",
+      "repro": "CUBALC_CTQ_REQUIRE=1 claim held \u2192 shell 2; CUBALC_ARG0=claim alone \u2192 list"
     }
   ],
   "workarounds": [
-    "GETFLAG link path for symlink dests \u2014 never GETFLAGOUT on existing links (W80)",
-    "Lean LET/DEFAULT; check VARS_N before heavy ops; reuse row/bag temps (W81)",
-    "HARDLINKOUT src share; SAMEINODE for verify; soft exists on re-share",
-    "RELINKOUT src link for force current alias (not LINKOUT re-link)",
-    "cubalc run prog seal|share|relink -- --src=F --share=F --link=F body"
+    "CLAIMOUT path body; check CLAIM_HIT; RM to release",
+    "TEEOUT out body then HAS LAST without READ; path in TEEOUT_PATH",
+    "CUBALC_CTQ_REQUIRE=1 for shell-visible held-claim fail (not CUBALC_ARG*)",
+    "Keep VARS_N well under 128 (W81)",
+    "cubalc run prog claim|tee|release -- --claim=F --out=F body"
   ],
   "language_gaps": [
-    "vars[] grow or hard-fail on overflow (silent 128 drop is agent footgun)",
-    "GETFLAGOUT option to not realpath (link-path mode) for alias ops",
-    "Cookbook: plate mirror HARDLINKOUT+RELINKOUT with lean VARS budget"
+    "CLAIMOUT TTL/lease auto-expire without manual RM",
+    "Cookbook: claim+tee queue worker under VARS budget",
+    "vars[] grow or hard-fail on overflow still open (W81)"
   ],
   "issues_faced": [
-    "GETFLAGOUT on existing symlink destroyed plate via RELINKOUT (W80) \u2014 fixed board to GETFLAG",
-    "vars[128] full \u2192 RELINKOUT knobs stuck at 0 despite trace (W81) \u2014 lean rewrite",
-    "WRITEOUT omit trailing NL (W5 reconfirm)",
+    "CLAIMOUT held soft OK + REQUIRE hard EXIT 2 (W84/W86)",
+    "TEEOUT LAST=body enables HAS without READ (W85)",
+    "WRITE/claim body omit final NL (W5 reconfirm)",
     "selftest 355/355"
   ],
-  "commit": "bd94a7aef66f9ee813dc3bba27ab4f999400261c",
-  "ts": "2026-08-08T05:30:01Z"
+  "commit": "",
+  "ts": "2026-08-08T05:48:00Z"
 }

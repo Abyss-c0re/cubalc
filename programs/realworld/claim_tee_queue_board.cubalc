@@ -1,0 +1,516 @@
+# claim_tee_queue_board.cubalc — CLAIMOUT + TEEOUT nested work claim + receipt tee
+#
+# Real use: queue agents take exclusive nested claims (no DIRNAME+CLAIM glue) and
+# write deep receipts while keeping the body in LAST for HAS/GREP without READ:
+#   CLAIMOUT / CLAIMNEST — ENSUREPARENT + exclusive create (1029)
+#   TEEOUT / TEEWOUT    — ENSUREPARENT + write, LAST=body (1028)
+#   GETFLAGOUT claim|out · GETFLAG spare · SUBCMD claim|tee|release|list|...
+#
+# First realworld CLAIMOUT + TEEOUT board. Distinct from work_claim_board
+# (plain CLAIM+STAT+WRITEATOMIC, no nested ensure) and inode_share_relink.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ctq_$$
+#   ./out/cubalc run programs/realworld/claim_tee_queue_board.cubalc \
+#     claim -- --claim=/tmp/ctq/work/deep/j1.claim workerA
+#   ./out/cubalc run ... tee -- --out=/tmp/ctq/rcpt/j1.txt done
+#   ./out/cubalc run ... release -- --claim=...
+#
+# Plate: STATUS.txt VAL.txt META.txt CTQ_REPORT.txt
+# Env: CLAIM_PATH RCPT_OUT CUBALC_CTQ_REQUIRE CUBALC_CTQ_MIN
+#
+# Edges:
+#   CLAIMOUT HIT=1 then soft exists HIT=0; release RM + re-claim
+#   TEEOUT LAST=body for HAS; CREATED parent vs rewrite
+#   lean VARS (W81); WRITE omit NL; empty probe soft
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "claim_tee_queue_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "claim_tee_queue -- claim|tee|release|list -- [--claim=F] [--out=F] [body]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "queue/work/deep/item.claim"
+LET claim_file = LAST
+SYS JOIN state_dir "queue/rcpt/item.txt"
+LET out_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT claim|c OR ENV CLAIM_PATH OR claim_file
+LET claim_file = LAST
+LET c_src = GETFLAGOUT_SRC
+LET c_ok = OK
+CLEAR_ERR
+GETFLAGOUT out|o OR ENV RCPT_OUT OR out_file
+LET out_file = LAST
+LET o_src = GETFLAGOUT_SRC
+LET o_ok = OK
+CLEAR_ERR
+
+LET body = "worker"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET body = LAST
+END
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_CTQ_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_CTQ_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "CTQ_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET created = 0
+LET claim_hit = 0
+LET claim_pid = 0
+LET row = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "claim", "tee", "release", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "claim" THEN
+    LET op = "claim"
+  WHEN "tee" THEN
+    LET op = "tee"
+  WHEN "release" THEN
+    LET op = "release"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n c_src o_src
+  CLEAR_ERR
+END
+
+SYS EQS op "claim"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF c_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "claim needs path"
+    FAIL "claim needs path"
+    CLEAR_ERR
+  ELSE
+    CLAIMOUT claim_file body
+    IF OK == 0 THEN
+      LET miss = 1
+      LET claim_hit = CLAIM_HIT
+      LET note_msg = "claim held or fail"
+      FAIL "claim held or fail"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "claim failed"
+      END
+    ELSE
+      LET claim_hit = CLAIM_HIT
+      LET created = CLAIMOUT_CREATED
+      LET claim_pid = CLAIM_PID
+      CLEAR_ERR
+      SYS CAT "claim:"
+      LET row = LAST
+      SYS CAT row body
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR claim_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":ok"
+      LET row = LAST
+      SYS GREPV "claim:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      LET hit = 1
+      LET note_msg = "claim ok"
+    END
+  END
+  PRINT_JSON admit_n bag_n claim_hit created claim_pid c_src
+  CLEAR_ERR
+END
+
+SYS EQS op "tee"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF o_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "tee needs out path"
+    FAIL "tee needs out path"
+    CLEAR_ERR
+  ELSE
+    SYS CAT "rcpt="
+    LET row = LAST
+    SYS CAT row body
+    LET row = LAST
+    TEEOUT out_file row
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "tee failed"
+      FAIL "tee failed"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "tee failed"
+      END
+    ELSE
+      LET created = TEEOUT_CREATED
+      # LAST is body (not path) — HAS without READ
+      SYS HAS LAST "rcpt="
+      LET has_n = LAST_N
+      CLEAR_ERR
+      SYS CAT "tee:"
+      LET row = LAST
+      SYS CAT row body
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR has_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":ok"
+      LET row = LAST
+      SYS GREPV "tee:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      LET hit = 1
+      LET note_msg = "tee ok"
+    END
+  END
+  PRINT_JSON admit_n bag_n created has_n o_src
+  CLEAR_ERR
+END
+
+SYS EQS op "release"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF c_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "release needs path"
+    FAIL "release needs path"
+    CLEAR_ERR
+  ELSE
+    SYS EXIST claim_file
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "release free soft"
+      FAIL "release free soft"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "release free"
+      END
+    ELSE
+      SYS RM claim_file
+      EXPECT OK == 1
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "release rm fail"
+        FAIL "release rm fail"
+        CLEAR_ERR
+      ELSE
+        CLEAR_ERR
+        SYS CAT "rel:"
+        LET row = LAST
+        SYS CAT row claim_file
+        LET row = LAST
+        SYS CAT row ":ok"
+        LET row = LAST
+        SYS GREPV "rel:" bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+        LET admit_n = 1
+        SYS LINES bag
+        LET bag_n = LAST_N
+        LET hit = 1
+        LET note_msg = "release ok"
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n c_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET row = LAST
+    SYS CAT row ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET row = LAST
+  SYS BLANK row
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs key"
+    FAIL "has needs key"
+    CLEAR_ERR
+  ELSE
+    SYS CAT row ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  CLAIMOUT ""
+  LET has_n = OK
+  CLEAR_ERR
+  TEEOUT "" "x"
+  LET admit_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON has_n admit_n c_src o_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+LET row = "schema=cubalc.claim_tee_queue_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "claim_hit"
+LET row = LAST
+SYS STR claim_hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "claim_tee_queue_board: done"
+PRINT_JSON hit miss bag_n claim_hit created has_n c_src note_msg
+EXIT 0
