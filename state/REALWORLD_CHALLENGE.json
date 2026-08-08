@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 186,
-  "program": "programs/realworld/tree_sample_cite_board.cubalc",
-  "theme": "TAKEINTREE + NTHINTREE + FORMATPATHLINE sample matching paths and build cites",
-  "version": "1.15.498-usability",
+  "iter": 187,
+  "program": "programs/realworld/tree_has_slice_page_board.cubalc",
+  "theme": "HASINTREE soft content-exists + SLICEINTREE path window page under tree",
+  "version": "1.15.500-usability",
   "pass": true,
-  "prior_note": "iter 185 PATHLINETEXTS+FREQ; this iter first realworld TAKEINTREE(1047)+NTHINTREE(1048)+FORMATPATHLINE(1046)",
+  "prior_note": "iter 186 TAKEINTREE+NTHINTREE+FORMATPATHLINE; this iter first realworld HASINTREE(1049)+SLICEINTREE(1050)",
   "tests": [
     {
       "name": "seed",
@@ -14,34 +14,52 @@
       "note": "seed"
     },
     {
-      "name": "take",
-      "cmd": "TAKEINTREE n=2 \u2192 mid.txt z.txt (no err.log)",
+      "name": "has",
+      "cmd": "HASINTREE error \u2192 HIT=1 path mid.txt; LAST keep preserve-me",
       "ok": true,
-      "note": "TAKEINTREE"
+      "note": "HASINTREE"
     },
     {
-      "name": "take0",
-      "cmd": "TAKE n=0 \u2192 empty soft",
+      "name": "has_miss",
+      "cmd": "HASINTREE zzzz \u2192 HIT=0 soft miss exit0",
+      "ok": true,
+      "note": "soft"
+    },
+    {
+      "name": "page",
+      "cmd": "SLICEINTREE start0 count2 \u2192 mid.txt z.txt",
+      "ok": true,
+      "note": "SLICEINTREE"
+    },
+    {
+      "name": "page_mid",
+      "cmd": "start1 count1 \u2192 z.txt",
+      "ok": true,
+      "note": "window"
+    },
+    {
+      "name": "page_empty",
+      "cmd": "start9 / count0 \u2192 empty soft miss",
       "ok": true,
       "note": "empty"
     },
     {
-      "name": "nth",
-      "cmd": "NTHINTREE i=1 \u2192 z.txt; i=9 OOR HIT=0",
+      "name": "icase",
+      "cmd": "HASINTREEI+SLICEINTREEI ERROR \u2192 hit",
       "ok": true,
-      "note": "NTHINTREE"
+      "note": "icase"
     },
     {
-      "name": "cite",
-      "cmd": "FORMATPATHLINE from FIRSTLINEINTREE \u2192 path:2:error middle",
+      "name": "probe",
+      "cmd": "empty/missing root OK=0 soft",
       "ok": true,
-      "note": "FORMATPATHLINE"
+      "note": "soft root"
     },
     {
       "name": "require",
-      "cmd": "missing root REQUIRE shell 2",
+      "cmd": "CUBALC_THSP_REQUIRE=1 miss/missing \u2192 shell 2",
       "ok": true,
-      "note": "hard"
+      "note": "hard EXIT"
     },
     {
       "name": "selftest",
@@ -938,6 +956,30 @@
       "title": "FORMATPATHLINE builds path:lineno:text; inverse of PARSEPATHLINE",
       "detail": "Positive: FORMATPATHLINE path lineno text \u2192 LAST cite; sticky PATH/LINE_N/TEXT. Empty path soft OK=0. Omitted text can use LAST. Round-trip with FIRSTLINEINTREE: use I+1 for 1-based grep -n lines (I is 0-based). Text may contain colons.",
       "repro": "FORMATPATHLINE /p 2 'a:b' \u2192 /p:2:a:b; FIRSTLINE I=1 \u2192 lineno 2"
+    },
+    {
+      "id": "W112",
+      "severity": "med",
+      "area": "lang|hasintree",
+      "title": "HASINTREE keeps LAST string; path only in PATH/HASINTREE_PATH (not LAST)",
+      "detail": "HASLINE-style: after HASINTREE hit, LAST stays prior string (board VAL wrote preserve-me). Path is PATH and HASINTREE_PATH. Agents that LET out=LAST after probe get the preserved token not the match path. Good for IF guards; false friend for VAL/out capture. SLICEINTREE correctly puts path bag in LAST.",
+      "repro": "SYS JOIN '' keep; HASINTREE root error; LAST==keep; PATH ends mid.txt"
+    },
+    {
+      "id": "W113",
+      "severity": "low",
+      "area": "lang|sliceintree",
+      "title": "SLICEINTREE start/count are 0-based window; past-end and count0 both soft empty OK=1 N=0",
+      "detail": "No hard OOR: start past hits and count 0 return empty bag with OK=1. Agents must treat N==0 as empty page (soft FAIL or REQUIRE EXIT). Matches TAKEINTREE empty style. Mid page start1 count1 equals NTHINTREE 1 path.",
+      "repro": "SLICEINTREE root error 9 2 \u2192 N=0 OK=1; count 0 \u2192 N=0"
+    },
+    {
+      "id": "W114",
+      "severity": "low",
+      "area": "lang|tree_order",
+      "title": "HASINTREE/SLICEINTREE walk order is sorted DFS (same family as TAKE/FIRST)",
+      "detail": "Hits order mid.txt then z.txt then err.log under nested a/b. No mtime/reverse window. Agents cannot page 'newest first' without sort glue.",
+      "repro": "SLICE 0 2 error \u2192 mid then z not err.log first"
     }
   ],
   "workarounds": [
@@ -945,19 +987,26 @@
     "NTHINTREE root needle i; gate on NTHINTREE_HIT not OK for OOR",
     "FORMATPATHLINE path (I+1) text for cites; skip PARSE round-trip under load (W108)",
     "CUBALC_TSC_REQUIRE=1 for shell-visible missing root",
-    "Keep VARS lean (~97) under 128 (W81)"
+    "Keep VARS lean (~97) under 128 (W81)",
+    "HASINTREE path: use HASINTREE_PATH/PATH not LAST after probe (W112)",
+    "SLICE empty page: check SLICEINTREE_N; pair with EXIT n under REQUIRE (W113)"
   ],
   "language_gaps": [
     "Stable PARSEPATHLINE after FORMAT under agent_boot boards (W108)",
     "TAKEINTREE by mtime / reverse order (still DFS like FIRSTINTREE W101)",
-    "Cookbook: seed\u2192take\u2192nth\u2192cite triage sample"
+    "Cookbook: seed\u2192take\u2192nth\u2192cite triage sample",
+    "HASINTREE optional LAST=PATH mode or OUT knob for agents that want path in LAST",
+    "SLICEINTREE by mtime / reverse order (still DFS like TAKEINTREE W101)",
+    "Cookbook: seed\u2192has probe\u2192page window triage under tree"
   ],
   "issues_faced": [
     "PARSEPATHLINE round-trip failed in board cite arm (W108) \u2014 trust FORMAT OK",
     "TAKE n=0 empty OK=1; NTH OOR HIT=0 OK=1 (W109/W110)",
     "0-based FIRSTLINE I needs +1 for FORMAT lineno (W111)",
-    "selftest 355/355"
+    "selftest 355/355",
+    "HASINTREE LAST preserve made VAL=preserve-me until documented W112",
+    "selftest 355/355 green v1.15.500"
   ],
-  "commit": "15d2fd425e629fc936cd9f4bb12190ab793dc1c0",
-  "ts": "2026-08-08T09:09:00Z"
+  "commit": "pending",
+  "ts": "2026-08-08T09:33:31Z"
 }

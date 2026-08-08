@@ -1,0 +1,577 @@
+# tree_has_slice_page_board.cubalc — HASINTREE + SLICEINTREE page under tree
+#
+# Real use: on-call / triage agents soft-probe whether any log under a tree
+# matches a signature, then page matching paths in windows for context budget:
+#   HASINTREE / ANYINTREE / CONTAINSINTREE — soft content-exists (1049)
+#   SLICEINTREE / MIDINTREE / WINDOWINTREE — path window start+count (1050)
+#   WRITEOUT — seed nested multi-file logs
+#   HASINTREEI / SLICEINTREEI — case-insensitive variants
+#
+# First realworld HASINTREE+SLICEINTREE board. Distinct from tree_sample_cite
+# (TAKE/NTH/FORMAT cites) and tree_first_last_peel (first/last only).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_thsp_$$
+#   ./out/cubalc run programs/realworld/tree_has_slice_page_board.cubalc \
+#     seed -- --root=/tmp/thsp/logs
+#   ./out/cubalc run ... has -- --root=... error
+#   ./out/cubalc run ... page -- --root=... --start=1 --count=1 error
+#
+# Plate: STATUS.txt VAL.txt META.txt THSP_REPORT.txt
+# Env: LOG_ROOT CUBALC_THSP_REQUIRE CUBALC_THSP_MIN CUBALC_THSP_START CUBALC_THSP_COUNT
+#
+# Edges:
+#   HAS miss soft HIT=0; missing/empty root soft; LAST string preserved
+#   SLICE start past end empty; count 0 empty; mid page vs TAKE/NTH
+#   case-i; REQUIRE miss shell; lean VARS; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "tree_has_slice_page_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT TS = 0
+DEFAULT TC = 2
+DEFAULT USAGE_LINE = "tree_has_slice_page -- seed|has|page|list -- [--root=D] [--start=K] [--count=K] [needle]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/tree"
+LET root_dir = LAST
+CLEAR_ERR
+
+GETFLAGOUT root|r OR ENV LOG_ROOT OR root_dir
+LET root_dir = LAST
+LET r_src = GETFLAGOUT_SRC
+LET r_ok = OK
+CLEAR_ERR
+
+GETFLAGN start|s OR ENV CUBALC_THSP_START OR TS
+LET TS = LAST_N
+CLEAR_ERR
+GETFLAGN count|c|n OR ENV CUBALC_THSP_COUNT OR TC
+LET TC = LAST_N
+CLEAR_ERR
+
+LET needle = "error"
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET needle = LAST
+END
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_THSP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_THSP_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "THSP_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET line_i = 0
+LET row = ""
+LET out = ""
+LET peel_path = ""
+LET keep_probe = "preserve-me"
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "seed", "has", "page", "slice", "window", "list", "ls", "drop", "gate", "soft", "clear", "probe", "icase"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "seed" THEN
+    LET op = "seed"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "page", "slice", "window" THEN
+    LET op = "page"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "icase" THEN
+    LET op = "icase"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n r_src TS TC
+  CLEAR_ERR
+END
+
+SYS EQS op "seed"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "seed needs root"
+    FAIL "seed needs root"
+    CLEAR_ERR
+  ELSE
+    SYS JOIN root_dir "a/b/mid.txt"
+    WRITEOUT LAST "noise\nerror middle\nok"
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "seed write failed"
+    END
+    CLEAR_ERR
+    SYS JOIN root_dir "a/b/z.txt"
+    WRITEOUT LAST "error z"
+    CLEAR_ERR
+    SYS JOIN root_dir "a/err.log"
+    WRITEOUT LAST "info\nerror last\ntrailer"
+    CLEAR_ERR
+    SYS JOIN root_dir "plain.txt"
+    WRITEOUT LAST "ok only"
+    CLEAR_ERR
+    SYS CAT "seed:"
+    LET row = LAST
+    SYS CAT row root_dir
+    LET row = LAST
+    SYS CAT row ":ok"
+    LET row = LAST
+    SYS GREPV "seed:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "seed ok"
+  END
+  PRINT_JSON admit_n bag_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "has needs root"
+    FAIL "has needs root"
+    CLEAR_ERR
+  ELSE
+    # HASLINE-style: LAST string should stay keep_probe after probe
+    SYS JOIN "" keep_probe
+    HASINTREE root_dir needle
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "has soft miss"
+      FAIL "has soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "has failed"
+      END
+    ELSE
+      LET peel_hit = HASINTREE_HIT
+      LET has_n = HASINTREE_N
+      LET peel_path = HASINTREE_PATH
+      LET out = LAST
+      CLEAR_ERR
+      SYS CAT "has:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":hi"
+      LET row = LAST
+      SYS GREPV "has:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "has hit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "has empty"
+        FAIL "has empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "has empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit has_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "page"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "page needs root"
+    FAIL "page needs root"
+    CLEAR_ERR
+  ELSE
+    SLICEINTREE root_dir needle TS TC
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "page soft miss"
+      FAIL "page soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "page failed"
+      END
+    ELSE
+      LET take_n = SLICEINTREE_N
+      LET line_i = SLICEINTREE_START
+      LET out = LAST
+      CLEAR_ERR
+      SYS CAT "page:"
+      LET row = LAST
+      SYS CAT row needle
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR take_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR TS
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR TC
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":pg"
+      LET row = LAST
+      SYS GREPV "page:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF take_n > 0 THEN
+        LET hit = 1
+        LET note_msg = "page hit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "page empty"
+        FAIL "page empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "page empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n TS TC r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "icase"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "icase needs root"
+    FAIL "icase needs root"
+    CLEAR_ERR
+  ELSE
+    HASINTREEI root_dir needle
+    LET peel_hit = HASINTREE_HIT
+    CLEAR_ERR
+    SLICEINTREEI root_dir needle TS TC
+    LET take_n = SLICEINTREE_N
+    LET out = LAST
+    CLEAR_ERR
+    SYS CAT "icase:"
+    LET row = LAST
+    SYS CAT row needle
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":ic"
+    LET row = LAST
+    SYS GREPV "icase:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "icase hit"
+    ELSE
+      LET miss = 1
+      LET note_msg = "icase empty"
+      FAIL "icase empty"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON admit_n bag_n peel_hit take_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET row = LAST
+    SYS CAT row ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  HASINTREE "" "x"
+  LET has_n = OK
+  CLEAR_ERR
+  SLICEINTREE "" "x" 0 1
+  LET admit_n = OK
+  CLEAR_ERR
+  HASINTREE "/no/such/thsp_root" "x"
+  LET peel_hit = OK
+  CLEAR_ERR
+  SLICEINTREE "/no/such/thsp_root" "x" 0 1
+  LET take_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON has_n admit_n peel_hit take_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.tree_has_slice_page_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "tree_has_slice_page_board: done"
+PRINT_JSON hit miss bag_n take_n peel_hit has_n TS TC r_src note_msg
+EXIT 0
