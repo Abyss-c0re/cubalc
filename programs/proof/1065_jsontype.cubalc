@@ -1,0 +1,70 @@
+# JSONTYPE / JTYPE / JSONKIND — probe plate value kinds
+# Choose JSONN vs string peel vs nested without guess/IF glue.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "n" 42 "s" "hi" "ok" true "nil" null "meta" RAW "{\"a\":1}" "xs" RAW "[1,2]"
+LET plate = LAST
+
+SYS JSONTYPE plate "n"
+ASSERT OK == 1
+ASSERT LAST == "num"
+ASSERT LAST_N == 1
+ASSERT JSONTYPE_N == 1
+ASSERT JSONTYPE_KEY == "n"
+
+SYS JSONTYPE plate "s"
+ASSERT LAST == "str"
+ASSERT LAST_N == 2
+
+SYS JSONTYPE plate "ok"
+ASSERT LAST == "bool"
+ASSERT LAST_N == 3
+
+SYS JSONTYPE plate "nil"
+ASSERT LAST == "null"
+ASSERT LAST_N == 4
+
+SYS JSONTYPE plate "meta"
+ASSERT LAST == "obj"
+ASSERT LAST_N == 5
+
+SYS JSONTYPE plate "xs"
+ASSERT LAST == "arr"
+ASSERT LAST_N == 6
+
+# missing
+SYS JSONTYPE plate "ghost"
+ASSERT LAST == "missing"
+ASSERT LAST_N == 0
+
+# key FROM plate
+SYS JSONTYPE "n" FROM plate
+ASSERT LAST == "num"
+ASSERT LAST_N == 1
+
+# 1-arg on LAST
+SYS JOIN "" plate
+SYS JSONTYPE "s"
+ASSERT LAST == "str"
+
+# aliases
+SYS JTYPE plate "n"
+ASSERT LAST == "num"
+SYS JSONKIND plate "s"
+ASSERT LAST == "str"
+SYS TYPEJSON plate "ok"
+ASSERT LAST == "bool"
+
+# false is bool
+SYS JSONTYPE "{\"f\":false}" "f"
+ASSERT LAST == "bool"
+ASSERT LAST_N == 3
+
+# negative num
+SYS JSONTYPE "{\"z\":-3}" "z"
+ASSERT LAST == "num"
+ASSERT LAST_N == 1
+
+PRINT "jsontype ok"
+ASSERT OK == 1
