@@ -1,0 +1,111 @@
+# JSONTOKV / JTOKV / JSONTOBAG — plate → key:val bag
+# Dual of JSONFROMKV. LOOKUP/FREQ walk without ZIP(JSONKEYS,JSONVALUES).
+# Uses ':' so default LOOKUP works (no sep glue).
+
+HOLD_FLASH 1
+
+# basic plate → bag
+SYS JSONOBJ "a" 1 "b" 2 "c" 3
+LET plate = LAST
+SYS JSONTOKV plate
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JSONTOKV_N == 3
+LET bag = LAST
+SYS LOOKUP bag "a"
+ASSERT LAST == "1"
+SYS LOOKUP bag "b"
+ASSERT LAST == "2"
+SYS LOOKUP bag "c"
+ASSERT LAST == "3"
+
+# order matches JSONKEYS
+SYS JSONKEYS plate
+LET keys = LAST
+SYS NTH 0 keys
+ASSERT LAST == "a"
+SYS NTH 0 bag
+ASSERT LAST == "a:1"
+SYS NTH 1 bag
+ASSERT LAST == "b:2"
+SYS NTH 2 bag
+ASSERT LAST == "c:3"
+
+# strings + bool + null round-trip tokens
+SYS JSONOBJ "role" "worker" "ok" true "gone" null "flag" false "n" 9
+LET p2 = LAST
+SYS JSONTOKV p2
+ASSERT LAST_N == 5
+LET b2 = LAST
+SYS LOOKUP b2 "role"
+ASSERT LAST == "worker"
+SYS LOOKUP b2 "ok"
+ASSERT LAST == "true"
+SYS LOOKUP b2 "gone"
+ASSERT LAST == "null"
+SYS LOOKUP b2 "flag"
+ASSERT LAST == "false"
+SYS LOOKUP b2 "n"
+ASSERT LAST == "9"
+
+# round-trip TOKV → FROMKV preserves scalars
+SYS JSONFROMKV b2
+ASSERT LAST_N == 5
+LET p3 = LAST
+SYS JSON "role" FROM p3
+ASSERT LAST == "worker"
+SYS JSONN "ok" FROM p3
+ASSERT LAST_N == 1
+SYS JSONTYPE p3 "gone"
+ASSERT LAST == "null"
+SYS JSONTYPE p3 "flag"
+ASSERT LAST == "bool"
+SYS JSONN "n" FROM p3
+ASSERT LAST_N == 9
+
+# empty / non-object soft
+SYS JSONTOKV "{}"
+ASSERT LAST_N == 0
+ASSERT LAST == ""
+SYS JSONTOKV "not-json"
+ASSERT LAST_N == 0
+ASSERT OK == 1
+
+# bare on LAST + aliases
+SYS JSONOBJ "x" 7 "y" "hi"
+SYS JTOKV
+ASSERT LAST_N == 2
+SYS LOOKUP LAST "x"
+ASSERT LAST == "7"
+SYS JSONOBJ "m" 3
+SYS JSONTOBAG
+ASSERT LAST_N == 1
+SYS PLATETOKV "{\"z\":4}"
+ASSERT LAST_N == 1
+SYS LOOKUP LAST "z"
+ASSERT LAST == "4"
+SYS KVFROMJSON "{\"w\":5}"
+ASSERT LAST_N == 1
+
+# FREQ pipeline: plate → bag → LOOKUP count
+SYS JSONOBJ "error" 5 "warn" 2
+SYS JSONTOKV LAST
+LET fbag = LAST
+SYS LOOKUPN fbag "error"
+ASSERT LAST_N == 5
+SYS LOOKUPN fbag "warn"
+ASSERT LAST_N == 2
+
+# dual of FROMKV smoke (FROMKV accepts = or :)
+SYS JSONFROMKV "sev=2\nok=1"
+LET fp = LAST
+SYS JSONTOKV fp
+ASSERT LAST_N == 2
+LET fbag2 = LAST
+SYS HASLINE fbag2 "sev:2"
+ASSERT LAST_N == 1
+SYS HASLINE fbag2 "ok:1"
+ASSERT LAST_N == 1
+
+PRINT "jsontokv ok"
+ASSERT OK == 1

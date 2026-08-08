@@ -4667,6 +4667,92 @@ int cubalc_host_json_from_kv(const char *bag, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS JSONTOKV plate — object → key:val bag (dual of JSONFROMKV).
+ * Uses ':' so default LOOKUP/FREQ work without sep glue. r->n = pairs. */
+int cubalc_host_json_to_kv(const char *json, cubalc_host_result *r) {
+  cubalc_host_result keys, gr, raw;
+  const char *p, *line;
+  size_t olen = 0;
+  long kept = 0;
+  r_clear(r);
+  memset(&keys, 0, sizeof keys);
+  if (cubalc_host_json_keys(json, &keys) != 0) {
+    r->str[0] = 0;
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  r->str[0] = 0;
+  p = keys.str;
+  while (*p) {
+    char key[256];
+    char linebuf[CUBALC_HOST_STR_MAX];
+    char valbuf[CUBALC_HOST_STR_MAX];
+    size_t kn = 0;
+    const char *valtext = "";
+    const char *v;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&raw, 0, sizeof raw);
+    if (cubalc_host_json_get_raw(json, key, &raw) != 0)
+      continue;
+    v = raw.str;
+    while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+    memset(&gr, 0, sizeof gr);
+    valbuf[0] = 0;
+    if (*v == '"') {
+      if (cubalc_host_json_get(json, key, &gr) == 0) {
+        valtext = gr.str;
+      } else {
+        size_t rl = strlen(v);
+        if (rl >= 2 && v[0] == '"' && v[rl - 1] == '"') {
+          size_t n = rl - 2;
+          if (n >= sizeof valbuf) n = sizeof valbuf - 1;
+          memcpy(valbuf, v + 1, n);
+          valbuf[n] = 0;
+          valtext = valbuf;
+        } else
+          valtext = v;
+      }
+    } else if (strncmp(v, "true", 4) == 0 &&
+               (v[4] == 0 || v[4] == ',' || v[4] == '}' || v[4] == ' ' ||
+                v[4] == '\n' || v[4] == '\r' || v[4] == '\t')) {
+      valtext = "true";
+    } else if (strncmp(v, "false", 5) == 0 &&
+               (v[5] == 0 || v[5] == ',' || v[5] == '}' || v[5] == ' ' ||
+                v[5] == '\n' || v[5] == '\r' || v[5] == '\t')) {
+      valtext = "false";
+    } else if (strncmp(v, "null", 4) == 0 &&
+               (v[4] == 0 || v[4] == ',' || v[4] == '}' || v[4] == ' ' ||
+                v[4] == '\n' || v[4] == '\r' || v[4] == '\t')) {
+      valtext = "null";
+    } else {
+      /* num, obj, arr — raw (single-line best effort) */
+      size_t i = 0;
+      while (v[i] && v[i] != '\n' && v[i] != '\r' && i + 1 < sizeof valbuf) {
+        valbuf[i] = v[i];
+        i++;
+      }
+      valbuf[i] = 0;
+      valtext = valbuf;
+    }
+    /* key:val — FREQ/LOOKUP default sep; empty string value → key: */
+    if (snprintf(linebuf, sizeof linebuf, "%s:%s", key, valtext ? valtext : "") < 0)
+      continue;
+    cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, linebuf);
+  }
+  r->n = kept;
+  r->ok = 1;
+  return 0;
+}
+
 static int load_token(char *out, size_t outn) {
   out[0] = 0;
   const char *e = getenv("XAI_API_KEY");
