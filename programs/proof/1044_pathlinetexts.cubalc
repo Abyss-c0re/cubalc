@@ -1,0 +1,94 @@
+# PATHLINETEXTS / TEXTSFROMPL / PLTEXTS — message texts from path:lineno:text bag
+# Companion to PATHLINETREE + PATHLINEPATHS · FREQ-ready without EACH+PARSEPATHLINE+PUSH.
+
+HOLD_FLASH 1
+
+# literal bag · 3 messages (keep duplicates)
+LET bag = "/tmp/a/err.log:2:error one\n/tmp/a/err.log:3:error two\n/tmp/b/warn.log:1:error one"
+PATHLINETEXTS bag
+ASSERT OK == 1
+ASSERT PATHLINETEXTS_N == 3
+ASSERT LAST_N == 3
+ASSERT PATHLINETEXTS_SKIP == 0
+SYS HASLINE LAST "error one"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "error two"
+ASSERT LAST_N == 1
+SYS NTH 0 PATHLINETEXTS
+ASSERT LAST == "error one"
+SYS NTH 1 PATHLINETEXTS
+ASSERT LAST == "error two"
+SYS NTH 2 PATHLINETEXTS
+ASSERT LAST == "error one"
+
+# skip non-annotated
+LET bag2 = "/x:1:hit\nplain\n/y:2:hit2"
+PATHLINETEXTS bag2
+ASSERT OK == 1
+ASSERT PATHLINETEXTS_N == 2
+ASSERT PATHLINETEXTS_SKIP == 1
+SYS HASLINE LAST "hit"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "hit2"
+ASSERT LAST_N == 1
+
+# empty soft
+PATHLINETEXTS ""
+ASSERT OK == 1
+ASSERT PATHLINETEXTS_N == 0
+ASSERT LAST == ""
+
+# empty body line still counts as a field
+LET bag3 = "/p:1:"
+PATHLINETEXTS bag3
+ASSERT OK == 1
+ASSERT PATHLINETEXTS_N == 1
+
+# aliases
+TEXTSFROMPL bag
+ASSERT TEXTSFROMPL_N == 3
+PLTEXTS bag
+ASSERT PLTEXTS_N == 3
+
+# SYS form
+SYS PATHLINETEXTS bag
+ASSERT OK == 1
+ASSERT PATHLINETEXTS_N == 3
+
+# live PATHLINETREE → texts → FREQ-friendly
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_plt_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "ok\nerror: boom\nerror: boom"
+ASSERT OK == 1
+SYS JOIN base "a/b/warn.log"
+WRITEOUT LAST "error: boom"
+ASSERT OK == 1
+
+PATHLINETREE base "error"
+ASSERT OK == 1
+ASSERT PATHLINETREE_N == 3
+PATHLINETEXTS LAST
+ASSERT OK == 1
+ASSERT PATHLINETEXTS_N == 3
+SYS COUNTLINE LAST "error: boom"
+ASSERT LAST_N == 3
+
+# unique files still 2
+PATHLINETREE base "error"
+PATHLINEPATHS LAST
+ASSERT PATHLINEPATHS_N == 2
+
+RMTREE base
+ASSERT OK == 1
+
+PRINT "pathlinetexts ok"
+ASSERT OK == 1
