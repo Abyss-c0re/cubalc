@@ -1752,6 +1752,6 @@
     "ensure --val=boot stored 0 until dropped SYS NUM val_str false friend",
     "CLEAR_ERR before OK check would also clear NUM status"
   ],
-  "commit": "pending",
+  "commit": "a09e09e",
   "ts": "2026-08-08T19:09:16Z"
 }
