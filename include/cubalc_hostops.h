@@ -268,6 +268,11 @@ int cubalc_host_json_subset(const char *sub, const char *super, cubalc_host_resu
  * Usability: contract keys without multi JSONHAS glue. */
 int cubalc_host_json_has_keys(const char *json, const char *keys_nl, int want_all,
                               cubalc_host_result *r);
+/* filter required keys into bag: want_present=0 → missing names, 1 → present.
+ * r->str = newline bag · r->n = count. Soft always OK. Null/false still present.
+ * Usability: after JSONHASALL fail, report WHICH keys without multi JSONHAS. */
+int cubalc_host_json_filter_req_keys(const char *json, const char *keys_nl,
+                                     int want_present, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

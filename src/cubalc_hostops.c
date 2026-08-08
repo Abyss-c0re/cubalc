@@ -4990,6 +4990,55 @@ int cubalc_host_json_has_keys(const char *json, const char *keys_nl, int want_al
   return 0;
 }
 
+/* Usability: SYS JSONMISS/JSONPRESENT — bag of missing/present required keys. */
+int cubalc_host_json_filter_req_keys(const char *json, const char *keys_nl,
+                                     int want_present, cubalc_host_result *r) {
+  cubalc_host_result gr;
+  const char *p, *line;
+  size_t olen = 0;
+  long count = 0;
+  r_clear(r);
+  r->ok = 1;
+  r->str[0] = 0;
+  r->n = 0;
+  if (!keys_nl || !keys_nl[0]) {
+    snprintf(r->str, sizeof r->str, "");
+    return 0;
+  }
+  p = keys_nl;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    int present;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&gr, 0, sizeof gr);
+    /* get_raw so null/false/0 still count as present */
+    present = (cubalc_host_json_get_raw(json, key, &gr) == 0) ? 1 : 0;
+    if ((want_present && present) || (!want_present && !present)) {
+      size_t al = strlen(key);
+      if (olen > 0) {
+        if (olen + 1 >= sizeof r->str) break;
+        r->str[olen++] = '\n';
+        r->str[olen] = 0;
+      }
+      if (olen + al + 1 >= sizeof r->str) break;
+      memcpy(r->str + olen, key, al + 1);
+      olen += al;
+      count++;
+    }
+  }
+  r->n = count;
+  return 0;
+}
+
 /* Usability: SYS JSONTOPKEY/JSONBOTKEY — dominant/min numeric key without TOKV+TOPKEY. */
 int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *r) {
   cubalc_host_result keys, raw;

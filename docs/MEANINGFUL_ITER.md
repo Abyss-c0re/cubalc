@@ -566,6 +566,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 536. ~~**`JSONEQ` / `JEQ` · `JSONNEQ` / `JNEQ`**~~ **done** (order-independent plate equality · verify WRITE/MERGE without fragile EQS).
 537. ~~**`JSONSUBSET` / `JSUBSET` · `JSONSUPERSET` / `JSONCOVERS`**~~ **done** (required-field plate match · sub keys+values in super · no multi JSONHAS).
 538. ~~**`JSONHASALL` / `JSONNEED` · `JSONHASANY` / `JHASANY`**~~ **done** (multi-key presence → LAST_N · HIT count · contract keys without multi JSONHAS).
+539. ~~**`JSONMISS` / `JSONMISSING` · `JSONPRESENT` / `JSONFOUND`**~~ **done** (bag of missing/present required keys · after HASALL fail name which · no multi JSONHAS).
 
 ## Tick protocol
 

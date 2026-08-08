@@ -1,0 +1,117 @@
+# JSONMISS / JSONMISSING · JSONPRESENT / JSONFOUND — missing/present key bags
+# After JSONHASALL fail, name WHICH keys without multi JSONHAS.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" "" "extra" 9
+LET plate = LAST
+
+# all present → empty miss bag
+SYS JSONMISS plate "ok" "n" "err"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT JSONMISS_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# one missing
+SYS JSONMISS plate "ok" "missing" "n"
+ASSERT LAST_N == 1
+ASSERT JSONMISS_N == 1
+SYS EQS LAST "missing"
+ASSERT LAST_N == 1
+
+# several missing (order of need list)
+SYS JSONMISS plate "gone" "ok" "nada" "n"
+ASSERT LAST_N == 2
+SYS HASLINE LAST "gone"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "nada"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 0
+
+# present dual
+SYS JSONPRESENT plate "ok" "missing" "n"
+ASSERT LAST_N == 2
+ASSERT JSONPRESENT_N == 2
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "missing"
+ASSERT LAST_N == 0
+
+# bare keys on LAST plate
+SYS JSONOBJ "a" 1 "b" 2
+SYS JSONMISS "a" "c" "b" "d"
+ASSERT LAST_N == 2
+SYS HASLINE LAST "c"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "d"
+ASSERT LAST_N == 1
+
+# OF bag form
+SYS JSONOBJ "x" 1 "y" 2 "z" 3
+LET p2 = LAST
+SYS JOIN "" "x\nmiss\ny\nnada"
+LET kbag = LAST
+SYS JSONMISS p2 OF kbag
+ASSERT LAST_N == 2
+SYS HASLINE LAST "miss"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "nada"
+ASSERT LAST_N == 1
+SYS JSONPRESENT p2 OF kbag
+ASSERT LAST_N == 2
+SYS HASLINE LAST "x"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "y"
+ASSERT LAST_N == 1
+
+# null/false still present (not missing)
+SYS JSONOBJ "gone" null "flag" false "n" 0
+LET p3 = LAST
+SYS JSONMISS p3 "gone" "flag" "n" "other"
+ASSERT LAST_N == 1
+SYS EQS LAST "other"
+ASSERT LAST_N == 1
+SYS JSONPRESENT p3 "gone" "flag" "other"
+ASSERT LAST_N == 2
+
+# aliases
+SYS JSONMISSING plate "ok" "zzz"
+ASSERT LAST_N == 1
+SYS JMISS plate "ok"
+ASSERT LAST_N == 0
+SYS JFOUND plate "ok" "zzz"
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+SYS JPRESENT plate "ok" "n"
+ASSERT LAST_N == 2
+
+# empty key list → empty bag
+SYS JSONMISS plate
+ASSERT LAST_N == 0
+SYS JSONPRESENT plate
+ASSERT LAST_N == 0
+
+# agent pattern: HASALL then MISS for message
+SYS JSONHASALL plate "ok" "version" "n"
+ASSERT LAST_N == 0
+SYS JSONMISS plate "ok" "version" "n"
+ASSERT LAST_N == 1
+SYS EQS LAST "version"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "version"
+ASSERT LAST_N == 1
+
+# IF LAST_N for complete contract
+SYS JSONMISS plate "ok" "n"
+IF LAST_N THEN
+  FAIL "should be complete"
+ELSE
+  PASS "contract complete"
+END
+ASSERT OK == 1
