@@ -1,0 +1,96 @@
+# MERGEP/DEFAULTP/TOGGLEP FROM — multi-key/defaults/flags on any plate without clobbering PLATE
+# Usability: multi-plate twin of SETP FROM for overlay + seed + feature flags.
+
+HOLD_FLASH 1
+
+LET PLATE = "{}"
+SETP "agent" "plate-agent"
+SETP "n" 1
+ASSERT SETP_FROM == 0
+
+LET peer = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":9}"
+
+# --- MERGEP FROM: multi-key into peer ---
+SYS JSONOBJ "status" "ready" "peer" "a" "n" 11
+MERGEP FROM peer LAST
+ASSERT OK == 1
+ASSERT MERGEP_FROM == 1
+ASSERT MERGEP_N == 3
+GETP FROM peer "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+GETP FROM peer "n"
+SYS EQS LAST "11"
+ASSERT LAST_N == 1
+# PLATE untouched
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+
+# trailing MERGEP FROM with named overlay
+SYS JSONOBJ "role" "worker"
+LET patch = LAST
+MERGEP patch FROM peer
+ASSERT MERGEP_FROM == 1
+GETP FROM peer "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# default PLATE MERGEP still works
+SYS JSONOBJ "phase" "boot"
+MERGEP LAST
+ASSERT MERGEP_FROM == 0
+GETP "phase"
+SYS EQS LAST "boot"
+ASSERT LAST_N == 1
+
+# --- DEFAULTP FROM ---
+DEFAULTP FROM peer "retries" 3
+ASSERT OK == 1
+ASSERT DEFAULTP_FROM == 1
+ASSERT DEFAULTP_N == 1
+GETP FROM peer "retries"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+# no clobber
+SETP FROM peer "retries" 99
+DEFAULTP "retries" 3 FROM peer
+ASSERT DEFAULTP_FROM == 1
+ASSERT DEFAULTP_N == 0
+ASSERT DEFAULTP_KEPT == 1
+GETP FROM peer "retries"
+SYS EQS LAST "99"
+ASSERT LAST_N == 1
+# PLATE still lacks retries
+GETP "retries" OR "miss"
+ASSERT GETP_HIT == 0
+SYS EQS LAST "miss"
+ASSERT LAST_N == 1
+
+# --- TOGGLEP FROM ---
+TOGGLEP FROM peer "debug"
+ASSERT OK == 1
+ASSERT TOGGLEP_FROM == 1
+ASSERT TOGGLEP_V == 1
+ASSERT TOGGLEP_PREV == 0
+GETP FROM peer "debug"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+TOGGLEP "debug" FROM peer
+ASSERT TOGGLEP_FROM == 1
+ASSERT TOGGLEP_V == 0
+GETP FROM peer "debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+# PLATE not toggled
+GETP "debug" OR "none"
+ASSERT GETP_HIT == 0
+
+# PLATE TOGGLEP default path
+TOGGLEP "local"
+ASSERT TOGGLEP_FROM == 0
+ASSERT TOGGLEP_V == 1
+
+PRINT "mergep_from soft ok"

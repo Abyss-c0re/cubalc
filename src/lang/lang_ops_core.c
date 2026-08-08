@@ -35601,11 +35601,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"BUMPP", "BUMPP alias of INCP"},
       {"DROPP", "DROPP alias of DELP"},
       {"PEEKP", "PEEKP alias of GETP"},
-      {"MERGEP", "MERGEP overlay — merge object into PLATE var · write-back · multi-key SETP"},
+      {"MERGEP", "MERGEP [FROM plate] overlay — merge into PLATE or named plate · multi-plate"},
       {"PATCHP", "PATCHP alias of MERGEP"},
-      {"DEFAULTP", "DEFAULTP|ENSUREP key value — set PLATE key only if missing · no clobber"},
+      {"DEFAULTP", "DEFAULTP|ENSUREP [FROM plate] key value — set-if-missing · multi-plate"},
       {"ENSUREP", "ENSUREP alias of DEFAULTP"},
-      {"TOGGLEP", "TOGGLEP key — flip PLATE flag 0↔1 · miss→1 · write-back"},
+      {"TOGGLEP", "TOGGLEP [FROM plate] key — flip flag · multi-plate · miss→1 · write-back"},
       {"NEEDP", "NEEDP key… — fail-fast if PLATE missing keys · missing listed · soft twin HASPALL"},
       {"REQUIREP", "REQUIREP alias of NEEDP"},
       {"HASP", "HASP key — soft 0|1 if PLATE has key · IF guards · no GETP miss ERR"},
@@ -37789,19 +37789,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     fail(vm, "SETP|INCP|DELP|GETP internal");
     return -1;
   }
-  /* MERGEP|PATCHP overlay — multi-key overlay into conventional PLATE var.
-   * DEFAULTP|ENSUREP key value — set PLATE key only if missing (no clobber).
-   * TOGGLEP key — flip PLATE 0↔1 flag (miss → 1).
-   * Usability: complete plate_boot mutate surface without JSONMERGE/JSONENSURE/
-   * JSONTOGGLE + LET PLATE = LAST glue:
-   *   INCLUDE plate_boot
-   *   SYS JSONOBJ "status" "ready" "peer" "a"
-   *   MERGEP LAST
-   *   DEFAULTP "retries" 3
-   *   TOGGLEP "debug"
-   *   INCLUDE plate_save
+  /* MERGEP|PATCHP [FROM plate] overlay — multi-key overlay into PLATE or named plate.
+   * DEFAULTP|ENSUREP [FROM plate] key value — set key only if missing (no clobber).
+   * TOGGLEP [FROM plate] key — flip 0↔1 flag (miss → 1).
+   * FROM: multi-plate twin of SETP FROM / FILLP FROM:
+   *   MERGEP FROM peer LAST
+   *   DEFAULTP "retries" 3 FROM session
+   *   TOGGLEP FROM peer "debug"
+   * Named FROM write-back updates that var; conventional PLATE stays untouched.
+   * MERGEP_FROM/DEFAULTP_FROM/TOGGLEP_FROM = 0|1.
    * MERGEP LAST_N = keys applied · DEFAULTP LAST_N = 1 inserted|0 kept · TOGGLEP LAST_N = new 0|1.
-   * All write-back PLATE + LAST (object plate). Missing PLATE → {}. */
+   * Missing default PLATE → {}. */
   if (kw(&L->cur,"MERGEP") || kw(&L->cur,"PATCHP") || kw(&L->cur,"PLATE_MERGE") ||
       kw(&L->cur,"MMERGEP") || kw(&L->cur,"OVERLAYP") || kw(&L->cur,"APPLY_P") ||
       kw(&L->cur,"DEFAULTP") || kw(&L->cur,"ENSUREP") || kw(&L->cur,"PLATE_DEFAULT") ||
@@ -37810,9 +37808,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"MTOGGLEP") || kw(&L->cur,"TOGGLEPLATEV")) {
     char plate[CUBALC_HOST_STR_MAX], over[CUBALC_HOST_STR_MAX];
     char key[96], val[CUBALC_HOST_STR_MAX], raw[8];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr, gr;
     int is_merge = 0, is_def = 0, is_tog = 0;
-    int val_kind = 0, present = 0;
+    int val_kind = 0, present = 0, have_from = 0;
     long cur = 0, nv = 0;
     Var *pv;
 
@@ -37827,66 +37826,66 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     lex_next(L);
     plate[0] = 0; over[0] = 0; key[0] = 0; val[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
 
-    pv = var_get(vm, "PLATE", 0);
-    if (pv && pv->is_str && pv->sval[0])
-      snprintf(plate, sizeof plate, "%s", pv->sval);
-    else
-      snprintf(plate, sizeof plate, "%s", "{}");
+    /* optional leading FROM plate_src */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
 
     if (is_merge) {
-      /* overlay: bare → LAST; else str/ident/expr */
+      /* overlay: bare → LAST; else str/ident (not trailing FROM) */
       if (L->cur.kind == TK_NL || L->cur.kind == TK_EOF ||
           (L->cur.kind == TK_IDENT &&
-           (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+           (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+            kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+            kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
             kw(&L->cur,"SYS") || kw(&L->cur,"IF") || kw(&L->cur,"END") ||
             kw(&L->cur,"INCLUDE") || kw(&L->cur,"SETP") || kw(&L->cur,"INCP") ||
             kw(&L->cur,"DELP") || kw(&L->cur,"GETP") || kw(&L->cur,"DEFAULTP") ||
             kw(&L->cur,"ENSUREP") || kw(&L->cur,"TOGGLEP") || kw(&L->cur,"MERGEP")))) {
         snprintf(over, sizeof over, "%s", vm->last_str);
       } else if (resolve_str_arg(vm, L, over, sizeof over) != 0) {
-        fail(vm, "MERGEP overlay — need object plate (or bare MERGEP uses LAST)");
+        fail(vm, "MERGEP [FROM plate] overlay — need object plate (or bare uses LAST)");
         return -1;
       }
       if (!over[0])
         snprintf(over, sizeof over, "%s", "{}");
-      memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_merge(plate, over, &hr) != 0) {
-        var_set_str(vm, "LAST", "");
-        vm->last_str[0] = 0;
-        vm->last_n = 0;
-        var_set_num(vm, "LAST_N", 0);
-        var_set_num(vm, "MERGEP_N", 0);
-        var_set_num(vm, "OK", 0);
-        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "MERGEP: fail");
-        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "MERGEP: fail");
-        bump(vm); return 1;
-      }
-      var_set_str(vm, "PLATE", hr.str);
-      var_set_str(vm, "LAST", hr.str);
-      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
-      vm->last_n = hr.n;
-      var_set_num(vm, "LAST_N", hr.n);
-      var_set_str(vm, "MERGEP", hr.str);
-      var_set_str(vm, "PATCHP", hr.str);
-      var_set_num(vm, "MERGEP_N", hr.n);
-      var_set_num(vm, "PATCHP_N", hr.n);
-      var_set_num(vm, "OK", 1);
-      if (vm->trace)
-        fprintf(vm->trace, "# mergep applied=%ld\n", hr.n);
-      bump(vm); return 1;
-    }
-
-    if (is_def) {
-      /* key */
+    } else if (is_def) {
       if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
         long kv = parse_expr(vm, L);
         snprintf(key, sizeof key, "%ld", kv);
       } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+            kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+          fail(vm, "DEFAULTP [FROM plate] key value — need key");
+          return -1;
+        }
         if (resolve_str_arg(vm, L, key, sizeof key) != 0)
           key[0] = 0;
       } else {
-        fail(vm, "DEFAULTP key value — need key");
+        fail(vm, "DEFAULTP [FROM plate] key value — need key");
         return -1;
       }
       if (!key[0]) {
@@ -37894,6 +37893,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "LAST_ERR", "DEFAULTP: empty key");
         var_set_str(vm, "ERR", "DEFAULTP: empty key");
         var_set_num(vm, "DEFAULTP_N", 0);
+        var_set_num(vm, "DEFAULTP_FROM", have_from ? 1 : 0);
         var_set_num(vm, "LAST_N", 0);
         bump(vm); return 1;
       }
@@ -37911,20 +37911,133 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(val, sizeof val, "%s", L->cur.text);
         val_kind = 1;
         lex_next(L);
+      } else if (L->cur.kind == TK_IDENT &&
+                 (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+                  kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM"))) {
+        fail(vm, "DEFAULTP [FROM plate] key value — need value");
+        return -1;
       } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
         if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
-          fail(vm, "DEFAULTP key value — need value");
+          fail(vm, "DEFAULTP [FROM plate] key value — need value");
           return -1;
         }
       } else {
-        fail(vm, "DEFAULTP key value — need value");
+        fail(vm, "DEFAULTP [FROM plate] key value — need value");
         return -1;
       }
+    } else {
+      /* TOGGLEP key */
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long kv = parse_expr(vm, L);
+        snprintf(key, sizeof key, "%ld", kv);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+            kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+          fail(vm, "TOGGLEP [FROM plate] key — need key");
+          return -1;
+        }
+        if (resolve_str_arg(vm, L, key, sizeof key) != 0)
+          key[0] = 0;
+      } else {
+        fail(vm, "TOGGLEP [FROM plate] key — need key");
+        return -1;
+      }
+      if (!key[0]) {
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "TOGGLEP: empty key");
+        var_set_str(vm, "ERR", "TOGGLEP: empty key");
+        var_set_num(vm, "TOGGLEP_N", 0);
+        var_set_num(vm, "TOGGLEP_FROM", have_from ? 1 : 0);
+        var_set_num(vm, "LAST_N", 0);
+        bump(vm); return 1;
+      }
+    }
+
+    /* trailing FROM plate_src */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* resolve working plate */
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    if (is_merge) {
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_merge(plate, over, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "MERGEP_N", 0);
+        var_set_num(vm, "MERGEP_FROM", have_from ? 1 : 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "MERGEP: fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "MERGEP: fail");
+        bump(vm); return 1;
+      }
+      if (have_from && from_name[0])
+        var_set_str(vm, from_name, hr.str);
+      else if (!have_from)
+        var_set_str(vm, "PLATE", hr.str);
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "MERGEP", hr.str);
+      var_set_str(vm, "PATCHP", hr.str);
+      var_set_num(vm, "MERGEP_N", hr.n);
+      var_set_num(vm, "PATCHP_N", hr.n);
+      var_set_num(vm, "MERGEP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# mergep applied=%ld from=%d\n", hr.n, have_from);
+      bump(vm); return 1;
+    }
+
+    if (is_def) {
       memset(&gr, 0, sizeof gr);
       present = (cubalc_host_json_get(plate, key, &gr) == 0) ? 1 : 0;
       if (present) {
-        /* keep — no clobber */
-        var_set_str(vm, "PLATE", plate);
+        /* keep — no clobber; still write-back named plate as-is for consistency */
+        if (have_from && from_name[0])
+          var_set_str(vm, from_name, plate);
+        else if (!have_from)
+          var_set_str(vm, "PLATE", plate);
         var_set_str(vm, "LAST", plate);
         snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
         vm->last_n = 0;
@@ -37933,9 +38046,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_num(vm, "ENSUREP_N", 0);
         var_set_num(vm, "DEFAULTP_KEPT", 1);
         var_set_str(vm, "DEFAULTP_KEY", key);
+        var_set_num(vm, "DEFAULTP_FROM", have_from ? 1 : 0);
         var_set_num(vm, "OK", 1);
         if (vm->trace)
-          fprintf(vm->trace, "# defaultp key=%s kept\n", key);
+          fprintf(vm->trace, "# defaultp key=%s kept from=%d\n", key, have_from);
         bump(vm); return 1;
       }
       memset(&hr, 0, sizeof hr);
@@ -37945,12 +38059,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         vm->last_n = 0;
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "DEFAULTP_N", 0);
+        var_set_num(vm, "DEFAULTP_FROM", have_from ? 1 : 0);
         var_set_num(vm, "OK", 0);
         var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "DEFAULTP: fail");
         var_set_str(vm, "ERR", hr.err[0] ? hr.err : "DEFAULTP: fail");
         bump(vm); return 1;
       }
-      var_set_str(vm, "PLATE", hr.str);
+      if (have_from && from_name[0])
+        var_set_str(vm, from_name, hr.str);
+      else if (!have_from)
+        var_set_str(vm, "PLATE", hr.str);
       var_set_str(vm, "LAST", hr.str);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
       vm->last_n = 1;
@@ -37961,31 +38079,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "ENSUREP_N", 1);
       var_set_num(vm, "DEFAULTP_KEPT", 0);
       var_set_str(vm, "DEFAULTP_KEY", key);
+      var_set_num(vm, "DEFAULTP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# defaultp key=%s inserted\n", key);
+        fprintf(vm->trace, "# defaultp key=%s inserted from=%d\n", key, have_from);
       bump(vm); return 1;
     }
 
     /* TOGGLEP */
-    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
-      long kv = parse_expr(vm, L);
-      snprintf(key, sizeof key, "%ld", kv);
-    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
-      if (resolve_str_arg(vm, L, key, sizeof key) != 0)
-        key[0] = 0;
-    } else {
-      fail(vm, "TOGGLEP key — need key");
-      return -1;
-    }
-    if (!key[0]) {
-      var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", "TOGGLEP: empty key");
-      var_set_str(vm, "ERR", "TOGGLEP: empty key");
-      var_set_num(vm, "TOGGLEP_N", 0);
-      var_set_num(vm, "LAST_N", 0);
-      bump(vm); return 1;
-    }
     memset(&gr, 0, sizeof gr);
     if (cubalc_host_json_get(plate, key, &gr) == 0) {
       char *end = NULL;
@@ -38006,12 +38107,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       vm->last_n = 0;
       var_set_num(vm, "LAST_N", 0);
       var_set_num(vm, "TOGGLEP_N", 0);
+      var_set_num(vm, "TOGGLEP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "OK", 0);
       var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "TOGGLEP: fail");
       var_set_str(vm, "ERR", hr.err[0] ? hr.err : "TOGGLEP: fail");
       bump(vm); return 1;
     }
-    var_set_str(vm, "PLATE", hr.str);
+    if (have_from && from_name[0])
+      var_set_str(vm, from_name, hr.str);
+    else if (!have_from)
+      var_set_str(vm, "PLATE", hr.str);
     var_set_str(vm, "LAST", hr.str);
     snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
     vm->last_n = nv;
@@ -38021,9 +38126,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "TOGGLEP_N", 1);
     var_set_num(vm, "TOGGLEP_PREV", cur ? 1 : 0);
     var_set_str(vm, "TOGGLEP_KEY", key);
+    var_set_num(vm, "TOGGLEP_FROM", have_from ? 1 : 0);
     var_set_num(vm, "OK", 1);
     if (vm->trace)
-      fprintf(vm->trace, "# togglep key=%s %ld→%ld\n", key, cur ? 1L : 0L, nv);
+      fprintf(vm->trace, "# togglep key=%s %ld→%ld from=%d\n",
+              key, cur ? 1L : 0L, nv, have_from);
     bump(vm); return 1;
   }
   /* NEEDP|REQUIREP key… — fail-fast if conventional PLATE missing any key.
