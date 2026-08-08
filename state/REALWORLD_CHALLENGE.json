@@ -1059,6 +1059,6 @@
     "mint hard-fail missing value until STR shuttle on TN (W118)",
     "selftest 355/355 green v1.15.505"
   ],
-  "commit": "pending",
+  "commit": "e69801c",
   "ts": "2026-08-08T10:24:34Z"
 }
