@@ -1,0 +1,637 @@
+# agent_json_plate_health_board.cubalc — JSONLEN + JSONEMPTY + JSONSUMN plate health
+#
+# Real use: agent STATUS plates — size/empty IF and integer score totals
+# without JSONKEYS bag materialize or JSONVALUES+SUM glue:
+#   JSONLEN / JLEN / NKEYS — top-level key count; LAST kept as plate (1071)
+#   JSONEMPTY / JSONNONEMPTY / HASKEYS — empty probe; LAST kept (1072)
+#   JSONSUMN / JSONSUM / JSUMN — sum integer values; skip strings; bool 0|1 (1073)
+#   JSONOBJ + WRITEOUT — mint / persist
+#   JSONINC / JSONDEL — mutate then re-health
+#
+# First realworld LEN+EMPTY+SUMN board. Addresses W137 (mixed SUM) with
+# typed JSONSUMN. Distinct from buffer (COPY/SWAP/TOKV) and hygiene.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajphl_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_health_board.cubalc \
+#     mint -- --plate=/tmp/ajphl/status.json
+#   ./out/cubalc run ... len -- --plate=...
+#   ./out/cubalc run ... empty -- --plate=...
+#   ./out/cubalc run ... sumn -- --plate=...
+#   ./out/cubalc run ... gate -- --plate=... --min=3 --minsum=5
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPHL_REPORT.txt
+# Env: PLATE_PATH CUBALC_AJPHL_REQUIRE CUBALC_AJPHL_MIN CUBALC_AJPHL_MINSUM
+#
+# Edges:
+#   empty {}; non-object soft empty/len0/sumn0; bools in sum; after DEL
+#   LAST preserved for chain; REQUIRE EXIT n; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_health_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT MINSUM = 1
+DEFAULT USAGE_LINE = "agent_json_plate_health -- mint|len|empty|sumn|gate|list -- [--plate=P] [--min=K] [--minsum=K]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/status.json"
+LET plate_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+GETFLAGN min OR ENV CUBALC_AJPHL_MIN OR MIN
+LET MIN = LAST_N
+CLEAR_ERR
+GETFLAGN minsum OR ENV CUBALC_AJPHL_MINSUM OR MINSUM
+LET MINSUM = LAST_N
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPHL_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPHL_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET line_i = 0
+LET row = ""
+LET out = ""
+LET body = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "mint", "len", "empty", "sumn", "gate", "drop", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "mint" THEN
+    LET op = "mint"
+  WHEN "len" THEN
+    LET op = "len"
+  WHEN "empty" THEN
+    LET op = "empty"
+  WHEN "sumn" THEN
+    LET op = "sumn"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src MIN MINSUM
+  CLEAR_ERR
+END
+
+SYS EQS op "mint"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # health plate: counters + string + bool + null
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "ok" 1 "error" 5 "warn" 2 "n" 3 "role" "worker" "dry" false "ts" run_date
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint soft miss"
+    FAIL "mint soft miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mint failed"
+    END
+  ELSE
+    LET take_n = JSONOBJ_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "mint write failed"
+    END
+    CLEAR_ERR
+    SYS CAT "mint:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mt"
+    LET row = LAST
+    SYS GREPV "mint:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "mint ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "len"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "len empty plate"
+    FAIL "len empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "len empty"
+    END
+  ELSE
+    SYS JSONLEN body
+    LET take_n = JSONLEN_N
+    # LAST should still be plate (chain)
+    SYS JSONN "ok" FROM LAST
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    SYS CAT "len:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":ln"
+    LET row = LAST
+    SYS GREPV "len:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "len ok"
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "empty"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    # file missing → treat as empty soft
+    LET peel_hit = 1
+    LET take_n = 0
+    LET miss = 1
+    LET note_msg = "empty file miss"
+    FAIL "empty file miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "empty file"
+    END
+  ELSE
+    SYS JSONEMPTY body
+    LET peel_hit = LAST_N
+    LET take_n = JSONEMPTY_LEN
+    CLEAR_ERR
+    SYS JSONNONEMPTY body
+    LET has_n = LAST_N
+    CLEAR_ERR
+    LET out = body
+    SYS CAT "empty:"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR has_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":em"
+    LET row = LAST
+    SYS GREPV "empty:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    IF peel_hit == 1 THEN
+      LET miss = 1
+      LET note_msg = "empty plate"
+      FAIL "empty plate"
+      CLEAR_ERR
+    ELSE
+      LET hit = 1
+      LET note_msg = "nonempty ok"
+    END
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit has_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "sumn"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "sumn empty plate"
+    FAIL "sumn empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "sumn empty"
+    END
+  ELSE
+    SYS JSONSUMN body
+    LET take_n = JSONSUMN_N
+    # LAST kept as plate — peel ok after sum
+    SYS JSONN "ok" FROM LAST
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    LET out = body
+    SYS CAT "sumn:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":sn"
+    LET row = LAST
+    SYS GREPV "sumn:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "sumn ok"
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate empty plate"
+    FAIL "gate empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate empty"
+    END
+  ELSE
+    SYS JSONEMPTY body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSONLEN body
+    LET take_n = JSONLEN_N
+    CLEAR_ERR
+    SYS JSONSUMN body
+    LET has_n = JSONSUMN_N
+    CLEAR_ERR
+    LET out = body
+    IF peel_hit == 1 THEN
+      LET miss = 1
+      LET note_msg = "gate empty deny"
+      FAIL "gate empty deny"
+      CLEAR_ERR
+    ELSE
+      IF take_n < MIN THEN
+        LET miss = 1
+        LET note_msg = "gate len deny"
+        FAIL "gate len deny"
+        CLEAR_ERR
+      ELSE
+        IF has_n < MINSUM THEN
+          LET miss = 1
+          LET note_msg = "gate sum deny"
+          FAIL "gate sum deny"
+          CLEAR_ERR
+        ELSE
+          LET hit = 1
+          LET note_msg = "gate admit"
+        END
+      END
+    END
+    SYS CAT "gate:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR has_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":gt"
+    LET row = LAST
+    SYS GREPV "gate:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON admit_n bag_n take_n has_n peel_hit MIN MINSUM hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "drop empty plate"
+    FAIL "drop empty plate"
+    CLEAR_ERR
+  ELSE
+    # strip to empty for empty-probe demos
+    SYS JSONPICK body "zzzz_none"
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    CLEAR_ERR
+    SYS JSONEMPTY body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS JSONLEN body
+    LET take_n = JSONLEN_N
+    CLEAR_ERR
+    SYS CAT "drop:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":dr"
+    LET row = LAST
+    SYS GREPV "drop:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop to empty"
+  END
+  PRINT_JSON admit_n bag_n take_n peel_hit p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JSONLEN "{}"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS JSONLEN "not-json"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS JSONEMPTY "{}"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS JSONEMPTY "[1,2]"
+  LET line_i = LAST_N
+  CLEAR_ERR
+  SYS JSONSUMN "{\"a\":1,\"b\":2,\"s\":\"x\",\"ok\":true}"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS JSONSUMN "{}"
+  LET bag_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON take_n has_n peel_hit line_i admit_n bag_n p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_health_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_health_board: done"
+PRINT_JSON hit miss bag_n take_n peel_hit has_n p_src note_msg
+EXIT 0
