@@ -1,0 +1,80 @@
+# JSONDROP / JSONOMIT / JDROPK — drop listed top-level plate keys
+# Strip known noise without chained JSONDEL. Twin of JSONPICK (omit vs keep).
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" 1 "err" "" "n" 5 "noise" "dropme" "tmp" "x" "role" "worker"
+LET plate = LAST
+
+# multi-key drop
+SYS JSONDROP plate "noise" "tmp"
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT JSONDROP_N == 2
+LET plate = LAST
+SYS JSONHAS "noise" plate
+ASSERT LAST_N == 0
+SYS JSONHAS "tmp" plate
+ASSERT LAST_N == 0
+SYS JSONN "ok" FROM plate
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 5
+SYS JSON "role" FROM plate
+ASSERT LAST == "worker"
+
+# missing keys soft-skipped (count only real removals)
+SYS JSONDROP plate "nope" "err" "ghost"
+ASSERT LAST_N == 1
+LET plate = LAST
+SYS JSONHAS "err" plate
+ASSERT LAST_N == 0
+
+# keys-only on LAST
+SYS JOIN "" plate
+SYS JSONOMIT "role"
+ASSERT JSONOMIT_N == 1
+SYS JSONHAS "role" LAST
+ASSERT LAST_N == 0
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 5
+
+# bag form: plate OF keys
+SYS JSONOBJ "a" 1 "b" 2 "c" 3 "d" 4
+LET p2 = LAST
+SYS PUSH "" "b"
+SYS PUSH LAST "d"
+LET ks = LAST
+SYS JSONDROP p2 OF ks
+ASSERT LAST_N == 2
+LET p3 = LAST
+SYS JSONHAS "b" p3
+ASSERT LAST_N == 0
+SYS JSONHAS "d" p3
+ASSERT LAST_N == 0
+SYS JSONN "a" FROM p3
+ASSERT LAST_N == 1
+SYS JSONN "c" FROM p3
+ASSERT LAST_N == 3
+
+# all miss → plate unchanged, n=0
+SYS JSONDROP "{\"x\":1}" "y" "z"
+ASSERT LAST_N == 0
+SYS JSONN "x" FROM LAST
+ASSERT LAST_N == 1
+
+# aliases
+SYS JDROPK "{\"m\":1,\"n\":2,\"o\":3}" "m" "o"
+ASSERT LAST_N == 2
+LET al = LAST
+SYS JSONHAS "m" al
+ASSERT LAST_N == 0
+SYS JSONN "n" FROM al
+ASSERT LAST_N == 2
+SYS JOMIT "{\"p\":9,\"q\":8}" "q"
+ASSERT LAST_N == 1
+SYS JSONN "p" FROM LAST
+ASSERT LAST_N == 9
+
+PRINT "jsondrop ok"
+ASSERT OK == 1

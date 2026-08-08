@@ -4445,6 +4445,66 @@ int cubalc_host_json_rename(const char *json, const char *oldk, const char *newk
   return 0;
 }
 
+/* Usability: SYS JSONDROP plate keys — drop listed top-level keys (bulk JSONDEL).
+ * keys_nl = newline bag. Missing soft-skipped. r->n = removed count. */
+int cubalc_host_json_drop(const char *json, const char *keys_nl, cubalc_host_result *r) {
+  char cur[CUBALC_HOST_STR_MAX];
+  const char *p, *line, *j;
+  long removed = 0;
+  cubalc_host_result dr;
+  r_clear(r);
+  j = json ? json : "";
+  while (*j == ' ' || *j == '\t' || *j == '\n' || *j == '\r') j++;
+  if (!*j || *j != '{')
+    snprintf(cur, sizeof cur, "%s", "{}");
+  else
+    snprintf(cur, sizeof cur, "%s", j);
+  if (!keys_nl || !keys_nl[0]) {
+    snprintf(r->str, sizeof r->str, "%s", cur);
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  p = keys_nl;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    while (kn > 0 && (key[kn - 1] == ' ' || key[kn - 1] == '\t'))
+      key[--kn] = 0;
+    {
+      char *s = key;
+      while (*s == ' ' || *s == '\t') s++;
+      if (s != key) {
+        size_t n = strlen(s);
+        memmove(key, s, n + 1);
+        kn = n;
+      }
+    }
+    if (!key[0]) continue;
+    memset(&dr, 0, sizeof dr);
+    if (cubalc_host_json_del(cur, key, &dr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               dr.err[0] ? dr.err : "jsondrop: del fail");
+      return -1;
+    }
+    if (dr.n > 0)
+      removed++;
+    snprintf(cur, sizeof cur, "%s", dr.str);
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  r->n = removed;
+  r->ok = 1;
+  return 0;
+}
+
 static int load_token(char *out, size_t outn) {
   out[0] = 0;
   const char *e = getenv("XAI_API_KEY");

@@ -223,6 +223,9 @@ int cubalc_host_json_pick(const char *json, const char *keys_nl, cubalc_host_res
  * If new exists, value is overwritten. Same name no-op with n=1 if present. */
 int cubalc_host_json_rename(const char *json, const char *oldk, const char *newk,
                             cubalc_host_result *r);
+/* drop listed top-level keys (newline bag). r->str=new object · r->n=removed count.
+ * Missing keys soft-skipped. Dual of JSONPICK when noise fields are known. */
+int cubalc_host_json_drop(const char *json, const char *keys_nl, cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */
