@@ -1,0 +1,93 @@
+# JSONMAXN / JMAXN · JSONMINN / JMINN — max/min integer plate values → LAST_N
+# Score extremes without JSONVALUES+MIN/MAX glue. LAST kept as plate.
+
+HOLD_FLASH 1
+
+# basic
+SYS JSONOBJ "a" 1 "b" 5 "c" 3
+LET plate = LAST
+SYS JSONMAXN plate
+ASSERT OK == 1
+ASSERT LAST_N == 5
+ASSERT JSONMAXN_N == 5
+# LAST still plate
+SYS JSONN "a" FROM LAST
+ASSERT LAST_N == 1
+SYS JSONMINN plate
+ASSERT LAST_N == 1
+ASSERT JSONMINN_N == 1
+
+# matches VALUES+MAX/MIN
+SYS JSONVALUES plate
+SYS MAX LAST
+ASSERT LAST_N == 5
+SYS JSONVALUES plate
+SYS MIN LAST
+ASSERT LAST_N == 1
+
+# matches TOPKEY value
+SYS JSONTOPKEY plate
+ASSERT LAST_N == 5
+SYS JSONBOTKEY plate
+ASSERT LAST_N == 1
+
+# empty / non-object soft 0
+SYS JSONMAXN "{}"
+ASSERT LAST_N == 0
+ASSERT OK == 1
+SYS JSONMINN "not-json"
+ASSERT LAST_N == 0
+
+# bare on LAST
+SYS JSONOBJ "x" 10 "y" 2
+SYS JSONMAXN
+ASSERT LAST_N == 10
+SYS JSONMINN LAST
+ASSERT LAST_N == 2
+
+# aliases
+SYS JSONOBJ "lo" 3 "hi" 9
+LET p2 = LAST
+SYS JMAXN p2
+ASSERT LAST_N == 9
+SYS JMINN p2
+ASSERT LAST_N == 3
+SYS PLATEMAX p2
+ASSERT LAST_N == 9
+SYS PLATEMIN p2
+ASSERT LAST_N == 3
+
+# skip non-numeric · bools count
+SYS JSONOBJ "s" "hi" "ok" true "n" 4 "m" 7
+LET p3 = LAST
+SYS JSONMAXN p3
+ASSERT LAST_N == 7
+SYS JSONMINN p3
+# true=1 is min among 1,4,7
+ASSERT LAST_N == 1
+
+# negatives
+SYS JSONOBJ "a" -10 "b" -1 "c" 0
+LET p4 = LAST
+SYS JSONMAXN p4
+ASSERT LAST_N == 0
+SYS JSONMINN p4
+ASSERT LAST_N == -10
+
+# single
+SYS JSONOBJ "only" 42
+SYS JSONMAXN LAST
+ASSERT LAST_N == 42
+SYS JSONMINN LAST
+ASSERT LAST_N == 42
+
+# FREQ plate
+SYS JSONFROMKV "error:5\nwarn:2\nok:1"
+SYS JSONMAXN LAST
+ASSERT LAST_N == 5
+SYS JSONFROMKV "error:5\nwarn:2\nok:1"
+SYS JSONMINN LAST
+ASSERT LAST_N == 1
+
+PRINT "jsonmaxn ok"
+ASSERT OK == 1

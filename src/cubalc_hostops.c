@@ -4722,6 +4722,49 @@ int cubalc_host_json_sum(const char *json, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS JSONMAXN/JSONMINN — extreme integer values without VALUES+MIN/MAX. */
+int cubalc_host_json_minmax(const char *json, int want_min, cubalc_host_result *r) {
+  cubalc_host_result vals;
+  const char *p, *line;
+  long best = 0;
+  int found = 0;
+  r_clear(r);
+  memset(&vals, 0, sizeof vals);
+  if (cubalc_host_json_values(json, &vals) != 0) {
+    r->n = 0;
+    r->ok = 1;
+    snprintf(r->str, sizeof r->str, "0");
+    return 0;
+  }
+  p = vals.str;
+  while (*p) {
+    char field[CUBALC_HOST_STR_MAX];
+    size_t flen;
+    char *end = NULL;
+    long v;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    flen = (size_t)(p - line);
+    if (flen >= sizeof field) flen = sizeof field - 1;
+    memcpy(field, line, flen);
+    field[flen] = 0;
+    if (!field[0]) continue;
+    v = strtol(field, &end, 10);
+    if (!(end && end != field && *end == 0))
+      continue;
+    if (!found || (want_min ? (v < best) : (v > best))) {
+      best = v;
+      found = 1;
+    }
+  }
+  r->n = found ? best : 0;
+  r->ok = 1;
+  snprintf(r->str, sizeof r->str, "%ld", r->n);
+  return 0;
+}
+
 /* Usability: SYS JSONTOPKEY/JSONBOTKEY — dominant/min numeric key without TOKV+TOPKEY. */
 int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *r) {
   cubalc_host_result keys, raw;
