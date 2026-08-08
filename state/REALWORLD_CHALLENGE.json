@@ -1,71 +1,71 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 167,
-  "program": "programs/realworld/cli_banner_intake_board.cubalc",
-  "theme": "HELPFLAG+VERSIONFLAG ops ticket intake CLI (banner early-exit + GREPV upsert + priority CLAMPN)",
-  "version": "1.15.453-usability",
+  "iter": 168,
+  "program": "programs/realworld/tag_multiflag_env_board.cubalc",
+  "theme": "GETFLAGALL multi-tag + GETFLAGN OR ENV deploy label CLI (JOINLINES rows)",
+  "version": "1.15.455-usability",
   "pass": true,
-  "prior_note": "iter 166 CLAMPN+RESTPOS; this iter first realworld HELPFLAG(1001)+VERSIONFLAG(1002) with ticket intake plate",
+  "prior_note": "iter 167 HELPFLAG/VERSIONFLAG; this iter first realworld GETFLAGALL(1003)+OR ENV(1004/1005)",
   "tests": [
     {
-      "name": "help_long",
-      "cmd": "cubalc run prog -- --help \u2192 helpflag hit=help EXIT 0 USAGE print",
+      "name": "list_default",
+      "cmd": "list \u2192 w_src default wcount 4",
       "ok": true,
-      "note": "HELPFLAG"
+      "note": "default"
     },
     {
-      "name": "version_long",
-      "cmd": "cubalc run prog -- --version \u2192 PROG_VERSION print versionflag hit EXIT 0",
+      "name": "env_workers",
+      "cmd": "WORKERS=12 src \u2192 w_src env wcount 12",
       "ok": true,
-      "note": "VERSIONFLAG"
+      "note": "OR ENV"
     },
     {
-      "name": "help_short_h",
-      "cmd": "-- -h helpflag hit",
+      "name": "tag_multi_cli",
+      "cmd": "tag -- --tag=canary --tag=eu --workers=3 svc-a svc-b",
       "ok": true,
-      "note": "short"
+      "note": "GETFLAGALL+CLI"
     },
     {
-      "name": "version_short_V",
-      "cmd": "-- -V versionflag hit",
+      "name": "row_fmt",
+      "cmd": "TAGS svc-a:canary|eu:3:live",
       "ok": true,
-      "note": "short"
-    },
-    {
-      "name": "admit_clamp",
-      "cmd": "admit -- --priority=50 tkt-alpha tkt-beta \u2192 PRI 9 pri_ch 1; tickets live",
-      "ok": true,
-      "note": "CLAMPN+GREPV"
-    },
-    {
-      "name": "upsert_short_p",
-      "cmd": "admit -- -p 3 tkt-alpha \u2192 GREPV upsert priority 3",
-      "ok": true,
-      "note": "alias p"
+      "note": "JOINLINES"
     },
     {
       "name": "has_substr",
-      "cmd": "has tkt-alpha hit; has tkt miss (prefix false friend ok via id:)",
+      "cmd": "has svc-a hit; has svc miss",
       "ok": true,
       "note": "GREP"
     },
     {
-      "name": "drop_list_gate_soft_probe_banner",
-      "cmd": "drop/list/gate/soft/probe/banner/clear green",
+      "name": "drop",
+      "cmd": "drop svc-b",
       "ok": true,
-      "note": "ops"
+      "note": "GREPV"
     },
     {
-      "name": "soft_empty_require",
-      "cmd": "admit empty soft; CUBALC_CBI_REQUIRE=1 REQUIRE RESTPOS sticky (shell may be 0)",
+      "name": "empty_require",
+      "cmd": "tag empty soft; CUBALC_TME_REQUIRE REQUIRE RESTPOS",
       "ok": true,
       "note": "RESTPOS"
     },
     {
-      "name": "help_without_ddash",
-      "cmd": "cubalc run prog --help strips flag \u2192 list default (W11)",
+      "name": "default_tag",
+      "cmd": "tag without --tag \u2192 untagged",
       "ok": true,
-      "note": "W11"
+      "note": "OR default"
+    },
+    {
+      "name": "probe_or_env",
+      "cmd": "TIMEOUT=5s FORCE=yes probe \u2192 5000ms force1 clamp64",
+      "ok": true,
+      "note": "MS+BOOL"
+    },
+    {
+      "name": "gate_soft_clear",
+      "cmd": "gate/soft/clear green",
+      "ok": true,
+      "note": "ops"
     },
     {
       "name": "selftest",
@@ -466,31 +466,59 @@
       "title": "HELPFLAG+VERSIONFLAG miss path is quiet-friendly and sticky USAGE survives",
       "detail": "Positive: miss leaves HELPFLAG_HIT=0 VERSIONFLAG_HIT=0; program continues; USAGE sticky still available for REQUIRE tips and banner action.",
       "repro": "list after HELPFLAG miss \u2192 help_hit 0 ver_hit 0"
+    },
+    {
+      "id": "W50",
+      "severity": "high",
+      "area": "host|sys_str",
+      "title": "SYS STR WORKERS hits host worker-count (nproc), not LET var WORKERS",
+      "detail": "LET WORKERS=3; PRINT_JSON WORKERS shows 3, but SYS STR WORKERS yields nproc (here 4) and LAST_N=4. SYS STR workers (lowercase) binds the var. SYS NUM WORKERS is unknown form. Agents must not name ops vars WORKERS when feeding SYS STR/ITOA \u2014 use wcount/nworkers.",
+      "repro": "LET WORKERS=3; SYS STR WORKERS \u2192 4 on 4-cpu host; SYS STR wcount works"
+    },
+    {
+      "id": "W51",
+      "severity": "low",
+      "area": "lang|getflagall",
+      "title": "GETFLAGALL multi --tag bag + JOINLINES | for row fields",
+      "detail": "Positive: --tag=canary --tag=eu \u2192 tag_n=2 bag; SYS JOINLINES \"|\" tags \u2192 canary|eu. OR default untagged when miss HIT=0. Coexists with GETFLAGN workers.",
+      "repro": "GETFLAGALL tag OR untagged with two --tag \u2192 JOINLINES |"
+    },
+    {
+      "id": "W52",
+      "severity": "low",
+      "area": "lang|or_env",
+      "title": "GETFLAGN/MS/BOOLFLAG OR ENV CLI>env>default with *_SRC",
+      "detail": "Positive: export WORKERS=12 \u2192 GETFLAGN_SRC env; --workers=3 \u2192 cli; unset \u2192 default. FLAG_ENV set on env path. Probe-path GETFLAGMS timeout OR ENV TIMEOUT and BOOLFLAG force OR ENV FORCE confirmed.",
+      "repro": "WORKERS=12 src env; --workers=3 src cli"
+    },
+    {
+      "id": "W53",
+      "severity": "med",
+      "area": "lang|flag_alias",
+      "title": "Short -t alias collision risk across GETFLAGALL tag|t and GETFLAGMS timeout|t",
+      "detail": "Prefer no short on tag when timeout also peels -t, or use distinct shorts. Board uses tag without short; timeout long-only in probe.",
+      "repro": "GETFLAGALL tag|t with GETFLAGMS timeout|t same -t"
     }
   ],
   "workarounds": [
-    "USAGE line; HELPFLAG; VERSIONFLAG early after PROG_VERSION",
-    "cubalc run prog -- --help|--version|-h|-V (host -- required, W11)",
-    "GETFLAGN priority|p OR 5; CLAMPN PRI 1 9; CLAMPN_CHANGED",
-    "SYS CAT tid \":\"; SYS GREPV pref tickets \u2014 upsert/drop without nested EACH",
-    "Predeclare row/pref before EACH if mid-loop LET needed; keep total unique LET low (W47)",
-    "HASRESTPOS soft + EXIT 2; REQUIRE RESTPOS alone is not shell-rc (W43)",
-    "banner action for plate-visible USAGE/version snapshot without EXIT"
+    "GETFLAGALL tag OR untagged; SYS JOINLINES \"|\" tags for row field",
+    "GETFLAGN workers|w OR ENV WORKERS OR 4; LET wcount not WORKERS (W50)",
+    "probe: GETFLAGMS timeout OR ENV TIMEOUT; BOOLFLAG force OR ENV FORCE",
+    "GREPV pref bag upsert; keep unique LET low (W47)",
+    "cubalc run prog tag -- --tag=a --tag=b --workers=N svc..."
   ],
   "language_gaps": [
-    "Raise or document var-table limit for EACH scopes (W47)",
-    "HELPFLAG/VERSIONFLAG optional plate audit hook without breaking EXIT 0",
-    "Host -- auto-pass-through for --help/--version before strip (W11)",
-    "REQUIRE RESTPOS non-zero process exit_code",
-    "Cookbook: CLI banner + ticket intake with HELPFLAG/VERSIONFLAG"
+    "SYS STR must prefer user var over host WORKERS knob (W50)",
+    "Document reserved host tokens that shadow LET names",
+    "Raise EACH/var-table limit (W47)",
+    "Cookbook: multi-tag deploy with GETFLAGALL + OR ENV"
   ],
   "issues_faced": [
-    "Nested EACH + dense LETs \u2192 unknown form hits/tid (W47) \u2014 slim board + GREPV LAST + predeclare row/pref",
-    "HELPFLAG/VERSIONFLAG work with host -- ; without -- help strips to list (W11)",
-    "REQUIRE RESTPOS sticky + usage tip; exit_code often 0",
-    "WRITE bag omits final NL (W10)",
+    "SYS STR WORKERS \u2192 nproc 4 despite LET WORKERS=3 (W50) \u2014 rename wcount",
+    "W47 denser boards break EACH \u2014 slim LETs; probe-only GETFLAGMS/BOOLFLAG",
+    "GETFLAGALL+JOINLINES multi-tag rows green; OR ENV cascade green",
     "selftest 355/355"
   ],
-  "commit": "55f8ba6cd8a09a6411fccc1f087710b27e2147db",
-  "ts": "2026-08-08T01:24:03Z"
+  "commit": "",
+  "ts": "2026-08-08T01:44:39Z"
 }

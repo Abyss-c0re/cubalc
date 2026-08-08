@@ -1,0 +1,526 @@
+# tag_multiflag_env_board.cubalc — GETFLAGALL multi-tags + GETFLAGN OR ENV
+#
+# Real use: release/fleet agents pin multi --tag labels on service targets and
+# pull workers from CLI over env over default without shell ${WORKERS:-n}:
+#   GETFLAGALL / MULTIFLAG tag — all --tag occurrences → bag (1003)
+#   GETFLAGN workers|w OR ENV WORKERS OR 4 — CLI>env>default (1004)
+#   GETFLAGN_SRC / FLAG_ENV plate audit
+#   SUBCMD + RESTPOS / HASRESTPOS — verb then service targets
+#   SYS GREPV + JOINLINES — upsert rows without nested EACH
+#
+# First realworld GETFLAGALL + GETFLAGN OR ENV board.
+# (GETFLAGMS/BOOLFLAG OR ENV covered in proof 1005; keep LET table lean — W47)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tme_$$
+#   export WORKERS=8
+#   ./out/cubalc run programs/realworld/tag_multiflag_env_board.cubalc \
+#     tag -- --tag=canary --tag=eu --workers=3 svc-a svc-b
+#   ./out/cubalc run ... list
+#   ./out/cubalc run ... drop -- svc-a
+#
+# Plate: TAGS.txt VAL.txt META.txt TME_REPORT.txt
+# Subcmds: list|ls tag drop has gate soft clear probe src
+# Env: WORKERS CUBALC_TME_REQUIRE CUBALC_TME_MIN
+#
+# Edges:
+#   GETFLAGALL empty → OR untagged; multi --tag=a --tag=b; JOINLINES |
+#   CLI workers beat WORKERS env; *_SRC cli|env|default
+#   W47 lean LET; GREPV upsert; HASRESTPOS soft; REQUIRE RESTPOS often exit 0
+#   WRITE NL; known latch
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "tag_multiflag_env_board: start"
+DEFAULT ACTION = "list"
+DEFAULT TFILE = "TAGS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "TME_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "tag_multiflag_env -- tag|list|drop -- [--tag=T ...] [--workers=N|-w N] svc..."
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+GETFLAGALL tag OR "untagged"
+LET tags = LAST
+LET tag_n = LAST_N
+CLEAR_ERR
+
+# NOTE: do not LET WORKERS — SYS STR WORKERS hits host worker-count knob (nproc), not var
+GETFLAGN workers|w OR ENV WORKERS OR 4
+LET wcount = LAST_N
+LET w_src = GETFLAGN_SRC
+CLEAR_ERR
+
+CLAMPN wcount 1 64
+LET wcount = LAST_N
+CLEAR_ERR
+
+SYS ENV "CUBALC_TME_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_TME_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir TFILE
+LET tags_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR tags_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+SYS JOINLINES "|" tags
+LET tag_join = LAST
+CLEAR_ERR
+
+LET row = ""
+LET pref = ""
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET val = ""
+LET meta = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "tag", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe", "src"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "tag" THEN
+    LET op = "tag"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "src" THEN
+    LET op = "src"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "bag_n"
+  SYS STR bag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON bag_n tag_n wcount w_src
+  CLEAR_ERR
+END
+
+SYS EQS op "src"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "src ok"
+  LET val = tags
+  LET val_ch = 1
+  LET meta = "w_src"
+  SYS PUSH meta w_src
+  LET meta = LAST
+  SYS PUSH meta "tag_n"
+  LET meta = LAST
+  SYS STR tag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON w_src tag_n wcount tags
+  CLEAR_ERR
+END
+
+SYS EQS op "tag"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "tag needs services"
+    FAIL "tag needs services"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      REQUIRE RESTPOS 1
+    END
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "tag needs services"
+    END
+  ELSE
+    EACH LINE AS tid IN targets
+      SYS BLANK tid
+      IF LAST_N == 0 THEN
+        SYS CAT tid ":"
+        LET pref = LAST
+        SYS GREPV pref bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS CAT tid ":"
+        LET row = LAST
+        SYS CAT row tag_join
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS STR wcount
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":live"
+        LET row = LAST
+        SYS PUSH bag row
+        LET bag = LAST
+        LET admit_n = admit_n + 1
+      END
+    END
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "tag ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "admit"
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta tag_join
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n tag_n wcount w_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs services"
+    FAIL "drop needs services"
+    CLEAR_ERR
+  ELSE
+    EACH LINE AS tid IN targets
+      SYS BLANK tid
+      IF LAST_N == 0 THEN
+        SYS CAT tid ":"
+        LET pref = LAST
+        SYS GREPV pref bag
+        LET bag = LAST
+        LET admit_n = admit_n + 1
+        CLEAR_ERR
+      END
+    END
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+    LET val = bag
+    LET val_ch = 1
+    LET meta = "drop"
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET pref = LAST
+  SYS BLANK pref
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs name"
+    FAIL "has needs name"
+    CLEAR_ERR
+  ELSE
+    SYS CAT pref ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    LET val = pref
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  SYS STR bag_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "gate"
+  LET meta_ch = 1
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    LET meta_ch = 1
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has tags"
+    LET val = bag
+    LET val_ch = 1
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # OR ENV family smoke (GETFLAGMS/BOOLFLAG) — reuse admit_n/has_n slots
+  GETFLAGMS timeout OR ENV TIMEOUT OR "30s"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  BOOLFLAG force|f OR ENV FORCE OR 0
+  LET has_n = LAST_N
+  CLEAR_ERR
+  CLAMPN 200 1 64
+  LET bag_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  SYS STR admit_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR admit_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR bag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON admit_n has_n bag_n w_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET val = ""
+  LET meta = ""
+  LET bag_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE tags_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "tags write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+LET meta = "schema=cubalc.tag_multiflag_env_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "workers"
+LET meta = LAST
+SYS STR wcount
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "w_src"
+LET meta = LAST
+SYS PUSH meta w_src
+LET meta = LAST
+SYS PUSH meta "tag_n"
+LET meta = LAST
+SYS STR tag_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "bag_n"
+LET meta = LAST
+SYS STR bag_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+
+NOTE "tag_multiflag_env_board: done"
+PRINT_JSON hit miss bag_n tag_n wcount w_src note_msg
+EXIT 0
