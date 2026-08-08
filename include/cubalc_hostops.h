@@ -263,6 +263,11 @@ int cubalc_host_json_eq(const char *a, const char *b, cubalc_host_result *r);
  * Soft: non-object sub/super → 0 (empty {} is subset of any object).
  * Usability: required-field verify without multi JSONHAS+JSON peels. */
 int cubalc_host_json_subset(const char *sub, const char *super, cubalc_host_result *r);
+/* multi-key presence: keys_nl newline bag. want_all=1 all present, 0=any.
+ * r->n 0|1 · r->code = number of listed keys found. Soft non-object → 0.
+ * Usability: contract keys without multi JSONHAS glue. */
+int cubalc_host_json_has_keys(const char *json, const char *keys_nl, int want_all,
+                              cubalc_host_result *r);
 
 /* chat: backend "local"|"grok", model may be ""/"local", msg required.
  * Reply text in r->str. Uses loopback :1212 or api.x.ai. */

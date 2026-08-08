@@ -1,0 +1,83 @@
+# JSONHASALL / JSONNEED · JSONHASANY / JHASANY — multi-key presence
+# Contract keys without multi JSONHAS. LAST kept as plate. HIT = found count.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" "" "extra" 9
+LET plate = LAST
+
+# all present
+SYS JSONHASALL plate "ok" "n" "err"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONHASALL_N == 1
+ASSERT JSONHASALL_HIT == 3
+
+# missing one
+SYS JSONHASALL plate "ok" "missing"
+ASSERT LAST_N == 0
+ASSERT JSONHASALL_HIT == 1
+
+# any present
+SYS JSONHASANY plate "missing" "ok"
+ASSERT LAST_N == 1
+ASSERT JSONHASANY_HIT == 1
+SYS JSONHASANY plate "nope" "nada"
+ASSERT LAST_N == 0
+ASSERT JSONHASANY_HIT == 0
+
+# bare keys on LAST plate
+SYS JSONOBJ "a" 1 "b" 2
+SYS JSONHASALL "a" "b"
+ASSERT LAST_N == 1
+SYS JSONHASALL "a" "c"
+ASSERT LAST_N == 0
+
+# OF bag form
+SYS JSONOBJ "x" 1 "y" 2 "z" 3
+LET p2 = LAST
+SYS JOIN "" "x\ny\nz"
+LET kbag = LAST
+SYS JSONHASALL p2 OF kbag
+ASSERT LAST_N == 1
+ASSERT JSONHASALL_HIT == 3
+SYS JOIN "" "x\nmiss"
+SYS JSONHASALL p2 OF LAST
+ASSERT LAST_N == 0
+
+# null/false still present
+SYS JSONOBJ "gone" null "flag" false "n" 0
+LET p3 = LAST
+SYS JSONHASALL p3 "gone" "flag" "n"
+ASSERT LAST_N == 1
+ASSERT JSONHASALL_HIT == 3
+
+# aliases
+SYS JSONNEED plate "ok" "n"
+ASSERT LAST_N == 1
+SYS JHASALL plate "ok"
+ASSERT LAST_N == 1
+SYS JHASANY plate "nope" "ok"
+ASSERT LAST_N == 1
+
+# empty key list: all-of-empty true, any-of-empty false
+SYS JSONHASALL plate
+ASSERT LAST_N == 1
+SYS JSONHASANY plate
+ASSERT LAST_N == 0
+
+# LAST kept as plate for chain
+SYS JSONHASALL plate "ok"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 3
+
+# IF pattern
+SYS JSONHASALL plate "ok" "n"
+IF LAST_N THEN
+  PASS "contract keys ok"
+END
+ASSERT OK == 1
+
+PRINT "jsonhasall ok"
+ASSERT OK == 1

@@ -3313,6 +3313,8 @@ int main(int argc, char **argv) {
       {"SYS JSONNEQ", "host", "SYS JSONNEQ|JNEQ a b — plates differ → LAST_N 1"},
       {"SYS JSONSUBSET", "host", "SYS JSONSUBSET|JSUBSET sub super — required fields match → LAST_N 0|1"},
       {"SYS JSONSUPERSET", "host", "SYS JSONSUPERSET|JSONCOVERS a b — a ⊇ b required fields"},
+      {"SYS JSONHASALL", "host", "SYS JSONHASALL|JSONNEED [plate] key… — all keys present → LAST_N 0|1"},
+      {"SYS JSONHASANY", "host", "SYS JSONHASANY|JHASANY [plate] key… — any key present → LAST_N 0|1"},
       {"SYS JSONKEYS", "host", "SYS JSONKEYS [plate] — top-level keys bag"},
       {"SYS JSONVALUES", "host", "SYS JSONVALUES [plate] — top-level values bag"},
       {"SYS SPAWN", "host", "allowlisted spawn (protect mode tight)"},
