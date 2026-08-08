@@ -584,6 +584,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 554. ~~**`LOADPLATE` / `READPLATE` / `PLATEREAD`**~~ **done** (soft plate-file load · miss/non-object → OR defaults · LAST_N hit · agent state boot).
 555. ~~**`SAVEPLATE` / `STOREPLATE` / `PLATESAVE`**~~ **done** (object-checked plate persist · mkdir parent · dual of LOADPLATE for agent state).
 556. ~~**`ENSUREPLATE` / `TOUCHPLATE` / `SEEDPLATE`**~~ **done** (create-or-load state plate · LAST=content · CREATED 0|1 · first-run seed without IF glue).
+557. ~~**`REQUIRE PLATEFILE` / `JSONPLATE` / `HASPLATE`**~~ **done** (fail-fast object plate file · LAST=content · soft twin SYS LOADPLATE · note REQUIRE PLATE stays REG-file).
 
 ## Tick protocol
 

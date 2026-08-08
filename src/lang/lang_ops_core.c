@@ -33853,7 +33853,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEQ|JSONNEQ|JSONSUBSET|JSONTYPE — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|FLAGPATH|FLAGFILE|FLAGDIR|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEQ|JSONNEQ|JSONSUBSET|JSONTYPE|PLATEFILE — fail-fast gates"},
       {"REQUIRE JSONEQ", "REQUIRE JSONEQ|SAMEJSON a b — fail-fast plate equality · lists changed keys · soft SYS JSONEQ"},
       {"REQUIRE SAMEJSON", "REQUIRE SAMEJSON alias of REQUIRE JSONEQ"},
       {"REQUIRE JSONNEQ", "REQUIRE JSONNEQ|JNEQ|DIFFJSON a b — fail-fast if plates still equal · mutation gate · soft SYS JSONNEQ"},
@@ -33863,6 +33863,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"REQUIRE JSONTYPE", "REQUIRE JSONTYPE|JTYPE [plate] key kind — fail-fast field type · soft SYS JSONTYPE"},
       {"REQUIRE JTYPE", "REQUIRE JTYPE alias of REQUIRE JSONTYPE"},
       {"REQUIRE JSONKIND", "REQUIRE JSONKIND alias of REQUIRE JSONTYPE"},
+      {"REQUIRE PLATEFILE", "REQUIRE PLATEFILE|JSONPLATE|HASPLATE path — fail-fast object plate file · LAST=content · soft LOADPLATE"},
+      {"REQUIRE JSONPLATE", "REQUIRE JSONPLATE alias of REQUIRE PLATEFILE"},
+      {"REQUIRE HASPLATE", "REQUIRE HASPLATE alias of REQUIRE PLATEFILE"},
+      {"REQUIRE PLATEOBJ", "REQUIRE PLATEOBJ alias of REQUIRE PLATEFILE"},
       {"REQUIRE JSONSUBSET", "REQUIRE JSONSUBSET|JSUBSET sub super — fail-fast required fields · bad keys listed · soft SYS JSONSUBSET"},
       {"REQUIRE JSONSUPERSET", "REQUIRE JSONSUPERSET|JSONCOVERS super sub — dual of JSONSUBSET (a ⊇ b)"},
       {"REQUIRE JSUBSET", "REQUIRE JSUBSET alias of REQUIRE JSONSUBSET"},
@@ -36643,6 +36647,73 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
+    /* REQUIRE PLATEFILE|JSONPLATE|HASPLATE path
+     * — fail-fast if path is not a readable object plate file.
+     * Soft twin: SYS LOADPLATE (hit). LAST = plate content · LAST_N=1.
+     * Note: REQUIRE PLATE remains REG-file alias (path exists as file).
+     * Usability: gate agent state plate before mutate without LOADPLATE_HIT IF. */
+    if (kw(&L->cur,"PLATEFILE") || kw(&L->cur,"JSONPLATE") || kw(&L->cur,"HASPLATE") ||
+        kw(&L->cur,"PLATEOBJ") || kw(&L->cur,"OBJECTPLATE") || kw(&L->cur,"VALIDPLATE") ||
+        kw(&L->cur,"NEEDPLATEFILE") || kw(&L->cur,"REQPLATE") || kw(&L->cur,"PLATEOK")){
+      char path[CUBALC_HOST_STR_MAX], plate[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr, keys;
+      const char *body;
+      int ok_obj = 0;
+      lex_next(L);
+      path[0] = 0;
+      plate[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail_at(vm, L, "REQUIRE PLATEFILE path — need plate file path");
+        return -1;
+      }
+      if (!path[0]) {
+        fail_at(vm, L, "REQUIRE PLATEFILE empty path");
+        return -1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_read(path, &hr) != 0 || !hr.str[0]) {
+        char msg[280];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE PLATEFILE miss line %d: %s — soft twin SYS LOADPLATE / ENSUREPLATE",
+                 aln, path);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      body = hr.str;
+      while (*body == ' ' || *body == '\t' || *body == '\n' || *body == '\r')
+        body++;
+      if (*body == '{') {
+        memset(&keys, 0, sizeof keys);
+        if (cubalc_host_json_keys(body, &keys) == 0) {
+          snprintf(plate, sizeof plate, "%s", body);
+          ok_obj = 1;
+        }
+      }
+      if (!ok_obj) {
+        char msg[300];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE PLATEFILE not-object line %d: %s — soft twin SYS LOADPLATE",
+                 aln, path);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_str(vm, "REQUIRE_PLATEFILE", path);
+      var_set_str(vm, "REQUIRE_PLATE_PATH", path);
+      var_set_str(vm, "LOADPLATE_PATH", path);
+      var_set_num(vm, "REQUIRE_PLATEFILE_N", 1);
+      var_set_num(vm, "LOADPLATE_HIT", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require platefile ok · %s\n", path);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     /* REQUIRE BIN|CMD|EXE|COMMAND name — fail if not X_OK on PATH (no lib fallback).
      * On success: LAST = resolved path, REQUIRE_BIN = path, LAST_N=1, OK=1.
      * Usability: gate curl/sh/agent tools before SPAWN without shell which. */
@@ -37740,7 +37811,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEXACT|JSONEQ|JSONNEQ|JSONSUBSET|JSONTYPE …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEXACT|JSONEQ|JSONNEQ|JSONSUBSET|JSONTYPE|PLATEFILE …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||

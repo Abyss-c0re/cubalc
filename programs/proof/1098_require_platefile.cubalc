@@ -1,0 +1,86 @@
+# REQUIRE PLATEFILE / JSONPLATE / HASPLATE — fail-fast object plate file
+# Soft twin: SYS LOADPLATE. LAST=plate content. REQUIRE PLATE stays REG-file.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_req_platefile"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "boot.json"
+LET path = LAST
+SYS JOIN dir "missing.json"
+LET miss = LAST
+SYS JOIN dir "bad.txt"
+LET bad = LAST
+
+# seed a real plate
+SYS JSONOBJ "ok" true "n" 5 "role" "gate"
+LET plate = LAST
+SYS SAVEPLATE path plate
+ASSERT OK == 1
+
+# hit
+REQUIRE PLATEFILE path
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LOADPLATE_HIT == 1
+SYS EQS REQUIRE_PLATEFILE path
+ASSERT LAST_N == 1
+# LAST is content
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 5
+
+# re-require and peel role
+REQUIRE PLATEFILE path
+LET p = LAST
+SYS JSON "role" FROM p
+SYS EQS LAST "gate"
+ASSERT LAST_N == 1
+
+# aliases
+REQUIRE JSONPLATE path
+ASSERT OK == 1
+REQUIRE HASPLATE path
+ASSERT OK == 1
+REQUIRE PLATEOBJ path
+ASSERT OK == 1
+REQUIRE OBJECTPLATE path
+ASSERT OK == 1
+REQUIRE VALIDPLATE path
+ASSERT OK == 1
+REQUIRE PLATEOK path
+ASSERT OK == 1
+
+# empty object plate is still valid object
+SYS JOIN dir "empty.json"
+LET epath = LAST
+SYS SAVEPLATE epath "{}"
+REQUIRE PLATEFILE epath
+ASSERT OK == 1
+SYS JSONEMPTY LAST
+ASSERT LAST_N == 1
+
+# agent pattern: soft load then require when ready
+SYS LOADPLATE path
+IF LOADPLATE_HIT THEN
+  REQUIRE PLATEFILE path
+  PASS "plate file ready"
+ELSE
+  FAIL "should hit"
+END
+ASSERT OK == 1
+
+# REQUIRE PLATE still means regular file (not object plate)
+REQUIRE PLATE path
+ASSERT OK == 1
+SYS EQS LAST path
+ASSERT LAST_N == 1
+
+# cleanup ok paths
+SYS RM path
+SYS RM epath
+SYS RM bad
+SYS RM miss
+SYS RM dir
