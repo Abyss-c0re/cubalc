@@ -1951,6 +1951,6 @@
     "probe REMOVELINE ERROR hit when third field was exact ERROR \u2014 redesign bag for pure substring trap",
     "FINDLINE index 0 vs miss both LAST_N=0 \u2014 HASLINE gate required"
   ],
-  "commit": "",
+  "commit": "74bb2ea",
   "ts": "2026-08-08T22:29:29Z"
 }
