@@ -589,6 +589,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 559. ~~**`UPDATEPLATE` / `JSONFILESET` / `PLATEKEYSET`**~~ **done** (one-shot load-set-save JSON plate field · no LOAD+JSONSET+SAVE glue).
 560. ~~**`BUMPPLATE` / `JSONFILEINC` / `DECRPLATE`**~~ **done** (one-shot load-inc/dec-save plate counter · no LOAD+JSONINC+SAVE glue).
 561. ~~**`PEEKPLATE` / `JSONFILEGET` / `PLATEKEYGET`**~~ **done** (one-shot peel field from plate file · OR fallback · no LOAD+JSON glue).
+562. ~~**`DROPPLATE` / `JSONFILEDEL` / `PLATEKEYDEL`**~~ **done** (one-shot load-del-save plate field · soft miss · no LOAD+JSONDEL+SAVE glue).
 
 ## Tick protocol
 

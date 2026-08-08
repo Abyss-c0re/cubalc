@@ -1,0 +1,88 @@
+# DROPPLATE / JSONFILEDEL — one-shot drop field from JSON plate file
+# Usability: agent field ack without LOADPLATE+JSONDEL+SAVEPLATE glue.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_dropplate"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS JOIN dir "fresh.json"
+LET fresh = LAST
+
+# seed
+SYS JSONOBJ "role" "worker" "tmp" "dropme" "n" 3
+LET plate = LAST
+SYS SAVEPLATE path plate
+ASSERT OK == 1
+
+# --- drop existing key ---
+SYS DROPPLATE path "tmp"
+ASSERT OK == 1
+ASSERT DROPPLATE_HIT == 1
+ASSERT LAST_N == 1
+ASSERT DROPPLATE_FILE == 1
+ASSERT DROPPLATE_CREATED == 0
+LET plate = LAST
+SYS JSONHAS plate "tmp"
+ASSERT LAST_N == 0
+SYS JSON "role" FROM plate
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 3
+
+# --- soft miss key (idempotent) ---
+SYS DROPPLATE path "tmp"
+ASSERT OK == 1
+ASSERT DROPPLATE_HIT == 0
+ASSERT LAST_N == 0
+
+# --- aliases ---
+SYS UPDATEPLATE path "scratch" "x"
+SYS JSONFILEDEL path "scratch"
+ASSERT DROPPLATE_HIT == 1
+SYS UPDATEPLATE path "scratch" "y"
+SYS PLATEKEYDEL path "scratch"
+ASSERT LAST_N == 1
+SYS UPDATEPLATE path "scratch" "z"
+SYS DELPLATEKEY path "scratch"
+ASSERT DROPPLATE_HIT == 1
+SYS UPDATEPLATE path "scratch" "w"
+SYS UNSETPLATEKEY path "scratch"
+ASSERT OK == 1
+
+# --- on-disk verify ---
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+SYS JSONHAS LAST "tmp"
+ASSERT LAST_N == 0
+SYS JSONHAS LAST "scratch"
+ASSERT LAST_N == 0
+SYS JSON "role" FROM LAST
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# --- missing file: creates empty object plate ---
+SYS RM fresh
+SYS DROPPLATE fresh "ghost"
+ASSERT OK == 1
+ASSERT DROPPLATE_CREATED == 1
+ASSERT DROPPLATE_FILE == 0
+ASSERT DROPPLATE_HIT == 0
+SYS LOADPLATE fresh
+ASSERT LOADPLATE_HIT == 1
+SYS JSONEMPTY LAST
+ASSERT LAST_N == 1
+
+# --- empty key soft fail ---
+LET empty = ""
+SYS DROPPLATE path empty
+ASSERT OK == 0
+SYS HAS LAST_ERR "empty key"
+ASSERT LAST_N == 1
+
+PRINT "dropplate ok"
