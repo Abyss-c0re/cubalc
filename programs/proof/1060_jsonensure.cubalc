@@ -1,0 +1,83 @@
+# JSONENSURE / JDEFAULT / JSONDEFAULT — set plate key only if missing
+# Agent boot defaults without clobbering live counters/status.
+# Twin of DEFAULT (vars) / KVFILEENSURE (files) for memory plates.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "retries" 3 "status" "running"
+LET plate = LAST
+
+# missing key → insert · LAST_N=1
+SYS JSONENSURE plate "max" 10
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONENSURE_SET == 1
+ASSERT JSONENSURE_HAD == 0
+ASSERT JSONENSURE_KEY == "max"
+LET plate = LAST
+SYS JSONN "max" FROM plate
+ASSERT LAST_N == 10
+SYS JSONN "retries" FROM plate
+ASSERT LAST_N == 3
+
+# present key → keep · LAST_N=0 (no clobber)
+SYS JSONENSURE plate "retries" 0
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT JSONENSURE_SET == 0
+ASSERT JSONENSURE_HAD == 1
+LET plate = LAST
+SYS JSONN "retries" FROM plate
+ASSERT LAST_N == 3
+
+# string default
+SYS JSONENSURE plate "role" "worker"
+ASSERT JSONENSURE_SET == 1
+LET plate = LAST
+SYS JSON "role" FROM plate
+ASSERT LAST == "worker"
+# second ensure keeps
+SYS JSONENSURE plate "role" "admin"
+ASSERT JSONENSURE_SET == 0
+LET plate = LAST
+SYS JSON "role" FROM plate
+ASSERT LAST == "worker"
+
+# 2-arg on LAST
+SYS JOIN "" plate
+SYS JSONENSURE "ok" 1
+ASSERT LAST_N == 1
+SYS JSONN "ok" FROM LAST
+ASSERT LAST_N == 1
+
+# empty / non-object → fresh with key
+SYS JSONENSURE "{}" "seed" 1
+ASSERT JSONENSURE_SET == 1
+SYS JSONN "seed" FROM LAST
+ASSERT LAST_N == 1
+
+# aliases
+SYS JDEFAULT "{\"a\":1}" "b" 2
+ASSERT JSONENSURE_SET == 1
+LET al = LAST
+SYS JSONN "a" FROM al
+ASSERT LAST_N == 1
+SYS JSONN "b" FROM al
+ASSERT LAST_N == 2
+SYS JSONDEFAULT "{\"a\":9}" "a" 0
+ASSERT JSONENSURE_SET == 0
+LET al2 = LAST
+SYS JSONN "a" FROM al2
+ASSERT LAST_N == 9
+
+# bool raw value when inserting (host peels true → 1)
+SYS JSONENSURE "{\"x\":1}" "flag" true
+ASSERT JSONENSURE_SET == 1
+LET fl = LAST
+SYS JSONHAS "flag" fl
+ASSERT LAST_N == 1
+SYS JSONN "flag" FROM fl
+ASSERT LAST_N == 1
+
+PRINT "jsonensure ok"
+ASSERT OK == 1
