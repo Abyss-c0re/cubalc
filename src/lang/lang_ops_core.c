@@ -35611,7 +35611,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASP", "HASP [FROM plate] key — soft 0|1 presence · multi-plate · no GETP miss ERR"},
       {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · multi-plate"},
       {"KEYSP", "KEYSP [FROM plate] — key bag → LAST · multi-plate · no JSONKEYS glue"},
-      {"DUMPP", "DUMPP|PLATEINFO — cubalc.plate_info.v1 snapshot of PLATE (keys/bytes/path)"},
+      {"DUMPP", "DUMPP|PLATEINFO [FROM plate] — cubalc.plate_info.v1 · multi-plate snapshot"},
       {"PLATEINFO", "PLATEINFO alias of DUMPP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
@@ -38536,41 +38536,85 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
   }
-  /* DUMPP|PLATEINFO|INFO_P — agent snapshot of conventional PLATE var.
+  /* DUMPP|PLATEINFO [FROM plate] — agent snapshot of PLATE or any plate object.
    * LAST = cubalc.plate_info.v1 JSON:
-   *   keys_n · bytes · path (PLATE_PATH if set) · keys (comma list) · has_plate
-   * Does not clobber PLATE. Soft empty plate → keys_n=0 has_plate=0 OK=1.
-   * Usability: one form for agents instead of KEYSP+LEN+JSONLEN+PATH glue:
-   *   INCLUDE plate_boot
-   *   SETP "role" "worker"
-   *   DUMPP
-   *   # LAST = {"schema":"cubalc.plate_info.v1",...}
-   */
+   *   keys_n · bytes · path (PLATE_PATH if default; var name if FROM named) · keys · has_plate
+   * Does not clobber PLATE. Soft empty → keys_n=0 has_plate=0 OK=1.
+   * FROM: multi-plate twin of KEYSP/NEEDP FROM:
+   *   DUMPP FROM peer
+   *   PLATEINFO FROM LAST
+   * DUMPP_FROM = 0|1 · DUMPP_SRC = source name when named FROM.
+   * Usability: one form for agents instead of KEYSP+LEN+JSONLEN+PATH glue. */
   if (kw(&L->cur,"DUMPP") || kw(&L->cur,"PLATEINFO") || kw(&L->cur,"INFO_P") ||
       kw(&L->cur,"PLATE_INFO") || kw(&L->cur,"DUMP_PLATE") || kw(&L->cur,"DESCRIBE_PLATE") ||
       kw(&L->cur,"SHOWPLATE") || kw(&L->cur,"PLATEMETA")) {
     char plate[CUBALC_HOST_STR_MAX], path[CUBALC_HOST_STR_MAX];
     char keys_flat[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
     char path_esc[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result keys;
     Var *pv, *pp;
     size_t i, o = 0;
     long bytes = 0, kn = 0;
-    int has_plate = 0;
+    int has_plate = 0, have_from = 0;
 
     lex_next(L);
     plate[0] = 0; path[0] = 0; keys_flat[0] = 0; path_esc[0] = 0;
-    pv = var_get(vm, "PLATE", 0);
-    if (pv && pv->is_str && pv->sval[0]) {
-      snprintf(plate, sizeof plate, "%s", pv->sval);
-      has_plate = 1;
+    from_name[0] = 0; from_src[0] = 0;
+
+    /* optional FROM plate_src (leading or only arg) */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{') {
+        snprintf(plate, sizeof plate, "%s", from_src);
+        has_plate = 1;
+      } else {
+        snprintf(plate, sizeof plate, "%s", "{}");
+        has_plate = 0;
+      }
+      /* path field: named source for agents (not PLATE_PATH file) */
+      if (from_name[0])
+        snprintf(path, sizeof path, "%s", from_name);
     } else {
-      snprintf(plate, sizeof plate, "%s", "{}");
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0]) {
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+        has_plate = 1;
+      } else {
+        snprintf(plate, sizeof plate, "%s", "{}");
+      }
+      pp = var_get(vm, "PLATE_PATH", 0);
+      if (pp && pp->is_str && pp->sval[0])
+        snprintf(path, sizeof path, "%s", pp->sval);
     }
     bytes = (long)strlen(plate);
-    pp = var_get(vm, "PLATE_PATH", 0);
-    if (pp && pp->is_str && pp->sval[0])
-      snprintf(path, sizeof path, "%s", pp->sval);
 
     memset(&keys, 0, sizeof keys);
     if (cubalc_host_json_keys(plate, &keys) == 0)
@@ -38609,9 +38653,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(out, sizeof out,
              "{\"schema\":\"cubalc.plate_info.v1\",\"ok\":true,"
              "\"has_plate\":%s,\"keys_n\":%ld,\"bytes\":%ld,"
-             "\"path\":\"%s\",\"keys\":\"%s\",\"version\":\"%s\"}",
+             "\"path\":\"%s\",\"keys\":\"%s\",\"from\":%s,\"version\":\"%s\"}",
              has_plate ? "true" : "false", kn, bytes, path_esc, keys_flat,
-             CUBALC_LANG_VERSION);
+             have_from ? "true" : "false", CUBALC_LANG_VERSION);
 
     var_set_str(vm, "LAST", out);
     snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
@@ -38622,11 +38666,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "DUMPP_N", kn);
     var_set_num(vm, "DUMPP_BYTES", bytes);
     var_set_num(vm, "DUMPP_HAS", has_plate ? 1 : 0);
+    var_set_num(vm, "DUMPP_FROM", have_from ? 1 : 0);
     var_set_str(vm, "DUMPP_PATH", path);
     var_set_str(vm, "DUMPP_KEYS", keys_flat);
+    var_set_str(vm, "DUMPP_SRC", from_name[0] ? from_name : (have_from ? "" : "PLATE"));
     var_set_num(vm, "OK", 1);
     if (vm->trace)
-      fprintf(vm->trace, "# dumpp keys_n=%ld bytes=%ld has=%d\n", kn, bytes, has_plate);
+      fprintf(vm->trace, "# dumpp keys_n=%ld bytes=%ld has=%d from=%d\n",
+              kn, bytes, has_plate, have_from);
     if (vm->res)
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
     bump(vm); return 1;

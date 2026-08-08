@@ -1,0 +1,66 @@
+# DUMPP FROM — cubalc.plate_info.v1 snapshot of any plate without clobbering PLATE
+# Usability: multi-plate agent health/inspect twin of KEYSP/NEEDP FROM.
+
+HOLD_FLASH 1
+
+LET PLATE = "{}"
+SETP "agent" "plate-agent"
+SETP "n" 1
+
+LET peer = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":9,\"role\":\"worker\"}"
+
+# --- DUMPP FROM named peer ---
+DUMPP FROM peer
+ASSERT OK == 1
+ASSERT DUMPP_FROM == 1
+ASSERT DUMPP_HAS == 1
+ASSERT DUMPP_N == 4
+ASSERT LAST_N == 4
+ASSERT DUMPP_BYTES > 10
+SYS EQS DUMPP_SRC "peer"
+ASSERT LAST_N == 1
+SYS EQS DUMPP_PATH "peer"
+ASSERT LAST_N == 1
+SYS HAS LAST "cubalc.plate_info.v1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"from\":true"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"keys_n\":4"
+ASSERT LAST_N == 1
+SYS HAS DUMPP_KEYS "host"
+ASSERT LAST_N == 1
+SYS HAS DUMPP_KEYS "role"
+ASSERT LAST_N == 1
+
+# PLATE not clobbered
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# default DUMPP still uses PLATE
+DUMPP
+ASSERT DUMPP_FROM == 0
+ASSERT DUMPP_HAS == 1
+ASSERT DUMPP_N == 2
+SYS HAS LAST "\"from\":false"
+ASSERT LAST_N == 1
+SYS EQS DUMPP_SRC "PLATE"
+ASSERT LAST_N == 1
+
+# PLATEINFO alias FROM
+PLATEINFO FROM peer
+ASSERT DUMPP_FROM == 1
+ASSERT DUMPP_N == 4
+
+# FROM LAST object
+SYS JSONOBJ "k" "v" "c" 3
+DUMPP FROM LAST
+ASSERT DUMPP_FROM == 1
+ASSERT DUMPP_HAS == 1
+ASSERT DUMPP_N == 2
+SYS HAS DUMPP_KEYS "k"
+ASSERT LAST_N == 1
+SYS EQS DUMPP_SRC "LAST"
+ASSERT LAST_N == 1
+
+PRINT "dumpp_from soft ok"
