@@ -1,57 +1,75 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 219,
-  "program": "programs/realworld/peer_overlay_fillp_from_board.cubalc",
-  "theme": "FILLP FROM peer overlay without PLATE clobber",
-  "version": "1.15.578-usability",
+  "iter": 220,
+  "program": "programs/realworld/peer_session_setp_from_board.cubalc",
+  "theme": "SETP/MERGEP/DEFAULTP/TOGGLEP FROM peer session without PLATE clobber",
+  "version": "1.15.581-usability",
   "pass": true,
-  "prior_note": "iter 218 bag priority; this iter first realworld FILLP FROM (proof 1127)",
+  "prior_note": "iter 219 FILLP FROM; this iter first realworld SETP FROM + MERGEP FROM (1130/1131)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "agent plate alice + empty peer",
+      "cmd": "agent plate plate-agent n=1",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "peer",
-      "cmd": "TRIM/LOWER + JSONOBJ peer disk",
+      "cmd": "seed peer GETP FROM host",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "render",
-      "cmd": "FILLP FROM peer; PLATE alice; miss=nope",
+      "name": "tick",
+      "cmd": "INCP FROM peer n\u219211 plate n=1",
       "ok": true,
-      "note": "FROM"
+      "note": "tick"
     },
     {
-      "name": "trail",
-      "cmd": "FILLP tpl FROM peer trailing",
+      "name": "set",
+      "cmd": "SETP FROM host+role",
       "ok": true,
-      "note": "trail"
+      "note": "set"
     },
     {
-      "name": "strict",
-      "cmd": "FILLP STRICT FROM complete",
+      "name": "get",
+      "cmd": "GETP FROM + OR fallback",
       "ok": true,
-      "note": "strict"
+      "note": "get"
     },
     {
-      "name": "snap",
-      "cmd": "FROM LAST + FROM literal",
+      "name": "merge",
+      "cmd": "MERGEP status overlay",
       "ok": true,
-      "note": "snap"
+      "note": "merge"
+    },
+    {
+      "name": "default",
+      "cmd": "DEFAULTP seed then kept",
+      "ok": true,
+      "note": "default"
+    },
+    {
+      "name": "flag",
+      "cmd": "TOGGLEP debug on/off PLATE clean",
+      "ok": true,
+      "note": "flag"
+    },
+    {
+      "name": "del",
+      "cmd": "DELP FROM tmp",
+      "ok": true,
+      "note": "del"
     },
     {
       "name": "gate",
-      "cmd": "peer non-{} + FROM + alice",
+      "cmd": "peer host + plate agent",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "empty peer miss; bare FILLP_FROM=0; TRIM",
+      "cmd": "empty peer OR; SETP_FROM=0; DELP miss",
       "ok": true,
       "note": "edges"
     },
@@ -63,7 +81,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_POF_REQUIRE=1 exit 2",
+      "cmd": "REQUIRE exit 2",
       "ok": true,
       "note": "hard env"
     },
@@ -71,7 +89,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "366/367 pre-existing sys_kvfileensure"
+      "note": "369/370 pre-existing sys_kvfileensure"
     }
   ],
   "weaknesses": [
@@ -1882,6 +1900,38 @@
       "title": "GETFLAG values not auto-TRIM; manual TRIM/LOWER per field",
       "detail": "peer --name='  bob  ' needs explicit SYS TRIM; no GETFLAG TRIM glue. Host-wide TRIM works once invoked.",
       "repro": "GETFLAG name without TRIM leaves spaces in JSON"
+    },
+    {
+      "id": "W227",
+      "severity": "med",
+      "area": "lang|plate",
+      "title": "SETP FROM peer does not auto-persist peer.json",
+      "detail": "INCP/SETP/MERGEP FROM mutate the in-memory peer var only. Agents must SYS WRITE peer_path peer after every mutation or disk lags memory \u2014 easy dual-source bug across process restarts.",
+      "repro": "INCP FROM peer n; new process READ peer.json \u2192 old n"
+    },
+    {
+      "id": "W228",
+      "severity": "med",
+      "area": "lang|plate",
+      "title": "no atomic peer disk bind (FROM path)",
+      "detail": "FROM accepts var/LAST/literal object, not a filesystem path. Multi-step agents re-READ peer.json each action; no SETP FROM @file / LOAD+mutate+save one-shot.",
+      "repro": "SETP FROM \"/tmp/peer.json\" host x \u2192 not a plate object"
+    },
+    {
+      "id": "W229",
+      "severity": "low",
+      "area": "lang|toggle",
+      "title": "TOGGLEP stores string \"0\"/\"1\" not bool",
+      "detail": "GETP debug after toggle yields \"0\"/\"1\"; JSON may serialize as string. Agents comparing to true/false need care.",
+      "repro": "TOGGLEP FROM peer debug; GETP \u2192 1 string"
+    },
+    {
+      "id": "W230",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL",
+      "detail": "cat -A STATUS last gate line lacks $.",
+      "repro": "cat -A STATUS.txt"
     }
   ],
   "workarounds": [
@@ -1967,14 +2017,14 @@
     "SYS CAT multi-arg for EQS expected bodies"
   ],
   "language_gaps": [
-    "no multi-object FILLP merge source",
-    "FROM LAST order-sensitive",
-    "still no soft STRICT; var table 128; FINDLINE 0/miss (prior)"
+    "FROM is in-memory object only \u2014 no path-addressed plate ops",
+    "no auto-persist twin of plate_save for arbitrary vars",
+    "dual-source FILLP still missing (prior W223)"
   ],
   "issues_faced": [
-    "must LOADPLATE agent each action to re-bind PLATE for GETP checks",
-    "name_s after peer TRIM not auto-fed to render defaults \u2014 re-read peer JSON"
+    "peer mutations require explicit WRITE peer.json each action",
+    "must reload PLATE from agent.json each action for GETP identity checks"
   ],
-  "commit": "5515cf6",
-  "ts": "2026-08-08T22:53:43Z"
+  "commit": "",
+  "ts": "2026-08-08T23:18:48Z"
 }
