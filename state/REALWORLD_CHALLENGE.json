@@ -1,57 +1,63 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 170,
-  "program": "programs/realworld/chunk_path_pages_board.cubalc",
-  "theme": "GETFLAGPATH + DIVCEILN artifact page planner (abs path + ceil pages)",
-  "version": "1.15.460-usability",
+  "iter": 171,
+  "program": "programs/realworld/stage_outdir_intake_board.cubalc",
+  "theme": "GETFLAGDIR + RESTPATHS staging intake (mkdir -p out + abs path bag)",
+  "version": "1.15.462-usability",
   "pass": true,
-  "prior_note": "iter 169 GETFLAGCSV+FLOORN/CAPN; this iter first realworld GETFLAGPATH(1009)+DIVCEILN(1008)+REQUIRE FLAGFILE(1010); fixed HOWMANY clash",
+  "prior_note": "iter 170 GETFLAGPATH+DIVCEILN; this iter first realworld GETFLAGDIR(1011)+RESTPATHS(1012)",
   "tests": [
     {
       "name": "list_default",
-      "cmd": "list \u2192 f_src default f_exist 1 pages from SIZE/64",
+      "cmd": "list \u2192 o_src default creates stage_out under STATE",
       "ok": true,
-      "note": "GETFLAGPATH"
+      "note": "GETFLAGDIR"
     },
     {
-      "name": "env_artifact",
-      "cmd": "ARTIFACT=Makefile CHUNK=32 \u2192 env psize 32",
+      "name": "stage_cli",
+      "cmd": "stage -- --out=DIR Makefile include/cubalc_law.h \u2192 admit 2",
       "ok": true,
-      "note": "OR ENV"
+      "note": "RESTPATHS"
     },
     {
-      "name": "plan_cli",
-      "cmd": "plan --file=docs/MEANINGFUL_ITER.md --size=16 art1 \u2192 pages 3612",
+      "name": "rows_abs",
+      "cmd": "STAGE basename:/abs/path:staged",
       "ok": true,
-      "note": "DIVCEILN"
+      "note": "plate"
     },
     {
-      "name": "abspath_meta",
-      "cmd": "META path absolute .../docs/MEANINGFUL_ITER.md",
-      "ok": true,
-      "note": "ABSPATH"
-    },
-    {
-      "name": "miss_require",
-      "cmd": "soft miss EXIST=0; REQUIRE FLAGFILE sticky",
-      "ok": true,
-      "note": "FLAGFILE"
-    },
-    {
-      "name": "basename_drop",
-      "cmd": "plan Makefile basename; drop m1 GREPV",
+      "name": "has_drop",
+      "cmd": "has Makefile; drop Makefile",
       "ok": true,
       "note": "ops"
     },
     {
-      "name": "probe",
-      "cmd": "DIVCEILN 100/16=7 PAGESN 50/20=3 div0=0",
+      "name": "empty_require",
+      "cmd": "stage empty soft; REQUIRE RESTPOS",
       "ok": true,
-      "note": "probe"
+      "note": "RESTPOS"
+    },
+    {
+      "name": "env_outdir",
+      "cmd": "OUTDIR=... stage Makefile \u2192 o_src env",
+      "ok": true,
+      "note": "ENV"
+    },
+    {
+      "name": "miss_exist",
+      "cmd": "missing+Makefile \u2192 path_n 2 exist_n 1",
+      "ok": true,
+      "note": "EXIST"
+    },
+    {
+      "name": "probe_gate_soft",
+      "cmd": "probe/gate/soft/clear",
+      "ok": true,
+      "note": "ops"
     },
     {
       "name": "selftest",
-      "cmd": "./out/cubalc selftest after HOWMANY unsteal",
+      "cmd": "./out/cubalc selftest",
       "ok": true,
       "note": "355/355"
     }
@@ -536,26 +542,48 @@
       "title": "REQUIRE FLAGFILE miss sticky + usage tip; shell rc may be non-zero or 0",
       "detail": "Missing path with CUBALC_CPP_REQUIRE=1 sets ok:false + REQUIRE FLAGFILE err with usage tip. Observed shell $?=1 here (stronger than RESTPOS class). Soft GETFLAGPATH EXIST=0 preferred when agents need always-continue.",
       "repro": "CUBALC_CPP_REQUIRE=1 plan --file=no/such \u2192 REQUIRE FLAGFILE missing"
+    },
+    {
+      "id": "W61",
+      "severity": "high",
+      "area": "lang|restpaths",
+      "title": "RESTPATHS counts SUBCMD verb as a positional path",
+      "detail": "After SUBCMD stage file1 file2, RESTPATHS_N=3: abspath(stage)+abs(file1)+abs(file2). RESTPATHS_EXIST_N counts only existing. Agents must DROPNTH 0 when basename matches ACTION after SUBCMD_HIT. RESTPATHS_EXIST_N is not recomputed after peel.",
+      "repro": "SUBCMD stage; RESTPATHS with two files \u2192 n=3; DROPNTH 0 if basename=stage"
+    },
+    {
+      "id": "W62",
+      "severity": "low",
+      "area": "lang|getflagdir",
+      "title": "GETFLAGDIR peels --out + mkdir -p; CREATED 0|1",
+      "detail": "Positive: CLI --out=/tmp/x creates dir CREATED=1; second call CREATED=0; ENV OUTDIR chain; short -o. Empty miss OK=0 sticky LAST_ERR. Coexists with RESTPATHS files.",
+      "repro": "GETFLAGDIR out|o OR ENV OUTDIR OR default \u2192 abs ISDIR"
+    },
+    {
+      "id": "W63",
+      "severity": "low",
+      "area": "lang|restpaths",
+      "title": "RESTPATHS missing inputs still absolute; EXIST_N soft",
+      "detail": "Positive: no/such/x.bin + Makefile \u2192 path_n=2 exist_n=1 after subcmd peel; abs paths always. Good for inventory plates without hard fail.",
+      "repro": "stage --out=D no/such Makefile \u2192 exist_n 1"
     }
   ],
   "workarounds": [
-    "GETFLAGPATH file|f OR ENV ARTIFACT OR path; check GETFLAGPATH_EXIST",
-    "SYS SIZE fpath; DIVCEILN nbytes psize (not HOWMANY \u2014 COUNTWHERE)",
-    "REQUIRE FLAGFILE when CUBALC_CPP_REQUIRE; soft EXIST for continue",
-    "drop via NTH0+GREPV (no EACH under dense LET W47)",
-    "cubalc run prog plan -- --file=PATH --size=N name"
+    "GETFLAGDIR out|o OR ENV OUTDIR OR def; check CREATED/ISDIR",
+    "RESTPATHS after SUBCMD; DROPNTH 0 when basename==ACTION (W61)",
+    "stage up to 2 files via NTH (avoid EACH W47); GREPV basename: upsert",
+    "cubalc run prog stage -- --out=DIR file1 file2"
   ],
   "language_gaps": [
-    "Guard new form aliases against existing HOWMANY/COUNTWHERE etc. at registration",
-    "Cookbook: artifact pages with GETFLAGPATH+DIVCEILN",
-    "EACH/var-table limit (W47)"
+    "RESTPATHS after SUBCMD should exclude verb (or RESTPATHS AFTER SUBCMD form)",
+    "RESTPATHS_EXIST_N recompute after bag peel",
+    "Cookbook: staging intake with GETFLAGDIR+RESTPATHS"
   ],
   "issues_faced": [
-    "HOWMANY alias clash DIVCEILN vs COUNTWHERE \u2014 fixed in core (W57)",
-    "W47 EACH drop \u2192 NTH0 GREPV",
-    "GETFLAGPATH+SIZE+DIVCEILN page plan green; REQUIRE FLAGFILE wall green",
+    "RESTPATHS includes stage verb \u2014 DROPNTH peel (W61)",
+    "GETFLAGDIR mkdir -p + RESTPATHS multi abs inventory green",
     "selftest 355/355"
   ],
-  "commit": "a4576c8c8824f7419a7fc4fd62e0c53534876a15",
-  "ts": "2026-08-08T02:31:47Z"
+  "commit": "",
+  "ts": "2026-08-08T02:56:00Z"
 }
