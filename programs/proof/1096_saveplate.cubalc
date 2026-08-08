@@ -1,0 +1,109 @@
+# SAVEPLATE / STOREPLATE / PLATESAVE — object plate persist (dual LOADPLATE)
+# Validates object, mkdir parent, write. Soft OK=0 if non-object.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_saveplate"
+LET dir = LAST
+SYS JOIN dir "deep/boot.json"
+LET path = LAST
+
+# build plate
+SYS JSONOBJ "ok" true "n" 7 "role" "agent"
+LET plate = LAST
+
+# save with mkdir parent
+SYS SAVEPLATE path plate
+ASSERT OK == 1
+ASSERT SAVEPLATE_OK == 1
+ASSERT LAST_N > 0
+ASSERT SAVEPLATE_N > 0
+SYS EQS SAVEPLATE_PATH LAST
+ASSERT LAST_N == 1
+SYS EXIST path
+ASSERT LAST_N == 1
+
+# round-trip via LOADPLATE
+SYS LOADPLATE path
+ASSERT LOADPLATE_HIT == 1
+LET loaded = LAST
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 7
+SYS JSON "role" FROM loaded
+SYS EQS LAST "agent"
+ASSERT LAST_N == 1
+
+# 1-arg form: plate = LAST
+SYS JSONOBJ "n" 9 "tag" "v2"
+SYS SAVEPLATE path
+ASSERT OK == 1
+SYS LOADPLATE path
+LET loaded = LAST
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 9
+SYS JSON "tag" FROM loaded
+SYS EQS LAST "v2"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JSONOBJ "x" 1
+LET p2 = LAST
+SYS JOIN dir "a.json"
+LET p2path = LAST
+SYS STOREPLATE p2path p2
+ASSERT SAVEPLATE_OK == 1
+SYS PLATESAVE p2path p2
+ASSERT OK == 1
+SYS DUMPPLATE p2path p2
+ASSERT OK == 1
+SYS PUTPLATE p2path p2
+ASSERT OK == 1
+SYS WRITEPLATE p2path p2
+ASSERT OK == 1
+SYS JSONSAVE p2path p2
+ASSERT OK == 1
+
+# non-object soft fail (does not clobber file)
+SYS JOIN dir "keep.json"
+LET keep = LAST
+SYS JSONOBJ "keep" 1
+SYS SAVEPLATE keep LAST
+ASSERT OK == 1
+SYS SAVEPLATE keep "not-a-plate"
+ASSERT OK == 0
+ASSERT SAVEPLATE_OK == 0
+SYS HAS LAST_ERR "object plate"
+ASSERT LAST_N == 1
+# prior plate intact
+SYS LOADPLATE keep
+ASSERT LOADPLATE_HIT == 1
+LET k = LAST
+SYS JSONN "keep" FROM k
+ASSERT LAST_N == 1
+
+# array not object
+SYS SAVEPLATE keep "[1,2]"
+ASSERT OK == 0
+SYS LOADPLATE keep
+LET k = LAST
+SYS JSONN "keep" FROM k
+ASSERT LAST_N == 1
+
+# agent cycle: load → mutate → save
+SYS JOIN dir "cycle.json"
+LET cpath = LAST
+SYS LOADPLATE cpath OR "{\"n\":0}"
+LET cur = LAST
+SYS JSONINC cur "n"
+LET cur = LAST
+SYS SAVEPLATE cpath cur
+ASSERT OK == 1
+SYS LOADPLATE cpath
+LET cur = LAST
+SYS JSONN "n" FROM cur
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RMTREE dir

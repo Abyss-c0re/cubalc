@@ -582,6 +582,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 552. ~~**`JSONCHANGELOG` / `JCHANGELOG` / `PLATECHANGELOG`**~~ **done** (readable `key: old → new` bag · agent/log plate sync · complements CHANGED names + DELTA values).
 553. ~~**`REQUIRE JSONTYPE` / `JTYPE` / `JSONKIND`**~~ **done** (fail-fast plate field type contract · got/want in error · soft twin SYS JSONTYPE).
 554. ~~**`LOADPLATE` / `READPLATE` / `PLATEREAD`**~~ **done** (soft plate-file load · miss/non-object → OR defaults · LAST_N hit · agent state boot).
+555. ~~**`SAVEPLATE` / `STOREPLATE` / `PLATESAVE`**~~ **done** (object-checked plate persist · mkdir parent · dual of LOADPLATE for agent state).
 
 ## Tick protocol
 
