@@ -35619,6 +35619,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FILLP STRICT", "FILLP STRICT alias of NEEDFILLP"},
       {"FILLPKEYS", "FILLPKEYS [tmpl] — bag of unique {{key}} names · template contract"},
       {"FILLPFILE", "FILLPFILE|SUBSTPLATEFILE tmpl [out] — expand {{key}} file from PLATE · dual SUBSTFILE"},
+      {"NEEDFILLPFILE", "NEEDFILLPFILE|FILLPFILE STRICT tmpl [out] — fail-fast missing {{key}} · no write"},
+      {"FILLPFILE STRICT", "FILLPFILE STRICT alias of NEEDFILLPFILE"},
       {"SUBSTPLATEFILE", "SUBSTPLATEFILE alias of FILLPFILE"},
       {"EXPANDPFILE", "EXPANDPFILE alias of FILLPFILE"},
       {"USAGE", "USAGE [\"text\"] — sticky CLI usage · REQUIRE ARG/ARGC/FLAG fails append tip"},
@@ -38397,35 +38399,54 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
     bump(vm); return 1;
   }
-  /* FILLPFILE|SUBSTPLATEFILE|EXPANDPFILE tmpl_path [out_path]
-   * — read template file, expand {{key}} from PLATE, write result.
+  /* FILLPFILE|SUBSTPLATEFILE|EXPANDPFILE [STRICT|NEED] tmpl_path [out_path]
+   * NEEDFILLPFILE|REQUIREFILLPFILE tmpl [out] — fail-fast if any {{key}} missing
+   *   (does not write). Soft FILLPFILE still writes half-filled body + MISS count.
    * Default out = tmpl_path (in-place). Soft miss read/write → OK=0 sticky ERR.
    * LAST = out path; LAST_N/FILLPFILE_N = slots; FILLPFILE_MISS; FILLPFILE_BYTES;
-   * FILLPFILE_BODY = expanded text.
-   * Usability: materialize status/config from plate without READ+FILLP+WRITE:
-   *   SETP "agent" "hive-01"
-   *   SETP "tick" 42
-   *   FILLPFILE "tpl/status.txt" "state/status.txt"
-   * Complements SYS SUBSTFILE ($NAME) with plate-local {{key}} dual of FILLP. */
+   * FILLPFILE_BODY; FILLPFILE_MISS_KEYS.
+   * Usability: materialize status/config only when plate is complete:
+   *   NEEDFILLPFILE "tpl/status.txt" "state/status.txt"
+   * Complements NEEDFILLP (memory) + SYS SUBSTFILE ($NAME). */
   if (kw(&L->cur,"FILLPFILE") || kw(&L->cur,"SUBSTPLATEFILE") ||
       kw(&L->cur,"EXPANDPFILE") || kw(&L->cur,"RENDERPFILE") ||
       kw(&L->cur,"TEMPLATEPFILE") || kw(&L->cur,"PLATE_FILLFILE") ||
       kw(&L->cur,"FILLPLATEFILE") || kw(&L->cur,"MFILLPFILE") ||
-      kw(&L->cur,"MATERIALIZEP") || kw(&L->cur,"PLATE_RENDERFILE")) {
+      kw(&L->cur,"MATERIALIZEP") || kw(&L->cur,"PLATE_RENDERFILE") ||
+      kw(&L->cur,"NEEDFILLPFILE") || kw(&L->cur,"REQUIREFILLPFILE") ||
+      kw(&L->cur,"STRICTFILLPFILE") || kw(&L->cur,"FILLPFILENEED")) {
     char path[CUBALC_HOST_STR_MAX], outpath[CUBALC_HOST_STR_MAX];
     char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
     char plate[CUBALC_HOST_STR_MAX], expanded[CUBALC_HOST_STR_MAX];
     char miss_keys[CUBALC_HOST_STR_MAX];
     long hits = 0, miss = 0;
+    int is_strict = 0;
+    int aln = L->cur.line;
     cubalc_host_result hr, wr;
     Var *pv;
+    char op0[28];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "NEEDFILLPFILE") == 0 || strcmp(op0, "REQUIREFILLPFILE") == 0 ||
+        strcmp(op0, "STRICTFILLPFILE") == 0 || strcmp(op0, "FILLPFILENEED") == 0)
+      is_strict = 1;
 
     lex_next(L);
+    if (!is_strict && (kw(&L->cur,"STRICT") || kw(&L->cur,"NEED") ||
+                       kw(&L->cur,"REQUIRE") || kw(&L->cur,"MUST") ||
+                       kw(&L->cur,"ALL") || kw(&L->cur,"COMPLETE"))) {
+      is_strict = 1;
+      lex_next(L);
+    }
+
     path[0] = 0; outpath[0] = 0; a[0] = 0; b[0] = 0;
     plate[0] = 0; expanded[0] = 0; miss_keys[0] = 0;
 
     if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
-      fail(vm, "FILLPFILE tmpl_path [out_path]");
+      fail(vm, is_strict ? "NEEDFILLPFILE tmpl_path [out_path]"
+                         : "FILLPFILE tmpl_path [out_path]");
       return -1;
     }
     snprintf(path, sizeof path, "%s", a);
@@ -38475,6 +38496,35 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     hits = cubalc_expand_fillp(plate, hr.str, expanded, sizeof expanded, &miss,
                                miss_keys, sizeof miss_keys);
 
+    if (is_strict && miss > 0) {
+      char flat[200], msg[320];
+      size_t mi = 0;
+      const char *mp;
+      flat[0] = 0;
+      for (mp = miss_keys; *mp && mi + 1 < sizeof flat; mp++) {
+        if (*mp == '\n' || *mp == '\r') {
+          if (mi > 0 && flat[mi - 1] != ',') {
+            flat[mi++] = ',';
+            if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+          }
+        } else {
+          flat[mi++] = *mp;
+        }
+      }
+      flat[mi] = 0;
+      if (!flat[0]) snprintf(flat, sizeof flat, "?");
+      snprintf(msg, sizeof msg,
+               "FILLPFILE STRICT missing line %d: %s — soft twin FILLPFILE / FILLPFILE_MISS",
+               aln, flat);
+      var_set_str(vm, "FILLPFILE_MISS_KEYS", miss_keys);
+      var_set_num(vm, "FILLPFILE_MISS", miss);
+      var_set_num(vm, "FILLPFILE_N", hits);
+      var_set_str(vm, "FILLPFILE_BODY", expanded);
+      if (vm->res) vm->res->asserts_fail++;
+      fail(vm, msg);
+      return -1;
+    }
+
     memset(&wr, 0, sizeof wr);
     if (cubalc_host_write(outpath, expanded, &wr) != 0) {
       char ebuf[CUBALC_HOST_ERR_MAX + 32];
@@ -38487,6 +38537,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "FILLPFILE_N", hits);
       var_set_num(vm, "FILLPFILE_MISS", miss);
       var_set_num(vm, "FILLPFILE_BYTES", 0);
+      var_set_str(vm, "FILLPFILE_MISS_KEYS", miss_keys);
       var_set_num(vm, "OK", 0);
       var_set_str(vm, "LAST_ERR", ebuf);
       var_set_str(vm, "ERR", ebuf);
@@ -38509,7 +38560,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "FILLPFILE_BYTES", (long)strlen(expanded));
     var_set_num(vm, "OK", 1);
     if (vm->trace)
-      fprintf(vm->trace, "# fillpfile hits=%ld miss=%ld out=%s\n", hits, miss, outpath);
+      fprintf(vm->trace, "# fillpfile hits=%ld miss=%ld strict=%d out=%s\n",
+              hits, miss, is_strict, outpath);
     bump(vm); return 1;
   }
   if (kw(&L->cur,"USAGE")||kw(&L->cur,"USEAGE")||kw(&L->cur,"SYNOPSIS")||

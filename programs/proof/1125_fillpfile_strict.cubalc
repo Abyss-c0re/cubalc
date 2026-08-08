@@ -1,0 +1,49 @@
+# NEEDFILLPFILE / FILLPFILE STRICT — no half-filled disk writes
+# Usability: agents materialize status files only when PLATE has all {{keys}}.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_ffstrict"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "tpl.txt"
+LET tpl = LAST
+SYS JOIN dir "out.txt"
+LET outp = LAST
+SYS RM outp
+
+SYS WRITE tpl "agent={{agent}} tick={{tick}} host={{host}}"
+ASSERT OK == 1
+
+LET PLATE = "{}"
+SETP "agent" "hive-01"
+SETP "tick" 3
+# host missing
+
+# soft FILLPFILE still writes incomplete
+FILLPFILE tpl outp
+ASSERT OK == 1
+ASSERT FILLPFILE_MISS == 1
+SYS HASLINE FILLPFILE_MISS_KEYS "host"
+ASSERT LAST_N == 1
+SYS READ outp
+SYS EQS LAST "agent=hive-01 tick=3 host="
+ASSERT LAST_N == 1
+
+# complete plate → STRICT succeeds and overwrites
+SETP "host" "cubeA"
+FILLPFILE STRICT tpl outp
+ASSERT OK == 1
+ASSERT FILLPFILE_MISS == 0
+SYS READ outp
+SYS EQS LAST "agent=hive-01 tick=3 host=cubeA"
+ASSERT LAST_N == 1
+
+NEEDFILLPFILE tpl outp
+ASSERT OK == 1
+SYS EQS FILLPFILE_BODY "agent=hive-01 tick=3 host=cubeA"
+ASSERT LAST_N == 1
+
+PRINT "fillpfile_strict soft ok"

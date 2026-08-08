@@ -1,0 +1,18 @@
+# NEEDFILLPFILE fails without writing when keys missing
+HOLD_FLASH 1
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_ffstrict_fail"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "tpl.txt"
+LET tpl = LAST
+SYS JOIN dir "out.txt"
+LET outp = LAST
+SYS RM outp
+SYS WRITE outp "UNTOUCHED"
+SYS WRITE tpl "x={{a}} y={{b}}"
+LET PLATE = "{}"
+SETP "a" "1"
+NEEDFILLPFILE tpl outp
+PRINT "should not reach"

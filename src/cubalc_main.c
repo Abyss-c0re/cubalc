@@ -2111,6 +2111,7 @@ int main(int argc, char **argv) {
       {"cat_wide", "programs/proof/1122_cat_wide.cubalc", "SYS CAT multi-arg host-wide concat for plate messages"},
       {"str_wide", "programs/proof/1123_str_wide.cubalc", "EQS/HAS/STARTS/ENDS/FIND/MID/REPLACE host-wide multi-KB"},
       {"fillp_strict", "programs/proof/1124_fillp_strict.cubalc", "NEEDFILLP/FILLP STRICT + FILLPKEYS template contract"},
+      {"fillpfile_strict", "programs/proof/1125_fillpfile_strict.cubalc", "NEEDFILLPFILE fail-fast plate template materialize"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2362,6 +2363,7 @@ int main(int argc, char **argv) {
       {"EXPANDP", "flow", "EXPANDP alias of FILLP"},
       {"TEMPLATEP", "flow", "TEMPLATEP alias of FILLP"},
       {"FILLPFILE", "flow", "FILLPFILE|SUBSTPLATEFILE tmpl [out] — expand {{key}} file from PLATE · write result"},
+      {"NEEDFILLPFILE", "flow", "NEEDFILLPFILE|FILLPFILE STRICT tmpl [out] — fail if {{key}} missing · no write"},
       {"SUBSTPLATEFILE", "flow", "SUBSTPLATEFILE alias of FILLPFILE"},
       {"EXPANDPFILE", "flow", "EXPANDPFILE alias of FILLPFILE"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},

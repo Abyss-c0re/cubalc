@@ -611,6 +611,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 581. ~~**`SYS CAT` multi-arg / host-wide**~~ **done** (N-part concat · CUBALC_HOST_STR_MAX · plate messages without nested CAT/512 truncate).
 582. ~~**String plane host-wide**~~ **done** (`EQS`/`HAS`/`STARTS`/`ENDS`/`FIND`/`MID`/`BEFORE`/`AFTER`/`BETWEEN`/`REPLACE[ALL]` · multi-KB after CAT/STREPEAT).
 583. ~~**`FILLP STRICT`/`NEEDFILLP`/`FILLPKEYS`**~~ **done** (fail-fast missing `{{key}}` · miss key bag · template contract discovery).
+584. ~~**`FILLPFILE STRICT`/`NEEDFILLPFILE`**~~ **done** (fail-fast materialize · no half-filled write · lists missing keys).
 
 ## Tick protocol
 
