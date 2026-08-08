@@ -197,6 +197,14 @@ int cubalc_host_join(const char *a, const char *b, cubalc_host_result *r);
 
 /* extract last non-empty JSON string field "key" from json blob → r->str */
 int cubalc_host_json_get(const char *json, const char *key, cubalc_host_result *r);
+/* Expand {{key}} from plate JSON object into out. Returns 0 always.
+ * *hits = slots, *miss = missing keys; optional miss_bag newline names. */
+int cubalc_host_expand_fillp(const char *plate, const char *tmpl,
+                             char *out, size_t outcap,
+                             long *hits, long *miss,
+                             char *miss_bag, size_t miss_cap);
+/* Unique {{key}} names in template order → newline bag. *nkeys out. */
+int cubalc_host_fillp_keys(const char *tmpl, char *out, size_t outcap, long *nkeys);
 /* top-level object keys of a JSON object → newline bag in r->str; r->n = count.
  * Nested objects/arrays skipped (depth). Soft fail if no object. */
 int cubalc_host_json_keys(const char *json, cubalc_host_result *r);

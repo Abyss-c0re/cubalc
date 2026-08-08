@@ -5980,3 +5980,134 @@ int cubalc_host_chat(const char *backend, const char *model_in, const char *msg,
   r->ok = 1;
   return 0;
 }
+
+
+/* Expand {{key}} from plate object — CLI + agents without .cubalc FILLP. */
+int cubalc_host_expand_fillp(const char *plate, const char *tmpl,
+                             char *out, size_t outcap,
+                             long *hits_out, long *miss_out,
+                             char *miss_bag, size_t miss_cap) {
+  const char *src = tmpl ? tmpl : "";
+  const char *pl = (plate && plate[0]) ? plate : "{}";
+  size_t o = 0, mo = 0;
+  long hits = 0, miss = 0;
+  char name[96];
+  cubalc_host_result gr;
+  if (miss_bag && miss_cap) miss_bag[0] = 0;
+  if (!out || outcap == 0) {
+    if (hits_out) *hits_out = 0;
+    if (miss_out) *miss_out = 0;
+    return -1;
+  }
+  out[0] = 0;
+  while (*src && o + 1 < outcap) {
+    if (src[0] == '{' && src[1] == '{') {
+      const char *p = src + 2;
+      size_t ni = 0;
+      name[0] = 0;
+      while (*p && !(p[0] == '}' && p[1] == '}') && ni + 1 < sizeof name) {
+        char ch = *p;
+        if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
+            (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '.')
+          name[ni++] = ch;
+        else
+          break;
+        p++;
+      }
+      name[ni] = 0;
+      if (name[0] && p[0] == '}' && p[1] == '}') {
+        src = p + 2;
+        hits++;
+        memset(&gr, 0, sizeof gr);
+        if (cubalc_host_json_get(pl, name, &gr) == 0) {
+          size_t vn = strlen(gr.str);
+          if (o + vn >= outcap) vn = outcap - 1 - o;
+          if (vn > 0) {
+            memcpy(out + o, gr.str, vn);
+            o += vn;
+          }
+          out[o] = 0;
+        } else {
+          miss++;
+          if (miss_bag && miss_cap > 1) {
+            size_t nl = strlen(name);
+            if (mo > 0 && mo + 1 < miss_cap) miss_bag[mo++] = '\n';
+            if (mo + nl < miss_cap) {
+              memcpy(miss_bag + mo, name, nl);
+              mo += nl;
+              miss_bag[mo] = 0;
+            }
+          }
+        }
+        continue;
+      }
+      out[o++] = *src++;
+      continue;
+    }
+    out[o++] = *src++;
+  }
+  out[o] = 0;
+  if (hits_out) *hits_out = hits;
+  if (miss_out) *miss_out = miss;
+  return 0;
+}
+
+int cubalc_host_fillp_keys(const char *tmpl, char *out, size_t outcap, long *nkeys) {
+  const char *src = tmpl ? tmpl : "";
+  size_t o = 0;
+  long n = 0;
+  char name[96];
+  if (!out || outcap == 0) {
+    if (nkeys) *nkeys = 0;
+    return -1;
+  }
+  out[0] = 0;
+  while (*src) {
+    if (src[0] == '{' && src[1] == '{') {
+      const char *p = src + 2;
+      size_t ni = 0;
+      name[0] = 0;
+      while (*p && !(p[0] == '}' && p[1] == '}') && ni + 1 < sizeof name) {
+        char ch = *p;
+        if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
+            (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '.')
+          name[ni++] = ch;
+        else
+          break;
+        p++;
+      }
+      name[ni] = 0;
+      if (name[0] && p[0] == '}' && p[1] == '}') {
+        size_t nl;
+        int seen = 0;
+        const char *q;
+        src = p + 2;
+        nl = strlen(name);
+        q = out;
+        while (*q) {
+          size_t ll = 0;
+          while (q[ll] && q[ll] != '\n') ll++;
+          if (ll == nl && memcmp(q, name, nl) == 0) { seen = 1; break; }
+          q += ll;
+          if (*q == '\n') q++;
+        }
+        if (!seen) {
+          if (o > 0 && o + 1 < outcap) out[o++] = '\n';
+          if (o + nl < outcap) {
+            memcpy(out + o, name, nl);
+            o += nl;
+            out[o] = 0;
+            n++;
+          }
+        }
+        continue;
+      }
+      src++;
+      continue;
+    }
+    src++;
+  }
+  if (nkeys) *nkeys = n;
+  return 0;
+}
+

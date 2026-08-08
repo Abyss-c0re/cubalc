@@ -4598,6 +4598,8 @@ int main(int argc, char **argv) {
      *   cubalc plate inc  path.json key [delta]
      *   cubalc plate del  path.json key
      *   cubalc plate keys path.json
+     *   cubalc plate fill [-s] path.json tmpl|@file [out]
+     *   cubalc plate fillkeys path.json tmpl|@file
      * Bare: cubalc plate path.json  → show
      * One JSON plate per call (cubalc.plate.v1) for agents. */
     const char *op = "show";
@@ -4617,21 +4619,23 @@ int main(int argc, char **argv) {
     plate[0] = 0;
     if (argc <= 2) {
       fprintf(stderr,
-              "usage: cubalc plate show|get|set|inc|del|keys <path.json> …\n"
+              "usage: cubalc plate show|get|set|inc|del|keys|fill <path.json> …\n"
               "       cubalc plate <path.json>                 # show\n"
               "       cubalc plate get <path> <key> [OR def]\n"
               "       cubalc plate set <path> <key> <value>\n"
               "       cubalc plate inc <path> <key> [delta]\n"
               "       cubalc plate del <path> <key>\n"
-              "       cubalc plate keys <path>\n");
+              "       cubalc plate keys <path>\n"
+              "       cubalc plate fill [-s|--strict] <path> <tmpl|@file> [out]\n"
+              "       cubalc plate fillkeys <path> <tmpl|@file>\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
-             "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\"]}\n",
+             "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\",\"fill\",\"fillkeys\"]}\n",
              CUBALC_LANG_VERSION);
       return 2;
     }
 
-    /* parse: op path …  OR  path (bare show) */
+        /* parse: op path …  OR  path (bare show) */
     if (strcmp(argv[2], "show") == 0 || strcmp(argv[2], "dump") == 0 ||
         strcmp(argv[2], "cat") == 0 || strcmp(argv[2], "read") == 0 ||
         strcmp(argv[2], "get") == 0 || strcmp(argv[2], "peek") == 0 ||
@@ -4639,7 +4643,11 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "inc") == 0 || strcmp(argv[2], "bump") == 0 ||
         strcmp(argv[2], "del") == 0 || strcmp(argv[2], "rm") == 0 ||
         strcmp(argv[2], "drop") == 0 || strcmp(argv[2], "keys") == 0 ||
-        strcmp(argv[2], "list") == 0 || strcmp(argv[2], "ls") == 0) {
+        strcmp(argv[2], "list") == 0 || strcmp(argv[2], "ls") == 0 ||
+        strcmp(argv[2], "fill") == 0 || strcmp(argv[2], "expand") == 0 ||
+        strcmp(argv[2], "template") == 0 || strcmp(argv[2], "render") == 0 ||
+        strcmp(argv[2], "fillkeys") == 0 || strcmp(argv[2], "fill-keys") == 0 ||
+        strcmp(argv[2], "tmplkeys") == 0) {
       op = argv[2];
       if (strcmp(op, "dump") == 0 || strcmp(op, "cat") == 0 || strcmp(op, "read") == 0)
         op = "show";
@@ -4653,15 +4661,26 @@ int main(int argc, char **argv) {
         op = "del";
       else if (strcmp(op, "list") == 0 || strcmp(op, "ls") == 0)
         op = "keys";
+      else if (strcmp(op, "expand") == 0 || strcmp(op, "template") == 0 ||
+               strcmp(op, "render") == 0)
+        op = "fill";
+      else if (strcmp(op, "fill-keys") == 0 || strcmp(op, "tmplkeys") == 0)
+        op = "fillkeys";
       ai = 3;
-      if (argc <= 3) {
+      /* fill[-keys]: optional -s|--strict before path */
+      if ((strcmp(op, "fill") == 0 || strcmp(op, "fillkeys") == 0) &&
+          ai < argc && argv[ai] &&
+          (!strcmp(argv[ai], "--strict") || !strcmp(argv[ai], "-s"))) {
+        val_kind = 99;
+        ai++;
+      }
+      if (ai >= argc) {
         printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
                "\"op\":\"%s\",\"err\":\"need path\",\"version\":\"%s\"}\n",
                op, CUBALC_LANG_VERSION);
         return 2;
       }
-      path = argv[3];
-      ai = 4;
+      path = argv[ai++];
     } else {
       /* bare path → show */
       op = "show";
@@ -4728,7 +4747,190 @@ int main(int argc, char **argv) {
       return 0;
     }
 
-    /* remaining ops need key */
+    /* fill|fillkeys — expand {{key}} from plate file without a .cubalc program.
+     * Usability: one-shot agent status/path templates (CLI dual of FILLP/FILLPKEYS).
+     *   cubalc plate fill agent.json "peer={{name}}@{{host}}"
+     *   cubalc plate fill -s agent.json @tpl.txt out.txt
+     *   cubalc plate fillkeys agent.json @tpl.txt
+     * Template: literal (contains {), @file, or readable path. */
+    if (strcmp(op, "fill") == 0 || strcmp(op, "fillkeys") == 0) {
+      const char *tmpl_arg = NULL;
+      const char *out_path = NULL;
+      char tmpl[CUBALC_HOST_STR_MAX], body[CUBALC_HOST_STR_MAX];
+      char miss_keys[CUBALC_HOST_STR_MAX], esc[CUBALC_HOST_STR_MAX];
+      char flat[CUBALC_HOST_STR_MAX];
+      long hits = 0, miss = 0, nk = 0;
+      int is_strict = (val_kind == 99) ? 1 : 0;
+      int is_keys = (strcmp(op, "fillkeys") == 0) ? 1 : 0;
+      size_t i, o;
+      cubalc_host_result tr, wrr;
+
+      tmpl[0] = 0; body[0] = 0; miss_keys[0] = 0;
+      /* optional -s|--strict before template */
+      if (ai < argc && argv[ai] &&
+          (!strcmp(argv[ai], "--strict") || !strcmp(argv[ai], "-s"))) {
+        is_strict = 1;
+        ai++;
+      }
+      if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"err\":\"need template string or @file\","
+               "\"version\":\"%s\"}\n", op, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      tmpl_arg = argv[ai++];
+      if (ai < argc && argv[ai] && argv[ai][0] &&
+          strcmp(argv[ai], "--strict") != 0 && strcmp(argv[ai], "-s") != 0)
+        out_path = argv[ai++];
+      if (ai < argc && argv[ai] &&
+          (!strcmp(argv[ai], "--strict") || !strcmp(argv[ai], "-s"))) {
+        is_strict = 1;
+        ai++;
+        if (!out_path && ai < argc && argv[ai] && argv[ai][0])
+          out_path = argv[ai++];
+      }
+
+      if (tmpl_arg[0] == '@') {
+        memset(&tr, 0, sizeof tr);
+        if (cubalc_host_read(tmpl_arg + 1, &tr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"err\":\"template read fail\",\"version\":\"%s\"}\n",
+                 op, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        snprintf(tmpl, sizeof tmpl, "%s", tr.str);
+      } else if (strchr(tmpl_arg, '{') == NULL && access(tmpl_arg, R_OK) == 0) {
+        memset(&tr, 0, sizeof tr);
+        if (cubalc_host_read(tmpl_arg, &tr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"err\":\"template read fail\",\"version\":\"%s\"}\n",
+                 op, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        snprintf(tmpl, sizeof tmpl, "%s", tr.str);
+      } else {
+        snprintf(tmpl, sizeof tmpl, "%s", tmpl_arg);
+      }
+
+      if (is_keys) {
+        cubalc_host_fillp_keys(tmpl, body, sizeof body, &nk);
+        o = 0; flat[0] = 0;
+        for (i = 0; body[i] && o + 2 < sizeof flat; i++) {
+          char c = body[i];
+          if (c == '\n' || c == '\r') {
+            if (o > 0 && flat[o - 1] != ',') flat[o++] = ',';
+          } else if (c == '"' || c == '\\') {
+            flat[o++] = '_';
+          } else {
+            flat[o++] = c;
+          }
+        }
+        flat[o] = 0;
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"fillkeys\",\"path\":\"%s\",\"file\":%s,\"n\":%ld,"
+               "\"keys\":\"%s\",\"version\":\"%s\"}\n",
+               path, file_hit ? "true" : "false", nk, flat, CUBALC_LANG_VERSION);
+        return 0;
+      }
+
+      cubalc_host_expand_fillp(plate, tmpl, body, sizeof body,
+                               &hits, &miss, miss_keys, sizeof miss_keys);
+
+      if (is_strict && miss > 0) {
+        o = 0; flat[0] = 0;
+        for (i = 0; miss_keys[i] && o + 2 < sizeof flat; i++) {
+          char c = miss_keys[i];
+          if (c == '\n' || c == '\r') {
+            if (o > 0 && flat[o - 1] != ',') {
+              flat[o++] = ',';
+              if (o + 1 < sizeof flat) flat[o++] = ' ';
+            }
+          } else if (c == '"' || c == '\\') {
+            flat[o++] = '_';
+          } else {
+            flat[o++] = c;
+          }
+        }
+        flat[o] = 0;
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"fill\",\"strict\":true,\"path\":\"%s\",\"hits\":%ld,"
+               "\"miss\":%ld,\"miss_keys\":\"%s\","
+               "\"err\":\"missing plate keys\",\"version\":\"%s\"}\n",
+               path, hits, miss, flat, CUBALC_LANG_VERSION);
+        return 1;
+      }
+
+      if (out_path && out_path[0]) {
+        slash = strrchr(out_path, '/');
+        if (slash && slash != out_path) {
+          size_t n = (size_t)(slash - out_path);
+          if (n >= sizeof parent) n = sizeof parent - 1;
+          memcpy(parent, out_path, n);
+          parent[n] = 0;
+          memset(&hr, 0, sizeof hr);
+          cubalc_host_mkdir(parent, &hr);
+        }
+        memset(&wrr, 0, sizeof wrr);
+        if (cubalc_host_write(out_path, body, &wrr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"fill\",\"err\":\"write fail\",\"version\":\"%s\"}\n",
+                 CUBALC_LANG_VERSION);
+          return 1;
+        }
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"fill\",\"path\":\"%s\",\"out\":\"%s\",\"hits\":%ld,"
+               "\"miss\":%ld,\"bytes\":%ld,\"strict\":%s,\"file\":%s,"
+               "\"version\":\"%s\"}\n",
+               path, out_path, hits, miss, (long)strlen(body),
+               is_strict ? "true" : "false",
+               file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+        return 0;
+      }
+
+      fputs(body, stdout);
+      if (!body[0] || body[strlen(body) - 1] != '\n')
+        fputc('\n', stdout);
+      o = 0; esc[0] = 0;
+      for (i = 0; body[i] && o + 2 < sizeof esc; i++) {
+        char c = body[i];
+        if (c == '"' || c == '\\') {
+          esc[o++] = '\\';
+          esc[o++] = c;
+        } else if (c == '\n') {
+          esc[o++] = '\\';
+          esc[o++] = 'n';
+        } else if (c == '\r') {
+        } else if ((unsigned char)c < 32) {
+          esc[o++] = ' ';
+        } else {
+          esc[o++] = c;
+        }
+      }
+      esc[o] = 0;
+      o = 0; flat[0] = 0;
+      for (i = 0; miss_keys[i] && o + 2 < sizeof flat; i++) {
+        char c = miss_keys[i];
+        if (c == '\n' || c == '\r') {
+          if (o > 0 && flat[o - 1] != ',') flat[o++] = ',';
+        } else if (c == '"' || c == '\\') {
+          flat[o++] = '_';
+        } else {
+          flat[o++] = c;
+        }
+      }
+      flat[o] = 0;
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"fill\",\"path\":\"%s\",\"hits\":%ld,\"miss\":%ld,"
+             "\"miss_keys\":\"%s\",\"bytes\":%ld,\"strict\":%s,\"file\":%s,"
+             "\"body\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"filled body above plate · FILLP dual for CLI agents\"}\n",
+             path, hits, miss, flat, (long)strlen(body),
+             is_strict ? "true" : "false",
+             file_hit ? "true" : "false", esc, CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+        /* remaining ops need key */
     if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"need key\",\"version\":\"%s\"}\n",
