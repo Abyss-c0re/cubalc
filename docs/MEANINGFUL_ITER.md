@@ -529,6 +529,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 499. ~~**`FIRSTLINEINTREE` / `LASTLINEINTREE` / `GREP1LINETREE`**~~ **done** (first/last matching line under tree · PATH+HIT+I · no GREPLINESTREE+TAKE/REVL glue).
 500. ~~**`PATHLINETREE` / `GREPNTREE` / `RGLINES`**~~ **done** (recursive path:lineno:line bag · agent grep -rn · no WALK+EACH+READ).
 501. ~~**`PARSEPATHLINE` / `SPLITPATHLINE` / `PEELPATHLINE`**~~ **done** (peel path:lineno:text → PATH · LINE_N · LAST=text · PATHLINETREE companion).
+502. ~~**`PATHLINEPATHS` / `PATHSFROMPL` / `UNIQPATHLINES`**~~ **done** (unique paths from path:lineno:text bag · no EACH+PARSEPATHLINE+HASLINE+PUSH).
 
 ## Tick protocol
 

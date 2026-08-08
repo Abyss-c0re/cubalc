@@ -1,0 +1,93 @@
+# PATHLINEPATHS / PATHSFROMPL / UNIQPATHLINES — unique paths from path:lineno:text bag
+# Companion to PATHLINETREE + PARSEPATHLINE without EACH+HASLINE+PUSH glue.
+
+HOLD_FLASH 1
+
+# literal multi-hit bag (2 files, 3 lines → 2 unique paths)
+LET bag = "/tmp/a/err.log:2:error one\n/tmp/a/err.log:3:error two\n/tmp/b/warn.log:1:error three"
+PATHLINEPATHS bag
+ASSERT OK == 1
+ASSERT PATHLINEPATHS_N == 2
+ASSERT LAST_N == 2
+ASSERT PATHLINEPATHS_SKIP == 0
+SYS HASLINE LAST "/tmp/a/err.log"
+ASSERT LAST_N == 1
+SYS HASLINE PATHLINEPATHS "/tmp/b/warn.log"
+ASSERT LAST_N == 1
+# order first-seen
+SYS NTH 0 PATHLINEPATHS
+ASSERT LAST == "/tmp/a/err.log"
+SYS NTH 1 PATHLINEPATHS
+ASSERT LAST == "/tmp/b/warn.log"
+
+# skip non-annotated fields
+LET bag2 = "/x:1:hit\nplain line\n/y:2:hit2\n/x:9:again"
+PATHLINEPATHS bag2
+ASSERT OK == 1
+ASSERT PATHLINEPATHS_N == 2
+ASSERT PATHLINEPATHS_SKIP == 1
+SYS HASLINE LAST "/x"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "/y"
+ASSERT LAST_N == 1
+
+# empty bag soft
+PATHLINEPATHS ""
+ASSERT OK == 1
+ASSERT PATHLINEPATHS_N == 0
+ASSERT LAST == ""
+
+# aliases
+PATHSFROMPL bag
+ASSERT PATHSFROMPL_N == 2
+UNIQPATHLINES bag
+ASSERT UNIQPATHLINES_N == 2
+
+# SYS form
+SYS PATHLINEPATHS bag
+ASSERT OK == 1
+ASSERT PATHLINEPATHS_N == 2
+
+# var bag peel
+LET bag3 = "/p:1:a\n/q:2:b"
+PATHLINEPATHS bag3
+ASSERT PATHLINEPATHS_N == 2
+
+# live PATHLINETREE → unique files
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_plp_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "ok\nerror: one\nerror: two"
+ASSERT OK == 1
+SYS JOIN base "a/b/warn.log"
+WRITEOUT LAST "info\nerror: warn"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "nope"
+ASSERT OK == 1
+
+PATHLINETREE base "error"
+ASSERT OK == 1
+ASSERT PATHLINETREE_N == 3
+ASSERT PATHLINETREE_FILES == 2
+PATHLINEPATHS LAST
+ASSERT OK == 1
+ASSERT PATHLINEPATHS_N == 2
+SYS HAS LAST "err.log"
+ASSERT LAST_N == 1
+SYS HAS LAST "warn.log"
+ASSERT LAST_N == 1
+
+RMTREE base
+ASSERT OK == 1
+
+PRINT "pathlinepaths ok"
+ASSERT OK == 1
