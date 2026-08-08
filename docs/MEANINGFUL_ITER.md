@@ -497,6 +497,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 467. ~~**`DIVCEILN` / `PAGESN`**~~ **done** (ceil(a/b) → LAST_N · page/chunk counts after GETFLAGN without shell).
 468. ~~**`GETFLAGPATH` / `FLAGPATH`**~~ **done** (path flag peel + ABSPATH · EXIST · OR ENV · no GETFLAG+REALPATH glue).
 469. ~~**`REQUIRE FLAGPATH` / `FLAGFILE` / `FLAGDIR`**~~ **done** (fail-fast path flag · ABSPATH + exist/kind · twin of GETFLAGPATH).
+470. ~~**`GETFLAGDIR` / `MKFLAGDIR`**~~ **done** (path flag peel + ABSPATH + mkdir -p · --out dirs without MKDIR glue).
 
 ## Tick protocol
 

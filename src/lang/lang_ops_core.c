@@ -26621,6 +26621,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASFLAG", "HASFLAG name[,|alt] — soft 0|1 if any alias --name/-name · FLAG_HIT_NAME"},
       {"GETFLAG", "GETFLAG name[,|alt] [OR ENV n]* [OR fb] — string peel · CLI>ENV>default · GETFLAG_SRC"},
       {"GETFLAGPATH", "GETFLAGPATH|FLAGPATH name[,|alt] [OR ENV n]* [OR path] — path peel + ABSPATH · EXIST · soft twin of REQUIRE FLAGPATH"},
+      {"GETFLAGDIR", "GETFLAGDIR|MKFLAGDIR name[,|alt] [OR ENV n]* [OR path] — path peel + ABSPATH + mkdir -p · FLAGDIR"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -29849,6 +29850,178 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# getflagpath %s hit=%s exist=%d → %s src=%s\n",
               name, hitnm, exist, absbuf, src_tag);
+    bump(vm); return 1;
+  }
+  /* GETFLAGDIR|MKFLAGDIR|ENSUREFLAGDIR name[,|alt...] [OR ENV name]* [OR|DEFAULT path]
+   * Peel path flag like GETFLAGPATH, ABSPATH, then mkdir -p so the dir exists.
+   * LAST = absolute dir · GETFLAGDIR_SRC cli|env|default · GETFLAGDIR_CREATED 0|1
+   * (1 if path was missing before mkdir). Soft miss: empty → OK=0 sticky LAST_ERR.
+   * Usability: --out state/run without GETFLAGPATH + SYS MKDIR glue. */
+  if (kw(&L->cur,"GETFLAGDIR") || kw(&L->cur,"MKFLAGDIR") || kw(&L->cur,"ENSUREFLAGDIR") ||
+      kw(&L->cur,"OUTDIRFLAG") || kw(&L->cur,"FLAGOUTDIR") || kw(&L->cur,"DIRFLAG") ||
+      kw(&L->cur,"GETOPTDIR") || kw(&L->cur,"FLAG_OUTDIR") || kw(&L->cur,"MKDIRFLAG") ||
+      kw(&L->cur,"ENSUREOUTDIR")){
+    char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX], fb[512];
+    char env_used[96], src_tag[16], absbuf[CUBALC_HOST_STR_MAX];
+    int hit, have_fb = 0, nac, from_env = 0, created = 0, exist_before = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    val[0] = 0;
+    fb[0] = 0;
+    env_used[0] = 0;
+    absbuf[0] = 0;
+    snprintf(src_tag, sizeof src_tag, "%s", "none");
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      fail_at(vm, L, "GETFLAGDIR needs name — GETFLAGDIR out|o OR ENV OUTDIR OR \"state/out\"");
+      return -1;
+    }
+    while (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+           kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (kw(&L->cur,"ENV") || kw(&L->cur,"FROMENV") || kw(&L->cur,"ENVOR") ||
+          kw(&L->cur,"GETENV") || kw(&L->cur,"ENV_GET")){
+        char en[96];
+        const char *ev;
+        lex_next(L);
+        en[0] = 0;
+        while (L->cur.kind == TK_MINUS) lex_next(L);
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          snprintf(en, sizeof en, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail_at(vm, L, "GETFLAGDIR OR ENV NAME");
+          return -1;
+        }
+        if (!have_fb && en[0]) {
+          ev = getenv(en);
+          if (ev && ev[0]) {
+            snprintf(fb, sizeof fb, "%s", ev);
+            have_fb = 1;
+            from_env = 1;
+            snprintf(env_used, sizeof env_used, "%s", en);
+          }
+        }
+        continue;
+      }
+      {
+        char lit[512];
+        lit[0] = 0;
+        if (resolve_str_arg(vm, L, lit, sizeof lit) != 0) {
+          fail_at(vm, L, "GETFLAGDIR name OR \"fallback\"");
+          return -1;
+        }
+        if (!have_fb) {
+          snprintf(fb, sizeof fb, "%s", lit);
+          have_fb = 1;
+          from_env = 0;
+        }
+      }
+      break;
+    }
+    hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
+    if (!hit) {
+      if (have_fb)
+        snprintf(val, sizeof val, "%s", fb);
+      else
+        val[0] = 0;
+    }
+    if (hit)
+      snprintf(src_tag, sizeof src_tag, "%s", "cli");
+    else if (have_fb && from_env)
+      snprintf(src_tag, sizeof src_tag, "%s", "env");
+    else if (have_fb)
+      snprintf(src_tag, sizeof src_tag, "%s", "default");
+    else
+      snprintf(src_tag, sizeof src_tag, "%s", "none");
+    if (!val[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "FLAG", "");
+      var_set_str(vm, "GETFLAGDIR", name);
+      var_set_str(vm, "GETFLAGDIR_RAW", "");
+      var_set_str(vm, "GETFLAGDIR_SRC", src_tag);
+      var_set_str(vm, "FLAG_SRC", src_tag);
+      var_set_str(vm, "FLAG_HIT_NAME", "");
+      var_set_str(vm, "FLAG_ALIAS", "");
+      var_set_str(vm, "FLAG_ENV", "");
+      var_set_str(vm, "LAST_ERR", "GETFLAGDIR: empty path — pass --name or OR default");
+      var_set_str(vm, "ERR", "GETFLAGDIR: empty path — pass --name or OR default");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "GETFLAGDIR_N", 0);
+      var_set_num(vm, "GETFLAGDIR_HIT", 0);
+      var_set_num(vm, "GETFLAGDIR_CREATED", 0);
+      var_set_num(vm, "GETFLAGDIR_EXIST", 0);
+      var_set_num(vm, "OK", 0);
+      if (vm->trace)
+        fprintf(vm->trace, "# getflagdir %s empty src=%s\n", name, src_tag);
+      bump(vm); return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(val, &hr) == 0 && hr.str[0])
+      snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+    else
+      snprintf(absbuf, sizeof absbuf, "%s", val);
+    exist_before = cubalc_host_exists(absbuf) || cubalc_host_exists(val) ? 1 : 0;
+    created = exist_before ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absbuf, &hr) != 0) {
+      const char *err = (hr.err[0]) ? hr.err : "GETFLAGDIR: mkdir failed";
+      var_set_str(vm, "LAST", absbuf);
+      var_set_str(vm, "FLAG", absbuf);
+      var_set_str(vm, "GETFLAGDIR", name);
+      var_set_str(vm, "GETFLAGDIR_RAW", val);
+      var_set_str(vm, "GETFLAGDIR_SRC", src_tag);
+      var_set_str(vm, "FLAG_SRC", src_tag);
+      var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
+      var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+      var_set_str(vm, "FLAG_ENV", (!hit && from_env) ? env_used : "");
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absbuf);
+      vm->last_n = (long)strlen(absbuf);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "GETFLAGDIR_N", vm->last_n);
+      var_set_num(vm, "GETFLAGDIR_HIT", hit ? 1L : 0L);
+      var_set_num(vm, "GETFLAGDIR_CREATED", 0);
+      var_set_num(vm, "GETFLAGDIR_EXIST", 0);
+      var_set_num(vm, "OK", 0);
+      if (vm->trace)
+        fprintf(vm->trace, "# getflagdir %s mkdir fail → %s (%s)\n", name, absbuf, err);
+      bump(vm); return 1;
+    }
+    /* Prefer host-returned path if set */
+    if (hr.str[0])
+      snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+    var_set_str(vm, "LAST", absbuf);
+    var_set_str(vm, "FLAG", absbuf);
+    var_set_str(vm, "GETFLAGDIR", name);
+    var_set_str(vm, "FLAGDIR", absbuf);
+    var_set_str(vm, "PATH", absbuf);
+    /* Do not set OUTDIR var — it collides with OR ENV OUTDIR name resolution. */
+    var_set_str(vm, "GETFLAGDIR_RAW", val);
+    var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
+    var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+    var_set_str(vm, "GETFLAGDIR_SRC", src_tag);
+    var_set_str(vm, "FLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_ENV", (!hit && from_env) ? env_used : "");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absbuf);
+    vm->last_n = (long)strlen(absbuf);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "GETFLAGDIR_N", vm->last_n);
+    var_set_num(vm, "GETFLAGDIR_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "GETFLAGDIR_CREATED", (long)created);
+    var_set_num(vm, "GETFLAGDIR_EXIST", 1L);
+    var_set_num(vm, "PATH_EXIST", 1L);
+    var_set_num(vm, "ISDIR", 1L);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# getflagdir %s hit=%s created=%d → %s src=%s\n",
+              name, hitnm, created, absbuf, src_tag);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]
