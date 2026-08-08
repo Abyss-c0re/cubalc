@@ -1,0 +1,125 @@
+# MERGEP / DEFAULTP / TOGGLEP — multi-key + defaults + flags on PLATE without LET glue
+# Completes plate_boot mutate surface next to SETP/INCP/DELP/GETP.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_mergep"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS RM path
+
+DEFAULT PLATE_PATH = path
+DEFAULT PLATE_SEED = "{\"n\":1,\"ok\":true}"
+INCLUDE plate_boot
+ASSERT OK == 1
+
+# --- MERGEP multi-key overlay ---
+SYS JSONOBJ "status" "ready" "peer" "a" "n" 9
+MERGEP LAST
+ASSERT OK == 1
+ASSERT MERGEP_N == 3
+SYS JSON "status" FROM PLATE
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+SYS JSON "peer" FROM PLATE
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+# overlay wins on n
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 9
+# seed key kept
+SYS JSON "ok" FROM PLATE
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# bare MERGEP uses LAST as overlay
+SYS JSONOBJ "phase" "run"
+MERGEP
+ASSERT OK == 1
+SYS JSON "phase" FROM PLATE
+SYS EQS LAST "run"
+ASSERT LAST_N == 1
+
+# PATCHP alias
+SYS JSONOBJ "tag" "x"
+PATCHP LAST
+SYS JSON "tag" FROM PLATE
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# --- DEFAULTP: insert if missing, never clobber ---
+DEFAULTP "retries" 3
+ASSERT OK == 1
+ASSERT DEFAULTP_N == 1
+ASSERT LAST_N == 1
+GETP "retries"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+# live value survives
+SETP "retries" 99
+DEFAULTP "retries" 3
+ASSERT DEFAULTP_N == 0
+ASSERT DEFAULTP_KEPT == 1
+GETP "retries"
+SYS EQS LAST "99"
+ASSERT LAST_N == 1
+
+# ENSUREP alias
+ENSUREP "role" "worker"
+ASSERT ENSUREP_N == 1
+GETP "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+ENSUREP "role" "boss"
+ASSERT ENSUREP_N == 0
+GETP "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# --- TOGGLEP feature flags ---
+TOGGLEP "debug"
+ASSERT OK == 1
+ASSERT TOGGLEP_V == 1
+ASSERT LAST_N == 1
+ASSERT TOGGLEP_PREV == 0
+GETP "debug"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+TOGGLEP "debug"
+ASSERT TOGGLEP_V == 0
+ASSERT TOGGLEP_PREV == 1
+GETP "debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+# FLIPP alias
+FLIPP "debug"
+ASSERT TOGGLEP_V == 1
+
+# persist
+INCLUDE plate_save
+ASSERT SAVEPLATE_OK == 1
+SYS LOADPLATE path
+LET loaded = LAST
+SYS JSON "status" FROM loaded
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 9
+SYS JSONN "retries" FROM loaded
+ASSERT LAST_N == 99
+SYS JSON "role" FROM loaded
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSONN "debug" FROM loaded
+ASSERT LAST_N == 1
+
+# HELP
+HELP MERGEP
+SYS HAS LAST "PLATE"
+ASSERT LAST_N == 1
+
+PRINT "mergep ok"

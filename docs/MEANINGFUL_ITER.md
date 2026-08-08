@@ -597,6 +597,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 567. ~~**`JSONFILETOGGLE` / `TOGGLEPLATEKEY` / `FLIPPLATEKEY`**~~ **done** (flip disk plate flag 0↔1 · agent feature flags without LOAD+TOGGLE+SAVE).
 568. ~~**`programs/lib/plate_save`**~~ **done** (INCLUDE plate_save = SAVEPLATE PLATE_PATH PLATE · dual of plate_boot write-back).
 569. ~~**`SETP` / `INCP` / `DELP` / `GETP`**~~ **done** (mutate conventional PLATE var in place · no JSONSET+LET glue · plate_boot/save workflow).
+570. ~~**`MERGEP` / `DEFAULTP` / `TOGGLEP`**~~ **done** (multi-key overlay + set-if-missing + flag flip on PLATE · complete mutate surface without LET glue).
 
 ## Tick protocol
 
