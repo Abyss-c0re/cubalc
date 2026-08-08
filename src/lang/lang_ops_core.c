@@ -2168,24 +2168,45 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "READ_OK", 1);
       bump(vm); return 1;
     }
-    /* SYS LOADPLATE|READPLATE|PLATEREAD path [OR|DEFAULT|FROM defaults]
+    /* SYS LOADPLATE|READPLATE [INTO name] path [OR|DEFAULT|FROM defaults]
      * Soft agent plate load: miss or non-object → fallback (default "{}"), OK=1.
      * LAST = plate text · LAST_N = 1 file-hit | 0 fallback.
-     * LOADPLATE_HIT · LOADPLATE_PATH · LOADPLATE_FALLBACK · READ_OK mirrors hit.
-     * Usability: state plate boot without READ+trim+IF+JSONDEFAULTS glue. */
+     * INTO name: also write plate into named var (multi-plate boot without LET PLATE=).
+     *   SYS LOADPLATE INTO peer "state/peer.json" OR "{}"
+     *   SYS LOADPLATE path INTO session
+     * LOADPLATE_HIT · LOADPLATE_PATH · LOADPLATE_FALLBACK · LOADPLATE_INTO · READ_OK.
+     * Note: FROM still means defaults (legacy); INTO is the multi-plate target.
+     * Usability: peer/session disk plates without LET glue / PLATE clobber. */
     if (kw(&L->cur,"LOADPLATE") || kw(&L->cur,"READPLATE") || kw(&L->cur,"PLATEREAD") ||
         kw(&L->cur,"LOADJSON") || kw(&L->cur,"READJSON") || kw(&L->cur,"JSONLOAD") ||
         kw(&L->cur,"PLATELOAD") || kw(&L->cur,"OPENPLATE") || kw(&L->cur,"GETPLATE")){
       char path[512], fb[CUBALC_HOST_STR_MAX], plate[CUBALC_HOST_STR_MAX];
+      char into_name[96];
       cubalc_host_result hr, keys;
-      int have_fb = 0, hit = 0;
+      int have_fb = 0, hit = 0, have_into = 0;
       const char *body;
       lex_next(L);
       path[0] = 0;
       fb[0] = 0;
       plate[0] = 0;
+      into_name[0] = 0;
+
+      /* optional leading INTO name */
+      if (kw(&L->cur,"INTO") || kw(&L->cur,"AS") || kw(&L->cur,"TOVAR") ||
+          kw(&L->cur,"BIND") || kw(&L->cur,"STOREIN")) {
+        lex_next(L);
+        have_into = 1;
+        if (L->cur.kind == TK_IDENT) {
+          snprintf(into_name, sizeof into_name, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail(vm, "SYS LOADPLATE INTO name path — need var name");
+          return -1;
+        }
+      }
+
       if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
-        fail(vm, "SYS LOADPLATE path [OR defaults] — need plate path");
+        fail(vm, "SYS LOADPLATE [INTO name] path [OR defaults] — need plate path");
         return -1;
       }
       if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
@@ -2196,6 +2217,19 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           have_fb = 1;
         else {
           fail(vm, "SYS LOADPLATE path OR defaults — need fallback plate");
+          return -1;
+        }
+      }
+      /* trailing INTO name */
+      if (!have_into && (kw(&L->cur,"INTO") || kw(&L->cur,"AS") || kw(&L->cur,"TOVAR") ||
+                         kw(&L->cur,"BIND") || kw(&L->cur,"STOREIN"))) {
+        lex_next(L);
+        have_into = 1;
+        if (L->cur.kind == TK_IDENT) {
+          snprintf(into_name, sizeof into_name, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail(vm, "SYS LOADPLATE path INTO name — need var name");
           return -1;
         }
       }
@@ -2228,6 +2262,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                     hr.err[0] ? hr.err : "LOADPLATE: miss or non-object — using fallback");
         /* sticky soft hint only; OK stays 1 for agent boot continue */
       }
+      if (have_into && into_name[0])
+        var_set_str(vm, into_name, plate);
       var_set_str(vm, "LAST", plate);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
       vm->last_n = hit ? 1 : 0;
@@ -2237,10 +2273,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "LOADPLATE_PATH", path);
       var_set_num(vm, "LOADPLATE_HIT", hit);
       var_set_num(vm, "LOADPLATE_FALLBACK", hit ? 0 : 1);
+      var_set_num(vm, "LOADPLATE_INTO", have_into ? 1 : 0);
+      var_set_str(vm, "LOADPLATE_VAR", into_name);
       var_set_num(vm, "READ_OK", hit);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# sys loadplate → hit=%d path=%s\n", hit, path);
+        fprintf(vm->trace, "# sys loadplate → hit=%d into=%s path=%s\n",
+                hit, into_name[0] ? into_name : "-", path);
       bump(vm); return 1;
     }
     /* SYS SAVEPLATE|STOREPLATE|PLATESAVE path [plate]
@@ -2390,27 +2429,47 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 absfile, hr.n, created);
       bump(vm); return 1;
     }
-    /* SYS ENSUREPLATE|TOUCHPLATE|NEEDPLATE path [OR|FROM defaults]
+    /* SYS ENSUREPLATE|TOUCHPLATE [INTO name] path [OR|FROM defaults]
      * Create-or-load agent state plate:
      *   hit  → LAST=plate content · LAST_N=0 · ENSUREPLATE_CREATED=0
      *   miss → write defaults/{} · LAST=plate · LAST_N=1 · CREATED=1
+     * INTO name: also bind plate into named var (multi-plate seed without PLATE clobber):
+     *   SYS ENSUREPLATE INTO peer "state/peer.json" OR "{\"n\":0}"
+     *   SYS ENSUREPLATE path INTO session
      * Always OK=1 when write/load succeeds. Dual of LOAD+SAVE one-shot boot.
-     * Usability: first-run plate seed without IF LOADPLATE_HIT + SAVEPLATE glue. */
+     * ENSUREPLATE_INTO · ENSUREPLATE_VAR mirror LOADPLATE INTO flags.
+     * Usability: first-run multi-plate seed without IF LOADPLATE_HIT + LET glue. */
     if (kw(&L->cur,"ENSUREPLATE") || kw(&L->cur,"TOUCHPLATE") || kw(&L->cur,"NEEDPLATE") ||
         kw(&L->cur,"PLATEENSURE") || kw(&L->cur,"SEEDPLATE") ||
         kw(&L->cur,"INITPLATE") || kw(&L->cur,"BOOTPLATE") || kw(&L->cur,"HAVEPLATE")){
       char path[CUBALC_HOST_STR_MAX], defs[CUBALC_HOST_STR_MAX], plate[CUBALC_HOST_STR_MAX];
       char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+      char into_name[96];
       const char *slash, *body;
       size_t n;
-      int hit = 0, created = 0;
+      int hit = 0, created = 0, have_into = 0;
       cubalc_host_result hr, keys;
       lex_next(L);
       path[0] = 0;
       defs[0] = 0;
       plate[0] = 0;
+      into_name[0] = 0;
+
+      if (kw(&L->cur,"INTO") || kw(&L->cur,"AS") || kw(&L->cur,"TOVAR") ||
+          kw(&L->cur,"BIND") || kw(&L->cur,"STOREIN")) {
+        lex_next(L);
+        have_into = 1;
+        if (L->cur.kind == TK_IDENT) {
+          snprintf(into_name, sizeof into_name, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail(vm, "SYS ENSUREPLATE INTO name path — need var name");
+          return -1;
+        }
+      }
+
       if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
-        fail(vm, "SYS ENSUREPLATE path [OR defaults] — need path");
+        fail(vm, "SYS ENSUREPLATE [INTO name] path [OR defaults] — need path");
         return -1;
       }
       if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
@@ -2419,6 +2478,18 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         lex_next(L);
         if (resolve_str_arg(vm, L, defs, sizeof defs) != 0)
           defs[0] = 0;
+      }
+      if (!have_into && (kw(&L->cur,"INTO") || kw(&L->cur,"AS") || kw(&L->cur,"TOVAR") ||
+                         kw(&L->cur,"BIND") || kw(&L->cur,"STOREIN"))) {
+        lex_next(L);
+        have_into = 1;
+        if (L->cur.kind == TK_IDENT) {
+          snprintf(into_name, sizeof into_name, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail(vm, "SYS ENSUREPLATE path INTO name — need var name");
+          return -1;
+        }
       }
       if (!defs[0])
         snprintf(defs, sizeof defs, "%s", "{}");
@@ -2433,6 +2504,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "ERR", "ENSUREPLATE: empty path");
         var_set_num(vm, "OK", 0);
         var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "ENSUREPLATE_INTO", have_into ? 1 : 0);
         bump(vm); return 1;
       }
       /* try load existing object plate */
@@ -2450,6 +2522,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         }
       }
       if (hit) {
+        if (have_into && into_name[0])
+          var_set_str(vm, into_name, plate);
         var_set_str(vm, "LAST", plate);
         snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
         vm->last_n = 0;
@@ -2459,11 +2533,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "ENSUREPLATE_PATH", path);
         var_set_num(vm, "ENSUREPLATE_CREATED", 0);
         var_set_num(vm, "ENSUREPLATE_HIT", 1);
+        var_set_num(vm, "ENSUREPLATE_INTO", have_into ? 1 : 0);
+        var_set_str(vm, "ENSUREPLATE_VAR", into_name);
         var_set_num(vm, "LOADPLATE_HIT", 1);
+        var_set_num(vm, "LOADPLATE_INTO", have_into ? 1 : 0);
         var_set_num(vm, "READ_OK", 1);
         var_set_num(vm, "OK", 1);
         if (vm->trace)
-          fprintf(vm->trace, "# sys ensureplate → hit path=%s\n", path);
+          fprintf(vm->trace, "# sys ensureplate → hit into=%s path=%s\n",
+                  into_name[0] ? into_name : "-", path);
         bump(vm); return 1;
       }
       /* miss/invalid → persist defaults (mkdir parent + write) */
@@ -2507,6 +2585,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "ERR", err);
         var_set_str(vm, "ENSUREPLATE_PATH", absfile);
         var_set_num(vm, "ENSUREPLATE_CREATED", 0);
+        var_set_num(vm, "ENSUREPLATE_INTO", have_into ? 1 : 0);
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "OK", 0);
         bump(vm); return 1;
@@ -2520,11 +2599,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "ERR", err);
         var_set_str(vm, "ENSUREPLATE_PATH", absfile);
         var_set_num(vm, "ENSUREPLATE_CREATED", 0);
+        var_set_num(vm, "ENSUREPLATE_INTO", have_into ? 1 : 0);
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "OK", 0);
         bump(vm); return 1;
       }
       snprintf(plate, sizeof plate, "%s", body);
+      if (have_into && into_name[0])
+        var_set_str(vm, into_name, plate);
       var_set_str(vm, "LAST", plate);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
       vm->last_n = 1;
@@ -2535,18 +2617,21 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "ENSUREPLATE_PARENT", absparent);
       var_set_num(vm, "ENSUREPLATE_CREATED", 1);
       var_set_num(vm, "ENSUREPLATE_HIT", 0);
+      var_set_num(vm, "ENSUREPLATE_INTO", have_into ? 1 : 0);
+      var_set_str(vm, "ENSUREPLATE_VAR", into_name);
       var_set_num(vm, "SAVEPLATE_N", hr.n);
       var_set_num(vm, "SAVEPLATE_OK", 1);
       var_set_num(vm, "LOADPLATE_HIT", 0);
+      var_set_num(vm, "LOADPLATE_INTO", have_into ? 1 : 0);
       var_set_num(vm, "READ_OK", 0);
       var_set_num(vm, "WRITE_OK", 1);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# sys ensureplate → created path=%s bytes=%ld\n",
-                absfile, hr.n);
-      (void)created;
+        fprintf(vm->trace, "# sys ensureplate → created into=%s path=%s\n",
+                into_name[0] ? into_name : "-", absfile);
       bump(vm); return 1;
     }
+
     /* SYS UPDATEPLATE|JSONFILESET|PLATEKEYSET path key value
      * One-shot agent plate mutate: soft-load object plate (miss→{}),
      * JSONSET key value, mkdir parent + write. LAST = new plate content.
@@ -36289,7 +36374,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
       {"SYS READ", "SYS READ [OR|SOFT] path [OR fallback] — soft/optional plate"},
       {"LOADPLATE", "LOADPLATE|READPLATE path [OR defaults] — soft plate file load · LAST_N=1 hit|0 fallback"},
-      {"SYS LOADPLATE", "SYS LOADPLATE path [OR defaults] — agent state plate boot · non-object → fallback"},
+      {"SYS LOADPLATE", "SYS LOADPLATE [INTO name] path [OR defaults] — multi-plate bind · soft boot"},
       {"READPLATE", "READPLATE alias of LOADPLATE"},
       {"PLATEREAD", "PLATEREAD alias of LOADPLATE"},
       {"LOADJSON", "LOADJSON alias of LOADPLATE"},
@@ -36299,7 +36384,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PLATESAVE", "PLATESAVE alias of SAVEPLATE"},
       {"WRITEPLATE", "WRITEPLATE alias of SAVEPLATE (object-checked; PLATEWRITE is WRITEOUT)"},
       {"ENSUREPLATE", "ENSUREPLATE|TOUCHPLATE path [OR defaults] — create-or-load plate · LAST=content · CREATED 0|1"},
-      {"SYS ENSUREPLATE", "SYS ENSUREPLATE path [OR seed] — first-run plate seed without IF LOAD+SAVE glue"},
+      {"SYS ENSUREPLATE", "SYS ENSUREPLATE [INTO name] path [OR seed] — multi-plate first-run seed"},
       {"TOUCHPLATE", "TOUCHPLATE alias of ENSUREPLATE"},
       {"NEEDPLATE", "NEEDPLATE alias of ENSUREPLATE"},
       {"SEEDPLATE", "SEEDPLATE alias of ENSUREPLATE"},

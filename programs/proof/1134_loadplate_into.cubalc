@@ -1,0 +1,98 @@
+# LOADPLATE INTO / ENSUREPLATE INTO — bind disk plates into named vars
+# Usability: multi-plate agents boot peer/session files without LET PLATE= / clobber.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_load_into"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "peer.json"
+LET ppath = LAST
+SYS JOIN dir "sess.json"
+LET spath = LAST
+SYS JOIN dir "miss.json"
+LET mpath = LAST
+SYS RM ppath
+SYS RM spath
+SYS RM mpath
+
+# conventional PLATE stays seed
+LET PLATE = "{}"
+SETP "agent" "plate-agent"
+
+# write peer plate on disk
+SYS JSONOBJ "agent" "hive-02" "host" "cubeB" "n" 9
+SYS SAVEPLATE ppath LAST
+ASSERT SAVEPLATE_OK == 1
+
+# --- LOADPLATE INTO named var ---
+SYS LOADPLATE INTO peer ppath
+ASSERT OK == 1
+ASSERT LOADPLATE_HIT == 1
+ASSERT LOADPLATE_INTO == 1
+SYS EQS LOADPLATE_VAR "peer"
+ASSERT LAST_N == 1
+GETP FROM peer "host"
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+GETP FROM peer "n"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+# PLATE not clobbered
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# trailing INTO + miss fallback
+SYS LOADPLATE mpath OR "{\"agent\":\"fb\",\"n\":0}" INTO thin
+ASSERT OK == 1
+ASSERT LOADPLATE_HIT == 0
+ASSERT LOADPLATE_FALLBACK == 1
+ASSERT LOADPLATE_INTO == 1
+GETP FROM thin "agent"
+SYS EQS LAST "fb"
+ASSERT LAST_N == 1
+
+# default LOADPLATE still only LAST (no INTO)
+SYS LOADPLATE ppath
+ASSERT LOADPLATE_INTO == 0
+ASSERT LOADPLATE_HIT == 1
+
+# --- ENSUREPLATE INTO: first-run seed ---
+SYS ENSUREPLATE INTO session spath OR "{\"ticks\":0,\"ok\":true}"
+ASSERT OK == 1
+ASSERT ENSUREPLATE_INTO == 1
+ASSERT ENSUREPLATE_CREATED == 1
+SYS EQS ENSUREPLATE_VAR "session"
+ASSERT LAST_N == 1
+GETP FROM session "ticks"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+# PLATE still plate-agent
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# second ensure hits existing file into same var
+SETP FROM session "ticks" 3
+SYS SAVEPLATE spath session
+ASSERT SAVEPLATE_OK == 1
+SYS ENSUREPLATE spath INTO session
+ASSERT ENSUREPLATE_CREATED == 0
+ASSERT ENSUREPLATE_HIT == 1
+ASSERT ENSUREPLATE_INTO == 1
+GETP FROM session "ticks"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# default ENSURE no INTO
+SYS JOIN dir "solo.json"
+LET solo = LAST
+SYS RM solo
+SYS ENSUREPLATE solo OR "{\"solo\":1}"
+ASSERT ENSUREPLATE_INTO == 0
+ASSERT ENSUREPLATE_CREATED == 1
+
+PRINT "loadplate_into soft ok"

@@ -2109,6 +2109,7 @@ int main(int argc, char **argv) {
       {"mergep_from", "programs/proof/1131_mergep_from.cubalc", "MERGEP/DEFAULTP/TOGGLEP FROM multi-plate"},
       {"needp_from", "programs/proof/1132_needp_from.cubalc", "NEEDP/HASP/KEYSP FROM multi-plate probes"},
       {"dumpp_from", "programs/proof/1133_dumpp_from.cubalc", "DUMPP FROM multi-plate plate_info snapshot"},
+      {"loadplate_into", "programs/proof/1134_loadplate_into.cubalc", "LOADPLATE/ENSUREPLATE INTO multi-plate disk bind"},
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},

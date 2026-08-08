@@ -620,6 +620,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 590. ~~**`MERGEP`/`DEFAULTP`/`TOGGLEP FROM`**~~ **done** (multi-key overlay + set-if-missing + flags on any plate · multi-plate twin of SETP FROM).
 591. ~~**`NEEDP`/`HASP`/`HASPALL`/`KEYSP FROM`**~~ **done** (contract + soft probes + key bag on any plate · multi-plate twin of GETP FROM).
 592. ~~**`DUMPP FROM`**~~ **done** (cubalc.plate_info.v1 snapshot of any plate · multi-plate twin of KEYSP FROM).
+593. ~~**`LOADPLATE`/`ENSUREPLATE INTO`**~~ **done** (bind disk plate into named var · multi-plate disk boot without PLATE clobber).
 
 ## Tick protocol
 
