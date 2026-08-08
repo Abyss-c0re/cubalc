@@ -1,0 +1,119 @@
+# GREPTREE / SEARCHTREE / RGREP — recursive content search under root
+# Agent content discovery without WALK+GREPFILES or shell grep -r.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_gt_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# nested files with mixed content
+SYS JOIN base "a/err.log"
+WRITEOUT LAST "error: boom\nok"
+ASSERT OK == 1
+SYS JOIN base "a/b/note.txt"
+WRITEOUT LAST "all good here"
+ASSERT OK == 1
+SYS JOIN base "a/b/warn.log"
+WRITEOUT LAST "WARNING: careful"
+ASSERT OK == 1
+SYS JOIN base "plain.txt"
+SYS WRITE LAST "no hits"
+ASSERT OK == 1
+SYS JOIN base "empty"
+SYS MKDIR LAST
+ASSERT OK == 1
+
+# find error
+GREPTREE base "error"
+ASSERT OK == 1
+ASSERT GREPTREE_N == 1
+ASSERT LAST_N == 1
+ASSERT GREPTREE_SCAN >= 3
+SYS HAS LAST "err.log"
+ASSERT LAST_N == 1
+SYS HAS LAST "warn"
+ASSERT LAST_N == 0
+
+# multi-hit
+GREPTREE base ":"
+ASSERT OK == 1
+ASSERT GREPTREE_N == 2
+SYS HAS LAST "err.log"
+ASSERT LAST_N == 1
+SYS HAS LAST "warn.log"
+ASSERT LAST_N == 1
+
+# case-sensitive miss
+GREPTREE base "WARNING"
+ASSERT OK == 1
+ASSERT GREPTREE_N == 1
+SYS HAS LAST "warn.log"
+ASSERT LAST_N == 1
+
+# GREPTREEI case-insensitive
+GREPTREEI base "warning"
+ASSERT OK == 1
+ASSERT GREPTREE_N == 1
+SYS HAS LAST "warn.log"
+ASSERT LAST_N == 1
+
+# no match
+GREPTREE base "zzzzz_nope"
+ASSERT OK == 1
+ASSERT GREPTREE_N == 0
+ASSERT LAST_N == 0
+
+# SYS + SEARCHTREE alias
+SYS GREPTREE base "good"
+ASSERT OK == 1
+ASSERT GREPTREE_N == 1
+SYS HAS LAST "note.txt"
+ASSERT LAST_N == 1
+SEARCHTREE base "plain"
+# wait plain content is "no hits" — search for "hits"
+SEARCHTREE base "hits"
+ASSERT OK == 1
+ASSERT SEARCHTREE_N == 1
+SYS HAS LAST "plain.txt"
+ASSERT LAST_N == 1
+
+# RGREP alias
+RGREP base "boom"
+ASSERT OK == 1
+ASSERT RGREP_N == 1
+
+# single file root
+SYS JOIN base "a/err.log"
+LET one = LAST
+GREPTREE one "error"
+ASSERT OK == 1
+ASSERT GREPTREE_N == 1
+
+# missing soft
+GREPTREE "/no/such/greptree/root" "x"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty path soft
+GREPTREE "" "x"
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+RMTREE base
+ASSERT OK == 1
+
+PRINT "greptree ok"
+ASSERT OK == 1

@@ -54,6 +54,11 @@ int cubalc_host_dirsize(const char *path, cubalc_host_result *r);
  * r->str = first relative path that differs ("" if equal). r->err = reason when differ.
  * Soft miss either root → return -1. Does not follow dir symlinks. */
 int cubalc_host_eqtree(const char *a, const char *b, cubalc_host_result *r);
+/* recursive content search under root. r->str = newline bag of matching full paths.
+ * r->n = hit count; r->code = files scanned. icase/invert like GREPFILES.
+ * Soft miss root → -1. Empty needle → all readable files. */
+int cubalc_host_greptree(const char *root, const char *needle, int icase, int invert,
+                         cubalc_host_result *r);
 /* rename/move path; soft miss if from missing */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */

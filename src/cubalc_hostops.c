@@ -934,6 +934,157 @@ int cubalc_host_eqtree(const char *a, const char *b, cubalc_host_result *r) {
   return 0;
 }
 
+/* Case-insensitive substring (ASCII). */
+static int cubalc_str_has_icase(const char *hay, const char *needle) {
+  size_t nlen, fi, j;
+  if (!hay || !needle) return 0;
+  nlen = strlen(needle);
+  if (nlen == 0) return 1;
+  for (fi = 0; hay[fi]; fi++) {
+    for (j = 0; j < nlen; j++) {
+      char ca = hay[fi + j], cb = needle[j];
+      if (!ca) break;
+      if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+      if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+      if (ca != cb) break;
+    }
+    if (j == nlen) return 1;
+  }
+  return 0;
+}
+
+/* Append path to bag with newline separator; soft truncate when full. */
+static void cubalc_bag_push(char *out, size_t outsz, size_t *olen, long *kept,
+                            const char *path) {
+  size_t pl;
+  if (!out || !olen || !kept || !path || !path[0]) return;
+  pl = strlen(path);
+  if (*kept > 0 && *olen + 1 < outsz) out[(*olen)++] = '\n';
+  if (*olen + pl < outsz) {
+    memcpy(out + *olen, path, pl);
+    *olen += pl;
+  }
+  out[*olen] = 0;
+  (*kept)++;
+}
+
+static void cubalc_greptree_rec(const char *dir, const char *needle, int icase,
+                                int invert, char *out, size_t outsz, size_t *olen,
+                                long *kept, long *scan, long *miss, int depth) {
+  DIR *d;
+  struct dirent *ent;
+  struct stat st;
+  size_t nlen;
+  if (!dir || !dir[0] || depth > 64 || !out || !olen || !kept) return;
+  if (*olen + 1 >= outsz) return;
+  nlen = needle ? strlen(needle) : 0;
+  d = opendir(dir);
+  if (!d) return;
+  while ((ent = readdir(d)) != NULL) {
+    char full[CUBALC_HOST_STR_MAX];
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+    if (cubalc_join_child(dir, ent->d_name, full, sizeof full) != 0)
+      continue;
+    if (lstat(full, &st) != 0) continue;
+    if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+        && !S_ISLNK(st.st_mode)
+#endif
+        ) {
+      cubalc_greptree_rec(full, needle, icase, invert, out, outsz, olen, kept,
+                          scan, miss, depth + 1);
+      continue;
+    }
+    /* only regular files for content probe */
+    if (!S_ISREG(st.st_mode)) continue;
+    if (scan) (*scan)++;
+    {
+      cubalc_host_result hr;
+      int hit = 0;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_read(full, &hr) != 0) {
+        if (miss) (*miss)++;
+        continue;
+      }
+      if (nlen == 0) {
+        hit = 1;
+      } else if (!icase) {
+        hit = (strstr(hr.str, needle) != NULL) ? 1 : 0;
+      } else {
+        hit = cubalc_str_has_icase(hr.str, needle);
+      }
+      if (invert) hit = !hit;
+      if (hit)
+        cubalc_bag_push(out, outsz, olen, kept, full);
+    }
+  }
+  closedir(d);
+}
+
+/* Usability: SYS GREPTREE|SEARCHTREE root needle — recursive content search without
+ * WALK+GREPFILES glue or shell grep -r. r->str bag of paths; r->n hits; r->code scanned. */
+int cubalc_host_greptree(const char *root, const char *needle, int icase, int invert,
+                         cubalc_host_result *r) {
+  char abs[CUBALC_HOST_STR_MAX];
+  size_t olen = 0;
+  long kept = 0, scan = 0, miss = 0;
+  struct stat st;
+  cubalc_host_result hr;
+  r_clear(r);
+  if (!root || !root[0]) {
+    snprintf(r->err, sizeof r->err, "greptree: empty path");
+    return -1;
+  }
+  if (!needle) needle = "";
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(root, &hr) == 0 && hr.str[0])
+    snprintf(abs, sizeof abs, "%s", hr.str);
+  else
+    snprintf(abs, sizeof abs, "%s", root);
+  if (lstat(abs, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "greptree: missing");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "greptree: %s", strerror(errno));
+    return -1;
+  }
+  r->str[0] = 0;
+  if (S_ISREG(st.st_mode)) {
+    /* single file root */
+    int hit = 0;
+    scan = 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_read(abs, &hr) != 0) {
+      miss = 1;
+    } else {
+      size_t nlen = strlen(needle);
+      if (nlen == 0) hit = 1;
+      else if (!icase) hit = (strstr(hr.str, needle) != NULL) ? 1 : 0;
+      else hit = cubalc_str_has_icase(hr.str, needle);
+      if (invert) hit = !hit;
+      if (hit) cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, abs);
+    }
+  } else if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+             && !S_ISLNK(st.st_mode)
+#endif
+             ) {
+    cubalc_greptree_rec(abs, needle, icase, invert, r->str, sizeof r->str, &olen,
+                        &kept, &scan, &miss, 0);
+  } else {
+    snprintf(r->err, sizeof r->err, "greptree: not a file or directory");
+    return -1;
+  }
+  r->n = kept;
+  r->code = (int)(scan > 0x7fffffff ? 0x7fffffff : scan);
+  /* stash miss count in high... not available; language can re-scan. OK. */
+  (void)miss;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS RENAME|MV from to — move plate without shell. */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) {
   r_clear(r);

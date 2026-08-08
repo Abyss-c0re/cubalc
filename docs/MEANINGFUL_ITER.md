@@ -521,6 +521,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 491. ~~**`MVTREE` / `MOVETREE` / `MVDIR`**~~ **done** (recursive tree move · rename or CPTREE+RMTREE · promote nested workspaces without shell mv).
 492. ~~**`DIRSIZE` / `DU` / `TREESIZE`**~~ **done** (recursive path byte inventory · DIRSIZE_FILES/DIRS · agent disk gate without shell du).
 493. ~~**`EQTREE` / `SAMETREE` / `CMPTREE`**~~ **done** (recursive structure+content equality · verify CPTREE without shell diff -r).
+494. ~~**`GREPTREE` / `SEARCHTREE` / `RGREP`**~~ **done** (recursive content search under root · path bag · no WALK+GREPFILES or shell grep -r).
 
 ## Tick protocol
 
