@@ -1,63 +1,63 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 199,
-  "program": "programs/realworld/agent_json_plate_presence_board.cubalc",
-  "theme": "JSONHASALL + JSONHASANY + JSONMISS + JSONPRESENT key presence gate",
-  "version": "1.15.530-usability",
+  "iter": 200,
+  "program": "programs/realworld/agent_json_plate_allowlist_board.cubalc",
+  "theme": "JSONEXTRA + JSONKNOWN + JSONPLUCK + REQUIRE JSONHASALL allow-list scrub",
+  "version": "1.15.533-usability",
   "pass": true,
-  "prior_note": "iter 198 AVGN+EQ+SUBSET value contract; this iter first realworld HASALL(1079)+MISS(1080) presence board",
+  "prior_note": "iter 199 HASALL+MISS presence; this iter first realworld EXTRA(1081)+PLUCK(1082)+REQUIRE JSONHASALL(1083) allowlist board",
   "tests": [
     {
       "name": "mint",
-      "cmd": "full status 7keys + partial incomplete",
+      "cmd": "8 keys allow+noise+debug",
       "ok": true,
-      "note": "mint"
+      "note": "mint dirty"
     },
     {
-      "name": "hasall",
-      "cmd": "schema role ok zone → 1; peel load=10",
+      "name": "extra",
+      "cmd": "EXTRA OF allow → noise+debug n=2",
       "ok": true,
-      "note": "HASALL"
+      "note": "EXTRA"
     },
     {
-      "name": "hasany",
-      "cmd": "peer|zone|replica → 1 (zone)",
+      "name": "known",
+      "cmd": "KNOWN 6 allow hits no noise",
       "ok": true,
-      "note": "HASANY"
+      "note": "KNOWN"
     },
     {
-      "name": "miss",
-      "cmd": "need+peer → miss_bag=peer count1",
+      "name": "pluck",
+      "cmd": "load|err|peer → 10|2|empty slots=3",
       "ok": true,
-      "note": "MISS"
-    },
-    {
-      "name": "present",
-      "cmd": "4 of 5; peer absent from bag",
-      "ok": true,
-      "note": "PRESENT"
+      "note": "PLUCK"
     },
     {
       "name": "gate",
-      "cmd": "admit full; deny partial miss=zone",
+      "cmd": "dirty extra deny; after scrub admit",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "partial",
-      "cmd": "install incomplete; HASALL0 MISS zone",
+      "name": "scrub",
+      "cmd": "PICK allow → EXTRA0 LEN6",
       "ok": true,
-      "note": "partial"
+      "note": "scrub"
+    },
+    {
+      "name": "req",
+      "cmd": "REQUIRE JSONHASALL + peel load=10",
+      "ok": true,
+      "note": "REQUIRE"
     },
     {
       "name": "probe",
-      "cmd": "null/false present; empty key list; OF bag",
+      "cmd": "empty allow all extra; null/false/true pluck",
       "ok": true,
       "note": "edges"
     },
     {
-      "name": "require",
-      "cmd": "CUBALC_AJPRE_REQUIRE=1 empty → shell 2",
+      "name": "empty",
+      "cmd": "CUBALC_AJPAL_REQUIRE=1 empty → shell 2",
       "ok": true,
       "note": "hard"
     },
@@ -1260,6 +1260,30 @@
       "title": "Empty key list: HASALL→1 HASANY→0",
       "detail": "Vacuous all-of-empty is true; any-of-empty is false. Surprising in dynamic OF bag when need list is blank after GREPV.",
       "repro": "JSONHASALL plate → 1; JSONHASANY plate → 0"
+    },
+    {
+      "id": "W150",
+      "severity": "med",
+      "area": "lang|nth",
+      "title": "SYS NTH has no OF bag form — only indexes LAST",
+      "detail": "Proof 1082 does NTH after PLUCK leaves bag in LAST. SYS NTH 0 OF val_bag is unknown form OF. Agents must re-PLUCK or keep bag in LAST before each NTH; cannot random-access a saved bag without rebinding LAST.",
+      "repro": "SYS NTH 0 OF val_bag → unknown form OF; SYS JSONPLUCK …; SYS NTH 0 works"
+    },
+    {
+      "id": "W151",
+      "severity": "low",
+      "area": "host|print_json",
+      "title": "PRINT_JSON collapses multi-line bag newlines",
+      "detail": "EXTRA key bag noise\\ndebug and PLUCK 10\\n2\\n render as noisedebug / 102 in PRINT_JSON objects. STATUS rows via CAT+HASLINE still see real newlines. Agents logging bags via PRINT_JSON lose field boundaries.",
+      "repro": "PRINT_JSON key_bag after JSONEXTRA → \"noisedebug\""
+    },
+    {
+      "id": "W152",
+      "severity": "high",
+      "area": "host|require_json",
+      "title": "REQUIRE JSONHASALL fail → shell 1, plate exit_code 0",
+      "detail": "Missing keys set asserts_fail+err message listing missing, shell often 1, but exit_code stays 0 (W7 class). Soft twin SYS JSONHASALL + EXIT n under REQUIRE env is more reliable for ops shell contracts.",
+      "repro": "REQUIRE JSONHASALL {a:1} a z → asserts_fail 1 exit_code 0 shell 1"
     }
   ],
   "workarounds": [
@@ -1290,7 +1314,10 @@
     "Contract admit: SUBSET req status; full lockstep: JSONEQ (W146)",
     "After JSONMISS/PRESENT: LET bag=LAST; peel FROM body not LAST (W147)",
     "Presence≠value: JSONTYPE null/false or SUBSET values after HASALL (W148)",
-    "Guard OF need bag: if blank skip HASALL or treat as soft miss (W149)"
+    "Guard OF need bag: if blank skip HASALL or treat as soft miss (W149)",
+    "NTH bag fields: re-PLUCK or leave bag in LAST before each NTH (W150)",
+    "Log multi-line bags via WRITE/STATUS not PRINT_JSON (W151)",
+    "Hard key contract: soft HASALL then EXIT n; do not trust REQUIRE shell alone (W152)"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1313,7 +1340,10 @@
     "JSONEQ_KEYS optional ignore-extra mode (subset equality)",
     "JSONMISS keep-plate mode (LAST=plate LAST_BAG=keys)",
     "JSONHASALL require-non-null / require-truthy mode",
-    "JSONMISS hard-fail mode when any required missing"
+    "JSONMISS hard-fail mode when any required missing",
+    "SYS NTH i OF bag form (index saved bag without LAST rebind)",
+    "PRINT_JSON encode bag as JSON array not collapsed string",
+    "REQUIRE JSONHASALL EXIT code configurable / match EXIT n"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1333,8 +1363,11 @@
     "bool pollution + trunc mean documented (W145)",
     "selftest 355/355 green v1.15.530",
     "HASALL keeps plate chain peel load=10 ok",
-    "partial→gate deny miss_bag=zone positive"
+    "partial→gate deny miss_bag=zone positive",
+    "selftest 355/355 green v1.15.533",
+    "NTH OF bag hard-fail — re-PLUCK workaround (W150)",
+    "REQUIRE JSONHASALL shell 1 exit_code 0 documented (W152)"
   ],
-  "commit": "c93af92",
-  "ts": "2026-08-08T14:33:40Z"
+  "commit": "pending",
+  "ts": "2026-08-08T14:59:50Z"
 }
