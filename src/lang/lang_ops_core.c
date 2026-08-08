@@ -26640,6 +26640,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FLAGKV", "FLAGKV alias of FLAGMAP"},
       {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
       {"POSN", "POSN alias of NTHPOS — first/second file without RESTARGS+NTH"},
+      {"NTHPOSPATH", "NTHPOSPATH|POSNPATH index [OR path] — NTHPOS + ABSPATH · EXIST · first file without REALPATH"},
       {"SUBCMD", "SUBCMD|COMMAND [OR def] — first positional → LAST · RESTPOS = remaining files"},
       {"REQUIRE RESTPOS", "REQUIRE RESTPOS|TAILPOS [min] — files after subcommand · not counting cmd"},
       {"HASRESTPOS", "HASRESTPOS|HASTAILPOS [min] — soft 0|1 remaining files after first positional"},
@@ -31004,6 +31005,124 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", (hit || have_fb) ? 1 : 0);
     if (vm->trace)
       fprintf(vm->trace, "# nthpos %ld hit=%ld → %s\n", idx, hit, field);
+    bump(vm); return 1;
+  }
+  /* NTHPOSPATH|POSNPATH index [OR fallback] — NTHPOS then ABSPATH.
+   * LAST = absolute path · NTHPOSPATH_EXIST 0|1 · NTHPOSPATH_HIT · NTHPOSPATH_RAW.
+   * Index parse mirrors NTHPOS (no parse_expr / OR). Usability: first file path
+   * without NTHPOS + SYS REALPATH glue. */
+  if (kw(&L->cur,"NTHPOSPATH") || kw(&L->cur,"POSNPATH") || kw(&L->cur,"POSPATH") ||
+      kw(&L->cur,"NTHPATH") || kw(&L->cur,"ARGPATH") || kw(&L->cur,"FILEPOS") ||
+      kw(&L->cur,"PATHPOS") || kw(&L->cur,"NTHRESTPATH") || kw(&L->cur,"GETPOSPATH")){
+    long idx = 0, have, at = 0, hit = 0, exist = 0;
+    char bag[CUBALC_HOST_STR_MAX], field[CUBALC_HOST_STR_MAX], fb[512];
+    char absbuf[CUBALC_HOST_STR_MAX], raw[CUBALC_HOST_STR_MAX];
+    const char *p, *start;
+    int have_fb = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    field[0] = 0;
+    fb[0] = 0;
+    absbuf[0] = 0;
+    raw[0] = 0;
+    if (L->cur.kind == TK_NUM) {
+      idx = L->cur.num;
+      lex_next(L);
+    } else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx = -L->cur.num;
+        lex_next(L);
+      } else {
+        fail_at(vm, L, "NTHPOSPATH needs index — NTHPOSPATH 0 [OR \"fallback\"]");
+        return -1;
+      }
+    } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"OR") && !kw(&L->cur,"DEFAULT") &&
+               !kw(&L->cur,"ELSE") && !kw(&L->cur,"FALLBACK")) {
+      if (strcmp(L->cur.text, "LAST_N") == 0)
+        idx = vm->last_n;
+      else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && !vv->is_str) idx = vv->val;
+        else if (vv && vv->is_str) idx = strtol(vv->sval, NULL, 10);
+        else {
+          fail_at(vm, L, "NTHPOSPATH needs index — NTHPOSPATH 0 [OR \"fallback\"]");
+          return -1;
+        }
+      }
+      lex_next(L);
+    } else if (L->cur.kind == TK_LPAREN) {
+      idx = parse_expr(vm, L);
+    } else {
+      fail_at(vm, L, "NTHPOSPATH needs index — NTHPOSPATH 0 [OR \"fallback\"]");
+      return -1;
+    }
+    if (idx < 0) idx = 0;
+    if (idx > 31) idx = 31;
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "NTHPOSPATH n OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    have = cubalc_collect_restargs(bag, sizeof bag);
+    p = bag;
+    while (*p) {
+      start = p;
+      while (*p && *p != '\n') p++;
+      if (at == idx) {
+        size_t fl = (size_t)(p - start);
+        if (fl >= sizeof field) fl = sizeof field - 1;
+        memcpy(field, start, fl);
+        field[fl] = 0;
+        hit = 1;
+        break;
+      }
+      at++;
+      if (*p == '\n') p++;
+    }
+    if (!hit) {
+      if (have_fb)
+        snprintf(field, sizeof field, "%s", fb);
+      else
+        field[0] = 0;
+    }
+    snprintf(raw, sizeof raw, "%s", field);
+    if (field[0]) {
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(field, &hr) == 0 && hr.str[0])
+        snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+      else
+        snprintf(absbuf, sizeof absbuf, "%s", field);
+      exist = (cubalc_host_exists(absbuf) || cubalc_host_exists(field)) ? 1 : 0;
+    } else {
+      exist = 0;
+      absbuf[0] = 0;
+    }
+    var_set_str(vm, "LAST", absbuf);
+    var_set_str(vm, "NTHPOSPATH", absbuf);
+    var_set_str(vm, "POSPATH", absbuf);
+    var_set_str(vm, "PATH", absbuf);
+    var_set_str(vm, "NTHPOS", raw);
+    var_set_str(vm, "POS", raw);
+    var_set_str(vm, "NTHPOSPATH_RAW", raw);
+    var_set_str(vm, "POSPATH_RAW", raw);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absbuf);
+    vm->last_n = (hit || (have_fb && field[0])) ? 1L : 0L;
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "NTHPOSPATH_N", idx);
+    var_set_num(vm, "NTHPOS_N", idx);
+    var_set_num(vm, "NTHPOSPATH_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "NTHPOSPATH_EXIST", (long)exist);
+    var_set_num(vm, "PATH_EXIST", (long)exist);
+    var_set_num(vm, "RESTARGS_N", have);
+    var_set_num(vm, "OK", (hit || (have_fb && field[0])) ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# nthpospath %ld hit=%ld exist=%ld → %s\n",
+              idx, hit, (long)exist, absbuf);
     bump(vm); return 1;
   }
   /* SUBCMD|COMMAND|CMD [OR|DEFAULT fallback]

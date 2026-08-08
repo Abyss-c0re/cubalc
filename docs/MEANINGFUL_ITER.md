@@ -499,6 +499,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 469. ~~**`REQUIRE FLAGPATH` / `FLAGFILE` / `FLAGDIR`**~~ **done** (fail-fast path flag · ABSPATH + exist/kind · twin of GETFLAGPATH).
 470. ~~**`GETFLAGDIR` / `MKFLAGDIR`**~~ **done** (path flag peel + ABSPATH + mkdir -p · --out dirs without MKDIR glue).
 471. ~~**`RESTPATHS` / `POSPATHS`**~~ **done** (positional files → absolute path bag · EXIST count · no EACH+REALPATH).
+472. ~~**`NTHPOSPATH` / `POSNPATH`**~~ **done** (Nth positional → absolute path · EXIST · OR fallback · no NTHPOS+REALPATH).
 
 ## Tick protocol
 
