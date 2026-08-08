@@ -3791,6 +3791,168 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 absfile, hr.n, created);
       bump(vm); return 1;
     }
+    /* SYS CLAIMOUT|CLAIMNEST path [body] — mkdir parent + exclusive create (soft).
+     * Twin of top-level CLAIMOUT. LAST = abs path · CLAIM_HIT 1|0 · CLAIMOUT_CREATED. */
+    if (kw(&L->cur,"CLAIMOUT") || kw(&L->cur,"CLAIMNEST") || kw(&L->cur,"ENSURECLAIM") ||
+        kw(&L->cur,"CLAIMPARENT") || kw(&L->cur,"EXCLOUT") || kw(&L->cur,"TAKECLAIMOUT") ||
+        kw(&L->cur,"ONCEOUT") || kw(&L->cur,"WORKCLAIM") || kw(&L->cur,"JOBCLAIM")){
+      char path[CUBALC_HOST_STR_MAX], body[CUBALC_HOST_STR_MAX];
+      char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+      const char *slash;
+      size_t n;
+      int created = 0, hit = 0;
+      long pid = 0;
+      cubalc_host_result hr;
+      lex_next(L);
+      path[0] = 0; body[0] = 0;
+      absfile[0] = 0; parent[0] = 0; absparent[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS CLAIMOUT path [body]");
+        return -1;
+      }
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, body, sizeof body) != 0)
+          body[0] = 0;
+      } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(body, sizeof body, "%ld", nv);
+      }
+#if defined(CUBALC_OS_WINDOWS)
+      pid = 0;
+#else
+      pid = (long)getpid();
+#endif
+      if (!body[0])
+        snprintf(body, sizeof body, "%ld\n", pid);
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "CLAIMOUT: empty path");
+        var_set_str(vm, "ERR", "CLAIMOUT: empty path");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "CLAIMOUT_N", 0);
+        var_set_num(vm, "CLAIM_HIT", 0);
+        var_set_num(vm, "CLAIMOUT_CREATED", 0);
+        var_set_num(vm, "CLAIM_PID", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+        snprintf(absfile, sizeof absfile, "%s", hr.str);
+      else
+        snprintf(absfile, sizeof absfile, "%s", path);
+      {
+        char work[CUBALC_HOST_STR_MAX];
+        snprintf(work, sizeof work, "%s", absfile);
+        n = strlen(work);
+        while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+          work[n - 1] = 0;
+          n--;
+        }
+        slash = cubalc_path_slash(work);
+        if (slash && slash != work) {
+          size_t dn = (size_t)(slash - work);
+          if (dn >= sizeof parent) dn = sizeof parent - 1;
+          memcpy(parent, work, dn);
+          parent[dn] = 0;
+        } else if (slash && slash == work) {
+          snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+        } else {
+          snprintf(parent, sizeof parent, ".");
+        }
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+      else
+        snprintf(absparent, sizeof absparent, "%s", parent);
+      created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_mkdir(absparent, &hr) != 0) {
+        const char *err = hr.err[0] ? hr.err : "CLAIMOUT: mkdir parent failed";
+        var_set_str(vm, "LAST", absfile);
+        var_set_str(vm, "CLAIMOUT_PARENT", absparent);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "CLAIMOUT_N", 0);
+        var_set_num(vm, "CLAIM_HIT", 0);
+        var_set_num(vm, "CLAIMOUT_CREATED", 0);
+        var_set_num(vm, "CLAIM_PID", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      if (hr.str[0])
+        snprintf(absparent, sizeof absparent, "%s", hr.str);
+#if defined(CUBALC_OS_WINDOWS)
+      {
+        FILE *lf = fopen(absfile, "r");
+        if (!lf) {
+          cubalc_host_result wr;
+          if (cubalc_host_write(absfile, body, &wr) == 0)
+            hit = 1;
+        } else {
+          fclose(lf);
+        }
+      }
+#else
+      {
+        int fd = open(absfile, O_CREAT | O_EXCL | O_WRONLY, 0644);
+        if (fd >= 0) {
+          size_t bl = strlen(body);
+          ssize_t w = write(fd, body, bl);
+          (void)w;
+          close(fd);
+          hit = 1;
+        }
+      }
+#endif
+      if (hit) {
+        var_set_str(vm, "LAST", absfile);
+        var_set_str(vm, "CLAIMOUT", absfile);
+        var_set_str(vm, "CLAIM", absfile);
+        var_set_str(vm, "CLAIMFILE", absfile);
+        var_set_str(vm, "PATH", absfile);
+        var_set_str(vm, "CLAIMOUT_PARENT", absparent);
+        var_set_str(vm, "DIRNAME", absparent);
+        var_set_str(vm, "PARENT", absparent);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_num(vm, "CLAIMOUT_N", 1);
+        var_set_num(vm, "CLAIM_HIT", 1);
+        var_set_num(vm, "CLAIM_N", 1);
+        var_set_num(vm, "CLAIM_PID", pid);
+        var_set_num(vm, "CLAIMOUT_CREATED", (long)created);
+        var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+        var_set_num(vm, "PATH_EXIST", 1);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# sys claimout → %s hit=1 created=%d\n", absfile, created);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "CLAIMOUT", absfile);
+      var_set_str(vm, "CLAIMOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", "CLAIMOUT: exists");
+      var_set_str(vm, "ERR", "CLAIMOUT: exists");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "CLAIMOUT_N", 0);
+      var_set_num(vm, "CLAIM_HIT", 0);
+      var_set_num(vm, "CLAIM_N", 0);
+      var_set_num(vm, "CLAIM_PID", 0);
+      var_set_num(vm, "CLAIMOUT_CREATED", (long)created);
+      var_set_num(vm, "OK", 0);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys claimout → %s hit=0 created=%d\n", absfile, created);
+      bump(vm); return 1;
+    }
     /* SYS FSYNC|SYNCFILE|FDATASYNC path — flush file data+metadata to disk.
      * LAST = path; LAST_N = 1 success / 0 soft miss; FSYNC_N mirrors LAST_N.
      * Opens O_RDONLY, fsync(fd), close. Soft miss on empty/open/fsync fail.
@@ -28345,6 +28507,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS RELINKOUT", "SYS RELINKOUT|RELINK target linkpath — mkdir parent + replace symlink · twin of top-level RELINKOUT"},
       {"TEEOUT", "TEEOUT|TEEWOUT path data — ENSUREPARENT + write keep body in LAST · TEEOUT_PATH=abs file"},
       {"SYS TEEOUT", "SYS TEEOUT|TEEWOUT path data — mkdir parent + tee write · twin of top-level TEEOUT"},
+      {"CLAIMOUT", "CLAIMOUT|CLAIMNEST path [body] — ENSUREPARENT + exclusive create · nested work-item claim"},
+      {"SYS CLAIMOUT", "SYS CLAIMOUT|CLAIMNEST path [body] — mkdir parent + O_EXCL claim · twin of top-level CLAIMOUT"},
       {"BOOLFLAG", "BOOLFLAG name[,|alt] [OR ENV n]* [OR 0|1] — truthy · CLI>ENV>default · BOOLFLAG_SRC"},
       {"GETFLAGN", "GETFLAGN|FLAGN name[,|alt] [OR ENV n]* [OR n] — int peel · CLI>ENV>default · GETFLAGN_SRC"},
       {"GETFLAGMS", "GETFLAGMS|FLAGMS name[,|alt] [OR ENV n]* [OR dur] — ms peel · CLI>ENV>default · GETFLAGMS_SRC"},
@@ -33701,6 +33865,170 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# teeout → %s bytes=%ld created=%d\n",
               absfile, hr.n, created);
+    bump(vm); return 1;
+  }
+  /* CLAIMOUT|CLAIMNEST path [body] — ENSUREPARENT + exclusive create one-shot.
+   * LAST = abs path · CLAIM_HIT 1|0 · CLAIMOUT_PARENT/CREATED · CLAIM_PID.
+   * Soft empty/mkdir fail · soft miss if held (OK=0 CLAIM_HIT=0 LAST_ERR exists).
+   * Usability: nested work-item claims without ENSUREPARENT + SYS CLAIM glue. */
+  if (kw(&L->cur,"CLAIMOUT") || kw(&L->cur,"CLAIMNEST") || kw(&L->cur,"ENSURECLAIM") ||
+      kw(&L->cur,"CLAIMPARENT") || kw(&L->cur,"EXCLOUT") || kw(&L->cur,"TAKECLAIMOUT") ||
+      kw(&L->cur,"ONCEOUT") || kw(&L->cur,"WORKCLAIM") || kw(&L->cur,"JOBCLAIM")){
+    char path[CUBALC_HOST_STR_MAX], body[CUBALC_HOST_STR_MAX];
+    char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+    const char *slash;
+    size_t n;
+    int created = 0, hit = 0;
+    long pid = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    path[0] = 0; body[0] = 0;
+    absfile[0] = 0; parent[0] = 0; absparent[0] = 0;
+    if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+      fail_at(vm, L, "CLAIMOUT needs path — CLAIMOUT \"work/deep/item.claim\" [body]");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (resolve_str_arg(vm, L, body, sizeof body) != 0)
+        body[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long nv = parse_expr(vm, L);
+      snprintf(body, sizeof body, "%ld", nv);
+    }
+#if defined(CUBALC_OS_WINDOWS)
+    pid = 0;
+#else
+    pid = (long)getpid();
+#endif
+    if (!body[0])
+      snprintf(body, sizeof body, "%ld\n", pid);
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "CLAIMOUT: empty path");
+      var_set_str(vm, "ERR", "CLAIMOUT: empty path");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "CLAIMOUT_N", 0);
+      var_set_num(vm, "CLAIM_HIT", 0);
+      var_set_num(vm, "CLAIMOUT_CREATED", 0);
+      var_set_num(vm, "CLAIM_PID", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+      snprintf(absfile, sizeof absfile, "%s", hr.str);
+    else
+      snprintf(absfile, sizeof absfile, "%s", path);
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", absfile);
+      n = strlen(work);
+      while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+        work[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else if (slash && slash == work) {
+        snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+      } else {
+        snprintf(parent, sizeof parent, ".");
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "CLAIMOUT: mkdir parent failed";
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "CLAIMOUT_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "CLAIMOUT_N", 0);
+      var_set_num(vm, "CLAIM_HIT", 0);
+      var_set_num(vm, "CLAIMOUT_CREATED", 0);
+      var_set_num(vm, "CLAIM_PID", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+#if defined(CUBALC_OS_WINDOWS)
+    {
+      FILE *lf = fopen(absfile, "r");
+      if (!lf) {
+        cubalc_host_result wr;
+        if (cubalc_host_write(absfile, body, &wr) == 0)
+          hit = 1;
+      } else {
+        fclose(lf);
+      }
+    }
+#else
+    {
+      int fd = open(absfile, O_CREAT | O_EXCL | O_WRONLY, 0644);
+      if (fd >= 0) {
+        size_t bl = strlen(body);
+        ssize_t w = write(fd, body, bl);
+        (void)w;
+        close(fd);
+        hit = 1;
+      }
+    }
+#endif
+    if (hit) {
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "CLAIMOUT", absfile);
+      var_set_str(vm, "CLAIM", absfile);
+      var_set_str(vm, "CLAIMFILE", absfile);
+      var_set_str(vm, "PATH", absfile);
+      var_set_str(vm, "CLAIMOUT_PARENT", absparent);
+      var_set_str(vm, "DIRNAME", absparent);
+      var_set_str(vm, "PARENT", absparent);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "CLAIMOUT_N", 1);
+      var_set_num(vm, "CLAIM_HIT", 1);
+      var_set_num(vm, "CLAIM_N", 1);
+      var_set_num(vm, "CLAIM_PID", pid);
+      var_set_num(vm, "CLAIMOUT_CREATED", (long)created);
+      var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+      var_set_num(vm, "PATH_EXIST", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# claimout → %s hit=1 created=%d\n", absfile, created);
+      bump(vm); return 1;
+    }
+    var_set_str(vm, "LAST", absfile);
+    var_set_str(vm, "CLAIMOUT", absfile);
+    var_set_str(vm, "CLAIMOUT_PARENT", absparent);
+    var_set_str(vm, "LAST_ERR", "CLAIMOUT: exists");
+    var_set_str(vm, "ERR", "CLAIMOUT: exists");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+    vm->last_n = 0;
+    var_set_num(vm, "LAST_N", 0);
+    var_set_num(vm, "CLAIMOUT_N", 0);
+    var_set_num(vm, "CLAIM_HIT", 0);
+    var_set_num(vm, "CLAIM_N", 0);
+    var_set_num(vm, "CLAIM_PID", 0);
+    var_set_num(vm, "CLAIMOUT_CREATED", (long)created);
+    var_set_num(vm, "OK", 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# claimout → %s hit=0 created=%d\n", absfile, created);
     bump(vm); return 1;
   }
   /* BOOLFLAG name[,|alt...] [OR ENV name]* [OR|DEFAULT 0|1]
