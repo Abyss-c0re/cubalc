@@ -2040,6 +2040,81 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "READ_OK", 1);
       bump(vm); return 1;
     }
+    /* SYS LOADPLATE|READPLATE|PLATEREAD path [OR|DEFAULT|FROM defaults]
+     * Soft agent plate load: miss or non-object → fallback (default "{}"), OK=1.
+     * LAST = plate text · LAST_N = 1 file-hit | 0 fallback.
+     * LOADPLATE_HIT · LOADPLATE_PATH · LOADPLATE_FALLBACK · READ_OK mirrors hit.
+     * Usability: state plate boot without READ+trim+IF+JSONDEFAULTS glue. */
+    if (kw(&L->cur,"LOADPLATE") || kw(&L->cur,"READPLATE") || kw(&L->cur,"PLATEREAD") ||
+        kw(&L->cur,"LOADJSON") || kw(&L->cur,"READJSON") || kw(&L->cur,"JSONLOAD") ||
+        kw(&L->cur,"PLATELOAD") || kw(&L->cur,"OPENPLATE") || kw(&L->cur,"GETPLATE")){
+      char path[512], fb[CUBALC_HOST_STR_MAX], plate[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr, keys;
+      int have_fb = 0, hit = 0;
+      const char *body;
+      lex_next(L);
+      path[0] = 0;
+      fb[0] = 0;
+      plate[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS LOADPLATE path [OR defaults] — need plate path");
+        return -1;
+      }
+      if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+          kw(&L->cur,"FALLBACK") || kw(&L->cur,"FROM") || kw(&L->cur,"WITH") ||
+          kw(&L->cur,"USING")) {
+        lex_next(L);
+        if (resolve_str_arg(vm, L, fb, sizeof fb) == 0)
+          have_fb = 1;
+        else {
+          fail(vm, "SYS LOADPLATE path OR defaults — need fallback plate");
+          return -1;
+        }
+      }
+      if (!have_fb)
+        snprintf(fb, sizeof fb, "%s", "{}");
+      /* ensure fallback is object-looking; else force {} */
+      {
+        const char *f = fb;
+        while (*f == ' ' || *f == '\t' || *f == '\n' || *f == '\r') f++;
+        if (*f != '{')
+          snprintf(fb, sizeof fb, "%s", "{}");
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_read(path, &hr) == 0 && hr.str[0]) {
+        body = hr.str;
+        while (*body == ' ' || *body == '\t' || *body == '\n' || *body == '\r')
+          body++;
+        if (*body == '{') {
+          /* require parseable key set (object) */
+          memset(&keys, 0, sizeof keys);
+          if (cubalc_host_json_keys(body, &keys) == 0) {
+            snprintf(plate, sizeof plate, "%s", body);
+            hit = 1;
+          }
+        }
+      }
+      if (!hit) {
+        snprintf(plate, sizeof plate, "%s", fb);
+        var_set_str(vm, "LAST_ERR",
+                    hr.err[0] ? hr.err : "LOADPLATE: miss or non-object — using fallback");
+        /* sticky soft hint only; OK stays 1 for agent boot continue */
+      }
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = hit ? 1 : 0;
+      var_set_num(vm, "LAST_N", hit ? 1 : 0);
+      var_set_str(vm, "LOADPLATE", plate);
+      var_set_str(vm, "READPLATE", plate);
+      var_set_str(vm, "LOADPLATE_PATH", path);
+      var_set_num(vm, "LOADPLATE_HIT", hit);
+      var_set_num(vm, "LOADPLATE_FALLBACK", hit ? 0 : 1);
+      var_set_num(vm, "READ_OK", hit);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# sys loadplate → hit=%d path=%s\n", hit, path);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WRITE")){
       lex_next(L);
       char path[512]; path[0]=0;
@@ -34127,6 +34202,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
       {"SYS READ", "SYS READ [OR|SOFT] path [OR fallback] — soft/optional plate"},
+      {"LOADPLATE", "LOADPLATE|READPLATE path [OR defaults] — soft plate file load · LAST_N=1 hit|0 fallback"},
+      {"SYS LOADPLATE", "SYS LOADPLATE path [OR defaults] — agent state plate boot · non-object → fallback"},
+      {"READPLATE", "READPLATE alias of LOADPLATE"},
+      {"PLATEREAD", "PLATEREAD alias of LOADPLATE"},
+      {"LOADJSON", "LOADJSON alias of LOADPLATE"},
       {"SYS RM", "SYS RM|UNLINK|DELETE path — remove file · missing soft OK"},
       {"SYS RENAME", "SYS RENAME|MV|MOVE from to — move plate path"},
       {"SYS COPY", "SYS COPY|CP src dst — duplicate file · LAST_N=bytes"},

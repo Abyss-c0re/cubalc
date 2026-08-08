@@ -1,0 +1,120 @@
+# LOADPLATE / READPLATE / PLATEREAD — soft plate-file load for agent state boot
+# Miss or non-object → OR defaults (default "{}"). LAST_N=1 hit | 0 fallback.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_loadplate"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "boot.json"
+LET path = LAST
+SYS JOIN dir "missing.json"
+LET miss = LAST
+SYS JOIN dir "notobj.txt"
+LET bad = LAST
+
+# write a real plate
+SYS JSONOBJ "ok" true "n" 3 "role" "worker"
+LET plate = LAST
+SYS WRITE path plate
+ASSERT OK == 1
+
+# hit: load plate from file
+SYS LOADPLATE path
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LOADPLATE_HIT == 1
+ASSERT LOADPLATE_FALLBACK == 0
+ASSERT READ_OK == 1
+SYS EQS LOADPLATE_PATH path
+ASSERT LAST_N == 1
+LET loaded = LAST
+SYS JSONN "n" FROM loaded
+ASSERT LAST_N == 3
+SYS JSON "role" FROM loaded
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSONHASALL loaded "ok" "n" "role"
+ASSERT LAST_N == 1
+
+# aliases
+SYS READPLATE path
+ASSERT LOADPLATE_HIT == 1
+SYS PLATEREAD path
+ASSERT LAST_N == 1
+SYS LOADJSON path
+ASSERT LAST_N == 1
+SYS OPENPLATE path
+ASSERT LAST_N == 1
+
+# miss → default {}
+SYS LOADPLATE miss
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT LOADPLATE_HIT == 0
+ASSERT LOADPLATE_FALLBACK == 1
+ASSERT READ_OK == 0
+SYS JSONEMPTY LAST
+ASSERT LAST_N == 1
+
+# miss → custom defaults plate
+SYS JSONOBJ "retries" 3 "soft" 1
+LET defs = LAST
+SYS LOADPLATE miss OR defs
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT LOADPLATE_FALLBACK == 1
+LET got = LAST
+SYS JSONN "retries" FROM got
+ASSERT LAST_N == 3
+SYS JSONN "soft" FROM got
+ASSERT LAST_N == 1
+
+# FROM alias for defaults
+SYS LOADPLATE miss FROM defs
+ASSERT LOADPLATE_FALLBACK == 1
+LET got = LAST
+SYS JSONN "retries" FROM got
+ASSERT LAST_N == 3
+
+# non-object file → fallback
+SYS WRITE bad "not a plate\n"
+SYS LOADPLATE bad OR defs
+ASSERT OK == 1
+ASSERT LOADPLATE_HIT == 0
+LET got = LAST
+SYS JSONN "retries" FROM got
+ASSERT LAST_N == 3
+
+# array is not object plate → fallback
+SYS WRITE bad "[1,2,3]"
+SYS LOADPLATE bad
+ASSERT LOADPLATE_HIT == 0
+SYS JSONEMPTY LAST
+ASSERT LAST_N == 1
+
+# hit ignores trailing OR defaults
+SYS LOADPLATE path OR defs
+ASSERT LOADPLATE_HIT == 1
+LET got = LAST
+SYS JSONN "n" FROM got
+ASSERT LAST_N == 3
+# defaults not applied on hit
+SYS JSONHASALL got "retries"
+ASSERT LAST_N == 0
+
+# agent boot pattern: load then fill remaining defaults
+SYS LOADPLATE miss OR "{}"
+SYS JSONDEFAULTS LAST defs
+LET boot = LAST
+SYS JSONN "retries" FROM boot
+ASSERT LAST_N == 3
+SYS JSONN "soft" FROM boot
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM path
+SYS RM bad
+SYS RM miss
