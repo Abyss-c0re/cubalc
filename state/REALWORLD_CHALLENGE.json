@@ -1857,6 +1857,6 @@
     "NEEDP require path exit_code 0 until EXIT after HASPALL precheck",
     "plate_boot create-on-miss made missing path keys soft-success"
   ],
-  "commit": "pending",
+  "commit": "b24bd83",
   "ts": "2026-08-08T20:00:30Z"
 }
