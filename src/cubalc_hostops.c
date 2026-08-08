@@ -387,6 +387,148 @@ int cubalc_host_rmtree(const char *path, cubalc_host_result *r) {
   return 0;
 }
 
+/* Refuse dest inside src (would recurse forever). Same path ok only for file copy. */
+static int cubalc_path_is_under(const char *parent, const char *child) {
+  size_t n;
+  if (!parent || !child || !parent[0] || !child[0]) return 0;
+  n = strlen(parent);
+  if (strncmp(child, parent, n) != 0) return 0;
+  if (child[n] == 0) return 1; /* equal */
+  if (child[n] == '/' || child[n] == '\\') return 1;
+  return 0;
+}
+
+/* Recursive copy: file → cubalc_host_copy; dir → mkdir dest + children.
+ * *count entries, *bytes file payload. Does not follow dir symlinks (copy as file if possible). */
+static int cubalc_cptree_rec(const char *src, const char *dst,
+                             long *count, long *bytes, int depth) {
+  struct stat st;
+  DIR *d;
+  struct dirent *ent;
+  cubalc_host_result hr;
+  if (!src || !src[0] || !dst || !dst[0] || !count || !bytes) return -1;
+  if (depth > 64) {
+    errno = ELOOP;
+    return -1;
+  }
+  if (lstat(src, &st) != 0) {
+    errno = errno ? errno : ENOENT;
+    return -1;
+  }
+  if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+      && !S_ISLNK(st.st_mode)
+#endif
+      ) {
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(dst, &hr) != 0) {
+      errno = EIO;
+      return -1;
+    }
+    (*count)++;
+    d = opendir(src);
+    if (!d) return -1;
+    while ((ent = readdir(d)) != NULL) {
+      char schild[CUBALC_HOST_STR_MAX], dchild[CUBALC_HOST_STR_MAX];
+      size_t sl, dl, nl;
+      if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+        continue;
+      sl = strlen(src);
+      dl = strlen(dst);
+      nl = strlen(ent->d_name);
+      if (sl + 1 + nl + 1 >= sizeof schild || dl + 1 + nl + 1 >= sizeof dchild) {
+        closedir(d);
+        errno = ENAMETOOLONG;
+        return -1;
+      }
+      if (sl > 0 && (src[sl - 1] == '/' || src[sl - 1] == '\\'))
+        snprintf(schild, sizeof schild, "%s%s", src, ent->d_name);
+      else
+        snprintf(schild, sizeof schild, "%s/%s", src, ent->d_name);
+      if (dl > 0 && (dst[dl - 1] == '/' || dst[dl - 1] == '\\'))
+        snprintf(dchild, sizeof dchild, "%s%s", dst, ent->d_name);
+      else
+        snprintf(dchild, sizeof dchild, "%s/%s", dst, ent->d_name);
+      if (cubalc_cptree_rec(schild, dchild, count, bytes, depth + 1) != 0) {
+        closedir(d);
+        return -1;
+      }
+    }
+    closedir(d);
+    return 0;
+  }
+  /* file / symlink / other: copy bytes via host_copy (follows symlink content) */
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_copy(src, dst, &hr) != 0) {
+    errno = EIO;
+    return -1;
+  }
+  (*count)++;
+  *bytes += hr.n;
+  return 0;
+}
+
+/* Usability: SYS CPTREE|COPYTREE src dest — recursive plate tree snapshot without shell cp -r.
+ * File → COPY; dir → mkdir dest + children. Soft miss src. r->n=entries, r->code=bytes. */
+int cubalc_host_cptree(const char *src, const char *dst, cubalc_host_result *r) {
+  long count = 0, bytes = 0;
+  struct stat st;
+  char asrc[CUBALC_HOST_STR_MAX], adst[CUBALC_HOST_STR_MAX];
+  cubalc_host_result hr;
+  r_clear(r);
+  if (!src || !src[0] || !dst || !dst[0]) {
+    snprintf(r->err, sizeof r->err, "cptree: empty path");
+    return -1;
+  }
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(src, &hr) == 0 && hr.str[0])
+    snprintf(asrc, sizeof asrc, "%s", hr.str);
+  else
+    snprintf(asrc, sizeof asrc, "%s", src);
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(dst, &hr) == 0 && hr.str[0])
+    snprintf(adst, sizeof adst, "%s", hr.str);
+  else
+    snprintf(adst, sizeof adst, "%s", dst);
+  if (lstat(asrc, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "cptree: missing source");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "cptree: %s", strerror(errno));
+    return -1;
+  }
+  /* dest under src dir would infinite-loop */
+  if (S_ISDIR(st.st_mode) && cubalc_path_is_under(asrc, adst) &&
+      strcmp(asrc, adst) != 0) {
+    snprintf(r->err, sizeof r->err, "cptree: dest inside src");
+    return -1;
+  }
+  if (strcmp(asrc, adst) == 0 && !S_ISDIR(st.st_mode)) {
+    /* file self-copy: treat as ok no-op like host_copy */
+    snprintf(r->str, sizeof r->str, "%s", adst);
+    r->n = 1;
+    r->code = (int)st.st_size;
+    r->ok = 1;
+    return 0;
+  }
+  if (strcmp(asrc, adst) == 0 && S_ISDIR(st.st_mode)) {
+    snprintf(r->err, sizeof r->err, "cptree: dest is src");
+    return -1;
+  }
+  if (cubalc_cptree_rec(asrc, adst, &count, &bytes, 0) != 0) {
+    if (r->err[0] == 0)
+      snprintf(r->err, sizeof r->err, "cptree: %s",
+               errno ? strerror(errno) : "fail");
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", adst);
+  r->n = count;
+  r->code = (int)(bytes > 0x7fffffff ? 0x7fffffff : bytes);
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS RENAME|MV from to — move plate without shell. */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) {
   r_clear(r);

@@ -41,6 +41,9 @@ int cubalc_host_rmdir(const char *path, cubalc_host_result *r);
 /* recursive tree remove (file or dir). missing → ok n=0; r->n = entries removed.
  * Does not follow directory symlinks (unlinks the link). Soft fail on errors. */
 int cubalc_host_rmtree(const char *path, cubalc_host_result *r);
+/* recursive tree copy src → dest. file → copy; dir → mkdir + children.
+ * r->n = entries created/copied; r->code = bytes of file data. Soft miss src. */
+int cubalc_host_cptree(const char *src, const char *dst, cubalc_host_result *r);
 /* rename/move path; soft miss if from missing */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */

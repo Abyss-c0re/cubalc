@@ -1,0 +1,124 @@
+# CPTREE / COPYTREE / CPDIR — recursive copy file or directory tree
+# Snapshot nested agent workspaces without shell cp -r or WALK+COPYALL glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_cpt_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+SYS JOIN base "src"
+LET src = LAST
+SYS JOIN base "dst"
+LET dst = LAST
+SYS JOIN base "dst2"
+LET dst2 = LAST
+SYS JOIN base "one.dat"
+LET one = LAST
+SYS JOIN base "one.copy"
+LET onec = LAST
+
+# nested source tree
+SYS JOIN src "a/b/c.txt"
+LET f1 = LAST
+WRITEOUT f1 "deep"
+ASSERT OK == 1
+SYS JOIN src "a/b/d.txt"
+LET f2 = LAST
+WRITEOUT f2 "sib"
+ASSERT OK == 1
+SYS JOIN src "a/e.txt"
+LET f3 = LAST
+WRITEOUT f3 "mid"
+ASSERT OK == 1
+SYS JOIN src "empty"
+SYS MKDIR LAST
+ASSERT OK == 1
+
+# file-only cptree
+SYS WRITE one "solo"
+ASSERT OK == 1
+CPTREE one onec
+ASSERT OK == 1
+ASSERT CPTREE_N == 1
+ASSERT CPTREE_BYTES == 4
+SYS READ onec
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+
+# full tree copy — top-level
+CPTREE src dst
+ASSERT OK == 1
+ASSERT CPTREE_N >= 5
+ASSERT CPTREE_BYTES >= 10
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS JOIN dst "a/b/c.txt"
+SYS READ LAST
+SYS EQS LAST "deep"
+ASSERT LAST_N == 1
+SYS JOIN dst "a/e.txt"
+SYS READ LAST
+SYS EQS LAST "mid"
+ASSERT LAST_N == 1
+SYS JOIN dst "empty"
+SYS ISDIR LAST
+ASSERT LAST_N == 1
+# source intact
+SYS JOIN src "a/b/c.txt"
+SYS READ LAST
+SYS EQS LAST "deep"
+ASSERT LAST_N == 1
+
+# SYS form + COPYTREE alias
+SYS CPTREE src dst2
+ASSERT OK == 1
+ASSERT CPTREE_N >= 5
+SYS JOIN dst2 "a/b/d.txt"
+SYS READ LAST
+SYS EQS LAST "sib"
+ASSERT LAST_N == 1
+
+# CPDIR alias re-copy into fresh
+SYS JOIN base "dst3"
+LET dst3 = LAST
+CPDIR src dst3
+ASSERT OK == 1
+ASSERT CPDIR_N >= 5
+
+# missing source soft
+CPTREE "/no/such/cptree/src" dst
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty path soft
+CPTREE "" dst
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# dest inside src refused
+SYS JOIN src "inside"
+LET bad = LAST
+CPTREE src bad
+ASSERT OK == 0
+LET e3 = LAST_ERR
+SYS HAS e3 "inside"
+ASSERT LAST_N == 1
+
+# cleanup
+RMTREE base
+ASSERT OK == 1
+
+PRINT "cptree ok"
+ASSERT OK == 1

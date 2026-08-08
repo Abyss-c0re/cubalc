@@ -517,6 +517,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 487. ~~**`TEEOUT` / `TEEWOUT`**~~ **done** (ENSUREPARENT + write keep body in LAST · nested plate write then GREP/HAS without READ back).
 488. ~~**`CLAIMOUT` / `CLAIMNEST`**~~ **done** (ENSUREPARENT + exclusive create · nested work-item claims without DIRNAME+CLAIM glue).
 489. ~~**`RMTREE` / `RMNEST` / `RMRF`**~~ **done** (recursive file/dir tree remove · clean nested MKTEMPDIR/CLAIMOUT workspaces without shell rm -rf).
+490. ~~**`CPTREE` / `COPYTREE` / `CPDIR`**~~ **done** (recursive file/dir tree copy · snapshot nested workspaces without shell cp -r).
 
 ## Tick protocol
 
