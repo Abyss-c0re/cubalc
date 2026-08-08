@@ -1182,6 +1182,6 @@
     "sed rename left SYS WRITE roster_path roster bug",
     "selftest 355/355 green"
   ],
-  "commit": "pending",
+  "commit": "4bb69b2",
   "ts": "2026-08-08T12:32:04Z"
 }
