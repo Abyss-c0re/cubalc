@@ -1335,6 +1335,6 @@
     "HASALL keeps plate chain peel load=10 ok",
     "partial→gate deny miss_bag=zone positive"
   ],
-  "commit": "pending",
+  "commit": "c93af92",
   "ts": "2026-08-08T14:33:40Z"
 }
