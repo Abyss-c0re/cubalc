@@ -1,75 +1,63 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 220,
-  "program": "programs/realworld/peer_session_setp_from_board.cubalc",
-  "theme": "SETP/MERGEP/DEFAULTP/TOGGLEP FROM peer session without PLATE clobber",
-  "version": "1.15.581-usability",
+  "iter": 221,
+  "program": "programs/realworld/peer_contract_needp_from_board.cubalc",
+  "theme": "NEEDP/HASP/KEYSP/DUMPP FROM peer contract gate",
+  "version": "1.15.583-usability",
   "pass": true,
-  "prior_note": "iter 219 FILLP FROM; this iter first realworld SETP FROM + MERGEP FROM (1130/1131)",
+  "prior_note": "iter 220 SETP FROM; this iter first realworld NEEDP+DUMPP FROM (1132/1133)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "agent plate plate-agent n=1",
+      "cmd": "agent plate",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "peer",
-      "cmd": "seed peer GETP FROM host",
+      "cmd": "seed peer HASP FROM host",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "tick",
-      "cmd": "INCP FROM peer n\u219211 plate n=1",
+      "name": "keys",
+      "cmd": "KEYSP FROM n=4 vs PLATE",
       "ok": true,
-      "note": "tick"
+      "note": "keys"
     },
     {
-      "name": "set",
-      "cmd": "SETP FROM host+role",
+      "name": "has",
+      "cmd": "HASP+HASPALL complete",
       "ok": true,
-      "note": "set"
+      "note": "has"
     },
     {
-      "name": "get",
-      "cmd": "GETP FROM + OR fallback",
+      "name": "need",
+      "cmd": "NEEDP FROM + trail + PLATE",
       "ok": true,
-      "note": "get"
+      "note": "need"
     },
     {
-      "name": "merge",
-      "cmd": "MERGEP status overlay",
+      "name": "dump",
+      "cmd": "DUMPP FROM plate_info",
       "ok": true,
-      "note": "merge"
+      "note": "dump"
     },
     {
-      "name": "default",
-      "cmd": "DEFAULTP seed then kept",
+      "name": "softmiss",
+      "cmd": "HASPALL miss status bag",
       "ok": true,
-      "note": "default"
-    },
-    {
-      "name": "flag",
-      "cmd": "TOGGLEP debug on/off PLATE clean",
-      "ok": true,
-      "note": "flag"
-    },
-    {
-      "name": "del",
-      "cmd": "DELP FROM tmp",
-      "ok": true,
-      "note": "del"
+      "note": "softmiss"
     },
     {
       "name": "gate",
-      "cmd": "peer host + plate agent",
+      "cmd": "NEEDP+DUMPP admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "empty peer OR; SETP_FROM=0; DELP miss",
+      "cmd": "empty peer + PLATE dump",
       "ok": true,
       "note": "edges"
     },
@@ -81,7 +69,7 @@
     },
     {
       "name": "require",
-      "cmd": "REQUIRE exit 2",
+      "cmd": "softmiss REQUIRE exit 2",
       "ok": true,
       "note": "hard env"
     },
@@ -89,7 +77,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "369/370 pre-existing sys_kvfileensure"
+      "note": "371/372 pre-existing sys_kvfileensure"
     }
   ],
   "weaknesses": [
@@ -1932,6 +1920,38 @@
       "title": "WRITE STATUS omit trailing NL",
       "detail": "cat -A STATUS last gate line lacks $.",
       "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W231",
+      "severity": "med",
+      "area": "lang|needp",
+      "title": "NEEDP FROM hard-fails; no soft NEEDP twin",
+      "detail": "Incomplete NEEDP FROM halts like NEEDP on PLATE. Soft contract probes must use HASPALL FROM + HASPALL_MISS_N / miss bag instead of NEEDP.",
+      "repro": "NEEDP FROM peer status \u2192 hard fail; HASPALL FROM peer agent status \u2192 soft miss bag"
+    },
+    {
+      "id": "W232",
+      "severity": "low",
+      "area": "lang|dumpp",
+      "title": "DUMPP FROM empty {} still DUMPP_FROM=1 HAS=1 N=0",
+      "detail": "Empty peer object dumps successfully with keys_n=0; agents must check DUMPP_N not only DUMPP_FROM/HAS for admit gates.",
+      "repro": "LET peer={}; DUMPP FROM peer \u2192 FROM=1 N=0"
+    },
+    {
+      "id": "W233",
+      "severity": "low",
+      "area": "lang|keysp",
+      "title": "KEYSP order not contract-stable",
+      "detail": "KEYSP FROM returns bag of keys; order not schema-ordered. Contract compare needs HASLINE each required key not EQS full bag.",
+      "repro": "KEYSP FROM peer; EQS to fixed order may flake"
+    },
+    {
+      "id": "W234",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL",
+      "detail": "cat -A STATUS last line without $.",
+      "repro": "cat -A STATUS.txt"
     }
   ],
   "workarounds": [
@@ -2017,14 +2037,14 @@
     "SYS CAT multi-arg for EQS expected bodies"
   ],
   "language_gaps": [
-    "FROM is in-memory object only \u2014 no path-addressed plate ops",
-    "no auto-persist twin of plate_save for arbitrary vars",
-    "dual-source FILLP still missing (prior W223)"
+    "no soft NEEDP FROM (OK=0 + miss bag without halt)",
+    "KEYSP unordered for schema equality",
+    "FROM still memory-only (prior W227/W228)"
   ],
   "issues_faced": [
-    "peer mutations require explicit WRITE peer.json each action",
-    "must reload PLATE from agent.json each action for GETP identity checks"
+    "NEEDP fail path only host-side; board uses HASPALL softmiss for incomplete contract",
+    "empty DUMPP still FROM=1 \u2014 gate uses N==4"
   ],
-  "commit": "cd783de",
-  "ts": "2026-08-08T23:18:48Z"
+  "commit": "",
+  "ts": "2026-08-08T23:43:47Z"
 }
