@@ -1,53 +1,47 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 180,
-  "program": "programs/realworld/tree_promote_verify_board.cubalc",
-  "theme": "MVTREE + DIRSIZE + EQTREE stage promote + disk budget + gold verify",
-  "version": "1.15.484-usability",
+  "iter": 181,
+  "program": "programs/realworld/greptree_scrub_board.cubalc",
+  "theme": "GREPTREE + REPLACETREE nested secret scan + bulk scrub (no shell grep -r/sed)",
+  "version": "1.15.486-usability",
   "pass": true,
-  "prior_note": "iter 179 CPTREE+RMTREE; this iter first realworld MVTREE(1032)+DIRSIZE(1033)+EQTREE(1034)",
+  "prior_note": "iter 180 MVTREE+DIRSIZE+EQTREE; this iter first realworld GREPTREE(1035)+REPLACETREE(1036); plate restored after accidental delete",
   "tests": [
     {
-      "name": "stage",
-      "cmd": "WRITEOUT nested stage tree + empty dir",
+      "name": "seed",
+      "cmd": "WRITEOUT nested tree with SECRET tokens",
       "ok": true,
-      "note": "stage"
+      "note": "seed"
     },
     {
-      "name": "size",
-      "cmd": "DIRSIZE 15B 2 files 3 dirs; MAXB=5 over soft",
+      "name": "scan",
+      "cmd": "GREPTREE SECRET N=2 SCAN=3",
       "ok": true,
-      "note": "DIRSIZE"
+      "note": "GREPTREE"
     },
     {
-      "name": "gold",
-      "cmd": "CPTREE stage\u2192gold before promote",
+      "name": "substr",
+      "cmd": "SECRE substring also hits SECRET_ABC (W93)",
       "ok": true,
-      "note": "gold"
+      "note": "W93"
     },
     {
-      "name": "promote",
-      "cmd": "MVTREE RENAMED=1 stage gone live ok",
+      "name": "scani",
+      "cmd": "GREPTREEI secret hits plain+svc (3)",
       "ok": true,
-      "note": "MVTREE"
+      "note": "GREPTREEI"
     },
     {
-      "name": "verify_eq",
-      "cmd": "EQTREE live gold EQTREE=1",
+      "name": "scrub",
+      "cmd": "REPLACETREE files=2 subs=2; second N=0",
       "ok": true,
-      "note": "EQTREE"
+      "note": "REPLACETREE"
     },
     {
-      "name": "verify_diff",
-      "cmd": "mutate live \u2192 EQTREE=0 reason content",
+      "name": "post",
+      "cmd": "scan SECRET empty soft; missing REQUIRE shell 2",
       "ok": true,
-      "note": "W92"
-    },
-    {
-      "name": "require",
-      "cmd": "promote missing REQUIRE=1 shell 2",
-      "ok": true,
-      "note": "hard"
+      "note": "edges"
     },
     {
       "name": "selftest",
@@ -792,26 +786,50 @@
       "title": "EQTREE OK=1 on both equal and unequal; equality is EQTREE/LAST_N",
       "detail": "EQTREE always OK=1 when both paths exist; equal \u2192 EQTREE=1 LAST_N=1; differ \u2192 EQTREE=0 LAST_N=0 with EQTREE_REASON content|missing|extra_b and EQTREE_DIFF path fragment. Soft OK=0 only for missing/empty args. Agents that branch on OK alone will false-admit drift. Board uses eq_n + EXIT under REQUIRE.",
       "repro": "EQTREE a b equal OK1 EQTREE1; mutate b \u2192 OK1 EQTREE0 reason content"
+    },
+    {
+      "id": "W93",
+      "severity": "med",
+      "area": "lang|greptree",
+      "title": "GREPTREE is literal substring, not whole-word token match",
+      "detail": "GREPTREE root needle scans file contents as substring (like grep without word boundaries). Needle SECRE matches SECRET_ABC; plain 'no secret here' hits GREPTREEI secret. Agents needing exact tokens must post-filter LAST path bag or use longer unique needles. GREPTREE_N=0 is still OK=1 (empty hit set is success).",
+      "repro": "seed SECRET_ABC; GREPTREE SECRE \u2192 N>=1; GREPTREE zzz \u2192 OK1 N0"
+    },
+    {
+      "id": "W94",
+      "severity": "low",
+      "area": "lang|greptree",
+      "title": "GREPTREE returns path bag + SCAN count; GREPTREEI for case-fold",
+      "detail": "Positive: LAST is multiline paths of matching files; GREPTREE_N file hits; GREPTREE_SCAN files examined. GREPTREEI finds WARNING via warning. Missing root OK=0; empty path OK=0. Distinct from bag SYS GREP which is line-level in memory.",
+      "repro": "GREPTREE base error \u2192 err.log; GREPTREEI base warning \u2192 warn.log"
+    },
+    {
+      "id": "W95",
+      "severity": "low",
+      "area": "lang|replacetree",
+      "title": "REPLACETREE bulk REPLACEALL; N=files SUBS=replacements; empty old no-op",
+      "detail": "Positive: REPLACETREE root old new rewrites nested files; REPLACETREE_N files touched; REPLACETREE_SUBS total substitutions. Second pass when already replaced \u2192 N=0 SUBS=0 OK=1. Empty old string no-op OK=1. Missing root soft OK=0. LAST is path bag of rewritten files.",
+      "repro": "REPLACETREE base OLD NEW \u2192 N2 SUBS3; again \u2192 N0"
     }
   ],
   "workarounds": [
-    "DIRSIZE path; use DIRSIZE/LAST_N for bytes; MAXB gate in board",
-    "MVTREE stage live; check RENAMED + EXIST stage 0; ignore N as node count on rename (W91)",
-    "EQTREE live gold; branch on EQTREE not OK (W92); EQTREE_REASON for diagnose",
-    "CUBALC_TPV_REQUIRE=1 for shell-visible promote/verify fails",
-    "Keep VARS lean (~97) under 128 (W81)"
+    "GREPTREE root needle; treat N=0 as empty not error; use long unique needles (W93)",
+    "GREPTREEI for case-insensitive secret scans",
+    "REPLACETREE root old new; check SUBS for actual rewrites; second pass idempotent",
+    "CUBALC_GTS_REQUIRE=1 for shell-visible scan miss on missing root",
+    "Keep VARS lean (~89) under 128 (W81)"
   ],
   "language_gaps": [
-    "MVTREE_N unified node count even on rename (or document rename N=1 clearly in HELP)",
-    "EQTREE hard mode / REQUIRE EQ that fails process on differ",
-    "Cookbook: stage\u2192size\u2192gold\u2192promote\u2192verify deploy lane"
+    "GREPTREE whole-word / regex mode (currently literal substring only)",
+    "REPLACETREE dry-run / preview without write",
+    "Cookbook: seed\u2192scan\u2192scrub\u2192rescan secret hygiene lane"
   ],
   "issues_faced": [
-    "MVTREE rename N=1 surprising vs CPTREE N (W91)",
-    "EQTREE OK stays 1 on content drift \u2014 must read EQTREE knob (W92)",
-    "WRITEOUT cfg omit final NL (W5)",
+    "Plate REALWORLD_CHALLENGE.json was missing in worktree \u2014 restored from HEAD before iter",
+    "GREPTREE SECRE false-friend on SECRET_ABC (W93) \u2014 documented not fixed",
+    "scani secret also hits 'no secret here' in plain (case-fold substring)",
     "selftest 355/355"
   ],
-  "commit": "6676c2e42538d45904e35c2d2d734b09c0b0a29e",
-  "ts": "2026-08-08T06:39:00Z"
+  "commit": "",
+  "ts": "2026-08-08T07:04:00Z"
 }

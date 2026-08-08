@@ -1,0 +1,610 @@
+# greptree_scrub_board.cubalc — GREPTREE + REPLACETREE secret scan + bulk scrub
+#
+# Real use: security/ops agents scan nested config trees for secrets/tokens then
+# bulk-rewrite them without shell grep -r / find|sed glue:
+#   GREPTREE / SEARCHTREE / RGREP — recursive content search (1035)
+#   GREPTREEI — case-insensitive tree search
+#   REPLACETREE / GSUBTREE / SEDTREE — recursive REPLACEALL (1036)
+#   WRITEOUT — seed nested plates with markers
+#
+# First realworld GREPTREE + REPLACETREE board. Distinct from fleet_config_scrub
+# (line GREP/REPLACE) and match_purge (bag SETMATCH).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_gts_$$
+#   ./out/cubalc run programs/realworld/greptree_scrub_board.cubalc \
+#     seed -- --root=/tmp/gts/cfg
+#   ./out/cubalc run ... scan -- --root=... SECRET
+#   ./out/cubalc run ... scrub -- --root=... SECRET REDACTED
+#
+# Plate: STATUS.txt VAL.txt META.txt GTS_REPORT.txt
+# Env: TREE_ROOT CUBALC_GTS_REQUIRE CUBALC_GTS_MIN
+#
+# Edges:
+#   GREPTREE N/SCAN; no-match N=0 OK=1; missing soft; GREPTREEI
+#   REPLACETREE N/SUBS; second pass N=0; empty old no-op
+#   lean VARS (W81); WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "greptree_scrub_board: start"
+DEFAULT ACTION = "list"
+DEFAULT MIN = 1
+DEFAULT USAGE_LINE = "greptree_scrub -- seed|scan|scani|scrub|list -- [--root=D] [needle|old] [new]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+LET targets = RESTPOS
+HASRESTPOS 1
+LET has_rest = LAST_N
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "scrub/tree"
+LET root_dir = LAST
+CLEAR_ERR
+
+GETFLAGOUT root|r OR ENV TREE_ROOT OR root_dir
+LET root_dir = LAST
+LET r_src = GETFLAGOUT_SRC
+LET r_ok = OK
+CLEAR_ERR
+
+LET arg0 = ""
+LET arg1 = ""
+IF has_rest == 1 THEN
+  SYS NTH 0 targets
+  LET arg0 = LAST
+  HASRESTPOS 2
+  IF LAST_N == 1 THEN
+    SYS NTH 1 targets
+    LET arg1 = LAST
+  END
+END
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_GTS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+SYS ENV "CUBALC_GTS_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "GTS_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET match_n = 0
+LET scan_n = 0
+LET sub_n = 0
+LET row = ""
+LET hits = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "seed", "scan", "scani", "scrub", "list", "ls", "drop", "has", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "seed" THEN
+    LET op = "seed"
+  WHEN "scan" THEN
+    LET op = "scan"
+  WHEN "scani" THEN
+    LET op = "scani"
+  WHEN "scrub" THEN
+    LET op = "scrub"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "seed"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "seed needs root"
+    FAIL "seed needs root"
+    CLEAR_ERR
+  ELSE
+    SYS JOIN root_dir "svc/a.env"
+    WRITEOUT LAST "token=SECRET_ABC host=prod"
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "seed write failed"
+    END
+    CLEAR_ERR
+    SYS JOIN root_dir "svc/b/note.txt"
+    WRITEOUT LAST "keep SECRET_ABC in docs"
+    CLEAR_ERR
+    SYS JOIN root_dir "plain.txt"
+    WRITEOUT LAST "no secret here"
+    CLEAR_ERR
+    SYS JOIN root_dir "svc/empty"
+    SYS MKDIR LAST
+    CLEAR_ERR
+    SYS CAT "seed:"
+    LET row = LAST
+    SYS CAT row root_dir
+    LET row = LAST
+    SYS CAT row ":ok"
+    LET row = LAST
+    SYS GREPV "seed:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "seed ok"
+  END
+  PRINT_JSON admit_n bag_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "scan"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS BLANK arg0
+  IF LAST_N == 1 THEN
+    LET arg0 = "SECRET"
+  END
+  CLEAR_ERR
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "scan needs root"
+    FAIL "scan needs root"
+    CLEAR_ERR
+  ELSE
+    GREPTREE root_dir arg0
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "scan soft miss"
+      FAIL "scan soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "scan failed"
+      END
+    ELSE
+      LET match_n = GREPTREE_N
+      LET scan_n = GREPTREE_SCAN
+      LET hits = LAST
+      CLEAR_ERR
+      SYS CAT "scan:"
+      LET row = LAST
+      SYS CAT row arg0
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR match_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":gt"
+      LET row = LAST
+      SYS GREPV "scan:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF match_n > 0 THEN
+        LET hit = 1
+        LET note_msg = "scan hits"
+      ELSE
+        LET miss = 1
+        LET note_msg = "scan empty"
+        FAIL "scan empty"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "scan empty"
+        END
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n match_n scan_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "scani"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS BLANK arg0
+  IF LAST_N == 1 THEN
+    LET arg0 = "secret"
+  END
+  CLEAR_ERR
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "scani needs root"
+    FAIL "scani needs root"
+    CLEAR_ERR
+  ELSE
+    GREPTREEI root_dir arg0
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "scani soft miss"
+      FAIL "scani soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "scani failed"
+      END
+    ELSE
+      LET match_n = GREPTREE_N
+      LET scan_n = GREPTREE_SCAN
+      LET hits = LAST
+      CLEAR_ERR
+      SYS CAT "scani:"
+      LET row = LAST
+      SYS CAT row arg0
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR match_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":gti"
+      LET row = LAST
+      SYS GREPV "scani:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      IF match_n > 0 THEN
+        LET hit = 1
+        LET note_msg = "scani hits"
+      ELSE
+        LET miss = 1
+        LET note_msg = "scani empty"
+        FAIL "scani empty"
+        CLEAR_ERR
+      END
+    END
+  END
+  PRINT_JSON admit_n bag_n match_n scan_n
+  CLEAR_ERR
+END
+
+SYS EQS op "scrub"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS BLANK arg0
+  IF LAST_N == 1 THEN
+    LET arg0 = "SECRET"
+  END
+  CLEAR_ERR
+  SYS BLANK arg1
+  IF LAST_N == 1 THEN
+    LET arg1 = "REDACTED"
+  END
+  CLEAR_ERR
+  IF r_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "scrub needs root"
+    FAIL "scrub needs root"
+    CLEAR_ERR
+  ELSE
+    REPLACETREE root_dir arg0 arg1
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "scrub soft miss"
+      FAIL "scrub soft miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "scrub failed"
+      END
+    ELSE
+      LET match_n = REPLACETREE_N
+      LET sub_n = REPLACETREE_SUBS
+      LET hits = LAST
+      CLEAR_ERR
+      SYS CAT "scrub:"
+      LET row = LAST
+      SYS CAT row arg0
+      LET row = LAST
+      SYS CAT row "->"
+      LET row = LAST
+      SYS CAT row arg1
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR match_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR sub_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":rt"
+      LET row = LAST
+      SYS GREPV "scrub:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      LET admit_n = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+      LET hit = 1
+      LET note_msg = "scrub ok"
+    END
+  END
+  PRINT_JSON admit_n bag_n match_n sub_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  IF has_rest == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop needs key"
+    FAIL "drop needs key"
+    CLEAR_ERR
+  ELSE
+    SYS NTH 0 targets
+    LET row = LAST
+    SYS CAT row ":"
+    SYS GREPV LAST bag
+    LET bag = LAST
+    CLEAR_ERR
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drop ok"
+  END
+  PRINT_JSON admit_n bag_n
+  CLEAR_ERR
+END
+
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS NTH 0 targets
+  LET row = LAST
+  SYS BLANK row
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs key"
+    FAIL "has needs key"
+    CLEAR_ERR
+  ELSE
+    SYS CAT row ":"
+    SYS GREP LAST bag
+    SYS LINES LAST
+    LET has_n = LAST_N
+    IF has_n > 1 THEN
+      LET has_n = 1
+    END
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+  END
+  PRINT_JSON bag_n MIN hit miss
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  GREPTREE "" "x"
+  LET has_n = OK
+  CLEAR_ERR
+  REPLACETREE "" "a" "b"
+  LET admit_n = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON has_n admit_n r_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+LET row = "schema=cubalc.greptree_scrub_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "match_n"
+LET row = LAST
+SYS STR match_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "sub_n"
+LET row = LAST
+SYS STR sub_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "greptree_scrub_board: done"
+PRINT_JSON hit miss bag_n match_n scan_n sub_n r_src note_msg
+EXIT 0
