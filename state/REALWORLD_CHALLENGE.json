@@ -1091,6 +1091,6 @@
     "negative --skip=-1 silently becomes skip0 (W121)",
     "selftest 355/355 green v1.15.508"
   ],
-  "commit": "pending",
+  "commit": "97ae7c4",
   "ts": "2026-08-08T10:48:19Z"
 }
