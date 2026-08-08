@@ -1,0 +1,88 @@
+# JSONCOPY / JCOPY / JSONDUP — copy plate key keeping raw value
+# Snapshot field before mutate without get_raw+JSONSET glue.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "n" 5 "status" "run" "ok" 1
+LET plate = LAST
+
+# copy present key
+SYS JSONCOPY plate "n" "n0"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONCOPY_N == 1
+ASSERT JSONCOPY_SRC == "n"
+ASSERT JSONCOPY_DST == "n0"
+LET plate = LAST
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 5
+SYS JSONN "n0" FROM plate
+ASSERT LAST_N == 5
+
+# src still intact after mutate of copy
+SYS JSONINC plate "n" 3
+LET plate = LAST
+SYS JSONN "n" FROM plate
+ASSERT LAST_N == 8
+SYS JSONN "n0" FROM plate
+ASSERT LAST_N == 5
+
+# soft miss
+SYS JSONCOPY plate "ghost" "g2"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+LET plate = LAST
+SYS JSONHAS "g2" plate
+ASSERT LAST_N == 0
+
+# overwrite dest
+SYS JSONOBJ "a" 10 "b" 20
+SYS JSONCOPY LAST "a" "b"
+ASSERT LAST_N == 1
+LET p2 = LAST
+SYS JSONN "b" FROM p2
+ASSERT LAST_N == 10
+SYS JSONN "a" FROM p2
+ASSERT LAST_N == 10
+
+# same name no-op
+SYS JSONOBJ "k" 7
+SYS JSONCOPY LAST "k" "k"
+ASSERT LAST_N == 1
+SYS JSONN "k" FROM LAST
+ASSERT LAST_N == 7
+
+# 2-arg on LAST
+SYS JSONOBJ "old" "v" "keep" 1
+SYS JSONCOPY "old" "snap"
+ASSERT LAST_N == 1
+LET p3 = LAST
+SYS JSON "snap" FROM p3
+ASSERT LAST == "v"
+SYS JSONN "keep" FROM p3
+ASSERT LAST_N == 1
+
+# string + nested raw preserved
+SYS JSONOBJ "msg" "hello" "meta" RAW "{\"x\":1}"
+SYS JSONCOPY LAST "msg" "msg2"
+LET p4 = LAST
+SYS JSON "msg2" FROM p4
+ASSERT LAST == "hello"
+SYS JSONCOPY p4 "meta" "meta0"
+ASSERT LAST_N == 1
+LET p5 = LAST
+SYS JSONTYPE p5 "meta0"
+ASSERT LAST == "obj"
+
+# aliases
+SYS JCOPY "{\"t\":3}" "t" "u"
+ASSERT LAST_N == 1
+SYS JSONN "u" FROM LAST
+ASSERT LAST_N == 3
+SYS JSONDUP "{\"z\":9}" "z" "zz"
+ASSERT LAST_N == 1
+SYS JSONN "zz" FROM LAST
+ASSERT LAST_N == 9
+
+PRINT "jsoncopy ok"
+ASSERT OK == 1
