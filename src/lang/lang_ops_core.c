@@ -26450,6 +26450,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"USAGE", "USAGE [\"text\"] — sticky CLI usage · REQUIRE ARG/ARGC/FLAG fails append tip"},
       {"HELPFLAG", "HELPFLAG|AUTOHELP [name|,|alt] — if --help|-h present print USAGE and EXIT 0 · default help|h|usage"},
+      {"VERSIONFLAG", "VERSIONFLAG|VERFLAG [name|,|alt] — if --version|-V print VERSION/PROG_VERSION and EXIT 0 · default version|V|ver"},
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
@@ -27955,6 +27956,76 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     vm->return_fn = 1;
     if (vm->trace)
       fprintf(vm->trace, "# helpflag hit=%s exit 0\n", hitnm);
+    bump(vm); return 1;
+  }
+  /* VERSIONFLAG|VERFLAG [name[,|alt...]] — if any version alias is present on CLI,
+   * print language VERSION (or sticky PROG_VERSION) and EXIT 0.
+   * Default aliases: version|V|ver. Miss → LAST_N=0 VERSIONFLAG_HIT=0 continue.
+   * Optional PROG_VERSION string overrides CUBALC_LANG_VERSION for product tools.
+   * Usability: twin of HELPFLAG · no HASFLAG version + IF + VERSION + EXIT glue. */
+  if (kw(&L->cur,"VERSIONFLAG") || kw(&L->cur,"VERFLAG") || kw(&L->cur,"AUTOVERSION") ||
+      kw(&L->cur,"ONVERSION") || kw(&L->cur,"CLIVER") || kw(&L->cur,"SHOWVERSION") ||
+      kw(&L->cur,"VERSION_FLAG") || kw(&L->cur,"IFVERSION")){
+    char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX], msg[CUBALC_HOST_STR_MAX];
+    int hit, nac;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    val[0] = 0;
+    msg[0] = 0;
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      snprintf(aliases, sizeof aliases, "version\nV\nver");
+      snprintf(name, sizeof name, "%s", "version");
+    }
+    hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
+    if (!hit) {
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "VERSIONFLAG_HIT", 0);
+      var_set_num(vm, "VERSIONFLAG_N", 0);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "VERSIONFLAG", name);
+      var_set_str(vm, "FLAG_HIT_NAME", "");
+      var_set_str(vm, "FLAG_ALIAS", "");
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      if (vm->trace)
+        fprintf(vm->trace, "# versionflag %s miss\n", name);
+      bump(vm); return 1;
+    }
+    {
+      Var *pv = var_get(vm, "PROG_VERSION", 0);
+      Var *vv = var_get(vm, "VERSION", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(msg, sizeof msg, "%s", pv->sval);
+      else if (vv && vv->is_str && vv->sval[0])
+        snprintf(msg, sizeof msg, "%s", vv->sval);
+      else
+        snprintf(msg, sizeof msg, "%s", CUBALC_LANG_VERSION);
+    }
+    var_set_str(vm, "LAST", msg);
+    var_set_str(vm, "VERSION", msg);
+    var_set_str(vm, "VERSIONFLAG", name);
+    var_set_str(vm, "FLAG_HIT_NAME", hitnm);
+    var_set_str(vm, "FLAG_ALIAS", hitnm);
+    var_set_str(vm, "FLAG", val[0] ? val : "1");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+    vm->last_n = 1;
+    var_set_num(vm, "LAST_N", 1);
+    var_set_num(vm, "VERSIONFLAG_HIT", 1);
+    var_set_num(vm, "VERSIONFLAG_N", 1);
+    var_set_num(vm, "OK", 1);
+    var_set_num(vm, "EXIT", 0);
+    if (vm->trace) fprintf(vm->trace, "%s\n", msg);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", msg);
+    vm->halt = 1;
+    vm->exit_code = 0;
+    vm->break_loop = 1;
+    vm->return_fn = 1;
+    if (vm->trace)
+      fprintf(vm->trace, "# versionflag hit=%s exit 0\n", hitnm);
     bump(vm); return 1;
   }
   /* CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery.

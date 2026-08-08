@@ -1,0 +1,32 @@
+# VERSIONFLAG / VERFLAG — print version and EXIT 0 on --version|-V
+
+HOLD_FLASH 1
+
+# miss: no version flag → continue
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV SET CUBALC_ARGC "0"
+VERSIONFLAG
+ASSERT LAST_N == 0
+ASSERT VERSIONFLAG_HIT == 0
+
+# program continues after miss
+GETFLAGN workers|w OR 4
+ASSERT LAST_N == 4
+
+# custom aliases without hit
+SYS ENV SET CUBALC_ARG0 "--help"
+SYS ENV SET CUBALC_ARGC "1"
+VERSIONFLAG version|V
+ASSERT LAST_N == 0
+ASSERT VERSIONFLAG_HIT == 0
+
+# VERFLAG alias (miss)
+VERFLAG
+ASSERT VERSIONFLAG_HIT == 0
+
+# PROG_VERSION sticky available for product tools (set before hit path smoke)
+LET PROG_VERSION = "mytool 2.0"
+SYS EQS PROG_VERSION "mytool 2.0"
+ASSERT LAST_N == 1
+
+PRINT "versionflag miss ok"

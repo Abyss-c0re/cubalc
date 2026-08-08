@@ -1,0 +1,6 @@
+# VERSIONFLAG hit — run with: cubalc run 1002b_versionflag_hit.cubalc -- --version
+# Expect: print version string, plate halted=true exit_code=0
+HOLD_FLASH 1
+LET PROG_VERSION = "demo-tool 1.0.0"
+VERSIONFLAG
+PRINT "unreachable"
