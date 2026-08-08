@@ -1,0 +1,84 @@
+# NEEDP/HASP/HASPALL/KEYSP FROM — multi-plate contract + discovery without clobbering PLATE
+# Usability: peer/session plate probes twin of SETP/MERGEP FROM.
+
+HOLD_FLASH 1
+
+LET PLATE = "{}"
+SETP "agent" "plate-agent"
+SETP "n" 1
+
+LET peer = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":9,\"role\":\"worker\"}"
+
+# --- KEYSP FROM ---
+KEYSP FROM peer
+ASSERT OK == 1
+ASSERT KEYSP_FROM == 1
+ASSERT KEYSP_N == 4
+ASSERT LAST_N == 4
+SYS HASLINE LAST "host"
+ASSERT LAST_N == 1
+# PLATE keys still different
+KEYSP
+ASSERT KEYSP_FROM == 0
+ASSERT KEYSP_N == 2
+SYS HASLINE LAST "agent"
+ASSERT LAST_N == 1
+
+# --- HASP FROM ---
+HASP FROM peer "host"
+ASSERT OK == 1
+ASSERT HASP_FROM == 1
+ASSERT HASP_HIT == 1
+ASSERT LAST_N == 1
+HASP "missing" FROM peer
+ASSERT HASP_FROM == 1
+ASSERT HASP_HIT == 0
+ASSERT LAST_N == 0
+ASSERT OK == 1
+# PLATE lacks host
+HASP "host"
+ASSERT HASP_FROM == 0
+ASSERT HASP_HIT == 0
+
+# --- HASPALL FROM ---
+HASPALL FROM peer "agent" "host" "n"
+ASSERT OK == 1
+ASSERT HASPALL_FROM == 1
+ASSERT HASPALL_N == 1
+ASSERT LAST_N == 1
+HASPALL "agent" "status" FROM peer
+ASSERT HASPALL_FROM == 1
+ASSERT HASPALL_N == 0
+ASSERT LAST_N == 0
+SYS HASLINE LAST "status"
+ASSERT LAST_N == 1
+ASSERT HASPALL_MISS_N == 1
+
+# --- NEEDP FROM success ---
+NEEDP FROM peer "agent" "host"
+ASSERT OK == 1
+ASSERT NEEDP_FROM == 1
+ASSERT NEEDP_N == 1
+# trailing FROM
+NEEDP "n" "role" FROM peer
+ASSERT NEEDP_FROM == 1
+ASSERT NEEDP_N == 1
+
+# default PLATE NEEDP still works
+NEEDP "agent" "n"
+ASSERT NEEDP_FROM == 0
+ASSERT NEEDP_N == 1
+
+# IF HASP FROM branch
+HASP FROM peer "role"
+IF LAST_N THEN
+  SETP FROM peer "seen" 1
+END
+GETP FROM peer "seen"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+# PLATE not set
+GETP "seen" OR "no"
+ASSERT GETP_HIT == 0
+
+PRINT "needp_from soft ok"

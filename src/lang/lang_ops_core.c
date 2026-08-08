@@ -35606,11 +35606,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DEFAULTP", "DEFAULTP|ENSUREP [FROM plate] key value — set-if-missing · multi-plate"},
       {"ENSUREP", "ENSUREP alias of DEFAULTP"},
       {"TOGGLEP", "TOGGLEP [FROM plate] key — flip flag · multi-plate · miss→1 · write-back"},
-      {"NEEDP", "NEEDP key… — fail-fast if PLATE missing keys · missing listed · soft twin HASPALL"},
+      {"NEEDP", "NEEDP [FROM plate] key… — fail-fast if plate missing keys · multi-plate · soft twin HASPALL"},
       {"REQUIREP", "REQUIREP alias of NEEDP"},
-      {"HASP", "HASP key — soft 0|1 if PLATE has key · IF guards · no GETP miss ERR"},
-      {"HASPALL", "HASPALL key… — soft 0|1 if PLATE has every key · contract probe"},
-      {"KEYSP", "KEYSP — PLATE key bag → LAST · LAST_N=count · no JSONKEYS glue"},
+      {"HASP", "HASP [FROM plate] key — soft 0|1 presence · multi-plate · no GETP miss ERR"},
+      {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · multi-plate"},
+      {"KEYSP", "KEYSP [FROM plate] — key bag → LAST · multi-plate · no JSONKEYS glue"},
       {"DUMPP", "DUMPP|PLATEINFO — cubalc.plate_info.v1 snapshot of PLATE (keys/bytes/path)"},
       {"PLATEINFO", "PLATEINFO alias of DUMPP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
@@ -38133,17 +38133,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               key, cur ? 1L : 0L, nv, have_from);
     bump(vm); return 1;
   }
-  /* NEEDP|REQUIREP key… — fail-fast if conventional PLATE missing any key.
-   * HASP key — soft single-key presence on PLATE → LAST_N 0|1 (no ERR on miss).
-   * HASPALL key… — soft multi-key all-present → LAST_N 0|1 · HIT=found.
-   * KEYSP — bag of PLATE keys → LAST · LAST_N=count (PLATE content kept in var).
-   * Usability: plate contract + discovery after plate_boot without
-   * REQUIRE JSONHASALL PLATE … / JSONKEYS PLATE / GETP miss sticky ERR glue:
-   *   INCLUDE plate_boot
-   *   NEEDP "n" "ok"
-   *   HASP "debug"
-   *   IF LAST_N THEN TOGGLEP "debug" END
-   *   KEYSP
+  /* NEEDP|REQUIREP [FROM plate] key… — fail-fast if plate missing any key.
+   * HASP [FROM plate] key — soft single-key presence → LAST_N 0|1 (no ERR on miss).
+   * HASPALL [FROM plate] key… — soft multi-key all-present → LAST_N 0|1.
+   * KEYSP [FROM plate] — bag of keys → LAST · LAST_N=count.
+   * FROM: multi-plate twin of SETP/MERGEP FROM (probe without clobbering PLATE):
+   *   HASP FROM peer "host"
+   *   NEEDP "agent" "n" FROM session
+   *   KEYSP FROM peer
+   * NEEDP_FROM/HASP_FROM/HASPALL_FROM/KEYSP_FROM = 0|1.
    * NEEDP lists missing keys in error (soft twin HASPALL / JSONMISS). */
   if (kw(&L->cur,"NEEDP") || kw(&L->cur,"REQUIREP") || kw(&L->cur,"PLATE_NEED") ||
       kw(&L->cur,"NEEDPLATEK") || kw(&L->cur,"REQUIRE_P") ||
@@ -38153,8 +38151,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"KEYS_P") || kw(&L->cur,"LISTPKEYS")) {
     char plate[CUBALC_HOST_STR_MAX], keys_nl[CUBALC_HOST_STR_MAX];
     char arg[CUBALC_HOST_STR_MAX], key[96];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr, miss;
     int is_need = 0, is_has = 0, is_hasall = 0, is_keys = 0;
+    int have_from = 0;
     size_t olen = 0;
     int aln = L->cur.line;
     Var *pv;
@@ -38171,13 +38171,75 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     lex_next(L);
     plate[0] = 0; keys_nl[0] = 0; key[0] = 0;
-    pv = var_get(vm, "PLATE", 0);
-    if (pv && pv->is_str && pv->sval[0])
-      snprintf(plate, sizeof plate, "%s", pv->sval);
-    else
-      snprintf(plate, sizeof plate, "%s", "{}");
+    from_name[0] = 0; from_src[0] = 0;
 
+    /* optional leading FROM plate_src */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* KEYSP: optional trailing FROM after bare, then resolve plate */
     if (is_keys) {
+      if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                         kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                         kw(&L->cur,"PLATEFROM"))) {
+        lex_next(L);
+        have_from = 1;
+        if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          pv = var_get(vm, L->cur.text, 0);
+          if (pv && pv->is_str) {
+            snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+            snprintf(from_src, sizeof from_src, "%s", pv->sval);
+            lex_next(L);
+          } else if (pv) {
+            snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+            snprintf(from_src, sizeof from_src, "%ld", pv->val);
+            lex_next(L);
+          } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+            from_src[0] = 0;
+          }
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        }
+      }
+      if (have_from) {
+        const char *b = from_src;
+        while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+        if (*b == '{')
+          snprintf(plate, sizeof plate, "%s", from_src);
+        else
+          snprintf(plate, sizeof plate, "%s", "{}");
+      } else {
+        pv = var_get(vm, "PLATE", 0);
+        if (pv && pv->is_str && pv->sval[0])
+          snprintf(plate, sizeof plate, "%s", pv->sval);
+        else
+          snprintf(plate, sizeof plate, "%s", "{}");
+      }
       memset(&hr, 0, sizeof hr);
       if (cubalc_host_json_keys(plate, &hr) != 0) {
         var_set_str(vm, "LAST", "");
@@ -38185,6 +38247,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         vm->last_n = 0;
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "KEYSP_N", 0);
+        var_set_num(vm, "KEYSP_FROM", have_from ? 1 : 0);
         var_set_num(vm, "OK", 0);
         var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "KEYSP: fail");
         var_set_str(vm, "ERR", hr.err[0] ? hr.err : "KEYSP: fail");
@@ -38197,9 +38260,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "KEYSP", hr.str);
       var_set_num(vm, "KEYSP_N", hr.n);
       var_set_num(vm, "JSONKEYS_N", hr.n);
+      var_set_num(vm, "KEYSP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# keysp n=%ld\n", hr.n);
+        fprintf(vm->trace, "# keysp n=%ld from=%d\n", hr.n, have_from);
       bump(vm); return 1;
     }
 
@@ -38208,16 +38272,62 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         long kv = parse_expr(vm, L);
         snprintf(key, sizeof key, "%ld", kv);
       } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+            kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+          fail(vm, "HASP [FROM plate] key — need key");
+          return -1;
+        }
         if (resolve_str_arg(vm, L, key, sizeof key) != 0)
           key[0] = 0;
       } else {
-        fail(vm, "HASP key — need key");
+        fail(vm, "HASP [FROM plate] key — need key");
         return -1;
+      }
+      /* trailing FROM */
+      if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                         kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                         kw(&L->cur,"PLATEFROM"))) {
+        lex_next(L);
+        have_from = 1;
+        if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          pv = var_get(vm, L->cur.text, 0);
+          if (pv && pv->is_str) {
+            snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+            snprintf(from_src, sizeof from_src, "%s", pv->sval);
+            lex_next(L);
+          } else if (pv) {
+            snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+            snprintf(from_src, sizeof from_src, "%ld", pv->val);
+            lex_next(L);
+          } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+            from_src[0] = 0;
+          }
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        }
+      }
+      if (have_from) {
+        const char *b = from_src;
+        while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+        if (*b == '{')
+          snprintf(plate, sizeof plate, "%s", from_src);
+        else
+          snprintf(plate, sizeof plate, "%s", "{}");
+      } else {
+        pv = var_get(vm, "PLATE", 0);
+        if (pv && pv->is_str && pv->sval[0])
+          snprintf(plate, sizeof plate, "%s", pv->sval);
+        else
+          snprintf(plate, sizeof plate, "%s", "{}");
       }
       if (!key[0]) {
         var_set_num(vm, "LAST_N", 0);
         vm->last_n = 0;
         var_set_num(vm, "HASP_N", 0);
+        var_set_num(vm, "HASP_FROM", have_from ? 1 : 0);
         var_set_num(vm, "OK", 1); /* soft probe */
         bump(vm); return 1;
       }
@@ -38228,8 +38338,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_num(vm, "HASP_N", 1);
         var_set_num(vm, "HASP_HIT", 1);
         var_set_str(vm, "HASP_KEY", key);
+        var_set_num(vm, "HASP_FROM", have_from ? 1 : 0);
         var_set_num(vm, "OK", 1);
-        /* LAST kept as probe result "1" for IF LAST_N; value not needed */
         var_set_str(vm, "LAST", "1");
         snprintf(vm->last_str, sizeof vm->last_str, "%s", "1");
       } else {
@@ -38238,20 +38348,23 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_num(vm, "HASP_N", 0);
         var_set_num(vm, "HASP_HIT", 0);
         var_set_str(vm, "HASP_KEY", key);
+        var_set_num(vm, "HASP_FROM", have_from ? 1 : 0);
         var_set_num(vm, "OK", 1);
         var_set_str(vm, "LAST", "0");
         snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
       }
       if (vm->trace)
-        fprintf(vm->trace, "# hasp key=%s hit=%ld\n", key, vm->last_n);
+        fprintf(vm->trace, "# hasp key=%s hit=%ld from=%d\n", key, vm->last_n, have_from);
       bump(vm); return 1;
     }
 
-    /* NEEDP / HASPALL: collect keys */
+    /* NEEDP / HASPALL: collect keys; stop before trailing FROM / statements */
     while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
            L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
       if (L->cur.kind == TK_IDENT &&
-          (kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"ELSE") ||
+          (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+           kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+           kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"ELSE") ||
            kw(&L->cur,"ELIF") || kw(&L->cur,"FOR") || kw(&L->cur,"WHILE") ||
            kw(&L->cur,"LOOP") || kw(&L->cur,"ASSERT") || kw(&L->cur,"PRINT") ||
            kw(&L->cur,"LET") || kw(&L->cur,"SYS") || kw(&L->cur,"SETP") ||
@@ -38281,14 +38394,57 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         olen += al;
       }
     }
+    /* trailing FROM after keys */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
     if (!keys_nl[0]) {
       if (is_need) {
-        fail(vm, "NEEDP key… — need at least one required key");
+        fail(vm, "NEEDP [FROM plate] key… — need at least one required key");
         return -1;
       }
       var_set_num(vm, "LAST_N", 0);
       vm->last_n = 0;
       var_set_num(vm, "HASPALL_N", 0);
+      var_set_num(vm, "HASPALL_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "NEEDP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
@@ -38302,6 +38458,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", 0);
       vm->last_n = 0;
       var_set_num(vm, "HASPALL_N", 0);
+      var_set_num(vm, "HASPALL_FROM", have_from ? 1 : 0);
       var_set_num(vm, "OK", 0);
       var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "HASPALL: fail");
       var_set_str(vm, "ERR", hr.err[0] ? hr.err : "HASPALL: fail");
@@ -38332,6 +38489,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(msg, sizeof msg,
                  "NEEDP missing line %d: %s — soft twin HASPALL / JSONMISS",
                  aln, flat);
+        var_set_num(vm, "NEEDP_FROM", have_from ? 1 : 0);
         if (vm->res) vm->res->asserts_fail++;
         fail(vm, msg);
         return -1;
@@ -38343,10 +38501,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "NEEDP_N", 1);
       var_set_num(vm, "NEEDP_HIT", (long)hr.code);
       var_set_num(vm, "REQUIREP_N", 1);
+      var_set_num(vm, "NEEDP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "OK", 1);
       if (vm->res) vm->res->asserts_ok++;
       if (vm->trace)
-        fprintf(vm->trace, "# needp hit=%d ok\n", hr.code);
+        fprintf(vm->trace, "# needp hit=%d ok from=%d\n", hr.code, have_from);
       bump(vm); return 1;
     }
 
@@ -38358,6 +38517,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "HASPALL_N", hit);
       var_set_num(vm, "HASPALL_HIT", (long)hr.code);
       var_set_num(vm, "JSONHASALL_HIT", (long)hr.code);
+      var_set_num(vm, "HASPALL_FROM", have_from ? 1 : 0);
       if (hit) {
         var_set_str(vm, "LAST", plate);
         snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
@@ -38371,7 +38531,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# haspall hit=%ld found=%d\n", hit, hr.code);
+        fprintf(vm->trace, "# haspall hit=%ld found=%d from=%d\n",
+                hit, hr.code, have_from);
       bump(vm); return 1;
     }
   }
