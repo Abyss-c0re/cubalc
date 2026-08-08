@@ -1,0 +1,107 @@
+# DIRSIZE / DU / TREESIZE — recursive total file bytes under path
+# Agent disk inventory without shell du or WALK+SIZEALL glue.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS PID
+SYS STR LAST_N
+LET pid = LAST
+SYS JOIN td "mi_du_"
+SYS CAT LAST pid
+LET base = LAST
+SYS MKDIR base
+ASSERT OK == 1
+
+# nested tree: known sizes
+SYS JOIN base "a/b/c.txt"
+WRITEOUT LAST "deep"
+ASSERT OK == 1
+# "deep" = 4 bytes
+SYS JOIN base "a/b/d.txt"
+WRITEOUT LAST "sib!"
+ASSERT OK == 1
+# "sib!" = 4 bytes
+SYS JOIN base "a/e.txt"
+WRITEOUT LAST "mid"
+ASSERT OK == 1
+# "mid" = 3 bytes
+SYS JOIN base "a/empty"
+SYS MKDIR LAST
+ASSERT OK == 1
+SYS JOIN base "leaf.dat"
+LET leaf = LAST
+SYS WRITE leaf "solo"
+ASSERT OK == 1
+# "solo" = 4 bytes
+# total file bytes = 4+4+3+4 = 15
+# dirs: base, a, a/b, a/empty = 4
+
+# file-only dirsize
+DIRSIZE leaf
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT DIRSIZE == 4
+ASSERT DIRSIZE_FILES == 1
+ASSERT DIRSIZE_DIRS == 0
+
+# full tree
+DIRSIZE base
+ASSERT OK == 1
+ASSERT DIRSIZE == 15
+ASSERT LAST_N == 15
+ASSERT DIRSIZE_FILES == 4
+ASSERT DIRSIZE_DIRS == 4
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS ENDS DIRSIZE_PATH "mi_du_"
+# ENDS may fail if pid suffix — check HAS path instead
+SYS HAS DIRSIZE_PATH "mi_du_"
+ASSERT LAST_N == 1
+
+# subtree a only: c+d+e = 11 bytes, dirs a + a/b + a/empty = 3, files 3
+SYS JOIN base "a"
+LET a = LAST
+DIRSIZE a
+ASSERT OK == 1
+ASSERT DIRSIZE == 11
+ASSERT DIRSIZE_FILES == 3
+ASSERT DIRSIZE_DIRS == 3
+
+# SYS form
+SYS DIRSIZE base
+ASSERT OK == 1
+ASSERT DIRSIZE_N == 15
+ASSERT DU_FILES == 4
+
+# DU alias
+DU leaf
+ASSERT OK == 1
+ASSERT DU_N == 4
+
+# TREESIZE alias
+TREESIZE base
+ASSERT OK == 1
+ASSERT TREESIZE_N == 15
+
+# missing soft
+DIRSIZE "/no/such/dirsize/path"
+ASSERT OK == 0
+LET e = LAST_ERR
+SYS HAS e "missing"
+ASSERT LAST_N == 1
+
+# empty soft
+DIRSIZE ""
+ASSERT OK == 0
+LET e2 = LAST_ERR
+SYS HAS e2 "empty"
+ASSERT LAST_N == 1
+
+# cleanup
+RMTREE base
+ASSERT OK == 1
+
+PRINT "dirsize ok"
+ASSERT OK == 1

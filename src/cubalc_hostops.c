@@ -646,6 +646,97 @@ int cubalc_host_mvtree(const char *src, const char *dst, cubalc_host_result *r) 
   }
 }
 
+/* Depth-first size walk. *bytes / *files / *dirs accumulators. No dir-symlink follow. */
+static int cubalc_dirsize_rec(const char *path, long *bytes, long *files, long *dirs,
+                              int depth) {
+  struct stat st;
+  DIR *d;
+  struct dirent *ent;
+  if (!path || !path[0] || !bytes || !files || !dirs) return -1;
+  if (depth > 64) {
+    errno = ELOOP;
+    return -1;
+  }
+  if (lstat(path, &st) != 0) return -1;
+  if (S_ISDIR(st.st_mode)
+#if defined(S_ISLNK)
+      && !S_ISLNK(st.st_mode)
+#endif
+      ) {
+    (*dirs)++;
+    d = opendir(path);
+    if (!d) return -1;
+    while ((ent = readdir(d)) != NULL) {
+      char child[CUBALC_HOST_STR_MAX];
+      size_t pl, nl;
+      if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+        continue;
+      pl = strlen(path);
+      nl = strlen(ent->d_name);
+      if (pl + 1 + nl + 1 >= sizeof child) {
+        closedir(d);
+        errno = ENAMETOOLONG;
+        return -1;
+      }
+      if (pl > 0 && (path[pl - 1] == '/' || path[pl - 1] == '\\'))
+        snprintf(child, sizeof child, "%s%s", path, ent->d_name);
+      else
+        snprintf(child, sizeof child, "%s/%s", path, ent->d_name);
+      if (cubalc_dirsize_rec(child, bytes, files, dirs, depth + 1) != 0) {
+        closedir(d);
+        return -1;
+      }
+    }
+    closedir(d);
+    return 0;
+  }
+  /* regular file / symlink / special: count size of the node (symlink: length of link) */
+  (*files)++;
+  *bytes += (long)st.st_size;
+  return 0;
+}
+
+/* Usability: SYS DIRSIZE|DU|TREESIZE path — recursive byte inventory without shell du.
+ * r->n = total bytes; r->code = (files & 0xffff) | ((dirs & 0xffff) << 16); soft miss. */
+int cubalc_host_dirsize(const char *path, cubalc_host_result *r) {
+  long bytes = 0, files = 0, dirs = 0;
+  char abs[CUBALC_HOST_STR_MAX];
+  struct stat st;
+  cubalc_host_result hr;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "dirsize: empty path");
+    return -1;
+  }
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+    snprintf(abs, sizeof abs, "%s", hr.str);
+  else
+    snprintf(abs, sizeof abs, "%s", path);
+  if (lstat(abs, &st) != 0) {
+    if (errno == ENOENT) {
+      snprintf(r->err, sizeof r->err, "dirsize: missing");
+      return -1;
+    }
+    snprintf(r->err, sizeof r->err, "dirsize: %s", strerror(errno));
+    return -1;
+  }
+  if (cubalc_dirsize_rec(abs, &bytes, &files, &dirs, 0) != 0) {
+    snprintf(r->err, sizeof r->err, "dirsize: %s",
+             errno ? strerror(errno) : "fail");
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", abs);
+  r->n = bytes;
+  {
+    unsigned fc = files > 0xffff ? 0xffff : (unsigned)files;
+    unsigned dc = dirs > 0xffff ? 0xffff : (unsigned)dirs;
+    r->code = (int)(fc | (dc << 16));
+  }
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS RENAME|MV from to — move plate without shell. */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) {
   r_clear(r);
