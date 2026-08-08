@@ -1,53 +1,65 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 194,
-  "program": "programs/realworld/roster_setmatch_promote_board.cubalc",
-  "theme": "SETMATCH + COUNTLINE + MOVELINE peer roster status/promote",
-  "version": "1.15.518-usability",
+  "iter": 195,
+  "program": "programs/realworld/agent_json_plate_buffer_board.cubalc",
+  "theme": "JSONCOPY + JSONSWAP + JSONVALUES + TOKV/FROMKV dual-buffer bag bridge",
+  "version": "1.15.520-usability",
   "pass": true,
-  "prior_note": "iter 193 JSONTOGGLE+TYPE; this iter diversify to bag-line SETMATCH(650)+COUNTLINE(649)+MOVELINE(648) roster ops",
+  "prior_note": "iter 194 SETMATCH roster; this iter first realworld COPY(1066)+SWAP(1067)+VALUES(1068)+FROMKV(1069)+TOKV(1070)",
   "tests": [
     {
-      "name": "seed",
-      "cmd": "4-peer idle/busy roster WRITE",
+      "name": "mint",
+      "cmd": "JSONOBJ cur/prev dual counters",
       "ok": true,
-      "note": "seed"
+      "note": "mint"
     },
     {
-      "name": "count",
-      "cmd": "exact peer1:idle=1; GREP :idle=3; bare idle=0",
+      "name": "snap",
+      "cmd": "JSONCOPY cur\u2192snap =10",
       "ok": true,
-      "note": "COUNTLINE exact"
+      "note": "COPY"
     },
     {
-      "name": "set",
-      "cmd": "SETMATCH peer2:idle\u2192peer2:done",
+      "name": "bump",
+      "cmd": "copy cur\u2192prev then INC cur +2 \u219212/10",
       "ok": true,
-      "note": "SETMATCH"
+      "note": "rollback buf"
     },
     {
-      "name": "promote",
-      "cmd": "FINDLINE idx1 + MOVELINE to front",
+      "name": "swap",
+      "cmd": "JSONSWAP cur/prev \u219210/12",
       "ok": true,
-      "note": "MOVELINE"
+      "note": "SWAP"
     },
     {
-      "name": "miss",
-      "cmd": "set peer9 soft miss; REQUIRE shell 2",
+      "name": "vals",
+      "cmd": "JSONVALUES N=8; SUM numerics 35",
       "ok": true,
-      "note": "soft+hard"
+      "note": "VALUES"
+    },
+    {
+      "name": "tokv",
+      "cmd": "JSONTOKV 8 rows LOOKUP cur=10",
+      "ok": true,
+      "note": "TOKV"
+    },
+    {
+      "name": "fromkv",
+      "cmd": "JSONFROMKV round-trip cur=10",
+      "ok": true,
+      "note": "FROMKV"
     },
     {
       "name": "probe",
-      "cmd": "exact ERROR field; COUNTLINE 1; MOVELINE OOR/clamp",
+      "cmd": "copy miss; swap both-miss; one-miss move",
       "ok": true,
       "note": "edges"
     },
     {
-      "name": "icase",
-      "cmd": "SETMATCHI idle\u2192done first only",
+      "name": "require",
+      "cmd": "CUBALC_AJPB_REQUIRE=1 empty \u2192 shell 2",
       "ok": true,
-      "note": "icase"
+      "note": "hard"
     },
     {
       "name": "selftest",
@@ -1136,6 +1148,30 @@
       "title": "MOVELINE from OOR soft N=0; dest past end clamps to last",
       "detail": "MOVELINE bag 5 0 on 3 lines \u2192 N=0 bag unchanged. MOVELINE 0 99 clamps to end (success). FINDLINE miss OK=0 LAST_N=-1 (not 0) \u2014 agents must not treat N==0 as only miss.",
       "repro": "FINDLINE miss LAST_N=-1; MOVELINE 0 99 clamps"
+    },
+    {
+      "id": "W136",
+      "severity": "med",
+      "area": "lang|jsonswap",
+      "title": "JSONSWAP one-missing key becomes silent move (rename)",
+      "detail": "SWAP a\u2194b when only a present: a removed, b=a value, N=1. Both missing N=0 soft. Agents expecting hard dual-present swap can lose keys. Documented as feature in proof; still a dual-buffer footgun.",
+      "repro": "JSONSWAP {a:7} a b \u2192 {b:7} no a"
+    },
+    {
+      "id": "W137",
+      "severity": "med",
+      "area": "lang|jsonvalues",
+      "title": "SUM on JSONVALUES mixed plate silently sums only numerics",
+      "detail": "VALUES bag includes schema/role/ts strings; SYS SUM LAST \u2192 35 (=ok+cur+prev+n+snap) with no err. Agents using SUM for plate health can ignore non-numeric fields without warning. Prefer pick numeric keys first.",
+      "repro": "JSONVALUES full status plate; SUM \u2192 35 not fail"
+    },
+    {
+      "id": "W138",
+      "severity": "low",
+      "area": "lang|jsoncopy",
+      "title": "JSONCOPY overwrites destination key silently (same class as RENAME W128)",
+      "detail": "COPY a\u2192b when b exists replaces b with a raw value. No conflict flag. Snapshot into prev after bump can clobber intentional prev if order wrong \u2014 board copies cur\u2192prev before INC to avoid.",
+      "repro": "JSONCOPY {a:10,b:20} a b \u2192 b=10"
     }
   ],
   "workarounds": [
@@ -1156,10 +1192,11 @@
     "export: N>0 after PICK before WRITEOUT peer view (W129)",
     "Never name vars FLAG or KEY (W130); use FLAG_S/KEY_S",
     "After JSONTYPE, peel with literal-key EQS branches for JSONN (W131)",
-    "After SETMATCH/MOVELINE/PUSH: LET bag=LAST before CLEAR_ERR (W133)"
+    "After SETMATCH/MOVELINE/PUSH: LET bag=LAST before CLEAR_ERR (W133)",
+    "Dual-buffer: JSONCOPY cur\u2192prev then INC cur; SWAP to rollback (W136/W138)",
+    "SUM plate: PICK numeric keys or JSONN each before SUM (W137)"
   ],
   "language_gaps": [
-    "JSON key token resolve vars / JSONHAS OF bag-of-keys loop",
     "JSON peel nested objects / dotted paths for object fields (W116)",
     "CLEAR_ERR optional keep-LAST mode",
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1170,18 +1207,19 @@
     "Unify JSON* key token resolution: vars for JSONN/JSON like TOGGLE/TYPE",
     "JSONTOGGLE only on bool/0/1 with hard reject for other types",
     "CLEAR_ERR keep-LAST option to avoid bag capture footgun (W117/W133)",
-    "JSONCOPY/JSONSWAP/JSONVALUES still unused in realworld"
+    "JSONSWAP require-both-present hard mode",
+    "JSONVALUES SUM typed / skip-non-numeric flag"
   ],
   "issues_faced": [
-    "selftest 355/355 green v1.15.513",
-    "PICK var keys work \u2014 positive contrast to W115",
     "FLAG/KEY specials caused flip to zero n until renamed FLAG_S (W130)",
     "JSONN var key failed after type gate \u2014 EQS literals (W131)",
     "selftest 355/355 green v1.15.516",
     "CLEAR_ERR after SETMATCH wrote ROSTER=cleared until capture-before-clear fix (W133)",
     "sed rename left SYS WRITE roster_path roster bug",
-    "selftest 355/355 green"
+    "selftest 355/355 green",
+    "selftest 355/355 green v1.15.520",
+    "TOKV first-colon split handles ISO ts and http URLs (positive)"
   ],
-  "commit": "4bb69b2",
-  "ts": "2026-08-08T12:32:04Z"
+  "commit": "pending",
+  "ts": "2026-08-08T12:54:03Z"
 }
