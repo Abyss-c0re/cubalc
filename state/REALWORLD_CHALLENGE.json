@@ -1,65 +1,71 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 202,
-  "program": "programs/realworld/agent_json_plate_delta_board.cubalc",
-  "theme": "JSONKEYDIFF + JSONCHANGED + JSONDELTA peer status sync delta",
-  "version": "1.15.538-usability",
+  "iter": 203,
+  "program": "programs/realworld/agent_json_plate_lockstep_board.cubalc",
+  "theme": "REQUIRE JSONEQ + REQUIRE JSONSUBSET peer lockstep verify",
+  "version": "1.15.540-usability",
   "pass": true,
-  "prior_note": "iter 201 EXACT schema; this iter first realworld KEYDIFF(1086)+CHANGED(1087)+DELTA(1088) sync board",
+  "prior_note": "iter 202 KEYDIFF+DELTA sync; this iter first realworld REQUIRE JSONEQ(1089)+SUBSET(1090) lockstep board",
   "tests": [
     {
       "name": "mint",
-      "cmd": "prev baseline + cur load/zone/peer",
+      "cmd": "status+order-shuffled peer+req triad",
       "ok": true,
-      "note": "mint pair"
+      "note": "mint"
     },
     {
-      "name": "keydiff",
-      "cmd": "only_cur=peer; only_prev=0; comm=5",
+      "name": "eq",
+      "cmd": "order-independent EQ=1 peel load=10",
       "ok": true,
-      "note": "KEYDIFF"
+      "note": "EQ"
     },
     {
-      "name": "changed",
-      "cmd": "load+zone+peer n=3",
+      "name": "subset",
+      "cmd": "req ⊆ status =1",
       "ok": true,
-      "note": "CHANGED"
+      "note": "SUBSET"
     },
     {
-      "name": "stable",
-      "cmd": "schema+role+ok n=3",
+      "name": "covers",
+      "cmd": "status ⊇ req SUPERSET=1",
       "ok": true,
-      "note": "STABLE"
+      "note": "COVERS"
     },
     {
-      "name": "delta",
-      "cmd": "patch load=40 zone=west +peer",
+      "name": "hard_eq",
+      "cmd": "soft then REQUIRE JSONEQ + peel",
       "ok": true,
-      "note": "DELTA"
+      "note": "REQUIRE EQ"
     },
     {
-      "name": "apply",
-      "cmd": "MERGE prev+delta EQ cur",
+      "name": "hard_sub",
+      "cmd": "REQUIRE JSONSUBSET+SUPERSET",
       "ok": true,
-      "note": "apply"
+      "note": "REQUIRE SUB"
     },
     {
       "name": "gate",
-      "cmd": "admit maxchg5; deny maxchg1",
+      "cmd": "admit lockstep; deny after drift",
       "ok": true,
       "note": "gate"
     },
     {
+      "name": "drift",
+      "cmd": "load 99 → EQ0 CHANGED1 SUBSET1",
+      "ok": true,
+      "note": "drift"
+    },
+    {
       "name": "probe",
-      "cmd": "identical empty; value-only; empty vs plate",
+      "cmd": "empty EQ; empty subset; order EQ",
       "ok": true,
       "note": "edges"
     },
     {
       "name": "require",
-      "cmd": "CUBALC_AJPDT_REQUIRE=1 empty → shell 2",
+      "cmd": "CUBALC_AJPLS_REQUIRE=1 empty → shell 2",
       "ok": true,
-      "note": "hard"
+      "note": "hard env"
     },
     {
       "name": "selftest",
@@ -1332,6 +1338,30 @@
       "title": "DELTA keeps LAST as patch plate; KEYDIFF/CHANGED set LAST to key bag",
       "detail": "Asymmetric LAST (W143/W147 class): after DELTA peel JSONN works; after CHANGED LAST is bag not plate. Capture bags immediately; do not chain peels after KEYDIFF.",
       "repro": "JSONCHANGED a b; JSONN k FROM LAST → fail; JSONDELTA a b; JSONN k FROM LAST ok"
+    },
+    {
+      "id": "W159",
+      "severity": "high",
+      "area": "host|require_json",
+      "title": "REQUIRE JSONEQ/SUBSET fail → shell 1 exit_code 0 (W152 class)",
+      "detail": "Mismatch lists changed/bad keys in err (positive UX) but asserts_fail path leaves plate exit_code 0 and shell often 1. Soft JSONEQ/SUBSET + EXIT n under env is reliable for ops shell contracts.",
+      "repro": "REQUIRE JSONEQ {a:1}{a:2} → err lists a, shell 1 exit_code 0"
+    },
+    {
+      "id": "W160",
+      "severity": "med",
+      "area": "lang|require_pattern",
+      "title": "Hard REQUIRE alone is assert-fail not EXIT — agents need soft-first + EXIT n",
+      "detail": "Board pattern soft IF then REQUIRE only on match avoids assert-fail pollution; on soft deny use EXIT n under CUBALC_*_REQUIRE. Documented as agent contract: never bare REQUIRE for process rc.",
+      "repro": "soft deny path EXIT 2 under REQUIRE env; bare REQUIRE JSONEQ mismatch exit_code 0"
+    },
+    {
+      "id": "W161",
+      "severity": "low",
+      "area": "lang|json_eq",
+      "title": "EQ deny with SUBSET still true is common lockstep split",
+      "detail": "Value drift on non-required fields fails EQ while SUBSET/COVERS pass. Gate must compose both for full lockstep; SUBSET alone is not lockstep.",
+      "repro": "load 10→99: EQ0 SUBSET1 CHANGED load"
     }
   ],
   "workarounds": [
@@ -1371,7 +1401,9 @@
     "ONLY rejects extras only — use EXACT for full key-set (W155)",
     "Always JSONDELTA old new (or FROM NEW explicit) (W156)",
     "Value drift: JSONCHANGED/DELTA not KEYDIFF alone (W157)",
-    "After KEYDIFF/CHANGED: LET bag=LAST before peels (W158)"
+    "After KEYDIFF/CHANGED: LET bag=LAST before peels (W158)",
+    "REQUIRE JSON*: soft probe then REQUIRE; on fail EXIT n (W159/W160)",
+    "Lockstep gate: SUBSET req AND EQ peer (W161)"
   ],
   "language_gaps": [
     "JSONOBJ/JSONSET accept num vars without STR demotion (JSONSETN)",
@@ -1403,7 +1435,9 @@
     "JSONONLY strict=exact alias warning when allow==need list",
     "JSONDELTA named args PREV/CUR to prevent swap",
     "JSONDIFF unified report: keys only + values + patch object",
-    "JSONCHANGED keep-plate mode optional"
+    "JSONCHANGED keep-plate mode optional",
+    "REQUIRE JSON* EXIT code / --strict-shell mode",
+    "REQUIRE JSONEQ return changed-key bag on LAST without assert-fail option"
   ],
   "issues_faced": [
     "selftest 355/355 green v1.15.516",
@@ -1432,8 +1466,11 @@
     "dirty/thin soft gates positive before remint hard",
     "selftest 355/355 green v1.15.538",
     "MERGE prev+delta EQ cur positive apply path",
-    "gate maxchg deny soft without shell fail"
+    "gate maxchg deny soft without shell fail",
+    "selftest 355/355 green v1.15.540",
+    "soft-first hard_eq/hard_sub avoids REQUIRE assert-fail",
+    "drift load-only keeps SUBSET for gate split demo"
   ],
-  "commit": "3fc0c39",
-  "ts": "2026-08-08T15:48:51Z"
+  "commit": "pending",
+  "ts": "2026-08-08T16:13:43Z"
 }

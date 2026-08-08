@@ -1,0 +1,859 @@
+# agent_json_plate_lockstep_board.cubalc — REQUIRE JSONEQ + REQUIRE JSONSUBSET lockstep
+#
+# Real use: agent STATUS peer lockstep — soft then hard plate equality and
+# required-field cover without fragile EQS string compare:
+#   SYS JSONEQ / JSONNEQ — soft order-independent equality (1077)
+#   REQUIRE JSONEQ / SAMEJSON — fail-fast EQ · lists changed keys (1089)
+#   SYS JSONSUBSET / SUPERSET — soft required fields (1078)
+#   REQUIRE JSONSUBSET / JSONCOVERS — fail-fast subset · bad keys listed (1090)
+#   gate: soft EQ admit; cover: soft SUBSET; hard: REQUIRE when clean
+#
+# First realworld REQUIRE JSONEQ+SUBSET board. Distinct from contract
+# (soft AVGN+EQ+SUBSET), schema EXACT (keys only), delta (patch sync).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ajpls_$$
+#   ./out/cubalc run programs/realworld/agent_json_plate_lockstep_board.cubalc \
+#     mint -- --plate=/tmp/ajpls/status.json --peer=/tmp/ajpls/peer.json
+#   ./out/cubalc run ... eq -- --plate=... --peer=...
+#   ./out/cubalc run ... subset -- --plate=... --req=...
+#   ./out/cubalc run ... hard_eq -- --plate=... --peer=...
+#   ./out/cubalc run ... gate -- --plate=... --peer=...
+#
+# Plate: STATUS.txt VAL.txt META.txt AJPLS_REPORT.txt
+# Env: PLATE_PATH PEER_PATH REQ_PATH CUBALC_AJPLS_REQUIRE
+#
+# Edges:
+#   order-independent EQ; value mismatch; missing/wrong req fields;
+#   REQUIRE shell 1 exit_code 0 (W152/W154 class); soft first pattern;
+#   LAST kept as first plate after REQUIRE; capture LAST_N (W144);
+#   WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_json_plate_lockstep_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_json_plate_lockstep -- mint|eq|subset|covers|hard_eq|hard_sub|gate|drift|list -- [--plate=P] [--peer=P] [--req=P]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS JOIN state_dir "sample/status.json"
+LET plate_file = LAST
+SYS JOIN state_dir "sample/peer.json"
+LET peer_file = LAST
+SYS JOIN state_dir "sample/req.json"
+LET req_file = LAST
+CLEAR_ERR
+
+GETFLAGOUT plate|p OR ENV PLATE_PATH OR plate_file
+LET plate_file = LAST
+LET p_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+GETFLAGOUT peer OR ENV PEER_PATH OR peer_file
+LET peer_file = LAST
+LET peer_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+GETFLAGOUT req OR ENV REQ_PATH OR req_file
+LET req_file = LAST
+LET req_src = GETFLAGOUT_SRC
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_AJPLS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "AJPLS_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET peer = ""
+LET req = ""
+LET eq_n = 0
+LET sub_n = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "mint", "eq", "subset", "covers", "hard_eq", "hard_sub", "gate", "drift", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "mint" THEN
+    LET op = "mint"
+  WHEN "eq" THEN
+    LET op = "eq"
+  WHEN "subset" THEN
+    LET op = "subset"
+  WHEN "covers" THEN
+    LET op = "covers"
+  WHEN "hard_eq" THEN
+    LET op = "hard_eq"
+  WHEN "hard_sub" THEN
+    LET op = "hard_sub"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "drift" THEN
+    LET op = "drift"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n p_src peer_src req_src
+  CLEAR_ERR
+END
+
+SYS EQS op "mint"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1 "load" 10 "zone" "east"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint soft miss"
+    FAIL "mint soft miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "mint failed"
+    END
+  ELSE
+    LET take_n = JSONOBJ_N
+    LET body = LAST
+    LET out = body
+    CLEAR_ERR
+    WRITEOUT plate_file body
+    EXPECT OK == 1
+    IF OK == 0 THEN
+      EXIT 2 "mint write failed"
+    END
+    CLEAR_ERR
+    # peer: same fields different key order
+    SYS JSONOBJ "zone" "east" "load" 10 "ok" 1 "role" "worker" "schema" "cubalc.agent_status.v1"
+    LET peer = LAST
+    WRITEOUT peer_file peer
+    CLEAR_ERR
+    # required contract: schema+role+ok
+    SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1
+    LET req = LAST
+    WRITEOUT req_file req
+    CLEAR_ERR
+    SYS CAT "mint:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":mt"
+    LET row = LAST
+    SYS GREPV "mint:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    LET admit_n = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+    LET hit = 1
+    LET note_msg = "mint ok"
+  END
+  PRINT_JSON admit_n bag_n take_n p_src peer_src req_src
+  CLEAR_ERR
+END
+
+SYS EQS op "eq"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS READ OR peer_file OR ""
+  LET peer = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "eq empty plate"
+    FAIL "eq empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "eq empty"
+    END
+  ELSE
+    SYS BLANK peer
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "eq empty peer"
+      FAIL "eq empty peer"
+      CLEAR_ERR
+    ELSE
+      SYS JSONEQ body peer
+      LET eq_n = LAST_N
+      LET take_n = eq_n
+      SYS JSONN "load" FROM LAST
+      LET peel_hit = LAST_N
+      CLEAR_ERR
+      LET out = body
+      IF eq_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "eq match"
+      ELSE
+        LET miss = 1
+        LET note_msg = "eq mismatch"
+        FAIL "eq mismatch"
+        CLEAR_ERR
+      END
+      SYS CAT "eq:"
+      LET row = LAST
+      SYS STR take_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":eq"
+      LET row = LAST
+      SYS GREPV "eq:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+    END
+  END
+  PRINT_JSON bag_n take_n eq_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "subset"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS READ OR req_file OR ""
+  LET req = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "subset empty plate"
+    FAIL "subset empty plate"
+    CLEAR_ERR
+  ELSE
+    SYS BLANK req
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "subset empty req"
+      FAIL "subset empty req"
+      CLEAR_ERR
+    ELSE
+      SYS JSONSUBSET req body
+      LET sub_n = LAST_N
+      LET take_n = sub_n
+      SYS JSONN "ok" FROM LAST
+      LET peel_hit = LAST_N
+      CLEAR_ERR
+      LET out = body
+      IF sub_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "subset ok"
+      ELSE
+        LET miss = 1
+        LET note_msg = "subset miss"
+        FAIL "subset miss"
+        CLEAR_ERR
+      END
+      SYS CAT "subset:"
+      LET row = LAST
+      SYS STR take_n
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":"
+      LET row = LAST
+      SYS STR peel_hit
+      SYS CAT row LAST
+      LET row = LAST
+      SYS CAT row ":sb"
+      LET row = LAST
+      SYS GREPV "subset:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+      SYS LINES bag
+      LET bag_n = LAST_N
+    END
+  END
+  PRINT_JSON bag_n take_n sub_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "covers"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS READ OR req_file OR ""
+  LET req = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "covers empty plate"
+    FAIL "covers empty plate"
+    CLEAR_ERR
+  ELSE
+    SYS JSONSUPERSET body req
+    LET sub_n = LAST_N
+    LET take_n = sub_n
+    CLEAR_ERR
+    LET out = body
+    IF sub_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "covers ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "covers miss"
+      FAIL "covers miss"
+      CLEAR_ERR
+    END
+    SYS CAT "covers:"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":cv"
+    LET row = LAST
+    SYS GREPV "covers:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n sub_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "hard_eq"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS READ OR peer_file OR ""
+  LET peer = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "hard_eq empty plate"
+    FAIL "hard_eq empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "hard_eq empty"
+    END
+  ELSE
+    SYS JSONEQ body peer
+    LET eq_n = LAST_N
+    CLEAR_ERR
+    IF eq_n == 1 THEN
+      REQUIRE JSONEQ body peer
+      LET take_n = LAST_N
+      SYS JSONN "load" FROM LAST
+      LET peel_hit = LAST_N
+      CLEAR_ERR
+      LET out = body
+      LET hit = 1
+      LET note_msg = "hard_eq ok"
+    ELSE
+      LET miss = 1
+      LET take_n = 0
+      LET note_msg = "hard_eq soft deny"
+      FAIL "hard_eq soft deny"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "hard_eq soft deny"
+      END
+    END
+    SYS CAT "hard_eq:"
+    LET row = LAST
+    SYS STR eq_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":he"
+    LET row = LAST
+    SYS GREPV "hard_eq:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n eq_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "hard_sub"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS READ OR req_file OR ""
+  LET req = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "hard_sub empty plate"
+    FAIL "hard_sub empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "hard_sub empty"
+    END
+  ELSE
+    SYS JSONSUBSET req body
+    LET sub_n = LAST_N
+    CLEAR_ERR
+    IF sub_n == 1 THEN
+      REQUIRE JSONSUBSET req body
+      LET take_n = LAST_N
+      SYS JSONN "ok" FROM LAST
+      LET peel_hit = LAST_N
+      CLEAR_ERR
+      REQUIRE JSONSUPERSET body req
+      CLEAR_ERR
+      LET out = body
+      LET hit = 1
+      LET note_msg = "hard_sub ok"
+    ELSE
+      LET miss = 1
+      LET take_n = 0
+      LET note_msg = "hard_sub soft deny"
+      FAIL "hard_sub soft deny"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "hard_sub soft deny"
+      END
+    END
+    SYS CAT "hard_sub:"
+    LET row = LAST
+    SYS STR sub_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR peel_hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":hs"
+    LET row = LAST
+    SYS GREPV "hard_sub:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n sub_n peel_hit p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "drift"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # mutate peer load → EQ fail; still SUBSET if req ok
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "drift empty plate"
+    FAIL "drift empty plate"
+    CLEAR_ERR
+  ELSE
+    SYS JSONSET body "load" 99
+    LET peer = LAST
+    WRITEOUT peer_file peer
+    CLEAR_ERR
+    SYS READ OR plate_file OR ""
+    LET body = LAST
+    CLEAR_ERR
+    SYS JSONEQ body peer
+    LET eq_n = LAST_N
+    CLEAR_ERR
+    SYS JSONCHANGED body peer
+    LET take_n = LAST_N
+    CLEAR_ERR
+    SYS READ OR req_file OR ""
+    LET req = LAST
+    CLEAR_ERR
+    SYS JSONSUBSET req body
+    LET sub_n = LAST_N
+    CLEAR_ERR
+    LET out = peer
+    IF eq_n == 0 THEN
+      IF take_n == 1 THEN
+        IF sub_n == 1 THEN
+          LET hit = 1
+          LET note_msg = "drift load only"
+        ELSE
+          LET miss = 1
+          LET note_msg = "drift subset fail"
+          FAIL "drift subset fail"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "drift chg count"
+        FAIL "drift chg count"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "drift still eq"
+      FAIL "drift still eq"
+      CLEAR_ERR
+    END
+    SYS CAT "drift:"
+    LET row = LAST
+    SYS STR eq_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR take_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR sub_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":dr"
+    LET row = LAST
+    SYS GREPV "drift:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n eq_n sub_n p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR plate_file OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS READ OR peer_file OR ""
+  LET peer = LAST
+  CLEAR_ERR
+  SYS READ OR req_file OR ""
+  LET req = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate empty plate"
+    FAIL "gate empty plate"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate empty"
+    END
+  ELSE
+    SYS BLANK req
+    IF LAST_N == 1 THEN
+      SYS JSONOBJ "schema" "cubalc.agent_status.v1" "role" "worker" "ok" 1
+      LET req = LAST
+      CLEAR_ERR
+    END
+    SYS JSONSUBSET req body
+    LET sub_n = LAST_N
+    CLEAR_ERR
+    SYS JSONEQ body peer
+    LET eq_n = LAST_N
+    LET take_n = eq_n
+    CLEAR_ERR
+    LET out = body
+    IF sub_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate subset deny"
+      FAIL "gate subset deny"
+      CLEAR_ERR
+    ELSE
+      IF eq_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "gate eq deny"
+        FAIL "gate eq deny"
+        CLEAR_ERR
+        IF require_hit > 0 THEN
+          EXIT 2 "gate eq deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate admit"
+      END
+    END
+    SYS CAT "gate:"
+    LET row = LAST
+    SYS STR sub_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR eq_n
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":"
+    LET row = LAST
+    SYS STR hit
+    SYS CAT row LAST
+    LET row = LAST
+    SYS CAT row ":gt"
+    LET row = LAST
+    SYS GREPV "gate:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag row
+    LET bag = LAST
+    LET bag_ch = 1
+    SYS LINES bag
+    LET bag_n = LAST_N
+  END
+  PRINT_JSON bag_n take_n sub_n eq_n hit miss p_src note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # empty equal
+  SYS JSONEQ "{}" "{}"
+  LET eq_n = LAST_N
+  CLEAR_ERR
+  # empty subset
+  SYS JSONSUBSET "{}" "{\"a\":1}"
+  LET sub_n = LAST_N
+  CLEAR_ERR
+  # value mismatch soft
+  SYS JSONOBJ "ok" true "n" 3
+  LET req = LAST
+  SYS JSONOBJ "ok" false "n" 3 "extra" 1
+  SYS JSONSUBSET req LAST
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # non-obj
+  SYS JSONEQ "not" "{}"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # order independent
+  SYS JSONOBJ "a" 1 "b" 2
+  LET body = LAST
+  SYS JSONOBJ "b" 2 "a" 1
+  SYS JSONEQ body LAST
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  PRINT_JSON eq_n sub_n take_n has_n peel_hit p_src
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS BLANK out
+  IF LAST_N == 0 THEN
+    SYS WRITE val_path out
+    CLEAR_ERR
+  ELSE
+    SYS WRITE val_path bag
+    CLEAR_ERR
+  END
+END
+
+LET row = "schema=cubalc.agent_json_plate_lockstep_board.v1"
+SYS PUSH row "date"
+LET row = LAST
+SYS PUSH row run_date
+LET row = LAST
+SYS PUSH row "op"
+LET row = LAST
+SYS PUSH row op
+LET row = LAST
+SYS PUSH row "hit"
+LET row = LAST
+SYS STR hit
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "miss"
+LET row = LAST
+SYS STR miss
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "bag_n"
+LET row = LAST
+SYS STR bag_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "take_n"
+LET row = LAST
+SYS STR take_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "eq_n"
+LET row = LAST
+SYS STR eq_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "sub_n"
+LET row = LAST
+SYS STR sub_n
+SYS PUSH row LAST
+LET row = LAST
+SYS PUSH row "note"
+LET row = LAST
+SYS PUSH row note_msg
+LET row = LAST
+SYS WRITE report_path row
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+SYS WRITE meta_path row
+CLEAR_ERR
+
+NOTE "agent_json_plate_lockstep_board: done"
+PRINT_JSON hit miss bag_n take_n eq_n sub_n p_src note_msg
+EXIT 0
