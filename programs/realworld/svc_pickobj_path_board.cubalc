@@ -1,0 +1,1075 @@
+# svc_pickobj_path_board.cubalc — path PICKOBJ/OMITOBJ project + KEYNEST walk
+#
+# Real use: ops agents project allowlisted nest fields (cfg.port/role) and strip
+# noise flags without GETOBJ+PICKP+SETOBJ glue; walk nest keys for inventory.
+# First realworld of proofs 1204 PICKOBJ path + 1203 EACH KEYNEST path.
+#
+#   PICKOBJ|KEEPOBJ nest field… · OMITOBJ|STRIPNEST nest field…
+#   EACH KEYNEST path · EACH KEY OF PLATE path · soft miss · FROM PEER
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_spp_$$
+#   ./out/cubalc run programs/realworld/svc_pickobj_path_board.cubalc boot
+#   ./out/cubalc run ... pick|omit|walk|soft|peer|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SPP_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_SPP_REQUIRE
+#
+# Edges:
+#   soft miss nest; false-friend keys; WRITE NL; NUM softens REQUIRE;
+#   EXIT shell (W7); reseed after pick via SETP
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_pickobj_path_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_pickobj_path -- boot|pick|omit|walk|soft|peer|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeX"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SPP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SPP_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+LET bag_n = 0
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET body = ""
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET soft_ok = 0
+LET gate_ok = 0
+LET path_val = ""
+LET walk_bag = ""
+LET n_walk = 0
+
+ONEOF ACTION "boot", "pick", "omit", "walk", "soft", "peer", "gate", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pick" THEN
+    LET op = "pick"
+  WHEN "omit" THEN
+    LET op = "omit"
+  WHEN "walk" THEN
+    LET op = "walk"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — seed cfg/flags with noise for project/scrub
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-pickobj\",\"schema\":\"cubalc.svc_pickobj_path.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"n\":1,\"cfg\":{\"port\":8080,\"tls\":0,\"role\":\"edge\",\"tmp\":1,\"noise\":\"x\"},\"flags\":{\"debug\":0,\"trace\":1,\"noise\":9,\"live\":1},\"meta\":{\"role\":\"" role_s "\",\"zone\":\"east\"}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"host\":\"" host_s "\",\"schema\":\"cubalc.svc_pickobj_path.v1\",\"meta\":{\"role\":\"edge\",\"zone\":\"west\",\"tmp\":\"x\",\"n\":9},\"cfg\":{\"port\":9090,\"tls\":1,\"tmp\":2},\"tag\":\"t\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  HASP "cfg.tmp"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  HASP "flags.noise"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  LENP "cfg"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF has_n == 5 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET take_n = 5
+        LET soft_ok = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot cfg len"
+        FAIL "boot cfg len"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot flags noise"
+      FAIL "boot flags noise"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot cfg tmp"
+    FAIL "boot cfg tmp"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit load_hit has_n note_msg
+  CLEAR_ERR
+END
+
+# pick — PICKOBJ project allowlist under cfg
+SYS EQS op "pick"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PICKOBJ "cfg" "port" "role"
+  CLEAR_ERR
+  GETP "cfg.port"
+  SYS EQS LAST "8080"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "cfg.role"
+  SYS EQS LAST "edge"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  HASP "cfg.tls"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  HASP "cfg.tmp"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  HASP "cfg.noise"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  LENP "cfg"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # false friend
+  HASP "cfg.por"
+  LET path_val = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 0 THEN
+        IF has_n == 0 THEN
+          IF miss_n == 0 THEN
+            IF take_n == 2 THEN
+              IF path_val == 0 THEN
+                LET hit = 1
+                LET note_msg = "pick ok"
+                LET admit_n = 1
+                LET gate_ok = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "pick false por"
+                FAIL "pick false por"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "pick cfg len"
+              FAIL "pick cfg len"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "pick noise gone"
+            FAIL "pick noise gone"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "pick tmp gone"
+          FAIL "pick tmp gone"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "pick tls gone"
+        FAIL "pick tls gone"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "pick role"
+      FAIL "pick role"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "pick port"
+    FAIL "pick port"
+    CLEAR_ERR
+  END
+  SYS CAT "pick:port+role:pk"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pick:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit take_n soft_ok note_msg
+  CLEAR_ERR
+END
+
+# omit — OMITOBJ strip noise under flags (reseed flags first)
+SYS EQS op "omit"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # ensure full flags present (pick may have left cfg thin)
+  SETP "flags.debug" 0
+  CLEAR_ERR
+  SETP "flags.trace" 1
+  CLEAR_ERR
+  SETP "flags.noise" 9
+  CLEAR_ERR
+  SETP "flags.live" 1
+  CLEAR_ERR
+  HASP "flags.noise"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  OMITOBJ "flags" "noise"
+  CLEAR_ERR
+  HASP "flags.noise"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "flags.trace"
+  SYS EQS LAST "1"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "flags.debug"
+  SYS EQS LAST "0"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  HASP "flags.live"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  LENP "flags"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # false friend
+  HASP "flags.noi"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF soft_ok == 0 THEN
+      IF load_hit == 1 THEN
+        IF has_n == 1 THEN
+          IF gate_ok == 1 THEN
+            IF take_n == 3 THEN
+              IF miss_n == 0 THEN
+                LET hit = 1
+                LET note_msg = "omit ok"
+                LET admit_n = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "omit false noi"
+                FAIL "omit false noi"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "omit flags len"
+              FAIL "omit flags len"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "omit live keep"
+            FAIL "omit live keep"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "omit debug keep"
+          FAIL "omit debug keep"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "omit trace keep"
+        FAIL "omit trace keep"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "omit noise gone"
+      FAIL "omit noise gone"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "omit pre noise"
+    FAIL "omit pre noise"
+    CLEAR_ERR
+  END
+  SYS CAT "omit:noise:om"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "omit:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n soft_ok take_n load_hit note_msg
+  CLEAR_ERR
+END
+
+# walk — EACH KEYNEST inventory of cfg keys
+SYS EQS op "walk"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # reseed cfg full for walk inventory
+  SETP "cfg.port" 8080
+  CLEAR_ERR
+  SETP "cfg.tls" 0
+  CLEAR_ERR
+  SETP "cfg.role" "edge"
+  CLEAR_ERR
+  SETP "cfg.tmp" 1
+  CLEAR_ERR
+  LET walk_bag = ""
+  LET n_walk = 0
+  EACH KEYNEST "cfg"
+    LET n_walk = n_walk + 1
+    SYS PUSH walk_bag KEY
+    LET walk_bag = LAST
+  END
+  CLEAR_ERR
+  LET peel_hit = n_walk
+  CLEAR_ERR
+  SYS HASLINE walk_bag "port"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE walk_bag "tls"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  SYS HASLINE walk_bag "role"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE walk_bag "tmp"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  # false friend
+  SYS HASLINE walk_bag "por"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # EACH KEY OF PLATE path sugar
+  LET walk_bag = ""
+  LET n_walk = 0
+  EACH KEY OF PLATE "flags"
+    LET n_walk = n_walk + 1
+    SYS PUSH walk_bag KEY
+    LET walk_bag = LAST
+  END
+  CLEAR_ERR
+  LET take_n = n_walk
+  CLEAR_ERR
+  SYS HASLINE walk_bag "debug"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 4 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF gate_ok == 1 THEN
+            IF miss_n == 0 THEN
+              IF take_n >= 2 THEN
+                IF admit_n == 1 THEN
+                  LET hit = 1
+                  LET note_msg = "walk ok"
+                  LET admit_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "walk flags debug"
+                  FAIL "walk flags debug"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "walk flags n"
+                FAIL "walk flags n"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "walk false por"
+              FAIL "walk false por"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "walk tmp"
+            FAIL "walk tmp"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "walk role"
+          FAIL "walk role"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "walk tls"
+        FAIL "walk tls"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "walk port"
+      FAIL "walk port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "walk cfg n"
+    FAIL "walk cfg n"
+    CLEAR_ERR
+  END
+  SYS CAT "walk:cfg" peel_hit ":wk"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "walk:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit take_n load_hit note_msg
+  CLEAR_ERR
+END
+
+# soft — miss nest pick/omit/walk empty
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PICKOBJ "missing.nest" "a" "b"
+  CLEAR_ERR
+  # soft pick may auto-create empty nest obj (document W359)
+  HASP "missing.nest"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  LENP "missing.nest"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  OMITOBJ "ghost.obj" "x"
+  CLEAR_ERR
+  LET walk_bag = ""
+  LET n_walk = 0
+  EACH KEYNEST "missing.nest"
+    LET n_walk = n_walk + 1
+    SYS PUSH walk_bag KEY
+    LET walk_bag = LAST
+  END
+  CLEAR_ERR
+  LET load_hit = n_walk
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  HASP "host"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # empty nest keys after soft pick (no a/b created)
+  HASP "missing.nest.a"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  HASP "ghost.obj"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # accept: empty nests may be auto-created (W359); no fields a/b; walk n=0
+  IF take_n == 0 THEN
+    IF load_hit == 0 THEN
+      IF soft_ok == 0 THEN
+        IF has_n == 1 THEN
+          IF gate_ok == 0 THEN
+            LET hit = 1
+            LET note_msg = "soft ok"
+            LET admit_n = 1
+            # peel_hit/miss_n record auto-create side effects
+            LET path_val = peel_hit
+          ELSE
+            LET miss = 1
+            LET note_msg = "soft nest field a"
+            FAIL "soft nest field a"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "soft host"
+          FAIL "soft host"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft empty bag"
+        FAIL "soft empty bag"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft walk n"
+      FAIL "soft walk n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft nest len"
+    FAIL "soft nest len"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:miss0:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit load_hit has_n note_msg
+  CLEAR_ERR
+END
+
+# peer — PICKOBJ/OMITOBJ FROM PEER
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PICKOBJ FROM PEER "meta" "role" "n"
+  CLEAR_ERR
+  GETP FROM PEER "meta.role"
+  SYS EQS LAST "edge"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "meta.n"
+  SYS EQS LAST "9"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  HASP FROM PEER "meta.zone"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  HASP FROM PEER "meta.tmp"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  OMITOBJ FROM PEER "cfg" "tmp"
+  CLEAR_ERR
+  HASP FROM PEER "cfg.tmp"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "cfg.port"
+  SYS EQS LAST "9090"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  GETP "role"
+  SYS EQS LAST role_s
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "peer.json"
+  LET peer_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE peer_path PEER
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 0 THEN
+        IF has_n == 0 THEN
+          IF gate_ok == 0 THEN
+            IF admit_n == 1 THEN
+              IF miss_n == 1 THEN
+                LET hit = 1
+                LET note_msg = "peer ok"
+                LET admit_n = 1
+                LET take_n = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "peer plate role"
+                FAIL "peer plate role"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "peer cfg port"
+              FAIL "peer cfg port"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer cfg tmp gone"
+            FAIL "peer cfg tmp gone"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer meta tmp"
+          FAIL "peer meta tmp"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer meta zone"
+        FAIL "peer meta zone"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer meta n"
+      FAIL "peer meta n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer meta role"
+    FAIL "peer meta role"
+    CLEAR_ERR
+  END
+  SYS CAT "peer:meta:pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit soft_ok admit_n note_msg
+  CLEAR_ERR
+END
+
+# gate — post-project contract
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # reseed minimal project surface
+  SETP "cfg.port" 8080
+  CLEAR_ERR
+  SETP "cfg.role" "edge"
+  CLEAR_ERR
+  PICKOBJ "cfg" "port" "role"
+  CLEAR_ERR
+  HASP "cfg.port"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  HASP "cfg.tls"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  NEEDP "host" "schema" "role"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET admit_n = 0
+  END
+  CLEAR_ERR
+  HASP "flags.noise"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # if noise still present from earlier omit miss — OMIT again
+  IF load_hit == 1 THEN
+    OMITOBJ "flags" "noise"
+    CLEAR_ERR
+    HASP "flags.noise"
+    LET load_hit = LAST_N
+    CLEAR_ERR
+  END
+  CLEAR_ERR
+  HASP "cfg.por"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  LENP "cfg"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF soft_ok == 0 THEN
+      IF admit_n == 1 THEN
+        IF load_hit == 0 THEN
+          IF miss_n == 0 THEN
+            IF take_n == 2 THEN
+              LET hit = 1
+              LET note_msg = "gate ok"
+              LET admit_n = 1
+              LET gate_ok = 1
+              LET has_n = 2
+            ELSE
+              LET miss = 1
+              LET note_msg = "gate cfg len"
+              FAIL "gate cfg len"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "gate false por"
+            FAIL "gate false por"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate flags noise"
+          FAIL "gate flags noise"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate needp"
+        FAIL "gate needp"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate tls gone"
+      FAIL "gate tls gone"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate port"
+    FAIL "gate port"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  SYS CAT "gate:1:gn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit take_n load_hit note_msg
+  CLEAR_ERR
+END
+
+# probe — KEEPOBJ/STRIPNEST aliases + empty bag
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SETP "cfg.port" 8080
+  CLEAR_ERR
+  SETP "cfg.tls" 0
+  CLEAR_ERR
+  SETP "cfg.role" "edge"
+  CLEAR_ERR
+  KEEPOBJ "cfg" "port"
+  CLEAR_ERR
+  HASP "cfg.port"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  HASP "cfg.role"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  SETP "flags.debug" 0
+  CLEAR_ERR
+  SETP "flags.noise" 9
+  CLEAR_ERR
+  STRIPNEST "flags" "noise"
+  CLEAR_ERR
+  HASP "flags.noise"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS HAS LAST "svc-pickobj"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  LENP "cfg"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    IF peel_hit == 1 THEN
+      IF soft_ok == 0 THEN
+        IF has_n == 0 THEN
+          IF gate_ok == 1 THEN
+            IF take_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "probe ok"
+              LET admit_n = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "probe cfg len"
+              FAIL "probe cfg len"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe agent"
+            FAIL "probe agent"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe strip noise"
+          FAIL "probe strip noise"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe keepobj role"
+        FAIL "probe keepobj role"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe keepobj port"
+      FAIL "probe keepobj port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe empty bag"
+    FAIL "probe empty bag"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:pick:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit take_n has_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_pickobj_path.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " has=" has_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_pickobj_path_board: end"

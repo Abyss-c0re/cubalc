@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 251,
-  "program": "programs/realworld/svc_getpn_slo_board.cubalc",
-  "theme": "GETPN nest path SLO / burn gate plane",
-  "version": "1.15.654-usability",
+  "iter": 252,
+  "program": "programs/realworld/svc_pickobj_path_board.cubalc",
+  "theme": "path PICKOBJ/OMITOBJ project + KEYNEST walk",
+  "version": "1.15.657-usability",
   "pass": true,
-  "prior_note": "iter 250 KEYSP inventory; this iter first realworld GETPN/NUMP path (proof 1202) for SLO peel",
+  "prior_note": "iter 251 GETPN SLO; this iter first realworld PICKOBJ/OMITOBJ path (1204) + KEYNEST path walk (1203)",
   "tests": [
     {
       "name": "list",
@@ -15,63 +15,63 @@
     },
     {
       "name": "boot",
-      "cmd": "seed lat/freq/burn + GETPN smoke",
+      "cmd": "seed cfg/flags noise",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "peel",
-      "cmd": "GETPN path slash zero bool NUMP",
+      "name": "pick",
+      "cmd": "PICKOBJ cfg port role",
       "ok": true,
-      "note": "peel"
+      "note": "pick"
     },
     {
-      "name": "budget",
-      "cmd": "compare peels vs MAX_P99/MAX_ERR",
+      "name": "omit",
+      "cmd": "OMITOBJ flags noise",
       "ok": true,
-      "note": "budget"
+      "note": "omit"
     },
     {
-      "name": "budget_over",
-      "cmd": "MAX_P99=100 → p99 over",
+      "name": "walk",
+      "cmd": "EACH KEYNEST cfg + KEY OF flags",
       "ok": true,
-      "note": "budget deny"
-    },
-    {
-      "name": "peer",
-      "cmd": "GETPN FROM PEER path",
-      "ok": true,
-      "note": "peer"
+      "note": "walk"
     },
     {
       "name": "soft",
-      "cmd": "OR default + hard miss",
+      "cmd": "miss nest pick/omit auto-create empty",
       "ok": true,
       "note": "soft"
     },
     {
+      "name": "peer",
+      "cmd": "PICKOBJ/OMITOBJ FROM PEER",
+      "ok": true,
+      "note": "peer"
+    },
+    {
       "name": "gate",
-      "cmd": "combined SLO + NEEDP",
+      "cmd": "project contract + NEEDP",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "SYS JSONN dual + recover after hard miss",
+      "cmd": "KEEPOBJ/STRIPNEST aliases",
       "ok": true,
       "note": "probe"
     },
     {
       "name": "require_unknown",
-      "cmd": "EXIT 2; REQUIRE=abc softens",
+      "cmd": "EXIT 2",
       "ok": true,
-      "note": "W7/W6"
+      "note": "W7"
     },
     {
       "name": "selftest",
-      "cmd": "./out/cubalc selftest",
+      "cmd": "selftest",
       "ok": false,
-      "note": "427/445 pre-existing cli shell set fails; getpn_path PASS 36"
+      "note": "430/449 pre-existing cli shell fails; pickobj_path PASS 25 each_key_path PASS 32"
     }
   ],
   "weaknesses": [
@@ -2938,25 +2938,49 @@
       "title": "SLO budget miss sets hit=0 without shell rc unless REQUIRE+EXIT",
       "detail": "MAX_P99=100 budget over → note budget p99 over, process exit_code 0. Agents need CUBALC_SGS_REQUIRE=1 or EXIT for CI-visible deny.",
       "repro": "MAX_P99=100 budget → shell 0 without REQUIRE"
+    },
+    {
+      "id": "W359",
+      "severity": "high",
+      "area": "lang|pickobj_soft",
+      "title": "PICKOBJ/OMITOBJ on missing nest auto-creates empty object",
+      "detail": "PICKOBJ missing.nest a b leaves HASP missing.nest=1 with LENP 0 (no fields a/b). OMITOBJ ghost.obj x creates ghost.obj empty. Soft miss is not a no-op; agents may accumulate empty nest shells unless DELP after soft probe.",
+      "repro": "PICKOBJ missing.nest a; HASP missing.nest → 1; LENP → 0"
+    },
+    {
+      "id": "W360",
+      "severity": "med",
+      "area": "lang|pickobj_reseed",
+      "title": "PICKOBJ destructive — need SETP reseed for later walk/omit",
+      "detail": "After PICKOBJ cfg port role, tls/tmp/noise gone. Walk inventory must SETP reseed. No non-destructive PICKOBJ TO / copy-project form.",
+      "repro": "pick then walk needs SETP cfg.tls etc"
+    },
+    {
+      "id": "W361",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL",
+      "detail": "W5 reconfirm",
+      "repro": "cat -A META.txt"
     }
   ],
   "workarounds": [
-    "SYS ENV for numeric budgets not GETFLAG long names",
-    "CLEAR_ERR after hard GETPN miss",
-    "REQUIRE env + EXIT for shell-visible SLO deny"
+    "SETP reseed after destructive PICKOBJ before walk",
+    "Soft: check LENP 0 not HASP 0 after miss pick",
+    "DELP empty shells if plate hygiene matters"
   ],
   "language_gaps": [
-    "GETPN nest path peels excellent for SLO/burn gates (LAST_N ready)",
-    "OR soft default + zero valid + bool→1 work",
-    "FROM PEER multi-plate numeric peel solid",
-    "GETFLAG multi-char without |short alias fragile",
-    "Hard miss sticky err requires discipline"
+    "PICKOBJ/OMITOBJ path project/scrub solid for config admit",
+    "EACH KEYNEST path walk good for inventory bags",
+    "FROM PEER multi-plate project works",
+    "Soft miss creates empty nests — not pure soft",
+    "No non-destructive project-to-var form"
   ],
   "issues_faced": [
-    "GETFLAG maxp99 OR ENV parse fail — switched to SYS ENV MAX_P99",
-    "Hard GETPN miss needs CLEAR_ERR before next peel",
-    "Budget over without REQUIRE is soft-only shell 0"
+    "PICKOBJ soft creates empty nest shells (W359)",
+    "Project is destructive; walk/omit need SETP reseed",
+    "CLI plate duals still fail set form"
   ],
-  "commit": "4cca51db",
-  "ts": "2026-08-09T12:13:54Z"
+  "commit": "",
+  "ts": "2026-08-09T12:39:50Z"
 }
