@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 671,
-  "version": "1.15.698-usability",
-  "item": "DELBYVAL + plate delbyval",
-  "item_id": 707,
-  "title": "DELBYVAL/DROPVAL + cubalc plate delbyval · drop every leaf with exact value write-back · multi-plate",
-  "commit": "ba105f48c1068ca01e6a045b9dde692315902753",
-  "summary": "Scrub by value without PATHSBYVAL+EACH+DELP glue. proof 1248 + CLI PASS.",
+  "iter": 672,
+  "version": "1.15.699-usability",
+  "item": "ALLEQFLAT + plate alleqflat",
+  "item_id": 708,
+  "title": "ALLEQFLAT/SAMEVALFLAT + cubalc plate alleqflat · all matching leaf values identical → LAST_N 0|1 · LAST=common value · multi-plate",
+  "commit": "e89003f8b1128c80d45078924b76bddcc1e3ab9d",
+  "summary": "Nest consistency without UNIQFLAT+LINES+CMP glue. proof 1249 + CLI PASS.",
   "proofs": [
-    "1248_delbyval PASS",
-    "1248_cli_plate_delbyval PASS",
-    "1247_setbyval reg PASS"
+    "1249_alleqflat PASS",
+    "1249_cli_plate_alleqflat PASS",
+    "1248_delbyval reg PASS"
   ],
-  "when": "2026-08-09T20:50:32Z",
+  "when": "2026-08-09T21:01:10Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ba105f48c1068ca01e6a045b9dde692315902753",
-  "note": "after SETBYVAL; EVOLVE_PAUSED"
+  "sha": "e89003f8b1128c80d45078924b76bddcc1e3ab9d",
+  "note": "after DELBYVAL; EVOLVE_PAUSED"
 }
