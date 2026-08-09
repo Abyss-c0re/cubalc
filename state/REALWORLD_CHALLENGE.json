@@ -2934,6 +2934,6 @@
     "HASP exact path segments",
     "EXIT 2 shell 0 (W7)"
   ],
-  "commit": "pending",
+  "commit": "892ce06e0e6db54b9107be932d2050bd5f566ea2",
   "ts": "2026-08-09T10:09:35Z"
 }
