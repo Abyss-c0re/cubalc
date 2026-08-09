@@ -1,0 +1,83 @@
+# PATHBYVAL / VALPATH — first leaf path by exact value (reverse of GETFLAT)
+# Usability: reverse nest lookup without EACH FLAT+EQS glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"leader\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\"}}"
+LET PEER = "{\"a\":{\"name\":\"first\"},\"b\":{\"name\":\"second\"},\"c\":{\"name\":\"third\"}}"
+
+PATHBYVAL "worker"
+ASSERT OK == 1
+ASSERT PATHBYVAL_HIT == 1
+SYS EQS LAST "meta.role"
+ASSERT LAST_N == 1
+SYS EQS PATHBYVAL "meta.role"
+ASSERT LAST_N == 1
+SYS EQS PATHBYVAL_VALUE "worker"
+ASSERT LAST_N == 1
+
+PATHBYVAL "leader"
+SYS EQS LAST "cfg.role"
+ASSERT LAST_N == 1
+
+PATHBYVAL "h1"
+SYS EQS LAST "cfg.host"
+ASSERT LAST_N == 1
+PATHBYVAL "h2"
+SYS EQS LAST "other.host"
+ASSERT LAST_N == 1
+
+# soft miss + OR fallback
+PATHBYVAL "nope" OR "default.path"
+ASSERT PATHBYVAL_HIT == 0
+ASSERT PATHBYVAL_FALLBACK == 1
+SYS EQS LAST "default.path"
+ASSERT LAST_N == 1
+
+PATHBYVAL "nope"
+ASSERT PATHBYVAL_HIT == 0
+ASSERT PATHBYVAL_FALLBACK == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+PATHBYVAL FROM PEER "second"
+ASSERT PATHBYVAL_FROM == 1
+SYS EQS PATHBYVAL_SRC "PEER"
+ASSERT LAST_N == 1
+SYS EQS LAST "b.name"
+ASSERT LAST_N == 1
+SYS EQS PATHBYVAL_VALUE "second"
+ASSERT LAST_N == 1
+
+# VALPATH / FINDVAL aliases
+VALPATH FROM PEER "first"
+SYS EQS LAST "a.name"
+ASSERT LAST_N == 1
+FINDVAL FROM PEER "third"
+SYS EQS LAST "c.name"
+ASSERT LAST_N == 1
+
+# first match wins when value repeated
+LET PLATE = "{\"a\":{\"v\":\"x\"},\"b\":{\"v\":\"x\"}}"
+PATHBYVAL "x"
+SYS EQS LAST "a.v"
+ASSERT LAST_N == 1
+
+# plate unchanged after multi-plate
+LET PLATE = "{\"x\":9}"
+PATHBYVAL FROM PEER "first"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# round-trip with GETFLAT
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"leader\"}}"
+PATHBYVAL "worker"
+LET p = LAST
+GETP p
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1243_pathbyval: PASS"

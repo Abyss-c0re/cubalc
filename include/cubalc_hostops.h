@@ -430,6 +430,13 @@ int cubalc_host_json_leaf_freq(const char *json, const char *needle,
  * Usability: majority role/status without FREQFLAT+SORTFREQ+BEFORE glue. */
 int cubalc_host_json_leaf_mode(const char *json, const char *needle,
                                cubalc_host_result *r);
+/* First leaf path whose value equals needle (PATHBYVAL / VALPATH / FINDVAL).
+ * Exact match on decoded leaf text. Empty needle → first empty-value leaf (rare).
+ * Hit → r->str=path · r->err=value · r->n=1 · r->code=1.
+ * Soft miss → str="" · n=0 · code=0. Soft always OK. Read-only.
+ * Usability: reverse nest lookup without EACH FLAT+EQS glue (dual of GETFLAT). */
+int cubalc_host_json_leaf_path_by_val(const char *json, const char *val,
+                                      cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */
