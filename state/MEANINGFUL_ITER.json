@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 653,
-  "version": "1.15.680-usability",
-  "item": "AVGFLAT + plate avgflat",
-  "item_id": 689,
-  "title": "AVGFLAT/MEANFLAT + cubalc plate avgflat · integer mean pure-int leaves by path needle → LAST_N",
-  "commit": "06bae483d4d3313672d95277e18b69ef2b844968",
-  "summary": "Nest mean scores without FLATKV+GREP+AVG or SUMFLAT+DIV glue. proof 1230 + CLI PASS.",
+  "iter": 654,
+  "version": "1.15.681-usability",
+  "item": "MEDIANFLAT + plate medianflat",
+  "item_id": 690,
+  "title": "MEDIANFLAT/P50FLAT + cubalc plate medianflat · integer median pure-int leaves by path needle → LAST_N",
+  "commit": "c35f0eb47f583f16f9a6f777befb7a8c1d31cf5a",
+  "summary": "Robust nest mid without FLATKV+GREP+MEDIAN glue. proof 1231 + CLI PASS.",
   "proofs": [
-    "1230_avgflat PASS",
-    "1230_cli_plate_avgflat PASS",
-    "1229_getflatn reg PASS",
-    "1220_sumflat reg PASS"
+    "1231_medianflat PASS",
+    "1231_cli_plate_medianflat PASS",
+    "1230_avgflat reg PASS"
   ],
-  "when": "2026-08-09T16:53:52Z",
+  "when": "2026-08-09T17:06:48Z",
   "agent": "meaningful_iter_10m",
-  "sha": "06bae483d4d3313672d95277e18b69ef2b844968",
-  "note": "after GETFLATN plane; EVOLVE_PAUSED"
+  "sha": "c35f0eb47f583f16f9a6f777befb7a8c1d31cf5a",
+  "note": "after thrash restore; after AVGFLAT plane; EVOLVE_PAUSED"
 }
