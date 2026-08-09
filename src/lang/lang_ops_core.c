@@ -27398,7 +27398,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"FILLPFILE") || kw(&L->cur,"DUMPP") || kw(&L->cur,"NEEDP") ||
              kw(&L->cur,"EQP") || kw(&L->cur,"NEQP") || kw(&L->cur,"DIFFP") ||
              kw(&L->cur,"CHANGELOGP") || kw(&L->cur,"SUBSETP") || kw(&L->cur,"COVERSP") ||
-             kw(&L->cur,"PLUCKP") || kw(&L->cur,"GETPALL") ||
+             kw(&L->cur,"PLUCKP") || kw(&L->cur,"GETPALL") || kw(&L->cur,"DELTAP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35758,6 +35758,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"REQUIRE COVERSP", "REQUIRE COVERSP super sub — fail-fast cover · soft twin COVERSP"},
       {"PLUCKP", "PLUCKP|GETPALL [FROM plate] key… — multi-key peel → value bag · multi-plate · no GETP+PUSH"},
       {"GETPALL", "GETPALL alias of PLUCKP"},
+      {"DELTAP", "DELTAP|CHANGEOBJP a b [FROM NEW|OLD] — changed keys as plate · multi-plate sync payload · no SYS JSONDELTA"},
+      {"CHANGEOBJP", "CHANGEOBJP alias of DELTAP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -39726,6 +39728,100 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# pluckp n=%ld hit=%ld from=%d src=%s\n",
               hr.n, (long)hr.code, have_from,
               from_name[0] ? from_name : (have_from ? "?" : "PLATE"));
+    bump(vm); return 1;
+  }
+  /* DELTAP|CHANGEOBJP a b [FROM NEW|OLD] — changed keys as plate object (JSONDELTA dual).
+   * Values from b/new by default; FROM OLD takes a. Soft {} if identical.
+   * Complements DIFFP (key names only) and CHANGELOGP (text lines).
+   * Usability: mesh sync payload without SYS JSONDELTA / DIFFP+EACH+SETP glue:
+   *   DELTAP PLATE PEER
+   *   DELTAP session peer FROM OLD
+   *   MERGEP FROM PLATE LAST   # apply peer delta
+   */
+  if (kw(&L->cur,"DELTAP") || kw(&L->cur,"CHANGEOBJP") || kw(&L->cur,"MDELTAP") ||
+      kw(&L->cur,"PLATE_DELTA") || kw(&L->cur,"DELTA_P") || kw(&L->cur,"SYNCP") ||
+      kw(&L->cur,"PATCHOBJP") || kw(&L->cur,"DIFFOBJP")) {
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+    char aname[96], bname[96];
+    cubalc_host_result hr;
+    int prefer_b = 1;
+    Var *pv;
+
+    lex_next(L);
+    a[0] = 0; b[0] = 0; aname[0] = 0; bname[0] = 0;
+
+#define CUBALC_RESOLVE_PLATE_ARG3(dst, dname) do { \
+      (dst)[0] = 0; (dname)[0] = 0; \
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) { \
+        snprintf((dname), sizeof(dname), "%s", "LAST"); \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+        lex_next(L); \
+      } else if (L->cur.kind == TK_IDENT) { \
+        pv = var_get(vm, L->cur.text, 0); \
+        if (pv && pv->is_str) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%s", pv->sval); \
+          lex_next(L); \
+        } else if (pv) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%ld", pv->val); \
+          lex_next(L); \
+        } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+          (dst)[0] = 0; \
+        } \
+      } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+      } \
+      { const char *bp = (dst); \
+        while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++; \
+        if (*bp != '{') snprintf((dst), sizeof(dst), "%s", "{}"); \
+      } \
+    } while (0)
+
+    CUBALC_RESOLVE_PLATE_ARG3(a, aname);
+    CUBALC_RESOLVE_PLATE_ARG3(b, bname);
+#undef CUBALC_RESOLVE_PLATE_ARG3
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USE") || kw(&L->cur,"VALUES")) {
+      lex_next(L);
+      if (kw(&L->cur,"OLD") || kw(&L->cur,"LEFT") || kw(&L->cur,"A") ||
+          kw(&L->cur,"BASE") || kw(&L->cur,"PREV") || kw(&L->cur,"PRIOR")) {
+        prefer_b = 0;
+        lex_next(L);
+      } else if (kw(&L->cur,"NEW") || kw(&L->cur,"RIGHT") || kw(&L->cur,"B") ||
+                 kw(&L->cur,"CUR") || kw(&L->cur,"NEXT") || kw(&L->cur,"PEER")) {
+        prefer_b = 1;
+        lex_next(L);
+      }
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_delta_obj(a, b, prefer_b, &hr) != 0) {
+      var_set_str(vm, "LAST", "{}");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "{}");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "DELTAP_N", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "DELTAP: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "DELTAP: fail");
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "DELTAP", hr.str);
+    var_set_num(vm, "DELTAP_N", hr.n);
+    var_set_num(vm, "JSONDELTA_N", hr.n);
+    var_set_str(vm, "DELTAP_A", aname);
+    var_set_str(vm, "DELTAP_B", bname);
+    var_set_num(vm, "DELTAP_NEW", prefer_b ? 1 : 0);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# deltap n=%ld a=%s b=%s prefer_b=%d\n",
+              hr.n, aname[0] ? aname : "?", bname[0] ? bname : "?", prefer_b);
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.

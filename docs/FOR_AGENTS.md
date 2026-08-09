@@ -51,6 +51,7 @@ EQP PLATE PEER                # soft mesh equality · or DIFFP / CHANGELOGP
 REQUIRE EQP PLATE PEER        # hard gate when sync must match
 SUBSETP need PEER             # soft required fields · REQUIRE SUBSETP hard
 PLUCKP FROM PEER "host" "n"   # multi-key peel → value bag (no GETP+PUSH)
+DELTAP PLATE PEER             # sync payload plate · MERGEP FROM PLATE LAST
 INCLUDE plate_both_save       # persist PLATE + PEER one INCLUDE
 # tick: INCLUDE plate_peer_tick
 ```

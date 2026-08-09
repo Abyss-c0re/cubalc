@@ -635,6 +635,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 605. ~~**`REQUIRE EQP` / `REQUIRE NEQP`**~~ **done** (fail-fast twins of soft EQP/NEQP · miss keys listed · mutation gate).
 606. ~~**`SUBSETP` / `COVERSP` + `REQUIRE SUBSETP`**~~ **done** (multi-plate required-field match · soft + fail-fast · no SYS JSONSUBSET).
 607. ~~**`PLUCKP` / `GETPALL`**~~ **done** (multi-key peel → value bag · multi-plate FROM · no GETP+PUSH / SYS JSONPLUCK glue).
+608. ~~**`DELTAP` / `CHANGEOBJP`**~~ **done** (changed keys as plate · multi-plate sync payload · dual of SYS JSONDELTA · complements DIFFP).
 
 ## Tick protocol
 

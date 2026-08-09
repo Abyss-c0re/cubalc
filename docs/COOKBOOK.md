@@ -276,8 +276,10 @@ SUBSETP need PEER           # soft required fields (values match)
 COVERSP PEER need           # dual · PEER covers need
 REQUIRE SUBSETP need PEER   # fail-fast · lists bad keys
 PLUCKP FROM PEER "host" "agent" "n"   # multi-key peel → value bag
+DELTAP PLATE PEER                     # changed keys as plate · MERGEP to apply
+# DELTAP PLATE PEER FROM OLD          # values from first plate
 ```
 
 Libs: `plate_peer` · `plate_peer_save` · `plate_peer_session` · `plate_peer_tick` · `plate_both_save`.  
-Proofs: `1137_plate_peer` · `1138_init_peer.sh` · `1139_plate_peer_tick` · `1143_plate_both_save` · `1145_eqp` · `1148_pluckp` · `1130_setp_from` · `1136_loadp`.
+Proofs: `1137_plate_peer` · `1138_init_peer.sh` · `1139_plate_peer_tick` · `1143_plate_both_save` · `1145_eqp` · `1148_pluckp` · `1149_deltap` · `1130_setp_from` · `1136_loadp`.
 

@@ -1,0 +1,70 @@
+# DELTAP / CHANGEOBJP — changed keys as plate object (multi-plate sync payload)
+# Usability: dual of SYS JSONDELTA · complements DIFFP keys + CHANGELOGP lines.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":1,\"host\":\"cubeA\",\"role\":\"worker\"}"
+LET PEER = "{\"n\":2,\"host\":\"cubeB\",\"role\":\"worker\",\"status\":\"ready\"}"
+
+# soft equal first
+EQP PLATE PEER
+ASSERT LAST_N == 0
+
+# key names only
+DIFFP PLATE PEER
+ASSERT DIFFP_N >= 2
+
+# delta object: values from PEER (new) by default
+DELTAP PLATE PEER
+ASSERT OK == 1
+ASSERT DELTAP_N >= 2
+ASSERT DELTAP_NEW == 1
+SYS JSON "host" FROM LAST
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM DELTAP
+ASSERT LAST_N == 2
+SYS JSON "status" FROM DELTAP
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+# role same → not in delta
+SYS JSON "role" FROM DELTAP
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# FROM OLD: values from first plate
+DELTAP PLATE PEER FROM OLD
+ASSERT DELTAP_NEW == 0
+SYS JSON "host" FROM LAST
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM DELTAP
+ASSERT LAST_N == 1
+
+# identical → empty object
+DELTAP PLATE PLATE
+ASSERT DELTAP_N == 0
+SYS EQS LAST "{}"
+ASSERT LAST_N == 1
+
+# apply peer delta into local plate
+DELTAP PLATE PEER
+MERGEP FROM PLATE LAST
+GETP "host"
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+GETP "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+EQP PLATE PEER
+ASSERT LAST_N == 1
+
+# alias
+LET a = "{\"x\":1}"
+LET b = "{\"x\":2,\"y\":9}"
+CHANGEOBJP a b
+ASSERT DELTAP_N == 2
+SYS JSONN "x" FROM LAST
+ASSERT LAST_N == 2
+
+PRINT "deltap soft ok"
