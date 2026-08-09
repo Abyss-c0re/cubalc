@@ -47,6 +47,7 @@ See `docs/COOKBOOK.md` §8 (single plate) · §9 (multi-plate PEER).
 INCLUDE plate_peer_session    # PLATE + PEER durable
 SETP FROM PEER "host" "cubeB"
 NEEDP FROM PEER "host"
+EQP PLATE PEER                # soft mesh equality · or DIFFP / CHANGELOGP
 INCLUDE plate_both_save       # persist PLATE + PEER one INCLUDE
 # tick: INCLUDE plate_peer_tick
 ```

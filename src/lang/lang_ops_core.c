@@ -27396,6 +27396,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"SETP") || kw(&L->cur,"INCP") || kw(&L->cur,"DELP") ||
              kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") || kw(&L->cur,"FILLP") ||
              kw(&L->cur,"FILLPFILE") || kw(&L->cur,"DUMPP") || kw(&L->cur,"NEEDP") ||
+             kw(&L->cur,"EQP") || kw(&L->cur,"NEQP") || kw(&L->cur,"DIFFP") ||
+             kw(&L->cur,"CHANGELOGP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35742,6 +35744,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
       {"DUMPP", "DUMPP|PLATEINFO [FROM plate] — cubalc.plate_info.v1 · multi-plate snapshot"},
       {"PLATEINFO", "PLATEINFO alias of DUMPP"},
+      {"EQP", "EQP|SAMEP a b — soft plate equality · multi-plate · no SYS JSONEQ"},
+      {"SAMEP", "SAMEP alias of EQP"},
+      {"NEQP", "NEQP a b — soft plate inequality · inverse of EQP"},
+      {"DIFFP", "DIFFP|CHANGEDP a b — changed key bag · multi-plate · no SYS JSONCHANGED"},
+      {"CHANGEDP", "CHANGEDP alias of DIFFP"},
+      {"CHANGELOGP", "CHANGELOGP|CLOGP a b — key: old → new bag · multi-plate · no SYS JSONCHANGELOG"},
+      {"CLOGP", "CLOGP alias of CHANGELOGP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -39299,6 +39308,150 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               kn, bytes, has_plate, have_from);
     if (vm->res)
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
+    bump(vm); return 1;
+  }
+  /* EQP|SAMEP a b — soft order-independent plate equality (top-level JSONEQ dual).
+   * NEQP a b — inverse · DIFFP|CHANGEDP a b — changed key bag · CHANGELOGP a b — value log.
+   * Args: plate var names (PLATE/PEER/…), LAST, or JSON object string.
+   * Soft always OK=1. LAST_N: eq 0|1 · neq 0|1 · diff/changelog = count.
+   * Usability: multi-plate mesh verify without SYS JSONEQ/JSONCHANGED glue:
+   *   EQP PLATE PEER
+   *   DIFFP session peer
+   *   CHANGELOGP a b
+   */
+  if (kw(&L->cur,"EQP") || kw(&L->cur,"SAMEP") || kw(&L->cur,"PLATE_EQ") ||
+      kw(&L->cur,"EQPLATE") || kw(&L->cur,"MEQP") ||
+      kw(&L->cur,"NEQP") || kw(&L->cur,"PLATE_NE") || kw(&L->cur,"NEPLATE") ||
+      kw(&L->cur,"MNEQP") ||
+      kw(&L->cur,"DIFFP") || kw(&L->cur,"CHANGEDP") || kw(&L->cur,"PLATE_DIFF") ||
+      kw(&L->cur,"MDIFFP") || kw(&L->cur,"KEYSDIFFP") ||
+      kw(&L->cur,"CHANGELOGP") || kw(&L->cur,"CLOGP") || kw(&L->cur,"PLATE_CHANGELOG") ||
+      kw(&L->cur,"MCHANGELOGP") || kw(&L->cur,"LOGDIFFP")) {
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+    char aname[96], bname[96];
+    cubalc_host_result hr;
+    int is_eq = 0, is_ne = 0, is_diff = 0, is_clog = 0;
+    Var *pv;
+
+    if (kw(&L->cur,"EQP") || kw(&L->cur,"SAMEP") || kw(&L->cur,"PLATE_EQ") ||
+        kw(&L->cur,"EQPLATE") || kw(&L->cur,"MEQP"))
+      is_eq = 1;
+    else if (kw(&L->cur,"NEQP") || kw(&L->cur,"PLATE_NE") || kw(&L->cur,"NEPLATE") ||
+             kw(&L->cur,"MNEQP"))
+      is_ne = 1;
+    else if (kw(&L->cur,"DIFFP") || kw(&L->cur,"CHANGEDP") || kw(&L->cur,"PLATE_DIFF") ||
+             kw(&L->cur,"MDIFFP") || kw(&L->cur,"KEYSDIFFP"))
+      is_diff = 1;
+    else
+      is_clog = 1;
+
+    lex_next(L);
+    a[0] = 0; b[0] = 0; aname[0] = 0; bname[0] = 0;
+
+    /* resolve plate arg → object text (non-object soft {}) */
+#define CUBALC_RESOLVE_PLATE_ARG(dst, dname) do { \
+      (dst)[0] = 0; (dname)[0] = 0; \
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) { \
+        snprintf((dname), sizeof(dname), "%s", "LAST"); \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+        lex_next(L); \
+      } else if (L->cur.kind == TK_IDENT) { \
+        pv = var_get(vm, L->cur.text, 0); \
+        if (pv && pv->is_str) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%s", pv->sval); \
+          lex_next(L); \
+        } else if (pv) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%ld", pv->val); \
+          lex_next(L); \
+        } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+          (dst)[0] = 0; \
+        } \
+      } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+      } \
+      { const char *bp = (dst); \
+        while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++; \
+        if (*bp != '{') snprintf((dst), sizeof(dst), "%s", "{}"); \
+      } \
+    } while (0)
+
+    CUBALC_RESOLVE_PLATE_ARG(a, aname);
+    CUBALC_RESOLVE_PLATE_ARG(b, bname);
+#undef CUBALC_RESOLVE_PLATE_ARG
+
+    if (!a[0] && !b[0] && !aname[0] && !bname[0]) {
+      /* bare: compare PLATE to LAST if LAST is object, else soft unequal empty */
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0]) {
+        snprintf(a, sizeof a, "%s", pv->sval);
+        snprintf(aname, sizeof aname, "%s", "PLATE");
+      } else {
+        snprintf(a, sizeof a, "%s", "{}");
+      }
+      snprintf(b, sizeof b, "%s", vm->last_str);
+      {
+        const char *bp = b;
+        while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+        if (*bp != '{') snprintf(b, sizeof b, "%s", "{}");
+      }
+      snprintf(bname, sizeof bname, "%s", "LAST");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (is_eq || is_ne) {
+      long hit = 0;
+      cubalc_host_json_eq(a, b, &hr);
+      hit = hr.n;
+      if (is_ne) hit = hit ? 0 : 1;
+      var_set_str(vm, "LAST", hit ? "1" : "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hit ? "1" : "0");
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "EQP_N", hit);
+      var_set_num(vm, "NEQP_N", hit);
+      var_set_num(vm, "EQP_EQ", is_eq ? hit : (hit ? 0 : 1));
+      var_set_str(vm, "EQP_A", aname);
+      var_set_str(vm, "EQP_B", bname);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# %s a=%s b=%s hit=%ld\n",
+                is_ne ? "neqp" : "eqp", aname[0] ? aname : "?", bname[0] ? bname : "?", hit);
+      bump(vm); return 1;
+    }
+
+    if (is_diff) {
+      cubalc_host_json_changed_keys(a, b, 0, &hr);
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "DIFFP", hr.str);
+      var_set_num(vm, "DIFFP_N", hr.n);
+      var_set_str(vm, "DIFFP_A", aname);
+      var_set_str(vm, "DIFFP_B", bname);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# diffp n=%ld a=%s b=%s\n",
+                hr.n, aname[0] ? aname : "?", bname[0] ? bname : "?");
+      bump(vm); return 1;
+    }
+
+    /* changelog */
+    cubalc_host_json_changelog(a, b, &hr);
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "CHANGELOGP", hr.str);
+    var_set_num(vm, "CHANGELOGP_N", hr.n);
+    var_set_str(vm, "CHANGELOGP_A", aname);
+    var_set_str(vm, "CHANGELOGP_B", bname);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# changelogp n=%ld a=%s b=%s\n",
+              hr.n, aname[0] ? aname : "?", bname[0] ? bname : "?");
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.

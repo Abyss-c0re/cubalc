@@ -1,0 +1,65 @@
+# EQP / NEQP / DIFFP / CHANGELOGP — multi-plate compare without SYS JSON*
+# Usability: mesh agents verify PLATE vs PEER in-language.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":1,\"role\":\"worker\",\"host\":\"cubeA\"}"
+LET PEER = "{\"role\":\"worker\",\"n\":1,\"host\":\"cubeA\"}"
+
+# order-independent equality
+EQP PLATE PEER
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT EQP_N == 1
+ASSERT EQP_EQ == 1
+
+SAMEP PLATE PEER
+ASSERT LAST_N == 1
+
+NEQP PLATE PEER
+ASSERT LAST_N == 0
+
+# mutate PEER
+SETP FROM PEER "host" "cubeB"
+SETP FROM PEER "status" "ready"
+
+EQP PLATE PEER
+ASSERT LAST_N == 0
+NEQP PLATE PEER
+ASSERT LAST_N == 1
+
+# changed keys bag
+DIFFP PLATE PEER
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS HASLINE LAST "host"
+ASSERT LAST_N == 1
+# restore LAST bag — DIFFP left keys in DIFFP
+SYS HASLINE DIFFP "status"
+ASSERT LAST_N == 1
+ASSERT DIFFP_N >= 1
+
+# changelog value lines
+CHANGELOGP PLATE PEER
+ASSERT OK == 1
+ASSERT CHANGELOGP_N >= 1
+ASSERT LAST_N >= 1
+SYS HAS LAST "host"
+ASSERT LAST_N == 1
+
+# string literals work too
+EQP "{\"a\":1}" "{\"a\":1}"
+ASSERT LAST_N == 1
+EQP "{\"a\":1}" "{\"a\":2}"
+ASSERT LAST_N == 0
+
+# PLATE vs LAST object
+LET snap = PLATE
+SETP "n" 9
+EQP snap PLATE
+ASSERT LAST_N == 0
+DIFFP snap PLATE
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+
+PRINT "eqp soft ok"

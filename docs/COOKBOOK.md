@@ -263,6 +263,15 @@ Top-level disk plane (no `SYS`):
 
 Mutate/probe (multi-plate `FROM`): `SETP`/`GETP`/`INCP`/`MERGEP`/`NEEDP`/`HASP`/`KEYSP`/`DUMPP`/`FILLP`/`FILLPFILE`.
 
+Compare plates (no `SYS JSONEQ` glue):
+
+```cubalc
+EQP PLATE PEER              # soft equal · LAST_N 0|1
+NEQP PLATE PEER             # inverse
+DIFFP PLATE PEER            # changed key bag → LAST
+CHANGELOGP PLATE PEER       # key: old → new lines → LAST
+```
+
 Libs: `plate_peer` · `plate_peer_save` · `plate_peer_session` · `plate_peer_tick` · `plate_both_save`.  
-Proofs: `1137_plate_peer` · `1138_init_peer.sh` · `1139_plate_peer_tick` · `1143_plate_both_save` · `1130_setp_from` · `1136_loadp`.
+Proofs: `1137_plate_peer` · `1138_init_peer.sh` · `1139_plate_peer_tick` · `1143_plate_both_save` · `1145_eqp` · `1130_setp_from` · `1136_loadp`.
 
