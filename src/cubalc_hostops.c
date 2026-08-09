@@ -7112,6 +7112,76 @@ int cubalc_host_json_leaf_path_by_val(const char *json, const char *val,
   return 0;
 }
 
+/* PATHSBYVAL: all leaf paths whose value equals needle. See header. */
+int cubalc_host_json_leaf_paths_by_val(const char *json, const char *val,
+                                       cubalc_host_result *r) {
+  cubalc_host_result kv;
+  const char *p, *line;
+  const char *want;
+  size_t olen = 0;
+  long n = 0;
+
+  r_clear(r);
+  r->str[0] = 0;
+  r->err[0] = 0;
+  r->n = 0;
+  r->code = 0;
+  r->ok = 1;
+  want = val ? val : "";
+  memset(&kv, 0, sizeof kv);
+  cubalc_host_json_leaf_kv(json ? json : "{}", NULL, &kv);
+  p = kv.str;
+  while (*p) {
+    char path[512], oldv[CUBALC_HOST_STR_MAX / 2];
+    size_t kn = 0, vn = 0;
+    const char *sep, *vs, *ve;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    kn = sep ? (size_t)(sep - line) : (size_t)(p - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn == 0 || kn >= sizeof path) continue;
+    memcpy(path, line, kn);
+    path[kn] = 0;
+    vs = sep ? sep + 1 : p;
+    ve = p;
+    while (vs < ve && (*vs == ' ' || *vs == '\t')) vs++;
+    while (ve > vs && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+    vn = (size_t)(ve - vs);
+    if (vn >= sizeof oldv) vn = sizeof oldv - 1;
+    memcpy(oldv, vs, vn);
+    oldv[vn] = 0;
+    if (strcmp(oldv, want) == 0)
+      cubalc_bag_push(r->str, sizeof r->str, &olen, &n, path);
+  }
+  r->n = n;
+  r->code = (int)n;
+  r->ok = 1;
+  if (want[0])
+    snprintf(r->err, sizeof r->err, "%s", want);
+  return 0;
+}
+
 /* UNIQFLAT: unique matching leaf values by path needle. See header. */
 int cubalc_host_json_leaf_uniq(const char *json, const char *needle,
                                cubalc_host_result *r) {

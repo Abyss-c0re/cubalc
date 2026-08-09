@@ -1,0 +1,74 @@
+# PATHSBYVAL / ALLPATHSBYVAL — all leaf paths with exact value
+# Usability: multi reverse nest lookup without EACH FLAT+IF+PUSH glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"fail\"},\"c\":{\"status\":\"ok\"}}"
+
+PATHSBYVAL "worker"
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT PATHSBYVAL_N == 2
+SYS HASLINE LAST "meta.role"
+ASSERT LAST_N == 1
+SYS HASLINE PATHSBYVAL "cfg.role"
+ASSERT LAST_N == 1
+SYS EQS PATHSBYVAL_VALUE "worker"
+ASSERT LAST_N == 1
+
+PATHSBYVAL "leader"
+ASSERT PATHSBYVAL_N == 1
+SYS EQS LAST "other.role"
+ASSERT LAST_N == 1
+
+PATHSBYVAL "h1"
+SYS EQS LAST "cfg.host"
+ASSERT LAST_N == 1
+
+# soft empty
+PATHSBYVAL "nope"
+ASSERT OK == 1
+ASSERT PATHSBYVAL_N == 0
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+PATHSBYVAL FROM PEER "ok"
+ASSERT PATHSBYVAL_FROM == 1
+SYS EQS PATHSBYVAL_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT PATHSBYVAL_N == 2
+SYS HASLINE LAST "a.status"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "c.status"
+ASSERT LAST_N == 1
+
+# aliases
+ALLPATHSBYVAL FROM PEER "fail"
+SYS EQS LAST "b.status"
+ASSERT LAST_N == 1
+FINDVALS FROM PEER "ok"
+ASSERT PATHSBYVAL_N == 2
+SYS HASLINE FINDVALS "a.status"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":9}"
+PATHSBYVAL FROM PEER "ok"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# first path equals PATHBYVAL
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\"}}"
+PATHSBYVAL "worker"
+SYS HEAD
+LET first = LAST
+PATHBYVAL "worker"
+SYS EQS LAST first
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1245_pathsbyval: PASS"
