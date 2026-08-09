@@ -244,6 +244,13 @@ int cubalc_host_json_path_obj(const char *json, const char *path, cubalc_host_re
  * Usability: agent discover nest structure without KEYSP+GETOBJ recursion. */
 int cubalc_host_json_leaf_paths(const char *json, const char *path,
                                 cubalc_host_result *r);
+/* Recursive path:value bag (FREQ/LOOKUP `path:val` lines) for nested plates.
+ * path/prefix optional nest root; paths relative to that root.
+ * Same leaf rules as leaf_paths; empty {} → `path:` (empty value).
+ * Strings decoded; nums/bools/null/arr raw. r->n = pairs. Soft always OK.
+ * Usability: agent flat report without PATHKEYS+GETP glue or TOKVP shallow-only. */
+int cubalc_host_json_leaf_kv(const char *json, const char *path,
+                             cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

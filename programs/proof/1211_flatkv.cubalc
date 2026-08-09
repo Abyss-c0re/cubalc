@@ -1,0 +1,86 @@
+# FLATKV / LEAFKV / FLATTENP — recursive path:value bag
+# Usability: flat inventory without PATHKEYS+GETP or shallow TOKVP.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"x\":1,\"role\":\"worker\",\"zone\":\"A\"},\"port\":8080},\"empty\":{},\"n\":3,\"ok\":true}"
+LET PEER = "{\"net\":{\"peer\":{\"host\":\"peerB\",\"tls\":1}}}"
+
+# full plate flat kv
+FLATKV
+ASSERT OK == 1
+ASSERT FLATKV_N == 8
+SYS HASLINE FLATKV "host:cubeA"
+ASSERT LAST_N == 1
+SYS HASLINE FLATKV "cfg.meta.x:1"
+ASSERT LAST_N == 1
+SYS HASLINE FLATKV "cfg.meta.role:worker"
+ASSERT LAST_N == 1
+SYS HASLINE FLATKV "cfg.meta.zone:A"
+ASSERT LAST_N == 1
+SYS HASLINE FLATKV "cfg.port:8080"
+ASSERT LAST_N == 1
+SYS HASLINE FLATKV "n:3"
+ASSERT LAST_N == 1
+SYS HASLINE FLATKV "ok:true"
+ASSERT LAST_N == 1
+# empty object terminal
+SYS HASLINE FLATKV "empty:"
+ASSERT LAST_N == 1
+# intermediates not listed as keys
+SYS HASLINE FLATKV "cfg:"
+ASSERT LAST_N == 0
+SYS HASLINE FLATKV "cfg.meta:"
+ASSERT LAST_N == 0
+
+# relative under nest
+FLATKV "cfg"
+ASSERT OK == 1
+ASSERT FLATKV_N == 4
+SYS EQS FLATKV_PATH "cfg"
+ASSERT LAST_N == 1
+SYS HASLINE FLATKV "meta.role:worker"
+ASSERT LAST_N == 1
+SYS HASLINE FLATKV "port:8080"
+ASSERT LAST_N == 1
+
+# deeper
+FLATKV "cfg.meta"
+ASSERT FLATKV_N == 3
+SYS HASLINE FLATKV "role:worker"
+ASSERT LAST_N == 1
+SYS HASLINE FLATKV "x:1"
+ASSERT LAST_N == 1
+
+# soft miss
+FLATKV "missing.nest"
+ASSERT OK == 1
+ASSERT FLATKV_N == 0
+
+# multi-plate FROM
+FLATKV FROM PEER "net"
+ASSERT FLATKV_FROM == 1
+SYS EQS FLATKV_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT FLATKV_N == 2
+SYS HASLINE FLATKV "peer.host:peerB"
+ASSERT LAST_N == 1
+SYS HASLINE FLATKV "peer.tls:1"
+ASSERT LAST_N == 1
+
+# aliases
+LEAFKV "cfg.meta"
+ASSERT LEAFKV_N == 3
+SYS HASLINE LEAFKV "zone:A"
+ASSERT LAST_N == 1
+
+FLATTENP
+ASSERT FLATTENP_N == 8
+
+# plate intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1211_flatkv: PASS"

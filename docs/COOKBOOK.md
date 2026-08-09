@@ -222,6 +222,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate pluck state/my_agent.json host freq.error n     # multi-key peel bag (paths ok)
 ./out/cubalc plate leaves state/my_agent.json                   # all dotted leaf paths (PATHKEYS dual)
 ./out/cubalc plate leaves state/my_agent.json cfg              # relative under nest
+./out/cubalc plate flat   state/my_agent.json                   # path:value bag (FLATKV dual)
+./out/cubalc plate flat   state/my_agent.json cfg              # relative under nest
 ./out/cubalc libs | grep plate
 
 # nest* still available; prefer dotted get/set when one scalar field:

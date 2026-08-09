@@ -2174,6 +2174,8 @@ int main(int argc, char **argv) {
       {"cli_plate_keys_len", "programs/proof/1201_cli_plate_keys_len.sh", "cubalc plate keys/len/empty/vals nest path"},
       {"pathkeys", "programs/proof/1210_pathkeys.cubalc", "PATHKEYS/LEAFKEYS dotted leaf path bag multi-plate"},
       {"cli_plate_leaves", "programs/proof/1210_cli_plate_leaves.sh", "cubalc plate leaves/pathkeys PATHKEYS dual"},
+      {"flatkv", "programs/proof/1211_flatkv.cubalc", "FLATKV/LEAFKV recursive path:value bag multi-plate"},
+      {"cli_plate_flat", "programs/proof/1211_cli_plate_flat.sh", "cubalc plate flat/flatkv FLATKV dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2451,6 +2453,9 @@ int main(int argc, char **argv) {
       {"PATHKEYS", "flow", "PATHKEYS|LEAFKEYS|DOTPATHS [FROM plate] [path] — dotted leaf path bag · multi-plate"},
       {"LEAFKEYS", "flow", "LEAFKEYS alias of PATHKEYS"},
       {"DOTPATHS", "flow", "DOTPATHS alias of PATHKEYS"},
+      {"FLATKV", "flow", "FLATKV|LEAFKV|FLATTENP [FROM plate] [path] — recursive path:value bag · multi-plate"},
+      {"LEAFKV", "flow", "LEAFKV alias of FLATKV"},
+      {"FLATTENP", "flow", "FLATTENP alias of FLATKV"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4921,6 +4926,7 @@ int main(int argc, char **argv) {
               "       cubalc plate del <path> <key>\n"
               "       cubalc plate keys <path> [nest.path]  # KEYSP dual · nest path ok\n"
               "       cubalc plate leaves|pathkeys <path> [nest.path]  # PATHKEYS dual · dotted leaf paths\n"
+              "       cubalc plate flat|flatkv <path> [nest.path]  # FLATKV dual · path:value bag\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -4952,7 +4958,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5001,6 +5007,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "leaves") == 0 || strcmp(argv[2], "leafkeys") == 0 ||
         strcmp(argv[2], "pathkeys") == 0 || strcmp(argv[2], "dotpaths") == 0 ||
         strcmp(argv[2], "flatpaths") == 0 || strcmp(argv[2], "dotkeys") == 0 ||
+        strcmp(argv[2], "flat") == 0 || strcmp(argv[2], "flatkv") == 0 ||
+        strcmp(argv[2], "leafkv") == 0 || strcmp(argv[2], "flatten") == 0 ||
+        strcmp(argv[2], "flattenp") == 0 || strcmp(argv[2], "tokvpath") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5133,6 +5142,11 @@ int main(int argc, char **argv) {
                strcmp(op, "dotpaths") == 0 || strcmp(op, "flatpaths") == 0 ||
                strcmp(op, "dotkeys") == 0 || strcmp(op, "leafpaths") == 0)
         op = "leaves";
+      else if (strcmp(op, "flatkv") == 0 || strcmp(op, "leafkv") == 0 ||
+               strcmp(op, "flatten") == 0 || strcmp(op, "flattenp") == 0 ||
+               strcmp(op, "tokvpath") == 0 || strcmp(op, "pathtokv") == 0 ||
+               strcmp(op, "plateflat") == 0)
+        op = "flat";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -5342,6 +5356,51 @@ int main(int argc, char **argv) {
              "\"op\":\"leaves\",\"path\":\"%s\",\"nest\":\"%s\",\"file\":%s,"
              "\"n\":%ld,\"paths\":\"%s\",\"version\":\"%s\","
              "\"note\":\"PATHKEYS dual · dotted leaf paths · bag lines above plate\"}\n",
+             path, nestp ? nestp : "", file_hit ? "true" : "false",
+             pr.n, flat, CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+    /* flat|flatkv [nest.path] — FLATKV dual: recursive path:value bag.
+     *   cubalc plate flat agent.json
+     *   cubalc plate flat agent.json cfg
+     *   cubalc plate flatkv agent.json cfg.meta */
+    if (strcmp(op, "flat") == 0) {
+      const char *nestp = NULL;
+      char flat[CUBALC_HOST_STR_MAX];
+      cubalc_host_result pr;
+      size_t i, o = 0;
+
+      if (ai < argc && argv[ai] && argv[ai][0])
+        nestp = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_kv(plate, nestp, &pr) != 0) {
+        pr.str[0] = 0;
+        pr.n = 0;
+      }
+      flat[0] = 0;
+      for (i = 0; pr.str[i] && o + 2 < sizeof flat; i++) {
+        char ch = pr.str[i];
+        if (ch == '\n' || ch == '\r') {
+          if (o > 0 && flat[o - 1] != ',')
+            flat[o++] = ',';
+        } else if (ch == '"' || ch == '\\') {
+          flat[o++] = '_';
+        } else {
+          flat[o++] = ch;
+        }
+      }
+      flat[o] = 0;
+      if (pr.str[0]) {
+        fputs(pr.str, stdout);
+        if (pr.str[strlen(pr.str) - 1] != '\n')
+          fputc('\n', stdout);
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"flat\",\"path\":\"%s\",\"nest\":\"%s\",\"file\":%s,"
+             "\"n\":%ld,\"bag\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"FLATKV dual · path:value bag · lines above plate\"}\n",
              path, nestp ? nestp : "", file_hit ? "true" : "false",
              pr.n, flat, CUBALC_LANG_VERSION);
       return 0;

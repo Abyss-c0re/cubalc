@@ -4383,6 +4383,128 @@ int cubalc_host_json_leaf_paths(const char *json, const char *path,
   return 0;
 }
 
+/* Decode a leaf raw JSON value into valbuf (string unquoted; tokens as-is). */
+static void cubalc_json_leaf_valtext(const char *obj, const char *key,
+                                     const char *rawv, char *valbuf, size_t vcap,
+                                     const char **valtext_out) {
+  cubalc_host_result gr;
+  const char *v = rawv ? rawv : "";
+  while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+  valbuf[0] = 0;
+  *valtext_out = "";
+  if (*v == '"') {
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get(obj, key, &gr) == 0) {
+      *valtext_out = gr.str;
+      /* copy into valbuf so gr can go out of scope for caller — caller must use
+       * immediately; copy for safety */
+      snprintf(valbuf, vcap, "%s", gr.str);
+      *valtext_out = valbuf;
+    } else {
+      size_t rl = strlen(v);
+      if (rl >= 2 && v[0] == '"' && v[rl - 1] == '"') {
+        size_t n = rl - 2;
+        if (n >= vcap) n = vcap - 1;
+        memcpy(valbuf, v + 1, n);
+        valbuf[n] = 0;
+        *valtext_out = valbuf;
+      } else {
+        snprintf(valbuf, vcap, "%s", v);
+        *valtext_out = valbuf;
+      }
+    }
+  } else if (strncmp(v, "true", 4) == 0 &&
+             (v[4] == 0 || v[4] == ',' || v[4] == '}' || v[4] == ' ' ||
+              v[4] == '\n' || v[4] == '\r' || v[4] == '\t')) {
+    *valtext_out = "true";
+  } else if (strncmp(v, "false", 5) == 0 &&
+             (v[5] == 0 || v[5] == ',' || v[5] == '}' || v[5] == ' ' ||
+              v[5] == '\n' || v[5] == '\r' || v[5] == '\t')) {
+    *valtext_out = "false";
+  } else if (strncmp(v, "null", 4) == 0 &&
+             (v[4] == 0 || v[4] == ',' || v[4] == '}' || v[4] == ' ' ||
+              v[4] == '\n' || v[4] == '\r' || v[4] == '\t')) {
+    *valtext_out = "null";
+  } else {
+    size_t i = 0;
+    while (v[i] && v[i] != '\n' && v[i] != '\r' && i + 1 < vcap) {
+      valbuf[i] = v[i];
+      i++;
+    }
+    valbuf[i] = 0;
+    *valtext_out = valbuf;
+  }
+}
+
+/* DFS: emit path:val lines under obj. */
+static void cubalc_json_leaf_kv_walk(const char *obj, const char *pfx,
+                                    char *out, size_t outcap, size_t *olen,
+                                    long *kept, int depth) {
+  cubalc_host_result keys, raw;
+  const char *p, *v, *valtext;
+  char key[256], child[512], linebuf[CUBALC_HOST_STR_MAX], valbuf[CUBALC_HOST_STR_MAX];
+
+  if (!obj || !out || !olen || !kept || depth > 8) return;
+  memset(&keys, 0, sizeof keys);
+  if (cubalc_host_json_keys(obj, &keys) != 0) return;
+  if (keys.n == 0) {
+    if (pfx && pfx[0]) {
+      if (snprintf(linebuf, sizeof linebuf, "%s:", pfx) >= 0)
+        cubalc_bag_push(out, outcap, olen, kept, linebuf);
+    }
+    return;
+  }
+  p = keys.str;
+  while (*p) {
+    size_t kn = 0;
+    while (p[kn] && p[kn] != '\n' && p[kn] != '\r') kn++;
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    if (kn > 0) {
+      memcpy(key, p, kn);
+      key[kn] = 0;
+      memset(&raw, 0, sizeof raw);
+      if (cubalc_host_json_get_raw(obj, key, &raw) == 0) {
+        if (pfx && pfx[0])
+          snprintf(child, sizeof child, "%s.%s", pfx, key);
+        else
+          snprintf(child, sizeof child, "%s", key);
+        v = raw.str;
+        while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+        if (*v == '{') {
+          cubalc_json_leaf_kv_walk(v, child, out, outcap, olen, kept, depth + 1);
+        } else {
+          cubalc_json_leaf_valtext(obj, key, raw.str, valbuf, sizeof valbuf, &valtext);
+          if (snprintf(linebuf, sizeof linebuf, "%s:%s", child,
+                       valtext ? valtext : "") >= 0)
+            cubalc_bag_push(out, outcap, olen, kept, linebuf);
+        }
+      }
+    }
+    p += kn;
+    while (*p == '\n' || *p == '\r') p++;
+  }
+}
+
+/* Recursive path:value bag · optional nest path root. Soft always OK. */
+int cubalc_host_json_leaf_kv(const char *json, const char *path,
+                             cubalc_host_result *r) {
+  cubalc_host_result obj;
+  size_t olen = 0;
+  long kept = 0;
+  r_clear(r);
+  r->str[0] = 0;
+  memset(&obj, 0, sizeof obj);
+  if (cubalc_host_json_path_obj(json ? json : "{}", path, &obj) != 0) {
+    r->ok = 1;
+    r->n = 0;
+    return 0;
+  }
+  cubalc_json_leaf_kv_walk(obj.str, "", r->str, sizeof r->str, &olen, &kept, 0);
+  r->n = kept;
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,
