@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 612,
-  "version": "1.15.639-usability",
-  "item": "SORTOBJ/SORTBAGOBJ nest sort",
-  "item_id": 648,
-  "title": "SORTOBJ|SORTBAGOBJ|NESTSORT|SORTFREQOBJ · nest sort pure-int keys write-back or bag · multi-plate · SORTP duals",
-  "commit": "cfacc4e13188365c4286cc09d082a7cef4b5bed9",
-  "summary": "Nest FREQ full rank without GETOBJ+SORTP+SETOBJ glue. proof 1189 46/46.",
+  "iter": 613,
+  "version": "1.15.640-usability",
+  "item": "cubalc plate nestsort/nestsortbag",
+  "item_id": 649,
+  "title": "cubalc plate nestsort|nestsortbag \u00b7 SORTOBJ/SORTBAGOBJ CLI duals \u00b7 ASC|DESC \u00b7 agent nest FREQ full rank without .cubalc",
+  "commit": "39ab599eb50e9945b6eb5216675e7d8fdeecc01a",
+  "summary": "CLI nest full sort after nestagg \u00b7 nestsort write-back / nestsortbag bag \u00b7 proof 1190.",
   "proofs": [
-    "1189_sortobj 46/46",
-    "1167_sortp reg ok",
-    "1187_topnobj reg ok",
-    "cubalc forms SORTOBJ ok"
+    "1190_cli_plate_nestsort PASS",
+    "1189_sortobj reg 46/46",
+    "1188_cli_plate_nestagg reg ok"
   ],
-  "when": "2026-08-09T10:10:00Z",
+  "when": "2026-08-09T10:20:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "cfacc4e13188365c4286cc09d082a7cef4b5bed9",
-  "note": "after backlog 647 nestagg CLI; EVOLVE_PAUSED"
+  "sha": "39ab599eb50e9945b6eb5216675e7d8fdeecc01a",
+  "note": "after backlog 648 SORTOBJ; EVOLVE_PAUSED"
 }

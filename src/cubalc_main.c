@@ -2155,6 +2155,7 @@ int main(int argc, char **argv) {
       {"topnobj", "programs/proof/1187_topnobj.cubalc", "TOPNOBJ/BOTNOBJ nest top/bottom N keys write-back multi-plate TOPNP duals"},
       {"cli_plate_nestagg", "programs/proof/1188_cli_plate_nestagg.sh", "cubalc plate nestsum/nestavg/nesttop/nestbot SUMNOBJ duals"},
       {"sortobj", "programs/proof/1189_sortobj.cubalc", "SORTOBJ/SORTBAGOBJ nest sort pure-int keys multi-plate SORTP duals"},
+      {"cli_plate_nestsort", "programs/proof/1190_cli_plate_nestsort.sh", "cubalc plate nestsort/nestsortbag SORTOBJ duals"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
       {"mergeobj", "programs/proof/1171_mergeobj.cubalc", "MERGEOBJ/DEFAULTOBJ nested plate merge one-shot multi-plate"},
       {"getpobj", "programs/proof/1172_getpobj.cubalc", "GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ nested scalar field plane multi-plate"},
@@ -4879,6 +4880,8 @@ int main(int argc, char **argv) {
               "       cubalc plate nestomit <path> <nest> <k1> [k2…]  # OMITOBJ dual\n"
               "       cubalc plate nestsum|nestavg|nestmedian <path> <nest>  # SUMNOBJ duals\n"
               "       cubalc plate nesttop|nestbot <path> <nest> [n]  # TOPNOBJ duals (no write)\n"
+              "       cubalc plate nestsort <path> <nest> [ASC|DESC]  # SORTOBJ dual (write)\n"
+              "       cubalc plate nestsortbag <path> <nest> [ASC|DESC]  # SORTBAGOBJ dual (no write)\n"
               "       cubalc plate fill [-s|--strict] <path> <tmpl|@file> [out]\n"
               "       cubalc plate fillkeys <path> <tmpl|@file>\n"
               "       cubalc plate ensure <path> [seed|@file]  # create-or-keep\n"
@@ -4893,6 +4896,7 @@ int main(int argc, char **argv) {
              "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
+             "\"nestsort\",\"nestsortbag\","
              "\"fill\",\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\",\"changelog\","
              "\"has\",\"need\",\"pick\",\"omit\",\"sum\",\"avg\",\"median\",\"top\",\"bot\"]}\n",
              CUBALC_LANG_VERSION);
@@ -4968,7 +4972,12 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "topnest") == 0 || strcmp(argv[2], "topnobj") == 0 ||
         strcmp(argv[2], "nestbot") == 0 || strcmp(argv[2], "nbot") == 0 ||
         strcmp(argv[2], "botnest") == 0 || strcmp(argv[2], "botnobj") == 0 ||
-        strcmp(argv[2], "nestbottom") == 0) {
+        strcmp(argv[2], "nestbottom") == 0 ||
+        strcmp(argv[2], "nestsort") == 0 || strcmp(argv[2], "nsort") == 0 ||
+        strcmp(argv[2], "sortnest") == 0 || strcmp(argv[2], "sortobj") == 0 ||
+        strcmp(argv[2], "nestsortbag") == 0 || strcmp(argv[2], "nsortbag") == 0 ||
+        strcmp(argv[2], "sortbagnest") == 0 || strcmp(argv[2], "sortbagobj") == 0 ||
+        strcmp(argv[2], "nestsortfreq") == 0 || strcmp(argv[2], "sortfreqobj") == 0) {
       op = argv[2];
       if (strcmp(op, "dump") == 0 || strcmp(op, "cat") == 0 || strcmp(op, "read") == 0)
         op = "show";
@@ -5066,6 +5075,13 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "nbot") == 0 || strcmp(op, "botnest") == 0 ||
                strcmp(op, "botnobj") == 0 || strcmp(op, "nestbottom") == 0)
         op = "nestbot";
+      else if (strcmp(op, "nsort") == 0 || strcmp(op, "sortnest") == 0 ||
+               strcmp(op, "sortobj") == 0)
+        op = "nestsort";
+      else if (strcmp(op, "nsortbag") == 0 || strcmp(op, "sortbagnest") == 0 ||
+               strcmp(op, "sortbagobj") == 0 || strcmp(op, "nestsortfreq") == 0 ||
+               strcmp(op, "sortfreqobj") == 0)
+        op = "nestsortbag";
       ai = 3;
       /* fill[-keys]: optional -s|--strict before path */
       if ((strcmp(op, "fill") == 0 || strcmp(op, "fillkeys") == 0) &&
@@ -5150,14 +5166,16 @@ int main(int argc, char **argv) {
     /* nestget|nestset|nestinc|nestdel|nestkeys|nesthas — nested field CLI duals of
      * GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ/KEYSOBJ/HASPOBJ. Agents one-shot nested config
      * without writing a .cubalc program.
-     * nestsum|nestavg|nestmedian|nesttop|nestbot — SUMNOBJ/TOPNOBJ CLI duals (no write). */
+     * nestsum|nestavg|nestmedian|nesttop|nestbot — SUMNOBJ/TOPNOBJ CLI duals (no write).
+     * nestsort|nestsortbag — SORTOBJ/SORTBAGOBJ CLI duals (sort write / bag no-write). */
     if (strcmp(op, "nestget") == 0 || strcmp(op, "nestset") == 0 ||
         strcmp(op, "nestinc") == 0 || strcmp(op, "nestdel") == 0 ||
         strcmp(op, "nestkeys") == 0 || strcmp(op, "nesthas") == 0 ||
         strcmp(op, "nestpick") == 0 || strcmp(op, "nestomit") == 0 ||
         strcmp(op, "nestsum") == 0 || strcmp(op, "nestavg") == 0 ||
         strcmp(op, "nestmedian") == 0 || strcmp(op, "nesttop") == 0 ||
-        strcmp(op, "nestbot") == 0) {
+        strcmp(op, "nestbot") == 0 ||
+        strcmp(op, "nestsort") == 0 || strcmp(op, "nestsortbag") == 0) {
       const char *nestk = NULL, *field = NULL;
       char nest[CUBALC_HOST_STR_MAX];
       cubalc_host_result ngr, gr, wr, kr;
@@ -5309,6 +5327,130 @@ int main(int argc, char **argv) {
                "\"file\":%s,\"version\":\"%s\",\"plate\":%s}\n",
                op, path, nestk, tr.n, tr.code, ntake, key1, val1,
                file_hit ? "true" : "false", CUBALC_LANG_VERSION, tr.str);
+        return 0;
+      }
+
+      /* nestsort [ASC|DESC] — SORTOBJ dual: sort pure-int nest keys, write-back file.
+       * nestsortbag [ASC|DESC] — SORTBAGOBJ dual: key:val bag, no file write.
+       * Usability: agent nest FREQ full rank without a .cubalc program. */
+      if (strcmp(op, "nestsort") == 0 || strcmp(op, "nestsortbag") == 0) {
+        cubalc_host_result sr;
+        int want_asc = 0;
+        int as_bag = (strcmp(op, "nestsortbag") == 0) ? 1 : 0;
+        char bag_esc[CUBALC_HOST_STR_MAX];
+        size_t bi, bo;
+
+        while (ai < argc && argv[ai] && argv[ai][0]) {
+          if (strcmp(argv[ai], "ASC") == 0 || strcmp(argv[ai], "asc") == 0 ||
+              strcmp(argv[ai], "UP") == 0 || strcmp(argv[ai], "up") == 0 ||
+              strcmp(argv[ai], "LIGHT") == 0 || strcmp(argv[ai], "light") == 0 ||
+              strcmp(argv[ai], "LOW") == 0 || strcmp(argv[ai], "low") == 0) {
+            want_asc = 1;
+            ai++;
+            continue;
+          }
+          if (strcmp(argv[ai], "DESC") == 0 || strcmp(argv[ai], "desc") == 0 ||
+              strcmp(argv[ai], "DOWN") == 0 || strcmp(argv[ai], "down") == 0 ||
+              strcmp(argv[ai], "HEAVY") == 0 || strcmp(argv[ai], "heavy") == 0 ||
+              strcmp(argv[ai], "HIGH") == 0 || strcmp(argv[ai], "high") == 0) {
+            want_asc = 0;
+            ai++;
+            continue;
+          }
+          break;
+        }
+
+        if (!nest_hit) {
+          if (as_bag) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                   "\"op\":\"nestsortbag\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":0,"
+                   "\"asc\":%s,\"nest_hit\":false,\"bag\":\"\","
+                   "\"file\":%s,\"version\":\"%s\"}\n",
+                   path, nestk, want_asc ? "true" : "false",
+                   file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+          } else {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                   "\"op\":\"nestsort\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":0,"
+                   "\"asc\":%s,\"nest_hit\":false,\"written\":false,"
+                   "\"file\":%s,\"version\":\"%s\",\"plate\":%s}\n",
+                   path, nestk, want_asc ? "true" : "false",
+                   file_hit ? "true" : "false", CUBALC_LANG_VERSION, plate);
+          }
+          return 0;
+        }
+
+        memset(&sr, 0, sizeof sr);
+        if (cubalc_host_json_sortbyval(nest, want_asc, as_bag, &sr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\",\"err\":\"%s\","
+                 "\"version\":\"%s\"}\n",
+                 op, path, nestk, sr.err[0] ? sr.err : "json sort fail",
+                 CUBALC_LANG_VERSION);
+          return 1;
+        }
+
+        if (as_bag) {
+          bag_esc[0] = 0;
+          bo = 0;
+          for (bi = 0; sr.str[bi] && bo + 2 < sizeof bag_esc; bi++) {
+            char c = sr.str[bi];
+            if (c == '"' || c == '\\') {
+              bag_esc[bo++] = '\\';
+              bag_esc[bo++] = c;
+            } else if (c == '\n' || c == '\r') {
+              bag_esc[bo++] = '\\';
+              bag_esc[bo++] = (c == '\n') ? 'n' : 'r';
+            } else if ((unsigned char)c < 32) {
+              bag_esc[bo++] = ' ';
+            } else {
+              bag_esc[bo++] = c;
+            }
+          }
+          bag_esc[bo] = 0;
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                 "\"op\":\"nestsortbag\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":%ld,"
+                 "\"asc\":%s,\"nest_hit\":true,\"bag\":\"%s\","
+                 "\"file\":%s,\"version\":\"%s\"}\n",
+                 path, nestk, sr.n, want_asc ? "true" : "false", bag_esc,
+                 file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+          return 0;
+        }
+
+        /* write-back sorted nest into outer plate file */
+        snprintf(nest, sizeof nest, "%s", sr.str);
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_json_set(plate, nestk, nest, 1, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"nestsort\",\"path\":\"%s\",\"nest\":\"%s\",\"err\":\"%s\","
+                 "\"version\":\"%s\"}\n",
+                 path, nestk, wr.err[0] ? wr.err : "outer set fail",
+                 CUBALC_LANG_VERSION);
+          return 1;
+        }
+        snprintf(plate, sizeof plate, "%s", wr.str);
+        slash = strrchr(path, '/');
+        if (slash && slash != path) {
+          size_t n = (size_t)(slash - path);
+          if (n >= sizeof parent) n = sizeof parent - 1;
+          memcpy(parent, path, n);
+          parent[n] = 0;
+          memset(&hr, 0, sizeof hr);
+          cubalc_host_mkdir(parent, &hr);
+        }
+        memset(&hr, 0, sizeof hr);
+        if (cubalc_host_write(path, plate, &hr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"nestsort\",\"path\":\"%s\",\"nest\":\"%s\","
+                 "\"err\":\"write fail\",\"version\":\"%s\"}\n",
+                 path, nestk, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"nestsort\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":%ld,"
+               "\"asc\":%s,\"nest_hit\":true,\"written\":true,\"bytes\":%ld,"
+               "\"file\":%s,\"version\":\"%s\",\"nest_body\":%s,\"plate\":%s}\n",
+               path, nestk, sr.n, want_asc ? "true" : "false", hr.n,
+               file_hit ? "true" : "false", CUBALC_LANG_VERSION, nest, plate);
         return 0;
       }
 
