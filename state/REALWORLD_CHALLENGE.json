@@ -2957,6 +2957,6 @@
     "Hard GETPN miss needs CLEAR_ERR before next peel",
     "Budget over without REQUIRE is soft-only shell 0"
   ],
-  "commit": "",
+  "commit": "4cca51db",
   "ts": "2026-08-09T12:13:54Z"
 }
