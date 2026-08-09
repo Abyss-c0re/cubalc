@@ -4,8 +4,8 @@
   "version": "1.15.648-usability",
   "item": "cubalc plate type kind probe",
   "item_id": 657,
-  "title": "cubalc plate type|kind · TYPEP CLI dual · missing|num|str|bool|null|obj|arr · dotted paths",
-  "commit": "PENDING",
+  "title": "cubalc plate type|kind \u00b7 TYPEP CLI dual \u00b7 missing|num|str|bool|null|obj|arr \u00b7 dotted paths",
+  "commit": "6d07061a42fdf3e4be2359446c881f710a6c509b",
   "summary": "Agent kind probe without .cubalc. proof 1198 PASS.",
   "proofs": [
     "1198_cli_plate_type PASS",
@@ -14,6 +14,6 @@
   ],
   "when": "2026-08-09T12:25:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "PENDING",
+  "sha": "6d07061a42fdf3e4be2359446c881f710a6c509b",
   "note": "after plate_pluck; path CLI type; EVOLVE_PAUSED"
 }
