@@ -1,0 +1,832 @@
+# svc_nest_agg_board.cubalc — SUMNOBJ/TOPKEYOBJ nest stats rollup
+#
+# Real use: fleet SLO agents roll up nested stats (hits/errors/latency) without
+# GETOBJ+SUMNP glue, find hot keys, and compare peer nests. First realworld of
+# proof 1183 (MEANINGFUL 642).
+#
+#   SUMNOBJ / MAXNOBJ / MINNOBJ / AVGNOBJ / MEDIANOBJ nest
+#   TOPKEYOBJ / BOTKEYOBJ nest
+#   TOTALOBJ / NESTSUM / MAXKEYOBJ / MINKEYOBJ / MEANOBJ / P50OBJ aliases
+#   … FROM PEER multi-plate
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sna_$$
+#   ./out/cubalc run programs/realworld/svc_nest_agg_board.cubalc boot
+#   ./out/cubalc run ... sum|top|peer|soft|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SNA_REPORT.txt agent.json peer.json hot.txt
+# Env: HOST_S ROLE_S MIN_SUM CUBALC_SNA_REQUIRE
+#
+# Edges:
+#   soft nest miss sum 0; empty nest; non-numeric keys skipped; WRITE NL;
+#   substring false friend on top key; NUM softens REQUIRE; EXIT shell (W7)
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_nest_agg_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_nest_agg -- boot|sum|top|peer|soft|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeA"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+DEFAULT MIN_SUM = "20"
+GETFLAG minsum|m OR ENV MIN_SUM OR MIN_SUM
+LET min_sum_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SNA_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+LET min_sum = 20
+SYS NUM min_sum_s
+IF OK == 1 THEN
+  LET min_sum = LAST_N
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SNA_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "hot.txt"
+LET hot_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+LET bag_n = 0
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET body = ""
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET soft_ok = 0
+LET gate_ok = 0
+LET sum_n = 0
+LET avg_n = 0
+LET max_n = 0
+LET min_n = 0
+LET hot_key = ""
+LET cold_key = ""
+
+ONEOF ACTION "boot", "sum", "top", "peer", "soft", "gate", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "sum" THEN
+    LET op = "sum"
+  WHEN "top" THEN
+    LET op = "top"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s min_sum
+  CLEAR_ERR
+END
+
+# boot — seed stats nest with mix of int metrics
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-agg\",\"schema\":\"cubalc.svc_nest_agg.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"stats\":{\"hits\":10,\"errors\":2,\"latency\":40,\"ok\":8},\"cfg\":{\"port\":8080,\"label\":\"web\"}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"host\":\"" host_s "\",\"stats\":{\"hits\":5,\"errors\":1,\"latency\":20},\"schema\":\"cubalc.svc_nest_agg.v1\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  SUMNOBJ "stats"
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  GETP "host"
+  SYS EQS LAST host_s
+  LET has_n = LAST_N
+  CLEAR_ERR
+  LENOBJ "stats"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF sum_n == 60 THEN
+    IF has_n == 1 THEN
+      IF take_n == 4 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET peel_hit = 1
+        LET load_hit = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot stats len"
+        FAIL "boot stats len"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot host"
+      FAIL "boot host"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot sum"
+    FAIL "boot sum"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n has_n take_n note_msg
+  CLEAR_ERR
+END
+
+# sum — multi aggregates on stats nest
+SYS EQS op "sum"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SUMNOBJ "stats"
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  AVGNOBJ "stats"
+  LET avg_n = LAST_N
+  CLEAR_ERR
+  MAXNOBJ "stats"
+  LET max_n = LAST_N
+  CLEAR_ERR
+  MINNOBJ "stats"
+  LET min_n = LAST_N
+  CLEAR_ERR
+  MEDIANOBJ "stats"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # non-numeric cfg.label skipped if someone sums cfg — prove ints only on stats
+  IF sum_n == 60 THEN
+    IF avg_n == 15 THEN
+      IF max_n == 40 THEN
+        IF min_n == 2 THEN
+          IF take_n == 8 THEN
+            LET hit = 1
+            LET note_msg = "sum ok"
+            LET admit_n = 1
+            LET has_n = 1
+            LET peel_hit = 1
+            LET load_hit = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "sum median"
+            FAIL "sum median"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "sum min"
+          FAIL "sum min"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "sum max"
+        FAIL "sum max"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "sum avg"
+      FAIL "sum avg"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "sum total"
+    FAIL "sum total"
+    CLEAR_ERR
+  END
+  SYS STR sum_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "sum:" w_s ":sm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "sum:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n avg_n max_n min_n note_msg
+  CLEAR_ERR
+END
+
+# top — TOPKEYOBJ / BOTKEYOBJ hotspot
+SYS EQS op "top"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TOPKEYOBJ "stats"
+  LET hot_key = LAST
+  CLEAR_ERR
+  BOTKEYOBJ "stats"
+  LET cold_key = LAST
+  CLEAR_ERR
+  SYS WRITE hot_path hot_key
+  CLEAR_ERR
+  SYS EQS hot_key "latency"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS EQS cold_key "errors"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # substring false friend: lat must not equal full key
+  SYS EQS hot_key "lat"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # HASLINE on bag of one key
+  SYS HASLINE hot_key "latency"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 0 THEN
+        IF take_n == 1 THEN
+          LET hit = 1
+          LET note_msg = "top ok"
+          LET admit_n = 1
+          LET sum_n = 40
+        ELSE
+          LET miss = 1
+          LET note_msg = "top hasline"
+          FAIL "top hasline"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "top false lat"
+        FAIL "top false lat"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "top cold"
+      FAIL "top cold"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "top hot"
+    FAIL "top hot"
+    CLEAR_ERR
+  END
+  SYS CAT "top:" hot_key ":tp"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "top:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit hot_key cold_key note_msg
+  CLEAR_ERR
+END
+
+# peer — multi-plate aggregates
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SUMNOBJ FROM PEER "stats"
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  TOPKEYOBJ FROM PEER "stats"
+  LET hot_key = LAST
+  CLEAR_ERR
+  BOTKEYOBJ FROM PEER "stats"
+  LET cold_key = LAST
+  CLEAR_ERR
+  MAXNOBJ FROM PEER "stats"
+  LET max_n = LAST_N
+  CLEAR_ERR
+  # agent sum still 60
+  SUMNOBJ "stats"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "agent"
+  SYS EQS LAST "hive-peer"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS EQS hot_key "latency"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS EQS cold_key "errors"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF sum_n == 26 THEN
+    IF take_n == 60 THEN
+      IF has_n == 1 THEN
+        IF peel_hit == 1 THEN
+          IF load_hit == 1 THEN
+            IF max_n == 20 THEN
+              LET hit = 1
+              LET note_msg = "peer ok"
+              LET admit_n = 1
+              LET soft_ok = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "peer max"
+              FAIL "peer max"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer cold"
+            FAIL "peer cold"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer hot"
+          FAIL "peer hot"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer agent"
+        FAIL "peer agent"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer agent sum"
+      FAIL "peer agent sum"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer sum"
+    FAIL "peer sum"
+    CLEAR_ERR
+  END
+  SYS STR sum_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" w_s ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n take_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# soft — nest miss + empty bag
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SUMNOBJ "nope"
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  LET soft_ok = 0
+  IF OK == 1 THEN
+    IF sum_n == 0 THEN
+      LET soft_ok = 1
+    END
+  END
+  CLEAR_ERR
+  TOPKEYOBJ "nope"
+  LET hot_key = LAST
+  CLEAR_ERR
+  SYS EMPTY hot_key
+  LET has_n = LAST_N
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF soft_ok == 1 THEN
+    IF has_n == 1 THEN
+      IF take_n == 0 THEN
+        LET hit = 1
+        LET note_msg = "soft ok"
+        LET admit_n = 1
+        LET peel_hit = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft empty bag"
+        FAIL "soft empty bag"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft top empty"
+      FAIL "soft top empty"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft sum miss"
+    FAIL "soft sum miss"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok" soft_ok ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n soft_ok has_n sum_n note_msg
+  CLEAR_ERR
+END
+
+# gate — sum >= min_sum and hot key latency
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SUMNOBJ "stats"
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  TOPKEYOBJ "stats"
+  LET hot_key = LAST
+  CLEAR_ERR
+  SYS EQS hot_key "latency"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_nest_agg"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  NONEMPTYOBJ "stats"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  LET take_n = 0
+  IF sum_n >= min_sum THEN
+    LET take_n = 1
+  END
+  CLEAR_ERR
+  IF take_n == 1 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 1 THEN
+          LET hit = 1
+          LET gate_ok = 1
+          LET admit_n = 1
+          LET note_msg = "gate ok"
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate nonempty"
+          FAIL "gate nonempty"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate schema"
+        FAIL "gate schema"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate hot"
+      FAIL "gate hot"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate sum lo"
+    FAIL "gate sum lo"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF gate_ok == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" gate_ok ":gn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n gate_ok sum_n min_sum has_n note_msg
+  CLEAR_ERR
+END
+
+# probe — aliases TOTALOBJ/MEANOBJ/MAXKEYOBJ + empty nest soft
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TOTALOBJ "stats"
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  MEANOBJ "stats"
+  LET avg_n = LAST_N
+  CLEAR_ERR
+  MAXKEYOBJ "stats"
+  LET hot_key = LAST
+  CLEAR_ERR
+  MINKEYOBJ "stats"
+  LET cold_key = LAST
+  CLEAR_ERR
+  P50OBJ "stats"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # create empty nest via PICKOBJ then sum
+  PICKOBJ "empty" "x"
+  CLEAR_ERR
+  SUMNOBJ "empty"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  TOPKEYOBJ "empty"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EMPTY body
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-agg"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS EQS hot_key "latency"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS EQS cold_key "errors"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF sum_n == 60 THEN
+    IF avg_n == 15 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 1 THEN
+          IF take_n == 8 THEN
+            IF miss_n == 0 THEN
+              IF soft_ok == 1 THEN
+                IF has_n == 1 THEN
+                  LET hit = 1
+                  LET note_msg = "probe ok"
+                  LET admit_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "probe agent"
+                  FAIL "probe agent"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "probe empty top"
+                FAIL "probe empty top"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "probe empty sum"
+              FAIL "probe empty sum"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe p50"
+            FAIL "probe p50"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe minkey"
+          FAIL "probe minkey"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe maxkey"
+        FAIL "probe maxkey"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe mean"
+      FAIL "probe mean"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe total"
+    FAIL "probe total"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:alias:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n avg_n hot_key soft_ok note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_nest_agg.v1 host=" host_s " role=" role_s " minsum=" min_sum " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " sum=" sum_n " hot=" hot_key " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_nest_agg_board: end"

@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 241,
-  "program": "programs/realworld/svc_nest_rename_board.cubalc",
-  "theme": "RENAMEPOBJ nest key rename schema promote",
-  "version": "1.15.630-usability",
+  "iter": 242,
+  "program": "programs/realworld/svc_nest_agg_board.cubalc",
+  "theme": "SUMNOBJ/TOPKEYOBJ nest stats rollup and hotspot",
+  "version": "1.15.633-usability",
   "pass": true,
-  "prior_note": "iter 240 PICKOBJ/LENOBJ scrub; this iter first realworld RENAMEPOBJ (1180 / MEANINGFUL 639)",
+  "prior_note": "iter 241 RENAMEPOBJ promote; this iter first realworld SUMNOBJ/TOPKEYOBJ (1183 / MEANINGFUL 642)",
   "tests": [
     {
       "name": "list",
@@ -15,37 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed legacy old_name/svc_name",
+      "cmd": "seed stats sum=60",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "rename",
-      "cmd": "old_name\u2192name agent cfg",
+      "name": "sum",
+      "cmd": "SUM/AVG/MAX/MIN/MEDIAN nest",
       "ok": true,
-      "note": "rename"
+      "note": "sum"
+    },
+    {
+      "name": "top",
+      "cmd": "TOPKEYOBJ latency BOTKEYOBJ errors",
+      "ok": true,
+      "note": "top"
     },
     {
       "name": "peer",
-      "cmd": "svc_name\u2192name FROM PEER",
+      "cmd": "SUMNOBJ/TOP FROM PEER",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "key miss + nest miss soft",
+      "cmd": "nest miss sum 0 + empty top",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "canonical name present legacy gone",
+      "cmd": "sum>=minsum + hot latency",
       "ok": true,
       "note": "gate"
     },
     {
+      "name": "gate_hi",
+      "cmd": "--minsum=100 deny",
+      "ok": true,
+      "note": "edge deny"
+    },
+    {
       "name": "probe",
-      "cmd": "MOVEKEYOBJ/NESTRENAME/AS FROM/same-name",
+      "cmd": "TOTALOBJ/MEAN/MAXKEY/empty nest",
       "ok": true,
       "note": "probe"
     },
@@ -59,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "408/415 pre-existing shell fails + oop_pickobj/kvfileensure; renamepobj PASS 38"
+      "note": "411/418 pre-existing shell fails + oop_pickobj/kvfileensure; sumnobj PASS 46"
     }
   ],
   "weaknesses": [
@@ -2614,6 +2626,38 @@
       "title": "CUBALC_SNR_REQUIRE=abc softens (NUM non-numeric)",
       "detail": "Non-numeric REQUIRE env leaves require_hit=0; soft path still exits 0. Same W6 class.",
       "repro": "CUBALC_SNR_REQUIRE=abc list \u2192 hit ok"
+    },
+    {
+      "id": "W320",
+      "severity": "med",
+      "area": "lang|sumnobj",
+      "title": "SUMNOBJ skips non-numeric nest fields silently",
+      "detail": "String keys in nest (label) are skipped with no SUMNOBJ_SKIP count for agents. Cannot tell if sum undercounts due to bad types without separate TYPEPOBJ walk. AVG divides by numeric field count only (implicit).",
+      "repro": "stats with hits/errors/latency/ok ints only summed; cfg.label never included if wrong nest"
+    },
+    {
+      "id": "W321",
+      "severity": "low",
+      "area": "lang|topkeyobj",
+      "title": "TOPKEYOBJ tie-break order unspecified",
+      "detail": "Board has unique max latency=40. Equal tops would yield unspecified key; agents need stable secondary key for fair sampling \u2014 not documented.",
+      "repro": "two keys same max value \u2192 which TOPKEYOBJ returns?"
+    },
+    {
+      "id": "W322",
+      "severity": "low",
+      "area": "host|write",
+      "title": "STATUS last line omits final NL",
+      "detail": "cat -A ends gate:0:gn without $ after edge deny run.",
+      "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W323",
+      "severity": "low",
+      "area": "host|require",
+      "title": "CUBALC_SNA_REQUIRE=abc softens",
+      "detail": "Non-numeric REQUIRE leaves require_hit=0 (W6 class).",
+      "repro": "CUBALC_SNA_REQUIRE=abc list"
     }
   ],
   "workarounds": [
@@ -2737,12 +2781,11 @@
     "EMPTYOBJ miss vs empty nest ambiguous",
     "dynamic scrub key lists blocked by SETPOBJ/OMITOBJ literal field names?",
     "RENAMEPOBJ needs var field names for env-driven schema maps",
-    "no documented RENAMEPOBJ collision policy for agents"
+    "no documented RENAMEPOBJ collision policy for agents",
+    "SUMNOBJ needs skip/count diagnostics for mixed-type nests",
+    "TOPKEYOBJ needs documented tie-break"
   ],
   "issues_faced": [
-    "NEEDPOBJ not soft \u2014 use HASPOBJ for soft miss",
-    "EXIT 2 shell rc 0 (W7)",
-    "KEYNEST KEY unknown after many LETs+SYS LINES and after boot CAT+SAVEPLATE",
     "PLUCKOBJ no OR; SYS NTH bag 0 invalid form",
     "EXIT 2 shell 0 (W7)",
     "PICKOBJ destructive write-back needs re-seed for omit demo after pick",
@@ -2750,8 +2793,11 @@
     "EXIT 2 shell 0 (W7)",
     "rename field names literal-only for dynamic migrations",
     "EXIT 2 shell 0 (W7)",
-    "collision rename not stress-tested"
+    "collision rename not stress-tested",
+    "silent skip of non-numeric nest fields in SUMNOBJ",
+    "minsum flag gate deny works",
+    "EXIT 2 shell 0 (W7)"
   ],
-  "commit": "207020947c88699cac7a41cc371a3b3905b42e79",
-  "ts": "2026-08-09T08:03:59Z"
+  "commit": "pending",
+  "ts": "2026-08-09T08:28:52Z"
 }
