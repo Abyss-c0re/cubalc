@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 252,
-  "program": "programs/realworld/svc_pickobj_path_board.cubalc",
-  "theme": "path PICKOBJ/OMITOBJ project + KEYNEST walk",
-  "version": "1.15.657-usability",
+  "iter": 253,
+  "program": "programs/realworld/svc_getobj_path_board.cubalc",
+  "theme": "deep GETOBJ/SETOBJ/MERGEOBJ/DEFAULTOBJ path plane",
+  "version": "1.15.659-usability",
   "pass": true,
-  "prior_note": "iter 251 GETPN SLO; this iter first realworld PICKOBJ/OMITOBJ path (1204) + KEYNEST path walk (1203)",
+  "prior_note": "iter 252 PICKOBJ path; this iter first realworld GETOBJ/SETOBJ/MERGEOBJ path (1207) + SETP autoraw seed",
   "tests": [
     {
       "name": "list",
@@ -15,63 +15,63 @@
     },
     {
       "name": "boot",
-      "cmd": "seed cfg/flags noise",
+      "cmd": "seed + GETOBJ meta + SETP autoraw",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "pick",
-      "cmd": "PICKOBJ cfg port role",
+      "name": "peel",
+      "cmd": "GETOBJ cfg.meta INTO",
       "ok": true,
-      "note": "pick"
+      "note": "peel"
     },
     {
-      "name": "omit",
-      "cmd": "OMITOBJ flags noise",
+      "name": "patch",
+      "cmd": "mutate INTO + SETOBJ write-back",
       "ok": true,
-      "note": "omit"
+      "note": "patch"
     },
     {
-      "name": "walk",
-      "cmd": "EACH KEYNEST cfg + KEY OF flags",
+      "name": "merge",
+      "cmd": "MERGEOBJ overlay zone/ttl",
       "ok": true,
-      "note": "walk"
+      "note": "merge"
+    },
+    {
+      "name": "default",
+      "cmd": "DEFAULTOBJ fill miss only",
+      "ok": true,
+      "note": "default"
     },
     {
       "name": "soft",
-      "cmd": "miss nest pick/omit auto-create empty",
+      "cmd": "GETOBJ miss OR {}",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "peer",
-      "cmd": "PICKOBJ/OMITOBJ FROM PEER",
+      "cmd": "GETOBJ/MERGEOBJ FROM PEER deep",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "gate",
-      "cmd": "project contract + NEEDP",
+      "cmd": "deep nest contract",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "KEEPOBJ/STRIPNEST aliases",
+      "cmd": "PEEKOBJ/PATCHNEST/ENSUREOBJ",
       "ok": true,
       "note": "probe"
-    },
-    {
-      "name": "require_unknown",
-      "cmd": "EXIT 2",
-      "ok": true,
-      "note": "W7"
     },
     {
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "430/449 pre-existing cli shell fails; pickobj_path PASS 25 each_key_path PASS 32"
+      "note": "430/450 pre-existing cli shell fails; getobj_path PASS 29"
     }
   ],
   "weaknesses": [
@@ -2962,25 +2962,49 @@
       "title": "WRITE omit trailing NL",
       "detail": "W5 reconfirm",
       "repro": "cat -A META.txt"
+    },
+    {
+      "id": "W362",
+      "severity": "med",
+      "area": "lang|eqs_role",
+      "title": "SYS EQS LAST role_s flaky after multi FROM PEER peels",
+      "detail": "After GETP FROM PEER chain, SYS EQS LAST role_s returned 0 even when GETP role printed worker (or FROM PLATE). Workaround: capture LET path_val=LAST then SYS HAS path_val agent id. May interact with W4 PRINT clobber.",
+      "repro": "peer board: GETP role; EQS role_s → 0 after peer FROM chain"
+    },
+    {
+      "id": "W363",
+      "severity": "low",
+      "area": "lang|getobj_miss",
+      "title": "GETOBJ hard miss leaves sticky last_err",
+      "detail": "Similar to GETPN W356: soft miss path needs CLEAR_ERR; selftest footer may show GETOBJ key miss residual.",
+      "repro": "GETOBJ missing.nest; last_err sticky"
+    },
+    {
+      "id": "W364",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL",
+      "detail": "W5 reconfirm",
+      "repro": "cat -A META.txt"
     }
   ],
   "workarounds": [
-    "SETP reseed after destructive PICKOBJ before walk",
-    "Soft: check LENP 0 not HASP 0 after miss pick",
-    "DELP empty shells if plate hygiene matters"
+    "Capture GETP into var before EQS/HAS",
+    "CLEAR_ERR after GETOBJ hard miss",
+    "SETOBJ create deep path for net.peer seed"
   ],
   "language_gaps": [
-    "PICKOBJ/OMITOBJ path project/scrub solid for config admit",
-    "EACH KEYNEST path walk good for inventory bags",
-    "FROM PEER multi-plate project works",
-    "Soft miss creates empty nests — not pure soft",
-    "No non-destructive project-to-var form"
+    "GETOBJ/SETOBJ/MERGEOBJ/DEFAULTOBJ deep path excellent for sub-object ops",
+    "SETP auto-raw nests JSON objects from string (1206)",
+    "INTO META + SETP FROM META + SETOBJ write-back works",
+    "Sibling keys preserved on deep SETOBJ",
+    "EQS after multi-plate peels needs careful capture"
   ],
   "issues_faced": [
-    "PICKOBJ soft creates empty nest shells (W359)",
-    "Project is destructive; walk/omit need SETP reseed",
-    "CLI plate duals still fail set form"
+    "SYS EQS role_s failed after peer FROM chain — used HAS agent id",
+    "Sibling cfg.port kept across deep SETOBJ (positive)",
+    "CLI shell duals still failing"
   ],
-  "commit": "cd7440a1",
-  "ts": "2026-08-09T12:39:50Z"
+  "commit": "",
+  "ts": "2026-08-09T13:05:12Z"
 }
