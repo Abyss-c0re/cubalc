@@ -53,6 +53,8 @@ PRINT "hello" CUBES UNITY
 ```cubalc
 # EXPECT = soft ASSERT — continues; OK/EXPECT_OK + sticky LAST_ERR
 EXPECT SMX_OK == 1 "peer may be offline"
+WHY   # cubalc.why.v1 · WHY_HINT recovery tip · ASSERT_GOT/EXPECTED when compare
+# run plate always includes "why_hint" for agents (no in-lang form required)
 IF OK == 0 THEN
   FAIL "probe soft-fail"          # intentional soft status (no fake expr)
   PRINT "probe" LAST_ERR

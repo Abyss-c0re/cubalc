@@ -27491,7 +27491,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"SUMMERGEOBJ") || kw(&L->cur,"ADDFREQOBJ") ||
              kw(&L->cur,"SUBVALOBJ") || kw(&L->cur,"SUBFREQOBJ") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
-             kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
+             kw(&L->cur,"NOTE") || kw(&L->cur,"WHY") || kw(&L->cur,"EXPLAIN") ||
+             kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
              kw(&L->cur,"CLASS") || kw(&L->cur,"NEW") || kw(&L->cur,"SEND") ||
              kw(&L->cur,"FN") || kw(&L->cur,"RETURN") || kw(&L->cur,"BREAK") ||
@@ -36599,6 +36600,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DUMP", "DUMP — alias of PRINT_JSON"},
       {"VARS", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time)"},
+      {"WHY", "WHY|EXPLAIN — cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED + hint"},
+      {"EXPLAIN", "EXPLAIN alias of WHY"},
+      {"WHYERR", "WHYERR alias of WHY"},
       {"IDENTITY", "IDENTITY — cubalc.identity.v1 plate (user@host:pid + vars)"},
       {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"LET", "LET name [=] expr|string — = optional before value"},
@@ -37690,6 +37694,150 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace) fprintf(vm->trace, "# status ok=%ld err=%s\n", okv, esc[0] ? esc : "-");
     bump(vm); return 1;
   }
+
+  /* WHY|EXPLAIN|WHYERR — agent recovery plate from sticky failure state.
+   * Surfaces LAST_ERR + ASSERT_GOT/EXPECTED/OP + actionable WHY_HINT without
+   * re-parsing free text. Does not rewrite OK. Complements STATUS/CLEAR_ERR.
+   *   EXPECT x == 1
+   *   WHY
+   *   # LAST = cubalc.why.v1 · WHY_HINT = recovery tip
+   */
+  if (kw(&L->cur,"WHY") || kw(&L->cur,"EXPLAIN") || kw(&L->cur,"WHYERR") ||
+      kw(&L->cur,"EXPLAIN_ERR") || kw(&L->cur,"WHY_ERR") || kw(&L->cur,"DIAGNOSE") ||
+      kw(&L->cur,"RECOVERY") || kw(&L->cur,"WHAT_FAILED")) {
+    long okv = 1;
+    const char *err = "", *got = "", *exp = "", *op = "", *hint;
+    char esc_err[240], esc_got[120], esc_exp[120], esc_op[48], esc_hint[280];
+    char line[CUBALC_HOST_STR_MAX];
+    char hintbuf[256];
+    size_t eo;
+    Var *vo, *vle, *vg, *ve, *vop;
+    const char *p;
+
+    lex_next(L);
+    vo = var_get(vm, "OK", 0);
+    if (vo && !vo->is_str) okv = vo->val;
+    vle = var_get(vm, "LAST_ERR", 0);
+    if (vle && vle->is_str && vle->sval[0]) err = vle->sval;
+    else if (vm->err[0]) err = vm->err;
+    else {
+      Var *ve2 = var_get(vm, "ERR", 0);
+      if (ve2 && ve2->is_str && ve2->sval[0]) err = ve2->sval;
+    }
+    vg = var_get(vm, "ASSERT_GOT", 0);
+    if (vg && vg->is_str) got = vg->sval;
+    ve = var_get(vm, "ASSERT_EXPECTED", 0);
+    if (ve && ve->is_str) exp = ve->sval;
+    vop = var_get(vm, "ASSERT_OP", 0);
+    if (vop && vop->is_str) op = vop->sval;
+
+    /* Actionable recovery tips from sticky error text */
+    if (!err[0] && okv)
+      snprintf(hintbuf, sizeof hintbuf, "ok — no sticky LAST_ERR");
+    else if (strstr(err, "INCLUDE") || strstr(err, "include") ||
+             strstr(err, "REQUIRE LIB") || strstr(err, "lib missing"))
+      snprintf(hintbuf, sizeof hintbuf,
+               "cubalc libs · REQUIRE LIB name · INCLUDE SOFT · cubalc which name");
+    else if (strstr(err, "ASSERT") || strstr(err, "EXPECT") ||
+             strstr(err, "is false") || strstr(err, "falsey"))
+      snprintf(hintbuf, sizeof hintbuf,
+               "ASSERT_GOT/ASSERT_EXPECTED · EXPECT soft · CLEAR_ERR after fix");
+    else if (strstr(err, "NEEDP") || strstr(err, "NEEDFLAT") ||
+             strstr(err, "missing") || strstr(err, "NEED "))
+      snprintf(hintbuf, sizeof hintbuf,
+               "NEEDP/NEEDFLAT · plate has/need · DEFAULTP seed · cubalc plate need");
+    else if (strstr(err, "VERSION") || strstr(err, "version") ||
+             strstr(err, "too old"))
+      snprintf(hintbuf, sizeof hintbuf,
+               "REQUIRE VERSION floor · cubalc version · upgrade runtime");
+    else if (strstr(err, "DIAL") || strstr(err, "SERVE") || strstr(err, "SMX") ||
+             strstr(err, "TALK") || strstr(err, "P2P") || strstr(err, "timeout"))
+      snprintf(hintbuf, sizeof hintbuf,
+               "CUBALC_P2P_SOFT=1 · cubalc env · CUBALC_P2P_TIMEOUT ms");
+    else if (strstr(err, "HOLD_FLASH") || strstr(err, "PLUG") ||
+             strstr(err, "hold_flash"))
+      snprintf(hintbuf, sizeof hintbuf,
+               "HOLD_FLASH default 1 · HOLD_FLASH 0 denies PLUG · docs/HOLD_FLASH.md");
+    else if (strstr(err, "unknown form") || strstr(err, "did you mean") ||
+             strstr(err, "unknown"))
+      snprintf(hintbuf, sizeof hintbuf,
+               "HELP form · cubalc forms prefix · cubalc search keyword");
+    else if (strstr(err, "cannot open") || strstr(err, "ENOENT") ||
+             strstr(err, "No such") || strstr(err, "path"))
+      snprintf(hintbuf, sizeof hintbuf,
+               "cubalc paths · SYS EXIST · REQUIRE PATH · check CUBALC_STATE");
+    else if (strstr(err, "UNIFORM") || strstr(err, "roles must"))
+      snprintf(hintbuf, sizeof hintbuf,
+               "UNIFORMFLAT · UNEQPATHS · SETBYVAL · cubalc plate uniform");
+    else if (!err[0])
+      snprintf(hintbuf, sizeof hintbuf,
+               "OK soft=0 without LAST_ERR — STATUS · VARS · FAIL/EXPECT probe");
+    else
+      snprintf(hintbuf, sizeof hintbuf,
+               "STATUS · CLEAR_ERR after fix · cubalc doctor · docs/COOKBOOK.md");
+    hint = hintbuf;
+
+    eo = 0;
+    for (p = err; *p && eo + 2 < sizeof esc_err; p++) {
+      if (*p == '"' || *p == '\\') { esc_err[eo++] = '\\'; esc_err[eo++] = *p; }
+      else if ((unsigned char)*p < 0x20) continue;
+      else esc_err[eo++] = *p;
+    }
+    esc_err[eo] = 0;
+    eo = 0;
+    for (p = got; *p && eo + 2 < sizeof esc_got; p++) {
+      if (*p == '"' || *p == '\\') { esc_got[eo++] = '\\'; esc_got[eo++] = *p; }
+      else if ((unsigned char)*p < 0x20) continue;
+      else esc_got[eo++] = *p;
+    }
+    esc_got[eo] = 0;
+    eo = 0;
+    for (p = exp; *p && eo + 2 < sizeof esc_exp; p++) {
+      if (*p == '"' || *p == '\\') { esc_exp[eo++] = '\\'; esc_exp[eo++] = *p; }
+      else if ((unsigned char)*p < 0x20) continue;
+      else esc_exp[eo++] = *p;
+    }
+    esc_exp[eo] = 0;
+    eo = 0;
+    for (p = op; *p && eo + 2 < sizeof esc_op; p++) {
+      if (*p == '"' || *p == '\\') { esc_op[eo++] = '\\'; esc_op[eo++] = *p; }
+      else if ((unsigned char)*p < 0x20) continue;
+      else esc_op[eo++] = *p;
+    }
+    esc_op[eo] = 0;
+    eo = 0;
+    for (p = hint; *p && eo + 2 < sizeof esc_hint; p++) {
+      if (*p == '"' || *p == '\\') { esc_hint[eo++] = '\\'; esc_hint[eo++] = *p; }
+      else if ((unsigned char)*p < 0x20) continue;
+      else esc_hint[eo++] = *p;
+    }
+    esc_hint[eo] = 0;
+
+    snprintf(line, sizeof line,
+      "{\"schema\":\"cubalc.why.v1\",\"ok\":%s,\"has_err\":%s,"
+      "\"last_err\":\"%s\",\"assert_got\":\"%s\",\"assert_expected\":\"%s\","
+      "\"assert_op\":\"%s\",\"hint\":\"%s\",\"version\":\"%s\"}",
+      okv ? "true" : "false", err[0] ? "true" : "false",
+      esc_err, esc_got, esc_exp, esc_op, esc_hint, CUBALC_LANG_VERSION);
+    if (vm->trace) fprintf(vm->trace, "%s\n", line);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
+
+    var_set_str(vm, "WHY", line);
+    var_set_str(vm, "EXPLAIN", line);
+    var_set_str(vm, "WHY_HINT", hint);
+    var_set_str(vm, "EXPLAIN_HINT", hint);
+    var_set_num(vm, "WHY_HAS_ERR", err[0] ? 1 : 0);
+    var_set_num(vm, "LAST_N", err[0] ? 1 : 0);
+    vm->last_n = err[0] ? 1 : 0;
+    /* LAST = short hint for agents that only read LAST string */
+    var_set_str(vm, "LAST", hint);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hint);
+    /* report-only: leave OK/LAST_ERR intact */
+    if (vm->trace)
+      fprintf(vm->trace, "# why has_err=%d hint=%s\n", err[0] ? 1 : 0, hint);
+    bump(vm); return 1;
+  }
+
   /* IDENTITY / WHOAMI_PLATE — one host/process identity plate for agents.
    * Fills PID HOSTNAME USER UID HOME CWD VERSION without chaining SYS forms.
    * Full JSON → last_print; short LAST "user@host:pid". */

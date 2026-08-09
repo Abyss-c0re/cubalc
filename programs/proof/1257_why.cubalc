@@ -1,0 +1,54 @@
+# WHY / EXPLAIN — agent recovery plate from sticky LAST_ERR
+# Usability: ASSERT_GOT/EXPECTED + actionable WHY_HINT without re-parsing free text.
+
+HOLD_FLASH 1
+
+# clean slate
+WHY
+ASSERT WHY_HAS_ERR == 0
+ASSERT LAST_N == 0
+SYS HAS LAST "ok"
+ASSERT LAST_N == 1
+SYS HAS WHY "cubalc.why.v1"
+ASSERT LAST_N == 1
+
+# soft EXPECT failure → why maps to assert tip
+LET x = 3
+EXPECT x == 1
+ASSERT OK == 0
+WHY
+ASSERT WHY_HAS_ERR == 1
+ASSERT LAST_N == 1
+SYS HAS WHY_HINT "ASSERT_GOT"
+ASSERT LAST_N == 1
+SYS HAS WHY_HINT "CLEAR_ERR"
+ASSERT LAST_N == 1
+SYS EQS ASSERT_GOT "3"
+ASSERT LAST_N == 1
+SYS EQS ASSERT_EXPECTED "1"
+ASSERT LAST_N == 1
+SYS HAS WHY "assert_got"
+ASSERT LAST_N == 1
+SYS HAS WHY "\"3\""
+ASSERT LAST_N == 1
+
+# EXPLAIN alias
+EXPLAIN
+SYS HAS EXPLAIN_HINT "EXPECT"
+ASSERT LAST_N == 1
+
+CLEAR_ERR
+WHY
+ASSERT WHY_HAS_ERR == 0
+
+# unknown form path → forms hint (via FAIL message)
+FAIL "unknown form FOOBAR — try HELP"
+WHY
+SYS HAS WHY_HINT "forms"
+ASSERT LAST_N == 1
+SYS HAS WHY_HINT "HELP"
+ASSERT LAST_N == 1
+
+CLEAR_ERR
+PASS
+PRINT "1257_why: PASS"

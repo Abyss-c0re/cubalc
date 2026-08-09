@@ -743,6 +743,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 713. ~~**`cubalc doctor` lib/nest-check readiness**~~ **done** (`libs_n` · `lib_agent_boot`/`plate_session`/`plate_uniform` · `nest_check` · docs flags · agent install plate without guessing INCLUDE layout).
 714. ~~**`PRETTYP` / `JSONPRETTY` + `cubalc plate pretty`**~~ **done** (2-space indented plate JSON → LAST · multi-plate · CLI dual · human/agent nest inspection without shell jq).
 715. ~~**`cubalc init --list` + plate scaffold uniform/pretty**~~ **done** (scaffold catalog JSON for agents · `--plate` seeds plate_uniform + PRETTYP + role NEEDP · run-ready nest check without cookbook prose).
+716. ~~**`WHY` / `EXPLAIN` + run `why_hint`**~~ **done** (cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED · actionable WHY_HINT · run plate dual for agents without re-parsing free text).
 
 ## Tick protocol
 

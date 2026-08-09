@@ -1635,10 +1635,12 @@ int main(int argc, char **argv) {
       plate_ok = 0;
       if (rc == 0) rc = 1;
     }
-    /* Usability: err_line/err_src — source snippet when error cites line N. */
+    /* Usability: err_line/err_src — source snippet when error cites line N.
+     * why_hint — agent recovery tip from sticky last_err (dual of in-lang WHY). */
     {
-      char esrc[220];
+      char esrc[220], whyh[240], whyesc[280];
       size_t k, o = 0;
+      const char *e = rr.last_err[0] ? rr.last_err : rr.err;
       for (k = 0; rr.err_src[k] && o + 2 < sizeof esrc; k++) {
         char c = rr.err_src[k];
         if (c == '"' || c == '\\') esrc[o++] = '_';
@@ -1646,14 +1648,62 @@ int main(int argc, char **argv) {
         else esrc[o++] = c;
       }
       esrc[o] = 0;
+      whyh[0] = 0;
+      if (!e[0] && plate_ok)
+        snprintf(whyh, sizeof whyh, "ok — no sticky LAST_ERR");
+      else if (strstr(e, "INCLUDE") || strstr(e, "include") ||
+               strstr(e, "REQUIRE LIB") || strstr(e, "lib missing"))
+        snprintf(whyh, sizeof whyh,
+                 "cubalc libs · REQUIRE LIB name · INCLUDE SOFT · cubalc which name");
+      else if (strstr(e, "ASSERT") || strstr(e, "EXPECT") ||
+               strstr(e, "is false") || strstr(e, "falsey"))
+        snprintf(whyh, sizeof whyh,
+                 "ASSERT_GOT/ASSERT_EXPECTED · EXPECT soft · CLEAR_ERR after fix");
+      else if (strstr(e, "NEEDP") || strstr(e, "NEEDFLAT") ||
+               strstr(e, "missing") || strstr(e, "NEED "))
+        snprintf(whyh, sizeof whyh,
+                 "NEEDP/NEEDFLAT · plate has/need · DEFAULTP seed · cubalc plate need");
+      else if (strstr(e, "VERSION") || strstr(e, "version") || strstr(e, "too old"))
+        snprintf(whyh, sizeof whyh,
+                 "REQUIRE VERSION floor · cubalc version · upgrade runtime");
+      else if (strstr(e, "DIAL") || strstr(e, "SERVE") || strstr(e, "SMX") ||
+               strstr(e, "TALK") || strstr(e, "P2P") || strstr(e, "timeout"))
+        snprintf(whyh, sizeof whyh,
+                 "CUBALC_P2P_SOFT=1 · cubalc env · CUBALC_P2P_TIMEOUT ms");
+      else if (strstr(e, "HOLD_FLASH") || strstr(e, "PLUG") || strstr(e, "hold_flash"))
+        snprintf(whyh, sizeof whyh,
+                 "HOLD_FLASH default 1 · HOLD_FLASH 0 denies PLUG · docs/HOLD_FLASH.md");
+      else if (strstr(e, "unknown form") || strstr(e, "did you mean") ||
+               strstr(e, "unknown"))
+        snprintf(whyh, sizeof whyh,
+                 "HELP form · cubalc forms prefix · cubalc search keyword");
+      else if (strstr(e, "cannot open") || strstr(e, "ENOENT") ||
+               strstr(e, "No such") || strstr(e, "path"))
+        snprintf(whyh, sizeof whyh,
+                 "cubalc paths · SYS EXIST · REQUIRE PATH · check CUBALC_STATE");
+      else if (e[0])
+        snprintf(whyh, sizeof whyh,
+                 "WHY in-program · STATUS · CLEAR_ERR · cubalc doctor · COOKBOOK");
+      else
+        snprintf(whyh, sizeof whyh, "STATUS · VARS · FAIL/EXPECT probe");
+      o = 0;
+      for (k = 0; whyh[k] && o + 2 < sizeof whyesc; k++) {
+        char c = whyh[k];
+        if (c == '"' || c == '\\') { whyesc[o++] = '\\'; whyesc[o++] = c; }
+        else if ((unsigned char)c < 32) whyesc[o++] = ' ';
+        else whyesc[o++] = c;
+      }
+      whyesc[o] = 0;
       printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
              "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
              "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
              "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
+             "\"why_hint\":\"%s\","
              "\"quiet\":%s,\"strict\":%s,\"exit_code\":%d,\"halted\":%s}\n",
              plate_ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
              rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
              CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc,
+             whyesc,
              quiet ? "true" : "false", strict ? "true" : "false",
              rr.exit_code, rr.halted ? "true" : "false");
     }
@@ -2307,6 +2357,7 @@ int main(int argc, char **argv) {
       {"prettyp", "programs/proof/1255_prettyp.cubalc", "PRETTYP/JSONPRETTY indented plate multi-plate"},
       {"cli_plate_pretty", "programs/proof/1255_cli_plate_pretty.sh", "cubalc plate pretty PRETTYP dual"},
       {"cli_init_list", "programs/proof/1256_cli_init_list.sh", "cubalc init --list scaffold catalog + plate uniform starter"},
+      {"why", "programs/proof/1257_why.cubalc", "WHY/EXPLAIN recovery plate from LAST_ERR + run why_hint"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
