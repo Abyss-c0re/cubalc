@@ -18575,8 +18575,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
    * EACH PROP|ATTR|OBJFIELD OF obj|Class [AS name] ... END — walk schema field names.
    * EACH METHOD|MSG|HANDLER OF obj|Class [AS name] ... END — walk schema method names.
    * EACH OBJ [Class] [AS name] ... END — walk live OOP objects (optional class filter).
-   * EACH KEY|KEYS [AS name] OF|FROM plate|LAST|PLATE ... END — walk JSON plate keys.
+   * EACH KEY|KEYS [AS name] OF|FROM plate|LAST|PLATE [path] ... END — walk plate keys.
    * EACH KEYNEST nest [FROM plate] | EACH KEY OF NEST nest — walk nested object keys.
+   * Nest path may be dotted/slash: EACH KEYNEST "cfg.flags" · EACH KEY OF PLATE "meta".
+   * Soft empty walk if path miss / non-object. No KEYSP/KEYSOBJ+EACH LINE glue.
    * Note: EACH FIELD/FIELDS stays a LINE synonym (bag walk), not schema props.
    * digit-4 control: cell-range iterator binds value to name, IT=index, VAL=value */
   if (kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")){
@@ -18613,18 +18615,20 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     lex_next(L);
     if (is_key){
-      /* EACH KEY|KEYS [AS name] OF|FROM plate|LAST|PLATE ... END
+      /* EACH KEY|KEYS [AS name] OF|FROM plate|LAST|PLATE [path] ... END
        * EACH KEYNEST|NESTKEY [AS name] nest [FROM plate] ... END
        * EACH KEY OF NEST nest [FROM plate] ... END
        * Binds KEY (+ VALUE/VAL) per field. KEYNEST peels nested object first.
-       * Soft empty if non-object. Usability: no KEYSP/KEYSOBJ+EACH LINE glue:
-       *   EACH KEYNEST "meta" ... END
+       * Nest path dotted/slash ok via path_obj (soft miss → empty walk):
+       *   EACH KEYNEST "cfg.flags" ... END
+       *   EACH KEY OF PLATE "meta" ... END
        *   EACH KEY OF NEST "cfg" FROM PEER ... END
+       * Soft empty if non-object. Usability: no KEYSP/KEYSOBJ+EACH LINE glue.
        */
       char bind[48], plate[CUBALC_HOST_STR_MAX], keys_snap[CUBALC_HOST_STR_MAX];
-      char nestk[96], outer[CUBALC_HOST_STR_MAX];
+      char nestk[192], outer[CUBALC_HOST_STR_MAX];
       cubalc_host_result kr, gr, ngr;
-      const char *p, *startp, *vv;
+      const char *p, *startp;
       long idx = 0, nkeys = 0;
       int have_src = 0, nest_mode = is_keynest ? 1 : 0;
       Var *pv;
@@ -18758,6 +18762,17 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
             snprintf(plate, sizeof plate, "%s", vm->last_str);
           }
+          /* optional nest path after plate: EACH KEY OF PLATE "cfg.flags" */
+          if (L->cur.kind == TK_STR ||
+              (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur, "AS") && !kw(&L->cur, "END") &&
+               !kw(&L->cur, "FROM") && !kw(&L->cur, "OF") &&
+               strcmp(L->cur.text, "->") != 0)) {
+            if (resolve_str_arg(vm, L, nestk, sizeof nestk) == 0 && nestk[0]) {
+              nest_mode = 1;
+              snprintf(outer, sizeof outer, "%s", plate);
+            }
+          }
         }
       } else {
         /* bare: conventional PLATE, else LAST object */
@@ -18766,35 +18781,33 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           snprintf(plate, sizeof plate, "%s", pv->sval);
         else
           snprintf(plate, sizeof plate, "%s", vm->last_str);
+        /* optional nest path after bare: EACH KEY "cfg" (only if string / not AS) */
+        if (L->cur.kind == TK_STR) {
+          if (resolve_str_arg(vm, L, nestk, sizeof nestk) == 0 && nestk[0]) {
+            nest_mode = 1;
+            snprintf(outer, sizeof outer, "%s", plate);
+          }
+        }
       }
       if (nest_mode) {
         const char *bp;
         if (!nestk[0]) {
           snprintf(plate, sizeof plate, "%s", "{}");
         } else {
-          bp = outer;
+          bp = outer[0] ? outer : plate;
           while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
           if (*bp != '{')
             snprintf(outer, sizeof outer, "%s", "{}");
+          else if (!outer[0])
+            snprintf(outer, sizeof outer, "%s", plate);
+          /* path-aware peel: "cfg.flags" / "a/b" · soft miss → {} */
           memset(&ngr, 0, sizeof ngr);
-          if (cubalc_host_json_get_raw(outer, nestk, &ngr) == 0) {
-            vv = ngr.str;
-            while (*vv == ' ' || *vv == '\t' || *vv == '\n' || *vv == '\r') vv++;
-            if (*vv == '{') {
-              if (vv != ngr.str) {
-                size_t n = strlen(vv);
-                memmove(ngr.str, vv, n + 1);
-              }
-              snprintf(plate, sizeof plate, "%s", ngr.str);
-            } else {
-              snprintf(plate, sizeof plate, "%s", "{}");
-            }
-          } else {
-            snprintf(plate, sizeof plate, "%s", "{}");
-          }
+          cubalc_host_json_path_obj(outer, nestk, &ngr);
+          snprintf(plate, sizeof plate, "%s", ngr.str);
         }
         var_set_str(vm, "NEST", nestk);
         var_set_str(vm, "KEYNEST", nestk);
+        var_set_str(vm, "KEY_PATH", nestk);
       }
       {
         const char *bp = plate;

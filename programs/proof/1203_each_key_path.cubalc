@@ -1,0 +1,123 @@
+# EACH KEYNEST / EACH KEY OF plate with dotted nest paths
+# Usability: deep nest walk without KEYSP path + EACH LINE glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"port\":8080,\"tls\":0,\"role\":\"edge\"},\"flags\":{\"debug\":0,\"trace\":1},\"n\":1}"
+LET PEER = "{\"meta\":{\"role\":\"worker\",\"zone\":\"B\",\"n\":3}}"
+
+# shallow KEYNEST still works
+LET bag = ""
+LET n_walk = 0
+EACH KEYNEST "cfg"
+  LET n_walk = n_walk + 1
+  SYS PUSH bag KEY
+  LET bag = LAST
+END
+ASSERT EACH_N == 3
+ASSERT KEYNEST_MODE == 1
+ASSERT n_walk == 3
+SYS HASLINE bag "port"
+ASSERT LAST_N == 1
+SYS HASLINE bag "tls"
+ASSERT LAST_N == 1
+SYS HASLINE bag "role"
+ASSERT LAST_N == 1
+SYS EQS KEYNEST "cfg"
+ASSERT LAST_N == 1
+
+# deep path KEYNEST
+LET bag = ""
+LET n_walk = 0
+LET saw_debug = 0
+LET debug_val = ""
+EACH KEYNEST "flags"
+  LET n_walk = n_walk + 1
+  SYS PUSH bag KEY
+  LET bag = LAST
+  SYS EQS KEY "debug"
+  IF LAST_N == 1 THEN
+    LET saw_debug = 1
+    LET debug_val = VALUE
+  END
+END
+ASSERT EACH_N == 2
+ASSERT saw_debug == 1
+SYS EQS debug_val "0"
+ASSERT LAST_N == 1
+SYS HASLINE bag "trace"
+ASSERT LAST_N == 1
+
+# EACH KEY OF PLATE "cfg" path sugar
+LET bag = ""
+LET n_walk = 0
+EACH KEY OF PLATE "cfg"
+  LET n_walk = n_walk + 1
+  SYS PUSH bag KEY
+  LET bag = LAST
+END
+ASSERT EACH_N == 3
+ASSERT KEYNEST_MODE == 1
+ASSERT n_walk == 3
+SYS HASLINE bag "port"
+ASSERT LAST_N == 1
+SYS EQS KEY_PATH "cfg"
+ASSERT LAST_N == 1
+
+# bare EACH KEY "flags" (string path on PLATE)
+LET bag = ""
+EACH KEY "flags"
+  SYS PUSH bag KEY
+  LET bag = LAST
+END
+ASSERT EACH_N == 2
+SYS HASLINE bag "debug"
+ASSERT LAST_N == 1
+SYS HASLINE bag "trace"
+ASSERT LAST_N == 1
+
+# multi-plate FROM + path
+LET bag = ""
+LET n_walk = 0
+EACH KEYNEST "meta" FROM PEER
+  LET n_walk = n_walk + 1
+  SYS PUSH bag KEY
+  LET bag = LAST
+END
+ASSERT EACH_N == 3
+ASSERT n_walk == 3
+SYS HASLINE bag "role"
+ASSERT LAST_N == 1
+SYS HASLINE bag "zone"
+ASSERT LAST_N == 1
+SYS HASLINE bag "n"
+ASSERT LAST_N == 1
+
+# soft miss path → empty walk
+LET n_walk = 0
+EACH KEYNEST "missing.nest"
+  LET n_walk = n_walk + 1
+END
+ASSERT EACH_N == 0
+ASSERT n_walk == 0
+ASSERT OK == 1
+
+# non-object leaf soft empty
+LET n_walk = 0
+EACH KEYNEST "host"
+  LET n_walk = n_walk + 1
+END
+ASSERT EACH_N == 0
+ASSERT n_walk == 0
+
+# top-level EACH KEY still works
+LET n_walk = 0
+EACH KEY
+  LET n_walk = n_walk + 1
+END
+ASSERT EACH_N == 4
+ASSERT n_walk == 4
+ASSERT KEYNEST_MODE == 0
+
+PASS
+PRINT "1203_each_key_path: PASS"
