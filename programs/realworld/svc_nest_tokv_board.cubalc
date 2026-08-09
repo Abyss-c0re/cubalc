@@ -1,0 +1,851 @@
+# svc_nest_tokv_board.cubalc — TOKVOBJ/FROMKVOBJ nest bag handoff bridge
+#
+# Real use: fleet agents export nested meta/cfg to key:val digests for GREP
+# handoff and re-import bags into snap nests without GETOBJ+TOKVP glue.
+# First realworld of proof 1182 (MEANINGFUL 641).
+#
+#   TOKVOBJ nest                 · NESTTOKV alias
+#   FROMKVOBJ nest bag           · BAGTONEST · replace nest
+#   TOKVOBJ/FROMKVOBJ FROM PEER
+#   FROMKVOBJ nest LAST          · round-trip
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_snt_$$
+#   ./out/cubalc run programs/realworld/svc_nest_tokv_board.cubalc boot
+#   ./out/cubalc run ... export|import|peer|soft|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SNT_REPORT.txt agent.json peer.json
+#        digest.txt
+# Env: HOST_S ROLE_S CUBALC_SNT_REQUIRE
+#
+# Edges:
+#   soft nest miss empty bag; FROMKV replace clobbers; GREP exactness;
+#   substring false friends; WRITE NL; NUM softens REQUIRE; EXIT shell (W7)
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_nest_tokv_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_nest_tokv -- boot|export|import|peer|soft|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SNT_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SNT_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "digest.txt"
+LET digest_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+LET bag_n = 0
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET body = ""
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET digest = ""
+LET soft_ok = 0
+LET gate_ok = 0
+LET tok_n = 0
+
+ONEOF ACTION "boot", "export", "import", "peer", "soft", "gate", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "export" THEN
+    LET op = "export"
+  WHEN "import" THEN
+    LET op = "import"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — seed meta nest for digest
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-tokv\",\"schema\":\"cubalc.svc_nest_tokv.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"meta\":{\"role\":\"" role_s "\",\"zone\":\"A\",\"n\":3},\"cfg\":{\"port\":8080}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"host\":\"" host_s "\",\"cfg\":{\"port\":8080,\"tls\":1},\"tag\":\"x\",\"schema\":\"cubalc.svc_nest_tokv.v1\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  TOKVOBJ "meta"
+  LET digest = LAST
+  CLEAR_ERR
+  SYS WRITE digest_path digest
+  CLEAR_ERR
+  SYS LINES digest
+  LET tok_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE digest "zone:A"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "host"
+  SYS EQS LAST host_s
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF tok_n == 3 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET load_hit = 1
+        LET take_n = 3
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot host"
+        FAIL "boot host"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot zone line"
+      FAIL "boot zone line"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot tok n"
+    FAIL "boot tok n"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tok_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# export — TOKVOBJ meta → digest plate
+SYS EQS op "export"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TOKVOBJ "meta"
+  LET digest = LAST
+  CLEAR_ERR
+  SYS WRITE digest_path digest
+  CLEAR_ERR
+  SYS LINES digest
+  LET tok_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE digest "role:worker"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE digest "n:3"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # HASLINE is whole-line exact: bare "role" must NOT hit "role:worker"
+  SYS HASLINE digest "role"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # false friend: zone:B
+  SYS HASLINE digest "zone:B"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF tok_n == 3 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 0 THEN
+          IF miss_n == 0 THEN
+            LET hit = 1
+            LET note_msg = "export ok"
+            LET admit_n = 1
+            LET take_n = 3
+          ELSE
+            LET miss = 1
+            LET note_msg = "export false zoneB"
+            FAIL "export false zoneB"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "export bare role hit"
+          FAIL "export bare role hit"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "export n line"
+        FAIL "export n line"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "export role line"
+      FAIL "export role line"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "export lines"
+    FAIL "export lines"
+    CLEAR_ERR
+  END
+  SYS STR tok_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "export:" w_s ":ex"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "export:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tok_n has_n peel_hit miss_n note_msg
+  CLEAR_ERR
+END
+
+# import — FROMKVOBJ replace snap from digest / literal bag
+SYS EQS op "import"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS READ OR digest_path OR ""
+  LET digest = LAST
+  CLEAR_ERR
+  SYS LINES digest
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF take_n < 1 THEN
+    LET digest = "role:worker\nzone:A\nn:3"
+  END
+  CLEAR_ERR
+  FROMKVOBJ "snap" digest
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  GETPOBJ "snap" "role"
+  SYS EQS LAST "worker"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETPOBJ "snap" "zone"
+  SYS EQS LAST "A"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  LENOBJ "snap"
+  LET tok_n = LAST_N
+  CLEAR_ERR
+  # replace meta with smaller bag — clobber
+  FROMKVOBJ "meta" "status:ready\ncount:2"
+  CLEAR_ERR
+  HASPOBJ "meta" "role"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETPOBJ "meta" "status"
+  SYS EQS LAST "ready"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # outer host intact
+  GETP "host"
+  SYS EQS LAST host_s
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF tok_n >= 2 THEN
+        IF load_hit == 0 THEN
+          IF miss_n == 1 THEN
+            IF soft_ok == 1 THEN
+              LET hit = 1
+              LET note_msg = "import ok"
+              LET admit_n = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "import host"
+              FAIL "import host"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "import status"
+            FAIL "import status"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "import role remain"
+          FAIL "import role remain"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "import snap len"
+        FAIL "import snap len"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "import zone"
+      FAIL "import zone"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "import role"
+    FAIL "import role"
+    CLEAR_ERR
+  END
+  SYS STR tok_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "import:" w_s ":im"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "import:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tok_n has_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# peer — TOKVOBJ/FROMKVOBJ FROM PEER
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TOKVOBJ FROM PEER "cfg"
+  LET digest = LAST
+  CLEAR_ERR
+  SYS WRITE digest_path digest
+  CLEAR_ERR
+  SYS HASLINE digest "port:8080"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE digest "tls:1"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  FROMKVOBJ FROM PEER "cfg" "host:cubeB\nport:9090"
+  CLEAR_ERR
+  GETPOBJ FROM PEER "cfg" "port"
+  SYS EQS LAST "9090"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETPOBJ FROM PEER "cfg" "host"
+  SYS EQS LAST "cubeB"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  HASPOBJ FROM PEER "cfg" "tls"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "tag"
+  SYS EQS LAST "x"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "peer.json"
+  LET peer_path = LAST
+  CLEAR_ERR
+  SAVEP FROM PEER peer_path
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 1 THEN
+        IF take_n == 1 THEN
+          IF miss_n == 0 THEN
+            IF soft_ok == 1 THEN
+              LET hit = 1
+              LET note_msg = "peer ok"
+              LET admit_n = 1
+              LET tok_n = 2
+            ELSE
+              LET miss = 1
+              LET note_msg = "peer tag"
+              FAIL "peer tag"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer tls remain"
+            FAIL "peer tls remain"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer host"
+          FAIL "peer host"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer port"
+        FAIL "peer port"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer tls line"
+      FAIL "peer tls line"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer port line"
+    FAIL "peer port line"
+    CLEAR_ERR
+  END
+  SYS CAT "peer:cfg:pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit load_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# soft — nest miss + empty bag
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TOKVOBJ "ghost"
+  LET digest = LAST
+  CLEAR_ERR
+  SYS EMPTY digest
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  LET has_n = 0
+  IF OK == 1 THEN
+    LET has_n = 1
+  END
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # FROMKV empty bag?
+  FROMKVOBJ "empty_in" ""
+  CLEAR_ERR
+  EMPTYOBJ "empty_in"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF soft_ok == 1 THEN
+    IF has_n == 1 THEN
+      IF take_n == 0 THEN
+        IF peel_hit == 1 THEN
+          LET hit = 1
+          LET note_msg = "soft ok"
+          LET admit_n = 1
+          LET load_hit = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "soft empty_in"
+          FAIL "soft empty_in"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft empty bag"
+        FAIL "soft empty bag"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft ok flag"
+      FAIL "soft ok flag"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft ghost empty"
+    FAIL "soft ghost empty"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok" soft_ok ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n soft_ok has_n peel_hit take_n note_msg
+  CLEAR_ERR
+END
+
+# gate — digest has required k:v lines; snap or meta present
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS READ OR digest_path OR ""
+  LET digest = LAST
+  CLEAR_ERR
+  SYS HASLINE digest "port:9090"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # after peer, digest may be peer cfg; accept either peer or meta export shape
+  SYS HASLINE digest "port:8080"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE digest "zone:A"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  LET take_n = has_n + peel_hit + load_hit
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_nest_tokv"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # bare "port" must NOT match port:N lines (whole-line exact)
+  SYS HASLINE digest "port"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  IF take_n >= 1 THEN
+    IF miss_n == 1 THEN
+      IF soft_ok == 0 THEN
+        LET hit = 1
+        LET gate_ok = 1
+        LET admit_n = 1
+        LET note_msg = "gate ok"
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate bare port hit"
+        FAIL "gate bare port hit"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate schema"
+      FAIL "gate schema"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate digest empty"
+    FAIL "gate digest empty"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF gate_ok == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" gate_ok ":gn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n gate_ok take_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# probe — round-trip LAST + NESTTOKV/BAGTONEST aliases
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # restore a full meta-like nest for round-trip
+  FROMKVOBJ "round" "a:1\nb:2\nc:3"
+  CLEAR_ERR
+  TOKVOBJ "round"
+  LET digest = LAST
+  CLEAR_ERR
+  # capture bag var — FROMKVOBJ nest LAST flaky after other peels
+  FROMKVOBJ "round2" digest
+  CLEAR_ERR
+  LENOBJ "round2"
+  LET tok_n = LAST_N
+  CLEAR_ERR
+  GETPOBJ "round2" "b"
+  SYS EQS LAST "2"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  NESTTOKV "round"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "a:1"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  BAGTONEST "alias_nest" "k:v\nm:9"
+  CLEAR_ERR
+  GETPOBJ "alias_nest" "m"
+  SYS EQS LAST "9"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-tokv"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF tok_n == 3 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 1 THEN
+          IF soft_ok == 1 THEN
+            LET hit = 1
+            LET note_msg = "probe ok"
+            LET admit_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe agent"
+            FAIL "probe agent"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe bagtonest"
+          FAIL "probe bagtonest"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe nesttokv"
+        FAIL "probe nesttokv"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe round2 b"
+      FAIL "probe round2 b"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe round2 len"
+    FAIL "probe round2 len"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:rt:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tok_n has_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_nest_tokv.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " tok=" tok_n " has=" has_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_nest_tokv_board: end"

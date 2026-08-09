@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 242,
-  "program": "programs/realworld/svc_nest_agg_board.cubalc",
-  "theme": "SUMNOBJ/TOPKEYOBJ nest stats rollup and hotspot",
-  "version": "1.15.633-usability",
+  "iter": 243,
+  "program": "programs/realworld/svc_nest_tokv_board.cubalc",
+  "theme": "TOKVOBJ/FROMKVOBJ nest bag handoff digest bridge",
+  "version": "1.15.635-usability",
   "pass": true,
-  "prior_note": "iter 241 RENAMEPOBJ promote; this iter first realworld SUMNOBJ/TOPKEYOBJ (1183 / MEANINGFUL 642)",
+  "prior_note": "iter 242 SUMNOBJ rollup; this iter first realworld TOKVOBJ/FROMKVOBJ (1182 / MEANINGFUL 641)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed stats sum=60",
+      "cmd": "seed meta + TOKVOBJ digest",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "sum",
-      "cmd": "SUM/AVG/MAX/MIN/MEDIAN nest",
+      "name": "export",
+      "cmd": "TOKVOBJ + HASLINE exact k:v",
       "ok": true,
-      "note": "sum"
+      "note": "export"
     },
     {
-      "name": "top",
-      "cmd": "TOPKEYOBJ latency BOTKEYOBJ errors",
+      "name": "import",
+      "cmd": "FROMKVOBJ snap + meta replace clobber",
       "ok": true,
-      "note": "top"
+      "note": "import"
     },
     {
       "name": "peer",
-      "cmd": "SUMNOBJ/TOP FROM PEER",
+      "cmd": "TOKV/FROMKV FROM PEER replace",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "nest miss sum 0 + empty top",
+      "cmd": "ghost TOKV empty + empty FROMKV",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "sum>=minsum + hot latency",
+      "cmd": "digest lines + bare port exactness",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "gate_hi",
-      "cmd": "--minsum=100 deny",
-      "ok": true,
-      "note": "edge deny"
-    },
-    {
       "name": "probe",
-      "cmd": "TOTALOBJ/MEAN/MAXKEY/empty nest",
+      "cmd": "round-trip + NESTTOKV/BAGTONEST",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +65,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "411/418 pre-existing shell fails + oop_pickobj/kvfileensure; sumnobj PASS 46"
+      "note": "413/420 pre-existing shell fails; tokvobj PASS 45"
     }
   ],
   "weaknesses": [
@@ -2658,6 +2652,38 @@
       "title": "CUBALC_SNA_REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE leaves require_hit=0 (W6 class).",
       "repro": "CUBALC_SNA_REQUIRE=abc list"
+    },
+    {
+      "id": "W324",
+      "severity": "med",
+      "area": "lang|fromkvobj",
+      "title": "FROMKVOBJ fully replaces nest \u2014 no merge mode",
+      "detail": "FROMKVOBJ meta bag drops prior keys (role gone after status/count import). Agents that need merge must MERGEOBJ after TOKV or bag-merge offline. No FROMKVOBJ MERGE flag.",
+      "repro": "FROMKVOBJ meta status:ready\\ncount:2 after role/zone/n \u2192 role HASPOBJ 0"
+    },
+    {
+      "id": "W325",
+      "severity": "med",
+      "area": "lang|fromkvobj",
+      "title": "FROMKVOBJ nest LAST unreliable after peels \u2014 capture bag var",
+      "detail": "Proof uses FROMKVOBJ snap LAST after TOKVOBJ; in long agent board FROMKVOBJ round2 LAST left empty nest. Capture LET digest = LAST then FROMKVOBJ round2 digest.",
+      "repro": "TOKVOBJ round; FROMKVOBJ round2 LAST \u2192 len 0; FROMKVOBJ round2 digest \u2192 len 3"
+    },
+    {
+      "id": "W326",
+      "severity": "low",
+      "area": "host|hasline",
+      "title": "SYS HASLINE is whole-line exact on k:v digests",
+      "detail": "HASLINE digest role does not match role:worker; HASLINE port misses port:8080. Good for exactness, surprising if agents expect substring. Prefer HASLINE role:worker or SYS HAS.",
+      "repro": "HASLINE bag role \u2192 0 for role:worker line"
+    },
+    {
+      "id": "W327",
+      "severity": "low",
+      "area": "host|write",
+      "title": "STATUS last line omits final NL",
+      "detail": "cat -A ends probe:rt:pb without $.",
+      "repro": "cat -A STATUS.txt"
     }
   ],
   "workarounds": [
@@ -2783,12 +2809,11 @@
     "RENAMEPOBJ needs var field names for env-driven schema maps",
     "no documented RENAMEPOBJ collision policy for agents",
     "SUMNOBJ needs skip/count diagnostics for mixed-type nests",
-    "TOPKEYOBJ needs documented tie-break"
+    "TOPKEYOBJ needs documented tie-break",
+    "FROMKVOBJ needs merge-mode for non-destructive bag import",
+    "FROMKVOBJ LAST binding fragile in multi-op agent boards"
   ],
   "issues_faced": [
-    "PLUCKOBJ no OR; SYS NTH bag 0 invalid form",
-    "EXIT 2 shell 0 (W7)",
-    "PICKOBJ destructive write-back needs re-seed for omit demo after pick",
     "EMPTYOBJ conflates miss and empty nest",
     "EXIT 2 shell 0 (W7)",
     "rename field names literal-only for dynamic migrations",
@@ -2796,8 +2821,12 @@
     "collision rename not stress-tested",
     "silent skip of non-numeric nest fields in SUMNOBJ",
     "minsum flag gate deny works",
+    "EXIT 2 shell 0 (W7)",
+    "FROMKVOBJ replace clobber not merge",
+    "FROMKVOBJ LAST flaky; use bag var",
+    "HASLINE whole-line exact on digests",
     "EXIT 2 shell 0 (W7)"
   ],
-  "commit": "33d2aa54865b20efae7eeff3b6e108d8d9cc5752",
-  "ts": "2026-08-09T08:28:52Z"
+  "commit": "pending",
+  "ts": "2026-08-09T08:54:57Z"
 }
