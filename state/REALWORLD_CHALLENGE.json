@@ -3005,6 +3005,6 @@
     "Sibling cfg.port kept across deep SETOBJ (positive)",
     "CLI shell duals still failing"
   ],
-  "commit": "",
+  "commit": "be4b3ad8",
   "ts": "2026-08-09T13:05:12Z"
 }
