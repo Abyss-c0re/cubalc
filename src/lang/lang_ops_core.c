@@ -35847,15 +35847,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"VALUEP", "VALUEP alias of VALSP"},
       {"TYPEP", "TYPEP|KINDP [FROM plate] key — field kind missing|num|str|bool|null|obj|arr · dotted path nest ok · multi-plate · no SYS JSONTYPE"},
       {"KINDP", "KINDP alias of TYPEP"},
-      {"GETOBJ", "GETOBJ|PEEKOBJ [FROM plate] key [OR fb] [INTO name] — peel nested object → plate · multi-plate · no GETP miss on obj"},
+      {"GETOBJ", "GETOBJ|PEEKOBJ [FROM plate] key [OR fb] [INTO name] — peel nested object → plate · dotted path ok · multi-plate"},
       {"PEEKOBJ", "PEEKOBJ alias of GETOBJ"},
       {"OBJGET", "OBJGET alias of GETOBJ"},
       {"GETNEST", "GETNEST alias of GETOBJ"},
-      {"SETOBJ", "SETOBJ|PUTOBJ|NESTP [FROM plate] key value — nest plate object under key · multi-plate · SETP RAW sugar"},
+      {"SETOBJ", "SETOBJ|PUTOBJ|NESTP [FROM plate] key value — nest plate object under key · dotted path ok · multi-plate"},
       {"PUTOBJ", "PUTOBJ alias of SETOBJ"},
       {"NESTP", "NESTP alias of SETOBJ · nest plate under key"},
       {"PUTNEST", "PUTNEST alias of SETOBJ"},
-      {"MERGEOBJ", "MERGEOBJ|PATCHNEST [FROM plate] key overlay — merge into nested object · multi-plate · no GETOBJ+MERGEP+SETOBJ"},
+      {"MERGEOBJ", "MERGEOBJ|PATCHNEST [FROM plate] key overlay — merge into nested object · dotted path ok · multi-plate"},
       {"PATCHNEST", "PATCHNEST alias of MERGEOBJ"},
       {"UPDATEOBJ", "UPDATEOBJ alias of MERGEOBJ"},
       {"DEFAULTOBJ", "DEFAULTOBJ|ENSUREOBJ [FROM plate] key defaults — fill missing nested keys only · multi-plate"},
@@ -41525,11 +41525,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * GETP only peels scalars (string/num/bool); nested objects miss — this is the fix:
    *   TYPEP "meta"          → obj
    *   GETOBJ "meta" INTO M  → M={"x":1}
+   *   GETOBJ "cfg.meta"     → deep path peel (same plane as GETP paths)
    *   SETP FROM M "x" 9
    *   SETOBJ "meta" M
    * Soft miss / non-object → OR fallback or sticky LAST_ERR. Multi-plate FROM.
    * SETOBJ|PUTOBJ|NESTP|PUTNEST [FROM plate] key value
-   * Nest a plate object under key (write-back) — SETP key RAW value sugar for agents.
+   * Nest a plate object under key (write-back) — paths create intermediate {}.
    */
   if (kw(&L->cur,"GETOBJ") || kw(&L->cur,"PEEKOBJ") || kw(&L->cur,"OBJGET") ||
       kw(&L->cur,"GETNEST") || kw(&L->cur,"NESTGET") || kw(&L->cur,"SUBOBJ") ||
@@ -41537,7 +41538,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"SETOBJ") || kw(&L->cur,"PUTOBJ") || kw(&L->cur,"NESTP") ||
       kw(&L->cur,"PUTNEST") || kw(&L->cur,"SETOBJECT") || kw(&L->cur,"NESTPLATE") ||
       kw(&L->cur,"MSETOBJ") || kw(&L->cur,"PLATE_SETOBJ") || kw(&L->cur,"PLATE_GETOBJ")) {
-    char plate[CUBALC_HOST_STR_MAX], key[96], val[CUBALC_HOST_STR_MAX];
+    char plate[CUBALC_HOST_STR_MAX], key[192], val[CUBALC_HOST_STR_MAX];
     char fb[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
     char into_name[96];
     cubalc_host_result gr, hr;
@@ -41735,11 +41736,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
 
     if (!is_set) {
-      /* peel nested object */
+      /* peel nested object (paths ok: GETOBJ "cfg.meta") */
       int hit = 0;
       const char *v;
       memset(&gr, 0, sizeof gr);
-      if (cubalc_host_json_get_raw(plate, key, &gr) == 0) {
+      if (cubalc_host_json_path_get_raw(plate, key, &gr) == 0) {
         v = gr.str;
         while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
         if (*v == '{') {
@@ -41761,6 +41762,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "PEEKOBJ", gr.str);
         var_set_num(vm, "GETOBJ_HIT", 1);
         var_set_num(vm, "JSON_HIT", 1);
+        var_set_num(vm, "PATH_DEPTH", (long)gr.code > 0 ? (long)gr.code : 1L);
         var_set_num(vm, "OK", 1);
         if (have_into && into_name[0])
           var_set_str(vm, into_name, gr.str);
@@ -41824,8 +41826,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
 
     memset(&hr, 0, sizeof hr);
-    /* val_kind=1 → insert raw JSON (object) without string-escaping */
-    if (cubalc_host_json_set(plate, key, val, 1, &hr) != 0) {
+    /* path-aware raw object insert (creates intermediate {} on deep path) */
+    if (cubalc_host_json_path_set(plate, key, val, 1, &hr) != 0) {
       var_set_str(vm, "LAST", "");
       vm->last_str[0] = 0;
       vm->last_n = 0;
@@ -41852,6 +41854,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "SETOBJ_FROM", have_from ? 1 : 0);
     var_set_str(vm, "SETOBJ_SRC",
                 from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "PATH_DEPTH", (long)hr.code > 0 ? (long)hr.code : 1L);
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# setobj key=%s updated=%ld from=%d\n",
@@ -41862,6 +41865,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* MERGEOBJ|PATCHNEST|UPDATEOBJ [FROM plate] key overlay
    * DEFAULTOBJ|ENSUREOBJ|DEFAULTNEST [FROM plate] key defaults
    * One-shot nest patch: peel nested object, MERGEP/DEFAULTP, SETOBJ write-back.
+   * Key may be dotted path: MERGEOBJ "cfg.meta" "{\"role\":\"leader\"}"
    * Miss nested key → start from {} then apply overlay/defaults.
    * Overlay wins (MERGEOBJ); DEFAULTOBJ only fills missing nested keys.
    * Usability: no GETOBJ+MERGEP+SETOBJ glue for agent nested config:
@@ -41875,13 +41879,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"DEFAULTOBJ") || kw(&L->cur,"ENSUREOBJ") || kw(&L->cur,"DEFAULTNEST") ||
       kw(&L->cur,"ENSURENEST") || kw(&L->cur,"SEEDOBJ") || kw(&L->cur,"MDEFAULTOBJ") ||
       kw(&L->cur,"NESTDEFAULT") || kw(&L->cur,"OBJDEFAULT")) {
-    char plate[CUBALC_HOST_STR_MAX], key[96], over[CUBALC_HOST_STR_MAX];
+    char plate[CUBALC_HOST_STR_MAX], key[192], over[CUBALC_HOST_STR_MAX];
     char nest[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result gr, mer, hr;
     int have_from = 0, is_def = 0;
     Var *pv;
     char op0[24];
-    const char *v;
 
     snprintf(op0, sizeof op0, "%s", L->cur.text);
     for (char *q = op0; *q; q++)
@@ -42041,19 +42044,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
     }
 
+    /* path-aware peel: miss/non-object → {} then apply overlay/defaults */
     snprintf(nest, sizeof nest, "%s", "{}");
     memset(&gr, 0, sizeof gr);
-    if (cubalc_host_json_get_raw(plate, key, &gr) == 0) {
-      v = gr.str;
-      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
-      if (*v == '{') {
-        if (v != gr.str) {
-          size_t n = strlen(v);
-          memmove(gr.str, v, n + 1);
-        }
-        snprintf(nest, sizeof nest, "%s", gr.str);
-      }
-    }
+    cubalc_host_json_path_obj(plate, key, &gr);
+    snprintf(nest, sizeof nest, "%s", gr.str);
 
     memset(&mer, 0, sizeof mer);
     if (is_def) {
@@ -42086,7 +42081,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(nest, sizeof nest, "%s", mer.str);
 
     memset(&hr, 0, sizeof hr);
-    if (cubalc_host_json_set(plate, key, nest, 1, &hr) != 0) {
+    if (cubalc_host_json_path_set(plate, key, nest, 1, &hr) != 0) {
       var_set_str(vm, "LAST", "");
       vm->last_str[0] = 0;
       vm->last_n = 0;
@@ -42117,6 +42112,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_str(vm, "MERGEOBJ_SRC",
                 from_name[0] ? from_name : (have_from ? "" : "PLATE"));
     var_set_num(vm, "MERGEOBJ_DEFAULT", is_def ? 1 : 0);
+    var_set_num(vm, "PATH_DEPTH", (long)hr.code > 0 ? (long)hr.code : 1L);
     if (is_def) {
       var_set_str(vm, "DEFAULTOBJ", hr.str);
       var_set_num(vm, "DEFAULTOBJ_N", mer.n);

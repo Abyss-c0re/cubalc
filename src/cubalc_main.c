@@ -2185,6 +2185,7 @@ int main(int argc, char **argv) {
       {"renamepobj_path", "programs/proof/1205_renamepobj_path.cubalc", "RENAMEPOBJ/COPYPOBJ/SWAPPOBJ dotted nest path"},
       {"cli_plate_nestrename", "programs/proof/1205_cli_plate_nestrename.sh", "cubalc plate nestrename/copy/swap duals paths"},
       {"setp_autoraw", "programs/proof/1206_setp_autoraw.cubalc", "SETP/DEFAULTP JSON-shaped string auto-raw object nest"},
+      {"getobj_path", "programs/proof/1207_getobj_path.cubalc", "GETOBJ/SETOBJ/MERGEOBJ dotted path peel/nest"},
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},

@@ -1,0 +1,87 @@
+# GETOBJ / SETOBJ / MERGEOBJ with dotted paths
+# Usability: peel/patch deep nest objects without multi-level GETOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"x\":1,\"role\":\"worker\"},\"port\":8080},\"n\":1}"
+LET PEER = "{\"svc\":{\"cfg\":{\"port\":9,\"tls\":0}},\"tag\":\"p\"}"
+
+# shallow GETOBJ still works
+GETOBJ "cfg"
+ASSERT OK == 1
+ASSERT GETOBJ_HIT == 1
+SYS HAS LAST "\"port\""
+ASSERT LAST_N == 1
+
+# deep path peel
+GETOBJ "cfg.meta" INTO META
+ASSERT OK == 1
+ASSERT GETOBJ_HIT == 1
+ASSERT GETOBJ_INTO == 1
+SYS HAS META "\"x\""
+ASSERT LAST_N == 1
+SYS HAS META "worker"
+ASSERT LAST_N == 1
+
+# mutate peeled plate and write-back deep path
+SETP FROM META "x" 9
+SETP FROM META "role" "leader"
+SETOBJ "cfg.meta" META
+ASSERT OK == 1
+GETOBJ "cfg.meta"
+SYS HAS LAST "\"x\":9"
+ASSERT LAST_N == 1
+SYS HAS LAST "leader"
+ASSERT LAST_N == 1
+# sibling port kept
+GETPN "cfg.port"
+ASSERT LAST_N == 8080
+
+# SETOBJ create deep path
+SETOBJ "net.peer" "{\"host\":\"cubeB\",\"n\":2}"
+ASSERT OK == 1
+GETOBJ "net.peer"
+SYS HAS LAST "cubeB"
+ASSERT LAST_N == 1
+GETPN "net.peer.n"
+ASSERT LAST_N == 2
+
+# MERGEOBJ deep path
+MERGEOBJ "cfg.meta" "{\"zone\":\"A\",\"x\":1}"
+ASSERT OK == 1
+GETP "cfg.meta.zone"
+SYS EQS LAST "A"
+ASSERT LAST_N == 1
+# overlay wins x
+GETPN "cfg.meta.x"
+ASSERT LAST_N == 1
+GETP "cfg.meta.role"
+SYS EQS LAST "leader"
+ASSERT LAST_N == 1
+
+# DEFAULTOBJ deep path (fill miss only)
+DEFAULTOBJ "cfg.meta" "{\"role\":\"x\",\"ttl\":30}"
+ASSERT OK == 1
+GETP "cfg.meta.role"
+SYS EQS LAST "leader"
+ASSERT LAST_N == 1
+GETPN "cfg.meta.ttl"
+ASSERT LAST_N == 30
+
+# multi-plate FROM + path
+GETOBJ FROM PEER "svc.cfg" INTO PCFG
+ASSERT GETOBJ_FROM == 1
+ASSERT GETOBJ_HIT == 1
+GETPN FROM PCFG "port"
+ASSERT LAST_N == 9
+
+# soft miss
+GETOBJ "missing.nest"
+ASSERT OK == 0
+ASSERT GETOBJ_HIT == 0
+GETOBJ "missing.nest" OR "{}"
+ASSERT OK == 1
+ASSERT GETOBJ_OR == 1
+
+PASS
+PRINT "1207_getobj_path: PASS"
