@@ -2834,6 +2834,6 @@
     "GETFLAG --host= ignored without host -- separator",
     "selftest 11 pre-existing CLI shell fails (unknown form set)"
   ],
-  "commit": "ade896f3",
+  "commit": "2a734111",
   "ts": "2026-08-09T10:46:11Z"
 }
