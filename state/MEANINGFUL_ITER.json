@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 588,
-  "version": "1.15.615-usability",
-  "item": "MEDIANP",
-  "item_id": 624,
-  "title": "MEDIANP|P50P|MIDP · multi-plate integer median · robust mid vs AVGNP · no TOKV+MEDIANKV",
-  "commit": "ab1e939f2f84069577571142fcadbf22fffb6f6b",
-  "summary": "Plate median after thrash restore. proof 1165 18/18 + sumnp/keepkeyp reg.",
+  "iter": 589,
+  "version": "1.15.616-usability",
+  "item": "TOPNP/BOTNP",
+  "item_id": 625,
+  "title": "TOPNP|TOPNKEYP · BOTNP|BOTNKEYP · multi-plate top/bottom N pure-int keys by value → plate · no TOKV+SORTFREQ+TAKE",
+  "commit": "dee5b5b5197cc3f87694f646d042a3ecd81430ad",
+  "summary": "Top/bottom N FREQ keys as plate without bag glue. proof 1166 33/33.",
   "proofs": [
-    "1165_medianp 18/18",
-    "1159_sumnp reg 30/30",
-    "1164_keepkeyp reg 40/40"
+    "1166_topnp 33/33",
+    "1165_medianp reg 18/18"
   ],
-  "when": "2026-08-09T05:05:52Z",
+  "when": "2026-08-09T05:16:59Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ab1e939f2f84069577571142fcadbf22fffb6f6b",
-  "note": "thrash restore then feature; EVOLVE_PAUSED"
+  "sha": "dee5b5b5197cc3f87694f646d042a3ecd81430ad",
+  "note": "invented after backlog 624; EVOLVE_PAUSED"
 }
