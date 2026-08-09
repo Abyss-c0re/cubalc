@@ -2173,6 +2173,6 @@
     "GREPV ensure: clobbered multi-key ensure audit rows \u2014 use ens:key:",
     "selftest still fails sys_kvfileensure despite board ensure green (proof vs harness?)"
   ],
-  "commit": "",
+  "commit": "5048f5c",
   "ts": "2026-08-09T01:24:08Z"
 }
