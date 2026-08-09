@@ -1,0 +1,814 @@
+# svc_pathsbyval_index_board.cubalc — PATHSBYVAL multi reverse path index
+#
+# Real use: ops agents list *all* nest paths holding a value (worker roles,
+# ok peers) without EACH FLAT+IF+PUSH glue — multi reverse inventory.
+# First realworld of proof 1245 PATHSBYVAL (MEANINGFUL 704).
+#
+#   PATHSBYVAL|ALLPATHSBYVAL|FINDVALS [FROM plate] value
+#   LAST = path bag lines · LAST_N = path count
+#   Prefer LAST/LAST_N near 128-var cap (W408).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_spb_$$
+#   ./out/cubalc run programs/realworld/svc_pathsbyval_index_board.cubalc boot
+#   ./out/cubalc run ... paths|alias|peer|soft|gate|head|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SPB_REPORT.txt agent.json peer.json paths.txt
+# Env: HOST_S ROLE_S CUBALC_SPB_REQUIRE
+#
+# Edges: soft miss empty bag; FROM PEER; first path == PATHBYVAL; exact value
+#   partials miss; WRITE NL; REQUIRE softens; HASLINE path bag
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_pathsbyval_index_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_pathsbyval_index -- boot|paths|alias|peer|soft|gate|head|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeB"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SPB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "paths.txt"
+LET paths_file = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SPB_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET path_bag = ""
+LET path_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+
+ONEOF ACTION "boot", "paths", "alias", "peer", "soft", "gate", "head", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "paths" THEN
+    LET op = "paths"
+  WHEN "alias" THEN
+    LET op = "alias"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "head" THEN
+    LET op = "head"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — dual worker roles + peer ok/fail
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  # agent_job=runner so worker value only on meta+cfg roles
+  SYS CAT "{\"agent\":\"svc-pathsbyval\",\"schema\":\"cubalc.svc_pathsbyval_index.v1\",\"site\":\"" host_s "\",\"agent_job\":\"runner\",\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"},\"label\":\"paths\"}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"schema\":\"cubalc.svc_pathsbyval_index.v1\",\"site\":\"" host_s "\",\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"fail\"},\"c\":{\"status\":\"ok\"},\"tag\":\"t\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "meta.role"
+  SYS EQS LAST "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.role"
+  SYS EQS LAST "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "other.role"
+  SYS EQS LAST "leader"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.host"
+  SYS EQS LAST "h1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "paths"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:roles:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# paths — PATHSBYVAL worker (2 paths) + leader + soft miss
+SYS EQS op "paths"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PATHSBYVAL "worker"
+  LET path_n = LAST_N
+  LET path_bag = LAST
+  CLEAR_ERR
+  SYS WRITE paths_file path_bag
+  CLEAR_ERR
+  SYS HASLINE path_bag "meta.role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE path_bag "cfg.role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF path_n == 2 THEN
+    LET score = score + 1
+  END
+  PATHSBYVAL "leader"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "other.role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  PATHSBYVAL "h1"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "cfg.host"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  PATHSBYVAL "nope"
+  LET body = LAST
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS EQS body ""
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF admit_n == 0 THEN
+    LET score = score + 1
+  END
+  GETP "label"
+  SYS EQS LAST "paths"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "paths ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "paths score"
+    FAIL "paths score"
+    CLEAR_ERR
+  END
+  SYS STR path_n
+  LET body = LAST
+  CLEAR_ERR
+  SYS CAT "paths:" body ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "paths:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n path_n score note_msg
+  CLEAR_ERR
+END
+
+# alias — ALLPATHSBYVAL + FINDVALS
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  ALLPATHSBYVAL "worker"
+  LET path_n = LAST_N
+  LET path_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE path_bag "meta.role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE path_bag "cfg.role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF path_n == 2 THEN
+    LET score = score + 1
+  END
+  FINDVALS "leader"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "other.role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-pathsbyval"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "paths"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "alias ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias score"
+    FAIL "alias score"
+    CLEAR_ERR
+  END
+  SYS WRITE paths_file path_bag
+  CLEAR_ERR
+  SYS STR path_n
+  LET body = LAST
+  CLEAR_ERR
+  SYS CAT "alias:" body ":al"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n path_n score note_msg
+  CLEAR_ERR
+END
+
+# peer — PATHSBYVAL FROM PEER ok (2 paths) + fail (1)
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PATHSBYVAL FROM PEER "ok"
+  LET path_n = LAST_N
+  LET path_bag = LAST
+  CLEAR_ERR
+  SYS WRITE paths_file path_bag
+  CLEAR_ERR
+  SYS HASLINE path_bag "a.status"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE path_bag "c.status"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF path_n == 2 THEN
+    LET score = score + 1
+  END
+  ALLPATHSBYVAL FROM PEER "fail"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "b.status"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-pathsbyval"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP FROM PEER "tag"
+  SYS EQS LAST "t"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "peer ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer score"
+    FAIL "peer score"
+    CLEAR_ERR
+  END
+  SYS STR path_n
+  LET body = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" body ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n path_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — miss + worker paths still resolve
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PATHSBYVAL "ghostpath"
+  LET path_n = LAST_N
+  LET path_bag = LAST
+  CLEAR_ERR
+  SYS EQS path_bag ""
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF path_n == 0 THEN
+    LET score = score + 1
+  END
+  PATHSBYVAL "worker"
+  LET path_n = LAST_N
+  LET path_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE path_bag "meta.role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF path_n == 2 THEN
+    LET score = score + 1
+  END
+  GETP "agent"
+  SYS EQS LAST "svc-pathsbyval"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "paths"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok1:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n path_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — multi-path admit: both worker paths present
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PATHSBYVAL "worker"
+  LET path_n = LAST_N
+  LET path_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE path_bag "meta.role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE path_bag "cfg.role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF path_n == 2 THEN
+    LET score = score + 1
+  END
+  GETP "schema"
+  SYS HAS LAST "svc_pathsbyval_index"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "paths"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET admit_n = 1
+    LET note_msg = "gate ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS WRITE paths_file path_bag
+  CLEAR_ERR
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n path_n score note_msg
+  CLEAR_ERR
+END
+
+# head — first PATHSBYVAL path equals PATHBYVAL
+SYS EQS op "head"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PATHSBYVAL "worker"
+  LET path_bag = LAST
+  LET path_n = LAST_N
+  CLEAR_ERR
+  SYS HEAD path_bag
+  LET body = LAST
+  CLEAR_ERR
+  PATHBYVAL "worker"
+  SYS EQS LAST body
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS body "meta.role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF path_n == 2 THEN
+    LET score = score + 1
+  END
+  GETP "agent"
+  SYS EQS LAST "svc-pathsbyval"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "paths"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "head ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "head score"
+    FAIL "head score"
+    CLEAR_ERR
+  END
+  SYS WRITE paths_file path_bag
+  CLEAR_ERR
+  SYS CAT "head:" body ":hd"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "head:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n path_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — exact value; partials work/orker miss; COUNTBYVAL cross-check optional
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PATHSBYVAL "worker"
+  LET path_n = LAST_N
+  LET path_bag = LAST
+  CLEAR_ERR
+  IF path_n == 2 THEN
+    LET score = score + 1
+  END
+  PATHSBYVAL "work"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body ""
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  PATHSBYVAL "orker"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body ""
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # COUNTBYVAL should match path count when available
+  COUNTBYVAL "worker"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF admit_n == path_n THEN
+    LET score = score + 1
+  END
+  GETP "schema"
+  SYS HAS LAST "pathsbyval"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "paths"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS WRITE paths_file path_bag
+  CLEAR_ERR
+  SYS CAT "probe:" path_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n path_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET body = LAST
+CLEAR_ERR
+SYS STR miss
+LET row = LAST
+CLEAR_ERR
+SYS CAT "hit=" body " miss=" row " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_pathsbyval_index.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " path_n=" path_n " score=" score " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_pathsbyval_index_board: end"
