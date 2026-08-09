@@ -695,6 +695,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 665. ~~**`SETP`/`DEFAULTP` JSON auto-raw**~~ **done** (string values starting with `{`/`[`/num/`true`/`false`/`null` store raw · agent plate seed without RAW/SETOBJ).
 666. ~~**Path `GETOBJ`/`SETOBJ`/`MERGEOBJ`/`DEFAULTOBJ`**~~ **done** (peel/nest/patch whole objects at dotted paths · INTO · multi-plate · no multi-level GETOBJ glue).
 667. ~~**`cubalc plate getobj`/`setobj`/`mergeobj`/`defaultobj`**~~ **done** (CLI duals of path GETOBJ/SETOBJ/MERGEOBJ/DEFAULTOBJ · agent one-shots without `.cubalc`).
+668. ~~**Path `PLUCKOBJ` + `cubalc plate pluckobj`**~~ **done** (multi-key peel nested object at dotted nest path → value bag · CLI dual · no GETOBJ+PLUCKP / multi GETPOBJ glue).
 
 ## Tick protocol
 

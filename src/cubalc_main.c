@@ -4938,6 +4938,7 @@ int main(int argc, char **argv) {
               "       cubalc plate eq|ne|diff|changelog <a.json> <b.json>\n"
               "       cubalc plate has|need <path> <k1> [k2 …]\n"
               "       cubalc plate pluck <path> <k1> [k2 …]  # multi-key peel bag · PLUCKP dual (paths ok)\n"
+              "       cubalc plate pluckobj <path> <nest> <k1> [k2…]  # PLUCKOBJ dual · nest path ok\n"
               "       cubalc plate pick|omit <path> <k1> [k2 …]  # keep/drop keys · PICKP/OMITP\n"
               "       cubalc plate sum|avg|median|mean|p50 <path>  # aggregates · SUMNP duals\n"
               "       cubalc plate top|bot <path> [n]          # top/bot N keys · TOPNP duals\n");
@@ -4947,7 +4948,7 @@ int main(int argc, char **argv) {
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
              "\"inc\",\"del\",\"keys\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
-             "\"nestrename\",\"nestcopy\",\"nestswap\","
+             "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
              "\"nestsort\",\"nestsortbag\","
              "\"fill\",\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\",\"changelog\","
@@ -5021,6 +5022,8 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "pluck") == 0 || strcmp(argv[2], "getall") == 0 ||
         strcmp(argv[2], "getpall") == 0 || strcmp(argv[2], "peel") == 0 ||
         strcmp(argv[2], "values") == 0 || strcmp(argv[2], "pluckp") == 0 ||
+        strcmp(argv[2], "pluckobj") == 0 || strcmp(argv[2], "nestpluck") == 0 ||
+        strcmp(argv[2], "objpluck") == 0 || strcmp(argv[2], "plucknest") == 0 ||
         strcmp(argv[2], "pick") == 0 || strcmp(argv[2], "keep") == 0 ||
         strcmp(argv[2], "select") == 0 || strcmp(argv[2], "project") == 0 ||
         strcmp(argv[2], "omit") == 0 || strcmp(argv[2], "strip") == 0 ||
@@ -5156,6 +5159,9 @@ int main(int argc, char **argv) {
                strcmp(op, "peel") == 0 || strcmp(op, "values") == 0 ||
                strcmp(op, "pluckp") == 0)
         op = "pluck";
+      else if (strcmp(op, "nestpluck") == 0 || strcmp(op, "objpluck") == 0 ||
+               strcmp(op, "plucknest") == 0)
+        op = "pluckobj";
       else if (strcmp(op, "keep") == 0 || strcmp(op, "select") == 0 ||
                strcmp(op, "project") == 0)
         op = "pick";
@@ -5405,13 +5411,15 @@ int main(int argc, char **argv) {
      * Nest key may be dotted path (cfg.flags) via path_obj peel.
      * nestsum|nestavg|nestmedian|nesttop|nestbot — SUMNOBJ/TOPNOBJ CLI duals (no write).
      * nestsort|nestsortbag — SORTOBJ/SORTBAGOBJ CLI duals (sort write / bag no-write).
-     * nestpick|nestomit — PICKOBJ/OMITOBJ duals (paths ok). */
+     * nestpick|nestomit — PICKOBJ/OMITOBJ duals (paths ok).
+     * pluckobj|nestpluck — PLUCKOBJ dual: multi-key peel nest → value bag (paths ok). */
     if (strcmp(op, "nestget") == 0 || strcmp(op, "nestset") == 0 ||
         strcmp(op, "nestinc") == 0 || strcmp(op, "nestdel") == 0 ||
         strcmp(op, "nestkeys") == 0 || strcmp(op, "nesthas") == 0 ||
         strcmp(op, "nestpick") == 0 || strcmp(op, "nestomit") == 0 ||
         strcmp(op, "nestrename") == 0 || strcmp(op, "nestcopy") == 0 ||
         strcmp(op, "nestswap") == 0 ||
+        strcmp(op, "pluckobj") == 0 ||
         strcmp(op, "nestsum") == 0 || strcmp(op, "nestavg") == 0 ||
         strcmp(op, "nestmedian") == 0 || strcmp(op, "nesttop") == 0 ||
         strcmp(op, "nestbot") == 0 ||
@@ -5808,6 +5816,121 @@ int main(int argc, char **argv) {
                "\"note\":\"RENAMEPOBJ/COPYPOBJ/SWAPPOBJ dual · nest path ok\"}\n",
                op, path, nestk, a, b, rr.n, file_hit ? "true" : "false",
                hr.n, CUBALC_LANG_VERSION, plate);
+        return 0;
+      }
+
+      /* pluckobj — multi-key peel from nest → value bag (PLUCKOBJ dual; nest path ok).
+       * Usability: agent one-shot nested extract without .cubalc:
+       *   cubalc plate pluckobj agent.json cfg.meta role x zone
+       * Bag lines above plate meta · empty field on miss · hit/miss counts. */
+      if (strcmp(op, "pluckobj") == 0) {
+        char keys_nl[CUBALC_HOST_STR_MAX];
+        char flat_req[CUBALC_HOST_STR_MAX];
+        char bag_esc[CUBALC_HOST_STR_MAX];
+        cubalc_host_result pr;
+        size_t o = 0, bi, bo;
+        long nreq = 0;
+        long hit = 0, miss = 0;
+
+        keys_nl[0] = 0;
+        flat_req[0] = 0;
+        if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"pluckobj\",\"path\":\"%s\",\"nest\":\"%s\","
+                 "\"err\":\"need one or more fields\",\"version\":\"%s\"}\n",
+                 path, nestk, CUBALC_LANG_VERSION);
+          return 2;
+        }
+        while (ai < argc && argv[ai] && argv[ai][0]) {
+          size_t kl = strlen(argv[ai]);
+          if (o + kl + 2 >= sizeof keys_nl) break;
+          if (o > 0) keys_nl[o++] = '\n';
+          memcpy(keys_nl + o, argv[ai], kl);
+          o += kl;
+          keys_nl[o] = 0;
+          {
+            size_t fo = strlen(flat_req);
+            if (fo + kl + 2 < sizeof flat_req) {
+              if (fo > 0) {
+                flat_req[fo++] = ',';
+                flat_req[fo] = 0;
+              }
+              memcpy(flat_req + fo, argv[ai], kl);
+              flat_req[fo + kl] = 0;
+            }
+          }
+          nreq++;
+          ai++;
+        }
+
+        memset(&pr, 0, sizeof pr);
+        if (nest_hit) {
+          if (cubalc_host_json_pluck(nest, keys_nl, &pr) != 0) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"pluckobj\",\"path\":\"%s\",\"nest\":\"%s\",\"err\":\"%s\","
+                   "\"version\":\"%s\"}\n",
+                   path, nestk, pr.err[0] ? pr.err : "pluck fail",
+                   CUBALC_LANG_VERSION);
+            return 1;
+          }
+          hit = (long)pr.code;
+          miss = pr.n - hit;
+        } else {
+          /* soft nest miss: nreq empty bag fields */
+          {
+            int i;
+            pr.str[0] = 0;
+            o = 0;
+            for (i = 0; i < nreq; i++) {
+              if (i > 0 && o + 1 < sizeof pr.str) pr.str[o++] = '\n';
+            }
+            pr.str[o] = 0;
+            pr.n = nreq;
+            pr.code = 0;
+          }
+          hit = 0;
+          miss = nreq;
+        }
+
+        if (pr.str[0]) {
+          fputs(pr.str, stdout);
+          if (pr.str[strlen(pr.str) - 1] != '\n')
+            fputc('\n', stdout);
+        } else if (nreq > 0) {
+          /* all-empty bag still emits blank lines for agent field count */
+          {
+            int i;
+            for (i = 0; i < nreq; i++)
+              fputc('\n', stdout);
+          }
+        }
+
+        bag_esc[0] = 0;
+        bo = 0;
+        for (bi = 0; pr.str[bi] && bo + 2 < sizeof bag_esc; bi++) {
+          char c = pr.str[bi];
+          if (c == '"' || c == '\\') {
+            bag_esc[bo++] = '\\';
+            bag_esc[bo++] = c;
+          } else if (c == '\n' || c == '\r') {
+            bag_esc[bo++] = '\\';
+            bag_esc[bo++] = (c == '\n') ? 'n' : 'r';
+          } else if ((unsigned char)c < 32) {
+            bag_esc[bo++] = ' ';
+          } else {
+            bag_esc[bo++] = c;
+          }
+        }
+        bag_esc[bo] = 0;
+
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"pluckobj\",\"path\":\"%s\",\"nest\":\"%s\","
+               "\"n\":%ld,\"hit\":%ld,\"miss\":%ld,\"keys\":\"%s\",\"bag\":\"%s\","
+               "\"nest_hit\":%s,\"file\":%s,\"version\":\"%s\","
+               "\"note\":\"bag lines above plate · PLUCKOBJ dual · nest path ok\"}\n",
+               path, nestk, nreq, hit, miss, flat_req, bag_esc,
+               nest_hit ? "true" : "false",
+               file_hit ? "true" : "false", CUBALC_LANG_VERSION);
         return 0;
       }
 

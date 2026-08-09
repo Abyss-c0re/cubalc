@@ -1,0 +1,62 @@
+# Path PLUCKOBJ — multi-key peel at dotted nest path → value bag
+# Usability: no GETOBJ+PLUCKP or multi GETPOBJ+PUSH for deep nests.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"x\":1,\"role\":\"worker\",\"zone\":\"A\"},\"port\":8080},\"n\":3}"
+LET PEER = "{\"net\":{\"peer\":{\"host\":\"peerB\",\"tls\":1,\"port\":9090}}}"
+
+# deep nest path peel
+PLUCKOBJ "cfg.meta" "role" "x" "zone"
+ASSERT OK == 1
+ASSERT PLUCKOBJ_N == 3
+ASSERT PLUCKOBJ_HIT == 3
+ASSERT PLUCKOBJ_MISS == 0
+ASSERT PLUCKOBJ_NEST_HIT == 1
+LET bag = LAST
+SYS EQS bag "worker\n1\nA"
+ASSERT LAST_N == 1
+SYS NTH 0
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# miss field → empty slot
+PLUCKOBJ "cfg.meta" "role" "missing" "x"
+ASSERT PLUCKOBJ_N == 3
+ASSERT PLUCKOBJ_HIT == 2
+ASSERT PLUCKOBJ_MISS == 1
+SYS LINES LAST
+ASSERT LAST_N == 3
+
+# soft nest path miss
+PLUCKOBJ "cfg.nope" "a" "b"
+ASSERT OK == 1
+ASSERT PLUCKOBJ_NEST_HIT == 0
+ASSERT PLUCKOBJ_HIT == 0
+ASSERT PLUCKOBJ_N == 2
+
+# multi-plate FROM + deep path
+PLUCKOBJ FROM PEER "net.peer" "host" "port" "tls"
+ASSERT PLUCKOBJ_FROM == 1
+SYS EQS PLUCKOBJ_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT PLUCKOBJ_HIT == 3
+SYS HASLINE LAST "peerB"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "9090"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "1"
+ASSERT LAST_N == 1
+
+# shallow still works (regression)
+PLUCKOBJ "cfg" "port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+
+# outer plate intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1209_pluckobj_path: PASS"

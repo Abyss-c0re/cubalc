@@ -35877,7 +35877,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NESTKEYS", "NESTKEYS alias of KEYSOBJ"},
       {"NEEDPOBJ", "NEEDPOBJ|REQUIRENEST [FROM plate] nest field… — fail-fast nested keys · miss listed"},
       {"REQUIRENEST", "REQUIRENEST alias of NEEDPOBJ"},
-      {"PLUCKOBJ", "PLUCKOBJ|NESTPLUCK [FROM plate] nest field… — multi-key peel nested → value bag · multi-plate · no GETPOBJ+PUSH"},
+      {"PLUCKOBJ", "PLUCKOBJ|NESTPLUCK [FROM plate] nest field… — multi-key peel nested → bag · dotted nest path ok · multi-plate"},
       {"NESTPLUCK", "NESTPLUCK alias of PLUCKOBJ"},
       {"GETPALLNEST", "GETPALLNEST alias of PLUCKOBJ"},
       {"PICKOBJ", "PICKOBJ|KEEPOBJ [FROM plate] nest field… — keep listed keys in nest · dotted nest path ok · write-back"},
@@ -42982,16 +42982,18 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
   /* PLUCKOBJ|GETPALLNEST|NESTPLUCK [FROM plate] nest field… —
    * Multi-key peel from nested object → value bag (PLUCKP dual for nests).
+   * Nest may be dotted/slash path: PLUCKOBJ "cfg.meta" "x" "role"
    * Empty field on miss · LAST_N = listed · PLUCKOBJ_HIT = found.
    * Soft nest miss → all empty fields, HIT=0.
    * Usability: no GETOBJ+PLUCKP or multi GETPOBJ+PUSH glue:
    *   PLUCKOBJ "meta" "x" "role" "zone"
+   *   PLUCKOBJ "cfg.meta" "zone" "role"
    *   PLUCKOBJ FROM PEER "cfg" "port" "tls"
    */
   if (kw(&L->cur,"PLUCKOBJ") || kw(&L->cur,"GETPALLNEST") || kw(&L->cur,"NESTPLUCK") ||
       kw(&L->cur,"PLUCKNEST") || kw(&L->cur,"OBJPLUCK") || kw(&L->cur,"MPLUCKOBJ") ||
       kw(&L->cur,"GETALLNEST") || kw(&L->cur,"PEELNEST") || kw(&L->cur,"NESTGETALL")) {
-    char plate[CUBALC_HOST_STR_MAX], nestk[96], nest[CUBALC_HOST_STR_MAX];
+    char plate[CUBALC_HOST_STR_MAX], nestk[192], nest[CUBALC_HOST_STR_MAX];
     char keys_nl[CUBALC_HOST_STR_MAX], arg[CUBALC_HOST_STR_MAX];
     char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     char bag[CUBALC_HOST_STR_MAX];
@@ -42999,7 +43001,6 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     int have_from = 0, n_req = 0, n_hit = 0, nest_hit = 0;
     size_t olen = 0, blen = 0;
     Var *pv;
-    const char *v;
 
     lex_next(L);
     plate[0] = 0; nestk[0] = 0; nest[0] = 0; keys_nl[0] = 0;
@@ -43143,20 +43144,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(plate, sizeof plate, "%s", "{}");
     }
 
+    /* path-aware peel: "cfg.meta" · soft miss → empty bag HIT=0 */
     nest[0] = 0;
     memset(&ngr, 0, sizeof ngr);
-    if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
-      v = ngr.str;
-      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
-      if (*v == '{') {
-        if (v != ngr.str) {
-          size_t n = strlen(v);
-          memmove(ngr.str, v, n + 1);
-        }
-        snprintf(nest, sizeof nest, "%s", ngr.str);
-        nest_hit = 1;
-      }
-    }
+    cubalc_host_json_path_obj(plate, nestk, &ngr);
+    snprintf(nest, sizeof nest, "%s", ngr.str);
+    nest_hit = (ngr.n != 0) ? 1 : 0;
 
     /* peel each field → bag (empty line on miss) */
     bag[0] = 0;
