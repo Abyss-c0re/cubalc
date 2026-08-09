@@ -1,0 +1,1057 @@
+# svc_pathkeys_flat_board.cubalc — PATHKEYS leaf discovery + FLATKV path:val inventory
+#
+# Real use: ops agents discover deep config leaves and export flat path:value
+# digests without KEYSP+GETOBJ recursion or PATHKEYS+GETP glue. First realworld
+# of proofs 1210 PATHKEYS + 1211 FLATKV.
+#
+#   PATHKEYS|LEAFKEYS|DOTPATHS [path] · FLATKV|LEAFKV|FLATTENP [path]
+#   soft miss empty · FROM PEER · intermediate objs not listed as leaves
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_spf_$$
+#   ./out/cubalc run programs/realworld/svc_pathkeys_flat_board.cubalc boot
+#   ./out/cubalc run ... leaves|flat|scope|peer|soft|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SPF_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_SPF_REQUIRE
+#
+# Edges:
+#   soft miss; empty obj terminal; intermediate not leaf; false-friend paths;
+#   WRITE NL; NUM softens REQUIRE; EXIT shell (W7)
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_pathkeys_flat_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_pathkeys_flat -- boot|leaves|flat|scope|peer|soft|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeX"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SPF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SPF_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+LET bag_n = 0
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET body = ""
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET soft_ok = 0
+LET gate_ok = 0
+LET path_val = ""
+
+ONEOF ACTION "boot", "leaves", "flat", "scope", "peer", "soft", "gate", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "leaves" THEN
+    LET op = "leaves"
+  WHEN "flat" THEN
+    LET op = "flat"
+  WHEN "scope" THEN
+    LET op = "scope"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — seed deep nest + empty obj
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-pathkeys\",\"schema\":\"cubalc.svc_pathkeys_flat.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"n\":1,\"cfg\":{\"meta\":{\"x\":1,\"role\":\"worker\",\"zone\":\"east\"},\"port\":8080,\"tls\":0},\"flags\":{\"live\":1,\"debug\":0},\"empty\":{},\"ok\":true}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"host\":\"" host_s "\",\"schema\":\"cubalc.svc_pathkeys_flat.v1\",\"net\":{\"peer\":{\"host\":\"peerB\",\"tls\":1,\"port\":9090}},\"tag\":\"t\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  PATHKEYS
+  LET body = LAST
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "cfg.meta.role"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "cfg.port"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "empty"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  # intermediate not leaf
+  SYS HASLINE body "cfg"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  FLATKV
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "host:" host_s
+  LET path_val = LAST
+  CLEAR_ERR
+  SYS HASLINE w_s path_val
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF miss_n == 0 THEN
+          IF has_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "boot ok"
+            LET admit_n = 1
+            LET gate_ok = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "boot flat host"
+            FAIL "boot flat host"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "boot cfg intermediate"
+          FAIL "boot cfg intermediate"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot empty leaf"
+        FAIL "boot empty leaf"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot port path"
+      FAIL "boot port path"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot meta role path"
+    FAIL "boot meta role path"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit soft_ok miss_n note_msg
+  CLEAR_ERR
+END
+
+# leaves — full PATHKEYS inventory + false friends
+SYS EQS op "leaves"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PATHKEYS
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "host"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "cfg.meta.x"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "cfg.meta.zone"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "flags.live"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "n"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  # intermediate not listed
+  SYS HASLINE body "cfg.meta"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # false friend substring
+  SYS HASLINE body "cfg.por"
+  LET path_val = LAST_N
+  CLEAR_ERR
+  # LEAFKEYS alias
+  LEAFKEYS
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS HASLINE w_s "empty"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF gate_ok == 1 THEN
+            IF miss_n == 0 THEN
+              IF path_val == 0 THEN
+                IF admit_n == 1 THEN
+                  LET hit = 1
+                  LET note_msg = "leaves ok"
+                  LET admit_n = 1
+                  LET take_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "leaves empty"
+                  FAIL "leaves empty"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "leaves false por"
+                FAIL "leaves false por"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "leaves intermediate meta"
+              FAIL "leaves intermediate meta"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "leaves n"
+            FAIL "leaves n"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "leaves flags.live"
+          FAIL "leaves flags.live"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "leaves zone"
+        FAIL "leaves zone"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "leaves meta.x"
+      FAIL "leaves meta.x"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "leaves host"
+    FAIL "leaves host"
+    CLEAR_ERR
+  END
+  SYS CAT "leaves:ok:lv"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "leaves:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit miss_n path_val note_msg
+  CLEAR_ERR
+END
+
+# flat — full FLATKV path:value export
+SYS EQS op "flat"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  FLATKV
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "cfg.meta.role:worker"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "cfg.port:8080"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "ok:true"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "empty:"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # intermediate not as key:
+  SYS HASLINE body "cfg:"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # false friend value
+  SYS HASLINE body "cfg.port:808"
+  LET path_val = LAST_N
+  CLEAR_ERR
+  FLATTENP
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS HASLINE w_s "flags.debug:0"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 0 THEN
+            IF path_val == 0 THEN
+              IF gate_ok == 1 THEN
+                LET hit = 1
+                LET note_msg = "flat ok"
+                LET admit_n = 1
+                LET take_n = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "flat debug"
+                FAIL "flat debug"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "flat false 808"
+              FAIL "flat false 808"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "flat intermediate cfg"
+            FAIL "flat intermediate cfg"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "flat empty:"
+          FAIL "flat empty:"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "flat ok true"
+        FAIL "flat ok true"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "flat port"
+      FAIL "flat port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "flat role"
+    FAIL "flat role"
+    CLEAR_ERR
+  END
+  SYS CAT "flat:ok:ft"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "flat:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit has_n miss_n note_msg
+  CLEAR_ERR
+END
+
+# scope — relative PATHKEYS/FLATKV under cfg
+SYS EQS op "scope"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PATHKEYS "cfg"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "meta.role"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "port"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "tls"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  # absolute prefix not present under relative
+  SYS HASLINE body "cfg.port"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  FLATKV "cfg.meta"
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS HASLINE w_s "role:worker"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE w_s "zone:east"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  SYS HASLINE w_s "x:1"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  PATHKEYS "cfg.meta"
+  LET path_val = LAST
+  CLEAR_ERR
+  SYS HASLINE path_val "role"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF miss_n == 0 THEN
+          IF has_n == 1 THEN
+            IF gate_ok == 1 THEN
+              IF admit_n == 1 THEN
+                IF take_n == 1 THEN
+                  LET hit = 1
+                  LET note_msg = "scope ok"
+                  LET admit_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "scope meta role path"
+                  FAIL "scope meta role path"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "scope x"
+                FAIL "scope x"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "scope zone"
+              FAIL "scope zone"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "scope role val"
+            FAIL "scope role val"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "scope abs prefix"
+          FAIL "scope abs prefix"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "scope tls"
+        FAIL "scope tls"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "scope port"
+      FAIL "scope port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "scope meta.role"
+    FAIL "scope meta.role"
+    CLEAR_ERR
+  END
+  SYS CAT "scope:cfg:sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scope:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit miss_n has_n note_msg
+  CLEAR_ERR
+END
+
+# peer — PATHKEYS/FLATKV FROM PEER
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PATHKEYS FROM PEER "net"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "peer.host"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "peer.tls"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "peer.port"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  FLATKV FROM PEER "net"
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS HASLINE w_s "peer.host:peerB"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE w_s "peer.port:9090"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  SYS HASLINE w_s "peer.tls:1"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS HAS LAST "svc-pathkeys"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF gate_ok == 1 THEN
+            IF admit_n == 1 THEN
+              IF miss_n == 1 THEN
+                LET hit = 1
+                LET note_msg = "peer ok"
+                LET admit_n = 1
+                LET take_n = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "peer plate agent"
+                FAIL "peer plate agent"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "peer tls val"
+              FAIL "peer tls val"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer port val"
+            FAIL "peer port val"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer host val"
+          FAIL "peer host val"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer port path"
+        FAIL "peer port path"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer tls path"
+      FAIL "peer tls path"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer host path"
+    FAIL "peer host path"
+    CLEAR_ERR
+  END
+  SYS CAT "peer:net:pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit has_n miss_n note_msg
+  CLEAR_ERR
+END
+
+# soft — miss nest empty
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PATHKEYS "missing.nest"
+  LET body = LAST
+  CLEAR_ERR
+  SYS LINES body
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  FLATKV "missing.nest"
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS LINES w_s
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  HASP "host"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # false friend path
+  HASP "cfg.por"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  PATHKEYS "cfg"
+  LET path_val = LAST
+  CLEAR_ERR
+  SYS HASLINE path_val "port"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 0 THEN
+    IF load_hit == 0 THEN
+      IF soft_ok == 0 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 0 THEN
+            IF gate_ok == 1 THEN
+              LET hit = 1
+              LET note_msg = "soft ok"
+              LET admit_n = 1
+              LET take_n = 0
+            ELSE
+              LET miss = 1
+              LET note_msg = "soft cfg recover"
+              FAIL "soft cfg recover"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "soft false por"
+            FAIL "soft false por"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "soft host"
+          FAIL "soft host"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft empty bag"
+        FAIL "soft empty bag"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft flat n"
+      FAIL "soft flat n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft pathkeys n"
+    FAIL "soft pathkeys n"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:miss0:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit load_hit gate_ok note_msg
+  CLEAR_ERR
+END
+
+# gate — inventory contract
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PATHKEYS
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "cfg.meta.role"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  FLATKV
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS HASLINE w_s "cfg.port:8080"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  NEEDP "host" "schema" "role"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET admit_n = 0
+  END
+  CLEAR_ERR
+  SYS HASLINE body "cfg"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  HASP "cfg.port"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  HASP "cfg.por"
+  LET path_val = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF admit_n == 1 THEN
+        IF miss_n == 0 THEN
+          IF has_n == 1 THEN
+            IF path_val == 0 THEN
+              LET hit = 1
+              LET note_msg = "gate ok"
+              LET admit_n = 1
+              LET gate_ok = 1
+              LET take_n = 1
+              LET soft_ok = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "gate false por"
+              FAIL "gate false por"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "gate has port"
+            FAIL "gate has port"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate intermediate"
+          FAIL "gate intermediate"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate needp"
+        FAIL "gate needp"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate flat port"
+      FAIL "gate flat port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate leaves role"
+    FAIL "gate leaves role"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:1:gn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit load_hit admit_n note_msg
+  CLEAR_ERR
+END
+
+# probe — DOTPATHS/LEAFKV aliases + empty bag + agent
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  DOTPATHS
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "host"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  LEAFKV "cfg.meta"
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS HASLINE w_s "role:worker"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  SYS HASLINE w_s "zone:east"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS HAS LAST "svc-pathkeys"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  PATHKEYS "flags"
+  LET path_val = LAST
+  CLEAR_ERR
+  SYS HASLINE path_val "live"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    IF peel_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF gate_ok == 1 THEN
+            IF admit_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "probe ok"
+              LET admit_n = 1
+              LET take_n = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "probe flags live"
+              FAIL "probe flags live"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe agent"
+            FAIL "probe agent"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe zone"
+          FAIL "probe zone"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe leafkv role"
+        FAIL "probe leafkv role"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe dotpaths host"
+      FAIL "probe dotpaths host"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe empty bag"
+    FAIL "probe empty bag"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:flat:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit soft_ok gate_ok note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_pathkeys_flat.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " has=" has_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_pathkeys_flat_board: end"
