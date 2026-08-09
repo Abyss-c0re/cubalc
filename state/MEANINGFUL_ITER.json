@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 606,
-  "version": "1.15.633-usability",
-  "item": "SUMNOBJ/TOPKEYOBJ nest aggregates",
-  "item_id": 642,
-  "title": "SUMNOBJ|MAXNOBJ|MINNOBJ|AVGNOBJ|MEDIANOBJ|TOPKEYOBJ|BOTKEYOBJ · nest numeric aggregates · multi-plate · SUMNP duals",
-  "commit": "a74a5a12de5676c9105359ba3ac83ab5c0271b96",
-  "summary": "Nest FREQ/score aggregates without GETOBJ+SUMNP/TOPKEYP glue. proof 1183 46/46.",
+  "iter": 607,
+  "version": "1.15.634-usability",
+  "item": "THRESHOBJ/DROPZEROOBJ/CAPOBJ",
+  "item_id": 643,
+  "title": "THRESHOBJ|DROPZEROOBJ|CAPOBJ · nest value denoise/clamp write-back · multi-plate · THRESHP duals",
+  "commit": "6ee668219622aa0606f52a1277de69f6a5f3d5a4",
+  "summary": "Nest FREQ denoise without GETOBJ+THRESHP+SETOBJ glue. proof 1184 47/47.",
   "proofs": [
-    "1183_sumnobj 46/46",
-    "1182_tokvobj reg ok",
-    "1159_sumnp reg ok",
-    "cubalc forms SUMNOBJ/TOPKEYOBJ ok"
+    "1184_threshobj 47/47",
+    "1183_sumnobj reg ok",
+    "1160_threshp reg ok",
+    "cubalc forms THRESHOBJ ok"
   ],
-  "when": "2026-08-09T08:40:00Z",
+  "when": "2026-08-09T08:55:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a74a5a12de5676c9105359ba3ac83ab5c0271b96",
-  "note": "after backlog 641 TOKVOBJ; EVOLVE_PAUSED"
+  "sha": "6ee668219622aa0606f52a1277de69f6a5f3d5a4",
+  "note": "after backlog 642 SUMNOBJ; EVOLVE_PAUSED"
 }
