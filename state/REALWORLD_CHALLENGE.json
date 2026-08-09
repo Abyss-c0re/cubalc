@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 264,
-  "program": "programs/realworld/svc_nthflat_sample_board.cubalc",
-  "theme": "NTHFLATN index sample + LASTFLAT newest-wins peel",
-  "version": "1.15.688-usability",
+  "iter": 265,
+  "program": "programs/realworld/svc_each_flat_walk_board.cubalc",
+  "theme": "EACH FLAT/LEAF walk + NTHFLAT inventory",
+  "version": "1.15.690-usability",
   "pass": true,
-  "prior_note": "iter 263 TYPEFLAT/LASTFLATN; this iter first realworld 1238 NTHFLATN + 1237 LASTFLAT",
+  "prior_note": "iter 264 NTHFLATN/LASTFLAT; this iter first realworld 1240 EACH FLAT + 1239 NTHFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed dual role/port + scores",
+      "cmd": "seed role/endpoint inventory",
       "ok": true,
       "note": "boot"
     },
     {
+      "name": "walk",
+      "cmd": "EACH FLAT role+all leaves",
+      "ok": true,
+      "note": "walk"
+    },
+    {
       "name": "nth",
-      "cmd": "NTHFLATN score+port+OOR",
+      "cmd": "NTHFLAT role/endpoint+OOR",
       "ok": true,
       "note": "nth"
     },
     {
-      "name": "last",
-      "cmd": "LASTFLAT role/port newest",
-      "ok": true,
-      "note": "last"
-    },
-    {
       "name": "peer",
-      "cmd": "FROM PEER nth+last name",
+      "cmd": "EACH LEAF FROM PEER names",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost OOR soft",
+      "cmd": "ghost empty walk soft",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "mid sample + leader admit",
+      "cmd": "role+endpoint admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "INDEXFLATN/ENDFLAT aliases",
+      "cmd": "INDEXFLAT probe peels",
       "ok": true,
       "note": "probe"
     },
@@ -59,7 +59,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "459/508 pre-existing cli shell fails; nthflatn PASS 25 lastflat PASS 21"
+      "note": "460/510 pre-existing cli fails; nthflat PASS 22; each_flat proof PASS 37 (not yet in selftest registry)"
     }
   ],
   "weaknesses": [
@@ -3270,6 +3270,30 @@
       "title": "NTHFLATN OOR + host string skip soft with OR fallback solid",
       "detail": "NTHFLATN port 2 OR 8080 and host 0 OR -1 work as soft miss. Good for sample gates; document OR required for non-zero shell policy on miss.",
       "repro": "NTHFLATN host 0 OR -1 \u2192 LAST_N -1"
+    },
+    {
+      "id": "W402",
+      "severity": "high",
+      "area": "lang|each_flat",
+      "title": "EACH_N special dark-reads 0 after EACH FLAT in large agent boards",
+      "detail": "Walk body ran (saw_worker/leader=1, PATH bag written) but LET keep_n=EACH_N yielded 0. Prefer manual n_walk counters. Same class as W377 specials under agent_boot load.",
+      "repro": "EACH FLAT role; LET n=EACH_N \u2192 0 while body executed twice"
+    },
+    {
+      "id": "W403",
+      "severity": "med",
+      "area": "lang|each_flat",
+      "title": "SYS EQS VALUE / SYS PUSH PATH fragile inside EACH in large boards",
+      "detail": "Proof uses SYS EQS VALUE and SYS PUSH bag PATH; realworld FROM PEER AS p and LEAVES blocks hit unknown form VALUE/PATH/w_s. Workaround: LET w_s=VALUE then EQS outside some contexts; PATH via AS bind; or PATH-only compares.",
+      "repro": "EACH LEAF FROM PEER name AS p; SYS EQS VALUE second \u2192 unknown form VALUE"
+    },
+    {
+      "id": "W404",
+      "severity": "med",
+      "area": "lang|needle",
+      "title": "NTHFLAT host collides with top-level host site field",
+      "detail": "Plate host:cubeE plus cfg.host/other.host \u2192 NTH 0 is site host string. Renamed endpoints. Substring needles need unique leaf segments for inventory.",
+      "repro": "NTHFLAT host 0 with top-level host \u2192 site name not endpoint"
     }
   ],
   "workarounds": [
@@ -3278,8 +3302,6 @@
     "Curated peer seeds for stable DIFFFLAT lines"
   ],
   "language_gaps": [
-    "VALSFLAT_N/GETFLAT_FALLBACK unreadable under agent_boot load",
-    "Inventory needles still substring-not-segment",
     "NEEDFLAT fail-fast exit_code policy inconsistent across run/JSON/CLI",
     "GETFLATN pure-int only \u2014 pair with GETFLAT for strings",
     "Need segment-bound needles for counter digests",
@@ -3289,7 +3311,9 @@
     "Single-char path needles are unsafe on substring match",
     "LASTFLATN_PATH special not always SYS EQS-able in large boards",
     "GETP bare key may resolve nested last match not top-level",
-    "NTHFLATN indices require stable plate key order contracts"
+    "NTHFLATN indices require stable plate key order contracts",
+    "EACH FLAT specials/PATH/VALUE need hardened large-board binding",
+    "Register 1240 each_flat in selftest suite"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3313,8 +3337,11 @@
     "SYS EQS LASTFLATN_PATH hard-failed; used GETP meta.port",
     "GETP bool not EQS true; used TYPEFLAT kind",
     "GETP/GETFLAT role collided with nested cfg.role; renamed top key agent_role",
-    "NTHFLATN port index depends on meta-before-cfg walk order"
+    "NTHFLATN port index depends on meta-before-cfg walk order",
+    "EACH_N dark; used n_walk counters",
+    "SYS EQS VALUE/PATH fragile in EACH FROM PEER; used PATH bind compares",
+    "Renamed host\u2192endpoint to avoid top-level host collision"
   ],
-  "commit": "7f3eeaeb",
-  "ts": "2026-08-09T18:30:43Z"
+  "commit": "175e537a",
+  "ts": "2026-08-09T18:59:25Z"
 }
