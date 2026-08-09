@@ -236,6 +236,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate keeponly state/my_agent.json cfg                   # project only matching leaves
 ./out/cubalc plate mergeflat state/base.json state/peer.json          # deep leaf overlay (nest-aware merge)
 ./out/cubalc plate renameflat state/my_agent.json cfg. config.        # rewrite leaf path prefixes
+./out/cubalc plate setflat    state/my_agent.json debug 0              # bulk set leaves matching path needle
+./out/cubalc plate setflat    state/my_agent.json cfg.port 9090         # set nested port one-shot
 ./out/cubalc libs | grep plate
 
 # nest* still available; prefer dotted get/set when one scalar field:

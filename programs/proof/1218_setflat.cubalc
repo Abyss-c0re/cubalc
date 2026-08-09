@@ -1,0 +1,86 @@
+# SETFLAT / MAPFLAT — bulk set leaf values by path needle
+# Usability: nest flags/ports without multi SETP/GREPFLAT glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"role\":\"worker\",\"debug\":1},\"port\":8080,\"debug\":1},\"n\":3,\"ok\":true}"
+
+# zero all debug leaves
+SETFLAT "debug" 0
+ASSERT OK == 1
+ASSERT SETFLAT_N == 2
+ASSERT SETFLAT_TOTAL == 7
+GETP "cfg.meta.debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+GETP "cfg.debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+# others intact
+GETP "cfg.meta.role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+GETP "cfg.port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# set port by path needle
+SETFLAT "cfg.port" 9090
+ASSERT SETFLAT_N == 1
+GETP "cfg.port"
+SYS EQS LAST "9090"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+LET PEER = "{\"net\":{\"tls\":0,\"peer\":{\"tls\":0}},\"keep\":1}"
+SETFLAT FROM PEER "tls" 1
+ASSERT SETFLAT_FROM == 1
+SYS EQS SETFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT SETFLAT_N == 2
+LET PLATE = PEER
+GETP "net.tls"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "net.peer.tls"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "keep"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# empty needle → all leaves
+LET PLATE = "{\"a\":1,\"b\":{\"c\":2}}"
+SETFLAT "" 0
+ASSERT SETFLAT_N == 2
+GETP "a"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+GETP "b.c"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# string value
+LET PLATE = "{\"meta\":{\"role\":\"x\",\"zone\":\"y\"}}"
+MAPFLAT "meta" "none"
+ASSERT MAPFLAT_N == 2
+GETP "meta.role"
+SYS EQS LAST "none"
+ASSERT LAST_N == 1
+GETP "meta.zone"
+SYS EQS LAST "none"
+ASSERT LAST_N == 1
+
+# miss needle → n=0 plate unchanged
+LET PLATE = "{\"x\":1}"
+SETFLAT "nope" 9
+ASSERT SETFLAT_N == 0
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1218_setflat: PASS"

@@ -2188,6 +2188,8 @@ int main(int argc, char **argv) {
       {"cli_plate_mergeflat", "programs/proof/1216_cli_plate_mergeflat.sh", "cubalc plate mergeflat MERGEFLAT dual"},
       {"renameflat", "programs/proof/1217_renameflat.cubalc", "RENAMEFLAT leaf path prefix rewrite multi-plate"},
       {"cli_plate_renameflat", "programs/proof/1217_cli_plate_renameflat.sh", "cubalc plate renameflat RENAMEFLAT dual"},
+      {"setflat", "programs/proof/1218_setflat.cubalc", "SETFLAT/MAPFLAT bulk leaf value set multi-plate"},
+      {"cli_plate_setflat", "programs/proof/1218_cli_plate_setflat.sh", "cubalc plate setflat SETFLAT dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2482,6 +2484,8 @@ int main(int argc, char **argv) {
       {"OVERLAYFLAT", "flow", "OVERLAYFLAT alias of MERGEFLAT"},
       {"RENAMEFLAT", "flow", "RENAMEFLAT|MOVEFLAT [FROM plate] old_pfx new_pfx — rewrite leaf path prefixes write-back"},
       {"MOVEFLAT", "flow", "MOVEFLAT alias of RENAMEFLAT"},
+      {"SETFLAT", "flow", "SETFLAT|MAPFLAT [FROM plate] needle value — bulk set leaf values by path needle write-back"},
+      {"MAPFLAT", "flow", "MAPFLAT alias of SETFLAT"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4962,6 +4966,7 @@ int main(int argc, char **argv) {
               "       cubalc plate keeponly <path> <needle>  # KEEONLYFLAT dual · project leaves\n"
               "       cubalc plate mergeflat <base.json> <overlay.json>  # MERGEFLAT dual · deep leaf overlay\n"
               "       cubalc plate renameflat <path> <old_pfx> <new_pfx>  # RENAMEFLAT dual · path prefix rewrite\n"
+              "       cubalc plate setflat <path> <needle> <value>  # SETFLAT dual · bulk leaf value set\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -4993,7 +4998,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5067,6 +5072,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "renameflat") == 0 || strcmp(argv[2], "moveflat") == 0 ||
         strcmp(argv[2], "prefixflat") == 0 || strcmp(argv[2], "repathflat") == 0 ||
         strcmp(argv[2], "rekeyflat") == 0 ||
+        strcmp(argv[2], "setflat") == 0 || strcmp(argv[2], "mapflat") == 0 ||
+        strcmp(argv[2], "setleaf") == 0 || strcmp(argv[2], "putflat") == 0 ||
+        strcmp(argv[2], "bulkset") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5237,6 +5245,10 @@ int main(int argc, char **argv) {
                strcmp(op, "repathflat") == 0 || strcmp(op, "rekeyflat") == 0 ||
                strcmp(op, "mvflat") == 0)
         op = "renameflat";
+      else if (strcmp(op, "mapflat") == 0 || strcmp(op, "setleaf") == 0 ||
+               strcmp(op, "putflat") == 0 || strcmp(op, "bulkset") == 0 ||
+               strcmp(op, "assignflat") == 0)
+        op = "setflat";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -5794,6 +5806,57 @@ int main(int argc, char **argv) {
              "\"file\":%s,\"n\":%ld,\"total\":%ld,\"version\":\"%s\",\"plate\":%s,"
              "\"note\":\"RENAMEFLAT dual · leaf path prefix rewrite\"}\n",
              path, oldp, newp, file_hit ? "true" : "false",
+             pr.n, pr.code, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    /* setflat <needle> <value> — SETFLAT dual: bulk set leaf values by path needle.
+     *   cubalc plate setflat agent.json debug 0
+     *   cubalc plate setflat agent.json cfg.port 9090
+     * Writes plate. n = updated leaf count. Empty needle sets all leaves. */
+    if (strcmp(op, "setflat") == 0) {
+      const char *needle = "", *val = NULL;
+      cubalc_host_result pr, wr;
+
+      if (ai >= argc || !argv[ai]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"setflat\",\"path\":\"%s\",\"err\":\"need needle value\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      /* allow empty needle as "" */
+      needle = argv[ai++];
+      if (ai >= argc || !argv[ai]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"setflat\",\"path\":\"%s\",\"err\":\"need value\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      val = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_set(plate, needle, val, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"setflat\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               path, pr.err[0] ? pr.err : "setflat fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", pr.str);
+      if (file_hit || (path && path[0] && strchr(path, '.'))) {
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_write(path, plate, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"setflat\",\"path\":\"%s\",\"err\":\"write fail\","
+                 "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        file_hit = 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"setflat\",\"path\":\"%s\",\"needle\":\"%s\",\"value\":\"%s\","
+             "\"file\":%s,\"n\":%ld,\"total\":%ld,\"version\":\"%s\",\"plate\":%s,"
+             "\"note\":\"SETFLAT dual · bulk leaf value set by path needle\"}\n",
+             path, needle, val, file_hit ? "true" : "false",
              pr.n, pr.code, CUBALC_LANG_VERSION, plate);
       return 0;
     }

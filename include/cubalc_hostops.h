@@ -293,6 +293,12 @@ int cubalc_host_json_leaf_merge(const char *base, const char *overlay,
  * Soft always OK. Usability: restructure nests without multi RENAMEP/DELP+SETP. */
 int cubalc_host_json_leaf_rename_pfx(const char *json, const char *old_pfx,
                                      const char *new_pfx, cubalc_host_result *r);
+/* Set value on every leaf whose path contains needle (SETFLAT).
+ * Empty needle → all leaves. value classified like unflat (num/bool/null/raw/string).
+ * Rebuilds plate. r->n = leaves updated. Soft always OK.
+ * Usability: bulk nest flag/port/default write without multi SETP/GREPFLAT glue. */
+int cubalc_host_json_leaf_set(const char *json, const char *needle, const char *val,
+                              cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

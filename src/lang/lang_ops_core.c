@@ -27436,6 +27436,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PRUNEFLAT") || kw(&L->cur,"KEEPONLYFLAT") || kw(&L->cur,"DELFLAT") ||
              kw(&L->cur,"MERGEFLAT") || kw(&L->cur,"OVERLAYFLAT") || kw(&L->cur,"PATCHFLAT") ||
              kw(&L->cur,"RENAMEFLAT") || kw(&L->cur,"MOVEFLAT") || kw(&L->cur,"PREFIXFLAT") ||
+             kw(&L->cur,"SETFLAT") || kw(&L->cur,"MAPFLAT") || kw(&L->cur,"SETLEAFP") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35825,6 +35826,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"OVERLAYFLAT", "OVERLAYFLAT alias of MERGEFLAT"},
       {"RENAMEFLAT", "RENAMEFLAT|MOVEFLAT [FROM plate] old_pfx new_pfx — rewrite leaf path prefixes write-back · multi-plate"},
       {"MOVEFLAT", "MOVEFLAT alias of RENAMEFLAT"},
+      {"SETFLAT", "SETFLAT|MAPFLAT [FROM plate] needle value — set leaf values matching path needle write-back · multi-plate"},
+      {"MAPFLAT", "MAPFLAT alias of SETFLAT"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -44320,6 +44323,162 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# renameflat n=%ld total=%ld %s→%s from=%d\n",
               hr.n, hr.code, oldp, newp, have_from);
+    bump(vm); return 1;
+  }
+
+  /* SETFLAT|MAPFLAT|SETLEAFP [FROM plate] needle value
+   * Set every leaf whose path contains needle to value; write-back plate.
+   * Empty needle → all leaves. LAST_N = updated · SETFLAT_TOTAL = leaf count.
+   * Usability: bulk nest flags/defaults without multi SETP/GREPFLAT glue:
+   *   SETFLAT "debug" 0
+   *   SETFLAT "cfg.port" 9090
+   *   SETFLAT FROM PEER "tls" 1
+   *   MAPFLAT "" "null"
+   */
+  if (kw(&L->cur,"SETFLAT") || kw(&L->cur,"MAPFLAT") || kw(&L->cur,"SETLEAFP") ||
+      kw(&L->cur,"SETALLFLAT") || kw(&L->cur,"MSETFLAT") || kw(&L->cur,"PLATE_SETFLAT") ||
+      kw(&L->cur,"PUTFLAT") || kw(&L->cur,"ASSIGNFLAT") || kw(&L->cur,"BULKSETP")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192], val[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; val[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* needle — allow empty string */
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(needle, sizeof needle, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"SETP") && !kw(&L->cur,"GETP") &&
+               !kw(&L->cur,"SETFLAT") && !kw(&L->cur,"FLATKV")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    /* value */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(val, sizeof val, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"FROM") || kw(&L->cur,"END") || kw(&L->cur,"ASSERT") ||
+           kw(&L->cur,"LET") || kw(&L->cur,"PRINT") || kw(&L->cur,"SYS") ||
+           kw(&L->cur,"PASS") || kw(&L->cur,"SETP") || kw(&L->cur,"GETP"))) {
+        fail(vm, "SETFLAT [FROM plate] needle value — need value");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0)
+        val[0] = 0;
+    } else {
+      fail(vm, "SETFLAT [FROM plate] needle value — need value");
+      return -1;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_set(plate, needle, val, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "SETFLAT: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "SETFLAT: fail");
+      var_set_num(vm, "SETFLAT_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "SETFLAT", hr.str);
+    var_set_str(vm, "MAPFLAT", hr.str);
+    var_set_num(vm, "SETFLAT_N", hr.n);
+    var_set_num(vm, "MAPFLAT_N", hr.n);
+    var_set_num(vm, "SETFLAT_TOTAL", hr.code);
+    var_set_str(vm, "SETFLAT_NEEDLE", needle);
+    var_set_str(vm, "SETFLAT_VAL", val);
+    var_set_num(vm, "SETFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "SETFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# setflat n=%ld total=%ld needle=%s from=%d\n",
+              hr.n, hr.code, needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 
