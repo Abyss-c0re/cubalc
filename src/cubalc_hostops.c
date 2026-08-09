@@ -6443,6 +6443,102 @@ int cubalc_host_json_leaf_get_last(const char *json, const char *needle,
   return 0;
 }
 
+/* NTHFLAT: 0-based Nth matching leaf value by path needle. See header. */
+int cubalc_host_json_leaf_get_nth(const char *json, const char *needle, long index,
+                                  cubalc_host_result *r) {
+  cubalc_host_result kv;
+  const char *p, *line;
+  size_t nn;
+  long seen = 0;
+
+  r_clear(r);
+  if (!needle) needle = "";
+  nn = strlen(needle);
+  if (index < 0) {
+    r->str[0] = 0;
+    r->err[0] = 0;
+    r->n = 0;
+    r->code = 0;
+    r->ok = 1;
+    return 0;
+  }
+  memset(&kv, 0, sizeof kv);
+  cubalc_host_json_leaf_kv(json ? json : "{}", NULL, &kv);
+  p = kv.str;
+  while (*p) {
+    char path[512], oldv[CUBALC_HOST_STR_MAX / 2];
+    size_t kn = 0, vn = 0;
+    const char *sep, *vs, *ve;
+    int hit;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    kn = sep ? (size_t)(sep - line) : (size_t)(p - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn == 0 || kn >= sizeof path) continue;
+    memcpy(path, line, kn);
+    path[kn] = 0;
+    vs = sep ? sep + 1 : p;
+    ve = p;
+    while (vs < ve && (*vs == ' ' || *vs == '\t')) vs++;
+    while (ve > vs && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+    vn = (size_t)(ve - vs);
+    if (vn >= sizeof oldv) vn = sizeof oldv - 1;
+    memcpy(oldv, vs, vn);
+    oldv[vn] = 0;
+    if (!nn)
+      hit = 1;
+    else {
+      size_t i;
+      hit = 0;
+      if (nn <= kn) {
+        for (i = 0; i + nn <= kn; i++) {
+          if (memcmp(path + i, needle, nn) == 0) {
+            hit = 1;
+            break;
+          }
+        }
+      }
+    }
+    if (!hit) continue;
+    if (seen == index) {
+      snprintf(r->str, sizeof r->str, "%s", oldv);
+      snprintf(r->err, sizeof r->err, "%s", path);
+      r->n = 1;
+      r->code = 1;
+      r->ok = 1;
+      return 0;
+    }
+    seen++;
+  }
+  r->str[0] = 0;
+  r->err[0] = 0;
+  r->n = 0;
+  r->code = 0;
+  r->ok = 1;
+  return 0;
+}
+
 /* GETFLATN: first pure-int leaf value by path needle. See header. */
 int cubalc_host_json_leaf_getn(const char *json, const char *needle,
                                cubalc_host_result *r) {

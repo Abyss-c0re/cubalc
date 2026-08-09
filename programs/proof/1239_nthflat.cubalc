@@ -1,0 +1,65 @@
+# NTHFLAT / INDEXFLAT — 0-based Nth matching leaf by path needle → LAST
+# Usability: index nest peels without PATHSFLAT+NTH+GETP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"leader\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\"}}"
+
+NTHFLAT "role" 0
+ASSERT OK == 1
+ASSERT NTHFLAT_HIT == 1
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+ASSERT NTHFLAT_I == 0
+SYS EQS NTHFLAT_PATH "meta.role"
+ASSERT LAST_N == 1
+
+NTHFLAT "role" 1
+ASSERT NTHFLAT_HIT == 1
+SYS EQS LAST "leader"
+ASSERT LAST_N == 1
+SYS EQS NTHFLAT_PATH "cfg.role"
+ASSERT LAST_N == 1
+
+NTHFLAT "role" 2 OR "fallback"
+ASSERT NTHFLAT_HIT == 0
+ASSERT NTHFLAT_FALLBACK == 1
+SYS EQS LAST "fallback"
+ASSERT LAST_N == 1
+
+NTHFLAT "host" 0
+SYS EQS LAST "h1"
+ASSERT LAST_N == 1
+NTHFLAT "host" 1
+SYS EQS LAST "h2"
+ASSERT LAST_N == 1
+
+NTHFLAT "nope" 0
+ASSERT NTHFLAT_HIT == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+LET PEER = "{\"a\":{\"name\":\"first\"},\"b\":{\"name\":\"second\"},\"c\":{\"name\":\"third\"}}"
+NTHFLAT FROM PEER "name" 1
+ASSERT NTHFLAT_FROM == 1
+SYS EQS NTHFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+SYS EQS LAST "second"
+ASSERT LAST_N == 1
+SYS EQS NTHFLAT_PATH "b.name"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":9}"
+NTHFLAT FROM PEER "name" 0
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+INDEXFLAT "x" 0
+ASSERT NTHFLAT_HIT == 1
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1239_nthflat: PASS"

@@ -386,6 +386,11 @@ int cubalc_host_json_leaf_get(const char *json, const char *needle,
  * Usability: newest-wins nest peel without REVL+GETFLAT glue. */
 int cubalc_host_json_leaf_get_last(const char *json, const char *needle,
                                    cubalc_host_result *r);
+/* 0-based Nth leaf by path needle (NTHFLAT).
+ * index < 0 or past end → miss. Hit → r->n=1 · r->str=value · r->err=path.
+ * Soft always OK. Usability: index nest peels without PATHSFLAT+NTH+GETP glue. */
+int cubalc_host_json_leaf_get_nth(const char *json, const char *needle, long index,
+                                  cubalc_host_result *r);
 /* First pure-int leaf whose path contains needle (GETFLATN).
  * Non-int matching leaves skipped. Empty needle → first pure-int leaf.
  * Hit → r->n=value · r->code=1 · r->str=decimal · r->err=path.

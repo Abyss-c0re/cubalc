@@ -27449,6 +27449,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PATHSFLAT") || kw(&L->cur,"VALSFLAT") || kw(&L->cur,"MATCHPATHS") ||
              kw(&L->cur,"GETFLAT") || kw(&L->cur,"FIRSTFLAT") || kw(&L->cur,"PEELFLAT") ||
              kw(&L->cur,"LASTFLAT") || kw(&L->cur,"ENDFLAT") || kw(&L->cur,"TAILFLAT") ||
+             kw(&L->cur,"NTHFLAT") || kw(&L->cur,"INDEXFLAT") || kw(&L->cur,"ATFLAT") ||
              kw(&L->cur,"GETFLATN") || kw(&L->cur,"FIRSTFLATN") || kw(&L->cur,"NUMFLAT") ||
              kw(&L->cur,"LASTFLATN") || kw(&L->cur,"ENDFLATN") || kw(&L->cur,"TAILFLATN") ||
              kw(&L->cur,"NTHFLATN") || kw(&L->cur,"INDEXFLATN") || kw(&L->cur,"ATFLATN") ||
@@ -35880,6 +35881,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FIRSTFLAT", "FIRSTFLAT alias of GETFLAT"},
       {"LASTFLAT", "LASTFLAT|ENDFLAT [FROM plate] needle [OR fallback] — last matching leaf value → LAST · multi-plate · read-only"},
       {"ENDFLAT", "ENDFLAT alias of LASTFLAT"},
+      {"NTHFLAT", "NTHFLAT|INDEXFLAT [FROM plate] needle index [OR fallback] — 0-based Nth matching leaf → LAST · multi-plate · read-only"},
+      {"INDEXFLAT", "INDEXFLAT alias of NTHFLAT"},
       {"GETFLATN", "GETFLATN|FIRSTFLATN [FROM plate] needle [OR fallback] — first pure-int matching leaf → LAST_N · multi-plate · read-only"},
       {"FIRSTFLATN", "FIRSTFLATN alias of GETFLATN"},
       {"LASTFLATN", "LASTFLATN|ENDFLATN [FROM plate] needle [OR fallback] — last pure-int matching leaf → LAST_N · multi-plate · read-only"},
@@ -46711,6 +46714,202 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# lastflat hit=%ld path=%s needle=%s from=%d\n",
               hr.n, hr.err[0] ? hr.err : "(miss)", needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* NTHFLAT|INDEXFLAT [FROM plate] needle index [OR|DEFAULT fallback]
+   * 0-based Nth leaf whose path contains needle → LAST=value · LAST_N=hit 0|1.
+   * Soft miss → OR string fallback or empty. NTHFLAT_PATH / NTHFLAT_I side channels.
+   * Usability: index nest peels without PATHSFLAT+NTH+GETP glue:
+   *   NTHFLAT "role" 0
+   *   NTHFLAT "role" 1 OR "worker"
+   *   NTHFLAT FROM PEER "name" 0
+   */
+  if (kw(&L->cur,"NTHFLAT") || kw(&L->cur,"INDEXFLAT") || kw(&L->cur,"ATFLAT") ||
+      kw(&L->cur,"MNTHFLAT") || kw(&L->cur,"PLATE_NTHFLAT") || kw(&L->cur,"LEAFNTH") ||
+      kw(&L->cur,"NTHLEAF") || kw(&L->cur,"GETFLATNTH")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192], fallback[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, have_fb = 0, have_idx = 0;
+    long idx = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; fallback[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"OR") && !kw(&L->cur,"DEFAULT") &&
+               !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+               !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") && !kw(&L->cur,"PASS") &&
+               !kw(&L->cur,"NTHFLAT") && !kw(&L->cur,"NTHFLATN") && !kw(&L->cur,"GETFLAT") &&
+               !kw(&L->cur,"IF")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    /* index — literal only (do not parse_expr: would swallow OR fallback) */
+    if (L->cur.kind == TK_NUM) {
+      idx = (long)L->cur.num;
+      have_idx = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx = -(long)L->cur.num;
+        have_idx = 1;
+        lex_next(L);
+      }
+    } else if (L->cur.kind == TK_LPAREN) {
+      idx = parse_expr(vm, L);
+      have_idx = 1;
+    } else if (L->cur.kind == TK_IDENT) {
+      pv = var_get(vm, L->cur.text, 0);
+      if (pv && !pv->is_str) {
+        idx = pv->val;
+        have_idx = 1;
+        lex_next(L);
+      }
+    }
+
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")) {
+      lex_next(L);
+      have_fb = 1;
+      if (resolve_str_arg(vm, L, fallback, sizeof fallback) != 0)
+        fallback[0] = 0;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!have_fb && (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+                     kw(&L->cur,"FALLBACK"))) {
+      lex_next(L);
+      have_fb = 1;
+      if (resolve_str_arg(vm, L, fallback, sizeof fallback) != 0)
+        fallback[0] = 0;
+    }
+
+    if (!have_idx) {
+      fail(vm, "NTHFLAT [FROM plate] needle index [OR def] — need 0-based index");
+      return 1;
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_get_nth(plate, needle, idx, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "NTHFLAT: fail");
+      var_set_str(vm, "ERR", "NTHFLAT: fail");
+      var_set_num(vm, "NTHFLAT_HIT", 0);
+      var_set_num(vm, "LAST_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (hr.n == 0 && have_fb) {
+      var_set_str(vm, "LAST", fallback);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", fallback);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "NTHFLAT", fallback);
+      var_set_str(vm, "NTHFLAT_PATH", "");
+      var_set_num(vm, "NTHFLAT_HIT", 0);
+      var_set_num(vm, "NTHFLAT_FALLBACK", 1);
+    } else if (hr.n == 0) {
+      var_set_str(vm, "LAST", "");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "NTHFLAT", "");
+      var_set_str(vm, "NTHFLAT_PATH", "");
+      var_set_num(vm, "NTHFLAT_HIT", 0);
+      var_set_num(vm, "NTHFLAT_FALLBACK", 0);
+    } else {
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_str(vm, "NTHFLAT", hr.str);
+      var_set_str(vm, "INDEXFLAT", hr.str);
+      var_set_str(vm, "NTHFLAT_PATH", hr.err);
+      var_set_num(vm, "NTHFLAT_HIT", 1);
+      var_set_num(vm, "NTHFLAT_FALLBACK", 0);
+    }
+    var_set_num(vm, "NTHFLAT_I", idx);
+    var_set_str(vm, "NTHFLAT_NEEDLE", needle);
+    var_set_num(vm, "NTHFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "NTHFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# nthflat hit=%ld i=%ld path=%s needle=%s from=%d\n",
+              hr.n, idx, hr.err[0] ? hr.err : "(miss)",
+              needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 
