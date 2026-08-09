@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 577,
-  "version": "1.15.604-usability",
-  "item": "COPYP/SWAPP",
-  "item_id": 613,
-  "title": "COPYP|DUPKEYP · SWAPP|XCHGP · multi-plate key copy/swap write-back · no SYS JSONCOPY/JSONSWAP",
-  "commit": "5a4e245e0e21f160e3d73c12c706a48101e7cf6b",
-  "summary": "Dual-buffer/snapshot plate fields with SETP-style write-back. proof 1154 31/31 + keydiffp reg.",
+  "iter": 578,
+  "version": "1.15.605-usability",
+  "item": "LENP/EMPTYP/VALSP",
+  "item_id": 614,
+  "title": "LENP|NKEYSP · EMPTYP|NONEMPTYP · VALSP · multi-plate size/empty/values probes · no SYS JSONLEN/JSONEMPTY/JSONVALUES",
+  "commit": "b414bc8dcb2a03e1a58a3ce5fea324d99308b25c",
+  "summary": "Key count, empty IF, values bag duals of KEYSP without SYS. proof 1155 31/31 + copyp reg.",
   "proofs": [
-    "1154_copyp 31/31",
-    "1153_keydiffp reg 27/27"
+    "1155_lenp 31/31",
+    "1154_copyp reg 31/31"
   ],
-  "when": "2026-08-09T03:15:46Z",
+  "when": "2026-08-09T03:25:40Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5a4e245e0e21f160e3d73c12c706a48101e7cf6b",
+  "sha": "b414bc8dcb2a03e1a58a3ce5fea324d99308b25c",
   "note": "clean tree; EVOLVE_PAUSED"
 }
