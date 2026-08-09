@@ -19837,11 +19837,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     /* SYS JSONN|JGETN|JSONNUM|JSON_N "key" [FROM src] [OR n]
      * — peel field as int → LAST_N (and LAST=decimal). Twin of LOOKUPN for plates.
-     * true→1 false→0; OR on miss. Usability: IF/arith without JSON+NUM glue. */
+     * true→1 false→0; OR on miss. Paths ok: JSONN "cfg.port" FROM PLATE.
+     * Usability: IF/arith without JSON+NUM glue · nest without GETPOBJ. */
     if (kw(&L->cur,"JSONN") || kw(&L->cur,"JGETN") || kw(&L->cur,"JSONNUM") ||
         kw(&L->cur,"JSON_N") || kw(&L->cur,"JSONINT") || kw(&L->cur,"JGETINT") ||
         kw(&L->cur,"PLATEN") || kw(&L->cur,"JSONGETN")){
-      char key[96]="n";
+      char key[192]="n";
       char fallback[64];
       char srcbuf[CUBALC_HOST_STR_MAX];
       int have_fb = 0, have_src = 0;
@@ -19851,8 +19852,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lex_next(L);
       fallback[0] = 0;
       srcbuf[0] = 0;
-      if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
-        snprintf(key,sizeof key,"%s",L->cur.text); lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long kv = parse_expr(vm, L);
+        snprintf(key, sizeof key, "%ld", kv);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (kw(&L->cur,"FROM") || kw(&L->cur,"IN") || kw(&L->cur,"OF") ||
+            kw(&L->cur,"SRC") || kw(&L->cur,"PLATE") ||
+            kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE")) {
+          /* bare key default "n" */
+        } else if (resolve_str_arg(vm, L, key, sizeof key) != 0) {
+          snprintf(key, sizeof key, "%s", "n");
+        }
       }
       if (kw(&L->cur,"FROM") || kw(&L->cur,"IN") || kw(&L->cur,"OF") ||
           kw(&L->cur,"SRC") || kw(&L->cur,"PLATE")){
@@ -19885,7 +19895,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       src = have_src ? srcbuf : vm->last_str;
       memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_get(src, key, &hr) != 0) {
+      /* path-aware: dotted/slash keys via path_get (shallow falls through) */
+      if (cubalc_host_json_path_get(src, key, &hr) != 0) {
         if (have_fb) {
           snprintf(vm->last_str, sizeof vm->last_str, "%s", fallback);
           vm->last_n = fb_n;
@@ -19917,7 +19928,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         }
         bump(vm); return 1;
       }
-      /* parse number; true/false already 1/0 from host_json_get */
+      /* parse number; true/false already 1/0 from host_json_get/path_get */
       {
         char *end = NULL;
         nval = strtol(hr.str, &end, 10);
@@ -35766,6 +35777,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
       {"DELP", "DELP [FROM plate] key — drop key · dotted path nest ok · write-back · soft miss · multi-plate"},
       {"GETP", "GETP [FROM plate] key [OR fallback] — peel key · dotted path nest ok · LAST=value · multi-plate"},
+      {"GETPN", "GETPN|NUMP [FROM plate] key [OR n] — peel numeric · LAST_N=value · paths ok · multi-plate · no GETP+NUM"},
+      {"NUMP", "NUMP alias of GETPN"},
+      {"GETP_N", "GETP_N alias of GETPN"},
       {"PUTP", "PUTP alias of SETP"},
       {"BUMPP", "BUMPP alias of INCP"},
       {"DROPP", "DROPP alias of DELP"},
@@ -38191,6 +38205,194 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     fail(vm, "SETP|INCP|DELP|GETP internal");
     return -1;
+  }
+  /* GETPN|NUMP|GETP_N|JGETN_P [FROM plate] key [OR n]
+   * Peel numeric field → LAST_N=value · LAST=decimal · GETPN_N=1|0 hit.
+   * Paths ok (same as GETP). Soft miss + OR → fallback value · OK=1.
+   * Hard miss without OR → OK=0 sticky LAST_ERR.
+   * Usability: nest/arith without GETP+SYS NUM / SYS JSONN glue:
+   *   GETPN "cfg.port"          # LAST_N=8080
+   *   GETPN "freq.error" OR 0
+   *   GETPN FROM PEER "meta.n"
+   * Twin of SYS JSONN for conventional PLATE multi-plate plane.
+   */
+  if (kw(&L->cur,"GETPN") || kw(&L->cur,"NUMP") || kw(&L->cur,"GETP_N") ||
+      kw(&L->cur,"MGETPN") || kw(&L->cur,"PLATE_GETN") || kw(&L->cur,"PEEKPN") ||
+      kw(&L->cur,"GETINTP") || kw(&L->cur,"INTP") || kw(&L->cur,"JGETN_P")) {
+    char plate[CUBALC_HOST_STR_MAX], key[192], fb[64];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result gr;
+    int have_fb = 0, have_from = 0;
+    long fb_n = 0, nval = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; key[0] = 0; fb[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(key, sizeof key, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE")) {
+        fail(vm, "GETPN [FROM plate] key [OR n] — need key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, key, sizeof key) != 0)
+        key[0] = 0;
+    } else {
+      fail(vm, "GETPN [FROM plate] key [OR n] — need key");
+      return -1;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"SOFT")) {
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        fb_n = parse_expr(vm, L);
+        snprintf(fb, sizeof fb, "%ld", fb_n);
+        have_fb = 1;
+      } else if (resolve_str_arg(vm, L, fb, sizeof fb) == 0) {
+        fb_n = strtol(fb, NULL, 10);
+        have_fb = 1;
+      } else {
+        fail(vm, "GETPN [FROM plate] key OR n — need fallback");
+        return -1;
+      }
+    }
+
+    if (!key[0]) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "GETPN: empty key");
+      var_set_str(vm, "ERR", "GETPN: empty key");
+      var_set_num(vm, "GETPN_N", 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "GETPN_FROM", have_from ? 1 : 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_path_get(plate, key, &gr) == 0) {
+      char *end = NULL;
+      nval = strtol(gr.str, &end, 10);
+      if (end == gr.str) nval = 0;
+      var_set_str(vm, "LAST", gr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", gr.str);
+      vm->last_n = nval;
+      var_set_num(vm, "LAST_N", nval);
+      var_set_str(vm, "GETPN", gr.str);
+      var_set_num(vm, "GETPN_V", nval);
+      var_set_num(vm, "GETPN_N", 1);
+      var_set_num(vm, "JSONN_V", nval);
+      var_set_num(vm, "JSONN_N", 1);
+      var_set_num(vm, "JSON_HIT", 1);
+      var_set_num(vm, "GETPN_OR", 0);
+      var_set_num(vm, "OK", 1);
+    } else if (have_fb) {
+      var_set_str(vm, "LAST", fb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+      vm->last_n = fb_n;
+      var_set_num(vm, "LAST_N", fb_n);
+      var_set_str(vm, "GETPN", fb);
+      var_set_num(vm, "GETPN_V", fb_n);
+      var_set_num(vm, "GETPN_N", 0);
+      var_set_num(vm, "JSONN_V", fb_n);
+      var_set_num(vm, "JSONN_N", 0);
+      var_set_num(vm, "JSON_HIT", 0);
+      var_set_num(vm, "GETPN_OR", 1);
+      var_set_num(vm, "OK", 1);
+    } else {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "GETPN_V", 0);
+      var_set_num(vm, "GETPN_N", 0);
+      var_set_num(vm, "JSON_HIT", 0);
+      var_set_num(vm, "GETPN_OR", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", gr.err[0] ? gr.err : "GETPN: key miss");
+      var_set_str(vm, "ERR", gr.err[0] ? gr.err : "GETPN: key miss");
+    }
+    var_set_str(vm, "GETPN_KEY", key);
+    var_set_num(vm, "GETPN_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "JSON_KEY", key);
+    var_set_num(vm, "JSON_FROM", have_from ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# getpn key=%s v=%ld hit=%ld from=%d\n",
+              key, vm->last_n, (long)(have_fb ? 0 : (vm->last_str[0] ? 1 : 0)),
+              have_from);
+    bump(vm); return 1;
   }
   /* MERGEP|PATCHP [FROM plate] overlay — multi-key overlay into PLATE or named plate.
    * DEFAULTP|ENSUREP [FROM plate] key value — set key only if missing (no clobber).

@@ -2171,6 +2171,8 @@ int main(int argc, char **argv) {
       {"cli_plate_rename_copy_swap", "programs/proof/1200_cli_plate_rename_copy_swap.sh", "cubalc plate rename/copy/swap duals paths"},
       {"path_keysp_lenp", "programs/proof/1201_path_keysp_lenp.cubalc", "KEYSP/LENP/EMPTYP/VALSP nest path"},
       {"cli_plate_keys_len", "programs/proof/1201_cli_plate_keys_len.sh", "cubalc plate keys/len/empty/vals nest path"},
+      {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
+      {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
       {"mergeobj", "programs/proof/1171_mergeobj.cubalc", "MERGEOBJ/DEFAULTOBJ nested plate merge one-shot multi-plate"},
       {"getpobj", "programs/proof/1172_getpobj.cubalc", "GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ nested scalar field plane multi-plate"},
@@ -2426,6 +2428,8 @@ int main(int argc, char **argv) {
       {"INCP", "flow", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · multi-plate"},
       {"DELP", "flow", "DELP [FROM plate] key — drop key · dotted path nest ok · soft miss · multi-plate"},
       {"GETP", "flow", "GETP [FROM plate] key [OR fallback] — peel value · dotted path nest ok · multi-plate"},
+      {"GETPN", "flow", "GETPN|NUMP [FROM plate] key [OR n] — peel numeric LAST_N=value · paths ok · multi-plate"},
+      {"NUMP", "flow", "NUMP alias of GETPN"},
       {"MERGEP", "flow", "MERGEP [FROM plate] overlay — multi-key · multi-plate"},
       {"DEFAULTP", "flow", "DEFAULTP|ENSUREP [FROM plate] key value — set-if-missing · multi-plate"},
       {"TOGGLEP", "flow", "TOGGLEP [FROM plate] key — flip flag · multi-plate · miss→1"},
@@ -4886,6 +4890,7 @@ int main(int argc, char **argv) {
               "usage: cubalc plate show|get|set|inc|del|keys|nestget|nestset|nestinc|nestdel|nestkeys|nesthas|nestpick|nestomit|fill|… <path> …\n"
               "       cubalc plate <path.json>                 # show\n"
               "       cubalc plate get <path> <key> [OR def]\n"
+              "       cubalc plate getn <path> <key> [OR n]  # GETPN dual · numeric peel (paths ok)\n"
               "       cubalc plate type <path> <key>  # TYPEP dual · kind miss|num|str|… (paths ok)\n"
               "       cubalc plate set <path> <key> <value>\n"
               "       cubalc plate default <path> <key> <value>  # DEFAULTP dual · set-if-missing (paths ok)\n"
@@ -4921,7 +4926,7 @@ int main(int argc, char **argv) {
               "       cubalc plate top|bot <path> [n]          # top/bot N keys · TOPNP duals\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
-             "\"ops\":[\"show\",\"get\",\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
+             "\"ops\":[\"show\",\"get\",\"getn\",\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
              "\"inc\",\"del\",\"keys\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -4936,6 +4941,9 @@ int main(int argc, char **argv) {
     if (strcmp(argv[2], "show") == 0 || strcmp(argv[2], "dump") == 0 ||
         strcmp(argv[2], "cat") == 0 || strcmp(argv[2], "read") == 0 ||
         strcmp(argv[2], "get") == 0 || strcmp(argv[2], "peek") == 0 ||
+        strcmp(argv[2], "getn") == 0 || strcmp(argv[2], "num") == 0 ||
+        strcmp(argv[2], "getpn") == 0 || strcmp(argv[2], "jgetn") == 0 ||
+        strcmp(argv[2], "int") == 0 ||
         strcmp(argv[2], "type") == 0 || strcmp(argv[2], "kind") == 0 ||
         strcmp(argv[2], "typeof") == 0 || strcmp(argv[2], "typep") == 0 ||
         strcmp(argv[2], "jtype") == 0 ||
@@ -5037,6 +5045,9 @@ int main(int argc, char **argv) {
         op = "show";
       else if (strcmp(op, "peek") == 0)
         op = "get";
+      else if (strcmp(op, "num") == 0 || strcmp(op, "getpn") == 0 ||
+               strcmp(op, "jgetn") == 0 || strcmp(op, "int") == 0)
+        op = "getn";
       else if (strcmp(op, "kind") == 0 || strcmp(op, "typeof") == 0 ||
                strcmp(op, "typep") == 0 || strcmp(op, "jtype") == 0)
         op = "type";
@@ -6933,6 +6944,53 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"op\":\"get\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":false,"
              "\"err\":\"key miss\",\"file\":%s,\"version\":\"%s\"}\n",
+             path, key, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+      return 1;
+    }
+
+    /* getn|num path key [OR n] — GETPN dual: numeric peel (paths ok).
+     * Usability: shell dual of GETPN / SYS JSONN for nest counters without .cubalc:
+     *   cubalc plate getn agent.json cfg.port
+     *   cubalc plate getn agent.json freq.error OR 0
+     * n = numeric value · hit true|false · exit 0 on hit or OR, 1 on hard miss. */
+    if (strcmp(op, "getn") == 0) {
+      long nval = 0, fb_n = 0;
+      char *end = NULL;
+      if (ai < argc && (strcmp(argv[ai], "OR") == 0 || strcmp(argv[ai], "DEFAULT") == 0 ||
+                        strcmp(argv[ai], "ELSE") == 0)) {
+        ai++;
+        if (ai < argc) {
+          fb = argv[ai++];
+          have_fb = 1;
+          fb_n = strtol(fb, &end, 10);
+          if (end == fb) fb_n = 0;
+        }
+      }
+      memset(&gr, 0, sizeof gr);
+      if (cubalc_host_json_path_get(plate, key, &gr) == 0) {
+        end = NULL;
+        nval = strtol(gr.str, &end, 10);
+        if (end == gr.str) nval = 0;
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"getn\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":true,"
+               "\"n\":%ld,\"value\":\"%s\",\"file\":%s,\"version\":\"%s\","
+               "\"note\":\"GETPN dual · LAST_N-style numeric peel · paths ok\"}\n",
+               path, key, nval, gr.str, file_hit ? "true" : "false",
+               CUBALC_LANG_VERSION);
+        return 0;
+      }
+      if (have_fb) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"getn\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":false,"
+               "\"or\":true,\"n\":%ld,\"value\":\"%ld\",\"file\":%s,"
+               "\"version\":\"%s\"}\n",
+               path, key, fb_n, fb_n, file_hit ? "true" : "false",
+               CUBALC_LANG_VERSION);
+        return 0;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+             "\"op\":\"getn\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":false,"
+             "\"n\":0,\"err\":\"key miss\",\"file\":%s,\"version\":\"%s\"}\n",
              path, key, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
       return 1;
     }

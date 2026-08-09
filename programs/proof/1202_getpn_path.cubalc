@@ -1,0 +1,79 @@
+# GETPN + path SYS JSONN — numeric peel for nest IF/arith without GETP+NUM glue
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"port\":8080,\"tls\":0},\"freq\":{\"error\":5,\"warn\":2},\"n\":1,\"flag\":true}"
+LET PEER = "{\"meta\":{\"n\":3,\"role\":\"worker\"}}"
+
+# shallow GETPN
+GETPN "n"
+ASSERT OK == 1
+ASSERT GETPN_N == 1
+ASSERT LAST_N == 1
+ASSERT GETPN_V == 1
+
+# nest path
+GETPN "cfg.port"
+ASSERT OK == 1
+ASSERT GETPN_N == 1
+ASSERT LAST_N == 8080
+ASSERT GETPN_V == 8080
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+
+GETPN "freq.error"
+ASSERT LAST_N == 5
+ASSERT GETPN_N == 1
+
+# zero is valid value
+GETPN "cfg.tls"
+ASSERT OK == 1
+ASSERT GETPN_N == 1
+ASSERT LAST_N == 0
+ASSERT GETPN_V == 0
+
+# bool → 1/0 style (host peels true as 1)
+GETPN "flag"
+ASSERT GETPN_N == 1
+ASSERT LAST_N == 1
+
+# soft miss OR
+GETPN "missing.path" OR 42
+ASSERT OK == 1
+ASSERT GETPN_N == 0
+ASSERT GETPN_OR == 1
+ASSERT LAST_N == 42
+
+# hard miss
+GETPN "nope"
+ASSERT OK == 0
+ASSERT GETPN_N == 0
+
+# multi-plate FROM
+GETPN FROM PEER "meta.n"
+ASSERT GETPN_FROM == 1
+ASSERT GETPN_N == 1
+ASSERT LAST_N == 3
+
+# SYS JSONN path (host dual)
+SYS JSONN "cfg.port" FROM PLATE
+ASSERT OK == 1
+ASSERT JSONN_N == 1
+ASSERT LAST_N == 8080
+ASSERT JSONN_V == 8080
+
+SYS JSONN "freq.warn" FROM PLATE
+ASSERT LAST_N == 2
+
+SYS JSONN "ghost" FROM PLATE OR 7
+ASSERT JSONN_N == 0
+ASSERT LAST_N == 7
+ASSERT JSON_OR == 1
+
+# alias NUMP
+NUMP "cfg.port"
+ASSERT LAST_N == 8080
+ASSERT GETPN_N == 1
+
+PASS
+PRINT "1202_getpn_path: PASS"

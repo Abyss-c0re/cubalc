@@ -688,6 +688,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 658. ~~**`cubalc plate default` / `toggle`**~~ **done** (CLI DEFAULTP/TOGGLEP duals · set-if-missing + flag flip · dotted paths · agent seed/feature flags without `.cubalc`).
 659. ~~**Dotted path `RENAMEP`/`COPYP`/`SWAPP` + `cubalc plate rename|copy|swap`**~~ **done** (path move/copy/swap write-back · multi-plate · CLI duals · no GETP+DELP+SETP glue).
 660. ~~**Dotted path `KEYSP`/`LENP`/`EMPTYP`/`VALSP` + `cubalc plate keys|len|empty|vals`**~~ **done** (nest bag size/keys/values probes · multi-plate · CLI duals · no GETOBJ+KEYSP glue).
+661. ~~**`GETPN` / path `SYS JSONN` + `cubalc plate getn`**~~ **done** (numeric nest peel → LAST_N=value · multi-plate · CLI dual · no GETP+NUM glue).
 
 ## Tick protocol
 
