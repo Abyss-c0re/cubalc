@@ -659,6 +659,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 629. ~~**`GETOBJ` / `SETOBJ` / `NESTP`**~~ **done** (peel/nest nested plate objects · multi-plate FROM/INTO · no GETP miss on obj).
 630. ~~**`MERGEOBJ` / `DEFAULTOBJ` / `PATCHNEST`**~~ **done** (merge/fill nested plate object one-shot · multi-plate · no GETOBJ+MERGEP+SETOBJ).
 631. ~~**`GETPOBJ` / `SETPOBJ` / `INCOBJ` / `DELPOBJ`**~~ **done** (nested scalar peel/set/inc/del · multi-plate · no GETOBJ+GETP/SETP+SETOBJ).
+632. ~~**`HASPOBJ` / `TYPEPOBJ` / `KEYSOBJ` / `NEEDPOBJ`**~~ **done** (nested probes + fail-fast contract · multi-plate · HASP/TYPEP/KEYSP/NEEDP duals for nests).
 
 ## Tick protocol
 

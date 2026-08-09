@@ -1,0 +1,5 @@
+# NEEDPOBJ fail-fast when nested fields missing
+HOLD_FLASH 1
+LET PLATE = "{\"meta\":{\"x\":1}}"
+NEEDPOBJ "meta" "x" "role"
+PRINT "should not reach"

@@ -275,6 +275,9 @@ DEFAULTOBJ FROM PEER "cfg" "{\"port\":8080}"  # fill missing nested only
 GETPOBJ "meta" "role"                 # peel nested scalar
 SETPOBJ "meta" "role" "leader"
 INCOBJ "stats" "hits"
+HASPOBJ "meta" "role"                 # soft nested presence
+KEYSOBJ "meta"                         # nested key bag
+NEEDPOBJ "meta" "x" "role"             # fail-fast nested contract
 ```
 
 Compare plates (no `SYS JSONEQ` glue):

@@ -1,0 +1,82 @@
+# HASPOBJ / TYPEPOBJ / KEYSOBJ / NEEDPOBJ — nested probes + contract
+# Usability: HASP/TYPEP/KEYSP/NEEDP duals for nested plate objects.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"x\":1,\"role\":\"worker\",\"ok\":true},\"n\":3}"
+LET PEER = "{\"cfg\":{\"port\":8080,\"tls\":0},\"name\":\"peerB\"}"
+
+# HASPOBJ soft presence
+HASPOBJ "meta" "role"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASPOBJ == 1
+HASPOBJ "meta" "missing"
+ASSERT LAST_N == 0
+ASSERT HASPOBJ == 0
+HASPOBJ "nope" "x"
+ASSERT LAST_N == 0
+ASSERT OK == 1
+
+# TYPEPOBJ kinds
+TYPEPOBJ "meta" "x"
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+ASSERT TYPEPOBJ_N == 1
+TYPEPOBJ "meta" "role"
+SYS EQS LAST "str"
+ASSERT TYPEPOBJ_N == 2
+TYPEPOBJ "meta" "ok"
+SYS EQS LAST "bool"
+ASSERT TYPEPOBJ_N == 3
+TYPEPOBJ "meta" "ghost"
+SYS EQS LAST "missing"
+ASSERT TYPEPOBJ_N == 0
+
+# KEYSOBJ nested key bag
+KEYSOBJ "meta"
+ASSERT OK == 1
+ASSERT KEYSOBJ_N == 3
+SYS HASLINE LAST "role"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "x"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 1
+KEYSOBJ "missing"
+ASSERT KEYSOBJ_N == 0
+
+# NEEDPOBJ pass
+NEEDPOBJ "meta" "x" "role"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+HASPOBJ FROM PEER "cfg" "port"
+ASSERT HASPOBJ_FROM == 1
+ASSERT LAST_N == 1
+TYPEPOBJ "cfg" "port" FROM PEER
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+KEYSOBJ FROM PEER "cfg"
+ASSERT KEYSOBJ_N == 2
+SYS HASLINE LAST "tls"
+ASSERT LAST_N == 1
+NEEDPOBJ FROM PEER "cfg" "port" "tls"
+ASSERT OK == 1
+
+# aliases
+NESTHAS "meta" "role"
+ASSERT LAST_N == 1
+NESTTYPE "meta" "x"
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+NESTKEYS "meta"
+ASSERT KEYSOBJ_N == 3
+
+# outer plate untouched by FROM probes
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+PRINT "haspobj soft ok"
