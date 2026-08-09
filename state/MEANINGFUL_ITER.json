@@ -5,7 +5,7 @@
   "item": "cubalc plate nestsort/nestsortbag",
   "item_id": 649,
   "title": "cubalc plate nestsort|nestsortbag \u00b7 SORTOBJ/SORTBAGOBJ CLI duals \u00b7 ASC|DESC \u00b7 agent nest FREQ full rank without .cubalc",
-  "commit": "39ab599eb50e9945b6eb5216675e7d8fdeecc01a",
+  "commit": "41139440273b9acb3f989bb117aefe1419c50250",
   "summary": "CLI nest full sort after nestagg \u00b7 nestsort write-back / nestsortbag bag \u00b7 proof 1190.",
   "proofs": [
     "1190_cli_plate_nestsort PASS",
@@ -14,6 +14,6 @@
   ],
   "when": "2026-08-09T10:20:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "39ab599eb50e9945b6eb5216675e7d8fdeecc01a",
+  "sha": "41139440273b9acb3f989bb117aefe1419c50250",
   "note": "after backlog 648 SORTOBJ; EVOLVE_PAUSED"
 }
