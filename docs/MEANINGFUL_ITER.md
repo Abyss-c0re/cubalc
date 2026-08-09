@@ -651,6 +651,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 621. ~~**`SUMMERGEP` / `ADDFREQP` / `MERGEKP` · `SUBP` / `SUBVALP` / `DELTAVP` · `DIVP` / `IDIVP`**~~ **done** (sum-merge / a−b / idiv on plate values · multi-plate peer FREQ · no TOKV+MERGEKV/DIFFKV/DIVKV+FROMKVP · not DIFFP key bag).
 622. ~~**`ABSP` / `MAGP` · `SIGNP` / `DIRP`**~~ **done** (absolute / signum plate values · multi-plate · rank SUBP deltas · no TOKV+ABSKV/SIGNKV+FROMKVP).
 623. ~~**`KEEPKEYP` / `GREPKEYP` · `DROPKEYP` / `GREPVKEYP` · `KEEPKEYPI` / `DROPKEYPI`**~~ **done** (key-needle keep/drop on plates · multi-plate · complements PICKP exact · no TOKV+KEEPKEY/DROPKEY+FROMKVP).
+624. ~~**`MEDIANP` / `P50P` / `MIDP`**~~ **done** (integer median of plate values · multi-plate · robust mid vs AVGNP · no TOKV+MEDIANKV / VALUES+MEDIAN).
 
 ## Tick protocol
 

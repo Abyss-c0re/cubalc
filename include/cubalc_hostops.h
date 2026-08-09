@@ -269,6 +269,11 @@ int cubalc_host_json_minmax(const char *json, int want_min, cubalc_host_result *
  * r->code = count of numeric fields used. Soft 0 if none. r->str = decimal.
  * Usability: typical score without JSONVALUES+AVG glue. */
 int cubalc_host_json_avg(const char *json, cubalc_host_result *r);
+/* integer median of pure-integer top-level values → r->n.
+ * Sort ascending; even n → lower mid (vals[(n-1)/2]) like MEDIANKV/SYS MEDIAN.
+ * Cap 256 values. Soft 0 if none. r->code = count used. r->str = decimal.
+ * Usability: robust mid score without JSONVALUES+MEDIAN / TOKV+MEDIANKV. */
+int cubalc_host_json_median(const char *json, cubalc_host_result *r);
 /* plate value denoise / clamp (multi-plate duals of THRESHKV / DROPZERO / CAPKV).
  * mode 0 THRESH: keep pure-int keys with value >= limit; drop non-int + below.
  * mode 1 DROPZERO: drop pure-int keys with value == 0; keep non-int + nonzero.

@@ -4874,6 +4874,62 @@ int cubalc_host_json_avg(const char *json, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: multi-plate MEDIANP — integer median of top-level ints (MEDIANKV dual).
+ * Sort ascending; even n → lower mid vals[(n-1)/2]. Cap 256. Soft 0 if none. */
+int cubalc_host_json_median(const char *json, cubalc_host_result *r) {
+  cubalc_host_result vals;
+  const char *p, *line;
+  long arr[256];
+  int n = 0, i;
+  r_clear(r);
+  memset(&vals, 0, sizeof vals);
+  if (cubalc_host_json_values(json, &vals) != 0) {
+    r->n = 0;
+    r->code = 0;
+    r->ok = 1;
+    snprintf(r->str, sizeof r->str, "0");
+    return 0;
+  }
+  p = vals.str;
+  while (*p && n < 256) {
+    char field[CUBALC_HOST_STR_MAX];
+    size_t flen;
+    char *end = NULL;
+    long v;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    flen = (size_t)(p - line);
+    if (flen >= sizeof field) flen = sizeof field - 1;
+    memcpy(field, line, flen);
+    field[flen] = 0;
+    if (!field[0]) continue;
+    v = strtol(field, &end, 10);
+    if (end && end != field && *end == 0)
+      arr[n++] = v;
+  }
+  if (n > 0) {
+    /* insertion sort (same as MEDIANKV) */
+    for (i = 1; i < n; i++) {
+      long key = arr[i];
+      int j = i - 1;
+      while (j >= 0 && arr[j] > key) {
+        arr[j + 1] = arr[j];
+        j--;
+      }
+      arr[j + 1] = key;
+    }
+    r->n = arr[(n - 1) / 2];
+  } else {
+    r->n = 0;
+  }
+  r->code = n;
+  r->ok = 1;
+  snprintf(r->str, sizeof r->str, "%ld", r->n);
+  return 0;
+}
+
 /* Usability: multi-plate THRESHP/DROPZEROP/CAPP — value filter/clamp without bag glue.
  * mode 0: keep pure-int value >= limit (drop non-int + below). r->n=kept r->code=drop.
  * mode 1: drop pure-int value == 0 (keep non-int + nonzero). r->n=kept r->code=drop.

@@ -35814,6 +35814,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"MAXNP", "MAXNP [FROM plate] — max int value → LAST_N · multi-plate · no SYS JSONMAXN"},
       {"MINNP", "MINNP [FROM plate] — min int value → LAST_N · multi-plate · no SYS JSONMINN"},
       {"AVGNP", "AVGNP|MEANP [FROM plate] — mean int value → LAST_N · multi-plate · no SYS JSONAVGN"},
+      {"MEDIANP", "MEDIANP|P50P|MIDP [FROM plate] — median int value → LAST_N · multi-plate · no TOKV+MEDIANKV"},
+      {"P50P", "P50P alias of MEDIANP · robust mid vs AVGNP"},
+      {"MIDP", "MIDP alias of MEDIANP"},
       {"TOPKEYP", "TOPKEYP|MAXKEYP [FROM plate] — key with max int · LAST=key LAST_N=v · multi-plate"},
       {"BOTKEYP", "BOTKEYP|MINKEYP [FROM plate] — key with min int · LAST=key LAST_N=v · multi-plate"},
       {"THRESHP", "THRESHP|KEEPVP [FROM plate] min — keep int value>=min → plate · multi-plate · no TOKV+THRESHKV"},
@@ -41304,13 +41307,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   /* SUMNP|TOTALP [FROM plate] — sum int values → LAST_N (JSONSUMN dual).
-   * MAXNP|MINNP|AVGNP [FROM plate] — max/min/mean int → LAST_N (JSONMAXN dual).
+   * MAXNP|MINNP|AVGNP|MEDIANP [FROM plate] — max/min/mean/median int → LAST_N.
    * TOPKEYP|BOTKEYP [FROM plate] — key with max/min int · LAST=key LAST_N=v.
    * Bare uses PLATE. Soft 0 / empty key if no numeric fields.
-   * Usability: score/FREQ plates without SYS JSONSUMN/JSONTOPKEY glue:
+   * Usability: score/FREQ plates without SYS JSONSUMN/JSONTOPKEY/MEDIANKV glue:
    *   SUMNP FROM scores
    *   TOPKEYP FROM freq
    *   AVGNP FROM PEER
+   *   MEDIANP FROM scores   # robust mid vs AVGNP
    */
   if (kw(&L->cur,"SUMNP") || kw(&L->cur,"TOTALP") || kw(&L->cur,"MSUMNP") ||
       kw(&L->cur,"PLATE_SUM") || kw(&L->cur,"SUMP") ||
@@ -41318,13 +41322,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"MINNP") || kw(&L->cur,"MMINNP") || kw(&L->cur,"PLATE_MINN") ||
       kw(&L->cur,"AVGNP") || kw(&L->cur,"MEANP") || kw(&L->cur,"MAVGNP") ||
       kw(&L->cur,"PLATE_AVGN") ||
+      kw(&L->cur,"MEDIANP") || kw(&L->cur,"P50P") || kw(&L->cur,"MIDP") ||
+      kw(&L->cur,"MMEDIANP") || kw(&L->cur,"PLATE_MEDIAN") || kw(&L->cur,"MEDP") ||
       kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXKEYP") || kw(&L->cur,"MTOPKEYP") ||
       kw(&L->cur,"PLATE_TOPKEY") ||
       kw(&L->cur,"BOTKEYP") || kw(&L->cur,"MINKEYP") || kw(&L->cur,"MBOTKEYP") ||
       kw(&L->cur,"PLATE_BOTKEY")) {
     char plate[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr;
-    int have_from = 0, mode = 0; /* 0 sum 1 max 2 min 3 avg 4 top 5 bot */
+    int have_from = 0, mode = 0; /* 0 sum 1 max 2 min 3 avg 4 top 5 bot 6 median */
     Var *pv;
     char op0[24];
 
@@ -41346,6 +41352,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     else if (strcmp(op0, "BOTKEYP") == 0 || strcmp(op0, "MINKEYP") == 0 ||
              strcmp(op0, "MBOTKEYP") == 0 || strcmp(op0, "PLATE_BOTKEY") == 0)
       mode = 5;
+    else if (strcmp(op0, "MEDIANP") == 0 || strcmp(op0, "P50P") == 0 ||
+             strcmp(op0, "MIDP") == 0 || strcmp(op0, "MMEDIANP") == 0 ||
+             strcmp(op0, "PLATE_MEDIAN") == 0 || strcmp(op0, "MEDP") == 0)
+      mode = 6;
     else
       mode = 0;
 
@@ -41461,6 +41471,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_num(vm, "OK", 0);
         bump(vm); return 1;
       }
+    } else if (mode == 6) {
+      if (cubalc_host_json_median(plate, &hr) != 0) {
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "MEDIANP_N", 0);
+        var_set_num(vm, "MEDIANP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "MEDIANP: fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "MEDIANP: fail");
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
     } else {
       if (cubalc_host_json_sum(plate, &hr) != 0) {
         vm->last_n = 0;
@@ -41492,6 +41513,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "JSONAVGN_N", hr.n);
       var_set_num(vm, "AVGNP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "AVGNP_USED", (long)hr.code);
+    } else if (mode == 6) {
+      var_set_num(vm, "MEDIANP_N", hr.n);
+      var_set_num(vm, "P50P_N", hr.n);
+      var_set_num(vm, "MEDIANP_USED", (long)hr.code);
+      var_set_num(vm, "MEDIANP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "MEDIANP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
     } else {
       var_set_num(vm, "SUMNP_N", hr.n);
       var_set_num(vm, "JSONSUMN_N", hr.n);
@@ -41502,7 +41530,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s n=%ld from=%d\n",
-              mode == 1 ? "maxnp" : mode == 2 ? "minnp" : mode == 3 ? "avgnp" : "sumnp",
+              mode == 1 ? "maxnp" : mode == 2 ? "minnp" : mode == 3 ? "avgnp" :
+              mode == 6 ? "medianp" : "sumnp",
               hr.n, have_from);
     bump(vm); return 1;
   }
