@@ -252,6 +252,7 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate countflat  state/my_agent.json score                # count leaf paths matching needle
 ./out/cubalc plate pathsflat  state/my_agent.json score                # matching leaf paths as bag
 ./out/cubalc plate valsflat   state/my_agent.json score                # matching leaf values as bag
+./out/cubalc plate getflat    state/my_agent.json port OR 8080         # first matching leaf value · OR fallback
 ./out/cubalc plate decflat    state/my_agent.json errs                  # decrement
 ./out/cubalc libs | grep plate
 

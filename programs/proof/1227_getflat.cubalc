@@ -1,0 +1,68 @@
+# GETFLAT / FIRSTFLAT — first matching leaf value by path needle · OR fallback
+# Usability: nest peel without PATHSFLAT+NTH+GETP glue.
+# Note: first match is FLATKV walk order; avoid duplicate path substrings.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"cfg\":{\"port\":9090,\"host\":\"h\"},\"meta\":{\"port\":1},\"label\":\"x\"}"
+
+GETFLAT "port"
+ASSERT OK == 1
+ASSERT GETFLAT_HIT == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "9090"
+ASSERT LAST_N == 1
+SYS EQS GETFLAT_PATH "cfg.port"
+ASSERT LAST_N == 1
+
+GETFLAT "host"
+SYS EQS LAST "h"
+ASSERT LAST_N == 1
+SYS EQS GETFLAT_PATH "cfg.host"
+ASSERT LAST_N == 1
+
+GETFLAT "nope" OR "fallback"
+ASSERT GETFLAT_HIT == 0
+ASSERT GETFLAT_FALLBACK == 1
+SYS EQS LAST "fallback"
+ASSERT LAST_N == 1
+SYS EQS GETFLAT_PATH ""
+ASSERT LAST_N == 1
+
+GETFLAT "nope"
+ASSERT GETFLAT_HIT == 0
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+LET PEER = "{\"agent_role\":\"leader\",\"n\":2}"
+GETFLAT FROM PEER "agent_role" OR "worker"
+ASSERT GETFLAT_FROM == 1
+SYS EQS GETFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT GETFLAT_HIT == 1
+SYS EQS LAST "leader"
+ASSERT LAST_N == 1
+SYS EQS GETFLAT_PATH "agent_role"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"a\":1}"
+GETFLAT FROM PEER "agent_role"
+GETP "a"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+FIRSTFLAT "a"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+ASSERT GETFLAT_HIT == 1
+
+# empty needle → first leaf
+LET PLATE = "{\"z\":7,\"y\":8}"
+GETFLAT ""
+ASSERT GETFLAT_HIT == 1
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1227_getflat: PASS"

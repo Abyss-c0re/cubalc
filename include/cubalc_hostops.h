@@ -349,6 +349,12 @@ int cubalc_host_json_leaf_count(const char *json, const char *needle,
  * Usability: peel GREPFLAT without BEFORE/AFTER · EACH LINE walk. */
 int cubalc_host_json_leaf_match_bag(const char *json, const char *needle, int want_vals,
                                     cubalc_host_result *r);
+/* First leaf whose path contains needle (GETFLAT).
+ * Empty needle → first leaf. Soft miss → r->n=0 · r->str="" · r->err="".
+ * Hit → r->n=1 · r->str=value · r->err=path (path side-channel on success).
+ * Soft always OK. Usability: nest peel by needle without PATHSFLAT+GETP glue. */
+int cubalc_host_json_leaf_get(const char *json, const char *needle,
+                              cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */
