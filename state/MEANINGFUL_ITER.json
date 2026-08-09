@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 584,
-  "version": "1.15.611-usability",
-  "item": "PCTP/SCALEP/ADDP",
-  "item_id": 620,
-  "title": "PCTP|SHAREP · SCALEP|MULP · ADDP|OFFSETP · multi-plate value share/weight/offset · no TOKV+PCTKV/SCALEKV/ADDKV+FROMKVP",
-  "commit": "3cee061e2e62279e69b24bbdf7bf49f34a96980b",
-  "summary": "FREQ plate percent share, scale factor, add delta without bag glue. proof 1161 46/46.",
+  "iter": 585,
+  "version": "1.15.612-usability",
+  "item": "SUMMERGEP/SUBP/DIVP",
+  "item_id": 621,
+  "title": "SUMMERGEP|ADDFREQP|MERGEKP · SUBP|SUBVALP|DELTAVP · DIVP|IDIVP · multi-plate FREQ combine/delta/mean · no TOKV+MERGEKV/DIFFKV/DIVKV",
+  "commit": "943511326d7fb59daaf738185fda93f17f7ec090",
+  "summary": "Peer FREQ sum-merge, a-b delta, idiv mean without bag glue. proof 1162 44/44.",
   "proofs": [
-    "1161_pctp 46/46",
-    "1160_threshp reg 43/43"
+    "1162_summergep 44/44",
+    "1161_pctp reg 46/46"
   ],
-  "when": "2026-08-09T04:26:36Z",
+  "when": "2026-08-09T04:37:13Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3cee061e2e62279e69b24bbdf7bf49f34a96980b",
-  "note": "invented after backlog 619; EVOLVE_PAUSED"
+  "sha": "943511326d7fb59daaf738185fda93f17f7ec090",
+  "note": "invented after backlog 620; EVOLVE_PAUSED"
 }
