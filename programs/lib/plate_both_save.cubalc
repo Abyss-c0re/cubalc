@@ -1,0 +1,17 @@
+# INCLUDE plate_both_save — persist PLATE + PEER one-shot
+# Usability: multi-plate session end without two INCLUDE saves
+#
+#   DEFAULT PLATE_PATH = "state/agent.json"
+#   DEFAULT PEER_PATH = "state/peer.json"
+#   INCLUDE plate_peer_session
+#   # mutate PLATE / PEER …
+#   INCLUDE plate_both_save
+#   # both files written · content vars kept
+#
+# Composes plate_save + plate_peer_save. Override paths before INCLUDE.
+# HOLD_FLASH not required.
+
+DEFAULT PLATE_PATH = "state/agent_plate.json"
+DEFAULT PEER_PATH = "state/peer_plate.json"
+INCLUDE plate_save
+INCLUDE plate_peer_save

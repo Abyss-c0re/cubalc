@@ -47,11 +47,11 @@ See `docs/COOKBOOK.md` §8 (single plate) · §9 (multi-plate PEER).
 INCLUDE plate_peer_session    # PLATE + PEER durable
 SETP FROM PEER "host" "cubeB"
 NEEDP FROM PEER "host"
-INCLUDE plate_peer_save
+INCLUDE plate_both_save       # persist PLATE + PEER one INCLUDE
 # tick: INCLUDE plate_peer_tick
 ```
 
-Shell: `cubalc init --peer` · `cubalc cat plate_peer_session`.
+Shell: `cubalc init --peer` · `cubalc cat plate_peer_session` · `cubalc cat plate_both_save`.
 
 Self-test: `make test` (lang suite + smx).
 

@@ -2115,6 +2115,7 @@ int main(int argc, char **argv) {
       {"plate_peer", "programs/proof/1137_plate_peer.cubalc", "INCLUDE plate_peer multi-plate PEER boot+save"},
       {"init_peer", "programs/proof/1138_init_peer.sh", "cubalc init --peer multi-plate scaffold"},
       {"plate_peer_tick", "programs/proof/1139_plate_peer_tick.cubalc", "INCLUDE plate_peer_tick multi-plate PEER tick"},
+      {"plate_both_save", "programs/proof/1143_plate_both_save.cubalc", "INCLUDE plate_both_save PLATE+PEER one-shot write-back"},
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
@@ -3581,8 +3582,7 @@ int main(int argc, char **argv) {
       "NEEDP FROM PEER \"agent\" \"host\" \"n\"\n"
       "DUMPP\n"
       "DUMPP FROM PEER\n"
-      "INCLUDE plate_save\n"
-      "INCLUDE plate_peer_save\n"
+      "INCLUDE plate_both_save\n"
       "PRINT \"peer init ok\" OK LAST_N\n";
     const char *body = body_boot;
     for (i = 2; i < argc; i++) {
@@ -3692,6 +3692,7 @@ int main(int argc, char **argv) {
       {"plate_peer_save.cubalc", "SAVEP FROM PEER PEER_PATH write-back (dual of plate_peer)"},
       {"plate_peer_session.cubalc", "plate_session + plate_peer one INCLUDE (PLATE + PEER)"},
       {"plate_peer_tick.cubalc", "SEEDP+INCP+ts+SAVEP PEER tick (dual of plate_tick)"},
+      {"plate_both_save.cubalc", "plate_save + plate_peer_save one INCLUDE (multi-plate write-back)"},
       {"peer_decide.cubalc", "FOLDBITS/SETDIGIT peer0 then DECIDE brain"},
       {"mesh_exchange.cubalc", "SMX KEY + dual EXCHANGE peer0/peer1"},
     };
@@ -3942,6 +3943,8 @@ int main(int argc, char **argv) {
        "INCLUDE plate_peer SEEDP INTO PEER multi-plate state"},
       {"programs/lib/plate_peer_save.cubalc", "plate",
        "INCLUDE plate_peer_save SAVEP FROM PEER write-back"},
+      {"programs/lib/plate_both_save.cubalc", "plate",
+       "INCLUDE plate_both_save PLATE+PEER dual write-back"},
       {"programs/proof/587_agent_boot.cubalc", "agent",
        "agent_boot stdlib preamble proof"},
       {"programs/proof/1099_plate_boot.cubalc", "plate_boot",

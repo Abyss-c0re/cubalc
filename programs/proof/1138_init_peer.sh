@@ -11,7 +11,7 @@ echo "$OUT" | grep -q '"template":"plate_peer_session"'
 echo "$OUT" | grep -q '"ok":true'
 grep -q 'INCLUDE plate_peer_session' "$ST/mesh.cubalc"
 grep -q 'SETP FROM PEER' "$ST/mesh.cubalc"
-grep -q 'plate_peer_save' "$ST/mesh.cubalc"
+grep -q 'plate_both_save' "$ST/mesh.cubalc"
 grep -q 'NEEDP FROM PEER' "$ST/mesh.cubalc"
 # run under private state so PEER/PLATE paths resolve under ST
 mkdir -p "$ST/state"

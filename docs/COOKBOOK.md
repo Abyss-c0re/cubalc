@@ -244,8 +244,8 @@ NEEDP FROM PEER "agent" "host"
 DUMPP FROM PEER
 FILLP FROM PEER "peer={{agent}}@{{host}}"
 
-INCLUDE plate_save                     # write PLATE
-INCLUDE plate_peer_save                # write PEER
+INCLUDE plate_both_save                # write PLATE + PEER one INCLUDE
+# or separately: plate_save · plate_peer_save
 # or one-shot peer tick:
 # INCLUDE plate_peer_tick              # seed + bump + ts + save PEER
 ```
@@ -260,6 +260,6 @@ Top-level disk plane (no `SYS`):
 
 Mutate/probe (multi-plate `FROM`): `SETP`/`GETP`/`INCP`/`MERGEP`/`NEEDP`/`HASP`/`KEYSP`/`DUMPP`/`FILLP`/`FILLPFILE`.
 
-Libs: `plate_peer` · `plate_peer_save` · `plate_peer_session` · `plate_peer_tick`.  
-Proofs: `1137_plate_peer` · `1138_init_peer.sh` · `1139_plate_peer_tick` · `1130_setp_from` · `1136_loadp`.
+Libs: `plate_peer` · `plate_peer_save` · `plate_peer_session` · `plate_peer_tick` · `plate_both_save`.  
+Proofs: `1137_plate_peer` · `1138_init_peer.sh` · `1139_plate_peer_tick` · `1143_plate_both_save` · `1130_setp_from` · `1136_loadp`.
 

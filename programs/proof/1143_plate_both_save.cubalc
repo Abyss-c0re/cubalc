@@ -1,0 +1,67 @@
+# plate_both_save — one INCLUDE persists PLATE + PEER
+# Usability: multi-plate session end without dual INCLUDE plate_save + plate_peer_save
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_plate_both_save"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET apath = LAST
+SYS JOIN dir "peer.json"
+LET ppath = LAST
+SYS RM apath
+SYS RM ppath
+
+DEFAULT PLATE_PATH = apath
+DEFAULT PLATE_SEED = "{\"agent\":\"plate-agent\",\"n\":1}"
+DEFAULT PEER_PATH = ppath
+DEFAULT PEER_SEED = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":0}"
+INCLUDE plate_peer_session
+ASSERT OK == 1
+
+SETP "status" "ready"
+INCP "n"
+SETP FROM PEER "host" "cubeC"
+INCP FROM PEER "n"
+NEEDP "n" "status"
+NEEDP FROM PEER "agent" "host" "n"
+
+INCLUDE plate_both_save
+ASSERT OK == 1
+ASSERT SAVEPLATE_OK == 1
+ASSERT SAVEP_FROM == 1
+SYS EQS SAVEP_SRC "PEER"
+ASSERT LAST_N == 1
+
+# durable reload both
+LOADP INTO a2 apath
+GETP FROM a2 "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM a2
+ASSERT LAST_N == 2
+
+LOADP INTO p2 ppath
+GETP FROM p2 "host"
+SYS EQS LAST "cubeC"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM p2
+ASSERT LAST_N == 1
+
+# plate_both_save again after second mutate
+SETP "status" "done"
+SETP FROM PEER "status" "acked"
+INCLUDE plate_both_save
+LOADP INTO a3 apath
+GETP FROM a3 "status"
+SYS EQS LAST "done"
+ASSERT LAST_N == 1
+LOADP INTO p3 ppath
+GETP FROM p3 "status"
+SYS EQS LAST "acked"
+ASSERT LAST_N == 1
+
+PRINT "plate_both_save soft ok"
