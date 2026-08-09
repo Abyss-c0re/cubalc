@@ -312,6 +312,13 @@ int cubalc_host_json_leaf_inc(const char *json, const char *needle, long delta,
  * without FLATKV+GREPFLAT+AFTER+SUM glue. */
 int cubalc_host_json_leaf_sum(const char *json, const char *needle,
                               cubalc_host_result *r);
+/* Extreme pure-int leaf by path needle (TOPPATHFLAT / BOTPATHFLAT).
+ * want_min=0 → max (TOP) · want_min=1 → min (BOT). First path wins ties.
+ * Empty needle → all pure-int leaves. r->str = winning path · r->n = value ·
+ * r->code = count of pure-int leaves considered. Soft empty → str="" n=0.
+ * Usability: locate dominant/min nest counter without GREPFLAT+EACH walk. */
+int cubalc_host_json_leaf_toppath(const char *json, const char *needle, int want_min,
+                                  cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

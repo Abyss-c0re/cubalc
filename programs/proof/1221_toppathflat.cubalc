@@ -1,0 +1,72 @@
+# TOPPATHFLAT / BOTPATHFLAT — path of max/min pure-int leaf by path needle
+# Usability: locate dominant/min nest counter without GREPFLAT+EACH walk.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"scores\":{\"a\":10,\"b\":30,\"c\":5},\"label\":\"x\",\"meta\":{\"scores\":{\"z\":40}}}"
+
+TOPPATHFLAT "scores"
+ASSERT OK == 1
+ASSERT TOPPATHFLAT_V == 40
+ASSERT TOPPATHFLAT_N == 4
+SYS EQS LAST "meta.scores.z"
+ASSERT LAST_N == 1
+
+BOTPATHFLAT "scores"
+ASSERT BOTPATHFLAT_V == 5
+ASSERT BOTPATHFLAT_N == 4
+SYS EQS LAST "scores.c"
+ASSERT LAST_N == 1
+
+# empty needle — max of all ints 40, min of all is 5
+TOPPATHFLAT ""
+ASSERT TOPPATHFLAT_V == 40
+SYS EQS LAST "meta.scores.z"
+ASSERT LAST_N == 1
+
+BOTPATHFLAT ""
+ASSERT BOTPATHFLAT_V == 5
+SYS EQS LAST "scores.c"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"west\":{\"latency\":90},\"east\":{\"latency\":40},\"name\":\"n\"}"
+TOPPATHFLAT FROM PEER "latency"
+ASSERT TOPPATHFLAT_FROM == 1
+SYS EQS TOPPATHFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT TOPPATHFLAT_V == 90
+SYS EQS LAST "west.latency"
+ASSERT LAST_N == 1
+
+BOTPATHFLAT FROM PEER "latency"
+ASSERT BOTPATHFLAT_V == 40
+SYS EQS LAST "east.latency"
+ASSERT LAST_N == 1
+
+# plate unchanged (read-only)
+LET PLATE = "{\"x\":1,\"y\":2}"
+TOPPATHFLAT FROM PEER "latency"
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# no match
+TOPPATHFLAT "nope"
+ASSERT TOPPATHFLAT_N == 0
+ASSERT TOPPATHFLAT_V == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# MAXPATHFLAT / MINPATHFLAT aliases
+LET PLATE = "{\"a\":3,\"b\":7,\"c\":1}"
+MAXPATHFLAT ""
+ASSERT TOPPATHFLAT_V == 7
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+MINPATHFLAT ""
+ASSERT BOTPATHFLAT_V == 1
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1221_toppathflat: PASS"

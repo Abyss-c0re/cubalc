@@ -2194,6 +2194,8 @@ int main(int argc, char **argv) {
       {"cli_plate_incflat", "programs/proof/1219_cli_plate_incflat.sh", "cubalc plate incflat INCFLAT dual"},
       {"sumflat", "programs/proof/1220_sumflat.cubalc", "SUMFLAT/TOTALFLAT sum pure-int leaves by path needle multi-plate"},
       {"cli_plate_sumflat", "programs/proof/1220_cli_plate_sumflat.sh", "cubalc plate sumflat SUMFLAT dual"},
+      {"toppathflat", "programs/proof/1221_toppathflat.cubalc", "TOPPATHFLAT/BOTPATHFLAT extreme pure-int leaf path multi-plate"},
+      {"cli_plate_toppathflat", "programs/proof/1221_cli_plate_toppathflat.sh", "cubalc plate toppath|botpath TOPPATHFLAT dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2494,6 +2496,9 @@ int main(int argc, char **argv) {
       {"BUMPFLAT", "flow", "BUMPFLAT alias of INCFLAT"},
       {"SUMFLAT", "flow", "SUMFLAT|TOTALFLAT [FROM plate] [needle] — sum pure-int leaves by path needle → LAST_N · read-only"},
       {"TOTALFLAT", "flow", "TOTALFLAT alias of SUMFLAT"},
+      {"TOPPATHFLAT", "flow", "TOPPATHFLAT|MAXPATHFLAT [FROM plate] [needle] — path of max pure-int leaf → LAST · value LAST_N"},
+      {"BOTPATHFLAT", "flow", "BOTPATHFLAT|MINPATHFLAT [FROM plate] [needle] — path of min pure-int leaf → LAST · value LAST_N"},
+      {"MAXPATHFLAT", "flow", "MAXPATHFLAT alias of TOPPATHFLAT"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4977,6 +4982,7 @@ int main(int argc, char **argv) {
               "       cubalc plate setflat <path> <needle> <value>  # SETFLAT dual · bulk leaf value set\n"
               "       cubalc plate incflat <path> <needle> [delta]  # INCFLAT dual · bump pure-int leaves\n"
               "       cubalc plate sumflat <path> [needle]  # SUMFLAT dual · sum pure-int leaves by path needle\n"
+              "       cubalc plate toppath|botpath <path> [needle]  # TOPPATHFLAT dual · path of max/min pure-int leaf\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -5008,7 +5014,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"toppath\",\"botpath\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5090,6 +5096,10 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "bulkinc") == 0 || strcmp(argv[2], "decflat") == 0 ||
         strcmp(argv[2], "sumflat") == 0 || strcmp(argv[2], "totalflat") == 0 ||
         strcmp(argv[2], "leafsum") == 0 || strcmp(argv[2], "flattotal") == 0 ||
+        strcmp(argv[2], "toppath") == 0 || strcmp(argv[2], "toppathflat") == 0 ||
+        strcmp(argv[2], "maxpath") == 0 || strcmp(argv[2], "maxpathflat") == 0 ||
+        strcmp(argv[2], "botpath") == 0 || strcmp(argv[2], "botpathflat") == 0 ||
+        strcmp(argv[2], "minpath") == 0 || strcmp(argv[2], "minpathflat") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5272,6 +5282,12 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "totalflat") == 0 || strcmp(op, "leafsum") == 0 ||
                strcmp(op, "flattotal") == 0 || strcmp(op, "sumleaf") == 0)
         op = "sumflat";
+      else if (strcmp(op, "toppathflat") == 0 || strcmp(op, "maxpath") == 0 ||
+               strcmp(op, "maxpathflat") == 0 || strcmp(op, "topflat") == 0)
+        op = "toppath";
+      else if (strcmp(op, "botpathflat") == 0 || strcmp(op, "minpath") == 0 ||
+               strcmp(op, "minpathflat") == 0 || strcmp(op, "botflat") == 0)
+        op = "botpath";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -5965,6 +5981,36 @@ int main(int argc, char **argv) {
              "\"note\":\"SUMFLAT dual · sum pure-int leaves by path needle (read-only)\"}\n",
              path, needle, file_hit ? "true" : "false",
              pr.n, (long)pr.code, pr.n, CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+    /* toppath|botpath [needle] — TOPPATHFLAT/BOTPATHFLAT dual (read-only).
+     *   cubalc plate toppath agent.json score
+     *   cubalc plate botpath agent.json latency
+     * path = winning leaf path · n = value · count = pure-int leaves considered. */
+    if (strcmp(op, "toppath") == 0 || strcmp(op, "botpath") == 0) {
+      const char *needle = "";
+      cubalc_host_result pr;
+      int want_min = (strcmp(op, "botpath") == 0);
+
+      if (ai < argc && argv[ai])
+        needle = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_toppath(plate, needle, want_min, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               op, path, pr.err[0] ? pr.err : "toppath fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"%s\",\"path\":\"%s\",\"needle\":\"%s\","
+             "\"file\":%s,\"leaf\":\"%s\",\"n\":%ld,\"count\":%ld,\"version\":\"%s\","
+             "\"note\":\"%s dual · path of %s pure-int leaf by needle (read-only)\"}\n",
+             op, path, needle, file_hit ? "true" : "false",
+             pr.str, pr.n, (long)pr.code, CUBALC_LANG_VERSION,
+             want_min ? "BOTPATHFLAT" : "TOPPATHFLAT",
+             want_min ? "min" : "max");
       return 0;
     }
 

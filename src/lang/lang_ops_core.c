@@ -27439,6 +27439,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"SETFLAT") || kw(&L->cur,"MAPFLAT") || kw(&L->cur,"SETLEAFP") ||
              kw(&L->cur,"INCFLAT") || kw(&L->cur,"BUMPFLAT") || kw(&L->cur,"ADDFLAT") ||
              kw(&L->cur,"SUMFLAT") || kw(&L->cur,"TOTALFLAT") || kw(&L->cur,"LEAFSUM") ||
+             kw(&L->cur,"TOPPATHFLAT") || kw(&L->cur,"BOTPATHFLAT") || kw(&L->cur,"MAXPATHFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35834,6 +35835,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"BUMPFLAT", "BUMPFLAT alias of INCFLAT"},
       {"SUMFLAT", "SUMFLAT|TOTALFLAT [FROM plate] [needle] — sum pure-int leaves matching path needle → LAST_N · multi-plate · read-only"},
       {"TOTALFLAT", "TOTALFLAT alias of SUMFLAT"},
+      {"TOPPATHFLAT", "TOPPATHFLAT|MAXPATHFLAT [FROM plate] [needle] — path of max pure-int leaf → LAST · value LAST_N · multi-plate"},
+      {"BOTPATHFLAT", "BOTPATHFLAT|MINPATHFLAT [FROM plate] [needle] — path of min pure-int leaf → LAST · value LAST_N · multi-plate"},
+      {"MAXPATHFLAT", "MAXPATHFLAT alias of TOPPATHFLAT"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -44779,6 +44783,161 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# sumflat sum=%ld n=%ld needle=%s from=%d\n",
               hr.n, (long)hr.code, needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* TOPPATHFLAT|MAXPATHFLAT [FROM plate] [needle]
+   * BOTPATHFLAT|MINPATHFLAT [FROM plate] [needle]
+   * Path of max/min pure-int leaf matching needle → LAST; value → LAST_N.
+   * Empty needle → all pure-int. Soft miss → LAST="" LAST_N=0. First path wins ties.
+   * Usability: locate dominant/min nest counter without GREPFLAT+EACH walk:
+   *   TOPPATHFLAT "score"
+   *   BOTPATHFLAT "latency"
+   *   TOPPATHFLAT FROM PEER "stats"
+   */
+  if (kw(&L->cur,"TOPPATHFLAT") || kw(&L->cur,"MAXPATHFLAT") || kw(&L->cur,"TOPFLAT") ||
+      kw(&L->cur,"MTOPPATHFLAT") || kw(&L->cur,"PLATE_TOPPATH") ||
+      kw(&L->cur,"BOTPATHFLAT") || kw(&L->cur,"MINPATHFLAT") || kw(&L->cur,"BOTFLAT") ||
+      kw(&L->cur,"MBOTPATHFLAT") || kw(&L->cur,"PLATE_BOTPATH")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, want_min = 0;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "BOTPATHFLAT") == 0 || strcmp(op0, "MINPATHFLAT") == 0 ||
+        strcmp(op0, "BOTFLAT") == 0 || strcmp(op0, "MBOTPATHFLAT") == 0 ||
+        strcmp(op0, "PLATE_BOTPATH") == 0)
+      want_min = 1;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(needle, sizeof needle, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"SETP") && !kw(&L->cur,"INCP") &&
+               !kw(&L->cur,"SUMFLAT") && !kw(&L->cur,"TOPPATHFLAT") && !kw(&L->cur,"BOTPATHFLAT")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_toppath(plate, needle, want_min, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "TOPPATHFLAT: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "TOPPATHFLAT: fail");
+      var_set_num(vm, "TOPPATHFLAT_N", 0);
+      var_set_str(vm, "LAST", "");
+      var_set_num(vm, "LAST_N", 0);
+      bump(vm); return 1;
+    }
+
+    /* LAST = winning path · LAST_N = extreme value (TOPKEYP dual for deep leaves) */
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    if (want_min) {
+      var_set_str(vm, "BOTPATHFLAT", hr.str);
+      var_set_str(vm, "MINPATHFLAT", hr.str);
+      var_set_num(vm, "BOTPATHFLAT_N", (long)hr.code);
+      var_set_num(vm, "BOTPATHFLAT_V", hr.n);
+      var_set_str(vm, "BOTPATHFLAT_NEEDLE", needle);
+      var_set_num(vm, "BOTPATHFLAT_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "BOTPATHFLAT_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    } else {
+      var_set_str(vm, "TOPPATHFLAT", hr.str);
+      var_set_str(vm, "MAXPATHFLAT", hr.str);
+      var_set_num(vm, "TOPPATHFLAT_N", (long)hr.code);
+      var_set_num(vm, "TOPPATHFLAT_V", hr.n);
+      var_set_str(vm, "TOPPATHFLAT_NEEDLE", needle);
+      var_set_num(vm, "TOPPATHFLAT_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "TOPPATHFLAT_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s path=%s v=%ld n=%ld needle=%s from=%d\n",
+              want_min ? "botpathflat" : "toppathflat",
+              hr.str[0] ? hr.str : "(none)", hr.n, (long)hr.code,
+              needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 
