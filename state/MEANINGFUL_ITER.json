@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 591,
-  "version": "1.15.618-usability",
-  "item": "cubalc plate sum/avg/median/top/bot",
-  "item_id": 627,
-  "title": "cubalc plate sum|avg|median|top|bot · CLI duals of SUMNP/AVGNP/MEDIANP/TOPNP/BOTNP · agent one-shots without .cubalc",
-  "commit": "ac2febf855b5de41f49cad4e2ad4a9e64cf6797f",
-  "summary": "CLI score/FREQ aggregates and top/bot N without .cubalc. proof 1168.",
+  "iter": 592,
+  "version": "1.15.619-usability",
+  "item": "EACH KEY",
+  "item_id": 628,
+  "title": "EACH KEY|KEYS|PLATEKEY OF|FROM plate · walk JSON plate keys · KEY+VALUE bound · no KEYSP+EACH LINE",
+  "commit": "325a038659020798fa6b8fcbe8fad683ee68c840",
+  "summary": "Plate key walk binds KEY and VALUE without KEYSP bag glue. proof 1169 22/22.",
   "proofs": [
-    "1168_cli_plate_agg ok",
-    "1165_medianp reg 18/18"
+    "1169_each_key 22/22",
+    "1168_cli_plate_agg reg ok"
   ],
-  "when": "2026-08-09T05:36:04Z",
+  "when": "2026-08-09T05:47:33Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ac2febf855b5de41f49cad4e2ad4a9e64cf6797f",
-  "note": "invented after backlog 626; EVOLVE_PAUSED"
+  "sha": "325a038659020798fa6b8fcbe8fad683ee68c840",
+  "note": "invented after backlog 627; EVOLVE_PAUSED"
 }
