@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 265,
-  "program": "programs/realworld/svc_each_flat_walk_board.cubalc",
-  "theme": "EACH FLAT/LEAF walk + NTHFLAT inventory",
-  "version": "1.15.690-usability",
+  "iter": 266,
+  "program": "programs/realworld/svc_freqflat_status_board.cubalc",
+  "theme": "FREQFLAT/HISTFLAT nest status histograms",
+  "version": "1.15.691-usability",
   "pass": true,
-  "prior_note": "iter 264 NTHFLATN/LASTFLAT; this iter first realworld 1240 EACH FLAT + 1239 NTHFLAT",
+  "prior_note": "iter 265 EACH FLAT; this iter first realworld 1241 FREQFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed role/endpoint inventory",
+      "cmd": "seed multi-role/endpoint plate",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "walk",
-      "cmd": "EACH FLAT role+all leaves",
+      "name": "freq",
+      "cmd": "FREQFLAT role+endpoint",
       "ok": true,
-      "note": "walk"
+      "note": "freq"
     },
     {
-      "name": "nth",
-      "cmd": "NTHFLAT role/endpoint+OOR",
+      "name": "hist",
+      "cmd": "empty needle all-leaf hist",
       "ok": true,
-      "note": "nth"
+      "note": "hist"
     },
     {
       "name": "peer",
-      "cmd": "EACH LEAF FROM PEER names",
+      "cmd": "FROM PEER status hist",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost empty walk soft",
+      "cmd": "ghost miss empty bag",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "role+endpoint admit",
+      "cmd": "worker majority admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "INDEXFLAT probe peels",
+      "cmd": "COUNTVALFLAT alias",
       "ok": true,
       "note": "probe"
     },
@@ -59,7 +59,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "460/510 pre-existing cli fails; nthflat PASS 22; each_flat proof PASS 37 (not yet in selftest registry)"
+      "note": "461/513 pre-existing cli fails; freqflat PASS 30"
     }
   ],
   "weaknesses": [
@@ -3294,6 +3294,30 @@
       "title": "NTHFLAT host collides with top-level host site field",
       "detail": "Plate host:cubeE plus cfg.host/other.host \u2192 NTH 0 is site host string. Renamed endpoints. Substring needles need unique leaf segments for inventory.",
       "repro": "NTHFLAT host 0 with top-level host \u2192 site name not endpoint"
+    },
+    {
+      "id": "W405",
+      "severity": "med",
+      "area": "lang|freqflat",
+      "title": "Empty-needle FREQFLAT inflates counts with agent_job/schema string leaves",
+      "detail": "FREQFLAT \"\" totals all leaves including agent_job=worker \u2192 worker:3 not worker:2 from role-only. Digests must scope needles (role, status) or tolerate site/schema pollution. SYS HAS worker: safer than HASLINE worker:2 on full plate.",
+      "repro": "FREQFLAT \"\" with agent_job worker + two role worker \u2192 worker:3"
+    },
+    {
+      "id": "W406",
+      "severity": "med",
+      "area": "lang|specials",
+      "title": "FREQFLAT_TOTAL dark-reads 0 after COUNTVALFLAT bag capture in large boards",
+      "detail": "COUNTVALFLAT logged total=3 uniques=2 but LET total_n=FREQFLAT_TOTAL later saw 0. Bag HASLINE x:2/y:1 worked. Prefer LAST bag + SYS LINES/HASLINE over delayed specials (W377 class).",
+      "repro": "COUNTVALFLAT v; LET t=FREQFLAT_TOTAL \u2192 0 while bag has 2 lines"
+    },
+    {
+      "id": "W407",
+      "severity": "low",
+      "area": "lang|freqflat",
+      "title": "FREQFLAT/HISTFLAT/COUNTVALFLAT aliases solid for scoped needles",
+      "detail": "Scoped FREQFLAT role/status/endpoint and FROM PEER status digests work well for canary health. Soft miss returns empty LAST + total 0.",
+      "repro": "FREQFLAT role \u2192 worker:2 leader:1"
     }
   ],
   "workarounds": [
@@ -3302,8 +3326,6 @@
     "Curated peer seeds for stable DIFFFLAT lines"
   ],
   "language_gaps": [
-    "NEEDFLAT fail-fast exit_code policy inconsistent across run/JSON/CLI",
-    "GETFLATN pure-int only \u2014 pair with GETFLAT for strings",
     "Need segment-bound needles for counter digests",
     "No combined MEDIAN+AVG spike-report form",
     "Document HASFLAT vs HASFLATN twin pairing for agents",
@@ -3313,7 +3335,9 @@
     "GETP bare key may resolve nested last match not top-level",
     "NTHFLATN indices require stable plate key order contracts",
     "EACH FLAT specials/PATH/VALUE need hardened large-board binding",
-    "Register 1240 each_flat in selftest suite"
+    "Register 1240 each_flat in selftest suite",
+    "Scope FREQFLAT needles tightly for digests",
+    "Capture FREQ specials immediately after op"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3340,8 +3364,10 @@
     "NTHFLATN port index depends on meta-before-cfg walk order",
     "EACH_N dark; used n_walk counters",
     "SYS EQS VALUE/PATH fragile in EACH FROM PEER; used PATH bind compares",
-    "Renamed host\u2192endpoint to avoid top-level host collision"
+    "Renamed host\u2192endpoint to avoid top-level host collision",
+    "Empty FREQFLAT worker count polluted by agent_job",
+    "FREQFLAT_TOTAL dark after COUNTVALFLAT; used bag HASLINE"
   ],
-  "commit": "175e537a",
-  "ts": "2026-08-09T18:59:25Z"
+  "commit": "a7536a82",
+  "ts": "2026-08-09T19:19:41Z"
 }
