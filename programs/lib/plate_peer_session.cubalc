@@ -1,0 +1,14 @@
+# INCLUDE plate_peer_session — agent PLATE + multi-plate PEER one-shot
+# Usability: version floor + durable PLATE + PEER without three INCLUDEs
+#
+#   DEFAULT PLATE_PATH = "state/agent.json"
+#   DEFAULT PLATE_SEED = "{\"n\":0}"
+#   DEFAULT PEER_PATH = "state/peer.json"
+#   DEFAULT PEER_SEED = "{\"agent\":\"\"}"
+#   INCLUDE plate_peer_session
+#   # VERSION · PLATE · PEER ready · SETP / SETP FROM PEER · plate_save / plate_peer_save
+#
+# Composes plate_session + plate_peer. HOLD_FLASH not required.
+
+INCLUDE plate_session
+INCLUDE plate_peer
