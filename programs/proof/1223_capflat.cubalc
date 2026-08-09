@@ -1,0 +1,84 @@
+# CAPFLAT / CLAMPFLAT — clamp pure-int leaves to max by path needle
+# Usability: nest score ceiling without multi GETP+SETP / CAPP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"score\":{\"a\":50,\"b\":150,\"c\":100},\"label\":\"x\",\"meta\":{\"score\":200,\"role\":\"w\"}}"
+
+CAPFLAT "score" 100
+ASSERT OK == 1
+ASSERT CAPFLAT_N == 2
+ASSERT CAPFLAT_MATCH == 4
+ASSERT CAPFLAT_MAX == 100
+GETP "score.a"
+SYS EQS LAST "50"
+ASSERT LAST_N == 1
+GETP "score.b"
+SYS EQS LAST "100"
+ASSERT LAST_N == 1
+GETP "score.c"
+SYS EQS LAST "100"
+ASSERT LAST_N == 1
+GETP "meta.score"
+SYS EQS LAST "100"
+ASSERT LAST_N == 1
+GETP "meta.role"
+SYS EQS LAST "w"
+ASSERT LAST_N == 1
+GETP "label"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# empty needle — CAPFLAT 10
+LET PLATE = "{\"a\":5,\"b\":20,\"c\":10,\"s\":\"z\"}"
+CAPFLAT 10
+ASSERT CAPFLAT_N == 1
+ASSERT CAPFLAT_MATCH == 3
+GETP "a"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+GETP "b"
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+GETP "c"
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+GETP "s"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"latency\":{\"west\":900,\"east\":40},\"n\":1}"
+CAPFLAT FROM PEER "latency" 100
+ASSERT CAPFLAT_FROM == 1
+SYS EQS CAPFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT CAPFLAT_N == 1
+ASSERT CAPFLAT_MATCH == 2
+LET PLATE = PEER
+GETP "latency.west"
+SYS EQS LAST "100"
+ASSERT LAST_N == 1
+GETP "latency.east"
+SYS EQS LAST "40"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# no caps needed
+LET PLATE = "{\"score\":{\"a\":1}}"
+CAPFLAT "score" 100
+ASSERT CAPFLAT_N == 0
+ASSERT CAPFLAT_MATCH == 1
+GETP "score.a"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+CLAMPFLAT "score" 0
+ASSERT CAPFLAT_N == 1
+GETP "score.a"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1223_capflat: PASS"

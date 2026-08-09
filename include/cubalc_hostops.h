@@ -326,6 +326,12 @@ int cubalc_host_json_leaf_toppath(const char *json, const char *needle, int want
  * Soft always OK. Usability: nest FREQ denoise without GETOBJ+THRESHP+SETOBJ. */
 int cubalc_host_json_leaf_thresh(const char *json, const char *needle, long minv,
                                  int drop_zero_only, cubalc_host_result *r);
+/* Clamp pure-int leaves value > max down to max among path-needle matches (CAPFLAT).
+ * Non-int leaves kept. Empty needle → all pure-int. Rebuilds plate.
+ * r->str = new plate · r->n = leaves capped · r->code = pure-int matches considered.
+ * Soft always OK. Usability: nest score ceiling without multi GETP+SETP/CAPP glue. */
+int cubalc_host_json_leaf_cap(const char *json, const char *needle, long maxv,
+                              cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */
