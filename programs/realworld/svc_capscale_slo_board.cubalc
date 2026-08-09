@@ -1,0 +1,990 @@
+# svc_capscale_slo_board.cubalc — CAPFLAT score ceiling + SCALEFLAT weight scale
+#
+# Real use: mesh SLO agents clamp outlier latency/score leaves to a ceiling,
+# then scale weight factors for canary handoff without multi GETP+arith+SETP.
+# First realworld of proofs 1223 CAPFLAT/CLAMPFLAT + 1224 SCALEFLAT/MULFLAT.
+#
+#   CAPFLAT|CLAMPFLAT [FROM plate] needle max · SCALEFLAT|MULFLAT needle factor
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_scs_$$
+#   ./out/cubalc run programs/realworld/svc_capscale_slo_board.cubalc boot
+#   ./out/cubalc run ... cap|scale|peer|soft|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SCS_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_SCS_REQUIRE
+#
+# Edges:
+#   needle substring false-friend (score vs meta.score); soft no-match;
+#   factor 0 zeros; pure-int only; LAST_N dual; WRITE NL; NUM softens REQUIRE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_capscale_slo_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_capscale_slo -- boot|cap|scale|peer|soft|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeS"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SCS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SCS_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+LET bag_n = 0
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET body = ""
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET soft_ok = 0
+LET gate_ok = 0
+LET keep_n = 0
+LET drop_n = 0
+LET match_n = 0
+LET path_val = ""
+
+ONEOF ACTION "boot", "cap", "scale", "peer", "soft", "gate", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "cap" THEN
+    LET op = "cap"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — scores over ceiling, weights, latency; peer mesh
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-capscale\",\"schema\":\"cubalc.svc_capscale_slo.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"score\":{\"a\":50,\"b\":150,\"c\":100},\"meta\":{\"score\":200,\"role\":\"w\"},\"weight\":{\"canary\":2,\"stable\":5},\"lat\":{\"west\":900,\"east\":40},\"label\":\"slo\"}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"schema\":\"cubalc.svc_capscale_slo.v1\",\"host\":\"" host_s "\",\"score\":{\"x\":30,\"y\":250},\"weight\":{\"edge\":4},\"lat\":{\"north\":120},\"tag\":\"t\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  GETP "score.b"
+  SYS EQS LAST "150"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "meta.score"
+  SYS EQS LAST "200"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "weight.canary"
+  SYS EQS LAST "2"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "lat.west"
+  SYS EQS LAST "900"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "slo"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "boot ok"
+            LET admit_n = 1
+            LET take_n = 1
+            LET keep_n = 3
+          ELSE
+            LET miss = 1
+            LET note_msg = "boot label"
+            FAIL "boot label"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "boot lat.west"
+          FAIL "boot lat.west"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot weight"
+        FAIL "boot weight"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot meta.score"
+      FAIL "boot meta.score"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score.b"
+    FAIL "boot score.b"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit load_hit soft_ok has_n note_msg
+  CLEAR_ERR
+END
+
+# cap — CAPFLAT score 100: clamp b/meta, leave a, false-friend meta.score
+SYS EQS op "cap"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  CAPFLAT "score" 100
+  LET keep_n = CAPFLAT_N
+  LET match_n = CAPFLAT_MATCH
+  CLEAR_ERR
+  CAPFLAT "lat" 100
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  GETP "score.a"
+  SYS EQS LAST "50"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "score.b"
+  SYS EQS LAST "100"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "score.c"
+  SYS EQS LAST "100"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  # false friend: meta.score also matched by needle score
+  GETP "meta.score"
+  SYS EQS LAST "100"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "meta.role"
+  SYS EQS LAST "w"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  GETP "lat.west"
+  SYS EQS LAST "100"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  GETP "lat.east"
+  SYS EQS LAST "40"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "slo"
+  LET drop_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 1 THEN
+            IF take_n == 1 THEN
+              IF gate_ok == 1 THEN
+                IF drop_n == 1 THEN
+                  LET hit = 1
+                  LET note_msg = "cap ok"
+                  LET admit_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "cap label"
+                  FAIL "cap label"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "cap lat.east"
+                FAIL "cap lat.east"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "cap lat.west"
+              FAIL "cap lat.west"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "cap meta.role"
+            FAIL "cap meta.role"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "cap meta.score"
+          FAIL "cap meta.score"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "cap score.c"
+        FAIL "cap score.c"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "cap score.b"
+      FAIL "cap score.b"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "cap score.a"
+    FAIL "cap score.a"
+    CLEAR_ERR
+  END
+  SYS STR keep_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "cap:" w_s ":cp"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "cap:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n keep_n match_n peel_hit has_n note_msg
+  CLEAR_ERR
+END
+
+# scale — SCALEFLAT weight factor 3 (canary/stable); strings survive
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SCALEFLAT "weight" 3
+  LET keep_n = SCALEFLAT_N
+  LET match_n = SCALEFLAT_MATCH
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  GETP "weight.canary"
+  SYS EQS LAST "6"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "weight.stable"
+  SYS EQS LAST "15"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # score unchanged by weight needle
+  GETP "score.a"
+  SYS EQS LAST "50"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "slo"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "meta.role"
+  SYS EQS LAST "w"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 1 THEN
+            IF keep_n == 2 THEN
+              LET hit = 1
+              LET note_msg = "scale ok"
+              LET admit_n = 1
+              LET take_n = 2
+            ELSE
+              LET miss = 1
+              LET note_msg = "scale n"
+              FAIL "scale n"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "scale meta.role"
+            FAIL "scale meta.role"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "scale label"
+          FAIL "scale label"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "scale score leak"
+        FAIL "scale score leak"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "scale stable"
+      FAIL "scale stable"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale canary"
+    FAIL "scale canary"
+    CLEAR_ERR
+  END
+  SYS STR keep_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "scale:" w_s ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n keep_n match_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# peer — CAPFLAT + SCALEFLAT FROM PEER
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  CAPFLAT FROM PEER "score" 100
+  LET keep_n = CAPFLAT_N
+  LET match_n = CAPFLAT_MATCH
+  CLEAR_ERR
+  SCALEFLAT FROM PEER "weight" 2
+  LET take_n = SCALEFLAT_N
+  CLEAR_ERR
+  CAPFLAT FROM PEER "lat" 100
+  CLEAR_ERR
+  GETP FROM PEER "score.y"
+  SYS EQS LAST "100"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "score.x"
+  SYS EQS LAST "30"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "weight.edge"
+  SYS EQS LAST "8"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "lat.north"
+  SYS EQS LAST "100"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "tag"
+  SYS EQS LAST "t"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # agent plate not mutated by FROM PEER
+  GETP "agent"
+  SYS EQS LAST "svc-capscale"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "peer.json"
+  LET peer_path = LAST
+  CLEAR_ERR
+  SAVEP FROM PEER peer_path
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 1 THEN
+            IF gate_ok == 1 THEN
+              LET hit = 1
+              LET note_msg = "peer ok"
+              LET admit_n = 1
+              LET drop_n = keep_n
+            ELSE
+              LET miss = 1
+              LET note_msg = "peer agent leak"
+              FAIL "peer agent leak"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer tag"
+            FAIL "peer tag"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer lat"
+          FAIL "peer lat"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer weight"
+        FAIL "peer weight"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer score.x"
+      FAIL "peer score.x"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer score.y"
+    FAIL "peer score.y"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" w_s ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n keep_n take_n peel_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# soft — no-match needle + empty bag
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  CAPFLAT "ghostpath" 10
+  LET keep_n = CAPFLAT_N
+  LET match_n = CAPFLAT_MATCH
+  LET soft_ok = 0
+  IF OK == 1 THEN
+    LET soft_ok = 1
+  END
+  CLEAR_ERR
+  SCALEFLAT "ghostpath" 9
+  LET take_n = SCALEFLAT_N
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-capscale"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # plate still has scores after ghost ops
+  GETP "score.a"
+  SYS EQS LAST "50"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF soft_ok == 1 THEN
+    IF keep_n == 0 THEN
+      IF match_n == 0 THEN
+        IF take_n == 0 THEN
+          IF miss_n == 0 THEN
+            IF peel_hit == 1 THEN
+              IF load_hit == 1 THEN
+                LET hit = 1
+                LET note_msg = "soft ok"
+                LET admit_n = 1
+                LET has_n = 0
+              ELSE
+                LET miss = 1
+                LET note_msg = "soft score"
+                FAIL "soft score"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "soft agent"
+              FAIL "soft agent"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "soft empty bag"
+            FAIL "soft empty bag"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "soft scale n"
+          FAIL "soft scale n"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft match"
+        FAIL "soft match"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft cap n"
+      FAIL "soft cap n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft cap ok"
+    FAIL "soft cap ok"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok" soft_ok ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n soft_ok keep_n take_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# gate — post cap+scale contract
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  GETP "score.b"
+  SYS EQS LAST "100"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "meta.score"
+  SYS EQS LAST "100"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "weight.canary"
+  SYS EQS LAST "6"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "weight.stable"
+  SYS EQS LAST "15"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "lat.west"
+  SYS EQS LAST "100"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_capscale_slo"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF take_n == 1 THEN
+            IF miss_n == 1 THEN
+              LET hit = 1
+              LET gate_ok = 1
+              LET admit_n = 1
+              LET note_msg = "gate ok"
+            ELSE
+              LET miss = 1
+              LET note_msg = "gate schema"
+              FAIL "gate schema"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "gate lat"
+            FAIL "gate lat"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate stable"
+          FAIL "gate stable"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate canary"
+        FAIL "gate canary"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate meta.score"
+      FAIL "gate meta.score"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score.b"
+    FAIL "gate score.b"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF gate_ok == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" gate_ok ":gn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n gate_ok peel_hit soft_ok has_n note_msg
+  CLEAR_ERR
+END
+
+# probe — CLAMPFLAT / MULFLAT aliases + factor 0 + empty needle cap
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SETP "probe.p1" 40
+  CLEAR_ERR
+  SETP "probe.p2" 150
+  CLEAR_ERR
+  SETP "probe.name" "run"
+  CLEAR_ERR
+  CLAMPFLAT "probe" 80
+  LET keep_n = CAPFLAT_N
+  LET match_n = CAPFLAT_MATCH
+  CLEAR_ERR
+  GETP "probe.p2"
+  SYS EQS LAST "80"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "probe.p1"
+  SYS EQS LAST "40"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "probe.name"
+  SYS EQS LAST "run"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  MULFLAT "probe" 2
+  LET take_n = SCALEFLAT_N
+  CLEAR_ERR
+  GETP "probe.p1"
+  SYS EQS LAST "80"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "probe.p2"
+  SYS EQS LAST "160"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # factor 0 zeros matching ints under tiny
+  SETP "tiny.z" 5
+  CLEAR_ERR
+  SETP "tiny.keep_s" "s"
+  CLEAR_ERR
+  SCALEFLAT "tiny" 0
+  CLEAR_ERR
+  GETP "tiny.z"
+  SYS EQS LAST "0"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  GETP "tiny.keep_s"
+  SYS EQS LAST "s"
+  LET drop_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-capscale"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 1 THEN
+            IF gate_ok == 1 THEN
+              IF drop_n == 1 THEN
+                IF admit_n == 1 THEN
+                  LET hit = 1
+                  LET note_msg = "probe ok"
+                  LET admit_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "probe agent"
+                  FAIL "probe agent"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "probe keep_s"
+                FAIL "probe keep_s"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "probe factor0"
+              FAIL "probe factor0"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe mul p2"
+            FAIL "probe mul p2"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe mul p1"
+          FAIL "probe mul p1"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe name"
+        FAIL "probe name"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe p1"
+      FAIL "probe p1"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe clamp p2"
+    FAIL "probe clamp p2"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:alias:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n keep_n take_n peel_hit gate_ok note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_capscale_slo.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " keep=" keep_n " match=" match_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_capscale_slo_board: end"

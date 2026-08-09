@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 257,
-  "program": "programs/realworld/svc_threshflat_hotpath_board.cubalc",
-  "theme": "THRESHFLAT/DROPZEROFLAT path denoise + TOPPATHFLAT hot/cold",
-  "version": "1.15.673-usability",
+  "iter": 258,
+  "program": "programs/realworld/svc_capscale_slo_board.cubalc",
+  "theme": "CAPFLAT score ceiling + SCALEFLAT weight scale",
+  "version": "1.15.675-usability",
   "pass": true,
-  "prior_note": "iter 256 DIFFFLAT/UNFLATKV/SETFLAT; this iter first realworld 1222 THRESHFLAT/DROPZEROFLAT + 1221 TOPPATHFLAT/BOTPATHFLAT (MEANINGFUL 644-645)",
+  "prior_note": "iter 257 THRESHFLAT/TOPPATHFLAT; this iter first realworld 1223 CAPFLAT + 1224 SCALEFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed hits/lat zeros+noise+hotspot",
+      "cmd": "seed score/weight/lat outliers",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "dropz",
-      "cmd": "DROPZEROFLAT hits+lat",
+      "name": "cap",
+      "cmd": "CAPFLAT score+lat 100 meta.score friend",
       "ok": true,
-      "note": "dropz"
+      "note": "cap"
     },
     {
-      "name": "thresh",
-      "cmd": "THRESHFLAT hits 5 + meta.hits false-friend",
+      "name": "scale",
+      "cmd": "SCALEFLAT weight 3",
       "ok": true,
-      "note": "thresh"
-    },
-    {
-      "name": "hot",
-      "cmd": "TOPPATHFLAT/BOTPATHFLAT lat LAST_N dual",
-      "ok": true,
-      "note": "hot"
+      "note": "scale"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER dropz+top/bot",
+      "cmd": "FROM PEER cap+scale",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost needle soft miss",
+      "cmd": "ghost needle soft",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "post-denoise admit contract",
+      "cmd": "post cap+scale admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "MAX/MINPATH + KEEPVFLAT thresh alias",
+      "cmd": "CLAMP/MUL aliases + factor0",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +59,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "444/478 pre-existing cli shell fails; toppathflat PASS 25 threshflat PASS 31"
+      "note": "446/482 pre-existing cli shell fails; capflat PASS 28 scaleflat PASS 29"
     }
   ],
   "weaknesses": [
@@ -3108,6 +3102,30 @@
       "title": "CLI plate dual scripts fail unknown form set (mass cli FAIL)",
       "detail": "Selftest 444/478: in-lang toppathflat PASS 25 threshflat PASS 31; all cli_plate_* shell duals fail \"unknown form 'set'\". Pre-existing shell harness regression not introduced by this board; blocks plate CLI dual confidence.",
       "repro": "./out/cubalc selftest | grep cli_plate_threshflat"
+    },
+    {
+      "id": "W381",
+      "severity": "med",
+      "area": "lang|needle",
+      "title": "CAPFLAT/SCALEFLAT needle substring hits meta.score collaterally",
+      "detail": "CAPFLAT \"score\" 100 clamps score.* and meta.score. Same substring false-friend class as THRESHFLAT hits/meta.hits (W379). No segment-bound needle; agents must name paths carefully or accept collateral.",
+      "repro": "CAPFLAT \"score\" 100 on meta.score=200 \u2192 meta.score=100"
+    },
+    {
+      "id": "W382",
+      "severity": "med",
+      "area": "lang|specials",
+      "title": "SCALEFLAT_N LET may read 0 after CAPFLAT FROM PEER chain in large boards",
+      "detail": "peer action: SCALEFLAT FROM PEER weight 2 correctly sets weight.edge 4\u21928, but LET take_n=SCALEFLAT_N yielded 0 in STATUS peer:0:pr while hit path used GETP. Related to W377 specials visibility under agent_boot load; prefer GETP asserts over special counts for gate.",
+      "repro": "CAPFLAT FROM PEER; SCALEFLAT FROM PEER; LET n=SCALEFLAT_N \u2192 0 in large board"
+    },
+    {
+      "id": "W383",
+      "severity": "low",
+      "area": "lang|alias",
+      "title": "CLAMPFLAT/MULFLAT aliases solid; factor 0 zeros pure-int leaves",
+      "detail": "CLAMPFLAT is CAPFLAT; MULFLAT is SCALEFLAT. SCALEFLAT needle 0 zeros matching ints (documented in proof 1224). Strings survive. Useful but footgun if factor env is empty/0.",
+      "repro": "SCALEFLAT \"hits\" 0 \u2192 hits.a=0 keep others"
     }
   ],
   "workarounds": [
@@ -3123,7 +3141,9 @@
     "Custom multi-plate INTO name surface incomplete for GETP FROM",
     "Prefer LAST_N over BOTPATHFLAT_V/TOPPATHFLAT_V after multi-op agent boards",
     "KEEPVFLAT naming implies exact keep; is threshold floor",
-    "Path needle substring lacks segment-bound option for safe FREQ denoise"
+    "Path needle substring lacks segment-bound option for safe FREQ denoise",
+    "CAPFLAT/SCALEFLAT need segment-bound needles for safe SLO scrub",
+    "Capture plate values via GETP not only CAPFLAT_N/SCALEFLAT_N in large boards"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3131,8 +3151,10 @@
     "CLI duals still failing set form",
     "BOTPATHFLAT_V/TOPPATHFLAT_V unreadable in large board; switched to LAST_N capture",
     "KEEPVFLAT misread as exact-value keep; is \u2265min THRESHFLAT alias",
-    "needle substring false-friend meta.hits under hits denoise"
+    "needle substring false-friend meta.hits under hits denoise",
+    "CAPFLAT needle substring collaterally clamps meta.score",
+    "SCALEFLAT_N special 0 after FROM PEER chain despite successful scale"
   ],
-  "commit": "83dd0885",
-  "ts": "2026-08-09T15:40:32Z"
+  "commit": "7ca70d11",
+  "ts": "2026-08-09T15:59:03Z"
 }
