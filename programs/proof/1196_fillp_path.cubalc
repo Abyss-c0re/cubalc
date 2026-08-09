@@ -1,0 +1,63 @@
+# FILLP dotted path nest templates {{freq.error}}
+# Usability: status/log strings from nest fields without GETP+REPLACEALL/GETPOBJ.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"error\":5,\"warn\":2},\"n\":3}"
+LET PEER = "{\"meta\":{\"role\":\"worker\",\"n\":9},\"host\":\"cubeB\"}"
+
+# nest path slots
+FILLP "host={{host}} err={{freq.error}} warn={{freq.warn}} n={{n}}"
+ASSERT OK == 1
+ASSERT FILLP_N == 4
+ASSERT FILLP_MISS == 0
+SYS EQS LAST "host=cubeA err=5 warn=2 n=3"
+ASSERT LAST_N == 1
+
+# slash path alias
+FILLP "e={{freq/error}}"
+SYS EQS LAST "e=5"
+ASSERT LAST_N == 1
+
+# miss path soft empty
+FILLP "x={{freq.crit}} y={{host}}"
+ASSERT OK == 1
+ASSERT FILLP_N == 2
+ASSERT FILLP_MISS == 1
+SYS EQS LAST "x= y=cubeA"
+ASSERT LAST_N == 1
+SYS HASLINE FILLP_MISS_KEYS "freq.crit"
+ASSERT LAST_N == 1
+
+# FILLPKEYS discovers path slots
+FILLPKEYS "a={{host}} b={{freq.error}} c={{meta.role}}"
+ASSERT OK == 1
+ASSERT FILLPKEYS_N == 3
+SYS HASLINE LAST "freq.error"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "host"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "meta.role"
+ASSERT LAST_N == 1
+
+# STRICT ok when nest paths present
+FILLP STRICT "err={{freq.error}} host={{host}}"
+ASSERT OK == 1
+ASSERT FILLP_MISS == 0
+SYS EQS LAST "err=5 host=cubeA"
+ASSERT LAST_N == 1
+
+# multi-plate FROM nest
+FILLP FROM PEER "role={{meta.role}} n={{meta.n}} host={{host}}"
+ASSERT OK == 1
+ASSERT FILLP_N == 3
+ASSERT FILLP_MISS == 0
+SYS EQS LAST "role=worker n=9 host=cubeB"
+ASSERT LAST_N == 1
+
+# shallow regression
+FILLP "n={{n}} host={{host}}"
+SYS EQS LAST "n=3 host=cubeA"
+ASSERT LAST_N == 1
+
+PRINT "1196_fillp_path ok"

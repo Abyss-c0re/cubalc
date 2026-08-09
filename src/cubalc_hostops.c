@@ -6999,8 +6999,10 @@ int cubalc_host_expand_fillp(const char *plate, const char *tmpl,
       name[0] = 0;
       while (*p && !(p[0] == '}' && p[1] == '}') && ni + 1 < sizeof name) {
         char ch = *p;
+        /* dotted/slash nest paths: {{freq.error}} {{meta/role}} */
         if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
-            (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '.')
+            (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '.' ||
+            ch == '/')
           name[ni++] = ch;
         else
           break;
@@ -7011,7 +7013,7 @@ int cubalc_host_expand_fillp(const char *plate, const char *tmpl,
         src = p + 2;
         hits++;
         memset(&gr, 0, sizeof gr);
-        if (cubalc_host_json_get(pl, name, &gr) == 0) {
+        if (cubalc_host_json_path_get(pl, name, &gr) == 0) {
           size_t vn = strlen(gr.str);
           if (o + vn >= outcap) vn = outcap - 1 - o;
           if (vn > 0) {
@@ -7062,7 +7064,8 @@ int cubalc_host_fillp_keys(const char *tmpl, char *out, size_t outcap, long *nke
       while (*p && !(p[0] == '}' && p[1] == '}') && ni + 1 < sizeof name) {
         char ch = *p;
         if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
-            (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '.')
+            (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '.' ||
+            ch == '/')
           name[ni++] = ch;
         else
           break;

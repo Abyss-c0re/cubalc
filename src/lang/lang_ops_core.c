@@ -880,8 +880,10 @@ static long cubalc_expand_fillp(const char *plate, const char *tmpl, char *out,
       name[0] = 0;
       while (*pp && !(pp[0] == '}' && pp[1] == '}') && ni + 1 < sizeof name) {
         char c = *pp;
+        /* allow dotted/slash nest paths: {{freq.error}} {{meta/role}} */
         if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-            (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.')
+            (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.' ||
+            c == '/')
           name[ni++] = c;
         else
           break;
@@ -892,7 +894,7 @@ static long cubalc_expand_fillp(const char *plate, const char *tmpl, char *out,
         src = pp + 2;
         hits++;
         memset(&gr, 0, sizeof gr);
-        if (cubalc_host_json_get(pl, name, &gr) == 0) {
+        if (cubalc_host_json_path_get(pl, name, &gr) == 0) {
           size_t vn = strlen(gr.str);
           if (o + vn >= outcap) vn = outcap - 1 - o;
           if (vn > 0) {
@@ -940,7 +942,8 @@ static long cubalc_fillp_keys(const char *tmpl, char *out, size_t outcap) {
       while (*pp && !(pp[0] == '}' && pp[1] == '}') && ni + 1 < sizeof name) {
         char c = *pp;
         if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-            (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.')
+            (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.' ||
+            c == '/')
           name[ni++] = c;
         else
           break;
@@ -36001,14 +36004,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SORTBAGP", "SORTBAGP|SORTTOKV|SORTFREQP [ASC|DESC] [FROM plate] — key:val bag sorted by value · dual SORTFREQ"},
       {"SORTTOKV", "SORTTOKV alias of SORTBAGP"},
       {"SORTFREQP", "SORTFREQP alias of SORTBAGP · FREQ rank without TOKV"},
-      {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
+      {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · dotted path {{freq.error}} ok · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
       {"TEMPLATEP", "TEMPLATEP alias of FILLP"},
-      {"NEEDFILLP", "NEEDFILLP|FILLP STRICT [tmpl] — fail-fast if {{key}} missing · lists names"},
+      {"NEEDFILLP", "NEEDFILLP|FILLP STRICT [tmpl] — fail-fast if {{key}} missing · path keys ok · lists names"},
       {"FILLP STRICT", "FILLP STRICT alias of NEEDFILLP"},
-      {"FILLPKEYS", "FILLPKEYS [tmpl] — bag of unique {{key}} names · template contract"},
-      {"FILLPFILE", "FILLPFILE [STRICT] [FROM plate] tmpl [out] — materialize · multi-plate FROM"},
+      {"FILLPKEYS", "FILLPKEYS [tmpl] — bag of unique {{key}} names · path keys ok · template contract"},
+      {"FILLPFILE", "FILLPFILE [STRICT] [FROM plate] tmpl [out] — materialize · path slots · multi-plate FROM"},
       {"NEEDFILLPFILE", "NEEDFILLPFILE|FILLPFILE STRICT tmpl [out] — fail-fast missing {{key}} · no write"},
       {"FILLPFILE STRICT", "FILLPFILE STRICT alias of NEEDFILLPFILE"},
       {"SUBSTPLATEFILE", "SUBSTPLATEFILE alias of FILLPFILE"},
@@ -47932,15 +47935,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * Usability: one-line help without shell; twin of NOTE for CLI tools. */
   /* FILLP|SUBSTPLATE|EXPANDP|TEMPLATEP [STRICT|NEED] [FROM plate] [template]
    * — expand {{key}} from PLATE (default) or FROM another object plate/var/LAST.
+   * Keys may be dotted/slash nest paths: {{freq.error}} {{meta/role}}.
    * Unset key → empty; incomplete {{ left literal. Bare FILLP uses prior LAST.
    * LAST = expanded; LAST_N/FILLP_N = slots; FILLP_MISS; FILLP_MISS_KEYS.
    * FILLP STRICT|NEED / NEEDFILLP — fail-fast if any {{key}} missing (lists names).
    * FILLPKEYS [template] — bag of unique {{key}} names · contract discovery.
    * FROM: multi-plate agents without LET PLATE = other:
    *   FILLP FROM peer "hello {{name}}"
+   *   FILLP "err={{freq.error}} host={{host}}"
    *   FILLP STRICT FROM LAST "ready={{status}}"
-   *   FILLP "x={{a}}" FROM other_plate
-   * Usability: status/log templates without GETP+REPLACEALL; multi-plate fill. */
+   * Usability: status/log templates without GETP+REPLACEALL / GETPOBJ glue. */
   if (kw(&L->cur,"FILLPKEYS") || kw(&L->cur,"TEMPLATEKEYS") ||
       kw(&L->cur,"PLATE_KEYS_TMPL") || kw(&L->cur,"KEYS_IN_TEMPLATE") ||
       kw(&L->cur,"MFILLPKEYS")) {

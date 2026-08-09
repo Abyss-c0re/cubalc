@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 618,
-  "version": "1.15.645-usability",
-  "item": "PLUCKP dotted path multi-key peel",
-  "item_id": 654,
-  "title": "PLUCKP|GETPALL dotted path nest multi-key peel \u2192 bag \u00b7 multi-plate \u00b7 COOKBOOK/FOR_AGENTS path recipes",
-  "commit": "27fa3e2f0806ab08e0e1fd68b19d8116627a5cd7",
-  "summary": "Multi-field nest extract without GETP+PUSH. proof 1195 26/26 + docs path recipes.",
+  "iter": 619,
+  "version": "1.15.646-usability",
+  "item": "FILLP dotted path nest templates",
+  "item_id": 655,
+  "title": "FILLP|FILLPFILE|{{freq.error}} dotted path nest template expand · STRICT miss keys · multi-plate · CLI plate fill dual",
+  "commit": "PENDING",
+  "summary": "Template expand nest slots without GETP glue. proof 1196 23/23 + CLI fill path ok.",
   "proofs": [
-    "1195_pluckp_path 26/26",
-    "1148_pluckp reg 24/24",
-    "1194_needp_path reg 27/27"
+    "1196_fillp_path 23/23",
+    "1120_fillp reg 25/25",
+    "1124_fillp_strict reg 22/22",
+    "cli plate fill path ok"
   ],
-  "when": "2026-08-09T11:40:00Z",
+  "when": "2026-08-09T11:55:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "27fa3e2f0806ab08e0e1fd68b19d8116627a5cd7",
-  "note": "after needp_path; path plane extract; EVOLVE_PAUSED"
+  "sha": "PENDING",
+  "note": "after pluckp_path; path plane templates; EVOLVE_PAUSED"
 }
