@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 240,
-  "program": "programs/realworld/svc_nest_proj_board.cubalc",
-  "theme": "PICKOBJ/OMITOBJ + LENOBJ nest scrub and handoff project",
-  "version": "1.15.629-usability",
+  "iter": 241,
+  "program": "programs/realworld/svc_nest_rename_board.cubalc",
+  "theme": "RENAMEPOBJ nest key rename schema promote",
+  "version": "1.15.630-usability",
   "pass": true,
-  "prior_note": "iter 239 KEYNEST/PLUCKOBJ walk; this iter first realworld PICKOBJ/LENOBJ (1177/1179 / MEANINGFUL 636-638)",
+  "prior_note": "iter 240 PICKOBJ/LENOBJ scrub; this iter first realworld RENAMEPOBJ (1180 / MEANINGFUL 639)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,37 @@
     },
     {
       "name": "boot",
-      "cmd": "seed cfg with secret/debug",
+      "cmd": "seed legacy old_name/svc_name",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "len",
-      "cmd": "LENOBJ/EMPTY/VALSOBJ + NESTLEN",
+      "name": "rename",
+      "cmd": "old_name\u2192name agent cfg",
       "ok": true,
-      "note": "len"
-    },
-    {
-      "name": "pick",
-      "cmd": "PICKOBJ allowlist drop secret",
-      "ok": true,
-      "note": "pick"
-    },
-    {
-      "name": "omit",
-      "cmd": "OMITOBJ secret/debug scrub",
-      "ok": true,
-      "note": "omit"
+      "note": "rename"
     },
     {
       "name": "peer",
-      "cmd": "OMITOBJ FROM PEER tmp/debug",
+      "cmd": "svc_name\u2192name FROM PEER",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "gate",
-      "cmd": "no secret + len band + nonempty",
-      "ok": true,
-      "note": "gate"
-    },
-    {
       "name": "soft",
-      "cmd": "nest miss LEN/EMPTY soft",
+      "cmd": "key miss + nest miss soft",
       "ok": true,
       "note": "soft"
     },
     {
+      "name": "gate",
+      "cmd": "canonical name present legacy gone",
+      "ok": true,
+      "note": "gate"
+    },
+    {
       "name": "probe",
-      "cmd": "KEEPOBJ/STRIPNEST/empty nest create",
+      "cmd": "MOVEKEYOBJ/NESTRENAME/AS FROM/same-name",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +59,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "407/414 pre-existing shell fails + oop_pickobj; pickobj/lenobj PASS"
+      "note": "408/415 pre-existing shell fails + oop_pickobj/kvfileensure; renamepobj PASS 38"
     }
   ],
   "weaknesses": [
@@ -2594,6 +2582,38 @@
       "title": "STATUS last line omits final NL",
       "detail": "cat -A ends soft:ok1:sf without $.",
       "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W316",
+      "severity": "med",
+      "area": "lang|renamepobj",
+      "title": "RENAMEPOBJ old/new keys are literal tokens \u2014 no variable field names",
+      "detail": "Like SETPOBJ, rename source/dest must be string literals in source. Dynamic schema maps (ENV OLD_KEY=old_name) cannot feed RENAMEPOBJ without CASE branches. Soft miss on unknown old key is OK n=0 not hard-fail.",
+      "repro": "LET o=old_name; RENAMEPOBJ cfg o name \u2014 form/parse risk; use literals"
+    },
+    {
+      "id": "W317",
+      "severity": "low",
+      "area": "lang|renamepobj",
+      "title": "RENAMEPOBJ collision with existing new key undefined in board path",
+      "detail": "Board only renames to free names. If new key already exists, agent must OMITOBJ first or risk silent overwrite/merge semantics not exercised here \u2014 document for MEANINGFUL follow-up.",
+      "repro": "cfg has both name and old_name; RENAMEPOBJ old_name name"
+    },
+    {
+      "id": "W318",
+      "severity": "low",
+      "area": "host|write",
+      "title": "STATUS last line omits final NL",
+      "detail": "cat -A ends soft:ok1:sf without $.",
+      "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W319",
+      "severity": "low",
+      "area": "host|require",
+      "title": "CUBALC_SNR_REQUIRE=abc softens (NUM non-numeric)",
+      "detail": "Non-numeric REQUIRE env leaves require_hit=0; soft path still exits 0. Same W6 class.",
+      "repro": "CUBALC_SNR_REQUIRE=abc list \u2192 hit ok"
     }
   ],
   "workarounds": [
@@ -2715,14 +2735,11 @@
     "SYS NTH requires bag in LAST not as first arg var",
     "no non-destructive PICKOBJ preview / INTO bag",
     "EMPTYOBJ miss vs empty nest ambiguous",
-    "dynamic scrub key lists blocked by SETPOBJ/OMITOBJ literal field names?"
+    "dynamic scrub key lists blocked by SETPOBJ/OMITOBJ literal field names?",
+    "RENAMEPOBJ needs var field names for env-driven schema maps",
+    "no documented RENAMEPOBJ collision policy for agents"
   ],
   "issues_faced": [
-    "GETOBJ_HIT LET stuck 0 on hit path for gate",
-    "EXIT 2 leaves shell rc 0 (W7)",
-    "SYS LOOKUP does not peel JSON object fields (line bags only)",
-    "SETPOBJ/INCOBJ reject variable values (literal-only)",
-    "SAVEP FROM PEER need path after long-board plate_peer_session",
     "NEEDPOBJ not soft \u2014 use HASPOBJ for soft miss",
     "EXIT 2 shell rc 0 (W7)",
     "KEYNEST KEY unknown after many LETs+SYS LINES and after boot CAT+SAVEPLATE",
@@ -2730,8 +2747,11 @@
     "EXIT 2 shell 0 (W7)",
     "PICKOBJ destructive write-back needs re-seed for omit demo after pick",
     "EMPTYOBJ conflates miss and empty nest",
-    "EXIT 2 shell 0 (W7)"
+    "EXIT 2 shell 0 (W7)",
+    "rename field names literal-only for dynamic migrations",
+    "EXIT 2 shell 0 (W7)",
+    "collision rename not stress-tested"
   ],
-  "commit": "75df1303ced084d5aee710e40b8593671136521f",
-  "ts": "2026-08-09T07:39:17Z"
+  "commit": "pending",
+  "ts": "2026-08-09T08:03:59Z"
 }
