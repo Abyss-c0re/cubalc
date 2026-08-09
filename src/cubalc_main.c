@@ -2164,6 +2164,7 @@ int main(int argc, char **argv) {
       {"cli_plate_need_path", "programs/proof/1194b_cli_plate_need_path.sh", "cubalc plate has/need dotted path contracts"},
       {"pluckp_path", "programs/proof/1195_pluckp_path.cubalc", "PLUCKP dotted path multi-key peel nest fields multi-plate"},
       {"fillp_path", "programs/proof/1196_fillp_path.cubalc", "FILLP {{freq.error}} dotted path nest templates multi-plate"},
+      {"cli_plate_pluck", "programs/proof/1197_cli_plate_pluck.sh", "cubalc plate pluck multi-key path peel PLUCKP dual"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
       {"mergeobj", "programs/proof/1171_mergeobj.cubalc", "MERGEOBJ/DEFAULTOBJ nested plate merge one-shot multi-plate"},
       {"getpobj", "programs/proof/1172_getpobj.cubalc", "GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ nested scalar field plane multi-plate"},
@@ -4898,6 +4899,7 @@ int main(int argc, char **argv) {
               "       cubalc plate merge  <path> <overlay|@file>\n"
               "       cubalc plate eq|ne|diff|changelog <a.json> <b.json>\n"
               "       cubalc plate has|need <path> <k1> [k2 …]\n"
+              "       cubalc plate pluck <path> <k1> [k2 …]  # multi-key peel bag · PLUCKP dual (paths ok)\n"
               "       cubalc plate pick|omit <path> <k1> [k2 …]  # keep/drop keys · PICKP/OMITP\n"
               "       cubalc plate sum|avg|median|mean|p50 <path>  # aggregates · SUMNP duals\n"
               "       cubalc plate top|bot <path> [n]          # top/bot N keys · TOPNP duals\n");
@@ -4908,7 +4910,7 @@ int main(int argc, char **argv) {
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
              "\"nestsort\",\"nestsortbag\","
              "\"fill\",\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\",\"changelog\","
-             "\"has\",\"need\",\"pick\",\"omit\",\"sum\",\"avg\",\"median\",\"top\",\"bot\"]}\n",
+             "\"has\",\"need\",\"pluck\",\"pick\",\"omit\",\"sum\",\"avg\",\"median\",\"top\",\"bot\"]}\n",
              CUBALC_LANG_VERSION);
       return 2;
     }
@@ -4942,6 +4944,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "has-keys") == 0 || strcmp(argv[2], "check") == 0 ||
         strcmp(argv[2], "need") == 0 || strcmp(argv[2], "require") == 0 ||
         strcmp(argv[2], "needkeys") == 0 || strcmp(argv[2], "require-keys") == 0 ||
+        strcmp(argv[2], "pluck") == 0 || strcmp(argv[2], "getall") == 0 ||
+        strcmp(argv[2], "getpall") == 0 || strcmp(argv[2], "peel") == 0 ||
+        strcmp(argv[2], "values") == 0 || strcmp(argv[2], "pluckp") == 0 ||
         strcmp(argv[2], "pick") == 0 || strcmp(argv[2], "keep") == 0 ||
         strcmp(argv[2], "select") == 0 || strcmp(argv[2], "project") == 0 ||
         strcmp(argv[2], "omit") == 0 || strcmp(argv[2], "strip") == 0 ||
@@ -5029,6 +5034,10 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "require") == 0 || strcmp(op, "needkeys") == 0 ||
                strcmp(op, "require-keys") == 0)
         op = "need";
+      else if (strcmp(op, "getall") == 0 || strcmp(op, "getpall") == 0 ||
+               strcmp(op, "peel") == 0 || strcmp(op, "values") == 0 ||
+               strcmp(op, "pluckp") == 0)
+        op = "pluck";
       else if (strcmp(op, "keep") == 0 || strcmp(op, "select") == 0 ||
                strcmp(op, "project") == 0)
         op = "pick";
@@ -6532,6 +6541,91 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
              nreq, (long)hasr.code, miss.n, flat_miss, flat_req,
              file_hit ? "true" : "false", CUBALC_LANG_VERSION);
       return all_ok ? 0 : 1;
+    }
+
+    /* pluck|getall path k1 [k2 …] — multi-key peel → value bag (PLUCKP dual).
+     * Usability: agent one-shot extract including dotted nest paths without .cubalc:
+     *   cubalc plate pluck agent.json host freq.error n
+     * Prints bag lines above plate meta · empty field on miss · hit/miss counts. */
+    if (strcmp(op, "pluck") == 0) {
+      char keys_nl[CUBALC_HOST_STR_MAX];
+      char flat_req[CUBALC_HOST_STR_MAX];
+      char bag_esc[CUBALC_HOST_STR_MAX];
+      cubalc_host_result pr;
+      size_t o = 0, bi, bo;
+      long nreq = 0;
+
+      keys_nl[0] = 0;
+      flat_req[0] = 0;
+      if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"pluck\",\"path\":\"%s\",\"err\":\"need one or more keys\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      while (ai < argc && argv[ai] && argv[ai][0]) {
+        size_t kl = strlen(argv[ai]);
+        if (o + kl + 2 >= sizeof keys_nl) break;
+        if (o > 0) keys_nl[o++] = '\n';
+        memcpy(keys_nl + o, argv[ai], kl);
+        o += kl;
+        keys_nl[o] = 0;
+        {
+          size_t fo = strlen(flat_req);
+          if (fo + kl + 2 < sizeof flat_req) {
+            if (fo > 0) {
+              flat_req[fo++] = ',';
+              flat_req[fo] = 0;
+            }
+            memcpy(flat_req + fo, argv[ai], kl);
+            flat_req[fo + kl] = 0;
+          }
+        }
+        nreq++;
+        ai++;
+      }
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_pluck(plate, keys_nl, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"pluck\",\"path\":\"%s\",\"err\":\"%s\","
+               "\"version\":\"%s\"}\n",
+               path, pr.err[0] ? pr.err : "pluck fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+
+      /* bag lines for greppable agent pipes */
+      if (pr.str[0]) {
+        fputs(pr.str, stdout);
+        if (pr.str[strlen(pr.str) - 1] != '\n')
+          fputc('\n', stdout);
+      }
+
+      bag_esc[0] = 0;
+      bo = 0;
+      for (bi = 0; pr.str[bi] && bo + 2 < sizeof bag_esc; bi++) {
+        char c = pr.str[bi];
+        if (c == '"' || c == '\\') {
+          bag_esc[bo++] = '\\';
+          bag_esc[bo++] = c;
+        } else if (c == '\n' || c == '\r') {
+          bag_esc[bo++] = '\\';
+          bag_esc[bo++] = (c == '\n') ? 'n' : 'r';
+        } else if ((unsigned char)c < 32) {
+          bag_esc[bo++] = ' ';
+        } else {
+          bag_esc[bo++] = c;
+        }
+      }
+      bag_esc[bo] = 0;
+
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"pluck\",\"path\":\"%s\",\"n\":%ld,\"hit\":%ld,\"miss\":%ld,"
+             "\"keys\":\"%s\",\"bag\":\"%s\",\"file\":%s,\"version\":\"%s\","
+             "\"note\":\"bag lines above plate · PLUCKP dual · paths ok\"}\n",
+             path, pr.n, (long)pr.code, pr.n - (long)pr.code, flat_req, bag_esc,
+             file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+      return 0;
     }
 
         /* remaining ops need key */

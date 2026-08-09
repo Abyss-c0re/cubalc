@@ -1,20 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 619,
-  "version": "1.15.646-usability",
-  "item": "FILLP dotted path nest templates",
-  "item_id": 655,
-  "title": "FILLP|FILLPFILE|{{freq.error}} dotted path nest template expand \u00b7 STRICT miss keys \u00b7 multi-plate \u00b7 CLI plate fill dual",
-  "commit": "5359c01d5189b64aaa9ce7460c7e3a637cfc7539",
-  "summary": "Template expand nest slots without GETP glue. proof 1196 23/23 + CLI fill path ok.",
+  "iter": 620,
+  "version": "1.15.647-usability",
+  "item": "cubalc plate pluck multi-key path peel",
+  "item_id": 656,
+  "title": "cubalc plate pluck|getall · PLUCKP CLI dual · dotted paths · agent one-shot bag without .cubalc",
+  "commit": "PENDING",
+  "summary": "CLI multi-key peel bag with nest paths. proof 1197 PASS.",
   "proofs": [
-    "1196_fillp_path 23/23",
-    "1120_fillp reg 25/25",
-    "1124_fillp_strict reg 22/22",
-    "cli plate fill path ok"
+    "1197_cli_plate_pluck PASS",
+    "1195_pluckp_path reg 26/26"
   ],
-  "when": "2026-08-09T11:55:00Z",
+  "when": "2026-08-09T12:10:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5359c01d5189b64aaa9ce7460c7e3a637cfc7539",
-  "note": "after pluckp_path; path plane templates; EVOLVE_PAUSED"
+  "sha": "PENDING",
+  "note": "after fillp_path; path CLI extract; EVOLVE_PAUSED"
 }

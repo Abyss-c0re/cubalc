@@ -215,6 +215,7 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate changelog state/a.json state/b.json             # key: old → new lines
 ./out/cubalc plate has  state/my_agent.json n ok status            # multi-key soft contract
 ./out/cubalc plate need state/my_agent.json n ok freq.error        # hard gate (paths ok)
+./out/cubalc plate pluck state/my_agent.json host freq.error n     # multi-key peel bag (paths ok)
 ./out/cubalc libs | grep plate
 
 # nest* still available; prefer dotted get/set when one scalar field:
