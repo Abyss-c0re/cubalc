@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 592,
-  "version": "1.15.619-usability",
-  "item": "EACH KEY",
-  "item_id": 628,
-  "title": "EACH KEY|KEYS|PLATEKEY OF|FROM plate · walk JSON plate keys · KEY+VALUE bound · no KEYSP+EACH LINE",
-  "commit": "325a038659020798fa6b8fcbe8fad683ee68c840",
-  "summary": "Plate key walk binds KEY and VALUE without KEYSP bag glue. proof 1169 22/22.",
+  "iter": 593,
+  "version": "1.15.620-usability",
+  "item": "GETOBJ/SETOBJ",
+  "item_id": 629,
+  "title": "GETOBJ|PEEKOBJ + SETOBJ|NESTP \u00b7 peel/nest nested plate objects \u00b7 multi-plate FROM/INTO \u00b7 no GETP miss on obj",
+  "commit": "f362586462c6d188b3b66e1c4719c9689496e372",
+  "summary": "Nested plate peel/nest binds sub-objects for SETP FROM without GETP scalar gap. proof 1170 33/33.",
   "proofs": [
-    "1169_each_key 22/22",
-    "1168_cli_plate_agg reg ok"
+    "1170_getobj 33/33",
+    "1169_each_key reg ok",
+    "1156_typep reg ok"
   ],
-  "when": "2026-08-09T05:47:33Z",
+  "when": "2026-08-09T06:04:37Z",
   "agent": "meaningful_iter_10m",
-  "sha": "325a038659020798fa6b8fcbe8fad683ee68c840",
-  "note": "invented after backlog 627; EVOLVE_PAUSED"
+  "sha": "f362586462c6d188b3b66e1c4719c9689496e372",
+  "note": "invented after backlog 628 EACH KEY; EVOLVE_PAUSED"
 }
