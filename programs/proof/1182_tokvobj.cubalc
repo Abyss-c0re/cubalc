@@ -1,0 +1,120 @@
+# TOKVOBJ / FROMKVOBJ — nest ↔ key:val bag bridge (TOKVP/FROMKVP duals)
+# Usability: FREQ/LOOKUP bag on nests without GETOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"n\":3,\"role\":\"worker\",\"zone\":\"A\"}}"
+LET PEER = "{\"cfg\":{\"port\":8080,\"tls\":1},\"tag\":\"x\"}"
+
+# nest → key:val bag
+TOKVOBJ "meta"
+ASSERT OK == 1
+ASSERT TOKVOBJ_N == 3
+ASSERT TOKVOBJ_NEST_HIT == 1
+ASSERT TOKVOBJ_FROM == 0
+SYS HASLINE LAST "n:3"
+ASSERT LAST_N == 1
+SYS HASLINE TOKVOBJ "role:worker"
+ASSERT LAST_N == 1
+SYS HASLINE TOKVOBJ "zone:A"
+ASSERT LAST_N == 1
+# outer intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# soft nest miss
+TOKVOBJ "ghost"
+ASSERT OK == 1
+ASSERT TOKVOBJ_N == 0
+ASSERT TOKVOBJ_NEST_HIT == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+TOKVOBJ FROM PEER "cfg"
+ASSERT TOKVOBJ_FROM == 1
+ASSERT TOKVOBJ_N == 2
+SYS EQS TOKVOBJ_SRC "PEER"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "port:8080"
+ASSERT LAST_N == 1
+SYS HASLINE TOKVOBJ "tls:1"
+ASSERT LAST_N == 1
+
+# bag → nest write-back (replace nest)
+FROMKVOBJ "stats" "hits:3\nmiss:1"
+ASSERT OK == 1
+ASSERT FROMKVOBJ_N == 2
+ASSERT FROMKVOBJ_CREATED == 1
+GETPOBJ "stats" "hits"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+GETPOBJ "stats" "miss"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+# other outer keys intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+TOKVOBJ "meta"
+ASSERT TOKVOBJ_N == 3
+
+# replace existing nest
+FROMKVOBJ "meta" "status:ready\ncount:2"
+ASSERT FROMKVOBJ_N == 2
+ASSERT FROMKVOBJ_NEST_HIT == 1
+ASSERT FROMKVOBJ_CREATED == 0
+GETPOBJ "meta" "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+HASPOBJ "meta" "role"
+ASSERT LAST_N == 0
+TOKVOBJ "meta"
+ASSERT TOKVOBJ_N == 2
+SYS HASLINE LAST "count:2"
+ASSERT LAST_N == 1
+
+# FROM PEER write-back
+FROMKVOBJ FROM PEER "cfg" "host:cubeB\nport:9090"
+ASSERT FROMKVOBJ_FROM == 1
+ASSERT FROMKVOBJ_N == 2
+GETPOBJ FROM PEER "cfg" "host"
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "cfg" "port"
+SYS EQS LAST "9090"
+ASSERT LAST_N == 1
+# PEER outer intact
+GETP FROM PEER "tag"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+# PLATE untouched
+GETPOBJ "meta" "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+# bag from LAST (round-trip)
+TOKVOBJ FROM PEER "cfg"
+FROMKVOBJ "snap" LAST
+ASSERT FROMKVOBJ_N == 2
+TOKVOBJ "snap"
+ASSERT TOKVOBJ_N == 2
+SYS HASLINE LAST "host:cubeB"
+ASSERT LAST_N == 1
+
+# trailing FROM + aliases
+NESTTOKV "cfg" FROM PEER
+ASSERT TOKVOBJ_N == 2
+BAGTONEST "cfg" "a:1\nb:2" FROM PEER
+ASSERT FROMKVOBJ_N == 2
+GETPOBJ FROM PEER "cfg" "a"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+NESTFROMKV "bag" "k:v" FROM PEER
+ASSERT FROMKVOBJ_N == 1
+GETPOBJ FROM PEER "bag" "k"
+SYS EQS LAST "v"
+ASSERT LAST_N == 1
+
+PRINT "tokvobj soft ok"
