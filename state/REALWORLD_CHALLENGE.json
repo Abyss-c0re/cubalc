@@ -2329,6 +2329,6 @@
     "NEEDP_N LET 0 despite needp hit=4 — switched to LAST_N",
     "STATUS last line no trailing NL"
   ],
-  "commit": "pending",
+  "commit": "5d55654",
   "ts": "2026-08-09T03:04:37Z"
 }
