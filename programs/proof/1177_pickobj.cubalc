@@ -1,0 +1,80 @@
+# PICKOBJ / OMITOBJ — keep/drop keys inside nested object with write-back
+# Usability: nested dual of PICKP/OMITP without GETOBJ+PICKP+SETOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"x\":1,\"role\":\"worker\",\"zone\":\"A\",\"tmp\":\"z\"},\"n\":3}"
+LET PEER = "{\"cfg\":{\"port\":8080,\"tls\":1,\"debug\":1},\"name\":\"peerB\"}"
+
+# keep only listed nest keys
+PICKOBJ "meta" "role" "zone"
+ASSERT OK == 1
+ASSERT PICKOBJ_OMIT == 0
+GETOBJ "meta"
+SYS HAS LAST "role"
+ASSERT LAST_N == 1
+SYS HAS LAST "zone"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"x\""
+ASSERT LAST_N == 0
+SYS HAS LAST "tmp"
+ASSERT LAST_N == 0
+# outer intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# omit listed nest keys
+LET PLATE = "{\"meta\":{\"a\":1,\"b\":2,\"c\":3}}"
+OMITOBJ "meta" "b"
+ASSERT OK == 1
+ASSERT PICKOBJ_OMIT == 1
+GETOBJ "meta"
+SYS HAS LAST "\"a\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"c\":3"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"b\""
+ASSERT LAST_N == 0
+KEYSOBJ "meta"
+ASSERT KEYSOBJ_N == 2
+
+# multi-plate FROM
+OMITOBJ FROM PEER "cfg" "debug"
+ASSERT PICKOBJ_FROM == 1
+GETOBJ FROM PEER "cfg"
+SYS HAS LAST "port"
+ASSERT LAST_N == 1
+SYS HAS LAST "tls"
+ASSERT LAST_N == 1
+SYS HAS LAST "debug"
+ASSERT LAST_N == 0
+GETP FROM PEER "name"
+SYS EQS LAST "peerB"
+ASSERT LAST_N == 1
+
+# pick creates nest if missing
+LET PLATE = "{\"a\":1}"
+PICKOBJ "stats" "hits"
+ASSERT OK == 1
+GETOBJ "stats"
+SYS EQS LAST "{}"
+ASSERT LAST_N == 1
+
+# alias
+LET PLATE = "{\"meta\":{\"x\":1,\"y\":2,\"z\":3}}"
+KEEPOBJ "meta" "x"
+GETOBJ "meta"
+SYS HAS LAST "\"x\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "y"
+ASSERT LAST_N == 0
+STRIPNEST "meta" "x"
+GETOBJ "meta"
+SYS EQS LAST "{}"
+ASSERT LAST_N == 1
+
+PRINT "pickobj soft ok"

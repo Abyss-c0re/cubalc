@@ -27414,6 +27414,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"HASPOBJ") || kw(&L->cur,"TYPEPOBJ") || kw(&L->cur,"KEYSOBJ") ||
              kw(&L->cur,"NEEDPOBJ") ||
              kw(&L->cur,"PLUCKOBJ") || kw(&L->cur,"NESTPLUCK") ||
+             kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"TOKVP") || kw(&L->cur,"FROMKVP") ||
              kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
              kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
@@ -35848,6 +35849,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PLUCKOBJ", "PLUCKOBJ|NESTPLUCK [FROM plate] nest field… — multi-key peel nested → value bag · multi-plate · no GETPOBJ+PUSH"},
       {"NESTPLUCK", "NESTPLUCK alias of PLUCKOBJ"},
       {"GETPALLNEST", "GETPALLNEST alias of PLUCKOBJ"},
+      {"PICKOBJ", "PICKOBJ|KEEPOBJ [FROM plate] nest field… — keep listed keys in nest · write-back · multi-plate"},
+      {"KEEPOBJ", "KEEPOBJ alias of PICKOBJ"},
+      {"OMITOBJ", "OMITOBJ|STRIPNEST [FROM plate] nest field… — drop listed keys in nest · write-back · multi-plate"},
+      {"STRIPNEST", "STRIPNEST alias of OMITOBJ"},
       {"TOKVP", "TOKVP|TOBAGP [FROM plate] — plate → key:val bag · multi-plate · no SYS JSONTOKV"},
       {"TOBAGP", "TOBAGP alias of TOKVP"},
       {"FROMKVP", "FROMKVP|BAGTOP [bag] [INTO name] — key=val bag → plate · multi-plate · no SYS JSONFROMKV"},
@@ -42887,6 +42892,248 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               nestk, n_req, n_hit, have_from);
     bump(vm); return 1;
   }
+
+  /* PICKOBJ|KEEPOBJ|SELECTNEST [FROM plate] nest field…
+   * OMITOBJ|DROPOBJKEYS|STRIPNEST [FROM plate] nest field…
+   * Keep/drop listed keys inside a nested object → write-back outer plate.
+   * Soft nest miss → creates {} then pick (empty) / omit (empty).
+   * LAST = outer plate · NEST/MERGED = nested result · LAST_N = keys kept/dropped.
+   * Usability: nested dual of PICKP/OMITP without GETOBJ+PICKP+SETOBJ glue:
+   *   PICKOBJ "meta" "role" "zone"
+   *   OMITOBJ FROM PEER "cfg" "tmp" "debug"
+   */
+  if (kw(&L->cur,"PICKOBJ") || kw(&L->cur,"KEEPOBJ") || kw(&L->cur,"SELECTNEST") ||
+      kw(&L->cur,"NESTPICK") || kw(&L->cur,"PICKNEST") || kw(&L->cur,"MPICKOBJ") ||
+      kw(&L->cur,"OMITOBJ") || kw(&L->cur,"DROPOBJKEYS") || kw(&L->cur,"STRIPNEST") ||
+      kw(&L->cur,"NESTOMIT") || kw(&L->cur,"OMITNEST") || kw(&L->cur,"MOMITOBJ") ||
+      kw(&L->cur,"DROPNESTKEYS") || kw(&L->cur,"STRIPOBJ")) {
+    char plate[CUBALC_HOST_STR_MAX], nestk[96], nest[CUBALC_HOST_STR_MAX];
+    char keys_nl[CUBALC_HOST_STR_MAX], arg[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result ngr, pr, hr;
+    int have_from = 0, is_omit = 0, n_req = 0, nest_hit = 0;
+    size_t olen = 0;
+    Var *pv;
+    const char *v;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "OMITOBJ") == 0 || strcmp(op0, "DROPOBJKEYS") == 0 ||
+        strcmp(op0, "STRIPNEST") == 0 || strcmp(op0, "NESTOMIT") == 0 ||
+        strcmp(op0, "OMITNEST") == 0 || strcmp(op0, "MOMITOBJ") == 0 ||
+        strcmp(op0, "DROPNESTKEYS") == 0 || strcmp(op0, "STRIPOBJ") == 0)
+      is_omit = 1;
+
+    lex_next(L);
+    plate[0] = 0; nestk[0] = 0; nest[0] = 0; keys_nl[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* nest key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(nestk, sizeof nestk, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"END") || kw(&L->cur,"ASSERT") || kw(&L->cur,"LET")) {
+        fail(vm, is_omit ? "OMITOBJ nest field… — need nest key"
+                         : "PICKOBJ nest field… — need nest key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, nestk, sizeof nestk) != 0)
+        nestk[0] = 0;
+    } else {
+      fail(vm, is_omit ? "OMITOBJ nest field… — need nest key"
+                       : "PICKOBJ nest field… — need nest key");
+      return -1;
+    }
+
+    while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+           L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+           kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+           kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"ASSERT") ||
+           kw(&L->cur,"PRINT") || kw(&L->cur,"LET") || kw(&L->cur,"SYS") ||
+           kw(&L->cur,"SETP") || kw(&L->cur,"GETP") || kw(&L->cur,"PICKP") ||
+           kw(&L->cur,"OMITP") || kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
+           kw(&L->cur,"PLUCKOBJ") || kw(&L->cur,"GETPOBJ") || kw(&L->cur,"INCLUDE") ||
+           kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
+           kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT")))
+        break;
+      arg[0] = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long kv = parse_expr(vm, L);
+        snprintf(arg, sizeof arg, "%ld", kv);
+      } else if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+        break;
+      }
+      if (!arg[0]) continue;
+      if (olen > 0) {
+        if (olen + 1 >= sizeof keys_nl) break;
+        keys_nl[olen++] = '\n';
+        keys_nl[olen] = 0;
+      }
+      {
+        size_t al = strlen(arg);
+        if (olen + al + 1 >= sizeof keys_nl) break;
+        memcpy(keys_nl + olen, arg, al + 1);
+        olen += al;
+      }
+      n_req++;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!nestk[0] || n_req == 0) {
+      if (n_req == 0) {
+        fail(vm, is_omit ? "OMITOBJ nest field… — need fields"
+                         : "PICKOBJ nest field… — need fields");
+        return -1;
+      }
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "PICKOBJ|OMITOBJ: empty nest");
+      var_set_str(vm, "ERR", "PICKOBJ|OMITOBJ: empty nest");
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    snprintf(nest, sizeof nest, "%s", "{}");
+    nest_hit = 0;
+    memset(&ngr, 0, sizeof ngr);
+    if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
+      v = ngr.str;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v == '{') {
+        if (v != ngr.str) {
+          size_t n = strlen(v);
+          memmove(ngr.str, v, n + 1);
+        }
+        snprintf(nest, sizeof nest, "%s", ngr.str);
+        nest_hit = 1;
+      }
+    }
+
+    memset(&pr, 0, sizeof pr);
+    if (is_omit) {
+      if (cubalc_host_json_drop(nest, keys_nl, &pr) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", pr.err[0] ? pr.err : "OMITOBJ: drop fail");
+        var_set_str(vm, "ERR", pr.err[0] ? pr.err : "OMITOBJ: drop fail");
+        bump(vm); return 1;
+      }
+    } else {
+      if (cubalc_host_json_pick(nest, keys_nl, &pr) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", pr.err[0] ? pr.err : "PICKOBJ: pick fail");
+        var_set_str(vm, "ERR", pr.err[0] ? pr.err : "PICKOBJ: pick fail");
+        bump(vm); return 1;
+      }
+    }
+    snprintf(nest, sizeof nest, "%s", pr.str);
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_set(plate, nestk, nest, 1, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "PICKOBJ: write-back fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "PICKOBJ: write-back fail");
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else if (!have_from)
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = pr.n;
+    var_set_num(vm, "LAST_N", pr.n);
+    var_set_str(vm, "NEST", nest);
+    var_set_str(vm, "MERGED", nest);
+    var_set_str(vm, is_omit ? "OMITOBJ" : "PICKOBJ", hr.str);
+    var_set_num(vm, is_omit ? "OMITOBJ_N" : "PICKOBJ_N", pr.n);
+    var_set_num(vm, "PICKOBJ_REQ", n_req);
+    var_set_str(vm, "PICKOBJ_NEST", nestk);
+    var_set_num(vm, "PICKOBJ_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "PICKOBJ_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "PICKOBJ_NEST_HIT", nest_hit ? 1 : 0);
+    var_set_num(vm, "PICKOBJ_OMIT", is_omit ? 1 : 0);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s nest=%s n=%ld req=%d from=%d\n",
+              is_omit ? "omitobj" : "pickobj", nestk, pr.n, n_req, have_from);
+    bump(vm); return 1;
+  }
+
 
 
 

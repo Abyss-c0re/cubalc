@@ -663,6 +663,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 633. ~~**`cubalc plate nestget|nestset|nestinc|nestdel|nestkeys|nesthas`**~~ **done** (CLI duals of GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ/KEYSOBJ/HASPOBJ · agent one-shots without `.cubalc`).
 634. ~~**`EACH KEYNEST` / `EACH KEY OF NEST`**~~ **done** (walk nested plate keys · KEY+VALUE bound · no KEYSOBJ+EACH LINE glue).
 635. ~~**`PLUCKOBJ` / `NESTPLUCK` / `GETPALLNEST`**~~ **done** (multi-key peel nested → value bag · multi-plate · no GETPOBJ+PUSH / GETOBJ+PLUCKP).
+636. ~~**`PICKOBJ` / `OMITOBJ` / `STRIPNEST`**~~ **done** (keep/drop keys inside nest · write-back · multi-plate · PICKP/OMITP duals for nests).
 
 ## Tick protocol
 

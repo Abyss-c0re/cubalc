@@ -286,7 +286,10 @@ KEYSOBJ "meta"                         # nested key bag
 NEEDPOBJ "meta" "x" "role"             # fail-fast nested contract
 EACH KEYNEST "meta"                 # walk nested KEY+VALUE
 PLUCKOBJ "meta" "x" "role" "zone"  # multi peel nested → bag
+PICKOBJ "meta" "role" "zone"         # keep only listed nest keys
+OMITOBJ "meta" "tmp"                  # drop nest keys write-back
 ```
+
 
 Compare plates (no `SYS JSONEQ` glue):
 
