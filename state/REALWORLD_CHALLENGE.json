@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 255,
-  "program": "programs/realworld/svc_flatops_scrub_board.cubalc",
-  "theme": "GREPFLAT/PRUNEFLAT/MERGEFLAT nest leaf scrub plane",
-  "version": "1.15.666-usability",
+  "iter": 256,
+  "program": "programs/realworld/svc_diffflat_drift_board.cubalc",
+  "theme": "DIFFFLAT mesh drift + UNFLATKV/SETFLAT plane",
+  "version": "1.15.670-usability",
   "pass": true,
-  "prior_note": "iter 254 PATHKEYS/FLATKV; this iter first realworld GREPFLAT+PRUNEFLAT+MERGEFLAT (1214-1216)",
+  "prior_note": "iter 255 GREP/PRUNE/MERGE flat; this iter first realworld DIFFFLAT (1213) + UNFLATKV (1212) + SETFLAT (1218)",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed noisy nest",
+      "cmd": "seed agent+peer drift",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "grepf",
-      "cmd": "GREPFLAT/GREPVFLAT/GREPFLATI/KEEPFLAT",
+      "name": "diff",
+      "cmd": "DIFFFLAT changelog deep leaves",
       "ok": true,
-      "note": "grepf"
+      "note": "diff"
     },
     {
-      "name": "prune",
-      "cmd": "PRUNEFLAT tmp+noise",
+      "name": "paths",
+      "cmd": "PATHDIFF path names only",
       "ok": true,
-      "note": "prune"
+      "note": "paths"
     },
     {
-      "name": "keep",
-      "cmd": "KEEPONLYFLAT cfg project",
+      "name": "equal",
+      "cmd": "self DIFFFLAT empty",
       "ok": true,
-      "note": "keep"
+      "note": "equal"
     },
     {
-      "name": "merge",
-      "cmd": "MERGEFLAT cfg overlay keep identity",
+      "name": "unflat",
+      "cmd": "FLATKV→UNFLATKV + UNDER",
       "ok": true,
-      "note": "merge"
+      "note": "unflat"
     },
     {
-      "name": "peer",
-      "cmd": "GREPFLAT/PRUNEFLAT FROM PEER",
+      "name": "setflat",
+      "cmd": "SETFLAT bulk debug zero",
       "ok": true,
-      "note": "peer"
+      "note": "setflat"
     },
     {
       "name": "soft",
-      "cmd": "empty needle prune + miss grepf",
+      "cmd": "empty unflat + self equal",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "post-scrub contract",
+      "cmd": "drift admit contract",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "DELFLAT/DROPFLAT/OVERLAYFLAT",
+      "cmd": "FROMFLAT + INCFLAT",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "437/464 pre-existing cli shell fails; grepflat PASS 31 pruneflat PASS 24 mergeflat PASS 22"
+      "note": "441/472 pre-existing cli shell fails; diffflat PASS 22 unflatkv PASS 27 setflat PASS 24"
     }
   ],
   "weaknesses": [
@@ -3050,25 +3050,57 @@
       "title": "CLI plate grepf/prune/mergeflat duals fail set form",
       "detail": "Selftest 27 CLI fails include grepf/prune/mergeflat shells. Language proofs PASS.",
       "repro": "selftest cli_plate_mergeflat FAIL"
+    },
+    {
+      "id": "W373",
+      "severity": "med",
+      "area": "lang|getp_from_var",
+      "title": "GETP FROM custom plate var name unknown form",
+      "detail": "GETP FROM SCRATCH / FROM TMP after UNFLATKV INTO SCRATCH fails with unknown form SCRATCH. INTO PEER/PLATE works; custom names need PLATE swap or disk reload.",
+      "repro": "UNFLATKV bag INTO SCRATCH; GETP FROM SCRATCH host → unknown form"
+    },
+    {
+      "id": "W374",
+      "severity": "med",
+      "area": "lang|plate_bak",
+      "title": "LET BAK=PLATE then PLATE={} may not isolate plate copy for restore",
+      "detail": "After unflat experiments, LET PLATE=BAK failed to restore meta.role in board; reloading via plate_peer_session from disk is reliable. Suggests plate binding/reference semantics.",
+      "repro": "BAK=PLATE; PLATE={}; UNFLATKV; PLATE=BAK → fields wrong"
+    },
+    {
+      "id": "W375",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL",
+      "detail": "W5 reconfirm",
+      "repro": "cat -A META.txt"
+    },
+    {
+      "id": "W376",
+      "severity": "high",
+      "area": "host|cli_plate",
+      "title": "CLI plate diffflat/unflat/setflat duals fail set form",
+      "detail": "Selftest 31 CLI fails include new flat duals. Language proofs PASS.",
+      "repro": "selftest cli_plate_diffflat FAIL"
     }
   ],
   "workarounds": [
-    "MERGEFLAT curated overlay not full PEER plate",
-    "SETP agent/host/schema after KEEPONLYFLAT",
-    "Full path:val needles for HASLINE on GREPFLAT bags"
+    "Swap LET PLATE for temporary unflat targets; reload session after",
+    "Exact changelog HASLINE needles with spaces around arrow",
+    "Curated peer seeds for stable DIFFFLAT lines"
   ],
   "language_gaps": [
-    "GREPFLAT/GREPVFLAT/GREPFLATI excellent for leaf triage",
-    "PRUNEFLAT write-back scrub solid",
-    "MERGEFLAT deep overlay powerful but identity-clobber footgun",
-    "KEEPONLYFLAT project is destructive",
-    "Empty PRUNEFLAT needle is safe no-op"
+    "DIFFFLAT deep nest changelog excellent for mesh drift",
+    "PATHDIFF path-name bag clean for admit lists",
+    "UNFLATKV round-trip + UNDER solid",
+    "SETFLAT/INCFLAT bulk leaf mutation solid",
+    "Custom multi-plate INTO name surface incomplete for GETP FROM"
   ],
   "issues_faced": [
-    "MERGEFLAT PEER clobbered identity — use curated OVERLAY",
-    "KEEPONLYFLAT needs identity reseed for gate",
-    "CLI duals still broken"
+    "GETP FROM custom INTO name broken — PLATE swap + disk reload",
+    "LET plate bak restore unreliable — INCLUDE plate_peer_session",
+    "CLI duals still failing set form"
   ],
-  "commit": "85fa37e5",
-  "ts": "2026-08-09T14:20:39Z"
+  "commit": "",
+  "ts": "2026-08-09T15:11:24Z"
 }
