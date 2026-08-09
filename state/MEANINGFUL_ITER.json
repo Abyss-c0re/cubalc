@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 586,
-  "version": "1.15.613-usability",
-  "item": "ABSP/SIGNP",
-  "item_id": 622,
-  "title": "ABSP|MAGP · SIGNP|DIRP · multi-plate magnitude and polarity · rank SUBP deltas · no TOKV+ABSKV/SIGNKV+FROMKVP",
-  "commit": "e653ab6d2ede1ea764047e57b4c4ed2df398c047",
-  "summary": "Plate |v| and signum after SUBP without bag glue. proof 1163 42/42.",
+  "iter": 587,
+  "version": "1.15.614-usability",
+  "item": "KEEPKEYP/DROPKEYP",
+  "item_id": 623,
+  "title": "KEEPKEYP|GREPKEYP · DROPKEYP|GREPVKEYP · KEEPKEYPI|DROPKEYPI · multi-plate key needle filter · complements PICKP · no TOKV+KEEPKEY/DROPKEY",
+  "commit": "8778adc25bd6e24862c00ba18ec32fdf552da1b0",
+  "summary": "FREQ key pattern keep/drop (icase) without bag glue. proof 1164 40/40.",
   "proofs": [
-    "1163_absp 42/42",
-    "1162_summergep reg 44/44",
-    "1161_pctp reg 46/46"
+    "1164_keepkeyp 40/40",
+    "1163_absp reg 42/42"
   ],
-  "when": "2026-08-09T04:46:21Z",
+  "when": "2026-08-09T04:55:55Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e653ab6d2ede1ea764047e57b4c4ed2df398c047",
-  "note": "invented after backlog 621; EVOLVE_PAUSED"
+  "sha": "8778adc25bd6e24862c00ba18ec32fdf552da1b0",
+  "note": "invented after backlog 622; EVOLVE_PAUSED"
 }
