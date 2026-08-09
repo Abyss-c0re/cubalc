@@ -1,51 +1,63 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 231,
-  "program": "programs/realworld/mesh_keydiffp_drift_board.cubalc",
-  "theme": "KEYDIFFP/KEYCOMMP mesh structural key-set drift gate",
-  "version": "1.15.607-usability",
+  "iter": 232,
+  "program": "programs/realworld/mesh_sumnp_score_board.cubalc",
+  "theme": "SUMNP/TOPKEYP mesh load/score plate aggregates",
+  "version": "1.15.609-usability",
   "pass": true,
-  "prior_note": "iter 230 RENAMEP promote; this iter first realworld KEYDIFFP (1153)",
+  "prior_note": "iter 231 KEYDIFFP; this iter first realworld SUMNP (1159 / MEANINGFUL 618)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "divergent key sets + KEYDIFFP/KEYCOMMP",
+      "cmd": "seed load+peer errors; sum20 top cpu peer13",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "additions",
-      "cmd": "KEYDIFFP PEER PLATE status only-in-peer",
+      "name": "sum",
+      "cmd": "SUMNP plate 20",
       "ok": true,
-      "note": "additions"
+      "note": "sum"
     },
     {
-      "name": "localonly",
-      "cmd": "KEYDIFFP PLATE PEER role only-local",
+      "name": "top",
+      "cmd": "TOPKEYP cpu BOTKEYP mem MAX/MIN",
       "ok": true,
-      "note": "localonly"
+      "note": "top"
     },
     {
-      "name": "common",
-      "cmd": "KEYCOMMP shared host/n not role/status",
+      "name": "avg",
+      "cmd": "AVGNP 6",
       "ok": true,
-      "note": "common"
+      "note": "avg"
     },
     {
-      "name": "align",
-      "cmd": "dual SETP close structural gap",
+      "name": "peer",
+      "cmd": "peer sum13 top error bot info",
       "ok": true,
-      "note": "align"
+      "note": "peer"
+    },
+    {
+      "name": "empty",
+      "cmd": "SUMNP FROM {} soft 0",
+      "ok": true,
+      "note": "empty"
     },
     {
       "name": "gate",
-      "cmd": "disk role+status; common has role",
+      "cmd": "sum<=budget 50",
       "ok": true,
       "note": "gate"
     },
     {
+      "name": "over",
+      "cmd": "budget=5 soft fail",
+      "ok": true,
+      "note": "over budget"
+    },
+    {
       "name": "probe",
-      "cmd": "lit forms + structure vs DIFFP",
+      "cmd": "TOTALP MAXKEYP MEANP skip strings",
       "ok": true,
       "note": "probe"
     },
@@ -57,7 +69,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_MKD_REQUIRE=1 EXIT 2",
+      "cmd": "CUBALC_MSS_REQUIRE=1 EXIT 2",
       "ok": true,
       "note": "hard env"
     },
@@ -65,7 +77,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "390/392 pre-existing sys_kvfileensure,init_peer; keydiffp PASS 27"
+      "note": "391/394 pre-existing sys_kvfileensure,init_peer,cli_plate_pick; sumnp PASS 30"
     }
   ],
   "weaknesses": [
@@ -2284,6 +2296,46 @@
       "title": "Structural align needs dual SETP (peer gains role, plate gains status)",
       "detail": "Closing key-set drift is multi-step: SETP FROM PEER role + SETP status on plate then both_save. No single ALIGNP form — agents hand-roll.",
       "repro": "align path sets both sides then KEYCOMMP grows"
+    },
+    {
+      "id": "W278",
+      "severity": "low",
+      "area": "lang|sumnp_skip",
+      "title": "SUMNP skips non-numeric fields silently (positive but opaque)",
+      "detail": "label/agent/schema strings do not contribute; sum is only numeric keys. No SUMNP_SKIP bag listing skipped keys — agents cannot audit what was ignored without KEYSP+TYPEP.",
+      "repro": "PLATE with cpu/mem/io + label → sum 20; no skip list"
+    },
+    {
+      "id": "W279",
+      "severity": "med",
+      "area": "lang|sumnp_from_var",
+      "title": "SUMNP FROM empty_obj LET var works (unlike MOVEKEYP FROM var)",
+      "detail": "Positive contrast to W270: SUMNP/TOPKEYP FROM empty_obj succeeded in large board empty action. Multi-plate FROM is not uniformly broken for all forms.",
+      "repro": "LET empty_obj {}; SUMNP FROM empty_obj → 0"
+    },
+    {
+      "id": "W280",
+      "severity": "low",
+      "area": "lang|avgnp",
+      "title": "AVGNP is integer mean only (truncates)",
+      "detail": "20/3 → 6 not 6.66. Ops SLOs needing float mean still need SYS/float path or document integer-only.",
+      "repro": "AVGNP plate 10+2+8 → 6"
+    },
+    {
+      "id": "W281",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META omit trailing NL (reconfirmed sumnp)",
+      "detail": "od -c META ends without newline.",
+      "repro": "od -c META after probe"
+    },
+    {
+      "id": "W282",
+      "severity": "med",
+      "area": "host|cli",
+      "title": "budget flag needs host -- separator for long opts (W11 class)",
+      "detail": "gate -- --budget=5 works; without host -- may strip. Board uses GETFLAG budget after --.",
+      "repro": "cubalc run prog gate -- --budget=5 → over budget"
     }
   ],
   "workarounds": [
@@ -2379,16 +2431,17 @@
     "Do not MOVEKEYP FROM arbitrary LET vars in large boards — only PLATE/PEER",
     "Staging order: RENAMEP promote before COPYP snapshot",
     "Pair KEYDIFFP (structure) with DIFFP (values) for full mesh drift",
-    "Capture KEYDIFFP bag via LAST+LINES+HASLINE body not delayed specials"
+    "Capture KEYDIFFP bag via LAST+LINES+HASLINE body not delayed specials",
+    "Pair TYPEP/KEYSP if need audit of non-numeric SUMNP skips",
+    "Integer AVGNP only — document for SLO means"
   ],
   "language_gaps": [
-    "KEYDIFFP vs DIFFP confusion risk (W274)",
-    "No single ALIGNP for structural close (W277)"
+    "SUMNP silent skip non-numeric (W278)",
+    "AVGNP integer truncate (W280)"
   ],
   "issues_faced": [
-    "None blocking — board green first pass with LAST/LINES capture",
-    "STATUS/META trailing NL omit"
+    "None blocking — green first pass including over-budget edge"
   ],
-  "commit": "d26ec9f8",
-  "ts": "2026-08-09T03:53:37Z"
+  "commit": "pending",
+  "ts": "2026-08-09T04:18:29Z"
 }
