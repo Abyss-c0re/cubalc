@@ -2153,6 +2153,7 @@ int main(int argc, char **argv) {
       {"pctobj", "programs/proof/1185_pctobj.cubalc", "PCTOBJ/SCALEPOBJ/ADDPOBJ nest value map write-back multi-plate PCTP duals"},
       {"keepkeyobj", "programs/proof/1186_keepkeyobj.cubalc", "KEEPKEYOBJ/DROPKEYOBJ nest key needle filter write-back multi-plate"},
       {"topnobj", "programs/proof/1187_topnobj.cubalc", "TOPNOBJ/BOTNOBJ nest top/bottom N keys write-back multi-plate TOPNP duals"},
+      {"cli_plate_nestagg", "programs/proof/1188_cli_plate_nestagg.sh", "cubalc plate nestsum/nestavg/nesttop/nestbot SUMNOBJ duals"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
       {"mergeobj", "programs/proof/1171_mergeobj.cubalc", "MERGEOBJ/DEFAULTOBJ nested plate merge one-shot multi-plate"},
       {"getpobj", "programs/proof/1172_getpobj.cubalc", "GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ nested scalar field plane multi-plate"},
@@ -4873,6 +4874,8 @@ int main(int argc, char **argv) {
               "       cubalc plate nesthas <path> <nest> <field>\n"
               "       cubalc plate nestpick <path> <nest> <k1> [k2…]  # PICKOBJ dual\n"
               "       cubalc plate nestomit <path> <nest> <k1> [k2…]  # OMITOBJ dual\n"
+              "       cubalc plate nestsum|nestavg|nestmedian <path> <nest>  # SUMNOBJ duals\n"
+              "       cubalc plate nesttop|nestbot <path> <nest> [n]  # TOPNOBJ duals (no write)\n"
               "       cubalc plate fill [-s|--strict] <path> <tmpl|@file> [out]\n"
               "       cubalc plate fillkeys <path> <tmpl|@file>\n"
               "       cubalc plate ensure <path> [seed|@file]  # create-or-keep\n"
@@ -4886,6 +4889,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
+             "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
              "\"fill\",\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\",\"changelog\","
              "\"has\",\"need\",\"pick\",\"omit\",\"sum\",\"avg\",\"median\",\"top\",\"bot\"]}\n",
              CUBALC_LANG_VERSION);
@@ -4950,7 +4954,18 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "picknest") == 0 || strcmp(argv[2], "pickobj") == 0 ||
         strcmp(argv[2], "nestomit") == 0 || strcmp(argv[2], "nomit") == 0 ||
         strcmp(argv[2], "omitnest") == 0 || strcmp(argv[2], "omitobj") == 0 ||
-        strcmp(argv[2], "stripnest") == 0) {
+        strcmp(argv[2], "stripnest") == 0 ||
+        strcmp(argv[2], "nestsum") == 0 || strcmp(argv[2], "nsum") == 0 ||
+        strcmp(argv[2], "sumnest") == 0 || strcmp(argv[2], "sumnobj") == 0 ||
+        strcmp(argv[2], "nestavg") == 0 || strcmp(argv[2], "navg") == 0 ||
+        strcmp(argv[2], "avgnest") == 0 || strcmp(argv[2], "nestmean") == 0 ||
+        strcmp(argv[2], "nestmedian") == 0 || strcmp(argv[2], "nmedian") == 0 ||
+        strcmp(argv[2], "nestp50") == 0 || strcmp(argv[2], "mediannest") == 0 ||
+        strcmp(argv[2], "nesttop") == 0 || strcmp(argv[2], "ntop") == 0 ||
+        strcmp(argv[2], "topnest") == 0 || strcmp(argv[2], "topnobj") == 0 ||
+        strcmp(argv[2], "nestbot") == 0 || strcmp(argv[2], "nbot") == 0 ||
+        strcmp(argv[2], "botnest") == 0 || strcmp(argv[2], "botnobj") == 0 ||
+        strcmp(argv[2], "nestbottom") == 0) {
       op = argv[2];
       if (strcmp(op, "dump") == 0 || strcmp(op, "cat") == 0 || strcmp(op, "read") == 0)
         op = "show";
@@ -5033,6 +5048,21 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "nomit") == 0 || strcmp(op, "omitobj") == 0 ||
                strcmp(op, "omitnest") == 0 || strcmp(op, "stripnest") == 0)
         op = "nestomit";
+      else if (strcmp(op, "nsum") == 0 || strcmp(op, "sumnest") == 0 ||
+               strcmp(op, "sumnobj") == 0)
+        op = "nestsum";
+      else if (strcmp(op, "navg") == 0 || strcmp(op, "avgnest") == 0 ||
+               strcmp(op, "nestmean") == 0)
+        op = "nestavg";
+      else if (strcmp(op, "nmedian") == 0 || strcmp(op, "nestp50") == 0 ||
+               strcmp(op, "mediannest") == 0)
+        op = "nestmedian";
+      else if (strcmp(op, "ntop") == 0 || strcmp(op, "topnest") == 0 ||
+               strcmp(op, "topnobj") == 0)
+        op = "nesttop";
+      else if (strcmp(op, "nbot") == 0 || strcmp(op, "botnest") == 0 ||
+               strcmp(op, "botnobj") == 0 || strcmp(op, "nestbottom") == 0)
+        op = "nestbot";
       ai = 3;
       /* fill[-keys]: optional -s|--strict before path */
       if ((strcmp(op, "fill") == 0 || strcmp(op, "fillkeys") == 0) &&
@@ -5116,11 +5146,15 @@ int main(int argc, char **argv) {
 
     /* nestget|nestset|nestinc|nestdel|nestkeys|nesthas — nested field CLI duals of
      * GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ/KEYSOBJ/HASPOBJ. Agents one-shot nested config
-     * without writing a .cubalc program. */
+     * without writing a .cubalc program.
+     * nestsum|nestavg|nestmedian|nesttop|nestbot — SUMNOBJ/TOPNOBJ CLI duals (no write). */
     if (strcmp(op, "nestget") == 0 || strcmp(op, "nestset") == 0 ||
         strcmp(op, "nestinc") == 0 || strcmp(op, "nestdel") == 0 ||
         strcmp(op, "nestkeys") == 0 || strcmp(op, "nesthas") == 0 ||
-        strcmp(op, "nestpick") == 0 || strcmp(op, "nestomit") == 0) {
+        strcmp(op, "nestpick") == 0 || strcmp(op, "nestomit") == 0 ||
+        strcmp(op, "nestsum") == 0 || strcmp(op, "nestavg") == 0 ||
+        strcmp(op, "nestmedian") == 0 || strcmp(op, "nesttop") == 0 ||
+        strcmp(op, "nestbot") == 0) {
       const char *nestk = NULL, *field = NULL;
       char nest[CUBALC_HOST_STR_MAX];
       cubalc_host_result ngr, gr, wr, kr;
@@ -5151,6 +5185,129 @@ int main(int argc, char **argv) {
       }
       if (!nest_hit)
         snprintf(nest, sizeof nest, "%s", "{}");
+
+      /* nestsum|nestavg|nestmedian — SUMNOBJ/AVGNOBJ/MEDIANOBJ duals (no write). */
+      if (strcmp(op, "nestsum") == 0 || strcmp(op, "nestavg") == 0 ||
+          strcmp(op, "nestmedian") == 0) {
+        cubalc_host_result ar;
+        long used = 0;
+        memset(&ar, 0, sizeof ar);
+        if (!nest_hit) {
+          if (strcmp(op, "nestsum") == 0)
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                   "\"op\":\"nestsum\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":0,"
+                   "\"nest_hit\":false,\"file\":%s,\"version\":\"%s\"}\n",
+                   path, nestk, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+          else
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                   "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":0,\"used\":0,"
+                   "\"nest_hit\":false,\"file\":%s,\"version\":\"%s\"}\n",
+                   op, path, nestk, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+          return 0;
+        }
+        if (strcmp(op, "nestsum") == 0) {
+          if (cubalc_host_json_sum(nest, &ar) != 0) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"nestsum\",\"path\":\"%s\",\"nest\":\"%s\",\"err\":\"%s\","
+                   "\"version\":\"%s\"}\n",
+                   path, nestk, ar.err[0] ? ar.err : "json sum fail",
+                   CUBALC_LANG_VERSION);
+            return 1;
+          }
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                 "\"op\":\"nestsum\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":%ld,"
+                 "\"nest_hit\":true,\"file\":%s,\"version\":\"%s\"}\n",
+                 path, nestk, ar.n, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+          return 0;
+        }
+        if (strcmp(op, "nestavg") == 0) {
+          if (cubalc_host_json_avg(nest, &ar) != 0) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"nestavg\",\"path\":\"%s\",\"nest\":\"%s\",\"err\":\"%s\","
+                   "\"version\":\"%s\"}\n",
+                   path, nestk, ar.err[0] ? ar.err : "json avg fail",
+                   CUBALC_LANG_VERSION);
+            return 1;
+          }
+          used = (long)ar.code;
+        } else {
+          if (cubalc_host_json_median(nest, &ar) != 0) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"nestmedian\",\"path\":\"%s\",\"nest\":\"%s\",\"err\":\"%s\","
+                   "\"version\":\"%s\"}\n",
+                   path, nestk, ar.err[0] ? ar.err : "json median fail",
+                   CUBALC_LANG_VERSION);
+            return 1;
+          }
+          used = (long)ar.code;
+        }
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":%ld,\"used\":%ld,"
+               "\"nest_hit\":true,\"file\":%s,\"version\":\"%s\"}\n",
+               op, path, nestk, ar.n, used, file_hit ? "true" : "false",
+               CUBALC_LANG_VERSION);
+        return 0;
+      }
+
+      /* nesttop|nestbot [n] — TOPNOBJ/BOTNOBJ duals (read-only; no file write). */
+      if (strcmp(op, "nesttop") == 0 || strcmp(op, "nestbot") == 0) {
+        cubalc_host_result tr, tk;
+        long ntake = 1;
+        int want_bot = (strcmp(op, "nestbot") == 0) ? 1 : 0;
+        char key1[256];
+        long val1 = 0;
+        if (ai < argc && argv[ai] && argv[ai][0]) {
+          char *end = NULL;
+          long vv = strtol(argv[ai], &end, 10);
+          if (end && end != argv[ai] && *end == 0)
+            ntake = vv;
+        }
+        if (ntake < 0) ntake = 0;
+        if (!nest_hit) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":0,\"cand\":0,"
+                 "\"take\":%ld,\"key\":\"\",\"value\":0,\"nest_hit\":false,"
+                 "\"file\":%s,\"version\":\"%s\",\"plate\":{}}\n",
+                 op, path, nestk, ntake, file_hit ? "true" : "false",
+                 CUBALC_LANG_VERSION);
+          return 0;
+        }
+        memset(&tr, 0, sizeof tr);
+        if (cubalc_host_json_topn(nest, ntake, want_bot, &tr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\",\"err\":\"%s\","
+                 "\"version\":\"%s\"}\n",
+                 op, path, nestk, tr.err[0] ? tr.err : "json topn fail",
+                 CUBALC_LANG_VERSION);
+          return 1;
+        }
+        key1[0] = 0;
+        memset(&tk, 0, sizeof tk);
+        if (tr.n > 0 && cubalc_host_json_keys(tr.str, &tk) == 0 && tk.str[0]) {
+          size_t kn = 0;
+          const char *kp = tk.str;
+          while (*kp && *kp != '\n' && *kp != '\r' && kn + 1 < sizeof key1)
+            key1[kn++] = *kp++;
+          key1[kn] = 0;
+          if (key1[0]) {
+            cubalc_host_result gr2;
+            char *end = NULL;
+            memset(&gr2, 0, sizeof gr2);
+            if (cubalc_host_json_get(tr.str, key1, &gr2) == 0 && gr2.str[0]) {
+              val1 = strtol(gr2.str, &end, 10);
+              if (!(end && end != gr2.str && *end == 0))
+                val1 = 0;
+            }
+          }
+        }
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":%ld,\"cand\":%d,"
+               "\"take\":%ld,\"key\":\"%s\",\"value\":%ld,\"nest_hit\":true,"
+               "\"file\":%s,\"version\":\"%s\",\"plate\":%s}\n",
+               op, path, nestk, tr.n, tr.code, ntake, key1, val1,
+               file_hit ? "true" : "false", CUBALC_LANG_VERSION, tr.str);
+        return 0;
+      }
 
       if (strcmp(op, "nestkeys") == 0) {
         char flatk[CUBALC_HOST_STR_MAX];
