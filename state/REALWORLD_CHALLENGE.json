@@ -3069,6 +3069,6 @@
     "KEEPONLYFLAT needs identity reseed for gate",
     "CLI duals still broken"
   ],
-  "commit": "",
+  "commit": "85fa37e5",
   "ts": "2026-08-09T14:20:39Z"
 }
