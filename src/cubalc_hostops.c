@@ -5827,6 +5827,76 @@ int cubalc_host_json_leaf_scale(const char *json, const char *needle, long facto
   return 0;
 }
 
+/* COUNTFLAT/HASFLAT: count leaf paths matching needle. See header. */
+int cubalc_host_json_leaf_count(const char *json, const char *needle,
+                                cubalc_host_result *r) {
+  cubalc_host_result kv;
+  const char *p, *line;
+  long count = 0;
+  size_t nn;
+
+  r_clear(r);
+  if (!needle) needle = "";
+  nn = strlen(needle);
+  memset(&kv, 0, sizeof kv);
+  cubalc_host_json_leaf_kv(json ? json : "{}", NULL, &kv);
+  p = kv.str;
+  while (*p) {
+    char path[512];
+    size_t kn = 0;
+    const char *sep;
+    int hit;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    kn = sep ? (size_t)(sep - line) : (size_t)(p - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn == 0 || kn >= sizeof path) continue;
+    memcpy(path, line, kn);
+    path[kn] = 0;
+    if (!nn)
+      hit = 1;
+    else {
+      size_t i;
+      hit = 0;
+      if (nn <= kn) {
+        for (i = 0; i + nn <= kn; i++) {
+          if (memcmp(path + i, needle, nn) == 0) {
+            hit = 1;
+            break;
+          }
+        }
+      }
+    }
+    if (hit) count++;
+  }
+  r->n = count;
+  r->code = (int)count;
+  r->ok = 1;
+  snprintf(r->str, sizeof r->str, "%ld", count);
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,

@@ -248,6 +248,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate dropzeroflat state/my_agent.json delta              # drop pure-int zero leaves matching needle
 ./out/cubalc plate capflat    state/my_agent.json score 100            # clamp pure-int *score* leaves to max 100
 ./out/cubalc plate scaleflat  state/my_agent.json score 2              # multiply pure-int *score* leaves by 2
+./out/cubalc plate hasflat    state/my_agent.json error                # soft leaf-path presence → n 0|1
+./out/cubalc plate countflat  state/my_agent.json score                # count leaf paths matching needle
 ./out/cubalc plate decflat    state/my_agent.json errs                  # decrement
 ./out/cubalc libs | grep plate
 

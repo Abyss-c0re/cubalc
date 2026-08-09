@@ -1,0 +1,66 @@
+# HASFLAT / COUNTFLAT — soft leaf-path presence and count by needle
+# Usability: structure probe without GREPFLAT+LINES/EMPTY glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"score\":{\"a\":1,\"b\":2},\"label\":\"x\",\"meta\":{\"score\":3,\"role\":\"w\"},\"error\":{\"code\":9}}"
+
+HASFLAT "score"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASFLAT_HIT == 1
+ASSERT HASFLAT_N == 3
+
+COUNTFLAT "score"
+ASSERT LAST_N == 3
+ASSERT COUNTFLAT_N == 3
+
+HASFLAT "error"
+ASSERT LAST_N == 1
+ASSERT HASFLAT_N == 1
+
+HASFLAT "nope"
+ASSERT LAST_N == 0
+ASSERT HASFLAT_HIT == 0
+ASSERT HASFLAT_N == 0
+
+COUNTFLAT "nope"
+ASSERT LAST_N == 0
+
+# empty needle — all leaves: score.a, score.b, label, meta.score, meta.role, error.code = 6
+COUNTFLAT ""
+ASSERT LAST_N == 6
+HASFLAT ""
+ASSERT LAST_N == 1
+ASSERT HASFLAT_N == 6
+
+LET PEER = "{\"tls\":{\"on\":1},\"name\":\"n\"}"
+HASFLAT FROM PEER "tls"
+ASSERT HASFLAT_FROM == 1
+SYS EQS HASFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT HASFLAT_HIT == 1
+ASSERT HASFLAT_N == 1
+
+COUNTFLAT FROM PEER "tls"
+ASSERT COUNTFLAT_FROM == 1
+ASSERT LAST_N == 1
+
+# plate unchanged (read-only)
+LET PLATE = "{\"x\":1}"
+HASFLAT FROM PEER "tls"
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# ANYFLAT alias
+LET PLATE = "{\"cfg\":{\"port\":8080}}"
+ANYFLAT "port"
+ASSERT LAST_N == 1
+ASSERT HASFLAT_N == 1
+
+NFLAT "cfg"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1225_hasflat: PASS"
