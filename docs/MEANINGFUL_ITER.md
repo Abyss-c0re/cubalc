@@ -644,6 +644,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 614. ~~**`LENP` / `NKEYSP` · `EMPTYP` / `NONEMPTYP` · `VALSP`**~~ **done** (size/empty/values probes · multi-plate · no SYS JSONLEN/JSONEMPTY/JSONVALUES).
 615. ~~**`TYPEP` / `KINDP`**~~ **done** (field kind probe missing|num|str|bool|null|obj|arr · multi-plate · no SYS JSONTYPE).
 616. ~~**`TOKVP` / `TOBAGP` · `FROMKVP` / `BAGTOP`**~~ **done** (plate↔key:val bag · multi-plate · no SYS JSONTOKV/JSONFROMKV).
+617. ~~**`cubalc plate pick` / `omit`**~~ **done** (CLI keep/drop listed keys · PICKP/OMITP duals · no `.cubalc`).
 
 ## Tick protocol
 

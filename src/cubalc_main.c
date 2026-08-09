@@ -2129,6 +2129,7 @@ int main(int argc, char **argv) {
       {"lenp", "programs/proof/1155_lenp.cubalc", "LENP/EMPTYP/VALSP multi-plate size empty values probes"},
       {"typep", "programs/proof/1156_typep.cubalc", "TYPEP multi-plate field kind probe no SYS JSONTYPE"},
       {"tokvp", "programs/proof/1157_tokvp.cubalc", "TOKVP/FROMKVP multi-plate bag↔plate convert"},
+      {"cli_plate_pick", "programs/proof/1158_cli_plate_pick.sh", "cubalc plate pick/omit key projection duals"},
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
@@ -4718,6 +4719,8 @@ int main(int argc, char **argv) {
      *   cubalc plate diff   a.json b.json            # changed key bag · JSONCHANGED dual
      *   cubalc plate changelog a.json b.json         # "key: old → new" · JSONCHANGELOG dual
      *   cubalc plate has|need path.json k1 k2 …      # multi-key contract · HASPALL/NEEDP duals
+     *   cubalc plate pick path.json k1 k2 …          # keep listed keys · PICKP dual
+     *   cubalc plate omit path.json k1 k2 …          # drop listed keys · OMITP dual
      * Bare: cubalc plate path.json  → show
      * One JSON plate per call (cubalc.plate.v1) for agents. */
     const char *op = "show";
@@ -4737,7 +4740,7 @@ int main(int argc, char **argv) {
     plate[0] = 0;
     if (argc <= 2) {
       fprintf(stderr,
-              "usage: cubalc plate show|get|set|inc|del|keys|fill|ensure|merge|eq|ne|diff|changelog|has|need <path> …\n"
+              "usage: cubalc plate show|get|set|inc|del|keys|fill|ensure|merge|eq|ne|diff|changelog|has|need|pick|omit <path> …\n"
               "       cubalc plate <path.json>                 # show\n"
               "       cubalc plate get <path> <key> [OR def]\n"
               "       cubalc plate set <path> <key> <value>\n"
@@ -4749,12 +4752,13 @@ int main(int argc, char **argv) {
               "       cubalc plate ensure <path> [seed|@file]  # create-or-keep\n"
               "       cubalc plate merge  <path> <overlay|@file>\n"
               "       cubalc plate eq|ne|diff|changelog <a.json> <b.json>\n"
-              "       cubalc plate has|need <path> <k1> [k2 …]\n");
+              "       cubalc plate has|need <path> <k1> [k2 …]\n"
+              "       cubalc plate pick|omit <path> <k1> [k2 …]  # keep/drop keys · PICKP/OMITP\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\",\"fill\","
              "\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\",\"changelog\","
-             "\"has\",\"need\"]}\n",
+             "\"has\",\"need\",\"pick\",\"omit\"]}\n",
              CUBALC_LANG_VERSION);
       return 2;
     }
@@ -4787,7 +4791,11 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "has") == 0 || strcmp(argv[2], "hasall") == 0 ||
         strcmp(argv[2], "has-keys") == 0 || strcmp(argv[2], "check") == 0 ||
         strcmp(argv[2], "need") == 0 || strcmp(argv[2], "require") == 0 ||
-        strcmp(argv[2], "needkeys") == 0 || strcmp(argv[2], "require-keys") == 0) {
+        strcmp(argv[2], "needkeys") == 0 || strcmp(argv[2], "require-keys") == 0 ||
+        strcmp(argv[2], "pick") == 0 || strcmp(argv[2], "keep") == 0 ||
+        strcmp(argv[2], "select") == 0 || strcmp(argv[2], "project") == 0 ||
+        strcmp(argv[2], "omit") == 0 || strcmp(argv[2], "strip") == 0 ||
+        strcmp(argv[2], "dropkeys") == 0 || strcmp(argv[2], "drop-keys") == 0) {
       op = argv[2];
       if (strcmp(op, "dump") == 0 || strcmp(op, "cat") == 0 || strcmp(op, "read") == 0)
         op = "show";
@@ -4829,6 +4837,12 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "require") == 0 || strcmp(op, "needkeys") == 0 ||
                strcmp(op, "require-keys") == 0)
         op = "need";
+      else if (strcmp(op, "keep") == 0 || strcmp(op, "select") == 0 ||
+               strcmp(op, "project") == 0)
+        op = "pick";
+      else if (strcmp(op, "strip") == 0 || strcmp(op, "dropkeys") == 0 ||
+               strcmp(op, "drop-keys") == 0)
+        op = "omit";
       ai = 3;
       /* fill[-keys]: optional -s|--strict before path */
       if ((strcmp(op, "fill") == 0 || strcmp(op, "fillkeys") == 0) &&
@@ -4907,6 +4921,74 @@ int main(int argc, char **argv) {
              "\"op\":\"keys\",\"path\":\"%s\",\"file\":%s,\"n\":%ld,"
              "\"keys\":\"%s\",\"version\":\"%s\"}\n",
              path, file_hit ? "true" : "false", keys.n, flat, CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+    /* pick|omit path k1 [k2 …] — project plate keys without a .cubalc program.
+     * Usability: shell dual of PICKP / OMITP for peer/log slim plates.
+     *   cubalc plate pick agent.json host status n
+     *   cubalc plate omit agent.json tmp debug
+     * Soft-missing keys skipped. Does not write file (stdout plate only). */
+    if (strcmp(op, "pick") == 0 || strcmp(op, "omit") == 0) {
+      char keys_nl[CUBALC_HOST_STR_MAX];
+      char flat_req[CUBALC_HOST_STR_MAX];
+      cubalc_host_result pr;
+      size_t o = 0;
+      long nreq = 0;
+      int is_omit = (strcmp(op, "omit") == 0) ? 1 : 0;
+
+      keys_nl[0] = 0;
+      flat_req[0] = 0;
+      if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"need one or more keys\","
+               "\"version\":\"%s\"}\n", op, path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      while (ai < argc && argv[ai] && argv[ai][0]) {
+        size_t kl = strlen(argv[ai]);
+        if (o + kl + 2 >= sizeof keys_nl) break;
+        if (o > 0) keys_nl[o++] = '\n';
+        memcpy(keys_nl + o, argv[ai], kl);
+        o += kl;
+        keys_nl[o] = 0;
+        {
+          size_t fo = strlen(flat_req);
+          if (fo + kl + 2 < sizeof flat_req) {
+            if (fo > 0) {
+              flat_req[fo++] = ',';
+              flat_req[fo] = 0;
+            }
+            memcpy(flat_req + fo, argv[ai], kl);
+            flat_req[fo + kl] = 0;
+          }
+        }
+        nreq++;
+        ai++;
+      }
+
+      memset(&pr, 0, sizeof pr);
+      if (is_omit) {
+        if (cubalc_host_json_drop(plate, keys_nl, &pr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"omit\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 path, pr.err[0] ? pr.err : "json drop fail", CUBALC_LANG_VERSION);
+          return 1;
+        }
+      } else {
+        if (cubalc_host_json_pick(plate, keys_nl, &pr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"pick\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 path, pr.err[0] ? pr.err : "json pick fail", CUBALC_LANG_VERSION);
+          return 1;
+        }
+      }
+
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"%s\",\"path\":\"%s\",\"n\":%ld,\"n_req\":%ld,"
+             "\"keys\":\"%s\",\"file\":%s,\"version\":\"%s\",\"plate\":%s}\n",
+             op, path, pr.n, nreq, flat_req,
+             file_hit ? "true" : "false", CUBALC_LANG_VERSION, pr.str);
       return 0;
     }
 
