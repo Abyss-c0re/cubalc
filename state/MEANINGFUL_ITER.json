@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 655,
-  "version": "1.15.682-usability",
-  "item": "NEEDFLATN + plate needflatn",
-  "item_id": 691,
-  "title": "NEEDFLATN/REQUIREFLATN + cubalc plate needflatn · fail-fast pure-int leaf needles · peel first → LAST_N",
-  "commit": "0e12101de86733c5b61ddf12d1cbe0181531a6f5",
-  "summary": "Typed nest contract without GETFLATN+IF fail glue. proof 1232 + CLI PASS.",
+  "iter": 656,
+  "version": "1.15.683-usability",
+  "item": "HASFLATN/COUNTFLATN + plate duals",
+  "item_id": 692,
+  "title": "HASFLATN/COUNTFLATN + cubalc plate hasflatn|countflatn · soft pure-int leaf presence/count → LAST_N",
+  "commit": "b7ec104b20fb632ec614bedfaeab8efac1869cca",
+  "summary": "Typed soft probe without GETFLATN+IF or NEEDFLATN fail glue. proof 1233 + CLI PASS.",
   "proofs": [
-    "1232_needflatn PASS",
-    "1232_cli_plate_needflatn PASS",
-    "1229_getflatn reg PASS",
-    "1228_needflat reg PASS"
+    "1233_hasflatn PASS",
+    "1233_cli_plate_hasflatn PASS",
+    "1225_hasflat reg PASS",
+    "1232_needflatn reg PASS"
   ],
-  "when": "2026-08-09T17:17:06Z",
+  "when": "2026-08-09T17:26:34Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0e12101de86733c5b61ddf12d1cbe0181531a6f5",
-  "note": "after MEDIANFLAT plane; EVOLVE_PAUSED"
+  "sha": "b7ec104b20fb632ec614bedfaeab8efac1869cca",
+  "note": "after NEEDFLATN plane; EVOLVE_PAUSED"
 }
