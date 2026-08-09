@@ -1,0 +1,149 @@
+# SUMMERGEOBJ / SUBVALOBJ — nest FREQ sum-merge and delta (SUMMERGEP duals)
+# Usability: peer nest FREQ combine without GETOBJ+SUMMERGEP+SETOBJ glue.
+# Not MERGEOBJ (overlay replace) · not GETOBJ alias SUBOBJ · not OOP.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"error\":5,\"warn\":2,\"info\":1,\"label\":\"x\"}}"
+LET PEER = "{\"host\":\"cubeB\",\"freq\":{\"error\":1,\"warn\":3,\"crit\":4},\"outer\":1}"
+LET BASE = "{\"freq\":{\"error\":2,\"warn\":1,\"info\":1},\"tag\":\"base\"}"
+
+# SUMMERGEOBJ peer same nest key: plate.freq += peer.freq
+SUMMERGEOBJ "freq" FROM PEER
+ASSERT OK == 1
+ASSERT SUMMERGEOBJ_N >= 4
+ASSERT SUMMERGEOBJ_HIT == 2
+ASSERT SUMMERGEOBJ_NEST_HIT == 1
+ASSERT SUMMERGEOBJ_HAVE_SRC == 1
+SYS EQS SUMMERGEOBJ_PEER "PEER"
+ASSERT LAST_N == 1
+SYS EQS SUMMERGEOBJ_PEER_NEST "freq"
+ASSERT LAST_N == 1
+# error 5+1=6 · warn 2+3=5 · info 1 · crit 4 · label kept
+GETPOBJ "freq" "error"
+SYS EQS LAST "6"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "warn"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "crit"
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "info"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "label"
+ASSERT LAST_N == 1
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+# PEER not mutated
+GETPOBJ FROM PEER "freq" "error"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# explicit src nest key + multi-plate target
+LET LOCAL = "{\"scores\":{\"a\":5,\"b\":2},\"keep\":1}"
+LET PEER = "{\"scores\":{\"a\":3,\"c\":7},\"z\":0}"
+SUMMERGEOBJ FROM LOCAL "scores" FROM PEER "scores"
+ASSERT OK == 1
+ASSERT SUMMERGEOBJ_FROM == 1
+SYS EQS SUMMERGEOBJ_SRC "LOCAL"
+ASSERT LAST_N == 1
+GETPOBJ FROM LOCAL "scores" "a"
+SYS EQS LAST "8"
+ASSERT LAST_N == 1
+GETPOBJ FROM LOCAL "scores" "b"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+GETPOBJ FROM LOCAL "scores" "c"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+GETP FROM LOCAL "keep"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# overlay object string (flat FREQ)
+LET PLATE = "{\"freq\":{\"error\":2},\"n\":1}"
+SUMMERGEOBJ "freq" "{\"error\":3,\"warn\":9}"
+ASSERT OK == 1
+GETPOBJ "freq" "error"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "warn"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# ADDFREQOBJ alias
+LET PLATE = "{\"freq\":{\"x\":1}}"
+ADDFREQOBJ "freq" "{\"x\":2,\"y\":3}"
+ASSERT OK == 1
+GETPOBJ "freq" "x"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "y"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# SUBVALOBJ: plate.freq − base.freq
+LET PLATE = "{\"host\":\"A\",\"freq\":{\"error\":9,\"warn\":3,\"info\":1}}"
+SUBVALOBJ "freq" FROM BASE "freq"
+ASSERT OK == 1
+ASSERT SUBVALOBJ_HIT >= 2
+ASSERT SUBVALOBJ_NEST_HIT == 1
+GETPOBJ "freq" "error"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "warn"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "info"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+GETP "host"
+SYS EQS LAST "A"
+ASSERT LAST_N == 1
+
+# SUBFREQOBJ alias + soft empty overlay nest
+LET PLATE = "{\"freq\":{\"a\":4}}"
+LET EMPTY = "{}"
+SUBFREQOBJ "freq" FROM EMPTY "freq"
+ASSERT OK == 1
+GETPOBJ "freq" "a"
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+
+# soft target nest miss: create from overlay
+LET PLATE = "{\"host\":\"z\"}"
+SUMMERGEOBJ "freq" "{\"error\":1}"
+ASSERT OK == 1
+ASSERT SUMMERGEOBJ_NEST_HIT == 0
+GETPOBJ "freq" "error"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "host"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# b-only key on SUB becomes negative
+LET PLATE = "{\"freq\":{\"a\":10}}"
+LET PREV = "{\"freq\":{\"a\":4,\"c\":3}}"
+SUBVALOBJ "freq" FROM PREV "freq"
+ASSERT OK == 1
+GETPOBJ "freq" "a"
+SYS EQS LAST "6"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "c"
+SYS EQS LAST "-3"
+ASSERT LAST_N == 1
+
+# HELP forms surface
+HELP SUMMERGEOBJ
+ASSERT OK == 1
+HELP SUBVALOBJ
+ASSERT OK == 1
+
+PRINT "1191_summergeobj ok"

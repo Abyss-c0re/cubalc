@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 613,
-  "version": "1.15.640-usability",
-  "item": "cubalc plate nestsort/nestsortbag",
-  "item_id": 649,
-  "title": "cubalc plate nestsort|nestsortbag \u00b7 SORTOBJ/SORTBAGOBJ CLI duals \u00b7 ASC|DESC \u00b7 agent nest FREQ full rank without .cubalc",
-  "commit": "41139440273b9acb3f989bb117aefe1419c50250",
-  "summary": "CLI nest full sort after nestagg \u00b7 nestsort write-back / nestsortbag bag \u00b7 proof 1190.",
+  "iter": 614,
+  "version": "1.15.641-usability",
+  "item": "SUMMERGEOBJ/SUBVALOBJ nest FREQ merge",
+  "item_id": 650,
+  "title": "SUMMERGEOBJ|ADDFREQOBJ|SUBVALOBJ|SUBFREQOBJ · nest pure-int sum-merge/delta write-back · multi-plate · SUMMERGEP duals",
+  "commit": "PENDING",
+  "summary": "Peer nest FREQ combine/delta without GETOBJ glue. proof 1191 46/46.",
   "proofs": [
-    "1190_cli_plate_nestsort PASS",
+    "1191_summergeobj 46/46",
+    "1162_summergep reg 44/44",
     "1189_sortobj reg 46/46",
-    "1188_cli_plate_nestagg reg ok"
+    "cubalc forms SUMMERGEOBJ ok"
   ],
-  "when": "2026-08-09T10:20:00Z",
+  "when": "2026-08-09T10:40:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "41139440273b9acb3f989bb117aefe1419c50250",
-  "note": "after backlog 648 SORTOBJ; EVOLVE_PAUSED"
+  "sha": "PENDING",
+  "note": "after backlog 649 nestsort CLI; EVOLVE_PAUSED"
 }
