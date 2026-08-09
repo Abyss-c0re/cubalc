@@ -1,0 +1,49 @@
+# NEEDFLATN / REQUIREFLATN — fail-fast pure-int leaf path contract + peel
+# Usability: typed int structure gate without GETFLATN+IF fail glue.
+# Soft twin: GETFLATN. On success LAST_N = first needle's pure-int value.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"cfg\":{\"port\":9090,\"host\":\"h\"},\"timeout_ms\":5000,\"label\":\"x\"}"
+
+NEEDFLATN "port"
+ASSERT OK == 1
+ASSERT LAST_N == 9090
+ASSERT NEEDFLATN == 9090
+ASSERT NEEDFLATN_N == 1
+ASSERT NEEDFLATN_MISS_N == 0
+SYS EQS NEEDFLATN_PATH "cfg.port"
+ASSERT LAST_N == 1
+
+NEEDFLATN "port" "timeout_ms"
+ASSERT OK == 1
+ASSERT LAST_N == 9090
+ASSERT NEEDFLATN_N == 2
+
+# host is string only — pure-int miss for "host" would fail; use timeout
+NEEDFLATN "timeout"
+ASSERT LAST_N == 5000
+SYS EQS NEEDFLATN_PATH "timeout_ms"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"hits\":{\"a\":3,\"b\":4},\"role\":\"leader\"}"
+NEEDFLATN FROM PEER "hits"
+ASSERT NEEDFLATN_FROM == 1
+SYS EQS NEEDFLATN_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT NEEDFLATN == 3
+ASSERT NEEDFLATN_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":1}"
+NEEDFLATN FROM PEER "hits"
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+REQUIREFLATN "x"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1232_needflatn: PASS"
