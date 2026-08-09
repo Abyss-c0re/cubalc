@@ -1,0 +1,91 @@
+# SETP / DEFAULTP auto-raw JSON-shaped strings
+# Usability: SETP "flags" "{\"debug\":0}" nests object (not quoted string).
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"n\":1}"
+
+# object auto-raw
+SETP "flags" "{\"debug\":0,\"trace\":1}"
+ASSERT OK == 1
+TYPEP "flags"
+SYS EQS LAST "obj"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 5
+GETP "flags.debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+GETP "flags.trace"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+KEYSP "flags"
+ASSERT KEYSP_N == 2
+
+# array auto-raw
+SETP "tags" "[\"a\",\"b\"]"
+ASSERT OK == 1
+TYPEP "tags"
+SYS EQS LAST "arr"
+ASSERT TYPEP_N == 6
+
+# decimal string auto-raw as num
+SETP "port" "8080"
+ASSERT OK == 1
+TYPEP "port"
+SYS EQS LAST "num"
+ASSERT TYPEP_N == 1
+GETPN "port"
+ASSERT LAST_N == 8080
+
+# bool/null tokens as string still auto-raw
+SETP "ok" "true"
+TYPEP "ok"
+SYS EQS LAST "bool"
+ASSERT TYPEP_N == 3
+SETP "gone" "null"
+TYPEP "gone"
+SYS EQS LAST "null"
+ASSERT TYPEP_N == 4
+
+# ordinary strings stay strings
+SETP "role" "worker"
+TYPEP "role"
+SYS EQS LAST "str"
+ASSERT TYPEP_N == 2
+GETP "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# path SETP object auto-raw (create nest)
+SETP "cfg.meta" "{\"zone\":\"A\",\"n\":3}"
+TYPEP "cfg.meta"
+SYS EQS LAST "obj"
+ASSERT TYPEP_N == 5
+GETP "cfg.meta.zone"
+SYS EQS LAST "A"
+ASSERT LAST_N == 1
+GETPN "cfg.meta.n"
+ASSERT LAST_N == 3
+
+# DEFAULTP auto-raw object on miss
+DEFAULTP "seed" "{\"v\":1}"
+ASSERT DEFAULTP_N == 1
+TYPEP "seed"
+SYS EQS LAST "obj"
+ASSERT TYPEP_N == 5
+GETPN "seed.v"
+ASSERT LAST_N == 1
+# keep (no clobber)
+DEFAULTP "seed" "{\"v\":9}"
+ASSERT DEFAULTP_KEPT == 1
+GETPN "seed.v"
+ASSERT LAST_N == 1
+
+# explicit RAW still works (after key)
+SETP "rawobj" RAW "{\"x\":2}"
+TYPEP "rawobj"
+SYS EQS LAST "obj"
+ASSERT TYPEP_N == 5
+
+PASS
+PRINT "1206_setp_autoraw: PASS"

@@ -35777,6 +35777,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
       {"DELP", "DELP [FROM plate] key — drop key · dotted path nest ok · write-back · soft miss · multi-plate"},
       {"GETP", "GETP [FROM plate] key [OR fallback] — peel key · dotted path nest ok · LAST=value · multi-plate"},
+      {"SETP", "SETP [FROM plate] key value — set key · JSON-shaped strings auto-raw ({}/[]/num/true) · paths ok"},
+      {"DEFAULTP", "DEFAULTP [FROM plate] key value — set-if-missing · JSON-shaped strings auto-raw · paths ok"},
       {"GETPN", "GETPN|NUMP [FROM plate] key [OR n] — peel numeric · LAST_N=value · paths ok · multi-plate · no GETP+NUM"},
       {"NUMP", "NUMP alias of GETPN"},
       {"GETP_N", "GETP_N alias of GETPN"},
@@ -37994,6 +37996,31 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           fail(vm, "SETP [FROM plate] key value — need value");
           return -1;
         }
+        /* Auto-raw JSON-shaped strings (match CLI plate set / agent plate seed):
+         * SETP "flags" "{\"debug\":0}" · SETP "n" "3" · true/false/null.
+         * Explicit string that looks like JSON still raw; use STR if need quote. */
+        if (!val_kind) {
+          const char *p = val;
+          size_t i;
+          int allnum = 1;
+          while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+          if (*p == '{' || *p == '[')
+            val_kind = 1;
+          else if (!strcmp(p, "true") || !strcmp(p, "false") || !strcmp(p, "null"))
+            val_kind = 1;
+          else {
+            i = 0;
+            if (p[0] == '-' && p[1]) i = 1;
+            if (!p[i]) allnum = 0;
+            for (; p[i]; i++) {
+              if (p[i] < '0' || p[i] > '9') {
+                allnum = 0;
+                break;
+              }
+            }
+            if (allnum) val_kind = 1;
+          }
+        }
       } else {
         fail(vm, "SETP [FROM plate] key value — need value");
         return -1;
@@ -38532,6 +38559,29 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
           fail(vm, "DEFAULTP [FROM plate] key value — need value");
           return -1;
+        }
+        /* Auto-raw JSON-shaped strings (same as SETP / CLI plate set). */
+        if (!val_kind) {
+          const char *p = val;
+          size_t i;
+          int allnum = 1;
+          while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+          if (*p == '{' || *p == '[')
+            val_kind = 1;
+          else if (!strcmp(p, "true") || !strcmp(p, "false") || !strcmp(p, "null"))
+            val_kind = 1;
+          else {
+            i = 0;
+            if (p[0] == '-' && p[1]) i = 1;
+            if (!p[i]) allnum = 0;
+            for (; p[i]; i++) {
+              if (p[i] < '0' || p[i] > '9') {
+                allnum = 0;
+                break;
+              }
+            }
+            if (allnum) val_kind = 1;
+          }
         }
       } else {
         fail(vm, "DEFAULTP [FROM plate] key value — need value");
