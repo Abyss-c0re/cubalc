@@ -417,6 +417,12 @@ int cubalc_host_json_leaf_getn_nth(const char *json, const char *needle, long in
  * Usability: choose GETFLAT vs GETFLATN vs nest peel without TYPEP+PATHSFLAT glue. */
 int cubalc_host_json_leaf_type(const char *json, const char *needle,
                                cubalc_host_result *r);
+/* Frequency of matching leaf values by path needle (FREQFLAT / HISTFLAT).
+ * Empty needle → all leaves. r->str = "val:count" bag (first-seen order, sep ':').
+ * r->n = unique keys · r->code = total matching leaves. Cap 64 uniques.
+ * Soft always OK. Read-only. Usability: nest status rollups without VALSFLAT+FREQ. */
+int cubalc_host_json_leaf_freq(const char *json, const char *needle,
+                               cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

@@ -727,6 +727,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 697. ~~**`NTHFLATN` / `INDEXFLATN` + `cubalc plate nthflatn`**~~ **done** (0-based Nth pure-int leaf by path needle → LAST_N · OR fallback · multi-plate · CLI dual · index peels without VALSFLATN+NTH glue).
 698. ~~**`NTHFLAT` / `INDEXFLAT` + `cubalc plate nthflat`**~~ **done** (0-based Nth matching leaf by path needle → LAST · OR fallback · multi-plate · CLI dual · index peels without PATHSFLAT+NTH+GETP glue).
 699. ~~**`EACH FLAT` / `EACH LEAF`**~~ **done** (walk matching nest leaves · PATH+VALUE bound · optional path needle · multi-plate FROM · soft empty · no PATHSFLAT+EACH LINE+GETP glue).
+700. ~~**`FREQFLAT` / `HISTFLAT` + `cubalc plate freqflat`**~~ **done** (value frequency of matching leaves → key:count bag · multi-plate · CLI dual · nest rollups without VALSFLAT+FREQ glue).
 
 ## Tick protocol
 

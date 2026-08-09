@@ -1,0 +1,82 @@
+# FREQFLAT / HISTFLAT — value frequency of matching nest leaves
+# Usability: nest status rollups without VALSFLAT+FREQ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"fail\"},\"c\":{\"status\":\"ok\"}}"
+
+FREQFLAT "role"
+ASSERT OK == 1
+ASSERT FREQFLAT_TOTAL == 3
+ASSERT LAST_N == 2
+ASSERT FREQFLAT_N == 2
+SYS HASLINE LAST "worker:2"
+ASSERT LAST_N == 1
+SYS HASLINE FREQFLAT "leader:1"
+ASSERT LAST_N == 1
+
+# needle before/after style still works; host order first-seen
+FREQFLAT "host"
+ASSERT FREQFLAT_TOTAL == 2
+ASSERT FREQFLAT_N == 2
+SYS HASLINE LAST "h1:1"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "h2:1"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+FREQFLAT FROM PEER "status"
+ASSERT FREQFLAT_FROM == 1
+SYS EQS FREQFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT FREQFLAT_TOTAL == 3
+ASSERT FREQFLAT_N == 2
+SYS HASLINE LAST "ok:2"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "fail:1"
+ASSERT LAST_N == 1
+
+# empty needle → all leaves
+FREQFLAT ""
+ASSERT FREQFLAT_TOTAL == 5
+ASSERT FREQFLAT_N >= 3
+SYS HASLINE LAST "worker:2"
+ASSERT LAST_N == 1
+
+# bare FREQFLAT (no needle) same as empty
+FREQFLAT
+ASSERT FREQFLAT_TOTAL == 5
+
+# soft empty miss
+FREQFLAT "nope"
+ASSERT OK == 1
+ASSERT FREQFLAT_TOTAL == 0
+ASSERT FREQFLAT_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# HISTFLAT alias
+HISTFLAT FROM PEER "status"
+ASSERT HISTFLAT_TOTAL == 3
+SYS HASLINE HISTFLAT "ok:2"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":9}"
+FREQFLAT FROM PEER "status"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# LEAFFREQ-style alias via COUNTVALFLAT
+LET PLATE = "{\"a\":{\"v\":\"x\"},\"b\":{\"v\":\"x\"},\"c\":{\"v\":\"y\"}}"
+COUNTVALFLAT "v"
+ASSERT FREQFLAT_TOTAL == 3
+SYS HASLINE LAST "x:2"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "y:1"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1241_freqflat: PASS"

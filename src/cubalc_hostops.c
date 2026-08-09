@@ -6898,6 +6898,77 @@ int cubalc_host_json_leaf_type(const char *json, const char *needle,
   return 0;
 }
 
+/* FREQFLAT: value frequency among leaves whose path contains needle. See header. */
+int cubalc_host_json_leaf_freq(const char *json, const char *needle,
+                               cubalc_host_result *r) {
+  cubalc_host_result vals;
+  char keys[64][128];
+  long counts[64];
+  int nk = 0, k;
+  const char *p, *start;
+  size_t flen, olen = 0;
+  long total = 0;
+
+  r_clear(r);
+  r->str[0] = 0;
+  r->n = 0;
+  r->code = 0;
+  r->ok = 1;
+  if (!needle) needle = "";
+  memset(&vals, 0, sizeof vals);
+  cubalc_host_json_leaf_match_bag(json ? json : "{}", needle, 1, &vals);
+  memset(counts, 0, sizeof counts);
+  if (vals.str[0]) {
+    p = vals.str;
+    while (*p) {
+      char field[128];
+      size_t take;
+      start = p;
+      while (*p && *p != '\n' && *p != '\r') p++;
+      flen = (size_t)(p - start);
+      take = flen;
+      if (take >= sizeof field) take = sizeof field - 1;
+      memcpy(field, start, take);
+      field[take] = 0;
+      total++;
+      for (k = 0; k < nk; k++) {
+        if (strcmp(keys[k], field) == 0) {
+          counts[k]++;
+          break;
+        }
+      }
+      if (k == nk && nk < 64) {
+        snprintf(keys[nk], sizeof keys[0], "%s", field);
+        counts[nk] = 1;
+        nk++;
+      }
+      while (*p == '\n' || *p == '\r') p++;
+    }
+  }
+  for (k = 0; k < nk; k++) {
+    char line[160];
+    int n;
+    n = snprintf(line, sizeof line, "%s:%ld", keys[k], counts[k]);
+    if (n < 0) n = 0;
+    if ((size_t)n >= sizeof line) n = (int)sizeof line - 1;
+    if (k > 0 && olen + 1 < sizeof r->str) r->str[olen++] = '\n';
+    if (olen + (size_t)n < sizeof r->str) {
+      memcpy(r->str + olen, line, (size_t)n);
+      olen += (size_t)n;
+    } else if (olen < sizeof r->str - 1) {
+      size_t t = sizeof r->str - 1 - olen;
+      memcpy(r->str + olen, line, t);
+      olen += t;
+    }
+    r->str[olen] = 0;
+  }
+  r->n = nk;
+  r->code = (int)total;
+  r->ok = 1;
+  snprintf(r->err, sizeof r->err, "%ld", total);
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,
