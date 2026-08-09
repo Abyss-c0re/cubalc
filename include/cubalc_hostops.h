@@ -314,6 +314,12 @@ int cubalc_host_json_keygrep(const char *json, const char *needle, int invert,
  * Soft {}. Usability: top severities without TOKV+SORTFREQ+TAKE+FROMKVP. */
 int cubalc_host_json_topn(const char *json, long n, int want_bot,
                           cubalc_host_result *r);
+/* sort all pure-int keys by value (want_asc=1 asc, 0 desc).
+ * as_bag=0 → plate in sort order · as_bag=1 → key:val bag (sep ':') for EACH/FREQ.
+ * Cap 256. r->n = count · r->code = same. Soft {}.
+ * Usability: full FREQ rank without TOKV+SORTFREQ or TOPNP cand guess. */
+int cubalc_host_json_sortbyval(const char *json, int want_asc, int as_bag,
+                               cubalc_host_result *r);
 /* order-independent top-level plate equality → r->n 1|0. Soft always OK.
  * Same keys + same raw values (whitespace-trimmed). Nested compared as raw text.
  * Usability: agent verify after WRITE/MERGE without fragile string EQS. */

@@ -1,0 +1,86 @@
+# SORTP / SORTBAGP — multi-plate sort pure-int keys by value (SORTFREQ dual)
+# Usability: full FREQ rank without TOKV+SORTFREQ or TOPNP cand guess.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12,\"host\":\"A\"}"
+LET PEER = "{\"a\":5,\"b\":2,\"c\":8}"
+LET empty = "{}"
+
+# SORTP default DESC → plate heaviest first (crit, error, warn, info)
+SORTP
+ASSERT OK == 1
+ASSERT SORTP_N == 4
+ASSERT SORTP_ASC == 0
+ASSERT SORTP_FROM == 0
+SYS HAS LAST "\"crit\":12"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"error\":9"
+ASSERT LAST_N == 1
+SYS HAS LAST "host"
+ASSERT LAST_N == 0
+# source not mutated
+SYS HAS PLATE "host"
+ASSERT LAST_N == 1
+
+# object key order: first key after sort build is crit (insertion order)
+SYS BEFORE LAST "\"error\""
+SYS HAS LAST "crit"
+ASSERT LAST_N == 1
+
+SORTP FROM PEER
+ASSERT SORTP_FROM == 1
+ASSERT SORTP_N == 3
+SYS EQS SORTP_SRC "PEER"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"c\":8"
+ASSERT LAST_N == 1
+
+# ASC lightest first
+SORTP ASC FROM PEER
+ASSERT SORTP_ASC == 1
+ASSERT SORTP_N == 3
+SYS HAS LAST "\"b\":2"
+ASSERT LAST_N == 1
+
+# SORTBAGP → key:val bag DESC
+SORTBAGP FROM PLATE
+ASSERT OK == 1
+ASSERT SORTBAGP_N == 4
+SYS HASLINE LAST "crit:12"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "error:9"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "warn:3"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "info:1"
+ASSERT LAST_N == 1
+# first line is heaviest
+SYS NTH 0 LAST
+SYS EQS LAST "crit:12"
+ASSERT LAST_N == 1
+
+SORTBAGP ASC FROM PEER
+ASSERT SORTP_ASC == 1
+ASSERT SORTBAGP_N == 3
+SYS NTH 0 LAST
+SYS EQS LAST "b:2"
+ASSERT LAST_N == 1
+
+# aliases
+SORTFREQP FROM PEER
+ASSERT SORTBAGP_N == 3
+SORTTOKV FROM PEER
+ASSERT SORTBAGP_N == 3
+SORTVP
+ASSERT SORTP_N == 4
+SORTP BAG FROM PEER
+ASSERT SORTBAGP_N == 3
+
+# empty soft
+SORTP FROM empty
+ASSERT SORTP_N == 0
+SORTBAGP FROM empty
+ASSERT SORTBAGP_N == 0
+
+PRINT "sortp soft ok"

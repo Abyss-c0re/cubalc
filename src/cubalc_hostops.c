@@ -5455,6 +5455,98 @@ int cubalc_host_json_topn(const char *json, long ntake, int want_bot,
   return 0;
 }
 
+/* Usability: multi-plate SORTP/SORTBAGP — full sort pure-int keys by value. */
+int cubalc_host_json_sortbyval(const char *json, int want_asc, int as_bag,
+                               cubalc_host_result *r) {
+  typedef struct { char key[256]; long val; } pair_t;
+  cubalc_host_result keys, raw, setr;
+  pair_t pairs[256];
+  char cur[CUBALC_HOST_STR_MAX];
+  char numbuf[40], linebuf[320];
+  const char *p, *line;
+  int np = 0, i, j;
+  size_t olen = 0;
+  r_clear(r);
+  memset(&keys, 0, sizeof keys);
+  snprintf(cur, sizeof cur, "%s", "{}");
+  r->str[0] = 0;
+  if (cubalc_host_json_keys(json, &keys) != 0) {
+    if (as_bag) {
+      r->str[0] = 0;
+    } else {
+      snprintf(r->str, sizeof r->str, "%s", "{}");
+    }
+    r->n = 0;
+    r->code = 0;
+    r->ok = 1;
+    return 0;
+  }
+  p = keys.str;
+  while (*p && np < 256) {
+    char key[256];
+    size_t kn = 0;
+    long num = 0;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&raw, 0, sizeof raw);
+    if (cubalc_host_json_get_raw(json, key, &raw) != 0) continue;
+    if (!json_raw_pure_int(raw.str, &num)) continue;
+    snprintf(pairs[np].key, sizeof pairs[np].key, "%s", key);
+    pairs[np].val = num;
+    np++;
+  }
+  for (i = 1; i < np; i++) {
+    pair_t tmp = pairs[i];
+    j = i - 1;
+    while (j >= 0) {
+      int better = want_asc ? (pairs[j].val > tmp.val) : (pairs[j].val < tmp.val);
+      if (!better) break;
+      pairs[j + 1] = pairs[j];
+      j--;
+    }
+    pairs[j + 1] = tmp;
+  }
+  if (as_bag) {
+    for (i = 0; i < np; i++) {
+      size_t llen;
+      snprintf(linebuf, sizeof linebuf, "%s:%ld", pairs[i].key, pairs[i].val);
+      llen = strlen(linebuf);
+      if (olen > 0) {
+        if (olen + 1 >= sizeof r->str) break;
+        r->str[olen++] = '\n';
+        r->str[olen] = 0;
+      }
+      if (olen + llen + 1 >= sizeof r->str) break;
+      memcpy(r->str + olen, linebuf, llen + 1);
+      olen += llen;
+    }
+    r->n = np;
+  } else {
+    for (i = 0; i < np; i++) {
+      snprintf(numbuf, sizeof numbuf, "%ld", pairs[i].val);
+      memset(&setr, 0, sizeof setr);
+      if (cubalc_host_json_set(cur, pairs[i].key, numbuf, 1, &setr) != 0) {
+        snprintf(r->err, sizeof r->err, "%s",
+                 setr.err[0] ? setr.err : "jsonsort: set fail");
+        return -1;
+      }
+      snprintf(cur, sizeof cur, "%s", setr.str);
+    }
+    snprintf(r->str, sizeof r->str, "%s", cur);
+    r->n = np;
+  }
+  r->code = np;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS JSONEQ a b — order-independent top-level plate equality. */
 int cubalc_host_json_eq(const char *a, const char *b, cubalc_host_result *r) {
   cubalc_host_result ka, kb, ra, rb;
