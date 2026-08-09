@@ -27400,6 +27400,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"STABLEP") || kw(&L->cur,"SAMEKEYSP") || kw(&L->cur,"EQKEYSP") ||
              kw(&L->cur,"CHANGELOGP") || kw(&L->cur,"SUBSETP") || kw(&L->cur,"COVERSP") ||
              kw(&L->cur,"PLUCKP") || kw(&L->cur,"GETPALL") || kw(&L->cur,"DELTAP") ||
+             kw(&L->cur,"PICKP") || kw(&L->cur,"KEEPP") || kw(&L->cur,"OMITP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35765,6 +35766,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"GETPALL", "GETPALL alias of PLUCKP"},
       {"DELTAP", "DELTAP|CHANGEOBJP a b [FROM NEW|OLD] — changed keys as plate · multi-plate sync payload · no SYS JSONDELTA"},
       {"CHANGEOBJP", "CHANGEOBJP alias of DELTAP"},
+      {"PICKP", "PICKP|KEEPP [FROM plate] key… — keep listed keys → subset plate · multi-plate · no SYS JSONPICK"},
+      {"KEEPP", "KEEPP alias of PICKP"},
+      {"SELECTP", "SELECTP alias of PICKP"},
+      {"OMITP", "OMITP|DROPKEYSP [FROM plate] key… — drop listed keys → remainder plate · multi-plate · no SYS JSONDROP"},
+      {"DROPKEYSP", "DROPKEYSP alias of OMITP"},
+      {"STRIPP", "STRIPP alias of OMITP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -39845,6 +39852,220 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# deltap n=%ld a=%s b=%s prefer_b=%d\n",
               hr.n, aname[0] ? aname : "?", bname[0] ? bname : "?", prefer_b);
+    bump(vm); return 1;
+  }
+  /* PICKP|KEEPP [FROM plate] key… — keep listed keys → subset plate (JSONPICK dual).
+   * OMITP|DROPKEYSP [FROM plate] key… — drop listed keys → remainder plate (JSONDROP dual).
+   * Missing keys soft-skipped (pick) / soft no-op (omit). Bare keys use PLATE.
+   * LAST = plate object · LAST_N = kept|dropped count · does not mutate source.
+   * Usability: slim/strip multi-plate peer/log payload without SYS JSONPICK/JSONDROP:
+   *   PICKP FROM PEER "host" "status" "n"
+   *   OMITP "tmp" "debug"
+   *   MERGEP FROM PLATE LAST
+   */
+  if (kw(&L->cur,"PICKP") || kw(&L->cur,"KEEPP") || kw(&L->cur,"MPICKP") ||
+      kw(&L->cur,"PLATE_PICK") || kw(&L->cur,"SELECTP") || kw(&L->cur,"KEEPKEYS") ||
+      kw(&L->cur,"PROJECTP") ||
+      kw(&L->cur,"OMITP") || kw(&L->cur,"DROPKEYSP") || kw(&L->cur,"MOMITP") ||
+      kw(&L->cur,"PLATE_OMIT") || kw(&L->cur,"STRIPP") || kw(&L->cur,"DROPKEYS") ||
+      kw(&L->cur,"STRIPKEYS")) {
+    char plate[CUBALC_HOST_STR_MAX], keys_nl[CUBALC_HOST_STR_MAX];
+    char arg[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, is_omit = 0;
+    size_t olen = 0;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "OMITP") == 0 || strcmp(op0, "DROPKEYSP") == 0 ||
+        strcmp(op0, "MOMITP") == 0 || strcmp(op0, "PLATE_OMIT") == 0 ||
+        strcmp(op0, "STRIPP") == 0 || strcmp(op0, "DROPKEYS") == 0 ||
+        strcmp(op0, "STRIPKEYS") == 0)
+      is_omit = 1;
+
+    lex_next(L);
+    plate[0] = 0; keys_nl[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    /* optional leading FROM plate */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* collect keys; stop before trailing FROM / statements */
+    while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+           L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+           kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+           kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"ELSE") ||
+           kw(&L->cur,"ELIF") || kw(&L->cur,"FOR") || kw(&L->cur,"WHILE") ||
+           kw(&L->cur,"LOOP") || kw(&L->cur,"ASSERT") || kw(&L->cur,"PRINT") ||
+           kw(&L->cur,"LET") || kw(&L->cur,"SYS") || kw(&L->cur,"SETP") ||
+           kw(&L->cur,"INCP") || kw(&L->cur,"DELP") || kw(&L->cur,"GETP") ||
+           kw(&L->cur,"MERGEP") || kw(&L->cur,"NEEDP") || kw(&L->cur,"HASP") ||
+           kw(&L->cur,"KEYSP") || kw(&L->cur,"PLUCKP") || kw(&L->cur,"PICKP") ||
+           kw(&L->cur,"OMITP") || kw(&L->cur,"EQP") || kw(&L->cur,"SUBSETP") ||
+           kw(&L->cur,"INCLUDE") || kw(&L->cur,"REQUIRE") ||
+           kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") || kw(&L->cur,"NOTE") ||
+           kw(&L->cur,"EXIT")))
+        break;
+      arg[0] = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long kv = parse_expr(vm, L);
+        snprintf(arg, sizeof arg, "%ld", kv);
+      } else if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+        break;
+      }
+      if (!arg[0]) continue;
+      if (olen > 0) {
+        if (olen + 1 >= sizeof keys_nl) break;
+        keys_nl[olen++] = '\n';
+        keys_nl[olen] = 0;
+      }
+      {
+        size_t al = strlen(arg);
+        if (olen + al + 1 >= sizeof keys_nl) break;
+        memcpy(keys_nl + olen, arg, al + 1);
+        olen += al;
+      }
+    }
+
+    /* trailing FROM plate */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    if (!keys_nl[0]) {
+      fail(vm, is_omit
+           ? "OMITP [FROM plate] key… — need at least one key"
+           : "PICKP [FROM plate] key… — need at least one key");
+      return -1;
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (is_omit) {
+      if (cubalc_host_json_drop(plate, keys_nl, &hr) != 0) {
+        var_set_str(vm, "LAST", "{}");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "{}");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OMITP_N", 0);
+        var_set_num(vm, "PICKP_N", 0);
+        var_set_num(vm, "OMITP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "OMITP: fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "OMITP: fail");
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "OMITP", hr.str);
+      var_set_str(vm, "DROPKEYSP", hr.str);
+      var_set_num(vm, "OMITP_N", hr.n);
+      var_set_num(vm, "JSONDROP_N", hr.n);
+      var_set_num(vm, "OMITP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "OMITP_SRC", from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# omitp n=%ld from=%d src=%s\n",
+                hr.n, have_from,
+                from_name[0] ? from_name : (have_from ? "?" : "PLATE"));
+      bump(vm); return 1;
+    }
+
+    if (cubalc_host_json_pick(plate, keys_nl, &hr) != 0) {
+      var_set_str(vm, "LAST", "{}");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "{}");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "PICKP_N", 0);
+      var_set_num(vm, "PICKP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "PICKP: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "PICKP: fail");
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "PICKP", hr.str);
+    var_set_str(vm, "KEEPP", hr.str);
+    var_set_num(vm, "PICKP_N", hr.n);
+    var_set_num(vm, "JSONPICK_N", hr.n);
+    var_set_num(vm, "PICKP_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "PICKP_SRC", from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# pickp n=%ld from=%d src=%s\n",
+              hr.n, have_from,
+              from_name[0] ? from_name : (have_from ? "?" : "PLATE"));
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.

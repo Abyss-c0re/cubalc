@@ -1,0 +1,115 @@
+# PICKP / KEEPP · OMITP / DROPKEYSP — multi-plate key projection (no SYS JSONPICK/JSONDROP)
+# Usability: slim or strip plate payloads for mesh/log without rebuild glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":1,\"role\":\"worker\",\"host\":\"cubeA\",\"tmp\":\"x\",\"debug\":1}"
+LET PEER = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":9,\"noise\":\"z\"}"
+
+# keep listed keys from conventional PLATE
+PICKP "role" "host" "n"
+ASSERT OK == 1
+ASSERT PICKP_N == 3
+ASSERT PICKP_FROM == 0
+SYS EQS PICKP_SRC "PLATE"
+ASSERT LAST_N == 1
+SYS JSON "role" FROM LAST
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSON "host" FROM PICKP
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM PICKP
+ASSERT LAST_N == 1
+# omitted keys absent
+SYS JSON "tmp" FROM PICKP
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# source PLATE untouched
+GETP "tmp"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# FROM PEER slim view
+PICKP FROM PEER "host" "agent" "n"
+ASSERT PICKP_FROM == 1
+SYS EQS PICKP_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT PICKP_N == 3
+SYS JSON "host" FROM LAST
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+SYS JSON "agent" FROM PICKP
+SYS EQS LAST "hive-02"
+ASSERT LAST_N == 1
+# noise dropped by pick
+SYS JSON "noise" FROM PICKP
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# trailing FROM
+PICKP "host" "n" FROM PEER
+ASSERT PICKP_N == 2
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 9
+
+# miss keys soft-skip
+PICKP "role" "missing" "n"
+ASSERT PICKP_N == 2
+
+# alias KEEPP
+KEEPP FROM PEER "agent"
+ASSERT PICKP_N == 1
+SYS JSON "agent" FROM LAST
+SYS EQS LAST "hive-02"
+ASSERT LAST_N == 1
+
+# OMITP strip noise from PLATE
+OMITP "tmp" "debug"
+ASSERT OK == 1
+ASSERT OMITP_N == 2
+ASSERT OMITP_FROM == 0
+SYS JSON "role" FROM LAST
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSON "tmp" FROM OMITP
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+SYS JSON "debug" FROM OMITP
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+# original still has tmp
+GETP "tmp"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# OMITP FROM PEER
+OMITP FROM PEER "noise"
+ASSERT OMITP_FROM == 1
+ASSERT OMITP_N == 1
+SYS JSON "noise" FROM LAST
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+SYS JSON "host" FROM OMITP
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+
+# alias DROPKEYSP
+DROPKEYSP "tmp" FROM PLATE
+ASSERT OMITP_N == 1
+
+# project peer fields then merge into local plate
+PICKP FROM PEER "host" "n"
+MERGEP FROM PLATE LAST
+GETP "host"
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 9
+# local-only keys kept
+GETP "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+PRINT "pickp soft ok"

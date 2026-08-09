@@ -637,6 +637,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 607. ~~**`PLUCKP` / `GETPALL`**~~ **done** (multi-key peel → value bag · multi-plate FROM · no GETP+PUSH / SYS JSONPLUCK glue).
 608. ~~**`DELTAP` / `CHANGEOBJP`**~~ **done** (changed keys as plate · multi-plate sync payload · dual of SYS JSONDELTA · complements DIFFP).
 609. ~~**`STABLEP` / `SAMEKEYSP` / `EQKEYSP`**~~ **done** (unchanged key bag · multi-plate dual of DIFFP · no SYS JSONSTABLE).
+610. ~~**`PICKP` / `KEEPP` · `OMITP` / `DROPKEYSP`**~~ **done** (keep/drop listed keys → plate · multi-plate · no SYS JSONPICK/JSONDROP).
 
 ## Tick protocol
 
