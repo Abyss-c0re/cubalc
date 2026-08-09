@@ -2071,6 +2071,6 @@
     "bare SAVEP agent_path wiped agent.json with empty PLATE \u2014 must SAVEP FROM",
     "GETP FROM agt unknown form under ensure var pressure \u2014 dropped extra INTO"
   ],
-  "commit": "",
+  "commit": "d5d8a7d",
   "ts": "2026-08-09T00:09:46Z"
 }
