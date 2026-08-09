@@ -1,0 +1,79 @@
+# RENAMEFLAT / MOVEFLAT — rewrite leaf path prefixes
+# Usability: restructure nests without multi RENAMEP/DELP+SETP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"role\":\"worker\",\"x\":1},\"port\":8080},\"n\":3}"
+
+# rename cfg.* → config.*
+RENAMEFLAT "cfg." "config."
+ASSERT OK == 1
+ASSERT RENAMEFLAT_N == 3
+ASSERT RENAMEFLAT_TOTAL == 5
+SYS EQS RENAMEFLAT_OLD "cfg."
+ASSERT LAST_N == 1
+SYS EQS RENAMEFLAT_NEW "config."
+ASSERT LAST_N == 1
+# old paths gone
+HASP "cfg.meta.role"
+ASSERT LAST_N == 0
+HASP "cfg.port"
+ASSERT LAST_N == 0
+# new paths present
+GETP "config.meta.role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+GETP "config.meta.x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "config.port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+# untouched leaves
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+LET PEER = "{\"tmp\":{\"a\":1,\"b\":2},\"keep\":9}"
+RENAMEFLAT FROM PEER "tmp." "meta."
+ASSERT RENAMEFLAT_FROM == 1
+SYS EQS RENAMEFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT RENAMEFLAT_N == 2
+LET PLATE = PEER
+GETP "meta.a"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "meta.b"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+GETP "keep"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+HASP "tmp.a"
+ASSERT LAST_N == 0
+
+# alias MOVEFLAT
+LET PLATE = "{\"a\":{\"x\":1}}"
+MOVEFLAT "a." "b."
+ASSERT MOVEFLAT_N == 1
+GETP "b.x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+HASP "a.x"
+ASSERT LAST_N == 0
+
+# strip prefix (new empty)
+LET PLATE = "{\"cfg\":{\"port\":1}}"
+RENAMEFLAT "cfg." ""
+ASSERT RENAMEFLAT_N == 1
+GETP "port"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1217_renameflat: PASS"

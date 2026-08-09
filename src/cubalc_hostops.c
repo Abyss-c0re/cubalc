@@ -5043,6 +5043,100 @@ int cubalc_host_json_leaf_merge(const char *base, const char *overlay,
   return 0;
 }
 
+/* Rename leaf path prefixes. See header. */
+int cubalc_host_json_leaf_rename_pfx(const char *json, const char *old_pfx,
+                                     const char *new_pfx, cubalc_host_result *r) {
+  cubalc_host_result kv, wr;
+  const char *p, *line;
+  char bag[CUBALC_HOST_STR_MAX];
+  size_t olen = 0;
+  long renamed = 0, kept = 0;
+  size_t opx;
+
+  r_clear(r);
+  if (!old_pfx) old_pfx = "";
+  if (!new_pfx) new_pfx = "";
+  opx = strlen(old_pfx);
+  memset(&kv, 0, sizeof kv);
+  cubalc_host_json_leaf_kv(json ? json : "{}", NULL, &kv);
+  bag[0] = 0;
+  if (!old_pfx[0]) {
+    /* no-op: return original plate */
+    snprintf(r->str, sizeof r->str, "%s",
+             (json && json[0]) ? json : "{}");
+    {
+      const char *b = r->str;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b != '{')
+        snprintf(r->str, sizeof r->str, "%s", "{}");
+    }
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  p = kv.str;
+  while (*p) {
+    char path[512], val[CUBALC_HOST_STR_MAX / 2], npath[640], linebuf[CUBALC_HOST_STR_MAX];
+    size_t kn = 0, vn = 0;
+    const char *sep, *vs, *ve;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    kn = sep ? (size_t)(sep - line) : (size_t)(p - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn == 0 || kn >= sizeof path) continue;
+    memcpy(path, line, kn);
+    path[kn] = 0;
+    vs = sep ? sep + 1 : p;
+    ve = p;
+    while (vs < ve && (*vs == ' ' || *vs == '\t')) vs++;
+    while (ve > vs && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+    vn = (size_t)(ve - vs);
+    if (vn >= sizeof val) vn = sizeof val - 1;
+    memcpy(val, vs, vn);
+    val[vn] = 0;
+    if (kn >= opx && memcmp(path, old_pfx, opx) == 0) {
+      snprintf(npath, sizeof npath, "%s%.*s", new_pfx, (int)(kn - opx), path + opx);
+      renamed++;
+    } else {
+      snprintf(npath, sizeof npath, "%s", path);
+    }
+    if (snprintf(linebuf, sizeof linebuf, "%s:%s", npath, val) >= 0)
+      cubalc_bag_push(bag, sizeof bag, &olen, &kept, linebuf);
+  }
+  memset(&wr, 0, sizeof wr);
+  if (cubalc_host_json_unflat_kv("{}", bag, NULL, &wr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s",
+             wr.err[0] ? wr.err : "renameflat: unflat fail");
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", wr.str);
+  r->n = renamed;
+  r->ok = 1;
+  r->code = kept; /* total leaves after rename */
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,

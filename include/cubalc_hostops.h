@@ -287,6 +287,12 @@ int cubalc_host_json_leaf_filter_write(const char *json, const char *needle,
  * Usability: peer/agent deep sync without FLATKV+UNFLATKV or shallow MERGEP. */
 int cubalc_host_json_leaf_merge(const char *base, const char *overlay,
                                 cubalc_host_result *r);
+/* Rename leaf path prefix across plate (RENAMEFLAT).
+ * Paths starting with old_pfx get old_pfx replaced by new_pfx; other leaves kept.
+ * Empty old_pfx → no-op copy. Rebuilds plate via unflat. r->n = renamed count.
+ * Soft always OK. Usability: restructure nests without multi RENAMEP/DELP+SETP. */
+int cubalc_host_json_leaf_rename_pfx(const char *json, const char *old_pfx,
+                                     const char *new_pfx, cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

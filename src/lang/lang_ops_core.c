@@ -27435,6 +27435,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"GREPFLAT") || kw(&L->cur,"GREPVFLAT") || kw(&L->cur,"GREPFLATI") ||
              kw(&L->cur,"PRUNEFLAT") || kw(&L->cur,"KEEPONLYFLAT") || kw(&L->cur,"DELFLAT") ||
              kw(&L->cur,"MERGEFLAT") || kw(&L->cur,"OVERLAYFLAT") || kw(&L->cur,"PATCHFLAT") ||
+             kw(&L->cur,"RENAMEFLAT") || kw(&L->cur,"MOVEFLAT") || kw(&L->cur,"PREFIXFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35822,6 +35823,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"KEEPONLYFLAT", "KEEPONLYFLAT|RETAINFLAT|PROJECTFLAT [FROM plate] needle — keep only matching leaves rewrite · multi-plate"},
       {"MERGEFLAT", "MERGEFLAT|OVERLAYFLAT|PATCHFLAT [FROM base] overlay — deep leaf overlay write-back · nest-aware MERGEP · multi-plate"},
       {"OVERLAYFLAT", "OVERLAYFLAT alias of MERGEFLAT"},
+      {"RENAMEFLAT", "RENAMEFLAT|MOVEFLAT [FROM plate] old_pfx new_pfx — rewrite leaf path prefixes write-back · multi-plate"},
+      {"MOVEFLAT", "MOVEFLAT alias of RENAMEFLAT"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -44187,6 +44190,136 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               hr.n,
               from_name[0] ? from_name : "PLATE",
               oname[0] ? oname : "?");
+    bump(vm); return 1;
+  }
+
+  /* RENAMEFLAT|MOVEFLAT|PREFIXFLAT [FROM plate] old_pfx new_pfx
+   * Rewrite all leaf paths starting with old_pfx → new_pfx; write-back plate.
+   * LAST = plate · LAST_N = renamed count · RENAMEFLAT_TOTAL = leaf count.
+   * Usability: restructure nests without multi RENAMEP/DELP+SETP glue:
+   *   RENAMEFLAT "cfg." "config."
+   *   RENAMEFLAT FROM PEER "tmp." "meta."
+   *   MOVEFLAT "a.b." "x."
+   */
+  if (kw(&L->cur,"RENAMEFLAT") || kw(&L->cur,"MOVEFLAT") || kw(&L->cur,"PREFIXFLAT") ||
+      kw(&L->cur,"REPFXFLAT") || kw(&L->cur,"MVFLAT") || kw(&L->cur,"MRENAMEFLAT") ||
+      kw(&L->cur,"PLATE_RENAMEFLAT") || kw(&L->cur,"REKEYFLAT") || kw(&L->cur,"REPATHFLAT")) {
+    char plate[CUBALC_HOST_STR_MAX], oldp[192], newp[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; oldp[0] = 0; newp[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (resolve_str_arg(vm, L, oldp, sizeof oldp) != 0)
+      oldp[0] = 0;
+    if (resolve_str_arg(vm, L, newp, sizeof newp) != 0)
+      newp[0] = 0;
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    if (!oldp[0]) {
+      fail(vm, "RENAMEFLAT [FROM plate] old_pfx new_pfx — need old prefix");
+      return -1;
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_rename_pfx(plate, oldp, newp, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "RENAMEFLAT: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "RENAMEFLAT: fail");
+      var_set_num(vm, "RENAMEFLAT_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "RENAMEFLAT", hr.str);
+    var_set_str(vm, "MOVEFLAT", hr.str);
+    var_set_num(vm, "RENAMEFLAT_N", hr.n);
+    var_set_num(vm, "MOVEFLAT_N", hr.n);
+    var_set_num(vm, "RENAMEFLAT_TOTAL", hr.code);
+    var_set_str(vm, "RENAMEFLAT_OLD", oldp);
+    var_set_str(vm, "RENAMEFLAT_NEW", newp);
+    var_set_num(vm, "RENAMEFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "RENAMEFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# renameflat n=%ld total=%ld %s→%s from=%d\n",
+              hr.n, hr.code, oldp, newp, have_from);
     bump(vm); return 1;
   }
 
