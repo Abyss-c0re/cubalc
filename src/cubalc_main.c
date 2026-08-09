@@ -2200,6 +2200,8 @@ int main(int argc, char **argv) {
       {"cli_plate_threshflat", "programs/proof/1222_cli_plate_threshflat.sh", "cubalc plate threshflat|dropzeroflat dual"},
       {"capflat", "programs/proof/1223_capflat.cubalc", "CAPFLAT/CLAMPFLAT clamp pure-int leaves by path needle multi-plate"},
       {"cli_plate_capflat", "programs/proof/1223_cli_plate_capflat.sh", "cubalc plate capflat CAPFLAT dual"},
+      {"scaleflat", "programs/proof/1224_scaleflat.cubalc", "SCALEFLAT/MULFLAT multiply pure-int leaves by factor multi-plate"},
+      {"cli_plate_scaleflat", "programs/proof/1224_cli_plate_scaleflat.sh", "cubalc plate scaleflat SCALEFLAT dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2508,6 +2510,8 @@ int main(int argc, char **argv) {
       {"DROPZEROFLAT", "flow", "DROPZEROFLAT|NZFLAT [FROM plate] [needle] — drop pure-int leaves value==0 by path needle write-back"},
       {"CAPFLAT", "flow", "CAPFLAT|CLAMPFLAT [FROM plate] [needle] max — clamp pure-int leaves value>max → max by path needle write-back"},
       {"CLAMPFLAT", "flow", "CLAMPFLAT alias of CAPFLAT"},
+      {"SCALEFLAT", "flow", "SCALEFLAT|MULFLAT [FROM plate] [needle] factor — multiply pure-int leaves by factor by path needle write-back"},
+      {"MULFLAT", "flow", "MULFLAT alias of SCALEFLAT"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4995,6 +4999,7 @@ int main(int argc, char **argv) {
               "       cubalc plate threshflat <path> [needle] <min>  # THRESHFLAT dual · drop pure-int leaves value<min\n"
               "       cubalc plate dropzeroflat <path> [needle]  # DROPZEROFLAT dual · drop pure-int zeros\n"
               "       cubalc plate capflat <path> [needle] <max>  # CAPFLAT dual · clamp pure-int leaves to max\n"
+              "       cubalc plate scaleflat <path> [needle] <factor>  # SCALEFLAT dual · multiply pure-int leaves\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -5026,7 +5031,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5117,6 +5122,8 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "dropzeroflat") == 0 || strcmp(argv[2], "nzflat") == 0 ||
         strcmp(argv[2], "capflat") == 0 || strcmp(argv[2], "clampflat") == 0 ||
         strcmp(argv[2], "maxvflat") == 0 || strcmp(argv[2], "ceilflat") == 0 ||
+        strcmp(argv[2], "scaleflat") == 0 || strcmp(argv[2], "mulflat") == 0 ||
+        strcmp(argv[2], "timesflat") == 0 || strcmp(argv[2], "multflat") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5313,6 +5320,9 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "clampflat") == 0 || strcmp(op, "maxvflat") == 0 ||
                strcmp(op, "ceilflat") == 0 || strcmp(op, "maxcapflat") == 0)
         op = "capflat";
+      else if (strcmp(op, "mulflat") == 0 || strcmp(op, "timesflat") == 0 ||
+               strcmp(op, "multflat") == 0 || strcmp(op, "factorflat") == 0)
+        op = "scaleflat";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -6189,6 +6199,76 @@ int main(int argc, char **argv) {
              "\"file\":%s,\"n\":%ld,\"match\":%ld,\"version\":\"%s\",\"plate\":%s,"
              "\"note\":\"CAPFLAT dual · clamp pure-int leaves to max by path needle\"}\n",
              path, needle, maxv, file_hit ? "true" : "false",
+             pr.n, (long)pr.code, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    /* scaleflat [needle] factor — SCALEFLAT dual: multiply pure-int leaves · write plate.
+     *   cubalc plate scaleflat agent.json score 2
+     *   cubalc plate scaleflat agent.json 10          # empty needle
+     */
+    if (strcmp(op, "scaleflat") == 0) {
+      const char *needle = "";
+      long factor = 1;
+      cubalc_host_result pr, wr;
+
+      if (ai >= argc || !argv[ai]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"scaleflat\",\"path\":\"%s\",\"err\":\"need [needle] factor\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      if (ai + 1 >= argc) {
+        char *end = NULL;
+        long d = strtol(argv[ai], &end, 10);
+        if (end && end != argv[ai] && *end == 0) {
+          factor = d;
+          ai++;
+        } else {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"scaleflat\",\"path\":\"%s\",\"err\":\"need factor int\","
+                 "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+          return 2;
+        }
+      } else {
+        needle = argv[ai++];
+        {
+          char *end = NULL;
+          long d = strtol(argv[ai], &end, 10);
+          if (!(end && end != argv[ai] && *end == 0)) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"scaleflat\",\"path\":\"%s\",\"err\":\"need factor int\","
+                   "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+            return 2;
+          }
+          factor = d;
+          ai++;
+        }
+      }
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_scale(plate, needle, factor, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"scaleflat\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               path, pr.err[0] ? pr.err : "scaleflat fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", pr.str);
+      if (file_hit || (path && path[0] && strchr(path, '.'))) {
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_write(path, plate, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"scaleflat\",\"path\":\"%s\",\"err\":\"write fail\","
+                 "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        file_hit = 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"scaleflat\",\"path\":\"%s\",\"needle\":\"%s\",\"factor\":%ld,"
+             "\"file\":%s,\"n\":%ld,\"match\":%ld,\"version\":\"%s\",\"plate\":%s,"
+             "\"note\":\"SCALEFLAT dual · multiply pure-int leaves by factor\"}\n",
+             path, needle, factor, file_hit ? "true" : "false",
              pr.n, (long)pr.code, CUBALC_LANG_VERSION, plate);
       return 0;
     }

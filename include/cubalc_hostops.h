@@ -332,6 +332,12 @@ int cubalc_host_json_leaf_thresh(const char *json, const char *needle, long minv
  * Soft always OK. Usability: nest score ceiling without multi GETP+SETP/CAPP glue. */
 int cubalc_host_json_leaf_cap(const char *json, const char *needle, long maxv,
                               cubalc_host_result *r);
+/* Multiply pure-int leaves by factor among path-needle matches (SCALEFLAT).
+ * Non-int leaves kept. Empty needle → all pure-int. Rebuilds plate.
+ * r->str = new plate · r->n = leaves scaled · r->code = pure-int matches considered.
+ * Soft always OK. Usability: nest score scale without multi GETP+arith+SETP glue. */
+int cubalc_host_json_leaf_scale(const char *json, const char *needle, long factor,
+                                cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

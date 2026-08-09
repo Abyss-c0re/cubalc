@@ -1,0 +1,89 @@
+# SCALEFLAT / MULFLAT — multiply pure-int leaves by factor (path needle)
+# Usability: nest score scale without multi GETP+arith+SETP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"score\":{\"a\":2,\"b\":5},\"label\":\"x\",\"meta\":{\"score\":10,\"role\":\"w\"}}"
+
+SCALEFLAT "score" 3
+ASSERT OK == 1
+ASSERT SCALEFLAT_N == 3
+ASSERT SCALEFLAT_MATCH == 3
+ASSERT SCALEFLAT_FACTOR == 3
+GETP "score.a"
+SYS EQS LAST "6"
+ASSERT LAST_N == 1
+GETP "score.b"
+SYS EQS LAST "15"
+ASSERT LAST_N == 1
+GETP "meta.score"
+SYS EQS LAST "30"
+ASSERT LAST_N == 1
+GETP "meta.role"
+SYS EQS LAST "w"
+ASSERT LAST_N == 1
+GETP "label"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# empty needle — SCALEFLAT 2
+LET PLATE = "{\"a\":3,\"b\":4,\"s\":\"z\"}"
+SCALEFLAT 2
+ASSERT SCALEFLAT_N == 2
+ASSERT SCALEFLAT_MATCH == 2
+GETP "a"
+SYS EQS LAST "6"
+ASSERT LAST_N == 1
+GETP "b"
+SYS EQS LAST "8"
+ASSERT LAST_N == 1
+GETP "s"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"stats\":{\"x\":7,\"y\":1},\"n\":9}"
+SCALEFLAT FROM PEER "stats" 10
+ASSERT SCALEFLAT_FROM == 1
+SYS EQS SCALEFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT SCALEFLAT_N == 2
+ASSERT SCALEFLAT_MATCH == 2
+LET PLATE = PEER
+GETP "stats.x"
+SYS EQS LAST "70"
+ASSERT LAST_N == 1
+GETP "stats.y"
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# factor 0 zeros matching ints
+LET PLATE = "{\"hits\":{\"a\":5},\"keep\":3}"
+SCALEFLAT "hits" 0
+ASSERT SCALEFLAT_N == 1
+GETP "hits.a"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+GETP "keep"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# no match
+LET PLATE = "{\"x\":1}"
+SCALEFLAT "nope" 9
+ASSERT SCALEFLAT_N == 0
+ASSERT SCALEFLAT_MATCH == 0
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+MULFLAT "x" 4
+ASSERT SCALEFLAT_N == 1
+GETP "x"
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1224_scaleflat: PASS"
