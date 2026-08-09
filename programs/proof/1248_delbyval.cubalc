@@ -1,0 +1,60 @@
+# DELBYVAL / DROPVAL — drop leaves by exact value
+# Usability: scrub by value without PATHSBYVAL+EACH+DELP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"fail\"},\"c\":{\"status\":\"ok\"}}"
+
+DELBYVAL "worker"
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT DELBYVAL_N == 2
+ASSERT DELBYVAL_KEPT == 3
+HASVAL "worker"
+ASSERT LAST_N == 0
+GETP "other.role"
+SYS EQS LAST "leader"
+ASSERT LAST_N == 1
+GETP "cfg.host"
+SYS EQS LAST "h1"
+ASSERT LAST_N == 1
+HASP "meta.role"
+ASSERT LAST_N == 0
+
+# soft miss
+DELBYVAL "nope"
+ASSERT OK == 1
+ASSERT DELBYVAL_N == 0
+ASSERT DELBYVAL_KEPT == 3
+
+# multi-plate FROM write-back
+DELBYVAL FROM PEER "ok"
+ASSERT DELBYVAL_FROM == 1
+SYS EQS DELBYVAL_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT DELBYVAL_N == 2
+ASSERT DELBYVAL_KEPT == 1
+HASVAL FROM PEER "ok"
+ASSERT LAST_N == 0
+GETP FROM PEER "b.status"
+SYS EQS LAST "fail"
+ASSERT LAST_N == 1
+
+# DROPVAL alias
+DROPVAL "leader"
+ASSERT DROPVAL_N == 1
+HASVAL "leader"
+ASSERT LAST_N == 0
+GETP "cfg.host"
+SYS EQS LAST "h1"
+ASSERT LAST_N == 1
+
+# remaining hosts
+COUNTBYVAL "h1"
+ASSERT LAST_N == 1
+COUNTBYVAL "h2"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1248_delbyval: PASS"

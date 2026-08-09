@@ -27460,6 +27460,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PATHSBYVAL") || kw(&L->cur,"ALLPATHSBYVAL") || kw(&L->cur,"FINDVALS") ||
              kw(&L->cur,"COUNTBYVAL") || kw(&L->cur,"NBYVAL") || kw(&L->cur,"HASVAL") ||
              kw(&L->cur,"SETBYVAL") || kw(&L->cur,"REPLACEVAL") || kw(&L->cur,"REWVAL") ||
+             kw(&L->cur,"DELBYVAL") || kw(&L->cur,"DROPVAL") || kw(&L->cur,"RMVAL") ||
              kw(&L->cur,"UNIQFLAT") || kw(&L->cur,"DISTINCTFLAT") || kw(&L->cur,"UNIQUEFLAT") ||
              kw(&L->cur,"NEEDFLAT") || kw(&L->cur,"REQUIREFLAT") || kw(&L->cur,"MUSTFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
@@ -35914,6 +35915,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASVALFLAT", "HASVALFLAT alias of HASVAL"},
       {"SETBYVAL", "SETBYVAL|REPLACEVAL [FROM plate] old new — rewrite every leaf value equal to old → new write-back · multi-plate"},
       {"REPLACEVAL", "REPLACEVAL alias of SETBYVAL"},
+      {"DELBYVAL", "DELBYVAL|DROPVAL [FROM plate] value — drop every leaf with exact value write-back · multi-plate"},
+      {"DROPVAL", "DROPVAL alias of DELBYVAL"},
       {"UNIQFLAT", "UNIQFLAT|DISTINCTFLAT [FROM plate] [needle] — unique matching leaf values → LAST bag · LAST_N=uniques · multi-plate · read-only"},
       {"DISTINCTFLAT", "DISTINCTFLAT alias of UNIQFLAT"},
       {"NEEDFLAT", "NEEDFLAT|REQUIREFLAT [FROM plate] needle… — fail-fast if any leaf-path needle missing · multi-plate · soft twin HASFLAT"},
@@ -48564,6 +48567,144 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# setbyval n=%ld total=%ld old=%s new=%s from=%d\n",
               hr.n, hr.code, oldv, newv, have_from);
+    bump(vm); return 1;
+  }
+
+  /* DELBYVAL|DROPVAL [FROM plate] value
+   * Drop every leaf whose value equals needle. Write-back PLATE or FROM var.
+   * LAST = new plate · LAST_N = deleted · DELBYVAL_KEPT = remaining leaves.
+   * Soft always OK (n=0 if no match). Usability: scrub by value without
+   * PATHSBYVAL+EACH+DELP glue:
+   *   DELBYVAL "standby"
+   *   DELBYVAL FROM PEER "fail"
+   *   DROPVAL "retry"
+   */
+  if (kw(&L->cur,"DELBYVAL") || kw(&L->cur,"DROPVAL") || kw(&L->cur,"RMVAL") ||
+      kw(&L->cur,"MDELBYVAL") || kw(&L->cur,"PLATE_DELBYVAL") || kw(&L->cur,"DELETEVAL") ||
+      kw(&L->cur,"REMOVEVAL") || kw(&L->cur,"PRUNEVAL") || kw(&L->cur,"STRIPVAL")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(needle, sizeof needle, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"DELBYVAL") && !kw(&L->cur,"IF")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else {
+      fail(vm, "DELBYVAL [FROM plate] value — need value");
+      return -1;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_del_by_val(plate, needle, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "DELBYVAL: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "DELBYVAL: fail");
+      var_set_num(vm, "DELBYVAL_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "DELBYVAL", hr.str);
+    var_set_str(vm, "DROPVAL", hr.str);
+    var_set_num(vm, "DELBYVAL_N", hr.n);
+    var_set_num(vm, "DROPVAL_N", hr.n);
+    var_set_num(vm, "DELBYVAL_KEPT", hr.code);
+    var_set_num(vm, "DROPVAL_KEPT", hr.code);
+    var_set_str(vm, "DELBYVAL_VALUE", needle);
+    var_set_num(vm, "DELBYVAL_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "DELBYVAL_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# delbyval n=%ld kept=%ld val=%s from=%d\n",
+              hr.n, hr.code, needle[0] ? needle : "", have_from);
     bump(vm); return 1;
   }
 
