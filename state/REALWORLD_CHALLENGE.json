@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 258,
-  "program": "programs/realworld/svc_capscale_slo_board.cubalc",
-  "theme": "CAPFLAT score ceiling + SCALEFLAT weight scale",
-  "version": "1.15.675-usability",
+  "iter": 259,
+  "program": "programs/realworld/svc_hasflat_inventory_board.cubalc",
+  "theme": "HASFLAT/PATHSFLAT/VALSFLAT + GETFLAT leaf inventory",
+  "version": "1.15.677-usability",
   "pass": true,
-  "prior_note": "iter 257 THRESHFLAT/TOPPATHFLAT; this iter first realworld 1223 CAPFLAT + 1224 SCALEFLAT",
+  "prior_note": "iter 258 CAPFLAT/SCALEFLAT; this iter first realworld 1225 HASFLAT + 1226 PATHSFLAT + 1227 GETFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed score/weight/lat outliers",
+      "cmd": "seed score/tls/cfg inventory",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "cap",
-      "cmd": "CAPFLAT score+lat 100 meta.score friend",
+      "name": "has",
+      "cmd": "HASFLAT/COUNTFLAT presence+count",
       "ok": true,
-      "note": "cap"
+      "note": "has"
     },
     {
-      "name": "scale",
-      "cmd": "SCALEFLAT weight 3",
+      "name": "paths",
+      "cmd": "PATHSFLAT/VALSFLAT bags",
       "ok": true,
-      "note": "scale"
+      "note": "paths"
+    },
+    {
+      "name": "get",
+      "cmd": "GETFLAT first+OR fallback",
+      "ok": true,
+      "note": "get"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER cap+scale",
+      "cmd": "FROM PEER has/paths/get",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost needle soft",
+      "cmd": "ghost soft + OR miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "post cap+scale admit",
+      "cmd": "structure admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "CLAMP/MUL aliases + factor0",
+      "cmd": "ANYFLAT/NFLAT/MATCH*/FIRSTFLAT",
       "ok": true,
       "note": "probe"
     },
@@ -59,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "446/482 pre-existing cli shell fails; capflat PASS 28 scaleflat PASS 29"
+      "note": "448/486 pre-existing cli shell fails; hasflat PASS 25 pathsflat PASS 25 getflat PASS 24"
     }
   ],
   "weaknesses": [
@@ -3126,6 +3132,30 @@
       "title": "CLAMPFLAT/MULFLAT aliases solid; factor 0 zeros pure-int leaves",
       "detail": "CLAMPFLAT is CAPFLAT; MULFLAT is SCALEFLAT. SCALEFLAT needle 0 zeros matching ints (documented in proof 1224). Strings survive. Useful but footgun if factor env is empty/0.",
       "repro": "SCALEFLAT \"hits\" 0 \u2192 hits.a=0 keep others"
+    },
+    {
+      "id": "W384",
+      "severity": "med",
+      "area": "lang|specials",
+      "title": "VALSFLAT_N / GETFLAT_FALLBACK dark-read 0 in large agent boards",
+      "detail": "After VALSFLAT score bag LAST is 10\\n20\\n30 (SYS LINES=3) but LET take_n=VALSFLAT_N yields 0 under agent_boot load. GETFLAT OR fallback sets LAST correctly but GETFLAT_FALLBACK special reads 0. Isolation mini-scripts and proof ASSERT work. Prefer SYS LINES LAST and SYS EQS LAST fallback-literal.",
+      "repro": "large board VALSFLAT \"score\"; LET n=VALSFLAT_N \u2192 0; SYS LINES LAST \u2192 3"
+    },
+    {
+      "id": "W385",
+      "severity": "med",
+      "area": "lang|needle",
+      "title": "HASFLAT/PATHSFLAT score needle includes meta.score false-friend",
+      "detail": "COUNTFLAT \"score\" returns 3 (score.a, score.b, meta.score). Same substring class as CAP/THRESH. Inventory digests over-count if agents expect nest-scoped only.",
+      "repro": "HASFLAT \"score\" on meta.score plate \u2192 HASFLAT_N=3"
+    },
+    {
+      "id": "W386",
+      "severity": "low",
+      "area": "lang|getflat",
+      "title": "GETFLAT first match is FLATKV walk order not path sort",
+      "detail": "Documented: GETFLAT port returns first walk match. Agents cannot assume deepest/shallowest without PATHSFLAT+pick. Useful for OR fallback soft peel.",
+      "repro": "GETFLAT \"port\" \u2192 cfg.port by walk order"
     }
   ],
   "workarounds": [
@@ -3143,7 +3173,9 @@
     "KEEPVFLAT naming implies exact keep; is threshold floor",
     "Path needle substring lacks segment-bound option for safe FREQ denoise",
     "CAPFLAT/SCALEFLAT need segment-bound needles for safe SLO scrub",
-    "Capture plate values via GETP not only CAPFLAT_N/SCALEFLAT_N in large boards"
+    "Capture plate values via GETP not only CAPFLAT_N/SCALEFLAT_N in large boards",
+    "VALSFLAT_N/GETFLAT_FALLBACK unreadable under agent_boot load",
+    "Inventory needles still substring-not-segment"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3153,8 +3185,10 @@
     "KEEPVFLAT misread as exact-value keep; is \u2265min THRESHFLAT alias",
     "needle substring false-friend meta.hits under hits denoise",
     "CAPFLAT needle substring collaterally clamps meta.score",
-    "SCALEFLAT_N special 0 after FROM PEER chain despite successful scale"
+    "SCALEFLAT_N special 0 after FROM PEER chain despite successful scale",
+    "VALSFLAT_N dark in large board; used SYS LINES bag",
+    "GETFLAT_FALLBACK dark; gated on LAST fallback literal"
   ],
-  "commit": "7ca70d11",
-  "ts": "2026-08-09T15:59:03Z"
+  "commit": "0d25538e",
+  "ts": "2026-08-09T16:24:56Z"
 }
