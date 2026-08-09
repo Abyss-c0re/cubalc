@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 267,
-  "program": "programs/realworld/svc_modeflat_majority_board.cubalc",
-  "theme": "MODEFLAT/TOPVALFLAT majority role digests",
-  "version": "1.15.693-usability",
+  "iter": 268,
+  "program": "programs/realworld/svc_pathbyval_reverse_board.cubalc",
+  "theme": "PATHBYVAL reverse nest path-by-value lookup",
+  "version": "1.15.695-usability",
   "pass": true,
-  "prior_note": "iter 266 FREQFLAT; this iter first realworld 1242 MODEFLAT (MEANINGFUL 701)",
+  "prior_note": "iter 267 MODEFLAT; this iter first realworld 1243 PATHBYVAL",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed multi-role/endpoint plate",
+      "cmd": "seed role/host plate + peer names",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "mode",
-      "cmd": "MODEFLAT role+endpoint+soft miss",
+      "name": "find",
+      "cmd": "PATHBYVAL worker/leader/h1/h2",
       "ok": true,
-      "note": "mode"
+      "note": "find"
     },
     {
-      "name": "top",
-      "cmd": "TOPVALFLAT/MAJORFLAT empty+bare",
+      "name": "or",
+      "cmd": "OR fallback + real hit",
       "ok": true,
-      "note": "top"
+      "note": "or"
     },
     {
       "name": "peer",
-      "cmd": "MODEFLAT FROM PEER status",
+      "cmd": "FROM PEER VALPATH/FINDVAL",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost miss empty LAST",
+      "cmd": "ghost miss empty path",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "worker majority admit",
+      "cmd": "GETP round-trip meta.role",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "tie",
-      "cmd": "first-seen tie x vs y",
+      "name": "first",
+      "cmd": "first-seen path on repeat value",
       "ok": true,
-      "note": "tie"
+      "note": "first"
     },
     {
       "name": "probe",
-      "cmd": "substring ro matches role",
+      "cmd": "exact value; work/orker miss",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "459/517 pre-existing cli fails; modeflat PASS 33"
+      "note": "457/521 pre-existing cli fails; pathbyval PASS 23"
     }
   ],
   "weaknesses": [
@@ -3356,6 +3356,30 @@
       "title": "forms MODEFLAT returns empty catalog entry",
       "detail": "cubalc forms MODEFLAT \u2192 n:0 despite live form + plate modeflat dual + selftest modeflat PASS 33. Human catalog lag.",
       "repro": "cubalc forms MODEFLAT \u2192 forms:[]"
+    },
+    {
+      "id": "W412",
+      "severity": "med",
+      "area": "lang|pathbyval",
+      "title": "PATHBYVAL first-seen depends on leaf walk / JSON key order",
+      "detail": "When multiple leaves share a value, PATHBYVAL returns the first walk hit. agent_job=worker before meta.role made reverse lookup return agent_job not meta.role. Agents must keep reverse-index values unique or accept earliest key order.",
+      "repro": "plate agent_job=worker + meta.role=worker; PATHBYVAL worker \u2192 agent_job"
+    },
+    {
+      "id": "W413",
+      "severity": "low",
+      "area": "lang|pathbyval",
+      "title": "PATHBYVAL value match is exact (good); partials soft-miss",
+      "detail": "Unlike MODEFLAT key-needle substring (W409), PATHBYVAL \"work\"/\"orker\" do not match \"worker\". Exact value contract is usable for reverse inventory; document contrast.",
+      "repro": "PATHBYVAL work \u2192 empty; PATHBYVAL worker \u2192 meta.role"
+    },
+    {
+      "id": "W414",
+      "severity": "low",
+      "area": "host|build",
+      "title": "out/cubalc can vanish mid-session; only .o left until make",
+      "detail": "Challenge fire found out/cubalc missing (cubalc_main.o only). Rebuild required before tests. Deploy/race risk for agent loops.",
+      "repro": "ls out/cubalc \u2192 missing; make restores binary"
     }
   ],
   "workarounds": [
@@ -3364,7 +3388,10 @@
     "Curated peer seeds for stable DIFFFLAT lines",
     "Capture MODEFLAT win via LAST_N immediately; avoid MODEFLAT_TOTAL under fat agents",
     "Predeclare path pool; reuse body/row/score to stay under 128 vars",
-    "Do not late-read MODEFLAT_SRC \u2014 use MODEFLAT_FROM or pre-copy to var"
+    "Do not late-read MODEFLAT_SRC \u2014 use MODEFLAT_FROM or pre-copy to var",
+    "Keep reverse-lookup values unique (no agent_job==role leaf)",
+    "PATHBYVAL x OR default.path for soft miss contract",
+    "GETP path after PATHBYVAL for round-trip gate"
   ],
   "language_gaps": [
     "Need segment-bound needles for counter digests",
@@ -3381,7 +3408,10 @@
     "Capture FREQ specials immediately after op",
     "vars[128] hard cap \u00b7 silent special drop (MODEFLAT_TOTAL/HIT/SRC)",
     "MODEFLAT needle substring match (false friends)",
-    "prefer LAST_N over MODEFLAT_N near var pressure"
+    "prefer LAST_N over MODEFLAT_N near var pressure",
+    "PATHBYVAL first-seen = leaf walk order (unique reverse values)",
+    "PATHBYVAL exact value match (contrast MODEFLAT key substring)",
+    "OR fallback soft-miss path for missing values"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3413,8 +3443,10 @@
     "FREQFLAT_TOTAL dark after COUNTVALFLAT; used bag HASLINE",
     "iter267: MODEFLAT_TOTAL silent 0 under fat agent until var footprint cut (W408)",
     "iter267: substring needle ro matches role (W409) \u2014 probe expects fuzzy hit",
-    "iter267: late MODEFLAT_SRC hard-fail; capture early or avoid (W410)"
+    "iter267: late MODEFLAT_SRC hard-fail; capture early or avoid (W410)",
+    "iter268: agent_job=role_s false-friend first-hit for PATHBYVAL worker (W412) \u2014 seed agent_job=runner",
+    "iter268: rebuilt out/cubalc (W414) before board tests"
   ],
-  "commit": "5ef4ee20",
-  "ts": "2026-08-09T19:53:01Z"
+  "commit": "pending",
+  "ts": "2026-08-09T20:14:39Z"
 }
