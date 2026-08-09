@@ -1,0 +1,118 @@
+# THRESHOBJ / DROPZEROOBJ / CAPOBJ — nest value denoise write-back
+# Usability: THRESHP/DROPZEROP/CAPP duals for nests without GETOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"warn\":3,\"error\":9,\"info\":1,\"label\":\"x\"}}"
+LET PEER = "{\"delta\":{\"a\":0,\"b\":5,\"c\":-2,\"d\":0,\"tag\":\"ok\"},\"outer\":\"z\"}"
+LET scores = "{\"board\":{\"p1\":40,\"p2\":150,\"p3\":80,\"name\":\"run\"}}"
+
+# THRESHOBJ: keep pure-int value >= min; write-back nest
+THRESHOBJ "freq" 3
+ASSERT OK == 1
+ASSERT THRESHOBJ_N == 2
+ASSERT THRESHOBJ_DROP == 2
+ASSERT THRESHOBJ_MIN == 3
+ASSERT THRESHOBJ_NEST_HIT == 1
+ASSERT THRESHOBJ_FROM == 0
+HASPOBJ "freq" "warn"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "error"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "info"
+ASSERT LAST_N == 0
+HASPOBJ "freq" "label"
+ASSERT LAST_N == 0
+# outer intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+THRESHOBJ FROM PEER "delta" 1
+ASSERT THRESHOBJ_FROM == 1
+ASSERT THRESHOBJ_N == 1
+SYS EQS THRESHOBJ_SRC "PEER"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "delta" "b"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "delta" "c"
+ASSERT LAST_N == 0
+GETP FROM PEER "outer"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# trailing FROM + aliases
+LET PEER = "{\"delta\":{\"a\":0,\"b\":5,\"c\":-2,\"d\":0,\"tag\":\"ok\"},\"outer\":\"z\"}"
+KEEPVOBJ "delta" 5 FROM PEER
+ASSERT THRESHOBJ_N == 1
+HASPOBJ FROM PEER "delta" "b"
+ASSERT LAST_N == 1
+MINCOUNTOBJ FROM PEER "delta" 5
+ASSERT THRESHOBJ_N == 1
+
+# DROPZEROOBJ: drop zeros, keep nonzero + non-int
+LET PEER = "{\"delta\":{\"a\":0,\"b\":5,\"c\":-2,\"d\":0,\"tag\":\"ok\"},\"outer\":\"z\"}"
+DROPZEROOBJ FROM PEER "delta"
+ASSERT OK == 1
+ASSERT DROPZEROOBJ_N == 3
+ASSERT DROPZEROOBJ_DROP == 2
+ASSERT DROPZEROOBJ_FROM == 1
+HASPOBJ FROM PEER "delta" "b"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "delta" "c"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "delta" "tag"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "delta" "a"
+ASSERT LAST_N == 0
+KEEPNZOBJ FROM PEER "delta"
+ASSERT DROPZEROOBJ_N == 3
+
+# CAPOBJ: clamp pure-int values; keep all keys
+CAPOBJ FROM scores "board" 100
+ASSERT OK == 1
+ASSERT CAPOBJ_N == 1
+ASSERT CAPOBJ_MAX == 100
+ASSERT CAPOBJ_KEYS == 4
+GETPOBJ FROM scores "board" "p2"
+SYS EQS LAST "100"
+ASSERT LAST_N == 1
+GETPOBJ FROM scores "board" "p1"
+SYS EQS LAST "40"
+ASSERT LAST_N == 1
+GETPOBJ FROM scores "board" "name"
+SYS EQS LAST "run"
+ASSERT LAST_N == 1
+
+CLAMPOBJ "board" 50 FROM scores
+ASSERT CAPOBJ_N == 2
+GETPOBJ FROM scores "board" "p2"
+SYS EQS LAST "50"
+ASSERT LAST_N == 1
+GETPOBJ FROM scores "board" "p3"
+SYS EQS LAST "50"
+ASSERT LAST_N == 1
+
+# soft nest miss — outer unchanged
+LET PLATE = "{\"host\":\"cubeA\"}"
+THRESHOBJ "ghost" 1
+ASSERT OK == 1
+ASSERT THRESHOBJ_NEST_HIT == 0
+ASSERT THRESHOBJ_N == 0
+HASP "ghost"
+ASSERT LAST_N == 0
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# NEST alias + NEST body
+LET PLATE = "{\"freq\":{\"warn\":3,\"error\":9,\"info\":1}}"
+NESTTHRESH "freq" 9
+ASSERT THRESHOBJ_N == 1
+SYS HAS NEST "error"
+ASSERT LAST_N == 1
+SYS HAS NEST "warn"
+ASSERT LAST_N == 0
+
+PRINT "threshobj soft ok"
