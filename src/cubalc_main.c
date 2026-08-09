@@ -2220,6 +2220,8 @@ int main(int argc, char **argv) {
       {"cli_plate_needflatn", "programs/proof/1232_cli_plate_needflatn.sh", "cubalc plate needflatn NEEDFLATN dual"},
       {"hasflatn", "programs/proof/1233_hasflatn.cubalc", "HASFLATN/COUNTFLATN pure-int leaf presence and count multi-plate"},
       {"cli_plate_hasflatn", "programs/proof/1233_cli_plate_hasflatn.sh", "cubalc plate hasflatn|countflatn dual"},
+      {"pathsflatn", "programs/proof/1234_pathsflatn.cubalc", "PATHSFLATN/VALSFLATN pure-int leaf path/value bags multi-plate"},
+      {"cli_plate_pathsflatn", "programs/proof/1234_cli_plate_pathsflatn.sh", "cubalc plate pathsflatn|valsflatn dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2543,6 +2545,10 @@ int main(int argc, char **argv) {
       {"NFLATN", "flow", "NFLATN alias of COUNTFLATN"},
       {"PATHSFLAT", "flow", "PATHSFLAT|MATCHPATHS [FROM plate] [needle] — matching leaf paths → LAST bag · read-only"},
       {"VALSFLAT", "flow", "VALSFLAT|MATCHVALS [FROM plate] [needle] — matching leaf values → LAST bag · read-only"},
+      {"PATHSFLATN", "flow", "PATHSFLATN|MATCHPATHSN [FROM plate] [needle] — pure-int matching leaf paths → LAST bag · read-only"},
+      {"VALSFLATN", "flow", "VALSFLATN|MATCHVALSN [FROM plate] [needle] — pure-int matching leaf values → LAST bag · read-only"},
+      {"MATCHPATHSN", "flow", "MATCHPATHSN alias of PATHSFLATN"},
+      {"MATCHVALSN", "flow", "MATCHVALSN alias of VALSFLATN"},
       {"GETFLAT", "flow", "GETFLAT|FIRSTFLAT [FROM plate] needle [OR fallback] — first matching leaf value → LAST · read-only"},
       {"FIRSTFLAT", "flow", "FIRSTFLAT alias of GETFLAT"},
       {"NEEDFLAT", "flow", "NEEDFLAT|REQUIREFLAT [FROM plate] needle… — fail-fast if any leaf-path needle missing · soft twin HASFLAT"},
@@ -5047,6 +5053,8 @@ int main(int argc, char **argv) {
               "       cubalc plate countflatn <path> [needle]  # COUNTFLATN dual · pure-int leaf match count\n"
               "       cubalc plate pathsflat <path> [needle]  # PATHSFLAT dual · matching leaf paths bag\n"
               "       cubalc plate valsflat <path> [needle]  # VALSFLAT dual · matching leaf values bag\n"
+              "       cubalc plate pathsflatn <path> [needle]  # PATHSFLATN dual · pure-int leaf paths bag\n"
+              "       cubalc plate valsflatn <path> [needle]  # VALSFLATN dual · pure-int leaf values bag\n"
               "       cubalc plate getflat <path> <needle> [OR def]  # GETFLAT dual · first matching leaf value\n"
               "       cubalc plate needflat <path> <needle> [needle…]  # NEEDFLAT dual · fail-fast leaf path contract\n"
               "       cubalc plate getflatn <path> <needle> [OR n]  # GETFLATN dual · first pure-int leaf → n\n"
@@ -5082,7 +5090,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"getflat\",\"needflat\",\"getflatn\",\"needflatn\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"needflat\",\"getflatn\",\"needflatn\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5190,6 +5198,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "pathsflat") == 0 || strcmp(argv[2], "matchpaths") == 0 ||
         strcmp(argv[2], "valsflat") == 0 || strcmp(argv[2], "matchvals") == 0 ||
         strcmp(argv[2], "leafvals") == 0 ||
+        strcmp(argv[2], "pathsflatn") == 0 || strcmp(argv[2], "matchpathsn") == 0 ||
+        strcmp(argv[2], "valsflatn") == 0 || strcmp(argv[2], "matchvalsn") == 0 ||
+        strcmp(argv[2], "leafvalsn") == 0 || strcmp(argv[2], "numvalsflat") == 0 ||
         strcmp(argv[2], "getflat") == 0 || strcmp(argv[2], "firstflat") == 0 ||
         strcmp(argv[2], "peelflat") == 0 || strcmp(argv[2], "leafget") == 0 ||
         strcmp(argv[2], "needflat") == 0 || strcmp(argv[2], "requireflat") == 0 ||
@@ -5421,6 +5432,12 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "matchvals") == 0 || strcmp(op, "leafvals") == 0 ||
                strcmp(op, "valmatch") == 0)
         op = "valsflat";
+      else if (strcmp(op, "matchpathsn") == 0 || strcmp(op, "pathmatchn") == 0 ||
+               strcmp(op, "numpathsflat") == 0)
+        op = "pathsflatn";
+      else if (strcmp(op, "matchvalsn") == 0 || strcmp(op, "leafvalsn") == 0 ||
+               strcmp(op, "numvalsflat") == 0 || strcmp(op, "intvalsflat") == 0)
+        op = "valsflatn";
       else if (strcmp(op, "firstflat") == 0 || strcmp(op, "peelflat") == 0 ||
                strcmp(op, "leafget") == 0 || strcmp(op, "getleaf") == 0)
         op = "getflat";
@@ -6571,6 +6588,54 @@ int main(int argc, char **argv) {
              op, path, needle, file_hit ? "true" : "false",
              pr.n, esc, CUBALC_LANG_VERSION,
              want_vals ? "VALSFLAT" : "PATHSFLAT",
+             want_vals ? "values" : "paths");
+      return 0;
+    }
+
+    /* pathsflatn|valsflatn [needle] — PATHSFLATN/VALSFLATN duals (pure-int bags).
+     *   cubalc plate pathsflatn agent.json score
+     *   cubalc plate valsflatn agent.json hits
+     * bag = newline pure-int path or value fields · n = count. */
+    if (strcmp(op, "pathsflatn") == 0 || strcmp(op, "valsflatn") == 0) {
+      const char *needle = "";
+      cubalc_host_result pr;
+      int want_vals = (strcmp(op, "valsflatn") == 0);
+      char esc[CUBALC_HOST_STR_MAX * 2];
+      size_t i, o = 0;
+
+      if (ai < argc && argv[ai])
+        needle = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_match_bagn(plate, needle, want_vals, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               op, path, pr.err[0] ? pr.err : "pathsflatn fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      esc[0] = 0;
+      for (i = 0; pr.str[i] && o + 2 < sizeof esc; i++) {
+        char c = pr.str[i];
+        if (c == '"' || c == '\\') {
+          esc[o++] = '\\';
+          esc[o++] = c;
+        } else if (c == '\n') {
+          esc[o++] = '\\';
+          esc[o++] = 'n';
+        } else if (c == '\r') {
+          /* skip */
+        } else {
+          esc[o++] = c;
+        }
+      }
+      esc[o] = 0;
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"%s\",\"path\":\"%s\",\"needle\":\"%s\","
+             "\"file\":%s,\"n\":%ld,\"bag\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"%s dual · pure-int leaf %s bag (read-only)\"}\n",
+             op, path, needle, file_hit ? "true" : "false",
+             pr.n, esc, CUBALC_LANG_VERSION,
+             want_vals ? "VALSFLATN" : "PATHSFLATN",
              want_vals ? "values" : "paths");
       return 0;
     }

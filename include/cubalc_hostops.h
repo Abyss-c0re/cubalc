@@ -368,6 +368,12 @@ int cubalc_host_json_leaf_countn(const char *json, const char *needle,
  * Usability: peel GREPFLAT without BEFORE/AFTER · EACH LINE walk. */
 int cubalc_host_json_leaf_match_bag(const char *json, const char *needle, int want_vals,
                                     cubalc_host_result *r);
+/* Pure-int matching leaf paths or values bag (PATHSFLATN / VALSFLATN).
+ * want_vals=0 → path bag · want_vals=1 → decimal value bag. Non-int skipped.
+ * Empty needle → all pure-int leaves. r->str = bag · r->n = field count.
+ * Soft always OK. Read-only. Usability: numeric EACH LINE without string pollution. */
+int cubalc_host_json_leaf_match_bagn(const char *json, const char *needle, int want_vals,
+                                     cubalc_host_result *r);
 /* First leaf whose path contains needle (GETFLAT).
  * Empty needle → first leaf. Soft miss → r->n=0 · r->str="" · r->err="".
  * Hit → r->n=1 · r->str=value · r->err=path (path side-channel on success).

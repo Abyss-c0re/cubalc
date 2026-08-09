@@ -35868,6 +35868,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NFLATN", "NFLATN alias of COUNTFLATN"},
       {"PATHSFLAT", "PATHSFLAT|MATCHPATHS [FROM plate] [needle] — matching leaf paths → LAST bag · multi-plate · read-only"},
       {"VALSFLAT", "VALSFLAT|MATCHVALS [FROM plate] [needle] — matching leaf values → LAST bag · multi-plate · read-only"},
+      {"PATHSFLATN", "PATHSFLATN|MATCHPATHSN [FROM plate] [needle] — pure-int matching leaf paths → LAST bag · multi-plate · read-only"},
+      {"VALSFLATN", "VALSFLATN|MATCHVALSN [FROM plate] [needle] — pure-int matching leaf values → LAST bag · multi-plate · read-only"},
+      {"MATCHPATHSN", "MATCHPATHSN alias of PATHSFLATN"},
+      {"MATCHVALSN", "MATCHVALSN alias of VALSFLATN"},
       {"GETFLAT", "GETFLAT|FIRSTFLAT [FROM plate] needle [OR fallback] — first matching leaf value → LAST · multi-plate · read-only"},
       {"FIRSTFLAT", "FIRSTFLAT alias of GETFLAT"},
       {"GETFLATN", "GETFLATN|FIRSTFLATN [FROM plate] needle [OR fallback] — first pure-int matching leaf → LAST_N · multi-plate · read-only"},
@@ -46206,6 +46210,161 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# %s n=%ld needle=%s from=%d\n",
               want_vals ? "valsflat" : "pathsflat",
+              hr.n, needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* PATHSFLATN|MATCHPATHSN [FROM plate] [needle]
+   * VALSFLATN|MATCHVALSN [FROM plate] [needle]
+   * Pure-int matching leaf paths or values as newline bag → LAST · LAST_N=count.
+   * Non-int matching leaves skipped. Empty needle → all pure-int leaves.
+   * Read-only. Soft empty bag.
+   * Usability: numeric EACH LINE / SUM without string pollution from VALSFLAT:
+   *   PATHSFLATN "score"
+   *   VALSFLATN "hits"
+   *   VALSFLATN FROM PEER "tls"
+   */
+  if (kw(&L->cur,"PATHSFLATN") || kw(&L->cur,"MATCHPATHSN") || kw(&L->cur,"MPATHSFLATN") ||
+      kw(&L->cur,"PLATE_PATHSFLATN") || kw(&L->cur,"PATHMATCHN") || kw(&L->cur,"NUMPATHSFLAT") ||
+      kw(&L->cur,"VALSFLATN") || kw(&L->cur,"MATCHVALSN") || kw(&L->cur,"MVALSFLATN") ||
+      kw(&L->cur,"PLATE_VALSFLATN") || kw(&L->cur,"VALMATCHN") || kw(&L->cur,"LEAFVALSN") ||
+      kw(&L->cur,"NUMVALSFLAT") || kw(&L->cur,"INTVALSFLAT")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, want_vals = 0;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "VALSFLATN") == 0 || strcmp(op0, "MATCHVALSN") == 0 ||
+        strcmp(op0, "MVALSFLATN") == 0 || strcmp(op0, "PLATE_VALSFLATN") == 0 ||
+        strcmp(op0, "VALMATCHN") == 0 || strcmp(op0, "LEAFVALSN") == 0 ||
+        strcmp(op0, "NUMVALSFLAT") == 0 || strcmp(op0, "INTVALSFLAT") == 0)
+      want_vals = 1;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(needle, sizeof needle, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"SETP") && !kw(&L->cur,"INCP") &&
+               !kw(&L->cur,"PATHSFLATN") && !kw(&L->cur,"VALSFLATN") &&
+               !kw(&L->cur,"PATHSFLAT") && !kw(&L->cur,"HASFLATN") && !kw(&L->cur,"IF")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_match_bagn(plate, needle, want_vals, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "PATHSFLATN: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "PATHSFLATN: fail");
+      var_set_num(vm, "PATHSFLATN_N", 0);
+      var_set_str(vm, "LAST", "");
+      var_set_num(vm, "LAST_N", 0);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    if (want_vals) {
+      var_set_str(vm, "VALSFLATN", hr.str);
+      var_set_str(vm, "MATCHVALSN", hr.str);
+      var_set_num(vm, "VALSFLATN_N", hr.n);
+      var_set_str(vm, "VALSFLATN_NEEDLE", needle);
+      var_set_num(vm, "VALSFLATN_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "VALSFLATN_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    } else {
+      var_set_str(vm, "PATHSFLATN", hr.str);
+      var_set_str(vm, "MATCHPATHSN", hr.str);
+      var_set_num(vm, "PATHSFLATN_N", hr.n);
+      var_set_str(vm, "PATHSFLATN_NEEDLE", needle);
+      var_set_num(vm, "PATHSFLATN_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "PATHSFLATN_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%ld needle=%s from=%d\n",
+              want_vals ? "valsflatn" : "pathsflatn",
               hr.n, needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }

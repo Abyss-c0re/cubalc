@@ -1,0 +1,87 @@
+# PATHSFLATN / VALSFLATN — pure-int leaf path/value bags by needle
+# Usability: numeric EACH LINE without string pollution from VALSFLAT.
+# Non-int matching leaves skipped.
+
+HOLD_FLASH 1
+
+# score.a/b ints, meta.score int, label string, host string under cfg
+LET PLATE = "{\"score\":{\"a\":10,\"b\":20},\"label\":\"x\",\"meta\":{\"score\":30,\"role\":\"w\"},\"cfg\":{\"port\":9,\"host\":\"h\"}}"
+
+PATHSFLATN "score"
+ASSERT OK == 1
+ASSERT PATHSFLATN_N == 3
+ASSERT LAST_N == 3
+SYS HAS LAST "score.a"
+ASSERT LAST_N == 1
+PATHSFLATN "score"
+SYS HAS LAST "score.b"
+ASSERT LAST_N == 1
+PATHSFLATN "score"
+SYS HAS LAST "meta.score"
+ASSERT LAST_N == 1
+
+VALSFLATN "score"
+ASSERT VALSFLATN_N == 3
+SYS HAS LAST "10"
+ASSERT LAST_N == 1
+VALSFLATN "score"
+SYS HAS LAST "20"
+ASSERT LAST_N == 1
+VALSFLATN "score"
+SYS HAS LAST "30"
+ASSERT LAST_N == 1
+
+# host path matches but non-int → pure-int bags empty for "host"
+PATHSFLATN "host"
+ASSERT PATHSFLATN_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+# PATHSFLAT would include host
+PATHSFLAT "host"
+ASSERT PATHSFLAT_N == 1
+
+# empty needle — pure-int only: score.a, score.b, meta.score, cfg.port = 4
+PATHSFLATN ""
+ASSERT PATHSFLATN_N == 4
+VALSFLATN ""
+ASSERT VALSFLATN_N == 4
+
+# no match
+PATHSFLATN "nope"
+ASSERT PATHSFLATN_N == 0
+
+LET PEER = "{\"hits\":{\"a\":3,\"b\":4},\"role\":\"leader\",\"n\":2}"
+PATHSFLATN FROM PEER "hits"
+ASSERT PATHSFLATN_FROM == 1
+SYS EQS PATHSFLATN_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT PATHSFLATN_N == 2
+
+VALSFLATN FROM PEER "hits"
+ASSERT VALSFLATN_N == 2
+SYS HAS LAST "3"
+ASSERT LAST_N == 1
+VALSFLATN FROM PEER "hits"
+SYS HAS LAST "4"
+ASSERT LAST_N == 1
+
+# role string-only
+VALSFLATN FROM PEER "role"
+ASSERT VALSFLATN_N == 0
+
+# plate unchanged
+LET PLATE = "{\"x\":9}"
+PATHSFLATN FROM PEER "hits"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+MATCHPATHSN "x"
+ASSERT PATHSFLATN_N == 1
+MATCHVALSN "x"
+ASSERT VALSFLATN_N == 1
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1234_pathsflatn: PASS"
