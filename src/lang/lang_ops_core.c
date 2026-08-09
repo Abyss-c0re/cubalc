@@ -27408,6 +27408,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"TYPEP") || kw(&L->cur,"KINDP") ||
              kw(&L->cur,"TOKVP") || kw(&L->cur,"FROMKVP") ||
              kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
+             kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35811,6 +35812,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"AVGNP", "AVGNP|MEANP [FROM plate] — mean int value → LAST_N · multi-plate · no SYS JSONAVGN"},
       {"TOPKEYP", "TOPKEYP|MAXKEYP [FROM plate] — key with max int · LAST=key LAST_N=v · multi-plate"},
       {"BOTKEYP", "BOTKEYP|MINKEYP [FROM plate] — key with min int · LAST=key LAST_N=v · multi-plate"},
+      {"THRESHP", "THRESHP|KEEPVP [FROM plate] min — keep int value>=min → plate · multi-plate · no TOKV+THRESHKV"},
+      {"KEEPVP", "KEEPVP|MINCOUNTP alias of THRESHP · denoise FREQ plates"},
+      {"MINCOUNTP", "MINCOUNTP alias of THRESHP"},
+      {"DROPZEROP", "DROPZEROP|KEEPNZP [FROM plate] — drop int value==0 keys → plate · multi-plate · no TOKV+DROPZERO"},
+      {"KEEPNZP", "KEEPNZP alias of DROPZEROP"},
+      {"CAPP", "CAPP|CLAMPP [FROM plate] max — clamp int values to max → plate · multi-plate · no TOKV+CAPKV"},
+      {"CLAMPP", "CLAMPP|MAXVALP alias of CAPP · cap FREQ outliers"},
+      {"MAXVALP", "MAXVALP alias of CAPP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -41463,6 +41472,200 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# %s n=%ld from=%d\n",
               mode == 1 ? "maxnp" : mode == 2 ? "minnp" : mode == 3 ? "avgnp" : "sumnp",
               hr.n, have_from);
+    bump(vm); return 1;
+  }
+  /* THRESHP|KEEPVP|MINCOUNTP [FROM plate] min
+   * — keep pure-int keys with value >= min → plate (JSON dual of SYS THRESHKV).
+   * DROPZEROP|KEEPNZP [FROM plate] — drop pure-int keys with value == 0.
+   * CAPP|CLAMPP [FROM plate] max — clamp pure-int values to max (CAPKV dual).
+   * Bare uses PLATE. Does not mutate source (PICKP style) — LAST = result plate.
+   * LAST_N = kept|capped · THRESHP_DROP / DROPZEROP_DROP · THRESHP_MIN / CAPP_MAX.
+   * Usability: denoise FREQ/score plates without TOKV+THRESHKV/DROPZERO/CAPKV+FROMKVP:
+   *   THRESHP 5 FROM freq
+   *   DROPZEROP FROM delta
+   *   CAPP 100 FROM scores
+   */
+  if (kw(&L->cur,"THRESHP") || kw(&L->cur,"KEEPVP") || kw(&L->cur,"MINCOUNTP") ||
+      kw(&L->cur,"MTHRESHP") || kw(&L->cur,"PLATE_THRESH") || kw(&L->cur,"KEEPMINP") ||
+      kw(&L->cur,"MINFREQP") || kw(&L->cur,"DROPRAREP") || kw(&L->cur,"PRUNEP") ||
+      kw(&L->cur,"DROPZEROP") || kw(&L->cur,"KEEPNZP") || kw(&L->cur,"MDROPZEROP") ||
+      kw(&L->cur,"PLATE_DROPZERO") || kw(&L->cur,"NZP") || kw(&L->cur,"KEEPNZP") ||
+      kw(&L->cur,"CAPP") || kw(&L->cur,"CLAMPP") || kw(&L->cur,"MCAPP") ||
+      kw(&L->cur,"PLATE_CAP") || kw(&L->cur,"MAXVALP") || kw(&L->cur,"CLAMPVALP")) {
+    char plate[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, mode = 0; /* 0 thresh 1 dropzero 2 cap */
+    long limit = 1;
+    int have_limit = 0;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "DROPZEROP") == 0 || strcmp(op0, "KEEPNZP") == 0 ||
+        strcmp(op0, "MDROPZEROP") == 0 || strcmp(op0, "PLATE_DROPZERO") == 0 ||
+        strcmp(op0, "NZP") == 0)
+      mode = 1;
+    else if (strcmp(op0, "CAPP") == 0 || strcmp(op0, "CLAMPP") == 0 ||
+             strcmp(op0, "MCAPP") == 0 || strcmp(op0, "PLATE_CAP") == 0 ||
+             strcmp(op0, "MAXVALP") == 0 || strcmp(op0, "CLAMPVALP") == 0)
+      mode = 2;
+    else
+      mode = 0;
+
+    lex_next(L);
+    plate[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    /* optional leading FROM plate */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* threshold / cap limit (required for thresh/cap; optional ignored for dropzero) */
+    if (mode != 1) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        limit = parse_expr(vm, L);
+        have_limit = 1;
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *dv = var_get(vm, L->cur.text, 0);
+        if (dv && !dv->is_str) {
+          limit = (long)dv->val;
+          have_limit = 1;
+          lex_next(L);
+        }
+      }
+    }
+
+    /* trailing FROM plate */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    if (mode != 1 && !have_limit) {
+      fail(vm, mode == 2
+           ? "CAPP [FROM plate] max — need max int"
+           : "THRESHP [FROM plate] min — need min int");
+      return -1;
+    }
+    if (mode == 1)
+      limit = 0;
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_valfilter(plate, mode, limit, &hr) != 0) {
+      var_set_str(vm, "LAST", "{}");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "{}");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "THRESHP_N", 0);
+      var_set_num(vm, "DROPZEROP_N", 0);
+      var_set_num(vm, "CAPP_N", 0);
+      var_set_num(vm, "THRESHP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err :
+                  (mode == 2 ? "CAPP: fail" : mode == 1 ? "DROPZEROP: fail" : "THRESHP: fail"));
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err :
+                  (mode == 2 ? "CAPP: fail" : mode == 1 ? "DROPZEROP: fail" : "THRESHP: fail"));
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    if (mode == 2) {
+      var_set_str(vm, "CAPP", hr.str);
+      var_set_str(vm, "CLAMPP", hr.str);
+      var_set_num(vm, "CAPP_N", hr.n);
+      var_set_num(vm, "CAPP_MAX", limit);
+      var_set_num(vm, "CAPP_KEYS", (long)hr.code);
+      var_set_num(vm, "CAPP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "CAPP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    } else if (mode == 1) {
+      var_set_str(vm, "DROPZEROP", hr.str);
+      var_set_str(vm, "KEEPNZP", hr.str);
+      var_set_num(vm, "DROPZEROP_N", hr.n);
+      var_set_num(vm, "DROPZEROP_DROP", (long)hr.code);
+      var_set_num(vm, "DROPZEROP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "DROPZEROP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    } else {
+      var_set_str(vm, "THRESHP", hr.str);
+      var_set_str(vm, "KEEPVP", hr.str);
+      var_set_num(vm, "THRESHP_N", hr.n);
+      var_set_num(vm, "THRESHP_DROP", (long)hr.code);
+      var_set_num(vm, "THRESHP_MIN", limit);
+      var_set_num(vm, "KEEPVP_N", hr.n);
+      var_set_num(vm, "THRESHP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "THRESHP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%ld drop/cap=%d limit=%ld from=%d\n",
+              mode == 2 ? "capp" : mode == 1 ? "dropzerop" : "threshp",
+              hr.n, hr.code, limit, have_from);
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.

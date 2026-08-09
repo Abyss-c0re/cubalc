@@ -1,0 +1,102 @@
+# THRESHP / DROPZEROP / CAPP — multi-plate value denoise (THRESHKV/DROPZERO/CAPKV duals)
+# Usability: FREQ/score plates without TOKV+THRESHKV/DROPZERO/CAPKV+FROMKVP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"warn\":3,\"error\":9,\"info\":1,\"label\":\"x\"}"
+LET PEER = "{\"a\":0,\"b\":5,\"c\":-2,\"d\":0,\"tag\":\"ok\"}"
+LET scores = "{\"p1\":40,\"p2\":150,\"p3\":80,\"name\":\"board\"}"
+LET empty = "{}"
+
+# THRESHP: keep pure-int value >= min (non-int dropped)
+THRESHP 3
+ASSERT OK == 1
+ASSERT THRESHP_N == 2
+ASSERT THRESHP_DROP == 2
+ASSERT THRESHP_MIN == 3
+ASSERT THRESHP_FROM == 0
+SYS HAS LAST "\"warn\":3"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"error\":9"
+ASSERT LAST_N == 1
+SYS HAS LAST "info"
+ASSERT LAST_N == 0
+SYS HAS LAST "label"
+ASSERT LAST_N == 0
+# source not mutated (PICKP style)
+SYS HAS PLATE "info"
+ASSERT LAST_N == 1
+
+THRESHP FROM PEER 1
+ASSERT THRESHP_FROM == 1
+ASSERT THRESHP_N == 1
+SYS EQS THRESHP_SRC "PEER"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"b\":5"
+ASSERT LAST_N == 1
+SYS HAS LAST "c"
+ASSERT LAST_N == 0
+
+# min after plate
+THRESHP 5 FROM scores
+ASSERT THRESHP_N == 3
+SYS HAS LAST "\"p2\":150"
+ASSERT LAST_N == 1
+
+# aliases
+KEEPVP 9
+ASSERT KEEPVP_N == 1
+SYS HAS LAST "\"error\":9"
+ASSERT LAST_N == 1
+MINCOUNTP FROM PEER 5
+ASSERT THRESHP_N == 1
+
+# DROPZEROP: drop value==0, keep non-int + nonzero (incl negative)
+DROPZEROP FROM PEER
+ASSERT OK == 1
+ASSERT DROPZEROP_N == 3
+ASSERT DROPZEROP_DROP == 2
+ASSERT DROPZEROP_FROM == 1
+SYS HAS LAST "\"b\":5"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"c\":-2"
+ASSERT LAST_N == 1
+SYS HAS LAST "tag"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"a\":"
+ASSERT LAST_N == 0
+KEEPNZP FROM PEER
+ASSERT DROPZEROP_N == 3
+
+# CAPP: clamp pure-int values to max; keep all keys
+CAPP 100 FROM scores
+ASSERT OK == 1
+ASSERT CAPP_N == 1
+ASSERT CAPP_MAX == 100
+ASSERT CAPP_KEYS == 4
+SYS HAS LAST "\"p2\":100"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"p1\":40"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"p3\":80"
+ASSERT LAST_N == 1
+SYS HAS LAST "name"
+ASSERT LAST_N == 1
+# source scores not mutated
+SYS HAS scores "150"
+ASSERT LAST_N == 1
+CLAMPP 50
+ASSERT CAPP_N == 0
+CAPP 50
+# bare PLATE: warn=3,error=9,info=1,label — cap error 9→50? wait max 50, error 9 stays, nothing >50
+ASSERT CAPP_N == 0
+
+# empty soft
+THRESHP FROM empty 1
+ASSERT THRESHP_N == 0
+DROPZEROP FROM empty
+ASSERT DROPZEROP_N == 0
+CAPP FROM empty 10
+ASSERT CAPP_N == 0
+
+PRINT "threshp soft ok"

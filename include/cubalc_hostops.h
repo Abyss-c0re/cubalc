@@ -269,6 +269,14 @@ int cubalc_host_json_minmax(const char *json, int want_min, cubalc_host_result *
  * r->code = count of numeric fields used. Soft 0 if none. r->str = decimal.
  * Usability: typical score without JSONVALUES+AVG glue. */
 int cubalc_host_json_avg(const char *json, cubalc_host_result *r);
+/* plate value denoise / clamp (multi-plate duals of THRESHKV / DROPZERO / CAPKV).
+ * mode 0 THRESH: keep pure-int keys with value >= limit; drop non-int + below.
+ * mode 1 DROPZERO: drop pure-int keys with value == 0; keep non-int + nonzero.
+ * mode 2 CAP: clamp pure-int values to <= limit; keep all keys (non-int unchanged).
+ * r->str = result plate · r->n = kept|capped count · r->code = dropped|capped keys.
+ * Soft {} if not object. Usability: FREQ plate denoise without TOKV+THRESHKV+FROMKVP. */
+int cubalc_host_json_valfilter(const char *json, int mode, long limit,
+                               cubalc_host_result *r);
 /* order-independent top-level plate equality → r->n 1|0. Soft always OK.
  * Same keys + same raw values (whitespace-trimmed). Nested compared as raw text.
  * Usability: agent verify after WRITE/MERGE without fragile string EQS. */

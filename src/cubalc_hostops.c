@@ -4874,6 +4874,130 @@ int cubalc_host_json_avg(const char *json, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: multi-plate THRESHP/DROPZEROP/CAPP — value filter/clamp without bag glue.
+ * mode 0: keep pure-int value >= limit (drop non-int + below). r->n=kept r->code=drop.
+ * mode 1: drop pure-int value == 0 (keep non-int + nonzero). r->n=kept r->code=drop.
+ * mode 2: clamp pure-int value to <= limit (keep all). r->n=capped r->code=nkeys. */
+int cubalc_host_json_valfilter(const char *json, int mode, long limit,
+                               cubalc_host_result *r) {
+  cubalc_host_result keys, raw, setr;
+  char cur[CUBALC_HOST_STR_MAX];
+  const char *p, *line;
+  long kept = 0, drop = 0, capped = 0, nkeys = 0;
+  r_clear(r);
+  memset(&keys, 0, sizeof keys);
+  snprintf(cur, sizeof cur, "%s", "{}");
+  if (cubalc_host_json_keys(json, &keys) != 0) {
+    snprintf(r->str, sizeof r->str, "%s", "{}");
+    r->n = 0;
+    r->code = 0;
+    r->ok = 1;
+    return 0;
+  }
+  p = keys.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    const char *v;
+    char *end = NULL;
+    long num = 0;
+    int is_num = 0;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    nkeys++;
+    memset(&raw, 0, sizeof raw);
+    if (cubalc_host_json_get_raw(json, key, &raw) != 0) {
+      drop++;
+      continue;
+    }
+    v = raw.str;
+    while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+    if (*v == '"') {
+      is_num = 0;
+    } else if (strncmp(v, "true", 4) == 0 &&
+               (v[4] == 0 || v[4] == ',' || v[4] == '}' || v[4] == ' ' ||
+                v[4] == '\n' || v[4] == '\r' || v[4] == '\t')) {
+      num = 1;
+      is_num = 1;
+    } else if (strncmp(v, "false", 5) == 0 &&
+               (v[5] == 0 || v[5] == ',' || v[5] == '}' || v[5] == ' ' ||
+                v[5] == '\n' || v[5] == '\r' || v[5] == '\t')) {
+      num = 0;
+      is_num = 1;
+    } else if (strncmp(v, "null", 4) == 0 || *v == '{' || *v == '[') {
+      is_num = 0;
+    } else {
+      num = strtol(v, &end, 10);
+      if (end && end != v && *end == 0)
+        is_num = 1;
+    }
+
+    if (mode == 0) {
+      /* THRESH: keep pure-int value >= limit */
+      if (!is_num || num < limit) {
+        drop++;
+        continue;
+      }
+      memset(&setr, 0, sizeof setr);
+      if (cubalc_host_json_set(cur, key, raw.str, 1, &setr) != 0) {
+        snprintf(r->err, sizeof r->err, "%s",
+                 setr.err[0] ? setr.err : "jsonthresh: set fail");
+        return -1;
+      }
+      snprintf(cur, sizeof cur, "%s", setr.str);
+      kept++;
+    } else if (mode == 1) {
+      /* DROPZERO: drop pure-int == 0; keep rest */
+      if (is_num && num == 0) {
+        drop++;
+        continue;
+      }
+      memset(&setr, 0, sizeof setr);
+      if (cubalc_host_json_set(cur, key, raw.str, 1, &setr) != 0) {
+        snprintf(r->err, sizeof r->err, "%s",
+                 setr.err[0] ? setr.err : "jsondropzero: set fail");
+        return -1;
+      }
+      snprintf(cur, sizeof cur, "%s", setr.str);
+      kept++;
+    } else {
+      /* CAP: clamp pure-int to limit; keep all keys */
+      char numbuf[32];
+      const char *use_raw = raw.str;
+      if (is_num && num > limit) {
+        snprintf(numbuf, sizeof numbuf, "%ld", limit);
+        use_raw = numbuf;
+        capped++;
+      }
+      memset(&setr, 0, sizeof setr);
+      if (cubalc_host_json_set(cur, key, use_raw, 1, &setr) != 0) {
+        snprintf(r->err, sizeof r->err, "%s",
+                 setr.err[0] ? setr.err : "jsoncap: set fail");
+        return -1;
+      }
+      snprintf(cur, sizeof cur, "%s", setr.str);
+      kept++;
+    }
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  if (mode == 2) {
+    r->n = capped;
+    r->code = (int)nkeys;
+  } else {
+    r->n = kept;
+    r->code = (int)drop;
+  }
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS JSONEQ a b — order-independent top-level plate equality. */
 int cubalc_host_json_eq(const char *a, const char *b, cubalc_host_result *r) {
   cubalc_host_result ka, kb, ra, rb;
