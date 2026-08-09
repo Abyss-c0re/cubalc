@@ -702,6 +702,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 672. ~~**`DIFFFLAT` / `PATHDIFF` + `cubalc plate diffflat`/`pathdiff`**~~ **done** (deep leaf path: old → new / path bag · multi-plate · nest-aware CHANGELOGP/DIFFP dual · CLI).
 673. ~~**`GREPFLAT` / `GREPVFLAT` / `GREPFLATI` + `cubalc plate grepf`**~~ **done** (filter path:value leaves by path needle · multi-plate · CLI dual · nest triage without FLATKV+GREP glue).
 674. ~~**`PRUNEFLAT` / `KEEPONLYFLAT` + `cubalc plate prune`/`keeponly`**~~ **done** (drop or project nested leaves by path needle write-back · multi-plate · CLI dual · no multi DELP / GREPFLAT+UNFLAT glue).
+675. ~~**`MERGEFLAT` / `OVERLAYFLAT` + `cubalc plate mergeflat`**~~ **done** (deep leaf overlay write-back · nest-aware MERGEP · multi-plate · CLI dual · no FLATKV+UNFLATKV glue).
 
 ## Tick protocol
 

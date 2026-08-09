@@ -5005,6 +5005,44 @@ int cubalc_host_json_leaf_filter_write(const char *json, const char *needle,
   return 0;
 }
 
+/* Deep leaf overlay merge. See header. */
+int cubalc_host_json_leaf_merge(const char *base, const char *overlay,
+                                cubalc_host_result *r) {
+  cubalc_host_result bag, wr;
+  const char *b;
+  r_clear(r);
+  b = base ? base : "";
+  while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+  if (*b != '{')
+    b = "{}";
+  else
+    b = base;
+  memset(&bag, 0, sizeof bag);
+  cubalc_host_json_leaf_kv(overlay ? overlay : "{}", NULL, &bag);
+  if (bag.n == 0 || !bag.str[0]) {
+    snprintf(r->str, sizeof r->str, "%s", b && b[0] ? b : "{}");
+    {
+      const char *t = r->str;
+      while (*t == ' ' || *t == '\t' || *t == '\n' || *t == '\r') t++;
+      if (*t != '{')
+        snprintf(r->str, sizeof r->str, "%s", "{}");
+    }
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  memset(&wr, 0, sizeof wr);
+  if (cubalc_host_json_unflat_kv(b, bag.str, NULL, &wr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s",
+             wr.err[0] ? wr.err : "leaf_merge: unflat fail");
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", wr.str);
+  r->n = bag.n;
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,

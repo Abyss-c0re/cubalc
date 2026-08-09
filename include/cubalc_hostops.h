@@ -281,6 +281,12 @@ int cubalc_host_json_leaf_grep(const char *json, const char *needle, int invert,
 int cubalc_host_json_leaf_filter_write(const char *json, const char *needle,
                                        int keep_only, int icase,
                                        cubalc_host_result *r);
+/* Deep leaf overlay: FLATKV(overlay) then UNFLAT onto base (nest-aware MERGEP).
+ * Overlay leaf paths win; base leaves not in overlay kept. r->n = overlay leaf count.
+ * Soft always OK. Empty overlay → copy base.
+ * Usability: peer/agent deep sync without FLATKV+UNFLATKV or shallow MERGEP. */
+int cubalc_host_json_leaf_merge(const char *base, const char *overlay,
+                                cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

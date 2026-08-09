@@ -2184,6 +2184,8 @@ int main(int argc, char **argv) {
       {"cli_plate_grepf", "programs/proof/1214_cli_plate_grepf.sh", "cubalc plate grepf/grepvf GREPFLAT dual"},
       {"pruneflat", "programs/proof/1215_pruneflat.cubalc", "PRUNEFLAT/KEEPONLYFLAT leaf path scrub project write-back"},
       {"cli_plate_prune", "programs/proof/1215_cli_plate_prune.sh", "cubalc plate prune/keeponly PRUNEFLAT dual"},
+      {"mergeflat", "programs/proof/1216_mergeflat.cubalc", "MERGEFLAT deep leaf overlay multi-plate nest-aware MERGEP"},
+      {"cli_plate_mergeflat", "programs/proof/1216_cli_plate_mergeflat.sh", "cubalc plate mergeflat MERGEFLAT dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2474,6 +2476,8 @@ int main(int argc, char **argv) {
       {"GREPFLATI", "flow", "GREPFLATI|IGREPFLAT [FROM plate] needle — case-insensitive GREPFLAT"},
       {"PRUNEFLAT", "flow", "PRUNEFLAT|DELFLAT [FROM plate] needle — drop matching leaf paths write-back"},
       {"KEEPONLYFLAT", "flow", "KEEPONLYFLAT|RETAINFLAT [FROM plate] needle — keep only matching leaves rewrite"},
+      {"MERGEFLAT", "flow", "MERGEFLAT|OVERLAYFLAT [FROM base] overlay — deep leaf overlay write-back · nest-aware"},
+      {"OVERLAYFLAT", "flow", "OVERLAYFLAT alias of MERGEFLAT"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4952,6 +4956,7 @@ int main(int argc, char **argv) {
               "       cubalc plate grepvf <path> <needle>  # GREPVFLAT dual · invert\n"
               "       cubalc plate prune <path> <needle>  # PRUNEFLAT dual · drop matching leaves\n"
               "       cubalc plate keeponly <path> <needle>  # KEEONLYFLAT dual · project leaves\n"
+              "       cubalc plate mergeflat <base.json> <overlay.json>  # MERGEFLAT dual · deep leaf overlay\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -4983,7 +4988,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5051,6 +5056,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "delflat") == 0 || strcmp(argv[2], "scrubflat") == 0 ||
         strcmp(argv[2], "keeponly") == 0 || strcmp(argv[2], "keeponlyflat") == 0 ||
         strcmp(argv[2], "retainflat") == 0 || strcmp(argv[2], "projectflat") == 0 ||
+        strcmp(argv[2], "mergeflat") == 0 || strcmp(argv[2], "overlayflat") == 0 ||
+        strcmp(argv[2], "patchflat") == 0 || strcmp(argv[2], "deepmerge") == 0 ||
+        strcmp(argv[2], "leafmerge") == 0 || strcmp(argv[2], "syncflat") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5213,6 +5221,10 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "keeponlyflat") == 0 || strcmp(op, "retainflat") == 0 ||
                strcmp(op, "projectflat") == 0 || strcmp(op, "retain") == 0)
         op = "keeponly";
+      else if (strcmp(op, "overlayflat") == 0 || strcmp(op, "patchflat") == 0 ||
+               strcmp(op, "deepmerge") == 0 || strcmp(op, "leafmerge") == 0 ||
+               strcmp(op, "syncflat") == 0 || strcmp(op, "applyflat") == 0)
+        op = "mergeflat";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -5664,6 +5676,64 @@ int main(int argc, char **argv) {
              keep_only
                  ? "KEEPONLYFLAT dual · project matching leaves"
                  : "PRUNEFLAT dual · drop matching leaves");
+      return 0;
+    }
+
+    /* mergeflat <overlay.json> — MERGEFLAT dual: deep leaf overlay onto path plate.
+     *   cubalc plate mergeflat base.json overlay.json
+     * Writes base. n = overlay leaf count. Nest-aware (unlike plate merge top-level). */
+    if (strcmp(op, "mergeflat") == 0) {
+      const char *path2 = NULL;
+      char plate2[CUBALC_HOST_STR_MAX];
+      cubalc_host_result pr, wr, tr;
+      int file_hit2 = 0;
+      const char *body2;
+
+      plate2[0] = 0;
+      if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"mergeflat\",\"path\":\"%s\",\"err\":\"need overlay path\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      path2 = argv[ai++];
+      memset(&tr, 0, sizeof tr);
+      if (cubalc_host_read(path2, &tr) == 0 && tr.str[0]) {
+        body2 = tr.str;
+        while (*body2 == ' ' || *body2 == '\t' || *body2 == '\n' || *body2 == '\r')
+          body2++;
+        if (*body2 == '{') {
+          snprintf(plate2, sizeof plate2, "%s", body2);
+          file_hit2 = 1;
+        }
+      }
+      if (!file_hit2)
+        snprintf(plate2, sizeof plate2, "%s", "{}");
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_merge(plate, plate2, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"mergeflat\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               path, pr.err[0] ? pr.err : "mergeflat fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", pr.str);
+      if (file_hit || (path && path[0] && strchr(path, '.'))) {
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_write(path, plate, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"mergeflat\",\"path\":\"%s\",\"err\":\"write fail\","
+                 "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        file_hit = 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"mergeflat\",\"path\":\"%s\",\"path2\":\"%s\",\"file\":%s,"
+             "\"file2\":%s,\"n\":%ld,\"version\":\"%s\",\"plate\":%s,"
+             "\"note\":\"MERGEFLAT dual · deep leaf overlay · nest-aware\"}\n",
+             path, path2, file_hit ? "true" : "false",
+             file_hit2 ? "true" : "false", pr.n, CUBALC_LANG_VERSION, plate);
       return 0;
     }
 

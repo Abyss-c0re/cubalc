@@ -27434,6 +27434,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"DIFFFLAT") || kw(&L->cur,"PATHDIFF") || kw(&L->cur,"CHANGELOGFLAT") ||
              kw(&L->cur,"GREPFLAT") || kw(&L->cur,"GREPVFLAT") || kw(&L->cur,"GREPFLATI") ||
              kw(&L->cur,"PRUNEFLAT") || kw(&L->cur,"KEEPONLYFLAT") || kw(&L->cur,"DELFLAT") ||
+             kw(&L->cur,"MERGEFLAT") || kw(&L->cur,"OVERLAYFLAT") || kw(&L->cur,"PATCHFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35819,6 +35820,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"GREPFLATI", "GREPFLATI|IGREPFLAT [FROM plate] needle — case-insensitive GREPFLAT"},
       {"PRUNEFLAT", "PRUNEFLAT|DELFLAT|SCRUBFLAT [FROM plate] needle — drop matching leaf paths write-back · multi-plate"},
       {"KEEPONLYFLAT", "KEEPONLYFLAT|RETAINFLAT|PROJECTFLAT [FROM plate] needle — keep only matching leaves rewrite · multi-plate"},
+      {"MERGEFLAT", "MERGEFLAT|OVERLAYFLAT|PATCHFLAT [FROM base] overlay — deep leaf overlay write-back · nest-aware MERGEP · multi-plate"},
+      {"OVERLAYFLAT", "OVERLAYFLAT alias of MERGEFLAT"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -44058,6 +44061,132 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# %s n=%ld needle=%s from=%d\n",
               keep_only ? "keeponlyflat" : "pruneflat",
               hr.n, needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* MERGEFLAT|OVERLAYFLAT|PATCHFLAT [FROM base] overlay
+   * Deep leaf overlay: apply overlay's FLATKV leaves onto base (nest-aware MERGEP).
+   * Overlay wins per leaf path; base-only leaves kept. Write-back base (PLATE or FROM).
+   * LAST = plate · LAST_N = overlay leaf count.
+   * Usability: peer deep sync without FLATKV+UNFLATKV or shallow MERGEP:
+   *   MERGEFLAT PEER
+   *   MERGEFLAT FROM session PEER
+   *   OVERLAYFLAT LAST
+   */
+  if (kw(&L->cur,"MERGEFLAT") || kw(&L->cur,"OVERLAYFLAT") || kw(&L->cur,"PATCHFLAT") ||
+      kw(&L->cur,"DEEPMERGEP") || kw(&L->cur,"LEAFMERGE") || kw(&L->cur,"MMERGEFLAT") ||
+      kw(&L->cur,"PLATE_MERGEFLAT") || kw(&L->cur,"APPLYFLAT") || kw(&L->cur,"SYNCFLAT")) {
+    char base[CUBALC_HOST_STR_MAX], over[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    char oname[96];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    base[0] = 0; over[0] = 0; from_name[0] = 0; from_src[0] = 0; oname[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* overlay plate arg */
+    if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(over, sizeof over, "%s", vm->last_str);
+      snprintf(oname, sizeof oname, "%s", "LAST");
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      pv = var_get(vm, L->cur.text, 0);
+      if (pv && pv->is_str) {
+        snprintf(oname, sizeof oname, "%s", L->cur.text);
+        snprintf(over, sizeof over, "%s", pv->sval);
+        lex_next(L);
+      } else if (pv) {
+        snprintf(oname, sizeof oname, "%s", L->cur.text);
+        snprintf(over, sizeof over, "%ld", pv->val);
+        lex_next(L);
+      } else if (resolve_str_arg(vm, L, over, sizeof over) != 0) {
+        over[0] = 0;
+      }
+    } else if (resolve_str_arg(vm, L, over, sizeof over) != 0) {
+      snprintf(over, sizeof over, "%s", vm->last_str);
+    }
+    {
+      const char *bp = over;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp != '{')
+        snprintf(over, sizeof over, "%s", "{}");
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(base, sizeof base, "%s", from_src);
+      else
+        snprintf(base, sizeof base, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(base, sizeof base, "%s", pv->sval);
+      else
+        snprintf(base, sizeof base, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_merge(base, over, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "MERGEFLAT: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "MERGEFLAT: fail");
+      var_set_num(vm, "MERGEFLAT_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "MERGEFLAT", hr.str);
+    var_set_str(vm, "OVERLAYFLAT", hr.str);
+    var_set_num(vm, "MERGEFLAT_N", hr.n);
+    var_set_num(vm, "OVERLAYFLAT_N", hr.n);
+    var_set_num(vm, "MERGEFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "MERGEFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_str(vm, "MERGEFLAT_OVER", oname[0] ? oname : "");
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# mergeflat n=%ld base=%s over=%s\n",
+              hr.n,
+              from_name[0] ? from_name : "PLATE",
+              oname[0] ? oname : "?");
     bump(vm); return 1;
   }
 

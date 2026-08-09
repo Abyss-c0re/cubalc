@@ -1,0 +1,89 @@
+# MERGEFLAT / OVERLAYFLAT — deep leaf overlay (nest-aware MERGEP)
+# Usability: peer deep sync without FLATKV+UNFLATKV or shallow MERGEP.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"role\":\"worker\",\"x\":1},\"port\":8080},\"n\":3}"
+LET PEER = "{\"cfg\":{\"meta\":{\"role\":\"leader\",\"zone\":\"A\"},\"port\":9090},\"ok\":true}"
+
+# overlay PEER leaves onto PLATE
+MERGEFLAT PEER
+ASSERT OK == 1
+ASSERT MERGEFLAT_N == 4
+# host and n kept from base
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+# nested role/port updated
+GETP "cfg.meta.role"
+SYS EQS LAST "leader"
+ASSERT LAST_N == 1
+GETP "cfg.port"
+SYS EQS LAST "9090"
+ASSERT LAST_N == 1
+# new leaves from overlay
+GETP "cfg.meta.zone"
+SYS EQS LAST "A"
+ASSERT LAST_N == 1
+GETP "ok"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+# x kept (not in overlay)
+GETP "cfg.meta.x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# multi-plate FROM base
+LET SESSION = "{\"a\":{\"b\":1},\"keep\":9}"
+LET PATCH = "{\"a\":{\"b\":2,\"c\":3}}"
+MERGEFLAT FROM SESSION PATCH
+ASSERT MERGEFLAT_FROM == 1
+SYS EQS MERGEFLAT_SRC "SESSION"
+ASSERT LAST_N == 1
+ASSERT MERGEFLAT_N == 2
+LET PLATE = SESSION
+GETP "a.b"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+GETP "a.c"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+GETP "keep"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# empty overlay no-op
+LET PLATE = "{\"x\":1}"
+MERGEFLAT "{}"
+ASSERT MERGEFLAT_N == 0
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# alias
+LET PLATE = "{\"k\":0}"
+OVERLAYFLAT "{\"k\":1,\"m\":2}"
+ASSERT OVERLAYFLAT_N == 2
+GETP "k"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "m"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+# shallow MERGEP would replace whole cfg object; MERGEFLAT merges leaves
+LET PLATE = "{\"cfg\":{\"a\":1,\"b\":2}}"
+LET O = "{\"cfg\":{\"b\":9}}"
+MERGEFLAT O
+GETP "cfg.a"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "cfg.b"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1216_mergeflat: PASS"
