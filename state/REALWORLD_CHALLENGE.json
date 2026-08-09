@@ -2355,6 +2355,6 @@
     "MOVEKEYP FROM s/scratch_obj unknown form — dropped from probe, used COPYP n n0",
     "STATUS last line no trailing NL"
   ],
-  "commit": "pending",
+  "commit": "823644b",
   "ts": "2026-08-09T03:29:19Z"
 }
