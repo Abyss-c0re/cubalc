@@ -1,18 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 602,
-  "version": "1.15.629-usability",
-  "item": "LENOBJ/EMPTYOBJ/VALSOBJ",
-  "item_id": 638,
-  "title": "LENOBJ|EMPTYOBJ|VALSOBJ|NONEMPTYOBJ \u00b7 nested size/empty/values \u00b7 multi-plate \u00b7 LENP duals",
-  "commit": "ccddd703d01a381ade34cff3c1da45b2b9310625",
-  "summary": "Nest size/empty/values without GETOBJ+LENP glue. proof 1179 30/30.",
+  "iter": 603,
+  "version": "1.15.630-usability",
+  "item": "RENAMEPOBJ/MOVEKEYOBJ/NESTRENAME",
+  "item_id": 639,
+  "title": "RENAMEPOBJ|MOVEKEYOBJ|NESTRENAME · nest key rename write-back · multi-plate · RENAMEP dual · not OOP RENAMEOBJ",
+  "commit": "f388dfaec0e5238d83f11cc110a8a1196c6ca03f",
+  "summary": "Rename keys inside nested plates without GETOBJ+RENAMEP+SETOBJ glue. proof 1180 38/38.",
   "proofs": [
-    "1179_lenobj 30/30",
-    "1177_pickobj reg ok"
+    "1180_renamepobj 38/38",
+    "1179_lenobj reg ok",
+    "1152_renamep reg ok",
+    "cubalc forms RENAMEPOBJ ok"
   ],
-  "when": "2026-08-09T07:35:27Z",
+  "when": "2026-08-09T07:55:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ccddd703d01a381ade34cff3c1da45b2b9310625",
-  "note": "invented after backlog 637 nestpick CLI; EVOLVE_PAUSED"
+  "sha": "f388dfaec0e5238d83f11cc110a8a1196c6ca03f",
+  "note": "invented after backlog 638 LENOBJ nest size; EVOLVE_PAUSED"
 }
