@@ -2204,6 +2204,8 @@ int main(int argc, char **argv) {
       {"cli_plate_scaleflat", "programs/proof/1224_cli_plate_scaleflat.sh", "cubalc plate scaleflat SCALEFLAT dual"},
       {"hasflat", "programs/proof/1225_hasflat.cubalc", "HASFLAT/COUNTFLAT leaf path presence and count multi-plate"},
       {"cli_plate_hasflat", "programs/proof/1225_cli_plate_hasflat.sh", "cubalc plate hasflat|countflat dual"},
+      {"pathsflat", "programs/proof/1226_pathsflat.cubalc", "PATHSFLAT/VALSFLAT matching leaf path/value bags multi-plate"},
+      {"cli_plate_pathsflat", "programs/proof/1226_cli_plate_pathsflat.sh", "cubalc plate pathsflat|valsflat dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2517,6 +2519,8 @@ int main(int argc, char **argv) {
       {"HASFLAT", "flow", "HASFLAT|ANYFLAT [FROM plate] [needle] — soft leaf-path presence → LAST_N 0|1 · read-only"},
       {"ANYFLAT", "flow", "ANYFLAT alias of HASFLAT"},
       {"COUNTFLAT", "flow", "COUNTFLAT|NFLAT [FROM plate] [needle] — count leaf paths matching needle → LAST_N · read-only"},
+      {"PATHSFLAT", "flow", "PATHSFLAT|MATCHPATHS [FROM plate] [needle] — matching leaf paths → LAST bag · read-only"},
+      {"VALSFLAT", "flow", "VALSFLAT|MATCHVALS [FROM plate] [needle] — matching leaf values → LAST bag · read-only"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -5007,6 +5011,8 @@ int main(int argc, char **argv) {
               "       cubalc plate scaleflat <path> [needle] <factor>  # SCALEFLAT dual · multiply pure-int leaves\n"
               "       cubalc plate hasflat <path> [needle]  # HASFLAT dual · leaf-path presence 0|1\n"
               "       cubalc plate countflat <path> [needle]  # COUNTFLAT dual · leaf-path match count\n"
+              "       cubalc plate pathsflat <path> [needle]  # PATHSFLAT dual · matching leaf paths bag\n"
+              "       cubalc plate valsflat <path> [needle]  # VALSFLAT dual · matching leaf values bag\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -5038,7 +5044,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"pathsflat\",\"valsflat\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5134,6 +5140,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "hasflat") == 0 || strcmp(argv[2], "anyflat") == 0 ||
         strcmp(argv[2], "countflat") == 0 || strcmp(argv[2], "nflat") == 0 ||
         strcmp(argv[2], "leafcount") == 0 ||
+        strcmp(argv[2], "pathsflat") == 0 || strcmp(argv[2], "matchpaths") == 0 ||
+        strcmp(argv[2], "valsflat") == 0 || strcmp(argv[2], "matchvals") == 0 ||
+        strcmp(argv[2], "leafvals") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5338,6 +5347,11 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "nflat") == 0 || strcmp(op, "leafcount") == 0 ||
                strcmp(op, "ncflat") == 0)
         op = "countflat";
+      else if (strcmp(op, "matchpaths") == 0 || strcmp(op, "pathmatch") == 0)
+        op = "pathsflat";
+      else if (strcmp(op, "matchvals") == 0 || strcmp(op, "leafvals") == 0 ||
+               strcmp(op, "valmatch") == 0)
+        op = "valsflat";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -6325,6 +6339,55 @@ int main(int argc, char **argv) {
                path, needle, file_hit ? "true" : "false",
                hit, pr.n, hit ? "true" : "false", CUBALC_LANG_VERSION);
       }
+      return 0;
+    }
+
+    /* pathsflat|valsflat [needle] — PATHSFLAT/VALSFLAT duals (read-only bags).
+     *   cubalc plate pathsflat agent.json score
+     *   cubalc plate valsflat agent.json hits
+     * bag = newline fields · n = count. */
+    if (strcmp(op, "pathsflat") == 0 || strcmp(op, "valsflat") == 0) {
+      const char *needle = "";
+      cubalc_host_result pr;
+      int want_vals = (strcmp(op, "valsflat") == 0);
+      char esc[CUBALC_HOST_STR_MAX * 2];
+      size_t i, o = 0;
+
+      if (ai < argc && argv[ai])
+        needle = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_match_bag(plate, needle, want_vals, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               op, path, pr.err[0] ? pr.err : "pathsflat fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      /* JSON-escape bag for plate field */
+      esc[0] = 0;
+      for (i = 0; pr.str[i] && o + 2 < sizeof esc; i++) {
+        char c = pr.str[i];
+        if (c == '"' || c == '\\') {
+          esc[o++] = '\\';
+          esc[o++] = c;
+        } else if (c == '\n') {
+          esc[o++] = '\\';
+          esc[o++] = 'n';
+        } else if (c == '\r') {
+          /* skip */
+        } else {
+          esc[o++] = c;
+        }
+      }
+      esc[o] = 0;
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"%s\",\"path\":\"%s\",\"needle\":\"%s\","
+             "\"file\":%s,\"n\":%ld,\"bag\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"%s dual · matching leaf %s bag (read-only)\"}\n",
+             op, path, needle, file_hit ? "true" : "false",
+             pr.n, esc, CUBALC_LANG_VERSION,
+             want_vals ? "VALSFLAT" : "PATHSFLAT",
+             want_vals ? "values" : "paths");
       return 0;
     }
 

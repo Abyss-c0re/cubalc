@@ -1,0 +1,76 @@
+# PATHSFLAT / VALSFLAT — matching leaf path/value bags by needle
+# Usability: peel GREPFLAT without BEFORE/AFTER · EACH LINE walk.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"score\":{\"a\":10,\"b\":20},\"label\":\"x\",\"meta\":{\"score\":30}}"
+
+PATHSFLAT "score"
+ASSERT OK == 1
+ASSERT PATHSFLAT_N == 3
+ASSERT LAST_N == 3
+SYS HAS LAST "score.a"
+ASSERT LAST_N == 1
+PATHSFLAT "score"
+SYS HAS LAST "score.b"
+ASSERT LAST_N == 1
+PATHSFLAT "score"
+SYS HAS LAST "meta.score"
+ASSERT LAST_N == 1
+
+VALSFLAT "score"
+ASSERT VALSFLAT_N == 3
+SYS HAS LAST "10"
+ASSERT LAST_N == 1
+VALSFLAT "score"
+SYS HAS LAST "20"
+ASSERT LAST_N == 1
+VALSFLAT "score"
+SYS HAS LAST "30"
+ASSERT LAST_N == 1
+
+# empty needle — all paths/values
+PATHSFLAT ""
+ASSERT PATHSFLAT_N == 4
+VALSFLAT ""
+ASSERT VALSFLAT_N == 4
+
+# no match
+PATHSFLAT "nope"
+ASSERT PATHSFLAT_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+LET PEER = "{\"tls\":{\"on\":1,\"mode\":\"strict\"},\"n\":2}"
+PATHSFLAT FROM PEER "tls"
+ASSERT PATHSFLAT_FROM == 1
+SYS EQS PATHSFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT PATHSFLAT_N == 2
+SYS HAS LAST "tls.on"
+ASSERT LAST_N == 1
+
+VALSFLAT FROM PEER "tls"
+ASSERT VALSFLAT_N == 2
+SYS HAS LAST "1"
+ASSERT LAST_N == 1
+VALSFLAT FROM PEER "tls"
+SYS HAS LAST "strict"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":9}"
+PATHSFLAT FROM PEER "tls"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+MATCHPATHS "x"
+ASSERT PATHSFLAT_N == 1
+MATCHVALS "x"
+ASSERT VALSFLAT_N == 1
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1226_pathsflat: PASS"

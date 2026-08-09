@@ -343,6 +343,12 @@ int cubalc_host_json_leaf_scale(const char *json, const char *needle, long facto
  * Soft always OK. Read-only. Usability: structure probe without GREPFLAT+LINES glue. */
 int cubalc_host_json_leaf_count(const char *json, const char *needle,
                                 cubalc_host_result *r);
+/* Matching leaf paths or values as newline bag (PATHSFLAT / VALSFLAT).
+ * want_vals=0 → path bag · want_vals=1 → value bag. Empty needle → all leaves.
+ * r->str = bag · r->n = field count. Soft always OK. Read-only.
+ * Usability: peel GREPFLAT without BEFORE/AFTER · EACH LINE walk. */
+int cubalc_host_json_leaf_match_bag(const char *json, const char *needle, int want_vals,
+                                    cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */
