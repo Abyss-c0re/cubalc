@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 598,
-  "version": "1.15.625-usability",
-  "item": "EACH KEYNEST",
-  "item_id": 634,
-  "title": "EACH KEYNEST|KEY OF NEST \u00b7 walk nested plate keys \u00b7 KEY+VALUE bound \u00b7 no KEYSOBJ+EACH LINE",
-  "commit": "a9c306086c46e1bdd7303fcb80eb6daa59b5224e",
-  "summary": "Nested key walk binds KEY/VALUE without bag glue. proof 1175 24/24.",
+  "iter": 599,
+  "version": "1.15.626-usability",
+  "item": "PLUCKOBJ",
+  "item_id": 635,
+  "title": "PLUCKOBJ|NESTPLUCK [FROM plate] nest field\u2026 \u00b7 multi-key nested peel \u2192 value bag",
+  "commit": "66db8cb50b4064d6043dcdf58862f73eb25192f0",
+  "summary": "Nested multi-field extract without GETPOBJ+PUSH glue. proof 1176 25/25.",
   "proofs": [
-    "1175_each_keynest 24/24",
-    "1169_each_key reg ok"
+    "1176_pluckobj 25/25",
+    "1175_each_keynest reg ok"
   ],
-  "when": "2026-08-09T06:56:52Z",
+  "when": "2026-08-09T07:05:54Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a9c306086c46e1bdd7303fcb80eb6daa59b5224e",
-  "note": "invented after backlog 633 nest CLI; EVOLVE_PAUSED"
+  "sha": "66db8cb50b4064d6043dcdf58862f73eb25192f0",
+  "note": "invented after backlog 634 KEYNEST; thrash restored; EVOLVE_PAUSED"
 }
