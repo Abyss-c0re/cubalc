@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 585,
-  "version": "1.15.612-usability",
-  "item": "SUMMERGEP/SUBP/DIVP",
-  "item_id": 621,
-  "title": "SUMMERGEP|ADDFREQP|MERGEKP · SUBP|SUBVALP|DELTAVP · DIVP|IDIVP · multi-plate FREQ combine/delta/mean · no TOKV+MERGEKV/DIFFKV/DIVKV",
-  "commit": "943511326d7fb59daaf738185fda93f17f7ec090",
-  "summary": "Peer FREQ sum-merge, a-b delta, idiv mean without bag glue. proof 1162 44/44.",
+  "iter": 586,
+  "version": "1.15.613-usability",
+  "item": "ABSP/SIGNP",
+  "item_id": 622,
+  "title": "ABSP|MAGP · SIGNP|DIRP · multi-plate magnitude and polarity · rank SUBP deltas · no TOKV+ABSKV/SIGNKV+FROMKVP",
+  "commit": "e653ab6d2ede1ea764047e57b4c4ed2df398c047",
+  "summary": "Plate |v| and signum after SUBP without bag glue. proof 1163 42/42.",
   "proofs": [
-    "1162_summergep 44/44",
+    "1163_absp 42/42",
+    "1162_summergep reg 44/44",
     "1161_pctp reg 46/46"
   ],
-  "when": "2026-08-09T04:37:13Z",
+  "when": "2026-08-09T04:46:21Z",
   "agent": "meaningful_iter_10m",
-  "sha": "943511326d7fb59daaf738185fda93f17f7ec090",
-  "note": "invented after backlog 620; EVOLVE_PAUSED"
+  "sha": "e653ab6d2ede1ea764047e57b4c4ed2df398c047",
+  "note": "invented after backlog 621; EVOLVE_PAUSED"
 }
