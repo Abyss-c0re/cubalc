@@ -27404,6 +27404,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"RENAMEP") || kw(&L->cur,"MOVEKEYP") ||
              kw(&L->cur,"KEYDIFFP") || kw(&L->cur,"KEYCOMMP") ||
              kw(&L->cur,"COPYP") || kw(&L->cur,"SWAPP") ||
+             kw(&L->cur,"LENP") || kw(&L->cur,"EMPTYP") || kw(&L->cur,"VALSP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35787,6 +35788,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DUPKEYP", "DUPKEYP alias of COPYP"},
       {"SWAPP", "SWAPP|XCHGP [FROM plate] a b — swap keys write-back · multi-plate · no SYS JSONSWAP"},
       {"XCHGP", "XCHGP alias of SWAPP"},
+      {"LENP", "LENP|NKEYSP [FROM plate] — key count → LAST_N · multi-plate · no SYS JSONLEN"},
+      {"NKEYSP", "NKEYSP alias of LENP"},
+      {"EMPTYP", "EMPTYP|ISEMPTYP [FROM plate] — soft empty plate 0|1 · multi-plate · no SYS JSONEMPTY"},
+      {"NONEMPTYP", "NONEMPTYP|HASKEYSP [FROM plate] — soft nonempty plate 0|1 · multi-plate"},
+      {"HASKEYSP", "HASKEYSP alias of NONEMPTYP"},
+      {"VALSP", "VALSP|VALUEP [FROM plate] — values bag · twin KEYSP · multi-plate · no SYS JSONVALUES"},
+      {"VALUEP", "VALUEP alias of VALSP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -40715,6 +40723,178 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "LAST_ERR", "SWAPP: fail");
       var_set_str(vm, "ERR", "SWAPP: fail");
     }
+    bump(vm); return 1;
+  }
+  /* LENP|NKEYSP [FROM plate] — top-level key count → LAST_N (JSONLEN dual).
+   * EMPTYP|ISEMPTYP [FROM plate] — soft 0|1 empty plate (JSONEMPTY dual).
+   * NONEMPTYP|HASKEYSP [FROM plate] — inverse of EMPTYP.
+   * VALSP|VALUEP [FROM plate] — values bag · twin KEYSP (JSONVALUES dual).
+   * Bare uses conventional PLATE. Soft non-object → 0 / empty bag.
+   * Usability: size/empty/value probes without SYS JSONLEN/JSONEMPTY/JSONVALUES:
+   *   LENP FROM PEER
+   *   IF EMPTYP … END
+   *   VALSP FROM session
+   */
+  if (kw(&L->cur,"LENP") || kw(&L->cur,"NKEYSP") || kw(&L->cur,"MLENP") ||
+      kw(&L->cur,"PLATE_LEN") || kw(&L->cur,"COUNTKEYSP") || kw(&L->cur,"SIZEP") ||
+      kw(&L->cur,"EMPTYP") || kw(&L->cur,"ISEMPTYP") || kw(&L->cur,"MEMPTYP") ||
+      kw(&L->cur,"PLATE_EMPTY") || kw(&L->cur,"EMPTYPLATE") ||
+      kw(&L->cur,"NONEMPTYP") || kw(&L->cur,"HASKEYSP") || kw(&L->cur,"MNONEMPTYP") ||
+      kw(&L->cur,"PLATE_NONEMPTY") || kw(&L->cur,"NONEMPTYPLATE") ||
+      kw(&L->cur,"VALSP") || kw(&L->cur,"VALUEP") || kw(&L->cur,"MVALSP") ||
+      kw(&L->cur,"PLATE_VALS") || kw(&L->cur,"VALP")) {
+    char plate[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, mode = 0; /* 0=len 1=empty 2=nonempty 3=vals */
+    long hit;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "EMPTYP") == 0 || strcmp(op0, "ISEMPTYP") == 0 ||
+        strcmp(op0, "MEMPTYP") == 0 || strcmp(op0, "PLATE_EMPTY") == 0 ||
+        strcmp(op0, "EMPTYPLATE") == 0)
+      mode = 1;
+    else if (strcmp(op0, "NONEMPTYP") == 0 || strcmp(op0, "HASKEYSP") == 0 ||
+             strcmp(op0, "MNONEMPTYP") == 0 || strcmp(op0, "PLATE_NONEMPTY") == 0 ||
+             strcmp(op0, "NONEMPTYPLATE") == 0)
+      mode = 2;
+    else if (strcmp(op0, "VALSP") == 0 || strcmp(op0, "VALUEP") == 0 ||
+             strcmp(op0, "MVALSP") == 0 || strcmp(op0, "PLATE_VALS") == 0 ||
+             strcmp(op0, "VALP") == 0)
+      mode = 3;
+    else
+      mode = 0;
+
+    lex_next(L);
+    plate[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    if (mode == 3) {
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_values(plate, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "VALSP_N", 0);
+        var_set_num(vm, "VALSP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "VALSP: fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "VALSP: fail");
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "VALSP", hr.str);
+      var_set_str(vm, "VALUEP", hr.str);
+      var_set_num(vm, "VALSP_N", hr.n);
+      var_set_num(vm, "JSONVALUES_N", hr.n);
+      var_set_num(vm, "VALSP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "VALSP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# valsp n=%ld from=%d\n", hr.n, have_from);
+      bump(vm); return 1;
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_len(plate, &hr) != 0) {
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "LENP_N", 0);
+      var_set_num(vm, "EMPTYP_N", 0);
+      var_set_num(vm, "LENP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "EMPTYP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "LENP: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "LENP: fail");
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    if (mode == 0) {
+      /* LENP — keep plate in LAST for chain (JSONLEN style) */
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "LENP_N", hr.n);
+      var_set_num(vm, "JSONLEN_N", hr.n);
+      var_set_num(vm, "KEYSP_N", hr.n); /* size dual of KEYSP count */
+      var_set_num(vm, "LENP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LENP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# lenp n=%ld from=%d\n", hr.n, have_from);
+      bump(vm); return 1;
+    }
+
+    /* EMPTYP / NONEMPTYP */
+    hit = (hr.n == 0) ? 1 : 0;
+    if (mode == 2)
+      hit = hit ? 0 : 1;
+    var_set_str(vm, "LAST", hit ? "1" : "0");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hit ? "1" : "0");
+    vm->last_n = hit;
+    var_set_num(vm, "LAST_N", hit);
+    var_set_num(vm, "EMPTYP_N", hit);
+    var_set_num(vm, "NONEMPTYP_N", hit);
+    var_set_num(vm, "JSONEMPTY_N", (mode == 1) ? hit : (hit ? 0 : 1));
+    var_set_num(vm, "LENP_N", hr.n);
+    var_set_num(vm, "EMPTYP_FROM", have_from ? 1 : 0);
+    var_set_num(vm, "NONEMPTYP_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "EMPTYP_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s hit=%ld keys=%ld from=%d\n",
+              mode == 2 ? "nonemptyp" : "emptyp", hit, hr.n, have_from);
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.
