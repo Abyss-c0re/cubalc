@@ -27413,6 +27413,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"DIVP") || kw(&L->cur,"SUMMERGEP") || kw(&L->cur,"SUBP") ||
              kw(&L->cur,"ABSP") || kw(&L->cur,"SIGNP") ||
              kw(&L->cur,"KEEPKEYP") || kw(&L->cur,"DROPKEYP") ||
+             kw(&L->cur,"TOPNP") || kw(&L->cur,"BOTNP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35855,6 +35856,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DROPKEYP", "DROPKEYP|GREPVKEYP [FROM plate] needle — drop keys containing needle · multi-plate · no TOKV+DROPKEY"},
       {"GREPVKEYP", "GREPVKEYP alias of DROPKEYP"},
       {"DROPKEYPI", "DROPKEYPI case-insensitive DROPKEYP"},
+      {"TOPNP", "TOPNP|TOPNKEYP [FROM plate] n — plate of top n pure-int keys by value · multi-plate · no TOKV+SORTFREQ"},
+      {"TOPNKEYP", "TOPNKEYP alias of TOPNP · top FREQ severities"},
+      {"BOTNP", "BOTNP|BOTNKEYP [FROM plate] n — plate of bottom n pure-int keys · multi-plate"},
+      {"BOTNKEYP", "BOTNKEYP alias of BOTNP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -42274,6 +42279,167 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# %s n=%ld drop=%d needle=%s icase=%d from=%d\n",
               invert ? "dropkeyp" : "keepkeyp", hr.n, hr.code, needle, icase,
               have_from);
+    bump(vm); return 1;
+  }
+  /* TOPNP|TOPNKEYP [FROM plate] n — plate of top n pure-int keys by value DESC.
+   * BOTNP|BOTNKEYP [FROM plate] n — bottom n pure-int keys ASC (smallest first).
+   * Non-int keys excluded. Cap 256 candidates. Bare uses PLATE. No source mutate.
+   * LAST = plate · LAST_N = kept · TOPNP_CAND = pure-int candidates seen.
+   * Usability: top FREQ severities without TOKV+SORTFREQ+TAKE+FROMKVP:
+   *   TOPNP 3 FROM freq
+   *   BOTNP 2 FROM scores
+   */
+  if (kw(&L->cur,"TOPNP") || kw(&L->cur,"TOPNKEYP") || kw(&L->cur,"HEADNP") ||
+      kw(&L->cur,"MTOPNP") || kw(&L->cur,"PLATE_TOPN") || kw(&L->cur,"TAKEBYVP") ||
+      kw(&L->cur,"BOTNP") || kw(&L->cur,"BOTNKEYP") || kw(&L->cur,"TAILNP") ||
+      kw(&L->cur,"MBOTNP") || kw(&L->cur,"PLATE_BOTN") || kw(&L->cur,"BOTTAKEP")) {
+    char plate[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, want_bot = 0, have_n = 0;
+    long ntake = 1;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "BOTNP") == 0 || strcmp(op0, "BOTNKEYP") == 0 ||
+        strcmp(op0, "TAILNP") == 0 || strcmp(op0, "MBOTNP") == 0 ||
+        strcmp(op0, "PLATE_BOTN") == 0 || strcmp(op0, "BOTTAKEP") == 0)
+      want_bot = 1;
+
+    lex_next(L);
+    plate[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      ntake = parse_expr(vm, L);
+      have_n = 1;
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *dv = var_get(vm, L->cur.text, 0);
+      if (dv && !dv->is_str) {
+        ntake = (long)dv->val;
+        have_n = 1;
+        lex_next(L);
+      }
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    if (!have_n) {
+      fail(vm, want_bot
+           ? "BOTNP [FROM plate] n — need count"
+           : "TOPNP [FROM plate] n — need count");
+      return -1;
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_topn(plate, ntake, want_bot, &hr) != 0) {
+      var_set_str(vm, "LAST", "{}");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "{}");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "TOPNP_N", 0);
+      var_set_num(vm, "BOTNP_N", 0);
+      var_set_num(vm, "TOPNP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err :
+                  (want_bot ? "BOTNP: fail" : "TOPNP: fail"));
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err :
+                  (want_bot ? "BOTNP: fail" : "TOPNP: fail"));
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    if (want_bot) {
+      var_set_str(vm, "BOTNP", hr.str);
+      var_set_str(vm, "BOTNKEYP", hr.str);
+      var_set_num(vm, "BOTNP_N", hr.n);
+      var_set_num(vm, "BOTNP_CAND", (long)hr.code);
+      var_set_num(vm, "BOTNP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "BOTNP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    } else {
+      var_set_str(vm, "TOPNP", hr.str);
+      var_set_str(vm, "TOPNKEYP", hr.str);
+      var_set_num(vm, "TOPNP_N", hr.n);
+      var_set_num(vm, "TOPNP_CAND", (long)hr.code);
+      var_set_num(vm, "TOPNP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "TOPNP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%ld cand=%d take=%ld from=%d\n",
+              want_bot ? "botnp" : "topnp", hr.n, hr.code, ntake, have_from);
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.

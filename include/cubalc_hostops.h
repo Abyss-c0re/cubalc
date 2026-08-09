@@ -308,6 +308,12 @@ int cubalc_host_json_valmerge(const char *a, const char *b, int mode,
  * Usability: FREQ key pattern filter without TOKV+KEEPKEY+FROMKVP or multi PICKP. */
 int cubalc_host_json_keygrep(const char *json, const char *needle, int invert,
                              int icase, cubalc_host_result *r);
+/* top/bottom N pure-int keys by value → result plate (want_bot=1 for min-first).
+ * Cap 256 candidates. Ties keep first-seen order among equal values.
+ * r->str = plate of up to n keys · r->n = kept · r->code = candidates scanned.
+ * Soft {}. Usability: top severities without TOKV+SORTFREQ+TAKE+FROMKVP. */
+int cubalc_host_json_topn(const char *json, long n, int want_bot,
+                          cubalc_host_result *r);
 /* order-independent top-level plate equality → r->n 1|0. Soft always OK.
  * Same keys + same raw values (whitespace-trimmed). Nested compared as raw text.
  * Usability: agent verify after WRITE/MERGE without fragile string EQS. */

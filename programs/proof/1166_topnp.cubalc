@@ -1,0 +1,82 @@
+# TOPNP / BOTNP — multi-plate top/bottom N pure-int keys by value
+# Usability: top FREQ without TOKV+SORTFREQ+TAKE+FROMKVP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12,\"host\":\"A\"}"
+LET PEER = "{\"a\":5,\"b\":2,\"c\":8,\"d\":2}"
+LET empty = "{}"
+
+# TOPNP 3: crit=12, error=9, warn=3
+TOPNP 3
+ASSERT OK == 1
+ASSERT TOPNP_N == 3
+ASSERT TOPNP_CAND == 4
+ASSERT TOPNP_FROM == 0
+SYS HAS LAST "\"crit\":12"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"error\":9"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"warn\":3"
+ASSERT LAST_N == 1
+SYS HAS LAST "info"
+ASSERT LAST_N == 0
+SYS HAS LAST "host"
+ASSERT LAST_N == 0
+# source not mutated
+SYS HAS PLATE "info"
+ASSERT LAST_N == 1
+
+TOPNP FROM PEER 2
+ASSERT TOPNP_FROM == 1
+ASSERT TOPNP_N == 2
+SYS EQS TOPNP_SRC "PEER"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"c\":8"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"a\":5"
+ASSERT LAST_N == 1
+SYS HAS LAST "b"
+ASSERT LAST_N == 0
+
+# n larger than cand → all pure-int keys
+TOPNP 99 FROM PEER
+ASSERT TOPNP_N == 4
+ASSERT TOPNP_CAND == 4
+
+# aliases
+TOPNKEYP 1
+ASSERT TOPNP_N == 1
+SYS HAS LAST "\"crit\":12"
+ASSERT LAST_N == 1
+
+# BOTNP: smallest first plate subset
+BOTNP 2
+ASSERT OK == 1
+ASSERT BOTNP_N == 2
+ASSERT BOTNP_CAND == 4
+SYS HAS LAST "\"info\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"warn\":3"
+ASSERT LAST_N == 1
+SYS HAS LAST "error"
+ASSERT LAST_N == 0
+
+BOTNP FROM PEER 1
+ASSERT BOTNP_FROM == 1
+ASSERT BOTNP_N == 1
+# ties b=2 and d=2 — first-seen among mins after stable sort of equals
+SYS HAS LAST "\"b\":2"
+ASSERT LAST_N == 1
+
+BOTNKEYP 2 FROM PEER
+ASSERT BOTNP_N == 2
+
+# empty / zero
+TOPNP FROM empty 3
+ASSERT TOPNP_N == 0
+ASSERT TOPNP_CAND == 0
+BOTNP 0
+ASSERT BOTNP_N == 0
+
+PRINT "topnp soft ok"
