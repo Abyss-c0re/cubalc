@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 266,
-  "program": "programs/realworld/svc_freqflat_status_board.cubalc",
-  "theme": "FREQFLAT/HISTFLAT nest status histograms",
-  "version": "1.15.691-usability",
+  "iter": 267,
+  "program": "programs/realworld/svc_modeflat_majority_board.cubalc",
+  "theme": "MODEFLAT/TOPVALFLAT majority role digests",
+  "version": "1.15.693-usability",
   "pass": true,
-  "prior_note": "iter 265 EACH FLAT; this iter first realworld 1241 FREQFLAT",
+  "prior_note": "iter 266 FREQFLAT; this iter first realworld 1242 MODEFLAT (MEANINGFUL 701)",
   "tests": [
     {
       "name": "list",
@@ -20,26 +20,26 @@
       "note": "boot"
     },
     {
-      "name": "freq",
-      "cmd": "FREQFLAT role+endpoint",
+      "name": "mode",
+      "cmd": "MODEFLAT role+endpoint+soft miss",
       "ok": true,
-      "note": "freq"
+      "note": "mode"
     },
     {
-      "name": "hist",
-      "cmd": "empty needle all-leaf hist",
+      "name": "top",
+      "cmd": "TOPVALFLAT/MAJORFLAT empty+bare",
       "ok": true,
-      "note": "hist"
+      "note": "top"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER status hist",
+      "cmd": "MODEFLAT FROM PEER status",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost miss empty bag",
+      "cmd": "ghost miss empty LAST",
       "ok": true,
       "note": "soft"
     },
@@ -50,8 +50,14 @@
       "note": "gate"
     },
     {
+      "name": "tie",
+      "cmd": "first-seen tie x vs y",
+      "ok": true,
+      "note": "tie"
+    },
+    {
       "name": "probe",
-      "cmd": "COUNTVALFLAT alias",
+      "cmd": "substring ro matches role",
       "ok": true,
       "note": "probe"
     },
@@ -59,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "461/513 pre-existing cli fails; freqflat PASS 30"
+      "note": "459/517 pre-existing cli fails; modeflat PASS 33"
     }
   ],
   "weaknesses": [
@@ -3318,12 +3324,47 @@
       "title": "FREQFLAT/HISTFLAT/COUNTVALFLAT aliases solid for scoped needles",
       "detail": "Scoped FREQFLAT role/status/endpoint and FROM PEER status digests work well for canary health. Soft miss returns empty LAST + total 0.",
       "repro": "FREQFLAT role \u2192 worker:2 leader:1"
+    },
+    {
+      "id": "W408",
+      "severity": "high",
+      "area": "lang|vars",
+      "title": "128-var hard cap silently drops MODEFLAT specials",
+      "detail": "VM vars[128]; var_get create returns NULL when full and var_set_num/str no-ops. MODEFLAT host computes total correctly (trace total=3) but MODEFLAT_TOTAL/HIT/SRC may stay 0/empty under agent_boot+plate_peer_session+lean board pressure. LAST/LAST_N always work (pre-seeded). Sweep: ~120 vars \u2192 HIT/SRC drop; ~122 \u2192 TOTAL drop; ~124 \u2192 N drop.",
+      "repro": "Burn 122 LET vN=0; MODEFLAT role \u2192 LAST=worker LAST_N=2 MODEFLAT_TOTAL=0"
+    },
+    {
+      "id": "W409",
+      "severity": "med",
+      "area": "lang|modeflat",
+      "title": "MODEFLAT needle is substring not path-segment exact",
+      "detail": "MODEFLAT \"ro\" matches leaves whose key contains \"ro\" (e.g. role) and returns dominant value worker. Agents expecting exact key segments get false friends; must use full segment names or accept fuzzy match.",
+      "repro": "PLATE with meta.role=worker; MODEFLAT \"ro\" \u2192 worker not empty"
+    },
+    {
+      "id": "W410",
+      "severity": "med",
+      "area": "lang|specials",
+      "title": "Late SYS EQS MODEFLAT_SRC hard-fails when special never created",
+      "detail": "Under var-cap pressure MODEFLAT_SRC is never allocated. Later SYS EQS MODEFLAT_SRC \"PEER\" yields unknown form MODEFLAT_SRC (hard halt) rather than soft empty compare. Capture SRC immediately into a predeclared var, or use only LAST/LAST_N/MODEFLAT_FROM.",
+      "repro": "Fat agent; MODEFLAT FROM PEER status; \u2026ops\u2026; SYS EQS MODEFLAT_SRC PEER \u2192 unknown form"
+    },
+    {
+      "id": "W411",
+      "severity": "low",
+      "area": "host|catalog",
+      "title": "forms MODEFLAT returns empty catalog entry",
+      "detail": "cubalc forms MODEFLAT \u2192 n:0 despite live form + plate modeflat dual + selftest modeflat PASS 33. Human catalog lag.",
+      "repro": "cubalc forms MODEFLAT \u2192 forms:[]"
     }
   ],
   "workarounds": [
     "Swap LET PLATE for temporary unflat targets; reload session after",
     "Exact changelog HASLINE needles with spaces around arrow",
-    "Curated peer seeds for stable DIFFFLAT lines"
+    "Curated peer seeds for stable DIFFFLAT lines",
+    "Capture MODEFLAT win via LAST_N immediately; avoid MODEFLAT_TOTAL under fat agents",
+    "Predeclare path pool; reuse body/row/score to stay under 128 vars",
+    "Do not late-read MODEFLAT_SRC \u2014 use MODEFLAT_FROM or pre-copy to var"
   ],
   "language_gaps": [
     "Need segment-bound needles for counter digests",
@@ -3337,7 +3378,10 @@
     "EACH FLAT specials/PATH/VALUE need hardened large-board binding",
     "Register 1240 each_flat in selftest suite",
     "Scope FREQFLAT needles tightly for digests",
-    "Capture FREQ specials immediately after op"
+    "Capture FREQ specials immediately after op",
+    "vars[128] hard cap \u00b7 silent special drop (MODEFLAT_TOTAL/HIT/SRC)",
+    "MODEFLAT needle substring match (false friends)",
+    "prefer LAST_N over MODEFLAT_N near var pressure"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3366,8 +3410,11 @@
     "SYS EQS VALUE/PATH fragile in EACH FROM PEER; used PATH bind compares",
     "Renamed host\u2192endpoint to avoid top-level host collision",
     "Empty FREQFLAT worker count polluted by agent_job",
-    "FREQFLAT_TOTAL dark after COUNTVALFLAT; used bag HASLINE"
+    "FREQFLAT_TOTAL dark after COUNTVALFLAT; used bag HASLINE",
+    "iter267: MODEFLAT_TOTAL silent 0 under fat agent until var footprint cut (W408)",
+    "iter267: substring needle ro matches role (W409) \u2014 probe expects fuzzy hit",
+    "iter267: late MODEFLAT_SRC hard-fail; capture early or avoid (W410)"
   ],
-  "commit": "a7536a82",
-  "ts": "2026-08-09T19:19:41Z"
+  "commit": "a3307e7e",
+  "ts": "2026-08-09T19:53:01Z"
 }
