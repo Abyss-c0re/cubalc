@@ -4,8 +4,8 @@
   "version": "1.15.646-usability",
   "item": "FILLP dotted path nest templates",
   "item_id": 655,
-  "title": "FILLP|FILLPFILE|{{freq.error}} dotted path nest template expand · STRICT miss keys · multi-plate · CLI plate fill dual",
-  "commit": "PENDING",
+  "title": "FILLP|FILLPFILE|{{freq.error}} dotted path nest template expand \u00b7 STRICT miss keys \u00b7 multi-plate \u00b7 CLI plate fill dual",
+  "commit": "5359c01d5189b64aaa9ce7460c7e3a637cfc7539",
   "summary": "Template expand nest slots without GETP glue. proof 1196 23/23 + CLI fill path ok.",
   "proofs": [
     "1196_fillp_path 23/23",
@@ -15,6 +15,6 @@
   ],
   "when": "2026-08-09T11:55:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "PENDING",
+  "sha": "5359c01d5189b64aaa9ce7460c7e3a637cfc7539",
   "note": "after pluckp_path; path plane templates; EVOLVE_PAUSED"
 }
