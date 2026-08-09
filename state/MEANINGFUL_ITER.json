@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 664,
-  "version": "1.15.691-usability",
-  "item": "FREQFLAT + plate freqflat",
-  "item_id": 700,
-  "title": "FREQFLAT/HISTFLAT + cubalc plate freqflat · value frequency of matching leaves → key:count bag · multi-plate",
-  "commit": "ca32161f311bb4eb8b0fb90287a69ee0092720c0",
-  "summary": "Nest status rollups without VALSFLAT+FREQ glue. proof 1241 + CLI PASS.",
+  "iter": 665,
+  "version": "1.15.692-usability",
+  "item": "MODEFLAT + plate modeflat",
+  "item_id": 701,
+  "title": "MODEFLAT/TOPVALFLAT + cubalc plate modeflat · dominant matching leaf value → LAST · winner count LAST_N · multi-plate",
+  "commit": "010f202ea2afe43b1a2d0f22325b1158afe4412a",
+  "summary": "Majority role/status without FREQFLAT+SORTFREQ+BEFORE glue. proof 1242 + CLI PASS.",
   "proofs": [
-    "1241_freqflat PASS",
-    "1241_cli_plate_freqflat PASS",
-    "1240_each_flat reg PASS"
+    "1242_modeflat PASS",
+    "1242_cli_plate_modeflat PASS",
+    "1241_freqflat reg PASS"
   ],
-  "when": "2026-08-09T19:07:51Z",
+  "when": "2026-08-09T19:24:56Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ca32161f311bb4eb8b0fb90287a69ee0092720c0",
-  "note": "after EACH FLAT; thrash restored; EVOLVE_PAUSED"
+  "sha": "010f202ea2afe43b1a2d0f22325b1158afe4412a",
+  "note": "after FREQFLAT; EVOLVE_PAUSED"
 }
