@@ -2981,6 +2981,6 @@
     "Project is destructive; walk/omit need SETP reseed",
     "CLI plate duals still fail set form"
   ],
-  "commit": "",
+  "commit": "cd7440a1",
   "ts": "2026-08-09T12:39:50Z"
 }
