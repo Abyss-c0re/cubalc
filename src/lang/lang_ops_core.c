@@ -27417,6 +27417,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
+             kw(&L->cur,"COPYPOBJ") || kw(&L->cur,"SWAPPOBJ") || kw(&L->cur,"NESTCOPY") ||
              kw(&L->cur,"TOKVP") || kw(&L->cur,"FROMKVP") ||
              kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
              kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
@@ -35866,6 +35867,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NESTRENAME", "NESTRENAME alias of RENAMEPOBJ"},
       {"REKEYOBJ", "REKEYOBJ alias of RENAMEPOBJ"},
       {"MVKEYOBJ", "MVKEYOBJ alias of RENAMEPOBJ"},
+      {"COPYPOBJ", "COPYPOBJ|DUPKEYOBJ|NESTCOPY [FROM plate] nest src dst — copy key in nest · write-back · multi-plate · COPYP dual · not OOP COPYOBJ"},
+      {"DUPKEYOBJ", "DUPKEYOBJ alias of COPYPOBJ"},
+      {"NESTCOPY", "NESTCOPY alias of COPYPOBJ"},
+      {"SWAPPOBJ", "SWAPPOBJ|XCHGKEYOBJ|NESTSWAP [FROM plate] nest a b — swap keys in nest · write-back · multi-plate · SWAPP dual"},
+      {"XCHGKEYOBJ", "XCHGKEYOBJ alias of SWAPPOBJ"},
+      {"NESTSWAP", "NESTSWAP alias of SWAPPOBJ"},
       {"TOKVP", "TOKVP|TOBAGP [FROM plate] — plate → key:val bag · multi-plate · no SYS JSONTOKV"},
       {"TOBAGP", "TOBAGP alias of TOKVP"},
       {"FROMKVP", "FROMKVP|BAGTOP [bag] [INTO name] — key=val bag → plate · multi-plate · no SYS JSONFROMKV"},
@@ -43672,6 +43679,439 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# renamepobj nest=%s %s→%s n=%ld from=%d\n",
               nestk, oldk, newk, rr.n, have_from);
+    bump(vm); return 1;
+  }
+
+  /* COPYPOBJ|DUPKEYOBJ|NESTCOPY [FROM plate] nest src dst —
+   * SWAPPOBJ|XCHGKEYOBJ|NESTSWAP [FROM plate] nest a b —
+   * Copy/swap keys inside nested object → write-back outer (COPYP/SWAPP duals).
+   * Soft nest miss or src miss (copy): LAST_N=0 · outer unchanged · OK=1.
+   * SWAPP: both miss n=0 · one miss = move · both hit = exchange.
+   * Not CLONEOBJ/COPYOBJ (OOP live-slot clone).
+   * Usability: nest dual-buffer / snapshot without GETOBJ+COPYP/SWAPP+SETOBJ:
+   *   COPYPOBJ "meta" "status" "prev"
+   *   SWAPPOBJ FROM PEER "cfg" "cur" "prev"
+   */
+  if (kw(&L->cur,"COPYPOBJ") || kw(&L->cur,"DUPKEYOBJ") || kw(&L->cur,"NESTCOPY") ||
+      kw(&L->cur,"COPYKEYOBJ") || kw(&L->cur,"SNAPSHOTNEST") || kw(&L->cur,"MCOPYPOBJ") ||
+      kw(&L->cur,"SWAPPOBJ") || kw(&L->cur,"XCHGKEYOBJ") || kw(&L->cur,"NESTSWAP") ||
+      kw(&L->cur,"SWAPKEYOBJ") || kw(&L->cur,"FLIPKEYOBJ") || kw(&L->cur,"MSWAPPOBJ") ||
+      kw(&L->cur,"EXCHKEYOBJ") || kw(&L->cur,"OBJCOPYKEY") || kw(&L->cur,"OBJSWAPKEY")) {
+    char plate[CUBALC_HOST_STR_MAX], nestk[96], nest[CUBALC_HOST_STR_MAX];
+    char ka[96], kb[96];
+    char ra[CUBALC_HOST_STR_MAX], rb[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result ngr, gr, hr, dr;
+    int have_from = 0, nest_hit = 0, is_swap = 0, has_a = 0, has_b = 0;
+    Var *pv;
+    const char *v;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "SWAPPOBJ") == 0 || strcmp(op0, "XCHGKEYOBJ") == 0 ||
+        strcmp(op0, "NESTSWAP") == 0 || strcmp(op0, "SWAPKEYOBJ") == 0 ||
+        strcmp(op0, "FLIPKEYOBJ") == 0 || strcmp(op0, "MSWAPPOBJ") == 0 ||
+        strcmp(op0, "EXCHKEYOBJ") == 0 || strcmp(op0, "OBJSWAPKEY") == 0)
+      is_swap = 1;
+
+    lex_next(L);
+    plate[0] = 0; nestk[0] = 0; nest[0] = 0; ka[0] = 0; kb[0] = 0;
+    ra[0] = 0; rb[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+    memset(&hr, 0, sizeof hr);
+    memset(&dr, 0, sizeof dr);
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* nest key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(nestk, sizeof nestk, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"END") || kw(&L->cur,"ASSERT") || kw(&L->cur,"LET")) {
+        fail(vm, is_swap ? "SWAPPOBJ nest a b — need nest key"
+                         : "COPYPOBJ nest src dst — need nest key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, nestk, sizeof nestk) != 0)
+        nestk[0] = 0;
+    } else {
+      fail(vm, is_swap ? "SWAPPOBJ nest a b — need nest key"
+                       : "COPYPOBJ nest src dst — need nest key");
+      return -1;
+    }
+
+    /* key A */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(ka, sizeof ka, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"END") || kw(&L->cur,"ASSERT") || kw(&L->cur,"LET")) {
+        fail(vm, is_swap ? "SWAPPOBJ nest a b — need key A"
+                         : "COPYPOBJ nest src dst — need src key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, ka, sizeof ka) != 0)
+        ka[0] = 0;
+    } else {
+      fail(vm, is_swap ? "SWAPPOBJ nest a b — need key A"
+                       : "COPYPOBJ nest src dst — need src key");
+      return -1;
+    }
+
+    /* key B */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(kb, sizeof kb, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"END") || kw(&L->cur,"ASSERT") || kw(&L->cur,"LET")) {
+        fail(vm, is_swap ? "SWAPPOBJ nest a b — need key B"
+                         : "COPYPOBJ nest src dst — need dst key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, kb, sizeof kb) != 0)
+        kb[0] = 0;
+    } else {
+      fail(vm, is_swap ? "SWAPPOBJ nest a b — need key B"
+                       : "COPYPOBJ nest src dst — need dst key");
+      return -1;
+    }
+
+    /* trailing FROM */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!nestk[0] || !ka[0] || !kb[0]) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", is_swap ? "SWAPPOBJ: empty nest/key" : "COPYPOBJ: empty nest/key");
+      var_set_str(vm, "ERR", is_swap ? "SWAPPOBJ: empty nest/key" : "COPYPOBJ: empty nest/key");
+      var_set_num(vm, "COPYPOBJ_N", 0);
+      var_set_num(vm, "SWAPPOBJ_N", 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "COPYPOBJ_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "SWAPPOBJ_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "COPYPOBJ_NEST_HIT", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    nest_hit = 0;
+    nest[0] = 0;
+    memset(&ngr, 0, sizeof ngr);
+    if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
+      v = ngr.str;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v == '{') {
+        if (v != ngr.str) {
+          size_t n = strlen(v);
+          memmove(ngr.str, v, n + 1);
+        }
+        snprintf(nest, sizeof nest, "%s", ngr.str);
+        nest_hit = 1;
+      }
+    }
+
+    /* soft nest miss — outer unchanged */
+    if (!nest_hit) {
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, is_swap ? "SWAPPOBJ" : "COPYPOBJ", plate);
+      var_set_num(vm, "COPYPOBJ_N", 0);
+      var_set_num(vm, "SWAPPOBJ_N", 0);
+      var_set_str(vm, "COPYPOBJ_NEST", nestk);
+      var_set_str(vm, "SWAPPOBJ_NEST", nestk);
+      var_set_str(vm, "COPYPOBJ_SRC", ka);
+      var_set_str(vm, "COPYPOBJ_DST", kb);
+      var_set_str(vm, "SWAPPOBJ_A", ka);
+      var_set_str(vm, "SWAPPOBJ_B", kb);
+      var_set_num(vm, "COPYPOBJ_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "SWAPPOBJ_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "COPYPOBJ_VAR",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_str(vm, "SWAPPOBJ_VAR",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "COPYPOBJ_NEST_HIT", 0);
+      var_set_num(vm, "SWAPPOBJ_NEST_HIT", 0);
+      var_set_str(vm, "NEST", "");
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# %s nest-miss nest=%s from=%d\n",
+                is_swap ? "swappobj" : "copypobj", nestk, have_from);
+      bump(vm); return 1;
+    }
+
+    if (!is_swap) {
+      /* COPYPOBJ */
+      memset(&gr, 0, sizeof gr);
+      if (cubalc_host_json_get_raw(nest, ka, &gr) != 0) {
+        var_set_str(vm, "LAST", plate);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "COPYPOBJ", plate);
+        var_set_num(vm, "COPYPOBJ_N", 0);
+        var_set_str(vm, "COPYPOBJ_NEST", nestk);
+        var_set_str(vm, "COPYPOBJ_SRC", ka);
+        var_set_str(vm, "COPYPOBJ_DST", kb);
+        var_set_num(vm, "COPYPOBJ_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "COPYPOBJ_VAR",
+                    from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+        var_set_num(vm, "COPYPOBJ_NEST_HIT", 1);
+        var_set_str(vm, "NEST", nest);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# copypobj key-miss nest=%s %s→%s\n", nestk, ka, kb);
+        bump(vm); return 1;
+      }
+      if (strcmp(ka, kb) == 0) {
+        var_set_str(vm, "LAST", plate);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "COPYPOBJ", plate);
+        var_set_num(vm, "COPYPOBJ_N", 1);
+        var_set_str(vm, "COPYPOBJ_NEST", nestk);
+        var_set_str(vm, "COPYPOBJ_SRC", ka);
+        var_set_str(vm, "COPYPOBJ_DST", kb);
+        var_set_num(vm, "COPYPOBJ_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "COPYPOBJ_VAR",
+                    from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+        var_set_num(vm, "COPYPOBJ_NEST_HIT", 1);
+        var_set_str(vm, "NEST", nest);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(nest, kb, gr.str, 1, &hr) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "COPYPOBJ: set fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "COPYPOBJ: set fail");
+        var_set_num(vm, "COPYPOBJ_N", 0);
+        bump(vm); return 1;
+      }
+      snprintf(nest, sizeof nest, "%s", hr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(plate, nestk, nest, 1, &hr) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "COPYPOBJ: write-back fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "COPYPOBJ: write-back fail");
+        var_set_num(vm, "COPYPOBJ_N", 0);
+        bump(vm); return 1;
+      }
+      if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+        var_set_str(vm, from_name, hr.str);
+      else if (!have_from)
+        var_set_str(vm, "PLATE", hr.str);
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_str(vm, "NEST", nest);
+      var_set_str(vm, "MERGED", nest);
+      var_set_str(vm, "COPYPOBJ", hr.str);
+      var_set_str(vm, "DUPKEYOBJ", hr.str);
+      var_set_str(vm, "NESTCOPY", hr.str);
+      var_set_num(vm, "COPYPOBJ_N", 1);
+      var_set_str(vm, "COPYPOBJ_NEST", nestk);
+      var_set_str(vm, "COPYPOBJ_SRC", ka);
+      var_set_str(vm, "COPYPOBJ_DST", kb);
+      var_set_num(vm, "COPYPOBJ_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "COPYPOBJ_VAR",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "COPYPOBJ_NEST_HIT", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# copypobj nest=%s %s→%s from=%d\n",
+                nestk, ka, kb, have_from);
+      bump(vm); return 1;
+    }
+
+    /* SWAPPOBJ */
+    if (strcmp(ka, kb) == 0) {
+      memset(&gr, 0, sizeof gr);
+      has_a = (cubalc_host_json_get_raw(nest, ka, &gr) == 0) ? 1 : 0;
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = has_a;
+      var_set_num(vm, "LAST_N", has_a);
+      var_set_str(vm, "SWAPPOBJ", plate);
+      var_set_num(vm, "SWAPPOBJ_N", has_a);
+      var_set_str(vm, "SWAPPOBJ_NEST", nestk);
+      var_set_str(vm, "SWAPPOBJ_A", ka);
+      var_set_str(vm, "SWAPPOBJ_B", kb);
+      var_set_num(vm, "SWAPPOBJ_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "SWAPPOBJ_VAR",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "SWAPPOBJ_NEST_HIT", 1);
+      var_set_str(vm, "NEST", nest);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(nest, ka, &gr) == 0) {
+      has_a = 1;
+      snprintf(ra, sizeof ra, "%s", gr.str);
+    }
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(nest, kb, &gr) == 0) {
+      has_b = 1;
+      snprintf(rb, sizeof rb, "%s", gr.str);
+    }
+    if (!has_a && !has_b) {
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "SWAPPOBJ", plate);
+      var_set_num(vm, "SWAPPOBJ_N", 0);
+      var_set_str(vm, "SWAPPOBJ_NEST", nestk);
+      var_set_str(vm, "SWAPPOBJ_A", ka);
+      var_set_str(vm, "SWAPPOBJ_B", kb);
+      var_set_num(vm, "SWAPPOBJ_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "SWAPPOBJ_VAR",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "SWAPPOBJ_NEST_HIT", 1);
+      var_set_str(vm, "NEST", nest);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# swappobj both-miss nest=%s\n", nestk);
+      bump(vm); return 1;
+    }
+    if (has_a && has_b) {
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(nest, ka, rb, 1, &hr) != 0) goto cubalc_swappobj_fail;
+      snprintf(nest, sizeof nest, "%s", hr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(nest, kb, ra, 1, &hr) != 0) goto cubalc_swappobj_fail;
+      snprintf(nest, sizeof nest, "%s", hr.str);
+    } else if (has_a && !has_b) {
+      memset(&dr, 0, sizeof dr);
+      if (cubalc_host_json_del(nest, ka, &dr) != 0) goto cubalc_swappobj_fail;
+      snprintf(nest, sizeof nest, "%s", dr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(nest, kb, ra, 1, &hr) != 0) goto cubalc_swappobj_fail;
+      snprintf(nest, sizeof nest, "%s", hr.str);
+    } else {
+      memset(&dr, 0, sizeof dr);
+      if (cubalc_host_json_del(nest, kb, &dr) != 0) goto cubalc_swappobj_fail;
+      snprintf(nest, sizeof nest, "%s", dr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(nest, ka, rb, 1, &hr) != 0) goto cubalc_swappobj_fail;
+      snprintf(nest, sizeof nest, "%s", hr.str);
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_set(plate, nestk, nest, 1, &hr) != 0) goto cubalc_swappobj_fail;
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else if (!have_from)
+      var_set_str(vm, "PLATE", hr.str);
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = 1;
+    var_set_num(vm, "LAST_N", 1);
+    var_set_str(vm, "NEST", nest);
+    var_set_str(vm, "MERGED", nest);
+    var_set_str(vm, "SWAPPOBJ", hr.str);
+    var_set_str(vm, "XCHGKEYOBJ", hr.str);
+    var_set_str(vm, "NESTSWAP", hr.str);
+    var_set_num(vm, "SWAPPOBJ_N", 1);
+    var_set_str(vm, "SWAPPOBJ_NEST", nestk);
+    var_set_str(vm, "SWAPPOBJ_A", ka);
+    var_set_str(vm, "SWAPPOBJ_B", kb);
+    var_set_num(vm, "SWAPPOBJ_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "SWAPPOBJ_VAR",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "SWAPPOBJ_NEST_HIT", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# swappobj nest=%s %s↔%s from=%d\n",
+              nestk, ka, kb, have_from);
+    bump(vm); return 1;
+  cubalc_swappobj_fail:
+    var_set_str(vm, "LAST", "");
+    vm->last_str[0] = 0;
+    vm->last_n = 0;
+    var_set_num(vm, "LAST_N", 0);
+    var_set_num(vm, "SWAPPOBJ_N", 0);
+    var_set_num(vm, "SWAPPOBJ_FROM", have_from ? 1 : 0);
+    var_set_num(vm, "OK", 0);
+    {
+      const char *e = hr.err[0] ? hr.err : (dr.err[0] ? dr.err : "SWAPPOBJ: fail");
+      var_set_str(vm, "LAST_ERR", e);
+      var_set_str(vm, "ERR", e);
+    }
     bump(vm); return 1;
   }
 

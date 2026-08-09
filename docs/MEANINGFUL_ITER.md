@@ -667,6 +667,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 637. ~~**`cubalc plate nestpick` / `nestomit`**~~ **done** (CLI duals of PICKOBJ/OMITOBJ · agent nest key projection without `.cubalc`).
 638. ~~**`LENOBJ` / `EMPTYOBJ` / `VALSOBJ` / `NONEMPTYOBJ`**~~ **done** (nested size/empty/values probes · multi-plate · LENP/EMPTYP/VALSP duals for nests).
 639. ~~**`RENAMEPOBJ` / `MOVEKEYOBJ` / `NESTRENAME`**~~ **done** (rename key inside nest · write-back · multi-plate · RENAMEP dual · not OOP RENAMEOBJ · no GETOBJ+RENAMEP+SETOBJ).
+640. ~~**`COPYPOBJ` / `SWAPPOBJ` / `NESTCOPY` / `NESTSWAP`**~~ **done** (copy/swap keys inside nest · write-back · multi-plate · COPYP/SWAPP duals · not OOP COPYOBJ · no GETOBJ+COPYP/SWAPP+SETOBJ).
 
 ## Tick protocol
 

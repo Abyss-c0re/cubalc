@@ -1,0 +1,133 @@
+# COPYPOBJ / SWAPPOBJ — nest key copy & swap with write-back
+# Usability: COPYP/SWAPP duals for nests without GETOBJ glue.
+# Not OOP CLONEOBJ/COPYOBJ (live-slot clone).
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"status\":\"ready\",\"n\":1,\"role\":\"worker\"}}"
+LET PEER = "{\"cfg\":{\"cur\":7,\"prev\":3,\"tag\":\"a\"},\"outer\":\"x\"}"
+
+# copy status → prev inside nest
+COPYPOBJ "meta" "status" "prev"
+ASSERT OK == 1
+ASSERT COPYPOBJ_N == 1
+ASSERT COPYPOBJ_NEST_HIT == 1
+ASSERT COPYPOBJ_FROM == 0
+SYS EQS COPYPOBJ_SRC "status"
+ASSERT LAST_N == 1
+SYS EQS COPYPOBJ_DST "prev"
+ASSERT LAST_N == 1
+GETPOBJ "meta" "prev"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+GETPOBJ "meta" "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+# outer intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# soft key miss
+COPYPOBJ "meta" "nope" "x"
+ASSERT OK == 1
+ASSERT COPYPOBJ_N == 0
+ASSERT COPYPOBJ_NEST_HIT == 1
+HASPOBJ "meta" "x"
+ASSERT LAST_N == 0
+
+# soft nest miss
+COPYPOBJ "ghost" "a" "b"
+ASSERT OK == 1
+ASSERT COPYPOBJ_N == 0
+ASSERT COPYPOBJ_NEST_HIT == 0
+HASP "ghost"
+ASSERT LAST_N == 0
+
+# multi-plate FROM PEER
+COPYPOBJ FROM PEER "cfg" "cur" "snap"
+ASSERT COPYPOBJ_FROM == 1
+ASSERT COPYPOBJ_N == 1
+GETPOBJ FROM PEER "cfg" "snap"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "cfg" "cur"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+# PLATE nest untouched
+GETPOBJ "meta" "prev"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+# PEER outer intact
+GETP FROM PEER "outer"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# trailing FROM + alias
+DUPKEYOBJ "cfg" "tag" "label" FROM PEER
+ASSERT COPYPOBJ_N == 1
+GETPOBJ FROM PEER "cfg" "label"
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+NESTCOPY "meta" "n" "n0"
+ASSERT COPYPOBJ_N == 1
+GETPOBJ "meta" "n0"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# SWAPPOBJ dual buffers on PEER nest
+SWAPPOBJ FROM PEER "cfg" "cur" "prev"
+ASSERT OK == 1
+ASSERT SWAPPOBJ_N == 1
+ASSERT SWAPPOBJ_FROM == 1
+ASSERT SWAPPOBJ_NEST_HIT == 1
+GETPOBJ FROM PEER "cfg" "cur"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "cfg" "prev"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+
+# SWAPP on PLATE nest
+SWAPPOBJ "meta" "role" "status"
+ASSERT SWAPPOBJ_N == 1
+GETPOBJ "meta" "role"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+GETPOBJ "meta" "status"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# one-side miss = move
+LET s = "{\"bag\":{\"only\":9}}"
+SWAPPOBJ "bag" "only" "moved" FROM s
+ASSERT SWAPPOBJ_N == 1
+GETPOBJ FROM s "bag" "moved"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+HASPOBJ FROM s "bag" "only"
+ASSERT LAST_N == 0
+
+# both miss soft
+SWAPPOBJ "bag" "z1" "z2" FROM s
+ASSERT OK == 1
+ASSERT SWAPPOBJ_N == 0
+
+# aliases
+NESTSWAP "bag" "moved" "v" FROM s
+ASSERT SWAPPOBJ_N == 1
+GETPOBJ FROM s "bag" "v"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+XCHGKEYOBJ "meta" "status" "role"
+ASSERT SWAPPOBJ_N == 1
+GETPOBJ "meta" "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+GETPOBJ "meta" "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+PRINT "copypobj soft ok"
