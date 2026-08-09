@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 238,
-  "program": "programs/realworld/svc_nest_field_board.cubalc",
-  "theme": "GETPOBJ/SETPOBJ/INCOBJ + HASPOBJ/KEYSOBJ/NEEDPOBJ nest field plane",
-  "version": "1.15.624-usability",
+  "iter": 239,
+  "program": "programs/realworld/svc_nest_walk_board.cubalc",
+  "theme": "EACH KEYNEST + PLUCKOBJ nest inventory walk and multi-peel",
+  "version": "1.15.627-usability",
   "pass": true,
-  "prior_note": "iter 237 MERGEOBJ nest overlay; this iter first realworld GETPOBJ/HASPOBJ (1172-1173 / MEANINGFUL 631-632)",
+  "prior_note": "iter 238 GETPOBJ field plane; this iter first realworld KEYNEST/PLUCKOBJ (1175-1176 / MEANINGFUL 634-635)",
   "tests": [
     {
       "name": "list",
@@ -15,67 +15,61 @@
     },
     {
       "name": "boot",
-      "cmd": "seed nested cfg/stats/labels + peer",
+      "cmd": "seed + KEYSOBJ verify (KEYNEST deferred)",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "get",
-      "cmd": "GETPOBJ peel + OR soft",
+      "name": "walk",
+      "cmd": "EACH KEYNEST cfg key bag",
       "ok": true,
-      "note": "get"
+      "note": "walk"
     },
     {
-      "name": "set",
-      "cmd": "SETPOBJ port/tls/labels",
+      "name": "peel",
+      "cmd": "KEYNEST walk + GETPOBJ port",
       "ok": true,
-      "note": "set"
+      "note": "peel"
     },
     {
-      "name": "bump",
-      "cmd": "INCOBJ stats hits delta=2",
+      "name": "pluck",
+      "cmd": "PLUCKOBJ multi + NESTPLUCK + miss slots",
       "ok": true,
-      "note": "bump"
-    },
-    {
-      "name": "keys",
-      "cmd": "KEYSOBJ inventory + empty nest",
-      "ok": true,
-      "note": "keys"
-    },
-    {
-      "name": "has",
-      "cmd": "HASPOBJ/TYPEPOBJ/NESTHAS",
-      "ok": true,
-      "note": "has"
+      "note": "pluck"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER get/set/inc",
+      "cmd": "KEYNEST/PLUCKOBJ FROM PEER",
       "ok": true,
       "note": "peer"
     },
     {
+      "name": "empty",
+      "cmd": "soft empty KEYNEST + nest-miss pluck",
+      "ok": true,
+      "note": "empty"
+    },
+    {
       "name": "gate",
-      "cmd": "NEEDPOBJ contract + soft HAS miss",
+      "cmd": "required keys walk+pluck admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "soft",
-      "cmd": "OR fb + empty KEYSOBJ + empty bag",
+      "cmd": "empty nest + GETPOBJ OR contrast",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "probe",
-      "cmd": "DELPOBJ + create nest + substring false friend",
+      "cmd": "KEY OF NEST stats + top EACH KEY + labels",
       "ok": true,
       "note": "probe"
     },
     {
       "name": "require_unknown",
-      "cmd": "EXIT 2; shell 0",
+      "cmd": "EXIT 2 shell 0",
       "ok": true,
       "note": "W7"
     },
@@ -83,7 +77,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "404/409 pre-existing 5 shell fails; getpobj/haspobj PASS"
+      "note": "406/412 pre-existing shell fails + oop_pickobj; each_keynest/pluckobj PASS"
     }
   ],
   "weaknesses": [
@@ -2542,6 +2536,38 @@
       "title": "STATUS last line still omits final NL",
       "detail": "cat -A ends probe:del:pb without $. Reconfirmed nest field board.",
       "repro": "cat -A STATUS.txt last row no $"
+    },
+    {
+      "id": "W308",
+      "severity": "high",
+      "area": "lang|keynest",
+      "title": "EACH KEYNEST KEY special unknown form after heavy preamble + SYS LINES",
+      "detail": "Short proofs and lean agent boards bind KEY for SYS PUSH key_bag KEY. After ~20 LETs plus early SYS LINES bag in realworld agent preambles, SYS PUSH key_bag KEY \u2192 unknown form KEY (KEYNEST body still runs or fails hard). SYS CAT key_bag KEY may treat KEY as literal string KEY. Workarounds: defer KEYNEST until after session-only load; avoid early SYS LINES after large LET blocks; use KEYSOBJ for boot verify.",
+      "repro": "many LET + SYS LINES bag; EACH KEYNEST cfg; SYS PUSH key_bag KEY \u2192 unknown form KEY"
+    },
+    {
+      "id": "W309",
+      "severity": "high",
+      "area": "lang|keynest",
+      "title": "KEYNEST KEY fails right after CAT+SAVEPLATE in same IF (boot path)",
+      "detail": "Even without early SYS LINES, KEYNEST immediately after multi SYS CAT seed + plate_peer_session + SYS SAVEPLATE in boot IF can hard-fail KEY. Same KEYNEST works in a later walk action after plate_peer_session only. Agents should not KEYNEST in the same block as heavy seed/save.",
+      "repro": "boot IF: CAT seed; SAVEPLATE; EACH KEYNEST; PUSH KEY \u2192 fail; walk action alone \u2192 port/retries/tls ok"
+    },
+    {
+      "id": "W310",
+      "severity": "med",
+      "area": "lang|pluckobj",
+      "title": "PLUCKOBJ has no OR fallback; miss leaves empty slots; SYS NTH bag 0 invalid",
+      "detail": "PLUCKOBJ cfg port missing \u2192 empty line slot, HIT reduced (soft). No OR fb form (unknown form OR). SYS NTH pluck_bag 0 \u2192 unknown form 0; use bag in LAST then SYS NTH 0, or SYS HASLINE. Nest miss PLUCKOBJ nope a b \u2192 LINES often 1 not field count.",
+      "repro": "PLUCKOBJ cfg port missing OR x \u2192 unknown form OR; SYS NTH bag 0 \u2192 unknown form 0"
+    },
+    {
+      "id": "W311",
+      "severity": "low",
+      "area": "host|write",
+      "title": "STATUS last line omits final NL",
+      "detail": "cat -A ends soft:ok1:sf without $. Reconfirmed nest walk board.",
+      "repro": "cat -A STATUS.txt"
     }
   ],
   "workarounds": [
@@ -2657,7 +2683,10 @@
     "no first-class nested field GET without INTO plate or string HAS",
     "nested scalar SET/INCOBJ cannot take runtime vars for value/delta",
     "plate_both_save brittle in long agent boards after session",
-    "NEEDPOBJ lacks soft twin for probe-then-REQUIRE pattern"
+    "NEEDPOBJ lacks soft twin for probe-then-REQUIRE pattern",
+    "EACH KEYNEST KEY special brittle in long agent preambles",
+    "PLUCKOBJ lacks OR soft default for missing nested fields",
+    "SYS NTH requires bag in LAST not as first arg var"
   ],
   "issues_faced": [
     "SYS PUSH KEY unknown form \u2014 switched to SYS CAT",
@@ -2671,8 +2700,11 @@
     "SETPOBJ/INCOBJ reject variable values (literal-only)",
     "SAVEP FROM PEER need path after long-board plate_peer_session",
     "NEEDPOBJ not soft \u2014 use HASPOBJ for soft miss",
-    "EXIT 2 shell rc 0 (W7)"
+    "EXIT 2 shell rc 0 (W7)",
+    "KEYNEST KEY unknown after many LETs+SYS LINES and after boot CAT+SAVEPLATE",
+    "PLUCKOBJ no OR; SYS NTH bag 0 invalid form",
+    "EXIT 2 shell 0 (W7)"
   ],
-  "commit": "371fcfaba1c439b6e85b3b0ee83bafa32f05c61b",
-  "ts": "2026-08-09T06:52:38Z"
+  "commit": "pending",
+  "ts": "2026-08-09T07:20:22Z"
 }

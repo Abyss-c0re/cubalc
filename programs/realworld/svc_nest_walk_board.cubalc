@@ -1,0 +1,1022 @@
+# svc_nest_walk_board.cubalc - EACH KEYNEST + PLUCKOBJ nest inventory walk
+#
+# Real use: fleet service agents walk nested cfg/stats/labels keys without
+# KEYSOBJ+EACH LINE glue, peel VALUE for scrub, and multi-pluck fields into
+# a handoff bag. First realworld of proofs 1175-1176 (MEANINGFUL 634-635).
+#
+#   EACH KEYNEST "cfg" - END          - KEY + VALUE - NEST bind
+#   EACH KEY OF NEST "cfg" FROM PEER
+#   EACH KEYNEST AS k "cfg" FROM PEER - VAL/V aliases
+#   PLUCKOBJ "cfg" "port" "retries"   - NESTPLUCK alias - multi-plate FROM
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_snw_$$
+#   ./out/cubalc run programs/realworld/svc_nest_walk_board.cubalc boot
+#   ./out/cubalc run ... walk|peel|pluck|peer|empty|gate|probe|soft|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SNW_REPORT.txt agent.json peer.json
+#        keys.txt pluck.txt
+# Env: HOST_S ROLE_S CUBALC_SNW_REQUIRE
+#
+# Edges:
+#   empty nest soft EACH_N 0; PLUCKOBJ miss empty slot (no OR);
+#   substring false friend on key bag; WRITE omit NL; NUM softens REQUIRE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_nest_walk_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_nest_walk -- boot|walk|peel|pluck|peer|empty|gate|probe|soft|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeW"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SNW_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SNW_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "keys.txt"
+LET keys_path = LAST
+SYS JOIN state_dir "pluck.txt"
+LET pluck_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET key_bag = ""
+LET pluck_bag = ""
+LET n_walk = 0
+LET port_val = ""
+LET soft_ok = 0
+LET gate_ok = 0
+
+# bag_n deferred — early SYS LINES after many LETs breaks KEYNEST KEY (W-new)
+LET bag_n = 0
+
+ONEOF ACTION "boot", "walk", "peel", "pluck", "peer", "empty", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "walk" THEN
+    LET op = "walk"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "pluck" THEN
+    LET op = "pluck"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "empty" THEN
+    LET op = "empty"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot - seed nested agent + peer
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-walk\",\"schema\":\"cubalc.svc_nest_walk.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"cfg\":{\"port\":8080,\"retries\":2,\"tls\":0},\"stats\":{\"hits\":1,\"errors\":0},\"labels\":{\"env\":\"dev\",\"tier\":\"cold\"}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"host\":\"" host_s "\",\"cfg\":{\"port\":8080,\"zone\":\"east\",\"tls\":1},\"schema\":\"cubalc.svc_nest_walk.v1\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # agent save only - peer seed already on disk via ensurep (W306 class)
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  # Defer KEYNEST to walk action — KEY special can fail right after
+  # heavy CAT+SAVEPLATE in same IF (use KEYSOBJ/GETPOBJ for boot verify)
+  KEYSOBJ "cfg"
+  LET key_bag = LAST
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  SYS LINES key_bag
+  LET n_walk = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "port"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETPOBJ "cfg" "port"
+  SYS EQS LAST "8080"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "host"
+  SYS EQS LAST host_s
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF n_walk >= 3 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 1 THEN
+          LET hit = 1
+          LET note_msg = "boot ok"
+          LET admit_n = 1
+          LET created = 1
+          LET take_n = n_walk
+        ELSE
+          LET miss = 1
+          LET note_msg = "boot port val"
+          FAIL "boot port val"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot host"
+        FAIL "boot host"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot port key"
+      FAIL "boot port key"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot keys thin"
+    FAIL "boot keys thin"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n n_walk has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# walk - KEYNEST key bag refresh
+SYS EQS op "walk"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET key_bag = ""
+  LET n_walk = 0
+  EACH KEYNEST "cfg"
+    LET n_walk = n_walk + 1
+    SYS PUSH key_bag KEY
+    LET key_bag = LAST
+  END
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  SYS LINES key_bag
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "port"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "retries"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # substring false friend: por must not match port as full key line
+  SYS HASLINE key_bag "por"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF n_walk >= 3 THEN
+    IF take_n == n_walk THEN
+      IF has_n == 1 THEN
+        IF peel_hit == 1 THEN
+          IF miss_n == 0 THEN
+            LET hit = 1
+            LET note_msg = "walk ok"
+            LET admit_n = 1
+            LET load_hit = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "walk false friend por"
+            FAIL "walk false friend por"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "walk retries"
+          FAIL "walk retries"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "walk port"
+        FAIL "walk port"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "walk lines mismatch"
+      FAIL "walk lines mismatch"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "walk thin"
+    FAIL "walk thin"
+    CLEAR_ERR
+  END
+  SYS STR n_walk
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "walk:" w_s ":wk"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "walk:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n n_walk take_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# peel - capture port VALUE during KEYNEST walk
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET port_val = ""
+  LET body = ""
+  LET n_walk = 0
+  EACH KEYNEST "cfg"
+    LET n_walk = n_walk + 1
+    SYS PUSH body KEY
+    LET body = LAST
+  END
+  CLEAR_ERR
+  # peel value via GETPOBJ (KEY compare flaky under nested IF in long boards)
+  GETPOBJ "cfg" "port"
+  LET port_val = LAST
+  CLEAR_ERR
+  SYS EQS port_val "8080"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "port"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "peel ok"
+      LET admit_n = 1
+      LET take_n = n_walk
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "peel getpobj mismatch"
+      FAIL "peel getpobj mismatch"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel port val"
+    FAIL "peel port val"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" port_val ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit take_n note_msg
+  CLEAR_ERR
+END
+
+# pluck - multi-key nested peel - bag
+SYS EQS op "pluck"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PLUCKOBJ "cfg" "port" "retries" "tls"
+  LET pluck_bag = LAST
+  CLEAR_ERR
+  SYS WRITE pluck_path pluck_bag
+  CLEAR_ERR
+  SYS LINES pluck_bag
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE pluck_bag "8080"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE pluck_bag "2"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # SYS NTH index only — bag is LAST after assign
+  LET body = pluck_bag
+  CLEAR_ERR
+  SYS EQS body pluck_bag
+  CLEAR_ERR
+  SYS HASLINE pluck_bag "8080"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # miss field leaves empty slot - bag still 3 lines
+  PLUCKOBJ "cfg" "port" "nope" "tls"
+  LET body = LAST
+  CLEAR_ERR
+  SYS LINES body
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # NESTPLUCK alias single
+  NESTPLUCK "labels" "env"
+  SYS EQS LAST "dev"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  IF take_n == 3 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 1 THEN
+          IF miss_n == 3 THEN
+            IF soft_ok == 1 THEN
+              LET hit = 1
+              LET note_msg = "pluck ok"
+              LET admit_n = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "pluck nestpluck"
+              FAIL "pluck nestpluck"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "pluck miss slots"
+            FAIL "pluck miss slots"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "pluck nth0"
+          FAIL "pluck nth0"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "pluck retries"
+        FAIL "pluck retries"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "pluck port"
+      FAIL "pluck port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "pluck lines"
+    FAIL "pluck lines"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "pluck:" w_s ":pk"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pluck:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n peel_hit miss_n note_msg
+  CLEAR_ERR
+END
+
+# peer - KEYNEST + PLUCKOBJ FROM PEER
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET key_bag = ""
+  LET n_walk = 0
+  EACH KEYNEST "cfg" FROM PEER
+    LET n_walk = n_walk + 1
+    SYS PUSH key_bag KEY
+    LET key_bag = LAST
+  END
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  GETPOBJ FROM PEER "cfg" "port"
+  LET port_val = LAST
+  CLEAR_ERR
+  SYS EQS port_val "8080"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  PLUCKOBJ FROM PEER "cfg" "port" "zone" "tls"
+  LET pluck_bag = LAST
+  CLEAR_ERR
+  SYS WRITE pluck_path pluck_bag
+  CLEAR_ERR
+  SYS HASLINE pluck_bag "east"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE pluck_bag "8080"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # agent cfg port unchanged by peer walk
+  GETPOBJ "cfg" "port"
+  SYS EQS LAST "8080"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "agent"
+  SYS EQS LAST "hive-peer"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF n_walk >= 2 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 1 THEN
+          IF soft_ok == 1 THEN
+            IF take_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "peer ok"
+              LET admit_n = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "peer agent"
+              FAIL "peer agent"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer agent plate intact"
+            FAIL "peer agent plate intact"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer pluck port"
+          FAIL "peer pluck port"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer zone"
+        FAIL "peer zone"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer port val"
+      FAIL "peer port val"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer walk thin"
+    FAIL "peer walk thin"
+    CLEAR_ERR
+  END
+  SYS STR n_walk
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" w_s ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n n_walk has_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# empty - soft empty KEYNEST + PLUCKOBJ nest miss
+SYS EQS op "empty"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET n_walk = 0
+  EACH KEYNEST "no_such_nest"
+    LET n_walk = n_walk + 1
+  END
+  CLEAR_ERR
+  LET has_n = n_walk
+  PLUCKOBJ "no_such_nest" "a" "b"
+  LET pluck_bag = LAST
+  CLEAR_ERR
+  SYS LINES pluck_bag
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # empty bag soft
+  LET body = ""
+  SYS LINES body
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 0 THEN
+    IF take_n >= 1 THEN
+      IF peel_hit == 0 THEN
+        LET hit = 1
+        LET note_msg = "empty ok"
+        LET admit_n = 1
+        LET soft_ok = 1
+        LET load_hit = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "empty bag lines"
+        FAIL "empty bag lines"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "empty pluck n"
+      FAIL "empty pluck n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "empty walk n"
+    FAIL "empty walk n"
+    CLEAR_ERR
+  END
+  SYS CAT "empty:0:em"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "empty:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n take_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# gate - required nest keys present via walk + pluck
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET key_bag = ""
+  EACH KEYNEST "cfg"
+    SYS PUSH key_bag KEY
+    LET key_bag = LAST
+  END
+  CLEAR_ERR
+  SYS HASLINE key_bag "port"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "retries"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  PLUCKOBJ "cfg" "port" "retries"
+  LET pluck_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE pluck_bag "8080"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_nest_walk"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "stats"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 1 THEN
+        IF take_n == 1 THEN
+          IF miss_n == 0 THEN
+            LET hit = 1
+            LET gate_ok = 1
+            LET admit_n = 1
+            LET note_msg = "gate ok"
+          ELSE
+            LET miss = 1
+            LET note_msg = "gate false nest stats"
+            FAIL "gate false nest stats"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate schema"
+          FAIL "gate schema"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate pluck port"
+        FAIL "gate pluck port"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate retries"
+      FAIL "gate retries"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate port"
+    FAIL "gate port"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF gate_ok == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" gate_ok ":gn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n gate_ok has_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# soft - empty bag + soft OR not on PLUCKOBJ + empty KEYNEST
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET n_walk = 0
+  EACH KEYNEST "zzz"
+    LET n_walk = 99
+  END
+  CLEAR_ERR
+  LET soft_ok = 0
+  IF n_walk == 0 THEN
+    LET soft_ok = 1
+  END
+  CLEAR_ERR
+  PLUCKOBJ "zzz" "a"
+  LET has_n = 1
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # GETPOBJ soft OR still works as contrast
+  GETPOBJ "zzz" "x" OR "fb"
+  SYS EQS LAST "fb"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF soft_ok == 1 THEN
+    IF has_n == 1 THEN
+      IF take_n == 0 THEN
+        IF peel_hit == 1 THEN
+          LET hit = 1
+          LET note_msg = "soft ok"
+          LET admit_n = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "soft getpobj OR"
+          FAIL "soft getpobj OR"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft empty bag"
+        FAIL "soft empty bag"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft pluck nest miss"
+      FAIL "soft pluck nest miss"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft keynest"
+    FAIL "soft keynest"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok" soft_ok ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n soft_ok has_n take_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# probe - alias KEY OF NEST + top-level EACH KEY + stats walk
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET n_walk = 0
+  EACH KEY OF NEST "stats"
+    LET n_walk = n_walk + 1
+  END
+  CLEAR_ERR
+  LET has_n = 0
+  IF n_walk >= 2 THEN
+    LET has_n = 1
+  END
+  CLEAR_ERR
+  # top-level EACH KEY not nest mode
+  LET take_n = 0
+  EACH KEY OF PLATE
+    LET take_n = take_n + 1
+  END
+  CLEAR_ERR
+  LET peel_hit = 0
+  IF take_n >= 5 THEN
+    LET peel_hit = 1
+  END
+  CLEAR_ERR
+  PLUCKOBJ "stats" "hits" "errors"
+  LET pluck_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE pluck_bag "1"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # labels walk
+  LET key_bag = ""
+  EACH KEYNEST "labels"
+    SYS PUSH key_bag KEY
+    LET key_bag = LAST
+  END
+  CLEAR_ERR
+  SYS HASLINE key_bag "env"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  # outer host intact
+  GETP "agent"
+  SYS EQS LAST "svc-walk"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 1 THEN
+        IF soft_ok == 1 THEN
+          IF miss_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "probe ok"
+            LET admit_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe agent"
+            FAIL "probe agent"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe labels"
+          FAIL "probe labels"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe stats pluck"
+        FAIL "probe stats pluck"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe top keys"
+      FAIL "probe top keys"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe stats walk"
+    FAIL "probe stats walk"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:stats:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit load_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# clear
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_nest_walk.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " walk=" n_walk " has=" has_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_nest_walk_board: end"
