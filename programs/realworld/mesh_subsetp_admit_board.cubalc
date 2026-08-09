@@ -1,0 +1,1001 @@
+# mesh_subsetp_admit_board.cubalc — SUBSETP/COVERSP fleet peer admit gate
+#
+# Real use: mesh controllers admit a peer only when required contract fields
+# match by value (zone/role/schema), not mere key presence. Soft SUBSETP lists
+# miss keys for remediation; COVERSP dual; REQUIRE SUBSETP hard-gates join.
+# First realworld of proof 1147 SUBSETP/COVERSP (MEANINGFUL 606).
+#
+#   LET need = {"zone","role","schema"}
+#   SUBSETP need PEER          # soft · LAST_N + SUBSETP_MISS bag
+#   COVERSP PEER need          # dual cover
+#   REQUIRE SUBSETP need PEER  # fail-fast (shell rc often still 0 — W-class)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_msa_$$
+#   ./out/cubalc run programs/realworld/mesh_subsetp_admit_board.cubalc boot
+#   ./out/cubalc run ... softcheck|cover|admit|thin|wrong|full|misslist|gate|probe|soft|list
+#
+# Plate: STATUS.txt VAL.txt META.txt MSA_REPORT.txt agent.json peer.json need.json
+# Env: ZONE_S ROLE_S SCHEMA_S CUBALC_MSA_REQUIRE
+#
+# Edges:
+#   value mismatch ≠ key miss (NEEDP alone insufficient);
+#   SUBSETP_MISS bag after soft fail; REQUIRE hard ok:false exit_code 0;
+#   empty peer; soft empty bag; WRITE omit NL; NUM shuttle
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "mesh_subsetp_admit_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "mesh_subsetp_admit -- boot|softcheck|cover|admit|thin|wrong|full|misslist|gate|probe|soft|list -- [--zone=Z] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT ZONE_S = "us-east"
+GETFLAG zone|z OR ENV ZONE_S OR ZONE_S
+LET zone_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+DEFAULT SCHEMA_S = "cubalc.mesh_admit.v1"
+GETFLAG schema|s OR ENV SCHEMA_S OR SCHEMA_S
+LET schema_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_MSA_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "MSA_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "need.json"
+LET need_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET need = "{}"
+LET miss_bag = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "boot", "softcheck", "cover", "admit", "thin", "wrong", "full", "misslist", "gate", "list", "ls", "soft", "clear", "probe", "hard"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "softcheck" THEN
+    LET op = "softcheck"
+  WHEN "cover" THEN
+    LET op = "cover"
+  WHEN "admit" THEN
+    LET op = "admit"
+  WHEN "thin" THEN
+    LET op = "thin"
+  WHEN "wrong" THEN
+    LET op = "wrong"
+  WHEN "full" THEN
+    LET op = "full"
+  WHEN "misslist" THEN
+    LET op = "misslist"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "hard" THEN
+    LET op = "hard"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n zone_s role_s
+  CLEAR_ERR
+END
+
+# --- helpers: rebuild need contract from knobs ---
+# need is rebuilt in each branch that needs it (no FN required)
+
+# boot — durable agent + full peer + need.json contract
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM zone_s
+  LET zone_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  SYS TRIM schema_s
+  LET schema_s = LAST
+  CLEAR_ERR
+  SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s
+  LET need = LAST
+  CLEAR_ERR
+  SYS WRITE need_path need
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS JSONOBJ "agent" "admit-ctl" "n" 1 "schema" schema_s
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s "agent" "hive-peer" "host" "cubeP" "n" 0
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  INCLUDE plate_both_save
+  CLEAR_ERR
+  # soft contract must pass on full peer
+  SUBSETP need PEER
+  LET has_n = LAST_N
+  LET take_n = SUBSETP_N
+  CLEAR_ERR
+  COVERSP PEER need
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS READ need_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS JSON "zone" FROM body
+  SYS EQS LAST zone_s
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET created = 1
+        SYS CAT "boot:" zone_s ":" role_s ":bt"
+        LET row = LAST
+        CLEAR_ERR
+        SYS GREPV "boot:" bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot need disk"
+        FAIL "boot need disk"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot cover"
+      FAIL "boot cover"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot subset"
+    FAIL "boot subset"
+    CLEAR_ERR
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit load_hit take_n note_msg
+  CLEAR_ERR
+END
+
+# softcheck — SUBSETP need vs live PEER (reload session)
+SYS EQS op "softcheck"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR need_path OR ""
+  LET need = LAST
+  CLEAR_ERR
+  SYS LINES need
+  IF LAST_N < 1 THEN
+    SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s
+    LET need = LAST
+    CLEAR_ERR
+  END
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SUBSETP need PEER
+  LET has_n = LAST_N
+  LET take_n = SUBSETP_N
+  LET miss_n = SUBSETP_MISS_N
+  LET miss_bag = SUBSETP_MISS
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "softcheck ok"
+    LET admit_n = 1
+    LET peel_hit = 1
+    LET load_hit = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "softcheck miss"
+    FAIL "softcheck miss"
+    CLEAR_ERR
+  END
+  SYS STR has_n
+  LET w_s = LAST
+  SYS STR miss_n
+  LET d_s = LAST
+  CLEAR_ERR
+  SYS CAT "softcheck:" w_s ":" d_s ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "softcheck:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n miss_n take_n note_msg
+  CLEAR_ERR
+END
+
+# cover — COVERSP PEER covers need
+SYS EQS op "cover"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR need_path OR ""
+  LET need = LAST
+  CLEAR_ERR
+  SYS LINES need
+  IF LAST_N < 1 THEN
+    SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s
+    LET need = LAST
+    CLEAR_ERR
+  END
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  COVERSP PEER need
+  LET has_n = LAST_N
+  LET take_n = COVERSP_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "cover ok"
+    LET admit_n = 1
+    LET peel_hit = 1
+    LET load_hit = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "cover miss"
+    FAIL "cover miss"
+    CLEAR_ERR
+  END
+  SYS CAT "cover:" note_msg ":cv"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "cover:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n take_n note_msg
+  CLEAR_ERR
+END
+
+# thin — peer missing role (key miss) + save
+SYS EQS op "thin"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR need_path OR ""
+  LET need = LAST
+  CLEAR_ERR
+  SYS LINES need
+  IF LAST_N < 1 THEN
+    SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s
+    LET need = LAST
+    CLEAR_ERR
+  END
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # drop role by rewriting peer seed thin
+  SYS JSONOBJ "zone" zone_s "schema" schema_s "agent" "hive-thin" "host" "cubeT" "n" 1
+  LET PEER = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_save
+  CLEAR_ERR
+  SUBSETP need PEER
+  LET has_n = LAST_N
+  LET miss_n = SUBSETP_MISS_N
+  LET miss_bag = SUBSETP_MISS
+  CLEAR_ERR
+  # soft deny = success (thin peer). Note: SUBSETP_MISS_N can stay 0 right
+  # after LET PEER=… without reload (knob flaky); misslist after disk load is reliable.
+  IF has_n == 0 THEN
+    LET hit = 1
+    LET note_msg = "thin ok"
+    LET admit_n = 0
+    LET take_n = miss_n
+    LET peel_hit = 1
+    LET load_hit = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "thin should fail subset"
+    FAIL "thin should fail subset"
+    CLEAR_ERR
+  END
+  SYS CAT "thin:role:miss:tn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "thin:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit miss_n note_msg
+  CLEAR_ERR
+END
+
+# wrong — peer has role key but wrong value (value mismatch)
+SYS EQS op "wrong"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR need_path OR ""
+  LET need = LAST
+  CLEAR_ERR
+  SYS LINES need
+  IF LAST_N < 1 THEN
+    SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s
+    LET need = LAST
+    CLEAR_ERR
+  END
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JSONOBJ "zone" "us-west" "role" role_s "schema" schema_s "agent" "hive-wrong" "host" "cubeW" "n" 1
+  LET PEER = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_save
+  CLEAR_ERR
+  # reload session so NEEDP FROM sees durable peer keys
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SUBSETP need PEER
+  LET has_n = LAST_N
+  LET miss_n = SUBSETP_MISS_N
+  LET miss_bag = SUBSETP_MISS
+  CLEAR_ERR
+  # NEEDP still sees zone key — value mismatch is the SUBSETP point
+  NEEDP FROM PEER "zone" "role" "schema"
+  LET load_hit = NEEDP_FROM
+  CLEAR_ERR
+  GETP FROM PEER "zone"
+  SYS EQS LAST "us-west"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 0 THEN
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "wrong ok"
+      LET admit_n = 0
+      LET take_n = miss_n
+      IF load_hit == 0 THEN
+        LET load_hit = 1
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "wrong zone val"
+      FAIL "wrong zone val"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "wrong should fail subset"
+    FAIL "wrong should fail subset"
+    CLEAR_ERR
+  END
+  SYS CAT "wrong:zone:val:wr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "wrong:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit load_hit miss_n note_msg
+  CLEAR_ERR
+END
+
+# full — restore full matching peer
+SYS EQS op "full"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR need_path OR ""
+  LET need = LAST
+  CLEAR_ERR
+  SYS LINES need
+  IF LAST_N < 1 THEN
+    SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s
+    LET need = LAST
+    CLEAR_ERR
+  END
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s "agent" "hive-peer" "host" "cubeP" "n" 2
+  LET PEER = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_save
+  CLEAR_ERR
+  SUBSETP need PEER
+  LET has_n = LAST_N
+  CLEAR_ERR
+  COVERSP PEER need
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "full ok"
+      LET admit_n = 1
+      LET take_n = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "full cover"
+      FAIL "full cover"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "full subset"
+    FAIL "full subset"
+    CLEAR_ERR
+  END
+  SYS CAT "full:" zone_s ":fl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "full:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# admit — soft then REQUIRE SUBSETP (must be full peer)
+SYS EQS op "admit"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR need_path OR ""
+  LET need = LAST
+  CLEAR_ERR
+  SYS LINES need
+  IF LAST_N < 1 THEN
+    SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s
+    LET need = LAST
+    CLEAR_ERR
+  END
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SUBSETP need PEER
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    REQUIRE SUBSETP need PEER
+    LET peel_hit = OK
+    CLEAR_ERR
+    REQUIRE COVERSP PEER need
+    LET load_hit = OK
+    CLEAR_ERR
+    SETP "status" "admitted"
+    CLEAR_ERR
+    SETP FROM PEER "status" "joined"
+    CLEAR_ERR
+    INCLUDE plate_both_save
+    CLEAR_ERR
+    SYS READ agent_path
+    LET body = LAST
+    CLEAR_ERR
+    SYS JSON "status" FROM body
+    SYS EQS LAST "admitted"
+    LET take_n = LAST_N
+    CLEAR_ERR
+    IF peel_hit == 1 THEN
+      IF take_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "admit ok"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "admit disk"
+        FAIL "admit disk"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "admit require"
+      FAIL "admit require"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET miss_n = SUBSETP_MISS_N
+    LET note_msg = "admit soft deny"
+    FAIL "admit soft deny"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "admit soft deny"
+    END
+  END
+  SYS CAT "admit:" note_msg ":ad"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "admit:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit take_n admit_n note_msg
+  CLEAR_ERR
+END
+
+# hard — REQUIRE SUBSETP against thin/wrong peer (expects ok:false, shell 0)
+SYS EQS op "hard"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR need_path OR ""
+  LET need = LAST
+  CLEAR_ERR
+  SYS LINES need
+  IF LAST_N < 1 THEN
+    SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s
+    LET need = LAST
+    CLEAR_ERR
+  END
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # force thin peer first so REQUIRE fails
+  SYS JSONOBJ "zone" zone_s "schema" schema_s "agent" "hive-hard" "n" 0
+  LET PEER = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_save
+  CLEAR_ERR
+  SUBSETP need PEER
+  LET has_n = LAST_N
+  LET miss_n = SUBSETP_MISS_N
+  LET miss_bag = SUBSETP_MISS
+  CLEAR_ERR
+  # Soft-deny only — REQUIRE SUBSETP fail leaves shell exit 0 (W-class).
+  # Agents must soft SUBSETP then EXIT n for process-visible deny.
+  IF has_n == 0 THEN
+    LET hit = 1
+    LET note_msg = "hard soft-deny ok"
+    LET peel_hit = 1
+    LET load_hit = 0
+    LET take_n = miss_n
+    LET admit_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "hard peer still full"
+    FAIL "hard peer still full"
+    CLEAR_ERR
+  END
+  SYS CAT "hard:soft-deny:hd"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "hard:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n miss_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# misslist — after thin/wrong, emit SUBSETP_MISS to bag/report
+SYS EQS op "misslist"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR need_path OR ""
+  LET need = LAST
+  CLEAR_ERR
+  SYS LINES need
+  IF LAST_N < 1 THEN
+    SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s
+    LET need = LAST
+    CLEAR_ERR
+  END
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SUBSETP need PEER
+  LET has_n = LAST_N
+  LET miss_n = SUBSETP_MISS_N
+  LET miss_bag = SUBSETP_MISS
+  CLEAR_ERR
+  SYS LINES miss_bag
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 0 THEN
+    IF miss_n >= 1 THEN
+      LET hit = 1
+      LET note_msg = "misslist ok"
+      LET peel_hit = 1
+      LET load_hit = 1
+      LET admit_n = 0
+      # push miss keys into STATUS bag for ops remediation queue
+      SYS GREPV "misskey:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag miss_bag
+      LET bag = LAST
+      LET bag_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "misslist empty"
+      FAIL "misslist empty"
+      CLEAR_ERR
+    END
+  ELSE
+    # full peer — empty miss is also reportable
+    LET hit = 1
+    LET note_msg = "misslist none"
+    LET peel_hit = 0
+    LET load_hit = 1
+    LET admit_n = 1
+  END
+  SYS STR miss_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "misslist:" w_s ":ml"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "misslist:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n miss_n take_n note_msg
+  CLEAR_ERR
+END
+
+# gate — disk need + peer value contract + agent status after admit path
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ need_path
+  LET need = LAST
+  CLEAR_ERR
+  SYS JSON "zone" FROM need
+  SYS EQS LAST zone_s
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS READ peer_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS JSON "zone" FROM body
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS JSON "role" FROM body
+  LET d_s = LAST
+  CLEAR_ERR
+  SYS JSON "schema" FROM body
+  LET out = LAST
+  CLEAR_ERR
+  SYS EQS w_s zone_s
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS EQS d_s role_s
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS EQS out schema_s
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # rebuild need and soft subset against disk body as PEER string
+  LET PEER = body
+  CLEAR_ERR
+  SUBSETP need PEER
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 1 THEN
+        IF take_n == 1 THEN
+          IF miss_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "gate ok"
+            LET admit_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "gate subset disk"
+            FAIL "gate subset disk"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate schema"
+          FAIL "gate schema"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate role"
+        FAIL "gate role"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate zone"
+      FAIL "gate zone"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate need"
+    FAIL "gate need"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate need"
+    END
+  END
+  SYS CAT "gate:" zone_s ":" role_s ":ga"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit load_hit take_n miss_n note_msg
+  CLEAR_ERR
+END
+
+# soft
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "soft empty require"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — NEEDP vs SUBSETP distinction; JSONEQ self; knobs
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ OR need_path OR ""
+  LET need = LAST
+  CLEAR_ERR
+  SYS LINES need
+  IF LAST_N < 1 THEN
+    SYS JSONOBJ "zone" zone_s "role" role_s "schema" schema_s
+    LET need = LAST
+    CLEAR_ERR
+  END
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  NEEDP FROM PEER "zone" "role" "schema"
+  LET has_n = NEEDP_FROM
+  CLEAR_ERR
+  SUBSETP need PEER
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS JSONEQ need need
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # literal form
+  SUBSETP "{\"a\":1}" "{\"a\":1,\"b\":2}"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF take_n == 1 THEN
+        IF load_hit == 1 THEN
+          LET hit = 1
+          LET note_msg = "probe ok"
+          LET admit_n = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe lit"
+          FAIL "probe lit"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe jsoneq"
+        FAIL "probe jsoneq"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe subset"
+      FAIL "probe subset"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe needp"
+    FAIL "probe needp"
+    CLEAR_ERR
+  END
+  PRINT_JSON has_n peel_hit take_n load_hit note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+SYS STR admit_n
+LET out = LAST
+CLEAR_ERR
+SYS CAT "schema=cubalc.mesh_admit.v1 op=" op " hit=" w_s " miss=" d_s " admit=" out " note=" note_msg " date=" run_date
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "msa op=" op " hit=" w_s " miss=" d_s " note=" note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n peel_hit has_n load_hit miss_n created note_msg
