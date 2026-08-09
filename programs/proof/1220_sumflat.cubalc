@@ -1,0 +1,67 @@
+# SUMFLAT / TOTALFLAT — sum pure-int leaves by path needle (read-only)
+# Usability: nest counter rollups without FLATKV+GREPFLAT+SUM glue.
+# Note: path needles are substring match on dotted leaf paths.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"hits_total\":1,\"cfg\":{\"meta\":{\"hits\":2,\"role\":\"w\"},\"port\":8080},\"errs\":3,\"ok\":true}"
+
+SUMFLAT "hits"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT SUMFLAT_N == 2
+ASSERT SUMFLAT_SUM == 3
+GETP "hits_total"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "cfg.meta.hits"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+SUMFLAT "port"
+ASSERT LAST_N == 8080
+ASSERT SUMFLAT_N == 1
+
+SUMFLAT "errs"
+ASSERT LAST_N == 3
+ASSERT SUMFLAT_N == 1
+
+# empty needle — all pure-int leaves: 1+2+8080+3 = 8086 (ok:true skipped)
+SUMFLAT ""
+ASSERT LAST_N == 8086
+ASSERT SUMFLAT_N == 4
+
+LET PEER = "{\"stats\":{\"a\":10,\"b\":20},\"label\":\"x\",\"n\":5}"
+SUMFLAT FROM PEER "stats"
+ASSERT SUMFLAT_FROM == 1
+SYS EQS SUMFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT SUMFLAT_SUM == 30
+ASSERT SUMFLAT_N == 2
+
+# plate unchanged after FROM sum (read-only); PEER all ints = 10+20+5
+LET PLATE = "{\"x\":7,\"y\":{\"z\":3}}"
+SUMFLAT FROM PEER ""
+ASSERT LAST_N == 35
+ASSERT SUMFLAT_N == 3
+GETP "x"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+
+# no match
+SUMFLAT "nope"
+ASSERT LAST_N == 0
+ASSERT SUMFLAT_N == 0
+
+TOTALFLAT "y"
+ASSERT LAST_N == 3
+ASSERT TOTALFLAT_N == 1
+
+# miss non-int only
+LET PLATE = "{\"a\":\"hi\",\"b\":true,\"c\":null}"
+SUMFLAT ""
+ASSERT LAST_N == 0
+ASSERT SUMFLAT_N == 0
+
+PASS
+PRINT "1220_sumflat: PASS"

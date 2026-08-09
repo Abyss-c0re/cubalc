@@ -305,6 +305,13 @@ int cubalc_host_json_leaf_set(const char *json, const char *needle, const char *
  * Soft always OK. Usability: bulk nest counters without multi INCP glue. */
 int cubalc_host_json_leaf_inc(const char *json, const char *needle, long delta,
                               cubalc_host_result *r);
+/* Sum pure-int leaves whose path contains needle (SUMFLAT).
+ * Empty needle → all pure-int leaves. Non-numeric matching leaves soft-skipped.
+ * r->n = sum · r->code = count of pure-int leaves summed · r->str = decimal sum.
+ * Soft always OK. Read-only (no plate write). Usability: nest counter rollups
+ * without FLATKV+GREPFLAT+AFTER+SUM glue. */
+int cubalc_host_json_leaf_sum(const char *json, const char *needle,
+                              cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

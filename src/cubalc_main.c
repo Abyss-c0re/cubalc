@@ -2192,6 +2192,8 @@ int main(int argc, char **argv) {
       {"cli_plate_setflat", "programs/proof/1218_cli_plate_setflat.sh", "cubalc plate setflat SETFLAT dual"},
       {"incflat", "programs/proof/1219_incflat.cubalc", "INCFLAT/BUMPFLAT bulk pure-int leaf bump multi-plate"},
       {"cli_plate_incflat", "programs/proof/1219_cli_plate_incflat.sh", "cubalc plate incflat INCFLAT dual"},
+      {"sumflat", "programs/proof/1220_sumflat.cubalc", "SUMFLAT/TOTALFLAT sum pure-int leaves by path needle multi-plate"},
+      {"cli_plate_sumflat", "programs/proof/1220_cli_plate_sumflat.sh", "cubalc plate sumflat SUMFLAT dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2490,6 +2492,8 @@ int main(int argc, char **argv) {
       {"MAPFLAT", "flow", "MAPFLAT alias of SETFLAT"},
       {"INCFLAT", "flow", "INCFLAT|BUMPFLAT [FROM plate] needle [delta] — bump pure-int leaves by path needle write-back"},
       {"BUMPFLAT", "flow", "BUMPFLAT alias of INCFLAT"},
+      {"SUMFLAT", "flow", "SUMFLAT|TOTALFLAT [FROM plate] [needle] — sum pure-int leaves by path needle → LAST_N · read-only"},
+      {"TOTALFLAT", "flow", "TOTALFLAT alias of SUMFLAT"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4972,6 +4976,7 @@ int main(int argc, char **argv) {
               "       cubalc plate renameflat <path> <old_pfx> <new_pfx>  # RENAMEFLAT dual · path prefix rewrite\n"
               "       cubalc plate setflat <path> <needle> <value>  # SETFLAT dual · bulk leaf value set\n"
               "       cubalc plate incflat <path> <needle> [delta]  # INCFLAT dual · bump pure-int leaves\n"
+              "       cubalc plate sumflat <path> [needle]  # SUMFLAT dual · sum pure-int leaves by path needle\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -5003,7 +5008,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5083,6 +5088,8 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "incflat") == 0 || strcmp(argv[2], "bumpflat") == 0 ||
         strcmp(argv[2], "addflat") == 0 || strcmp(argv[2], "tickflat") == 0 ||
         strcmp(argv[2], "bulkinc") == 0 || strcmp(argv[2], "decflat") == 0 ||
+        strcmp(argv[2], "sumflat") == 0 || strcmp(argv[2], "totalflat") == 0 ||
+        strcmp(argv[2], "leafsum") == 0 || strcmp(argv[2], "flattotal") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5262,6 +5269,9 @@ int main(int argc, char **argv) {
         op = "incflat";
       else if (strcmp(op, "decflat") == 0)
         op = "decflat";
+      else if (strcmp(op, "totalflat") == 0 || strcmp(op, "leafsum") == 0 ||
+               strcmp(op, "flattotal") == 0 || strcmp(op, "sumleaf") == 0)
+        op = "sumflat";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -5928,6 +5938,33 @@ int main(int argc, char **argv) {
              "\"note\":\"INCFLAT dual · bump pure-int leaves by path needle\"}\n",
              op, path, needle, delta, file_hit ? "true" : "false",
              pr.n, pr.code, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    /* sumflat <needle?> — SUMFLAT dual: sum pure-int leaves by path needle (read-only).
+     *   cubalc plate sumflat agent.json hits
+     *   cubalc plate sumflat agent.json          # all pure-int leaves
+     * n = sum · count = pure-int leaves used · plate not written. */
+    if (strcmp(op, "sumflat") == 0) {
+      const char *needle = "";
+      cubalc_host_result pr;
+
+      if (ai < argc && argv[ai])
+        needle = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_sum(plate, needle, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"sumflat\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               path, pr.err[0] ? pr.err : "sumflat fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"sumflat\",\"path\":\"%s\",\"needle\":\"%s\","
+             "\"file\":%s,\"n\":%ld,\"count\":%ld,\"sum\":%ld,\"version\":\"%s\","
+             "\"note\":\"SUMFLAT dual · sum pure-int leaves by path needle (read-only)\"}\n",
+             path, needle, file_hit ? "true" : "false",
+             pr.n, (long)pr.code, pr.n, CUBALC_LANG_VERSION);
       return 0;
     }
 

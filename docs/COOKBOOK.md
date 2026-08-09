@@ -240,6 +240,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate setflat    state/my_agent.json cfg.port 9090         # set nested port one-shot
 ./out/cubalc plate incflat    state/my_agent.json hits                 # bump pure-int leaves matching needle
 ./out/cubalc plate incflat    state/my_agent.json cfg.meta.x 5          # delta 5
+./out/cubalc plate sumflat    state/my_agent.json hits                 # sum pure-int leaves matching needle
+./out/cubalc plate sumflat    state/my_agent.json                      # sum all pure-int leaves
 ./out/cubalc plate decflat    state/my_agent.json errs                  # decrement
 ./out/cubalc libs | grep plate
 

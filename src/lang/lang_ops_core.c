@@ -27438,6 +27438,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"RENAMEFLAT") || kw(&L->cur,"MOVEFLAT") || kw(&L->cur,"PREFIXFLAT") ||
              kw(&L->cur,"SETFLAT") || kw(&L->cur,"MAPFLAT") || kw(&L->cur,"SETLEAFP") ||
              kw(&L->cur,"INCFLAT") || kw(&L->cur,"BUMPFLAT") || kw(&L->cur,"ADDFLAT") ||
+             kw(&L->cur,"SUMFLAT") || kw(&L->cur,"TOTALFLAT") || kw(&L->cur,"LEAFSUM") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35831,6 +35832,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"MAPFLAT", "MAPFLAT alias of SETFLAT"},
       {"INCFLAT", "INCFLAT|BUMPFLAT [FROM plate] needle [delta] — bump pure-int leaves matching path needle write-back · multi-plate"},
       {"BUMPFLAT", "BUMPFLAT alias of INCFLAT"},
+      {"SUMFLAT", "SUMFLAT|TOTALFLAT [FROM plate] [needle] — sum pure-int leaves matching path needle → LAST_N · multi-plate · read-only"},
+      {"TOTALFLAT", "TOTALFLAT alias of SUMFLAT"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -44644,6 +44647,138 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# incflat n=%ld total=%ld delta=%ld needle=%s from=%d\n",
               hr.n, hr.code, delta, needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* SUMFLAT|TOTALFLAT [FROM plate] [needle]
+   * Sum pure-int leaves whose path contains needle → LAST_N.
+   * Non-numeric matching leaves soft-skipped. Empty/omitted needle → all pure-int.
+   * Read-only (plate unchanged). SUMFLAT_N = count of ints summed.
+   * Usability: nest counter rollups without FLATKV+GREPFLAT+SUM glue:
+   *   SUMFLAT "hits"
+   *   SUMFLAT ""
+   *   SUMFLAT FROM PEER "stats"
+   */
+  if (kw(&L->cur,"SUMFLAT") || kw(&L->cur,"TOTALFLAT") || kw(&L->cur,"LEAFSUM") ||
+      kw(&L->cur,"MSUMFLAT") || kw(&L->cur,"PLATE_SUMFLAT") || kw(&L->cur,"SUMLEAFP") ||
+      kw(&L->cur,"FLATTOTAL") || kw(&L->cur,"SUMALLFLAT")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(needle, sizeof needle, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"SETP") && !kw(&L->cur,"INCP") &&
+               !kw(&L->cur,"INCFLAT") && !kw(&L->cur,"SETFLAT") && !kw(&L->cur,"SUMFLAT")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_sum(plate, needle, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "SUMFLAT: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "SUMFLAT: fail");
+      var_set_num(vm, "SUMFLAT_N", 0);
+      var_set_num(vm, "LAST_N", 0);
+      bump(vm); return 1;
+    }
+
+    /* Read-only: keep plate in LAST (like SUMNP); value in LAST_N */
+    var_set_str(vm, "LAST", plate);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "SUMFLAT", hr.str);
+    var_set_str(vm, "TOTALFLAT", hr.str);
+    var_set_num(vm, "SUMFLAT_N", (long)hr.code); /* count of ints */
+    var_set_num(vm, "TOTALFLAT_N", (long)hr.code);
+    var_set_num(vm, "SUMFLAT_SUM", hr.n);
+    var_set_str(vm, "SUMFLAT_NEEDLE", needle);
+    var_set_num(vm, "SUMFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "SUMFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# sumflat sum=%ld n=%ld needle=%s from=%d\n",
+              hr.n, (long)hr.code, needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 

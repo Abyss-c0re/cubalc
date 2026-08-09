@@ -706,6 +706,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 676. ~~**`RENAMEFLAT` / `MOVEFLAT` + `cubalc plate renameflat`**~~ **done** (rewrite leaf path prefixes write-back · multi-plate · CLI dual · nest restructure without multi RENAMEP glue).
 677. ~~**`SETFLAT` / `MAPFLAT` + `cubalc plate setflat`**~~ **done** (bulk set leaf values by path needle write-back · multi-plate · CLI dual · no multi SETP/GREPFLAT glue).
 678. ~~**`INCFLAT` / `BUMPFLAT` + `cubalc plate incflat`**~~ **done** (bump pure-int leaves by path needle write-back · multi-plate · CLI dual · no multi INCP glue).
+679. ~~**`SUMFLAT` / `TOTALFLAT` + `cubalc plate sumflat`**~~ **done** (sum pure-int leaves by path needle → LAST_N · multi-plate · CLI dual · nest rollups without FLATKV+GREP+SUM glue).
 
 ## Tick protocol
 
