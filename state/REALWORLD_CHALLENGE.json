@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 259,
-  "program": "programs/realworld/svc_hasflat_inventory_board.cubalc",
-  "theme": "HASFLAT/PATHSFLAT/VALSFLAT + GETFLAT leaf inventory",
-  "version": "1.15.677-usability",
+  "iter": 260,
+  "program": "programs/realworld/svc_needflat_slo_board.cubalc",
+  "theme": "NEEDFLAT contract + GETFLATN peel + AVGFLAT mean",
+  "version": "1.15.680-usability",
   "pass": true,
-  "prior_note": "iter 258 CAPFLAT/SCALEFLAT; this iter first realworld 1225 HASFLAT + 1226 PATHSFLAT + 1227 GETFLAT",
+  "prior_note": "iter 259 HAS/PATHS/GETFLAT inventory; this iter first realworld 1228 NEEDFLAT + 1229 GETFLATN + 1230 AVGFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed score/tls/cfg inventory",
+      "cmd": "seed tls/port/scores/hits",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "has",
-      "cmd": "HASFLAT/COUNTFLAT presence+count",
+      "name": "need",
+      "cmd": "NEEDFLAT multi-needle pass",
       "ok": true,
-      "note": "has"
+      "note": "need"
     },
     {
-      "name": "paths",
-      "cmd": "PATHSFLAT/VALSFLAT bags",
+      "name": "getn",
+      "cmd": "GETFLATN port+host skip+OR",
       "ok": true,
-      "note": "paths"
+      "note": "getn"
     },
     {
-      "name": "get",
-      "cmd": "GETFLAT first+OR fallback",
+      "name": "avg",
+      "cmd": "AVGFLAT scores mean 20 + trunc",
       "ok": true,
-      "note": "get"
+      "note": "avg"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER has/paths/get",
+      "cmd": "FROM PEER need+getn+avg",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost soft + OR miss",
+      "cmd": "HASFLAT twin soft miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "structure admit",
+      "cmd": "contract+port+avg band",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "ANYFLAT/NFLAT/MATCH*/FIRSTFLAT",
+      "cmd": "FIRSTFLATN/MEANFLAT aliases",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "448/486 pre-existing cli shell fails; hasflat PASS 25 pathsflat PASS 25 getflat PASS 24"
+      "note": "451/492 pre-existing cli shell fails; needflat PASS 10 getflatn PASS 23 avgflat PASS 27"
     }
   ],
   "weaknesses": [
@@ -3156,6 +3156,30 @@
       "title": "GETFLAT first match is FLATKV walk order not path sort",
       "detail": "Documented: GETFLAT port returns first walk match. Agents cannot assume deepest/shallowest without PATHSFLAT+pick. Useful for OR fallback soft peel.",
       "repro": "GETFLAT \"port\" \u2192 cfg.port by walk order"
+    },
+    {
+      "id": "W387",
+      "severity": "high",
+      "area": "lang|needflat",
+      "title": "NEEDFLAT miss hard-fails with sticky err but JSON exit_code 0; shell rc 1",
+      "detail": "NEEDFLAT ghost on empty plate: last_err NEEDFLAT missing leaf, halted false, exit_code 0 in run JSON; shell process rc=1. CLI plate needflat dual expects rc=2. Agents cannot rely on exit_code field or consistent non-zero policy; soft twin is HASFLAT only. Related W7 REQUIRE/EXIT surface.",
+      "repro": "cubalc run -q need_miss.cubalc \u2192 err NEEDFLAT missing; exit_code 0; shell 1"
+    },
+    {
+      "id": "W388",
+      "severity": "med",
+      "area": "lang|getflatn",
+      "title": "GETFLATN skips non-int leaves silently (host string \u2192 fallback)",
+      "detail": "GETFLATN \"host\" OR 0 with cfg.host=\"h\" yields hit=0 LAST_N=0 without type error. Correct for pure-int peel but agents may expect string peel (use GETFLAT). First pure-int under hits needle is walk-order (hits.x=3).",
+      "repro": "GETFLATN \"host\" OR 0 \u2192 0; GETFLATN \"hits\" \u2192 3"
+    },
+    {
+      "id": "W389",
+      "severity": "low",
+      "area": "lang|avgflat",
+      "title": "AVGFLAT truncates toward zero (1+2)/2=1 like SYS AVG",
+      "detail": "Integer mean only; no float surface. Documented in proof 1230. SLO bands must use integer-safe thresholds.",
+      "repro": "AVGFLAT \"u\" on {1,2} \u2192 LAST_N 1"
     }
   ],
   "workarounds": [
@@ -3164,8 +3188,6 @@
     "Curated peer seeds for stable DIFFFLAT lines"
   ],
   "language_gaps": [
-    "DIFFFLAT deep nest changelog excellent for mesh drift",
-    "PATHDIFF path-name bag clean for admit lists",
     "UNFLATKV round-trip + UNDER solid",
     "SETFLAT/INCFLAT bulk leaf mutation solid",
     "Custom multi-plate INTO name surface incomplete for GETP FROM",
@@ -3175,7 +3197,9 @@
     "CAPFLAT/SCALEFLAT need segment-bound needles for safe SLO scrub",
     "Capture plate values via GETP not only CAPFLAT_N/SCALEFLAT_N in large boards",
     "VALSFLAT_N/GETFLAT_FALLBACK unreadable under agent_boot load",
-    "Inventory needles still substring-not-segment"
+    "Inventory needles still substring-not-segment",
+    "NEEDFLAT fail-fast exit_code policy inconsistent across run/JSON/CLI",
+    "GETFLATN pure-int only \u2014 pair with GETFLAT for strings"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3187,8 +3211,10 @@
     "CAPFLAT needle substring collaterally clamps meta.score",
     "SCALEFLAT_N special 0 after FROM PEER chain despite successful scale",
     "VALSFLAT_N dark in large board; used SYS LINES bag",
-    "GETFLAT_FALLBACK dark; gated on LAST fallback literal"
+    "GETFLAT_FALLBACK dark; gated on LAST fallback literal",
+    "NEEDFLAT miss exit_code JSON 0 vs shell 1 vs CLI dual expects 2",
+    "Soft path must use HASFLAT; NEEDFLAT hard-fails"
   ],
-  "commit": "0d25538e",
-  "ts": "2026-08-09T16:24:56Z"
+  "commit": "5c46dd4a",
+  "ts": "2026-08-09T16:49:19Z"
 }
