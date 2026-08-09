@@ -2180,6 +2180,8 @@ int main(int argc, char **argv) {
       {"haspobj", "programs/proof/1173_haspobj.cubalc", "HASPOBJ/TYPEPOBJ/KEYSOBJ/NEEDPOBJ nested probes and contract multi-plate"},
       {"cli_plate_nest", "programs/proof/1174_cli_plate_nest.sh", "cubalc plate nestget/set/inc/del/keys/has nested CLI duals"},
       {"cli_plate_nestpick", "programs/proof/1178_cli_plate_nestpick.sh", "cubalc plate nestpick/nestomit PICKOBJ/OMITOBJ duals"},
+      {"pickobj_path", "programs/proof/1204_pickobj_path.cubalc", "PICKOBJ/OMITOBJ dotted nest path write-back"},
+      {"cli_plate_nestpick_path", "programs/proof/1204_cli_plate_nestpick_path.sh", "cubalc plate nestpick/omit deep nest path"},
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
@@ -5352,8 +5354,10 @@ int main(int argc, char **argv) {
     /* nestget|nestset|nestinc|nestdel|nestkeys|nesthas — nested field CLI duals of
      * GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ/KEYSOBJ/HASPOBJ. Agents one-shot nested config
      * without writing a .cubalc program.
+     * Nest key may be dotted path (cfg.flags) via path_obj peel.
      * nestsum|nestavg|nestmedian|nesttop|nestbot — SUMNOBJ/TOPNOBJ CLI duals (no write).
-     * nestsort|nestsortbag — SORTOBJ/SORTBAGOBJ CLI duals (sort write / bag no-write). */
+     * nestsort|nestsortbag — SORTOBJ/SORTBAGOBJ CLI duals (sort write / bag no-write).
+     * nestpick|nestomit — PICKOBJ/OMITOBJ duals (paths ok). */
     if (strcmp(op, "nestget") == 0 || strcmp(op, "nestset") == 0 ||
         strcmp(op, "nestinc") == 0 || strcmp(op, "nestdel") == 0 ||
         strcmp(op, "nestkeys") == 0 || strcmp(op, "nesthas") == 0 ||
@@ -5365,7 +5369,6 @@ int main(int argc, char **argv) {
       const char *nestk = NULL, *field = NULL;
       char nest[CUBALC_HOST_STR_MAX];
       cubalc_host_result ngr, gr, wr, kr;
-      const char *v;
       int nest_hit = 0;
 
       if (ai >= argc || !argv[ai] || !argv[ai][0]) {
@@ -5376,22 +5379,12 @@ int main(int argc, char **argv) {
       }
       nestk = argv[ai++];
 
+      /* path-aware nest peel: "cfg.flags" · soft miss → {} */
       nest[0] = 0;
       memset(&ngr, 0, sizeof ngr);
-      if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
-        v = ngr.str;
-        while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
-        if (*v == '{') {
-          if (v != ngr.str) {
-            size_t n = strlen(v);
-            memmove(ngr.str, v, n + 1);
-          }
-          snprintf(nest, sizeof nest, "%s", ngr.str);
-          nest_hit = 1;
-        }
-      }
-      if (!nest_hit)
-        snprintf(nest, sizeof nest, "%s", "{}");
+      cubalc_host_json_path_obj(plate, nestk, &ngr);
+      snprintf(nest, sizeof nest, "%s", ngr.str);
+      nest_hit = (ngr.n != 0) ? 1 : 0;
 
       /* nestsum|nestavg|nestmedian — SUMNOBJ/AVGNOBJ/MEDIANOBJ duals (no write). */
       if (strcmp(op, "nestsum") == 0 || strcmp(op, "nestavg") == 0 ||
@@ -5605,7 +5598,7 @@ int main(int argc, char **argv) {
         /* write-back sorted nest into outer plate file */
         snprintf(nest, sizeof nest, "%s", sr.str);
         memset(&wr, 0, sizeof wr);
-        if (cubalc_host_json_set(plate, nestk, nest, 1, &wr) != 0) {
+        if (cubalc_host_json_path_set(plate, nestk, nest, 1, &wr) != 0) {
           printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
                  "\"op\":\"nestsort\",\"path\":\"%s\",\"nest\":\"%s\",\"err\":\"%s\","
                  "\"version\":\"%s\"}\n",
@@ -5730,8 +5723,9 @@ int main(int argc, char **argv) {
         }
         snprintf(nest, sizeof nest, "%s", pr.str);
 
+        /* path write-back: nest may be dotted (cfg.flags) */
         memset(&wr, 0, sizeof wr);
-        if (cubalc_host_json_set(plate, nestk, nest, 1, &wr) != 0) {
+        if (cubalc_host_json_path_set(plate, nestk, nest, 1, &wr) != 0) {
           printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
                  "\"op\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
                  op, wr.err[0] ? wr.err : "outer set fail", CUBALC_LANG_VERSION);
@@ -5757,7 +5751,8 @@ int main(int argc, char **argv) {
         printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
                "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\",\"n\":%ld,"
                "\"n_req\":%ld,\"keys\":\"%s\",\"nest_hit\":%s,\"file\":%s,"
-               "\"bytes\":%ld,\"version\":\"%s\",\"plate\":%s}\n",
+               "\"bytes\":%ld,\"version\":\"%s\",\"plate\":%s,"
+               "\"note\":\"PICKOBJ/OMITOBJ dual · nest path ok\"}\n",
                op, path, nestk, pr.n, nreq, flat_req,
                nest_hit ? "true" : "false",
                file_hit ? "true" : "false", hr.n, CUBALC_LANG_VERSION, plate);
@@ -5929,7 +5924,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
           long nest_removed = wr.n;
 
         memset(&wr, 0, sizeof wr);
-        if (cubalc_host_json_set(plate, nestk, nest, 1, &wr) != 0) {
+        if (cubalc_host_json_path_set(plate, nestk, nest, 1, &wr) != 0) {
           printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
                  "\"op\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
                  op, wr.err[0] ? wr.err : "outer set fail", CUBALC_LANG_VERSION);

@@ -35878,9 +35878,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PLUCKOBJ", "PLUCKOBJ|NESTPLUCK [FROM plate] nest field… — multi-key peel nested → value bag · multi-plate · no GETPOBJ+PUSH"},
       {"NESTPLUCK", "NESTPLUCK alias of PLUCKOBJ"},
       {"GETPALLNEST", "GETPALLNEST alias of PLUCKOBJ"},
-      {"PICKOBJ", "PICKOBJ|KEEPOBJ [FROM plate] nest field… — keep listed keys in nest · write-back · multi-plate"},
+      {"PICKOBJ", "PICKOBJ|KEEPOBJ [FROM plate] nest field… — keep listed keys in nest · dotted nest path ok · write-back"},
       {"KEEPOBJ", "KEEPOBJ alias of PICKOBJ"},
-      {"OMITOBJ", "OMITOBJ|STRIPNEST [FROM plate] nest field… — drop listed keys in nest · write-back · multi-plate"},
+      {"OMITOBJ", "OMITOBJ|STRIPNEST [FROM plate] nest field… — drop listed keys in nest · dotted nest path ok · write-back"},
       {"STRIPNEST", "STRIPNEST alias of OMITOBJ"},
       {"LENOBJ", "LENOBJ|NESTLEN [FROM plate] nest — nested key count → LAST_N · multi-plate · LENP dual"},
       {"NESTLEN", "NESTLEN alias of LENOBJ"},
@@ -43179,10 +43179,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* PICKOBJ|KEEPOBJ|SELECTNEST [FROM plate] nest field…
    * OMITOBJ|DROPOBJKEYS|STRIPNEST [FROM plate] nest field…
    * Keep/drop listed keys inside a nested object → write-back outer plate.
+   * Nest may be dotted/slash path: PICKOBJ "cfg.flags" "debug"
    * Soft nest miss → creates {} then pick (empty) / omit (empty).
    * LAST = outer plate · NEST/MERGED = nested result · LAST_N = keys kept/dropped.
    * Usability: nested dual of PICKP/OMITP without GETOBJ+PICKP+SETOBJ glue:
    *   PICKOBJ "meta" "role" "zone"
+   *   PICKOBJ "cfg.flags" "debug"
    *   OMITOBJ FROM PEER "cfg" "tmp" "debug"
    */
   if (kw(&L->cur,"PICKOBJ") || kw(&L->cur,"KEEPOBJ") || kw(&L->cur,"SELECTNEST") ||
@@ -43190,14 +43192,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"OMITOBJ") || kw(&L->cur,"DROPOBJKEYS") || kw(&L->cur,"STRIPNEST") ||
       kw(&L->cur,"NESTOMIT") || kw(&L->cur,"OMITNEST") || kw(&L->cur,"MOMITOBJ") ||
       kw(&L->cur,"DROPNESTKEYS") || kw(&L->cur,"STRIPOBJ")) {
-    char plate[CUBALC_HOST_STR_MAX], nestk[96], nest[CUBALC_HOST_STR_MAX];
+    char plate[CUBALC_HOST_STR_MAX], nestk[192], nest[CUBALC_HOST_STR_MAX];
     char keys_nl[CUBALC_HOST_STR_MAX], arg[CUBALC_HOST_STR_MAX];
     char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result ngr, pr, hr;
     int have_from = 0, is_omit = 0, n_req = 0, nest_hit = 0;
     size_t olen = 0;
     Var *pv;
-    const char *v;
     char op0[24];
 
     snprintf(op0, sizeof op0, "%s", L->cur.text);
@@ -43348,21 +43349,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(plate, sizeof plate, "%s", "{}");
     }
 
+    /* path-aware peel: "cfg.flags" / "a/b" · soft miss → {} */
     snprintf(nest, sizeof nest, "%s", "{}");
     nest_hit = 0;
     memset(&ngr, 0, sizeof ngr);
-    if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
-      v = ngr.str;
-      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
-      if (*v == '{') {
-        if (v != ngr.str) {
-          size_t n = strlen(v);
-          memmove(ngr.str, v, n + 1);
-        }
-        snprintf(nest, sizeof nest, "%s", ngr.str);
-        nest_hit = 1;
-      }
-    }
+    cubalc_host_json_path_obj(plate, nestk, &ngr);
+    snprintf(nest, sizeof nest, "%s", ngr.str);
+    nest_hit = (ngr.n != 0) ? 1 : 0;
 
     memset(&pr, 0, sizeof pr);
     if (is_omit) {
@@ -43382,8 +43375,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     snprintf(nest, sizeof nest, "%s", pr.str);
 
+    /* write-back nest object along path (creates intermediate {} if needed) */
     memset(&hr, 0, sizeof hr);
-    if (cubalc_host_json_set(plate, nestk, nest, 1, &hr) != 0) {
+    if (cubalc_host_json_path_set(plate, nestk, nest, 1, &hr) != 0) {
       var_set_num(vm, "OK", 0);
       var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "PICKOBJ: write-back fail");
       var_set_str(vm, "ERR", hr.err[0] ? hr.err : "PICKOBJ: write-back fail");
@@ -43410,6 +43404,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 from_name[0] ? from_name : (have_from ? "" : "PLATE"));
     var_set_num(vm, "PICKOBJ_NEST_HIT", nest_hit ? 1 : 0);
     var_set_num(vm, "PICKOBJ_OMIT", is_omit ? 1 : 0);
+    var_set_num(vm, "PATH_DEPTH", (long)hr.code > 0 ? (long)hr.code : 1L);
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s nest=%s n=%ld req=%d from=%d\n",

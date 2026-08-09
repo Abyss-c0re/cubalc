@@ -690,6 +690,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 660. ~~**Dotted path `KEYSP`/`LENP`/`EMPTYP`/`VALSP` + `cubalc plate keys|len|empty|vals`**~~ **done** (nest bag size/keys/values probes · multi-plate · CLI duals · no GETOBJ+KEYSP glue).
 661. ~~**`GETPN` / path `SYS JSONN` + `cubalc plate getn`**~~ **done** (numeric nest peel → LAST_N=value · multi-plate · CLI dual · no GETP+NUM glue).
 662. ~~**Path `EACH KEY` / `KEYNEST`**~~ **done** (walk nest keys at dotted path · `EACH KEY OF PLATE "cfg"` · soft miss empty · no KEYSP+EACH LINE).
+663. ~~**Path `PICKOBJ`/`OMITOBJ` + nestpick/nestomit**~~ **done** (keep/drop keys inside dotted nest · write-back · CLI dual · no GETOBJ+PICKP+SETOBJ).
 
 ## Tick protocol
 

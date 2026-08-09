@@ -1,0 +1,80 @@
+# PICKOBJ / OMITOBJ with dotted nest paths
+# Usability: project keys deep in nest without GETOBJ+PICKP+SETOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"port\":8080,\"tls\":0,\"role\":\"edge\",\"tmp\":1},\"flags\":{\"debug\":0,\"trace\":1,\"noise\":9},\"n\":1}"
+LET PEER = "{\"meta\":{\"role\":\"worker\",\"zone\":\"B\",\"tmp\":\"x\"}}"
+
+# shallow nest still works
+PICKOBJ "cfg" "port" "role"
+ASSERT OK == 1
+ASSERT PICKOBJ_N == 2
+GETP "cfg.port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+GETP "cfg.role"
+SYS EQS LAST "edge"
+ASSERT LAST_N == 1
+HASP "cfg.tls"
+ASSERT LAST_N == 0
+HASP "cfg.tmp"
+ASSERT LAST_N == 0
+
+# reseed cfg via path sets
+SETP "cfg.port" 8080
+SETP "cfg.tls" 0
+SETP "cfg.role" "edge"
+SETP "cfg.tmp" 1
+ASSERT OK == 1
+HASP "cfg.tls"
+ASSERT LAST_N == 1
+
+# deep path pick — keep only debug under flags
+PICKOBJ "flags" "debug"
+ASSERT OK == 1
+ASSERT PICKOBJ_N == 1
+GETP "flags.debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+HASP "flags.trace"
+ASSERT LAST_N == 0
+HASP "flags.noise"
+ASSERT LAST_N == 0
+
+# reseed flags and omit noise
+SETP "flags.debug" 0
+SETP "flags.trace" 1
+SETP "flags.noise" 9
+OMITOBJ "flags" "noise"
+ASSERT OK == 1
+ASSERT OMITOBJ_N == 1
+HASP "flags.noise"
+ASSERT LAST_N == 0
+GETP "flags.trace"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "flags.debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# multi-plate FROM + nest path
+OMITOBJ FROM PEER "meta" "tmp"
+ASSERT PICKOBJ_FROM == 1
+ASSERT OMITOBJ_N == 1
+GETP FROM PEER "meta.role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+HASP FROM PEER "meta.tmp"
+ASSERT LAST_N == 0
+
+# soft miss nest path → empty pick write-back
+PICKOBJ "missing.nest" "a"
+ASSERT OK == 1
+ASSERT PICKOBJ_N == 0
+TYPEP "missing.nest"
+SYS EQS LAST "obj"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1204_pickobj_path: PASS"
