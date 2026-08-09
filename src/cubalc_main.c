@@ -2304,6 +2304,8 @@ int main(int argc, char **argv) {
       {"cli_plate_uniform", "programs/proof/1252_cli_plate_uniform.sh", "cubalc plate uniform UNIFORMFLAT dual"},
       {"plate_uniform", "programs/proof/1253_plate_uniform.cubalc", "INCLUDE plate_uniform nest consistency DEFAULT needle"},
       {"cli_doctor_libs", "programs/proof/1254_cli_doctor_libs.sh", "cubalc doctor lib/nest-check readiness plate"},
+      {"prettyp", "programs/proof/1255_prettyp.cubalc", "PRETTYP/JSONPRETTY indented plate multi-plate"},
+      {"cli_plate_pretty", "programs/proof/1255_cli_plate_pretty.sh", "cubalc plate pretty PRETTYP dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -5175,6 +5177,7 @@ int main(int argc, char **argv) {
               "       cubalc plate firstuneq <path> [needle]  # FIRSTUNEQFLAT dual · first path that breaks uniformity\n"
               "       cubalc plate uneqpaths <path> [needle]  # UNEQPATHS dual · all paths that break uniformity\n"
               "       cubalc plate uniform <path> [needle]  # UNIFORMFLAT dual · one-shot eq + first path + all diverge paths\n"
+              "       cubalc plate pretty <path>  # PRETTYP dual · 2-space indented plate (no jq)\n"
               "       cubalc plate needflatn <path> <needle> [needle…]  # NEEDFLATN dual · fail-fast pure-int leaf + peel\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
@@ -5207,7 +5210,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"lastflat\",\"nthflat\",\"needflat\",\"getflatn\",\"lastflatn\",\"nthflatn\",\"typeflat\",\"freqflat\",\"modeflat\",\"pathbyval\",\"uniqflat\",\"pathsbyval\",\"countbyval\",\"hasval\",\"setbyval\",\"delbyval\",\"alleqflat\",\"firstuneq\",\"uneqpaths\",\"uniform\",\"needflatn\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"lastflat\",\"nthflat\",\"needflat\",\"getflatn\",\"lastflatn\",\"nthflatn\",\"typeflat\",\"freqflat\",\"modeflat\",\"pathbyval\",\"uniqflat\",\"pathsbyval\",\"countbyval\",\"hasval\",\"setbyval\",\"delbyval\",\"alleqflat\",\"firstuneq\",\"uneqpaths\",\"uniform\",\"pretty\",\"needflatn\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5360,6 +5363,8 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "alluneq") == 0 || strcmp(argv[2], "pathsuneq") == 0 ||
         strcmp(argv[2], "uniform") == 0 || strcmp(argv[2], "uniformflat") == 0 ||
         strcmp(argv[2], "checkflat") == 0 || strcmp(argv[2], "samecheck") == 0 ||
+        strcmp(argv[2], "pretty") == 0 || strcmp(argv[2], "prettyp") == 0 ||
+        strcmp(argv[2], "jsonpretty") == 0 || strcmp(argv[2], "prettyjson") == 0 ||
         strcmp(argv[2], "needflatn") == 0 || strcmp(argv[2], "requireflatn") == 0 ||
         strcmp(argv[2], "mustflatn") == 0 || strcmp(argv[2], "needintflat") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
@@ -5668,6 +5673,11 @@ int main(int argc, char **argv) {
                strcmp(op, "nestuniform") == 0 || strcmp(op, "flatuniform") == 0 ||
                strcmp(op, "uniformcheck") == 0 || strcmp(op, "eqcheck") == 0)
         op = "uniform";
+      else if (strcmp(op, "prettyp") == 0 || strcmp(op, "jsonpretty") == 0 ||
+               strcmp(op, "prettyjson") == 0 || strcmp(op, "prettyplate") == 0 ||
+               strcmp(op, "fmtjson") == 0 || strcmp(op, "indentjson") == 0 ||
+               strcmp(op, "pp") == 0)
+        op = "pretty";
       else if (strcmp(op, "requireflatn") == 0 || strcmp(op, "mustflatn") == 0 ||
                strcmp(op, "needintflat") == 0 || strcmp(op, "neednumflat") == 0)
         op = "needflatn";
@@ -5837,6 +5847,41 @@ int main(int argc, char **argv) {
              "\"op\":\"show\",\"path\":\"%s\",\"file\":%s,\"keys_n\":%ld,"
              "\"version\":\"%s\",\"plate\":%s}\n",
              path, file_hit ? "true" : "false", keys.n, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    /* pretty — PRETTYP dual: 2-space indented plate text (read-only, no jq).
+     *   cubalc plate pretty agent.json
+     * prints pretty body then JSON meta with n=bytes. */
+    if (strcmp(op, "pretty") == 0) {
+      cubalc_host_result pr;
+      char esc[CUBALC_HOST_STR_MAX * 2];
+      size_t i, o = 0;
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_pretty(plate, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"pretty\",\"path\":\"%s\",\"err\":\"pretty fail\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 1;
+      }
+      if (pr.str[0])
+        printf("%s\n", pr.str);
+      for (i = 0, o = 0; pr.str[i] && o + 2 < sizeof esc; i++) {
+        char c = pr.str[i];
+        if (c == '"' || c == '\\') { esc[o++] = '\\'; esc[o++] = c; }
+        else if (c == '\n') { esc[o++] = '\\'; esc[o++] = 'n'; }
+        else if (c == '\r') { esc[o++] = '\\'; esc[o++] = 'r'; }
+        else if (c == '\t') { esc[o++] = '\\'; esc[o++] = 't'; }
+        else esc[o++] = c;
+      }
+      esc[o] = 0;
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"pretty\",\"path\":\"%s\",\"file\":%s,\"n\":%ld,"
+             "\"truncated\":%s,\"pretty\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"PRETTYP dual · 2-space indented plate (no jq)\"}\n",
+             path, file_hit ? "true" : "false", pr.n,
+             pr.code ? "false" : "true", esc, CUBALC_LANG_VERSION);
       return 0;
     }
 

@@ -485,6 +485,11 @@ int cubalc_host_json_leaf_first_uneq(const char *json, const char *needle,
  * Usability: bulk locate nest inconsistencies without EACH FLAT+IF+PUSH glue. */
 int cubalc_host_json_leaf_uneq_paths(const char *json, const char *needle,
                                      cubalc_host_result *r);
+/* Pretty-print JSON plate with 2-space indent (PRETTYP / JSONPRETTY).
+ * r->str = indented text · r->n = output bytes · r->code = 1 ok | 0 truncated.
+ * Empty/non-JSON → "{}" soft. Soft always OK. Read-only.
+ * Usability: human/agent plate inspection without shell jq. */
+int cubalc_host_json_pretty(const char *json, cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

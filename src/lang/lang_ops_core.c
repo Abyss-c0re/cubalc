@@ -27465,6 +27465,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"FIRSTUNEQFLAT") || kw(&L->cur,"PATHUNEQ") || kw(&L->cur,"DIVERGE1") ||
              kw(&L->cur,"UNEQPATHS") || kw(&L->cur,"DIVERGEPATHS") || kw(&L->cur,"ALLUNEQ") ||
              kw(&L->cur,"UNIFORMFLAT") || kw(&L->cur,"CHECKFLAT") || kw(&L->cur,"SAMECHECK") ||
+             kw(&L->cur,"PRETTYP") || kw(&L->cur,"JSONPRETTY") || kw(&L->cur,"PRETTYJSON") ||
              kw(&L->cur,"UNIQFLAT") || kw(&L->cur,"DISTINCTFLAT") || kw(&L->cur,"UNIQUEFLAT") ||
              kw(&L->cur,"NEEDFLAT") || kw(&L->cur,"REQUIREFLAT") || kw(&L->cur,"MUSTFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
@@ -35932,6 +35933,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"UNIFORMFLAT", "UNIFORMFLAT|CHECKFLAT [FROM plate] [needle] — one-shot nest consistency · LAST_N 0|1 eq · UNIFORM_PATH/PATHS/REF/VAL · no ALLEQ+FIRSTUNEQ+UNEQPATHS glue"},
       {"CHECKFLAT", "CHECKFLAT alias of UNIFORMFLAT"},
       {"SAMECHECK", "SAMECHECK alias of UNIFORMFLAT"},
+      {"PRETTYP", "PRETTYP|JSONPRETTY [FROM plate] — 2-space indented plate JSON → LAST · LAST_N=bytes · multi-plate · no shell jq"},
+      {"JSONPRETTY", "JSONPRETTY alias of PRETTYP"},
+      {"PRETTYJSON", "PRETTYJSON alias of PRETTYP"},
       {"UNIQFLAT", "UNIQFLAT|DISTINCTFLAT [FROM plate] [needle] — unique matching leaf values → LAST bag · LAST_N=uniques · multi-plate · read-only"},
       {"DISTINCTFLAT", "DISTINCTFLAT alias of UNIQFLAT"},
       {"NEEDFLAT", "NEEDFLAT|REQUIREFLAT [FROM plate] needle… — fail-fast if any leaf-path needle missing · multi-plate · soft twin HASFLAT"},
@@ -49366,6 +49370,94 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# uniformflat eq=%ld n=%ld div=%ld needle=%s from=%d\n",
               eq, total, divn, needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* PRETTYP|JSONPRETTY|PRETTYJSON [FROM plate]
+   * 2-space indented plate JSON → LAST · LAST_N = bytes.
+   * Soft always OK. Read-only. Truncation sets PRETTYP_TRUNC=1.
+   * Usability: human/agent nest inspection without shell jq:
+   *   PRETTYP
+   *   PRETTYP FROM PEER
+   *   JSONPRETTY FROM LAST
+   */
+  if (kw(&L->cur,"PRETTYP") || kw(&L->cur,"JSONPRETTY") || kw(&L->cur,"PRETTYJSON") ||
+      kw(&L->cur,"MPRETTYP") || kw(&L->cur,"PLATE_PRETTY") || kw(&L->cur,"PRETTYPLATE") ||
+      kw(&L->cur,"FMTJSON") || kw(&L->cur,"INDENTJSON") || kw(&L->cur,"PRETTY_P")) {
+    char plate[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{' || *b == '[')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_pretty(plate, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "PRETTYP: fail");
+      var_set_str(vm, "ERR", "PRETTYP: fail");
+      var_set_num(vm, "LAST_N", 0);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    var_set_num(vm, "LAST_N", hr.n);
+    vm->last_n = hr.n;
+    var_set_str(vm, "PRETTYP", hr.str);
+    var_set_str(vm, "JSONPRETTY", hr.str);
+    var_set_str(vm, "PRETTYJSON", hr.str);
+    var_set_num(vm, "PRETTYP_N", hr.n);
+    var_set_num(vm, "PRETTYP_TRUNC", hr.code ? 0 : 1);
+    var_set_num(vm, "PRETTYP_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "PRETTYP_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# prettyp n=%ld trunc=%d from=%d\n",
+              hr.n, hr.code ? 0 : 1, have_from);
     bump(vm); return 1;
   }
 

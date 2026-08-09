@@ -7595,6 +7595,105 @@ int cubalc_host_json_leaf_uneq_paths(const char *json, const char *needle,
   return 0;
 }
 
+/* PRETTYP: 2-space indented JSON for human/agent plate reads. See header. */
+int cubalc_host_json_pretty(const char *json, cubalc_host_result *r) {
+  const char *p;
+  size_t o = 0;
+  int depth = 0, in_str = 0, esc = 0, truncated = 0;
+  size_t cap;
+
+  r_clear(r);
+  r->ok = 1;
+  r->str[0] = 0;
+  p = json ? json : "";
+  while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+  if (!*p) {
+    snprintf(r->str, sizeof r->str, "{}");
+    r->n = 2;
+    r->code = 1;
+    return 0;
+  }
+  cap = sizeof r->str - 1;
+  while (*p) {
+    char c = *p++;
+    if (o + 16 >= cap) {
+      truncated = 1;
+      break;
+    }
+    if (in_str) {
+      r->str[o++] = c;
+      if (esc) esc = 0;
+      else if (c == '\\') esc = 1;
+      else if (c == '"') in_str = 0;
+      continue;
+    }
+    if (c == '"') {
+      r->str[o++] = c;
+      in_str = 1;
+      continue;
+    }
+    if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
+      continue;
+    if (c == '{' || c == '[') {
+      const char *q = p;
+      r->str[o++] = c;
+      while (*q == ' ' || *q == '\t' || *q == '\n' || *q == '\r') q++;
+      if ((c == '{' && *q == '}') || (c == '[' && *q == ']')) {
+        r->str[o++] = *q;
+        p = q + 1;
+        continue;
+      }
+      depth++;
+      r->str[o++] = '\n';
+      {
+        int i;
+        for (i = 0; i < depth && o + 2 < cap; i++) {
+          r->str[o++] = ' ';
+          r->str[o++] = ' ';
+        }
+      }
+      continue;
+    }
+    if (c == '}' || c == ']') {
+      if (depth > 0) depth--;
+      r->str[o++] = '\n';
+      {
+        int i;
+        for (i = 0; i < depth && o + 2 < cap; i++) {
+          r->str[o++] = ' ';
+          r->str[o++] = ' ';
+        }
+      }
+      if (o < cap) r->str[o++] = c;
+      continue;
+    }
+    if (c == ',') {
+      r->str[o++] = c;
+      r->str[o++] = '\n';
+      {
+        int i;
+        for (i = 0; i < depth && o + 2 < cap; i++) {
+          r->str[o++] = ' ';
+          r->str[o++] = ' ';
+        }
+      }
+      continue;
+    }
+    if (c == ':') {
+      r->str[o++] = c;
+      r->str[o++] = ' ';
+      continue;
+    }
+    r->str[o++] = c;
+  }
+  r->str[o] = 0;
+  r->n = (long)o;
+  r->code = truncated ? 0 : 1;
+  if (truncated)
+    snprintf(r->err, sizeof r->err, "truncated");
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,

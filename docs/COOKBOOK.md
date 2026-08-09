@@ -275,6 +275,7 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate firstuneq  state/my_agent.json role                  # first path that breaks uniformity
 ./out/cubalc plate uneqpaths  state/my_agent.json role                  # all paths that break uniformity
 ./out/cubalc plate uniform    state/my_agent.json role                  # one-shot eq + first + all diverge paths
+./out/cubalc plate pretty     state/my_agent.json                       # 2-space indent plate (no jq)
 ./out/cubalc plate decflat    state/my_agent.json errs                  # decrement
 ./out/cubalc libs | grep plate
 

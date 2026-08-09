@@ -1,0 +1,64 @@
+# PRETTYP / JSONPRETTY — 2-space indented plate JSON
+# Usability: human/agent nest inspection without shell jq.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"n\":1}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":2}"
+
+PRETTYP
+ASSERT OK == 1
+ASSERT LAST_N > 10
+ASSERT PRETTYP_TRUNC == 0
+SYS HAS LAST "meta"
+ASSERT LAST_N == 1
+SYS HAS LAST "role"
+ASSERT LAST_N == 1
+SYS HAS LAST "\n"
+ASSERT LAST_N == 1
+SYS HAS LAST "  "
+ASSERT LAST_N == 1
+SYS EQS PRETTYP_SRC "PLATE"
+ASSERT LAST_N == 1
+
+# multi-plate
+PRETTYP FROM PEER
+ASSERT PRETTYP_FROM == 1
+SYS EQS PRETTYP_SRC "PEER"
+ASSERT LAST_N == 1
+SYS HAS LAST "status"
+ASSERT LAST_N == 1
+SYS HAS LAST "ok"
+ASSERT LAST_N == 1
+
+# empty object compact
+LET PLATE = "{}"
+PRETTYP
+SYS EQS LAST "{}"
+ASSERT LAST_N == 1
+
+# nested empty object
+LET PLATE = "{\"x\":{}}"
+PRETTYP
+SYS HAS LAST "x"
+ASSERT LAST_N == 1
+SYS HAS LAST "{}"
+ASSERT LAST_N == 1
+
+# alias
+LET PLATE = "{\"k\":\"v\"}"
+JSONPRETTY
+SYS HAS LAST "k"
+ASSERT LAST_N == 1
+SYS HAS LAST "v"
+ASSERT LAST_N == 1
+
+# plate unchanged after FROM
+LET PLATE = "{\"keep\":9}"
+PRETTYP FROM PEER
+GETP "keep"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1255_prettyp: PASS"
