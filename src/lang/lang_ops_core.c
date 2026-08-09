@@ -27439,6 +27439,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"SETFLAT") || kw(&L->cur,"MAPFLAT") || kw(&L->cur,"SETLEAFP") ||
              kw(&L->cur,"INCFLAT") || kw(&L->cur,"BUMPFLAT") || kw(&L->cur,"ADDFLAT") ||
              kw(&L->cur,"SUMFLAT") || kw(&L->cur,"TOTALFLAT") || kw(&L->cur,"LEAFSUM") ||
+             kw(&L->cur,"AVGFLAT") || kw(&L->cur,"MEANFLAT") || kw(&L->cur,"MEDIANFLAT") ||
+             kw(&L->cur,"P50FLAT") ||
              kw(&L->cur,"TOPPATHFLAT") || kw(&L->cur,"BOTPATHFLAT") || kw(&L->cur,"MAXPATHFLAT") ||
              kw(&L->cur,"THRESHFLAT") || kw(&L->cur,"KEEPVFLAT") || kw(&L->cur,"DROPZEROFLAT") ||
              kw(&L->cur,"CAPFLAT") || kw(&L->cur,"CLAMPFLAT") || kw(&L->cur,"MAXVFLAT") ||
@@ -35845,6 +35847,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"TOTALFLAT", "TOTALFLAT alias of SUMFLAT"},
       {"AVGFLAT", "AVGFLAT|MEANFLAT [FROM plate] [needle] — integer mean of pure-int leaves matching path needle → LAST_N · multi-plate · read-only"},
       {"MEANFLAT", "MEANFLAT alias of AVGFLAT"},
+      {"MEDIANFLAT", "MEDIANFLAT|P50FLAT [FROM plate] [needle] — integer median pure-int leaves by path needle → LAST_N · multi-plate · read-only"},
+      {"P50FLAT", "P50FLAT alias of MEDIANFLAT"},
       {"TOPPATHFLAT", "TOPPATHFLAT|MAXPATHFLAT [FROM plate] [needle] — path of max pure-int leaf → LAST · value LAST_N · multi-plate"},
       {"BOTPATHFLAT", "BOTPATHFLAT|MINPATHFLAT [FROM plate] [needle] — path of min pure-int leaf → LAST · value LAST_N · multi-plate"},
       {"MAXPATHFLAT", "MAXPATHFLAT alias of TOPPATHFLAT"},
@@ -44954,6 +44958,138 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# avgflat avg=%ld n=%ld sum=%ld needle=%s from=%d\n",
               hr.n, (long)hr.code, sum_side, needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* MEDIANFLAT|P50FLAT [FROM plate] [needle]
+   * Integer median of pure-int leaves whose path contains needle → LAST_N.
+   * Sort ascending; even n → lower mid (like SYS MEDIAN). Cap 256.
+   * Empty/omitted needle → all pure-int. Read-only. MEDIANFLAT_N = count used.
+   * Soft empty → LAST_N=0 MEDIANFLAT_N=0.
+   * Usability: robust nest mid scores without FLATKV+GREP+MEDIAN glue:
+   *   MEDIANFLAT "score"
+   *   MEDIANFLAT ""
+   *   MEDIANFLAT FROM PEER "latency"
+   */
+  if (kw(&L->cur,"MEDIANFLAT") || kw(&L->cur,"P50FLAT") || kw(&L->cur,"MIDFLAT") ||
+      kw(&L->cur,"MMEDIANFLAT") || kw(&L->cur,"PLATE_MEDIANFLAT") || kw(&L->cur,"LEAFMEDIAN") ||
+      kw(&L->cur,"FLATMEDIAN") || kw(&L->cur,"MEDALLFLAT")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(needle, sizeof needle, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"SETP") && !kw(&L->cur,"INCP") &&
+               !kw(&L->cur,"MEDIANFLAT") && !kw(&L->cur,"AVGFLAT") && !kw(&L->cur,"SUMFLAT")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_median(plate, needle, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "MEDIANFLAT: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "MEDIANFLAT: fail");
+      var_set_num(vm, "MEDIANFLAT_N", 0);
+      var_set_num(vm, "LAST_N", 0);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", plate);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "MEDIANFLAT", hr.str);
+    var_set_str(vm, "P50FLAT", hr.str);
+    var_set_num(vm, "MEDIANFLAT_N", (long)hr.code);
+    var_set_num(vm, "P50FLAT_N", (long)hr.code);
+    var_set_num(vm, "MEDIANFLAT_MED", hr.n);
+    var_set_str(vm, "MEDIANFLAT_NEEDLE", needle);
+    var_set_num(vm, "MEDIANFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "MEDIANFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# medianflat med=%ld n=%ld needle=%s from=%d\n",
+              hr.n, (long)hr.code, needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 

@@ -1,0 +1,65 @@
+# MEDIANFLAT / P50FLAT — integer median of pure-int leaves by path needle (read-only)
+# Usability: robust nest mid without FLATKV+GREP+MEDIAN glue.
+# Sort asc; even n → lower mid (like SYS MEDIAN). Non-int matching leaves skipped.
+
+HOLD_FLASH 1
+
+# odd: 10,20,30 → 20
+LET PLATE = "{\"scores\":{\"a\":10,\"b\":20,\"c\":30},\"label\":\"x\",\"n\":5}"
+
+MEDIANFLAT "scores"
+ASSERT OK == 1
+ASSERT LAST_N == 20
+ASSERT MEDIANFLAT_N == 3
+ASSERT MEDIANFLAT_MED == 20
+
+# even: 10,30 → lower mid 10
+LET PLATE = "{\"u\":{\"x\":10,\"y\":30}}"
+MEDIANFLAT "u"
+ASSERT LAST_N == 10
+ASSERT MEDIANFLAT_N == 2
+
+# single
+MEDIANFLAT "x"
+ASSERT LAST_N == 10
+ASSERT MEDIANFLAT_N == 1
+
+# empty needle: 10,30 from u + wait plate is only u
+# reset: 1,2,3,100 → sorted 1,2,3,100 → lower mid of 4 is index 1 → 2
+LET PLATE = "{\"a\":1,\"b\":2,\"c\":3,\"d\":100,\"s\":\"z\"}"
+MEDIANFLAT ""
+ASSERT LAST_N == 2
+ASSERT MEDIANFLAT_N == 4
+
+LET PEER = "{\"lat\":{\"p50\":100,\"p95\":200,\"p99\":400},\"tag\":\"z\"}"
+MEDIANFLAT FROM PEER "lat"
+ASSERT MEDIANFLAT_FROM == 1
+SYS EQS MEDIANFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT MEDIANFLAT_MED == 200
+ASSERT MEDIANFLAT_N == 3
+
+# plate unchanged after FROM
+LET PLATE = "{\"x\":7}"
+MEDIANFLAT FROM PEER "lat"
+GETP "x"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+
+# no match
+MEDIANFLAT "nope"
+ASSERT LAST_N == 0
+ASSERT MEDIANFLAT_N == 0
+
+P50FLAT "x"
+ASSERT LAST_N == 7
+ASSERT P50FLAT_N == 1
+
+# non-int only
+LET PLATE = "{\"a\":\"hi\",\"b\":true,\"c\":null}"
+MEDIANFLAT ""
+ASSERT LAST_N == 0
+ASSERT MEDIANFLAT_N == 0
+
+PASS
+PRINT "1231_medianflat: PASS"

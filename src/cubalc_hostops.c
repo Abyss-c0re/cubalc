@@ -5440,6 +5440,104 @@ int cubalc_host_json_leaf_avg(const char *json, const char *needle,
   return 0;
 }
 
+/* MEDIANFLAT: integer median of pure-int leaves by path needle. See header. */
+int cubalc_host_json_leaf_median(const char *json, const char *needle,
+                                 cubalc_host_result *r) {
+  cubalc_host_result kv;
+  const char *p, *line;
+  long arr[256];
+  int n = 0, i;
+  size_t nn;
+
+  r_clear(r);
+  if (!needle) needle = "";
+  nn = strlen(needle);
+  memset(&kv, 0, sizeof kv);
+  cubalc_host_json_leaf_kv(json ? json : "{}", NULL, &kv);
+  p = kv.str;
+  while (*p && n < 256) {
+    char path[512], oldv[CUBALC_HOST_STR_MAX / 2];
+    size_t kn = 0, vn = 0;
+    const char *sep, *vs, *ve;
+    int hit;
+    char *end = NULL;
+    long num;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    kn = sep ? (size_t)(sep - line) : (size_t)(p - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn == 0 || kn >= sizeof path) continue;
+    memcpy(path, line, kn);
+    path[kn] = 0;
+    vs = sep ? sep + 1 : p;
+    ve = p;
+    while (vs < ve && (*vs == ' ' || *vs == '\t')) vs++;
+    while (ve > vs && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+    vn = (size_t)(ve - vs);
+    if (vn >= sizeof oldv) vn = sizeof oldv - 1;
+    memcpy(oldv, vs, vn);
+    oldv[vn] = 0;
+    if (!nn)
+      hit = 1;
+    else {
+      size_t j;
+      hit = 0;
+      if (nn <= kn) {
+        for (j = 0; j + nn <= kn; j++) {
+          if (memcmp(path + j, needle, nn) == 0) {
+            hit = 1;
+            break;
+          }
+        }
+      }
+    }
+    if (!hit) continue;
+    end = NULL;
+    num = strtol(oldv, &end, 10);
+    if (end && end != oldv && *end == 0)
+      arr[n++] = num;
+  }
+  if (n > 0) {
+    for (i = 1; i < n; i++) {
+      long key = arr[i];
+      int j = i - 1;
+      while (j >= 0 && arr[j] > key) {
+        arr[j + 1] = arr[j];
+        j--;
+      }
+      arr[j + 1] = key;
+    }
+    r->n = arr[(n - 1) / 2];
+  } else {
+    r->n = 0;
+  }
+  r->code = n;
+  r->ok = 1;
+  snprintf(r->str, sizeof r->str, "%ld", r->n);
+  return 0;
+}
+
 /* TOPPATHFLAT/BOTPATHFLAT: extreme pure-int leaf path. See header. */
 int cubalc_host_json_leaf_toppath(const char *json, const char *needle, int want_min,
                                   cubalc_host_result *r) {

@@ -319,6 +319,12 @@ int cubalc_host_json_leaf_sum(const char *json, const char *needle,
  * Usability: nest mean scores without FLATKV+GREP+AVG / SUMFLAT+DIV glue. */
 int cubalc_host_json_leaf_avg(const char *json, const char *needle,
                               cubalc_host_result *r);
+/* Integer median of pure-int leaves by path needle (MEDIANFLAT / P50FLAT).
+ * Empty needle → all pure-int. Sort asc; even n → lower mid vals[(n-1)/2].
+ * Cap 256 samples. r->n = median · r->code = count · r->str = decimal.
+ * Soft always OK. Read-only. Usability: robust nest mid without FLATKV+GREP+MEDIAN. */
+int cubalc_host_json_leaf_median(const char *json, const char *needle,
+                                 cubalc_host_result *r);
 /* Extreme pure-int leaf by path needle (TOPPATHFLAT / BOTPATHFLAT).
  * want_min=0 → max (TOP) · want_min=1 → min (BOT). First path wins ties.
  * Empty needle → all pure-int leaves. r->str = winning path · r->n = value ·

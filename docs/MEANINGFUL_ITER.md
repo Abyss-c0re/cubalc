@@ -717,6 +717,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 687. ~~**`NEEDFLAT` / `REQUIREFLAT` + `cubalc plate needflat`**~~ **done** (fail-fast if any leaf-path needle missing · multi-plate · CLI dual · structure contract without multi HASFLAT+IF fail glue).
 688. ~~**`GETFLATN` / `FIRSTFLATN` + `cubalc plate getflatn`**~~ **done** (first pure-int leaf by path needle → LAST_N · OR fallback · multi-plate · CLI dual · nest numeric peel without GETFLAT+NUM glue).
 689. ~~**`AVGFLAT` / `MEANFLAT` + `cubalc plate avgflat`**~~ **done** (integer mean of pure-int leaves by path needle → LAST_N · multi-plate · CLI dual · nest mean scores without FLATKV+GREP+AVG / SUMFLAT+DIV glue).
+690. ~~**`MEDIANFLAT` / `P50FLAT` + `cubalc plate medianflat`**~~ **done** (integer median of pure-int leaves by path needle → LAST_N · multi-plate · CLI dual · robust nest mid without FLATKV+GREP+MEDIAN glue).
 
 ## Tick protocol
 
