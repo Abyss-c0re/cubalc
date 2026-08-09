@@ -27409,6 +27409,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"GETOBJ") || kw(&L->cur,"SETOBJ") || kw(&L->cur,"PEEKOBJ") ||
              kw(&L->cur,"NESTP") || kw(&L->cur,"PUTOBJ") ||
              kw(&L->cur,"MERGEOBJ") || kw(&L->cur,"DEFAULTOBJ") || kw(&L->cur,"PATCHNEST") ||
+             kw(&L->cur,"GETPOBJ") || kw(&L->cur,"SETPOBJ") || kw(&L->cur,"INCOBJ") ||
+             kw(&L->cur,"DELPOBJ") ||
              kw(&L->cur,"TOKVP") || kw(&L->cur,"FROMKVP") ||
              kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
              kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
@@ -35824,6 +35826,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DEFAULTOBJ", "DEFAULTOBJ|ENSUREOBJ [FROM plate] key defaults — fill missing nested keys only · multi-plate"},
       {"ENSUREOBJ", "ENSUREOBJ alias of DEFAULTOBJ"},
       {"DEFAULTNEST", "DEFAULTNEST alias of DEFAULTOBJ"},
+      {"GETPOBJ", "GETPOBJ|PEEKNEST [FROM plate] nest field [OR fb] — peel nested scalar · multi-plate · no GETOBJ+GETP"},
+      {"PEEKNEST", "PEEKNEST alias of GETPOBJ"},
+      {"SETPOBJ", "SETPOBJ|PUTNESTF [FROM plate] nest field value — set nested scalar · multi-plate · no GETOBJ+SETP+SETOBJ"},
+      {"PUTNESTF", "PUTNESTF alias of SETPOBJ"},
+      {"INCOBJ", "INCOBJ|BUMPNEST [FROM plate] nest field [delta] — bump nested counter · multi-plate"},
+      {"BUMPNEST", "BUMPNEST alias of INCOBJ"},
+      {"DELPOBJ", "DELPOBJ|DROPNEST [FROM plate] nest field — drop nested key · multi-plate"},
+      {"DROPNEST", "DROPNEST alias of DELPOBJ"},
       {"TOKVP", "TOKVP|TOBAGP [FROM plate] — plate → key:val bag · multi-plate · no SYS JSONTOKV"},
       {"TOBAGP", "TOBAGP alias of TOKVP"},
       {"FROMKVP", "FROMKVP|BAGTOP [bag] [INTO name] — key=val bag → plate · multi-plate · no SYS JSONFROMKV"},
@@ -41765,6 +41775,426 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               is_def ? "defaultobj" : "mergeobj", key, mer.n, have_from);
     bump(vm); return 1;
   }
+
+  /* GETPOBJ|PEEKNEST [FROM plate] nest field [OR fb]
+   * SETPOBJ|PUTNESTF [FROM plate] nest field value
+   * INCOBJ|BUMPNEST [FROM plate] nest field [delta]
+   * DELPOBJ|DROPNEST [FROM plate] nest field
+   * Nested scalar field plane — peel/set/inc/del inside a nested object without
+   * GETOBJ+GETP/SETP+SETOBJ glue. Creates nest {} if missing on set/inc.
+   * Soft miss on get (OR fallback). Multi-plate FROM write-back.
+   * Usability for agent nested counters/config:
+   *   GETPOBJ "meta" "role"
+   *   SETPOBJ "meta" "role" "leader"
+   *   INCOBJ "stats" "hits"
+   *   DELPOBJ FROM PEER "cfg" "tmp"
+   */
+  if (kw(&L->cur,"GETPOBJ") || kw(&L->cur,"PEEKNEST") || kw(&L->cur,"NESTGETP") ||
+      kw(&L->cur,"GETNESTF") || kw(&L->cur,"OBJGETP") || kw(&L->cur,"MGETPOBJ") ||
+      kw(&L->cur,"SETPOBJ") || kw(&L->cur,"PUTNESTF") || kw(&L->cur,"NESTSETP") ||
+      kw(&L->cur,"SETOBJF") || kw(&L->cur,"PUTNESTKEY") || kw(&L->cur,"MSETPOBJ") ||
+      kw(&L->cur,"INCOBJ") || kw(&L->cur,"BUMPNEST") || kw(&L->cur,"NESTINCP") ||
+      kw(&L->cur,"INCNEST") || kw(&L->cur,"INCOBJF") || kw(&L->cur,"MINCOBJ") ||
+      kw(&L->cur,"DECOBJ") || kw(&L->cur,"DECNNEST") ||
+      kw(&L->cur,"DELPOBJ") || kw(&L->cur,"DROPNEST") || kw(&L->cur,"NESTDELP") ||
+      kw(&L->cur,"DELOBJF") || kw(&L->cur,"RMNESTF") || kw(&L->cur,"MDELPOBJ")) {
+    char plate[CUBALC_HOST_STR_MAX], nestk[96], field[96], val[CUBALC_HOST_STR_MAX];
+    char fb[CUBALC_HOST_STR_MAX], nest[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX], raw[32];
+    cubalc_host_result gr, ngr, hr, setr;
+    int is_set = 0, is_inc = 0, is_dec = 0, is_del = 0, is_get = 0;
+    int have_from = 0, have_fb = 0, val_kind = 0;
+    long delta = 1, cur = 0, nv = 0;
+    Var *pv;
+    char op0[24];
+    const char *v;
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "SETPOBJ") == 0 || strcmp(op0, "PUTNESTF") == 0 ||
+        strcmp(op0, "NESTSETP") == 0 || strcmp(op0, "SETOBJF") == 0 ||
+        strcmp(op0, "PUTNESTKEY") == 0 || strcmp(op0, "MSETPOBJ") == 0)
+      is_set = 1;
+    else if (strcmp(op0, "DECOBJ") == 0 || strcmp(op0, "DECNNEST") == 0) {
+      is_inc = 1;
+      is_dec = 1;
+      delta = -1;
+    } else if (strcmp(op0, "INCOBJ") == 0 || strcmp(op0, "BUMPNEST") == 0 ||
+               strcmp(op0, "NESTINCP") == 0 || strcmp(op0, "INCNEST") == 0 ||
+               strcmp(op0, "INCOBJF") == 0 || strcmp(op0, "MINCOBJ") == 0)
+      is_inc = 1;
+    else if (strcmp(op0, "DELPOBJ") == 0 || strcmp(op0, "DROPNEST") == 0 ||
+             strcmp(op0, "NESTDELP") == 0 || strcmp(op0, "DELOBJF") == 0 ||
+             strcmp(op0, "RMNESTF") == 0 || strcmp(op0, "MDELPOBJ") == 0)
+      is_del = 1;
+    else
+      is_get = 1;
+
+    lex_next(L);
+    plate[0] = 0; nestk[0] = 0; field[0] = 0; val[0] = 0; fb[0] = 0;
+    nest[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* nest key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(nestk, sizeof nestk, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT")) {
+        fail(vm, "GETPOBJ|SETPOBJ|INCOBJ|DELPOBJ — need nest key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, nestk, sizeof nestk) != 0)
+        nestk[0] = 0;
+    } else {
+      fail(vm, "GETPOBJ|SETPOBJ|INCOBJ|DELPOBJ — need nest key");
+      return -1;
+    }
+
+    /* field key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(field, sizeof field, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT")) {
+        fail(vm, "GETPOBJ|SETPOBJ|INCOBJ|DELPOBJ — need field key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, field, sizeof field) != 0)
+        field[0] = 0;
+    } else {
+      fail(vm, "GETPOBJ|SETPOBJ|INCOBJ|DELPOBJ — need field key");
+      return -1;
+    }
+
+    if (is_get) {
+      if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+          kw(&L->cur,"FALLBACK") || kw(&L->cur,"SOFT")) {
+        lex_next(L);
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(fb, sizeof fb, "%ld", n);
+          have_fb = 1;
+        } else if (L->cur.kind == TK_IDENT &&
+                   (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF"))) {
+          fail(vm, "GETPOBJ nest field OR fallback — need fallback");
+          return -1;
+        } else if (resolve_str_arg(vm, L, fb, sizeof fb) == 0) {
+          have_fb = 1;
+        } else {
+          fail(vm, "GETPOBJ nest field OR fallback — need fallback");
+          return -1;
+        }
+      }
+    } else if (is_set) {
+      if (kw(&L->cur,"RAW") || kw(&L->cur,"ASRAW") || kw(&L->cur,"LITERAL")) {
+        val_kind = 1;
+        lex_next(L);
+      }
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long n = parse_expr(vm, L);
+        snprintf(val, sizeof val, "%ld", n);
+        val_kind = 1;
+      } else if (L->cur.kind == TK_IDENT &&
+                 (strcmp(L->cur.text, "true") == 0 || strcmp(L->cur.text, "false") == 0 ||
+                  strcmp(L->cur.text, "null") == 0)) {
+        snprintf(val, sizeof val, "%s", L->cur.text);
+        val_kind = 1;
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT &&
+                 (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+                  kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM"))) {
+        fail(vm, "SETPOBJ nest field value — need value");
+        return -1;
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+          fail(vm, "SETPOBJ nest field value — need value");
+          return -1;
+        }
+      } else {
+        fail(vm, "SETPOBJ nest field value — need value");
+        return -1;
+      }
+    } else if (is_inc) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        delta = parse_expr(vm, L);
+        if (is_dec && delta > 0) delta = -delta;
+      }
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!nestk[0] || !field[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "GETPOBJ|SETPOBJ|INCOBJ|DELPOBJ: empty nest/field");
+      var_set_str(vm, "ERR", "GETPOBJ|SETPOBJ|INCOBJ|DELPOBJ: empty nest/field");
+      var_set_num(vm, "GETPOBJ_FROM", have_from ? 1 : 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    /* peel nest object (or {} for mutators) */
+    snprintf(nest, sizeof nest, "%s", "{}");
+    memset(&ngr, 0, sizeof ngr);
+    if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
+      v = ngr.str;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v == '{') {
+        if (v != ngr.str) {
+          size_t n = strlen(v);
+          memmove(ngr.str, v, n + 1);
+        }
+        snprintf(nest, sizeof nest, "%s", ngr.str);
+      } else if (is_get) {
+        /* nest exists but not object → miss */
+        nest[0] = 0;
+      }
+      /* mutators: non-object nest replaced by {} */
+    } else if (is_get) {
+      nest[0] = 0;
+    }
+
+    if (is_get) {
+      if (!nest[0]) {
+        if (have_fb) {
+          var_set_str(vm, "LAST", fb);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_str(vm, "GETPOBJ", fb);
+          var_set_num(vm, "GETPOBJ_HIT", 0);
+          var_set_num(vm, "GETPOBJ_OR", 1);
+          var_set_num(vm, "OK", 1);
+        } else {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "GETPOBJ_HIT", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "GETPOBJ: nest miss or not object");
+          var_set_str(vm, "ERR", "GETPOBJ: nest miss or not object");
+        }
+      } else {
+        memset(&gr, 0, sizeof gr);
+        if (cubalc_host_json_get(nest, field, &gr) == 0) {
+          var_set_str(vm, "LAST", gr.str);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", gr.str);
+          vm->last_n = 1;
+          var_set_num(vm, "LAST_N", 1);
+          var_set_str(vm, "GETPOBJ", gr.str);
+          var_set_str(vm, "PEEKNEST", gr.str);
+          var_set_num(vm, "GETPOBJ_HIT", 1);
+          var_set_num(vm, "JSON_HIT", 1);
+          var_set_num(vm, "OK", 1);
+        } else if (have_fb) {
+          var_set_str(vm, "LAST", fb);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_str(vm, "GETPOBJ", fb);
+          var_set_num(vm, "GETPOBJ_HIT", 0);
+          var_set_num(vm, "GETPOBJ_OR", 1);
+          var_set_num(vm, "OK", 1);
+        } else {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "GETPOBJ_HIT", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "GETPOBJ: field miss");
+          var_set_str(vm, "ERR", "GETPOBJ: field miss");
+        }
+      }
+      var_set_str(vm, "GETPOBJ_NEST", nestk);
+      var_set_str(vm, "GETPOBJ_KEY", field);
+      var_set_num(vm, "GETPOBJ_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "GETPOBJ_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      if (vm->trace)
+        fprintf(vm->trace, "# getpobj nest=%s field=%s from=%d\n",
+                nestk, field, have_from);
+      bump(vm); return 1;
+    }
+
+    /* mutators need nest object */
+    if (!nest[0])
+      snprintf(nest, sizeof nest, "%s", "{}");
+
+    if (is_set) {
+      memset(&setr, 0, sizeof setr);
+      if (cubalc_host_json_set(nest, field, val, val_kind, &setr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", setr.err[0] ? setr.err : "SETPOBJ: nest set fail");
+        var_set_str(vm, "ERR", setr.err[0] ? setr.err : "SETPOBJ: nest set fail");
+        bump(vm); return 1;
+      }
+      snprintf(nest, sizeof nest, "%s", setr.str);
+    } else if (is_inc) {
+      memset(&gr, 0, sizeof gr);
+      cur = 0;
+      if (cubalc_host_json_get(nest, field, &gr) == 0) {
+        char *end = NULL;
+        cur = strtol(gr.str, &end, 10);
+        if (end == gr.str) cur = 0;
+      }
+      nv = cur + delta;
+      snprintf(raw, sizeof raw, "%ld", nv);
+      memset(&setr, 0, sizeof setr);
+      if (cubalc_host_json_set(nest, field, raw, 1, &setr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", setr.err[0] ? setr.err : "INCOBJ: nest set fail");
+        var_set_str(vm, "ERR", setr.err[0] ? setr.err : "INCOBJ: nest set fail");
+        bump(vm); return 1;
+      }
+      snprintf(nest, sizeof nest, "%s", setr.str);
+    } else if (is_del) {
+      memset(&setr, 0, sizeof setr);
+      if (cubalc_host_json_del(nest, field, &setr) != 0) {
+        /* soft: keep nest as-is if del fails? treat as miss nest field */
+        snprintf(nest, sizeof nest, "%s", nest); /* no-op */
+        setr.n = 0;
+        /* still write-back nest so outer plate consistent */
+      } else {
+        snprintf(nest, sizeof nest, "%s", setr.str);
+      }
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_set(plate, nestk, nest, 1, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "SETPOBJ: write-back fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "SETPOBJ: write-back fail");
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else if (!have_from)
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    var_set_str(vm, "NEST", nest);
+    var_set_str(vm, "MERGED", nest);
+    if (is_inc) {
+      vm->last_n = nv;
+      var_set_num(vm, "LAST_N", nv);
+      var_set_num(vm, "INCOBJ_V", nv);
+      var_set_num(vm, "INCOBJ_DELTA", delta);
+      var_set_str(vm, "INCOBJ", hr.str);
+    } else if (is_del) {
+      vm->last_n = setr.n;
+      var_set_num(vm, "LAST_N", setr.n);
+      var_set_num(vm, "DELPOBJ_N", setr.n);
+      var_set_str(vm, "DELPOBJ", hr.str);
+    } else {
+      vm->last_n = setr.n;
+      var_set_num(vm, "LAST_N", setr.n);
+      var_set_num(vm, "SETPOBJ_N", setr.n);
+      var_set_str(vm, "SETPOBJ", hr.str);
+    }
+    var_set_str(vm, "GETPOBJ_NEST", nestk);
+    var_set_str(vm, "SETPOBJ_NEST", nestk);
+    var_set_str(vm, "SETPOBJ_KEY", field);
+    var_set_num(vm, "GETPOBJ_FROM", have_from ? 1 : 0);
+    var_set_num(vm, "SETPOBJ_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "SETPOBJ_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s nest=%s field=%s from=%d\n",
+              is_inc ? "incobj" : (is_del ? "delpobj" : "setpobj"),
+              nestk, field, have_from);
+    bump(vm); return 1;
+  }
+
 
 
   /* TOKVP|TOBAGP [FROM plate] — plate → key:val bag (JSONTOKV dual).

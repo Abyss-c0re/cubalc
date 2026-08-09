@@ -272,6 +272,9 @@ SETOBJ "meta" META           # write nested back
 GETOBJ FROM PEER "cfg" OR "{}" INTO CFG
 MERGEOBJ "meta" "{\"role\":\"leader\"}"   # overlay nested without peel glue
 DEFAULTOBJ FROM PEER "cfg" "{\"port\":8080}"  # fill missing nested only
+GETPOBJ "meta" "role"                 # peel nested scalar
+SETPOBJ "meta" "role" "leader"
+INCOBJ "stats" "hits"
 ```
 
 Compare plates (no `SYS JSONEQ` glue):

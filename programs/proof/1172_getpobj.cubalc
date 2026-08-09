@@ -1,0 +1,95 @@
+# GETPOBJ / SETPOBJ / INCOBJ / DELPOBJ — nested scalar field plane
+# Usability: no GETOBJ+GETP/SETP+SETOBJ glue for agent nested config/counters.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"x\":1,\"role\":\"worker\"},\"n\":3}"
+LET PEER = "{\"cfg\":{\"port\":8080,\"tls\":0},\"name\":\"peerB\"}"
+
+# peel nested scalar
+GETPOBJ "meta" "role"
+ASSERT OK == 1
+ASSERT GETPOBJ_HIT == 1
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+GETPOBJ "meta" "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# set nested scalar
+SETPOBJ "meta" "role" "leader"
+ASSERT OK == 1
+GETPOBJ "meta" "role"
+SYS EQS LAST "leader"
+ASSERT LAST_N == 1
+# sibling + outer intact
+GETPOBJ "meta" "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# inc nested counter (creates nest if needed)
+INCOBJ "stats" "hits"
+ASSERT OK == 1
+ASSERT INCOBJ_V == 1
+INCOBJ "stats" "hits" 2
+ASSERT INCOBJ_V == 3
+GETPOBJ "stats" "hits"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# del nested field
+SETPOBJ "meta" "tmp" "z"
+DELPOBJ "meta" "tmp"
+ASSERT OK == 1
+GETPOBJ "meta" "tmp"
+ASSERT OK == 0
+ASSERT GETPOBJ_HIT == 0
+GETPOBJ "meta" "role"
+SYS EQS LAST "leader"
+ASSERT LAST_N == 1
+
+# soft miss + OR
+GETPOBJ "meta" "missing" OR "fallback"
+ASSERT OK == 1
+ASSERT GETPOBJ_OR == 1
+SYS EQS LAST "fallback"
+ASSERT LAST_N == 1
+GETPOBJ "nope" "x" OR 0
+ASSERT GETPOBJ_OR == 1
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# multi-plate FROM PEER
+GETPOBJ FROM PEER "cfg" "port"
+ASSERT GETPOBJ_FROM == 1
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+SETPOBJ FROM PEER "cfg" "port" 9090
+ASSERT SETPOBJ_FROM == 1
+INCOBJ FROM PEER "cfg" "tls"
+GETPOBJ "cfg" "port" FROM PEER
+SYS EQS LAST "9090"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "cfg" "tls"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP FROM PEER "name"
+SYS EQS LAST "peerB"
+ASSERT LAST_N == 1
+
+# PEEKNEST / BUMPNEST / DROPNEST aliases
+LET PLATE = "{\"a\":{\"k\":5}}"
+PEEKNEST "a" "k"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+BUMPNEST "a" "k"
+ASSERT INCOBJ_V == 6
+DROPNEST "a" "k"
+GETPOBJ "a" "k" OR "gone"
+SYS EQS LAST "gone"
+ASSERT LAST_N == 1
+
+PRINT "getpobj soft ok"
