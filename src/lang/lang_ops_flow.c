@@ -18576,6 +18576,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
    * EACH METHOD|MSG|HANDLER OF obj|Class [AS name] ... END — walk schema method names.
    * EACH OBJ [Class] [AS name] ... END — walk live OOP objects (optional class filter).
    * EACH KEY|KEYS [AS name] OF|FROM plate|LAST|PLATE ... END — walk JSON plate keys.
+   * EACH KEYNEST nest [FROM plate] | EACH KEY OF NEST nest — walk nested object keys.
    * Note: EACH FIELD/FIELDS stays a LINE synonym (bag walk), not schema props.
    * digit-4 control: cell-range iterator binds value to name, IT=index, VAL=value */
   if (kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")){
@@ -18598,33 +18599,37 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     int is_obj = (kw(&L->cur,"OBJ")||kw(&L->cur,"OBJS")||kw(&L->cur,"OBJECT")||
                   kw(&L->cur,"OBJECTS")||kw(&L->cur,"INST")||kw(&L->cur,"INSTANCE")||
                   kw(&L->cur,"INSTANCES")||kw(&L->cur,"OOP"));
-    int is_key = (kw(&L->cur,"KEY")||kw(&L->cur,"KEYS")||kw(&L->cur,"PLATEKEY")||
+    int is_keynest = (kw(&L->cur,"KEYNEST")||kw(&L->cur,"NESTKEY")||
+                      kw(&L->cur,"NESTKEYS")||kw(&L->cur,"KEYINNEST")||
+                      kw(&L->cur,"NESTPAIR")||kw(&L->cur,"NESTPAIRS")||
+                      kw(&L->cur,"PLATEKEYNEST")||kw(&L->cur,"JSONKEYNEST"));
+    int is_key = is_keynest ||
+                 (kw(&L->cur,"KEY")||kw(&L->cur,"KEYS")||kw(&L->cur,"PLATEKEY")||
                   kw(&L->cur,"PLATEKEYS")||kw(&L->cur,"JSONKEY")||kw(&L->cur,"JSONKEYS")||
                   kw(&L->cur,"K")||kw(&L->cur,"PAIR")||kw(&L->cur,"PAIRS")||
                   kw(&L->cur,"KV")||kw(&L->cur,"KVS"));
     if (!is_cell && !is_cube && !is_line && !is_obj && !is_prop && !is_meth && !is_key){
-      fail(vm,"EACH CUBE|CELL|LINE|PROP|METHOD|OBJ|KEY as name"); return -1;
+      fail(vm,"EACH CUBE|CELL|LINE|PROP|METHOD|OBJ|KEY|KEYNEST as name"); return -1;
     }
     lex_next(L);
     if (is_key){
       /* EACH KEY|KEYS [AS name] OF|FROM plate|LAST|PLATE ... END
-       * Binds each top-level JSON plate key to name (default KEY); IT=0-based; KEY_N=1-based.
-       * Also binds VALUE/VAL from plate (decoded string or number text).
-       * Snapshot keys bag before loop so body may clobber LAST/PLATE.
-       * Soft empty if non-object. Usability: no KEYSP+EACH LINE glue for plate walk:
-       *   EACH KEY OF PLATE
-       *     GETP KEY
-       *   END
-       *   EACH KEY AS k FROM PEER ... END
+       * EACH KEYNEST|NESTKEY [AS name] nest [FROM plate] ... END
+       * EACH KEY OF NEST nest [FROM plate] ... END
+       * Binds KEY (+ VALUE/VAL) per field. KEYNEST peels nested object first.
+       * Soft empty if non-object. Usability: no KEYSP/KEYSOBJ+EACH LINE glue:
+       *   EACH KEYNEST "meta" ... END
+       *   EACH KEY OF NEST "cfg" FROM PEER ... END
        */
       char bind[48], plate[CUBALC_HOST_STR_MAX], keys_snap[CUBALC_HOST_STR_MAX];
-      cubalc_host_result kr, gr;
-      const char *p, *start;
+      char nestk[96], outer[CUBALC_HOST_STR_MAX];
+      cubalc_host_result kr, gr, ngr;
+      const char *p, *startp, *vv;
       long idx = 0, nkeys = 0;
-      int have_src = 0;
+      int have_src = 0, nest_mode = is_keynest ? 1 : 0;
       Var *pv;
       snprintf(bind, sizeof bind, "KEY");
-      plate[0] = 0; keys_snap[0] = 0;
+      plate[0] = 0; keys_snap[0] = 0; nestk[0] = 0; outer[0] = 0;
       if (kw(&L->cur, "AS") || kw(&L->cur, "->")) {
         lex_next(L);
         if (L->cur.kind != TK_IDENT) { fail(vm, "EACH KEY as name"); return -1; }
@@ -18633,30 +18638,126 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       } else if (L->cur.kind == TK_IDENT && !kw(&L->cur, "OF") &&
                  !kw(&L->cur, "ON") && !kw(&L->cur, "IN") &&
                  !kw(&L->cur, "FROM") && !kw(&L->cur, "END") &&
+                 !kw(&L->cur, "NEST") &&
                  strcmp(L->cur.text, "->") != 0) {
-        snprintf(bind, sizeof bind, "%s", L->cur.text);
-        lex_next(L);
+        /* bare bind only for top-level EACH KEY name OF … — not nest key */
+        if (!nest_mode) {
+          snprintf(bind, sizeof bind, "%s", L->cur.text);
+          lex_next(L);
+        }
       }
-      if (kw(&L->cur, "OF") || kw(&L->cur, "ON") || kw(&L->cur, "IN") ||
+      if (nest_mode) {
+        /* EACH KEYNEST [AS name] nest [FROM plate] */
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long kv = parse_expr(vm, L);
+          snprintf(nestk, sizeof nestk, "%ld", kv);
+        } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          if (kw(&L->cur, "FROM") || kw(&L->cur, "OF") || kw(&L->cur, "END")) {
+            fail(vm, "EACH KEYNEST nest — need nest key");
+            return -1;
+          }
+          if (resolve_str_arg(vm, L, nestk, sizeof nestk) != 0)
+            nestk[0] = 0;
+        } else {
+          fail(vm, "EACH KEYNEST nest — need nest key");
+          return -1;
+        }
+        if (kw(&L->cur, "FROM") || kw(&L->cur, "OF") || kw(&L->cur, "ON") ||
+            kw(&L->cur, "IN") || kw(&L->cur, "USING")) {
+          lex_next(L);
+          have_src = 1;
+          if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+            snprintf(outer, sizeof outer, "%s", vm->last_str);
+            lex_next(L);
+          } else if (L->cur.kind == TK_IDENT) {
+            pv = var_get(vm, L->cur.text, 0);
+            if (pv && pv->is_str) {
+              snprintf(outer, sizeof outer, "%s", pv->sval);
+              lex_next(L);
+            } else if (pv) {
+              snprintf(outer, sizeof outer, "%ld", pv->val);
+              lex_next(L);
+            } else if (resolve_str_arg(vm, L, outer, sizeof outer) != 0) {
+              outer[0] = 0;
+            }
+          } else if (resolve_str_arg(vm, L, outer, sizeof outer) != 0) {
+            snprintf(outer, sizeof outer, "%s", vm->last_str);
+          }
+        } else {
+          pv = var_get(vm, "PLATE", 0);
+          if (pv && pv->is_str && pv->sval[0])
+            snprintf(outer, sizeof outer, "%s", pv->sval);
+          else
+            snprintf(outer, sizeof outer, "%s", vm->last_str);
+        }
+      } else if (kw(&L->cur, "OF") || kw(&L->cur, "ON") || kw(&L->cur, "IN") ||
           kw(&L->cur, "FROM") || kw(&L->cur, "FOR") || kw(&L->cur, "OVER")) {
         lex_next(L);
-        have_src = 1;
-        if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
-          snprintf(plate, sizeof plate, "%s", vm->last_str);
+        if (kw(&L->cur, "NEST") || kw(&L->cur, "NESTED") ||
+            kw(&L->cur, "SUB") || kw(&L->cur, "CHILD") || kw(&L->cur, "INNER")) {
+          /* EACH KEY OF NEST nest [FROM plate] — not EACH KEY OF OBJ (prop plane) */
           lex_next(L);
-        } else if (L->cur.kind == TK_IDENT) {
-          pv = var_get(vm, L->cur.text, 0);
-          if (pv && pv->is_str) {
-            snprintf(plate, sizeof plate, "%s", pv->sval);
-            lex_next(L);
-          } else if (pv) {
-            snprintf(plate, sizeof plate, "%ld", pv->val);
-            lex_next(L);
-          } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
-            plate[0] = 0;
+          nest_mode = 1;
+          if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+            long kv = parse_expr(vm, L);
+            snprintf(nestk, sizeof nestk, "%ld", kv);
+          } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+            if (kw(&L->cur, "FROM") || kw(&L->cur, "END")) {
+              fail(vm, "EACH KEY OF NEST nest — need nest key");
+              return -1;
+            }
+            if (resolve_str_arg(vm, L, nestk, sizeof nestk) != 0)
+              nestk[0] = 0;
+          } else {
+            fail(vm, "EACH KEY OF NEST nest — need nest key");
+            return -1;
           }
-        } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
-          snprintf(plate, sizeof plate, "%s", vm->last_str);
+          if (kw(&L->cur, "FROM") || kw(&L->cur, "USING") || kw(&L->cur, "OF")) {
+            lex_next(L);
+            have_src = 1;
+            if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+              snprintf(outer, sizeof outer, "%s", vm->last_str);
+              lex_next(L);
+            } else if (L->cur.kind == TK_IDENT) {
+              pv = var_get(vm, L->cur.text, 0);
+              if (pv && pv->is_str) {
+                snprintf(outer, sizeof outer, "%s", pv->sval);
+                lex_next(L);
+              } else if (pv) {
+                snprintf(outer, sizeof outer, "%ld", pv->val);
+                lex_next(L);
+              } else if (resolve_str_arg(vm, L, outer, sizeof outer) != 0) {
+                outer[0] = 0;
+              }
+            } else if (resolve_str_arg(vm, L, outer, sizeof outer) != 0) {
+              snprintf(outer, sizeof outer, "%s", vm->last_str);
+            }
+          } else {
+            pv = var_get(vm, "PLATE", 0);
+            if (pv && pv->is_str && pv->sval[0])
+              snprintf(outer, sizeof outer, "%s", pv->sval);
+            else
+              snprintf(outer, sizeof outer, "%s", vm->last_str);
+          }
+        } else {
+          have_src = 1;
+          if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+            snprintf(plate, sizeof plate, "%s", vm->last_str);
+            lex_next(L);
+          } else if (L->cur.kind == TK_IDENT) {
+            pv = var_get(vm, L->cur.text, 0);
+            if (pv && pv->is_str) {
+              snprintf(plate, sizeof plate, "%s", pv->sval);
+              lex_next(L);
+            } else if (pv) {
+              snprintf(plate, sizeof plate, "%ld", pv->val);
+              lex_next(L);
+            } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+              plate[0] = 0;
+            }
+          } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+            snprintf(plate, sizeof plate, "%s", vm->last_str);
+          }
         }
       } else {
         /* bare: conventional PLATE, else LAST object */
@@ -18665,6 +18766,35 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           snprintf(plate, sizeof plate, "%s", pv->sval);
         else
           snprintf(plate, sizeof plate, "%s", vm->last_str);
+      }
+      if (nest_mode) {
+        const char *bp;
+        if (!nestk[0]) {
+          snprintf(plate, sizeof plate, "%s", "{}");
+        } else {
+          bp = outer;
+          while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+          if (*bp != '{')
+            snprintf(outer, sizeof outer, "%s", "{}");
+          memset(&ngr, 0, sizeof ngr);
+          if (cubalc_host_json_get_raw(outer, nestk, &ngr) == 0) {
+            vv = ngr.str;
+            while (*vv == ' ' || *vv == '\t' || *vv == '\n' || *vv == '\r') vv++;
+            if (*vv == '{') {
+              if (vv != ngr.str) {
+                size_t n = strlen(vv);
+                memmove(ngr.str, vv, n + 1);
+              }
+              snprintf(plate, sizeof plate, "%s", ngr.str);
+            } else {
+              snprintf(plate, sizeof plate, "%s", "{}");
+            }
+          } else {
+            snprintf(plate, sizeof plate, "%s", "{}");
+          }
+        }
+        var_set_str(vm, "NEST", nestk);
+        var_set_str(vm, "KEYNEST", nestk);
       }
       {
         const char *bp = plate;
@@ -18695,11 +18825,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           size_t kn = 0;
           while (*p == '\n' || *p == '\r') p++;
           if (!*p) break;
-          start = p;
+          startp = p;
           while (*p && *p != '\n' && *p != '\r') p++;
-          kn = (size_t)(p - start);
+          kn = (size_t)(p - startp);
           if (kn >= sizeof key) kn = sizeof key - 1;
-          memcpy(key, start, kn);
+          memcpy(key, startp, kn);
           key[kn] = 0;
           if (!key[0]) {
             if (*p == '\n' || *p == '\r') p++;
@@ -18708,7 +18838,6 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           var_set_str(vm, bind, key);
           var_set_str(vm, "KEY", key);
           var_set_str(vm, "K", key);
-          /* peel value for agent convenience (VALUE/VAL) */
           memset(&gr, 0, sizeof gr);
           if (cubalc_host_json_get(plate, key, &gr) == 0) {
             var_set_str(vm, "VALUE", gr.str);
@@ -18739,6 +18868,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "LAST_N", nkeys);
         var_set_num(vm, "EACH_N", nkeys);
         var_set_num(vm, "NKEYS", nkeys);
+        var_set_num(vm, "KEYNEST_MODE", nest_mode ? 1 : 0);
         var_set_num(vm, "OK", 1);
         (void)have_src;
         bump(vm);

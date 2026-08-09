@@ -1,0 +1,102 @@
+# EACH KEYNEST / EACH KEY OF NEST — walk nested plate keys without KEYSOBJ+EACH LINE
+# Usability: bind KEY + VALUE for nested object fields (agent config walk).
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"x\":1,\"role\":\"worker\",\"zone\":\"A\"},\"n\":3}"
+LET PEER = "{\"cfg\":{\"port\":8080,\"tls\":1},\"name\":\"peerB\"}"
+LET bag = ""
+LET n_walk = 0
+LET saw_role = 0
+LET role_val = ""
+
+# bare KEYNEST uses PLATE nest
+EACH KEYNEST "meta"
+  LET n_walk = n_walk + 1
+  SYS PUSH bag KEY
+  LET bag = LAST
+  SYS EQS KEY "role"
+  IF LAST_N == 1 THEN
+    LET saw_role = 1
+    LET role_val = VALUE
+  END
+  SYS EQS KEY "x"
+  IF LAST_N == 1 THEN
+    SYS EQS VALUE "1"
+    ASSERT LAST_N == 1
+  END
+END
+ASSERT OK == 1
+ASSERT EACH_N == 3
+ASSERT KEYNEST_MODE == 1
+ASSERT n_walk == 3
+ASSERT saw_role == 1
+SYS EQS role_val "worker"
+ASSERT LAST_N == 1
+SYS HASLINE bag "role"
+ASSERT LAST_N == 1
+SYS HASLINE bag "zone"
+ASSERT LAST_N == 1
+SYS HASLINE bag "x"
+ASSERT LAST_N == 1
+SYS EQS NEST "meta"
+ASSERT LAST_N == 1
+
+# FROM PEER with bind name
+LET bag2 = ""
+EACH KEYNEST AS k "cfg" FROM PEER
+  SYS PUSH bag2 k
+  LET bag2 = LAST
+  SYS EQS k "port"
+  IF LAST_N == 1 THEN
+    SYS EQS VAL "8080"
+    ASSERT LAST_N == 1
+  END
+  SYS EQS k "tls"
+  IF LAST_N == 1 THEN
+    SYS EQS V "1"
+    ASSERT LAST_N == 1
+  END
+END
+ASSERT EACH_N == 2
+SYS HASLINE bag2 "port"
+ASSERT LAST_N == 1
+SYS HASLINE bag2 "tls"
+ASSERT LAST_N == 1
+
+# EACH KEY OF NEST alias
+LET c = 0
+EACH KEY OF NEST "meta"
+  LET c = c + 1
+END
+ASSERT c == 3
+ASSERT KEYNEST_MODE == 1
+
+# OF NEST FROM PEER
+LET c2 = 0
+EACH KEY OF NEST "cfg" FROM PEER
+  LET c2 = c2 + 1
+END
+ASSERT c2 == 2
+
+# soft empty nest
+EACH KEYNEST "missing"
+  LET n_walk = 99
+END
+ASSERT EACH_N == 0
+ASSERT n_walk == 3
+
+# top-level EACH KEY still works (not nest mode)
+LET t = 0
+EACH KEY OF PLATE
+  LET t = t + 1
+END
+ASSERT t == 3
+ASSERT KEYNEST_MODE == 0
+
+# PEER outer untouched
+GETP FROM PEER "name"
+SYS EQS LAST "peerB"
+ASSERT LAST_N == 1
+
+PRINT "each_keynest soft ok"

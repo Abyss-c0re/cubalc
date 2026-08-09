@@ -284,6 +284,7 @@ INCOBJ "stats" "hits"
 HASPOBJ "meta" "role"                 # soft nested presence
 KEYSOBJ "meta"                         # nested key bag
 NEEDPOBJ "meta" "x" "role"             # fail-fast nested contract
+EACH KEYNEST "meta"                 # walk nested KEY+VALUE
 ```
 
 Compare plates (no `SYS JSONEQ` glue):
