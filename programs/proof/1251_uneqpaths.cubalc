@@ -1,0 +1,88 @@
+# UNEQPATHS / DIVERGEPATHS — all leaf paths that break uniformity
+# Usability: bulk nest inconsistency without EACH FLAT+IF+PUSH glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"ok\"},\"c\":{\"status\":\"ok\"}}"
+LET MIX = "{\"w1\":{\"role\":\"worker\"},\"w2\":{\"role\":\"leader\"},\"w3\":{\"role\":\"leader\"},\"w4\":{\"role\":\"standby\"}}"
+
+# mixed roles → one diverge path (other.role vs first worker)
+UNEQPATHS "role"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT UNEQPATHS_TOTAL == 3
+SYS EQS UNEQPATHS_REF "worker"
+ASSERT LAST_N == 1
+SYS EQS LAST "other.role"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "other.role"
+ASSERT LAST_N == 1
+
+# hosts: one diverge
+UNEQPATHS "host"
+ASSERT LAST_N == 1
+ASSERT UNEQPATHS_TOTAL == 2
+SYS EQS UNEQPATHS_REF "h1"
+ASSERT LAST_N == 1
+SYS HAS LAST "host"
+ASSERT LAST_N == 1
+
+# multi diverge from first (3 paths != worker)
+UNEQPATHS FROM MIX "role"
+ASSERT UNEQPATHS_FROM == 1
+ASSERT LAST_N == 3
+ASSERT UNEQPATHS_TOTAL == 4
+SYS EQS UNEQPATHS_SRC "MIX"
+ASSERT LAST_N == 1
+SYS EQS UNEQPATHS_REF "worker"
+ASSERT LAST_N == 1
+SYS HASLINE UNEQPATHS "w2.role"
+ASSERT LAST_N == 1
+SYS HASLINE UNEQPATHS "w3.role"
+ASSERT LAST_N == 1
+SYS HASLINE UNEQPATHS "w4.role"
+ASSERT LAST_N == 1
+SYS HASLINE UNEQPATHS "w1.role"
+ASSERT LAST_N == 0
+
+# after unify → empty bag
+SETBYVAL "leader" "worker"
+UNEQPATHS "role"
+ASSERT LAST_N == 0
+ASSERT UNEQPATHS_TOTAL == 3
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# multi-plate all same
+UNEQPATHS FROM PEER "status"
+ASSERT LAST_N == 0
+ASSERT UNEQPATHS_TOTAL == 3
+SYS EQS UNEQPATHS_REF "ok"
+ASSERT LAST_N == 1
+
+# soft empty miss
+UNEQPATHS "nope"
+ASSERT LAST_N == 0
+ASSERT UNEQPATHS_TOTAL == 0
+
+# DIVERGEPATHS alias
+LET PLATE = "{\"x\":{\"v\":\"a\"},\"y\":{\"v\":\"b\"},\"z\":{\"v\":\"c\"}}"
+DIVERGEPATHS "v"
+ASSERT LAST_N == 2
+SYS HASLINE DIVERGEPATHS "y.v"
+ASSERT LAST_N == 1
+SYS HASLINE DIVERGEPATHS "z.v"
+ASSERT LAST_N == 1
+SYS EQS DIVERGEPATHS_REF "a"
+ASSERT LAST_N == 1
+
+# plate unchanged after multi-plate
+LET PLATE = "{\"x\":9}"
+UNEQPATHS FROM PEER "status"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1251_uneqpaths: PASS"

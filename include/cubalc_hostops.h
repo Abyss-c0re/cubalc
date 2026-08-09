@@ -478,6 +478,13 @@ int cubalc_host_json_leaf_all_eq(const char *json, const char *needle,
  * without EACH FLAT+EQS glue. */
 int cubalc_host_json_leaf_first_uneq(const char *json, const char *needle,
                                      cubalc_host_result *r);
+/* All matching leaf paths whose value differs from the first match (UNEQPATHS / DIVERGEPATHS).
+ * Empty needle → all leaves. Multi twin of FIRSTUNEQFLAT.
+ * r->str = path bag · r->n = diverge count · r->code = total matches · r->err = ref value.
+ * Soft empty bag when uniform / 0-1 matches. Soft always OK. Read-only.
+ * Usability: bulk locate nest inconsistencies without EACH FLAT+IF+PUSH glue. */
+int cubalc_host_json_leaf_uneq_paths(const char *json, const char *needle,
+                                     cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

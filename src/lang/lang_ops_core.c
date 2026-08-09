@@ -27463,6 +27463,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"DELBYVAL") || kw(&L->cur,"DROPVAL") || kw(&L->cur,"RMVAL") ||
              kw(&L->cur,"ALLEQFLAT") || kw(&L->cur,"SAMEVALFLAT") || kw(&L->cur,"EQVALSFLAT") ||
              kw(&L->cur,"FIRSTUNEQFLAT") || kw(&L->cur,"PATHUNEQ") || kw(&L->cur,"DIVERGE1") ||
+             kw(&L->cur,"UNEQPATHS") || kw(&L->cur,"DIVERGEPATHS") || kw(&L->cur,"ALLUNEQ") ||
              kw(&L->cur,"UNIQFLAT") || kw(&L->cur,"DISTINCTFLAT") || kw(&L->cur,"UNIQUEFLAT") ||
              kw(&L->cur,"NEEDFLAT") || kw(&L->cur,"REQUIREFLAT") || kw(&L->cur,"MUSTFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
@@ -35924,6 +35925,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FIRSTUNEQFLAT", "FIRSTUNEQFLAT|PATHUNEQ [FROM plate] [needle] — first leaf path whose value differs from first match → LAST · LAST_N 0|1 · multi-plate · locate after ALLEQFLAT fail"},
       {"PATHUNEQ", "PATHUNEQ alias of FIRSTUNEQFLAT"},
       {"DIVERGE1", "DIVERGE1 alias of FIRSTUNEQFLAT"},
+      {"UNEQPATHS", "UNEQPATHS|DIVERGEPATHS [FROM plate] [needle] — all leaf paths whose value differs from first match → LAST bag · LAST_N=count · multi twin of FIRSTUNEQFLAT"},
+      {"DIVERGEPATHS", "DIVERGEPATHS alias of UNEQPATHS"},
+      {"ALLUNEQ", "ALLUNEQ alias of UNEQPATHS"},
       {"UNIQFLAT", "UNIQFLAT|DISTINCTFLAT [FROM plate] [needle] — unique matching leaf values → LAST bag · LAST_N=uniques · multi-plate · read-only"},
       {"DISTINCTFLAT", "DISTINCTFLAT alias of UNIQFLAT"},
       {"NEEDFLAT", "NEEDFLAT|REQUIREFLAT [FROM plate] needle… — fail-fast if any leaf-path needle missing · multi-plate · soft twin HASFLAT"},
@@ -49030,6 +49034,144 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# firstuneqflat found=%ld i=%ld n=%ld needle=%s from=%d\n",
               found, found ? hr.n : 0L, total, needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* UNEQPATHS|DIVERGEPATHS|ALLUNEQ [FROM plate] [needle]
+   * All matching leaf paths whose value differs from the first match → LAST bag.
+   * LAST_N = diverge count. UNEQPATHS_REF = first value. UNEQPATHS_TOTAL = matches.
+   * Empty/omitted needle → all leaves. Soft empty bag if uniform / 0-1. Multi twin of FIRSTUNEQFLAT.
+   * Usability: bulk nest inconsistency locate without EACH FLAT+IF+PUSH:
+   *   ALLEQFLAT "role"
+   *   IF LAST_N == 0
+   *     UNEQPATHS "role"   # bag of paths != first role
+   *   END
+   *   UNEQPATHS FROM PEER "status"
+   *   DIVERGEPATHS ""
+   */
+  if (kw(&L->cur,"UNEQPATHS") || kw(&L->cur,"DIVERGEPATHS") || kw(&L->cur,"ALLUNEQ") ||
+      kw(&L->cur,"MUNEQPATHS") || kw(&L->cur,"PLATE_UNEQPATHS") || kw(&L->cur,"PATHSUNEQ") ||
+      kw(&L->cur,"DIVERGEALL") || kw(&L->cur,"ALLDIVERGE") || kw(&L->cur,"UNEQALL")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(needle, sizeof needle, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"UNEQPATHS") && !kw(&L->cur,"FIRSTUNEQFLAT") &&
+               !kw(&L->cur,"IF")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_uneq_paths(plate, needle, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "UNEQPATHS: fail");
+      var_set_str(vm, "ERR", "UNEQPATHS: fail");
+      var_set_num(vm, "UNEQPATHS_N", 0);
+      var_set_num(vm, "LAST_N", 0);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    var_set_num(vm, "LAST_N", hr.n);
+    vm->last_n = hr.n;
+    var_set_str(vm, "UNEQPATHS", hr.str);
+    var_set_str(vm, "DIVERGEPATHS", hr.str);
+    var_set_str(vm, "ALLUNEQ", hr.str);
+    var_set_num(vm, "UNEQPATHS_N", hr.n);
+    var_set_num(vm, "DIVERGEPATHS_N", hr.n);
+    var_set_num(vm, "UNEQPATHS_TOTAL", (long)hr.code);
+    var_set_num(vm, "DIVERGEPATHS_TOTAL", (long)hr.code);
+    var_set_str(vm, "UNEQPATHS_REF", hr.err);
+    var_set_str(vm, "DIVERGEPATHS_REF", hr.err);
+    var_set_str(vm, "UNEQPATHS_NEEDLE", needle);
+    var_set_num(vm, "UNEQPATHS_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "UNEQPATHS_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# uneqpaths n=%ld total=%ld needle=%s from=%d\n",
+              hr.n, (long)hr.code, needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 
