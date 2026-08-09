@@ -35051,7 +35051,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * Bare HELP → catalog tip pointing at cubalc forms CLI. */
   if (kw(&L->cur,"HELP")||kw(&L->cur,"MAN")||kw(&L->cur,"DOC")){
     static const struct { const char *name; const char *hint; } help[] = {
-      {"HOLD_FLASH", "HOLD_FLASH 0|1 — device/firmware safeguard; default 1 (omit preamble)"},
+      {"HOLD_FLASH", "HOLD_FLASH 0|1 — device/mesh-join only; not language PLUG"},
       {"CUBE", "CUBE name [OF Class] ROLE host|body PROTON 0|1 — COP unit"},
       {"CLASS", "CLASS Name · FIELD · METHOD … END — OOP type (COP upgrade)"},
       {"LISTCLASSES", "LISTCLASSES|CLASSES — bag of class names · NCLASSES"},
@@ -36605,6 +36605,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"WHYERR", "WHYERR alias of WHY"},
       {"IDENTITY", "IDENTITY — cubalc.identity.v1 plate (user@host:pid + vars)"},
       {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname — SOFT sets INCLUDE_MISS/SUGGEST · CUBALC_INCLUDE_PATH dirs"},
+      {"LISTINCLUDES", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N (after -I/INCLUDE)"},
+      {"INCLUDES", "INCLUDES alias of LISTINCLUDES"},
+      {"LOADED", "LOADED alias of LISTINCLUDES"},
+      {"HASINCLUDE", "HASINCLUDE name|path — soft 0|1 if module loaded · stem/path match · dual of LISTINCLUDES"},
       {"LET", "LET name [=] expr|string — = optional before value"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
@@ -37375,7 +37379,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (!q[0]){
       snprintf(out, sizeof out,
                "HELP [form] · cubalc forms [prefix] · cookbook: docs/COOKBOOK.md · "
-               "HOLD_FLASH default 1 (device/firmware safeguard) · SMX binary mesh");
+               "HOLD_FLASH device/mesh-join only · SMX binary mesh");
       found = 1; hits = nhelp;
     } else {
       size_t o = 0;
@@ -37757,7 +37761,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     else if (strstr(err, "HOLD_FLASH") || strstr(err, "PLUG") ||
              strstr(err, "hold_flash"))
       snprintf(hintbuf, sizeof hintbuf,
-               "HOLD_FLASH default 1 · HOLD_FLASH 0 denies PLUG · docs/HOLD_FLASH.md");
+               "HOLD_FLASH device/mesh-join only · docs/HOLD_FLASH.md");
     else if (strstr(err, "unknown form") || strstr(err, "did you mean") ||
              strstr(err, "unknown"))
       snprintf(hintbuf, sizeof hintbuf,

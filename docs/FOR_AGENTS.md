@@ -34,6 +34,7 @@ cubalc run -L "$PWD/mylibs" -I my_extra prog.cubalc  # one-shot CUBALC_INCLUDE_P
 ```
 
 Run plate includes `preload_n` / `include_path_n`. See `cubalc env PRELOAD`.
+After load: `LISTINCLUDES` → path bag · `HASINCLUDE agent_boot` soft 0|1 · `INCLUDE_N`.
 
 ## Durable agent state (plates)
 

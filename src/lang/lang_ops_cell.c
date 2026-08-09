@@ -5700,6 +5700,113 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     if (rc<0) return -1;
     bump(vm); return 1;
   }
+
+  /* LISTINCLUDES / INCLUDES / LOADED — bag of resolved INCLUDE paths this run.
+   * Usability: after cubalc run -I / INCLUDE ONCE, agents audit without guessing.
+   * LAST = newline paths · LAST_N / INCLUDE_N = count · empty bag when none. */
+  if (kw(&L->cur, "LISTINCLUDES") || kw(&L->cur, "INCLUDES") ||
+      kw(&L->cur, "LOADED") || kw(&L->cur, "LISTINCLUDED") ||
+      kw(&L->cur, "INCLUDED") || kw(&L->cur, "LIST_INCLUDES") ||
+      kw(&L->cur, "INCLUDELIST")) {
+    char bag[4096];
+    size_t o = 0;
+    int i, n = 0;
+    lex_next(L);
+    bag[0] = 0;
+    for (i = 0; i < vm->n_included; i++) {
+      size_t ln = strlen(vm->included[i]);
+      if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, vm->included[i], ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTINCLUDES", bag);
+    var_set_str(vm, "INCLUDES", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "INCLUDE_N", n);
+    var_set_num(vm, "LISTINCLUDES_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASINCLUDE name|path — soft 0|1 if a loaded INCLUDE matches stem or path.
+   * Complements LISTINCLUDES · IF without bag GREP after -I preload. */
+  if (kw(&L->cur, "HASINCLUDE") || kw(&L->cur, "HAVEINCLUDE") ||
+      kw(&L->cur, "HASLOADED") || kw(&L->cur, "ISINCLUDED") ||
+      kw(&L->cur, "INCLUDELOADED")) {
+    char want[256], stem[256];
+    int i, hit = 0;
+    size_t wlen;
+    const char *slash;
+    lex_next(L);
+    if (kw(&L->cur, "LIB") || kw(&L->cur, "OF") || kw(&L->cur, "MODULE"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(want, sizeof want, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(want, sizeof want, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(want, sizeof want, "%s", vm->last_str);
+      else
+        snprintf(want, sizeof want, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "HASINCLUDE name|path");
+      return -1;
+    }
+    /* normalize stem: basename, strip .cubalc */
+    slash = strrchr(want, '/');
+    snprintf(stem, sizeof stem, "%s", slash ? slash + 1 : want);
+    wlen = strlen(stem);
+    if (wlen > 7 && strcmp(stem + wlen - 7, ".cubalc") == 0)
+      stem[wlen - 7] = 0;
+    for (i = 0; i < vm->n_included; i++) {
+      const char *p = vm->included[i];
+      const char *b = strrchr(p, '/');
+      char pstem[256];
+      size_t plen;
+      b = b ? b + 1 : p;
+      snprintf(pstem, sizeof pstem, "%s", b);
+      plen = strlen(pstem);
+      if (plen > 7 && strcmp(pstem + plen - 7, ".cubalc") == 0)
+        pstem[plen - 7] = 0;
+      if (strcmp(p, want) == 0 || strcmp(b, want) == 0 ||
+          strcmp(pstem, want) == 0 || strcmp(pstem, stem) == 0 ||
+          strcmp(b, stem) == 0 ||
+          (stem[0] && strstr(p, stem))) {
+        hit = 1;
+        var_set_str(vm, "INCLUDE_PATH", p);
+        break;
+      }
+    }
+    if (!hit)
+      var_set_str(vm, "INCLUDE_PATH", "");
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "HASINCLUDE_N", hit);
+    var_set_num(vm, "INCLUDE_N", vm->n_included);
+    var_set_str(vm, "INCLUDE_MISS", hit ? "" : want);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* FN name ... END — reusable practical blocks */
   return 0;
 }

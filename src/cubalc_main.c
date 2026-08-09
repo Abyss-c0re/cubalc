@@ -865,7 +865,7 @@ static int cmd_smx_bus(int argc, char **argv) {
 }
 
 /* Core protection layer — NexusCore + nanobot mesh enforcement under Cube Laws.
- * Priorities (WE ACK): one_cmd · SMX fail-closed · HOLD_FLASH · budget · CT101 · mesh
+ * Priorities (WE ACK): one_cmd · SMX fail-closed · budget · CT101 · mesh · device hold
  */
 static int cmd_protect(int argc, char **argv) {
   const char *mode = (argc > 2) ? argv[2] : "all";
@@ -938,7 +938,7 @@ static int cmd_protect(int argc, char **argv) {
            "\"note\":\"status only — no board/smx; run cubalc protect all for checks\","
            "\"next\":[\"cubalc protect all\",\"cubalc doctor\",\"cubalc env\"],"
            "\"hints\":["
-           "\"HOLD_FLASH default 1 (device/firmware safeguard; omit preamble)\","
+           "\"HOLD_FLASH device/mesh-join only · default 1 · not language PLUG\","
            "\"export CUBALC_SMX_KEY=$(openssl rand -hex 32) for P2P\","
            "\"cubalc protect all · cubalc doctor · docs/CORE_PROTECT.md\""
            "]}\n",
@@ -1957,7 +1957,7 @@ int main(int argc, char **argv) {
                  "CUBALC_P2P_SOFT=1 · cubalc env · CUBALC_P2P_TIMEOUT ms");
       else if (strstr(e, "HOLD_FLASH") || strstr(e, "PLUG") || strstr(e, "hold_flash"))
         snprintf(whyh, sizeof whyh,
-                 "HOLD_FLASH default 1 · HOLD_FLASH 0 denies PLUG · docs/HOLD_FLASH.md");
+                 "HOLD_FLASH device/mesh-join only · docs/HOLD_FLASH.md");
       else if (strstr(e, "unknown form") || strstr(e, "did you mean") ||
                strstr(e, "unknown"))
         snprintf(whyh, sizeof whyh,
@@ -2081,7 +2081,7 @@ int main(int argc, char **argv) {
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"nest_check\":\"%s\","
              "\"hints\":["
-             "\"HOLD_FLASH default 1 — omit preamble; HOLD_FLASH 0 denies PLUG\","
+             "\"HOLD_FLASH device/mesh-join only · default 1 · not language PLUG\","
              "\"export CUBALC_SMX_KEY=$(openssl rand -hex 32) for P2P\","
              "\"cubalc protect · cubalc smx-bus prove-tcp\","
              "\"cubalc selftest — live usability proofs\","
@@ -2650,6 +2650,8 @@ int main(int argc, char **argv) {
       {"include_path_soft", "programs/proof/1259_include_path_soft.cubalc", "CUBALC_INCLUDE_PATH + INCLUDE SOFT MISS/SUGGEST"},
       {"cli_include_path", "programs/proof/1259_cli_include_path.sh", "CUBALC_INCLUDE_PATH private lib resolve"},
       {"cli_run_preload", "programs/proof/1260_cli_run_preload.sh", "run -I/CUBALC_PRELOAD + -L include-path preload"},
+      {"listincludes", "programs/proof/1261_listincludes.cubalc", "LISTINCLUDES/HASINCLUDE loaded module audit"},
+      {"cli_listincludes", "programs/proof/1261_cli_listincludes.sh", "LISTINCLUDES after run -I preload"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2815,7 +2817,7 @@ int main(int argc, char **argv) {
     /* Usability: live human/agent catalog of play forms (not opcode soup).
      * cubalc forms [prefix] — case-insensitive substring filter. */
     static const struct { const char *name; const char *plane; const char *hint; } forms[] = {
-      {"HOLD_FLASH", "law", "device/firmware safeguard · default 1 (omit preamble)"},
+      {"HOLD_FLASH", "law", "device/mesh-join only · default 1 · not language PLUG"},
       {"CUBE", "core", "place cube · CUBE name ROLE host|body"},
       {"PLUG", "core", "wire cubes · denied only if HOLD_FLASH 0"},
       {"UNPLUG", "core", "remove plug edge"},
@@ -3142,6 +3144,8 @@ int main(int argc, char **argv) {
       {"SUBSTPLATEFILE", "flow", "SUBSTPLATEFILE alias of FILLPFILE"},
       {"EXPANDPFILE", "flow", "EXPANDPFILE alias of FILLPFILE"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
+      {"LISTINCLUDES", "flow", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N"},
+      {"HASINCLUDE", "flow", "HASINCLUDE name|path — soft 0|1 if module loaded this run"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback] · ENV SET name val · ENV UNSET name"},
       {"SYS SETENV", "host", "SYS SETENV|ENV SET name value — process setenv"},
       {"SYS ENVDEFAULT", "host", "SYS ENVDEFAULT|ENSUREENV name value — setenv if missing/empty"},
@@ -4473,7 +4477,7 @@ int main(int argc, char **argv) {
       strcmp(cmd, "stdlib") == 0) {
     /* Usability: list programs/lib INCLUDE snippets for agents/humans */
     static const struct { const char *file; const char *hint; } known[] = {
-      {"hold_seed.cubalc", "optional device/firmware HOLD_FLASH seed (not program preamble)"},
+      {"hold_seed.cubalc", "optional new-device / mesh-join HOLD_FLASH seed"},
       {"agent_boot.cubalc", "REQUIRE 1.15 + VERSION agent preamble (no HOLD_FLASH tax)"},
       {"plate_boot.cubalc", "ENSUREPLATE seed + PLATE var agent state preamble (DEFAULT path/seed)"},
       {"plate_tick.cubalc", "ENSURE+bump+ts+SAVE agent plate tick (DEFAULT path/seed/keys)"},
@@ -11069,7 +11073,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"protect", "programs/protect", "core protect samples"},
       {"cookbook", "docs/COOKBOOK.md", "hold → plug → smx recipes"},
       {"agents", "docs/FOR_AGENTS.md", "agent prompt snippet"},
-      {"hold_flash", "docs/HOLD_FLASH.md", "device/firmware connection safeguard"},
+      {"hold_flash", "docs/HOLD_FLASH.md", "device/mesh-join safeguard only"},
       {"p2p_doc", "docs/P2P_SMX.md", "binary mesh wire"},
       {"lang_src", "src/lang", "modular language planes"},
       {"hello", "programs/hello_cube.cubalc", "minimal starter"},
@@ -11168,17 +11172,19 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
     static const struct { const char *name; const char *path; const char *hint; } aliases[] = {
       {"cookbook", "docs/COOKBOOK.md", "hold → plug → smx recipes"},
       {"agents", "docs/FOR_AGENTS.md", "agent prompt snippet"},
-      {"hold_flash", "docs/HOLD_FLASH.md", "device/firmware connection safeguard"},
+      {"hold_flash", "docs/HOLD_FLASH.md", "device/mesh-join safeguard only"},
       {"p2p_doc", "docs/P2P_SMX.md", "binary mesh wire"},
       {"hello", "programs/hello_cube.cubalc", "minimal starter"},
       {"lib", "programs/lib", "INCLUDE short-name stdlib dir"},
       {"proof", "programs/proof", "usability + ISA proofs dir"},
     };
     static const struct { const char *name; const char *plane; const char *hint; } forms[] = {
-      {"HOLD_FLASH", "law", "device/firmware safeguard · default 1"},
+      {"HOLD_FLASH", "law", "device/mesh-join only · default 1 · not language PLUG"},
       {"CUBE", "core", "place cube"},
       {"PLUG", "core", "wire cubes · denied only if HOLD_FLASH 0"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] path|libname → programs/lib/"},
+      {"LISTINCLUDES", "flow", "LISTINCLUDES|LOADED bag of included paths · INCLUDE_N"},
+      {"HASINCLUDE", "flow", "HASINCLUDE name soft 0|1 if module loaded"},
       {"DEFAULT", "flow", "DEFAULT name = value if unset"},
       {"DEFINED", "flow", "DEFINED name → LAST_N 0|1"},
       {"TYPEOF", "flow", "TYPEOF name → undef|num|str"},
@@ -11858,10 +11864,12 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
     int nh = 0, i;
     size_t k;
     static const struct { const char *name; const char *plane; const char *hint; } forms[] = {
-      {"HOLD_FLASH", "law", "device/firmware safeguard · default 1 (omit preamble)"},
+      {"HOLD_FLASH", "law", "device/mesh-join only · default 1 · not language PLUG"},
       {"CUBE", "core", "place cube · CUBE name ROLE host|body"},
       {"PLUG", "core", "wire cubes · denied only if HOLD_FLASH 0"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
+      {"LISTINCLUDES", "flow", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N"},
+      {"HASINCLUDE", "flow", "HASINCLUDE name|path — soft 0|1 if module loaded this run"},
       {"DEFAULT", "flow", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"DEFINED", "flow", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"TYPEOF", "flow", "TYPEOF name — LAST undef|num|str · LAST_N 0|1|2"},
@@ -13042,7 +13050,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
     static const struct { const char *name; const char *path; const char *hint; } aliases[] = {
       {"cookbook", "docs/COOKBOOK.md", "hold → plug → smx recipes"},
       {"agents", "docs/FOR_AGENTS.md", "agent prompt snippet"},
-      {"hold_flash", "docs/HOLD_FLASH.md", "device/firmware connection safeguard"},
+      {"hold_flash", "docs/HOLD_FLASH.md", "device/mesh-join safeguard only"},
       {"p2p_doc", "docs/P2P_SMX.md", "binary mesh wire"},
       {"hello", "programs/hello_cube.cubalc", "minimal starter"},
       {"init", "cubalc init [--list|--plate|--peer]", "scaffold agent_boot / plate_session+uniform / multi-plate peer"},
@@ -13096,7 +13104,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
     {
       DIR *d = opendir("programs/lib");
       static const struct { const char *file; const char *hint; } known[] = {
-        {"hold_seed.cubalc", "optional device/firmware HOLD_FLASH seed (not program preamble)"},
+        {"hold_seed.cubalc", "optional new-device / mesh-join HOLD_FLASH seed"},
         {"agent_boot.cubalc", "REQUIRE 1.15 + VERSION agent preamble (no HOLD_FLASH tax)"},
         {"plate_boot.cubalc", "ENSUREPLATE seed + PLATE var agent state preamble (DEFAULT path/seed)"},
       {"plate_tick.cubalc", "ENSURE+bump+ts+SAVE agent plate tick (DEFAULT path/seed/keys)"},
@@ -13276,7 +13284,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    law|manifest           law plate JSON\n"
       "    protect|core-guard     Core protect checks → state/CORE_PROTECT.json\n"
       "    protect status         JSON summary only · why_hint/next/docs (no board)\n"
-      "    HOLD_FLASH             device/firmware safeguard · default 1 (omit preamble)\n"
+      "    HOLD_FLASH             device/mesh-join only · default 1 · not language PLUG\n"
       "\n"
       "  P2P / SMX2 (binary wire)\n"
       "    smx|smx-selftest       seal/open/anti-replay\n"

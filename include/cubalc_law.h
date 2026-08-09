@@ -10,10 +10,10 @@
 /* creed = opaque status token, not human language */
 #define CUBALC_CREED        "C3"
 #define CUBALC_SHARE        "smx"
-/* HOLD_FLASH: safeguard before connecting a *device that requires firmware
- * changes*. Runtime defaults to 1 — programs need NOT start with HOLD_FLASH 1.
- * Sticky ack — not auto-flash. Devices free: no host firmware write without hold.
- * Set HOLD_FLASH 0 only to deny PLUG (tests / lock-down). */
+/* HOLD_FLASH: device/firmware + mesh-join safeguard only.
+ * Not a program preamble; not a gate on language PLUG (virtual cube wire).
+ * Default 1 so SMX mesh frames carry the sticky hold ack.
+ * Set/include only when initiating a new device or mesh plug-in. */
 #define CUBALC_HOLD_FLASH   1
 #define CUBALC_MAGIC_BIN    0x43424C43u  /* CBLC */
 #define CUBALC_PROTO_V1     1
@@ -33,7 +33,7 @@
 #define CUBALC_LANG_NAME    "CubalC"
 #define CUBALC_LANG_AKA     "C3"
 #define CUBALC_LANG_PARADIGM "COP/flow"
-#define CUBALC_LANG_VERSION "1.15.710-usability"
+#define CUBALC_LANG_VERSION "1.15.711-usability"
 /* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
 #define CUBALC_HTTP_REQUIRED 0
 #define CUBALC_MAX_SRC      (256 * 1024)

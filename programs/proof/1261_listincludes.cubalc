@@ -1,0 +1,48 @@
+# LISTINCLUDES / HASINCLUDE — audit loaded modules after INCLUDE / -I preload
+# Usability: agents verify lib graph without guessing paths.
+
+# empty before any INCLUDE
+LISTINCLUDES
+ASSERT LAST_N == 0
+ASSERT INCLUDE_N == 0
+
+INCLUDE hold_seed
+ASSERT INCLUDE_OK == 1
+
+LISTINCLUDES
+ASSERT LAST_N == 1
+ASSERT INCLUDE_N == 1
+SYS HAS LAST "hold_seed"
+ASSERT LAST_N == 1
+
+HASINCLUDE hold_seed
+ASSERT LAST_N == 1
+SYS HAS INCLUDE_PATH "hold_seed"
+ASSERT LAST_N == 1
+
+HASINCLUDE hold_seed.cubalc
+ASSERT LAST_N == 1
+
+HASINCLUDE zzz_no_such_lib_xxxxx
+ASSERT LAST_N == 0
+SYS EQS INCLUDE_MISS "zzz_no_such_lib_xxxxx"
+ASSERT LAST_N == 1
+
+# second distinct module grows bag
+INCLUDE agent_boot
+LISTINCLUDES
+ASSERT LAST_N == 2
+ASSERT INCLUDE_N == 2
+HASINCLUDE agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE hold_seed
+ASSERT LAST_N == 1
+
+# INCLUDE ONCE does not double-count
+INCLUDE ONCE hold_seed
+ASSERT INCLUDE_SKIPPED == 1
+LISTINCLUDES
+ASSERT LAST_N == 2
+
+PASS
+PRINT "1261_listincludes: PASS"
