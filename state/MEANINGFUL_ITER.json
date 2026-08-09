@@ -1,20 +1,21 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 603,
-  "version": "1.15.630-usability",
-  "item": "RENAMEPOBJ/MOVEKEYOBJ/NESTRENAME",
-  "item_id": 639,
-  "title": "RENAMEPOBJ|MOVEKEYOBJ|NESTRENAME · nest key rename write-back · multi-plate · RENAMEP dual · not OOP RENAMEOBJ",
-  "commit": "f388dfaec0e5238d83f11cc110a8a1196c6ca03f",
-  "summary": "Rename keys inside nested plates without GETOBJ+RENAMEP+SETOBJ glue. proof 1180 38/38.",
+  "iter": 604,
+  "version": "1.15.631-usability",
+  "item": "COPYPOBJ/SWAPPOBJ/NESTCOPY/NESTSWAP",
+  "item_id": 640,
+  "title": "COPYPOBJ|SWAPPOBJ|NESTCOPY|NESTSWAP · nest key copy/swap write-back · multi-plate · COPYP/SWAPP duals · not OOP COPYOBJ",
+  "commit": "228658a82cadb23529a20c4bf6f385009a39ba19",
+  "summary": "Copy/swap keys inside nested plates without GETOBJ+COPYP/SWAPP+SETOBJ glue. proof 1181 46/46.",
   "proofs": [
-    "1180_renamepobj 38/38",
+    "1181_copypobj 46/46",
+    "1180_renamepobj reg ok",
+    "1154_copyp reg ok",
     "1179_lenobj reg ok",
-    "1152_renamep reg ok",
-    "cubalc forms RENAMEPOBJ ok"
+    "cubalc forms COPYPOBJ/SWAPPOBJ ok"
   ],
-  "when": "2026-08-09T07:55:00Z",
+  "when": "2026-08-09T08:10:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f388dfaec0e5238d83f11cc110a8a1196c6ca03f",
-  "note": "invented after backlog 638 LENOBJ nest size; EVOLVE_PAUSED"
+  "sha": "228658a82cadb23529a20c4bf6f385009a39ba19",
+  "note": "restored thrash then shipped after backlog 639 RENAMEPOBJ; EVOLVE_PAUSED"
 }
