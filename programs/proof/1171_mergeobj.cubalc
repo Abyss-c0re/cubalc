@@ -1,0 +1,97 @@
+# MERGEOBJ / DEFAULTOBJ — one-shot nested plate merge/fill
+# Usability: no GETOBJ + MERGEP + SETOBJ glue for nested agent config.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"x\":1,\"role\":\"worker\"},\"n\":3}"
+LET PEER = "{\"cfg\":{\"port\":8080},\"name\":\"peerB\"}"
+
+# overlay nested — wins on existing keys, adds new
+MERGEOBJ "meta" "{\"role\":\"leader\",\"zone\":\"A\"}"
+ASSERT OK == 1
+ASSERT MERGEOBJ_N == 2
+GETOBJ "meta"
+SYS HAS LAST "leader"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"x\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "zone"
+ASSERT LAST_N == 1
+# outer keys intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS HAS MERGED "leader"
+ASSERT LAST_N == 1
+
+# DEFAULTOBJ fill missing only (no clobber)
+DEFAULTOBJ "meta" "{\"x\":99,\"role\":\"nobody\",\"extra\":1}"
+ASSERT OK == 1
+ASSERT MERGEOBJ_DEFAULT == 1
+GETOBJ "meta"
+SYS HAS LAST "\"x\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "leader"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"extra\":1"
+ASSERT LAST_N == 1
+
+# create nested if missing
+MERGEOBJ "stats" "{\"hits\":1,\"ok\":1}"
+ASSERT OK == 1
+GETOBJ "stats"
+SYS HAS LAST "hits"
+ASSERT LAST_N == 1
+TYPEP "stats"
+SYS EQS LAST "obj"
+ASSERT LAST_N == 1
+
+# multi-plate FROM PEER
+MERGEOBJ FROM PEER "cfg" "{\"port\":9090,\"tls\":1}"
+ASSERT MERGEOBJ_FROM == 1
+SYS EQS MERGEOBJ_SRC "PEER"
+ASSERT LAST_N == 1
+GETOBJ FROM PEER "cfg"
+SYS HAS LAST "9090"
+ASSERT LAST_N == 1
+SYS HAS LAST "tls"
+ASSERT LAST_N == 1
+GETP FROM PEER "name"
+SYS EQS LAST "peerB"
+ASSERT LAST_N == 1
+
+# DEFAULTOBJ FROM PEER seed missing nested
+DEFAULTOBJ "cfg" "{\"port\":1,\"retries\":3}" FROM PEER
+GETOBJ FROM PEER "cfg"
+SYS HAS LAST "9090"
+ASSERT LAST_N == 1
+SYS HAS LAST "retries"
+ASSERT LAST_N == 1
+
+# PATCHNEST alias
+LET PLATE = "{\"a\":{\"k\":1}}"
+PATCHNEST "a" "{\"k\":2,\"m\":3}"
+GETOBJ "a"
+SYS HAS LAST "\"k\":2"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"m\":3"
+ASSERT LAST_N == 1
+
+# soft reject non-object overlay
+MERGEOBJ "a" "not-obj"
+ASSERT OK == 0
+SYS HAS LAST_ERR "not object"
+ASSERT LAST_N == 1
+
+# non-object nested key replaced via merge of {}+over
+LET PLATE = "{\"x\":\"scalar\"}"
+MERGEOBJ "x" "{\"now\":1}"
+ASSERT OK == 1
+GETOBJ "x"
+SYS HAS LAST "now"
+ASSERT LAST_N == 1
+
+PRINT "mergeobj soft ok"

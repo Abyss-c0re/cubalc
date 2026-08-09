@@ -270,6 +270,8 @@ GETOBJ "meta" INTO META     # peel nested plate
 SETP FROM META "x" 9
 SETOBJ "meta" META           # write nested back
 GETOBJ FROM PEER "cfg" OR "{}" INTO CFG
+MERGEOBJ "meta" "{\"role\":\"leader\"}"   # overlay nested without peel glue
+DEFAULTOBJ FROM PEER "cfg" "{\"port\":8080}"  # fill missing nested only
 ```
 
 Compare plates (no `SYS JSONEQ` glue):

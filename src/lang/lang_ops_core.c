@@ -27408,6 +27408,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"TYPEP") || kw(&L->cur,"KINDP") ||
              kw(&L->cur,"GETOBJ") || kw(&L->cur,"SETOBJ") || kw(&L->cur,"PEEKOBJ") ||
              kw(&L->cur,"NESTP") || kw(&L->cur,"PUTOBJ") ||
+             kw(&L->cur,"MERGEOBJ") || kw(&L->cur,"DEFAULTOBJ") || kw(&L->cur,"PATCHNEST") ||
              kw(&L->cur,"TOKVP") || kw(&L->cur,"FROMKVP") ||
              kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
              kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
@@ -35817,6 +35818,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PUTOBJ", "PUTOBJ alias of SETOBJ"},
       {"NESTP", "NESTP alias of SETOBJ · nest plate under key"},
       {"PUTNEST", "PUTNEST alias of SETOBJ"},
+      {"MERGEOBJ", "MERGEOBJ|PATCHNEST [FROM plate] key overlay — merge into nested object · multi-plate · no GETOBJ+MERGEP+SETOBJ"},
+      {"PATCHNEST", "PATCHNEST alias of MERGEOBJ"},
+      {"UPDATEOBJ", "UPDATEOBJ alias of MERGEOBJ"},
+      {"DEFAULTOBJ", "DEFAULTOBJ|ENSUREOBJ [FROM plate] key defaults — fill missing nested keys only · multi-plate"},
+      {"ENSUREOBJ", "ENSUREOBJ alias of DEFAULTOBJ"},
+      {"DEFAULTNEST", "DEFAULTNEST alias of DEFAULTOBJ"},
       {"TOKVP", "TOKVP|TOBAGP [FROM plate] — plate → key:val bag · multi-plate · no SYS JSONTOKV"},
       {"TOBAGP", "TOBAGP alias of TOKVP"},
       {"FROMKVP", "FROMKVP|BAGTOP [bag] [INTO name] — key=val bag → plate · multi-plate · no SYS JSONFROMKV"},
@@ -41489,6 +41496,276 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               key, hr.n, have_from);
     bump(vm); return 1;
   }
+
+  /* MERGEOBJ|PATCHNEST|UPDATEOBJ [FROM plate] key overlay
+   * DEFAULTOBJ|ENSUREOBJ|DEFAULTNEST [FROM plate] key defaults
+   * One-shot nest patch: peel nested object, MERGEP/DEFAULTP, SETOBJ write-back.
+   * Miss nested key → start from {} then apply overlay/defaults.
+   * Overlay wins (MERGEOBJ); DEFAULTOBJ only fills missing nested keys.
+   * Usability: no GETOBJ+MERGEP+SETOBJ glue for agent nested config:
+   *   MERGEOBJ "meta" "{\"role\":\"leader\"}"
+   *   DEFAULTOBJ FROM PEER "cfg" "{\"port\":8080,\"tls\":0}"
+   * LAST = outer plate · LAST_N = keys applied · MERGED = nested result.
+   */
+  if (kw(&L->cur,"MERGEOBJ") || kw(&L->cur,"PATCHNEST") || kw(&L->cur,"UPDATEOBJ") ||
+      kw(&L->cur,"PATCHOBJ") || kw(&L->cur,"MMERGEOBJ") || kw(&L->cur,"NESTMERGE") ||
+      kw(&L->cur,"MERGEINTO") || kw(&L->cur,"NESTPATCH") ||
+      kw(&L->cur,"DEFAULTOBJ") || kw(&L->cur,"ENSUREOBJ") || kw(&L->cur,"DEFAULTNEST") ||
+      kw(&L->cur,"ENSURENEST") || kw(&L->cur,"SEEDOBJ") || kw(&L->cur,"MDEFAULTOBJ") ||
+      kw(&L->cur,"NESTDEFAULT") || kw(&L->cur,"OBJDEFAULT")) {
+    char plate[CUBALC_HOST_STR_MAX], key[96], over[CUBALC_HOST_STR_MAX];
+    char nest[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result gr, mer, hr;
+    int have_from = 0, is_def = 0;
+    Var *pv;
+    char op0[24];
+    const char *v;
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "DEFAULTOBJ") == 0 || strcmp(op0, "ENSUREOBJ") == 0 ||
+        strcmp(op0, "DEFAULTNEST") == 0 || strcmp(op0, "ENSURENEST") == 0 ||
+        strcmp(op0, "SEEDOBJ") == 0 || strcmp(op0, "MDEFAULTOBJ") == 0 ||
+        strcmp(op0, "NESTDEFAULT") == 0 || strcmp(op0, "OBJDEFAULT") == 0)
+      is_def = 1;
+
+    lex_next(L);
+    plate[0] = 0; key[0] = 0; over[0] = 0; nest[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(key, sizeof key, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+        fail(vm, is_def ? "DEFAULTOBJ [FROM plate] key defaults — need key"
+                        : "MERGEOBJ [FROM plate] key overlay — need key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, key, sizeof key) != 0)
+        key[0] = 0;
+    } else {
+      fail(vm, is_def ? "DEFAULTOBJ [FROM plate] key defaults — need key"
+                      : "MERGEOBJ [FROM plate] key overlay — need key");
+      return -1;
+    }
+
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+         kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM"))) {
+      fail(vm, is_def ? "DEFAULTOBJ key defaults — need defaults object"
+                      : "MERGEOBJ key overlay — need overlay object");
+      return -1;
+    }
+    if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(over, sizeof over, "%s", vm->last_str);
+      lex_next(L);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (resolve_str_arg(vm, L, over, sizeof over) != 0) {
+        fail(vm, is_def ? "DEFAULTOBJ key defaults — need defaults object"
+                        : "MERGEOBJ key overlay — need overlay object");
+        return -1;
+      }
+    } else {
+      fail(vm, is_def ? "DEFAULTOBJ key defaults — need defaults object"
+                      : "MERGEOBJ key overlay — need overlay object");
+      return -1;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!key[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", is_def ? "DEFAULTOBJ: empty key" : "MERGEOBJ: empty key");
+      var_set_str(vm, "ERR", is_def ? "DEFAULTOBJ: empty key" : "MERGEOBJ: empty key");
+      var_set_num(vm, "MERGEOBJ_FROM", have_from ? 1 : 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    {
+      const char *bp = over;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (!*bp || *bp != '{') {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR",
+                    is_def ? "DEFAULTOBJ: defaults not object"
+                           : "MERGEOBJ: overlay not object");
+        var_set_str(vm, "ERR",
+                    is_def ? "DEFAULTOBJ: defaults not object"
+                           : "MERGEOBJ: overlay not object");
+        var_set_str(vm, "MERGEOBJ_KEY", key);
+        var_set_num(vm, "MERGEOBJ_FROM", have_from ? 1 : 0);
+        bump(vm); return 1;
+      }
+      if (bp != over) {
+        size_t n = strlen(bp);
+        memmove(over, bp, n + 1);
+      }
+    }
+
+    snprintf(nest, sizeof nest, "%s", "{}");
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(plate, key, &gr) == 0) {
+      v = gr.str;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v == '{') {
+        if (v != gr.str) {
+          size_t n = strlen(v);
+          memmove(gr.str, v, n + 1);
+        }
+        snprintf(nest, sizeof nest, "%s", gr.str);
+      }
+    }
+
+    memset(&mer, 0, sizeof mer);
+    if (is_def) {
+      if (cubalc_host_json_defaults(nest, over, &mer) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", mer.err[0] ? mer.err : "DEFAULTOBJ: fail");
+        var_set_str(vm, "ERR", mer.err[0] ? mer.err : "DEFAULTOBJ: fail");
+        var_set_str(vm, "MERGEOBJ_KEY", key);
+        var_set_num(vm, "MERGEOBJ_FROM", have_from ? 1 : 0);
+        bump(vm); return 1;
+      }
+    } else {
+      if (cubalc_host_json_merge(nest, over, &mer) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", mer.err[0] ? mer.err : "MERGEOBJ: fail");
+        var_set_str(vm, "ERR", mer.err[0] ? mer.err : "MERGEOBJ: fail");
+        var_set_str(vm, "MERGEOBJ_KEY", key);
+        var_set_num(vm, "MERGEOBJ_FROM", have_from ? 1 : 0);
+        bump(vm); return 1;
+      }
+    }
+    snprintf(nest, sizeof nest, "%s", mer.str);
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_set(plate, key, nest, 1, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "MERGEOBJ: write-back fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "MERGEOBJ: write-back fail");
+      var_set_str(vm, "MERGEOBJ_KEY", key);
+      var_set_num(vm, "MERGEOBJ_FROM", have_from ? 1 : 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else if (!have_from)
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = mer.n;
+    var_set_num(vm, "LAST_N", mer.n);
+    var_set_str(vm, "MERGEOBJ", hr.str);
+    var_set_str(vm, "MERGED", nest);
+    var_set_str(vm, "NEST", nest);
+    var_set_num(vm, "MERGEOBJ_N", mer.n);
+    var_set_str(vm, "MERGEOBJ_KEY", key);
+    var_set_num(vm, "MERGEOBJ_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "MERGEOBJ_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "MERGEOBJ_DEFAULT", is_def ? 1 : 0);
+    if (is_def) {
+      var_set_str(vm, "DEFAULTOBJ", hr.str);
+      var_set_num(vm, "DEFAULTOBJ_N", mer.n);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s key=%s applied=%ld from=%d\n",
+              is_def ? "defaultobj" : "mergeobj", key, mer.n, have_from);
+    bump(vm); return 1;
+  }
+
 
   /* TOKVP|TOBAGP [FROM plate] — plate → key:val bag (JSONTOKV dual).
    * FROMKVP|BAGTOP [bag|LAST] — key=val bag → plate object (JSONFROMKV dual).
