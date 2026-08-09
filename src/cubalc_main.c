@@ -2139,6 +2139,7 @@ int main(int argc, char **argv) {
       {"medianp", "programs/proof/1165_medianp.cubalc", "MEDIANP multi-plate integer median robust mid vs AVGNP"},
       {"topnp", "programs/proof/1166_topnp.cubalc", "TOPNP/BOTNP multi-plate top/bottom N keys by value"},
       {"sortp", "programs/proof/1167_sortp.cubalc", "SORTP/SORTBAGP multi-plate sort keys by value"},
+      {"cli_plate_agg", "programs/proof/1168_cli_plate_agg.sh", "cubalc plate sum/avg/median/top/bot aggregate duals"},
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
@@ -4755,6 +4756,8 @@ int main(int argc, char **argv) {
      *   cubalc plate has|need path.json k1 k2 …      # multi-key contract · HASPALL/NEEDP duals
      *   cubalc plate pick path.json k1 k2 …          # keep listed keys · PICKP dual
      *   cubalc plate omit path.json k1 k2 …          # drop listed keys · OMITP dual
+     *   cubalc plate sum|avg|median path.json        # numeric aggregates · SUMNP/AVGNP/MEDIANP
+     *   cubalc plate top|bot path.json [n]           # top/bot N keys by value · TOPNP/BOTNP
      * Bare: cubalc plate path.json  → show
      * One JSON plate per call (cubalc.plate.v1) for agents. */
     const char *op = "show";
@@ -4774,7 +4777,7 @@ int main(int argc, char **argv) {
     plate[0] = 0;
     if (argc <= 2) {
       fprintf(stderr,
-              "usage: cubalc plate show|get|set|inc|del|keys|fill|ensure|merge|eq|ne|diff|changelog|has|need|pick|omit <path> …\n"
+              "usage: cubalc plate show|get|set|inc|del|keys|fill|ensure|merge|eq|ne|diff|changelog|has|need|pick|omit|sum|avg|median|top|bot <path> …\n"
               "       cubalc plate <path.json>                 # show\n"
               "       cubalc plate get <path> <key> [OR def]\n"
               "       cubalc plate set <path> <key> <value>\n"
@@ -4787,12 +4790,14 @@ int main(int argc, char **argv) {
               "       cubalc plate merge  <path> <overlay|@file>\n"
               "       cubalc plate eq|ne|diff|changelog <a.json> <b.json>\n"
               "       cubalc plate has|need <path> <k1> [k2 …]\n"
-              "       cubalc plate pick|omit <path> <k1> [k2 …]  # keep/drop keys · PICKP/OMITP\n");
+              "       cubalc plate pick|omit <path> <k1> [k2 …]  # keep/drop keys · PICKP/OMITP\n"
+              "       cubalc plate sum|avg|median|mean|p50 <path>  # aggregates · SUMNP duals\n"
+              "       cubalc plate top|bot <path> [n]          # top/bot N keys · TOPNP duals\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\",\"fill\","
              "\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\",\"changelog\","
-             "\"has\",\"need\",\"pick\",\"omit\"]}\n",
+             "\"has\",\"need\",\"pick\",\"omit\",\"sum\",\"avg\",\"median\",\"top\",\"bot\"]}\n",
              CUBALC_LANG_VERSION);
       return 2;
     }
@@ -4829,7 +4834,16 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "pick") == 0 || strcmp(argv[2], "keep") == 0 ||
         strcmp(argv[2], "select") == 0 || strcmp(argv[2], "project") == 0 ||
         strcmp(argv[2], "omit") == 0 || strcmp(argv[2], "strip") == 0 ||
-        strcmp(argv[2], "dropkeys") == 0 || strcmp(argv[2], "drop-keys") == 0) {
+        strcmp(argv[2], "dropkeys") == 0 || strcmp(argv[2], "drop-keys") == 0 ||
+        strcmp(argv[2], "sum") == 0 || strcmp(argv[2], "total") == 0 ||
+        strcmp(argv[2], "avg") == 0 || strcmp(argv[2], "mean") == 0 ||
+        strcmp(argv[2], "average") == 0 ||
+        strcmp(argv[2], "median") == 0 || strcmp(argv[2], "p50") == 0 ||
+        strcmp(argv[2], "mid") == 0 ||
+        strcmp(argv[2], "top") == 0 || strcmp(argv[2], "topn") == 0 ||
+        strcmp(argv[2], "head") == 0 ||
+        strcmp(argv[2], "bot") == 0 || strcmp(argv[2], "bottom") == 0 ||
+        strcmp(argv[2], "botn") == 0 || strcmp(argv[2], "tail") == 0) {
       op = argv[2];
       if (strcmp(op, "dump") == 0 || strcmp(op, "cat") == 0 || strcmp(op, "read") == 0)
         op = "show";
@@ -4877,6 +4891,17 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "strip") == 0 || strcmp(op, "dropkeys") == 0 ||
                strcmp(op, "drop-keys") == 0)
         op = "omit";
+      else if (strcmp(op, "total") == 0)
+        op = "sum";
+      else if (strcmp(op, "mean") == 0 || strcmp(op, "average") == 0)
+        op = "avg";
+      else if (strcmp(op, "p50") == 0 || strcmp(op, "mid") == 0)
+        op = "median";
+      else if (strcmp(op, "topn") == 0 || strcmp(op, "head") == 0)
+        op = "top";
+      else if (strcmp(op, "bottom") == 0 || strcmp(op, "botn") == 0 ||
+               strcmp(op, "tail") == 0)
+        op = "bot";
       ai = 3;
       /* fill[-keys]: optional -s|--strict before path */
       if ((strcmp(op, "fill") == 0 || strcmp(op, "fillkeys") == 0) &&
@@ -5023,6 +5048,110 @@ int main(int argc, char **argv) {
              "\"keys\":\"%s\",\"file\":%s,\"version\":\"%s\",\"plate\":%s}\n",
              op, path, pr.n, nreq, flat_req,
              file_hit ? "true" : "false", CUBALC_LANG_VERSION, pr.str);
+      return 0;
+    }
+
+    /* sum|avg|median path — numeric plate aggregates without a .cubalc program.
+     * Usability: CLI duals of SUMNP / AVGNP / MEDIANP for agent one-shots.
+     *   cubalc plate sum scores.json
+     *   cubalc plate avg scores.json
+     *   cubalc plate median|p50 scores.json
+     * Soft 0 if no pure-int fields. Does not write file. */
+    if (strcmp(op, "sum") == 0 || strcmp(op, "avg") == 0 ||
+        strcmp(op, "median") == 0) {
+      cubalc_host_result ar;
+      long used = 0;
+      memset(&ar, 0, sizeof ar);
+      if (strcmp(op, "sum") == 0) {
+        if (cubalc_host_json_sum(plate, &ar) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"sum\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 path, ar.err[0] ? ar.err : "json sum fail", CUBALC_LANG_VERSION);
+          return 1;
+        }
+      } else if (strcmp(op, "avg") == 0) {
+        if (cubalc_host_json_avg(plate, &ar) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"avg\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 path, ar.err[0] ? ar.err : "json avg fail", CUBALC_LANG_VERSION);
+          return 1;
+        }
+        used = (long)ar.code;
+      } else {
+        if (cubalc_host_json_median(plate, &ar) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"median\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 path, ar.err[0] ? ar.err : "json median fail", CUBALC_LANG_VERSION);
+          return 1;
+        }
+        used = (long)ar.code;
+      }
+      if (strcmp(op, "sum") == 0)
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"sum\",\"path\":\"%s\",\"n\":%ld,\"file\":%s,"
+               "\"version\":\"%s\"}\n",
+               path, ar.n, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+      else
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"n\":%ld,\"used\":%ld,\"file\":%s,"
+               "\"version\":\"%s\"}\n",
+               op, path, ar.n, used, file_hit ? "true" : "false",
+               CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+    /* top|bot path [n] — top/bottom N pure-int keys by value → plate.
+     * Usability: CLI dual of TOPNP/BOTNP · default n=1.
+     *   cubalc plate top freq.json 3
+     *   cubalc plate bot scores.json
+     * Soft empty plate if no ints. Does not write file. */
+    if (strcmp(op, "top") == 0 || strcmp(op, "bot") == 0) {
+      cubalc_host_result tr;
+      cubalc_host_result tk;
+      long ntake = 1;
+      int want_bot = (strcmp(op, "bot") == 0) ? 1 : 0;
+      char key1[256];
+      long val1 = 0;
+      if (ai < argc && argv[ai] && argv[ai][0]) {
+        char *end = NULL;
+        long v = strtol(argv[ai], &end, 10);
+        if (end && end != argv[ai] && *end == 0)
+          ntake = v;
+      }
+      if (ntake < 0) ntake = 0;
+      memset(&tr, 0, sizeof tr);
+      if (cubalc_host_json_topn(plate, ntake, want_bot, &tr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               op, path, tr.err[0] ? tr.err : "json topn fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      /* peel first key for agent convenience when n>=1 */
+      key1[0] = 0;
+      memset(&tk, 0, sizeof tk);
+      if (tr.n > 0 && cubalc_host_json_keys(tr.str, &tk) == 0 && tk.str[0]) {
+        size_t kn = 0;
+        const char *kp = tk.str;
+        while (*kp && *kp != '\n' && *kp != '\r' && kn + 1 < sizeof key1)
+          key1[kn++] = *kp++;
+        key1[kn] = 0;
+        if (key1[0]) {
+          cubalc_host_result gr2;
+          char *end = NULL;
+          memset(&gr2, 0, sizeof gr2);
+          if (cubalc_host_json_get(tr.str, key1, &gr2) == 0 && gr2.str[0]) {
+            val1 = strtol(gr2.str, &end, 10);
+            if (!(end && end != gr2.str && *end == 0))
+              val1 = 0;
+          }
+        }
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"%s\",\"path\":\"%s\",\"n\":%ld,\"cand\":%d,\"take\":%ld,"
+             "\"key\":\"%s\",\"value\":%ld,\"file\":%s,\"version\":\"%s\","
+             "\"plate\":%s}\n",
+             op, path, tr.n, tr.code, ntake, key1, val1,
+             file_hit ? "true" : "false", CUBALC_LANG_VERSION, tr.str);
       return 0;
     }
 
