@@ -380,6 +380,12 @@ int cubalc_host_json_leaf_match_bagn(const char *json, const char *needle, int w
  * Soft always OK. Usability: nest peel by needle without PATHSFLAT+GETP glue. */
 int cubalc_host_json_leaf_get(const char *json, const char *needle,
                               cubalc_host_result *r);
+/* Last leaf whose path contains needle (LASTFLAT).
+ * Empty needle → last leaf. Soft miss → r->n=0 · r->str="" · r->err="".
+ * Hit → r->n=1 · r->str=value · r->err=path. Soft always OK.
+ * Usability: newest-wins nest peel without REVL+GETFLAT glue. */
+int cubalc_host_json_leaf_get_last(const char *json, const char *needle,
+                                   cubalc_host_result *r);
 /* First pure-int leaf whose path contains needle (GETFLATN).
  * Non-int matching leaves skipped. Empty needle → first pure-int leaf.
  * Hit → r->n=value · r->code=1 · r->str=decimal · r->err=path.
