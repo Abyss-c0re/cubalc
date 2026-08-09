@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 608,
-  "version": "1.15.635-usability",
-  "item": "PCTOBJ/SCALEPOBJ/ADDPOBJ nest maps",
-  "item_id": 644,
-  "title": "PCTOBJ|SCALEPOBJ|ADDPOBJ|DIVPOBJ|ABSPOBJ|SIGNPOBJ · nest value map write-back · multi-plate · PCTP duals · not OOP SCALEOBJ",
-  "commit": "1b7c1e3aa0ea3c46ab2f9861afd9819c99206d8b",
-  "summary": "Nest FREQ share/weight/offset without GETOBJ+PCTP+SETOBJ glue. proof 1185 51/51.",
+  "iter": 609,
+  "version": "1.15.636-usability",
+  "item": "KEEPKEYOBJ/DROPKEYOBJ nest key needle",
+  "item_id": 645,
+  "title": "KEEPKEYOBJ|DROPKEYOBJ|KEEPKEYOBJI|DROPKEYOBJI · nest key needle filter write-back · multi-plate · KEEPKEYP duals",
+  "commit": "ce42dec97378d3929702ecaf475230d838e53df0",
+  "summary": "Nest key pattern filter without GETOBJ+KEEPKEYP+SETOBJ glue. proof 1186 51/51.",
   "proofs": [
-    "1185_pctobj 51/51",
-    "1184_threshobj reg ok",
-    "1161_pctp reg ok",
-    "cubalc forms PCTOBJ/SCALEPOBJ ok"
+    "1186_keepkeyobj 51/51",
+    "1185_pctobj reg ok",
+    "1164_keepkeyp reg ok",
+    "cubalc forms KEEPKEYOBJ ok"
   ],
-  "when": "2026-08-09T09:10:00Z",
+  "when": "2026-08-09T09:25:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1b7c1e3aa0ea3c46ab2f9861afd9819c99206d8b",
-  "note": "after backlog 643 THRESHOBJ; EVOLVE_PAUSED"
+  "sha": "ce42dec97378d3929702ecaf475230d838e53df0",
+  "note": "after backlog 644 PCTOBJ; EVOLVE_PAUSED"
 }
