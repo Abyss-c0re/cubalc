@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 246,
-  "program": "programs/realworld/svc_pathp_board.cubalc",
-  "theme": "dotted path GETP/SETP/INCP nest path plane",
-  "version": "1.15.643-usability",
+  "iter": 247,
+  "program": "programs/realworld/svc_pluckp_digest_board.cubalc",
+  "theme": "multi-key PLUCKP health digest + NEEDP/HASPALL path gate",
+  "version": "1.15.647-usability",
   "pass": true,
-  "prior_note": "iter 245 TOPNOBJ rank; this iter first realworld dotted path GETP/SETP (1192-1193 / MEANINGFUL 651-652)",
+  "prior_note": "iter 246 path GETP/SETP; this iter first realworld PLUCKP dotted multi-key digest (proof 1195) + NEEDP path (1194)",
   "tests": [
     {
       "name": "list",
@@ -15,63 +15,57 @@
     },
     {
       "name": "boot",
-      "cmd": "seed nest + path get",
+      "cmd": "seed nest + PLUCKP 4-key LAST_N",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "get",
-      "cmd": "GETP path/slash + OR + HASP exact",
+      "name": "pluck",
+      "cmd": "PLUCKP dotted/slash + GETPALL",
       "ok": true,
-      "note": "get"
-    },
-    {
-      "name": "set",
-      "cmd": "SETP update + deep create",
-      "ok": true,
-      "note": "set"
-    },
-    {
-      "name": "bump",
-      "cmd": "INCP path + create nest",
-      "ok": true,
-      "note": "bump"
+      "note": "pluck"
     },
     {
       "name": "peer",
-      "cmd": "GETP/SETP FROM PEER path",
+      "cmd": "PLUCKP/NEEDP FROM PEER path",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "HASP miss + GETP OR + TYPEP missing",
+      "cmd": "PLUCKP miss empty + HASPALL miss bag + false friend",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "required paths admit",
+      "cmd": "NEEDP/HASPALL path contract",
       "ok": true,
       "note": "gate"
     },
     {
+      "name": "digest",
+      "cmd": "STATUS multi-field health digest row",
+      "ok": true,
+      "note": "digest"
+    },
+    {
       "name": "probe",
-      "cmd": "DEFAULTP/TOGGLEP/TYPEP/DELP",
+      "cmd": "SRC/FROM flags + peer partial miss",
       "ok": true,
       "note": "probe"
     },
     {
       "name": "require_unknown",
-      "cmd": "EXIT 2 shell 0",
+      "cmd": "EXIT 2 shell 2; REQUIRE=abc softens",
       "ok": true,
-      "note": "W7"
+      "note": "W7/W6"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "419/429 pre-existing shell fails + oop_pickobj/kvfileensure; pathp PASS 41+32"
+      "note": "422/433 pre-existing cli shell set fails; pluckp_path PASS 26 needp_path PASS 27"
     }
   ],
   "weaknesses": [
@@ -81,14 +75,14 @@
       "area": "host|arg",
       "title": "CUBALC_ARG0 env no longer reaches SYS ARG in 1.15.426",
       "detail": "export CUBALC_ARG0=open leaves SYS ARG 0 and SYS ENV CUBALC_ARG0 empty; python sees the env var. Positional `cubalc run file open s0` works. Breaks all prior host contracts that used CUBALC_ARG* alone.",
-      "repro": "CUBALC_ARG0=open cubalc run prog; SYS ARG 0 \u2192 empty; cubalc run prog open works"
+      "repro": "CUBALC_ARG0=open cubalc run prog; SYS ARG 0 → empty; cubalc run prog open works"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "lang|default",
       "title": "DEFAULT still requires = (optional = is LET-only)",
-      "detail": "DEFAULT ACTION \"list\" \u2192 err DEFAULT name = value. Optional glue from 974 is LET/IF only, not DEFAULT. Agents must keep DEFAULT name = val.",
+      "detail": "DEFAULT ACTION \"list\" → err DEFAULT name = value. Optional glue from 974 is LET/IF only, not DEFAULT. Agents must keep DEFAULT name = val.",
       "repro": "DEFAULT ACTION \"list\" hard-fail"
     },
     {
@@ -129,7 +123,7 @@
       "area": "host|require_arg",
       "title": "REQUIRE ARGC hard-fail leaves process exit_code 0",
       "detail": "REQUIRE ARGC N when short sets ok:false + asserts_fail and sticky err, but plate exit_code stays 0 and shell 0 is 0. Agents cannot rely on process status for CLI contract failures; only EXIT n propagates shell rc.",
-      "repro": "cubalc run -e 'SYS ENV SET CUBALC_ARGC 0; REQUIRE ARGC 1' \u2192 exit_code 0 shell 0"
+      "repro": "cubalc run -e 'SYS ENV SET CUBALC_ARGC 0; REQUIRE ARGC 1' → exit_code 0 shell 0"
     },
     {
       "id": "W8",
@@ -145,7 +139,7 @@
       "area": "host|args_env",
       "title": "export CUBALC_ARG* still dead; only SYS ENV SET or positional works",
       "detail": "Reconfirmed W1: export CUBALC_ARG0=argc CUBALC_ARGC=1 before cubalc run leaves ARGC=0 and defaults ACTION=list. In-process SYS ENV SET CUBALC_ARG* works (proof 976). Host env contract remains broken for outer shells.",
-      "repro": "CUBALC_ARG0=argc cubalc run seal_batch\u2026 \u2192 list/argc0"
+      "repro": "CUBALC_ARG0=argc cubalc run seal_batch… → list/argc0"
     },
     {
       "id": "W10",
@@ -161,7 +155,7 @@
       "area": "host|cli",
       "title": "cubalc run strips unknown long options unless after host --",
       "detail": "Program args like --mode=seal never reach SYS ARG/HASFLAG unless invoked as: cubalc run prog ACTION -- --mode=seal files. Without the host double-dash separator, agents silently lose all long options. Reconfirmed: cubalc run prog --help falls through to list (HELPFLAG never sees --help).",
-      "repro": "cubalc run prog --help \u2192 list; cubalc run prog -- --help \u2192 helpflag hit"
+      "repro": "cubalc run prog --help → list; cubalc run prog -- --help → helpflag hit"
     },
     {
       "id": "W12",
@@ -193,7 +187,7 @@
       "area": "host|cli",
       "title": "host strips positional token run from program args",
       "detail": "cubalc run prog.cubalc run -- --mode=x leaves ARG0 as --mode=x (token run dropped). Other action names (deploy, dry, list) pass through. Action cannot be named run; use deploy/apply or CUBALC_*_ACTION env.",
-      "repro": "cubalc run -e 'SYS ARG 0; PRINT LAST' run -- --mode=x \u2192 prints --mode=x"
+      "repro": "cubalc run -e 'SYS ARG 0; PRINT LAST' run -- --mode=x → prints --mode=x"
     },
     {
       "id": "W16",
@@ -201,15 +195,15 @@
       "area": "host|require_flag",
       "title": "REQUIRE FLAG miss leaves process exit_code 0",
       "detail": "Same class as REQUIRE ARGC (W7): ok:false + asserts_fail + sticky err with usage tip, but shell $? is 0. Agents must EXIT n after soft probe for shell-visible contract failures.",
-      "repro": "CUBALC_DC_REQUIRE=1 contract without flags \u2192 exit_code 0 shell 0"
+      "repro": "CUBALC_DC_REQUIRE=1 contract without flags → exit_code 0 shell 0"
     },
     {
       "id": "W17",
       "severity": "med",
       "area": "lang|usage",
       "title": "USAGE works; multi-part join and sticky tip on REQUIRE FLAG confirmed",
-      "detail": "Positive note: sticky USAGE appends to REQUIRE FLAG err as \u00b7 usage: \u2026. Unicode ellipsis in USAGE string can mangle plate bytes \u2014 prefer ASCII ....",
-      "repro": "USAGE line with unicode ellipsis \u2192 cat -A shows M-bM-^@M-&"
+      "detail": "Positive note: sticky USAGE appends to REQUIRE FLAG err as · usage: …. Unicode ellipsis in USAGE string can mangle plate bytes — prefer ASCII ....",
+      "repro": "USAGE line with unicode ellipsis → cat -A shows M-bM-^@M-&"
     },
     {
       "id": "W18",
@@ -225,7 +219,7 @@
       "area": "lang|restargs",
       "title": "HASRESTARGS/REQUIRE RESTARGS count action + numeric ARG tokens as files",
       "detail": "RESTARGS is all non-flag positionals. With ARG0=hasrest ARG1=2, raw rest_n=2 and HASRESTARGS 2 passes with zero files. Agents must DROP action (and non-path args) before file gates; raw REQUIRE RESTARGS is a false friend for file intake.",
-      "repro": "hasrest 2 (no files) \u2192 HASRESTARGS 2 hit; peeled file_n may be 1 (the 2)"
+      "repro": "hasrest 2 (no files) → HASRESTARGS 2 hit; peeled file_n may be 1 (the 2)"
     },
     {
       "id": "W20",
@@ -239,9 +233,9 @@
       "id": "W21",
       "severity": "low",
       "area": "lang|listflags",
-      "title": "LISTFLAGS returns names only (no values) \u2014 good inventory, not config",
+      "title": "LISTFLAGS returns names only (no values) — good inventory, not config",
       "detail": "LISTFLAGS bag is mode/verbose/job without values. Pair with GETFLAG for values. Files never listed. Confirmed useful for flag inventory plates.",
-      "repro": "LISTFLAGS with --job=ingest --verbose=1 a.bin \u2192 job\\nverbose"
+      "repro": "LISTFLAGS with --job=ingest --verbose=1 a.bin → job\\nverbose"
     },
     {
       "id": "W22",
@@ -257,7 +251,7 @@
       "area": "lang|nthpos",
       "title": "NTHPOS 0 is the action token when action is positional ARG0",
       "detail": "With register -- --src=x hopA, NTHPOS 0=register and NTHPOS 1=hopA. Agents must peel action or use NTHPOS 1 for first hop. Same class as RESTARGS inflation (W19).",
-      "repro": "nth 0 with hops \u2192 val is action name not first hop"
+      "repro": "nth 0 with hops → val is action name not first hop"
     },
     {
       "id": "W24",
@@ -281,7 +275,7 @@
       "area": "lang|flagmap",
       "title": "FLAGMAP bare --flag value is 1 and does not consume following hops",
       "detail": "Positive: --verbose hopA leaves hopA in RESTARGS; FLAGMAP verbose=1. Prefer --name=val for non-bools. LOOKUP fmap key = works.",
-      "repro": "FLAGMAP with --verbose hopA \u2192 verbose=1; hops keep hopA"
+      "repro": "FLAGMAP with --verbose hopA → verbose=1; hops keep hopA"
     },
     {
       "id": "W27",
@@ -289,14 +283,14 @@
       "area": "lang|case",
       "title": "Heavy multi-statement CASE arms can break WHEN framing",
       "detail": "With large WHEN bodies (nested IF/EACH/PRINT_JSON), subsequent WHEN arms were executed as top-level forms (unknown form WHEN). Workaround: CASE only assigns LET op= synonym canonical; bodies live in SYS EQS op IF after CASE END.",
-      "repro": "CASE with 20+ stmt WHEN list then WHEN admit \u2192 fall into admit / WHEN drain form error"
+      "repro": "CASE with 20+ stmt WHEN list then WHEN admit → fall into admit / WHEN drain form error"
     },
     {
       "id": "W28",
       "severity": "med",
       "area": "lang|case",
       "title": "MATCH_ARM not LET-assignable or SYS PUSH-able",
-      "detail": "LET hit_arm = MATCH_ARM does not create a usable var; SYS PUSH meta MATCH_ARM \u2192 unknown form. PRINT_JSON MATCH_ARM works; SYS EQS MATCH_ARM synonym works after CASE.",
+      "detail": "LET hit_arm = MATCH_ARM does not create a usable var; SYS PUSH meta MATCH_ARM → unknown form. PRINT_JSON MATCH_ARM works; SYS EQS MATCH_ARM synonym works after CASE.",
       "repro": "LET x = MATCH_ARM; SYS EQS x ..."
     },
     {
@@ -305,7 +299,7 @@
       "area": "lang|names",
       "title": "Variable name note collides with NOTE form",
       "detail": "LET note / PRINT note can invoke NOTE. Use note_msg (established board convention).",
-      "repro": "PRINT note \u2192 NOTE form path"
+      "repro": "PRINT note → NOTE form path"
     },
     {
       "id": "W30",
@@ -321,15 +315,15 @@
       "area": "host|grep",
       "title": "SYS GREP argument order is needle then bag (easy to reverse)",
       "detail": "SYS GREP bag needle silently mis-filters (empty or wrong). Correct: SYS GREP needle bag. Broke window status replace until fixed; agents copy IF/LIST order habits.",
-      "repro": "SYS GREP windows night \u2192 empty; SYS GREP night windows \u2192 night:open"
+      "repro": "SYS GREP windows night → empty; SYS GREP night windows → night:open"
     },
     {
       "id": "W32",
       "severity": "low",
       "area": "lang|boolflag",
       "title": "BOOLFLAG_HIT vs truth: present false still HIT=1",
-      "detail": "Positive distinction: --quiet=false \u2192 BOOLFLAG truth 0 but BOOLFLAG_HIT 1 and HASFLAG 1. --dry-run=no same. Agents must use BOOLFLAG not HASFLAG for enable gates.",
-      "repro": "BOOLFLAG quiet with --quiet=false \u2192 LAST_N 0 HIT 1"
+      "detail": "Positive distinction: --quiet=false → BOOLFLAG truth 0 but BOOLFLAG_HIT 1 and HASFLAG 1. --dry-run=no same. Agents must use BOOLFLAG not HASFLAG for enable gates.",
+      "repro": "BOOLFLAG quiet with --quiet=false → LAST_N 0 HIT 1"
     },
     {
       "id": "W33",
@@ -337,15 +331,15 @@
       "area": "lang|casei",
       "title": "CASE exact remains case-sensitive; CASEI matches List/DRAIN",
       "detail": "Positive: CASE List vs list DEFAULT miss; CASEI List hits list arm. Good dual for strict vs CLI-tolerant dispatch.",
-      "repro": "CASE List WHEN list \u2192 miss; CASEI List WHEN list \u2192 hit"
+      "repro": "CASE List WHEN list → miss; CASEI List WHEN list → hit"
     },
     {
       "id": "W34",
       "severity": "med",
       "area": "lang|boolflag",
       "title": "BOOLFLAG truth table: true/yes/on/1 vs false/no/off/0 (case variants)",
-      "detail": "force=yes/ON/true work; dry=0/off/no work. Bare --force \u2192 true. OR default when missing. Document for ops runbooks.",
-      "repro": "BOOLFLAG force with --force=ON \u2192 1"
+      "detail": "force=yes/ON/true work; dry=0/off/no work. Bare --force → true. OR default when missing. Document for ops runbooks.",
+      "repro": "BOOLFLAG force with --force=ON → 1"
     },
     {
       "id": "W35",
@@ -353,14 +347,14 @@
       "area": "host|oneof",
       "title": "REQUIRE ONEOF miss leaves process exit_code 0",
       "detail": "Same class as REQUIRE ARGC/FLAG: ok:false asserts_fail + usage tip, shell $? often 0. Soft ONEOF + EXIT 2 is reliable for agent shell status.",
-      "repro": "CUBALC_SS_REQUIRE=1 cubalc run prog boom \u2192 exit_code 0"
+      "repro": "CUBALC_SS_REQUIRE=1 cubalc run prog boom → exit_code 0"
     },
     {
       "id": "W36",
       "severity": "med",
       "area": "lang|getflagn",
       "title": "GETFLAGN non-numeric: HIT=1 LAST_N=0 sticky LAST_ERR",
-      "detail": "--mode=fast with GETFLAGN mode OR 5 \u2192 HIT 1, LAST_N 0 (default not applied on bad parse), LAST_ERR set. Agents must CLEAR_ERR and treat HIT&&N carefully; missing uses OR default with HIT 0.",
+      "detail": "--mode=fast with GETFLAGN mode OR 5 → HIT 1, LAST_N 0 (default not applied on bad parse), LAST_ERR set. Agents must CLEAR_ERR and treat HIT&&N carefully; missing uses OR default with HIT 0.",
       "repro": "GETFLAGN mode OR 5 with --mode=fast"
     },
     {
@@ -369,15 +363,15 @@
       "area": "lang|restpos",
       "title": "RESTPOS multi-line bag: SYS EQS RESTPOS single token is false friend",
       "detail": "SYS EQS RESTPOS nodeA fails when bag is nodeA\\nnodeB; use HASLINE targets or NTH 0.",
-      "repro": "SUBCMD scale nodeA nodeB; SYS EQS RESTPOS nodeA \u2192 0"
+      "repro": "SUBCMD scale nodeA nodeB; SYS EQS RESTPOS nodeA → 0"
     },
     {
       "id": "W38",
       "severity": "low",
       "area": "lang|getflagn",
       "title": "GETFLAGN --count=0 is valid hit with LAST_N 0",
-      "detail": "Positive: zero is not missing; HIT=1 distinguishes from OR default. Bare --retries \u2192 1.",
-      "repro": "GETFLAGN count OR 9 with --count=0 \u2192 n=0 hit=1"
+      "detail": "Positive: zero is not missing; HIT=1 distinguishes from OR default. Bare --retries → 1.",
+      "repro": "GETFLAGN count OR 9 with --count=0 → n=0 hit=1"
     },
     {
       "id": "W39",
@@ -385,7 +379,7 @@
       "area": "lang|inrange",
       "title": "INRANGE name collision: free numeric vs OOP HASBETWEEN alias",
       "detail": "Free INRANGE (996) stole OOP INRANGE alias of HASBETWEEN; oop_wherebetween selftest failed. Fixed: proof uses HASBETWEEN; removed OOP INRANGE alias from catalog+flow. Agents must use HASBETWEEN for class field soft range, INRANGE for numeric x lo hi.",
-      "repro": "INRANGE Counter n 40 60 \u2192 form tip (pre-fix); HASBETWEEN works"
+      "repro": "INRANGE Counter n 40 60 → form tip (pre-fix); HASBETWEEN works"
     },
     {
       "id": "W40",
@@ -399,9 +393,9 @@
       "id": "W41",
       "severity": "low",
       "area": "lang|getflagms",
-      "title": "GETFLAGMS bare --flag \u2192 1 ms (not default)",
+      "title": "GETFLAGMS bare --flag → 1 ms (not default)",
       "detail": "Bare --tick yields 1ms with HIT=1; missing uses OR default with HIT=0. Compound 1m30s and unit 250ms work.",
-      "repro": "GETFLAGMS tick OR 100 with --tick \u2192 1"
+      "repro": "GETFLAGMS tick OR 100 with --tick → 1"
     },
     {
       "id": "W42",
@@ -409,7 +403,7 @@
       "area": "lang|inrange",
       "title": "INRANGE lo/hi swap via TO works; soft OOR returns 0",
       "detail": "Positive: INRANGE 5 10 TO 1 hits; INRANGE 0 1 100 misses. REQUIRE BETWEEN hard still exit_code 0 class.",
-      "repro": "INRANGE 5 10 TO 1 \u2192 1"
+      "repro": "INRANGE 5 10 TO 1 → 1"
     },
     {
       "id": "W43",
@@ -417,7 +411,7 @@
       "area": "host|restpos",
       "title": "REQUIRE RESTPOS miss leaves process exit_code 0",
       "detail": "Same class as REQUIRE ONEOF/FLAG: ok:false asserts_fail + usage tip; shell $? often 0. Soft HASRESTPOS + EXIT 2 is reliable for agents. Reconfirmed on admit empty with CUBALC_CBI_REQUIRE=1.",
-      "repro": "CUBALC_CBI_REQUIRE=1 admit no tickets \u2192 REQUIRE RESTPOS sticky; exit_code 0"
+      "repro": "CUBALC_CBI_REQUIRE=1 admit no tickets → REQUIRE RESTPOS sticky; exit_code 0"
     },
     {
       "id": "W44",
@@ -425,15 +419,15 @@
       "area": "lang|flag_alias",
       "title": "GETFLAGN name|alias may fail under ENV SET seed; works with CLI -w",
       "detail": "Proof 1000 seeded via SYS ENV SET CUBALC_ARG* hit parse unknown form on workers|w; live cubalc run -e with -- -w 8 peels correctly and FLAG_HIT_NAME=w. Host ENV seed vs CLI argv dual still fragile (related W9).",
-      "repro": "ENV SET CUBALC_ARG0=-w vs cubalc run \u2026 -- -w 8"
+      "repro": "ENV SET CUBALC_ARG0=-w vs cubalc run … -- -w 8"
     },
     {
       "id": "W45",
       "severity": "low",
       "area": "lang|clampn",
       "title": "CLAMPN works with vars/LAST_N; CLAMPN_CHANGED and bounds swap",
-      "detail": "Positive: 50000\u21921000 changed=1; in-band unchanged; CLAMPN 5 10 1 stays 5; below lo clamps up. Reconfirmed priority 50\u21929.",
-      "repro": "CLAMPN 50 1 9 \u2192 9 CHANGED 1"
+      "detail": "Positive: 50000→1000 changed=1; in-band unchanged; CLAMPN 5 10 1 stays 5; below lo clamps up. Reconfirmed priority 50→9.",
+      "repro": "CLAMPN 50 1 9 → 9 CHANGED 1"
     },
     {
       "id": "W46",
@@ -441,7 +435,7 @@
       "area": "lang|restpos",
       "title": "HASRESTPOS min wants careful use with SUBCMD (files only, not verb)",
       "detail": "Positive: HASRESTPOS 1 after SUBCMD set with routes; 0 when only verb. Prefer --name=val flags so bare flags do not eat targets.",
-      "repro": "set -- --qps=10 r1 \u2192 HASRESTPOS 1"
+      "repro": "set -- --qps=10 r1 → HASRESTPOS 1"
     },
     {
       "id": "W47",
@@ -449,15 +443,15 @@
       "area": "lang|each_let",
       "title": "Dense LET tables break EACH AS and mid-EACH LET (unknown form)",
       "detail": "With ~10+ extra program LETs beyond a lean board, EACH LINE AS tid IN targets fails at SYS BLANK tid (unknown form tid). Nested EACH + LET hits = LAST fails earlier (unknown form hits). Predeclaring temps at top helps reassignment but steals more slots and can push past the threshold. Workarounds: slim unique LET/DEFAULT count; GREPV LAST chain; predeclare only essential temps (row/pref); avoid nested EACH in large boards. Isolated mini programs with few vars still nest EACH fine.",
-      "repro": "mini2 + 10 LETs: EACH IN hits \u2192 unknown form hits; full board without slim: SYS BLANK tid unknown form tid"
+      "repro": "mini2 + 10 LETs: EACH IN hits → unknown form hits; full board without slim: SYS BLANK tid unknown form tid"
     },
     {
       "id": "W48",
       "severity": "med",
       "area": "lang|helpflag",
-      "title": "HELPFLAG/VERSIONFLAG halt before STATE write \u2014 no audit plate on banner path",
+      "title": "HELPFLAG/VERSIONFLAG halt before STATE write — no audit plate on banner path",
       "detail": "Correct CLI UX (EXIT 0 early) but ops agents cannot rely on CBI_REPORT for --help/--version invocations. banner subcmd is plate-visible miss-path snapshot of USAGE+PROG_VERSION+HIT knobs.",
-      "repro": "run -- --help \u2192 halted stmts~28 no TICKETS/REPORT write"
+      "repro": "run -- --help → halted stmts~28 no TICKETS/REPORT write"
     },
     {
       "id": "W49",
@@ -465,30 +459,30 @@
       "area": "lang|helpflag",
       "title": "HELPFLAG+VERSIONFLAG miss path is quiet-friendly and sticky USAGE survives",
       "detail": "Positive: miss leaves HELPFLAG_HIT=0 VERSIONFLAG_HIT=0; program continues; USAGE sticky still available for REQUIRE tips and banner action.",
-      "repro": "list after HELPFLAG miss \u2192 help_hit 0 ver_hit 0"
+      "repro": "list after HELPFLAG miss → help_hit 0 ver_hit 0"
     },
     {
       "id": "W50",
       "severity": "high",
       "area": "host|sys_str",
       "title": "SYS STR WORKERS hits host worker-count (nproc), not LET var WORKERS",
-      "detail": "LET WORKERS=3; PRINT_JSON WORKERS shows 3, but SYS STR WORKERS yields nproc (here 4) and LAST_N=4. SYS STR workers (lowercase) binds the var. SYS NUM WORKERS is unknown form. Agents must not name ops vars WORKERS when feeding SYS STR/ITOA \u2014 use wcount/nworkers.",
-      "repro": "LET WORKERS=3; SYS STR WORKERS \u2192 4 on 4-cpu host; SYS STR wcount works"
+      "detail": "LET WORKERS=3; PRINT_JSON WORKERS shows 3, but SYS STR WORKERS yields nproc (here 4) and LAST_N=4. SYS STR workers (lowercase) binds the var. SYS NUM WORKERS is unknown form. Agents must not name ops vars WORKERS when feeding SYS STR/ITOA — use wcount/nworkers.",
+      "repro": "LET WORKERS=3; SYS STR WORKERS → 4 on 4-cpu host; SYS STR wcount works"
     },
     {
       "id": "W51",
       "severity": "low",
       "area": "lang|getflagall",
       "title": "GETFLAGALL multi --tag bag + JOINLINES | for row fields",
-      "detail": "Positive: --tag=canary --tag=eu \u2192 tag_n=2 bag; SYS JOINLINES \"|\" tags \u2192 canary|eu. OR default untagged when miss HIT=0. Coexists with GETFLAGN workers.",
-      "repro": "GETFLAGALL tag OR untagged with two --tag \u2192 JOINLINES |"
+      "detail": "Positive: --tag=canary --tag=eu → tag_n=2 bag; SYS JOINLINES \"|\" tags → canary|eu. OR default untagged when miss HIT=0. Coexists with GETFLAGN workers.",
+      "repro": "GETFLAGALL tag OR untagged with two --tag → JOINLINES |"
     },
     {
       "id": "W52",
       "severity": "low",
       "area": "lang|or_env",
       "title": "GETFLAGN/MS/BOOLFLAG OR ENV CLI>env>default with *_SRC",
-      "detail": "Positive: export WORKERS=12 \u2192 GETFLAGN_SRC env; --workers=3 \u2192 cli; unset \u2192 default. FLAG_ENV set on env path. Probe-path GETFLAGMS timeout OR ENV TIMEOUT and BOOLFLAG force OR ENV FORCE confirmed.",
+      "detail": "Positive: export WORKERS=12 → GETFLAGN_SRC env; --workers=3 → cli; unset → default. FLAG_ENV set on env path. Probe-path GETFLAGMS timeout OR ENV TIMEOUT and BOOLFLAG force OR ENV FORCE confirmed.",
       "repro": "WORKERS=12 src env; --workers=3 src cli"
     },
     {
@@ -504,7 +498,7 @@
       "severity": "low",
       "area": "lang|getflagcsv",
       "title": "GETFLAGCSV multi+comma+ENV chain with zone|zones|z aliases",
-      "detail": "Positive: --zones=canary,eu --zone=apac \u2192 zone_n=3 JOINLINES canary|eu|apac; ENV ZONES=eu, us \u2192 2 after space trim; CLI beats env; OR default 'default'. Coexists with GETFLAGN replicas.",
+      "detail": "Positive: --zones=canary,eu --zone=apac → zone_n=3 JOINLINES canary|eu|apac; ENV ZONES=eu, us → 2 after space trim; CLI beats env; OR default 'default'. Coexists with GETFLAGN replicas.",
       "repro": "GETFLAGCSV zone|zones|z OR ENV ZONES OR default with multi flags"
     },
     {
@@ -512,8 +506,8 @@
       "severity": "low",
       "area": "lang|floorn_capn",
       "title": "FLOORN/CAPN one-sided bounds after GETFLAGN (not CLAMPN)",
-      "detail": "Positive: FLOORN 0 1 \u2192 1; CAPN 100 16 \u2192 16; mid 8 unchanged. Pipeline GETFLAGN then FLOORN then CAPN for replica floor/cap without dual-sided clamp. ATLEASTN/ATMOSTN aliases work in proof.",
-      "repro": "GETFLAGN replicas 100; FLOORN 1; CAPN 16 \u2192 rcount 16"
+      "detail": "Positive: FLOORN 0 1 → 1; CAPN 100 16 → 16; mid 8 unchanged. Pipeline GETFLAGN then FLOORN then CAPN for replica floor/cap without dual-sided clamp. ATLEASTN/ATMOSTN aliases work in proof.",
+      "repro": "GETFLAGN replicas 100; FLOORN 1; CAPN 16 → rcount 16"
     },
     {
       "id": "W56",
@@ -529,7 +523,7 @@
       "area": "lang|alias_clash",
       "title": "DIVCEILN stole HOWMANY from COUNTWHERE (core before flow)",
       "detail": "DIVCEILN registered HOWMANY as alias in lang_ops_core; COUNTWHERE HOWMANY lives in lang_ops_flow (later). HOWMANY Counter tag 1 failed as DIVCEILN a b. Fixed: remove HOWMANY from DIVCEILN; keep PAGESN/CHUNKCOUNT/NPAGES. Same class as INRANGE/HASBETWEEN (W39).",
-      "repro": "HOWMANY Counter tag 1 \u2192 DIVCEILN tip (pre-fix); COUNTWHERE works"
+      "repro": "HOWMANY Counter tag 1 → DIVCEILN tip (pre-fix); COUNTWHERE works"
     },
     {
       "id": "W58",
@@ -544,8 +538,8 @@
       "severity": "low",
       "area": "lang|divceiln",
       "title": "DIVCEILN/PAGESN page counts; div0 soft OK=0",
-      "detail": "Positive: 100/16=7; 0/16=0; 10/0 \u2192 0 sticky LAST_ERR. Pipeline SYS SIZE + DIVCEILN psize for artifact pages.",
-      "repro": "DIVCEILN 100 16 \u2192 7; DIVCEILN 10 0 \u2192 0 DIVCEILN_OK 0"
+      "detail": "Positive: 100/16=7; 0/16=0; 10/0 → 0 sticky LAST_ERR. Pipeline SYS SIZE + DIVCEILN psize for artifact pages.",
+      "repro": "DIVCEILN 100 16 → 7; DIVCEILN 10 0 → 0 DIVCEILN_OK 0"
     },
     {
       "id": "W60",
@@ -553,7 +547,7 @@
       "area": "host|require_flagpath",
       "title": "REQUIRE FLAGFILE miss sticky + usage tip; shell rc may be non-zero or 0",
       "detail": "Missing path with CUBALC_CPP_REQUIRE=1 sets ok:false + REQUIRE FLAGFILE err with usage tip. Observed shell $?=1 here (stronger than RESTPOS class). Soft GETFLAGPATH EXIST=0 preferred when agents need always-continue.",
-      "repro": "CUBALC_CPP_REQUIRE=1 plan --file=no/such \u2192 REQUIRE FLAGFILE missing"
+      "repro": "CUBALC_CPP_REQUIRE=1 plan --file=no/such → REQUIRE FLAGFILE missing"
     },
     {
       "id": "W61",
@@ -561,7 +555,7 @@
       "area": "lang|restpaths",
       "title": "RESTPATHS counts SUBCMD verb as a positional path",
       "detail": "After SUBCMD stage file1 file2, RESTPATHS_N=3: abspath(stage)+abs(file1)+abs(file2). RESTPATHS_EXIST_N counts only existing. Agents must DROPNTH 0 when basename matches ACTION after SUBCMD_HIT. RESTPATHS_EXIST_N is not recomputed after peel.",
-      "repro": "SUBCMD stage; RESTPATHS with two files \u2192 n=3; DROPNTH 0 if basename=stage"
+      "repro": "SUBCMD stage; RESTPATHS with two files → n=3; DROPNTH 0 if basename=stage"
     },
     {
       "id": "W62",
@@ -569,23 +563,23 @@
       "area": "lang|getflagdir",
       "title": "GETFLAGDIR peels --out + mkdir -p; CREATED 0|1",
       "detail": "Positive: CLI --out=/tmp/x creates dir CREATED=1; second call CREATED=0; ENV OUTDIR chain; short -o. Empty miss OK=0 sticky LAST_ERR. Coexists with RESTPATHS files.",
-      "repro": "GETFLAGDIR out|o OR ENV OUTDIR OR default \u2192 abs ISDIR"
+      "repro": "GETFLAGDIR out|o OR ENV OUTDIR OR default → abs ISDIR"
     },
     {
       "id": "W63",
       "severity": "low",
       "area": "lang|restpaths",
       "title": "RESTPATHS missing inputs still absolute; EXIST_N soft",
-      "detail": "Positive: no/such/x.bin + Makefile \u2192 path_n=2 exist_n=1 after subcmd peel; abs paths always. Good for inventory plates without hard fail.",
-      "repro": "stage --out=D no/such Makefile \u2192 exist_n 1"
+      "detail": "Positive: no/such/x.bin + Makefile → path_n=2 exist_n=1 after subcmd peel; abs paths always. Good for inventory plates without hard fail.",
+      "repro": "stage --out=D no/such Makefile → exist_n 1"
     },
     {
       "id": "W64",
       "severity": "high",
       "area": "lang|nthpospath",
       "title": "NTHPOSPATH 0 is SUBCMD verb abs path (same class as RESTPATHS W61)",
-      "detail": "export -- Makefile \u2192 NTHPOSPATH 0 = .../export EXIST=0; first file is NTHPOSPATH 1. Agents must use index 1 when SUBCMD_HIT, or peel verb. Probe confirmed nth0 ends with action name.",
-      "repro": "SUBCMD export file; NTHPOSPATH 0 \u2192 verb; NTHPOSPATH 1 \u2192 file"
+      "detail": "export -- Makefile → NTHPOSPATH 0 = .../export EXIST=0; first file is NTHPOSPATH 1. Agents must use index 1 when SUBCMD_HIT, or peel verb. Probe confirmed nth0 ends with action name.",
+      "repro": "SUBCMD export file; NTHPOSPATH 0 → verb; NTHPOSPATH 1 → file"
     },
     {
       "id": "W65",
@@ -593,7 +587,7 @@
       "area": "lang|getflagout",
       "title": "GETFLAGOUT peels --report to abs file + mkdir parent for WRITE",
       "detail": "Positive: CLI/ENV/default create parent CREATED=1; LAST is file path not dir; WRITE digest works; second call CREATED=0 EXIST=1 when file present. Twin of GETFLAGDIR (dir) vs GETFLAGOUT (file).",
-      "repro": "GETFLAGOUT report OR ENV REPORT OR nested/out.json \u2192 WRITE LAST"
+      "repro": "GETFLAGOUT report OR ENV REPORT OR nested/out.json → WRITE LAST"
     },
     {
       "id": "W66",
@@ -608,8 +602,8 @@
       "severity": "low",
       "area": "lang|restpospaths",
       "title": "RESTPOSPATHS excludes SUBCMD verb (fixes RESTPATHS W61 class)",
-      "detail": "Positive: seal Makefile h \u2192 RESTPOSPATHS_N=2 not 3. Probe: RESTPATHS_N=2 (probe+file) vs RESTPOSPATHS_N=1 (file only). Prefer RESTPOSPATHS after SUBCMD for file intake.",
-      "repro": "SUBCMD seal a b; RESTPOSPATHS \u2192 n=2; RESTPATHS \u2192 n=3"
+      "detail": "Positive: seal Makefile h → RESTPOSPATHS_N=2 not 3. Probe: RESTPATHS_N=2 (probe+file) vs RESTPOSPATHS_N=1 (file only). Prefer RESTPOSPATHS after SUBCMD for file intake.",
+      "repro": "SUBCMD seal a b; RESTPOSPATHS → n=2; RESTPATHS → n=3"
     },
     {
       "id": "W68",
@@ -617,7 +611,7 @@
       "area": "lang|writeout",
       "title": "WRITEOUT one-shot ENSUREPARENT+WRITE nested plates",
       "detail": "Positive: WRITEOUT nested/manifest body creates parents CREATED=1; second CREATED=0; LAST=abs file; LAST_N=bytes. PUTOUT/SYS WRITEOUT aliases. Coexists with GETFLAGOUT peel.",
-      "repro": "WRITEOUT deep/m.txt body \u2192 ISFILE; parent mkdirs"
+      "repro": "WRITEOUT deep/m.txt body → ISFILE; parent mkdirs"
     },
     {
       "id": "W69",
@@ -625,23 +619,23 @@
       "area": "lang|cat_multiline",
       "title": "SYS CAT with embedded newline in .cubalc source mangles body assembly",
       "detail": "Building multi-line manifest via SYS CAT body \"\\n\" split across source lines duplicated schema and dropped basenames. Workaround: SYS PUSH body row for newline bags. Same class as REPLACEALL multiline hazard.",
-      "repro": "SYS CAT body newline fragment in file \u2192 corrupt bag; SYS PUSH body row ok"
+      "repro": "SYS CAT body newline fragment in file → corrupt bag; SYS PUSH body row ok"
     },
     {
       "id": "W70",
       "severity": "low",
       "area": "lang|appendout",
       "title": "APPENDOUT_CREATED is parent mkdir, not first-line; GETFLAGOUT steals create",
-      "detail": "GETFLAGOUT log already mkdirs parent \u2192 APPENDOUT_CREATED often 0 even on first append. APPENDOUT_CREATED=1 only when parent was missing. Agents must not use CREATED as first-write detector; use ISFILE/LINES before append.",
-      "repro": "GETFLAGOUT log; APPENDOUT log line \u2192 CREATED 0; APPENDOUT alone on fresh nest \u2192 CREATED 1"
+      "detail": "GETFLAGOUT log already mkdirs parent → APPENDOUT_CREATED often 0 even on first append. APPENDOUT_CREATED=1 only when parent was missing. Agents must not use CREATED as first-write detector; use ISFILE/LINES before append.",
+      "repro": "GETFLAGOUT log; APPENDOUT log line → CREATED 0; APPENDOUT alone on fresh nest → CREATED 1"
     },
     {
       "id": "W71",
       "severity": "low",
       "area": "lang|writeoutatomic",
       "title": "WRITEOUTATOMIC nested status plates; no leftover temps",
-      "detail": "Positive: overwrite replaces body (ready\u2192live); PATHGLOB *.cubalc-tmp empty; CREATED 0 on second write when parent exists.",
-      "repro": "WRITEOUTATOMIC status ready; WRITEOUTATOMIC status live \u2192 only live"
+      "detail": "Positive: overwrite replaces body (ready→live); PATHGLOB *.cubalc-tmp empty; CREATED 0 on second write when parent exists.",
+      "repro": "WRITEOUTATOMIC status ready; WRITEOUTATOMIC status live → only live"
     },
     {
       "id": "W72",
@@ -649,14 +643,14 @@
       "area": "lang|copyout",
       "title": "COPYOUT snaps status to nested dest; missing src soft OK=0",
       "detail": "Positive: COPYOUT status snap creates dest parents; soft fail on missing source. Snap action must pass same --status path as status write (fresh process peels defaults independently).",
-      "repro": "COPYOUT stat_file snap_file; COPYOUT missing dest \u2192 OK 0"
+      "repro": "COPYOUT stat_file snap_file; COPYOUT missing dest → OK 0"
     },
     {
       "id": "W73",
       "severity": "med",
       "area": "lang|getflagout",
       "title": "Eager multi GETFLAGOUT always mkdirs all default parents",
-      "detail": "Board peels log+status+snap every invocation \u2192 creates default run/ trees under STATE even for list/log-only. Lazy peel per action would avoid side-effect dirs; costs more branches.",
+      "detail": "Board peels log+status+snap every invocation → creates default run/ trees under STATE even for list/log-only. Lazy peel per action would avoid side-effect dirs; costs more branches.",
       "repro": "list alone creates state/run/agent.log parent via default GETFLAGOUT"
     },
     {
@@ -665,14 +659,14 @@
       "area": "lang|touchout",
       "title": "TOUCHOUT NEW vs CREATED: file create vs parent mkdir",
       "detail": "Positive: first TOUCHOUT NEW=1; renew NEW=0. CREATED often 0 after GETFLAGOUT already mkdirs parent (same class as APPENDOUT_CREATED W70). Prefer TOUCHOUT_NEW for lease claim vs renew.",
-      "repro": "TOUCHOUT lease \u2192 NEW 1; TOUCHOUT again \u2192 NEW 0 CREATED 0"
+      "repro": "TOUCHOUT lease → NEW 1; TOUCHOUT again → NEW 0 CREATED 0"
     },
     {
       "id": "W75",
       "severity": "low",
       "area": "lang|moveout",
       "title": "MOVEOUT promotes src to nested dest; src gone; missing soft",
-      "detail": "Positive: MOVEOUT stage\u2192live removes src; CREATED for dest parent; probe MOVEOUT missing \u2192 OK 0. Pass --src and --dest on promote invocation (fresh peels).",
+      "detail": "Positive: MOVEOUT stage→live removes src; CREATED for dest parent; probe MOVEOUT missing → OK 0. Pass --src and --dest on promote invocation (fresh peels).",
       "repro": "MOVEOUT src dest; EXIST src 0; EXIST dest 1"
     },
     {
@@ -681,7 +675,7 @@
       "area": "lang|json_write",
       "title": "WRITEOUT body with unquoted {braces} can parse as forms",
       "detail": "WRITEOUT path {\"job\":1} failed unknown form job in -e smoke. Prefer simple key=val plate lines or careful quoting. Board uses job=id claimed=ISO.",
-      "repro": "WRITEOUT f {\\\"job\\\":1} \u2192 unknown form job"
+      "repro": "WRITEOUT f {\\\"job\\\":1} → unknown form job"
     },
     {
       "id": "W77",
@@ -689,7 +683,7 @@
       "area": "lang|writeoutif",
       "title": "WRITEOUTIF mtime-stable when body unchanged",
       "detail": "Positive: first set CHANGED=1; same body CHANGED=0 and mtime unchanged after 1s sleep; different body CHANGED=1. Good for deploy status watchers. CREATED often 0 after GETFLAGOUT parent (W70 class).",
-      "repro": "WRITEOUTIF st state=ready twice \u2192 second CHANGED 0 mtime stable"
+      "repro": "WRITEOUTIF st state=ready twice → second CHANGED 0 mtime stable"
     },
     {
       "id": "W78",
@@ -697,15 +691,15 @@
       "area": "lang|logstamp",
       "title": "LOGSTAMP appends ISO Z + msg without DATE+CAT+APPENDOUT",
       "detail": "Positive: multi lines with ISO timestamps; LOGSTAMP_LINE/ISO knobs in proof; CREATED parent-only like APPENDOUT.",
-      "repro": "LOGSTAMP log deploy-start \u2192 2026-\u2026Z deploy-start"
+      "repro": "LOGSTAMP log deploy-start → 2026-…Z deploy-start"
     },
     {
       "id": "W79",
       "severity": "low",
       "area": "lang|linkout",
       "title": "LINKOUT creates abs symlink; re-link soft exists fail",
-      "detail": "Positive: LINKOUT status latest \u2192 ISLINK abs target; second LINKOUT OK=0 sticky exists. Agents must RM link or tolerate soft miss for republish.",
-      "repro": "LINKOUT st link; LINKOUT again \u2192 exists err"
+      "detail": "Positive: LINKOUT status latest → ISLINK abs target; second LINKOUT OK=0 sticky exists. Agents must RM link or tolerate soft miss for republish.",
+      "repro": "LINKOUT st link; LINKOUT again → exists err"
     },
     {
       "id": "W80",
@@ -713,15 +707,15 @@
       "area": "lang|getflagout",
       "title": "GETFLAGOUT realpath-follows existing symlinks to TARGET",
       "detail": "GETFLAGOUT link OR path when path is already a symlink returns realpath(target) with exist=1, not the link path. Agents that then RELINKOUT/RM that path destroy the plate file and recreate a symlink on the plate path. RELINKOUT itself carefully avoids realpath(linkpath); GETFLAGOUT undoes that safety. Workaround: GETFLAG (literal) for symlink destinations; GETFLAGOUT only for regular files/dirs that need parent mkdir.",
-      "repro": "ln -s /tmp/t /tmp/l; GETFLAGOUT link OR /tmp/l -- --link=/tmp/l \u2192 LAST=/tmp/t not /tmp/l"
+      "repro": "ln -s /tmp/t /tmp/l; GETFLAGOUT link OR /tmp/l -- --link=/tmp/l → LAST=/tmp/t not /tmp/l"
     },
     {
       "id": "W81",
       "severity": "high",
       "area": "lang|vars",
       "title": "VM vars[128] hard ceiling; new knobs silently fail when full",
-      "detail": "Var table is fixed 128 slots (name[48]). Fat agent boards (IDENTITY+GETFLAGOUT\u00d73+many LET/DEFAULT+CASE) reach n_vars\u2248127; subsequent var_set_num for RELINKOUT_CREATED/REPLACED and other op knobs silently no-ops (create returns NULL). Trace still prints C locals correctly while language knobs stay 0. Agents must lean LETs, reuse temps, or UNSET/DROP_VAR. VARS reports n; no hard-fail on overflow.",
-      "repro": "board with ~50 LET + 3 GETFLAGOUT \u2192 VARS_N 127; RELINKOUT log replaced=1 but RELINKOUT_REPLACED still 0"
+      "detail": "Var table is fixed 128 slots (name[48]). Fat agent boards (IDENTITY+GETFLAGOUT×3+many LET/DEFAULT+CASE) reach n_vars≈127; subsequent var_set_num for RELINKOUT_CREATED/REPLACED and other op knobs silently no-ops (create returns NULL). Trace still prints C locals correctly while language knobs stay 0. Agents must lean LETs, reuse temps, or UNSET/DROP_VAR. VARS reports n; no hard-fail on overflow.",
+      "repro": "board with ~50 LET + 3 GETFLAGOUT → VARS_N 127; RELINKOUT log replaced=1 but RELINKOUT_REPLACED still 0"
     },
     {
       "id": "W82",
@@ -737,23 +731,23 @@
       "area": "lang|relinkout",
       "title": "RELINKOUT force-replaces nested symlink; fills LINKOUT re-link gap",
       "detail": "Positive: first link CREATED=1 REPLACED=0; retarget same path REPLACED=1 CREATED=0; READLINK peels new target. Closes W79/LINKOUT-force language_gap when agents use RELINKOUT and GETFLAG (not GETFLAGOUT) for the link path.",
-      "repro": "RELINKOUT a cur; RELINKOUT b cur \u2192 REPLACED 1 READLINK b"
+      "repro": "RELINKOUT a cur; RELINKOUT b cur → REPLACED 1 READLINK b"
     },
     {
       "id": "W84",
       "severity": "low",
       "area": "lang|claimout",
       "title": "CLAIMOUT exclusive nested claim; second soft exists; CREATED parent-only",
-      "detail": "Positive: CLAIMOUT path body \u2192 HIT=1 CLAIM_PID>0 body on disk; second OK=0 HIT=0 soft held. CREATED often 0 after GETFLAGOUT parent mkdir (W70 class). Release via RM enables re-claim with CREATED=0 when parent exists. Body omit trailing NL (W5).",
-      "repro": "CLAIMOUT f worker; CLAIMOUT f other \u2192 OK 0 HIT 0; RM f; CLAIMOUT f \u2192 HIT 1"
+      "detail": "Positive: CLAIMOUT path body → HIT=1 CLAIM_PID>0 body on disk; second OK=0 HIT=0 soft held. CREATED often 0 after GETFLAGOUT parent mkdir (W70 class). Release via RM enables re-claim with CREATED=0 when parent exists. Body omit trailing NL (W5).",
+      "repro": "CLAIMOUT f worker; CLAIMOUT f other → OK 0 HIT 0; RM f; CLAIMOUT f → HIT 1"
     },
     {
       "id": "W85",
       "severity": "low",
       "area": "lang|teeout",
       "title": "TEEOUT writes nested plate and leaves body in LAST (not path)",
-      "detail": "Positive: TEEOUT out body \u2192 LAST=body for HAS/GREP without READ; TEEOUT_PATH abs. CREATED parent-only like APPENDOUT. Distinct from WRITEOUT which leaves path-ish LAST. Agents that need path after write use TEEOUT_PATH not LAST.",
-      "repro": "TEEOUT f rcpt=done; SYS HAS LAST rcpt= \u2192 1; LAST is body not path"
+      "detail": "Positive: TEEOUT out body → LAST=body for HAS/GREP without READ; TEEOUT_PATH abs. CREATED parent-only like APPENDOUT. Distinct from WRITEOUT which leaves path-ish LAST. Agents that need path after write use TEEOUT_PATH not LAST.",
+      "repro": "TEEOUT f rcpt=done; SYS HAS LAST rcpt= → 1; LAST is body not path"
     },
     {
       "id": "W86",
@@ -761,7 +755,7 @@
       "area": "host|env",
       "title": "Custom CUBALC_* ENV reach SYS ENV; CUBALC_ARG* host still dead (W1/W9)",
       "detail": "Positive contrast: export CUBALC_CTQ_REQUIRE=1 is visible to SYS ENV and drives EXIT 2 on held claim. export CUBALC_ARG0=claim still does not populate SYS ARG (W1). Agents may use custom env gates but not ARG env contract.",
-      "repro": "CUBALC_CTQ_REQUIRE=1 claim held \u2192 shell 2; CUBALC_ARG0=claim alone \u2192 list"
+      "repro": "CUBALC_CTQ_REQUIRE=1 claim held → shell 2; CUBALC_ARG0=claim alone → list"
     },
     {
       "id": "W87",
@@ -769,31 +763,31 @@
       "area": "lang|rmtree",
       "title": "RMTREE missing path is OK=1 with N=0 (idempotent, not soft-fail)",
       "detail": "Unlike CPTREE missing (OK=0 sticky missing) or empty path (OK=0 empty), RMTREE on a non-existent path returns OK=1 RMTREE_N=0. Agents cannot use OK alone to detect wipe-of-nothing vs wipe-of-tree; must check RMTREE_N or pre EXIST. Empty path still OK=0. Positive for GC scripts that re-run.",
-      "repro": "RMTREE /no/such \u2192 OK 1 N 0; RMTREE \"\" \u2192 OK 0 empty"
+      "repro": "RMTREE /no/such → OK 1 N 0; RMTREE \"\" → OK 0 empty"
     },
     {
       "id": "W88",
       "severity": "low",
       "area": "lang|cptree",
       "title": "CPTREE recursive snapshot; refuses dest inside src; missing soft",
-      "detail": "Positive: CPTREE work snap \u2192 N/BYTES knobs; nested files+empty dirs; source intact. CPTREE missing src OK=0; dest inside src OK=0 LAST_ERR contains inside. File-only CPTREE works. Agents use CPTREE_N/CPTREE_BYTES not LAST alone (LAST is abs dest path).",
-      "repro": "CPTREE src dst N>=5; CPTREE src src/inside \u2192 dest inside src"
+      "detail": "Positive: CPTREE work snap → N/BYTES knobs; nested files+empty dirs; source intact. CPTREE missing src OK=0; dest inside src OK=0 LAST_ERR contains inside. File-only CPTREE works. Agents use CPTREE_N/CPTREE_BYTES not LAST alone (LAST is abs dest path).",
+      "repro": "CPTREE src dst N>=5; CPTREE src src/inside → dest inside src"
     },
     {
       "id": "W89",
       "severity": "low",
       "area": "lang|rmtree",
       "title": "RMTREE removes file or full dir tree; N counts nodes",
-      "detail": "Positive: RMTREE work after stage+snap removed 6 nodes; EXIST work 0; sibling snap untouched until separate wipe. RMNEST/RMRF aliases. Pair with CPTREE for stage\u2192snap\u2192wipe sandbox lifecycle.",
-      "repro": "RMTREE work \u2192 N 6 EXIST 0; snap still present"
+      "detail": "Positive: RMTREE work after stage+snap removed 6 nodes; EXIST work 0; sibling snap untouched until separate wipe. RMNEST/RMRF aliases. Pair with CPTREE for stage→snap→wipe sandbox lifecycle.",
+      "repro": "RMTREE work → N 6 EXIST 0; snap still present"
     },
     {
       "id": "W90",
       "severity": "low",
       "area": "lang|dirsize",
       "title": "DIRSIZE recursive file-byte inventory; FILES/DIRS knobs",
-      "detail": "Positive: DIRSIZE stage \u2192 DIRSIZE/LAST_N=bytes, DIRSIZE_FILES, DIRSIZE_DIRS (empty dirs counted). Missing path OK=0 soft. LAST string is abs path after op; agents must read DIRSIZE or LAST_N for bytes not LAST string. Good for deploy size gates with MAXB.",
-      "repro": "DIRSIZE tree \u2192 bytes 15 files 2 dirs 3; DIRSIZE missing \u2192 OK 0"
+      "detail": "Positive: DIRSIZE stage → DIRSIZE/LAST_N=bytes, DIRSIZE_FILES, DIRSIZE_DIRS (empty dirs counted). Missing path OK=0 soft. LAST string is abs path after op; agents must read DIRSIZE or LAST_N for bytes not LAST string. Good for deploy size gates with MAXB.",
+      "repro": "DIRSIZE tree → bytes 15 files 2 dirs 3; DIRSIZE missing → OK 0"
     },
     {
       "id": "W91",
@@ -801,15 +795,15 @@
       "area": "lang|mvtree",
       "title": "MVTREE_N is 1 on same-FS rename, not recursive node count",
       "detail": "Same-filesystem MVTREE uses rename(2): MVTREE_RENAMED=1 and MVTREE_N=1 even for multi-file trees. Cross-device path may CPTREE+RMTREE with higher N. Agents must not treat MVTREE_N as CPTREE_N-style node inventory; use DIRSIZE/EXIST for post-promote checks. Dest-inside-src and missing soft like CPTREE.",
-      "repro": "MVTREE stage live with 5 nodes \u2192 RENAMED 1 N 1; EXIST stage 0"
+      "repro": "MVTREE stage live with 5 nodes → RENAMED 1 N 1; EXIST stage 0"
     },
     {
       "id": "W92",
       "severity": "med",
       "area": "lang|eqtree",
       "title": "EQTREE OK=1 on both equal and unequal; equality is EQTREE/LAST_N",
-      "detail": "EQTREE always OK=1 when both paths exist; equal \u2192 EQTREE=1 LAST_N=1; differ \u2192 EQTREE=0 LAST_N=0 with EQTREE_REASON content|missing|extra_b and EQTREE_DIFF path fragment. Soft OK=0 only for missing/empty args. Agents that branch on OK alone will false-admit drift. Board uses eq_n + EXIT under REQUIRE.",
-      "repro": "EQTREE a b equal OK1 EQTREE1; mutate b \u2192 OK1 EQTREE0 reason content"
+      "detail": "EQTREE always OK=1 when both paths exist; equal → EQTREE=1 LAST_N=1; differ → EQTREE=0 LAST_N=0 with EQTREE_REASON content|missing|extra_b and EQTREE_DIFF path fragment. Soft OK=0 only for missing/empty args. Agents that branch on OK alone will false-admit drift. Board uses eq_n + EXIT under REQUIRE.",
+      "repro": "EQTREE a b equal OK1 EQTREE1; mutate b → OK1 EQTREE0 reason content"
     },
     {
       "id": "W93",
@@ -817,7 +811,7 @@
       "area": "lang|greptree",
       "title": "GREPTREE is literal substring, not whole-word token match",
       "detail": "GREPTREE root needle scans file contents as substring (like grep without word boundaries). Needle SECRE matches SECRET_ABC; plain 'no secret here' hits GREPTREEI secret. Agents needing exact tokens must post-filter LAST path bag or use longer unique needles. GREPTREE_N=0 is still OK=1 (empty hit set is success).",
-      "repro": "seed SECRET_ABC; GREPTREE SECRE \u2192 N>=1; GREPTREE zzz \u2192 OK1 N0"
+      "repro": "seed SECRET_ABC; GREPTREE SECRE → N>=1; GREPTREE zzz → OK1 N0"
     },
     {
       "id": "W94",
@@ -825,55 +819,55 @@
       "area": "lang|greptree",
       "title": "GREPTREE returns path bag + SCAN count; GREPTREEI for case-fold",
       "detail": "Positive: LAST is multiline paths of matching files; GREPTREE_N file hits; GREPTREE_SCAN files examined. GREPTREEI finds WARNING via warning. Missing root OK=0; empty path OK=0. Distinct from bag SYS GREP which is line-level in memory.",
-      "repro": "GREPTREE base error \u2192 err.log; GREPTREEI base warning \u2192 warn.log"
+      "repro": "GREPTREE base error → err.log; GREPTREEI base warning → warn.log"
     },
     {
       "id": "W95",
       "severity": "low",
       "area": "lang|replacetree",
       "title": "REPLACETREE bulk REPLACEALL; N=files SUBS=replacements; empty old no-op",
-      "detail": "Positive: REPLACETREE root old new rewrites nested files; REPLACETREE_N files touched; REPLACETREE_SUBS total substitutions. Second pass when already replaced \u2192 N=0 SUBS=0 OK=1. Empty old string no-op OK=1. Missing root soft OK=0. LAST is path bag of rewritten files.",
-      "repro": "REPLACETREE base OLD NEW \u2192 N2 SUBS3; again \u2192 N0"
+      "detail": "Positive: REPLACETREE root old new rewrites nested files; REPLACETREE_N files touched; REPLACETREE_SUBS total substitutions. Second pass when already replaced → N=0 SUBS=0 OK=1. Empty old string no-op OK=1. Missing root soft OK=0. LAST is path bag of rewritten files.",
+      "repro": "REPLACETREE base OLD NEW → N2 SUBS3; again → N0"
     },
     {
       "id": "W96",
       "severity": "low",
       "area": "lang|countintree",
       "title": "COUNTINTREE tallies substring occurrences + FILES; zero is OK=1",
-      "detail": "Positive: COUNTINTREE root needle \u2192 COUNTINTREE/LAST_N total hits, COUNTINTREE_FILES files with \u22651 hit. Empty needle \u2192 0. Missing root soft OK=0. COUNTINTREEI case-fold. Unlike GREPTREE (path bag), this returns a number for SLO/severity budgets (MAXC gate). Substring class same as GREPTREE (W93): erro counts inside error.",
-      "repro": "COUNTINTREE logs error \u2192 2; COUNTINTREE zzz \u2192 OK1 N0; missing \u2192 OK0"
+      "detail": "Positive: COUNTINTREE root needle → COUNTINTREE/LAST_N total hits, COUNTINTREE_FILES files with ≥1 hit. Empty needle → 0. Missing root soft OK=0. COUNTINTREEI case-fold. Unlike GREPTREE (path bag), this returns a number for SLO/severity budgets (MAXC gate). Substring class same as GREPTREE (W93): erro counts inside error.",
+      "repro": "COUNTINTREE logs error → 2; COUNTINTREE zzz → OK1 N0; missing → OK0"
     },
     {
       "id": "W97",
       "severity": "low",
       "area": "lang|greplinestree",
       "title": "GREPLINESTREE harvests matching lines (not paths); FILES separate",
-      "detail": "Positive: GREPLINESTREE root needle \u2192 LAST multiline line bag, GREPLINESTREE_N line count, GREPLINESTREE_FILES file count. Distinct from GREPTREE path list and COUNTINTREE occurrence tally. Zero match OK=1 N=0. GREPLINESTREEI/HARVESTTREE aliases. Harvest bag last line may omit final NL (W5/W10 class) when written to plate.",
-      "repro": "GREPLINESTREE logs error \u2192 2 lines boom/again; GREPTREE would return err.log path only"
+      "detail": "Positive: GREPLINESTREE root needle → LAST multiline line bag, GREPLINESTREE_N line count, GREPLINESTREE_FILES file count. Distinct from GREPTREE path list and COUNTINTREE occurrence tally. Zero match OK=1 N=0. GREPLINESTREEI/HARVESTTREE aliases. Harvest bag last line may omit final NL (W5/W10 class) when written to plate.",
+      "repro": "GREPLINESTREE logs error → 2 lines boom/again; GREPTREE would return err.log path only"
     },
     {
       "id": "W98",
       "severity": "med",
       "area": "lang|tree_search",
       "title": "Tree search family OK=1 on empty hits; soft only on missing root",
-      "detail": "GREPTREE/COUNTINTREE/GREPLINESTREE all succeed with N=0 when needle absent. Agents cannot use OK for 'found something' \u2014 must branch on N/COUNT/LAST_N. REQUIRE-style hard fail needs board EXIT after N check or missing-root soft. Reconfirms W93 empty-hit pattern across tree ops.",
-      "repro": "COUNTINTREE/GREPLINESTREE zzz \u2192 OK1 N0; harvest board marks miss only via line_n>0 gate"
+      "detail": "GREPTREE/COUNTINTREE/GREPLINESTREE all succeed with N=0 when needle absent. Agents cannot use OK for 'found something' — must branch on N/COUNT/LAST_N. REQUIRE-style hard fail needs board EXIT after N check or missing-root soft. Reconfirms W93 empty-hit pattern across tree ops.",
+      "repro": "COUNTINTREE/GREPLINESTREE zzz → OK1 N0; harvest board marks miss only via line_n>0 gate"
     },
     {
       "id": "W99",
       "severity": "low",
       "area": "lang|firstintree",
       "title": "FIRSTINTREE/LASTINTREE one-shot path pick; HIT=0 empty OK=1",
-      "detail": "Positive: FIRSTINTREE root needle \u2192 LAST abs path, FIRSTINTREE_HIT 0|1. LASTINTREE last DFS match. No-match OK=1 HIT=0 LAST empty (same W98 empty-hit class). Order is sorted DFS (a/b/mid before a/err). FIRSTINTREEI/LASTINTREEI case-fold. Distinct from GREPTREE multi-path bag.",
-      "repro": "FIRSTINTREE logs error \u2192 \u2026/mid.txt; LASTINTREE \u2192 \u2026/err.log; zzz \u2192 HIT 0 OK 1"
+      "detail": "Positive: FIRSTINTREE root needle → LAST abs path, FIRSTINTREE_HIT 0|1. LASTINTREE last DFS match. No-match OK=1 HIT=0 LAST empty (same W98 empty-hit class). Order is sorted DFS (a/b/mid before a/err). FIRSTINTREEI/LASTINTREEI case-fold. Distinct from GREPTREE multi-path bag.",
+      "repro": "FIRSTINTREE logs error → …/mid.txt; LASTINTREE → …/err.log; zzz → HIT 0 OK 1"
     },
     {
       "id": "W100",
       "severity": "low",
       "area": "lang|firstlineintree",
       "title": "FIRSTLINEINTREE peels line text + PATH + 0-based I",
-      "detail": "Positive: FIRSTLINEINTREE \u2192 LAST=line body, FIRSTLINEINTREE_PATH file, FIRSTLINEINTREE_I line index (0-based; miss I=-1). LASTLINEINTREE last match across tree. No-match OK=1 HIT=0 PATH empty. Agents get path+line without GREPLINESTREE+TAKE. Substring needle (erro) still hits.",
-      "repro": "FIRSTLINEINTREE error \u2192 'error first-line' I=1 path mid.txt; miss \u2192 HIT0 I=-1"
+      "detail": "Positive: FIRSTLINEINTREE → LAST=line body, FIRSTLINEINTREE_PATH file, FIRSTLINEINTREE_I line index (0-based; miss I=-1). LASTLINEINTREE last match across tree. No-match OK=1 HIT=0 PATH empty. Agents get path+line without GREPLINESTREE+TAKE. Substring needle (erro) still hits.",
+      "repro": "FIRSTLINEINTREE error → 'error first-line' I=1 path mid.txt; miss → HIT0 I=-1"
     },
     {
       "id": "W101",
@@ -888,32 +882,32 @@
       "severity": "med",
       "area": "lang|pathlinetree",
       "title": "PATHLINETREE is substring grep -rn; colon needle matches any ':' line",
-      "detail": "PATHLINETREE root needle returns path:lineno:text bags (1-based lineno). Needle ':' hits every line containing a colon (error: boom, WARNING: careful) \u2014 useful multi-file count but a false friend if agents mean field separators. Empty hits OK=1 N=0 (W98 class). Text after second colon may itself contain colons (error: boom).",
-      "repro": "PATHLINETREE logs error \u2192 N2; PATHLINETREE logs : \u2192 N3 FILES2"
+      "detail": "PATHLINETREE root needle returns path:lineno:text bags (1-based lineno). Needle ':' hits every line containing a colon (error: boom, WARNING: careful) — useful multi-file count but a false friend if agents mean field separators. Empty hits OK=1 N=0 (W98 class). Text after second colon may itself contain colons (error: boom).",
+      "repro": "PATHLINETREE logs error → N2; PATHLINETREE logs : → N3 FILES2"
     },
     {
       "id": "W103",
       "severity": "low",
       "area": "lang|parsepathline",
       "title": "PARSEPATHLINE peels first two colon fields as path and lineno",
-      "detail": "Positive: PARSEPATHLINE path:N:text \u2192 PATH, LINE_N, LAST/TEXT=remainder (colons kept in body). Plain lines HIT=0 OK=1. Empty string soft OK=0. Agents building digests from PATHLINETREE bags must NTH then PARSEPATHLINE; HIT distinguishes annotated vs garbage fields.",
-      "repro": "PARSEPATHLINE /p:10:a:b:c \u2192 PATH /p LINE_N 10 LAST a:b:c; plain \u2192 HIT 0"
+      "detail": "Positive: PARSEPATHLINE path:N:text → PATH, LINE_N, LAST/TEXT=remainder (colons kept in body). Plain lines HIT=0 OK=1. Empty string soft OK=0. Agents building digests from PATHLINETREE bags must NTH then PARSEPATHLINE; HIT distinguishes annotated vs garbage fields.",
+      "repro": "PARSEPATHLINE /p:10:a:b:c → PATH /p LINE_N 10 LAST a:b:c; plain → HIT 0"
     },
     {
       "id": "W104",
       "severity": "low",
       "area": "lang|pathlinepaths",
       "title": "PATHLINEPATHS unique first-seen paths; SKIP non-annotated",
-      "detail": "Positive: PATHLINEPATHS bag \u2192 unique paths in first-seen order, PATHLINEPATHS_N, SKIP count for lines that fail path:num:text shape. Empty bag OK=1 N=0. Companion to PATHLINETREE for implicated-file lists without EACH+HASLINE glue.",
-      "repro": "PATHLINEPATHS three cites two files \u2192 N2; plain line increments SKIP"
+      "detail": "Positive: PATHLINEPATHS bag → unique paths in first-seen order, PATHLINEPATHS_N, SKIP count for lines that fail path:num:text shape. Empty bag OK=1 N=0. Companion to PATHLINETREE for implicated-file lists without EACH+HASLINE glue.",
+      "repro": "PATHLINEPATHS three cites two files → N2; plain line increments SKIP"
     },
     {
       "id": "W105",
       "severity": "low",
       "area": "lang|pathlinetexts",
       "title": "PATHLINETEXTS peels message bodies; keeps duplicates; SKIP plain",
-      "detail": "Positive: PATHLINETEXTS bag \u2192 text-only bag in bag order, PATHLINETEXTS_N, SKIP non-annotated. Duplicates preserved (FREQ-ready). Empty bag OK=1 N=0. Empty body path:N: still counts as one field. Companion to PATHLINEPATHS (unique files) without EACH+PARSEPATHLINE.",
-      "repro": "PATHLINETREE error; PATHLINETEXTS LAST \u2192 3x 'error: boom' + other"
+      "detail": "Positive: PATHLINETEXTS bag → text-only bag in bag order, PATHLINETEXTS_N, SKIP non-annotated. Duplicates preserved (FREQ-ready). Empty bag OK=1 N=0. Empty body path:N: still counts as one field. Companion to PATHLINEPATHS (unique files) without EACH+PARSEPATHLINE.",
+      "repro": "PATHLINETREE error; PATHLINETEXTS LAST → 3x 'error: boom' + other"
     },
     {
       "id": "W106",
@@ -928,8 +922,8 @@
       "severity": "low",
       "area": "lang|pathlinefreq",
       "title": "PATHLINEFREQ TOTAL vs N: lines vs unique paths",
-      "detail": "Positive: PATHLINEFREQ_N = unique paths, PATHLINEFREQ_TOTAL = cite lines, SKIP = garbage fields. LOOKUPN path \u2192 count. Good for MAXT budgets on total hits and TOPKEY for hottest file. Distinct from COUNTINTREE (global substring tally without path hist).",
-      "repro": "4 error cites / 2 files \u2192 N2 TOTAL4; LOOKUPN err.log \u2192 3"
+      "detail": "Positive: PATHLINEFREQ_N = unique paths, PATHLINEFREQ_TOTAL = cite lines, SKIP = garbage fields. LOOKUPN path → count. Good for MAXT budgets on total hits and TOPKEY for hottest file. Distinct from COUNTINTREE (global substring tally without path hist).",
+      "repro": "4 error cites / 2 files → N2 TOTAL4; LOOKUPN err.log → 3"
     },
     {
       "id": "W108",
@@ -937,31 +931,31 @@
       "area": "lang|parsepathline",
       "title": "PARSEPATHLINE round-trip after FORMATPATHLINE can HIT=0 under agent boards",
       "detail": "FORMATPATHLINE builds valid path:lineno:text and VAL stores it, but PARSEPATHLINE on a LET-bound copy immediately after can yield PARSEPATHLINE_HIT=0 in deep INCLUDE agent_boot boards (reproduced once on cite arm; lean -e sequence HIT=1). Agents should trust FORMAT OK+LAST for cite emit; use PARSE on literals or fresh peels for intake. Possible LAST/knob clobber or var-table pressure near W81.",
-      "repro": "board cite arm: FORMATPATHLINE ok cite string; PARSEPATHLINE out \u2192 HIT 0 intermittently/in-board"
+      "repro": "board cite arm: FORMATPATHLINE ok cite string; PARSEPATHLINE out → HIT 0 intermittently/in-board"
     },
     {
       "id": "W109",
       "severity": "low",
       "area": "lang|takeintree",
       "title": "TAKEINTREE first n matching paths DFS; n=0 empty OK=1",
-      "detail": "Positive: TAKEINTREE root needle n \u2192 path bag TAKEINTREE_N\u2264n, MAX=n. Oversize n caps at match count. n=0 \u2192 N=0 empty LAST OK=1. Missing root soft OK=0. Order matches FIRSTINTREE head. TAKEINTREEI case-fold. Good for triage samples without full GREPTREE bag.",
-      "repro": "TAKEINTREE logs error 2 \u2192 mid+z; TAKE 0 \u2192 N0; TAKE 10 \u2192 N3"
+      "detail": "Positive: TAKEINTREE root needle n → path bag TAKEINTREE_N≤n, MAX=n. Oversize n caps at match count. n=0 → N=0 empty LAST OK=1. Missing root soft OK=0. Order matches FIRSTINTREE head. TAKEINTREEI case-fold. Good for triage samples without full GREPTREE bag.",
+      "repro": "TAKEINTREE logs error 2 → mid+z; TAKE 0 → N0; TAKE 10 → N3"
     },
     {
       "id": "W110",
       "severity": "low",
       "area": "lang|nthintree",
       "title": "NTHINTREE 0-based; OOR and negative soft HIT=0 OK=1",
-      "detail": "Positive: NTHINTREE root needle i \u2192 path, NTHINTREE_HIT, NTHINTREE_I. i=0 equals FIRSTINTREE. Out-of-range or negative \u2192 HIT=0 empty LAST OK=1 (not soft path miss). Distinct from SYS NTH on bags (no tree walk). INDEXINTREE alias.",
-      "repro": "NTHINTREE error 1 \u2192 z.txt; NTH 9 \u2192 HIT 0; NTH -1 \u2192 HIT 0"
+      "detail": "Positive: NTHINTREE root needle i → path, NTHINTREE_HIT, NTHINTREE_I. i=0 equals FIRSTINTREE. Out-of-range or negative → HIT=0 empty LAST OK=1 (not soft path miss). Distinct from SYS NTH on bags (no tree walk). INDEXINTREE alias.",
+      "repro": "NTHINTREE error 1 → z.txt; NTH 9 → HIT 0; NTH -1 → HIT 0"
     },
     {
       "id": "W111",
       "severity": "low",
       "area": "lang|formatpathline",
       "title": "FORMATPATHLINE builds path:lineno:text; inverse of PARSEPATHLINE",
-      "detail": "Positive: FORMATPATHLINE path lineno text \u2192 LAST cite; sticky PATH/LINE_N/TEXT. Empty path soft OK=0. Omitted text can use LAST. Round-trip with FIRSTLINEINTREE: use I+1 for 1-based grep -n lines (I is 0-based). Text may contain colons.",
-      "repro": "FORMATPATHLINE /p 2 'a:b' \u2192 /p:2:a:b; FIRSTLINE I=1 \u2192 lineno 2"
+      "detail": "Positive: FORMATPATHLINE path lineno text → LAST cite; sticky PATH/LINE_N/TEXT. Empty path soft OK=0. Omitted text can use LAST. Round-trip with FIRSTLINEINTREE: use I+1 for 1-based grep -n lines (I is 0-based). Text may contain colons.",
+      "repro": "FORMATPATHLINE /p 2 'a:b' → /p:2:a:b; FIRSTLINE I=1 → lineno 2"
     },
     {
       "id": "W112",
@@ -977,7 +971,7 @@
       "area": "lang|sliceintree",
       "title": "SLICEINTREE start/count are 0-based window; past-end and count0 both soft empty OK=1 N=0",
       "detail": "No hard OOR: start past hits and count 0 return empty bag with OK=1. Agents must treat N==0 as empty page (soft FAIL or REQUIRE EXIT). Matches TAKEINTREE empty style. Mid page start1 count1 equals NTHINTREE 1 path.",
-      "repro": "SLICEINTREE root error 9 2 \u2192 N=0 OK=1; count 0 \u2192 N=0"
+      "repro": "SLICEINTREE root error 9 2 → N=0 OK=1; count 0 → N=0"
     },
     {
       "id": "W114",
@@ -985,7 +979,7 @@
       "area": "lang|tree_order",
       "title": "HASINTREE/SLICEINTREE walk order is sorted DFS (same family as TAKE/FIRST)",
       "detail": "Hits order mid.txt then z.txt then err.log under nested a/b. No mtime/reverse window. Agents cannot page 'newest first' without sort glue.",
-      "repro": "SLICE 0 2 error \u2192 mid then z not err.log first"
+      "repro": "SLICE 0 2 error → mid then z not err.log first"
     },
     {
       "id": "W115",
@@ -993,15 +987,15 @@
       "area": "lang|json_key",
       "title": "JSON / JSONHAS / JSON key FROM reject variable key tokens (literals only)",
       "detail": "Same class as HASFLAG (W13): SYS JSONHAS k plate with k=version looks for field name k not value. Agents must EQS-branch known keys into literal peels. Breaks dynamic key loops from JSONKEYS bag without CASE glue.",
-      "repro": "LET k version; JSONHAS k plate \u2192 HIT 0; JSONHAS \"version\" \u2192 1"
+      "repro": "LET k version; JSONHAS k plate → HIT 0; JSONHAS \"version\" → 1"
     },
     {
       "id": "W116",
       "severity": "med",
       "area": "lang|json_object",
       "title": "JSONKEYS lists object-valued keys but JSONHAS/JSON peel miss them",
-      "detail": "Plate nested:{x:1} appears in JSONKEYS bag, but JSONHAS nested and JSON nested FROM both miss (HIT=0/OK=0). Only scalar fields peel. Nested object access needs a separate path or string re-parse. False friend for agent schema discovery\u2192peel pipelines.",
-      "repro": "JSONKEYS has nested; JSONHAS nested \u2192 0; JSON nested FROM \u2192 miss"
+      "detail": "Plate nested:{x:1} appears in JSONKEYS bag, but JSONHAS nested and JSON nested FROM both miss (HIT=0/OK=0). Only scalar fields peel. Nested object access needs a separate path or string re-parse. False friend for agent schema discovery→peel pipelines.",
+      "repro": "JSONKEYS has nested; JSONHAS nested → 0; JSON nested FROM → miss"
     },
     {
       "id": "W117",
@@ -1016,7 +1010,7 @@
       "severity": "high",
       "area": "lang|json_value",
       "title": "JSONOBJ/JSONSET reject bare numeric vars as values",
-      "detail": "LET TN=3; SYS JSONOBJ \"n\" TN \u2192 missing value hard err. SYS JSONSET plate \"n\" TN \u2192 unknown form TN. String vars and literals work. Agents must SYS STR TN; LET n_str=LAST before pair writes. Side effect: n stored as JSON string \"3\" not number.",
+      "detail": "LET TN=3; SYS JSONOBJ \"n\" TN → missing value hard err. SYS JSONSET plate \"n\" TN → unknown form TN. String vars and literals work. Agents must SYS STR TN; LET n_str=LAST before pair writes. Side effect: n stored as JSON string \"3\" not number.",
       "repro": "LET TN 3; JSONOBJ \"n\" TN fails; STR then JSONOBJ \"n\" n_str ok"
     },
     {
@@ -1025,23 +1019,23 @@
       "area": "lang|json_type",
       "title": "STR shuttle for W118 demotes numbers to JSON strings",
       "detail": "After SYS STR TN + JSONSET n n_str, plate has \"n\":\"3\" not \"n\":3. Peers that type-check JSON numbers may fail. No JSONSETN / typed numeric put. Literals 3 in JSONOBJ keep number type.",
-      "repro": "mint with n_str \u2192 cat plate shows \"n\":\"0\""
+      "repro": "mint with n_str → cat plate shows \"n\":\"0\""
     },
     {
       "id": "W120",
       "severity": "low",
       "area": "lang|jsonobj_n",
       "title": "JSONOBJ FROM base reports only new pair count not total keys",
-      "detail": "JSONOBJ FROM body \"extra\" \"yes\" \"stamp_n\" n_str \u2192 JSONOBJ_N=2 (added pairs) not full key count. Agents must JSONKEYS after extend for inventory. Positive for delta tracking.",
-      "repro": "extend existing 6-key plate \u2192 JSONOBJ_N 2"
+      "detail": "JSONOBJ FROM body \"extra\" \"yes\" \"stamp_n\" n_str → JSONOBJ_N=2 (added pairs) not full key count. Agents must JSONKEYS after extend for inventory. Positive for delta tracking.",
+      "repro": "extend existing 6-key plate → JSONOBJ_N 2"
     },
     {
       "id": "W121",
       "severity": "med",
       "area": "lang|dropintree",
       "title": "DROPINTREE negative skip clamps to 0 silently (SKIP knob != arg)",
-      "detail": "DROPINTREE root error -1 \u2192 N=3 SKIP=0 OK=1. No hard err. Board GETFLAGN --skip=-1 leaves SK=-1 while op used 0. Agents comparing SK plate to DROPINTREE_SKIP can disagree. Prefer clamp or hard reject negatives.",
-      "repro": "DROPINTREE root error -1 \u2192 SKIP 0 N all; flag SK still -1"
+      "detail": "DROPINTREE root error -1 → N=3 SKIP=0 OK=1. No hard err. Board GETFLAGN --skip=-1 leaves SK=-1 while op used 0. Agents comparing SK plate to DROPINTREE_SKIP can disagree. Prefer clamp or hard reject negatives.",
+      "repro": "DROPINTREE root error -1 → SKIP 0 N all; flag SK still -1"
     },
     {
       "id": "W122",
@@ -1049,23 +1043,23 @@
       "area": "lang|tree_needle",
       "title": "tree content needles are substrings not whole-token (err matches error)",
       "detail": "DROPINTREE root err 0 hits all three error* files (mid/z/err.log). Same class as GREP substring. Agents wanting whole-word need post-filter or exact line ops. False friend for short needles.",
-      "repro": "DROPINTREE root err 0 \u2192 N=3 same as error"
+      "repro": "DROPINTREE root err 0 → N=3 same as error"
     },
     {
       "id": "W123",
       "severity": "low",
       "area": "lang|dropintree",
       "title": "skip past end / skip==hitcount both soft empty OK=1 N=0",
-      "detail": "DROP skip 3 or 99 on 3 hits \u2192 empty bag no hard OOR. Dual TAKE+DROP cover works (1+2=3). Residual empty is agent FAIL/REQUIRE EXIT concern not language hard fail.",
-      "repro": "DROPINTREE root error 3 \u2192 N=0 OK=1"
+      "detail": "DROP skip 3 or 99 on 3 hits → empty bag no hard OOR. Dual TAKE+DROP cover works (1+2=3). Residual empty is agent FAIL/REQUIRE EXIT concern not language hard fail.",
+      "repro": "DROPINTREE root error 3 → N=0 OK=1"
     },
     {
       "id": "W124",
       "severity": "high",
       "area": "lang|json_num_arg",
       "title": "JSONINC delta and JSONENSURE value reject numeric vars (literal only)",
-      "detail": "SYS JSONINC body \"retries\" DELTA \u2192 unknown form DELTA (partial default +1 then hard fail). SYS JSONENSURE body \"max\" MAXR same. STR shuttle works for ENSURE values (max stored as string \"10\", JSONN peels 10). INC delta cannot use string var either \u2014 only literal 1/2/3/5 EQS branches.",
-      "repro": "LET d 2; JSONINC p retries d \u2192 unknown form d; JSONINC p retries 2 ok"
+      "detail": "SYS JSONINC body \"retries\" DELTA → unknown form DELTA (partial default +1 then hard fail). SYS JSONENSURE body \"max\" MAXR same. STR shuttle works for ENSURE values (max stored as string \"10\", JSONN peels 10). INC delta cannot use string var either — only literal 1/2/3/5 EQS branches.",
+      "repro": "LET d 2; JSONINC p retries d → unknown form d; JSONINC p retries 2 ok"
     },
     {
       "id": "W125",
@@ -1079,9 +1073,9 @@
       "id": "W126",
       "severity": "low",
       "area": "lang|jsonn",
-      "title": "JSONN non-numeric string HIT=1 LAST_N=0 (role\u21920)",
+      "title": "JSONN non-numeric string HIT=1 LAST_N=0 (role→0)",
       "detail": "Positive: peel role as agent string leaves LAST=role LAST_N=0 without soft fail. Distinguish from miss (OK=0). Useful but easy to treat as zero counter.",
-      "repro": "JSONN role FROM plate \u2192 HIT1 LAST_N0 LAST=worker"
+      "repro": "JSONN role FROM plate → HIT1 LAST_N0 LAST=worker"
     },
     {
       "id": "W127",
@@ -1089,31 +1083,31 @@
       "area": "lang|jsonpick",
       "title": "JSONPICK emits keys in pick-list order not original plate order",
       "detail": "Pick ok,n,role,schema from plate ordered schema,ok,... yields {\"ok\":1,\"n\":5,\"role\":...,\"schema\":...}. Agents that rely on key order for signatures/diff may break. Prefer JSONKEYS after pick for inventory.",
-      "repro": "JSONPICK plate ok n role schema \u2192 ok first not schema"
+      "repro": "JSONPICK plate ok n role schema → ok first not schema"
     },
     {
       "id": "W128",
       "severity": "med",
       "area": "lang|jsonrename",
       "title": "JSONRENAME overwrites destination key silently",
-      "detail": "RENAME a\u2192b when b exists: new b gets a's value, old b dropped, N=1. No conflict soft flag. Schema migrate can clobber live fields without warning.",
-      "repro": "JSONRENAME {a:10,b:20} a b \u2192 b=10 only"
+      "detail": "RENAME a→b when b exists: new b gets a's value, old b dropped, N=1. No conflict soft flag. Schema migrate can clobber live fields without warning.",
+      "repro": "JSONRENAME {a:10,b:20} a b → b=10 only"
     },
     {
       "id": "W129",
       "severity": "low",
       "area": "lang|jsonpick",
-      "title": "JSONPICK all-missing keys \u2192 {} OK=1 N=0 soft",
+      "title": "JSONPICK all-missing keys → {} OK=1 N=0 soft",
       "detail": "No hard fail when none of listed keys present. DROP all-miss leaves plate unchanged N=0. RENAME miss N=0 plate intact. Agents need N>0 gates for export contracts.",
-      "repro": "JSONPICK {a:1} zzz \u2192 LAST {} N=0 OK=1"
+      "repro": "JSONPICK {a:1} zzz → LAST {} N=0 OK=1"
     },
     {
       "id": "W130",
       "severity": "high",
       "area": "lang|names",
-      "title": "FLAG and KEY are host specials \u2014 user vars named FLAG/KEY mis-bind",
-      "detail": "DEFAULT FLAG=\"debug\"; GETFLAG flag \u2192 debug; GETFLAG key \u2192 n; then LET flag_name=FLAG binds wrong (toggled n not debug). PRINT FLAG is not the var. Same class as note (W29). Use FLAG_S/KEY_S or other names.",
-      "repro": "LET FLAG debug; GETFLAG key; LET x=FLAG \u2192 not debug; JSONTOGGLE body FLAG hits wrong key"
+      "title": "FLAG and KEY are host specials — user vars named FLAG/KEY mis-bind",
+      "detail": "DEFAULT FLAG=\"debug\"; GETFLAG flag → debug; GETFLAG key → n; then LET flag_name=FLAG binds wrong (toggled n not debug). PRINT FLAG is not the var. Same class as note (W29). Use FLAG_S/KEY_S or other names.",
+      "repro": "LET FLAG debug; GETFLAG key; LET x=FLAG → not debug; JSONTOGGLE body FLAG hits wrong key"
     },
     {
       "id": "W131",
@@ -1121,15 +1115,15 @@
       "area": "lang|json_key",
       "title": "JSONTYPE/JSONTOGGLE accept string var keys; JSONN/JSON still literal-only",
       "detail": "SYS JSONTYPE body KEY_S and JSONTOGGLE body flag_name work. SYS JSONN KEY_S FROM body looks for field KEY_S (miss). Agents need EQS branches for peel after type gate. Inconsistent key resolution across JSON family.",
-      "repro": "LET k n; JSONTYPE p k \u2192 num; JSONN k FROM p \u2192 no field KEY_S"
+      "repro": "LET k n; JSONTYPE p k → num; JSONN k FROM p → no field KEY_S"
     },
     {
       "id": "W132",
       "severity": "med",
       "area": "lang|jsontoggle",
-      "title": "JSONTOGGLE treats any non-zero/non-empty as truthy \u2192 0 (can zero counters)",
-      "detail": "Toggle on n=7 \u2192 n=0; tag=\"on\" \u2192 0. Missing\u21921 is intentional. Wrong flag name that collides with a counter (or W130 FLAG bug) silently zeros data. Prefer dedicated bool keys only.",
-      "repro": "JSONTOGGLE {n:7} n \u2192 n=0 PREV truthy"
+      "title": "JSONTOGGLE treats any non-zero/non-empty as truthy → 0 (can zero counters)",
+      "detail": "Toggle on n=7 → n=0; tag=\"on\" → 0. Missing→1 is intentional. Wrong flag name that collides with a counter (or W130 FLAG bug) silently zeros data. Prefer dedicated bool keys only.",
+      "repro": "JSONTOGGLE {n:7} n → n=0 PREV truthy"
     },
     {
       "id": "W133",
@@ -1137,22 +1131,22 @@
       "area": "lang|clear_err",
       "title": "CLEAR_ERR after SETMATCH/MOVELINE before LET bag=LAST stores cleared",
       "detail": "W117 CLEAR_ERR sets LAST=cleared. Board SETMATCH hit then CLEAR_ERR then LET rost_bag=LAST wrote ROSTER.txt as the word cleared. Must capture LAST into a var immediately after bag mutators, before CLEAR_ERR/CAT.",
-      "repro": "SETMATCH bag a A; CLEAR_ERR; LET bag=LAST \u2192 bag is cleared"
+      "repro": "SETMATCH bag a A; CLEAR_ERR; LET bag=LAST → bag is cleared"
     },
     {
       "id": "W134",
       "severity": "low",
       "area": "lang|countline",
       "title": "COUNTLINE/SETMATCH are exact full-field only (not substring)",
-      "detail": "Positive for peer:status rows: COUNTLINE bag idle \u2192 0 while GREP :idle \u2192 3. SETMATCH ERROR boom bag with needle ERROR misses; needs full field. Agents mixing GREP substring tallies with COUNTLINE exact get false zeros.",
-      "repro": "COUNTLINE peer1:idle\\n... idle \u2192 0; COUNTLINE peer1:idle \u2192 1"
+      "detail": "Positive for peer:status rows: COUNTLINE bag idle → 0 while GREP :idle → 3. SETMATCH ERROR boom bag with needle ERROR misses; needs full field. Agents mixing GREP substring tallies with COUNTLINE exact get false zeros.",
+      "repro": "COUNTLINE peer1:idle\\n... idle → 0; COUNTLINE peer1:idle → 1"
     },
     {
       "id": "W135",
       "severity": "low",
       "area": "lang|moveline",
       "title": "MOVELINE from OOR soft N=0; dest past end clamps to last",
-      "detail": "MOVELINE bag 5 0 on 3 lines \u2192 N=0 bag unchanged. MOVELINE 0 99 clamps to end (success). FINDLINE miss OK=0 LAST_N=-1 (not 0) \u2014 agents must not treat N==0 as only miss.",
+      "detail": "MOVELINE bag 5 0 on 3 lines → N=0 bag unchanged. MOVELINE 0 99 clamps to end (success). FINDLINE miss OK=0 LAST_N=-1 (not 0) — agents must not treat N==0 as only miss.",
       "repro": "FINDLINE miss LAST_N=-1; MOVELINE 0 99 clamps"
     },
     {
@@ -1160,32 +1154,32 @@
       "severity": "med",
       "area": "lang|jsonswap",
       "title": "JSONSWAP one-missing key becomes silent move (rename)",
-      "detail": "SWAP a\u2194b when only a present: a removed, b=a value, N=1. Both missing N=0 soft. Agents expecting hard dual-present swap can lose keys. Documented as feature in proof; still a dual-buffer footgun.",
-      "repro": "JSONSWAP {a:7} a b \u2192 {b:7} no a"
+      "detail": "SWAP a↔b when only a present: a removed, b=a value, N=1. Both missing N=0 soft. Agents expecting hard dual-present swap can lose keys. Documented as feature in proof; still a dual-buffer footgun.",
+      "repro": "JSONSWAP {a:7} a b → {b:7} no a"
     },
     {
       "id": "W137",
       "severity": "med",
       "area": "lang|jsonvalues",
       "title": "SUM on JSONVALUES mixed plate silently sums only numerics",
-      "detail": "VALUES bag includes schema/role/ts strings; SYS SUM LAST \u2192 35 (=ok+cur+prev+n+snap) with no err. Agents using SUM for plate health can ignore non-numeric fields without warning. Prefer pick numeric keys first.",
-      "repro": "JSONVALUES full status plate; SUM \u2192 35 not fail"
+      "detail": "VALUES bag includes schema/role/ts strings; SYS SUM LAST → 35 (=ok+cur+prev+n+snap) with no err. Agents using SUM for plate health can ignore non-numeric fields without warning. Prefer pick numeric keys first.",
+      "repro": "JSONVALUES full status plate; SUM → 35 not fail"
     },
     {
       "id": "W138",
       "severity": "low",
       "area": "lang|jsoncopy",
       "title": "JSONCOPY overwrites destination key silently (same class as RENAME W128)",
-      "detail": "COPY a\u2192b when b exists replaces b with a raw value. No conflict flag. Snapshot into prev after bump can clobber intentional prev if order wrong \u2014 board copies cur\u2192prev before INC to avoid.",
-      "repro": "JSONCOPY {a:10,b:20} a b \u2192 b=10"
+      "detail": "COPY a→b when b exists replaces b with a raw value. No conflict flag. Snapshot into prev after bump can clobber intentional prev if order wrong — board copies cur→prev before INC to avoid.",
+      "repro": "JSONCOPY {a:10,b:20} a b → b=10"
     },
     {
       "id": "W139",
       "severity": "med",
       "area": "lang|jsonempty",
       "title": "JSONEMPTY LAST_N polarity is 1=empty 0=nonempty (easy IF invert)",
-      "detail": "JSONEMPTY {} \u2192 LAST_N 1; nonempty plate \u2192 LAST_N 0. JSONNONEMPTY is inverse. Agents writing IF LAST_N for 'has data' on EMPTY get the wrong branch. Prefer JSONNONEMPTY or JSONLEN > 0 for presence gates.",
-      "repro": "JSONEMPTY {a:1} \u2192 LAST_N 0; JSONEMPTY {} \u2192 1"
+      "detail": "JSONEMPTY {} → LAST_N 1; nonempty plate → LAST_N 0. JSONNONEMPTY is inverse. Agents writing IF LAST_N for 'has data' on EMPTY get the wrong branch. Prefer JSONNONEMPTY or JSONLEN > 0 for presence gates.",
+      "repro": "JSONEMPTY {a:1} → LAST_N 0; JSONEMPTY {} → 1"
     },
     {
       "id": "W140",
@@ -1193,23 +1187,23 @@
       "area": "lang|json_soft",
       "title": "JSONLEN/EMPTY/SUMN treat non-object as empty/0 with OK=1",
       "detail": "Arrays and garbage strings: LEN=0 EMPTY=1 SUMN=0 all soft success. Bad peer plates look like empty objects. Agents need JSONTYPE or STARTS { before health gates.",
-      "repro": "JSONEMPTY [1,2] \u2192 LAST_N 1 OK=1; JSONLEN not-json \u2192 0"
+      "repro": "JSONEMPTY [1,2] → LAST_N 1 OK=1; JSONLEN not-json → 0"
     },
     {
       "id": "W141",
       "severity": "low",
       "area": "lang|jsonsumn",
       "title": "JSONSUMN includes bool as 0|1 and skips strings silently",
-      "detail": "Positive vs W137 VALUES+SUM: SUMN is typed and documented. ok=true adds 1; dry=false adds 0; schema/role/ts ignored. Score gates can inflate by flag keys \u2014 PICK counters before SUMN for pure tallies.",
-      "repro": "SUMN {ok:true,n:7,s:hi} \u2192 8"
+      "detail": "Positive vs W137 VALUES+SUM: SUMN is typed and documented. ok=true adds 1; dry=false adds 0; schema/role/ts ignored. Score gates can inflate by flag keys — PICK counters before SUMN for pure tallies.",
+      "repro": "SUMN {ok:true,n:7,s:hi} → 8"
     },
     {
       "id": "W142",
       "severity": "med",
       "area": "lang|json_extremes",
       "title": "JSONMAXN/MINN/TOPKEY/BOTKEY count bools as 0|1",
-      "detail": "Same class as JSONSUMN (W141): true\u21921 false\u21920 enter extreme math. Load plate with live:true makes MINN=1 and BOTKEY=live instead of coldest shard. Pure-numeric PICK before extremes, or mint without bool flags.",
-      "repro": "JSONOBJ s0 12 s1 3 live true s2 40; JSONMINN \u2192 1; JSONBOTKEY \u2192 live"
+      "detail": "Same class as JSONSUMN (W141): true→1 false→0 enter extreme math. Load plate with live:true makes MINN=1 and BOTKEY=live instead of coldest shard. Pure-numeric PICK before extremes, or mint without bool flags.",
+      "repro": "JSONOBJ s0 12 s1 3 live true s2 40; JSONMINN → 1; JSONBOTKEY → live"
     },
     {
       "id": "W143",
@@ -1217,31 +1211,31 @@
       "area": "lang|json_last",
       "title": "JSONTOPKEY/BOTKEY overwrite LAST with key; MAXN keeps plate",
       "detail": "Asymmetric LAST contract: JSONMAXN/MINN set LAST=plate + LAST_N=v (chain peel ok). JSONTOPKEY/BOTKEY set LAST=key + LAST_N=v so subsequent JSONN FROM LAST fails. Agents must LET key=LAST then peel FROM saved plate body. Easy footgun when mixing value+key extremes in one flow.",
-      "repro": "JSONTOPKEY plate; JSONN k FROM LAST \u2192 miss; must JSONN k FROM body"
+      "repro": "JSONTOPKEY plate; JSONN k FROM LAST → miss; must JSONN k FROM body"
     },
     {
       "id": "W144",
       "severity": "high",
       "area": "lang|vars",
       "title": "Op side-channel vars (JSONAVGN_N/USED etc) silent-fail at n_vars=128",
-      "detail": "VM var table hard-caps at 128 (lang_core var_find create). Host op still computes (trace avg=5 used=3) and sets LAST_N, but var_set_num for new names JSONAVGN_N/JSONAVGN_USED returns without binding when full. LET x = JSONAVGN_N \u2192 0 and gates deny/admit wrongly. Heavy agent_boot+GETFLAG*+locals boards hit this. Prefer LET x = LAST_N immediately; use JSONLEN for field counts instead of JSONAVGN_USED.",
-      "repro": "full contract board gate: trace avg=5 but LET avg_n=JSONAVGN_N \u2192 0 until capture LAST_N"
+      "detail": "VM var table hard-caps at 128 (lang_core var_find create). Host op still computes (trace avg=5 used=3) and sets LAST_N, but var_set_num for new names JSONAVGN_N/JSONAVGN_USED returns without binding when full. LET x = JSONAVGN_N → 0 and gates deny/admit wrongly. Heavy agent_boot+GETFLAG*+locals boards hit this. Prefer LET x = LAST_N immediately; use JSONLEN for field counts instead of JSONAVGN_USED.",
+      "repro": "full contract board gate: trace avg=5 but LET avg_n=JSONAVGN_N → 0 until capture LAST_N"
     },
     {
       "id": "W145",
       "severity": "med",
       "area": "lang|json_avgn",
       "title": "JSONAVGN counts bools 0|1 and truncates toward 0",
-      "detail": "Same bool pollution class as SUMN/MAXN (W141/W142). (1+2)/2\u21921 trunc. PICK pure metrics before mean for SLO gates.",
-      "repro": "JSONAVGN {ok:true,flag:false,n:9,s:hi} \u2192 3 used 3; {x:1,y:2} \u2192 1"
+      "detail": "Same bool pollution class as SUMN/MAXN (W141/W142). (1+2)/2→1 trunc. PICK pure metrics before mean for SLO gates.",
+      "repro": "JSONAVGN {ok:true,flag:false,n:9,s:hi} → 3 used 3; {x:1,y:2} → 1"
     },
     {
       "id": "W146",
       "severity": "low",
       "area": "lang|json_eq",
       "title": "JSONEQ is exact key-set equality; extra keys fail even if required fields match",
-      "detail": "Peer with extra noise fails JSONEQ; use JSONSUBSET for required-field admit and JSONEQ only for full snapshot verify. SUPERSET dual of SUBSET. Documented positive: status\u2286peer_with_extra SUBSET=1 EQ=0.",
-      "repro": "EQ status vs status+extra \u2192 0; SUBSET status peer \u2192 1"
+      "detail": "Peer with extra noise fails JSONEQ; use JSONSUBSET for required-field admit and JSONEQ only for full snapshot verify. SUPERSET dual of SUBSET. Documented positive: status⊆peer_with_extra SUBSET=1 EQ=0.",
+      "repro": "EQ status vs status+extra → 0; SUBSET status peer → 1"
     },
     {
       "id": "W147",
@@ -1249,31 +1243,31 @@
       "area": "lang|json_last",
       "title": "JSONMISS/PRESENT overwrite LAST with key bag; HASALL keeps plate",
       "detail": "Asymmetric LAST contract (class of W143 TOPKEY): HASALL/HASANY keep plate for chain peel; MISS/PRESENT set LAST=newline bag of keys and LAST_N=count. Agents that JSONMISS then JSONN FROM LAST fail. Capture miss_bag=LAST then peel FROM body.",
-      "repro": "JSONMISS plate keys; JSONN k FROM LAST \u2192 miss; use saved body"
+      "repro": "JSONMISS plate keys; JSONN k FROM LAST → miss; use saved body"
     },
     {
       "id": "W148",
       "severity": "med",
       "area": "lang|json_presence",
       "title": "null and false count as present keys (not missing)",
-      "detail": "JSONHASALL/MISS treat key existence only \u2014 gone:null and flag:false are present. Ops handoffs that mean 'unset' via null still pass presence gates. Pair with JSONTYPE or value SUBSET for semantic completeness.",
-      "repro": "JSONHASALL {gone:null,flag:false,n:0} gone flag n \u2192 1; MISS other only"
+      "detail": "JSONHASALL/MISS treat key existence only — gone:null and flag:false are present. Ops handoffs that mean 'unset' via null still pass presence gates. Pair with JSONTYPE or value SUBSET for semantic completeness.",
+      "repro": "JSONHASALL {gone:null,flag:false,n:0} gone flag n → 1; MISS other only"
     },
     {
       "id": "W149",
       "severity": "low",
       "area": "lang|json_hasall",
-      "title": "Empty key list: HASALL\u21921 HASANY\u21920",
+      "title": "Empty key list: HASALL→1 HASANY→0",
       "detail": "Vacuous all-of-empty is true; any-of-empty is false. Surprising in dynamic OF bag when need list is blank after GREPV.",
-      "repro": "JSONHASALL plate \u2192 1; JSONHASANY plate \u2192 0"
+      "repro": "JSONHASALL plate → 1; JSONHASANY plate → 0"
     },
     {
       "id": "W150",
       "severity": "med",
       "area": "lang|nth",
-      "title": "SYS NTH has no OF bag form \u2014 only indexes LAST",
+      "title": "SYS NTH has no OF bag form — only indexes LAST",
       "detail": "Proof 1082 does NTH after PLUCK leaves bag in LAST. SYS NTH 0 OF val_bag is unknown form OF. Agents must re-PLUCK or keep bag in LAST before each NTH; cannot random-access a saved bag without rebinding LAST.",
-      "repro": "SYS NTH 0 OF val_bag \u2192 unknown form OF; SYS JSONPLUCK \u2026; SYS NTH 0 works"
+      "repro": "SYS NTH 0 OF val_bag → unknown form OF; SYS JSONPLUCK …; SYS NTH 0 works"
     },
     {
       "id": "W151",
@@ -1281,55 +1275,55 @@
       "area": "host|print_json",
       "title": "PRINT_JSON collapses multi-line bag newlines",
       "detail": "EXTRA key bag noise\\ndebug and PLUCK 10\\n2\\n render as noisedebug / 102 in PRINT_JSON objects. STATUS rows via CAT+HASLINE still see real newlines. Agents logging bags via PRINT_JSON lose field boundaries.",
-      "repro": "PRINT_JSON key_bag after JSONEXTRA \u2192 \"noisedebug\""
+      "repro": "PRINT_JSON key_bag after JSONEXTRA → \"noisedebug\""
     },
     {
       "id": "W152",
       "severity": "high",
       "area": "host|require_json",
-      "title": "REQUIRE JSONHASALL fail \u2192 shell 1, plate exit_code 0",
+      "title": "REQUIRE JSONHASALL fail → shell 1, plate exit_code 0",
       "detail": "Missing keys set asserts_fail+err message listing missing, shell often 1, but exit_code stays 0 (W7 class). Soft twin SYS JSONHASALL + EXIT n under REQUIRE env is more reliable for ops shell contracts.",
-      "repro": "REQUIRE JSONHASALL {a:1} a z \u2192 asserts_fail 1 exit_code 0 shell 1"
+      "repro": "REQUIRE JSONHASALL {a:1} a z → asserts_fail 1 exit_code 0 shell 1"
     },
     {
       "id": "W153",
       "severity": "med",
       "area": "lang|json_exact",
-      "title": "JSONEXACT is key-set only \u2014 values may drift while EXACT=1",
-      "detail": "Exact schema gates presence/absence of keys, not value types or contents. role can change worker\u2192boss, ok 1\u21920, still EXACT. Pair with JSONSUBSET/EQ for value contracts after EXACT admit.",
+      "title": "JSONEXACT is key-set only — values may drift while EXACT=1",
+      "detail": "Exact schema gates presence/absence of keys, not value types or contents. role can change worker→boss, ok 1→0, still EXACT. Pair with JSONSUBSET/EQ for value contracts after EXACT admit.",
       "repro": "JSONEXACT {schema,role,ok,load,zone} match; mutate ok=0 still EXACT=1"
     },
     {
       "id": "W154",
       "severity": "high",
       "area": "host|require_json",
-      "title": "REQUIRE JSONONLY/JSONEXACT fail \u2192 shell 1 exit_code 0 (W152 class)",
+      "title": "REQUIRE JSONONLY/JSONEXACT fail → shell 1 exit_code 0 (W152 class)",
       "detail": "Same assert-fail path as REQUIRE JSONHASALL: lists missing/extra in err, asserts_fail=1, shell often 1, plate exit_code 0. Soft JSONEXACT + EXIT n under env is more reliable for ops.",
-      "repro": "REQUIRE JSONONLY {a,noise} a b \u2192 shell 1 exit_code 0"
+      "repro": "REQUIRE JSONONLY {a,noise} a b → shell 1 exit_code 0"
     },
     {
       "id": "W155",
       "severity": "low",
       "area": "lang|json_only",
-      "title": "JSONONLY allow-list may be a superset \u2014 missing keys still pass ONLY",
-      "detail": "REQUIRE JSONONLY {a:1} a b c succeeds (no extras). ONLY \u2260 EXACT. Agents needing both must JSONEXACT or HASALL+ONLY dual.",
-      "repro": "REQUIRE JSONONLY {a:1} a b c \u2192 ok; JSONEXACT same \u2192 fail miss b c"
+      "title": "JSONONLY allow-list may be a superset — missing keys still pass ONLY",
+      "detail": "REQUIRE JSONONLY {a:1} a b c succeeds (no extras). ONLY ≠ EXACT. Agents needing both must JSONEXACT or HASALL+ONLY dual.",
+      "repro": "REQUIRE JSONONLY {a:1} a b c → ok; JSONEXACT same → fail miss b c"
     },
     {
       "id": "W156",
       "severity": "med",
       "area": "lang|json_delta",
-      "title": "JSONDELTA arg order is old,new (values from NEW) \u2014 silent swap hazard",
+      "title": "JSONDELTA arg order is old,new (values from NEW) — silent swap hazard",
       "detail": "SYS JSONDELTA prev cur peels NEW values; swapped args silently produce OLD values for shared keys and wrong patch payloads. No order-check or keyword default beyond FROM NEW|OLD. Agents must document call site as old,new.",
-      "repro": "JSONDELTA new old \u2192 load from old; JSONDELTA old new \u2192 load from new"
+      "repro": "JSONDELTA new old → load from old; JSONDELTA old new → load from new"
     },
     {
       "id": "W157",
       "severity": "low",
       "area": "lang|json_diff",
       "title": "KEYDIFF is keys-only; value-only edits leave KEYDIFF empty",
-      "detail": "Same key-set plates with m:2\u21929: KEYDIFF=0 CHANGED=1. Ops using KEYDIFF alone miss value drift. Pair KEYDIFF+CHANGED or use DELTA.",
-      "repro": "KEYDIFF {k:1,m:2}{k:1,m:9}\u21920; CHANGED\u2192m"
+      "detail": "Same key-set plates with m:2→9: KEYDIFF=0 CHANGED=1. Ops using KEYDIFF alone miss value drift. Pair KEYDIFF+CHANGED or use DELTA.",
+      "repro": "KEYDIFF {k:1,m:2}{k:1,m:9}→0; CHANGED→m"
     },
     {
       "id": "W158",
@@ -1337,21 +1331,21 @@
       "area": "lang|json_last",
       "title": "DELTA keeps LAST as patch plate; KEYDIFF/CHANGED set LAST to key bag",
       "detail": "Asymmetric LAST (W143/W147 class): after DELTA peel JSONN works; after CHANGED LAST is bag not plate. Capture bags immediately; do not chain peels after KEYDIFF.",
-      "repro": "JSONCHANGED a b; JSONN k FROM LAST \u2192 fail; JSONDELTA a b; JSONN k FROM LAST ok"
+      "repro": "JSONCHANGED a b; JSONN k FROM LAST → fail; JSONDELTA a b; JSONN k FROM LAST ok"
     },
     {
       "id": "W159",
       "severity": "high",
       "area": "host|require_json",
-      "title": "REQUIRE JSONEQ/SUBSET fail \u2192 shell 1 exit_code 0 (W152 class)",
+      "title": "REQUIRE JSONEQ/SUBSET fail → shell 1 exit_code 0 (W152 class)",
       "detail": "Mismatch lists changed/bad keys in err (positive UX) but asserts_fail path leaves plate exit_code 0 and shell often 1. Soft JSONEQ/SUBSET + EXIT n under env is reliable for ops shell contracts.",
-      "repro": "REQUIRE JSONEQ {a:1}{a:2} \u2192 err lists a, shell 1 exit_code 0"
+      "repro": "REQUIRE JSONEQ {a:1}{a:2} → err lists a, shell 1 exit_code 0"
     },
     {
       "id": "W160",
       "severity": "med",
       "area": "lang|require_pattern",
-      "title": "Hard REQUIRE alone is assert-fail not EXIT \u2014 agents need soft-first + EXIT n",
+      "title": "Hard REQUIRE alone is assert-fail not EXIT — agents need soft-first + EXIT n",
       "detail": "Board pattern soft IF then REQUIRE only on match avoids assert-fail pollution; on soft deny use EXIT n under CUBALC_*_REQUIRE. Documented as agent contract: never bare REQUIRE for process rc.",
       "repro": "soft deny path EXIT 2 under REQUIRE env; bare REQUIRE JSONEQ mismatch exit_code 0"
     },
@@ -1361,15 +1355,15 @@
       "area": "lang|json_eq",
       "title": "EQ deny with SUBSET still true is common lockstep split",
       "detail": "Value drift on non-required fields fails EQ while SUBSET/COVERS pass. Gate must compose both for full lockstep; SUBSET alone is not lockstep.",
-      "repro": "load 10\u219299: EQ0 SUBSET1 CHANGED load"
+      "repro": "load 10→99: EQ0 SUBSET1 CHANGED load"
     },
     {
       "id": "W162",
       "severity": "med",
       "area": "lang|json_defaults",
       "title": "JSONDEFAULTS LAST_N is inserted-count not plate size",
-      "detail": "LAST_N/JSONDEFAULTS_N = keys filled this call; complete re-apply yields 0. Agents checking boot success must not treat LAST_N==0 as failure when plate already complete \u2014 pair with HASALL or JSONDEFAULTS_HAD.",
-      "repro": "DEFAULTS complete plate \u2192 LAST_N 0 HAD>0; empty {} defs \u2192 LAST_N full"
+      "detail": "LAST_N/JSONDEFAULTS_N = keys filled this call; complete re-apply yields 0. Agents checking boot success must not treat LAST_N==0 as failure when plate already complete — pair with HASALL or JSONDEFAULTS_HAD.",
+      "repro": "DEFAULTS complete plate → LAST_N 0 HAD>0; empty {} defs → LAST_N full"
     },
     {
       "id": "W163",
@@ -1377,39 +1371,39 @@
       "area": "lang|json_last",
       "title": "REQUIRE JSONNEQ keeps LAST as first plate (prev) not cur",
       "detail": "After REQUIRE JSONNEQ prev body, peel FROM LAST reads prev. Chain peel of mutated load wrong unless peel FROM body. Same first-arg LAST keep as JSONEQ/SUBSET.",
-      "repro": "REQUIRE JSONNEQ prev body; JSONN load FROM LAST \u2192 prev load"
+      "repro": "REQUIRE JSONNEQ prev body; JSONN load FROM LAST → prev load"
     },
     {
       "id": "W164",
       "severity": "low",
       "area": "lang|json_changelog",
       "title": "CHANGELOG is bag LAST not plate; arrow format quotes strings",
-      "detail": "LAST becomes multi-line log; HAS/HASLINE for substrings. String values appear quoted in log (zone: \"east\" \u2192 \"west\"). PRINT_JSON collapses newlines (W151).",
-      "repro": "JSONCHANGELOG; HAS log \"load:\" and \"\u2192\""
+      "detail": "LAST becomes multi-line log; HAS/HASLINE for substrings. String values appear quoted in log (zone: \"east\" → \"west\"). PRINT_JSON collapses newlines (W151).",
+      "repro": "JSONCHANGELOG; HAS log \"load:\" and \"→\""
     },
     {
       "id": "W165",
       "severity": "med",
       "area": "host|loadplate",
       "title": "LOADPLATE LAST_N is hit polarity (1=file, 0=fallback) not plate size",
-      "detail": "Successful file load \u2192 LAST_N=1; miss/non-object \u2192 LAST_N=0 with defaults in LAST. Easy to confuse with empty plate (JSONEMPTY). Check LOADPLATE_HIT / FALLBACK or LAST_N==1 for hit.",
-      "repro": "LOADPLATE miss OR defs \u2192 LAST_N 0 FALLBACK 1; plate still has keys"
+      "detail": "Successful file load → LAST_N=1; miss/non-object → LAST_N=0 with defaults in LAST. Easy to confuse with empty plate (JSONEMPTY). Check LOADPLATE_HIT / FALLBACK or LAST_N==1 for hit.",
+      "repro": "LOADPLATE miss OR defs → LAST_N 0 FALLBACK 1; plate still has keys"
     },
     {
       "id": "W166",
       "severity": "high",
       "area": "host|require_json",
-      "title": "REQUIRE JSONTYPE fail \u2192 shell 1 exit_code 0 (W152 class)",
+      "title": "REQUIRE JSONTYPE fail → shell 1 exit_code 0 (W152 class)",
       "detail": "Wrong kind: err 'n is str, want num' (good UX) but asserts_fail path, shell 1, exit_code 0. Soft JSONTYPE + EXIT n under env for ops rc.",
-      "repro": "REQUIRE JSONTYPE {n:\"str\"} n num \u2192 shell 1 exit_code 0"
+      "repro": "REQUIRE JSONTYPE {n:\"str\"} n num → shell 1 exit_code 0"
     },
     {
       "id": "W167",
       "severity": "med",
       "area": "lang|json_type",
-      "title": "ok:1 is num not bool \u2014 type contracts must match encode style",
+      "title": "ok:1 is num not bool — type contracts must match encode style",
       "detail": "JSONOBJ ok 1 yields kind num; live true yields bool. Agents copying HTTP bool flags as 0|1 fail REQUIRE JSONTYPE ok bool. Soft probe first.",
-      "repro": "JSONTYPE ok FROM {ok:1} \u2192 num; live true \u2192 bool"
+      "repro": "JSONTYPE ok FROM {ok:1} → num; live true → bool"
     },
     {
       "id": "W168",
@@ -1417,7 +1411,7 @@
       "area": "host|saveplate",
       "title": "SAVEPLATE leaves LAST as path string, not plate content",
       "detail": "After SAVEPLATE path body, LAST is path (SAVEPLATE_PATH) and LAST_N is byte size. Chain peel JSONN FROM LAST fails. Agents must peel FROM body or LOADPLATE after save. Dual of LOADPLATE which puts content in LAST.",
-      "repro": "SAVEPLATE p body; JSONN k FROM LAST \u2192 miss; peel FROM body or LOADPLATE p"
+      "repro": "SAVEPLATE p body; JSONN k FROM LAST → miss; peel FROM body or LOADPLATE p"
     },
     {
       "id": "W169",
@@ -1425,23 +1419,23 @@
       "area": "host|ensureplate",
       "title": "ENSUREPLATE LAST_N polarity opposite LOADPLATE hit",
       "detail": "ENSURE first create LAST_N=1 CREATED=1; second load LAST_N=0 HIT=1. LOADPLATE uses LAST_N=1 for file hit. Mixing without CREATED/HIT flags confuses boot scripts.",
-      "repro": "ENSURE miss\u21921 create; ENSURE again\u21920 load; LOADPLATE hit\u21921"
+      "repro": "ENSURE miss→1 create; ENSURE again→0 load; LOADPLATE hit→1"
     },
     {
       "id": "W170",
       "severity": "high",
       "area": "host|require_platefile",
-      "title": "REQUIRE PLATEFILE miss \u2192 shell 1 exit_code 0 (W152 class)",
+      "title": "REQUIRE PLATEFILE miss → shell 1 exit_code 0 (W152 class)",
       "detail": "Missing object plate: err lists path + soft twin LOADPLATE/ENSUREPLATE, asserts_fail, shell 1, exit_code 0. Soft LOADPLATE + EXIT n under env for ops rc.",
-      "repro": "REQUIRE PLATEFILE /tmp/none.json \u2192 shell 1 exit_code 0"
+      "repro": "REQUIRE PLATEFILE /tmp/none.json → shell 1 exit_code 0"
     },
     {
       "id": "W171",
       "severity": "high",
       "area": "host|getflagout",
       "title": "GETFLAGOUT path-absolutizes bare flag values",
-      "detail": "GETFLAGOUT key|k OR \u2026 for --key=zone yields cwd/zone (path-like). Field ids must use GETFLAG/GETFLAGMS, not GETFLAGOUT. First realworld hit while wiring UPDATEPLATE --key/--val.",
-      "repro": "GETFLAGOUT key OR zone with --key=zone \u2192 /cwd/zone plate keys"
+      "detail": "GETFLAGOUT key|k OR … for --key=zone yields cwd/zone (path-like). Field ids must use GETFLAG/GETFLAGMS, not GETFLAGOUT. First realworld hit while wiring UPDATEPLATE --key/--val.",
+      "repro": "GETFLAGOUT key OR zone with --key=zone → /cwd/zone plate keys"
     },
     {
       "id": "W172",
@@ -1449,7 +1443,7 @@
       "area": "host|updateplate",
       "title": "UPDATEPLATE value rejects bare numeric LET vars",
       "detail": "SYS UPDATEPLATE path \"load\" take_n hard-fails need value when take_n is num. Parenthesized expr (take_n) or literal works; SYS STR stores JSON string not number. resolve_str_arg only accepts is_str idents; num branch only for TK_NUM/LPAREN.",
-      "repro": "LET n=1; UPDATEPLATE p \"load\" n \u2192 need value; UPDATEPLATE p \"load\" (n) ok"
+      "repro": "LET n=1; UPDATEPLATE p \"load\" n → need value; UPDATEPLATE p \"load\" (n) ok"
     },
     {
       "id": "W173",
@@ -1457,31 +1451,31 @@
       "area": "host|json",
       "title": "SYS JSON does not resolve variable key names",
       "detail": "SYS JSON k FROM body peels literal field \"k\" (or miss json: no field k), not value of k. Dynamic peels need JSONPLUCK body k or fixed string keys.",
-      "repro": "LET k zone; SYS JSON k FROM body \u2192 miss; SYS JSONPLUCK body k \u2192 east"
+      "repro": "LET k zone; SYS JSON k FROM body → miss; SYS JSONPLUCK body k → east"
     },
     {
       "id": "W174",
       "severity": "high",
       "area": "lang|vars",
       "title": "VM var table hard-capped at 128; late LET silently fails",
-      "detail": "Var vars[128]; n_vars>=128 \u2192 var_get create returns NULL. Agent boards with agent_boot+IDENTITY+GETFLAGOUT side-effects sit ~97 vars before work; UPDATEPLATE injects many host knobs (UPDATEPLATE_*, SAVEPLATE_*, JSONSET_*). Further LET empty=\"\" no-ops; resolve_str_arg then hard-fails need key. Workarounds: reuse LETs, literal \"\" keys, lean side-effect surface.",
-      "repro": "heavy board + 2\u00d7UPDATEPLATE then LET empty=\"\"; UPDATEPLATE row empty 1 \u2192 need key hard"
+      "detail": "Var vars[128]; n_vars>=128 → var_get create returns NULL. Agent boards with agent_boot+IDENTITY+GETFLAGOUT side-effects sit ~97 vars before work; UPDATEPLATE injects many host knobs (UPDATEPLATE_*, SAVEPLATE_*, JSONSET_*). Further LET empty=\"\" no-ops; resolve_str_arg then hard-fails need key. Workarounds: reuse LETs, literal \"\" keys, lean side-effect surface.",
+      "repro": "heavy board + 2×UPDATEPLATE then LET empty=\"\"; UPDATEPLATE row empty 1 → need key hard"
     },
     {
       "id": "W175",
       "severity": "med",
       "area": "host|updateplate",
       "title": "UPDATEPLATE LAST_N is insert/update not success; non-object wipe",
-      "detail": "LAST_N=0 key-inserted / 1 key-updated (json_set n). OK=1 is success. Non-object file body silently reseeded to {} with CREATED=1 (data loss). Bool true peels as \"1\" via SYS JSON. No multi-key batch \u2014 gate needs N successive calls.",
-      "repro": "WRITE junk; UPDATEPLATE k v \u2192 plate {k:v} only; true\u2192JSON peel 1"
+      "detail": "LAST_N=0 key-inserted / 1 key-updated (json_set n). OK=1 is success. Non-object file body silently reseeded to {} with CREATED=1 (data loss). Bool true peels as \"1\" via SYS JSON. No multi-key batch — gate needs N successive calls.",
+      "repro": "WRITE junk; UPDATEPLATE k v → plate {k:v} only; true→JSON peel 1"
     },
     {
       "id": "W176",
       "severity": "high",
       "area": "lang|getflag",
       "title": "GETFLAG rejects flag name 'or' and multi-char |aliases like fb|fallback",
-      "detail": "GETFLAG or|fallback OR \u2026 hard-fails (OR chain keyword). GETFLAG fb|fallback also errs treating fallback as OR clause. Short single-token names (fb, key|k) work. Agents cannot name CLI flags or/fallback without workarounds.",
-      "repro": "GETFLAG or|fallback OR ENV X OR d \u2192 parse err; GETFLAG fb OR \u2026 ok"
+      "detail": "GETFLAG or|fallback OR … hard-fails (OR chain keyword). GETFLAG fb|fallback also errs treating fallback as OR clause. Short single-token names (fb, key|k) work. Agents cannot name CLI flags or/fallback without workarounds.",
+      "repro": "GETFLAG or|fallback OR ENV X OR d → parse err; GETFLAG fb OR … ok"
     },
     {
       "id": "W177",
@@ -1497,7 +1491,7 @@
       "area": "host|peekplate",
       "title": "PEEKPLATE with OR returns OK=1 on miss/missing file",
       "detail": "Designed soft fallback: miss key or missing file with OR yields OK=1 HIT=0 LAST=fallback. Agents using OR cannot rely on OK for hard require; must branch LAST_N/HIT and EXIT n under env require.",
-      "repro": "PEEKPLATE miss.json k OR none \u2192 OK=1; REQUIRE path needs EXIT on LAST_N==0"
+      "repro": "PEEKPLATE miss.json k OR none → OK=1; REQUIRE path needs EXIT on LAST_N==0"
     },
     {
       "id": "W179",
@@ -1505,23 +1499,23 @@
       "area": "host|dropplate",
       "title": "DROPPLATE missing file creates empty {} plate (side-effect write)",
       "detail": "DROPPLATE on absent path CREATED=1 writes {}. Soft miss key is OK=1 HIT=0 idempotent. Agents doing field GC must not DROP on paths they never intended to create.",
-      "repro": "RM fresh; DROPPLATE fresh ghost \u2192 file exists JSONEMPTY 1"
+      "repro": "RM fresh; DROPPLATE fresh ghost → file exists JSONEMPTY 1"
     },
     {
       "id": "W180",
       "severity": "low",
       "area": "host|bumpplate",
-      "title": "DECRPLATE on missing key seeds 0 then \u22121",
+      "title": "DECRPLATE on missing key seeds 0 then −1",
       "detail": "BUMP 0 + DECR on new key yields load:-1. Useful for signed counters but surprising for 'ensure then dec' budgets without prior seed.",
-      "repro": "DECRPLATE newpath load \u2192 {\"load\":-1}"
+      "repro": "DECRPLATE newpath load → {\"load\":-1}"
     },
     {
       "id": "W181",
       "severity": "med",
       "area": "host|jsonfilemerge",
       "title": "JSONFILEMERGE LAST_N is overlay key count not success",
-      "detail": "LAST_N = number of keys applied from overlay (empty {} \u2192 0). OK=1 is success. Agents must not treat LAST_N>0 as hit polarity alone when overlay is empty-by-design.",
-      "repro": "JSONFILEMERGE path {} \u2192 OK=1 LAST_N=0 base preserved"
+      "detail": "LAST_N = number of keys applied from overlay (empty {} → 0). OK=1 is success. Agents must not treat LAST_N>0 as hit polarity alone when overlay is empty-by-design.",
+      "repro": "JSONFILEMERGE path {} → OK=1 LAST_N=0 base preserved"
     },
     {
       "id": "W182",
@@ -1529,7 +1523,7 @@
       "area": "host|jsonfilemerge",
       "title": "JSONFILEMERGE create-on-miss writes nested plate from overlay only",
       "detail": "Missing path: mkdir parent + write overlay as plate (CREATED). No base to preserve. Useful for first-run seed overlay; dangerous if path typo silently creates.",
-      "repro": "RM nested/fresh; JSONFILEMERGE deep {boot:1} \u2192 file exists"
+      "repro": "RM nested/fresh; JSONFILEMERGE deep {boot:1} → file exists"
     },
     {
       "id": "W183",
@@ -1552,7 +1546,7 @@
       "severity": "high",
       "area": "host|num",
       "title": "SYS NUM parses LAST only; ignores following token as value source",
-      "detail": "SYS NUM val_str does not parse val_str \u2014 it shuttles current LAST. Non-numeric LAST still OK=1 LAST_N=0 (W6 class). Agents that branch IF OK after NUM val_str silently treat any prior LAST; string ensure values like boot became phase:0. Fix: put value in LAST first or pass string through to JSONFILEENSURE.",
+      "detail": "SYS NUM val_str does not parse val_str — it shuttles current LAST. Non-numeric LAST still OK=1 LAST_N=0 (W6 class). Agents that branch IF OK after NUM val_str silently treat any prior LAST; string ensure values like boot became phase:0. Fix: put value in LAST first or pass string through to JSONFILEENSURE.",
       "repro": "LET v boot; SYS NUM v  # parses LAST not v; OK=1 LAST_N=0"
     },
     {
@@ -1561,31 +1555,31 @@
       "area": "host|jsonfileensure",
       "title": "JSONFILEENSURE LAST_N is set(1)/had(0) not success",
       "detail": "OK=1 success; LAST_N=1 newly set, 0 key already present (no clobber). Same polarity class as UPDATEPLATE insert/update but inverted meaning from BUMP counters.",
-      "repro": "ENSURE path retries 3 twice \u2192 first LAST_N=1 second 0 keep value"
+      "repro": "ENSURE path retries 3 twice → first LAST_N=1 second 0 keep value"
     },
     {
       "id": "W187",
       "severity": "med",
       "area": "host|jsonfiletoggle",
       "title": "JSONFILETOGGLE LAST_N is new flag value 0|1; miss seeds 1",
-      "detail": "Missing key \u2192 1 (on). Truthy strings (on/true/yes?) flip to 0. LAST_N is not a hit bit \u2014 agents must not treat LAST_N==0 as failure.",
-      "repro": "TOGGLE miss \u2192 LAST_N=1; TOGGLE again \u2192 0; mode on \u2192 TOGGLE \u2192 0"
+      "detail": "Missing key → 1 (on). Truthy strings (on/true/yes?) flip to 0. LAST_N is not a hit bit — agents must not treat LAST_N==0 as failure.",
+      "repro": "TOGGLE miss → LAST_N=1; TOGGLE again → 0; mode on → TOGGLE → 0"
     },
     {
       "id": "W188",
       "severity": "low",
       "area": "host|jsonfiledefaults",
       "title": "JSONFILEDEFAULTS dual of MERGE: fill-if-missing only",
-      "detail": "LAST_N=keys newly set. Re-boot with same defs \u2192 LAST_N=0 live counters preserved. MERGE overwrites; DEFAULTS never clobbers \u2014 agents must pick form by intent.",
-      "repro": "DEFAULTS retries=3; UPDATE 99; DEFAULTS again \u2192 still 99 LAST_N=0"
+      "detail": "LAST_N=keys newly set. Re-boot with same defs → LAST_N=0 live counters preserved. MERGE overwrites; DEFAULTS never clobbers — agents must pick form by intent.",
+      "repro": "DEFAULTS retries=3; UPDATE 99; DEFAULTS again → still 99 LAST_N=0"
     },
     {
       "id": "W189",
       "severity": "high",
       "area": "lang|getp",
       "title": "GETP LAST_N is string length not hit bit",
-      "detail": "After GETP \"role\", LAST=worker and LAST_N=6 (strlen). Numeric \"4\" \u2192 LAST_N=1. OR fallback \"fb\" \u2192 LAST_N=2. Agents must use OK / GETP_HIT / EQS for hit, never LAST_N==1 as presence. Same class as other peel strlen footguns.",
-      "repro": "GETP role \u2192 LAST_N 6; GETP n=4 \u2192 LAST_N 1"
+      "detail": "After GETP \"role\", LAST=worker and LAST_N=6 (strlen). Numeric \"4\" → LAST_N=1. OR fallback \"fb\" → LAST_N=2. Agents must use OK / GETP_HIT / EQS for hit, never LAST_N==1 as presence. Same class as other peel strlen footguns.",
+      "repro": "GETP role → LAST_N 6; GETP n=4 → LAST_N 1"
     },
     {
       "id": "W190",
@@ -1593,7 +1587,7 @@
       "area": "lang|jsonhas",
       "title": "JSONHAS is key-first: JSONHAS key [plate] not plate key",
       "detail": "SYS JSONHAS body \"ok\" probes key named body. Correct: JSONHAS \"ok\" body or JSONHASALL body \"ok\". Easy false friend after JSONHASALL plate keys order.",
-      "repro": "JSONHAS body ok \u2192 0; JSONHASALL body n ok \u2192 1"
+      "repro": "JSONHAS body ok → 0; JSONHASALL body n ok → 1"
     },
     {
       "id": "W191",
@@ -1609,7 +1603,7 @@
       "area": "lang|setp",
       "title": "SETP insert LAST_N=0 update=1; INCP LAST_N is new value",
       "detail": "SETP_N insert 0 / update 1 (opposite success polarity). INCP/BUMPP LAST_N is counter value. DECP negative ok. Confusing mix when mixing with GETP strlen LAST_N.",
-      "repro": "SETP role worker \u2192 LAST_N 0; INCP n \u2192 LAST_N 1+"
+      "repro": "SETP role worker → LAST_N 0; INCP n → LAST_N 1+"
     },
     {
       "id": "W193",
@@ -1624,8 +1618,8 @@
       "severity": "high",
       "area": "lang|needp",
       "title": "NEEDP missing keys leaves plate exit_code 0 (assert fail only)",
-      "detail": "NEEDP missing status \u2192 ok:false asserts_fail=1 sticky err with soft twin tip, but exit_code 0 and may not halt. Agents cannot rely on process status for contract failures; EXIT n after HASPALL pre-check under env require.",
-      "repro": "NEEDP n status on {n:0} \u2192 exit_code 0 asserts_fail 1"
+      "detail": "NEEDP missing status → ok:false asserts_fail=1 sticky err with soft twin tip, but exit_code 0 and may not halt. Agents cannot rely on process status for contract failures; EXIT n after HASPALL pre-check under env require.",
+      "repro": "NEEDP n status on {n:0} → exit_code 0 asserts_fail 1"
     },
     {
       "id": "W195",
@@ -1633,7 +1627,7 @@
       "area": "lang|haspall",
       "title": "HASPALL miss returns LAST bag of missing names; LAST_N is 0|1 not count",
       "detail": "On partial miss LAST_N=0 and LAST lists missing keys (HASPALL_MISS_N). On full hit LAST_N=1. Soft OK=1 always. Dual of JSONHASALL but on PLATE var.",
-      "repro": "HASPALL n ghost_key \u2192 LAST_N 0 LAST contains ghost_key"
+      "repro": "HASPALL n ghost_key → LAST_N 0 LAST contains ghost_key"
     },
     {
       "id": "W196",
@@ -1641,7 +1635,7 @@
       "area": "lang|mergep",
       "title": "MERGEP LAST_N is overlay key count; overlay wins on collide",
       "detail": "Same class as JSONFILEMERGE W181 but in-memory PLATE. Bare MERGEP uses LAST as overlay. PATCHP alias. DEFAULTP never clobbers (dual of MERGEP).",
-      "repro": "MERGEP {n:9,status:ready} \u2192 LAST_N 2|3; n becomes 9"
+      "repro": "MERGEP {n:9,status:ready} → LAST_N 2|3; n becomes 9"
     },
     {
       "id": "W197",
@@ -1649,15 +1643,15 @@
       "area": "lang|hasp",
       "title": "HASP soft miss keeps OK=1 LAST_N=0",
       "detail": "Single-key soft probe: hit LAST_N=1, miss LAST_N=0 with OK=1 (no sticky fail). Safe for IF HASP branches without CLEAR_ERR.",
-      "repro": "HASP missing \u2192 OK 1 LAST_N 0"
+      "repro": "HASP missing → OK 1 LAST_N 0"
     },
     {
       "id": "W198",
       "severity": "high",
       "area": "lib|plate_patch",
       "title": "plate_patch SAVEPLATE PLATE fails after UNSET PLATE / failed LET PLATE",
-      "detail": "When PLATE undefined, JSONFILEMERGE branch runs then LET PLATE=LAST; if LET fails (128-var) or PLATE still bad, SYS SAVEPLATE PLATE_PATH PLATE \u2192 unknown form PLATE. Proof uses UNSET PLATE fresh path; heavy agent boards hit this. Prefer JSONFILEMERGE alone for create-on-miss under load.",
-      "repro": "UNSET PLATE; INCLUDE plate_patch \u2192 unknown form PLATE on SAVE"
+      "detail": "When PLATE undefined, JSONFILEMERGE branch runs then LET PLATE=LAST; if LET fails (128-var) or PLATE still bad, SYS SAVEPLATE PLATE_PATH PLATE → unknown form PLATE. Proof uses UNSET PLATE fresh path; heavy agent boards hit this. Prefer JSONFILEMERGE alone for create-on-miss under load.",
+      "repro": "UNSET PLATE; INCLUDE plate_patch → unknown form PLATE on SAVE"
     },
     {
       "id": "W199",
@@ -1665,7 +1659,7 @@
       "area": "host|cli_plate",
       "title": "cubalc plate CLI is dual of language plate ops; schema cubalc.plate.v1",
       "detail": "Shell one-shots: plate set/get/inc/del/keys/show PATH. get missing OR fb sets or:true. No .cubalc needed. Agents should know CLI vs INCLUDE plate_patch for multi-key.",
-      "repro": "cubalc plate get F missing OR fb \u2192 or true value fb"
+      "repro": "cubalc plate get F missing OR fb → or true value fb"
     },
     {
       "id": "W200",
@@ -1689,7 +1683,7 @@
       "area": "lang|dumpp",
       "title": "DUMPP LAST_N is keys_n; empty PLATE has_plate:false bytes=2",
       "detail": "DUMPP on missing PLATE still OK=1 with cubalc.plate_info.v1 and has_plate:false LAST_N=0 DUMPP_BYTES=2 (\"{}\"). Populated: LAST_N=keys_n, DUMPP_KEYS bag, DUMPP_PATH. PLATE content not clobbered.",
-      "repro": "UNSET PLATE; DUMPP \u2192 has_plate false; after boot DUMPP_N>=3"
+      "repro": "UNSET PLATE; DUMPP → has_plate false; after boot DUMPP_N>=3"
     },
     {
       "id": "W203",
@@ -1720,8 +1714,8 @@
       "severity": "med",
       "area": "lang|fillp",
       "title": "FILLP missing key soft-fills empty; FILLP_MISS counts misses",
-      "detail": "x={{missing}} y={{name}} \u2192 x= y=alice with FILLP_MISS=1 OK=1. Agents must check FILLP_MISS or EQS for contract, not only OK.",
-      "repro": "FILLP x={{missing}} y={{name}} \u2192 empty slot + MISS 1"
+      "detail": "x={{missing}} y={{name}} → x= y=alice with FILLP_MISS=1 OK=1. Agents must check FILLP_MISS or EQS for contract, not only OK.",
+      "repro": "FILLP x={{missing}} y={{name}} → empty slot + MISS 1"
     },
     {
       "id": "W207",
@@ -1729,7 +1723,7 @@
       "area": "lang|fillp",
       "title": "Incomplete {{brace stays literal; no slots FILLP_N=0",
       "detail": "keep {{name without close stays literal. plain text FILLP_N=0. Empty-string plate value is hit not miss ([]z).",
-      "repro": "FILLP keep {{name \u2192 contains {{name; SETP empty \"\"; FILLP [{{empty}}]"
+      "repro": "FILLP keep {{name → contains {{name; SETP empty \"\"; FILLP [{{empty}}]"
     },
     {
       "id": "W208",
@@ -1737,7 +1731,7 @@
       "area": "lang|fillp",
       "title": "Bare FILLP expands prior LAST as template",
       "detail": "SYS CAT template; FILLP with no arg uses LAST. Handy for composed templates; easy footgun if LAST is plate JSON.",
-      "repro": "CAT host={{host}}; FILLP \u2192 host=cube1"
+      "repro": "CAT host={{host}}; FILLP → host=cube1"
     },
     {
       "id": "W209",
@@ -1752,7 +1746,7 @@
       "severity": "med",
       "area": "lang|fillpfile",
       "title": "FILLPFILE LAST is out path; FILLPFILE_BODY mirrors content",
-      "detail": "After FILLPFILE tpl out, LAST=out path (EQS path). Expanded body in FILLPFILE_BODY and READ out. Soft miss template \u2192 OK=0 FILLPFILE_N=0 sticky LAST_ERR.",
+      "detail": "After FILLPFILE tpl out, LAST=out path (EQS path). Expanded body in FILLPFILE_BODY and READ out. Soft miss template → OK=0 FILLPFILE_N=0 sticky LAST_ERR.",
       "repro": "FILLPFILE tpl out; EQS LAST out; READ out body"
     },
     {
@@ -1760,8 +1754,8 @@
       "severity": "med",
       "area": "lang|fillpfile",
       "title": "FILLPFILE uses conventional PLATE var not disk plate path",
-      "detail": "UPDATEPLATE disk fields alone does not feed FILLPFILE \u2014 must LET PLATE from LOADPLATE (or SETP on PLATE). Agents that only mutate files without reloading PLATE get empty slot expands.",
-      "repro": "UPDATEPLATE path agent x; FILLPFILE without LOADPLATE\u2192PLATE \u2192 miss slots"
+      "detail": "UPDATEPLATE disk fields alone does not feed FILLPFILE — must LET PLATE from LOADPLATE (or SETP on PLATE). Agents that only mutate files without reloading PLATE get empty slot expands.",
+      "repro": "UPDATEPLATE path agent x; FILLPFILE without LOADPLATE→PLATE → miss slots"
     },
     {
       "id": "W212",
@@ -1769,7 +1763,7 @@
       "area": "lang|fillpfile",
       "title": "Omit out rewrites template in place",
       "detail": "FILLPFILE inp alone LAST=inp path and file content replaced. Easy to destroy source templates if reused.",
-      "repro": "WRITE n={{tick}}; FILLPFILE inp; READ \u2192 n=42"
+      "repro": "WRITE n={{tick}}; FILLPFILE inp; READ → n=42"
     },
     {
       "id": "W213",
@@ -1784,8 +1778,8 @@
       "severity": "high",
       "area": "lang|vars",
       "title": "var table hard cap 128 with no soft fail",
-      "detail": "Var vars[128] in cubalc_lang_internal.h; n_vars++ has no bounds check. Under agent_boot+plate_session+GETFLAG+board knobs, FILLP_MISS/FILLP_MISS_KEYS may never land (SYS HASLINE FILLP_MISS_KEYS \u2192 unknown form) and LET take_n=FILLP_N stays 0 while fillp log shows hits=6. Agents must keep knobs tight or side knobs silently drop.",
-      "repro": "agent board with ~40 LETs; FILLP then SYS HASLINE FILLP_MISS_KEYS \u2192 unknown form; PRINT FILLP_MISS may be 0 while miss slots empty"
+      "detail": "Var vars[128] in cubalc_lang_internal.h; n_vars++ has no bounds check. Under agent_boot+plate_session+GETFLAG+board knobs, FILLP_MISS/FILLP_MISS_KEYS may never land (SYS HASLINE FILLP_MISS_KEYS → unknown form) and LET take_n=FILLP_N stays 0 while fillp log shows hits=6. Agents must keep knobs tight or side knobs silently drop.",
+      "repro": "agent board with ~40 LETs; FILLP then SYS HASLINE FILLP_MISS_KEYS → unknown form; PRINT FILLP_MISS may be 0 while miss slots empty"
     },
     {
       "id": "W215",
@@ -1793,7 +1787,7 @@
       "area": "lang|fillp",
       "title": "NEEDFILLP hard-fails whole program; no soft STRICT twin",
       "detail": "NEEDFILLP/FILLP STRICT call fail() and halt with asserts_fail; cannot branch in-process on missing keys. Ops preflight must use soft FILLP + FILLP_MISS (or body markers). Host subprocess required to catch hard ship fail.",
-      "repro": "NEEDFILLP with missing {{host}} \u2192 err FILLP STRICT missing; exit_code 0 in JSON but process exit 1"
+      "repro": "NEEDFILLP with missing {{host}} → err FILLP STRICT missing; exit_code 0 in JSON but process exit 1"
     },
     {
       "id": "W216",
@@ -1801,14 +1795,14 @@
       "area": "host|grep",
       "title": "GREPV substring false-friend clobbers softship via ship:",
       "detail": "SYS GREPV \"ship:\" bag also removes lines starting softship: because softship: contains ship: as substring. Bag status rows need disjoint prefixes (sship:/nship:).",
-      "repro": "PUSH softship:1; GREPV ship: \u2192 softship row gone"
+      "repro": "PUSH softship:1; GREPV ship: → softship row gone"
     },
     {
       "id": "W217",
       "severity": "med",
       "area": "lang|fillp",
       "title": "empty-string PLATE key is FILLP hit not miss",
-      "detail": "SETP \"rel\" \"\"; FILLP \"z={{rel}}\" \u2192 FILLP_MISS=0 body z=. Ops that treat blank as unset get false complete under STRICT if key present empty.",
+      "detail": "SETP \"rel\" \"\"; FILLP \"z={{rel}}\" → FILLP_MISS=0 body z=. Ops that treat blank as unset get false complete under STRICT if key present empty.",
       "repro": "SETP rel \"\"; NEEDFILLP \"{{rel}}\" succeeds with empty expansion"
     },
     {
@@ -1817,7 +1811,7 @@
       "area": "host|clear_err",
       "title": "CLEAR_ERR after FILLP can drop LAST before capture",
       "detail": "FILLP; CLEAR_ERR; SYS EQS LAST expected fails because LAST no longer holds expanded body. Capture LET body=LAST before CLEAR_ERR.",
-      "repro": "FILLP \"z=\"; CLEAR_ERR; SYS EQS LAST \"z=\" \u2192 0"
+      "repro": "FILLP \"z=\"; CLEAR_ERR; SYS EQS LAST \"z=\" → 0"
     },
     {
       "id": "W219",
@@ -1825,7 +1819,7 @@
       "area": "lang|arith",
       "title": "no SYS DEC/ADD for simple bag_n-1 index math",
       "detail": "SYS DEC/ADD unknown (suggest DECRPLATE/ADDKV). Demote-to-tail needs REVL+NTH 0 or MOVELINE clamp-to-99 instead of NTH(bag_n-1).",
-      "repro": "SYS DEC bag_n \u2192 unknown; SYS ADD n -1 \u2192 unknown"
+      "repro": "SYS DEC bag_n → unknown; SYS ADD n -1 → unknown"
     },
     {
       "id": "W220",
@@ -1833,14 +1827,14 @@
       "area": "host|findline",
       "title": "FINDLINE LAST_N=0 ambiguous: miss vs index 0",
       "detail": "Hit at front returns LAST_N=0 same as miss. Agents must HASLINE first then FINDLINE; promote/demote at head cannot use LAST_N alone as presence.",
-      "repro": "FINDLINE bag headrow \u2192 0; FINDLINE bag missing \u2192 0"
+      "repro": "FINDLINE bag headrow → 0; FINDLINE bag missing → 0"
     },
     {
       "id": "W221",
       "severity": "med",
       "area": "host|grep",
       "title": "SYS GREP id prefix is substring (INC-1 matches INC-10)",
-      "detail": "set path uses GREP id_s bag then NTH 0 \u2014 prefix false friends on incident ids. Prefer exact HASLINE id:sev or COUNTLINE full field.",
+      "detail": "set path uses GREP id_s bag then NTH 0 — prefix false friends on incident ids. Prefer exact HASLINE id:sev or COUNTLINE full field.",
       "repro": "bag has INC-10:crit; GREP INC-1 hits INC-10"
     },
     {
@@ -1857,7 +1851,7 @@
       "area": "lang|fillp",
       "title": "no dual-source FILLP (PLATE+peer merge)",
       "detail": "FILLP FROM takes one object. Cannot expand {{agent}}/{{peer}} from durable PLATE and peer overlay in one pass without manual merge JSON or two FILLP steps.",
-      "repro": "want peer={{peer.name}} agent={{PLATE.name}} in one template \u2014 must MERGEJSON first"
+      "repro": "want peer={{peer.name}} agent={{PLATE.name}} in one template — must MERGEJSON first"
     },
     {
       "id": "W224",
@@ -1865,7 +1859,7 @@
       "area": "lang|fillp",
       "title": "FILLP FROM LAST fragile on LAST thrash",
       "detail": "FROM LAST uses current LAST as plate JSON; any intermediate SYS/PRINT overwrites. Pattern SYS CAT \"\" snap; FILLP FROM LAST works only if nothing touches LAST between.",
-      "repro": "JSONOBJ; PRINT x; FILLP FROM LAST \u2192 wrong/empty plate"
+      "repro": "JSONOBJ; PRINT x; FILLP FROM LAST → wrong/empty plate"
     },
     {
       "id": "W225",
@@ -1888,8 +1882,8 @@
       "severity": "med",
       "area": "lang|plate",
       "title": "SETP FROM peer does not auto-persist peer.json",
-      "detail": "INCP/SETP/MERGEP FROM mutate the in-memory peer var only. Agents must SYS WRITE peer_path peer after every mutation or disk lags memory \u2014 easy dual-source bug across process restarts.",
-      "repro": "INCP FROM peer n; new process READ peer.json \u2192 old n"
+      "detail": "INCP/SETP/MERGEP FROM mutate the in-memory peer var only. Agents must SYS WRITE peer_path peer after every mutation or disk lags memory — easy dual-source bug across process restarts.",
+      "repro": "INCP FROM peer n; new process READ peer.json → old n"
     },
     {
       "id": "W228",
@@ -1897,7 +1891,7 @@
       "area": "lang|plate",
       "title": "no atomic peer disk bind (FROM path)",
       "detail": "FROM accepts var/LAST/literal object, not a filesystem path. Multi-step agents re-READ peer.json each action; no SETP FROM @file / LOAD+mutate+save one-shot.",
-      "repro": "SETP FROM \"/tmp/peer.json\" host x \u2192 not a plate object"
+      "repro": "SETP FROM \"/tmp/peer.json\" host x → not a plate object"
     },
     {
       "id": "W229",
@@ -1905,7 +1899,7 @@
       "area": "lang|toggle",
       "title": "TOGGLEP stores string \"0\"/\"1\" not bool",
       "detail": "GETP debug after toggle yields \"0\"/\"1\"; JSON may serialize as string. Agents comparing to true/false need care.",
-      "repro": "TOGGLEP FROM peer debug; GETP \u2192 1 string"
+      "repro": "TOGGLEP FROM peer debug; GETP → 1 string"
     },
     {
       "id": "W230",
@@ -1921,7 +1915,7 @@
       "area": "lang|needp",
       "title": "NEEDP FROM hard-fails; no soft NEEDP twin",
       "detail": "Incomplete NEEDP FROM halts like NEEDP on PLATE. Soft contract probes must use HASPALL FROM + HASPALL_MISS_N / miss bag instead of NEEDP.",
-      "repro": "NEEDP FROM peer status \u2192 hard fail; HASPALL FROM peer agent status \u2192 soft miss bag"
+      "repro": "NEEDP FROM peer status → hard fail; HASPALL FROM peer agent status → soft miss bag"
     },
     {
       "id": "W232",
@@ -1929,7 +1923,7 @@
       "area": "lang|dumpp",
       "title": "DUMPP FROM empty {} still DUMPP_FROM=1 HAS=1 N=0",
       "detail": "Empty peer object dumps successfully with keys_n=0; agents must check DUMPP_N not only DUMPP_FROM/HAS for admit gates.",
-      "repro": "LET peer={}; DUMPP FROM peer \u2192 FROM=1 N=0"
+      "repro": "LET peer={}; DUMPP FROM peer → FROM=1 N=0"
     },
     {
       "id": "W233",
@@ -1953,15 +1947,15 @@
       "area": "lang|savep",
       "title": "bare SAVEP path always writes PLATE not named var",
       "detail": "After LOADPLATE INTO agt path, SAVEP path still persists conventional PLATE. Easy to wipe agent.json with {} if PLATE empty. Must SAVEP FROM agt path.",
-      "repro": "LOADPLATE INTO agt agent.json; SAVEP agent.json \u2192 writes PLATE"
+      "repro": "LOADPLATE INTO agt agent.json; SAVEP agent.json → writes PLATE"
     },
     {
       "id": "W236",
       "severity": "med",
       "area": "lang|vars",
-      "title": "LOADPLATE INTO under var-table pressure \u2192 unknown form",
-      "detail": "When vars[128] is full, INTO bind fails silently; later GETP FROM name \u2192 unknown form 'name'. Multi-plate boards must minimize simultaneous plate vars.",
-      "repro": "many LETs + LOADPLATE INTO agt; GETP FROM agt \u2192 unknown form"
+      "title": "LOADPLATE INTO under var-table pressure → unknown form",
+      "detail": "When vars[128] is full, INTO bind fails silently; later GETP FROM name → unknown form 'name'. Multi-plate boards must minimize simultaneous plate vars.",
+      "repro": "many LETs + LOADPLATE INTO agt; GETP FROM agt → unknown form"
     },
     {
       "id": "W237",
@@ -1984,8 +1978,8 @@
       "severity": "med",
       "area": "lang|savep",
       "title": "SAVEP_FROM/SAVEP_SRC knobs flaky under board var pressure",
-      "detail": "After INCLUDE plate_peer_save, SAVEP_FROM may read 0 and SYS EQS SAVEP_SRC PEER \u2192 unknown form even when disk write succeeded. Agents should re-INCLUDE plate_peer or LOADP and check field values.",
-      "repro": "INCP FROM PEER; plate_peer_save; LET x=SAVEP_FROM \u2192 0 despite durable n"
+      "detail": "After INCLUDE plate_peer_save, SAVEP_FROM may read 0 and SYS EQS SAVEP_SRC PEER → unknown form even when disk write succeeded. Agents should re-INCLUDE plate_peer or LOADP and check field values.",
+      "repro": "INCP FROM PEER; plate_peer_save; LET x=SAVEP_FROM → 0 despite durable n"
     },
     {
       "id": "W240",
@@ -1993,7 +1987,7 @@
       "area": "lang|jsonn",
       "title": "SYS JSONN FROM short/ fresh INTO var may hard-fail parse",
       "detail": "LOADP INTO chk then SYS JSONN n FROM chk can yield SYS JSONN key FROM plate [OR n] error under pressure; GETP+NUM is safer for multi-plate boards.",
-      "repro": "LOADP INTO chk path; SYS JSONN n FROM chk \u2192 parse err"
+      "repro": "LOADP INTO chk path; SYS JSONN n FROM chk → parse err"
     },
     {
       "id": "W241",
@@ -2017,7 +2011,7 @@
       "area": "host|cat",
       "title": "SYS CAT row LAST chained after STR loses prior fragments",
       "detail": "Pattern SYS CAT a; LET row=LAST; SYS STR n; SYS CAT row LAST b often collapses to just the number under multi-step builds. Safe pattern: STR to named vars then one multi-arg SYS CAT.",
-      "repro": "SYS CAT workers=; STR 16; SYS CAT row LAST \u2192 often just 16"
+      "repro": "SYS CAT workers=; STR 16; SYS CAT row LAST → often just 16"
     },
     {
       "id": "W244",
@@ -2025,7 +2019,7 @@
       "area": "lang|restpos",
       "title": "admit multi-file only peels NTH 0/1 not full EACH",
       "detail": "Board caps at two RESTPOS files to avoid EACH+var thrash; full batch needs EACH LINE over RESTPOS with careful LAST capture.",
-      "repro": "admit a b c \u2192 only a,b registered"
+      "repro": "admit a b c → only a,b registered"
     },
     {
       "id": "W245",
@@ -2049,7 +2043,7 @@
       "area": "host|grep",
       "title": "GREPV shared op: prefix clobbers sibling ensure rows",
       "detail": "SYS GREPV \"ensure:\" bag drops all ensure:* lines. Per-key ensure audit needs unique prefixes (ens:key:) or GREPV full key path.",
-      "repro": "PUSH ensure:port; GREPV ensure:; PUSH ensure:ttl \u2192 only ttl remains"
+      "repro": "PUSH ensure:port; GREPV ensure:; PUSH ensure:ttl → only ttl remains"
     },
     {
       "id": "W248",
@@ -2057,7 +2051,7 @@
       "area": "lang|kvfile",
       "title": "KVFILEENSURE knobs HIT vs NEW dual",
       "detail": "Existing key: HIT=1 NEW=0 LAST=current line; missing: HIT=0 NEW=1. Agents must branch on NEW not only OK.",
-      "repro": "KVFILEENSURE port 9999 when port=8800 \u2192 NEW=0 value stays 8800"
+      "repro": "KVFILEENSURE port 9999 when port=8800 → NEW=0 value stays 8800"
     },
     {
       "id": "W249",
@@ -2080,8 +2074,8 @@
       "severity": "high",
       "area": "lang|vars",
       "title": "LOADP INTO temps fail under plate_peer_session var pressure",
-      "detail": "After INCLUDE plate_peer_session + plate_both_save, LOADP INTO a2 often fails; GETP FROM a2 \u2192 unknown form a2. Prefer SYS READ path + JSON peel for disk verify.",
-      "repro": "plate_peer_session; plate_both_save; LOADP INTO a2 agent.json; GETP FROM a2 agent \u2192 unknown form"
+      "detail": "After INCLUDE plate_peer_session + plate_both_save, LOADP INTO a2 often fails; GETP FROM a2 → unknown form a2. Prefer SYS READ path + JSON peel for disk verify.",
+      "repro": "plate_peer_session; plate_both_save; LOADP INTO a2 agent.json; GETP FROM a2 agent → unknown form"
     },
     {
       "id": "W252",
@@ -2105,7 +2099,7 @@
       "area": "lang|subsetp",
       "title": "REQUIRE SUBSETP miss leaves process exit_code 0 (shell often 1 or 0)",
       "detail": "Same class as REQUIRE ARGC/FLAG/ONEOF: ok:false + asserts_fail + sticky err listing bad keys, but plate exit_code stays 0. Agents cannot rely on shell status for contract deny; soft SUBSETP + EXIT n is the reliable admit wall.",
-      "repro": "cubalc run programs/proof/1147b_subsetp_fail.cubalc \u2192 exit_code 0; shell may be 1 from host wrapper"
+      "repro": "cubalc run programs/proof/1147b_subsetp_fail.cubalc → exit_code 0; shell may be 1 from host wrapper"
     },
     {
       "id": "W255",
@@ -2113,15 +2107,15 @@
       "area": "lang|subsetp_miss",
       "title": "SUBSETP_MISS_N can stay 0 right after LET PEER= without reload",
       "detail": "After LET PEER = thin_json; plate_peer_save; SUBSETP need PEER logs hit=0 miss=1 but LET miss_n = SUBSETP_MISS_N often remains 0. After INCLUDE plate_peer_session (disk reload) the same soft fail yields miss_n>=1 and usable SUBSETP_MISS bag. Agents should reload multi-plate before reading miss knobs or treat LAST_N==0 alone as deny.",
-      "repro": "thin peer LET then SUBSETP \u2192 MISS_N 0; session reload \u2192 MISS_N 1"
+      "repro": "thin peer LET then SUBSETP → MISS_N 0; session reload → MISS_N 1"
     },
     {
       "id": "W256",
       "severity": "high",
       "area": "lang|hasline",
       "title": "SYS HASLINE/EQS on miss_bag or SUBSETP_MISS fails as unknown form in large boards",
-      "detail": "In mesh_subsetp_admit_board (~900 lines, CASEI+deep IF), SYS HASLINE miss_bag \"role\", SYS HASLINE SUBSETP_MISS \"role\", and SYS EQS miss_bag \"role\" all hard-failed with unknown form 'miss_bag'|'SUBSETP_MISS'. Same forms work in short proofs and tiny scripts. Likely parser/form budget or IF-depth interaction \u2014 agents must avoid HASLINE on miss bags in large dispatch boards; use LAST_N soft deny + misslist after reload.",
-      "repro": "large board thin path SYS HASLINE SUBSETP_MISS role \u2192 unknown form"
+      "detail": "In mesh_subsetp_admit_board (~900 lines, CASEI+deep IF), SYS HASLINE miss_bag \"role\", SYS HASLINE SUBSETP_MISS \"role\", and SYS EQS miss_bag \"role\" all hard-failed with unknown form 'miss_bag'|'SUBSETP_MISS'. Same forms work in short proofs and tiny scripts. Likely parser/form budget or IF-depth interaction — agents must avoid HASLINE on miss bags in large dispatch boards; use LAST_N soft deny + misslist after reload.",
+      "repro": "large board thin path SYS HASLINE SUBSETP_MISS role → unknown form"
     },
     {
       "id": "W257",
@@ -2129,7 +2123,7 @@
       "area": "lang|needp_from",
       "title": "NEEDP FROM PEER unreliable immediately after LET PEER= + plate_peer_save",
       "detail": "NEEDP_FROM was 0 right after rewriting PEER in-memory and savep, even with zone/role/schema present on disk. INCLUDE plate_peer_session reload restored probes. Pair with W255: multi-plate knobs want session reload after LET PEER overwrite.",
-      "repro": "wrong path NEEDP FROM before reload \u2192 0; after plate_peer_session \u2192 keys hit"
+      "repro": "wrong path NEEDP FROM before reload → 0; after plate_peer_session → keys hit"
     },
     {
       "id": "W258",
@@ -2137,7 +2131,7 @@
       "area": "lang|require_subsetp_knob",
       "title": "LET peel_hit = REQUIRE_SUBSETP after ok REQUIRE can read 0 in large board",
       "detail": "REQUIRE SUBSETP logged ok but REQUIRE_SUBSETP knob read as 0 in admit path; LET peel_hit = OK worked. Prefer OK/LAST_N immediately after REQUIRE over named REQUIRE_* knobs in large programs.",
-      "repro": "admit REQUIRE ok; REQUIRE_SUBSETP\u21920; OK\u21921"
+      "repro": "admit REQUIRE ok; REQUIRE_SUBSETP→0; OK→1"
     },
     {
       "id": "W259",
@@ -2153,7 +2147,7 @@
       "area": "lang|diffp_n",
       "title": "LET x = DIFFP_N / DELTAP_N can bind 0 in large realworld boards",
       "detail": "mesh_deltap_sync_board boot logged diffp n=4 and deltap n=4 but LET take_n=DIFFP_N and LET peel_hit=DELTAP_N both stayed 0 so IF take_n>=1 failed. Short scripts and ASSERT knobs work. Workaround: LET body=LAST; SYS LINES body / SYS JSONLEN body; LET n=LAST_N immediately after DIFFP/DELTAP.",
-      "repro": "large board LET take_n=DIFFP_N after multi-plate DIFFP \u2192 0 despite log n=4"
+      "repro": "large board LET take_n=DIFFP_N after multi-plate DIFFP → 0 despite log n=4"
     },
     {
       "id": "W261",
@@ -2161,14 +2155,14 @@
       "area": "lang|require_eqp",
       "title": "REQUIRE EQP miss leaves plate exit_code 0",
       "detail": "Same class as REQUIRE SUBSETP/ARGC/FLAG: ok:false + asserts_fail, shell may be 1 from host, but exit_code field is 0. Soft EQP + EXIT n for agent-visible sync deny.",
-      "repro": "1146b_require_eqp_fail \u2192 exit_code 0"
+      "repro": "1146b_require_eqp_fail → exit_code 0"
     },
     {
       "id": "W262",
       "severity": "med",
       "area": "lang|mergep_eqp",
       "title": "DELTAP+MERGEP pull then SETP local-only field breaks EQP",
-      "detail": "After MERGEP peer delta into PLATE, SETP status synced on PLATE only leaves PEER status stale \u2192 EQP fails. Ops apply must SETP both sides or omit local-only overlays before verify.",
+      "detail": "After MERGEP peer delta into PLATE, SETP status synced on PLATE only leaves PEER status stale → EQP fails. Ops apply must SETP both sides or omit local-only overlays before verify.",
       "repro": "apply merge then SETP status; EQP diverge on status"
     },
     {
@@ -2193,13 +2187,13 @@
       "area": "lang|needp_n",
       "title": "LET x = NEEDP_N binds 0 in large boards despite needp hit=4 ok",
       "detail": "mesh_pickp_project boot: NEEDP multi-key logged hit=4 ok but LET load_hit=NEEDP_N stayed 0. Short scripts bind NEEDP_N=1. Same class as DIFFP_N/DELTAP_N (W260). Workaround: LET load_hit=LAST_N immediately after NEEDP.",
-      "repro": "large board NEEDP a b c d; LET x=NEEDP_N \u2192 0; LAST_N \u2192 1"
+      "repro": "large board NEEDP a b c d; LET x=NEEDP_N → 0; LAST_N → 1"
     },
     {
       "id": "W266",
       "severity": "med",
       "area": "lang|pickp",
-      "title": "PICKP/OMITP are non-destructive (source plate untouched) \u2014 easy to misread as in-place",
+      "title": "PICKP/OMITP are non-destructive (source plate untouched) — easy to misread as in-place",
       "detail": "Positive for hygiene: secret remains on PLATE after OMITP/PICKP; only LAST/export changes. Agents that expect mutate-in-place must MERGEP/SETP back or they ship full plate with secrets still present on disk agent.json.",
       "repro": "OMITP secret; GETP secret still redact-me; export clean"
     },
@@ -2208,7 +2202,7 @@
       "severity": "low",
       "area": "lang|pickp_miss",
       "title": "PICKP miss keys soft-skip without miss bag",
-      "detail": "PICKP role missing n \u2192 PICKP_N=2 and missing_key absent; no SUBSETP-style miss list. Agents cannot tell which keys were skipped without pre-HASP.",
+      "detail": "PICKP role missing n → PICKP_N=2 and missing_key absent; no SUBSETP-style miss list. Agents cannot tell which keys were skipped without pre-HASP.",
       "repro": "PICKP a missing b; JSON missing empty; no miss keys bag"
     },
     {
@@ -2225,31 +2219,31 @@
       "area": "ops|state",
       "title": "REALWORLD_CHALLENGE.json can vanish from worktree between fires",
       "detail": "This fire found state/REALWORLD_CHALLENGE.json missing (MEANINGFUL_ITER.json also gone) while git HEAD still had plate. Restored via git checkout HEAD --. Concurrent evolve/mi thrash may delete or not re-pin challenge plate.",
-      "repro": "ls state/REALWORLD_CHALLENGE.json \u2192 missing; git show HEAD:state/..."
+      "repro": "ls state/REALWORLD_CHALLENGE.json → missing; git show HEAD:state/..."
     },
     {
       "id": "W270",
       "severity": "high",
       "area": "lang|movekeyp_from",
       "title": "MOVEKEYP/RENAMEP FROM arbitrary LET var fails as unknown form in large boards",
-      "detail": "Proof 1152 MOVEKEYP a count FROM s works in short file. In mesh_renamep_promote_board, MOVEKEYP FROM s and FROM scratch_obj both hard-fail unknown form 's'|'scratch_obj' \u2014 trailing FROM only reliable for PLATE/PEER multi-plate names in large CASEI boards. Workaround: RENAMEP/COPYP on PLATE/PEER only.",
-      "repro": "large board MOVEKEYP a count FROM scratch_obj \u2192 unknown form scratch_obj"
+      "detail": "Proof 1152 MOVEKEYP a count FROM s works in short file. In mesh_renamep_promote_board, MOVEKEYP FROM s and FROM scratch_obj both hard-fail unknown form 's'|'scratch_obj' — trailing FROM only reliable for PLATE/PEER multi-plate names in large CASEI boards. Workaround: RENAMEP/COPYP on PLATE/PEER only.",
+      "repro": "large board MOVEKEYP a count FROM scratch_obj → unknown form scratch_obj"
     },
     {
       "id": "W271",
       "severity": "low",
       "area": "lang|renamep_miss",
       "title": "RENAMEP soft miss leaves no phantom key (positive) but RENAMEP_N LET flaky",
-      "detail": "RENAMEP nope phantom \u2192 HASP phantom 0. Prefer HASP checks over LET RENAMEP_N in large boards (class W260).",
-      "repro": "softmiss action HASP phantom \u2192 0"
+      "detail": "RENAMEP nope phantom → HASP phantom 0. Prefer HASP checks over LET RENAMEP_N in large boards (class W260).",
+      "repro": "softmiss action HASP phantom → 0"
     },
     {
       "id": "W272",
       "severity": "med",
       "area": "lang|renamep_order",
-      "title": "Promote must precede COPYP status\u2192prev or status missing",
+      "title": "Promote must precede COPYP status→prev or status missing",
       "detail": "Ops path: RENAMEP tmp status then COPYP status prev then SETP status live. Snap action must re-promote if only boot ran. Document staging order for intake agents.",
-      "repro": "snap without promote \u2192 needs HASP status branch"
+      "repro": "snap without promote → needs HASP status branch"
     },
     {
       "id": "W273",
@@ -2263,7 +2257,7 @@
       "id": "W274",
       "severity": "med",
       "area": "lang|keydiffp_vs_diffp",
-      "title": "KEYDIFFP is structural only \u2014 easy to confuse with DIFFP value changes",
+      "title": "KEYDIFFP is structural only — easy to confuse with DIFFP value changes",
       "detail": "KEYCOMMP still includes n when values diverge; DIFFP lists n for value change. Agents must pair KEYDIFFP (schema drift) with DIFFP (sync payload). Documented in probe: SETP n then both bags hit n differently.",
       "repro": "KEYCOMMP after n change still has n; DIFFP has n"
     },
@@ -2288,7 +2282,7 @@
       "severity": "med",
       "area": "ops|align",
       "title": "Structural align needs dual SETP (peer gains role, plate gains status)",
-      "detail": "Closing key-set drift is multi-step: SETP FROM PEER role + SETP status on plate then both_save. No single ALIGNP form \u2014 agents hand-roll.",
+      "detail": "Closing key-set drift is multi-step: SETP FROM PEER role + SETP status on plate then both_save. No single ALIGNP form — agents hand-roll.",
       "repro": "align path sets both sides then KEYCOMMP grows"
     },
     {
@@ -2296,8 +2290,8 @@
       "severity": "low",
       "area": "lang|sumnp_skip",
       "title": "SUMNP skips non-numeric fields silently (positive but opaque)",
-      "detail": "label/agent/schema strings do not contribute; sum is only numeric keys. No SUMNP_SKIP bag listing skipped keys \u2014 agents cannot audit what was ignored without KEYSP+TYPEP.",
-      "repro": "PLATE with cpu/mem/io + label \u2192 sum 20; no skip list"
+      "detail": "label/agent/schema strings do not contribute; sum is only numeric keys. No SUMNP_SKIP bag listing skipped keys — agents cannot audit what was ignored without KEYSP+TYPEP.",
+      "repro": "PLATE with cpu/mem/io + label → sum 20; no skip list"
     },
     {
       "id": "W279",
@@ -2305,15 +2299,15 @@
       "area": "lang|sumnp_from_var",
       "title": "SUMNP FROM empty_obj LET var works (unlike MOVEKEYP FROM var)",
       "detail": "Positive contrast to W270: SUMNP/TOPKEYP FROM empty_obj succeeded in large board empty action. Multi-plate FROM is not uniformly broken for all forms.",
-      "repro": "LET empty_obj {}; SUMNP FROM empty_obj \u2192 0"
+      "repro": "LET empty_obj {}; SUMNP FROM empty_obj → 0"
     },
     {
       "id": "W280",
       "severity": "low",
       "area": "lang|avgnp",
       "title": "AVGNP is integer mean only (truncates)",
-      "detail": "20/3 \u2192 6 not 6.66. Ops SLOs needing float mean still need SYS/float path or document integer-only.",
-      "repro": "AVGNP plate 10+2+8 \u2192 6"
+      "detail": "20/3 → 6 not 6.66. Ops SLOs needing float mean still need SYS/float path or document integer-only.",
+      "repro": "AVGNP plate 10+2+8 → 6"
     },
     {
       "id": "W281",
@@ -2329,31 +2323,31 @@
       "area": "host|cli",
       "title": "budget flag needs host -- separator for long opts (W11 class)",
       "detail": "gate -- --budget=5 works; without host -- may strip. Board uses GETFLAG budget after --.",
-      "repro": "cubalc run prog gate -- --budget=5 \u2192 over budget"
+      "repro": "cubalc run prog gate -- --budget=5 → over budget"
     },
     {
       "id": "W283",
       "severity": "high",
       "area": "lang|divp_last",
       "title": "DIVP 2 FROM LAST fails if CLEAR_ERR between SUMMERGEP and DIVP",
-      "detail": "CLEAR_ERR after SUMMERGEP clobbers LAST so DIVP FROM LAST has no plate. Capture LET merged=LAST then DIVP 2 FROM merged. Agents chaining merge\u2192mean must not CLEAR_ERR on bare LAST.",
-      "repro": "SUMMERGEP; CLEAR_ERR; DIVP 2 FROM LAST \u2192 empty/wrong; DIVP 2 FROM merged ok"
+      "detail": "CLEAR_ERR after SUMMERGEP clobbers LAST so DIVP FROM LAST has no plate. Capture LET merged=LAST then DIVP 2 FROM merged. Agents chaining merge→mean must not CLEAR_ERR on bare LAST.",
+      "repro": "SUMMERGEP; CLEAR_ERR; DIVP 2 FROM LAST → empty/wrong; DIVP 2 FROM merged ok"
     },
     {
       "id": "W284",
       "severity": "high",
       "area": "lang|subp_let",
       "title": "SUBP now prev LET JSON vars fail in large board after multi-plate session",
-      "detail": "Proof SUBP now prev works; mesh_summergep probe after ADDFREQP+session: SUBP a b \u2014 need two plates. Workaround: SUBP PLATE base with disk base.json only.",
-      "repro": "large board LET now/prev JSON; SUBP now prev \u2192 need two plates"
+      "detail": "Proof SUBP now prev works; mesh_summergep probe after ADDFREQP+session: SUBP a b — need two plates. Workaround: SUBP PLATE base with disk base.json only.",
+      "repro": "large board LET now/prev JSON; SUBP now prev → need two plates"
     },
     {
       "id": "W285",
       "severity": "low",
       "area": "lang|summergep",
-      "title": "SUMMERGEP non-destructive (sources unmutated) \u2014 positive",
+      "title": "SUMMERGEP non-destructive (sources unmutated) — positive",
       "detail": "After merge, GETP warn still local 2; peer intact. Same class as PICKP non-destructive.",
-      "repro": "SUMMERGEP; GETP warn \u2192 2"
+      "repro": "SUMMERGEP; GETP warn → 2"
     },
     {
       "id": "W286",
@@ -2367,15 +2361,15 @@
       "id": "W287",
       "severity": "med",
       "area": "lang|eqs_var",
-      "title": "SYS EQS load_hit 4 \u2192 unknown form load_hit in large boards",
+      "title": "SYS EQS load_hit 4 → unknown form load_hit in large boards",
       "detail": "SYS EQS with numeric var as first arg treated as form name. Use IF load_hit == 4 instead. Reconfirms var-token restrictions on EQS similar to HASFLAG literals.",
-      "repro": "SYS EQS load_hit 4 \u2192 unknown form load_hit"
+      "repro": "SYS EQS load_hit 4 → unknown form load_hit"
     },
     {
       "id": "W288",
       "severity": "low",
       "area": "lang|medianp_avg",
-      "title": "MEDIANP robust vs AVGNP outlier \u2014 positive SLO twin",
+      "title": "MEDIANP robust vs AVGNP outlier — positive SLO twin",
       "detail": "With lat 1,3,8,10,100 median=8 mean=24. Document pair for mesh latency SLOs.",
       "repro": "MEDIANP 8; AVGNP 24 same plate"
     },
@@ -2400,8 +2394,8 @@
       "severity": "low",
       "area": "lang|topnp",
       "title": "TOPNP skips non-numeric keys silently (host/agent)",
-      "detail": "host/schema strings never appear in top plate \u2014 positive for FREQ rank. No skip bag; same class as SUMNP silent skip.",
-      "repro": "TOPNP 3 plate with host \u2192 only pure-int keys"
+      "detail": "host/schema strings never appear in top plate — positive for FREQ rank. No skip bag; same class as SUMNP silent skip.",
+      "repro": "TOPNP 3 plate with host → only pure-int keys"
     },
     {
       "id": "W292",
@@ -2409,7 +2403,7 @@
       "area": "lang|topnp_n",
       "title": "TOPNP N accepts variable top_n in large board (positive contrast)",
       "detail": "Unlike HASFLAG/HASARGC literal-only, TOPNP top_n with LET top_n=3 worked. Document as usable for budget flags.",
-      "repro": "LET top_n 3; TOPNP top_n \u2192 crit/error/warn"
+      "repro": "LET top_n 3; TOPNP top_n → crit/error/warn"
     },
     {
       "id": "W293",
@@ -2417,7 +2411,7 @@
       "area": "lang|botnp_tie",
       "title": "BOTNP ties pick first-seen among equal mins (stable but opaque)",
       "detail": "Peer b=2 and d=2: BOTNP 1 returns b not d. Agents must not assume keyname order for ties.",
-      "repro": "BOTNP FROM PEER 1 with b=2 d=2 \u2192 b"
+      "repro": "BOTNP FROM PEER 1 with b=2 d=2 → b"
     },
     {
       "id": "W294",
@@ -2431,9 +2425,9 @@
       "id": "W295",
       "severity": "high",
       "area": "lang|push_key",
-      "title": "SYS PUSH bag KEY \u2192 unknown form KEY in large boards",
+      "title": "SYS PUSH bag KEY → unknown form KEY in large boards",
       "detail": "Proof SYS PUSH bag KEY works; mesh_each_key board fails unknown form KEY. LET k_s=KEY; SYS PUSH bag k_s also fails unknown form k_s. Workaround: SYS CAT key_bag KEY \"\\n\"; LET key_bag=LAST.",
-      "repro": "large board EACH KEY; SYS PUSH key_bag KEY \u2192 unknown form KEY"
+      "repro": "large board EACH KEY; SYS PUSH key_bag KEY → unknown form KEY"
     },
     {
       "id": "W296",
@@ -2448,7 +2442,7 @@
       "severity": "low",
       "area": "lang|each_key",
       "title": "Empty EACH KEY OF {} does not run body (positive soft)",
-      "detail": "n_walk remains prior value when empty plate walked \u2014 soft zero walk.",
+      "detail": "n_walk remains prior value when empty plate walked — soft zero walk.",
       "repro": "n_walk=3; EACH KEY OF empty; n_walk still 3"
     },
     {
@@ -2464,16 +2458,16 @@
       "severity": "high",
       "area": "lang|mergeobj_flags",
       "title": "MERGEOBJ_N/MERGEOBJ_DEFAULT/MERGEOBJ_FROM/MERGEOBJ_SRC often unreadable after plate_peer_session in long boards",
-      "detail": "Short proofs ASSERT MERGEOBJ_N and SYS EQS MERGEOBJ_SRC work. In realworld agent boards after INCLUDE plate_peer_session + many LETs, LET x = MERGEOBJ_N leaves 0 despite log applied=N; SYS EQS MERGEOBJ_SRC PEER \u2192 unknown form MERGEOBJ_SRC. Agents must verify nest via GETOBJ + SYS HAS, not flag tokens.",
-      "repro": "long board MERGEOBJ then LET m = MERGEOBJ_N; PRINT_JSON m \u2192 0 while log applied=3; SYS EQS MERGEOBJ_SRC PEER unknown form"
+      "detail": "Short proofs ASSERT MERGEOBJ_N and SYS EQS MERGEOBJ_SRC work. In realworld agent boards after INCLUDE plate_peer_session + many LETs, LET x = MERGEOBJ_N leaves 0 despite log applied=N; SYS EQS MERGEOBJ_SRC PEER → unknown form MERGEOBJ_SRC. Agents must verify nest via GETOBJ + SYS HAS, not flag tokens.",
+      "repro": "long board MERGEOBJ then LET m = MERGEOBJ_N; PRINT_JSON m → 0 while log applied=3; SYS EQS MERGEOBJ_SRC PEER unknown form"
     },
     {
       "id": "W300",
       "severity": "high",
       "area": "lang|getobj_into",
       "title": "GETOBJ INTO name + GETP FROM name fails in long plate_peer boards",
-      "detail": "Proof 1170 GETOBJ INTO META + field peel works. After plate_peer_session in multi-action realworld, getobj log shows into=1 then GETP FROM CFG/NESTCFG \u2192 unknown form plate name. Prefer GETOBJ string body + SYS HAS for nest verify.",
-      "repro": "GETOBJ cfg INTO CFG; GETP FROM CFG port \u2192 unknown form CFG in svc_nest_mergeobj_board"
+      "detail": "Proof 1170 GETOBJ INTO META + field peel works. After plate_peer_session in multi-action realworld, getobj log shows into=1 then GETP FROM CFG/NESTCFG → unknown form plate name. Prefer GETOBJ string body + SYS HAS for nest verify.",
+      "repro": "GETOBJ cfg INTO CFG; GETP FROM CFG port → unknown form CFG in svc_nest_mergeobj_board"
     },
     {
       "id": "W301",
@@ -2495,17 +2489,17 @@
       "id": "W303",
       "severity": "high",
       "area": "lang|setpobj",
-      "title": "SETPOBJ value rejects variables \u2014 literals only",
-      "detail": "SETPOBJ nest field port_n with LET port_n=9090 \u2192 'SETPOBJ nest field value \u2014 need value'. Agents must branch literals (8080/9090) or only use string/number literals. Breaks dynamic fleet port overlay without CASE on known ports.",
-      "repro": "LET p=9090; SETPOBJ cfg port p \u2192 need value"
+      "title": "SETPOBJ value rejects variables — literals only",
+      "detail": "SETPOBJ nest field port_n with LET port_n=9090 → 'SETPOBJ nest field value — need value'. Agents must branch literals (8080/9090) or only use string/number literals. Breaks dynamic fleet port overlay without CASE on known ports.",
+      "repro": "LET p=9090; SETPOBJ cfg port p → need value"
     },
     {
       "id": "W304",
       "severity": "high",
       "area": "lang|incobj",
-      "title": "INCOBJ delta rejects variables \u2014 unknown form delta_n",
-      "detail": "INCOBJ stats hits delta_n with LET delta_n=2 hard-fails unknown form. Must INCOBJ \u2026 1|2 literal or EQS-branch. Same class as SETPOBJ literal-only values.",
-      "repro": "INCOBJ stats hits delta_n \u2192 unknown form delta_n"
+      "title": "INCOBJ delta rejects variables — unknown form delta_n",
+      "detail": "INCOBJ stats hits delta_n with LET delta_n=2 hard-fails unknown form. Must INCOBJ … 1|2 literal or EQS-branch. Same class as SETPOBJ literal-only values.",
+      "repro": "INCOBJ stats hits delta_n → unknown form delta_n"
     },
     {
       "id": "W305",
@@ -2513,7 +2507,7 @@
       "area": "lang|needpobj",
       "title": "NEEDPOBJ is fail-fast sticky, not soft miss",
       "detail": "NEEDPOBJ cfg port nope_field leaves last_err and is not a soft probe. Soft contract checks need HASPOBJ. Distinct from NEEDP style but agents often expect soft+REQUIRE dual.",
-      "repro": "NEEDPOBJ cfg port nope \u2192 NEEDPOBJ: missing in cfg: nope_field"
+      "repro": "NEEDPOBJ cfg port nope → NEEDPOBJ: missing in cfg: nope_field"
     },
     {
       "id": "W306",
@@ -2521,7 +2515,7 @@
       "area": "host|savep",
       "title": "SAVEP FROM PEER PEER_PATH need path after plate_peer_session in long boards",
       "detail": "Short programs SAVEP FROM PEER PEER_PATH ok. In multi-GETFLAG/SUBCMD/CASEI agent boards, plate_both_save and SAVEP FROM PEER peer_path fail 'need path' even when PRINT PEER_PATH showed a path moments earlier, or path token empty at SAVEP. Workaround: skip peer re-save on boot (ensurep seed) or re-JOIN path immediately before SAVEP on later actions.",
-      "repro": "svc_nest_field boot INCLUDE plate_both_save \u2192 SAVEP need path"
+      "repro": "svc_nest_field boot INCLUDE plate_both_save → SAVEP need path"
     },
     {
       "id": "W307",
@@ -2536,8 +2530,8 @@
       "severity": "high",
       "area": "lang|keynest",
       "title": "EACH KEYNEST KEY special unknown form after heavy preamble + SYS LINES",
-      "detail": "Short proofs and lean agent boards bind KEY for SYS PUSH key_bag KEY. After ~20 LETs plus early SYS LINES bag in realworld agent preambles, SYS PUSH key_bag KEY \u2192 unknown form KEY (KEYNEST body still runs or fails hard). SYS CAT key_bag KEY may treat KEY as literal string KEY. Workarounds: defer KEYNEST until after session-only load; avoid early SYS LINES after large LET blocks; use KEYSOBJ for boot verify.",
-      "repro": "many LET + SYS LINES bag; EACH KEYNEST cfg; SYS PUSH key_bag KEY \u2192 unknown form KEY"
+      "detail": "Short proofs and lean agent boards bind KEY for SYS PUSH key_bag KEY. After ~20 LETs plus early SYS LINES bag in realworld agent preambles, SYS PUSH key_bag KEY → unknown form KEY (KEYNEST body still runs or fails hard). SYS CAT key_bag KEY may treat KEY as literal string KEY. Workarounds: defer KEYNEST until after session-only load; avoid early SYS LINES after large LET blocks; use KEYSOBJ for boot verify.",
+      "repro": "many LET + SYS LINES bag; EACH KEYNEST cfg; SYS PUSH key_bag KEY → unknown form KEY"
     },
     {
       "id": "W309",
@@ -2545,15 +2539,15 @@
       "area": "lang|keynest",
       "title": "KEYNEST KEY fails right after CAT+SAVEPLATE in same IF (boot path)",
       "detail": "Even without early SYS LINES, KEYNEST immediately after multi SYS CAT seed + plate_peer_session + SYS SAVEPLATE in boot IF can hard-fail KEY. Same KEYNEST works in a later walk action after plate_peer_session only. Agents should not KEYNEST in the same block as heavy seed/save.",
-      "repro": "boot IF: CAT seed; SAVEPLATE; EACH KEYNEST; PUSH KEY \u2192 fail; walk action alone \u2192 port/retries/tls ok"
+      "repro": "boot IF: CAT seed; SAVEPLATE; EACH KEYNEST; PUSH KEY → fail; walk action alone → port/retries/tls ok"
     },
     {
       "id": "W310",
       "severity": "med",
       "area": "lang|pluckobj",
       "title": "PLUCKOBJ has no OR fallback; miss leaves empty slots; SYS NTH bag 0 invalid",
-      "detail": "PLUCKOBJ cfg port missing \u2192 empty line slot, HIT reduced (soft). No OR fb form (unknown form OR). SYS NTH pluck_bag 0 \u2192 unknown form 0; use bag in LAST then SYS NTH 0, or SYS HASLINE. Nest miss PLUCKOBJ nope a b \u2192 LINES often 1 not field count.",
-      "repro": "PLUCKOBJ cfg port missing OR x \u2192 unknown form OR; SYS NTH bag 0 \u2192 unknown form 0"
+      "detail": "PLUCKOBJ cfg port missing → empty line slot, HIT reduced (soft). No OR fb form (unknown form OR). SYS NTH pluck_bag 0 → unknown form 0; use bag in LAST then SYS NTH 0, or SYS HASLINE. Nest miss PLUCKOBJ nope a b → LINES often 1 not field count.",
+      "repro": "PLUCKOBJ cfg port missing OR x → unknown form OR; SYS NTH bag 0 → unknown form 0"
     },
     {
       "id": "W311",
@@ -2567,7 +2561,7 @@
       "id": "W312",
       "severity": "med",
       "area": "lang|pickobj",
-      "title": "PICKOBJ is destructive write-back \u2014 no dry-run / preview bag",
+      "title": "PICKOBJ is destructive write-back — no dry-run / preview bag",
       "detail": "PICKOBJ immediately rewrites nested object in place. Agents that need both full cfg and projected handoff must copy plate first or re-seed. No PICKOBJ INTO bag form; must KEYSOBJ/GETOBJ after.",
       "repro": "PICKOBJ cfg port retries tls permanently drops secret/debug from PLATE"
     },
@@ -2577,7 +2571,7 @@
       "area": "lang|lenobj",
       "title": "EMPTYOBJ nest miss returns empty=true (LAST_N=1) same as empty object",
       "detail": "EMPTYOBJ nope and EMPTYOBJ stats:{} both LAST_N=1. Soft miss vs empty nest not distinguished by EMPTYOBJ alone; check LENOBJ_NEST_HIT / KEYSOBJ for miss vs empty.",
-      "repro": "EMPTYOBJ nope \u2192 1; EMPTYOBJ stats {} \u2192 1"
+      "repro": "EMPTYOBJ nope → 1; EMPTYOBJ stats {} → 1"
     },
     {
       "id": "W314",
@@ -2585,7 +2579,7 @@
       "area": "lang|setpobj",
       "title": "SETPOBJ still literal-only for rehydrate after pick (W303 class)",
       "detail": "omit path re-adds secret via SETPOBJ cfg secret s3cr3t literals only. Cannot SETPOBJ from ENV/ARG vars for dynamic scrub lists.",
-      "repro": "LET s=secretval; SETPOBJ cfg secret s \u2192 need value"
+      "repro": "LET s=secretval; SETPOBJ cfg secret s → need value"
     },
     {
       "id": "W315",
@@ -2599,16 +2593,16 @@
       "id": "W316",
       "severity": "med",
       "area": "lang|renamepobj",
-      "title": "RENAMEPOBJ old/new keys are literal tokens \u2014 no variable field names",
+      "title": "RENAMEPOBJ old/new keys are literal tokens — no variable field names",
       "detail": "Like SETPOBJ, rename source/dest must be string literals in source. Dynamic schema maps (ENV OLD_KEY=old_name) cannot feed RENAMEPOBJ without CASE branches. Soft miss on unknown old key is OK n=0 not hard-fail.",
-      "repro": "LET o=old_name; RENAMEPOBJ cfg o name \u2014 form/parse risk; use literals"
+      "repro": "LET o=old_name; RENAMEPOBJ cfg o name — form/parse risk; use literals"
     },
     {
       "id": "W317",
       "severity": "low",
       "area": "lang|renamepobj",
       "title": "RENAMEPOBJ collision with existing new key undefined in board path",
-      "detail": "Board only renames to free names. If new key already exists, agent must OMITOBJ first or risk silent overwrite/merge semantics not exercised here \u2014 document for MEANINGFUL follow-up.",
+      "detail": "Board only renames to free names. If new key already exists, agent must OMITOBJ first or risk silent overwrite/merge semantics not exercised here — document for MEANINGFUL follow-up.",
       "repro": "cfg has both name and old_name; RENAMEPOBJ old_name name"
     },
     {
@@ -2625,7 +2619,7 @@
       "area": "host|require",
       "title": "CUBALC_SNR_REQUIRE=abc softens (NUM non-numeric)",
       "detail": "Non-numeric REQUIRE env leaves require_hit=0; soft path still exits 0. Same W6 class.",
-      "repro": "CUBALC_SNR_REQUIRE=abc list \u2192 hit ok"
+      "repro": "CUBALC_SNR_REQUIRE=abc list → hit ok"
     },
     {
       "id": "W320",
@@ -2640,8 +2634,8 @@
       "severity": "low",
       "area": "lang|topkeyobj",
       "title": "TOPKEYOBJ tie-break order unspecified",
-      "detail": "Board has unique max latency=40. Equal tops would yield unspecified key; agents need stable secondary key for fair sampling \u2014 not documented.",
-      "repro": "two keys same max value \u2192 which TOPKEYOBJ returns?"
+      "detail": "Board has unique max latency=40. Equal tops would yield unspecified key; agents need stable secondary key for fair sampling — not documented.",
+      "repro": "two keys same max value → which TOPKEYOBJ returns?"
     },
     {
       "id": "W322",
@@ -2663,17 +2657,17 @@
       "id": "W324",
       "severity": "med",
       "area": "lang|fromkvobj",
-      "title": "FROMKVOBJ fully replaces nest \u2014 no merge mode",
+      "title": "FROMKVOBJ fully replaces nest — no merge mode",
       "detail": "FROMKVOBJ meta bag drops prior keys (role gone after status/count import). Agents that need merge must MERGEOBJ after TOKV or bag-merge offline. No FROMKVOBJ MERGE flag.",
-      "repro": "FROMKVOBJ meta status:ready\\ncount:2 after role/zone/n \u2192 role HASPOBJ 0"
+      "repro": "FROMKVOBJ meta status:ready\\ncount:2 after role/zone/n → role HASPOBJ 0"
     },
     {
       "id": "W325",
       "severity": "med",
       "area": "lang|fromkvobj",
-      "title": "FROMKVOBJ nest LAST unreliable after peels \u2014 capture bag var",
+      "title": "FROMKVOBJ nest LAST unreliable after peels — capture bag var",
       "detail": "Proof uses FROMKVOBJ snap LAST after TOKVOBJ; in long agent board FROMKVOBJ round2 LAST left empty nest. Capture LET digest = LAST then FROMKVOBJ round2 digest.",
-      "repro": "TOKVOBJ round; FROMKVOBJ round2 LAST \u2192 len 0; FROMKVOBJ round2 digest \u2192 len 3"
+      "repro": "TOKVOBJ round; FROMKVOBJ round2 LAST → len 0; FROMKVOBJ round2 digest → len 3"
     },
     {
       "id": "W326",
@@ -2681,7 +2675,7 @@
       "area": "host|hasline",
       "title": "SYS HASLINE is whole-line exact on k:v digests",
       "detail": "HASLINE digest role does not match role:worker; HASLINE port misses port:8080. Good for exactness, surprising if agents expect substring. Prefer HASLINE role:worker or SYS HAS.",
-      "repro": "HASLINE bag role \u2192 0 for role:worker line"
+      "repro": "HASLINE bag role → 0 for role:worker line"
     },
     {
       "id": "W327",
@@ -2705,7 +2699,7 @@
       "area": "lang|threshobj",
       "title": "THRESHOBJ drops non-integer nest fields as well as sub-threshold ints",
       "detail": "Proof: label string dropped by THRESHOBJ. DROPZEROOBJ keeps non-int (tag). Inconsistent denoise policy: thresh strips strings, dropzero keeps them. Agents mixing labels into FREQ lose labels on thresh.",
-      "repro": "freq with label:x; THRESHOBJ freq 1 \u2192 label gone; DROPZERO keeps tag"
+      "repro": "freq with label:x; THRESHOBJ freq 1 → label gone; DROPZERO keeps tag"
     },
     {
       "id": "W330",
@@ -2735,7 +2729,7 @@
       "id": "W333",
       "severity": "med",
       "area": "lang|topnobj",
-      "title": "TOPNOBJ is destructive write-back \u2014 no non-destructive rank bag",
+      "title": "TOPNOBJ is destructive write-back — no non-destructive rank bag",
       "detail": "TOPNOBJ rewrites nest in place; full FREQ lost unless re-seeded. No TOPNOBJ INTO bag form for ranked key list without clobber. Agents need copy nest first for dual top+full retention.",
       "repro": "TOPNOBJ freq 3 drops noise/web/cache permanently on plate"
     },
@@ -2745,7 +2739,7 @@
       "area": "lang|topnobj",
       "title": "Non-int nest fields dropped from TOPNOBJ candidate set",
       "detail": "label:x skipped (TOPNOBJ_CAND counts pure-int only). Documented in proof; agents with mixed nests lose labels on top-N keep.",
-      "repro": "freq with label:x; TOPNOBJ 3 \u2192 label gone"
+      "repro": "freq with label:x; TOPNOBJ 3 → label gone"
     },
     {
       "id": "W335",
@@ -2761,7 +2755,7 @@
       "area": "lang|pathp",
       "title": "SETP/INCP path values/deltas still literal-oriented",
       "detail": "SETP freq.error 9 and INCP stats.hits 2 use literals. Dynamic path values from ENV still need SETPOBJ-class workarounds or CASE. Path *keys* are string literals in source too (cannot SETP path_var).",
-      "repro": "LET p=freq.error; GETP p \u2014 may not resolve path var"
+      "repro": "LET p=freq.error; GETP p — may not resolve path var"
     },
     {
       "id": "W337",
@@ -2769,7 +2763,7 @@
       "area": "lang|hasp",
       "title": "HASP path is exact segment match not prefix",
       "detail": "HASP freq.err does not hit freq.error. Good exactness; agents must not treat dotted paths as prefix needles.",
-      "repro": "HASP freq.err \u2192 0 while freq.error exists"
+      "repro": "HASP freq.err → 0 while freq.error exists"
     },
     {
       "id": "W338",
@@ -2786,154 +2780,60 @@
       "title": "CUBALC_SPP_REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE softens (W6 class).",
       "repro": "CUBALC_SPP_REQUIRE=abc list"
+    },
+    {
+      "id": "W340",
+      "severity": "high",
+      "area": "lang|pluckp_specials",
+      "title": "PLUCKP_HIT/MISS/N read as 0 in long agent scripts",
+      "detail": "After agent_boot+SUBCMD+many LETs, form log shows pluckp n=4 hit=4 but LET x=PLUCKP_HIT / PRINT PLUCKP_HIT yield 0. LAST_N after PLUCKP correctly returns bag field count. Short proofs and minimal INCLUDE scripts read specials fine. Forces agents to use LAST_N (and GETP for values) instead of PLUCKP_HIT/MISS.",
+      "repro": "full svc_pluckp_digest boot: pluckp hit=4 log then PLUCKP_HIT→0; LAST_N→4"
+    },
+    {
+      "id": "W341",
+      "severity": "high",
+      "area": "host|nth_bag",
+      "title": "SYS NTH/LINE/HASLINE bag-name token often reparsed as next form",
+      "detail": "In long agent programs SYS NTH 0 PLUCKP becomes SYS NTH 0 + bare PLUCKP (need at least one key). SYS LINE 1 peel_bag → unknown form peel_bag; SYS HASLINE body/HASPALL_MISS similarly. Short proofs work. Workaround: use LAST_N after PLUCKP; GETP for values; LET w_s=LAST after HASPALL then HASLINE w_s only when LAST holds miss bag.",
+      "repro": "SYS NTH 0 PLUCKP in svc_pluckp_digest boot → bare PLUCKP err; works in 1195 proof"
+    },
+    {
+      "id": "W342",
+      "severity": "med",
+      "area": "lang|getflag",
+      "title": "GETFLAG host|h OR ENV OR default ignores --host= without host --",
+      "detail": "cubalc run prog boot --host=cubeA leaves host_s=cubeX (default). Same W11 class: long options need cubalc run prog boot -- --host=cubeA. Reconfirmed META host=cubeX.",
+      "repro": "run board boot --host=cubeA → getflag src=default cubeX"
+    },
+    {
+      "id": "W343",
+      "severity": "low",
+      "area": "host|write",
+      "title": "STATUS/VAL/META WRITE omit trailing NL",
+      "detail": "cat -A STATUS last line probe:pluck:pb without $; VAL/META single lines without trailing NL. W5/W10 class.",
+      "repro": "cat -A STATUS.txt META.txt after probe"
     }
   ],
   "workarounds": [
-    "FORMATPATHLINE path (I+1) text for cites; skip PARSE round-trip under load (W108)",
-    "CUBALC_TSC_REQUIRE=1 for shell-visible missing root",
-    "Keep VARS lean (~97) under 128 (W81)",
-    "HASINTREE path: use HASINTREE_PATH/PATH not LAST after probe (W112)",
-    "SLICE empty page: check SLICEINTREE_N; pair with EXIT n under REQUIRE (W113)",
-    "JSON dynamic keys: EQS-branch literals from known schema; no var keys (W115)",
-    "Capture LAST into LET before CLEAR_ERR if probe preserved it (W117)",
-    "JSONOBJ/JSONSET numeric: SYS STR n first (W118); accept string n or use literal numbers",
-    "DROPINTREE skip: treat N==0 as empty page; clamp SK>=0 before op (W121)",
-    "JSONINC delta: EQS-branch literals 1/2/3/5 (W124); ENSURE values via STR",
-    "JSONN OR: hardcode literal defaults (W125)",
-    "JSONPICK/DROP/RENAME accept string vars for keys (unlike JSONHAS W115); use OF bag for dynamic lists",
-    "export: N>0 after PICK before WRITEOUT peer view (W129)",
-    "Never name vars FLAG or KEY (W130); use FLAG_S/KEY_S",
-    "After JSONTYPE, peel with literal-key EQS branches for JSONN (W131)",
-    "After SETMATCH/MOVELINE/PUSH: LET bag=LAST before CLEAR_ERR (W133)",
-    "Dual-buffer: JSONCOPY cur\u2192prev then INC cur; SWAP to rollback (W136/W138)",
-    "SUM plate: PICK numeric keys or JSONN each before SUM (W137)",
-    "Presence: JSONNONEMPTY or JSONLEN>0 not JSONEMPTY LAST_N (W139)",
-    "Score: PICK numeric counters then SUMN to avoid bool inflation (W141)",
-    "Extremes: PICK pure-numeric shard keys before MAXN/MINN/TOPKEY (W142)",
-    "After TOPKEY/BOTKEY: LET key_s=LAST immediately; peel FROM body not LAST (W143)",
-    "After JSONAVGN/EQ/SUBSET: LET x = LAST_N not JSON*_N when near 128 vars (W144)",
-    "Mean load: JSONPICK metrics then AVGN; never whole status plate (W145)",
-    "Contract admit: SUBSET req status; full lockstep: JSONEQ (W146)",
-    "After JSONMISS/PRESENT: LET bag=LAST; peel FROM body not LAST (W147)",
-    "Presence\u2260value: JSONTYPE null/false or SUBSET values after HASALL (W148)",
-    "Guard OF need bag: if blank skip HASALL or treat as soft miss (W149)",
-    "NTH bag fields: re-PLUCK or leave bag in LAST before each NTH (W150)",
-    "Log multi-line bags via WRITE/STATUS not PRINT_JSON (W151)",
-    "Hard key contract: soft HASALL then EXIT n; do not trust REQUIRE shell alone (W152)",
-    "Schema admit: soft JSONEXACT then value SUBSET/EQ (W153)",
-    "Hard schema: soft EXACT + EXIT n; do not rely on REQUIRE shell alone (W154)",
-    "ONLY rejects extras only \u2014 use EXACT for full key-set (W155)",
-    "Always JSONDELTA old new (or FROM NEW explicit) (W156)",
-    "Value drift: JSONCHANGED/DELTA not KEYDIFF alone (W157)",
-    "After KEYDIFF/CHANGED: LET bag=LAST before peels (W158)",
-    "REQUIRE JSON*: soft probe then REQUIRE; on fail EXIT n (W159/W160)",
-    "Lockstep gate: SUBSET req AND EQ peer (W161)",
-    "After DEFAULTS: check HASALL or HAD not only LAST_N==0 (W162)",
-    "After REQUIRE JSONNEQ: peel FROM body/cur not LAST (W163)",
-    "CHANGELOG: HAS substrings; WRITE log bag not PRINT_JSON (W164)",
-    "LOADPLATE: treat LAST_N==1 as file hit; 0 means fallback plate (W165)",
-    "REQUIRE JSONTYPE: soft JSONTYPE EQS kind then REQUIRE; EXIT n for shell (W166)",
-    "Type contracts: probe kinds on mint schema before REQUIRE (W167)",
-    "After SAVEPLATE: peel FROM body or LOADPLATE (W168)",
-    "ENSURE: use CREATED/HIT flags not raw LAST_N alone (W169)",
-    "REQUIRE PLATEFILE: soft LOADPLATE first + EXIT n (W170)",
-    "GETFLAG for non-path flags; GETFLAGOUT only for paths",
-    "UPDATEPLATE numeric via (expr) not bare LET num",
-    "JSONPLUCK for dynamic key peel",
-    "literal \"\" empty key; reuse LETs under 128-var cap",
-    "GETFLAG fb (not or); single-token flag names",
-    "capture LAST_N right after SYS plate-file ops",
-    "EXIT n when require_hit and LAST_N==0 even if OK=1",
-    "use LAST_N for applied key count; OK for success",
-    "seed SAVEPLATE before apply when base fields required",
-    "prefer JSONFILEMERGE/OVERLAYPLATE for disk; MERGEPLATE for strings",
-    "pass string values to JSONFILEENSURE; use (n) paren only for known nums",
-    "read LAST_N immediately; do not use *SET/*HAD knobs under var cap",
-    "DEFAULTS for boot seed; MERGE/UPDATE for intentional overwrite",
-    "GETP hit via OK or two-step without trusting LAST_N",
-    "JSONHASALL plate keys for presence",
-    "LOADPLATE path after plate_boot when PLATE suspect",
-    "capture OK immediately after SETP/PUTP before CLEAR_ERR",
-    "HASPALL precheck + EXIT n under env require (do not trust NEEDP rc)",
-    "use ghost_key for intentional HASPALL miss tests",
-    "DEFAULTP for boot seed; MERGEP for intentional overwrite",
-    "create-on-miss via JSONFILEMERGE when PLATE may be unset",
-    "LOADPLATE/PEEK after plate_patch for field peels",
-    "use cubalc plate for shell one-shots; plate_patch for multi-key in-language",
-    "LOADPLATE alone for true miss require",
-    "DUMPP then peel HAS has_plate / keys_n from LAST JSON",
-    "INCLUDE plate_session once per action after setting PLATE_PATH/SEED",
-    "EQS expanded LAST against built expected string",
-    "NEEDP identity keys before status fill gate",
-    "soft empty + CUBALC_*_REQUIRE for hard miss without plate create",
-    "LOADPLATE then LET PLATE=LAST before FILLPFILE",
-    "seed separate tpl and out paths; avoid in-place on shared templates",
-    "SYS CAT multi-arg for EQS expected bodies",
-    "soft SUBSETP then EXIT n for shell-visible admit deny (never trust REQUIRE SUBSETP rc)",
-    "INCLUDE plate_peer_session after LET PEER= rewrite before NEEDP/SUBSETP_MISS knobs",
-    "avoid SYS HASLINE on SUBSETP_MISS in large CASEI boards \u2014 use LAST_N deny",
-    "LET x = OK after REQUIRE SUBSETP not REQUIRE_SUBSETP knob alone",
-    "After DIFFP/DELTAP use LAST+LINES/JSONLEN not LET knobs in large boards",
-    "SETP status on both PLATE and PEER before EQP verify after apply",
-    "Soft EQP + EXIT n instead of REQUIRE EQP for shell deny",
-    "After NEEDP use LAST_N not NEEDP_N in large boards",
-    "Always write OMITP/PICKP LAST to export.json \u2014 agent.json still holds secrets",
-    "Do not MOVEKEYP FROM arbitrary LET vars in large boards \u2014 only PLATE/PEER",
-    "Staging order: RENAMEP promote before COPYP snapshot",
-    "Pair KEYDIFFP (structure) with DIFFP (values) for full mesh drift",
-    "Capture KEYDIFFP bag via LAST+LINES+HASLINE body not delayed specials",
-    "Pair TYPEP/KEYSP if need audit of non-numeric SUMNP skips",
-    "Integer AVGNP only \u2014 document for SLO means",
-    "After SUMMERGEP LET merged=LAST before CLEAR_ERR; DIVP FROM merged",
-    "SUBP only PLATE/PEER/base paths in large boards \u2014 not ad-hoc LET JSON pairs",
-    "Prefer IF n == k over SYS EQS n k for numeric vars",
-    "Pair MEDIANP with AVGNP for outlier-aware mesh SLOs",
-    "TOPNP variable N works for flag budgets",
-    "Do not rely on BOTNP tie-break key names",
-    "Build key bags with SYS CAT bag KEY newline not SYS PUSH bag KEY",
-    "Prefer EACH KEY AS k FROM PEER over bare FROM"
+    "After PLUCKP use LAST_N for field count; GETP/GETP FROM PEER for values",
+    "HASPALL incomplete: LET w_s=LAST; SYS HASLINE w_s key",
+    "Shell-visible miss: EXIT n (not REQUIRE alone)",
+    "Flags: cubalc run prog ACTION -- --host=H"
   ],
   "language_gaps": [
-    "SYS PUSH bag KEY unknown form in large boards (W295)",
-    "EACH KEY FROM PEER without AS flaky (W296)",
-    "mergeobj result flags not stable as agent-readable tokens outside short proofs",
-    "GETOBJ INTO multi-plate peel brittle after session INCLUDE",
-    "no first-class nested field GET without INTO plate or string HAS",
-    "nested scalar SET/INCOBJ cannot take runtime vars for value/delta",
-    "plate_both_save brittle in long agent boards after session",
-    "NEEDPOBJ lacks soft twin for probe-then-REQUIRE pattern",
-    "EACH KEYNEST KEY special brittle in long agent preambles",
-    "PLUCKOBJ lacks OR soft default for missing nested fields",
-    "SYS NTH requires bag in LAST not as first arg var",
-    "no non-destructive PICKOBJ preview / INTO bag",
-    "EMPTYOBJ miss vs empty nest ambiguous",
-    "dynamic scrub key lists blocked by SETPOBJ/OMITOBJ literal field names?",
-    "RENAMEPOBJ needs var field names for env-driven schema maps",
-    "no documented RENAMEPOBJ collision policy for agents",
-    "SUMNOBJ needs skip/count diagnostics for mixed-type nests",
-    "TOPKEYOBJ needs documented tie-break",
-    "FROMKVOBJ needs merge-mode for non-destructive bag import",
-    "FROMKVOBJ LAST binding fragile in multi-op agent boards",
-    "THRESHOBJ/CAPOBJ need var threshold/cap for agent ENV gates",
-    "THRESH vs DROPZERO disagree on non-int nest field retention",
-    "TOPNOBJ/BOTNOBJ need var N and non-destructive INTO bag mode",
-    "mixed-type nest labels lost on top-N keep",
-    "dotted path forms need var path keys for dynamic maps",
-    "SETP path value from ENV/var still awkward"
+    "PLUCKP multi-key path works (proof + board) but result specials unreliable in agent-length scripts",
+    "Bag peel after PLUCKP needs durable bag handle; NTH/LINE var bag glue is brittle",
+    "NEEDP/HASPALL path contracts work; HASPALL incomplete LAST=miss bag is usable",
+    "Long-option intake still needs host -- (W11/W342)",
+    "WRITE trailing NL still missing (W5/W343)"
   ],
   "issues_faced": [
-    "HASLINE whole-line exact on digests",
-    "EXIT 2 shell 0 (W7)",
-    "THRESHOBJ min literal branching for ENV mins",
-    "THRESH drops strings; DROPZERO keeps non-int",
-    "EXIT 2 shell 0 (W7)",
-    "TOPNOBJ N literal branching for ENV TOP_N",
-    "destructive top-N needs reseed for full map",
-    "EXIT 2 shell 0 (W7)",
-    "path keys/values literal in agent boards",
-    "HASP exact path segments",
-    "EXIT 2 shell 0 (W7)"
+    "PLUCKP_HIT/N specials dead (0) in long board despite form success — used LAST_N",
+    "SYS NTH 0 PLUCKP / SYS LINE peel_bag / SYS HASLINE HASPALL_MISS parse as bare forms",
+    "Value harvest fell back to GETP after multi-key PLUCKP count smoke",
+    "GETFLAG --host= ignored without host -- separator",
+    "selftest 11 pre-existing CLI shell fails (unknown form set)"
   ],
-  "commit": "892ce06e0e6db54b9107be932d2050bd5f566ea2",
-  "ts": "2026-08-09T10:09:35Z"
+  "commit": "ade896f3",
+  "ts": "2026-08-09T10:46:11Z"
 }
