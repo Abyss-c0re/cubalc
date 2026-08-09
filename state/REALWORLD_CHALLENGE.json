@@ -2673,6 +2673,6 @@
     "NEEDPOBJ not soft \u2014 use HASPOBJ for soft miss",
     "EXIT 2 shell rc 0 (W7)"
   ],
-  "commit": "pending",
+  "commit": "371fcfaba1c439b6e85b3b0ee83bafa32f05c61b",
   "ts": "2026-08-09T06:52:38Z"
 }
