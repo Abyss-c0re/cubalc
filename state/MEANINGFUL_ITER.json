@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 643,
-  "version": "1.15.670-usability",
-  "item": "SUMFLAT + plate sumflat",
-  "item_id": 679,
-  "title": "SUMFLAT/TOTALFLAT + cubalc plate sumflat · sum pure-int leaves by path needle → LAST_N (read-only)",
-  "commit": "25c4f81e9567809fc981d66dba9ae4d163f72e04",
-  "summary": "Nest counter rollups without FLATKV+GREPFLAT+SUM glue. proof 1220 + CLI PASS.",
+  "iter": 644,
+  "version": "1.15.671-usability",
+  "item": "TOPPATHFLAT + plate toppath/botpath",
+  "item_id": 680,
+  "title": "TOPPATHFLAT/BOTPATHFLAT + cubalc plate toppath|botpath · path of max/min pure-int leaf by needle",
+  "commit": "d07865f38652d4d05f01c124750d80d9cca71d40",
+  "summary": "Locate dominant/min nest counters without GREPFLAT walk. proof 1221 + CLI PASS.",
   "proofs": [
-    "1220_sumflat PASS",
-    "1220_cli_plate_sumflat PASS",
-    "1219_incflat reg PASS"
+    "1221_toppathflat PASS",
+    "1221_cli_plate_toppathflat PASS",
+    "1220_sumflat reg PASS"
   ],
-  "when": "2026-08-09T15:04:00Z",
+  "when": "2026-08-09T15:15:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "25c4f81e9567809fc981d66dba9ae4d163f72e04",
-  "note": "after INCFLAT plane; EVOLVE_PAUSED; thrash restore mid-tick"
+  "sha": "d07865f38652d4d05f01c124750d80d9cca71d40",
+  "note": "after SUMFLAT plane; EVOLVE_PAUSED"
 }
