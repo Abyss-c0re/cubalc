@@ -1,0 +1,71 @@
+# PLUCKOBJ / NESTPLUCK — multi-key peel nested object → value bag
+# Usability: no GETPOBJ+PUSH or GETOBJ+PLUCKP glue for agent nested extracts.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"x\":1,\"role\":\"worker\",\"zone\":\"A\"},\"n\":3}"
+LET PEER = "{\"cfg\":{\"port\":8080,\"tls\":1,\"host\":\"peerB\"},\"name\":\"peerB\"}"
+
+# peel multiple nested fields in order
+PLUCKOBJ "meta" "role" "x" "zone"
+ASSERT OK == 1
+ASSERT PLUCKOBJ_N == 3
+ASSERT PLUCKOBJ_HIT == 3
+ASSERT PLUCKOBJ_MISS == 0
+LET bag = LAST
+SYS EQS bag "worker\n1\nA"
+ASSERT LAST_N == 1
+SYS NTH 0
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# miss field → empty slot, HIT reduced
+PLUCKOBJ "meta" "role" "missing" "x"
+ASSERT PLUCKOBJ_N == 3
+ASSERT PLUCKOBJ_HIT == 2
+ASSERT PLUCKOBJ_MISS == 1
+LET bag = LAST
+SYS NTH 0
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+# index 1 empty on miss — bag still 3 fields
+SYS LINES bag
+ASSERT LAST_N == 3
+
+# nest miss soft
+PLUCKOBJ "nope" "a" "b"
+ASSERT OK == 1
+ASSERT PLUCKOBJ_NEST_HIT == 0
+ASSERT PLUCKOBJ_HIT == 0
+ASSERT PLUCKOBJ_N == 2
+
+# multi-plate FROM PEER
+PLUCKOBJ FROM PEER "cfg" "port" "tls" "host"
+ASSERT PLUCKOBJ_FROM == 1
+SYS EQS PLUCKOBJ_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT PLUCKOBJ_HIT == 3
+SYS HASLINE LAST "8080"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "1"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "peerB"
+ASSERT LAST_N == 1
+
+# trailing FROM
+PLUCKOBJ "cfg" "port" FROM PEER
+ASSERT PLUCKOBJ_HIT == 1
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+
+# alias
+NESTPLUCK "meta" "zone"
+SYS EQS LAST "A"
+ASSERT LAST_N == 1
+
+# outer plate intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+PRINT "pluckobj soft ok"

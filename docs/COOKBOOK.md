@@ -285,6 +285,7 @@ HASPOBJ "meta" "role"                 # soft nested presence
 KEYSOBJ "meta"                         # nested key bag
 NEEDPOBJ "meta" "x" "role"             # fail-fast nested contract
 EACH KEYNEST "meta"                 # walk nested KEY+VALUE
+PLUCKOBJ "meta" "x" "role" "zone"  # multi peel nested → bag
 ```
 
 Compare plates (no `SYS JSONEQ` glue):
