@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 609,
-  "version": "1.15.636-usability",
-  "item": "KEEPKEYOBJ/DROPKEYOBJ nest key needle",
-  "item_id": 645,
-  "title": "KEEPKEYOBJ|DROPKEYOBJ|KEEPKEYOBJI|DROPKEYOBJI · nest key needle filter write-back · multi-plate · KEEPKEYP duals",
-  "commit": "ce42dec97378d3929702ecaf475230d838e53df0",
-  "summary": "Nest key pattern filter without GETOBJ+KEEPKEYP+SETOBJ glue. proof 1186 51/51.",
+  "iter": 610,
+  "version": "1.15.637-usability",
+  "item": "TOPNOBJ/BOTNOBJ nest top-N",
+  "item_id": 646,
+  "title": "TOPNOBJ|BOTNOBJ|NESTTOPN|NESTBOTN · nest top/bottom N pure-int keys write-back · multi-plate · TOPNP duals",
+  "commit": "782687e8577f1bfd8e12ca2da1ff735ecd06d79a",
+  "summary": "Nest top/bottom N FREQ keys without GETOBJ+TOPNP+SETOBJ glue. proof 1187 45/45.",
   "proofs": [
-    "1186_keepkeyobj 51/51",
-    "1185_pctobj reg ok",
-    "1164_keepkeyp reg ok",
-    "cubalc forms KEEPKEYOBJ ok"
+    "1187_topnobj 45/45",
+    "1186_keepkeyobj reg ok",
+    "1166_topnp reg ok",
+    "cubalc forms TOPNOBJ ok"
   ],
-  "when": "2026-08-09T09:25:00Z",
+  "when": "2026-08-09T09:40:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ce42dec97378d3929702ecaf475230d838e53df0",
-  "note": "after backlog 644 PCTOBJ; EVOLVE_PAUSED"
+  "sha": "782687e8577f1bfd8e12ca2da1ff735ecd06d79a",
+  "note": "restored thrash then shipped after backlog 645 KEEPKEYOBJ; EVOLVE_PAUSED"
 }
