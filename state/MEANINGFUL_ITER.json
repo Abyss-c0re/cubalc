@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 651,
-  "version": "1.15.678-usability",
-  "item": "NEEDFLAT + plate needflat",
-  "item_id": 687,
-  "title": "NEEDFLAT/REQUIREFLAT + cubalc plate needflat · fail-fast leaf path needle contract",
-  "commit": "5d41f535c43e3efe02bd68d872263d8f9f317f76",
-  "summary": "Structure gate without multi HASFLAT+IF fail. proof 1228 + CLI PASS.",
+  "iter": 652,
+  "version": "1.15.679-usability",
+  "item": "GETFLATN + plate getflatn",
+  "item_id": 688,
+  "title": "GETFLATN/FIRSTFLATN + cubalc plate getflatn · first pure-int leaf by needle → LAST_N · OR fallback",
+  "commit": "073be3600a470e38640f36abb85f2dc1a1a626e0",
+  "summary": "Nest numeric peel without GETFLAT+NUM glue. proof 1229 + CLI PASS.",
   "proofs": [
-    "1228_needflat PASS",
-    "1228_cli_plate_needflat PASS",
-    "1227_getflat reg PASS"
+    "1229_getflatn PASS",
+    "1229_cli_plate_getflatn PASS",
+    "1228_needflat reg PASS"
   ],
-  "when": "2026-08-09T16:25:00Z",
+  "when": "2026-08-09T16:35:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5d41f535c43e3efe02bd68d872263d8f9f317f76",
-  "note": "after GETFLAT plane; EVOLVE_PAUSED"
+  "sha": "073be3600a470e38640f36abb85f2dc1a1a626e0",
+  "note": "after NEEDFLAT plane; EVOLVE_PAUSED"
 }
