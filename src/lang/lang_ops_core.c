@@ -35759,10 +35759,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
-      {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · write-back · multi-plate"},
-      {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · write-back · default +1"},
-      {"DELP", "DELP [FROM plate] key — drop key · write-back · soft miss · multi-plate"},
-      {"GETP", "GETP [FROM plate] key [OR fallback] — peel key · LAST=value · multi-plate"},
+      {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · dotted path nest ok · write-back · multi-plate"},
+      {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
+      {"DELP", "DELP [FROM plate] key — drop key · dotted path nest ok · write-back · soft miss · multi-plate"},
+      {"GETP", "GETP [FROM plate] key [OR fallback] — peel key · dotted path nest ok · LAST=value · multi-plate"},
       {"PUTP", "PUTP alias of SETP"},
       {"BUMPP", "BUMPP alias of INCP"},
       {"DROPP", "DROPP alias of DELP"},
@@ -35774,7 +35774,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"TOGGLEP", "TOGGLEP [FROM plate] key — flip flag · multi-plate · miss→1 · write-back"},
       {"NEEDP", "NEEDP [FROM plate] key… — fail-fast if plate missing keys · multi-plate · soft twin HASPALL"},
       {"REQUIREP", "REQUIREP alias of NEEDP"},
-      {"HASP", "HASP [FROM plate] key — soft 0|1 presence · multi-plate · no GETP miss ERR"},
+      {"HASP", "HASP [FROM plate] key — soft 0|1 presence · dotted path nest ok · multi-plate · no GETP miss ERR"},
       {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · multi-plate"},
       {"KEYSP", "KEYSP [FROM plate] — key bag → LAST · multi-plate · no JSONKEYS glue"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
@@ -37823,13 +37823,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * INCP|BUMPP|PLATE_INC [FROM plate] key [delta] — bump numeric key.
    * DELP|DROPP|PLATE_DEL [FROM plate] key — drop key (soft miss LAST_N=0).
    * GETP|PEEKP|PLATE_GET [FROM plate] key [OR|DEFAULT fb] — peel value.
+   * Dotted/slash paths for nested fields (no GETPOBJ glue):
+   *   GETP "freq.error" · SETP "freq.error" 9 · INCP "stats.hits" · DELP "cfg/tmp"
    * FROM: multi-plate agents without LET PLATE = other (twin of FILLP FROM):
    *   SETP FROM peer "host" "cubeB"
    *   GETP "n" FROM peer
    *   INCP "ticks" 1 FROM session
    *   SETP "role" "worker" FROM peer
    * Named FROM write-back updates that var; conventional PLATE stays untouched.
-   * SETP_FROM/GETP_FROM/INCP_FROM/DELP_FROM = 0|1.
+   * SETP_FROM/GETP_FROM/INCP_FROM/DELP_FROM = 0|1 · PATH_DEPTH when dotted.
    * Missing default PLATE → {}. GETP hit → LAST=value LAST_N=1; miss+OR → fb. */
   if (kw(&L->cur,"SETP") || kw(&L->cur,"PUTP") || kw(&L->cur,"PLATE_SET") ||
       kw(&L->cur,"MSETP") || kw(&L->cur,"SETPLATEV") ||
@@ -38030,7 +38032,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     if (is_get) {
       memset(&gr, 0, sizeof gr);
-      if (cubalc_host_json_get(plate, key, &gr) == 0) {
+      if (cubalc_host_json_path_get(plate, key, &gr) == 0) {
         var_set_str(vm, "LAST", gr.str);
         snprintf(vm->last_str, sizeof vm->last_str, "%s", gr.str);
         vm->last_n = 1;
@@ -38039,6 +38041,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "PEEKP", gr.str);
         var_set_num(vm, "GETP_HIT", 1);
         var_set_num(vm, "JSON_HIT", 1);
+        var_set_num(vm, "PATH_DEPTH", (long)gr.code > 0 ? (long)gr.code : 1L);
         var_set_num(vm, "OK", 1);
       } else if (have_fb) {
         var_set_str(vm, "LAST", fb);
@@ -38056,8 +38059,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "GETP_HIT", 0);
         var_set_num(vm, "OK", 0);
-        var_set_str(vm, "LAST_ERR", "GETP: key miss");
-        var_set_str(vm, "ERR", "GETP: key miss");
+        var_set_str(vm, "LAST_ERR", gr.err[0] ? gr.err : "GETP: key miss");
+        var_set_str(vm, "ERR", gr.err[0] ? gr.err : "GETP: key miss");
       }
       var_set_str(vm, "GETP_KEY", key);
       var_set_num(vm, "GETP_FROM", have_from ? 1 : 0);
@@ -38069,7 +38072,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     if (is_set) {
       memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_set(plate, key, val, val_kind, &hr) != 0) {
+      if (cubalc_host_json_path_set(plate, key, val, val_kind, &hr) != 0) {
         var_set_str(vm, "LAST", "");
         vm->last_str[0] = 0;
         vm->last_n = 0;
@@ -38093,6 +38096,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "SETP_N", hr.n);
       var_set_str(vm, "SETP_KEY", key);
       var_set_num(vm, "SETP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "PATH_DEPTH", (long)hr.code > 0 ? (long)hr.code : 1L);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
         fprintf(vm->trace, "# setp key=%s updated=%ld from=%d\n", key, hr.n, have_from);
@@ -38101,7 +38105,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     if (is_inc) {
       memset(&gr, 0, sizeof gr);
-      if (cubalc_host_json_get(plate, key, &gr) == 0) {
+      if (cubalc_host_json_path_get(plate, key, &gr) == 0) {
         char *end = NULL;
         cur = strtol(gr.str, &end, 10);
         if (end == gr.str) cur = 0;
@@ -38111,7 +38115,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       nv = cur + delta;
       snprintf(raw, sizeof raw, "%ld", nv);
       memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_set(plate, key, raw, 1, &hr) != 0) {
+      if (cubalc_host_json_path_set(plate, key, raw, 1, &hr) != 0) {
         var_set_str(vm, "LAST", "");
         vm->last_str[0] = 0;
         vm->last_n = 0;
@@ -38138,6 +38142,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "INCP_KEY", key);
       var_set_num(vm, "INCP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "SETP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "PATH_DEPTH", (long)hr.code > 0 ? (long)hr.code : 1L);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
         fprintf(vm->trace, "# incp key=%s v=%ld delta=%ld from=%d\n",
@@ -38147,7 +38152,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     if (is_del) {
       memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_del(plate, key, &hr) != 0) {
+      if (cubalc_host_json_path_del(plate, key, &hr) != 0) {
         var_set_str(vm, "LAST", "");
         vm->last_str[0] = 0;
         vm->last_n = 0;
@@ -38173,6 +38178,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "DELP_KEY", key);
       var_set_num(vm, "DELP_FROM", have_from ? 1 : 0);
       var_set_num(vm, "SETP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "PATH_DEPTH", (long)hr.code > 0 ? (long)hr.code : 1L);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
         fprintf(vm->trace, "# delp key=%s removed=%ld from=%d\n",
@@ -38732,7 +38738,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         bump(vm); return 1;
       }
       memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_get(plate, key, &hr) == 0) {
+      if (cubalc_host_json_path_has(plate, key, &hr) != 0) {
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASP_N", 0);
+        var_set_num(vm, "HASP_HIT", 0);
+        var_set_str(vm, "HASP_KEY", key);
+        var_set_num(vm, "HASP_FROM", have_from ? 1 : 0);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      } else if (hr.n) {
         vm->last_n = 1;
         var_set_num(vm, "LAST_N", 1);
         var_set_num(vm, "HASP_N", 1);

@@ -678,6 +678,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 648. ~~**`SORTOBJ` / `SORTBAGOBJ` / `NESTSORT` / `SORTFREQOBJ`**~~ **done** (nest sort pure-int keys write-back or bag · multi-plate · SORTP duals · not OOP SORTOBJS · no GETOBJ+SORTP+SETOBJ).
 649. ~~**`cubalc plate nestsort` / `nestsortbag`**~~ **done** (CLI duals of SORTOBJ/SORTBAGOBJ · ASC|DESC · agent nest FREQ full rank without `.cubalc`).
 650. ~~**`SUMMERGEOBJ` / `SUBVALOBJ` / `ADDFREQOBJ` / `SUBFREQOBJ`**~~ **done** (nest pure-int sum-merge / delta write-back · multi-plate · SUMMERGEP/SUBP duals · not MERGEOBJ / not GETOBJ SUBOBJ · no GETOBJ+SUMMERGEP+SETOBJ).
+651. ~~**Dotted path `GETP`/`SETP`/`INCP`/`DELP`/`HASP`**~~ **done** (`"freq.error"` / `"a/b/c"` · create intermediate `{}` on set · multi-plate · no GETPOBJ+GETP/SETP+SETOBJ glue).
 
 ## Tick protocol
 

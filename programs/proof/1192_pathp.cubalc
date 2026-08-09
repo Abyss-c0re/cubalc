@@ -1,0 +1,131 @@
+# Dotted/slash path sugar on GETP/SETP/INCP/DELP/HASP
+# Usability: one form for shallow + nested plate fields without GETPOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"error\":5,\"warn\":2},\"meta\":{\"role\":\"leader\"}}"
+LET PEER = "{\"scores\":{\"a\":3,\"b\":1},\"outer\":\"z\"}"
+
+# shallow still works
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# dotted GETP nest peel
+GETP "freq.error"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+ASSERT GETP_HIT == 1
+GETP "freq.warn"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+GETP "meta.role"
+SYS EQS LAST "leader"
+ASSERT LAST_N == 1
+
+# slash path alias
+GETP "freq/error"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+# HASP dotted
+HASP "freq.error"
+ASSERT LAST_N == 1
+HASP "freq.crit"
+ASSERT LAST_N == 0
+HASP "ghost.x"
+ASSERT LAST_N == 0
+
+# GETP miss + OR
+GETP "freq.crit" OR "0"
+SYS EQS LAST "0"
+ASSERT GETP_HIT == 0
+ASSERT GETP_OR == 1
+ASSERT OK == 1
+
+# SETP create intermediate nest
+SETP "stats.hits" 10
+ASSERT OK == 1
+GETP "stats.hits"
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+# existing nest field update
+SETP "freq.error" 9
+ASSERT OK == 1
+GETP "freq.error"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+GETP "freq.warn"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+# INCP path (create + bump)
+INCP "stats.hits"
+ASSERT OK == 1
+ASSERT INCP_V == 11
+GETP "stats.hits"
+SYS EQS LAST "11"
+ASSERT LAST_N == 1
+INCP "stats.misses" 3
+ASSERT INCP_V == 3
+GETP "stats.misses"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# DELP path
+DELP "freq.warn"
+ASSERT OK == 1
+ASSERT DELP_HIT == 1
+HASP "freq.warn"
+ASSERT LAST_N == 0
+HASP "freq.error"
+ASSERT LAST_N == 1
+DELP "freq.ghost"
+ASSERT OK == 1
+ASSERT DELP_HIT == 0
+
+# multi-plate FROM path
+GETP FROM PEER "scores.a"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SETP FROM PEER "scores.c" 7
+ASSERT OK == 1
+GETP FROM PEER "scores.c"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+GETP FROM PEER "outer"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+# PLATE untouched by FROM peer write
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# deeper path a.b.c
+SETP "cfg.net.port" 8080
+ASSERT OK == 1
+GETP "cfg.net.port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+INCP "cfg.net.port" 1
+ASSERT INCP_V == 8081
+GETP "cfg/net/port"
+SYS EQS LAST "8081"
+ASSERT LAST_N == 1
+HASP "cfg.net.port"
+ASSERT LAST_N == 1
+DELP "cfg.net.port"
+HASP "cfg.net.port"
+ASSERT LAST_N == 0
+
+# shallow SETP/INCP regression (no path)
+SETP "n" 1
+INCP "n"
+GETP "n"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+PRINT "1192_pathp ok"

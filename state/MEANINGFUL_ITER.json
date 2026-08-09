@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 614,
-  "version": "1.15.641-usability",
-  "item": "SUMMERGEOBJ/SUBVALOBJ nest FREQ merge",
-  "item_id": 650,
-  "title": "SUMMERGEOBJ|ADDFREQOBJ|SUBVALOBJ|SUBFREQOBJ \u00b7 nest pure-int sum-merge/delta write-back \u00b7 multi-plate \u00b7 SUMMERGEP duals",
-  "commit": "791794c205527f4e2228cbdc287bd81001f88ffa",
-  "summary": "Peer nest FREQ combine/delta without GETOBJ glue. proof 1191 46/46.",
+  "iter": 615,
+  "version": "1.15.642-usability",
+  "item": "dotted path GETP/SETP/INCP/DELP/HASP",
+  "item_id": 651,
+  "title": "GETP|SETP|INCP|DELP|HASP dotted/slash path nest sugar · multi-plate · no GETPOBJ glue",
+  "commit": "PENDING",
+  "summary": "One form for shallow+deep plate fields. proof 1192 41/41.",
   "proofs": [
-    "1191_summergeobj 46/46",
-    "1162_summergep reg 44/44",
-    "1189_sortobj reg 46/46",
-    "cubalc forms SUMMERGEOBJ ok"
+    "1192_pathp 41/41",
+    "1110_setp reg 38/38",
+    "1130_setp_from reg 38/38",
+    "1191_summergeobj reg 46/46"
   ],
-  "when": "2026-08-09T10:40:00Z",
+  "when": "2026-08-09T10:55:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "791794c205527f4e2228cbdc287bd81001f88ffa",
-  "note": "after backlog 649 nestsort CLI; EVOLVE_PAUSED"
+  "sha": "PENDING",
+  "note": "after backlog 650 SUMMERGEOBJ; EVOLVE_PAUSED"
 }

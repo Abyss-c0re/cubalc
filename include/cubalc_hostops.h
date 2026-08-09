@@ -217,6 +217,17 @@ int cubalc_host_json_set(const char *json, const char *key, const char *val,
  * r->n = 1 if key was removed, 0 if missing (still OK, object unchanged/copy).
  * Soft fail only on empty key / malformed. Usability: plate field ack/drop. */
 int cubalc_host_json_del(const char *json, const char *key, cubalc_host_result *r);
+/* Dotted/slash path sugar for nested plate fields (GETP "freq.error").
+ * Path seps: '.' or '/'. No sep → same as top-level get/set/del.
+ * Max 8 segments. Intermediate miss on get/del → soft fail.
+ * path_set creates missing intermediate objects as {}.
+ * Usability: one form for shallow+deep without GETPOBJ+GETP/SETP+SETOBJ. */
+int cubalc_host_json_path_get(const char *json, const char *path, cubalc_host_result *r);
+int cubalc_host_json_path_set(const char *json, const char *path, const char *val,
+                              int val_kind, cubalc_host_result *r);
+int cubalc_host_json_path_del(const char *json, const char *path, cubalc_host_result *r);
+/* Soft presence: r->n = 0|1 · r->ok=1 always when args valid. */
+int cubalc_host_json_path_has(const char *json, const char *path, cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */
