@@ -350,6 +350,7 @@ int cubalc_host_json_subset_bad_keys(const char *sub, const char *super,
 /* multi-key presence: keys_nl newline bag. want_all=1 all present, 0=any.
  * r->n 0|1 · r->code = number of listed keys found. Soft non-object → 0.
  * Usability: contract keys without multi JSONHAS glue. */
+/* Multi-key presence (HASPALL/NEEDP/JSONHASALL). Keys may be dotted paths. */
 int cubalc_host_json_has_keys(const char *json, const char *keys_nl, int want_all,
                               cubalc_host_result *r);
 /* filter required keys into bag: want_present=0 → missing names, 1 → present.

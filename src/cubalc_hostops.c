@@ -6080,8 +6080,8 @@ int cubalc_host_json_has_keys(const char *json, const char *keys_nl, int want_al
     if (!key[0]) continue;
     listed++;
     memset(&gr, 0, sizeof gr);
-    /* get_raw so null/false/0 still count as present */
-    if (cubalc_host_json_get_raw(json, key, &gr) == 0)
+    /* path_get_raw: dotted/slash paths + null/false/0 still count as present */
+    if (cubalc_host_json_path_get_raw(json, key, &gr) == 0)
       found++;
     else if (want_all) {
       r->n = 0;
@@ -6134,8 +6134,8 @@ int cubalc_host_json_filter_req_keys(const char *json, const char *keys_nl,
     key[kn] = 0;
     if (!key[0]) continue;
     memset(&gr, 0, sizeof gr);
-    /* get_raw so null/false/0 still count as present */
-    present = (cubalc_host_json_get_raw(json, key, &gr) == 0) ? 1 : 0;
+    /* path_get_raw: dotted nest contracts · null/false/0 still present */
+    present = (cubalc_host_json_path_get_raw(json, key, &gr) == 0) ? 1 : 0;
     if ((want_present && present) || (!want_present && !present)) {
       size_t al = strlen(key);
       if (olen > 0) {

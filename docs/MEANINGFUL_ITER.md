@@ -680,6 +680,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 650. ~~**`SUMMERGEOBJ` / `SUBVALOBJ` / `ADDFREQOBJ` / `SUBFREQOBJ`**~~ **done** (nest pure-int sum-merge / delta write-back · multi-plate · SUMMERGEP/SUBP duals · not MERGEOBJ / not GETOBJ SUBOBJ · no GETOBJ+SUMMERGEP+SETOBJ).
 651. ~~**Dotted path `GETP`/`SETP`/`INCP`/`DELP`/`HASP`**~~ **done** (`"freq.error"` / `"a/b/c"` · create intermediate `{}` on set · multi-plate · no GETPOBJ+GETP/SETP+SETOBJ glue).
 652. ~~**Dotted path `TYPEP`/`DEFAULTP`/`TOGGLEP` + `cubalc plate get|set|inc|del`**~~ **done** (complete nest path plane · kind probe + set-if-missing + flag flip · CLI path duals without nestget).
+653. ~~**Dotted path `NEEDP`/`HASPALL` + `cubalc plate has|need`**~~ **done** (nest contract gates · miss bag lists path keys · multi-plate · CLI dual without nestget).
 
 ## Tick protocol
 

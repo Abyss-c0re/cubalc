@@ -2160,6 +2160,8 @@ int main(int argc, char **argv) {
       {"pathp", "programs/proof/1192_pathp.cubalc", "GETP/SETP/INCP/DELP/HASP dotted path nest sugar multi-plate"},
       {"pathp_more", "programs/proof/1193_pathp_more.cubalc", "TYPEP/DEFAULTP/TOGGLEP path + cubalc plate get/set/inc path"},
       {"cli_plate_path", "programs/proof/1193b_cli_plate_path.sh", "cubalc plate get/set/inc/del dotted path duals"},
+      {"needp_path", "programs/proof/1194_needp_path.cubalc", "NEEDP/HASPALL dotted path nest contracts multi-plate"},
+      {"cli_plate_need_path", "programs/proof/1194b_cli_plate_need_path.sh", "cubalc plate has/need dotted path contracts"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
       {"mergeobj", "programs/proof/1171_mergeobj.cubalc", "MERGEOBJ/DEFAULTOBJ nested plate merge one-shot multi-plate"},
       {"getpobj", "programs/proof/1172_getpobj.cubalc", "GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ nested scalar field plane multi-plate"},
@@ -2418,9 +2420,9 @@ int main(int argc, char **argv) {
       {"MERGEP", "flow", "MERGEP [FROM plate] overlay — multi-key · multi-plate"},
       {"DEFAULTP", "flow", "DEFAULTP|ENSUREP [FROM plate] key value — set-if-missing · multi-plate"},
       {"TOGGLEP", "flow", "TOGGLEP [FROM plate] key — flip flag · multi-plate · miss→1"},
-      {"NEEDP", "flow", "NEEDP [FROM plate] key… — fail-fast missing keys · multi-plate"},
+      {"NEEDP", "flow", "NEEDP [FROM plate] key… — fail-fast missing keys · dotted path nest ok · multi-plate"},
       {"HASP", "flow", "HASP [FROM plate] key — soft 0|1 presence · dotted path nest ok · multi-plate"},
-      {"HASPALL", "flow", "HASPALL [FROM plate] key… — soft all-present · multi-plate"},
+      {"HASPALL", "flow", "HASPALL [FROM plate] key… — soft all-present · dotted path nest ok · multi-plate"},
       {"KEYSP", "flow", "KEYSP [FROM plate] — key bag → LAST · multi-plate"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
@@ -6445,6 +6447,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
 
     /* has|need path k1 [k2 …] — multi-key presence contract on a plate file.
      * Usability: shell dual of HASPALL / NEEDP without a .cubalc program.
+     * Keys may be dotted nest paths: cubalc plate need agent.json host freq.error
      *   cubalc plate has  agent.json n status role
      *   cubalc plate need agent.json n ok
      * has: ok always true · has_all · miss bag · exit 0 iff all present

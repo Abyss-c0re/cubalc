@@ -35772,10 +35772,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DEFAULTP", "DEFAULTP|ENSUREP [FROM plate] key value — set-if-missing · dotted path nest ok · multi-plate"},
       {"ENSUREP", "ENSUREP alias of DEFAULTP"},
       {"TOGGLEP", "TOGGLEP [FROM plate] key — flip flag · dotted path nest ok · multi-plate · miss→1 · write-back"},
-      {"NEEDP", "NEEDP [FROM plate] key… — fail-fast if plate missing keys · multi-plate · soft twin HASPALL"},
+      {"NEEDP", "NEEDP [FROM plate] key… — fail-fast if plate missing keys · dotted path nest ok · multi-plate · soft twin HASPALL"},
       {"REQUIREP", "REQUIREP alias of NEEDP"},
       {"HASP", "HASP [FROM plate] key — soft 0|1 presence · dotted path nest ok · multi-plate · no GETP miss ERR"},
-      {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · multi-plate"},
+      {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · dotted path nest ok · multi-plate"},
       {"KEYSP", "KEYSP [FROM plate] — key bag → LAST · multi-plate · no JSONKEYS glue"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
@@ -38543,6 +38543,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * HASP [FROM plate] key — soft single-key presence → LAST_N 0|1 (no ERR on miss).
    * HASPALL [FROM plate] key… — soft multi-key all-present → LAST_N 0|1.
    * KEYSP [FROM plate] — bag of keys → LAST · LAST_N=count.
+   * Keys may be dotted/slash nest paths (same plane as GETP "freq.error"):
+   *   NEEDP "host" "freq.error"
+   *   HASPALL "meta.role" "meta.n" FROM PEER
    * FROM: multi-plate twin of SETP/MERGEP FROM (probe without clobbering PLATE):
    *   HASP FROM peer "host"
    *   NEEDP "agent" "n" FROM session

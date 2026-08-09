@@ -1,0 +1,61 @@
+# NEEDP / HASPALL dotted path nest contracts
+# Usability: fail-fast / soft multi-key gates on nest fields without HASPOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"error\":5,\"warn\":2},\"n\":1}"
+LET PEER = "{\"meta\":{\"role\":\"worker\",\"n\":3},\"ok\":true}"
+LET thin = "{\"host\":\"only\"}"
+
+# HASPALL all present (mix shallow + path)
+HASPALL "host" "freq.error" "n"
+ASSERT OK == 1
+ASSERT HASPALL_N == 1
+ASSERT LAST_N == 1
+ASSERT HASPALL_HIT == 3
+
+# HASPALL soft miss lists missing path keys
+HASPALL "host" "freq.crit" "ghost.x"
+ASSERT OK == 1
+ASSERT HASPALL_N == 0
+ASSERT LAST_N == 0
+SYS HASLINE HASPALL_MISS "freq.crit"
+ASSERT LAST_N == 1
+SYS HASLINE HASPALL_MISS "ghost.x"
+ASSERT LAST_N == 1
+SYS HASLINE HASPALL_MISS "host"
+ASSERT LAST_N == 0
+
+# NEEDP pass
+NEEDP "host" "freq.error" "freq.warn"
+ASSERT OK == 1
+ASSERT NEEDP_N == 1
+ASSERT NEEDP_HIT == 3
+
+# multi-plate FROM
+HASPALL FROM PEER "meta.role" "meta.n" "ok"
+ASSERT OK == 1
+ASSERT HASPALL_N == 1
+ASSERT HASPALL_FROM == 1
+NEEDP FROM PEER "meta.role" "ok"
+ASSERT OK == 1
+ASSERT NEEDP_FROM == 1
+
+# HASPALL thin miss
+HASPALL FROM thin "host" "freq.error"
+ASSERT OK == 1
+ASSERT HASPALL_N == 0
+SYS HASLINE HASPALL_MISS "freq.error"
+ASSERT LAST_N == 1
+
+# shallow regression
+HASPALL "host" "n"
+ASSERT HASPALL_N == 1
+NEEDP "host"
+ASSERT NEEDP_N == 1
+
+# slash path alias
+HASPALL "freq/error" "freq/warn"
+ASSERT HASPALL_N == 1
+
+PRINT "1194_needp_path ok"

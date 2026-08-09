@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 616,
-  "version": "1.15.643-usability",
-  "item": "TYPEP/DEFAULTP/TOGGLEP path + plate CLI path",
-  "item_id": 652,
-  "title": "TYPEP|DEFAULTP|TOGGLEP dotted path \u00b7 cubalc plate get|set|inc|del path duals \u00b7 complete nest path plane",
-  "commit": "ccf69e3d5557f0405f1e4046f86b6e84943646e4",
-  "summary": "Kind probe + set-if-missing + flag flip on nest paths; CLI path without nestget. proof 1193 32/32 + CLI PASS.",
+  "iter": 617,
+  "version": "1.15.644-usability",
+  "item": "NEEDP/HASPALL dotted path contracts",
+  "item_id": 653,
+  "title": "NEEDP|HASPALL|plate has|need dotted path nest contracts · miss bag lists path keys · multi-plate",
+  "commit": "PENDING",
+  "summary": "Nest field contracts without HASPOBJ glue. proof 1194 27/27 + CLI PASS.",
   "proofs": [
-    "1193_pathp_more 32/32",
-    "1193b_cli_plate_path PASS",
-    "1192_pathp reg 41/41",
-    "1110_setp reg ok"
+    "1194_needp_path 27/27",
+    "1194b_cli_plate_need_path PASS",
+    "1113_needp reg 30/30"
   ],
-  "when": "2026-08-09T11:10:00Z",
+  "when": "2026-08-09T11:25:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ccf69e3d5557f0405f1e4046f86b6e84943646e4",
-  "note": "after thrash restore; pathp complete plane; EVOLVE_PAUSED"
+  "sha": "PENDING",
+  "note": "after pathp_more; EVOLVE_PAUSED"
 }
