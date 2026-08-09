@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 638,
-  "version": "1.15.665-usability",
-  "item": "PRUNEFLAT + KEEONLYFLAT",
-  "item_id": 674,
-  "title": "PRUNEFLAT/KEEPONLYFLAT + cubalc plate prune/keeponly \u00b7 leaf path scrub/project write-back",
-  "commit": "9d487243358e520d5ebeb60a59218218ba89e03b",
-  "summary": "Scrub or project nested leaves by path needle. proof 1215 + CLI PASS after thrash restore.",
+  "iter": 639,
+  "version": "1.15.666-usability",
+  "item": "MERGEFLAT + plate mergeflat",
+  "item_id": 675,
+  "title": "MERGEFLAT/OVERLAYFLAT + cubalc plate mergeflat \u00b7 deep leaf overlay \u00b7 nest-aware MERGEP",
+  "commit": "1798f7e3ece145bab6996692107a2ceafef3143e",
+  "summary": "Deep leaf overlay without FLATKV+UNFLAT or shallow MERGEP. proof 1216 + CLI PASS.",
   "proofs": [
-    "1215_pruneflat PASS",
-    "1215_cli_plate_prune PASS",
-    "1214_grepflat reg PASS"
+    "1216_mergeflat PASS",
+    "1216_cli_plate_mergeflat PASS",
+    "1215_pruneflat reg PASS"
   ],
-  "when": "2026-08-09T14:07:21Z",
+  "when": "2026-08-09T14:16:36Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9d487243358e520d5ebeb60a59218218ba89e03b",
-  "note": "after thrash restore; after GREPFLAT; EVOLVE_PAUSED"
+  "sha": "1798f7e3ece145bab6996692107a2ceafef3143e",
+  "note": "after PRUNEFLAT plane; EVOLVE_PAUSED"
 }
