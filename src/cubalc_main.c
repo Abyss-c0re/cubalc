@@ -1979,20 +1979,50 @@ int main(int argc, char **argv) {
         else whyesc[o++] = c;
       }
       whyesc[o] = 0;
-      printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
-             "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
-             "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
-             "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
-             "\"why_hint\":\"%s\","
-             "\"quiet\":%s,\"strict\":%s,\"preload_n\":%d,\"include_path_n\":%d,"
-             "\"exit_code\":%d,\"halted\":%s}\n",
-             plate_ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
-             rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
-             CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc,
-             whyesc,
-             quiet ? "true" : "false", strict ? "true" : "false",
-             n_preload, n_ipath,
-             rr.exit_code, rr.halted ? "true" : "false");
+      /* includes JSON array from newline bag (LISTINCLUDES plate dual). */
+      {
+        char incj[768];
+        size_t io = 0;
+        const char *ip = rr.includes;
+        incj[io++] = '[';
+        while (*ip && io + 8 < sizeof incj) {
+          const char *seg = ip;
+          size_t slen = 0;
+          while (ip[slen] && ip[slen] != '\n') slen++;
+          if (io > 1 && io + 1 < sizeof incj) incj[io++] = ',';
+          if (io + 1 < sizeof incj) incj[io++] = '"';
+          {
+            size_t j;
+            for (j = 0; j < slen && io + 2 < sizeof incj; j++) {
+              char c = seg[j];
+              if (c == '"' || c == '\\') { incj[io++] = '\\'; incj[io++] = c; }
+              else if ((unsigned char)c < 32) incj[io++] = ' ';
+              else incj[io++] = c;
+            }
+          }
+          if (io + 1 < sizeof incj) incj[io++] = '"';
+          ip += slen;
+          if (*ip == '\n') ip++;
+        }
+        if (io + 1 < sizeof incj) incj[io++] = ']';
+        incj[io] = 0;
+        printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
+               "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
+               "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
+               "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
+               "\"why_hint\":\"%s\","
+               "\"quiet\":%s,\"strict\":%s,\"preload_n\":%d,\"include_path_n\":%d,"
+               "\"includes_n\":%d,\"includes\":%s,"
+               "\"exit_code\":%d,\"halted\":%s}\n",
+               plate_ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
+               rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
+               CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc,
+               whyesc,
+               quiet ? "true" : "false", strict ? "true" : "false",
+               n_preload, n_ipath,
+               rr.includes_n, incj,
+               rr.exit_code, rr.halted ? "true" : "false");
+      }
     }
     return rc;
   }
@@ -2652,6 +2682,7 @@ int main(int argc, char **argv) {
       {"cli_run_preload", "programs/proof/1260_cli_run_preload.sh", "run -I/CUBALC_PRELOAD + -L include-path preload"},
       {"listincludes", "programs/proof/1261_listincludes.cubalc", "LISTINCLUDES/HASINCLUDE loaded module audit"},
       {"cli_listincludes", "programs/proof/1261_cli_listincludes.sh", "LISTINCLUDES after run -I preload"},
+      {"cli_run_includes", "programs/proof/1262_cli_run_includes.sh", "run plate includes_n/includes LISTINCLUDES dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},

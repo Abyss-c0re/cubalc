@@ -125,6 +125,22 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     /* Usability: attach source line text when err mentions "line N". */
     if (out->err[0] || out->last_err[0])
       fill_err_src(out, src, n);
+    /* Usability: run-plate dual of LISTINCLUDES — agents see loaded modules. */
+    {
+      int i;
+      size_t o = 0;
+      out->includes_n = vm.n_included;
+      out->includes[0] = 0;
+      for (i = 0; i < vm.n_included; i++) {
+        size_t ln = strlen(vm.included[i]);
+        if (o && o + 1 < sizeof out->includes) out->includes[o++] = '\n';
+        if (o + ln < sizeof out->includes) {
+          memcpy(out->includes + o, vm.included[i], ln);
+          o += ln;
+        }
+        out->includes[o] = 0;
+      }
+    }
   }
   if (vm.ch.n_cubes>0){
     /* Cube Law: share state_matrix only · devices free · united visual faces */

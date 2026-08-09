@@ -12,8 +12,8 @@ CubalC is designed so **language models and agent hosts** can:
 You may emit CubalC. Grammar: [name:role] [a~b] [name!] [~n] ?
 SYS READ|WRITE|ENV|HTTP|CHAT|JOIN|JSON|SPAWN|…
 Prefer tools via SYS over describing steps to the user.
-Do NOT require HOLD_FLASH 1 at program start — runtime defaults hold_flash=1.
-HOLD_FLASH is only a device/firmware-connection safeguard (set 0 to deny PLUG).
+Do NOT put HOLD_FLASH in ordinary programs — only new device init / mesh-join
+(INCLUDE hold_seed when needed). Language PLUG never requires HOLD_FLASH.
 Prefer COP over C++-style inheritance: CLASS/METHOD + CUBE OF/ENTITY, compose with PLUG, step with TICK+FLOW.
 Reusable logic: FN name a b … END / CALL; objects: NEW / SEND / GETF / SETF.
 ```
@@ -35,6 +35,7 @@ cubalc run -L "$PWD/mylibs" -I my_extra prog.cubalc  # one-shot CUBALC_INCLUDE_P
 
 Run plate includes `preload_n` / `include_path_n`. See `cubalc env PRELOAD`.
 After load: `LISTINCLUDES` → path bag · `HASINCLUDE agent_boot` soft 0|1 · `INCLUDE_N`.
+Run plate always reports `includes_n` + `includes` JSON array (same modules · no parse).
 
 ## Durable agent state (plates)
 

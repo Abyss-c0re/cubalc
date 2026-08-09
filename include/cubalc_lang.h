@@ -22,6 +22,9 @@ typedef struct cubalc_run_result {
   char err_src[200];  /* trimmed source text at err_line */
   int exit_code;      /* EXIT n — process-oriented; 0 default */
   int halted;         /* 1 if EXIT stopped the program */
+  /* Usability: resolved INCLUDE paths this run (dual of LISTINCLUDES for agents). */
+  int includes_n;     /* count of modules loaded (INCLUDE / -I preload) */
+  char includes[640]; /* newline-joined resolved paths */
 } cubalc_run_result;
 
 int cubalc_run_file(const char *path, cubalc_run_result *out, FILE *trace);
