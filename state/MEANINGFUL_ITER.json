@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 642,
-  "version": "1.15.669-usability",
-  "item": "INCFLAT + plate incflat",
-  "item_id": 678,
-  "title": "INCFLAT/BUMPFLAT + cubalc plate incflat \u00b7 bulk pure-int leaf bump by path needle write-back",
-  "commit": "5d30de9e23276b5929aa1d8ea8b86a246e779c4a",
-  "summary": "Bulk nest counter bumps without multi INCP. proof 1219 + CLI PASS.",
+  "iter": 643,
+  "version": "1.15.670-usability",
+  "item": "SUMFLAT + plate sumflat",
+  "item_id": 679,
+  "title": "SUMFLAT/TOTALFLAT + cubalc plate sumflat · sum pure-int leaves by path needle → LAST_N (read-only)",
+  "commit": "25c4f81e9567809fc981d66dba9ae4d163f72e04",
+  "summary": "Nest counter rollups without FLATKV+GREPFLAT+SUM glue. proof 1220 + CLI PASS.",
   "proofs": [
-    "1219_incflat PASS",
-    "1219_cli_plate_incflat PASS",
-    "1218_setflat reg PASS"
+    "1220_sumflat PASS",
+    "1220_cli_plate_sumflat PASS",
+    "1219_incflat reg PASS"
   ],
-  "when": "2026-08-09T14:47:33Z",
+  "when": "2026-08-09T15:04:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5d30de9e23276b5929aa1d8ea8b86a246e779c4a",
-  "note": "after SETFLAT plane; EVOLVE_PAUSED"
+  "sha": "25c4f81e9567809fc981d66dba9ae4d163f72e04",
+  "note": "after INCFLAT plane; EVOLVE_PAUSED; thrash restore mid-tick"
 }
