@@ -2265,6 +2265,6 @@
     "NEEDP FROM after in-memory PEER rewrite returned 0 until plate_peer_session reload",
     "SUBSETP_MISS_N 0 after LET PEER thin despite log miss=1; misslist after disk load ok"
   ],
-  "commit": "f7552fe",
+  "commit": "d8d5503",
   "ts": "2026-08-09T02:19:25Z"
 }
