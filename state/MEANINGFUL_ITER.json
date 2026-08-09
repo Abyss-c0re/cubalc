@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 581,
-  "version": "1.15.608-usability",
-  "item": "cubalc plate pick/omit",
-  "item_id": 617,
-  "title": "cubalc plate pick|omit · CLI keep/drop key projection · PICKP/OMITP duals · no .cubalc",
-  "commit": "0ed78850be29b71e34145408f9dab9e445be9afb",
-  "summary": "Shell agents project plate keys without .cubalc. proof 1158 cli pick/omit ok.",
+  "iter": 582,
+  "version": "1.15.609-usability",
+  "item": "SUMNP/TOPKEYP",
+  "item_id": 618,
+  "title": "SUMNP|MAXNP|MINNP|AVGNP · TOPKEYP|BOTKEYP · multi-plate numeric aggregates · no SYS JSONSUMN/JSONTOPKEY",
+  "commit": "61e96ee1006a941d0a74dc51cb14e35532ea43ed",
+  "summary": "Score/FREQ plate sum max min mean top/bot key without SYS. proof 1159 30/30 + tokvp reg. thrash restored first.",
   "proofs": [
-    "1158_cli_plate_pick.sh ok"
+    "1159_sumnp 30/30",
+    "1157_tokvp reg 26/26"
   ],
-  "when": "2026-08-09T03:55:42Z",
+  "when": "2026-08-09T04:05:28Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0ed78850be29b71e34145408f9dab9e445be9afb",
-  "note": "clean tree; EVOLVE_PAUSED"
+  "sha": "61e96ee1006a941d0a74dc51cb14e35532ea43ed",
+  "note": "thrash restore then feature; EVOLVE_PAUSED"
 }
