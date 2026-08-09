@@ -1,51 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 233,
-  "program": "programs/realworld/mesh_summergep_freq_board.cubalc",
-  "theme": "SUMMERGEP/SUBP/DIVP mesh FREQ rollup and interval delta",
-  "version": "1.15.612-usability",
+  "iter": 234,
+  "program": "programs/realworld/mesh_medianp_latency_board.cubalc",
+  "theme": "MEDIANP/P50P mesh robust latency scores vs AVGNP outlier",
+  "version": "1.15.615-usability",
   "pass": true,
-  "prior_note": "iter 232 SUMNP scores; this iter first realworld SUMMERGEP (1162 / MEANINGFUL 621)",
+  "prior_note": "iter 233 SUMMERGEP FREQ; this iter first realworld MEDIANP (1165 / MEANINGFUL 624)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "FREQ seeds + merge warn5 error6 crit4",
+      "cmd": "median 8 avg 24 peer 4",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "merge",
-      "cmd": "SUMMERGEP write merged.json",
+      "name": "median",
+      "cmd": "MEDIANP plate 8",
       "ok": true,
-      "note": "merge"
+      "note": "median"
     },
     {
-      "name": "delta",
-      "cmd": "SUBP PLATE base interval",
+      "name": "avg",
+      "cmd": "AVGNP 24 > median 8",
       "ok": true,
-      "note": "delta"
+      "note": "avg"
     },
     {
-      "name": "mean",
-      "cmd": "DIVP 2 FROM merged",
+      "name": "peer",
+      "cmd": "even-count median 4",
       "ok": true,
-      "note": "mean"
+      "note": "peer"
+    },
+    {
+      "name": "filter",
+      "cmd": "KEEPKEYP lat_ then MEDIANP",
+      "ok": true,
+      "note": "filter"
     },
     {
       "name": "empty",
-      "cmd": "soft empty merge/sub",
+      "cmd": "MEDIANP FROM {} 0",
       "ok": true,
       "note": "empty"
     },
     {
       "name": "gate",
-      "cmd": "merged error<=err_max",
+      "cmd": "p50<=15; slo=5 over",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "ADDFREQP IDIVP sources intact",
+      "cmd": "P50P MIDP single 7",
       "ok": true,
       "note": "probe"
     },
@@ -57,7 +63,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_MSF_REQUIRE=1 EXIT 2",
+      "cmd": "CUBALC_MML_REQUIRE=1 EXIT 2",
       "ok": true,
       "note": "hard env"
     },
@@ -65,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "394/397 pre-existing sys_kvfileensure,init_peer,cli_plate_pick; summergep PASS 44"
+      "note": "397/400 pre-existing 3 shell fails; medianp PASS 18"
     }
   ],
   "weaknesses": [
@@ -2356,6 +2362,38 @@
       "title": "WRITE META omit trailing NL (reconfirmed summergep)",
       "detail": "cat -A META no $.",
       "repro": "od -c META after gate"
+    },
+    {
+      "id": "W287",
+      "severity": "med",
+      "area": "lang|eqs_var",
+      "title": "SYS EQS load_hit 4 → unknown form load_hit in large boards",
+      "detail": "SYS EQS with numeric var as first arg treated as form name. Use IF load_hit == 4 instead. Reconfirms var-token restrictions on EQS similar to HASFLAG literals.",
+      "repro": "SYS EQS load_hit 4 → unknown form load_hit"
+    },
+    {
+      "id": "W288",
+      "severity": "low",
+      "area": "lang|medianp_avg",
+      "title": "MEDIANP robust vs AVGNP outlier — positive SLO twin",
+      "detail": "With lat 1,3,8,10,100 median=8 mean=24. Document pair for mesh latency SLOs.",
+      "repro": "MEDIANP 8; AVGNP 24 same plate"
+    },
+    {
+      "id": "W289",
+      "severity": "low",
+      "area": "lang|eqs_clobber",
+      "title": "SYS EQS after MEDIANP clobbers LAST_N (proof documents re-run)",
+      "detail": "Capture LET med=LAST_N immediately; re-MEDIANP if needed after EQS on strings.",
+      "repro": "MEDIANP FROM PEER; SYS EQS MEDIANP_SRC PEER; LAST_N not 4"
+    },
+    {
+      "id": "W290",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META/STATUS omit trailing NL (reconfirmed medianp)",
+      "detail": "cat -A META no $; STATUS gate no $.",
+      "repro": "cat -A META after gate"
     }
   ],
   "workarounds": [
@@ -2455,16 +2493,17 @@
     "Pair TYPEP/KEYSP if need audit of non-numeric SUMNP skips",
     "Integer AVGNP only — document for SLO means",
     "After SUMMERGEP LET merged=LAST before CLEAR_ERR; DIVP FROM merged",
-    "SUBP only PLATE/PEER/base paths in large boards — not ad-hoc LET JSON pairs"
+    "SUBP only PLATE/PEER/base paths in large boards — not ad-hoc LET JSON pairs",
+    "Prefer IF n == k over SYS EQS n k for numeric vars",
+    "Pair MEDIANP with AVGNP for outlier-aware mesh SLOs"
   ],
   "language_gaps": [
-    "DIVP FROM LAST after CLEAR_ERR (W283)",
-    "SUBP LET vars fail large board (W284)"
+    "SYS EQS var number unknown form (W287)",
+    "EQS clobbers LAST after MEDIANP (W289)"
   ],
   "issues_faced": [
-    "mean failed until DIVP FROM merged capture",
-    "probe SUBP now prev need two plates — switched to SUBP PLATE base"
+    "SYS EQS load_hit 4 unknown form — switched to IF =="
   ],
-  "commit": "90d53b45",
-  "ts": "2026-08-09T04:44:29Z"
+  "commit": "pending",
+  "ts": "2026-08-09T05:08:48Z"
 }

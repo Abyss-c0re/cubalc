@@ -1,0 +1,668 @@
+# mesh_medianp_latency_board.cubalc — MEDIANP/P50P mesh robust latency scores
+#
+# Real use: mesh SLO agents take integer median of latency/score plate fields
+# so one outlier spike does not dominate (AVGNP twin). First realworld of
+# proof 1165 MEDIANP (MEANINGFUL 624). KEEPKEYP filters lat_* keys first.
+#
+#   MEDIANP / MEDIANP FROM PEER
+#   P50P / MIDP aliases
+#   KEEPKEYP "lat" then MEDIANP FROM body
+#   AVGNP contrast (mean >> median with outlier)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_mml_$$
+#   ./out/cubalc run programs/realworld/mesh_medianp_latency_board.cubalc boot
+#   ./out/cubalc run ... median|avg|peer|filter|empty|gate|probe|soft|list
+#
+# Plate: STATUS.txt VAL.txt META.txt MML_REPORT.txt agent.json peer.json
+# Env: HOST_S SLO_P50 CUBALC_MML_REQUIRE
+#
+# Edges:
+#   outlier 100 pulls mean not median; empty soft 0; LAST_N capture;
+#   WRITE omit NL; soft empty bag; NUM shuttle; EQS clobber LAST after MEDIANP
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "mesh_medianp_latency_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "mesh_medianp_latency -- boot|median|avg|peer|filter|empty|gate|probe|soft|list -- [--host=H] [--slo=N]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeP"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT SLO_P50 = "15"
+GETFLAG slo|s OR ENV SLO_P50 OR SLO_P50
+SYS NUM
+LET slo_p50 = LAST_N
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_MML_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "MML_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET med_n = 0
+LET avg_n = 0
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "boot", "median", "avg", "peer", "filter", "empty", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "median" THEN
+    LET op = "median"
+  WHEN "avg" THEN
+    LET op = "avg"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "filter" THEN
+    LET op = "filter"
+  WHEN "empty" THEN
+    LET op = "empty"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s slo_p50
+  CLEAR_ERR
+END
+
+# boot — latencies with outlier e=100; peer even set
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  # 1,3,8,10,100 → median 8 · mean 24
+  SYS JSONOBJ "agent" "lat-ctl" "lat_a" 10 "lat_b" 3 "lat_c" 8 "lat_d" 1 "lat_e" 100 "label" "mesh" "schema" "cubalc.mesh_medianp.v1"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  # 2,4,6,8 → median lower-mid 4
+  SYS JSONOBJ "agent" "hive-peer" "host" host_s "lat_w" 2 "lat_x" 4 "lat_y" 6 "lat_z" 8 "schema" "cubalc.mesh_medianp.v1"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  INCLUDE plate_both_save
+  CLEAR_ERR
+  MEDIANP
+  LET med_n = LAST_N
+  CLEAR_ERR
+  AVGNP
+  LET avg_n = LAST_N
+  CLEAR_ERR
+  MEDIANP FROM PEER
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF med_n == 8 THEN
+    IF avg_n == 24 THEN
+      IF take_n == 4 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET created = 1
+        LET has_n = 1
+        LET peel_hit = 1
+        LET load_hit = 1
+        SYS CAT "boot:" host_s ":bt"
+        LET row = LAST
+        CLEAR_ERR
+        SYS GREPV "boot:" bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot peer med"
+        FAIL "boot peer med"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot avg"
+      FAIL "boot avg"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot median"
+    FAIL "boot median"
+    CLEAR_ERR
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n med_n avg_n take_n note_msg
+  CLEAR_ERR
+END
+
+# median — plate P50
+SYS EQS op "median"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  MEDIANP
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF take_n == 8 THEN
+    LET hit = 1
+    LET note_msg = "median ok"
+    LET admit_n = 1
+    LET has_n = 1
+    LET peel_hit = 1
+    LET load_hit = 1
+    LET med_n = take_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "median bad"
+    FAIL "median bad"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "median:" w_s ":md"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "median:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n note_msg
+  CLEAR_ERR
+END
+
+# avg — contrast mean pulled by outlier
+SYS EQS op "avg"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  AVGNP
+  LET take_n = LAST_N
+  CLEAR_ERR
+  MEDIANP
+  LET med_n = LAST_N
+  CLEAR_ERR
+  # mean 24 > median 8
+  IF take_n == 24 THEN
+    IF med_n == 8 THEN
+      IF take_n > med_n THEN
+        LET hit = 1
+        LET note_msg = "avg ok outlier"
+        LET admit_n = 1
+        LET has_n = 1
+        LET peel_hit = 1
+        LET load_hit = 1
+        LET avg_n = take_n
+      ELSE
+        LET miss = 1
+        LET note_msg = "avg not above med"
+        FAIL "avg not above med"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "avg med"
+      FAIL "avg med"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "avg bad"
+    FAIL "avg bad"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  SYS STR med_n
+  LET d_s = LAST
+  CLEAR_ERR
+  SYS CAT "avg:" w_s ":" d_s ":av"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "avg:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n med_n note_msg
+  CLEAR_ERR
+END
+
+# peer — even-count median
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  MEDIANP FROM PEER
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF take_n == 4 THEN
+    LET hit = 1
+    LET note_msg = "peer ok"
+    LET admit_n = 1
+    LET has_n = 1
+    LET peel_hit = 1
+    LET load_hit = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer med"
+    FAIL "peer med"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" w_s ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n note_msg
+  CLEAR_ERR
+END
+
+# filter — KEEPKEYP lat_ then MEDIANP FROM filtered body
+SYS EQS op "filter"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  KEEPKEYP "lat_"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "lat_a"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HAS body "label"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # label must be dropped by keepkey
+  MEDIANP FROM body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 0 THEN
+      IF take_n == 8 THEN
+        LET hit = 1
+        LET note_msg = "filter ok"
+        LET admit_n = 1
+        LET load_hit = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "filter med"
+        FAIL "filter med"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "filter label leak"
+      FAIL "filter label leak"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "filter keep"
+    FAIL "filter keep"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "filter:" w_s ":fl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "filter:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# empty — soft 0
+SYS EQS op "empty"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET empty_obj = "{}"
+  MEDIANP FROM empty_obj
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF take_n == 0 THEN
+    LET hit = 1
+    LET note_msg = "empty ok"
+    LET admit_n = 0
+    LET has_n = 1
+    LET peel_hit = 1
+    LET load_hit = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "empty nonzero"
+    FAIL "empty nonzero"
+    CLEAR_ERR
+  END
+  SYS CAT "empty:0:em"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "empty:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n note_msg
+  CLEAR_ERR
+END
+
+# gate — median under SLO_P50
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  MEDIANP
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF take_n <= slo_p50 THEN
+    IF take_n >= 1 THEN
+      LET hit = 1
+      LET note_msg = "gate ok"
+      LET admit_n = 1
+      LET has_n = 1
+      LET peel_hit = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate zero"
+      FAIL "gate zero"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate over slo"
+    FAIL "gate over slo"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate over slo"
+    END
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  SYS STR slo_p50
+  LET d_s = LAST
+  CLEAR_ERR
+  SYS CAT "gate:" w_s ":" d_s ":ga"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n slo_p50 note_msg
+  CLEAR_ERR
+END
+
+# soft
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "soft empty require"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — P50P/MIDP aliases; single-value; EQS clobber after MEDIANP
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  P50P FROM PEER
+  LET take_n = LAST_N
+  CLEAR_ERR
+  MIDP
+  LET has_n = LAST_N
+  CLEAR_ERR
+  LET one = "{\"only\":7,\"tag\":\"t\"}"
+  MEDIANP FROM one
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # EQS clobber LAST_N — re-run median for stable capture (proof pattern)
+  MEDIANP FROM PEER
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # do not SYS EQS load_hit 4 — large boards treat load_hit as form (use IF ==)
+  IF take_n == 4 THEN
+    IF has_n == 8 THEN
+      IF peel_hit == 7 THEN
+        IF load_hit == 4 THEN
+          LET hit = 1
+          LET note_msg = "probe ok"
+          LET admit_n = 1
+          LET miss_n = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe peer reread"
+          FAIL "probe peer reread"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe single"
+        FAIL "probe single"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe midp"
+      FAIL "probe midp"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe p50"
+    FAIL "probe p50"
+    CLEAR_ERR
+  END
+  PRINT_JSON take_n has_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+SYS STR admit_n
+LET out = LAST
+CLEAR_ERR
+SYS CAT "schema=cubalc.mesh_medianp.v1 op=" op " hit=" w_s " miss=" d_s " admit=" out " note=" note_msg " date=" run_date
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "mml op=" op " hit=" w_s " miss=" d_s " note=" note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n peel_hit has_n load_hit miss_n created slo_p50 med_n avg_n note_msg
