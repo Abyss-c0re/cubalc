@@ -1,0 +1,96 @@
+# LOADP / SEEDP — top-level multi-plate disk boot without SYS keyword
+# Usability: dual of SAVEP; same plane as SETP/GETP for agents.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_loadp"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "peer.json"
+LET ppath = LAST
+SYS JOIN dir "sess.json"
+LET spath = LAST
+SYS JOIN dir "miss.json"
+LET mpath = LAST
+SYS RM ppath
+SYS RM spath
+SYS RM mpath
+
+LET PLATE = "{}"
+SETP "agent" "plate-agent"
+
+# seed peer file via SAVEP FROM
+LET peer = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":9}"
+SAVEP FROM peer ppath
+ASSERT SAVEPLATE_OK == 1
+
+# --- LOADP INTO ---
+LOADP INTO peer2 ppath
+ASSERT OK == 1
+ASSERT LOADPLATE_HIT == 1
+ASSERT LOADP_INTO == 1
+ASSERT LOADPLATE_INTO == 1
+SYS EQS LOADPLATE_VAR "peer2"
+ASSERT LAST_N == 1
+GETP FROM peer2 "host"
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+# PLATE untouched
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# trailing INTO + OR fallback
+LOADP mpath OR "{\"agent\":\"fb\"}" INTO thin
+ASSERT OK == 1
+ASSERT LOADPLATE_HIT == 0
+ASSERT LOADPLATE_FALLBACK == 1
+ASSERT LOADP_INTO == 1
+GETP FROM thin "agent"
+SYS EQS LAST "fb"
+ASSERT LAST_N == 1
+
+# no INTO still works (LAST only)
+LOADP ppath
+ASSERT LOADP_INTO == 0
+ASSERT LOADPLATE_HIT == 1
+SYS JSON "host" FROM LAST
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+
+# --- SEEDP INTO first-run ---
+SEEDP INTO session spath OR "{\"ticks\":0,\"ok\":true}"
+ASSERT OK == 1
+ASSERT SEEDP_INTO == 1
+ASSERT ENSUREPLATE_CREATED == 1
+SYS EQS ENSUREPLATE_VAR "session"
+ASSERT LAST_N == 1
+GETP FROM session "ticks"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# hit path
+SETP FROM session "ticks" 4
+SAVEP FROM session spath
+SEEDP spath INTO session
+ASSERT ENSUREPLATE_CREATED == 0
+ASSERT ENSUREPLATE_HIT == 1
+ASSERT SEEDP_INTO == 1
+GETP FROM session "ticks"
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+
+# round-trip with SAVEP + LOADP (no SYS)
+SETP FROM peer2 "n" 12
+SAVEP FROM peer2 ppath
+LOADP INTO peer3 ppath
+GETP FROM peer3 "n"
+SYS EQS LAST "12"
+ASSERT LAST_N == 1
+
+PRINT "loadp soft ok"

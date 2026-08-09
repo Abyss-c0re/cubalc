@@ -622,6 +622,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 592. ~~**`DUMPP FROM`**~~ **done** (cubalc.plate_info.v1 snapshot of any plate · multi-plate twin of KEYSP FROM).
 593. ~~**`LOADPLATE`/`ENSUREPLATE INTO`**~~ **done** (bind disk plate into named var · multi-plate disk boot without PLATE clobber).
 594. ~~**`SAVEP` / `SAVEPLATE FROM`**~~ **done** (persist PLATE or named plate · multi-plate disk dual of LOAD INTO · no LAST footgun).
+595. ~~**`LOADP`/`SEEDP INTO`**~~ **done** (top-level soft load + disk seed into named vars · no SYS · dual of SAVEP · ENSUREP stays DEFAULTP).
 
 ## Tick protocol
 

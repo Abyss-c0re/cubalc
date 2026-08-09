@@ -35738,6 +35738,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · multi-plate"},
       {"KEYSP", "KEYSP [FROM plate] — key bag → LAST · multi-plate · no JSONKEYS glue"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
+      {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
+      {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
       {"DUMPP", "DUMPP|PLATEINFO [FROM plate] — cubalc.plate_info.v1 · multi-plate snapshot"},
       {"PLATEINFO", "PLATEINFO alias of DUMPP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
@@ -37981,6 +37983,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
     }
 
+    /* ENSUREP INTO path is disk seed — not DEFAULTP key-value (use SEEDP) */
+    if (is_def && (kw(&L->cur,"INTO") || kw(&L->cur,"AS") || kw(&L->cur,"TOVAR"))) {
+      fail(vm, "ENSUREP INTO is disk seed — use SEEDP|BOOTP INTO name path (ENSUREP = DEFAULTP key)");
+      return -1;
+    }
+
     if (is_merge) {
       /* overlay: bare → LAST; else str/ident (not trailing FROM) */
       if (L->cur.kind == TK_NL || L->cur.kind == TK_EOF ||
@@ -38882,6 +38890,275 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               absfile, hr.n, have_from, from_name[0] ? from_name : "PLATE");
     bump(vm); return 1;
   }
+  /* LOADP [INTO name] path [OR defaults] — top-level soft plate load (no SYS).
+   * SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load (no SYS).
+   * Note: bare ENSUREP remains DEFAULTP alias; use SEEDP for disk seed.
+   * Dual of SAVEP for multi-plate disk boot without SYS keyword soup.
+   * Same knobs as SYS LOADPLATE/ENSUREPLATE (HIT/FALLBACK/INTO/CREATED/VAR). */
+  if (kw(&L->cur,"LOADP") || kw(&L->cur,"LOAD_P") || kw(&L->cur,"READ_P") ||
+      kw(&L->cur,"MLOADP") || kw(&L->cur,"PLATE_LOAD") ||
+      kw(&L->cur,"SEEDP") || kw(&L->cur,"BOOTP") || kw(&L->cur,"ENSURE_P") ||
+      kw(&L->cur,"SEED_P") || kw(&L->cur,"MENSUREP") || kw(&L->cur,"PLATE_ENSURE") ||
+      kw(&L->cur,"BOOT_P") || kw(&L->cur,"DISKENSURE") || kw(&L->cur,"ENSUREDISK")) {
+    char pathb[CUBALC_HOST_STR_MAX], fb[CUBALC_HOST_STR_MAX], plate[CUBALC_HOST_STR_MAX];
+    char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+    char into_name[96];
+    const char *slash, *body;
+    size_t n;
+    int is_ensure = 0, have_into = 0, have_fb = 0, hit = 0, created = 0;
+    cubalc_host_result hr, keys;
+
+    if (kw(&L->cur,"SEEDP") || kw(&L->cur,"BOOTP") || kw(&L->cur,"ENSURE_P") ||
+        kw(&L->cur,"SEED_P") || kw(&L->cur,"MENSUREP") || kw(&L->cur,"PLATE_ENSURE") ||
+        kw(&L->cur,"BOOT_P") || kw(&L->cur,"DISKENSURE") || kw(&L->cur,"ENSUREDISK"))
+      is_ensure = 1;
+
+    lex_next(L);
+    pathb[0] = 0; fb[0] = 0; plate[0] = 0; into_name[0] = 0;
+
+    if (kw(&L->cur,"INTO") || kw(&L->cur,"AS") || kw(&L->cur,"TOVAR") ||
+        kw(&L->cur,"BIND") || kw(&L->cur,"STOREIN")) {
+      lex_next(L);
+      have_into = 1;
+      if (L->cur.kind == TK_IDENT) {
+        snprintf(into_name, sizeof into_name, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, is_ensure ? "SEEDP INTO name path — need var name"
+                           : "LOADP INTO name path — need var name");
+        return -1;
+      }
+    }
+
+    if (resolve_str_arg(vm, L, pathb, sizeof pathb) != 0) {
+      fail(vm, is_ensure ? "SEEDP [INTO name] path [OR seed] — need path"
+                         : "LOADP [INTO name] path [OR defaults] — need path");
+      return -1;
+    }
+
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK") || kw(&L->cur,"FROM") || kw(&L->cur,"WITH") ||
+        kw(&L->cur,"USING") || kw(&L->cur,"SEED")) {
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) == 0)
+        have_fb = 1;
+      else if (!is_ensure) {
+        fail(vm, "LOADP path OR defaults — need fallback plate");
+        return -1;
+      }
+    }
+
+    if (!have_into && (kw(&L->cur,"INTO") || kw(&L->cur,"AS") || kw(&L->cur,"TOVAR") ||
+                       kw(&L->cur,"BIND") || kw(&L->cur,"STOREIN"))) {
+      lex_next(L);
+      have_into = 1;
+      if (L->cur.kind == TK_IDENT) {
+        snprintf(into_name, sizeof into_name, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, is_ensure ? "SEEDP path INTO name — need var name"
+                           : "LOADP path INTO name — need var name");
+        return -1;
+      }
+    }
+
+    if (!have_fb)
+      snprintf(fb, sizeof fb, "%s", "{}");
+    {
+      const char *f = fb;
+      while (*f == ' ' || *f == '\t' || *f == '\n' || *f == '\r') f++;
+      if (*f != '{')
+        snprintf(fb, sizeof fb, "%s", "{}");
+    }
+
+    if (!pathb[0]) {
+      var_set_str(vm, "LAST_ERR", is_ensure ? "SEEDP: empty path" : "LOADP: empty path");
+      var_set_str(vm, "ERR", is_ensure ? "SEEDP: empty path" : "LOADP: empty path");
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, is_ensure ? "ENSUREPLATE_INTO" : "LOADPLATE_INTO", have_into ? 1 : 0);
+      bump(vm); return 1;
+    }
+
+    /* try load existing object plate */
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_read(pathb, &hr) == 0 && hr.str[0]) {
+      body = hr.str;
+      while (*body == ' ' || *body == '\t' || *body == '\n' || *body == '\r')
+        body++;
+      if (*body == '{') {
+        memset(&keys, 0, sizeof keys);
+        if (cubalc_host_json_keys(body, &keys) == 0) {
+          snprintf(plate, sizeof plate, "%s", body);
+          hit = 1;
+        }
+      }
+    }
+
+    if (hit) {
+      if (have_into && into_name[0])
+        var_set_str(vm, into_name, plate);
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      if (is_ensure) {
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "ENSUREPLATE", plate);
+        var_set_str(vm, "ENSUREP", plate);
+        var_set_str(vm, "ENSUREPLATE_PATH", pathb);
+        var_set_num(vm, "ENSUREPLATE_CREATED", 0);
+        var_set_num(vm, "ENSUREPLATE_HIT", 1);
+        var_set_num(vm, "ENSUREPLATE_INTO", have_into ? 1 : 0);
+        var_set_str(vm, "ENSUREPLATE_VAR", into_name);
+        var_set_num(vm, "ENSUREP_INTO", have_into ? 1 : 0);
+      var_set_num(vm, "SEEDP_INTO", have_into ? 1 : 0);
+      } else {
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_num(vm, "LOADPLATE_FALLBACK", 0);
+      }
+      var_set_str(vm, "LOADPLATE", plate);
+      var_set_str(vm, "LOADP", plate);
+      var_set_str(vm, "LOADPLATE_PATH", pathb);
+      var_set_num(vm, "LOADPLATE_HIT", 1);
+      var_set_num(vm, "LOADPLATE_INTO", have_into ? 1 : 0);
+      var_set_str(vm, "LOADPLATE_VAR", into_name);
+      var_set_num(vm, "LOADP_INTO", have_into ? 1 : 0);
+      var_set_num(vm, "READ_OK", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# %s → hit into=%s path=%s\n",
+                is_ensure ? "ensurep" : "loadp",
+                into_name[0] ? into_name : "-", pathb);
+      bump(vm); return 1;
+    }
+
+    /* miss */
+    if (!is_ensure) {
+      snprintf(plate, sizeof plate, "%s", fb);
+      if (have_into && into_name[0])
+        var_set_str(vm, into_name, plate);
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "LAST_ERR",
+                  hr.err[0] ? hr.err : "LOADP: miss or non-object — using fallback");
+      var_set_str(vm, "LOADPLATE", plate);
+      var_set_str(vm, "LOADP", plate);
+      var_set_str(vm, "LOADPLATE_PATH", pathb);
+      var_set_num(vm, "LOADPLATE_HIT", 0);
+      var_set_num(vm, "LOADPLATE_FALLBACK", 1);
+      var_set_num(vm, "LOADPLATE_INTO", have_into ? 1 : 0);
+      var_set_str(vm, "LOADPLATE_VAR", into_name);
+      var_set_num(vm, "LOADP_INTO", have_into ? 1 : 0);
+      var_set_num(vm, "READ_OK", 0);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# loadp → fallback into=%s path=%s\n",
+                into_name[0] ? into_name : "-", pathb);
+      bump(vm); return 1;
+    }
+
+    /* ENSUREP miss → write seed */
+    body = fb;
+    while (*body == ' ' || *body == '\t' || *body == '\n' || *body == '\r')
+      body++;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(pathb, &hr) == 0 && hr.str[0])
+      snprintf(absfile, sizeof absfile, "%s", hr.str);
+    else
+      snprintf(absfile, sizeof absfile, "%s", pathb);
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", absfile);
+      n = strlen(work);
+      while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+        work[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else {
+        parent[0] = '.';
+        parent[1] = 0;
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "SEEDP: mkdir parent failed";
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      var_set_str(vm, "ENSUREPLATE_PATH", absfile);
+      var_set_num(vm, "ENSUREPLATE_CREATED", 0);
+      var_set_num(vm, "ENSUREPLATE_INTO", have_into ? 1 : 0);
+      var_set_num(vm, "ENSUREP_INTO", have_into ? 1 : 0);
+      var_set_num(vm, "SEEDP_INTO", have_into ? 1 : 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_write(absfile, body, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "SEEDP: write failed";
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      var_set_str(vm, "ENSUREPLATE_PATH", absfile);
+      var_set_num(vm, "ENSUREPLATE_CREATED", 0);
+      var_set_num(vm, "ENSUREPLATE_INTO", have_into ? 1 : 0);
+      var_set_num(vm, "ENSUREP_INTO", have_into ? 1 : 0);
+      var_set_num(vm, "SEEDP_INTO", have_into ? 1 : 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    snprintf(plate, sizeof plate, "%s", body);
+    if (have_into && into_name[0])
+      var_set_str(vm, into_name, plate);
+    var_set_str(vm, "LAST", plate);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+    vm->last_n = 1;
+    var_set_num(vm, "LAST_N", 1);
+    var_set_str(vm, "ENSUREPLATE", plate);
+    var_set_str(vm, "ENSUREP", plate);
+    var_set_str(vm, "LOADPLATE", plate);
+    var_set_str(vm, "LOADP", plate);
+    var_set_str(vm, "ENSUREPLATE_PATH", absfile);
+    var_set_str(vm, "ENSUREPLATE_PARENT", absparent);
+    var_set_str(vm, "LOADPLATE_PATH", absfile);
+    var_set_num(vm, "ENSUREPLATE_CREATED", 1);
+    var_set_num(vm, "ENSUREPLATE_HIT", 0);
+    var_set_num(vm, "ENSUREPLATE_INTO", have_into ? 1 : 0);
+    var_set_str(vm, "ENSUREPLATE_VAR", into_name);
+    var_set_num(vm, "ENSUREP_INTO", have_into ? 1 : 0);
+      var_set_num(vm, "SEEDP_INTO", have_into ? 1 : 0);
+    var_set_num(vm, "LOADPLATE_HIT", 0);
+    var_set_num(vm, "LOADPLATE_INTO", have_into ? 1 : 0);
+    var_set_num(vm, "LOADP_INTO", have_into ? 1 : 0);
+    var_set_str(vm, "LOADPLATE_VAR", into_name);
+    var_set_num(vm, "SAVEPLATE_N", hr.n);
+    var_set_num(vm, "SAVEPLATE_OK", 1);
+    var_set_num(vm, "READ_OK", 0);
+    var_set_num(vm, "WRITE_OK", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# ensurep → created into=%s path=%s\n",
+              into_name[0] ? into_name : "-", absfile);
+    (void)created;
+    bump(vm); return 1;
+  }
   /* DUMPP|PLATEINFO [FROM plate] — agent snapshot of PLATE or any plate object.
    * LAST = cubalc.plate_info.v1 JSON:
    *   keys_n · bytes · path (PLATE_PATH if default; var name if FROM named) · keys · has_plate
@@ -39132,7 +39409,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           kw(&L->cur,"INCLUDE") || kw(&L->cur,"SETP") || kw(&L->cur,"INCP") ||
           kw(&L->cur,"DELP") || kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") ||
           kw(&L->cur,"DEFAULTP") || kw(&L->cur,"TOGGLEP") || kw(&L->cur,"NEEDP") ||
-          kw(&L->cur,"HASP") || kw(&L->cur,"KEYSP") || kw(&L->cur,"DUMPP") || kw(&L->cur,"SAVEP") ||
+          kw(&L->cur,"HASP") || kw(&L->cur,"KEYSP") || kw(&L->cur,"DUMPP") || kw(&L->cur,"SAVEP") || kw(&L->cur,"LOADP") || kw(&L->cur,"SEEDP") || kw(&L->cur,"BOOTP") ||
           kw(&L->cur,"FILLP") || kw(&L->cur,"FILLPKEYS") || kw(&L->cur,"SUBSTPLATE") ||
           kw(&L->cur,"EXPANDP") || kw(&L->cur,"FILLPFILE") ||
           kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
