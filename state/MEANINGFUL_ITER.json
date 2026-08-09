@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 654,
-  "version": "1.15.681-usability",
-  "item": "MEDIANFLAT + plate medianflat",
-  "item_id": 690,
-  "title": "MEDIANFLAT/P50FLAT + cubalc plate medianflat · integer median pure-int leaves by path needle → LAST_N",
-  "commit": "c35f0eb47f583f16f9a6f777befb7a8c1d31cf5a",
-  "summary": "Robust nest mid without FLATKV+GREP+MEDIAN glue. proof 1231 + CLI PASS.",
+  "iter": 655,
+  "version": "1.15.682-usability",
+  "item": "NEEDFLATN + plate needflatn",
+  "item_id": 691,
+  "title": "NEEDFLATN/REQUIREFLATN + cubalc plate needflatn · fail-fast pure-int leaf needles · peel first → LAST_N",
+  "commit": "0e12101de86733c5b61ddf12d1cbe0181531a6f5",
+  "summary": "Typed nest contract without GETFLATN+IF fail glue. proof 1232 + CLI PASS.",
   "proofs": [
-    "1231_medianflat PASS",
-    "1231_cli_plate_medianflat PASS",
-    "1230_avgflat reg PASS"
+    "1232_needflatn PASS",
+    "1232_cli_plate_needflatn PASS",
+    "1229_getflatn reg PASS",
+    "1228_needflat reg PASS"
   ],
-  "when": "2026-08-09T17:06:48Z",
+  "when": "2026-08-09T17:17:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c35f0eb47f583f16f9a6f777befb7a8c1d31cf5a",
-  "note": "after thrash restore; after AVGFLAT plane; EVOLVE_PAUSED"
+  "sha": "0e12101de86733c5b61ddf12d1cbe0181531a6f5",
+  "note": "after MEDIANFLAT plane; EVOLVE_PAUSED"
 }
