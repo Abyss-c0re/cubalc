@@ -36609,6 +36609,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"INCLUDES", "INCLUDES alias of LISTINCLUDES"},
       {"LOADED", "LOADED alias of LISTINCLUDES"},
       {"HASINCLUDE", "HASINCLUDE name|path — soft 0|1 if module loaded · stem/path match · dual of LISTINCLUDES"},
+      {"HASINCLUDEALL", "HASINCLUDEALL a b… — soft 0|1 all loaded · INCLUDE_MISS bag of missing"},
+      {"NEEDINCLUDE", "NEEDINCLUDE a b… — fail-fast if any module not loaded · after -I/INCLUDE"},
       {"LET", "LET name [=] expr|string — = optional before value"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},

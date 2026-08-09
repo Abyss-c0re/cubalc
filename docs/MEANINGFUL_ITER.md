@@ -749,6 +749,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 719. ~~**`cubalc run -I` / `CUBALC_PRELOAD` + `-L`**~~ **done** (CLI preload INCLUDE ONCE before body · colon env dual · one-shot include-path dirs · top-level `-I`/`-L` · plate `preload_n`/`include_path_n` · no edit every program).
 720. ~~**`LISTINCLUDES` / `HASINCLUDE`**~~ **done** (bag of resolved INCLUDE paths · soft loaded probe · INCLUDE_N · audit after -I/INCLUDE without guessing).
 721. ~~**run plate `includes` / `includes_n`**~~ **done** (JSON array of resolved INCLUDE paths on every run plate · LISTINCLUDES dual · agents audit -I/INCLUDE without parsing source).
+722. ~~**`NEEDINCLUDE` / `HASINCLUDEALL`**~~ **done** (fail-fast / soft multi module-loaded gates · INCLUDE_MISS bag · agent boot contract after -I/INCLUDE).
 
 ## Tick protocol
 

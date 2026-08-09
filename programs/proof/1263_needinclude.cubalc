@@ -1,0 +1,44 @@
+# NEEDINCLUDE / HASINCLUDEALL — loaded-module gates after INCLUDE / -I
+# Usability: agent boot contracts without multi HASINCLUDE + IF glue.
+
+LISTINCLUDES
+ASSERT LAST_N == 0
+
+# soft all-miss
+HASINCLUDEALL agent_boot hold_seed
+ASSERT LAST_N == 0
+ASSERT OK == 0
+SYS HAS INCLUDE_MISS "agent_boot"
+ASSERT LAST_N == 1
+SYS HAS INCLUDE_MISS "hold_seed"
+ASSERT LAST_N == 1
+
+INCLUDE hold_seed
+HASINCLUDEALL hold_seed agent_boot
+ASSERT LAST_N == 0
+ASSERT INCLUDE_MISS_N == 1
+SYS EQS INCLUDE_MISS "agent_boot"
+ASSERT LAST_N == 1
+
+INCLUDE agent_boot
+HASINCLUDEALL hold_seed agent_boot
+ASSERT LAST_N == 1
+ASSERT OK == 1
+ASSERT INCLUDE_MISS_N == 0
+ASSERT INCLUDE_NEED_N == 2
+ASSERT INCLUDE_HIT_N == 2
+
+NEEDINCLUDE hold_seed
+ASSERT OK == 1
+NEEDINCLUDE hold_seed, agent_boot
+ASSERT OK == 1
+NEEDINCLUDE agent_boot hold_seed
+ASSERT OK == 1
+
+# still present after ONCE skip
+INCLUDE ONCE hold_seed
+NEEDINCLUDE hold_seed
+ASSERT OK == 1
+
+PASS
+PRINT "1263_needinclude: PASS"

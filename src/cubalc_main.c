@@ -1936,10 +1936,11 @@ int main(int argc, char **argv) {
       whyh[0] = 0;
       if (!e[0] && plate_ok)
         snprintf(whyh, sizeof whyh, "ok — no sticky LAST_ERR");
-      else if (strstr(e, "INCLUDE") || strstr(e, "include") ||
+      else if (strstr(e, "NEEDINCLUDE") || strstr(e, "HASINCLUDEALL") ||
+               strstr(e, "INCLUDE") || strstr(e, "include") ||
                strstr(e, "REQUIRE LIB") || strstr(e, "lib missing"))
         snprintf(whyh, sizeof whyh,
-                 "cubalc libs · REQUIRE LIB name · INCLUDE SOFT · cubalc which name");
+                 "INCLUDE / cubalc run -I · NEEDINCLUDE · LISTINCLUDES · cubalc libs");
       else if (strstr(e, "ASSERT") || strstr(e, "EXPECT") ||
                strstr(e, "is false") || strstr(e, "falsey"))
         snprintf(whyh, sizeof whyh,
@@ -2683,6 +2684,8 @@ int main(int argc, char **argv) {
       {"listincludes", "programs/proof/1261_listincludes.cubalc", "LISTINCLUDES/HASINCLUDE loaded module audit"},
       {"cli_listincludes", "programs/proof/1261_cli_listincludes.sh", "LISTINCLUDES after run -I preload"},
       {"cli_run_includes", "programs/proof/1262_cli_run_includes.sh", "run plate includes_n/includes LISTINCLUDES dual"},
+      {"needinclude", "programs/proof/1263_needinclude.cubalc", "NEEDINCLUDE/HASINCLUDEALL loaded module gates"},
+      {"cli_needinclude", "programs/proof/1263_cli_needinclude.sh", "NEEDINCLUDE after run -I preload"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3177,6 +3180,8 @@ int main(int argc, char **argv) {
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"LISTINCLUDES", "flow", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N"},
       {"HASINCLUDE", "flow", "HASINCLUDE name|path — soft 0|1 if module loaded this run"},
+      {"HASINCLUDEALL", "flow", "HASINCLUDEALL a b… soft all-loaded · INCLUDE_MISS bag"},
+      {"NEEDINCLUDE", "flow", "NEEDINCLUDE a b… fail-fast if any module not loaded"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback] · ENV SET name val · ENV UNSET name"},
       {"SYS SETENV", "host", "SYS SETENV|ENV SET name value — process setenv"},
       {"SYS ENVDEFAULT", "host", "SYS ENVDEFAULT|ENSUREENV name value — setenv if missing/empty"},
@@ -11216,6 +11221,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"INCLUDE", "flow", "INCLUDE [ONCE] path|libname → programs/lib/"},
       {"LISTINCLUDES", "flow", "LISTINCLUDES|LOADED bag of included paths · INCLUDE_N"},
       {"HASINCLUDE", "flow", "HASINCLUDE name soft 0|1 if module loaded"},
+      {"HASINCLUDEALL", "flow", "HASINCLUDEALL a b soft all loaded"},
+      {"NEEDINCLUDE", "flow", "NEEDINCLUDE a b fail-fast not loaded"},
       {"DEFAULT", "flow", "DEFAULT name = value if unset"},
       {"DEFINED", "flow", "DEFINED name → LAST_N 0|1"},
       {"TYPEOF", "flow", "TYPEOF name → undef|num|str"},
@@ -11901,6 +11908,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"LISTINCLUDES", "flow", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N"},
       {"HASINCLUDE", "flow", "HASINCLUDE name|path — soft 0|1 if module loaded this run"},
+      {"HASINCLUDEALL", "flow", "HASINCLUDEALL a b… soft all-loaded · INCLUDE_MISS bag"},
+      {"NEEDINCLUDE", "flow", "NEEDINCLUDE a b… fail-fast if any module not loaded"},
       {"DEFAULT", "flow", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"DEFINED", "flow", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"TYPEOF", "flow", "TYPEOF name — LAST undef|num|str · LAST_N 0|1|2"},
