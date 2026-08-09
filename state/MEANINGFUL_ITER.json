@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 590,
-  "version": "1.15.617-usability",
-  "item": "SORTP/SORTBAGP",
-  "item_id": 626,
-  "title": "SORTP|SORTVP · SORTBAGP|SORTTOKV|SORTFREQP · multi-plate sort pure-int keys by value → plate or key:val bag · ASC|DESC",
-  "commit": "c102672cf03c056cd3750bf9c98d447f0c90636a",
-  "summary": "Full FREQ rank plate/bag without TOKV+SORTFREQ. proof 1167 32/32.",
+  "iter": 591,
+  "version": "1.15.618-usability",
+  "item": "cubalc plate sum/avg/median/top/bot",
+  "item_id": 627,
+  "title": "cubalc plate sum|avg|median|top|bot · CLI duals of SUMNP/AVGNP/MEDIANP/TOPNP/BOTNP · agent one-shots without .cubalc",
+  "commit": "ac2febf855b5de41f49cad4e2ad4a9e64cf6797f",
+  "summary": "CLI score/FREQ aggregates and top/bot N without .cubalc. proof 1168.",
   "proofs": [
-    "1167_sortp 32/32",
-    "1166_topnp reg 33/33"
+    "1168_cli_plate_agg ok",
+    "1165_medianp reg 18/18"
   ],
-  "when": "2026-08-09T05:26:07Z",
+  "when": "2026-08-09T05:36:04Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c102672cf03c056cd3750bf9c98d447f0c90636a",
-  "note": "invented after backlog 625; EVOLVE_PAUSED"
+  "sha": "ac2febf855b5de41f49cad4e2ad4a9e64cf6797f",
+  "note": "invented after backlog 626; EVOLVE_PAUSED"
 }
