@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 597,
-  "version": "1.15.624-usability",
-  "item": "cubalc plate nest*",
-  "item_id": 633,
-  "title": "cubalc plate nestget|nestset|nestinc|nestdel|nestkeys|nesthas \u00b7 CLI duals of nested field plane",
-  "commit": "eb5e890595c4271ae2a74332f68c0f7db80a6b33",
-  "summary": "Agent one-shot nested plate get/set/inc without .cubalc. proof 1174 ok.",
+  "iter": 598,
+  "version": "1.15.625-usability",
+  "item": "EACH KEYNEST",
+  "item_id": 634,
+  "title": "EACH KEYNEST|KEY OF NEST \u00b7 walk nested plate keys \u00b7 KEY+VALUE bound \u00b7 no KEYSOBJ+EACH LINE",
+  "commit": "a9c306086c46e1bdd7303fcb80eb6daa59b5224e",
+  "summary": "Nested key walk binds KEY/VALUE without bag glue. proof 1175 24/24.",
   "proofs": [
-    "1174_cli_plate_nest ok"
+    "1175_each_keynest 24/24",
+    "1169_each_key reg ok"
   ],
-  "when": "2026-08-09T06:47:16Z",
+  "when": "2026-08-09T06:56:52Z",
   "agent": "meaningful_iter_10m",
-  "sha": "eb5e890595c4271ae2a74332f68c0f7db80a6b33",
-  "note": "invented after backlog 632 HASPOBJ; EVOLVE_PAUSED"
+  "sha": "a9c306086c46e1bdd7303fcb80eb6daa59b5224e",
+  "note": "invented after backlog 633 nest CLI; EVOLVE_PAUSED"
 }
