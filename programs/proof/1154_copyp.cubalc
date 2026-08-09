@@ -1,0 +1,94 @@
+# COPYP / SWAPP — multi-plate key copy & swap with write-back (no SYS JSONCOPY/JSONSWAP)
+# Usability: dual-buffer / snapshot fields without GETP+SETP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"status\":\"ready\",\"n\":1,\"role\":\"worker\"}"
+LET PEER = "{\"cur\":7,\"prev\":3,\"tag\":\"a\"}"
+
+# copy status → prev on PLATE
+COPYP "status" "prev"
+ASSERT OK == 1
+ASSERT COPYP_N == 1
+ASSERT COPYP_FROM == 0
+SYS EQS COPYP_SRC "status"
+ASSERT LAST_N == 1
+SYS EQS COPYP_DST "prev"
+ASSERT LAST_N == 1
+GETP "prev"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+GETP "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+# soft miss
+COPYP "nope" "x"
+ASSERT COPYP_N == 0
+HASP "x"
+ASSERT LAST_N == 0
+
+# FROM PEER write-back
+COPYP FROM PEER "cur" "snap"
+ASSERT COPYP_FROM == 1
+ASSERT COPYP_N == 1
+SYS JSONN "snap" FROM PEER
+ASSERT LAST_N == 7
+SYS JSONN "cur" FROM PEER
+ASSERT LAST_N == 7
+# PLATE untouched by peer copy
+GETP "prev"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+# trailing FROM
+COPYP "tag" "label" FROM PEER
+ASSERT COPYP_N == 1
+GETP FROM PEER "label"
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# alias DUPKEYP
+DUPKEYP "n" "n0"
+ASSERT COPYP_N == 1
+SYS JSONN "n0" FROM PLATE
+ASSERT LAST_N == 1
+
+# SWAPP dual buffers on PEER
+SWAPP FROM PEER "cur" "prev"
+ASSERT OK == 1
+ASSERT SWAPP_N == 1
+ASSERT SWAPP_FROM == 1
+SYS JSONN "cur" FROM PEER
+ASSERT LAST_N == 3
+SYS JSONN "prev" FROM PEER
+ASSERT LAST_N == 7
+
+# SWAPP on PLATE
+SWAPP "role" "status"
+ASSERT SWAPP_N == 1
+GETP "role"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+GETP "status"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# move when one key missing
+LET s = "{\"only\":5}"
+SWAPP "only" "moved" FROM s
+ASSERT SWAPP_N == 1
+HASP FROM s "only"
+ASSERT LAST_N == 0
+SYS JSONN "moved" FROM s
+ASSERT LAST_N == 5
+
+# both miss soft
+SWAPP "a" "b" FROM s
+ASSERT SWAPP_N == 0
+
+# alias XCHGP
+XCHGP "prev" "status"
+ASSERT SWAPP_N == 1
+
+PRINT "copyp soft ok"

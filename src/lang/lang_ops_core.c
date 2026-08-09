@@ -27403,6 +27403,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PICKP") || kw(&L->cur,"KEEPP") || kw(&L->cur,"OMITP") ||
              kw(&L->cur,"RENAMEP") || kw(&L->cur,"MOVEKEYP") ||
              kw(&L->cur,"KEYDIFFP") || kw(&L->cur,"KEYCOMMP") ||
+             kw(&L->cur,"COPYP") || kw(&L->cur,"SWAPP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35782,6 +35783,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"KEYCOMMP", "KEYCOMMP|KEYINTERP a b — keys in both · multi-plate · no SYS JSONKEYCOMM"},
       {"KEYINTERP", "KEYINTERP alias of KEYCOMMP"},
       {"COMMONKEYSP", "COMMONKEYSP alias of KEYCOMMP"},
+      {"COPYP", "COPYP|DUPKEYP [FROM plate] src dst — copy key write-back · multi-plate · no SYS JSONCOPY"},
+      {"DUPKEYP", "DUPKEYP alias of COPYP"},
+      {"SWAPP", "SWAPP|XCHGP [FROM plate] a b — swap keys write-back · multi-plate · no SYS JSONSWAP"},
+      {"XCHGP", "XCHGP alias of SWAPP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -40359,6 +40364,357 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# %s n=%ld a=%s b=%s\n",
               want_inter ? "keycommp" : "keydiffp",
               hr.n, aname[0] ? aname : "?", bname[0] ? bname : "?");
+    bump(vm); return 1;
+  }
+  /* COPYP|DUPKEYP [FROM plate] src dst — copy key raw value (JSONCOPY dual).
+   * SWAPP|XCHGP [FROM plate] a b — exchange two keys (JSONSWAP dual).
+   * Soft miss: COPYP_N=0 plate unchanged · SWAPP both miss n=0 · one miss = move.
+   * Write-back: mutates PLATE or named FROM plate (SETP/RENAMEP style).
+   * Usability: dual-buffer / snapshot fields without GETP+SETP glue:
+   *   COPYP "status" "prev"
+   *   SWAPP FROM PEER "cur" "prev"
+   */
+  if (kw(&L->cur,"COPYP") || kw(&L->cur,"DUPKEYP") || kw(&L->cur,"MCOPYP") ||
+      kw(&L->cur,"PLATE_COPY") || kw(&L->cur,"COPYKEYP") || kw(&L->cur,"SNAPSHOTP") ||
+      kw(&L->cur,"SWAPP") || kw(&L->cur,"XCHGP") || kw(&L->cur,"MSWAPP") ||
+      kw(&L->cur,"PLATE_SWAP") || kw(&L->cur,"SWAPKEYP") || kw(&L->cur,"EXCHP") ||
+      kw(&L->cur,"FLIPKEYP")) {
+    char plate[CUBALC_HOST_STR_MAX], ka[96], kb[96];
+    char ra[CUBALC_HOST_STR_MAX], rb[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result gr, hr, dr;
+    int have_from = 0, is_swap = 0, has_a = 0, has_b = 0;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "SWAPP") == 0 || strcmp(op0, "XCHGP") == 0 ||
+        strcmp(op0, "MSWAPP") == 0 || strcmp(op0, "PLATE_SWAP") == 0 ||
+        strcmp(op0, "SWAPKEYP") == 0 || strcmp(op0, "EXCHP") == 0 ||
+        strcmp(op0, "FLIPKEYP") == 0)
+      is_swap = 1;
+
+    lex_next(L);
+    plate[0] = 0; ka[0] = 0; kb[0] = 0;
+    ra[0] = 0; rb[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+    memset(&hr, 0, sizeof hr);
+    memset(&dr, 0, sizeof dr);
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* key A (src) */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(ka, sizeof ka, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+        fail(vm, is_swap ? "SWAPP [FROM plate] a b — need key A"
+                         : "COPYP [FROM plate] src dst — need src key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, ka, sizeof ka) != 0)
+        ka[0] = 0;
+    } else {
+      fail(vm, is_swap ? "SWAPP [FROM plate] a b — need key A"
+                       : "COPYP [FROM plate] src dst — need src key");
+      return -1;
+    }
+
+    /* key B (dst) */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(kb, sizeof kb, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+        fail(vm, is_swap ? "SWAPP [FROM plate] a b — need key B"
+                         : "COPYP [FROM plate] src dst — need dst key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, kb, sizeof kb) != 0)
+        kb[0] = 0;
+    } else {
+      fail(vm, is_swap ? "SWAPP [FROM plate] a b — need key B"
+                       : "COPYP [FROM plate] src dst — need dst key");
+      return -1;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!ka[0] || !kb[0]) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", is_swap ? "SWAPP: empty key" : "COPYP: empty key");
+      var_set_str(vm, "ERR", is_swap ? "SWAPP: empty key" : "COPYP: empty key");
+      var_set_num(vm, "COPYP_N", 0);
+      var_set_num(vm, "SWAPP_N", 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "COPYP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "SWAPP_FROM", have_from ? 1 : 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    if (!is_swap) {
+      /* COPYP */
+      memset(&gr, 0, sizeof gr);
+      if (cubalc_host_json_get_raw(plate, ka, &gr) != 0) {
+        /* soft miss — write-back unchanged plate */
+        if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+          var_set_str(vm, from_name, plate);
+        else if (!have_from)
+          var_set_str(vm, "PLATE", plate);
+        var_set_str(vm, "LAST", plate);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "COPYP", plate);
+        var_set_num(vm, "COPYP_N", 0);
+        var_set_str(vm, "COPYP_SRC", ka);
+        var_set_str(vm, "COPYP_DST", kb);
+        var_set_num(vm, "COPYP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "COPYP_VAR",
+                    from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# copyp %s→%s miss from=%d\n", ka, kb, have_from);
+        bump(vm); return 1;
+      }
+      if (strcmp(ka, kb) == 0) {
+        if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+          var_set_str(vm, from_name, plate);
+        else if (!have_from)
+          var_set_str(vm, "PLATE", plate);
+        var_set_str(vm, "LAST", plate);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "COPYP", plate);
+        var_set_num(vm, "COPYP_N", 1);
+        var_set_str(vm, "COPYP_SRC", ka);
+        var_set_str(vm, "COPYP_DST", kb);
+        var_set_num(vm, "COPYP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "COPYP_VAR",
+                    from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(plate, kb, gr.str, 1, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "COPYP_N", 0);
+        var_set_num(vm, "COPYP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "COPYP: fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "COPYP: fail");
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+        var_set_str(vm, from_name, hr.str);
+      else if (!have_from)
+        var_set_str(vm, "PLATE", hr.str);
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_str(vm, "COPYP", hr.str);
+      var_set_str(vm, "DUPKEYP", hr.str);
+      var_set_num(vm, "COPYP_N", 1);
+      var_set_num(vm, "JSONCOPY_N", 1);
+      var_set_str(vm, "COPYP_SRC", ka);
+      var_set_str(vm, "COPYP_DST", kb);
+      var_set_num(vm, "COPYP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "COPYP_VAR",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# copyp %s→%s ok from=%d\n", ka, kb, have_from);
+      bump(vm); return 1;
+    }
+
+    /* SWAPP */
+    if (strcmp(ka, kb) == 0) {
+      memset(&gr, 0, sizeof gr);
+      has_a = (cubalc_host_json_get_raw(plate, ka, &gr) == 0) ? 1 : 0;
+      if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+        var_set_str(vm, from_name, plate);
+      else if (!have_from)
+        var_set_str(vm, "PLATE", plate);
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = has_a;
+      var_set_num(vm, "LAST_N", has_a);
+      var_set_str(vm, "SWAPP", plate);
+      var_set_num(vm, "SWAPP_N", has_a);
+      var_set_str(vm, "SWAPP_A", ka);
+      var_set_str(vm, "SWAPP_B", kb);
+      var_set_num(vm, "SWAPP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "SWAPP_VAR",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(plate, ka, &gr) == 0) {
+      has_a = 1;
+      snprintf(ra, sizeof ra, "%s", gr.str);
+    }
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(plate, kb, &gr) == 0) {
+      has_b = 1;
+      snprintf(rb, sizeof rb, "%s", gr.str);
+    }
+    if (!has_a && !has_b) {
+      if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+        var_set_str(vm, from_name, plate);
+      else if (!have_from)
+        var_set_str(vm, "PLATE", plate);
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "SWAPP", plate);
+      var_set_num(vm, "SWAPP_N", 0);
+      var_set_str(vm, "SWAPP_A", ka);
+      var_set_str(vm, "SWAPP_B", kb);
+      var_set_num(vm, "SWAPP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "SWAPP_VAR",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# swapp both miss from=%d\n", have_from);
+      bump(vm); return 1;
+    }
+    if (has_a && has_b) {
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(plate, ka, rb, 1, &hr) != 0) goto cubalc_swapp_fail;
+      snprintf(plate, sizeof plate, "%s", hr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(plate, kb, ra, 1, &hr) != 0) goto cubalc_swapp_fail;
+      snprintf(plate, sizeof plate, "%s", hr.str);
+    } else if (has_a && !has_b) {
+      memset(&dr, 0, sizeof dr);
+      if (cubalc_host_json_del(plate, ka, &dr) != 0) goto cubalc_swapp_fail;
+      snprintf(plate, sizeof plate, "%s", dr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(plate, kb, ra, 1, &hr) != 0) goto cubalc_swapp_fail;
+      snprintf(plate, sizeof plate, "%s", hr.str);
+    } else {
+      memset(&dr, 0, sizeof dr);
+      if (cubalc_host_json_del(plate, kb, &dr) != 0) goto cubalc_swapp_fail;
+      snprintf(plate, sizeof plate, "%s", dr.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_set(plate, ka, rb, 1, &hr) != 0) goto cubalc_swapp_fail;
+      snprintf(plate, sizeof plate, "%s", hr.str);
+    }
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, plate);
+    else if (!have_from)
+      var_set_str(vm, "PLATE", plate);
+    var_set_str(vm, "LAST", plate);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+    vm->last_n = 1;
+    var_set_num(vm, "LAST_N", 1);
+    var_set_str(vm, "SWAPP", plate);
+    var_set_str(vm, "XCHGP", plate);
+    var_set_num(vm, "SWAPP_N", 1);
+    var_set_num(vm, "JSONSWAP_N", 1);
+    var_set_str(vm, "SWAPP_A", ka);
+    var_set_str(vm, "SWAPP_B", kb);
+    var_set_num(vm, "SWAPP_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "SWAPP_VAR",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# swapp %s↔%s ok from=%d\n", ka, kb, have_from);
+    bump(vm); return 1;
+  cubalc_swapp_fail:
+    var_set_str(vm, "LAST", "");
+    vm->last_str[0] = 0;
+    vm->last_n = 0;
+    var_set_num(vm, "LAST_N", 0);
+    var_set_num(vm, "SWAPP_N", 0);
+    var_set_num(vm, "SWAPP_FROM", have_from ? 1 : 0);
+    var_set_num(vm, "OK", 0);
+    if (hr.err[0]) {
+      var_set_str(vm, "LAST_ERR", hr.err);
+      var_set_str(vm, "ERR", hr.err);
+    } else if (dr.err[0]) {
+      var_set_str(vm, "LAST_ERR", dr.err);
+      var_set_str(vm, "ERR", dr.err);
+    } else {
+      var_set_str(vm, "LAST_ERR", "SWAPP: fail");
+      var_set_str(vm, "ERR", "SWAPP: fail");
+    }
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.
