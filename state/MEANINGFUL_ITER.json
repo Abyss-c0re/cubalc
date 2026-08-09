@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 610,
-  "version": "1.15.637-usability",
-  "item": "TOPNOBJ/BOTNOBJ nest top-N",
-  "item_id": 646,
-  "title": "TOPNOBJ|BOTNOBJ|NESTTOPN|NESTBOTN · nest top/bottom N pure-int keys write-back · multi-plate · TOPNP duals",
-  "commit": "782687e8577f1bfd8e12ca2da1ff735ecd06d79a",
-  "summary": "Nest top/bottom N FREQ keys without GETOBJ+TOPNP+SETOBJ glue. proof 1187 45/45.",
+  "iter": 611,
+  "version": "1.15.638-usability",
+  "item": "cubalc plate nestsum/nesttop CLI",
+  "item_id": 647,
+  "title": "cubalc plate nestsum|nestavg|nestmedian|nesttop|nestbot · CLI duals of SUMNOBJ/TOPNOBJ · agent one-shots",
+  "commit": "5adfb94ed2468ea1315f95b15519b6eb247e92f1",
+  "summary": "Nested FREQ aggregates from CLI without .cubalc. proof 1188 ok.",
   "proofs": [
-    "1187_topnobj 45/45",
-    "1186_keepkeyobj reg ok",
-    "1166_topnp reg ok",
-    "cubalc forms TOPNOBJ ok"
+    "1188_cli_plate_nestagg ok",
+    "1187_topnobj reg ok",
+    "1168_cli_plate_agg reg ok"
   ],
-  "when": "2026-08-09T09:40:00Z",
+  "when": "2026-08-09T09:55:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "782687e8577f1bfd8e12ca2da1ff735ecd06d79a",
-  "note": "restored thrash then shipped after backlog 645 KEEPKEYOBJ; EVOLVE_PAUSED"
+  "sha": "5adfb94ed2468ea1315f95b15519b6eb247e92f1",
+  "note": "after backlog 646 TOPNOBJ; EVOLVE_PAUSED"
 }
