@@ -3516,6 +3516,6 @@
     "iter270: restored REALWORLD plate after accidental delete in 94cab4c1",
     "iter270: PATHSBYVAL board 9/9 green; COUNTBYVAL cross-check ok"
   ],
-  "commit": "pending",
+  "commit": "483f4e72",
   "ts": "2026-08-09T21:02:42Z"
 }
