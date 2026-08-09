@@ -1,0 +1,109 @@
+# GETOBJ / SETOBJ — peel and nest nested plate objects
+# Usability: GETP misses on obj fields; TYPEP says obj — now peel into a plate var,
+# mutate with SETP FROM, write back with SETOBJ. Multi-plate agents without glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"x\":1,\"role\":\"worker\"},\"n\":3}"
+LET PEER = "{\"cfg\":{\"port\":8080,\"tls\":1},\"name\":\"peerB\"}"
+
+# peel nested from conventional PLATE
+GETOBJ "meta"
+ASSERT OK == 1
+ASSERT GETOBJ_HIT == 1
+ASSERT LAST_N == 1
+SYS HAS LAST "\"x\""
+ASSERT LAST_N == 1
+SYS HAS LAST "worker"
+ASSERT LAST_N == 1
+TYPEP "meta"
+SYS EQS LAST "obj"
+ASSERT LAST_N == 1
+
+# GETP still cannot peel objects (documents the gap)
+GETP "meta"
+ASSERT OK == 0
+ASSERT GETP_HIT == 0
+
+# INTO bind + mutate + write-back
+GETOBJ "meta" INTO META
+ASSERT GETOBJ_INTO == 1
+SETP FROM META "x" 9
+SETP FROM META "role" "leader"
+SETOBJ "meta" META
+ASSERT OK == 1
+GETOBJ "meta"
+SYS HAS LAST "\"x\":9"
+ASSERT LAST_N == 1
+SYS HAS LAST "leader"
+ASSERT LAST_N == 1
+# outer plate still has host/n
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# FROM PEER peel + trailing FROM
+GETOBJ FROM PEER "cfg"
+ASSERT GETOBJ_FROM == 1
+SYS EQS GETOBJ_SRC "PEER"
+ASSERT LAST_N == 1
+SYS HAS LAST "8080"
+ASSERT LAST_N == 1
+GETOBJ "cfg" FROM PEER INTO CFG
+SETP FROM CFG "port" 9090
+SETOBJ FROM PEER "cfg" CFG
+ASSERT SETOBJ_FROM == 1
+GETOBJ FROM PEER "cfg"
+SYS HAS LAST "9090"
+ASSERT LAST_N == 1
+# PEER name untouched
+GETP FROM PEER "name"
+SYS EQS LAST "peerB"
+ASSERT LAST_N == 1
+
+# soft miss + OR + non-object
+GETOBJ "missing" OR "{}"
+ASSERT OK == 1
+ASSERT GETOBJ_OR == 1
+ASSERT GETOBJ_HIT == 0
+SYS EQS LAST "{}"
+ASSERT LAST_N == 1
+
+GETOBJ "host"
+ASSERT OK == 0
+SYS EQS LAST_ERR "GETOBJ: key miss or not object"
+ASSERT LAST_N == 1
+
+# NESTP alias create nested under new key
+LET PLATE = "{\"a\":1}"
+LET SUB = "{\"k\":\"v\"}"
+NESTP "child" SUB
+ASSERT OK == 1
+GETOBJ "child"
+SYS EQS LAST "{\"k\":\"v\"}"
+ASSERT LAST_N == 1
+GETP "a"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# SETOBJ reject non-object value (soft)
+SETOBJ "bad" "not-json-obj"
+ASSERT OK == 0
+SYS HAS LAST_ERR "not object"
+ASSERT LAST_N == 1
+
+# empty seed object via OR INTO
+GETOBJ "nope" OR "{}" INTO EMPTY
+LENP FROM EMPTY
+ASSERT LAST_N == 0
+
+# PEEKOBJ alias
+LET PLATE = "{\"z\":{\"q\":1}}"
+PEEKOBJ "z"
+SYS HAS LAST "\"q\":1"
+ASSERT LAST_N == 1
+
+PRINT "getobj soft ok"

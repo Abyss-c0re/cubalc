@@ -27406,6 +27406,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"COPYP") || kw(&L->cur,"SWAPP") ||
              kw(&L->cur,"LENP") || kw(&L->cur,"EMPTYP") || kw(&L->cur,"VALSP") ||
              kw(&L->cur,"TYPEP") || kw(&L->cur,"KINDP") ||
+             kw(&L->cur,"GETOBJ") || kw(&L->cur,"SETOBJ") || kw(&L->cur,"PEEKOBJ") ||
+             kw(&L->cur,"NESTP") || kw(&L->cur,"PUTOBJ") ||
              kw(&L->cur,"TOKVP") || kw(&L->cur,"FROMKVP") ||
              kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
              kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
@@ -35807,6 +35809,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"VALUEP", "VALUEP alias of VALSP"},
       {"TYPEP", "TYPEP|KINDP [FROM plate] key — field kind missing|num|str|bool|null|obj|arr · multi-plate · no SYS JSONTYPE"},
       {"KINDP", "KINDP alias of TYPEP"},
+      {"GETOBJ", "GETOBJ|PEEKOBJ [FROM plate] key [OR fb] [INTO name] — peel nested object → plate · multi-plate · no GETP miss on obj"},
+      {"PEEKOBJ", "PEEKOBJ alias of GETOBJ"},
+      {"OBJGET", "OBJGET alias of GETOBJ"},
+      {"GETNEST", "GETNEST alias of GETOBJ"},
+      {"SETOBJ", "SETOBJ|PUTOBJ|NESTP [FROM plate] key value — nest plate object under key · multi-plate · SETP RAW sugar"},
+      {"PUTOBJ", "PUTOBJ alias of SETOBJ"},
+      {"NESTP", "NESTP alias of SETOBJ · nest plate under key"},
+      {"PUTNEST", "PUTNEST alias of SETOBJ"},
       {"TOKVP", "TOKVP|TOBAGP [FROM plate] — plate → key:val bag · multi-plate · no SYS JSONTOKV"},
       {"TOBAGP", "TOBAGP alias of TOKVP"},
       {"FROMKVP", "FROMKVP|BAGTOP [bag] [INTO name] — key=val bag → plate · multi-plate · no SYS JSONFROMKV"},
@@ -41140,6 +41150,346 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               key, kind_s, kind_n, have_from);
     bump(vm); return 1;
   }
+
+  /* GETOBJ|PEEKOBJ|OBJGET|GETNEST [FROM plate] key [OR|DEFAULT fb] [INTO name]
+   * Peel nested JSON object field as plate text → LAST (and optional INTO var).
+   * GETP only peels scalars (string/num/bool); nested objects miss — this is the fix:
+   *   TYPEP "meta"          → obj
+   *   GETOBJ "meta" INTO M  → M={"x":1}
+   *   SETP FROM M "x" 9
+   *   SETOBJ "meta" M
+   * Soft miss / non-object → OR fallback or sticky LAST_ERR. Multi-plate FROM.
+   * SETOBJ|PUTOBJ|NESTP|PUTNEST [FROM plate] key value
+   * Nest a plate object under key (write-back) — SETP key RAW value sugar for agents.
+   */
+  if (kw(&L->cur,"GETOBJ") || kw(&L->cur,"PEEKOBJ") || kw(&L->cur,"OBJGET") ||
+      kw(&L->cur,"GETNEST") || kw(&L->cur,"NESTGET") || kw(&L->cur,"SUBOBJ") ||
+      kw(&L->cur,"OBJPEEL") || kw(&L->cur,"PLATEOBJ") || kw(&L->cur,"MGETOBJ") ||
+      kw(&L->cur,"SETOBJ") || kw(&L->cur,"PUTOBJ") || kw(&L->cur,"NESTP") ||
+      kw(&L->cur,"PUTNEST") || kw(&L->cur,"SETOBJECT") || kw(&L->cur,"NESTPLATE") ||
+      kw(&L->cur,"MSETOBJ") || kw(&L->cur,"PLATE_SETOBJ") || kw(&L->cur,"PLATE_GETOBJ")) {
+    char plate[CUBALC_HOST_STR_MAX], key[96], val[CUBALC_HOST_STR_MAX];
+    char fb[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    char into_name[96];
+    cubalc_host_result gr, hr;
+    int is_set = 0, have_from = 0, have_fb = 0, have_into = 0;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "SETOBJ") == 0 || strcmp(op0, "PUTOBJ") == 0 ||
+        strcmp(op0, "NESTP") == 0 || strcmp(op0, "PUTNEST") == 0 ||
+        strcmp(op0, "SETOBJECT") == 0 || strcmp(op0, "NESTPLATE") == 0 ||
+        strcmp(op0, "MSETOBJ") == 0 || strcmp(op0, "PLATE_SETOBJ") == 0)
+      is_set = 1;
+
+    lex_next(L);
+    plate[0] = 0; key[0] = 0; val[0] = 0; fb[0] = 0;
+    from_name[0] = 0; from_src[0] = 0; into_name[0] = 0;
+
+    /* optional leading FROM plate */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(key, sizeof key, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"INTO") ||
+          kw(&L->cur,"AS")) {
+        fail(vm, is_set ? "SETOBJ [FROM plate] key value — need key"
+                        : "GETOBJ [FROM plate] key [OR fb] [INTO name] — need key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, key, sizeof key) != 0)
+        key[0] = 0;
+    } else {
+      fail(vm, is_set ? "SETOBJ [FROM plate] key value — need key"
+                      : "GETOBJ [FROM plate] key [OR fb] [INTO name] — need key");
+      return -1;
+    }
+
+    if (is_set) {
+      /* value: plate object string / var / LAST */
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+           kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM"))) {
+        /* trailing FROM handled below — missing value */
+        fail(vm, "SETOBJ [FROM plate] key value — need value");
+        return -1;
+      }
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(val, sizeof val, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+          fail(vm, "SETOBJ [FROM plate] key value — need value");
+          return -1;
+        }
+      } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        /* allow nesting a number as raw (rare) */
+        long n = parse_expr(vm, L);
+        snprintf(val, sizeof val, "%ld", n);
+      } else {
+        fail(vm, "SETOBJ [FROM plate] key value — need value");
+        return -1;
+      }
+    } else {
+      /* GETOBJ: optional OR fallback then optional INTO */
+      if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+          kw(&L->cur,"FALLBACK") || kw(&L->cur,"SOFT")) {
+        lex_next(L);
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(fb, sizeof fb, "%ld", n);
+          have_fb = 1;
+        } else if (L->cur.kind == TK_IDENT &&
+                   (kw(&L->cur,"FROM") || kw(&L->cur,"INTO") || kw(&L->cur,"AS"))) {
+          fail(vm, "GETOBJ key OR fallback — need fallback");
+          return -1;
+        } else if (resolve_str_arg(vm, L, fb, sizeof fb) == 0) {
+          have_fb = 1;
+        } else {
+          fail(vm, "GETOBJ key OR fallback — need fallback");
+          return -1;
+        }
+      }
+      if (kw(&L->cur,"INTO") || kw(&L->cur,"AS") || kw(&L->cur,"->") ||
+          kw(&L->cur,"BIND") || kw(&L->cur,"TO")) {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT) {
+          fail(vm, "GETOBJ … INTO name — need var name");
+          return -1;
+        }
+        snprintf(into_name, sizeof into_name, "%s", L->cur.text);
+        have_into = 1;
+        lex_next(L);
+      }
+    }
+
+    /* trailing FROM if not already */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* trailing INTO after FROM for GETOBJ "k" FROM plate INTO name */
+    if (!is_set && !have_into && (kw(&L->cur,"INTO") || kw(&L->cur,"AS") ||
+                                  kw(&L->cur,"->") || kw(&L->cur,"BIND") ||
+                                  kw(&L->cur,"TO"))) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT) {
+        fail(vm, "GETOBJ … INTO name — need var name");
+        return -1;
+      }
+      snprintf(into_name, sizeof into_name, "%s", L->cur.text);
+      have_into = 1;
+      lex_next(L);
+    }
+
+    /* resolve working plate */
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    if (!key[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", is_set ? "SETOBJ: empty key" : "GETOBJ: empty key");
+      var_set_str(vm, "ERR", is_set ? "SETOBJ: empty key" : "GETOBJ: empty key");
+      var_set_num(vm, is_set ? "SETOBJ_FROM" : "GETOBJ_FROM", have_from ? 1 : 0);
+      bump(vm); return 1;
+    }
+
+    if (!is_set) {
+      /* peel nested object */
+      int hit = 0;
+      const char *v;
+      memset(&gr, 0, sizeof gr);
+      if (cubalc_host_json_get_raw(plate, key, &gr) == 0) {
+        v = gr.str;
+        while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+        if (*v == '{') {
+          /* normalize to start at { */
+          if (v != gr.str) {
+            size_t n = strlen(v);
+            memmove(gr.str, v, n + 1);
+            gr.n = (long)n;
+          }
+          hit = 1;
+        }
+      }
+      if (hit) {
+        var_set_str(vm, "LAST", gr.str);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", gr.str);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "GETOBJ", gr.str);
+        var_set_str(vm, "PEEKOBJ", gr.str);
+        var_set_num(vm, "GETOBJ_HIT", 1);
+        var_set_num(vm, "JSON_HIT", 1);
+        var_set_num(vm, "OK", 1);
+        if (have_into && into_name[0])
+          var_set_str(vm, into_name, gr.str);
+      } else if (have_fb) {
+        var_set_str(vm, "LAST", fb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "GETOBJ", fb);
+        var_set_num(vm, "GETOBJ_HIT", 0);
+        var_set_num(vm, "GETOBJ_OR", 1);
+        var_set_num(vm, "OK", 1);
+        if (have_into && into_name[0])
+          var_set_str(vm, into_name, fb);
+      } else {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "GETOBJ_HIT", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "GETOBJ: key miss or not object");
+        var_set_str(vm, "ERR", "GETOBJ: key miss or not object");
+      }
+      var_set_str(vm, "GETOBJ_KEY", key);
+      var_set_num(vm, "GETOBJ_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "GETOBJ_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "GETOBJ_INTO", have_into ? 1 : 0);
+      if (have_into)
+        var_set_str(vm, "GETOBJ_INTO_NAME", into_name);
+      if (vm->trace)
+        fprintf(vm->trace, "# getobj key=%s hit=%d from=%d into=%d\n",
+                key, hit, have_from, have_into);
+      bump(vm); return 1;
+    }
+
+    /* SETOBJ: require value is object (or empty → {}) */
+    {
+      const char *bp = val;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (!*bp)
+        snprintf(val, sizeof val, "%s", "{}");
+      else if (*bp != '{') {
+        /* wrap non-object as refused soft fail — agents should nest plates */
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SETOBJ_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "SETOBJ: value not object");
+        var_set_str(vm, "ERR", "SETOBJ: value not object");
+        var_set_str(vm, "SETOBJ_KEY", key);
+        var_set_num(vm, "SETOBJ_FROM", have_from ? 1 : 0);
+        bump(vm); return 1;
+      } else if (bp != val) {
+        size_t n = strlen(bp);
+        memmove(val, bp, n + 1);
+      }
+    }
+
+    memset(&hr, 0, sizeof hr);
+    /* val_kind=1 → insert raw JSON (object) without string-escaping */
+    if (cubalc_host_json_set(plate, key, val, 1, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "SETOBJ_N", 0);
+      var_set_num(vm, "SETOBJ_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "SETOBJ: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "SETOBJ: fail");
+      bump(vm); return 1;
+    }
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else if (!have_from)
+      var_set_str(vm, "PLATE", hr.str);
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "SETOBJ", hr.str);
+    var_set_str(vm, "NESTP", hr.str);
+    var_set_num(vm, "SETOBJ_N", hr.n);
+    var_set_str(vm, "SETOBJ_KEY", key);
+    var_set_num(vm, "SETOBJ_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "SETOBJ_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# setobj key=%s updated=%ld from=%d\n",
+              key, hr.n, have_from);
+    bump(vm); return 1;
+  }
+
   /* TOKVP|TOBAGP [FROM plate] — plate → key:val bag (JSONTOKV dual).
    * FROMKVP|BAGTOP [bag|LAST] — key=val bag → plate object (JSONFROMKV dual).
    * Optional INTO name on FROMKVP write-back. Soft empty bag/plate.

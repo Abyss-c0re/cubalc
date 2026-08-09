@@ -263,6 +263,15 @@ Top-level disk plane (no `SYS`):
 
 Mutate/probe (multi-plate `FROM`): `SETP`/`GETP`/`INCP`/`MERGEP`/`NEEDP`/`HASP`/`KEYSP`/`DUMPP`/`FILLP`/`FILLPFILE`/`PLUCKP`.
 
+Nested object fields (GETP only peels scalars):
+
+```cubalc
+GETOBJ "meta" INTO META     # peel nested plate
+SETP FROM META "x" 9
+SETOBJ "meta" META           # write nested back
+GETOBJ FROM PEER "cfg" OR "{}" INTO CFG
+```
+
 Compare plates (no `SYS JSONEQ` glue):
 
 ```cubalc

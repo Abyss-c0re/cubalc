@@ -656,6 +656,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 626. ~~**`SORTP` / `SORTVP` · `SORTBAGP` / `SORTTOKV` / `SORTFREQP`**~~ **done** (full sort pure-int keys by value → plate or key:val bag · ASC|DESC · multi-plate · no TOKV+SORTFREQ).
 627. ~~**`cubalc plate sum` / `avg` / `median` · `top` / `bot`**~~ **done** (CLI duals of SUMNP/AVGNP/MEDIANP/TOPNP/BOTNP · agent one-shots without `.cubalc`).
 628. ~~**`EACH KEY` / `KEYS` / `PLATEKEY` OF|FROM plate**~~ **done** (walk JSON plate keys · bind KEY + VALUE · no KEYSP+EACH LINE glue).
+629. ~~**`GETOBJ` / `SETOBJ` / `NESTP`**~~ **done** (peel/nest nested plate objects · multi-plate FROM/INTO · no GETP miss on obj).
 
 ## Tick protocol
 
