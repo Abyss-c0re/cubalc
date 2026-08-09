@@ -2798,6 +2798,6 @@
     "minsum flag gate deny works",
     "EXIT 2 shell 0 (W7)"
   ],
-  "commit": "pending",
+  "commit": "33d2aa54865b20efae7eeff3b6e108d8d9cc5752",
   "ts": "2026-08-09T08:28:52Z"
 }
