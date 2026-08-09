@@ -4,8 +4,8 @@
   "version": "1.15.647-usability",
   "item": "cubalc plate pluck multi-key path peel",
   "item_id": 656,
-  "title": "cubalc plate pluck|getall · PLUCKP CLI dual · dotted paths · agent one-shot bag without .cubalc",
-  "commit": "PENDING",
+  "title": "cubalc plate pluck|getall \u00b7 PLUCKP CLI dual \u00b7 dotted paths \u00b7 agent one-shot bag without .cubalc",
+  "commit": "dc24fc7c3a30d54c0354d703ebd84ebd67541b4e",
   "summary": "CLI multi-key peel bag with nest paths. proof 1197 PASS.",
   "proofs": [
     "1197_cli_plate_pluck PASS",
@@ -13,6 +13,6 @@
   ],
   "when": "2026-08-09T12:10:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "PENDING",
+  "sha": "dc24fc7c3a30d54c0354d703ebd84ebd67541b4e",
   "note": "after fillp_path; path CLI extract; EVOLVE_PAUSED"
 }
