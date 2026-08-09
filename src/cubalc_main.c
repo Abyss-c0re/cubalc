@@ -4657,6 +4657,9 @@ int main(int argc, char **argv) {
      *   cubalc plate fillkeys path.json tmpl|@file
      *   cubalc plate ensure path.json [seed|@file]   # create-or-keep · ENSUREPLATE dual
      *   cubalc plate merge  path.json overlay|@file  # multi-key overlay · JSONFILEMERGE dual
+     *   cubalc plate eq     a.json b.json            # order-indep equal · JSONEQ dual
+     *   cubalc plate ne     a.json b.json            # unequal probe
+     *   cubalc plate diff   a.json b.json            # changed key bag · JSONCHANGED dual
      * Bare: cubalc plate path.json  → show
      * One JSON plate per call (cubalc.plate.v1) for agents. */
     const char *op = "show";
@@ -4676,7 +4679,7 @@ int main(int argc, char **argv) {
     plate[0] = 0;
     if (argc <= 2) {
       fprintf(stderr,
-              "usage: cubalc plate show|get|set|inc|del|keys|fill|ensure|merge <path.json> …\n"
+              "usage: cubalc plate show|get|set|inc|del|keys|fill|ensure|merge|eq|ne|diff <path> …\n"
               "       cubalc plate <path.json>                 # show\n"
               "       cubalc plate get <path> <key> [OR def]\n"
               "       cubalc plate set <path> <key> <value>\n"
@@ -4686,11 +4689,12 @@ int main(int argc, char **argv) {
               "       cubalc plate fill [-s|--strict] <path> <tmpl|@file> [out]\n"
               "       cubalc plate fillkeys <path> <tmpl|@file>\n"
               "       cubalc plate ensure <path> [seed|@file]  # create-or-keep\n"
-              "       cubalc plate merge  <path> <overlay|@file>\n");
+              "       cubalc plate merge  <path> <overlay|@file>\n"
+              "       cubalc plate eq|ne|diff <a.json> <b.json>\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\",\"fill\","
-             "\"fillkeys\",\"ensure\",\"merge\"]}\n",
+             "\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\"]}\n",
              CUBALC_LANG_VERSION);
       return 2;
     }
@@ -4711,7 +4715,13 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "ensure") == 0 || strcmp(argv[2], "seed") == 0 ||
         strcmp(argv[2], "touch") == 0 || strcmp(argv[2], "create") == 0 ||
         strcmp(argv[2], "merge") == 0 || strcmp(argv[2], "patch") == 0 ||
-        strcmp(argv[2], "overlay") == 0 || strcmp(argv[2], "apply") == 0) {
+        strcmp(argv[2], "overlay") == 0 || strcmp(argv[2], "apply") == 0 ||
+        strcmp(argv[2], "eq") == 0 || strcmp(argv[2], "same") == 0 ||
+        strcmp(argv[2], "equal") == 0 || strcmp(argv[2], "cmp") == 0 ||
+        strcmp(argv[2], "ne") == 0 || strcmp(argv[2], "neq") == 0 ||
+        strcmp(argv[2], "differ") == 0 || strcmp(argv[2], "unequal") == 0 ||
+        strcmp(argv[2], "diff") == 0 || strcmp(argv[2], "changed") == 0 ||
+        strcmp(argv[2], "delta") == 0) {
       op = argv[2];
       if (strcmp(op, "dump") == 0 || strcmp(op, "cat") == 0 || strcmp(op, "read") == 0)
         op = "show";
@@ -4736,6 +4746,14 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "patch") == 0 || strcmp(op, "overlay") == 0 ||
                strcmp(op, "apply") == 0)
         op = "merge";
+      else if (strcmp(op, "same") == 0 || strcmp(op, "equal") == 0 ||
+               strcmp(op, "cmp") == 0)
+        op = "eq";
+      else if (strcmp(op, "neq") == 0 || strcmp(op, "differ") == 0 ||
+               strcmp(op, "unequal") == 0)
+        op = "ne";
+      else if (strcmp(op, "changed") == 0 || strcmp(op, "delta") == 0)
+        op = "diff";
       ai = 3;
       /* fill[-keys]: optional -s|--strict before path */
       if ((strcmp(op, "fill") == 0 || strcmp(op, "fillkeys") == 0) &&
@@ -5167,6 +5185,89 @@ int main(int argc, char **argv) {
              path, mer.n, file_hit ? "true" : "false", hr.n,
              CUBALC_LANG_VERSION, plate);
       return 0;
+    }
+
+    /* eq|ne|diff a.json b.json — compare two agent plates without .cubalc.
+     * Usability: mesh/peer sync verify (JSONEQ / JSONCHANGED duals for shell).
+     * Soft-missing files load as {}. eq exit 0 if equal else 1; ne inverted;
+     * diff exit 0 if identical else 1 (keys listed either way). */
+    if (strcmp(op, "eq") == 0 || strcmp(op, "ne") == 0 || strcmp(op, "diff") == 0) {
+      const char *path2 = NULL;
+      char plate2[CUBALC_HOST_STR_MAX];
+      int file_hit2 = 0, equal = 0;
+      cubalc_host_result er, ch;
+      char flat[CUBALC_HOST_STR_MAX];
+      size_t i, o;
+
+      plate2[0] = 0;
+      if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"need second path\","
+               "\"version\":\"%s\"}\n", op, path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      path2 = argv[ai++];
+
+      /* soft-load second plate (mirror path load above) */
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_read(path2, &hr) == 0 && hr.str[0]) {
+        body = hr.str;
+        while (*body == ' ' || *body == '\t' || *body == '\n' || *body == '\r')
+          body++;
+        if (*body == '{') {
+          memset(&keys, 0, sizeof keys);
+          if (cubalc_host_json_keys(body, &keys) == 0) {
+            snprintf(plate2, sizeof plate2, "%s", body);
+            file_hit2 = 1;
+          }
+        }
+      }
+      if (!file_hit2)
+        snprintf(plate2, sizeof plate2, "%s", "{}");
+
+      memset(&er, 0, sizeof er);
+      cubalc_host_json_eq(plate, plate2, &er);
+      equal = (er.n == 1) ? 1 : 0;
+
+      if (strcmp(op, "eq") == 0 || strcmp(op, "ne") == 0) {
+        int want_ne = (strcmp(op, "ne") == 0);
+        int pass = want_ne ? !equal : equal;
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"path2\":\"%s\","
+               "\"equal\":%s,\"file\":%s,\"file2\":%s,\"version\":\"%s\"}\n",
+               op, path, path2,
+               equal ? "true" : "false",
+               file_hit ? "true" : "false",
+               file_hit2 ? "true" : "false",
+               CUBALC_LANG_VERSION);
+        return pass ? 0 : 1;
+      }
+
+      /* diff — changed keys bag (want_same=0) */
+      memset(&ch, 0, sizeof ch);
+      cubalc_host_json_changed_keys(plate, plate2, 0, &ch);
+      o = 0; flat[0] = 0;
+      for (i = 0; ch.str[i] && o + 2 < sizeof flat; i++) {
+        char c = ch.str[i];
+        if (c == '\n' || c == '\r') {
+          if (o > 0 && flat[o - 1] != ',') flat[o++] = ',';
+        } else if (c == '"' || c == '\\') {
+          flat[o++] = '_';
+        } else {
+          flat[o++] = c;
+        }
+      }
+      flat[o] = 0;
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"diff\",\"path\":\"%s\",\"path2\":\"%s\","
+             "\"equal\":%s,\"n\":%ld,\"keys\":\"%s\","
+             "\"file\":%s,\"file2\":%s,\"version\":\"%s\"}\n",
+             path, path2,
+             equal ? "true" : "false", ch.n, flat,
+             file_hit ? "true" : "false",
+             file_hit2 ? "true" : "false",
+             CUBALC_LANG_VERSION);
+      return equal ? 0 : 1;
     }
 
         /* remaining ops need key */
@@ -7600,7 +7701,7 @@ int main(int argc, char **argv) {
       "    init|new|scaffold [f]  starter · --plate for plate_session durable state\n"
       "    examples|starters [p]  curated runnable programs (JSON)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
-      "    plate|jsonplate …      agent plate get/set/inc/keys/fill/ensure/merge (JSON)\n"
+      "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/diff (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib        list programs/lib INCLUDE snippets\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
