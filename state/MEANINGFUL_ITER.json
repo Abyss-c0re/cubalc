@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 605,
-  "version": "1.15.632-usability",
-  "item": "TOKVOBJ/FROMKVOBJ/NESTTOKV/BAGTONEST",
-  "item_id": 641,
-  "title": "TOKVOBJ|FROMKVOBJ|NESTTOKV|BAGTONEST · nest ↔ key:val bag · multi-plate · TOKVP/FROMKVP duals",
-  "commit": "6e29ce977f8522ff69b975993d8a47ab1d735980",
-  "summary": "Nest bag bridge without GETOBJ+TOKVP/FROMKVP+SETOBJ glue. proof 1182 45/45.",
+  "iter": 606,
+  "version": "1.15.633-usability",
+  "item": "SUMNOBJ/TOPKEYOBJ nest aggregates",
+  "item_id": 642,
+  "title": "SUMNOBJ|MAXNOBJ|MINNOBJ|AVGNOBJ|MEDIANOBJ|TOPKEYOBJ|BOTKEYOBJ · nest numeric aggregates · multi-plate · SUMNP duals",
+  "commit": "a74a5a12de5676c9105359ba3ac83ab5c0271b96",
+  "summary": "Nest FREQ/score aggregates without GETOBJ+SUMNP/TOPKEYP glue. proof 1183 46/46.",
   "proofs": [
-    "1182_tokvobj 45/45",
-    "1181_copypobj reg ok",
-    "1157_tokvp reg ok",
-    "cubalc forms TOKVOBJ/FROMKVOBJ ok"
+    "1183_sumnobj 46/46",
+    "1182_tokvobj reg ok",
+    "1159_sumnp reg ok",
+    "cubalc forms SUMNOBJ/TOPKEYOBJ ok"
   ],
-  "when": "2026-08-09T08:25:00Z",
+  "when": "2026-08-09T08:40:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "6e29ce977f8522ff69b975993d8a47ab1d735980",
-  "note": "after backlog 640 COPYPOBJ; EVOLVE_PAUSED"
+  "sha": "a74a5a12de5676c9105359ba3ac83ab5c0271b96",
+  "note": "after backlog 641 TOKVOBJ; EVOLVE_PAUSED"
 }
