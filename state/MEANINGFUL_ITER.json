@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 594,
-  "version": "1.15.621-usability",
-  "item": "MERGEOBJ/DEFAULTOBJ",
-  "item_id": 630,
-  "title": "MERGEOBJ|PATCHNEST + DEFAULTOBJ|ENSUREOBJ \u00b7 one-shot nest merge/fill \u00b7 multi-plate \u00b7 no GETOBJ+MERGEP+SETOBJ",
-  "commit": "80f191775ae81d7fc4d8adfba49ee940e8e9297c",
-  "summary": "Nested plate overlay/defaults without peel-merge-write glue. proof 1171 29/29.",
+  "iter": 595,
+  "version": "1.15.622-usability",
+  "item": "GETPOBJ/SETPOBJ/INCOBJ",
+  "item_id": 631,
+  "title": "GETPOBJ|SETPOBJ|INCOBJ|DELPOBJ \u00b7 nested scalar peel/set/inc/del \u00b7 multi-plate \u00b7 no GETOBJ+GETP glue",
+  "commit": "84981889c7df480d27aa5fa91d1b3d0c572b30bc",
+  "summary": "Nested field plane for agent counters/config without peel-write glue. proof 1172 30/30.",
   "proofs": [
-    "1171_mergeobj 29/29",
-    "1170_getobj reg ok"
+    "1172_getpobj 30/30",
+    "1171_mergeobj reg ok"
   ],
-  "when": "2026-08-09T06:16:51Z",
+  "when": "2026-08-09T06:25:58Z",
   "agent": "meaningful_iter_10m",
-  "sha": "80f191775ae81d7fc4d8adfba49ee940e8e9297c",
-  "note": "invented after backlog 629 GETOBJ; thrash restored; EVOLVE_PAUSED"
+  "sha": "84981889c7df480d27aa5fa91d1b3d0c572b30bc",
+  "note": "invented after backlog 630 MERGEOBJ; EVOLVE_PAUSED"
 }
