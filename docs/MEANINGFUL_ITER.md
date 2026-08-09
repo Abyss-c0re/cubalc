@@ -642,6 +642,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 612. ~~**`KEYDIFFP` / `ONLYKEYSP` · `KEYCOMMP` / `KEYINTERP`**~~ **done** (keys only-in-a / intersection bags · multi-plate · no SYS JSONKEYDIFF/JSONKEYCOMM).
 613. ~~**`COPYP` / `DUPKEYP` · `SWAPP` / `XCHGP`**~~ **done** (copy/swap keys write-back · multi-plate · no SYS JSONCOPY/JSONSWAP).
 614. ~~**`LENP` / `NKEYSP` · `EMPTYP` / `NONEMPTYP` · `VALSP`**~~ **done** (size/empty/values probes · multi-plate · no SYS JSONLEN/JSONEMPTY/JSONVALUES).
+615. ~~**`TYPEP` / `KINDP`**~~ **done** (field kind probe missing|num|str|bool|null|obj|arr · multi-plate · no SYS JSONTYPE).
 
 ## Tick protocol
 

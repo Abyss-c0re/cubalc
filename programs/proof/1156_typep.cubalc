@@ -1,0 +1,72 @@
+# TYPEP / KINDP — multi-plate field kind probe (no SYS JSONTYPE)
+# Usability: choose peel path (JSONN vs string vs nested) without guess/IF glue.
+# Codes: 0 missing · 1 num · 2 str · 3 bool · 4 null · 5 obj · 6 arr
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":3,\"host\":\"cubeA\",\"ok\":true,\"note\":null,\"meta\":{\"x\":1},\"tags\":[1,2]}"
+LET PEER = "{\"payload\":\"ready\",\"count\":9}"
+
+# conventional PLATE kinds
+TYPEP "n"
+ASSERT OK == 1
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 1
+ASSERT TYPEP_FROM == 0
+
+TYPEP "host"
+SYS EQS LAST "str"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 2
+
+TYPEP "ok"
+SYS EQS LAST "bool"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 3
+
+TYPEP "note"
+SYS EQS LAST "null"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 4
+
+TYPEP "meta"
+SYS EQS LAST "obj"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 5
+
+TYPEP "tags"
+SYS EQS LAST "arr"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 6
+
+# soft miss
+TYPEP "missing"
+SYS EQS LAST "missing"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 0
+
+# FROM PEER
+TYPEP FROM PEER "payload"
+ASSERT TYPEP_FROM == 1
+SYS EQS TYPEP_SRC "PEER"
+ASSERT LAST_N == 1
+SYS EQS LAST "str"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 2
+
+TYPEP "count" FROM PEER
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 1
+
+# alias KINDP
+KINDP "host"
+SYS EQS LAST "str"
+ASSERT LAST_N == 1
+
+# PLATE untouched by FROM peels
+TYPEP "n"
+ASSERT TYPEP_N == 1
+
+PRINT "typep soft ok"

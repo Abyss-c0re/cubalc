@@ -27405,6 +27405,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"KEYDIFFP") || kw(&L->cur,"KEYCOMMP") ||
              kw(&L->cur,"COPYP") || kw(&L->cur,"SWAPP") ||
              kw(&L->cur,"LENP") || kw(&L->cur,"EMPTYP") || kw(&L->cur,"VALSP") ||
+             kw(&L->cur,"TYPEP") || kw(&L->cur,"KINDP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35795,6 +35796,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASKEYSP", "HASKEYSP alias of NONEMPTYP"},
       {"VALSP", "VALSP|VALUEP [FROM plate] — values bag · twin KEYSP · multi-plate · no SYS JSONVALUES"},
       {"VALUEP", "VALUEP alias of VALSP"},
+      {"TYPEP", "TYPEP|KINDP [FROM plate] key — field kind missing|num|str|bool|null|obj|arr · multi-plate · no SYS JSONTYPE"},
+      {"KINDP", "KINDP alias of TYPEP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -40895,6 +40898,175 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# %s hit=%ld keys=%ld from=%d\n",
               mode == 2 ? "nonemptyp" : "emptyp", hit, hr.n, have_from);
+    bump(vm); return 1;
+  }
+  /* TYPEP|KINDP [FROM plate] key — field kind probe (JSONTYPE dual).
+   * LAST = missing|num|str|bool|null|obj|arr · LAST_N = 0..6.
+   * Soft miss → missing/0 · multi-plate FROM · no SYS JSONTYPE glue.
+   * Usability: choose JSONN vs string peel vs nested without IF-guess:
+   *   TYPEP "retries"
+   *   TYPEP FROM PEER "payload"
+   */
+  if (kw(&L->cur,"TYPEP") || kw(&L->cur,"KINDP") || kw(&L->cur,"MTYPEP") ||
+      kw(&L->cur,"PLATE_TYPE") || kw(&L->cur,"KEYTYPEP") || kw(&L->cur,"TYPEOFP") ||
+      kw(&L->cur,"FIELDTYPEP") || kw(&L->cur,"JTYPEP")) {
+    char plate[CUBALC_HOST_STR_MAX], key[96];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    const char *kind_s = "missing";
+    long kind_n = 0;
+    int have_from = 0;
+    cubalc_host_result gr;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; key[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(key, sizeof key, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+        fail(vm, "TYPEP [FROM plate] key — need key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, key, sizeof key) != 0)
+        key[0] = 0;
+    } else {
+      fail(vm, "TYPEP [FROM plate] key — need key");
+      return -1;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!key[0]) {
+      var_set_str(vm, "LAST", "missing");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "missing");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "TYPEP_N", 0);
+      var_set_str(vm, "TYPEP", "missing");
+      var_set_num(vm, "TYPEP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LAST_ERR", "TYPEP: empty key");
+      var_set_str(vm, "ERR", "TYPEP: empty key");
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(plate, key, &gr) != 0) {
+      kind_s = "missing";
+      kind_n = 0;
+    } else {
+      const char *v = gr.str;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v == '"') {
+        kind_s = "str";
+        kind_n = 2;
+      } else if (*v == '{') {
+        kind_s = "obj";
+        kind_n = 5;
+      } else if (*v == '[') {
+        kind_s = "arr";
+        kind_n = 6;
+      } else if (strncmp(v, "true", 4) == 0 || strncmp(v, "false", 5) == 0) {
+        kind_s = "bool";
+        kind_n = 3;
+      } else if (strncmp(v, "null", 4) == 0) {
+        kind_s = "null";
+        kind_n = 4;
+      } else if (*v == '-' || (*v >= '0' && *v <= '9')) {
+        kind_s = "num";
+        kind_n = 1;
+      } else {
+        kind_s = "str";
+        kind_n = 2;
+      }
+    }
+
+    var_set_str(vm, "LAST", kind_s);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", kind_s);
+    vm->last_n = kind_n;
+    var_set_num(vm, "LAST_N", kind_n);
+    var_set_str(vm, "TYPEP", kind_s);
+    var_set_str(vm, "KINDP", kind_s);
+    var_set_str(vm, "JSONTYPE", kind_s);
+    var_set_num(vm, "TYPEP_N", kind_n);
+    var_set_num(vm, "JSONTYPE_N", kind_n);
+    var_set_str(vm, "TYPEP_KEY", key);
+    var_set_num(vm, "TYPEP_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "TYPEP_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# typep key=%s kind=%s n=%ld from=%d\n",
+              key, kind_s, kind_n, have_from);
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.
