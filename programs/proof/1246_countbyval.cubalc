@@ -1,0 +1,67 @@
+# COUNTBYVAL / HASVAL — count/presence of exact leaf values
+# Usability: without PATHSBYVAL+LINES glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"fail\"},\"c\":{\"status\":\"ok\"}}"
+
+COUNTBYVAL "worker"
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT COUNTBYVAL_N == 2
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+COUNTBYVAL "leader"
+ASSERT LAST_N == 1
+COUNTBYVAL "h1"
+ASSERT LAST_N == 1
+COUNTBYVAL "nope"
+ASSERT LAST_N == 0
+
+# HASVAL soft presence
+HASVAL "worker"
+ASSERT LAST_N == 1
+ASSERT HASVAL_HIT == 1
+ASSERT HASVAL_N == 2
+HASVAL "nope"
+ASSERT LAST_N == 0
+ASSERT HASVAL_HIT == 0
+
+# multi-plate FROM
+COUNTBYVAL FROM PEER "ok"
+ASSERT COUNTBYVAL_FROM == 1
+SYS EQS COUNTBYVAL_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT COUNTBYVAL_N == 2
+ASSERT COUNTBYVAL_N == 2
+
+HASVAL FROM PEER "fail"
+ASSERT HASVAL_FROM == 1
+ASSERT LAST_N == 1
+HASVAL FROM PEER "missing"
+ASSERT LAST_N == 0
+
+# aliases
+NBYVAL "worker"
+ASSERT LAST_N == 2
+HASVALFLAT "leader"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":9}"
+COUNTBYVAL FROM PEER "ok"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# consistent with PATHSBYVAL count
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\"}}"
+PATHSBYVAL "worker"
+LET npaths = PATHSBYVAL_N
+COUNTBYVAL "worker"
+ASSERT LAST_N == npaths
+
+PASS
+PRINT "1246_countbyval: PASS"

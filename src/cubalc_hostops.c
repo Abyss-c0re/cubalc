@@ -7182,6 +7182,25 @@ int cubalc_host_json_leaf_paths_by_val(const char *json, const char *val,
   return 0;
 }
 
+/* COUNTBYVAL/HASVAL: count leaves whose value equals needle. See header. */
+int cubalc_host_json_leaf_count_by_val(const char *json, const char *val,
+                                       cubalc_host_result *r) {
+  cubalc_host_result paths;
+
+  r_clear(r);
+  memset(&paths, 0, sizeof paths);
+  cubalc_host_json_leaf_paths_by_val(json, val, &paths);
+  r->n = paths.n;
+  r->code = paths.n > 0 ? 1 : 0;
+  r->ok = 1;
+  snprintf(r->str, sizeof r->str, "%ld", paths.n);
+  if (val && val[0])
+    snprintf(r->err, sizeof r->err, "%s", val);
+  else
+    r->err[0] = 0;
+  return 0;
+}
+
 /* UNIQFLAT: unique matching leaf values by path needle. See header. */
 int cubalc_host_json_leaf_uniq(const char *json, const char *needle,
                                cubalc_host_result *r) {
