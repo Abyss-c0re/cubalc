@@ -2239,6 +2239,8 @@ int main(int argc, char **argv) {
       {"cli_plate_modeflat", "programs/proof/1242_cli_plate_modeflat.sh", "cubalc plate modeflat MODEFLAT dual"},
       {"pathbyval", "programs/proof/1243_pathbyval.cubalc", "PATHBYVAL/VALPATH first leaf path by exact value multi-plate"},
       {"cli_plate_pathbyval", "programs/proof/1243_cli_plate_pathbyval.sh", "cubalc plate pathbyval PATHBYVAL dual"},
+      {"uniqflat", "programs/proof/1244_uniqflat.cubalc", "UNIQFLAT/DISTINCTFLAT unique matching leaf values multi-plate"},
+      {"cli_plate_uniqflat", "programs/proof/1244_cli_plate_uniqflat.sh", "cubalc plate uniqflat UNIQFLAT dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -5095,6 +5097,7 @@ int main(int argc, char **argv) {
               "       cubalc plate freqflat <path> [needle]  # FREQFLAT dual · value frequency of matching leaves\n"
               "       cubalc plate modeflat <path> [needle]  # MODEFLAT dual · dominant matching leaf value\n"
               "       cubalc plate pathbyval <path> <value> [OR def]  # PATHBYVAL dual · first leaf path by exact value\n"
+              "       cubalc plate uniqflat <path> [needle]  # UNIQFLAT dual · unique matching leaf values\n"
               "       cubalc plate needflatn <path> <needle> [needle…]  # NEEDFLATN dual · fail-fast pure-int leaf + peel\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
@@ -5127,7 +5130,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"lastflat\",\"nthflat\",\"needflat\",\"getflatn\",\"lastflatn\",\"nthflatn\",\"typeflat\",\"freqflat\",\"modeflat\",\"pathbyval\",\"needflatn\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"lastflat\",\"nthflat\",\"needflat\",\"getflatn\",\"lastflatn\",\"nthflatn\",\"typeflat\",\"freqflat\",\"modeflat\",\"pathbyval\",\"uniqflat\",\"needflatn\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5260,6 +5263,8 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "majorflat") == 0 || strcmp(argv[2], "leafmode") == 0 ||
         strcmp(argv[2], "pathbyval") == 0 || strcmp(argv[2], "valpath") == 0 ||
         strcmp(argv[2], "findval") == 0 || strcmp(argv[2], "pathofval") == 0 ||
+        strcmp(argv[2], "uniqflat") == 0 || strcmp(argv[2], "distinctflat") == 0 ||
+        strcmp(argv[2], "uniqueflat") == 0 || strcmp(argv[2], "leafuniq") == 0 ||
         strcmp(argv[2], "needflatn") == 0 || strcmp(argv[2], "requireflatn") == 0 ||
         strcmp(argv[2], "mustflatn") == 0 || strcmp(argv[2], "needintflat") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
@@ -5527,6 +5532,10 @@ int main(int argc, char **argv) {
                strcmp(op, "pathofval") == 0 || strcmp(op, "findpathval") == 0 ||
                strcmp(op, "whereval") == 0 || strcmp(op, "locateval") == 0)
         op = "pathbyval";
+      else if (strcmp(op, "distinctflat") == 0 || strcmp(op, "uniqueflat") == 0 ||
+               strcmp(op, "leafuniq") == 0 || strcmp(op, "dedupflat") == 0 ||
+               strcmp(op, "uniqvalsflat") == 0 || strcmp(op, "uniquevals") == 0)
+        op = "uniqflat";
       else if (strcmp(op, "requireflatn") == 0 || strcmp(op, "mustflatn") == 0 ||
                strcmp(op, "needintflat") == 0 || strcmp(op, "neednumflat") == 0)
         op = "needflatn";
@@ -7389,6 +7398,47 @@ int main(int argc, char **argv) {
                (pr.n == 0 && have_fb) ? "true" : "false",
                lesc, pr.n, CUBALC_LANG_VERSION);
       }
+      return 0;
+    }
+
+    /* uniqflat [needle] — UNIQFLAT dual: unique matching leaf values (read-only).
+     *   cubalc plate uniqflat agent.json role
+     *   cubalc plate uniqflat agent.json          # all leaves
+     * bag lines: unique values · n=uniques · total=matching leaves. */
+    if (strcmp(op, "uniqflat") == 0) {
+      const char *needle = "";
+      cubalc_host_result pr;
+      char esc[CUBALC_HOST_STR_MAX * 2];
+      size_t i, o = 0;
+
+      if (ai < argc && argv[ai])
+        needle = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_uniq(plate, needle, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"uniqflat\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               path, pr.err[0] ? pr.err : "uniqflat fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      for (i = 0, o = 0; pr.str[i] && o + 2 < sizeof esc; i++) {
+        char c = pr.str[i];
+        if (c == '"' || c == '\\') { esc[o++] = '\\'; esc[o++] = c; }
+        else if (c == '\n') { esc[o++] = '\\'; esc[o++] = 'n'; }
+        else esc[o++] = c;
+      }
+      esc[o] = 0;
+      if (pr.str[0]) {
+        fputs(pr.str, stdout);
+        if (pr.str[strlen(pr.str) - 1] != '\n')
+          fputc('\n', stdout);
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"uniqflat\",\"path\":\"%s\",\"needle\":\"%s\","
+             "\"file\":%s,\"n\":%ld,\"total\":%ld,\"bag\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"UNIQFLAT dual · unique matching leaf values (read-only)\"}\n",
+             path, needle, file_hit ? "true" : "false",
+             pr.n, (long)pr.code, esc, CUBALC_LANG_VERSION);
       return 0;
     }
 

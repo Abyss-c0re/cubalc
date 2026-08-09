@@ -437,6 +437,12 @@ int cubalc_host_json_leaf_mode(const char *json, const char *needle,
  * Usability: reverse nest lookup without EACH FLAT+EQS glue (dual of GETFLAT). */
 int cubalc_host_json_leaf_path_by_val(const char *json, const char *val,
                                       cubalc_host_result *r);
+/* Unique matching leaf values by path needle (UNIQFLAT / DISTINCTFLAT).
+ * Empty needle → all leaves. First-seen order. Cap 64 uniques.
+ * r->str = value bag · r->n = unique count · r->code = total matching leaves.
+ * Soft always OK. Read-only. Usability: "what values exist" without VALSFLAT+UNIQ. */
+int cubalc_host_json_leaf_uniq(const char *json, const char *needle,
+                               cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

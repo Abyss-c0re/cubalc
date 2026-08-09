@@ -1,0 +1,84 @@
+# UNIQFLAT / DISTINCTFLAT — unique matching leaf values by path needle
+# Usability: "what values exist" without VALSFLAT+UNIQ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"fail\"},\"c\":{\"status\":\"ok\"}}"
+
+UNIQFLAT "role"
+ASSERT OK == 1
+ASSERT UNIQFLAT_TOTAL == 3
+ASSERT LAST_N == 2
+ASSERT UNIQFLAT_N == 2
+SYS HASLINE LAST "worker"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQFLAT "leader"
+ASSERT LAST_N == 1
+# order first-seen: worker before leader
+SYS HEAD
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+UNIQFLAT "host"
+ASSERT UNIQFLAT_TOTAL == 2
+ASSERT UNIQFLAT_N == 2
+SYS HASLINE LAST "h1"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "h2"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+UNIQFLAT FROM PEER "status"
+ASSERT UNIQFLAT_FROM == 1
+SYS EQS UNIQFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT UNIQFLAT_TOTAL == 3
+ASSERT UNIQFLAT_N == 2
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "fail"
+ASSERT LAST_N == 1
+
+# empty needle → all leaves
+UNIQFLAT ""
+ASSERT UNIQFLAT_TOTAL == 5
+ASSERT UNIQFLAT_N >= 3
+SYS HASLINE LAST "worker"
+ASSERT LAST_N == 1
+
+# bare UNIQFLAT
+UNIQFLAT
+ASSERT UNIQFLAT_TOTAL == 5
+
+# soft empty
+UNIQFLAT "nope"
+ASSERT OK == 1
+ASSERT UNIQFLAT_TOTAL == 0
+ASSERT UNIQFLAT_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# DISTINCTFLAT alias
+DISTINCTFLAT FROM PEER "status"
+ASSERT DISTINCTFLAT_TOTAL == 3
+SYS HASLINE DISTINCTFLAT "ok"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":9}"
+UNIQFLAT FROM PEER "status"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# single unique
+LET PLATE = "{\"a\":{\"v\":\"x\"},\"b\":{\"v\":\"x\"},\"c\":{\"v\":\"x\"}}"
+UNIQFLAT "v"
+ASSERT UNIQFLAT_TOTAL == 3
+ASSERT UNIQFLAT_N == 1
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1244_uniqflat: PASS"
