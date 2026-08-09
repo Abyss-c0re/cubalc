@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 644,
-  "version": "1.15.671-usability",
-  "item": "TOPPATHFLAT + plate toppath/botpath",
-  "item_id": 680,
-  "title": "TOPPATHFLAT/BOTPATHFLAT + cubalc plate toppath|botpath · path of max/min pure-int leaf by needle",
-  "commit": "d07865f38652d4d05f01c124750d80d9cca71d40",
-  "summary": "Locate dominant/min nest counters without GREPFLAT walk. proof 1221 + CLI PASS.",
+  "iter": 645,
+  "version": "1.15.672-usability",
+  "item": "THRESHFLAT + DROPZEROFLAT + plate duals",
+  "item_id": 681,
+  "title": "THRESHFLAT/DROPZEROFLAT + cubalc plate threshflat|dropzeroflat · pure-int leaf value denoise by path needle",
+  "commit": "ec28efa395782b93bf112e7d6717b7944683d5c1",
+  "summary": "Nest FREQ denoise without GETOBJ+THRESHP glue. proof 1222 + CLI PASS.",
   "proofs": [
-    "1221_toppathflat PASS",
-    "1221_cli_plate_toppathflat PASS",
-    "1220_sumflat reg PASS"
+    "1222_threshflat PASS",
+    "1222_cli_plate_threshflat PASS",
+    "1221_toppathflat reg PASS"
   ],
-  "when": "2026-08-09T15:15:00Z",
+  "when": "2026-08-09T15:25:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d07865f38652d4d05f01c124750d80d9cca71d40",
-  "note": "after SUMFLAT plane; EVOLVE_PAUSED"
+  "sha": "ec28efa395782b93bf112e7d6717b7944683d5c1",
+  "note": "after TOPPATHFLAT plane; EVOLVE_PAUSED"
 }
