@@ -27464,6 +27464,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"ALLEQFLAT") || kw(&L->cur,"SAMEVALFLAT") || kw(&L->cur,"EQVALSFLAT") ||
              kw(&L->cur,"FIRSTUNEQFLAT") || kw(&L->cur,"PATHUNEQ") || kw(&L->cur,"DIVERGE1") ||
              kw(&L->cur,"UNEQPATHS") || kw(&L->cur,"DIVERGEPATHS") || kw(&L->cur,"ALLUNEQ") ||
+             kw(&L->cur,"UNIFORMFLAT") || kw(&L->cur,"CHECKFLAT") || kw(&L->cur,"SAMECHECK") ||
              kw(&L->cur,"UNIQFLAT") || kw(&L->cur,"DISTINCTFLAT") || kw(&L->cur,"UNIQUEFLAT") ||
              kw(&L->cur,"NEEDFLAT") || kw(&L->cur,"REQUIREFLAT") || kw(&L->cur,"MUSTFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
@@ -35928,6 +35929,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"UNEQPATHS", "UNEQPATHS|DIVERGEPATHS [FROM plate] [needle] — all leaf paths whose value differs from first match → LAST bag · LAST_N=count · multi twin of FIRSTUNEQFLAT"},
       {"DIVERGEPATHS", "DIVERGEPATHS alias of UNEQPATHS"},
       {"ALLUNEQ", "ALLUNEQ alias of UNEQPATHS"},
+      {"UNIFORMFLAT", "UNIFORMFLAT|CHECKFLAT [FROM plate] [needle] — one-shot nest consistency · LAST_N 0|1 eq · UNIFORM_PATH/PATHS/REF/VAL · no ALLEQ+FIRSTUNEQ+UNEQPATHS glue"},
+      {"CHECKFLAT", "CHECKFLAT alias of UNIFORMFLAT"},
+      {"SAMECHECK", "SAMECHECK alias of UNIFORMFLAT"},
       {"UNIQFLAT", "UNIQFLAT|DISTINCTFLAT [FROM plate] [needle] — unique matching leaf values → LAST bag · LAST_N=uniques · multi-plate · read-only"},
       {"DISTINCTFLAT", "DISTINCTFLAT alias of UNIQFLAT"},
       {"NEEDFLAT", "NEEDFLAT|REQUIREFLAT [FROM plate] needle… — fail-fast if any leaf-path needle missing · multi-plate · soft twin HASFLAT"},
@@ -48730,7 +48734,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    */
   if (kw(&L->cur,"ALLEQFLAT") || kw(&L->cur,"SAMEVALFLAT") || kw(&L->cur,"EQVALSFLAT") ||
       kw(&L->cur,"MALLEQFLAT") || kw(&L->cur,"PLATE_ALLEQFLAT") || kw(&L->cur,"ALLSAMEFLAT") ||
-      kw(&L->cur,"SAMEFLAT") || kw(&L->cur,"EQALLFLAT") || kw(&L->cur,"UNIFORMFLAT")) {
+      kw(&L->cur,"SAMEFLAT") || kw(&L->cur,"EQALLFLAT") || kw(&L->cur,"EQVALSALL")) {
     char plate[CUBALC_HOST_STR_MAX], needle[192];
     char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr;
@@ -49172,6 +49176,196 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# uneqpaths n=%ld total=%ld needle=%s from=%d\n",
               hr.n, (long)hr.code, needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* UNIFORMFLAT|CHECKFLAT|SAMECHECK [FROM plate] [needle]
+   * One-shot nest consistency probe (ALLEQFLAT + FIRSTUNEQFLAT + UNEQPATHS).
+   * LAST_N = 0|1 all-equal · LAST = common value when equal else "".
+   * Side: UNIFORM_N matches · UNIFORM_DIV diverge count · UNIFORM_PATH first
+   *       UNIFORM_PATHS bag · UNIFORM_REF · UNIFORM_VAL · UNIFORM_UNIQUES
+   * Soft always OK. Read-only. Usability: one form for nest check + locate:
+   *   UNIFORMFLAT "role"
+   *   IF LAST_N == 0
+   *     PRINT UNIFORM_PATHS
+   *   END
+   *   UNIFORMFLAT FROM PEER "status"
+   *   CHECKFLAT ""
+   */
+  if (kw(&L->cur,"UNIFORMFLAT") || kw(&L->cur,"CHECKFLAT") || kw(&L->cur,"SAMECHECK") ||
+      kw(&L->cur,"MUNIFORMFLAT") || kw(&L->cur,"PLATE_UNIFORM") || kw(&L->cur,"CHECKUNIFORM") ||
+      kw(&L->cur,"NESTUNIFORM") || kw(&L->cur,"FLATUNIFORM") || kw(&L->cur,"UNIFORMCHECK")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    char ref[256], val[256], path1[512];
+    cubalc_host_result heq, h1, hpaths;
+    int have_from = 0;
+    long eq = 0, total = 0, divn = 0, uniques = 0, idx = 0;
+    Var *pv;
+    const char *ep;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+    ref[0] = 0; val[0] = 0; path1[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(needle, sizeof needle, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"UNIFORMFLAT") && !kw(&L->cur,"ALLEQFLAT") &&
+               !kw(&L->cur,"IF")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&heq, 0, sizeof heq);
+    memset(&h1, 0, sizeof h1);
+    memset(&hpaths, 0, sizeof hpaths);
+    if (cubalc_host_json_leaf_all_eq(plate, needle, &heq) != 0 ||
+        cubalc_host_json_leaf_first_uneq(plate, needle, &h1) != 0 ||
+        cubalc_host_json_leaf_uneq_paths(plate, needle, &hpaths) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "UNIFORMFLAT: fail");
+      var_set_str(vm, "ERR", "UNIFORMFLAT: fail");
+      var_set_num(vm, "UNIFORM_N", 0);
+      var_set_num(vm, "LAST_N", 0);
+      bump(vm); return 1;
+    }
+
+    eq = heq.code ? 1 : 0;
+    total = heq.n;
+    divn = hpaths.n;
+    uniques = (heq.err[0] && heq.err[0] >= '0' && heq.err[0] <= '9')
+                  ? strtol(heq.err, NULL, 10)
+                  : (eq ? (total > 0 ? 1 : 0) : 0);
+    if (h1.code) {
+      snprintf(path1, sizeof path1, "%s", h1.str);
+      idx = h1.n;
+      ep = h1.err;
+      {
+        size_t i = 0;
+        while (*ep && *ep != '\n' && *ep != '\r' && i + 1 < sizeof ref)
+          ref[i++] = *ep++;
+        ref[i] = 0;
+      }
+      while (*ep == '\n' || *ep == '\r') ep++;
+      {
+        size_t i = 0;
+        while (*ep && *ep != '\n' && *ep != '\r' && i + 1 < sizeof val)
+          val[i++] = *ep++;
+        val[i] = 0;
+      }
+    } else if (hpaths.err[0]) {
+      snprintf(ref, sizeof ref, "%s", hpaths.err);
+    }
+
+    var_set_num(vm, "LAST_N", eq);
+    vm->last_n = eq;
+    if (eq) {
+      var_set_str(vm, "LAST", heq.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", heq.str);
+    } else {
+      var_set_str(vm, "LAST", "");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+    }
+
+    var_set_str(vm, "UNIFORMFLAT", heq.str);
+    var_set_str(vm, "CHECKFLAT", heq.str);
+    var_set_num(vm, "UNIFORM_EQ", eq);
+    var_set_num(vm, "UNIFORMFLAT_EQ", eq);
+    var_set_num(vm, "UNIFORM_N", total);
+    var_set_num(vm, "UNIFORMFLAT_N", total);
+    var_set_num(vm, "UNIFORM_DIV", divn);
+    var_set_num(vm, "UNIFORMFLAT_DIV", divn);
+    var_set_num(vm, "UNIFORM_UNIQUES", uniques);
+    var_set_num(vm, "UNIFORMFLAT_UNIQUES", uniques);
+    var_set_num(vm, "UNIFORM_I", idx);
+    var_set_str(vm, "UNIFORM_PATH", path1);
+    var_set_str(vm, "UNIFORMFLAT_PATH", path1);
+    var_set_str(vm, "UNIFORM_PATHS", hpaths.str);
+    var_set_str(vm, "UNIFORMFLAT_PATHS", hpaths.str);
+    var_set_str(vm, "UNIFORM_REF", ref);
+    var_set_str(vm, "UNIFORMFLAT_REF", ref);
+    var_set_str(vm, "UNIFORM_VAL", val);
+    var_set_str(vm, "UNIFORMFLAT_VAL", val);
+    var_set_str(vm, "UNIFORMFLAT_NEEDLE", needle);
+    var_set_num(vm, "UNIFORMFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "UNIFORMFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# uniformflat eq=%ld n=%ld div=%ld needle=%s from=%d\n",
+              eq, total, divn, needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 

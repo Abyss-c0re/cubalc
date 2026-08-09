@@ -2255,6 +2255,8 @@ int main(int argc, char **argv) {
       {"cli_plate_firstuneq", "programs/proof/1250_cli_plate_firstuneq.sh", "cubalc plate firstuneq FIRSTUNEQFLAT dual"},
       {"uneqpaths", "programs/proof/1251_uneqpaths.cubalc", "UNEQPATHS/DIVERGEPATHS all diverge leaf paths multi-plate"},
       {"cli_plate_uneqpaths", "programs/proof/1251_cli_plate_uneqpaths.sh", "cubalc plate uneqpaths UNEQPATHS dual"},
+      {"uniformflat", "programs/proof/1252_uniformflat.cubalc", "UNIFORMFLAT/CHECKFLAT one-shot nest consistency multi-plate"},
+      {"cli_plate_uniform", "programs/proof/1252_cli_plate_uniform.sh", "cubalc plate uniform UNIFORMFLAT dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -5120,6 +5122,7 @@ int main(int argc, char **argv) {
               "       cubalc plate alleqflat <path> [needle]  # ALLEQFLAT dual · all matching leaf values identical\n"
               "       cubalc plate firstuneq <path> [needle]  # FIRSTUNEQFLAT dual · first path that breaks uniformity\n"
               "       cubalc plate uneqpaths <path> [needle]  # UNEQPATHS dual · all paths that break uniformity\n"
+              "       cubalc plate uniform <path> [needle]  # UNIFORMFLAT dual · one-shot eq + first path + all diverge paths\n"
               "       cubalc plate needflatn <path> <needle> [needle…]  # NEEDFLATN dual · fail-fast pure-int leaf + peel\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
@@ -5152,7 +5155,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"lastflat\",\"nthflat\",\"needflat\",\"getflatn\",\"lastflatn\",\"nthflatn\",\"typeflat\",\"freqflat\",\"modeflat\",\"pathbyval\",\"uniqflat\",\"pathsbyval\",\"countbyval\",\"hasval\",\"setbyval\",\"delbyval\",\"alleqflat\",\"firstuneq\",\"uneqpaths\",\"needflatn\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"lastflat\",\"nthflat\",\"needflat\",\"getflatn\",\"lastflatn\",\"nthflatn\",\"typeflat\",\"freqflat\",\"modeflat\",\"pathbyval\",\"uniqflat\",\"pathsbyval\",\"countbyval\",\"hasval\",\"setbyval\",\"delbyval\",\"alleqflat\",\"firstuneq\",\"uneqpaths\",\"uniform\",\"needflatn\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5303,6 +5306,8 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "pathuneq") == 0 || strcmp(argv[2], "diverge1") == 0 ||
         strcmp(argv[2], "uneqpaths") == 0 || strcmp(argv[2], "divergepaths") == 0 ||
         strcmp(argv[2], "alluneq") == 0 || strcmp(argv[2], "pathsuneq") == 0 ||
+        strcmp(argv[2], "uniform") == 0 || strcmp(argv[2], "uniformflat") == 0 ||
+        strcmp(argv[2], "checkflat") == 0 || strcmp(argv[2], "samecheck") == 0 ||
         strcmp(argv[2], "needflatn") == 0 || strcmp(argv[2], "requireflatn") == 0 ||
         strcmp(argv[2], "mustflatn") == 0 || strcmp(argv[2], "needintflat") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
@@ -5606,6 +5611,11 @@ int main(int argc, char **argv) {
                strcmp(op, "alldiverge") == 0 || strcmp(op, "uneqall") == 0 ||
                strcmp(op, "uneqpath") == 0 || strcmp(op, "divergepath") == 0)
         op = "uneqpaths";
+      else if (strcmp(op, "uniformflat") == 0 || strcmp(op, "checkflat") == 0 ||
+               strcmp(op, "samecheck") == 0 || strcmp(op, "checkuniform") == 0 ||
+               strcmp(op, "nestuniform") == 0 || strcmp(op, "flatuniform") == 0 ||
+               strcmp(op, "uniformcheck") == 0 || strcmp(op, "eqcheck") == 0)
+        op = "uniform";
       else if (strcmp(op, "requireflatn") == 0 || strcmp(op, "mustflatn") == 0 ||
                strcmp(op, "needintflat") == 0 || strcmp(op, "neednumflat") == 0)
         op = "needflatn";
@@ -7856,6 +7866,109 @@ int main(int argc, char **argv) {
              "\"note\":\"UNEQPATHS dual · all paths that break uniformity\"}\n",
              path, needle, file_hit ? "true" : "false",
              pr.n, (long)pr.code, resc, besc, CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+    /* uniform [needle] — UNIFORMFLAT dual: one-shot eq + first path + all diverge paths.
+     *   cubalc plate uniform agent.json role
+     * eq · n · div · uniques · path · paths bag · ref · value · common when eq. */
+    if (strcmp(op, "uniform") == 0) {
+      const char *needle = "";
+      cubalc_host_result heq, h1, hpaths;
+      char pesc[1024], besc[CUBALC_HOST_STR_MAX * 2], resc[512], vesc[512], cesc[512];
+      char ref[256], val[256], path1[512];
+      long eq = 0, total = 0, divn = 0, uniques = 0, idx = 0;
+      size_t i, o = 0;
+      const char *ep;
+
+      if (ai < argc && argv[ai])
+        needle = argv[ai++];
+
+      memset(&heq, 0, sizeof heq);
+      memset(&h1, 0, sizeof h1);
+      memset(&hpaths, 0, sizeof hpaths);
+      if (cubalc_host_json_leaf_all_eq(plate, needle, &heq) != 0 ||
+          cubalc_host_json_leaf_first_uneq(plate, needle, &h1) != 0 ||
+          cubalc_host_json_leaf_uneq_paths(plate, needle, &hpaths) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"uniform\",\"path\":\"%s\",\"err\":\"uniform fail\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 1;
+      }
+      eq = heq.code ? 1 : 0;
+      total = heq.n;
+      divn = hpaths.n;
+      uniques = (heq.err[0] && heq.err[0] >= '0' && heq.err[0] <= '9')
+                    ? strtol(heq.err, NULL, 10)
+                    : (eq ? (total > 0 ? 1 : 0) : 0);
+      ref[0] = 0;
+      val[0] = 0;
+      path1[0] = 0;
+      if (h1.code) {
+        snprintf(path1, sizeof path1, "%s", h1.str);
+        idx = h1.n;
+        ep = h1.err;
+        {
+          size_t k = 0;
+          while (*ep && *ep != '\n' && *ep != '\r' && k + 1 < sizeof ref)
+            ref[k++] = *ep++;
+          ref[k] = 0;
+        }
+        while (*ep == '\n' || *ep == '\r') ep++;
+        {
+          size_t k = 0;
+          while (*ep && *ep != '\n' && *ep != '\r' && k + 1 < sizeof val)
+            val[k++] = *ep++;
+          val[k] = 0;
+        }
+      } else if (hpaths.err[0]) {
+        snprintf(ref, sizeof ref, "%s", hpaths.err);
+      }
+      if (eq && heq.str[0])
+        printf("%s\n", heq.str);
+      else if (path1[0])
+        printf("%s\n", path1);
+      for (i = 0, o = 0; path1[i] && o + 2 < sizeof pesc; i++) {
+        char c = path1[i];
+        if (c == '"' || c == '\\') { pesc[o++] = '\\'; pesc[o++] = c; }
+        else pesc[o++] = c;
+      }
+      pesc[o] = 0;
+      for (i = 0, o = 0; hpaths.str[i] && o + 2 < sizeof besc; i++) {
+        char c = hpaths.str[i];
+        if (c == '"' || c == '\\') { besc[o++] = '\\'; besc[o++] = c; }
+        else if (c == '\n') { besc[o++] = '\\'; besc[o++] = 'n'; }
+        else besc[o++] = c;
+      }
+      besc[o] = 0;
+      for (i = 0, o = 0; ref[i] && o + 2 < sizeof resc; i++) {
+        char c = ref[i];
+        if (c == '"' || c == '\\') { resc[o++] = '\\'; resc[o++] = c; }
+        else resc[o++] = c;
+      }
+      resc[o] = 0;
+      for (i = 0, o = 0; val[i] && o + 2 < sizeof vesc; i++) {
+        char c = val[i];
+        if (c == '"' || c == '\\') { vesc[o++] = '\\'; vesc[o++] = c; }
+        else vesc[o++] = c;
+      }
+      vesc[o] = 0;
+      for (i = 0, o = 0; heq.str[i] && o + 2 < sizeof cesc; i++) {
+        char c = heq.str[i];
+        if (c == '"' || c == '\\') { cesc[o++] = '\\'; cesc[o++] = c; }
+        else cesc[o++] = c;
+      }
+      cesc[o] = 0;
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"uniform\",\"path\":\"%s\",\"needle\":\"%s\","
+             "\"file\":%s,\"eq\":%s,\"n\":%ld,\"div\":%ld,\"uniques\":%ld,"
+             "\"i\":%ld,\"path_first\":\"%s\",\"paths\":\"%s\","
+             "\"ref\":\"%s\",\"value\":\"%s\",\"common\":\"%s\","
+             "\"version\":\"%s\","
+             "\"note\":\"UNIFORMFLAT dual · one-shot nest consistency\"}\n",
+             path, needle, file_hit ? "true" : "false",
+             eq ? "true" : "false", total, divn, uniques, idx,
+             pesc, besc, resc, vesc, cesc, CUBALC_LANG_VERSION);
       return 0;
     }
 

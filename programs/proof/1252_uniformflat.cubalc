@@ -1,0 +1,94 @@
+# UNIFORMFLAT / CHECKFLAT — one-shot nest consistency
+# Usability: ALLEQ + first path + all diverge paths without three-form glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"ok\"},\"c\":{\"status\":\"ok\"}}"
+LET MIX = "{\"w1\":{\"role\":\"worker\"},\"w2\":{\"role\":\"leader\"},\"w3\":{\"role\":\"leader\"}}"
+
+# mixed roles
+UNIFORMFLAT "role"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT UNIFORM_EQ == 0
+ASSERT UNIFORM_N == 3
+ASSERT UNIFORM_DIV == 1
+ASSERT UNIFORM_UNIQUES == 2
+SYS EQS UNIFORM_PATH "other.role"
+ASSERT LAST_N == 1
+SYS EQS UNIFORM_REF "worker"
+ASSERT LAST_N == 1
+SYS EQS UNIFORM_VAL "leader"
+ASSERT LAST_N == 1
+SYS HASLINE UNIFORM_PATHS "other.role"
+ASSERT LAST_N == 1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# hosts
+UNIFORMFLAT "host"
+ASSERT UNIFORM_EQ == 0
+ASSERT UNIFORM_N == 2
+ASSERT UNIFORM_DIV == 1
+SYS EQS UNIFORM_REF "h1"
+ASSERT LAST_N == 1
+SYS EQS UNIFORM_VAL "h2"
+ASSERT LAST_N == 1
+
+# multi diverge
+UNIFORMFLAT FROM MIX "role"
+ASSERT UNIFORMFLAT_FROM == 1
+SYS EQS UNIFORMFLAT_SRC "MIX"
+ASSERT LAST_N == 1
+UNIFORMFLAT FROM MIX "role"
+ASSERT LAST_N == 0
+ASSERT UNIFORM_DIV == 2
+ASSERT UNIFORM_N == 3
+SYS HASLINE UNIFORM_PATHS "w2.role"
+ASSERT LAST_N == 1
+SYS HASLINE UNIFORM_PATHS "w3.role"
+ASSERT LAST_N == 1
+
+# after unify → equal
+SETBYVAL "leader" "worker"
+UNIFORMFLAT "role"
+ASSERT LAST_N == 1
+ASSERT UNIFORM_EQ == 1
+ASSERT UNIFORM_DIV == 0
+ASSERT UNIFORM_N == 3
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS EQS UNIFORM_PATH ""
+ASSERT LAST_N == 1
+
+# multi-plate all same
+UNIFORMFLAT FROM PEER "status"
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+ASSERT UNIFORM_N == 3
+ASSERT UNIFORM_DIV == 0
+
+# soft empty
+UNIFORMFLAT "nope"
+ASSERT LAST_N == 0
+ASSERT UNIFORM_N == 0
+ASSERT UNIFORM_DIV == 0
+
+# CHECKFLAT alias
+LET PLATE = "{\"x\":{\"v\":\"a\"},\"y\":{\"v\":\"a\"}}"
+CHECKFLAT "v"
+ASSERT LAST_N == 1
+SYS EQS CHECKFLAT "a"
+ASSERT LAST_N == 1
+
+# plate unchanged after multi-plate
+LET PLATE = "{\"x\":9}"
+UNIFORMFLAT FROM PEER "status"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1252_uniformflat: PASS"

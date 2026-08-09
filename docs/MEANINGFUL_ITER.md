@@ -738,6 +738,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 708. ~~**`ALLEQFLAT` / `SAMEVALFLAT` + `cubalc plate alleqflat`**~~ **done** (all matching leaf values identical → LAST_N 0|1 · LAST=common value · multi-plate · CLI dual · nest consistency without UNIQFLAT+LINES+CMP glue).
 709. ~~**`FIRSTUNEQFLAT` / `PATHUNEQ` + `cubalc plate firstuneq`**~~ **done** (first leaf path whose value differs from first match → LAST · LAST_N 0|1 · ref/val side vars · multi-plate · CLI dual · locate after ALLEQFLAT fail without EACH FLAT+EQS glue).
 710. ~~**`UNEQPATHS` / `DIVERGEPATHS` + `cubalc plate uneqpaths`**~~ **done** (all leaf paths whose value differs from first match → LAST bag · LAST_N=count · multi twin of FIRSTUNEQFLAT · multi-plate · CLI dual · bulk nest inconsistency without EACH FLAT+IF+PUSH glue).
+711. ~~**`UNIFORMFLAT` / `CHECKFLAT` + `cubalc plate uniform`**~~ **done** (one-shot nest consistency · LAST_N 0|1 eq · UNIFORM_PATH/PATHS/REF/VAL/DIV/N · multi-plate · CLI dual · no ALLEQFLAT+FIRSTUNEQFLAT+UNEQPATHS glue).
 
 ## Tick protocol
 
