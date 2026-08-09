@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 565,
-  "version": "1.15.592-usability",
-  "item": "cubalc plate changelog",
-  "item_id": 601,
-  "title": "cubalc plate changelog · CLI JSONCHANGELOG dual for mesh value diffs",
-  "commit": "0da621b02c0f4f8c902744bc64d1fd21880b964e",
-  "summary": "Shell agents get greppable key: old → new plate diffs without .cubalc. proof 1142 + eq/diff/ensure reg.",
+  "iter": 566,
+  "version": "1.15.593-usability",
+  "item": "plate_both_save + init --peer",
+  "item_id": 602,
+  "title": "INCLUDE plate_both_save · init --peer dual write-back one INCLUDE",
+  "commit": "291d0ec484831c65741aa1465269129b3fd52856",
+  "summary": "Multi-plate agents persist PLATE+PEER with one INCLUDE; scaffold updated. proof 1143 14/14 + init_peer.",
   "proofs": [
-    "1142_cli_plate_changelog",
-    "1141_cli_plate_eq_diff reg",
-    "1140_cli_plate_ensure_merge reg"
+    "1143_plate_both_save 14/14",
+    "1138_init_peer reg"
   ],
-  "when": "2026-08-09T01:15:01Z",
+  "when": "2026-08-09T01:24:40Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0da621b02c0f4f8c902744bc64d1fd21880b964e",
+  "sha": "291d0ec484831c65741aa1465269129b3fd52856",
   "note": "clean tree; EVOLVE_PAUSED"
 }
