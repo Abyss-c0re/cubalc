@@ -2931,6 +2931,6 @@
     "VALSP unordered value bag needs KEYSP twin for audit",
     "CLI plate shell duals still broken; language proofs green"
   ],
-  "commit": "",
+  "commit": "e8037397",
   "ts": "2026-08-09T11:49:22Z"
 }
