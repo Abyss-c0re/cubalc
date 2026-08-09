@@ -1,0 +1,82 @@
+# TYPEFLAT / KINDFLAT — first matching leaf kind by path needle
+# Usability: choose GETFLAT vs GETFLATN vs nest without TYPEP+PATHSFLAT glue.
+# LAST = kind · LAST_N = 0 missing|1 num|2 str|3 bool|4 null|5 obj|6 arr
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"cfg\":{\"port\":9090,\"host\":\"h\",\"on\":true,\"note\":null},\"meta\":{\"port\":1},\"label\":\"x\"}"
+
+TYPEFLAT "port"
+ASSERT OK == 1
+ASSERT TYPEFLAT_HIT == 1
+ASSERT TYPEFLAT_N == 1
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+SYS EQS TYPEFLAT_PATH "cfg.port"
+ASSERT LAST_N == 1
+
+TYPEFLAT "host"
+ASSERT TYPEFLAT_N == 2
+SYS EQS LAST "str"
+ASSERT LAST_N == 1
+SYS EQS TYPEFLAT_PATH "cfg.host"
+ASSERT LAST_N == 1
+
+TYPEFLAT "on"
+ASSERT TYPEFLAT_N == 3
+SYS EQS LAST "bool"
+ASSERT LAST_N == 1
+
+TYPEFLAT "note"
+ASSERT TYPEFLAT_N == 4
+SYS EQS LAST "null"
+ASSERT LAST_N == 1
+
+TYPEFLAT "nope"
+ASSERT TYPEFLAT_HIT == 0
+ASSERT TYPEFLAT_N == 0
+SYS EQS LAST "missing"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"role\":\"leader\",\"n\":2,\"flag\":false}"
+TYPEFLAT FROM PEER "role"
+ASSERT TYPEFLAT_FROM == 1
+SYS EQS TYPEFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT TYPEFLAT_N == 2
+SYS EQS LAST "str"
+ASSERT LAST_N == 1
+
+TYPEFLAT FROM PEER "n"
+ASSERT TYPEFLAT_N == 1
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+
+TYPEFLAT FROM PEER "flag"
+ASSERT TYPEFLAT_N == 3
+SYS EQS LAST "bool"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":1}"
+TYPEFLAT FROM PEER "role"
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+KINDFLAT "x"
+ASSERT TYPEFLAT_HIT == 1
+ASSERT TYPEFLAT_N == 1
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+
+# empty needle → first leaf in walk order
+LET PLATE = "{\"a\":1,\"b\":\"s\"}"
+TYPEFLAT ""
+ASSERT TYPEFLAT_HIT == 1
+ASSERT TYPEFLAT_N == 1
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1236_typeflat: PASS"

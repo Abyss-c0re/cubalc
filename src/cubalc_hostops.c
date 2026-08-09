@@ -6544,6 +6544,74 @@ int cubalc_host_json_leaf_getn_last(const char *json, const char *needle,
   return 0;
 }
 
+/* TYPEFLAT: first matching leaf kind by path needle. See header. */
+int cubalc_host_json_leaf_type(const char *json, const char *needle,
+                               cubalc_host_result *r) {
+  cubalc_host_result gr, raw;
+  const char *v;
+  const char *kind_s = "missing";
+  long kind_n = 0;
+
+  r_clear(r);
+  memset(&gr, 0, sizeof gr);
+  if (cubalc_host_json_leaf_get(json, needle, &gr) != 0) {
+    snprintf(r->str, sizeof r->str, "%s", "missing");
+    r->n = 0;
+    r->code = 0;
+    r->ok = 1;
+    return 0;
+  }
+  if (gr.code == 0 || !gr.err[0]) {
+    /* soft miss */
+    snprintf(r->str, sizeof r->str, "%s", "missing");
+    r->err[0] = 0;
+    r->n = 0;
+    r->code = 0;
+    r->ok = 1;
+    return 0;
+  }
+  /* classify raw JSON at path for accurate str vs num */
+  memset(&raw, 0, sizeof raw);
+  if (cubalc_host_json_path_get_raw(json ? json : "{}", gr.err, &raw) != 0) {
+    snprintf(r->str, sizeof r->str, "%s", "missing");
+    snprintf(r->err, sizeof r->err, "%s", gr.err);
+    r->n = 0;
+    r->code = 0;
+    r->ok = 1;
+    return 0;
+  }
+  v = raw.str;
+  while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+  if (*v == '"') {
+    kind_s = "str";
+    kind_n = 2;
+  } else if (*v == '{') {
+    kind_s = "obj";
+    kind_n = 5;
+  } else if (*v == '[') {
+    kind_s = "arr";
+    kind_n = 6;
+  } else if (strncmp(v, "true", 4) == 0 || strncmp(v, "false", 5) == 0) {
+    kind_s = "bool";
+    kind_n = 3;
+  } else if (strncmp(v, "null", 4) == 0) {
+    kind_s = "null";
+    kind_n = 4;
+  } else if (*v == '-' || (*v >= '0' && *v <= '9')) {
+    kind_s = "num";
+    kind_n = 1;
+  } else {
+    kind_s = "str";
+    kind_n = 2;
+  }
+  snprintf(r->str, sizeof r->str, "%s", kind_s);
+  snprintf(r->err, sizeof r->err, "%s", gr.err);
+  r->n = kind_n;
+  r->code = 1;
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,

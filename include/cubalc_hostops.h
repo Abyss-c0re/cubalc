@@ -394,6 +394,12 @@ int cubalc_host_json_leaf_getn(const char *json, const char *needle,
  * Usability: newest-wins nest numeric peel without REVL+GETFLATN glue. */
 int cubalc_host_json_leaf_getn_last(const char *json, const char *needle,
                                     cubalc_host_result *r);
+/* First matching leaf kind by path needle (TYPEFLAT).
+ * r->str = missing|num|str|bool|null|obj|arr · r->n = 0..6 · r->err = path on hit.
+ * r->code = hit 0|1. Soft always OK. Empty needle → first leaf.
+ * Usability: choose GETFLAT vs GETFLATN vs nest peel without TYPEP+PATHSFLAT glue. */
+int cubalc_host_json_leaf_type(const char *json, const char *needle,
+                               cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */
