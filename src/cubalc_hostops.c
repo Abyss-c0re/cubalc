@@ -5244,6 +5244,89 @@ int cubalc_host_json_valmerge(const char *a, const char *b, int mode,
   return 0;
 }
 
+/* ASCII lowercase copy into dst (max dlen-1). */
+static void ascii_lower_cpy(char *dst, size_t dlen, const char *src) {
+  size_t i = 0;
+  if (!dst || dlen == 0) return;
+  if (!src) { dst[0] = 0; return; }
+  while (src[i] && i + 1 < dlen) {
+    char c = src[i];
+    dst[i] = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
+    i++;
+  }
+  dst[i] = 0;
+}
+
+/* Usability: multi-plate KEEPKEYP/DROPKEYP — filter keys by needle substring. */
+int cubalc_host_json_keygrep(const char *json, const char *needle, int invert,
+                             int icase, cubalc_host_result *r) {
+  cubalc_host_result keys, raw, setr;
+  char cur[CUBALC_HOST_STR_MAX];
+  char nl[256], kl[256];
+  const char *p, *line;
+  const char *need = needle ? needle : "";
+  size_t nlen;
+  long kept = 0, drop = 0;
+  r_clear(r);
+  memset(&keys, 0, sizeof keys);
+  snprintf(cur, sizeof cur, "%s", "{}");
+  nlen = strlen(need);
+  if (icase) ascii_lower_cpy(nl, sizeof nl, need);
+  if (cubalc_host_json_keys(json, &keys) != 0) {
+    snprintf(r->str, sizeof r->str, "%s", "{}");
+    r->n = 0;
+    r->code = 0;
+    r->ok = 1;
+    return 0;
+  }
+  p = keys.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    int match = 0, keep;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    if (nlen == 0) {
+      match = 1;
+    } else if (!icase) {
+      match = (strstr(key, need) != NULL);
+    } else {
+      ascii_lower_cpy(kl, sizeof kl, key);
+      match = (strstr(kl, nl) != NULL);
+    }
+    keep = invert ? !match : match;
+    if (keep) {
+      memset(&raw, 0, sizeof raw);
+      if (cubalc_host_json_get_raw(json, key, &raw) != 0) {
+        drop++;
+        continue;
+      }
+      memset(&setr, 0, sizeof setr);
+      if (cubalc_host_json_set(cur, key, raw.str, 1, &setr) != 0) {
+        snprintf(r->err, sizeof r->err, "%s",
+                 setr.err[0] ? setr.err : "jsonkeygrep: set fail");
+        return -1;
+      }
+      snprintf(cur, sizeof cur, "%s", setr.str);
+      kept++;
+    } else {
+      drop++;
+    }
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  r->n = kept;
+  r->code = (int)drop;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS JSONEQ a b — order-independent top-level plate equality. */
 int cubalc_host_json_eq(const char *a, const char *b, cubalc_host_result *r) {
   cubalc_host_result ka, kb, ra, rb;

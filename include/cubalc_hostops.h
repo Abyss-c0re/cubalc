@@ -296,6 +296,13 @@ int cubalc_host_json_valmap(const char *json, int mode, long arg,
  * Soft {}. Usability: peer FREQ combine/delta without TOKV+MERGEKV/DIFFKV+FROMKVP. */
 int cubalc_host_json_valmerge(const char *a, const char *b, int mode,
                               cubalc_host_result *r);
+/* filter plate keys by needle substring (multi-plate dual of KEEPKEY/DROPKEY).
+ * invert=0 keep matching · invert=1 drop matching · icase=1 ASCII case-insensitive.
+ * empty needle: keep all (or drop all if invert). Soft {}.
+ * r->str = plate · r->n = kept · r->code = dropped.
+ * Usability: FREQ key pattern filter without TOKV+KEEPKEY+FROMKVP or multi PICKP. */
+int cubalc_host_json_keygrep(const char *json, const char *needle, int invert,
+                             int icase, cubalc_host_result *r);
 /* order-independent top-level plate equality → r->n 1|0. Soft always OK.
  * Same keys + same raw values (whitespace-trimmed). Nested compared as raw text.
  * Usability: agent verify after WRITE/MERGE without fragile string EQS. */

@@ -1,0 +1,98 @@
+# KEEPKEYP / DROPKEYP — multi-plate key needle filter (KEEPKEY/DROPKEY duals)
+# Usability: FREQ key pattern without TOKV+KEEPKEY+FROMKVP; complements PICKP exact keys.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"error_count\":9,\"warn_count\":3,\"info_n\":1,\"host\":\"A\"}"
+LET PEER = "{\"Error_A\":2,\"warn_B\":4,\"ok\":1}"
+LET empty = "{}"
+
+# KEEPKEYP: keep keys containing needle
+KEEPKEYP "count"
+ASSERT OK == 1
+ASSERT KEEPKEYP_N == 2
+ASSERT KEEPKEYP_DROP == 2
+ASSERT KEEPKEYP_FROM == 0
+SYS HAS LAST "error_count"
+ASSERT LAST_N == 1
+SYS HAS LAST "warn_count"
+ASSERT LAST_N == 1
+SYS HAS LAST "info"
+ASSERT LAST_N == 0
+SYS HAS LAST "host"
+ASSERT LAST_N == 0
+# source not mutated
+SYS HAS PLATE "host"
+ASSERT LAST_N == 1
+
+KEEPKEYP FROM PEER "warn"
+ASSERT KEEPKEYP_FROM == 1
+ASSERT KEEPKEYP_N == 1
+SYS EQS KEEPKEYP_SRC "PEER"
+ASSERT LAST_N == 1
+SYS HAS LAST "warn_B"
+ASSERT LAST_N == 1
+SYS HAS LAST "Error"
+ASSERT LAST_N == 0
+
+# GREPKEYP alias
+GREPKEYP "error" FROM PLATE
+ASSERT GREPKEYP_N == 1
+SYS HAS LAST "error_count"
+ASSERT LAST_N == 1
+
+# DROPKEYP: drop matching keys
+DROPKEYP "count"
+ASSERT OK == 1
+ASSERT DROPKEYP_N == 2
+ASSERT DROPKEYP_DROP == 2
+SYS HAS LAST "info_n"
+ASSERT LAST_N == 1
+SYS HAS LAST "host"
+ASSERT LAST_N == 1
+SYS HAS LAST "error_count"
+ASSERT LAST_N == 0
+SYS HAS LAST "warn_count"
+ASSERT LAST_N == 0
+
+DROPKEYP FROM PEER "ok"
+ASSERT DROPKEYP_FROM == 1
+ASSERT DROPKEYP_N == 2
+SYS HAS LAST "Error_A"
+ASSERT LAST_N == 1
+SYS HAS LAST "warn_B"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"ok\""
+ASSERT LAST_N == 0
+
+# case-insensitive
+KEEPKEYPI "error" FROM PEER
+ASSERT KEEPKEYP_ICASE == 1
+ASSERT KEEPKEYP_N == 1
+SYS HAS LAST "Error_A"
+ASSERT LAST_N == 1
+
+DROPKEYPI "WARN" FROM PEER
+ASSERT DROPKEYP_N == 2
+SYS HAS LAST "warn_B"
+ASSERT LAST_N == 0
+SYS HAS LAST "Error_A"
+ASSERT LAST_N == 1
+
+# empty needle keep all
+KEEPKEYP ""
+ASSERT KEEPKEYP_N == 4
+ASSERT KEEPKEYP_DROP == 0
+
+# empty needle drop all
+DROPKEYP ""
+ASSERT DROPKEYP_N == 0
+ASSERT DROPKEYP_DROP == 4
+
+# empty plate soft
+KEEPKEYP FROM empty "x"
+ASSERT KEEPKEYP_N == 0
+DROPKEYP FROM empty "x"
+ASSERT DROPKEYP_N == 0
+
+PRINT "keepkeyp soft ok"
