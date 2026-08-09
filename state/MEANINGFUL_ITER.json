@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 563,
-  "version": "1.15.590-usability",
-  "item": "cubalc plate ensure + merge",
-  "item_id": 599,
-  "title": "cubalc plate ensure/merge · CLI ENSUREPLATE + JSONFILEMERGE duals",
-  "commit": "4d48d1b1f74a2e9a2b75721d5add4274332e91ec",
-  "summary": "Shell agents seed create-or-keep plates and multi-key overlay merge without .cubalc. proof 1140 + plate CLI reg.",
+  "iter": 564,
+  "version": "1.15.591-usability",
+  "item": "cubalc plate eq/ne/diff",
+  "item_id": 600,
+  "title": "cubalc plate eq|ne|diff · CLI JSONEQ/JSONCHANGED duals for mesh sync",
+  "commit": "e7f98d15fabec710af03ba74cc6ecbdea057d90a",
+  "summary": "Shell agents compare plate files order-independently and list changed keys without .cubalc. proof 1141 + plate CLI reg.",
   "proofs": [
-    "1140_cli_plate_ensure_merge",
-    "1112_cli_plate reg",
-    "1126_cli_plate_fill reg"
+    "1141_cli_plate_eq_diff",
+    "1140_cli_plate_ensure_merge reg",
+    "1112_cli_plate reg"
   ],
-  "when": "2026-08-09T00:51:25Z",
+  "when": "2026-08-09T01:05:39Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4d48d1b1f74a2e9a2b75721d5add4274332e91ec",
-  "note": "clean tree; EVOLVE_PAUSED"
+  "sha": "e7f98d15fabec710af03ba74cc6ecbdea057d90a",
+  "note": "thrash restore then ship; EVOLVE_PAUSED"
 }
