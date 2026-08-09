@@ -2186,6 +2186,7 @@ int main(int argc, char **argv) {
       {"cli_plate_nestrename", "programs/proof/1205_cli_plate_nestrename.sh", "cubalc plate nestrename/copy/swap duals paths"},
       {"setp_autoraw", "programs/proof/1206_setp_autoraw.cubalc", "SETP/DEFAULTP JSON-shaped string auto-raw object nest"},
       {"getobj_path", "programs/proof/1207_getobj_path.cubalc", "GETOBJ/SETOBJ/MERGEOBJ dotted path peel/nest"},
+      {"cli_plate_getobj", "programs/proof/1208_cli_plate_getobj.sh", "cubalc plate getobj/setobj/mergeobj/defaultobj duals paths"},
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
@@ -4901,6 +4902,9 @@ int main(int argc, char **argv) {
               "       cubalc plate <path.json>                 # show\n"
               "       cubalc plate get <path> <key> [OR def]\n"
               "       cubalc plate getn <path> <key> [OR n]  # GETPN dual · numeric peel (paths ok)\n"
+              "       cubalc plate getobj <path> <key> [OR '{}']  # GETOBJ dual · peel object (paths ok)\n"
+              "       cubalc plate setobj <path> <key> <obj|@file>  # SETOBJ dual · nest object (paths ok)\n"
+              "       cubalc plate mergeobj|defaultobj <path> <key> <obj|@file>  # MERGEOBJ/DEFAULTOBJ duals\n"
               "       cubalc plate type <path> <key>  # TYPEP dual · kind miss|num|str|… (paths ok)\n"
               "       cubalc plate set <path> <key> <value>\n"
               "       cubalc plate default <path> <key> <value>  # DEFAULTP dual · set-if-missing (paths ok)\n"
@@ -4939,7 +4943,8 @@ int main(int argc, char **argv) {
               "       cubalc plate top|bot <path> [n]          # top/bot N keys · TOPNP duals\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
-             "\"ops\":[\"show\",\"get\",\"getn\",\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
+             "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
+             "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
              "\"inc\",\"del\",\"keys\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\","
@@ -4958,6 +4963,14 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "getn") == 0 || strcmp(argv[2], "num") == 0 ||
         strcmp(argv[2], "getpn") == 0 || strcmp(argv[2], "jgetn") == 0 ||
         strcmp(argv[2], "int") == 0 ||
+        strcmp(argv[2], "getobj") == 0 || strcmp(argv[2], "peekobj") == 0 ||
+        strcmp(argv[2], "objget") == 0 ||
+        strcmp(argv[2], "setobj") == 0 || strcmp(argv[2], "putobj") == 0 ||
+        strcmp(argv[2], "nestp") == 0 || strcmp(argv[2], "putnest") == 0 ||
+        strcmp(argv[2], "mergeobj") == 0 || strcmp(argv[2], "patchnest") == 0 ||
+        strcmp(argv[2], "updateobj") == 0 ||
+        strcmp(argv[2], "defaultobj") == 0 || strcmp(argv[2], "ensureobj") == 0 ||
+        strcmp(argv[2], "defaultnest") == 0 ||
         strcmp(argv[2], "type") == 0 || strcmp(argv[2], "kind") == 0 ||
         strcmp(argv[2], "typeof") == 0 || strcmp(argv[2], "typep") == 0 ||
         strcmp(argv[2], "jtype") == 0 ||
@@ -5068,6 +5081,15 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "num") == 0 || strcmp(op, "getpn") == 0 ||
                strcmp(op, "jgetn") == 0 || strcmp(op, "int") == 0)
         op = "getn";
+      else if (strcmp(op, "peekobj") == 0 || strcmp(op, "objget") == 0)
+        op = "getobj";
+      else if (strcmp(op, "putobj") == 0 || strcmp(op, "nestp") == 0 ||
+               strcmp(op, "putnest") == 0)
+        op = "setobj";
+      else if (strcmp(op, "patchnest") == 0 || strcmp(op, "updateobj") == 0)
+        op = "mergeobj";
+      else if (strcmp(op, "ensureobj") == 0 || strcmp(op, "defaultnest") == 0)
+        op = "defaultobj";
       else if (strcmp(op, "kind") == 0 || strcmp(op, "typeof") == 0 ||
                strcmp(op, "typep") == 0 || strcmp(op, "jtype") == 0)
         op = "type";
@@ -7117,6 +7139,194 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
              "\"n\":0,\"err\":\"key miss\",\"file\":%s,\"version\":\"%s\"}\n",
              path, key, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
       return 1;
+    }
+
+    /* getobj path key [OR '{}'] — GETOBJ dual: peel nested object (paths ok).
+     * setobj path key obj|@file — SETOBJ dual: nest object write-back (paths ok).
+     * mergeobj|defaultobj path key obj|@file — MERGEOBJ/DEFAULTOBJ duals.
+     * Usability: deep nest object peel/patch without a .cubalc program:
+     *   cubalc plate getobj agent.json cfg.meta
+     *   cubalc plate setobj agent.json net.peer '{"host":"B"}'
+     *   cubalc plate mergeobj agent.json cfg.meta '{"zone":"A"}'
+     */
+    if (strcmp(op, "getobj") == 0 || strcmp(op, "setobj") == 0 ||
+        strcmp(op, "mergeobj") == 0 || strcmp(op, "defaultobj") == 0) {
+      char objbuf[CUBALC_HOST_STR_MAX];
+      char nest[CUBALC_HOST_STR_MAX];
+      cubalc_host_result pr, mr;
+      const char *v;
+      int hit = 0;
+
+      if (strcmp(op, "getobj") == 0) {
+        if (ai < argc && (strcmp(argv[ai], "OR") == 0 || strcmp(argv[ai], "DEFAULT") == 0 ||
+                          strcmp(argv[ai], "ELSE") == 0)) {
+          ai++;
+          if (ai < argc) {
+            fb = argv[ai++];
+            have_fb = 1;
+          }
+        }
+        memset(&gr, 0, sizeof gr);
+        if (cubalc_host_json_path_get_raw(plate, key, &gr) == 0) {
+          v = gr.str;
+          while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+          if (*v == '{') {
+            hit = 1;
+            if (v != gr.str) {
+              size_t n = strlen(v);
+              memmove(gr.str, v, n + 1);
+            }
+          }
+        }
+        if (hit) {
+          fputs(gr.str, stdout);
+          if (!gr.str[0] || gr.str[strlen(gr.str) - 1] != '\n')
+            fputc('\n', stdout);
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                 "\"op\":\"getobj\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":true,"
+                 "\"file\":%s,\"version\":\"%s\",\"plate\":%s,"
+                 "\"note\":\"GETOBJ dual · object body above plate · paths ok\"}\n",
+                 path, key, file_hit ? "true" : "false", CUBALC_LANG_VERSION, gr.str);
+          return 0;
+        }
+        if (have_fb) {
+          const char *body_out = fb;
+          while (*body_out == ' ' || *body_out == '\t') body_out++;
+          if (*body_out != '{')
+            body_out = "{}";
+          fputs(body_out, stdout);
+          if (body_out[strlen(body_out) - 1] != '\n')
+            fputc('\n', stdout);
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                 "\"op\":\"getobj\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":false,"
+                 "\"or\":true,\"file\":%s,\"version\":\"%s\",\"plate\":%s}\n",
+                 path, key, file_hit ? "true" : "false", CUBALC_LANG_VERSION, body_out);
+          return 0;
+        }
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"getobj\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":false,"
+               "\"err\":\"key miss or not object\",\"file\":%s,\"version\":\"%s\"}\n",
+               path, key, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+        return 1;
+      }
+
+      /* setobj|mergeobj|defaultobj need object value */
+      if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"err\":\"need object value or @file\","
+               "\"version\":\"%s\"}\n", op, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      val = argv[ai++];
+      objbuf[0] = 0;
+      if (val[0] == '@') {
+        memset(&pr, 0, sizeof pr);
+        if (cubalc_host_read(val + 1, &pr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"err\":\"object read fail\",\"version\":\"%s\"}\n",
+                 op, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        snprintf(objbuf, sizeof objbuf, "%s", pr.str);
+      } else if (strchr(val, '{') == NULL && access(val, R_OK) == 0) {
+        memset(&pr, 0, sizeof pr);
+        if (cubalc_host_read(val, &pr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"err\":\"object read fail\",\"version\":\"%s\"}\n",
+                 op, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        snprintf(objbuf, sizeof objbuf, "%s", pr.str);
+      } else {
+        snprintf(objbuf, sizeof objbuf, "%s", val);
+      }
+      v = objbuf;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v != '{') {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"err\":\"value not object\",\"version\":\"%s\"}\n",
+               op, CUBALC_LANG_VERSION);
+        return 1;
+      }
+      if (v != objbuf) {
+        size_t n = strlen(v);
+        memmove(objbuf, v, n + 1);
+      }
+
+      if (strcmp(op, "setobj") == 0) {
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_json_path_set(plate, key, objbuf, 1, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"setobj\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 wr.err[0] ? wr.err : "set fail", CUBALC_LANG_VERSION);
+          return 1;
+        }
+        snprintf(plate, sizeof plate, "%s", wr.str);
+      } else {
+        /* mergeobj / defaultobj: peel nest, merge/defaults, path_set */
+        memset(&pr, 0, sizeof pr);
+        cubalc_host_json_path_obj(plate, key, &pr);
+        snprintf(nest, sizeof nest, "%s", pr.str);
+        memset(&mr, 0, sizeof mr);
+        if (strcmp(op, "defaultobj") == 0) {
+          if (cubalc_host_json_defaults(nest, objbuf, &mr) != 0) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"defaultobj\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                   mr.err[0] ? mr.err : "defaults fail", CUBALC_LANG_VERSION);
+            return 1;
+          }
+        } else {
+          if (cubalc_host_json_merge(nest, objbuf, &mr) != 0) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"mergeobj\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                   mr.err[0] ? mr.err : "merge fail", CUBALC_LANG_VERSION);
+            return 1;
+          }
+        }
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_json_path_set(plate, key, mr.str, 1, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 op, wr.err[0] ? wr.err : "set fail", CUBALC_LANG_VERSION);
+          return 1;
+        }
+        snprintf(plate, sizeof plate, "%s", wr.str);
+        /* report applied count in wr.n via mr.n after write */
+        wr.n = mr.n;
+      }
+
+      slash = strrchr(path, '/');
+      if (slash && slash != path) {
+        size_t n = (size_t)(slash - path);
+        if (n >= sizeof parent) n = sizeof parent - 1;
+        memcpy(parent, path, n);
+        parent[n] = 0;
+        memset(&hr, 0, sizeof hr);
+        cubalc_host_mkdir(parent, &hr);
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_write(path, plate, &hr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"err\":\"write fail\",\"version\":\"%s\"}\n",
+               op, CUBALC_LANG_VERSION);
+        return 1;
+      }
+      if (strcmp(op, "setobj") == 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"setobj\",\"path\":\"%s\",\"key\":\"%s\",\"bytes\":%ld,"
+               "\"file\":%s,\"version\":\"%s\",\"plate\":%s,"
+               "\"note\":\"SETOBJ dual · paths ok\"}\n",
+               path, key, hr.n, file_hit ? "true" : "false",
+               CUBALC_LANG_VERSION, plate);
+      } else {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"key\":\"%s\",\"n\":%ld,"
+               "\"bytes\":%ld,\"file\":%s,\"version\":\"%s\",\"plate\":%s,"
+               "\"note\":\"MERGEOBJ/DEFAULTOBJ dual · paths ok\"}\n",
+               op, path, key, wr.n, hr.n, file_hit ? "true" : "false",
+               CUBALC_LANG_VERSION, plate);
+      }
+      return 0;
     }
 
     /* type|kind path key — TYPEP dual: field kind probe (paths ok).
