@@ -277,6 +277,14 @@ int cubalc_host_json_avg(const char *json, cubalc_host_result *r);
  * Soft {} if not object. Usability: FREQ plate denoise without TOKV+THRESHKV+FROMKVP. */
 int cubalc_host_json_valfilter(const char *json, int mode, long limit,
                                cubalc_host_result *r);
+/* plate value rewrite (multi-plate duals of PCTKV / SCALEKV / ADDKV).
+ * mode 0 PCT: pure-int values → (v*100)/sum · zero sum → 0 · non-int kept.
+ * mode 1 SCALE: pure-int values → v * arg · non-int kept.
+ * mode 2 ADD: pure-int values → v + arg · non-int kept.
+ * r->str = result plate · r->n = fields rewritten · r->code = total (PCT) or nkeys.
+ * Soft {}. Usability: FREQ share/weight/offset without TOKV+PCTKV/SCALEKV/ADDKV+FROMKVP. */
+int cubalc_host_json_valmap(const char *json, int mode, long arg,
+                            cubalc_host_result *r);
 /* order-independent top-level plate equality → r->n 1|0. Soft always OK.
  * Same keys + same raw values (whitespace-trimmed). Nested compared as raw text.
  * Usability: agent verify after WRITE/MERGE without fragile string EQS. */

@@ -4998,6 +4998,122 @@ int cubalc_host_json_valfilter(const char *json, int mode, long limit,
   return 0;
 }
 
+/* Parse pure-int JSON raw value (bool as 0/1). Returns 1 if numeric. */
+static int json_raw_pure_int(const char *raw, long *out) {
+  const char *v = raw ? raw : "";
+  char *end = NULL;
+  long num = 0;
+  while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+  if (*v == '"') return 0;
+  if (strncmp(v, "true", 4) == 0 &&
+      (v[4] == 0 || v[4] == ',' || v[4] == '}' || v[4] == ' ' ||
+       v[4] == '\n' || v[4] == '\r' || v[4] == '\t')) {
+    if (out) *out = 1;
+    return 1;
+  }
+  if (strncmp(v, "false", 5) == 0 &&
+      (v[5] == 0 || v[5] == ',' || v[5] == '}' || v[5] == ' ' ||
+       v[5] == '\n' || v[5] == '\r' || v[5] == '\t')) {
+    if (out) *out = 0;
+    return 1;
+  }
+  if (strncmp(v, "null", 4) == 0 || *v == '{' || *v == '[')
+    return 0;
+  num = strtol(v, &end, 10);
+  if (!(end && end != v && *end == 0))
+    return 0;
+  if (out) *out = num;
+  return 1;
+}
+
+/* Usability: multi-plate PCTP/SCALEP/ADDP — rewrite int values without bag glue.
+ * mode 0 PCT: (v*100)/sum · mode 1 SCALE: v*arg · mode 2 ADD: v+arg.
+ * Non-int keys kept as-is. r->n = rewritten · r->code = sum (PCT) or nkeys. */
+int cubalc_host_json_valmap(const char *json, int mode, long arg,
+                            cubalc_host_result *r) {
+  cubalc_host_result keys, raw, setr;
+  char cur[CUBALC_HOST_STR_MAX];
+  const char *p, *line;
+  long total = 0, rew = 0, nkeys = 0;
+  r_clear(r);
+  memset(&keys, 0, sizeof keys);
+  snprintf(cur, sizeof cur, "%s", "{}");
+  if (cubalc_host_json_keys(json, &keys) != 0) {
+    snprintf(r->str, sizeof r->str, "%s", "{}");
+    r->n = 0;
+    r->code = 0;
+    r->ok = 1;
+    return 0;
+  }
+  /* PCT: sum pure-int values first */
+  if (mode == 0) {
+    p = keys.str;
+    while (*p) {
+      char key[256];
+      size_t kn = 0;
+      long num = 0;
+      while (*p == '\n' || *p == '\r') p++;
+      if (!*p) break;
+      line = p;
+      while (*p && *p != '\n' && *p != '\r') p++;
+      kn = (size_t)(p - line);
+      if (kn >= sizeof key) kn = sizeof key - 1;
+      memcpy(key, line, kn);
+      key[kn] = 0;
+      if (!key[0]) continue;
+      memset(&raw, 0, sizeof raw);
+      if (cubalc_host_json_get_raw(json, key, &raw) != 0) continue;
+      if (json_raw_pure_int(raw.str, &num)) total += num;
+    }
+  }
+  /* rebuild plate */
+  p = keys.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    long num = 0;
+    char numbuf[40];
+    const char *use_raw;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    nkeys++;
+    memset(&raw, 0, sizeof raw);
+    if (cubalc_host_json_get_raw(json, key, &raw) != 0) continue;
+    use_raw = raw.str;
+    if (json_raw_pure_int(raw.str, &num)) {
+      long outv;
+      if (mode == 0)
+        outv = (total != 0) ? ((num * 100) / total) : 0;
+      else if (mode == 1)
+        outv = num * arg;
+      else
+        outv = num + arg;
+      snprintf(numbuf, sizeof numbuf, "%ld", outv);
+      use_raw = numbuf;
+      rew++;
+    }
+    memset(&setr, 0, sizeof setr);
+    if (cubalc_host_json_set(cur, key, use_raw, 1, &setr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               setr.err[0] ? setr.err : "jsonvalmap: set fail");
+      return -1;
+    }
+    snprintf(cur, sizeof cur, "%s", setr.str);
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  r->n = rew;
+  r->code = (mode == 0) ? (int)total : (int)nkeys;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS JSONEQ a b — order-independent top-level plate equality. */
 int cubalc_host_json_eq(const char *a, const char *b, cubalc_host_result *r) {
   cubalc_host_result ka, kb, ra, rb;

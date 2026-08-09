@@ -1,0 +1,108 @@
+# PCTP / SCALEP / ADDP — multi-plate value share/weight/offset (PCTKV/SCALEKV/ADDKV duals)
+# Usability: FREQ plates without TOKV+PCTKV/SCALEKV/ADDKV+FROMKVP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"warn\":25,\"error\":50,\"info\":25,\"label\":\"x\"}"
+LET PEER = "{\"a\":3,\"b\":7,\"tag\":\"ok\"}"
+LET empty = "{}"
+
+# PCTP: values as integer percent of sum (25+50+25=100 → 25,50,25)
+PCTP
+ASSERT OK == 1
+ASSERT PCTP_N == 3
+ASSERT PCTP_SUM == 100
+ASSERT PCTP_FROM == 0
+SYS HAS LAST "\"warn\":25"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"error\":50"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"info\":25"
+ASSERT LAST_N == 1
+SYS HAS LAST "label"
+ASSERT LAST_N == 1
+# source not mutated
+SYS HAS PLATE "\"error\":50"
+ASSERT LAST_N == 1
+
+# FROM PEER: 3+7=10 → 30%% and 70%%
+PCTP FROM PEER
+ASSERT PCTP_FROM == 1
+ASSERT PCTP_SUM == 10
+ASSERT PCTP_N == 2
+SYS EQS PCTP_SRC "PEER"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"a\":30"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"b\":70"
+ASSERT LAST_N == 1
+SYS HAS LAST "tag"
+ASSERT LAST_N == 1
+
+SHAREP
+ASSERT PCTP_SUM == 100
+
+# SCALEP: multiply ints by factor
+SCALEP 2 FROM PEER
+ASSERT OK == 1
+ASSERT SCALEP_N == 2
+ASSERT SCALEP_F == 2
+ASSERT SCALEP_FROM == 1
+SYS HAS LAST "\"a\":6"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"b\":14"
+ASSERT LAST_N == 1
+SYS HAS LAST "tag"
+ASSERT LAST_N == 1
+# PEER source intact
+SYS HAS PEER "\"a\":3"
+ASSERT LAST_N == 1
+
+MULP 10
+ASSERT SCALEP_N == 3
+SYS HAS LAST "\"warn\":250"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"error\":500"
+ASSERT LAST_N == 1
+
+# ADDP: Laplace +1 / offset
+ADDP 1 FROM PEER
+ASSERT OK == 1
+ASSERT ADDP_N == 2
+ASSERT ADDP_D == 1
+ASSERT ADDP_FROM == 1
+SYS HAS LAST "\"a\":4"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"b\":8"
+ASSERT LAST_N == 1
+SYS HAS LAST "tag"
+ASSERT LAST_N == 1
+
+OFFSETP -1
+ASSERT ADDP_N == 3
+SYS HAS LAST "\"warn\":24"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"error\":49"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"info\":24"
+ASSERT LAST_N == 1
+
+# empty soft
+PCTP FROM empty
+ASSERT PCTP_N == 0
+ASSERT PCTP_SUM == 0
+SCALEP FROM empty 3
+ASSERT SCALEP_N == 0
+ADDP FROM empty 1
+ASSERT ADDP_N == 0
+
+# zero-sum soft zeros
+LET zed = "{\"a\":0,\"b\":0}"
+PCTP FROM zed
+ASSERT PCTP_SUM == 0
+SYS HAS LAST "\"a\":0"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"b\":0"
+ASSERT LAST_N == 1
+
+PRINT "pctp soft ok"

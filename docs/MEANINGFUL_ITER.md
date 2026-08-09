@@ -647,6 +647,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 617. ~~**`cubalc plate pick` / `omit`**~~ **done** (CLI keep/drop listed keys · PICKP/OMITP duals · no `.cubalc`).
 618. ~~**`SUMNP` / `MAXNP` / `MINNP` / `AVGNP` · `TOPKEYP` / `BOTKEYP`**~~ **done** (numeric plate aggregates · multi-plate · no SYS JSONSUMN/JSONTOPKEY).
 619. ~~**`THRESHP` / `KEEPVP` · `DROPZEROP` / `KEEPNZP` · `CAPP` / `CLAMPP`**~~ **done** (value denoise/clamp on plates · multi-plate · no TOKV+THRESHKV/DROPZERO/CAPKV+FROMKVP).
+620. ~~**`PCTP` / `SHAREP` · `SCALEP` / `MULP` · `ADDP` / `OFFSETP`**~~ **done** (value share/weight/offset on plates · multi-plate · no TOKV+PCTKV/SCALEKV/ADDKV+FROMKVP).
 
 ## Tick protocol
 
