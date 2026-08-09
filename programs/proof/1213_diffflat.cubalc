@@ -1,0 +1,66 @@
+# DIFFFLAT / PATHDIFF — deep leaf-path plate compare
+# Usability: nest-aware mesh sync without shallow DIFFP/CHANGELOGP.
+
+HOLD_FLASH 1
+
+LET A = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"role\":\"worker\",\"x\":1},\"port\":8080},\"n\":3}"
+LET B = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"role\":\"leader\",\"x\":1,\"zone\":\"A\"},\"port\":9090},\"n\":3,\"ok\":true}"
+
+# deep changelog
+DIFFFLAT A B
+ASSERT OK == 1
+ASSERT DIFFFLAT_N == 4
+ASSERT DIFFFLAT_EQ == 0
+SYS HASLINE DIFFFLAT "cfg.meta.role: worker → leader"
+ASSERT LAST_N == 1
+SYS HASLINE DIFFFLAT "cfg.port: 8080 → 9090"
+ASSERT LAST_N == 1
+# added in B
+SYS HASLINE DIFFFLAT "cfg.meta.zone: (missing) → A"
+ASSERT LAST_N == 1
+SYS HASLINE DIFFFLAT "ok: (missing) → true"
+ASSERT LAST_N == 1
+# path bag side channel
+SYS HASLINE DIFFFLAT_PATHS "cfg.meta.role"
+ASSERT LAST_N == 1
+SYS HASLINE DIFFFLAT_PATHS "cfg.port"
+ASSERT LAST_N == 1
+SYS HASLINE DIFFFLAT_PATHS "cfg.meta.zone"
+ASSERT LAST_N == 1
+SYS HASLINE DIFFFLAT_PATHS "ok"
+ASSERT LAST_N == 1
+ASSERT PATHDIFF_N == 4
+
+# paths-only form
+PATHDIFF A B
+ASSERT PATHDIFF_N == 4
+SYS HASLINE PATHDIFF "cfg.meta.role"
+ASSERT LAST_N == 1
+SYS HASLINE PATHDIFF "ok"
+ASSERT LAST_N == 1
+
+# equal plates
+DIFFFLAT A A
+ASSERT DIFFFLAT_N == 0
+ASSERT DIFFFLAT_EQ == 1
+
+# drop in B (present only in A)
+LET C = "{\"host\":\"cubeA\",\"n\":3}"
+DIFFFLAT A C
+ASSERT DIFFFLAT_N >= 3
+SYS HASLINE DIFFFLAT "cfg.meta.role: worker → (missing)"
+ASSERT LAST_N == 1
+SYS HASLINE DIFFFLAT "cfg.port: 8080 → (missing)"
+ASSERT LAST_N == 1
+
+# alias
+CHANGELOGFLAT A B
+ASSERT CHANGELOGFLAT_N == 4
+
+# shallow DIFFP would only see top-level; DIFFFLAT sees nests
+# (cfg may appear as changed object top-level, but we verify deep role path)
+SYS HASLINE DIFFFLAT "cfg.meta.role: worker → leader"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1213_diffflat: PASS"

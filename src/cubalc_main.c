@@ -2178,6 +2178,8 @@ int main(int argc, char **argv) {
       {"cli_plate_flat", "programs/proof/1211_cli_plate_flat.sh", "cubalc plate flat/flatkv FLATKV dual"},
       {"unflatkv", "programs/proof/1212_unflatkv.cubalc", "UNFLATKV/FROMFLAT path:value bag to nested plate"},
       {"cli_plate_unflat", "programs/proof/1212_cli_plate_unflat.sh", "cubalc plate unflat UNFLATKV dual"},
+      {"diffflat", "programs/proof/1213_diffflat.cubalc", "DIFFFLAT/PATHDIFF deep leaf plate changelog multi-plate"},
+      {"cli_plate_diffflat", "programs/proof/1213_cli_plate_diffflat.sh", "cubalc plate diffflat/pathdiff DIFFFLAT dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2461,6 +2463,8 @@ int main(int argc, char **argv) {
       {"UNFLATKV", "flow", "UNFLATKV|FROMFLAT|UNFLATTENP [bag] [UNDER path] [INTO name] — path:value bag → nested plate"},
       {"FROMFLAT", "flow", "FROMFLAT alias of UNFLATKV"},
       {"UNFLATTENP", "flow", "UNFLATTENP alias of UNFLATKV"},
+      {"DIFFFLAT", "flow", "DIFFFLAT|CHANGELOGFLAT a b — deep leaf path: old → new bag · nest-aware"},
+      {"PATHDIFF", "flow", "PATHDIFF|DIFFPATH a b — changed leaf path bag · nest-aware DIFFP"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4933,6 +4937,8 @@ int main(int argc, char **argv) {
               "       cubalc plate leaves|pathkeys <path> [nest.path]  # PATHKEYS dual · dotted leaf paths\n"
               "       cubalc plate flat|flatkv <path> [nest.path]  # FLATKV dual · path:value bag\n"
               "       cubalc plate unflat|unflatkv <path> [UNDER nest] <bag|@file|k:v…>  # UNFLATKV dual\n"
+              "       cubalc plate diffflat|clogflat <a.json> <b.json>  # DIFFFLAT dual · deep leaf changelog\n"
+              "       cubalc plate pathdiff <a.json> <b.json>  # PATHDIFF dual · changed leaf paths\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -4964,7 +4970,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5019,6 +5025,10 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "unflat") == 0 || strcmp(argv[2], "unflatkv") == 0 ||
         strcmp(argv[2], "fromflat") == 0 || strcmp(argv[2], "unflatten") == 0 ||
         strcmp(argv[2], "unflattenp") == 0 || strcmp(argv[2], "pathfromkv") == 0 ||
+        strcmp(argv[2], "diffflat") == 0 || strcmp(argv[2], "clogflat") == 0 ||
+        strcmp(argv[2], "changelogflat") == 0 || strcmp(argv[2], "leafdiff") == 0 ||
+        strcmp(argv[2], "pathdiff") == 0 || strcmp(argv[2], "diffpath") == 0 ||
+        strcmp(argv[2], "diffpaths") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5160,6 +5170,12 @@ int main(int argc, char **argv) {
                strcmp(op, "unflatten") == 0 || strcmp(op, "unflattenp") == 0 ||
                strcmp(op, "pathfromkv") == 0 || strcmp(op, "applyflat") == 0)
         op = "unflat";
+      else if (strcmp(op, "clogflat") == 0 || strcmp(op, "changelogflat") == 0 ||
+               strcmp(op, "leafdiff") == 0 || strcmp(op, "flatdiff") == 0)
+        op = "diffflat";
+      else if (strcmp(op, "diffpath") == 0 || strcmp(op, "diffpaths") == 0 ||
+               strcmp(op, "changedpaths") == 0)
+        op = "pathdiff";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -7006,7 +7022,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
      * Soft-missing files load as {}. eq exit 0 if equal else 1; ne inverted;
      * diff/changelog exit 0 if identical else 1 (keys/lines listed either way). */
     if (strcmp(op, "eq") == 0 || strcmp(op, "ne") == 0 || strcmp(op, "diff") == 0 ||
-        strcmp(op, "changelog") == 0) {
+        strcmp(op, "changelog") == 0 ||
+        strcmp(op, "diffflat") == 0 || strcmp(op, "pathdiff") == 0) {
       const char *path2 = NULL;
       char plate2[CUBALC_HOST_STR_MAX];
       int file_hit2 = 0, equal = 0;
@@ -7085,6 +7102,50 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
                file_hit2 ? "true" : "false",
                CUBALC_LANG_VERSION);
         return equal ? 0 : 1;
+      }
+
+      /* diffflat|pathdiff — deep leaf-path compare (DIFFFLAT / PATHDIFF duals).
+       * Nest-aware changelog / path bag above plate. */
+      if (strcmp(op, "diffflat") == 0 || strcmp(op, "pathdiff") == 0) {
+        int paths_only = (strcmp(op, "pathdiff") == 0) ? 1 : 0;
+        memset(&ch, 0, sizeof ch);
+        cubalc_host_json_leaf_diff(plate, plate2, paths_only, &ch);
+        if (ch.str[0]) {
+          fputs(ch.str, stdout);
+          if (ch.str[strlen(ch.str) - 1] != '\n')
+            fputc('\n', stdout);
+        }
+        o = 0; esc[0] = 0;
+        for (i = 0; ch.str[i] && o + 2 < sizeof esc; i++) {
+          char c = ch.str[i];
+          if (c == '"' || c == '\\') {
+            esc[o++] = '\\';
+            esc[o++] = c;
+          } else if (c == '\n') {
+            esc[o++] = '\\';
+            esc[o++] = 'n';
+          } else if (c == '\r') {
+          } else if ((unsigned char)c < 32) {
+            esc[o++] = ' ';
+          } else {
+            esc[o++] = c;
+          }
+        }
+        esc[o] = 0;
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"path2\":\"%s\","
+               "\"equal\":%s,\"n\":%ld,\"lines\":\"%s\","
+               "\"file\":%s,\"file2\":%s,\"version\":\"%s\","
+               "\"note\":\"%s\"}\n",
+               op, path, path2,
+               (ch.n == 0) ? "true" : "false", ch.n, esc,
+               file_hit ? "true" : "false",
+               file_hit2 ? "true" : "false",
+               CUBALC_LANG_VERSION,
+               paths_only
+                   ? "PATHDIFF dual · changed leaf paths · bag above plate"
+                   : "DIFFFLAT dual · deep leaf path: old → new · bag above plate");
+        return (ch.n == 0) ? 0 : 1;
       }
 
       /* changelog — human/agent "key: old → new" lines (JSONCHANGELOG dual).

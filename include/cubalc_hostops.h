@@ -259,6 +259,14 @@ int cubalc_host_json_leaf_kv(const char *json, const char *path,
  * Usability: agent edit flat inventory then re-nest without multi SETP. */
 int cubalc_host_json_unflat_kv(const char *base, const char *bag, const char *under,
                                cubalc_host_result *r);
+/* Deep leaf-path changelog between two plates (FLATKV dual of CHANGELOGP).
+ * paths_only=0 → "path: old → new" lines · (missing) for add/drop.
+ * paths_only=1 → bag of changed leaf paths only.
+ * Compares recursive leaf_kv inventories (not top-level keys only).
+ * r->n = change count · soft always OK. Empty if equal.
+ * Usability: nest-aware mesh/agent plate sync without shallow DIFFP. */
+int cubalc_host_json_leaf_diff(const char *a, const char *b, int paths_only,
+                               cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

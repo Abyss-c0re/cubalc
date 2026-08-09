@@ -699,6 +699,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 669. ~~**`PATHKEYS` / `LEAFKEYS` / `DOTPATHS` + `cubalc plate leaves`**~~ **done** (recursive dotted leaf path bag · multi-plate · CLI dual · agent structure discovery without KEYSP+GETOBJ walk).
 670. ~~**`FLATKV` / `LEAFKV` / `FLATTENP` + `cubalc plate flat`**~~ **done** (recursive path:value bag · multi-plate · CLI dual · flat inventory without PATHKEYS+GETP or shallow TOKVP).
 671. ~~**`UNFLATKV` / `FROMFLAT` / `UNFLATTENP` + `cubalc plate unflat`**~~ **done** (path:value bag → nested plate · UNDER prefix · CLI dual · FLATKV round-trip without multi SETP).
+672. ~~**`DIFFFLAT` / `PATHDIFF` + `cubalc plate diffflat`/`pathdiff`**~~ **done** (deep leaf path: old → new / path bag · multi-plate · nest-aware CHANGELOGP/DIFFP dual · CLI).
 
 ## Tick protocol
 

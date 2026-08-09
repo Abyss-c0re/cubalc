@@ -227,6 +227,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate unflat state/my_agent.json host:cubeA cfg.port:9  # path:val → nest (UNFLATKV)
 ./out/cubalc plate unflat state/my_agent.json @flat.txt               # bag file
 ./out/cubalc plate unflat state/peer.json UNDER cfg role:edge         # relative under nest
+./out/cubalc plate diffflat state/a.json state/b.json                 # deep leaf path: old → new
+./out/cubalc plate pathdiff  state/a.json state/b.json                 # changed leaf paths only
 ./out/cubalc libs | grep plate
 
 # nest* still available; prefer dotted get/set when one scalar field:

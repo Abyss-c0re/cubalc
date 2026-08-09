@@ -27431,6 +27431,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PATHKEYS") || kw(&L->cur,"LEAFKEYS") || kw(&L->cur,"DOTPATHS") ||
              kw(&L->cur,"FLATKV") || kw(&L->cur,"LEAFKV") || kw(&L->cur,"FLATTENP") ||
              kw(&L->cur,"UNFLATKV") || kw(&L->cur,"FROMFLAT") || kw(&L->cur,"UNFLATTENP") ||
+             kw(&L->cur,"DIFFFLAT") || kw(&L->cur,"PATHDIFF") || kw(&L->cur,"CHANGELOGFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35808,6 +35809,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"UNFLATKV", "UNFLATKV|FROMFLAT|UNFLATTENP [bag] [UNDER path] [INTO name] — path:value bag → nested plate · round-trip FLATKV"},
       {"FROMFLAT", "FROMFLAT alias of UNFLATKV"},
       {"UNFLATTENP", "UNFLATTENP alias of UNFLATKV"},
+      {"DIFFFLAT", "DIFFFLAT|CHANGELOGFLAT|LEAFDIFF a b — deep leaf path: old → new bag · multi-plate · nest-aware CHANGELOGP"},
+      {"CHANGELOGFLAT", "CHANGELOGFLAT alias of DIFFFLAT"},
+      {"PATHDIFF", "PATHDIFF|DIFFPATH a b — changed leaf path bag only · multi-plate · nest-aware DIFFP"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -43646,6 +43650,105 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# unflatkv n=%ld under=%s into=%s\n",
               hr.n, under[0] ? under : ".",
               have_into ? into_name : "PLATE");
+    bump(vm); return 1;
+  }
+
+  /* DIFFFLAT|CHANGELOGFLAT|LEAFDIFF|CLOGFLAT a b
+   * PATHDIFF|DIFFPATH a b — deep leaf-path compare of two plates.
+   * DIFFFLAT → "path: old → new" bag · PATHDIFF → changed path bag only.
+   * Args: plate vars / LAST / JSON strings (same as CHANGELOGP).
+   * Soft always OK. LAST_N = change count.
+   * Usability: nest-aware mesh sync without shallow DIFFP/CHANGELOGP:
+   *   DIFFFLAT PLATE PEER
+   *   PATHDIFF session peer
+   *   CHANGELOGFLAT a b
+   */
+  if (kw(&L->cur,"DIFFFLAT") || kw(&L->cur,"CHANGELOGFLAT") || kw(&L->cur,"LEAFDIFF") ||
+      kw(&L->cur,"CLOGFLAT") || kw(&L->cur,"FLATDIFF") || kw(&L->cur,"MDIFFFLAT") ||
+      kw(&L->cur,"PLATE_DIFFFLAT") || kw(&L->cur,"LEAFCHANGELOG") ||
+      kw(&L->cur,"PATHDIFF") || kw(&L->cur,"DIFFPATH") || kw(&L->cur,"DIFFPATHS") ||
+      kw(&L->cur,"CHANGEDPATHS") || kw(&L->cur,"MPATHDIFF") || kw(&L->cur,"LEAFPATHDIFF")) {
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+    char aname[96], bname[96];
+    cubalc_host_result hr, paths;
+    int paths_only = 0;
+    Var *pv;
+    char op0[28];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "PATHDIFF") == 0 || strcmp(op0, "DIFFPATH") == 0 ||
+        strcmp(op0, "DIFFPATHS") == 0 || strcmp(op0, "CHANGEDPATHS") == 0 ||
+        strcmp(op0, "MPATHDIFF") == 0 || strcmp(op0, "LEAFPATHDIFF") == 0)
+      paths_only = 1;
+
+    lex_next(L);
+    a[0] = 0; b[0] = 0; aname[0] = 0; bname[0] = 0;
+
+#define CUBALC_RESOLVE_PLATE_ARG_DF(dst, dname) do { \
+      (dst)[0] = 0; (dname)[0] = 0; \
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) { \
+        snprintf((dname), sizeof(dname), "%s", "LAST"); \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+        lex_next(L); \
+      } else if (L->cur.kind == TK_IDENT) { \
+        pv = var_get(vm, L->cur.text, 0); \
+        if (pv && pv->is_str) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%s", pv->sval); \
+          lex_next(L); \
+        } else if (pv) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%ld", pv->val); \
+          lex_next(L); \
+        } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+          (dst)[0] = 0; \
+        } \
+      } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+      } \
+      { const char *bp = (dst); \
+        while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++; \
+        if (*bp != '{') snprintf((dst), sizeof(dst), "%s", "{}"); \
+      } \
+    } while (0)
+
+    CUBALC_RESOLVE_PLATE_ARG_DF(a, aname);
+    CUBALC_RESOLVE_PLATE_ARG_DF(b, bname);
+#undef CUBALC_RESOLVE_PLATE_ARG_DF
+
+    memset(&hr, 0, sizeof hr);
+    cubalc_host_json_leaf_diff(a, b, paths_only, &hr);
+    /* always also compute path bag for DIFFFLAT_PATHS */
+    memset(&paths, 0, sizeof paths);
+    if (paths_only) {
+      snprintf(paths.str, sizeof paths.str, "%s", hr.str);
+      paths.n = hr.n;
+    } else {
+      cubalc_host_json_leaf_diff(a, b, 1, &paths);
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "DIFFFLAT", hr.str);
+    var_set_str(vm, "CHANGELOGFLAT", hr.str);
+    var_set_str(vm, "LEAFDIFF", hr.str);
+    var_set_num(vm, "DIFFFLAT_N", hr.n);
+    var_set_num(vm, "CHANGELOGFLAT_N", hr.n);
+    var_set_num(vm, "PATHDIFF_N", paths.n);
+    var_set_str(vm, "DIFFFLAT_PATHS", paths.str);
+    var_set_str(vm, "PATHDIFF", paths.str);
+    var_set_str(vm, "DIFFFLAT_A", aname);
+    var_set_str(vm, "DIFFFLAT_B", bname);
+    var_set_num(vm, "DIFFFLAT_EQ", hr.n == 0 ? 1 : 0);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%ld a=%s b=%s\n",
+              paths_only ? "pathdiff" : "diffflat",
+              hr.n, aname[0] ? aname : "?", bname[0] ? bname : "?");
     bump(vm); return 1;
   }
 

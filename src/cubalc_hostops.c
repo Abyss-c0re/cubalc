@@ -4617,6 +4617,220 @@ int cubalc_host_json_unflat_kv(const char *base, const char *bag, const char *un
   return 0;
 }
 
+/* True if path appears as a whole line in a newline bag (no colon required). */
+static int cubalc_pathbag_has(const char *bag, const char *path) {
+  const char *sp;
+  size_t kn;
+  if (!bag || !path || !path[0]) return 0;
+  kn = strlen(path);
+  sp = bag;
+  while (*sp) {
+    size_t sn = 0;
+    while (*sp == '\n' || *sp == '\r') sp++;
+    if (!*sp) break;
+    while (sp[sn] && sp[sn] != '\n' && sp[sn] != '\r') sn++;
+    if (sn == kn && memcmp(sp, path, kn) == 0) return 1;
+    sp += sn;
+  }
+  return 0;
+}
+
+/* Lookup path in leaf_kv bag (path:val lines). Returns 1 hit, 0 miss. */
+static int cubalc_flatbag_get(const char *bag, const char *path,
+                              char *val, size_t vcap) {
+  const char *p, *line;
+  size_t pl;
+  if (!bag || !path || !path[0] || !val || vcap < 1) return 0;
+  pl = strlen(path);
+  val[0] = 0;
+  p = bag;
+  while (*p) {
+    size_t kn = 0;
+    const char *sep;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    if (!sep) continue;
+    kn = (size_t)(sep - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn != pl || memcmp(line, path, pl) != 0) continue;
+    {
+      const char *vs = sep + 1, *ve = p;
+      size_t vn;
+      while (vs < ve && (*vs == ' ' || *vs == '\t')) vs++;
+      while (ve > vs && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+      vn = (size_t)(ve - vs);
+      if (vn >= vcap) vn = vcap - 1;
+      memcpy(val, vs, vn);
+      val[vn] = 0;
+    }
+    return 1;
+  }
+  return 0;
+}
+
+/* Deep leaf-path diff / changelog. See header. */
+int cubalc_host_json_leaf_diff(const char *a, const char *b, int paths_only,
+                               cubalc_host_result *r) {
+  cubalc_host_result ka, kb;
+  const char *p, *line;
+  size_t olen = 0;
+  long count = 0;
+  char seen[CUBALC_HOST_STR_MAX];
+  size_t seen_olen = 0;
+  long seen_n = 0;
+
+  r_clear(r);
+  r->str[0] = 0;
+  r->ok = 1;
+  r->n = 0;
+  seen[0] = 0;
+  memset(&ka, 0, sizeof ka);
+  memset(&kb, 0, sizeof kb);
+  cubalc_host_json_leaf_kv(a ? a : "{}", NULL, &ka);
+  cubalc_host_json_leaf_kv(b ? b : "{}", NULL, &kb);
+
+  p = ka.str;
+  while (*p) {
+    char path[512], va[CUBALC_HOST_STR_MAX / 4], vb[CUBALC_HOST_STR_MAX / 4];
+    char linebuf[CUBALC_HOST_STR_MAX];
+    size_t kn = 0;
+    int has_b;
+    const char *sep;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    if (!sep) continue;
+    kn = (size_t)(sep - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn == 0 || kn >= sizeof path) continue;
+    memcpy(path, line, kn);
+    path[kn] = 0;
+    {
+      const char *vs = sep + 1, *ve = p;
+      size_t vn;
+      while (vs < ve && (*vs == ' ' || *vs == '\t')) vs++;
+      while (ve > vs && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+      vn = (size_t)(ve - vs);
+      if (vn >= sizeof va) vn = sizeof va - 1;
+      memcpy(va, vs, vn);
+      va[vn] = 0;
+    }
+    has_b = cubalc_flatbag_get(kb.str, path, vb, sizeof vb);
+    cubalc_bag_push(seen, sizeof seen, &seen_olen, &seen_n, path);
+    if (has_b && strcmp(va, vb) == 0)
+      continue;
+    if (paths_only) {
+      cubalc_bag_push(r->str, sizeof r->str, &olen, &count, path);
+    } else if (has_b) {
+      if (snprintf(linebuf, sizeof linebuf, "%s: %s → %s", path, va, vb) >= 0)
+        cubalc_bag_push(r->str, sizeof r->str, &olen, &count, linebuf);
+    } else {
+      if (snprintf(linebuf, sizeof linebuf, "%s: %s → (missing)", path, va) >= 0)
+        cubalc_bag_push(r->str, sizeof r->str, &olen, &count, linebuf);
+    }
+  }
+
+  p = kb.str;
+  while (*p) {
+    char path[512], vb[CUBALC_HOST_STR_MAX / 4];
+    char linebuf[CUBALC_HOST_STR_MAX];
+    size_t kn = 0;
+    const char *sep;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    if (!sep) continue;
+    kn = (size_t)(sep - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn == 0 || kn >= sizeof path) continue;
+    memcpy(path, line, kn);
+    path[kn] = 0;
+    if (cubalc_pathbag_has(seen, path))
+      continue;
+    {
+      const char *vs = sep + 1, *ve = p;
+      size_t vn;
+      while (vs < ve && (*vs == ' ' || *vs == '\t')) vs++;
+      while (ve > vs && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+      vn = (size_t)(ve - vs);
+      if (vn >= sizeof vb) vn = sizeof vb - 1;
+      memcpy(vb, vs, vn);
+      vb[vn] = 0;
+    }
+    if (paths_only) {
+      cubalc_bag_push(r->str, sizeof r->str, &olen, &count, path);
+    } else {
+      if (snprintf(linebuf, sizeof linebuf, "%s: (missing) → %s", path, vb) >= 0)
+        cubalc_bag_push(r->str, sizeof r->str, &olen, &count, linebuf);
+    }
+  }
+
+  r->n = count;
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,
