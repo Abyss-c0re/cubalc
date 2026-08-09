@@ -27402,6 +27402,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PLUCKP") || kw(&L->cur,"GETPALL") || kw(&L->cur,"DELTAP") ||
              kw(&L->cur,"PICKP") || kw(&L->cur,"KEEPP") || kw(&L->cur,"OMITP") ||
              kw(&L->cur,"RENAMEP") || kw(&L->cur,"MOVEKEYP") ||
+             kw(&L->cur,"KEYDIFFP") || kw(&L->cur,"KEYCOMMP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35776,6 +35777,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"RENAMEP", "RENAMEP|MOVEKEYP [FROM plate] old new — rename key write-back · multi-plate · no SYS JSONRENAME"},
       {"MOVEKEYP", "MOVEKEYP alias of RENAMEP"},
       {"MVKEYP", "MVKEYP alias of RENAMEP"},
+      {"KEYDIFFP", "KEYDIFFP|ONLYKEYSP a b — keys in a not in b · multi-plate · no SYS JSONKEYDIFF"},
+      {"ONLYKEYSP", "ONLYKEYSP alias of KEYDIFFP"},
+      {"KEYCOMMP", "KEYCOMMP|KEYINTERP a b — keys in both · multi-plate · no SYS JSONKEYCOMM"},
+      {"KEYINTERP", "KEYINTERP alias of KEYCOMMP"},
+      {"COMMONKEYSP", "COMMONKEYSP alias of KEYCOMMP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -40247,6 +40253,112 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# renamep %s→%s n=%ld from=%d src=%s\n",
               oldk, newk, hr.n, have_from,
               from_name[0] ? from_name : (have_from ? "?" : "PLATE"));
+    bump(vm); return 1;
+  }
+  /* KEYDIFFP|ONLYKEYSP a b — keys in a not in b → bag (JSONKEYDIFF dual).
+   * KEYCOMMP|KEYINTERP a b — keys in both → bag (JSONKEYCOMM dual).
+   * Structure-only (ignores values). Soft always OK=1 · LAST_N=count.
+   * Note: KEYSDIFFP stays DIFFP alias (value+structure changes) — not this.
+   * Usability: mesh additions/shared keys without SYS JSONKEYDIFF/JSONKEYCOMM:
+   *   KEYDIFFP PEER PLATE   # keys peer has that local lacks
+   *   KEYCOMMP PLATE PEER   # shared field names
+   */
+  if (kw(&L->cur,"KEYDIFFP") || kw(&L->cur,"ONLYKEYSP") || kw(&L->cur,"KEYSONLYP") ||
+      kw(&L->cur,"ONLYINP") || kw(&L->cur,"MKEYDIFFP") || kw(&L->cur,"PLATE_KEYDIFF") ||
+      kw(&L->cur,"KEYCOMMP") || kw(&L->cur,"KEYINTERP") || kw(&L->cur,"COMMONKEYSP") ||
+      kw(&L->cur,"KEYANDP") || kw(&L->cur,"MKEYCOMMP") || kw(&L->cur,"PLATE_KEYCOMM") ||
+      kw(&L->cur,"SHAREDKEYSP")) {
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+    char aname[96], bname[96];
+    cubalc_host_result hr;
+    int want_inter = 0;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "KEYCOMMP") == 0 || strcmp(op0, "KEYINTERP") == 0 ||
+        strcmp(op0, "COMMONKEYSP") == 0 || strcmp(op0, "KEYANDP") == 0 ||
+        strcmp(op0, "MKEYCOMMP") == 0 || strcmp(op0, "PLATE_KEYCOMM") == 0 ||
+        strcmp(op0, "SHAREDKEYSP") == 0)
+      want_inter = 1;
+
+    lex_next(L);
+    a[0] = 0; b[0] = 0; aname[0] = 0; bname[0] = 0;
+
+#define CUBALC_RESOLVE_PLATE_ARG_KD(dst, dname) do { \
+      (dst)[0] = 0; (dname)[0] = 0; \
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) { \
+        snprintf((dname), sizeof(dname), "%s", "LAST"); \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+        lex_next(L); \
+      } else if (L->cur.kind == TK_IDENT) { \
+        pv = var_get(vm, L->cur.text, 0); \
+        if (pv && pv->is_str) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%s", pv->sval); \
+          lex_next(L); \
+        } else if (pv) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%ld", pv->val); \
+          lex_next(L); \
+        } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+          (dst)[0] = 0; \
+        } \
+      } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+      } \
+      { const char *bp = (dst); \
+        while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++; \
+        if (*bp != '{') snprintf((dst), sizeof(dst), "%s", "{}"); \
+      } \
+    } while (0)
+
+    CUBALC_RESOLVE_PLATE_ARG_KD(a, aname);
+    CUBALC_RESOLVE_PLATE_ARG_KD(b, bname);
+#undef CUBALC_RESOLVE_PLATE_ARG_KD
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_key_set_op(a, b, want_inter, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "KEYDIFFP_N", 0);
+      var_set_num(vm, "KEYCOMMP_N", 0);
+      var_set_str(vm, "LAST_ERR",
+                  want_inter ? "KEYCOMMP: fail" : "KEYDIFFP: fail");
+      var_set_str(vm, "ERR",
+                  want_inter ? "KEYCOMMP: fail" : "KEYDIFFP: fail");
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    if (want_inter) {
+      var_set_str(vm, "KEYCOMMP", hr.str);
+      var_set_str(vm, "KEYINTERP", hr.str);
+      var_set_num(vm, "KEYCOMMP_N", hr.n);
+      var_set_num(vm, "JSONKEYCOMM_N", hr.n);
+      var_set_str(vm, "KEYCOMMP_A", aname);
+      var_set_str(vm, "KEYCOMMP_B", bname);
+    } else {
+      var_set_str(vm, "KEYDIFFP", hr.str);
+      var_set_str(vm, "ONLYKEYSP", hr.str);
+      var_set_num(vm, "KEYDIFFP_N", hr.n);
+      var_set_num(vm, "JSONKEYDIFF_N", hr.n);
+      var_set_str(vm, "KEYDIFFP_A", aname);
+      var_set_str(vm, "KEYDIFFP_B", bname);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%ld a=%s b=%s\n",
+              want_inter ? "keycommp" : "keydiffp",
+              hr.n, aname[0] ? aname : "?", bname[0] ? bname : "?");
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.

@@ -1,0 +1,80 @@
+# KEYDIFFP / KEYCOMMP — multi-plate structural key-set bags (no SYS JSONKEY*)
+# Usability: mesh additions vs shared names without KEYSP+DIFF/INTERSECT glue.
+# Note: KEYSDIFFP is DIFFP alias (value changes) — not KEYDIFFP.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":1,\"host\":\"cubeA\",\"role\":\"worker\"}"
+LET PEER = "{\"n\":2,\"host\":\"cubeB\",\"status\":\"ready\",\"agent\":\"hive\"}"
+
+# keys only in PEER (additions relative to PLATE)
+KEYDIFFP PEER PLATE
+ASSERT OK == 1
+ASSERT KEYDIFFP_N >= 2
+SYS HASLINE LAST "status"
+ASSERT LAST_N == 1
+SYS HASLINE KEYDIFFP "agent"
+ASSERT LAST_N == 1
+# shared keys not only-in-peer
+SYS HASLINE KEYDIFFP "host"
+ASSERT LAST_N == 0
+SYS HASLINE KEYDIFFP "n"
+ASSERT LAST_N == 0
+
+# keys only in PLATE
+KEYDIFFP PLATE PEER
+ASSERT KEYDIFFP_N == 1
+SYS HASLINE LAST "role"
+ASSERT LAST_N == 1
+SYS HASLINE KEYDIFFP "status"
+ASSERT LAST_N == 0
+
+# intersection (shared names regardless of value)
+KEYCOMMP PLATE PEER
+ASSERT OK == 1
+ASSERT KEYCOMMP_N == 2
+SYS HASLINE LAST "host"
+ASSERT LAST_N == 1
+SYS HASLINE KEYCOMMP "n"
+ASSERT LAST_N == 1
+SYS HASLINE KEYCOMMP "role"
+ASSERT LAST_N == 0
+SYS HASLINE KEYCOMMP "status"
+ASSERT LAST_N == 0
+
+# aliases
+ONLYKEYSP PEER PLATE
+ASSERT KEYDIFFP_N >= 2
+KEYINTERP PLATE PEER
+ASSERT KEYCOMMP_N == 2
+COMMONKEYSP PLATE PEER
+ASSERT KEYCOMMP_N == 2
+
+# identical → empty only-diff, full inter
+KEYDIFFP PLATE PLATE
+ASSERT KEYDIFFP_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+KEYCOMMP PLATE PLATE
+ASSERT KEYCOMMP_N == 3
+
+# literals
+KEYDIFFP "{\"a\":1,\"b\":2}" "{\"a\":9}"
+SYS HASLINE LAST "b"
+ASSERT LAST_N == 1
+ASSERT KEYDIFFP_N == 1
+KEYCOMMP "{\"a\":1,\"b\":2}" "{\"a\":9,\"c\":0}"
+SYS HASLINE LAST "a"
+ASSERT LAST_N == 1
+ASSERT KEYCOMMP_N == 1
+
+# value-change still shared key (structure ≠ DIFFP)
+SETP FROM PEER "n" 99
+KEYCOMMP PLATE PEER
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+DIFFP PLATE PEER
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+
+PRINT "keydiffp soft ok"
