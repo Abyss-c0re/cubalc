@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 666,
-  "version": "1.15.693-usability",
-  "item": "PATHBYVAL + plate pathbyval",
-  "item_id": 702,
-  "title": "PATHBYVAL/VALPATH + cubalc plate pathbyval · first leaf path by exact value → LAST · OR fallback · multi-plate",
-  "commit": "7168c8d888185ebfb8c8aec9a18601a555dd736e",
-  "summary": "Reverse nest lookup without EACH FLAT+EQS glue (dual of GETFLAT). proof 1243 + CLI PASS.",
+  "iter": 667,
+  "version": "1.15.694-usability",
+  "item": "UNIQFLAT + plate uniqflat",
+  "item_id": 703,
+  "title": "UNIQFLAT/DISTINCTFLAT + cubalc plate uniqflat · unique matching leaf values → LAST bag · multi-plate",
+  "commit": "313dc8662a63b8765447d9160238f65d0dcd86c5",
+  "summary": "Inventory roles/statuses without VALSFLAT+UNIQ glue. proof 1244 + CLI PASS.",
   "proofs": [
-    "1243_pathbyval PASS",
-    "1243_cli_plate_pathbyval PASS",
-    "1242_modeflat reg PASS"
+    "1244_uniqflat PASS",
+    "1244_cli_plate_uniqflat PASS",
+    "1243_pathbyval reg PASS"
   ],
-  "when": "2026-08-09T19:42:02Z",
+  "when": "2026-08-09T20:00:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "7168c8d888185ebfb8c8aec9a18601a555dd736e",
-  "note": "after MODEFLAT; EVOLVE_PAUSED"
+  "sha": "313dc8662a63b8765447d9160238f65d0dcd86c5",
+  "note": "after PATHBYVAL; EVOLVE_PAUSED"
 }
