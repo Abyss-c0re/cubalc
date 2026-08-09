@@ -3478,6 +3478,6 @@
     "iter269: UNIQFLAT ro fuzzy key match reconfirms flat-needle substring family (W415)",
     "iter269: multi-line uniq bag WRITE no final NL (W416)"
   ],
-  "commit": "pending",
+  "commit": "d0055f7c",
   "ts": "2026-08-09T20:33:45Z"
 }
