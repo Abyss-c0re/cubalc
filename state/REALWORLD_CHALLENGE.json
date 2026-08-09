@@ -1,63 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 221,
-  "program": "programs/realworld/peer_contract_needp_from_board.cubalc",
-  "theme": "NEEDP/HASP/KEYSP/DUMPP FROM peer contract gate",
-  "version": "1.15.583-usability",
+  "iter": 222,
+  "program": "programs/realworld/peer_disk_into_savep_board.cubalc",
+  "theme": "LOADPLATE INTO + SAVEP FROM multi-plate disk bind",
+  "version": "1.15.586-usability",
   "pass": true,
-  "prior_note": "iter 220 SETP FROM; this iter first realworld NEEDP+DUMPP FROM (1132/1133)",
+  "prior_note": "iter 221 NEEDP FROM; this iter first realworld LOAD INTO + SAVEP (1134/1135)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "agent plate",
+      "cmd": "SAVEP agent + SAVEP FROM peer",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "peer",
-      "cmd": "seed peer HASP FROM host",
+      "name": "ensure",
+      "cmd": "ENSUREPLATE INTO session create+hit",
       "ok": true,
-      "note": "peer"
+      "note": "ensure"
     },
     {
-      "name": "keys",
-      "cmd": "KEYSP FROM n=4 vs PLATE",
+      "name": "load",
+      "cmd": "LOADPLATE INTO peer",
       "ok": true,
-      "note": "keys"
+      "note": "load"
     },
     {
-      "name": "has",
-      "cmd": "HASP+HASPALL complete",
+      "name": "tick",
+      "cmd": "INCP+SAVEP FROM after GETP thrash",
       "ok": true,
-      "note": "has"
+      "note": "tick"
     },
     {
-      "name": "need",
-      "cmd": "NEEDP FROM + trail + PLATE",
+      "name": "save",
+      "cmd": "trailing FROM + SAVEP FROM agt",
       "ok": true,
-      "note": "need"
+      "note": "save"
     },
     {
-      "name": "dump",
-      "cmd": "DUMPP FROM plate_info",
+      "name": "reload",
+      "cmd": "LOAD OR fallback miss",
       "ok": true,
-      "note": "dump"
-    },
-    {
-      "name": "softmiss",
-      "cmd": "HASPALL miss status bag",
-      "ok": true,
-      "note": "softmiss"
+      "note": "reload"
     },
     {
       "name": "gate",
-      "cmd": "NEEDP+DUMPP admit",
+      "cmd": "peer n>=11 role worker",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "empty peer + PLATE dump",
+      "cmd": "SAVEP non-object soft; INTO=0",
       "ok": true,
       "note": "edges"
     },
@@ -69,7 +63,7 @@
     },
     {
       "name": "require",
-      "cmd": "softmiss REQUIRE exit 2",
+      "cmd": "REQUIRE exit 2",
       "ok": true,
       "note": "hard env"
     },
@@ -77,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "371/372 pre-existing sys_kvfileensure"
+      "note": "374/375 pre-existing sys_kvfileensure"
     }
   ],
   "weaknesses": [
@@ -1952,6 +1946,38 @@
       "title": "WRITE STATUS omit trailing NL",
       "detail": "cat -A STATUS last line without $.",
       "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W235",
+      "severity": "high",
+      "area": "lang|savep",
+      "title": "bare SAVEP path always writes PLATE not named var",
+      "detail": "After LOADPLATE INTO agt path, SAVEP path still persists conventional PLATE. Easy to wipe agent.json with {} if PLATE empty. Must SAVEP FROM agt path.",
+      "repro": "LOADPLATE INTO agt agent.json; SAVEP agent.json \u2192 writes PLATE"
+    },
+    {
+      "id": "W236",
+      "severity": "med",
+      "area": "lang|vars",
+      "title": "LOADPLATE INTO under var-table pressure \u2192 unknown form",
+      "detail": "When vars[128] is full, INTO bind fails silently; later GETP FROM name \u2192 unknown form 'name'. Multi-plate boards must minimize simultaneous plate vars.",
+      "repro": "many LETs + LOADPLATE INTO agt; GETP FROM agt \u2192 unknown form"
+    },
+    {
+      "id": "W237",
+      "severity": "low",
+      "area": "lang|load",
+      "title": "LOADPLATE miss without OR is soft but empty bind unclear",
+      "detail": "Board uses OR fallback path for miss; without OR agents must check LOADPLATE_HIT before GETP FROM.",
+      "repro": "LOADPLATE INTO x missing.json; GETP FROM x key"
+    },
+    {
+      "id": "W238",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL",
+      "detail": "cat -A STATUS last line no $.",
+      "repro": "cat -A STATUS.txt"
     }
   ],
   "workarounds": [
@@ -2037,14 +2063,14 @@
     "SYS CAT multi-arg for EQS expected bodies"
   ],
   "language_gaps": [
-    "no soft NEEDP FROM (OK=0 + miss bag without halt)",
-    "KEYSP unordered for schema equality",
-    "FROM still memory-only (prior W227/W228)"
+    "SAVEP default target PLATE is a footgun next to LOAD INTO",
+    "var table 128 still bites multi-plate INTO binds",
+    "no SAVEP soft warning when PLATE empty overwrites file"
   ],
   "issues_faced": [
-    "NEEDP fail path only host-side; board uses HASPALL softmiss for incomplete contract",
-    "empty DUMPP still FROM=1 \u2014 gate uses N==4"
+    "bare SAVEP agent_path wiped agent.json with empty PLATE \u2014 must SAVEP FROM",
+    "GETP FROM agt unknown form under ensure var pressure \u2014 dropped extra INTO"
   ],
-  "commit": "0ca2e30",
-  "ts": "2026-08-08T23:43:47Z"
+  "commit": "",
+  "ts": "2026-08-09T00:09:46Z"
 }

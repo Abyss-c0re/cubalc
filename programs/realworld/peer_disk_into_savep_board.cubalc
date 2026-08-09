@@ -1,0 +1,829 @@
+# peer_disk_into_savep_board.cubalc — LOADPLATE INTO + SAVEP FROM multi-plate disk
+#
+# Real use: mesh agents bind peer/session files into named vars (LOADPLATE INTO)
+# and persist them with SAVEP FROM without LAST footgun after GETP. First-run
+# ENSUREPLATE INTO seeds session. Fixes dual-source disk lag from prior boards.
+# First realworld of proofs 1134 + 1135.
+#
+#   SYS LOADPLATE INTO peer path
+#   SYS ENSUREPLATE INTO session path OR seed
+#   SAVEP FROM peer path · SAVEP path FROM peer · SAVEP path (PLATE)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_pdis_$$
+#   ./out/cubalc run programs/realworld/peer_disk_into_savep_board.cubalc boot
+#   ./out/cubalc run ... ensure|load|tick|save|reload|gate|probe|soft|list
+#
+# Plate: STATUS.txt VAL.txt META.txt PDIS_REPORT.txt peer.json agent.json sess.json
+# Env: HOST_S CUBALC_PDIS_REQUIRE
+#
+# Edges:
+#   LOAD miss + OR fallback; SAVEP after GETP LAST thrash; SAVEP non-object soft;
+#   ENSURE create then hit; PLATE SAVEP_FROM=0; soft empty bag; WRITE omit NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "peer_disk_into_savep_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "peer_disk_into_savep -- boot|ensure|load|tick|save|reload|gate|probe|soft|list -- [--host=H]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeB"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_PDIS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "PDIS_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "sess.json"
+LET sess_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET miss_n = 0
+LET from_n = 0
+LET peer = "{}"
+LET session = "{}"
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "boot", "ensure", "load", "tick", "save", "reload", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "ensure" THEN
+    LET op = "ensure"
+  WHEN "load" THEN
+    LET op = "load"
+  WHEN "tick" THEN
+    LET op = "tick"
+  WHEN "save" THEN
+    LET op = "save"
+  WHEN "reload" THEN
+    LET op = "reload"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s
+  CLEAR_ERR
+END
+
+# boot — agent PLATE via SAVEP + seed peer file via SAVEPLATE
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE = "{}"
+  CLEAR_ERR
+  SETP "agent" "plate-agent"
+  CLEAR_ERR
+  SETP "n" 1
+  CLEAR_ERR
+  SETP "schema" "cubalc.peer_disk.v1"
+  CLEAR_ERR
+  # GETP thrash LAST then SAVEP must still use PLATE
+  GETP "agent"
+  CLEAR_ERR
+  SAVEP agent_path
+  LET from_n = SAVEP_FROM
+  LET peel_hit = SAVEPLATE_OK
+  CLEAR_ERR
+  SYS TRIM host_s
+  LET host_s = LAST
+  CLEAR_ERR
+  SYS JSONOBJ "agent" "hive-02" "host" host_s "n" 9
+  LET peer = LAST
+  CLEAR_ERR
+  SAVEP FROM peer peer_path
+  LET has_n = SAVEP_FROM
+  CLEAR_ERR
+  SYS EQS SAVEP_SRC "peer"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "plate-agent"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF from_n == 0 THEN
+      IF has_n == 1 THEN
+        IF load_hit == 1 THEN
+          IF take_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "boot ok"
+            LET admit_n = 1
+            LET created = 1
+            SYS CAT "boot:plate-agent:bt"
+            LET row = LAST
+            CLEAR_ERR
+            SYS GREPV "boot:" bag
+            LET bag = LAST
+            CLEAR_ERR
+            SYS PUSH bag row
+            LET bag = LAST
+            LET bag_ch = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "boot plate"
+            FAIL "boot plate"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "boot src"
+          FAIL "boot src"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot peer save"
+        FAIL "boot peer save"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot savep from"
+      FAIL "boot savep from"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot savep"
+    FAIL "boot savep"
+    CLEAR_ERR
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n from_n peel_hit has_n take_n note_msg
+  CLEAR_ERR
+END
+
+# ensure — ENSUREPLATE INTO session first create then hit
+SYS EQS op "ensure"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS RM sess_path
+  CLEAR_ERR
+  SYS ENSUREPLATE INTO session sess_path OR "{\"ticks\":0,\"ok\":true}"
+  LET from_n = ENSUREPLATE_INTO
+  LET created = ENSUREPLATE_CREATED
+  CLEAR_ERR
+  SYS EQS ENSUREPLATE_VAR "session"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP FROM session "ticks"
+  SYS EQS LAST "0"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SETP FROM session "ticks" 3
+  CLEAR_ERR
+  SAVEP FROM session sess_path
+  CLEAR_ERR
+  SYS ENSUREPLATE sess_path INTO session
+  LET take_n = ENSUREPLATE_CREATED
+  LET load_hit = ENSUREPLATE_HIT
+  CLEAR_ERR
+  GETP FROM session "ticks"
+  SYS EQS LAST "3"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # skip extra INTO under var pressure — session contract only
+  IF from_n == 1 THEN
+    IF created == 1 THEN
+      IF peel_hit == 1 THEN
+        IF has_n == 1 THEN
+          IF take_n == 0 THEN
+            IF load_hit == 1 THEN
+              IF miss_n == 1 THEN
+                LET hit = 1
+                LET note_msg = "ensure ok"
+                LET admit_n = 1
+                SYS CAT "ensure:1:0:en"
+                LET row = LAST
+                CLEAR_ERR
+                SYS GREPV "ensure:" bag
+                LET bag = LAST
+                CLEAR_ERR
+                SYS PUSH bag row
+                LET bag = LAST
+                LET bag_ch = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "ensure ticks3"
+                FAIL "ensure ticks3"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "ensure hit"
+              FAIL "ensure hit"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "ensure recreate"
+            FAIL "ensure recreate"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "ensure ticks0"
+          FAIL "ensure ticks0"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "ensure var"
+        FAIL "ensure var"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "ensure created"
+      FAIL "ensure created"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "ensure into"
+    FAIL "ensure into"
+    CLEAR_ERR
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n from_n created take_n load_hit miss_n note_msg
+  CLEAR_ERR
+END
+
+# load — LOADPLATE INTO peer
+SYS EQS op "load"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE INTO peer peer_path
+  LET from_n = LOADPLATE_INTO
+  LET peel_hit = LOADPLATE_HIT
+  CLEAR_ERR
+  SYS EQS LOADPLATE_VAR "peer"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP FROM peer "host"
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # PLATE path separate
+  SYS LOADPLATE INTO agt agent_path
+  CLEAR_ERR
+  GETP FROM agt "agent"
+  SYS EQS LAST "plate-agent"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF from_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF has_n == 1 THEN
+        IF take_n == 0 THEN
+          IF load_hit == 1 THEN
+            LET hit = 1
+            LET note_msg = "load ok"
+            LET admit_n = 1
+            LET out = body
+            SYS CAT "load:" body ":ld"
+            LET row = LAST
+            CLEAR_ERR
+            SYS GREPV "load:" bag
+            LET bag = LAST
+            CLEAR_ERR
+            SYS PUSH bag row
+            LET bag = LAST
+            LET bag_ch = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "load agent"
+            FAIL "load agent"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "load host blank"
+          FAIL "load host blank"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "load var"
+        FAIL "load var"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "load hit"
+      FAIL "load hit"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "load miss"
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "load into"
+    FAIL "load into"
+    CLEAR_ERR
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n from_n peel_hit has_n load_hit note_msg
+  CLEAR_ERR
+END
+
+# tick — INCP FROM peer + SAVEP FROM (persist without LAST footgun)
+SYS EQS op "tick"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE INTO peer peer_path
+  CLEAR_ERR
+  INCP FROM peer "n" 2
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # thrash LAST via GETP then SAVEP FROM
+  GETP FROM peer "host"
+  CLEAR_ERR
+  SAVEP FROM peer peer_path
+  LET from_n = SAVEP_FROM
+  LET peel_hit = SAVEPLATE_OK
+  CLEAR_ERR
+  SYS LOADPLATE INTO peer peer_path
+  CLEAR_ERR
+  SYS JSONN "n" FROM peer
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # expect 11 if started at 9
+  IF from_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF has_n == 11 THEN
+        LET hit = 1
+        LET note_msg = "tick ok"
+        LET admit_n = 1
+        LET load_hit = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "tick n"
+        FAIL "tick n"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "tick save"
+      FAIL "tick save"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "tick from"
+    FAIL "tick from"
+    CLEAR_ERR
+  END
+  SYS CAT "tick:" has_n ":" from_n ":tk"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "tick:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n from_n peel_hit has_n take_n note_msg
+  CLEAR_ERR
+END
+
+# save — trailing SAVEP path FROM peer + agent SAVEP
+SYS EQS op "save"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE INTO peer peer_path
+  CLEAR_ERR
+  SYS LOADPLATE INTO agt agent_path
+  CLEAR_ERR
+  SETP FROM peer "role" "worker"
+  CLEAR_ERR
+  SAVEP peer_path FROM peer
+  LET from_n = SAVEP_FROM
+  CLEAR_ERR
+  # must SAVEP FROM agt — bare SAVEP writes PLATE (LAST footgun twin)
+  GETP FROM agt "n"
+  CLEAR_ERR
+  SAVEP FROM agt agent_path
+  LET peel_hit = SAVEP_FROM
+  LET has_n = SAVEPLATE_OK
+  CLEAR_ERR
+  SYS LOADPLATE INTO peer peer_path
+  CLEAR_ERR
+  GETP FROM peer "role"
+  SYS EQS LAST "worker"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # from_n=peer save FROM, peel_hit=agt save FROM (both 1)
+  IF from_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF has_n == 1 THEN
+        IF take_n == 1 THEN
+          LET hit = 1
+          LET note_msg = "save ok"
+          LET admit_n = 1
+          LET load_hit = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "save role"
+          FAIL "save role"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "save agent ok"
+        FAIL "save agent ok"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "save agt from"
+      FAIL "save agt from"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "save peer from"
+    FAIL "save peer from"
+    CLEAR_ERR
+  END
+  SYS CAT "save:" from_n ":" peel_hit ":sv"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "save:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n from_n peel_hit has_n take_n note_msg
+  CLEAR_ERR
+END
+
+# reload — miss path OR fallback
+SYS EQS op "reload"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS JOIN state_dir "miss.json"
+  LET row = LAST
+  CLEAR_ERR
+  SYS RM row
+  CLEAR_ERR
+  SYS LOADPLATE row OR "{\"agent\":\"fb\",\"n\":0}" INTO thin
+  LET from_n = LOADPLATE_INTO
+  LET peel_hit = LOADPLATE_HIT
+  LET has_n = LOADPLATE_FALLBACK
+  CLEAR_ERR
+  GETP FROM thin "agent"
+  SYS EQS LAST "fb"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF from_n == 1 THEN
+    IF peel_hit == 0 THEN
+      IF has_n == 1 THEN
+        IF take_n == 1 THEN
+          LET hit = 1
+          LET note_msg = "reload ok"
+          LET admit_n = 1
+          LET load_hit = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "reload fb"
+          FAIL "reload fb"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "reload fallback"
+        FAIL "reload fallback"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "reload hit"
+      FAIL "reload hit"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "reload into"
+    FAIL "reload into"
+    CLEAR_ERR
+  END
+  SYS CAT "reload:" has_n ":" peel_hit ":rl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "reload:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n from_n peel_hit has_n take_n note_msg
+  CLEAR_ERR
+END
+
+# gate — peer n>=11, role worker, agent plate-agent on disk
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE INTO peer peer_path
+  CLEAR_ERR
+  SYS LOADPLATE INTO agt agent_path
+  CLEAR_ERR
+  SYS JSONN "n" FROM peer
+  LET take_n = LAST_N
+  CLEAR_ERR
+  GETP FROM peer "role"
+  SYS EQS LAST "worker"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP FROM agt "agent"
+  SYS EQS LAST "plate-agent"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF take_n >= 11 THEN
+    IF peel_hit == 1 THEN
+      IF has_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "gate ok"
+        LET admit_n = 1
+        LET from_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate agent"
+        FAIL "gate agent"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate role"
+      FAIL "gate role"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "gate role"
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate n"
+    FAIL "gate n"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate n"
+    END
+  END
+  SYS CAT "gate:" take_n ":" peel_hit ":ga"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit has_n note_msg
+  CLEAR_ERR
+END
+
+# soft
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "soft empty require"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — SAVEP non-object soft; LOAD miss no OR fails soft; INTO flags
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOADPLATE INTO agt agent_path
+  CLEAR_ERR
+  SAVEP FROM "not-json" agent_path
+  LET peel_hit = OK
+  LET has_n = SAVEPLATE_OK
+  CLEAR_ERR
+  # agent file intact
+  SYS LOADPLATE INTO agt agent_path
+  CLEAR_ERR
+  GETP FROM agt "agent"
+  SYS EQS LAST "plate-agent"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # bare LOADPLATE no INTO
+  SYS LOADPLATE peer_path
+  LET from_n = LOADPLATE_INTO
+  LET load_hit = LOADPLATE_HIT
+  CLEAR_ERR
+  IF peel_hit == 0 THEN
+    IF has_n == 0 THEN
+      IF take_n == 1 THEN
+        IF from_n == 0 THEN
+          IF load_hit == 1 THEN
+            LET hit = 1
+            LET note_msg = "probe ok"
+            LET admit_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe load hit"
+            FAIL "probe load hit"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe into0"
+          FAIL "probe into0"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe agent intact"
+        FAIL "probe agent intact"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe save ok"
+      FAIL "probe save ok"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe save fail"
+    FAIL "probe save fail"
+    CLEAR_ERR
+  END
+  PRINT_JSON peel_hit has_n take_n from_n load_hit note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+SYS CAT "schema=cubalc.peer_disk_into_savep.v1 op=" op " hit="
+LET row = LAST
+SYS STR hit
+SYS CAT row LAST " miss="
+LET row = LAST
+SYS STR miss
+SYS CAT row LAST " admit="
+LET row = LAST
+SYS STR admit_n
+SYS CAT row LAST " note=" note_msg " date=" run_date
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS CAT "pdis op=" op " hit="
+LET body = LAST
+SYS STR hit
+SYS CAT body LAST " miss="
+LET body = LAST
+SYS STR miss
+SYS CAT body LAST " note=" note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n from_n peel_hit has_n load_hit created note_msg
