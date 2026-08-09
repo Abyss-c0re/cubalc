@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 564,
-  "version": "1.15.591-usability",
-  "item": "cubalc plate eq/ne/diff",
-  "item_id": 600,
-  "title": "cubalc plate eq|ne|diff · CLI JSONEQ/JSONCHANGED duals for mesh sync",
-  "commit": "e7f98d15fabec710af03ba74cc6ecbdea057d90a",
-  "summary": "Shell agents compare plate files order-independently and list changed keys without .cubalc. proof 1141 + plate CLI reg.",
+  "iter": 565,
+  "version": "1.15.592-usability",
+  "item": "cubalc plate changelog",
+  "item_id": 601,
+  "title": "cubalc plate changelog · CLI JSONCHANGELOG dual for mesh value diffs",
+  "commit": "0da621b02c0f4f8c902744bc64d1fd21880b964e",
+  "summary": "Shell agents get greppable key: old → new plate diffs without .cubalc. proof 1142 + eq/diff/ensure reg.",
   "proofs": [
-    "1141_cli_plate_eq_diff",
-    "1140_cli_plate_ensure_merge reg",
-    "1112_cli_plate reg"
+    "1142_cli_plate_changelog",
+    "1141_cli_plate_eq_diff reg",
+    "1140_cli_plate_ensure_merge reg"
   ],
-  "when": "2026-08-09T01:05:39Z",
+  "when": "2026-08-09T01:15:01Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e7f98d15fabec710af03ba74cc6ecbdea057d90a",
-  "note": "thrash restore then ship; EVOLVE_PAUSED"
+  "sha": "0da621b02c0f4f8c902744bc64d1fd21880b964e",
+  "note": "clean tree; EVOLVE_PAUSED"
 }
