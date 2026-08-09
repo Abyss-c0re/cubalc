@@ -3632,6 +3632,6 @@
     "iter274: ALLEQFLAT board 9/9; unify via SETBYVAL leader\u2192worker",
     "iter274: LAST_N is equality bit not count (W431)"
   ],
-  "commit": "pending",
+  "commit": "0344fe5e",
   "ts": "2026-08-09T23:28:34Z"
 }
