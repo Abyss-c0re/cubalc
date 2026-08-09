@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 646,
-  "version": "1.15.673-usability",
-  "item": "CAPFLAT + plate capflat",
-  "item_id": 682,
-  "title": "CAPFLAT/CLAMPFLAT + cubalc plate capflat · clamp pure-int leaves to max by path needle",
-  "commit": "eaddaa3b0fbc64573c163d0fbbc2eb333ed12733",
-  "summary": "Nest score ceilings without multi GETP+SETP. proof 1223 + CLI PASS.",
+  "iter": 647,
+  "version": "1.15.674-usability",
+  "item": "SCALEFLAT + plate scaleflat",
+  "item_id": 683,
+  "title": "SCALEFLAT/MULFLAT + cubalc plate scaleflat · multiply pure-int leaves by factor by path needle",
+  "commit": "376a6d3a21a2393b35ad0f369099c0f9d657a6e9",
+  "summary": "Nest score scale without multi GETP+arith+SETP. proof 1224 + CLI PASS.",
   "proofs": [
-    "1223_capflat PASS",
-    "1223_cli_plate_capflat PASS",
-    "1222_threshflat reg PASS"
+    "1224_scaleflat PASS",
+    "1224_cli_plate_scaleflat PASS",
+    "1223_capflat reg PASS"
   ],
-  "when": "2026-08-09T15:35:00Z",
+  "when": "2026-08-09T15:45:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "eaddaa3b0fbc64573c163d0fbbc2eb333ed12733",
-  "note": "after THRESHFLAT plane; EVOLVE_PAUSED"
+  "sha": "376a6d3a21a2393b35ad0f369099c0f9d657a6e9",
+  "note": "after CAPFLAT plane; EVOLVE_PAUSED"
 }
