@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 659,
-  "version": "1.15.686-usability",
-  "item": "TYPEFLAT + plate typeflat",
-  "item_id": 695,
-  "title": "TYPEFLAT/KINDFLAT + cubalc plate typeflat · first matching leaf kind by needle → LAST/LAST_N",
-  "commit": "6589d07c6f3788cc1719235bc9e10ee353277087",
-  "summary": "Peel strategy without TYPEP+PATHSFLAT glue. proof 1236 + CLI PASS.",
+  "iter": 660,
+  "version": "1.15.687-usability",
+  "item": "LASTFLAT + plate lastflat",
+  "item_id": 696,
+  "title": "LASTFLAT/ENDFLAT + cubalc plate lastflat · last matching leaf value by needle · OR fallback",
+  "commit": "f0d53663a959edd37ac3c4a823b5b4f79c19d0d6",
+  "summary": "Newest-wins nest peel without REVL+GETFLAT glue. proof 1237 + CLI PASS.",
   "proofs": [
-    "1236_typeflat PASS",
-    "1236_cli_plate_typeflat PASS",
-    "1235_lastflatn reg PASS"
+    "1237_lastflat PASS",
+    "1237_cli_plate_lastflat PASS",
+    "1227_getflat reg PASS"
   ],
-  "when": "2026-08-09T17:59:07Z",
+  "when": "2026-08-09T18:09:34Z",
   "agent": "meaningful_iter_10m",
-  "sha": "6589d07c6f3788cc1719235bc9e10ee353277087",
-  "note": "after LASTFLATN plane; EVOLVE_PAUSED"
+  "sha": "f0d53663a959edd37ac3c4a823b5b4f79c19d0d6",
+  "note": "after thrash restore; after TYPEFLAT plane; EVOLVE_PAUSED"
 }
