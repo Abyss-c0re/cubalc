@@ -1,0 +1,15 @@
+# INCLUDE plate_peer — multi-plate PEER state next to conventional PLATE
+# Usability: SEEDP INTO PEER without LOAD/LET/SYS glue; pair with plate_peer_save
+#
+#   DEFAULT PEER_PATH = "state/peer.json"
+#   DEFAULT PEER_SEED = "{\"agent\":\"\",\"n\":0}"
+#   INCLUDE plate_peer
+#   SETP FROM PEER "host" "cubeB"
+#   NEEDP FROM PEER "agent" "host"
+#   INCLUDE plate_peer_save
+#
+# Paths relative to CUBALC_STATE / CWD. HOLD_FLASH not required.
+
+DEFAULT PEER_PATH = "state/peer_plate.json"
+DEFAULT PEER_SEED = "{}"
+SEEDP INTO PEER PEER_PATH OR PEER_SEED

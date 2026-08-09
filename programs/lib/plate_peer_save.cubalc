@@ -1,0 +1,11 @@
+# INCLUDE plate_peer_save — persist PEER to PEER_PATH
+# Usability: dual of plate_peer write-back (twin of plate_save for multi-plate)
+#
+#   INCLUDE plate_peer
+#   # mutate PEER via SETP FROM / MERGEP FROM …
+#   INCLUDE plate_peer_save
+#
+# Override PEER_PATH before INCLUDE. HOLD_FLASH not required.
+
+DEFAULT PEER_PATH = "state/peer_plate.json"
+SAVEP FROM PEER PEER_PATH

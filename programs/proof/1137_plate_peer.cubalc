@@ -1,0 +1,86 @@
+# plate_peer / plate_peer_save — multi-plate PEER boot + write-back stdlib
+# Usability: INCLUDE knobs for peer state beside conventional PLATE.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_plate_peer"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET apath = LAST
+SYS JOIN dir "peer.json"
+LET ppath = LAST
+SYS RM apath
+SYS RM ppath
+
+# conventional PLATE session
+DEFAULT PLATE_PATH = apath
+DEFAULT PLATE_SEED = "{\"agent\":\"plate-agent\",\"n\":1}"
+INCLUDE plate_session
+ASSERT OK == 1
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# peer plate via lib
+DEFAULT PEER_PATH = ppath
+DEFAULT PEER_SEED = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":0}"
+INCLUDE plate_peer
+ASSERT OK == 1
+ASSERT SEEDP_INTO == 1
+ASSERT ENSUREPLATE_CREATED == 1
+SYS EQS PEER_PATH ppath
+ASSERT LAST_N == 1
+GETP FROM PEER "host"
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+# PLATE still plate-agent
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+
+# mutate peer + save
+SETP FROM PEER "n" 3
+MERGEP FROM PEER "{\"status\":\"ready\"}"
+NEEDP FROM PEER "agent" "host" "n" "status"
+INCLUDE plate_peer_save
+ASSERT OK == 1
+ASSERT SAVEP_FROM == 1
+ASSERT SAVEPLATE_OK == 1
+SYS EQS SAVEP_SRC "PEER"
+ASSERT LAST_N == 1
+
+# reload into fresh var proves durable
+LOADP INTO peer2 ppath
+GETP FROM peer2 "n"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+GETP FROM peer2 "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+# second INCLUDE plate_peer hits existing file
+SETP FROM PEER "n" 9
+INCLUDE plate_peer_save
+# re-seed should load, not recreate empty
+INCLUDE plate_peer
+ASSERT ENSUREPLATE_CREATED == 0
+ASSERT ENSUREPLATE_HIT == 1
+GETP FROM PEER "n"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# PLATE still independent
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+INCP "n"
+INCLUDE plate_save
+ASSERT SAVEPLATE_OK == 1
+SYS LOADPLATE apath
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 2
+
+PRINT "plate_peer soft ok"

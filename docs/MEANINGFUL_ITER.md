@@ -623,6 +623,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 593. ~~**`LOADPLATE`/`ENSUREPLATE INTO`**~~ **done** (bind disk plate into named var · multi-plate disk boot without PLATE clobber).
 594. ~~**`SAVEP` / `SAVEPLATE FROM`**~~ **done** (persist PLATE or named plate · multi-plate disk dual of LOAD INTO · no LAST footgun).
 595. ~~**`LOADP`/`SEEDP INTO`**~~ **done** (top-level soft load + disk seed into named vars · no SYS · dual of SAVEP · ENSUREP stays DEFAULTP).
+596. ~~**`programs/lib/plate_peer` + `plate_peer_save`**~~ **done** (multi-plate PEER boot/write-back INCLUDE · dual of plate_boot/plate_save).
 
 ## Tick protocol
 
