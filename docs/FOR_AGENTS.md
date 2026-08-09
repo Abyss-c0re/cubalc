@@ -49,6 +49,7 @@ SETP FROM PEER "host" "cubeB"
 NEEDP FROM PEER "host"
 EQP PLATE PEER                # soft mesh equality · or DIFFP / CHANGELOGP
 REQUIRE EQP PLATE PEER        # hard gate when sync must match
+SUBSETP need PEER             # soft required fields · REQUIRE SUBSETP hard
 INCLUDE plate_both_save       # persist PLATE + PEER one INCLUDE
 # tick: INCLUDE plate_peer_tick
 ```

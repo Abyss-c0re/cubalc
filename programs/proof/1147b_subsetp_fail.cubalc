@@ -1,0 +1,6 @@
+# REQUIRE SUBSETP fail path
+HOLD_FLASH 1
+LET need = "{\"host\":\"cubeA\",\"agent\":\"hive\"}"
+LET PEER = "{\"host\":\"cubeA\"}"
+REQUIRE SUBSETP need PEER
+PRINT "should not reach"

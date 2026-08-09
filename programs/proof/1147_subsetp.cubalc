@@ -1,0 +1,55 @@
+# SUBSETP / COVERSP / REQUIRE SUBSETP — multi-plate required-field contracts
+# Usability: mesh partial match without SYS JSONSUBSET glue.
+
+HOLD_FLASH 1
+
+LET need = "{\"host\":\"cubeA\",\"agent\":\"hive\"}"
+LET PEER = "{\"agent\":\"hive\",\"host\":\"cubeA\",\"n\":3,\"extra\":true}"
+LET thin = "{\"host\":\"cubeA\"}"
+
+# soft: need is subset of PEER
+SUBSETP need PEER
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT SUBSETP_N == 1
+
+# cover dual
+COVERSP PEER need
+ASSERT LAST_N == 1
+ASSERT COVERSP_N == 1
+
+# miss keys on soft fail
+SUBSETP need thin
+ASSERT LAST_N == 0
+ASSERT SUBSETP_MISS_N >= 1
+SYS HASLINE SUBSETP_MISS "agent"
+ASSERT LAST_N == 1
+
+# hard gate
+REQUIRE SUBSETP need PEER
+ASSERT OK == 1
+ASSERT REQUIRE_SUBSETP == 1
+ASSERT REQUIRE_JSONSUBSET == 1
+
+REQUIRE COVERSP PEER need
+ASSERT OK == 1
+
+# string literals
+SUBSETP "{\"a\":1}" "{\"a\":1,\"b\":2}"
+ASSERT LAST_N == 1
+SUBSETP "{\"a\":1}" "{\"a\":2}"
+ASSERT LAST_N == 0
+SYS HASLINE SUBSETP_MISS "a"
+ASSERT LAST_N == 1
+
+# agent pattern
+SUBSETP need PEER
+IF LAST_N THEN
+  REQUIRE SUBSETP need PEER
+  PASS "peer covers need"
+ELSE
+  FAIL "should cover"
+END
+ASSERT OK == 1
+
+PRINT "subsetp soft ok"

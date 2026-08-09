@@ -272,6 +272,9 @@ DIFFP PLATE PEER            # changed key bag → LAST
 CHANGELOGP PLATE PEER       # key: old → new lines → LAST
 REQUIRE EQP PLATE PEER      # fail-fast if unequal · lists changed keys
 REQUIRE NEQP before after   # fail-fast if still equal (mutation gate)
+SUBSETP need PEER           # soft required fields (values match)
+COVERSP PEER need           # dual · PEER covers need
+REQUIRE SUBSETP need PEER   # fail-fast · lists bad keys
 ```
 
 Libs: `plate_peer` · `plate_peer_save` · `plate_peer_session` · `plate_peer_tick` · `plate_both_save`.  

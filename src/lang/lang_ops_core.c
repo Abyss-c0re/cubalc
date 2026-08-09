@@ -27397,7 +27397,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") || kw(&L->cur,"FILLP") ||
              kw(&L->cur,"FILLPFILE") || kw(&L->cur,"DUMPP") || kw(&L->cur,"NEEDP") ||
              kw(&L->cur,"EQP") || kw(&L->cur,"NEQP") || kw(&L->cur,"DIFFP") ||
-             kw(&L->cur,"CHANGELOGP") ||
+             kw(&L->cur,"CHANGELOGP") || kw(&L->cur,"SUBSETP") || kw(&L->cur,"COVERSP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35751,6 +35751,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"CHANGEDP", "CHANGEDP alias of DIFFP"},
       {"CHANGELOGP", "CHANGELOGP|CLOGP a b — key: old → new bag · multi-plate · no SYS JSONCHANGELOG"},
       {"CLOGP", "CLOGP alias of CHANGELOGP"},
+      {"SUBSETP", "SUBSETP|ISSUBSETP sub super — soft required-field match · multi-plate · no SYS JSONSUBSET"},
+      {"COVERSP", "COVERSP|SUPERSETP super sub — super covers sub · multi-plate · no SYS JSONCOVERS"},
+      {"REQUIRE SUBSETP", "REQUIRE SUBSETP sub super — fail-fast required fields · soft twin SUBSETP"},
+      {"REQUIRE COVERSP", "REQUIRE COVERSP super sub — fail-fast cover · soft twin COVERSP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -39457,6 +39461,104 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               hr.n, aname[0] ? aname : "?", bname[0] ? bname : "?");
     bump(vm); return 1;
   }
+  /* SUBSETP|ISSUBSETP sub super — soft required-field match (top-level JSONSUBSET dual).
+   * COVERSP|SUPERSETP super sub — super covers sub (dual · JSONCOVERS dual).
+   * Args: plate vars / LAST / JSON strings (same resolve as EQP).
+   * LAST_N 0|1 · SUBSETP_MISS / COVERSP_MISS = bad key bag on fail.
+   * Usability: mesh partial contract without SYS JSONSUBSET glue:
+   *   SUBSETP need PEER
+   *   COVERSP PEER need
+   *   REQUIRE SUBSETP need PEER
+   */
+  if (kw(&L->cur,"SUBSETP") || kw(&L->cur,"ISSUBSETP") || kw(&L->cur,"MSUBSETP") ||
+      kw(&L->cur,"PLATE_SUBSET") || kw(&L->cur,"SUBSETOF") ||
+      kw(&L->cur,"COVERSP") || kw(&L->cur,"SUPERSETP") || kw(&L->cur,"MSUPERSETP") ||
+      kw(&L->cur,"PLATE_COVERS") || kw(&L->cur,"COVERSPLATE") || kw(&L->cur,"COVERSOF")) {
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+    char aname[96], bname[96];
+    cubalc_host_result hr, bad;
+    int want_cover = 0;
+    const char *sub, *sup;
+    long hit;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "COVERSP") == 0 || strcmp(op0, "SUPERSETP") == 0 ||
+        strcmp(op0, "MSUPERSETP") == 0 || strcmp(op0, "PLATE_COVERS") == 0 ||
+        strcmp(op0, "COVERSPLATE") == 0 || strcmp(op0, "COVERSOF") == 0)
+      want_cover = 1;
+
+    lex_next(L);
+    a[0] = 0; b[0] = 0; aname[0] = 0; bname[0] = 0;
+
+#define CUBALC_RESOLVE_PLATE_ARG2(dst, dname) do { \
+      (dst)[0] = 0; (dname)[0] = 0; \
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) { \
+        snprintf((dname), sizeof(dname), "%s", "LAST"); \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+        lex_next(L); \
+      } else if (L->cur.kind == TK_IDENT) { \
+        pv = var_get(vm, L->cur.text, 0); \
+        if (pv && pv->is_str) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%s", pv->sval); \
+          lex_next(L); \
+        } else if (pv) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%ld", pv->val); \
+          lex_next(L); \
+        } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+          (dst)[0] = 0; \
+        } \
+      } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+      } \
+      { const char *bp = (dst); \
+        while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++; \
+        if (*bp != '{') snprintf((dst), sizeof(dst), "%s", "{}"); \
+      } \
+    } while (0)
+
+    CUBALC_RESOLVE_PLATE_ARG2(a, aname);
+    CUBALC_RESOLVE_PLATE_ARG2(b, bname);
+#undef CUBALC_RESOLVE_PLATE_ARG2
+
+    if (want_cover) {
+      sub = b;
+      sup = a;
+    } else {
+      sub = a;
+      sup = b;
+    }
+
+    memset(&hr, 0, sizeof hr);
+    cubalc_host_json_subset(sub, sup, &hr);
+    hit = hr.n;
+    memset(&bad, 0, sizeof bad);
+    if (!hit)
+      cubalc_host_json_subset_bad_keys(sub, sup, &bad);
+
+    var_set_str(vm, "LAST", hit ? "1" : "0");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hit ? "1" : "0");
+    vm->last_n = hit;
+    var_set_num(vm, "LAST_N", hit);
+    var_set_num(vm, "SUBSETP_N", hit);
+    var_set_num(vm, "COVERSP_N", hit);
+    var_set_str(vm, "SUBSETP_MISS", bad.str);
+    var_set_str(vm, "COVERSP_MISS", bad.str);
+    var_set_num(vm, "SUBSETP_MISS_N", bad.n);
+    var_set_str(vm, "SUBSETP_A", aname);
+    var_set_str(vm, "SUBSETP_B", bname);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s a=%s b=%s hit=%ld miss=%ld\n",
+              want_cover ? "coversp" : "subsetp",
+              aname[0] ? aname : "?", bname[0] ? bname : "?", hit, bad.n);
+    bump(vm); return 1;
+  }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.
    * Bare USAGE re-echoes stored USAGE (or empty). Does not change OK/ERR.
    * REQUIRE ARG / ARGC / FLAG failures append " · usage: …" when set.
@@ -41169,20 +41271,24 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
-    /* REQUIRE JSONSUBSET|JSUBSET sub super — fail-fast required-field match.
-     * REQUIRE JSONSUPERSET|JSONCOVERS super sub — dual (a ⊇ b).
+    /* REQUIRE JSONSUBSET|SUBSETP sub super — fail-fast required-field match.
+     * REQUIRE JSONSUPERSET|COVERSP super sub — dual (a ⊇ b).
      * On fail lists bad keys (missing or value≠) via subset_bad_keys.
-     * Soft twin: SYS JSONSUBSET. LAST=first plate arg on success. */
+     * Soft twins: SUBSETP / COVERSP / SYS JSONSUBSET. LAST=first plate on success. */
     if (kw(&L->cur,"JSONSUBSET") || kw(&L->cur,"JSUBSET") || kw(&L->cur,"SUBSETJSON") ||
         kw(&L->cur,"ISSUBSET") || kw(&L->cur,"PLATESUBSET") || kw(&L->cur,"JSONIN") ||
         kw(&L->cur,"REQSUBSET") || kw(&L->cur,"NEEDSUBSET") ||
+        kw(&L->cur,"SUBSETP") || kw(&L->cur,"ISSUBSETP") || kw(&L->cur,"MSUBSETP") ||
+        kw(&L->cur,"PLATE_SUBSET") || kw(&L->cur,"SUBSETOF") ||
         kw(&L->cur,"JSONSUPERSET") || kw(&L->cur,"JSUPERSET") || kw(&L->cur,"SUPERSETJSON") ||
         kw(&L->cur,"ISSUPERSET") || kw(&L->cur,"PLATESUPERSET") || kw(&L->cur,"JSONCOVERS") ||
-        kw(&L->cur,"COVERS") || kw(&L->cur,"REQSUPERSET") || kw(&L->cur,"NEEDCOVER")){
+        kw(&L->cur,"COVERS") || kw(&L->cur,"REQSUPERSET") || kw(&L->cur,"NEEDCOVER") ||
+        kw(&L->cur,"COVERSP") || kw(&L->cur,"SUPERSETP") || kw(&L->cur,"MSUPERSETP") ||
+        kw(&L->cur,"PLATE_COVERS") || kw(&L->cur,"COVERSPLATE") || kw(&L->cur,"COVERSOF")){
       char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
       char op[32];
       cubalc_host_result hr, bad;
-      int want_super = 0;
+      int want_super = 0, used_p = 0;
       const char *sub, *sup;
       snprintf(op, sizeof op, "%s", L->cur.text);
       {
@@ -41190,11 +41296,21 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         for (q = op; *q; q++)
           if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
       }
+      if (strcmp(op, "SUBSETP") == 0 || strcmp(op, "ISSUBSETP") == 0 ||
+          strcmp(op, "MSUBSETP") == 0 || strcmp(op, "PLATE_SUBSET") == 0 ||
+          strcmp(op, "SUBSETOF") == 0 ||
+          strcmp(op, "COVERSP") == 0 || strcmp(op, "SUPERSETP") == 0 ||
+          strcmp(op, "MSUPERSETP") == 0 || strcmp(op, "PLATE_COVERS") == 0 ||
+          strcmp(op, "COVERSPLATE") == 0 || strcmp(op, "COVERSOF") == 0)
+        used_p = 1;
       if (strcmp(op, "JSONSUPERSET") == 0 || strcmp(op, "JSUPERSET") == 0 ||
           strcmp(op, "SUPERSETJSON") == 0 || strcmp(op, "ISSUPERSET") == 0 ||
           strcmp(op, "PLATESUPERSET") == 0 || strcmp(op, "JSONCOVERS") == 0 ||
           strcmp(op, "COVERS") == 0 || strcmp(op, "REQSUPERSET") == 0 ||
-          strcmp(op, "NEEDCOVER") == 0)
+          strcmp(op, "NEEDCOVER") == 0 ||
+          strcmp(op, "COVERSP") == 0 || strcmp(op, "SUPERSETP") == 0 ||
+          strcmp(op, "MSUPERSETP") == 0 || strcmp(op, "PLATE_COVERS") == 0 ||
+          strcmp(op, "COVERSPLATE") == 0 || strcmp(op, "COVERSOF") == 0)
         want_super = 1;
       lex_next(L);
       a[0] = 0;
@@ -41205,9 +41321,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         b[0] = 0;
       if (!a[0] || !b[0]) {
         fail_at(vm, L,
-                want_super
-                    ? "REQUIRE JSONSUPERSET super sub — need two plates"
-                    : "REQUIRE JSONSUBSET sub super — need two plates");
+                used_p
+                ? (want_super
+                   ? "REQUIRE COVERSP super sub — need two plates (soft twin COVERSP)"
+                   : "REQUIRE SUBSETP sub super — need two plates (soft twin SUBSETP)")
+                : (want_super
+                   ? "REQUIRE JSONSUPERSET super sub — need two plates"
+                   : "REQUIRE JSONSUBSET sub super — need two plates"));
         return -1;
       }
       if (want_super) {
@@ -41239,11 +41359,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         flat[mi] = 0;
         if (flat[0])
           snprintf(msg, sizeof msg,
-                   "REQUIRE JSONSUBSET mismatch line %d: %s — soft twin SYS JSONSUBSET",
+                   used_p
+                   ? "REQUIRE SUBSETP mismatch line %d: %s — soft twin SUBSETP"
+                   : "REQUIRE JSONSUBSET mismatch line %d: %s — soft twin SYS JSONSUBSET",
                    aln, flat);
         else
           snprintf(msg, sizeof msg,
-                   "REQUIRE JSONSUBSET mismatch line %d — soft twin SYS JSONSUBSET",
+                   used_p
+                   ? "REQUIRE SUBSETP mismatch line %d — soft twin SUBSETP"
+                   : "REQUIRE JSONSUBSET mismatch line %d — soft twin SYS JSONSUBSET",
                    aln);
         if (vm->res) vm->res->asserts_fail++;
         fail(vm, msg);
@@ -41255,11 +41379,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", 1);
       var_set_num(vm, "JSONSUBSET_N", 1);
       var_set_num(vm, "JSONSUPERSET_N", 1);
+      var_set_num(vm, "SUBSETP_N", 1);
+      var_set_num(vm, "COVERSP_N", 1);
       var_set_num(vm, "REQUIRE_JSONSUBSET", 1);
+      var_set_num(vm, "REQUIRE_SUBSETP", 1);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
         fprintf(vm->trace, "# require %s ok\n",
-                want_super ? "jsonsuperset" : "jsonsubset");
+                used_p ? (want_super ? "coversp" : "subsetp")
+                       : (want_super ? "jsonsuperset" : "jsonsubset"));
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
