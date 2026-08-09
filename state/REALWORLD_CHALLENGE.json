@@ -2103,6 +2103,6 @@
     "SYS JSONN FROM chk hard-fail under pressure \u2014 use GETP+NUM",
     "SYS EQS SAVEP_SRC unknown form under pressure"
   ],
-  "commit": "",
+  "commit": "4571d17",
   "ts": "2026-08-09T00:35:00Z"
 }
