@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 250,
-  "program": "programs/realworld/svc_path_keysp_inventory_board.cubalc",
-  "theme": "nest path KEYSP/LENP/EMPTYP/VALSP config inventory",
-  "version": "1.15.652-usability",
+  "iter": 251,
+  "program": "programs/realworld/svc_getpn_slo_board.cubalc",
+  "theme": "GETPN nest path SLO / burn gate plane",
+  "version": "1.15.654-usability",
   "pass": true,
-  "prior_note": "iter 249 path rename/copy/swap; this iter first realworld KEYSP/LENP/EMPTYP/VALSP nest path (proof 1201)",
+  "prior_note": "iter 250 KEYSP inventory; this iter first realworld GETPN/NUMP path (proof 1202) for SLO peel",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed cfg/flags/empty + LENP/KEYSP",
+      "cmd": "seed lat/freq/burn + GETPN smoke",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "keys",
-      "cmd": "KEYSP cfg/flags + false friend por",
+      "name": "peel",
+      "cmd": "GETPN path slash zero bool NUMP",
       "ok": true,
-      "note": "keys"
+      "note": "peel"
     },
     {
-      "name": "len",
-      "cmd": "LENP nest + leaf host 0",
+      "name": "budget",
+      "cmd": "compare peels vs MAX_P99/MAX_ERR",
       "ok": true,
-      "note": "len"
+      "note": "budget"
     },
     {
-      "name": "empty",
-      "cmd": "EMPTYP/NONEMPTYP/HASKEYSP",
+      "name": "budget_over",
+      "cmd": "MAX_P99=100 → p99 over",
       "ok": true,
-      "note": "empty"
-    },
-    {
-      "name": "vals",
-      "cmd": "VALSP cfg/flags values",
-      "ok": true,
-      "note": "vals"
+      "note": "budget deny"
     },
     {
       "name": "peer",
-      "cmd": "KEYSP/LENP/VALSP FROM PEER",
+      "cmd": "GETPN FROM PEER path",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "miss nest empty + leaf EMPTYP",
+      "cmd": "OR default + hard miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "inventory + NEEDP contract",
+      "cmd": "combined SLO + NEEDP",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "DEFAULTP extra + LENP grow",
+      "cmd": "SYS JSONN dual + recover after hard miss",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "425/442 pre-existing cli shell set fails; path_keysp_lenp PASS 38 getpn_path PASS 36"
+      "note": "427/445 pre-existing cli shell set fails; getpn_path PASS 36"
     }
   ],
   "weaknesses": [
@@ -2912,25 +2906,57 @@
       "title": "CLI plate keys/len/getn shell duals fail unknown form set",
       "detail": "Selftest 17 CLI fails including cli_plate_keys_len and cli_plate_getn. In-language 1201/1202 PASS. Same W350 harness class.",
       "repro": "selftest cli_plate_keys_len FAIL set"
+    },
+    {
+      "id": "W355",
+      "severity": "med",
+      "area": "lang|getflag",
+      "title": "GETFLAG multi-char name OR ENV chain hard-fails parse",
+      "detail": "GETFLAG maxp99 OR ENV MAX_P99 OR MAX_P99 → err GETFLAG name OR \"fallback\" (halt early). host|h short form works. Agents must use SYS ENV for numeric knobs or short|long flag aliases.",
+      "repro": "GETFLAG maxp99 OR ENV MAX_P99 → parse err line"
+    },
+    {
+      "id": "W356",
+      "severity": "med",
+      "area": "lang|getpn_miss",
+      "title": "GETPN hard miss leaves sticky last_err json: no field",
+      "detail": "GETPN nope sets OK=0 and sticky last_err even after later successful peels if CLEAR_ERR omitted carefully. Selftest footer may show last_err residual. Soft path must CLEAR_ERR after hard miss before next GETPN.",
+      "repro": "GETPN nope; CLEAR_ERR; GETPN n — clear required"
+    },
+    {
+      "id": "W357",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL META/VAL/STATUS",
+      "detail": "Reconfirmed W5 class.",
+      "repro": "cat -A META.txt"
+    },
+    {
+      "id": "W358",
+      "severity": "low",
+      "area": "ops|budget_shell",
+      "title": "SLO budget miss sets hit=0 without shell rc unless REQUIRE+EXIT",
+      "detail": "MAX_P99=100 budget over → note budget p99 over, process exit_code 0. Agents need CUBALC_SGS_REQUIRE=1 or EXIT for CI-visible deny.",
+      "repro": "MAX_P99=100 budget → shell 0 without REQUIRE"
     }
   ],
   "workarounds": [
-    "KEYSP then LET body=LAST; SYS HASLINE body key (avoid special bag name)",
-    "Pair TYPEP with EMPTYP for leaf vs miss",
-    "DEFAULTP then LENP to verify nest growth"
+    "SYS ENV for numeric budgets not GETFLAG long names",
+    "CLEAR_ERR after hard GETPN miss",
+    "REQUIRE env + EXIT for shell-visible SLO deny"
   ],
   "language_gaps": [
-    "KEYSP/LENP/EMPTYP/VALSP nest path inventory works well for config audit",
-    "FROM PEER path inventory multi-plate solid",
-    "Soft miss nest → empty key bag + EMPTYP 1",
-    "Leaf EMPTYP ambiguous vs missing (need TYPEP)",
-    "GETPN path now in tree (1202 PASS) — not used this board"
+    "GETPN nest path peels excellent for SLO/burn gates (LAST_N ready)",
+    "OR soft default + zero valid + bool→1 work",
+    "FROM PEER multi-plate numeric peel solid",
+    "GETFLAG multi-char without |short alias fragile",
+    "Hard miss sticky err requires discipline"
   ],
   "issues_faced": [
-    "EMPTYP conflates leaf scalar and missing nest",
-    "VALSP unordered value bag needs KEYSP twin for audit",
-    "CLI plate shell duals still broken; language proofs green"
+    "GETFLAG maxp99 OR ENV parse fail — switched to SYS ENV MAX_P99",
+    "Hard GETPN miss needs CLEAR_ERR before next peel",
+    "Budget over without REQUIRE is soft-only shell 0"
   ],
-  "commit": "e8037397",
-  "ts": "2026-08-09T11:49:22Z"
+  "commit": "",
+  "ts": "2026-08-09T12:13:54Z"
 }
