@@ -3415,6 +3415,6 @@
     "iter267: substring needle ro matches role (W409) \u2014 probe expects fuzzy hit",
     "iter267: late MODEFLAT_SRC hard-fail; capture early or avoid (W410)"
   ],
-  "commit": "a3307e7e",
+  "commit": "5ef4ee20",
   "ts": "2026-08-09T19:53:01Z"
 }
