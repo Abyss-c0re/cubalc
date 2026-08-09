@@ -1,57 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 234,
-  "program": "programs/realworld/mesh_medianp_latency_board.cubalc",
-  "theme": "MEDIANP/P50P mesh robust latency scores vs AVGNP outlier",
-  "version": "1.15.615-usability",
+  "iter": 235,
+  "program": "programs/realworld/mesh_topnp_hotspot_board.cubalc",
+  "theme": "TOPNP/BOTNP mesh alert hotspot ranking + SORTP",
+  "version": "1.15.617-usability",
   "pass": true,
-  "prior_note": "iter 233 SUMMERGEP FREQ; this iter first realworld MEDIANP (1165 / MEANINGFUL 624)",
+  "prior_note": "iter 234 MEDIANP; this iter first realworld TOPNP (1166) + SORTP",
   "tests": [
     {
       "name": "boot",
-      "cmd": "median 8 avg 24 peer 4",
+      "cmd": "TOPNP 3 crit/error/warn; source intact",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "median",
-      "cmd": "MEDIANP plate 8",
+      "name": "top",
+      "cmd": "TOPNP crit=12",
       "ok": true,
-      "note": "median"
+      "note": "top"
     },
     {
-      "name": "avg",
-      "cmd": "AVGNP 24 > median 8",
+      "name": "bot",
+      "cmd": "BOTNP info+warn",
       "ok": true,
-      "note": "avg"
+      "note": "bot"
     },
     {
       "name": "peer",
-      "cmd": "even-count median 4",
+      "cmd": "TOPNP FROM PEER c,a",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "filter",
-      "cmd": "KEEPKEYP lat_ then MEDIANP",
+      "name": "sort",
+      "cmd": "SORTP DESC full rank",
       "ok": true,
-      "note": "filter"
+      "note": "sort"
     },
     {
       "name": "empty",
-      "cmd": "MEDIANP FROM {} 0",
+      "cmd": "empty soft 0",
       "ok": true,
       "note": "empty"
     },
     {
       "name": "gate",
-      "cmd": "p50<=15; slo=5 over",
+      "cmd": "TOPNKEYP 1 crit high",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "P50P MIDP single 7",
+      "cmd": "n>cand all; BOTNP ties",
       "ok": true,
       "note": "probe"
     },
@@ -63,7 +63,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_MML_REQUIRE=1 EXIT 2",
+      "cmd": "CUBALC_MTH_REQUIRE=1 EXIT 2",
       "ok": true,
       "note": "hard env"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "397/400 pre-existing 3 shell fails; medianp PASS 18"
+      "note": "399/402 pre-existing sys_kvfileensure,init_peer,cli_plate_pick; topnp PASS 33 sortp PASS 32"
     }
   ],
   "weaknesses": [
@@ -2394,6 +2394,38 @@
       "title": "WRITE META/STATUS omit trailing NL (reconfirmed medianp)",
       "detail": "cat -A META no $; STATUS gate no $.",
       "repro": "cat -A META after gate"
+    },
+    {
+      "id": "W291",
+      "severity": "low",
+      "area": "lang|topnp",
+      "title": "TOPNP skips non-numeric keys silently (host/agent)",
+      "detail": "host/schema strings never appear in top plate — positive for FREQ rank. No skip bag; same class as SUMNP silent skip.",
+      "repro": "TOPNP 3 plate with host → only pure-int keys"
+    },
+    {
+      "id": "W292",
+      "severity": "low",
+      "area": "lang|topnp_n",
+      "title": "TOPNP N accepts variable top_n in large board (positive contrast)",
+      "detail": "Unlike HASFLAG/HASARGC literal-only, TOPNP top_n with LET top_n=3 worked. Document as usable for budget flags.",
+      "repro": "LET top_n 3; TOPNP top_n → crit/error/warn"
+    },
+    {
+      "id": "W293",
+      "severity": "med",
+      "area": "lang|botnp_tie",
+      "title": "BOTNP ties pick first-seen among equal mins (stable but opaque)",
+      "detail": "Peer b=2 and d=2: BOTNP 1 returns b not d. Agents must not assume keyname order for ties.",
+      "repro": "BOTNP FROM PEER 1 with b=2 d=2 → b"
+    },
+    {
+      "id": "W294",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS last line omit trailing NL (reconfirmed topnp)",
+      "detail": "cat -A gate line without $.",
+      "repro": "cat -A STATUS after gate"
     }
   ],
   "workarounds": [
@@ -2495,15 +2527,17 @@
     "After SUMMERGEP LET merged=LAST before CLEAR_ERR; DIVP FROM merged",
     "SUBP only PLATE/PEER/base paths in large boards — not ad-hoc LET JSON pairs",
     "Prefer IF n == k over SYS EQS n k for numeric vars",
-    "Pair MEDIANP with AVGNP for outlier-aware mesh SLOs"
+    "Pair MEDIANP with AVGNP for outlier-aware mesh SLOs",
+    "TOPNP variable N works for flag budgets",
+    "Do not rely on BOTNP tie-break key names"
   ],
   "language_gaps": [
-    "SYS EQS var number unknown form (W287)",
-    "EQS clobbers LAST after MEDIANP (W289)"
+    "TOPNP silent skip non-numeric (W291)",
+    "BOTNP tie order opaque (W293)"
   ],
   "issues_faced": [
-    "SYS EQS load_hit 4 unknown form — switched to IF =="
+    "None blocking — board green first pass"
   ],
-  "commit": "41aa9118",
-  "ts": "2026-08-09T05:08:48Z"
+  "commit": "pending",
+  "ts": "2026-08-09T05:33:37Z"
 }
