@@ -212,6 +212,12 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate has  state/my_agent.json n ok status            # multi-key soft contract
 ./out/cubalc plate need state/my_agent.json n ok                   # hard gate (ok:false on miss)
 ./out/cubalc libs | grep plate
+
+./out/cubalc plate nestget  state/my_agent.json meta role
+./out/cubalc plate nestset  state/my_agent.json meta role leader
+./out/cubalc plate nestinc  state/my_agent.json stats hits
+./out/cubalc plate nestkeys state/my_agent.json meta
+./out/cubalc plate nesthas  state/my_agent.json meta role
 ```
 
 `ensure` does not clobber an existing object plate (dual of `ENSUREPLATE`).  

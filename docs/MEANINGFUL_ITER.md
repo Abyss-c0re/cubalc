@@ -660,6 +660,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 630. ~~**`MERGEOBJ` / `DEFAULTOBJ` / `PATCHNEST`**~~ **done** (merge/fill nested plate object one-shot · multi-plate · no GETOBJ+MERGEP+SETOBJ).
 631. ~~**`GETPOBJ` / `SETPOBJ` / `INCOBJ` / `DELPOBJ`**~~ **done** (nested scalar peel/set/inc/del · multi-plate · no GETOBJ+GETP/SETP+SETOBJ).
 632. ~~**`HASPOBJ` / `TYPEPOBJ` / `KEYSOBJ` / `NEEDPOBJ`**~~ **done** (nested probes + fail-fast contract · multi-plate · HASP/TYPEP/KEYSP/NEEDP duals for nests).
+633. ~~**`cubalc plate nestget|nestset|nestinc|nestdel|nestkeys|nesthas`**~~ **done** (CLI duals of GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ/KEYSOBJ/HASPOBJ · agent one-shots without `.cubalc`).
 
 ## Tick protocol
 
