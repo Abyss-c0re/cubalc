@@ -2123,6 +2123,6 @@
     "chained SYS CAT row LAST after STR collapsed job rows to deadline_ms only",
     "fixed with multi-arg CAT after STR into w_s/d_s"
   ],
-  "commit": "",
+  "commit": "5e3f9cb",
   "ts": "2026-08-09T00:59:24Z"
 }
