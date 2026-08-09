@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 599,
-  "version": "1.15.626-usability",
-  "item": "PLUCKOBJ",
-  "item_id": 635,
-  "title": "PLUCKOBJ|NESTPLUCK [FROM plate] nest field\u2026 \u00b7 multi-key nested peel \u2192 value bag",
-  "commit": "66db8cb50b4064d6043dcdf58862f73eb25192f0",
-  "summary": "Nested multi-field extract without GETPOBJ+PUSH glue. proof 1176 25/25.",
+  "iter": 600,
+  "version": "1.15.627-usability",
+  "item": "PICKOBJ/OMITOBJ",
+  "item_id": 636,
+  "title": "PICKOBJ|OMITOBJ nest key keep/drop write-back \u00b7 multi-plate \u00b7 PICKP/OMITP duals",
+  "commit": "a6c492aa8d2cfcda3a10d6acbdc81db81d88d824",
+  "summary": "Nested key projection write-back without GETOBJ+PICKP+SETOBJ. proof 1177 24/24.",
   "proofs": [
-    "1176_pluckobj 25/25",
-    "1175_each_keynest reg ok"
+    "1177_pickobj 24/24",
+    "1176_pluckobj reg ok"
   ],
-  "when": "2026-08-09T07:05:54Z",
+  "when": "2026-08-09T07:15:40Z",
   "agent": "meaningful_iter_10m",
-  "sha": "66db8cb50b4064d6043dcdf58862f73eb25192f0",
-  "note": "invented after backlog 634 KEYNEST; thrash restored; EVOLVE_PAUSED"
+  "sha": "a6c492aa8d2cfcda3a10d6acbdc81db81d88d824",
+  "note": "invented after backlog 635 PLUCKOBJ; EVOLVE_PAUSED"
 }
