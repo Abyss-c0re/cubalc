@@ -1,0 +1,126 @@
+# KEEPKEYOBJ / DROPKEYOBJ — nest key needle filter write-back
+# Usability: KEEPKEYP dual for nests; complements PICKOBJ exact keys.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"error_count\":9,\"warn_count\":3,\"info_n\":1,\"host\":\"A\"}}"
+LET PEER = "{\"logs\":{\"Error_A\":2,\"warn_B\":4,\"ok\":1},\"outer\":\"z\"}"
+
+# KEEPKEYOBJ: keep nest keys containing needle
+KEEPKEYOBJ "freq" "count"
+ASSERT OK == 1
+ASSERT KEEPKEYOBJ_N == 2
+ASSERT KEEPKEYOBJ_DROP == 2
+ASSERT KEEPKEYOBJ_NEST_HIT == 1
+ASSERT KEEPKEYOBJ_FROM == 0
+HASPOBJ "freq" "error_count"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "warn_count"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "info_n"
+ASSERT LAST_N == 0
+HASPOBJ "freq" "host"
+ASSERT LAST_N == 0
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+KEEPKEYOBJ FROM PEER "logs" "warn"
+ASSERT KEEPKEYOBJ_FROM == 1
+ASSERT KEEPKEYOBJ_N == 1
+SYS EQS KEEPKEYOBJ_SRC "PEER"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "logs" "warn_B"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "logs" "Error_A"
+ASSERT LAST_N == 0
+GETP FROM PEER "outer"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# GREPKEYOBJ alias + trailing FROM
+LET PLATE = "{\"freq\":{\"error_count\":9,\"warn_count\":3,\"info_n\":1,\"host\":\"A\"}}"
+GREPKEYOBJ "freq" "error"
+ASSERT GREPKEYOBJ_N == 1
+HASPOBJ "freq" "error_count"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "warn_count"
+ASSERT LAST_N == 0
+
+# DROPKEYOBJ: drop matching nest keys
+LET PLATE = "{\"freq\":{\"error_count\":9,\"warn_count\":3,\"info_n\":1,\"host\":\"A\"}}"
+DROPKEYOBJ "freq" "count"
+ASSERT OK == 1
+ASSERT DROPKEYOBJ_N == 2
+ASSERT DROPKEYOBJ_DROP == 2
+HASPOBJ "freq" "info_n"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "host"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "error_count"
+ASSERT LAST_N == 0
+HASPOBJ "freq" "warn_count"
+ASSERT LAST_N == 0
+
+LET PEER = "{\"logs\":{\"Error_A\":2,\"warn_B\":4,\"ok\":1},\"outer\":\"z\"}"
+DROPKEYOBJ FROM PEER "logs" "ok"
+ASSERT DROPKEYOBJ_FROM == 1
+ASSERT DROPKEYOBJ_N == 2
+HASPOBJ FROM PEER "logs" "Error_A"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "logs" "warn_B"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "logs" "ok"
+ASSERT LAST_N == 0
+
+# case-insensitive
+LET PEER = "{\"logs\":{\"Error_A\":2,\"warn_B\":4,\"ok\":1},\"outer\":\"z\"}"
+KEEPKEYOBJI FROM PEER "logs" "error"
+ASSERT KEEPKEYOBJ_ICASE == 1
+ASSERT KEEPKEYOBJ_N == 1
+HASPOBJ FROM PEER "logs" "Error_A"
+ASSERT LAST_N == 1
+
+# reseed and drop case-insensitive warn
+LET PEER = "{\"logs\":{\"Error_A\":2,\"warn_B\":4,\"ok\":1},\"outer\":\"z\"}"
+DROPKEYOBJI FROM PEER "logs" "WARN"
+ASSERT DROPKEYOBJ_N == 2
+ASSERT DROPKEYOBJ_DROP == 1
+HASPOBJ FROM PEER "logs" "warn_B"
+ASSERT LAST_N == 0
+HASPOBJ FROM PEER "logs" "Error_A"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "logs" "ok"
+ASSERT LAST_N == 1
+
+# empty needle keep all
+LET PLATE = "{\"freq\":{\"a\":1,\"b\":2,\"c\":3}}"
+KEEPKEYOBJ "freq" ""
+ASSERT KEEPKEYOBJ_N == 3
+ASSERT KEEPKEYOBJ_DROP == 0
+LENOBJ "freq"
+ASSERT LAST_N == 3
+
+# soft nest miss
+KEEPKEYOBJ "ghost" "x"
+ASSERT OK == 1
+ASSERT KEEPKEYOBJ_NEST_HIT == 0
+ASSERT KEEPKEYOBJ_N == 0
+HASP "ghost"
+ASSERT LAST_N == 0
+
+# NEST aliases
+LET PLATE = "{\"freq\":{\"tmp_a\":1,\"keep_b\":2}}"
+NESTDROPKEY "freq" "tmp"
+ASSERT DROPKEYOBJ_N == 1
+HASPOBJ "freq" "tmp_a"
+ASSERT LAST_N == 0
+HASPOBJ "freq" "keep_b"
+ASSERT LAST_N == 1
+NESTKEEPKEY "freq" "keep"
+ASSERT KEEPKEYOBJ_N == 1
+HASPOBJ "freq" "keep_b"
+ASSERT LAST_N == 1
+
+PRINT "keepkeyobj soft ok"

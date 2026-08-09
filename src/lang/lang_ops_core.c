@@ -27428,6 +27428,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PCTP") || kw(&L->cur,"SCALEP") || kw(&L->cur,"ADDP") ||
              kw(&L->cur,"DIVP") || kw(&L->cur,"SUMMERGEP") || kw(&L->cur,"SUBP") ||
              kw(&L->cur,"ABSP") || kw(&L->cur,"SIGNP") ||
+             kw(&L->cur,"KEEPKEYOBJ") || kw(&L->cur,"DROPKEYOBJ") ||
              kw(&L->cur,"KEEPKEYP") || kw(&L->cur,"DROPKEYP") ||
              kw(&L->cur,"TOPNP") || kw(&L->cur,"BOTNP") ||
              kw(&L->cur,"SORTP") || kw(&L->cur,"SORTBAGP") ||
@@ -35909,6 +35910,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DIVPOBJ", "DIVPOBJ|NESTDIV [FROM plate] nest divisor — idiv nest ints write-back · multi-plate · DIVP dual · not OOP DIVOBJ"},
       {"ABSPOBJ", "ABSPOBJ|MAGPOBJ|NESTABS [FROM plate] nest — abs nest ints write-back · multi-plate · ABSP dual · not OOP ABSOBJ"},
       {"SIGNPOBJ", "SIGNPOBJ|DIRPOBJ|NESTSIGN [FROM plate] nest — signum nest ints write-back · multi-plate · SIGNP dual · not OOP SIGNOBJ"},
+      {"KEEPKEYOBJ", "KEEPKEYOBJ|GREPKEYOBJ [FROM plate] nest needle — keep nest keys containing needle write-back · multi-plate · KEEPKEYP dual"},
+      {"GREPKEYOBJ", "GREPKEYOBJ alias of KEEPKEYOBJ"},
+      {"NESTKEEPKEY", "NESTKEEPKEY alias of KEEPKEYOBJ"},
+      {"KEEPKEYOBJI", "KEEPKEYOBJI case-insensitive KEEPKEYOBJ"},
+      {"DROPKEYOBJ", "DROPKEYOBJ|GREPVKEYOBJ [FROM plate] nest needle — drop nest keys containing needle write-back · multi-plate · DROPKEYP dual"},
+      {"GREPVKEYOBJ", "GREPVKEYOBJ alias of DROPKEYOBJ"},
+      {"NESTDROPKEY", "NESTDROPKEY alias of DROPKEYOBJ"},
+      {"DROPKEYOBJI", "DROPKEYOBJI case-insensitive DROPKEYOBJ"},
       {"TOKVP", "TOKVP|TOBAGP [FROM plate] — plate → key:val bag · multi-plate · no SYS JSONTOKV"},
       {"TOBAGP", "TOBAGP alias of TOKVP"},
       {"FROMKVP", "FROMKVP|BAGTOP [bag] [INTO name] — key=val bag → plate · multi-plate · no SYS JSONFROMKV"},
@@ -46304,6 +46313,261 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               aname[0] ? aname : "?", bname[0] ? bname : "?");
     bump(vm); return 1;
   }
+  /* KEEPKEYOBJ|GREPKEYOBJ|NESTKEEPKEY [FROM plate] nest needle —
+   * keep nest keys containing needle → write-back outer (KEEPKEYP dual).
+   * DROPKEYOBJ|GREPVKEYOBJ|NESTDROPKEY [FROM plate] nest needle — drop matching keys.
+   * KEEPKEYOBJI / DROPKEYOBJI — case-insensitive.
+   * Complements PICKOBJ (exact keys) with substring key filter on nests.
+   * Soft nest miss: outer unchanged · NEST_HIT=0.
+   * Usability: nest FREQ key pattern without GETOBJ+KEEPKEYP+SETOBJ:
+   *   KEEPKEYOBJ "freq" "error"
+   *   DROPKEYOBJ FROM PEER "cfg" "tmp"
+   *   KEEPKEYOBJI "meta" "Warn"
+   */
+  if (kw(&L->cur,"KEEPKEYOBJ") || kw(&L->cur,"GREPKEYOBJ") || kw(&L->cur,"NESTKEEPKEY") ||
+      kw(&L->cur,"FILTERKEYOBJ") || kw(&L->cur,"MKEEPKEYOBJ") || kw(&L->cur,"KEYGREPOBJ") ||
+      kw(&L->cur,"DROPKEYOBJ") || kw(&L->cur,"GREPVKEYOBJ") || kw(&L->cur,"NESTDROPKEY") ||
+      kw(&L->cur,"RMKEYOBJ") || kw(&L->cur,"MDROPKEYOBJ") ||
+      kw(&L->cur,"KEEPKEYOBJI") || kw(&L->cur,"GREPKEYOBJI") || kw(&L->cur,"FILTERKEYOBJI") ||
+      kw(&L->cur,"DROPKEYOBJI") || kw(&L->cur,"GREPVKEYOBJI") || kw(&L->cur,"RMKEYOBJI")) {
+    char plate[CUBALC_HOST_STR_MAX], nestk[96], nest[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX], needle[256];
+    cubalc_host_result ngr, hr, wr;
+    int have_from = 0, nest_hit = 0, invert = 0, icase = 0;
+    Var *pv;
+    const char *v;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "DROPKEYOBJ") == 0 || strcmp(op0, "GREPVKEYOBJ") == 0 ||
+        strcmp(op0, "NESTDROPKEY") == 0 || strcmp(op0, "RMKEYOBJ") == 0 ||
+        strcmp(op0, "MDROPKEYOBJ") == 0 || strcmp(op0, "DROPKEYOBJI") == 0 ||
+        strcmp(op0, "GREPVKEYOBJI") == 0 || strcmp(op0, "RMKEYOBJI") == 0)
+      invert = 1;
+    if (strcmp(op0, "KEEPKEYOBJI") == 0 || strcmp(op0, "GREPKEYOBJI") == 0 ||
+        strcmp(op0, "FILTERKEYOBJI") == 0 || strcmp(op0, "DROPKEYOBJI") == 0 ||
+        strcmp(op0, "GREPVKEYOBJI") == 0 || strcmp(op0, "RMKEYOBJI") == 0)
+      icase = 1;
+
+    lex_next(L);
+    plate[0] = 0; nestk[0] = 0; nest[0] = 0;
+    from_name[0] = 0; from_src[0] = 0; needle[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* nest key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(nestk, sizeof nestk, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"END") || kw(&L->cur,"ASSERT") || kw(&L->cur,"LET")) {
+        fail(vm, "KEEPKEYOBJ|DROPKEYOBJ nest needle — need nest key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, nestk, sizeof nestk) != 0)
+        nestk[0] = 0;
+    } else {
+      fail(vm, "KEEPKEYOBJ|DROPKEYOBJ nest needle — need nest key");
+      return -1;
+    }
+
+    /* needle */
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT || L->cur.kind == TK_NUM ||
+        L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+           kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+           kw(&L->cur,"END") || kw(&L->cur,"ASSERT") || kw(&L->cur,"LET"))) {
+        /* empty needle allowed via missing — treat as "" */
+      } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!nestk[0]) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "KEEPKEYOBJ: empty nest");
+      var_set_str(vm, "ERR", "KEEPKEYOBJ: empty nest");
+      var_set_num(vm, "LAST_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    nest_hit = 0;
+    nest[0] = 0;
+    memset(&ngr, 0, sizeof ngr);
+    if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
+      v = ngr.str;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v == '{') {
+        if (v != ngr.str) {
+          size_t n = strlen(v);
+          memmove(ngr.str, v, n + 1);
+        }
+        snprintf(nest, sizeof nest, "%s", ngr.str);
+        nest_hit = 1;
+      }
+    }
+
+    if (!nest_hit) {
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "NEST", "");
+      var_set_num(vm, "KEEPKEYOBJ_N", 0);
+      var_set_num(vm, "DROPKEYOBJ_N", 0);
+      var_set_num(vm, "KEEPKEYOBJ_DROP", 0);
+      var_set_str(vm, "KEEPKEYOBJ_NEST", nestk);
+      var_set_str(vm, "KEEPKEYOBJ_NEEDLE", needle);
+      var_set_num(vm, "KEEPKEYOBJ_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "KEEPKEYOBJ_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "KEEPKEYOBJ_NEST_HIT", 0);
+      var_set_num(vm, "KEEPKEYOBJ_ICASE", icase ? 1 : 0);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# keepkeyobj nest-miss nest=%s\n", nestk);
+      bump(vm); return 1;
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_keygrep(nest, needle, invert, icase, &hr) != 0) {
+      var_set_str(vm, "LAST", "{}");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "{}");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "KEEPKEYOBJ_N", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err :
+                  (invert ? "DROPKEYOBJ: fail" : "KEEPKEYOBJ: fail"));
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err :
+                  (invert ? "DROPKEYOBJ: fail" : "KEEPKEYOBJ: fail"));
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    snprintf(nest, sizeof nest, "%s", hr.str);
+
+    memset(&wr, 0, sizeof wr);
+    if (cubalc_host_json_set(plate, nestk, nest, 1, &wr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", wr.err[0] ? wr.err : "KEEPKEYOBJ: write-back fail");
+      var_set_str(vm, "ERR", wr.err[0] ? wr.err : "KEEPKEYOBJ: write-back fail");
+      var_set_num(vm, "KEEPKEYOBJ_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, wr.str);
+    else if (!have_from)
+      var_set_str(vm, "PLATE", wr.str);
+
+    var_set_str(vm, "LAST", wr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", wr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "NEST", nest);
+    var_set_str(vm, "MERGED", nest);
+    var_set_str(vm, "KEEPKEYOBJ_NEST", nestk);
+    var_set_str(vm, "KEEPKEYOBJ_NEEDLE", needle);
+    var_set_num(vm, "KEEPKEYOBJ_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "KEEPKEYOBJ_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "KEEPKEYOBJ_NEST_HIT", 1);
+    var_set_num(vm, "KEEPKEYOBJ_ICASE", icase ? 1 : 0);
+    if (invert) {
+      var_set_str(vm, "DROPKEYOBJ", wr.str);
+      var_set_str(vm, "GREPVKEYOBJ", wr.str);
+      var_set_num(vm, "DROPKEYOBJ_N", hr.n);
+      var_set_num(vm, "DROPKEYOBJ_DROP", (long)hr.code);
+      var_set_num(vm, "DROPKEYOBJ_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "DROPKEYOBJ_NEEDLE", needle);
+    } else {
+      var_set_str(vm, "KEEPKEYOBJ", wr.str);
+      var_set_str(vm, "GREPKEYOBJ", wr.str);
+      var_set_num(vm, "KEEPKEYOBJ_N", hr.n);
+      var_set_num(vm, "KEEPKEYOBJ_DROP", (long)hr.code);
+      var_set_num(vm, "GREPKEYOBJ_N", hr.n);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s nest=%s n=%ld drop=%d needle=%s icase=%d from=%d\n",
+              invert ? "dropkeyobj" : "keepkeyobj", nestk, hr.n, hr.code, needle,
+              icase, have_from);
+    bump(vm); return 1;
+  }
+
   /* KEEPKEYP|GREPKEYP [FROM plate] needle — keep keys containing needle (KEEPKEY dual).
    * DROPKEYP|GREPVKEYP [FROM plate] needle — drop matching keys (DROPKEY dual).
    * KEEPKEYPI|GREPKEYPI / DROPKEYPI — case-insensitive key match.
