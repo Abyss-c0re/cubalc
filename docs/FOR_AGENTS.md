@@ -31,6 +31,7 @@ cubalc run -I agent_boot -e 'STATUS'              # INCLUDE ONCE agent_boot firs
 cubalc -I plate_session my.cubalc                 # top-level -I (no run subcmd)
 export CUBALC_PRELOAD=agent_boot:hold_seed        # colon list env dual
 cubalc run -L "$PWD/mylibs" -I my_extra prog.cubalc  # one-shot CUBALC_INCLUDE_PATH
+CUBALC_INCLUDE_PATH=$PWD/mylibs cubalc which my_extra   # resolve project lib path
 ```
 
 Run plate includes `preload_n` / `include_path_n`. See `cubalc env PRELOAD`.

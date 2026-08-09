@@ -2059,10 +2059,15 @@ int main(int argc, char **argv) {
     int modular = 0, smx_key = 0, protect_plate = 0, bin_ok = 1;
     int libs_n = 0, lib_agent_boot = 0, lib_plate_session = 0, lib_plate_uniform = 0;
     int lib_hold_seed = 0, cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
+    int include_path_set = 0, preload_set = 0;
     const char *hx = getenv("CUBALC_SMX_KEY");
     const char *kf = getenv("CUBALC_SMX_KEY_FILE");
+    const char *ipath = getenv("CUBALC_INCLUDE_PATH");
+    const char *preload = getenv("CUBALC_PRELOAD");
     const char *libdir = "programs/lib";
     state_dir(dir, sizeof dir);
+    if (ipath && ipath[0]) include_path_set = 1;
+    if (preload && preload[0]) preload_set = 1;
     snprintf(protect_path, sizeof protect_path, "%s/CORE_PROTECT.json", dir);
     modular = (access("src/lang/lang_parse.c", R_OK) == 0 &&
                access("include/lang/cubalc_lang_internal.h", R_OK) == 0 &&
@@ -2109,6 +2114,7 @@ int main(int argc, char **argv) {
              "\"libs_dir\":\"%s\",\"libs_dir_ok\":%s,\"libs_n\":%d,"
              "\"lib_agent_boot\":%s,\"lib_plate_session\":%s,"
              "\"lib_plate_uniform\":%s,\"lib_hold_seed\":%s,"
+             "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"nest_check\":\"%s\","
              "\"hints\":["
@@ -2117,6 +2123,7 @@ int main(int argc, char **argv) {
              "\"cubalc protect · cubalc smx-bus prove-tcp\","
              "\"cubalc selftest — live usability proofs\","
              "\"cubalc libs · cubalc cat plate_uniform · INCLUDE plate_uniform\","
+             "\"CUBALC_INCLUDE_PATH + cubalc which name · run -I / NEEDINCLUDE\","
              "\"cubalc plate uniform agent.json role — nest value consistency\","
              "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
@@ -2142,6 +2149,8 @@ int main(int argc, char **argv) {
              lib_plate_session ? "true" : "false",
              lib_plate_uniform ? "true" : "false",
              lib_hold_seed ? "true" : "false",
+             include_path_set ? "true" : "false",
+             preload_set ? "true" : "false",
              cookbook_ok ? "true" : "false",
              for_agents_ok ? "true" : "false",
              lib_plate_uniform
@@ -2686,6 +2695,7 @@ int main(int argc, char **argv) {
       {"cli_run_includes", "programs/proof/1262_cli_run_includes.sh", "run plate includes_n/includes LISTINCLUDES dual"},
       {"needinclude", "programs/proof/1263_needinclude.cubalc", "NEEDINCLUDE/HASINCLUDEALL loaded module gates"},
       {"cli_needinclude", "programs/proof/1263_cli_needinclude.sh", "NEEDINCLUDE after run -I preload"},
+      {"cli_which_include_path", "programs/proof/1264_cli_which_include_path.sh", "which/SYS WHICH CUBALC_INCLUDE_PATH project libs"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -11768,15 +11778,24 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       cubalc_host_result hr;
       if (cubalc_host_find_cubalc(q, &hr) == 0 && nh < 16) {
         const char *kind = "path";
+        const char *hint = "INCLUDE/cat resolve";
+        const char *ip = getenv("CUBALC_INCLUDE_PATH");
         if (strstr(hr.str, "programs/lib/")) kind = "lib";
         else if (strstr(hr.str, "programs/proof/")) kind = "proof";
         else if (strstr(hr.str, "programs/p2p/")) kind = "p2p";
         else if (strstr(hr.str, "programs/protect/")) kind = "protect";
         else if (strstr(hr.str, "programs/")) kind = "program";
         else if (strstr(hr.str, "docs/")) kind = "doc";
+        else if (ip && ip[0] && strstr(hr.str, ".cubalc")) {
+          /* project lib from CUBALC_INCLUDE_PATH (or -L) */
+          kind = "lib";
+          hint = "CUBALC_INCLUDE_PATH project lib";
+        } else if (strstr(hr.str, ".cubalc")) {
+          kind = "lib";
+        }
         snprintf(hits[nh].kind, sizeof hits[0].kind, "%s", kind);
         snprintf(hits[nh].path, sizeof hits[0].path, "%s", hr.str);
-        snprintf(hits[nh].hint, sizeof hits[0].hint, "INCLUDE/cat resolve");
+        snprintf(hits[nh].hint, sizeof hits[0].hint, "%s", hint);
         hits[nh].present = 1;
         nh++;
       }

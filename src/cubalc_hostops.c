@@ -3322,6 +3322,43 @@ int cubalc_host_find_cubalc(const char *name, cubalc_host_result *r) {
       }
     }
   }
+  /* CUBALC_INCLUDE_PATH=dir:dir — project libs (INCLUDE / which / SYS WHICH dual). */
+  {
+    const char *ip = getenv("CUBALC_INCLUDE_PATH");
+    if (ip && ip[0]) {
+      const char *seg = ip;
+      while (*seg) {
+        char dir[512];
+        size_t dlen = 0;
+        while (*seg == ':') seg++;
+        if (!*seg) break;
+        while (seg[dlen] && seg[dlen] != ':' && dlen + 1 < sizeof dir) {
+          dir[dlen] = seg[dlen];
+          dlen++;
+        }
+        dir[dlen] = 0;
+        seg += dlen;
+        if (!dir[0]) continue;
+        snprintf(try, sizeof try, "%s/%s.cubalc", dir, stem);
+        if (access(try, R_OK) == 0) {
+          snprintf(r->str, sizeof r->str, "%s", try);
+          r->ok = 1; r->n = 1; return 0;
+        }
+        snprintf(try, sizeof try, "%s/%s", dir, leaf);
+        if (access(try, R_OK) == 0) {
+          snprintf(r->str, sizeof r->str, "%s", try);
+          r->ok = 1; r->n = 1; return 0;
+        }
+        if (!strchr(leaf, '.')) {
+          snprintf(try, sizeof try, "%s/%s.cubalc", dir, leaf);
+          if (access(try, R_OK) == 0) {
+            snprintf(r->str, sizeof r->str, "%s", try);
+            r->ok = 1; r->n = 1; return 0;
+          }
+        }
+      }
+    }
+  }
   snprintf(r->err, sizeof r->err, "find: not found %s", name);
   return -1;
 }
