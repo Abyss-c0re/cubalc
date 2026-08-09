@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 607,
-  "version": "1.15.634-usability",
-  "item": "THRESHOBJ/DROPZEROOBJ/CAPOBJ",
-  "item_id": 643,
-  "title": "THRESHOBJ|DROPZEROOBJ|CAPOBJ · nest value denoise/clamp write-back · multi-plate · THRESHP duals",
-  "commit": "6ee668219622aa0606f52a1277de69f6a5f3d5a4",
-  "summary": "Nest FREQ denoise without GETOBJ+THRESHP+SETOBJ glue. proof 1184 47/47.",
+  "iter": 608,
+  "version": "1.15.635-usability",
+  "item": "PCTOBJ/SCALEPOBJ/ADDPOBJ nest maps",
+  "item_id": 644,
+  "title": "PCTOBJ|SCALEPOBJ|ADDPOBJ|DIVPOBJ|ABSPOBJ|SIGNPOBJ · nest value map write-back · multi-plate · PCTP duals · not OOP SCALEOBJ",
+  "commit": "1b7c1e3aa0ea3c46ab2f9861afd9819c99206d8b",
+  "summary": "Nest FREQ share/weight/offset without GETOBJ+PCTP+SETOBJ glue. proof 1185 51/51.",
   "proofs": [
-    "1184_threshobj 47/47",
-    "1183_sumnobj reg ok",
-    "1160_threshp reg ok",
-    "cubalc forms THRESHOBJ ok"
+    "1185_pctobj 51/51",
+    "1184_threshobj reg ok",
+    "1161_pctp reg ok",
+    "cubalc forms PCTOBJ/SCALEPOBJ ok"
   ],
-  "when": "2026-08-09T08:55:00Z",
+  "when": "2026-08-09T09:10:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "6ee668219622aa0606f52a1277de69f6a5f3d5a4",
-  "note": "after backlog 642 SUMNOBJ; EVOLVE_PAUSED"
+  "sha": "1b7c1e3aa0ea3c46ab2f9861afd9819c99206d8b",
+  "note": "after backlog 643 THRESHOBJ; EVOLVE_PAUSED"
 }
