@@ -7201,6 +7201,85 @@ int cubalc_host_json_leaf_count_by_val(const char *json, const char *val,
   return 0;
 }
 
+/* SETBYVAL: rewrite leaf values equal to oldv → newv. See header. */
+int cubalc_host_json_leaf_set_by_val(const char *json, const char *oldv, const char *newv,
+                                     cubalc_host_result *r) {
+  cubalc_host_result kv, wr;
+  const char *p, *line;
+  char bag[CUBALC_HOST_STR_MAX];
+  size_t olen = 0;
+  long updated = 0, total = 0;
+  const char *want, *nv;
+
+  r_clear(r);
+  want = oldv ? oldv : "";
+  nv = newv ? newv : "";
+  memset(&kv, 0, sizeof kv);
+  cubalc_host_json_leaf_kv(json ? json : "{}", NULL, &kv);
+  bag[0] = 0;
+  p = kv.str;
+  while (*p) {
+    char path[512], oldleaf[CUBALC_HOST_STR_MAX / 2], linebuf[CUBALC_HOST_STR_MAX];
+    size_t kn = 0, vn = 0;
+    const char *sep, *vs, *ve;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    kn = sep ? (size_t)(sep - line) : (size_t)(p - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn == 0 || kn >= sizeof path) continue;
+    memcpy(path, line, kn);
+    path[kn] = 0;
+    vs = sep ? sep + 1 : p;
+    ve = p;
+    while (vs < ve && (*vs == ' ' || *vs == '\t')) vs++;
+    while (ve > vs && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+    vn = (size_t)(ve - vs);
+    if (vn >= sizeof oldleaf) vn = sizeof oldleaf - 1;
+    memcpy(oldleaf, vs, vn);
+    oldleaf[vn] = 0;
+    if (strcmp(oldleaf, want) == 0) {
+      if (snprintf(linebuf, sizeof linebuf, "%s:%s", path, nv) >= 0)
+        cubalc_bag_push(bag, sizeof bag, &olen, &total, linebuf);
+      updated++;
+    } else {
+      if (snprintf(linebuf, sizeof linebuf, "%s:%s", path, oldleaf) >= 0)
+        cubalc_bag_push(bag, sizeof bag, &olen, &total, linebuf);
+    }
+  }
+  memset(&wr, 0, sizeof wr);
+  if (cubalc_host_json_unflat_kv("{}", bag, NULL, &wr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s",
+             wr.err[0] ? wr.err : "setbyval: unflat fail");
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", wr.str);
+  r->n = updated;
+  r->ok = 1;
+  r->code = total;
+  return 0;
+}
+
 /* UNIQFLAT: unique matching leaf values by path needle. See header. */
 int cubalc_host_json_leaf_uniq(const char *json, const char *needle,
                                cubalc_host_result *r) {

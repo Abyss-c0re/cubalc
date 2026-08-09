@@ -447,6 +447,11 @@ int cubalc_host_json_leaf_paths_by_val(const char *json, const char *val,
  * Soft always OK. Read-only. Usability: presence/count without PATHSBYVAL+LINES glue. */
 int cubalc_host_json_leaf_count_by_val(const char *json, const char *val,
                                        cubalc_host_result *r);
+/* Rewrite every leaf value equal to oldv → newv (SETBYVAL / REPLACEVAL).
+ * Exact match. r->str = new plate · r->n = leaves rewritten · r->code = total leaves.
+ * Soft always OK. Usability: bulk status rewrite without PATHSBYVAL+EACH+SETP glue. */
+int cubalc_host_json_leaf_set_by_val(const char *json, const char *oldv, const char *newv,
+                                     cubalc_host_result *r);
 /* Unique matching leaf values by path needle (UNIQFLAT / DISTINCTFLAT).
  * Empty needle → all leaves. First-seen order. Cap 64 uniques.
  * r->str = value bag · r->n = unique count · r->code = total matching leaves.

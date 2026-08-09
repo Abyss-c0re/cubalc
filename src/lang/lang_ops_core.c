@@ -27459,6 +27459,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PATHBYVAL") || kw(&L->cur,"VALPATH") || kw(&L->cur,"FINDVAL") ||
              kw(&L->cur,"PATHSBYVAL") || kw(&L->cur,"ALLPATHSBYVAL") || kw(&L->cur,"FINDVALS") ||
              kw(&L->cur,"COUNTBYVAL") || kw(&L->cur,"NBYVAL") || kw(&L->cur,"HASVAL") ||
+             kw(&L->cur,"SETBYVAL") || kw(&L->cur,"REPLACEVAL") || kw(&L->cur,"REWVAL") ||
              kw(&L->cur,"UNIQFLAT") || kw(&L->cur,"DISTINCTFLAT") || kw(&L->cur,"UNIQUEFLAT") ||
              kw(&L->cur,"NEEDFLAT") || kw(&L->cur,"REQUIREFLAT") || kw(&L->cur,"MUSTFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
@@ -35911,6 +35912,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NBYVAL", "NBYVAL alias of COUNTBYVAL"},
       {"HASVAL", "HASVAL|HASVALFLAT [FROM plate] value — soft presence of exact leaf value → LAST_N 0|1 · multi-plate · read-only"},
       {"HASVALFLAT", "HASVALFLAT alias of HASVAL"},
+      {"SETBYVAL", "SETBYVAL|REPLACEVAL [FROM plate] old new — rewrite every leaf value equal to old → new write-back · multi-plate"},
+      {"REPLACEVAL", "REPLACEVAL alias of SETBYVAL"},
       {"UNIQFLAT", "UNIQFLAT|DISTINCTFLAT [FROM plate] [needle] — unique matching leaf values → LAST bag · LAST_N=uniques · multi-plate · read-only"},
       {"DISTINCTFLAT", "DISTINCTFLAT alias of UNIQFLAT"},
       {"NEEDFLAT", "NEEDFLAT|REQUIREFLAT [FROM plate] needle… — fail-fast if any leaf-path needle missing · multi-plate · soft twin HASFLAT"},
@@ -48406,6 +48409,161 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# %s n=%ld hit=%d val=%s from=%d\n",
               want_has ? "hasval" : "countbyval", hr.n, hr.code,
               needle[0] ? needle : "", have_from);
+    bump(vm); return 1;
+  }
+
+  /* SETBYVAL|REPLACEVAL [FROM plate] old new
+   * Rewrite every leaf whose value equals old → new. Write-back PLATE or FROM var.
+   * LAST = new plate · LAST_N = leaves rewritten · SETBYVAL_TOTAL = leaf count.
+   * Soft always OK (n=0 if no match). Usability: bulk status rewrite without
+   * PATHSBYVAL+EACH+SETP glue:
+   *   SETBYVAL "worker" "standby"
+   *   SETBYVAL FROM PEER "ok" "ready"
+   *   REPLACEVAL "fail" "retry"
+   */
+  if (kw(&L->cur,"SETBYVAL") || kw(&L->cur,"REPLACEVAL") || kw(&L->cur,"REWVAL") ||
+      kw(&L->cur,"MSETBYVAL") || kw(&L->cur,"PLATE_SETBYVAL") || kw(&L->cur,"SWAPVAL") ||
+      kw(&L->cur,"REVAL") || kw(&L->cur,"MAPVAL") || kw(&L->cur,"REWRITEVAL")) {
+    char plate[CUBALC_HOST_STR_MAX], oldv[192], newv[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; oldv[0] = 0; newv[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, oldv, sizeof oldv) != 0)
+        oldv[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(oldv, sizeof oldv, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"SETBYVAL") && !kw(&L->cur,"IF")) {
+      if (resolve_str_arg(vm, L, oldv, sizeof oldv) != 0)
+        oldv[0] = 0;
+    } else {
+      fail(vm, "SETBYVAL [FROM plate] old new — need old value");
+      return -1;
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, newv, sizeof newv) != 0)
+        newv[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(newv, sizeof newv, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"IF")) {
+      if (resolve_str_arg(vm, L, newv, sizeof newv) != 0)
+        newv[0] = 0;
+    } else {
+      fail(vm, "SETBYVAL [FROM plate] old new — need new value");
+      return -1;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_set_by_val(plate, oldv, newv, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "SETBYVAL: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "SETBYVAL: fail");
+      var_set_num(vm, "SETBYVAL_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "SETBYVAL", hr.str);
+    var_set_str(vm, "REPLACEVAL", hr.str);
+    var_set_num(vm, "SETBYVAL_N", hr.n);
+    var_set_num(vm, "REPLACEVAL_N", hr.n);
+    var_set_num(vm, "SETBYVAL_TOTAL", hr.code);
+    var_set_str(vm, "SETBYVAL_OLD", oldv);
+    var_set_str(vm, "SETBYVAL_NEW", newv);
+    var_set_num(vm, "SETBYVAL_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "SETBYVAL_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# setbyval n=%ld total=%ld old=%s new=%s from=%d\n",
+              hr.n, hr.code, oldv, newv, have_from);
     bump(vm); return 1;
   }
 

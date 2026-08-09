@@ -1,0 +1,65 @@
+# SETBYVAL / REPLACEVAL — rewrite leaf values by exact match
+# Usability: bulk status rewrite without PATHSBYVAL+EACH+SETP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"fail\"},\"c\":{\"status\":\"ok\"}}"
+
+SETBYVAL "worker" "standby"
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT SETBYVAL_N == 2
+ASSERT SETBYVAL_TOTAL == 5
+GETP "meta.role"
+SYS EQS LAST "standby"
+ASSERT LAST_N == 1
+GETP "cfg.role"
+SYS EQS LAST "standby"
+ASSERT LAST_N == 1
+GETP "other.role"
+SYS EQS LAST "leader"
+ASSERT LAST_N == 1
+GETP "cfg.host"
+SYS EQS LAST "h1"
+ASSERT LAST_N == 1
+
+# no match soft
+SETBYVAL "nope" "x"
+ASSERT OK == 1
+ASSERT SETBYVAL_N == 0
+GETP "meta.role"
+SYS EQS LAST "standby"
+ASSERT LAST_N == 1
+
+# multi-plate FROM write-back
+SETBYVAL FROM PEER "ok" "ready"
+ASSERT SETBYVAL_FROM == 1
+SYS EQS SETBYVAL_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT SETBYVAL_N == 2
+GETP FROM PEER "a.status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+GETP FROM PEER "c.status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+GETP FROM PEER "b.status"
+SYS EQS LAST "fail"
+ASSERT LAST_N == 1
+
+# REPLACEVAL alias
+REPLACEVAL "leader" "boss"
+ASSERT REPLACEVAL_N == 1
+GETP "other.role"
+SYS EQS LAST "boss"
+ASSERT LAST_N == 1
+
+# consistent with COUNTBYVAL after rewrite
+COUNTBYVAL "standby"
+ASSERT LAST_N == 2
+COUNTBYVAL "worker"
+ASSERT LAST_N == 0
+
+PASS
+PRINT "1247_setbyval: PASS"

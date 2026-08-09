@@ -2245,6 +2245,8 @@ int main(int argc, char **argv) {
       {"cli_plate_pathsbyval", "programs/proof/1245_cli_plate_pathsbyval.sh", "cubalc plate pathsbyval PATHSBYVAL dual"},
       {"countbyval", "programs/proof/1246_countbyval.cubalc", "COUNTBYVAL/HASVAL count/presence by exact leaf value multi-plate"},
       {"cli_plate_countbyval", "programs/proof/1246_cli_plate_countbyval.sh", "cubalc plate countbyval|hasval dual"},
+      {"setbyval", "programs/proof/1247_setbyval.cubalc", "SETBYVAL/REPLACEVAL rewrite leaf values by exact match multi-plate"},
+      {"cli_plate_setbyval", "programs/proof/1247_cli_plate_setbyval.sh", "cubalc plate setbyval SETBYVAL dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -5105,6 +5107,7 @@ int main(int argc, char **argv) {
               "       cubalc plate pathsbyval <path> <value>  # PATHSBYVAL dual · all leaf paths by exact value\n"
               "       cubalc plate countbyval <path> <value>  # COUNTBYVAL dual · count leaves by exact value\n"
               "       cubalc plate hasval <path> <value>  # HASVAL dual · soft presence of exact leaf value\n"
+              "       cubalc plate setbyval <path> <old> <new>  # SETBYVAL dual · rewrite leaf values by exact match\n"
               "       cubalc plate needflatn <path> <needle> [needle…]  # NEEDFLATN dual · fail-fast pure-int leaf + peel\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
@@ -5137,7 +5140,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"lastflat\",\"nthflat\",\"needflat\",\"getflatn\",\"lastflatn\",\"nthflatn\",\"typeflat\",\"freqflat\",\"modeflat\",\"pathbyval\",\"uniqflat\",\"pathsbyval\",\"countbyval\",\"hasval\",\"needflatn\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"lastflat\",\"nthflat\",\"needflat\",\"getflatn\",\"lastflatn\",\"nthflatn\",\"typeflat\",\"freqflat\",\"modeflat\",\"pathbyval\",\"uniqflat\",\"pathsbyval\",\"countbyval\",\"hasval\",\"setbyval\",\"needflatn\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5278,6 +5281,8 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "valcount") == 0 || strcmp(argv[2], "nval") == 0 ||
         strcmp(argv[2], "hasval") == 0 || strcmp(argv[2], "hasvalflat") == 0 ||
         strcmp(argv[2], "anyval") == 0 || strcmp(argv[2], "valhas") == 0 ||
+        strcmp(argv[2], "setbyval") == 0 || strcmp(argv[2], "replaceval") == 0 ||
+        strcmp(argv[2], "rewval") == 0 || strcmp(argv[2], "mapval") == 0 ||
         strcmp(argv[2], "needflatn") == 0 || strcmp(argv[2], "requireflatn") == 0 ||
         strcmp(argv[2], "mustflatn") == 0 || strcmp(argv[2], "needintflat") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
@@ -5559,6 +5564,10 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "hasvalflat") == 0 || strcmp(op, "anyval") == 0 ||
                strcmp(op, "valhas") == 0 || strcmp(op, "containsval") == 0)
         op = "hasval";
+      else if (strcmp(op, "replaceval") == 0 || strcmp(op, "rewval") == 0 ||
+               strcmp(op, "mapval") == 0 || strcmp(op, "rewriteval") == 0 ||
+               strcmp(op, "reval") == 0 || strcmp(op, "swapval") == 0)
+        op = "setbyval";
       else if (strcmp(op, "requireflatn") == 0 || strcmp(op, "mustflatn") == 0 ||
                strcmp(op, "needintflat") == 0 || strcmp(op, "neednumflat") == 0)
         op = "needflatn";
@@ -7556,6 +7565,55 @@ int main(int argc, char **argv) {
                path, needle, file_hit ? "true" : "false",
                pr.n, CUBALC_LANG_VERSION);
       }
+      return 0;
+    }
+
+    /* setbyval <old> <new> — SETBYVAL dual: rewrite leaf values by exact match.
+     *   cubalc plate setbyval agent.json worker standby
+     * Writes plate. n = rewritten leaf count. */
+    if (strcmp(op, "setbyval") == 0) {
+      const char *oldv = "", *newv = NULL;
+      cubalc_host_result pr, wr;
+
+      if (ai >= argc || !argv[ai]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"setbyval\",\"path\":\"%s\",\"err\":\"need old new\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      oldv = argv[ai++];
+      if (ai >= argc || !argv[ai]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"setbyval\",\"path\":\"%s\",\"err\":\"need new value\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      newv = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_set_by_val(plate, oldv, newv, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"setbyval\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               path, pr.err[0] ? pr.err : "setbyval fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", pr.str);
+      if (file_hit || (path && path[0] && strchr(path, '.'))) {
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_write(path, plate, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"setbyval\",\"path\":\"%s\",\"err\":\"write fail\","
+                 "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        file_hit = 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"setbyval\",\"path\":\"%s\",\"old\":\"%s\",\"new\":\"%s\","
+             "\"file\":%s,\"n\":%ld,\"total\":%ld,\"version\":\"%s\",\"plate\":%s,"
+             "\"note\":\"SETBYVAL dual · rewrite leaf values by exact match\"}\n",
+             path, oldv, newv, file_hit ? "true" : "false",
+             pr.n, pr.code, CUBALC_LANG_VERSION, plate);
       return 0;
     }
 
