@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 270,
-  "program": "programs/realworld/svc_pathsbyval_index_board.cubalc",
-  "theme": "PATHSBYVAL multi reverse path index",
-  "version": "1.15.699-usability",
+  "iter": 271,
+  "program": "programs/realworld/svc_countbyval_presence_board.cubalc",
+  "theme": "COUNTBYVAL/HASVAL exact value presence gates",
+  "version": "1.15.703-usability",
   "pass": true,
-  "prior_note": "iter 269 UNIQFLAT; this iter first realworld 1245 PATHSBYVAL",
+  "prior_note": "iter 270 PATHSBYVAL; this iter first realworld 1246 COUNTBYVAL",
   "tests": [
     {
       "name": "list",
@@ -20,44 +20,44 @@
       "note": "boot"
     },
     {
-      "name": "paths",
-      "cmd": "PATHSBYVAL worker 2 paths",
+      "name": "count",
+      "cmd": "COUNTBYVAL worker=2 leader=1",
       "ok": true,
-      "note": "paths"
+      "note": "count"
     },
     {
-      "name": "alias",
-      "cmd": "ALLPATHSBYVAL/FINDVALS",
+      "name": "has",
+      "cmd": "HASVAL/HASVALFLAT presence",
       "ok": true,
-      "note": "alias"
+      "note": "has"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER ok/fail paths",
+      "cmd": "FROM PEER ok/fail counts",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost miss empty bag",
+      "cmd": "ghost count 0",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "both worker paths admit",
+      "cmd": "workers>1 leader present",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "head",
-      "cmd": "HEAD == PATHBYVAL",
+      "name": "cross",
+      "cmd": "COUNTBYVAL==PATHSBYVAL n",
       "ok": true,
-      "note": "head"
+      "note": "cross"
     },
     {
       "name": "probe",
-      "cmd": "exact value + COUNTBYVAL",
+      "cmd": "exact partials miss",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red pre-existing; pathsbyval language PASS"
+      "note": "cli duals red pre-existing; countbyval PASS"
     }
   ],
   "weaknesses": [
@@ -3436,6 +3436,30 @@
       "title": "git add of deleted state plate stages deletion",
       "detail": "When REALWORLD_CHALLENGE.json missing, git add path stages D and commit removes plate. Agents must test -f before add or git restore.",
       "repro": "rm state/REALWORLD; git add state/REALWORLD \u2192 deletes in commit"
+    },
+    {
+      "id": "W422",
+      "severity": "low",
+      "area": "lang|countbyval",
+      "title": "COUNTBYVAL/HASVAL exact value; partials soft 0",
+      "detail": "COUNTBYVAL work/orker \u2192 LAST_N 0; worker \u2192 2. Same exact-value family as PATHBYVAL/PATHSBYVAL (contrast key-needle substring UNIQFLAT/MODEFLAT).",
+      "repro": "COUNTBYVAL work \u2192 0; COUNTBYVAL worker \u2192 2"
+    },
+    {
+      "id": "W423",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE count string omits trailing NL",
+      "detail": "cnt.txt is single digit 2 without newline (W5 class).",
+      "repro": "od -c cnt.txt ends without \\n"
+    },
+    {
+      "id": "W424",
+      "severity": "low",
+      "area": "lang|countbyval",
+      "title": "COUNTBYVAL LAST is decimal string of count",
+      "detail": "LAST=\"2\" and LAST_N=2 both set; agents must prefer LAST_N for numeric gates to avoid STR/NUM shuttle.",
+      "repro": "COUNTBYVAL worker; EQS LAST 2; LAST_N==2"
     }
   ],
   "workarounds": [
@@ -3453,12 +3477,12 @@
     "SYS HEAD bag for first-seen unique order",
     "agent_job=runner so worker reverse paths stay role-only",
     "test -f state plate before git add",
-    "make out/cubalc when binary missing"
+    "make out/cubalc when binary missing",
+    "prefer LAST_N over LAST string for count gates",
+    "HASVAL for boolean presence before COUNTBYVAL",
+    "agent_job=runner keeps worker count role-only"
   ],
   "language_gaps": [
-    "Single-char path needles are unsafe on substring match",
-    "LASTFLATN_PATH special not always SYS EQS-able in large boards",
-    "GETP bare key may resolve nested last match not top-level",
     "NTHFLATN indices require stable plate key order contracts",
     "EACH FLAT specials/PATH/VALUE need hardened large-board binding",
     "Register 1240 each_flat in selftest suite",
@@ -3475,7 +3499,10 @@
     "prefer LAST_N unique count over UNIQFLAT_N near var cap",
     "PATHSBYVAL multi reverse path bag by exact value",
     "HEAD path bag equals PATHBYVAL first path",
-    "COUNTBYVAL LAST_N aligns with PATHSBYVAL count"
+    "COUNTBYVAL LAST_N aligns with PATHSBYVAL count",
+    "COUNTBYVAL LAST_N exact leaf value counts",
+    "HASVAL soft presence 0|1 without path bag",
+    "COUNTBYVAL aligns with PATHSBYVAL path count"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3514,8 +3541,10 @@
     "iter269: multi-line uniq bag WRITE no final NL (W416)",
     "iter270: rebuilt out/cubalc; selftest race missing proofs transient",
     "iter270: restored REALWORLD plate after accidental delete in 94cab4c1",
-    "iter270: PATHSBYVAL board 9/9 green; COUNTBYVAL cross-check ok"
+    "iter270: PATHSBYVAL board 9/9 green; COUNTBYVAL cross-check ok",
+    "iter271: COUNTBYVAL/HASVAL board 9/9; PATHSBYVAL cross-check green",
+    "iter271: test -f REALWORLD plate before git add (W421 lesson)"
   ],
-  "commit": "483f4e72",
-  "ts": "2026-08-09T21:02:42Z"
+  "commit": "pending",
+  "ts": "2026-08-09T21:48:32Z"
 }
