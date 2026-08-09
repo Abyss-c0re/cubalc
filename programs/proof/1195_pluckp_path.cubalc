@@ -1,0 +1,78 @@
+# PLUCKP dotted path multi-key peel
+# Usability: extract host + nest fields into one bag without multi GETP/GETPOBJ.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"error\":5,\"warn\":2,\"info\":1},\"n\":3}"
+LET PEER = "{\"meta\":{\"role\":\"worker\",\"n\":9},\"outer\":\"z\"}"
+
+# mix shallow + nest paths
+PLUCKP "host" "freq.error" "freq.warn" "n"
+ASSERT OK == 1
+ASSERT PLUCKP_N == 4
+ASSERT PLUCKP_HIT == 4
+ASSERT PLUCKP_MISS == 0
+ASSERT LAST_N == 4
+SYS NTH 0 PLUCKP
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+SYS NTH 1 PLUCKP
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+SYS NTH 2 PLUCKP
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+SYS NTH 3 PLUCKP
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# miss leaves empty field; HIT/MISS counts
+PLUCKP "host" "freq.crit" "ghost"
+ASSERT PLUCKP_N == 3
+ASSERT PLUCKP_HIT == 1
+ASSERT PLUCKP_MISS == 2
+SYS NTH 0 PLUCKP
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+SYS NTH 1 PLUCKP
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+PLUCKP FROM PEER "meta.role" "meta.n" "outer"
+ASSERT PLUCKP_FROM == 1
+ASSERT PLUCKP_HIT == 3
+SYS EQS PLUCKP_SRC "PEER"
+ASSERT LAST_N == 1
+SYS NTH 0 PLUCKP
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS NTH 1 PLUCKP
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+SYS NTH 2 PLUCKP
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# slash path alias
+PLUCKP "freq/error" "freq/warn"
+ASSERT PLUCKP_HIT == 2
+SYS NTH 0 PLUCKP
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+# shallow-only regression
+PLUCKP "host" "n"
+ASSERT PLUCKP_HIT == 2
+SYS NTH 0 PLUCKP
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# GETPALL alias
+GETPALL "n" "freq.error"
+ASSERT PLUCKP_HIT == 2
+SYS NTH 1 PLUCKP
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+PRINT "1195_pluckp_path ok"

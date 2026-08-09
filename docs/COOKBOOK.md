@@ -185,7 +185,9 @@ INCLUDE plate_session          # agent_boot + plate_boot
 
 SETP "status" "ready"          # mutate PLATE (no LET glue)
 INCP "n"
-NEEDP "n" "ok" "status"        # fail-fast contract
+SETP "freq.error" 0            # dotted nest path · no GETPOBJ glue
+NEEDP "n" "ok" "status" "freq.error"   # fail-fast (paths ok)
+PLUCKP "n" "status" "freq.error"       # multi-key peel → bag
 DUMPP                          # cubalc.plate_info.v1 snapshot
 
 SYS JSONOBJ "peer" "a"
@@ -201,7 +203,9 @@ CLI one-shots (no `.cubalc` file):
 ```bash
 ./out/cubalc plate show state/my_agent.json
 ./out/cubalc plate get  state/my_agent.json n
+./out/cubalc plate get  state/my_agent.json freq.error             # dotted nest path
 ./out/cubalc plate set  state/my_agent.json role worker
+./out/cubalc plate set  state/my_agent.json freq.error 0
 ./out/cubalc plate inc  state/my_agent.json n
 ./out/cubalc plate ensure state/my_agent.json '{"n":0,"ok":true}'   # create-or-keep
 ./out/cubalc plate merge  state/my_agent.json '{"status":"ready"}'  # multi-key overlay
@@ -210,9 +214,10 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate diff   state/a.json state/b.json                # changed keys
 ./out/cubalc plate changelog state/a.json state/b.json             # key: old → new lines
 ./out/cubalc plate has  state/my_agent.json n ok status            # multi-key soft contract
-./out/cubalc plate need state/my_agent.json n ok                   # hard gate (ok:false on miss)
+./out/cubalc plate need state/my_agent.json n ok freq.error        # hard gate (paths ok)
 ./out/cubalc libs | grep plate
 
+# nest* still available; prefer dotted get/set when one scalar field:
 ./out/cubalc plate nestget  state/my_agent.json meta role
 ./out/cubalc plate nestset  state/my_agent.json meta role leader
 ./out/cubalc plate nestinc  state/my_agent.json stats hits
@@ -225,11 +230,11 @@ CLI one-shots (no `.cubalc` file):
 `ensure` does not clobber an existing object plate (dual of `ENSUREPLATE`).  
 `merge` applies overlay keys and saves (dual of `JSONFILEMERGE` / `MERGEP` on disk).  
 `eq` / `ne` / `diff` / `changelog` compare two plate files (dual of `JSONEQ` / `JSONCHANGED` / `JSONCHANGELOG`) — exit `0` when plates match.  
-`has` / `need` multi-key presence (dual of `HASPALL` / `NEEDP`) — `need` sets `ok:false` when any key is missing.
+`has` / `need` multi-key presence (dual of `HASPALL` / `NEEDP`) — dotted keys ok; `need` sets `ok:false` when any key is missing.
 
 Libs: `plate_session` · `plate_boot` · `plate_save` · `plate_patch` · `plate_tick` · `agent_boot`.  
-Forms: `SETP`/`INCP`/`MERGEP`/`NEEDP`/`DUMPP`.  
-Proofs: `1117_plate_session` · `1110_setp` · `1115_plate_patch` · `1116_dumpp` · `1112_cli_plate.sh` · `1140_cli_plate_ensure_merge.sh` · `1141_cli_plate_eq_diff.sh` · `1142_cli_plate_changelog.sh` · `1144_cli_plate_has_need.sh`.
+Forms: `SETP`/`GETP`/`INCP`/`MERGEP`/`NEEDP`/`PLUCKP`/`DUMPP` (dotted paths).  
+Proofs: `1117_plate_session` · `1110_setp` · `1192_pathp` · `1194_needp_path` · `1195_pluckp_path` · `1112_cli_plate.sh` · `1193b_cli_plate_path.sh`.
 
 ## 9. Multi-plate PEER state (PLATE + PEER)
 

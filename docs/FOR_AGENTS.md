@@ -32,12 +32,15 @@ Prefer INCLUDE over hand-built JSON:
 INCLUDE plate_session          # REQUIRE VERSION + ENSUREPLATE → PLATE
 SETP "status" "ready"
 INCP "n"
-NEEDP "n" "status"
+SETP "freq.error" 0            # dotted nest path (no GETPOBJ glue)
+NEEDP "n" "status" "freq.error"
+PLUCKP "n" "status" "freq.error"   # multi-key peel → bag
 INCLUDE plate_save             # or plate_patch with PLATE_PATCH
 DUMPP                          # cubalc.plate_info.v1
 ```
 
 Shell: `cubalc plate get|set|inc|show|ensure|merge|eq|diff|changelog|has|need path.json` · `cubalc libs` · `cubalc cat plate_session`.  
+Keys may be dotted: `cubalc plate get agent.json freq.error` · `plate need … host freq.error`.  
 `ensure`/`merge` seed+patch · `eq`/`diff`/`changelog` sync · `has`/`need` multi-key contract (no `.cubalc`).  
 See `docs/COOKBOOK.md` §8 (single plate) · §9 (multi-plate PEER).
 
@@ -46,11 +49,12 @@ See `docs/COOKBOOK.md` §8 (single plate) · §9 (multi-plate PEER).
 ```cubalc
 INCLUDE plate_peer_session    # PLATE + PEER durable
 SETP FROM PEER "host" "cubeB"
-NEEDP FROM PEER "host"
+SETP FROM PEER "freq.error" 1
+NEEDP FROM PEER "host" "freq.error"
 EQP PLATE PEER                # soft mesh equality · or DIFFP / CHANGELOGP
 REQUIRE EQP PLATE PEER        # hard gate when sync must match
 SUBSETP need PEER             # soft required fields · REQUIRE SUBSETP hard
-PLUCKP FROM PEER "host" "n"   # multi-key peel → value bag (no GETP+PUSH)
+PLUCKP FROM PEER "host" "freq.error" "n"   # multi-key peel (paths ok)
 DELTAP PLATE PEER             # sync payload plate · MERGEP FROM PLATE LAST
 INCLUDE plate_both_save       # persist PLATE + PEER one INCLUDE
 # tick: INCLUDE plate_peer_tick

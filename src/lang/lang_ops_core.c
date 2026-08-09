@@ -35797,7 +35797,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"COVERSP", "COVERSP|SUPERSETP super sub — super covers sub · multi-plate · no SYS JSONCOVERS"},
       {"REQUIRE SUBSETP", "REQUIRE SUBSETP sub super — fail-fast required fields · soft twin SUBSETP"},
       {"REQUIRE COVERSP", "REQUIRE COVERSP super sub — fail-fast cover · soft twin COVERSP"},
-      {"PLUCKP", "PLUCKP|GETPALL [FROM plate] key… — multi-key peel → value bag · multi-plate · no GETP+PUSH"},
+      {"PLUCKP", "PLUCKP|GETPALL [FROM plate] key… — multi-key peel → value bag · dotted path nest ok · multi-plate · no GETP+PUSH"},
       {"GETPALL", "GETPALL alias of PLUCKP"},
       {"DELTAP", "DELTAP|CHANGEOBJP a b [FROM NEW|OLD] — changed keys as plate · multi-plate sync payload · no SYS JSONDELTA"},
       {"CHANGEOBJP", "CHANGEOBJP alias of DELTAP"},
@@ -39847,8 +39847,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   }
   /* PLUCKP|GETPALL [FROM plate] key… — multi-key peel → value bag (JSONPLUCK dual).
    * Empty field on miss · LAST_N = listed · PLUCKP_HIT = found · PLUCKP_MISS = n−hit.
+   * Keys may be dotted/slash nest paths (same as GETP "freq.error"):
+   *   PLUCKP "host" "freq.error" "freq.warn"
+   *   PLUCKP FROM PEER "meta.role" "meta.n"
    * Trailing FROM plate ok. Bare keys use conventional PLATE.
-   * Usability: multi-field extract without multi GETP+PUSH glue:
+   * Usability: multi-field extract without multi GETP+PUSH / GETPOBJ glue:
    *   PLUCKP FROM PEER "host" "agent" "n"
    *   PLUCKP "host" "n" FROM session
    */

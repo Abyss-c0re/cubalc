@@ -6218,7 +6218,8 @@ int cubalc_host_json_filter_plate_keys(const char *json, const char *allowed_nl,
   return 0;
 }
 
-/* Usability: SYS JSONPLUCK — multi-key peel → value bag without multi JSON+PUSH. */
+/* Usability: SYS JSONPLUCK / PLUCKP — multi-key peel → value bag without multi GETP+PUSH.
+ * Keys may be dotted/slash nest paths (same plane as GETP "freq.error"). */
 int cubalc_host_json_pluck(const char *json, const char *keys_nl,
                            cubalc_host_result *r) {
   cubalc_host_result gr;
@@ -6253,7 +6254,8 @@ int cubalc_host_json_pluck(const char *json, const char *keys_nl,
     listed++;
     field[0] = 0;
     memset(&gr, 0, sizeof gr);
-    if (cubalc_host_json_get(json, key, &gr) == 0) {
+    /* path_get: shallow keys + nested freq.error / meta/role */
+    if (cubalc_host_json_path_get(json, key, &gr) == 0) {
       found++;
       /* bag fields cannot embed newlines — flatten decoded value */
       {

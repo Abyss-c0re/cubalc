@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 617,
-  "version": "1.15.644-usability",
-  "item": "NEEDP/HASPALL dotted path contracts",
-  "item_id": 653,
-  "title": "NEEDP|HASPALL|plate has|need dotted path nest contracts \u00b7 miss bag lists path keys \u00b7 multi-plate",
-  "commit": "f3bbda23395f5357e597931d68e4ec0443d00f93",
-  "summary": "Nest field contracts without HASPOBJ glue. proof 1194 27/27 + CLI PASS.",
+  "iter": 618,
+  "version": "1.15.645-usability",
+  "item": "PLUCKP dotted path multi-key peel",
+  "item_id": 654,
+  "title": "PLUCKP|GETPALL dotted path nest multi-key peel → bag · multi-plate · COOKBOOK/FOR_AGENTS path recipes",
+  "commit": "PENDING",
+  "summary": "Multi-field nest extract without GETP+PUSH. proof 1195 26/26 + docs path recipes.",
   "proofs": [
-    "1194_needp_path 27/27",
-    "1194b_cli_plate_need_path PASS",
-    "1113_needp reg 30/30"
+    "1195_pluckp_path 26/26",
+    "1148_pluckp reg 24/24",
+    "1194_needp_path reg 27/27"
   ],
-  "when": "2026-08-09T11:25:00Z",
+  "when": "2026-08-09T11:40:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f3bbda23395f5357e597931d68e4ec0443d00f93",
-  "note": "after pathp_more; EVOLVE_PAUSED"
+  "sha": "PENDING",
+  "note": "after needp_path; path plane extract; EVOLVE_PAUSED"
 }
