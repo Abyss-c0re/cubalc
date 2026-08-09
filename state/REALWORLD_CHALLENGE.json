@@ -2752,6 +2752,6 @@
     "EXIT 2 shell 0 (W7)",
     "collision rename not stress-tested"
   ],
-  "commit": "pending",
+  "commit": "207020947c88699cac7a41cc371a3b3905b42e79",
   "ts": "2026-08-09T08:03:59Z"
 }
