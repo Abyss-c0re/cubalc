@@ -1,57 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 222,
-  "program": "programs/realworld/peer_disk_into_savep_board.cubalc",
-  "theme": "LOADPLATE INTO + SAVEP FROM multi-plate disk bind",
-  "version": "1.15.586-usability",
+  "iter": 223,
+  "program": "programs/realworld/mesh_peer_session_lib_board.cubalc",
+  "theme": "plate_peer_session + plate_peer_save mesh lib board",
+  "version": "1.15.588-usability",
   "pass": true,
-  "prior_note": "iter 221 NEEDP FROM; this iter first realworld LOAD INTO + SAVEP (1134/1135)",
+  "prior_note": "iter 222 LOAD INTO+SAVEP hand-rolled; this iter first realworld plate_peer_session lib (1137)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "SAVEP agent + SAVEP FROM peer",
+      "cmd": "plate_peer_session dual seed",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "ensure",
-      "cmd": "ENSUREPLATE INTO session create+hit",
-      "ok": true,
-      "note": "ensure"
-    },
-    {
-      "name": "load",
-      "cmd": "LOADPLATE INTO peer",
-      "ok": true,
-      "note": "load"
-    },
-    {
       "name": "tick",
-      "cmd": "INCP+SAVEP FROM after GETP thrash",
+      "cmd": "INCP FROM PEER + peer_save durable",
       "ok": true,
       "note": "tick"
     },
     {
+      "name": "merge",
+      "cmd": "MERGEP status overlay",
+      "ok": true,
+      "note": "merge"
+    },
+    {
+      "name": "need",
+      "cmd": "NEEDP FROM contract",
+      "ok": true,
+      "note": "need"
+    },
+    {
       "name": "save",
-      "cmd": "trailing FROM + SAVEP FROM agt",
+      "cmd": "plate_save + peer_save dual",
       "ok": true,
       "note": "save"
     },
     {
       "name": "reload",
-      "cmd": "LOAD OR fallback miss",
+      "cmd": "re-INCLUDE peer hit CREATED=0",
       "ok": true,
       "note": "reload"
     },
     {
       "name": "gate",
-      "cmd": "peer n>=11 role worker",
+      "cmd": "LOADP dual disk admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "SAVEP non-object soft; INTO=0",
+      "cmd": "HASPALL soft miss",
       "ok": true,
       "note": "edges"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "374/375 pre-existing sys_kvfileensure"
+      "note": "376/378 pre-existing sys_kvfileensure,init_peer"
     }
   ],
   "weaknesses": [
@@ -1978,6 +1978,38 @@
       "title": "WRITE STATUS omit trailing NL",
       "detail": "cat -A STATUS last line no $.",
       "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W239",
+      "severity": "med",
+      "area": "lang|savep",
+      "title": "SAVEP_FROM/SAVEP_SRC knobs flaky under board var pressure",
+      "detail": "After INCLUDE plate_peer_save, SAVEP_FROM may read 0 and SYS EQS SAVEP_SRC PEER \u2192 unknown form even when disk write succeeded. Agents should re-INCLUDE plate_peer or LOADP and check field values.",
+      "repro": "INCP FROM PEER; plate_peer_save; LET x=SAVEP_FROM \u2192 0 despite durable n"
+    },
+    {
+      "id": "W240",
+      "severity": "med",
+      "area": "lang|jsonn",
+      "title": "SYS JSONN FROM short/ fresh INTO var may hard-fail parse",
+      "detail": "LOADP INTO chk then SYS JSONN n FROM chk can yield SYS JSONN key FROM plate [OR n] error under pressure; GETP+NUM is safer for multi-plate boards.",
+      "repro": "LOADP INTO chk path; SYS JSONN n FROM chk \u2192 parse err"
+    },
+    {
+      "id": "W241",
+      "severity": "low",
+      "area": "lib|peer",
+      "title": "plate_peer_save DEFAULT PEER_PATH noise",
+      "detail": "INCLUDE plate_peer_save re-states DEFAULT PEER_PATH; harmless if set but confuses audits of which path was used when SAVEP knobs drop.",
+      "repro": "trace INCLUDE plate_peer_save after custom PEER_PATH"
+    },
+    {
+      "id": "W242",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL",
+      "detail": "cat -A STATUS last line without $.",
+      "repro": "cat -A STATUS.txt"
     }
   ],
   "workarounds": [
@@ -2063,14 +2095,14 @@
     "SYS CAT multi-arg for EQS expected bodies"
   ],
   "language_gaps": [
-    "SAVEP default target PLATE is a footgun next to LOAD INTO",
-    "var table 128 still bites multi-plate INTO binds",
-    "no SAVEP soft warning when PLATE empty overwrites file"
+    "stdlib peer_save lacks hard assert of write path in knobs under var cap",
+    "still no dual-source FILLP; bare SAVEP PLATE footgun (prior)"
   ],
   "issues_faced": [
-    "bare SAVEP agent_path wiped agent.json with empty PLATE \u2014 must SAVEP FROM",
-    "GETP FROM agt unknown form under ensure var pressure \u2014 dropped extra INTO"
+    "SAVEP_FROM=0 after successful peer_save \u2014 prove via re-INCLUDE plate_peer",
+    "SYS JSONN FROM chk hard-fail under pressure \u2014 use GETP+NUM",
+    "SYS EQS SAVEP_SRC unknown form under pressure"
   ],
-  "commit": "d5d8a7d",
-  "ts": "2026-08-09T00:09:46Z"
+  "commit": "",
+  "ts": "2026-08-09T00:35:00Z"
 }
