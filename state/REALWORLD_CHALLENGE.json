@@ -2893,6 +2893,6 @@
     "Schema migrate is multi-statement only (no batch pairs)",
     "Selftest CLI shell duals still broken (set form); language proofs green"
   ],
-  "commit": "",
+  "commit": "79d083ab",
   "ts": "2026-08-09T11:24:47Z"
 }
