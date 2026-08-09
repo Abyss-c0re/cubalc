@@ -5026,8 +5026,8 @@ static int json_raw_pure_int(const char *raw, long *out) {
   return 1;
 }
 
-/* Usability: multi-plate PCTP/SCALEP/ADDP — rewrite int values without bag glue.
- * mode 0 PCT: (v*100)/sum · mode 1 SCALE: v*arg · mode 2 ADD: v+arg.
+/* Usability: multi-plate PCTP/SCALEP/ADDP/DIVP — rewrite int values without bag glue.
+ * mode 0 PCT: (v*100)/sum · 1 SCALE: v*arg · 2 ADD: v+arg · 3 DIV: v/arg (0→0).
  * Non-int keys kept as-is. r->n = rewritten · r->code = sum (PCT) or nkeys. */
 int cubalc_host_json_valmap(const char *json, int mode, long arg,
                             cubalc_host_result *r) {
@@ -5093,6 +5093,8 @@ int cubalc_host_json_valmap(const char *json, int mode, long arg,
         outv = (total != 0) ? ((num * 100) / total) : 0;
       else if (mode == 1)
         outv = num * arg;
+      else if (mode == 3)
+        outv = (arg != 0) ? (num / arg) : 0;
       else
         outv = num + arg;
       snprintf(numbuf, sizeof numbuf, "%ld", outv);
@@ -5110,6 +5112,115 @@ int cubalc_host_json_valmap(const char *json, int mode, long arg,
   snprintf(r->str, sizeof r->str, "%s", cur);
   r->n = rew;
   r->code = (mode == 0) ? (int)total : (int)nkeys;
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: multi-plate SUMMERGEP/SUBP — combine two FREQ plates by key.
+ * mode 0: sum shared pure-int keys; append b-only keys.
+ * mode 1: a−b shared pure-int; append b-only as −b; non-int in a kept. */
+int cubalc_host_json_valmerge(const char *a, const char *b, int mode,
+                              cubalc_host_result *r) {
+  cubalc_host_result ka, kb, rawa, rawb, setr;
+  char cur[CUBALC_HOST_STR_MAX];
+  const char *p, *line;
+  long nkeys = 0, hit = 0;
+  r_clear(r);
+  memset(&ka, 0, sizeof ka);
+  memset(&kb, 0, sizeof kb);
+  /* seed from a (or {}) */
+  if (cubalc_host_json_keys(a, &ka) != 0) {
+    snprintf(cur, sizeof cur, "%s", "{}");
+    ka.str[0] = 0;
+    ka.n = 0;
+  } else {
+    snprintf(cur, sizeof cur, "%s", a && a[0] ? a : "{}");
+  }
+  /* walk b keys and fold */
+  if (cubalc_host_json_keys(b, &kb) != 0)
+    kb.str[0] = 0;
+  p = kb.str;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    long va = 0, vb = 0;
+    int a_num = 0, b_num = 0, a_has = 0;
+    char numbuf[40];
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    memset(&rawb, 0, sizeof rawb);
+    if (cubalc_host_json_get_raw(b, key, &rawb) != 0) continue;
+    b_num = json_raw_pure_int(rawb.str, &vb);
+    memset(&rawa, 0, sizeof rawa);
+    a_has = (cubalc_host_json_get_raw(cur, key, &rawa) == 0) ? 1 : 0;
+    if (a_has)
+      a_num = json_raw_pure_int(rawa.str, &va);
+
+    if (mode == 0) {
+      /* SUMMERGE */
+      if (a_has && a_num && b_num) {
+        snprintf(numbuf, sizeof numbuf, "%ld", va + vb);
+        memset(&setr, 0, sizeof setr);
+        if (cubalc_host_json_set(cur, key, numbuf, 1, &setr) != 0) {
+          snprintf(r->err, sizeof r->err, "%s",
+                   setr.err[0] ? setr.err : "jsonsummerge: set fail");
+          return -1;
+        }
+        snprintf(cur, sizeof cur, "%s", setr.str);
+        hit++;
+      } else if (!a_has) {
+        memset(&setr, 0, sizeof setr);
+        if (cubalc_host_json_set(cur, key, rawb.str, 1, &setr) != 0) {
+          snprintf(r->err, sizeof r->err, "%s",
+                   setr.err[0] ? setr.err : "jsonsummerge: set fail");
+          return -1;
+        }
+        snprintf(cur, sizeof cur, "%s", setr.str);
+      }
+      /* else a has non-int or b non-int: keep a */
+    } else {
+      /* SUB a−b */
+      if (!b_num) continue; /* ignore non-int b for subtract */
+      if (a_has && a_num) {
+        snprintf(numbuf, sizeof numbuf, "%ld", va - vb);
+        memset(&setr, 0, sizeof setr);
+        if (cubalc_host_json_set(cur, key, numbuf, 1, &setr) != 0) {
+          snprintf(r->err, sizeof r->err, "%s",
+                   setr.err[0] ? setr.err : "jsonsubp: set fail");
+          return -1;
+        }
+        snprintf(cur, sizeof cur, "%s", setr.str);
+        hit++;
+      } else if (!a_has) {
+        snprintf(numbuf, sizeof numbuf, "%ld", -vb);
+        memset(&setr, 0, sizeof setr);
+        if (cubalc_host_json_set(cur, key, numbuf, 1, &setr) != 0) {
+          snprintf(r->err, sizeof r->err, "%s",
+                   setr.err[0] ? setr.err : "jsonsubp: set fail");
+          return -1;
+        }
+        snprintf(cur, sizeof cur, "%s", setr.str);
+      }
+      /* a has non-int: keep a */
+    }
+  }
+  /* count keys in result */
+  {
+    cubalc_host_result kl;
+    memset(&kl, 0, sizeof kl);
+    if (cubalc_host_json_keys(cur, &kl) == 0)
+      nkeys = kl.n;
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  r->n = nkeys;
+  r->code = (int)hit;
   r->ok = 1;
   return 0;
 }

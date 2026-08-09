@@ -277,14 +277,23 @@ int cubalc_host_json_avg(const char *json, cubalc_host_result *r);
  * Soft {} if not object. Usability: FREQ plate denoise without TOKV+THRESHKV+FROMKVP. */
 int cubalc_host_json_valfilter(const char *json, int mode, long limit,
                                cubalc_host_result *r);
-/* plate value rewrite (multi-plate duals of PCTKV / SCALEKV / ADDKV).
+/* plate value rewrite (multi-plate duals of PCTKV / SCALEKV / ADDKV / DIVKV).
  * mode 0 PCT: pure-int values → (v*100)/sum · zero sum → 0 · non-int kept.
  * mode 1 SCALE: pure-int values → v * arg · non-int kept.
  * mode 2 ADD: pure-int values → v + arg · non-int kept.
+ * mode 3 DIV: pure-int values → v / arg (trunc toward 0) · arg 0 → 0 · non-int kept.
  * r->str = result plate · r->n = fields rewritten · r->code = total (PCT) or nkeys.
- * Soft {}. Usability: FREQ share/weight/offset without TOKV+PCTKV/SCALEKV/ADDKV+FROMKVP. */
+ * Soft {}. Usability: FREQ share/weight/offset/mean without TOKV+…+FROMKVP. */
 int cubalc_host_json_valmap(const char *json, int mode, long arg,
                             cubalc_host_result *r);
+/* two-plate numeric combine (multi-plate duals of MERGEKV / DIFFKV).
+ * mode 0 SUMMERGE: start with a; for each b key pure-int: if a int → sum else set b.
+ * mode 1 SUB: start with a; for each b key pure-int: if a int → a−b else set −b.
+ * Non-int keys in a kept; non-int-only in b ignored for SUB if a missing (for SUM keep raw b).
+ * r->str = plate · r->n = result key count · r->code = hit (shared int keys combined).
+ * Soft {}. Usability: peer FREQ combine/delta without TOKV+MERGEKV/DIFFKV+FROMKVP. */
+int cubalc_host_json_valmerge(const char *a, const char *b, int mode,
+                              cubalc_host_result *r);
 /* order-independent top-level plate equality → r->n 1|0. Soft always OK.
  * Same keys + same raw values (whitespace-trimmed). Nested compared as raw text.
  * Usability: agent verify after WRITE/MERGE without fragile string EQS. */

@@ -27410,6 +27410,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
              kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
              kw(&L->cur,"PCTP") || kw(&L->cur,"SCALEP") || kw(&L->cur,"ADDP") ||
+             kw(&L->cur,"DIVP") || kw(&L->cur,"SUMMERGEP") || kw(&L->cur,"SUBP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35830,6 +35831,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"ADDP", "ADDP|OFFSETP [FROM plate] delta — add delta to int values → plate · multi-plate · no TOKV+ADDKV"},
       {"OFFSETP", "OFFSETP|ADDVP alias of ADDP · Laplace/score offset"},
       {"ADDVP", "ADDVP alias of ADDP"},
+      {"DIVP", "DIVP|IDIVP [FROM plate] divisor — integer-divide int values → plate · multi-plate · no TOKV+DIVKV"},
+      {"IDIVP", "IDIVP|QUOTP alias of DIVP · mean after N SUMMERGEP"},
+      {"QUOTP", "QUOTP alias of DIVP"},
+      {"SUMMERGEP", "SUMMERGEP|ADDFREQP|MERGEKP a b — sum pure-int keys · multi-plate · no TOKV+MERGEKV"},
+      {"ADDFREQP", "ADDFREQP alias of SUMMERGEP · combine peer FREQ plates"},
+      {"MERGEKP", "MERGEKP alias of SUMMERGEP"},
+      {"SUBP", "SUBP|SUBVALP|DELTAVP a b — a−b pure-int by key · multi-plate · no TOKV+DIFFKV · not DIFFP key bag"},
+      {"SUBVALP", "SUBVALP alias of SUBP"},
+      {"DELTAVP", "DELTAVP alias of SUBP · now−baseline FREQ delta"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -41681,12 +41691,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* PCTP|SHAREP [FROM plate] — rewrite pure-int values as integer %% of sum (PCTKV dual).
    * SCALEP|MULP [FROM plate] factor — multiply pure-int values (SCALEKV dual).
    * ADDP|OFFSETP [FROM plate] delta — add delta to pure-int values (ADDKV dual).
+   * DIVP|IDIVP [FROM plate] divisor — integer-divide pure-int values (DIVKV dual).
    * Non-int keys kept. Bare uses PLATE. Does not mutate source (PICKP style).
-   * LAST = plate · LAST_N = rewritten · PCTP_SUM / SCALEP_F / ADDP_D.
-   * Usability: FREQ share/weight/offset without TOKV+PCTKV/SCALEKV/ADDKV+FROMKVP:
+   * LAST = plate · LAST_N = rewritten · PCTP_SUM / SCALEP_F / ADDP_D / DIVP_D.
+   * Usability: FREQ share/weight/offset/mean without TOKV+…+FROMKVP:
    *   PCTP FROM freq
    *   SCALEP 2 FROM scores
    *   ADDP 1 FROM counts
+   *   DIVP 3 FROM merged   # mean of 3 SUMMERGEP sources
    */
   if (kw(&L->cur,"PCTP") || kw(&L->cur,"SHAREP") || kw(&L->cur,"PERCENTP") ||
       kw(&L->cur,"MPCTP") || kw(&L->cur,"PLATE_PCT") || kw(&L->cur,"NORMP") ||
@@ -41694,10 +41706,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"SCALEP") || kw(&L->cur,"MULP") || kw(&L->cur,"WEIGHTP") ||
       kw(&L->cur,"MSCALEP") || kw(&L->cur,"PLATE_SCALE") || kw(&L->cur,"MULVP") ||
       kw(&L->cur,"ADDP") || kw(&L->cur,"OFFSETP") || kw(&L->cur,"ADDVP") ||
-      kw(&L->cur,"MADDP") || kw(&L->cur,"PLATE_ADD") || kw(&L->cur,"OFFSETVP")) {
+      kw(&L->cur,"MADDP") || kw(&L->cur,"PLATE_ADD") || kw(&L->cur,"OFFSETVP") ||
+      kw(&L->cur,"DIVP") || kw(&L->cur,"IDIVP") || kw(&L->cur,"QUOTP") ||
+      kw(&L->cur,"MDIVP") || kw(&L->cur,"PLATE_DIV") || kw(&L->cur,"DIVVP")) {
     char plate[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr;
-    int have_from = 0, mode = 0; /* 0 pct 1 scale 2 add */
+    int have_from = 0, mode = 0; /* 0 pct 1 scale 2 add 3 div */
     long arg = 1;
     int have_arg = 0;
     Var *pv;
@@ -41714,6 +41728,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              strcmp(op0, "ADDVP") == 0 || strcmp(op0, "MADDP") == 0 ||
              strcmp(op0, "PLATE_ADD") == 0 || strcmp(op0, "OFFSETVP") == 0)
       mode = 2;
+    else if (strcmp(op0, "DIVP") == 0 || strcmp(op0, "IDIVP") == 0 ||
+             strcmp(op0, "QUOTP") == 0 || strcmp(op0, "MDIVP") == 0 ||
+             strcmp(op0, "PLATE_DIV") == 0 || strcmp(op0, "DIVVP") == 0)
+      mode = 3;
     else
       mode = 0;
 
@@ -41808,6 +41826,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (mode != 0 && !have_arg) {
       fail(vm, mode == 1
            ? "SCALEP [FROM plate] factor — need int factor"
+           : mode == 3
+           ? "DIVP [FROM plate] divisor — need int divisor"
            : "ADDP [FROM plate] delta — need int delta");
       return -1;
     }
@@ -41822,11 +41842,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "PCTP_N", 0);
       var_set_num(vm, "SCALEP_N", 0);
       var_set_num(vm, "ADDP_N", 0);
+      var_set_num(vm, "DIVP_N", 0);
       var_set_num(vm, "PCTP_FROM", have_from ? 1 : 0);
       var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err :
-                  (mode == 2 ? "ADDP: fail" : mode == 1 ? "SCALEP: fail" : "PCTP: fail"));
+                  (mode == 3 ? "DIVP: fail" : mode == 2 ? "ADDP: fail" :
+                   mode == 1 ? "SCALEP: fail" : "PCTP: fail"));
       var_set_str(vm, "ERR", hr.err[0] ? hr.err :
-                  (mode == 2 ? "ADDP: fail" : mode == 1 ? "SCALEP: fail" : "PCTP: fail"));
+                  (mode == 3 ? "DIVP: fail" : mode == 2 ? "ADDP: fail" :
+                   mode == 1 ? "SCALEP: fail" : "PCTP: fail"));
       var_set_num(vm, "OK", 0);
       bump(vm); return 1;
     }
@@ -41835,7 +41858,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
     vm->last_n = hr.n;
     var_set_num(vm, "LAST_N", hr.n);
-    if (mode == 2) {
+    if (mode == 3) {
+      var_set_str(vm, "DIVP", hr.str);
+      var_set_str(vm, "IDIVP", hr.str);
+      var_set_num(vm, "DIVP_N", hr.n);
+      var_set_num(vm, "DIVP_D", arg);
+      var_set_num(vm, "DIVP_KEYS", (long)hr.code);
+      var_set_num(vm, "DIVP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "DIVP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    } else if (mode == 2) {
       var_set_str(vm, "ADDP", hr.str);
       var_set_str(vm, "OFFSETP", hr.str);
       var_set_num(vm, "ADDP_N", hr.n);
@@ -41866,8 +41898,128 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s n=%ld arg=%ld code=%d from=%d\n",
-              mode == 2 ? "addp" : mode == 1 ? "scalep" : "pctp",
+              mode == 3 ? "divp" : mode == 2 ? "addp" : mode == 1 ? "scalep" : "pctp",
               hr.n, arg, hr.code, have_from);
+    bump(vm); return 1;
+  }
+  /* SUMMERGEP|ADDFREQP|MERGEKP a b — sum pure-int keys across two plates (MERGEKV dual).
+   * SUBP|SUBVALP|DELTAVP a b — a−b by pure-int key (DIFFKV dual; not DIFFP key-bag).
+   * Keys only in b: SUM appends as-is · SUB appends as −b. Non-int in a kept.
+   * LAST = plate · LAST_N = key count · *_HIT = shared int keys combined.
+   * Usability: peer FREQ combine/delta without TOKV+MERGEKV/DIFFKV+FROMKVP:
+   *   SUMMERGEP PLATE PEER
+   *   SUBP now baseline
+   *   DIVP 2 FROM LAST
+   */
+  if (kw(&L->cur,"SUMMERGEP") || kw(&L->cur,"ADDFREQP") || kw(&L->cur,"MERGEKP") ||
+      kw(&L->cur,"MSUMMERGEP") || kw(&L->cur,"PLATE_SUMMERGE") || kw(&L->cur,"KVADDP") ||
+      kw(&L->cur,"COMBINEP") || kw(&L->cur,"FUSEP") || kw(&L->cur,"SUMFREQP") ||
+      kw(&L->cur,"SUBP") || kw(&L->cur,"SUBVALP") || kw(&L->cur,"DELTAVP") ||
+      kw(&L->cur,"MSUBP") || kw(&L->cur,"PLATE_SUB") || kw(&L->cur,"SUBFREQP") ||
+      kw(&L->cur,"DELTAFREQP") || kw(&L->cur,"SUBHISTP")) {
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+    char aname[96], bname[96];
+    cubalc_host_result hr;
+    int mode = 0; /* 0 sum 1 sub */
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "SUBP") == 0 || strcmp(op0, "SUBVALP") == 0 ||
+        strcmp(op0, "DELTAVP") == 0 || strcmp(op0, "MSUBP") == 0 ||
+        strcmp(op0, "PLATE_SUB") == 0 || strcmp(op0, "SUBFREQP") == 0 ||
+        strcmp(op0, "DELTAFREQP") == 0 || strcmp(op0, "SUBHISTP") == 0)
+      mode = 1;
+    else
+      mode = 0;
+
+    lex_next(L);
+    a[0] = 0; b[0] = 0; aname[0] = 0; bname[0] = 0;
+
+#define CUBALC_RESOLVE_PLATE_ARG2(dst, dname) do { \
+      (dst)[0] = 0; (dname)[0] = 0; \
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) { \
+        snprintf((dname), sizeof(dname), "%s", "LAST"); \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+        lex_next(L); \
+      } else if (L->cur.kind == TK_IDENT) { \
+        pv = var_get(vm, L->cur.text, 0); \
+        if (pv && pv->is_str) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%s", pv->sval); \
+          lex_next(L); \
+        } else if (pv) { \
+          snprintf((dname), sizeof(dname), "%s", L->cur.text); \
+          snprintf((dst), sizeof(dst), "%ld", pv->val); \
+          lex_next(L); \
+        } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+          (dst)[0] = 0; \
+        } \
+      } else if (resolve_str_arg(vm, L, (dst), sizeof(dst)) != 0) { \
+        snprintf((dst), sizeof(dst), "%s", vm->last_str); \
+      } \
+      { const char *bp = (dst); \
+        while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++; \
+        if (*bp != '{') snprintf((dst), sizeof(dst), "%s", "{}"); \
+      } \
+    } while (0)
+
+    CUBALC_RESOLVE_PLATE_ARG2(a, aname);
+    CUBALC_RESOLVE_PLATE_ARG2(b, bname);
+#undef CUBALC_RESOLVE_PLATE_ARG2
+
+    if (!aname[0] && !bname[0] && (!a[0] || strcmp(a, "{}") == 0) &&
+        (!b[0] || strcmp(b, "{}") == 0)) {
+      fail(vm, mode == 1
+           ? "SUBP a b — need two plates (DIFFKV dual; not DIFFP key bag)"
+           : "SUMMERGEP a b — need two plates (MERGEKV dual)");
+      return -1;
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_valmerge(a, b, mode, &hr) != 0) {
+      var_set_str(vm, "LAST", "{}");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "{}");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "SUMMERGEP_N", 0);
+      var_set_num(vm, "SUBP_N", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err :
+                  (mode == 1 ? "SUBP: fail" : "SUMMERGEP: fail"));
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err :
+                  (mode == 1 ? "SUBP: fail" : "SUMMERGEP: fail"));
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    if (mode == 1) {
+      var_set_str(vm, "SUBP", hr.str);
+      var_set_str(vm, "SUBVALP", hr.str);
+      var_set_str(vm, "DELTAVP", hr.str);
+      var_set_num(vm, "SUBP_N", hr.n);
+      var_set_num(vm, "SUBP_HIT", (long)hr.code);
+      var_set_str(vm, "SUBP_A", aname);
+      var_set_str(vm, "SUBP_B", bname);
+    } else {
+      var_set_str(vm, "SUMMERGEP", hr.str);
+      var_set_str(vm, "ADDFREQP", hr.str);
+      var_set_str(vm, "MERGEKP", hr.str);
+      var_set_num(vm, "SUMMERGEP_N", hr.n);
+      var_set_num(vm, "SUMMERGEP_HIT", (long)hr.code);
+      var_set_str(vm, "SUMMERGEP_A", aname);
+      var_set_str(vm, "SUMMERGEP_B", bname);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%ld hit=%d a=%s b=%s\n",
+              mode == 1 ? "subp" : "summergep", hr.n, hr.code,
+              aname[0] ? aname : "?", bname[0] ? bname : "?");
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.

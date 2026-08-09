@@ -1,0 +1,115 @@
+# SUMMERGEP / SUBP / DIVP — multi-plate FREQ combine / delta / mean
+# Usability: duals of SYS MERGEKV/DIFFKV/DIVKV without TOKV+…+FROMKVP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"warn\":2,\"error\":5,\"info\":1,\"host\":\"A\"}"
+LET PEER = "{\"warn\":3,\"error\":1,\"crit\":4,\"host\":\"B\"}"
+LET base = "{\"warn\":1,\"error\":2,\"info\":1}"
+LET empty = "{}"
+
+# SUMMERGEP: sum shared ints, append b-only, keep a non-int
+SUMMERGEP PLATE PEER
+ASSERT OK == 1
+ASSERT SUMMERGEP_N == 5
+ASSERT SUMMERGEP_HIT == 2
+SYS EQS SUMMERGEP_A "PLATE"
+ASSERT LAST_N == 1
+SYS EQS SUMMERGEP_B "PEER"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"warn\":5"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"error\":6"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"info\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"crit\":4"
+ASSERT LAST_N == 1
+SYS HAS LAST "host"
+ASSERT LAST_N == 1
+# sources not mutated
+SYS HAS PLATE "\"warn\":2"
+ASSERT LAST_N == 1
+SYS HAS PEER "\"warn\":3"
+ASSERT LAST_N == 1
+
+# aliases
+ADDFREQP PLATE PEER
+ASSERT SUMMERGEP_HIT == 2
+MERGEKP PLATE PEER
+ASSERT SUMMERGEP_N == 5
+
+# SUBP: a−b shared; b-only as −b
+SUBP PLATE base
+ASSERT OK == 1
+ASSERT SUBP_HIT == 3
+SYS HAS LAST "\"warn\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"error\":3"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"info\":0"
+ASSERT LAST_N == 1
+SYS HAS LAST "host"
+ASSERT LAST_N == 1
+
+# b-only negative
+LET now = "{\"a\":10,\"b\":2}"
+LET prev = "{\"a\":4,\"c\":3}"
+SUBP now prev
+ASSERT SUBP_HIT == 1
+SYS HAS LAST "\"a\":6"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"b\":2"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"c\":-3"
+ASSERT LAST_N == 1
+
+DELTAVP PLATE base
+ASSERT SUBP_HIT == 3
+SUBVALP now prev
+ASSERT SUBP_N == 3
+
+# DIVP: integer divide after sum-merge (mean of 2) · FROM LAST (not bare PLATE)
+SUMMERGEP PLATE PEER
+DIVP 2 FROM LAST
+ASSERT OK == 1
+ASSERT DIVP_N == 4
+ASSERT DIVP_D == 2
+ASSERT DIVP_FROM == 1
+SYS HAS LAST "\"warn\":2"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"error\":3"
+ASSERT LAST_N == 1
+# crit 4/2=2, info 1/2=0
+SYS HAS LAST "\"crit\":2"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"info\":0"
+ASSERT LAST_N == 1
+SYS HAS LAST "host"
+ASSERT LAST_N == 1
+
+IDIVP FROM PEER 2
+ASSERT DIVP_FROM == 1
+SYS HAS LAST "\"warn\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"crit\":2"
+ASSERT LAST_N == 1
+
+# bare DIVP uses conventional PLATE
+DIVP 2
+ASSERT DIVP_FROM == 0
+SYS HAS LAST "\"warn\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"error\":2"
+ASSERT LAST_N == 1
+
+
+# empty soft
+SUMMERGEP empty empty
+ASSERT SUMMERGEP_N == 0
+SUBP empty empty
+ASSERT SUBP_N == 0
+DIVP FROM empty 3
+ASSERT DIVP_N == 0
+
+PRINT "summergep soft ok"
