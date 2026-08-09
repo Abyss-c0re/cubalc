@@ -312,6 +312,13 @@ int cubalc_host_json_leaf_inc(const char *json, const char *needle, long delta,
  * without FLATKV+GREPFLAT+AFTER+SUM glue. */
 int cubalc_host_json_leaf_sum(const char *json, const char *needle,
                               cubalc_host_result *r);
+/* Integer mean of pure-int leaves by path needle (AVGFLAT / MEANFLAT).
+ * Empty needle → all pure-int. Non-numeric matching leaves soft-skipped.
+ * r->n = avg (trunc toward 0) · r->code = count · r->str = decimal avg ·
+ * r->err = decimal sum (side-channel). Soft always OK. Read-only.
+ * Usability: nest mean scores without FLATKV+GREP+AVG / SUMFLAT+DIV glue. */
+int cubalc_host_json_leaf_avg(const char *json, const char *needle,
+                              cubalc_host_result *r);
 /* Extreme pure-int leaf by path needle (TOPPATHFLAT / BOTPATHFLAT).
  * want_min=0 → max (TOP) · want_min=1 → min (BOT). First path wins ties.
  * Empty needle → all pure-int leaves. r->str = winning path · r->n = value ·

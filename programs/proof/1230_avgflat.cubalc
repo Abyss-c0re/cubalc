@@ -1,0 +1,67 @@
+# AVGFLAT / MEANFLAT — integer mean of pure-int leaves by path needle (read-only)
+# Usability: nest mean scores without FLATKV+GREP+AVG or SUMFLAT+DIV glue.
+# Truncates toward zero (like SYS AVG). Non-int matching leaves skipped.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"scores\":{\"a\":10,\"b\":20,\"c\":30},\"label\":\"x\",\"n\":5}"
+
+AVGFLAT "scores"
+ASSERT OK == 1
+ASSERT LAST_N == 20
+ASSERT AVGFLAT_N == 3
+ASSERT AVGFLAT_SUM == 60
+ASSERT AVGFLAT_AVG == 20
+
+AVGFLAT "n"
+ASSERT LAST_N == 5
+ASSERT AVGFLAT_N == 1
+ASSERT AVGFLAT_SUM == 5
+
+# empty needle — all pure-int: (10+20+30+5)/4 = 16
+AVGFLAT ""
+ASSERT LAST_N == 16
+ASSERT AVGFLAT_N == 4
+ASSERT AVGFLAT_SUM == 65
+
+# truncation: 1+2 = 3 / 2 = 1
+LET PLATE = "{\"u\":{\"x\":1,\"y\":2}}"
+AVGFLAT "u"
+ASSERT LAST_N == 1
+ASSERT AVGFLAT_N == 2
+ASSERT AVGFLAT_SUM == 3
+
+LET PEER = "{\"lat\":{\"p50\":100,\"p95\":200},\"tag\":\"z\"}"
+AVGFLAT FROM PEER "lat"
+ASSERT AVGFLAT_FROM == 1
+SYS EQS AVGFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT AVGFLAT_AVG == 150
+ASSERT AVGFLAT_N == 2
+ASSERT AVGFLAT_SUM == 300
+
+# plate unchanged after FROM (read-only)
+LET PLATE = "{\"x\":7}"
+AVGFLAT FROM PEER "lat"
+GETP "x"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+
+# no match
+AVGFLAT "nope"
+ASSERT LAST_N == 0
+ASSERT AVGFLAT_N == 0
+ASSERT AVGFLAT_SUM == 0
+
+MEANFLAT "x"
+ASSERT LAST_N == 7
+ASSERT MEANFLAT_N == 1
+
+# non-int only
+LET PLATE = "{\"a\":\"hi\",\"b\":true,\"c\":null}"
+AVGFLAT ""
+ASSERT LAST_N == 0
+ASSERT AVGFLAT_N == 0
+
+PASS
+PRINT "1230_avgflat: PASS"

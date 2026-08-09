@@ -5420,6 +5420,26 @@ int cubalc_host_json_leaf_sum(const char *json, const char *needle,
   return 0;
 }
 
+/* AVGFLAT: integer mean of pure-int leaves by path needle. See header. */
+int cubalc_host_json_leaf_avg(const char *json, const char *needle,
+                              cubalc_host_result *r) {
+  long sum;
+  int count;
+  long avg;
+
+  if (cubalc_host_json_leaf_sum(json, needle, r) != 0)
+    return -1;
+  sum = r->n;
+  count = r->code;
+  avg = (count > 0) ? (sum / (long)count) : 0;
+  r->n = avg;
+  r->code = count;
+  r->ok = 1;
+  snprintf(r->str, sizeof r->str, "%ld", avg);
+  snprintf(r->err, sizeof r->err, "%ld", sum); /* sum side-channel */
+  return 0;
+}
+
 /* TOPPATHFLAT/BOTPATHFLAT: extreme pure-int leaf path. See header. */
 int cubalc_host_json_leaf_toppath(const char *json, const char *needle, int want_min,
                                   cubalc_host_result *r) {

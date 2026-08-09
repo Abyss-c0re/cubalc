@@ -2212,6 +2212,8 @@ int main(int argc, char **argv) {
       {"cli_plate_needflat", "programs/proof/1228_cli_plate_needflat.sh", "cubalc plate needflat NEEDFLAT dual"},
       {"getflatn", "programs/proof/1229_getflatn.cubalc", "GETFLATN first pure-int leaf by needle OR fallback multi-plate"},
       {"cli_plate_getflatn", "programs/proof/1229_cli_plate_getflatn.sh", "cubalc plate getflatn GETFLATN dual"},
+      {"avgflat", "programs/proof/1230_avgflat.cubalc", "AVGFLAT/MEANFLAT integer mean pure-int leaves by path needle multi-plate"},
+      {"cli_plate_avgflat", "programs/proof/1230_cli_plate_avgflat.sh", "cubalc plate avgflat AVGFLAT dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2512,6 +2514,8 @@ int main(int argc, char **argv) {
       {"BUMPFLAT", "flow", "BUMPFLAT alias of INCFLAT"},
       {"SUMFLAT", "flow", "SUMFLAT|TOTALFLAT [FROM plate] [needle] — sum pure-int leaves by path needle → LAST_N · read-only"},
       {"TOTALFLAT", "flow", "TOTALFLAT alias of SUMFLAT"},
+      {"AVGFLAT", "flow", "AVGFLAT|MEANFLAT [FROM plate] [needle] — integer mean pure-int leaves by path needle → LAST_N · read-only"},
+      {"MEANFLAT", "flow", "MEANFLAT alias of AVGFLAT"},
       {"TOPPATHFLAT", "flow", "TOPPATHFLAT|MAXPATHFLAT [FROM plate] [needle] — path of max pure-int leaf → LAST · value LAST_N"},
       {"BOTPATHFLAT", "flow", "BOTPATHFLAT|MINPATHFLAT [FROM plate] [needle] — path of min pure-int leaf → LAST · value LAST_N"},
       {"MAXPATHFLAT", "flow", "MAXPATHFLAT alias of TOPPATHFLAT"},
@@ -5016,6 +5020,7 @@ int main(int argc, char **argv) {
               "       cubalc plate setflat <path> <needle> <value>  # SETFLAT dual · bulk leaf value set\n"
               "       cubalc plate incflat <path> <needle> [delta]  # INCFLAT dual · bump pure-int leaves\n"
               "       cubalc plate sumflat <path> [needle]  # SUMFLAT dual · sum pure-int leaves by path needle\n"
+              "       cubalc plate avgflat <path> [needle]  # AVGFLAT dual · mean pure-int leaves by path needle\n"
               "       cubalc plate toppath|botpath <path> [needle]  # TOPPATHFLAT dual · path of max/min pure-int leaf\n"
               "       cubalc plate threshflat <path> [needle] <min>  # THRESHFLAT dual · drop pure-int leaves value<min\n"
               "       cubalc plate dropzeroflat <path> [needle]  # DROPZEROFLAT dual · drop pure-int zeros\n"
@@ -5059,7 +5064,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"pathsflat\",\"valsflat\",\"getflat\",\"needflat\",\"getflatn\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"pathsflat\",\"valsflat\",\"getflat\",\"needflat\",\"getflatn\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5141,6 +5146,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "bulkinc") == 0 || strcmp(argv[2], "decflat") == 0 ||
         strcmp(argv[2], "sumflat") == 0 || strcmp(argv[2], "totalflat") == 0 ||
         strcmp(argv[2], "leafsum") == 0 || strcmp(argv[2], "flattotal") == 0 ||
+        strcmp(argv[2], "avgflat") == 0 || strcmp(argv[2], "meanflat") == 0 ||
+        strcmp(argv[2], "avgleaf") == 0 || strcmp(argv[2], "flatmean") == 0 ||
+        strcmp(argv[2], "leafmean") == 0 ||
         strcmp(argv[2], "toppath") == 0 || strcmp(argv[2], "toppathflat") == 0 ||
         strcmp(argv[2], "maxpath") == 0 || strcmp(argv[2], "maxpathflat") == 0 ||
         strcmp(argv[2], "botpath") == 0 || strcmp(argv[2], "botpathflat") == 0 ||
@@ -5346,6 +5354,10 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "totalflat") == 0 || strcmp(op, "leafsum") == 0 ||
                strcmp(op, "flattotal") == 0 || strcmp(op, "sumleaf") == 0)
         op = "sumflat";
+      else if (strcmp(op, "meanflat") == 0 || strcmp(op, "avgleaf") == 0 ||
+               strcmp(op, "flatmean") == 0 || strcmp(op, "leafmean") == 0 ||
+               strcmp(op, "avgallflat") == 0)
+        op = "avgflat";
       else if (strcmp(op, "toppathflat") == 0 || strcmp(op, "maxpath") == 0 ||
                strcmp(op, "maxpathflat") == 0 || strcmp(op, "topflat") == 0)
         op = "toppath";
@@ -6075,6 +6087,41 @@ int main(int argc, char **argv) {
              "\"note\":\"SUMFLAT dual · sum pure-int leaves by path needle (read-only)\"}\n",
              path, needle, file_hit ? "true" : "false",
              pr.n, (long)pr.code, pr.n, CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+    /* avgflat [needle] — AVGFLAT dual: integer mean pure-int leaves (read-only).
+     *   cubalc plate avgflat agent.json score
+     *   cubalc plate avgflat agent.json          # all pure-int leaves
+     * n = mean · count = pure-int leaves used · sum side · plate not written. */
+    if (strcmp(op, "avgflat") == 0) {
+      const char *needle = "";
+      cubalc_host_result pr;
+      long sum_side = 0;
+
+      if (ai < argc && argv[ai])
+        needle = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_avg(plate, needle, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"avgflat\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               path, pr.err[0] ? pr.err : "avgflat fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      if (pr.err[0]) {
+        char *end = NULL;
+        long s = strtol(pr.err, &end, 10);
+        if (end && end != pr.err && *end == 0)
+          sum_side = s;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"avgflat\",\"path\":\"%s\",\"needle\":\"%s\","
+             "\"file\":%s,\"n\":%ld,\"count\":%ld,\"avg\":%ld,\"sum\":%ld,"
+             "\"version\":\"%s\","
+             "\"note\":\"AVGFLAT dual · mean pure-int leaves by path needle (read-only)\"}\n",
+             path, needle, file_hit ? "true" : "false",
+             pr.n, (long)pr.code, pr.n, sum_side, CUBALC_LANG_VERSION);
       return 0;
     }
 
