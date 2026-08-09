@@ -1,69 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 228,
-  "program": "programs/realworld/mesh_deltap_sync_board.cubalc",
-  "theme": "DELTAP/CHANGEOBJP mesh peer sync apply + DIFFP/CHANGELOGP/EQP",
-  "version": "1.15.600-usability",
+  "iter": 229,
+  "program": "programs/realworld/mesh_pickp_project_board.cubalc",
+  "theme": "PICKP/OMITP mesh export projection hygiene",
+  "version": "1.15.602-usability",
   "pass": true,
-  "prior_note": "iter 227 SUBSETP admit; this iter first realworld DELTAP (1149 / MEANINGFUL 608)",
+  "prior_note": "iter 228 DELTAP sync; this iter first realworld PICKP/OMITP (1151)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "divergent session + DIFFP/DELTAP via LINES/JSONLEN",
+      "cmd": "seed secret+noise dual plates",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "drift",
-      "cmd": "INCP peer + status stale",
+      "name": "slim",
+      "cmd": "PICKP public fields no secret",
       "ok": true,
-      "note": "drift"
+      "note": "slim"
     },
     {
-      "name": "diff",
-      "cmd": "DIFFP key bag push",
+      "name": "strip",
+      "cmd": "OMITP secret/debug/tmp",
       "ok": true,
-      "note": "diff"
+      "note": "strip"
     },
     {
-      "name": "changelog",
-      "cmd": "CHANGELOGP lines",
+      "name": "peer",
+      "cmd": "PICKP FROM PEER drop noise",
       "ok": true,
-      "note": "changelog"
+      "note": "peer"
     },
     {
-      "name": "delta",
-      "cmd": "DELTAP pull payload → delta.json",
+      "name": "merge",
+      "cmd": "PICKP peer host/n MERGEP",
       "ok": true,
-      "note": "delta"
+      "note": "merge"
     },
     {
-      "name": "old",
-      "cmd": "DELTAP FROM OLD local host",
+      "name": "export",
+      "cmd": "OMITP write export.json",
       "ok": true,
-      "note": "old"
-    },
-    {
-      "name": "apply",
-      "cmd": "MERGEP + both status synced + both_save",
-      "ok": true,
-      "note": "apply"
-    },
-    {
-      "name": "verify",
-      "cmd": "EQP after apply",
-      "ok": true,
-      "note": "verify"
+      "note": "export"
     },
     {
       "name": "gate",
-      "cmd": "disk host match + synced",
+      "cmd": "disk export clean + projected",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "lit DELTAP/CHANGEOBJP empty",
+      "cmd": "miss soft-skip KEEPP/DROPKEYSP",
       "ok": true,
       "note": "probe"
     },
@@ -75,7 +63,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_MDS_REQUIRE=1 EXIT 2",
+      "cmd": "CUBALC_MPP_REQUIRE=1 EXIT 2",
       "ok": true,
       "note": "hard env"
     },
@@ -83,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "383/385 pre-existing sys_kvfileensure,init_peer; deltap PASS 19"
+      "note": "385/387 pre-existing sys_kvfileensure,init_peer; pickp PASS 35"
     }
   ],
   "weaknesses": [
@@ -2198,6 +2186,46 @@
       "title": "WRITE META omit trailing NL (reconfirmed mesh_deltap)",
       "detail": "cat -A META no $; same class as W5/W259.",
       "repro": "od -c META after probe"
+    },
+    {
+      "id": "W265",
+      "severity": "high",
+      "area": "lang|needp_n",
+      "title": "LET x = NEEDP_N binds 0 in large boards despite needp hit=4 ok",
+      "detail": "mesh_pickp_project boot: NEEDP multi-key logged hit=4 ok but LET load_hit=NEEDP_N stayed 0. Short scripts bind NEEDP_N=1. Same class as DIFFP_N/DELTAP_N (W260). Workaround: LET load_hit=LAST_N immediately after NEEDP.",
+      "repro": "large board NEEDP a b c d; LET x=NEEDP_N → 0; LAST_N → 1"
+    },
+    {
+      "id": "W266",
+      "severity": "med",
+      "area": "lang|pickp",
+      "title": "PICKP/OMITP are non-destructive (source plate untouched) — easy to misread as in-place",
+      "detail": "Positive for hygiene: secret remains on PLATE after OMITP/PICKP; only LAST/export changes. Agents that expect mutate-in-place must MERGEP/SETP back or they ship full plate with secrets still present on disk agent.json.",
+      "repro": "OMITP secret; GETP secret still redact-me; export clean"
+    },
+    {
+      "id": "W267",
+      "severity": "low",
+      "area": "lang|pickp_miss",
+      "title": "PICKP miss keys soft-skip without miss bag",
+      "detail": "PICKP role missing n → PICKP_N=2 and missing_key absent; no SUBSETP-style miss list. Agents cannot tell which keys were skipped without pre-HASP.",
+      "repro": "PICKP a missing b; JSON missing empty; no miss keys bag"
+    },
+    {
+      "id": "W268",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS last line often omit trailing NL (reconfirmed)",
+      "detail": "cat -A STATUS shows gate line without $; intermediate rows have $. Class W10.",
+      "repro": "cat -A STATUS after gate"
+    },
+    {
+      "id": "W269",
+      "severity": "med",
+      "area": "ops|state",
+      "title": "REALWORLD_CHALLENGE.json can vanish from worktree between fires",
+      "detail": "This fire found state/REALWORLD_CHALLENGE.json missing (MEANINGFUL_ITER.json also gone) while git HEAD still had plate. Restored via git checkout HEAD --. Concurrent evolve/mi thrash may delete or not re-pin challenge plate.",
+      "repro": "ls state/REALWORLD_CHALLENGE.json → missing; git show HEAD:state/..."
     }
   ],
   "workarounds": [
@@ -2287,18 +2315,20 @@
     "LET x = OK after REQUIRE SUBSETP not REQUIRE_SUBSETP knob alone",
     "After DIFFP/DELTAP use LAST+LINES/JSONLEN not LET knobs in large boards",
     "SETP status on both PLATE and PEER before EQP verify after apply",
-    "Soft EQP + EXIT n instead of REQUIRE EQP for shell deny"
+    "Soft EQP + EXIT n instead of REQUIRE EQP for shell deny",
+    "After NEEDP use LAST_N not NEEDP_N in large boards",
+    "Always write OMITP/PICKP LAST to export.json — agent.json still holds secrets"
   ],
   "language_gaps": [
-    "DIFFP_N/DELTAP_N LET bind 0 in large boards (W260)",
-    "REQUIRE EQP exit_code 0 (W261)",
-    "local-only SETP after MERGEP breaks EQP (W262)"
+    "NEEDP_N LET bind 0 in large boards (W265)",
+    "PICKP/OMITP non-destructive easy to misread (W266)",
+    "PICKP miss soft-skip no miss bag (W267)"
   ],
   "issues_faced": [
-    "LET DIFFP_N/DELTAP_N read 0 despite log n=4 — switched to LINES/JSONLEN",
-    "apply SETP status only on PLATE broke verify EQP — dual SETP synced",
-    "probe SYS EQS LAST {} after knobs flaky — JSONLEN==0 gate"
+    "REALWORLD_CHALLENGE.json missing at start — restored from git HEAD",
+    "NEEDP_N LET 0 despite needp hit=4 — switched to LAST_N",
+    "STATUS last line no trailing NL"
   ],
-  "commit": "79ac7fb",
-  "ts": "2026-08-09T02:40:59Z"
+  "commit": "pending",
+  "ts": "2026-08-09T03:04:37Z"
 }
