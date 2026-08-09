@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 271,
-  "program": "programs/realworld/svc_countbyval_presence_board.cubalc",
-  "theme": "COUNTBYVAL/HASVAL exact value presence gates",
-  "version": "1.15.703-usability",
+  "iter": 272,
+  "program": "programs/realworld/svc_setbyval_rewrite_board.cubalc",
+  "theme": "SETBYVAL bulk leaf value rewrite",
+  "version": "1.15.708-usability",
   "pass": true,
-  "prior_note": "iter 270 PATHSBYVAL; this iter first realworld 1246 COUNTBYVAL",
+  "prior_note": "iter 271 COUNTBYVAL; this iter first realworld 1247 SETBYVAL",
   "tests": [
     {
       "name": "list",
@@ -20,44 +20,44 @@
       "note": "boot"
     },
     {
-      "name": "count",
-      "cmd": "COUNTBYVAL worker=2 leader=1",
+      "name": "set",
+      "cmd": "worker\u2192standby n=2",
       "ok": true,
-      "note": "count"
-    },
-    {
-      "name": "has",
-      "cmd": "HASVAL/HASVALFLAT presence",
-      "ok": true,
-      "note": "has"
+      "note": "set"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER ok/fail counts",
+      "cmd": "FROM PEER ok\u2192ready",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost count 0",
+      "cmd": "ghost rewrite n=0",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "workers>1 leader present",
+      "cmd": "standby admit after rewrite",
       "ok": true,
       "note": "gate"
     },
     {
+      "name": "alias",
+      "cmd": "REPLACEVAL leader\u2192boss",
+      "ok": true,
+      "note": "alias"
+    },
+    {
       "name": "cross",
-      "cmd": "COUNTBYVAL==PATHSBYVAL n",
+      "cmd": "SET n==COUNTBYVAL==PATHS",
       "ok": true,
       "note": "cross"
     },
     {
       "name": "probe",
-      "cmd": "exact partials miss",
+      "cmd": "partials do not rewrite",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red pre-existing; countbyval PASS"
+      "note": "cli duals red; setbyval PASS"
     }
   ],
   "weaknesses": [
@@ -3460,6 +3460,30 @@
       "title": "COUNTBYVAL LAST is decimal string of count",
       "detail": "LAST=\"2\" and LAST_N=2 both set; agents must prefer LAST_N for numeric gates to avoid STR/NUM shuttle.",
       "repro": "COUNTBYVAL worker; EQS LAST 2; LAST_N==2"
+    },
+    {
+      "id": "W425",
+      "severity": "med",
+      "area": "lang|setbyval",
+      "title": "SETBYVAL mutates PLATE in place; durable only after SAVEPLATE",
+      "detail": "SETBYVAL rewrites live plate bag; agents that reload plate_peer_session without SAVEPLATE lose rewrites. Board SAVEPLATE after set/peer/gate/alias.",
+      "repro": "SETBYVAL worker standby; exit; reload agent.json without save \u2192 still worker"
+    },
+    {
+      "id": "W426",
+      "severity": "low",
+      "area": "lang|setbyval",
+      "title": "SETBYVAL exact value match; partials n=0",
+      "detail": "SETBYVAL work/orker \u2192 0 rewrites; worker \u2192 2. Exact-value family (W413/W422).",
+      "repro": "SETBYVAL work x \u2192 LAST_N 0"
+    },
+    {
+      "id": "W427",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE set count omits trailing NL",
+      "detail": "set.txt is digit 2 without newline (W5).",
+      "repro": "od -c set.txt"
     }
   ],
   "workarounds": [
@@ -3480,12 +3504,12 @@
     "make out/cubalc when binary missing",
     "prefer LAST_N over LAST string for count gates",
     "HASVAL for boolean presence before COUNTBYVAL",
-    "agent_job=runner keeps worker count role-only"
+    "agent_job=runner keeps worker count role-only",
+    "SAVEPLATE after SETBYVAL/REPLACEVAL before process exit",
+    "SETP re-seed before soft/gate when prior actions rewrote roles",
+    "prefer LAST_N for rewrite count gates"
   ],
   "language_gaps": [
-    "NTHFLATN indices require stable plate key order contracts",
-    "EACH FLAT specials/PATH/VALUE need hardened large-board binding",
-    "Register 1240 each_flat in selftest suite",
     "Scope FREQFLAT needles tightly for digests",
     "Capture FREQ specials immediately after op",
     "vars[128] hard cap \u00b7 silent special drop (MODEFLAT_TOTAL/HIT/SRC)",
@@ -3502,7 +3526,10 @@
     "COUNTBYVAL LAST_N aligns with PATHSBYVAL count",
     "COUNTBYVAL LAST_N exact leaf value counts",
     "HASVAL soft presence 0|1 without path bag",
-    "COUNTBYVAL aligns with PATHSBYVAL path count"
+    "COUNTBYVAL aligns with PATHSBYVAL path count",
+    "SETBYVAL bulk rewrite exact leaf values",
+    "REPLACEVAL alias for set-by-value",
+    "SAVEPLATE required after SETBYVAL for durable agent plate"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3543,8 +3570,10 @@
     "iter270: restored REALWORLD plate after accidental delete in 94cab4c1",
     "iter270: PATHSBYVAL board 9/9 green; COUNTBYVAL cross-check ok",
     "iter271: COUNTBYVAL/HASVAL board 9/9; PATHSBYVAL cross-check green",
-    "iter271: test -f REALWORLD plate before git add (W421 lesson)"
+    "iter271: test -f REALWORLD plate before git add (W421 lesson)",
+    "iter272: SETBYVAL board 9/9; SAVEPLATE after mutate for durability",
+    "iter272: soft/gate re-seed workers after prior set path rewrites"
   ],
-  "commit": "57d14861",
-  "ts": "2026-08-09T21:48:32Z"
+  "commit": "pending",
+  "ts": "2026-08-09T22:38:34Z"
 }
