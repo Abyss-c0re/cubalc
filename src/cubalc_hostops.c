@@ -6445,6 +6445,105 @@ int cubalc_host_json_leaf_getn(const char *json, const char *needle,
   return 0;
 }
 
+/* LASTFLATN: last pure-int leaf value by path needle. See header. */
+int cubalc_host_json_leaf_getn_last(const char *json, const char *needle,
+                                    cubalc_host_result *r) {
+  cubalc_host_result kv;
+  const char *p, *line;
+  size_t nn;
+  int found = 0;
+  long last_num = 0;
+  char last_path[512];
+
+  r_clear(r);
+  if (!needle) needle = "";
+  nn = strlen(needle);
+  last_path[0] = 0;
+  memset(&kv, 0, sizeof kv);
+  cubalc_host_json_leaf_kv(json ? json : "{}", NULL, &kv);
+  p = kv.str;
+  while (*p) {
+    char path[512], oldv[CUBALC_HOST_STR_MAX / 2];
+    size_t kn = 0, vn = 0;
+    const char *sep, *vs, *ve;
+    int hit;
+    char *end = NULL;
+    long num;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    kn = sep ? (size_t)(sep - line) : (size_t)(p - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn == 0 || kn >= sizeof path) continue;
+    memcpy(path, line, kn);
+    path[kn] = 0;
+    vs = sep ? sep + 1 : p;
+    ve = p;
+    while (vs < ve && (*vs == ' ' || *vs == '\t')) vs++;
+    while (ve > vs && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+    vn = (size_t)(ve - vs);
+    if (vn >= sizeof oldv) vn = sizeof oldv - 1;
+    memcpy(oldv, vs, vn);
+    oldv[vn] = 0;
+    if (!nn)
+      hit = 1;
+    else {
+      size_t i;
+      hit = 0;
+      if (nn <= kn) {
+        for (i = 0; i + nn <= kn; i++) {
+          if (memcmp(path + i, needle, nn) == 0) {
+            hit = 1;
+            break;
+          }
+        }
+      }
+    }
+    if (!hit) continue;
+    end = NULL;
+    num = strtol(oldv, &end, 10);
+    if (!(end && end != oldv && *end == 0))
+      continue;
+    last_num = num;
+    snprintf(last_path, sizeof last_path, "%s", path);
+    found = 1;
+  }
+  if (found) {
+    r->n = last_num;
+    r->code = 1;
+    r->ok = 1;
+    snprintf(r->str, sizeof r->str, "%ld", last_num);
+    snprintf(r->err, sizeof r->err, "%s", last_path);
+    return 0;
+  }
+  r->str[0] = 0;
+  r->err[0] = 0;
+  r->n = 0;
+  r->code = 0;
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,

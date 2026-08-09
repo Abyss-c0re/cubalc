@@ -1,0 +1,66 @@
+# LASTFLATN / ENDFLATN — last pure-int leaf by path needle → LAST_N
+# Usability: newest-wins nest numeric peel without REVL+GETFLATN glue.
+# Non-int matching leaves skipped.
+
+HOLD_FLASH 1
+
+# first port is cfg.port=9090, last is meta.port=1
+LET PLATE = "{\"cfg\":{\"port\":9090,\"host\":\"h\"},\"meta\":{\"port\":1},\"label\":\"x\"}"
+
+GETFLATN "port"
+ASSERT LAST_N == 9090
+SYS EQS GETFLATN_PATH "cfg.port"
+ASSERT LAST_N == 1
+
+LASTFLATN "port"
+ASSERT OK == 1
+ASSERT LASTFLATN_HIT == 1
+ASSERT LAST_N == 1
+ASSERT LASTFLATN == 1
+SYS EQS LASTFLATN_PATH "meta.port"
+ASSERT LAST_N == 1
+
+LASTFLATN "host" OR 0
+ASSERT LASTFLATN_HIT == 0
+ASSERT LASTFLATN_FALLBACK == 1
+ASSERT LAST_N == 0
+
+LASTFLATN "nope" OR 8080
+ASSERT LASTFLATN_HIT == 0
+ASSERT LASTFLATN_FALLBACK == 1
+ASSERT LAST_N == 8080
+
+LASTFLATN "nope"
+ASSERT LASTFLATN_HIT == 0
+ASSERT LAST_N == 0
+
+LET PEER = "{\"hits\":{\"a\":3,\"b\":4},\"label\":\"z\"}"
+LASTFLATN FROM PEER "hits" OR 0
+ASSERT LASTFLATN_FROM == 1
+ASSERT LASTFLATN_HIT == 1
+ASSERT LASTFLATN == 4
+ASSERT LAST_N == 4
+SYS EQS LASTFLATN_SRC "PEER"
+ASSERT LAST_N == 1
+SYS EQS LASTFLATN_PATH "hits.b"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":1}"
+LASTFLATN FROM PEER "hits"
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+ENDFLATN "x"
+ASSERT LASTFLATN_HIT == 1
+ASSERT LAST_N == 1
+
+# empty needle → last pure-int
+LET PLATE = "{\"s\":\"z\",\"n\":42,\"m\":7}"
+LASTFLATN ""
+ASSERT LASTFLATN_HIT == 1
+ASSERT LAST_N == 7
+
+PASS
+PRINT "1235_lastflatn: PASS"

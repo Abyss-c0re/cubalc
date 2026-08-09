@@ -2222,6 +2222,8 @@ int main(int argc, char **argv) {
       {"cli_plate_hasflatn", "programs/proof/1233_cli_plate_hasflatn.sh", "cubalc plate hasflatn|countflatn dual"},
       {"pathsflatn", "programs/proof/1234_pathsflatn.cubalc", "PATHSFLATN/VALSFLATN pure-int leaf path/value bags multi-plate"},
       {"cli_plate_pathsflatn", "programs/proof/1234_cli_plate_pathsflatn.sh", "cubalc plate pathsflatn|valsflatn dual"},
+      {"lastflatn", "programs/proof/1235_lastflatn.cubalc", "LASTFLATN last pure-int leaf by needle OR fallback multi-plate"},
+      {"cli_plate_lastflatn", "programs/proof/1235_cli_plate_lastflatn.sh", "cubalc plate lastflatn LASTFLATN dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2555,6 +2557,8 @@ int main(int argc, char **argv) {
       {"REQUIREFLAT", "flow", "REQUIREFLAT alias of NEEDFLAT"},
       {"GETFLATN", "flow", "GETFLATN|FIRSTFLATN [FROM plate] needle [OR fallback] — first pure-int matching leaf → LAST_N · read-only"},
       {"FIRSTFLATN", "flow", "FIRSTFLATN alias of GETFLATN"},
+      {"LASTFLATN", "flow", "LASTFLATN|ENDFLATN [FROM plate] needle [OR fallback] — last pure-int matching leaf → LAST_N · read-only"},
+      {"ENDFLATN", "flow", "ENDFLATN alias of LASTFLATN"},
       {"NEEDFLATN", "flow", "NEEDFLATN|REQUIREFLATN [FROM plate] needle… — fail-fast pure-int leaf needles · peel first → LAST_N · soft twin GETFLATN"},
       {"REQUIREFLATN", "flow", "REQUIREFLATN alias of NEEDFLATN"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
@@ -5058,6 +5062,7 @@ int main(int argc, char **argv) {
               "       cubalc plate getflat <path> <needle> [OR def]  # GETFLAT dual · first matching leaf value\n"
               "       cubalc plate needflat <path> <needle> [needle…]  # NEEDFLAT dual · fail-fast leaf path contract\n"
               "       cubalc plate getflatn <path> <needle> [OR n]  # GETFLATN dual · first pure-int leaf → n\n"
+              "       cubalc plate lastflatn <path> <needle> [OR n]  # LASTFLATN dual · last pure-int leaf → n\n"
               "       cubalc plate needflatn <path> <needle> [needle…]  # NEEDFLATN dual · fail-fast pure-int leaf + peel\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
@@ -5090,7 +5095,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"needflat\",\"getflatn\",\"needflatn\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"avgflat\",\"medianflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"capflat\",\"scaleflat\",\"hasflat\",\"countflat\",\"hasflatn\",\"countflatn\",\"pathsflat\",\"valsflat\",\"pathsflatn\",\"valsflatn\",\"getflat\",\"needflat\",\"getflatn\",\"lastflatn\",\"needflatn\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5207,6 +5212,8 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "mustflat") == 0 ||
         strcmp(argv[2], "getflatn") == 0 || strcmp(argv[2], "firstflatn") == 0 ||
         strcmp(argv[2], "numflat") == 0 || strcmp(argv[2], "getnflat") == 0 ||
+        strcmp(argv[2], "lastflatn") == 0 || strcmp(argv[2], "endflatn") == 0 ||
+        strcmp(argv[2], "tailflatn") == 0 || strcmp(argv[2], "lastnumflat") == 0 ||
         strcmp(argv[2], "needflatn") == 0 || strcmp(argv[2], "requireflatn") == 0 ||
         strcmp(argv[2], "mustflatn") == 0 || strcmp(argv[2], "needintflat") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
@@ -5447,6 +5454,9 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "firstflatn") == 0 || strcmp(op, "numflat") == 0 ||
                strcmp(op, "getnflat") == 0 || strcmp(op, "ngetflat") == 0)
         op = "getflatn";
+      else if (strcmp(op, "endflatn") == 0 || strcmp(op, "tailflatn") == 0 ||
+               strcmp(op, "lastnumflat") == 0 || strcmp(op, "getnflatl") == 0)
+        op = "lastflatn";
       else if (strcmp(op, "requireflatn") == 0 || strcmp(op, "mustflatn") == 0 ||
                strcmp(op, "needintflat") == 0 || strcmp(op, "neednumflat") == 0)
         op = "needflatn";
@@ -6824,6 +6834,71 @@ int main(int argc, char **argv) {
                "\"file\":%s,\"hit\":true,\"fallback\":false,\"leaf\":\"%s\","
                "\"n\":%ld,\"version\":\"%s\","
                "\"note\":\"GETFLATN dual · first pure-int leaf by path needle\"}\n",
+               path, needle, file_hit ? "true" : "false", pr.err, pr.n,
+               CUBALC_LANG_VERSION);
+      }
+      return 0;
+    }
+
+    /* lastflatn <needle> [OR n] — LASTFLATN dual: last pure-int leaf by needle (read-only).
+     *   cubalc plate lastflatn agent.json port
+     *   cubalc plate lastflatn agent.json port OR 8080
+     * n = value · hit · leaf path (last match). */
+    if (strcmp(op, "lastflatn") == 0) {
+      const char *needle = "";
+      long fb_n = 0;
+      int have_fb = 0;
+      cubalc_host_result pr;
+
+      if (ai >= argc || !argv[ai]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"lastflatn\",\"path\":\"%s\",\"err\":\"need needle [OR n]\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      needle = argv[ai++];
+      if (ai < argc && argv[ai] &&
+          (strcmp(argv[ai], "OR") == 0 || strcmp(argv[ai], "or") == 0 ||
+           strcmp(argv[ai], "DEFAULT") == 0 || strcmp(argv[ai], "default") == 0)) {
+        ai++;
+        if (ai < argc && argv[ai]) {
+          char *end = NULL;
+          long d = strtol(argv[ai], &end, 10);
+          if (end && end != argv[ai] && *end == 0) {
+            fb_n = d;
+            have_fb = 1;
+            ai++;
+          }
+        }
+      }
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_getn_last(plate, needle, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"lastflatn\",\"path\":\"%s\",\"err\":\"lastflatn fail\","
+               "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+        return 1;
+      }
+      if (pr.code == 0 && have_fb) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"lastflatn\",\"path\":\"%s\",\"needle\":\"%s\","
+               "\"file\":%s,\"hit\":false,\"fallback\":true,\"leaf\":\"\","
+               "\"n\":%ld,\"version\":\"%s\","
+               "\"note\":\"LASTFLATN dual · pure-int leaf miss used OR fallback\"}\n",
+               path, needle, file_hit ? "true" : "false", fb_n, CUBALC_LANG_VERSION);
+      } else if (pr.code == 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"lastflatn\",\"path\":\"%s\",\"needle\":\"%s\","
+               "\"file\":%s,\"hit\":false,\"fallback\":false,\"leaf\":\"\","
+               "\"n\":0,\"version\":\"%s\","
+               "\"note\":\"LASTFLATN dual · no pure-int leaf match\"}\n",
+               path, needle, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+      } else {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"lastflatn\",\"path\":\"%s\",\"needle\":\"%s\","
+               "\"file\":%s,\"hit\":true,\"fallback\":false,\"leaf\":\"%s\","
+               "\"n\":%ld,\"version\":\"%s\","
+               "\"note\":\"LASTFLATN dual · last pure-int leaf by path needle\"}\n",
                path, needle, file_hit ? "true" : "false", pr.err, pr.n,
                CUBALC_LANG_VERSION);
       }
