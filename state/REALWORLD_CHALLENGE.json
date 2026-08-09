@@ -3037,6 +3037,6 @@
     "Empty {} is a leaf path (document as inventory quirk)",
     "CLI shell duals still broken for leaves/flat"
   ],
-  "commit": "",
+  "commit": "74b85fe6",
   "ts": "2026-08-09T13:30:20Z"
 }
