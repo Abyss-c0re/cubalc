@@ -2172,6 +2172,8 @@ int main(int argc, char **argv) {
       {"cli_plate_rename_copy_swap", "programs/proof/1200_cli_plate_rename_copy_swap.sh", "cubalc plate rename/copy/swap duals paths"},
       {"path_keysp_lenp", "programs/proof/1201_path_keysp_lenp.cubalc", "KEYSP/LENP/EMPTYP/VALSP nest path"},
       {"cli_plate_keys_len", "programs/proof/1201_cli_plate_keys_len.sh", "cubalc plate keys/len/empty/vals nest path"},
+      {"pathkeys", "programs/proof/1210_pathkeys.cubalc", "PATHKEYS/LEAFKEYS dotted leaf path bag multi-plate"},
+      {"cli_plate_leaves", "programs/proof/1210_cli_plate_leaves.sh", "cubalc plate leaves/pathkeys PATHKEYS dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2446,6 +2448,9 @@ int main(int argc, char **argv) {
       {"HASP", "flow", "HASP [FROM plate] key — soft 0|1 presence · dotted path nest ok · multi-plate"},
       {"HASPALL", "flow", "HASPALL [FROM plate] key… — soft all-present · dotted path nest ok · multi-plate"},
       {"KEYSP", "flow", "KEYSP [FROM plate] — key bag → LAST · multi-plate"},
+      {"PATHKEYS", "flow", "PATHKEYS|LEAFKEYS|DOTPATHS [FROM plate] [path] — dotted leaf path bag · multi-plate"},
+      {"LEAFKEYS", "flow", "LEAFKEYS alias of PATHKEYS"},
+      {"DOTPATHS", "flow", "DOTPATHS alias of PATHKEYS"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4915,6 +4920,7 @@ int main(int argc, char **argv) {
               "       cubalc plate inc <path> <key> [delta]\n"
               "       cubalc plate del <path> <key>\n"
               "       cubalc plate keys <path> [nest.path]  # KEYSP dual · nest path ok\n"
+              "       cubalc plate leaves|pathkeys <path> [nest.path]  # PATHKEYS dual · dotted leaf paths\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -4946,7 +4952,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -4992,6 +4998,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "del") == 0 || strcmp(argv[2], "rm") == 0 ||
         strcmp(argv[2], "drop") == 0 || strcmp(argv[2], "keys") == 0 ||
         strcmp(argv[2], "list") == 0 || strcmp(argv[2], "ls") == 0 ||
+        strcmp(argv[2], "leaves") == 0 || strcmp(argv[2], "leafkeys") == 0 ||
+        strcmp(argv[2], "pathkeys") == 0 || strcmp(argv[2], "dotpaths") == 0 ||
+        strcmp(argv[2], "flatpaths") == 0 || strcmp(argv[2], "dotkeys") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5120,6 +5129,10 @@ int main(int argc, char **argv) {
         op = "del";
       else if (strcmp(op, "list") == 0 || strcmp(op, "ls") == 0)
         op = "keys";
+      else if (strcmp(op, "leafkeys") == 0 || strcmp(op, "pathkeys") == 0 ||
+               strcmp(op, "dotpaths") == 0 || strcmp(op, "flatpaths") == 0 ||
+               strcmp(op, "dotkeys") == 0 || strcmp(op, "leafpaths") == 0)
+        op = "leaves";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -5286,6 +5299,51 @@ int main(int argc, char **argv) {
              "\"op\":\"show\",\"path\":\"%s\",\"file\":%s,\"keys_n\":%ld,"
              "\"version\":\"%s\",\"plate\":%s}\n",
              path, file_hit ? "true" : "false", keys.n, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    /* leaves|pathkeys [nest.path] — PATHKEYS dual: dotted leaf path bag.
+     *   cubalc plate leaves agent.json
+     *   cubalc plate leaves agent.json cfg
+     *   cubalc plate pathkeys agent.json cfg.meta */
+    if (strcmp(op, "leaves") == 0) {
+      const char *nestp = NULL;
+      char flat[CUBALC_HOST_STR_MAX];
+      cubalc_host_result pr;
+      size_t i, o = 0;
+
+      if (ai < argc && argv[ai] && argv[ai][0])
+        nestp = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_paths(plate, nestp, &pr) != 0) {
+        pr.str[0] = 0;
+        pr.n = 0;
+      }
+      flat[0] = 0;
+      for (i = 0; pr.str[i] && o + 2 < sizeof flat; i++) {
+        char ch = pr.str[i];
+        if (ch == '\n' || ch == '\r') {
+          if (o > 0 && flat[o - 1] != ',')
+            flat[o++] = ',';
+        } else if (ch == '"' || ch == '\\') {
+          flat[o++] = '_';
+        } else {
+          flat[o++] = ch;
+        }
+      }
+      flat[o] = 0;
+      if (pr.str[0]) {
+        fputs(pr.str, stdout);
+        if (pr.str[strlen(pr.str) - 1] != '\n')
+          fputc('\n', stdout);
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"leaves\",\"path\":\"%s\",\"nest\":\"%s\",\"file\":%s,"
+             "\"n\":%ld,\"paths\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"PATHKEYS dual · dotted leaf paths · bag lines above plate\"}\n",
+             path, nestp ? nestp : "", file_hit ? "true" : "false",
+             pr.n, flat, CUBALC_LANG_VERSION);
       return 0;
     }
 

@@ -1,0 +1,89 @@
+# PATHKEYS / LEAFKEYS / DOTPATHS — dotted leaf path bag
+# Usability: discover deep plate structure without KEYSP+GETOBJ recursion.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"x\":1,\"role\":\"worker\",\"zone\":\"A\"},\"port\":8080},\"empty\":{},\"n\":3}"
+LET PEER = "{\"net\":{\"peer\":{\"host\":\"peerB\",\"tls\":1}}}"
+
+# full plate leaf paths
+PATHKEYS
+ASSERT OK == 1
+ASSERT PATHKEYS_N == 7
+SYS HASLINE PATHKEYS "host"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "cfg.meta.x"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "cfg.meta.role"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "cfg.meta.zone"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "cfg.port"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "n"
+ASSERT LAST_N == 1
+# empty object is a terminal path
+SYS HASLINE PATHKEYS "empty"
+ASSERT LAST_N == 1
+# intermediate objects not listed as leaves
+SYS HASLINE PATHKEYS "cfg"
+ASSERT LAST_N == 0
+SYS HASLINE PATHKEYS "cfg.meta"
+ASSERT LAST_N == 0
+
+# relative under nest path
+PATHKEYS "cfg"
+ASSERT OK == 1
+ASSERT PATHKEYS_N == 4
+SYS EQS PATHKEYS_PATH "cfg"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "meta.x"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "meta.role"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "port"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "meta.zone"
+ASSERT LAST_N == 1
+
+# deeper nest
+PATHKEYS "cfg.meta"
+ASSERT PATHKEYS_N == 3
+SYS HASLINE PATHKEYS "role"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "x"
+ASSERT LAST_N == 1
+
+# soft miss
+PATHKEYS "missing.nest"
+ASSERT OK == 1
+ASSERT PATHKEYS_N == 0
+
+# multi-plate FROM
+PATHKEYS FROM PEER "net"
+ASSERT PATHKEYS_FROM == 1
+SYS EQS PATHKEYS_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT PATHKEYS_N == 2
+SYS HASLINE PATHKEYS "peer.host"
+ASSERT LAST_N == 1
+SYS HASLINE PATHKEYS "peer.tls"
+ASSERT LAST_N == 1
+
+# alias LEAFKEYS
+LEAFKEYS "cfg.meta"
+ASSERT LEAFKEYS_N == 3
+SYS HASLINE LEAFKEYS "zone"
+ASSERT LAST_N == 1
+
+# alias DOTPATHS
+DOTPATHS
+ASSERT DOTPATHS_N == 7
+
+# plate intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1210_pathkeys: PASS"

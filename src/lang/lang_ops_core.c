@@ -27428,6 +27428,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"HASPOBJ") || kw(&L->cur,"TYPEPOBJ") || kw(&L->cur,"KEYSOBJ") ||
              kw(&L->cur,"NEEDPOBJ") ||
              kw(&L->cur,"PLUCKOBJ") || kw(&L->cur,"NESTPLUCK") ||
+             kw(&L->cur,"PATHKEYS") || kw(&L->cur,"LEAFKEYS") || kw(&L->cur,"DOTPATHS") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35796,6 +35797,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASP", "HASP [FROM plate] key — soft 0|1 presence · dotted path nest ok · multi-plate · no GETP miss ERR"},
       {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · dotted path nest ok · multi-plate"},
       {"KEYSP", "KEYSP [FROM plate] [path] — key bag → LAST · nest path ok · multi-plate · no JSONKEYS glue"},
+      {"PATHKEYS", "PATHKEYS|LEAFKEYS|DOTPATHS [FROM plate] [path] — dotted leaf path bag · multi-plate · no KEYSP+GETOBJ walk"},
+      {"LEAFKEYS", "LEAFKEYS alias of PATHKEYS"},
+      {"DOTPATHS", "DOTPATHS alias of PATHKEYS"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -43212,6 +43216,155 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# pluckobj nest=%s n=%d hit=%d from=%d\n",
               nestk, n_req, n_hit, have_from);
+    bump(vm); return 1;
+  }
+
+  /* PATHKEYS|LEAFKEYS|DOTPATHS|FLATPATHS [FROM plate] [path]
+   * Recursively list dotted leaf paths under plate (or nest path) → LAST bag.
+   * LAST_N = count · PATHKEYS_PATH · PATHKEYS_FROM.
+   * Soft empty on miss/non-object. Multi-plate FROM.
+   * Usability: agent discover deep plate structure without KEYSP+GETOBJ walk:
+   *   PATHKEYS                          → host\ncfg.meta.role\ncfg.port\n…
+   *   PATHKEYS "cfg"                    → meta.role\nport\n…
+   *   PATHKEYS FROM PEER "net"
+   */
+  if (kw(&L->cur,"PATHKEYS") || kw(&L->cur,"LEAFKEYS") || kw(&L->cur,"DOTPATHS") ||
+      kw(&L->cur,"FLATPATHS") || kw(&L->cur,"LEAFPATHS") || kw(&L->cur,"ALLDOTS") ||
+      kw(&L->cur,"DOTKEYS") || kw(&L->cur,"FLATP") || kw(&L->cur,"PATHSP") ||
+      kw(&L->cur,"PLATE_PATHS") || kw(&L->cur,"MPATHKEYS")) {
+    char plate[CUBALC_HOST_STR_MAX];
+    char nest_path[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; nest_path[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    /* optional leading FROM plate_src */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* optional nest path */
+    if (L->cur.kind == TK_STR ||
+        (L->cur.kind == TK_IDENT &&
+         !kw(&L->cur,"FROM") && !kw(&L->cur,"USING") && !kw(&L->cur,"OF") &&
+         !kw(&L->cur,"WITHPLATE") && !kw(&L->cur,"PLATEFROM") &&
+         !kw(&L->cur,"END") && !kw(&L->cur,"ELSE") && !kw(&L->cur,"ELIF") &&
+         !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") &&
+         !kw(&L->cur,"SYS") && !kw(&L->cur,"PASS") && !kw(&L->cur,"FAIL") &&
+         !kw(&L->cur,"INCLUDE") && !kw(&L->cur,"SETP") && !kw(&L->cur,"GETP") &&
+         !kw(&L->cur,"KEYSP") && !kw(&L->cur,"PATHKEYS") && !kw(&L->cur,"LEAFKEYS"))) {
+      if (resolve_str_arg(vm, L, nest_path, sizeof nest_path) != 0)
+        nest_path[0] = 0;
+    }
+
+    /* trailing FROM if not already */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+      /* path after FROM PEER: PATHKEYS FROM PEER "cfg" */
+      if (!nest_path[0] &&
+          (L->cur.kind == TK_STR ||
+           (L->cur.kind == TK_IDENT &&
+            !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ELSE") &&
+            !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") && !kw(&L->cur,"PASS")))) {
+        if (resolve_str_arg(vm, L, nest_path, sizeof nest_path) != 0)
+          nest_path[0] = 0;
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_paths(plate, nest_path[0] ? nest_path : NULL, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "PATHKEYS_N", 0);
+      var_set_num(vm, "LEAFKEYS_N", 0);
+      var_set_num(vm, "PATHKEYS_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "PATHKEYS_PATH", nest_path);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "PATHKEYS", hr.str);
+    var_set_str(vm, "LEAFKEYS", hr.str);
+    var_set_str(vm, "DOTPATHS", hr.str);
+    var_set_num(vm, "PATHKEYS_N", hr.n);
+    var_set_num(vm, "LEAFKEYS_N", hr.n);
+    var_set_num(vm, "DOTPATHS_N", hr.n);
+    var_set_num(vm, "PATHKEYS_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "PATHKEYS_PATH", nest_path);
+    var_set_str(vm, "PATHKEYS_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# pathkeys n=%ld from=%d path=%s\n",
+              hr.n, have_from, nest_path[0] ? nest_path : ".");
     bump(vm); return 1;
   }
 

@@ -236,6 +236,14 @@ int cubalc_host_json_path_has(const char *json, const char *path, cubalc_host_re
  * Soft miss / non-object leaf → r->str="{}" · r->n=0 · always OK.
  * Usability: nest bag size/keys without GETOBJ+KEYSP glue. */
 int cubalc_host_json_path_obj(const char *json, const char *path, cubalc_host_result *r);
+/* Recursively collect dotted leaf paths of a JSON object → newline bag.
+ * path/prefix: optional nest root (NULL/"" = whole plate). Paths are relative
+ * to that root (cfg.meta.role). Leaf = non-object value or empty {}.
+ * Intermediate non-empty objects are walked, not listed. r->n = count.
+ * Soft always OK. Max depth 8 (same as path get/set).
+ * Usability: agent discover nest structure without KEYSP+GETOBJ recursion. */
+int cubalc_host_json_leaf_paths(const char *json, const char *path,
+                                cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

@@ -696,6 +696,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 666. ~~**Path `GETOBJ`/`SETOBJ`/`MERGEOBJ`/`DEFAULTOBJ`**~~ **done** (peel/nest/patch whole objects at dotted paths · INTO · multi-plate · no multi-level GETOBJ glue).
 667. ~~**`cubalc plate getobj`/`setobj`/`mergeobj`/`defaultobj`**~~ **done** (CLI duals of path GETOBJ/SETOBJ/MERGEOBJ/DEFAULTOBJ · agent one-shots without `.cubalc`).
 668. ~~**Path `PLUCKOBJ` + `cubalc plate pluckobj`**~~ **done** (multi-key peel nested object at dotted nest path → value bag · CLI dual · no GETOBJ+PLUCKP / multi GETPOBJ glue).
+669. ~~**`PATHKEYS` / `LEAFKEYS` / `DOTPATHS` + `cubalc plate leaves`**~~ **done** (recursive dotted leaf path bag · multi-plate · CLI dual · agent structure discovery without KEYSP+GETOBJ walk).
 
 ## Tick protocol
 

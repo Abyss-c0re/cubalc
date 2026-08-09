@@ -4317,6 +4317,72 @@ int cubalc_host_json_path_obj(const char *json, const char *path, cubalc_host_re
   return 0;
 }
 
+/* DFS walk: emit dotted leaf paths under obj with optional prefix. */
+static void cubalc_json_leaf_walk(const char *obj, const char *pfx,
+                                  char *out, size_t outcap, size_t *olen,
+                                  long *kept, int depth) {
+  cubalc_host_result keys, raw;
+  const char *p, *v;
+  char key[256], child[512];
+
+  if (!obj || !out || !olen || !kept || depth > 8) return;
+  memset(&keys, 0, sizeof keys);
+  if (cubalc_host_json_keys(obj, &keys) != 0) return;
+  if (keys.n == 0) {
+    /* empty object terminal: emit path when nested under a key */
+    if (pfx && pfx[0])
+      cubalc_bag_push(out, outcap, olen, kept, pfx);
+    return;
+  }
+  p = keys.str;
+  while (*p) {
+    size_t kn = 0;
+    while (p[kn] && p[kn] != '\n' && p[kn] != '\r') kn++;
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    if (kn > 0) {
+      memcpy(key, p, kn);
+      key[kn] = 0;
+      memset(&raw, 0, sizeof raw);
+      if (cubalc_host_json_get_raw(obj, key, &raw) == 0) {
+        if (pfx && pfx[0])
+          snprintf(child, sizeof child, "%s.%s", pfx, key);
+        else
+          snprintf(child, sizeof child, "%s", key);
+        v = raw.str;
+        while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+        if (*v == '{') {
+          cubalc_json_leaf_walk(v, child, out, outcap, olen, kept, depth + 1);
+        } else {
+          cubalc_bag_push(out, outcap, olen, kept, child);
+        }
+      }
+    }
+    p += kn;
+    while (*p == '\n' || *p == '\r') p++;
+  }
+}
+
+/* Recursively collect dotted leaf paths · optional nest path root.
+ * Paths relative to nest root. Soft always OK. See header. */
+int cubalc_host_json_leaf_paths(const char *json, const char *path,
+                                cubalc_host_result *r) {
+  cubalc_host_result obj;
+  size_t olen = 0;
+  long kept = 0;
+  r_clear(r);
+  r->str[0] = 0;
+  memset(&obj, 0, sizeof obj);
+  if (cubalc_host_json_path_obj(json ? json : "{}", path, &obj) != 0) {
+    r->ok = 1;
+    r->n = 0;
+    return 0;
+  }
+  cubalc_json_leaf_walk(obj.str, "", r->str, sizeof r->str, &olen, &kept, 0);
+  r->n = kept;
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,
