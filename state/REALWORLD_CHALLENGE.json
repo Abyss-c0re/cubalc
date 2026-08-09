@@ -2867,6 +2867,6 @@
     "FILLP soft miss body spacing requires STARTS/HAS not ENDS host",
     "Selftest 13 pre-existing CLI shell set fails; cubalc proofs green including fillp_path"
   ],
-  "commit": "",
+  "commit": "1c0f08d0",
   "ts": "2026-08-09T10:59:58Z"
 }
