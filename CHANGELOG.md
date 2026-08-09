@@ -46,7 +46,7 @@
 ### Usability
 - HOLD_FLASH is a **device/firmware connection safeguard** only; runtime defaults `hold_flash=1`
 - Programs / recipes / HELP / doctor / forms no longer teach “start with HOLD_FLASH 1”
-- PLUG denied only if `HOLD_FLASH 0`; `INCLUDE hold_seed` optional for firmware-capable hosts
+- HOLD_FLASH is device/mesh-join only (not language PLUG); `INCLUDE hold_seed` optional for new-device hosts
 - Emitters (evolve / translate) drop forced HOLD_FLASH preamble
 - Docs: `docs/HOLD_FLASH.md` · `docs/FOR_AGENTS.md` · `AGENTS.md` · COOKBOOK / README
 - Version: `1.15.232-usability`

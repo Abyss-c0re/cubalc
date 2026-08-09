@@ -89,7 +89,7 @@ FLOW 4              # energy / board law still holds
 
 - Energy **must flow** before compile (`FLOW` / plugs / impulse).
 - Matrix compatibility gates **PLUG**.
-- **HOLD_FLASH** is device/firmware safeguard only (default 1).
+- **HOLD_FLASH** is device/mesh-join only (default 1; not language PLUG).
 
 ## Demo: life engine (cell division)
 

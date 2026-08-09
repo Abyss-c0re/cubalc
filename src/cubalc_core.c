@@ -170,9 +170,8 @@ int cubalc_cube_spawn(cubalc_chain *ch, const char *id, const char *role,
 
 int cubalc_cube_plug(cubalc_chain *ch, int a, int b) {
   if (!ch || a < 0 || b < 0 || a >= ch->n_cubes || b >= ch->n_cubes || a == b) return -1;
-  /* HOLD_FLASH = device/firmware connection safeguard (default 1 at run start).
-   * Not a required program preamble. Not auto-flash. Deny only when set 0. */
-  if (!ch->hold_flash) return -5;
+  /* Language PLUG wires virtual cubes only — never gated by HOLD_FLASH.
+   * HOLD_FLASH is device/firmware + mesh-join only (see docs/HOLD_FLASH.md). */
   float cmp = cubalc_matrix_compat(&ch->cubes[a].atom.matrix, &ch->cubes[b].atom.matrix);
   /* Snap only if matrices compatible — Cube is SoT, not labels */
   if (cmp < 0.35f) return -2; /* incompatible */

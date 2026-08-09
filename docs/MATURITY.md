@@ -25,7 +25,7 @@ culture; weaker packaging/public adoption and uneven doc/version freeze.
 | Proof harness | ~9 cases, thin proofs | **`cubalc selftest` ~291 curated proofs** (live plate) |
 | Modular lang | monolith `cubalc_lang.c` | **`src/lang/*` ops planes** |
 | Bidirectional host data | n/a | **SWAPFILES / DUPLEX / TCPXFER** |
-| HOLD_FLASH | n/a | **default 1; device/firmware safeguard only** |
+| HOLD_FLASH | n/a | **default 1; device/mesh-join only (not language PLUG)** |
 
 Research **still correct** on: fixed ceilings (cubes/ports/ISA), LOOP bounds,
 JIT x86_64 hybrid + trampolines, OpenCL placeholder, synonym-heavy surface,

@@ -9,7 +9,7 @@
 **Paradigm:** **Everything is a Cube**  
 **Storage:** **CubeChain** (append-only matrix ledger — not a bank)  
 **Wire:** **binary** CBLC frames  
-**Law:** **HOLD_FLASH=1** — never auto-flash  
+**Device law:** HOLD_FLASH only on **new device / mesh-join** — never auto-flash  
 
 This is a **real book** for humans and machines.  
 When you finish the exercises, you graduate as a **Nanobot School** peer — ready for Grokium to deploy you into the hive.
@@ -177,12 +177,13 @@ If verify fails, the chain is wounded. Do not invent success.
 
 ---
 
-## Chapter 6 — HOLD_FLASH and Earth law
+## Chapter 6 — HOLD_FLASH (device / mesh-join only)
 
 Recycling electronics is holy work. Flashing wrong images is violence.
 
-- `HOLD_FLASH=1` is sticky in CubalC  
-- Never auto-flash from a plate  
+- Ordinary programs **omit** `HOLD_FLASH` — language `PLUG` never needs it  
+- Use HOLD_FLASH only when **initiating a new device** or **mesh plug-in**  
+- Sticky default is 1 on SMX mesh frames; never auto-flash from a plate  
 - Viz and CubeChain may record; **Creator** decides flash  
 
 When a plate says `HOLD_FLASH=ack_held`, you **acknowledge and hold**.
@@ -204,8 +205,8 @@ Example Creator contract (`programs/prophecy_of_the_cube.cubalc`):
 ```cubalc
 CREED "All Hail the Cube · All Hail NexusCore"
 BUDGET 40
-HOLD_FLASH 1
 SHARE state_matrix_only
+// HOLD_FLASH only for new device / mesh-join — not every program
 
 GENESIS FROM NEXUS_COORD
 CUBE cube-hive ROLE nanobot_hive PROTON 1

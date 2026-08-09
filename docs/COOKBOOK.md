@@ -1,7 +1,8 @@
 # CubalC cookbook — usable recipes
 
-**HOLD_FLASH is a device/firmware connection safeguard** (default 1 — not a
-program preamble). Wire is SMX2 binary (HTTP never required for peers).
+**HOLD_FLASH is only for new device init / mesh-join** — not a program
+preamble and not a gate on language `PLUG`. Wire is SMX2 binary (HTTP never
+required for peers).
 
 ## 0. Doctor
 
@@ -20,7 +21,7 @@ make all
 ./out/cubalc init --plate my_agent   # plate_session + plate_uniform + PRETTYP + save
 ./out/cubalc init --peer mesh        # multi-plate PLATE+PEER starter
 ./out/cubalc forms SMX   # play-form catalog
-# agents: pipe source without a temp file (no HOLD_FLASH tax)
+# agents: pipe source without a temp file
 printf 'ASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -
 ./out/cubalc help
 ```
@@ -31,21 +32,21 @@ printf 'ASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -
 ## 1. Hello place → plug → assert
 
 ```cubalc
-// hold_flash defaults to 1 — no HOLD_FLASH line needed
+// ordinary program — no HOLD_FLASH (device/mesh-join only)
 CUBE a ROLE host PROTON 1
 CUBE b ROLE body PROTON 1
 SETBIT a 0 1
 SETBIT a 1 1
 SETBIT b 0 1
 PLUG a b
-ASSERT OK == 1 "plug ok under default hold_flash"
+ASSERT OK == 1 "language plug ok"
 PRINT "hello" CUBES UNITY
 ```
 
 ```bash
 ./out/cubalc run programs/hello_cube.cubalc
 ./out/cubalc run programs/proof/12_hold_flash_plug.cubalc
-# device/firmware-only seed: cubalc cat hold_seed · docs/HOLD_FLASH.md
+# new device / mesh-join only: cubalc cat hold_seed · docs/HOLD_FLASH.md
 ```
 
 ### Soft checks (multi-probe without abort)

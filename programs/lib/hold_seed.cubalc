@@ -1,14 +1,14 @@
 // INCLUDE "lib/hold_seed.cubalc"  (from a programs/* path) or absolute path
 //
-// HOLD_FLASH is a **device/firmware connection safeguard**, not a program
-// preamble. Runtime already defaults hold_flash=1 for normal cube PLUG.
+// HOLD_FLASH is a **device/firmware + mesh-join** safeguard only.
+// Ordinary agent programs should NOT require this INCLUDE.
+// Language PLUG (virtual cubes) never needs HOLD_FLASH.
 //
-// Use this seed only when you need an explicit sticky ack for hosts that
-// can change firmware / physical devices. Ordinary agent programs should
-// NOT require this INCLUDE.
+// Use this seed only when initiating a *new device* or mesh plug-in
+// on a host that can change firmware / physical connections.
 //
-//   HOLD_FLASH 1  — allow device plug (default at runtime anyway)
-//   HOLD_FLASH 0  — deny PLUG (tests / lock-down)
+//   HOLD_FLASH 1  — sticky device/mesh hold ack (runtime default is already 1)
+//   BUDGET / SHARE — optional mesh session knobs
 
 HOLD_FLASH 1
 BUDGET 40

@@ -80,7 +80,7 @@ export CUBALC_CT101_PROTECT=1
 | Law | Enforcement |
 |-----|-------------|
 | Matrix SoT | Core matrix + optional SoT fold |
-| HOLD_FLASH | User permission before plug-in; program header + SMX flags; PLUG denied if 0 |
+| HOLD_FLASH | Device/mesh-join sticky ack on SMX frames (default 1); not a language PLUG gate |
 | Binary talk | SMX KEY/EXCHANGE/SERVE/DIAL only |
 | One commander | Single `cmd` role unit |
 | Budget | `BUDGET 40` |

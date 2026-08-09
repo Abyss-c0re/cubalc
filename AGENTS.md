@@ -34,9 +34,9 @@ Exit non-zero on assert fail / hard SYS fail. Soft HTTP may set `OK=0`.
 
 ## Write programs agents can verify
 
-1. **Do not** start every program with `HOLD_FLASH 1`. Runtime already defaults
-   `hold_flash=1`. `HOLD_FLASH` is a **device/firmware connection safeguard**
-   (use `HOLD_FLASH 0` to deny PLUG). See `docs/HOLD_FLASH.md`.
+1. **Do not** put `HOLD_FLASH` in ordinary programs. It is only for **new
+   device init / mesh-join** (`INCLUDE hold_seed` when needed). Language
+   `PLUG` never requires it. See `docs/HOLD_FLASH.md`.
 2. Prefer `SYS` for host effects; do not invent flash/device writes.
 3. Assert outcomes: `ASSERT SMX_OK == 1`, `ASSERT OK == 1`, `ASSERT LAST_N > 0`.  
    Optional reason: `ASSERT ready == 1 "peer not ready"` → err includes line + message.  

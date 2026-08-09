@@ -9,7 +9,7 @@
 | `[name!]` / `[name!0\|1]` | pulse proton |
 | `[~n]` | flow n ticks |
 | `?` | show board |
-| `[hold]` / `HOLD_FLASH 0|1` | **Device/firmware** connection safeguard (default 1 — omit preamble; `0` denies PLUG) |
+| `[hold]` / `HOLD_FLASH 0|1` | **Device/mesh-join** only (default 1; not language `PLUG`) |
 | `[genesis "plate"]` | fold plate → matrix |
 | `[sync]` | hive join cubes |
 | `[fleet]` | fleet map cubes |

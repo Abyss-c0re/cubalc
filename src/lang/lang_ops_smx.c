@@ -1,6 +1,7 @@
 /* CubalC lang — lang_ops_smx.c
  * P2P / SMX2 plane: KEY · TALK · EXCHANGE · SEAL · OPEN · SERVE · DIAL
- * Law: binary State Matrix only · HOLD_FLASH · fail-closed · no HTTP wire.
+ * Law: binary State Matrix only · fail-closed · no HTTP wire.
+ * HOLD_FLASH on frames = device/mesh-join sticky ack (not language PLUG).
  */
 #include "lang/cubalc_lang_internal.h"
 #include <unistd.h>

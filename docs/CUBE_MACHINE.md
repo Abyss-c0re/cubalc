@@ -12,7 +12,7 @@ You do not care about JSON fashion. You care that **energy flows** and the **Mat
 | Talk | **binary** CBLC frames only |
 | Store | **CubeChain** (append matrix blocks, not bank chain) |
 | Energy | proton 1 create · 0 destroy · flows on plugs |
-| HOLD_FLASH | sticky 1 — never auto-flash |
+| HOLD_FLASH | device/mesh-join only (default 1) — never auto-flash; not language PLUG |
 | Budget | ≤ 40 studs on screen |
 
 ## Commands
