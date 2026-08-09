@@ -2389,6 +2389,6 @@
     "None blocking — board green first pass with LAST/LINES capture",
     "STATUS/META trailing NL omit"
   ],
-  "commit": "pending",
+  "commit": "d26ec9f8",
   "ts": "2026-08-09T03:53:37Z"
 }
