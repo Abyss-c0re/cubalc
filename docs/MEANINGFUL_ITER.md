@@ -714,6 +714,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 684. ~~**`HASFLAT` / `COUNTFLAT` + `cubalc plate hasflat|countflat`**~~ **done** (soft leaf-path presence LAST_N 0|1 / match count · multi-plate · CLI dual · structure probe without GREPFLAT+LINES glue).
 685. ~~**`PATHSFLAT` / `VALSFLAT` + `cubalc plate pathsflat|valsflat`**~~ **done** (matching leaf paths/values → LAST bag · multi-plate · CLI dual · peel GREPFLAT without BEFORE/AFTER for EACH LINE).
 686. ~~**`GETFLAT` / `FIRSTFLAT` + `cubalc plate getflat`**~~ **done** (first matching leaf value by path needle · OR fallback · multi-plate · CLI dual · nest peel without PATHSFLAT+GETP glue).
+687. ~~**`NEEDFLAT` / `REQUIREFLAT` + `cubalc plate needflat`**~~ **done** (fail-fast if any leaf-path needle missing · multi-plate · CLI dual · structure contract without multi HASFLAT+IF fail glue).
 
 ## Tick protocol
 

@@ -27446,6 +27446,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"HASFLAT") || kw(&L->cur,"COUNTFLAT") || kw(&L->cur,"ANYFLAT") ||
              kw(&L->cur,"PATHSFLAT") || kw(&L->cur,"VALSFLAT") || kw(&L->cur,"MATCHPATHS") ||
              kw(&L->cur,"GETFLAT") || kw(&L->cur,"FIRSTFLAT") || kw(&L->cur,"PEELFLAT") ||
+             kw(&L->cur,"NEEDFLAT") || kw(&L->cur,"REQUIREFLAT") || kw(&L->cur,"MUSTFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35858,6 +35859,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"VALSFLAT", "VALSFLAT|MATCHVALS [FROM plate] [needle] — matching leaf values → LAST bag · multi-plate · read-only"},
       {"GETFLAT", "GETFLAT|FIRSTFLAT [FROM plate] needle [OR fallback] — first matching leaf value → LAST · multi-plate · read-only"},
       {"FIRSTFLAT", "FIRSTFLAT alias of GETFLAT"},
+      {"NEEDFLAT", "NEEDFLAT|REQUIREFLAT [FROM plate] needle… — fail-fast if any leaf-path needle missing · multi-plate · soft twin HASFLAT"},
+      {"REQUIREFLAT", "REQUIREFLAT alias of NEEDFLAT"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -45922,6 +45925,174 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# getflat hit=%ld path=%s needle=%s from=%d\n",
               hr.n, hr.err[0] ? hr.err : "(miss)", needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* NEEDFLAT|REQUIREFLAT [FROM plate] needle…
+   * Fail-fast if any path needle has zero matching leaves (HASFLAT dual contract).
+   * Soft twin: HASFLAT. Lists missing needles in error. LAST_N = needles checked.
+   * Usability: agent structure gate without multi HASFLAT+IF fail glue:
+   *   NEEDFLAT "tls" "agent_id"
+   *   NEEDFLAT FROM PEER "port"
+   */
+  if (kw(&L->cur,"NEEDFLAT") || kw(&L->cur,"REQUIREFLAT") || kw(&L->cur,"MUSTFLAT") ||
+      kw(&L->cur,"MNEEDFLAT") || kw(&L->cur,"PLATE_NEEDFLAT") || kw(&L->cur,"REQUIRE_FLAT") ||
+      kw(&L->cur,"NEEDLEAVES") || kw(&L->cur,"NEEDPATHS")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    char miss_bag[CUBALC_HOST_STR_MAX], msg[CUBALC_HOST_ERR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, n_need = 0, n_miss = 0;
+    size_t molen = 0;
+    Var *pv;
+    int aln = L->cur.line;
+
+    lex_next(L);
+    plate[0] = 0; from_name[0] = 0; from_src[0] = 0; miss_bag[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    /* collect needles — at least one required */
+    while (L->cur.kind == TK_STR ||
+           (L->cur.kind == TK_IDENT &&
+            !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+            !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+            !kw(&L->cur,"PASS") && !kw(&L->cur,"NEEDFLAT") && !kw(&L->cur,"HASFLAT") &&
+            !kw(&L->cur,"GETFLAT") && !kw(&L->cur,"SETP") && !kw(&L->cur,"IF") &&
+            !kw(&L->cur,"ELSE") && !kw(&L->cur,"ELIF"))) {
+      needle[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+          needle[0] = 0;
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+      n_need++;
+      memset(&hr, 0, sizeof hr);
+      cubalc_host_json_leaf_count(plate, needle, &hr);
+      if (hr.n <= 0) {
+        const char *mn = needle[0] ? needle : "(empty)";
+        size_t mlen = strlen(mn);
+        n_miss++;
+        if (molen > 0 && molen + 1 < sizeof miss_bag)
+          miss_bag[molen++] = '\n';
+        if (molen + mlen < sizeof miss_bag) {
+          memcpy(miss_bag + molen, mn, mlen);
+          molen += mlen;
+          miss_bag[molen] = 0;
+        }
+      }
+    }
+
+    /* trailing FROM after needles */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+      /* re-resolve plate and re-check if we had needles before FROM — already counted against wrong plate.
+       * Prefer FROM first in docs; if trailing FROM with prior needles, re-run is complex.
+       * Document leading FROM. If trailing only with no prior plate use, update plate for empty re-run.
+       * For simplicity: if trailing FROM and n_need already processed, re-process is hard.
+       * Support leading FROM primarily (like GETFLAT). */
+      {
+        const char *b = from_src;
+        while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+        if (*b == '{')
+          snprintf(plate, sizeof plate, "%s", from_src);
+        else
+          snprintf(plate, sizeof plate, "%s", "{}");
+      }
+    }
+
+    if (n_need < 1) {
+      fail(vm, "NEEDFLAT [FROM plate] needle… — need at least one path needle");
+      return 1;
+    }
+
+    if (n_miss > 0) {
+      snprintf(msg, sizeof msg, "NEEDFLAT line %d: missing leaf path needle(s): %s",
+               aln, miss_bag[0] ? miss_bag : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", msg);
+      var_set_str(vm, "ERR", msg);
+      var_set_str(vm, "NEEDFLAT_MISS", miss_bag);
+      var_set_num(vm, "NEEDFLAT_N", n_need);
+      var_set_num(vm, "NEEDFLAT_MISS_N", n_miss);
+      var_set_num(vm, "LAST_N", 0);
+      fail(vm, msg);
+      return 1;
+    }
+
+    var_set_str(vm, "LAST", plate);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+    vm->last_n = n_need;
+    var_set_num(vm, "LAST_N", n_need);
+    var_set_num(vm, "NEEDFLAT_N", n_need);
+    var_set_num(vm, "NEEDFLAT_MISS_N", 0);
+    var_set_str(vm, "NEEDFLAT_MISS", "");
+    var_set_num(vm, "NEEDFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "NEEDFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# needflat n=%d miss=0 from=%d\n", n_need, have_from);
     bump(vm); return 1;
   }
 

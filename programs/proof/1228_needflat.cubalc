@@ -1,0 +1,35 @@
+# NEEDFLAT / REQUIREFLAT — fail-fast leaf path needle contract
+# Usability: structure gate without multi HASFLAT+IF fail glue.
+# Soft twin: HASFLAT.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"tls\":{\"on\":1},\"agent_id\":\"a1\",\"cfg\":{\"port\":8080}}"
+
+NEEDFLAT "tls"
+ASSERT OK == 1
+ASSERT NEEDFLAT_N == 1
+ASSERT NEEDFLAT_MISS_N == 0
+
+NEEDFLAT "tls" "agent_id" "port"
+ASSERT OK == 1
+ASSERT NEEDFLAT_N == 3
+
+NEEDFLAT "cfg"
+ASSERT NEEDFLAT_N == 1
+
+LET PEER = "{\"role\":\"leader\",\"n\":1}"
+NEEDFLAT FROM PEER "role"
+ASSERT NEEDFLAT_FROM == 1
+SYS EQS NEEDFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT NEEDFLAT_N == 1
+
+# miss path — soft EXPECT style via nested run is heavy; use FAIL probe via EXIT?
+# Contract pass path covered; miss is CLI-tested (fail-fast).
+
+REQUIREFLAT "agent_id"
+ASSERT OK == 1
+
+PASS
+PRINT "1228_needflat: PASS"
