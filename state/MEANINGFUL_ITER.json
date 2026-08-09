@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 668,
-  "version": "1.15.695-usability",
-  "item": "PATHSBYVAL + plate pathsbyval",
-  "item_id": 704,
-  "title": "PATHSBYVAL/ALLPATHSBYVAL + cubalc plate pathsbyval · all leaf paths by exact value → LAST bag · multi-plate",
-  "commit": "32245e04a4a98b4fa4aa3b4f78fd08cdef769732",
-  "summary": "Multi reverse nest lookup without EACH FLAT+IF+PUSH glue. proof 1245 + CLI PASS.",
+  "iter": 669,
+  "version": "1.15.696-usability",
+  "item": "COUNTBYVAL + HASVAL + plate duals",
+  "item_id": 705,
+  "title": "COUNTBYVAL/NBYVAL + HASVAL/HASVALFLAT + cubalc plate countbyval|hasval · exact leaf value count/presence → LAST_N · multi-plate",
+  "commit": "b8d330285c7a3b77aa117f0d37dd61f0f17278f1",
+  "summary": "Presence/count without PATHSBYVAL+LINES glue. proof 1246 + CLI PASS.",
   "proofs": [
-    "1245_pathsbyval PASS",
-    "1245_cli_plate_pathsbyval PASS",
-    "1244_uniqflat reg PASS"
+    "1246_countbyval PASS",
+    "1246_cli_plate_countbyval PASS",
+    "1245_pathsbyval reg PASS"
   ],
-  "when": "2026-08-09T20:13:04Z",
+  "when": "2026-08-09T20:29:11Z",
   "agent": "meaningful_iter_10m",
-  "sha": "32245e04a4a98b4fa4aa3b4f78fd08cdef769732",
-  "note": "after UNIQFLAT; thrash restored; EVOLVE_PAUSED"
+  "sha": "b8d330285c7a3b77aa117f0d37dd61f0f17278f1",
+  "note": "after PATHSBYVAL; EVOLVE_PAUSED"
 }
