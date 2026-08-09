@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 641,
-  "version": "1.15.668-usability",
-  "item": "SETFLAT + plate setflat",
-  "item_id": 677,
-  "title": "SETFLAT/MAPFLAT + cubalc plate setflat \u00b7 bulk leaf value set by path needle write-back",
-  "commit": "54ee4164805a2f61d1772c4ad8e25d9b1a49e41b",
-  "summary": "Bulk nest leaf value set without multi SETP. proof 1218 + CLI PASS.",
+  "iter": 642,
+  "version": "1.15.669-usability",
+  "item": "INCFLAT + plate incflat",
+  "item_id": 678,
+  "title": "INCFLAT/BUMPFLAT + cubalc plate incflat \u00b7 bulk pure-int leaf bump by path needle write-back",
+  "commit": "5d30de9e23276b5929aa1d8ea8b86a246e779c4a",
+  "summary": "Bulk nest counter bumps without multi INCP. proof 1219 + CLI PASS.",
   "proofs": [
-    "1218_setflat PASS",
-    "1218_cli_plate_setflat PASS",
-    "1217_renameflat reg PASS"
+    "1219_incflat PASS",
+    "1219_cli_plate_incflat PASS",
+    "1218_setflat reg PASS"
   ],
-  "when": "2026-08-09T14:36:28Z",
+  "when": "2026-08-09T14:47:33Z",
   "agent": "meaningful_iter_10m",
-  "sha": "54ee4164805a2f61d1772c4ad8e25d9b1a49e41b",
-  "note": "after RENAMEFLAT plane; EVOLVE_PAUSED"
+  "sha": "5d30de9e23276b5929aa1d8ea8b86a246e779c4a",
+  "note": "after SETFLAT plane; EVOLVE_PAUSED"
 }
