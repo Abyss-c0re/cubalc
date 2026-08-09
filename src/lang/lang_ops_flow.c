@@ -18579,6 +18579,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
    * EACH KEYNEST nest [FROM plate] | EACH KEY OF NEST nest — walk nested object keys.
    * Nest path may be dotted/slash: EACH KEYNEST "cfg.flags" · EACH KEY OF PLATE "meta".
    * Soft empty walk if path miss / non-object. No KEYSP/KEYSOBJ+EACH LINE glue.
+   * EACH FLAT|LEAF [AS name] [needle] [OF|FROM plate] ... END — walk matching leaf path:value.
+   * Empty needle → all leaves. Binds PATH + VALUE. No PATHSFLAT+EACH LINE+GETP glue.
    * Note: EACH FIELD/FIELDS stays a LINE synonym (bag walk), not schema props.
    * digit-4 control: cell-range iterator binds value to name, IT=index, VAL=value */
   if (kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")){
@@ -18610,8 +18612,14 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
                   kw(&L->cur,"PLATEKEYS")||kw(&L->cur,"JSONKEY")||kw(&L->cur,"JSONKEYS")||
                   kw(&L->cur,"K")||kw(&L->cur,"PAIR")||kw(&L->cur,"PAIRS")||
                   kw(&L->cur,"KV")||kw(&L->cur,"KVS"));
-    if (!is_cell && !is_cube && !is_line && !is_obj && !is_prop && !is_meth && !is_key){
-      fail(vm,"EACH CUBE|CELL|LINE|PROP|METHOD|OBJ|KEY|KEYNEST as name"); return -1;
+    int is_flat = (kw(&L->cur,"FLAT")||kw(&L->cur,"FLATS")||kw(&L->cur,"LEAF")||
+                   kw(&L->cur,"LEAVES")||kw(&L->cur,"LEAFPATH")||kw(&L->cur,"LEAFPATHS")||
+                   kw(&L->cur,"DOTPATH")||kw(&L->cur,"DOTPATHS")||kw(&L->cur,"FLATPATH")||
+                   kw(&L->cur,"FLATPATHS")||kw(&L->cur,"PATHLEAF")||kw(&L->cur,"PATHLEAVES")||
+                   kw(&L->cur,"LEAFKV")||kw(&L->cur,"FLATLEAF")||kw(&L->cur,"MATCHLEAF")||
+                   kw(&L->cur,"MATCHLEAVES"));
+    if (!is_cell && !is_cube && !is_line && !is_obj && !is_prop && !is_meth && !is_key && !is_flat){
+      fail(vm,"EACH CUBE|CELL|LINE|PROP|METHOD|OBJ|KEY|KEYNEST|FLAT as name"); return -1;
     }
     lex_next(L);
     if (is_key){
@@ -18884,6 +18892,225 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "KEYNEST_MODE", nest_mode ? 1 : 0);
         var_set_num(vm, "OK", 1);
         (void)have_src;
+        bump(vm);
+        return 1;
+      }
+    }
+    if (is_flat){
+      /* EACH FLAT|LEAF [AS name] [needle] [OF|FROM plate] ... END
+       * Walk recursive leaf path:value pairs whose path contains needle.
+       * Empty needle → all leaves. Soft empty walk.
+       * Binds PATH (default bind) + VALUE/VAL/V + LEAF + IT/IDX + FLAT_N.
+       * Usability: nest leaf walk without PATHSFLAT+EACH LINE+GETP glue:
+       *   EACH FLAT "role" ... END
+       *   EACH LEAF FROM PEER ... END
+       *   EACH FLAT OF PLATE "host" AS p ... END
+       *   EACH FLAT AS p "name" FROM PEER ... END
+       */
+      char bind[48], plate[CUBALC_HOST_STR_MAX], bag[CUBALC_HOST_STR_MAX];
+      char needle[192], from_name[96];
+      cubalc_host_result hr;
+      const char *p, *line;
+      long idx = 0, nleaf = 0;
+      int have_src = 0, have_needle = 0;
+      Var *pv;
+      snprintf(bind, sizeof bind, "PATH");
+      plate[0] = 0; bag[0] = 0; needle[0] = 0; from_name[0] = 0;
+
+      if (kw(&L->cur, "AS") || kw(&L->cur, "->")) {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT) { fail(vm, "EACH FLAT as name"); return -1; }
+        snprintf(bind, sizeof bind, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !kw(&L->cur, "OF") &&
+                 !kw(&L->cur, "ON") && !kw(&L->cur, "IN") &&
+                 !kw(&L->cur, "FROM") && !kw(&L->cur, "END") &&
+                 !kw(&L->cur, "USING") && !kw(&L->cur, "OVER") &&
+                 strcmp(L->cur.text, "->") != 0) {
+        /* bare bind name before OF/FROM/needle — not a plate var used as source */
+        snprintf(bind, sizeof bind, "%s", L->cur.text);
+        lex_next(L);
+      }
+
+      /* optional needle before source */
+      if (L->cur.kind == TK_STR) {
+        if (resolve_str_arg(vm, L, needle, sizeof needle) == 0)
+          have_needle = 1;
+      } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long kv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", kv);
+        have_needle = 1;
+      }
+
+      if (kw(&L->cur, "OF") || kw(&L->cur, "ON") || kw(&L->cur, "IN") ||
+          kw(&L->cur, "FROM") || kw(&L->cur, "FOR") || kw(&L->cur, "OVER") ||
+          kw(&L->cur, "USING")) {
+        lex_next(L);
+        have_src = 1;
+        if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(plate, sizeof plate, "%s", vm->last_str);
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          pv = var_get(vm, L->cur.text, 0);
+          if (pv && pv->is_str) {
+            snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+            snprintf(plate, sizeof plate, "%s", pv->sval);
+            lex_next(L);
+          } else if (pv) {
+            snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+            snprintf(plate, sizeof plate, "%ld", pv->val);
+            lex_next(L);
+          } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+            plate[0] = 0;
+          }
+        } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+          snprintf(plate, sizeof plate, "%s", vm->last_str);
+        }
+      } else {
+        /* bare: conventional PLATE, else LAST object */
+        pv = var_get(vm, "PLATE", 0);
+        if (pv && pv->is_str && pv->sval[0])
+          snprintf(plate, sizeof plate, "%s", pv->sval);
+        else
+          snprintf(plate, sizeof plate, "%s", vm->last_str);
+      }
+
+      /* optional needle after source */
+      if (!have_needle) {
+        if (L->cur.kind == TK_STR) {
+          if (resolve_str_arg(vm, L, needle, sizeof needle) == 0)
+            have_needle = 1;
+        } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long kv = parse_expr(vm, L);
+          snprintf(needle, sizeof needle, "%ld", kv);
+          have_needle = 1;
+        } else if (L->cur.kind == TK_IDENT &&
+                   !kw(&L->cur, "AS") && !kw(&L->cur, "END") &&
+                   !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+                   !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+                   !kw(&L->cur, "IF") && !kw(&L->cur, "PASS") &&
+                   !kw(&L->cur, "EACH") && !kw(&L->cur, "FOR") &&
+                   strcmp(L->cur.text, "->") != 0) {
+          /* only accept string-ish idents as needle, not statement starters */
+          if (resolve_str_arg(vm, L, needle, sizeof needle) == 0)
+            have_needle = 1;
+        }
+      }
+
+      if (kw(&L->cur, "AS") || kw(&L->cur, "->")) {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT) { fail(vm, "EACH FLAT as name"); return -1; }
+        snprintf(bind, sizeof bind, "%s", L->cur.text);
+        lex_next(L);
+      }
+
+      {
+        const char *bp = plate;
+        while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+        if (*bp != '{')
+          snprintf(plate, sizeof plate, "%s", "{}");
+      }
+
+      skip_nl(L);
+      {
+        Lex body_start = *L;
+        int depth = 1;
+        while (L->cur.kind != TK_EOF) {
+          if (block_scan_step(L, &depth, 0)) break;
+        }
+        if (depth != 0) { fail(vm, "EACH FLAT without END"); return -1; }
+
+        memset(&hr, 0, sizeof hr);
+        /* invert=0, icase=0 — path needle filter · empty needle → all leaves */
+        cubalc_host_json_leaf_grep(plate, needle, 0, 0, &hr);
+        if (hr.str[0])
+          snprintf(bag, sizeof bag, "%s", hr.str);
+        else
+          bag[0] = 0;
+
+        p = bag;
+        while (*p && !vm->fatal && !vm->halt) {
+          char path[512], val[CUBALC_HOST_STR_MAX / 2];
+          size_t kn = 0, vn = 0;
+          const char *sep, *vs, *ve;
+          while (*p == '\n' || *p == '\r') p++;
+          if (!*p) break;
+          line = p;
+          while (*p && *p != '\n' && *p != '\r') p++;
+          sep = NULL;
+          {
+            const char *s = line;
+            while (s < p) {
+              if (*s == ':' || *s == '=') {
+                sep = s;
+                break;
+              }
+              s++;
+            }
+          }
+          kn = sep ? (size_t)(sep - line) : (size_t)(p - line);
+          while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+          {
+            size_t sk = 0;
+            while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+            if (sk) {
+              line += sk;
+              kn -= sk;
+            }
+          }
+          if (kn == 0 || kn >= sizeof path) {
+            if (*p == '\n' || *p == '\r') p++;
+            continue;
+          }
+          memcpy(path, line, kn);
+          path[kn] = 0;
+          vs = sep ? sep + 1 : p;
+          ve = p;
+          while (vs < ve && (*vs == ' ' || *vs == '\t')) vs++;
+          while (ve > vs && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+          vn = (size_t)(ve - vs);
+          if (vn >= sizeof val) vn = sizeof val - 1;
+          memcpy(val, vs, vn);
+          val[vn] = 0;
+
+          var_set_str(vm, bind, path);
+          var_set_str(vm, "PATH", path);
+          var_set_str(vm, "LEAF", path);
+          var_set_str(vm, "LEAFPATH", path);
+          var_set_str(vm, "FLAT_PATH", path);
+          var_set_str(vm, "VALUE", val);
+          var_set_str(vm, "VAL", val);
+          var_set_str(vm, "V", val);
+          var_set_str(vm, "FLAT_VALUE", val);
+          var_set_num(vm, "IT", idx);
+          var_set_num(vm, "IDX", idx);
+          var_set_num(vm, "FLAT_N", idx + 1);
+          var_set_num(vm, "LEAF_N", idx + 1);
+          var_set_str(vm, "FLAT_NEEDLE", needle);
+          var_set_num(vm, "OK", 1);
+          vm->break_loop = 0;
+          vm->continue_loop = 0;
+          {
+            Lex body = body_start;
+            if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+          }
+          if (vm->break_loop) { vm->break_loop = 0; idx++; nleaf = idx; break; }
+          vm->continue_loop = 0;
+          idx++;
+          nleaf = idx;
+          if (*p == '\n' || *p == '\r') p++;
+        }
+        if (kw(&L->cur, "END")) lex_next(L);
+        var_set_num(vm, "LAST_N", nleaf);
+        var_set_num(vm, "EACH_N", nleaf);
+        var_set_num(vm, "NFLAT", nleaf);
+        var_set_num(vm, "NLEAVES", nleaf);
+        var_set_str(vm, "FLAT_NEEDLE", needle);
+        var_set_num(vm, "FLAT_FROM", have_src ? 1 : 0);
+        var_set_str(vm, "FLAT_SRC",
+                    from_name[0] ? from_name : (have_src ? "" : "PLATE"));
+        var_set_num(vm, "OK", 1);
+        (void)have_needle;
         bump(vm);
         return 1;
       }

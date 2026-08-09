@@ -1,0 +1,150 @@
+# EACH FLAT / EACH LEAF — walk matching nest leaves with PATH + VALUE
+# Usability: nest leaf walk without PATHSFLAT+EACH LINE+GETP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"leader\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\"}}"
+LET PEER = "{\"a\":{\"name\":\"first\"},\"b\":{\"name\":\"second\"},\"c\":{\"name\":\"third\"}}"
+LET empty = "{}"
+LET bag = ""
+LET n_walk = 0
+LET saw_worker = 0
+LET saw_leader = 0
+LET first_path = ""
+LET first_val = ""
+
+# bare EACH FLAT with needle — uses PLATE
+EACH FLAT "role"
+  LET n_walk = n_walk + 1
+  SYS PUSH bag PATH
+  LET bag = LAST
+  SYS EQS VALUE "worker"
+  IF LAST_N == 1 THEN
+    LET saw_worker = 1
+    SYS EQS PATH "meta.role"
+    ASSERT LAST_N == 1
+  END
+  SYS EQS VALUE "leader"
+  IF LAST_N == 1 THEN
+    LET saw_leader = 1
+    SYS EQS PATH "cfg.role"
+    ASSERT LAST_N == 1
+  END
+  IF IT == 0 THEN
+    LET first_path = PATH
+    LET first_val = VALUE
+  END
+END
+ASSERT OK == 1
+ASSERT EACH_N == 2
+ASSERT LAST_N == 2
+ASSERT n_walk == 2
+ASSERT saw_worker == 1
+ASSERT saw_leader == 1
+SYS EQS first_path "meta.role"
+ASSERT LAST_N == 1
+SYS EQS first_val "worker"
+ASSERT LAST_N == 1
+SYS HASLINE bag "meta.role"
+ASSERT LAST_N == 1
+SYS HASLINE bag "cfg.role"
+ASSERT LAST_N == 1
+
+# all leaves (empty needle)
+LET bag2 = ""
+LET n_all = 0
+EACH FLAT
+  LET n_all = n_all + 1
+  SYS PUSH bag2 PATH
+  LET bag2 = LAST
+END
+ASSERT EACH_N == 4
+ASSERT n_all == 4
+SYS HASLINE bag2 "meta.role"
+ASSERT LAST_N == 1
+SYS HASLINE bag2 "cfg.host"
+ASSERT LAST_N == 1
+SYS HASLINE bag2 "other.host"
+ASSERT LAST_N == 1
+
+# FROM PEER with bind name + needle after source
+LET bag3 = ""
+LET saw_second = 0
+EACH LEAF FROM PEER "name" AS p
+  SYS PUSH bag3 p
+  LET bag3 = LAST
+  SYS EQS VALUE "second"
+  IF LAST_N == 1 THEN
+    LET saw_second = 1
+    SYS EQS p "b.name"
+    ASSERT LAST_N == 1
+    SYS EQS LEAF "b.name"
+    ASSERT LAST_N == 1
+  END
+END
+ASSERT EACH_N == 3
+ASSERT saw_second == 1
+SYS HASLINE bag3 "a.name"
+ASSERT LAST_N == 1
+SYS HASLINE bag3 "c.name"
+ASSERT LAST_N == 1
+ASSERT FLAT_FROM == 1
+SYS EQS FLAT_SRC "PEER"
+ASSERT LAST_N == 1
+
+# needle before FROM
+LET bag4 = ""
+EACH FLAT "host" FROM PLATE
+  SYS PUSH bag4 VALUE
+  LET bag4 = LAST
+END
+ASSERT EACH_N == 2
+SYS HASLINE bag4 "h1"
+ASSERT LAST_N == 1
+SYS HASLINE bag4 "h2"
+ASSERT LAST_N == 1
+
+# empty soft
+LET guard = 3
+EACH FLAT "nope"
+  LET guard = 99
+END
+ASSERT EACH_N == 0
+ASSERT guard == 3
+
+EACH FLAT OF empty
+  LET guard = 77
+END
+ASSERT EACH_N == 0
+ASSERT guard == 3
+
+# LEAVES alias + VALUE side channels (before PLATE clobber)
+LET n_val = 0
+EACH LEAVES "role"
+  SYS EQS VAL "worker"
+  IF LAST_N == 1 THEN
+    LET n_val = n_val + 1
+  END
+  SYS EQS V "leader"
+  IF LAST_N == 1 THEN
+    LET n_val = n_val + 10
+  END
+END
+ASSERT n_val == 11
+ASSERT EACH_N == 2
+
+# plate unchanged after multi-plate walk
+LET PLATE = "{\"x\":9}"
+EACH FLAT FROM PEER "name"
+  SYS EQS VALUE "first"
+  IF LAST_N == 1 THEN
+    ASSERT IT == 0
+  END
+END
+ASSERT EACH_N == 3
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1240_each_flat: PASS"
