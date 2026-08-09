@@ -4831,6 +4831,87 @@ int cubalc_host_json_leaf_diff(const char *a, const char *b, int paths_only,
   return 0;
 }
 
+/* Case-insensitive substring needle in hay[0..hn). Empty needle → hit. */
+static int cubalc_str_has_icase_n(const char *hay, size_t hn, const char *needle) {
+  size_t nn, i, j;
+  if (!needle || !needle[0]) return 1;
+  if (!hay) return 0;
+  nn = strlen(needle);
+  if (nn > hn) return 0;
+  for (i = 0; i + nn <= hn; i++) {
+    for (j = 0; j < nn; j++) {
+      unsigned char a = (unsigned char)hay[i + j];
+      unsigned char b = (unsigned char)needle[j];
+      if (a >= 'A' && a <= 'Z') a = (unsigned char)(a - 'A' + 'a');
+      if (b >= 'A' && b <= 'Z') b = (unsigned char)(b - 'A' + 'a');
+      if (a != b) break;
+    }
+    if (j == nn) return 1;
+  }
+  return 0;
+}
+
+/* Filter leaf path:value bag by path needle. See header. */
+int cubalc_host_json_leaf_grep(const char *json, const char *needle, int invert,
+                               int icase, cubalc_host_result *r) {
+  cubalc_host_result kv;
+  const char *p;
+  size_t olen = 0;
+  long kept = 0;
+  r_clear(r);
+  r->str[0] = 0;
+  r->ok = 1;
+  r->n = 0;
+  if (!needle) needle = "";
+  memset(&kv, 0, sizeof kv);
+  cubalc_host_json_leaf_kv(json ? json : "{}", NULL, &kv);
+  p = kv.str;
+  while (*p) {
+    const char *line, *sep, *path0;
+    size_t ln, pn;
+    int hit;
+    char linebuf[CUBALC_HOST_STR_MAX];
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    ln = (size_t)(p - line);
+    if (ln == 0) continue;
+    /* path = trim of prefix before first : or = */
+    path0 = line;
+    while (path0 < p && (*path0 == ' ' || *path0 == '\t')) path0++;
+    sep = path0;
+    while (sep < p && *sep != ':' && *sep != '=') sep++;
+    pn = (size_t)(sep - path0);
+    while (pn > 0 && (path0[pn - 1] == ' ' || path0[pn - 1] == '\t')) pn--;
+    if (!needle[0])
+      hit = 1;
+    else if (icase)
+      hit = cubalc_str_has_icase_n(path0, pn, needle);
+    else {
+      size_t nn = strlen(needle), i;
+      hit = 0;
+      if (nn <= pn) {
+        for (i = 0; i + nn <= pn; i++) {
+          if (memcmp(path0 + i, needle, nn) == 0) {
+            hit = 1;
+            break;
+          }
+        }
+      }
+    }
+    if (invert) hit = !hit;
+    if (!hit) continue;
+    if (ln >= sizeof linebuf) ln = sizeof linebuf - 1;
+    memcpy(linebuf, line, ln);
+    linebuf[ln] = 0;
+    cubalc_bag_push(r->str, sizeof r->str, &olen, &kept, linebuf);
+  }
+  r->n = kept;
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,

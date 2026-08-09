@@ -229,6 +229,9 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate unflat state/peer.json UNDER cfg role:edge         # relative under nest
 ./out/cubalc plate diffflat state/a.json state/b.json                 # deep leaf path: old → new
 ./out/cubalc plate pathdiff  state/a.json state/b.json                 # changed leaf paths only
+./out/cubalc plate grepf    state/my_agent.json cfg                   # path:value leaves matching path needle
+./out/cubalc plate grepvf   state/my_agent.json tmp                   # drop matching paths
+./out/cubalc plate grepfi   state/my_agent.json CFG.META              # case-insensitive path filter
 ./out/cubalc libs | grep plate
 
 # nest* still available; prefer dotted get/set when one scalar field:

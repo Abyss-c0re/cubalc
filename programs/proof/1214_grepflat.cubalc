@@ -1,0 +1,86 @@
+# GREPFLAT / GREPVFLAT / GREPFLATI — filter path:value leaves by path needle
+# Usability: nest triage without FLATKV+SYS GREP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"role\":\"worker\",\"x\":1},\"port\":8080,\"tmp\":1},\"n\":3,\"ok\":true}"
+LET PEER = "{\"net\":{\"peer\":{\"host\":\"peerB\",\"tls\":1},\"zone\":\"Z\"}}"
+
+# keep cfg.* leaves
+GREPFLAT "cfg"
+ASSERT OK == 1
+ASSERT GREPFLAT_N == 4
+SYS HASLINE GREPFLAT "cfg.meta.role:worker"
+ASSERT LAST_N == 1
+SYS HASLINE GREPFLAT "cfg.meta.x:1"
+ASSERT LAST_N == 1
+SYS HASLINE GREPFLAT "cfg.port:8080"
+ASSERT LAST_N == 1
+SYS HASLINE GREPFLAT "cfg.tmp:1"
+ASSERT LAST_N == 1
+# host/n/ok not in bag
+SYS HASLINE GREPFLAT "host:cubeA"
+ASSERT LAST_N == 0
+SYS HASLINE GREPFLAT "n:3"
+ASSERT LAST_N == 0
+SYS EQS GREPFLAT_NEEDLE "cfg"
+ASSERT LAST_N == 1
+
+# deeper needle
+GREPFLAT "meta"
+ASSERT GREPFLAT_N == 2
+SYS HASLINE GREPFLAT "cfg.meta.role:worker"
+ASSERT LAST_N == 1
+SYS HASLINE GREPFLAT "cfg.port:8080"
+ASSERT LAST_N == 0
+
+# invert — drop cfg
+GREPVFLAT "cfg"
+ASSERT GREPFLAT_INVERT == 1
+ASSERT GREPFLAT_N == 3
+SYS HASLINE GREPFLAT "host:cubeA"
+ASSERT LAST_N == 1
+SYS HASLINE GREPFLAT "n:3"
+ASSERT LAST_N == 1
+SYS HASLINE GREPFLAT "ok:true"
+ASSERT LAST_N == 1
+SYS HASLINE GREPFLAT "cfg.port:8080"
+ASSERT LAST_N == 0
+
+# case-insensitive
+GREPFLATI "CFG.META"
+ASSERT GREPFLAT_ICASE == 1
+ASSERT GREPFLAT_N == 2
+SYS HASLINE GREPFLAT "cfg.meta.role:worker"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+GREPFLAT FROM PEER "peer"
+ASSERT GREPFLAT_FROM == 1
+SYS EQS GREPFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT GREPFLAT_N == 2
+SYS HASLINE GREPFLAT "net.peer.host:peerB"
+ASSERT LAST_N == 1
+SYS HASLINE GREPFLAT "net.peer.tls:1"
+ASSERT LAST_N == 1
+SYS HASLINE GREPFLAT "net.zone:Z"
+ASSERT LAST_N == 0
+
+# empty needle → all leaves
+GREPFLAT ""
+ASSERT GREPFLAT_N == 7
+
+# alias KEEPFLAT
+KEEPFLAT "port"
+ASSERT KEEPFLAT_N == 1
+SYS HASLINE KEEPFLAT "cfg.port:8080"
+ASSERT LAST_N == 1
+
+# plate intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1214_grepflat: PASS"

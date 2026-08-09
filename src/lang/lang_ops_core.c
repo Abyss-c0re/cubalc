@@ -27432,6 +27432,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"FLATKV") || kw(&L->cur,"LEAFKV") || kw(&L->cur,"FLATTENP") ||
              kw(&L->cur,"UNFLATKV") || kw(&L->cur,"FROMFLAT") || kw(&L->cur,"UNFLATTENP") ||
              kw(&L->cur,"DIFFFLAT") || kw(&L->cur,"PATHDIFF") || kw(&L->cur,"CHANGELOGFLAT") ||
+             kw(&L->cur,"GREPFLAT") || kw(&L->cur,"GREPVFLAT") || kw(&L->cur,"GREPFLATI") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35812,6 +35813,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DIFFFLAT", "DIFFFLAT|CHANGELOGFLAT|LEAFDIFF a b — deep leaf path: old → new bag · multi-plate · nest-aware CHANGELOGP"},
       {"CHANGELOGFLAT", "CHANGELOGFLAT alias of DIFFFLAT"},
       {"PATHDIFF", "PATHDIFF|DIFFPATH a b — changed leaf path bag only · multi-plate · nest-aware DIFFP"},
+      {"GREPFLAT", "GREPFLAT|KEEPFLAT [FROM plate] needle — path:value bag filtered by path needle · multi-plate"},
+      {"GREPVFLAT", "GREPVFLAT|DROPFLAT [FROM plate] needle — invert GREPFLAT"},
+      {"GREPFLATI", "GREPFLATI|IGREPFLAT [FROM plate] needle — case-insensitive GREPFLAT"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -43749,6 +43753,151 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# %s n=%ld a=%s b=%s\n",
               paths_only ? "pathdiff" : "diffflat",
               hr.n, aname[0] ? aname : "?", bname[0] ? bname : "?");
+    bump(vm); return 1;
+  }
+
+  /* GREPFLAT|KEEPFLAT|FILTERFLAT [FROM plate] needle
+   * GREPVFLAT|DROPFLAT [FROM plate] needle — invert path filter.
+   * GREPFLATI|IGREPFLAT — case-insensitive path needle.
+   * Flattens plate to path:val then keeps lines whose *path* contains needle.
+   * Soft always OK. LAST_N = kept.
+   * Usability: nest triage without FLATKV+SYS GREP glue:
+   *   GREPFLAT "cfg"
+   *   GREPFLAT FROM PEER "meta"
+   *   GREPVFLAT "tmp"
+   *   GREPFLATI "CFG.META"
+   */
+  if (kw(&L->cur,"GREPFLAT") || kw(&L->cur,"KEEPFLAT") || kw(&L->cur,"FILTERFLAT") ||
+      kw(&L->cur,"MGREPFLAT") || kw(&L->cur,"PLATE_GREPFLAT") || kw(&L->cur,"LEAFGREP") ||
+      kw(&L->cur,"GREPVFLAT") || kw(&L->cur,"DROPFLAT") || kw(&L->cur,"VGREPFLAT") ||
+      kw(&L->cur,"GREPFLATI") || kw(&L->cur,"IGREPFLAT") || kw(&L->cur,"GREPIFLAT") ||
+      kw(&L->cur,"GREPVFLATI") || kw(&L->cur,"DROPFLATI")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[256];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, invert = 0, icase = 0;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "GREPVFLAT") == 0 || strcmp(op0, "DROPFLAT") == 0 ||
+        strcmp(op0, "VGREPFLAT") == 0 || strcmp(op0, "GREPVFLATI") == 0 ||
+        strcmp(op0, "DROPFLATI") == 0)
+      invert = 1;
+    if (strcmp(op0, "GREPFLATI") == 0 || strcmp(op0, "IGREPFLAT") == 0 ||
+        strcmp(op0, "GREPIFLAT") == 0 || strcmp(op0, "GREPVFLATI") == 0 ||
+        strcmp(op0, "DROPFLATI") == 0)
+      icase = 1;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* needle */
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+        L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"FROM") || kw(&L->cur,"END") || kw(&L->cur,"ASSERT") ||
+           kw(&L->cur,"LET") || kw(&L->cur,"PRINT") || kw(&L->cur,"SYS") ||
+           kw(&L->cur,"PASS") || kw(&L->cur,"FLATKV") || kw(&L->cur,"GREPFLAT") ||
+           kw(&L->cur,"SETP") || kw(&L->cur,"GETP"))) {
+        /* no needle → empty = all */
+        needle[0] = 0;
+      } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long kv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", kv);
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+    }
+
+    /* trailing FROM */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    cubalc_host_json_leaf_grep(plate, needle, invert, icase, &hr);
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "GREPFLAT", hr.str);
+    var_set_str(vm, "KEEPFLAT", hr.str);
+    var_set_num(vm, "GREPFLAT_N", hr.n);
+    var_set_num(vm, "KEEPFLAT_N", hr.n);
+    var_set_str(vm, "GREPFLAT_NEEDLE", needle);
+    var_set_num(vm, "GREPFLAT_INVERT", invert);
+    var_set_num(vm, "GREPFLAT_ICASE", icase);
+    var_set_num(vm, "GREPFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "GREPFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# grepflat n=%ld inv=%d icase=%d needle=%s from=%d\n",
+              hr.n, invert, icase, needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 

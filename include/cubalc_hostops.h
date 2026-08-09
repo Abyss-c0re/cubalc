@@ -267,6 +267,12 @@ int cubalc_host_json_unflat_kv(const char *base, const char *bag, const char *un
  * Usability: nest-aware mesh/agent plate sync without shallow DIFFP. */
 int cubalc_host_json_leaf_diff(const char *a, const char *b, int paths_only,
                                cubalc_host_result *r);
+/* Filter recursive path:value bag by path needle (GREPFLAT).
+ * invert=1 drop matches · icase=1 case-insensitive path match.
+ * Empty needle → all leaves (or none if invert). r->n = kept lines.
+ * Soft always OK. Usability: nest triage without FLATKV+SYS GREP glue. */
+int cubalc_host_json_leaf_grep(const char *json, const char *needle, int invert,
+                               int icase, cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */
