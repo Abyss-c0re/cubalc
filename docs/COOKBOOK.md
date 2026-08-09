@@ -218,6 +218,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate nestinc  state/my_agent.json stats hits
 ./out/cubalc plate nestkeys state/my_agent.json meta
 ./out/cubalc plate nesthas  state/my_agent.json meta role
+./out/cubalc plate nestpick state/my_agent.json meta role zone
+./out/cubalc plate nestomit state/my_agent.json meta tmp
 ```
 
 `ensure` does not clobber an existing object plate (dual of `ENSUREPLATE`).  
