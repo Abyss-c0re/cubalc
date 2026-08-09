@@ -1,0 +1,94 @@
+# UNFLATKV / FROMFLAT — path:value bag → nested plate (FLATKV round-trip)
+# Usability: edit flat inventory then re-nest without multi SETP.
+
+HOLD_FLASH 1
+
+# build from empty
+LET PLATE = "{}"
+UNFLATKV "host:cubeA\ncfg.meta.role:worker\ncfg.meta.x:1\ncfg.port:8080\nempty:\nn:3\nok:true"
+ASSERT OK == 1
+ASSERT UNFLATKV_N == 7
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+GETP "cfg.meta.role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+GETP "cfg.meta.x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "cfg.port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+# boolean true peels as 1 via GETP (host bool decode)
+GETP "ok"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+# empty val → {} object terminal
+TYPEP "empty"
+SYS EQS LAST "obj"
+ASSERT LAST_N == 1
+
+# round-trip FLATKV → UNFLATKV
+FLATKV
+ASSERT FLATKV_N == 7
+LET bag = LAST
+LET PLATE = "{}"
+UNFLATKV bag
+ASSERT OK == 1
+ASSERT UNFLATKV_N == 7
+GETP "cfg.meta.role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# UNDER relative bag
+LET PEER = "{}"
+UNFLATKV "role:edge\nport:9090" UNDER "cfg" INTO PEER
+ASSERT UNFLATKV_INTO == 1
+SYS EQS UNFLATKV_DST "PEER"
+ASSERT LAST_N == 1
+ASSERT UNFLATKV_N == 2
+# PEER should have cfg.role / cfg.port
+LET PLATE = PEER
+GETP "cfg.role"
+SYS EQS LAST "edge"
+ASSERT LAST_N == 1
+GETP "cfg.port"
+SYS EQS LAST "9090"
+ASSERT LAST_N == 1
+
+# merge into existing plate (overlay paths)
+LET PLATE = "{\"host\":\"old\",\"n\":1}"
+UNFLATKV "host:new\ncfg.meta.zone:A"
+ASSERT OK == 1
+GETP "host"
+SYS EQS LAST "new"
+ASSERT LAST_N == 1
+GETP "n"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "cfg.meta.zone"
+SYS EQS LAST "A"
+ASSERT LAST_N == 1
+
+# empty bag soft
+UNFLATKV ""
+ASSERT OK == 1
+ASSERT UNFLATKV_N == 0
+
+# alias FROMFLAT
+LET PLATE = "{}"
+FROMFLAT "a.b:2"
+ASSERT FROMFLAT_N == 1
+GETP "a.b"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1212_unflatkv: PASS"

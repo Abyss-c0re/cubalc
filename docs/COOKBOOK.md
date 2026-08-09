@@ -224,6 +224,9 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate leaves state/my_agent.json cfg              # relative under nest
 ./out/cubalc plate flat   state/my_agent.json                   # path:value bag (FLATKV dual)
 ./out/cubalc plate flat   state/my_agent.json cfg              # relative under nest
+./out/cubalc plate unflat state/my_agent.json host:cubeA cfg.port:9  # path:val → nest (UNFLATKV)
+./out/cubalc plate unflat state/my_agent.json @flat.txt               # bag file
+./out/cubalc plate unflat state/peer.json UNDER cfg role:edge         # relative under nest
 ./out/cubalc libs | grep plate
 
 # nest* still available; prefer dotted get/set when one scalar field:

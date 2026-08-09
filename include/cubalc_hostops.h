@@ -251,6 +251,14 @@ int cubalc_host_json_leaf_paths(const char *json, const char *path,
  * Usability: agent flat report without PATHKEYS+GETP glue or TOKVP shallow-only. */
 int cubalc_host_json_leaf_kv(const char *json, const char *path,
                              cubalc_host_result *r);
+/* Apply recursive path:value bag onto base plate (round-trip of leaf_kv).
+ * bag lines `path:val` or `path=val`. under: optional nest prefix (cfg → cfg.path).
+ * Empty value → raw {} (restores empty-object terminals from leaf_kv).
+ * true/false/null/int/float raw; else string. Creates intermediate {}.
+ * r->str = result plate · r->n = pairs applied. Soft empty bag = copy base.
+ * Usability: agent edit flat inventory then re-nest without multi SETP. */
+int cubalc_host_json_unflat_kv(const char *base, const char *bag, const char *under,
+                               cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

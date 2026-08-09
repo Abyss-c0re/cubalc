@@ -27430,6 +27430,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PLUCKOBJ") || kw(&L->cur,"NESTPLUCK") ||
              kw(&L->cur,"PATHKEYS") || kw(&L->cur,"LEAFKEYS") || kw(&L->cur,"DOTPATHS") ||
              kw(&L->cur,"FLATKV") || kw(&L->cur,"LEAFKV") || kw(&L->cur,"FLATTENP") ||
+             kw(&L->cur,"UNFLATKV") || kw(&L->cur,"FROMFLAT") || kw(&L->cur,"UNFLATTENP") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35804,6 +35805,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FLATKV", "FLATKV|LEAFKV|FLATTENP [FROM plate] [path] — recursive path:value bag · multi-plate · no PATHKEYS+GETP / shallow TOKVP"},
       {"LEAFKV", "LEAFKV alias of FLATKV"},
       {"FLATTENP", "FLATTENP alias of FLATKV · plate flatten to path:val bag"},
+      {"UNFLATKV", "UNFLATKV|FROMFLAT|UNFLATTENP [bag] [UNDER path] [INTO name] — path:value bag → nested plate · round-trip FLATKV"},
+      {"FROMFLAT", "FROMFLAT alias of UNFLATKV"},
+      {"UNFLATTENP", "UNFLATTENP alias of UNFLATKV"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -43514,6 +43518,134 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# flatkv n=%ld from=%d path=%s\n",
               hr.n, have_from, nest_path[0] ? nest_path : ".");
+    bump(vm); return 1;
+  }
+
+  /* UNFLATKV|FROMFLAT|UNFLATTENP|PATHFROMKV [bag|LAST] [UNDER path] [INTO name]
+   * Apply path:value bag → nested plate (round-trip of FLATKV).
+   * Empty val → {}. Optional UNDER nest prefix for relative bags.
+   * INTO writes named plate; default write-back PLATE.
+   * Usability: agent edit flat inventory then re-nest without multi SETP:
+   *   FLATKV → bag · …edit… · UNFLATKV bag
+   *   UNFLATKV "cfg.port:9\nhost:x"
+   *   UNFLATKV LAST UNDER "cfg" INTO PEER
+   */
+  if (kw(&L->cur,"UNFLATKV") || kw(&L->cur,"FROMFLAT") || kw(&L->cur,"UNFLATTENP") ||
+      kw(&L->cur,"PATHFROMKV") || kw(&L->cur,"UNFLAT") || kw(&L->cur,"NESTFROMFLAT") ||
+      kw(&L->cur,"APPLYFLAT") || kw(&L->cur,"MUNFLATKV") || kw(&L->cur,"PLATE_UNFLAT")) {
+    char plate[CUBALC_HOST_STR_MAX], bag[CUBALC_HOST_STR_MAX];
+    char under[192], into_name[96];
+    cubalc_host_result hr;
+    int have_bag = 0, have_under = 0, have_into = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; bag[0] = 0; under[0] = 0; into_name[0] = 0;
+
+    /* bag: LAST bare, string, or var */
+    if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(bag, sizeof bag, "%s", vm->last_str);
+      have_bag = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_STR ||
+               (L->cur.kind == TK_IDENT &&
+                !kw(&L->cur,"UNDER") && !kw(&L->cur,"AT") && !kw(&L->cur,"IN") &&
+                !kw(&L->cur,"INTO") && !kw(&L->cur,"TO") && !kw(&L->cur,"FROM") &&
+                !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+                !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") && !kw(&L->cur,"PASS") &&
+                !kw(&L->cur,"SETP") && !kw(&L->cur,"GETP") && !kw(&L->cur,"FLATKV") &&
+                !kw(&L->cur,"UNFLATKV") && !kw(&L->cur,"PATHKEYS"))) {
+      if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(bag, sizeof bag, "%s", pv->sval);
+          have_bag = 1;
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, bag, sizeof bag) == 0) {
+          have_bag = 1;
+        }
+      } else if (resolve_str_arg(vm, L, bag, sizeof bag) == 0) {
+        have_bag = 1;
+      }
+    }
+    if (!have_bag) {
+      snprintf(bag, sizeof bag, "%s", vm->last_str);
+      have_bag = 1;
+    }
+
+    /* optional UNDER|AT|IN path, or bare string path if looks like nest not bag */
+    if (kw(&L->cur,"UNDER") || kw(&L->cur,"AT") || kw(&L->cur,"IN") ||
+        kw(&L->cur,"PREFIX") || kw(&L->cur,"ROOT")) {
+      lex_next(L);
+      have_under = 1;
+      if (resolve_str_arg(vm, L, under, sizeof under) != 0)
+        under[0] = 0;
+    } else if (L->cur.kind == TK_STR) {
+      /* bare string after bag = under path */
+      if (resolve_str_arg(vm, L, under, sizeof under) == 0 && under[0])
+        have_under = 1;
+    }
+
+    if (kw(&L->cur,"INTO") || kw(&L->cur,"TO") || kw(&L->cur,"AS")) {
+      lex_next(L);
+      if (L->cur.kind == TK_IDENT) {
+        snprintf(into_name, sizeof into_name, "%s", L->cur.text);
+        have_into = 1;
+        lex_next(L);
+      }
+    }
+
+    /* base plate: INTO name if exists, else PLATE */
+    if (have_into) {
+      pv = var_get(vm, into_name, 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_unflat_kv(plate, bag, have_under ? under : NULL, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "UNFLATKV_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "UNFLATKV: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "UNFLATKV: fail");
+      bump(vm); return 1;
+    }
+
+    if (have_into && into_name[0] && strcmp(into_name, "LAST") != 0)
+      var_set_str(vm, into_name, hr.str);
+    else
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "UNFLATKV", hr.str);
+    var_set_str(vm, "FROMFLAT", hr.str);
+    var_set_str(vm, "UNFLATTENP", hr.str);
+    var_set_num(vm, "UNFLATKV_N", hr.n);
+    var_set_num(vm, "FROMFLAT_N", hr.n);
+    var_set_str(vm, "UNFLATKV_UNDER", under);
+    var_set_num(vm, "UNFLATKV_INTO", have_into ? 1 : 0);
+    var_set_str(vm, "UNFLATKV_DST",
+                have_into && into_name[0] ? into_name : "PLATE");
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# unflatkv n=%ld under=%s into=%s\n",
+              hr.n, under[0] ? under : ".",
+              have_into ? into_name : "PLATE");
     bump(vm); return 1;
   }
 

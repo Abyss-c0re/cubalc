@@ -2176,6 +2176,8 @@ int main(int argc, char **argv) {
       {"cli_plate_leaves", "programs/proof/1210_cli_plate_leaves.sh", "cubalc plate leaves/pathkeys PATHKEYS dual"},
       {"flatkv", "programs/proof/1211_flatkv.cubalc", "FLATKV/LEAFKV recursive path:value bag multi-plate"},
       {"cli_plate_flat", "programs/proof/1211_cli_plate_flat.sh", "cubalc plate flat/flatkv FLATKV dual"},
+      {"unflatkv", "programs/proof/1212_unflatkv.cubalc", "UNFLATKV/FROMFLAT path:value bag to nested plate"},
+      {"cli_plate_unflat", "programs/proof/1212_cli_plate_unflat.sh", "cubalc plate unflat UNFLATKV dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2456,6 +2458,9 @@ int main(int argc, char **argv) {
       {"FLATKV", "flow", "FLATKV|LEAFKV|FLATTENP [FROM plate] [path] — recursive path:value bag · multi-plate"},
       {"LEAFKV", "flow", "LEAFKV alias of FLATKV"},
       {"FLATTENP", "flow", "FLATTENP alias of FLATKV"},
+      {"UNFLATKV", "flow", "UNFLATKV|FROMFLAT|UNFLATTENP [bag] [UNDER path] [INTO name] — path:value bag → nested plate"},
+      {"FROMFLAT", "flow", "FROMFLAT alias of UNFLATKV"},
+      {"UNFLATTENP", "flow", "UNFLATTENP alias of UNFLATKV"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4927,6 +4932,7 @@ int main(int argc, char **argv) {
               "       cubalc plate keys <path> [nest.path]  # KEYSP dual · nest path ok\n"
               "       cubalc plate leaves|pathkeys <path> [nest.path]  # PATHKEYS dual · dotted leaf paths\n"
               "       cubalc plate flat|flatkv <path> [nest.path]  # FLATKV dual · path:value bag\n"
+              "       cubalc plate unflat|unflatkv <path> [UNDER nest] <bag|@file|k:v…>  # UNFLATKV dual\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -4958,7 +4964,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5010,6 +5016,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "flat") == 0 || strcmp(argv[2], "flatkv") == 0 ||
         strcmp(argv[2], "leafkv") == 0 || strcmp(argv[2], "flatten") == 0 ||
         strcmp(argv[2], "flattenp") == 0 || strcmp(argv[2], "tokvpath") == 0 ||
+        strcmp(argv[2], "unflat") == 0 || strcmp(argv[2], "unflatkv") == 0 ||
+        strcmp(argv[2], "fromflat") == 0 || strcmp(argv[2], "unflatten") == 0 ||
+        strcmp(argv[2], "unflattenp") == 0 || strcmp(argv[2], "pathfromkv") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5147,6 +5156,10 @@ int main(int argc, char **argv) {
                strcmp(op, "tokvpath") == 0 || strcmp(op, "pathtokv") == 0 ||
                strcmp(op, "plateflat") == 0)
         op = "flat";
+      else if (strcmp(op, "unflatkv") == 0 || strcmp(op, "fromflat") == 0 ||
+               strcmp(op, "unflatten") == 0 || strcmp(op, "unflattenp") == 0 ||
+               strcmp(op, "pathfromkv") == 0 || strcmp(op, "applyflat") == 0)
+        op = "unflat";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -5403,6 +5416,111 @@ int main(int argc, char **argv) {
              "\"note\":\"FLATKV dual · path:value bag · lines above plate\"}\n",
              path, nestp ? nestp : "", file_hit ? "true" : "false",
              pr.n, flat, CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+    /* unflat|unflatkv [UNDER nest] bag|@file|k:v… — UNFLATKV dual: path:value → nest plate.
+     *   cubalc plate unflat agent.json host:cubeA cfg.port:9
+     *   cubalc plate unflat agent.json @flat.txt
+     *   cubalc plate unflat agent.json UNDER cfg meta.role:worker port:8080
+     * Creates plate file if missing. Empty val → {}. Writes plate back to path. */
+    if (strcmp(op, "unflat") == 0) {
+      const char *under = NULL;
+      char bag[CUBALC_HOST_STR_MAX];
+      char flat[CUBALC_HOST_STR_MAX];
+      cubalc_host_result pr, wr, tr;
+      size_t o = 0, i;
+      long nlines = 0;
+
+      bag[0] = 0;
+      /* optional UNDER nest */
+      if (ai < argc && argv[ai] &&
+          (strcmp(argv[ai], "UNDER") == 0 || strcmp(argv[ai], "under") == 0 ||
+           strcmp(argv[ai], "AT") == 0 || strcmp(argv[ai], "at") == 0 ||
+           strcmp(argv[ai], "IN") == 0 || strcmp(argv[ai], "in") == 0)) {
+        ai++;
+        if (ai < argc && argv[ai] && argv[ai][0])
+          under = argv[ai++];
+      }
+
+      if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"unflat\",\"path\":\"%s\","
+               "\"err\":\"need bag lines, @file, or path:val args\",\"version\":\"%s\"}\n",
+               path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+
+      /* single @file or readable file → bag body; else join remaining as lines */
+      if (argv[ai][0] == '@' ||
+          (ai + 1 == argc && argv[ai][0] != '{' &&
+           strchr(argv[ai], ':') == NULL && strchr(argv[ai], '=') == NULL &&
+           access(argv[ai], R_OK) == 0)) {
+        const char *fp = (argv[ai][0] == '@') ? argv[ai] + 1 : argv[ai];
+        memset(&tr, 0, sizeof tr);
+        if (cubalc_host_read(fp, &tr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"unflat\",\"err\":\"bag file read fail\",\"version\":\"%s\"}\n",
+                 CUBALC_LANG_VERSION);
+          return 1;
+        }
+        snprintf(bag, sizeof bag, "%s", tr.str);
+        ai++;
+      } else {
+        while (ai < argc && argv[ai] && argv[ai][0]) {
+          size_t kl = strlen(argv[ai]);
+          if (o + kl + 2 >= sizeof bag) break;
+          if (o > 0) bag[o++] = '\n';
+          memcpy(bag + o, argv[ai], kl);
+          o += kl;
+          bag[o] = 0;
+          ai++;
+        }
+      }
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_unflat_kv(plate, bag, under, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"unflat\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               path, pr.err[0] ? pr.err : "unflat fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      nlines = pr.n;
+      snprintf(plate, sizeof plate, "%s", pr.str);
+
+      /* write-back file when path looks like file */
+      if (file_hit || (path && path[0] && strchr(path, '.'))) {
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_write(path, plate, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"unflat\",\"path\":\"%s\",\"err\":\"write fail\","
+                 "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        file_hit = 1;
+      }
+
+      flat[0] = 0;
+      o = 0;
+      for (i = 0; bag[i] && o + 2 < sizeof flat; i++) {
+        char ch = bag[i];
+        if (ch == '\n' || ch == '\r') {
+          if (o > 0 && flat[o - 1] != ',')
+            flat[o++] = ',';
+        } else if (ch == '"' || ch == '\\') {
+          flat[o++] = '_';
+        } else {
+          flat[o++] = ch;
+        }
+      }
+      flat[o] = 0;
+
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"unflat\",\"path\":\"%s\",\"nest\":\"%s\",\"file\":%s,"
+             "\"n\":%ld,\"bag\":\"%s\",\"version\":\"%s\",\"plate\":%s,"
+             "\"note\":\"UNFLATKV dual · path:value → nested plate\"}\n",
+             path, under ? under : "", file_hit ? "true" : "false",
+             nlines, flat, CUBALC_LANG_VERSION, plate);
       return 0;
     }
 
