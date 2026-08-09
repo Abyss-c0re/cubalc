@@ -36604,7 +36604,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXPLAIN", "EXPLAIN alias of WHY"},
       {"WHYERR", "WHYERR alias of WHY"},
       {"IDENTITY", "IDENTITY — cubalc.identity.v1 plate (user@host:pid + vars)"},
-      {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
+      {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname — SOFT sets INCLUDE_MISS/SUGGEST · CUBALC_INCLUDE_PATH dirs"},
       {"LET", "LET name [=] expr|string — = optional before value"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},

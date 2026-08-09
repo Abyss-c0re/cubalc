@@ -745,6 +745,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 715. ~~**`cubalc init --list` + plate scaffold uniform/pretty**~~ **done** (scaffold catalog JSON for agents · `--plate` seeds plate_uniform + PRETTYP + role NEEDP · run-ready nest check without cookbook prose).
 716. ~~**`WHY` / `EXPLAIN` + run `why_hint`**~~ **done** (cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED · actionable WHY_HINT · run plate dual for agents without re-parsing free text).
 717. ~~**`cubalc protect status` agent plate polish**~~ **done** (`why_hint` · `next` · docs_core_protect/hold_flash · modular_lang · smx_key · hold_flash_means · no board run).
+718. ~~**`CUBALC_INCLUDE_PATH` + INCLUDE SOFT MISS/SUGGEST**~~ **done** (colon extra dirs for project libs · soft miss sets INCLUDE_MISS/INCLUDE_SUGGEST/LAST=suggest · env catalog · no copy into programs/lib).
 
 ## Tick protocol
 

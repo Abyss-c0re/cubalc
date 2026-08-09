@@ -1,0 +1,43 @@
+# CUBALC_INCLUDE_PATH + INCLUDE SOFT MISS/SUGGEST side vars
+# Usability: project lib dirs without copy to programs/lib; soft miss recovery.
+
+HOLD_FLASH 1
+
+# Soft typo → INCLUDE_MISS + INCLUDE_SUGGEST + LAST=suggestion
+INCLUDE SOFT hold_sead
+ASSERT OK == 0
+ASSERT INCLUDE_OK == 0
+SYS EQS INCLUDE_MISS "hold_sead"
+ASSERT LAST_N == 1
+SYS EQS INCLUDE_SUGGEST "hold_seed"
+ASSERT LAST_N == 1
+SYS EQS LAST "hold_seed"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "did you mean"
+ASSERT LAST_N == 1
+
+# Soft miss with no suggestion
+INCLUDE OR zzz_no_lib_xxxxx
+ASSERT OK == 0
+SYS EQS INCLUDE_MISS "zzz_no_lib_xxxxx"
+ASSERT LAST_N == 1
+SYS EQS INCLUDE_SUGGEST ""
+ASSERT LAST_N == 1
+
+# Hit clears MISS/SUGGEST
+INCLUDE hold_seed
+ASSERT OK == 1
+ASSERT INCLUDE_OK == 1
+SYS EQS INCLUDE_MISS ""
+ASSERT LAST_N == 1
+SYS EQS INCLUDE_SUGGEST ""
+ASSERT LAST_N == 1
+SYS HAS INCLUDE_PATH "hold_seed"
+ASSERT LAST_N == 1
+
+# CUBALC_INCLUDE_PATH — load private lib from extra dir (set by proof shell)
+# When env unset, soft miss private_agent_lib
+# Proof shell exports path before run; see 1259_cli companion if env set.
+
+PASS
+PRINT "1259_include_path_soft: PASS"

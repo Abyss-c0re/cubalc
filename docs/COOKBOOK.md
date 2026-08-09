@@ -140,11 +140,15 @@ export CUBALC_PROTECT=1
 
 ## 6. INCLUDE a lib snippet
 
-From a program under `programs/…` (INCLUDE resolves relative to file dir, `programs/`, and **short names → `programs/lib/`**):
+From a program under `programs/…` (INCLUDE resolves relative to file dir, `programs/`,
+**short names → `programs/lib/`**, then **`CUBALC_INCLUDE_PATH=dir:dir`**):
 
 ```cubalc
 INCLUDE hold_seed                    # short form → programs/lib/hold_seed.cubalc
 # or: INCLUDE "lib/hold_seed.cubalc"
+# project libs: export CUBALC_INCLUDE_PATH=$PWD/mylibs
+INCLUDE agent_extra                  # → $CUBALC_INCLUDE_PATH/agent_extra.cubalc
+INCLUDE SOFT maybe_plugin            # miss → INCLUDE_OK=0 · INCLUDE_MISS · INCLUDE_SUGGEST · LAST=suggest
 CUBE peer0 ROLE host PROTON 1
 CUBE peer1 ROLE body PROTON 1
 PLUG peer0 peer1

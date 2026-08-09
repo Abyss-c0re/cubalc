@@ -5552,19 +5552,59 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
         if (f) snprintf(path, sizeof path, "%s", p2);
       }
     }
+    /* CUBALC_INCLUDE_PATH=dir:dir — extra search roots for agent/project libs */
+    if (!f && orig[0] != '/') {
+      const char *ip = getenv("CUBALC_INCLUDE_PATH");
+      if (ip && ip[0]) {
+        char base[256];
+        const char *slash = strrchr(orig, '/');
+        const char *leaf = slash ? slash + 1 : orig;
+        size_t blen;
+        const char *seg = ip;
+        snprintf(base, sizeof base, "%s", leaf);
+        blen = strlen(base);
+        if (blen > 7 && strcmp(base + blen - 7, ".cubalc") == 0)
+          base[blen - 7] = 0;
+        while (*seg && !f) {
+          char dir[512], p3[768];
+          size_t dlen = 0;
+          while (*seg == ':') seg++;
+          if (!*seg) break;
+          while (seg[dlen] && seg[dlen] != ':' && dlen + 1 < sizeof dir)
+            dir[dlen] = seg[dlen], dlen++;
+          dir[dlen] = 0;
+          seg += dlen;
+          if (!dir[0]) continue;
+          /* dir/stem.cubalc */
+          snprintf(p3, sizeof p3, "%s/%s.cubalc", dir, base);
+          f = fopen(p3, "rb");
+          if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+          /* dir/orig as given */
+          snprintf(p3, sizeof p3, "%s/%s", dir, orig);
+          f = fopen(p3, "rb");
+          if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+          /* dir/orig.cubalc if orig has no extension */
+          if (!strchr(orig, '.')) {
+            snprintf(p3, sizeof p3, "%s/%s.cubalc", dir, orig);
+            f = fopen(p3, "rb");
+            if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+          }
+        }
+      }
+    }
     if (!f){
       char ebuf[192], sug[64];
       include_suggest_lib(orig, sug, sizeof sug);
       if (sug[0])
         snprintf(ebuf, sizeof ebuf,
-                 "INCLUDE cannot open '%s' — did you mean %s? (programs/lib · cubalc libs)",
+                 "INCLUDE cannot open '%s' — did you mean %s? (programs/lib · CUBALC_INCLUDE_PATH · cubalc libs)",
                  orig, sug);
       else
         snprintf(ebuf, sizeof ebuf,
-                 "INCLUDE cannot open '%s' — tried programs/lib/%s.cubalc · cubalc libs",
-                 orig, orig);
+                 "INCLUDE cannot open '%s' — tried programs/lib · CUBALC_INCLUDE_PATH · cubalc libs",
+                 orig);
       if (soft) {
-        /* Usability: optional module — sticky err, continue (like EXPECT). */
+        /* Usability: optional module — sticky err + MISS/SUGGEST side vars. */
         char msg[192];
         if (sug[0])
           snprintf(msg, sizeof msg,
@@ -5574,13 +5614,25 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
         var_set_str(vm, "ERR", msg);
         var_set_str(vm, "LAST_ERR", msg);
         var_set_str(vm, "INCLUDE_PATH", "");
-        var_set_str(vm, "LAST", "");
-        vm->last_str[0] = 0;
-        vm->last_n = 0;
-        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "INCLUDE_MISS", orig);
+        var_set_str(vm, "INCLUDE_SUGGEST", sug);
+        /* LAST = suggestion (agent recovery) or empty miss name */
+        if (sug[0]) {
+          var_set_str(vm, "LAST", sug);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", sug);
+          vm->last_n = 1;
+          var_set_num(vm, "LAST_N", 1);
+        } else {
+          var_set_str(vm, "LAST", orig);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", orig);
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+        }
         var_set_num(vm, "OK", 0);
         var_set_num(vm, "INCLUDE_OK", 0);
-        if (vm->trace) fprintf(vm->trace, "# include soft miss: %s\n", orig);
+        if (vm->trace)
+          fprintf(vm->trace, "# include soft miss: %s suggest=%s\n",
+                  orig, sug[0] ? sug : "-");
         bump(vm); return 1;
       }
       fail(vm, ebuf);
@@ -5595,6 +5647,8 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       if (hit) {
         fclose(f);
         var_set_str(vm, "INCLUDE_PATH", path);
+        var_set_str(vm, "INCLUDE_MISS", "");
+        var_set_str(vm, "INCLUDE_SUGGEST", "");
         var_set_str(vm, "LAST", path);
         snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
         vm->last_n = (long)strlen(path);
@@ -5623,8 +5677,10 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       snprintf(vm->included[vm->n_included], sizeof vm->included[0], "%s", path);
       vm->n_included++;
     }
-    /* agent-visible resolved path */
+    /* agent-visible resolved path · clear soft-miss side channels */
     var_set_str(vm, "INCLUDE_PATH", path);
+    var_set_str(vm, "INCLUDE_MISS", "");
+    var_set_str(vm, "INCLUDE_SUGGEST", "");
     var_set_str(vm, "LAST", path);
     snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
     vm->last_n = (long)strlen(path);
