@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 633,
-  "version": "1.15.660-usability",
-  "item": "PATHKEYS + plate leaves",
-  "item_id": 669,
-  "title": "PATHKEYS/LEAFKEYS/DOTPATHS + cubalc plate leaves \u00b7 dotted leaf path bag \u00b7 multi-plate \u00b7 structure discovery",
-  "commit": "9c4a517ae5f6cb01aafe6b01f23a9cd6731fe9b0",
-  "summary": "Recursive dotted leaf paths without KEYSP+GETOBJ walk. proof 1210 + CLI leaves PASS.",
+  "iter": 634,
+  "version": "1.15.661-usability",
+  "item": "FLATKV + plate flat",
+  "item_id": 670,
+  "title": "FLATKV/LEAFKV/FLATTENP + cubalc plate flat \u00b7 recursive path:value bag \u00b7 multi-plate \u00b7 flat inventory",
+  "commit": "083ff50017cc5aa7a33791f10c88848bb0c75c08",
+  "summary": "Nested plate \u2192 path:val bag without PATHKEYS+GETP. proof 1211 + CLI flat PASS.",
   "proofs": [
-    "1210_pathkeys PASS",
-    "1210_cli_plate_leaves PASS",
-    "1209_pluckobj_path reg PASS",
-    "1201_path_keysp_lenp reg PASS"
+    "1211_flatkv PASS",
+    "1211_cli_plate_flat PASS",
+    "1210_pathkeys reg PASS"
   ],
-  "when": "2026-08-09T13:14:39Z",
+  "when": "2026-08-09T13:26:38Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9c4a517ae5f6cb01aafe6b01f23a9cd6731fe9b0",
-  "note": "after thrash restore; invent after backlog 668; EVOLVE_PAUSED"
+  "sha": "083ff50017cc5aa7a33791f10c88848bb0c75c08",
+  "note": "invent after 669 PATHKEYS; EVOLVE_PAUSED"
 }
