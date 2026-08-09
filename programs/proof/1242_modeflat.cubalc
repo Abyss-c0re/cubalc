@@ -1,0 +1,87 @@
+# MODEFLAT / TOPVALFLAT — dominant matching leaf value by path needle
+# Usability: majority role/status without FREQFLAT+SORTFREQ+BEFORE glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"fail\"},\"c\":{\"status\":\"ok\"}}"
+
+MODEFLAT "role"
+ASSERT OK == 1
+ASSERT MODEFLAT_HIT == 1
+ASSERT MODEFLAT_TOTAL == 3
+ASSERT LAST_N == 2
+ASSERT MODEFLAT_N == 2
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS EQS MODEFLAT "worker"
+ASSERT LAST_N == 1
+
+# unique hosts → first-seen wins on equal counts
+MODEFLAT "host"
+ASSERT MODEFLAT_TOTAL == 2
+ASSERT MODEFLAT_N == 1
+SYS EQS LAST "h1"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+MODEFLAT FROM PEER "status"
+ASSERT MODEFLAT_FROM == 1
+SYS EQS MODEFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT MODEFLAT_TOTAL == 3
+ASSERT MODEFLAT_N == 2
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+
+# empty needle → all leaves (worker appears twice)
+MODEFLAT ""
+ASSERT MODEFLAT_TOTAL == 5
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+ASSERT MODEFLAT_N == 2
+
+# bare MODEFLAT
+MODEFLAT
+ASSERT MODEFLAT_TOTAL == 5
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# soft miss
+MODEFLAT "nope"
+ASSERT OK == 1
+ASSERT MODEFLAT_HIT == 0
+ASSERT MODEFLAT_TOTAL == 0
+ASSERT MODEFLAT_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# TOPVALFLAT alias
+TOPVALFLAT FROM PEER "status"
+ASSERT TOPVALFLAT_TOTAL == 3
+SYS EQS TOPVALFLAT "ok"
+ASSERT LAST_N == 1
+ASSERT TOPVALFLAT_N == 2
+
+# MAJORFLAT alias
+MAJORFLAT "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":9}"
+MODEFLAT FROM PEER "status"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# first-seen tie: equal counts keep earlier value
+LET PLATE = "{\"a\":{\"v\":\"x\"},\"b\":{\"v\":\"y\"},\"c\":{\"v\":\"x\"},\"d\":{\"v\":\"y\"}}"
+MODEFLAT "v"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+ASSERT MODEFLAT_N == 2
+ASSERT MODEFLAT_TOTAL == 4
+
+PASS
+PRINT "1242_modeflat: PASS"

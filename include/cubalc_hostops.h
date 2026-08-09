@@ -423,6 +423,13 @@ int cubalc_host_json_leaf_type(const char *json, const char *needle,
  * Soft always OK. Read-only. Usability: nest status rollups without VALSFLAT+FREQ. */
 int cubalc_host_json_leaf_freq(const char *json, const char *needle,
                                cubalc_host_result *r);
+/* Dominant (mode) matching leaf value by path needle (MODEFLAT / TOPVALFLAT).
+ * First-seen wins ties. Empty needle → all leaves.
+ * Hit → r->str=value · r->n=winner count · r->code=total leaves · r->err=decimal count.
+ * Soft miss → empty str · n=0 · code=0. Soft always OK. Read-only.
+ * Usability: majority role/status without FREQFLAT+SORTFREQ+BEFORE glue. */
+int cubalc_host_json_leaf_mode(const char *json, const char *needle,
+                               cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */
