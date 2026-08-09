@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 579,
-  "version": "1.15.606-usability",
-  "item": "TYPEP/KINDP",
-  "item_id": 615,
-  "title": "TYPEP|KINDP · multi-plate field kind probe missing|num|str|bool|null|obj|arr · no SYS JSONTYPE",
-  "commit": "56c35ba47937dfcf29e9f35b902a538e205b2994",
-  "summary": "Field kind probe for peel path selection without SYS. proof 1156 24/24 + lenp reg.",
+  "iter": 580,
+  "version": "1.15.607-usability",
+  "item": "TOKVP/FROMKVP",
+  "item_id": 616,
+  "title": "TOKVP|TOBAGP · FROMKVP|BAGTOP · multi-plate bag↔plate convert · no SYS JSONTOKV/JSONFROMKV",
+  "commit": "29bb4cb75b6637675259a9ec9ab1687d14f37356",
+  "summary": "Plate↔key:val bag bridge with optional INTO write-back. proof 1157 26/26 + typep reg.",
   "proofs": [
-    "1156_typep 24/24",
-    "1155_lenp reg 31/31"
+    "1157_tokvp 26/26",
+    "1156_typep reg 24/24"
   ],
-  "when": "2026-08-09T03:34:58Z",
+  "when": "2026-08-09T03:45:01Z",
   "agent": "meaningful_iter_10m",
-  "sha": "56c35ba47937dfcf29e9f35b902a538e205b2994",
+  "sha": "29bb4cb75b6637675259a9ec9ab1687d14f37356",
   "note": "clean tree; EVOLVE_PAUSED"
 }
