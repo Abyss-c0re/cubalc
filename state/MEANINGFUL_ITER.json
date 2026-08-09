@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 601,
-  "version": "1.15.628-usability",
-  "item": "cubalc plate nestpick/nestomit",
-  "item_id": 637,
-  "title": "cubalc plate nestpick|nestomit \u00b7 CLI duals of PICKOBJ/OMITOBJ \u00b7 nest key projection",
-  "commit": "3f3344faea0b2209cfd6a688faae730a64f6559b",
-  "summary": "Agent one-shot nest keep/drop without .cubalc. proof 1178 ok.",
+  "iter": 602,
+  "version": "1.15.629-usability",
+  "item": "LENOBJ/EMPTYOBJ/VALSOBJ",
+  "item_id": 638,
+  "title": "LENOBJ|EMPTYOBJ|VALSOBJ|NONEMPTYOBJ \u00b7 nested size/empty/values \u00b7 multi-plate \u00b7 LENP duals",
+  "commit": "ccddd703d01a381ade34cff3c1da45b2b9310625",
+  "summary": "Nest size/empty/values without GETOBJ+LENP glue. proof 1179 30/30.",
   "proofs": [
-    "1178_cli_plate_nestpick ok"
+    "1179_lenobj 30/30",
+    "1177_pickobj reg ok"
   ],
-  "when": "2026-08-09T07:30:44Z",
+  "when": "2026-08-09T07:35:27Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3f3344faea0b2209cfd6a688faae730a64f6559b",
-  "note": "invented after backlog 636 PICKOBJ; EVOLVE_PAUSED"
+  "sha": "ccddd703d01a381ade34cff3c1da45b2b9310625",
+  "note": "invented after backlog 637 nestpick CLI; EVOLVE_PAUSED"
 }
