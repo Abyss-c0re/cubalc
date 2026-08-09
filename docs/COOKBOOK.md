@@ -258,6 +258,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate avgflat     state/my_agent.json scores              # mean pure-int leaves by needle → n
 ./out/cubalc plate medianflat  state/my_agent.json scores              # median pure-int leaves by needle → n
 ./out/cubalc plate needflatn  state/my_agent.json port timeout_ms      # fail-fast pure-int leaves + peel first → n
+./out/cubalc plate hasflatn   state/my_agent.json port                  # pure-int leaf presence 0|1
+./out/cubalc plate countflatn state/my_agent.json score                 # pure-int leaf match count
 ./out/cubalc plate decflat    state/my_agent.json errs                  # decrement
 ./out/cubalc libs | grep plate
 

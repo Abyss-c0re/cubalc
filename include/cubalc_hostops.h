@@ -356,6 +356,12 @@ int cubalc_host_json_leaf_scale(const char *json, const char *needle, long facto
  * Soft always OK. Read-only. Usability: structure probe without GREPFLAT+LINES glue. */
 int cubalc_host_json_leaf_count(const char *json, const char *needle,
                                 cubalc_host_result *r);
+/* Count pure-int leaves whose path contains needle (COUNTFLATN / HASFLATN).
+ * Non-int matching leaves skipped. Empty needle → all pure-int leaves.
+ * r->n = pure-int match count · r->str = decimal. Soft always OK. Read-only.
+ * Usability: typed soft probe without GETFLATN+IF or NEEDFLATN fail glue. */
+int cubalc_host_json_leaf_countn(const char *json, const char *needle,
+                                 cubalc_host_result *r);
 /* Matching leaf paths or values as newline bag (PATHSFLAT / VALSFLAT).
  * want_vals=0 → path bag · want_vals=1 → value bag. Empty needle → all leaves.
  * r->str = bag · r->n = field count. Soft always OK. Read-only.

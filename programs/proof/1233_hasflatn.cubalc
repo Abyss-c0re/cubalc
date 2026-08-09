@@ -1,0 +1,75 @@
+# HASFLATN / COUNTFLATN — soft pure-int leaf presence and count by path needle
+# Usability: typed probe without GETFLATN+IF or NEEDFLATN fail glue.
+# Non-int matching leaves skipped (unlike HASFLAT/COUNTFLAT).
+
+HOLD_FLASH 1
+
+# host is string; port/meta.port are ints; label string
+LET PLATE = "{\"cfg\":{\"port\":9090,\"host\":\"h\"},\"meta\":{\"port\":1},\"label\":\"x\",\"score\":{\"a\":10,\"b\":20}}"
+
+HASFLATN "port"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASFLATN_HIT == 1
+ASSERT HASFLATN_N == 2
+
+COUNTFLATN "port"
+ASSERT LAST_N == 2
+ASSERT COUNTFLATN_N == 2
+
+# host: path match but non-int → pure-int count 0
+HASFLATN "host"
+ASSERT LAST_N == 0
+ASSERT HASFLATN_HIT == 0
+ASSERT HASFLATN_N == 0
+
+# HASFLAT would hit host (any leaf); contrast
+HASFLAT "host"
+ASSERT LAST_N == 1
+
+COUNTFLATN "score"
+ASSERT LAST_N == 2
+
+HASFLATN "nope"
+ASSERT LAST_N == 0
+ASSERT HASFLATN_N == 0
+
+# empty needle — all pure-int: port 9090, meta.port 1, score.a 10, score.b 20 = 4
+COUNTFLATN ""
+ASSERT LAST_N == 4
+HASFLATN ""
+ASSERT LAST_N == 1
+ASSERT HASFLATN_N == 4
+
+LET PEER = "{\"hits\":{\"a\":3,\"b\":4},\"role\":\"leader\"}"
+HASFLATN FROM PEER "hits"
+ASSERT HASFLATN_FROM == 1
+SYS EQS HASFLATN_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT HASFLATN_HIT == 1
+ASSERT HASFLATN_N == 2
+
+COUNTFLATN FROM PEER "hits"
+ASSERT COUNTFLATN_FROM == 1
+ASSERT LAST_N == 2
+
+# role is string only
+HASFLATN FROM PEER "role"
+ASSERT LAST_N == 0
+
+# plate unchanged
+LET PLATE = "{\"x\":1}"
+HASFLATN FROM PEER "hits"
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+ANYFLATN "x"
+ASSERT LAST_N == 1
+ASSERT HASFLATN_N == 1
+
+NFLATN "x"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1233_hasflatn: PASS"
