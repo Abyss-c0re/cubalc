@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 576,
-  "version": "1.15.603-usability",
-  "item": "KEYDIFFP/KEYCOMMP",
-  "item_id": 612,
-  "title": "KEYDIFFP|ONLYKEYSP · KEYCOMMP|KEYINTERP · multi-plate key-set bags · no SYS JSONKEYDIFF/JSONKEYCOMM",
-  "commit": "c1c140c21e8e843876ceb90ab69abc73e3820d07",
-  "summary": "Structural only-in-a / intersection key bags for mesh without SYS. proof 1153 27/27 + renamep reg. thrash restored first.",
+  "iter": 577,
+  "version": "1.15.604-usability",
+  "item": "COPYP/SWAPP",
+  "item_id": 613,
+  "title": "COPYP|DUPKEYP · SWAPP|XCHGP · multi-plate key copy/swap write-back · no SYS JSONCOPY/JSONSWAP",
+  "commit": "5a4e245e0e21f160e3d73c12c706a48101e7cf6b",
+  "summary": "Dual-buffer/snapshot plate fields with SETP-style write-back. proof 1154 31/31 + keydiffp reg.",
   "proofs": [
-    "1153_keydiffp 27/27",
-    "1152_renamep reg 26/26"
+    "1154_copyp 31/31",
+    "1153_keydiffp reg 27/27"
   ],
-  "when": "2026-08-09T03:05:22Z",
+  "when": "2026-08-09T03:15:46Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c1c140c21e8e843876ceb90ab69abc73e3820d07",
-  "note": "thrash restore then feature; EVOLVE_PAUSED"
+  "sha": "5a4e245e0e21f160e3d73c12c706a48101e7cf6b",
+  "note": "clean tree; EVOLVE_PAUSED"
 }
