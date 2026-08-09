@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 640,
-  "version": "1.15.667-usability",
-  "item": "RENAMEFLAT + plate renameflat",
-  "item_id": 676,
-  "title": "RENAMEFLAT/MOVEFLAT + cubalc plate renameflat \u00b7 leaf path prefix rewrite write-back",
-  "commit": "8f03982ab1926dfd69482eafd08d476ba05c0df9",
-  "summary": "Restructure nest paths by prefix without multi RENAMEP. proof 1217 + CLI PASS.",
+  "iter": 641,
+  "version": "1.15.668-usability",
+  "item": "SETFLAT + plate setflat",
+  "item_id": 677,
+  "title": "SETFLAT/MAPFLAT + cubalc plate setflat \u00b7 bulk leaf value set by path needle write-back",
+  "commit": "54ee4164805a2f61d1772c4ad8e25d9b1a49e41b",
+  "summary": "Bulk nest leaf value set without multi SETP. proof 1218 + CLI PASS.",
   "proofs": [
-    "1217_renameflat PASS",
-    "1217_cli_plate_renameflat PASS",
-    "1216_mergeflat reg PASS"
+    "1218_setflat PASS",
+    "1218_cli_plate_setflat PASS",
+    "1217_renameflat reg PASS"
   ],
-  "when": "2026-08-09T14:26:48Z",
+  "when": "2026-08-09T14:36:28Z",
   "agent": "meaningful_iter_10m",
-  "sha": "8f03982ab1926dfd69482eafd08d476ba05c0df9",
-  "note": "after MERGEFLAT plane; EVOLVE_PAUSED"
+  "sha": "54ee4164805a2f61d1772c4ad8e25d9b1a49e41b",
+  "note": "after RENAMEFLAT plane; EVOLVE_PAUSED"
 }
