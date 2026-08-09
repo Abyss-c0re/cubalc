@@ -27407,6 +27407,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"LENP") || kw(&L->cur,"EMPTYP") || kw(&L->cur,"VALSP") ||
              kw(&L->cur,"TYPEP") || kw(&L->cur,"KINDP") ||
              kw(&L->cur,"TOKVP") || kw(&L->cur,"FROMKVP") ||
+             kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35803,6 +35804,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"TOBAGP", "TOBAGP alias of TOKVP"},
       {"FROMKVP", "FROMKVP|BAGTOP [bag] [INTO name] — key=val bag → plate · multi-plate · no SYS JSONFROMKV"},
       {"BAGTOP", "BAGTOP alias of FROMKVP"},
+      {"SUMNP", "SUMNP|TOTALP [FROM plate] — sum int values → LAST_N · multi-plate · no SYS JSONSUMN"},
+      {"TOTALP", "TOTALP alias of SUMNP"},
+      {"MAXNP", "MAXNP [FROM plate] — max int value → LAST_N · multi-plate · no SYS JSONMAXN"},
+      {"MINNP", "MINNP [FROM plate] — min int value → LAST_N · multi-plate · no SYS JSONMINN"},
+      {"AVGNP", "AVGNP|MEANP [FROM plate] — mean int value → LAST_N · multi-plate · no SYS JSONAVGN"},
+      {"TOPKEYP", "TOPKEYP|MAXKEYP [FROM plate] — key with max int · LAST=key LAST_N=v · multi-plate"},
+      {"BOTKEYP", "BOTKEYP|MINKEYP [FROM plate] — key with min int · LAST=key LAST_N=v · multi-plate"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -41252,6 +41260,209 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# fromkvp n=%ld into=%d var=%s\n",
               hr.n, have_into, into_name[0] ? into_name : "-");
+    bump(vm); return 1;
+  }
+  /* SUMNP|TOTALP [FROM plate] — sum int values → LAST_N (JSONSUMN dual).
+   * MAXNP|MINNP|AVGNP [FROM plate] — max/min/mean int → LAST_N (JSONMAXN dual).
+   * TOPKEYP|BOTKEYP [FROM plate] — key with max/min int · LAST=key LAST_N=v.
+   * Bare uses PLATE. Soft 0 / empty key if no numeric fields.
+   * Usability: score/FREQ plates without SYS JSONSUMN/JSONTOPKEY glue:
+   *   SUMNP FROM scores
+   *   TOPKEYP FROM freq
+   *   AVGNP FROM PEER
+   */
+  if (kw(&L->cur,"SUMNP") || kw(&L->cur,"TOTALP") || kw(&L->cur,"MSUMNP") ||
+      kw(&L->cur,"PLATE_SUM") || kw(&L->cur,"SUMP") ||
+      kw(&L->cur,"MAXNP") || kw(&L->cur,"MMAXNP") || kw(&L->cur,"PLATE_MAXN") ||
+      kw(&L->cur,"MINNP") || kw(&L->cur,"MMINNP") || kw(&L->cur,"PLATE_MINN") ||
+      kw(&L->cur,"AVGNP") || kw(&L->cur,"MEANP") || kw(&L->cur,"MAVGNP") ||
+      kw(&L->cur,"PLATE_AVGN") ||
+      kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXKEYP") || kw(&L->cur,"MTOPKEYP") ||
+      kw(&L->cur,"PLATE_TOPKEY") ||
+      kw(&L->cur,"BOTKEYP") || kw(&L->cur,"MINKEYP") || kw(&L->cur,"MBOTKEYP") ||
+      kw(&L->cur,"PLATE_BOTKEY")) {
+    char plate[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, mode = 0; /* 0 sum 1 max 2 min 3 avg 4 top 5 bot */
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "MAXNP") == 0 || strcmp(op0, "MMAXNP") == 0 ||
+        strcmp(op0, "PLATE_MAXN") == 0)
+      mode = 1;
+    else if (strcmp(op0, "MINNP") == 0 || strcmp(op0, "MMINNP") == 0 ||
+             strcmp(op0, "PLATE_MINN") == 0)
+      mode = 2;
+    else if (strcmp(op0, "AVGNP") == 0 || strcmp(op0, "MEANP") == 0 ||
+             strcmp(op0, "MAVGNP") == 0 || strcmp(op0, "PLATE_AVGN") == 0)
+      mode = 3;
+    else if (strcmp(op0, "TOPKEYP") == 0 || strcmp(op0, "MAXKEYP") == 0 ||
+             strcmp(op0, "MTOPKEYP") == 0 || strcmp(op0, "PLATE_TOPKEY") == 0)
+      mode = 4;
+    else if (strcmp(op0, "BOTKEYP") == 0 || strcmp(op0, "MINKEYP") == 0 ||
+             strcmp(op0, "MBOTKEYP") == 0 || strcmp(op0, "PLATE_BOTKEY") == 0)
+      mode = 5;
+    else
+      mode = 0;
+
+    lex_next(L);
+    plate[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (mode == 4 || mode == 5) {
+      if (cubalc_host_json_topkey(plate, mode == 5 ? 1 : 0, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TOPKEYP_N", 0);
+        var_set_num(vm, "BOTKEYP_N", 0);
+        var_set_num(vm, "TOPKEYP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err :
+                    (mode == 5 ? "BOTKEYP: fail" : "TOPKEYP: fail"));
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err :
+                    (mode == 5 ? "BOTKEYP: fail" : "TOPKEYP: fail"));
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      if (mode == 5) {
+        var_set_str(vm, "BOTKEYP", hr.str);
+        var_set_num(vm, "BOTKEYP_N", hr.n);
+        var_set_num(vm, "BOTKEYP_V", hr.n);
+        var_set_num(vm, "JSONBOTKEY_N", hr.n);
+      } else {
+        var_set_str(vm, "TOPKEYP", hr.str);
+        var_set_num(vm, "TOPKEYP_N", hr.n);
+        var_set_num(vm, "TOPKEYP_V", hr.n);
+        var_set_num(vm, "JSONTOPKEY_N", hr.n);
+      }
+      var_set_num(vm, "TOPKEYP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "BOTKEYP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "TOPKEYP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# %s key=%s v=%ld from=%d\n",
+                mode == 5 ? "botkeyp" : "topkeyp", hr.str, hr.n, have_from);
+      bump(vm); return 1;
+    }
+
+    if (mode == 1 || mode == 2) {
+      if (cubalc_host_json_minmax(plate, mode == 2 ? 1 : 0, &hr) != 0) {
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "MAXNP_N", 0);
+        var_set_num(vm, "MINNP_N", 0);
+        var_set_num(vm, "MAXNP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err :
+                    (mode == 2 ? "MINNP: fail" : "MAXNP: fail"));
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err :
+                    (mode == 2 ? "MINNP: fail" : "MAXNP: fail"));
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+    } else if (mode == 3) {
+      if (cubalc_host_json_avg(plate, &hr) != 0) {
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "AVGNP_N", 0);
+        var_set_num(vm, "AVGNP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "AVGNP: fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "AVGNP: fail");
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+    } else {
+      if (cubalc_host_json_sum(plate, &hr) != 0) {
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SUMNP_N", 0);
+        var_set_num(vm, "SUMNP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "SUMNP: fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "SUMNP: fail");
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+    }
+
+    /* keep plate in LAST for chain (JSONSUMN style) */
+    var_set_str(vm, "LAST", plate);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    if (mode == 1) {
+      var_set_num(vm, "MAXNP_N", hr.n);
+      var_set_num(vm, "JSONMAXN_N", hr.n);
+      var_set_num(vm, "MAXNP_FROM", have_from ? 1 : 0);
+    } else if (mode == 2) {
+      var_set_num(vm, "MINNP_N", hr.n);
+      var_set_num(vm, "JSONMINN_N", hr.n);
+      var_set_num(vm, "MINNP_FROM", have_from ? 1 : 0);
+    } else if (mode == 3) {
+      var_set_num(vm, "AVGNP_N", hr.n);
+      var_set_num(vm, "JSONAVGN_N", hr.n);
+      var_set_num(vm, "AVGNP_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "AVGNP_USED", (long)hr.code);
+    } else {
+      var_set_num(vm, "SUMNP_N", hr.n);
+      var_set_num(vm, "JSONSUMN_N", hr.n);
+      var_set_num(vm, "SUMNP_FROM", have_from ? 1 : 0);
+    }
+    var_set_str(vm, "SUMNP_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%ld from=%d\n",
+              mode == 1 ? "maxnp" : mode == 2 ? "minnp" : mode == 3 ? "avgnp" : "sumnp",
+              hr.n, have_from);
     bump(vm); return 1;
   }
   /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.
