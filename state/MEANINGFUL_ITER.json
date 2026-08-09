@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 573,
-  "version": "1.15.600-usability",
-  "item": "STABLEP/SAMEKEYSP",
-  "item_id": 609,
-  "title": "STABLEP|SAMEKEYSP|EQKEYSP · multi-plate unchanged key bag · dual DIFFP · no SYS JSONSTABLE",
-  "commit": "dcaf503e29d418c57eda86a70122db2310e98cbb",
-  "summary": "Mesh agents list keys that still match between plates without SYS. proof 1150 20/20 + deltap/eqp reg.",
+  "iter": 574,
+  "version": "1.15.601-usability",
+  "item": "PICKP/OMITP",
+  "item_id": 610,
+  "title": "PICKP|KEEPP · OMITP|DROPKEYSP · multi-plate keep/drop key projection · no SYS JSONPICK/JSONDROP",
+  "commit": "31c2fda77b13107839bd07facc692a5cb1800990",
+  "summary": "Slim/strip plate payloads for mesh/log without SYS rebuild. proof 1151 35/35 + pluckp/stablep reg.",
   "proofs": [
-    "1150_stablep 20/20",
-    "1149_deltap reg 19/19",
-    "1145_eqp reg 21/21"
+    "1151_pickp 35/35",
+    "1148_pluckp reg",
+    "1150_stablep reg"
   ],
-  "when": "2026-08-09T02:38:21Z",
+  "when": "2026-08-09T02:45:56Z",
   "agent": "meaningful_iter_10m",
-  "sha": "dcaf503e29d418c57eda86a70122db2310e98cbb",
+  "sha": "31c2fda77b13107839bd07facc692a5cb1800990",
   "note": "clean tree; EVOLVE_PAUSED"
 }
