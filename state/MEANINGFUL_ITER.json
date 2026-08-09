@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 652,
-  "version": "1.15.679-usability",
-  "item": "GETFLATN + plate getflatn",
-  "item_id": 688,
-  "title": "GETFLATN/FIRSTFLATN + cubalc plate getflatn · first pure-int leaf by needle → LAST_N · OR fallback",
-  "commit": "073be3600a470e38640f36abb85f2dc1a1a626e0",
-  "summary": "Nest numeric peel without GETFLAT+NUM glue. proof 1229 + CLI PASS.",
+  "iter": 653,
+  "version": "1.15.680-usability",
+  "item": "AVGFLAT + plate avgflat",
+  "item_id": 689,
+  "title": "AVGFLAT/MEANFLAT + cubalc plate avgflat · integer mean pure-int leaves by path needle → LAST_N",
+  "commit": "06bae483d4d3313672d95277e18b69ef2b844968",
+  "summary": "Nest mean scores without FLATKV+GREP+AVG or SUMFLAT+DIV glue. proof 1230 + CLI PASS.",
   "proofs": [
-    "1229_getflatn PASS",
-    "1229_cli_plate_getflatn PASS",
-    "1228_needflat reg PASS"
+    "1230_avgflat PASS",
+    "1230_cli_plate_avgflat PASS",
+    "1229_getflatn reg PASS",
+    "1220_sumflat reg PASS"
   ],
-  "when": "2026-08-09T16:35:00Z",
+  "when": "2026-08-09T16:53:52Z",
   "agent": "meaningful_iter_10m",
-  "sha": "073be3600a470e38640f36abb85f2dc1a1a626e0",
-  "note": "after NEEDFLAT plane; EVOLVE_PAUSED"
+  "sha": "06bae483d4d3313672d95277e18b69ef2b844968",
+  "note": "after GETFLATN plane; EVOLVE_PAUSED"
 }
