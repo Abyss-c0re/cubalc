@@ -1,47 +1,65 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 224,
-  "program": "programs/realworld/job_deadline_budget_board.cubalc",
-  "theme": "GETFLAGMS+CLAMPN+BOOLFLAG+RESTPOS job deadline budget",
-  "version": "1.15.590-usability",
+  "iter": 225,
+  "program": "programs/realworld/agent_config_kvfile_board.cubalc",
+  "theme": "LOOKUPFILE/KVFILESET/ENSURE/INC agent key=val plate",
+  "version": "1.15.592-usability",
   "pass": true,
-  "prior_note": "iter 223 plate_peer_session; this iter CLI budget surface away from multi-plate",
+  "prior_note": "iter 224 job deadline CLI; this iter on-disk kvfile agent config",
   "tests": [
     {
-      "name": "budget",
-      "cmd": "workers 100\u219216 deadline 2h\u21921h",
+      "name": "boot",
+      "cmd": "seed agent.conf",
       "ok": true,
-      "note": "clamp"
+      "note": "boot"
     },
     {
-      "name": "admit",
-      "cmd": "RESTPOS a.bin b.bin rows",
+      "name": "set",
+      "cmd": "KVFILESET port=8800",
       "ok": true,
-      "note": "admit"
+      "note": "set"
     },
     {
-      "name": "admit_dry",
-      "cmd": "BOOLFLAG dry no bag mutate",
+      "name": "get",
+      "cmd": "LOOKUPFILE port",
       "ok": true,
-      "note": "dry"
+      "note": "get"
     },
     {
-      "name": "admit_empty",
-      "cmd": "HASRESTPOS soft miss",
+      "name": "ensure_kept",
+      "cmd": "ENSURE port no overwrite",
       "ok": true,
-      "note": "empty rest"
+      "note": "ensure kept"
+    },
+    {
+      "name": "ensure_new",
+      "cmd": "ENSURE ttl append",
+      "ok": true,
+      "note": "ensure new"
+    },
+    {
+      "name": "tick",
+      "cmd": "KVFILEINC n",
+      "ok": true,
+      "note": "tick"
     },
     {
       "name": "gate",
-      "cmd": "jobs+budget present",
+      "cmd": "host+port present",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "CLAMPN OOR edges",
+      "cmd": "ensure keep+new+OR miss",
       "ok": true,
       "note": "edges"
+    },
+    {
+      "name": "del",
+      "cmd": "KVFILEDEL ttl",
+      "ok": true,
+      "note": "del"
     },
     {
       "name": "soft",
@@ -59,7 +77,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "376/378 pre-existing sys_kvfileensure,init_peer"
+      "note": "376/378 sys_kvfileensure,init_peer"
     }
   ],
   "weaknesses": [
@@ -2030,6 +2048,38 @@
       "title": "WRITE JOBS/BUDGET omit trailing NL",
       "detail": "cat -A last line without $.",
       "repro": "cat -A JOBS.txt"
+    },
+    {
+      "id": "W247",
+      "severity": "med",
+      "area": "host|grep",
+      "title": "GREPV shared op: prefix clobbers sibling ensure rows",
+      "detail": "SYS GREPV \"ensure:\" bag drops all ensure:* lines. Per-key ensure audit needs unique prefixes (ens:key:) or GREPV full key path.",
+      "repro": "PUSH ensure:port; GREPV ensure:; PUSH ensure:ttl \u2192 only ttl remains"
+    },
+    {
+      "id": "W248",
+      "severity": "low",
+      "area": "lang|kvfile",
+      "title": "KVFILEENSURE knobs HIT vs NEW dual",
+      "detail": "Existing key: HIT=1 NEW=0 LAST=current line; missing: HIT=0 NEW=1. Agents must branch on NEW not only OK.",
+      "repro": "KVFILEENSURE port 9999 when port=8800 \u2192 NEW=0 value stays 8800"
+    },
+    {
+      "id": "W249",
+      "severity": "low",
+      "area": "lang|lookup",
+      "title": "LOOKUPFILE miss needs OR default for soft path",
+      "detail": "Bare LOOKUPFILE missing key leaves empty LAST; OR miss default required for gate soft.",
+      "repro": "LOOKUPFILE conf no_such OR miss"
+    },
+    {
+      "id": "W250",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE conf/STATUS omit trailing NL",
+      "detail": "cat -A last line without $.",
+      "repro": "cat -A agent.conf"
     }
   ],
   "workarounds": [
@@ -2115,14 +2165,14 @@
     "SYS CAT multi-arg for EQS expected bodies"
   ],
   "language_gaps": [
-    "no RESTPOS EACH helper for job bags without NTH",
-    "BOOLFLAG no dry-run synonym",
-    "prior peer SAVEP knobs / var table issues still open"
+    "no atomic multi-key KVFILESET batch",
+    "GREPV substring on status bags remains footgun",
+    "sys_kvfileensure selftest fail needs MEANINGFUL_ITER triage"
   ],
   "issues_faced": [
-    "chained SYS CAT row LAST after STR collapsed job rows to deadline_ms only",
-    "fixed with multi-arg CAT after STR into w_s/d_s"
+    "GREPV ensure: clobbered multi-key ensure audit rows \u2014 use ens:key:",
+    "selftest still fails sys_kvfileensure despite board ensure green (proof vs harness?)"
   ],
-  "commit": "5e3f9cb",
-  "ts": "2026-08-09T00:59:24Z"
+  "commit": "",
+  "ts": "2026-08-09T01:24:08Z"
 }

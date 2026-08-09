@@ -1,0 +1,676 @@
+# agent_config_kvfile_board.cubalc — LOOKUPFILE/KVFILESET/ENSURE/INC agent plate
+#
+# Real use: agents keep a durable key=val config plate on disk without JSON
+# READ+KVSET+WRITE glue:
+#   LOOKUPFILE / KVFILEGET — get key
+#   KVFILESET / SETKVFILE  — set/replace or append
+#   KVFILEENSURE           — default only if missing
+#   KVFILEINC              — numeric tick
+#   KVFILEDEL              — drop key
+#
+# Distinct from plate_kv (in-memory bag KV) and dotenv_sync (env files):
+# this board is *on-disk key=val agent plate* for host/port/mode/ttl.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ackv_$$
+#   ./out/cubalc run programs/realworld/agent_config_kvfile_board.cubalc boot
+#   ./out/cubalc run ... set -- --key=port --val=8800
+#   ./out/cubalc run ... ensure -- --key=ttl --val=30
+#   ./out/cubalc run ... tick -- --key=n
+#   ./out/cubalc run ... get|del|gate|probe|soft|list
+#
+# Plate: STATUS.txt VAL.txt META.txt ACKV_REPORT.txt agent.conf
+# Env: KEY_S VAL_S CUBALC_ACKV_REQUIRE
+#
+# Edges:
+#   ENSURE no-overwrite; SET append NEW; LOOKUP miss soft; empty path;
+#   substring false (key not prefix); WRITE omit NL; soft empty bag
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_config_kvfile_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "agent_config_kvfile -- boot|set|get|ensure|tick|del|gate|probe|soft|list -- [--key=K] [--val=V]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT KEY_S = "port"
+GETFLAG key|k OR ENV KEY_S OR KEY_S
+LET key_s = LAST
+CLEAR_ERR
+
+DEFAULT VAL_S = "8800"
+GETFLAG val|v OR ENV VAL_S OR VAL_S
+LET val_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_ACKV_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "ACKV_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.conf"
+LET conf_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "boot", "set", "get", "ensure", "tick", "del", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "set" THEN
+    LET op = "set"
+  WHEN "get" THEN
+    LET op = "get"
+  WHEN "ensure" THEN
+    LET op = "ensure"
+  WHEN "tick" THEN
+    LET op = "tick"
+  WHEN "del" THEN
+    LET op = "del"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n key_s val_s
+  CLEAR_ERR
+END
+
+# boot — seed agent.conf
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS WRITE conf_path "host=peer1\nport=7700\nmode=soft\nn=0"
+  CLEAR_ERR
+  SYS LOOKUPFILE conf_path "host"
+  SYS EQS LAST "peer1"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS LOOKUPFILE conf_path "port"
+  SYS EQS LAST "7700"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET created = 1
+      LET take_n = 1
+      SYS CAT "boot:peer1:7700:bt"
+      LET row = LAST
+      CLEAR_ERR
+      SYS GREPV "boot:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot port"
+      FAIL "boot port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot host"
+    FAIL "boot host"
+    CLEAR_ERR
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# set — KVFILESET replace or append
+SYS EQS op "set"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM key_s
+  LET key_s = LAST
+  CLEAR_ERR
+  SYS TRIM val_s
+  LET val_s = LAST
+  CLEAR_ERR
+  SYS KVFILESET conf_path key_s val_s
+  LET has_n = OK
+  LET peel_hit = KVFILESET_HIT
+  LET take_n = KVFILESET_TOTAL
+  CLEAR_ERR
+  SYS LOOKUPFILE conf_path key_s
+  SYS EQS LAST val_s
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF load_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "set ok"
+      LET admit_n = 1
+      SYS CAT "set:" key_s ":" val_s ":st"
+      LET row = LAST
+      CLEAR_ERR
+      SYS GREPV "set:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "set lookup"
+      FAIL "set lookup"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "set kv"
+    FAIL "set kv"
+    CLEAR_ERR
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit take_n load_hit note_msg
+  CLEAR_ERR
+END
+
+# get — LOOKUPFILE soft miss OR
+SYS EQS op "get"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOOKUPFILE conf_path key_s OR ""
+  LET out = LAST
+  CLEAR_ERR
+  SYS BLANK out
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 0 THEN
+    LET hit = 1
+    LET note_msg = "get ok"
+    LET admit_n = 1
+    LET take_n = 1
+    LET peel_hit = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "get miss"
+    FAIL "get miss"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "get miss"
+    END
+  END
+  SYS WRITE val_path out
+  CLEAR_ERR
+  SYS CAT "get:" key_s ":" out ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "get:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n out note_msg
+  CLEAR_ERR
+END
+
+# ensure — no overwrite existing; append missing
+SYS EQS op "ensure"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM key_s
+  LET key_s = LAST
+  CLEAR_ERR
+  SYS TRIM val_s
+  LET val_s = LAST
+  CLEAR_ERR
+  # first call may set or keep
+  SYS KVFILEENSURE conf_path key_s val_s
+  LET has_n = OK
+  LET peel_hit = KVFILEENSURE_HIT
+  LET take_n = KVFILEENSURE_NEW
+  LET out = LAST
+  CLEAR_ERR
+  SYS LOOKUPFILE conf_path key_s
+  LET body = LAST
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    # if HIT=1 existing, body should NOT equal val if different seed
+    # if NEW=1, body equals val
+    IF take_n == 1 THEN
+      SYS EQS body val_s
+      LET load_hit = LAST_N
+      CLEAR_ERR
+      IF load_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "ensure new"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "ensure new val"
+        FAIL "ensure new val"
+        CLEAR_ERR
+      END
+    ELSE
+      # kept existing — body present non-blank
+      SYS BLANK body
+      LET load_hit = LAST_N
+      CLEAR_ERR
+      IF load_hit == 0 THEN
+        LET hit = 1
+        LET note_msg = "ensure kept"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "ensure blank"
+        FAIL "ensure blank"
+        CLEAR_ERR
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "ensure fail"
+    FAIL "ensure fail"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  SYS STR peel_hit
+  LET d_s = LAST
+  CLEAR_ERR
+  # unique row prefix per key — GREPV "ensure:" would clobber other ensure keys
+  SYS CAT "ens:" key_s ":" w_s ":" d_s ":en"
+  LET row = LAST
+  CLEAR_ERR
+  SYS CAT "ens:" key_s ":"
+  LET out = LAST
+  CLEAR_ERR
+  SYS GREPV out bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit take_n load_hit body note_msg
+  CLEAR_ERR
+END
+
+# tick — KVFILEINC on n (default counter key)
+SYS EQS op "tick"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET key_s = "n"
+  CLEAR_ERR
+  SYS KVFILEINC conf_path key_s 1
+  LET has_n = OK
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS LOOKUPFILE conf_path key_s
+  SYS NUM
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == take_n THEN
+      LET hit = 1
+      LET note_msg = "tick ok"
+      LET admit_n = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "tick val"
+      FAIL "tick val"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "tick inc"
+    FAIL "tick inc"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "tick:" key_s ":" w_s ":tk"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "tick:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# del — KVFILEDEL
+SYS EQS op "del"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS KVFILEDEL conf_path key_s
+  LET has_n = OK
+  LET peel_hit = KVFILEDEL_HIT
+  CLEAR_ERR
+  SYS LOOKUPFILE conf_path key_s OR ""
+  LET out = LAST
+  CLEAR_ERR
+  SYS BLANK out
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "del ok"
+        LET admit_n = 1
+        LET take_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "del still"
+        FAIL "del still"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "del miss"
+      FAIL "del miss"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "del miss"
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "del fail"
+    FAIL "del fail"
+    CLEAR_ERR
+  END
+  SYS CAT "del:" key_s ":" peel_hit ":dl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "del:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# gate — host+port present
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LOOKUPFILE conf_path "host" OR ""
+  LET out = LAST
+  CLEAR_ERR
+  SYS BLANK out
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS LOOKUPFILE conf_path "port" OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 0 THEN
+    IF peel_hit == 0 THEN
+      LET hit = 1
+      LET note_msg = "gate ok"
+      LET admit_n = 1
+      LET take_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate port"
+      FAIL "gate port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate host"
+    FAIL "gate host"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate host"
+    END
+  END
+  PRINT_JSON has_n peel_hit out body note_msg
+  CLEAR_ERR
+END
+
+# soft
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "soft empty require"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — ensure keep; set new; lookup miss; ensure on missing file path soft
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # ensure port does not overwrite 7700 (or whatever set left)
+  SYS LOOKUPFILE conf_path "port"
+  LET out = LAST
+  CLEAR_ERR
+  SYS KVFILEENSURE conf_path "port" "9999"
+  LET peel_hit = KVFILEENSURE_NEW
+  CLEAR_ERR
+  SYS LOOKUPFILE conf_path "port"
+  SYS EQS LAST out
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # ensure brand new key
+  SYS KVFILEENSURE conf_path "probe_ttl" "5"
+  LET take_n = KVFILEENSURE_NEW
+  CLEAR_ERR
+  SYS LOOKUPFILE conf_path "probe_ttl"
+  SYS EQS LAST "5"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # lookup missing
+  SYS LOOKUPFILE conf_path "no_such_key" OR "miss"
+  SYS EQS LAST "miss"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 0 THEN
+    IF has_n == 1 THEN
+      IF take_n == 1 THEN
+        IF load_hit == 1 THEN
+          IF miss_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "probe ok"
+            LET admit_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe or"
+            FAIL "probe or"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe new val"
+          FAIL "probe new val"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe new"
+        FAIL "probe new"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe keep"
+      FAIL "probe keep"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe ensure new port"
+    FAIL "probe ensure new port"
+    CLEAR_ERR
+  END
+  PRINT_JSON peel_hit has_n take_n load_hit miss_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+SYS STR admit_n
+LET out = LAST
+CLEAR_ERR
+SYS CAT "schema=cubalc.agent_config_kvfile.v1 op=" op " hit=" w_s " miss=" d_s " admit=" out " note=" note_msg " date=" run_date
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "ackv op=" op " hit=" w_s " miss=" d_s " note=" note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n peel_hit has_n load_hit created note_msg
