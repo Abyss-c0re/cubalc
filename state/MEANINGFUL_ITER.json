@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 621,
-  "version": "1.15.648-usability",
-  "item": "cubalc plate type kind probe",
-  "item_id": 657,
-  "title": "cubalc plate type|kind \u00b7 TYPEP CLI dual \u00b7 missing|num|str|bool|null|obj|arr \u00b7 dotted paths",
-  "commit": "6d07061a42fdf3e4be2359446c881f710a6c509b",
-  "summary": "Agent kind probe without .cubalc. proof 1198 PASS.",
+  "iter": 622,
+  "version": "1.15.649-usability",
+  "item": "cubalc plate default/toggle",
+  "item_id": 658,
+  "title": "cubalc plate default|toggle · DEFAULTP/TOGGLEP CLI duals · set-if-missing + flag flip · dotted paths",
+  "commit": "PENDING",
+  "summary": "Agent seed/feature flags without .cubalc. proof 1199 PASS after thrash restore.",
   "proofs": [
-    "1198_cli_plate_type PASS",
-    "1156_typep reg 24/24",
+    "1199_cli_plate_default_toggle PASS",
     "1193_pathp_more reg 32/32"
   ],
-  "when": "2026-08-09T12:25:00Z",
+  "when": "2026-08-09T12:40:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "6d07061a42fdf3e4be2359446c881f710a6c509b",
-  "note": "after plate_pluck; path CLI type; EVOLVE_PAUSED"
+  "sha": "PENDING",
+  "note": "after thrash restore; plate_type; EVOLVE_PAUSED"
 }

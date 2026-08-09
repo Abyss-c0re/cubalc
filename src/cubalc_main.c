@@ -2166,6 +2166,7 @@ int main(int argc, char **argv) {
       {"fillp_path", "programs/proof/1196_fillp_path.cubalc", "FILLP {{freq.error}} dotted path nest templates multi-plate"},
       {"cli_plate_pluck", "programs/proof/1197_cli_plate_pluck.sh", "cubalc plate pluck multi-key path peel PLUCKP dual"},
       {"cli_plate_type", "programs/proof/1198_cli_plate_type.sh", "cubalc plate type TYPEP dual kind probe paths"},
+      {"cli_plate_default_toggle", "programs/proof/1199_cli_plate_default_toggle.sh", "cubalc plate default/toggle DEFAULTP/TOGGLEP duals paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
       {"mergeobj", "programs/proof/1171_mergeobj.cubalc", "MERGEOBJ/DEFAULTOBJ nested plate merge one-shot multi-plate"},
       {"getpobj", "programs/proof/1172_getpobj.cubalc", "GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ nested scalar field plane multi-plate"},
@@ -4880,6 +4881,8 @@ int main(int argc, char **argv) {
               "       cubalc plate get <path> <key> [OR def]\n"
               "       cubalc plate type <path> <key>  # TYPEP dual · kind miss|num|str|… (paths ok)\n"
               "       cubalc plate set <path> <key> <value>\n"
+              "       cubalc plate default <path> <key> <value>  # DEFAULTP dual · set-if-missing (paths ok)\n"
+              "       cubalc plate toggle <path> <key>  # TOGGLEP dual · flip 0↔1 (paths ok)\n"
               "       cubalc plate inc <path> <key> [delta]\n"
               "       cubalc plate del <path> <key>\n"
               "       cubalc plate keys <path>\n"
@@ -4907,7 +4910,7 @@ int main(int argc, char **argv) {
               "       cubalc plate top|bot <path> [n]          # top/bot N keys · TOPNP duals\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
-             "\"ops\":[\"show\",\"get\",\"type\",\"set\",\"inc\",\"del\",\"keys\","
+             "\"ops\":[\"show\",\"get\",\"type\",\"set\",\"default\",\"toggle\",\"inc\",\"del\",\"keys\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
              "\"nestsort\",\"nestsortbag\","
@@ -4925,6 +4928,10 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "typeof") == 0 || strcmp(argv[2], "typep") == 0 ||
         strcmp(argv[2], "jtype") == 0 ||
         strcmp(argv[2], "set") == 0 || strcmp(argv[2], "put") == 0 ||
+        strcmp(argv[2], "default") == 0 || strcmp(argv[2], "ensurekey") == 0 ||
+        strcmp(argv[2], "defaultp") == 0 || strcmp(argv[2], "setdefault") == 0 ||
+        strcmp(argv[2], "toggle") == 0 || strcmp(argv[2], "flip") == 0 ||
+        strcmp(argv[2], "togglep") == 0 || strcmp(argv[2], "flipp") == 0 ||
         strcmp(argv[2], "inc") == 0 || strcmp(argv[2], "bump") == 0 ||
         strcmp(argv[2], "del") == 0 || strcmp(argv[2], "rm") == 0 ||
         strcmp(argv[2], "drop") == 0 || strcmp(argv[2], "keys") == 0 ||
@@ -5008,6 +5015,12 @@ int main(int argc, char **argv) {
         op = "type";
       else if (strcmp(op, "put") == 0)
         op = "set";
+      else if (strcmp(op, "ensurekey") == 0 || strcmp(op, "defaultp") == 0 ||
+               strcmp(op, "setdefault") == 0)
+        op = "default";
+      else if (strcmp(op, "flip") == 0 || strcmp(op, "togglep") == 0 ||
+               strcmp(op, "flipp") == 0)
+        op = "toggle";
       else if (strcmp(op, "bump") == 0)
         op = "inc";
       else if (strcmp(op, "rm") == 0 || strcmp(op, "drop") == 0)
@@ -6808,6 +6821,125 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
              "\"op\":\"set\",\"path\":\"%s\",\"key\":\"%s\",\"updated\":%ld,"
              "\"bytes\":%ld,\"version\":\"%s\",\"plate\":%s}\n",
              path, key, wr.n, hr.n, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    /* default path key value — DEFAULTP dual: set-if-missing (paths ok).
+     *   cubalc plate default agent.json cfg.port 8080
+     * kept=true when key already present (no clobber). */
+    if (strcmp(op, "default") == 0) {
+      size_t i;
+      int allnum = 1, present = 0;
+      cubalc_host_result hasr;
+      if (ai >= argc) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"default\",\"err\":\"need value\",\"version\":\"%s\"}\n",
+               CUBALC_LANG_VERSION);
+        return 2;
+      }
+      val = argv[ai++];
+      memset(&hasr, 0, sizeof hasr);
+      present = (cubalc_host_json_path_has(plate, key, &hasr) == 0 && hasr.n) ? 1 : 0;
+      if (present) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"default\",\"path\":\"%s\",\"key\":\"%s\",\"kept\":true,"
+               "\"inserted\":false,\"file\":%s,\"version\":\"%s\",\"plate\":%s}\n",
+               path, key, file_hit ? "true" : "false", CUBALC_LANG_VERSION, plate);
+        return 0;
+      }
+      if (!strcmp(val, "true") || !strcmp(val, "false") || !strcmp(val, "null") ||
+          val[0] == '{' || val[0] == '[')
+        val_kind = 1;
+      else {
+        if (val[0] == '-' && val[1]) i = 1;
+        else i = 0;
+        if (!val[i]) allnum = 0;
+        for (; val[i]; i++) {
+          if (val[i] < '0' || val[i] > '9') {
+            allnum = 0;
+            break;
+          }
+        }
+        if (allnum) val_kind = 1;
+      }
+      memset(&wr, 0, sizeof wr);
+      if (cubalc_host_json_path_set(plate, key, val, val_kind, &wr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"default\",\"path\":\"%s\",\"key\":\"%s\",\"err\":\"%s\","
+               "\"version\":\"%s\"}\n",
+               path, key, wr.err[0] ? wr.err : "json set fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", wr.str);
+      slash = strrchr(path, '/');
+      if (slash && slash != path) {
+        size_t n = (size_t)(slash - path);
+        if (n >= sizeof parent) n = sizeof parent - 1;
+        memcpy(parent, path, n);
+        parent[n] = 0;
+        memset(&hr, 0, sizeof hr);
+        cubalc_host_mkdir(parent, &hr);
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_write(path, plate, &hr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"default\",\"err\":\"write fail\",\"version\":\"%s\"}\n",
+               CUBALC_LANG_VERSION);
+        return 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"default\",\"path\":\"%s\",\"key\":\"%s\",\"kept\":false,"
+             "\"inserted\":true,\"bytes\":%ld,\"version\":\"%s\",\"plate\":%s}\n",
+             path, key, hr.n, CUBALC_LANG_VERSION, plate);
+      return 0;
+    }
+
+    /* toggle path key — TOGGLEP dual: flip 0↔1 flag (paths ok; miss→1).
+     *   cubalc plate toggle agent.json flags.debug */
+    if (strcmp(op, "toggle") == 0) {
+      long cur = 0, nv;
+      char raw[32];
+      memset(&gr, 0, sizeof gr);
+      if (cubalc_host_json_path_get(plate, key, &gr) == 0) {
+        char *end = NULL;
+        if (!gr.str[0]) cur = 0;
+        else {
+          cur = strtol(gr.str, &end, 10);
+          if (end == gr.str) cur = 1; /* non-numeric non-empty → truthy */
+        }
+      } else {
+        cur = 0;
+      }
+      nv = cur ? 0 : 1;
+      snprintf(raw, sizeof raw, "%ld", nv);
+      memset(&wr, 0, sizeof wr);
+      if (cubalc_host_json_path_set(plate, key, raw, 1, &wr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"toggle\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               wr.err[0] ? wr.err : "json set fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", wr.str);
+      slash = strrchr(path, '/');
+      if (slash && slash != path) {
+        size_t n = (size_t)(slash - path);
+        if (n >= sizeof parent) n = sizeof parent - 1;
+        memcpy(parent, path, n);
+        parent[n] = 0;
+        memset(&hr, 0, sizeof hr);
+        cubalc_host_mkdir(parent, &hr);
+      }
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_write(path, plate, &hr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"toggle\",\"err\":\"write fail\",\"version\":\"%s\"}\n",
+               CUBALC_LANG_VERSION);
+        return 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"toggle\",\"path\":\"%s\",\"key\":\"%s\",\"value\":%ld,"
+             "\"prev\":%ld,\"bytes\":%ld,\"version\":\"%s\",\"plate\":%s}\n",
+             path, key, nv, cur ? 1L : 0L, hr.n, CUBALC_LANG_VERSION, plate);
       return 0;
     }
 

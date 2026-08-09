@@ -39,9 +39,9 @@ INCLUDE plate_save             # or plate_patch with PLATE_PATCH
 DUMPP                          # cubalc.plate_info.v1
 ```
 
-Shell: `cubalc plate get|type|set|inc|show|ensure|merge|eq|diff|changelog|has|need|pluck path.json` · `cubalc libs` · `cubalc cat plate_session`.  
-Keys may be dotted: `cubalc plate get agent.json freq.error` · `plate type agent.json freq.error` → `num` · `plate pluck … host freq.error n`.  
-`ensure`/`merge` seed+patch · `eq`/`diff`/`changelog` sync · `has`/`need` contract · `pluck` bag · `type` kind probe (no `.cubalc`).  
+Shell: `cubalc plate get|type|set|default|toggle|inc|show|ensure|merge|eq|diff|changelog|has|need|pluck path.json` · `cubalc libs` · `cubalc cat plate_session`.  
+Keys may be dotted: `cubalc plate get agent.json freq.error` · `plate type … freq.error` → `num` · `plate default … cfg.port 8080` · `plate toggle … flags.debug`.  
+`ensure`/`merge` seed+patch · `default` set-if-missing · `toggle` 0↔1 · `has`/`need` · `pluck` · `type` (no `.cubalc`).  
 See `docs/COOKBOOK.md` §8 (single plate) · §9 (multi-plate PEER).
 
 ### Multi-plate PEER

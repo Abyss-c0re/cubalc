@@ -208,6 +208,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate type state/my_agent.json meta                   # → obj|missing
 ./out/cubalc plate set  state/my_agent.json role worker
 ./out/cubalc plate set  state/my_agent.json freq.error 0
+./out/cubalc plate default state/my_agent.json cfg.port 8080        # set-if-missing (paths ok)
+./out/cubalc plate toggle  state/my_agent.json flags.debug          # flip 0↔1
 ./out/cubalc plate inc  state/my_agent.json n
 ./out/cubalc plate ensure state/my_agent.json '{"n":0,"ok":true}'   # create-or-keep
 ./out/cubalc plate merge  state/my_agent.json '{"status":"ready"}'  # multi-key overlay

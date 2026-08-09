@@ -685,6 +685,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 655. ~~**Dotted path `FILLP` / `FILLPFILE` / `{{freq.error}}`**~~ **done** (template expand nest slots · STRICT miss lists path keys · multi-plate · CLI plate fill dual · no GETP+REPLACEALL).
 656. ~~**`cubalc plate pluck` / `getall`**~~ **done** (CLI multi-key peel bag · PLUCKP dual · dotted paths · agent one-shot without `.cubalc`).
 657. ~~**`cubalc plate type` / `kind`**~~ **done** (CLI TYPEP dual · kind miss|num|str|bool|null|obj|arr · dotted paths · agent peel strategy without `.cubalc`).
+658. ~~**`cubalc plate default` / `toggle`**~~ **done** (CLI DEFAULTP/TOGGLEP duals · set-if-missing + flag flip · dotted paths · agent seed/feature flags without `.cubalc`).
 
 ## Tick protocol
 
