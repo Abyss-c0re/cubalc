@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 578,
-  "version": "1.15.605-usability",
-  "item": "LENP/EMPTYP/VALSP",
-  "item_id": 614,
-  "title": "LENP|NKEYSP · EMPTYP|NONEMPTYP · VALSP · multi-plate size/empty/values probes · no SYS JSONLEN/JSONEMPTY/JSONVALUES",
-  "commit": "b414bc8dcb2a03e1a58a3ce5fea324d99308b25c",
-  "summary": "Key count, empty IF, values bag duals of KEYSP without SYS. proof 1155 31/31 + copyp reg.",
+  "iter": 579,
+  "version": "1.15.606-usability",
+  "item": "TYPEP/KINDP",
+  "item_id": 615,
+  "title": "TYPEP|KINDP · multi-plate field kind probe missing|num|str|bool|null|obj|arr · no SYS JSONTYPE",
+  "commit": "56c35ba47937dfcf29e9f35b902a538e205b2994",
+  "summary": "Field kind probe for peel path selection without SYS. proof 1156 24/24 + lenp reg.",
   "proofs": [
-    "1155_lenp 31/31",
-    "1154_copyp reg 31/31"
+    "1156_typep 24/24",
+    "1155_lenp reg 31/31"
   ],
-  "when": "2026-08-09T03:25:40Z",
+  "when": "2026-08-09T03:34:58Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b414bc8dcb2a03e1a58a3ce5fea324d99308b25c",
+  "sha": "56c35ba47937dfcf29e9f35b902a538e205b2994",
   "note": "clean tree; EVOLVE_PAUSED"
 }
