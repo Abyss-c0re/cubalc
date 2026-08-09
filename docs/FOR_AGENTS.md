@@ -37,8 +37,8 @@ INCLUDE plate_save             # or plate_patch with PLATE_PATCH
 DUMPP                          # cubalc.plate_info.v1
 ```
 
-Shell: `cubalc plate get|set|inc|show|ensure|merge|eq|diff|changelog path.json` · `cubalc libs` · `cubalc cat plate_session`.  
-`ensure` = create-or-keep · `merge` = multi-key overlay · `eq`/`diff`/`changelog` = sync verify (no `.cubalc`).  
+Shell: `cubalc plate get|set|inc|show|ensure|merge|eq|diff|changelog|has|need path.json` · `cubalc libs` · `cubalc cat plate_session`.  
+`ensure`/`merge` seed+patch · `eq`/`diff`/`changelog` sync · `has`/`need` multi-key contract (no `.cubalc`).  
 See `docs/COOKBOOK.md` §8 (single plate) · §9 (multi-plate PEER).
 
 ### Multi-plate PEER

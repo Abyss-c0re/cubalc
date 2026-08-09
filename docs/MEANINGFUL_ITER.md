@@ -630,6 +630,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 600. ~~**`cubalc plate eq` / `ne` / `diff`**~~ **done** (CLI plate compare · JSONEQ/JSONCHANGED duals · mesh sync verify without `.cubalc`).
 601. ~~**`cubalc plate changelog`**~~ **done** (CLI `key: old → new` bag · JSONCHANGELOG dual · greppable mesh sync lines).
 602. ~~**`programs/lib/plate_both_save` + init --peer**~~ **done** (one INCLUDE PLATE+PEER write-back · scaffold uses it · dual of dual saves).
+603. ~~**`cubalc plate has` / `need`**~~ **done** (CLI multi-key contract · HASPALL/NEEDP duals · miss bag + exit status).
 
 ## Tick protocol
 

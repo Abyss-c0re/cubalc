@@ -209,16 +209,19 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate eq     state/a.json state/b.json                # order-indep equal
 ./out/cubalc plate diff   state/a.json state/b.json                # changed keys
 ./out/cubalc plate changelog state/a.json state/b.json             # key: old → new lines
+./out/cubalc plate has  state/my_agent.json n ok status            # multi-key soft contract
+./out/cubalc plate need state/my_agent.json n ok                   # hard gate (ok:false on miss)
 ./out/cubalc libs | grep plate
 ```
 
 `ensure` does not clobber an existing object plate (dual of `ENSUREPLATE`).  
 `merge` applies overlay keys and saves (dual of `JSONFILEMERGE` / `MERGEP` on disk).  
-`eq` / `ne` / `diff` / `changelog` compare two plate files (dual of `JSONEQ` / `JSONCHANGED` / `JSONCHANGELOG`) — exit `0` when plates match.
+`eq` / `ne` / `diff` / `changelog` compare two plate files (dual of `JSONEQ` / `JSONCHANGED` / `JSONCHANGELOG`) — exit `0` when plates match.  
+`has` / `need` multi-key presence (dual of `HASPALL` / `NEEDP`) — `need` sets `ok:false` when any key is missing.
 
 Libs: `plate_session` · `plate_boot` · `plate_save` · `plate_patch` · `plate_tick` · `agent_boot`.  
 Forms: `SETP`/`INCP`/`MERGEP`/`NEEDP`/`DUMPP`.  
-Proofs: `1117_plate_session` · `1110_setp` · `1115_plate_patch` · `1116_dumpp` · `1112_cli_plate.sh` · `1140_cli_plate_ensure_merge.sh` · `1141_cli_plate_eq_diff.sh` · `1142_cli_plate_changelog.sh`.
+Proofs: `1117_plate_session` · `1110_setp` · `1115_plate_patch` · `1116_dumpp` · `1112_cli_plate.sh` · `1140_cli_plate_ensure_merge.sh` · `1141_cli_plate_eq_diff.sh` · `1142_cli_plate_changelog.sh` · `1144_cli_plate_has_need.sh`.
 
 ## 9. Multi-plate PEER state (PLATE + PEER)
 

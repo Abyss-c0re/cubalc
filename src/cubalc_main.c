@@ -4664,6 +4664,7 @@ int main(int argc, char **argv) {
      *   cubalc plate ne     a.json b.json            # unequal probe
      *   cubalc plate diff   a.json b.json            # changed key bag · JSONCHANGED dual
      *   cubalc plate changelog a.json b.json         # "key: old → new" · JSONCHANGELOG dual
+     *   cubalc plate has|need path.json k1 k2 …      # multi-key contract · HASPALL/NEEDP duals
      * Bare: cubalc plate path.json  → show
      * One JSON plate per call (cubalc.plate.v1) for agents. */
     const char *op = "show";
@@ -4683,7 +4684,7 @@ int main(int argc, char **argv) {
     plate[0] = 0;
     if (argc <= 2) {
       fprintf(stderr,
-              "usage: cubalc plate show|get|set|inc|del|keys|fill|ensure|merge|eq|ne|diff|changelog <path> …\n"
+              "usage: cubalc plate show|get|set|inc|del|keys|fill|ensure|merge|eq|ne|diff|changelog|has|need <path> …\n"
               "       cubalc plate <path.json>                 # show\n"
               "       cubalc plate get <path> <key> [OR def]\n"
               "       cubalc plate set <path> <key> <value>\n"
@@ -4694,11 +4695,13 @@ int main(int argc, char **argv) {
               "       cubalc plate fillkeys <path> <tmpl|@file>\n"
               "       cubalc plate ensure <path> [seed|@file]  # create-or-keep\n"
               "       cubalc plate merge  <path> <overlay|@file>\n"
-              "       cubalc plate eq|ne|diff|changelog <a.json> <b.json>\n");
+              "       cubalc plate eq|ne|diff|changelog <a.json> <b.json>\n"
+              "       cubalc plate has|need <path> <k1> [k2 …]\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\",\"fill\","
-             "\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\",\"changelog\"]}\n",
+             "\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\",\"changelog\","
+             "\"has\",\"need\"]}\n",
              CUBALC_LANG_VERSION);
       return 2;
     }
@@ -4727,7 +4730,11 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "diff") == 0 || strcmp(argv[2], "changed") == 0 ||
         strcmp(argv[2], "delta") == 0 ||
         strcmp(argv[2], "changelog") == 0 || strcmp(argv[2], "clog") == 0 ||
-        strcmp(argv[2], "changes") == 0 || strcmp(argv[2], "logdiff") == 0) {
+        strcmp(argv[2], "changes") == 0 || strcmp(argv[2], "logdiff") == 0 ||
+        strcmp(argv[2], "has") == 0 || strcmp(argv[2], "hasall") == 0 ||
+        strcmp(argv[2], "has-keys") == 0 || strcmp(argv[2], "check") == 0 ||
+        strcmp(argv[2], "need") == 0 || strcmp(argv[2], "require") == 0 ||
+        strcmp(argv[2], "needkeys") == 0 || strcmp(argv[2], "require-keys") == 0) {
       op = argv[2];
       if (strcmp(op, "dump") == 0 || strcmp(op, "cat") == 0 || strcmp(op, "read") == 0)
         op = "show";
@@ -4763,6 +4770,12 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "clog") == 0 || strcmp(op, "changes") == 0 ||
                strcmp(op, "logdiff") == 0)
         op = "changelog";
+      else if (strcmp(op, "hasall") == 0 || strcmp(op, "has-keys") == 0 ||
+               strcmp(op, "check") == 0)
+        op = "has";
+      else if (strcmp(op, "require") == 0 || strcmp(op, "needkeys") == 0 ||
+               strcmp(op, "require-keys") == 0)
+        op = "need";
       ai = 3;
       /* fill[-keys]: optional -s|--strict before path */
       if ((strcmp(op, "fill") == 0 || strcmp(op, "fillkeys") == 0) &&
@@ -5319,6 +5332,92 @@ int main(int argc, char **argv) {
              file_hit2 ? "true" : "false",
              CUBALC_LANG_VERSION);
       return equal ? 0 : 1;
+    }
+
+    /* has|need path k1 [k2 …] — multi-key presence contract on a plate file.
+     * Usability: shell dual of HASPALL / NEEDP without a .cubalc program.
+     *   cubalc plate has  agent.json n status role
+     *   cubalc plate need agent.json n ok
+     * has: ok always true · has_all · miss bag · exit 0 iff all present
+     * need: ok false + err when miss (hard gate for agent scripts) */
+    if (strcmp(op, "has") == 0 || strcmp(op, "need") == 0) {
+      char keys_nl[CUBALC_HOST_STR_MAX];
+      char flat_miss[CUBALC_HOST_STR_MAX];
+      char flat_req[CUBALC_HOST_STR_MAX];
+      cubalc_host_result miss, hasr;
+      size_t o = 0, i;
+      long nreq = 0;
+      int all_ok;
+
+      keys_nl[0] = 0;
+      flat_req[0] = 0;
+      if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"need one or more keys\","
+               "\"version\":\"%s\"}\n", op, path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      while (ai < argc && argv[ai] && argv[ai][0]) {
+        size_t kl = strlen(argv[ai]);
+        if (o + kl + 2 >= sizeof keys_nl) break;
+        if (o > 0) keys_nl[o++] = '\n';
+        memcpy(keys_nl + o, argv[ai], kl);
+        o += kl;
+        keys_nl[o] = 0;
+        /* flat req for plate meta */
+        {
+          size_t fo = strlen(flat_req);
+          if (fo + kl + 2 < sizeof flat_req) {
+            if (fo > 0) {
+              flat_req[fo++] = ',';
+              flat_req[fo] = 0;
+            }
+            memcpy(flat_req + fo, argv[ai], kl);
+            flat_req[fo + kl] = 0;
+          }
+        }
+        nreq++;
+        ai++;
+      }
+
+      memset(&miss, 0, sizeof miss);
+      cubalc_host_json_filter_req_keys(plate, keys_nl, 0 /* missing */, &miss);
+      memset(&hasr, 0, sizeof hasr);
+      cubalc_host_json_has_keys(plate, keys_nl, 1 /* all */, &hasr);
+      all_ok = (hasr.n == 1) ? 1 : 0;
+
+      o = 0; flat_miss[0] = 0;
+      for (i = 0; miss.str[i] && o + 2 < sizeof flat_miss; i++) {
+        char c = miss.str[i];
+        if (c == '\n' || c == '\r') {
+          if (o > 0 && flat_miss[o - 1] != ',') flat_miss[o++] = ',';
+        } else if (c == '"' || c == '\\') {
+          flat_miss[o++] = '_';
+        } else {
+          flat_miss[o++] = c;
+        }
+      }
+      flat_miss[o] = 0;
+
+      if (strcmp(op, "need") == 0 && !all_ok) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"need\",\"path\":\"%s\",\"has_all\":false,"
+               "\"n_req\":%ld,\"n_hit\":%ld,\"n_miss\":%ld,\"miss\":\"%s\","
+               "\"keys\":\"%s\",\"file\":%s,\"err\":\"missing plate keys\","
+               "\"version\":\"%s\"}\n",
+               path, nreq, (long)hasr.code, miss.n, flat_miss, flat_req,
+               file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+        return 1;
+      }
+
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"%s\",\"path\":\"%s\",\"has_all\":%s,"
+             "\"n_req\":%ld,\"n_hit\":%ld,\"n_miss\":%ld,\"miss\":\"%s\","
+             "\"keys\":\"%s\",\"file\":%s,\"version\":\"%s\"}\n",
+             op, path, all_ok ? "true" : "false",
+             nreq, (long)hasr.code, miss.n, flat_miss, flat_req,
+             file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+      return all_ok ? 0 : 1;
     }
 
         /* remaining ops need key */
@@ -7752,7 +7851,7 @@ int main(int argc, char **argv) {
       "    init|new|scaffold [f]  starter · --plate for plate_session durable state\n"
       "    examples|starters [p]  curated runnable programs (JSON)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
-      "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/diff/changelog\n"
+      "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib        list programs/lib INCLUDE snippets\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
