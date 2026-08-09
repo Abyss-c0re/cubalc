@@ -27401,6 +27401,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"CHANGELOGP") || kw(&L->cur,"SUBSETP") || kw(&L->cur,"COVERSP") ||
              kw(&L->cur,"PLUCKP") || kw(&L->cur,"GETPALL") || kw(&L->cur,"DELTAP") ||
              kw(&L->cur,"PICKP") || kw(&L->cur,"KEEPP") || kw(&L->cur,"OMITP") ||
+             kw(&L->cur,"RENAMEP") || kw(&L->cur,"MOVEKEYP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35772,6 +35773,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"OMITP", "OMITP|DROPKEYSP [FROM plate] key… — drop listed keys → remainder plate · multi-plate · no SYS JSONDROP"},
       {"DROPKEYSP", "DROPKEYSP alias of OMITP"},
       {"STRIPP", "STRIPP alias of OMITP"},
+      {"RENAMEP", "RENAMEP|MOVEKEYP [FROM plate] old new — rename key write-back · multi-plate · no SYS JSONRENAME"},
+      {"MOVEKEYP", "MOVEKEYP alias of RENAMEP"},
+      {"MVKEYP", "MVKEYP alias of RENAMEP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -40065,6 +40069,183 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# pickp n=%ld from=%d src=%s\n",
               hr.n, have_from,
+              from_name[0] ? from_name : (have_from ? "?" : "PLATE"));
+    bump(vm); return 1;
+  }
+  /* RENAMEP|MOVEKEYP [FROM plate] old new — rename key in place (JSONRENAME dual).
+   * Soft miss: LAST_N=0 plate unchanged structure · dest overwrites if present.
+   * Write-back: mutates PLATE or named FROM plate var (SETP/DELP style).
+   * Usability: promote tmp→status without GETP+DELP+SETP glue:
+   *   RENAMEP "tmp" "status"
+   *   RENAMEP FROM PEER "tmp_host" "host"
+   */
+  if (kw(&L->cur,"RENAMEP") || kw(&L->cur,"MOVEKEYP") || kw(&L->cur,"MRENAMEP") ||
+      kw(&L->cur,"PLATE_RENAME") || kw(&L->cur,"MVKEYP") || kw(&L->cur,"RENAMEKEYP") ||
+      kw(&L->cur,"MOVEP") || kw(&L->cur,"REKEYP")) {
+    char plate[CUBALC_HOST_STR_MAX], oldk[96], newk[96];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; oldk[0] = 0; newk[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+
+    /* optional leading FROM plate */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* old key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(oldk, sizeof oldk, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+        fail(vm, "RENAMEP [FROM plate] old new — need old key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, oldk, sizeof oldk) != 0)
+        oldk[0] = 0;
+    } else {
+      fail(vm, "RENAMEP [FROM plate] old new — need old key");
+      return -1;
+    }
+
+    /* new key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(newk, sizeof newk, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+        fail(vm, "RENAMEP [FROM plate] old new — need new key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, newk, sizeof newk) != 0)
+        newk[0] = 0;
+    } else {
+      fail(vm, "RENAMEP [FROM plate] old new — need new key");
+      return -1;
+    }
+
+    /* trailing FROM plate */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!oldk[0] || !newk[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RENAMEP_N", 0);
+      var_set_num(vm, "RENAMEP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LAST_ERR", "RENAMEP: empty key");
+      var_set_str(vm, "ERR", "RENAMEP: empty key");
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_rename(plate, oldk, newk, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RENAMEP_N", 0);
+      var_set_num(vm, "RENAMEP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "RENAMEP: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "RENAMEP: fail");
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    /* write-back like SETP/DELP */
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else if (!have_from)
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "RENAMEP", hr.str);
+    var_set_str(vm, "MOVEKEYP", hr.str);
+    var_set_num(vm, "RENAMEP_N", hr.n);
+    var_set_num(vm, "JSONRENAME_N", hr.n);
+    var_set_str(vm, "RENAMEP_OLD", oldk);
+    var_set_str(vm, "RENAMEP_NEW", newk);
+    var_set_num(vm, "RENAMEP_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "RENAMEP_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# renamep %s→%s n=%ld from=%d src=%s\n",
+              oldk, newk, hr.n, have_from,
               from_name[0] ? from_name : (have_from ? "?" : "PLATE"));
     bump(vm); return 1;
   }

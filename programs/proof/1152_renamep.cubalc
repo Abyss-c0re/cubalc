@@ -1,0 +1,79 @@
+# RENAMEP / MOVEKEYP — multi-plate key rename with write-back (no SYS JSONRENAME)
+# Usability: promote tmp→status without GETP+DELP+SETP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":1,\"tmp\":\"ready\",\"role\":\"worker\"}"
+LET PEER = "{\"tmp_host\":\"cubeB\",\"agent\":\"hive\",\"n\":3}"
+
+# rename on conventional PLATE
+RENAMEP "tmp" "status"
+ASSERT OK == 1
+ASSERT RENAMEP_N == 1
+ASSERT RENAMEP_FROM == 0
+SYS EQS RENAMEP_SRC "PLATE"
+ASSERT LAST_N == 1
+SYS EQS RENAMEP_OLD "tmp"
+ASSERT LAST_N == 1
+SYS EQS RENAMEP_NEW "status"
+ASSERT LAST_N == 1
+
+GETP "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+HASP "tmp"
+ASSERT LAST_N == 0
+# other keys kept
+GETP "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+
+# soft miss
+RENAMEP "nope" "x"
+ASSERT OK == 1
+ASSERT RENAMEP_N == 0
+HASP "x"
+ASSERT LAST_N == 0
+
+# FROM PEER write-back
+RENAMEP FROM PEER "tmp_host" "host"
+ASSERT RENAMEP_FROM == 1
+SYS EQS RENAMEP_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT RENAMEP_N == 1
+GETP FROM PEER "host"
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+HASP FROM PEER "tmp_host"
+ASSERT LAST_N == 0
+# PLATE untouched by peer rename
+GETP "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+# trailing FROM
+RENAMEP "agent" "name" FROM PEER
+ASSERT RENAMEP_N == 1
+GETP FROM PEER "name"
+SYS EQS LAST "hive"
+ASSERT LAST_N == 1
+
+# alias MOVEKEYP
+LET s = "{\"a\":9,\"b\":1}"
+MOVEKEYP "a" "count" FROM s
+ASSERT RENAMEP_N == 1
+SYS JSONN "count" FROM s
+ASSERT LAST_N == 9
+HASP FROM s "a"
+ASSERT LAST_N == 0
+
+# same-name is present no-op hit when key exists
+RENAMEP "status" "status"
+ASSERT RENAMEP_N == 1
+GETP "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+PRINT "renamep soft ok"
