@@ -1,0 +1,1071 @@
+# svc_needflatn_int_board.cubalc — NEEDFLATN/HASFLATN + PATHSFLATN pure-int leaf contracts
+#
+# Real use: mesh agents gate on pure-int leaves only (ports/timeouts/hits),
+# soft-probe typed presence without string pollution, harvest int path/value
+# digests. First realworld of 1232 NEEDFLATN + 1233 HASFLATN + 1234 PATHSFLATN.
+#
+#   NEEDFLATN|REQUIREFLATN needle… · HASFLATN|COUNTFLATN|ANYFLATN|NFLATN
+#   PATHSFLATN|VALSFLATN|MATCHPATHSN|MATCHVALSN · contrast HASFLAT/PATHSFLAT
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sni_$$
+#   ./out/cubalc run programs/realworld/svc_needflatn_int_board.cubalc boot
+#   ./out/cubalc run ... needn|hasn|pathsn|peer|soft|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SNI_REPORT.txt agent.json peer.json keys.txt
+# Env: HOST_S ROLE_S CUBALC_SNI_REQUIRE
+#
+# Edges:
+#   host string: HASFLAT hit vs HASFLATN miss; NEEDFLATN hard-fail on string-only;
+#   substring meta.score; soft twin HASFLATN; WRITE NL; NUM softens REQUIRE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_needflatn_int_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_needflatn_int -- boot|needn|hasn|pathsn|peer|soft|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SNI_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SNI_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "keys.txt"
+LET keys_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+LET bag_n = 0
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET body = ""
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET soft_ok = 0
+LET gate_ok = 0
+LET keep_n = 0
+LET path_val = ""
+LET key_bag = ""
+
+ONEOF ACTION "boot", "needn", "hasn", "pathsn", "peer", "soft", "gate", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "needn" THEN
+    LET op = "needn"
+  WHEN "hasn" THEN
+    LET op = "hasn"
+  WHEN "pathsn" THEN
+    LET op = "pathsn"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — mixed int/string plate for typed vs any-leaf contrast
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-needflatn\",\"schema\":\"cubalc.svc_needflatn_int.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"cfg\":{\"port\":9090,\"host\":\"h\"},\"timeout_ms\":5000,\"meta\":{\"port\":1,\"role\":\"w\"},\"score\":{\"a\":10,\"b\":20},\"meta_score\":30,\"label\":\"int\"}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"schema\":\"cubalc.svc_needflatn_int.v1\",\"host\":\"" host_s "\",\"hits\":{\"a\":3,\"b\":4},\"role\":\"leader\",\"n\":2,\"tag\":\"t\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  GETP "cfg.port"
+  SYS EQS LAST "9090"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "cfg.host"
+  SYS EQS LAST "h"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "timeout_ms"
+  SYS EQS LAST "5000"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "score.a"
+  SYS EQS LAST "10"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "int"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "boot ok"
+            LET admit_n = 1
+            LET take_n = 1
+            LET keep_n = 2
+          ELSE
+            LET miss = 1
+            LET note_msg = "boot label"
+            FAIL "boot label"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "boot score.a"
+          FAIL "boot score.a"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot timeout"
+        FAIL "boot timeout"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot host str"
+      FAIL "boot host str"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot port"
+    FAIL "boot port"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit load_hit soft_ok has_n note_msg
+  CLEAR_ERR
+END
+
+# needn — NEEDFLATN multi pure-int contract + peel first value
+SYS EQS op "needn"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  NEEDFLATN "port" "timeout_ms"
+  LET take_n = LAST_N
+  LET keep_n = NEEDFLATN_N
+  LET miss_n = NEEDFLATN_MISS_N
+  CLEAR_ERR
+  SYS EQS NEEDFLATN_PATH "cfg.port"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  REQUIREFLATN "score"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "int"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-needflatn"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF take_n == 9090 THEN
+    IF keep_n == 2 THEN
+      IF miss_n == 0 THEN
+        IF peel_hit == 1 THEN
+          IF load_hit == 10 THEN
+            IF soft_ok == 1 THEN
+              IF has_n == 1 THEN
+                LET hit = 1
+                LET note_msg = "needn ok"
+                LET admit_n = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "needn agent"
+                FAIL "needn agent"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "needn label"
+              FAIL "needn label"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "needn score peel"
+            FAIL "needn score peel"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "needn path"
+          FAIL "needn path"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "needn miss_n"
+        FAIL "needn miss_n"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "needn n"
+      FAIL "needn n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "needn port val"
+    FAIL "needn port val"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "needn:" w_s ":nn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "needn:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n keep_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# hasn — HASFLATN/COUNTFLATN vs HASFLAT contrast on host string
+SYS EQS op "hasn"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  HASFLATN "port"
+  LET peel_hit = LAST_N
+  LET keep_n = HASFLATN_N
+  CLEAR_ERR
+  COUNTFLATN "port"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # host string: pure-int miss
+  HASFLATN "host"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # any-leaf HASFLAT hits host
+  HASFLAT "host"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  COUNTFLATN "score"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  COUNTFLATN ""
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # score.a, score.b, meta_score (substring) = 3 pure-int
+  # pure-int all: cfg.port, meta.port, timeout_ms, score.a, score.b, meta_score = 6
+  IF peel_hit == 1 THEN
+    IF keep_n == 2 THEN
+      IF take_n == 2 THEN
+        IF load_hit == 0 THEN
+          IF soft_ok == 1 THEN
+            IF has_n == 3 THEN
+              IF miss_n >= 6 THEN
+                LET hit = 1
+                LET note_msg = "hasn ok"
+                LET admit_n = 1
+                LET gate_ok = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "hasn empty count"
+                FAIL "hasn empty count"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "hasn score n"
+              FAIL "hasn score n"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "hasn hasflat host"
+            FAIL "hasn hasflat host"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "hasn host int"
+          FAIL "hasn host int"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "hasn count port"
+        FAIL "hasn count port"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "hasn port n"
+      FAIL "hasn port n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "hasn port"
+    FAIL "hasn port"
+    CLEAR_ERR
+  END
+  SYS STR keep_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "hasn:" w_s ":hn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "hasn:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n keep_n take_n load_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# pathsn — PATHSFLATN/VALSFLATN pure-int bags vs PATHSFLAT host pollution
+SYS EQS op "pathsn"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PATHSFLATN "score"
+  LET key_bag = LAST
+  LET keep_n = PATHSFLATN_N
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  SYS HASLINE key_bag "score.a"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "score.b"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # meta.score may not exist — we have meta_score as top key; score needle: score.a score.b only = 2
+  # Wait plate has score.a, score.b only under score.* — meta doesn't have score key
+  # meta_score is top-level path "meta_score" - contains "score" substring!
+  SYS HASLINE key_bag "meta_score"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  VALSFLATN "score"
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "10"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "20"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # host: PATHSFLATN empty, PATHSFLAT one
+  PATHSFLATN "host"
+  LET path_val = LAST
+  CLEAR_ERR
+  SYS EQS path_val ""
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  PATHSFLAT "host"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "cfg.host"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF take_n >= 2 THEN
+          IF has_n == 1 THEN
+            IF miss_n == 1 THEN
+              IF gate_ok == 1 THEN
+                IF admit_n == 1 THEN
+                  LET hit = 1
+                  LET note_msg = "pathsn ok"
+                  LET admit_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "pathsn pathsflat host"
+                  FAIL "pathsn pathsflat host"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "pathsn host empty"
+                FAIL "pathsn host empty"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "pathsn val 20"
+              FAIL "pathsn val 20"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "pathsn val 10"
+            FAIL "pathsn val 10"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "pathsn vals n"
+          FAIL "pathsn vals n"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "pathsn meta_score friend"
+        FAIL "pathsn meta_score friend"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "pathsn score.b"
+      FAIL "pathsn score.b"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "pathsn score.a"
+    FAIL "pathsn score.a"
+    CLEAR_ERR
+  END
+  SYS STR keep_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "pathsn:" w_s ":pn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pathsn:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n keep_n take_n peel_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# peer — NEEDFLATN/HASFLATN/PATHSFLATN FROM PEER
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  NEEDFLATN FROM PEER "hits"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  HASFLATN FROM PEER "hits"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  COUNTFLATN FROM PEER "hits"
+  LET keep_n = LAST_N
+  CLEAR_ERR
+  # role string: HASFLATN miss, HASFLAT hit
+  HASFLATN FROM PEER "role"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  HASFLAT FROM PEER "role"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  PATHSFLATN FROM PEER "hits"
+  LET key_bag = LAST
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  SYS HASLINE key_bag "hits.a"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-needflatn"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "tag"
+  SYS EQS LAST "t"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  IF take_n == 3 THEN
+    IF peel_hit == 1 THEN
+      IF keep_n == 2 THEN
+        IF load_hit == 0 THEN
+          IF soft_ok == 1 THEN
+            IF has_n == 1 THEN
+              IF miss_n == 1 THEN
+                IF gate_ok == 1 THEN
+                  LET hit = 1
+                  LET note_msg = "peer ok"
+                  LET admit_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "peer tag"
+                  FAIL "peer tag"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "peer agent"
+                FAIL "peer agent"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "peer paths"
+              FAIL "peer paths"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer hasflat role"
+            FAIL "peer hasflat role"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer role int"
+          FAIL "peer role int"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer has n"
+        FAIL "peer has n"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer has"
+      FAIL "peer has"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer needn"
+    FAIL "peer needn"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" w_s ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n keep_n load_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# soft — HASFLATN twin for miss (NEEDFLATN would hard-fail)
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  HASFLATN "ghostpath"
+  LET peel_hit = LAST_N
+  LET keep_n = HASFLATN_N
+  CLEAR_ERR
+  PATHSFLATN "ghostpath"
+  LET path_val = LAST
+  CLEAR_ERR
+  SYS EQS path_val ""
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  VALSFLATN "ghostpath"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body ""
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-needflatn"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # string host still not pure-int
+  HASFLATN "host"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 0 THEN
+    IF keep_n == 0 THEN
+      IF load_hit == 1 THEN
+        IF soft_ok == 1 THEN
+          IF miss_n == 0 THEN
+            IF has_n == 1 THEN
+              IF take_n == 0 THEN
+                LET hit = 1
+                LET note_msg = "soft ok"
+                LET admit_n = 1
+                LET gate_ok = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "soft host int"
+                FAIL "soft host int"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "soft agent"
+              FAIL "soft agent"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "soft empty bag"
+            FAIL "soft empty bag"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "soft vals"
+          FAIL "soft vals"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft paths"
+        FAIL "soft paths"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft has n"
+      FAIL "soft has n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft has"
+    FAIL "soft has"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok" soft_ok ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit keep_n take_n has_n note_msg
+  CLEAR_ERR
+END
+
+# gate — NEEDFLATN port+timeout, HASFLATN port, schema
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  NEEDFLATN "port" "timeout_ms"
+  LET take_n = LAST_N
+  LET keep_n = NEEDFLATN_N
+  CLEAR_ERR
+  HASFLATN "port"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # host must NOT be pure-int present
+  HASFLATN "host"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_needflatn_int"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  COUNTFLATN "score"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF take_n == 9090 THEN
+    IF keep_n == 2 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 0 THEN
+          IF miss_n == 1 THEN
+            IF has_n >= 2 THEN
+              LET hit = 1
+              LET gate_ok = 1
+              LET admit_n = 1
+              LET note_msg = "gate ok"
+              LET soft_ok = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "gate score"
+              FAIL "gate score"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "gate schema"
+            FAIL "gate schema"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate host int"
+          FAIL "gate host int"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate has port"
+        FAIL "gate has port"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate need n"
+      FAIL "gate need n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate port"
+    FAIL "gate port"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF gate_ok == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" gate_ok ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n gate_ok take_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# probe — ANYFLATN/NFLATN/MATCHPATHSN/MATCHVALSN aliases
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SETP "probe.p1" 7
+  CLEAR_ERR
+  SETP "probe.p2" 14
+  CLEAR_ERR
+  SETP "probe.name" "run"
+  CLEAR_ERR
+  ANYFLATN "probe"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  NFLATN "probe"
+  LET keep_n = LAST_N
+  CLEAR_ERR
+  MATCHPATHSN "probe"
+  LET key_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE key_bag "probe.p1"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # name string not in pure-int paths
+  SYS HASLINE key_bag "probe.name"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  MATCHVALSN "probe"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "7"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "run"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-needflatn"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF keep_n == 2 THEN
+      IF load_hit == 1 THEN
+        IF soft_ok == 0 THEN
+          IF has_n == 1 THEN
+            IF take_n == 0 THEN
+              IF miss_n == 1 THEN
+                LET hit = 1
+                LET note_msg = "probe ok"
+                LET admit_n = 1
+                LET gate_ok = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "probe agent"
+                FAIL "probe agent"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "probe val run"
+              FAIL "probe val run"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe val 7"
+            FAIL "probe val 7"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe name path"
+          FAIL "probe name path"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe paths p1"
+        FAIL "probe paths p1"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe nflatn"
+      FAIL "probe nflatn"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe anyflatn"
+    FAIL "probe anyflatn"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:alias:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit keep_n load_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_needflatn_int.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " keep=" keep_n " take=" take_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_needflatn_int_board: end"
