@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 669,
-  "version": "1.15.696-usability",
-  "item": "COUNTBYVAL + HASVAL + plate duals",
-  "item_id": 705,
-  "title": "COUNTBYVAL/NBYVAL + HASVAL/HASVALFLAT + cubalc plate countbyval|hasval · exact leaf value count/presence → LAST_N · multi-plate",
-  "commit": "b8d330285c7a3b77aa117f0d37dd61f0f17278f1",
-  "summary": "Presence/count without PATHSBYVAL+LINES glue. proof 1246 + CLI PASS.",
+  "iter": 670,
+  "version": "1.15.697-usability",
+  "item": "SETBYVAL + plate setbyval",
+  "item_id": 706,
+  "title": "SETBYVAL/REPLACEVAL + cubalc plate setbyval · rewrite every leaf value equal to old → new write-back · multi-plate",
+  "commit": "33403d0718c16434e7e4e7c63b52074fbae583d3",
+  "summary": "Bulk status rewrite without PATHSBYVAL+EACH+SETP glue. proof 1247 + CLI PASS.",
   "proofs": [
-    "1246_countbyval PASS",
-    "1246_cli_plate_countbyval PASS",
-    "1245_pathsbyval reg PASS"
+    "1247_setbyval PASS",
+    "1247_cli_plate_setbyval PASS",
+    "1246_countbyval reg PASS"
   ],
-  "when": "2026-08-09T20:29:11Z",
+  "when": "2026-08-09T20:40:12Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b8d330285c7a3b77aa117f0d37dd61f0f17278f1",
-  "note": "after PATHSBYVAL; EVOLVE_PAUSED"
+  "sha": "33403d0718c16434e7e4e7c63b52074fbae583d3",
+  "note": "after COUNTBYVAL; EVOLVE_PAUSED"
 }
