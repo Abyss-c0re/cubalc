@@ -27415,6 +27415,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"NEEDPOBJ") ||
              kw(&L->cur,"PLUCKOBJ") || kw(&L->cur,"NESTPLUCK") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
+             kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"TOKVP") || kw(&L->cur,"FROMKVP") ||
              kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
              kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
@@ -35853,6 +35854,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"KEEPOBJ", "KEEPOBJ alias of PICKOBJ"},
       {"OMITOBJ", "OMITOBJ|STRIPNEST [FROM plate] nest field… — drop listed keys in nest · write-back · multi-plate"},
       {"STRIPNEST", "STRIPNEST alias of OMITOBJ"},
+      {"LENOBJ", "LENOBJ|NESTLEN [FROM plate] nest — nested key count → LAST_N · multi-plate · LENP dual"},
+      {"NESTLEN", "NESTLEN alias of LENOBJ"},
+      {"EMPTYOBJ", "EMPTYOBJ|ISEMPTYNEST [FROM plate] nest — soft empty nest 0|1 · multi-plate · EMPTYP dual"},
+      {"NONEMPTYOBJ", "NONEMPTYOBJ|HASKEYSOBJ [FROM plate] nest — soft nonempty nest 0|1 · multi-plate"},
+      {"VALSOBJ", "VALSOBJ|NESTVALS [FROM plate] nest — nested values bag → LAST · multi-plate · VALSP dual"},
+      {"NESTVALS", "NESTVALS alias of VALSOBJ"},
       {"TOKVP", "TOKVP|TOBAGP [FROM plate] — plate → key:val bag · multi-plate · no SYS JSONTOKV"},
       {"TOBAGP", "TOBAGP alias of TOKVP"},
       {"FROMKVP", "FROMKVP|BAGTOP [bag] [INTO name] — key=val bag → plate · multi-plate · no SYS JSONFROMKV"},
@@ -43133,6 +43140,247 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               is_omit ? "omitobj" : "pickobj", nestk, pr.n, n_req, have_from);
     bump(vm); return 1;
   }
+
+  /* LENOBJ|NESTLEN|NKEYSOBJ [FROM plate] nest — nested key count → LAST_N (LENP dual).
+   * EMPTYOBJ|ISEMPTYNEST [FROM plate] nest — soft empty nest 0|1 (EMPTYP dual).
+   * NONEMPTYOBJ|HASKEYSOBJ [FROM plate] nest — soft nonempty 0|1.
+   * VALSOBJ|NESTVALS [FROM plate] nest — nested values bag → LAST (VALSP dual).
+   * Soft nest miss: LEN=0 · EMPTY=1 · NONEMPTY=0 · VALS="".
+   * Usability: nest size/empty/values without GETOBJ+LENP/EMPTYP/VALSP glue:
+   *   LENOBJ "meta"
+   *   EMPTYOBJ "stats"
+   *   VALSOBJ FROM PEER "cfg"
+   */
+  if (kw(&L->cur,"LENOBJ") || kw(&L->cur,"NESTLEN") || kw(&L->cur,"NKEYSOBJ") ||
+      kw(&L->cur,"OBJLEN") || kw(&L->cur,"MLENOBJ") || kw(&L->cur,"COUNTNEST") ||
+      kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"ISEMPTYNEST") || kw(&L->cur,"NESTEMPTY") ||
+      kw(&L->cur,"ISEMPTYOBJ") || kw(&L->cur,"MEMPTYOBJ") ||
+      kw(&L->cur,"NONEMPTYOBJ") || kw(&L->cur,"HASKEYSOBJ") || kw(&L->cur,"NESTNONEMPTY") ||
+      kw(&L->cur,"HASNESTKEYS") || kw(&L->cur,"MNONEMPTYOBJ") ||
+      kw(&L->cur,"VALSOBJ") || kw(&L->cur,"NESTVALS") || kw(&L->cur,"OBJVALS") ||
+      kw(&L->cur,"VALUESNEST") || kw(&L->cur,"MVALSOBJ") || kw(&L->cur,"NESTVALUES")) {
+    char plate[CUBALC_HOST_STR_MAX], nestk[96], nest[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result ngr, hr;
+    int have_from = 0, nest_hit = 0;
+    int is_len = 0, is_empty = 0, is_nonempty = 0, is_vals = 0;
+    long nkeys = 0;
+    Var *pv;
+    const char *v;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "LENOBJ") == 0 || strcmp(op0, "NESTLEN") == 0 ||
+        strcmp(op0, "NKEYSOBJ") == 0 || strcmp(op0, "OBJLEN") == 0 ||
+        strcmp(op0, "MLENOBJ") == 0 || strcmp(op0, "COUNTNEST") == 0)
+      is_len = 1;
+    else if (strcmp(op0, "EMPTYOBJ") == 0 || strcmp(op0, "ISEMPTYNEST") == 0 ||
+             strcmp(op0, "NESTEMPTY") == 0 || strcmp(op0, "ISEMPTYOBJ") == 0 ||
+             strcmp(op0, "MEMPTYOBJ") == 0)
+      is_empty = 1;
+    else if (strcmp(op0, "NONEMPTYOBJ") == 0 || strcmp(op0, "HASKEYSOBJ") == 0 ||
+             strcmp(op0, "NESTNONEMPTY") == 0 || strcmp(op0, "HASNESTKEYS") == 0 ||
+             strcmp(op0, "MNONEMPTYOBJ") == 0)
+      is_nonempty = 1;
+    else
+      is_vals = 1;
+
+    lex_next(L);
+    plate[0] = 0; nestk[0] = 0; nest[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(nestk, sizeof nestk, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"END") || kw(&L->cur,"ASSERT") || kw(&L->cur,"LET")) {
+        fail(vm, "LENOBJ|EMPTYOBJ|VALSOBJ nest — need nest key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, nestk, sizeof nestk) != 0)
+        nestk[0] = 0;
+    } else {
+      fail(vm, "LENOBJ|EMPTYOBJ|VALSOBJ nest — need nest key");
+      return -1;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!nestk[0]) {
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LENOBJ|EMPTYOBJ|VALSOBJ: empty nest");
+      var_set_str(vm, "ERR", "LENOBJ|EMPTYOBJ|VALSOBJ: empty nest");
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    nest_hit = 0;
+    nest[0] = 0;
+    memset(&ngr, 0, sizeof ngr);
+    if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
+      v = ngr.str;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v == '{') {
+        if (v != ngr.str) {
+          size_t n = strlen(v);
+          memmove(ngr.str, v, n + 1);
+        }
+        snprintf(nest, sizeof nest, "%s", ngr.str);
+        nest_hit = 1;
+      }
+    }
+
+    nkeys = 0;
+    if (nest_hit) {
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_len(nest, &hr) == 0)
+        nkeys = hr.n;
+      else if (cubalc_host_json_keys(nest, &hr) == 0)
+        nkeys = hr.n;
+    }
+
+    var_set_str(vm, "LENOBJ_NEST", nestk);
+    var_set_num(vm, "LENOBJ_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "LENOBJ_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "LENOBJ_NEST_HIT", nest_hit ? 1 : 0);
+
+    if (is_len) {
+      var_set_num(vm, "LAST_N", nkeys);
+      vm->last_n = nkeys;
+      {
+        char nb[32];
+        snprintf(nb, sizeof nb, "%ld", nkeys);
+        var_set_str(vm, "LAST", nb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      }
+      var_set_num(vm, "LENOBJ", nkeys);
+      var_set_num(vm, "LENOBJ_N", nkeys);
+      var_set_num(vm, "NKEYS", nkeys);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# lenobj nest=%s n=%ld from=%d\n",
+                nestk, nkeys, have_from);
+      bump(vm); return 1;
+    }
+
+    if (is_empty || is_nonempty) {
+      int empty = (!nest_hit || nkeys == 0) ? 1 : 0;
+      int flag = is_empty ? empty : !empty;
+      var_set_num(vm, "LAST_N", flag ? 1 : 0);
+      vm->last_n = flag ? 1 : 0;
+      var_set_str(vm, "LAST", flag ? "1" : "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", flag ? "1" : "0");
+      if (is_empty) {
+        var_set_num(vm, "EMPTYOBJ", empty ? 1 : 0);
+        var_set_num(vm, "EMPTYOBJ_N", empty ? 1 : 0);
+      } else {
+        var_set_num(vm, "NONEMPTYOBJ", empty ? 0 : 1);
+        var_set_num(vm, "NONEMPTYOBJ_N", empty ? 0 : 1);
+      }
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# %s nest=%s flag=%d\n",
+                is_empty ? "emptyobj" : "nonemptyobj", nestk, flag);
+      bump(vm); return 1;
+    }
+
+    /* VALSOBJ */
+    {
+      char bag[CUBALC_HOST_STR_MAX];
+      bag[0] = 0;
+      if (nest_hit) {
+        memset(&hr, 0, sizeof hr);
+        if (cubalc_host_json_values(nest, &hr) == 0) {
+          snprintf(bag, sizeof bag, "%s", hr.str);
+          nkeys = hr.n;
+        }
+      }
+      var_set_str(vm, "LAST", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      vm->last_n = nkeys;
+      var_set_num(vm, "LAST_N", nkeys);
+      var_set_str(vm, "VALSOBJ", bag);
+      var_set_str(vm, "NESTVALS", bag);
+      var_set_num(vm, "VALSOBJ_N", nkeys);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# valsobj nest=%s n=%ld from=%d\n",
+                nestk, nkeys, have_from);
+      bump(vm); return 1;
+    }
+  }
+
 
 
 

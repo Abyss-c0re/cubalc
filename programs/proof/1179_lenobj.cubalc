@@ -1,0 +1,79 @@
+# LENOBJ / EMPTYOBJ / NONEMPTYOBJ / VALSOBJ — nested size/empty/values probes
+# Usability: LENP/EMPTYP/VALSP duals for nests without GETOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"x\":1,\"role\":\"worker\",\"zone\":\"A\"},\"n\":3}"
+LET PEER = "{\"cfg\":{\"port\":8080,\"tls\":1},\"name\":\"peerB\"}"
+
+# LENOBJ key count
+LENOBJ "meta"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT LENOBJ_N == 3
+ASSERT LENOBJ_NEST_HIT == 1
+
+# empty / nonempty
+EMPTYOBJ "meta"
+ASSERT LAST_N == 0
+ASSERT EMPTYOBJ == 0
+NONEMPTYOBJ "meta"
+ASSERT LAST_N == 1
+ASSERT NONEMPTYOBJ == 1
+
+LET PLATE = "{\"stats\":{}}"
+EMPTYOBJ "stats"
+ASSERT LAST_N == 1
+ASSERT EMPTYOBJ == 1
+NONEMPTYOBJ "stats"
+ASSERT LAST_N == 0
+LENOBJ "stats"
+ASSERT LAST_N == 0
+
+# nest miss soft
+LENOBJ "nope"
+ASSERT LENOBJ_NEST_HIT == 0
+ASSERT LAST_N == 0
+EMPTYOBJ "nope"
+ASSERT LAST_N == 1
+
+# VALSOBJ values bag
+LET PLATE = "{\"meta\":{\"x\":1,\"role\":\"worker\",\"zone\":\"A\"}}"
+VALSOBJ "meta"
+ASSERT OK == 1
+ASSERT VALSOBJ_N == 3
+SYS HASLINE LAST "1"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "worker"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "A"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+LENOBJ FROM PEER "cfg"
+ASSERT LENOBJ_FROM == 1
+ASSERT LAST_N == 2
+VALSOBJ "cfg" FROM PEER
+ASSERT VALSOBJ_N == 2
+SYS HASLINE LAST "8080"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "1"
+ASSERT LAST_N == 1
+EMPTYOBJ FROM PEER "cfg"
+ASSERT LAST_N == 0
+
+# aliases
+NESTLEN "meta"
+ASSERT LAST_N == 3
+NESTVALS "meta"
+ASSERT VALSOBJ_N == 3
+LET PLATE = "{\"stats\":{}}"
+ISEMPTYNEST "stats"
+ASSERT LAST_N == 1
+
+# outer intact on FROM
+GETP FROM PEER "name"
+SYS EQS LAST "peerB"
+ASSERT LAST_N == 1
+
+PRINT "lenobj soft ok"

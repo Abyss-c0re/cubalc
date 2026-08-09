@@ -290,6 +290,9 @@ EACH KEYNEST "meta"                 # walk nested KEY+VALUE
 PLUCKOBJ "meta" "x" "role" "zone"  # multi peel nested → bag
 PICKOBJ "meta" "role" "zone"         # keep only listed nest keys
 OMITOBJ "meta" "tmp"                  # drop nest keys write-back
+LENOBJ "meta"                        # nest key count → LAST_N
+VALSOBJ "meta"                        # nest values bag
+EMPTYOBJ "stats"                      # soft empty nest probe
 ```
 
 
