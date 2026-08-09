@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 247,
-  "program": "programs/realworld/svc_pluckp_digest_board.cubalc",
-  "theme": "multi-key PLUCKP health digest + NEEDP/HASPALL path gate",
-  "version": "1.15.647-usability",
+  "iter": 248,
+  "program": "programs/realworld/svc_fillp_path_report_board.cubalc",
+  "theme": "FILLP path nest report + TYPEP kind gate",
+  "version": "1.15.648-usability",
   "pass": true,
-  "prior_note": "iter 246 path GETP/SETP; this iter first realworld PLUCKP dotted multi-key digest (proof 1195) + NEEDP path (1194)",
+  "prior_note": "iter 247 PLUCKP multi-key digest; this iter first realworld FILLP {{freq.error}} path templates (proof 1196) + TYPEP path kinds",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,61 @@
     },
     {
       "name": "boot",
-      "cmd": "seed nest + PLUCKP 4-key LAST_N",
+      "cmd": "seed nest + FILLP path smoke + TYPEP num",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "pluck",
-      "cmd": "PLUCKP dotted/slash + GETPALL",
+      "name": "fill",
+      "cmd": "FILLP multi path + slash alias",
       "ok": true,
-      "note": "pluck"
+      "note": "fill"
     },
     {
-      "name": "peer",
-      "cmd": "PLUCKP/NEEDP FROM PEER path",
+      "name": "keys",
+      "cmd": "FILLPKEYS path slots + false friend",
       "ok": true,
-      "note": "peer"
+      "note": "keys"
     },
     {
       "name": "soft",
-      "cmd": "PLUCKP miss empty + HASPALL miss bag + false friend",
+      "cmd": "miss empty slots x=/z= host keep",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "gate",
-      "cmd": "NEEDP/HASPALL path contract",
+      "name": "strict",
+      "cmd": "FILLP STRICT + NEEDFILLP + soft twin",
       "ok": true,
-      "note": "gate"
+      "note": "strict"
     },
     {
-      "name": "digest",
-      "cmd": "STATUS multi-field health digest row",
+      "name": "peer",
+      "cmd": "FILLP FROM PEER path + NEEDP",
       "ok": true,
-      "note": "digest"
+      "note": "peer"
+    },
+    {
+      "name": "type",
+      "cmd": "TYPEP num/str/obj/missing + slash",
+      "ok": true,
+      "note": "type"
+    },
+    {
+      "name": "report",
+      "cmd": "FILLPFILE materialize out_report",
+      "ok": true,
+      "note": "report"
     },
     {
       "name": "probe",
-      "cmd": "SRC/FROM flags + peer partial miss",
+      "cmd": "empty bag + FILLPKEYS path + schema",
       "ok": true,
       "note": "probe"
     },
     {
       "name": "require_unknown",
-      "cmd": "EXIT 2 shell 2; REQUIRE=abc softens",
+      "cmd": "EXIT 2; REQUIRE=abc softens",
       "ok": true,
       "note": "W7/W6"
     },
@@ -65,7 +77,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "422/433 pre-existing cli shell set fails; pluckp_path PASS 26 needp_path PASS 27"
+      "note": "422/435 pre-existing cli shell set fails; fillp_path PASS 23"
     }
   ],
   "weaknesses": [
@@ -2812,28 +2824,49 @@
       "title": "STATUS/VAL/META WRITE omit trailing NL",
       "detail": "cat -A STATUS last line probe:pluck:pb without $; VAL/META single lines without trailing NL. W5/W10 class.",
       "repro": "cat -A STATUS.txt META.txt after probe"
+    },
+    {
+      "id": "W344",
+      "severity": "high",
+      "area": "host|hasline_bag",
+      "title": "SYS HASLINE var/FILLP_MISS_KEYS reparsed as form in long agents",
+      "detail": "Reconfirmed W341 class on FILLP soft path: LET w_s=FILLP_MISS_KEYS; SYS HASLINE w_s \"freq.crit\" → unknown form w_s. SYS HASLINE FILLP_MISS_KEYS also fails as unknown form in long boards though proofs work. Soft miss contract must use expanded body shape (x= / z=) not miss-key bag.",
+      "repro": "svc_fillp_path_report soft: SYS HASLINE w_s freq.crit → unknown form w_s"
+    },
+    {
+      "id": "W345",
+      "severity": "med",
+      "area": "lang|fillp_miss",
+      "title": "FILLP miss empty slots leave awkward \"x= y=val z=\" shape",
+      "detail": "Soft templates expand missing path keys to empty strings with spaces: \"x= y=cubeX z=\". Agents must STARTS/HAS glue rather than structured miss maps when HASLINE bag fails (W344).",
+      "repro": "FILLP \"x={{freq.crit}} y={{host}}\" → x= y=cubeX"
+    },
+    {
+      "id": "W346",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL on META/VAL/STATUS last line",
+      "detail": "Reconfirmed W5/W343: cat -A META/VAL no final $; STATUS last probe line without NL.",
+      "repro": "cat -A META.txt after strict"
     }
   ],
   "workarounds": [
-    "After PLUCKP use LAST_N for field count; GETP/GETP FROM PEER for values",
-    "HASPALL incomplete: LET w_s=LAST; SYS HASLINE w_s key",
-    "Shell-visible miss: EXIT n (not REQUIRE alone)",
-    "Flags: cubalc run prog ACTION -- --host=H"
+    "Soft miss: inspect expanded string empty slots not FILLP_MISS_KEYS via HASLINE",
+    "FILLPKEYS: LET body=LAST then HASLINE body key",
+    "Shell contract: EXIT n; REQUIRE ENV NUM softens non-numeric"
   ],
   "language_gaps": [
-    "PLUCKP multi-key path works (proof + board) but result specials unreliable in agent-length scripts",
-    "Bag peel after PLUCKP needs durable bag handle; NTH/LINE var bag glue is brittle",
-    "NEEDP/HASPALL path contracts work; HASPALL incomplete LAST=miss bag is usable",
-    "Long-option intake still needs host -- (W11/W342)",
-    "WRITE trailing NL still missing (W5/W343)"
+    "FILLP path templates work well for ops digests ({{freq.error}})",
+    "FILLPKEYS path slot inventory works with SYS HASLINE on keys bag (LAST)",
+    "TYPEP path kinds solid for admit gates",
+    "Miss-key bag tooling brittle in agent-length scripts (HASLINE specials)",
+    "FILLPFILE path materialize works for report files"
   ],
   "issues_faced": [
-    "PLUCKP_HIT/N specials dead (0) in long board despite form success — used LAST_N",
-    "SYS NTH 0 PLUCKP / SYS LINE peel_bag / SYS HASLINE HASPALL_MISS parse as bare forms",
-    "Value harvest fell back to GETP after multi-key PLUCKP count smoke",
-    "GETFLAG --host= ignored without host -- separator",
-    "selftest 11 pre-existing CLI shell fails (unknown form set)"
+    "SYS HASLINE on FILLP_MISS_KEYS/var dead in long board (W344) — used body empty-slot shape",
+    "FILLP soft miss body spacing requires STARTS/HAS not ENDS host",
+    "Selftest 13 pre-existing CLI shell set fails; cubalc proofs green including fillp_path"
   ],
-  "commit": "2a734111",
-  "ts": "2026-08-09T10:46:11Z"
+  "commit": "",
+  "ts": "2026-08-09T10:59:58Z"
 }
