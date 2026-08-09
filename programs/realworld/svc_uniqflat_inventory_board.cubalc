@@ -1,0 +1,833 @@
+# svc_uniqflat_inventory_board.cubalc — UNIQFLAT distinct leaf value inventory
+#
+# Real use: fleet agents list *which* role/status/host values exist without
+# VALSFLAT+UNIQ glue — zone inventory, canary value sets, peer status sets.
+# First realworld of proof 1244 UNIQFLAT (MEANINGFUL 703).
+#
+#   UNIQFLAT|DISTINCTFLAT [FROM plate] needle
+#   LAST = unique values bag (first-seen order) · LAST_N = unique count
+#   Prefer LAST/LAST_N over UNIQFLAT_TOTAL near 128-var cap (W408).
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_suf_$$
+#   ./out/cubalc run programs/realworld/svc_uniqflat_inventory_board.cubalc boot
+#   ./out/cubalc run ... uniq|dist|peer|soft|gate|single|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SUF_REPORT.txt agent.json peer.json uniq.txt
+# Env: HOST_S ROLE_S CUBALC_SUF_REQUIRE
+#
+# Edges: soft miss empty bag; FROM PEER; empty/bare needle; single unique;
+#   substring key false friends; WRITE NL; REQUIRE softens; HASLINE bag
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_uniqflat_inventory_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_uniqflat_inventory -- boot|uniq|dist|peer|soft|gate|single|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeU"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SUF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "uniq.txt"
+LET uniq_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SUF_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET uniq_bag = ""
+LET uniq_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+
+ONEOF ACTION "boot", "uniq", "dist", "peer", "soft", "gate", "single", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "uniq" THEN
+    LET op = "uniq"
+  WHEN "dist" THEN
+    LET op = "dist"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "single" THEN
+    LET op = "single"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — multi-role/host plate + peer status
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  # agent_job=runner avoids worker value inflation on empty needle
+  SYS CAT "{\"agent\":\"svc-uniqflat\",\"schema\":\"cubalc.svc_uniqflat_inventory.v1\",\"site\":\"" host_s "\",\"agent_job\":\"runner\",\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"endpoint\":\"h1\"},\"other\":{\"endpoint\":\"h2\",\"role\":\"leader\"},\"label\":\"uniq\"}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"schema\":\"cubalc.svc_uniqflat_inventory.v1\",\"site\":\"" host_s "\",\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"fail\"},\"c\":{\"status\":\"ok\"},\"tag\":\"t\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "meta.role"
+  SYS EQS LAST "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.role"
+  SYS EQS LAST "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "other.role"
+  SYS EQS LAST "leader"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.endpoint"
+  SYS EQS LAST "h1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "uniq"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:roles:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# uniq — UNIQFLAT role + endpoint inventory
+SYS EQS op "uniq"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  UNIQFLAT "role"
+  LET uniq_n = LAST_N
+  LET uniq_bag = LAST
+  CLEAR_ERR
+  SYS WRITE uniq_path uniq_bag
+  CLEAR_ERR
+  SYS HASLINE uniq_bag "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE uniq_bag "leader"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF uniq_n == 2 THEN
+    LET score = score + 1
+  END
+  # first-seen order: worker before leader
+  SYS HEAD uniq_bag
+  SYS EQS LAST "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  UNIQFLAT "endpoint"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "h1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE body "h2"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # soft miss
+  UNIQFLAT "nope"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body ""
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "uniq"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "uniq ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "uniq score"
+    FAIL "uniq score"
+    CLEAR_ERR
+  END
+  SYS STR uniq_n
+  LET body = LAST
+  CLEAR_ERR
+  SYS CAT "uniq:" body ":uq"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "uniq:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n uniq_n score note_msg
+  CLEAR_ERR
+END
+
+# dist — DISTINCTFLAT alias + empty/bare needle
+SYS EQS op "dist"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  DISTINCTFLAT "role"
+  LET uniq_n = LAST_N
+  LET uniq_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE uniq_bag "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE uniq_bag "leader"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF uniq_n == 2 THEN
+    LET score = score + 1
+  END
+  # empty needle all leaves — worker/leader/h1/h2/runner present
+  UNIQFLAT ""
+  LET body = LAST
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE body "runner"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF admit_n >= 5 THEN
+    LET score = score + 1
+  END
+  # bare UNIQFLAT same family
+  UNIQFLAT
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "leader"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-uniqflat"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "dist ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "dist score"
+    FAIL "dist score"
+    CLEAR_ERR
+  END
+  SYS WRITE uniq_path uniq_bag
+  CLEAR_ERR
+  SYS STR uniq_n
+  LET body = LAST
+  CLEAR_ERR
+  SYS CAT "dist:" body ":dt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "dist:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n uniq_n score note_msg
+  CLEAR_ERR
+END
+
+# peer — UNIQFLAT FROM PEER status set
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  UNIQFLAT FROM PEER "status"
+  LET uniq_n = LAST_N
+  LET uniq_bag = LAST
+  CLEAR_ERR
+  SYS WRITE uniq_path uniq_bag
+  CLEAR_ERR
+  SYS HASLINE uniq_bag "ok"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE uniq_bag "fail"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF uniq_n == 2 THEN
+    LET score = score + 1
+  END
+  DISTINCTFLAT FROM PEER "status"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "ok"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-uniqflat"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP FROM PEER "tag"
+  SYS EQS LAST "t"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "peer ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer score"
+    FAIL "peer score"
+    CLEAR_ERR
+  END
+  SYS STR uniq_n
+  LET body = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" body ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n uniq_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — ghost miss + role inventory still works
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  UNIQFLAT "ghostpath"
+  LET uniq_n = LAST_N
+  LET uniq_bag = LAST
+  CLEAR_ERR
+  SYS EQS uniq_bag ""
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF uniq_n == 0 THEN
+    LET score = score + 1
+  END
+  UNIQFLAT "role"
+  LET uniq_n = LAST_N
+  LET uniq_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE uniq_bag "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF uniq_n == 2 THEN
+    LET score = score + 1
+  END
+  GETP "agent"
+  SYS EQS LAST "svc-uniqflat"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "uniq"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok1:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n uniq_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — inventory admit: worker+leader present, unique roles == 2
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  UNIQFLAT "role"
+  LET uniq_n = LAST_N
+  LET uniq_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE uniq_bag "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE uniq_bag "leader"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF uniq_n == 2 THEN
+    LET score = score + 1
+  END
+  GETP "schema"
+  SYS HAS LAST "svc_uniqflat_inventory"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "uniq"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET admit_n = 1
+    LET note_msg = "gate ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS WRITE uniq_path uniq_bag
+  CLEAR_ERR
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n uniq_n score note_msg
+  CLEAR_ERR
+END
+
+# single — all same value → unique n=1
+SYS EQS op "single"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SETP "probe.a.v" "x"
+  CLEAR_ERR
+  SETP "probe.b.v" "x"
+  CLEAR_ERR
+  SETP "probe.c.v" "x"
+  CLEAR_ERR
+  UNIQFLAT "v"
+  LET uniq_n = LAST_N
+  LET uniq_bag = LAST
+  CLEAR_ERR
+  SYS WRITE uniq_path uniq_bag
+  CLEAR_ERR
+  SYS EQS uniq_bag "x"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF uniq_n == 1 THEN
+    LET score = score + 1
+  END
+  GETP "agent"
+  SYS EQS LAST "svc-uniqflat"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "uniq"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF score == 4 THEN
+    LET hit = 1
+    LET note_msg = "single ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "single score"
+    FAIL "single score"
+    CLEAR_ERR
+  END
+  SYS CAT "single:" uniq_bag ":sg"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "single:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n uniq_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — key needle substring "ro" may match role (MODEFLAT-class fuzzy keys)
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  UNIQFLAT "role"
+  LET uniq_n = LAST_N
+  LET uniq_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE uniq_bag "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF uniq_n == 2 THEN
+    LET score = score + 1
+  END
+  # substring key needle — document whether fuzzy
+  UNIQFLAT "ro"
+  LET body = LAST
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  # accept either fuzzy hit (worker present) or exact miss empty
+  SYS HAS body "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    SYS EQS body ""
+    IF LAST_N == 1 THEN
+      LET score = score + 1
+    END
+  END
+  CLEAR_ERR
+  UNIQFLAT "agent_job"
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "runner"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "uniqflat"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "uniq"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS WRITE uniq_path uniq_bag
+  CLEAR_ERR
+  SYS CAT "probe:" uniq_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n uniq_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET body = LAST
+CLEAR_ERR
+SYS STR miss
+LET row = LAST
+CLEAR_ERR
+SYS CAT "hit=" body " miss=" row " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_uniqflat_inventory.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " uniq_n=" uniq_n " score=" score " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_uniqflat_inventory_board: end"

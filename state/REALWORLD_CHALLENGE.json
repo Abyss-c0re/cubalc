@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 268,
-  "program": "programs/realworld/svc_pathbyval_reverse_board.cubalc",
-  "theme": "PATHBYVAL reverse nest path-by-value lookup",
-  "version": "1.15.695-usability",
+  "iter": 269,
+  "program": "programs/realworld/svc_uniqflat_inventory_board.cubalc",
+  "theme": "UNIQFLAT/DISTINCTFLAT unique leaf value inventory",
+  "version": "1.15.696-usability",
   "pass": true,
-  "prior_note": "iter 267 MODEFLAT; this iter first realworld 1243 PATHBYVAL",
+  "prior_note": "iter 268 PATHBYVAL; this iter first realworld 1244 UNIQFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed role/host plate + peer names",
+      "cmd": "seed multi-role/endpoint plate",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "find",
-      "cmd": "PATHBYVAL worker/leader/h1/h2",
+      "name": "uniq",
+      "cmd": "UNIQFLAT role+endpoint first-seen",
       "ok": true,
-      "note": "find"
+      "note": "uniq"
     },
     {
-      "name": "or",
-      "cmd": "OR fallback + real hit",
+      "name": "dist",
+      "cmd": "DISTINCTFLAT + empty/bare",
       "ok": true,
-      "note": "or"
+      "note": "dist"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER VALPATH/FINDVAL",
+      "cmd": "FROM PEER status set",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost miss empty path",
+      "cmd": "ghost miss empty bag",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "GETP round-trip meta.role",
+      "cmd": "worker+leader inventory admit",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "first",
-      "cmd": "first-seen path on repeat value",
+      "name": "single",
+      "cmd": "all-same value uniq n=1",
       "ok": true,
-      "note": "first"
+      "note": "single"
     },
     {
       "name": "probe",
-      "cmd": "exact value; work/orker miss",
+      "cmd": "key needle ro fuzzy match",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "457/521 pre-existing cli fails; pathbyval PASS 23"
+      "note": "457/523 pre-existing cli fails; uniqflat PASS 31"
     }
   ],
   "weaknesses": [
@@ -3380,6 +3380,30 @@
       "title": "out/cubalc can vanish mid-session; only .o left until make",
       "detail": "Challenge fire found out/cubalc missing (cubalc_main.o only). Rebuild required before tests. Deploy/race risk for agent loops.",
       "repro": "ls out/cubalc \u2192 missing; make restores binary"
+    },
+    {
+      "id": "W415",
+      "severity": "med",
+      "area": "lang|uniqflat",
+      "title": "UNIQFLAT key needle is substring (same class as MODEFLAT W409)",
+      "detail": "UNIQFLAT \"ro\" matches role leaves and returns worker\\nleader unique bag. Path-segment exactness is not the contract; agents must use full key names for inventory scopes.",
+      "repro": "UNIQFLAT \"ro\" on plate with meta.role+cfg.role \u2192 LAST_N=2 worker/leader"
+    },
+    {
+      "id": "W416",
+      "severity": "low",
+      "area": "host|write",
+      "title": "UNIQFLAT multi-line bag WRITE omits final NL (W10 class)",
+      "detail": "cat -A uniq.txt shows worker$ then leader without trailing newline on last unique value.",
+      "repro": "od -c uniq.txt ends without \\n after last value"
+    },
+    {
+      "id": "W417",
+      "severity": "low",
+      "area": "lang|head",
+      "title": "SYS HEAD bag works for first-seen order check after UNIQFLAT",
+      "detail": "Positive note: SYS HEAD uniq_bag \u2192 worker confirms first-seen order without NTHLINE. Useful inventory gate.",
+      "repro": "UNIQFLAT role; SYS HEAD uniq_bag; EQS worker"
     }
   ],
   "workarounds": [
@@ -3391,10 +3415,12 @@
     "Do not late-read MODEFLAT_SRC \u2014 use MODEFLAT_FROM or pre-copy to var",
     "Keep reverse-lookup values unique (no agent_job==role leaf)",
     "PATHBYVAL x OR default.path for soft miss contract",
-    "GETP path after PATHBYVAL for round-trip gate"
+    "GETP path after PATHBYVAL for round-trip gate",
+    "UNIQFLAT full key names (role not ro) for inventory scope",
+    "HASLINE bag for value set membership gates",
+    "SYS HEAD bag for first-seen unique order"
   ],
   "language_gaps": [
-    "Need segment-bound needles for counter digests",
     "No combined MEDIAN+AVG spike-report form",
     "Document HASFLAT vs HASFLATN twin pairing for agents",
     "Pure-int *N ops still substring-needle path false friends",
@@ -3411,7 +3437,10 @@
     "prefer LAST_N over MODEFLAT_N near var pressure",
     "PATHBYVAL first-seen = leaf walk order (unique reverse values)",
     "PATHBYVAL exact value match (contrast MODEFLAT key substring)",
-    "OR fallback soft-miss path for missing values"
+    "OR fallback soft-miss path for missing values",
+    "UNIQFLAT needle substring on keys (like MODEFLAT/FREQFLAT)",
+    "UNIQFLAT first-seen order of unique values",
+    "prefer LAST_N unique count over UNIQFLAT_N near var cap"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3445,8 +3474,10 @@
     "iter267: substring needle ro matches role (W409) \u2014 probe expects fuzzy hit",
     "iter267: late MODEFLAT_SRC hard-fail; capture early or avoid (W410)",
     "iter268: agent_job=role_s false-friend first-hit for PATHBYVAL worker (W412) \u2014 seed agent_job=runner",
-    "iter268: rebuilt out/cubalc (W414) before board tests"
+    "iter268: rebuilt out/cubalc (W414) before board tests",
+    "iter269: UNIQFLAT ro fuzzy key match reconfirms flat-needle substring family (W415)",
+    "iter269: multi-line uniq bag WRITE no final NL (W416)"
   ],
-  "commit": "2a4e863b",
-  "ts": "2026-08-09T20:14:39Z"
+  "commit": "pending",
+  "ts": "2026-08-09T20:33:45Z"
 }
