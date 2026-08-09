@@ -27437,6 +27437,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"MERGEFLAT") || kw(&L->cur,"OVERLAYFLAT") || kw(&L->cur,"PATCHFLAT") ||
              kw(&L->cur,"RENAMEFLAT") || kw(&L->cur,"MOVEFLAT") || kw(&L->cur,"PREFIXFLAT") ||
              kw(&L->cur,"SETFLAT") || kw(&L->cur,"MAPFLAT") || kw(&L->cur,"SETLEAFP") ||
+             kw(&L->cur,"INCFLAT") || kw(&L->cur,"BUMPFLAT") || kw(&L->cur,"ADDFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35828,6 +35829,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"MOVEFLAT", "MOVEFLAT alias of RENAMEFLAT"},
       {"SETFLAT", "SETFLAT|MAPFLAT [FROM plate] needle value — set leaf values matching path needle write-back · multi-plate"},
       {"MAPFLAT", "MAPFLAT alias of SETFLAT"},
+      {"INCFLAT", "INCFLAT|BUMPFLAT [FROM plate] needle [delta] — bump pure-int leaves matching path needle write-back · multi-plate"},
+      {"BUMPFLAT", "BUMPFLAT alias of INCFLAT"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -44479,6 +44482,168 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# setflat n=%ld total=%ld needle=%s from=%d\n",
               hr.n, hr.code, needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* INCFLAT|BUMPFLAT|ADDFLAT [FROM plate] needle [delta]
+   * Bump pure-int leaves whose path contains needle (default delta 1).
+   * Non-numeric matching leaves soft-skipped. Empty needle → all pure-int leaves.
+   * LAST_N = bumped · INCFLAT_TOTAL = leaf count. Write-back plate.
+   * Usability: bulk nest counters without multi INCP glue:
+   *   INCFLAT "hits"
+   *   INCFLAT "cfg.meta.x" 5
+   *   INCFLAT FROM PEER "stats" -1
+   */
+  if (kw(&L->cur,"INCFLAT") || kw(&L->cur,"BUMPFLAT") || kw(&L->cur,"ADDFLAT") ||
+      kw(&L->cur,"TICKFLAT") || kw(&L->cur,"MINCFLAT") || kw(&L->cur,"PLATE_INCFLAT") ||
+      kw(&L->cur,"INCALLFLAT") || kw(&L->cur,"BULKINC") || kw(&L->cur,"DECFLAT")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, is_dec = 0;
+    long delta = 1;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "DECFLAT") == 0)
+      is_dec = 1;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      /* bare number as needle only if next is also number (delta) — treat as needle str */
+      long kv = parse_expr(vm, L);
+      snprintf(needle, sizeof needle, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"SETP") && !kw(&L->cur,"INCP") &&
+               !kw(&L->cur,"INCFLAT") && !kw(&L->cur,"SETFLAT")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    /* optional delta */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      delta = parse_expr(vm, L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      /* avoid LAST as delta unless numeric var — skip */
+    } else if (L->cur.kind == TK_IDENT) {
+      pv = var_get(vm, L->cur.text, 0);
+      if (pv && !pv->is_str) {
+        delta = pv->val;
+        lex_next(L);
+      }
+    }
+    if (is_dec && delta > 0)
+      delta = -delta;
+    else if (is_dec && delta == 1)
+      delta = -1;
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_inc(plate, needle, delta, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "INCFLAT: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "INCFLAT: fail");
+      var_set_num(vm, "INCFLAT_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "INCFLAT", hr.str);
+    var_set_str(vm, "BUMPFLAT", hr.str);
+    var_set_num(vm, "INCFLAT_N", hr.n);
+    var_set_num(vm, "BUMPFLAT_N", hr.n);
+    var_set_num(vm, "INCFLAT_TOTAL", hr.code);
+    var_set_num(vm, "INCFLAT_DELTA", delta);
+    var_set_str(vm, "INCFLAT_NEEDLE", needle);
+    var_set_num(vm, "INCFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "INCFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# incflat n=%ld total=%ld delta=%ld needle=%s from=%d\n",
+              hr.n, hr.code, delta, needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 

@@ -299,6 +299,12 @@ int cubalc_host_json_leaf_rename_pfx(const char *json, const char *old_pfx,
  * Usability: bulk nest flag/port/default write without multi SETP/GREPFLAT glue. */
 int cubalc_host_json_leaf_set(const char *json, const char *needle, const char *val,
                               cubalc_host_result *r);
+/* Increment pure-int leaves whose path contains needle (INCFLAT).
+ * delta default 1. Non-numeric matching leaves soft-skipped (not counted).
+ * Empty needle → all pure-int leaves. r->n = bumped · r->code = total leaves.
+ * Soft always OK. Usability: bulk nest counters without multi INCP glue. */
+int cubalc_host_json_leaf_inc(const char *json, const char *needle, long delta,
+                              cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

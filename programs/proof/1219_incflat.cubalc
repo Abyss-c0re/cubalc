@@ -1,0 +1,92 @@
+# INCFLAT / BUMPFLAT — bulk bump pure-int leaves by path needle
+# Usability: nest counters without multi INCP glue.
+# Note: avoid duplicate key names at different depths — GETP strstr keeps last match.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"hits_total\":1,\"cfg\":{\"meta\":{\"hits\":2,\"role\":\"w\"},\"port\":8080},\"errs\":3,\"ok\":true}"
+
+INCFLAT "hits"
+ASSERT OK == 1
+ASSERT INCFLAT_N == 2
+ASSERT INCFLAT_DELTA == 1
+GETP "hits_total"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+GETP "cfg.meta.hits"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+GETP "cfg.port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+GETP "cfg.meta.role"
+SYS EQS LAST "w"
+ASSERT LAST_N == 1
+GETP "ok"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+INCFLAT "port" 5
+ASSERT INCFLAT_N == 1
+ASSERT INCFLAT_DELTA == 5
+GETP "cfg.port"
+SYS EQS LAST "8085"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"stats\":{\"a\":10,\"b\":20},\"label\":\"x\"}"
+INCFLAT FROM PEER "stats" 1
+ASSERT INCFLAT_FROM == 1
+SYS EQS INCFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT INCFLAT_N == 2
+LET PLATE = PEER
+GETP "stats.a"
+SYS EQS LAST "11"
+ASSERT LAST_N == 1
+GETP "stats.b"
+SYS EQS LAST "21"
+ASSERT LAST_N == 1
+GETP "label"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+LET PLATE = "{\"a\":1,\"b\":{\"c\":2,\"s\":\"z\"}}"
+INCFLAT ""
+ASSERT INCFLAT_N == 2
+GETP "a"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+GETP "b.c"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+GETP "b.s"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# DECFLAT — unique top-level key
+LET PLATE = "{\"errs_total\":5,\"cfg\":{\"errs\":2}}"
+DECFLAT "errs"
+ASSERT INCFLAT_N == 2
+GETP "errs_total"
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+GETP "cfg.errs"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+LET PLATE = "{\"x\":1}"
+INCFLAT "nope"
+ASSERT INCFLAT_N == 0
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+LET PLATE = "{\"n\":0}"
+BUMPFLAT "n" 3
+ASSERT BUMPFLAT_N == 1
+GETP "n"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1219_incflat: PASS"

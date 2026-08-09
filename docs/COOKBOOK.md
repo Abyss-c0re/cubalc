@@ -238,6 +238,9 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate renameflat state/my_agent.json cfg. config.        # rewrite leaf path prefixes
 ./out/cubalc plate setflat    state/my_agent.json debug 0              # bulk set leaves matching path needle
 ./out/cubalc plate setflat    state/my_agent.json cfg.port 9090         # set nested port one-shot
+./out/cubalc plate incflat    state/my_agent.json hits                 # bump pure-int leaves matching needle
+./out/cubalc plate incflat    state/my_agent.json cfg.meta.x 5          # delta 5
+./out/cubalc plate decflat    state/my_agent.json errs                  # decrement
 ./out/cubalc libs | grep plate
 
 # nest* still available; prefer dotted get/set when one scalar field:
