@@ -1,21 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 604,
-  "version": "1.15.631-usability",
-  "item": "COPYPOBJ/SWAPPOBJ/NESTCOPY/NESTSWAP",
-  "item_id": 640,
-  "title": "COPYPOBJ|SWAPPOBJ|NESTCOPY|NESTSWAP · nest key copy/swap write-back · multi-plate · COPYP/SWAPP duals · not OOP COPYOBJ",
-  "commit": "228658a82cadb23529a20c4bf6f385009a39ba19",
-  "summary": "Copy/swap keys inside nested plates without GETOBJ+COPYP/SWAPP+SETOBJ glue. proof 1181 46/46.",
+  "iter": 605,
+  "version": "1.15.632-usability",
+  "item": "TOKVOBJ/FROMKVOBJ/NESTTOKV/BAGTONEST",
+  "item_id": 641,
+  "title": "TOKVOBJ|FROMKVOBJ|NESTTOKV|BAGTONEST · nest ↔ key:val bag · multi-plate · TOKVP/FROMKVP duals",
+  "commit": "6e29ce977f8522ff69b975993d8a47ab1d735980",
+  "summary": "Nest bag bridge without GETOBJ+TOKVP/FROMKVP+SETOBJ glue. proof 1182 45/45.",
   "proofs": [
-    "1181_copypobj 46/46",
-    "1180_renamepobj reg ok",
-    "1154_copyp reg ok",
-    "1179_lenobj reg ok",
-    "cubalc forms COPYPOBJ/SWAPPOBJ ok"
+    "1182_tokvobj 45/45",
+    "1181_copypobj reg ok",
+    "1157_tokvp reg ok",
+    "cubalc forms TOKVOBJ/FROMKVOBJ ok"
   ],
-  "when": "2026-08-09T08:10:00Z",
+  "when": "2026-08-09T08:25:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "228658a82cadb23529a20c4bf6f385009a39ba19",
-  "note": "restored thrash then shipped after backlog 639 RENAMEPOBJ; EVOLVE_PAUSED"
+  "sha": "6e29ce977f8522ff69b975993d8a47ab1d735980",
+  "note": "after backlog 640 COPYPOBJ; EVOLVE_PAUSED"
 }
