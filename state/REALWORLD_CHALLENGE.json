@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 273,
-  "program": "programs/realworld/svc_delbyval_scrub_board.cubalc",
-  "theme": "DELBYVAL scrub leaves by exact value",
-  "version": "1.15.709-usability",
+  "iter": 274,
+  "program": "programs/realworld/svc_alleqflat_consistency_board.cubalc",
+  "theme": "ALLEQFLAT nest value consistency gates",
+  "version": "1.15.711-usability",
   "pass": true,
-  "prior_note": "iter 272 SETBYVAL; this iter first realworld 1248 DELBYVAL",
+  "prior_note": "iter 273 DELBYVAL; this iter first realworld 1249 ALLEQFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed dual worker roles",
+      "cmd": "seed mixed roles + peer ok",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "del",
-      "cmd": "DELBYVAL worker n=2",
+      "name": "check",
+      "cmd": "mixed roles LAST_N=0",
       "ok": true,
-      "note": "del"
+      "note": "check"
+    },
+    {
+      "name": "unify",
+      "cmd": "SETBYVAL then ALLEQ hit",
+      "ok": true,
+      "note": "unify"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER ok scrub",
+      "cmd": "FROM PEER status all ok",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost drop n=0",
+      "cmd": "ghost miss LAST_N=0",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "no worker after scrub",
+      "cmd": "uniform worker admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "DROPVAL leader",
+      "cmd": "SAMEVALFLAT",
       "ok": true,
       "note": "alias"
     },
     {
-      "name": "cross",
-      "cmd": "DEL n==COUNTBYVAL",
-      "ok": true,
-      "note": "cross"
-    },
-    {
       "name": "probe",
-      "cmd": "partials do not scrub",
+      "cmd": "empty needle mixed",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; delbyval PASS"
+      "note": "cli duals red; alleqflat PASS"
     }
   ],
   "weaknesses": [
@@ -3508,6 +3508,30 @@
       "title": "DELBYVAL drops whole leaf keys (HASP path gone)",
       "detail": "After DELBYVAL worker, HASP meta.role is 0 not empty value. Agents must not GETP deleted paths expecting soft empty without HASP gate.",
       "repro": "DELBYVAL worker; HASP meta.role \u2192 0"
+    },
+    {
+      "id": "W431",
+      "severity": "low",
+      "area": "lang|alleqflat",
+      "title": "ALLEQFLAT LAST_N is 0|1 equality flag not leaf count",
+      "detail": "When mixed, LAST_N=0 and LAST empty; when equal LAST_N=1 and LAST=shared value. Agents must not treat LAST_N as matching-leaf total (use ALLEQFLAT_N special when available, or UNIQFLAT).",
+      "repro": "mixed roles ALLEQFLAT role \u2192 LAST_N 0 not 3"
+    },
+    {
+      "id": "W432",
+      "severity": "low",
+      "area": "lang|alleqflat",
+      "title": "empty/bare ALLEQFLAT needle tests all leaves",
+      "detail": "ALLEQFLAT \"\" / bare across mixed plate \u2192 not equal (hosts+roles+labels). Useful whole-plate consistency gate.",
+      "repro": "ALLEQFLAT \u2192 LAST_N 0 on multi-value plate"
+    },
+    {
+      "id": "W433",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE eq flag omits trailing NL",
+      "detail": "eq.txt is 0 or worker without final NL (W5).",
+      "repro": "od -c eq.txt"
     }
   ],
   "workarounds": [
@@ -3534,12 +3558,12 @@
     "prefer LAST_N for rewrite count gates",
     "SAVEPLATE after DELBYVAL/DROPVAL",
     "SETP re-seed roles before independent del/gate paths",
-    "HASVAL/HASP after scrub for admit gates"
+    "HASVAL/HASP after scrub for admit gates",
+    "use LAST_N==1 for admit not LAST_N as count",
+    "SETP re-seed mixed roles before check path",
+    "SAMEVALFLAT interchangeable with ALLEQFLAT"
   ],
   "language_gaps": [
-    "MODEFLAT needle substring match (false friends)",
-    "prefer LAST_N over MODEFLAT_N near var pressure",
-    "PATHBYVAL first-seen = leaf walk order (unique reverse values)",
     "PATHBYVAL exact value match (contrast MODEFLAT key substring)",
     "OR fallback soft-miss path for missing values",
     "UNIQFLAT needle substring on keys (like MODEFLAT/FREQFLAT)",
@@ -3556,7 +3580,10 @@
     "SAVEPLATE required after SETBYVAL for durable agent plate",
     "DELBYVAL scrub leaves by exact value",
     "DROPVAL alias for del-by-value",
-    "HASP gone after DELBYVAL (key removed not emptied)"
+    "HASP gone after DELBYVAL (key removed not emptied)",
+    "ALLEQFLAT LAST_N 0|1 consistency flag",
+    "SAMEVALFLAT alias",
+    "SETBYVAL then ALLEQFLAT for unify-and-check"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3601,8 +3628,10 @@
     "iter272: SETBYVAL board 9/9; SAVEPLATE after mutate for durability",
     "iter272: soft/gate re-seed workers after prior set path rewrites",
     "iter273: DELBYVAL board 9/9; re-seed SETP before del after prior scrubs",
-    "iter273: SAVEPLATE after mutate for durable agent/peer plates"
+    "iter273: SAVEPLATE after mutate for durable agent/peer plates",
+    "iter274: ALLEQFLAT board 9/9; unify via SETBYVAL leader\u2192worker",
+    "iter274: LAST_N is equality bit not count (W431)"
   ],
-  "commit": "2af715a5",
-  "ts": "2026-08-09T23:04:03Z"
+  "commit": "pending",
+  "ts": "2026-08-09T23:28:34Z"
 }
