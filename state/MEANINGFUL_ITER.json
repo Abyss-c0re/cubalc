@@ -4,8 +4,8 @@
   "version": "1.15.642-usability",
   "item": "dotted path GETP/SETP/INCP/DELP/HASP",
   "item_id": 651,
-  "title": "GETP|SETP|INCP|DELP|HASP dotted/slash path nest sugar · multi-plate · no GETPOBJ glue",
-  "commit": "PENDING",
+  "title": "GETP|SETP|INCP|DELP|HASP dotted/slash path nest sugar \u00b7 multi-plate \u00b7 no GETPOBJ glue",
+  "commit": "2f913f30c86762dbeb055eed2f4411dc7e393578",
   "summary": "One form for shallow+deep plate fields. proof 1192 41/41.",
   "proofs": [
     "1192_pathp 41/41",
@@ -15,6 +15,6 @@
   ],
   "when": "2026-08-09T10:55:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "PENDING",
+  "sha": "2f913f30c86762dbeb055eed2f4411dc7e393578",
   "note": "after backlog 650 SUMMERGEOBJ; EVOLVE_PAUSED"
 }
