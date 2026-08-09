@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 660,
-  "version": "1.15.687-usability",
-  "item": "LASTFLAT + plate lastflat",
-  "item_id": 696,
-  "title": "LASTFLAT/ENDFLAT + cubalc plate lastflat · last matching leaf value by needle · OR fallback",
-  "commit": "f0d53663a959edd37ac3c4a823b5b4f79c19d0d6",
-  "summary": "Newest-wins nest peel without REVL+GETFLAT glue. proof 1237 + CLI PASS.",
+  "iter": 661,
+  "version": "1.15.688-usability",
+  "item": "NTHFLATN + plate nthflatn",
+  "item_id": 697,
+  "title": "NTHFLATN/INDEXFLATN + cubalc plate nthflatn · 0-based Nth pure-int leaf by needle → LAST_N · OR fallback",
+  "commit": "005cfeb062a67661b19e0a29f9f30976bb574bc5",
+  "summary": "Index pure-int nest peels without VALSFLATN+NTH glue. proof 1238 + CLI PASS.",
   "proofs": [
-    "1237_lastflat PASS",
-    "1237_cli_plate_lastflat PASS",
-    "1227_getflat reg PASS"
+    "1238_nthflatn PASS",
+    "1238_cli_plate_nthflatn PASS",
+    "1229_getflatn reg PASS"
   ],
-  "when": "2026-08-09T18:09:34Z",
+  "when": "2026-08-09T18:23:13Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f0d53663a959edd37ac3c4a823b5b4f79c19d0d6",
-  "note": "after thrash restore; after TYPEFLAT plane; EVOLVE_PAUSED"
+  "sha": "005cfeb062a67661b19e0a29f9f30976bb574bc5",
+  "note": "after LASTFLAT plane; EVOLVE_PAUSED"
 }
