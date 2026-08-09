@@ -1,0 +1,93 @@
+# EACH KEY — walk JSON plate keys without KEYSP + EACH LINE glue
+# Usability: plate field walk binds KEY + VALUE for agents.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"n\":3,\"role\":\"worker\"}"
+LET PEER = "{\"a\":1,\"b\":2}"
+LET empty = "{}"
+LET bag = ""
+LET n_walk = 0
+LET saw_host = 0
+LET saw_n = 0
+LET host_val = ""
+
+# bare EACH KEY uses PLATE
+EACH KEY
+  LET n_walk = n_walk + 1
+  SYS PUSH bag KEY
+  LET bag = LAST
+  SYS EQS KEY "host"
+  IF LAST_N == 1 THEN
+    LET saw_host = 1
+    LET host_val = VALUE
+  END
+  SYS EQS KEY "n"
+  IF LAST_N == 1 THEN
+    LET saw_n = 1
+    SYS EQS VALUE "3"
+    ASSERT LAST_N == 1
+  END
+END
+ASSERT OK == 1
+ASSERT EACH_N == 3
+ASSERT LAST_N == 3
+ASSERT n_walk == 3
+ASSERT saw_host == 1
+ASSERT saw_n == 1
+SYS EQS host_val "cubeA"
+ASSERT LAST_N == 1
+SYS HASLINE bag "host"
+ASSERT LAST_N == 1
+SYS HASLINE bag "role"
+ASSERT LAST_N == 1
+SYS HASLINE bag "n"
+ASSERT LAST_N == 1
+
+# FROM PEER with bind name
+LET bag2 = ""
+EACH KEY AS k FROM PEER
+  SYS PUSH bag2 k
+  LET bag2 = LAST
+  SYS EQS k "a"
+  IF LAST_N == 1 THEN
+    SYS EQS VAL "1"
+    ASSERT LAST_N == 1
+  END
+  SYS EQS k "b"
+  IF LAST_N == 1 THEN
+    SYS EQS V "2"
+    ASSERT LAST_N == 1
+  END
+END
+ASSERT EACH_N == 2
+SYS HASLINE bag2 "a"
+ASSERT LAST_N == 1
+SYS HASLINE bag2 "b"
+ASSERT LAST_N == 1
+
+# OF named plate var
+LET tmp = "{\"y\":7}"
+EACH KEY OF tmp
+  SYS EQS KEY "y"
+  ASSERT LAST_N == 1
+  SYS EQS VALUE "7"
+  ASSERT LAST_N == 1
+END
+ASSERT EACH_N == 1
+
+# empty soft
+EACH KEY OF empty
+  LET n_walk = 99
+END
+ASSERT EACH_N == 0
+ASSERT n_walk == 3
+
+# KEYS alias
+LET c = 0
+EACH KEYS OF PEER
+  LET c = c + 1
+END
+ASSERT c == 2
+
+PRINT "each_key soft ok"

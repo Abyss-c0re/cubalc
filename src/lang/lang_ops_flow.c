@@ -18575,6 +18575,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
    * EACH PROP|ATTR|OBJFIELD OF obj|Class [AS name] ... END — walk schema field names.
    * EACH METHOD|MSG|HANDLER OF obj|Class [AS name] ... END — walk schema method names.
    * EACH OBJ [Class] [AS name] ... END — walk live OOP objects (optional class filter).
+   * EACH KEY|KEYS [AS name] OF|FROM plate|LAST|PLATE ... END — walk JSON plate keys.
    * Note: EACH FIELD/FIELDS stays a LINE synonym (bag walk), not schema props.
    * digit-4 control: cell-range iterator binds value to name, IT=index, VAL=value */
   if (kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")){
@@ -18597,10 +18598,153 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     int is_obj = (kw(&L->cur,"OBJ")||kw(&L->cur,"OBJS")||kw(&L->cur,"OBJECT")||
                   kw(&L->cur,"OBJECTS")||kw(&L->cur,"INST")||kw(&L->cur,"INSTANCE")||
                   kw(&L->cur,"INSTANCES")||kw(&L->cur,"OOP"));
-    if (!is_cell && !is_cube && !is_line && !is_obj && !is_prop && !is_meth){
-      fail(vm,"EACH CUBE|CELL|LINE|PROP|METHOD|OBJ as name"); return -1;
+    int is_key = (kw(&L->cur,"KEY")||kw(&L->cur,"KEYS")||kw(&L->cur,"PLATEKEY")||
+                  kw(&L->cur,"PLATEKEYS")||kw(&L->cur,"JSONKEY")||kw(&L->cur,"JSONKEYS")||
+                  kw(&L->cur,"K")||kw(&L->cur,"PAIR")||kw(&L->cur,"PAIRS")||
+                  kw(&L->cur,"KV")||kw(&L->cur,"KVS"));
+    if (!is_cell && !is_cube && !is_line && !is_obj && !is_prop && !is_meth && !is_key){
+      fail(vm,"EACH CUBE|CELL|LINE|PROP|METHOD|OBJ|KEY as name"); return -1;
     }
     lex_next(L);
+    if (is_key){
+      /* EACH KEY|KEYS [AS name] OF|FROM plate|LAST|PLATE ... END
+       * Binds each top-level JSON plate key to name (default KEY); IT=0-based; KEY_N=1-based.
+       * Also binds VALUE/VAL from plate (decoded string or number text).
+       * Snapshot keys bag before loop so body may clobber LAST/PLATE.
+       * Soft empty if non-object. Usability: no KEYSP+EACH LINE glue for plate walk:
+       *   EACH KEY OF PLATE
+       *     GETP KEY
+       *   END
+       *   EACH KEY AS k FROM PEER ... END
+       */
+      char bind[48], plate[CUBALC_HOST_STR_MAX], keys_snap[CUBALC_HOST_STR_MAX];
+      cubalc_host_result kr, gr;
+      const char *p, *start;
+      long idx = 0, nkeys = 0;
+      int have_src = 0;
+      Var *pv;
+      snprintf(bind, sizeof bind, "KEY");
+      plate[0] = 0; keys_snap[0] = 0;
+      if (kw(&L->cur, "AS") || kw(&L->cur, "->")) {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT) { fail(vm, "EACH KEY as name"); return -1; }
+        snprintf(bind, sizeof bind, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !kw(&L->cur, "OF") &&
+                 !kw(&L->cur, "ON") && !kw(&L->cur, "IN") &&
+                 !kw(&L->cur, "FROM") && !kw(&L->cur, "END") &&
+                 strcmp(L->cur.text, "->") != 0) {
+        snprintf(bind, sizeof bind, "%s", L->cur.text);
+        lex_next(L);
+      }
+      if (kw(&L->cur, "OF") || kw(&L->cur, "ON") || kw(&L->cur, "IN") ||
+          kw(&L->cur, "FROM") || kw(&L->cur, "FOR") || kw(&L->cur, "OVER")) {
+        lex_next(L);
+        have_src = 1;
+        if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(plate, sizeof plate, "%s", vm->last_str);
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          pv = var_get(vm, L->cur.text, 0);
+          if (pv && pv->is_str) {
+            snprintf(plate, sizeof plate, "%s", pv->sval);
+            lex_next(L);
+          } else if (pv) {
+            snprintf(plate, sizeof plate, "%ld", pv->val);
+            lex_next(L);
+          } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+            plate[0] = 0;
+          }
+        } else if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+          snprintf(plate, sizeof plate, "%s", vm->last_str);
+        }
+      } else {
+        /* bare: conventional PLATE, else LAST object */
+        pv = var_get(vm, "PLATE", 0);
+        if (pv && pv->is_str && pv->sval[0])
+          snprintf(plate, sizeof plate, "%s", pv->sval);
+        else
+          snprintf(plate, sizeof plate, "%s", vm->last_str);
+      }
+      {
+        const char *bp = plate;
+        while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+        if (*bp != '{')
+          snprintf(plate, sizeof plate, "%s", "{}");
+      }
+      if (kw(&L->cur, "AS") || kw(&L->cur, "->")) {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT) { fail(vm, "EACH KEY as name"); return -1; }
+        snprintf(bind, sizeof bind, "%s", L->cur.text);
+        lex_next(L);
+      }
+      skip_nl(L);
+      {
+        Lex body_start = *L;
+        int depth = 1;
+        while (L->cur.kind != TK_EOF) {
+          if (block_scan_step(L, &depth, 0)) break;
+        }
+        if (depth != 0) { fail(vm, "EACH KEY without END"); return -1; }
+        memset(&kr, 0, sizeof kr);
+        if (cubalc_host_json_keys(plate, &kr) == 0 && kr.str[0])
+          snprintf(keys_snap, sizeof keys_snap, "%s", kr.str);
+        p = keys_snap;
+        while (*p && !vm->fatal && !vm->halt) {
+          char key[256];
+          size_t kn = 0;
+          while (*p == '\n' || *p == '\r') p++;
+          if (!*p) break;
+          start = p;
+          while (*p && *p != '\n' && *p != '\r') p++;
+          kn = (size_t)(p - start);
+          if (kn >= sizeof key) kn = sizeof key - 1;
+          memcpy(key, start, kn);
+          key[kn] = 0;
+          if (!key[0]) {
+            if (*p == '\n' || *p == '\r') p++;
+            continue;
+          }
+          var_set_str(vm, bind, key);
+          var_set_str(vm, "KEY", key);
+          var_set_str(vm, "K", key);
+          /* peel value for agent convenience (VALUE/VAL) */
+          memset(&gr, 0, sizeof gr);
+          if (cubalc_host_json_get(plate, key, &gr) == 0) {
+            var_set_str(vm, "VALUE", gr.str);
+            var_set_str(vm, "VAL", gr.str);
+            var_set_str(vm, "V", gr.str);
+          } else {
+            var_set_str(vm, "VALUE", "");
+            var_set_str(vm, "VAL", "");
+            var_set_str(vm, "V", "");
+          }
+          var_set_num(vm, "IT", idx);
+          var_set_num(vm, "IDX", idx);
+          var_set_num(vm, "KEY_N", idx + 1);
+          var_set_num(vm, "OK", 1);
+          vm->break_loop = 0;
+          vm->continue_loop = 0;
+          {
+            Lex body = body_start;
+            if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+          }
+          if (vm->break_loop) { vm->break_loop = 0; idx++; nkeys = idx; break; }
+          vm->continue_loop = 0;
+          idx++;
+          nkeys = idx;
+          if (*p == '\n' || *p == '\r') p++;
+        }
+        if (kw(&L->cur, "END")) lex_next(L);
+        var_set_num(vm, "LAST_N", nkeys);
+        var_set_num(vm, "EACH_N", nkeys);
+        var_set_num(vm, "NKEYS", nkeys);
+        var_set_num(vm, "OK", 1);
+        (void)have_src;
+        bump(vm);
+        return 1;
+      }
+    }
     if (is_prop){
       /* EACH PROP|ATTR|OBJFIELD OF obj|Class [AS name] ... END
        * Binds each CLASS field name to name (default PROP); IT=0-based; PROP_N=1-based.
