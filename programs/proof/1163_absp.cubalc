@@ -1,0 +1,97 @@
+# ABSP / SIGNP — multi-plate magnitude + polarity (ABSKV/SIGNKV duals)
+# Usability: after SUBP, rank deltas / direction without TOKV+ABSKV/SIGNKV+FROMKVP.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"a\":-5,\"b\":3,\"c\":-1,\"d\":0,\"label\":\"x\"}"
+LET PEER = "{\"up\":4,\"down\":-9,\"flat\":0}"
+LET empty = "{}"
+
+# ABSP: |v| · ABSP_N = negatives flipped only
+ABSP
+ASSERT OK == 1
+ASSERT ABSP_N == 2
+ASSERT ABSP_FROM == 0
+SYS HAS LAST "\"a\":5"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"b\":3"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"c\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"d\":0"
+ASSERT LAST_N == 1
+SYS HAS LAST "label"
+ASSERT LAST_N == 1
+# source not mutated
+SYS HAS PLATE "\"a\":-5"
+ASSERT LAST_N == 1
+
+ABSP FROM PEER
+ASSERT ABSP_FROM == 1
+ASSERT ABSP_N == 1
+SYS EQS ABSP_SRC "PEER"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"down\":9"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"up\":4"
+ASSERT LAST_N == 1
+
+MAGP FROM PEER
+ASSERT MAGP_N == 1
+
+# SUBP then ABSP then TOPKEYP = largest magnitude delta
+LET now = "{\"warn\":10,\"error\":2,\"info\":5}"
+LET base = "{\"warn\":3,\"error\":8,\"info\":5}"
+SUBP now base
+# warn:7 error:-6 info:0
+ABSP FROM LAST
+ASSERT ABSP_N == 1
+TOPKEYP FROM LAST
+SYS EQS LAST "warn"
+ASSERT LAST_N == 1
+ASSERT TOPKEYP_N == 7
+
+# SIGNP: map to -1|0|1
+SIGNP
+ASSERT OK == 1
+ASSERT SIGNP_N == 4
+ASSERT SIGNP_POS == 1
+ASSERT SIGNP_NEG == 2
+ASSERT SIGNP_ZERO == 1
+ASSERT SIGNP_FROM == 0
+SYS HAS LAST "\"a\":-1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"b\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"c\":-1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"d\":0"
+ASSERT LAST_N == 1
+SYS HAS LAST "label"
+ASSERT LAST_N == 1
+
+SIGNP FROM PEER
+ASSERT SIGNP_FROM == 1
+ASSERT SIGNP_POS == 1
+ASSERT SIGNP_NEG == 1
+ASSERT SIGNP_ZERO == 1
+SYS HAS LAST "\"up\":1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"down\":-1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"flat\":0"
+ASSERT LAST_N == 1
+
+DIRP FROM PEER
+ASSERT SIGNP_N == 3
+
+# empty soft
+ABSP FROM empty
+ASSERT ABSP_N == 0
+SIGNP FROM empty
+ASSERT SIGNP_N == 0
+ASSERT SIGNP_POS == 0
+ASSERT SIGNP_NEG == 0
+ASSERT SIGNP_ZERO == 0
+
+PRINT "absp soft ok"

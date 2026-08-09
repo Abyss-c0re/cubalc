@@ -27411,6 +27411,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
              kw(&L->cur,"PCTP") || kw(&L->cur,"SCALEP") || kw(&L->cur,"ADDP") ||
              kw(&L->cur,"DIVP") || kw(&L->cur,"SUMMERGEP") || kw(&L->cur,"SUBP") ||
+             kw(&L->cur,"ABSP") || kw(&L->cur,"SIGNP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
              kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
              kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
@@ -35840,6 +35841,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SUBP", "SUBP|SUBVALP|DELTAVP a b — a−b pure-int by key · multi-plate · no TOKV+DIFFKV · not DIFFP key bag"},
       {"SUBVALP", "SUBVALP alias of SUBP"},
       {"DELTAVP", "DELTAVP alias of SUBP · now−baseline FREQ delta"},
+      {"ABSP", "ABSP|MAGP [FROM plate] — |int| values → plate · multi-plate · no TOKV+ABSKV · rank SUBP deltas"},
+      {"MAGP", "MAGP|ABSVP alias of ABSP · magnitude for TOPKEYP"},
+      {"SIGNP", "SIGNP|DIRP [FROM plate] — map int to −1|0|1 → plate · multi-plate · no TOKV+SIGNKV"},
+      {"DIRP", "DIRP|SGNP alias of SIGNP · polarity after SUBP"},
       {"FILLP", "FILLP [STRICT] [FROM plate] [tmpl] — expand {{key}} · FROM other plate/var/LAST"},
       {"SUBSTPLATE", "SUBSTPLATE alias of FILLP"},
       {"EXPANDP", "EXPANDP alias of FILLP"},
@@ -41692,13 +41697,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * SCALEP|MULP [FROM plate] factor — multiply pure-int values (SCALEKV dual).
    * ADDP|OFFSETP [FROM plate] delta — add delta to pure-int values (ADDKV dual).
    * DIVP|IDIVP [FROM plate] divisor — integer-divide pure-int values (DIVKV dual).
+   * ABSP|MAGP [FROM plate] — absolute pure-int values (ABSKV dual · rank SUBP deltas).
+   * SIGNP|DIRP [FROM plate] — map pure-int to −1|0|1 (SIGNKV dual · polarity).
    * Non-int keys kept. Bare uses PLATE. Does not mutate source (PICKP style).
    * LAST = plate · LAST_N = rewritten · PCTP_SUM / SCALEP_F / ADDP_D / DIVP_D.
-   * Usability: FREQ share/weight/offset/mean without TOKV+…+FROMKVP:
-   *   PCTP FROM freq
-   *   SCALEP 2 FROM scores
-   *   ADDP 1 FROM counts
-   *   DIVP 3 FROM merged   # mean of 3 SUMMERGEP sources
+   * ABSP_N = negatives flipped · SIGNP_POS/NEG/ZERO class counts.
+   * Usability: FREQ rewrite without TOKV+…+FROMKVP:
+   *   PCTP FROM freq · SCALEP 2 · ADDP 1 · DIVP 3 FROM merged
+   *   SUBP now base · ABSP FROM LAST · TOPKEYP FROM LAST
+   *   SIGNP FROM LAST
    */
   if (kw(&L->cur,"PCTP") || kw(&L->cur,"SHAREP") || kw(&L->cur,"PERCENTP") ||
       kw(&L->cur,"MPCTP") || kw(&L->cur,"PLATE_PCT") || kw(&L->cur,"NORMP") ||
@@ -41708,10 +41715,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"ADDP") || kw(&L->cur,"OFFSETP") || kw(&L->cur,"ADDVP") ||
       kw(&L->cur,"MADDP") || kw(&L->cur,"PLATE_ADD") || kw(&L->cur,"OFFSETVP") ||
       kw(&L->cur,"DIVP") || kw(&L->cur,"IDIVP") || kw(&L->cur,"QUOTP") ||
-      kw(&L->cur,"MDIVP") || kw(&L->cur,"PLATE_DIV") || kw(&L->cur,"DIVVP")) {
+      kw(&L->cur,"MDIVP") || kw(&L->cur,"PLATE_DIV") || kw(&L->cur,"DIVVP") ||
+      kw(&L->cur,"ABSP") || kw(&L->cur,"MAGP") || kw(&L->cur,"MABSP") ||
+      kw(&L->cur,"PLATE_ABS") || kw(&L->cur,"ABSVP") || kw(&L->cur,"MAGVP") ||
+      kw(&L->cur,"SIGNP") || kw(&L->cur,"DIRP") || kw(&L->cur,"SGNP") ||
+      kw(&L->cur,"MSIGNP") || kw(&L->cur,"PLATE_SIGN") || kw(&L->cur,"DIRVP")) {
     char plate[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr;
-    int have_from = 0, mode = 0; /* 0 pct 1 scale 2 add 3 div */
+    int have_from = 0, mode = 0; /* 0 pct 1 scale 2 add 3 div 4 abs 5 sign */
     long arg = 1;
     int have_arg = 0;
     Var *pv;
@@ -41732,6 +41743,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              strcmp(op0, "QUOTP") == 0 || strcmp(op0, "MDIVP") == 0 ||
              strcmp(op0, "PLATE_DIV") == 0 || strcmp(op0, "DIVVP") == 0)
       mode = 3;
+    else if (strcmp(op0, "ABSP") == 0 || strcmp(op0, "MAGP") == 0 ||
+             strcmp(op0, "MABSP") == 0 || strcmp(op0, "PLATE_ABS") == 0 ||
+             strcmp(op0, "ABSVP") == 0 || strcmp(op0, "MAGVP") == 0)
+      mode = 4;
+    else if (strcmp(op0, "SIGNP") == 0 || strcmp(op0, "DIRP") == 0 ||
+             strcmp(op0, "SGNP") == 0 || strcmp(op0, "MSIGNP") == 0 ||
+             strcmp(op0, "PLATE_SIGN") == 0 || strcmp(op0, "DIRVP") == 0)
+      mode = 5;
     else
       mode = 0;
 
@@ -41765,8 +41784,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
     }
 
-    /* factor/delta for scale/add; PCT has no arg */
-    if (mode != 0) {
+    /* factor/delta/divisor for scale/add/div; PCT/ABS/SIGN have no arg */
+    if (mode == 1 || mode == 2 || mode == 3) {
       if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
         arg = parse_expr(vm, L);
         have_arg = 1;
@@ -41823,7 +41842,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(plate, sizeof plate, "%s", "{}");
     }
 
-    if (mode != 0 && !have_arg) {
+    if ((mode == 1 || mode == 2 || mode == 3) && !have_arg) {
       fail(vm, mode == 1
            ? "SCALEP [FROM plate] factor — need int factor"
            : mode == 3
@@ -41831,7 +41850,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
            : "ADDP [FROM plate] delta — need int delta");
       return -1;
     }
-    if (mode == 0) arg = 0;
+    if (mode == 0 || mode == 4 || mode == 5) arg = 0;
 
     memset(&hr, 0, sizeof hr);
     if (cubalc_host_json_valmap(plate, mode, arg, &hr) != 0) {
@@ -41843,12 +41862,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "SCALEP_N", 0);
       var_set_num(vm, "ADDP_N", 0);
       var_set_num(vm, "DIVP_N", 0);
+      var_set_num(vm, "ABSP_N", 0);
+      var_set_num(vm, "SIGNP_N", 0);
       var_set_num(vm, "PCTP_FROM", have_from ? 1 : 0);
       var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err :
-                  (mode == 3 ? "DIVP: fail" : mode == 2 ? "ADDP: fail" :
+                  (mode == 5 ? "SIGNP: fail" : mode == 4 ? "ABSP: fail" :
+                   mode == 3 ? "DIVP: fail" : mode == 2 ? "ADDP: fail" :
                    mode == 1 ? "SCALEP: fail" : "PCTP: fail"));
       var_set_str(vm, "ERR", hr.err[0] ? hr.err :
-                  (mode == 3 ? "DIVP: fail" : mode == 2 ? "ADDP: fail" :
+                  (mode == 5 ? "SIGNP: fail" : mode == 4 ? "ABSP: fail" :
+                   mode == 3 ? "DIVP: fail" : mode == 2 ? "ADDP: fail" :
                    mode == 1 ? "SCALEP: fail" : "PCTP: fail"));
       var_set_num(vm, "OK", 0);
       bump(vm); return 1;
@@ -41858,7 +41881,30 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
     vm->last_n = hr.n;
     var_set_num(vm, "LAST_N", hr.n);
-    if (mode == 3) {
+    if (mode == 5) {
+      long npos = (hr.code >> 16) & 0xff;
+      long nneg = (hr.code >> 8) & 0xff;
+      long nzero = hr.code & 0xff;
+      var_set_str(vm, "SIGNP", hr.str);
+      var_set_str(vm, "DIRP", hr.str);
+      var_set_num(vm, "SIGNP_N", hr.n);
+      var_set_num(vm, "SIGNP_POS", npos);
+      var_set_num(vm, "SIGNP_NEG", nneg);
+      var_set_num(vm, "SIGNP_ZERO", nzero);
+      var_set_num(vm, "DIRP_N", hr.n);
+      var_set_num(vm, "SIGNP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "SIGNP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    } else if (mode == 4) {
+      var_set_str(vm, "ABSP", hr.str);
+      var_set_str(vm, "MAGP", hr.str);
+      var_set_num(vm, "ABSP_N", hr.n);
+      var_set_num(vm, "ABSP_KEYS", (long)hr.code);
+      var_set_num(vm, "MAGP_N", hr.n);
+      var_set_num(vm, "ABSP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "ABSP_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    } else if (mode == 3) {
       var_set_str(vm, "DIVP", hr.str);
       var_set_str(vm, "IDIVP", hr.str);
       var_set_num(vm, "DIVP_N", hr.n);
@@ -41898,6 +41944,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s n=%ld arg=%ld code=%d from=%d\n",
+              mode == 5 ? "signp" : mode == 4 ? "absp" :
               mode == 3 ? "divp" : mode == 2 ? "addp" : mode == 1 ? "scalep" : "pctp",
               hr.n, arg, hr.code, have_from);
     bump(vm); return 1;

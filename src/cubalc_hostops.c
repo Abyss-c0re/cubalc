@@ -5026,15 +5026,17 @@ static int json_raw_pure_int(const char *raw, long *out) {
   return 1;
 }
 
-/* Usability: multi-plate PCTP/SCALEP/ADDP/DIVP — rewrite int values without bag glue.
- * mode 0 PCT: (v*100)/sum · 1 SCALE: v*arg · 2 ADD: v+arg · 3 DIV: v/arg (0→0).
- * Non-int keys kept as-is. r->n = rewritten · r->code = sum (PCT) or nkeys. */
+/* Usability: multi-plate PCTP/SCALEP/ADDP/DIVP/ABSP/SIGNP — rewrite int values.
+ * mode 0 PCT · 1 SCALE · 2 ADD · 3 DIV · 4 ABS · 5 SIGN (−1|0|1).
+ * Non-int keys kept. r->n = rewritten (ABS: negatives flipped) · r->code = sum|nkeys|
+ * for SIGN: (pos&0xff)<<16 | (neg&0xff)<<8 | (zero&0xff). */
 int cubalc_host_json_valmap(const char *json, int mode, long arg,
                             cubalc_host_result *r) {
   cubalc_host_result keys, raw, setr;
   char cur[CUBALC_HOST_STR_MAX];
   const char *p, *line;
   long total = 0, rew = 0, nkeys = 0;
+  long npos = 0, nneg = 0, nzero = 0;
   r_clear(r);
   memset(&keys, 0, sizeof keys);
   snprintf(cur, sizeof cur, "%s", "{}");
@@ -5095,11 +5097,22 @@ int cubalc_host_json_valmap(const char *json, int mode, long arg,
         outv = num * arg;
       else if (mode == 3)
         outv = (arg != 0) ? (num / arg) : 0;
-      else
+      else if (mode == 4) {
+        outv = (num < 0) ? -num : num;
+        if (num < 0) rew++; /* count only flipped negatives like ABSKV */
+      } else if (mode == 5) {
+        if (num > 0) { outv = 1; npos++; }
+        else if (num < 0) { outv = -1; nneg++; }
+        else { outv = 0; nzero++; }
+        rew++;
+      } else
         outv = num + arg;
+      if (mode != 4 && mode != 5)
+        rew++;
+      else if (mode == 4 && num >= 0)
+        ; /* already counted only negatives */
       snprintf(numbuf, sizeof numbuf, "%ld", outv);
       use_raw = numbuf;
-      rew++;
     }
     memset(&setr, 0, sizeof setr);
     if (cubalc_host_json_set(cur, key, use_raw, 1, &setr) != 0) {
@@ -5111,7 +5124,13 @@ int cubalc_host_json_valmap(const char *json, int mode, long arg,
   }
   snprintf(r->str, sizeof r->str, "%s", cur);
   r->n = rew;
-  r->code = (mode == 0) ? (int)total : (int)nkeys;
+  if (mode == 0)
+    r->code = (int)total;
+  else if (mode == 5) {
+    /* pack pos/neg/zero into code; also store full counts via n if needed */
+    r->code = (int)(((npos & 0xff) << 16) | ((nneg & 0xff) << 8) | (nzero & 0xff));
+  } else
+    r->code = (int)nkeys;
   r->ok = 1;
   return 0;
 }

@@ -277,13 +277,15 @@ int cubalc_host_json_avg(const char *json, cubalc_host_result *r);
  * Soft {} if not object. Usability: FREQ plate denoise without TOKV+THRESHKV+FROMKVP. */
 int cubalc_host_json_valfilter(const char *json, int mode, long limit,
                                cubalc_host_result *r);
-/* plate value rewrite (multi-plate duals of PCTKV / SCALEKV / ADDKV / DIVKV).
+/* plate value rewrite (multi-plate duals of PCT/SCALE/ADD/DIV/ABS/SIGN KV).
  * mode 0 PCT: pure-int values → (v*100)/sum · zero sum → 0 · non-int kept.
  * mode 1 SCALE: pure-int values → v * arg · non-int kept.
  * mode 2 ADD: pure-int values → v + arg · non-int kept.
  * mode 3 DIV: pure-int values → v / arg (trunc toward 0) · arg 0 → 0 · non-int kept.
- * r->str = result plate · r->n = fields rewritten · r->code = total (PCT) or nkeys.
- * Soft {}. Usability: FREQ share/weight/offset/mean without TOKV+…+FROMKVP. */
+ * mode 4 ABS: pure-int values → |v| · r->n = negatives flipped · non-int kept.
+ * mode 5 SIGN: pure-int values → −1|0|1 · r->n = rewritten · r->code packs pos/neg/zero
+ *   as (pos<<16)|(neg<<8)|zero (each 0..255) when possible; else nkeys.
+ * Soft {}. Usability: FREQ rewrite without TOKV+…+FROMKVP. */
 int cubalc_host_json_valmap(const char *json, int mode, long arg,
                             cubalc_host_result *r);
 /* two-plate numeric combine (multi-plate duals of MERGEKV / DIFFKV).
