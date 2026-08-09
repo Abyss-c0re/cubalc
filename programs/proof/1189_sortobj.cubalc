@@ -1,0 +1,122 @@
+# SORTOBJ / SORTBAGOBJ — nest sort pure-int keys (SORTP duals)
+# Usability: full nest FREQ rank without GETOBJ glue. Not OOP SORTOBJS.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12,\"label\":\"x\"}}"
+LET PEER = "{\"scores\":{\"a\":5,\"b\":2,\"c\":8},\"outer\":\"z\"}"
+
+# SORTOBJ default DESC write-back (crit, error, warn, info)
+SORTOBJ "freq"
+ASSERT OK == 1
+ASSERT SORTOBJ_N == 4
+ASSERT SORTOBJ_ASC == 0
+ASSERT SORTOBJ_NEST_HIT == 1
+ASSERT SORTOBJ_FROM == 0
+HASPOBJ "freq" "crit"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "error"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "label"
+ASSERT LAST_N == 0
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+# NEST body has crit before error in string order after sort
+SYS HAS NEST "crit"
+ASSERT LAST_N == 1
+SYS HAS NEST "error"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+SORTOBJ FROM PEER "scores"
+ASSERT SORTOBJ_FROM == 1
+ASSERT SORTOBJ_N == 3
+SYS EQS SORTOBJ_SRC "PEER"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "scores" "c"
+ASSERT LAST_N == 1
+GETP FROM PEER "outer"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# ASC lightest first
+LET PEER = "{\"scores\":{\"a\":5,\"b\":2,\"c\":8},\"outer\":\"z\"}"
+SORTOBJ ASC FROM PEER "scores"
+ASSERT SORTOBJ_ASC == 1
+ASSERT SORTOBJ_N == 3
+HASPOBJ FROM PEER "scores" "b"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "scores" "b"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+# trailing ASC
+LET PLATE = "{\"freq\":{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12}}"
+SORTOBJ "freq" ASC
+ASSERT SORTOBJ_ASC == 1
+ASSERT SORTOBJ_N == 4
+GETPOBJ "freq" "info"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# SORTBAGOBJ → key:val bag DESC (no write-back of bag)
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12,\"label\":\"x\"}}"
+SORTBAGOBJ "freq"
+ASSERT OK == 1
+ASSERT SORTBAGOBJ_N == 4
+SYS HASLINE LAST "crit:12"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "error:9"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "warn:3"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "info:1"
+ASSERT LAST_N == 1
+# first line heaviest
+SYS NTH 0 LAST
+SYS EQS LAST "crit:12"
+ASSERT LAST_N == 1
+# outer host intact (bag path does not mutate plate)
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+# non-int label still in nest
+HASPOBJ "freq" "label"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"scores\":{\"a\":5,\"b\":2,\"c\":8},\"outer\":\"z\"}"
+SORTBAGOBJ ASC FROM PEER "scores"
+ASSERT SORTOBJ_ASC == 1
+ASSERT SORTBAGOBJ_N == 3
+SYS NTH 0 LAST
+SYS EQS LAST "b:2"
+ASSERT LAST_N == 1
+
+# aliases
+LET PLATE = "{\"freq\":{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12}}"
+NESTSORT "freq"
+ASSERT SORTOBJ_N == 4
+SORTFREQOBJ "freq"
+ASSERT SORTBAGOBJ_N == 4
+SYS HASLINE LAST "crit:12"
+ASSERT LAST_N == 1
+SORTTOKVOBJ "freq" ASC
+ASSERT SORTBAGOBJ_N == 4
+SYS NTH 0 LAST
+SYS EQS LAST "info:1"
+ASSERT LAST_N == 1
+
+# soft nest miss
+SORTOBJ "ghost"
+ASSERT OK == 1
+ASSERT SORTOBJ_NEST_HIT == 0
+ASSERT SORTOBJ_N == 0
+HASP "ghost"
+ASSERT LAST_N == 0
+SORTBAGOBJ "ghost"
+ASSERT SORTBAGOBJ_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+PRINT "sortobj soft ok"
