@@ -1,0 +1,58 @@
+# GETFLATN / FIRSTFLATN — first pure-int leaf by path needle → LAST_N
+# Usability: nest numeric peel without GETFLAT+NUM glue.
+# Non-int matching leaves skipped.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"cfg\":{\"port\":9090,\"host\":\"h\"},\"meta\":{\"port\":1},\"label\":\"x\"}"
+
+GETFLATN "port"
+ASSERT OK == 1
+ASSERT GETFLATN_HIT == 1
+ASSERT LAST_N == 9090
+ASSERT GETFLATN == 9090
+SYS EQS GETFLATN_PATH "cfg.port"
+ASSERT LAST_N == 1
+
+GETFLATN "host" OR 0
+ASSERT GETFLATN_HIT == 0
+ASSERT GETFLATN_FALLBACK == 1
+ASSERT LAST_N == 0
+
+GETFLATN "nope" OR 8080
+ASSERT GETFLATN_HIT == 0
+ASSERT GETFLATN_FALLBACK == 1
+ASSERT LAST_N == 8080
+
+GETFLATN "nope"
+ASSERT GETFLATN_HIT == 0
+ASSERT LAST_N == 0
+
+LET PEER = "{\"hits\":{\"a\":3,\"b\":4},\"label\":\"z\"}"
+GETFLATN FROM PEER "hits" OR 0
+ASSERT GETFLATN_FROM == 1
+ASSERT GETFLATN_HIT == 1
+ASSERT GETFLATN == 3
+ASSERT LAST_N == 3
+SYS EQS GETFLATN_SRC "PEER"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":1}"
+GETFLATN FROM PEER "hits"
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+FIRSTFLATN "x"
+ASSERT GETFLATN_HIT == 1
+ASSERT LAST_N == 1
+
+# empty needle → first pure-int
+LET PLATE = "{\"s\":\"z\",\"n\":42}"
+GETFLATN ""
+ASSERT GETFLATN_HIT == 1
+ASSERT LAST_N == 42
+
+PASS
+PRINT "1229_getflatn: PASS"
