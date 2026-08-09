@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 587,
-  "version": "1.15.614-usability",
-  "item": "KEEPKEYP/DROPKEYP",
-  "item_id": 623,
-  "title": "KEEPKEYP|GREPKEYP · DROPKEYP|GREPVKEYP · KEEPKEYPI|DROPKEYPI · multi-plate key needle filter · complements PICKP · no TOKV+KEEPKEY/DROPKEY",
-  "commit": "8778adc25bd6e24862c00ba18ec32fdf552da1b0",
-  "summary": "FREQ key pattern keep/drop (icase) without bag glue. proof 1164 40/40.",
+  "iter": 588,
+  "version": "1.15.615-usability",
+  "item": "MEDIANP",
+  "item_id": 624,
+  "title": "MEDIANP|P50P|MIDP · multi-plate integer median · robust mid vs AVGNP · no TOKV+MEDIANKV",
+  "commit": "ab1e939f2f84069577571142fcadbf22fffb6f6b",
+  "summary": "Plate median after thrash restore. proof 1165 18/18 + sumnp/keepkeyp reg.",
   "proofs": [
-    "1164_keepkeyp 40/40",
-    "1163_absp reg 42/42"
+    "1165_medianp 18/18",
+    "1159_sumnp reg 30/30",
+    "1164_keepkeyp reg 40/40"
   ],
-  "when": "2026-08-09T04:55:55Z",
+  "when": "2026-08-09T05:05:52Z",
   "agent": "meaningful_iter_10m",
-  "sha": "8778adc25bd6e24862c00ba18ec32fdf552da1b0",
-  "note": "invented after backlog 622; EVOLVE_PAUSED"
+  "sha": "ab1e939f2f84069577571142fcadbf22fffb6f6b",
+  "note": "thrash restore then feature; EVOLVE_PAUSED"
 }
