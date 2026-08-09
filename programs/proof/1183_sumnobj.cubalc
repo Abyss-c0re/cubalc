@@ -1,0 +1,117 @@
+# SUMNOBJ / MAXNOBJ / MINNOBJ / AVGNOBJ / MEDIANOBJ / TOPKEYOBJ / BOTKEYOBJ
+# Nest numeric aggregates — SUMNP/TOPKEYP duals without GETOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"scores\":{\"a\":10,\"b\":2,\"c\":8,\"label\":\"x\"}}"
+LET PEER = "{\"freq\":{\"warn\":3,\"error\":9,\"info\":1},\"tag\":\"t\"}"
+
+# sum ints in nest (strings skipped)
+SUMNOBJ "scores"
+ASSERT OK == 1
+ASSERT LAST_N == 20
+ASSERT SUMNOBJ_N == 20
+ASSERT SUMNOBJ_NEST_HIT == 1
+ASSERT SUMNOBJ_FROM == 0
+# outer intact in LAST chain style
+SYS HAS LAST "cubeA"
+ASSERT LAST_N == 1
+
+SUMNOBJ FROM PEER "freq"
+ASSERT SUMNOBJ_FROM == 1
+ASSERT SUMNOBJ_N == 13
+ASSERT LAST_N == 13
+
+# max/min
+MAXNOBJ "scores"
+ASSERT LAST_N == 10
+ASSERT MAXNOBJ_N == 10
+MINNOBJ "scores"
+ASSERT LAST_N == 2
+ASSERT MINNOBJ_N == 2
+
+MAXNOBJ FROM PEER "freq"
+ASSERT LAST_N == 9
+MINNOBJ FROM PEER "freq"
+ASSERT LAST_N == 1
+
+# integer mean
+AVGNOBJ "scores"
+ASSERT AVGNOBJ_N == 6
+ASSERT LAST_N == 6
+AVGNOBJ FROM PEER "freq"
+ASSERT LAST_N == 4
+
+# median
+MEDIANOBJ "scores"
+ASSERT MEDIANOBJ_N == 8
+ASSERT LAST_N == 8
+
+# top/bot key by value
+TOPKEYOBJ "scores"
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+ASSERT TOPKEYOBJ_N == 10
+ASSERT TOPKEYOBJ_V == 10
+ASSERT TOPKEYOBJ_NEST_HIT == 1
+
+BOTKEYOBJ "scores"
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+ASSERT BOTKEYOBJ_N == 2
+
+TOPKEYOBJ FROM PEER "freq"
+SYS EQS LAST "error"
+ASSERT LAST_N == 1
+ASSERT TOPKEYOBJ_N == 9
+ASSERT TOPKEYOBJ_FROM == 1
+
+BOTKEYOBJ FROM PEER "freq"
+SYS EQS LAST "info"
+ASSERT LAST_N == 1
+ASSERT BOTKEYOBJ_N == 1
+
+# soft nest miss
+SUMNOBJ "ghost"
+ASSERT OK == 1
+ASSERT SUMNOBJ_N == 0
+ASSERT SUMNOBJ_NEST_HIT == 0
+ASSERT LAST_N == 0
+TOPKEYOBJ "ghost"
+ASSERT TOPKEYOBJ_NEST_HIT == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# empty nest soft
+LET PLATE = "{\"empty\":{}}"
+SUMNOBJ "empty"
+ASSERT SUMNOBJ_N == 0
+TOPKEYOBJ "empty"
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# aliases + trailing FROM
+LET PEER = "{\"freq\":{\"warn\":3,\"error\":9,\"info\":1},\"tag\":\"t\"}"
+TOTALOBJ "freq" FROM PEER
+ASSERT SUMNOBJ_N == 13
+NESTSUM FROM PEER "freq"
+ASSERT SUMNOBJ_N == 13
+MAXKEYOBJ FROM PEER "freq"
+SYS EQS LAST "error"
+ASSERT LAST_N == 1
+MINKEYOBJ "freq" FROM PEER
+SYS EQS LAST "info"
+ASSERT LAST_N == 1
+# reseed PLATE after empty-nest tests
+LET PLATE = "{\"scores\":{\"a\":10,\"b\":2,\"c\":8}}"
+MEANOBJ "scores"
+ASSERT AVGNOBJ_N == 6
+P50OBJ "scores"
+ASSERT MEDIANOBJ_N == 8
+
+# PEER outer intact after nest peels
+GETP FROM PEER "tag"
+SYS EQS LAST "t"
+ASSERT LAST_N == 1
+
+PRINT "sumnobj soft ok"

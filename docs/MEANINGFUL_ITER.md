@@ -669,6 +669,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 639. ~~**`RENAMEPOBJ` / `MOVEKEYOBJ` / `NESTRENAME`**~~ **done** (rename key inside nest · write-back · multi-plate · RENAMEP dual · not OOP RENAMEOBJ · no GETOBJ+RENAMEP+SETOBJ).
 640. ~~**`COPYPOBJ` / `SWAPPOBJ` / `NESTCOPY` / `NESTSWAP`**~~ **done** (copy/swap keys inside nest · write-back · multi-plate · COPYP/SWAPP duals · not OOP COPYOBJ · no GETOBJ+COPYP/SWAPP+SETOBJ).
 641. ~~**`TOKVOBJ` / `FROMKVOBJ` / `NESTTOKV` / `BAGTONEST`**~~ **done** (nest ↔ key:val bag · multi-plate · TOKVP/FROMKVP duals · no GETOBJ+TOKVP/FROMKVP+SETOBJ).
+642. ~~**`SUMNOBJ` / `MAXNOBJ` / `MINNOBJ` / `AVGNOBJ` / `MEDIANOBJ` / `TOPKEYOBJ` / `BOTKEYOBJ`**~~ **done** (nest numeric aggregates · multi-plate · SUMNP/TOPKEYP duals · no GETOBJ+SUMNP glue).
 
 ## Tick protocol
 
