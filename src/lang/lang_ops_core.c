@@ -35888,15 +35888,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NONEMPTYOBJ", "NONEMPTYOBJ|HASKEYSOBJ [FROM plate] nest — soft nonempty nest 0|1 · multi-plate"},
       {"VALSOBJ", "VALSOBJ|NESTVALS [FROM plate] nest — nested values bag → LAST · multi-plate · VALSP dual"},
       {"NESTVALS", "NESTVALS alias of VALSOBJ"},
-      {"RENAMEPOBJ", "RENAMEPOBJ|MOVEKEYOBJ|NESTRENAME [FROM plate] nest old new — rename key in nest · write-back · multi-plate · RENAMEP dual · not OOP RENAMEOBJ"},
+      {"RENAMEPOBJ", "RENAMEPOBJ|NESTRENAME [FROM plate] nest old new — rename key in nest · dotted nest path ok · write-back · not OOP RENAMEOBJ"},
       {"MOVEKEYOBJ", "MOVEKEYOBJ alias of RENAMEPOBJ"},
       {"NESTRENAME", "NESTRENAME alias of RENAMEPOBJ"},
       {"REKEYOBJ", "REKEYOBJ alias of RENAMEPOBJ"},
       {"MVKEYOBJ", "MVKEYOBJ alias of RENAMEPOBJ"},
-      {"COPYPOBJ", "COPYPOBJ|DUPKEYOBJ|NESTCOPY [FROM plate] nest src dst — copy key in nest · write-back · multi-plate · COPYP dual · not OOP COPYOBJ"},
+      {"COPYPOBJ", "COPYPOBJ|NESTCOPY [FROM plate] nest src dst — copy key in nest · dotted nest path ok · write-back · not OOP COPYOBJ"},
       {"DUPKEYOBJ", "DUPKEYOBJ alias of COPYPOBJ"},
       {"NESTCOPY", "NESTCOPY alias of COPYPOBJ"},
-      {"SWAPPOBJ", "SWAPPOBJ|XCHGKEYOBJ|NESTSWAP [FROM plate] nest a b — swap keys in nest · write-back · multi-plate · SWAPP dual"},
+      {"SWAPPOBJ", "SWAPPOBJ|NESTSWAP [FROM plate] nest a b — swap keys in nest · dotted nest path ok · write-back"},
       {"XCHGKEYOBJ", "XCHGKEYOBJ alias of SWAPPOBJ"},
       {"NESTSWAP", "NESTSWAP alias of SWAPPOBJ"},
       {"TOKVOBJ", "TOKVOBJ|NESTTOKV [FROM plate] nest — nest → key:val bag · multi-plate · TOKVP dual"},
@@ -43660,23 +43660,24 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
   /* RENAMEPOBJ|MOVEKEYOBJ|NESTRENAME [FROM plate] nest old new —
    * Rename key inside nested object → write-back outer plate (RENAMEP dual).
+   * Nest may be dotted/slash path: RENAMEPOBJ "cfg.flags" "tmp" "debug"
    * Soft nest miss or old-key miss: LAST_N=0 · outer unchanged · OK=1.
    * Dest overwrites if already present (same as RENAMEP/JSONRENAME).
    * Not RENAMEOBJ (OOP live-slot rename) — nest keys only.
    * Usability: promote nest tmp→status without GETOBJ+RENAMEP+SETOBJ glue:
    *   RENAMEPOBJ "meta" "tmp" "status"
+   *   RENAMEPOBJ "cfg.flags" "dbg" "debug"
    *   RENAMEPOBJ FROM PEER "cfg" "tmp_port" "port"
    */
   if (kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
       kw(&L->cur,"RENAMEKEYOBJ") || kw(&L->cur,"MVKEYOBJ") || kw(&L->cur,"REKEYOBJ") ||
       kw(&L->cur,"MRENAMEPOBJ") || kw(&L->cur,"NEST_RENAME") || kw(&L->cur,"OBJRENAMEKEY")) {
-    char plate[CUBALC_HOST_STR_MAX], nestk[96], nest[CUBALC_HOST_STR_MAX];
+    char plate[CUBALC_HOST_STR_MAX], nestk[192], nest[CUBALC_HOST_STR_MAX];
     char oldk[96], newk[96];
     char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result ngr, rr, hr;
     int have_from = 0, nest_hit = 0;
     Var *pv;
-    const char *v;
 
     lex_next(L);
     plate[0] = 0; nestk[0] = 0; nest[0] = 0; oldk[0] = 0; newk[0] = 0;
@@ -43824,21 +43825,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(plate, sizeof plate, "%s", "{}");
     }
 
+    /* path-aware peel: "cfg.flags" · soft miss → n=0 (outer unchanged) */
     nest_hit = 0;
     nest[0] = 0;
     memset(&ngr, 0, sizeof ngr);
-    if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
-      v = ngr.str;
-      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
-      if (*v == '{') {
-        if (v != ngr.str) {
-          size_t n = strlen(v);
-          memmove(ngr.str, v, n + 1);
-        }
-        snprintf(nest, sizeof nest, "%s", ngr.str);
-        nest_hit = 1;
-      }
-    }
+    cubalc_host_json_path_obj(plate, nestk, &ngr);
+    snprintf(nest, sizeof nest, "%s", ngr.str);
+    nest_hit = (ngr.n != 0) ? 1 : 0;
 
     /* soft nest miss — no invent empty nest; outer unchanged */
     if (!nest_hit) {
@@ -43903,7 +43896,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     snprintf(nest, sizeof nest, "%s", rr.str);
     memset(&hr, 0, sizeof hr);
-    if (cubalc_host_json_set(plate, nestk, nest, 1, &hr) != 0) {
+    if (cubalc_host_json_path_set(plate, nestk, nest, 1, &hr) != 0) {
       var_set_num(vm, "OK", 0);
       var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "RENAMEPOBJ: write-back fail");
       var_set_str(vm, "ERR", hr.err[0] ? hr.err : "RENAMEPOBJ: write-back fail");
@@ -43943,11 +43936,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* COPYPOBJ|DUPKEYOBJ|NESTCOPY [FROM plate] nest src dst —
    * SWAPPOBJ|XCHGKEYOBJ|NESTSWAP [FROM plate] nest a b —
    * Copy/swap keys inside nested object → write-back outer (COPYP/SWAPP duals).
+   * Nest may be dotted/slash path: COPYPOBJ "cfg.flags" "debug" "trace"
    * Soft nest miss or src miss (copy): LAST_N=0 · outer unchanged · OK=1.
    * SWAPP: both miss n=0 · one miss = move · both hit = exchange.
    * Not CLONEOBJ/COPYOBJ (OOP live-slot clone).
    * Usability: nest dual-buffer / snapshot without GETOBJ+COPYP/SWAPP+SETOBJ:
    *   COPYPOBJ "meta" "status" "prev"
+   *   COPYPOBJ "cfg.flags" "debug" "mirror"
    *   SWAPPOBJ FROM PEER "cfg" "cur" "prev"
    */
   if (kw(&L->cur,"COPYPOBJ") || kw(&L->cur,"DUPKEYOBJ") || kw(&L->cur,"NESTCOPY") ||
@@ -43955,14 +43950,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"SWAPPOBJ") || kw(&L->cur,"XCHGKEYOBJ") || kw(&L->cur,"NESTSWAP") ||
       kw(&L->cur,"SWAPKEYOBJ") || kw(&L->cur,"FLIPKEYOBJ") || kw(&L->cur,"MSWAPPOBJ") ||
       kw(&L->cur,"EXCHKEYOBJ") || kw(&L->cur,"OBJCOPYKEY") || kw(&L->cur,"OBJSWAPKEY")) {
-    char plate[CUBALC_HOST_STR_MAX], nestk[96], nest[CUBALC_HOST_STR_MAX];
+    char plate[CUBALC_HOST_STR_MAX], nestk[192], nest[CUBALC_HOST_STR_MAX];
     char ka[96], kb[96];
     char ra[CUBALC_HOST_STR_MAX], rb[CUBALC_HOST_STR_MAX];
     char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result ngr, gr, hr, dr;
     int have_from = 0, nest_hit = 0, is_swap = 0, has_a = 0, has_b = 0;
     Var *pv;
-    const char *v;
     char op0[24];
 
     snprintf(op0, sizeof op0, "%s", L->cur.text);
@@ -44123,21 +44117,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(plate, sizeof plate, "%s", "{}");
     }
 
+    /* path-aware peel: "cfg.flags" · soft miss → n=0 */
     nest_hit = 0;
     nest[0] = 0;
     memset(&ngr, 0, sizeof ngr);
-    if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
-      v = ngr.str;
-      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
-      if (*v == '{') {
-        if (v != ngr.str) {
-          size_t n = strlen(v);
-          memmove(ngr.str, v, n + 1);
-        }
-        snprintf(nest, sizeof nest, "%s", ngr.str);
-        nest_hit = 1;
-      }
-    }
+    cubalc_host_json_path_obj(plate, nestk, &ngr);
+    snprintf(nest, sizeof nest, "%s", ngr.str);
+    nest_hit = (ngr.n != 0) ? 1 : 0;
 
     /* soft nest miss — outer unchanged */
     if (!nest_hit) {
@@ -44221,7 +44207,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       snprintf(nest, sizeof nest, "%s", hr.str);
       memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_set(plate, nestk, nest, 1, &hr) != 0) {
+      if (cubalc_host_json_path_set(plate, nestk, nest, 1, &hr) != 0) {
         var_set_num(vm, "OK", 0);
         var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "COPYPOBJ: write-back fail");
         var_set_str(vm, "ERR", hr.err[0] ? hr.err : "COPYPOBJ: write-back fail");
@@ -44330,7 +44316,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(nest, sizeof nest, "%s", hr.str);
     }
     memset(&hr, 0, sizeof hr);
-    if (cubalc_host_json_set(plate, nestk, nest, 1, &hr) != 0) goto cubalc_swappobj_fail;
+    if (cubalc_host_json_path_set(plate, nestk, nest, 1, &hr) != 0) goto cubalc_swappobj_fail;
     if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
       var_set_str(vm, from_name, hr.str);
     else if (!have_from)

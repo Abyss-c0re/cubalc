@@ -2182,6 +2182,8 @@ int main(int argc, char **argv) {
       {"cli_plate_nestpick", "programs/proof/1178_cli_plate_nestpick.sh", "cubalc plate nestpick/nestomit PICKOBJ/OMITOBJ duals"},
       {"pickobj_path", "programs/proof/1204_pickobj_path.cubalc", "PICKOBJ/OMITOBJ dotted nest path write-back"},
       {"cli_plate_nestpick_path", "programs/proof/1204_cli_plate_nestpick_path.sh", "cubalc plate nestpick/omit deep nest path"},
+      {"renamepobj_path", "programs/proof/1205_renamepobj_path.cubalc", "RENAMEPOBJ/COPYPOBJ/SWAPPOBJ dotted nest path"},
+      {"cli_plate_nestrename", "programs/proof/1205_cli_plate_nestrename.sh", "cubalc plate nestrename/copy/swap duals paths"},
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
@@ -2505,7 +2507,9 @@ int main(int argc, char **argv) {
       {"LENOBJ", "flow", "LENOBJ|NESTLEN [FROM plate] nest — nested key count → LAST_N · multi-plate"},
       {"EMPTYOBJ", "flow", "EMPTYOBJ [FROM plate] nest — soft empty nest 0|1 · multi-plate"},
       {"VALSOBJ", "flow", "VALSOBJ|NESTVALS [FROM plate] nest — nested values bag · multi-plate"},
-      {"RENAMEPOBJ", "flow", "RENAMEPOBJ|MOVEKEYOBJ|NESTRENAME [FROM plate] nest old new — rename key in nest · multi-plate · RENAMEP dual"},
+      {"RENAMEPOBJ", "flow", "RENAMEPOBJ|NESTRENAME [FROM plate] nest old new — rename key in nest · dotted nest path ok · write-back"},
+      {"COPYPOBJ", "flow", "COPYPOBJ|NESTCOPY [FROM plate] nest src dst — copy key in nest · dotted nest path ok"},
+      {"SWAPPOBJ", "flow", "SWAPPOBJ|NESTSWAP [FROM plate] nest a b — swap keys in nest · dotted nest path ok"},
       {"MOVEKEYOBJ", "flow", "MOVEKEYOBJ alias of RENAMEPOBJ"},
       {"NESTRENAME", "flow", "NESTRENAME alias of RENAMEPOBJ"},
       {"COPYPOBJ", "flow", "COPYPOBJ|DUPKEYOBJ|NESTCOPY [FROM plate] nest src dst — copy key in nest · multi-plate · COPYP dual"},
@@ -4913,6 +4917,9 @@ int main(int argc, char **argv) {
               "       cubalc plate nesthas <path> <nest> <field>\n"
               "       cubalc plate nestpick <path> <nest> <k1> [k2…]  # PICKOBJ dual\n"
               "       cubalc plate nestomit <path> <nest> <k1> [k2…]  # OMITOBJ dual\n"
+              "       cubalc plate nestrename <path> <nest> <old> <new>  # RENAMEPOBJ dual · path ok\n"
+              "       cubalc plate nestcopy <path> <nest> <src> <dst>    # COPYPOBJ dual · path ok\n"
+              "       cubalc plate nestswap <path> <nest> <a> <b>        # SWAPPOBJ dual · path ok\n"
               "       cubalc plate nestsum|nestavg|nestmedian <path> <nest>  # SUMNOBJ duals\n"
               "       cubalc plate nesttop|nestbot <path> <nest> [n]  # TOPNOBJ duals (no write)\n"
               "       cubalc plate nestsort <path> <nest> [ASC|DESC]  # SORTOBJ dual (write)\n"
@@ -4932,6 +4939,7 @@ int main(int argc, char **argv) {
              "\"ops\":[\"show\",\"get\",\"getn\",\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
              "\"inc\",\"del\",\"keys\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
+             "\"nestrename\",\"nestcopy\",\"nestswap\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
              "\"nestsort\",\"nestsortbag\","
              "\"fill\",\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\",\"changelog\","
@@ -5027,6 +5035,12 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "nestomit") == 0 || strcmp(argv[2], "nomit") == 0 ||
         strcmp(argv[2], "omitnest") == 0 || strcmp(argv[2], "omitobj") == 0 ||
         strcmp(argv[2], "stripnest") == 0 ||
+        strcmp(argv[2], "nestrename") == 0 || strcmp(argv[2], "nrename") == 0 ||
+        strcmp(argv[2], "renamenest") == 0 || strcmp(argv[2], "renamepobj") == 0 ||
+        strcmp(argv[2], "nestcopy") == 0 || strcmp(argv[2], "ncopy") == 0 ||
+        strcmp(argv[2], "copynest") == 0 || strcmp(argv[2], "copypobj") == 0 ||
+        strcmp(argv[2], "nestswap") == 0 || strcmp(argv[2], "nswap") == 0 ||
+        strcmp(argv[2], "swapnest") == 0 || strcmp(argv[2], "swappobj") == 0 ||
         strcmp(argv[2], "nestsum") == 0 || strcmp(argv[2], "nsum") == 0 ||
         strcmp(argv[2], "sumnest") == 0 || strcmp(argv[2], "sumnobj") == 0 ||
         strcmp(argv[2], "nestavg") == 0 || strcmp(argv[2], "navg") == 0 ||
@@ -5158,6 +5172,15 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "nomit") == 0 || strcmp(op, "omitobj") == 0 ||
                strcmp(op, "omitnest") == 0 || strcmp(op, "stripnest") == 0)
         op = "nestomit";
+      else if (strcmp(op, "nrename") == 0 || strcmp(op, "renamenest") == 0 ||
+               strcmp(op, "renamepobj") == 0)
+        op = "nestrename";
+      else if (strcmp(op, "ncopy") == 0 || strcmp(op, "copynest") == 0 ||
+               strcmp(op, "copypobj") == 0)
+        op = "nestcopy";
+      else if (strcmp(op, "nswap") == 0 || strcmp(op, "swapnest") == 0 ||
+               strcmp(op, "swappobj") == 0)
+        op = "nestswap";
       else if (strcmp(op, "nsum") == 0 || strcmp(op, "sumnest") == 0 ||
                strcmp(op, "sumnobj") == 0)
         op = "nestsum";
@@ -5362,6 +5385,8 @@ int main(int argc, char **argv) {
         strcmp(op, "nestinc") == 0 || strcmp(op, "nestdel") == 0 ||
         strcmp(op, "nestkeys") == 0 || strcmp(op, "nesthas") == 0 ||
         strcmp(op, "nestpick") == 0 || strcmp(op, "nestomit") == 0 ||
+        strcmp(op, "nestrename") == 0 || strcmp(op, "nestcopy") == 0 ||
+        strcmp(op, "nestswap") == 0 ||
         strcmp(op, "nestsum") == 0 || strcmp(op, "nestavg") == 0 ||
         strcmp(op, "nestmedian") == 0 || strcmp(op, "nesttop") == 0 ||
         strcmp(op, "nestbot") == 0 ||
@@ -5661,6 +5686,106 @@ int main(int argc, char **argv) {
       }
 
       
+      /* nestrename|nestcopy|nestswap — RENAMEPOBJ/COPYPOBJ/SWAPPOBJ duals (nest path ok).
+       *   cubalc plate nestrename agent.json flags dbg debug
+       *   cubalc plate nestcopy   agent.json flags debug mirror
+       *   cubalc plate nestswap   agent.json flags debug trace */
+      if (strcmp(op, "nestrename") == 0 || strcmp(op, "nestcopy") == 0 ||
+          strcmp(op, "nestswap") == 0) {
+        const char *a = NULL, *b = NULL;
+        cubalc_host_result rr;
+        if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\","
+                 "\"err\":\"need src key\",\"version\":\"%s\"}\n",
+                 op, path, nestk, CUBALC_LANG_VERSION);
+          return 2;
+        }
+        a = argv[ai++];
+        if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\","
+                 "\"err\":\"need dst key\",\"version\":\"%s\"}\n",
+                 op, path, nestk, CUBALC_LANG_VERSION);
+          return 2;
+        }
+        b = argv[ai++];
+        if (!nest_hit) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\",\"src\":\"%s\","
+                 "\"dst\":\"%s\",\"n\":0,\"nest_hit\":false,\"file\":%s,"
+                 "\"version\":\"%s\",\"plate\":%s}\n",
+                 op, path, nestk, a, b, file_hit ? "true" : "false",
+                 CUBALC_LANG_VERSION, plate);
+          return 0;
+        }
+        memset(&rr, 0, sizeof rr);
+        if (strcmp(op, "nestrename") == 0) {
+          if (cubalc_host_json_rename(nest, a, b, &rr) != 0) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"nestrename\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                   rr.err[0] ? rr.err : "rename fail", CUBALC_LANG_VERSION);
+            return 1;
+          }
+        } else if (strcmp(op, "nestcopy") == 0) {
+          if (cubalc_host_json_copy_key(nest, a, b, &rr) != 0) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"nestcopy\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                   rr.err[0] ? rr.err : "copy fail", CUBALC_LANG_VERSION);
+            return 1;
+          }
+        } else {
+          if (cubalc_host_json_swap_keys(nest, a, b, &rr) != 0) {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"nestswap\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                   rr.err[0] ? rr.err : "swap fail", CUBALC_LANG_VERSION);
+            return 1;
+          }
+        }
+        if (rr.n == 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\",\"src\":\"%s\","
+                 "\"dst\":\"%s\",\"n\":0,\"nest_hit\":true,\"file\":%s,"
+                 "\"version\":\"%s\",\"plate\":%s}\n",
+                 op, path, nestk, a, b, file_hit ? "true" : "false",
+                 CUBALC_LANG_VERSION, plate);
+          return 0;
+        }
+        snprintf(nest, sizeof nest, "%s", rr.str);
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_json_path_set(plate, nestk, nest, 1, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 op, wr.err[0] ? wr.err : "outer set fail", CUBALC_LANG_VERSION);
+          return 1;
+        }
+        snprintf(plate, sizeof plate, "%s", wr.str);
+        slash = strrchr(path, '/');
+        if (slash && slash != path) {
+          size_t n = (size_t)(slash - path);
+          if (n >= sizeof parent) n = sizeof parent - 1;
+          memcpy(parent, path, n);
+          parent[n] = 0;
+          memset(&hr, 0, sizeof hr);
+          cubalc_host_mkdir(parent, &hr);
+        }
+        memset(&hr, 0, sizeof hr);
+        if (cubalc_host_write(path, plate, &hr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"err\":\"write fail\",\"version\":\"%s\"}\n",
+                 op, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"nest\":\"%s\",\"src\":\"%s\","
+               "\"dst\":\"%s\",\"n\":%ld,\"nest_hit\":true,\"file\":%s,"
+               "\"bytes\":%ld,\"version\":\"%s\",\"plate\":%s,"
+               "\"note\":\"RENAMEPOBJ/COPYPOBJ/SWAPPOBJ dual · nest path ok\"}\n",
+               op, path, nestk, a, b, rr.n, file_hit ? "true" : "false",
+               hr.n, CUBALC_LANG_VERSION, plate);
+        return 0;
+      }
+
       /* nestpick|nestomit — multi-key keep/drop inside nest (PICKOBJ/OMITOBJ duals). */
       if (strcmp(op, "nestpick") == 0 || strcmp(op, "nestomit") == 0) {
         char keys_nl[CUBALC_HOST_STR_MAX];

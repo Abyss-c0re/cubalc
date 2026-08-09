@@ -1,0 +1,66 @@
+# RENAMEPOBJ / COPYPOBJ / SWAPPOBJ with dotted nest paths
+# Usability: restructure keys inside deep nests without GETOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"flags\":{\"dbg\":0,\"trace\":1,\"noise\":9},\"n\":1}"
+LET PEER = "{\"meta\":{\"tmp\":\"ready\",\"role\":\"worker\"}}"
+
+# shallow nest rename still works
+RENAMEPOBJ "flags" "dbg" "debug"
+ASSERT OK == 1
+ASSERT RENAMEPOBJ_N == 1
+ASSERT RENAMEPOBJ_NEST_HIT == 1
+GETP "flags.debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+HASP "flags.dbg"
+ASSERT LAST_N == 0
+
+# copy inside nest
+COPYPOBJ "flags" "debug" "mirror"
+ASSERT OK == 1
+ASSERT COPYPOBJ_N == 1
+GETP "flags.mirror"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+GETP "flags.debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# swap inside nest
+SWAPPOBJ "flags" "debug" "trace"
+ASSERT OK == 1
+ASSERT SWAPPOBJ_N == 1
+GETP "flags.debug"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "flags.trace"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+RENAMEPOBJ FROM PEER "meta" "tmp" "status"
+ASSERT RENAMEPOBJ_FROM == 1
+ASSERT RENAMEPOBJ_N == 1
+GETP FROM PEER "meta.status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+HASP FROM PEER "meta.tmp"
+ASSERT LAST_N == 0
+
+# soft nest miss
+RENAMEPOBJ "missing.nest" "a" "b"
+ASSERT OK == 1
+ASSERT RENAMEPOBJ_N == 0
+ASSERT RENAMEPOBJ_NEST_HIT == 0
+
+# soft key miss
+COPYPOBJ "flags" "nope" "x"
+ASSERT OK == 1
+ASSERT COPYPOBJ_N == 0
+HASP "flags.x"
+ASSERT LAST_N == 0
+
+PASS
+PRINT "1205_renamepobj_path: PASS"
