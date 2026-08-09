@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 243,
-  "program": "programs/realworld/svc_nest_tokv_board.cubalc",
-  "theme": "TOKVOBJ/FROMKVOBJ nest bag handoff digest bridge",
-  "version": "1.15.635-usability",
+  "iter": 244,
+  "program": "programs/realworld/svc_nest_denoise_board.cubalc",
+  "theme": "THRESHOBJ/DROPZEROOBJ/CAPOBJ nest FREQ denoise",
+  "version": "1.15.638-usability",
   "pass": true,
-  "prior_note": "iter 242 SUMNOBJ rollup; this iter first realworld TOKVOBJ/FROMKVOBJ (1182 / MEANINGFUL 641)",
+  "prior_note": "iter 243 TOKVOBJ bag bridge; this iter first realworld THRESHOBJ denoise (1184 / MEANINGFUL 643)",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed meta + TOKVOBJ digest",
+      "cmd": "seed freq zeros/noise/outlier",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "export",
-      "cmd": "TOKVOBJ + HASLINE exact k:v",
+      "name": "dropz",
+      "cmd": "DROPZEROOBJ drop a=0",
       "ok": true,
-      "note": "export"
+      "note": "dropz"
     },
     {
-      "name": "import",
-      "cmd": "FROMKVOBJ snap + meta replace clobber",
+      "name": "thresh",
+      "cmd": "THRESHOBJ min=5 keep c,d",
       "ok": true,
-      "note": "import"
+      "note": "thresh"
+    },
+    {
+      "name": "cap",
+      "cmd": "CAPOBJ d 100\u219220",
+      "ok": true,
+      "note": "cap"
     },
     {
       "name": "peer",
-      "cmd": "TOKV/FROMKV FROM PEER replace",
+      "cmd": "DROPZERO+THRESH FROM PEER",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost TOKV empty + empty FROMKV",
+      "cmd": "ghost nest soft miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "digest lines + bare port exactness",
+      "cmd": "no zeros, capped, no noise",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "round-trip + NESTTOKV/BAGTONEST",
+      "cmd": "CLAMPOBJ/KEEPNZ/NESTTHRESH",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "413/420 pre-existing shell fails; tokvobj PASS 45"
+      "note": "415/423 pre-existing shell fails + oop_pickobj/kvfileensure; threshobj PASS 47"
     }
   ],
   "weaknesses": [
@@ -2684,6 +2690,38 @@
       "title": "STATUS last line omits final NL",
       "detail": "cat -A ends probe:rt:pb without $.",
       "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W328",
+      "severity": "med",
+      "area": "lang|threshobj",
+      "title": "THRESHOBJ/CAPOBJ min/max want numeric literals in practice",
+      "detail": "Board branches min_t_s 3 vs default 5 and max_c 50 vs 20 with literal THRESHOBJ freq 5 / CAPOBJ freq 20. Free var thresholds not used (same class as SETPOBJ/INCOBJ literals). Agents with ENV MIN_T=7 need CASE branches for each allowed min.",
+      "repro": "THRESHOBJ freq min_t with LET min_t=5 may fail; use THRESHOBJ freq 5"
+    },
+    {
+      "id": "W329",
+      "severity": "med",
+      "area": "lang|threshobj",
+      "title": "THRESHOBJ drops non-integer nest fields as well as sub-threshold ints",
+      "detail": "Proof: label string dropped by THRESHOBJ. DROPZEROOBJ keeps non-int (tag). Inconsistent denoise policy: thresh strips strings, dropzero keeps them. Agents mixing labels into FREQ lose labels on thresh.",
+      "repro": "freq with label:x; THRESHOBJ freq 1 \u2192 label gone; DROPZERO keeps tag"
+    },
+    {
+      "id": "W330",
+      "severity": "low",
+      "area": "host|write",
+      "title": "STATUS last line omits final NL",
+      "detail": "cat -A ends soft:ok1:sf without $ when soft last... actually soft has $ after list. probe last without $ if last.",
+      "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W331",
+      "severity": "low",
+      "area": "host|require",
+      "title": "CUBALC_SND_REQUIRE=abc softens",
+      "detail": "Non-numeric REQUIRE softens (W6 class).",
+      "repro": "CUBALC_SND_REQUIRE=abc list"
     }
   ],
   "workarounds": [
@@ -2811,13 +2849,11 @@
     "SUMNOBJ needs skip/count diagnostics for mixed-type nests",
     "TOPKEYOBJ needs documented tie-break",
     "FROMKVOBJ needs merge-mode for non-destructive bag import",
-    "FROMKVOBJ LAST binding fragile in multi-op agent boards"
+    "FROMKVOBJ LAST binding fragile in multi-op agent boards",
+    "THRESHOBJ/CAPOBJ need var threshold/cap for agent ENV gates",
+    "THRESH vs DROPZERO disagree on non-int nest field retention"
   ],
   "issues_faced": [
-    "EMPTYOBJ conflates miss and empty nest",
-    "EXIT 2 shell 0 (W7)",
-    "rename field names literal-only for dynamic migrations",
-    "EXIT 2 shell 0 (W7)",
     "collision rename not stress-tested",
     "silent skip of non-numeric nest fields in SUMNOBJ",
     "minsum flag gate deny works",
@@ -2825,8 +2861,11 @@
     "FROMKVOBJ replace clobber not merge",
     "FROMKVOBJ LAST flaky; use bag var",
     "HASLINE whole-line exact on digests",
+    "EXIT 2 shell 0 (W7)",
+    "THRESHOBJ min literal branching for ENV mins",
+    "THRESH drops strings; DROPZERO keeps non-int",
     "EXIT 2 shell 0 (W7)"
   ],
-  "commit": "da7647a3d84ff5b790d5163601f8409ef264a413",
-  "ts": "2026-08-09T08:54:57Z"
+  "commit": "pending",
+  "ts": "2026-08-09T09:19:28Z"
 }
