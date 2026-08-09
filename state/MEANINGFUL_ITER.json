@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 662,
-  "version": "1.15.689-usability",
-  "item": "NTHFLAT + plate nthflat",
-  "item_id": 698,
-  "title": "NTHFLAT/INDEXFLAT + cubalc plate nthflat · 0-based Nth matching leaf by needle → LAST · OR fallback",
-  "commit": "41ffd4c649403653aaaec7ad11c3a1c2739e440a",
-  "summary": "Index nest peels without PATHSFLAT+NTH+GETP glue. proof 1239 + CLI PASS.",
+  "iter": 663,
+  "version": "1.15.690-usability",
+  "item": "EACH FLAT / EACH LEAF",
+  "item_id": 699,
+  "title": "EACH FLAT/LEAF walk matching nest leaves · PATH+VALUE bound · optional path needle · multi-plate FROM",
+  "commit": "09c783050324d2fd87879d8105b10462305ee9d8",
+  "summary": "Nest leaf walk without PATHSFLAT+EACH LINE+GETP glue. proof 1240 PASS · forms EACH FLAT.",
   "proofs": [
-    "1239_nthflat PASS",
-    "1239_cli_plate_nthflat PASS",
-    "1238_nthflatn reg PASS"
+    "1240_each_flat PASS",
+    "1169_each_key reg PASS",
+    "1239_nthflat reg PASS"
   ],
-  "when": "2026-08-09T18:37:37Z",
+  "when": "2026-08-09T18:48:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "41ffd4c649403653aaaec7ad11c3a1c2739e440a",
-  "note": "after NTHFLATN plane; EVOLVE_PAUSED"
+  "sha": "09c783050324d2fd87879d8105b10462305ee9d8",
+  "note": "after NTHFLAT plane; EVOLVE_PAUSED"
 }
