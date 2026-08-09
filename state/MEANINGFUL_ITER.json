@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 567,
-  "version": "1.15.594-usability",
-  "item": "cubalc plate has/need",
-  "item_id": 603,
-  "title": "cubalc plate has|need · CLI HASPALL/NEEDP duals multi-key contract",
-  "commit": "ad62ebca2abc6e278e9077e38192de29ac1fbe4c",
-  "summary": "Shell agents soft/hard multi-key plate gates with miss bag without .cubalc. proof 1144 + plate CLI reg.",
+  "iter": 568,
+  "version": "1.15.595-usability",
+  "item": "EQP/NEQP/DIFFP/CHANGELOGP",
+  "item_id": 604,
+  "title": "EQP|NEQP|DIFFP|CHANGELOGP · in-lang multi-plate compare no SYS JSON*",
+  "commit": "0f168a70cbc0acc057318741236b1806acf89921",
+  "summary": "Mesh agents compare plate vars order-independently and list value diffs without SYS. proof 1145 21/21.",
   "proofs": [
-    "1144_cli_plate_has_need",
-    "1140_cli_plate_ensure_merge reg",
-    "1142_cli_plate_changelog reg"
+    "1145_eqp 21/21",
+    "1143_plate_both_save reg 14/14"
   ],
-  "when": "2026-08-09T01:35:40Z",
+  "when": "2026-08-09T01:47:51Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ad62ebca2abc6e278e9077e38192de29ac1fbe4c",
+  "sha": "0f168a70cbc0acc057318741236b1806acf89921",
   "note": "clean tree; EVOLVE_PAUSED"
 }
