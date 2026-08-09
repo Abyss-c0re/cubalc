@@ -247,10 +247,20 @@ int cubalc_host_json_get_raw(const char *json, const char *key, cubalc_host_resu
 /* keep only listed top-level keys (newline bag order). r->str=new object · r->n=kept.
  * Missing keys skipped. Raw values preserved. Empty keys bag → {}. */
 int cubalc_host_json_pick(const char *json, const char *keys_nl, cubalc_host_result *r);
-/* rename top-level key old→new preserving raw value. r->n=1 renamed|0 missing (copy).
- * If new exists, value is overwritten. Same name no-op with n=1 if present. */
+/* rename key old→new preserving raw value. r->n=1 renamed|0 missing (copy).
+ * If new exists, value is overwritten. Same name no-op with n=1 if present.
+ * Paths: "freq.error" / "a/b/c" via path_get/del/set · create intermediate {} on dest.
+ * Usability: promote/move nested fields without GETP+DELP+SETP glue. */
 int cubalc_host_json_rename(const char *json, const char *oldk, const char *newk,
                             cubalc_host_result *r);
+/* copy key src→dst preserving raw value (paths ok). r->n=1 copied|0 soft miss.
+ * Dest overwrites if present. Same path no-op n=1 if present. Dual of rename keep-src. */
+int cubalc_host_json_copy_key(const char *json, const char *src, const char *dst,
+                              cubalc_host_result *r);
+/* swap two keys (paths ok). r->n=1 swapped|0 both miss. One-sided miss moves value.
+ * Same path no-op with n=1 if present. Dual of dual path_set. */
+int cubalc_host_json_swap_keys(const char *json, const char *a, const char *b,
+                               cubalc_host_result *r);
 /* drop listed top-level keys (newline bag). r->str=new object · r->n=removed count.
  * Missing keys soft-skipped. Dual of JSONPICK when noise fields are known. */
 int cubalc_host_json_drop(const char *json, const char *keys_nl, cubalc_host_result *r);

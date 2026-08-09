@@ -1,0 +1,84 @@
+# RENAMEP / COPYP / SWAPP with dotted paths
+# Usability: restructure nest fields without GETP+DELP+SETP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"port\":8080,\"tls\":0},\"flags\":{\"debug\":0,\"trace\":1},\"n\":1}"
+
+# rename nest path → nest path
+RENAMEP "cfg.port" "cfg.listen"
+ASSERT OK == 1
+ASSERT RENAMEP_N == 1
+GETP "cfg.listen"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+HASP "cfg.port"
+ASSERT LAST_N == 0
+
+# cross-nest move
+RENAMEP "cfg.tls" "net.tls"
+ASSERT RENAMEP_N == 1
+GETP "net.tls"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+HASP "cfg.tls"
+ASSERT LAST_N == 0
+
+# copy path → path (keep src)
+COPYP "flags.debug" "flags.verbose"
+ASSERT OK == 1
+ASSERT COPYP_N == 1
+GETP "flags.debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+GETP "flags.verbose"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+HASP "flags.debug"
+ASSERT LAST_N == 1
+HASP "flags.verbose"
+ASSERT LAST_N == 1
+
+# copy real value
+COPYP "flags.trace" "flags.mirror"
+ASSERT COPYP_N == 1
+GETP "flags.mirror"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "flags.trace"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# soft miss copy
+COPYP "flags.nope" "flags.x"
+ASSERT COPYP_N == 0
+HASP "flags.x"
+ASSERT LAST_N == 0
+
+# swap two nest flags
+SWAPP "flags.debug" "flags.trace"
+ASSERT OK == 1
+ASSERT SWAPP_N == 1
+GETP "flags.debug"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP "flags.trace"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# shallow still works
+RENAMEP "host" "name"
+ASSERT RENAMEP_N == 1
+GETP "name"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+HASP "host"
+ASSERT LAST_N == 0
+
+# soft miss rename
+RENAMEP "missing.path" "other"
+ASSERT OK == 1
+ASSERT RENAMEP_N == 0
+
+PASS
+PRINT "1200_path_rename_copy_swap: PASS"

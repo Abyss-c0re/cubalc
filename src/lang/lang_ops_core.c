@@ -35810,7 +35810,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"OMITP", "OMITP|DROPKEYSP [FROM plate] key… — drop listed keys → remainder plate · multi-plate · no SYS JSONDROP"},
       {"DROPKEYSP", "DROPKEYSP alias of OMITP"},
       {"STRIPP", "STRIPP alias of OMITP"},
-      {"RENAMEP", "RENAMEP|MOVEKEYP [FROM plate] old new — rename key write-back · multi-plate · no SYS JSONRENAME"},
+      {"RENAMEP", "RENAMEP|MOVEKEYP [FROM plate] old new — rename key write-back · paths ok · multi-plate · no SYS JSONRENAME"},
       {"MOVEKEYP", "MOVEKEYP alias of RENAMEP"},
       {"MVKEYP", "MVKEYP alias of RENAMEP"},
       {"KEYDIFFP", "KEYDIFFP|ONLYKEYSP a b — keys in a not in b · multi-plate · no SYS JSONKEYDIFF"},
@@ -35818,9 +35818,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"KEYCOMMP", "KEYCOMMP|KEYINTERP a b — keys in both · multi-plate · no SYS JSONKEYCOMM"},
       {"KEYINTERP", "KEYINTERP alias of KEYCOMMP"},
       {"COMMONKEYSP", "COMMONKEYSP alias of KEYCOMMP"},
-      {"COPYP", "COPYP|DUPKEYP [FROM plate] src dst — copy key write-back · multi-plate · no SYS JSONCOPY"},
+      {"COPYP", "COPYP|DUPKEYP [FROM plate] src dst — copy key write-back · paths ok · multi-plate · no SYS JSONCOPY"},
       {"DUPKEYP", "DUPKEYP alias of COPYP"},
-      {"SWAPP", "SWAPP|XCHGP [FROM plate] a b — swap keys write-back · multi-plate · no SYS JSONSWAP"},
+      {"SWAPP", "SWAPP|XCHGP [FROM plate] a b — swap keys write-back · paths ok · multi-plate · no SYS JSONSWAP"},
       {"XCHGP", "XCHGP alias of SWAPP"},
       {"LENP", "LENP|NKEYSP [FROM plate] — key count → LAST_N · multi-plate · no SYS JSONLEN"},
       {"NKEYSP", "NKEYSP alias of LENP"},
@@ -40328,14 +40328,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* RENAMEP|MOVEKEYP [FROM plate] old new — rename key in place (JSONRENAME dual).
    * Soft miss: LAST_N=0 plate unchanged structure · dest overwrites if present.
    * Write-back: mutates PLATE or named FROM plate var (SETP/DELP style).
+   * Paths: "freq.error" / "a/b/c" · cross-nest move ok · create intermediate {}.
    * Usability: promote tmp→status without GETP+DELP+SETP glue:
    *   RENAMEP "tmp" "status"
+   *   RENAMEP "cfg.port" "net.listen"
    *   RENAMEP FROM PEER "tmp_host" "host"
    */
   if (kw(&L->cur,"RENAMEP") || kw(&L->cur,"MOVEKEYP") || kw(&L->cur,"MRENAMEP") ||
       kw(&L->cur,"PLATE_RENAME") || kw(&L->cur,"MVKEYP") || kw(&L->cur,"RENAMEKEYP") ||
       kw(&L->cur,"MOVEP") || kw(&L->cur,"REKEYP")) {
-    char plate[CUBALC_HOST_STR_MAX], oldk[96], newk[96];
+    char plate[CUBALC_HOST_STR_MAX], oldk[192], newk[192];
     char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr;
     int have_from = 0;
@@ -40621,11 +40623,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"SWAPP") || kw(&L->cur,"XCHGP") || kw(&L->cur,"MSWAPP") ||
       kw(&L->cur,"PLATE_SWAP") || kw(&L->cur,"SWAPKEYP") || kw(&L->cur,"EXCHP") ||
       kw(&L->cur,"FLIPKEYP")) {
-    char plate[CUBALC_HOST_STR_MAX], ka[96], kb[96];
-    char ra[CUBALC_HOST_STR_MAX], rb[CUBALC_HOST_STR_MAX];
+    /* Paths ok: "cfg.port" / "flags.debug" via host copy_key / swap_keys. */
+    char plate[CUBALC_HOST_STR_MAX], ka[192], kb[192];
     char from_name[96], from_src[CUBALC_HOST_STR_MAX];
-    cubalc_host_result gr, hr, dr;
-    int have_from = 0, is_swap = 0, has_a = 0, has_b = 0;
+    cubalc_host_result hr;
+    int have_from = 0, is_swap = 0;
     Var *pv;
     char op0[24];
 
@@ -40640,10 +40642,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     lex_next(L);
     plate[0] = 0; ka[0] = 0; kb[0] = 0;
-    ra[0] = 0; rb[0] = 0;
     from_name[0] = 0; from_src[0] = 0;
     memset(&hr, 0, sizeof hr);
-    memset(&dr, 0, sizeof dr);
 
     if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
         kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
@@ -40763,52 +40763,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(plate, sizeof plate, "%s", "{}");
     }
 
+    memset(&hr, 0, sizeof hr);
     if (!is_swap) {
-      /* COPYP */
-      memset(&gr, 0, sizeof gr);
-      if (cubalc_host_json_get_raw(plate, ka, &gr) != 0) {
-        /* soft miss — write-back unchanged plate */
-        if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
-          var_set_str(vm, from_name, plate);
-        else if (!have_from)
-          var_set_str(vm, "PLATE", plate);
-        var_set_str(vm, "LAST", plate);
-        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
-        vm->last_n = 0;
-        var_set_num(vm, "LAST_N", 0);
-        var_set_str(vm, "COPYP", plate);
-        var_set_num(vm, "COPYP_N", 0);
-        var_set_str(vm, "COPYP_SRC", ka);
-        var_set_str(vm, "COPYP_DST", kb);
-        var_set_num(vm, "COPYP_FROM", have_from ? 1 : 0);
-        var_set_str(vm, "COPYP_VAR",
-                    from_name[0] ? from_name : (have_from ? "" : "PLATE"));
-        var_set_num(vm, "OK", 1);
-        if (vm->trace)
-          fprintf(vm->trace, "# copyp %s→%s miss from=%d\n", ka, kb, have_from);
-        bump(vm); return 1;
-      }
-      if (strcmp(ka, kb) == 0) {
-        if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
-          var_set_str(vm, from_name, plate);
-        else if (!have_from)
-          var_set_str(vm, "PLATE", plate);
-        var_set_str(vm, "LAST", plate);
-        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
-        vm->last_n = 1;
-        var_set_num(vm, "LAST_N", 1);
-        var_set_str(vm, "COPYP", plate);
-        var_set_num(vm, "COPYP_N", 1);
-        var_set_str(vm, "COPYP_SRC", ka);
-        var_set_str(vm, "COPYP_DST", kb);
-        var_set_num(vm, "COPYP_FROM", have_from ? 1 : 0);
-        var_set_str(vm, "COPYP_VAR",
-                    from_name[0] ? from_name : (have_from ? "" : "PLATE"));
-        var_set_num(vm, "OK", 1);
-        bump(vm); return 1;
-      }
-      memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_set(plate, kb, gr.str, 1, &hr) != 0) {
+      if (cubalc_host_json_copy_key(plate, ka, kb, &hr) != 0) {
         var_set_str(vm, "LAST", "");
         vm->last_str[0] = 0;
         vm->last_n = 0;
@@ -40826,12 +40783,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "PLATE", hr.str);
       var_set_str(vm, "LAST", hr.str);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
-      vm->last_n = 1;
-      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
       var_set_str(vm, "COPYP", hr.str);
-      var_set_str(vm, "DUPKEYP", hr.str);
-      var_set_num(vm, "COPYP_N", 1);
-      var_set_num(vm, "JSONCOPY_N", 1);
+      if (hr.n)
+        var_set_str(vm, "DUPKEYP", hr.str);
+      var_set_num(vm, "COPYP_N", hr.n);
+      if (hr.n)
+        var_set_num(vm, "JSONCOPY_N", hr.n);
       var_set_str(vm, "COPYP_SRC", ka);
       var_set_str(vm, "COPYP_DST", kb);
       var_set_num(vm, "COPYP_FROM", have_from ? 1 : 0);
@@ -40839,97 +40798,37 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                   from_name[0] ? from_name : (have_from ? "" : "PLATE"));
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# copyp %s→%s ok from=%d\n", ka, kb, have_from);
+        fprintf(vm->trace, "# copyp %s→%s n=%ld from=%d\n", ka, kb, hr.n, have_from);
       bump(vm); return 1;
     }
 
-    /* SWAPP */
-    if (strcmp(ka, kb) == 0) {
-      memset(&gr, 0, sizeof gr);
-      has_a = (cubalc_host_json_get_raw(plate, ka, &gr) == 0) ? 1 : 0;
-      if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
-        var_set_str(vm, from_name, plate);
-      else if (!have_from)
-        var_set_str(vm, "PLATE", plate);
-      var_set_str(vm, "LAST", plate);
-      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
-      vm->last_n = has_a;
-      var_set_num(vm, "LAST_N", has_a);
-      var_set_str(vm, "SWAPP", plate);
-      var_set_num(vm, "SWAPP_N", has_a);
-      var_set_str(vm, "SWAPP_A", ka);
-      var_set_str(vm, "SWAPP_B", kb);
-      var_set_num(vm, "SWAPP_FROM", have_from ? 1 : 0);
-      var_set_str(vm, "SWAPP_VAR",
-                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
-      var_set_num(vm, "OK", 1);
-      bump(vm); return 1;
-    }
-    memset(&gr, 0, sizeof gr);
-    if (cubalc_host_json_get_raw(plate, ka, &gr) == 0) {
-      has_a = 1;
-      snprintf(ra, sizeof ra, "%s", gr.str);
-    }
-    memset(&gr, 0, sizeof gr);
-    if (cubalc_host_json_get_raw(plate, kb, &gr) == 0) {
-      has_b = 1;
-      snprintf(rb, sizeof rb, "%s", gr.str);
-    }
-    if (!has_a && !has_b) {
-      if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
-        var_set_str(vm, from_name, plate);
-      else if (!have_from)
-        var_set_str(vm, "PLATE", plate);
-      var_set_str(vm, "LAST", plate);
-      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+    /* SWAPP — path-aware via host swap_keys */
+    if (cubalc_host_json_swap_keys(plate, ka, kb, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
       vm->last_n = 0;
       var_set_num(vm, "LAST_N", 0);
-      var_set_str(vm, "SWAPP", plate);
       var_set_num(vm, "SWAPP_N", 0);
-      var_set_str(vm, "SWAPP_A", ka);
-      var_set_str(vm, "SWAPP_B", kb);
       var_set_num(vm, "SWAPP_FROM", have_from ? 1 : 0);
-      var_set_str(vm, "SWAPP_VAR",
-                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
-      var_set_num(vm, "OK", 1);
-      if (vm->trace)
-        fprintf(vm->trace, "# swapp both miss from=%d\n", have_from);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "SWAPP: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "SWAPP: fail");
+      var_set_num(vm, "OK", 0);
       bump(vm); return 1;
     }
-    if (has_a && has_b) {
-      memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_set(plate, ka, rb, 1, &hr) != 0) goto cubalc_swapp_fail;
-      snprintf(plate, sizeof plate, "%s", hr.str);
-      memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_set(plate, kb, ra, 1, &hr) != 0) goto cubalc_swapp_fail;
-      snprintf(plate, sizeof plate, "%s", hr.str);
-    } else if (has_a && !has_b) {
-      memset(&dr, 0, sizeof dr);
-      if (cubalc_host_json_del(plate, ka, &dr) != 0) goto cubalc_swapp_fail;
-      snprintf(plate, sizeof plate, "%s", dr.str);
-      memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_set(plate, kb, ra, 1, &hr) != 0) goto cubalc_swapp_fail;
-      snprintf(plate, sizeof plate, "%s", hr.str);
-    } else {
-      memset(&dr, 0, sizeof dr);
-      if (cubalc_host_json_del(plate, kb, &dr) != 0) goto cubalc_swapp_fail;
-      snprintf(plate, sizeof plate, "%s", dr.str);
-      memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_set(plate, ka, rb, 1, &hr) != 0) goto cubalc_swapp_fail;
-      snprintf(plate, sizeof plate, "%s", hr.str);
-    }
     if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
-      var_set_str(vm, from_name, plate);
+      var_set_str(vm, from_name, hr.str);
     else if (!have_from)
-      var_set_str(vm, "PLATE", plate);
-    var_set_str(vm, "LAST", plate);
-    snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
-    vm->last_n = 1;
-    var_set_num(vm, "LAST_N", 1);
-    var_set_str(vm, "SWAPP", plate);
-    var_set_str(vm, "XCHGP", plate);
-    var_set_num(vm, "SWAPP_N", 1);
-    var_set_num(vm, "JSONSWAP_N", 1);
+      var_set_str(vm, "PLATE", hr.str);
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "SWAPP", hr.str);
+    if (hr.n)
+      var_set_str(vm, "XCHGP", hr.str);
+    var_set_num(vm, "SWAPP_N", hr.n);
+    if (hr.n)
+      var_set_num(vm, "JSONSWAP_N", hr.n);
     var_set_str(vm, "SWAPP_A", ka);
     var_set_str(vm, "SWAPP_B", kb);
     var_set_num(vm, "SWAPP_FROM", have_from ? 1 : 0);
@@ -40937,26 +40836,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 from_name[0] ? from_name : (have_from ? "" : "PLATE"));
     var_set_num(vm, "OK", 1);
     if (vm->trace)
-      fprintf(vm->trace, "# swapp %s↔%s ok from=%d\n", ka, kb, have_from);
-    bump(vm); return 1;
-  cubalc_swapp_fail:
-    var_set_str(vm, "LAST", "");
-    vm->last_str[0] = 0;
-    vm->last_n = 0;
-    var_set_num(vm, "LAST_N", 0);
-    var_set_num(vm, "SWAPP_N", 0);
-    var_set_num(vm, "SWAPP_FROM", have_from ? 1 : 0);
-    var_set_num(vm, "OK", 0);
-    if (hr.err[0]) {
-      var_set_str(vm, "LAST_ERR", hr.err);
-      var_set_str(vm, "ERR", hr.err);
-    } else if (dr.err[0]) {
-      var_set_str(vm, "LAST_ERR", dr.err);
-      var_set_str(vm, "ERR", dr.err);
-    } else {
-      var_set_str(vm, "LAST_ERR", "SWAPP: fail");
-      var_set_str(vm, "ERR", "SWAPP: fail");
-    }
+      fprintf(vm->trace, "# swapp %s↔%s n=%ld from=%d\n", ka, kb, hr.n, have_from);
     bump(vm); return 1;
   }
   /* LENP|NKEYSP [FROM plate] — top-level key count → LAST_N (JSONLEN dual).

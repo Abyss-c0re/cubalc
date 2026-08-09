@@ -2167,6 +2167,8 @@ int main(int argc, char **argv) {
       {"cli_plate_pluck", "programs/proof/1197_cli_plate_pluck.sh", "cubalc plate pluck multi-key path peel PLUCKP dual"},
       {"cli_plate_type", "programs/proof/1198_cli_plate_type.sh", "cubalc plate type TYPEP dual kind probe paths"},
       {"cli_plate_default_toggle", "programs/proof/1199_cli_plate_default_toggle.sh", "cubalc plate default/toggle DEFAULTP/TOGGLEP duals paths"},
+      {"path_rename_copy_swap", "programs/proof/1200_path_rename_copy_swap.cubalc", "RENAMEP/COPYP/SWAPP dotted paths"},
+      {"cli_plate_rename_copy_swap", "programs/proof/1200_cli_plate_rename_copy_swap.sh", "cubalc plate rename/copy/swap duals paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
       {"mergeobj", "programs/proof/1171_mergeobj.cubalc", "MERGEOBJ/DEFAULTOBJ nested plate merge one-shot multi-plate"},
       {"getpobj", "programs/proof/1172_getpobj.cubalc", "GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ nested scalar field plane multi-plate"},
@@ -4857,6 +4859,9 @@ int main(int argc, char **argv) {
      *   cubalc plate omit path.json k1 k2 …          # drop listed keys · OMITP dual
      *   cubalc plate sum|avg|median path.json        # numeric aggregates · SUMNP/AVGNP/MEDIANP
      *   cubalc plate top|bot path.json [n]           # top/bot N keys by value · TOPNP/BOTNP
+     *   cubalc plate rename path.json old new        # RENAMEP dual · paths ok
+     *   cubalc plate copy   path.json src dst        # COPYP dual · paths ok
+     *   cubalc plate swap   path.json a b            # SWAPP dual · paths ok
      * Bare: cubalc plate path.json  → show
      * One JSON plate per call (cubalc.plate.v1) for agents. */
     const char *op = "show";
@@ -4883,6 +4888,9 @@ int main(int argc, char **argv) {
               "       cubalc plate set <path> <key> <value>\n"
               "       cubalc plate default <path> <key> <value>  # DEFAULTP dual · set-if-missing (paths ok)\n"
               "       cubalc plate toggle <path> <key>  # TOGGLEP dual · flip 0↔1 (paths ok)\n"
+              "       cubalc plate rename <path> <old> <new>  # RENAMEP dual · paths ok\n"
+              "       cubalc plate copy <path> <src> <dst>    # COPYP dual · paths ok\n"
+              "       cubalc plate swap <path> <a> <b>        # SWAPP dual · paths ok\n"
               "       cubalc plate inc <path> <key> [delta]\n"
               "       cubalc plate del <path> <key>\n"
               "       cubalc plate keys <path>\n"
@@ -4910,7 +4918,8 @@ int main(int argc, char **argv) {
               "       cubalc plate top|bot <path> [n]          # top/bot N keys · TOPNP duals\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
-             "\"ops\":[\"show\",\"get\",\"type\",\"set\",\"default\",\"toggle\",\"inc\",\"del\",\"keys\","
+             "\"ops\":[\"show\",\"get\",\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
+             "\"inc\",\"del\",\"keys\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
              "\"nestsort\",\"nestsortbag\","
@@ -4932,6 +4941,14 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "defaultp") == 0 || strcmp(argv[2], "setdefault") == 0 ||
         strcmp(argv[2], "toggle") == 0 || strcmp(argv[2], "flip") == 0 ||
         strcmp(argv[2], "togglep") == 0 || strcmp(argv[2], "flipp") == 0 ||
+        strcmp(argv[2], "rename") == 0 || strcmp(argv[2], "move") == 0 ||
+        strcmp(argv[2], "mv") == 0 || strcmp(argv[2], "renamep") == 0 ||
+        strcmp(argv[2], "movekey") == 0 || strcmp(argv[2], "rekey") == 0 ||
+        strcmp(argv[2], "copy") == 0 || strcmp(argv[2], "cp") == 0 ||
+        strcmp(argv[2], "dup") == 0 || strcmp(argv[2], "copyp") == 0 ||
+        strcmp(argv[2], "dupkey") == 0 ||
+        strcmp(argv[2], "swap") == 0 || strcmp(argv[2], "xchg") == 0 ||
+        strcmp(argv[2], "swapp") == 0 || strcmp(argv[2], "exchange") == 0 ||
         strcmp(argv[2], "inc") == 0 || strcmp(argv[2], "bump") == 0 ||
         strcmp(argv[2], "del") == 0 || strcmp(argv[2], "rm") == 0 ||
         strcmp(argv[2], "drop") == 0 || strcmp(argv[2], "keys") == 0 ||
@@ -5021,6 +5038,16 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "flip") == 0 || strcmp(op, "togglep") == 0 ||
                strcmp(op, "flipp") == 0)
         op = "toggle";
+      else if (strcmp(op, "move") == 0 || strcmp(op, "mv") == 0 ||
+               strcmp(op, "renamep") == 0 || strcmp(op, "movekey") == 0 ||
+               strcmp(op, "rekey") == 0)
+        op = "rename";
+      else if (strcmp(op, "cp") == 0 || strcmp(op, "dup") == 0 ||
+               strcmp(op, "copyp") == 0 || strcmp(op, "dupkey") == 0)
+        op = "copy";
+      else if (strcmp(op, "xchg") == 0 || strcmp(op, "swapp") == 0 ||
+               strcmp(op, "exchange") == 0)
+        op = "swap";
       else if (strcmp(op, "bump") == 0)
         op = "inc";
       else if (strcmp(op, "rm") == 0 || strcmp(op, "drop") == 0)
@@ -6646,6 +6673,92 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
              "\"note\":\"bag lines above plate · PLUCKP dual · paths ok\"}\n",
              path, pr.n, (long)pr.code, pr.n - (long)pr.code, flat_req, bag_esc,
              file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+    /* rename|copy|swap path src dst — RENAMEP/COPYP/SWAPP duals (paths ok).
+     * Usability: restructure nest fields without a .cubalc program:
+     *   cubalc plate rename agent.json cfg.port net.listen
+     *   cubalc plate copy   agent.json flags.debug flags.trace
+     *   cubalc plate swap   agent.json a.x a.y
+     * Soft miss: rename/copy n=0 plate unchanged · swap both-miss n=0. */
+    if (strcmp(op, "rename") == 0 || strcmp(op, "copy") == 0 ||
+        strcmp(op, "swap") == 0) {
+      const char *src = NULL, *dst = NULL;
+      cubalc_host_result rr;
+      if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"need src key\","
+               "\"version\":\"%s\"}\n", op, path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      src = argv[ai++];
+      if (ai >= argc || !argv[ai] || !argv[ai][0]) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"need dst key\","
+               "\"version\":\"%s\"}\n", op, path, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      dst = argv[ai++];
+      memset(&rr, 0, sizeof rr);
+      if (strcmp(op, "rename") == 0) {
+        if (cubalc_host_json_rename(plate, src, dst, &rr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"rename\",\"path\":\"%s\",\"src\":\"%s\",\"dst\":\"%s\","
+                 "\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 path, src, dst, rr.err[0] ? rr.err : "rename fail",
+                 CUBALC_LANG_VERSION);
+          return 1;
+        }
+      } else if (strcmp(op, "copy") == 0) {
+        if (cubalc_host_json_copy_key(plate, src, dst, &rr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"copy\",\"path\":\"%s\",\"src\":\"%s\",\"dst\":\"%s\","
+                 "\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 path, src, dst, rr.err[0] ? rr.err : "copy fail",
+                 CUBALC_LANG_VERSION);
+          return 1;
+        }
+      } else {
+        if (cubalc_host_json_swap_keys(plate, src, dst, &rr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"swap\",\"path\":\"%s\",\"src\":\"%s\",\"dst\":\"%s\","
+                 "\"err\":\"%s\",\"version\":\"%s\"}\n",
+                 path, src, dst, rr.err[0] ? rr.err : "swap fail",
+                 CUBALC_LANG_VERSION);
+          return 1;
+        }
+      }
+      snprintf(plate, sizeof plate, "%s", rr.str);
+      if (rr.n) {
+        slash = strrchr(path, '/');
+        if (slash && slash != path) {
+          size_t n = (size_t)(slash - path);
+          if (n >= sizeof parent) n = sizeof parent - 1;
+          memcpy(parent, path, n);
+          parent[n] = 0;
+          memset(&hr, 0, sizeof hr);
+          cubalc_host_mkdir(parent, &hr);
+        }
+        memset(&hr, 0, sizeof hr);
+        if (cubalc_host_write(path, plate, &hr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"err\":\"write fail\",\"version\":\"%s\"}\n",
+                 op, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"src\":\"%s\",\"dst\":\"%s\","
+               "\"n\":%ld,\"bytes\":%ld,\"version\":\"%s\",\"plate\":%s}\n",
+               op, path, src, dst, rr.n, hr.n, CUBALC_LANG_VERSION, plate);
+        return 0;
+      }
+      /* soft miss / no-op write skipped */
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"%s\",\"path\":\"%s\",\"src\":\"%s\",\"dst\":\"%s\","
+             "\"n\":0,\"file\":%s,\"version\":\"%s\",\"plate\":%s}\n",
+             op, path, src, dst, file_hit ? "true" : "false",
+             CUBALC_LANG_VERSION, plate);
       return 0;
     }
 

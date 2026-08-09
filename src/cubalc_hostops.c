@@ -4778,6 +4778,7 @@ int cubalc_host_json_pick(const char *json, const char *keys_nl, cubalc_host_res
 int cubalc_host_json_rename(const char *json, const char *oldk, const char *newk,
                             cubalc_host_result *r) {
   char base[CUBALC_HOST_STR_MAX];
+  char raw[CUBALC_HOST_STR_MAX];
   cubalc_host_result gr, hr, dr;
   const char *j;
   r_clear(r);
@@ -4792,14 +4793,16 @@ int cubalc_host_json_rename(const char *json, const char *oldk, const char *newk
   else
     snprintf(base, sizeof base, "%s", j);
 
+  /* path-aware: dotted/slash keys use path_get/del/set (shallow falls through). */
   memset(&gr, 0, sizeof gr);
-  if (cubalc_host_json_get_raw(base, oldk, &gr) != 0) {
+  if (cubalc_host_json_path_get_raw(base, oldk, &gr) != 0) {
     /* missing — soft copy */
     snprintf(r->str, sizeof r->str, "%s", base);
     r->n = 0;
     r->ok = 1;
     return 0;
   }
+  snprintf(raw, sizeof raw, "%s", gr.str);
   if (strcmp(oldk, newk) == 0) {
     snprintf(r->str, sizeof r->str, "%s", base);
     r->n = 1;
@@ -4808,15 +4811,164 @@ int cubalc_host_json_rename(const char *json, const char *oldk, const char *newk
   }
   /* drop old, then write new with raw value (overwrites dest if any) */
   memset(&dr, 0, sizeof dr);
-  if (cubalc_host_json_del(base, oldk, &dr) != 0) {
+  if (cubalc_host_json_path_del(base, oldk, &dr) != 0) {
     snprintf(r->err, sizeof r->err, "%s",
              dr.err[0] ? dr.err : "jsonrename: del fail");
     return -1;
   }
   memset(&hr, 0, sizeof hr);
-  if (cubalc_host_json_set(dr.str, newk, gr.str, 1, &hr) != 0) {
+  if (cubalc_host_json_path_set(dr.str, newk, raw, 1, &hr) != 0) {
     snprintf(r->err, sizeof r->err, "%s",
              hr.err[0] ? hr.err : "jsonrename: set fail");
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", hr.str);
+  r->n = 1;
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: copy key src→dst (paths ok) — dual of rename keep-src.
+ * Soft miss src → plate unchanged n=0. Dest overwrites. Same path no-op n=1. */
+int cubalc_host_json_copy_key(const char *json, const char *src, const char *dst,
+                              cubalc_host_result *r) {
+  char base[CUBALC_HOST_STR_MAX];
+  char raw[CUBALC_HOST_STR_MAX];
+  cubalc_host_result gr, hr;
+  const char *j;
+  r_clear(r);
+  if (!src || !src[0] || !dst || !dst[0]) {
+    snprintf(r->err, sizeof r->err, "jsoncopy: empty key");
+    return -1;
+  }
+  j = json ? json : "";
+  while (*j == ' ' || *j == '\t' || *j == '\n' || *j == '\r') j++;
+  if (!*j || *j != '{')
+    snprintf(base, sizeof base, "%s", "{}");
+  else
+    snprintf(base, sizeof base, "%s", j);
+
+  memset(&gr, 0, sizeof gr);
+  if (cubalc_host_json_path_get_raw(base, src, &gr) != 0) {
+    snprintf(r->str, sizeof r->str, "%s", base);
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  snprintf(raw, sizeof raw, "%s", gr.str);
+  if (strcmp(src, dst) == 0) {
+    snprintf(r->str, sizeof r->str, "%s", base);
+    r->n = 1;
+    r->ok = 1;
+    return 0;
+  }
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_json_path_set(base, dst, raw, 1, &hr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s",
+             hr.err[0] ? hr.err : "jsoncopy: set fail");
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", hr.str);
+  r->n = 1;
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: swap two keys (paths ok). One-sided miss moves value; both miss n=0. */
+int cubalc_host_json_swap_keys(const char *json, const char *a, const char *b,
+                               cubalc_host_result *r) {
+  char base[CUBALC_HOST_STR_MAX];
+  char ra[CUBALC_HOST_STR_MAX], rb[CUBALC_HOST_STR_MAX];
+  cubalc_host_result gr, hr, dr;
+  const char *j;
+  int has_a = 0, has_b = 0;
+  r_clear(r);
+  if (!a || !a[0] || !b || !b[0]) {
+    snprintf(r->err, sizeof r->err, "jsonswap: empty key");
+    return -1;
+  }
+  j = json ? json : "";
+  while (*j == ' ' || *j == '\t' || *j == '\n' || *j == '\r') j++;
+  if (!*j || *j != '{')
+    snprintf(base, sizeof base, "%s", "{}");
+  else
+    snprintf(base, sizeof base, "%s", j);
+
+  if (strcmp(a, b) == 0) {
+    memset(&gr, 0, sizeof gr);
+    has_a = (cubalc_host_json_path_get_raw(base, a, &gr) == 0) ? 1 : 0;
+    snprintf(r->str, sizeof r->str, "%s", base);
+    r->n = has_a ? 1 : 0;
+    r->ok = 1;
+    return 0;
+  }
+
+  ra[0] = 0;
+  rb[0] = 0;
+  memset(&gr, 0, sizeof gr);
+  if (cubalc_host_json_path_get_raw(base, a, &gr) == 0) {
+    has_a = 1;
+    snprintf(ra, sizeof ra, "%s", gr.str);
+  }
+  memset(&gr, 0, sizeof gr);
+  if (cubalc_host_json_path_get_raw(base, b, &gr) == 0) {
+    has_b = 1;
+    snprintf(rb, sizeof rb, "%s", gr.str);
+  }
+  if (!has_a && !has_b) {
+    snprintf(r->str, sizeof r->str, "%s", base);
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  if (has_a && has_b) {
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_path_set(base, a, rb, 1, &hr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               hr.err[0] ? hr.err : "jsonswap: set a fail");
+      return -1;
+    }
+    snprintf(base, sizeof base, "%s", hr.str);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_path_set(base, b, ra, 1, &hr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               hr.err[0] ? hr.err : "jsonswap: set b fail");
+      return -1;
+    }
+    snprintf(r->str, sizeof r->str, "%s", hr.str);
+    r->n = 1;
+    r->ok = 1;
+    return 0;
+  }
+  if (has_a && !has_b) {
+    memset(&dr, 0, sizeof dr);
+    if (cubalc_host_json_path_del(base, a, &dr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               dr.err[0] ? dr.err : "jsonswap: del a fail");
+      return -1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_path_set(dr.str, b, ra, 1, &hr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               hr.err[0] ? hr.err : "jsonswap: set b fail");
+      return -1;
+    }
+    snprintf(r->str, sizeof r->str, "%s", hr.str);
+    r->n = 1;
+    r->ok = 1;
+    return 0;
+  }
+  /* !has_a && has_b */
+  memset(&dr, 0, sizeof dr);
+  if (cubalc_host_json_path_del(base, b, &dr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s",
+             dr.err[0] ? dr.err : "jsonswap: del b fail");
+    return -1;
+  }
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_json_path_set(dr.str, a, rb, 1, &hr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s",
+             hr.err[0] ? hr.err : "jsonswap: set a fail");
     return -1;
   }
   snprintf(r->str, sizeof r->str, "%s", hr.str);
