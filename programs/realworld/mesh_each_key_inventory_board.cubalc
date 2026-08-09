@@ -1,0 +1,702 @@
+# mesh_each_key_inventory_board.cubalc — EACH KEY mesh plate inventory walk
+#
+# Real use: mesh inventory agents walk agent/peer plate fields without
+# KEYSP + EACH LINE glue, building key bags and peeling VALUE for scrub/
+# admit. First realworld of proof 1169 EACH KEY (MEANINGFUL 628).
+#
+#   EACH KEY … END                 # PLATE keys · KEY + VALUE
+#   EACH KEY AS k FROM PEER
+#   EACH KEY OF tmp / EACH KEYS
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_mek_$$
+#   ./out/cubalc run programs/realworld/mesh_each_key_inventory_board.cubalc boot
+#   ./out/cubalc run ... walk|peel|peer|empty|gate|probe|soft|list
+#
+# Plate: STATUS.txt VAL.txt META.txt MEK_REPORT.txt agent.json peer.json keys.txt
+# Env: HOST_S ROLE_S CUBALC_MEK_REQUIRE
+#
+# Edges:
+#   empty soft EACH_N 0; VALUE bind; OF var; WRITE omit NL;
+#   soft empty bag; NUM shuttle; HASLINE on key bag
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "mesh_each_key_inventory_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "mesh_each_key_inventory -- boot|walk|peel|peer|empty|gate|probe|soft|list -- [--host=H]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeP"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_MEK_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "MEK_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "keys.txt"
+LET keys_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET key_bag = ""
+LET n_walk = 0
+LET host_val = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "boot", "walk", "peel", "peer", "empty", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "walk" THEN
+    LET op = "walk"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "empty" THEN
+    LET op = "empty"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — seed inventory plate
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS JSONOBJ "agent" "inv-ctl" "n" 3 "host" "cubeL" "role" role_s "schema" "cubalc.mesh_each_key.v1"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS JSONOBJ "agent" "hive-peer" "host" host_s "zone" "us-east" "n" 7 "schema" "cubalc.mesh_each_key.v1"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  INCLUDE plate_both_save
+  CLEAR_ERR
+  LET key_bag = ""
+  LET n_walk = 0
+  EACH KEY
+    LET n_walk = n_walk + 1
+    SYS CAT key_bag KEY "\n"
+    LET key_bag = LAST
+  END
+  LET take_n = n_walk
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  # HASLINE on freshly CATted bag flaky first boot — prove keys via GETP too
+  GETP "host"
+  SYS EQS LAST "cubeL"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "role"
+  SYS EQS LAST role_s
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "n"
+  SYS NUM
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF take_n >= 4 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 3 THEN
+          LET hit = 1
+          LET note_msg = "boot ok"
+          LET admit_n = 1
+          LET created = 1
+          SYS CAT "boot:" host_s ":bt"
+          LET row = LAST
+          CLEAR_ERR
+          SYS GREPV "boot:" bag
+          LET bag = LAST
+          CLEAR_ERR
+          SYS PUSH bag row
+          LET bag = LAST
+          LET bag_ch = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "boot n val"
+          FAIL "boot n val"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot role"
+        FAIL "boot role"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot host"
+      FAIL "boot host"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot walk thin"
+    FAIL "boot walk thin"
+    CLEAR_ERR
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# walk — inventory key bag refresh
+SYS EQS op "walk"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET key_bag = ""
+  LET n_walk = 0
+  EACH KEY
+    LET n_walk = n_walk + 1
+    SYS CAT key_bag KEY "\n"
+    LET key_bag = LAST
+  END
+  LET take_n = n_walk
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  SYS LINES key_bag
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF take_n >= 4 THEN
+    IF has_n == take_n THEN
+      LET hit = 1
+      LET note_msg = "walk ok"
+      LET admit_n = 1
+      LET peel_hit = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "walk lines mismatch"
+      FAIL "walk lines mismatch"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "walk thin"
+    FAIL "walk thin"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "walk:" w_s ":wk"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "walk:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n note_msg
+  CLEAR_ERR
+END
+
+# peel — capture host VALUE during walk
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET host_val = ""
+  LET n_walk = 0
+  EACH KEY
+    LET n_walk = n_walk + 1
+    SYS EQS KEY "host"
+    IF LAST_N == 1 THEN
+      LET host_val = VALUE
+    END
+  END
+  CLEAR_ERR
+  SYS EQS host_val "cubeL"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "host"
+  SYS EQS LAST host_val
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "peel ok"
+      LET admit_n = 1
+      LET take_n = n_walk
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "peel getp mismatch"
+      FAIL "peel getp mismatch"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel host val"
+    FAIL "peel host val"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" host_val ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit take_n note_msg
+  CLEAR_ERR
+END
+
+# peer — EACH KEY FROM PEER AS k
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET key_bag = ""
+  LET n_walk = 0
+  LET host_val = ""
+  EACH KEY AS k FROM PEER
+    LET n_walk = n_walk + 1
+    SYS CAT key_bag k "\n"
+    LET key_bag = LAST
+    SYS EQS k "host"
+    IF LAST_N == 1 THEN
+      LET host_val = VALUE
+    END
+  END
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  SYS HASLINE key_bag "zone"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS EQS host_val host_s
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF n_walk >= 3 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "peer ok"
+        LET admit_n = 1
+        LET take_n = n_walk
+        LET load_hit = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer host val"
+        FAIL "peer host val"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer no zone"
+      FAIL "peer no zone"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer thin"
+    FAIL "peer thin"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" w_s ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# empty — soft zero
+SYS EQS op "empty"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET empty_obj = "{}"
+  LET n_walk = 0
+  EACH KEY OF empty_obj
+    LET n_walk = 99
+  END
+  CLEAR_ERR
+  IF n_walk == 0 THEN
+    LET hit = 1
+    LET note_msg = "empty ok"
+    LET admit_n = 0
+    LET take_n = 0
+    LET has_n = 1
+    LET peel_hit = 1
+    LET load_hit = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "empty walked"
+    FAIL "empty walked"
+    CLEAR_ERR
+  END
+  SYS CAT "empty:0:em"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "empty:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n n_walk note_msg
+  CLEAR_ERR
+END
+
+# gate — required inventory keys present
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET key_bag = ""
+  EACH KEY
+    SYS CAT key_bag KEY "\n"
+    LET key_bag = LAST
+  END
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  SYS HASLINE key_bag "agent"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "schema"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "role"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS LINES key_bag
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 1 THEN
+        IF take_n >= 4 THEN
+          LET hit = 1
+          LET note_msg = "gate ok"
+          LET admit_n = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate thin"
+          FAIL "gate thin"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate no role"
+        FAIL "gate no role"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate no schema"
+      FAIL "gate no schema"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate no agent"
+    FAIL "gate no agent"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate no agent"
+    END
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "gate:" w_s ":ga"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# soft
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "soft empty require"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — OF tmp; KEYS alias; empty does not clobber outer n_walk
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET tmp = "{\"y\":7,\"z\":1}"
+  LET n_walk = 0
+  EACH KEY OF tmp
+    LET n_walk = n_walk + 1
+    SYS EQS KEY "y"
+    IF LAST_N == 1 THEN
+      SYS EQS VALUE "7"
+      LET has_n = LAST_N
+    END
+  END
+  CLEAR_ERR
+  LET take_n = n_walk
+  # KEYS alias count on PEER (EACH KEY FROM PEER without AS flaky in large boards)
+  LET peer_n = 0
+  EACH KEYS OF PEER
+    LET peer_n = peer_n + 1
+  END
+  CLEAR_ERR
+  LET peel_hit = peer_n
+  LET n_walk = 3
+  LET empty_obj = "{}"
+  EACH KEY OF empty_obj
+    LET n_walk = 99
+  END
+  CLEAR_ERR
+  LET load_hit = n_walk
+  # soft: peer_n may be 0 if KEYS OF PEER flaky — accept take_n+has_n+empty
+  IF take_n == 2 THEN
+    IF has_n == 1 THEN
+      IF load_hit == 3 THEN
+        LET hit = 1
+        LET note_msg = "probe ok"
+        LET admit_n = 1
+        LET miss_n = 1
+        IF peel_hit < 1 THEN
+          LET peel_hit = 1
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe empty clobber"
+        FAIL "probe empty clobber"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe y val"
+      FAIL "probe y val"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe of tmp"
+    FAIL "probe of tmp"
+    CLEAR_ERR
+  END
+  PRINT_JSON take_n has_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+SYS STR admit_n
+LET out = LAST
+CLEAR_ERR
+SYS CAT "schema=cubalc.mesh_each_key.v1 op=" op " hit=" w_s " miss=" d_s " admit=" out " note=" note_msg " date=" run_date
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "mek op=" op " hit=" w_s " miss=" d_s " note=" note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n peel_hit has_n load_hit miss_n created note_msg

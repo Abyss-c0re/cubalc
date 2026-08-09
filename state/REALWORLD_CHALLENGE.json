@@ -1,57 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 235,
-  "program": "programs/realworld/mesh_topnp_hotspot_board.cubalc",
-  "theme": "TOPNP/BOTNP mesh alert hotspot ranking + SORTP",
-  "version": "1.15.617-usability",
+  "iter": 236,
+  "program": "programs/realworld/mesh_each_key_inventory_board.cubalc",
+  "theme": "EACH KEY mesh plate inventory walk and peel",
+  "version": "1.15.620-usability",
   "pass": true,
-  "prior_note": "iter 234 MEDIANP; this iter first realworld TOPNP (1166) + SORTP",
+  "prior_note": "iter 235 TOPNP hotspot; this iter first realworld EACH KEY (1169 / MEANINGFUL 628)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "TOPNP 3 crit/error/warn; source intact",
+      "cmd": "EACH KEY count + GETP verify",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "top",
-      "cmd": "TOPNP crit=12",
+      "name": "walk",
+      "cmd": "key bag refresh",
       "ok": true,
-      "note": "top"
+      "note": "walk"
     },
     {
-      "name": "bot",
-      "cmd": "BOTNP info+warn",
+      "name": "peel",
+      "cmd": "host VALUE peel",
       "ok": true,
-      "note": "bot"
+      "note": "peel"
     },
     {
       "name": "peer",
-      "cmd": "TOPNP FROM PEER c,a",
+      "cmd": "EACH KEY AS k FROM PEER",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "sort",
-      "cmd": "SORTP DESC full rank",
-      "ok": true,
-      "note": "sort"
-    },
-    {
       "name": "empty",
-      "cmd": "empty soft 0",
+      "cmd": "OF {} soft no body",
       "ok": true,
       "note": "empty"
     },
     {
       "name": "gate",
-      "cmd": "TOPNKEYP 1 crit high",
+      "cmd": "required keys agent/schema/role",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "n>cand all; BOTNP ties",
+      "cmd": "OF tmp + empty no clobber",
       "ok": true,
       "note": "probe"
     },
@@ -63,7 +57,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_MTH_REQUIRE=1 EXIT 2",
+      "cmd": "CUBALC_MEK_REQUIRE=1 EXIT 2",
       "ok": true,
       "note": "hard env"
     },
@@ -71,7 +65,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "399/402 pre-existing sys_kvfileensure,init_peer,cli_plate_pick; topnp PASS 33 sortp PASS 32"
+      "note": "400/404 pre-existing 4 shell fails; each_key PASS 22"
     }
   ],
   "weaknesses": [
@@ -2426,6 +2420,38 @@
       "title": "WRITE STATUS last line omit trailing NL (reconfirmed topnp)",
       "detail": "cat -A gate line without $.",
       "repro": "cat -A STATUS after gate"
+    },
+    {
+      "id": "W295",
+      "severity": "high",
+      "area": "lang|push_key",
+      "title": "SYS PUSH bag KEY → unknown form KEY in large boards",
+      "detail": "Proof SYS PUSH bag KEY works; mesh_each_key board fails unknown form KEY. LET k_s=KEY; SYS PUSH bag k_s also fails unknown form k_s. Workaround: SYS CAT key_bag KEY \"\\n\"; LET key_bag=LAST.",
+      "repro": "large board EACH KEY; SYS PUSH key_bag KEY → unknown form KEY"
+    },
+    {
+      "id": "W296",
+      "severity": "med",
+      "area": "lang|each_key_from",
+      "title": "EACH KEY FROM PEER without AS unreliable in large boards",
+      "detail": "EACH KEY AS k FROM PEER works for inventory; bare EACH KEY FROM PEER with counter may leave peer_n=0. Prefer AS bind or KEYS OF PEER.",
+      "repro": "EACH KEY FROM PEER; peer_n+1 stays 0"
+    },
+    {
+      "id": "W297",
+      "severity": "low",
+      "area": "lang|each_key",
+      "title": "Empty EACH KEY OF {} does not run body (positive soft)",
+      "detail": "n_walk remains prior value when empty plate walked — soft zero walk.",
+      "repro": "n_walk=3; EACH KEY OF empty; n_walk still 3"
+    },
+    {
+      "id": "W298",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL (reconfirmed each_key)",
+      "detail": "cat -A last STATUS line no $.",
+      "repro": "cat -A STATUS after gate"
     }
   ],
   "workarounds": [
@@ -2529,15 +2555,19 @@
     "Prefer IF n == k over SYS EQS n k for numeric vars",
     "Pair MEDIANP with AVGNP for outlier-aware mesh SLOs",
     "TOPNP variable N works for flag budgets",
-    "Do not rely on BOTNP tie-break key names"
+    "Do not rely on BOTNP tie-break key names",
+    "Build key bags with SYS CAT bag KEY newline not SYS PUSH bag KEY",
+    "Prefer EACH KEY AS k FROM PEER over bare FROM"
   ],
   "language_gaps": [
-    "TOPNP silent skip non-numeric (W291)",
-    "BOTNP tie order opaque (W293)"
+    "SYS PUSH bag KEY unknown form in large boards (W295)",
+    "EACH KEY FROM PEER without AS flaky (W296)"
   ],
   "issues_faced": [
-    "None blocking — board green first pass"
+    "SYS PUSH KEY unknown form — switched to SYS CAT",
+    "HASLINE on fresh CAT bag flaky first boot — used GETP verify",
+    "bare EACH KEY FROM PEER counter stuck 0 in probe"
   ],
-  "commit": "b14f4f7e",
-  "ts": "2026-08-09T05:33:37Z"
+  "commit": "pending",
+  "ts": "2026-08-09T06:01:37Z"
 }
