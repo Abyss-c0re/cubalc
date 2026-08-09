@@ -1,77 +1,71 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 227,
-  "program": "programs/realworld/mesh_subsetp_admit_board.cubalc",
-  "theme": "SUBSETP/COVERSP fleet peer admit value-contract gate",
-  "version": "1.15.598-usability",
+  "iter": 228,
+  "program": "programs/realworld/mesh_deltap_sync_board.cubalc",
+  "theme": "DELTAP/CHANGEOBJP mesh peer sync apply + DIFFP/CHANGELOGP/EQP",
+  "version": "1.15.600-usability",
   "pass": true,
-  "prior_note": "iter 226 both_save; this iter first realworld SUBSETP/COVERSP (1147 / MEANINGFUL 606)",
+  "prior_note": "iter 227 SUBSETP admit; this iter first realworld DELTAP (1149 / MEANINGFUL 608)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "session + need.json + full peer subset/cover",
+      "cmd": "divergent session + DIFFP/DELTAP via LINES/JSONLEN",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "softcheck",
-      "cmd": "SUBSETP need PEER hit",
+      "name": "drift",
+      "cmd": "INCP peer + status stale",
       "ok": true,
-      "note": "softcheck"
+      "note": "drift"
     },
     {
-      "name": "cover",
-      "cmd": "COVERSP PEER need",
+      "name": "diff",
+      "cmd": "DIFFP key bag push",
       "ok": true,
-      "note": "cover"
+      "note": "diff"
     },
     {
-      "name": "thin",
-      "cmd": "key miss soft deny",
+      "name": "changelog",
+      "cmd": "CHANGELOGP lines",
       "ok": true,
-      "note": "thin"
+      "note": "changelog"
     },
     {
-      "name": "wrong",
-      "cmd": "value mismatch zone + NEEDP keys",
+      "name": "delta",
+      "cmd": "DELTAP pull payload → delta.json",
       "ok": true,
-      "note": "wrong"
+      "note": "delta"
     },
     {
-      "name": "misslist",
-      "cmd": "SUBSETP_MISS bag after reload",
+      "name": "old",
+      "cmd": "DELTAP FROM OLD local host",
       "ok": true,
-      "note": "misslist"
+      "note": "old"
     },
     {
-      "name": "full",
-      "cmd": "restore full peer",
+      "name": "apply",
+      "cmd": "MERGEP + both status synced + both_save",
       "ok": true,
-      "note": "full"
+      "note": "apply"
     },
     {
-      "name": "admit",
-      "cmd": "REQUIRE SUBSETP+COVERSP + both_save",
+      "name": "verify",
+      "cmd": "EQP after apply",
       "ok": true,
-      "note": "admit"
+      "note": "verify"
     },
     {
       "name": "gate",
-      "cmd": "disk need/peer value contract",
+      "cmd": "disk host match + synced",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "NEEDP vs SUBSETP + lit form",
+      "cmd": "lit DELTAP/CHANGEOBJP empty",
       "ok": true,
       "note": "probe"
-    },
-    {
-      "name": "hard",
-      "cmd": "soft deny path (REQUIRE shell 0 class)",
-      "ok": true,
-      "note": "hard"
     },
     {
       "name": "soft",
@@ -81,7 +75,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_MSA_REQUIRE=1 EXIT 2",
+      "cmd": "CUBALC_MDS_REQUIRE=1 EXIT 2",
       "ok": true,
       "note": "hard env"
     },
@@ -89,7 +83,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "380/382 pre-existing sys_kvfileensure,init_peer; subsetp PASS 19"
+      "note": "383/385 pre-existing sys_kvfileensure,init_peer; deltap PASS 19"
     }
   ],
   "weaknesses": [
@@ -2164,6 +2158,46 @@
       "title": "WRITE META omit trailing NL (reconfirmed)",
       "detail": "cat -A META ends without $; od -c ends on Z without \\n. Same class as W5/W10/W250/W253.",
       "repro": "od -c META.txt after mesh_subsetp_admit hard"
+    },
+    {
+      "id": "W260",
+      "severity": "high",
+      "area": "lang|diffp_n",
+      "title": "LET x = DIFFP_N / DELTAP_N can bind 0 in large realworld boards",
+      "detail": "mesh_deltap_sync_board boot logged diffp n=4 and deltap n=4 but LET take_n=DIFFP_N and LET peel_hit=DELTAP_N both stayed 0 so IF take_n>=1 failed. Short scripts and ASSERT knobs work. Workaround: LET body=LAST; SYS LINES body / SYS JSONLEN body; LET n=LAST_N immediately after DIFFP/DELTAP.",
+      "repro": "large board LET take_n=DIFFP_N after multi-plate DIFFP → 0 despite log n=4"
+    },
+    {
+      "id": "W261",
+      "severity": "high",
+      "area": "lang|require_eqp",
+      "title": "REQUIRE EQP miss leaves plate exit_code 0",
+      "detail": "Same class as REQUIRE SUBSETP/ARGC/FLAG: ok:false + asserts_fail, shell may be 1 from host, but exit_code field is 0. Soft EQP + EXIT n for agent-visible sync deny.",
+      "repro": "1146b_require_eqp_fail → exit_code 0"
+    },
+    {
+      "id": "W262",
+      "severity": "med",
+      "area": "lang|mergep_eqp",
+      "title": "DELTAP+MERGEP pull then SETP local-only field breaks EQP",
+      "detail": "After MERGEP peer delta into PLATE, SETP status synced on PLATE only leaves PEER status stale → EQP fails. Ops apply must SETP both sides or omit local-only overlays before verify.",
+      "repro": "apply merge then SETP status; EQP diverge on status"
+    },
+    {
+      "id": "W263",
+      "severity": "low",
+      "area": "lang|deltap_empty",
+      "title": "Identical DELTAP LAST may not be stable for SYS EQS \"{}\" after LET knobs",
+      "detail": "Prefer SYS JSONLEN LAST == 0 or capture body=LAST before other LETs. Board treats take_n==0 as empty-ok.",
+      "repro": "DELTAP same same; SYS EQS LAST {} after LET DELTAP_N can miss"
+    },
+    {
+      "id": "W264",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META omit trailing NL (reconfirmed mesh_deltap)",
+      "detail": "cat -A META no $; same class as W5/W259.",
+      "repro": "od -c META after probe"
     }
   ],
   "workarounds": [
@@ -2250,21 +2284,21 @@
     "soft SUBSETP then EXIT n for shell-visible admit deny (never trust REQUIRE SUBSETP rc)",
     "INCLUDE plate_peer_session after LET PEER= rewrite before NEEDP/SUBSETP_MISS knobs",
     "avoid SYS HASLINE on SUBSETP_MISS in large CASEI boards — use LAST_N deny",
-    "LET x = OK after REQUIRE SUBSETP not REQUIRE_SUBSETP knob alone"
+    "LET x = OK after REQUIRE SUBSETP not REQUIRE_SUBSETP knob alone",
+    "After DIFFP/DELTAP use LAST+LINES/JSONLEN not LET knobs in large boards",
+    "SETP status on both PLATE and PEER before EQP verify after apply",
+    "Soft EQP + EXIT n instead of REQUIRE EQP for shell deny"
   ],
   "language_gaps": [
-    "REQUIRE SUBSETP exit_code 0 (W254)",
-    "SUBSETP_MISS_N flaky after LET PEER without reload (W255)",
-    "HASLINE/EQS on miss bag unknown form in large boards (W256)",
-    "NEEDP FROM after LET PEER needs session reload (W257)",
-    "REQUIRE_SUBSETP knob unreliable vs OK (W258)"
+    "DIFFP_N/DELTAP_N LET bind 0 in large boards (W260)",
+    "REQUIRE EQP exit_code 0 (W261)",
+    "local-only SETP after MERGEP breaks EQP (W262)"
   ],
   "issues_faced": [
-    "SYS HASLINE miss_bag/SUBSETP_MISS unknown form inside large board thin path — forced soft LAST_N-only success for thin/hard",
-    "REQUIRE_SUBSETP LET read 0 after require ok — switched to OK",
-    "NEEDP FROM after in-memory PEER rewrite returned 0 until plate_peer_session reload",
-    "SUBSETP_MISS_N 0 after LET PEER thin despite log miss=1; misslist after disk load ok"
+    "LET DIFFP_N/DELTAP_N read 0 despite log n=4 — switched to LINES/JSONLEN",
+    "apply SETP status only on PLATE broke verify EQP — dual SETP synced",
+    "probe SYS EQS LAST {} after knobs flaky — JSONLEN==0 gate"
   ],
-  "commit": "d8d5503",
-  "ts": "2026-08-09T02:19:25Z"
+  "commit": "pending",
+  "ts": "2026-08-09T02:40:59Z"
 }

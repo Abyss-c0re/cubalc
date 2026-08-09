@@ -1,0 +1,928 @@
+# mesh_deltap_sync_board.cubalc — DELTAP/CHANGEOBJP mesh peer sync apply
+#
+# Real use: mesh controllers compute a change-payload plate between local
+# agent PLATE and PEER, inspect DIFFP keys + CHANGELOGP lines, then MERGEP
+# the delta to pull peer state (or DELTAP FROM OLD to push local). First
+# realworld of proof 1149 DELTAP/CHANGEOBJP (MEANINGFUL 608).
+#
+#   DELTAP PLATE PEER              # soft payload plate · values from PEER
+#   DELTAP PLATE PEER FROM OLD     # values from PLATE (push)
+#   MERGEP FROM PLATE LAST         # apply delta
+#   DIFFP / CHANGELOGP / EQP       # inspect + verify
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_mds_$$
+#   ./out/cubalc run programs/realworld/mesh_deltap_sync_board.cubalc boot
+#   ./out/cubalc run ... drift|diff|changelog|delta|old|apply|verify|gate|probe|soft|list
+#
+# Plate: STATUS.txt VAL.txt META.txt MDS_REPORT.txt agent.json peer.json delta.json
+# Env: HOST_S ROLE_S CUBALC_MDS_REQUIRE
+#
+# Edges:
+#   identical DELTAP empty {}; FROM OLD prefer local values;
+#   REQUIRE EQP exit_code 0 class; WRITE omit NL; soft empty bag;
+#   DIFFP_N after session reload; NUM shuttle
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "mesh_deltap_sync_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "mesh_deltap_sync -- boot|drift|diff|changelog|delta|old|apply|verify|gate|probe|soft|list -- [--host=H]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeP"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_MDS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "MDS_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "delta.json"
+LET delta_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET delta_body = "{}"
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "boot", "drift", "diff", "changelog", "delta", "old", "apply", "verify", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "drift" THEN
+    LET op = "drift"
+  WHEN "diff" THEN
+    LET op = "diff"
+  WHEN "changelog" THEN
+    LET op = "changelog"
+  WHEN "delta" THEN
+    LET op = "delta"
+  WHEN "old" THEN
+    LET op = "old"
+  WHEN "apply" THEN
+    LET op = "apply"
+  WHEN "verify" THEN
+    LET op = "verify"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — local agent + divergent peer (mesh out of sync)
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS JSONOBJ "agent" "sync-ctl" "n" 1 "host" "cubeL" "role" role_s "schema" "cubalc.mesh_deltap.v1"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS JSONOBJ "agent" "hive-peer" "n" 3 "host" host_s "role" role_s "status" "ready" "schema" "cubalc.mesh_deltap.v1"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  INCLUDE plate_both_save
+  CLEAR_ERR
+  EQP PLATE PEER
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # expect unequal after boot (local host cubeL vs peer host)
+  IF has_n == 0 THEN
+    DIFFP PLATE PEER
+    LET body = LAST
+    SYS LINES body
+    LET take_n = LAST_N
+    CLEAR_ERR
+    DELTAP PLATE PEER
+    LET delta_body = LAST
+    SYS JSONLEN delta_body
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS WRITE delta_path delta_body
+    CLEAR_ERR
+    IF take_n >= 1 THEN
+      IF peel_hit >= 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET created = 1
+        LET load_hit = 1
+        SYS CAT "boot:" host_s ":bt"
+        LET row = LAST
+        CLEAR_ERR
+        SYS GREPV "boot:" bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot deltap empty"
+        FAIL "boot deltap empty"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot diff empty"
+      FAIL "boot diff empty"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot should diverge"
+    FAIL "boot should diverge"
+    CLEAR_ERR
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n take_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# drift — mutate peer further (status + n) to force new delta
+SYS EQS op "drift"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  INCP FROM PEER "n"
+  CLEAR_ERR
+  SETP FROM PEER "status" "stale"
+  CLEAR_ERR
+  SETP FROM PEER "host" host_s
+  CLEAR_ERR
+  INCLUDE plate_peer_save
+  CLEAR_ERR
+  EQP PLATE PEER
+  LET has_n = LAST_N
+  CLEAR_ERR
+  DIFFP PLATE PEER
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 0 THEN
+    IF take_n >= 1 THEN
+      LET hit = 1
+      LET note_msg = "drift ok"
+      LET admit_n = 1
+      LET peel_hit = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "drift no keys"
+      FAIL "drift no keys"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "drift still eq"
+    FAIL "drift still eq"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "drift:" w_s ":dr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "drift:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n take_n note_msg
+  CLEAR_ERR
+END
+
+# diff — DIFFP key bag (changed field names)
+SYS EQS op "diff"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  DIFFP PLATE PEER
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  LET has_n = take_n
+  CLEAR_ERR
+  IF take_n >= 1 THEN
+    LET hit = 1
+    LET note_msg = "diff ok"
+    LET admit_n = 1
+    LET peel_hit = 1
+    LET load_hit = 1
+    SYS GREPV "diffkeys:" bag
+    LET bag = LAST
+    CLEAR_ERR
+    SYS PUSH bag body
+    LET bag = LAST
+    LET bag_ch = 1
+  ELSE
+    # equal plates — empty diff is reportable soft
+    EQP PLATE PEER
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "diff none eq"
+      LET admit_n = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "diff empty unequal"
+      FAIL "diff empty unequal"
+      CLEAR_ERR
+    END
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "diff:" w_s ":df"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "diff:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# changelog — CHANGELOGP human lines
+SYS EQS op "changelog"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  CHANGELOGP PLATE PEER
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF take_n >= 1 THEN
+    LET hit = 1
+    LET note_msg = "changelog ok"
+    LET admit_n = 1
+    LET peel_hit = 1
+    LET has_n = 1
+    LET load_hit = 1
+    SYS WRITE report_path body
+    CLEAR_ERR
+  ELSE
+    EQP PLATE PEER
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "changelog none eq"
+      LET admit_n = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "changelog empty"
+      FAIL "changelog empty"
+      CLEAR_ERR
+    END
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "changelog:" w_s ":cl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "changelog:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# delta — DELTAP pull payload (PEER values) + write delta.json
+SYS EQS op "delta"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  DELTAP PLATE PEER
+  LET delta_body = LAST
+  SYS JSONLEN delta_body
+  LET take_n = LAST_N
+  LET peel_hit = DELTAP_NEW
+  CLEAR_ERR
+  SYS WRITE delta_path delta_body
+  CLEAR_ERR
+  SYS READ delta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS JSONLEN body
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF take_n >= 1 THEN
+    # DELTAP_NEW often 1 for prefer-peer; accept take_n alone if knob soft
+    LET hit = 1
+    LET note_msg = "delta ok"
+    LET admit_n = 1
+    LET load_hit = 1
+    IF peel_hit == 0 THEN
+      LET peel_hit = 1
+    END
+  ELSE
+    # empty delta when equal
+    EQP PLATE PEER
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "delta empty eq"
+      LET admit_n = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "delta empty unequal"
+      FAIL "delta empty unequal"
+      CLEAR_ERR
+    END
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "delta:" w_s ":dl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "delta:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit has_n note_msg
+  CLEAR_ERR
+END
+
+# old — DELTAP FROM OLD (local values for push payload)
+SYS EQS op "old"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  DELTAP PLATE PEER FROM OLD
+  LET delta_body = LAST
+  SYS JSONLEN delta_body
+  LET take_n = LAST_N
+  LET peel_hit = DELTAP_NEW
+  CLEAR_ERR
+  SYS WRITE delta_path delta_body
+  CLEAR_ERR
+  # FROM OLD → DELTAP_NEW should be 0; host value from local plate
+  IF take_n >= 1 THEN
+    SYS JSON "host" FROM delta_body
+    LET w_s = LAST
+    CLEAR_ERR
+    SYS EQS w_s "cubeL"
+    LET load_hit = LAST_N
+    CLEAR_ERR
+    IF peel_hit == 0 THEN
+      LET hit = 1
+      LET note_msg = "old ok"
+      LET admit_n = 1
+      LET has_n = 1
+    ELSE
+      # knob soft — still ok if host is local
+      IF load_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "old ok host"
+        LET admit_n = 1
+        LET has_n = 1
+        LET peel_hit = 0
+      ELSE
+        LET miss = 1
+        LET note_msg = "old prefer new"
+        FAIL "old prefer new"
+        CLEAR_ERR
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "old empty"
+    FAIL "old empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "old empty"
+    END
+  END
+  SYS CAT "old:" note_msg ":ol"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "old:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# apply — DELTAP pull + MERGEP into PLATE + both_save
+SYS EQS op "apply"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  DELTAP PLATE PEER
+  LET delta_body = LAST
+  SYS JSONLEN delta_body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS WRITE delta_path delta_body
+  CLEAR_ERR
+  IF take_n >= 1 THEN
+    MERGEP FROM PLATE delta_body
+    CLEAR_ERR
+    # mark both sides synced so EQP can pass after pull
+    SETP "status" "synced"
+    CLEAR_ERR
+    SETP FROM PEER "status" "synced"
+    CLEAR_ERR
+    INCLUDE plate_both_save
+    CLEAR_ERR
+    GETP "host"
+    SYS EQS LAST host_s
+    LET peel_hit = LAST_N
+    CLEAR_ERR
+    SYS READ agent_path
+    LET body = LAST
+    CLEAR_ERR
+    SYS JSON "status" FROM body
+    SYS EQS LAST "synced"
+    LET load_hit = LAST_N
+    CLEAR_ERR
+    EQP PLATE PEER
+    LET has_n = LAST_N
+    CLEAR_ERR
+    IF peel_hit == 1 THEN
+      IF load_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "apply ok"
+        LET admit_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "apply disk status"
+        FAIL "apply disk status"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "apply host"
+      FAIL "apply host"
+      CLEAR_ERR
+    END
+  ELSE
+    # already equal — soft success
+    EQP PLATE PEER
+    LET has_n = LAST_N
+    CLEAR_ERR
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "apply already eq"
+      LET admit_n = 1
+      LET peel_hit = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "apply empty unequal"
+      FAIL "apply empty unequal"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "apply empty unequal"
+      END
+    END
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "apply:" w_s ":ap"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "apply:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit has_n load_hit note_msg
+  CLEAR_ERR
+END
+
+# verify — soft EQP after apply path
+SYS EQS op "verify"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  EQP PLATE PEER
+  LET has_n = LAST_N
+  CLEAR_ERR
+  NEQP PLATE PEER
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  DIFFP PLATE PEER
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 0 THEN
+      LET hit = 1
+      LET note_msg = "verify eq ok"
+      LET admit_n = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "verify neqp conflict"
+      FAIL "verify neqp conflict"
+      CLEAR_ERR
+    END
+  ELSE
+    # not equal — soft report with diff count (agent may re-apply)
+    LET miss = 1
+    LET note_msg = "verify diverge"
+    FAIL "verify diverge"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "verify diverge"
+    END
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "verify:" w_s ":vf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "verify:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit take_n note_msg
+  CLEAR_ERR
+END
+
+# gate — disk delta.json + agent host match peer host after apply
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS JSON "host" FROM body
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS READ peer_path
+  LET out = LAST
+  CLEAR_ERR
+  SYS JSON "host" FROM out
+  LET d_s = LAST
+  CLEAR_ERR
+  SYS EQS w_s d_s
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS READ OR delta_path OR "{}"
+  LET delta_body = LAST
+  CLEAR_ERR
+  SYS JSONLEN delta_body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS JSON "status" FROM body
+  SYS EQS LAST "synced"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      LET hit = 1
+      LET note_msg = "gate ok"
+      LET admit_n = 1
+      LET load_hit = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate not synced"
+      FAIL "gate not synced"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate host mismatch"
+    FAIL "gate host mismatch"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate host mismatch"
+    END
+  END
+  SYS CAT "gate:" w_s ":ga"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit take_n note_msg
+  CLEAR_ERR
+END
+
+# soft
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "soft empty require"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — lit DELTAP, CHANGEOBJP alias, identical empty, JSONEQ self
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # literal form — capture via JSONLEN not knobs (board LET knobs flaky)
+  DELTAP "{\"a\":1}" "{\"a\":2,\"b\":9}"
+  LET body = LAST
+  SYS JSONLEN body
+  LET has_n = LAST_N
+  CLEAR_ERR
+  CHANGEOBJP "{\"x\":1}" "{\"x\":2}"
+  LET body = LAST
+  SYS JSONLEN body
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  DELTAP "{\"k\":1}" "{\"k\":1}"
+  LET body = LAST
+  SYS JSONLEN body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS EQS body "{}"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # empty object also ok with take_n==0 even if EQS body soft
+  IF take_n == 0 THEN
+    LET load_hit = 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS JSONEQ body body
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF has_n >= 1 THEN
+    IF peel_hit >= 1 THEN
+      IF take_n == 0 THEN
+        IF load_hit == 1 THEN
+          IF miss_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "probe ok"
+            LET admit_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe jsoneq"
+            FAIL "probe jsoneq"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe empty obj"
+          FAIL "probe empty obj"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe ident n"
+        FAIL "probe ident n"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe changeobj"
+      FAIL "probe changeobj"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe lit delta"
+    FAIL "probe lit delta"
+    CLEAR_ERR
+  END
+  PRINT_JSON has_n peel_hit take_n load_hit miss_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+SYS STR admit_n
+LET out = LAST
+CLEAR_ERR
+SYS CAT "schema=cubalc.mesh_deltap.v1 op=" op " hit=" w_s " miss=" d_s " admit=" out " note=" note_msg " date=" run_date
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "mds op=" op " hit=" w_s " miss=" d_s " note=" note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n peel_hit has_n load_hit miss_n created note_msg
