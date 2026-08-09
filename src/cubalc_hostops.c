@@ -4271,6 +4271,52 @@ int cubalc_host_json_path_has(const char *json, const char *path, cubalc_host_re
   return 0;
 }
 
+/* Peel object at path (or whole plate) for KEYSP/LENP/VALSP nest probes.
+ * Soft miss/non-object → "{}" n=0. path empty → root object (or "{}"). */
+int cubalc_host_json_path_obj(const char *json, const char *path, cubalc_host_result *r) {
+  cubalc_host_result gr;
+  const char *v, *j;
+  r_clear(r);
+  j = json ? json : "";
+  while (*j == ' ' || *j == '\t' || *j == '\n' || *j == '\r') j++;
+  if (!path || !path[0]) {
+    if (*j == '{') {
+      snprintf(r->str, sizeof r->str, "%s", j);
+      /* count is not required for callers that re-run keys/len; n=1 means object hit */
+      r->n = 1;
+      r->ok = 1;
+      return 0;
+    }
+    snprintf(r->str, sizeof r->str, "%s", "{}");
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  memset(&gr, 0, sizeof gr);
+  if (cubalc_host_json_path_get_raw(j && *j ? j : "{}", path, &gr) != 0) {
+    snprintf(r->str, sizeof r->str, "%s", "{}");
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  v = gr.str;
+  while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+  if (*v != '{') {
+    snprintf(r->str, sizeof r->str, "%s", "{}");
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  if (v != gr.str) {
+    size_t m = strlen(v);
+    memmove(gr.str, v, m + 1);
+  }
+  snprintf(r->str, sizeof r->str, "%s", gr.str);
+  r->n = 1;
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,

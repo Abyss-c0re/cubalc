@@ -1,0 +1,93 @@
+# KEYSP / LENP / EMPTYP / VALSP with nest path
+# Usability: nest bag probes without GETOBJ+KEYSP/LENP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"port\":8080,\"tls\":0,\"role\":\"edge\"},\"flags\":{\"debug\":0},\"empty\":{},\"n\":1}"
+LET PEER = "{\"meta\":{\"role\":\"worker\",\"n\":3}}"
+
+# top-level still works
+KEYSP
+ASSERT OK == 1
+ASSERT KEYSP_N == 5
+LENP
+ASSERT LENP_N == 5
+ASSERT LAST_N == 5
+
+# nest path keys
+KEYSP "cfg"
+ASSERT OK == 1
+ASSERT KEYSP_N == 3
+SYS HASLINE LAST "port"
+ASSERT LAST_N == 1
+SYS HASLINE KEYSP "tls"
+ASSERT LAST_N == 1
+SYS HASLINE KEYSP "role"
+ASSERT LAST_N == 1
+SYS EQS KEYSP_PATH "cfg"
+ASSERT LAST_N == 1
+
+# deeper path
+KEYSP "flags"
+ASSERT KEYSP_N == 1
+SYS HASLINE KEYSP "debug"
+ASSERT LAST_N == 1
+
+# LENP path
+LENP "cfg"
+ASSERT LENP_N == 3
+ASSERT LAST_N == 3
+SYS EQS LENP_PATH "cfg"
+ASSERT LAST_N == 1
+
+# EMPTYP path
+EMPTYP "empty"
+ASSERT EMPTYP_N == 1
+ASSERT LAST_N == 1
+EMPTYP "cfg"
+ASSERT EMPTYP_N == 0
+ASSERT LAST_N == 0
+NONEMPTYP "cfg"
+ASSERT NONEMPTYP_N == 1
+ASSERT LAST_N == 1
+
+# soft miss path → empty
+KEYSP "missing.nest"
+ASSERT OK == 1
+ASSERT KEYSP_N == 0
+LENP "missing.nest"
+ASSERT LENP_N == 0
+EMPTYP "missing.nest"
+ASSERT EMPTYP_N == 1
+
+# VALSP path
+VALSP "cfg"
+ASSERT OK == 1
+ASSERT VALSP_N == 3
+SYS HASLINE VALSP "8080"
+ASSERT LAST_N == 1
+SYS HASLINE VALSP "0"
+ASSERT LAST_N == 1
+SYS HASLINE VALSP "edge"
+ASSERT LAST_N == 1
+
+# multi-plate FROM + path
+KEYSP FROM PEER "meta"
+ASSERT KEYSP_FROM == 1
+ASSERT KEYSP_N == 2
+SYS HASLINE KEYSP "role"
+ASSERT LAST_N == 1
+SYS HASLINE KEYSP "n"
+ASSERT LAST_N == 1
+LENP FROM PEER "meta"
+ASSERT LENP_N == 2
+ASSERT LENP_FROM == 1
+
+# non-object leaf path soft empty
+LENP "host"
+ASSERT LENP_N == 0
+EMPTYP "host"
+ASSERT EMPTYP_N == 1
+
+PASS
+PRINT "1201_path_keysp_lenp: PASS"

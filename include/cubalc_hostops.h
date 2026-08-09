@@ -231,6 +231,11 @@ int cubalc_host_json_path_set(const char *json, const char *path, const char *va
 int cubalc_host_json_path_del(const char *json, const char *path, cubalc_host_result *r);
 /* Soft presence: r->n = 0|1 · r->ok=1 always when args valid. */
 int cubalc_host_json_path_has(const char *json, const char *path, cubalc_host_result *r);
+/* Peel object at path for KEYSP/LENP/EMPTYP/VALSP probes.
+ * path empty/NULL → whole json (must be object or soft "{}").
+ * Soft miss / non-object leaf → r->str="{}" · r->n=0 · always OK.
+ * Usability: nest bag size/keys without GETOBJ+KEYSP glue. */
+int cubalc_host_json_path_obj(const char *json, const char *path, cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

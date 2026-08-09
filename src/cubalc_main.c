@@ -2169,6 +2169,8 @@ int main(int argc, char **argv) {
       {"cli_plate_default_toggle", "programs/proof/1199_cli_plate_default_toggle.sh", "cubalc plate default/toggle DEFAULTP/TOGGLEP duals paths"},
       {"path_rename_copy_swap", "programs/proof/1200_path_rename_copy_swap.cubalc", "RENAMEP/COPYP/SWAPP dotted paths"},
       {"cli_plate_rename_copy_swap", "programs/proof/1200_cli_plate_rename_copy_swap.sh", "cubalc plate rename/copy/swap duals paths"},
+      {"path_keysp_lenp", "programs/proof/1201_path_keysp_lenp.cubalc", "KEYSP/LENP/EMPTYP/VALSP nest path"},
+      {"cli_plate_keys_len", "programs/proof/1201_cli_plate_keys_len.sh", "cubalc plate keys/len/empty/vals nest path"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
       {"mergeobj", "programs/proof/1171_mergeobj.cubalc", "MERGEOBJ/DEFAULTOBJ nested plate merge one-shot multi-plate"},
       {"getpobj", "programs/proof/1172_getpobj.cubalc", "GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ nested scalar field plane multi-plate"},
@@ -4893,7 +4895,8 @@ int main(int argc, char **argv) {
               "       cubalc plate swap <path> <a> <b>        # SWAPP dual · paths ok\n"
               "       cubalc plate inc <path> <key> [delta]\n"
               "       cubalc plate del <path> <key>\n"
-              "       cubalc plate keys <path>\n"
+              "       cubalc plate keys <path> [nest.path]  # KEYSP dual · nest path ok\n"
+              "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
               "       cubalc plate nestinc <path> <nest> <field> [delta]\n"
@@ -4919,7 +4922,7 @@ int main(int argc, char **argv) {
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\","
+             "\"inc\",\"del\",\"keys\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
              "\"nestsort\",\"nestsortbag\","
@@ -4953,6 +4956,13 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "del") == 0 || strcmp(argv[2], "rm") == 0 ||
         strcmp(argv[2], "drop") == 0 || strcmp(argv[2], "keys") == 0 ||
         strcmp(argv[2], "list") == 0 || strcmp(argv[2], "ls") == 0 ||
+        strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
+        strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
+        strcmp(argv[2], "countkeys") == 0 ||
+        strcmp(argv[2], "empty") == 0 || strcmp(argv[2], "isempty") == 0 ||
+        strcmp(argv[2], "emptyp") == 0 ||
+        strcmp(argv[2], "vals") == 0 || strcmp(argv[2], "values") == 0 ||
+        strcmp(argv[2], "valsp") == 0 ||
         strcmp(argv[2], "fill") == 0 || strcmp(argv[2], "expand") == 0 ||
         strcmp(argv[2], "template") == 0 || strcmp(argv[2], "render") == 0 ||
         strcmp(argv[2], "fillkeys") == 0 || strcmp(argv[2], "fill-keys") == 0 ||
@@ -5054,6 +5064,13 @@ int main(int argc, char **argv) {
         op = "del";
       else if (strcmp(op, "list") == 0 || strcmp(op, "ls") == 0)
         op = "keys";
+      else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
+               strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
+        op = "len";
+      else if (strcmp(op, "isempty") == 0 || strcmp(op, "emptyp") == 0)
+        op = "empty";
+      else if (strcmp(op, "values") == 0 || strcmp(op, "valsp") == 0)
+        op = "vals";
       else if (strcmp(op, "expand") == 0 || strcmp(op, "template") == 0 ||
                strcmp(op, "render") == 0)
         op = "fill";
@@ -5204,29 +5221,119 @@ int main(int argc, char **argv) {
       return 0;
     }
 
-    if (strcmp(op, "keys") == 0) {
+    /* keys|len|empty|vals [nest.path] — KEYSP/LENP/EMPTYP/VALSP duals (path ok).
+     *   cubalc plate keys agent.json
+     *   cubalc plate keys agent.json cfg.flags
+     *   cubalc plate len  agent.json cfg
+     *   cubalc plate empty agent.json cfg.flags
+     *   cubalc plate vals agent.json cfg */
+    if (strcmp(op, "keys") == 0 || strcmp(op, "len") == 0 ||
+        strcmp(op, "empty") == 0 || strcmp(op, "vals") == 0) {
+      const char *nestp = NULL;
+      char sub[CUBALC_HOST_STR_MAX];
       char flat[CUBALC_HOST_STR_MAX];
+      cubalc_host_result obj, pr;
       size_t i, o = 0;
-      memset(&keys, 0, sizeof keys);
-      cubalc_host_json_keys(plate, &keys);
-      flat[0] = 0;
-      for (i = 0; keys.str[i] && o + 2 < sizeof flat; i++) {
-        char c = keys.str[i];
-        if (c == '\n' || c == '\r') {
-          if (o > 0 && flat[o - 1] != ',') {
-            flat[o++] = ',';
-          }
-        } else if (c == '"' || c == '\\') {
-          flat[o++] = '_';
-        } else {
-          flat[o++] = c;
+      long nkeys = 0;
+      int isempty;
+
+      if (ai < argc && argv[ai] && argv[ai][0])
+        nestp = argv[ai++];
+
+      memset(&obj, 0, sizeof obj);
+      cubalc_host_json_path_obj(plate, nestp, &obj);
+      snprintf(sub, sizeof sub, "%s", obj.str);
+
+      if (strcmp(op, "keys") == 0) {
+        memset(&keys, 0, sizeof keys);
+        if (cubalc_host_json_keys(sub, &keys) != 0) {
+          keys.str[0] = 0;
+          keys.n = 0;
         }
+        flat[0] = 0;
+        for (i = 0; keys.str[i] && o + 2 < sizeof flat; i++) {
+          char c = keys.str[i];
+          if (c == '\n' || c == '\r') {
+            if (o > 0 && flat[o - 1] != ',')
+              flat[o++] = ',';
+          } else if (c == '"' || c == '\\') {
+            flat[o++] = '_';
+          } else {
+            flat[o++] = c;
+          }
+        }
+        flat[o] = 0;
+        if (keys.str[0]) {
+          fputs(keys.str, stdout);
+          if (keys.str[strlen(keys.str) - 1] != '\n')
+            fputc('\n', stdout);
+        }
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"keys\",\"path\":\"%s\",\"nest\":\"%s\",\"file\":%s,"
+               "\"n\":%ld,\"keys\":\"%s\",\"version\":\"%s\","
+               "\"note\":\"KEYSP dual · nest path ok · bag lines above plate\"}\n",
+               path, nestp ? nestp : "", file_hit ? "true" : "false",
+               keys.n, flat, CUBALC_LANG_VERSION);
+        return 0;
       }
-      flat[o] = 0;
+
+      if (strcmp(op, "vals") == 0) {
+        memset(&pr, 0, sizeof pr);
+        if (cubalc_host_json_values(sub, &pr) != 0) {
+          pr.str[0] = 0;
+          pr.n = 0;
+        }
+        flat[0] = 0;
+        for (i = 0; pr.str[i] && o + 2 < sizeof flat; i++) {
+          char c = pr.str[i];
+          if (c == '\n' || c == '\r') {
+            if (o > 0 && flat[o - 1] != ',')
+              flat[o++] = ',';
+          } else if (c == '"' || c == '\\') {
+            flat[o++] = '_';
+          } else {
+            flat[o++] = c;
+          }
+        }
+        flat[o] = 0;
+        if (pr.str[0]) {
+          fputs(pr.str, stdout);
+          if (pr.str[strlen(pr.str) - 1] != '\n')
+            fputc('\n', stdout);
+        }
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"vals\",\"path\":\"%s\",\"nest\":\"%s\",\"file\":%s,"
+               "\"n\":%ld,\"vals\":\"%s\",\"version\":\"%s\","
+               "\"note\":\"VALSP dual · nest path ok · bag lines above plate\"}\n",
+               path, nestp ? nestp : "", file_hit ? "true" : "false",
+               pr.n, flat, CUBALC_LANG_VERSION);
+        return 0;
+      }
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_len(sub, &pr) != 0)
+        nkeys = 0;
+      else
+        nkeys = pr.n;
+      isempty = (nkeys == 0) ? 1 : 0;
+
+      if (strcmp(op, "len") == 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"len\",\"path\":\"%s\",\"nest\":\"%s\",\"file\":%s,"
+               "\"n\":%ld,\"version\":\"%s\","
+               "\"note\":\"LENP dual · nest path ok\"}\n",
+               path, nestp ? nestp : "", file_hit ? "true" : "false",
+               nkeys, CUBALC_LANG_VERSION);
+        return 0;
+      }
+
+      /* empty — always exit 0; agents read empty bool (EMPTYP dual) */
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
-             "\"op\":\"keys\",\"path\":\"%s\",\"file\":%s,\"n\":%ld,"
-             "\"keys\":\"%s\",\"version\":\"%s\"}\n",
-             path, file_hit ? "true" : "false", keys.n, flat, CUBALC_LANG_VERSION);
+             "\"op\":\"empty\",\"path\":\"%s\",\"nest\":\"%s\",\"file\":%s,"
+             "\"empty\":%s,\"n\":%ld,\"version\":\"%s\","
+             "\"note\":\"EMPTYP dual · nest path ok\"}\n",
+             path, nestp ? nestp : "", file_hit ? "true" : "false",
+             isempty ? "true" : "false", nkeys, CUBALC_LANG_VERSION);
       return 0;
     }
 

@@ -35779,7 +35779,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"REQUIREP", "REQUIREP alias of NEEDP"},
       {"HASP", "HASP [FROM plate] key — soft 0|1 presence · dotted path nest ok · multi-plate · no GETP miss ERR"},
       {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · dotted path nest ok · multi-plate"},
-      {"KEYSP", "KEYSP [FROM plate] — key bag → LAST · multi-plate · no JSONKEYS glue"},
+      {"KEYSP", "KEYSP [FROM plate] [path] — key bag → LAST · nest path ok · multi-plate · no JSONKEYS glue"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -35822,12 +35822,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DUPKEYP", "DUPKEYP alias of COPYP"},
       {"SWAPP", "SWAPP|XCHGP [FROM plate] a b — swap keys write-back · paths ok · multi-plate · no SYS JSONSWAP"},
       {"XCHGP", "XCHGP alias of SWAPP"},
-      {"LENP", "LENP|NKEYSP [FROM plate] — key count → LAST_N · multi-plate · no SYS JSONLEN"},
+      {"LENP", "LENP|NKEYSP [FROM plate] [path] — key count → LAST_N · nest path ok · multi-plate · no SYS JSONLEN"},
       {"NKEYSP", "NKEYSP alias of LENP"},
-      {"EMPTYP", "EMPTYP|ISEMPTYP [FROM plate] — soft empty plate 0|1 · multi-plate · no SYS JSONEMPTY"},
-      {"NONEMPTYP", "NONEMPTYP|HASKEYSP [FROM plate] — soft nonempty plate 0|1 · multi-plate"},
+      {"EMPTYP", "EMPTYP|ISEMPTYP [FROM plate] [path] — soft empty plate 0|1 · nest path ok · multi-plate · no SYS JSONEMPTY"},
+      {"NONEMPTYP", "NONEMPTYP|HASKEYSP [FROM plate] [path] — soft nonempty plate 0|1 · nest path ok · multi-plate"},
       {"HASKEYSP", "HASKEYSP alias of NONEMPTYP"},
-      {"VALSP", "VALSP|VALUEP [FROM plate] — values bag · twin KEYSP · multi-plate · no SYS JSONVALUES"},
+      {"VALSP", "VALSP|VALUEP [FROM plate] [path] — values bag · twin KEYSP · nest path ok · multi-plate · no SYS JSONVALUES"},
       {"VALUEP", "VALUEP alias of VALSP"},
       {"TYPEP", "TYPEP|KINDP [FROM plate] key — field kind missing|num|str|bool|null|obj|arr · dotted path nest ok · multi-plate · no SYS JSONTYPE"},
       {"KINDP", "KINDP alias of TYPEP"},
@@ -38545,8 +38545,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* NEEDP|REQUIREP [FROM plate] key… — fail-fast if plate missing any key.
    * HASP [FROM plate] key — soft single-key presence → LAST_N 0|1 (no ERR on miss).
    * HASPALL [FROM plate] key… — soft multi-key all-present → LAST_N 0|1.
-   * KEYSP [FROM plate] — bag of keys → LAST · LAST_N=count.
-   * Keys may be dotted/slash nest paths (same plane as GETP "freq.error"):
+   * KEYSP [FROM plate] [path] — bag of keys → LAST · LAST_N=count.
+   * Optional path peels nest object first (KEYSOBJ dual without separate form):
+   *   KEYSP "cfg" · KEYSP "cfg.flags" · KEYSP FROM PEER "meta"
+   * Keys for NEEDP/HASP may be dotted/slash nest paths (same as GETP "freq.error"):
    *   NEEDP "host" "freq.error"
    *   HASPALL "meta.role" "meta.n" FROM PEER
    * FROM: multi-plate twin of SETP/MERGEP FROM (probe without clobbering PLATE):
@@ -38611,8 +38613,20 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
     }
 
-    /* KEYSP: optional trailing FROM after bare, then resolve plate */
+    /* KEYSP: optional path · optional trailing FROM · resolve plate · keys at path */
     if (is_keys) {
+      char nest_path[192];
+      cubalc_host_result obj;
+      nest_path[0] = 0;
+      /* optional nest path before trailing FROM: KEYSP "cfg.flags" */
+      if (L->cur.kind == TK_STR ||
+          (L->cur.kind == TK_IDENT &&
+           !kw(&L->cur,"FROM") && !kw(&L->cur,"USING") && !kw(&L->cur,"OF") &&
+           !kw(&L->cur,"WITHPLATE") && !kw(&L->cur,"PLATEFROM") &&
+           !kw(&L->cur,"END") && !kw(&L->cur,"ELSE") && !kw(&L->cur,"ELIF"))) {
+        if (resolve_str_arg(vm, L, nest_path, sizeof nest_path) != 0)
+          nest_path[0] = 0;
+      }
       if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
                          kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
                          kw(&L->cur,"PLATEFROM"))) {
@@ -38637,6 +38651,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
           snprintf(from_src, sizeof from_src, "%s", vm->last_str);
         }
+        /* path after FROM PEER: KEYSP FROM PEER "cfg" */
+        if (!nest_path[0] &&
+            (L->cur.kind == TK_STR ||
+             (L->cur.kind == TK_IDENT &&
+              !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ELSE")))) {
+          if (resolve_str_arg(vm, L, nest_path, sizeof nest_path) != 0)
+            nest_path[0] = 0;
+        }
       }
       if (have_from) {
         const char *b = from_src;
@@ -38652,17 +38674,33 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         else
           snprintf(plate, sizeof plate, "%s", "{}");
       }
-      memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_keys(plate, &hr) != 0) {
+      /* peel nest object when path given (soft miss → empty keys) */
+      memset(&obj, 0, sizeof obj);
+      if (cubalc_host_json_path_obj(plate, nest_path[0] ? nest_path : NULL, &obj) != 0) {
         var_set_str(vm, "LAST", "");
         vm->last_str[0] = 0;
         vm->last_n = 0;
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "KEYSP_N", 0);
         var_set_num(vm, "KEYSP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "KEYSP_PATH", nest_path);
         var_set_num(vm, "OK", 0);
-        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "KEYSP: fail");
-        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "KEYSP: fail");
+        var_set_str(vm, "LAST_ERR", obj.err[0] ? obj.err : "KEYSP: path fail");
+        var_set_str(vm, "ERR", obj.err[0] ? obj.err : "KEYSP: path fail");
+        bump(vm); return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", obj.str);
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_keys(plate, &hr) != 0) {
+        /* soft empty bag (non-object already normalized by path_obj) */
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "KEYSP_N", 0);
+        var_set_num(vm, "KEYSP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "KEYSP_PATH", nest_path);
+        var_set_num(vm, "OK", 1);
         bump(vm); return 1;
       }
       var_set_str(vm, "LAST", hr.str);
@@ -38673,9 +38711,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "KEYSP_N", hr.n);
       var_set_num(vm, "JSONKEYS_N", hr.n);
       var_set_num(vm, "KEYSP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "KEYSP_PATH", nest_path);
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# keysp n=%ld from=%d\n", hr.n, have_from);
+        fprintf(vm->trace, "# keysp n=%ld from=%d path=%s\n",
+                hr.n, have_from, nest_path[0] ? nest_path : ".");
       bump(vm); return 1;
     }
 
@@ -40839,14 +40879,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       fprintf(vm->trace, "# swapp %s↔%s n=%ld from=%d\n", ka, kb, hr.n, have_from);
     bump(vm); return 1;
   }
-  /* LENP|NKEYSP [FROM plate] — top-level key count → LAST_N (JSONLEN dual).
-   * EMPTYP|ISEMPTYP [FROM plate] — soft 0|1 empty plate (JSONEMPTY dual).
-   * NONEMPTYP|HASKEYSP [FROM plate] — inverse of EMPTYP.
-   * VALSP|VALUEP [FROM plate] — values bag · twin KEYSP (JSONVALUES dual).
-   * Bare uses conventional PLATE. Soft non-object → 0 / empty bag.
+  /* LENP|NKEYSP [FROM plate] [path] — key count → LAST_N (JSONLEN dual).
+   * EMPTYP|ISEMPTYP [FROM plate] [path] — soft 0|1 empty plate (JSONEMPTY dual).
+   * NONEMPTYP|HASKEYSP [FROM plate] [path] — inverse of EMPTYP.
+   * VALSP|VALUEP [FROM plate] [path] — values bag · twin KEYSP (JSONVALUES dual).
+   * Optional path peels nest object (LENOBJ/EMPTYOBJ/VALSOBJ dual without glue):
+   *   LENP "cfg" · EMPTYP "cfg.flags" · VALSP FROM PEER "meta"
+   * Bare uses conventional PLATE. Soft non-object / miss path → 0 / empty bag.
    * Usability: size/empty/value probes without SYS JSONLEN/JSONEMPTY/JSONVALUES:
    *   LENP FROM PEER
-   *   IF EMPTYP … END
+   *   IF EMPTYP "cfg" … END
    *   VALSP FROM session
    */
   if (kw(&L->cur,"LENP") || kw(&L->cur,"NKEYSP") || kw(&L->cur,"MLENP") ||
@@ -40858,7 +40900,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"VALSP") || kw(&L->cur,"VALUEP") || kw(&L->cur,"MVALSP") ||
       kw(&L->cur,"PLATE_VALS") || kw(&L->cur,"VALP")) {
     char plate[CUBALC_HOST_STR_MAX], from_name[96], from_src[CUBALC_HOST_STR_MAX];
-    cubalc_host_result hr;
+    char nest_path[192];
+    cubalc_host_result hr, obj;
     int have_from = 0, mode = 0; /* 0=len 1=empty 2=nonempty 3=vals */
     long hit;
     Var *pv;
@@ -40883,10 +40926,47 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       mode = 0;
 
     lex_next(L);
-    plate[0] = 0; from_name[0] = 0; from_src[0] = 0;
+    plate[0] = 0; from_name[0] = 0; from_src[0] = 0; nest_path[0] = 0;
 
     if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
         kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* optional nest path: LENP "cfg" · EMPTYP FROM PEER "meta" */
+    if (L->cur.kind == TK_STR ||
+        (L->cur.kind == TK_IDENT &&
+         !kw(&L->cur,"FROM") && !kw(&L->cur,"USING") && !kw(&L->cur,"OF") &&
+         !kw(&L->cur,"WITHPLATE") && !kw(&L->cur,"PLATEFROM") &&
+         !kw(&L->cur,"END") && !kw(&L->cur,"ELSE") && !kw(&L->cur,"ELIF"))) {
+      if (resolve_str_arg(vm, L, nest_path, sizeof nest_path) != 0)
+        nest_path[0] = 0;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
       lex_next(L);
       have_from = 1;
       if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
@@ -40926,6 +41006,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(plate, sizeof plate, "%s", "{}");
     }
 
+    memset(&obj, 0, sizeof obj);
+    cubalc_host_json_path_obj(plate, nest_path[0] ? nest_path : NULL, &obj);
+    snprintf(plate, sizeof plate, "%s", obj.str);
+
     if (mode == 3) {
       memset(&hr, 0, sizeof hr);
       if (cubalc_host_json_values(plate, &hr) != 0) {
@@ -40935,6 +41019,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "VALSP_N", 0);
         var_set_num(vm, "VALSP_FROM", have_from ? 1 : 0);
+        var_set_str(vm, "VALSP_PATH", nest_path);
         var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "VALSP: fail");
         var_set_str(vm, "ERR", hr.err[0] ? hr.err : "VALSP: fail");
         var_set_num(vm, "OK", 0);
@@ -40949,30 +41034,25 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "VALSP_N", hr.n);
       var_set_num(vm, "JSONVALUES_N", hr.n);
       var_set_num(vm, "VALSP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "VALSP_PATH", nest_path);
       var_set_str(vm, "VALSP_SRC",
                   from_name[0] ? from_name : (have_from ? "" : "PLATE"));
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# valsp n=%ld from=%d\n", hr.n, have_from);
+        fprintf(vm->trace, "# valsp n=%ld from=%d path=%s\n",
+                hr.n, have_from, nest_path[0] ? nest_path : ".");
       bump(vm); return 1;
     }
 
     memset(&hr, 0, sizeof hr);
     if (cubalc_host_json_len(plate, &hr) != 0) {
-      vm->last_n = 0;
-      var_set_num(vm, "LAST_N", 0);
-      var_set_num(vm, "LENP_N", 0);
-      var_set_num(vm, "EMPTYP_N", 0);
-      var_set_num(vm, "LENP_FROM", have_from ? 1 : 0);
-      var_set_num(vm, "EMPTYP_FROM", have_from ? 1 : 0);
-      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "LENP: fail");
-      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "LENP: fail");
-      var_set_num(vm, "OK", 0);
-      bump(vm); return 1;
+      /* soft zero on empty object */
+      hr.n = 0;
+      hr.ok = 1;
     }
 
     if (mode == 0) {
-      /* LENP — keep plate in LAST for chain (JSONLEN style) */
+      /* LENP — keep (sub)plate in LAST for chain (JSONLEN style) */
       var_set_str(vm, "LAST", plate);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
       vm->last_n = hr.n;
@@ -40981,11 +41061,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "JSONLEN_N", hr.n);
       var_set_num(vm, "KEYSP_N", hr.n); /* size dual of KEYSP count */
       var_set_num(vm, "LENP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LENP_PATH", nest_path);
       var_set_str(vm, "LENP_SRC",
                   from_name[0] ? from_name : (have_from ? "" : "PLATE"));
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# lenp n=%ld from=%d\n", hr.n, have_from);
+        fprintf(vm->trace, "# lenp n=%ld from=%d path=%s\n",
+                hr.n, have_from, nest_path[0] ? nest_path : ".");
       bump(vm); return 1;
     }
 
@@ -41003,12 +41085,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "LENP_N", hr.n);
     var_set_num(vm, "EMPTYP_FROM", have_from ? 1 : 0);
     var_set_num(vm, "NONEMPTYP_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "EMPTYP_PATH", nest_path);
     var_set_str(vm, "EMPTYP_SRC",
                 from_name[0] ? from_name : (have_from ? "" : "PLATE"));
     var_set_num(vm, "OK", 1);
     if (vm->trace)
-      fprintf(vm->trace, "# %s hit=%ld keys=%ld from=%d\n",
-              mode == 2 ? "nonemptyp" : "emptyp", hit, hr.n, have_from);
+      fprintf(vm->trace, "# %s hit=%ld keys=%ld from=%d path=%s\n",
+              mode == 2 ? "nonemptyp" : "emptyp", hit, hr.n, have_from,
+              nest_path[0] ? nest_path : ".");
     bump(vm); return 1;
   }
   /* TYPEP|KINDP [FROM plate] key — field kind probe (JSONTYPE dual).
