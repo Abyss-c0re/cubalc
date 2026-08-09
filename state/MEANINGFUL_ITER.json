@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 636,
-  "version": "1.15.663-usability",
-  "item": "DIFFFLAT + PATHDIFF",
-  "item_id": 672,
-  "title": "DIFFFLAT/PATHDIFF + cubalc plate diffflat/pathdiff \u00b7 deep leaf changelog \u00b7 nest-aware mesh sync",
-  "commit": "929f4d6c08cccf8e8fb17060a2ebf8037fa2c02b",
-  "summary": "Deep leaf path: old \u2192 new without shallow DIFFP. proof 1213 + CLI PASS.",
+  "iter": 637,
+  "version": "1.15.664-usability",
+  "item": "GREPFLAT + plate grepf",
+  "item_id": 673,
+  "title": "GREPFLAT/GREPVFLAT/GREPFLATI + cubalc plate grepf \u00b7 path needle filter on leaf bags \u00b7 nest triage",
+  "commit": "d19d42d9875d8458d1d428c70592c10b43285a74",
+  "summary": "Filter nested path:value leaves by path needle. proof 1214 + CLI PASS.",
   "proofs": [
-    "1213_diffflat PASS",
-    "1213_cli_plate_diffflat PASS",
-    "1212_unflatkv reg PASS"
+    "1214_grepflat PASS",
+    "1214_cli_plate_grepf PASS",
+    "1213_diffflat reg PASS"
   ],
-  "when": "2026-08-09T13:47:59Z",
+  "when": "2026-08-09T13:57:04Z",
   "agent": "meaningful_iter_10m",
-  "sha": "929f4d6c08cccf8e8fb17060a2ebf8037fa2c02b",
-  "note": "after FLATKV/UNFLATKV plane; EVOLVE_PAUSED"
+  "sha": "d19d42d9875d8458d1d428c70592c10b43285a74",
+  "note": "after DIFFFLAT plane; EVOLVE_PAUSED"
 }
