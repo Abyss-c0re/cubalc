@@ -1,0 +1,84 @@
+# FIRSTUNEQFLAT / PATHUNEQ — first leaf path that breaks uniformity
+# Usability: after ALLEQFLAT fails, locate inconsistency without EACH FLAT+EQS glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"ok\"},\"c\":{\"status\":\"ok\"}}"
+
+# mixed roles → first diverge is other.role (leader vs first worker)
+FIRSTUNEQFLAT "role"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT FIRSTUNEQFLAT_FOUND == 1
+ASSERT FIRSTUNEQ_N == 3
+ASSERT FIRSTUNEQ_I == 2
+SYS EQS FIRSTUNEQ_REF "worker"
+ASSERT LAST_N == 1
+SYS EQS FIRSTUNEQ_VAL "leader"
+ASSERT LAST_N == 1
+SYS HAS LAST "role"
+ASSERT LAST_N == 1
+SYS EQS LAST "other.role"
+ASSERT LAST_N == 1
+
+# hosts differ at second host leaf
+FIRSTUNEQFLAT "host"
+ASSERT LAST_N == 1
+ASSERT FIRSTUNEQ_N == 2
+ASSERT FIRSTUNEQ_I == 1
+SYS EQS FIRSTUNEQ_REF "h1"
+ASSERT LAST_N == 1
+SYS EQS FIRSTUNEQ_VAL "h2"
+ASSERT LAST_N == 1
+
+# after unify roles → no diverge
+SETBYVAL "leader" "worker"
+FIRSTUNEQFLAT "role"
+ASSERT LAST_N == 0
+ASSERT FIRSTUNEQFLAT_FOUND == 0
+ASSERT FIRSTUNEQ_N == 3
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# multi-plate all same → soft miss
+FIRSTUNEQFLAT FROM PEER "status"
+ASSERT LAST_N == 0
+ASSERT FIRSTUNEQFLAT_FROM == 1
+SYS EQS FIRSTUNEQFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT FIRSTUNEQ_N == 3
+
+# soft empty miss
+FIRSTUNEQFLAT "nope"
+ASSERT LAST_N == 0
+ASSERT FIRSTUNEQ_N == 0
+
+# bare all-leaves: first diverge among mixed values
+LET PLATE = "{\"a\":1,\"b\":1,\"c\":2}"
+FIRSTUNEQFLAT ""
+ASSERT LAST_N == 1
+ASSERT FIRSTUNEQ_I == 2
+SYS EQS FIRSTUNEQ_REF "1"
+ASSERT LAST_N == 1
+SYS EQS FIRSTUNEQ_VAL "2"
+ASSERT LAST_N == 1
+
+# PATHUNEQ alias
+LET PLATE = "{\"x\":{\"v\":\"a\"},\"y\":{\"v\":\"b\"}}"
+PATHUNEQ "v"
+ASSERT LAST_N == 1
+SYS EQS PATHUNEQ "y.v"
+ASSERT LAST_N == 1
+SYS EQS FIRSTUNEQ_VAL "b"
+ASSERT LAST_N == 1
+
+# plate unchanged after multi-plate
+LET PLATE = "{\"x\":9}"
+FIRSTUNEQFLAT FROM PEER "status"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1250_firstuneqflat: PASS"

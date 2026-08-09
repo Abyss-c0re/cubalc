@@ -470,6 +470,14 @@ int cubalc_host_json_leaf_uniq(const char *json, const char *needle,
  * Soft always OK. Read-only. Usability: nest consistency without UNIQFLAT+LINES+CMP. */
 int cubalc_host_json_leaf_all_eq(const char *json, const char *needle,
                                  cubalc_host_result *r);
+/* First matching leaf whose value differs from the first match (FIRSTUNEQFLAT / PATHUNEQ).
+ * Empty needle → all leaves. First-seen order (match bag walk).
+ * Hit  → r->code=1 · r->str=path · r->n=0-based index · r->err="ref\\nval\\ntotal"
+ * Miss → r->code=0 · r->str="" · r->n=0 · r->err="total" decimal (0|1|N when uniform).
+ * Soft always OK. Read-only. Usability: locate first nest inconsistency after ALLEQFLAT fails
+ * without EACH FLAT+EQS glue. */
+int cubalc_host_json_leaf_first_uneq(const char *json, const char *needle,
+                                     cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

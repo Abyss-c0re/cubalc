@@ -7456,6 +7456,82 @@ int cubalc_host_json_leaf_all_eq(const char *json, const char *needle,
   return 0;
 }
 
+/* FIRSTUNEQFLAT: first matching leaf that diverges from the first match value.
+ * Hit:  r->code=1 · r->str=path · r->n=0-based match index · r->err="ref\\nval\\ntotal"
+ * Miss: r->code=0 · r->str="" · r->n=0 · r->err="total" decimal (match count).
+ * Soft always OK. Read-only. */
+int cubalc_host_json_leaf_first_uneq(const char *json, const char *needle,
+                                     cubalc_host_result *r) {
+  cubalc_host_result paths, vals;
+  const char *pp, *pv, *ps, *vs;
+  char ref[256], path[512], val[CUBALC_HOST_STR_MAX / 4];
+  long idx = 0, total = 0;
+  size_t n;
+
+  r_clear(r);
+  r->str[0] = 0;
+  r->err[0] = 0;
+  r->n = 0;
+  r->code = 0;
+  r->ok = 1;
+  if (!needle) needle = "";
+  memset(&paths, 0, sizeof paths);
+  memset(&vals, 0, sizeof vals);
+  cubalc_host_json_leaf_match_bag(json ? json : "{}", needle, 0, &paths);
+  cubalc_host_json_leaf_match_bag(json ? json : "{}", needle, 1, &vals);
+  total = paths.n;
+  if (total <= 1) {
+    /* 0 or 1 match → no possible diverge */
+    snprintf(r->err, sizeof r->err, "%ld", total);
+    return 0;
+  }
+  /* first value = ref */
+  pv = vals.str;
+  vs = pv;
+  while (*pv && *pv != '\n' && *pv != '\r') pv++;
+  n = (size_t)(pv - vs);
+  if (n >= sizeof ref) n = sizeof ref - 1;
+  memcpy(ref, vs, n);
+  ref[n] = 0;
+  while (*pv == '\n' || *pv == '\r') pv++;
+  pp = paths.str;
+  /* skip first path */
+  while (*pp && *pp != '\n' && *pp != '\r') pp++;
+  while (*pp == '\n' || *pp == '\r') pp++;
+  idx = 1;
+  while (*pp && *pv) {
+    ps = pp;
+    while (*pp && *pp != '\n' && *pp != '\r') pp++;
+    n = (size_t)(pp - ps);
+    if (n >= sizeof path) n = sizeof path - 1;
+    memcpy(path, ps, n);
+    path[n] = 0;
+    while (*pp == '\n' || *pp == '\r') pp++;
+    vs = pv;
+    while (*pv && *pv != '\n' && *pv != '\r') pv++;
+    n = (size_t)(pv - vs);
+    if (n >= sizeof val) n = sizeof val - 1;
+    memcpy(val, vs, n);
+    val[n] = 0;
+    while (*pv == '\n' || *pv == '\r') pv++;
+    if (strcmp(val, ref) != 0) {
+      snprintf(r->str, sizeof r->str, "%s", path);
+      snprintf(r->err, sizeof r->err, "%s\n%s\n%ld", ref, val, total);
+      r->n = idx;
+      r->code = 1;
+      r->ok = 1;
+      return 0;
+    }
+    idx++;
+  }
+  /* all equal */
+  snprintf(r->err, sizeof r->err, "%ld", total);
+  r->code = 0;
+  r->n = 0;
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,
