@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 595,
-  "version": "1.15.622-usability",
-  "item": "GETPOBJ/SETPOBJ/INCOBJ",
-  "item_id": 631,
-  "title": "GETPOBJ|SETPOBJ|INCOBJ|DELPOBJ \u00b7 nested scalar peel/set/inc/del \u00b7 multi-plate \u00b7 no GETOBJ+GETP glue",
-  "commit": "84981889c7df480d27aa5fa91d1b3d0c572b30bc",
-  "summary": "Nested field plane for agent counters/config without peel-write glue. proof 1172 30/30.",
+  "iter": 596,
+  "version": "1.15.623-usability",
+  "item": "HASPOBJ/KEYSOBJ/NEEDPOBJ",
+  "item_id": 632,
+  "title": "HASPOBJ|TYPEPOBJ|KEYSOBJ|NEEDPOBJ \u00b7 nested probes + fail-fast contract \u00b7 multi-plate",
+  "commit": "8aa71d199ea84d162e313466bac4f07aa255e8f5",
+  "summary": "Nested HASP/TYPEP/KEYSP/NEEDP duals without GETOBJ glue. proof 1173 30/30.",
   "proofs": [
-    "1172_getpobj 30/30",
-    "1171_mergeobj reg ok"
+    "1173_haspobj 30/30",
+    "1173b_needpobj_fail ok",
+    "1172_getpobj reg ok"
   ],
-  "when": "2026-08-09T06:25:58Z",
+  "when": "2026-08-09T06:35:42Z",
   "agent": "meaningful_iter_10m",
-  "sha": "84981889c7df480d27aa5fa91d1b3d0c572b30bc",
-  "note": "invented after backlog 630 MERGEOBJ; EVOLVE_PAUSED"
+  "sha": "8aa71d199ea84d162e313466bac4f07aa255e8f5",
+  "note": "invented after backlog 631 GETPOBJ; EVOLVE_PAUSED"
 }
