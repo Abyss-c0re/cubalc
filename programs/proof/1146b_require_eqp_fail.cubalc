@@ -1,0 +1,6 @@
+# REQUIRE EQP fail path — unequal plates must fatal (assert count via runner)
+HOLD_FLASH 1
+LET PLATE = "{\"n\":1}"
+LET PEER = "{\"n\":2}"
+REQUIRE EQP PLATE PEER
+PRINT "should not reach"

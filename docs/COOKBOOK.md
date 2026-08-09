@@ -270,6 +270,8 @@ EQP PLATE PEER              # soft equal · LAST_N 0|1
 NEQP PLATE PEER             # inverse
 DIFFP PLATE PEER            # changed key bag → LAST
 CHANGELOGP PLATE PEER       # key: old → new lines → LAST
+REQUIRE EQP PLATE PEER      # fail-fast if unequal · lists changed keys
+REQUIRE NEQP before after   # fail-fast if still equal (mutation gate)
 ```
 
 Libs: `plate_peer` · `plate_peer_save` · `plate_peer_session` · `plate_peer_tick` · `plate_both_save`.  

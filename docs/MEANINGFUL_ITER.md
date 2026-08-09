@@ -632,6 +632,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 602. ~~**`programs/lib/plate_both_save` + init --peer**~~ **done** (one INCLUDE PLATE+PEER write-back · scaffold uses it · dual of dual saves).
 603. ~~**`cubalc plate has` / `need`**~~ **done** (CLI multi-key contract · HASPALL/NEEDP duals · miss bag + exit status).
 604. ~~**`EQP` / `NEQP` / `DIFFP` / `CHANGELOGP`**~~ **done** (in-lang multi-plate compare · no SYS JSONEQ/JSONCHANGED glue).
+605. ~~**`REQUIRE EQP` / `REQUIRE NEQP`**~~ **done** (fail-fast twins of soft EQP/NEQP · miss keys listed · mutation gate).
 
 ## Tick protocol
 

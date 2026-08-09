@@ -1,0 +1,56 @@
+# REQUIRE EQP / NEQP — fail-fast multi-plate equality (soft twin EQP/NEQP)
+# Usability: mesh contract after soft EQP without SYS JSONEQ / REQUIRE JSONEQ.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":1,\"role\":\"worker\",\"host\":\"cubeA\"}"
+LET PEER = "{\"role\":\"worker\",\"n\":1,\"host\":\"cubeA\"}"
+
+# soft probe then hard gate
+EQP PLATE PEER
+ASSERT LAST_N == 1
+REQUIRE EQP PLATE PEER
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT REQUIRE_EQP == 1
+ASSERT REQUIRE_JSONEQ == 1
+ASSERT EQP_N == 1
+
+# aliases
+REQUIRE SAMEP PLATE PEER
+ASSERT OK == 1
+REQUIRE PLATEEQ PLATE PEER
+ASSERT OK == 1
+
+# self
+REQUIRE EQP PLATE PLATE
+ASSERT OK == 1
+
+# mutate PEER → soft unequal → hard NEQP gate
+SETP FROM PEER "host" "cubeB"
+EQP PLATE PEER
+ASSERT LAST_N == 0
+NEQP PLATE PEER
+ASSERT LAST_N == 1
+REQUIRE NEQP PLATE PEER
+ASSERT OK == 1
+ASSERT REQUIRE_NEQP == 1
+ASSERT REQUIRE_JSONNEQ == 1
+ASSERT NEQP_N == 1
+ASSERT DIFFP_N >= 1
+SYS HASLINE DIFFP "host"
+ASSERT LAST_N == 1
+
+# agent pattern: soft then require when ready
+LET a = "{\"ok\":true,\"n\":3}"
+LET b = "{\"n\":3,\"ok\":true}"
+EQP a b
+IF LAST_N THEN
+  REQUIRE EQP a b
+  PASS "plates match"
+ELSE
+  FAIL "should match"
+END
+ASSERT OK == 1
+
+PRINT "require_eqp soft ok"
