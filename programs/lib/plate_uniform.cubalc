@@ -1,0 +1,17 @@
+# INCLUDE plate_uniform — nest value consistency check on PLATE
+# Usability: UNIFORMFLAT one-shot without re-stating the form every agent boot
+#
+#   DEFAULT UNIFORM_NEEDLE = "role"   # path needle · "" = all leaves
+#   # PLATE already set (plate_boot / plate_session / SETP …)
+#   INCLUDE plate_uniform
+#   # UNIFORM_EQ 0|1 · UNIFORM_N · UNIFORM_DIV · UNIFORM_PATH · UNIFORM_PATHS
+#   # UNIFORM_REF · UNIFORM_VAL · LAST_N mirrors UNIFORM_EQ · LAST=common when eq
+#   IF UNIFORM_EQ == 0
+#     FAIL "mixed nest values"   # or PRINT UNIFORM_PATHS then SETBYVAL …
+#   END
+#
+# Shell dual (no INCLUDE): cubalc plate uniform state/agent.json role
+# Override needle before INCLUDE. HOLD_FLASH not required (same policy as plate_boot).
+
+DEFAULT UNIFORM_NEEDLE = ""
+UNIFORMFLAT UNIFORM_NEEDLE

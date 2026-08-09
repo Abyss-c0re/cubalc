@@ -267,6 +267,10 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate countflatn state/my_agent.json score                 # pure-int leaf match count
 ./out/cubalc plate pathsflatn state/my_agent.json score                 # pure-int leaf paths bag
 ./out/cubalc plate valsflatn  state/my_agent.json score                 # pure-int leaf values bag
+./out/cubalc plate alleqflat  state/my_agent.json role                  # all matching leaf values identical?
+./out/cubalc plate firstuneq  state/my_agent.json role                  # first path that breaks uniformity
+./out/cubalc plate uneqpaths  state/my_agent.json role                  # all paths that break uniformity
+./out/cubalc plate uniform    state/my_agent.json role                  # one-shot eq + first + all diverge paths
 ./out/cubalc plate decflat    state/my_agent.json errs                  # decrement
 ./out/cubalc libs | grep plate
 
@@ -285,8 +289,22 @@ CLI one-shots (no `.cubalc` file):
 `eq` / `ne` / `diff` / `changelog` compare two plate files (dual of `JSONEQ` / `JSONCHANGED` / `JSONCHANGELOG`) — exit `0` when plates match.  
 `has` / `need` multi-key presence (dual of `HASPALL` / `NEEDP`) — dotted keys ok; `need` sets `ok:false` when any key is missing.
 
-Libs: `plate_session` · `plate_boot` · `plate_save` · `plate_patch` · `plate_tick` · `agent_boot`.  
-Forms: `SETP`/`GETP`/`INCP`/`MERGEP`/`NEEDP`/`PLUCKP`/`DUMPP` (dotted paths).  
+Libs: `plate_session` · `plate_boot` · `plate_save` · `plate_patch` · `plate_tick` · `plate_uniform` · `agent_boot`.  
+Forms: `SETP`/`GETP`/`INCP`/`MERGEP`/`NEEDP`/`PLUCKP`/`DUMPP` (dotted paths) · `UNIFORMFLAT` nest check.
+
+### Nest value consistency (roles / statuses)
+
+```cubalc
+# after plate_session / SETP fleet of nested role/status leaves:
+DEFAULT UNIFORM_NEEDLE = "role"
+INCLUDE plate_uniform
+IF UNIFORM_EQ == 0
+  # UNIFORM_PATH first diverge · UNIFORM_PATHS bag · REF/VAL
+  SETBYVAL UNIFORM_VAL UNIFORM_REF   # or FAIL / PRINT UNIFORM_PATHS
+  INCLUDE plate_uniform              # re-check
+END
+# shell one-shot: cubalc plate uniform state/my_agent.json role
+```  
 Proofs: `1117_plate_session` · `1110_setp` · `1192_pathp` · `1194_needp_path` · `1195_pluckp_path` · `1112_cli_plate.sh` · `1193b_cli_plate_path.sh`.
 
 ## 9. Multi-plate PEER state (PLATE + PEER)

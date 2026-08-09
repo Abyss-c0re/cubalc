@@ -39,9 +39,10 @@ INCLUDE plate_save             # or plate_patch with PLATE_PATCH
 DUMPP                          # cubalc.plate_info.v1
 ```
 
-Shell: `cubalc plate get|type|set|default|toggle|inc|show|ensure|merge|eq|diff|changelog|has|need|pluck path.json` · `cubalc libs` · `cubalc cat plate_session`.  
+Shell: `cubalc plate get|type|set|default|toggle|inc|show|ensure|merge|eq|diff|changelog|has|need|pluck|uniform path.json` · `cubalc libs` · `cubalc cat plate_session`.  
 Keys may be dotted: `cubalc plate get agent.json freq.error` · `plate type … freq.error` → `num` · `plate default … cfg.port 8080` · `plate toggle … flags.debug`.  
-`ensure`/`merge` seed+patch · `default` set-if-missing · `toggle` 0↔1 · `has`/`need` · `pluck` · `type` (no `.cubalc`).  
+`ensure`/`merge` seed+patch · `default` set-if-missing · `toggle` 0↔1 · `has`/`need` · `pluck` · `type` · `uniform` nest-eq (no `.cubalc`).  
+INCLUDE `plate_uniform` after `DEFAULT UNIFORM_NEEDLE = "role"` for in-language nest consistency (`UNIFORM_EQ` / `UNIFORM_PATHS`).  
 See `docs/COOKBOOK.md` §8 (single plate) · §9 (multi-plate PEER).
 
 ### Multi-plate PEER

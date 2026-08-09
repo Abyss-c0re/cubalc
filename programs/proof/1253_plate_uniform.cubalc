@@ -1,0 +1,51 @@
+# plate_uniform lib — INCLUDE nest consistency check on PLATE
+# Usability: DEFAULT needle + UNIFORMFLAT without retyping form each boot.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\"},\"other\":{\"role\":\"leader\"}}"
+
+DEFAULT UNIFORM_NEEDLE = "role"
+INCLUDE plate_uniform
+ASSERT OK == 1
+ASSERT INCLUDE_OK == 1
+ASSERT UNIFORM_EQ == 0
+ASSERT LAST_N == 0
+ASSERT UNIFORM_N == 3
+ASSERT UNIFORM_DIV == 1
+SYS EQS UNIFORM_PATH "other.role"
+ASSERT LAST_N == 1
+SYS EQS UNIFORM_REF "worker"
+ASSERT LAST_N == 1
+SYS EQS UNIFORM_VAL "leader"
+ASSERT LAST_N == 1
+SYS HASLINE UNIFORM_PATHS "other.role"
+ASSERT LAST_N == 1
+
+# unify then re-check (INCLUDE reloads form path)
+SETBYVAL "leader" "worker"
+INCLUDE plate_uniform
+ASSERT UNIFORM_EQ == 1
+ASSERT LAST_N == 1
+ASSERT UNIFORM_DIV == 0
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS EQS UNIFORM_PATH ""
+ASSERT LAST_N == 1
+
+# empty needle = all leaves (now uniform roles only — hosts gone, only roles worker×3)
+# plate still has only role leaves after our setbyval
+UNIFORMFLAT ""
+ASSERT LAST_N == 1
+
+# short name discovery
+REQUIRE LIB plate_uniform
+ASSERT OK == 1
+
+# cubalc which style path exists via SYS WHICH
+SYS WHICH plate_uniform
+SYS HAS LAST "plate_uniform"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1253_plate_uniform: PASS"
