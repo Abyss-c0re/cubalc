@@ -4660,6 +4660,7 @@ int main(int argc, char **argv) {
      *   cubalc plate eq     a.json b.json            # order-indep equal · JSONEQ dual
      *   cubalc plate ne     a.json b.json            # unequal probe
      *   cubalc plate diff   a.json b.json            # changed key bag · JSONCHANGED dual
+     *   cubalc plate changelog a.json b.json         # "key: old → new" · JSONCHANGELOG dual
      * Bare: cubalc plate path.json  → show
      * One JSON plate per call (cubalc.plate.v1) for agents. */
     const char *op = "show";
@@ -4679,7 +4680,7 @@ int main(int argc, char **argv) {
     plate[0] = 0;
     if (argc <= 2) {
       fprintf(stderr,
-              "usage: cubalc plate show|get|set|inc|del|keys|fill|ensure|merge|eq|ne|diff <path> …\n"
+              "usage: cubalc plate show|get|set|inc|del|keys|fill|ensure|merge|eq|ne|diff|changelog <path> …\n"
               "       cubalc plate <path.json>                 # show\n"
               "       cubalc plate get <path> <key> [OR def]\n"
               "       cubalc plate set <path> <key> <value>\n"
@@ -4690,11 +4691,11 @@ int main(int argc, char **argv) {
               "       cubalc plate fillkeys <path> <tmpl|@file>\n"
               "       cubalc plate ensure <path> [seed|@file]  # create-or-keep\n"
               "       cubalc plate merge  <path> <overlay|@file>\n"
-              "       cubalc plate eq|ne|diff <a.json> <b.json>\n");
+              "       cubalc plate eq|ne|diff|changelog <a.json> <b.json>\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\",\"fill\","
-             "\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\"]}\n",
+             "\"fillkeys\",\"ensure\",\"merge\",\"eq\",\"ne\",\"diff\",\"changelog\"]}\n",
              CUBALC_LANG_VERSION);
       return 2;
     }
@@ -4721,7 +4722,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "ne") == 0 || strcmp(argv[2], "neq") == 0 ||
         strcmp(argv[2], "differ") == 0 || strcmp(argv[2], "unequal") == 0 ||
         strcmp(argv[2], "diff") == 0 || strcmp(argv[2], "changed") == 0 ||
-        strcmp(argv[2], "delta") == 0) {
+        strcmp(argv[2], "delta") == 0 ||
+        strcmp(argv[2], "changelog") == 0 || strcmp(argv[2], "clog") == 0 ||
+        strcmp(argv[2], "changes") == 0 || strcmp(argv[2], "logdiff") == 0) {
       op = argv[2];
       if (strcmp(op, "dump") == 0 || strcmp(op, "cat") == 0 || strcmp(op, "read") == 0)
         op = "show";
@@ -4754,6 +4757,9 @@ int main(int argc, char **argv) {
         op = "ne";
       else if (strcmp(op, "changed") == 0 || strcmp(op, "delta") == 0)
         op = "diff";
+      else if (strcmp(op, "clog") == 0 || strcmp(op, "changes") == 0 ||
+               strcmp(op, "logdiff") == 0)
+        op = "changelog";
       ai = 3;
       /* fill[-keys]: optional -s|--strict before path */
       if ((strcmp(op, "fill") == 0 || strcmp(op, "fillkeys") == 0) &&
@@ -5187,16 +5193,18 @@ int main(int argc, char **argv) {
       return 0;
     }
 
-    /* eq|ne|diff a.json b.json — compare two agent plates without .cubalc.
-     * Usability: mesh/peer sync verify (JSONEQ / JSONCHANGED duals for shell).
+    /* eq|ne|diff|changelog a.json b.json — compare two agent plates without .cubalc.
+     * Usability: mesh/peer sync verify (JSONEQ / JSONCHANGED / JSONCHANGELOG duals).
      * Soft-missing files load as {}. eq exit 0 if equal else 1; ne inverted;
-     * diff exit 0 if identical else 1 (keys listed either way). */
-    if (strcmp(op, "eq") == 0 || strcmp(op, "ne") == 0 || strcmp(op, "diff") == 0) {
+     * diff/changelog exit 0 if identical else 1 (keys/lines listed either way). */
+    if (strcmp(op, "eq") == 0 || strcmp(op, "ne") == 0 || strcmp(op, "diff") == 0 ||
+        strcmp(op, "changelog") == 0) {
       const char *path2 = NULL;
       char plate2[CUBALC_HOST_STR_MAX];
       int file_hit2 = 0, equal = 0;
       cubalc_host_result er, ch;
       char flat[CUBALC_HOST_STR_MAX];
+      char esc[CUBALC_HOST_STR_MAX];
       size_t i, o;
 
       plate2[0] = 0;
@@ -5243,27 +5251,67 @@ int main(int argc, char **argv) {
         return pass ? 0 : 1;
       }
 
-      /* diff — changed keys bag (want_same=0) */
+      if (strcmp(op, "diff") == 0) {
+        /* diff — changed keys bag (want_same=0) */
+        memset(&ch, 0, sizeof ch);
+        cubalc_host_json_changed_keys(plate, plate2, 0, &ch);
+        o = 0; flat[0] = 0;
+        for (i = 0; ch.str[i] && o + 2 < sizeof flat; i++) {
+          char c = ch.str[i];
+          if (c == '\n' || c == '\r') {
+            if (o > 0 && flat[o - 1] != ',') flat[o++] = ',';
+          } else if (c == '"' || c == '\\') {
+            flat[o++] = '_';
+          } else {
+            flat[o++] = c;
+          }
+        }
+        flat[o] = 0;
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+               "\"op\":\"diff\",\"path\":\"%s\",\"path2\":\"%s\","
+               "\"equal\":%s,\"n\":%ld,\"keys\":\"%s\","
+               "\"file\":%s,\"file2\":%s,\"version\":\"%s\"}\n",
+               path, path2,
+               equal ? "true" : "false", ch.n, flat,
+               file_hit ? "true" : "false",
+               file_hit2 ? "true" : "false",
+               CUBALC_LANG_VERSION);
+        return equal ? 0 : 1;
+      }
+
+      /* changelog — human/agent "key: old → new" lines (JSONCHANGELOG dual).
+       * Prints newline bag above the meta plate for greppable agent logs. */
       memset(&ch, 0, sizeof ch);
-      cubalc_host_json_changed_keys(plate, plate2, 0, &ch);
-      o = 0; flat[0] = 0;
-      for (i = 0; ch.str[i] && o + 2 < sizeof flat; i++) {
+      cubalc_host_json_changelog(plate, plate2, &ch);
+      if (ch.str[0]) {
+        fputs(ch.str, stdout);
+        if (ch.str[strlen(ch.str) - 1] != '\n')
+          fputc('\n', stdout);
+      }
+      o = 0; esc[0] = 0;
+      for (i = 0; ch.str[i] && o + 2 < sizeof esc; i++) {
         char c = ch.str[i];
-        if (c == '\n' || c == '\r') {
-          if (o > 0 && flat[o - 1] != ',') flat[o++] = ',';
-        } else if (c == '"' || c == '\\') {
-          flat[o++] = '_';
+        if (c == '"' || c == '\\') {
+          esc[o++] = '\\';
+          esc[o++] = c;
+        } else if (c == '\n') {
+          esc[o++] = '\\';
+          esc[o++] = 'n';
+        } else if (c == '\r') {
+        } else if ((unsigned char)c < 32) {
+          esc[o++] = ' ';
         } else {
-          flat[o++] = c;
+          esc[o++] = c;
         }
       }
-      flat[o] = 0;
+      esc[o] = 0;
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
-             "\"op\":\"diff\",\"path\":\"%s\",\"path2\":\"%s\","
-             "\"equal\":%s,\"n\":%ld,\"keys\":\"%s\","
-             "\"file\":%s,\"file2\":%s,\"version\":\"%s\"}\n",
+             "\"op\":\"changelog\",\"path\":\"%s\",\"path2\":\"%s\","
+             "\"equal\":%s,\"n\":%ld,\"lines\":\"%s\","
+             "\"file\":%s,\"file2\":%s,\"version\":\"%s\","
+             "\"note\":\"changelog lines above plate · JSONCHANGELOG dual\"}\n",
              path, path2,
-             equal ? "true" : "false", ch.n, flat,
+             equal ? "true" : "false", ch.n, esc,
              file_hit ? "true" : "false",
              file_hit2 ? "true" : "false",
              CUBALC_LANG_VERSION);
@@ -7701,7 +7749,7 @@ int main(int argc, char **argv) {
       "    init|new|scaffold [f]  starter · --plate for plate_session durable state\n"
       "    examples|starters [p]  curated runnable programs (JSON)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
-      "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/diff (JSON)\n"
+      "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/diff/changelog\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib        list programs/lib INCLUDE snippets\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
