@@ -27461,6 +27461,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"COUNTBYVAL") || kw(&L->cur,"NBYVAL") || kw(&L->cur,"HASVAL") ||
              kw(&L->cur,"SETBYVAL") || kw(&L->cur,"REPLACEVAL") || kw(&L->cur,"REWVAL") ||
              kw(&L->cur,"DELBYVAL") || kw(&L->cur,"DROPVAL") || kw(&L->cur,"RMVAL") ||
+             kw(&L->cur,"ALLEQFLAT") || kw(&L->cur,"SAMEVALFLAT") || kw(&L->cur,"EQVALSFLAT") ||
              kw(&L->cur,"UNIQFLAT") || kw(&L->cur,"DISTINCTFLAT") || kw(&L->cur,"UNIQUEFLAT") ||
              kw(&L->cur,"NEEDFLAT") || kw(&L->cur,"REQUIREFLAT") || kw(&L->cur,"MUSTFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
@@ -35917,6 +35918,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"REPLACEVAL", "REPLACEVAL alias of SETBYVAL"},
       {"DELBYVAL", "DELBYVAL|DROPVAL [FROM plate] value — drop every leaf with exact value write-back · multi-plate"},
       {"DROPVAL", "DROPVAL alias of DELBYVAL"},
+      {"ALLEQFLAT", "ALLEQFLAT|SAMEVALFLAT [FROM plate] [needle] — all matching leaf values identical → LAST_N 0|1 · LAST=common value · multi-plate · read-only"},
+      {"SAMEVALFLAT", "SAMEVALFLAT alias of ALLEQFLAT"},
       {"UNIQFLAT", "UNIQFLAT|DISTINCTFLAT [FROM plate] [needle] — unique matching leaf values → LAST bag · LAST_N=uniques · multi-plate · read-only"},
       {"DISTINCTFLAT", "DISTINCTFLAT alias of UNIQFLAT"},
       {"NEEDFLAT", "NEEDFLAT|REQUIREFLAT [FROM plate] needle… — fail-fast if any leaf-path needle missing · multi-plate · soft twin HASFLAT"},
@@ -48705,6 +48708,150 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# delbyval n=%ld kept=%ld val=%s from=%d\n",
               hr.n, hr.code, needle[0] ? needle : "", have_from);
+    bump(vm); return 1;
+  }
+
+  /* ALLEQFLAT|SAMEVALFLAT [FROM plate] [needle]
+   * Soft probe: all matching leaf values identical → LAST_N 0|1.
+   * LAST = common value when equal (else empty). ALLEQFLAT_N = match count.
+   * Empty/omitted needle → all leaves. Soft empty match → LAST_N=0.
+   * Usability: nest consistency without UNIQFLAT+LINES+CMP glue:
+   *   ALLEQFLAT "role"
+   *   ALLEQFLAT FROM PEER "status"
+   *   SAMEVALFLAT ""
+   */
+  if (kw(&L->cur,"ALLEQFLAT") || kw(&L->cur,"SAMEVALFLAT") || kw(&L->cur,"EQVALSFLAT") ||
+      kw(&L->cur,"MALLEQFLAT") || kw(&L->cur,"PLATE_ALLEQFLAT") || kw(&L->cur,"ALLSAMEFLAT") ||
+      kw(&L->cur,"SAMEFLAT") || kw(&L->cur,"EQALLFLAT") || kw(&L->cur,"UNIFORMFLAT")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(needle, sizeof needle, "%ld", kv);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"ALLEQFLAT") && !kw(&L->cur,"UNIQFLAT") &&
+               !kw(&L->cur,"IF")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_all_eq(plate, needle, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "ALLEQFLAT: fail");
+      var_set_str(vm, "ERR", "ALLEQFLAT: fail");
+      var_set_num(vm, "ALLEQFLAT_N", 0);
+      var_set_num(vm, "LAST_N", 0);
+      bump(vm); return 1;
+    }
+
+    {
+      long eq = hr.code ? 1 : 0;
+      var_set_num(vm, "LAST_N", eq);
+      vm->last_n = eq;
+      if (eq) {
+        var_set_str(vm, "LAST", hr.str);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      } else {
+        var_set_str(vm, "LAST", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      }
+      var_set_str(vm, "ALLEQFLAT", hr.str);
+      var_set_str(vm, "SAMEVALFLAT", hr.str);
+      var_set_num(vm, "ALLEQFLAT_EQ", eq);
+      var_set_num(vm, "SAMEVALFLAT_EQ", eq);
+      var_set_num(vm, "ALLEQFLAT_N", hr.n); /* match count */
+      var_set_num(vm, "SAMEVALFLAT_N", hr.n);
+      var_set_num(vm, "ALLEQFLAT_UNIQUES",
+                  (hr.err[0] && (hr.err[0] >= '0' && hr.err[0] <= '9'))
+                      ? strtol(hr.err, NULL, 10)
+                      : (eq ? 1 : 0));
+    }
+    var_set_str(vm, "ALLEQFLAT_NEEDLE", needle);
+    var_set_num(vm, "ALLEQFLAT_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "ALLEQFLAT_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# alleqflat eq=%d n=%ld needle=%s from=%d\n",
+              hr.code, hr.n, needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 

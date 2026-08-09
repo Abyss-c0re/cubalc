@@ -7421,6 +7421,41 @@ int cubalc_host_json_leaf_uniq(const char *json, const char *needle,
   return 0;
 }
 
+/* ALLEQFLAT: all matching leaf values identical? See header. */
+int cubalc_host_json_leaf_all_eq(const char *json, const char *needle,
+                                 cubalc_host_result *r) {
+  cubalc_host_result uq;
+
+  r_clear(r);
+  r->str[0] = 0;
+  r->err[0] = 0;
+  r->n = 0;
+  r->code = 0;
+  r->ok = 1;
+  memset(&uq, 0, sizeof uq);
+  cubalc_host_json_leaf_uniq(json, needle, &uq);
+  /* uq.n = unique count · uq.code = total matching leaves · uq.str = bag */
+  r->n = uq.code; /* match count in n for agents */
+  if (uq.code == 0 || uq.n == 0) {
+    r->code = 0;
+    r->str[0] = 0;
+    snprintf(r->err, sizeof r->err, "0");
+    return 0;
+  }
+  if (uq.n == 1) {
+    /* single unique value = all equal */
+    snprintf(r->str, sizeof r->str, "%s", uq.str);
+    r->code = 1;
+    snprintf(r->err, sizeof r->err, "1");
+  } else {
+    r->str[0] = 0;
+    r->code = 0;
+    snprintf(r->err, sizeof r->err, "%ld", uq.n);
+  }
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,

@@ -463,6 +463,13 @@ int cubalc_host_json_leaf_del_by_val(const char *json, const char *val,
  * Soft always OK. Read-only. Usability: "what values exist" without VALSFLAT+UNIQ. */
 int cubalc_host_json_leaf_uniq(const char *json, const char *needle,
                                cubalc_host_result *r);
+/* All matching leaf values identical? (ALLEQFLAT / SAMEVALFLAT).
+ * Empty needle → all leaves. Soft empty match → code=0 str="".
+ * Hit all-equal → r->code=1 · r->str=common value · r->n=match count.
+ * Differ → r->code=0 · r->str="" · r->n=match count · r->err=unique count decimal.
+ * Soft always OK. Read-only. Usability: nest consistency without UNIQFLAT+LINES+CMP. */
+int cubalc_host_json_leaf_all_eq(const char *json, const char *needle,
+                                 cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

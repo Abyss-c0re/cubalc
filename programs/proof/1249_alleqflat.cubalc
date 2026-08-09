@@ -1,0 +1,67 @@
+# ALLEQFLAT / SAMEVALFLAT — all matching leaf values identical?
+# Usability: nest consistency without UNIQFLAT+LINES+CMP glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"meta\":{\"role\":\"worker\"},\"cfg\":{\"role\":\"worker\",\"host\":\"h1\"},\"other\":{\"host\":\"h2\",\"role\":\"leader\"}}"
+LET PEER = "{\"a\":{\"status\":\"ok\"},\"b\":{\"status\":\"ok\"},\"c\":{\"status\":\"ok\"}}"
+
+# mixed roles → not equal
+ALLEQFLAT "role"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT ALLEQFLAT_EQ == 0
+ASSERT ALLEQFLAT_N == 3
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single host values differ
+ALLEQFLAT "host"
+ASSERT LAST_N == 0
+ASSERT ALLEQFLAT_N == 2
+
+# after unify roles
+SETBYVAL "leader" "worker"
+ALLEQFLAT "role"
+ASSERT LAST_N == 1
+ASSERT ALLEQFLAT_EQ == 1
+ASSERT ALLEQFLAT_N == 3
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS EQS ALLEQFLAT "worker"
+ASSERT LAST_N == 1
+
+# multi-plate all same
+ALLEQFLAT FROM PEER "status"
+ASSERT ALLEQFLAT_FROM == 1
+SYS EQS ALLEQFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+ASSERT ALLEQFLAT_N == 3
+
+# soft empty miss
+ALLEQFLAT "nope"
+ASSERT LAST_N == 0
+ASSERT ALLEQFLAT_N == 0
+
+# bare / empty needle — all leaves (roles worker x3, hosts differ → not equal)
+ALLEQFLAT ""
+ASSERT LAST_N == 0
+ASSERT ALLEQFLAT_N == 5
+
+# SAMEVALFLAT alias
+SAMEVALFLAT "role"
+ASSERT LAST_N == 1
+SYS EQS SAMEVALFLAT "worker"
+ASSERT LAST_N == 1
+
+# plate unchanged after multi-plate
+LET PLATE = "{\"x\":9}"
+ALLEQFLAT FROM PEER "status"
+GETP "x"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1249_alleqflat: PASS"

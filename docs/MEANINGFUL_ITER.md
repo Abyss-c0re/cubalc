@@ -735,6 +735,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 705. ~~**`COUNTBYVAL` / `HASVAL` + `cubalc plate countbyval|hasval`**~~ **done** (count / soft presence of exact leaf value → LAST_N · multi-plate · CLI duals · without PATHSBYVAL+LINES glue).
 706. ~~**`SETBYVAL` / `REPLACEVAL` + `cubalc plate setbyval`**~~ **done** (rewrite every leaf value equal to old → new write-back · multi-plate · CLI dual · bulk status rewrite without PATHSBYVAL+EACH+SETP glue).
 707. ~~**`DELBYVAL` / `DROPVAL` + `cubalc plate delbyval`**~~ **done** (drop every leaf with exact value write-back · multi-plate · CLI dual · scrub by value without PATHSBYVAL+EACH+DELP glue).
+708. ~~**`ALLEQFLAT` / `SAMEVALFLAT` + `cubalc plate alleqflat`**~~ **done** (all matching leaf values identical → LAST_N 0|1 · LAST=common value · multi-plate · CLI dual · nest consistency without UNIQFLAT+LINES+CMP glue).
 
 ## Tick protocol
 
