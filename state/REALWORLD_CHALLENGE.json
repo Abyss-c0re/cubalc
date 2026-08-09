@@ -3447,6 +3447,6 @@
     "iter268: agent_job=role_s false-friend first-hit for PATHBYVAL worker (W412) \u2014 seed agent_job=runner",
     "iter268: rebuilt out/cubalc (W414) before board tests"
   ],
-  "commit": "pending",
+  "commit": "2a4e863b",
   "ts": "2026-08-09T20:14:39Z"
 }
