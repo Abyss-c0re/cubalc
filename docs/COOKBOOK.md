@@ -261,7 +261,7 @@ Top-level disk plane (no `SYS`):
 | `SEEDP INTO name path` | create-or-load into named var |
 | `SAVEP` / `SAVEP FROM name path` | persist PLATE or named plate |
 
-Mutate/probe (multi-plate `FROM`): `SETP`/`GETP`/`INCP`/`MERGEP`/`NEEDP`/`HASP`/`KEYSP`/`DUMPP`/`FILLP`/`FILLPFILE`.
+Mutate/probe (multi-plate `FROM`): `SETP`/`GETP`/`INCP`/`MERGEP`/`NEEDP`/`HASP`/`KEYSP`/`DUMPP`/`FILLP`/`FILLPFILE`/`PLUCKP`.
 
 Compare plates (no `SYS JSONEQ` glue):
 
@@ -275,8 +275,9 @@ REQUIRE NEQP before after   # fail-fast if still equal (mutation gate)
 SUBSETP need PEER           # soft required fields (values match)
 COVERSP PEER need           # dual · PEER covers need
 REQUIRE SUBSETP need PEER   # fail-fast · lists bad keys
+PLUCKP FROM PEER "host" "agent" "n"   # multi-key peel → value bag
 ```
 
 Libs: `plate_peer` · `plate_peer_save` · `plate_peer_session` · `plate_peer_tick` · `plate_both_save`.  
-Proofs: `1137_plate_peer` · `1138_init_peer.sh` · `1139_plate_peer_tick` · `1143_plate_both_save` · `1145_eqp` · `1130_setp_from` · `1136_loadp`.
+Proofs: `1137_plate_peer` · `1138_init_peer.sh` · `1139_plate_peer_tick` · `1143_plate_both_save` · `1145_eqp` · `1148_pluckp` · `1130_setp_from` · `1136_loadp`.
 

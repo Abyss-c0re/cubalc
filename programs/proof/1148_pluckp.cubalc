@@ -1,0 +1,68 @@
+# PLUCKP / GETPALL — multi-key peel to value bag (multi-plate · no GETP+PUSH)
+# Usability: extract several fields from PLATE/PEER one-shot.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":1,\"role\":\"worker\",\"host\":\"cubeA\",\"tmp\":\"x\"}"
+LET PEER = "{\"agent\":\"hive-02\",\"host\":\"cubeB\",\"n\":9}"
+
+# conventional PLATE multi-peel
+PLUCKP "role" "host" "n"
+ASSERT OK == 1
+ASSERT PLUCKP_N == 3
+ASSERT PLUCKP_HIT == 3
+ASSERT PLUCKP_MISS == 0
+ASSERT PLUCKP_FROM == 0
+SYS NTH 0
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+SYS NTH 1 PLUCKP
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+SYS NTH 2 PLUCKP
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# miss leaves empty field, counts in MISS
+PLUCKP "role" "missing" "n"
+ASSERT PLUCKP_N == 3
+ASSERT PLUCKP_HIT == 2
+ASSERT PLUCKP_MISS == 1
+SYS NTH 1 PLUCKP
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# FROM PEER
+PLUCKP FROM PEER "host" "agent" "n"
+ASSERT OK == 1
+ASSERT PLUCKP_FROM == 1
+SYS EQS PLUCKP_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT PLUCKP_HIT == 3
+SYS NTH 0 PLUCKP
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+SYS NTH 1 PLUCKP
+SYS EQS LAST "hive-02"
+ASSERT LAST_N == 1
+
+# trailing FROM
+PLUCKP "host" "n" FROM PEER
+ASSERT PLUCKP_FROM == 1
+ASSERT PLUCKP_HIT == 2
+SYS NTH 0 PLUCKP
+SYS EQS LAST "cubeB"
+ASSERT LAST_N == 1
+
+# alias
+GETPALL FROM PEER "agent"
+ASSERT PLUCKP_HIT == 1
+SYS EQS LAST "hive-02"
+ASSERT LAST_N == 1
+
+# PLATE untouched across FROM
+GETP "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+
+PRINT "pluckp soft ok"
