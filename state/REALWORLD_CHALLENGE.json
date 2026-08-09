@@ -1,83 +1,89 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 237,
-  "program": "programs/realworld/svc_nest_mergeobj_board.cubalc",
-  "theme": "MERGEOBJ/DEFAULTOBJ nested service config fleet overlay",
-  "version": "1.15.622-usability",
+  "iter": 238,
+  "program": "programs/realworld/svc_nest_field_board.cubalc",
+  "theme": "GETPOBJ/SETPOBJ/INCOBJ + HASPOBJ/KEYSOBJ/NEEDPOBJ nest field plane",
+  "version": "1.15.624-usability",
   "pass": true,
-  "prior_note": "iter 236 EACH KEY inventory; this iter first realworld MERGEOBJ/DEFAULTOBJ (1171 / MEANINGFUL 630)",
+  "prior_note": "iter 237 MERGEOBJ nest overlay; this iter first realworld GETPOBJ/HASPOBJ (1172-1173 / MEANINGFUL 631-632)",
   "tests": [
     {
       "name": "list",
-      "cmd": "list defaults",
+      "cmd": "list",
       "ok": true,
       "note": "list"
     },
     {
       "name": "boot",
-      "cmd": "seed nested cfg/limits/labels + peer",
+      "cmd": "seed nested cfg/stats/labels + peer",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "defaults",
-      "cmd": "DEFAULTOBJ no-clobber fill timeout/mem",
+      "name": "get",
+      "cmd": "GETPOBJ peel + OR soft",
       "ok": true,
-      "note": "defaults"
+      "note": "get"
     },
     {
-      "name": "overlay",
-      "cmd": "MERGEOBJ fleet port/tls/labels win",
+      "name": "set",
+      "cmd": "SETPOBJ port/tls/labels",
       "ok": true,
-      "note": "overlay"
+      "note": "set"
+    },
+    {
+      "name": "bump",
+      "cmd": "INCOBJ stats hits delta=2",
+      "ok": true,
+      "note": "bump"
+    },
+    {
+      "name": "keys",
+      "cmd": "KEYSOBJ inventory + empty nest",
+      "ok": true,
+      "note": "keys"
+    },
+    {
+      "name": "has",
+      "cmd": "HASPOBJ/TYPEPOBJ/NESTHAS",
+      "ok": true,
+      "note": "has"
     },
     {
       "name": "peer",
-      "cmd": "MERGEOBJ/DEFAULTOBJ FROM PEER nest",
+      "cmd": "FROM PEER get/set/inc",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "peel",
-      "cmd": "GETOBJ cfg string + soft OR miss",
-      "ok": true,
-      "note": "peel"
-    },
-    {
-      "name": "patch",
-      "cmd": "PATCHNEST alias + outer host intact",
-      "ok": true,
-      "note": "patch"
-    },
-    {
       "name": "gate",
-      "cmd": "required nest keys admit",
+      "cmd": "NEEDPOBJ contract + soft HAS miss",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "soft",
-      "cmd": "non-object overlay soft + empty bag",
+      "cmd": "OR fb + empty KEYSOBJ + empty bag",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "probe",
-      "cmd": "create nest + scalar replace + fresh DEFAULTOBJ",
+      "cmd": "DELPOBJ + create nest + substring false friend",
       "ok": true,
       "note": "probe"
     },
     {
       "name": "require_unknown",
-      "cmd": "EXIT 2 unknown; shell 0",
+      "cmd": "EXIT 2; shell 0",
       "ok": true,
-      "note": "W7 shell"
+      "note": "W7"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "403/407 pre-existing 4 shell fails; mergeobj PASS 29"
+      "note": "404/409 pre-existing 5 shell fails; getpobj/haspobj PASS"
     }
   ],
   "weaknesses": [
@@ -2496,6 +2502,46 @@
       "title": "STATUS bag last line still omits final NL (W5/W10 class)",
       "detail": "cat -A STATUS.txt ends probe:stats:pb without $. Intermediate rows have $. Reconfirmed on svc nest board after multi-action walk.",
       "repro": "cat -A STATUS.txt last row no $"
+    },
+    {
+      "id": "W303",
+      "severity": "high",
+      "area": "lang|setpobj",
+      "title": "SETPOBJ value rejects variables \u2014 literals only",
+      "detail": "SETPOBJ nest field port_n with LET port_n=9090 \u2192 'SETPOBJ nest field value \u2014 need value'. Agents must branch literals (8080/9090) or only use string/number literals. Breaks dynamic fleet port overlay without CASE on known ports.",
+      "repro": "LET p=9090; SETPOBJ cfg port p \u2192 need value"
+    },
+    {
+      "id": "W304",
+      "severity": "high",
+      "area": "lang|incobj",
+      "title": "INCOBJ delta rejects variables \u2014 unknown form delta_n",
+      "detail": "INCOBJ stats hits delta_n with LET delta_n=2 hard-fails unknown form. Must INCOBJ \u2026 1|2 literal or EQS-branch. Same class as SETPOBJ literal-only values.",
+      "repro": "INCOBJ stats hits delta_n \u2192 unknown form delta_n"
+    },
+    {
+      "id": "W305",
+      "severity": "med",
+      "area": "lang|needpobj",
+      "title": "NEEDPOBJ is fail-fast sticky, not soft miss",
+      "detail": "NEEDPOBJ cfg port nope_field leaves last_err and is not a soft probe. Soft contract checks need HASPOBJ. Distinct from NEEDP style but agents often expect soft+REQUIRE dual.",
+      "repro": "NEEDPOBJ cfg port nope \u2192 NEEDPOBJ: missing in cfg: nope_field"
+    },
+    {
+      "id": "W306",
+      "severity": "high",
+      "area": "host|savep",
+      "title": "SAVEP FROM PEER PEER_PATH need path after plate_peer_session in long boards",
+      "detail": "Short programs SAVEP FROM PEER PEER_PATH ok. In multi-GETFLAG/SUBCMD/CASEI agent boards, plate_both_save and SAVEP FROM PEER peer_path fail 'need path' even when PRINT PEER_PATH showed a path moments earlier, or path token empty at SAVEP. Workaround: skip peer re-save on boot (ensurep seed) or re-JOIN path immediately before SAVEP on later actions.",
+      "repro": "svc_nest_field boot INCLUDE plate_both_save \u2192 SAVEP need path"
+    },
+    {
+      "id": "W307",
+      "severity": "low",
+      "area": "host|write",
+      "title": "STATUS last line still omits final NL",
+      "detail": "cat -A ends probe:del:pb without $. Reconfirmed nest field board.",
+      "repro": "cat -A STATUS.txt last row no $"
     }
   ],
   "workarounds": [
@@ -2608,7 +2654,10 @@
     "EACH KEY FROM PEER without AS flaky (W296)",
     "mergeobj result flags not stable as agent-readable tokens outside short proofs",
     "GETOBJ INTO multi-plate peel brittle after session INCLUDE",
-    "no first-class nested field GET without INTO plate or string HAS"
+    "no first-class nested field GET without INTO plate or string HAS",
+    "nested scalar SET/INCOBJ cannot take runtime vars for value/delta",
+    "plate_both_save brittle in long agent boards after session",
+    "NEEDPOBJ lacks soft twin for probe-then-REQUIRE pattern"
   ],
   "issues_faced": [
     "SYS PUSH KEY unknown form \u2014 switched to SYS CAT",
@@ -2618,8 +2667,12 @@
     "GETP FROM INTO plate unknown form despite into=1",
     "GETOBJ_HIT LET stuck 0 on hit path for gate",
     "EXIT 2 leaves shell rc 0 (W7)",
-    "SYS LOOKUP does not peel JSON object fields (line bags only)"
+    "SYS LOOKUP does not peel JSON object fields (line bags only)",
+    "SETPOBJ/INCOBJ reject variable values (literal-only)",
+    "SAVEP FROM PEER need path after long-board plate_peer_session",
+    "NEEDPOBJ not soft \u2014 use HASPOBJ for soft miss",
+    "EXIT 2 shell rc 0 (W7)"
   ],
-  "commit": "2be1729f96a414c39e554054189f62a5384a5fbd",
-  "ts": "2026-08-09T06:31:02Z"
+  "commit": "pending",
+  "ts": "2026-08-09T06:52:38Z"
 }
