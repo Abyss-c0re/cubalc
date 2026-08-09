@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 572,
-  "version": "1.15.599-usability",
-  "item": "DELTAP/CHANGEOBJP",
-  "item_id": 608,
-  "title": "DELTAP|CHANGEOBJP · multi-plate change payload plate · no SYS JSONDELTA",
-  "commit": "4b63e242dd8eedb4e251fdcaf80a197213b9f36c",
-  "summary": "Mesh agents build apply-ready delta plates from PLATE vs PEER without SYS. proof 1149 19/19 + pluckp reg.",
+  "iter": 573,
+  "version": "1.15.600-usability",
+  "item": "STABLEP/SAMEKEYSP",
+  "item_id": 609,
+  "title": "STABLEP|SAMEKEYSP|EQKEYSP · multi-plate unchanged key bag · dual DIFFP · no SYS JSONSTABLE",
+  "commit": "dcaf503e29d418c57eda86a70122db2310e98cbb",
+  "summary": "Mesh agents list keys that still match between plates without SYS. proof 1150 20/20 + deltap/eqp reg.",
   "proofs": [
-    "1149_deltap 19/19",
-    "1148_pluckp reg 24/24"
+    "1150_stablep 20/20",
+    "1149_deltap reg 19/19",
+    "1145_eqp reg 21/21"
   ],
-  "when": "2026-08-09T02:25:28Z",
+  "when": "2026-08-09T02:38:21Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4b63e242dd8eedb4e251fdcaf80a197213b9f36c",
+  "sha": "dcaf503e29d418c57eda86a70122db2310e98cbb",
   "note": "clean tree; EVOLVE_PAUSED"
 }
