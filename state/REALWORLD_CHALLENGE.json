@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 248,
-  "program": "programs/realworld/svc_fillp_path_report_board.cubalc",
-  "theme": "FILLP path nest report + TYPEP kind gate",
-  "version": "1.15.648-usability",
+  "iter": 249,
+  "program": "programs/realworld/svc_path_rename_board.cubalc",
+  "theme": "path RENAMEP/COPYP/SWAPP config migrate plane",
+  "version": "1.15.650-usability",
   "pass": true,
-  "prior_note": "iter 247 PLUCKP multi-key digest; this iter first realworld FILLP {{freq.error}} path templates (proof 1196) + TYPEP path kinds",
+  "prior_note": "iter 248 FILLP path report; this iter first realworld RENAMEP/COPYP/SWAPP dotted paths (proof 1200)",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed nest + FILLP path smoke + TYPEP num",
+      "cmd": "seed cfg/flags nest",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "fill",
-      "cmd": "FILLP multi path + slash alias",
+      "name": "rename",
+      "cmd": "path+cross-nest+slash RENAMEP",
       "ok": true,
-      "note": "fill"
+      "note": "rename"
     },
     {
-      "name": "keys",
-      "cmd": "FILLPKEYS path slots + false friend",
+      "name": "copy",
+      "cmd": "COPYP keep src + soft miss",
       "ok": true,
-      "note": "keys"
+      "note": "copy"
+    },
+    {
+      "name": "swap",
+      "cmd": "SWAPP flags + slash live",
+      "ok": true,
+      "note": "swap"
     },
     {
       "name": "soft",
-      "cmd": "miss empty slots x=/z= host keep",
+      "cmd": "miss rename/copy no create",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "strict",
-      "cmd": "FILLP STRICT + NEEDFILLP + soft twin",
-      "ok": true,
-      "note": "strict"
-    },
-    {
       "name": "peer",
-      "cmd": "FILLP FROM PEER path + NEEDP",
+      "cmd": "RENAMEP/COPYP FROM PEER path",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "type",
-      "cmd": "TYPEP num/str/obj/missing + slash",
+      "name": "gate",
+      "cmd": "post-migrate HASP/NEEDP",
       "ok": true,
-      "note": "type"
-    },
-    {
-      "name": "report",
-      "cmd": "FILLPFILE materialize out_report",
-      "ok": true,
-      "note": "report"
+      "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "empty bag + FILLPKEYS path + schema",
+      "cmd": "MOVEKEYP/DUPKEYP/XCHGP aliases",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "422/435 pre-existing cli shell set fails; fillp_path PASS 23"
+      "note": "423/438 pre-existing cli shell set fails; path_rename_copy_swap PASS 27"
     }
   ],
   "weaknesses": [
@@ -2848,25 +2842,57 @@
       "title": "WRITE omit trailing NL on META/VAL/STATUS last line",
       "detail": "Reconfirmed W5/W343: cat -A META/VAL no final $; STATUS last probe line without NL.",
       "repro": "cat -A META.txt after strict"
+    },
+    {
+      "id": "W347",
+      "severity": "med",
+      "area": "lang|renamep_soft",
+      "title": "RENAMEP/COPYP soft miss returns OK=1 with n=0 — silent no-op",
+      "detail": "RENAMEP missing.path→other and COPYP flags.nope→flags.x leave HASP dst=0 but process OK. Agents must HASP dst after migrate; relying on OK alone admits false success. Confirmed soft path in svc_path_rename board.",
+      "repro": "RENAMEP missing.path other.place; HASP other.place → 0; OK still 1"
+    },
+    {
+      "id": "W348",
+      "severity": "low",
+      "area": "lang|renamep_batch",
+      "title": "No multi-pair RENAMEP/COPYP/SWAPP batch form",
+      "detail": "Config migrate needs chained RENAMEP lines (port→listen, tls→net.tls, retries→retry_n). No RENAMEPALL pairs bag. Ops scripts grow verbose for schema waves.",
+      "repro": "three RENAMEP calls vs one batch form (missing)"
+    },
+    {
+      "id": "W349",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL META/VAL/STATUS",
+      "detail": "Reconfirmed W5/W343/W346: cat -A META/VAL no final newline after clear.",
+      "repro": "cat -A META.txt after clear"
+    },
+    {
+      "id": "W350",
+      "severity": "high",
+      "area": "host|cli_plate",
+      "title": "CLI plate shell duals still fail unknown form set",
+      "detail": "Selftest 15 fails all *cli_plate*.sh including rename/copy/swap duals: unknown form set. In-language 1200 PASS. Outer shell harness regressions block CLI parity proofs.",
+      "repro": "./out/cubalc selftest → cli_plate_rename_copy_swap FAIL set"
     }
   ],
   "workarounds": [
-    "Soft miss: inspect expanded string empty slots not FILLP_MISS_KEYS via HASLINE",
-    "FILLPKEYS: LET body=LAST then HASLINE body key",
-    "Shell contract: EXIT n; REQUIRE ENV NUM softens non-numeric"
+    "After RENAMEP/COPYP always HASP dst + GETP value",
+    "Chain RENAMEP for multi-field schema waves",
+    "Shell-visible miss: EXIT n after HASP miss"
   ],
   "language_gaps": [
-    "FILLP path templates work well for ops digests ({{freq.error}})",
-    "FILLPKEYS path slot inventory works with SYS HASLINE on keys bag (LAST)",
-    "TYPEP path kinds solid for admit gates",
-    "Miss-key bag tooling brittle in agent-length scripts (HASLINE specials)",
-    "FILLPFILE path materialize works for report files"
+    "RENAMEP/COPYP/SWAPP dotted paths work for config migrate plane",
+    "Cross-nest move (cfg.tls→net.tls) creates intermediate nest",
+    "FROM PEER path rename/copy works multi-plate",
+    "Soft miss is quiet OK — contract needs HASP twin",
+    "CLI plate duals harness broken independently of language"
   ],
   "issues_faced": [
-    "SYS HASLINE on FILLP_MISS_KEYS/var dead in long board (W344) — used body empty-slot shape",
-    "FILLP soft miss body spacing requires STARTS/HAS not ENDS host",
-    "Selftest 13 pre-existing CLI shell set fails; cubalc proofs green including fillp_path"
+    "Soft miss RENAMEP/COPYP OK without dst create — must HASP verify",
+    "Schema migrate is multi-statement only (no batch pairs)",
+    "Selftest CLI shell duals still broken (set form); language proofs green"
   ],
-  "commit": "1c0f08d0",
-  "ts": "2026-08-09T10:59:58Z"
+  "commit": "",
+  "ts": "2026-08-09T11:24:47Z"
 }
