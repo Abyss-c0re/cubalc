@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 254,
-  "program": "programs/realworld/svc_pathkeys_flat_board.cubalc",
-  "theme": "PATHKEYS leaf discovery + FLATKV path:val inventory",
-  "version": "1.15.661-usability",
+  "iter": 255,
+  "program": "programs/realworld/svc_flatops_scrub_board.cubalc",
+  "theme": "GREPFLAT/PRUNEFLAT/MERGEFLAT nest leaf scrub plane",
+  "version": "1.15.666-usability",
   "pass": true,
-  "prior_note": "iter 253 GETOBJ path; this iter first realworld PATHKEYS (1210) + FLATKV (1211) leaf inventory",
+  "prior_note": "iter 254 PATHKEYS/FLATKV; this iter first realworld GREPFLAT+PRUNEFLAT+MERGEFLAT (1214-1216)",
   "tests": [
     {
       "name": "list",
@@ -15,63 +15,63 @@
     },
     {
       "name": "boot",
-      "cmd": "seed + PATHKEYS/FLATKV smoke",
+      "cmd": "seed noisy nest",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "leaves",
-      "cmd": "full PATHKEYS + false friend",
+      "name": "grepf",
+      "cmd": "GREPFLAT/GREPVFLAT/GREPFLATI/KEEPFLAT",
       "ok": true,
-      "note": "leaves"
+      "note": "grepf"
     },
     {
-      "name": "flat",
-      "cmd": "full FLATKV path:val export",
+      "name": "prune",
+      "cmd": "PRUNEFLAT tmp+noise",
       "ok": true,
-      "note": "flat"
+      "note": "prune"
     },
     {
-      "name": "scope",
-      "cmd": "relative under cfg/meta",
+      "name": "keep",
+      "cmd": "KEEPONLYFLAT cfg project",
       "ok": true,
-      "note": "scope"
+      "note": "keep"
+    },
+    {
+      "name": "merge",
+      "cmd": "MERGEFLAT cfg overlay keep identity",
+      "ok": true,
+      "note": "merge"
     },
     {
       "name": "peer",
-      "cmd": "PATHKEYS/FLATKV FROM PEER net",
+      "cmd": "GREPFLAT/PRUNEFLAT FROM PEER",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "miss nest empty bags",
+      "cmd": "empty needle prune + miss grepf",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "inventory contract",
+      "cmd": "post-scrub contract",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "DOTPATHS/LEAFKV aliases",
+      "cmd": "DELFLAT/DROPFLAT/OVERLAYFLAT",
       "ok": true,
       "note": "probe"
-    },
-    {
-      "name": "require_unknown",
-      "cmd": "EXIT 2; REQUIRE=abc softens",
-      "ok": true,
-      "note": "W7/W6"
     },
     {
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "432/454 pre-existing cli shell fails; pathkeys PASS 32 flatkv PASS 31"
+      "note": "437/464 pre-existing cli shell fails; grepflat PASS 31 pruneflat PASS 24 mergeflat PASS 22"
     }
   ],
   "weaknesses": [
@@ -3018,25 +3018,57 @@
       "title": "CLI plate leaves/flat shell duals fail unknown form set",
       "detail": "cli_plate_leaves and cli_plate_flat FAIL set; in-language 1210/1211 PASS. Same harness class as W350/W354.",
       "repro": "selftest cli_plate_flat FAIL"
+    },
+    {
+      "id": "W369",
+      "severity": "high",
+      "area": "lang|mergeflat_clobber",
+      "title": "MERGEFLAT PEER overlays identity leaves (agent/host)",
+      "detail": "MERGEFLAT PEER copies all peer leaf paths including agent/host/schema, clobbering plate identity. Ops must MERGEFLAT a curated overlay object (cfg/ok only) not the raw PEER plate. Documented when full PEER overlay rewrote agent to hive-peer.",
+      "repro": "MERGEFLAT PEER → plate agent becomes hive-peer"
+    },
+    {
+      "id": "W370",
+      "severity": "med",
+      "area": "lang|keeponly_destructive",
+      "title": "KEEPONLYFLAT is fully destructive project",
+      "detail": "KEEPONLYFLAT cfg drops host/role/agent; later NEEDP fails unless SETP reseed. No KEEPONLYFLAT TO / non-destructive project form.",
+      "repro": "KEEPONLYFLAT cfg; HASP host → 0"
+    },
+    {
+      "id": "W371",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL",
+      "detail": "W5 reconfirm",
+      "repro": "cat -A META.txt"
+    },
+    {
+      "id": "W372",
+      "severity": "high",
+      "area": "host|cli_plate",
+      "title": "CLI plate grepf/prune/mergeflat duals fail set form",
+      "detail": "Selftest 27 CLI fails include grepf/prune/mergeflat shells. Language proofs PASS.",
+      "repro": "selftest cli_plate_mergeflat FAIL"
     }
   ],
   "workarounds": [
-    "Build full path:val needle with SYS CAT before HASLINE",
-    "LET body=LAST after PATHKEYS/FLATKV then HASLINE body",
-    "Treat empty: as present empty object not miss"
+    "MERGEFLAT curated overlay not full PEER plate",
+    "SETP agent/host/schema after KEEPONLYFLAT",
+    "Full path:val needles for HASLINE on GREPFLAT bags"
   ],
   "language_gaps": [
-    "PATHKEYS excellent for deep leaf discovery without recursion",
-    "FLATKV excellent for path:value export digests",
-    "Relative scope under nest drops absolute prefix",
-    "Intermediates not listed as leaves (good)",
-    "HASLINE exact-line vs prefix is easy footgun on FLATKV"
+    "GREPFLAT/GREPVFLAT/GREPFLATI excellent for leaf triage",
+    "PRUNEFLAT write-back scrub solid",
+    "MERGEFLAT deep overlay powerful but identity-clobber footgun",
+    "KEEPONLYFLAT project is destructive",
+    "Empty PRUNEFLAT needle is safe no-op"
   ],
   "issues_faced": [
-    "HASLINE prefix host: fails — need full path:val line",
-    "Empty {} is a leaf path (document as inventory quirk)",
-    "CLI shell duals still broken for leaves/flat"
+    "MERGEFLAT PEER clobbered identity — use curated OVERLAY",
+    "KEEPONLYFLAT needs identity reseed for gate",
+    "CLI duals still broken"
   ],
-  "commit": "74b85fe6",
-  "ts": "2026-08-09T13:30:20Z"
+  "commit": "",
+  "ts": "2026-08-09T14:20:39Z"
 }

@@ -1,0 +1,1187 @@
+# svc_flatops_scrub_board.cubalc — GREPFLAT/PRUNEFLAT/MERGEFLAT nest leaf ops plane
+#
+# Real use: ops agents filter, scrub, project, and peer-overlay nested config
+# leaves without FLATKV+GREP or multi DELP glue. First realworld of proofs
+# 1214 GREPFLAT + 1215 PRUNEFLAT + 1216 MERGEFLAT.
+#
+#   GREPFLAT|GREPVFLAT|GREPFLATI needle · PRUNEFLAT|KEEPONLYFLAT · MERGEFLAT overlay
+#   soft empty needle · FROM PEER · false-friend needles
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sfo_$$
+#   ./out/cubalc run programs/realworld/svc_flatops_scrub_board.cubalc boot
+#   ./out/cubalc run ... grepf|prune|keep|merge|peer|soft|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SFO_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_SFO_REQUIRE
+#
+# Edges:
+#   soft empty needle; miss prune n=0; false-friend path needles; WRITE NL;
+#   NUM softens REQUIRE; EXIT shell (W7); HASLINE exact path:val
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_flatops_scrub_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_flatops_scrub -- boot|grepf|prune|keep|merge|peer|soft|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeX"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SFO_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SFO_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+LET bag_n = 0
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET body = ""
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET soft_ok = 0
+LET gate_ok = 0
+LET path_val = ""
+
+ONEOF ACTION "boot", "grepf", "prune", "keep", "merge", "peer", "soft", "gate", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "grepf" THEN
+    LET op = "grepf"
+  WHEN "prune" THEN
+    LET op = "prune"
+  WHEN "keep" THEN
+    LET op = "keep"
+  WHEN "merge" THEN
+    LET op = "merge"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — seed noisy nest for scrub/project
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-flatops\",\"schema\":\"cubalc.svc_flatops_scrub.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"n\":1,\"cfg\":{\"meta\":{\"role\":\"worker\",\"x\":1,\"zone\":\"east\"},\"port\":8080,\"tmp\":9,\"tls\":0},\"flags\":{\"debug\":1,\"live\":1,\"noise\":3},\"ok\":true}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"host\":\"" host_s "\",\"schema\":\"cubalc.svc_flatops_scrub.v1\",\"cfg\":{\"meta\":{\"role\":\"leader\",\"zone\":\"west\"},\"port\":9090},\"ok\":true,\"tag\":\"t\",\"net\":{\"peer\":{\"host\":\"peerB\",\"tls\":1},\"tmp\":1}}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  HASP "cfg.tmp"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  HASP "flags.noise"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  FLATKV
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "cfg.port:8080"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET take_n = 1
+        LET has_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot flat port"
+        FAIL "boot flat port"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot flags noise"
+      FAIL "boot flags noise"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot cfg tmp"
+    FAIL "boot cfg tmp"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit load_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# grepf — GREPFLAT / GREPVFLAT / GREPFLATI
+SYS EQS op "grepf"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  GREPFLAT "cfg"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "cfg.port:8080"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "cfg.meta.role:worker"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "host:"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  # host not in cfg filter — use full needle attempt
+  SYS CAT "host:" host_s
+  LET path_val = LAST
+  CLEAR_ERR
+  SYS HASLINE body path_val
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GREPVFLAT "cfg"
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS HASLINE w_s path_val
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE w_s "cfg.port:8080"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  GREPFLATI "CFG.META"
+  LET d_s = LAST
+  CLEAR_ERR
+  SYS HASLINE d_s "cfg.meta.role:worker"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  KEEPFLAT "port"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "cfg.port:8080"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 0 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 0 THEN
+            IF gate_ok == 1 THEN
+              IF admit_n == 1 THEN
+                LET hit = 1
+                LET note_msg = "grepf ok"
+                LET admit_n = 1
+                LET take_n = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "grepf keepflat port"
+                FAIL "grepf keepflat port"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "grepf icase meta"
+              FAIL "grepf icase meta"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "grepf invert no cfg"
+            FAIL "grepf invert no cfg"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "grepf invert host"
+          FAIL "grepf invert host"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "grepf cfg no host"
+        FAIL "grepf cfg no host"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "grepf meta role"
+      FAIL "grepf meta role"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "grepf port"
+    FAIL "grepf port"
+    CLEAR_ERR
+  END
+  SYS CAT "grepf:cfg:gf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "grepf:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit has_n gate_ok note_msg
+  CLEAR_ERR
+END
+
+# prune — PRUNEFLAT noise paths write-back
+SYS EQS op "prune"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # ensure noise present
+  SETP "cfg.tmp" 9
+  CLEAR_ERR
+  SETP "flags.noise" 3
+  CLEAR_ERR
+  SETP "flags.debug" 1
+  CLEAR_ERR
+  HASP "cfg.tmp"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  PRUNEFLAT "tmp"
+  CLEAR_ERR
+  HASP "cfg.tmp"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  PRUNEFLAT "noise"
+  CLEAR_ERR
+  HASP "flags.noise"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "cfg.port"
+  SYS EQS LAST "8080"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "host"
+  SYS EQS LAST host_s
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  # false friend
+  HASP "cfg.tm"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF soft_ok == 0 THEN
+      IF load_hit == 0 THEN
+        IF has_n == 1 THEN
+          IF gate_ok == 1 THEN
+            IF miss_n == 0 THEN
+              LET hit = 1
+              LET note_msg = "prune ok"
+              LET admit_n = 1
+              LET take_n = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "prune false tm"
+              FAIL "prune false tm"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "prune host keep"
+            FAIL "prune host keep"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "prune port keep"
+          FAIL "prune port keep"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "prune noise gone"
+        FAIL "prune noise gone"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "prune tmp gone"
+      FAIL "prune tmp gone"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "prune pre tmp"
+    FAIL "prune pre tmp"
+    CLEAR_ERR
+  END
+  SYS CAT "prune:tmp+noise:pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "prune:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n soft_ok load_hit has_n note_msg
+  CLEAR_ERR
+END
+
+# keep — KEEPONLYFLAT project cfg.*
+SYS EQS op "keep"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # reseed full plate for project
+  SETP "host" host_s
+  CLEAR_ERR
+  SETP "role" role_s
+  CLEAR_ERR
+  SETP "n" 1
+  CLEAR_ERR
+  SETP "cfg.port" 8080
+  CLEAR_ERR
+  SETP "cfg.tls" 0
+  CLEAR_ERR
+  SETP "cfg.meta.role" "worker"
+  CLEAR_ERR
+  SETP "cfg.meta.zone" "east"
+  CLEAR_ERR
+  SETP "flags.live" 1
+  CLEAR_ERR
+  KEEPONLYFLAT "cfg"
+  CLEAR_ERR
+  HASP "host"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  HASP "n"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  HASP "flags.live"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "cfg.port"
+  SYS EQS LAST "8080"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "cfg.meta.role"
+  SYS EQS LAST "worker"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  FLATKV
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "cfg.port:8080"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "host:"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # restore agent/schema for later gate — KEEPONLY is destructive
+  SETP "agent" "svc-flatops"
+  CLEAR_ERR
+  SETP "schema" "cubalc.svc_flatops_scrub.v1"
+  CLEAR_ERR
+  SETP "host" host_s
+  CLEAR_ERR
+  SETP "role" role_s
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF peel_hit == 0 THEN
+    IF load_hit == 0 THEN
+      IF soft_ok == 0 THEN
+        IF has_n == 1 THEN
+          IF gate_ok == 1 THEN
+            IF admit_n == 1 THEN
+              IF miss_n == 0 THEN
+                LET hit = 1
+                LET note_msg = "keep ok"
+                LET admit_n = 1
+                LET take_n = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "keep no host flat"
+                FAIL "keep no host flat"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "keep flat port"
+              FAIL "keep flat port"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "keep meta role"
+            FAIL "keep meta role"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "keep port"
+          FAIL "keep port"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "keep flags gone"
+        FAIL "keep flags gone"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "keep n gone"
+      FAIL "keep n gone"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "keep host gone"
+    FAIL "keep host gone"
+    CLEAR_ERR
+  END
+  SYS CAT "keep:cfg:kp"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "keep:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit has_n admit_n note_msg
+  CLEAR_ERR
+END
+
+# merge — MERGEFLAT PEER deep overlay (reseed base first)
+SYS EQS op "merge"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # base plate with deep nest
+  SETP "host" host_s
+  CLEAR_ERR
+  SETP "role" role_s
+  CLEAR_ERR
+  SETP "agent" "svc-flatops"
+  CLEAR_ERR
+  SETP "schema" "cubalc.svc_flatops_scrub.v1"
+  CLEAR_ERR
+  SETP "n" 1
+  CLEAR_ERR
+  SETP "cfg.port" 8080
+  CLEAR_ERR
+  SETP "cfg.meta.role" "worker"
+  CLEAR_ERR
+  SETP "cfg.meta.x" 1
+  CLEAR_ERR
+  # overlay only cfg/ok leaves — full PEER would clobber agent/host (W369)
+  LET OVERLAY = "{\"cfg\":{\"meta\":{\"role\":\"leader\",\"zone\":\"west\"},\"port\":9090},\"ok\":true}"
+  MERGEFLAT OVERLAY
+  CLEAR_ERR
+  GETP "host"
+  SYS EQS LAST host_s
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS HAS LAST "svc-flatops"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "cfg.meta.role"
+  SYS EQS LAST "leader"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "cfg.port"
+  SYS EQS LAST "9090"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "cfg.meta.zone"
+  SYS EQS LAST "west"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  GETP "ok"
+  SYS EQS LAST "1"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  GETPN "cfg.meta.x"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF gate_ok == 1 THEN
+            IF admit_n == 1 THEN
+              IF miss_n == 1 THEN
+                LET hit = 1
+                LET note_msg = "merge ok"
+                LET admit_n = 1
+                LET take_n = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "merge x keep"
+                FAIL "merge x keep"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "merge ok leaf"
+              FAIL "merge ok leaf"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "merge zone"
+            FAIL "merge zone"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "merge port"
+          FAIL "merge port"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "merge role leader"
+        FAIL "merge role leader"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "merge agent keep"
+      FAIL "merge agent keep"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "merge host keep"
+    FAIL "merge host keep"
+    CLEAR_ERR
+  END
+  SYS CAT "merge:peer:mg"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "merge:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit soft_ok has_n note_msg
+  CLEAR_ERR
+END
+
+# peer — GREPFLAT/PRUNEFLAT FROM PEER
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  GREPFLAT FROM PEER "peer"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "net.peer.host:peerB"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "net.peer.tls:1"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "net.tmp:1"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  PRUNEFLAT FROM PEER "tmp"
+  CLEAR_ERR
+  HASP FROM PEER "net.tmp"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "net.peer.host"
+  SYS EQS LAST "peerB"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS HAS LAST "svc-flatops"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "peer.json"
+  LET peer_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE peer_path PEER
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 0 THEN
+        IF has_n == 0 THEN
+          IF gate_ok == 1 THEN
+            IF admit_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "peer ok"
+              LET admit_n = 1
+              LET take_n = 1
+              LET miss_n = 0
+            ELSE
+              LET miss = 1
+              LET note_msg = "peer plate agent"
+              FAIL "peer plate agent"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer host keep"
+            FAIL "peer host keep"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer tmp pruned"
+          FAIL "peer tmp pruned"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer grepf no tmp"
+        FAIL "peer grepf no tmp"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer tls"
+      FAIL "peer tls"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer grepf host"
+    FAIL "peer grepf host"
+    CLEAR_ERR
+  END
+  SYS CAT "peer:prune:pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit has_n gate_ok note_msg
+  CLEAR_ERR
+END
+
+# soft — empty needle / miss needle n=0
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  PRUNEFLAT ""
+  CLEAR_ERR
+  GETP "host"
+  SYS EQS LAST host_s
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  PRUNEFLAT "ghost.noise"
+  CLEAR_ERR
+  HASP "host"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GREPFLAT "zzz.nope"
+  LET body = LAST
+  CLEAR_ERR
+  SYS LINES body
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET has_n = LAST_N
+  CLEAR_ERR
+  HASP "cfg.por"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  GREPFLAT "cfg"
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS HASLINE w_s "cfg.port:9090"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  # after merge port may be 9090; accept either 8080 or 9090
+  SYS HASLINE w_s "cfg.port:8080"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF gate_ok == 0 THEN
+    IF admit_n == 1 THEN
+      LET gate_ok = 1
+    END
+  END
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 0 THEN
+        IF has_n == 0 THEN
+          IF miss_n == 0 THEN
+            IF gate_ok == 1 THEN
+              LET hit = 1
+              LET note_msg = "soft ok"
+              LET admit_n = 1
+              LET take_n = 0
+            ELSE
+              LET miss = 1
+              LET note_msg = "soft grepf recover"
+              FAIL "soft grepf recover"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "soft false por"
+            FAIL "soft false por"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "soft empty bag"
+          FAIL "soft empty bag"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft grepf empty"
+        FAIL "soft grepf empty"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft host keep"
+      FAIL "soft host keep"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft empty prune host"
+    FAIL "soft empty prune host"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:noop:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit soft_ok gate_ok note_msg
+  CLEAR_ERR
+END
+
+# gate — post-scrub contract
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  NEEDP "host" "schema" "role" "agent"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF OK == 0 THEN
+    LET admit_n = 0
+  END
+  CLEAR_ERR
+  HASP "cfg.port"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  HASP "cfg.tmp"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  FLATKV
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "cfg.meta.role:leader"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "cfg.meta.role:worker"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # role is leader after merge, or worker if merge skipped
+  LET gate_ok = 0
+  IF load_hit == 1 THEN
+    LET gate_ok = 1
+  END
+  IF has_n == 1 THEN
+    LET gate_ok = 1
+  END
+  CLEAR_ERR
+  HASP "cfg.por"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF admit_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF soft_ok == 0 THEN
+        IF gate_ok == 1 THEN
+          IF miss_n == 0 THEN
+            LET hit = 1
+            LET note_msg = "gate ok"
+            LET admit_n = 1
+            LET take_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "gate false por"
+            FAIL "gate false por"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate meta role"
+          FAIL "gate meta role"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate tmp pruned"
+        FAIL "gate tmp pruned"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate has port"
+      FAIL "gate has port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate needp"
+    FAIL "gate needp"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:1:gn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit soft_ok gate_ok note_msg
+  CLEAR_ERR
+END
+
+# probe — DELFLAT/DROPFLAT/OVERLAYFLAT aliases + empty bag
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SETP "cfg.noise2" 1
+  CLEAR_ERR
+  DELFLAT "noise2"
+  CLEAR_ERR
+  HASP "cfg.noise2"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  DROPFLAT "zzz"
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS LINES w_s
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  # DROPFLAT is invert grepf — bag of non-matching; n may be large
+  GETP "agent"
+  SYS HAS LAST "svc-flatops"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  OVERLAYFLAT "{}"
+  CLEAR_ERR
+  GETP "host"
+  SYS EQS LAST host_s
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  SCRUBFLAT "ghost"
+  CLEAR_ERR
+  HASP "host"
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF load_hit == 0 THEN
+    IF peel_hit == 0 THEN
+      IF has_n == 1 THEN
+        IF gate_ok == 1 THEN
+          IF admit_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "probe ok"
+            LET admit_n = 1
+            LET take_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe scrub host"
+            FAIL "probe scrub host"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe overlay empty"
+          FAIL "probe overlay empty"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe agent"
+        FAIL "probe agent"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe delflat"
+      FAIL "probe delflat"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe empty bag"
+    FAIL "probe empty bag"
+    CLEAR_ERR
+  END
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  SYS CAT "probe:flat:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit has_n gate_ok note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_flatops_scrub.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " has=" has_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_flatops_scrub_board: end"
