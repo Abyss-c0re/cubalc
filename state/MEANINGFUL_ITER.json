@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 639,
-  "version": "1.15.666-usability",
-  "item": "MERGEFLAT + plate mergeflat",
-  "item_id": 675,
-  "title": "MERGEFLAT/OVERLAYFLAT + cubalc plate mergeflat \u00b7 deep leaf overlay \u00b7 nest-aware MERGEP",
-  "commit": "1798f7e3ece145bab6996692107a2ceafef3143e",
-  "summary": "Deep leaf overlay without FLATKV+UNFLAT or shallow MERGEP. proof 1216 + CLI PASS.",
+  "iter": 640,
+  "version": "1.15.667-usability",
+  "item": "RENAMEFLAT + plate renameflat",
+  "item_id": 676,
+  "title": "RENAMEFLAT/MOVEFLAT + cubalc plate renameflat \u00b7 leaf path prefix rewrite write-back",
+  "commit": "8f03982ab1926dfd69482eafd08d476ba05c0df9",
+  "summary": "Restructure nest paths by prefix without multi RENAMEP. proof 1217 + CLI PASS.",
   "proofs": [
-    "1216_mergeflat PASS",
-    "1216_cli_plate_mergeflat PASS",
-    "1215_pruneflat reg PASS"
+    "1217_renameflat PASS",
+    "1217_cli_plate_renameflat PASS",
+    "1216_mergeflat reg PASS"
   ],
-  "when": "2026-08-09T14:16:36Z",
+  "when": "2026-08-09T14:26:48Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1798f7e3ece145bab6996692107a2ceafef3143e",
-  "note": "after PRUNEFLAT plane; EVOLVE_PAUSED"
+  "sha": "8f03982ab1926dfd69482eafd08d476ba05c0df9",
+  "note": "after MERGEFLAT plane; EVOLVE_PAUSED"
 }
