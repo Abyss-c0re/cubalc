@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 582,
-  "version": "1.15.609-usability",
-  "item": "SUMNP/TOPKEYP",
-  "item_id": 618,
-  "title": "SUMNP|MAXNP|MINNP|AVGNP · TOPKEYP|BOTKEYP · multi-plate numeric aggregates · no SYS JSONSUMN/JSONTOPKEY",
-  "commit": "61e96ee1006a941d0a74dc51cb14e35532ea43ed",
-  "summary": "Score/FREQ plate sum max min mean top/bot key without SYS. proof 1159 30/30 + tokvp reg. thrash restored first.",
+  "iter": 583,
+  "version": "1.15.610-usability",
+  "item": "THRESHP/DROPZEROP/CAPP",
+  "item_id": 619,
+  "title": "THRESHP|KEEPVP · DROPZEROP|KEEPNZP · CAPP|CLAMPP · multi-plate value denoise/clamp · no TOKV+THRESHKV/DROPZERO/CAPKV+FROMKVP",
+  "commit": "3a97f0afa1a08fedf8083d378a9a7751a700d0aa",
+  "summary": "FREQ/score plate keep-by-min, drop-zero, clamp-max without bag glue. proof 1160 43/43.",
   "proofs": [
-    "1159_sumnp 30/30",
-    "1157_tokvp reg 26/26"
+    "1160_threshp 43/43",
+    "1159_sumnp reg 30/30"
   ],
-  "when": "2026-08-09T04:05:28Z",
+  "when": "2026-08-09T04:20:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "61e96ee1006a941d0a74dc51cb14e35532ea43ed",
-  "note": "thrash restore then feature; EVOLVE_PAUSED"
+  "sha": "3a97f0afa1a08fedf8083d378a9a7751a700d0aa",
+  "note": "invented after backlog 618; EVOLVE_PAUSED"
 }
