@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 645,
-  "version": "1.15.672-usability",
-  "item": "THRESHFLAT + DROPZEROFLAT + plate duals",
-  "item_id": 681,
-  "title": "THRESHFLAT/DROPZEROFLAT + cubalc plate threshflat|dropzeroflat · pure-int leaf value denoise by path needle",
-  "commit": "ec28efa395782b93bf112e7d6717b7944683d5c1",
-  "summary": "Nest FREQ denoise without GETOBJ+THRESHP glue. proof 1222 + CLI PASS.",
+  "iter": 646,
+  "version": "1.15.673-usability",
+  "item": "CAPFLAT + plate capflat",
+  "item_id": 682,
+  "title": "CAPFLAT/CLAMPFLAT + cubalc plate capflat · clamp pure-int leaves to max by path needle",
+  "commit": "eaddaa3b0fbc64573c163d0fbbc2eb333ed12733",
+  "summary": "Nest score ceilings without multi GETP+SETP. proof 1223 + CLI PASS.",
   "proofs": [
-    "1222_threshflat PASS",
-    "1222_cli_plate_threshflat PASS",
-    "1221_toppathflat reg PASS"
+    "1223_capflat PASS",
+    "1223_cli_plate_capflat PASS",
+    "1222_threshflat reg PASS"
   ],
-  "when": "2026-08-09T15:25:00Z",
+  "when": "2026-08-09T15:35:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ec28efa395782b93bf112e7d6717b7944683d5c1",
-  "note": "after TOPPATHFLAT plane; EVOLVE_PAUSED"
+  "sha": "eaddaa3b0fbc64573c163d0fbbc2eb333ed12733",
+  "note": "after THRESHFLAT plane; EVOLVE_PAUSED"
 }
