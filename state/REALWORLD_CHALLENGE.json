@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 272,
-  "program": "programs/realworld/svc_setbyval_rewrite_board.cubalc",
-  "theme": "SETBYVAL bulk leaf value rewrite",
-  "version": "1.15.708-usability",
+  "iter": 273,
+  "program": "programs/realworld/svc_delbyval_scrub_board.cubalc",
+  "theme": "DELBYVAL scrub leaves by exact value",
+  "version": "1.15.709-usability",
   "pass": true,
-  "prior_note": "iter 271 COUNTBYVAL; this iter first realworld 1247 SETBYVAL",
+  "prior_note": "iter 272 SETBYVAL; this iter first realworld 1248 DELBYVAL",
   "tests": [
     {
       "name": "list",
@@ -20,44 +20,44 @@
       "note": "boot"
     },
     {
-      "name": "set",
-      "cmd": "worker\u2192standby n=2",
+      "name": "del",
+      "cmd": "DELBYVAL worker n=2",
       "ok": true,
-      "note": "set"
+      "note": "del"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER ok\u2192ready",
+      "cmd": "FROM PEER ok scrub",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost rewrite n=0",
+      "cmd": "ghost drop n=0",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "standby admit after rewrite",
+      "cmd": "no worker after scrub",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "REPLACEVAL leader\u2192boss",
+      "cmd": "DROPVAL leader",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "cross",
-      "cmd": "SET n==COUNTBYVAL==PATHS",
+      "cmd": "DEL n==COUNTBYVAL",
       "ok": true,
       "note": "cross"
     },
     {
       "name": "probe",
-      "cmd": "partials do not rewrite",
+      "cmd": "partials do not scrub",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; setbyval PASS"
+      "note": "cli duals red; delbyval PASS"
     }
   ],
   "weaknesses": [
@@ -3484,6 +3484,30 @@
       "title": "WRITE set count omits trailing NL",
       "detail": "set.txt is digit 2 without newline (W5).",
       "repro": "od -c set.txt"
+    },
+    {
+      "id": "W428",
+      "severity": "med",
+      "area": "lang|delbyval",
+      "title": "DELBYVAL mutates plate; SAVEPLATE required for durable scrub",
+      "detail": "Same class as SETBYVAL W425 \u2014 live plate drop; agent.json stale without SAVEPLATE. Board SAVEPLATE after del/peer/gate/alias.",
+      "repro": "DELBYVAL worker; exit; reload without save \u2192 workers remain"
+    },
+    {
+      "id": "W429",
+      "severity": "low",
+      "area": "lang|delbyval",
+      "title": "DELBYVAL exact value; partials n=0",
+      "detail": "DELBYVAL work/orker \u2192 0; worker \u2192 2. Exact-value family.",
+      "repro": "DELBYVAL work \u2192 LAST_N 0"
+    },
+    {
+      "id": "W430",
+      "severity": "low",
+      "area": "lang|delbyval",
+      "title": "DELBYVAL drops whole leaf keys (HASP path gone)",
+      "detail": "After DELBYVAL worker, HASP meta.role is 0 not empty value. Agents must not GETP deleted paths expecting soft empty without HASP gate.",
+      "repro": "DELBYVAL worker; HASP meta.role \u2192 0"
     }
   ],
   "workarounds": [
@@ -3507,12 +3531,12 @@
     "agent_job=runner keeps worker count role-only",
     "SAVEPLATE after SETBYVAL/REPLACEVAL before process exit",
     "SETP re-seed before soft/gate when prior actions rewrote roles",
-    "prefer LAST_N for rewrite count gates"
+    "prefer LAST_N for rewrite count gates",
+    "SAVEPLATE after DELBYVAL/DROPVAL",
+    "SETP re-seed roles before independent del/gate paths",
+    "HASVAL/HASP after scrub for admit gates"
   ],
   "language_gaps": [
-    "Scope FREQFLAT needles tightly for digests",
-    "Capture FREQ specials immediately after op",
-    "vars[128] hard cap \u00b7 silent special drop (MODEFLAT_TOTAL/HIT/SRC)",
     "MODEFLAT needle substring match (false friends)",
     "prefer LAST_N over MODEFLAT_N near var pressure",
     "PATHBYVAL first-seen = leaf walk order (unique reverse values)",
@@ -3529,7 +3553,10 @@
     "COUNTBYVAL aligns with PATHSBYVAL path count",
     "SETBYVAL bulk rewrite exact leaf values",
     "REPLACEVAL alias for set-by-value",
-    "SAVEPLATE required after SETBYVAL for durable agent plate"
+    "SAVEPLATE required after SETBYVAL for durable agent plate",
+    "DELBYVAL scrub leaves by exact value",
+    "DROPVAL alias for del-by-value",
+    "HASP gone after DELBYVAL (key removed not emptied)"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3572,8 +3599,10 @@
     "iter271: COUNTBYVAL/HASVAL board 9/9; PATHSBYVAL cross-check green",
     "iter271: test -f REALWORLD plate before git add (W421 lesson)",
     "iter272: SETBYVAL board 9/9; SAVEPLATE after mutate for durability",
-    "iter272: soft/gate re-seed workers after prior set path rewrites"
+    "iter272: soft/gate re-seed workers after prior set path rewrites",
+    "iter273: DELBYVAL board 9/9; re-seed SETP before del after prior scrubs",
+    "iter273: SAVEPLATE after mutate for durable agent/peer plates"
   ],
-  "commit": "1e555913",
-  "ts": "2026-08-09T22:38:34Z"
+  "commit": "pending",
+  "ts": "2026-08-09T23:04:03Z"
 }
