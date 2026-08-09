@@ -673,6 +673,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 643. ~~**`THRESHOBJ` / `DROPZEROOBJ` / `CAPOBJ`**~~ **done** (nest value denoise/clamp write-back · multi-plate · THRESHP/DROPZEROP/CAPP duals · no GETOBJ+THRESHP+SETOBJ).
 644. ~~**`PCTOBJ` / `SCALEPOBJ` / `ADDPOBJ` / `DIVPOBJ` / `ABSPOBJ` / `SIGNPOBJ`**~~ **done** (nest value map write-back · multi-plate · PCTP/SCALEP duals · not OOP SCALEOBJ/ABSOBJ · no GETOBJ+PCTP+SETOBJ).
 645. ~~**`KEEPKEYOBJ` / `DROPKEYOBJ` / `KEEPKEYOBJI` / `DROPKEYOBJI`**~~ **done** (nest key needle filter write-back · multi-plate · KEEPKEYP duals · complements PICKOBJ exact · no GETOBJ+KEEPKEYP+SETOBJ).
+646. ~~**`TOPNOBJ` / `BOTNOBJ` / `NESTTOPN` / `NESTBOTN`**~~ **done** (nest top/bottom N pure-int keys write-back · multi-plate · TOPNP/BOTNP duals · no GETOBJ+TOPNP+SETOBJ).
 
 ## Tick protocol
 

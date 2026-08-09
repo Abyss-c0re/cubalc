@@ -1,0 +1,117 @@
+# TOPNOBJ / BOTNOBJ — nest top/bottom N pure-int keys write-back
+# Usability: TOPNP duals without GETOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12,\"label\":\"x\"}}"
+LET PEER = "{\"scores\":{\"a\":5,\"b\":2,\"c\":8,\"d\":2},\"outer\":\"z\"}"
+
+# TOPNOBJ 3: crit=12, error=9, warn=3
+TOPNOBJ "freq" 3
+ASSERT OK == 1
+ASSERT TOPNOBJ_N == 3
+ASSERT TOPNOBJ_CAND == 4
+ASSERT TOPNOBJ_NEST_HIT == 1
+ASSERT TOPNOBJ_FROM == 0
+HASPOBJ "freq" "crit"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "error"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "warn"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "info"
+ASSERT LAST_N == 0
+HASPOBJ "freq" "label"
+ASSERT LAST_N == 0
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "crit"
+SYS EQS LAST "12"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+TOPNOBJ FROM PEER "scores" 2
+ASSERT TOPNOBJ_FROM == 1
+ASSERT TOPNOBJ_N == 2
+SYS EQS TOPNOBJ_SRC "PEER"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "scores" "c"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "scores" "a"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "scores" "b"
+ASSERT LAST_N == 0
+GETP FROM PEER "outer"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# n larger than candidates
+LET PEER = "{\"scores\":{\"a\":5,\"b\":2,\"c\":8,\"d\":2},\"outer\":\"z\"}"
+TOPNOBJ FROM PEER "scores" 99
+ASSERT TOPNOBJ_N == 4
+ASSERT TOPNOBJ_CAND == 4
+
+# aliases
+LET PLATE = "{\"freq\":{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12}}"
+TOPNKEYOBJ "freq" 1
+ASSERT TOPNOBJ_N == 1
+HASPOBJ "freq" "crit"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "error"
+ASSERT LAST_N == 0
+
+# BOTNOBJ: smallest first subset
+LET PLATE = "{\"freq\":{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12}}"
+BOTNOBJ "freq" 2
+ASSERT OK == 1
+ASSERT BOTNOBJ_N == 2
+ASSERT BOTNOBJ_CAND == 4
+HASPOBJ "freq" "info"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "warn"
+ASSERT LAST_N == 1
+HASPOBJ "freq" "error"
+ASSERT LAST_N == 0
+GETPOBJ "freq" "info"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"scores\":{\"a\":5,\"b\":2,\"c\":8,\"d\":2},\"outer\":\"z\"}"
+BOTNOBJ FROM PEER "scores" 1
+ASSERT BOTNOBJ_FROM == 1
+ASSERT BOTNOBJ_N == 1
+# ties b=2 and d=2
+HASPOBJ FROM PEER "scores" "b"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"scores\":{\"a\":5,\"b\":2,\"c\":8,\"d\":2},\"outer\":\"z\"}"
+BOTNKEYOBJ "scores" 2 FROM PEER
+ASSERT BOTNOBJ_N == 2
+
+# soft nest miss
+TOPNOBJ "ghost" 3
+ASSERT OK == 1
+ASSERT TOPNOBJ_NEST_HIT == 0
+ASSERT TOPNOBJ_N == 0
+HASP "ghost"
+ASSERT LAST_N == 0
+
+# NEST aliases + NEST body
+LET PLATE = "{\"freq\":{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12}}"
+NESTTOPN "freq" 2
+ASSERT TOPNOBJ_N == 2
+SYS HAS NEST "crit"
+ASSERT LAST_N == 1
+SYS HAS NEST "error"
+ASSERT LAST_N == 1
+SYS HAS NEST "warn"
+ASSERT LAST_N == 0
+
+LET PLATE = "{\"freq\":{\"error\":9,\"warn\":3,\"info\":1,\"crit\":12}}"
+NESTBOTN "freq" 1
+ASSERT BOTNOBJ_N == 1
+HASPOBJ "freq" "info"
+ASSERT LAST_N == 1
+
+PRINT "topnobj soft ok"
