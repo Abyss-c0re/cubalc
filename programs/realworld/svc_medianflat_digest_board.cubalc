@@ -1,0 +1,890 @@
+# svc_medianflat_digest_board.cubalc — MEDIANFLAT p50 + SUMFLAT rollup latency digest
+#
+# Real use: mesh digests agents take robust median of pure-int latency leaves
+# and sum hit counters by path needle without FLATKV+GREP+MEDIAN/SUM walks.
+# First realworld of proof 1231 MEDIANFLAT (+ SUMFLAT 1220 first path-needle board).
+#
+#   MEDIANFLAT|P50FLAT [FROM plate] needle · SUMFLAT|TOTALFLAT needle
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_smd_$$
+#   ./out/cubalc run programs/realworld/svc_medianflat_digest_board.cubalc boot
+#   ./out/cubalc run ... med|sum|peer|soft|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SMD_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_SMD_REQUIRE
+#
+# Edges:
+#   even-n lower mid; substring false-friend hits; soft no-match; AVG vs MED
+#   skew; non-int skip; WRITE NL; NUM softens REQUIRE; EXIT shell
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_medianflat_digest_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_medianflat_digest -- boot|med|sum|peer|soft|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeM"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SMD_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SMD_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+LET bag_n = 0
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET body = ""
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET soft_ok = 0
+LET gate_ok = 0
+LET keep_n = 0
+LET sum_n = 0
+LET path_val = ""
+
+ONEOF ACTION "boot", "med", "sum", "peer", "soft", "gate", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "med" THEN
+    LET op = "med"
+  WHEN "sum" THEN
+    LET op = "sum"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — lat samples + hits counters + outlier; peer mesh
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-medianflat\",\"schema\":\"cubalc.svc_medianflat_digest.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"lat\":{\"a\":10,\"b\":20,\"c\":30,\"spike\":900},\"hits\":{\"ok\":2,\"err\":1},\"hits_total\":5,\"meta\":{\"hits\":3,\"role\":\"w\"},\"label\":\"digest\"}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"schema\":\"cubalc.svc_medianflat_digest.v1\",\"host\":\"" host_s "\",\"lat\":{\"p50\":100,\"p95\":200,\"p99\":400},\"stats\":{\"a\":10,\"b\":20},\"tag\":\"t\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  GETP "lat.b"
+  SYS EQS LAST "20"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "lat.spike"
+  SYS EQS LAST "900"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "hits.ok"
+  SYS EQS LAST "2"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "meta.hits"
+  SYS EQS LAST "3"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "digest"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "boot ok"
+            LET admit_n = 1
+            LET take_n = 1
+            LET keep_n = 4
+          ELSE
+            LET miss = 1
+            LET note_msg = "boot label"
+            FAIL "boot label"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "boot meta.hits"
+          FAIL "boot meta.hits"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot hits.ok"
+        FAIL "boot hits.ok"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot spike"
+      FAIL "boot spike"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot lat.b"
+    FAIL "boot lat.b"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit load_hit soft_ok has_n note_msg
+  CLEAR_ERR
+END
+
+# med — MEDIANFLAT lat: 10,20,30,900 sorted → lower mid of 4 = 20
+SYS EQS op "med"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  MEDIANFLAT "lat"
+  LET take_n = LAST_N
+  LET keep_n = MEDIANFLAT_N
+  CLEAR_ERR
+  # AVG would be skewed by spike: (10+20+30+900)/4 = 240
+  AVGFLAT "lat"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # even pair 10,30 → lower mid 10
+  SETP "u.x" 10
+  CLEAR_ERR
+  SETP "u.y" 30
+  CLEAR_ERR
+  MEDIANFLAT "u"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "lat.spike"
+  SYS EQS LAST "900"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "digest"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # med robust vs avg skew: med 20, avg 240
+  LET miss_n = 0
+  IF take_n == 20 THEN
+    IF peel_hit == 240 THEN
+      LET miss_n = 1
+    END
+  END
+  CLEAR_ERR
+  IF take_n == 20 THEN
+    IF keep_n == 4 THEN
+      IF load_hit == 10 THEN
+        IF soft_ok == 1 THEN
+          IF has_n == 1 THEN
+            IF miss_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "med ok"
+              LET admit_n = 1
+              LET gate_ok = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "med vs avg"
+              FAIL "med vs avg"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "med label"
+            FAIL "med label"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "med spike remain"
+          FAIL "med spike remain"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "med even mid"
+        FAIL "med even mid"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "med n"
+      FAIL "med n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "med val"
+    FAIL "med val"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "med:" w_s ":md"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "med:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n keep_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# sum — SUMFLAT hits needle: hits.ok + hits.err + hits_total + meta.hits = 2+1+5+3 = 11
+SYS EQS op "sum"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SUMFLAT "hits"
+  LET take_n = LAST_N
+  LET keep_n = SUMFLAT_N
+  LET sum_n = SUMFLAT_SUM
+  CLEAR_ERR
+  SUMFLAT "nope"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # lat spike not in hits sum
+  GETP "lat.spike"
+  SYS EQS LAST "900"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "digest"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  TOTALFLAT "lat"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # 10+20+30+900 = 960
+  IF take_n == 11 THEN
+    IF keep_n == 4 THEN
+      IF sum_n == 11 THEN
+        IF load_hit == 0 THEN
+          IF soft_ok == 1 THEN
+            IF has_n == 1 THEN
+              IF peel_hit == 960 THEN
+                LET hit = 1
+                LET note_msg = "sum ok"
+                LET admit_n = 1
+                LET miss_n = 0
+              ELSE
+                LET miss = 1
+                LET note_msg = "sum lat total"
+                FAIL "sum lat total"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "sum label"
+              FAIL "sum label"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "sum spike"
+            FAIL "sum spike"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "sum nope"
+          FAIL "sum nope"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "sum special"
+        FAIL "sum special"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "sum n"
+      FAIL "sum n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "sum val"
+    FAIL "sum val"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "sum:" w_s ":sm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "sum:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n keep_n peel_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# peer — MEDIANFLAT + SUMFLAT FROM PEER
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  MEDIANFLAT FROM PEER "lat"
+  LET take_n = LAST_N
+  LET keep_n = MEDIANFLAT_N
+  CLEAR_ERR
+  SUMFLAT FROM PEER "stats"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "tag"
+  SYS EQS LAST "t"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-medianflat"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "lat.b"
+  SYS EQS LAST "20"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # peer lat 100,200,400 → med 200
+  IF take_n == 200 THEN
+    IF keep_n == 3 THEN
+      IF peel_hit == 30 THEN
+        IF soft_ok == 1 THEN
+          IF has_n == 1 THEN
+            IF load_hit == 1 THEN
+              LET hit = 1
+              LET note_msg = "peer ok"
+              LET admit_n = 1
+              LET miss_n = 0
+            ELSE
+              LET miss = 1
+              LET note_msg = "peer agent lat"
+              FAIL "peer agent lat"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer agent"
+            FAIL "peer agent"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer tag"
+          FAIL "peer tag"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer sum stats"
+        FAIL "peer sum stats"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer med n"
+      FAIL "peer med n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer med"
+    FAIL "peer med"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" w_s ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n keep_n peel_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# soft — no-match needles
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  MEDIANFLAT "ghostpath"
+  LET peel_hit = LAST_N
+  LET keep_n = MEDIANFLAT_N
+  CLEAR_ERR
+  SUMFLAT "ghostpath"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-medianflat"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "lat.a"
+  SYS EQS LAST "10"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 0 THEN
+    IF keep_n == 0 THEN
+      IF take_n == 0 THEN
+        IF miss_n == 0 THEN
+          IF soft_ok == 1 THEN
+            IF has_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "soft ok"
+              LET admit_n = 1
+              LET load_hit = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "soft lat.a"
+              FAIL "soft lat.a"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "soft agent"
+            FAIL "soft agent"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "soft empty bag"
+          FAIL "soft empty bag"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft sum"
+        FAIL "soft sum"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft med n"
+      FAIL "soft med n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft med"
+    FAIL "soft med"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok" soft_ok ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit take_n soft_ok has_n note_msg
+  CLEAR_ERR
+END
+
+# gate — med p50 band + hits sum contract
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  MEDIANFLAT "lat"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SUMFLAT "hits"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_medianflat_digest"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # band: med in [15,50] (robust, not spike)
+  LET load_hit = 0
+  IF take_n >= 15 THEN
+    IF take_n <= 50 THEN
+      LET load_hit = 1
+    END
+  END
+  CLEAR_ERR
+  # hits sum must include false-friend meta.hits (≥5 from nest alone would be wrong)
+  LET soft_ok = 0
+  IF peel_hit == 11 THEN
+    LET soft_ok = 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "digest"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF load_hit == 1 THEN
+    IF soft_ok == 1 THEN
+      IF miss_n == 1 THEN
+        IF has_n == 1 THEN
+          LET hit = 1
+          LET gate_ok = 1
+          LET admit_n = 1
+          LET note_msg = "gate ok"
+          LET keep_n = 4
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate label"
+          FAIL "gate label"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate schema"
+        FAIL "gate schema"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate hits sum"
+      FAIL "gate hits sum"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate med band"
+    FAIL "gate med band"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF gate_ok == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" gate_ok ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n gate_ok take_n peel_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# probe — P50FLAT / TOTALFLAT aliases + non-int only
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SETP "probe.p1" 5
+  CLEAR_ERR
+  SETP "probe.p2" 15
+  CLEAR_ERR
+  SETP "probe.p3" 25
+  CLEAR_ERR
+  SETP "probe.name" "run"
+  CLEAR_ERR
+  P50FLAT "probe"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  TOTALFLAT "probe"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # 5+15+25=45; med of 3 = 15
+  GETP "probe.name"
+  SYS EQS LAST "run"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  SETP "only.s" "hi"
+  CLEAR_ERR
+  SETP "only.b" "true"
+  CLEAR_ERR
+  MEDIANFLAT "only"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SUMFLAT "only"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-medianflat"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF take_n == 15 THEN
+    IF peel_hit == 45 THEN
+      IF soft_ok == 1 THEN
+        IF load_hit == 0 THEN
+          IF has_n == 0 THEN
+            IF miss_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "probe ok"
+              LET admit_n = 1
+              LET keep_n = 3
+            ELSE
+              LET miss = 1
+              LET note_msg = "probe agent"
+              FAIL "probe agent"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe sum nonint"
+            FAIL "probe sum nonint"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe med nonint"
+          FAIL "probe med nonint"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe name"
+        FAIL "probe name"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe total"
+      FAIL "probe total"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe p50"
+    FAIL "probe p50"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:alias:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit soft_ok load_hit note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_medianflat_digest.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " keep=" keep_n " take=" take_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_medianflat_digest_board: end"
