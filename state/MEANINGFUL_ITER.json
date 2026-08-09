@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 635,
-  "version": "1.15.662-usability",
-  "item": "UNFLATKV + plate unflat",
-  "item_id": 671,
-  "title": "UNFLATKV/FROMFLAT/UNFLATTENP + cubalc plate unflat \u00b7 path:value bag \u2192 nested plate \u00b7 UNDER \u00b7 FLATKV round-trip",
-  "commit": "11e3b269c5b6b5cd265aac0ce31c22315a9d5795",
-  "summary": "Flat bag re-nests without multi SETP. proof 1212 + CLI unflat PASS.",
+  "iter": 636,
+  "version": "1.15.663-usability",
+  "item": "DIFFFLAT + PATHDIFF",
+  "item_id": 672,
+  "title": "DIFFFLAT/PATHDIFF + cubalc plate diffflat/pathdiff \u00b7 deep leaf changelog \u00b7 nest-aware mesh sync",
+  "commit": "929f4d6c08cccf8e8fb17060a2ebf8037fa2c02b",
+  "summary": "Deep leaf path: old \u2192 new without shallow DIFFP. proof 1213 + CLI PASS.",
   "proofs": [
-    "1212_unflatkv PASS",
-    "1212_cli_plate_unflat PASS",
-    "1211_flatkv reg PASS"
+    "1213_diffflat PASS",
+    "1213_cli_plate_diffflat PASS",
+    "1212_unflatkv reg PASS"
   ],
-  "when": "2026-08-09T13:37:30Z",
+  "when": "2026-08-09T13:47:59Z",
   "agent": "meaningful_iter_10m",
-  "sha": "11e3b269c5b6b5cd265aac0ce31c22315a9d5795",
-  "note": "round-trip after 670 FLATKV; EVOLVE_PAUSED"
+  "sha": "929f4d6c08cccf8e8fb17060a2ebf8037fa2c02b",
+  "note": "after FLATKV/UNFLATKV plane; EVOLVE_PAUSED"
 }
