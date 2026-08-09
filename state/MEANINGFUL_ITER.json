@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 569,
-  "version": "1.15.596-usability",
-  "item": "REQUIRE EQP/NEQP",
-  "item_id": 605,
-  "title": "REQUIRE EQP|NEQP · fail-fast multi-plate equality · soft twin EQP/NEQP",
-  "commit": "3c0b4ab23afc29a727902987344196b4c678179d",
-  "summary": "Mesh agents hard-gate plate sync/mutation with changed-key errors without SYS. proof 1146 24/24 + fail path.",
+  "iter": 570,
+  "version": "1.15.597-usability",
+  "item": "SUBSETP/COVERSP + REQUIRE SUBSETP",
+  "item_id": 606,
+  "title": "SUBSETP|COVERSP · multi-plate required-field match soft+hard · no SYS JSONSUBSET",
+  "commit": "6c78ac577c3a3ddd77f12a5205632a4aa9bc55fd",
+  "summary": "Mesh agents soft/hard required-field plate contracts with miss keys without SYS. proof 1147 19/19 + fail path. thrash restore first.",
   "proofs": [
-    "1146_require_eqp 24/24",
-    "1146b_require_eqp_fail",
-    "1145_eqp reg 21/21"
+    "1147_subsetp 19/19",
+    "1147b_subsetp_fail",
+    "1146_require_eqp reg 24/24"
   ],
-  "when": "2026-08-09T01:55:52Z",
+  "when": "2026-08-09T02:06:05Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3c0b4ab23afc29a727902987344196b4c678179d",
-  "note": "clean tree; EVOLVE_PAUSED"
+  "sha": "6c78ac577c3a3ddd77f12a5205632a4aa9bc55fd",
+  "note": "thrash restore then ship; EVOLVE_PAUSED"
 }
