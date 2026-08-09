@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 262,
-  "program": "programs/realworld/svc_needflatn_int_board.cubalc",
-  "theme": "NEEDFLATN/HASFLATN + PATHSFLATN pure-int leaf contracts",
-  "version": "1.15.684-usability",
+  "iter": 263,
+  "program": "programs/realworld/svc_typeflat_peel_board.cubalc",
+  "theme": "TYPEFLAT kind probe + LASTFLATN newest-wins peel",
+  "version": "1.15.686-usability",
   "pass": true,
-  "prior_note": "iter 261 MEDIAN/SUM; this iter first realworld 1232 NEEDFLATN + 1233 HASFLATN + 1234 PATHSFLATN",
+  "prior_note": "iter 262 NEEDFLATN/HASFLATN; this iter first realworld 1236 TYPEFLAT + 1235 LASTFLATN",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed mixed int/string plate",
+      "cmd": "seed multi-kind dual port",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "needn",
-      "cmd": "NEEDFLATN port+timeout peel",
+      "name": "type",
+      "cmd": "TYPEFLAT num/str/bool/null/missing",
       "ok": true,
-      "note": "needn"
+      "note": "type"
     },
     {
-      "name": "hasn",
-      "cmd": "HASFLATN vs HASFLAT host",
+      "name": "lastn",
+      "cmd": "LASTFLATN vs GETFLATN first/last",
       "ok": true,
-      "note": "hasn"
-    },
-    {
-      "name": "pathsn",
-      "cmd": "PATHSFLATN vs PATHSFLAT host",
-      "ok": true,
-      "note": "pathsn"
+      "note": "lastn"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER needn/hasn/paths",
+      "cmd": "FROM PEER type+last/first hits",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "HASFLATN twin soft miss",
+      "cmd": "missing kind + OR fallback",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "typed port contract admit",
+      "cmd": "port num first/last admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "ANYFLATN/MATCH*N aliases",
+      "cmd": "KINDFLAT/ENDFLATN aliases",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +59,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "455/500 pre-existing cli shell fails; needflatn PASS 18 hasflatn PASS 27 pathsflatn PASS 27"
+      "note": "457/504 pre-existing cli shell fails; typeflat PASS 30 lastflatn PASS 26"
     }
   ],
   "weaknesses": [
@@ -3228,6 +3222,30 @@
       "title": "PATHSFLATN score still pulls meta_score top-level false-friend",
       "detail": "Substring meta_score matches score needle; pure-int filter does not fix path-name false friends. COUNTFLATN score=3 (a,b,meta_score).",
       "repro": "PATHSFLATN \"score\" includes meta_score"
+    },
+    {
+      "id": "W396",
+      "severity": "high",
+      "area": "lang|needle",
+      "title": "TYPEFLAT single-letter needle \"n\" matches agent path (substring disaster)",
+      "detail": "TYPEFLAT FROM PEER \"n\" resolved path=agent kind=str instead of field n:2. Any path containing letter n matches. Agents must use longer needles (hits, flag, role) or GETP for short keys. Critical for inventory/contract probes.",
+      "repro": "TYPEFLAT FROM PEER \"n\" on {agent,n:2} \u2192 path agent str"
+    },
+    {
+      "id": "W397",
+      "severity": "med",
+      "area": "lang|specials",
+      "title": "SYS EQS LASTFLATN_PATH unknown form in large agent boards",
+      "detail": "Proof uses SYS EQS LASTFLATN_PATH \"meta.port\"; in full realworld board parser errors unknown form LASTFLATN_PATH. TYPEFLAT_PATH worked in same board. Capture LAST_N value + GETP meta.port instead.",
+      "repro": "LASTFLATN port; SYS EQS LASTFLATN_PATH \"meta.port\" \u2192 unknown form"
+    },
+    {
+      "id": "W398",
+      "severity": "low",
+      "area": "host|bool",
+      "title": "GETP bool leaf not EQS \"true\" reliably; prefer TYPEFLAT kind",
+      "detail": "GETP cfg.on SYS EQS LAST \"true\" failed in boot; TYPEFLAT on \u2192 bool works. JSON bool peel string form inconsistent for agents.",
+      "repro": "GETP cfg.on; SYS EQS LAST true \u2192 miss; TYPEFLAT on \u2192 bool"
     }
   ],
   "workarounds": [
@@ -3236,8 +3254,6 @@
     "Curated peer seeds for stable DIFFFLAT lines"
   ],
   "language_gaps": [
-    "KEEPVFLAT naming implies exact keep; is threshold floor",
-    "Path needle substring lacks segment-bound option for safe FREQ denoise",
     "CAPFLAT/SCALEFLAT need segment-bound needles for safe SLO scrub",
     "Capture plate values via GETP not only CAPFLAT_N/SCALEFLAT_N in large boards",
     "VALSFLAT_N/GETFLAT_FALLBACK unreadable under agent_boot load",
@@ -3247,7 +3263,9 @@
     "Need segment-bound needles for counter digests",
     "No combined MEDIAN+AVG spike-report form",
     "Document HASFLAT vs HASFLATN twin pairing for agents",
-    "Pure-int *N ops still substring-needle path false friends"
+    "Pure-int *N ops still substring-needle path false friends",
+    "Single-char path needles are unsafe on substring match",
+    "LASTFLATN_PATH special not always SYS EQS-able in large boards"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3266,8 +3284,11 @@
     "Even median lower-mid must be taught for p50 bands",
     "HASFLATN_N dark after FROM PEER; used COUNTFLATN LAST_N",
     "PATHSFLAT_N dark; used HASLINE on bag",
-    "meta_score substring inflates score counts"
+    "meta_score substring inflates score counts",
+    "TYPEFLAT n matched agent path; used GETP for short keys",
+    "SYS EQS LASTFLATN_PATH hard-failed; used GETP meta.port",
+    "GETP bool not EQS true; used TYPEFLAT kind"
   ],
-  "commit": "41e3c7bf",
-  "ts": "2026-08-09T17:39:50Z"
+  "commit": "265e3930",
+  "ts": "2026-08-09T18:06:21Z"
 }

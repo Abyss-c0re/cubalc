@@ -1,0 +1,936 @@
+# svc_typeflat_peel_board.cubalc — TYPEFLAT kind probe + LASTFLATN newest-wins peel
+#
+# Real use: mesh agents classify leaf kinds (num/str/bool/null) before peel,
+# then take first vs last pure-int under a needle for port/hit overlays without
+# TYPEP+PATHSFLAT or REVL+GETFLATN glue. First realworld of 1236 TYPEFLAT +
+# 1235 LASTFLATN (GETFLATN contrast).
+#
+#   TYPEFLAT|KINDFLAT [FROM plate] needle · LASTFLATN|ENDFLATN needle [OR n]
+#   GETFLATN first twin · missing → LAST "missing" / LAST_N 0
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_stp_$$
+#   ./out/cubalc run programs/realworld/svc_typeflat_peel_board.cubalc boot
+#   ./out/cubalc run ... type|lastn|peer|soft|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt STP_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_STP_REQUIRE
+#
+# Edges:
+#   first vs last port; host str vs port num kinds; soft missing; OR fallback;
+#   bool/null kinds; WRITE NL; NUM softens REQUIRE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_typeflat_peel_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_typeflat_peel -- boot|type|lastn|peer|soft|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeP"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_STP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "STP_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+LET bag_n = 0
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET body = ""
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET soft_ok = 0
+LET gate_ok = 0
+LET keep_n = 0
+LET path_val = ""
+LET kind_s = ""
+
+ONEOF ACTION "boot", "type", "lastn", "peer", "soft", "gate", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "type" THEN
+    LET op = "type"
+  WHEN "lastn" THEN
+    LET op = "lastn"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — multi-kind plate + dual port (cfg vs meta) + peer hits
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-typeflat\",\"schema\":\"cubalc.svc_typeflat_peel.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"cfg\":{\"port\":9090,\"host\":\"h\",\"on\":true,\"note\":null},\"meta\":{\"port\":1},\"label\":\"peel\"}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"schema\":\"cubalc.svc_typeflat_peel.v1\",\"host\":\"" host_s "\",\"hits\":{\"a\":3,\"b\":4},\"role\":\"leader\",\"n\":2,\"flag\":false,\"tag\":\"t\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  GETP "cfg.port"
+  SYS EQS LAST "9090"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETP "meta.port"
+  SYS EQS LAST "1"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "cfg.host"
+  SYS EQS LAST "h"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  TYPEFLAT "on"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "bool"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "peel"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF has_n == 1 THEN
+          IF miss_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "boot ok"
+            LET admit_n = 1
+            LET take_n = 1
+            LET keep_n = 2
+          ELSE
+            LET miss = 1
+            LET note_msg = "boot label"
+            FAIL "boot label"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "boot on"
+          FAIL "boot on"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot host"
+        FAIL "boot host"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot meta.port"
+      FAIL "boot meta.port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot cfg.port"
+    FAIL "boot cfg.port"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit load_hit soft_ok has_n note_msg
+  CLEAR_ERR
+END
+
+# type — TYPEFLAT kinds: port num, host str, on bool, note null, miss missing
+SYS EQS op "type"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TYPEFLAT "port"
+  LET kind_s = LAST
+  LET keep_n = TYPEFLAT_N
+  CLEAR_ERR
+  SYS EQS kind_s "num"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS EQS TYPEFLAT_PATH "cfg.port"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  TYPEFLAT "host"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "str"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  TYPEFLAT "on"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "bool"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  TYPEFLAT "note"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "null"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  TYPEFLAT "nope"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "missing"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # first walk port is cfg.port (num=1)
+  IF peel_hit == 1 THEN
+    IF keep_n == 1 THEN
+      IF load_hit == 1 THEN
+        IF soft_ok == 1 THEN
+          IF has_n == 1 THEN
+            IF miss_n == 1 THEN
+              IF take_n == 1 THEN
+                LET hit = 1
+                LET note_msg = "type ok"
+                LET admit_n = 1
+                LET gate_ok = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "type missing"
+                FAIL "type missing"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "type null"
+              FAIL "type null"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "type bool"
+            FAIL "type bool"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "type str"
+          FAIL "type str"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "type path"
+        FAIL "type path"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "type kind n"
+      FAIL "type kind n"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "type num"
+    FAIL "type num"
+    CLEAR_ERR
+  END
+  SYS CAT "type:" kind_s ":ty"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "type:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit soft_ok has_n miss_n note_msg
+  CLEAR_ERR
+END
+
+# lastn — LASTFLATN meta.port=1 vs GETFLATN cfg.port=9090; OR fallback
+SYS EQS op "lastn"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  GETFLATN "port"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  LASTFLATN "port"
+  LET peel_hit = LAST_N
+  # LASTFLATN_PATH may not bind via SYS EQS in large boards — verify via value + GETP
+  CLEAR_ERR
+  GETP "meta.port"
+  SYS EQS LAST "1"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # host non-int → fallback
+  LASTFLATN "host" OR 0
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  LASTFLATN "nope" OR 8080
+  LET has_n = LAST_N
+  CLEAR_ERR
+  LASTFLATN "nope"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  GETP "cfg.port"
+  SYS EQS LAST "9090"
+  LET gate_ok = LAST_N
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "peel"
+  LET keep_n = LAST_N
+  CLEAR_ERR
+  IF take_n == 9090 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 1 THEN
+        IF soft_ok == 0 THEN
+          IF has_n == 8080 THEN
+            IF miss_n == 0 THEN
+              IF gate_ok == 1 THEN
+                IF keep_n == 1 THEN
+                  LET hit = 1
+                  LET note_msg = "lastn ok"
+                  LET admit_n = 1
+                ELSE
+                  LET miss = 1
+                  LET note_msg = "lastn label"
+                  FAIL "lastn label"
+                  CLEAR_ERR
+                END
+              ELSE
+                LET miss = 1
+                LET note_msg = "lastn plate"
+                FAIL "lastn plate"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "lastn empty"
+              FAIL "lastn empty"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "lastn or"
+            FAIL "lastn or"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "lastn host skip"
+          FAIL "lastn host skip"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "lastn meta.port"
+        FAIL "lastn meta.port"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "lastn val"
+      FAIL "lastn val"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "lastn first"
+    FAIL "lastn first"
+    CLEAR_ERR
+  END
+  SYS STR peel_hit
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "lastn:" w_s ":ln"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "lastn:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit soft_ok has_n note_msg
+  CLEAR_ERR
+END
+
+# peer — TYPEFLAT + LASTFLATN FROM PEER
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TYPEFLAT FROM PEER "role"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "str"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # avoid TYPEFLAT "n" — single-letter needle matches agent (substring false-friend)
+  GETP FROM PEER "n"
+  SYS EQS LAST "2"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  TYPEFLAT FROM PEER "flag"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "bool"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  LASTFLATN FROM PEER "hits" OR 0
+  LET take_n = LAST_N
+  CLEAR_ERR
+  GETFLATN FROM PEER "hits" OR 0
+  LET keep_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-typeflat"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "tag"
+  SYS EQS LAST "t"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # last hits.b=4, first hits.a=3
+  IF peel_hit == 1 THEN
+    IF load_hit == 1 THEN
+      IF soft_ok == 1 THEN
+        IF take_n == 4 THEN
+          IF keep_n == 3 THEN
+            IF has_n == 1 THEN
+              IF miss_n == 1 THEN
+                LET hit = 1
+                LET note_msg = "peer ok"
+                LET admit_n = 1
+                LET gate_ok = 1
+              ELSE
+                LET miss = 1
+                LET note_msg = "peer tag"
+                FAIL "peer tag"
+                CLEAR_ERR
+              END
+            ELSE
+              LET miss = 1
+              LET note_msg = "peer agent"
+              FAIL "peer agent"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer first hits"
+            FAIL "peer first hits"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer last hits"
+          FAIL "peer last hits"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer flag"
+        FAIL "peer flag"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer n val"
+      FAIL "peer n val"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer role"
+    FAIL "peer role"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" w_s ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n keep_n peel_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# soft — missing kind + empty OR peels
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TYPEFLAT "ghostpath"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "missing"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  LASTFLATN "ghostpath" OR 99
+  LET take_n = LAST_N
+  CLEAR_ERR
+  LASTFLATN "ghostpath"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-typeflat"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  # host is str not num — LASTFLATN soft miss without OR
+  TYPEFLAT "host"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "str"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF take_n == 99 THEN
+      IF load_hit == 0 THEN
+        IF miss_n == 0 THEN
+          IF soft_ok == 1 THEN
+            IF has_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "soft ok"
+              LET admit_n = 1
+              LET gate_ok = 1
+              LET keep_n = 0
+            ELSE
+              LET miss = 1
+              LET note_msg = "soft host kind"
+              FAIL "soft host kind"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "soft agent"
+            FAIL "soft agent"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "soft empty bag"
+          FAIL "soft empty bag"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft last empty"
+        FAIL "soft last empty"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft or"
+      FAIL "soft or"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft missing"
+    FAIL "soft missing"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok" soft_ok ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n peel_hit take_n soft_ok has_n note_msg
+  CLEAR_ERR
+END
+
+# gate — port is num, last port=1, first=9090, schema
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TYPEFLAT "port"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "num"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  GETFLATN "port"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  LASTFLATN "port"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_typeflat_peel"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # host must be str for string peel path
+  TYPEFLAT "host"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "str"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF take_n == 9090 THEN
+      IF load_hit == 1 THEN
+        IF miss_n == 1 THEN
+          IF soft_ok == 1 THEN
+            LET hit = 1
+            LET gate_ok = 1
+            LET admit_n = 1
+            LET note_msg = "gate ok"
+            LET has_n = 1
+            LET keep_n = 2
+          ELSE
+            LET miss = 1
+            LET note_msg = "gate host"
+            FAIL "gate host"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate schema"
+          FAIL "gate schema"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate last port"
+        FAIL "gate last port"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate first port"
+      FAIL "gate first port"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate port kind"
+    FAIL "gate port kind"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF gate_ok == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" gate_ok ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n gate_ok take_n load_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# probe — KINDFLAT / ENDFLATN aliases + empty needle last
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SETP "probe.n" 42
+  CLEAR_ERR
+  SETP "probe.m" 7
+  CLEAR_ERR
+  SETP "probe.s" "z"
+  CLEAR_ERR
+  KINDFLAT "probe"
+  LET kind_s = LAST
+  CLEAR_ERR
+  SYS EQS kind_s "num"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  ENDFLATN "probe"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # last pure-int under probe walk — m=7 after n=42 if order n then m then s
+  GETFLATN "probe"
+  LET keep_n = LAST_N
+  CLEAR_ERR
+  GETP "probe.s"
+  SYS EQS LAST "z"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-typeflat"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # empty needle last pure-int on scratch only via probe if last is 7
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF peel_hit == 1 THEN
+    IF take_n == 7 THEN
+      IF keep_n == 42 THEN
+        IF soft_ok == 1 THEN
+          IF has_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "probe ok"
+            LET admit_n = 1
+            LET load_hit = 1
+            LET miss_n = 0
+            LET gate_ok = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe agent"
+            FAIL "probe agent"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe s"
+          FAIL "probe s"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe first"
+        FAIL "probe first"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe last"
+      FAIL "probe last"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe kind"
+    FAIL "probe kind"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:alias:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n keep_n peel_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_typeflat_peel.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " keep=" keep_n " take=" take_n " kind=" kind_s " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_typeflat_peel_board: end"
