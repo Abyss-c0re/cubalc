@@ -1685,11 +1685,15 @@ int main(int argc, char **argv) {
     return cubalc_cmd_evolve(argc - 1, argv + 1);
   }
   if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
-    /* Usability: one JSON plate for agents/humans — is this install ready? */
+    /* Usability: one JSON plate for agents/humans — is this install ready?
+     * Also surfaces INCLUDE lib layout + nest-check readiness (plate_uniform). */
     char dir[512], protect_path[640], key_preview[16];
     int modular = 0, smx_key = 0, protect_plate = 0, bin_ok = 1;
+    int libs_n = 0, lib_agent_boot = 0, lib_plate_session = 0, lib_plate_uniform = 0;
+    int lib_hold_seed = 0, cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
     const char *hx = getenv("CUBALC_SMX_KEY");
     const char *kf = getenv("CUBALC_SMX_KEY_FILE");
+    const char *libdir = "programs/lib";
     state_dir(dir, sizeof dir);
     snprintf(protect_path, sizeof protect_path, "%s/CORE_PROTECT.json", dir);
     modular = (access("src/lang/lang_parse.c", R_OK) == 0 &&
@@ -1702,8 +1706,29 @@ int main(int argc, char **argv) {
     if (hx && strlen(hx) >= 8) {
       snprintf(key_preview, sizeof key_preview, "%.8s…", hx);
     }
+    libdir_ok = (access(libdir, R_OK) == 0);
+    lib_agent_boot = (access("programs/lib/agent_boot.cubalc", R_OK) == 0);
+    lib_plate_session = (access("programs/lib/plate_session.cubalc", R_OK) == 0);
+    lib_plate_uniform = (access("programs/lib/plate_uniform.cubalc", R_OK) == 0);
+    lib_hold_seed = (access("programs/lib/hold_seed.cubalc", R_OK) == 0);
+    cookbook_ok = (access("docs/COOKBOOK.md", R_OK) == 0);
+    for_agents_ok = (access("docs/FOR_AGENTS.md", R_OK) == 0);
+    if (libdir_ok) {
+      DIR *d = opendir(libdir);
+      if (d) {
+        struct dirent *de;
+        while ((de = readdir(d)) != NULL) {
+          size_t len = strlen(de->d_name);
+          if (len < 8 || strcmp(de->d_name + len - 7, ".cubalc") != 0)
+            continue;
+          if (de->d_name[0] == '.') continue;
+          libs_n++;
+        }
+        closedir(d);
+      }
+    }
     {
-      int ok = modular && (CUBALC_HOLD_FLASH == 1);
+      int ok = modular && (CUBALC_HOLD_FLASH == 1) && lib_agent_boot;
       printf("{\"schema\":\"cubalc.doctor.v1\",\"ok\":%s,"
              "\"version\":\"%s\",\"paradigm\":\"%s\",\"creed\":\"%s\","
              "\"hold_flash\":%d,\"hold_flash_means\":\"device_firmware_connection_safeguard\","
@@ -1713,16 +1738,24 @@ int main(int argc, char **argv) {
              "\"state_dir\":\"%s\",\"core_protect_plate\":%s,"
              "\"core_protect_path\":\"%s\","
              "\"bin_ok\":%s,"
+             "\"libs_dir\":\"%s\",\"libs_dir_ok\":%s,\"libs_n\":%d,"
+             "\"lib_agent_boot\":%s,\"lib_plate_session\":%s,"
+             "\"lib_plate_uniform\":%s,\"lib_hold_seed\":%s,"
+             "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
+             "\"nest_check\":\"%s\","
              "\"hints\":["
              "\"HOLD_FLASH default 1 — omit preamble; HOLD_FLASH 0 denies PLUG\","
              "\"export CUBALC_SMX_KEY=$(openssl rand -hex 32) for P2P\","
              "\"cubalc protect · cubalc smx-bus prove-tcp\","
              "\"cubalc selftest — live usability proofs\","
-             "\"cubalc env · docs/COOKBOOK.md · programs/lib/\""
+             "\"cubalc libs · cubalc cat plate_uniform · INCLUDE plate_uniform\","
+             "\"cubalc plate uniform agent.json role — nest value consistency\","
+             "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
-             "\"docs/HOLD_FLASH.md\",\"docs/CORE_PROTECT.md\","
-             "\"programs/hello_cube.cubalc\",\"programs/p2p/mesh_local.cubalc\"]"
+             "\"docs/HOLD_FLASH.md\",\"docs/CORE_PROTECT.md\",\"docs/FOR_AGENTS.md\","
+             "\"programs/hello_cube.cubalc\",\"programs/p2p/mesh_local.cubalc\","
+             "\"programs/lib/plate_uniform.cubalc\"]"
              "}\n",
              ok ? "true" : "false",
              CUBALC_LANG_VERSION, CUBALC_LANG_PARADIGM, CUBALC_CREED,
@@ -1733,7 +1766,19 @@ int main(int argc, char **argv) {
              dir,
              protect_plate ? "true" : "false",
              protect_path,
-             bin_ok ? "true" : "false");
+             bin_ok ? "true" : "false",
+             libdir,
+             libdir_ok ? "true" : "false",
+             libs_n,
+             lib_agent_boot ? "true" : "false",
+             lib_plate_session ? "true" : "false",
+             lib_plate_uniform ? "true" : "false",
+             lib_hold_seed ? "true" : "false",
+             cookbook_ok ? "true" : "false",
+             for_agents_ok ? "true" : "false",
+             lib_plate_uniform
+                 ? "INCLUDE plate_uniform · cubalc plate uniform"
+                 : "missing programs/lib/plate_uniform.cubalc");
       return ok ? 0 : 1;
     }
   }
@@ -2258,6 +2303,7 @@ int main(int argc, char **argv) {
       {"uniformflat", "programs/proof/1252_uniformflat.cubalc", "UNIFORMFLAT/CHECKFLAT one-shot nest consistency multi-plate"},
       {"cli_plate_uniform", "programs/proof/1252_cli_plate_uniform.sh", "cubalc plate uniform UNIFORMFLAT dual"},
       {"plate_uniform", "programs/proof/1253_plate_uniform.cubalc", "INCLUDE plate_uniform nest consistency DEFAULT needle"},
+      {"cli_doctor_libs", "programs/proof/1254_cli_doctor_libs.sh", "cubalc doctor lib/nest-check readiness plate"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},

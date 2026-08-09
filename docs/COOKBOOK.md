@@ -7,7 +7,7 @@ program preamble). Wire is SMX2 binary (HTTP never required for peers).
 
 ```bash
 make all
-./out/cubalc doctor      # JSON readiness
+./out/cubalc doctor      # JSON readiness · libs_n · lib_plate_uniform · nest_check
 ./out/cubalc version     # language version JSON (also: VERSION in-program)
 ./out/cubalc paths       # cwd/state/lib/docs layout JSON
 ./out/cubalc cookbook    # paths
@@ -15,6 +15,7 @@ make all
 ./out/cubalc env [pfx]   # host CUBALC_* contract (set/default/hint JSON)
 ./out/cubalc examples    # curated runnable starters (JSON · filterable)
 ./out/cubalc cat agent_boot  # dump lib/program source + meta plate
+./out/cubalc cat plate_uniform  # nest consistency INCLUDE snippet
 ./out/cubalc init --plate my_agent   # scaffold plate_session starter
 ./out/cubalc init --peer mesh        # multi-plate PLATE+PEER starter
 ./out/cubalc forms SMX   # play-form catalog
@@ -22,6 +23,9 @@ make all
 printf 'ASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -
 ./out/cubalc help
 ```
+
+`doctor` / `health` plate fields agents use: `libs_dir` · `libs_n` · `lib_agent_boot` ·
+`lib_plate_session` · `lib_plate_uniform` · `nest_check` · `docs_cookbook` · `docs_for_agents`.
 
 ## 1. Hello place → plug → assert
 

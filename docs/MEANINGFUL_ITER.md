@@ -740,6 +740,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 710. ~~**`UNEQPATHS` / `DIVERGEPATHS` + `cubalc plate uneqpaths`**~~ **done** (all leaf paths whose value differs from first match → LAST bag · LAST_N=count · multi twin of FIRSTUNEQFLAT · multi-plate · CLI dual · bulk nest inconsistency without EACH FLAT+IF+PUSH glue).
 711. ~~**`UNIFORMFLAT` / `CHECKFLAT` + `cubalc plate uniform`**~~ **done** (one-shot nest consistency · LAST_N 0|1 eq · UNIFORM_PATH/PATHS/REF/VAL/DIV/N · multi-plate · CLI dual · no ALLEQFLAT+FIRSTUNEQFLAT+UNEQPATHS glue).
 712. ~~**`programs/lib/plate_uniform` + cookbook nest-check**~~ **done** (INCLUDE DEFAULT UNIFORM_NEEDLE → UNIFORMFLAT on PLATE · examples/libs catalog · COOKBOOK recipe · no retype form each agent boot).
+713. ~~**`cubalc doctor` lib/nest-check readiness**~~ **done** (`libs_n` · `lib_agent_boot`/`plate_session`/`plate_uniform` · `nest_check` · docs flags · agent install plate without guessing INCLUDE layout).
 
 ## Tick protocol
 
