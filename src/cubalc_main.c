@@ -879,14 +879,26 @@ static int cmd_protect(int argc, char **argv) {
   ensure_dir(dir);
   snprintf(plate_path, sizeof plate_path, "%s/CORE_PROTECT.json", dir);
 
-  /* protect status|plate — JSON summary without board/smx run (agents) */
+  /* protect status|plate — JSON summary without board/smx run (agents).
+   * Surfaces docs/lib readiness + next actions so agents don't re-run board. */
   if (strcmp(mode, "status") == 0 || strcmp(mode, "plate") == 0 ||
-      strcmp(mode, "show") == 0) {
+      strcmp(mode, "show") == 0 || strcmp(mode, "summary") == 0 ||
+      strcmp(mode, "info") == 0) {
     int plate = (access(plate_path, R_OK) == 0);
     int last_ok = -1; /* -1 unknown, 0 false, 1 true */
     const char *pe = getenv("CUBALC_PROTECT");
+    const char *hx = getenv("CUBALC_SMX_KEY");
+    const char *kf = getenv("CUBALC_SMX_KEY_FILE");
     int protect_env = (pe && pe[0] && pe[0] != '0');
     int prog_ok = (access(prog, R_OK) == 0);
+    int docs_cp = (access("docs/CORE_PROTECT.md", R_OK) == 0);
+    int docs_hf = (access("docs/HOLD_FLASH.md", R_OK) == 0);
+    int modular = (access("src/lang/lang_parse.c", R_OK) == 0 &&
+                   access("src/lang/lang_ops_smx.c", R_OK) == 0);
+    int smx_key = 0;
+    const char *why;
+    if (hx && strlen(hx) >= 64) smx_key = 1;
+    else if (kf && kf[0] && access(kf, R_OK) == 0) smx_key = 1;
     if (plate) {
       FILE *f = fopen(plate_path, "r");
       if (f) {
@@ -900,23 +912,47 @@ static int cmd_protect(int argc, char **argv) {
           last_ok = 0;
       }
     }
+    if (!prog_ok)
+      why = "missing programs/protect/core_protect.cubalc — check checkout";
+    else if (last_ok == 0)
+      why = "last CORE_PROTECT plate ok:false — cubalc protect all to recheck";
+    else if (!plate)
+      why = "no plate yet — cubalc protect all writes CORE_PROTECT.json";
+    else if (!smx_key)
+      why = "status ok · set CUBALC_SMX_KEY for P2P · cubalc protect all to recheck";
+    else
+      why = "status only — plate present · cubalc protect all for live checks";
     printf("{\"schema\":\"cubalc.protect_status.v1\",\"ok\":true,"
            "\"cmd\":\"protect\",\"mode\":\"status\","
-           "\"hold_flash\":%d,\"budget\":%d,\"share\":\"%s\","
+           "\"hold_flash\":%d,"
+           "\"hold_flash_means\":\"device_firmware_connection_safeguard\","
+           "\"budget\":%d,\"share\":\"%s\","
            "\"http_required\":false,\"law\":\"core_protect\","
            "\"protect_env\":%s,\"program_present\":%s,"
            "\"plate_present\":%s,\"plate\":\"%s\","
            "\"last_plate_ok\":%s,\"version\":\"%s\","
            "\"program\":\"%s\","
+           "\"docs_core_protect\":%s,\"docs_hold_flash\":%s,"
+           "\"modular_lang\":%s,\"smx_key_configured\":%s,"
+           "\"why_hint\":\"%s\","
            "\"note\":\"status only — no board/smx; run cubalc protect all for checks\","
-           "\"hints\":[\"HOLD_FLASH default 1 (device/firmware safeguard; omit preamble)\","
-           "\"cubalc protect all · cubalc doctor\"]}\n",
+           "\"next\":[\"cubalc protect all\",\"cubalc doctor\",\"cubalc env\"],"
+           "\"hints\":["
+           "\"HOLD_FLASH default 1 (device/firmware safeguard; omit preamble)\","
+           "\"export CUBALC_SMX_KEY=$(openssl rand -hex 32) for P2P\","
+           "\"cubalc protect all · cubalc doctor · docs/CORE_PROTECT.md\""
+           "]}\n",
            CUBALC_HOLD_FLASH, CUBALC_BUDGET, CUBALC_SHARE,
            protect_env ? "true" : "false",
            prog_ok ? "true" : "false",
            plate ? "true" : "false", plate_path,
            last_ok < 0 ? "null" : (last_ok ? "true" : "false"),
-           CUBALC_LANG_VERSION, prog);
+           CUBALC_LANG_VERSION, prog,
+           docs_cp ? "true" : "false",
+           docs_hf ? "true" : "false",
+           modular ? "true" : "false",
+           smx_key ? "true" : "false",
+           why);
     return 0;
   }
 
@@ -2358,6 +2394,8 @@ int main(int argc, char **argv) {
       {"cli_plate_pretty", "programs/proof/1255_cli_plate_pretty.sh", "cubalc plate pretty PRETTYP dual"},
       {"cli_init_list", "programs/proof/1256_cli_init_list.sh", "cubalc init --list scaffold catalog + plate uniform starter"},
       {"why", "programs/proof/1257_why.cubalc", "WHY/EXPLAIN recovery plate from LAST_ERR + run why_hint"},
+      {"cli_why_hint", "programs/proof/1257_cli_why_hint.sh", "run plate why_hint agent recovery tip"},
+      {"cli_protect_status", "programs/proof/1258_cli_protect_status.sh", "cubalc protect status agent readiness plate"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -12979,7 +13017,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "  Law & Core safety\n"
       "    law|manifest           law plate JSON\n"
       "    protect|core-guard     Core protect checks → state/CORE_PROTECT.json\n"
-      "    protect status         JSON summary only (no board/smx run)\n"
+      "    protect status         JSON summary only · why_hint/next/docs (no board)\n"
       "    HOLD_FLASH             device/firmware safeguard · default 1 (omit preamble)\n"
       "\n"
       "  P2P / SMX2 (binary wire)\n"

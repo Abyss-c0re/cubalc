@@ -129,10 +129,14 @@ CLI bus:
 ## 5. Core protect
 
 ```bash
+./out/cubalc protect status   # no board — why_hint · next · docs flags · smx_key
 export CUBALC_PROTECT=1
-./out/cubalc protect
+./out/cubalc protect          # live checks → state/CORE_PROTECT.json
 ./out/cubalc run programs/protect/core_protect.cubalc
 ```
+
+`protect status` / `summary` / `info` plate: `hold_flash_means` · `docs_core_protect` ·
+`docs_hold_flash` · `modular_lang` · `smx_key_configured` · `why_hint` · `next`.
 
 ## 6. INCLUDE a lib snippet
 
