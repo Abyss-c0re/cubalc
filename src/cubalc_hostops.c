@@ -4912,6 +4912,99 @@ int cubalc_host_json_leaf_grep(const char *json, const char *needle, int invert,
   return 0;
 }
 
+/* Write-back prune / keep-only leaf filter. See header. */
+int cubalc_host_json_leaf_filter_write(const char *json, const char *needle,
+                                       int keep_only, int icase,
+                                       cubalc_host_result *r) {
+  cubalc_host_result bag, dr;
+  const char *p, *line;
+  char cur[CUBALC_HOST_STR_MAX];
+  long nops = 0;
+  r_clear(r);
+  if (!needle) needle = "";
+  /* empty needle: prune no-op; keep-only = full plate */
+  if (!needle[0] && !keep_only) {
+    snprintf(r->str, sizeof r->str, "%s",
+             (json && json[0]) ? json : "{}");
+    {
+      const char *b = r->str;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b != '{')
+        snprintf(r->str, sizeof r->str, "%s", "{}");
+    }
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  memset(&bag, 0, sizeof bag);
+  /* keep_only → matching bag; prune → matching bag then delete those paths */
+  cubalc_host_json_leaf_grep(json ? json : "{}", needle, 0, icase, &bag);
+  if (keep_only) {
+    memset(&dr, 0, sizeof dr);
+    if (cubalc_host_json_unflat_kv("{}", bag.str, NULL, &dr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s",
+               dr.err[0] ? dr.err : "keeponly: unflat fail");
+      return -1;
+    }
+    snprintf(r->str, sizeof r->str, "%s", dr.str);
+    r->n = bag.n;
+    r->ok = 1;
+    return 0;
+  }
+  /* prune: del each matching path */
+  snprintf(cur, sizeof cur, "%s", (json && json[0]) ? json : "{}");
+  {
+    const char *b = cur;
+    while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+    if (*b != '{')
+      snprintf(cur, sizeof cur, "%s", "{}");
+  }
+  p = bag.str;
+  while (*p) {
+    char path[512];
+    size_t kn = 0;
+    const char *sep;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    sep = NULL;
+    {
+      const char *s = line;
+      while (s < p) {
+        if (*s == ':' || *s == '=') {
+          sep = s;
+          break;
+        }
+        s++;
+      }
+    }
+    kn = sep ? (size_t)(sep - line) : (size_t)(p - line);
+    while (kn > 0 && (line[kn - 1] == ' ' || line[kn - 1] == '\t')) kn--;
+    {
+      size_t sk = 0;
+      while (sk < kn && (line[sk] == ' ' || line[sk] == '\t')) sk++;
+      if (sk) {
+        line += sk;
+        kn -= sk;
+      }
+    }
+    if (kn == 0 || kn >= sizeof path) continue;
+    memcpy(path, line, kn);
+    path[kn] = 0;
+    memset(&dr, 0, sizeof dr);
+    if (cubalc_host_json_path_del(cur, path, &dr) == 0) {
+      snprintf(cur, sizeof cur, "%s", dr.str);
+      if (dr.n > 0)
+        nops++;
+    }
+  }
+  snprintf(r->str, sizeof r->str, "%s", cur);
+  r->n = nops;
+  r->ok = 1;
+  return 0;
+}
+
 /* Set leaf along path; create missing intermediate objects as {}.
  * r->str = new root plate · r->n from leaf set · r->code = path depth. */
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,

@@ -2182,6 +2182,8 @@ int main(int argc, char **argv) {
       {"cli_plate_diffflat", "programs/proof/1213_cli_plate_diffflat.sh", "cubalc plate diffflat/pathdiff DIFFFLAT dual"},
       {"grepflat", "programs/proof/1214_grepflat.cubalc", "GREPFLAT/GREPVFLAT/GREPFLATI path needle filter multi-plate"},
       {"cli_plate_grepf", "programs/proof/1214_cli_plate_grepf.sh", "cubalc plate grepf/grepvf GREPFLAT dual"},
+      {"pruneflat", "programs/proof/1215_pruneflat.cubalc", "PRUNEFLAT/KEEPONLYFLAT leaf path scrub project write-back"},
+      {"cli_plate_prune", "programs/proof/1215_cli_plate_prune.sh", "cubalc plate prune/keeponly PRUNEFLAT dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2470,6 +2472,8 @@ int main(int argc, char **argv) {
       {"GREPFLAT", "flow", "GREPFLAT|KEEPFLAT [FROM plate] needle — filter path:value bag by path needle"},
       {"GREPVFLAT", "flow", "GREPVFLAT|DROPFLAT [FROM plate] needle — invert GREPFLAT"},
       {"GREPFLATI", "flow", "GREPFLATI|IGREPFLAT [FROM plate] needle — case-insensitive GREPFLAT"},
+      {"PRUNEFLAT", "flow", "PRUNEFLAT|DELFLAT [FROM plate] needle — drop matching leaf paths write-back"},
+      {"KEEPONLYFLAT", "flow", "KEEPONLYFLAT|RETAINFLAT [FROM plate] needle — keep only matching leaves rewrite"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4946,6 +4950,8 @@ int main(int argc, char **argv) {
               "       cubalc plate pathdiff <a.json> <b.json>  # PATHDIFF dual · changed leaf paths\n"
               "       cubalc plate grepf|grepflat <path> <needle>  # GREPFLAT dual · path filter\n"
               "       cubalc plate grepvf <path> <needle>  # GREPVFLAT dual · invert\n"
+              "       cubalc plate prune <path> <needle>  # PRUNEFLAT dual · drop matching leaves\n"
+              "       cubalc plate keeponly <path> <needle>  # KEEONLYFLAT dual · project leaves\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -4977,7 +4983,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5041,6 +5047,10 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "grepvf") == 0 || strcmp(argv[2], "grepvflat") == 0 ||
         strcmp(argv[2], "dropflat") == 0 || strcmp(argv[2], "grepfi") == 0 ||
         strcmp(argv[2], "grepflati") == 0 ||
+        strcmp(argv[2], "prune") == 0 || strcmp(argv[2], "pruneflat") == 0 ||
+        strcmp(argv[2], "delflat") == 0 || strcmp(argv[2], "scrubflat") == 0 ||
+        strcmp(argv[2], "keeponly") == 0 || strcmp(argv[2], "keeponlyflat") == 0 ||
+        strcmp(argv[2], "retainflat") == 0 || strcmp(argv[2], "projectflat") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5197,6 +5207,12 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "grepflati") == 0 || strcmp(op, "igrepflat") == 0 ||
                strcmp(op, "grepiflat") == 0)
         op = "grepfi";
+      else if (strcmp(op, "pruneflat") == 0 || strcmp(op, "delflat") == 0 ||
+               strcmp(op, "scrubflat") == 0 || strcmp(op, "rmflat") == 0)
+        op = "prune";
+      else if (strcmp(op, "keeponlyflat") == 0 || strcmp(op, "retainflat") == 0 ||
+               strcmp(op, "projectflat") == 0 || strcmp(op, "retain") == 0)
+        op = "keeponly";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -5605,6 +5621,49 @@ int main(int argc, char **argv) {
              op, path, needle, file_hit ? "true" : "false",
              pr.n, invert ? "true" : "false", icase ? "true" : "false",
              flat, CUBALC_LANG_VERSION);
+      return 0;
+    }
+
+    /* prune|keeponly [needle] — PRUNEFLAT / KEEONLYFLAT duals (write-back).
+     *   cubalc plate prune    agent.json tmp
+     *   cubalc plate keeponly agent.json cfg
+     * Rewrites plate file. n = deleted (prune) or kept (keeponly). */
+    if (strcmp(op, "prune") == 0 || strcmp(op, "keeponly") == 0) {
+      const char *needle = "";
+      cubalc_host_result pr, wr;
+      int keep_only = (strcmp(op, "keeponly") == 0) ? 1 : 0;
+
+      if (ai < argc && argv[ai] && argv[ai][0])
+        needle = argv[ai++];
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_filter_write(plate, needle, keep_only, 0, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               op, path, pr.err[0] ? pr.err : "filter write fail",
+               CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", pr.str);
+      if (file_hit || (path && path[0] && strchr(path, '.'))) {
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_write(path, plate, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"write fail\","
+                 "\"version\":\"%s\"}\n", op, path, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        file_hit = 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"%s\",\"path\":\"%s\",\"needle\":\"%s\",\"file\":%s,"
+             "\"n\":%ld,\"keep_only\":%s,\"version\":\"%s\",\"plate\":%s,"
+             "\"note\":\"%s\"}\n",
+             op, path, needle, file_hit ? "true" : "false",
+             pr.n, keep_only ? "true" : "false", CUBALC_LANG_VERSION, plate,
+             keep_only
+                 ? "KEEPONLYFLAT dual · project matching leaves"
+                 : "PRUNEFLAT dual · drop matching leaves");
       return 0;
     }
 

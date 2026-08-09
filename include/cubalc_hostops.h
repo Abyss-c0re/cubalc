@@ -273,6 +273,14 @@ int cubalc_host_json_leaf_diff(const char *a, const char *b, int paths_only,
  * Soft always OK. Usability: nest triage without FLATKV+SYS GREP glue. */
 int cubalc_host_json_leaf_grep(const char *json, const char *needle, int invert,
                                int icase, cubalc_host_result *r);
+/* Write-back leaf filter by path needle.
+ * keep_only=0 (PRUNEFLAT): path_del every matching leaf · r->n = deleted.
+ * keep_only=1 (KEEPONLYFLAT): rebuild plate from matching path:val only · r->n = kept.
+ * Empty needle + keep_only=0 → no-op copy · keep_only=1 → full copy (all leaves).
+ * Soft always OK. Usability: scrub/project nested plate without multi DELP/UNFLAT glue. */
+int cubalc_host_json_leaf_filter_write(const char *json, const char *needle,
+                                       int keep_only, int icase,
+                                       cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

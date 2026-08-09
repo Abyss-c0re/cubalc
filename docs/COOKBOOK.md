@@ -232,6 +232,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate grepf    state/my_agent.json cfg                   # path:value leaves matching path needle
 ./out/cubalc plate grepvf   state/my_agent.json tmp                   # drop matching paths
 ./out/cubalc plate grepfi   state/my_agent.json CFG.META              # case-insensitive path filter
+./out/cubalc plate prune    state/my_agent.json tmp                   # drop leaves matching path needle
+./out/cubalc plate keeponly state/my_agent.json cfg                   # project only matching leaves
 ./out/cubalc libs | grep plate
 
 # nest* still available; prefer dotted get/set when one scalar field:

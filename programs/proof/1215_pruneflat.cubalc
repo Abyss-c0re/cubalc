@@ -1,0 +1,78 @@
+# PRUNEFLAT / KEEONLYFLAT — scrub or project nested leaves by path needle
+# Usability: write-back without multi DELP or GREPFLAT+UNFLAT glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"role\":\"worker\",\"x\":1},\"port\":8080,\"tmp\":9},\"n\":3,\"debug\":1}"
+
+# prune tmp + debug noise
+PRUNEFLAT "tmp"
+ASSERT OK == 1
+ASSERT PRUNEFLAT_N == 1
+HASP "cfg.tmp"
+ASSERT LAST_N == 0
+GETP "cfg.port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+PRUNEFLAT "debug"
+ASSERT PRUNEFLAT_N == 1
+HASP "debug"
+ASSERT LAST_N == 0
+GETP "n"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# keeponly project cfg.*
+LET PLATE = "{\"host\":\"cubeA\",\"cfg\":{\"meta\":{\"role\":\"worker\"},\"port\":8080},\"n\":3}"
+KEEPONLYFLAT "cfg"
+ASSERT OK == 1
+ASSERT KEEPONLYFLAT_N == 2
+HASP "host"
+ASSERT LAST_N == 0
+HASP "n"
+ASSERT LAST_N == 0
+GETP "cfg.meta.role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+GETP "cfg.port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+LET PEER = "{\"net\":{\"peer\":{\"host\":\"peerB\",\"tls\":1},\"tmp\":1}}"
+PRUNEFLAT FROM PEER "tmp"
+ASSERT PRUNEFLAT_FROM == 1
+SYS EQS PRUNEFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT PRUNEFLAT_N == 1
+LET PLATE = PEER
+HASP "net.tmp"
+ASSERT LAST_N == 0
+GETP "net.peer.host"
+SYS EQS LAST "peerB"
+ASSERT LAST_N == 1
+
+# alias DELFLAT
+LET PLATE = "{\"a\":{\"b\":1,\"c\":2}}"
+DELFLAT "c"
+ASSERT DELFLAT_N == 1
+HASP "a.c"
+ASSERT LAST_N == 0
+GETP "a.b"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# empty needle prune no-op
+LET PLATE = "{\"x\":1}"
+PRUNEFLAT ""
+ASSERT PRUNEFLAT_N == 0
+GETP "x"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1215_pruneflat: PASS"
