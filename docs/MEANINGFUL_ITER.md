@@ -626,6 +626,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 596. ~~**`programs/lib/plate_peer` + `plate_peer_save`**~~ **done** (multi-plate PEER boot/write-back INCLUDE · dual of plate_boot/plate_save).
 597. ~~**`plate_peer_session` + `cubalc init --peer`**~~ **done** (one INCLUDE PLATE+PEER · scaffold multi-plate starter).
 598. ~~**`plate_peer_tick` + COOKBOOK §9**~~ **done** (PEER tick lib dual of plate_tick · multi-plate recipes for agents).
+599. ~~**`cubalc plate ensure` / `merge`**~~ **done** (CLI create-or-keep + multi-key overlay · ENSUREPLATE/JSONFILEMERGE duals · no `.cubalc`).
 
 ## Tick protocol
 

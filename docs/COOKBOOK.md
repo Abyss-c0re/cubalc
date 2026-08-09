@@ -203,12 +203,18 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate get  state/my_agent.json n
 ./out/cubalc plate set  state/my_agent.json role worker
 ./out/cubalc plate inc  state/my_agent.json n
+./out/cubalc plate ensure state/my_agent.json '{"n":0,"ok":true}'   # create-or-keep
+./out/cubalc plate merge  state/my_agent.json '{"status":"ready"}'  # multi-key overlay
+./out/cubalc plate merge  state/peer.json @patch.json
 ./out/cubalc libs | grep plate
 ```
 
+`ensure` does not clobber an existing object plate (dual of `ENSUREPLATE`).  
+`merge` applies overlay keys and saves (dual of `JSONFILEMERGE` / `MERGEP` on disk).
+
 Libs: `plate_session` · `plate_boot` · `plate_save` · `plate_patch` · `plate_tick` · `agent_boot`.  
 Forms: `SETP`/`INCP`/`MERGEP`/`NEEDP`/`DUMPP`.  
-Proofs: `1117_plate_session` · `1110_setp` · `1115_plate_patch` · `1116_dumpp` · `1112_cli_plate.sh`.
+Proofs: `1117_plate_session` · `1110_setp` · `1115_plate_patch` · `1116_dumpp` · `1112_cli_plate.sh` · `1140_cli_plate_ensure_merge.sh`.
 
 ## 9. Multi-plate PEER state (PLATE + PEER)
 
