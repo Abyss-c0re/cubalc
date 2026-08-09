@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 615,
-  "version": "1.15.642-usability",
-  "item": "dotted path GETP/SETP/INCP/DELP/HASP",
-  "item_id": 651,
-  "title": "GETP|SETP|INCP|DELP|HASP dotted/slash path nest sugar \u00b7 multi-plate \u00b7 no GETPOBJ glue",
-  "commit": "2f913f30c86762dbeb055eed2f4411dc7e393578",
-  "summary": "One form for shallow+deep plate fields. proof 1192 41/41.",
+  "iter": 616,
+  "version": "1.15.643-usability",
+  "item": "TYPEP/DEFAULTP/TOGGLEP path + plate CLI path",
+  "item_id": 652,
+  "title": "TYPEP|DEFAULTP|TOGGLEP dotted path · cubalc plate get|set|inc|del path duals · complete nest path plane",
+  "commit": "PENDING",
+  "summary": "Kind probe + set-if-missing + flag flip on nest paths; CLI path without nestget. proof 1193 32/32 + CLI PASS.",
   "proofs": [
-    "1192_pathp 41/41",
-    "1110_setp reg 38/38",
-    "1130_setp_from reg 38/38",
-    "1191_summergeobj reg 46/46"
+    "1193_pathp_more 32/32",
+    "1193b_cli_plate_path PASS",
+    "1192_pathp reg 41/41",
+    "1110_setp reg ok"
   ],
-  "when": "2026-08-09T10:55:00Z",
+  "when": "2026-08-09T11:10:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2f913f30c86762dbeb055eed2f4411dc7e393578",
-  "note": "after backlog 650 SUMMERGEOBJ; EVOLVE_PAUSED"
+  "sha": "PENDING",
+  "note": "after thrash restore; pathp complete plane; EVOLVE_PAUSED"
 }

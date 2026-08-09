@@ -35769,9 +35769,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PEEKP", "PEEKP alias of GETP"},
       {"MERGEP", "MERGEP [FROM plate] overlay — merge into PLATE or named plate · multi-plate"},
       {"PATCHP", "PATCHP alias of MERGEP"},
-      {"DEFAULTP", "DEFAULTP|ENSUREP [FROM plate] key value — set-if-missing · multi-plate"},
+      {"DEFAULTP", "DEFAULTP|ENSUREP [FROM plate] key value — set-if-missing · dotted path nest ok · multi-plate"},
       {"ENSUREP", "ENSUREP alias of DEFAULTP"},
-      {"TOGGLEP", "TOGGLEP [FROM plate] key — flip flag · multi-plate · miss→1 · write-back"},
+      {"TOGGLEP", "TOGGLEP [FROM plate] key — flip flag · dotted path nest ok · multi-plate · miss→1 · write-back"},
       {"NEEDP", "NEEDP [FROM plate] key… — fail-fast if plate missing keys · multi-plate · soft twin HASPALL"},
       {"REQUIREP", "REQUIREP alias of NEEDP"},
       {"HASP", "HASP [FROM plate] key — soft 0|1 presence · dotted path nest ok · multi-plate · no GETP miss ERR"},
@@ -35826,7 +35826,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASKEYSP", "HASKEYSP alias of NONEMPTYP"},
       {"VALSP", "VALSP|VALUEP [FROM plate] — values bag · twin KEYSP · multi-plate · no SYS JSONVALUES"},
       {"VALUEP", "VALUEP alias of VALSP"},
-      {"TYPEP", "TYPEP|KINDP [FROM plate] key — field kind missing|num|str|bool|null|obj|arr · multi-plate · no SYS JSONTYPE"},
+      {"TYPEP", "TYPEP|KINDP [FROM plate] key — field kind missing|num|str|bool|null|obj|arr · dotted path nest ok · multi-plate · no SYS JSONTYPE"},
       {"KINDP", "KINDP alias of TYPEP"},
       {"GETOBJ", "GETOBJ|PEEKOBJ [FROM plate] key [OR fb] [INTO name] — peel nested object → plate · multi-plate · no GETP miss on obj"},
       {"PEEKOBJ", "PEEKOBJ alias of GETOBJ"},
@@ -38437,7 +38437,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
     if (is_def) {
       memset(&gr, 0, sizeof gr);
-      present = (cubalc_host_json_get(plate, key, &gr) == 0) ? 1 : 0;
+      present = (cubalc_host_json_path_has(plate, key, &gr) == 0 && gr.n) ? 1 : 0;
       if (present) {
         /* keep — no clobber; still write-back named plate as-is for consistency */
         if (have_from && from_name[0])
@@ -38459,7 +38459,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         bump(vm); return 1;
       }
       memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_set(plate, key, val, val_kind, &hr) != 0) {
+      if (cubalc_host_json_path_set(plate, key, val, val_kind, &hr) != 0) {
         var_set_str(vm, "LAST", "");
         vm->last_str[0] = 0;
         vm->last_n = 0;
@@ -38492,9 +38492,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
 
-    /* TOGGLEP */
+    /* TOGGLEP (dotted path ok) */
     memset(&gr, 0, sizeof gr);
-    if (cubalc_host_json_get(plate, key, &gr) == 0) {
+    if (cubalc_host_json_path_get(plate, key, &gr) == 0) {
       char *end = NULL;
       if (!gr.str[0]) cur = 0;
       else {
@@ -38507,7 +38507,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     nv = cur ? 0 : 1;
     snprintf(raw, sizeof raw, "%ld", nv);
     memset(&hr, 0, sizeof hr);
-    if (cubalc_host_json_set(plate, key, raw, 1, &hr) != 0) {
+    if (cubalc_host_json_path_set(plate, key, raw, 1, &hr) != 0) {
       var_set_str(vm, "LAST", "");
       vm->last_str[0] = 0;
       vm->last_n = 0;
@@ -41125,9 +41125,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* TYPEP|KINDP [FROM plate] key — field kind probe (JSONTYPE dual).
    * LAST = missing|num|str|bool|null|obj|arr · LAST_N = 0..6.
    * Soft miss → missing/0 · multi-plate FROM · no SYS JSONTYPE glue.
+   * Dotted/slash paths (same as GETP): TYPEP "freq.error" · TYPEP "meta/role".
    * Usability: choose JSONN vs string peel vs nested without IF-guess:
    *   TYPEP "retries"
    *   TYPEP FROM PEER "payload"
+   *   TYPEP "freq.error"
    */
   if (kw(&L->cur,"TYPEP") || kw(&L->cur,"KINDP") || kw(&L->cur,"MTYPEP") ||
       kw(&L->cur,"PLATE_TYPE") || kw(&L->cur,"KEYTYPEP") || kw(&L->cur,"TYPEOFP") ||
@@ -41242,7 +41244,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
 
     memset(&gr, 0, sizeof gr);
-    if (cubalc_host_json_get_raw(plate, key, &gr) != 0) {
+    if (cubalc_host_json_path_get_raw(plate, key, &gr) != 0) {
       kind_s = "missing";
       kind_n = 0;
     } else {

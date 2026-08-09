@@ -2158,6 +2158,8 @@ int main(int argc, char **argv) {
       {"cli_plate_nestsort", "programs/proof/1190_cli_plate_nestsort.sh", "cubalc plate nestsort/nestsortbag SORTOBJ duals"},
       {"summergeobj", "programs/proof/1191_summergeobj.cubalc", "SUMMERGEOBJ/SUBVALOBJ nest FREQ sum-merge delta multi-plate"},
       {"pathp", "programs/proof/1192_pathp.cubalc", "GETP/SETP/INCP/DELP/HASP dotted path nest sugar multi-plate"},
+      {"pathp_more", "programs/proof/1193_pathp_more.cubalc", "TYPEP/DEFAULTP/TOGGLEP path + cubalc plate get/set/inc path"},
+      {"cli_plate_path", "programs/proof/1193b_cli_plate_path.sh", "cubalc plate get/set/inc/del dotted path duals"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
       {"mergeobj", "programs/proof/1171_mergeobj.cubalc", "MERGEOBJ/DEFAULTOBJ nested plate merge one-shot multi-plate"},
       {"getpobj", "programs/proof/1172_getpobj.cubalc", "GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ nested scalar field plane multi-plate"},
@@ -6546,7 +6548,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
         }
       }
       memset(&gr, 0, sizeof gr);
-      if (cubalc_host_json_get(plate, key, &gr) == 0) {
+      /* dotted/slash path: plate get agent.json freq.error */
+      if (cubalc_host_json_path_get(plate, key, &gr) == 0) {
         /* escape value lightly for JSON string field */
         char esc[CUBALC_HOST_STR_MAX];
         size_t i, o = 0;
@@ -6621,7 +6624,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
         if (allnum) val_kind = 1;
       }
       memset(&wr, 0, sizeof wr);
-      if (cubalc_host_json_set(plate, key, val, val_kind, &wr) != 0) {
+      /* dotted/slash path: plate set agent.json freq.error 9 */
+      if (cubalc_host_json_path_set(plate, key, val, val_kind, &wr) != 0) {
         printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
                "\"op\":\"set\",\"path\":\"%s\",\"key\":\"%s\",\"err\":\"%s\","
                "\"version\":\"%s\"}\n",
@@ -6664,7 +6668,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
         ai++;
       }
       memset(&gr, 0, sizeof gr);
-      if (cubalc_host_json_get(plate, key, &gr) == 0) {
+      if (cubalc_host_json_path_get(plate, key, &gr) == 0) {
         char *end = NULL;
         cur = strtol(gr.str, &end, 10);
         if (end == gr.str) cur = 0;
@@ -6672,7 +6676,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       nv = cur + delta;
       snprintf(raw, sizeof raw, "%ld", nv);
       memset(&wr, 0, sizeof wr);
-      if (cubalc_host_json_set(plate, key, raw, 1, &wr) != 0) {
+      if (cubalc_host_json_path_set(plate, key, raw, 1, &wr) != 0) {
         printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
                "\"op\":\"inc\",\"err\":\"%s\",\"version\":\"%s\"}\n",
                wr.err[0] ? wr.err : "json set fail", CUBALC_LANG_VERSION);
@@ -6704,7 +6708,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
 
     if (strcmp(op, "del") == 0) {
       memset(&wr, 0, sizeof wr);
-      if (cubalc_host_json_del(plate, key, &wr) != 0) {
+      if (cubalc_host_json_path_del(plate, key, &wr) != 0) {
         printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
                "\"op\":\"del\",\"err\":\"%s\",\"version\":\"%s\"}\n",
                wr.err[0] ? wr.err : "json del fail", CUBALC_LANG_VERSION);

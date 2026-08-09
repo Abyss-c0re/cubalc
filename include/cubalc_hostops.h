@@ -223,6 +223,9 @@ int cubalc_host_json_del(const char *json, const char *key, cubalc_host_result *
  * path_set creates missing intermediate objects as {}.
  * Usability: one form for shallow+deep without GETPOBJ+GETP/SETP+SETOBJ. */
 int cubalc_host_json_path_get(const char *json, const char *path, cubalc_host_result *r);
+/* Raw leaf peel along path (quotes/nested preserved) · soft miss -1. */
+int cubalc_host_json_path_get_raw(const char *json, const char *path,
+                                  cubalc_host_result *r);
 int cubalc_host_json_path_set(const char *json, const char *path, const char *val,
                               int val_kind, cubalc_host_result *r);
 int cubalc_host_json_path_del(const char *json, const char *path, cubalc_host_result *r);

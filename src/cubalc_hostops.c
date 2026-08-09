@@ -4135,13 +4135,47 @@ static int cubalc_json_path_is_deep(const char *path) {
   return 0;
 }
 
+/* Walk intermediates to parent object of leaf; leave parent in cur. n segs out. */
+static int cubalc_json_path_walk_parent(const char *json, const char *path,
+                                        char segs[][96], int *nsegs,
+                                        char *cur, size_t curcap,
+                                        cubalc_host_result *err) {
+  cubalc_host_result gr;
+  int n, i;
+  const char *v;
+  n = cubalc_json_path_split(path, segs, CUBALC_JSON_PATH_MAXSEG);
+  if (n < 1) {
+    if (err) snprintf(err->err, sizeof err->err, "jsonpath: bad path");
+    return -1;
+  }
+  *nsegs = n;
+  snprintf(cur, curcap, "%s", json && json[0] ? json : "{}");
+  for (i = 0; i < n - 1; i++) {
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(cur, segs[i], &gr) != 0) {
+      if (err) snprintf(err->err, sizeof err->err, "jsonpath: miss %s", segs[i]);
+      return -1;
+    }
+    v = gr.str;
+    while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+    if (*v != '{') {
+      if (err) snprintf(err->err, sizeof err->err, "jsonpath: not object at %s", segs[i]);
+      return -1;
+    }
+    if (v != gr.str) {
+      size_t m = strlen(v);
+      memmove(gr.str, v, m + 1);
+    }
+    snprintf(cur, curcap, "%s", gr.str);
+  }
+  return 0;
+}
+
 /* Peel path leaf as decoded scalar (string unquoted / number text). Soft miss -1. */
 int cubalc_host_json_path_get(const char *json, const char *path, cubalc_host_result *r) {
   char segs[CUBALC_JSON_PATH_MAXSEG][96];
   char cur[CUBALC_HOST_STR_MAX];
-  cubalc_host_result gr;
-  int n, i;
-  const char *v;
+  int n;
   r_clear(r);
   if (!path || !path[0]) {
     snprintf(r->err, sizeof r->err, "jsonpath: empty path");
@@ -4149,31 +4183,27 @@ int cubalc_host_json_path_get(const char *json, const char *path, cubalc_host_re
   }
   if (!cubalc_json_path_is_deep(path))
     return cubalc_host_json_get(json, path, r);
-  n = cubalc_json_path_split(path, segs, CUBALC_JSON_PATH_MAXSEG);
-  if (n < 1) {
-    snprintf(r->err, sizeof r->err, "jsonpath: bad path");
+  if (cubalc_json_path_walk_parent(json, path, segs, &n, cur, sizeof cur, r) != 0)
+    return -1;
+  return cubalc_host_json_get(cur, segs[n - 1], r);
+}
+
+/* Raw leaf peel along path. Soft miss -1. */
+int cubalc_host_json_path_get_raw(const char *json, const char *path,
+                                  cubalc_host_result *r) {
+  char segs[CUBALC_JSON_PATH_MAXSEG][96];
+  char cur[CUBALC_HOST_STR_MAX];
+  int n;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "jsonpath: empty path");
     return -1;
   }
-  snprintf(cur, sizeof cur, "%s", json && json[0] ? json : "{}");
-  for (i = 0; i < n - 1; i++) {
-    memset(&gr, 0, sizeof gr);
-    if (cubalc_host_json_get_raw(cur, segs[i], &gr) != 0) {
-      snprintf(r->err, sizeof r->err, "jsonpath: miss %s", segs[i]);
-      return -1;
-    }
-    v = gr.str;
-    while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
-    if (*v != '{') {
-      snprintf(r->err, sizeof r->err, "jsonpath: not object at %s", segs[i]);
-      return -1;
-    }
-    if (v != gr.str) {
-      size_t m = strlen(v);
-      memmove(gr.str, v, m + 1);
-    }
-    snprintf(cur, sizeof cur, "%s", gr.str);
-  }
-  return cubalc_host_json_get(cur, segs[n - 1], r);
+  if (!cubalc_json_path_is_deep(path))
+    return cubalc_host_json_get_raw(json, path, r);
+  if (cubalc_json_path_walk_parent(json, path, segs, &n, cur, sizeof cur, r) != 0)
+    return -1;
+  return cubalc_host_json_get_raw(cur, segs[n - 1], r);
 }
 
 /* Soft presence along dotted path. r->n = 0|1. Always r->ok=1 when args valid. */

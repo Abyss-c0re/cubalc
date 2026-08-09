@@ -1,0 +1,88 @@
+# TYPEP/DEFAULTP/TOGGLEP dotted path + CLI plate get/set/inc path duals
+# Completes nest path plane after GETP/SETP path sugar.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"error\":5,\"warn\":2},\"flags\":{\"debug\":0}}"
+LET PEER = "{\"meta\":{\"role\":\"worker\",\"n\":3}}"
+
+# TYPEP path kinds (TYPEP_N survives SYS EQS clobber of LAST_N)
+TYPEP "host"
+SYS EQS LAST "str"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 2
+TYPEP "freq"
+SYS EQS LAST "obj"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 5
+TYPEP "freq.error"
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 1
+TYPEP "freq.ghost"
+SYS EQS LAST "missing"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 0
+TYPEP "flags.debug"
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 1
+TYPEP FROM PEER "meta.role"
+SYS EQS LAST "str"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 2
+TYPEP FROM PEER "meta.n"
+SYS EQS LAST "num"
+ASSERT LAST_N == 1
+ASSERT TYPEP_N == 1
+
+# DEFAULTP path — set-if-missing creates nest
+DEFAULTP "cfg.port" 8080
+ASSERT OK == 1
+ASSERT DEFAULTP_N == 1
+GETP "cfg.port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+# keep existing
+DEFAULTP "cfg.port" 9999
+ASSERT DEFAULTP_KEPT == 1
+ASSERT DEFAULTP_N == 0
+GETP "cfg.port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+# existing nest field keep
+DEFAULTP "freq.error" 0
+ASSERT DEFAULTP_KEPT == 1
+GETP "freq.error"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+# TOGGLEP path
+TOGGLEP "flags.debug"
+ASSERT OK == 1
+ASSERT TOGGLEP_V == 1
+GETP "flags.debug"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+TOGGLEP "flags.debug"
+ASSERT TOGGLEP_V == 0
+GETP "flags.debug"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+# create intermediate on miss
+TOGGLEP "flags.verbose"
+ASSERT TOGGLEP_V == 1
+GETP "flags.verbose"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# shallow DEFAULTP/TOGGLEP regression
+DEFAULTP "retries" 3
+ASSERT DEFAULTP_N == 1
+TOGGLEP "on"
+ASSERT TOGGLEP_V == 1
+GETP "retries"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+PRINT "1193_pathp_more lang ok"
