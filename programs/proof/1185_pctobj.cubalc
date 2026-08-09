@@ -1,0 +1,144 @@
+# PCTOBJ / SCALEPOBJ / ADDPOBJ / DIVPOBJ / ABSPOBJ / SIGNPOBJ
+# Nest value map write-back — PCTP duals without GETOBJ glue.
+# Not OOP SCALEOBJ/MULOBJ/ABSOBJ/SIGNOBJ (field TIMESF family).
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"freq\":{\"warn\":25,\"error\":50,\"info\":25,\"label\":\"x\"}}"
+LET PEER = "{\"scores\":{\"a\":3,\"b\":7,\"tag\":\"ok\"},\"outer\":\"z\"}"
+
+# PCTOBJ: values as integer percent of sum (25+50+25=100)
+PCTOBJ "freq"
+ASSERT OK == 1
+ASSERT PCTOBJ_N == 3
+ASSERT PCTOBJ_SUM == 100
+ASSERT PCTOBJ_NEST_HIT == 1
+ASSERT PCTOBJ_FROM == 0
+GETPOBJ "freq" "warn"
+SYS EQS LAST "25"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "error"
+SYS EQS LAST "50"
+ASSERT LAST_N == 1
+GETPOBJ "freq" "label"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+# FROM PEER: 3+7=10 → 30%% and 70%%
+PCTOBJ FROM PEER "scores"
+ASSERT PCTOBJ_FROM == 1
+ASSERT PCTOBJ_SUM == 10
+ASSERT PCTOBJ_N == 2
+GETPOBJ FROM PEER "scores" "a"
+SYS EQS LAST "30"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "scores" "b"
+SYS EQS LAST "70"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "scores" "tag"
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+GETP FROM PEER "outer"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# reseed PEER for scale
+LET PEER = "{\"scores\":{\"a\":3,\"b\":7,\"tag\":\"ok\"},\"outer\":\"z\"}"
+SCALEPOBJ FROM PEER "scores" 2
+ASSERT OK == 1
+ASSERT SCALEPOBJ_N == 2
+ASSERT SCALEPOBJ_F == 2
+GETPOBJ FROM PEER "scores" "a"
+SYS EQS LAST "6"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "scores" "b"
+SYS EQS LAST "14"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "scores" "tag"
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+
+# MULPOBJ / NESTSCALE aliases on PLATE freq (already percented)
+MULPOBJ "freq" 10
+ASSERT SCALEPOBJ_N == 3
+GETPOBJ "freq" "warn"
+SYS EQS LAST "250"
+ASSERT LAST_N == 1
+
+# ADDPOBJ Laplace +1
+LET PEER = "{\"scores\":{\"a\":3,\"b\":7,\"tag\":\"ok\"},\"outer\":\"z\"}"
+ADDPOBJ FROM PEER "scores" 1
+ASSERT OK == 1
+ASSERT ADDPOBJ_N == 2
+ASSERT ADDPOBJ_D == 1
+GETPOBJ FROM PEER "scores" "a"
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "scores" "b"
+SYS EQS LAST "8"
+ASSERT LAST_N == 1
+
+# DIVPOBJ
+DIVPOBJ FROM PEER "scores" 2
+ASSERT DIVPOBJ_N == 2
+ASSERT DIVPOBJ_D == 2
+GETPOBJ FROM PEER "scores" "a"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "scores" "b"
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+
+# ABSPOBJ / SIGNPOBJ
+LET PEER = "{\"delta\":{\"x\":-3,\"y\":0,\"z\":5,\"name\":\"d\"},\"outer\":\"z\"}"
+ABSPOBJ FROM PEER "delta"
+# ABSP_N = negatives flipped only (plate ABSP semantics)
+ASSERT ABSPOBJ_N == 1
+GETPOBJ FROM PEER "delta" "x"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "delta" "y"
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "delta" "z"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"delta\":{\"x\":-3,\"y\":0,\"z\":5,\"name\":\"d\"},\"outer\":\"z\"}"
+SIGNPOBJ FROM PEER "delta"
+# SIGNP_N = pure-int keys rewritten
+ASSERT SIGNPOBJ_N == 3
+ASSERT SIGNPOBJ_POS == 1
+ASSERT SIGNPOBJ_NEG == 1
+ASSERT SIGNPOBJ_ZERO == 1
+GETPOBJ FROM PEER "delta" "x"
+SYS EQS LAST "-1"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "delta" "z"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# soft nest miss
+PCTOBJ "ghost"
+ASSERT OK == 1
+ASSERT PCTOBJ_NEST_HIT == 0
+ASSERT PCTOBJ_N == 0
+HASP "ghost"
+ASSERT LAST_N == 0
+
+# trailing FROM + NESTPCT
+LET PEER = "{\"scores\":{\"a\":1,\"b\":3},\"outer\":\"z\"}"
+NESTPCT "scores" FROM PEER
+ASSERT PCTOBJ_N == 2
+ASSERT PCTOBJ_SUM == 4
+GETPOBJ FROM PEER "scores" "a"
+SYS EQS LAST "25"
+ASSERT LAST_N == 1
+GETPOBJ FROM PEER "scores" "b"
+SYS EQS LAST "75"
+ASSERT LAST_N == 1
+
+PRINT "pctobj soft ok"
