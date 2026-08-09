@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 661,
-  "version": "1.15.688-usability",
-  "item": "NTHFLATN + plate nthflatn",
-  "item_id": 697,
-  "title": "NTHFLATN/INDEXFLATN + cubalc plate nthflatn · 0-based Nth pure-int leaf by needle → LAST_N · OR fallback",
-  "commit": "005cfeb062a67661b19e0a29f9f30976bb574bc5",
-  "summary": "Index pure-int nest peels without VALSFLATN+NTH glue. proof 1238 + CLI PASS.",
+  "iter": 662,
+  "version": "1.15.689-usability",
+  "item": "NTHFLAT + plate nthflat",
+  "item_id": 698,
+  "title": "NTHFLAT/INDEXFLAT + cubalc plate nthflat · 0-based Nth matching leaf by needle → LAST · OR fallback",
+  "commit": "41ffd4c649403653aaaec7ad11c3a1c2739e440a",
+  "summary": "Index nest peels without PATHSFLAT+NTH+GETP glue. proof 1239 + CLI PASS.",
   "proofs": [
-    "1238_nthflatn PASS",
-    "1238_cli_plate_nthflatn PASS",
-    "1229_getflatn reg PASS"
+    "1239_nthflat PASS",
+    "1239_cli_plate_nthflat PASS",
+    "1238_nthflatn reg PASS"
   ],
-  "when": "2026-08-09T18:23:13Z",
+  "when": "2026-08-09T18:37:37Z",
   "agent": "meaningful_iter_10m",
-  "sha": "005cfeb062a67661b19e0a29f9f30976bb574bc5",
-  "note": "after LASTFLAT plane; EVOLVE_PAUSED"
+  "sha": "41ffd4c649403653aaaec7ad11c3a1c2739e440a",
+  "note": "after NTHFLATN plane; EVOLVE_PAUSED"
 }
