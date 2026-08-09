@@ -1,0 +1,58 @@
+# plate_peer_tick — multi-plate PEER ensure+bump+ts+save one INCLUDE
+# Usability: dual of plate_tick for peer agents beside PLATE.
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_peer_tick"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "peer.json"
+LET ppath = LAST
+SYS RM ppath
+
+# conventional PLATE stays independent
+LET PLATE = "{}"
+SETP "agent" "plate-agent"
+SETP "n" 1
+
+DEFAULT PEER_PATH = ppath
+DEFAULT PEER_SEED = "{\"n\":0,\"agent\":\"hive-02\"}"
+DEFAULT PEER_TICK_KEY = "n"
+DEFAULT PEER_TS_KEY = "ts"
+INCLUDE plate_peer_tick
+ASSERT OK == 1
+ASSERT SEEDP_INTO == 1
+ASSERT SAVEP_FROM == 1
+ASSERT PEER_TICK_N == 1
+GETP FROM PEER "n"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+GETP FROM PEER "agent"
+SYS EQS LAST "hive-02"
+ASSERT LAST_N == 1
+HASP FROM PEER "ts"
+ASSERT HASP_HIT == 1
+# PLATE untouched
+GETP "agent"
+SYS EQS LAST "plate-agent"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 1
+
+# second tick bumps
+INCLUDE plate_peer_tick
+ASSERT PEER_TICK_N == 2
+GETP FROM PEER "n"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+# durable on disk
+LOADP INTO check ppath
+GETP FROM check "n"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+HASP FROM check "ts"
+ASSERT HASP_HIT == 1
+
+PRINT "plate_peer_tick soft ok"

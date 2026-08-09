@@ -1,0 +1,25 @@
+# INCLUDE plate_peer_tick — multi-plate PEER tick (seed + bump + stamp + save)
+# Usability: dual of plate_tick for PEER without SETP FROM / SAVEP glue
+#
+#   DEFAULT PEER_PATH = "state/peer.json"
+#   DEFAULT PEER_SEED = "{\"n\":0,\"agent\":\"local\"}"
+#   DEFAULT PEER_TICK_KEY = "n"
+#   DEFAULT PEER_TS_KEY = "ts"
+#   INCLUDE plate_peer_tick
+#   # PEER holds content · PEER_TICK_N is new counter · file saved
+#
+# Composes with plate_peer / plate_peer_session. HOLD_FLASH not required.
+
+DEFAULT PEER_PATH = "state/peer_plate.json"
+DEFAULT PEER_SEED = "{\"n\":0}"
+DEFAULT PEER_TICK_KEY = "n"
+DEFAULT PEER_TS_KEY = "ts"
+
+SEEDP INTO PEER PEER_PATH OR PEER_SEED
+SYS DATE
+LET PEER_TS = LAST
+INCP FROM PEER PEER_TICK_KEY
+LET PEER_TICK_N = INCP_V
+SETP FROM PEER PEER_TS_KEY PEER_TS
+SAVEP FROM PEER PEER_PATH
+# PEER content remains (SAVEP sets LAST=path only)

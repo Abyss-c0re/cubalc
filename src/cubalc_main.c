@@ -2114,6 +2114,7 @@ int main(int argc, char **argv) {
       {"loadp", "programs/proof/1136_loadp.cubalc", "LOADP/ENSUREP INTO multi-plate no-SYS disk boot"},
       {"plate_peer", "programs/proof/1137_plate_peer.cubalc", "INCLUDE plate_peer multi-plate PEER boot+save"},
       {"init_peer", "programs/proof/1138_init_peer.sh", "cubalc init --peer multi-plate scaffold"},
+      {"plate_peer_tick", "programs/proof/1139_plate_peer_tick.cubalc", "INCLUDE plate_peer_tick multi-plate PEER tick"},
       {"dumpp", "programs/proof/1116_dumpp.cubalc", "DUMPP cubalc.plate_info.v1 PLATE snapshot"},
       {"fillp", "programs/proof/1120_fillp.cubalc", "FILLP/SUBSTPLATE expand {{key}} from PLATE templates"},
       {"fillpfile", "programs/proof/1121_fillpfile.cubalc", "FILLPFILE materialize {{key}} template file from PLATE"},
@@ -3690,6 +3691,7 @@ int main(int argc, char **argv) {
       {"plate_peer.cubalc", "SEEDP INTO PEER multi-plate peer state (DEFAULT PEER_PATH/SEED)"},
       {"plate_peer_save.cubalc", "SAVEP FROM PEER PEER_PATH write-back (dual of plate_peer)"},
       {"plate_peer_session.cubalc", "plate_session + plate_peer one INCLUDE (PLATE + PEER)"},
+      {"plate_peer_tick.cubalc", "SEEDP+INCP+ts+SAVEP PEER tick (dual of plate_tick)"},
       {"peer_decide.cubalc", "FOLDBITS/SETDIGIT peer0 then DECIDE brain"},
       {"mesh_exchange.cubalc", "SMX KEY + dual EXCHANGE peer0/peer1"},
     };

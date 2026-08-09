@@ -16,6 +16,7 @@ make all
 ./out/cubalc examples    # curated runnable starters (JSON · filterable)
 ./out/cubalc cat agent_boot  # dump lib/program source + meta plate
 ./out/cubalc init --plate my_agent   # scaffold plate_session starter
+./out/cubalc init --peer mesh        # multi-plate PLATE+PEER starter
 ./out/cubalc forms SMX   # play-form catalog
 # agents: pipe source without a temp file (no HOLD_FLASH tax)
 printf 'ASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -
@@ -208,3 +209,47 @@ CLI one-shots (no `.cubalc` file):
 Libs: `plate_session` · `plate_boot` · `plate_save` · `plate_patch` · `plate_tick` · `agent_boot`.  
 Forms: `SETP`/`INCP`/`MERGEP`/`NEEDP`/`DUMPP`.  
 Proofs: `1117_plate_session` · `1110_setp` · `1115_plate_patch` · `1116_dumpp` · `1112_cli_plate.sh`.
+
+## 9. Multi-plate PEER state (PLATE + PEER)
+
+Keep a conventional agent `PLATE` and a second named plate (`PEER`) without
+`LET PLATE = other` clobber:
+
+```bash
+./out/cubalc init mesh --peer --force   # scaffold plate_peer_session starter
+./out/cubalc libs | grep plate_peer
+```
+
+```cubalc
+DEFAULT PLATE_PATH = "state/agent.json"
+DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true}"
+DEFAULT PEER_PATH = "state/peer.json"
+DEFAULT PEER_SEED = "{\"agent\":\"local\",\"n\":0}"
+INCLUDE plate_peer_session             # agent_boot + PLATE + PEER
+
+SETP "status" "ready"                  # mutate PLATE
+SETP FROM PEER "host" "cubeB"          # mutate PEER (PLATE untouched)
+INCP FROM PEER "n"
+NEEDP FROM PEER "agent" "host"
+DUMPP FROM PEER
+FILLP FROM PEER "peer={{agent}}@{{host}}"
+
+INCLUDE plate_save                     # write PLATE
+INCLUDE plate_peer_save                # write PEER
+# or one-shot peer tick:
+# INCLUDE plate_peer_tick              # seed + bump + ts + save PEER
+```
+
+Top-level disk plane (no `SYS`):
+
+| form | use |
+|------|-----|
+| `LOADP INTO name path` | soft load into named var |
+| `SEEDP INTO name path` | create-or-load into named var |
+| `SAVEP` / `SAVEP FROM name path` | persist PLATE or named plate |
+
+Mutate/probe (multi-plate `FROM`): `SETP`/`GETP`/`INCP`/`MERGEP`/`NEEDP`/`HASP`/`KEYSP`/`DUMPP`/`FILLP`/`FILLPFILE`.
+
+Libs: `plate_peer` · `plate_peer_save` · `plate_peer_session` · `plate_peer_tick`.  
+Proofs: `1137_plate_peer` · `1138_init_peer.sh` · `1139_plate_peer_tick` · `1130_setp_from` · `1136_loadp`.
+

@@ -38,7 +38,19 @@ DUMPP                          # cubalc.plate_info.v1
 ```
 
 Shell: `cubalc plate get|set|inc|show path.json` · `cubalc libs` · `cubalc cat plate_session`.
-See `docs/COOKBOOK.md` §8.
+See `docs/COOKBOOK.md` §8 (single plate) · §9 (multi-plate PEER).
+
+### Multi-plate PEER
+
+```cubalc
+INCLUDE plate_peer_session    # PLATE + PEER durable
+SETP FROM PEER "host" "cubeB"
+NEEDP FROM PEER "host"
+INCLUDE plate_peer_save
+# tick: INCLUDE plate_peer_tick
+```
+
+Shell: `cubalc init --peer` · `cubalc cat plate_peer_session`.
 
 Self-test: `make test` (lang suite + smx).
 
