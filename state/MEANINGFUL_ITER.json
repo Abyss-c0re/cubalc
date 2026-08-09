@@ -1,18 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 622,
-  "version": "1.15.649-usability",
-  "item": "cubalc plate default/toggle",
-  "item_id": 658,
-  "title": "cubalc plate default|toggle \u00b7 DEFAULTP/TOGGLEP CLI duals \u00b7 set-if-missing + flag flip \u00b7 dotted paths",
-  "commit": "ad910bb0a88d8683dce398382befc894b0598a98",
-  "summary": "Agent seed/feature flags without .cubalc. proof 1199 PASS after thrash restore.",
+  "iter": 633,
+  "version": "1.15.660-usability",
+  "item": "PATHKEYS + plate leaves",
+  "item_id": 669,
+  "title": "PATHKEYS/LEAFKEYS/DOTPATHS + cubalc plate leaves \u00b7 dotted leaf path bag \u00b7 multi-plate \u00b7 structure discovery",
+  "commit": "9c4a517ae5f6cb01aafe6b01f23a9cd6731fe9b0",
+  "summary": "Recursive dotted leaf paths without KEYSP+GETOBJ walk. proof 1210 + CLI leaves PASS.",
   "proofs": [
-    "1199_cli_plate_default_toggle PASS",
-    "1193_pathp_more reg 32/32"
+    "1210_pathkeys PASS",
+    "1210_cli_plate_leaves PASS",
+    "1209_pluckobj_path reg PASS",
+    "1201_path_keysp_lenp reg PASS"
   ],
-  "when": "2026-08-09T12:40:00Z",
+  "when": "2026-08-09T13:14:39Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ad910bb0a88d8683dce398382befc894b0598a98",
-  "note": "after thrash restore; plate_type; EVOLVE_PAUSED"
+  "sha": "9c4a517ae5f6cb01aafe6b01f23a9cd6731fe9b0",
+  "note": "after thrash restore; invent after backlog 668; EVOLVE_PAUSED"
 }
