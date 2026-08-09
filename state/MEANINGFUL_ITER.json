@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 647,
-  "version": "1.15.674-usability",
-  "item": "SCALEFLAT + plate scaleflat",
-  "item_id": 683,
-  "title": "SCALEFLAT/MULFLAT + cubalc plate scaleflat · multiply pure-int leaves by factor by path needle",
-  "commit": "376a6d3a21a2393b35ad0f369099c0f9d657a6e9",
-  "summary": "Nest score scale without multi GETP+arith+SETP. proof 1224 + CLI PASS.",
+  "iter": 648,
+  "version": "1.15.675-usability",
+  "item": "HASFLAT + COUNTFLAT + plate duals",
+  "item_id": 684,
+  "title": "HASFLAT/COUNTFLAT + cubalc plate hasflat|countflat · soft leaf-path presence and count by needle",
+  "commit": "5c5b808282649827433aa8370233a3a9b115341e",
+  "summary": "Structure probe without GREPFLAT+LINES glue. proof 1225 + CLI PASS.",
   "proofs": [
-    "1224_scaleflat PASS",
-    "1224_cli_plate_scaleflat PASS",
-    "1223_capflat reg PASS"
+    "1225_hasflat PASS",
+    "1225_cli_plate_hasflat PASS",
+    "1224_scaleflat reg PASS"
   ],
-  "when": "2026-08-09T15:45:00Z",
+  "when": "2026-08-09T15:55:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "376a6d3a21a2393b35ad0f369099c0f9d657a6e9",
-  "note": "after CAPFLAT plane; EVOLVE_PAUSED"
+  "sha": "5c5b808282649827433aa8370233a3a9b115341e",
+  "note": "after SCALEFLAT plane; EVOLVE_PAUSED"
 }
