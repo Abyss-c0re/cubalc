@@ -1,0 +1,92 @@
+# THRESHFLAT / DROPZEROFLAT — denoise pure-int leaves by value + path needle
+# Usability: nest FREQ denoise without GETOBJ+THRESHP+SETOBJ glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"hits\":{\"a\":10,\"b\":2,\"c\":5},\"label\":\"x\",\"meta\":{\"hits\":1,\"role\":\"w\"}}"
+
+THRESHFLAT "hits" 5
+ASSERT OK == 1
+ASSERT THRESHFLAT_N == 2
+ASSERT THRESHFLAT_DROP == 2
+ASSERT THRESHFLAT_MIN == 5
+GETP "hits.a"
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+GETP "hits.c"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+GETP "hits.b"
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+GETP "meta.hits"
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+GETP "meta.role"
+SYS EQS LAST "w"
+ASSERT LAST_N == 1
+GETP "label"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# empty needle min — bare THRESHFLAT 3
+LET PLATE = "{\"a\":1,\"b\":3,\"c\":9,\"s\":\"z\"}"
+THRESHFLAT 3
+ASSERT THRESHFLAT_N == 2
+ASSERT THRESHFLAT_DROP == 1
+GETP "a"
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+GETP "b"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+GETP "c"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+GETP "s"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+LET PEER = "{\"delta\":{\"x\":0,\"y\":4,\"z\":0},\"keep\":1}"
+DROPZEROFLAT FROM PEER "delta"
+ASSERT DROPZEROFLAT_FROM == 1
+SYS EQS DROPZEROFLAT_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT DROPZEROFLAT_N == 1
+ASSERT DROPZEROFLAT_DROP == 2
+LET PLATE = PEER
+GETP "delta.y"
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+GETP "delta.x"
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+GETP "keep"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+LET PLATE = "{\"a\":0,\"b\":0,\"c\":2}"
+DROPZEROFLAT ""
+ASSERT DROPZEROFLAT_N == 1
+ASSERT DROPZEROFLAT_DROP == 2
+GETP "c"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+GETP "a"
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# no drops
+LET PLATE = "{\"hits\":{\"a\":9}}"
+THRESHFLAT "hits" 1
+ASSERT THRESHFLAT_N == 1
+ASSERT THRESHFLAT_DROP == 0
+GETP "hits.a"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+KEEPVFLAT "hits" 9
+ASSERT THRESHFLAT_N == 1
+
+PASS
+PRINT "1222_threshflat: PASS"

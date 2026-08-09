@@ -244,6 +244,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate sumflat    state/my_agent.json                      # sum all pure-int leaves
 ./out/cubalc plate toppath    state/my_agent.json score                # path of max pure-int leaf matching needle
 ./out/cubalc plate botpath    state/my_agent.json latency              # path of min pure-int leaf
+./out/cubalc plate threshflat state/my_agent.json hits 5               # drop pure-int *hits* leaves with value < 5
+./out/cubalc plate dropzeroflat state/my_agent.json delta              # drop pure-int zero leaves matching needle
 ./out/cubalc plate decflat    state/my_agent.json errs                  # decrement
 ./out/cubalc libs | grep plate
 

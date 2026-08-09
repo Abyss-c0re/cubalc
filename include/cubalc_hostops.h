@@ -319,6 +319,13 @@ int cubalc_host_json_leaf_sum(const char *json, const char *needle,
  * Usability: locate dominant/min nest counter without GREPFLAT+EACH walk. */
 int cubalc_host_json_leaf_toppath(const char *json, const char *needle, int want_min,
                                   cubalc_host_result *r);
+/* Keep pure-int leaves with value >= min among path-needle matches (THRESHFLAT).
+ * drop_zero_only!=0 → DROPZEROFLAT: drop matching pure-int leaves with value==0 only.
+ * Non-int leaves always kept. Empty needle → all pure-int. Rebuilds plate.
+ * r->str = new plate · r->n = kept matching pure-int · r->code = dropped count.
+ * Soft always OK. Usability: nest FREQ denoise without GETOBJ+THRESHP+SETOBJ. */
+int cubalc_host_json_leaf_thresh(const char *json, const char *needle, long minv,
+                                 int drop_zero_only, cubalc_host_result *r);
 /* merge overlay top-level keys into base (overlay wins). r->str = result object.
  * r->n = keys applied from overlay. Raw values preserved (nested objects ok).
  * Empty/non-object base → {}. Empty overlay → copy of base. */

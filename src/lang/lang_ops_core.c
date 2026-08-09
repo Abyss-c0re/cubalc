@@ -27440,6 +27440,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"INCFLAT") || kw(&L->cur,"BUMPFLAT") || kw(&L->cur,"ADDFLAT") ||
              kw(&L->cur,"SUMFLAT") || kw(&L->cur,"TOTALFLAT") || kw(&L->cur,"LEAFSUM") ||
              kw(&L->cur,"TOPPATHFLAT") || kw(&L->cur,"BOTPATHFLAT") || kw(&L->cur,"MAXPATHFLAT") ||
+             kw(&L->cur,"THRESHFLAT") || kw(&L->cur,"KEEPVFLAT") || kw(&L->cur,"DROPZEROFLAT") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
              kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
@@ -35838,6 +35839,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"TOPPATHFLAT", "TOPPATHFLAT|MAXPATHFLAT [FROM plate] [needle] — path of max pure-int leaf → LAST · value LAST_N · multi-plate"},
       {"BOTPATHFLAT", "BOTPATHFLAT|MINPATHFLAT [FROM plate] [needle] — path of min pure-int leaf → LAST · value LAST_N · multi-plate"},
       {"MAXPATHFLAT", "MAXPATHFLAT alias of TOPPATHFLAT"},
+      {"THRESHFLAT", "THRESHFLAT|KEEPVFLAT [FROM plate] needle min — keep pure-int leaves value≥min by path needle write-back · multi-plate"},
+      {"KEEPVFLAT", "KEEPVFLAT alias of THRESHFLAT"},
+      {"DROPZEROFLAT", "DROPZEROFLAT|NZFLAT [FROM plate] [needle] — drop pure-int leaves with value==0 by path needle write-back · multi-plate"},
       {"SAVEP", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate disk dual of LOAD INTO"},
       {"LOADP", "LOADP [INTO name] path [OR defaults] — top-level soft load · multi-plate bind · no SYS"},
       {"SEEDP", "SEEDP|BOOTP [INTO name] path [OR seed] — top-level create-or-load disk · multi-plate · no SYS (ENSUREP=DEFAULTP)"},
@@ -44938,6 +44942,185 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
               want_min ? "botpathflat" : "toppathflat",
               hr.str[0] ? hr.str : "(none)", hr.n, (long)hr.code,
               needle[0] ? needle : "*", have_from);
+    bump(vm); return 1;
+  }
+
+  /* THRESHFLAT|KEEPVFLAT [FROM plate] needle min
+   * DROPZEROFLAT|NZFLAT [FROM plate] [needle]
+   * Keep pure-int leaves value>=min (or drop zeros) among path matches · write-back.
+   * Non-int leaves kept. Empty needle → all pure-int. LAST_N = kept · DROP = dropped.
+   * Usability: nest FREQ denoise without GETOBJ+THRESHP/DROPZEROP+SETOBJ:
+   *   THRESHFLAT "hits" 5
+   *   DROPZEROFLAT "delta"
+   *   THRESHFLAT FROM PEER "stats" 1
+   */
+  if (kw(&L->cur,"THRESHFLAT") || kw(&L->cur,"KEEPVFLAT") || kw(&L->cur,"MINCOUNTFLAT") ||
+      kw(&L->cur,"MTHRESHFLAT") || kw(&L->cur,"PLATE_THRESHFLAT") || kw(&L->cur,"KEEPMINFLAT") ||
+      kw(&L->cur,"DROPZEROFLAT") || kw(&L->cur,"NZFLAT") || kw(&L->cur,"KEEPNZFLAT") ||
+      kw(&L->cur,"MDROPZEROFLAT") || kw(&L->cur,"PLATE_DROPZEROFLAT")) {
+    char plate[CUBALC_HOST_STR_MAX], needle[192];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, drop_zero = 0, have_min = 0;
+    long minv = 0;
+    Var *pv;
+    char op0[28];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "DROPZEROFLAT") == 0 || strcmp(op0, "NZFLAT") == 0 ||
+        strcmp(op0, "KEEPNZFLAT") == 0 || strcmp(op0, "MDROPZEROFLAT") == 0 ||
+        strcmp(op0, "PLATE_DROPZEROFLAT") == 0)
+      drop_zero = 1;
+
+    lex_next(L);
+    plate[0] = 0; needle[0] = 0; from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_STR) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    } else if (!drop_zero && (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                              L->cur.kind == TK_LPAREN)) {
+      /* THRESHFLAT min with empty needle: THRESHFLAT 5 */
+      minv = parse_expr(vm, L);
+      have_min = 1;
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur,"FROM") && !kw(&L->cur,"END") && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"PASS") && !kw(&L->cur,"SETP") && !kw(&L->cur,"INCP") &&
+               !kw(&L->cur,"THRESHFLAT") && !kw(&L->cur,"DROPZEROFLAT")) {
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+    }
+
+    if (!drop_zero && !have_min) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        minv = parse_expr(vm, L);
+        have_min = 1;
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && !pv->is_str) {
+          minv = pv->val;
+          have_min = 1;
+          lex_next(L);
+        }
+      }
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!drop_zero && !have_min) {
+      fail(vm, "THRESHFLAT [FROM plate] [needle] min — need min int");
+      return 1;
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_leaf_thresh(plate, needle, minv, drop_zero, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "THRESHFLAT: fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "THRESHFLAT: fail");
+      var_set_num(vm, "THRESHFLAT_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    if (drop_zero) {
+      var_set_str(vm, "DROPZEROFLAT", hr.str);
+      var_set_str(vm, "NZFLAT", hr.str);
+      var_set_num(vm, "DROPZEROFLAT_N", hr.n);
+      var_set_num(vm, "DROPZEROFLAT_DROP", (long)hr.code);
+      var_set_str(vm, "DROPZEROFLAT_NEEDLE", needle);
+      var_set_num(vm, "DROPZEROFLAT_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "DROPZEROFLAT_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    } else {
+      var_set_str(vm, "THRESHFLAT", hr.str);
+      var_set_str(vm, "KEEPVFLAT", hr.str);
+      var_set_num(vm, "THRESHFLAT_N", hr.n);
+      var_set_num(vm, "THRESHFLAT_DROP", (long)hr.code);
+      var_set_num(vm, "THRESHFLAT_MIN", minv);
+      var_set_str(vm, "THRESHFLAT_NEEDLE", needle);
+      var_set_num(vm, "THRESHFLAT_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "THRESHFLAT_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s kept=%ld drop=%ld min=%ld needle=%s from=%d\n",
+              drop_zero ? "dropzeroflat" : "threshflat",
+              hr.n, (long)hr.code, minv, needle[0] ? needle : "*", have_from);
     bump(vm); return 1;
   }
 

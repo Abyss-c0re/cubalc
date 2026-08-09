@@ -708,6 +708,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 678. ~~**`INCFLAT` / `BUMPFLAT` + `cubalc plate incflat`**~~ **done** (bump pure-int leaves by path needle write-back · multi-plate · CLI dual · no multi INCP glue).
 679. ~~**`SUMFLAT` / `TOTALFLAT` + `cubalc plate sumflat`**~~ **done** (sum pure-int leaves by path needle → LAST_N · multi-plate · CLI dual · nest rollups without FLATKV+GREP+SUM glue).
 680. ~~**`TOPPATHFLAT` / `BOTPATHFLAT` + `cubalc plate toppath|botpath`**~~ **done** (path of max/min pure-int leaf by needle → LAST · value LAST_N · multi-plate · CLI dual · locate dominant nest counter without GREPFLAT walk).
+681. ~~**`THRESHFLAT` / `DROPZEROFLAT` + `cubalc plate threshflat|dropzeroflat`**~~ **done** (keep pure-int leaves value≥min / drop zeros by path needle write-back · multi-plate · CLI dual · nest FREQ denoise without GETOBJ+THRESHP).
 
 ## Tick protocol
 

@@ -2196,6 +2196,8 @@ int main(int argc, char **argv) {
       {"cli_plate_sumflat", "programs/proof/1220_cli_plate_sumflat.sh", "cubalc plate sumflat SUMFLAT dual"},
       {"toppathflat", "programs/proof/1221_toppathflat.cubalc", "TOPPATHFLAT/BOTPATHFLAT extreme pure-int leaf path multi-plate"},
       {"cli_plate_toppathflat", "programs/proof/1221_cli_plate_toppathflat.sh", "cubalc plate toppath|botpath TOPPATHFLAT dual"},
+      {"threshflat", "programs/proof/1222_threshflat.cubalc", "THRESHFLAT/DROPZEROFLAT pure-int leaf value denoise multi-plate"},
+      {"cli_plate_threshflat", "programs/proof/1222_cli_plate_threshflat.sh", "cubalc plate threshflat|dropzeroflat dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -2499,6 +2501,9 @@ int main(int argc, char **argv) {
       {"TOPPATHFLAT", "flow", "TOPPATHFLAT|MAXPATHFLAT [FROM plate] [needle] — path of max pure-int leaf → LAST · value LAST_N"},
       {"BOTPATHFLAT", "flow", "BOTPATHFLAT|MINPATHFLAT [FROM plate] [needle] — path of min pure-int leaf → LAST · value LAST_N"},
       {"MAXPATHFLAT", "flow", "MAXPATHFLAT alias of TOPPATHFLAT"},
+      {"THRESHFLAT", "flow", "THRESHFLAT|KEEPVFLAT [FROM plate] [needle] min — keep pure-int leaves value≥min by path needle write-back"},
+      {"KEEPVFLAT", "flow", "KEEPVFLAT alias of THRESHFLAT"},
+      {"DROPZEROFLAT", "flow", "DROPZEROFLAT|NZFLAT [FROM plate] [needle] — drop pure-int leaves value==0 by path needle write-back"},
       {"SAVEP", "flow", "SAVEP [FROM plate] path — persist PLATE or named plate · multi-plate"},
       {"LOADP", "flow", "LOADP [INTO name] path [OR defaults] — soft load · multi-plate · no SYS"},
       {"SEEDP", "flow", "SEEDP|BOOTP [INTO name] path [OR seed] — disk create-or-load · multi-plate · no SYS"},
@@ -4983,6 +4988,8 @@ int main(int argc, char **argv) {
               "       cubalc plate incflat <path> <needle> [delta]  # INCFLAT dual · bump pure-int leaves\n"
               "       cubalc plate sumflat <path> [needle]  # SUMFLAT dual · sum pure-int leaves by path needle\n"
               "       cubalc plate toppath|botpath <path> [needle]  # TOPPATHFLAT dual · path of max/min pure-int leaf\n"
+              "       cubalc plate threshflat <path> [needle] <min>  # THRESHFLAT dual · drop pure-int leaves value<min\n"
+              "       cubalc plate dropzeroflat <path> [needle]  # DROPZEROFLAT dual · drop pure-int zeros\n"
               "       cubalc plate len|empty|vals <path> [nest.path]  # LENP/EMPTYP/VALSP duals\n"
               "       cubalc plate nestget <path> <nest> <field> [OR def]\n"
               "       cubalc plate nestset <path> <nest> <field> <value>\n"
@@ -5014,7 +5021,7 @@ int main(int argc, char **argv) {
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
              "\"ops\":[\"show\",\"get\",\"getn\",\"getobj\",\"setobj\",\"mergeobj\",\"defaultobj\","
              "\"type\",\"set\",\"default\",\"toggle\",\"rename\",\"copy\",\"swap\","
-             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"toppath\",\"botpath\",\"len\",\"empty\",\"vals\","
+             "\"inc\",\"del\",\"keys\",\"leaves\",\"pathkeys\",\"flat\",\"flatkv\",\"unflat\",\"unflatkv\",\"diffflat\",\"pathdiff\",\"grepf\",\"grepflat\",\"grepvf\",\"prune\",\"keeponly\",\"mergeflat\",\"renameflat\",\"setflat\",\"incflat\",\"sumflat\",\"toppath\",\"botpath\",\"threshflat\",\"dropzeroflat\",\"len\",\"empty\",\"vals\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestrename\",\"nestcopy\",\"nestswap\",\"pluckobj\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
@@ -5100,6 +5107,9 @@ int main(int argc, char **argv) {
         strcmp(argv[2], "maxpath") == 0 || strcmp(argv[2], "maxpathflat") == 0 ||
         strcmp(argv[2], "botpath") == 0 || strcmp(argv[2], "botpathflat") == 0 ||
         strcmp(argv[2], "minpath") == 0 || strcmp(argv[2], "minpathflat") == 0 ||
+        strcmp(argv[2], "threshflat") == 0 || strcmp(argv[2], "keepvflat") == 0 ||
+        strcmp(argv[2], "mincountflat") == 0 ||
+        strcmp(argv[2], "dropzeroflat") == 0 || strcmp(argv[2], "nzflat") == 0 ||
         strcmp(argv[2], "len") == 0 || strcmp(argv[2], "length") == 0 ||
         strcmp(argv[2], "nkeys") == 0 || strcmp(argv[2], "size") == 0 ||
         strcmp(argv[2], "countkeys") == 0 ||
@@ -5288,6 +5298,11 @@ int main(int argc, char **argv) {
       else if (strcmp(op, "botpathflat") == 0 || strcmp(op, "minpath") == 0 ||
                strcmp(op, "minpathflat") == 0 || strcmp(op, "botflat") == 0)
         op = "botpath";
+      else if (strcmp(op, "keepvflat") == 0 || strcmp(op, "mincountflat") == 0 ||
+               strcmp(op, "keepminflat") == 0)
+        op = "threshflat";
+      else if (strcmp(op, "nzflat") == 0 || strcmp(op, "keepnzflat") == 0)
+        op = "dropzeroflat";
       else if (strcmp(op, "length") == 0 || strcmp(op, "nkeys") == 0 ||
                strcmp(op, "size") == 0 || strcmp(op, "countkeys") == 0)
         op = "len";
@@ -6011,6 +6026,90 @@ int main(int argc, char **argv) {
              pr.str, pr.n, (long)pr.code, CUBALC_LANG_VERSION,
              want_min ? "BOTPATHFLAT" : "TOPPATHFLAT",
              want_min ? "min" : "max");
+      return 0;
+    }
+
+    /* threshflat [needle] min | dropzeroflat [needle]
+     * THRESHFLAT/DROPZEROFLAT duals: denoise pure-int leaves by value · write plate.
+     *   cubalc plate threshflat agent.json hits 5
+     *   cubalc plate threshflat agent.json 10          # empty needle
+     *   cubalc plate dropzeroflat agent.json delta
+     */
+    if (strcmp(op, "threshflat") == 0 || strcmp(op, "dropzeroflat") == 0) {
+      const char *needle = "";
+      long minv = 0;
+      int drop_zero = (strcmp(op, "dropzeroflat") == 0);
+      int have_min = 0;
+      cubalc_host_result pr, wr;
+
+      if (drop_zero) {
+        if (ai < argc && argv[ai])
+          needle = argv[ai++];
+      } else {
+        if (ai >= argc || !argv[ai]) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"threshflat\",\"path\":\"%s\",\"err\":\"need [needle] min\","
+                 "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+          return 2;
+        }
+        /* if only one arg and it's a number → empty needle + min */
+        if (ai + 1 >= argc) {
+          char *end = NULL;
+          long d = strtol(argv[ai], &end, 10);
+          if (end && end != argv[ai] && *end == 0) {
+            minv = d;
+            have_min = 1;
+            ai++;
+          } else {
+            printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                   "\"op\":\"threshflat\",\"path\":\"%s\",\"err\":\"need min int\","
+                   "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+            return 2;
+          }
+        } else {
+          needle = argv[ai++];
+          {
+            char *end = NULL;
+            long d = strtol(argv[ai], &end, 10);
+            if (!(end && end != argv[ai] && *end == 0)) {
+              printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                     "\"op\":\"threshflat\",\"path\":\"%s\",\"err\":\"need min int\","
+                     "\"version\":\"%s\"}\n", path, CUBALC_LANG_VERSION);
+              return 2;
+            }
+            minv = d;
+            have_min = 1;
+            ai++;
+          }
+        }
+        (void)have_min;
+      }
+
+      memset(&pr, 0, sizeof pr);
+      if (cubalc_host_json_leaf_thresh(plate, needle, minv, drop_zero, &pr) != 0) {
+        printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+               "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"%s\",\"version\":\"%s\"}\n",
+               op, path, pr.err[0] ? pr.err : "threshflat fail", CUBALC_LANG_VERSION);
+        return 1;
+      }
+      snprintf(plate, sizeof plate, "%s", pr.str);
+      if (file_hit || (path && path[0] && strchr(path, '.'))) {
+        memset(&wr, 0, sizeof wr);
+        if (cubalc_host_write(path, plate, &wr) != 0) {
+          printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
+                 "\"op\":\"%s\",\"path\":\"%s\",\"err\":\"write fail\","
+                 "\"version\":\"%s\"}\n", op, path, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        file_hit = 1;
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"%s\",\"path\":\"%s\",\"needle\":\"%s\",\"min\":%ld,"
+             "\"file\":%s,\"n\":%ld,\"drop\":%ld,\"version\":\"%s\",\"plate\":%s,"
+             "\"note\":\"%s dual · pure-int leaf value denoise by path needle\"}\n",
+             op, path, needle, minv, file_hit ? "true" : "false",
+             pr.n, (long)pr.code, CUBALC_LANG_VERSION, plate,
+             drop_zero ? "DROPZEROFLAT" : "THRESHFLAT");
       return 0;
     }
 
