@@ -4,8 +4,8 @@
   "version": "1.15.643-usability",
   "item": "TYPEP/DEFAULTP/TOGGLEP path + plate CLI path",
   "item_id": 652,
-  "title": "TYPEP|DEFAULTP|TOGGLEP dotted path · cubalc plate get|set|inc|del path duals · complete nest path plane",
-  "commit": "PENDING",
+  "title": "TYPEP|DEFAULTP|TOGGLEP dotted path \u00b7 cubalc plate get|set|inc|del path duals \u00b7 complete nest path plane",
+  "commit": "ccf69e3d5557f0405f1e4046f86b6e84943646e4",
   "summary": "Kind probe + set-if-missing + flag flip on nest paths; CLI path without nestget. proof 1193 32/32 + CLI PASS.",
   "proofs": [
     "1193_pathp_more 32/32",
@@ -15,6 +15,6 @@
   ],
   "when": "2026-08-09T11:10:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "PENDING",
+  "sha": "ccf69e3d5557f0405f1e4046f86b6e84943646e4",
   "note": "after thrash restore; pathp complete plane; EVOLVE_PAUSED"
 }
