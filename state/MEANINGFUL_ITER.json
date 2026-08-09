@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 648,
-  "version": "1.15.675-usability",
-  "item": "HASFLAT + COUNTFLAT + plate duals",
-  "item_id": 684,
-  "title": "HASFLAT/COUNTFLAT + cubalc plate hasflat|countflat · soft leaf-path presence and count by needle",
-  "commit": "5c5b808282649827433aa8370233a3a9b115341e",
-  "summary": "Structure probe without GREPFLAT+LINES glue. proof 1225 + CLI PASS.",
+  "iter": 649,
+  "version": "1.15.676-usability",
+  "item": "PATHSFLAT + VALSFLAT + plate duals",
+  "item_id": 685,
+  "title": "PATHSFLAT/VALSFLAT + cubalc plate pathsflat|valsflat · matching leaf path/value bags by needle",
+  "commit": "0cafc3e540e7a535c288fa8be4b2796ca9507fde",
+  "summary": "Peel GREPFLAT without BEFORE/AFTER for EACH LINE. proof 1226 + CLI PASS.",
   "proofs": [
-    "1225_hasflat PASS",
-    "1225_cli_plate_hasflat PASS",
-    "1224_scaleflat reg PASS"
+    "1226_pathsflat PASS",
+    "1226_cli_plate_pathsflat PASS",
+    "1225_hasflat reg PASS"
   ],
-  "when": "2026-08-09T15:55:00Z",
+  "when": "2026-08-09T16:05:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5c5b808282649827433aa8370233a3a9b115341e",
-  "note": "after SCALEFLAT plane; EVOLVE_PAUSED"
+  "sha": "0cafc3e540e7a535c288fa8be4b2796ca9507fde",
+  "note": "after HASFLAT plane; thrash restore mid-tick; EVOLVE_PAUSED"
 }
