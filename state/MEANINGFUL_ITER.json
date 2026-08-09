@@ -1,18 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 600,
-  "version": "1.15.627-usability",
-  "item": "PICKOBJ/OMITOBJ",
-  "item_id": 636,
-  "title": "PICKOBJ|OMITOBJ nest key keep/drop write-back \u00b7 multi-plate \u00b7 PICKP/OMITP duals",
-  "commit": "a6c492aa8d2cfcda3a10d6acbdc81db81d88d824",
-  "summary": "Nested key projection write-back without GETOBJ+PICKP+SETOBJ. proof 1177 24/24.",
+  "iter": 601,
+  "version": "1.15.628-usability",
+  "item": "cubalc plate nestpick/nestomit",
+  "item_id": 637,
+  "title": "cubalc plate nestpick|nestomit \u00b7 CLI duals of PICKOBJ/OMITOBJ \u00b7 nest key projection",
+  "commit": "3f3344faea0b2209cfd6a688faae730a64f6559b",
+  "summary": "Agent one-shot nest keep/drop without .cubalc. proof 1178 ok.",
   "proofs": [
-    "1177_pickobj 24/24",
-    "1176_pluckobj reg ok"
+    "1178_cli_plate_nestpick ok"
   ],
-  "when": "2026-08-09T07:15:40Z",
+  "when": "2026-08-09T07:30:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a6c492aa8d2cfcda3a10d6acbdc81db81d88d824",
-  "note": "invented after backlog 635 PLUCKOBJ; EVOLVE_PAUSED"
+  "sha": "3f3344faea0b2209cfd6a688faae730a64f6559b",
+  "note": "invented after backlog 636 PICKOBJ; EVOLVE_PAUSED"
 }
