@@ -2894,6 +2894,6 @@
     "destructive top-N needs reseed for full map",
     "EXIT 2 shell 0 (W7)"
   ],
-  "commit": "pending",
+  "commit": "5417d286620327e4d93d7e90cd57abf6db967ad6",
   "ts": "2026-08-09T09:44:24Z"
 }
