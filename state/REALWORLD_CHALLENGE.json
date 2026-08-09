@@ -2620,6 +2620,6 @@
     "EXIT 2 leaves shell rc 0 (W7)",
     "SYS LOOKUP does not peel JSON object fields (line bags only)"
   ],
-  "commit": "pending",
+  "commit": "2be1729f96a414c39e554054189f62a5384a5fbd",
   "ts": "2026-08-09T06:31:02Z"
 }
