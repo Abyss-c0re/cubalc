@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 245,
-  "program": "programs/realworld/svc_nest_topn_board.cubalc",
-  "theme": "TOPNOBJ/BOTNOBJ nest FREQ top-N rank keep",
-  "version": "1.15.640-usability",
+  "iter": 246,
+  "program": "programs/realworld/svc_pathp_board.cubalc",
+  "theme": "dotted path GETP/SETP/INCP nest path plane",
+  "version": "1.15.643-usability",
   "pass": true,
-  "prior_note": "iter 244 THRESHOBJ denoise; this iter first realworld TOPNOBJ/BOTNOBJ (1187 / MEANINGFUL 646)",
+  "prior_note": "iter 245 TOPNOBJ rank; this iter first realworld dotted path GETP/SETP (1192-1193 / MEANINGFUL 651-652)",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed 6-key FREQ",
+      "cmd": "seed nest + path get",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "top",
-      "cmd": "TOPNOBJ 3 api/db/batch",
+      "name": "get",
+      "cmd": "GETP path/slash + OR + HASP exact",
       "ok": true,
-      "note": "top"
+      "note": "get"
     },
     {
-      "name": "bot",
-      "cmd": "BOTNOBJ 2 of remaining",
+      "name": "set",
+      "cmd": "SETP update + deep create",
       "ok": true,
-      "note": "bot"
+      "note": "set"
+    },
+    {
+      "name": "bump",
+      "cmd": "INCP path + create nest",
+      "ok": true,
+      "note": "bump"
     },
     {
       "name": "peer",
-      "cmd": "TOPNOBJ FROM PEER 2",
+      "cmd": "GETP/SETP FROM PEER path",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost nest soft miss",
+      "cmd": "HASP miss + GETP OR + TYPEP missing",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "batch+db only after pipeline",
+      "cmd": "required paths admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "TOPNKEYOBJ/n>cand/NESTBOTN",
+      "cmd": "DEFAULTP/TOGGLEP/TYPEP/DELP",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +71,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "416/425 pre-existing shell fails + oop_pickobj/kvfileensure; topnobj PASS 45"
+      "note": "419/429 pre-existing shell fails + oop_pickobj/kvfileensure; pathp PASS 41+32"
     }
   ],
   "weaknesses": [
@@ -2748,6 +2754,38 @@
       "title": "STATUS last line omits final NL",
       "detail": "cat -A ends soft:ok1:sf without trailing $ when list last... STATUS shows soft last without $ if soft last.",
       "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W336",
+      "severity": "med",
+      "area": "lang|pathp",
+      "title": "SETP/INCP path values/deltas still literal-oriented",
+      "detail": "SETP freq.error 9 and INCP stats.hits 2 use literals. Dynamic path values from ENV still need SETPOBJ-class workarounds or CASE. Path *keys* are string literals in source too (cannot SETP path_var).",
+      "repro": "LET p=freq.error; GETP p \u2014 may not resolve path var"
+    },
+    {
+      "id": "W337",
+      "severity": "low",
+      "area": "lang|hasp",
+      "title": "HASP path is exact segment match not prefix",
+      "detail": "HASP freq.err does not hit freq.error. Good exactness; agents must not treat dotted paths as prefix needles.",
+      "repro": "HASP freq.err \u2192 0 while freq.error exists"
+    },
+    {
+      "id": "W338",
+      "severity": "low",
+      "area": "host|write",
+      "title": "STATUS last line omits final NL",
+      "detail": "cat -A ends soft:ok1:sf without $ when soft last after list.",
+      "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W339",
+      "severity": "low",
+      "area": "host|require",
+      "title": "CUBALC_SPP_REQUIRE=abc softens",
+      "detail": "Non-numeric REQUIRE softens (W6 class).",
+      "repro": "CUBALC_SPP_REQUIRE=abc list"
     }
   ],
   "workarounds": [
@@ -2879,12 +2917,11 @@
     "THRESHOBJ/CAPOBJ need var threshold/cap for agent ENV gates",
     "THRESH vs DROPZERO disagree on non-int nest field retention",
     "TOPNOBJ/BOTNOBJ need var N and non-destructive INTO bag mode",
-    "mixed-type nest labels lost on top-N keep"
+    "mixed-type nest labels lost on top-N keep",
+    "dotted path forms need var path keys for dynamic maps",
+    "SETP path value from ENV/var still awkward"
   ],
   "issues_faced": [
-    "EXIT 2 shell 0 (W7)",
-    "FROMKVOBJ replace clobber not merge",
-    "FROMKVOBJ LAST flaky; use bag var",
     "HASLINE whole-line exact on digests",
     "EXIT 2 shell 0 (W7)",
     "THRESHOBJ min literal branching for ENV mins",
@@ -2892,8 +2929,11 @@
     "EXIT 2 shell 0 (W7)",
     "TOPNOBJ N literal branching for ENV TOP_N",
     "destructive top-N needs reseed for full map",
+    "EXIT 2 shell 0 (W7)",
+    "path keys/values literal in agent boards",
+    "HASP exact path segments",
     "EXIT 2 shell 0 (W7)"
   ],
-  "commit": "5417d286620327e4d93d7e90cd57abf6db967ad6",
-  "ts": "2026-08-09T09:44:24Z"
+  "commit": "pending",
+  "ts": "2026-08-09T10:09:35Z"
 }
