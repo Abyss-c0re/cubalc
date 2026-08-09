@@ -1,19 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 596,
-  "version": "1.15.623-usability",
-  "item": "HASPOBJ/KEYSOBJ/NEEDPOBJ",
-  "item_id": 632,
-  "title": "HASPOBJ|TYPEPOBJ|KEYSOBJ|NEEDPOBJ \u00b7 nested probes + fail-fast contract \u00b7 multi-plate",
-  "commit": "8aa71d199ea84d162e313466bac4f07aa255e8f5",
-  "summary": "Nested HASP/TYPEP/KEYSP/NEEDP duals without GETOBJ glue. proof 1173 30/30.",
+  "iter": 597,
+  "version": "1.15.624-usability",
+  "item": "cubalc plate nest*",
+  "item_id": 633,
+  "title": "cubalc plate nestget|nestset|nestinc|nestdel|nestkeys|nesthas \u00b7 CLI duals of nested field plane",
+  "commit": "eb5e890595c4271ae2a74332f68c0f7db80a6b33",
+  "summary": "Agent one-shot nested plate get/set/inc without .cubalc. proof 1174 ok.",
   "proofs": [
-    "1173_haspobj 30/30",
-    "1173b_needpobj_fail ok",
-    "1172_getpobj reg ok"
+    "1174_cli_plate_nest ok"
   ],
-  "when": "2026-08-09T06:35:42Z",
+  "when": "2026-08-09T06:47:16Z",
   "agent": "meaningful_iter_10m",
-  "sha": "8aa71d199ea84d162e313466bac4f07aa255e8f5",
-  "note": "invented after backlog 631 GETPOBJ; EVOLVE_PAUSED"
+  "sha": "eb5e890595c4271ae2a74332f68c0f7db80a6b33",
+  "note": "invented after backlog 632 HASPOBJ; EVOLVE_PAUSED"
 }
