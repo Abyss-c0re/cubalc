@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 670,
-  "version": "1.15.697-usability",
-  "item": "SETBYVAL + plate setbyval",
-  "item_id": 706,
-  "title": "SETBYVAL/REPLACEVAL + cubalc plate setbyval · rewrite every leaf value equal to old → new write-back · multi-plate",
-  "commit": "33403d0718c16434e7e4e7c63b52074fbae583d3",
-  "summary": "Bulk status rewrite without PATHSBYVAL+EACH+SETP glue. proof 1247 + CLI PASS.",
+  "iter": 671,
+  "version": "1.15.698-usability",
+  "item": "DELBYVAL + plate delbyval",
+  "item_id": 707,
+  "title": "DELBYVAL/DROPVAL + cubalc plate delbyval · drop every leaf with exact value write-back · multi-plate",
+  "commit": "ba105f48c1068ca01e6a045b9dde692315902753",
+  "summary": "Scrub by value without PATHSBYVAL+EACH+DELP glue. proof 1248 + CLI PASS.",
   "proofs": [
-    "1247_setbyval PASS",
-    "1247_cli_plate_setbyval PASS",
-    "1246_countbyval reg PASS"
+    "1248_delbyval PASS",
+    "1248_cli_plate_delbyval PASS",
+    "1247_setbyval reg PASS"
   ],
-  "when": "2026-08-09T20:40:12Z",
+  "when": "2026-08-09T20:50:32Z",
   "agent": "meaningful_iter_10m",
-  "sha": "33403d0718c16434e7e4e7c63b52074fbae583d3",
-  "note": "after COUNTBYVAL; EVOLVE_PAUSED"
+  "sha": "ba105f48c1068ca01e6a045b9dde692315902753",
+  "note": "after SETBYVAL; EVOLVE_PAUSED"
 }
