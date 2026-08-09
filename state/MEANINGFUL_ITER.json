@@ -4,8 +4,8 @@
   "version": "1.15.649-usability",
   "item": "cubalc plate default/toggle",
   "item_id": 658,
-  "title": "cubalc plate default|toggle · DEFAULTP/TOGGLEP CLI duals · set-if-missing + flag flip · dotted paths",
-  "commit": "PENDING",
+  "title": "cubalc plate default|toggle \u00b7 DEFAULTP/TOGGLEP CLI duals \u00b7 set-if-missing + flag flip \u00b7 dotted paths",
+  "commit": "ad910bb0a88d8683dce398382befc894b0598a98",
   "summary": "Agent seed/feature flags without .cubalc. proof 1199 PASS after thrash restore.",
   "proofs": [
     "1199_cli_plate_default_toggle PASS",
@@ -13,6 +13,6 @@
   ],
   "when": "2026-08-09T12:40:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "PENDING",
+  "sha": "ad910bb0a88d8683dce398382befc894b0598a98",
   "note": "after thrash restore; plate_type; EVOLVE_PAUSED"
 }
