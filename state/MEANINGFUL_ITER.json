@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 571,
-  "version": "1.15.598-usability",
-  "item": "PLUCKP/GETPALL",
-  "item_id": 607,
-  "title": "PLUCKP|GETPALL · multi-key peel value bag multi-plate · no GETP+PUSH",
-  "commit": "f0950d4d153214fb245b88ada55069f04193f6c9",
-  "summary": "Mesh agents peel several plate fields to a bag one-shot without multi GETP. proof 1148 24/24 + subsetp reg.",
+  "iter": 572,
+  "version": "1.15.599-usability",
+  "item": "DELTAP/CHANGEOBJP",
+  "item_id": 608,
+  "title": "DELTAP|CHANGEOBJP · multi-plate change payload plate · no SYS JSONDELTA",
+  "commit": "4b63e242dd8eedb4e251fdcaf80a197213b9f36c",
+  "summary": "Mesh agents build apply-ready delta plates from PLATE vs PEER without SYS. proof 1149 19/19 + pluckp reg.",
   "proofs": [
-    "1148_pluckp 24/24",
-    "1147_subsetp reg 19/19"
+    "1149_deltap 19/19",
+    "1148_pluckp reg 24/24"
   ],
-  "when": "2026-08-09T02:16:02Z",
+  "when": "2026-08-09T02:25:28Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f0950d4d153214fb245b88ada55069f04193f6c9",
+  "sha": "4b63e242dd8eedb4e251fdcaf80a197213b9f36c",
   "note": "clean tree; EVOLVE_PAUSED"
 }
