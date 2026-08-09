@@ -1,18 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 580,
-  "version": "1.15.607-usability",
-  "item": "TOKVP/FROMKVP",
-  "item_id": 616,
-  "title": "TOKVP|TOBAGP · FROMKVP|BAGTOP · multi-plate bag↔plate convert · no SYS JSONTOKV/JSONFROMKV",
-  "commit": "29bb4cb75b6637675259a9ec9ab1687d14f37356",
-  "summary": "Plate↔key:val bag bridge with optional INTO write-back. proof 1157 26/26 + typep reg.",
+  "iter": 581,
+  "version": "1.15.608-usability",
+  "item": "cubalc plate pick/omit",
+  "item_id": 617,
+  "title": "cubalc plate pick|omit · CLI keep/drop key projection · PICKP/OMITP duals · no .cubalc",
+  "commit": "0ed78850be29b71e34145408f9dab9e445be9afb",
+  "summary": "Shell agents project plate keys without .cubalc. proof 1158 cli pick/omit ok.",
   "proofs": [
-    "1157_tokvp 26/26",
-    "1156_typep reg 24/24"
+    "1158_cli_plate_pick.sh ok"
   ],
-  "when": "2026-08-09T03:45:01Z",
+  "when": "2026-08-09T03:55:42Z",
   "agent": "meaningful_iter_10m",
-  "sha": "29bb4cb75b6637675259a9ec9ab1687d14f37356",
+  "sha": "0ed78850be29b71e34145408f9dab9e445be9afb",
   "note": "clean tree; EVOLVE_PAUSED"
 }
