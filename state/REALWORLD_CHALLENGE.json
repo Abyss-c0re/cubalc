@@ -1,51 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 230,
-  "program": "programs/realworld/mesh_renamep_promote_board.cubalc",
-  "theme": "RENAMEP/COPYP mesh staging-field promote tmp→canonical",
-  "version": "1.15.605-usability",
+  "iter": 231,
+  "program": "programs/realworld/mesh_keydiffp_drift_board.cubalc",
+  "theme": "KEYDIFFP/KEYCOMMP mesh structural key-set drift gate",
+  "version": "1.15.607-usability",
   "pass": true,
-  "prior_note": "iter 229 PICKP export; this iter first realworld RENAMEP (1152) + COPYP snap",
+  "prior_note": "iter 230 RENAMEP promote; this iter first realworld KEYDIFFP (1153)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "tmp + tmp_host staging seeds",
+      "cmd": "divergent key sets + KEYDIFFP/KEYCOMMP",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "promote",
-      "cmd": "RENAMEP tmp→status disk",
+      "name": "additions",
+      "cmd": "KEYDIFFP PEER PLATE status only-in-peer",
       "ok": true,
-      "note": "promote"
+      "note": "additions"
     },
     {
-      "name": "peer",
-      "cmd": "RENAMEP FROM PEER tmp_host→host",
+      "name": "localonly",
+      "cmd": "KEYDIFFP PLATE PEER role only-local",
       "ok": true,
-      "note": "peer"
+      "note": "localonly"
     },
     {
-      "name": "softmiss",
-      "cmd": "RENAMEP missing soft no phantom",
+      "name": "common",
+      "cmd": "KEYCOMMP shared host/n not role/status",
       "ok": true,
-      "note": "softmiss"
+      "note": "common"
     },
     {
-      "name": "snap",
-      "cmd": "COPYP status→prev then live",
+      "name": "align",
+      "cmd": "dual SETP close structural gap",
       "ok": true,
-      "note": "snap"
+      "note": "align"
     },
     {
       "name": "gate",
-      "cmd": "disk no tmp; host; prev ready",
+      "cmd": "disk role+status; common has role",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "same-name no-op + COPYP n0",
+      "cmd": "lit forms + structure vs DIFFP",
       "ok": true,
       "note": "probe"
     },
@@ -57,7 +57,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_MRP_REQUIRE=1 EXIT 2",
+      "cmd": "CUBALC_MKD_REQUIRE=1 EXIT 2",
       "ok": true,
       "note": "hard env"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "388/390 pre-existing sys_kvfileensure,init_peer; renamep PASS 26"
+      "note": "390/392 pre-existing sys_kvfileensure,init_peer; keydiffp PASS 27"
     }
   ],
   "weaknesses": [
@@ -2252,6 +2252,38 @@
       "title": "WRITE STATUS last line omit trailing NL (reconfirmed renamep)",
       "detail": "cat -A gate line without $.",
       "repro": "cat -A STATUS after gate"
+    },
+    {
+      "id": "W274",
+      "severity": "med",
+      "area": "lang|keydiffp_vs_diffp",
+      "title": "KEYDIFFP is structural only — easy to confuse with DIFFP value changes",
+      "detail": "KEYCOMMP still includes n when values diverge; DIFFP lists n for value change. Agents must pair KEYDIFFP (schema drift) with DIFFP (sync payload). Documented in probe: SETP n then both bags hit n differently.",
+      "repro": "KEYCOMMP after n change still has n; DIFFP has n"
+    },
+    {
+      "id": "W275",
+      "severity": "low",
+      "area": "lang|keydiffp_bag",
+      "title": "KEYDIFFP bag via LAST+LINES reliable; KEYDIFFP_N LET still class-W260 risk",
+      "detail": "Board used SYS LINES body after KEYDIFFP not LET KEYDIFFP_N. HASLINE on body var worked (unlike SUBSETP_MISS specials in prior boards).",
+      "repro": "KEYDIFFP; LET body=LAST; SYS LINES body; SYS HASLINE body status"
+    },
+    {
+      "id": "W276",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META/STATUS last line omit trailing NL (reconfirmed keydiffp)",
+      "detail": "cat -A META no $; STATUS gate line no $.",
+      "repro": "cat -A META after probe"
+    },
+    {
+      "id": "W277",
+      "severity": "med",
+      "area": "ops|align",
+      "title": "Structural align needs dual SETP (peer gains role, plate gains status)",
+      "detail": "Closing key-set drift is multi-step: SETP FROM PEER role + SETP status on plate then both_save. No single ALIGNP form — agents hand-roll.",
+      "repro": "align path sets both sides then KEYCOMMP grows"
     }
   ],
   "workarounds": [
@@ -2345,16 +2377,18 @@
     "After NEEDP use LAST_N not NEEDP_N in large boards",
     "Always write OMITP/PICKP LAST to export.json — agent.json still holds secrets",
     "Do not MOVEKEYP FROM arbitrary LET vars in large boards — only PLATE/PEER",
-    "Staging order: RENAMEP promote before COPYP snapshot"
+    "Staging order: RENAMEP promote before COPYP snapshot",
+    "Pair KEYDIFFP (structure) with DIFFP (values) for full mesh drift",
+    "Capture KEYDIFFP bag via LAST+LINES+HASLINE body not delayed specials"
   ],
   "language_gaps": [
-    "MOVEKEYP FROM LET var unknown form in large boards (W270)",
-    "RENAMEP_N prefer HASP over knobs (W271)"
+    "KEYDIFFP vs DIFFP confusion risk (W274)",
+    "No single ALIGNP for structural close (W277)"
   ],
   "issues_faced": [
-    "MOVEKEYP FROM s/scratch_obj unknown form — dropped from probe, used COPYP n n0",
-    "STATUS last line no trailing NL"
+    "None blocking — board green first pass with LAST/LINES capture",
+    "STATUS/META trailing NL omit"
   ],
-  "commit": "823644b",
-  "ts": "2026-08-09T03:29:19Z"
+  "commit": "pending",
+  "ts": "2026-08-09T03:53:37Z"
 }

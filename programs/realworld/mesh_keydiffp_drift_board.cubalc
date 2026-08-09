@@ -1,0 +1,730 @@
+# mesh_keydiffp_drift_board.cubalc — KEYDIFFP/KEYCOMMP mesh structural key drift
+#
+# Real use: mesh controllers detect schema/key-set drift between local agent
+# PLATE and PEER (additions vs shared keys) without KEYSP+DIFF glue. Distinct
+# from DIFFP (value changes). First realworld of proof 1153 KEYDIFFP/KEYCOMMP.
+#
+#   KEYDIFFP PEER PLATE     # keys only in PEER (additions)
+#   KEYDIFFP PLATE PEER     # keys only in PLATE (local-only)
+#   KEYCOMMP PLATE PEER     # shared key names (structure)
+#   ONLYKEYSP / KEYINTERP aliases
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_mkd_$$
+#   ./out/cubalc run programs/realworld/mesh_keydiffp_drift_board.cubalc boot
+#   ./out/cubalc run ... additions|localonly|common|align|gate|probe|soft|list
+#
+# Plate: STATUS.txt VAL.txt META.txt MKD_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_MKD_REQUIRE
+#
+# Edges:
+#   structure ≠ value DIFFP; HASLINE on LAST immediately (not delayed var);
+#   identical empty only-diff; WRITE omit NL; soft empty; NUM shuttle
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "mesh_keydiffp_drift_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "mesh_keydiffp_drift -- boot|additions|localonly|common|align|gate|probe|soft|list -- [--host=H]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeP"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_MKD_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "MKD_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "boot", "additions", "localonly", "common", "align", "gate", "list", "ls", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "additions" THEN
+    LET op = "additions"
+  WHEN "localonly" THEN
+    LET op = "localonly"
+  WHEN "common" THEN
+    LET op = "common"
+  WHEN "align" THEN
+    LET op = "align"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — local has role; peer has status+agent extras
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS JSONOBJ "agent" "drift-ctl" "n" 1 "host" "cubeL" "role" role_s "schema" "cubalc.mesh_keydiffp.v1"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS JSONOBJ "agent" "hive-peer" "n" 3 "host" host_s "status" "ready" "schema" "cubalc.mesh_keydiffp.v1"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  INCLUDE plate_both_save
+  CLEAR_ERR
+  KEYDIFFP PEER PLATE
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  KEYCOMMP PLATE PEER
+  LET out = LAST
+  SYS LINES out
+  LET has_n = LAST_N
+  CLEAR_ERR
+  IF take_n >= 1 THEN
+    IF has_n >= 2 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET created = 1
+      LET peel_hit = 1
+      LET load_hit = 1
+      SYS CAT "boot:" host_s ":bt"
+      LET row = LAST
+      CLEAR_ERR
+      SYS GREPV "boot:" bag
+      LET bag = LAST
+      CLEAR_ERR
+      SYS PUSH bag row
+      LET bag = LAST
+      LET bag_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot common thin"
+      FAIL "boot common thin"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot no additions"
+    FAIL "boot no additions"
+    CLEAR_ERR
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n note_msg
+  CLEAR_ERR
+END
+
+# additions — keys only in PEER
+SYS EQS op "additions"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  KEYDIFFP PEER PLATE
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # HASLINE on LAST immediately (large-board special-token HASLINE flaky)
+  SYS HASLINE body "status"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "host"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  # host is shared → must NOT be only-in-peer
+  IF take_n >= 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 0 THEN
+        LET hit = 1
+        LET note_msg = "additions ok"
+        LET admit_n = 1
+        LET has_n = take_n
+        SYS GREPV "addkeys:" bag
+        LET bag = LAST
+        CLEAR_ERR
+        SYS PUSH bag body
+        LET bag = LAST
+        LET bag_ch = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "additions host leak"
+        FAIL "additions host leak"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "additions no status"
+      FAIL "additions no status"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "additions empty"
+    FAIL "additions empty"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "additions:" w_s ":ad"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "additions:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# localonly — keys only in PLATE (role)
+SYS EQS op "localonly"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  KEYDIFFP PLATE PEER
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "role"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "status"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF take_n >= 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 0 THEN
+        LET hit = 1
+        LET note_msg = "localonly ok"
+        LET admit_n = 1
+        LET has_n = take_n
+      ELSE
+        LET miss = 1
+        LET note_msg = "localonly status leak"
+        FAIL "localonly status leak"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "localonly no role"
+      FAIL "localonly no role"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "localonly empty"
+    FAIL "localonly empty"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "localonly:" w_s ":lo"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "localonly:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# common — KEYCOMMP shared names (structure ignore values)
+SYS EQS op "common"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  KEYCOMMP PLATE PEER
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "host"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "n"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "role"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE body "status"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # role local-only, status peer-only → not in common
+  IF take_n >= 2 THEN
+    IF peel_hit == 1 THEN
+      IF has_n == 1 THEN
+        IF load_hit == 0 THEN
+          IF miss_n == 0 THEN
+            LET hit = 1
+            LET note_msg = "common ok"
+            LET admit_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "common status leak"
+            FAIL "common status leak"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "common role leak"
+          FAIL "common role leak"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "common no n"
+        FAIL "common no n"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "common no host"
+      FAIL "common no host"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "common thin"
+    FAIL "common thin"
+    CLEAR_ERR
+  END
+  SYS STR take_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "common:" w_s ":cm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "common:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n peel_hit has_n load_hit miss_n note_msg
+  CLEAR_ERR
+END
+
+# align — SETP FROM PEER role so peer gains role; drop structural local-only
+SYS EQS op "align"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SETP FROM PEER "role" role_s
+  CLEAR_ERR
+  SETP "status" "ready"
+  CLEAR_ERR
+  INCLUDE plate_both_save
+  CLEAR_ERR
+  KEYDIFFP PLATE PEER
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  KEYCOMMP PLATE PEER
+  LET out = LAST
+  SYS LINES out
+  LET has_n = LAST_N
+  CLEAR_ERR
+  # after align, local-only should shrink; common should grow
+  IF has_n >= 3 THEN
+    LET hit = 1
+    LET note_msg = "align ok"
+    LET admit_n = 1
+    LET peel_hit = 1
+    LET load_hit = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "align common"
+    FAIL "align common"
+    CLEAR_ERR
+  END
+  SYS STR has_n
+  LET w_s = LAST
+  SYS STR take_n
+  LET d_s = LAST
+  CLEAR_ERR
+  SYS CAT "align:" w_s ":" d_s ":al"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "align:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n take_n has_n note_msg
+  CLEAR_ERR
+END
+
+# gate — disk peer has role; KEYDIFFP PLATE PEER empty or small; common has role
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS READ peer_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS JSON "role" FROM body
+  SYS EQS LAST role_s
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS READ agent_path
+  LET out = LAST
+  CLEAR_ERR
+  SYS JSON "status" FROM out
+  SYS EQS LAST "ready"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  KEYCOMMP PLATE PEER
+  LET row = LAST
+  SYS LINES row
+  LET take_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE row "role"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF take_n >= 3 THEN
+        IF load_hit == 1 THEN
+          LET hit = 1
+          LET note_msg = "gate ok"
+          LET admit_n = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate common role"
+          FAIL "gate common role"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate common thin"
+        FAIL "gate common thin"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate plate status"
+      FAIL "gate plate status"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate peer role"
+    FAIL "gate peer role"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate peer role"
+    END
+  END
+  SYS CAT "gate:" host_s ":ga"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit take_n load_hit note_msg
+  CLEAR_ERR
+END
+
+# soft
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "soft empty require"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — lit forms; structure vs DIFFP; aliases; identical empty
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  # literals
+  KEYDIFFP "{\"a\":1,\"b\":2}" "{\"a\":9}"
+  LET body = LAST
+  SYS HASLINE body "b"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  KEYCOMMP "{\"a\":1,\"b\":2}" "{\"a\":9,\"c\":0}"
+  LET body = LAST
+  SYS HASLINE body "a"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  # identical → empty only-diff
+  KEYDIFFP PLATE PLATE
+  LET body = LAST
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  # value change still shared structure (KEYCOMMP keeps n)
+  SETP FROM PEER "n" 99
+  CLEAR_ERR
+  KEYCOMMP PLATE PEER
+  LET body = LAST
+  SYS HASLINE body "n"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  DIFFP PLATE PEER
+  LET out = LAST
+  SYS HASLINE out "n"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # restore peer n for cleanliness
+  SETP FROM PEER "n" 3
+  CLEAR_ERR
+  INCLUDE plate_peer_save
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF take_n == 0 THEN
+        IF load_hit == 1 THEN
+          IF miss_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "probe ok"
+            LET admit_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe diffp n"
+            FAIL "probe diffp n"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe keycomm n"
+          FAIL "probe keycomm n"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe self diff"
+        FAIL "probe self diff"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe lit common"
+      FAIL "probe lit common"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe lit diff"
+    FAIL "probe lit diff"
+    CLEAR_ERR
+  END
+  PRINT_JSON has_n peel_hit take_n load_hit miss_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+SYS STR admit_n
+LET out = LAST
+CLEAR_ERR
+SYS CAT "schema=cubalc.mesh_keydiffp.v1 op=" op " hit=" w_s " miss=" d_s " admit=" out " note=" note_msg " date=" run_date
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "mkd op=" op " hit=" w_s " miss=" d_s " note=" note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n take_n peel_hit has_n load_hit miss_n created note_msg
