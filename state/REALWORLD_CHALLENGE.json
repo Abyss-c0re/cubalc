@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 244,
-  "program": "programs/realworld/svc_nest_denoise_board.cubalc",
-  "theme": "THRESHOBJ/DROPZEROOBJ/CAPOBJ nest FREQ denoise",
-  "version": "1.15.638-usability",
+  "iter": 245,
+  "program": "programs/realworld/svc_nest_topn_board.cubalc",
+  "theme": "TOPNOBJ/BOTNOBJ nest FREQ top-N rank keep",
+  "version": "1.15.640-usability",
   "pass": true,
-  "prior_note": "iter 243 TOKVOBJ bag bridge; this iter first realworld THRESHOBJ denoise (1184 / MEANINGFUL 643)",
+  "prior_note": "iter 244 THRESHOBJ denoise; this iter first realworld TOPNOBJ/BOTNOBJ (1187 / MEANINGFUL 646)",
   "tests": [
     {
       "name": "list",
@@ -15,31 +15,25 @@
     },
     {
       "name": "boot",
-      "cmd": "seed freq zeros/noise/outlier",
+      "cmd": "seed 6-key FREQ",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "dropz",
-      "cmd": "DROPZEROOBJ drop a=0",
+      "name": "top",
+      "cmd": "TOPNOBJ 3 api/db/batch",
       "ok": true,
-      "note": "dropz"
+      "note": "top"
     },
     {
-      "name": "thresh",
-      "cmd": "THRESHOBJ min=5 keep c,d",
+      "name": "bot",
+      "cmd": "BOTNOBJ 2 of remaining",
       "ok": true,
-      "note": "thresh"
-    },
-    {
-      "name": "cap",
-      "cmd": "CAPOBJ d 100\u219220",
-      "ok": true,
-      "note": "cap"
+      "note": "bot"
     },
     {
       "name": "peer",
-      "cmd": "DROPZERO+THRESH FROM PEER",
+      "cmd": "TOPNOBJ FROM PEER 2",
       "ok": true,
       "note": "peer"
     },
@@ -51,13 +45,13 @@
     },
     {
       "name": "gate",
-      "cmd": "no zeros, capped, no noise",
+      "cmd": "batch+db only after pipeline",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "CLAMPOBJ/KEEPNZ/NESTTHRESH",
+      "cmd": "TOPNKEYOBJ/n>cand/NESTBOTN",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +65,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "415/423 pre-existing shell fails + oop_pickobj/kvfileensure; threshobj PASS 47"
+      "note": "416/425 pre-existing shell fails + oop_pickobj/kvfileensure; topnobj PASS 45"
     }
   ],
   "weaknesses": [
@@ -2722,6 +2716,38 @@
       "title": "CUBALC_SND_REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE softens (W6 class).",
       "repro": "CUBALC_SND_REQUIRE=abc list"
+    },
+    {
+      "id": "W332",
+      "severity": "med",
+      "area": "lang|topnobj",
+      "title": "TOPNOBJ/BOTNOBJ N argument wants literal (ENV needs CASE)",
+      "detail": "Board branches top_n_s 2 vs default TOPNOBJ freq 3. Free LET n then TOPNOBJ freq n not used. Same literal-N class as THRESHOBJ limits.",
+      "repro": "TOPNOBJ freq top_n with var may fail; use TOPNOBJ freq 3"
+    },
+    {
+      "id": "W333",
+      "severity": "med",
+      "area": "lang|topnobj",
+      "title": "TOPNOBJ is destructive write-back \u2014 no non-destructive rank bag",
+      "detail": "TOPNOBJ rewrites nest in place; full FREQ lost unless re-seeded. No TOPNOBJ INTO bag form for ranked key list without clobber. Agents need copy nest first for dual top+full retention.",
+      "repro": "TOPNOBJ freq 3 drops noise/web/cache permanently on plate"
+    },
+    {
+      "id": "W334",
+      "severity": "low",
+      "area": "lang|topnobj",
+      "title": "Non-int nest fields dropped from TOPNOBJ candidate set",
+      "detail": "label:x skipped (TOPNOBJ_CAND counts pure-int only). Documented in proof; agents with mixed nests lose labels on top-N keep.",
+      "repro": "freq with label:x; TOPNOBJ 3 \u2192 label gone"
+    },
+    {
+      "id": "W335",
+      "severity": "low",
+      "area": "host|write",
+      "title": "STATUS last line omits final NL",
+      "detail": "cat -A ends soft:ok1:sf without trailing $ when list last... STATUS shows soft last without $ if soft last.",
+      "repro": "cat -A STATUS.txt"
     }
   ],
   "workarounds": [
@@ -2851,12 +2877,11 @@
     "FROMKVOBJ needs merge-mode for non-destructive bag import",
     "FROMKVOBJ LAST binding fragile in multi-op agent boards",
     "THRESHOBJ/CAPOBJ need var threshold/cap for agent ENV gates",
-    "THRESH vs DROPZERO disagree on non-int nest field retention"
+    "THRESH vs DROPZERO disagree on non-int nest field retention",
+    "TOPNOBJ/BOTNOBJ need var N and non-destructive INTO bag mode",
+    "mixed-type nest labels lost on top-N keep"
   ],
   "issues_faced": [
-    "collision rename not stress-tested",
-    "silent skip of non-numeric nest fields in SUMNOBJ",
-    "minsum flag gate deny works",
     "EXIT 2 shell 0 (W7)",
     "FROMKVOBJ replace clobber not merge",
     "FROMKVOBJ LAST flaky; use bag var",
@@ -2864,8 +2889,11 @@
     "EXIT 2 shell 0 (W7)",
     "THRESHOBJ min literal branching for ENV mins",
     "THRESH drops strings; DROPZERO keeps non-int",
+    "EXIT 2 shell 0 (W7)",
+    "TOPNOBJ N literal branching for ENV TOP_N",
+    "destructive top-N needs reseed for full map",
     "EXIT 2 shell 0 (W7)"
   ],
-  "commit": "a1c15294f94b0af1b15b0434b564045432a545ca",
-  "ts": "2026-08-09T09:19:28Z"
+  "commit": "pending",
+  "ts": "2026-08-09T09:44:24Z"
 }

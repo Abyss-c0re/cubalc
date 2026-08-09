@@ -1,0 +1,887 @@
+# svc_nest_topn_board.cubalc — TOPNOBJ/BOTNOBJ nest FREQ top-N rank keep
+#
+# Real use: fleet hotspot agents keep only top/bottom N pure-int keys in a
+# nested FREQ map for handoff rank without GETOBJ+TOPNP glue. First realworld
+# of proof 1187 (MEANINGFUL 646).
+#
+#   TOPNOBJ nest n              · TOPNKEYOBJ / NESTTOPN aliases
+#   BOTNOBJ nest n              · BOTNKEYOBJ / NESTBOTN
+#   … FROM PEER multi-plate
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sntn_$$
+#   ./out/cubalc run programs/realworld/svc_nest_topn_board.cubalc boot
+#   ./out/cubalc run ... top|bot|peer|soft|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SNTN_REPORT.txt agent.json peer.json keys.txt
+# Env: HOST_S ROLE_S TOP_N BOT_N CUBALC_SNTN_REQUIRE
+#
+# Edges:
+#   destructive write-back; n>cand; soft nest miss; non-int skipped;
+#   N literal branch; WRITE NL; NUM softens REQUIRE; EXIT shell (W7)
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_nest_topn_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_nest_topn -- boot|top|bot|peer|soft|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeN"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+DEFAULT TOP_N = "3"
+GETFLAG topn|n OR ENV TOP_N OR TOP_N
+LET top_n_s = LAST
+CLEAR_ERR
+
+DEFAULT BOT_N = "2"
+GETFLAG botn|b OR ENV BOT_N OR BOT_N
+LET bot_n_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SNTN_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+LET top_n = 3
+SYS NUM top_n_s
+IF OK == 1 THEN
+  LET top_n = LAST_N
+END
+CLEAR_ERR
+
+LET bot_n = 2
+SYS NUM bot_n_s
+IF OK == 1 THEN
+  LET bot_n = LAST_N
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SNTN_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "keys.txt"
+LET keys_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+LET bag_n = 0
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET body = ""
+LET load_hit = 0
+LET miss_n = 0
+LET w_s = ""
+LET d_s = ""
+LET key_bag = ""
+LET soft_ok = 0
+LET gate_ok = 0
+LET keep_n = 0
+
+ONEOF ACTION "boot", "top", "bot", "peer", "soft", "gate", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "top" THEN
+    LET op = "top"
+  WHEN "bot" THEN
+    LET op = "bot"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s top_n bot_n
+  CLEAR_ERR
+END
+
+# boot — seed FREQ with 6 int counters
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-topn\",\"schema\":\"cubalc.svc_nest_topn.v1\",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"freq\":{\"api\":90,\"web\":40,\"db\":70,\"cache\":20,\"batch\":55,\"noise\":5},\"cfg\":{\"port\":8080}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"agent\":\"hive-peer\",\"host\":\"" host_s "\",\"freq\":{\"a\":10,\"b\":30,\"c\":5},\"tag\":\"t\",\"schema\":\"cubalc.svc_nest_topn.v1\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LENOBJ "freq"
+  LET keep_n = LAST_N
+  CLEAR_ERR
+  KEYSOBJ "freq"
+  LET key_bag = LAST
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  SYS HASLINE key_bag "api"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  GETP "host"
+  SYS EQS LAST host_s
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF keep_n == 6 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET take_n = 6
+        LET load_hit = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot host"
+        FAIL "boot host"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot api key"
+      FAIL "boot api key"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot len"
+    FAIL "boot len"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:" host_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n keep_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# top — TOPNOBJ n (literal 3 default)
+SYS EQS op "top"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS EQS top_n_s "2"
+  IF LAST_N == 1 THEN
+    TOPNOBJ "freq" 2
+    LET top_n = 2
+  ELSE
+    TOPNOBJ "freq" 3
+    LET top_n = 3
+  END
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  KEYSOBJ "freq"
+  LET key_bag = LAST
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  LENOBJ "freq"
+  LET keep_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "api"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "db"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "batch"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "noise"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  # false friend substring
+  SYS HASLINE key_bag "ap"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  IF keep_n == top_n THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 1 THEN
+          IF miss_n == 0 THEN
+            IF soft_ok == 0 THEN
+              LET hit = 1
+              LET note_msg = "top ok"
+              LET admit_n = 1
+              LET take_n = top_n
+            ELSE
+              LET miss = 1
+              LET note_msg = "top false ap"
+              FAIL "top false ap"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "top noise remain"
+            FAIL "top noise remain"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "top batch"
+          FAIL "top batch"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "top db"
+        FAIL "top db"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "top api"
+      FAIL "top api"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "top len"
+    FAIL "top len"
+    CLEAR_ERR
+  END
+  SYS STR keep_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "top:" w_s ":tp"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "top:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n keep_n has_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# bot — BOTNOBJ on current nest (after top: bottom of remaining)
+SYS EQS op "bot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS EQS bot_n_s "1"
+  IF LAST_N == 1 THEN
+    BOTNOBJ "freq" 1
+    LET bot_n = 1
+  ELSE
+    BOTNOBJ "freq" 2
+    LET bot_n = 2
+  END
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  KEYSOBJ "freq"
+  LET key_bag = LAST
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  LENOBJ "freq"
+  LET keep_n = LAST_N
+  CLEAR_ERR
+  # after top3 api/db/batch, bot2 = batch(55)+db(70)
+  SYS HASLINE key_bag "batch"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "db"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "api"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  IF keep_n == bot_n THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 0 THEN
+          LET hit = 1
+          LET note_msg = "bot ok"
+          LET admit_n = 1
+          LET take_n = bot_n
+        ELSE
+          LET miss = 1
+          LET note_msg = "bot api remain"
+          FAIL "bot api remain"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "bot db"
+        FAIL "bot db"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "bot batch"
+      FAIL "bot batch"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "bot len"
+    FAIL "bot len"
+    CLEAR_ERR
+  END
+  SYS STR keep_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "bot:" w_s ":bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "bot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n keep_n has_n peel_hit load_hit note_msg
+  CLEAR_ERR
+END
+
+# peer — TOPNOBJ FROM PEER 2
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TOPNOBJ FROM PEER "freq" 2
+  CLEAR_ERR
+  KEYSOBJ FROM PEER "freq"
+  LET key_bag = LAST
+  CLEAR_ERR
+  SYS WRITE keys_path key_bag
+  CLEAR_ERR
+  SYS HASLINE key_bag "b"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "a"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "c"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  LENOBJ FROM PEER "freq"
+  LET keep_n = LAST_N
+  CLEAR_ERR
+  GETP FROM PEER "tag"
+  SYS EQS LAST "t"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "peer.json"
+  LET peer_path = LAST
+  CLEAR_ERR
+  SAVEP FROM PEER peer_path
+  CLEAR_ERR
+  IF keep_n == 2 THEN
+    IF has_n == 1 THEN
+      IF peel_hit == 1 THEN
+        IF load_hit == 0 THEN
+          IF soft_ok == 1 THEN
+            LET hit = 1
+            LET note_msg = "peer ok"
+            LET admit_n = 1
+            LET take_n = 2
+          ELSE
+            LET miss = 1
+            LET note_msg = "peer tag"
+            FAIL "peer tag"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "peer c remain"
+          FAIL "peer c remain"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "peer a"
+        FAIL "peer a"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "peer b"
+      FAIL "peer b"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer len"
+    FAIL "peer len"
+    CLEAR_ERR
+  END
+  SYS STR keep_n
+  LET w_s = LAST
+  CLEAR_ERR
+  SYS CAT "peer:" w_s ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n keep_n has_n peel_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+# soft — nest miss
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  TOPNOBJ "ghost" 3
+  LET soft_ok = 0
+  IF OK == 1 THEN
+    LET soft_ok = 1
+  END
+  CLEAR_ERR
+  HASP "ghost"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  BOTNOBJ "ghost" 1
+  CLEAR_ERR
+  LET body = ""
+  SYS LINES body
+  LET take_n = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-topn"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF soft_ok == 1 THEN
+    IF has_n == 0 THEN
+      IF take_n == 0 THEN
+        IF peel_hit == 1 THEN
+          LET hit = 1
+          LET note_msg = "soft ok"
+          LET admit_n = 1
+          LET load_hit = 1
+        ELSE
+          LET miss = 1
+          LET note_msg = "soft agent"
+          FAIL "soft agent"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "soft empty bag"
+        FAIL "soft empty bag"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "soft ghost created"
+      FAIL "soft ghost created"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft top ok"
+    FAIL "soft top ok"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok" soft_ok ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n soft_ok has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# gate — after top+bot pipeline: batch+db remain, no noise/api
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  KEYSOBJ "freq"
+  LET key_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE key_bag "batch"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "db"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "api"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "noise"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  LENOBJ "freq"
+  LET keep_n = LAST_N
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_nest_topn"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 0 THEN
+        IF miss_n == 0 THEN
+          IF keep_n == 2 THEN
+            IF soft_ok == 1 THEN
+              LET hit = 1
+              LET gate_ok = 1
+              LET admit_n = 1
+              LET note_msg = "gate ok"
+            ELSE
+              LET miss = 1
+              LET note_msg = "gate schema"
+              FAIL "gate schema"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "gate len"
+            FAIL "gate len"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate noise"
+          FAIL "gate noise"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate api remain"
+        FAIL "gate api remain"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate db"
+      FAIL "gate db"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate batch"
+    FAIL "gate batch"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF gate_ok == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" gate_ok ":gn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n gate_ok has_n peel_hit keep_n note_msg
+  CLEAR_ERR
+END
+
+# probe — aliases + n>cand + NESTTOPN
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  FROMKVOBJ "scores" "p1:40\np2:10\np3:80\np4:25\nname:run"
+  CLEAR_ERR
+  TOPNKEYOBJ "scores" 2
+  CLEAR_ERR
+  KEYSOBJ "scores"
+  LET key_bag = LAST
+  CLEAR_ERR
+  SYS HASLINE key_bag "p3"
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "p1"
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  SYS HASLINE key_bag "name"
+  LET load_hit = LAST_N
+  CLEAR_ERR
+  FROMKVOBJ "mini" "a:1\nb:2\nc:3"
+  CLEAR_ERR
+  NESTTOPN "mini" 99
+  CLEAR_ERR
+  LENOBJ "mini"
+  LET take_n = LAST_N
+  CLEAR_ERR
+  NESTBOTN "mini" 1
+  CLEAR_ERR
+  HASPOBJ "mini" "a"
+  LET soft_ok = LAST_N
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-topn"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  SYS JOIN state_dir "agent.json"
+  LET agent_path = LAST
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    IF peel_hit == 1 THEN
+      IF load_hit == 0 THEN
+        IF take_n == 3 THEN
+          IF soft_ok == 1 THEN
+            IF miss_n == 1 THEN
+              LET hit = 1
+              LET note_msg = "probe ok"
+              LET admit_n = 1
+              LET keep_n = 1
+            ELSE
+              LET miss = 1
+              LET note_msg = "probe agent"
+              FAIL "probe agent"
+              CLEAR_ERR
+            END
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe nestbot"
+            FAIL "probe nestbot"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe n>cand"
+          FAIL "probe n>cand"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe name kept"
+        FAIL "probe name kept"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe p1"
+      FAIL "probe p1"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe p3"
+    FAIL "probe p3"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:alias:pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n has_n peel_hit load_hit soft_ok note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+CLEAR_ERR
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "hit=" w_s " miss=" d_s " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_nest_topn.v1 host=" host_s " role=" role_s " topn=" top_n " botn=" bot_n " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " keep=" keep_n " has=" has_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n note_msg
+NOTE "svc_nest_topn_board: end"
