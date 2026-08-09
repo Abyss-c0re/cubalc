@@ -2827,6 +2827,6 @@
     "HASLINE whole-line exact on digests",
     "EXIT 2 shell 0 (W7)"
   ],
-  "commit": "pending",
+  "commit": "da7647a3d84ff5b790d5163601f8409ef264a413",
   "ts": "2026-08-09T08:54:57Z"
 }
