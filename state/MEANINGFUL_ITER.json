@@ -5,15 +5,15 @@
   "item": "cubalc plate ensure + merge",
   "item_id": 599,
   "title": "cubalc plate ensure/merge · CLI ENSUREPLATE + JSONFILEMERGE duals",
-  "commit": "1844dd532cc624811503a2e5e4f8b11c4b6e3db9",
+  "commit": "4d48d1b1f74a2e9a2b75721d5add4274332e91ec",
   "summary": "Shell agents seed create-or-keep plates and multi-key overlay merge without .cubalc. proof 1140 + plate CLI reg.",
   "proofs": [
     "1140_cli_plate_ensure_merge",
     "1112_cli_plate reg",
     "1126_cli_plate_fill reg"
   ],
-  "when": "2026-08-09T00:50:53Z",
+  "when": "2026-08-09T00:51:25Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1844dd532cc624811503a2e5e4f8b11c4b6e3db9",
+  "sha": "4d48d1b1f74a2e9a2b75721d5add4274332e91ec",
   "note": "clean tree; EVOLVE_PAUSED"
 }
