@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 657,
-  "version": "1.15.684-usability",
-  "item": "PATHSFLATN/VALSFLATN + plate duals",
-  "item_id": 693,
-  "title": "PATHSFLATN/VALSFLATN + cubalc plate pathsflatn|valsflatn · pure-int leaf path/value bags",
-  "commit": "120c97e60446880232133bc17695ea56106e6b5f",
-  "summary": "Numeric EACH without string pollution from VALSFLAT. proof 1234 + CLI PASS.",
+  "iter": 658,
+  "version": "1.15.685-usability",
+  "item": "LASTFLATN + plate lastflatn",
+  "item_id": 694,
+  "title": "LASTFLATN/ENDFLATN + cubalc plate lastflatn · last pure-int leaf by needle → LAST_N · OR fallback",
+  "commit": "f8c32a91825eb3753383227742e7fbfd983cea9e",
+  "summary": "Newest-wins nest peel without REVL+GETFLATN glue. proof 1235 + CLI PASS.",
   "proofs": [
-    "1234_pathsflatn PASS",
-    "1234_cli_plate_pathsflatn PASS",
-    "1226_pathsflat reg PASS",
-    "1233_hasflatn reg PASS"
+    "1235_lastflatn PASS",
+    "1235_cli_plate_lastflatn PASS",
+    "1229_getflatn reg PASS"
   ],
-  "when": "2026-08-09T17:36:52Z",
+  "when": "2026-08-09T17:47:16Z",
   "agent": "meaningful_iter_10m",
-  "sha": "120c97e60446880232133bc17695ea56106e6b5f",
-  "note": "after HASFLATN plane; EVOLVE_PAUSED"
+  "sha": "f8c32a91825eb3753383227742e7fbfd983cea9e",
+  "note": "after PATHSFLATN plane; EVOLVE_PAUSED"
 }
