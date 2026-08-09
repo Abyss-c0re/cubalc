@@ -1,63 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 232,
-  "program": "programs/realworld/mesh_sumnp_score_board.cubalc",
-  "theme": "SUMNP/TOPKEYP mesh load/score plate aggregates",
-  "version": "1.15.609-usability",
+  "iter": 233,
+  "program": "programs/realworld/mesh_summergep_freq_board.cubalc",
+  "theme": "SUMMERGEP/SUBP/DIVP mesh FREQ rollup and interval delta",
+  "version": "1.15.612-usability",
   "pass": true,
-  "prior_note": "iter 231 KEYDIFFP; this iter first realworld SUMNP (1159 / MEANINGFUL 618)",
+  "prior_note": "iter 232 SUMNP scores; this iter first realworld SUMMERGEP (1162 / MEANINGFUL 621)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "seed load+peer errors; sum20 top cpu peer13",
+      "cmd": "FREQ seeds + merge warn5 error6 crit4",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "sum",
-      "cmd": "SUMNP plate 20",
+      "name": "merge",
+      "cmd": "SUMMERGEP write merged.json",
       "ok": true,
-      "note": "sum"
+      "note": "merge"
     },
     {
-      "name": "top",
-      "cmd": "TOPKEYP cpu BOTKEYP mem MAX/MIN",
+      "name": "delta",
+      "cmd": "SUBP PLATE base interval",
       "ok": true,
-      "note": "top"
+      "note": "delta"
     },
     {
-      "name": "avg",
-      "cmd": "AVGNP 6",
+      "name": "mean",
+      "cmd": "DIVP 2 FROM merged",
       "ok": true,
-      "note": "avg"
-    },
-    {
-      "name": "peer",
-      "cmd": "peer sum13 top error bot info",
-      "ok": true,
-      "note": "peer"
+      "note": "mean"
     },
     {
       "name": "empty",
-      "cmd": "SUMNP FROM {} soft 0",
+      "cmd": "soft empty merge/sub",
       "ok": true,
       "note": "empty"
     },
     {
       "name": "gate",
-      "cmd": "sum<=budget 50",
+      "cmd": "merged error<=err_max",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "over",
-      "cmd": "budget=5 soft fail",
-      "ok": true,
-      "note": "over budget"
-    },
-    {
       "name": "probe",
-      "cmd": "TOTALP MAXKEYP MEANP skip strings",
+      "cmd": "ADDFREQP IDIVP sources intact",
       "ok": true,
       "note": "probe"
     },
@@ -69,7 +57,7 @@
     },
     {
       "name": "require",
-      "cmd": "CUBALC_MSS_REQUIRE=1 EXIT 2",
+      "cmd": "CUBALC_MSF_REQUIRE=1 EXIT 2",
       "ok": true,
       "note": "hard env"
     },
@@ -77,7 +65,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "391/394 pre-existing sys_kvfileensure,init_peer,cli_plate_pick; sumnp PASS 30"
+      "note": "394/397 pre-existing sys_kvfileensure,init_peer,cli_plate_pick; summergep PASS 44"
     }
   ],
   "weaknesses": [
@@ -2336,6 +2324,38 @@
       "title": "budget flag needs host -- separator for long opts (W11 class)",
       "detail": "gate -- --budget=5 works; without host -- may strip. Board uses GETFLAG budget after --.",
       "repro": "cubalc run prog gate -- --budget=5 → over budget"
+    },
+    {
+      "id": "W283",
+      "severity": "high",
+      "area": "lang|divp_last",
+      "title": "DIVP 2 FROM LAST fails if CLEAR_ERR between SUMMERGEP and DIVP",
+      "detail": "CLEAR_ERR after SUMMERGEP clobbers LAST so DIVP FROM LAST has no plate. Capture LET merged=LAST then DIVP 2 FROM merged. Agents chaining merge→mean must not CLEAR_ERR on bare LAST.",
+      "repro": "SUMMERGEP; CLEAR_ERR; DIVP 2 FROM LAST → empty/wrong; DIVP 2 FROM merged ok"
+    },
+    {
+      "id": "W284",
+      "severity": "high",
+      "area": "lang|subp_let",
+      "title": "SUBP now prev LET JSON vars fail in large board after multi-plate session",
+      "detail": "Proof SUBP now prev works; mesh_summergep probe after ADDFREQP+session: SUBP a b — need two plates. Workaround: SUBP PLATE base with disk base.json only.",
+      "repro": "large board LET now/prev JSON; SUBP now prev → need two plates"
+    },
+    {
+      "id": "W285",
+      "severity": "low",
+      "area": "lang|summergep",
+      "title": "SUMMERGEP non-destructive (sources unmutated) — positive",
+      "detail": "After merge, GETP warn still local 2; peer intact. Same class as PICKP non-destructive.",
+      "repro": "SUMMERGEP; GETP warn → 2"
+    },
+    {
+      "id": "W286",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META omit trailing NL (reconfirmed summergep)",
+      "detail": "cat -A META no $.",
+      "repro": "od -c META after gate"
     }
   ],
   "workarounds": [
@@ -2433,15 +2453,18 @@
     "Pair KEYDIFFP (structure) with DIFFP (values) for full mesh drift",
     "Capture KEYDIFFP bag via LAST+LINES+HASLINE body not delayed specials",
     "Pair TYPEP/KEYSP if need audit of non-numeric SUMNP skips",
-    "Integer AVGNP only — document for SLO means"
+    "Integer AVGNP only — document for SLO means",
+    "After SUMMERGEP LET merged=LAST before CLEAR_ERR; DIVP FROM merged",
+    "SUBP only PLATE/PEER/base paths in large boards — not ad-hoc LET JSON pairs"
   ],
   "language_gaps": [
-    "SUMNP silent skip non-numeric (W278)",
-    "AVGNP integer truncate (W280)"
+    "DIVP FROM LAST after CLEAR_ERR (W283)",
+    "SUBP LET vars fail large board (W284)"
   ],
   "issues_faced": [
-    "None blocking — green first pass including over-budget edge"
+    "mean failed until DIVP FROM merged capture",
+    "probe SUBP now prev need two plates — switched to SUBP PLATE base"
   ],
-  "commit": "3e9e8954",
-  "ts": "2026-08-09T04:18:29Z"
+  "commit": "pending",
+  "ts": "2026-08-09T04:44:29Z"
 }
