@@ -4,8 +4,8 @@
   "version": "1.15.641-usability",
   "item": "SUMMERGEOBJ/SUBVALOBJ nest FREQ merge",
   "item_id": 650,
-  "title": "SUMMERGEOBJ|ADDFREQOBJ|SUBVALOBJ|SUBFREQOBJ · nest pure-int sum-merge/delta write-back · multi-plate · SUMMERGEP duals",
-  "commit": "PENDING",
+  "title": "SUMMERGEOBJ|ADDFREQOBJ|SUBVALOBJ|SUBFREQOBJ \u00b7 nest pure-int sum-merge/delta write-back \u00b7 multi-plate \u00b7 SUMMERGEP duals",
+  "commit": "791794c205527f4e2228cbdc287bd81001f88ffa",
   "summary": "Peer nest FREQ combine/delta without GETOBJ glue. proof 1191 46/46.",
   "proofs": [
     "1191_summergeobj 46/46",
@@ -15,6 +15,6 @@
   ],
   "when": "2026-08-09T10:40:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "PENDING",
+  "sha": "791794c205527f4e2228cbdc287bd81001f88ffa",
   "note": "after backlog 649 nestsort CLI; EVOLVE_PAUSED"
 }
