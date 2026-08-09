@@ -1,57 +1,45 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 223,
-  "program": "programs/realworld/mesh_peer_session_lib_board.cubalc",
-  "theme": "plate_peer_session + plate_peer_save mesh lib board",
-  "version": "1.15.588-usability",
+  "iter": 224,
+  "program": "programs/realworld/job_deadline_budget_board.cubalc",
+  "theme": "GETFLAGMS+CLAMPN+BOOLFLAG+RESTPOS job deadline budget",
+  "version": "1.15.590-usability",
   "pass": true,
-  "prior_note": "iter 222 LOAD INTO+SAVEP hand-rolled; this iter first realworld plate_peer_session lib (1137)",
+  "prior_note": "iter 223 plate_peer_session; this iter CLI budget surface away from multi-plate",
   "tests": [
     {
-      "name": "boot",
-      "cmd": "plate_peer_session dual seed",
+      "name": "budget",
+      "cmd": "workers 100\u219216 deadline 2h\u21921h",
       "ok": true,
-      "note": "boot"
+      "note": "clamp"
     },
     {
-      "name": "tick",
-      "cmd": "INCP FROM PEER + peer_save durable",
+      "name": "admit",
+      "cmd": "RESTPOS a.bin b.bin rows",
       "ok": true,
-      "note": "tick"
+      "note": "admit"
     },
     {
-      "name": "merge",
-      "cmd": "MERGEP status overlay",
+      "name": "admit_dry",
+      "cmd": "BOOLFLAG dry no bag mutate",
       "ok": true,
-      "note": "merge"
+      "note": "dry"
     },
     {
-      "name": "need",
-      "cmd": "NEEDP FROM contract",
+      "name": "admit_empty",
+      "cmd": "HASRESTPOS soft miss",
       "ok": true,
-      "note": "need"
-    },
-    {
-      "name": "save",
-      "cmd": "plate_save + peer_save dual",
-      "ok": true,
-      "note": "save"
-    },
-    {
-      "name": "reload",
-      "cmd": "re-INCLUDE peer hit CREATED=0",
-      "ok": true,
-      "note": "reload"
+      "note": "empty rest"
     },
     {
       "name": "gate",
-      "cmd": "LOADP dual disk admit",
+      "cmd": "jobs+budget present",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "HASPALL soft miss",
+      "cmd": "CLAMPN OOR edges",
       "ok": true,
       "note": "edges"
     },
@@ -2010,6 +1998,38 @@
       "title": "WRITE STATUS omit trailing NL",
       "detail": "cat -A STATUS last line without $.",
       "repro": "cat -A STATUS.txt"
+    },
+    {
+      "id": "W243",
+      "severity": "med",
+      "area": "host|cat",
+      "title": "SYS CAT row LAST chained after STR loses prior fragments",
+      "detail": "Pattern SYS CAT a; LET row=LAST; SYS STR n; SYS CAT row LAST b often collapses to just the number under multi-step builds. Safe pattern: STR to named vars then one multi-arg SYS CAT.",
+      "repro": "SYS CAT workers=; STR 16; SYS CAT row LAST \u2192 often just 16"
+    },
+    {
+      "id": "W244",
+      "severity": "low",
+      "area": "lang|restpos",
+      "title": "admit multi-file only peels NTH 0/1 not full EACH",
+      "detail": "Board caps at two RESTPOS files to avoid EACH+var thrash; full batch needs EACH LINE over RESTPOS with careful LAST capture.",
+      "repro": "admit a b c \u2192 only a,b registered"
+    },
+    {
+      "id": "W245",
+      "severity": "low",
+      "area": "lang|boolflag",
+      "title": "BOOLFLAG dry and dry-run naming not aliased",
+      "detail": "Agents must pass --dry not --dry-run unless both probed; no automatic synonym bag.",
+      "repro": "--dry-run leaves dry_n=0"
+    },
+    {
+      "id": "W246",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE JOBS/BUDGET omit trailing NL",
+      "detail": "cat -A last line without $.",
+      "repro": "cat -A JOBS.txt"
     }
   ],
   "workarounds": [
@@ -2095,14 +2115,14 @@
     "SYS CAT multi-arg for EQS expected bodies"
   ],
   "language_gaps": [
-    "stdlib peer_save lacks hard assert of write path in knobs under var cap",
-    "still no dual-source FILLP; bare SAVEP PLATE footgun (prior)"
+    "no RESTPOS EACH helper for job bags without NTH",
+    "BOOLFLAG no dry-run synonym",
+    "prior peer SAVEP knobs / var table issues still open"
   ],
   "issues_faced": [
-    "SAVEP_FROM=0 after successful peer_save \u2014 prove via re-INCLUDE plate_peer",
-    "SYS JSONN FROM chk hard-fail under pressure \u2014 use GETP+NUM",
-    "SYS EQS SAVEP_SRC unknown form under pressure"
+    "chained SYS CAT row LAST after STR collapsed job rows to deadline_ms only",
+    "fixed with multi-arg CAT after STR into w_s/d_s"
   ],
-  "commit": "4571d17",
-  "ts": "2026-08-09T00:35:00Z"
+  "commit": "",
+  "ts": "2026-08-09T00:59:24Z"
 }

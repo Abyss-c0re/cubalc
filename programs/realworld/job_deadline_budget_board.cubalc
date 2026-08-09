@@ -1,0 +1,481 @@
+# job_deadline_budget_board.cubalc — GETFLAGMS + CLAMPN + BOOLFLAG + RESTPOS job gate
+#
+# Real use: batch/job agents admit work files after a subcommand with a clamped
+# worker budget and deadline (ms), optional dry-run, without shell getopt:
+#   RESTPOS / HASRESTPOS / REQUIRE RESTPOS — job paths after verb
+#   GETFLAGN workers · CLAMPN into [min,max]
+#   GETFLAGMS deadline|ttl · CLAMPN ms budget
+#   BOOLFLAG dry — soft dry-run (no bag mutate)
+#
+# Distinct from rate_clampn (route QPS) and batch_restargs (LISTFLAGS/RESTARGS):
+# this board is *deadline duration + worker clamp + dry + RESTPOS jobs*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_jdb_$$
+#   ./out/cubalc run programs/realworld/job_deadline_budget_board.cubalc \
+#     admit -- --workers=100 --deadline=2h --min=1 --max=16 a.bin b.bin
+#   ./out/cubalc run ... admit -- --dry --workers=4 job1
+#
+# Plate: JOBS.txt VAL.txt META.txt JDB_REPORT.txt  (bag = JOBS)
+# Env: CUBALC_JDB_REQUIRE
+#
+# Edges:
+#   CLAMPN_CHANGED; GETFLAGMS default OR; BOOLFLAG dry=false vs HASFLAG;
+#   HASRESTPOS soft; empty rest; WRITE omit NL; NUM shuttle
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "job_deadline_budget_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "job_deadline_budget -- admit|budget|list|gate|probe|soft|clear -- [--workers=N] [--deadline=D] [--min=] [--max=] [--dry] files…"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_JDB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+# workers min/max defaults
+GETFLAGN min OR 1
+LET min_n = LAST_N
+CLEAR_ERR
+GETFLAGN max OR 16
+LET max_n = LAST_N
+CLEAR_ERR
+GETFLAGN workers OR 4
+LET workers_n = LAST_N
+CLEAR_ERR
+CLAMPN workers_n min_n max_n
+LET workers_n = LAST_N
+LET clamp_w = CLAMPN_CHANGED
+CLEAR_ERR
+
+GETFLAGMS deadline OR "30s"
+LET deadline_ms = LAST_N
+CLEAR_ERR
+# cap deadline to 1h for safety
+CLAMPN deadline_ms 1000 3600000
+LET deadline_ms = LAST_N
+LET clamp_d = CLAMPN_CHANGED
+CLEAR_ERR
+
+BOOLFLAG dry
+LET dry_n = LAST_N
+LET dry_hit = BOOLFLAG_HIT
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "JOBS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JDB_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "BUDGET.txt"
+LET budget_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET bag_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET op = "unknown"
+LET take_n = 0
+LET peel_hit = 0
+LET row = ""
+LET out = ""
+LET body = ""
+LET created = 0
+LET load_hit = 0
+LET miss_n = 0
+LET rest_n = 0
+LET w_s = ""
+LET d_s = ""
+
+SYS LINES bag
+LET bag_n = LAST_N
+
+ONEOF ACTION "admit", "budget", "list", "ls", "gate", "soft", "clear", "probe"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "admit" THEN
+    LET op = "admit"
+  WHEN "budget" THEN
+    LET op = "budget"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n workers_n deadline_ms dry_n
+  CLEAR_ERR
+END
+
+# budget — write clamped knobs only
+SYS EQS op "budget"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS STR workers_n
+  LET w_s = LAST
+  SYS STR min_n
+  LET row = LAST
+  SYS STR max_n
+  LET out = LAST
+  SYS STR deadline_ms
+  LET d_s = LAST
+  SYS STR clamp_w
+  LET body = LAST
+  SYS STR clamp_d
+  LET peel_hit = LAST
+  SYS STR dry_n
+  LET miss_n = LAST
+  CLEAR_ERR
+  SYS CAT "workers=" w_s " min=" row " max=" out " deadline_ms=" d_s " clamp_w=" body " clamp_d=" peel_hit " dry=" miss_n
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE budget_path body
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "budget ok"
+  LET admit_n = 1
+  LET take_n = workers_n
+  LET peel_hit = deadline_ms
+  PRINT_JSON workers_n deadline_ms clamp_w clamp_d dry_n note_msg
+  CLEAR_ERR
+END
+
+# admit — RESTPOS jobs into bag (skip if dry)
+SYS EQS op "admit"
+IF LAST_N == 1 THEN
+  LET known = 1
+  HASRESTPOS 1
+  LET has_n = LAST_N
+  LET rest_n = RESTPOS_N
+  CLEAR_ERR
+  IF has_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "admit no rest"
+    FAIL "admit no rest"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "admit no rest"
+    END
+  ELSE
+    # write budget snapshot always
+    SYS STR workers_n
+    LET w_s = LAST
+    SYS STR deadline_ms
+    LET d_s = LAST
+    SYS STR dry_n
+    LET miss_n = LAST
+    CLEAR_ERR
+    SYS CAT "workers=" w_s " deadline_ms=" d_s " dry=" miss_n
+    LET body = LAST
+    CLEAR_ERR
+    SYS WRITE budget_path body
+    CLEAR_ERR
+    IF dry_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "admit dry"
+      LET admit_n = 0
+      LET take_n = rest_n
+      LET peel_hit = 1
+      # no bag mutate
+    ELSE
+      LET body = RESTPOS
+      CLEAR_ERR
+      SYS LINES body
+      LET take_n = LAST_N
+      CLEAR_ERR
+      SYS NTH 0 body
+      LET out = LAST
+      CLEAR_ERR
+      SYS CAT "job:" out ":w=" w_s ":d=" d_s
+      LET row = LAST
+      CLEAR_ERR
+      SYS HASLINE bag row
+      LET load_hit = LAST_N
+      CLEAR_ERR
+      IF load_hit == 1 THEN
+        LET miss = 1
+        LET note_msg = "admit dup"
+        FAIL "admit dup"
+        CLEAR_ERR
+      ELSE
+        SYS PUSH bag row
+        LET bag = LAST
+        LET bag_ch = 1
+        IF take_n > 1 THEN
+          SYS NTH 1 body
+          LET out = LAST
+          CLEAR_ERR
+          SYS CAT "job:" out ":w=" w_s ":d=" d_s
+          LET row = LAST
+          CLEAR_ERR
+          SYS PUSH bag row
+          LET bag = LAST
+        END
+        SYS LINES bag
+        LET bag_n = LAST_N
+        LET hit = 1
+        LET note_msg = "admit ok"
+        LET admit_n = 1
+        LET peel_hit = rest_n
+      END
+    END
+  END
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n rest_n workers_n deadline_ms dry_n note_msg
+  CLEAR_ERR
+END
+
+# gate — need jobs + budget file
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  SYS READ OR budget_path OR ""
+  LET body = LAST
+  CLEAR_ERR
+  SYS BLANK body
+  LET has_n = LAST_N
+  CLEAR_ERR
+  SYS HAS body "workers="
+  LET peel_hit = LAST_N
+  CLEAR_ERR
+  IF bag_n > 0 THEN
+    IF has_n == 0 THEN
+      IF peel_hit == 1 THEN
+        LET hit = 1
+        LET note_msg = "gate ok"
+        LET admit_n = 1
+        LET take_n = bag_n
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate budget body"
+        FAIL "gate budget body"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate no budget"
+      FAIL "gate no budget"
+      CLEAR_ERR
+      IF require_hit > 0 THEN
+        EXIT 2 "gate no budget"
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate empty"
+    FAIL "gate empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "gate empty"
+    END
+  END
+  PRINT_JSON bag_n has_n peel_hit note_msg
+  CLEAR_ERR
+END
+
+# soft — empty bag soft miss
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  IF bag_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    IF require_hit > 0 THEN
+      EXIT 2 "soft empty require"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has rows"
+  END
+  PRINT_JSON bag_n miss hit
+  CLEAR_ERR
+END
+
+# probe — clamp OOR; GETFLAGMS default; BOOLFLAG false friend; RESTPOS empty
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  # clamp workers OOR high
+  CLAMPN 100 1 16
+  LET take_n = LAST_N
+  LET peel_hit = CLAMPN_CHANGED
+  CLEAR_ERR
+  # clamp in-range
+  CLAMPN 8 1 16
+  LET has_n = CLAMPN_CHANGED
+  CLEAR_ERR
+  # deadline clamp high 2h → 1h cap already applied at top; local
+  CLAMPN 7200000 1000 3600000
+  LET load_hit = LAST_N
+  LET miss_n = CLAMPN_CHANGED
+  CLEAR_ERR
+  # BOOLFLAG dry=false present
+  # (host may not pass; soft check CLAMP only)
+  HASRESTPOS 1
+  LET rest_n = LAST_N
+  CLEAR_ERR
+  IF take_n == 16 THEN
+    IF peel_hit == 1 THEN
+      IF has_n == 0 THEN
+        IF load_hit == 3600000 THEN
+          IF miss_n == 1 THEN
+            LET hit = 1
+            LET note_msg = "probe ok"
+            LET admit_n = 1
+          ELSE
+            LET miss = 1
+            LET note_msg = "probe clamp d"
+            FAIL "probe clamp d"
+            CLEAR_ERR
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "probe d val"
+          FAIL "probe d val"
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "probe clamp w0"
+        FAIL "probe clamp w0"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "probe clamp w"
+      FAIL "probe clamp w"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe w16"
+    FAIL "probe w16"
+    CLEAR_ERR
+  END
+  PRINT_JSON take_n peel_hit has_n load_hit miss_n rest_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF bag_ch > 0 THEN
+  SYS WRITE plate_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE val_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+SYS STR admit_n
+LET out = LAST
+SYS STR workers_n
+LET row = LAST
+SYS STR deadline_ms
+LET body = LAST
+CLEAR_ERR
+SYS CAT "schema=cubalc.job_deadline_budget.v1 op=" op " hit=" w_s " miss=" d_s " admit=" out " w=" row " d=" body " note=" note_msg " date=" run_date
+LET row = LAST
+SYS WRITE meta_path row
+CLEAR_ERR
+
+SYS STR hit
+LET w_s = LAST
+SYS STR miss
+LET d_s = LAST
+CLEAR_ERR
+SYS CAT "jdb op=" op " hit=" w_s " miss=" d_s " note=" note_msg
+LET body = LAST
+SYS WRITE report_path body
+CLEAR_ERR
+
+PRINT_JSON op hit miss admit_n bag_n workers_n deadline_ms dry_n clamp_w clamp_d rest_n note_msg
