@@ -1,0 +1,78 @@
+# TOKVP / FROMKVP — multi-plate bag↔plate convert (no SYS JSONTOKV/JSONFROMKV)
+# Usability: LOOKUP/FREQ bag bridge without SYS glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":3,\"host\":\"cubeA\",\"role\":\"worker\"}"
+LET PEER = "{\"agent\":\"hive\",\"n\":9}"
+
+# plate → key:val bag
+TOKVP
+ASSERT OK == 1
+ASSERT TOKVP_N == 3
+ASSERT TOKVP_FROM == 0
+SYS HASLINE LAST "n:3"
+ASSERT LAST_N == 1
+SYS HASLINE TOKVP "host:cubeA"
+ASSERT LAST_N == 1
+SYS HASLINE TOKVP "role:worker"
+ASSERT LAST_N == 1
+
+# FROM PEER
+TOKVP FROM PEER
+ASSERT TOKVP_FROM == 1
+ASSERT TOKVP_N == 2
+SYS EQS TOKVP_SRC "PEER"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "agent:hive"
+ASSERT LAST_N == 1
+SYS HASLINE TOKVP "n:9"
+ASSERT LAST_N == 1
+
+# bag → plate
+FROMKVP "status:ready\ncount:2"
+ASSERT OK == 1
+ASSERT FROMKVP_N == 2
+SYS JSON "status" FROM LAST
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+SYS JSONN "count" FROM FROMKVP
+ASSERT LAST_N == 2
+
+# INTO named plate
+FROMKVP "x:1\ny:2" INTO session
+ASSERT FROMKVP_INTO == 1
+SYS EQS FROMKVP_VAR "session"
+ASSERT LAST_N == 1
+SYS JSONN "x" FROM session
+ASSERT LAST_N == 1
+SYS JSONN "y" FROM session
+ASSERT LAST_N == 2
+
+# INTO may lead
+FROMKVP INTO peer2 "a:7"
+ASSERT FROMKVP_N == 1
+SYS JSONN "a" FROM peer2
+ASSERT LAST_N == 7
+
+# round-trip TOKVP → FROMKVP
+TOKVP FROM PEER
+FROMKVP LAST INTO rebuilt
+EQP PEER rebuilt
+ASSERT LAST_N == 1
+
+# aliases
+TOBAGP
+ASSERT TOKVP_N == 3
+BAGTOP "k:v"
+ASSERT FROMKVP_N == 1
+SYS JSON "k" FROM LAST
+SYS EQS LAST "v"
+ASSERT LAST_N == 1
+
+# PLATE untouched by FROM peels / INTO others
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+
+PRINT "tokvp soft ok"
