@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 263,
-  "program": "programs/realworld/svc_typeflat_peel_board.cubalc",
-  "theme": "TYPEFLAT kind probe + LASTFLATN newest-wins peel",
-  "version": "1.15.686-usability",
+  "iter": 264,
+  "program": "programs/realworld/svc_nthflat_sample_board.cubalc",
+  "theme": "NTHFLATN index sample + LASTFLAT newest-wins peel",
+  "version": "1.15.688-usability",
   "pass": true,
-  "prior_note": "iter 262 NEEDFLATN/HASFLATN; this iter first realworld 1236 TYPEFLAT + 1235 LASTFLATN",
+  "prior_note": "iter 263 TYPEFLAT/LASTFLATN; this iter first realworld 1238 NTHFLATN + 1237 LASTFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed multi-kind dual port",
+      "cmd": "seed dual role/port + scores",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "type",
-      "cmd": "TYPEFLAT num/str/bool/null/missing",
+      "name": "nth",
+      "cmd": "NTHFLATN score+port+OOR",
       "ok": true,
-      "note": "type"
+      "note": "nth"
     },
     {
-      "name": "lastn",
-      "cmd": "LASTFLATN vs GETFLATN first/last",
+      "name": "last",
+      "cmd": "LASTFLAT role/port newest",
       "ok": true,
-      "note": "lastn"
+      "note": "last"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER type+last/first hits",
+      "cmd": "FROM PEER nth+last name",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "missing kind + OR fallback",
+      "cmd": "ghost OOR soft",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "port num first/last admit",
+      "cmd": "mid sample + leader admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "KINDFLAT/ENDFLATN aliases",
+      "cmd": "INDEXFLATN/ENDFLAT aliases",
       "ok": true,
       "note": "probe"
     },
@@ -59,7 +59,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "457/504 pre-existing cli shell fails; typeflat PASS 30 lastflatn PASS 26"
+      "note": "459/508 pre-existing cli shell fails; nthflatn PASS 25 lastflat PASS 21"
     }
   ],
   "weaknesses": [
@@ -3246,6 +3246,30 @@
       "title": "GETP bool leaf not EQS \"true\" reliably; prefer TYPEFLAT kind",
       "detail": "GETP cfg.on SYS EQS LAST \"true\" failed in boot; TYPEFLAT on \u2192 bool works. JSON bool peel string form inconsistent for agents.",
       "repro": "GETP cfg.on; SYS EQS LAST true \u2192 miss; TYPEFLAT on \u2192 bool"
+    },
+    {
+      "id": "W399",
+      "severity": "high",
+      "area": "lang|getp",
+      "title": "GETP \"role\" returns last nested role when top-level role also present",
+      "detail": "Plate has role:worker, meta.role:worker, cfg.role:leader. GETP \"role\" returned leader (not top-level worker). GETFLAT \"role\" also yielded leader with path=role. Agents must use dotted keys (meta.role/cfg.role) or avoid top-level key name collisions with nested segments.",
+      "repro": "GETP role on {role:worker,cfg:{role:leader}} \u2192 leader"
+    },
+    {
+      "id": "W400",
+      "severity": "med",
+      "area": "lang|nthflatn",
+      "title": "NTHFLATN index order is FLATKV walk order not key sort",
+      "detail": "meta before cfg in plate \u2192 NTHFLATN port 0=meta.port 1, port 1=cfg.port 9090. Proof had cfg first so index 0=9090. Agents cannot assume stable index without controlling seed key order.",
+      "repro": "NTHFLATN port 0 depends on object key order in JSON"
+    },
+    {
+      "id": "W401",
+      "severity": "low",
+      "area": "lang|oor",
+      "title": "NTHFLATN OOR + host string skip soft with OR fallback solid",
+      "detail": "NTHFLATN port 2 OR 8080 and host 0 OR -1 work as soft miss. Good for sample gates; document OR required for non-zero shell policy on miss.",
+      "repro": "NTHFLATN host 0 OR -1 \u2192 LAST_N -1"
     }
   ],
   "workarounds": [
@@ -3254,8 +3278,6 @@
     "Curated peer seeds for stable DIFFFLAT lines"
   ],
   "language_gaps": [
-    "CAPFLAT/SCALEFLAT need segment-bound needles for safe SLO scrub",
-    "Capture plate values via GETP not only CAPFLAT_N/SCALEFLAT_N in large boards",
     "VALSFLAT_N/GETFLAT_FALLBACK unreadable under agent_boot load",
     "Inventory needles still substring-not-segment",
     "NEEDFLAT fail-fast exit_code policy inconsistent across run/JSON/CLI",
@@ -3265,7 +3287,9 @@
     "Document HASFLAT vs HASFLATN twin pairing for agents",
     "Pure-int *N ops still substring-needle path false friends",
     "Single-char path needles are unsafe on substring match",
-    "LASTFLATN_PATH special not always SYS EQS-able in large boards"
+    "LASTFLATN_PATH special not always SYS EQS-able in large boards",
+    "GETP bare key may resolve nested last match not top-level",
+    "NTHFLATN indices require stable plate key order contracts"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3287,8 +3311,10 @@
     "meta_score substring inflates score counts",
     "TYPEFLAT n matched agent path; used GETP for short keys",
     "SYS EQS LASTFLATN_PATH hard-failed; used GETP meta.port",
-    "GETP bool not EQS true; used TYPEFLAT kind"
+    "GETP bool not EQS true; used TYPEFLAT kind",
+    "GETP/GETFLAT role collided with nested cfg.role; renamed top key agent_role",
+    "NTHFLATN port index depends on meta-before-cfg walk order"
   ],
-  "commit": "265e3930",
-  "ts": "2026-08-09T18:06:21Z"
+  "commit": "7f3eeaeb",
+  "ts": "2026-08-09T18:30:43Z"
 }
