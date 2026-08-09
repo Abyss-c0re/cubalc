@@ -1269,11 +1269,98 @@ static int cmd_showcase(void) {
 }
 
 
+/* Usability: cubalc run -I / CUBALC_PRELOAD — prepend INCLUDE ONCE lines. */
+static int run_safe_include_token(const char *s) {
+  size_t i;
+  if (!s || !s[0]) return 0;
+  for (i = 0; s[i]; i++) {
+    unsigned char c = (unsigned char)s[i];
+    if (c < 32 || c == '"' || c == '\'' || c == ';' || c == '\\') return 0;
+  }
+  return 1;
+}
+
+static void run_preload_add(char preload[][96], int *n_preload, const char *name) {
+  int i;
+  if (!name || !name[0] || !n_preload || *n_preload >= 16) return;
+  if (!run_safe_include_token(name)) return;
+  for (i = 0; i < *n_preload; i++) {
+    if (strcmp(preload[i], name) == 0) return;
+  }
+  snprintf(preload[*n_preload], 96, "%s", name);
+  (*n_preload)++;
+}
+
+static void run_preload_parse_env(char preload[][96], int *n_preload, const char *env) {
+  const char *p = env;
+  if (!p || !p[0]) return;
+  while (*p && *n_preload < 16) {
+    char name[96];
+    size_t len = 0;
+    while (*p == ':' || *p == ',' || *p == ' ' || *p == '\t') p++;
+    if (!*p) break;
+    while (p[len] && p[len] != ':' && p[len] != ',' && p[len] != ' ' &&
+           p[len] != '\t' && len + 1 < sizeof name) {
+      name[len] = p[len];
+      len++;
+    }
+    name[len] = 0;
+    p += len;
+    if (name[0]) run_preload_add(preload, n_preload, name);
+  }
+}
+
+/* body may be NULL when only preloads (unlikely). Caller frees return. */
+static char *run_build_with_preload(char preload[][96], int n_preload,
+                                    const char *body, size_t body_len,
+                                    size_t *out_len) {
+  size_t pre = 0, need, k;
+  char *buf;
+  if (!body) {
+    body = "";
+    body_len = 0;
+  }
+  if (n_preload <= 0) {
+    buf = malloc(body_len + 1);
+    if (!buf) return NULL;
+    if (body_len) memcpy(buf, body, body_len);
+    buf[body_len] = 0;
+    if (out_len) *out_len = body_len;
+    return buf;
+  }
+  for (k = 0; k < (size_t)n_preload; k++)
+    pre += strlen("INCLUDE ONCE ") + strlen(preload[k]) + 1;
+  need = pre + body_len + 8;
+  if (need > (size_t)CUBALC_MAX_SRC + 2048)
+    need = (size_t)CUBALC_MAX_SRC + 2048;
+  buf = malloc(need);
+  if (!buf) return NULL;
+  pre = 0;
+  for (k = 0; k < (size_t)n_preload; k++) {
+    int n = snprintf(buf + pre, need - pre, "INCLUDE ONCE %s\n", preload[k]);
+    if (n > 0 && (size_t)n < need - pre) pre += (size_t)n;
+  }
+  if (pre + body_len >= need) body_len = need - pre - 1;
+  if (body_len) memcpy(buf + pre, body, body_len);
+  buf[pre + body_len] = 0;
+  if (out_len) *out_len = pre + body_len;
+  return buf;
+}
+
 int main(int argc, char **argv) {
   const char *cmd = argc > 1 ? argv[1] : "genesis";
-  /* Usability: cubalc -e CODE ≡ cubalc run -e CODE (no subcommand required). */
+  /* Usability: cubalc -e CODE ≡ cubalc run -e CODE (no subcommand required).
+   * Also -I/--include/-L top-level → run so agents skip the subcommand. */
   if (strcmp(cmd, "-e") == 0 || strcmp(cmd, "--expr") == 0 ||
-      strcmp(cmd, "--code") == 0 || strcmp(cmd, "-c") == 0)
+      strcmp(cmd, "--code") == 0 || strcmp(cmd, "-c") == 0 ||
+      strcmp(cmd, "-I") == 0 || strcmp(cmd, "--include") == 0 ||
+      strcmp(cmd, "--preload") == 0 ||
+      strncmp(cmd, "--include=", 10) == 0 ||
+      strncmp(cmd, "--preload=", 10) == 0 ||
+      strcmp(cmd, "-L") == 0 || strcmp(cmd, "--include-path") == 0 ||
+      strcmp(cmd, "--lib-path") == 0 ||
+      strncmp(cmd, "--include-path=", 15) == 0 ||
+      strncmp(cmd, "--lib-path=", 11) == 0)
     cmd = "run";
   if (strcmp(cmd, "genesis") == 0)
     return cmd_genesis(argc > 2 ? argv[2] :
@@ -1479,14 +1566,20 @@ int main(int argc, char **argv) {
      * Usability: cubalc run -e CODE | --expr|--code|-c — inline source (no temp file).
      *   multiple -e join with newline; \n \t \\ escapes expanded in each chunk.
      * Quiet: -q|--quiet|--plate or CUBALC_QUIET=1 → plate-only (no board/# ok).
-     * Strict: -s|--strict or CUBALC_STRICT=1 → soft last_err fails exit+plate ok. */
+     * Strict: -s|--strict or CUBALC_STRICT=1 → soft last_err fails exit+plate ok.
+     * Preload: -I|--include|--preload LIB + CUBALC_PRELOAD=a:b → INCLUDE ONCE before body.
+     * Path: -L|--include-path|--lib-path DIR prepends CUBALC_INCLUDE_PATH for this run. */
     int quiet = 0, strict = 0, i, rc;
     int plate_ok;
     int have_expr = 0;
     int src_idx = -1;
     int ddash = 0;
     int n_parg = 0;
+    int n_preload = 0;
+    int n_ipath = 0;
     const char *parg[32];
+    char preload[16][96];
+    char ipaths[8][512];
     const char *src_path = NULL;
     const char *src_label;
     const char *eq;
@@ -1495,6 +1588,8 @@ int main(int argc, char **argv) {
     FILE *trace;
     FILE *devnull = NULL;
     cubalc_run_result rr;
+    (void)ddash;
+    (void)src_idx;
     eq = getenv("CUBALC_QUIET");
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
@@ -1503,6 +1598,8 @@ int main(int argc, char **argv) {
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
       strict = 1;
+    /* Env preloads first; CLI -I appends (deduped). */
+    run_preload_parse_env(preload, &n_preload, getenv("CUBALC_PRELOAD"));
     /* Scan from argv[1] so top-level cubalc -e CODE (cmd rewritten to run) works. */
     for (i = 1; i < argc; i++) {
       if (!strcmp(argv[i], "run") || !strcmp(argv[i], "eval"))
@@ -1515,6 +1612,49 @@ int main(int argc, char **argv) {
       if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--strict") ||
           !strcmp(argv[i], "--fail-soft") || !strcmp(argv[i], "--strict-err")) {
         strict = 1;
+        continue;
+      }
+      /* -I lib · --include lib · --include=lib · --preload */
+      if (!strcmp(argv[i], "-I") || !strcmp(argv[i], "--include") ||
+          !strcmp(argv[i], "--preload")) {
+        if (i + 1 >= argc) {
+          fprintf(stderr, "cubalc run: %s needs a lib/path name\n", argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        run_preload_add(preload, &n_preload, argv[++i]);
+        continue;
+      }
+      if (!strncmp(argv[i], "--include=", 10)) {
+        run_preload_add(preload, &n_preload, argv[i] + 10);
+        continue;
+      }
+      if (!strncmp(argv[i], "--preload=", 10)) {
+        run_preload_add(preload, &n_preload, argv[i] + 10);
+        continue;
+      }
+      /* -L dir · --include-path · --lib-path — one-shot CUBALC_INCLUDE_PATH */
+      if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--include-path") ||
+          !strcmp(argv[i], "--lib-path")) {
+        if (i + 1 >= argc) {
+          fprintf(stderr, "cubalc run: %s needs a directory\n", argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        if (n_ipath < 8)
+          snprintf(ipaths[n_ipath++], sizeof ipaths[0], "%s", argv[++i]);
+        else
+          i++;
+        continue;
+      }
+      if (!strncmp(argv[i], "--include-path=", 15)) {
+        if (n_ipath < 8)
+          snprintf(ipaths[n_ipath++], sizeof ipaths[0], "%s", argv[i] + 15);
+        continue;
+      }
+      if (!strncmp(argv[i], "--lib-path=", 11)) {
+        if (n_ipath < 8)
+          snprintf(ipaths[n_ipath++], sizeof ipaths[0], "%s", argv[i] + 11);
         continue;
       }
       if (!strcmp(argv[i], "-e") || !strcmp(argv[i], "--expr") ||
@@ -1586,6 +1726,37 @@ int main(int argc, char **argv) {
         parg[n_parg++] = argv[i];
       }
     }
+    /* Apply -L dirs: prepend to CUBALC_INCLUDE_PATH for this process. */
+    if (n_ipath > 0) {
+      char joined[4096];
+      size_t o = 0;
+      int k;
+      const char *old = getenv("CUBALC_INCLUDE_PATH");
+      joined[0] = 0;
+      for (k = 0; k < n_ipath; k++) {
+        size_t L;
+        if (!ipaths[k][0]) continue;
+        if (o && o + 1 < sizeof joined) joined[o++] = ':';
+        L = strlen(ipaths[k]);
+        if (o + L >= sizeof joined) L = sizeof joined - o - 1;
+        if (L > 0) {
+          memcpy(joined + o, ipaths[k], L);
+          o += L;
+        }
+      }
+      if (old && old[0]) {
+        size_t L = strlen(old);
+        if (o && o + 1 < sizeof joined) joined[o++] = ':';
+        if (o + L >= sizeof joined) L = sizeof joined - o - 1;
+        if (L > 0) {
+          memcpy(joined + o, old, L);
+          o += L;
+        }
+      }
+      joined[o] = 0;
+      if (joined[0])
+        setenv("CUBALC_INCLUDE_PATH", joined, 1);
+    }
     /* Publish program args for SYS ARG / ARGC / ARGS */
     {
       char nm[32], ac[16];
@@ -1602,10 +1773,13 @@ int main(int argc, char **argv) {
     }
     if (!have_expr && !src_path) {
       fprintf(stderr,
-              "usage: cubalc run [-q] [-s] [-e CODE]... <file.cubalc>|- [-- args…]\n"
-              "       cubalc eval [-q] [-s] [-e CODE]... <file>|-\n"
+              "usage: cubalc run [-q] [-s] [-I LIB]... [-L DIR]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
+              "       cubalc eval [-q] [-s] [-I LIB]... [-e CODE]... <file>|-\n"
               "       cubalc -e 'SYS DATE\\nPRINT LAST'   # top-level alias\n"
+              "       cubalc -I agent_boot -e 'STATUS'  # preload INCLUDE ONCE\n"
               "       multiple -e join with newline; \\n \\t \\\\ escapes\n"
+              "       -I/--include/--preload LIB  · CUBALC_PRELOAD=a:b\n"
+              "       -L/--include-path DIR · prepends CUBALC_INCLUDE_PATH\n"
               "       CUBALC_QUIET=1  → plate only · CUBALC_STRICT=1 → soft last_err fails\n");
       free(expr_buf);
       return 2;
@@ -1625,9 +1799,23 @@ int main(int argc, char **argv) {
                "\"err\":\"empty -e expression\"}\n");
         return 2;
       }
-      rc = cubalc_run_source(expr_buf, expr_len, src_label, &rr, trace);
-      free(expr_buf);
-      expr_buf = NULL;
+      if (n_preload > 0) {
+        size_t clen = 0;
+        char *comb = run_build_with_preload(preload, n_preload, expr_buf, expr_len, &clen);
+        free(expr_buf);
+        expr_buf = NULL;
+        if (!comb) {
+          if (devnull) fclose(devnull);
+          printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<expr>\",\"err\":\"oom\"}\n");
+          return 2;
+        }
+        rc = cubalc_run_source(comb, clen, src_label, &rr, trace);
+        free(comb);
+      } else {
+        rc = cubalc_run_source(expr_buf, expr_len, src_label, &rr, trace);
+        free(expr_buf);
+        expr_buf = NULL;
+      }
     } else {
       src_label = src_path;
       if (!strcmp(src_path, "-") || !strcmp(src_path, "--stdin") ||
@@ -1649,8 +1837,21 @@ int main(int argc, char **argv) {
           return 2;
         }
         src_label = "<stdin>";
-        rc = cubalc_run_source(buf, n, src_label, &rr, trace);
-        free(buf);
+        if (n_preload > 0) {
+          size_t clen = 0;
+          char *comb = run_build_with_preload(preload, n_preload, buf, n, &clen);
+          free(buf);
+          if (!comb) {
+            if (devnull) fclose(devnull);
+            printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<stdin>\",\"err\":\"oom\"}\n");
+            return 2;
+          }
+          rc = cubalc_run_source(comb, clen, src_label, &rr, trace);
+          free(comb);
+        } else {
+          rc = cubalc_run_source(buf, n, src_label, &rr, trace);
+          free(buf);
+        }
       } else if (strstr(src_path, ".cblc")) {
         cubalc_image img;
         if (cubalc_isa_load(&img, src_path) != 0) {
@@ -1658,7 +1859,55 @@ int main(int argc, char **argv) {
           printf("{\"ok\":false,\"cmd\":\"run\",\"err\":\"bad cblc\"}\n");
           return 2;
         }
+        /* ISA image has no INCLUDE surface — preload ignored for .cblc */
         rc = cubalc_jit_exec(&img, &rr, trace);
+      } else if (n_preload > 0) {
+        /* File + preload: read body, prepend INCLUDE ONCE, run as source. */
+        FILE *f = fopen(src_path, "rb");
+        char *buf = NULL;
+        size_t n = 0;
+        if (!f) {
+          if (devnull) fclose(devnull);
+          printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
+                 "\"err\":\"cannot open\"}\n", src_path);
+          return 2;
+        }
+        fseek(f, 0, SEEK_END);
+        {
+          long sz = ftell(f);
+          fseek(f, 0, SEEK_SET);
+          if (sz < 0 || sz > CUBALC_MAX_SRC) {
+            fclose(f);
+            if (devnull) fclose(devnull);
+            printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
+                   "\"err\":\"bad size\"}\n", src_path);
+            return 2;
+          }
+          buf = malloc((size_t)sz + 1);
+          if (!buf) {
+            fclose(f);
+            if (devnull) fclose(devnull);
+            printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\",\"err\":\"oom\"}\n",
+                   src_path);
+            return 2;
+          }
+          n = fread(buf, 1, (size_t)sz, f);
+          buf[n] = 0;
+        }
+        fclose(f);
+        {
+          size_t clen = 0;
+          char *comb = run_build_with_preload(preload, n_preload, buf, n, &clen);
+          free(buf);
+          if (!comb) {
+            if (devnull) fclose(devnull);
+            printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\",\"err\":\"oom\"}\n",
+                   src_path);
+            return 2;
+          }
+          rc = cubalc_run_source(comb, clen, src_label, &rr, trace);
+          free(comb);
+        }
       } else {
         rc = cubalc_run_file(src_path, &rr, trace);
       }
@@ -1735,12 +1984,14 @@ int main(int argc, char **argv) {
              "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
              "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
              "\"why_hint\":\"%s\","
-             "\"quiet\":%s,\"strict\":%s,\"exit_code\":%d,\"halted\":%s}\n",
+             "\"quiet\":%s,\"strict\":%s,\"preload_n\":%d,\"include_path_n\":%d,"
+             "\"exit_code\":%d,\"halted\":%s}\n",
              plate_ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
              rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
              CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc,
              whyesc,
              quiet ? "true" : "false", strict ? "true" : "false",
+             n_preload, n_ipath,
              rr.exit_code, rr.halted ? "true" : "false");
     }
     return rc;
@@ -2398,6 +2649,7 @@ int main(int argc, char **argv) {
       {"cli_protect_status", "programs/proof/1258_cli_protect_status.sh", "cubalc protect status agent readiness plate"},
       {"include_path_soft", "programs/proof/1259_include_path_soft.cubalc", "CUBALC_INCLUDE_PATH + INCLUDE SOFT MISS/SUGGEST"},
       {"cli_include_path", "programs/proof/1259_cli_include_path.sh", "CUBALC_INCLUDE_PATH private lib resolve"},
+      {"cli_run_preload", "programs/proof/1260_cli_run_preload.sh", "run -I/CUBALC_PRELOAD + -L include-path preload"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -4318,6 +4570,7 @@ int main(int argc, char **argv) {
       {"CUBALC_STATE", "state", 0, "state plate directory"},
       {"CUBALC_ROOT", "", 0, "install root for INCLUDE resolution"},
       {"CUBALC_INCLUDE_PATH", "", 0, "colon dirs for INCLUDE short names (after programs/lib)"},
+      {"CUBALC_PRELOAD", "", 0, "colon lib names auto-INCLUDE ONCE before run body (-I dual)"},
       {"CUBALC_SEED", "", 0, "RNG seed for reproducible runs"},
       {"CUBALC_QUIET", "", 0, "1 → run plate-only no board noise"},
       {"CUBALC_STRICT", "", 0, "1 → run: soft last_err fails exit + plate ok"},
@@ -12803,6 +13056,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"CUBALC_SEED", "RNG seed for reproducible runs"},
       {"CUBALC_QUIET", "1 → run plate-only"},
       {"CUBALC_STRICT", "1 → soft last_err fails exit"},
+      {"CUBALC_INCLUDE_PATH", "colon dirs for INCLUDE short names"},
+      {"CUBALC_PRELOAD", "colon libs auto-INCLUDE ONCE before run (-I)"},
     };
     if (!q || !q[0]) {
       fprintf(stderr, "usage: cubalc search <keyword>\n"

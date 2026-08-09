@@ -24,6 +24,17 @@ Reusable logic: FN name a b … END / CALL; objects: NEW / SEND / GETF / SETF.
 agent → .cubalc source → cubalc run → stdout JSON/board → agent
 ```
 
+### Preload libs without editing source
+
+```bash
+cubalc run -I agent_boot -e 'STATUS'              # INCLUDE ONCE agent_boot first
+cubalc -I plate_session my.cubalc                 # top-level -I (no run subcmd)
+export CUBALC_PRELOAD=agent_boot:hold_seed        # colon list env dual
+cubalc run -L "$PWD/mylibs" -I my_extra prog.cubalc  # one-shot CUBALC_INCLUDE_PATH
+```
+
+Run plate includes `preload_n` / `include_path_n`. See `cubalc env PRELOAD`.
+
 ## Durable agent state (plates)
 
 Prefer INCLUDE over hand-built JSON:
