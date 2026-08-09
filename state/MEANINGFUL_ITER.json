@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 570,
-  "version": "1.15.597-usability",
-  "item": "SUBSETP/COVERSP + REQUIRE SUBSETP",
-  "item_id": 606,
-  "title": "SUBSETP|COVERSP · multi-plate required-field match soft+hard · no SYS JSONSUBSET",
-  "commit": "6c78ac577c3a3ddd77f12a5205632a4aa9bc55fd",
-  "summary": "Mesh agents soft/hard required-field plate contracts with miss keys without SYS. proof 1147 19/19 + fail path. thrash restore first.",
+  "iter": 571,
+  "version": "1.15.598-usability",
+  "item": "PLUCKP/GETPALL",
+  "item_id": 607,
+  "title": "PLUCKP|GETPALL · multi-key peel value bag multi-plate · no GETP+PUSH",
+  "commit": "f0950d4d153214fb245b88ada55069f04193f6c9",
+  "summary": "Mesh agents peel several plate fields to a bag one-shot without multi GETP. proof 1148 24/24 + subsetp reg.",
   "proofs": [
-    "1147_subsetp 19/19",
-    "1147b_subsetp_fail",
-    "1146_require_eqp reg 24/24"
+    "1148_pluckp 24/24",
+    "1147_subsetp reg 19/19"
   ],
-  "when": "2026-08-09T02:06:05Z",
+  "when": "2026-08-09T02:16:02Z",
   "agent": "meaningful_iter_10m",
-  "sha": "6c78ac577c3a3ddd77f12a5205632a4aa9bc55fd",
-  "note": "thrash restore then ship; EVOLVE_PAUSED"
+  "sha": "f0950d4d153214fb245b88ada55069f04193f6c9",
+  "note": "clean tree; EVOLVE_PAUSED"
 }
