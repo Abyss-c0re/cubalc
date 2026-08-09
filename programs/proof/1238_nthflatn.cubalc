@@ -1,0 +1,67 @@
+# NTHFLATN / INDEXFLATN — 0-based Nth pure-int leaf by path needle → LAST_N
+# Usability: index pure-int peels after COUNTFLATN without VALSFLATN+NTH glue.
+
+HOLD_FLASH 1
+
+# pure-int ports: cfg.port=9090 (i=0), meta.port=1 (i=1)
+LET PLATE = "{\"cfg\":{\"port\":9090,\"host\":\"h\"},\"meta\":{\"port\":1},\"score\":{\"a\":10,\"b\":20,\"c\":30}}"
+
+NTHFLATN "port" 0
+ASSERT OK == 1
+ASSERT NTHFLATN_HIT == 1
+ASSERT LAST_N == 9090
+ASSERT NTHFLATN == 9090
+ASSERT NTHFLATN_I == 0
+SYS EQS NTHFLATN_PATH "cfg.port"
+ASSERT LAST_N == 1
+
+NTHFLATN "port" 1
+ASSERT NTHFLATN_HIT == 1
+ASSERT LAST_N == 1
+SYS EQS NTHFLATN_PATH "meta.port"
+ASSERT LAST_N == 1
+
+NTHFLATN "port" 2 OR 8080
+ASSERT NTHFLATN_HIT == 0
+ASSERT NTHFLATN_FALLBACK == 1
+ASSERT LAST_N == 8080
+
+NTHFLATN "score" 0
+ASSERT LAST_N == 10
+NTHFLATN "score" 1
+ASSERT LAST_N == 20
+NTHFLATN "score" 2
+ASSERT LAST_N == 30
+
+# host is string-only — no pure-int index 0
+NTHFLATN "host" 0 OR -1
+ASSERT NTHFLATN_HIT == 0
+ASSERT LAST_N == -1
+
+# empty needle: all pure-int order walk
+NTHFLATN "" 0
+ASSERT NTHFLATN_HIT == 1
+# first pure-int in plate walk
+
+LET PEER = "{\"hits\":{\"a\":3,\"b\":4,\"c\":5}}"
+NTHFLATN FROM PEER "hits" 1
+ASSERT NTHFLATN_FROM == 1
+SYS EQS NTHFLATN_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT NTHFLATN == 4
+SYS EQS NTHFLATN_PATH "hits.b"
+ASSERT LAST_N == 1
+
+# plate unchanged
+LET PLATE = "{\"x\":7}"
+NTHFLATN FROM PEER "hits" 0
+GETP "x"
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+
+INDEXFLATN "x" 0
+ASSERT NTHFLATN_HIT == 1
+ASSERT LAST_N == 7
+
+PASS
+PRINT "1238_nthflatn: PASS"

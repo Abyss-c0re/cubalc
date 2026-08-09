@@ -257,6 +257,7 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate needflat   state/my_agent.json tls agent_id         # fail-fast if leaf path needles missing
 ./out/cubalc plate getflatn   state/my_agent.json port OR 8080         # first pure-int leaf by needle → n
 ./out/cubalc plate lastflatn  state/my_agent.json port OR 8080         # last pure-int leaf by needle → n
+./out/cubalc plate nthflatn   state/my_agent.json score 1 OR 0         # 0-based Nth pure-int leaf by needle → n
 ./out/cubalc plate typeflat   state/my_agent.json port                 # first matching leaf kind → num|str|…
 ./out/cubalc plate avgflat     state/my_agent.json scores              # mean pure-int leaves by needle → n
 ./out/cubalc plate medianflat  state/my_agent.json scores              # median pure-int leaves by needle → n
