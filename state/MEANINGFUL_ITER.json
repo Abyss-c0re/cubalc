@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 575,
-  "version": "1.15.602-usability",
-  "item": "RENAMEP/MOVEKEYP",
-  "item_id": 611,
-  "title": "RENAMEP|MOVEKEYP · multi-plate key rename write-back · no SYS JSONRENAME / GETP+DELP+SETP",
-  "commit": "5730d25a8c879147a0d0661a3ac9fb98193d8130",
-  "summary": "Promote tmp→status on PLATE/PEER with SETP-style write-back. proof 1152 26/26 + pickp reg.",
+  "iter": 576,
+  "version": "1.15.603-usability",
+  "item": "KEYDIFFP/KEYCOMMP",
+  "item_id": 612,
+  "title": "KEYDIFFP|ONLYKEYSP · KEYCOMMP|KEYINTERP · multi-plate key-set bags · no SYS JSONKEYDIFF/JSONKEYCOMM",
+  "commit": "c1c140c21e8e843876ceb90ab69abc73e3820d07",
+  "summary": "Structural only-in-a / intersection key bags for mesh without SYS. proof 1153 27/27 + renamep reg. thrash restored first.",
   "proofs": [
-    "1152_renamep 26/26",
-    "1151_pickp reg 35/35"
+    "1153_keydiffp 27/27",
+    "1152_renamep reg 26/26"
   ],
-  "when": "2026-08-09T02:55:28Z",
+  "when": "2026-08-09T03:05:22Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5730d25a8c879147a0d0661a3ac9fb98193d8130",
-  "note": "clean tree; EVOLVE_PAUSED"
+  "sha": "c1c140c21e8e843876ceb90ab69abc73e3820d07",
+  "note": "thrash restore then feature; EVOLVE_PAUSED"
 }
