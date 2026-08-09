@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 566,
-  "version": "1.15.593-usability",
-  "item": "plate_both_save + init --peer",
-  "item_id": 602,
-  "title": "INCLUDE plate_both_save · init --peer dual write-back one INCLUDE",
-  "commit": "291d0ec484831c65741aa1465269129b3fd52856",
-  "summary": "Multi-plate agents persist PLATE+PEER with one INCLUDE; scaffold updated. proof 1143 14/14 + init_peer.",
+  "iter": 567,
+  "version": "1.15.594-usability",
+  "item": "cubalc plate has/need",
+  "item_id": 603,
+  "title": "cubalc plate has|need · CLI HASPALL/NEEDP duals multi-key contract",
+  "commit": "ad62ebca2abc6e278e9077e38192de29ac1fbe4c",
+  "summary": "Shell agents soft/hard multi-key plate gates with miss bag without .cubalc. proof 1144 + plate CLI reg.",
   "proofs": [
-    "1143_plate_both_save 14/14",
-    "1138_init_peer reg"
+    "1144_cli_plate_has_need",
+    "1140_cli_plate_ensure_merge reg",
+    "1142_cli_plate_changelog reg"
   ],
-  "when": "2026-08-09T01:24:40Z",
+  "when": "2026-08-09T01:35:40Z",
   "agent": "meaningful_iter_10m",
-  "sha": "291d0ec484831c65741aa1465269129b3fd52856",
+  "sha": "ad62ebca2abc6e278e9077e38192de29ac1fbe4c",
   "note": "clean tree; EVOLVE_PAUSED"
 }
