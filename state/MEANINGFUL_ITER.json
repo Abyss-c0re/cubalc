@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 620,
-  "version": "1.15.647-usability",
-  "item": "cubalc plate pluck multi-key path peel",
-  "item_id": 656,
-  "title": "cubalc plate pluck|getall \u00b7 PLUCKP CLI dual \u00b7 dotted paths \u00b7 agent one-shot bag without .cubalc",
-  "commit": "dc24fc7c3a30d54c0354d703ebd84ebd67541b4e",
-  "summary": "CLI multi-key peel bag with nest paths. proof 1197 PASS.",
+  "iter": 621,
+  "version": "1.15.648-usability",
+  "item": "cubalc plate type kind probe",
+  "item_id": 657,
+  "title": "cubalc plate type|kind · TYPEP CLI dual · missing|num|str|bool|null|obj|arr · dotted paths",
+  "commit": "PENDING",
+  "summary": "Agent kind probe without .cubalc. proof 1198 PASS.",
   "proofs": [
-    "1197_cli_plate_pluck PASS",
-    "1195_pluckp_path reg 26/26"
+    "1198_cli_plate_type PASS",
+    "1156_typep reg 24/24",
+    "1193_pathp_more reg 32/32"
   ],
-  "when": "2026-08-09T12:10:00Z",
+  "when": "2026-08-09T12:25:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "dc24fc7c3a30d54c0354d703ebd84ebd67541b4e",
-  "note": "after fillp_path; path CLI extract; EVOLVE_PAUSED"
+  "sha": "PENDING",
+  "note": "after plate_pluck; path CLI type; EVOLVE_PAUSED"
 }

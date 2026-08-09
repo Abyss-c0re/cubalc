@@ -2165,6 +2165,7 @@ int main(int argc, char **argv) {
       {"pluckp_path", "programs/proof/1195_pluckp_path.cubalc", "PLUCKP dotted path multi-key peel nest fields multi-plate"},
       {"fillp_path", "programs/proof/1196_fillp_path.cubalc", "FILLP {{freq.error}} dotted path nest templates multi-plate"},
       {"cli_plate_pluck", "programs/proof/1197_cli_plate_pluck.sh", "cubalc plate pluck multi-key path peel PLUCKP dual"},
+      {"cli_plate_type", "programs/proof/1198_cli_plate_type.sh", "cubalc plate type TYPEP dual kind probe paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
       {"mergeobj", "programs/proof/1171_mergeobj.cubalc", "MERGEOBJ/DEFAULTOBJ nested plate merge one-shot multi-plate"},
       {"getpobj", "programs/proof/1172_getpobj.cubalc", "GETPOBJ/SETPOBJ/INCOBJ/DELPOBJ nested scalar field plane multi-plate"},
@@ -4877,6 +4878,7 @@ int main(int argc, char **argv) {
               "usage: cubalc plate show|get|set|inc|del|keys|nestget|nestset|nestinc|nestdel|nestkeys|nesthas|nestpick|nestomit|fill|… <path> …\n"
               "       cubalc plate <path.json>                 # show\n"
               "       cubalc plate get <path> <key> [OR def]\n"
+              "       cubalc plate type <path> <key>  # TYPEP dual · kind miss|num|str|… (paths ok)\n"
               "       cubalc plate set <path> <key> <value>\n"
               "       cubalc plate inc <path> <key> [delta]\n"
               "       cubalc plate del <path> <key>\n"
@@ -4905,7 +4907,7 @@ int main(int argc, char **argv) {
               "       cubalc plate top|bot <path> [n]          # top/bot N keys · TOPNP duals\n");
       printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":false,\"cmd\":\"plate\","
              "\"err\":\"need op and/or path\",\"version\":\"%s\","
-             "\"ops\":[\"show\",\"get\",\"set\",\"inc\",\"del\",\"keys\","
+             "\"ops\":[\"show\",\"get\",\"type\",\"set\",\"inc\",\"del\",\"keys\","
              "\"nestget\",\"nestset\",\"nestinc\",\"nestdel\",\"nestkeys\",\"nesthas\",\"nestpick\",\"nestomit\","
              "\"nestsum\",\"nestavg\",\"nestmedian\",\"nesttop\",\"nestbot\","
              "\"nestsort\",\"nestsortbag\","
@@ -4919,6 +4921,9 @@ int main(int argc, char **argv) {
     if (strcmp(argv[2], "show") == 0 || strcmp(argv[2], "dump") == 0 ||
         strcmp(argv[2], "cat") == 0 || strcmp(argv[2], "read") == 0 ||
         strcmp(argv[2], "get") == 0 || strcmp(argv[2], "peek") == 0 ||
+        strcmp(argv[2], "type") == 0 || strcmp(argv[2], "kind") == 0 ||
+        strcmp(argv[2], "typeof") == 0 || strcmp(argv[2], "typep") == 0 ||
+        strcmp(argv[2], "jtype") == 0 ||
         strcmp(argv[2], "set") == 0 || strcmp(argv[2], "put") == 0 ||
         strcmp(argv[2], "inc") == 0 || strcmp(argv[2], "bump") == 0 ||
         strcmp(argv[2], "del") == 0 || strcmp(argv[2], "rm") == 0 ||
@@ -4998,6 +5003,9 @@ int main(int argc, char **argv) {
         op = "show";
       else if (strcmp(op, "peek") == 0)
         op = "get";
+      else if (strcmp(op, "kind") == 0 || strcmp(op, "typeof") == 0 ||
+               strcmp(op, "typep") == 0 || strcmp(op, "jtype") == 0)
+        op = "type";
       else if (strcmp(op, "put") == 0)
         op = "set";
       else if (strcmp(op, "bump") == 0)
@@ -6694,6 +6702,52 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
              "\"err\":\"key miss\",\"file\":%s,\"version\":\"%s\"}\n",
              path, key, file_hit ? "true" : "false", CUBALC_LANG_VERSION);
       return 1;
+    }
+
+    /* type|kind path key — TYPEP dual: field kind probe (paths ok).
+     * Usability: choose num/str/obj peel without a .cubalc program:
+     *   cubalc plate type agent.json freq.error  → num
+     *   cubalc plate kind agent.json meta        → obj
+     * Soft miss → kind=missing · hit=false · exit 1. */
+    if (strcmp(op, "type") == 0) {
+      const char *kind_s = "missing";
+      long kind_n = 0;
+      int hit = 0;
+      memset(&gr, 0, sizeof gr);
+      if (cubalc_host_json_path_get_raw(plate, key, &gr) == 0) {
+        const char *v = gr.str;
+        hit = 1;
+        while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+        if (*v == '"') {
+          kind_s = "str";
+          kind_n = 2;
+        } else if (*v == '{') {
+          kind_s = "obj";
+          kind_n = 5;
+        } else if (*v == '[') {
+          kind_s = "arr";
+          kind_n = 6;
+        } else if (strncmp(v, "true", 4) == 0 || strncmp(v, "false", 5) == 0) {
+          kind_s = "bool";
+          kind_n = 3;
+        } else if (strncmp(v, "null", 4) == 0) {
+          kind_s = "null";
+          kind_n = 4;
+        } else if (*v == '-' || (*v >= '0' && *v <= '9')) {
+          kind_s = "num";
+          kind_n = 1;
+        } else {
+          kind_s = "str";
+          kind_n = 2;
+        }
+      }
+      printf("{\"schema\":\"cubalc.plate.v1\",\"ok\":true,\"cmd\":\"plate\","
+             "\"op\":\"type\",\"path\":\"%s\",\"key\":\"%s\",\"hit\":%s,"
+             "\"kind\":\"%s\",\"n\":%ld,\"file\":%s,\"version\":\"%s\","
+             "\"note\":\"TYPEP dual · missing|num|str|bool|null|obj|arr · paths ok\"}\n",
+             path, key, hit ? "true" : "false", kind_s, kind_n,
+             file_hit ? "true" : "false", CUBALC_LANG_VERSION);
+      return hit ? 0 : 1;
     }
 
     if (strcmp(op, "set") == 0) {

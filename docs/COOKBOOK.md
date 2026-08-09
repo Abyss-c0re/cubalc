@@ -204,6 +204,8 @@ CLI one-shots (no `.cubalc` file):
 ./out/cubalc plate show state/my_agent.json
 ./out/cubalc plate get  state/my_agent.json n
 ./out/cubalc plate get  state/my_agent.json freq.error             # dotted nest path
+./out/cubalc plate type state/my_agent.json freq.error             # → num · TYPEP dual
+./out/cubalc plate type state/my_agent.json meta                   # → obj|missing
 ./out/cubalc plate set  state/my_agent.json role worker
 ./out/cubalc plate set  state/my_agent.json freq.error 0
 ./out/cubalc plate inc  state/my_agent.json n
