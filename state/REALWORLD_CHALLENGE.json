@@ -1,65 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 225,
-  "program": "programs/realworld/agent_config_kvfile_board.cubalc",
-  "theme": "LOOKUPFILE/KVFILESET/ENSURE/INC agent key=val plate",
-  "version": "1.15.592-usability",
+  "iter": 226,
+  "program": "programs/realworld/mesh_both_save_board.cubalc",
+  "theme": "plate_both_save dual PLATE+PEER one-shot persist",
+  "version": "1.15.595-usability",
   "pass": true,
-  "prior_note": "iter 224 job deadline CLI; this iter on-disk kvfile agent config",
+  "prior_note": "iter 225 kvfile config; this iter first realworld plate_both_save (1143)",
   "tests": [
     {
       "name": "boot",
-      "cmd": "seed agent.conf",
+      "cmd": "session + both_save seed",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "set",
-      "cmd": "KVFILESET port=8800",
-      "ok": true,
-      "note": "set"
-    },
-    {
-      "name": "get",
-      "cmd": "LOOKUPFILE port",
-      "ok": true,
-      "note": "get"
-    },
-    {
-      "name": "ensure_kept",
-      "cmd": "ENSURE port no overwrite",
-      "ok": true,
-      "note": "ensure kept"
-    },
-    {
-      "name": "ensure_new",
-      "cmd": "ENSURE ttl append",
-      "ok": true,
-      "note": "ensure new"
-    },
-    {
       "name": "tick",
-      "cmd": "KVFILEINC n",
+      "cmd": "INCP both + both_save n=2/1",
       "ok": true,
       "note": "tick"
     },
     {
+      "name": "status",
+      "cmd": "status ready + host cubeC",
+      "ok": true,
+      "note": "status"
+    },
+    {
+      "name": "save",
+      "cmd": "done/acked both_save",
+      "ok": true,
+      "note": "save"
+    },
+    {
+      "name": "reload",
+      "cmd": "session loads durable",
+      "ok": true,
+      "note": "reload"
+    },
+    {
       "name": "gate",
-      "cmd": "host+port present",
+      "cmd": "disk dual fields",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "ensure keep+new+OR miss",
+      "cmd": "NEEDP + JSONEQ self",
       "ok": true,
       "note": "edges"
-    },
-    {
-      "name": "del",
-      "cmd": "KVFILEDEL ttl",
-      "ok": true,
-      "note": "del"
     },
     {
       "name": "soft",
@@ -77,7 +65,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": false,
-      "note": "376/378 sys_kvfileensure,init_peer"
+      "note": "378/380 pre-existing sys_kvfileensure,init_peer"
     }
   ],
   "weaknesses": [
@@ -2080,6 +2068,30 @@
       "title": "WRITE conf/STATUS omit trailing NL",
       "detail": "cat -A last line without $.",
       "repro": "cat -A agent.conf"
+    },
+    {
+      "id": "W251",
+      "severity": "high",
+      "area": "lang|vars",
+      "title": "LOADP INTO temps fail under plate_peer_session var pressure",
+      "detail": "After INCLUDE plate_peer_session + plate_both_save, LOADP INTO a2 often fails; GETP FROM a2 \u2192 unknown form a2. Prefer SYS READ path + JSON peel for disk verify.",
+      "repro": "plate_peer_session; plate_both_save; LOADP INTO a2 agent.json; GETP FROM a2 agent \u2192 unknown form"
+    },
+    {
+      "id": "W252",
+      "severity": "low",
+      "area": "lib|both_save",
+      "title": "plate_both_save leaves no combined OK if second save fails silently",
+      "detail": "Composes two INCLUDE saves; board must verify both files via READ rather than SAVEPLATE_OK alone (knobs flaky).",
+      "repro": "INCLUDE plate_both_save; check agent.json and peer.json bodies"
+    },
+    {
+      "id": "W253",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL",
+      "detail": "cat -A last STATUS line without $.",
+      "repro": "cat -A STATUS.txt"
     }
   ],
   "workarounds": [
@@ -2165,14 +2177,12 @@
     "SYS CAT multi-arg for EQS expected bodies"
   ],
   "language_gaps": [
-    "no atomic multi-key KVFILESET batch",
-    "GREPV substring on status bags remains footgun",
-    "sys_kvfileensure selftest fail needs MEANINGFUL_ITER triage"
+    "var table still bites multi-plate + INTO temps",
+    "both_save needs disk body verify not knob-only"
   ],
   "issues_faced": [
-    "GREPV ensure: clobbered multi-key ensure audit rows \u2014 use ens:key:",
-    "selftest still fails sys_kvfileensure despite board ensure green (proof vs harness?)"
+    "LOADP INTO a2 unknown form after peer_session \u2014 switched to SYS READ+JSON"
   ],
-  "commit": "5048f5c",
-  "ts": "2026-08-09T01:24:08Z"
+  "commit": "",
+  "ts": "2026-08-09T01:49:17Z"
 }
