@@ -1,0 +1,110 @@
+# RENAMEPOBJ / MOVEKEYOBJ / NESTRENAME — rename key inside nested plate
+# Usability: RENAMEP dual for nests without GETOBJ+RENAMEP+SETOBJ glue.
+# Not OOP RENAMEOBJ (live-slot rename).
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"host\":\"cubeA\",\"meta\":{\"tmp\":\"ready\",\"role\":\"worker\",\"zone\":\"A\"},\"n\":3}"
+LET PEER = "{\"cfg\":{\"tmp_port\":8080,\"tls\":1,\"name\":\"peerB\"},\"tag\":\"x\"}"
+
+# rename inside nest on conventional PLATE
+RENAMEPOBJ "meta" "tmp" "status"
+ASSERT OK == 1
+ASSERT RENAMEPOBJ_N == 1
+ASSERT RENAMEPOBJ_NEST_HIT == 1
+ASSERT RENAMEPOBJ_FROM == 0
+SYS EQS RENAMEPOBJ_SRC "PLATE"
+ASSERT LAST_N == 1
+SYS EQS RENAMEPOBJ_OLD "tmp"
+ASSERT LAST_N == 1
+SYS EQS RENAMEPOBJ_NEW "status"
+ASSERT LAST_N == 1
+
+GETPOBJ "meta" "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+HASPOBJ "meta" "tmp"
+ASSERT LAST_N == 0
+# other nest keys kept
+GETPOBJ "meta" "role"
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+# outer scalars intact
+GETP "host"
+SYS EQS LAST "cubeA"
+ASSERT LAST_N == 1
+SYS JSONN "n" FROM PLATE
+ASSERT LAST_N == 3
+
+# soft old-key miss
+RENAMEPOBJ "meta" "nope" "x"
+ASSERT OK == 1
+ASSERT RENAMEPOBJ_N == 0
+ASSERT RENAMEPOBJ_NEST_HIT == 1
+HASPOBJ "meta" "x"
+ASSERT LAST_N == 0
+GETPOBJ "meta" "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+# soft nest miss
+RENAMEPOBJ "ghost" "a" "b"
+ASSERT OK == 1
+ASSERT RENAMEPOBJ_N == 0
+ASSERT RENAMEPOBJ_NEST_HIT == 0
+HASP "ghost"
+ASSERT LAST_N == 0
+
+# multi-plate FROM write-back
+RENAMEPOBJ FROM PEER "cfg" "tmp_port" "port"
+ASSERT RENAMEPOBJ_FROM == 1
+SYS EQS RENAMEPOBJ_SRC "PEER"
+ASSERT LAST_N == 1
+ASSERT RENAMEPOBJ_N == 1
+GETPOBJ FROM PEER "cfg" "port"
+SYS EQS LAST "8080"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "cfg" "tmp_port"
+ASSERT LAST_N == 0
+# PLATE untouched by peer rename
+GETPOBJ "meta" "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+# PEER outer intact
+GETP FROM PEER "tag"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# trailing FROM + AS
+RENAMEPOBJ "cfg" "name" AS "id" FROM PEER
+ASSERT RENAMEPOBJ_N == 1
+GETPOBJ FROM PEER "cfg" "id"
+SYS EQS LAST "peerB"
+ASSERT LAST_N == 1
+HASPOBJ FROM PEER "cfg" "name"
+ASSERT LAST_N == 0
+
+# alias MOVEKEYOBJ / NESTRENAME
+LET s = "{\"bag\":{\"a\":9,\"b\":1}}"
+MOVEKEYOBJ "bag" "a" "count" FROM s
+ASSERT RENAMEPOBJ_N == 1
+GETPOBJ FROM s "bag" "count"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+HASPOBJ FROM s "bag" "a"
+ASSERT LAST_N == 0
+
+NESTRENAME "bag" "b" "flag" FROM s
+ASSERT RENAMEPOBJ_N == 1
+GETPOBJ FROM s "bag" "flag"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# same-name is present no-op hit when key exists
+RENAMEPOBJ "meta" "status" "status"
+ASSERT RENAMEPOBJ_N == 1
+GETPOBJ "meta" "status"
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+PRINT "renamepobj soft ok"

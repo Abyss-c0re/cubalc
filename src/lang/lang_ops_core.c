@@ -27416,6 +27416,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"PLUCKOBJ") || kw(&L->cur,"NESTPLUCK") ||
              kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
              kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
+             kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
              kw(&L->cur,"TOKVP") || kw(&L->cur,"FROMKVP") ||
              kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
              kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
@@ -35860,6 +35861,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NONEMPTYOBJ", "NONEMPTYOBJ|HASKEYSOBJ [FROM plate] nest — soft nonempty nest 0|1 · multi-plate"},
       {"VALSOBJ", "VALSOBJ|NESTVALS [FROM plate] nest — nested values bag → LAST · multi-plate · VALSP dual"},
       {"NESTVALS", "NESTVALS alias of VALSOBJ"},
+      {"RENAMEPOBJ", "RENAMEPOBJ|MOVEKEYOBJ|NESTRENAME [FROM plate] nest old new — rename key in nest · write-back · multi-plate · RENAMEP dual · not OOP RENAMEOBJ"},
+      {"MOVEKEYOBJ", "MOVEKEYOBJ alias of RENAMEPOBJ"},
+      {"NESTRENAME", "NESTRENAME alias of RENAMEPOBJ"},
+      {"REKEYOBJ", "REKEYOBJ alias of RENAMEPOBJ"},
+      {"MVKEYOBJ", "MVKEYOBJ alias of RENAMEPOBJ"},
       {"TOKVP", "TOKVP|TOBAGP [FROM plate] — plate → key:val bag · multi-plate · no SYS JSONTOKV"},
       {"TOBAGP", "TOBAGP alias of TOKVP"},
       {"FROMKVP", "FROMKVP|BAGTOP [bag] [INTO name] — key=val bag → plate · multi-plate · no SYS JSONFROMKV"},
@@ -43386,6 +43392,288 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
 
 
+
+  /* RENAMEPOBJ|MOVEKEYOBJ|NESTRENAME [FROM plate] nest old new —
+   * Rename key inside nested object → write-back outer plate (RENAMEP dual).
+   * Soft nest miss or old-key miss: LAST_N=0 · outer unchanged · OK=1.
+   * Dest overwrites if already present (same as RENAMEP/JSONRENAME).
+   * Not RENAMEOBJ (OOP live-slot rename) — nest keys only.
+   * Usability: promote nest tmp→status without GETOBJ+RENAMEP+SETOBJ glue:
+   *   RENAMEPOBJ "meta" "tmp" "status"
+   *   RENAMEPOBJ FROM PEER "cfg" "tmp_port" "port"
+   */
+  if (kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
+      kw(&L->cur,"RENAMEKEYOBJ") || kw(&L->cur,"MVKEYOBJ") || kw(&L->cur,"REKEYOBJ") ||
+      kw(&L->cur,"MRENAMEPOBJ") || kw(&L->cur,"NEST_RENAME") || kw(&L->cur,"OBJRENAMEKEY")) {
+    char plate[CUBALC_HOST_STR_MAX], nestk[96], nest[CUBALC_HOST_STR_MAX];
+    char oldk[96], newk[96];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result ngr, rr, hr;
+    int have_from = 0, nest_hit = 0;
+    Var *pv;
+    const char *v;
+
+    lex_next(L);
+    plate[0] = 0; nestk[0] = 0; nest[0] = 0; oldk[0] = 0; newk[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    /* nest key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(nestk, sizeof nestk, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"END") || kw(&L->cur,"ASSERT") || kw(&L->cur,"LET")) {
+        fail(vm, "RENAMEPOBJ [FROM plate] nest old new — need nest key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, nestk, sizeof nestk) != 0)
+        nestk[0] = 0;
+    } else {
+      fail(vm, "RENAMEPOBJ [FROM plate] nest old new — need nest key");
+      return -1;
+    }
+
+    /* old key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(oldk, sizeof oldk, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"AS") || kw(&L->cur,"TO") ||
+          kw(&L->cur,"END") || kw(&L->cur,"ASSERT") || kw(&L->cur,"LET")) {
+        fail(vm, "RENAMEPOBJ nest old new — need old key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, oldk, sizeof oldk) != 0)
+        oldk[0] = 0;
+    } else {
+      fail(vm, "RENAMEPOBJ nest old new — need old key");
+      return -1;
+    }
+
+    /* optional AS|TO before new key */
+    if (kw(&L->cur,"AS") || kw(&L->cur,"TO") || kw(&L->cur,"INTO"))
+      lex_next(L);
+
+    /* new key */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long kv = parse_expr(vm, L);
+      snprintf(newk, sizeof newk, "%ld", kv);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+          kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+          kw(&L->cur,"END") || kw(&L->cur,"ASSERT") || kw(&L->cur,"LET")) {
+        fail(vm, "RENAMEPOBJ nest old new — need new key");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, newk, sizeof newk) != 0)
+        newk[0] = 0;
+    } else {
+      fail(vm, "RENAMEPOBJ nest old new — need new key");
+      return -1;
+    }
+
+    /* trailing FROM plate */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        snprintf(from_name, sizeof from_name, "%s", "LAST");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!nestk[0] || !oldk[0] || !newk[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RENAMEPOBJ_N", 0);
+      var_set_num(vm, "RENAMEPOBJ_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "RENAMEPOBJ_NEST_HIT", 0);
+      var_set_str(vm, "LAST_ERR", "RENAMEPOBJ: empty nest/key");
+      var_set_str(vm, "ERR", "RENAMEPOBJ: empty nest/key");
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    nest_hit = 0;
+    nest[0] = 0;
+    memset(&ngr, 0, sizeof ngr);
+    if (cubalc_host_json_get_raw(plate, nestk, &ngr) == 0) {
+      v = ngr.str;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v == '{') {
+        if (v != ngr.str) {
+          size_t n = strlen(v);
+          memmove(ngr.str, v, n + 1);
+        }
+        snprintf(nest, sizeof nest, "%s", ngr.str);
+        nest_hit = 1;
+      }
+    }
+
+    /* soft nest miss — no invent empty nest; outer unchanged */
+    if (!nest_hit) {
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "RENAMEPOBJ", plate);
+      var_set_num(vm, "RENAMEPOBJ_N", 0);
+      var_set_str(vm, "RENAMEPOBJ_NEST", nestk);
+      var_set_str(vm, "RENAMEPOBJ_OLD", oldk);
+      var_set_str(vm, "RENAMEPOBJ_NEW", newk);
+      var_set_num(vm, "RENAMEPOBJ_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "RENAMEPOBJ_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "RENAMEPOBJ_NEST_HIT", 0);
+      var_set_str(vm, "NEST", "");
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# renamepobj nest-miss nest=%s %s→%s from=%d\n",
+                nestk, oldk, newk, have_from);
+      bump(vm); return 1;
+    }
+
+    memset(&rr, 0, sizeof rr);
+    if (cubalc_host_json_rename(nest, oldk, newk, &rr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RENAMEPOBJ_N", 0);
+      var_set_num(vm, "RENAMEPOBJ_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "RENAMEPOBJ_NEST_HIT", 1);
+      var_set_str(vm, "LAST_ERR", rr.err[0] ? rr.err : "RENAMEPOBJ: rename fail");
+      var_set_str(vm, "ERR", rr.err[0] ? rr.err : "RENAMEPOBJ: rename fail");
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+
+    /* soft old-key miss: n=0 · leave outer unchanged */
+    if (rr.n == 0) {
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "RENAMEPOBJ", plate);
+      var_set_num(vm, "RENAMEPOBJ_N", 0);
+      var_set_str(vm, "RENAMEPOBJ_NEST", nestk);
+      var_set_str(vm, "RENAMEPOBJ_OLD", oldk);
+      var_set_str(vm, "RENAMEPOBJ_NEW", newk);
+      var_set_num(vm, "RENAMEPOBJ_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "RENAMEPOBJ_SRC",
+                  from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+      var_set_num(vm, "RENAMEPOBJ_NEST_HIT", 1);
+      var_set_str(vm, "NEST", nest);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# renamepobj key-miss nest=%s %s→%s from=%d\n",
+                nestk, oldk, newk, have_from);
+      bump(vm); return 1;
+    }
+
+    snprintf(nest, sizeof nest, "%s", rr.str);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_set(plate, nestk, nest, 1, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "RENAMEPOBJ: write-back fail");
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "RENAMEPOBJ: write-back fail");
+      var_set_num(vm, "RENAMEPOBJ_N", 0);
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_name[0] && strcmp(from_name, "LAST") != 0)
+      var_set_str(vm, from_name, hr.str);
+    else if (!have_from)
+      var_set_str(vm, "PLATE", hr.str);
+
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = rr.n;
+    var_set_num(vm, "LAST_N", rr.n);
+    var_set_str(vm, "NEST", nest);
+    var_set_str(vm, "MERGED", nest);
+    var_set_str(vm, "RENAMEPOBJ", hr.str);
+    var_set_str(vm, "MOVEKEYOBJ", hr.str);
+    var_set_str(vm, "NESTRENAME", hr.str);
+    var_set_num(vm, "RENAMEPOBJ_N", rr.n);
+    var_set_str(vm, "RENAMEPOBJ_NEST", nestk);
+    var_set_str(vm, "RENAMEPOBJ_OLD", oldk);
+    var_set_str(vm, "RENAMEPOBJ_NEW", newk);
+    var_set_num(vm, "RENAMEPOBJ_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "RENAMEPOBJ_SRC",
+                from_name[0] ? from_name : (have_from ? "" : "PLATE"));
+    var_set_num(vm, "RENAMEPOBJ_NEST_HIT", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# renamepobj nest=%s %s→%s n=%ld from=%d\n",
+              nestk, oldk, newk, rr.n, have_from);
+    bump(vm); return 1;
+  }
 
   /* TOKVP|TOBAGP [FROM plate] — plate → key:val bag (JSONTOKV dual).
    * FROMKVP|BAGTOP [bag|LAST] — key=val bag → plate object (JSONFROMKV dual).
