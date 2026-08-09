@@ -1,0 +1,63 @@
+# STABLEP / SAMEKEYSP / EQKEYSP — unchanged key bag (multi-plate dual of DIFFP)
+# Usability: dual of SYS JSONSTABLE · mesh agents see what still matches without SYS glue.
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":1,\"host\":\"cubeA\",\"role\":\"worker\",\"status\":\"idle\"}"
+LET PEER = "{\"n\":2,\"host\":\"cubeB\",\"role\":\"worker\",\"status\":\"idle\"}"
+
+# value changes + shared stable fields
+DIFFP PLATE PEER
+ASSERT DIFFP_N >= 2
+SYS HASLINE LAST "host"
+ASSERT LAST_N == 1
+SYS HASLINE DIFFP "n"
+ASSERT LAST_N == 1
+
+STABLEP PLATE PEER
+ASSERT OK == 1
+ASSERT STABLEP_N >= 2
+SYS HASLINE LAST "role"
+ASSERT LAST_N == 1
+SYS HASLINE STABLEP "status"
+ASSERT LAST_N == 1
+# changed keys not stable
+SYS HASLINE STABLEP "host"
+ASSERT LAST_N == 0
+SYS HASLINE STABLEP "n"
+ASSERT LAST_N == 0
+
+# identical plates → all keys stable
+STABLEP PLATE PLATE
+ASSERT STABLEP_N >= 4
+SYS HASLINE LAST "host"
+ASSERT LAST_N == 1
+SYS HASLINE STABLEP "n"
+ASSERT LAST_N == 1
+
+# empty intersection of same values
+LET a = "{\"x\":1,\"y\":2}"
+LET b = "{\"x\":9,\"z\":3}"
+STABLEP a b
+ASSERT STABLEP_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+DIFFP a b
+ASSERT DIFFP_N >= 2
+
+# aliases
+SAMEKEYSP PLATE PEER
+ASSERT STABLEP_N >= 2
+EQKEYSP PLATE PEER
+ASSERT STABLEP_N >= 2
+UNCHANGEDP PLATE PEER
+ASSERT STABLEP_N >= 2
+
+# string literals
+STABLEP "{\"k\":1,\"m\":2}" "{\"k\":1,\"m\":9}"
+SYS HASLINE LAST "k"
+ASSERT LAST_N == 1
+SYS HASLINE STABLEP "m"
+ASSERT LAST_N == 0
+
+PRINT "stablep soft ok"

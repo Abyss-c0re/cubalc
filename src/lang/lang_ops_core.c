@@ -27397,6 +27397,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") || kw(&L->cur,"FILLP") ||
              kw(&L->cur,"FILLPFILE") || kw(&L->cur,"DUMPP") || kw(&L->cur,"NEEDP") ||
              kw(&L->cur,"EQP") || kw(&L->cur,"NEQP") || kw(&L->cur,"DIFFP") ||
+             kw(&L->cur,"STABLEP") || kw(&L->cur,"SAMEKEYSP") || kw(&L->cur,"EQKEYSP") ||
              kw(&L->cur,"CHANGELOGP") || kw(&L->cur,"SUBSETP") || kw(&L->cur,"COVERSP") ||
              kw(&L->cur,"PLUCKP") || kw(&L->cur,"GETPALL") || kw(&L->cur,"DELTAP") ||
              kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
@@ -35750,6 +35751,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NEQP", "NEQP a b — soft plate inequality · inverse of EQP"},
       {"DIFFP", "DIFFP|CHANGEDP a b — changed key bag · multi-plate · no SYS JSONCHANGED"},
       {"CHANGEDP", "CHANGEDP alias of DIFFP"},
+      {"STABLEP", "STABLEP|SAMEKEYSP|EQKEYSP a b — unchanged key bag · multi-plate · dual DIFFP · no SYS JSONSTABLE"},
+      {"SAMEKEYSP", "SAMEKEYSP alias of STABLEP"},
+      {"EQKEYSP", "EQKEYSP alias of STABLEP"},
+      {"UNCHANGEDP", "UNCHANGEDP alias of STABLEP"},
       {"CHANGELOGP", "CHANGELOGP|CLOGP a b — key: old → new bag · multi-plate · no SYS JSONCHANGELOG"},
       {"CLOGP", "CLOGP alias of CHANGELOGP"},
       {"SUBSETP", "SUBSETP|ISSUBSETP sub super — soft required-field match · multi-plate · no SYS JSONSUBSET"},
@@ -39324,11 +39329,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   }
   /* EQP|SAMEP a b — soft order-independent plate equality (top-level JSONEQ dual).
    * NEQP a b — inverse · DIFFP|CHANGEDP a b — changed key bag · CHANGELOGP a b — value log.
+   * STABLEP|SAMEKEYSP a b — unchanged key bag (JSONSTABLE dual · dual of DIFFP).
    * Args: plate var names (PLATE/PEER/…), LAST, or JSON object string.
-   * Soft always OK=1. LAST_N: eq 0|1 · neq 0|1 · diff/changelog = count.
-   * Usability: multi-plate mesh verify without SYS JSONEQ/JSONCHANGED glue:
+   * Soft always OK=1. LAST_N: eq 0|1 · neq 0|1 · diff/stable/changelog = count.
+   * Usability: multi-plate mesh verify without SYS JSONEQ/JSONCHANGED/JSONSTABLE glue:
    *   EQP PLATE PEER
    *   DIFFP session peer
+   *   STABLEP PLATE PEER   # keys that still match
    *   CHANGELOGP a b
    */
   if (kw(&L->cur,"EQP") || kw(&L->cur,"SAMEP") || kw(&L->cur,"PLATE_EQ") ||
@@ -39337,12 +39344,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       kw(&L->cur,"MNEQP") ||
       kw(&L->cur,"DIFFP") || kw(&L->cur,"CHANGEDP") || kw(&L->cur,"PLATE_DIFF") ||
       kw(&L->cur,"MDIFFP") || kw(&L->cur,"KEYSDIFFP") ||
+      kw(&L->cur,"STABLEP") || kw(&L->cur,"SAMEKEYSP") || kw(&L->cur,"EQKEYSP") ||
+      kw(&L->cur,"UNCHANGEDP") || kw(&L->cur,"PLATE_STABLE") || kw(&L->cur,"MSTABLEP") ||
       kw(&L->cur,"CHANGELOGP") || kw(&L->cur,"CLOGP") || kw(&L->cur,"PLATE_CHANGELOG") ||
       kw(&L->cur,"MCHANGELOGP") || kw(&L->cur,"LOGDIFFP")) {
     char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
     char aname[96], bname[96];
     cubalc_host_result hr;
-    int is_eq = 0, is_ne = 0, is_diff = 0, is_clog = 0;
+    int is_eq = 0, is_ne = 0, is_diff = 0, is_stable = 0, is_clog = 0;
     Var *pv;
 
     if (kw(&L->cur,"EQP") || kw(&L->cur,"SAMEP") || kw(&L->cur,"PLATE_EQ") ||
@@ -39354,6 +39363,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     else if (kw(&L->cur,"DIFFP") || kw(&L->cur,"CHANGEDP") || kw(&L->cur,"PLATE_DIFF") ||
              kw(&L->cur,"MDIFFP") || kw(&L->cur,"KEYSDIFFP"))
       is_diff = 1;
+    else if (kw(&L->cur,"STABLEP") || kw(&L->cur,"SAMEKEYSP") || kw(&L->cur,"EQKEYSP") ||
+             kw(&L->cur,"UNCHANGEDP") || kw(&L->cur,"PLATE_STABLE") || kw(&L->cur,"MSTABLEP"))
+      is_stable = 1;
     else
       is_clog = 1;
 
@@ -39433,19 +39445,30 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
 
-    if (is_diff) {
-      cubalc_host_json_changed_keys(a, b, 0, &hr);
+    if (is_diff || is_stable) {
+      cubalc_host_json_changed_keys(a, b, is_stable ? 1 : 0, &hr);
       var_set_str(vm, "LAST", hr.str);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
       vm->last_n = hr.n;
       var_set_num(vm, "LAST_N", hr.n);
-      var_set_str(vm, "DIFFP", hr.str);
-      var_set_num(vm, "DIFFP_N", hr.n);
-      var_set_str(vm, "DIFFP_A", aname);
-      var_set_str(vm, "DIFFP_B", bname);
+      if (is_stable) {
+        var_set_str(vm, "STABLEP", hr.str);
+        var_set_num(vm, "STABLEP_N", hr.n);
+        var_set_str(vm, "STABLEP_A", aname);
+        var_set_str(vm, "STABLEP_B", bname);
+        var_set_num(vm, "JSONSTABLE_N", hr.n);
+        var_set_num(vm, "JSONEQKEYS_N", hr.n);
+      } else {
+        var_set_str(vm, "DIFFP", hr.str);
+        var_set_num(vm, "DIFFP_N", hr.n);
+        var_set_str(vm, "DIFFP_A", aname);
+        var_set_str(vm, "DIFFP_B", bname);
+        var_set_num(vm, "JSONCHANGED_N", hr.n);
+      }
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# diffp n=%ld a=%s b=%s\n",
+        fprintf(vm->trace, "# %s n=%ld a=%s b=%s\n",
+                is_stable ? "stablep" : "diffp",
                 hr.n, aname[0] ? aname : "?", bname[0] ? bname : "?");
       bump(vm); return 1;
     }
