@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 667,
-  "version": "1.15.694-usability",
-  "item": "UNIQFLAT + plate uniqflat",
-  "item_id": 703,
-  "title": "UNIQFLAT/DISTINCTFLAT + cubalc plate uniqflat · unique matching leaf values → LAST bag · multi-plate",
-  "commit": "313dc8662a63b8765447d9160238f65d0dcd86c5",
-  "summary": "Inventory roles/statuses without VALSFLAT+UNIQ glue. proof 1244 + CLI PASS.",
+  "iter": 668,
+  "version": "1.15.695-usability",
+  "item": "PATHSBYVAL + plate pathsbyval",
+  "item_id": 704,
+  "title": "PATHSBYVAL/ALLPATHSBYVAL + cubalc plate pathsbyval · all leaf paths by exact value → LAST bag · multi-plate",
+  "commit": "32245e04a4a98b4fa4aa3b4f78fd08cdef769732",
+  "summary": "Multi reverse nest lookup without EACH FLAT+IF+PUSH glue. proof 1245 + CLI PASS.",
   "proofs": [
-    "1244_uniqflat PASS",
-    "1244_cli_plate_uniqflat PASS",
-    "1243_pathbyval reg PASS"
+    "1245_pathsbyval PASS",
+    "1245_cli_plate_pathsbyval PASS",
+    "1244_uniqflat reg PASS"
   ],
-  "when": "2026-08-09T20:00:00Z",
+  "when": "2026-08-09T20:13:04Z",
   "agent": "meaningful_iter_10m",
-  "sha": "313dc8662a63b8765447d9160238f65d0dcd86c5",
-  "note": "after PATHBYVAL; EVOLVE_PAUSED"
+  "sha": "32245e04a4a98b4fa4aa3b4f78fd08cdef769732",
+  "note": "after UNIQFLAT; thrash restored; EVOLVE_PAUSED"
 }
