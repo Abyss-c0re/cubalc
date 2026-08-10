@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 758,
-  "version": "1.15.785-usability",
-  "item": "LISTTOPICS + HASTOPIC + cubalc topics catalog",
-  "item_id": 794,
-  "title": "LISTTOPICS|HASTOPIC|NEEDTOPIC \u00b7 cubalc topics \u00b7 cubalc.topics.v1",
-  "commit": "fc885da7207b5cfca3a45de3c93563ac8f80b32f",
-  "summary": "discoverable topic catalog + soft/hard gates; no hardcode. proof 1335 PASS.",
+  "iter": 759,
+  "version": "1.15.786-usability",
+  "item": "ERRTIPS + cubalc errtips recovery tip bags",
+  "item_id": 795,
+  "title": "ERRTIPS|FIXTIPS [err] \u00b7 cubalc errtips \u00b7 cubalc.errtips.v1",
+  "commit": "426a81ba2acc4181e220029864054da7708c1d67",
+  "summary": "LAST_ERR\u2192tip bag + inferred topic; chain TIPS/TOPIC/RUNSNIP. proof 1336 PASS.",
   "proofs": [
-    "1335_listtopics PASS",
-    "1335_cli_listtopics PASS"
+    "1336_errtips PASS",
+    "1336_cli_errtips PASS"
   ],
-  "when": "2026-08-10T13:36:22Z",
+  "when": "2026-08-10T13:53:56Z",
   "agent": "meaningful_iter_10m",
-  "sha": "fc885da7207b5cfca3a45de3c93563ac8f80b32f",
-  "note": "topics n=8; hastopic cap; needtopic plate"
+  "sha": "426a81ba2acc4181e220029864054da7708c1d67",
+  "note": "errtips lib/cap/p2p/run; FIXTIPS fat; report-only"
 }
