@@ -3254,6 +3254,8 @@ int main(int argc, char **argv) {
       {"cli_listtopics", "programs/proof/1335_cli_listtopics.sh", "cubalc topics plate + hastopic"},
       {"errtips", "programs/proof/1336_errtips.cubalc", "ERRTIPS recovery tip bag from LAST_ERR"},
       {"cli_errtips", "programs/proof/1336_cli_errtips.sh", "cubalc errtips classify + plate"},
+      {"errrun", "programs/proof/1337_errrun.cubalc", "ERRRUN classify+RUNSNIP recovery one-shot"},
+      {"cli_errrun", "programs/proof/1337_cli_errrun.sh", "cubalc errrun plate + topics"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3899,6 +3901,8 @@ int main(int argc, char **argv) {
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
       {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
+      {"ERRRUN", "flow", "ERRRUN [err] ERRTIPS+RUNSNIP one-shot · cubalc errrun dual"},
+      {"RECOVERSNIP", "flow", "RECOVERSNIP alias of ERRRUN"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
@@ -5070,7 +5074,7 @@ int main(int argc, char **argv) {
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
            "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc doctor · cubalc errtips · cubalc topics · cubalc topic · cubalc init\n");
+           "Commands: cubalc doctor · cubalc errrun · cubalc errtips · cubalc topics · cubalc init\n");
     return 0;
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
@@ -5911,6 +5915,102 @@ int main(int argc, char **argv) {
            "\"err\":\"%s\",\"tips\":[%s]}\n",
            topic, n, CUBALC_LANG_VERSION, errj, tipsj);
     return n > 0 ? 0 : 1;
+  }
+  if (strcmp(cmd, "errrun") == 0 || strcmp(cmd, "recoversnip") == 0 ||
+      strcmp(cmd, "fixrun") == 0 || strcmp(cmd, "err-run") == 0 ||
+      strcmp(cmd, "errsnip") == 0 || strcmp(cmd, "fixsnip") == 0) {
+    /* Usability: classify err + RUNSNIP topic (dual of ERRRUN).
+     *   cubalc errrun "INCLUDE missing"
+     * Schema cubalc.errrun.v1 · nested RUNSNIP via in-lang ERRRUN. */
+    char msg[400], esc[480], src[720];
+    cubalc_run_result rr;
+    size_t o = 0, j, e;
+    int i, ok;
+    msg[0] = 0;
+    for (i = 2; i < argc; i++) {
+      size_t ln;
+      if (!argv[i]) continue;
+      ln = strlen(argv[i]);
+      if (o && o + 1 < sizeof msg) msg[o++] = ' ';
+      if (o + ln < sizeof msg) { memcpy(msg + o, argv[i], ln); o += ln; }
+      msg[o] = 0;
+    }
+    if (!msg[0]) snprintf(msg, sizeof msg, "%s", "ok");
+    e = 0;
+    for (j = 0; msg[j] && e + 2 < sizeof esc; j++) {
+      char c = msg[j];
+      if (c == '"' || c == '\\') { esc[e++] = '\\'; esc[e++] = c; }
+      else if ((unsigned char)c < 32) esc[e++] = ' ';
+      else esc[e++] = c;
+    }
+    esc[e] = 0;
+    snprintf(src, sizeof src,
+             "ERRRUN \"%s\"\n"
+             "PRINT ERRRUN_TOPIC\n"
+             "IF OK == 0 THEN\n"
+             "  FAIL \"errrun nested\"\n"
+             "END\n"
+             "PASS\n",
+             esc);
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, strlen(src), "<cli-errrun>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    {
+      char topicj[48], lastj[400];
+      size_t k, lo = 0;
+      const char *tp = rr.last_print[0] ? rr.last_print : "general";
+      /* topic from first print — may be multi-line if PRINT wrong; take first line */
+      k = 0;
+      while (tp[k] && tp[k] != '\n' && k + 1 < sizeof topicj) {
+        topicj[k] = tp[k];
+        k++;
+      }
+      topicj[k] = 0;
+      /* re-fetch last via second field: use ERRRUN_LAST by another run */
+      {
+        char src2[640];
+        cubalc_run_result rr2;
+        snprintf(src2, sizeof src2,
+                 "ERRRUN \"%s\"\n"
+                 "PRINT ERRRUN_TOPIC\n"
+                 "PASS\n",
+                 esc);
+        memset(&rr2, 0, sizeof rr2);
+        (void)cubalc_run_source(src2, strlen(src2), "<cli-errrun-topic>", &rr2, NULL);
+        tp = rr2.last_print[0] ? rr2.last_print : topicj;
+        k = 0;
+        while (tp[k] && tp[k] != '\n' && k + 1 < sizeof topicj) {
+          topicj[k] = tp[k];
+          k++;
+        }
+        topicj[k] = 0;
+        snprintf(src2, sizeof src2,
+                 "ERRRUN \"%s\"\n"
+                 "PRINT LAST\n"
+                 "PASS\n",
+                 esc);
+        memset(&rr2, 0, sizeof rr2);
+        (void)cubalc_run_source(src2, strlen(src2), "<cli-errrun-last>", &rr2, NULL);
+        tp = rr2.last_print;
+        lo = 0;
+        for (k = 0; tp[k] && lo + 2 < sizeof lastj; k++) {
+          char c = tp[k];
+          if (c == '"' || c == '\\') { lastj[lo++] = '\\'; lastj[lo++] = c; }
+          else if (c == '\n') { lastj[lo++] = '\\'; lastj[lo++] = 'n'; }
+          else if ((unsigned char)c < 32) lastj[lo++] = ' ';
+          else lastj[lo++] = c;
+        }
+        lastj[lo] = 0;
+      }
+      printf("{\"schema\":\"cubalc.errrun.v1\",\"ok\":%s,\"cmd\":\"errrun\","
+             "\"topic\":\"%s\",\"asserts_ok\":%d,\"asserts_fail\":%d,\"stmts\":%d,"
+             "\"last\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"ERRTIPS classify + RUNSNIP topic · dual of in-lang ERRRUN\","
+             "\"err\":\"%s\"}\n",
+             ok ? "true" : "false", topicj, rr.asserts_ok, rr.asserts_fail, rr.stmts,
+             lastj, CUBALC_LANG_VERSION, esc);
+    }
+    return ok ? 0 : 1;
   }
   if (strcmp(cmd, "init") == 0 || strcmp(cmd, "new") == 0 ||
       strcmp(cmd, "scaffold") == 0 || strcmp(cmd, "create") == 0) {
@@ -15252,6 +15352,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
       {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
+      {"ERRRUN", "flow", "ERRRUN [err] ERRTIPS+RUNSNIP one-shot · cubalc errrun dual"},
+      {"RECOVERSNIP", "flow", "RECOVERSNIP alias of ERRRUN"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
@@ -16718,12 +16820,13 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    topics|listtopics          discovery topic catalog (cubalc.topics.v1)\n"
       "    hastopic|needtopic <t>     soft/hard topic membership gates\n"
       "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
+      "    errrun|recoversnip <err…>  classify + RUNSNIP topic (cubalc.errrun.v1)\n"
       "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|formsfor|related|snip|topic|runsnip|topics|errtips  duals\n"
+      "    picklib|listforms|formhint|formsfor|related|snip|topic|runsnip|topics|errtips|errrun  duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
@@ -16753,8 +16856,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|ERRTIPS|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|LISTTOPICS|EXIT|CLEAR_ERR|WHY\n"
-      "    LISTLIBS|LISTFORMS|LISTTOPICS|FORMHINT|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|ERRTIPS|HASTOPIC|HASFORM|HASFORMS\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|ERRTIPS|ERRRUN|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|LISTTOPICS|EXIT|CLEAR_ERR|WHY\n"
+      "    LISTLIBS|LISTFORMS|LISTTOPICS|FORMHINT|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|ERRTIPS|ERRRUN|HASTOPIC|HASFORM\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"

@@ -2741,6 +2741,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"NEEDTOPIC", "NEEDTOPIC name — fail-fast if topic unknown"},
       {"ERRTIPS", "ERRTIPS [err] — recovery tip bag from LAST_ERR or arg · ERRTIPS_TOPIC · dual of cubalc errtips"},
       {"FIXTIPS", "FIXTIPS alias of ERRTIPS"},
+      {"ERRRUN", "ERRRUN [err] — ERRTIPS classify + RUNSNIP topic one-shot · dual of cubalc errrun"},
+      {"RECOVERSNIP", "RECOVERSNIP alias of ERRRUN"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · dotted path nest ok · write-back · multi-plate"},
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
@@ -40152,6 +40154,166 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     /* report-only: do not rewrite OK / sticky LAST_ERR */
     if (vm->trace)
       fprintf(vm->trace, "# errtips topic=%s n=%d\n", topic, n);
+    bump(vm);
+    return 1;
+  }
+
+  /* ERRRUN|RECOVERSNIP [err] — ERRTIPS classify + RUNSNIP on inferred topic.
+   * Usability: soft-fail → tip bag + prove recovery surface without two forms.
+   * Sets ERRTIPS_* then nested RUNSNIP <topic> · OK from nested · LAST nested print. */
+  if (kw(&L->cur,"ERRRUN")||kw(&L->cur,"RECOVERSNIP")||kw(&L->cur,"FIXRUN")||
+      kw(&L->cur,"ERR_RUN")||kw(&L->cur,"RECOVER_RUN")||kw(&L->cur,"AUTOFIX_SNIP")||
+      kw(&L->cur,"ERRSNIP")||kw(&L->cur,"FIXSNIP")){
+    static const struct { const char *topic; const char *tip; } tips[] = {
+      {"general", "cubalc doctor — install readiness plate"},
+      {"general", "STATUS · VARS · CLEAR_ERR after fix"},
+      {"general", "cubalc topics · TOPIC name for tips+forms+snip triad"},
+      {"cap", "HASFORM name · NEEDFORMS a b · FORMHINT name"},
+      {"cap", "RELATED HASFORM · FORMSFOR cap · RUNSNIP cap"},
+      {"fat", "VARROOM · HASVARROOM n · NEEDVARROOM n"},
+      {"fat", "REMAIN_MS · HAS_TIME · NEEDTIME · cubalc run -T ms"},
+      {"plate", "NEEDP/DEFAULTP seed · GETP OR fallback"},
+      {"plate", "PRETTYP · SAVEPLATE · INCLUDE plate_session"},
+      {"p2p", "export CUBALC_SMX_KEY hex64 before mesh"},
+      {"p2p", "CUBALC_P2P_SOFT=1 · CUBALC_P2P_TIMEOUT ms"},
+      {"run", "ASSERT_GOT/ASSERT_EXPECTED · EXPECT soft · CLEAR_ERR"},
+      {"run", "WHY · ERRTIPS after FAIL · TIPS run"},
+      {"lib", "cubalc libs [filter] · REQUIRE LIB · INCLUDE SOFT"},
+      {"lib", "MATCHLIBS · CHECKDEPS · cubalc recipe name"},
+      {"protect", "cubalc protect status · HOLD_FLASH device/mesh-join only"},
+    };
+    char topic[32], bag[2048], argerr[240], nested[96];
+    const char *err = "";
+    size_t o = 0;
+    int i, n = 0, nall = (int)(sizeof tips / sizeof tips[0]);
+    cubalc_run_result rr;
+    int ok;
+    Var *vle;
+    lex_next(L);
+    argerr[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(argerr, sizeof argerr, "%s", L->cur.text);
+      lex_next(L);
+      err = argerr;
+    } else if (L->cur.kind == TK_IDENT) {
+      if (strcmp(L->cur.text, "LAST") == 0 || strcmp(L->cur.text, "LAST_ERR") == 0 ||
+          strcmp(L->cur.text, "ERR") == 0) {
+        if (strcmp(L->cur.text, "LAST") == 0)
+          snprintf(argerr, sizeof argerr, "%s", vm->last_str);
+        else {
+          Var *vx = var_get(vm, L->cur.text, 0);
+          if (vx && vx->is_str) snprintf(argerr, sizeof argerr, "%s", vx->sval);
+        }
+        lex_next(L);
+        err = argerr;
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            !(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+              kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
+              kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
+          snprintf(argerr, sizeof argerr, "%s", vv->sval);
+          lex_next(L);
+          err = argerr;
+        }
+      }
+    }
+    if (!err[0]) {
+      vle = var_get(vm, "LAST_ERR", 0);
+      if (vle && vle->is_str && vle->sval[0]) err = vle->sval;
+      else if (vm->err[0]) err = vm->err;
+      else {
+        Var *ve2 = var_get(vm, "ERR", 0);
+        if (ve2 && ve2->is_str && ve2->sval[0]) err = ve2->sval;
+      }
+    }
+    snprintf(topic, sizeof topic, "%s", "general");
+    if (err[0]) {
+      if (strstr(err, "NEEDFORM") || strstr(err, "HASFORM") ||
+          strstr(err, "FORMMISS") || strstr(err, "unknown form") ||
+          strstr(err, "did you mean") || strstr(err, "REQUIRE FORM") ||
+          strstr(err, "LISTFORMS") || strstr(err, "FORMHINT") ||
+          strstr(err, "NEEDFORMS") || strstr(err, "HASFORMS"))
+        snprintf(topic, sizeof topic, "%s", "cap");
+      else if (strstr(err, "NEEDMATCHLIBS") || strstr(err, "HASMATCHLIBS") ||
+               strstr(err, "PICKLIB") || strstr(err, "SORTLIBS") ||
+               strstr(err, "INCLUDE") || strstr(err, "include") ||
+               strstr(err, "REQUIRE LIB") || strstr(err, "lib missing") ||
+               strstr(err, "NEEDDEPS") || strstr(err, "CHECKDEPS") ||
+               strstr(err, "HASLIB") || strstr(err, "LISTLIBS"))
+        snprintf(topic, sizeof topic, "%s", "lib");
+      else if (strstr(err, "VARROOM") || strstr(err, "NEEDVARROOM") ||
+               strstr(err, "HASVARROOM") || strstr(err, "REMAIN_MS") ||
+               strstr(err, "NEEDTIME") || strstr(err, "HAS_TIME"))
+        snprintf(topic, sizeof topic, "%s", "fat");
+      else if (strstr(err, "NEEDP") || strstr(err, "NEEDFLAT") ||
+               strstr(err, "UNIFORM") || strstr(err, "plate") ||
+               strstr(err, "PLATE") || strstr(err, "SETP") || strstr(err, "GETP"))
+        snprintf(topic, sizeof topic, "%s", "plate");
+      else if (strstr(err, "DIAL") || strstr(err, "SERVE") || strstr(err, "SMX") ||
+               strstr(err, "TALK") || strstr(err, "P2P") || strstr(err, "timeout"))
+        snprintf(topic, sizeof topic, "%s", "p2p");
+      else if (strstr(err, "HOLD_FLASH") || strstr(err, "protect") ||
+               strstr(err, "CORE_PROTECT"))
+        snprintf(topic, sizeof topic, "%s", "protect");
+      else if (strstr(err, "ASSERT") || strstr(err, "EXPECT") ||
+               strstr(err, "is false") || strstr(err, "FAIL") ||
+               strstr(err, "VERSION") || strstr(err, "too old"))
+        snprintf(topic, sizeof topic, "%s", "run");
+    }
+    bag[0] = 0; o = 0; n = 0;
+    if (!err[0]) {
+      const char *oktip = "ok — no sticky LAST_ERR · RUNSNIP general probe";
+      size_t ln = strlen(oktip);
+      memcpy(bag, oktip, ln); bag[ln] = 0; n = 1;
+    } else {
+      for (i = 0; i < nall; i++) {
+        size_t ln;
+        if (strcmp(tips[i].topic, topic) != 0) continue;
+        ln = strlen(tips[i].tip);
+        if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) { memcpy(bag + o, tips[i].tip, ln); o += ln; }
+        bag[o] = 0; n++;
+      }
+    }
+    var_set_str(vm, "ERRTIPS", bag);
+    var_set_str(vm, "ERRTIPS_TOPIC", topic);
+    var_set_str(vm, "ERRRUN_TOPIC", topic);
+    var_set_str(vm, "TOPIC_NAME", topic);
+    var_set_num(vm, "ERRTIPS_N", n);
+    var_set_num(vm, "ERRRUN_TIPS_N", n);
+    /* nested RUNSNIP on inferred topic */
+    snprintf(nested, sizeof nested, "RUNSNIP %s\nPASS\n", topic);
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(nested, strlen(nested), "<errrun>", &rr, vm->trace);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    var_set_num(vm, "ERRRUN_OK", ok);
+    var_set_num(vm, "RUNSNIP_OK", ok);
+    var_set_num(vm, "ERRRUN_ASSERTS_OK", rr.asserts_ok);
+    var_set_num(vm, "ERRRUN_ASSERTS_FAIL", rr.asserts_fail);
+    if (rr.last_print[0]) {
+      var_set_str(vm, "LAST", rr.last_print);
+      var_set_str(vm, "ERRRUN_LAST", rr.last_print);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", rr.last_print);
+      vm->last_n = (long)strlen(rr.last_print);
+    } else {
+      var_set_str(vm, "LAST", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      vm->last_n = n;
+    }
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", ok);
+    if (!ok) {
+      const char *em = rr.last_err[0] ? rr.last_err : (rr.err[0] ? rr.err : "ERRRUN nested fail");
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->res) {
+      vm->res->asserts_ok += rr.asserts_ok;
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", vm->last_str);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# errrun topic=%s tips=%d ok=%d\n", topic, n, ok);
     bump(vm);
     return 1;
   }
