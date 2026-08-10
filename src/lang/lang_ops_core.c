@@ -3575,6 +3575,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"STATUS", "STATUS — cubalc.status.v1 health (ok/vars/timeout_ms/remain_ms/wall_ms)"},
       {"DOCTOR", "DOCTOR|INSTALL_HEALTH — install readiness plate · dual of cubalc doctor · DOCTOR_OK/LIBS_N"},
       {"INSTALL_HEALTH", "INSTALL_HEALTH alias of DOCTOR"},
+      {"NEEDDOCTOR", "NEEDDOCTOR|REQUIRE DOCTOR — fail-fast if install not ready · hard twin of DOCTOR"},
+      {"REQUIRE DOCTOR", "REQUIRE DOCTOR alias of NEEDDOCTOR"},
       {"WHY", "WHY|EXPLAIN — cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED + hint"},
       {"EXPLAIN", "EXPLAIN alias of WHY"},
       {"WHYERR", "WHYERR alias of WHY"},
@@ -38552,9 +38554,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* DOCTOR|INSTALL_HEALTH — install readiness plate (dual of cubalc doctor).
    * Usability: agents gate INCLUDE/init without shelling cubalc doctor.
    * LAST=cubalc.doctor.v1 · DOCTOR_OK · DOCTOR_LIBS_N · key lib_* probes.
-   * Soft always returns 1; OK follows readiness (modular+hold+agent_boot). */
+   * Soft always returns 1; OK follows readiness (modular+hold+agent_boot).
+   * NEEDDOCTOR|REQUIRE DOCTOR — same plate then fail() if not ready (hard gate). */
   if (kw(&L->cur,"DOCTOR")||kw(&L->cur,"INSTALL_HEALTH")||kw(&L->cur,"INSTALLHEALTH")||
-      kw(&L->cur,"DOCTOR_JSON")||kw(&L->cur,"HEALTHCHECK")||kw(&L->cur,"CHECK_INSTALL")){
+      kw(&L->cur,"DOCTOR_JSON")||kw(&L->cur,"HEALTHCHECK")||kw(&L->cur,"CHECK_INSTALL")||
+      kw(&L->cur,"NEEDDOCTOR")||kw(&L->cur,"NEED_DOCTOR")||kw(&L->cur,"REQUIREDOCTOR")||
+      kw(&L->cur,"REQUIRE_DOCTOR")||kw(&L->cur,"REQUIRE DOCTOR")||kw(&L->cur,"MUSTDOCTOR")){
+    int hard = kw(&L->cur,"NEEDDOCTOR")||kw(&L->cur,"NEED_DOCTOR")||
+               kw(&L->cur,"REQUIREDOCTOR")||kw(&L->cur,"REQUIRE_DOCTOR")||
+               kw(&L->cur,"REQUIRE DOCTOR")||kw(&L->cur,"MUSTDOCTOR");
     char line[CUBALC_HOST_STR_MAX];
     char protect_path[640];
     const char *libdir = "programs/lib";
@@ -38675,10 +38683,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "ERR",
                   "DOCTOR: not ready — need modular lang + HOLD_FLASH=1 + programs/lib/agent_boot");
     }
+    if (hard && !ok) {
+      fail_at(vm, L,
+              "NEEDDOCTOR: install not ready — modular lang + HOLD_FLASH=1 + programs/lib/agent_boot · cubalc doctor");
+      return -1;
+    }
     if (vm->res)
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", "cubalc.doctor.v1");
     if (vm->trace)
-      fprintf(vm->trace, "# doctor ok=%d libs_n=%d modular=%d\n", ok, libs_n, modular);
+      fprintf(vm->trace, "# doctor ok=%d libs_n=%d modular=%d hard=%d\n", ok, libs_n, modular, hard);
     bump(vm);
     return 1;
   }
@@ -39484,6 +39497,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"WHY", "TIPS"}, {"CLEAR_ERR", "WHY"}, {"CLEAR_ERR", "STATUS"},
       {"STATUS", "IDENTITY"}, {"STATUS", "VERSION"}, {"STATUS", "VARS"}, {"STATUS", "DOCTOR"},
       {"DOCTOR", "STATUS"}, {"DOCTOR", "VERSION"}, {"DOCTOR", "OPEN"}, {"DOCTOR", "DISCOVER"},
+      {"DOCTOR", "NEEDDOCTOR"}, {"NEEDDOCTOR", "DOCTOR"}, {"NEEDDOCTOR", "REQUIRE DOCTOR"},
       {"VERSION", "REQUIRE VERSION"}, {"VERSION", "STATUS"},
       {"EXIT", "PASS"}, {"EXIT", "FAIL"}, {"EXIT", "STATUS"},
       {"NOTE", "PASS"}, {"NOTE", "TIPS"},

@@ -1,0 +1,28 @@
+# NEEDDOCTOR — hard install gate (twin of DOCTOR)
+
+# soft plate still works
+DOCTOR
+ASSERT OK == 1
+ASSERT DOCTOR_OK == 1
+
+# hard gate must pass on ready install
+NEEDDOCTOR
+ASSERT OK == 1
+ASSERT DOCTOR_OK == 1
+ASSERT DOCTOR_LIBS_N >= 1
+ASSERT DOCTOR_AGENT_BOOT == 1
+
+# solid aliases (single-token; multiword REQUIRE DOCTOR is eaten by REQUIRE *)
+REQUIREDOCTOR
+ASSERT OK == 1
+MUSTDOCTOR
+ASSERT OK == 1
+NEED_DOCTOR
+ASSERT OK == 1
+
+# still chainable
+INCLUDE open_boot
+ASSERT OK == 1
+
+PASS
+PRINT "1357_needdoctor: PASS"

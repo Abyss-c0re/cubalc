@@ -1805,7 +1805,7 @@ int main(int argc, char **argv) {
      * Path: -L|--include-path|--lib-path DIR prepends CUBALC_INCLUDE_PATH for this run.
      * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older.
      * Forms: -C|--need-forms F1,F2 + CUBALC_REQUIRE_FORMS — fail if HELP catalog misses. */
-    int quiet = 0, strict = 0, i, rc;
+    int quiet = 0, strict = 0, req_doctor = 0, i, rc;
     int plate_ok;
     int have_expr = 0;
     int src_idx = -1;
@@ -1832,6 +1832,7 @@ int main(int argc, char **argv) {
     (void)src_idx;
     req_ver[0] = 0;
     req_forms[0] = 0;
+    req_doctor = 0;
     eq = getenv("CUBALC_QUIET");
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
@@ -1858,6 +1859,10 @@ int main(int argc, char **argv) {
     eq = getenv("CUBALC_REQUIRE_FORMS");
     if (eq && eq[0])
       snprintf(req_forms, sizeof req_forms, "%s", eq);
+    eq = getenv("CUBALC_REQUIRE_DOCTOR");
+    if (eq && eq[0] && strcmp(eq, "0") != 0 && strcasecmp(eq, "false") != 0 &&
+        strcasecmp(eq, "no") != 0 && strcasecmp(eq, "off") != 0)
+      req_doctor = 1;
     /* Env preloads first; CLI -I appends (deduped). */
     run_preload_parse_env(preload, &n_preload, getenv("CUBALC_PRELOAD"));
     /* Scan from argv[1] so top-level cubalc -e CODE (cmd rewritten to run) works. */
@@ -1952,6 +1957,12 @@ int main(int argc, char **argv) {
       }
       if (!strncmp(argv[i], "--require-forms=", 16)) {
         snprintf(req_forms, sizeof req_forms, "%s", argv[i] + 16);
+        continue;
+      }
+      /* -D · --need-doctor · --require-doctor · CUBALC_REQUIRE_DOCTOR dual */
+      if (!strcmp(argv[i], "-D") || !strcmp(argv[i], "--need-doctor") ||
+          !strcmp(argv[i], "--require-doctor") || !strcmp(argv[i], "--doctor-gate")) {
+        req_doctor = 1;
         continue;
       }
       /* -I lib · --include lib · --include=lib · --preload */
@@ -2240,6 +2251,37 @@ int main(int argc, char **argv) {
                req_forms, CUBALC_LANG_VERSION,
                n_preload,
                req_ver[0] ? req_ver : "",
+               CUBALC_MAX_VARS,
+               quiet ? "true" : "false", strict ? "true" : "false");
+        return 1;
+      }
+    }
+    /* Fail-fast install readiness floor before body (NEEDDOCTOR dual). */
+    if (req_doctor) {
+      cubalc_run_result dr;
+      int dhit;
+      memset(&dr, 0, sizeof dr);
+      (void)cubalc_run_source("NEEDDOCTOR\nPASS\n", 16, "<require-doctor>", &dr, NULL);
+      dhit = (dr.ok && dr.asserts_fail == 0 && !dr.err[0]) ? 1 : 0;
+      if (!dhit) {
+        free(expr_buf);
+        if (devnull) fclose(devnull);
+        printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
+               "\"err\":\"REQUIRE DOCTOR failed: %s\","
+               "\"require_doctor\":true,\"version\":\"%s\","
+               "\"why_hint\":\"cubalc doctor · NEEDDOCTOR · programs/lib/agent_boot · HOLD_FLASH=1\","
+               "\"preload_n\":%d,"
+               "\"require_version\":\"%s\",\"require_forms\":\"%s\","
+               "\"includes_n\":0,\"includes\":[],"
+               "\"vars_n\":0,\"vars_max\":%d,\"vars_full\":false,"
+               "\"quiet\":%s,\"strict\":%s,"
+               "\"exit_code\":1,\"halted\":false}\n",
+               have_expr ? "<expr>" : (src_path ? src_path : "?"),
+               dr.err[0] ? dr.err : (dr.last_err[0] ? dr.last_err : "install not ready"),
+               CUBALC_LANG_VERSION,
+               n_preload,
+               req_ver[0] ? req_ver : "",
+               req_forms[0] ? req_forms : "",
                CUBALC_MAX_VARS,
                quiet ? "true" : "false", strict ? "true" : "false");
         return 1;
@@ -2556,6 +2598,34 @@ int main(int argc, char **argv) {
       strcmp(cmd, "self-evolve") == 0) {
     /* Pure C: braincube solves · algocube optimizes · emits .cubalc */
     return cubalc_cmd_evolve(argc - 1, argv + 1);
+  }
+  if (strcmp(cmd, "needdoctor") == 0 || strcmp(cmd, "need-doctor") == 0 ||
+      strcmp(cmd, "require-doctor") == 0 || strcmp(cmd, "requiredoctor") == 0) {
+    /* Usability: hard install gate (dual of NEEDDOCTOR). exit 1 if not ready. */
+    cubalc_run_result rr;
+    int ok;
+    static const char src_nd[] = "NEEDDOCTOR\nPASS\n";
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src_nd, sizeof src_nd - 1, "<cli-needdoctor>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    {
+      const char *em = ok ? "" : (rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "not ready"));
+      char esc[240];
+      size_t e = 0, k;
+      for (k = 0; em[k] && e + 2 < sizeof esc; k++) {
+        char c = em[k];
+        if (c == '"' || c == '\\') { esc[e++] = '\\'; esc[e++] = c; }
+        else if ((unsigned char)c < 32) esc[e++] = ' ';
+        else esc[e++] = c;
+      }
+      esc[e] = 0;
+      printf("{\"schema\":\"cubalc.doctor.v1\",\"ok\":%s,\"cmd\":\"needdoctor\","
+             "\"version\":\"%s\","
+             "\"note\":\"hard install gate · dual of NEEDDOCTOR · exit 1 if not ready\","
+             "\"err\":\"%s\"}\n",
+             ok ? "true" : "false", CUBALC_LANG_VERSION, esc);
+    }
+    return ok ? 0 : 1;
   }
   if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     /* Usability: one JSON plate for agents/humans — is this install ready?
@@ -3297,6 +3367,8 @@ int main(int argc, char **argv) {
       {"cli_init_open", "programs/proof/1355_cli_init_open.sh", "cubalc init --open scaffold + doctor"},
       {"doctor_form", "programs/proof/1356_doctor.cubalc", "DOCTOR in-lang install readiness plate"},
       {"cli_doctor_form", "programs/proof/1356_cli_doctor.sh", "DOCTOR form + cubalc doctor dual smoke"},
+      {"needdoctor", "programs/proof/1357_needdoctor.cubalc", "NEEDDOCTOR hard install gate twin of DOCTOR"},
+      {"cli_needdoctor", "programs/proof/1357_cli_needdoctor.sh", "cubalc needdoctor + run -D preflight"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -3684,6 +3756,8 @@ int main(int argc, char **argv) {
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
       {"DOCTOR", "flow", "DOCTOR|INSTALL_HEALTH install readiness plate · dual of cubalc doctor"},
       {"INSTALL_HEALTH", "flow", "INSTALL_HEALTH alias of DOCTOR"},
+      {"NEEDDOCTOR", "flow", "NEEDDOCTOR|REQUIRE DOCTOR fail-fast if install not ready"},
+      {"REQUIRE DOCTOR", "flow", "REQUIRE DOCTOR alias of NEEDDOCTOR"},
       {"IDENTITY", "flow", "IDENTITY — cubalc.identity.v1 user@host:pid plate"},
       {"SETP", "flow", "SETP [FROM plate] key value — set key · JSON-shaped strings auto-raw · paths ok · multi-plate"},
       {"DEFAULTP", "flow", "DEFAULTP [FROM plate] key value — set-if-missing · JSON-shaped strings auto-raw · paths ok"},
@@ -18578,8 +18652,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
-      "    run|eval [-q][-s][-T ms][-I lib][-L dir][-R ver][-C forms][-e CODE] <file|->\n"
-      "                          -q plate · -s strict · -T wall · -C form floor (NEEDFORMS)\n"
+      "    run|eval [-q][-s][-T ms][-I lib][-L dir][-R ver][-C forms][-D][-e CODE] <file|->\n"
+      "                          -q plate · -s strict · -T wall · -C form floor · -D doctor floor (NEEDDOCTOR)\n"
       "    help|-h                this text\n"
       "\n"
       "  Law & Core safety\n"
