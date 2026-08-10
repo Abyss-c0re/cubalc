@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 303,
-  "program": "programs/realworld/svc_errrun_topicwalk_board.cubalc",
-  "theme": "ERRRUN recover + EACH TOPIC walk + TOPICHINT docs",
-  "version": "1.15.789-usability",
+  "iter": 304,
+  "program": "programs/realworld/svc_relatedtopic_mesh_board.cubalc",
+  "theme": "RELATEDTOPIC neighbor mesh + TOPICHINT first hop",
+  "version": "1.15.790-usability",
   "pass": true,
-  "prior_note": "iter 302 ERRTIPS only; this iter first realworld 1337 ERRRUN + 1338 EACH TOPIC + 1339 TOPICHINT",
+  "prior_note": "iter 303 ERRRUN/EACH TOPIC; this iter first realworld 1340 RELATEDTOPIC/SEETOPICS",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate errwalk",
+      "cmd": "seed agent plate reltopic",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "recover",
-      "cmd": "ERRRUN sticky/arg + RECOVERSNIP",
+      "name": "mesh",
+      "cmd": "RELATEDTOPIC plate/cap/p2p bags",
       "ok": true,
-      "note": "recover"
+      "note": "mesh"
+    },
+    {
+      "name": "first",
+      "cmd": "NTH neighbor + TOPICHINT",
+      "ok": true,
+      "note": "first"
     },
     {
       "name": "walk",
-      "cmd": "EACH TOPIC n=8 + MATCH + HASTOPIC",
+      "cmd": "EACH TOPIC + RELATEDTOPIC floor 8",
       "ok": true,
       "note": "walk"
     },
     {
-      "name": "hint",
-      "cmd": "TOPICHINT/DESCRIBETOPIC + EACH",
-      "ok": true,
-      "note": "hint"
-    },
-    {
       "name": "soft",
-      "cmd": "TOPICHINT miss + empty MATCH",
+      "cmd": "miss + bare soft",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "ERRRUN run class + LISTTOPICS",
+      "cmd": "plate topic contract",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "RECOVERSNIP + DESCRIBETOPIC",
+      "cmd": "SEETOPICS forms\u2192cap",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + MATCH p + walk",
+      "cmd": "PRINT clobber + HAS substring",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "CLI duals still red; errrun/each/hint PASS"
+      "note": "CLI duals still red; relatedtopic PASS"
     }
   ],
   "weaknesses": [
@@ -4618,6 +4618,46 @@
       "title": "WRITE META omit trailing NL (reconfirmed errwalk board)",
       "detail": "od META ends 5a without 0a. STATUS last line no $.",
       "repro": "od -An -tx1 META.txt | tail -1"
+    },
+    {
+      "id": "W569",
+      "severity": "med",
+      "area": "lang|relatedtopic",
+      "title": "RELATEDTOPIC graph is curated not symmetric (plate does not list cap)",
+      "detail": "plate neighbors fat/run/general/lib; cap not adjacent to plate. Agents assuming full mesh (every topic links every other) will fail HASLINE checks. Route using returned bag only.",
+      "repro": "RELATEDTOPIC plate; SYS HASLINE bag cap \u2192 0"
+    },
+    {
+      "id": "W570",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT before TOPICHINT LAST uses clobbered mark not neighbor",
+      "detail": "RELATEDTOPIC; PRINT x; TOPICHINT LAST \u2192 miss on \"x \u2026\". Must SYS NTH 0 bag into var then TOPICHINT var. Same class as form RELATED bags.",
+      "repro": "RELATEDTOPIC plate; PRINT m; TOPICHINT LAST \u2192 miss"
+    },
+    {
+      "id": "W571",
+      "severity": "med",
+      "area": "lang|has",
+      "title": "SYS HAS substring false friend on topic neighbor bags (reconfirmed)",
+      "detail": "HAS bag \"fa\" hits fat; HASLINE bag \"fa\" is 0. Prefer HASLINE for exact topic ids.",
+      "repro": "RELATEDTOPIC plate; SYS HAS LAST fa \u2192 1"
+    },
+    {
+      "id": "W572",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META omit trailing NL (reconfirmed relatedtopic mesh)",
+      "detail": "od META ends 5a without 0a. STATUS last line no $.",
+      "repro": "od -An -tx1 META.txt | tail -1"
+    },
+    {
+      "id": "W573",
+      "severity": "low",
+      "area": "lang|relatedtopic",
+      "title": "Bare RELATEDTOPIC / unknown soft-miss OK=0 (good dual of HASTOPIC)",
+      "detail": "RELATEDTOPIC zzz and bare RELATEDTOPIC soft-fail without process hard exit. Agents still need CLEAR_ERR before next path.",
+      "repro": "RELATEDTOPIC; PRINT OK \u2192 0"
     }
   ],
   "workarounds": [
@@ -4674,7 +4714,9 @@
     "ERRTIPS \"explicit incident text\" for known classes; CLEAR_ERR after classify",
     "chain: LET t=ERRTIPS_TOPIC; TIPS t for full topic tips after recovery class",
     "always END after EACH TOPIC; capture TOPICHINT LAST before PRINT",
-    "use cubalc run -q for quieter ERRRUN recovery paths"
+    "use cubalc run -q for quieter ERRRUN recovery paths",
+    "SYS NTH 0 body; LET n=LAST; TOPICHINT n \u2014 never TOPICHINT LAST after PRINT",
+    "HASLINE for exact neighbor topic ids; do not assume full mesh"
   ],
   "language_gaps": [
     "PRETTYP/JSONPRETTY/PRETTYJSON plate evidence dump",
@@ -4737,7 +4779,10 @@
     "PRINT clobber after ERRTIPS bag (W561)",
     "EACH TOPIC requires END (W564)",
     "ERRRUN nested snip stdout noise (W565)",
-    "MATCH substring on topic ids not glob (W567)"
+    "MATCH substring on topic ids not glob (W567)",
+    "RELATEDTOPIC curated asymmetric graph (W569)",
+    "PRINT clobber before TOPICHINT LAST (W570)",
+    "HAS substring on topic bags (W571)"
   ],
   "issues_faced": [
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
@@ -4810,9 +4855,12 @@
     "iter302: board 10/10; selftest CLI duals still red",
     "iter303: ERRRUN+EACH TOPIC+TOPICHINT all green first pass",
     "iter303: EACH TOPIC without END is hard fail (W564); nested ERRRUN noisy (W565)",
-    "iter303: selftest CLI duals still red"
+    "iter303: selftest CLI duals still red",
+    "iter304: RELATEDTOPIC mesh board 10/10; first hop fat via NTH+TOPICHINT",
+    "iter304: plate\u2260cap adjacency (W569); HAS substring fa\u2192fat (W571)",
+    "iter304: selftest CLI duals still red"
   ],
-  "commit": "d2193229",
-  "ts": "2026-08-10T14:29:15Z",
+  "commit": "pending",
+  "ts": "2026-08-10T14:54:21Z",
   "board_commit": "d2193229"
 }
