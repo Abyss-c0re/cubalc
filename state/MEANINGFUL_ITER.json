@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 843,
-  "version": "1.15.835-usability",
-  "item": "env_guard lib NEED_ENVS + NEED_ENV_ANY",
-  "item_id": 843,
-  "title": "env_guard \u00b7 NEED_ENVS \u00b7 NEED_ENV_ANY \u00b7 doctor lib_env_guard",
-  "commit": "4e98efcc36d65ffc424c6481fc1da3b8cd4491e7",
-  "summary": "INCLUDE env_guard host-env ALL/ANY contract twin of cli_guard; doctor lib_env_guard; proof 1383 PASS.",
+  "iter": 844,
+  "version": "1.15.836-usability",
+  "item": "env_boot + cubalc init --env",
+  "item_id": 844,
+  "title": "env_boot \u00b7 init --env \u00b7 doctor lib_env_boot",
+  "commit": "fc04dd0aee3716a7dbdbe516ce94d61ce2b2ffd9",
+  "summary": "agent_boot+env_guard one-shot; init --env catalog n=15; doctor lib_env_boot; proof 1384 PASS.",
   "proofs": [
-    "1383_env_guard PASS",
-    "1383_cli_env_guard PASS"
+    "1384_env_boot PASS",
+    "1384_cli_init_env PASS"
   ],
-  "when": "2026-08-10T23:45:48Z",
+  "when": "2026-08-10T23:55:09Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "4e98efcc36d65ffc424c6481fc1da3b8cd4491e7",
-  "note": "pairs form_guard/cli_guard \u00b7 uses HASENVALL/HASENVANY \u00b7 host config without N\u00d7 ENV glue"
+  "sha": "fc04dd0aee3716a7dbdbe516ce94d61ce2b2ffd9",
+  "note": "pairs cap_boot/cli_session \u00b7 host env starter without cookbook"
 }
