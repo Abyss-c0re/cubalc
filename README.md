@@ -34,7 +34,6 @@ CubalC is a **machine language for agents and hosts**:
 | “Prose as code” | Prefer matrix + asserts |
 | Device flasher | Devices free — no auto-flash |
 | HTTP mesh | Wire is SMX2 binary only |
-| School / diploma product | Science ops improve the *language*, not a curriculum |
 
 ---
 

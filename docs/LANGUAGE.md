@@ -78,9 +78,9 @@ cubalc decide "goal"      # translate → braincube path
 cubalc law
 ```
 
-## Pure science (language direction — not a school)
+## Pure science (language direction)
 
-Science domains guide **what ops CubalC must express as pure logic**. No diploma.
+Science domains guide **what ops CubalC must express as pure logic**.
 
 | form | meaning |
 |------|---------|

@@ -1,8 +1,6 @@
 # Pure science — CubalC language demos
 
-These programs are **not a school** and issue **no diploma**.
-
-They are **executable design probes**: public-domain math / physics / chemistry / biology / earth relations expressed in native CubalC, to **drive and verify language evolution** (constants, pure functions, cubechain models).
+**Executable design probes**: public-domain math / physics / chemistry / biology / earth relations expressed in native CubalC, to **drive and verify language evolution** (constants, pure functions, cubechain models).
 
 ```bash
 make science          # run all demos

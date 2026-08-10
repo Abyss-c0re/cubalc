@@ -11,7 +11,7 @@ connect. It is **not** a fundamental requirement for ordinary CubalC programs.
 | Sticky ack before device/firmware connect | Required first line of every `.cubalc` |
 | Flag carried on SMX mesh frames (default 1) | Gate on language `PLUG a b` (virtual cubes) |
 | Explicit seed for firmware-capable hosts | Boilerplate for SYS / plates / bags / host work |
-| Never auto-flash | Curriculum / diploma law |
+| Never auto-flash | Required program preamble |
 
 **Devices free:** CubalC never auto-flashes hardware. Hosts that *can* write
 firmware still respect HOLD_FLASH as “commander said yes, hold (do not flash).”
