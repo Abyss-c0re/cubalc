@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 824,
-  "version": "1.15.816-usability",
-  "item": "CLIINFO / DUMPCLI CLI surface plate",
-  "item_id": 824,
-  "title": "CLIINFO · DUMPCLI · cubalc.cli.v1 · cubalc cliinfo",
-  "commit": "33f58d896f9908a8d6da939573009d35d8ec5c01",
-  "summary": "One-shot argc/flags/flagmap/restargs plate; CLI dual cliinfo -- args; proof 1364 PASS.",
+  "iter": 825,
+  "version": "1.15.817-usability",
+  "item": "cli_boot + cubalc init --cli",
+  "item_id": 825,
+  "title": "cli_boot · init --cli · HELPFLAG+VERSIONFLAG+CLIINFO scaffold",
+  "commit": "4b6337ac9bec3115916e3a550b8c67b885de32f2",
+  "summary": "INCLUDE cli_boot agent CLI tool surface; init n=13; doctor lib_cli_boot; proofs 1365 PASS.",
   "proofs": [
-    "1364_cliinfo PASS",
-    "1364_cli_cliinfo PASS",
-    "1363_hasargall regression PASS"
+    "1365_cli_boot PASS",
+    "1365_cli_init_cli PASS"
   ],
-  "when": "2026-08-10T20:07:15Z",
+  "when": "2026-08-10T20:14:49Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "33f58d896f9908a8d6da939573009d35d8ec5c01",
-  "note": "restored thrash first · IDENTITY-style short + plate in LAST"
+  "sha": "4b6337ac9bec3115916e3a550b8c67b885de32f2",
+  "note": "twin of ready_boot for product CLI tools"
 }
