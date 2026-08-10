@@ -36637,6 +36637,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"LIBMATCH", "LIBMATCH alias of MATCHLIBS"},
       {"HASMATCHLIBS", "HASMATCHLIBS|HASLIBS needle — soft 0|1 any stem matches filter · dual of MATCHLIBS bag"},
       {"NEEDMATCHLIBS", "NEEDMATCHLIBS|NEEDLIBS needle — fail-fast if no lib matches filter · install gate"},
+      {"COUNTMATCHLIBS", "COUNTMATCHLIBS|COUNTLIBS needle — match count → LAST_N without bag · dual of MATCHLIBS_N"},
+      {"COUNTLIBS", "COUNTLIBS alias of COUNTMATCHLIBS"},
       {"PICKLIB", "PICKLIB|FIRSTLIB needle [OR fallback] — first matching stem · INCLUDE without MATCHLIBS+NTH"},
       {"FIRSTLIB", "FIRSTLIB alias of PICKLIB"},
       {"NTHLIB", "NTHLIB idx needle [OR fallback] — 0-based Nth matching stem · INCLUDE without MATCHLIBS+NTH"},

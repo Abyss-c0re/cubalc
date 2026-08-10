@@ -1,0 +1,42 @@
+# COUNTMATCHLIBS — match count without bag materialize
+
+COUNTMATCHLIBS plate
+ASSERT OK == 1
+ASSERT LAST_N >= 10
+ASSERT COUNTMATCHLIBS_N >= 10
+ASSERT MATCHLIBS_N >= 10
+ASSERT COUNTMATCHLIBS_FILTER == "plate"
+# LAST is decimal count string, not bag
+ASSERT LAST_N >= 10
+
+COUNTLIBS fat
+ASSERT OK == 1
+ASSERT LAST_N == 2
+
+COUNTMATCHLIBS agent
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# empty miss still soft OK with 0
+COUNTMATCHLIBS no_such_lib_xyz_zzz
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# need needle
+COUNTMATCHLIBS ""
+ASSERT OK == 0
+CLEAR_ERR
+
+# case-insensitive
+COUNTMATCHLIBS PLATE
+ASSERT OK == 1
+ASSERT LAST_N >= 10
+
+# vs MATCHLIBS bag: count does not leave multi-line LAST
+COUNTMATCHLIBS fat
+ASSERT LAST_N == 2
+SYS HASLINE LAST "fat_boot"
+ASSERT LAST_N == 0
+
+PASS
+PRINT "1313_countmatchlibs: PASS"
