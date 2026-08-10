@@ -816,6 +816,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 786. ~~**`LISTFORMS` / `COUNTFORMS` + CLI**~~ **done** (in-lang HELP catalog bag/count · dual of cubalc forms · agent surface discovery without shell).
 787. ~~**`FORMHINT` / CLI `formhint`**~~ **done** (HELP one-line peel → LAST · dual of HASFORM with payload · agent docs without multi-match soup).
 788. ~~**`TIPS` / `cubalc tips`**~~ **done** (curated agent next-steps by topic · cubalc.tips.v1 · dual in-lang bag · no cookbook prose).
+789. ~~**`FORMSFOR` / `cubalc formsfor`**~~ **done** (topic → form-name bag · cubalc.formsfor.v1 · dual of TIPS prose · capability surface without LISTFORMS soup).
 
 ## Tick protocol
 

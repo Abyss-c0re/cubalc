@@ -2726,6 +2726,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"TIPS", "TIPS [topic] — curated agent next-steps bag · dual of cubalc tips"},
+      {"FORMSFOR", "FORMSFOR|TOPICFORMS [topic] — curated form-name bag by topic · dual of cubalc formsfor"},
+      {"TOPICFORMS", "TOPICFORMS alias of FORMSFOR"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · dotted path nest ok · write-back · multi-plate"},
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
@@ -39008,6 +39010,158 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     bump(vm);
     return 1;
   }
+  /* FORMSFOR|TOPICFORMS [topic] — curated form-name bag by usability topic.
+   * Dual of TIPS (tips=prose next-steps; FORMSFOR=capability surface names).
+   * Topics match TIPS: general|cap|fat|plate|p2p|run|lib|protect.
+   * LAST = newline form names · LAST_N = count · FORMSFOR_TOPIC · OK=1. */
+  if (kw(&L->cur,"FORMSFOR")||kw(&L->cur,"TOPICFORMS")||kw(&L->cur,"FORMSTOPIC")||
+      kw(&L->cur,"FORMS_FOR")||kw(&L->cur,"SURFACE")||kw(&L->cur,"TOPICSURFACE")||
+      kw(&L->cur,"CAPFORMS")||kw(&L->cur,"FORMSBYTOPIC")){
+    static const struct { const char *topic; const char *form; } rows[] = {
+      {"general", "VERSION"},
+      {"general", "STATUS"},
+      {"general", "IDENTITY"},
+      {"general", "TIPS"},
+      {"general", "FORMSFOR"},
+      {"general", "WHY"},
+      {"general", "CLEAR_ERR"},
+      {"general", "INCLUDE"},
+      {"general", "REQUIRE VERSION"},
+      {"general", "VARS"},
+      {"cap", "HASFORM"},
+      {"cap", "NEEDFORM"},
+      {"cap", "HASFORMS"},
+      {"cap", "NEEDFORMS"},
+      {"cap", "FORMHINT"},
+      {"cap", "LISTFORMS"},
+      {"cap", "COUNTFORMS"},
+      {"cap", "REQUIRE FORM"},
+      {"cap", "TIPS"},
+      {"cap", "FORMSFOR"},
+      {"fat", "VARROOM"},
+      {"fat", "HASVARROOM"},
+      {"fat", "NEEDVARROOM"},
+      {"fat", "REMAIN_MS"},
+      {"fat", "HAS_TIME"},
+      {"fat", "NEEDTIME"},
+      {"fat", "STATUS"},
+      {"fat", "VARS"},
+      {"fat", "TIPS"},
+      {"plate", "SETP"},
+      {"plate", "GETP"},
+      {"plate", "NEEDP"},
+      {"plate", "DEFAULTP"},
+      {"plate", "INCP"},
+      {"plate", "DELP"},
+      {"plate", "PRETTYP"},
+      {"plate", "DUMPP"},
+      {"plate", "SAVEPLATE"},
+      {"plate", "LOADPLATE"},
+      {"p2p", "SMX"},
+      {"p2p", "SERVE"},
+      {"p2p", "DIAL"},
+      {"p2p", "TALK"},
+      {"p2p", "EXCHANGE"},
+      {"p2p", "TIPS"},
+      {"run", "ASSERT"},
+      {"run", "EXPECT"},
+      {"run", "FAIL"},
+      {"run", "PASS"},
+      {"run", "NOTE"},
+      {"run", "EXIT"},
+      {"run", "WHY"},
+      {"run", "CLEAR_ERR"},
+      {"run", "TIPS"},
+      {"lib", "LISTLIBS"},
+      {"lib", "HASLIB"},
+      {"lib", "MATCHLIBS"},
+      {"lib", "PICKLIB"},
+      {"lib", "RECIPE"},
+      {"lib", "CHECKDEPS"},
+      {"lib", "SORTLIBS"},
+      {"lib", "FRESHLIBS"},
+      {"lib", "LIBAGE"},
+      {"lib", "INCLUDE"},
+      {"protect", "HOLD_FLASH"},
+      {"protect", "STATUS"},
+      {"protect", "VERSION"},
+      {"protect", "TIPS"},
+    };
+    char topic[32], tup[32], bag[4096];
+    size_t k, o = 0;
+    int i, n = 0, nall = (int)(sizeof rows / sizeof rows[0]);
+    lex_next(L);
+    topic[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(topic, sizeof topic, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(topic, sizeof topic, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(topic, sizeof topic, "%s", vm->last_str);
+      else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+                 kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
+                 kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
+        snprintf(topic, sizeof topic, "%s", L->cur.text);
+        lex_next(L);
+      }
+    }
+    if (!topic[0])
+      snprintf(topic, sizeof topic, "%s", "general");
+    for (k = 0; topic[k] && k + 1 < sizeof tup; k++) {
+      char c = topic[k];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      tup[k] = c;
+    }
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    bag[0] = 0;
+    for (i = 0; i < nall; i++) {
+      int hit = !strcmp(rows[i].topic, tup);
+      size_t ln;
+      if (!hit) continue;
+      ln = strlen(rows[i].form);
+      if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, rows[i].form, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FORMSFOR", bag);
+    var_set_str(vm, "TOPICFORMS", bag);
+    var_set_str(vm, "FORMSFOR_TOPIC", tup);
+    var_set_str(vm, "TOPICFORMS_TOPIC", tup);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "FORMSFOR_N", n);
+    var_set_num(vm, "TOPICFORMS_N", n);
+    var_set_num(vm, "OK", n > 0 ? 1 : 0);
+    if (n == 0) {
+      var_set_str(vm, "LAST_ERR",
+                  "FORMSFOR: unknown topic — FORMSFOR general|cap|fat|plate|p2p|run|lib|protect");
+      var_set_str(vm, "ERR",
+                  "FORMSFOR: unknown topic — FORMSFOR general|cap|fat|plate|p2p|run|lib|protect");
+    }
+    bump(vm);
+    return 1;
+  }
+
   /* NOTE ["text"] — agent breadcrumb / step log. Sets LAST + NOTE, does not
    * change OK, EXPECT_OK, or sticky LAST_ERR (unlike PASS/FAIL). Trace: # note: */
   if (kw(&L->cur,"NOTE")||kw(&L->cur,"REMARK")||kw(&L->cur,"LOG_NOTE")||

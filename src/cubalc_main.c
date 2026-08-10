@@ -3240,6 +3240,8 @@ int main(int argc, char **argv) {
       {"cli_formhint", "programs/proof/1328_cli_formhint.sh", "cubalc formhint CLI dual + forms"},
       {"tips", "programs/proof/1329_tips.cubalc", "TIPS topic bag dual of cubalc tips"},
       {"cli_tips", "programs/proof/1329_cli_tips.sh", "cubalc tips plate + topics + forms"},
+      {"formsfor", "programs/proof/1330_formsfor.cubalc", "FORMSFOR/TOPICFORMS topic form-name bags"},
+      {"cli_formsfor", "programs/proof/1330_cli_formsfor.sh", "cubalc formsfor plate + topics + forms"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3870,6 +3872,8 @@ int main(int argc, char **argv) {
       {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "flow", "HASFORMS names… soft all present · FORMMISS bag"},
       {"TIPS", "flow", "TIPS [topic] curated agent next-steps bag · cubalc tips dual"},
+      {"FORMSFOR", "flow", "FORMSFOR|TOPICFORMS [topic] form-name bag by topic · cubalc formsfor dual"},
+      {"TOPICFORMS", "flow", "TOPICFORMS alias of FORMSFOR"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
@@ -5041,7 +5045,7 @@ int main(int argc, char **argv) {
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
            "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc doctor · cubalc tips · cubalc init · cubalc run <file>\n");
+           "Commands: cubalc doctor · cubalc tips · cubalc formsfor · cubalc init · cubalc run <file>\n");
     return 0;
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
@@ -5140,6 +5144,119 @@ int main(int argc, char **argv) {
         printf("%s\"%s\"", n ? "," : "", esc);
         n++;
       }
+    }
+    printf("],\"n\":%d}\n", n);
+    return n > 0 ? 0 : 1;
+  }
+  if (strcmp(cmd, "formsfor") == 0 || strcmp(cmd, "topicforms") == 0 ||
+      strcmp(cmd, "formstopic") == 0 || strcmp(cmd, "surface") == 0 ||
+      strcmp(cmd, "forms-for") == 0 || strcmp(cmd, "capforms") == 0) {
+    /* Usability: curated form-name bags by topic (dual of FORMSFOR / TIPS).
+     *   cubalc formsfor · cubalc formsfor cap · cubalc topicforms fat
+     * Schema cubalc.formsfor.v1 · agents get capability surface without LISTFORMS soup. */
+    static const struct {
+      const char *topic;
+      const char *form;
+    } rows[] = {
+      {"general", "VERSION"},
+      {"general", "STATUS"},
+      {"general", "IDENTITY"},
+      {"general", "TIPS"},
+      {"general", "FORMSFOR"},
+      {"general", "WHY"},
+      {"general", "CLEAR_ERR"},
+      {"general", "INCLUDE"},
+      {"general", "REQUIRE VERSION"},
+      {"general", "VARS"},
+      {"cap", "HASFORM"},
+      {"cap", "NEEDFORM"},
+      {"cap", "HASFORMS"},
+      {"cap", "NEEDFORMS"},
+      {"cap", "FORMHINT"},
+      {"cap", "LISTFORMS"},
+      {"cap", "COUNTFORMS"},
+      {"cap", "REQUIRE FORM"},
+      {"cap", "TIPS"},
+      {"cap", "FORMSFOR"},
+      {"fat", "VARROOM"},
+      {"fat", "HASVARROOM"},
+      {"fat", "NEEDVARROOM"},
+      {"fat", "REMAIN_MS"},
+      {"fat", "HAS_TIME"},
+      {"fat", "NEEDTIME"},
+      {"fat", "STATUS"},
+      {"fat", "VARS"},
+      {"fat", "TIPS"},
+      {"plate", "SETP"},
+      {"plate", "GETP"},
+      {"plate", "NEEDP"},
+      {"plate", "DEFAULTP"},
+      {"plate", "INCP"},
+      {"plate", "DELP"},
+      {"plate", "PRETTYP"},
+      {"plate", "DUMPP"},
+      {"plate", "SAVEPLATE"},
+      {"plate", "LOADPLATE"},
+      {"p2p", "SMX"},
+      {"p2p", "SERVE"},
+      {"p2p", "DIAL"},
+      {"p2p", "TALK"},
+      {"p2p", "EXCHANGE"},
+      {"p2p", "TIPS"},
+      {"run", "ASSERT"},
+      {"run", "EXPECT"},
+      {"run", "FAIL"},
+      {"run", "PASS"},
+      {"run", "NOTE"},
+      {"run", "EXIT"},
+      {"run", "WHY"},
+      {"run", "CLEAR_ERR"},
+      {"run", "TIPS"},
+      {"lib", "LISTLIBS"},
+      {"lib", "HASLIB"},
+      {"lib", "MATCHLIBS"},
+      {"lib", "PICKLIB"},
+      {"lib", "RECIPE"},
+      {"lib", "CHECKDEPS"},
+      {"lib", "SORTLIBS"},
+      {"lib", "FRESHLIBS"},
+      {"lib", "LIBAGE"},
+      {"lib", "INCLUDE"},
+      {"protect", "HOLD_FLASH"},
+      {"protect", "STATUS"},
+      {"protect", "VERSION"},
+      {"protect", "TIPS"},
+    };
+    const char *topic = (argc > 2 && argv[2][0]) ? argv[2] : "general";
+    char tup[32];
+    size_t k;
+    int i, n = 0, nall = (int)(sizeof rows / sizeof rows[0]);
+    for (k = 0; topic[k] && k + 1 < sizeof tup; k++)
+      tup[k] = (char)((topic[k] >= 'A' && topic[k] <= 'Z')
+                          ? topic[k] - 'A' + 'a' : topic[k]);
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "help") || !strcmp(tup, "all") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    printf("{\"schema\":\"cubalc.formsfor.v1\",\"ok\":true,\"cmd\":\"formsfor\","
+           "\"topic\":\"%s\",\"version\":\"%s\","
+           "\"note\":\"curated form-name bag by topic · dual of in-lang FORMSFOR · TIPS twin\","
+           "\"topics\":[\"general\",\"cap\",\"fat\",\"plate\",\"p2p\",\"run\",\"lib\",\"protect\"],"
+           "\"forms\":[",
+           tup, CUBALC_LANG_VERSION);
+    for (i = 0; i < nall; i++) {
+      if (strcmp(rows[i].topic, tup) != 0)
+        continue;
+      printf("%s\"%s\"", n ? "," : "", rows[i].form);
+      n++;
     }
     printf("],\"n\":%d}\n", n);
     return n > 0 ? 0 : 1;
@@ -14469,6 +14586,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "flow", "HASFORMS names… soft all present · FORMMISS bag"},
       {"TIPS", "flow", "TIPS [topic] curated agent next-steps bag · cubalc tips dual"},
+      {"FORMSFOR", "flow", "FORMSFOR|TOPICFORMS [topic] form-name bag by topic · cubalc formsfor dual"},
+      {"TOPICFORMS", "flow", "TOPICFORMS alias of FORMSFOR"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
@@ -15927,12 +16046,13 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    search|find|query      keyword search forms/libs/examples/env\n"
       "    cookbook|start         paths to starters\n"
       "    tips|howto|next [topic]  curated agent next-steps JSON (cap|fat|plate|run…)\n"
+      "    formsfor|topicforms [topic]  form-name bag by topic (cubalc.formsfor.v1)\n"
       "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|countforms|hasform|hasforms|needforms|nthlib  filter duals\n"
+      "    picklib|listforms|formhint|formsfor|countforms|hasform|hasforms|needforms|nthlib  filter duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
@@ -15962,8 +16082,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|LISTFORMS|FORMHINT|COUNTFORMS|HASFORM|HASFORMS|NEEDFORMS|MATCHLIBS|PICKLIB|RECIPE\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|FORMSFOR|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
+      "    LISTLIBS|LISTFORMS|FORMHINT|FORMSFOR|COUNTFORMS|HASFORM|HASFORMS|NEEDFORMS|MATCHLIBS|PICKLIB|RECIPE\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"
