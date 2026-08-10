@@ -5805,7 +5805,7 @@
     "iter323: miss/hard first failed CLEAR_ERR ate LAST_N; fixed capture; board 10/10",
     "iter323: selftest 564/767 hasenvall+hasenvany PASS; CLI duals still set"
   ],
-  "commit": "pending",
+  "commit": "e518bf55",
   "ts": "2026-08-10T23:39:57Z",
-  "board_commit": "pending"
+  "board_commit": "e518bf55"
 }
