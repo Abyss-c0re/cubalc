@@ -1,14 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 816,
-  "item": "NEEDDOCTOR hard install gate + CLI needdoctor/-D",
-  "summary": "NEEDDOCTOR|REQUIREDOCTOR|MUSTDOCTOR hard twin of DOCTOR; cubalc needdoctor; run -D/--need-doctor; CUBALC_REQUIRE_DOCTOR; proofs 1357",
-  "version": "1.15.807-usability",
-  "commit": "4a2307ea0f6fcc7284445749ef7abde0ae402f61",
+  "iter": 781,
+  "version": "1.15.808-usability",
+  "item": "doctor_boot + cubalc init --doctor",
+  "item_id": 817,
+  "title": "doctor_boot \u00b7 init --doctor \u00b7 lib_doctor_boot",
+  "commit": "8d88b4f79ce0ecb80d991d46ea0aef7ea0097853",
+  "summary": "INCLUDE agent_boot+NEEDDOCTOR scaffold; init n=11; doctor readiness. proof 1358 PASS.",
   "proofs": [
-    "programs/proof/1357_needdoctor.cubalc",
-    "programs/proof/1357_cli_needdoctor.sh"
+    "1358_doctor_boot PASS",
+    "1358_cli_init_doctor PASS"
   ],
-  "ts": 1786387400,
-  "sha": "4a2307ea0f6fcc7284445749ef7abde0ae402f61"
+  "when": "2026-08-10T18:55:28Z",
+  "agent": "meaningful_iter_10m",
+  "sha": "8d88b4f79ce0ecb80d991d46ea0aef7ea0097853",
+  "note": "INCLUDE doctor_boot \u00b7 cubalc init demo --doctor \u00b7 needdoctor"
 }
