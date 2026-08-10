@@ -4812,7 +4812,7 @@
     "iter303: EACH TOPIC without END is hard fail (W564); nested ERRRUN noisy (W565)",
     "iter303: selftest CLI duals still red"
   ],
-  "commit": "pending",
+  "commit": "d2193229",
   "ts": "2026-08-10T14:29:15Z",
-  "board_commit": "2c87b609"
+  "board_commit": "d2193229"
 }
