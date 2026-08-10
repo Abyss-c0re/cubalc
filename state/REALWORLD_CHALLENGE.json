@@ -4860,7 +4860,7 @@
     "iter304: plate\u2260cap adjacency (W569); HAS substring fa\u2192fat (W571)",
     "iter304: selftest CLI duals still red"
   ],
-  "commit": "pending",
+  "commit": "5b960163",
   "ts": "2026-08-10T14:54:21Z",
-  "board_commit": "d2193229"
+  "board_commit": "5b960163"
 }
