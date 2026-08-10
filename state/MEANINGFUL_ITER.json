@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 774,
-  "version": "1.15.801-usability",
-  "item": "RUNSNIP MATCH|NTH|LASTMATCH filter pick + execute mini",
-  "item_id": 810,
-  "title": "RUNSNIP MATCH|NTH|LASTMATCH \u00b7 cubalc runsnip match|nth|lastmatch \u00b7 runsnip.v1",
-  "commit": "3c9a24642b8ba17425427c6b1a016d6ebede33c0",
-  "summary": "Filter-pick topic then execute curated SNIP without NTHTOPIC+RUNSNIP glue. proof 1351 PASS.",
+  "iter": 775,
+  "version": "1.15.802-usability",
+  "item": "DISCOVER match bag + first-topic open plate",
+  "item_id": 811,
+  "title": "DISCOVER|EXPLORE \u00b7 cubalc discover \u00b7 discover.v1",
+  "commit": "20b8f297cf9ebd76a892f560ac3976938ed7702b",
+  "summary": "Match bag + first open + next steps without MATCHTOPICS+TOPICHINT+GUIDE glue. proof 1352 PASS.",
   "proofs": [
-    "1351_runsnipmatch PASS",
-    "1351_cli_runsnipmatch PASS"
+    "1352_discover PASS",
+    "1352_cli_discover PASS"
   ],
-  "when": "2026-08-10T16:57:35Z",
+  "when": "2026-08-10T17:08:05Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3c9a24642b8ba17425427c6b1a016d6ebede33c0",
-  "note": "RUNSNIP MATCH p \u2192 cap mini; NTH 1 p \u2192 plate; LASTMATCH \u2192 protect"
+  "sha": "20b8f297cf9ebd76a892f560ac3976938ed7702b",
+  "note": "DISCOVER p \u2192 first=cap n=4; chain GUIDE DISCOVER_FIRST / RUNSNIP DISCOVER_FIRST"
 }
