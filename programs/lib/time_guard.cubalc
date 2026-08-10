@@ -1,0 +1,19 @@
+# INCLUDE time_guard — fail-fast if fewer than NEED_TIME ms wall budget left
+# Usability: mid-run early gate before heavy work without retyping NEEDTIME
+#   cubalc run -T 5000 prog.cubalc
+#   DEFAULT NEED_TIME = 200
+#   INCLUDE time_guard
+#   # NEEDTIME applied · REMAIN_MS / TIMEOUT_MS side vars set
+# Soft dual (no fatal): DEFAULT TIME_GUARD_SOFT = 1 then INCLUDE
+# Without -T / CUBALC_RUN_TIMEOUT: NEEDTIME always ok (unlimited).
+# HOLD_FLASH not required (same policy as agent_boot / var_guard).
+
+DEFAULT NEED_TIME = 100
+DEFAULT TIME_GUARD_SOFT = 0
+
+IF TIME_GUARD_SOFT
+  HAS_TIME NEED_TIME
+  # soft miss leaves OK=0 + LAST_ERR · agent CLEAR_ERR or EXIT early
+ELSE
+  NEEDTIME NEED_TIME
+END

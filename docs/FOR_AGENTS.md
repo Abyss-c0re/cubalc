@@ -45,6 +45,7 @@ Host version floor: `export CUBALC_REQUIRE_VERSION=1.15` or `cubalc run -R 1.15`
 Wall budget for runaway loops: `cubalc run -T 5000` or `export CUBALC_RUN_TIMEOUT=5000` (ms).
 Plate: `timeout_ms` · `timed_out` · in-lang `TIMEOUT_MS` / `TIMED_OUT` · SLEEP clamps to remaining.
 Mid-run probe: `REMAIN_MS` → ms left (−1 unlimited) · `HAS_TIME 200` soft · `NEEDTIME 200` fail-fast before heavy work.
+Recipe: `DEFAULT NEED_TIME = 200` · `INCLUDE time_guard` (soft: `DEFAULT TIME_GUARD_SOFT = 1`) · `cubalc doctor` → `lib_time_guard`.
 After load: `LISTINCLUDES` → path bag · `INCLUDESTEMS` short names · `HASINCLUDE agent_boot` soft 0|1 · `INCLUDE_N`.
 Run plate always reports `includes_n` + `includes` paths + `include_stems` / `include_stems_n` short names (INCLUDESTEMS dual).
 Also `preload_n` + `preload` short-name array from `-I` / `CUBALC_PRELOAD` (request).

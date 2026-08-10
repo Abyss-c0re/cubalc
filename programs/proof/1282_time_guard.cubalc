@@ -1,0 +1,17 @@
+# INCLUDE time_guard — wall budget gate recipe (unlimited host path)
+
+DEFAULT NEED_TIME = 1
+INCLUDE time_guard
+ASSERT OK == 1
+ASSERT TIMEOUT_UNLIMITED == 1
+ASSERT REMAIN_MS == -1
+
+# soft path under unlimited still ok
+LET NEED_TIME = 999999
+LET TIME_GUARD_SOFT = 1
+INCLUDE time_guard
+ASSERT LAST_N == 1
+ASSERT OK == 1
+
+PASS
+PRINT "1282_time_guard: PASS"
