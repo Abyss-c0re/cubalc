@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 281,
-  "program": "programs/realworld/svc_incflat_counter_board.cubalc",
-  "theme": "INCFLAT bulk nest int counter bump",
-  "version": "1.15.734-usability",
+  "iter": 282,
+  "program": "programs/realworld/svc_mergeflat_overlay_board.cubalc",
+  "theme": "MERGEFLAT deep leaf nest overlay sync",
+  "version": "1.15.739-usability",
   "pass": true,
-  "prior_note": "iter 280 PRUNEFLAT scrub; this iter first realworld 1219 INCFLAT/DECFLAT/BUMPFLAT",
+  "prior_note": "iter 281 INCFLAT counters; this iter first realworld 1216 MERGEFLAT/OVERLAYFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,61 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed counters+peer",
+      "cmd": "seed base+peer patch",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "bump",
-      "cmd": "INCFLAT hits x2",
+      "name": "merge",
+      "cmd": "MERGEFLAT PEER deep overlay",
       "ok": true,
-      "note": "bump"
+      "note": "merge"
     },
     {
-      "name": "delta",
-      "cmd": "port +5",
+      "name": "session",
+      "cmd": "FROM SESSION PATCH",
       "ok": true,
-      "note": "delta"
+      "note": "session"
     },
     {
-      "name": "peer",
-      "cmd": "FROM PEER stats",
+      "name": "empty",
+      "cmd": "empty overlay no-op",
       "ok": true,
-      "note": "peer"
+      "note": "empty"
     },
     {
-      "name": "dec",
-      "cmd": "DECFLAT errs",
+      "name": "shallow",
+      "cmd": "cfg.a kept when only b overlays",
       "ok": true,
-      "note": "dec"
-    },
-    {
-      "name": "all",
-      "cmd": "empty needle all ints",
-      "ok": true,
-      "note": "all"
+      "note": "shallow"
     },
     {
       "name": "soft",
-      "cmd": "ghost miss",
+      "cmd": "empty GHOST overlay",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "hits floor",
+      "cmd": "leader after merge",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "BUMPFLAT +3",
+      "cmd": "OVERLAYFLAT",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "hit substring + value miss",
+      "cmd": "partial meta + extra leaf",
       "ok": true,
       "note": "probe"
     },
@@ -83,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; incflat PASS"
+      "note": "cli duals red; mergeflat PASS"
     }
   ],
   "weaknesses": [
@@ -3782,12 +3776,49 @@
       "title": "WRITE VAL/META omit trailing NL",
       "detail": "cat -A VAL without final $ (W5 class).",
       "repro": "cat -A VAL.txt"
+    },
+    {
+      "id": "W463",
+      "severity": "high",
+      "area": "lang|mergeflat",
+      "title": "MERGEFLAT overlays ALL leaves including agent/schema identity",
+      "detail": "Peer seed with agent:hive-peer overwrote base agent after MERGEFLAT PEER; SAVEPLATE persisted identity clobber. Overlay patches must omit identity keys or agents must re-SETP agent/schema after merge.",
+      "repro": "MERGEFLAT PEER with agent in PEER \u2192 GETP agent hive-peer"
+    },
+    {
+      "id": "W464",
+      "severity": "low",
+      "area": "lang|mergeflat",
+      "title": "deep leaf merge keeps unmentioned siblings (vs shallow object replace)",
+      "detail": "Positive: MERGEFLAT {cfg:{b:9}} on {cfg:{a:1,b:2}} keeps cfg.a. Document vs MERGEP object replace.",
+      "repro": "MERGEFLAT cfg.b only \u2192 cfg.a remains"
+    },
+    {
+      "id": "W465",
+      "severity": "low",
+      "area": "lang|mergeflat",
+      "title": "empty {} overlay is soft no-op N=0",
+      "detail": "MERGEFLAT {} leaves base intact. Useful clear-miss path.",
+      "repro": "MERGEFLAT {} \u2192 MERGEFLAT_N 0"
+    },
+    {
+      "id": "W466",
+      "severity": "low",
+      "area": "lang|mergeflat",
+      "title": "bool true peels as 1 via GETP after overlay",
+      "detail": "PEER ok:true \u2192 GETP ok is 1. Same host bool decode class as UNFLATKV.",
+      "repro": "GETP ok after merge \u2192 1 not true"
+    },
+    {
+      "id": "W467",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META omit trailing NL",
+      "detail": "W5 class confirmed.",
+      "repro": "cat -A VAL.txt"
     }
   ],
   "workarounds": [
-    "GETP path after PATHBYVAL for round-trip gate",
-    "UNIQFLAT full key names (role not ro) for inventory scope",
-    "HASLINE bag for value set membership gates",
     "SYS HEAD bag for first-seen unique order",
     "agent_job=runner so worker reverse paths stay role-only",
     "test -f state plate before git add",
@@ -3824,13 +3855,12 @@
     "KEEPONLYFLAT for cfg.* share project then reload agent",
     "unique counter leaf names to avoid substring multi-bump",
     "BUMPFLAT for single named counter + explicit delta",
-    "empty INCFLAT only when all-int inventory intended"
+    "empty INCFLAT only when all-int inventory intended",
+    "omit agent/schema from MERGEFLAT overlay peers",
+    "re-SETP identity after merge if patch untrusted",
+    "use MERGEFLAT not MERGEP for nested cfg leaf sync"
   ],
   "language_gaps": [
-    "CHECKFLAT alias for UNIFORMFLAT",
-    "FIRSTUNEQFLAT LAST=path LAST_N=found",
-    "PATHUNEQ alias",
-    "prefer LAST path over specials under var cap",
     "UNEQPATHS LAST=path bag LAST_N=count TOTAL/REF/SRC specials",
     "DIVERGEPATHS|ALLUNEQ aliases",
     "prefer SYS EQS special direct over LET capture under pressure",
@@ -3850,11 +3880,13 @@
     "INCFLAT/DECFLAT/BUMPFLAT bulk pure-int leaf bump",
     "path substring needles multi-match counters",
     "empty needle = all pure-int leaves",
-    "INCFLAT_DELTA/FROM/SRC specials"
+    "INCFLAT_DELTA/FROM/SRC specials",
+    "MERGEFLAT/OVERLAYFLAT deep leaf nest overlay",
+    "MERGEFLAT overlays identity keys if present in patch",
+    "keeps unmentioned base leaves (deep not shallow replace)",
+    "MERGEFLAT_N/SRC/FROM specials"
   ],
   "issues_faced": [
-    "GETP bool not EQS true; used TYPEFLAT kind",
-    "GETP/GETFLAT role collided with nested cfg.role; renamed top key agent_role",
     "NTHFLATN port index depends on meta-before-cfg walk order",
     "EACH_N dark; used n_walk counters",
     "SYS EQS VALUE/PATH fragile in EACH FROM PEER; used PATH bind compares",
@@ -3892,8 +3924,10 @@
     "iter280: alias DELFLAT c nuked 7 paths; fixed to dropme unique needle",
     "iter280: 10/10 green after alias fix; empty tmp:{} residual documented",
     "iter281: 11 board actions green first pass; hits substring multi-leaf expected",
-    "iter281: selftest cli duals still red; incflat proof green"
+    "iter281: selftest cli duals still red; incflat proof green",
+    "iter282: first merge clobbered agent via peer agent key; stripped identity from PEER seed",
+    "iter282: 10/10 green after fix; shallow sibling keep confirmed"
   ],
-  "commit": "9853d72e",
-  "ts": "2026-08-10T03:38:54Z"
+  "commit": "pending",
+  "ts": "2026-08-10T04:29:32Z"
 }
