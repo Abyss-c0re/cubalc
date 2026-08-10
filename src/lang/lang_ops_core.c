@@ -2745,6 +2745,9 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"FILTERTOPICS", "FILTERTOPICS alias of MATCHTOPICS"},
       {"PICKTOPIC", "PICKTOPIC|FIRSTTOPIC needle [OR fallback] — first matching topic · dual of PICKLIB"},
       {"FIRSTTOPIC", "FIRSTTOPIC alias of PICKTOPIC"},
+      {"HASMATCHTOPICS", "HASMATCHTOPICS needle — soft 0|1 if any topic matches filter · dual of HASMATCHLIBS"},
+      {"NEEDMATCHTOPICS", "NEEDMATCHTOPICS needle — fail-fast if no topic matches filter"},
+      {"COUNTMATCHTOPICS", "COUNTMATCHTOPICS needle — match count → LAST_N without bag · dual of COUNTMATCHLIBS"},
       {"TOPICHINT", "TOPICHINT|DESCRIBETOPIC name — one-line topic hint → LAST · dual of cubalc topichint"},
       {"DESCRIBETOPIC", "DESCRIBETOPIC alias of TOPICHINT"},
       {"RELATEDTOPIC", "RELATEDTOPIC|SEETOPICS name — related discovery topic bag · dual of cubalc relatedtopic · twin of RELATED for topics"},
@@ -39252,8 +39255,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NEEDTOPIC", "HASTOPIC"}, {"NEEDTOPIC", "LISTTOPICS"},
       {"MATCHTOPICS", "PICKTOPIC"}, {"MATCHTOPICS", "LISTTOPICS"}, {"MATCHTOPICS", "HASTOPIC"},
       {"MATCHTOPICS", "TOPICHINT"}, {"MATCHTOPICS", "GUIDE"},
+      {"MATCHTOPICS", "HASMATCHTOPICS"}, {"MATCHTOPICS", "COUNTMATCHTOPICS"},
       {"PICKTOPIC", "MATCHTOPICS"}, {"PICKTOPIC", "GUIDE"}, {"PICKTOPIC", "TOPIC"},
       {"PICKTOPIC", "TOPICHINT"}, {"PICKTOPIC", "HASTOPIC"},
+      {"HASMATCHTOPICS", "NEEDMATCHTOPICS"}, {"HASMATCHTOPICS", "MATCHTOPICS"},
+      {"HASMATCHTOPICS", "COUNTMATCHTOPICS"}, {"HASMATCHTOPICS", "PICKTOPIC"},
+      {"NEEDMATCHTOPICS", "HASMATCHTOPICS"}, {"NEEDMATCHTOPICS", "MATCHTOPICS"},
+      {"COUNTMATCHTOPICS", "MATCHTOPICS"}, {"COUNTMATCHTOPICS", "HASMATCHTOPICS"},
+      {"COUNTMATCHTOPICS", "PICKTOPIC"},
       {"TOPIC", "RELATEDTOPIC"}, {"TOPIC", "TOPICHINT"}, {"TOPIC", "TIPS"},
       {"TOPIC", "FORMSFOR"}, {"TOPIC", "SNIP"}, {"TOPIC", "LISTTOPICS"},
       {"TOPIC", "FORMTOPICS"}, {"TOPIC", "GUIDE"},
@@ -40501,6 +40510,112 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     vm->last_n = 1;
     var_set_num(vm, "LAST_N", 1);
     var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+
+  /* HASMATCHTOPICS / NEEDMATCHTOPICS / COUNTMATCHTOPICS needle —
+   * soft 0|1 presence · fail-fast · count without bag (dual of MATCHLIBS triad gates).
+   * Dual of cubalc hasmatchtopics|needmatchtopics|countmatchtopics. */
+  if (kw(&L->cur,"HASMATCHTOPICS")||kw(&L->cur,"HASTOPICMATCH")||kw(&L->cur,"TOPICSMATCH")||
+      kw(&L->cur,"NEEDMATCHTOPICS")||kw(&L->cur,"NEEDTOPICMATCH")||
+      kw(&L->cur,"COUNTMATCHTOPICS")||kw(&L->cur,"COUNTTOPICS")||
+      kw(&L->cur,"COUNTTOPICMATCH")||kw(&L->cur,"NTOPICMATCH")){
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    int hard = kw(&L->cur,"NEEDMATCHTOPICS")||kw(&L->cur,"NEEDTOPICMATCH");
+    int mode_count = kw(&L->cur,"COUNTMATCHTOPICS")||kw(&L->cur,"COUNTTOPICS")||
+                     kw(&L->cur,"COUNTTOPICMATCH")||kw(&L->cur,"NTOPICMATCH");
+    char needle[64], nlow[64];
+    size_t k;
+    int i, n = 0, nall = (int)(sizeof topics / sizeof topics[0]);
+    int aln = L->cur.line;
+    lex_next(L);
+    needle[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(needle, sizeof needle, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(needle, sizeof needle, "%s", vm->last_str);
+      else
+        snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!needle[0]) {
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "HASMATCHTOPICS_N", 0);
+      var_set_num(vm, "COUNTMATCHTOPICS_N", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "HASMATCHTOPICS: need needle — HASMATCHTOPICS p · NEEDMATCHTOPICS cap");
+      var_set_str(vm, "ERR",
+                  "HASMATCHTOPICS: need needle — HASMATCHTOPICS p · NEEDMATCHTOPICS cap");
+      if (hard) { fail(vm, "NEEDMATCHTOPICS: need needle"); return -1; }
+      bump(vm);
+      return 1;
+    }
+    for (k = 0; needle[k] && k + 1 < sizeof nlow; k++) {
+      char ch = needle[k];
+      if (ch >= 'A' && ch <= 'Z') ch = (char)(ch - 'A' + 'a');
+      nlow[k] = ch;
+    }
+    nlow[k] = 0;
+    if (!strcmp(nlow, "capability") || !strcmp(nlow, "forms") || !strcmp(nlow, "form"))
+      snprintf(nlow, sizeof nlow, "%s", "cap");
+    if (!strcmp(nlow, "mesh") || !strcmp(nlow, "smx") || !strcmp(nlow, "peer"))
+      snprintf(nlow, sizeof nlow, "%s", "p2p");
+    if (!strcmp(nlow, "nest") || !strcmp(nlow, "var") || !strcmp(nlow, "timeout"))
+      snprintf(nlow, sizeof nlow, "%s", "fat");
+    if (!strcmp(nlow, "json") || !strcmp(nlow, "agent"))
+      snprintf(nlow, sizeof nlow, "%s", "plate");
+    if (!strcmp(nlow, "start") || !strcmp(nlow, "all") || !strcmp(nlow, "help") ||
+        !strcmp(nlow, "default") || !strcmp(nlow, "*"))
+      snprintf(nlow, sizeof nlow, "%s", "general");
+    for (i = 0; i < nall; i++) {
+      if (strstr(topics[i], nlow)) n++;
+    }
+    var_set_str(vm, "MATCHTOPICS_FILTER", nlow);
+    var_set_str(vm, "HASMATCHTOPICS_FILTER", nlow);
+    var_set_num(vm, "MATCHTOPICS_N", n);
+    var_set_num(vm, "COUNTMATCHTOPICS_N", n);
+    var_set_num(vm, "HASMATCHTOPICS_N", n > 0 ? 1 : 0);
+    if (mode_count) {
+      char nb[24];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm);
+      return 1;
+    }
+    /* has / need presence */
+    var_set_str(vm, "LAST", n > 0 ? "1" : "0");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", n > 0 ? "1" : "0");
+    vm->last_n = n > 0 ? 1 : 0;
+    var_set_num(vm, "LAST_N", n > 0 ? 1 : 0);
+    var_set_num(vm, "OK", n > 0 ? 1 : 0);
+    if (n == 0) {
+      char em[176];
+      snprintf(em, sizeof em,
+               "%s miss: '%s' — MATCHTOPICS · LISTTOPICS · cubalc matchtopics",
+               hard ? "NEEDMATCHTOPICS" : "HASMATCHTOPICS", needle);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      if (hard) {
+        fail(vm, em);
+        return -1;
+      }
+    }
+    (void)aln;
     bump(vm);
     return 1;
   }
