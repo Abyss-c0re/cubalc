@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 762,
-  "version": "1.15.789-usability",
-  "item": "TOPICHINT + cubalc topichint topic docs",
-  "item_id": 798,
-  "title": "TOPICHINT|DESCRIBETOPIC name \u00b7 cubalc topichint \u00b7 cubalc.topichint.v1",
-  "commit": "3a614e0f1db8c334503beabd7303d0e1a78bb3af",
-  "summary": "one-line topic hint twin of FORMHINT; chain with LISTTOPICS/EACH TOPIC. proof 1339 PASS.",
+  "iter": 763,
+  "version": "1.15.790-usability",
+  "item": "RELATEDTOPIC + cubalc relatedtopic topic neighbor bags",
+  "item_id": 799,
+  "title": "RELATEDTOPIC|SEETOPICS name · cubalc relatedtopic · cubalc.relatedtopic.v1",
+  "commit": "a4f37d1f3da2d5eb978a4ebcb31798e72903772d",
+  "summary": "topic→related topics bag twin of RELATED for forms; chain with TOPICHINT/EACH TOPIC. proof 1340 PASS.",
   "proofs": [
-    "1339_topichint PASS",
-    "1339_cli_topichint PASS"
+    "1340_relatedtopic PASS",
+    "1340_cli_relatedtopic PASS"
   ],
-  "when": "2026-08-10T14:26:50Z",
+  "when": "2026-08-10T14:40:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3a614e0f1db8c334503beabd7303d0e1a78bb3af",
-  "note": "topichint cap; DESCRIBETOPIC plate; EACH TOPIC loop"
+  "sha": "a4f37d1f3da2d5eb978a4ebcb31798e72903772d",
+  "note": "relatedtopic cap; seetopics mesh→p2p; FORMSFOR general includes RELATEDTOPIC"
 }
