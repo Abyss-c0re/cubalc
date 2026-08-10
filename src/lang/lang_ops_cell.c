@@ -5938,6 +5938,155 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* CATLIB / READLIB / LIBSRC name — soft dump lib source → LAST (dual of cubalc cat).
+   * Usability: agents inspect INCLUDE recipes without shell · resolve like INCLUDE short name.
+   * LAST_N = bytes (capped) · LIB_PATH · soft miss OK=0 sticky LAST_ERR. */
+  if (kw(&L->cur, "CATLIB") || kw(&L->cur, "READLIB") ||
+      kw(&L->cur, "LIBSRC") || kw(&L->cur, "LIBCAT") ||
+      kw(&L->cur, "SHOWLIB") || kw(&L->cur, "DUMPLIB") ||
+      kw(&L->cur, "CAT_LIB") || kw(&L->cur, "READ_LIB")) {
+    char name[160], path[768], base[160];
+    char *buf = NULL;
+    FILE *f = NULL;
+    long sz = 0;
+    size_t nr = 0, cap = 0;
+    const char *slash, *leaf, *ip, *root;
+    size_t blen;
+    lex_next(L);
+    name[0] = 0;
+    path[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CATLIB: need name");
+      var_set_str(vm, "ERR", "CATLIB: need name");
+      bump(vm);
+      return 1;
+    }
+    slash = strrchr(name, '/');
+    leaf = slash ? slash + 1 : name;
+    snprintf(base, sizeof base, "%s", leaf);
+    blen = strlen(base);
+    if (blen > 7 && strcmp(base + blen - 7, ".cubalc") == 0)
+      base[blen - 7] = 0;
+    /* direct path */
+    if (name[0] == '/' || strchr(name, '/')) {
+      f = fopen(name, "rb");
+      if (f) snprintf(path, sizeof path, "%s", name);
+    }
+    if (!f) {
+      char p3[768];
+      snprintf(p3, sizeof p3, "programs/lib/%s.cubalc", base);
+      f = fopen(p3, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p3);
+    }
+    if (!f) {
+      char p3[768];
+      snprintf(p3, sizeof p3, "programs/lib/%s", name);
+      f = fopen(p3, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p3);
+    }
+    if (!f) {
+      f = fopen(name, "rb");
+      if (f) snprintf(path, sizeof path, "%s", name);
+    }
+    root = getenv("CUBALC_ROOT");
+    if (!f && root && root[0]) {
+      char p2[768];
+      snprintf(p2, sizeof p2, "%s/programs/lib/%s.cubalc", root, base);
+      f = fopen(p2, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p2);
+    }
+    ip = getenv("CUBALC_INCLUDE_PATH");
+    if (!f && ip && ip[0]) {
+      const char *seg = ip;
+      while (*seg && !f) {
+        char dir[512], p3[768];
+        size_t dlen = 0;
+        while (*seg == ':') seg++;
+        if (!*seg) break;
+        while (seg[dlen] && seg[dlen] != ':' && dlen + 1 < sizeof dir)
+          dir[dlen] = seg[dlen], dlen++;
+        dir[dlen] = 0;
+        seg += dlen;
+        if (!dir[0]) continue;
+        snprintf(p3, sizeof p3, "%s/%s.cubalc", dir, base);
+        f = fopen(p3, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+        snprintf(p3, sizeof p3, "%s/%s", dir, name);
+        f = fopen(p3, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+      }
+    }
+    if (!f) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "CATLIB miss: '%s' — programs/lib · CUBALC_INCLUDE_PATH · cubalc cat",
+               name);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "LIB_PATH", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    fseek(f, 0, SEEK_END);
+    sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz < 0) sz = 0;
+    /* Cap to var string budget so agents can hold source in LAST */
+    cap = (size_t)CUBALC_VAR_STR_MAX - 1;
+    if ((size_t)sz > cap) sz = (long)cap;
+    buf = (char *)malloc((size_t)sz + 1);
+    if (!buf) {
+      fclose(f);
+      var_set_str(vm, "LAST", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CATLIB: oom");
+      var_set_str(vm, "ERR", "CATLIB: oom");
+      bump(vm);
+      return 1;
+    }
+    nr = fread(buf, 1, (size_t)sz, f);
+    fclose(f);
+    buf[nr] = 0;
+    var_set_str(vm, "LAST", buf);
+    var_set_str(vm, "LIBSRC", buf);
+    var_set_str(vm, "CATLIB", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    free(buf);
+    vm->last_n = (long)nr;
+    var_set_num(vm, "LAST_N", (long)nr);
+    var_set_num(vm, "CATLIB_N", (long)nr);
+    var_set_str(vm, "LIB_PATH", path);
+    var_set_str(vm, "LIB_STEM", base);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTPRELOAD / PRELOADS — short-name bag of effective -I / CUBALC_PRELOAD.
    * Usability: CLI sets CUBALC_PRELOAD_ACTIVE; programs audit request vs INCLUDESTEMS. */
   if (kw(&L->cur, "LISTPRELOAD") || kw(&L->cur, "PRELOADS") ||

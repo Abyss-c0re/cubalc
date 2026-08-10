@@ -1,0 +1,21 @@
+# CATLIB / READLIB — soft dump lib source (dual of cubalc cat)
+
+CATLIB fat_session
+ASSERT OK == 1
+ASSERT LAST_N > 20
+ASSERT LIB_PATH != ""
+SYS HAS LAST "INCLUDE fat_boot"
+ASSERT LAST_N == 1
+# re-read stem specials after HAS clobbered LAST string
+CATLIB fat_session
+SYS HAS LAST "plate_boot"
+ASSERT LAST_N == 1
+
+# soft miss
+CATLIB no_such_lib_xyz_zzz
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+PASS
+PRINT "1289_catlib: PASS"
