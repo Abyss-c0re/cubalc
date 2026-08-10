@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 311,
-  "program": "programs/realworld/svc_open_playbook_board.cubalc",
-  "theme": "OPEN/OPENPLAY fleet DISCOVER+GUIDE playbook one-shot",
-  "version": "1.15.804-usability",
+  "iter": 312,
+  "program": "programs/realworld/svc_runsnipmatch_prove_board.cubalc",
+  "theme": "RUNSNIP MATCH/NTH/LASTMATCH fleet prove mini cold-route",
+  "version": "1.15.806-usability",
   "pass": true,
-  "prior_note": "iter 310 DISCOVER open plate; this iter first realworld 1354 OPEN DISCOVER bag + GUIDE first",
+  "prior_note": "iter 311 OPEN playbook; this iter first realworld 1351 RUNSNIP MATCH prove twin of GUIDE MATCH (closes W600)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate opb",
+      "cmd": "seed agent plate rsm",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "open",
-      "cmd": "OPEN all n=8 first=general + GUIDE",
+      "name": "match",
+      "cmd": "RUNSNIP MATCH p→cap N=4 I=0",
       "ok": true,
-      "note": "open"
+      "note": "match"
     },
     {
-      "name": "filter",
-      "cmd": "OPEN p n=4 first=cap + mesh",
+      "name": "nth",
+      "cmd": "NTH 1 plate · NTH 2 p2p · OR run",
       "ok": true,
-      "note": "filter"
+      "note": "nth"
+    },
+    {
+      "name": "last",
+      "cmd": "LASTMATCH protect · OR general",
+      "ok": true,
+      "note": "last"
     },
     {
       "name": "chain",
-      "cmd": "OPEN→RUNSNIP first + OPENPLAY plate",
+      "cmd": "OPEN→RUNSNIP first→MATCH→NTH plate",
       "ok": true,
       "note": "chain"
     },
     {
       "name": "soft",
-      "cmd": "zzz miss + bare recover",
+      "cmd": "miss/empty/OOR + OR recover",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "plate surface + OPEN lib",
+      "cmd": "plate surface + MATCH lib",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "OPENPLAY plate/mesh + DISCOVER_FIRST mirror",
+      "cmd": "FIRST PICK forms SNIPRUN",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + OPEN_NEXT_N + HASTOPIC",
+      "cmd": "PRINT clobber + HASTOPIC + bare OPEN n=8",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "542/712 open PASS; CLI duals still red"
+      "note": "runsnipmatch PASS; CLI duals still red; rebuilt after OOM"
     }
   ],
   "weaknesses": [
@@ -5010,10 +5016,57 @@
       "title": "host command open collides with form OPEN dual naming",
       "detail": "cubalc open works as CLI dual of OPEN form. Agents using shell open path vs in-lang OPEN must not confuse with filesystem open. Forms catalog lists OPEN|OPENPLAY.",
       "repro": "cubalc open · OPEN in .cubalc"
+    },
+    {
+      "id": "W618",
+      "severity": "high",
+      "area": "host|build",
+      "title": "single-shot gcc of monorepo OOMs; need -D_GNU_SOURCE object build",
+      "detail": "make out/cubalc (one CC all SRC) killed under 15G RAM on 2.8MB lang_ops_core.c. Worked: per-file -O0 -D_DEFAULT_SOURCE -D_GNU_SOURCE then link. Without _GNU_SOURCE readdir implicit under -std=c11. Host fire often finds missing out/cubalc.",
+      "repro": "make out/cubalc → Killed; gcc -c with -D_GNU_SOURCE succeeds"
+    },
+    {
+      "id": "W619",
+      "severity": "med",
+      "area": "lib|open_boot",
+      "title": "open_boot ignores OPEN_NEEDLE — always bare OPEN",
+      "detail": "programs/lib/open_boot.cubalc is INCLUDE agent_boot; OPEN only. Comments claim DEFAULT OPEN_NEEDLE filtered open; DEFAULT before INCLUDE still opens n=8 first=general. Must LET then OPEN OPEN_NEEDLE after INCLUDE (proof 1355).",
+      "repro": "DEFAULT OPEN_NEEDLE=p; INCLUDE open_boot → OPEN_N=8 not 4"
+    },
+    {
+      "id": "W620",
+      "severity": "low",
+      "area": "lang|runsnipmatch",
+      "title": "RUNSNIP MATCH first-of-substring p→cap (same class as GUIDE MATCH)",
+      "detail": "RUNSNIP_MATCH_N=4 I=0 TOPIC=cap. Use NTH 1 for plate prove mini.",
+      "repro": "RUNSNIP MATCH p → cap"
+    },
+    {
+      "id": "W621",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers RUNSNIP_TOPIC capture path in LAST",
+      "detail": "Capture topic before PRINT; probe-mark LAST != cap.",
+      "repro": "RUNSNIP MATCH p; PRINT x; SYS EQS LAST cap → 0"
+    },
+    {
+      "id": "W622",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS/META omit trailing NL (reconfirmed rsm)",
+      "detail": "STATUS last probe:4:pb without $; META no final NL.",
+      "repro": "cat -A RSM STATUS"
+    },
+    {
+      "id": "W623",
+      "severity": "low",
+      "area": "lang|runsnipmatch",
+      "title": "RUNSNIP_MATCH_N/I knobs dual of GUIDE_MATCH_N/I (positive)",
+      "detail": "Family size + slot index work for prove path same as guide path. RUNSNIP_OK separates mini assert fail from filter miss.",
+      "repro": "RUNSNIP NTH 1 p → MATCH_I=1 TOPIC=plate"
     }
   ],
   "workarounds": [
-    "omit agent/schema from MERGEFLAT overlay peers",
     "re-SETP identity after merge if patch untrusted",
     "use MERGEFLAT not MERGEP for nested cfg leaf sync",
     "always use trailing . on path prefixes",
@@ -5067,15 +5120,13 @@
     {
       "id": "WA-OPB",
       "note": "use GUIDE_* after OPEN not OPEN_NEXT; capture body before PRINT; exact needle for non-first topics"
+    },
+    {
+      "id": "WA-RSM",
+      "note": "build with -D_GNU_SOURCE per .o; OPEN OPEN_NEEDLE after open_boot; NTH for non-first prove; capture before PRINT"
     }
   ],
   "language_gaps": [
-    "FORMTOPICS bare name vs bag var collision (W576)",
-    "CLI vs in-lang GUIDE count skew (W577)",
-    "FORMGUIDE name/bag-var collision (W580)",
-    "CLI vs in-lang START_NEXT_N skew (W581)",
-    "START has no soft-miss dual (W582)",
-    "MATCHTOPICS/PICKTOPIC/FILTERTOPICS/FIRSTTOPIC topic filter duals of MATCHLIBS/PICKLIB",
     "HASMATCHTOPICS/NEEDMATCHTOPICS soft/hard filter presence",
     "substring strstr filter (W585) vs HASTOPIC exact",
     "PICKTOPIC first-of-catalog not ranked (W586)",
@@ -5109,10 +5160,15 @@
     "OPEN_NEXT_N not dual of DISCOVER_NEXT_N (W612)",
     "GUIDE_* filled by OPEN (W616)",
     "PRINT clobber open plate (W614)",
-    "chain RUNSNIP OPEN_FIRST"
+    "chain RUNSNIP OPEN_FIRST",
+    "RUNSNIP MATCH/NTH/LASTMATCH prove twin of GUIDE MATCH (1351)",
+    "RUNSNIP_MATCH_N/I + RUNSNIP_OK knobs (W623)",
+    "open_boot ignores OPEN_NEEDLE (W619)",
+    "monorepo single-gcc OOM without object build (W618)",
+    "-std=c11 needs -D_GNU_SOURCE for dirent/readdir",
+    "PRINT clobber runsnip topic (W621)"
   ],
   "issues_faced": [
-    "iter298: board 10/10 + host -C ok; selftest CLI duals still red 455/658",
     "iter299: FORMSFOR/TIPS var topic lex_next fixed + HOWTO_TOPIC dual",
     "iter299: SYS HAS substring false friend on form bags (W544)",
     "iter299: board 10/10 green; selftest CLI duals still 57 red",
@@ -5141,9 +5197,10 @@
     "NTHTOPIC var index hard-fail unknown form; LASTTOPIC_N 0 after success; board 10/10 green",
     "RUNSNIP MATCH missing in binary while proof 1351 exists; GUIDE MATCH board 10/10+unknown green",
     "probe SYS EQS DISCOVER_MATCH_N hard-failed unknown form; fixed via DEFINED; board 10/10",
-    "binary missing at fire start — rebuilt; OPEN board 10/10 green; OPEN_NEXT_N gap vs DISCOVER"
+    "binary missing at fire start — rebuilt; OPEN board 10/10 green; OPEN_NEXT_N gap vs DISCOVER",
+    "out/cubalc missing; OOM on make until disk swap + object -D_GNU_SOURCE build; board 10/10+unknown green"
   ],
-  "commit": "b20b51ec",
-  "ts": "2026-08-10T17:56:51Z",
-  "board_commit": "b20b51ec"
+  "commit": "pending",
+  "ts": "2026-08-10T18:28:03Z",
+  "board_commit": "pending"
 }

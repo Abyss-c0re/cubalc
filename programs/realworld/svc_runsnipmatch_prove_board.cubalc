@@ -1,0 +1,1022 @@
+# svc_runsnipmatch_prove_board.cubalc — RUNSNIP MATCH fleet prove minis
+#
+# Real use: fleet agents pick a discovery topic by filter and execute the
+# curated SNIP mini in one shot (RUNSNIP MATCH/NTH/LASTMATCH) — no
+# PICKTOPIC+RUNSNIP glue. Twin of GUIDE MATCH for the prove path.
+# First realworld of proof 1351 RUNSNIP MATCH (closes W600 ship lag).
+#
+#   RUNSNIP MATCH|RUNSNIPMATCH needle [OR fb] → RUNSNIP_TOPIC · MATCH_N/I · OK
+#   RUNSNIP NTH|RUNSNIPNTH idx needle · LASTMATCH · FIRST|PICK aliases
+#   soft miss · synonym forms/mesh · substring p · chain OPEN_FIRST prove
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rsm_$$
+#   ./out/cubalc run programs/realworld/svc_runsnipmatch_prove_board.cubalc boot
+#   ./out/cubalc run ... match|nth|last|chain|soft|gate|alias|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt RSM_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S NEEDLE_S CUBALC_RSM_REQUIRE
+#
+# Edges: PRINT clobber; RUNSNIP_MATCH_N family vs MATCH_I slot; first p→cap;
+#   WRITE NL; open_boot DEFAULT OPEN_NEEDLE ignored (lib always bare OPEN)
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_runsnipmatch_prove_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_runsnipmatch_prove -- boot|match|nth|last|chain|soft|gate|alias|probe|list -- [--host=H] [--role=R] [--needle=N]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+DEFAULT NEEDLE_S = "p"
+GETFLAG needle|n OR ENV NEEDLE_S OR NEEDLE_S
+LET needle_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_RSM_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "RSM_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sum_v = 0
+LET sum_n = 0
+LET stem_s = ""
+LET topics_n = 0
+LET topic_got = ""
+LET filt_s = ""
+LET slot_n = 0
+
+ONEOF ACTION "boot", "match", "nth", "last", "chain", "soft", "gate", "alias", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "match" THEN
+    LET op = "match"
+  WHEN "nth" THEN
+    LET op = "nth"
+  WHEN "last" THEN
+    LET op = "last"
+  WHEN "chain" THEN
+    LET op = "chain"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "alias" THEN
+    LET op = "alias"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s needle_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-rsm\",\"schema\":\"cubalc.svc_runsnipmatch_prove.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"want_filter\":\"runsnip_match\",\"label\":\"rsm\",\"cfg\":{\"surface\":\"RUNSNIP MATCH,RUNSNIPMATCH,RUNSNIPNTH,RUNSNIPLASTMATCH\",\"needle\":\"p\"}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"peer\":\"runsnip_match\",\"n\":1}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "agent"
+  SYS EQS LAST "svc-rsm"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_runsnipmatch_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "rsm"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "runsnip_match"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "RUNSNIPMATCH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# match — RUNSNIP MATCH first filtered prove mini
+SYS EQS op "match"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  GETP "cfg.needle"
+  LET filt_s = LAST
+  CLEAR_ERR
+  RUNSNIP MATCH filt_s
+  LET topic_got = RUNSNIP_TOPIC
+  LET topics_n = RUNSNIP_MATCH_N
+  LET slot_n = RUNSNIP_MATCH_I
+  LET sum_v = RUNSNIP_OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS topic_got "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS TOPIC_NAME "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF topics_n == 4 THEN
+    LET score = score + 1
+  END
+  IF slot_n == 0 THEN
+    LET score = score + 1
+  END
+  SYS EQS PICKTOPIC "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  RUNSNIPMATCH filt_s
+  LET topic_got = RUNSNIPMATCH
+  CLEAR_ERR
+  SYS EQS topic_got "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "RUNSNIP MATCH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "rsm"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "match ok"
+    LET admit_n = 1
+    LET find_n = topics_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "match score"
+    FAIL "match score"
+    CLEAR_ERR
+  END
+  SYS CAT "match:" topic_got ":mt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "match:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n topic_got slot_n score note_msg
+  CLEAR_ERR
+END
+
+# nth — RUNSNIP NTH slots
+SYS EQS op "nth"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  RUNSNIP NTH 1 p
+  LET topic_got = RUNSNIP_TOPIC
+  LET slot_n = RUNSNIP_MATCH_I
+  LET topics_n = RUNSNIP_MATCH_N
+  LET sum_v = RUNSNIP_OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS topic_got "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF slot_n == 1 THEN
+    LET score = score + 1
+  END
+  IF topics_n == 4 THEN
+    LET score = score + 1
+  END
+  RUNSNIPNTH 2 p
+  LET topic_got = RUNSNIP_TOPIC
+  LET slot_n = RUNSNIP_MATCH_I
+  CLEAR_ERR
+  SYS EQS topic_got "p2p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF slot_n == 2 THEN
+    LET score = score + 1
+  END
+  RUNSNIP NTH 9 p OR run
+  LET topic_got = RUNSNIP_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "run"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "RUNSNIPNTH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.needle"
+  SYS EQS LAST "p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-rsm"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "nth ok"
+    LET admit_n = 1
+    LET find_n = topics_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "nth score"
+    FAIL "nth score"
+    CLEAR_ERR
+  END
+  SYS CAT "nth:" topic_got ":nt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "nth:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n topic_got slot_n score note_msg
+  CLEAR_ERR
+END
+
+# last — LASTMATCH tail prove
+SYS EQS op "last"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  RUNSNIP LASTMATCH p
+  LET topic_got = RUNSNIP_TOPIC
+  LET slot_n = RUNSNIP_MATCH_I
+  LET topics_n = RUNSNIP_MATCH_N
+  LET sum_v = RUNSNIP_OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS topic_got "protect"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF slot_n == 3 THEN
+    LET score = score + 1
+  END
+  IF topics_n == 4 THEN
+    LET score = score + 1
+  END
+  RUNSNIPLASTMATCH p
+  LET topic_got = RUNSNIP_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "protect"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  RUNSNIP LASTMATCH zzz OR general
+  LET topic_got = RUNSNIP_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "general"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "RUNSNIPLASTMATCH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "runsnip_match"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "rsm"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.needle"
+  SYS EQS LAST "p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "last ok"
+    LET admit_n = 1
+    LET find_n = slot_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "last score"
+    FAIL "last score"
+    CLEAR_ERR
+  END
+  SYS CAT "last:" topic_got ":lt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "last:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n topic_got slot_n score note_msg
+  CLEAR_ERR
+END
+
+# chain — OPEN then RUNSNIP OPEN_FIRST + MATCH path
+SYS EQS op "chain"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  OPEN p
+  LET topics_n = OPEN_N
+  LET topic_got = OPEN_FIRST
+  CLEAR_ERR
+  IF topics_n == 4 THEN
+    LET score = score + 1
+  END
+  SYS EQS topic_got "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  RUNSNIP OPEN_FIRST
+  LET sum_v = RUNSNIP_OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS RUNSNIP_TOPIC "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  RUNSNIP MATCH p
+  LET topics_n = RUNSNIP_MATCH_N
+  LET slot_n = RUNSNIP_MATCH_I
+  CLEAR_ERR
+  IF topics_n == 4 THEN
+    LET score = score + 1
+  END
+  IF slot_n == 0 THEN
+    LET score = score + 1
+  END
+  RUNSNIP NTH 1 p
+  LET topic_got = RUNSNIP_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "runsnip_match"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "RUNSNIP MATCH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "runsnipmatch_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "chain ok"
+    LET admit_n = 1
+    LET find_n = topics_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "chain score"
+    FAIL "chain score"
+    CLEAR_ERR
+  END
+  SYS CAT "chain:" topic_got ":ch"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "chain:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# soft — miss paths + OR recover
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  RUNSNIP MATCH zzz_nope
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  IF RUNSNIP_OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  RUNSNIPMATCH
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  RUNSNIP NTH 5 p
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  RUNSNIP LASTMATCH zzz
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  RUNSNIP MATCH zzz OR general
+  LET topic_got = RUNSNIP_TOPIC
+  CLEAR_ERR
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS topic_got "general"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-rsm"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "RUNSNIPMATCH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "rsm"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok1:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — plate + live RUNSNIP MATCH
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  RUNSNIP MATCH lib
+  LET topic_got = RUNSNIP_TOPIC
+  LET topics_n = RUNSNIP_MATCH_N
+  CLEAR_ERR
+  SYS EQS topic_got "lib"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF topics_n == 1 THEN
+    LET score = score + 1
+  END
+  IF RUNSNIP_OK == 1 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "RUNSNIP MATCH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "RUNSNIPNTH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "runsnipmatch_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "runsnip_match"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 7 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = topics_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# alias — FIRST PICK forms mesh
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  RUNSNIP FIRST lib
+  LET topic_got = RUNSNIP_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "lib"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF RUNSNIP_OK == 1 THEN
+    LET score = score + 1
+  END
+  RUNSNIP PICK mesh
+  LET topic_got = RUNSNIP_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "p2p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  RUNSNIPMATCH forms
+  LET topic_got = RUNSNIP_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SNIPRUN plate
+  LET topic_got = RUNSNIP_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "RUNSNIPMATCH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "rsm"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.needle"
+  SYS EQS LAST "p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "alias ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias score"
+    FAIL "alias score"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:1:as"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT + HASTOPIC false friend + open_boot needle footgun note
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  RUNSNIP MATCH p
+  LET topic_got = RUNSNIP_TOPIC
+  LET topics_n = RUNSNIP_MATCH_N
+  LET slot_n = RUNSNIP_MATCH_I
+  LET sum_v = RUNSNIP_OK
+  CLEAR_ERR
+  LET stem_s = topic_got
+  PRINT "probe-mark"
+  CLEAR_ERR
+  SYS EQS stem_s "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS LAST "cap"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF topics_n == 4 THEN
+    LET score = score + 1
+  END
+  IF slot_n == 0 THEN
+    LET score = score + 1
+  END
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  HASTOPIC p
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  IF sum_n == 0 THEN
+    LET score = score + 1
+  END
+  # open_boot always bare OPEN — DEFAULT OPEN_NEEDLE ignored (lib footgun)
+  DEFAULT OPEN_NEEDLE = "p"
+  # only OPEN inside open_boot; re-probe with direct OPEN after DEFAULT
+  # (DEFAULT set-if-unset may not overwrite existing) — document via OPEN_N after bare
+  OPEN
+  IF OPEN_N == 8 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "runsnipmatch_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "RUNSNIPMATCH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = topics_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" topics_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET body = LAST
+CLEAR_ERR
+SYS STR miss
+LET row = LAST
+CLEAR_ERR
+SYS CAT "hit=" body " miss=" row " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_runsnipmatch_prove.v1 host=" host_s " role=" role_s " needle=" needle_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " find_n=" find_n " topics_n=" topics_n " topic=" topic_got " filt=" filt_s " slot=" slot_n " score=" score " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+IF hit == 0 THEN
+  IF known == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+NOTE "svc_runsnipmatch_prove_board: done"
+PASS
