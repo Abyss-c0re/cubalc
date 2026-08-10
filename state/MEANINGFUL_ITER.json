@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 736,
-  "version": "1.15.763-usability",
-  "item": "COUNTMATCHLIBS + CLI picklib/hasmatchlibs duals",
-  "item_id": 772,
-  "title": "COUNTMATCHLIBS count without bag \u00b7 cubalc.libmatch.v1 pick/count/has/need/nth/last",
-  "commit": "46ef870e3791d831aef8acbb17076a480aaf615b",
-  "summary": "In-lang count + shell filter duals for agent lib discovery without .cubalc. proof 1313 PASS.",
+  "iter": 737,
+  "version": "1.15.764-usability",
+  "item": "HASCOUNTMATCHLIBS/NEEDCOUNTMATCHLIBS min count gates",
+  "item_id": 773,
+  "title": "Soft/hard min match-count gates \u00b7 need \u2265n libs without COUNT+IF",
+  "commit": "b5a51acd1d2c92145728b0aac174543ba9040093",
+  "summary": "Thrash restored. HASCOUNTMATCHLIBS min needle; NEEDCOUNTMATCHLIBS fail. proof 1314 PASS.",
   "proofs": [
-    "1313_countmatchlibs PASS",
-    "1313_cli_libmatch PASS"
+    "1314_hascountmatchlibs PASS",
+    "1314_cli_hascountmatchlibs PASS"
   ],
-  "when": "2026-08-10T08:58:51Z",
+  "when": "2026-08-10T09:08:39Z",
   "agent": "meaningful_iter_10m",
-  "sha": "46ef870e3791d831aef8acbb17076a480aaf615b",
-  "note": "COUNTMATCHLIBS plate; cubalc picklib fat; needmatchlibs exit 1 on miss"
+  "sha": "b5a51acd1d2c92145728b0aac174543ba9040093",
+  "note": "restored thrash; NEEDCOUNTMATCHLIBS 2 fat; HASCOUNTMATCHLIBS 50 plate soft miss"
 }
