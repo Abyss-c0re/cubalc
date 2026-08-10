@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 753,
-  "version": "1.15.780-usability",
-  "item": "FORMSFOR + cubalc formsfor topic form-name bags",
-  "item_id": 789,
-  "title": "FORMSFOR [topic] \u00b7 cubalc formsfor|topicforms \u00b7 cubalc.formsfor.v1",
-  "commit": "b2a23f47ddcf6bde13cca5dc9747a8aa070ddf84",
-  "summary": "topic \u2192 form-name bag dual of TIPS prose; capability surface without LISTFORMS soup. proof 1330 PASS.",
+  "iter": 754,
+  "version": "1.15.781-usability",
+  "item": "RELATED + cubalc related form neighbor bags",
+  "item_id": 790,
+  "title": "RELATED|SEEALSO form \u00b7 cubalc related \u00b7 cubalc.related.v1",
+  "commit": "c5003de5e77c5576ad6aa9073bb8c6740683ca3c",
+  "summary": "form \u2192 related form-name bag dual of FORMSFOR; complements FORMHINT. proof 1331 PASS.",
   "proofs": [
-    "1330_formsfor PASS",
-    "1330_cli_formsfor PASS"
+    "1331_related PASS",
+    "1331_cli_related PASS"
   ],
-  "when": "2026-08-10T12:41:20Z",
+  "when": "2026-08-10T12:58:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b2a23f47ddcf6bde13cca5dc9747a8aa070ddf84",
-  "note": "formsfor cap; TOPICFORMS lib; surface fat alias"
+  "sha": "c5003de5e77c5576ad6aa9073bb8c6740683ca3c",
+  "note": "related HASFORM; seealso SETP; TIPS/FORMSFOR topic lex_next fix"
 }
