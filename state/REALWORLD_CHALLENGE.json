@@ -4122,6 +4122,6 @@
     "iter287: plate_tick DEFAULTS PLATE_SEED truncated at brace",
     "iter287: selftest still 455/610 CLI plate duals red (set\u2192SETF)"
   ],
-  "commit": "pending",
+  "commit": "17d99fd7",
   "ts": "2026-08-10T06:35:39Z"
 }
