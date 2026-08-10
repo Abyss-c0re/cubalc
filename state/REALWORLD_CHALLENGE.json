@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 292,
-  "program": "programs/realworld/svc_nthlib_roster_board.cubalc",
-  "theme": "NTHLIB/LASTLIB indexed lib stem roster",
-  "version": "1.15.760-usability",
+  "iter": 293,
+  "program": "programs/realworld/svc_countmatchlibs_board.cubalc",
+  "theme": "COUNTMATCHLIBS fleet filter inventory size",
+  "version": "1.15.763-usability",
   "pass": true,
-  "prior_note": "iter 291 HASMATCH+INCLUDE; this iter first realworld 1310 NTHLIB/LASTLIB",
+  "prior_note": "iter 292 NTHLIB roster; this iter first realworld 1313 COUNTMATCHLIBS/COUNTLIBS",
   "tests": [
     {
       "name": "list",
@@ -20,44 +20,38 @@
       "note": "boot"
     },
     {
-      "name": "first",
-      "cmd": "NTHLIB 0 plate_boot",
+      "name": "plate",
+      "cmd": "COUNTMATCHLIBS plate n=11",
       "ok": true,
-      "note": "first"
+      "note": "plate"
     },
     {
-      "name": "second",
-      "cmd": "NTHLIB 1 plate_both_save",
+      "name": "fat",
+      "cmd": "COUNTLIBS fat n=2",
       "ok": true,
-      "note": "second"
-    },
-    {
-      "name": "last",
-      "cmd": "LASTLIB plate_uniform + ENDLIB",
-      "ok": true,
-      "note": "last"
+      "note": "fat"
     },
     {
       "name": "soft",
-      "cmd": "OOR OR + ghost miss",
+      "cmd": "ghost OK=1 count 0 vs HASMATCH OK=0",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "family size floor",
+      "cmd": "min_count floor",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "INDEXLIB+ENDLIB",
+      "cmd": "COUNTLIBS==COUNTMATCHLIBS",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "LAST_N dual + CLEAR_ERR",
+      "cmd": "LAST count string vs MATCHLIBS bag",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; nthlib PASS; include_match broken"
+      "note": "cli duals red; countmatchlibs PASS"
     }
   ],
   "weaknesses": [
@@ -4178,6 +4172,38 @@
       "title": "WRITE VAL/META/STATUS omit trailing NL",
       "detail": "Reconfirmed STATUS last line and META without final \\n.",
       "repro": "od -c META.txt"
+    },
+    {
+      "id": "W514",
+      "severity": "med",
+      "area": "lang|countmatchlibs",
+      "title": "COUNTMATCHLIBS LAST is decimal count string not stem bag",
+      "detail": "COUNTMATCHLIBS plate \u2192 LAST=\"11\" LAST_N=11. SYS HASLINE LAST plate_boot fails. Agents expecting MATCHLIBS-style bag must not reuse COUNTMATCH LAST for stem inventory.",
+      "repro": "COUNTMATCHLIBS fat; SYS HASLINE LAST fat_boot \u2192 0; LAST is 2"
+    },
+    {
+      "id": "W515",
+      "severity": "med",
+      "area": "lang|countmatchlibs",
+      "title": "COUNTMATCHLIBS soft miss OK=1 while HASMATCHLIBS miss OK=0",
+      "detail": "Same filter family: COUNTMATCHLIBS ghost \u2192 OK=1 LAST_N=0; HASMATCHLIBS ghost \u2192 OK=0. Agents sharing one OK branch invert presence gates.",
+      "repro": "COUNTMATCHLIBS no_such \u2192 OK=1; HASMATCHLIBS no_such \u2192 OK=0"
+    },
+    {
+      "id": "W516",
+      "severity": "low",
+      "area": "lang|eqs",
+      "title": "SYS EQS does not take two bare vars (second must be literal/LAST)",
+      "detail": "SYS EQS last_s sum_n \u2192 unknown form sum_n. Must SYS STR sum_n; SYS EQS last_s LAST. Broke plate score until fixed.",
+      "repro": "SYS EQS a b with both vars \u2192 parse fail sum_n"
+    },
+    {
+      "id": "W517",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META/STATUS omit trailing NL",
+      "detail": "Reconfirmed STATUS last line and META without final \\n.",
+      "repro": "od -c META.txt"
     }
   ],
   "workarounds": [
@@ -4223,11 +4249,6 @@
     "use unique path needles for single counter rollups"
   ],
   "language_gaps": [
-    "path substring multi-match",
-    "SETFLAT_N/TOTAL/SRC/FROM specials",
-    "CAPFLAT/CLAMPFLAT pure-int leaf ceiling",
-    "CAPFLAT_N changed vs CAPFLAT_MATCH inventory",
-    "bare CAPFLAT max = all pure-int empty needle",
     "path substring multi-match scores",
     "SUMFLAT/TOTALFLAT pure-int nest rollup read-only",
     "LAST_N = sum not count; use SUMFLAT_N for leaf count",
@@ -4262,12 +4283,14 @@
     "NTHLIB index-then-needle vs PICKLIB needle-first (W509)",
     "NTHLIB_N family size vs LAST_N=1 (W510)",
     "INCLUDE MATCH not implemented 1.15.760 (W511)",
-    "CLEAR_ERR LAST=cleared after NTHLIB (W512)"
+    "CLEAR_ERR LAST=cleared after NTHLIB (W512)",
+    "COUNTMATCHLIBS/COUNTLIBS filter size without bag",
+    "LAST is count string not stem bag (W514)",
+    "soft miss OK=1 vs HASMATCH OK=0 (W515)",
+    "SYS EQS two-var parse fail (W516)",
+    "quoted PLATE for case-insensitive with plate loaded"
   ],
   "issues_faced": [
-    "iter271: test -f REALWORLD plate before git add (W421 lesson)",
-    "iter272: SETBYVAL board 9/9; SAVEPLATE after mutate for durability",
-    "iter272: soft/gate re-seed workers after prior set path rewrites",
     "iter273: DELBYVAL board 9/9; re-seed SETP before del after prior scrubs",
     "iter273: SAVEPLATE after mutate for durable agent/peer plates",
     "iter274: ALLEQFLAT board 9/9; unify via SETBYVAL leader\u2192worker",
@@ -4314,8 +4337,11 @@
     "iter291: 10/10 green after stem_s capture + quoted PLATE",
     "iter292: first realworld 1310 NTHLIB; 10/10 green first pass",
     "iter292: INCLUDE MATCH proof 1311 red \u2014 form not wired (W511)",
-    "iter292: NTH 0/1/last plate stems alpha-stable"
+    "iter292: NTH 0/1/last plate stems alpha-stable",
+    "iter293: first realworld 1313 COUNTMATCHLIBS; plate blocked on SYS EQS two-var",
+    "iter293: 10/10 green after STR shuttle; soft polarity vs HASMATCH documented",
+    "iter293: selftest CLI duals still red"
   ],
-  "commit": "64f4242b",
-  "ts": "2026-08-10T08:38:58Z"
+  "commit": "pending",
+  "ts": "2026-08-10T09:03:58Z"
 }
