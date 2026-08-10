@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 310,
-  "program": "programs/realworld/svc_discover_open_board.cubalc",
-  "theme": "DISCOVER fleet open plate match bag+first+next (post-onboard)",
-  "version": "1.15.802-usability",
+  "iter": 311,
+  "program": "programs/realworld/svc_open_playbook_board.cubalc",
+  "theme": "OPEN/OPENPLAY fleet DISCOVER+GUIDE playbook one-shot",
+  "version": "1.15.804-usability",
   "pass": true,
-  "prior_note": "iter 309 GUIDE MATCH; this iter first realworld 1352 DISCOVER + 1353 discover_boot open plate",
+  "prior_note": "iter 310 DISCOVER open plate; this iter first realworld 1354 OPEN DISCOVER bag + GUIDE first",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate dso",
+      "cmd": "seed agent plate opb",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "open",
-      "cmd": "DISCOVER all n=8 first=general",
+      "cmd": "OPEN all n=8 first=general + GUIDE",
       "ok": true,
       "note": "open"
     },
     {
       "name": "filter",
-      "cmd": "DISCOVER p n=4 first=cap + mesh",
+      "cmd": "OPEN p n=4 first=cap + mesh",
       "ok": true,
       "note": "filter"
     },
     {
       "name": "chain",
-      "cmd": "DISCOVER→GUIDE first→RUNSNIP plate",
+      "cmd": "OPEN→RUNSNIP first + OPENPLAY plate",
       "ok": true,
       "note": "chain"
     },
     {
       "name": "soft",
-      "cmd": "zzz miss + bare recover + forms",
+      "cmd": "zzz miss + bare recover",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "plate surface + DISCOVER lib",
+      "cmd": "plate surface + OPEN lib",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "EXPLORE lib + RELATED bag",
+      "cmd": "OPENPLAY plate/mesh + DISCOVER_FIRST mirror",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + DEFINED wrong knob",
+      "cmd": "PRINT clobber + OPEN_NEXT_N + HASTOPIC",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "540/708 discover PASS; CLI duals still red"
+      "note": "542/712 open PASS; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -4962,10 +4962,57 @@
       "title": "bare DISCOVER opens full catalog filter=* n=8 first=general",
       "detail": "Positive ops default: empty needle is all-topics open not soft miss. Soft miss only on unknown filter (zzz_nope).",
       "repro": "DISCOVER → n=8 first=general; DISCOVER zzz → OK=0"
+    },
+    {
+      "id": "W612",
+      "severity": "med",
+      "area": "lang|open",
+      "title": "OPEN_NEXT_N missing/0 — not dual of DISCOVER_NEXT_N",
+      "detail": "DISCOVER sets DISCOVER_NEXT_N (>=4) with next-step bag; OPEN embeds GUIDE instead and may leave OPEN_NEXT_N unset or 0. Agents chaining next steps must use GUIDE_* knobs or re-DISCOVER.",
+      "repro": "OPEN; PRINT OPEN_NEXT_N  # often 0; DISCOVER has DISCOVER_NEXT_N>=4"
+    },
+    {
+      "id": "W613",
+      "severity": "low",
+      "area": "lang|open",
+      "title": "OPEN first-of-substring p→cap same class as DISCOVER/MATCH",
+      "detail": "OPEN p → OPEN_FIRST=cap not plate; OPEN_N=4. Exact topic needle for plate playbook.",
+      "repro": "OPEN p → first cap"
+    },
+    {
+      "id": "W614",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers OPEN plate JSON in LAST",
+      "detail": "Capture body before PRINT; probe-mark loses cubalc.open.v1.",
+      "repro": "OPEN p; PRINT x; SYS HASI LAST cubalc.open.v1 → 0"
+    },
+    {
+      "id": "W615",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS/META omit trailing NL (reconfirmed opb)",
+      "detail": "STATUS last probe:4:pb without $; META no final NL.",
+      "repro": "cat -A OPB STATUS/META"
+    },
+    {
+      "id": "W616",
+      "severity": "low",
+      "area": "lang|open",
+      "title": "OPEN mirrors DISCOVER_FIRST/TOPIC_NAME and fills GUIDE_* knobs",
+      "detail": "Positive: one form yields OPEN_N bag + OPEN_FIRST + GUIDE_RELATED_N/TIPS/FORMS. OPENPLAY alias works. Chain RUNSNIP OPEN_FIRST ok.",
+      "repro": "OPEN p; PRINT GUIDE_RELATED_N OPEN_FORMS_N"
+    },
+    {
+      "id": "W617",
+      "severity": "med",
+      "area": "host|cli",
+      "title": "host command open collides with form OPEN dual naming",
+      "detail": "cubalc open works as CLI dual of OPEN form. Agents using shell open path vs in-lang OPEN must not confuse with filesystem open. Forms catalog lists OPEN|OPENPLAY.",
+      "repro": "cubalc open · OPEN in .cubalc"
     }
   ],
   "workarounds": [
-    "empty INCFLAT only when all-int inventory intended",
     "omit agent/schema from MERGEFLAT overlay peers",
     "re-SETP identity after merge if patch untrusted",
     "use MERGEFLAT not MERGEP for nested cfg leaf sync",
@@ -5016,15 +5063,13 @@
     {
       "id": "WA-DSO",
       "note": "use DISCOVER_N not DISCOVER_MATCH_N; DEFINED for missing knobs not SYS EQS; capture body before PRINT"
+    },
+    {
+      "id": "WA-OPB",
+      "note": "use GUIDE_* after OPEN not OPEN_NEXT; capture body before PRINT; exact needle for non-first topics"
     }
   ],
   "language_gaps": [
-    "ERRRUN nested snip stdout noise (W565)",
-    "MATCH substring on topic ids not glob (W567)",
-    "RELATEDTOPIC curated asymmetric graph (W569)",
-    "PRINT clobber before TOPICHINT LAST (W570)",
-    "HAS substring on topic bags (W571)",
-    "stale binary vs ERRGUIDE catalog (W574)",
     "FORMTOPICS bare name vs bag var collision (W576)",
     "CLI vs in-lang GUIDE count skew (W577)",
     "FORMGUIDE name/bag-var collision (W580)",
@@ -5058,10 +5103,15 @@
     "SYS EQS undefined special → unknown form hard-fail (W607)",
     "discover_boot INCLUDE agent_boot+DISCOVER (1353)",
     "chain GUIDE/RUNSNIP DISCOVER_FIRST",
-    "PRINT clobber discover plate (W609)"
+    "PRINT clobber discover plate (W609)",
+    "OPEN/OPENPLAY DISCOVER bag + GUIDE first one-shot (1354)",
+    "OPEN_N/FIRST/FILTER/TOPICS/FORMS_N knobs",
+    "OPEN_NEXT_N not dual of DISCOVER_NEXT_N (W612)",
+    "GUIDE_* filled by OPEN (W616)",
+    "PRINT clobber open plate (W614)",
+    "chain RUNSNIP OPEN_FIRST"
   ],
   "issues_faced": [
-    "iter298: LISTFORMS var lex_next fixed; INCLUDE stop-list filter needs quotes",
     "iter298: board 10/10 + host -C ok; selftest CLI duals still red 455/658",
     "iter299: FORMSFOR/TIPS var topic lex_next fixed + HOWTO_TOPIC dual",
     "iter299: SYS HAS substring false friend on form bags (W544)",
@@ -5090,9 +5140,10 @@
     "selftest rows[512] hid matchtopics/start/formguide until cap raised; board 10/10 green; CLI duals still unknown form set",
     "NTHTOPIC var index hard-fail unknown form; LASTTOPIC_N 0 after success; board 10/10 green",
     "RUNSNIP MATCH missing in binary while proof 1351 exists; GUIDE MATCH board 10/10+unknown green",
-    "probe SYS EQS DISCOVER_MATCH_N hard-failed unknown form; fixed via DEFINED; board 10/10"
+    "probe SYS EQS DISCOVER_MATCH_N hard-failed unknown form; fixed via DEFINED; board 10/10",
+    "binary missing at fire start — rebuilt; OPEN board 10/10 green; OPEN_NEXT_N gap vs DISCOVER"
   ],
-  "commit": "b9e501a9",
-  "ts": "2026-08-10T17:24:06Z",
-  "board_commit": "b9e501a9"
+  "commit": "pending",
+  "ts": "2026-08-10T17:56:51Z",
+  "board_commit": "pending"
 }

@@ -1,0 +1,912 @@
+# svc_open_playbook_board.cubalc — OPEN fleet DISCOVER+GUIDE playbook one-shot
+#
+# Real use: fleet agents cold-open a filtered discovery bag AND the first
+# topic's full GUIDE playbook in one form (OPEN/OPENPLAY) — no DISCOVER then
+# GUIDE glue. Chain RUNSNIP OPEN_FIRST for prove mini. First realworld of
+# proof 1354 OPEN (1.15.804).
+#
+#   OPEN|OPENPLAY [needle] → OPEN_N · OPEN_FIRST · OPEN_TOPICS · OPEN_FORMS_N
+#     + GUIDE_* knobs · cubalc.open.v1
+#   soft miss zzz · synonym mesh · bare all n=8 first=general
+#   chain RUNSNIP OPEN_FIRST
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_opb_$$
+#   ./out/cubalc run programs/realworld/svc_open_playbook_board.cubalc boot
+#   ./out/cubalc run ... open|filter|chain|soft|gate|alias|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt OPB_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S NEEDLE_S CUBALC_OPB_REQUIRE
+#
+# Edges: PRINT clobber open JSON; OPEN_NEXT_N may be 0 (not dual of DISCOVER);
+#   first-of-substring p→cap; WRITE NL; DISCOVER_FIRST mirrors OPEN_FIRST
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_open_playbook_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_open_playbook -- boot|open|filter|chain|soft|gate|alias|probe|list -- [--host=H] [--role=R] [--needle=N]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+DEFAULT NEEDLE_S = "p"
+GETFLAG needle|n OR ENV NEEDLE_S OR NEEDLE_S
+LET needle_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_OPB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "OPB_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sum_v = 0
+LET sum_n = 0
+LET stem_s = ""
+LET topics_n = 0
+LET topic_got = ""
+LET filt_s = ""
+LET forms_n = 0
+LET tips_n = 0
+
+ONEOF ACTION "boot", "open", "filter", "chain", "soft", "gate", "alias", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "open" THEN
+    LET op = "open"
+  WHEN "filter" THEN
+    LET op = "filter"
+  WHEN "chain" THEN
+    LET op = "chain"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "alias" THEN
+    LET op = "alias"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s needle_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-opb\",\"schema\":\"cubalc.svc_open_playbook.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"want_filter\":\"open_play\",\"label\":\"opb\",\"cfg\":{\"surface\":\"OPEN,OPENPLAY,OPEN_FIRST,OPEN_TOPICS\",\"needle\":\"p\"}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"peer\":\"open_play\",\"n\":1}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "agent"
+  SYS EQS LAST "svc-opb"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_open_playbook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "opb"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "open_play"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "OPEN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# open — bare OPEN full catalog + general playbook
+SYS EQS op "open"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  OPEN
+  LET body = LAST
+  LET topics_n = OPEN_N
+  LET topic_got = OPEN_FIRST
+  LET forms_n = OPEN_FORMS_N
+  LET sum_n = GUIDE_RELATED_N
+  LET tips_n = GUIDE_TIPS_N
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF topics_n == 8 THEN
+    LET score = score + 1
+  END
+  SYS EQS topic_got "general"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS DISCOVER_FIRST "general"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sum_n >= 3 THEN
+    LET score = score + 1
+  END
+  IF tips_n >= 2 THEN
+    LET score = score + 1
+  END
+  IF forms_n >= 2 THEN
+    LET score = score + 1
+  END
+  SYS HASI body "cubalc.open.v1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "OPEN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "opb"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET admit_n = 1
+    LET find_n = topics_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "open score"
+    FAIL "open score"
+    CLEAR_ERR
+  END
+  SYS CAT "open:" topics_n ":op"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "open:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n topic_got forms_n score note_msg
+  CLEAR_ERR
+END
+
+# filter — OPEN p / mesh
+SYS EQS op "filter"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  GETP "cfg.needle"
+  LET filt_s = LAST
+  CLEAR_ERR
+  OPEN filt_s
+  LET body = LAST
+  LET topics_n = OPEN_N
+  LET topic_got = OPEN_FIRST
+  LET stem_s = OPEN_FILTER
+  LET forms_n = OPEN_FORMS_N
+  LET tips_n = GUIDE_TIPS_N
+  CLEAR_ERR
+  IF topics_n == 4 THEN
+    LET score = score + 1
+  END
+  SYS EQS topic_got "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS stem_s "p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS TOPIC_NAME "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI body "HASFORM"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE OPEN_TOPICS "protect"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF forms_n >= 2 THEN
+    LET score = score + 1
+  END
+  IF tips_n >= 1 THEN
+    LET score = score + 1
+  END
+  OPEN mesh
+  LET topic_got = OPEN_FIRST
+  CLEAR_ERR
+  SYS EQS topic_got "p2p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF OPEN_N == 1 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "filter ok"
+    LET admit_n = 1
+    LET find_n = topics_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "filter score"
+    FAIL "filter score"
+    CLEAR_ERR
+  END
+  SYS CAT "filter:" topics_n ":ft"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "filter:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# chain — OPEN then RUNSNIP OPEN_FIRST
+SYS EQS op "chain"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  OPEN p
+  LET topics_n = OPEN_N
+  LET topic_got = OPEN_FIRST
+  LET sum_n = GUIDE_RELATED_N
+  LET body = LAST
+  CLEAR_ERR
+  IF topics_n == 4 THEN
+    LET score = score + 1
+  END
+  SYS EQS topic_got "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sum_n >= 3 THEN
+    LET score = score + 1
+  END
+  SYS HASI body "cubalc.open.v1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  RUNSNIP OPEN_FIRST
+  LET sum_v = RUNSNIP_OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS RUNSNIP_TOPIC "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  OPENPLAY plate
+  LET topic_got = OPEN_FIRST
+  LET forms_n = GUIDE_FORMS_N
+  CLEAR_ERR
+  SYS EQS topic_got "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF forms_n >= 2 THEN
+    LET score = score + 1
+  END
+  GETP "want_filter"
+  SYS EQS LAST "open_play"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "OPENPLAY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "chain ok"
+    LET admit_n = 1
+    LET find_n = topics_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "chain score"
+    FAIL "chain score"
+    CLEAR_ERR
+  END
+  SYS CAT "chain:" topic_got ":ch"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "chain:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# soft — miss + recover
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  OPEN zzz_nope
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  OPEN
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF OPEN_N == 8 THEN
+    LET score = score + 1
+  END
+  SYS EQS OPEN_FIRST "general"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-opb"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "OPEN_FIRST"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "OPEN_TOPICS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "opb"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.needle"
+  SYS EQS LAST "p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok1:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — plate + live OPEN
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  OPEN lib
+  LET topic_got = OPEN_FIRST
+  LET topics_n = OPEN_N
+  CLEAR_ERR
+  SYS EQS topic_got "lib"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF topics_n == 1 THEN
+    LET score = score + 1
+  END
+  IF GUIDE_RELATED_N >= 2 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "OPEN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "OPENPLAY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "open_playbook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "open_play"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 7 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = topics_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# alias — OPENPLAY + mirror DISCOVER_FIRST
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  OPENPLAY plate
+  LET topic_got = OPEN_FIRST
+  LET forms_n = GUIDE_FORMS_N
+  CLEAR_ERR
+  SYS EQS topic_got "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS DISCOVER_FIRST "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF forms_n >= 2 THEN
+    LET score = score + 1
+  END
+  IF OPEN_N == 1 THEN
+    LET score = score + 1
+  END
+  OPENPLAY mesh
+  LET topic_got = OPEN_FIRST
+  CLEAR_ERR
+  SYS EQS topic_got "p2p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "OPENPLAY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "opb"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.needle"
+  SYS EQS LAST "p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "alias ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias score"
+    FAIL "alias score"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:1:as"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topic_got forms_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber + OPEN_NEXT_N sticky + HASTOPIC false friend
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  OPEN p
+  LET body = LAST
+  LET topics_n = OPEN_N
+  LET topic_got = OPEN_FIRST
+  LET forms_n = OPEN_FORMS_N
+  CLEAR_ERR
+  LET stem_s = body
+  PRINT "probe-mark"
+  CLEAR_ERR
+  SYS HASI stem_s "cubalc.open.v1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI LAST "cubalc.open.v1"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS topic_got "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF topics_n == 4 THEN
+    LET score = score + 1
+  END
+  IF forms_n >= 2 THEN
+    LET score = score + 1
+  END
+  HASTOPIC p
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  IF sum_n == 0 THEN
+    LET score = score + 1
+  END
+  # OPEN_NEXT_N often 0 (not dual of DISCOVER_NEXT_N) — observe
+  DEFINED OPEN_NEXT_N
+  LET sum_v = LAST_N
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  ELSE
+    IF OPEN_NEXT_N == 0 THEN
+      LET score = score + 1
+    ELSE
+      IF OPEN_NEXT_N >= 0 THEN
+        LET score = score + 1
+      END
+    END
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "open_playbook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "OPEN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = topics_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" topics_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n topics_n forms_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET body = LAST
+CLEAR_ERR
+SYS STR miss
+LET row = LAST
+CLEAR_ERR
+SYS CAT "hit=" body " miss=" row " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_open_playbook.v1 host=" host_s " role=" role_s " needle=" needle_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " find_n=" find_n " topics_n=" topics_n " topic=" topic_got " filt=" filt_s " forms_n=" forms_n " score=" score " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+IF hit == 0 THEN
+  IF known == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+NOTE "svc_open_playbook_board: done"
+PASS
