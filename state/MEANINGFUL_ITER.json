@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 742,
-  "version": "1.15.769-usability",
-  "item": "CLI newestlib/oldestlib mtime duals",
-  "item_id": 778,
-  "title": "cubalc newestlib|oldestlib \u00b7 cubalc.libmatch.v1 stem+path+mtime",
-  "commit": "6739dddcc669813cb50cabdca62bd87390be7981",
-  "summary": "Thrash restored. Shell mtime filter duals of NEWESTLIB. proof 1319 PASS.",
+  "iter": 743,
+  "version": "1.15.770-usability",
+  "item": "SORTLIBS + CLI sortlibs mtime bag",
+  "item_id": 779,
+  "title": "SORTLIBS|LIBSORT needle [ASC|DESC] \u00b7 cubalc sortlibs \u00b7 mtime-ordered match bag",
+  "commit": "b74e18bb4f6f97dac44c4392c95ea88d07c2a831",
+  "summary": "mtime-ordered lib stems (newest-first); dual of alpha MATCHLIBS; CLI stems+mtimes. proof 1320 PASS.",
   "proofs": [
-    "1319_cli_newestlib_cmd PASS"
+    "1320_sortlibs PASS",
+    "1320_cli_sortlibs PASS"
   ],
-  "when": "2026-08-10T10:06:43Z",
+  "when": "2026-08-10T10:23:33Z",
   "agent": "meaningful_iter_10m",
-  "sha": "6739dddcc669813cb50cabdca62bd87390be7981",
-  "note": "restored thrash; cubalc newestlib fat\u2192fat_session; oldestlib fat\u2192fat_boot"
+  "sha": "b74e18bb4f6f97dac44c4392c95ea88d07c2a831",
+  "note": "SORTLIBS fat \u2192 fat_session\\nfat_boot; ASC oldest-first; head dual of NEWESTLIB"
 }
