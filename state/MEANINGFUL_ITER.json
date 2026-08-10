@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 829,
-  "version": "1.15.821-usability",
-  "item": "ARGMAP / ARGKV raw argv bag",
-  "item_id": 829,
-  "title": "ARGMAP · ARGKV · cubalc.argmap.v1 · FLAGMAP twin",
-  "commit": "ae2226db5a5920de6a0fcd2f8f926e8021bbf195",
-  "summary": "Raw argv i=value bag for LOOKUP by index; CLI dual argmap; proof 1369 PASS.",
+  "iter": 830,
+  "version": "1.15.822-usability",
+  "item": "NTHARG / GETARG raw argv peel",
+  "item_id": 830,
+  "title": "NTHARG · GETARG · OR fallback · NTHPOS twin for CUBALC_ARGn",
+  "commit": "299591f641cd775e436a7abb12f4deb90f58769b",
+  "summary": "Peel CUBALC_ARGi with hit/index side vars; flags kept unlike NTHPOS; proof 1370 PASS.",
   "proofs": [
-    "1369_argmap PASS",
-    "1369_cli_argmap PASS"
+    "1370_ntharg PASS",
+    "1370_cli_ntharg PASS"
   ],
-  "when": "2026-08-10T20:54:46Z",
+  "when": "2026-08-10T21:04:17Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "ae2226db5a5920de6a0fcd2f8f926e8021bbf195",
-  "note": "completes FLAGMAP/CLIINFO argv discovery surface"
+  "sha": "299591f641cd775e436a7abb12f4deb90f58769b",
+  "note": "restored thrash first · pairs ARGMAP/CLIINFO"
 }
