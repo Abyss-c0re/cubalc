@@ -820,6 +820,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 790. ~~**`RELATED` / `cubalc related`**~~ **done** (form → related form-name bag · cubalc.related.v1 · dual of FORMSFOR · complements FORMHINT).
 791. ~~**`SNIP` / `cubalc snip`**~~ **done** (topic → mini runnable source · cubalc.snip.v1 · triad with TIPS prose + FORMSFOR names).
 792. ~~**`TOPIC` / `cubalc topic`**~~ **done** (one plate tips+forms+snip · cubalc.topic.v1 · agents skip three discovery calls).
+793. ~~**`RUNSNIP` / `cubalc runsnip`**~~ **done** (execute curated SNIP mini one-shot · cubalc.runsnip.v1 · no temp file paste).
 
 ## Tick protocol
 

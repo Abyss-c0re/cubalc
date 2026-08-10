@@ -3248,6 +3248,8 @@ int main(int argc, char **argv) {
       {"cli_snip", "programs/proof/1332_cli_snip.sh", "cubalc snip plate + topics + forms"},
       {"topic", "programs/proof/1333_topic.cubalc", "TOPIC/TOPICCARD triad plate tips+forms+snip"},
       {"cli_topic", "programs/proof/1333_cli_topic.sh", "cubalc topic plate + forms"},
+      {"runsnip", "programs/proof/1334_runsnip.cubalc", "RUNSNIP/SNIPRUN execute topic mini"},
+      {"cli_runsnip", "programs/proof/1334_cli_runsnip.sh", "cubalc runsnip plate + topics"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3884,6 +3886,8 @@ int main(int argc, char **argv) {
       {"SEEALSO", "flow", "SEEALSO alias of RELATED"},
       {"SNIP", "flow", "SNIP|SNIPPET [topic] mini runnable source · cubalc snip dual"},
       {"SNIPPET", "flow", "SNIPPET alias of SNIP"},
+      {"RUNSNIP", "flow", "RUNSNIP|SNIPRUN [topic] execute curated SNIP mini · cubalc runsnip dual"},
+      {"SNIPRUN", "flow", "SNIPRUN alias of RUNSNIP"},
       {"TOPIC", "flow", "TOPIC|TOPICCARD [topic] tips+forms+snip one plate · cubalc topic dual"},
       {"TOPICCARD", "flow", "TOPICCARD alias of TOPIC"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
@@ -5057,7 +5061,7 @@ int main(int argc, char **argv) {
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
            "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc doctor · cubalc topic · cubalc tips · cubalc snip · cubalc init\n");
+           "Commands: cubalc doctor · cubalc topic · cubalc runsnip · cubalc snip · cubalc init\n");
     return 0;
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
@@ -5636,6 +5640,72 @@ int main(int argc, char **argv) {
            "\"tips\":[%s],\"forms\":[%s],\"snip\":\"%s\"}\n",
            tup, nt, nf, lines, CUBALC_LANG_VERSION, tips_j, forms_j, snip_j);
     return 0;
+  }
+  if (strcmp(cmd, "runsnip") == 0 || strcmp(cmd, "sniprun") == 0 ||
+      strcmp(cmd, "snip-run") == 0 || strcmp(cmd, "run-snip") == 0 ||
+      strcmp(cmd, "exec-snip") == 0 || strcmp(cmd, "play-snip") == 0) {
+    /* Usability: execute curated SNIP mini without temp files (dual of RUNSNIP).
+     *   cubalc runsnip · cubalc runsnip cap · cubalc sniprun plate
+     * Schema cubalc.runsnip.v1 · nested run plate fields + topic. */
+    char src[480];
+    cubalc_run_result rr;
+    const char *topic = (argc > 2 && argv[2][0]) ? argv[2] : "general";
+    char tup[32];
+    size_t k;
+    int ok;
+    for (k = 0; topic[k] && k + 1 < sizeof tup; k++)
+      tup[k] = (char)((topic[k] >= 'A' && topic[k] <= 'Z')
+                          ? topic[k] - 'A' + 'a' : topic[k]);
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "help") || !strcmp(tup, "all") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    /* Prefer in-lang RUNSNIP so catalog stays single-source with language. */
+    if (strchr(tup, '"') || strchr(tup, ' ') || strchr(tup, '\n')) {
+      printf("{\"schema\":\"cubalc.runsnip.v1\",\"ok\":false,\"cmd\":\"runsnip\","
+             "\"err\":\"bad topic\",\"version\":\"%s\"}\n", CUBALC_LANG_VERSION);
+      return 2;
+    }
+    snprintf(src, sizeof src,
+             "RUNSNIP %s\n"
+             "PRINT LAST\n"
+             "IF OK == 0 THEN\n"
+             "  FAIL \"runsnip nested\"\n"
+             "END\n"
+             "PASS\n",
+             tup);
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, strlen(src), "<cli-runsnip>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    {
+      char lastj[400];
+      size_t i, o = 0;
+      const char *h = rr.last_print[0] ? rr.last_print : (rr.last_err[0] ? rr.last_err : "");
+      for (i = 0; h[i] && o + 2 < sizeof lastj; i++) {
+        char c = h[i];
+        if (c == '"' || c == '\\') { lastj[o++] = '\\'; lastj[o++] = c; }
+        else if (c == '\n') { lastj[o++] = '\\'; lastj[o++] = 'n'; }
+        else if ((unsigned char)c < 32) lastj[o++] = ' ';
+        else lastj[o++] = c;
+      }
+      lastj[o] = 0;
+      printf("{\"schema\":\"cubalc.runsnip.v1\",\"ok\":%s,\"cmd\":\"runsnip\","
+             "\"topic\":\"%s\",\"asserts_ok\":%d,\"asserts_fail\":%d,\"stmts\":%d,"
+             "\"last\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"execute curated SNIP mini · dual of in-lang RUNSNIP · no temp file\","
+             "\"topics\":[\"general\",\"cap\",\"fat\",\"plate\",\"p2p\",\"run\",\"lib\",\"protect\"]}\n",
+             ok ? "true" : "false", tup, rr.asserts_ok, rr.asserts_fail, rr.stmts,
+             lastj, CUBALC_LANG_VERSION);
+    }
+    return ok ? 0 : 1;
   }
   if (strcmp(cmd, "init") == 0 || strcmp(cmd, "new") == 0 ||
       strcmp(cmd, "scaffold") == 0 || strcmp(cmd, "create") == 0) {
@@ -14968,6 +15038,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"SEEALSO", "flow", "SEEALSO alias of RELATED"},
       {"SNIP", "flow", "SNIP|SNIPPET [topic] mini runnable source · cubalc snip dual"},
       {"SNIPPET", "flow", "SNIPPET alias of SNIP"},
+      {"RUNSNIP", "flow", "RUNSNIP|SNIPRUN [topic] execute curated SNIP mini · cubalc runsnip dual"},
+      {"SNIPRUN", "flow", "SNIPRUN alias of RUNSNIP"},
       {"TOPIC", "flow", "TOPIC|TOPICCARD [topic] tips+forms+snip one plate · cubalc topic dual"},
       {"TOPICCARD", "flow", "TOPICCARD alias of TOPIC"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
@@ -16432,12 +16504,13 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    related|seealso <form>     related form-name bag (cubalc.related.v1)\n"
       "    snip|snippet [topic]       mini runnable source JSON (cubalc.snip.v1)\n"
       "    topic|topiccard [topic]    tips+forms+snip one plate (cubalc.topic.v1)\n"
+      "    runsnip|sniprun [topic]    execute curated SNIP mini (cubalc.runsnip.v1)\n"
       "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|formsfor|related|snip|topic|countforms|hasform|hasforms  duals\n"
+      "    picklib|listforms|formhint|formsfor|related|snip|topic|runsnip|countforms|hasform  duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
@@ -16467,8 +16540,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|FORMSFOR|RELATED|SNIP|TOPIC|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|LISTFORMS|FORMHINT|FORMSFOR|RELATED|SNIP|TOPIC|COUNTFORMS|HASFORM|HASFORMS|NEEDFORMS|MATCHLIBS|PICKLIB\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
+      "    LISTLIBS|LISTFORMS|FORMHINT|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|COUNTFORMS|HASFORM|HASFORMS|NEEDFORMS|MATCHLIBS\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"

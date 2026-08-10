@@ -2732,6 +2732,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"SEEALSO", "SEEALSO alias of RELATED"},
       {"SNIP", "SNIP|SNIPPET [topic] — curated mini runnable source → LAST · dual of cubalc snip"},
       {"SNIPPET", "SNIPPET alias of SNIP"},
+      {"RUNSNIP", "RUNSNIP|SNIPRUN [topic] — execute curated SNIP mini program one-shot · dual of cubalc runsnip"},
+      {"SNIPRUN", "SNIPRUN alias of RUNSNIP"},
       {"TOPIC", "TOPIC|TOPICCARD [topic] — one plate tips+forms+snip · dual of cubalc topic"},
       {"TOPICCARD", "TOPICCARD alias of TOPIC"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
@@ -39492,6 +39494,182 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->res)
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", src);
+    bump(vm);
+    return 1;
+  }
+
+  /* RUNSNIP|SNIPRUN [topic] — execute curated SNIP mini program one-shot.
+   * Usability: SNIP returns pasteable source; RUNSNIP runs it without temp files.
+   * Nested cubalc_run_source · LAST from nested print · OK from nested plate.
+   * Topics match SNIP: general|cap|fat|plate|p2p|run|lib|protect. */
+  if (kw(&L->cur,"RUNSNIP")||kw(&L->cur,"SNIPRUN")||kw(&L->cur,"RUN_SNIP")||
+      kw(&L->cur,"EXEC_SNIP")||kw(&L->cur,"APPLY_SNIP")||kw(&L->cur,"DOSNIP")||
+      kw(&L->cur,"RUNMINI")||kw(&L->cur,"PLAYSNIP")){
+    static const struct { const char *topic; const char *src; } snips[] = {
+      {"general",
+       "VERSION\n"
+       "STATUS\n"
+       "PRINT \"version\" VERSION\n"
+       "PASS\n"},
+      {"cap",
+       "HASFORM SORTLIBS\n"
+       "ASSERT LAST_N == 1 \"need SORTLIBS form\"\n"
+       "FORMHINT SORTLIBS\n"
+       "PRINT LAST\n"
+       "RELATED HASFORM\n"
+       "PRINT RELATED\n"
+       "PASS\n"},
+      {"fat",
+       "VARROOM\n"
+       "PRINT \"free_slots\" LAST_N\n"
+       "HASVARROOM 8\n"
+       "ASSERT LAST_N == 1\n"
+       "REMAIN_MS\n"
+       "PRINT \"remain_ms\" LAST_N\n"
+       "PASS\n"},
+      {"plate",
+       "LET PLATE = \"{\\\"n\\\":0,\\\"ok\\\":true}\"\n"
+       "SETP \"status\" \"ready\"\n"
+       "INCP \"n\"\n"
+       "NEEDP \"n\" \"ok\" \"status\"\n"
+       "PRETTYP\n"
+       "PRINT LAST\n"
+       "PASS\n"},
+      {"p2p",
+       "NOTE \"set CUBALC_SMX_KEY before mesh\"\n"
+       "TIPS p2p\n"
+       "PRINT LAST\n"
+       "FORMSFOR p2p\n"
+       "PRINT LAST\n"
+       "PASS\n"},
+      {"run",
+       "EXPECT 1 == 1\n"
+       "WHY\n"
+       "PRINT WHY_HINT\n"
+       "CLEAR_ERR\n"
+       "PASS \"run probe ok\"\n"},
+      {"lib",
+       "LISTLIBS\n"
+       "PRINT \"libs\" LAST_N\n"
+       "HASLIB agent_boot\n"
+       "ASSERT LAST_N == 1\n"
+       "RECIPE agent_boot\n"
+       "PRINT LAST\n"
+       "PASS\n"},
+      {"protect",
+       "HOLD_FLASH\n"
+       "PRINT \"hold_flash\" LAST_N\n"
+       "VERSION\n"
+       "STATUS\n"
+       "TIPS protect\n"
+       "PRINT LAST\n"
+       "PASS\n"},
+    };
+    char topic[32], tup[32];
+    size_t k;
+    int i, nall = (int)(sizeof snips / sizeof snips[0]);
+    const char *src = NULL;
+    cubalc_run_result rr;
+    int ok;
+    lex_next(L);
+    topic[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(topic, sizeof topic, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0]) {
+        snprintf(topic, sizeof topic, "%s", vv->sval);
+        lex_next(L);
+      } else if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(topic, sizeof topic, "%s", vm->last_str);
+        lex_next(L);
+      } else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+                   kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
+                   kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
+        snprintf(topic, sizeof topic, "%s", L->cur.text);
+        lex_next(L);
+      }
+    }
+    if (!topic[0])
+      snprintf(topic, sizeof topic, "%s", "general");
+    for (k = 0; topic[k] && k + 1 < sizeof tup; k++) {
+      char c = topic[k];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      tup[k] = c;
+    }
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    for (i = 0; i < nall; i++) {
+      if (!strcmp(snips[i].topic, tup)) { src = snips[i].src; break; }
+    }
+    var_set_str(vm, "RUNSNIP_TOPIC", tup);
+    var_set_str(vm, "SNIPRUN_TOPIC", tup);
+    if (!src) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "RUNSNIP_OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "RUNSNIP: unknown topic — RUNSNIP general|cap|fat|plate|p2p|run|lib|protect");
+      var_set_str(vm, "ERR",
+                  "RUNSNIP: unknown topic — RUNSNIP general|cap|fat|plate|p2p|run|lib|protect");
+      bump(vm);
+      return 1;
+    }
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, strlen(src), "<runsnip>", &rr, vm->trace);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    var_set_str(vm, "RUNSNIP_SRC", src);
+    var_set_num(vm, "RUNSNIP_OK", ok);
+    var_set_num(vm, "RUNSNIP_ASSERTS_OK", rr.asserts_ok);
+    var_set_num(vm, "RUNSNIP_ASSERTS_FAIL", rr.asserts_fail);
+    var_set_num(vm, "RUNSNIP_STMTS", rr.stmts);
+    if (rr.last_print[0]) {
+      var_set_str(vm, "LAST", rr.last_print);
+      var_set_str(vm, "RUNSNIP_LAST", rr.last_print);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", rr.last_print);
+      vm->last_n = (long)strlen(rr.last_print);
+    } else if (rr.last_err[0]) {
+      var_set_str(vm, "LAST", rr.last_err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", rr.last_err);
+      vm->last_n = (long)strlen(rr.last_err);
+    } else if (rr.err[0]) {
+      var_set_str(vm, "LAST", rr.err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", rr.err);
+      vm->last_n = (long)strlen(rr.err);
+    } else {
+      var_set_str(vm, "LAST", ok ? "runsnip ok" : "runsnip fail");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", ok ? "runsnip ok" : "runsnip fail");
+      vm->last_n = ok ? 10 : 12;
+    }
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", ok);
+    if (!ok) {
+      const char *em = rr.last_err[0] ? rr.last_err : (rr.err[0] ? rr.err : "RUNSNIP nested fail");
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->res) {
+      vm->res->asserts_ok += rr.asserts_ok;
+      /* do not accumulate nested asserts_fail into outer hard fail count unless soft */
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", vm->last_str);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# runsnip topic=%s ok=%d asserts_ok=%d fail=%d\n",
+              tup, ok, rr.asserts_ok, rr.asserts_fail);
     bump(vm);
     return 1;
   }
