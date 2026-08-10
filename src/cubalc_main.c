@@ -2353,7 +2353,7 @@ int main(int argc, char **argv) {
     char dir[512], protect_path[640], key_preview[16];
     int modular = 0, smx_key = 0, protect_plate = 0, bin_ok = 1;
     int libs_n = 0, lib_agent_boot = 0, lib_plate_session = 0, lib_plate_uniform = 0;
-    int lib_hold_seed = 0, cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
+    int lib_hold_seed = 0, lib_var_guard = 0, cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
     int include_path_set = 0, preload_set = 0;
     const char *hx = getenv("CUBALC_SMX_KEY");
     const char *kf = getenv("CUBALC_SMX_KEY_FILE");
@@ -2379,6 +2379,7 @@ int main(int argc, char **argv) {
     lib_plate_session = (access("programs/lib/plate_session.cubalc", R_OK) == 0);
     lib_plate_uniform = (access("programs/lib/plate_uniform.cubalc", R_OK) == 0);
     lib_hold_seed = (access("programs/lib/hold_seed.cubalc", R_OK) == 0);
+    lib_var_guard = (access("programs/lib/var_guard.cubalc", R_OK) == 0);
     cookbook_ok = (access("docs/COOKBOOK.md", R_OK) == 0);
     for_agents_ok = (access("docs/FOR_AGENTS.md", R_OK) == 0);
     if (libdir_ok) {
@@ -2409,11 +2410,12 @@ int main(int argc, char **argv) {
              "\"libs_dir\":\"%s\",\"libs_dir_ok\":%s,\"libs_n\":%d,"
              "\"lib_agent_boot\":%s,\"lib_plate_session\":%s,"
              "\"lib_plate_uniform\":%s,\"lib_hold_seed\":%s,"
+             "\"lib_var_guard\":%s,"
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"vars_max\":%d,\"varroom_forms\":true,"
              "\"var_budget\":\"STATUS/VARS/run plate vars_n|max|full · "
-             "VARROOM/HASVARROOM/NEEDVARROOM\","
+             "VARROOM/HASVARROOM/NEEDVARROOM · INCLUDE var_guard\","
              "\"nest_check\":\"%s\","
              "\"hints\":["
              "\"HOLD_FLASH device/mesh-join only · default 1 · not language PLUG\","
@@ -2423,13 +2425,13 @@ int main(int argc, char **argv) {
              "\"cubalc libs · cubalc cat plate_uniform · INCLUDE plate_uniform\","
              "\"CUBALC_INCLUDE_PATH + cubalc which name · run -I / NEEDINCLUDE\","
              "\"cubalc plate uniform agent.json role — nest value consistency\","
-             "\"VARROOM/HASVARROOM/NEEDVARROOM · fat boards (vars_max=%d)\","
+             "\"VARROOM/HASVARROOM/NEEDVARROOM · INCLUDE var_guard (vars_max=%d)\","
              "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
              "\"docs/HOLD_FLASH.md\",\"docs/CORE_PROTECT.md\",\"docs/FOR_AGENTS.md\","
              "\"programs/hello_cube.cubalc\",\"programs/p2p/mesh_local.cubalc\","
-             "\"programs/lib/plate_uniform.cubalc\"]"
+             "\"programs/lib/plate_uniform.cubalc\",\"programs/lib/var_guard.cubalc\"]"
              "}\n",
              ok ? "true" : "false",
              CUBALC_LANG_VERSION, CUBALC_LANG_PARADIGM, CUBALC_CREED,
@@ -2448,6 +2450,7 @@ int main(int argc, char **argv) {
              lib_plate_session ? "true" : "false",
              lib_plate_uniform ? "true" : "false",
              lib_hold_seed ? "true" : "false",
+             lib_var_guard ? "true" : "false",
              include_path_set ? "true" : "false",
              preload_set ? "true" : "false",
              cookbook_ok ? "true" : "false",
@@ -3017,6 +3020,8 @@ int main(int argc, char **argv) {
       {"hasvarroom", "programs/proof/1277_hasvarroom.cubalc", "HASVARROOM soft free-slot probe"},
       {"cli_hasvarroom", "programs/proof/1277_cli_hasvarroom.sh", "HASVARROOM soft miss + forms"},
       {"cli_doctor_vars_max", "programs/proof/1278_cli_doctor_vars_max.sh", "cubalc doctor vars_max/var budget plate"},
+      {"var_guard", "programs/proof/1279_var_guard.cubalc", "INCLUDE var_guard NEED_VARROOM free-slot gate"},
+      {"cli_var_guard", "programs/proof/1279_cli_var_guard.sh", "var_guard lib + doctor lib_var_guard"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},

@@ -1,0 +1,18 @@
+# INCLUDE var_guard — fail-fast if fewer than NEED_VARROOM free var slots
+# Usability: fat agent boards (nest specials + LET) guard room without retyping
+#   DEFAULT NEED_VARROOM = 48
+#   INCLUDE var_guard
+#   # NEEDVARROOM applied · VARROOM/VARS_N/VARS_MAX side vars set
+#   SETP "freq.error" 0
+# Soft dual (no fatal): DEFAULT VAR_GUARD_SOFT = 1 then INCLUDE
+# HOLD_FLASH not required (same policy as agent_boot).
+
+DEFAULT NEED_VARROOM = 32
+DEFAULT VAR_GUARD_SOFT = 0
+
+IF VAR_GUARD_SOFT
+  HASVARROOM NEED_VARROOM
+  # soft miss leaves OK=0 + LAST_ERR · agent CLEAR_ERR or lean LETs
+ELSE
+  NEEDVARROOM NEED_VARROOM
+END

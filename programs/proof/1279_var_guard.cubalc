@@ -1,0 +1,25 @@
+# INCLUDE var_guard — free-slot gate for fat agent boards
+
+DEFAULT NEED_VARROOM = 20
+INCLUDE var_guard
+ASSERT OK == 1
+ASSERT VARROOM >= 20
+ASSERT VARS_MAX >= 256
+
+# soft path: absurd need soft-misses without fatal
+# DEFAULT is set-if-unset — use LET to override for second guard
+LET NEED_VARROOM = 9999
+LET VAR_GUARD_SOFT = 1
+INCLUDE var_guard
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+# hard path again with modest need
+LET NEED_VARROOM = 10
+LET VAR_GUARD_SOFT = 0
+INCLUDE var_guard
+ASSERT OK == 1
+
+PASS
+PRINT "1279_var_guard: PASS"
