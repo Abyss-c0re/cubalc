@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 826,
-  "version": "1.15.818-usability",
-  "item": "CLI hasflagall/needflags · hasargall/needargs",
-  "item_id": 826,
-  "title": "flaggate/arggate CLI duals · optional -- live argv",
-  "commit": "5eef5da6e4bd79cc1a95d454e1a40750505137c0",
-  "summary": "Host duals of HASFLAGALL/NEEDFLAGS and HASARGALL/NEEDARGS; plates flaggate/arggate.v1; proof 1366 PASS.",
+  "iter": 827,
+  "version": "1.15.819-usability",
+  "item": "cli_guard NEED_FLAGS + NEED_REST_N",
+  "item_id": 827,
+  "title": "cli_guard · form_guard twin for CLI flags+restargs",
+  "commit": "7e482baf416f044f6aec0035ba76ac56d289022c",
+  "summary": "DEFAULT NEED_FLAGS/NEED_REST_N soft|hard CLI contract INCLUDE; doctor lib_cli_guard; proof 1367 PASS.",
   "proofs": [
-    "1366_cli_flaggate PASS",
-    "1366_cli_arggate PASS"
+    "1367_cli_guard PASS",
+    "1367_cli_cli_guard PASS"
   ],
-  "when": "2026-08-10T20:24:08Z",
+  "when": "2026-08-10T20:33:57Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "5eef5da6e4bd79cc1a95d454e1a40750505137c0",
-  "note": "hasforms twin for multi flag/arg contracts"
+  "sha": "7e482baf416f044f6aec0035ba76ac56d289022c",
+  "note": "pairs with cli_boot · NEEDFLAGS/HASRESTARGS without N× glue"
 }
