@@ -762,6 +762,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 732. ~~**run plate `include_stems` / `include_stems_n`**~~ **done** (INCLUDESTEMS dual on every run plate · short names vs preload[] without path peel).
 733. ~~**`CUBALC_MAX_VARS` 256 + `VARS_MAX`/`VARS_FULL` + STATUS vars_n**~~ **done** (fat agent boards keep specials · fix 64-slot var_slot bug · sticky full err · proof 1274).
 734. ~~**run plate `vars_n` / `vars_max` / `vars_full`**~~ **done** (STATUS pressure dual on every run plate · agents see fat-board budget without STATUS form).
+735. ~~**`VARROOM` / `NEEDVARROOM`**~~ **done** (free var slots → LAST_N · fail-fast room gate · fat nest specials guard without VARS dump).
 
 ## Tick protocol
 

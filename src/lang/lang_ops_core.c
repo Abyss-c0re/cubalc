@@ -36599,6 +36599,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
       {"VARS", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
+      {"VARROOM", "VARROOM|VARSLEFT — free var slots → LAST_N · dual of VARS_N/MAX"},
+      {"NEEDVARROOM", "NEEDVARROOM n — fail-fast if fewer than n free var slots"},
       {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time/vars_n|max|full)"},
       {"WHY", "WHY|EXPLAIN — cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED + hint"},
       {"EXPLAIN", "EXPLAIN alias of WHY"},
@@ -37570,6 +37572,75 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,"%s",line);
     bump(vm); return 1;
   }
+  /* VARROOM / VARSLEFT — free var-table slots → LAST_N.
+   * NEEDVARROOM n — fail-fast if fewer than n free (fat nest specials guard).
+   * Usability: IF before SETP/ALLEQFLAT without VARS dump or plate parse. */
+  if (kw(&L->cur, "VARROOM") || kw(&L->cur, "VARSLEFT") ||
+      kw(&L->cur, "VARS_ROOM") || kw(&L->cur, "FREEVARS") ||
+      kw(&L->cur, "NEEDVARROOM") || kw(&L->cur, "REQUIREVARROOM") ||
+      kw(&L->cur, "NEED_VARROOM") || kw(&L->cur, "REQUIRE_VARS")) {
+    int hard = kw(&L->cur, "NEEDVARROOM") || kw(&L->cur, "REQUIREVARROOM") ||
+               kw(&L->cur, "NEED_VARROOM") || kw(&L->cur, "REQUIRE_VARS");
+    int aln = L->cur.line;
+    long need = 1;
+    long room;
+    lex_next(L);
+    if (hard) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+        need = parse_expr(vm, L);
+      if (need < 0) need = 0;
+    }
+    room = (long)CUBALC_MAX_VARS - (long)vm->n_vars;
+    if (room < 0) room = 0;
+    var_set_num(vm, "VARS_N", (long)vm->n_vars);
+    var_set_num(vm, "VARS_MAX", (long)CUBALC_MAX_VARS);
+    var_set_num(vm, "VARS_FULL", vm->vars_full ? 1L : 0L);
+    var_set_num(vm, "VARROOM", room);
+    var_set_num(vm, "VARS_LEFT", room);
+    if (hard) {
+      if (room >= need && !vm->vars_full) {
+        var_set_num(vm, "LAST_N", room);
+        vm->last_n = room;
+        {
+          char nb[24];
+          snprintf(nb, sizeof nb, "%ld", room);
+          var_set_str(vm, "LAST", nb);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+        }
+        var_set_num(vm, "OK", 1);
+        if (vm->res) vm->res->asserts_ok++;
+        bump(vm);
+        return 1;
+      }
+      {
+        char msg[200];
+        snprintf(msg, sizeof msg,
+                 "NEEDVARROOM line %d: need %ld free have %ld (used %d/%d%s) — "
+                 "lean LETs or raise CUBALC_MAX_VARS",
+                 aln, need, room, vm->n_vars, CUBALC_MAX_VARS,
+                 vm->vars_full ? ",full" : "");
+        var_set_str(vm, "ERR", msg);
+        var_set_str(vm, "LAST_ERR", msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+    }
+    /* soft VARROOM */
+    var_set_num(vm, "LAST_N", room);
+    vm->last_n = room;
+    {
+      char nb[24];
+      snprintf(nb, sizeof nb, "%ld", room);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* VARS / LOCALS — dump all program variables as one JSON line for agents.
    * Complements PRINT_JSON (named/snapshot): full LET/SYS table without guessing names. */
   if (kw(&L->cur,"VARS")||kw(&L->cur,"LOCALS")||kw(&L->cur,"SHOW_VARS")||

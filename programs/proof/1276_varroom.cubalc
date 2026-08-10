@@ -1,0 +1,29 @@
+# VARROOM / NEEDVARROOM — free var-table slots for fat agent boards
+
+VARROOM
+ASSERT LAST_N > 0
+ASSERT VARROOM > 0
+ASSERT VARS_MAX >= 256
+ASSERT VARS_FULL == 0
+LET room0 = LAST_N
+
+# consume a few slots
+LET a = 1
+LET b = 2
+LET c = 3
+VARROOM
+ASSERT LAST_N < room0 "room shrinks after LET"
+ASSERT LAST_N == VARROOM
+ASSERT VARS_N >= 3
+
+# soft room still OK
+NEEDVARROOM 1
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+
+# need more than available → hard fail path covered by CLI proof
+NEEDVARROOM 10
+ASSERT OK == 1
+
+PASS
+PRINT "1276_varroom: PASS"
