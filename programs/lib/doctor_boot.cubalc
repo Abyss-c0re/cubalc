@@ -1,0 +1,12 @@
+# INCLUDE doctor_boot — agent preamble + hard install gate one-shot
+# Usability: agent_boot (REQUIRE VERSION + VERSION) + NEEDDOCTOR hard gate
+#   INCLUDE doctor_boot
+#   # DOCTOR plate set · DOCTOR_OK == 1 or fail-fast
+# Soft twin: DOCTOR alone (no fail). Hard twin: NEEDDOCTOR / REQUIREDOCTOR.
+#
+# Scaffold: cubalc init demo --doctor
+# CLI dual: cubalc needdoctor · run -D
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+INCLUDE agent_boot
+NEEDDOCTOR

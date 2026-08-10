@@ -1,0 +1,19 @@
+# INCLUDE doctor_boot — agent_boot + NEEDDOCTOR hard install gate
+
+INCLUDE doctor_boot
+ASSERT OK == 1
+ASSERT DOCTOR_OK == 1
+ASSERT DOCTOR_LIBS_N >= 1
+ASSERT DOCTOR_AGENT_BOOT == 1
+SYS HASI "cubalc.doctor.v1"
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST_N >= 1
+
+# still chainable after hard gate
+INCLUDE open_boot
+ASSERT OK == 1
+ASSERT OPEN_N >= 1
+
+PASS
+PRINT "1358_doctor_boot: PASS"

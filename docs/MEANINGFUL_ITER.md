@@ -844,6 +844,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 814. ~~**`open_boot` + `cubalc init --open`**~~ **done** (INCLUDE agent_boot+OPEN · init scaffold n=10 · doctor lib_open_boot).
 815. ~~**`DOCTOR` in-lang + dual CLI**~~ **done** (install readiness plate from programs · DOCTOR_OK/LIBS_N · dual of cubalc doctor).
 816. ~~**`NEEDDOCTOR` / CLI `needdoctor` / run `-D`**~~ **done** (hard install gate twin of DOCTOR · fail-fast preflight · CUBALC_REQUIRE_DOCTOR).
+817. ~~**`doctor_boot` + `cubalc init --doctor`**~~ **done** (INCLUDE agent_boot+NEEDDOCTOR · init scaffold n=11 · doctor lib_doctor_boot).
 
 ## Tick protocol
 
