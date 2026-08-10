@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 308,
-  "program": "programs/realworld/svc_nthtopic_roster_board.cubalc",
-  "theme": "NTHTOPIC/LASTTOPIC fleet topic roster index + COUNTMATCHTOPICS gate",
-  "version": "1.15.799-usability",
+  "iter": 309,
+  "program": "programs/realworld/svc_guidematch_route_board.cubalc",
+  "theme": "GUIDE MATCH/NTH/LASTMATCH fleet playbook cold-route (no glue)",
+  "version": "1.15.800-usability",
   "pass": true,
-  "prior_note": "iter 307 MATCHTOPICS/PICKTOPIC; this iter first realworld 1349 NTHTOPIC/LASTTOPIC + 1348 HASMATCHTOPICS/COUNTMATCHTOPICS",
+  "prior_note": "iter 308 NTHTOPIC roster; this iter first realworld 1350 GUIDE MATCH one-shot playbook route",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate ntr",
+      "cmd": "seed agent plate gmr",
       "ok": true,
       "note": "boot"
     },
     {
+      "name": "match",
+      "cmd": "GUIDE MATCH p → cap GUIDE_MATCH_N=4",
+      "ok": true,
+      "note": "match"
+    },
+    {
       "name": "nth",
-      "cmd": "NTHTOPIC 0..3 p + OOR OR general",
+      "cmd": "GUIDE NTH 1 plate + GUIDENTH 2 p2p",
       "ok": true,
       "note": "nth"
     },
     {
       "name": "last",
-      "cmd": "LASTTOPIC/ENDTOPIC mesh form OR",
+      "cmd": "GUIDE LASTMATCH protect + OR general",
       "ok": true,
       "note": "last"
     },
     {
-      "name": "count",
-      "cmd": "COUNT/HAS/NEEDMATCHTOPICS gates",
-      "ok": true,
-      "note": "count"
-    },
-    {
       "name": "chain",
-      "cmd": "COUNT→NTH 1 plate→GUIDE",
+      "cmd": "MATCH→NTH→LASTMATCH no glue",
       "ok": true,
       "note": "chain"
     },
     {
       "name": "soft",
-      "cmd": "OOR empty miss + OR recover",
+      "cmd": "miss/empty/OOR + OR recover",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "plate surface + NTH lib",
+      "cmd": "plate surface + MATCH lib",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "ENDTOPIC mesh form synonym",
+      "cmd": "FIRST PICK forms PLAYGUIDE",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + HASTOPIC vs HASMATCH",
+      "cmd": "PRINT clobber + HASTOPIC p false friend",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "CLI duals still red; nthtopic/hasmatchtopics PASS when registered"
+      "note": "CLI duals red; guidematch PASS; runsnipmatch not in binary"
     }
   ],
   "weaknesses": [
@@ -4872,10 +4872,57 @@
       "title": "NTHTOPIC_N is family match count not index+1",
       "detail": "After NTHTOPIC 0 p and NTHTOPIC 3 p, NTHTOPIC_N stays 4 (size of filtered roster), not the 1-based slot. Useful for capacity but easy to misread as 'current index'.",
       "repro": "NTHTOPIC 3 p; PRINT NTHTOPIC_N  # 4 not 4 as index"
+    },
+    {
+      "id": "W600",
+      "severity": "high",
+      "area": "lang|runsnip",
+      "title": "RUNSNIP MATCH shipped in proof 1351 but not in 1.15.800 binary",
+      "detail": "RUNSNIP MATCH p → unknown form 'p' (MATCH not consumed). GUIDE MATCH works. forms catalog lists only bare RUNSNIP. Proof 1351 fails until MATCH/NTH/LASTMATCH duals land for RUNSNIP.",
+      "repro": "RUNSNIP MATCH p → unknown form p; GUIDE MATCH p → cap"
+    },
+    {
+      "id": "W601",
+      "severity": "low",
+      "area": "lang|guidematch",
+      "title": "GUIDE_MATCH_N family size vs GUIDE_MATCH_I slot (good dual knobs)",
+      "detail": "Positive: after GUIDE MATCH p, GUIDE_MATCH_N=4 and GUIDE_MATCH_I=0; GUIDE NTH 1 → I=1; LASTMATCH → I=3. Clearer than NTHTOPIC_N alone.",
+      "repro": "GUIDE NTH 1 p; PRINT GUIDE_MATCH_I GUIDE_MATCH_N"
+    },
+    {
+      "id": "W602",
+      "severity": "med",
+      "area": "lang|guidematch",
+      "title": "GUIDE MATCH first-of-substring same class as PICKTOPIC (p→cap)",
+      "detail": "Substring strstr + catalog order: MATCH p always opens cap playbook not plate. Fleet routers needing plate must GUIDE NTH 1 p or GUIDE plate.",
+      "repro": "GUIDE MATCH p → TOPIC_NAME cap"
+    },
+    {
+      "id": "W603",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers GUIDE plate JSON in LAST (reconfirm)",
+      "detail": "Capture body before PRINT; probe-mark path loses cubalc.guide.v1 in LAST.",
+      "repro": "GUIDE MATCH p; PRINT x; SYS HASI LAST cubalc.guide.v1 → 0"
+    },
+    {
+      "id": "W604",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META/STATUS omit trailing NL (reconfirmed gmr)",
+      "detail": "STATUS last probe:4:pb without $; META ends without \\n.",
+      "repro": "cat -A GMR STATUS after board"
+    },
+    {
+      "id": "W605",
+      "severity": "low",
+      "area": "lang|synonym",
+      "title": "GUIDEMATCH forms→cap mesh→p2p synonym rewrite (same table)",
+      "detail": "GUIDE PICK mesh → p2p; GUIDEMATCH forms → cap. Hardcoded synonym table shared with MATCHTOPICS.",
+      "repro": "GUIDE PICK mesh → p2p"
     }
   ],
   "workarounds": [
-    "unique counter leaf names to avoid substring multi-bump",
     "BUMPFLAT for single named counter + explicit delta",
     "empty INCFLAT only when all-int inventory intended",
     "omit agent/schema from MERGEFLAT overlay peers",
@@ -4920,15 +4967,13 @@
     {
       "id": "WA-NTR",
       "note": "hardcode NTHTOPIC 0/1/2/3 branches; use COUNTMATCHTOPICS_N; ignore LASTTOPIC_N; HASTOPIC for exact"
+    },
+    {
+      "id": "WA-GMR",
+      "note": "use GUIDE MATCH not RUNSNIP MATCH until duals ship; GUIDE NTH for non-first slots; capture body before PRINT"
     }
   ],
   "language_gaps": [
-    "SYS HAS substring vs HASLINE exact on form bags (W544)",
-    "CLI tips n vs in-lang TIPS_N skew (W547)",
-    "RELATED multi-word hub missing (W549)",
-    "HAS substring vs HASLINE on neighbor bags (W551)",
-    "PRINT clobber after RELATED/SNIP (W550)",
-    "host strips positional run (W554/W15)",
     "RUNSNIP nested asserts pollute parent plate (W555)",
     "SYS EMPTY TOPIC_SNIP polarity easy to misread (W557)",
     "ERRTIPS keyword heuristics not structured taxonomy (W559)",
@@ -4962,10 +5007,15 @@
     "LASTTOPIC_N sticky 0 (W594)",
     "prefer COUNTMATCHTOPICS_N over LAST_N (W595)",
     "HASMATCHTOPICS vs HASTOPIC substring false friend (W596)",
-    "NTHTOPIC_N family size not slot (W599)"
+    "NTHTOPIC_N family size not slot (W599)",
+    "GUIDE MATCH/NTH/LASTMATCH one-shot filter+playbook (1350)",
+    "GUIDEMATCH/GUIDENTH/GUIDELASTMATCH compound aliases",
+    "GUIDE_MATCH_N family + GUIDE_MATCH_I slot knobs (W601)",
+    "RUNSNIP MATCH not in binary 1.15.800 (W600) — proof ahead of ship",
+    "GUIDE MATCH first-of-substring p→cap (W602)",
+    "PRINT clobber GUIDE JSON (W603)"
   ],
   "issues_faced": [
-    "iter297: form_guard soft+hard contracts; HASFORMS body var from GETP cfg.need works",
     "iter298: -C floor invisible to SYS ENV (W537); use CUBALC_REQUIRE_FORMS for in-lang",
     "iter298: LISTFORMS var lex_next fixed; INCLUDE stop-list filter needs quotes",
     "iter298: board 10/10 + host -C ok; selftest CLI duals still red 455/658",
@@ -4994,9 +5044,10 @@
     "iter306: FORMGUIDE FORMHINT needs quotes (W580); START_NEXT_N CLI skew (W581)",
     "iter306: selftest CLI duals still red",
     "selftest rows[512] hid matchtopics/start/formguide until cap raised; board 10/10 green; CLI duals still unknown form set",
-    "NTHTOPIC var index hard-fail unknown form; LASTTOPIC_N 0 after success; board 10/10 green"
+    "NTHTOPIC var index hard-fail unknown form; LASTTOPIC_N 0 after success; board 10/10 green",
+    "RUNSNIP MATCH missing in binary while proof 1351 exists; GUIDE MATCH board 10/10+unknown green"
   ],
-  "commit": "132b4c73",
-  "ts": "2026-08-10T16:34:17Z",
-  "board_commit": "132b4c73"
+  "commit": "pending",
+  "ts": "2026-08-10T16:59:10Z",
+  "board_commit": "pending"
 }
