@@ -862,6 +862,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 832. ~~**`AFTERARG` / `NEXTARG` + CLI**~~ **done** (peel argv after exact token · FINDARG+NTHARG one-shot · cubalc afterarg · proof 1372).
 833. ~~**`FIRSTARG` / `LASTARG` + CLI**~~ **done** (raw argv end peels with OR · NTHARG ends without ARGC · cubalc firstarg|lastarg · proof 1373).
 834. ~~**`cubalc run -F` / `--dotenv` / `CUBALC_DOTENV`**~~ **done** (host KEY=VAL plate load before body · SYS DOTENV dual · hard miss · proof 1374).
+835. ~~**`cubalc run --cwd` / `CUBALC_CWD`**~~ **done** (host chdir before body · SYS CHDIR dual · abs program path · proof 1375).
 
 ## Tick protocol
 

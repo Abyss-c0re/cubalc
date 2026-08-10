@@ -1880,6 +1880,7 @@ int main(int argc, char **argv) {
      * Preload: -I|--include|--preload LIB + CUBALC_PRELOAD=a:b → INCLUDE ONCE before body.
      * Path: -L|--include-path|--lib-path DIR prepends CUBALC_INCLUDE_PATH for this run.
      * Dotenv: -F|--dotenv|--env-file PATH + CUBALC_DOTENV=a:b → SYS DOTENV before body.
+     * Cwd: --cwd|--cd|--chdir DIR + CUBALC_CWD — chdir before body (relative plates).
      * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older.
      * Forms: -C|--need-forms F1,F2 + CUBALC_REQUIRE_FORMS — fail if HELP catalog misses.
      * Ready: -Y|--need-ready + CUBALC_REQUIRE_READY — fail if READY prove checklist fails. */
@@ -1899,6 +1900,8 @@ int main(int argc, char **argv) {
     char preload[16][96];
     char ipaths[8][512];
     char dotenv_paths[8][512];
+    char run_cwd[512];
+    char src_abs[1024];
     char req_ver[64];
     char req_forms[512];
     const char *src_path = NULL;
@@ -1917,6 +1920,8 @@ int main(int argc, char **argv) {
     req_ready = 0;
     n_dotenv = 0;
     dotenv_keys = 0;
+    run_cwd[0] = 0;
+    src_abs[0] = 0;
     eq = getenv("CUBALC_QUIET");
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
@@ -1955,6 +1960,10 @@ int main(int argc, char **argv) {
     run_preload_parse_env(preload, &n_preload, getenv("CUBALC_PRELOAD"));
     /* Env dotenv paths first; CLI -F/--dotenv appends (deduped). */
     run_dotenv_parse_env(dotenv_paths, &n_dotenv, getenv("CUBALC_DOTENV"));
+    /* Env cwd first; CLI --cwd overrides. */
+    eq = getenv("CUBALC_CWD");
+    if (eq && eq[0])
+      snprintf(run_cwd, sizeof run_cwd, "%s", eq);
     /* Scan from argv[1] so top-level cubalc -e CODE (cmd rewritten to run) works. */
     for (i = 1; i < argc; i++) {
       if (!strcmp(argv[i], "run") || !strcmp(argv[i], "eval"))
@@ -2129,6 +2138,34 @@ int main(int argc, char **argv) {
         run_dotenv_add(dotenv_paths, &n_dotenv, argv[i] + 10);
         continue;
       }
+      /* --cwd DIR · --cd · --chdir · CUBALC_CWD dual — process chdir before body */
+      if (!strcmp(argv[i], "--cwd") || !strcmp(argv[i], "--cd") ||
+          !strcmp(argv[i], "--chdir") || !strcmp(argv[i], "--workdir") ||
+          !strcmp(argv[i], "--work-dir")) {
+        if (i + 1 >= argc) {
+          fprintf(stderr, "cubalc run: %s needs a directory\n", argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        snprintf(run_cwd, sizeof run_cwd, "%s", argv[++i]);
+        continue;
+      }
+      if (!strncmp(argv[i], "--cwd=", 6)) {
+        snprintf(run_cwd, sizeof run_cwd, "%s", argv[i] + 6);
+        continue;
+      }
+      if (!strncmp(argv[i], "--cd=", 5)) {
+        snprintf(run_cwd, sizeof run_cwd, "%s", argv[i] + 5);
+        continue;
+      }
+      if (!strncmp(argv[i], "--chdir=", 8)) {
+        snprintf(run_cwd, sizeof run_cwd, "%s", argv[i] + 8);
+        continue;
+      }
+      if (!strncmp(argv[i], "--workdir=", 10)) {
+        snprintf(run_cwd, sizeof run_cwd, "%s", argv[i] + 10);
+        continue;
+      }
       if (!strcmp(argv[i], "-e") || !strcmp(argv[i], "--expr") ||
           !strcmp(argv[i], "--code") || !strcmp(argv[i], "-c")) {
         const char *chunk;
@@ -2250,9 +2287,11 @@ int main(int argc, char **argv) {
               "       cubalc -e 'SYS DATE\\nPRINT LAST'   # top-level alias\n"
               "       cubalc -I agent_boot -e 'STATUS'  # preload INCLUDE ONCE\n"
               "       cubalc -F .env -e 'SYS ENV NAME'  # dotenv KEY=VAL before body\n"
+              "       cubalc --cwd state -e 'SYS LIST .\\nPRINT LAST'  # chdir before body\n"
               "       multiple -e join with newline; \\n \\t \\\\ escapes\n"
               "       -I/--include/--preload LIB  · CUBALC_PRELOAD=a:b\n"
               "       -F/--dotenv/--env-file PATH · CUBALC_DOTENV=a:b (SYS DOTENV dual)\n"
+              "       --cwd|--cd|--chdir DIR · CUBALC_CWD (SYS CHDIR dual before body)\n"
               "       -L/--include-path DIR · prepends CUBALC_INCLUDE_PATH\n"
               "       -R/--require-version X.Y · CUBALC_REQUIRE_VERSION floor\n"
               "       -C/--need-forms F1,F2 · CUBALC_REQUIRE_FORMS capability floor\n"
@@ -2262,6 +2301,41 @@ int main(int argc, char **argv) {
               "       CUBALC_QUIET=1  → plate only · CUBALC_STRICT=1 → soft last_err fails\n");
       free(expr_buf);
       return 2;
+    }
+    /* Absolute-ize program path before chdir so relative .cubalc still opens.
+     * Join cwd when not already absolute (avoid realpath feature-test fights). */
+    if (src_path && src_path[0] && strcmp(src_path, "-") != 0) {
+      if (src_path[0] == '/') {
+        snprintf(src_abs, sizeof src_abs, "%s", src_path);
+        src_path = src_abs;
+      } else {
+        char cur[768];
+        if (getcwd(cur, sizeof cur)) {
+          snprintf(src_abs, sizeof src_abs, "%s/%s", cur, src_path);
+          src_path = src_abs;
+        }
+      }
+    }
+    /* Host chdir before dotenv/body (dual of SYS CHDIR). Hard-fail miss. */
+    if (run_cwd[0]) {
+      char cwd_now[1024];
+      if (chdir(run_cwd) != 0) {
+        free(expr_buf);
+        if (devnull) fclose(devnull);
+        printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
+               "\"err\":\"CWD failed: cannot chdir '%s'\","
+               "\"cwd\":\"%s\",\"version\":\"%s\","
+               "\"why_hint\":\"cubalc run --cwd DIR · CUBALC_CWD · SYS CHDIR in-lang\","
+               "\"exit_code\":1,\"halted\":false}\n",
+               have_expr ? "<expr>" : (src_path ? src_path : "?"),
+               run_cwd, run_cwd, CUBALC_LANG_VERSION);
+        return 1;
+      }
+      if (!getcwd(cwd_now, sizeof cwd_now))
+        snprintf(cwd_now, sizeof cwd_now, "%s", run_cwd);
+      setenv("CUBALC_CWD_ACTIVE", cwd_now, 1);
+    } else {
+      unsetenv("CUBALC_CWD_ACTIVE");
     }
     /* Load KEY=VAL env plates into this process before gates/body (SYS DOTENV dual).
      * Hard-fail missing/unreadable paths so agents see a clear host contract. */
@@ -3939,6 +4013,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_include_path", "programs/proof/1259_cli_include_path.sh", "CUBALC_INCLUDE_PATH private lib resolve"},
       {"cli_run_preload", "programs/proof/1260_cli_run_preload.sh", "run -I/CUBALC_PRELOAD + -L include-path preload"},
       {"cli_run_dotenv", "programs/proof/1374_cli_run_dotenv.sh", "run -F/--dotenv/CUBALC_DOTENV KEY=VAL before body"},
+      {"cli_run_cwd", "programs/proof/1375_cli_run_cwd.sh", "run --cwd/CUBALC_CWD chdir before body"},
       {"listincludes", "programs/proof/1261_listincludes.cubalc", "LISTINCLUDES/HASINCLUDE loaded module audit"},
       {"cli_listincludes", "programs/proof/1261_cli_listincludes.sh", "LISTINCLUDES after run -I preload"},
       {"cli_run_includes", "programs/proof/1262_cli_run_includes.sh", "run plate includes_n/includes LISTINCLUDES dual"},
@@ -9370,6 +9445,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"CUBALC_PRELOAD_ACTIVE", "", 0, "set by run to effective -I/PRELOAD list · LISTPRELOAD in-lang"},
       {"CUBALC_DOTENV", "", 0, "colon KEY=VAL plate paths auto-load before run body (-F/--dotenv dual)"},
       {"CUBALC_DOTENV_ACTIVE", "", 0, "set by run to effective dotenv paths after successful load"},
+      {"CUBALC_CWD", "", 0, "chdir before run body (--cwd/--cd dual · relative plates)"},
+      {"CUBALC_CWD_ACTIVE", "", 0, "set by run to absolute cwd after successful --cwd"},
       {"CUBALC_REQUIRE_VERSION", "", 0, "x.y[.z] floor for run (-R dual · fail if runtime older)"},
       {"CUBALC_REQUIRE_FORMS", "", 0, "comma form names for run (-C dual · NEEDFORMS floor before body)"},
       {"CUBALC_REQUIRE_DOCTOR", "", 0, "1 to require NEEDDOCTOR before run body (-D dual)"},
@@ -19348,6 +19425,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"CUBALC_PRELOAD_ACTIVE", "effective -I/PRELOAD list · LISTPRELOAD"},
       {"CUBALC_DOTENV", "colon KEY=VAL plates before run (-F/--dotenv dual)"},
       {"CUBALC_DOTENV_ACTIVE", "effective dotenv paths after load"},
+      {"CUBALC_CWD", "chdir before run body (--cwd dual)"},
+      {"CUBALC_CWD_ACTIVE", "absolute cwd after --cwd"},
       {"CUBALC_REQUIRE_VERSION", "x.y floor for run (-R dual)"},
       {"CUBALC_REQUIRE_FORMS", "comma forms for run (-C dual · capability floor)"},
       {"CUBALC_REQUIRE_DOCTOR", "1 for run -D dual · NEEDDOCTOR floor"},
