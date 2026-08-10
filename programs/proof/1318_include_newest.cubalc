@@ -1,0 +1,34 @@
+# INCLUDE NEWEST / OLDEST — mtime pick + include one-shot
+
+INCLUDE ONCE NEWEST fat
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "fat_session"
+ASSERT NEWESTLIB_MTIME > 0
+
+INCLUDE ONCE OLDEST fat
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "fat_boot"
+
+# LATEST alias
+INCLUDE ONCE LATEST guard
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "time_guard"
+
+# DEFAULT on miss
+INCLUDE ONCE NEWEST no_such_lib_xyz DEFAULT hold_seed
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "hold_seed"
+ASSERT INCLUDE_MATCH_FALLBACK == 1
+
+# SOFT miss
+INCLUDE SOFT NEWEST no_such_lib_xyz_zzz
+ASSERT OK == 0
+CLEAR_ERR
+
+# EARLIEST alias
+INCLUDE ONCE EARLIEST hold
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "hold_seed"
+
+PASS
+PRINT "1318_include_newest: PASS"

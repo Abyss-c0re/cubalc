@@ -6004,8 +6004,8 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       bump(vm);
       return 1;
     }
-    /* INCLUDE MATCH|FIRST|PICK | NTH idx | LASTMATCH|ENDMATCH needle [DEFAULT stem]
-     * Usability: filter pick family → INCLUDE without PICKLIB/NTHLIB/LASTLIB+LAST glue. */
+    /* INCLUDE MATCH|FIRST|PICK | NTH idx | LASTMATCH|ENDMATCH | NEWEST|OLDEST needle [DEFAULT stem]
+     * Usability: filter pick family → INCLUDE without PICKLIB/NTHLIB/NEWESTLIB+LAST glue. */
     if (kw(&L->cur,"MATCH") || kw(&L->cur,"FIRST") || kw(&L->cur,"PICK") ||
         kw(&L->cur,"MATCHFIRST") || kw(&L->cur,"FIRSTMATCH") ||
         kw(&L->cur,"PICKMATCH") || kw(&L->cur,"MATCHLIB") ||
@@ -6013,11 +6013,16 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
         kw(&L->cur,"INCLUDENTH") ||
         kw(&L->cur,"LASTMATCH") || kw(&L->cur,"ENDMATCH") ||
         kw(&L->cur,"MATCHLAST") || kw(&L->cur,"LASTLIBINC") ||
-        kw(&L->cur,"INCLASTMATCH")) {
+        kw(&L->cur,"INCLASTMATCH") ||
+        kw(&L->cur,"NEWEST") || kw(&L->cur,"LATEST") || kw(&L->cur,"FRESH") ||
+        kw(&L->cur,"INCLUDENEWEST") || kw(&L->cur,"MATCHNEWEST") ||
+        kw(&L->cur,"OLDEST") || kw(&L->cur,"EARLIEST") || kw(&L->cur,"STALE") ||
+        kw(&L->cur,"INCLUDEOLDEST") || kw(&L->cur,"MATCHOLDEST")) {
       char needle[96], fup[96], fb[96];
       char stems[96][96];
+      char stem_paths[96][768];
       int nstem = 0, i, j, have_fb = 0;
-      int mode = 1; /* 1=first 2=last 3=nth */
+      int mode = 1; /* 1=first 2=last 3=nth 4=newest 5=oldest */
       int want_idx = 0, have_idx = 0;
       size_t a;
       DIR *d;
@@ -6030,6 +6035,12 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       else if (kw(&L->cur,"NTH") || kw(&L->cur,"NTHMATCH") ||
                kw(&L->cur,"MATCHNTH") || kw(&L->cur,"INCLUDENTH"))
         mode = 3;
+      else if (kw(&L->cur,"NEWEST") || kw(&L->cur,"LATEST") || kw(&L->cur,"FRESH") ||
+               kw(&L->cur,"INCLUDENEWEST") || kw(&L->cur,"MATCHNEWEST"))
+        mode = 4;
+      else if (kw(&L->cur,"OLDEST") || kw(&L->cur,"EARLIEST") || kw(&L->cur,"STALE") ||
+               kw(&L->cur,"INCLUDEOLDEST") || kw(&L->cur,"MATCHOLDEST"))
+        mode = 5;
       lex_next(L);
       needle[0] = 0;
       fb[0] = 0;
@@ -6151,31 +6162,58 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
               if (!strstr(stem_l, fup) && !strstr(hay, fup))
                 continue;
             }
-            snprintf(stems[nstem++], sizeof stems[0], "%s", stem);
+            snprintf(stems[nstem], sizeof stems[0], "%s", stem);
+            snprintf(stem_paths[nstem], sizeof stem_paths[0], "%s/%s",
+                     dirs[di], ent->d_name);
+            nstem++;
           }
           closedir(d);
         }
       }
+      /* alpha sort keeps path parallel for first/last/nth modes */
       for (i = 1; i < nstem; i++) {
-        char tmp[96];
+        char tmp[96], tp[768];
         snprintf(tmp, sizeof tmp, "%s", stems[i]);
+        snprintf(tp, sizeof tp, "%s", stem_paths[i]);
         j = i;
         while (j > 0 && strcmp(stems[j - 1], tmp) > 0) {
           snprintf(stems[j], sizeof stems[0], "%s", stems[j - 1]);
+          snprintf(stem_paths[j], sizeof stem_paths[0], "%s", stem_paths[j - 1]);
           j--;
         }
         snprintf(stems[j], sizeof stems[0], "%s", tmp);
+        snprintf(stem_paths[j], sizeof stem_paths[0], "%s", tp);
       }
       {
         int pick_i = 0;
         int ok_pick = 0;
-        if (mode == 2)
+        if (mode == 4 || mode == 5) {
+          /* mtime pick among matches */
+          long best_mt = 0;
+          int have_best = 0;
+          for (i = 0; i < nstem; i++) {
+            struct stat st;
+            if (stat(stem_paths[i], &st) != 0) continue;
+            if (!have_best ||
+                (mode == 5 ? (st.st_mtime < best_mt) : (st.st_mtime > best_mt)) ||
+                (st.st_mtime == best_mt && strcmp(stems[i], stems[pick_i]) < 0)) {
+              best_mt = (long)st.st_mtime;
+              have_best = 1;
+              pick_i = i;
+            }
+          }
+          ok_pick = have_best;
+          if (ok_pick) {
+            var_set_num(vm, "NEWESTLIB_MTIME", best_mt);
+            var_set_num(vm, "LIB_MTIME", best_mt);
+          }
+        } else if (mode == 2)
           pick_i = nstem > 0 ? nstem - 1 : 0;
         else if (mode == 3)
           pick_i = want_idx;
         else
           pick_i = 0;
-        if (nstem > 0 && pick_i >= 0 && pick_i < nstem)
+        if (!(mode == 4 || mode == 5) && nstem > 0 && pick_i >= 0 && pick_i < nstem)
           ok_pick = 1;
         var_set_num(vm, "MATCHLIBS_N", nstem);
         var_set_num(vm, "PICKLIB_N", nstem);
@@ -6191,6 +6229,10 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
             var_set_str(vm, "NTHLIB", orig);
           if (mode == 2)
             var_set_str(vm, "LASTLIB", orig);
+          if (mode == 4)
+            var_set_str(vm, "NEWESTLIB", orig);
+          if (mode == 5)
+            var_set_str(vm, "OLDESTLIB", orig);
         } else if (have_fb) {
           snprintf(orig, sizeof orig, "%s", fb);
           var_set_str(vm, "INCLUDE_MATCH", orig);
@@ -6204,6 +6246,14 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
           else if (mode == 2)
             snprintf(msg, sizeof msg,
                      "INCLUDE LASTMATCH miss line %d: '%s' — MATCHLIBS · cubalc libs %s · DEFAULT stem",
+                     aln, needle, needle);
+          else if (mode == 4)
+            snprintf(msg, sizeof msg,
+                     "INCLUDE NEWEST miss line %d: '%s' — NEWESTLIB · cubalc libs %s · DEFAULT stem",
+                     aln, needle, needle);
+          else if (mode == 5)
+            snprintf(msg, sizeof msg,
+                     "INCLUDE OLDEST miss line %d: '%s' — OLDESTLIB · cubalc libs %s · DEFAULT stem",
                      aln, needle, needle);
           else
             snprintf(msg, sizeof msg,
@@ -6232,7 +6282,7 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       }
     } else {
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){
-        fail_at(vm,L,"INCLUDE needs path|libname|MATCH|NTH|LASTMATCH — INCLUDE hold_seed · INCLUDE MATCH plate"); return -1;
+        fail_at(vm,L,"INCLUDE needs path|libname|MATCH|NTH|LASTMATCH|NEWEST|OLDEST — INCLUDE hold_seed"); return -1;
       }
       /* Resolve IDENT as string var / LAST when set — else bare short name (lib stem). */
       if (L->cur.kind == TK_STR) {
