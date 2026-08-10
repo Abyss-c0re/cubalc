@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 749,
-  "version": "1.15.776-usability",
-  "item": "run -C / CUBALC_REQUIRE_FORMS form floor",
-  "item_id": 785,
-  "title": "cubalc run -C|--need-forms \u00b7 CUBALC_REQUIRE_FORMS \u00b7 plate require_forms",
-  "commit": "6233a5e4e7c07103e1222774284b60296cd41cec",
-  "summary": "host form capability floor before body; NEEDFORMS dual of -R; env catalog. proof 1326 PASS.",
+  "iter": 750,
+  "version": "1.15.777-usability",
+  "item": "LISTFORMS/COUNTFORMS + CLI formlist",
+  "item_id": 786,
+  "title": "LISTFORMS \u00b7 COUNTFORMS \u00b7 cubalc listforms|countforms \u00b7 dual of cubalc forms",
+  "commit": "ac409d5932923ddc0d4ffeb6161243d5b88869ac",
+  "summary": "in-lang HELP catalog bag/count; CLI formlist.v1; thrash restored. proof 1327 PASS.",
   "proofs": [
-    "1326_cli_require_forms PASS"
+    "1327_listforms PASS",
+    "1327_cli_listforms PASS"
   ],
-  "when": "2026-08-10T11:48:00Z",
+  "when": "2026-08-10T12:06:42Z",
   "agent": "meaningful_iter_10m",
-  "sha": "6233a5e4e7c07103e1222774284b60296cd41cec",
-  "note": "run -C SORTLIBS,LIBAGE ok; -C missing fails; env CUBALC_REQUIRE_FORMS"
+  "sha": "ac409d5932923ddc0d4ffeb6161243d5b88869ac",
+  "note": "restored thrash; LISTFORMS SORT; COUNTFORMS FORM; CLI countforms n"
 }
