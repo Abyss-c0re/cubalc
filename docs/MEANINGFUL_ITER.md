@@ -764,6 +764,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 734. ~~**run plate `vars_n` / `vars_max` / `vars_full`**~~ **done** (STATUS pressure dual on every run plate · agents see fat-board budget without STATUS form).
 735. ~~**`VARROOM` / `NEEDVARROOM`**~~ **done** (free var slots → LAST_N · fail-fast room gate · fat nest specials guard without VARS dump).
 736. ~~**`HASVARROOM`**~~ **done** (soft 0|1 free slots >= n · sticky LAST_ERR on miss · dual of NEEDVARROOM · IF without count compare).
+737. ~~**`cubalc doctor` vars_max / var budget**~~ **done** (install plate reports CUBALC_MAX_VARS + VARROOM forms · fat-board readiness without STATUS).
 
 ## Tick protocol
 

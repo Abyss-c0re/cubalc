@@ -2411,6 +2411,9 @@ int main(int argc, char **argv) {
              "\"lib_plate_uniform\":%s,\"lib_hold_seed\":%s,"
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
+             "\"vars_max\":%d,\"varroom_forms\":true,"
+             "\"var_budget\":\"STATUS/VARS/run plate vars_n|max|full · "
+             "VARROOM/HASVARROOM/NEEDVARROOM\","
              "\"nest_check\":\"%s\","
              "\"hints\":["
              "\"HOLD_FLASH device/mesh-join only · default 1 · not language PLUG\","
@@ -2420,6 +2423,7 @@ int main(int argc, char **argv) {
              "\"cubalc libs · cubalc cat plate_uniform · INCLUDE plate_uniform\","
              "\"CUBALC_INCLUDE_PATH + cubalc which name · run -I / NEEDINCLUDE\","
              "\"cubalc plate uniform agent.json role — nest value consistency\","
+             "\"VARROOM/HASVARROOM/NEEDVARROOM · fat boards (vars_max=%d)\","
              "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
@@ -2448,9 +2452,11 @@ int main(int argc, char **argv) {
              preload_set ? "true" : "false",
              cookbook_ok ? "true" : "false",
              for_agents_ok ? "true" : "false",
+             CUBALC_MAX_VARS,
              lib_plate_uniform
                  ? "INCLUDE plate_uniform · cubalc plate uniform"
-                 : "missing programs/lib/plate_uniform.cubalc");
+                 : "missing programs/lib/plate_uniform.cubalc",
+             CUBALC_MAX_VARS);
       return ok ? 0 : 1;
     }
   }
@@ -3010,6 +3016,7 @@ int main(int argc, char **argv) {
       {"cli_varroom", "programs/proof/1276_cli_varroom.sh", "VARROOM after fat LETs + forms catalog"},
       {"hasvarroom", "programs/proof/1277_hasvarroom.cubalc", "HASVARROOM soft free-slot probe"},
       {"cli_hasvarroom", "programs/proof/1277_cli_hasvarroom.sh", "HASVARROOM soft miss + forms"},
+      {"cli_doctor_vars_max", "programs/proof/1278_cli_doctor_vars_max.sh", "cubalc doctor vars_max/var budget plate"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
