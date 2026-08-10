@@ -4722,7 +4722,7 @@
     "iter301: RUNSNIP nested asserts inflate parent plate (W555)",
     "iter301: board 10/10 green after exec rename; selftest CLI duals still red"
   ],
-  "commit": "pending",
+  "commit": "51ba8a4f",
   "ts": "2026-08-10T13:39:52Z",
-  "board_commit": "bb3efa60"
+  "board_commit": "51ba8a4f"
 }
