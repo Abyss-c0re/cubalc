@@ -1,26 +1,18 @@
 {
-  "agent": "thalamus_meaningful_iter",
-  "cli_proof": "programs/proof/1376_cli_hasflagany.sh",
-  "commit": "857303090e286a1e0343761bdfa3a4869ac27f4e",
-  "feature": "HASFLAGANY/NEEDFLAGANY",
-  "host": "pve",
-  "item": "cubalc run --cwd / CUBALC_CWD",
-  "item_id": 835,
-  "iter": 836,
-  "meaningful_iter": 836,
-  "n": 836,
-  "note": "any-of multi named-flag gate \u00b7 FLAGHAVE bag \u00b7 hard NEEDFLAGANY",
-  "proof": "programs/proof/1376_hasflagany.cubalc",
-  "proof_sha": "22cbc331530b8ca677c9b1a0a3c68d52a1351da8",
-  "proofs": [
-    "1375_cli_run_cwd PASS"
-  ],
   "schema": "cubalc.meaningful_iter.v1",
-  "sha": "857303090e286a1e0343761bdfa3a4869ac27f4e",
-  "src_sha": "5ed12266c7cfd3dfcc672475a1b7dde63385adf3",
-  "summary": "Host chdir before program; abs program path; CUBALC_CWD_ACTIVE; proof 1375 PASS.",
-  "title": "run --cwd|--cd chdir before body \u00b7 SYS CHDIR dual",
-  "ts": 1786400967,
+  "iter": 836,
   "version": "1.15.828-usability",
-  "when": "2026-08-10T22:14:30Z"
+  "item": "HASFLAGANY / NEEDFLAGANY any-of flags",
+  "item_id": 836,
+  "title": "HASFLAGANY · NEEDFLAGANY · FLAGHAVE · CLI dual flaggate any",
+  "commit": "004ffb4453168942837a4fbe7ff19a4ac183af72",
+  "summary": "Any-of multi --flag gate twin of HASFLAGALL; soft/hard; proof 1376 PASS.",
+  "proofs": [
+    "1376_hasflagany PASS",
+    "1376_cli_hasflagany PASS"
+  ],
+  "when": "2026-08-10T22:29:38Z",
+  "agent": "thalamus_meaningful_iter",
+  "sha": "004ffb4453168942837a4fbe7ff19a4ac183af72",
+  "note": "completed partial catalog stubs · pairs HASFLAGALL"
 }
