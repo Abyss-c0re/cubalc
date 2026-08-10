@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 751,
-  "version": "1.15.778-usability",
-  "item": "FORMHINT + CLI formhint HELP peel",
-  "item_id": 787,
-  "title": "FORMHINT|DESCRIBEFORM \u00b7 cubalc formhint \u00b7 HELP one-line payload",
-  "commit": "dea08b9c2a1852b3ad5badb4e8bfae7b78c27505",
-  "summary": "one-line form docs peel; dual of HASFORM with payload; CLI formhint.v1. proof 1328 PASS.",
+  "iter": 752,
+  "version": "1.15.779-usability",
+  "item": "TIPS + cubalc tips topic playbooks",
+  "item_id": 788,
+  "title": "TIPS [topic] \u00b7 cubalc tips|howto \u00b7 cubalc.tips.v1",
+  "commit": "ab985651cd22b3fe771e1c0a9d660c82c10267a5",
+  "summary": "curated agent next-steps by topic; CLI JSON + in-lang bag. proof 1329 PASS.",
   "proofs": [
-    "1328_formhint PASS",
-    "1328_cli_formhint PASS"
+    "1329_tips PASS",
+    "1329_cli_tips PASS"
   ],
-  "when": "2026-08-10T12:16:23Z",
+  "when": "2026-08-10T12:27:18Z",
   "agent": "meaningful_iter_10m",
-  "sha": "dea08b9c2a1852b3ad5badb4e8bfae7b78c27505",
-  "note": "FORMHINT SORTLIBS\u2192hint; miss soft; cubalc formhint dual"
+  "sha": "ab985651cd22b3fe771e1c0a9d660c82c10267a5",
+  "note": "tips cap; TIPS fat bag; howto p2p alias"
 }
