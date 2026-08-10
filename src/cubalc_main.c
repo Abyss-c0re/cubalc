@@ -2362,7 +2362,7 @@ int main(int argc, char **argv) {
                "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
                "\"why_hint\":\"%s\","
                "\"quiet\":%s,\"strict\":%s,"
-               "\"timeout_ms\":%d,\"timed_out\":%s,"
+               "\"timeout_ms\":%d,\"timed_out\":%s,\"remain_ms\":%d,"
                "\"preload_n\":%d,\"preload\":%s,"
                "\"preload_ok\":%s,\"preload_miss_n\":%d,\"preload_miss\":%s,"
                "\"include_path_n\":%d,"
@@ -2378,6 +2378,7 @@ int main(int argc, char **argv) {
                quiet ? "true" : "false", strict ? "true" : "false",
                rr.timeout_ms > 0 ? rr.timeout_ms : (int)run_timeout_ms,
                rr.timed_out ? "true" : "false",
+               rr.remain_ms,
                n_preload, prej,
                pmiss_n == 0 ? "true" : "false", pmiss_n, pmiss,
                n_ipath,
@@ -3108,6 +3109,7 @@ int main(int argc, char **argv) {
       {"fat_boot", "programs/proof/1283_fat_boot.cubalc", "INCLUDE fat_boot agent_boot+var_guard one-shot"},
       {"cli_fat_boot", "programs/proof/1283_cli_fat_boot.sh", "fat_boot lib + doctor lib_fat_boot"},
       {"cli_init_fat", "programs/proof/1284_cli_init_fat.sh", "cubalc init --fat fat_boot nest scaffold"},
+      {"cli_remain_ms_plate", "programs/proof/1285_cli_remain_ms_plate.sh", "run plate remain_ms dual of REMAIN_MS + STATUS"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},

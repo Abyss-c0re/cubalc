@@ -138,6 +138,18 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     out->n_cubes = vm.ch.n_cubes;
     out->unity = vm.ch.unity;
     out->timeout_ms = (int)vm.run_timeout_ms;
+    /* Usability: end-of-run wall budget left (dual of REMAIN_MS form). */
+    {
+      long rem = cubalc_lang_timeout_remain_ms(&vm);
+      if (out->timed_out)
+        out->remain_ms = 0;
+      else if (rem < 0)
+        out->remain_ms = -1;
+      else if (rem > 2147483647L)
+        out->remain_ms = 2147483647;
+      else
+        out->remain_ms = (int)rem;
+    }
     if (vm.fatal && !out->err[0]) snprintf(out->err,sizeof out->err,"%s",vm.err);
     /* Usability: surface sticky LAST_ERR/ERR on plate even when run ok
      * (soft FAIL/EXPECT probes leave agent-readable reason). */

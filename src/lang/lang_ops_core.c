@@ -36619,7 +36619,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"REMAIN_MS", "REMAIN_MS|BUDGETLEFT — wall budget remaining ms → LAST_N (-1 unlimited)"},
       {"HAS_TIME", "HAS_TIME n — soft 0|1 if remaining >= n · sticky LAST_ERR on miss"},
       {"NEEDTIME", "NEEDTIME n — fail-fast if wall budget remaining < n ms"},
-      {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time/vars_n|max|full)"},
+      {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time/vars_n|max|full/timeout_ms/remain_ms)"},
       {"WHY", "WHY|EXPLAIN — cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED + hint"},
       {"EXPLAIN", "EXPLAIN alias of WHY"},
       {"WHYERR", "WHYERR alias of WHY"},
@@ -37924,16 +37924,24 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     esc[eo] = 0;
     tsec = (long)time(NULL);
-    snprintf(line, sizeof line,
-      "{\"schema\":\"cubalc.status.v1\",\"ok\":%s,\"last_err\":\"%s\","
-      "\"version\":\"%s\",\"time\":%ld,\"n\":%d,\"hold\":%d,\"unity\":%ld,"
-      "\"last_n\":%ld,\"expect_ok\":%ld,\"smx_ok\":%ld,\"smx_talks\":%ld,"
-      "\"sp\":%d,\"stmts\":%d,\"vars_n\":%d,\"vars_max\":%d,\"vars_full\":%s}",
-      okv ? "true" : "false", esc, CUBALC_LANG_VERSION, tsec,
-      vm->ch.n_cubes, vm->hold_flash,
-      (long)lround(vm->ch.unity * 100.0), vm->last_n, exp_ok, smx, talks,
-      vm->sp, vm->res ? vm->res->stmts : 0,
-      vm->n_vars, CUBALC_MAX_VARS, vm->vars_full ? "true" : "false");
+    {
+      long rem = cubalc_lang_timeout_remain_ms(vm);
+      long tms = vm->run_timeout_ms > 0 ? vm->run_timeout_ms : 0L;
+      snprintf(line, sizeof line,
+        "{\"schema\":\"cubalc.status.v1\",\"ok\":%s,\"last_err\":\"%s\","
+        "\"version\":\"%s\",\"time\":%ld,\"n\":%d,\"hold\":%d,\"unity\":%ld,"
+        "\"last_n\":%ld,\"expect_ok\":%ld,\"smx_ok\":%ld,\"smx_talks\":%ld,"
+        "\"sp\":%d,\"stmts\":%d,\"vars_n\":%d,\"vars_max\":%d,\"vars_full\":%s,"
+        "\"timeout_ms\":%ld,\"remain_ms\":%ld}",
+        okv ? "true" : "false", esc, CUBALC_LANG_VERSION, tsec,
+        vm->ch.n_cubes, vm->hold_flash,
+        (long)lround(vm->ch.unity * 100.0), vm->last_n, exp_ok, smx, talks,
+        vm->sp, vm->res ? vm->res->stmts : 0,
+        vm->n_vars, CUBALC_MAX_VARS, vm->vars_full ? "true" : "false",
+        tms, rem < 0 ? -1L : rem);
+      var_set_num(vm, "TIMEOUT_MS", tms);
+      var_set_num(vm, "REMAIN_MS", rem < 0 ? -1L : rem);
+    }
     if (vm->trace) fprintf(vm->trace, "%s\n", line);
     if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
     var_set_num(vm, "STATUS_OK", okv);
