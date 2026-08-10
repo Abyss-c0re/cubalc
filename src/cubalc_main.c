@@ -3276,6 +3276,8 @@ int main(int argc, char **argv) {
       {"cli_hasmatchtopics", "programs/proof/1348_cli_hasmatchtopics.sh", "cubalc has|need|count matchtopics CLI"},
       {"nthtopic", "programs/proof/1349_nthtopic.cubalc", "NTHTOPIC/LASTTOPIC topic filter index duals"},
       {"cli_nthtopic", "programs/proof/1349_cli_nthtopic.sh", "cubalc nthtopic|lasttopic plate + forms"},
+      {"guidematch", "programs/proof/1350_guidematch.cubalc", "GUIDE MATCH|NTH|LASTMATCH filter pick+playbook"},
+      {"cli_guidematch", "programs/proof/1350_cli_guidematch.sh", "cubalc guide match|nth|lastmatch + forms"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -3931,8 +3933,11 @@ int main(int argc, char **argv) {
       {"SNIPRUN", "flow", "SNIPRUN alias of RUNSNIP"},
       {"TOPIC", "flow", "TOPIC|TOPICCARD [topic] tips+forms+snip one plate · cubalc topic dual"},
       {"TOPICCARD", "flow", "TOPICCARD alias of TOPIC"},
-      {"GUIDE", "flow", "GUIDE|PLAYGUIDE [topic] full playbook hint+related+tips+forms+snip · cubalc guide dual"},
+      {"GUIDE", "flow", "GUIDE|PLAYGUIDE [topic]|MATCH|NTH|LASTMATCH full playbook · filter pick+guide · cubalc guide dual"},
       {"PLAYGUIDE", "flow", "PLAYGUIDE alias of GUIDE"},
+      {"GUIDEMATCH", "flow", "GUIDEMATCH needle [OR fb] first matching topic GUIDE · no PICKTOPIC+GUIDE glue"},
+      {"GUIDENTH", "flow", "GUIDENTH idx needle [OR fb] Nth matching topic GUIDE · no NTHTOPIC+GUIDE glue"},
+      {"GUIDELASTMATCH", "flow", "GUIDELASTMATCH needle [OR fb] last matching topic GUIDE · no LASTTOPIC+GUIDE glue"},
       {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
       {"EACH TOPIC", "flow", "EACH TOPIC [AS name] [MATCH] walk discovery topics · dual of LISTTOPICS"},
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
@@ -6548,10 +6553,14 @@ int main(int argc, char **argv) {
   }
   if (strcmp(cmd, "guide") == 0 || strcmp(cmd, "playguide") == 0 ||
       strcmp(cmd, "topicguide") == 0 || strcmp(cmd, "agentguide") == 0 ||
-      strcmp(cmd, "fulltopic") == 0 || strcmp(cmd, "topicboard") == 0) {
+      strcmp(cmd, "fulltopic") == 0 || strcmp(cmd, "topicboard") == 0 ||
+      strcmp(cmd, "guidematch") == 0 || strcmp(cmd, "matchguide") == 0 ||
+      strcmp(cmd, "guidenth") == 0 || strcmp(cmd, "nthguide") == 0 ||
+      strcmp(cmd, "guidelastmatch") == 0 || strcmp(cmd, "lastmatchguide") == 0) {
     /* Usability: full playbook plate (dual of GUIDE) — hint+related+tips+forms+snip.
-     *   cubalc guide · cubalc guide cap · cubalc playguide plate
-     * Schema cubalc.guide.v1 · agents skip TOPICHINT+RELATEDTOPIC+TOPIC glue. */
+     *   cubalc guide · cubalc guide cap · cubalc guide match p · cubalc guide nth 1 p
+     *   cubalc guidematch p · cubalc guidenth 1 p · cubalc guidelastmatch p
+     * Schema cubalc.guide.v1 · agents skip TOPICHINT+RELATEDTOPIC+TOPIC / NTHTOPIC+GUIDE glue. */
     static const struct { const char *id; const char *hint; } hints[] = {
       {"general", "install/doctor/init surface · VERSION STATUS IDENTITY"},
       {"cap", "HASFORM/NEEDFORMS capability floor · FORMHINT · run -C"},
@@ -6611,16 +6620,115 @@ int main(int argc, char **argv) {
       {"lib", "HASLIB agent_boot\\nRECIPE agent_boot\\nPASS\\n"},
       {"protect", "HOLD_FLASH\\nVERSION\\nPASS\\n"},
     };
-    const char *topic = (argc > 2 && argv[2][0]) ? argv[2] : "general";
+    static const char *topic_ids[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    const char *topic = "general";
     char tup[32], tips_j[2400], forms_j[1200], rel_j[256], hj[320];
-    const char *hint = NULL, *src = "";
+    char nlow[64], matches[8][16];
+    nlow[0] = 0;
+    const char *hint = NULL, *src = "", *needle = NULL, *fallback = NULL, *mpick = NULL;
     size_t k, o, j;
     int i, nt = 0, nf = 0, nr = 0, lines = 0;
+    int mode_filt = 0; /* 0 direct · 1 first · 2 nth · 3 lastmatch */
+    int m_idx = 0, m_n = 0, ai = 2;
     int n_hints = (int)(sizeof hints / sizeof hints[0]);
     int n_rels = (int)(sizeof rels / sizeof rels[0]);
     int n_tips = (int)(sizeof tips / sizeof tips[0]);
     int n_forms = (int)(sizeof forms / sizeof forms[0]);
     int n_snips = (int)(sizeof snips / sizeof snips[0]);
+    int n_topic_ids = (int)(sizeof topic_ids / sizeof topic_ids[0]);
+    if (strcmp(cmd, "guidematch") == 0 || strcmp(cmd, "matchguide") == 0)
+      mode_filt = 1;
+    else if (strcmp(cmd, "guidenth") == 0 || strcmp(cmd, "nthguide") == 0)
+      mode_filt = 2;
+    else if (strcmp(cmd, "guidelastmatch") == 0 || strcmp(cmd, "lastmatchguide") == 0)
+      mode_filt = 3;
+    if (mode_filt == 0 && argc > 2 && argv[2] && argv[2][0]) {
+      if (!strcmp(argv[2], "match") || !strcmp(argv[2], "first") ||
+          !strcmp(argv[2], "pick")) {
+        mode_filt = 1;
+        ai = 3;
+      } else if (!strcmp(argv[2], "nth") || !strcmp(argv[2], "index")) {
+        mode_filt = 2;
+        ai = 3;
+      } else if (!strcmp(argv[2], "lastmatch") || !strcmp(argv[2], "endmatch") ||
+                 !strcmp(argv[2], "matchlast")) {
+        mode_filt = 3;
+        ai = 3;
+      } else {
+        topic = argv[2];
+      }
+    }
+    if (mode_filt != 0) {
+      if (mode_filt == 2) {
+        if (argc <= ai || !argv[ai] || !argv[ai][0]) {
+          fprintf(stderr, "usage: cubalc guide nth <idx> <needle> [OR fallback]\n");
+          printf("{\"schema\":\"cubalc.guide.v1\",\"ok\":false,\"cmd\":\"guidenth\","
+                 "\"err\":\"need idx and needle\",\"version\":\"%s\"}\n",
+                 CUBALC_LANG_VERSION);
+          return 2;
+        }
+        m_idx = atoi(argv[ai]);
+        ai++;
+      }
+      if (argc <= ai || !argv[ai] || !argv[ai][0]) {
+        fprintf(stderr, "usage: cubalc guide match|lastmatch <needle> [OR fallback]\n");
+        printf("{\"schema\":\"cubalc.guide.v1\",\"ok\":false,\"cmd\":\"guidematch\","
+               "\"err\":\"need needle\",\"version\":\"%s\"}\n",
+               CUBALC_LANG_VERSION);
+        return 2;
+      }
+      needle = argv[ai];
+      ai++;
+      if (argc > ai + 1 && argv[ai] &&
+          (!strcmp(argv[ai], "OR") || !strcmp(argv[ai], "or") ||
+           !strcmp(argv[ai], "ELSE") || !strcmp(argv[ai], "DEFAULT")) &&
+          argv[ai + 1] && argv[ai + 1][0])
+        fallback = argv[ai + 1];
+      for (k = 0; needle[k] && k + 1 < sizeof nlow; k++)
+        nlow[k] = (char)((needle[k] >= 'A' && needle[k] <= 'Z')
+                             ? needle[k] - 'A' + 'a' : needle[k]);
+      nlow[k] = 0;
+      if (!strcmp(nlow, "capability") || !strcmp(nlow, "forms") || !strcmp(nlow, "form"))
+        snprintf(nlow, sizeof nlow, "%s", "cap");
+      if (!strcmp(nlow, "mesh") || !strcmp(nlow, "smx") || !strcmp(nlow, "peer"))
+        snprintf(nlow, sizeof nlow, "%s", "p2p");
+      if (!strcmp(nlow, "nest") || !strcmp(nlow, "var") || !strcmp(nlow, "timeout"))
+        snprintf(nlow, sizeof nlow, "%s", "fat");
+      if (!strcmp(nlow, "json") || !strcmp(nlow, "agent"))
+        snprintf(nlow, sizeof nlow, "%s", "plate");
+      if (!strcmp(nlow, "start") || !strcmp(nlow, "help") || !strcmp(nlow, "all") ||
+          !strcmp(nlow, "default") || !strcmp(nlow, "*"))
+        snprintf(nlow, sizeof nlow, "%s", "general");
+      m_n = 0;
+      for (i = 0; i < n_topic_ids && m_n < 8; i++) {
+        if (!strstr(topic_ids[i], nlow)) continue;
+        snprintf(matches[m_n], sizeof matches[0], "%s", topic_ids[i]);
+        m_n++;
+      }
+      if (mode_filt == 3) {
+        if (m_n > 0) { mpick = matches[m_n - 1]; m_idx = m_n - 1; }
+      } else if (mode_filt == 1) {
+        if (m_n > 0) { mpick = matches[0]; m_idx = 0; }
+      } else {
+        if (m_idx < 0) m_idx = 0;
+        if (m_idx < m_n) mpick = matches[m_idx];
+      }
+      if (!mpick) {
+        if (fallback && fallback[0]) {
+          topic = fallback;
+        } else {
+          printf("{\"schema\":\"cubalc.guide.v1\",\"ok\":false,\"cmd\":\"guidematch\","
+                 "\"filter\":\"%s\",\"idx\":%d,\"match_n\":%d,\"err\":\"no match\","
+                 "\"version\":\"%s\"}\n",
+                 nlow, m_idx, m_n, CUBALC_LANG_VERSION);
+          return 1;
+        }
+      } else {
+        topic = mpick;
+      }
+    }
     for (k = 0; topic[k] && k + 1 < sizeof tup; k++)
       tup[k] = (char)((topic[k] >= 'A' && topic[k] <= 'Z')
                           ? topic[k] - 'A' + 'a' : topic[k]);
@@ -6697,12 +6805,16 @@ int main(int argc, char **argv) {
       else hj[o++] = c;
     }
     hj[o] = 0;
-    printf("{\"schema\":\"cubalc.guide.v1\",\"ok\":true,\"cmd\":\"guide\","
+    printf("{\"schema\":\"cubalc.guide.v1\",\"ok\":true,\"cmd\":\"%s\","
            "\"topic\":\"%s\",\"hint\":\"%s\",\"related_n\":%d,\"tips_n\":%d,"
            "\"forms_n\":%d,\"snip_lines\":%d,\"version\":\"%s\","
-           "\"note\":\"full playbook · dual of GUIDE · TOPICHINT+RELATEDTOPIC+TOPIC\","
+           "\"filter\":\"%s\",\"match_i\":%d,\"match_n\":%d,\"filter_mode\":%d,"
+           "\"note\":\"full playbook · MATCH|NTH|LASTMATCH filter pick · dual of GUIDE\","
            "\"related\":[%s],\"tips\":[%s],\"forms\":[%s],\"snip\":\"%s\"}\n",
+           mode_filt == 1 ? "guidematch" : mode_filt == 2 ? "guidenth" :
+           mode_filt == 3 ? "guidelastmatch" : "guide",
            tup, hj, nr, nt, nf, lines, CUBALC_LANG_VERSION,
+           mode_filt ? nlow : "", m_idx, mode_filt ? m_n : 0, mode_filt,
            rel_j, tips_j, forms_j, src);
     return 0;
   }
@@ -17981,7 +18093,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    relatedtopic|seetopics <t> related topic bag (cubalc.relatedtopic.v1)\n"
       "    formtopics|topicsof <form> topics covering form (cubalc.formtopics.v1)\n"
       "    formguide|guideform <form> form docs+topics+playbook (cubalc.formguide.v1)\n"
-      "    guide|playguide [topic]    full playbook plate (cubalc.guide.v1)\n"
+      "    guide|playguide [topic]|match|nth|lastmatch  full playbook · filter pick (cubalc.guide.v1)\n"
       "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
       "    errrun|recoversnip <err…>  classify + RUNSNIP topic (cubalc.errrun.v1)\n"
       "    errguide|recoverguide <err…> classify + GUIDE playbook (cubalc.errguide.v1)\n"
@@ -17990,7 +18102,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|onboard|matchtopics|picktopic|hasmatchtopics|nthtopic|lasttopic|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
+      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|guidematch|guidenth|guidelastmatch|onboard|matchtopics|picktopic|hasmatchtopics|nthtopic|lasttopic|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"

@@ -1,0 +1,103 @@
+# GUIDE MATCH / NTH / LASTMATCH — filter pick + full playbook one-shot
+# Completes NTHTOPIC → GUIDE chain without glue. needle "p" → cap/plate/p2p/protect
+
+GUIDE MATCH p
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "cap"
+ASSERT GUIDE_RELATED_N >= 3
+ASSERT GUIDE_TIPS_N >= 2
+ASSERT GUIDE_MATCH_N == 4
+ASSERT GUIDE_MATCH_I == 0
+ASSERT PICKTOPIC == "cap"
+SYS HASI "HASFORM"
+ASSERT LAST_N == 1
+
+# standalone first
+GUIDEMATCH p
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "cap"
+ASSERT GUIDEMATCH == "cap"
+
+# NTH pick
+GUIDE NTH 1 p
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "plate"
+ASSERT GUIDE_MATCH_I == 1
+SYS HASI "SETP"
+ASSERT LAST_N == 1
+
+GUIDENTH 2 p
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "p2p"
+
+# last matching
+GUIDE LASTMATCH p
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "protect"
+ASSERT GUIDE_MATCH_I == 3
+
+GUIDELASTMATCH p
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "protect"
+
+# alias FIRST / PICK
+GUIDE FIRST lib
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "lib"
+
+GUIDE PICK mesh
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "p2p"
+
+# exact + synonym filter
+GUIDEMATCH forms
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "cap"
+
+# preserve bare GUIDE LAST (use LAST var as topic)
+LET T = "fat"
+# set LAST via print path: GUIDE fat then use chain
+GUIDE fat
+ASSERT TOPIC_NAME == "fat"
+# LAST is guide plate JSON now — not used as topic name here
+
+# OR fallback
+GUIDE MATCH zzz OR general
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "general"
+
+GUIDENTH 9 p OR run
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "run"
+
+# soft miss
+GUIDE MATCH zzz_nope
+ASSERT OK == 0
+CLEAR_ERR
+
+GUIDENTH 5 p
+ASSERT OK == 0
+CLEAR_ERR
+
+GUIDE LASTMATCH zzz
+ASSERT OK == 0
+CLEAR_ERR
+
+# need needle soft
+GUIDEMATCH
+ASSERT OK == 0
+CLEAR_ERR
+
+# direct GUIDE still works
+GUIDE plate
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "plate"
+ASSERT GUIDE_RELATED_N >= 3
+
+# plate schema after match
+GUIDE MATCH plate
+SYS HASI "cubalc.guide.v1"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1350_guidematch: PASS"
