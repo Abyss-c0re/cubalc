@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 842,
-  "version": "1.15.834-usability",
-  "item": "HASENVANY / NEEDENVANY any-of host env",
-  "item_id": 842,
-  "title": "HASENVANY \u00b7 NEEDENVANY \u00b7 ENVHAVE \u00b7 CLI envgate any",
-  "commit": "79b51d064a650f956b88cc31fa72b847a2e0925f",
-  "summary": "Any-of multi host-env gate twin of HASENVALL; soft/hard; envgate.v1 any; proof 1382 PASS.",
+  "iter": 843,
+  "version": "1.15.835-usability",
+  "item": "env_guard lib NEED_ENVS + NEED_ENV_ANY",
+  "item_id": 843,
+  "title": "env_guard \u00b7 NEED_ENVS \u00b7 NEED_ENV_ANY \u00b7 doctor lib_env_guard",
+  "commit": "4e98efcc36d65ffc424c6481fc1da3b8cd4491e7",
+  "summary": "INCLUDE env_guard host-env ALL/ANY contract twin of cli_guard; doctor lib_env_guard; proof 1383 PASS.",
   "proofs": [
-    "1382_hasenvany PASS",
-    "1382_cli_hasenvany PASS"
+    "1383_env_guard PASS",
+    "1383_cli_env_guard PASS"
   ],
-  "when": "2026-08-10T23:33:50Z",
+  "when": "2026-08-10T23:45:48Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "79b51d064a650f956b88cc31fa72b847a2e0925f",
-  "note": "pairs HASENVALL \u00b7 completes flag/arg/env ALL+ANY matrix \u00b7 thrash-free"
+  "sha": "4e98efcc36d65ffc424c6481fc1da3b8cd4491e7",
+  "note": "pairs form_guard/cli_guard \u00b7 uses HASENVALL/HASENVANY \u00b7 host config without N\u00d7 ENV glue"
 }
