@@ -4,11 +4,7 @@
   "item": "NEEDDOCTOR hard install gate + CLI needdoctor/-D",
   "summary": "NEEDDOCTOR|REQUIREDOCTOR|MUSTDOCTOR hard twin of DOCTOR; cubalc needdoctor; run -D/--need-doctor; CUBALC_REQUIRE_DOCTOR; proofs 1357",
   "version": "1.15.807-usability",
-  "commit": "4a2307ea0f6fcc7284445749ef7abde0ae402f61",
-  "proofs": [
-    "programs/proof/1357_needdoctor.cubalc",
-    "programs/proof/1357_cli_needdoctor.sh"
-  ],
-  "ts": 1786387400,
-  "sha": "4a2307ea0f6fcc7284445749ef7abde0ae402f61"
+  "commit": null,
+  "proofs": ["programs/proof/1357_needdoctor.cubalc", "programs/proof/1357_cli_needdoctor.sh"],
+  "ts": 1786387400
 }

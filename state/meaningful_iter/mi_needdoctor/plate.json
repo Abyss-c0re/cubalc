@@ -1,0 +1,18 @@
+{
+  "schema": "cubalc.meaningful_iter.v1",
+  "iter": 816,
+  "version": "1.15.807-usability",
+  "item": "NEEDDOCTOR hard install gate",
+  "item_id": 816,
+  "title": "NEEDDOCTOR|REQUIREDOCTOR \u00b7 run -D \u00b7 cubalc needdoctor",
+  "commit": "4a2307ea0f6fcc7284445749ef7abde0ae402f61",
+  "summary": "Hard fail-fast twin of soft DOCTOR; CLI needdoctor + -D/--need-doctor + CUBALC_REQUIRE_DOCTOR. proof 1357 PASS.",
+  "proofs": [
+    "1357_needdoctor PASS",
+    "1357_cli_needdoctor PASS"
+  ],
+  "when": "2026-08-10T18:42:01Z",
+  "agent": "nanobot_cubalc",
+  "sha": "4a2307ea0f6fcc7284445749ef7abde0ae402f61",
+  "note": "dual of DOCTOR \u00b7 agents gate cold-start without soft-ok ambiguity"
+}
