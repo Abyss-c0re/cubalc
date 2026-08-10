@@ -4412,6 +4412,6 @@
     "iter295: fat canary fat_session vs baseline fat_boot mtime split",
     "iter295: selftest CLI duals still red"
   ],
-  "commit": "pending",
+  "commit": "b4f954c5",
   "ts": "2026-08-10T09:53:46Z"
 }
