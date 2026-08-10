@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 763,
-  "version": "1.15.790-usability",
-  "item": "RELATEDTOPIC + cubalc relatedtopic topic neighbor bags",
-  "item_id": 799,
-  "title": "RELATEDTOPIC|SEETOPICS name · cubalc relatedtopic · cubalc.relatedtopic.v1",
-  "commit": "a4f37d1f3da2d5eb978a4ebcb31798e72903772d",
-  "summary": "topic→related topics bag twin of RELATED for forms; chain with TOPICHINT/EACH TOPIC. proof 1340 PASS.",
+  "iter": 764,
+  "version": "1.15.791-usability",
+  "item": "FORMTOPICS + cubalc formtopics reverse FORMSFOR",
+  "item_id": 800,
+  "title": "FORMTOPICS|TOPICSOF form · cubalc formtopics · cubalc.formtopics.v1",
+  "commit": "2381f167da59fe41046e6f3bb8f51db4bee318ec",
+  "summary": "form→covering topics reverse of FORMSFOR; chain with TOPICHINT/TOPIC. proof 1341 PASS.",
   "proofs": [
-    "1340_relatedtopic PASS",
-    "1340_cli_relatedtopic PASS"
+    "1341_formtopics PASS",
+    "1341_cli_formtopics PASS"
   ],
-  "when": "2026-08-10T14:40:00Z",
+  "when": "2026-08-10T14:58:12Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a4f37d1f3da2d5eb978a4ebcb31798e72903772d",
-  "note": "relatedtopic cap; seetopics mesh→p2p; FORMSFOR general includes RELATEDTOPIC"
+  "sha": "2381f167da59fe41046e6f3bb8f51db4bee318ec",
+  "note": "formtopics HASFORM→cap; INCLUDE multi-topic; STATUS general/fat/protect"
 }
