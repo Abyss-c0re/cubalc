@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 738,
-  "version": "1.15.765-usability",
-  "item": "EACH LIB MATCH walk sorted lib stems",
-  "item_id": 774,
-  "title": "EACH LIB [AS name] [MATCH needle] \u00b7 no MATCHLIBS+EACH LINE glue",
-  "commit": "cafd0790c301c470a754bcaf06c1ee94fed3f93d",
-  "summary": "Walk filtered lib stems for INCLUDE/recipe loops. Soft empty. proof 1315 PASS.",
+  "iter": 739,
+  "version": "1.15.766-usability",
+  "item": "INCLUDE ALL MATCH bulk include filtered libs",
+  "item_id": 775,
+  "title": "INCLUDE ALL MATCH needle [DEFAULT] \u00b7 bulk filter include \u00b7 SOFT miss",
+  "commit": "eecdca3c5cc616c96893eed43d41758b7abe67b1",
+  "summary": "Bulk-include matching stems without EACH LIB+INCLUDE loop. proof 1316 PASS.",
   "proofs": [
-    "1315_each_lib PASS",
-    "1315_cli_each_lib PASS"
+    "1316_include_all_match PASS",
+    "1316_cli_include_all_match PASS"
   ],
-  "when": "2026-08-10T09:29:03Z",
+  "when": "2026-08-10T09:36:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "cafd0790c301c470a754bcaf06c1ee94fed3f93d",
-  "note": "EACH LIB MATCH fat; EACH LIB AS x MATCH guard; empty soft"
+  "sha": "eecdca3c5cc616c96893eed43d41758b7abe67b1",
+  "note": "INCLUDE ALL MATCH guard; DEFAULT hold_seed; SOFT miss"
 }
