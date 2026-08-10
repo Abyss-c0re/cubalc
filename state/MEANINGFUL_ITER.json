@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 735,
-  "version": "1.15.762-usability",
-  "item": "INCLUDE NTH/LASTMATCH filter pick+include",
-  "item_id": 771,
-  "title": "INCLUDE NTH idx + LASTMATCH \u00b7 completes MATCH triad \u00b7 DEFAULT/SOFT",
-  "commit": "eb43df1b5a911e25e9188b8b7f3110c58b7f4ae8",
-  "summary": "Nth and last sorted filter stems one-shot INCLUDE. Completes MATCH/NTH/LAST triad. proof 1312 PASS.",
+  "iter": 736,
+  "version": "1.15.763-usability",
+  "item": "COUNTMATCHLIBS + CLI picklib/hasmatchlibs duals",
+  "item_id": 772,
+  "title": "COUNTMATCHLIBS count without bag \u00b7 cubalc.libmatch.v1 pick/count/has/need/nth/last",
+  "commit": "46ef870e3791d831aef8acbb17076a480aaf615b",
+  "summary": "In-lang count + shell filter duals for agent lib discovery without .cubalc. proof 1313 PASS.",
   "proofs": [
-    "1312_include_nth_last PASS",
-    "1312_cli_include_nth_last PASS"
+    "1313_countmatchlibs PASS",
+    "1313_cli_libmatch PASS"
   ],
-  "when": "2026-08-10T08:49:10Z",
+  "when": "2026-08-10T08:58:51Z",
   "agent": "meaningful_iter_10m",
-  "sha": "eb43df1b5a911e25e9188b8b7f3110c58b7f4ae8",
-  "note": "INCLUDE NTH 1 fat; LASTMATCH plate; DEFAULT hold_seed"
+  "sha": "46ef870e3791d831aef8acbb17076a480aaf615b",
+  "note": "COUNTMATCHLIBS plate; cubalc picklib fat; needmatchlibs exit 1 on miss"
 }
