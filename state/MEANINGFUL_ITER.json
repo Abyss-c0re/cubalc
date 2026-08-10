@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 841,
-  "version": "1.15.833-usability",
-  "item": "HASENVALL / NEEDENVS multi host-env ALL gates",
-  "item_id": 841,
-  "title": "HASENVALL \u00b7 NEEDENVS \u00b7 ENVMISS \u00b7 CLI envgate",
-  "commit": "8d4272faeb84b174b75a26b8365e8c9e1fd8c67c",
-  "summary": "Multi host-env ALL gate twin of HASARGALL; soft/hard; cubalc.envgate.v1; proof 1381 PASS.",
+  "iter": 842,
+  "version": "1.15.834-usability",
+  "item": "HASENVANY / NEEDENVANY any-of host env",
+  "item_id": 842,
+  "title": "HASENVANY \u00b7 NEEDENVANY \u00b7 ENVHAVE \u00b7 CLI envgate any",
+  "commit": "79b51d064a650f956b88cc31fa72b847a2e0925f",
+  "summary": "Any-of multi host-env gate twin of HASENVALL; soft/hard; envgate.v1 any; proof 1382 PASS.",
   "proofs": [
-    "1381_hasenvall PASS",
-    "1381_cli_hasenvall PASS",
-    "1381_cli_envgate PASS"
+    "1382_hasenvany PASS",
+    "1382_cli_hasenvany PASS"
   ],
-  "when": "2026-08-10T23:21:17Z",
+  "when": "2026-08-10T23:33:50Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "8d4272faeb84b174b75a26b8365e8c9e1fd8c67c",
-  "note": "pairs HASARGALL/HASFLAGALL \u00b7 process env multi presence \u00b7 completes flag/arg/env ALL matrix"
+  "sha": "79b51d064a650f956b88cc31fa72b847a2e0925f",
+  "note": "pairs HASENVALL \u00b7 completes flag/arg/env ALL+ANY matrix \u00b7 thrash-free"
 }
