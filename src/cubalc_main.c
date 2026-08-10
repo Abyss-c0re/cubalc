@@ -1803,7 +1803,8 @@ int main(int argc, char **argv) {
      * Timeout: -T MS|--timeout MS or CUBALC_RUN_TIMEOUT — wall-clock kill runaway loops.
      * Preload: -I|--include|--preload LIB + CUBALC_PRELOAD=a:b → INCLUDE ONCE before body.
      * Path: -L|--include-path|--lib-path DIR prepends CUBALC_INCLUDE_PATH for this run.
-     * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older. */
+     * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older.
+     * Forms: -C|--need-forms F1,F2 + CUBALC_REQUIRE_FORMS — fail if HELP catalog misses. */
     int quiet = 0, strict = 0, i, rc;
     int plate_ok;
     int have_expr = 0;
@@ -1818,6 +1819,7 @@ int main(int argc, char **argv) {
     char preload[16][96];
     char ipaths[8][512];
     char req_ver[64];
+    char req_forms[512];
     const char *src_path = NULL;
     const char *src_label;
     const char *eq;
@@ -1829,6 +1831,7 @@ int main(int argc, char **argv) {
     (void)ddash;
     (void)src_idx;
     req_ver[0] = 0;
+    req_forms[0] = 0;
     eq = getenv("CUBALC_QUIET");
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
@@ -1851,6 +1854,10 @@ int main(int argc, char **argv) {
     eq = getenv("CUBALC_REQUIRE_VERSION");
     if (eq && eq[0])
       snprintf(req_ver, sizeof req_ver, "%s", eq);
+    /* Env form floor first; CLI -C appends/overrides. */
+    eq = getenv("CUBALC_REQUIRE_FORMS");
+    if (eq && eq[0])
+      snprintf(req_forms, sizeof req_forms, "%s", eq);
     /* Env preloads first; CLI -I appends (deduped). */
     run_preload_parse_env(preload, &n_preload, getenv("CUBALC_PRELOAD"));
     /* Scan from argv[1] so top-level cubalc -e CODE (cmd rewritten to run) works. */
@@ -1925,6 +1932,26 @@ int main(int argc, char **argv) {
       }
       if (!strncmp(argv[i], "--min-version=", 14)) {
         snprintf(req_ver, sizeof req_ver, "%s", argv[i] + 14);
+        continue;
+      }
+      /* -C F1,F2 · --need-forms · --require-forms · CUBALC_REQUIRE_FORMS dual */
+      if (!strcmp(argv[i], "-C") || !strcmp(argv[i], "--need-forms") ||
+          !strcmp(argv[i], "--require-forms") || !strcmp(argv[i], "--forms-need")) {
+        if (i + 1 >= argc) {
+          fprintf(stderr, "cubalc run: %s needs form names (e.g. SORTLIBS,LIBAGE)\n",
+                  argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        snprintf(req_forms, sizeof req_forms, "%s", argv[++i]);
+        continue;
+      }
+      if (!strncmp(argv[i], "--need-forms=", 13)) {
+        snprintf(req_forms, sizeof req_forms, "%s", argv[i] + 13);
+        continue;
+      }
+      if (!strncmp(argv[i], "--require-forms=", 16)) {
+        snprintf(req_forms, sizeof req_forms, "%s", argv[i] + 16);
         continue;
       }
       /* -I lib · --include lib · --include=lib · --preload */
@@ -2086,14 +2113,15 @@ int main(int argc, char **argv) {
     }
     if (!have_expr && !src_path) {
       fprintf(stderr,
-              "usage: cubalc run [-q] [-s] [-T MS] [-R VER] [-I LIB]... [-L DIR]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
-              "       cubalc eval [-q] [-s] [-T MS] [-R VER] [-I LIB]... [-e CODE]... <file>|-\n"
+              "usage: cubalc run [-q] [-s] [-T MS] [-R VER] [-C FORMS] [-I LIB]... [-L DIR]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
+              "       cubalc eval [-q] [-s] [-T MS] [-R VER] [-C FORMS] [-I LIB]... [-e CODE]... <file>|-\n"
               "       cubalc -e 'SYS DATE\\nPRINT LAST'   # top-level alias\n"
               "       cubalc -I agent_boot -e 'STATUS'  # preload INCLUDE ONCE\n"
               "       multiple -e join with newline; \\n \\t \\\\ escapes\n"
               "       -I/--include/--preload LIB  · CUBALC_PRELOAD=a:b\n"
               "       -L/--include-path DIR · prepends CUBALC_INCLUDE_PATH\n"
               "       -R/--require-version X.Y · CUBALC_REQUIRE_VERSION floor\n"
+              "       -C/--need-forms F1,F2 · CUBALC_REQUIRE_FORMS capability floor\n"
               "       -T/--timeout MS · CUBALC_RUN_TIMEOUT wall kill runaway loops\n"
               "       CUBALC_QUIET=1  → plate only · CUBALC_STRICT=1 → soft last_err fails\n");
       free(expr_buf);
@@ -2175,6 +2203,47 @@ int main(int argc, char **argv) {
              CUBALC_MAX_VARS,
              quiet ? "true" : "false", strict ? "true" : "false");
       return 1;
+    }
+    /* Fail-fast form capability floor before body (agent host contract · NEEDFORMS dual). */
+    if (req_forms[0]) {
+      char forms[512], src[700];
+      size_t a, b;
+      cubalc_run_result fr;
+      int fhit;
+      /* normalize , : ; | to spaces for NEEDFORMS */
+      for (a = 0, b = 0; req_forms[a] && b + 1 < sizeof forms; a++) {
+        char c = req_forms[a];
+        if (c == ',' || c == ':' || c == ';' || c == '|')
+          c = ' ';
+        forms[b++] = c;
+      }
+      forms[b] = 0;
+      snprintf(src, sizeof src, "NEEDFORMS %s\nPASS\n", forms);
+      memset(&fr, 0, sizeof fr);
+      (void)cubalc_run_source(src, strlen(src), "<require-forms>", &fr, NULL);
+      fhit = (fr.ok && fr.asserts_fail == 0 && !fr.err[0]) ? 1 : 0;
+      if (!fhit) {
+        free(expr_buf);
+        if (devnull) fclose(devnull);
+        printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
+               "\"err\":\"REQUIRE FORMS failed: %s\","
+               "\"require_forms\":\"%s\",\"version\":\"%s\","
+               "\"why_hint\":\"cubalc hasforms · HASFORM · NEEDFORMS · upgrade runtime\","
+               "\"preload_n\":%d,"
+               "\"require_version\":\"%s\","
+               "\"includes_n\":0,\"includes\":[],"
+               "\"vars_n\":0,\"vars_max\":%d,\"vars_full\":false,"
+               "\"quiet\":%s,\"strict\":%s,"
+               "\"exit_code\":1,\"halted\":false}\n",
+               have_expr ? "<expr>" : (src_path ? src_path : "?"),
+               fr.err[0] ? fr.err : (fr.last_err[0] ? fr.last_err : "missing form"),
+               req_forms, CUBALC_LANG_VERSION,
+               n_preload,
+               req_ver[0] ? req_ver : "",
+               CUBALC_MAX_VARS,
+               quiet ? "true" : "false", strict ? "true" : "false");
+        return 1;
+      }
     }
     if (quiet) {
       devnull = fopen("/dev/null", "w");
@@ -2436,6 +2505,7 @@ int main(int argc, char **argv) {
                "\"preload_ok\":%s,\"preload_miss_n\":%d,\"preload_miss\":%s,"
                "\"include_path_n\":%d,"
                "\"require_version\":\"%s\","
+               "\"require_forms\":\"%s\","
                "\"includes_n\":%d,\"includes\":%s,"
                "\"include_stems_n\":%d,\"include_stems\":%s,"
                "\"vars_n\":%d,\"vars_max\":%d,\"vars_full\":%s,"
@@ -2452,6 +2522,7 @@ int main(int argc, char **argv) {
                pmiss_n == 0 ? "true" : "false", pmiss_n, pmiss,
                n_ipath,
                req_ver[0] ? req_ver : "",
+               req_forms[0] ? req_forms : "",
                rr.includes_n, incj,
                stems_n, stemsj,
                rr.vars_n, rr.vars_max > 0 ? rr.vars_max : CUBALC_MAX_VARS,
@@ -3162,6 +3233,7 @@ int main(int argc, char **argv) {
       {"cli_which_include_path", "programs/proof/1264_cli_which_include_path.sh", "which/SYS WHICH CUBALC_INCLUDE_PATH project libs"},
       {"cli_cat_libs_include_path", "programs/proof/1265_cli_cat_libs_include_path.sh", "cat/libs CUBALC_INCLUDE_PATH project lib discovery"},
       {"cli_require_version", "programs/proof/1266_cli_require_version.sh", "run -R / CUBALC_REQUIRE_VERSION host version floor"},
+      {"cli_require_forms", "programs/proof/1326_cli_require_forms.sh", "run -C / CUBALC_REQUIRE_FORMS host form capability floor"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -5729,6 +5801,7 @@ int main(int argc, char **argv) {
       {"CUBALC_PRELOAD", "", 0, "colon lib names auto-INCLUDE ONCE before run body (-I dual)"},
       {"CUBALC_PRELOAD_ACTIVE", "", 0, "set by run to effective -I/PRELOAD list · LISTPRELOAD in-lang"},
       {"CUBALC_REQUIRE_VERSION", "", 0, "x.y[.z] floor for run (-R dual · fail if runtime older)"},
+      {"CUBALC_REQUIRE_FORMS", "", 0, "comma form names for run (-C dual · NEEDFORMS floor before body)"},
       {"CUBALC_SEED", "", 0, "RNG seed for reproducible runs"},
       {"CUBALC_QUIET", "", 0, "1 → run plate-only no board noise"},
       {"CUBALC_STRICT", "", 0, "1 → run: soft last_err fails exit + plate ok"},
@@ -15460,6 +15533,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"CUBALC_PRELOAD", "colon libs auto-INCLUDE ONCE before run (-I)"},
       {"CUBALC_PRELOAD_ACTIVE", "effective -I/PRELOAD list · LISTPRELOAD"},
       {"CUBALC_REQUIRE_VERSION", "x.y floor for run (-R dual)"},
+      {"CUBALC_REQUIRE_FORMS", "comma forms for run (-C dual · capability floor)"},
     };
     if (!q || !q[0]) {
       fprintf(stderr, "usage: cubalc search <keyword>\n"
@@ -15681,8 +15755,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
-      "    run|eval [-q][-s][-T ms][-I lib][-L dir][-R ver][-e CODE] <file|->\n"
-      "                          -q plate-only · -s soft last_err fails · -T wall budget\n"
+      "    run|eval [-q][-s][-T ms][-I lib][-L dir][-R ver][-C forms][-e CODE] <file|->\n"
+      "                          -q plate · -s strict · -T wall · -C form floor (NEEDFORMS)\n"
       "    help|-h                this text\n"
       "\n"
       "  Law & Core safety\n"
