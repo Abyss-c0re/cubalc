@@ -824,6 +824,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 794. ~~**`LISTTOPICS` / `HASTOPIC` / `cubalc topics`**~~ **done** (discovery topic catalog + soft/hard gates · cubalc.topics.v1 · no hardcode topic names).
 795. ~~**`ERRTIPS` / `cubalc errtips`**~~ **done** (LAST_ERR → recovery tip bag + inferred topic · cubalc.errtips.v1 · chain TIPS/TOPIC/RUNSNIP).
 796. ~~**`ERRRUN` / `cubalc errrun`**~~ **done** (ERRTIPS classify + RUNSNIP topic one-shot · cubalc.errrun.v1 · soft-fail → prove recovery surface).
+797. ~~**`EACH TOPIC`**~~ **done** (walk discovery topics · MATCH filter · dual of LISTTOPICS+EACH LINE · agent topic loops).
 
 ## Tick protocol
 

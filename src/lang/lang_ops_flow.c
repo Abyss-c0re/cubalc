@@ -18623,11 +18623,145 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
                   kw(&L->cur,"STEMS")||kw(&L->cur,"MODULE")||kw(&L->cur,"MODULES")||
                   kw(&L->cur,"LIBSTEM")||kw(&L->cur,"LIBSTEMS")||kw(&L->cur,"STDLIB")||
                   kw(&L->cur,"MATCHLIB")||kw(&L->cur,"MATCHLIBS"));
+    int is_topic = (kw(&L->cur,"TOPIC")||kw(&L->cur,"TOPICS")||kw(&L->cur,"DISCOVERY")||
+                    kw(&L->cur,"DISCOVERIES")||kw(&L->cur,"PLAYBOOK")||kw(&L->cur,"PLAYBOOKS")||
+                    kw(&L->cur,"SURFACE")||kw(&L->cur,"SURFACES")||
+                    kw(&L->cur,"DISCOVERY_TOPIC")||kw(&L->cur,"DISCOVERY_TOPICS"));
     if (!is_cell && !is_cube && !is_line && !is_obj && !is_prop && !is_meth && !is_key &&
-        !is_flat && !is_lib){
-      fail(vm,"EACH CUBE|CELL|LINE|PROP|METHOD|OBJ|KEY|KEYNEST|FLAT|LIB as name"); return -1;
+        !is_flat && !is_lib && !is_topic){
+      fail(vm,"EACH CUBE|CELL|LINE|PROP|METHOD|OBJ|KEY|KEYNEST|FLAT|LIB|TOPIC as name"); return -1;
     }
     lex_next(L);
+    if (is_topic){
+      /* EACH TOPIC [AS name] [MATCH|FILTER needle] … END
+       * Walk curated discovery topics (same set as LISTTOPICS / TIPS / RUNSNIP).
+       * Optional MATCH filter (case-insensitive substring on id).
+       * Binds name (default TOPIC) + LINE · IT 0-based · TOPIC_N 1-based · EACHTOPICS_N.
+       * Usability: no LISTTOPICS + EACH LINE glue for TOPIC/TIPS/RUNSNIP walks. */
+      static const char *topics[] = {
+        "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+      };
+      char tname[48], needle[96], fup[96];
+      char hits[16][32];
+      int nall = (int)(sizeof topics / sizeof topics[0]);
+      int nh = 0, i;
+      long idx = 0;
+      size_t a;
+      snprintf(tname, sizeof tname, "TOPIC");
+      needle[0] = 0;
+      fup[0] = 0;
+      if (kw(&L->cur,"AS")||kw(&L->cur,"->")){
+        lex_next(L);
+        if (L->cur.kind!=TK_IDENT){ fail(vm,"EACH TOPIC as name"); return -1; }
+        snprintf(tname, sizeof tname, "%s", L->cur.text); lex_next(L);
+      } else if (L->cur.kind==TK_IDENT &&
+                 strcmp(L->cur.text,"MATCH")!=0 && strcmp(L->cur.text,"FILTER")!=0 &&
+                 strcmp(L->cur.text,"WHERE")!=0 && strcmp(L->cur.text,"WITH")!=0 &&
+                 strcmp(L->cur.text,"OF")!=0 && strcmp(L->cur.text,"IN")!=0 &&
+                 strcmp(L->cur.text,"FROM")!=0 && strcmp(L->cur.text,"END")!=0){
+        snprintf(tname, sizeof tname, "%s", L->cur.text); lex_next(L);
+      }
+      if (kw(&L->cur,"MATCH")||kw(&L->cur,"FILTER")||kw(&L->cur,"WHERE")||
+          kw(&L->cur,"WITH")||kw(&L->cur,"OF")||kw(&L->cur,"IN")||kw(&L->cur,"FROM")||
+          kw(&L->cur,"LIKE")||kw(&L->cur,"FOR")){
+        lex_next(L);
+        if (L->cur.kind == TK_STR) {
+          snprintf(needle, sizeof needle, "%s", L->cur.text);
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(needle, sizeof needle, "%s", vv->sval);
+          else if (strcmp(L->cur.text, "LAST") == 0)
+            snprintf(needle, sizeof needle, "%s", vm->last_str);
+          else
+            snprintf(needle, sizeof needle, "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+      if (needle[0]) {
+        for (a = 0; needle[a] && a + 1 < sizeof fup; a++) {
+          char c = needle[a];
+          if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+          fup[a] = c;
+        }
+        fup[a] = 0;
+      }
+      for (i = 0; i < nall && nh < 16; i++) {
+        if (fup[0]) {
+          char low[32];
+          size_t b;
+          for (b = 0; topics[i][b] && b + 1 < sizeof low; b++) {
+            char c = topics[i][b];
+            if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+            low[b] = c;
+          }
+          low[b] = 0;
+          if (!strstr(low, fup)) continue;
+        }
+        snprintf(hits[nh++], sizeof hits[0], "%s", topics[i]);
+      }
+      skip_nl(L);
+      {
+        Lex body_start = *L;
+        int depth = 1;
+        while (L->cur.kind != TK_EOF) {
+          if (block_scan_step(L, &depth, 0)) break;
+        }
+        if (depth != 0) { fail(vm, "EACH TOPIC without END"); return -1; }
+        var_set_num(vm, "EACHTOPICS_N", nh);
+        var_set_num(vm, "LISTTOPICS_N", nh);
+        if (needle[0]) {
+          var_set_str(vm, "EACHTOPICS_FILTER", needle);
+          var_set_str(vm, "LISTTOPICS_FILTER", needle);
+        } else {
+          var_set_str(vm, "EACHTOPICS_FILTER", "");
+        }
+        for (i = 0; i < nh && !vm->fatal && !vm->halt; i++) {
+          var_set_str(vm, tname, hits[i]);
+          var_set_str(vm, "TOPIC", hits[i]);
+          var_set_str(vm, "LINE", hits[i]);
+          var_set_str(vm, "TOPIC_NAME", hits[i]);
+          var_set_num(vm, "IT", idx);
+          var_set_num(vm, "IDX", idx);
+          var_set_num(vm, "TOPIC_N", idx + 1);
+          var_set_num(vm, "LINE_N", idx + 1);
+          var_set_num(vm, "OK", 1);
+          vm->break_loop = 0;
+          vm->continue_loop = 0;
+          {
+            Lex body = body_start;
+            if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+          }
+          if (vm->break_loop) { vm->break_loop = 0; break; }
+          vm->continue_loop = 0;
+          idx++;
+        }
+        if (kw(&L->cur, "END")) lex_next(L);
+        var_set_num(vm, "LAST_N", nh);
+        var_set_num(vm, "EACH_N", nh);
+        var_set_num(vm, "EACHTOPICS_N", nh);
+        var_set_num(vm, "OK", 1);
+        {
+          char bag[256];
+          size_t o = 0;
+          int k;
+          bag[0] = 0;
+          for (k = 0; k < nh; k++) {
+            size_t ln = strlen(hits[k]);
+            if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+            if (o + ln < sizeof bag) { memcpy(bag + o, hits[k], ln); o += ln; }
+            bag[o] = 0;
+          }
+          var_set_str(vm, "LAST", bag);
+          var_set_str(vm, "EACHTOPICS", bag);
+          var_set_str(vm, "LISTTOPICS", bag);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+        }
+        bump(vm);
+        return 1;
+      }
+    }
     if (is_lib){
       /* EACH LIB [AS name] [MATCH|FILTER needle] … END
        * Walk sorted lib stems (programs/lib + CUBALC_INCLUDE_PATH).

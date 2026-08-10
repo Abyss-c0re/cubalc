@@ -3256,6 +3256,8 @@ int main(int argc, char **argv) {
       {"cli_errtips", "programs/proof/1336_cli_errtips.sh", "cubalc errtips classify + plate"},
       {"errrun", "programs/proof/1337_errrun.cubalc", "ERRRUN classify+RUNSNIP recovery one-shot"},
       {"cli_errrun", "programs/proof/1337_cli_errrun.sh", "cubalc errrun plate + topics"},
+      {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
+      {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3897,6 +3899,7 @@ int main(int argc, char **argv) {
       {"TOPIC", "flow", "TOPIC|TOPICCARD [topic] tips+forms+snip one plate · cubalc topic dual"},
       {"TOPICCARD", "flow", "TOPICCARD alias of TOPIC"},
       {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
+      {"EACH TOPIC", "flow", "EACH TOPIC [AS name] [MATCH] walk discovery topics · dual of LISTTOPICS"},
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
@@ -15348,6 +15351,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"TOPIC", "flow", "TOPIC|TOPICCARD [topic] tips+forms+snip one plate · cubalc topic dual"},
       {"TOPICCARD", "flow", "TOPICCARD alias of TOPIC"},
       {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
+      {"EACH TOPIC", "flow", "EACH TOPIC [AS name] [MATCH] walk discovery topics · dual of LISTTOPICS"},
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
@@ -16826,7 +16830,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|formsfor|related|snip|topic|runsnip|topics|errtips|errrun  duals\n"
+      "    picklib|listforms|formhint|formsfor|related|snip|topic|runsnip|topics|errtips|errrun · EACH TOPIC\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"

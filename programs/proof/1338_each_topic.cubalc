@@ -1,0 +1,44 @@
+# EACH TOPIC — walk discovery topics (dual of LISTTOPICS bag)
+
+LET bag = ""
+LET n = 0
+EACH TOPIC
+  LET n = n + 1
+  SYS PUSH bag TOPIC
+  LET bag = LAST
+END
+ASSERT n == 8
+ASSERT EACHTOPICS_N == 8
+ASSERT LAST_N == 8
+SYS HASI "cap"
+ASSERT LAST_N == 1
+SYS HASI "protect"
+ASSERT LAST_N == 1
+
+# AS bind name
+LET seen = 0
+EACH TOPIC AS t
+  IF t == "lib" THEN
+    LET seen = 1
+  END
+END
+ASSERT seen == 1
+
+# MATCH filter
+LET m = 0
+EACH TOPIC MATCH "a"
+  LET m = m + 1
+END
+# general, cap, fat, plate, p2p, run, lib, protect — filter "a": general, cap, fat, plate (4)
+ASSERT m >= 3
+ASSERT EACHTOPICS_N == m
+ASSERT LAST_N == m
+
+# walk + HASTOPIC
+EACH TOPIC AS t
+  HASTOPIC t
+  ASSERT LAST_N == 1
+END
+
+PASS
+PRINT "1338_each_topic: PASS"
