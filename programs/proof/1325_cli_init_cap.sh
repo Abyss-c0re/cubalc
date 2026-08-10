@@ -7,7 +7,7 @@ TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
 OUT=$("$CUBALC" init --list 2>&1)
-printf '%s\n' "$OUT" | grep -q '"n":7'
+printf '%s\n' "$OUT" | grep -q '"n":8'
 printf '%s\n' "$OUT" | grep -q 'cap_boot'
 printf '%s\n' "$OUT" | grep -q -- '--cap'
 

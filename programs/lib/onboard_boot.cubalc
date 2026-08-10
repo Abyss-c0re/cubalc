@@ -1,0 +1,12 @@
+# INCLUDE onboard_boot — agent first-call discovery surface one-shot
+# Usability: agent_boot (REQUIRE VERSION + VERSION) + START onboarding plate
+#   INCLUDE onboard_boot
+#   # START_TOPICS · START_NEXT · START_HINT ready
+#   GUIDE general   # optional deeper playbook
+#
+# Scaffold: cubalc init demo --onboard
+# CLI dual plate: cubalc onboard
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+INCLUDE agent_boot
+START

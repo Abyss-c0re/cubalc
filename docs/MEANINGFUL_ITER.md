@@ -832,6 +832,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 802. ~~**`ERRGUIDE` / `cubalc errguide`**~~ **done** (ERRTIPS classify + GUIDE playbook one-shot · cubalc.errguide.v1 · twin of ERRRUN).
 803. ~~**`FORMGUIDE` / `cubalc formguide`**~~ **done** (FORMHINT + covering topics + first-topic GUIDE · cubalc.formguide.v1 · form→playbook).
 804. ~~**`START` / `cubalc onboard`**~~ **done** (agent onboarding plate topics+next · cubalc.start.v1 · CLI start stays cookbook).
+805. ~~**`onboard_boot` + `cubalc init --onboard`**~~ **done** (INCLUDE agent_boot+START · init scaffold n=8 · doctor lib_onboard_boot).
 
 ## Tick protocol
 
