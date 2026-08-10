@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 279,
-  "program": "programs/realworld/svc_flatkv_digest_board.cubalc",
-  "theme": "FLATKV path:value nest digest + UNFLATKV rebuild",
-  "version": "1.15.727-usability",
+  "iter": 280,
+  "program": "programs/realworld/svc_pruneflat_scrub_board.cubalc",
+  "theme": "PRUNEFLAT nest noise/secret write-back scrub",
+  "version": "1.15.729-usability",
   "pass": true,
-  "prior_note": "iter 278 GREPFLAT scrub; this iter first realworld 1211 FLATKV + 1212 UNFLATKV",
+  "prior_note": "iter 279 FLATKV digest; this iter first realworld 1215 PRUNEFLAT/KEEPONLYFLAT/DELFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed nest+peer",
+      "cmd": "seed tmp+secret+debug",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "flat",
-      "cmd": "full FLATKV digest",
+      "name": "prune",
+      "cmd": "PRUNEFLAT tmp+debug residual",
       "ok": true,
-      "note": "flat"
+      "note": "prune"
     },
     {
-      "name": "slice",
-      "cmd": "relative cfg + cfg.meta",
+      "name": "keep",
+      "cmd": "KEEPONLYFLAT cfg project",
       "ok": true,
-      "note": "slice"
+      "note": "keep"
+    },
+    {
+      "name": "secret",
+      "cmd": "sec substring scrub",
+      "ok": true,
+      "note": "secret"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER lat bag",
+      "cmd": "FROM PEER tmp+tmp_peer",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "rebuild",
-      "cmd": "FLATKV\u2192UNFLATKV round-trip",
-      "ok": true,
-      "note": "rebuild"
-    },
-    {
       "name": "soft",
-      "cmd": "missing nest + empty unflat",
+      "cmd": "ghost + empty needle",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "leaf floor admit",
+      "cmd": "share-safe no secret/debug",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "LEAFKV FLATTENP FROMFLAT",
+      "cmd": "DELFLAT dropme",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "path exact vs GREPFLAT substring",
+      "cmd": "value miss + path sub",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; flatkv PASS"
+      "note": "cli duals red; pruneflat PASS"
     }
   ],
   "weaknesses": [
@@ -3696,11 +3696,49 @@
       "title": "PRINT_JSON key=SPECIAL form rejects empty form name",
       "detail": "PRINT_JSON n path=FLATKV_PATH \u2192 unknown form '' . Prefer LET p = FLATKV_PATH; PRINT_JSON n p or bare special names without key= glue.",
       "repro": "PRINT_JSON path=FLATKV_PATH \u2192 unknown form"
+    },
+    {
+      "id": "W453",
+      "severity": "high",
+      "area": "lang|pruneflat",
+      "title": "PRUNEFLAT/DELFLAT needle is path substring \u2014 short needles over-delete",
+      "detail": "DELFLAT c matched 7 leaves (cfg.*, schema path chars, a.c). Agents must use unique tokens (dropme) or dotted a.c. Same class as GREPFLAT substring (W444).",
+      "repro": "DELFLAT c on agent plate \u2192 PRUNEFLAT_N=7"
+    },
+    {
+      "id": "W454",
+      "severity": "med",
+      "area": "lang|pruneflat",
+      "title": "PRUNEFLAT leaves empty parent object residual",
+      "detail": "Pruning tmp.scratch leaves tmp:{} still present (TYPEP obj). Share gates must HASP children or PRUNEFLAT parent key, not assume parent gone.",
+      "repro": "PRUNEFLAT tmp \u2192 HASP tmp.scratch 0 but TYPEP tmp == obj"
+    },
+    {
+      "id": "W455",
+      "severity": "low",
+      "area": "lang|pruneflat",
+      "title": "PRUNEFLAT LAST is full plate JSON not pruned-path bag",
+      "detail": "LAST after PRUNEFLAT is the rewritten plate document (write-back preview). Contrast GREPFLAT LAST path:value bag. Agents writing LEAVES must not assume bag of paths.",
+      "repro": "PRUNEFLAT tmp; LAST starts with {\"agent\":..."
+    },
+    {
+      "id": "W456",
+      "severity": "low",
+      "area": "lang|pruneflat",
+      "title": "empty needle PRUNEFLAT is no-op (N=0); value needles soft-miss",
+      "detail": "PRUNEFLAT \"\" and PRUNEFLAT s3cr3t leave plate intact. Path-only filter.",
+      "repro": "PRUNEFLAT s3cr3t \u2192 0; secret leaf remains"
+    },
+    {
+      "id": "W457",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META omit trailing NL",
+      "detail": "cat -A VAL ends without $ (W5 class).",
+      "repro": "od -c VAL.txt"
     }
   ],
   "workarounds": [
-    "Capture MODEFLAT win via LAST_N immediately; avoid MODEFLAT_TOTAL under fat agents",
-    "Predeclare path pool; reuse body/row/score to stay under 128 vars",
     "Do not late-read MODEFLAT_SRC \u2014 use MODEFLAT_FROM or pre-copy to var",
     "Keep reverse-lookup values unique (no agent_job==role leaf)",
     "PATHBYVAL x OR default.path for soft miss contract",
@@ -3737,13 +3775,12 @@
     "GREPFLATI for case-tolerant secret path inventory",
     "use peer_host not host when other-like leaves present",
     "LET capture specials before PRINT_JSON",
-    "FLATKV path must be exact nest root"
+    "FLATKV path must be exact nest root",
+    "use unique path tokens for PRUNEFLAT not single letters",
+    "TYPEP/HASP residual empty parents after prune",
+    "KEEPONLYFLAT for cfg.* share project then reload agent"
   ],
   "language_gaps": [
-    "DELBYVAL scrub leaves by exact value",
-    "DROPVAL alias for del-by-value",
-    "HASP gone after DELBYVAL (key removed not emptied)",
-    "ALLEQFLAT LAST_N 0|1 consistency flag",
     "SAMEVALFLAT alias",
     "SETBYVAL then ALLEQFLAT for unify-and-check",
     "UNIFORMFLAT LAST_N 0|1 one-shot equality",
@@ -3763,11 +3800,13 @@
     "FLATKV/LEAFKV/FLATTENP path:value inventory",
     "UNFLATKV/FROMFLAT bag\u2192nest rebuild + UNDER/INTO",
     "FLATKV path exact nest root not substring",
-    "empty object \u2192 empty: terminal leaf"
+    "empty object \u2192 empty: terminal leaf",
+    "PRUNEFLAT/KEEPONLYFLAT/DELFLAT write-back nest scrub",
+    "path substring needles over-delete short tokens",
+    "empty parent residual after child prune",
+    "LAST = full plate JSON after prune"
   ],
   "issues_faced": [
-    "PATHSFLAT_N dark; used HASLINE on bag",
-    "meta_score substring inflates score counts",
     "TYPEFLAT n matched agent path; used GETP for short keys",
     "SYS EQS LASTFLATN_PATH hard-failed; used GETP meta.port",
     "GETP bool not EQS true; used TYPEFLAT kind",
@@ -3805,8 +3844,10 @@
     "iter278: scrub failed first on host:h1 \u2014 plate_session rewrote host to h2; gate on site/zone",
     "iter278: 10/10 green; grepflat PASS 31; selftest 455/567 cli duals red",
     "iter279: avoided top-level host key (W445); used peer_host + site",
-    "iter279: 10/10 green; flatkv/unflatkv round-trip; selftest cli duals still red"
+    "iter279: 10/10 green; flatkv/unflatkv round-trip; selftest cli duals still red",
+    "iter280: alias DELFLAT c nuked 7 paths; fixed to dropme unique needle",
+    "iter280: 10/10 green after alias fix; empty tmp:{} residual documented"
   ],
-  "commit": "351825f7",
-  "ts": "2026-08-10T02:24:58Z"
+  "commit": "pending",
+  "ts": "2026-08-10T02:49:38Z"
 }
