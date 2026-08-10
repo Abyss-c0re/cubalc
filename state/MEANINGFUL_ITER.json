@@ -2,18 +2,18 @@
   "schema": "cubalc.meaningful_iter.v1",
   "iter": 841,
   "version": "1.15.833-usability",
-  "item": "HASENVALL / NEEDENVS multi host-env ALL gate",
+  "item": "HASENVALL / NEEDENVS multi host-env ALL gates",
   "item_id": 841,
-  "title": "HASENVALL · NEEDENVS · ENVMISS · CLI dual envgate",
-  "commit": "pending",
-  "summary": "Multi host-env ALL gate twin of HASARGALL; soft/hard; ENVMISS/ENVHAVE bags; cubalc hasenvall|needenvs envgate.v1; proof 1381 PASS.",
+  "title": "HASENVALL \u00b7 NEEDENVS \u00b7 ENVMISS \u00b7 CLI envgate",
+  "commit": "415ce354eff39d275f58e640e3f848481807feef",
+  "summary": "Multi host-env ALL gate twin of HASARGALL; soft/hard; cubalc.envgate.v1; proof 1381 PASS.",
   "proofs": [
     "1381_hasenvall PASS",
     "1381_cli_hasenvall PASS",
     "1381_cli_envgate PASS"
   ],
-  "when": "2026-08-10T23:25:00Z",
+  "when": "2026-08-10T23:21:06Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "pending",
-  "note": "pairs HASARGALL/HASFLAGALL · host config contract without N× SYS HASENV"
+  "sha": "415ce354eff39d275f58e640e3f848481807feef",
+  "note": "pairs HASARGALL/HASFLAGALL \u00b7 process env multi presence \u00b7 completes flag/arg/env ALL matrix"
 }
