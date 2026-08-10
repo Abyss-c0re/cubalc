@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 839,
-  "version": "1.15.831-usability",
-  "item": "cubalc run -M / --mkdir DIR",
-  "item_id": 839,
-  "title": "run -M|--mkdir mkdir -p before cwd/body · SYS MKDIR dual",
-  "commit": "0ecfec70d4f9a743ae04c48b241f6b90e04f4b6e",
-  "summary": "mkdir -p before --cwd; MKDIR_N/DIRS; workdir scaffold; proof 1379 PASS.",
+  "iter": 840,
+  "version": "1.15.832-usability",
+  "item": "HASARGANY / NEEDARGANY any-of args",
+  "item_id": 840,
+  "title": "HASARGANY · NEEDARGANY · ARGHAVE · CLI dual arggate any",
+  "commit": "c1aa00c86523b792d520380faed73a365dbc4179",
+  "summary": "Any-of multi CUBALC_ARGn/env gate twin of HASARGALL; soft/hard; proof 1380 PASS.",
   "proofs": [
-    "1379_cli_run_mkdir PASS"
+    "1380_hasargany PASS",
+    "1380_cli_hasargany PASS"
   ],
-  "when": "2026-08-10T22:54:09Z",
+  "when": "2026-08-10T23:05:16Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "0ecfec70d4f9a743ae04c48b241f6b90e04f4b6e",
-  "note": "pairs run --cwd · agent workdir scaffold"
+  "sha": "c1aa00c86523b792d520380faed73a365dbc4179",
+  "note": "pairs HASFLAGANY · completes flag/arg any-of matrix · thrash restore first"
 }
