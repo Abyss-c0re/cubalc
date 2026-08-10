@@ -1,0 +1,63 @@
+# ERRTIPS — recovery tip bag from sticky LAST_ERR / arg
+
+# clean state
+ERRTIPS
+ASSERT ERRTIPS_TOPIC == "general"
+ASSERT ERRTIPS_N >= 1
+SYS HASI "no sticky"
+ASSERT LAST_N == 1
+
+# lib class
+FAIL "INCLUDE missing hold_seed"
+ERRTIPS
+ASSERT ERRTIPS_TOPIC == "lib"
+ASSERT ERRTIPS_N >= 2
+SYS HASI "libs"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# cap class
+FAIL "unknown form FOOBAR — did you mean FLOW?"
+ERRTIPS
+ASSERT ERRTIPS_TOPIC == "cap"
+ASSERT ERRTIPS_N >= 2
+SYS HASI "HASFORM"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# p2p class
+FAIL "SMX DIAL timeout peer offline"
+ERRTIPS
+ASSERT ERRTIPS_TOPIC == "p2p"
+SYS HASI "CUBALC_P2P"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# run class
+FAIL "ASSERT failed line 3: 0 == 1 is false"
+ERRTIPS
+ASSERT ERRTIPS_TOPIC == "run"
+SYS HASI "ASSERT_GOT"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# explicit arg overrides sticky
+FAIL "something"
+ERRTIPS "NEEDFORMS miss SORTLIBS"
+ASSERT ERRTIPS_TOPIC == "cap"
+CLEAR_ERR
+
+# alias
+FIXTIPS "VARROOM full NEEDVARROOM"
+ASSERT ERRTIPS_TOPIC == "fat"
+ASSERT ERRTIPS_N >= 2
+
+# chain: inferred topic usable with TIPS
+ERRTIPS "REQUIRE LIB missing"
+ASSERT ERRTIPS_TOPIC == "lib"
+TIPS lib
+ASSERT TIPS_N >= 1
+ASSERT TIPS_TOPIC == "lib"
+
+PASS
+PRINT "1336_errtips: PASS"

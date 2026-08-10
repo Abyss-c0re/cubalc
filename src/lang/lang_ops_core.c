@@ -2739,6 +2739,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"LISTTOPICS", "LISTTOPICS|TOPICS — bag of discovery topics · dual of cubalc topics"},
       {"HASTOPIC", "HASTOPIC name — soft 0|1 if topic known · dual of HASFORM for topics"},
       {"NEEDTOPIC", "NEEDTOPIC name — fail-fast if topic unknown"},
+      {"ERRTIPS", "ERRTIPS [err] — recovery tip bag from LAST_ERR or arg · ERRTIPS_TOPIC · dual of cubalc errtips"},
+      {"FIXTIPS", "FIXTIPS alias of ERRTIPS"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · dotted path nest ok · write-back · multi-plate"},
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
@@ -39992,6 +39994,164 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
     }
     (void)aln;
+    bump(vm);
+    return 1;
+  }
+
+  /* ERRTIPS|FIXTIPS [err] — multi-line recovery tips from sticky LAST_ERR (or arg).
+   * Usability: WHY = one hint; ERRTIPS = tip bag + inferred discovery topic so agents
+   * can chain TIPS/TOPIC/RUNSNIP after soft fail without cookbook.
+   * LAST=newline tips · ERRTIPS_TOPIC · ERRTIPS_N · report-only (does not clear ERR). */
+  if (kw(&L->cur,"ERRTIPS")||kw(&L->cur,"FIXTIPS")||kw(&L->cur,"RECOVERTIPS")||
+      kw(&L->cur,"ERR_TIPS")||kw(&L->cur,"FIXHINTS")||kw(&L->cur,"RECOVERY_TIPS")||
+      kw(&L->cur,"WHYTIPS")||kw(&L->cur,"ERRPLAYBOOK")){
+    static const struct { const char *topic; const char *tip; } tips[] = {
+      {"general", "cubalc doctor — install readiness plate"},
+      {"general", "STATUS · VARS · CLEAR_ERR after fix"},
+      {"general", "cubalc topics · TOPIC name for tips+forms+snip triad"},
+      {"general", "cubalc search KEYWORD — forms/libs/examples"},
+      {"cap", "HASFORM name · NEEDFORMS a b · FORMHINT name"},
+      {"cap", "LISTFORMS prefix · cubalc forms · cubalc run -C FORMS"},
+      {"cap", "INCLUDE cap_boot · cubalc init --cap"},
+      {"cap", "RELATED HASFORM · FORMSFOR cap · RUNSNIP cap"},
+      {"fat", "VARROOM · HASVARROOM n · NEEDVARROOM n"},
+      {"fat", "REMAIN_MS · HAS_TIME · NEEDTIME · cubalc run -T ms"},
+      {"fat", "INCLUDE fat_session · DEFAULT NEED_VARROOM"},
+      {"plate", "NEEDP/DEFAULTP seed · GETP OR fallback"},
+      {"plate", "cubalc plate has|need path.json keys"},
+      {"plate", "PRETTYP · SAVEPLATE · INCLUDE plate_session"},
+      {"p2p", "export CUBALC_SMX_KEY hex64 before mesh"},
+      {"p2p", "CUBALC_P2P_SOFT=1 · CUBALC_P2P_TIMEOUT ms"},
+      {"p2p", "cubalc smx-bus prove-tcp · docs/P2P_SMX.md"},
+      {"run", "ASSERT_GOT/ASSERT_EXPECTED · EXPECT soft · CLEAR_ERR"},
+      {"run", "WHY · cubalc run -s / CUBALC_STRICT"},
+      {"run", "ERRTIPS after FAIL · TIPS run playbook"},
+      {"lib", "cubalc libs [filter] · REQUIRE LIB · INCLUDE SOFT"},
+      {"lib", "MATCHLIBS · CHECKDEPS · cubalc recipe name"},
+      {"lib", "cubalc which name · HASLIB · LISTLIBS"},
+      {"protect", "cubalc protect status · HOLD_FLASH device/mesh-join only"},
+      {"protect", "docs/CORE_PROTECT.md · cubalc protect all"},
+    };
+    char topic[32], bag[4096], argerr[240];
+    const char *err = "";
+    size_t o = 0;
+    int i, n = 0, nall = (int)(sizeof tips / sizeof tips[0]);
+    Var *vle;
+    lex_next(L);
+    argerr[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(argerr, sizeof argerr, "%s", L->cur.text);
+      lex_next(L);
+      err = argerr;
+    } else if (L->cur.kind == TK_IDENT) {
+      if (strcmp(L->cur.text, "LAST") == 0 || strcmp(L->cur.text, "LAST_ERR") == 0 ||
+          strcmp(L->cur.text, "ERR") == 0) {
+        if (strcmp(L->cur.text, "LAST") == 0)
+          snprintf(argerr, sizeof argerr, "%s", vm->last_str);
+        else {
+          Var *vx = var_get(vm, L->cur.text, 0);
+          if (vx && vx->is_str) snprintf(argerr, sizeof argerr, "%s", vx->sval);
+        }
+        lex_next(L);
+        err = argerr;
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            !(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+              kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
+              kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
+          snprintf(argerr, sizeof argerr, "%s", vv->sval);
+          lex_next(L);
+          err = argerr;
+        }
+      }
+    }
+    if (!err[0]) {
+      vle = var_get(vm, "LAST_ERR", 0);
+      if (vle && vle->is_str && vle->sval[0]) err = vle->sval;
+      else if (vm->err[0]) err = vm->err;
+      else {
+        Var *ve2 = var_get(vm, "ERR", 0);
+        if (ve2 && ve2->is_str && ve2->sval[0]) err = ve2->sval;
+      }
+    }
+    /* classify → discovery topic (cap before lib: NEEDFORMS/SORTLIBS overlap) */
+    snprintf(topic, sizeof topic, "%s", "general");
+    if (!err[0])
+      snprintf(topic, sizeof topic, "%s", "general");
+    else if (strstr(err, "NEEDFORM") || strstr(err, "HASFORM") ||
+             strstr(err, "FORMMISS") || strstr(err, "unknown form") ||
+             strstr(err, "did you mean") || strstr(err, "REQUIRE FORM") ||
+             strstr(err, "LISTFORMS") || strstr(err, "FORMHINT") ||
+             strstr(err, "NEEDFORMS") || strstr(err, "HASFORMS"))
+      snprintf(topic, sizeof topic, "%s", "cap");
+    else if (strstr(err, "NEEDMATCHLIBS") || strstr(err, "HASMATCHLIBS") ||
+             strstr(err, "PICKLIB") || strstr(err, "SORTLIBS") ||
+             strstr(err, "INCLUDE") || strstr(err, "include") ||
+             strstr(err, "REQUIRE LIB") || strstr(err, "lib missing") ||
+             strstr(err, "NEEDDEPS") || strstr(err, "CHECKDEPS") ||
+             strstr(err, "HASLIB") || strstr(err, "LISTLIBS"))
+      snprintf(topic, sizeof topic, "%s", "lib");
+    else if (strstr(err, "VARROOM") || strstr(err, "NEEDVARROOM") ||
+             strstr(err, "HASVARROOM") || strstr(err, "REMAIN_MS") ||
+             strstr(err, "NEEDTIME") || strstr(err, "HAS_TIME") ||
+             strstr(err, "timed_out") || strstr(err, "timeout_ms"))
+      snprintf(topic, sizeof topic, "%s", "fat");
+    else if (strstr(err, "NEEDP") || strstr(err, "NEEDFLAT") ||
+             strstr(err, "UNIFORM") || strstr(err, "roles must") ||
+             strstr(err, "plate") || strstr(err, "PLATE") ||
+             strstr(err, "SETP") || strstr(err, "GETP"))
+      snprintf(topic, sizeof topic, "%s", "plate");
+    else if (strstr(err, "DIAL") || strstr(err, "SERVE") || strstr(err, "SMX") ||
+             strstr(err, "TALK") || strstr(err, "P2P") || strstr(err, "timeout") ||
+             strstr(err, "peer"))
+      snprintf(topic, sizeof topic, "%s", "p2p");
+    else if (strstr(err, "HOLD_FLASH") || strstr(err, "hold_flash") ||
+             strstr(err, "CORE_PROTECT") || strstr(err, "protect"))
+      snprintf(topic, sizeof topic, "%s", "protect");
+    else if (strstr(err, "ASSERT") || strstr(err, "EXPECT") ||
+             strstr(err, "is false") || strstr(err, "falsey") ||
+             strstr(err, "FAIL") || strstr(err, "EXIT"))
+      snprintf(topic, sizeof topic, "%s", "run");
+    else if (strstr(err, "VERSION") || strstr(err, "too old"))
+      snprintf(topic, sizeof topic, "%s", "run");
+    else if (strstr(err, "cannot open") || strstr(err, "ENOENT") ||
+             strstr(err, "No such") || strstr(err, "path"))
+      snprintf(topic, sizeof topic, "%s", "general");
+
+    bag[0] = 0;
+    if (!err[0]) {
+      const char *oktip = "ok — no sticky LAST_ERR · STATUS · CLEAR_ERR idle";
+      size_t ln = strlen(oktip);
+      memcpy(bag, oktip, ln);
+      bag[ln] = 0;
+      n = 1;
+      snprintf(topic, sizeof topic, "%s", "general");
+    } else {
+      for (i = 0; i < nall; i++) {
+        size_t ln;
+        if (strcmp(tips[i].topic, topic) != 0) continue;
+        ln = strlen(tips[i].tip);
+        if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) { memcpy(bag + o, tips[i].tip, ln); o += ln; }
+        bag[o] = 0;
+        n++;
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "ERRTIPS", bag);
+    var_set_str(vm, "FIXTIPS", bag);
+    var_set_str(vm, "ERRTIPS_TOPIC", topic);
+    var_set_str(vm, "FIXTIPS_TOPIC", topic);
+    var_set_str(vm, "TOPIC_NAME", topic);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "ERRTIPS_N", n);
+    var_set_num(vm, "FIXTIPS_N", n);
+    /* report-only: do not rewrite OK / sticky LAST_ERR */
+    if (vm->trace)
+      fprintf(vm->trace, "# errtips topic=%s n=%d\n", topic, n);
     bump(vm);
     return 1;
   }

@@ -3252,6 +3252,8 @@ int main(int argc, char **argv) {
       {"cli_runsnip", "programs/proof/1334_cli_runsnip.sh", "cubalc runsnip plate + topics"},
       {"listtopics", "programs/proof/1335_listtopics.cubalc", "LISTTOPICS/HASTOPIC/NEEDTOPIC topic catalog"},
       {"cli_listtopics", "programs/proof/1335_cli_listtopics.sh", "cubalc topics plate + hastopic"},
+      {"errtips", "programs/proof/1336_errtips.cubalc", "ERRTIPS recovery tip bag from LAST_ERR"},
+      {"cli_errtips", "programs/proof/1336_cli_errtips.sh", "cubalc errtips classify + plate"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3895,6 +3897,8 @@ int main(int argc, char **argv) {
       {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
+      {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
+      {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
@@ -5066,7 +5070,7 @@ int main(int argc, char **argv) {
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
            "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc doctor · cubalc topics · cubalc topic · cubalc runsnip · cubalc init\n");
+           "Commands: cubalc doctor · cubalc errtips · cubalc topics · cubalc topic · cubalc init\n");
     return 0;
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
@@ -5782,6 +5786,131 @@ int main(int argc, char **argv) {
     }
     printf("]}\n");
     return 0;
+  }
+  if (strcmp(cmd, "errtips") == 0 || strcmp(cmd, "fixtips") == 0 ||
+      strcmp(cmd, "recovertips") == 0 || strcmp(cmd, "err-tips") == 0 ||
+      strcmp(cmd, "fixhints") == 0 || strcmp(cmd, "whytips") == 0) {
+    /* Usability: classify error text → recovery tip bag + topic (dual of ERRTIPS).
+     *   cubalc errtips "INCLUDE missing foo"
+     * Schema cubalc.errtips.v1 · pure C (no nested PRINT flakiness). */
+    static const struct { const char *topic; const char *tip; } tips[] = {
+      {"general", "cubalc doctor — install readiness plate"},
+      {"general", "STATUS · VARS · CLEAR_ERR after fix"},
+      {"general", "cubalc topics · TOPIC name for tips+forms+snip triad"},
+      {"general", "cubalc search KEYWORD — forms/libs/examples"},
+      {"cap", "HASFORM name · NEEDFORMS a b · FORMHINT name"},
+      {"cap", "LISTFORMS prefix · cubalc forms · cubalc run -C FORMS"},
+      {"cap", "INCLUDE cap_boot · cubalc init --cap"},
+      {"cap", "RELATED HASFORM · FORMSFOR cap · RUNSNIP cap"},
+      {"fat", "VARROOM · HASVARROOM n · NEEDVARROOM n"},
+      {"fat", "REMAIN_MS · HAS_TIME · NEEDTIME · cubalc run -T ms"},
+      {"fat", "INCLUDE fat_session · DEFAULT NEED_VARROOM"},
+      {"plate", "NEEDP/DEFAULTP seed · GETP OR fallback"},
+      {"plate", "cubalc plate has|need path.json keys"},
+      {"plate", "PRETTYP · SAVEPLATE · INCLUDE plate_session"},
+      {"p2p", "export CUBALC_SMX_KEY hex64 before mesh"},
+      {"p2p", "CUBALC_P2P_SOFT=1 · CUBALC_P2P_TIMEOUT ms"},
+      {"p2p", "cubalc smx-bus prove-tcp · docs/P2P_SMX.md"},
+      {"run", "ASSERT_GOT/ASSERT_EXPECTED · EXPECT soft · CLEAR_ERR"},
+      {"run", "WHY · cubalc run -s / CUBALC_STRICT"},
+      {"run", "ERRTIPS after FAIL · TIPS run playbook"},
+      {"lib", "cubalc libs [filter] · REQUIRE LIB · INCLUDE SOFT"},
+      {"lib", "MATCHLIBS · CHECKDEPS · cubalc recipe name"},
+      {"lib", "cubalc which name · HASLIB · LISTLIBS"},
+      {"protect", "cubalc protect status · HOLD_FLASH device/mesh-join only"},
+      {"protect", "docs/CORE_PROTECT.md · cubalc protect all"},
+    };
+    char msg[400], topic[32], tipsj[2400], errj[480];
+    size_t o = 0, e, j, to = 0;
+    int i, n = 0, nall = (int)(sizeof tips / sizeof tips[0]);
+    int first = 1;
+    msg[0] = 0;
+    for (i = 2; i < argc; i++) {
+      size_t ln;
+      if (!argv[i]) continue;
+      ln = strlen(argv[i]);
+      if (o && o + 1 < sizeof msg) msg[o++] = ' ';
+      if (o + ln < sizeof msg) { memcpy(msg + o, argv[i], ln); o += ln; }
+      msg[o] = 0;
+    }
+    if (!msg[0]) snprintf(msg, sizeof msg, "%s", "ok");
+    snprintf(topic, sizeof topic, "%s", "general");
+    if (!strcmp(msg, "ok"))
+      snprintf(topic, sizeof topic, "%s", "general");
+    else if (strstr(msg, "NEEDFORM") || strstr(msg, "HASFORM") ||
+             strstr(msg, "FORMMISS") || strstr(msg, "unknown form") ||
+             strstr(msg, "did you mean") || strstr(msg, "REQUIRE FORM") ||
+             strstr(msg, "LISTFORMS") || strstr(msg, "FORMHINT") ||
+             strstr(msg, "NEEDFORMS") || strstr(msg, "HASFORMS"))
+      snprintf(topic, sizeof topic, "%s", "cap");
+    else if (strstr(msg, "NEEDMATCHLIBS") || strstr(msg, "HASMATCHLIBS") ||
+             strstr(msg, "PICKLIB") || strstr(msg, "SORTLIBS") ||
+             strstr(msg, "INCLUDE") || strstr(msg, "include") ||
+             strstr(msg, "REQUIRE LIB") || strstr(msg, "lib missing") ||
+             strstr(msg, "NEEDDEPS") || strstr(msg, "CHECKDEPS") ||
+             strstr(msg, "HASLIB") || strstr(msg, "LISTLIBS"))
+      snprintf(topic, sizeof topic, "%s", "lib");
+    else if (strstr(msg, "VARROOM") || strstr(msg, "NEEDVARROOM") ||
+             strstr(msg, "HASVARROOM") || strstr(msg, "REMAIN_MS") ||
+             strstr(msg, "NEEDTIME") || strstr(msg, "HAS_TIME"))
+      snprintf(topic, sizeof topic, "%s", "fat");
+    else if (strstr(msg, "NEEDP") || strstr(msg, "NEEDFLAT") ||
+             strstr(msg, "UNIFORM") || strstr(msg, "plate") ||
+             strstr(msg, "PLATE") || strstr(msg, "SETP") || strstr(msg, "GETP"))
+      snprintf(topic, sizeof topic, "%s", "plate");
+    else if (strstr(msg, "DIAL") || strstr(msg, "SERVE") || strstr(msg, "SMX") ||
+             strstr(msg, "TALK") || strstr(msg, "P2P") || strstr(msg, "timeout"))
+      snprintf(topic, sizeof topic, "%s", "p2p");
+    else if (strstr(msg, "HOLD_FLASH") || strstr(msg, "protect") ||
+             strstr(msg, "CORE_PROTECT"))
+      snprintf(topic, sizeof topic, "%s", "protect");
+    else if (strstr(msg, "ASSERT") || strstr(msg, "EXPECT") ||
+             strstr(msg, "is false") || strstr(msg, "FAIL") ||
+             strstr(msg, "VERSION") || strstr(msg, "too old"))
+      snprintf(topic, sizeof topic, "%s", "run");
+    tipsj[0] = 0; to = 0; n = 0; first = 1;
+    if (!strcmp(msg, "ok")) {
+      const char *oktip = "ok — no sticky LAST_ERR · STATUS · CLEAR_ERR idle";
+      size_t ln = strlen(oktip);
+      tipsj[to++] = '"';
+      memcpy(tipsj + to, oktip, ln); to += ln;
+      tipsj[to++] = '"'; tipsj[to] = 0;
+      n = 1;
+    } else {
+      for (i = 0; i < nall; i++) {
+        size_t ln, v = 0;
+        char one[320];
+        if (strcmp(tips[i].topic, topic) != 0) continue;
+        ln = strlen(tips[i].tip);
+        for (j = 0; j < ln && v + 2 < sizeof one; j++) {
+          char c = tips[i].tip[j];
+          if (c == '"' || c == '\\') { one[v++] = '\\'; one[v++] = c; }
+          else one[v++] = c;
+        }
+        one[v] = 0;
+        if (to + v + 4 < sizeof tipsj) {
+          if (!first) tipsj[to++] = ',';
+          tipsj[to++] = '"';
+          memcpy(tipsj + to, one, v); to += v;
+          tipsj[to++] = '"'; tipsj[to] = 0;
+          first = 0; n++;
+        }
+      }
+    }
+    e = 0;
+    for (j = 0; msg[j] && e + 2 < sizeof errj; j++) {
+      char c = msg[j];
+      if (c == '"' || c == '\\') { errj[e++] = '\\'; errj[e++] = c; }
+      else if ((unsigned char)c < 32) errj[e++] = ' ';
+      else errj[e++] = c;
+    }
+    errj[e] = 0;
+    printf("{\"schema\":\"cubalc.errtips.v1\",\"ok\":true,\"cmd\":\"errtips\","
+           "\"topic\":\"%s\",\"n\":%d,\"version\":\"%s\","
+           "\"note\":\"recovery tip bag from err text · dual of ERRTIPS · chain cubalc topic\","
+           "\"err\":\"%s\",\"tips\":[%s]}\n",
+           topic, n, CUBALC_LANG_VERSION, errj, tipsj);
+    return n > 0 ? 0 : 1;
   }
   if (strcmp(cmd, "init") == 0 || strcmp(cmd, "new") == 0 ||
       strcmp(cmd, "scaffold") == 0 || strcmp(cmd, "create") == 0) {
@@ -15121,6 +15250,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
+      {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
+      {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
@@ -16586,12 +16717,13 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    runsnip|sniprun [topic]    execute curated SNIP mini (cubalc.runsnip.v1)\n"
       "    topics|listtopics          discovery topic catalog (cubalc.topics.v1)\n"
       "    hastopic|needtopic <t>     soft/hard topic membership gates\n"
+      "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
       "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|formsfor|related|snip|topic|runsnip|topics|hastopic  duals\n"
+      "    picklib|listforms|formhint|formsfor|related|snip|topic|runsnip|topics|errtips  duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
@@ -16621,8 +16753,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|LISTTOPICS|EXIT|CLEAR_ERR|WHY · STATUS\n"
-      "    LISTLIBS|LISTFORMS|LISTTOPICS|FORMHINT|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|HASTOPIC|HASFORM|HASFORMS|NEEDFORMS\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|ERRTIPS|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|LISTTOPICS|EXIT|CLEAR_ERR|WHY\n"
+      "    LISTLIBS|LISTFORMS|LISTTOPICS|FORMHINT|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|ERRTIPS|HASTOPIC|HASFORM|HASFORMS\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"
