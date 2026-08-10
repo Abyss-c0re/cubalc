@@ -1,0 +1,18 @@
+# REMAIN_MS / HAS_TIME / NEEDTIME — wall budget remaining probes
+# Without -T: REMAIN_MS → -1 (unlimited) · HAS_TIME/NEEDTIME always ok
+# With budget: early EXIT / soft IF before heavy work without shell date
+
+REMAIN_MS
+ASSERT LAST_N == -1
+ASSERT TIMEOUT_UNLIMITED == 1
+ASSERT OK == 1
+
+HAS_TIME 999999
+ASSERT LAST_N == 1
+ASSERT OK == 1
+
+NEEDTIME 1
+ASSERT OK == 1
+
+PASS
+PRINT "1281_remain_ms: PASS"

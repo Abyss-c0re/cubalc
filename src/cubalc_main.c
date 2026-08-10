@@ -2483,7 +2483,7 @@ int main(int argc, char **argv) {
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"vars_max\":%d,\"varroom_forms\":true,"
-             "\"run_timeout\":true,"
+             "\"run_timeout\":true,\"remain_ms_forms\":true,"
              "\"var_budget\":\"STATUS/VARS/run plate vars_n|max|full · "
              "VARROOM/HASVARROOM/NEEDVARROOM · INCLUDE var_guard\","
              "\"nest_check\":\"%s\","
@@ -2496,7 +2496,7 @@ int main(int argc, char **argv) {
              "\"CUBALC_INCLUDE_PATH + cubalc which name · run -I / NEEDINCLUDE\","
              "\"cubalc plate uniform agent.json role — nest value consistency\","
              "\"VARROOM/HASVARROOM/NEEDVARROOM · INCLUDE var_guard (vars_max=%d)\","
-             "\"cubalc run -T MS · CUBALC_RUN_TIMEOUT wall kill runaway loops\","
+             "\"cubalc run -T MS · REMAIN_MS/HAS_TIME/NEEDTIME mid-run budget\","
              "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
@@ -3095,6 +3095,8 @@ int main(int argc, char **argv) {
       {"cli_var_guard", "programs/proof/1279_cli_var_guard.sh", "var_guard lib + doctor lib_var_guard"},
       {"run_timeout", "programs/proof/1280_run_timeout.cubalc", "CUBALC_RUN_TIMEOUT wall kill + TIMEOUT_MS specials"},
       {"cli_run_timeout", "programs/proof/1280_cli_run_timeout.sh", "cubalc run -T / timed_out plate dual"},
+      {"remain_ms", "programs/proof/1281_remain_ms.cubalc", "REMAIN_MS/HAS_TIME/NEEDTIME wall budget probes"},
+      {"cli_remain_ms", "programs/proof/1281_cli_remain_ms.sh", "REMAIN_MS mid-run budget + forms + doctor"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3358,6 +3360,9 @@ int main(int argc, char **argv) {
       {"VARROOM", "flow", "VARROOM free var slots → LAST_N"},
       {"HASVARROOM", "flow", "HASVARROOM n soft 0|1 if room >= n"},
       {"NEEDVARROOM", "flow", "NEEDVARROOM n fail-fast if room < n"},
+      {"REMAIN_MS", "flow", "REMAIN_MS|BUDGETLEFT wall budget left ms · -1 unlimited"},
+      {"HAS_TIME", "flow", "HAS_TIME n soft 0|1 if remaining >= n"},
+      {"NEEDTIME", "flow", "NEEDTIME n fail-fast if wall remaining < n ms"},
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
       {"IDENTITY", "flow", "IDENTITY — cubalc.identity.v1 user@host:pid plate"},
       {"SETP", "flow", "SETP [FROM plate] key value — set key · JSON-shaped strings auto-raw · paths ok · multi-plate"},
@@ -11748,6 +11753,9 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"VARROOM", "flow", "VARROOM free var slots → LAST_N"},
       {"HASVARROOM", "flow", "HASVARROOM n soft 0|1 if room >= n"},
       {"NEEDVARROOM", "flow", "NEEDVARROOM n fail-fast if room < n"},
+      {"REMAIN_MS", "flow", "REMAIN_MS|BUDGETLEFT wall budget left ms · -1 unlimited"},
+      {"HAS_TIME", "flow", "HAS_TIME n soft 0|1 if remaining >= n"},
+      {"NEEDTIME", "flow", "NEEDTIME n fail-fast if wall remaining < n ms"},
       {"STATUS", "flow", "STATUS agent health plate"},
       {"IDENTITY", "flow", "IDENTITY user@host:pid plate"},
       {"SYS PID", "host", "SYS PID process id"},
@@ -12471,6 +12479,9 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"VARROOM", "flow", "VARROOM free var slots → LAST_N"},
       {"HASVARROOM", "flow", "HASVARROOM n soft 0|1 if room >= n"},
       {"NEEDVARROOM", "flow", "NEEDVARROOM n fail-fast if room < n"},
+      {"REMAIN_MS", "flow", "REMAIN_MS|BUDGETLEFT wall budget left ms · -1 unlimited"},
+      {"HAS_TIME", "flow", "HAS_TIME n soft 0|1 if remaining >= n"},
+      {"NEEDTIME", "flow", "NEEDTIME n fail-fast if wall remaining < n ms"},
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
       {"IDENTITY", "flow", "IDENTITY — cubalc.identity.v1 user@host:pid plate"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},

@@ -36616,6 +36616,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"VARROOM", "VARROOM|VARSLEFT — free var slots → LAST_N · dual of VARS_N/MAX"},
       {"HASVARROOM", "HASVARROOM n — soft 0|1 if free slots >= n · sticky LAST_ERR on miss"},
       {"NEEDVARROOM", "NEEDVARROOM n — fail-fast if fewer than n free var slots"},
+      {"REMAIN_MS", "REMAIN_MS|BUDGETLEFT — wall budget remaining ms → LAST_N (-1 unlimited)"},
+      {"HAS_TIME", "HAS_TIME n — soft 0|1 if remaining >= n · sticky LAST_ERR on miss"},
+      {"NEEDTIME", "NEEDTIME n — fail-fast if wall budget remaining < n ms"},
       {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time/vars_n|max|full)"},
       {"WHY", "WHY|EXPLAIN — cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED + hint"},
       {"EXPLAIN", "EXPLAIN alias of WHY"},
@@ -37688,6 +37691,122 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;
+  }
+
+  /* REMAIN_MS / BUDGETLEFT / TIMELEFT — wall budget remaining → LAST_N.
+   * HAS_TIME n / HASTIME — soft 0|1 if remaining >= n (unlimited → 1).
+   * NEEDTIME n / NEED_TIME — fail-fast if budget set and remaining < n.
+   * Usability: mid-run early EXIT before heavy work without shell date glue.
+   * Complements CUBALC_RUN_TIMEOUT / -T (TIMEOUT_MS / TIMED_OUT). */
+  if (kw(&L->cur, "REMAIN_MS") || kw(&L->cur, "REMAINMS") ||
+      kw(&L->cur, "BUDGETLEFT") || kw(&L->cur, "BUDGET_LEFT") ||
+      kw(&L->cur, "TIMELEFT") || kw(&L->cur, "TIME_LEFT") ||
+      kw(&L->cur, "TIMEOUT_LEFT") || kw(&L->cur, "MSLEFT") ||
+      kw(&L->cur, "HAS_TIME") || kw(&L->cur, "HASTIME") ||
+      kw(&L->cur, "HAS_BUDGET") || kw(&L->cur, "HASBUDGET") ||
+      kw(&L->cur, "ENOUGHTIME") || kw(&L->cur, "ENOUGH_TIME") ||
+      kw(&L->cur, "NEEDTIME") || kw(&L->cur, "NEED_TIME") ||
+      kw(&L->cur, "REQUIRE_TIME") || kw(&L->cur, "REQUIRETIME") ||
+      kw(&L->cur, "NEEDBUDGET") || kw(&L->cur, "NEED_BUDGET")) {
+    int hard = kw(&L->cur, "NEEDTIME") || kw(&L->cur, "NEED_TIME") ||
+               kw(&L->cur, "REQUIRE_TIME") || kw(&L->cur, "REQUIRETIME") ||
+               kw(&L->cur, "NEEDBUDGET") || kw(&L->cur, "NEED_BUDGET");
+    int soft_need = kw(&L->cur, "HAS_TIME") || kw(&L->cur, "HASTIME") ||
+                    kw(&L->cur, "HAS_BUDGET") || kw(&L->cur, "HASBUDGET") ||
+                    kw(&L->cur, "ENOUGHTIME") || kw(&L->cur, "ENOUGH_TIME");
+    int aln = L->cur.line;
+    long need = 1;
+    long rem;
+    int unlimited;
+    int ok_time;
+    lex_next(L);
+    if (hard || soft_need) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+        need = parse_expr(vm, L);
+      if (need < 0) need = 0;
+    }
+    rem = cubalc_lang_timeout_remain_ms(vm);
+    unlimited = (rem < 0) ? 1 : 0;
+    if (unlimited)
+      ok_time = 1;
+    else
+      ok_time = (rem >= need) ? 1 : 0;
+    var_set_num(vm, "TIMEOUT_MS",
+                vm->run_timeout_ms > 0 ? vm->run_timeout_ms : 0L);
+    var_set_num(vm, "REMAIN_MS", unlimited ? -1L : rem);
+    var_set_num(vm, "BUDGET_LEFT", unlimited ? -1L : rem);
+    var_set_num(vm, "TIMELEFT", unlimited ? -1L : rem);
+    var_set_num(vm, "NEEDTIME_N", need);
+    var_set_num(vm, "HAS_TIME_N", ok_time);
+    var_set_num(vm, "TIMEOUT_UNLIMITED", unlimited ? 1L : 0L);
+    if (hard) {
+      if (ok_time) {
+        long outn = unlimited ? -1L : rem;
+        var_set_num(vm, "LAST_N", outn);
+        vm->last_n = outn;
+        {
+          char nb[24];
+          snprintf(nb, sizeof nb, "%ld", outn);
+          var_set_str(vm, "LAST", nb);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+        }
+        var_set_num(vm, "OK", 1);
+        if (vm->res) vm->res->asserts_ok++;
+        bump(vm);
+        return 1;
+      }
+      {
+        char msg[200];
+        snprintf(msg, sizeof msg,
+                 "NEEDTIME line %d: need %ldms have %ldms (budget %ldms) — "
+                 "raise -T / CUBALC_RUN_TIMEOUT or lean the work",
+                 aln, need, rem < 0 ? 0L : rem,
+                 vm->run_timeout_ms > 0 ? vm->run_timeout_ms : 0L);
+        var_set_str(vm, "ERR", msg);
+        var_set_str(vm, "LAST_ERR", msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+    }
+    if (soft_need) {
+      var_set_num(vm, "LAST_N", ok_time);
+      vm->last_n = ok_time;
+      {
+        char nb[8];
+        snprintf(nb, sizeof nb, "%d", ok_time);
+        var_set_str(vm, "LAST", nb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      }
+      if (ok_time) {
+        var_set_num(vm, "OK", 1);
+      } else {
+        char em[192];
+        snprintf(em, sizeof em,
+                 "HAS_TIME miss line %d: need %ldms have %ldms (budget %ldms) — "
+                 "EXIT early or raise -T",
+                 aln, need, rem < 0 ? 0L : rem,
+                 vm->run_timeout_ms > 0 ? vm->run_timeout_ms : 0L);
+        var_set_str(vm, "ERR", em);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_num(vm, "OK", 0);
+      }
+      bump(vm);
+      return 1;
+    }
+    {
+      long outn = unlimited ? -1L : rem;
+      char nb[24];
+      var_set_num(vm, "LAST_N", outn);
+      vm->last_n = outn;
+      snprintf(nb, sizeof nb, "%ld", outn);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      var_set_num(vm, "OK", 1);
+      bump(vm);
+      return 1;
+    }
   }
 
   /* VARS / LOCALS — dump all program variables as one JSON line for agents.
