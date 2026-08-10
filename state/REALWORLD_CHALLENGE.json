@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 304,
-  "program": "programs/realworld/svc_relatedtopic_mesh_board.cubalc",
-  "theme": "RELATEDTOPIC neighbor mesh + TOPICHINT first hop",
-  "version": "1.15.790-usability",
+  "iter": 305,
+  "program": "programs/realworld/svc_guide_playbook_board.cubalc",
+  "theme": "GUIDE playbook + FORMTOPICS reverse + ERRGUIDE recover",
+  "version": "1.15.793-usability",
   "pass": true,
-  "prior_note": "iter 303 ERRRUN/EACH TOPIC; this iter first realworld 1340 RELATEDTOPIC/SEETOPICS",
+  "prior_note": "iter 304 RELATEDTOPIC mesh; this iter first realworld 1341 FORMTOPICS + 1342 GUIDE + 1343 ERRGUIDE (rebuild for ERRGUIDE)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate reltopic",
+      "cmd": "seed agent plate guide",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "mesh",
-      "cmd": "RELATEDTOPIC plate/cap/p2p bags",
+      "name": "guide",
+      "cmd": "GUIDE plate/general/forms playbook",
       "ok": true,
-      "note": "mesh"
+      "note": "guide"
     },
     {
-      "name": "first",
-      "cmd": "NTH neighbor + TOPICHINT",
+      "name": "forms",
+      "cmd": "FORMTOPICS reverse + chain GUIDE",
       "ok": true,
-      "note": "first"
+      "note": "forms"
     },
     {
-      "name": "walk",
-      "cmd": "EACH TOPIC + RELATEDTOPIC floor 8",
+      "name": "recover",
+      "cmd": "ERRGUIDE sticky/arg + RECOVERGUIDE",
       "ok": true,
-      "note": "walk"
+      "note": "recover"
     },
     {
       "name": "soft",
-      "cmd": "miss + bare soft",
+      "cmd": "GUIDE/FORMTOPICS soft miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "plate topic contract",
+      "cmd": "plate surface + live GUIDE",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "SEETOPICS forms\u2192cap",
+      "cmd": "PLAYGUIDE TOPICSOF RECOVERGUIDE",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + HAS substring",
+      "cmd": "PRINT clobber + mesh\u2192p2p + NEEDP plate",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "CLI duals still red; relatedtopic PASS"
+      "note": "CLI duals still red; guide/formtopics/errguide PASS"
     }
   ],
   "weaknesses": [
@@ -4658,6 +4658,46 @@
       "title": "Bare RELATEDTOPIC / unknown soft-miss OK=0 (good dual of HASTOPIC)",
       "detail": "RELATEDTOPIC zzz and bare RELATEDTOPIC soft-fail without process hard exit. Agents still need CLEAR_ERR before next path.",
       "repro": "RELATEDTOPIC; PRINT OK \u2192 0"
+    },
+    {
+      "id": "W574",
+      "severity": "high",
+      "area": "host|build",
+      "title": "ERRGUIDE in catalog/source but pre-rebuild binary unknown form",
+      "detail": "MEANINGFUL_ITER + HELP listed ERRGUIDE; 1.15.792 binary returned unknown form ERRGUIDE until full make \u2192 1.15.793. Same stale-binary class as HASFORMS (W530). Agents should HASFORM ERRGUIDE before depending on recover path.",
+      "repro": "pre-rebuild ERRGUIDE \u2192 unknown form; post-make PASS"
+    },
+    {
+      "id": "W575",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT after GUIDE clobbers playbook JSON in LAST (reconfirmed)",
+      "detail": "Must LET body=LAST before PRINT. Probe: HASI stem cubalc.guide.v1 works; HASI LAST after PRINT fails.",
+      "repro": "GUIDE plate; PRINT x; SYS HASI LAST cubalc.guide.v1 \u2192 0"
+    },
+    {
+      "id": "W576",
+      "severity": "med",
+      "area": "lang|formtopics",
+      "title": "Bare FORMTOPICS FORMTOPICS resolves prior bag var not form name",
+      "detail": "Proof documents: bare FORMTOPICS would resolve to prior bag var; use FORMTOPICS \"FORMTOPICS\" quoted for the form itself. Easy footgun after FORMTOPICS sets bag var FORMTOPICS.",
+      "repro": "FORMTOPICS HASFORM; FORMTOPICS FORMTOPICS may use bag; quoted works"
+    },
+    {
+      "id": "W577",
+      "severity": "low",
+      "area": "host|cli",
+      "title": "CLI guide tip/form counts may differ from in-lang GUIDE_*_N",
+      "detail": "cubalc guide plate tips_n=2 forms_n=3; in-lang GUIDE plate tips_n=3 forms_n=4 observed. Agents use floors (>=) not exact dual with CLI.",
+      "repro": "GUIDE plate; compare GUIDE_TIPS_N to cubalc guide plate"
+    },
+    {
+      "id": "W578",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META omit trailing NL (reconfirmed guide playbook)",
+      "detail": "od META ends 5a without 0a. STATUS last line no $.",
+      "repro": "od -An -tx1 META.txt | tail -1"
     }
   ],
   "workarounds": [
@@ -4716,7 +4756,9 @@
     "always END after EACH TOPIC; capture TOPICHINT LAST before PRINT",
     "use cubalc run -q for quieter ERRRUN recovery paths",
     "SYS NTH 0 body; LET n=LAST; TOPICHINT n \u2014 never TOPICHINT LAST after PRINT",
-    "HASLINE for exact neighbor topic ids; do not assume full mesh"
+    "HASLINE for exact neighbor topic ids; do not assume full mesh",
+    "HASFORM ERRGUIDE before recover paths; rebuild if miss",
+    "FORMTOPICS \"FORMTOPICS\" quoted; LET body=LAST before PRINT after GUIDE"
   ],
   "language_gaps": [
     "PRETTYP/JSONPRETTY/PRETTYJSON plate evidence dump",
@@ -4782,7 +4824,10 @@
     "MATCH substring on topic ids not glob (W567)",
     "RELATEDTOPIC curated asymmetric graph (W569)",
     "PRINT clobber before TOPICHINT LAST (W570)",
-    "HAS substring on topic bags (W571)"
+    "HAS substring on topic bags (W571)",
+    "stale binary vs ERRGUIDE catalog (W574)",
+    "FORMTOPICS bare name vs bag var collision (W576)",
+    "CLI vs in-lang GUIDE count skew (W577)"
   ],
   "issues_faced": [
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
@@ -4858,9 +4903,12 @@
     "iter303: selftest CLI duals still red",
     "iter304: RELATEDTOPIC mesh board 10/10; first hop fat via NTH+TOPICHINT",
     "iter304: plate\u2260cap adjacency (W569); HAS substring fa\u2192fat (W571)",
-    "iter304: selftest CLI duals still red"
+    "iter304: selftest CLI duals still red",
+    "iter305: rebuild required for ERRGUIDE (W574); GUIDE+FORMTOPICS already wired",
+    "iter305: board 10/10; FORMTOPICS quoted self-name (W576)",
+    "iter305: selftest CLI duals still red"
   ],
-  "commit": "5b960163",
-  "ts": "2026-08-10T14:54:21Z",
+  "commit": "pending",
+  "ts": "2026-08-10T15:23:30Z",
   "board_commit": "5b960163"
 }
