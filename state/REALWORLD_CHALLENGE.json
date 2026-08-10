@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 276,
-  "program": "programs/realworld/svc_firstuneq_diverge_board.cubalc",
-  "theme": "FIRSTUNEQFLAT first diverge path locate",
-  "version": "1.15.721-usability",
+  "iter": 277,
+  "program": "programs/realworld/svc_uneqpaths_inventory_board.cubalc",
+  "theme": "UNEQPATHS bulk diverge path inventory",
+  "version": "1.15.724-usability",
   "pass": true,
-  "prior_note": "iter 275 UNIFORMFLAT; this iter first realworld 1250 FIRSTUNEQFLAT",
+  "prior_note": "iter 276 FIRSTUNEQFLAT first path; this iter first realworld 1251 UNEQPATHS/DIVERGEPATHS bulk bag",
   "tests": [
     {
       "name": "list",
@@ -15,27 +15,33 @@
     },
     {
       "name": "boot",
-      "cmd": "seed mixed roles",
+      "cmd": "seed agent+peer+mix",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "find",
-      "cmd": "other.role/host paths",
+      "cmd": "single other.role/host",
       "ok": true,
       "note": "find"
     },
     {
-      "name": "unify",
-      "cmd": "SETBYVAL then miss",
+      "name": "multi",
+      "cmd": "FROM MIX 3 paths vs FIRSTUNEQ 1",
       "ok": true,
-      "note": "unify"
+      "note": "multi"
     },
     {
       "name": "peer",
-      "cmd": "b.status diverge",
+      "cmd": "b+c status bag",
       "ok": true,
       "note": "peer"
+    },
+    {
+      "name": "unify",
+      "cmd": "SETBYVAL then empty",
+      "ok": true,
+      "note": "unify"
     },
     {
       "name": "soft",
@@ -51,21 +57,27 @@
     },
     {
       "name": "alias",
-      "cmd": "PATHUNEQ",
+      "cmd": "DIVERGEPATHS",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "empty needle + role",
+      "cmd": "empty needle + rol substring",
       "ok": true,
       "note": "probe"
+    },
+    {
+      "name": "unknown",
+      "cmd": "bogus EXIT 2",
+      "ok": true,
+      "note": "unknown\u21922"
     },
     {
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; firstuneq PASS"
+      "note": "cli duals red; uneqpaths PASS 32"
     }
   ],
   "weaknesses": [
@@ -3580,6 +3592,38 @@
       "title": "WRITE diverge path omits trailing NL",
       "detail": "path.txt other.role without final NL (W5).",
       "repro": "od -c path.txt"
+    },
+    {
+      "id": "W440",
+      "severity": "high",
+      "area": "lang|var_special",
+      "title": "LET ref_v = DIVERGEPATHS_REF then SYS EQS ref_v \u2192 unknown form under board pressure",
+      "detail": "Heavy agent boards: after DIVERGEPATHS, LET ref_v = DIVERGEPATHS_REF; SYS EQS ref_v \"worker\" yields unknown form 'ref_v' with ok:false exit_code 0. Capture fails or var slot lost. Workaround: SYS EQS DIVERGEPATHS_REF \"worker\" direct on special. UNEQPATHS_REF same class if LET-captured late.",
+      "repro": "alias arm LET ref_v=DIVERGEPATHS_REF; SYS EQS ref_v worker \u2192 unknown form ref_v"
+    },
+    {
+      "id": "W441",
+      "severity": "med",
+      "area": "lang|uneqpaths",
+      "title": "UNEQPATHS needle is path substring not segment-exact",
+      "detail": "Needle 'rol' matches leaf paths containing role (other.role). Agents expecting token-exact path segment filters get false positives. total counts matching leaves; empty needle matches all leaves.",
+      "repro": "UNEQPATHS rol with mixed roles \u2192 other.role; total=3"
+    },
+    {
+      "id": "W442",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE multi-line UNEQPATHS bag omits final NL",
+      "detail": "PATHS.txt shows w2.role$ w3.role$ w4.role without trailing NL on last path (W5/W10 class).",
+      "repro": "cat -A PATHS.txt after multi"
+    },
+    {
+      "id": "W443",
+      "severity": "med",
+      "area": "host|exit",
+      "title": "unknown form mid-run leaves shell exit 0",
+      "detail": "alias failure set err+ok:false but process exit_code 0 and shell $?. Agents must EXIT n after sticky err or score miss for shell-visible contracts.",
+      "repro": "broken alias arm \u2192 ok:false exit_code 0 shell 0"
     }
   ],
   "workarounds": [
@@ -3612,7 +3656,10 @@
     "GETP diverge leaves instead of UNIFORM_PATHS bag",
     "use LAST for diverge path not FIRSTUNEQ specials",
     "SETBYVAL then FIRSTUNEQ miss for unify verify",
-    "single-leaf needles always soft-miss diverge"
+    "single-leaf needles always soft-miss diverge",
+    "SYS EQS DIVERGEPATHS_REF not LET-bound ref_v",
+    "capture LAST_N immediately after UNEQPATHS before PRINT",
+    "EXIT 2 on unknown ACTION; REQUIRE softens non-numeric"
   ],
   "language_gaps": [
     "HEAD path bag equals PATHBYVAL first path",
@@ -3634,20 +3681,13 @@
     "CHECKFLAT alias for UNIFORMFLAT",
     "FIRSTUNEQFLAT LAST=path LAST_N=found",
     "PATHUNEQ alias",
-    "prefer LAST path over specials under var cap"
+    "prefer LAST path over specials under var cap",
+    "UNEQPATHS LAST=path bag LAST_N=count TOTAL/REF/SRC specials",
+    "DIVERGEPATHS|ALLUNEQ aliases",
+    "prefer SYS EQS special direct over LET capture under pressure",
+    "needle path substring not segment-exact"
   ],
   "issues_faced": [
-    "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
-    "LET plate bak restore unreliable \u2014 INCLUDE plate_peer_session",
-    "CLI duals still failing set form",
-    "BOTPATHFLAT_V/TOPPATHFLAT_V unreadable in large board; switched to LAST_N capture",
-    "KEEPVFLAT misread as exact-value keep; is \u2265min THRESHFLAT alias",
-    "needle substring false-friend meta.hits under hits denoise",
-    "CAPFLAT needle substring collaterally clamps meta.score",
-    "SCALEFLAT_N special 0 after FROM PEER chain despite successful scale",
-    "VALSFLAT_N dark in large board; used SYS LINES bag",
-    "GETFLAT_FALLBACK dark; gated on LAST fallback literal",
-    "NEEDFLAT miss exit_code JSON 0 vs shell 1 vs CLI dual expects 2",
     "Soft path must use HASFLAT; NEEDFLAT hard-fails",
     "SUMFLAT hits overcounts hits_total+meta.hits",
     "Even median lower-mid must be taught for p50 bands",
@@ -3685,8 +3725,10 @@
     "iter275: UNIFORM_PATH hard-fail under var pressure \u2014 board uses LAST_N only (W434)",
     "iter275: 9/9 green after special avoidance",
     "iter276: FIRSTUNEQ LAST/LAST_N works under agent pressure (unlike UNIFORM_PATH)",
-    "iter276: 9/9 green; empty needle finds first diverge among a/b/c"
+    "iter276: 9/9 green; empty needle finds first diverge among a/b/c",
+    "iter277: LET ref_v=DIVERGEPATHS_REF then SYS EQS ref_v hard-fails unknown form; fixed via special-direct EQS",
+    "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red"
   ],
-  "commit": "01d5bdfc",
-  "ts": "2026-08-10T01:08:57Z"
+  "commit": "eeabca4e",
+  "ts": "2026-08-10T01:49:46Z"
 }
