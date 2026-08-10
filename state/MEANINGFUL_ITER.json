@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 757,
-  "version": "1.15.784-usability",
-  "item": "RUNSNIP + cubalc runsnip execute topic minis",
-  "item_id": 793,
-  "title": "RUNSNIP|SNIPRUN [topic] \u00b7 cubalc runsnip \u00b7 cubalc.runsnip.v1",
-  "commit": "5944de8555b33d9eebdb1b8afc42ea06bcbf84ca",
-  "summary": "execute curated SNIP mini one-shot; no temp paste. proof 1334 PASS.",
+  "iter": 758,
+  "version": "1.15.785-usability",
+  "item": "LISTTOPICS + HASTOPIC + cubalc topics catalog",
+  "item_id": 794,
+  "title": "LISTTOPICS|HASTOPIC|NEEDTOPIC \u00b7 cubalc topics \u00b7 cubalc.topics.v1",
+  "commit": "fc885da7207b5cfca3a45de3c93563ac8f80b32f",
+  "summary": "discoverable topic catalog + soft/hard gates; no hardcode. proof 1335 PASS.",
   "proofs": [
-    "1334_runsnip PASS",
-    "1334_cli_runsnip PASS"
+    "1335_listtopics PASS",
+    "1335_cli_listtopics PASS"
   ],
-  "when": "2026-08-10T13:26:30Z",
+  "when": "2026-08-10T13:36:22Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5944de8555b33d9eebdb1b8afc42ea06bcbf84ca",
-  "note": "runsnip cap; SNIPRUN fat; nested cubalc_run_source"
+  "sha": "fc885da7207b5cfca3a45de3c93563ac8f80b32f",
+  "note": "topics n=8; hastopic cap; needtopic plate"
 }
