@@ -1,0 +1,82 @@
+# FINDARG / ARGINDEX — reverse of NTHARG: exact raw argv token → 0-based index
+
+HOLD_FLASH 1
+
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV UNSET CUBALC_ARG2
+SYS ENV UNSET CUBALC_ARG3
+SYS ENV SET CUBALC_ARGC "0"
+
+# miss on empty argv
+FINDARG "seal"
+ASSERT FINDARG_HIT == 0
+ASSERT LAST_N == -1
+ASSERT OK == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# flags + subcommand + file
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARG1 "seal"
+SYS ENV SET CUBALC_ARG2 "out.bin"
+SYS ENV SET CUBALC_ARGC "3"
+
+FINDARG "--verbose"
+ASSERT FINDARG_HIT == 1
+ASSERT LAST_N == 0
+ASSERT FINDARG_N == 0
+ASSERT OK == 1
+SYS EQS LAST "--verbose"
+ASSERT LAST_N == 1
+
+FINDARG "seal"
+ASSERT FINDARG_HIT == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "seal"
+ASSERT LAST_N == 1
+
+FINDARG "out.bin"
+ASSERT FINDARG_HIT == 1
+ASSERT LAST_N == 2
+
+# miss token
+FINDARG "missing"
+ASSERT FINDARG_HIT == 0
+ASSERT LAST_N == -1
+ASSERT OK == 0
+
+# ARGINDEX alias
+ARGINDEX "seal"
+ASSERT FINDARG_HIT == 1
+ASSERT LAST_N == 1
+
+# locate then peel next (subcommand file without RESTPOS glue)
+FINDARG "seal"
+ASSERT FINDARG_HIT == 1
+# peel following raw argv: index 2 = out.bin (seal at 1)
+NTHARG 2
+SYS EQS LAST "out.bin"
+ASSERT LAST_N == 1
+
+# first match wins (duplicate)
+SYS ENV SET CUBALC_ARG0 "x"
+SYS ENV SET CUBALC_ARG1 "y"
+SYS ENV SET CUBALC_ARG2 "x"
+SYS ENV SET CUBALC_ARGC "3"
+FINDARG "x"
+ASSERT LAST_N == 0
+ASSERT FINDARG_HIT == 1
+
+# discoverable
+HASFORM "FINDARG"
+ASSERT LAST_N == 1
+HASFORM "ARGINDEX"
+ASSERT LAST_N == 1
+
+RELATED "FINDARG"
+SYS HASLINE LAST "NTHARG"
+ASSERT LAST_N == 1
+
+PRINT "findarg ok"
+PASS

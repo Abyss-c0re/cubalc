@@ -3606,6 +3606,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"ARGKV", "ARGKV alias of ARGMAP"},
       {"NTHARG", "NTHARG|GETARG index [OR fallback] — peel CUBALC_ARGi raw argv · flags kept"},
       {"GETARG", "GETARG alias of NTHARG — raw argv peel (not non-flag NTHPOS)"},
+      {"FINDARG", "FINDARG|ARGINDEX token — 0-based index of exact raw argv · -1 miss · FINDARG_HIT"},
+      {"ARGINDEX", "ARGINDEX alias of FINDARG — reverse of NTHARG (token → index)"},
       {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
       {"POSN", "POSN alias of NTHPOS — first/second file without RESTARGS+NTH"},
       {"NTHPOSPATH", "NTHPOSPATH|POSNPATH index [OR path] — NTHPOS + ABSPATH · EXIST · first file without REALPATH"},
@@ -39719,7 +39721,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"ARGMAP", "HASARG"}, {"ARGMAP", "NTHPOS"}, {"ARGMAP", "NTHARG"},
       {"FLAGMAP", "ARGMAP"},
       {"NTHARG", "ARGMAP"}, {"NTHARG", "HASARG"}, {"NTHARG", "NTHPOS"},
-      {"NTHARG", "SYS ARG"}, {"NTHPOS", "NTHARG"}, {"GETARG", "NTHARG"},
+      {"NTHARG", "SYS ARG"}, {"NTHARG", "FINDARG"}, {"NTHPOS", "NTHARG"},
+      {"GETARG", "NTHARG"},
+      {"FINDARG", "NTHARG"}, {"FINDARG", "ARGMAP"}, {"FINDARG", "HASARG"},
+      {"FINDARG", "SYS ARGS"}, {"ARGINDEX", "FINDARG"}, {"ARGINDEX", "NTHARG"},
       {"FORMHINT", "HASFORM"}, {"FORMHINT", "LISTFORMS"}, {"FORMHINT", "RELATED"},
       {"FORMHINT", "FORMSFOR"}, {"FORMHINT", "TIPS"},
       {"LISTFORMS", "COUNTFORMS"}, {"LISTFORMS", "HASFORM"}, {"LISTFORMS", "FORMHINT"},
@@ -69335,6 +69340,64 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# ntharg %ld hit=%d\n", idx, hit ? 1 : 0);
+    bump(vm);
+    return 1;
+  }
+  /* FINDARG|ARGINDEX token — 0-based index of first exact CUBALC_ARGi match.
+   * LAST = matched token (or "") · LAST_N / FINDARG_N = index or -1 · FINDARG_HIT 0|1.
+   * OK=1 hit / 0 miss (soft). Twin of SYS FINDLINE for raw argv; reverse of NTHARG.
+   * Usability: locate subcommand/flag token then NTHARG index+1 without ARGS+FINDLINE. */
+  if (kw(&L->cur,"FINDARG") || kw(&L->cur,"ARGINDEX") || kw(&L->cur,"INDEXARG") ||
+      kw(&L->cur,"WHICHARG") || kw(&L->cur,"ARGVINDEX") || kw(&L->cur,"ARGOF") ||
+      kw(&L->cur,"FINDARGV") || kw(&L->cur,"LOCATEARG")){
+    char needle[CUBALC_HOST_STR_MAX], field[CUBALC_HOST_STR_MAX], envn[32];
+    const char *ac, *a;
+    int argc = 32, k;
+    long idx = -1, hit = 0;
+    lex_next(L);
+    needle[0] = 0;
+    field[0] = 0;
+    if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+      fail_at(vm, L, "FINDARG needs token — FINDARG \"--verbose\" | FINDARG seal");
+      return -1;
+    }
+    ac = getenv("CUBALC_ARGC");
+    if (ac && ac[0]) {
+      argc = (int)strtol(ac, NULL, 10);
+      if (argc < 0) argc = 0;
+      if (argc > 32) argc = 32;
+    } else {
+      argc = 0;
+      for (k = 0; k < 32; k++) {
+        snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+        if (!getenv(envn)) break;
+        argc++;
+      }
+    }
+    for (k = 0; k < argc; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      a = getenv(envn);
+      if (!a) a = "";
+      if (strcmp(a, needle) == 0) {
+        idx = (long)k;
+        hit = 1;
+        snprintf(field, sizeof field, "%s", a);
+        break;
+      }
+    }
+    var_set_str(vm, "LAST", field);
+    var_set_str(vm, "FINDARG", field);
+    var_set_str(vm, "ARGINDEX", field);
+    var_set_str(vm, "FINDARG_TOKEN", needle);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", field);
+    vm->last_n = hit ? idx : -1L;
+    var_set_num(vm, "LAST_N", hit ? idx : -1L);
+    var_set_num(vm, "FINDARG_N", hit ? idx : -1L);
+    var_set_num(vm, "ARGINDEX_N", hit ? idx : -1L);
+    var_set_num(vm, "FINDARG_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "OK", hit ? 1L : 0L);
+    if (vm->trace)
+      fprintf(vm->trace, "# findarg hit=%ld idx=%ld token=%s\n", hit, idx, needle);
     bump(vm);
     return 1;
   }
