@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 747,
-  "version": "1.15.774-usability",
-  "item": "HASFORMS/NEEDFORMS + form_guard + CLI",
-  "item_id": 783,
-  "title": "HASFORMS \u00b7 NEEDFORMS \u00b7 form_guard \u00b7 cubalc hasforms|needforms",
-  "commit": "881694aeef9eb31bafcc1a3d49c59e22d8c50b80",
-  "summary": "multi form capability contracts; FORMMISS; form_guard lib; doctor. thrash restored. proof 1324 PASS.",
+  "iter": 748,
+  "version": "1.15.775-usability",
+  "item": "cap_boot + cubalc init --cap",
+  "item_id": 784,
+  "title": "cap_boot \u00b7 init --cap|--forms \u00b7 doctor lib_cap_boot \u00b7 catalog n=7",
+  "commit": "37814ebce39187af6a8d6469cf190fc63f422c59",
+  "summary": "agent_boot+form_guard one-shot; init --cap scaffold; doctor/catalog. proof 1325 PASS.",
   "proofs": [
-    "1324_hasforms PASS",
-    "1324_cli_hasforms PASS"
+    "1325_cap_boot PASS",
+    "1325_cli_init_cap PASS"
   ],
-  "when": "2026-08-10T11:21:33Z",
+  "when": "2026-08-10T11:40:03Z",
   "agent": "meaningful_iter_10m",
-  "sha": "881694aeef9eb31bafcc1a3d49c59e22d8c50b80",
-  "note": "restored thrash; HASFORMS multi; INCLUDE form_guard; doctor lib_form_guard"
+  "sha": "37814ebce39187af6a8d6469cf190fc63f422c59",
+  "note": "INCLUDE cap_boot; cubalc init --cap; doctor lib_cap_boot true"
 }
