@@ -5,7 +5,7 @@
   "item": "NTHLIB/LASTLIB index and last match stems",
   "item_id": 769,
   "title": "NTHLIB idx + LASTLIB sorted duals of PICKLIB \u00b7 INCLUDE without MATCHLIBS+NTH",
-  "commit": "12fdeea19fa2cdf0e78db43528cf69b06677cf84",
+  "commit": "4fdd19f9afea9f0e203d90cf81f95561cf4cb360",
   "summary": "0-based Nth and last matching lib stems for INCLUDE. Completes PICKLIB family.",
   "proofs": [
     "1310_nthlib PASS",
@@ -13,6 +13,6 @@
   ],
   "when": "2026-08-10T11:30:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "12fdeea19fa2cdf0e78db43528cf69b06677cf84",
+  "sha": "4fdd19f9afea9f0e203d90cf81f95561cf4cb360",
   "note": "NTHLIB 1 plate; LASTLIB plate; OR fallback; INCLUDE LAST"
 }
