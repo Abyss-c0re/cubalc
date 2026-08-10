@@ -4908,7 +4908,7 @@
     "iter305: board 10/10; FORMTOPICS quoted self-name (W576)",
     "iter305: selftest CLI duals still red"
   ],
-  "commit": "pending",
+  "commit": "76b85c1a",
   "ts": "2026-08-10T15:23:30Z",
-  "board_commit": "5b960163"
+  "board_commit": "76b85c1a"
 }
