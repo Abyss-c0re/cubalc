@@ -7,6 +7,11 @@
 extern "C" {
 #endif
 
+/* Public var-table ceiling (agents: STATUS/VARS/run plate vars_max). */
+#ifndef CUBALC_MAX_VARS
+#define CUBALC_MAX_VARS 256
+#endif
+
 typedef struct cubalc_run_result {
   int ok;
   int asserts_ok;
@@ -25,6 +30,10 @@ typedef struct cubalc_run_result {
   /* Usability: resolved INCLUDE paths this run (dual of LISTINCLUDES for agents). */
   int includes_n;     /* count of modules loaded (INCLUDE / -I preload) */
   char includes[640]; /* newline-joined resolved paths */
+  /* Usability: var-table pressure dual of STATUS vars_n|max|full (no STATUS form). */
+  int vars_n;         /* live program vars at end of run */
+  int vars_max;       /* CUBALC_MAX_VARS ceiling */
+  int vars_full;      /* 1 if create failed once (specials may be dark) */
 } cubalc_run_result;
 
 int cubalc_run_file(const char *path, cubalc_run_result *out, FILE *trace);

@@ -2029,6 +2029,7 @@ int main(int argc, char **argv) {
              "\"include_path_n\":%d,"
              "\"includes_n\":0,\"includes\":[],"
              "\"include_stems_n\":0,\"include_stems\":[],"
+             "\"vars_n\":0,\"vars_max\":%d,\"vars_full\":false,"
              "\"quiet\":%s,\"strict\":%s,"
              "\"exit_code\":1,\"halted\":false}\n",
              have_expr ? "<expr>" : (src_path ? src_path : "?"),
@@ -2036,6 +2037,7 @@ int main(int argc, char **argv) {
              n_preload, prej,
              pmiss_n == 0 ? "true" : "false", pmiss_n, pmiss,
              n_ipath,
+             CUBALC_MAX_VARS,
              quiet ? "true" : "false", strict ? "true" : "false");
       return 1;
     }
@@ -2300,6 +2302,7 @@ int main(int argc, char **argv) {
                "\"require_version\":\"%s\","
                "\"includes_n\":%d,\"includes\":%s,"
                "\"include_stems_n\":%d,\"include_stems\":%s,"
+               "\"vars_n\":%d,\"vars_max\":%d,\"vars_full\":%s,"
                "\"exit_code\":%d,\"halted\":%s}\n",
                plate_ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
                rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
@@ -2312,6 +2315,8 @@ int main(int argc, char **argv) {
                req_ver[0] ? req_ver : "",
                rr.includes_n, incj,
                stems_n, stemsj,
+               rr.vars_n, rr.vars_max > 0 ? rr.vars_max : CUBALC_MAX_VARS,
+               rr.vars_full ? "true" : "false",
                rr.exit_code, rr.halted ? "true" : "false");
       }
     }
@@ -3000,6 +3005,7 @@ int main(int argc, char **argv) {
       {"cli_haspreload", "programs/proof/1272_cli_haspreload.sh", "HASPRELOAD after run -I"},
       {"cli_include_stems_plate", "programs/proof/1273_cli_include_stems_plate.sh", "run plate include_stems dual of INCLUDESTEMS"},
       {"vars_max", "programs/proof/1274_vars_max.cubalc", "CUBALC_MAX_VARS 256 + VARS/STATUS pressure"},
+      {"cli_vars_plate", "programs/proof/1275_cli_vars_plate.sh", "run plate vars_n/max/full dual of STATUS"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},

@@ -141,6 +141,10 @@ static int run_source_inner(const char *src, size_t n, const char *name,
         out->includes[o] = 0;
       }
     }
+    /* Usability: run-plate dual of STATUS vars_n|max|full — fat board pressure. */
+    out->vars_n = vm.n_vars;
+    out->vars_max = CUBALC_MAX_VARS;
+    out->vars_full = vm.vars_full ? 1 : 0;
   }
   if (vm.ch.n_cubes>0){
     /* Cube Law: share state_matrix only · devices free · united visual faces */

@@ -761,6 +761,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 731. ~~**`HASPRELOAD`**~~ **done** (soft 0|1 if name in -I/CUBALC_PRELOAD request bag · dual of HASINCLUDE · IF without LISTPRELOAD+HASLINE).
 732. ~~**run plate `include_stems` / `include_stems_n`**~~ **done** (INCLUDESTEMS dual on every run plate · short names vs preload[] without path peel).
 733. ~~**`CUBALC_MAX_VARS` 256 + `VARS_MAX`/`VARS_FULL` + STATUS vars_n**~~ **done** (fat agent boards keep specials · fix 64-slot var_slot bug · sticky full err · proof 1274).
+734. ~~**run plate `vars_n` / `vars_max` / `vars_full`**~~ **done** (STATUS pressure dual on every run plate · agents see fat-board budget without STATUS form).
 
 ## Tick protocol
 
