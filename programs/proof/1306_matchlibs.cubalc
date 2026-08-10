@@ -1,0 +1,49 @@
+# MATCHLIBS / FILTERLIBS — in-lang dual of cubalc libs [filter]
+
+MATCHLIBS plate
+ASSERT OK == 1
+ASSERT LAST_N >= 10
+SYS HASLINE LAST "plate_tick"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "plate_boot"
+ASSERT LAST_N == 1
+# agent_boot stem must not match "plate" as stem
+SYS HASLINE LAST "agent_boot"
+ASSERT LAST_N == 0
+ASSERT MATCHLIBS_N >= 10
+ASSERT MATCHLIBS_FILTER == "plate"
+
+FILTERLIBS fat
+ASSERT OK == 1
+ASSERT LAST_N == 2
+SYS HASLINE LAST "fat_session"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "fat_boot"
+ASSERT LAST_N == 1
+
+LIBMATCH tick
+ASSERT OK == 1
+ASSERT LAST_N >= 2
+SYS HASLINE LAST "plate_tick"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "plate_peer_tick"
+ASSERT LAST_N == 1
+
+# case-insensitive
+MATCHLIBS FAT
+ASSERT OK == 1
+ASSERT LAST_N == 2
+
+# empty miss still soft OK=1 with empty bag
+MATCHLIBS no_such_lib_xyz_zzz
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT MATCHLIBS_N == 0
+
+# need needle (empty string)
+MATCHLIBS ""
+ASSERT OK == 0
+CLEAR_ERR
+
+PASS
+PRINT "1306_matchlibs: PASS"
