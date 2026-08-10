@@ -5840,6 +5840,145 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* PRELOADMISS / PRELOADOK / NEEDPRELOAD — audit CLI -I/CUBALC_PRELOAD vs loaded.
+   * Usability: request bag from CUBALC_PRELOAD_ACTIVE; miss = not in include_loaded.
+   * Soft PRELOADMISS → LAST=miss bag LAST_N=count; PRELOADOK → 0|1; NEEDPRELOAD hard. */
+  if (kw(&L->cur, "PRELOADMISS") || kw(&L->cur, "MISSINGPRELOAD") ||
+      kw(&L->cur, "PRELOAD_MISS") || kw(&L->cur, "CHECKPRELOAD") ||
+      kw(&L->cur, "PRELOADOK") || kw(&L->cur, "HASPRELOADALL") ||
+      kw(&L->cur, "PRELOAD_OK") || kw(&L->cur, "ALLPRELOADED") ||
+      kw(&L->cur, "NEEDPRELOAD") || kw(&L->cur, "REQUIREPRELOAD") ||
+      kw(&L->cur, "NEED_PRELOAD") || kw(&L->cur, "REQUIRE_PRELOAD")) {
+    int hard = kw(&L->cur, "NEEDPRELOAD") || kw(&L->cur, "REQUIREPRELOAD") ||
+               kw(&L->cur, "NEED_PRELOAD") || kw(&L->cur, "REQUIRE_PRELOAD");
+    int as_ok = kw(&L->cur, "PRELOADOK") || kw(&L->cur, "HASPRELOADALL") ||
+                kw(&L->cur, "PRELOAD_OK") || kw(&L->cur, "ALLPRELOADED");
+    int aln = L->cur.line;
+    const char *env = getenv("CUBALC_PRELOAD_ACTIVE");
+    char miss[512];
+    size_t mo = 0;
+    int n_need = 0, n_hit = 0, n_miss = 0;
+    miss[0] = 0;
+    lex_next(L);
+    if (!env || !env[0])
+      env = getenv("CUBALC_PRELOAD");
+    if (env && env[0]) {
+      const char *p = env;
+      while (*p) {
+        char name[96], hitp[256];
+        size_t len = 0;
+        while (*p == ':' || *p == ',' || *p == ' ' || *p == '\t') p++;
+        if (!*p) break;
+        while (p[len] && p[len] != ':' && p[len] != ',' && p[len] != ' ' &&
+               p[len] != '\t' && len + 1 < sizeof name) {
+          name[len] = p[len];
+          len++;
+        }
+        name[len] = 0;
+        p += len;
+        if (!name[0]) continue;
+        n_need++;
+        if (include_loaded_match(vm, name, hitp, sizeof hitp)) {
+          n_hit++;
+        } else {
+          if (n_miss > 0 && mo + 1 < sizeof miss) miss[mo++] = '\n';
+          if (mo + len < sizeof miss) {
+            memcpy(miss + mo, name, len);
+            mo += len;
+          }
+          miss[mo] = 0;
+          n_miss++;
+        }
+      }
+    }
+    var_set_num(vm, "PRELOAD_N", n_need);
+    var_set_num(vm, "PRELOAD_HIT_N", n_hit);
+    var_set_num(vm, "PRELOAD_MISS_N", n_miss);
+    var_set_str(vm, "PRELOAD_MISS", miss);
+    var_set_num(vm, "INCLUDE_N", vm->n_included);
+
+    if (hard) {
+      if (n_miss == 0) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "PRELOAD_OK_N", 1);
+        var_set_num(vm, "OK", 1);
+        if (vm->res) vm->res->asserts_ok++;
+        if (vm->trace)
+          fprintf(vm->trace, "# needpreload ok need=%d\n", n_need);
+        bump(vm);
+        return 1;
+      }
+      {
+        char msg[240];
+        char flat[160];
+        size_t fi = 0;
+        const char *mp;
+        flat[0] = 0;
+        for (mp = miss; *mp && fi + 1 < sizeof flat; mp++) {
+          if (*mp == '\n') {
+            if (fi > 0 && flat[fi - 1] != ',') {
+              flat[fi++] = ',';
+              if (fi + 1 < sizeof flat) flat[fi++] = ' ';
+            }
+          } else {
+            flat[fi++] = *mp;
+          }
+        }
+        flat[fi] = 0;
+        snprintf(msg, sizeof msg,
+                 "NEEDPRELOAD missing line %d: %s — cubalc run -I name · "
+                 "INCLUDE / LISTPRELOAD vs INCLUDESTEMS",
+                 aln, flat[0] ? flat : "?");
+        var_set_str(vm, "ERR", msg);
+        var_set_str(vm, "LAST_ERR", msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+    }
+
+    /* Soft: PRELOADOK → 0|1; PRELOADMISS/CHECKPRELOAD → miss bag + count */
+    if (as_ok) {
+      int ok = (n_miss == 0);
+      var_set_num(vm, "LAST_N", ok);
+      vm->last_n = ok;
+      if (ok) {
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+      } else {
+        var_set_str(vm, "LAST", miss);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", miss);
+        var_set_num(vm, "OK", 0);
+        {
+          char em[192];
+          snprintf(em, sizeof em,
+                   "PRELOADOK miss line %d: %s — cubalc run -I / INCLUDE",
+                   aln, miss);
+          var_set_str(vm, "ERR", em);
+          var_set_str(vm, "LAST_ERR", em);
+        }
+      }
+      var_set_num(vm, "PRELOAD_OK_N", ok);
+      bump(vm);
+      return 1;
+    }
+
+    /* PRELOADMISS / CHECKPRELOAD — always OK=1 audit; LAST_N = miss count */
+    var_set_str(vm, "LAST", miss);
+    var_set_str(vm, "PRELOADMISS", miss);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", miss);
+    vm->last_n = n_miss;
+    var_set_num(vm, "LAST_N", n_miss);
+    var_set_num(vm, "PRELOAD_OK_N", n_miss == 0 ? 1 : 0);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* INCLUDESTEMS / LISTINCLUDESTEMS — basenames without .cubalc from loaded modules.
    * Usability: short-name bag for HASLINE/NEEDINCLUDE glue after -I without BASENAMEALL. */
   if (kw(&L->cur, "INCLUDESTEMS") || kw(&L->cur, "LISTINCLUDESTEMS") ||

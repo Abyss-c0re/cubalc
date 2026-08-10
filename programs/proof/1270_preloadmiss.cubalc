@@ -1,0 +1,58 @@
+# PRELOADMISS / PRELOADOK / NEEDPRELOAD — -I request vs loaded audit
+# Soft miss bag + soft 0|1 + hard gate without LISTPRELOAD∖INCLUDESTEMS glue.
+
+# Empty preload → no miss, PRELOADOK
+PRELOADMISS
+ASSERT LAST_N == 0
+ASSERT PRELOAD_MISS_N == 0
+ASSERT PRELOAD_OK_N == 1
+PRELOADOK
+ASSERT LAST_N == 1
+ASSERT OK == 1
+NEEDPRELOAD
+ASSERT OK == 1
+
+# Request names without loading them → miss bag
+SYS ENV SET CUBALC_PRELOAD_ACTIVE "hold_seed:no_such_preload_zzz"
+PRELOADMISS
+ASSERT LAST_N == 2
+SYS HASLINE LAST "hold_seed"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "no_such_preload_zzz"
+ASSERT LAST_N == 1
+ASSERT PRELOAD_N == 2
+ASSERT PRELOAD_MISS_N == 2
+ASSERT PRELOAD_OK_N == 0
+
+PRELOADOK
+ASSERT LAST_N == 0
+ASSERT PRELOAD_OK_N == 0
+CLEAR_ERR
+
+# After INCLUDE of one name, only the other remains missing
+INCLUDE hold_seed
+PRELOADMISS
+ASSERT LAST_N == 1
+SYS HASLINE LAST "no_such_preload_zzz"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "hold_seed"
+ASSERT LAST_N == 0
+ASSERT PRELOAD_HIT_N == 1
+ASSERT PRELOAD_MISS_N == 1
+
+PRELOADOK
+ASSERT LAST_N == 0
+ASSERT PRELOAD_OK_N == 0
+CLEAR_ERR
+
+# All requested present → clean
+SYS ENV SET CUBALC_PRELOAD_ACTIVE "hold_seed"
+PRELOADMISS
+ASSERT LAST_N == 0
+PRELOADOK
+ASSERT LAST_N == 1
+NEEDPRELOAD
+ASSERT OK == 1
+
+PASS
+PRINT "1270_preloadmiss: PASS"

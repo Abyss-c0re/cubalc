@@ -2055,6 +2055,10 @@ int main(int argc, char **argv) {
       whyh[0] = 0;
       if (!e[0] && plate_ok)
         snprintf(whyh, sizeof whyh, "ok — no sticky LAST_ERR");
+      else if (strstr(e, "NEEDPRELOAD") || strstr(e, "PRELOADOK") ||
+               strstr(e, "PRELOADMISS") || strstr(e, "preload"))
+        snprintf(whyh, sizeof whyh,
+                 "cubalc run -I name · LISTPRELOAD · PRELOADMISS · INCLUDESTEMS");
       else if (strstr(e, "NEEDINCLUDE") || strstr(e, "HASINCLUDEALL") ||
                strstr(e, "INCLUDE") || strstr(e, "include") ||
                strstr(e, "REQUIRE LIB") || strstr(e, "lib missing"))
@@ -2842,6 +2846,8 @@ int main(int argc, char **argv) {
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
       {"listpreload", "programs/proof/1269_listpreload.cubalc", "LISTPRELOAD effective -I/PRELOAD bag"},
       {"cli_listpreload", "programs/proof/1269_cli_listpreload.sh", "LISTPRELOAD after run -I · PRELOAD_ACTIVE"},
+      {"preloadmiss", "programs/proof/1270_preloadmiss.cubalc", "PRELOADMISS/PRELOADOK -I vs loaded audit"},
+      {"cli_preloadmiss", "programs/proof/1270_cli_preloadmiss.sh", "PRELOADMISS/NEEDPRELOAD after run -I"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3337,6 +3343,9 @@ int main(int argc, char **argv) {
       {"LISTINCLUDES", "flow", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N"},
       {"INCLUDESTEMS", "flow", "INCLUDESTEMS short-name bag from loaded modules"},
       {"LISTPRELOAD", "flow", "LISTPRELOAD|PRELOADS -I/CUBALC_PRELOAD short-name bag"},
+      {"PRELOADMISS", "flow", "PRELOADMISS|CHECKPRELOAD -I names not loaded bag"},
+      {"PRELOADOK", "flow", "PRELOADOK soft 0|1 all -I preloads loaded"},
+      {"NEEDPRELOAD", "flow", "NEEDPRELOAD fail-fast if any -I name not loaded"},
       {"HASINCLUDE", "flow", "HASINCLUDE name|path — soft 0|1 if module loaded this run"},
       {"HASINCLUDEALL", "flow", "HASINCLUDEALL a b… soft all-loaded · INCLUDE_MISS bag"},
       {"NEEDINCLUDE", "flow", "NEEDINCLUDE a b… fail-fast if any module not loaded"},
@@ -11463,6 +11472,9 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"LISTINCLUDES", "flow", "LISTINCLUDES|LOADED bag of included paths · INCLUDE_N"},
       {"INCLUDESTEMS", "flow", "INCLUDESTEMS short-name bag from loaded modules"},
       {"LISTPRELOAD", "flow", "LISTPRELOAD -I preload short-name bag"},
+      {"PRELOADMISS", "flow", "PRELOADMISS -I names not loaded bag"},
+      {"PRELOADOK", "flow", "PRELOADOK soft all -I loaded"},
+      {"NEEDPRELOAD", "flow", "NEEDPRELOAD fail-fast -I not loaded"},
       {"HASINCLUDE", "flow", "HASINCLUDE name soft 0|1 if module loaded"},
       {"HASINCLUDEALL", "flow", "HASINCLUDEALL a b soft all loaded"},
       {"NEEDINCLUDE", "flow", "NEEDINCLUDE a b fail-fast not loaded"},
@@ -12159,6 +12171,11 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"PLUG", "core", "wire cubes · denied only if HOLD_FLASH 0"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"LISTINCLUDES", "flow", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N"},
+      {"INCLUDESTEMS", "flow", "INCLUDESTEMS short-name bag from loaded modules"},
+      {"LISTPRELOAD", "flow", "LISTPRELOAD|PRELOADS -I/CUBALC_PRELOAD short-name bag"},
+      {"PRELOADMISS", "flow", "PRELOADMISS|CHECKPRELOAD -I names not loaded bag"},
+      {"PRELOADOK", "flow", "PRELOADOK soft 0|1 all -I preloads loaded"},
+      {"NEEDPRELOAD", "flow", "NEEDPRELOAD fail-fast if any -I name not loaded"},
       {"HASINCLUDE", "flow", "HASINCLUDE name|path — soft 0|1 if module loaded this run"},
       {"HASINCLUDEALL", "flow", "HASINCLUDEALL a b… soft all-loaded · INCLUDE_MISS bag"},
       {"NEEDINCLUDE", "flow", "NEEDINCLUDE a b… fail-fast if any module not loaded"},
