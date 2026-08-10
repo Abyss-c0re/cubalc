@@ -1572,6 +1572,52 @@ static void run_dotenv_parse_env(char paths[][512], int *n, const char *env) {
   }
 }
 
+/* mkdir -p path · 0 ok · -1 fail (err filled). Dual of SYS MKDIR for host run. */
+static int run_mkdir_p(const char *path, char *err, size_t errn) {
+  char buf[1024];
+  size_t i, n;
+  struct stat st;
+  if (!path || !path[0]) {
+    if (err && errn) snprintf(err, errn, "MKDIR: empty path");
+    return -1;
+  }
+  if (stat(path, &st) == 0) {
+    if (S_ISDIR(st.st_mode)) return 0;
+    if (err && errn)
+      snprintf(err, errn, "MKDIR: exists but not dir '%s'", path);
+    return -1;
+  }
+  snprintf(buf, sizeof buf, "%s", path);
+  n = strlen(buf);
+  while (n > 1 && buf[n - 1] == '/') buf[--n] = 0;
+  for (i = 1; i < n; i++) {
+    if (buf[i] != '/') continue;
+    buf[i] = 0;
+    if (buf[0] && mkdir(buf, 0755) != 0 && errno != EEXIST) {
+      if (err && errn)
+        snprintf(err, errn, "MKDIR: fail '%s' (%s)", buf, strerror(errno));
+      return -1;
+    }
+    if (buf[0] && stat(buf, &st) == 0 && !S_ISDIR(st.st_mode)) {
+      if (err && errn)
+        snprintf(err, errn, "MKDIR: not a dir '%s'", buf);
+      return -1;
+    }
+    buf[i] = '/';
+  }
+  if (mkdir(buf, 0755) != 0 && errno != EEXIST) {
+    if (err && errn)
+      snprintf(err, errn, "MKDIR: fail '%s' (%s)", buf, strerror(errno));
+    return -1;
+  }
+  if (stat(buf, &st) != 0 || !S_ISDIR(st.st_mode)) {
+    if (err && errn)
+      snprintf(err, errn, "MKDIR: not a dir '%s'", buf);
+    return -1;
+  }
+  return 0;
+}
+
 /* Parse KEY=VAL into process env. Returns 0 ok · -1 bad form (err filled).
  * Usability: cubalc run -E KEY=VAL dual of SYS ENV SET without rewriting body. */
 static int run_setenv_one(const char *kv, char *err, size_t errn) {
@@ -1911,6 +1957,7 @@ int main(int argc, char **argv) {
      * Dotenv: -F|--dotenv|--env-file PATH + CUBALC_DOTENV=a:b → SYS DOTENV before body.
      * Setenv: -E|--setenv KEY=VAL (repeatable) — process env inject after dotenv (CLI wins).
      * Unsetenv: -U|--unsetenv KEY (repeatable) — clear keys after dotenv, before -E.
+     * Mkdir: -M|--mkdir|--ensure-dir DIR (repeatable) — mkdir -p before cwd/body.
      * Cwd: --cwd|--cd|--chdir DIR + CUBALC_CWD — chdir before body (relative plates).
      * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older.
      * Forms: -C|--need-forms F1,F2 + CUBALC_REQUIRE_FORMS — fail if HELP catalog misses.
@@ -1926,6 +1973,7 @@ int main(int argc, char **argv) {
     int n_dotenv = 0;
     int n_setenv = 0;
     int n_unsetenv = 0;
+    int n_mkdir = 0;
     long run_timeout_ms = 0;
     int run_timeout_cli = 0;
     long dotenv_keys = 0;
@@ -1935,6 +1983,7 @@ int main(int argc, char **argv) {
     char dotenv_paths[8][512];
     char setenv_kvs[32][384];
     char unsetenv_keys[32][192];
+    char mkdir_paths[8][512];
     char run_cwd[512];
     char src_abs[1024];
     char req_ver[64];
@@ -1956,6 +2005,7 @@ int main(int argc, char **argv) {
     n_dotenv = 0;
     n_setenv = 0;
     n_unsetenv = 0;
+    n_mkdir = 0;
     dotenv_keys = 0;
     run_cwd[0] = 0;
     src_abs[0] = 0;
@@ -2203,6 +2253,36 @@ int main(int argc, char **argv) {
         snprintf(run_cwd, sizeof run_cwd, "%s", argv[i] + 10);
         continue;
       }
+      /* -M DIR · --mkdir · --ensure-dir · mkdir -p before cwd/body (SYS MKDIR dual) */
+      if (!strcmp(argv[i], "-M") || !strcmp(argv[i], "--mkdir") ||
+          !strcmp(argv[i], "--ensure-dir") || !strcmp(argv[i], "--ensuredir") ||
+          !strcmp(argv[i], "--make-dir")) {
+        if (i + 1 >= argc) {
+          fprintf(stderr, "cubalc run: %s needs a directory path\n", argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        if (n_mkdir < 8)
+          snprintf(mkdir_paths[n_mkdir++], sizeof mkdir_paths[0], "%s", argv[++i]);
+        else
+          i++;
+        continue;
+      }
+      if (!strncmp(argv[i], "--mkdir=", 8)) {
+        if (n_mkdir < 8)
+          snprintf(mkdir_paths[n_mkdir++], sizeof mkdir_paths[0], "%s", argv[i] + 8);
+        continue;
+      }
+      if (!strncmp(argv[i], "--ensure-dir=", 13)) {
+        if (n_mkdir < 8)
+          snprintf(mkdir_paths[n_mkdir++], sizeof mkdir_paths[0], "%s", argv[i] + 13);
+        continue;
+      }
+      if (!strncmp(argv[i], "-M", 2) && argv[i][2] == '=' ) {
+        if (n_mkdir < 8)
+          snprintf(mkdir_paths[n_mkdir++], sizeof mkdir_paths[0], "%s", argv[i] + 3);
+        continue;
+      }
       /* -E KEY=VAL · --setenv · --env-set · process env inject (after dotenv) */
       if (!strcmp(argv[i], "-E") || !strcmp(argv[i], "--setenv") ||
           !strcmp(argv[i], "--env-set") || !strcmp(argv[i], "--export")) {
@@ -2384,12 +2464,14 @@ int main(int argc, char **argv) {
               "       cubalc -F .env -e 'SYS ENV NAME'  # dotenv KEY=VAL before body\n"
               "       cubalc -E FOO=bar -e 'SYS ENV FOO'  # inject env (after dotenv)\n"
               "       cubalc -U SECRET -E SECRET=new -e '…'  # clear then inject\n"
+              "       cubalc -M state/work --cwd state/work -e '…'  # mkdir -p then chdir\n"
               "       cubalc --cwd state -e 'SYS LIST .\\nPRINT LAST'  # chdir before body\n"
               "       multiple -e join with newline; \\n \\t \\\\ escapes\n"
               "       -I/--include/--preload LIB  · CUBALC_PRELOAD=a:b\n"
               "       -F/--dotenv/--env-file PATH · CUBALC_DOTENV=a:b (SYS DOTENV dual)\n"
               "       -E|--setenv KEY=VAL · inject process env after dotenv (SYS ENV SET dual)\n"
               "       -U|--unsetenv KEY · clear env after dotenv, before -E (SYS ENV UNSET dual)\n"
+              "       -M|--mkdir DIR · mkdir -p before cwd/body (SYS MKDIR dual)\n"
               "       --cwd|--cd|--chdir DIR · CUBALC_CWD (SYS CHDIR dual before body)\n"
               "       -L/--include-path DIR · prepends CUBALC_INCLUDE_PATH\n"
               "       -R/--require-version X.Y · CUBALC_REQUIRE_VERSION floor\n"
@@ -2414,6 +2496,48 @@ int main(int argc, char **argv) {
           src_path = src_abs;
         }
       }
+    }
+    /* mkdir -p before cwd so --cwd can land in a fresh workdir (SYS MKDIR dual). */
+    if (n_mkdir > 0) {
+      int mi;
+      char merr[240];
+      char mbag[2048];
+      size_t mo = 0;
+      mbag[0] = 0;
+      for (mi = 0; mi < n_mkdir; mi++) {
+        size_t ml;
+        merr[0] = 0;
+        if (run_mkdir_p(mkdir_paths[mi], merr, sizeof merr) != 0) {
+          free(expr_buf);
+          if (devnull) fclose(devnull);
+          printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
+                 "\"err\":\"MKDIR failed: %s\","
+                 "\"mkdir\":\"%s\",\"mkdir_n\":%d,\"version\":\"%s\","
+                 "\"why_hint\":\"cubalc run -M|--mkdir DIR · SYS MKDIR in-lang\","
+                 "\"exit_code\":1,\"halted\":false}\n",
+                 have_expr ? "<expr>" : (src_path ? src_path : "?"),
+                 merr[0] ? merr : "mkdir fail",
+                 mkdir_paths[mi], n_mkdir, CUBALC_LANG_VERSION);
+          return 1;
+        }
+        ml = strlen(mkdir_paths[mi]);
+        if (mo && mo + 1 < sizeof mbag) mbag[mo++] = '\n';
+        if (mo + ml < sizeof mbag) {
+          memcpy(mbag + mo, mkdir_paths[mi], ml);
+          mo += ml;
+          mbag[mo] = 0;
+        }
+      }
+      {
+        char nb[16];
+        snprintf(nb, sizeof nb, "%d", n_mkdir);
+        setenv("CUBALC_MKDIR_N", nb, 1);
+      }
+      if (mbag[0])
+        setenv("CUBALC_MKDIR_DIRS", mbag, 1);
+    } else {
+      unsetenv("CUBALC_MKDIR_N");
+      unsetenv("CUBALC_MKDIR_DIRS");
     }
     /* Host chdir before dotenv/body (dual of SYS CHDIR). Hard-fail miss. */
     if (run_cwd[0]) {
@@ -4191,6 +4315,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_run_cwd", "programs/proof/1375_cli_run_cwd.sh", "run --cwd/CUBALC_CWD chdir before body"},
       {"cli_run_setenv", "programs/proof/1377_cli_run_setenv.sh", "run -E/--setenv KEY=VAL inject after dotenv"},
       {"cli_run_unsetenv", "programs/proof/1378_cli_run_unsetenv.sh", "run -U/--unsetenv KEY clear before -E"},
+      {"cli_run_mkdir", "programs/proof/1379_cli_run_mkdir.sh", "run -M/--mkdir DIR mkdir -p before cwd"},
       {"listincludes", "programs/proof/1261_listincludes.cubalc", "LISTINCLUDES/HASINCLUDE loaded module audit"},
       {"cli_listincludes", "programs/proof/1261_cli_listincludes.sh", "LISTINCLUDES after run -I preload"},
       {"cli_run_includes", "programs/proof/1262_cli_run_includes.sh", "run plate includes_n/includes LISTINCLUDES dual"},
@@ -9633,6 +9758,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"CUBALC_SETENV_KEYS", "", 0, "newline bag of keys set by run -E/--setenv"},
       {"CUBALC_UNSETENV_N", "", 0, "count of -U/--unsetenv KEY clears applied by run"},
       {"CUBALC_UNSETENV_KEYS", "", 0, "newline bag of keys cleared by run -U/--unsetenv"},
+      {"CUBALC_MKDIR_N", "", 0, "count of -M/--mkdir dirs created/ensured by run"},
+      {"CUBALC_MKDIR_DIRS", "", 0, "newline bag of dirs from run -M/--mkdir"},
       {"CUBALC_CWD", "", 0, "chdir before run body (--cwd/--cd dual · relative plates)"},
       {"CUBALC_CWD_ACTIVE", "", 0, "set by run to absolute cwd after successful --cwd"},
       {"CUBALC_REQUIRE_VERSION", "", 0, "x.y[.z] floor for run (-R dual · fail if runtime older)"},
@@ -19631,6 +19758,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"CUBALC_SETENV_KEYS", "keys bag from run -E/--setenv"},
       {"CUBALC_UNSETENV_N", "count of run -U/--unsetenv clears"},
       {"CUBALC_UNSETENV_KEYS", "keys bag from run -U/--unsetenv"},
+      {"CUBALC_MKDIR_N", "count of run -M/--mkdir dirs"},
+      {"CUBALC_MKDIR_DIRS", "dirs bag from run -M/--mkdir"},
       {"CUBALC_CWD", "chdir before run body (--cwd dual)"},
       {"CUBALC_CWD_ACTIVE", "absolute cwd after --cwd"},
       {"CUBALC_REQUIRE_VERSION", "x.y floor for run (-R dual)"},
