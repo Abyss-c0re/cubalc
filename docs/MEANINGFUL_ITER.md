@@ -810,6 +810,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 780. ~~**`FRESHLIBS` / `STALELIBS` + CLI**~~ **done** (age-filter match bags · max/min age sec · newest-first · dual of path FRESH/KEEPSTALE for libs · no shell find -mtime).
 781. ~~**`LIBAGE` / `HASFRESH` / `NEEDFRESH` + CLI**~~ **done** (single-lib age + soft/hard freshness gates · default 86400 · dual of FRESHLIBS bag for one stem · INCLUDE contract).
 782. ~~**`HASFORM` / `NEEDFORM` / `REQUIRE FORM` + CLI**~~ **done** (capability gate via HELP catalog · no version floor glue · soft/hard · cubalc hasform|needform).
+783. ~~**`HASFORMS` / `NEEDFORMS` + `form_guard` + CLI**~~ **done** (multi form capability contract · FORMMISS bag · INCLUDE form_guard · doctor lib_form_guard · cubalc hasforms|needforms).
 
 ## Tick protocol
 

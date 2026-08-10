@@ -1,0 +1,17 @@
+# INCLUDE form_guard — fail-fast if NEED_FORMS surface missing from runtime
+# Usability: agent capability contract without N× HASFORM/NEEDFORM glue
+#   DEFAULT NEED_FORMS = "SORTLIBS\nLIBAGE\nFRESHLIBS"
+#   INCLUDE form_guard
+# Soft dual (no fatal): DEFAULT FORM_GUARD_SOFT = 1 then INCLUDE
+# Default NEED_FORMS checks capability gates themselves (always on this series).
+# HOLD_FLASH not required (same policy as agent_boot / var_guard / time_guard).
+
+DEFAULT NEED_FORMS = "HASFORM\nNEEDFORM\nHASFORMS"
+DEFAULT FORM_GUARD_SOFT = 0
+
+IF FORM_GUARD_SOFT
+  HASFORMS NEED_FORMS
+  # soft miss: OK=0 · FORMMISS bag · agent CLEAR_ERR or upgrade cubalc
+ELSE
+  NEEDFORMS NEED_FORMS
+END

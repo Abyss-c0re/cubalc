@@ -2053,6 +2053,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"DEFS", "DEFS alias of LISTFNS"},
       {"HASFORM", "HASFORM|KNOWNFORM name — soft 0|1 if human-plane form is in HELP catalog · capability probe"},
       {"NEEDFORM", "NEEDFORM|REQUIREFORM name — fail-fast if form missing · dual of HASFORM"},
+      {"HASFORMS", "HASFORMS|ALLFORMS names… — soft 0|1 all known · FORMMISS bag of missing"},
+      {"NEEDFORMS", "NEEDFORMS|REQUIREFORMS names… — fail-fast if any form missing · multi HASFORM"},
       {"REQUIRE FORM", "REQUIRE FORM|OP name — fail if form missing from HELP catalog · no version glue"},
       {"HASFN", "HASFN|HASFUNC name — soft 0|1 before CALL"},
       {"HASFUNC", "HASFUNC alias of HASFN"},
@@ -37545,6 +37547,167 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm);
       return 1;
     }
+  }
+
+  /* HASFORMS|NEEDFORMS name… — multi form capability gate (all-or-FORMMISS).
+   * Usability: agent boot contracts without N× HASFORM glue · bag/CSV/idents.
+   * Soft: LAST_N 0|1 · FORMMISS bag · NEEDFORMS fail-fast first miss. */
+  if (kw(&L->cur,"HASFORMS") || kw(&L->cur,"HAS_FORMS") ||
+      kw(&L->cur,"ALLFORMS") || kw(&L->cur,"FORMSOK") ||
+      kw(&L->cur,"NEEDFORMS") || kw(&L->cur,"NEED_FORMS") ||
+      kw(&L->cur,"REQUIREFORMS") || kw(&L->cur,"MUSTFORMS")) {
+    int hard = kw(&L->cur,"NEEDFORMS") || kw(&L->cur,"NEED_FORMS") ||
+               kw(&L->cur,"REQUIREFORMS") || kw(&L->cur,"MUSTFORMS");
+    char names[32][96];
+    char miss[1024];
+    int nname = 0, nmiss = 0, i, aln = L->cur.line;
+    size_t mo = 0;
+    lex_next(L);
+    miss[0] = 0;
+    /* gather idents/strings until statement boundary; one str may be bag/CSV */
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      /* Stop only on control/statement heads — form names themselves (HASFORM…)
+       * are valid capability tokens and must not cut the list short. */
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+           kw(&L->cur,"REQUIRE") || kw(&L->cur,"END") ||
+           kw(&L->cur,"IF") || kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") ||
+           kw(&L->cur,"PASS") || kw(&L->cur,"FAIL") || kw(&L->cur,"INCLUDE") ||
+           kw(&L->cur,"SYS") || kw(&L->cur,"HELP") || kw(&L->cur,"CLEAR_ERR") ||
+           kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"DEFAULT") ||
+           kw(&L->cur,"VERSION") || kw(&L->cur,"STATUS") || kw(&L->cur,"FOR") ||
+           kw(&L->cur,"WHILE") || kw(&L->cur,"LOOP") || kw(&L->cur,"EACH") ||
+           kw(&L->cur,"CUBE") || kw(&L->cur,"PLUG") || kw(&L->cur,"HOLD_FLASH")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        /* split bag on newline/comma/space if multi */
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[96];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          /* expand bag var as multiple names */
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[96];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0]) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDFORMS name… — NEEDFORMS SORTLIBS LIBAGE · HASFORMS bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASFORMS_N", 0);
+      var_set_num(vm, "FORMMISS_N", 0);
+      var_set_str(vm, "FORMMISS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASFORMS: need names — HASFORMS SORTLIBS LIBAGE");
+      var_set_str(vm, "ERR", "HASFORMS: need names — HASFORMS SORTLIBS LIBAGE");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      if (cubalc_form_known(names[i], NULL))
+        continue;
+      nmiss++;
+      if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+      {
+        size_t ln = strlen(names[i]);
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, names[i], ln);
+          mo += ln;
+          miss[mo] = 0;
+        }
+      }
+      if (hard) {
+        char em[192];
+        snprintf(em, sizeof em,
+                 "NEEDFORMS miss line %d: '%s' (+%d more?) — cubalc forms · HASFORM · upgrade",
+                 aln, names[i], nname - i - 1);
+        fail_at(vm, L, em);
+        return -1;
+      }
+    }
+    var_set_str(vm, "FORMMISS", miss);
+    var_set_num(vm, "FORMMISS_N", nmiss);
+    var_set_num(vm, "HASFORMS_N", nname - nmiss);
+    var_set_num(vm, "NEEDFORMS_N", nname);
+    var_set_num(vm, "FORMS_N", nname);
+    if (nmiss == 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else {
+      char em[200];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASFORMS miss (%d/%d): %s — cubalc forms · NEEDFORMS · upgrade runtime",
+               nmiss, nname, miss);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    bump(vm);
+    return 1;
   }
 
   /* HELP [prefix|form] — in-program form discovery for agents/humans
