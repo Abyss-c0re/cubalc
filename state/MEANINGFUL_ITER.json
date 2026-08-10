@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 828,
-  "version": "1.15.820-usability",
-  "item": "cli_session + cubalc init --cli-session",
-  "item_id": 828,
-  "title": "cli_session · cli_boot+cli_guard one-shot · init n=14",
-  "commit": "c2130592c2bc0ef1f557fb07c89e1ae234aac099",
-  "summary": "INCLUDE cli_session composes CLI preamble + contract; init --cli-session; doctor lib_cli_session; proof 1368 PASS.",
+  "iter": 829,
+  "version": "1.15.821-usability",
+  "item": "ARGMAP / ARGKV raw argv bag",
+  "item_id": 829,
+  "title": "ARGMAP · ARGKV · cubalc.argmap.v1 · FLAGMAP twin",
+  "commit": "ae2226db5a5920de6a0fcd2f8f926e8021bbf195",
+  "summary": "Raw argv i=value bag for LOOKUP by index; CLI dual argmap; proof 1369 PASS.",
   "proofs": [
-    "1368_cli_session PASS",
-    "1368_cli_init_cli_session PASS"
+    "1369_argmap PASS",
+    "1369_cli_argmap PASS"
   ],
-  "when": "2026-08-10T20:44:49Z",
+  "when": "2026-08-10T20:54:46Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "c2130592c2bc0ef1f557fb07c89e1ae234aac099",
-  "note": "fat_session twin for product CLI tools"
+  "sha": "ae2226db5a5920de6a0fcd2f8f926e8021bbf195",
+  "note": "completes FLAGMAP/CLIINFO argv discovery surface"
 }
