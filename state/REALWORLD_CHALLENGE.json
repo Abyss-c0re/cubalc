@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 277,
-  "program": "programs/realworld/svc_uneqpaths_inventory_board.cubalc",
-  "theme": "UNEQPATHS bulk diverge path inventory",
-  "version": "1.15.724-usability",
+  "iter": 278,
+  "program": "programs/realworld/svc_grepflat_scrub_board.cubalc",
+  "theme": "GREPFLAT secret leaf scrub inventory",
+  "version": "1.15.725-usability",
   "pass": true,
-  "prior_note": "iter 276 FIRSTUNEQFLAT first path; this iter first realworld 1251 UNEQPATHS/DIVERGEPATHS bulk bag",
+  "prior_note": "iter 277 UNEQPATHS bulk paths; this iter first realworld 1214 GREPFLAT/GREPVFLAT/KEEPFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent+peer+mix",
+      "cmd": "seed secrets+token",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "find",
-      "cmd": "single other.role/host",
+      "name": "secrets",
+      "cmd": "GREPFLAT secret",
       "ok": true,
-      "note": "find"
+      "note": "secrets"
     },
     {
-      "name": "multi",
-      "cmd": "FROM MIX 3 paths vs FIRSTUNEQ 1",
+      "name": "scrub",
+      "cmd": "GREPVFLAT invert share bag",
       "ok": true,
-      "note": "multi"
+      "note": "scrub"
+    },
+    {
+      "name": "keep",
+      "cmd": "KEEPFLAT token + tok substring",
+      "ok": true,
+      "note": "keep"
     },
     {
       "name": "peer",
-      "cmd": "b+c status bag",
+      "cmd": "FROM PEER secret bag",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "unify",
-      "cmd": "SETBYVAL then empty",
-      "ok": true,
-      "note": "unify"
-    },
-    {
       "name": "soft",
-      "cmd": "ghost + single leaf",
+      "cmd": "ghost miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "no diverge admit",
+      "cmd": "invert clean + secret still exists",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "DIVERGEPATHS",
+      "cmd": "GREPFLATI vs case-sensitive",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "empty needle + rol substring",
+      "cmd": "empty all + sec sub + value miss",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; uneqpaths PASS 32"
+      "note": "cli duals red; grepflat PASS 31"
     }
   ],
   "weaknesses": [
@@ -3624,6 +3624,38 @@
       "title": "unknown form mid-run leaves shell exit 0",
       "detail": "alias failure set err+ok:false but process exit_code 0 and shell $?. Agents must EXIT n after sticky err or score miss for shell-visible contracts.",
       "repro": "broken alias arm \u2192 ok:false exit_code 0 shell 0"
+    },
+    {
+      "id": "W444",
+      "severity": "med",
+      "area": "lang|grepflat",
+      "title": "GREPFLAT needle is path substring (not segment-exact); values ignored",
+      "detail": "Needles 'sec'/'tok' match path segments secret/token. GREPFLAT s3cr3t (value-only) soft-misses LAST_N=0. Path-only filter is intentional but easy false friend for value search.",
+      "repro": "GREPFLAT sec \u2192 cfg.secret; GREPFLAT s3cr3t \u2192 0"
+    },
+    {
+      "id": "W445",
+      "severity": "med",
+      "area": "lang|getp_host",
+      "title": "top-level host leaf rewritten after plate_peer_session when other.host exists",
+      "detail": "Seed host:h1 + other.host:h2; after INCLUDE plate_peer_session, GETP host and FLAT host leaf are h2 (both host and other.host = h2). Agents must not gate on host:h1; prefer site/label or unique paths.",
+      "repro": "boot seed host h1; session; GETP host \u2192 h2; GREPVFLAT shows host:h2"
+    },
+    {
+      "id": "W446",
+      "severity": "low",
+      "area": "lang|grepflati",
+      "title": "GREPFLAT case-sensitive vs GREPFLATI dual works; uppercase path needle misses lower path",
+      "detail": "Positive: GREPFLAT SECRET \u2192 0; GREPFLATI SECRET \u2192 cfg.secret with GREPFLAT_ICASE=1. Document for scrub allowlists.",
+      "repro": "GREPFLAT SECRET \u2192 0; GREPFLATI SECRET \u2192 1"
+    },
+    {
+      "id": "W447",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE LEAVES bag omits final NL on last path:value",
+      "detail": "cat -A LEAVES.txt last line without $. Same W5/W10/W442 class.",
+      "repro": "od -c LEAVES after scrub"
     }
   ],
   "workarounds": [
@@ -3659,13 +3691,12 @@
     "single-leaf needles always soft-miss diverge",
     "SYS EQS DIVERGEPATHS_REF not LET-bound ref_v",
     "capture LAST_N immediately after UNEQPATHS before PRINT",
-    "EXIT 2 on unknown ACTION; REQUIRE softens non-numeric"
+    "EXIT 2 on unknown ACTION; REQUIRE softens non-numeric",
+    "gate scrub on site/label not host when other.host collides",
+    "capture LAST_N before PRINT after GREPFLAT",
+    "GREPFLATI for case-tolerant secret path inventory"
   ],
   "language_gaps": [
-    "HEAD path bag equals PATHBYVAL first path",
-    "COUNTBYVAL LAST_N aligns with PATHSBYVAL count",
-    "COUNTBYVAL LAST_N exact leaf value counts",
-    "HASVAL soft presence 0|1 without path bag",
     "COUNTBYVAL aligns with PATHSBYVAL path count",
     "SETBYVAL bulk rewrite exact leaf values",
     "REPLACEVAL alias for set-by-value",
@@ -3685,11 +3716,13 @@
     "UNEQPATHS LAST=path bag LAST_N=count TOTAL/REF/SRC specials",
     "DIVERGEPATHS|ALLUNEQ aliases",
     "prefer SYS EQS special direct over LET capture under pressure",
-    "needle path substring not segment-exact"
+    "needle path substring not segment-exact",
+    "GREPFLAT/GREPVFLAT/GREPFLATI/KEEPFLAT path:value filter",
+    "GREPFLAT_N/NEEDLE/INVERT/ICASE/SRC/FROM specials",
+    "path substring needle; value needles soft-miss",
+    "plate_session may rewrite host when other.host present"
   ],
   "issues_faced": [
-    "Soft path must use HASFLAT; NEEDFLAT hard-fails",
-    "SUMFLAT hits overcounts hits_total+meta.hits",
     "Even median lower-mid must be taught for p50 bands",
     "HASFLATN_N dark after FROM PEER; used COUNTFLATN LAST_N",
     "PATHSFLAT_N dark; used HASLINE on bag",
@@ -3727,8 +3760,10 @@
     "iter276: FIRSTUNEQ LAST/LAST_N works under agent pressure (unlike UNIFORM_PATH)",
     "iter276: 9/9 green; empty needle finds first diverge among a/b/c",
     "iter277: LET ref_v=DIVERGEPATHS_REF then SYS EQS ref_v hard-fails unknown form; fixed via special-direct EQS",
-    "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red"
+    "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
+    "iter278: scrub failed first on host:h1 \u2014 plate_session rewrote host to h2; gate on site/zone",
+    "iter278: 10/10 green; grepflat PASS 31; selftest 455/567 cli duals red"
   ],
-  "commit": "6a3002c4",
-  "ts": "2026-08-10T01:49:46Z"
+  "commit": "pending",
+  "ts": "2026-08-10T02:00:51Z"
 }
