@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 765,
-  "version": "1.15.792-usability",
-  "item": "GUIDE + cubalc guide full playbook plate",
-  "item_id": 801,
-  "title": "GUIDE|PLAYGUIDE [topic] · cubalc guide · cubalc.guide.v1",
-  "commit": "aa868d11f2cf9cd9a77ae522a26dd86c14459a12",
-  "summary": "full playbook plate: hint+related+tips+forms+snip; chain FORMTOPICS→GUIDE. proof 1342 PASS.",
+  "iter": 766,
+  "version": "1.15.793-usability",
+  "item": "ERRGUIDE + cubalc errguide recovery playbook",
+  "item_id": 802,
+  "title": "ERRGUIDE|RECOVERGUIDE [err] · cubalc errguide · cubalc.errguide.v1",
+  "commit": "d88b379afdb98a8d5e8a3f1551418d0a0117e34b",
+  "summary": "ERRTIPS classify + GUIDE playbook one-shot; twin of ERRRUN. proof 1343 PASS.",
   "proofs": [
-    "1342_guide PASS",
-    "1342_cli_guide PASS"
+    "1343_errguide PASS",
+    "1343_cli_errguide PASS"
   ],
-  "when": "2026-08-10T15:07:53Z",
+  "when": "2026-08-10T15:17:42Z",
   "agent": "meaningful_iter_10m",
-  "sha": "aa868d11f2cf9cd9a77ae522a26dd86c14459a12",
-  "note": "restored thrash first; guide cap related general/run/lib/fat"
+  "sha": "d88b379afdb98a8d5e8a3f1551418d0a0117e34b",
+  "note": "errguide INCLUDE→lib; bags GUIDE_RELATED/FORMS + ERRGUIDE_TOPIC"
 }
