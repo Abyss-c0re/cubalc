@@ -565,7 +565,17 @@ void cubalc_lang_chunk_push(VM *vm, const char *id){
 Var *cubalc_lang_var_get(VM *vm, const char *name, int create) {
   for (int i=0;i<vm->n_vars;i++)
     if (strcmp(vm->vars[i].name, name)==0) return &vm->vars[i];
-  if (!create || vm->n_vars >= 128) return NULL;
+  if (!create || vm->n_vars >= CUBALC_MAX_VARS) {
+    if (create && !vm->vars_full) {
+      vm->vars_full = 1;
+      snprintf(vm->err, sizeof vm->err,
+               "var table full (%d) — specials/LET may drop; raise CUBALC_MAX_VARS or lean the board",
+               CUBALC_MAX_VARS);
+      if (vm->res)
+        snprintf(vm->res->last_err, sizeof vm->res->last_err, "%s", vm->err);
+    }
+    return NULL;
+  }
   Var *v = &vm->vars[vm->n_vars++];
   memset(v, 0, sizeof *v);
   snprintf(v->name, sizeof v->name, "%s", name);
@@ -1055,12 +1065,8 @@ int cubalc_lang_parse_cube(VM *vm, Lex *L){
 
 
 long *cubalc_lang_var_slot(VM *vm, const char *name, int create){
-  for (int i=0;i<vm->n_vars;i++)
-    if (strcmp(vm->vars[i].name,name)==0) return &vm->vars[i].val;
-  if (!create || vm->n_vars>=64) return NULL;
-  snprintf(vm->vars[vm->n_vars].name,sizeof vm->vars[0].name,"%s",name);
-  vm->vars[vm->n_vars].val=0;
-  return &vm->vars[vm->n_vars++].val;
+  Var *v = cubalc_lang_var_get(vm, name, create);
+  return v ? &v->val : NULL;
 }
 
 /* Flow law: if stuck, deconstruct then reconstruct the way out. */

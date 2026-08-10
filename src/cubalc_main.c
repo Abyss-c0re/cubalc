@@ -2999,6 +2999,7 @@ int main(int argc, char **argv) {
       {"haspreload", "programs/proof/1272_haspreload.cubalc", "HASPRELOAD soft -I request bag probe"},
       {"cli_haspreload", "programs/proof/1272_cli_haspreload.sh", "HASPRELOAD after run -I"},
       {"cli_include_stems_plate", "programs/proof/1273_cli_include_stems_plate.sh", "run plate include_stems dual of INCLUDESTEMS"},
+      {"vars_max", "programs/proof/1274_vars_max.cubalc", "CUBALC_MAX_VARS 256 + VARS/STATUS pressure"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},

@@ -36599,7 +36599,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
       {"VARS", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
-      {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time)"},
+      {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time/vars_n|max|full)"},
       {"WHY", "WHY|EXPLAIN — cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED + hint"},
       {"EXPLAIN", "EXPLAIN alias of WHY"},
       {"WHYERR", "WHYERR alias of WHY"},
@@ -37631,10 +37631,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
     }
     o += (size_t)snprintf(line + o, sizeof line - o,
-                          "},\"n\":%d,\"version\":\"%s\"}", n, CUBALC_LANG_VERSION);
+                          "},\"n\":%d,\"max\":%d,\"full\":%s,\"version\":\"%s\"}",
+                          n, CUBALC_MAX_VARS,
+                          vm->vars_full ? "true" : "false",
+                          CUBALC_LANG_VERSION);
     if (vm->trace) fprintf(vm->trace, "%s\n", line);
     if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
     var_set_num(vm, "VARS_N", (long)n);
+    var_set_num(vm, "VARS_MAX", (long)CUBALC_MAX_VARS);
+    var_set_num(vm, "VARS_FULL", vm->vars_full ? 1L : 0L);
     var_set_num(vm, "LAST_N", (long)n);
     var_set_num(vm, "OK", 1);
     vm->last_n = (long)n;
@@ -37684,15 +37689,20 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       "{\"schema\":\"cubalc.status.v1\",\"ok\":%s,\"last_err\":\"%s\","
       "\"version\":\"%s\",\"time\":%ld,\"n\":%d,\"hold\":%d,\"unity\":%ld,"
       "\"last_n\":%ld,\"expect_ok\":%ld,\"smx_ok\":%ld,\"smx_talks\":%ld,"
-      "\"sp\":%d,\"stmts\":%d}",
+      "\"sp\":%d,\"stmts\":%d,\"vars_n\":%d,\"vars_max\":%d,\"vars_full\":%s}",
       okv ? "true" : "false", esc, CUBALC_LANG_VERSION, tsec,
       vm->ch.n_cubes, vm->hold_flash,
       (long)lround(vm->ch.unity * 100.0), vm->last_n, exp_ok, smx, talks,
-      vm->sp, vm->res ? vm->res->stmts : 0);
+      vm->sp, vm->res ? vm->res->stmts : 0,
+      vm->n_vars, CUBALC_MAX_VARS, vm->vars_full ? "true" : "false");
     if (vm->trace) fprintf(vm->trace, "%s\n", line);
     if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
     var_set_num(vm, "STATUS_OK", okv);
     var_set_num(vm, "TIME", tsec);
+    /* Var-table pressure dual of VARS max/full — agents without full VARS dump. */
+    var_set_num(vm, "VARS_N", (long)vm->n_vars);
+    var_set_num(vm, "VARS_MAX", (long)CUBALC_MAX_VARS);
+    var_set_num(vm, "VARS_FULL", vm->vars_full ? 1L : 0L);
     /* short LAST summary — full plate is last_print / trace JSON */
     if (okv)
       snprintf(note, sizeof note, "status:ok");
@@ -63769,7 +63779,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         for (j = i; j < vm->n_vars - 1; j++)
           vm->vars[j] = vm->vars[j + 1];
         vm->n_vars--;
-        if (vm->n_vars >= 0 && vm->n_vars < 128)
+        if (vm->n_vars >= 0 && vm->n_vars < CUBALC_MAX_VARS)
           memset(&vm->vars[vm->n_vars], 0, sizeof(Var));
         removed = 1;
         break;

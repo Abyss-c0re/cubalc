@@ -10,7 +10,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 - Dual-only mirrors (`D*` copy of existing `S*`) as the sole change of a tick.
 - Version plate-only commits.
 - Thrash restore churn without a product delta.
-- Demoting or deleting: HOLD_FLASH plug permission, core-protect, SMX P2P, modular `src/lang/`.
+- Demoting or deleting: core-protect, SMX P2P, modular `src/lang/` (HOLD_FLASH stays device/mesh-join only).
 
 ## Preferred backlog (pick the highest unfinished item)
 
@@ -760,6 +760,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 730. ~~**run plate `preload_ok` / `preload_miss` / `preload_miss_n`**~~ **done** (CLI dual of PRELOADOK/PRELOADMISS · agents audit -I vs includes without in-lang forms).
 731. ~~**`HASPRELOAD`**~~ **done** (soft 0|1 if name in -I/CUBALC_PRELOAD request bag · dual of HASINCLUDE · IF without LISTPRELOAD+HASLINE).
 732. ~~**run plate `include_stems` / `include_stems_n`**~~ **done** (INCLUDESTEMS dual on every run plate · short names vs preload[] without path peel).
+733. ~~**`CUBALC_MAX_VARS` 256 + `VARS_MAX`/`VARS_FULL` + STATUS vars_n**~~ **done** (fat agent boards keep specials · fix 64-slot var_slot bug · sticky full err · proof 1274).
 
 ## Tick protocol
 

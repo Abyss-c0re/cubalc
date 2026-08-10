@@ -30,9 +30,14 @@ typedef struct { int kind; long num; char text[8192]; int line; } Tok;
 typedef struct { const char *s; size_t n, i; int line; size_t tok_off; Tok cur; } Lex;
 /* Agent plates (PLATE after plate_boot/SETP) need more than 512 bytes of JSON.
  * 4096 fits multi-key agent state without truncating SAVEPLATE write-back.
- * 128 vars × 4K ≈ 0.5MB of the stack VM — acceptable next to last_str/chain. */
+ * Fat agent boards (mesh + nest specials + LET) outgrow 128 slots: silent
+ * drops of MODEFLAT/UNIFORM result specials (REALWORLD W408/W434).
+ * 256 x 4K ~ 1MB stack VM — still fine for CLI agent hosts. */
 #ifndef CUBALC_VAR_STR_MAX
 #define CUBALC_VAR_STR_MAX 4096
+#endif
+#ifndef CUBALC_MAX_VARS
+#define CUBALC_MAX_VARS 256
 #endif
 typedef struct { char name[48]; long val; char sval[CUBALC_VAR_STR_MAX]; int is_str; } Var;
 
@@ -92,8 +97,9 @@ typedef struct {
 #define CUBALC_STACK_N  32
 typedef struct {
   cubalc_chain ch;
-  Var vars[128];
+  Var vars[CUBALC_MAX_VARS];
   int n_vars;
+  int vars_full; /* sticky: create failed once (specials may be dark) */
   FnDef fns[CUBALC_MAX_FNS];
   int n_fns;
   ClassDef classes[CUBALC_MAX_CLASSES];

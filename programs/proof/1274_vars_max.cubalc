@@ -1,0 +1,174 @@
+# Agent var budget — fat boards must keep specials (W408/W434 class)
+# CUBALC_MAX_VARS raised; VARS reports max/full; 200 LETs leave room for specials
+
+# Reserve room under the new ceiling with many LET bindings
+LET v001 = 1
+LET v002 = 2
+LET v003 = 3
+LET v004 = 4
+LET v005 = 5
+LET v006 = 6
+LET v007 = 7
+LET v008 = 8
+LET v009 = 9
+LET v010 = 10
+LET v011 = 11
+LET v012 = 12
+LET v013 = 13
+LET v014 = 14
+LET v015 = 15
+LET v016 = 16
+LET v017 = 17
+LET v018 = 18
+LET v019 = 19
+LET v020 = 20
+LET v021 = 21
+LET v022 = 22
+LET v023 = 23
+LET v024 = 24
+LET v025 = 25
+LET v026 = 26
+LET v027 = 27
+LET v028 = 28
+LET v029 = 29
+LET v030 = 30
+LET v031 = 31
+LET v032 = 32
+LET v033 = 33
+LET v034 = 34
+LET v035 = 35
+LET v036 = 36
+LET v037 = 37
+LET v038 = 38
+LET v039 = 39
+LET v040 = 40
+LET v041 = 41
+LET v042 = 42
+LET v043 = 43
+LET v044 = 44
+LET v045 = 45
+LET v046 = 46
+LET v047 = 47
+LET v048 = 48
+LET v049 = 49
+LET v050 = 50
+LET v051 = 51
+LET v052 = 52
+LET v053 = 53
+LET v054 = 54
+LET v055 = 55
+LET v056 = 56
+LET v057 = 57
+LET v058 = 58
+LET v059 = 59
+LET v060 = 60
+LET v061 = 61
+LET v062 = 62
+LET v063 = 63
+LET v064 = 64
+LET v065 = 65
+LET v066 = 66
+LET v067 = 67
+LET v068 = 68
+LET v069 = 69
+LET v070 = 70
+LET v071 = 71
+LET v072 = 72
+LET v073 = 73
+LET v074 = 74
+LET v075 = 75
+LET v076 = 76
+LET v077 = 77
+LET v078 = 78
+LET v079 = 79
+LET v080 = 80
+LET v081 = 81
+LET v082 = 82
+LET v083 = 83
+LET v084 = 84
+LET v085 = 85
+LET v086 = 86
+LET v087 = 87
+LET v088 = 88
+LET v089 = 89
+LET v090 = 90
+LET v091 = 91
+LET v092 = 92
+LET v093 = 93
+LET v094 = 94
+LET v095 = 95
+LET v096 = 96
+LET v097 = 97
+LET v098 = 98
+LET v099 = 99
+LET v100 = 100
+LET v101 = 101
+LET v102 = 102
+LET v103 = 103
+LET v104 = 104
+LET v105 = 105
+LET v106 = 106
+LET v107 = 107
+LET v108 = 108
+LET v109 = 109
+LET v110 = 110
+LET v111 = 111
+LET v112 = 112
+LET v113 = 113
+LET v114 = 114
+LET v115 = 115
+LET v116 = 116
+LET v117 = 117
+LET v118 = 118
+LET v119 = 119
+LET v120 = 120
+LET v121 = 121
+LET v122 = 122
+LET v123 = 123
+LET v124 = 124
+LET v125 = 125
+LET v126 = 126
+LET v127 = 127
+LET v128 = 128
+LET v129 = 129
+LET v130 = 130
+LET v131 = 131
+LET v132 = 132
+LET v133 = 133
+LET v134 = 134
+LET v135 = 135
+LET v136 = 136
+LET v137 = 137
+LET v138 = 138
+LET v139 = 139
+LET v140 = 140
+LET v141 = 141
+LET v142 = 142
+LET v143 = 143
+LET v144 = 144
+LET v145 = 145
+LET v146 = 146
+LET v147 = 147
+LET v148 = 148
+LET v149 = 149
+LET v150 = 150
+
+# Past the old 128 soft-fail zone — specials must still bind
+SETP "role" "worker"
+SETP "cfg.role" "worker"
+SETP "other.role" "leader"
+ALLEQFLAT "role"
+ASSERT LAST_N == 0 "mixed roles"
+FIRSTUNEQFLAT "role"
+# LAST must be a real path (not dark 0 under var pressure)
+ASSERT LAST_N == 1 "firstuneq found under fat LET board"
+SYS HAS LAST "role"
+ASSERT OK == 1 "LAST path has role"
+
+VARS
+ASSERT VARS_MAX >= 256 "agent ceiling raised"
+ASSERT VARS_N >= 150 "fat board still counted"
+ASSERT VARS_FULL == 0 "not full yet"
+
+STATUS
+PRINT "vars_max_ok" VARS_N VARS_MAX VARS_FULL
