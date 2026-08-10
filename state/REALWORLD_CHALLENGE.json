@@ -3764,6 +3764,6 @@
     "iter278: scrub failed first on host:h1 \u2014 plate_session rewrote host to h2; gate on site/zone",
     "iter278: 10/10 green; grepflat PASS 31; selftest 455/567 cli duals red"
   ],
-  "commit": "pending",
+  "commit": "fa05888a",
   "ts": "2026-08-10T02:00:51Z"
 }
