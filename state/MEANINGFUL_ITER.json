@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 776,
-  "version": "1.15.803-usability",
-  "item": "discover_boot + cubalc init --discover",
-  "item_id": 812,
-  "title": "discover_boot \u00b7 init --discover \u00b7 doctor lib_discover_boot",
-  "commit": "69a54d7c4d9781a5cf8d02f901840163c132b2cf",
-  "summary": "INCLUDE agent_boot+DISCOVER scaffold; init catalog n=9; doctor readiness. proof 1353 PASS.",
+  "iter": 777,
+  "version": "1.15.804-usability",
+  "item": "OPEN DISCOVER bag + GUIDE first one-shot",
+  "item_id": 813,
+  "title": "OPEN|OPENPLAY \u00b7 cubalc open \u00b7 open.v1",
+  "commit": "0ecb49ccdea46fef150bed495a99edfbd8f7dc9d",
+  "summary": "Filter match bag + full GUIDE for first without DISCOVER+GUIDE glue. proof 1354 PASS.",
   "proofs": [
-    "1353_discover_boot PASS",
-    "1353_cli_init_discover PASS"
+    "1354_open PASS",
+    "1354_cli_open PASS"
   ],
-  "when": "2026-08-10T17:39:38Z",
+  "when": "2026-08-10T17:48:43Z",
   "agent": "meaningful_iter_10m",
-  "sha": "69a54d7c4d9781a5cf8d02f901840163c132b2cf",
-  "note": "INCLUDE discover_boot \u00b7 GUIDE DISCOVER_FIRST \u00b7 cubalc init demo --discover"
+  "sha": "0ecb49ccdea46fef150bed495a99edfbd8f7dc9d",
+  "note": "OPEN p \u2192 first=cap n=4 + GUIDE tips/forms; RUNSNIP OPEN_FIRST"
 }
