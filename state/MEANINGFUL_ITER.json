@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 760,
-  "version": "1.15.787-usability",
-  "item": "ERRRUN + cubalc errrun classify+RUNSNIP one-shot",
-  "item_id": 796,
-  "title": "ERRRUN|RECOVERSNIP [err] \u00b7 cubalc errrun \u00b7 cubalc.errrun.v1",
-  "commit": "a186fb51578c85d18495f3ad0f8504974d3be37f",
-  "summary": "ERRTIPS classify + RUNSNIP topic; soft-fail \u2192 prove recovery surface. proof 1337 PASS.",
+  "iter": 761,
+  "version": "1.15.788-usability",
+  "item": "EACH TOPIC walk discovery topics",
+  "item_id": 797,
+  "title": "EACH TOPIC [AS name] [MATCH] \u00b7 EACHTOPICS bag",
+  "commit": "3e07abbee2e47c65e5346325c8a0dbf9ce022d61",
+  "summary": "walk discovery topics with AS/MATCH; dual of LISTTOPICS+EACH LINE. proof 1338 PASS.",
   "proofs": [
-    "1337_errrun PASS",
-    "1337_cli_errrun PASS"
+    "1338_each_topic PASS",
+    "1338_cli_each_topic PASS"
   ],
-  "when": "2026-08-10T14:10:07Z",
+  "when": "2026-08-10T14:16:47Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a186fb51578c85d18495f3ad0f8504974d3be37f",
-  "note": "errrun lib/cap/p2p; thrash restore then ship"
+  "sha": "3e07abbee2e47c65e5346325c8a0dbf9ce022d61",
+  "note": "EACH TOPIC MATCH a; AS t; HASTOPIC loop"
 }
