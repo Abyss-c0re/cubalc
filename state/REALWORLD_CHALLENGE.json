@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 289,
-  "program": "programs/realworld/svc_prettyp_evidence_board.cubalc",
-  "theme": "PRETTYP/JSONPRETTY plate evidence dump",
-  "version": "1.15.754-usability",
+  "iter": 290,
+  "program": "programs/realworld/svc_matchlibs_pick_board.cubalc",
+  "theme": "MATCHLIBS/PICKLIB fleet lib stem discovery",
+  "version": "1.15.757-usability",
   "pass": true,
-  "prior_note": "iter 288 CHECKDEPS install gate; this iter first realworld 1255 PRETTYP/JSONPRETTY",
+  "prior_note": "iter 289 PRETTYP evidence; this iter first realworld 1306 MATCHLIBS + 1307 PICKLIB",
   "tests": [
     {
       "name": "list",
@@ -20,44 +20,44 @@
       "note": "boot"
     },
     {
-      "name": "dump",
-      "cmd": "PRETTYP agent 238B",
+      "name": "plate",
+      "cmd": "MATCHLIBS plate n=11",
       "ok": true,
-      "note": "dump"
+      "note": "plate"
     },
     {
-      "name": "peer",
-      "cmd": "FROM PEER 77B",
+      "name": "fat",
+      "cmd": "FILTERLIBS fat n=2",
       "ok": true,
-      "note": "peer"
+      "note": "fat"
     },
     {
-      "name": "empty",
-      "cmd": "compact {}",
+      "name": "pick",
+      "cmd": "PICKLIB plate_boot + OR",
       "ok": true,
-      "note": "empty"
+      "note": "pick"
     },
     {
       "name": "soft",
-      "cmd": "ghost key HAS miss",
+      "cmd": "MATCH soft vs PICK hard miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "byte floor",
+      "cmd": "min_match floor",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "JSONPRETTY+PRETTYJSON",
+      "cmd": "LIBMATCH+FIRSTLIB",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "LAST_N bytes + PRINT clobber",
+      "cmd": "empty needle + PICKLIB_N dual",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "455/615 cli duals red; prettyp PASS"
+      "note": "cli duals red; matchlibs+picklib PASS"
     }
   ],
   "weaknesses": [
@@ -4066,6 +4066,46 @@
       "title": "WRITE VAL/META/STATUS omit trailing NL",
       "detail": "Reconfirmed: STATUS last bag line and META od -c end without \\n.",
       "repro": "od -c META.txt"
+    },
+    {
+      "id": "W500",
+      "severity": "high",
+      "area": "lang|matchlibs",
+      "title": "MATCHLIBS miss is soft OK=1; PICKLIB miss is hard OK=0",
+      "detail": "MATCHLIBS ghost \u2192 OK=1 LAST_N=0 empty bag. PICKLIB ghost \u2192 OK=0 LAST_N=0. Same family of lib discovery ops with inverted miss polarity. Agents must not share one OK branch for both.",
+      "repro": "MATCHLIBS no_such \u2192 OK=1; PICKLIB no_such \u2192 OK=0"
+    },
+    {
+      "id": "W501",
+      "severity": "med",
+      "area": "lang|picklib",
+      "title": "PICKLIB LAST_N=1 hit but PICKLIB_N is full match count",
+      "detail": "PICKLIB plate \u2192 LAST=plate_boot LAST_N=1 while PICKLIB_N>=10. Size gates on LAST_N under-count inventory; use PICKLIB_N or MATCHLIBS for family size.",
+      "repro": "PICKLIB plate; PRINT LAST_N \u2192 1; PRINT PICKLIB_N \u2192 11"
+    },
+    {
+      "id": "W502",
+      "severity": "med",
+      "area": "lang|picklib",
+      "title": "PICKLIB first stem is alpha-sorted not INCLUDE order",
+      "detail": "PICKLIB tick \u2192 plate_peer_tick before plate_tick. Ops expecting primary plate_tick get peer_tick. Document sort order; MATCHLIBS bag + explicit HASLINE for preferred stem.",
+      "repro": "PICKLIB tick \u2192 plate_peer_tick not plate_tick"
+    },
+    {
+      "id": "W503",
+      "severity": "low",
+      "area": "lang|matchlibs",
+      "title": "empty needle MATCHLIBS/PICKLIB hard-fail OK=0",
+      "detail": "MATCHLIBS \"\" and PICKLIB \"\" need needle. Soft empty-bag miss only applies when needle is non-empty. Agents with empty ENV filter must DEFAULT before MATCH.",
+      "repro": "MATCHLIBS \"\" \u2192 OK=0"
+    },
+    {
+      "id": "W504",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META/STATUS omit trailing NL",
+      "detail": "Reconfirmed: STATUS last line and META od -c end without \\n.",
+      "repro": "od -c META.txt"
     }
   ],
   "workarounds": [
@@ -4111,10 +4151,6 @@
     "use unique path needles for single counter rollups"
   ],
   "language_gaps": [
-    "INCFLAT/DECFLAT/BUMPFLAT bulk pure-int leaf bump",
-    "path substring needles multi-match counters",
-    "empty needle = all pure-int leaves",
-    "INCFLAT_DELTA/FROM/SRC specials",
     "MERGEFLAT/OVERLAYFLAT deep leaf nest overlay",
     "MERGEFLAT overlays identity keys if present in patch",
     "keeps unmentioned base leaves (deep not shallow replace)",
@@ -4149,11 +4185,14 @@
     "LAST_N after PRETTYP is bytes not lines (W496)",
     "no needle soft-miss form \u2014 HAS on pretty body (W497)",
     "capture pretty_s before PRINT/EQS (W498/W4)",
-    "empty object compact {}"
+    "empty object compact {}",
+    "MATCHLIBS/FILTERLIBS/LIBMATCH stem inventory",
+    "PICKLIB/FIRSTLIB first alpha + OR fallback",
+    "MATCH soft miss vs PICK hard miss (W500)",
+    "PICKLIB_N full count vs LAST_N=1 (W501)",
+    "alpha sort plate_peer_tick before plate_tick (W502)"
   ],
   "issues_faced": [
-    "iter268: agent_job=role_s false-friend first-hit for PATHBYVAL worker (W412) \u2014 seed agent_job=runner",
-    "iter268: rebuilt out/cubalc (W414) before board tests",
     "iter269: UNIQFLAT ro fuzzy key match reconfirms flat-needle substring family (W415)",
     "iter269: multi-line uniq bag WRITE no final NL (W416)",
     "iter270: rebuilt out/cubalc; selftest race missing proofs transient",
@@ -4200,8 +4239,11 @@
     "iter288: selftest 455/613 still CLI duals red",
     "iter289: first realworld 1255 PRETTYP; 10/10 green first pass",
     "iter289: dump writes EVIDENCE.txt 238B indented nest",
-    "iter289: selftest 455/615 CLI duals still red"
+    "iter289: selftest 455/615 CLI duals still red",
+    "iter290: first realworld 1306+1307 MATCHLIBS/PICKLIB; 10/10 green first pass",
+    "iter290: plate family 11 stems; tick picks plate_peer_tick alpha",
+    "iter290: selftest CLI duals still red"
   ],
-  "commit": "ef586ee4",
-  "ts": "2026-08-10T07:24:06Z"
+  "commit": "pending",
+  "ts": "2026-08-10T07:48:39Z"
 }

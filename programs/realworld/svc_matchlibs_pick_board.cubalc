@@ -1,0 +1,865 @@
+# svc_matchlibs_pick_board.cubalc — MATCHLIBS/PICKLIB fleet lib stem discovery
+#
+# Real use: ops agents filter available lib stems on a host before INCLUDE,
+# pick first alpha match (or OR fallback) without shelling `cubalc libs`.
+# First realworld of proofs 1306 MATCHLIBS/FILTERLIBS + 1307 PICKLIB/FIRSTLIB.
+#
+#   MATCHLIBS|FILTERLIBS|LIBMATCH needle → stem bag · LAST_N = count
+#   PICKLIB|FIRSTLIB needle [OR fallback] → single stem · LAST_N=1 hit
+#   empty needle hard-fail OK=0 · ghost miss soft OK=1 empty bag (MATCH)
+#   PICKLIB miss OK=0 unless OR fallback
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sml_$$
+#   ./out/cubalc run programs/realworld/svc_matchlibs_pick_board.cubalc boot
+#   ./out/cubalc run ... plate|fat|pick|soft|gate|alias|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SML_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_SML_REQUIRE
+#
+# Edges: MATCH miss OK=1 LAST_N=0 vs PICK miss OK=0; first alpha plate_boot;
+#   tick → plate_peer_tick before plate_tick; OR fallback; WRITE NL; REQUIRE softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_matchlibs_pick_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_matchlibs_pick -- boot|plate|fat|pick|soft|gate|alias|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SML_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SML_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sum_v = 0
+LET sum_n = 0
+LET stem_s = ""
+LET libs_bag = ""
+LET filt_s = ""
+
+ONEOF ACTION "boot", "plate", "fat", "pick", "soft", "gate", "alias", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "plate" THEN
+    LET op = "plate"
+  WHEN "fat" THEN
+    LET op = "fat"
+  WHEN "pick" THEN
+    LET op = "pick"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "alias" THEN
+    LET op = "alias"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-matchlibs\",\"schema\":\"cubalc.svc_matchlibs_pick.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"want_filter\":\"plate\",\"min_match\":5,\"label\":\"matchlibs\",\"cfg\":{\"pick\":\"plate_boot\"}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"peer\":\"libs\",\"n\":1}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "agent"
+  SYS EQS LAST "svc-matchlibs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_matchlibs_pick"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "matchlibs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# plate — MATCHLIBS plate family inventory
+SYS EQS op "plate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  MATCHLIBS plate
+  LET libs_bag = LAST
+  LET sum_n = LAST_N
+  LET sum_v = MATCHLIBS_N
+  LET filt_s = MATCHLIBS_FILTER
+  CLEAR_ERR
+  IF sum_n >= 10 THEN
+    LET score = score + 1
+  END
+  IF sum_v == sum_n THEN
+    LET score = score + 1
+  END
+  SYS EQS filt_s "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE libs_bag "plate_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE libs_bag "plate_tick"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # false friend: agent_boot must NOT match needle plate
+  SYS HASLINE libs_bag "agent_boot"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-matchlibs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "matchlibs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "plate ok"
+    LET admit_n = sum_n
+    LET find_n = sum_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "plate score"
+    FAIL "plate score"
+    CLEAR_ERR
+  END
+  SYS CAT "plate:" sum_n ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "plate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n filt_s score note_msg
+  CLEAR_ERR
+END
+
+# fat — FILTERLIBS fat family (2 stems)
+SYS EQS op "fat"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  FILTERLIBS fat
+  LET libs_bag = LAST
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  IF sum_n == 2 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE libs_bag "fat_session"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE libs_bag "fat_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # case-insensitive
+  MATCHLIBS FAT
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF find_n == 2 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.pick"
+  SYS EQS LAST "plate_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "min_match"
+  SYS EQS LAST "5"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 7 THEN
+    LET hit = 1
+    LET note_msg = "fat ok"
+    LET admit_n = sum_n
+    LET find_n = 2
+  ELSE
+    LET miss = 1
+    LET note_msg = "fat score"
+    FAIL "fat score"
+    CLEAR_ERR
+  END
+  SYS CAT "fat:" sum_n ":ft"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "fat:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n score note_msg
+  CLEAR_ERR
+END
+
+# pick — PICKLIB first alpha + tick family + OR fallback
+SYS EQS op "pick"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PICKLIB plate
+  LET stem_s = LAST
+  LET sum_n = LAST_N
+  LET find_n = PICKLIB_N
+  LET filt_s = PICKLIB_FILTER
+  CLEAR_ERR
+  SYS EQS stem_s "plate_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sum_n == 1 THEN
+    LET score = score + 1
+  END
+  IF find_n >= 10 THEN
+    LET score = score + 1
+  END
+  SYS EQS filt_s "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # tick family first alpha: plate_peer_tick before plate_tick
+  PICKLIB tick
+  LET stem_s = LAST
+  CLEAR_ERR
+  SYS EQS stem_s "plate_peer_tick"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  FIRSTLIB fat
+  LET stem_s = LAST
+  CLEAR_ERR
+  SYS EQS stem_s "fat_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # OR fallback on miss
+  PICKLIB no_such_lib_xyz OR agent_boot
+  LET stem_s = LAST
+  LET sum_v = PICKLIB_N
+  CLEAR_ERR
+  SYS EQS stem_s "agent_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.pick"
+  SYS EQS LAST "plate_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-matchlibs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pick ok"
+    LET admit_n = 1
+    LET find_n = find_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "pick score"
+    FAIL "pick score"
+    CLEAR_ERR
+  END
+  SYS CAT "pick:plate_boot:pk"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pick:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n stem_s score note_msg
+  CLEAR_ERR
+END
+
+# soft — ghost miss dual (MATCH soft vs PICK hard)
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  MATCHLIBS no_such_lib_xyz_zzz
+  LET sum_v = OK
+  LET sum_n = LAST_N
+  LET find_n = MATCHLIBS_N
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF sum_n == 0 THEN
+    LET score = score + 1
+  END
+  IF find_n == 0 THEN
+    LET score = score + 1
+  END
+  PICKLIB no_such_lib_xyz
+  LET sum_v = OK
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  IF admit_n == 0 THEN
+    LET score = score + 1
+  END
+  GETP "label"
+  SYS EQS LAST "matchlibs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-matchlibs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok1:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — min_match floor on plate family
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  MATCHLIBS plate
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  IF sum_n >= 5 THEN
+    LET score = score + 1
+  END
+  PICKLIB plate
+  LET stem_s = LAST
+  CLEAR_ERR
+  SYS EQS stem_s "plate_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_matchlibs_pick"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "min_match"
+  SYS EQS LAST "5"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "plate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-matchlibs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET admit_n = 1
+    LET find_n = sum_n
+    LET note_msg = "gate ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n stem_s score note_msg
+  CLEAR_ERR
+END
+
+# alias — FILTERLIBS + LIBMATCH + FIRSTLIB
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  LIBMATCH tick
+  LET libs_bag = LAST
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  IF sum_n >= 2 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE libs_bag "plate_tick"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE libs_bag "plate_peer_tick"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  FIRSTLIB fat
+  LET stem_s = LAST
+  CLEAR_ERR
+  SYS EQS stem_s "fat_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  FILTERLIBS fat
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF find_n == 2 THEN
+    LET score = score + 1
+  END
+  GETP "label"
+  SYS EQS LAST "matchlibs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "alias ok"
+    LET admit_n = 1
+    LET find_n = sum_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias score"
+    FAIL "alias score"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:" sum_n ":as"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n stem_s score note_msg
+  CLEAR_ERR
+END
+
+# probe — empty needle hard + dual miss + alpha order false friend
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  # empty needle hard-fail
+  MATCHLIBS ""
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  PICKLIB ""
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  # MATCH soft miss vs PICK hard miss
+  MATCHLIBS ghostpath_lib_999
+  LET sum_n = LAST_N
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF sum_n == 0 THEN
+    LET score = score + 1
+  END
+  PICKLIB ghostpath_lib_999
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  # PICKLIB_N is full match count even when LAST is single stem
+  PICKLIB plate
+  LET stem_s = LAST
+  LET find_n = PICKLIB_N
+  LET admit_n = LAST_N
+  CLEAR_ERR
+  SYS EQS stem_s "plate_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF admit_n == 1 THEN
+    LET score = score + 1
+  END
+  IF find_n >= 10 THEN
+    LET score = score + 1
+  END
+  IF admit_n != find_n THEN
+    LET score = score + 1
+  END
+  GETP "schema"
+  SYS HAS LAST "matchlibs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = find_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" find_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n find_n stem_s score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET body = LAST
+CLEAR_ERR
+SYS STR miss
+LET row = LAST
+CLEAR_ERR
+SYS CAT "hit=" body " miss=" row " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_matchlibs_pick.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " find_n=" find_n " sum_n=" sum_n " score=" score " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n sum_n note_msg
+NOTE "svc_matchlibs_pick_board: end"
