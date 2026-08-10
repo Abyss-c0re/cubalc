@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 745,
-  "version": "1.15.772-usability",
-  "item": "LIBAGE/HASFRESH/NEEDFRESH single-lib gates + CLI",
-  "item_id": 781,
-  "title": "LIBAGE \u00b7 HASFRESH \u00b7 NEEDFRESH \u00b7 cubalc libage|hasfresh|needfresh",
-  "commit": "192173216cf414b35ffab67f0c8409f41643b35e",
-  "summary": "single-lib age + soft/hard freshness gates; default 86400s; CLI age/fresh plates. proof 1322 PASS.",
+  "iter": 746,
+  "version": "1.15.773-usability",
+  "item": "HASFORM/NEEDFORM/REQUIRE FORM capability gates + CLI",
+  "item_id": 782,
+  "title": "HASFORM \u00b7 NEEDFORM \u00b7 REQUIRE FORM \u00b7 cubalc hasform|needform",
+  "commit": "1bdbf50e9aa7514259c9209ba087ef21b19499c5",
+  "summary": "HELP-catalog capability gates; soft/hard; CLI formgate.v1; catalog hoist. proof 1323 PASS.",
   "proofs": [
-    "1322_libage PASS",
-    "1322_cli_libage PASS"
+    "1323_hasform PASS",
+    "1323_cli_hasform PASS"
   ],
-  "when": "2026-08-10T10:47:06Z",
+  "when": "2026-08-10T11:00:32Z",
   "agent": "meaningful_iter_10m",
-  "sha": "192173216cf414b35ffab67f0c8409f41643b35e",
-  "note": "LIBAGE fat_session\u2192age; HASFRESH max 1e6 ok; NEEDFRESH max 1 fails"
+  "sha": "1bdbf50e9aa7514259c9209ba087ef21b19499c5",
+  "note": "HASFORM SORTLIBS ok; NEEDFORM missing fails; REQUIRE FORM LIBAGE"
 }
