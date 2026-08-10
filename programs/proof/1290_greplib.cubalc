@@ -1,0 +1,54 @@
+# GREPLIB / SEARCHLIBS — lib content discovery (dual of shell grep)
+
+# one-lib: matching lines containing needle
+GREPLIB fat_session "INCLUDE"
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+ASSERT LIB_STEM == "fat_session"
+ASSERT LIB_PATH != ""
+SYS HAS LAST "INCLUDE"
+ASSERT LAST_N == 1
+
+# re-grep (HAS clobbered LAST string)
+GREPLIB fat_session "plate_boot"
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+
+# all-libs stem discovery
+SEARCHLIBS "NEED_VARROOM"
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS HASLINE LAST "var_guard"
+ASSERT LAST_N == 1
+# fat_boot also references NEED_VARROOM
+SEARCHLIBS "NEED_VARROOM"
+SYS HASLINE LAST "fat_boot"
+ASSERT LAST_N == 1
+
+# LIBGREP alias
+LIBGREP "agent_boot"
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS HASLINE LAST "agent_boot"
+ASSERT LAST_N == 1
+
+# GREPLIB one-arg → SEARCHLIBS mode
+GREPLIB "fat_session"
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS HASLINE LAST "fat_session"
+ASSERT LAST_N == 1
+
+# soft miss missing lib
+GREPLIB no_such_lib_xyz_zzz "INCLUDE"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# empty hits still OK when lib exists
+GREPLIB agent_boot "zzz_no_such_token_qqq_999"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+PASS
+PRINT "1290_greplib: PASS"

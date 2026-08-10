@@ -36634,6 +36634,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"LISTLIBS", "LISTLIBS|LIBSTEMS — short names from programs/lib (+INCLUDE_PATH) · dual of cubalc libs"},
       {"HASLIB", "HASLIB name — soft 0|1 if stdlib/project lib stem exists · dual of LISTLIBS"},
       {"CATLIB", "CATLIB|READLIB name — soft dump lib source → LAST · dual of cubalc cat"},
+      {"GREPLIB", "GREPLIB name needle — matching lines from one lib → LAST bag · soft miss"},
+      {"SEARCHLIBS", "SEARCHLIBS|LIBGREP needle — stems whose source contains needle · dual of shell grep libs"},
       {"LISTPRELOAD", "LISTPRELOAD|PRELOADS — -I/CUBALC_PRELOAD short names bag (CUBALC_PRELOAD_ACTIVE)"},
       {"PRELOADS", "PRELOADS alias of LISTPRELOAD"},
       {"PRELOADMISS", "PRELOADMISS|CHECKPRELOAD — -I names not loaded · bag + LAST_N=count · PRELOAD_MISS"},
