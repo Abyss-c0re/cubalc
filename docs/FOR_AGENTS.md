@@ -39,9 +39,9 @@ CUBALC_INCLUDE_PATH=$PWD/mylibs cubalc libs             # catalog + include_path
 Run plate includes `preload_n` / `include_path_n`. See `cubalc env PRELOAD`.
 Host version floor: `export CUBALC_REQUIRE_VERSION=1.15` or `cubalc run -R 1.15` (fail if runtime older).
 After load: `LISTINCLUDES` → path bag · `INCLUDESTEMS` short names · `HASINCLUDE agent_boot` soft 0|1 · `INCLUDE_N`.
-Run plate always reports `includes_n` + `includes` JSON array (same modules · no parse).
+Run plate always reports `includes_n` + `includes` paths + `include_stems` / `include_stems_n` short names (INCLUDESTEMS dual).
 Also `preload_n` + `preload` short-name array from `-I` / `CUBALC_PRELOAD` (request).
-Plate dual of PRELOADOK/PRELOADMISS: `preload_ok` · `preload_miss_n` · `preload_miss[]` (request vs includes stems).
+Plate dual of PRELOADOK/PRELOADMISS: `preload_ok` · `preload_miss_n` · `preload_miss[]` (request vs include_stems).
 In-lang: `LISTPRELOAD` → same short names (via `CUBALC_PRELOAD_ACTIVE`) · `INCLUDESTEMS` loaded.
 Audit -I vs loaded (no bag diff glue): `PRELOADMISS` miss bag · `PRELOADOK` soft 0|1 · `NEEDPRELOAD` fail-fast.
 Request probe: `HASPRELOAD agent_boot` soft 0|1 (was `-I` asked?) · dual of `HASINCLUDE` (did it load?).

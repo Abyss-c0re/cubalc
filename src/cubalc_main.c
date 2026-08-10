@@ -1366,6 +1366,58 @@ static int run_includes_has_stem(const char *includes, const char *want) {
   return 0;
 }
 
+/* JSON array of short stems from includes bag · dual of INCLUDESTEMS.
+ * Returns stem count; outj = ["hold_seed","agent_boot"] or []. */
+static int run_includes_stems_json(const char *includes, char *outj, size_t outn) {
+  size_t io = 0;
+  int n = 0;
+  const char *ip;
+  if (!outj || outn < 3) return 0;
+  outj[io++] = '[';
+  if (!includes) includes = "";
+  for (ip = includes; *ip;) {
+    const char *seg = ip;
+    size_t slen = 0;
+    const char *b;
+    char stem[256];
+    size_t plen, j;
+    while (ip[slen] && ip[slen] != '\n') slen++;
+    b = seg;
+    for (j = 0; j < slen; j++)
+      if (seg[j] == '/') b = seg + j + 1;
+    plen = (size_t)(seg + slen - b);
+    if (plen >= sizeof stem) plen = sizeof stem - 1;
+    memcpy(stem, b, plen);
+    stem[plen] = 0;
+    if (plen > 7 && strcmp(stem + plen - 7, ".cubalc") == 0) {
+      stem[plen - 7] = 0;
+      plen -= 7;
+    }
+    if (plen > 0) {
+      if (n && io + 1 < outn) outj[io++] = ',';
+      if (io + 1 < outn) outj[io++] = '"';
+      for (j = 0; j < plen && io + 2 < outn; j++) {
+        char c = stem[j];
+        if (c == '"' || c == '\\') {
+          outj[io++] = '\\';
+          if (io + 1 < outn) outj[io++] = c;
+        } else if ((unsigned char)c < 32) {
+          if (io + 1 < outn) outj[io++] = ' ';
+        } else {
+          outj[io++] = c;
+        }
+      }
+      if (io + 1 < outn) outj[io++] = '"';
+      n++;
+    }
+    ip += slen;
+    if (*ip == '\n') ip++;
+  }
+  if (io + 1 < outn) outj[io++] = ']';
+  outj[io] = 0;
+  return n;
+}
+
 /* JSON array of -I names missing from includes bag · dual of PRELOADMISS.
  * Returns miss count; outj = ["a","b"] or []. Empty request → 0 + []. */
 static int run_preload_miss_json(char preload[][96], int n_preload,
@@ -1975,7 +2027,9 @@ int main(int argc, char **argv) {
              "\"preload_n\":%d,\"preload\":%s,"
              "\"preload_ok\":%s,\"preload_miss_n\":%d,\"preload_miss\":%s,"
              "\"include_path_n\":%d,"
-             "\"includes_n\":0,\"includes\":[],\"quiet\":%s,\"strict\":%s,"
+             "\"includes_n\":0,\"includes\":[],"
+             "\"include_stems_n\":0,\"include_stems\":[],"
+             "\"quiet\":%s,\"strict\":%s,"
              "\"exit_code\":1,\"halted\":false}\n",
              have_expr ? "<expr>" : (src_path ? src_path : "?"),
              req_ver, CUBALC_LANG_VERSION, req_ver, CUBALC_LANG_VERSION,
@@ -2186,13 +2240,14 @@ int main(int argc, char **argv) {
       }
       whyesc[o] = 0;
       /* includes JSON array from newline bag (LISTINCLUDES plate dual).
+       * include_stems short-name array (INCLUDESTEMS dual · compare to preload[]).
        * preload JSON array of -I / CUBALC_PRELOAD names (requested, not paths).
        * preload_ok / preload_miss* dual of PRELOADOK/PRELOADMISS for agents. */
       {
-        char incj[768], prej[512], pmiss[512];
+        char incj[768], stemsj[512], prej[512], pmiss[512];
         size_t io = 0, po = 0;
         const char *ip = rr.includes;
-        int pi, pmiss_n;
+        int pi, pmiss_n, stems_n;
         incj[io++] = '[';
         while (*ip && io + 8 < sizeof incj) {
           const char *seg = ip;
@@ -2215,6 +2270,7 @@ int main(int argc, char **argv) {
         }
         if (io + 1 < sizeof incj) incj[io++] = ']';
         incj[io] = 0;
+        stems_n = run_includes_stems_json(rr.includes, stemsj, sizeof stemsj);
         prej[po++] = '[';
         for (pi = 0; pi < n_preload && po + 8 < sizeof prej; pi++) {
           size_t j, sl = strlen(preload[pi]);
@@ -2243,6 +2299,7 @@ int main(int argc, char **argv) {
                "\"include_path_n\":%d,"
                "\"require_version\":\"%s\","
                "\"includes_n\":%d,\"includes\":%s,"
+               "\"include_stems_n\":%d,\"include_stems\":%s,"
                "\"exit_code\":%d,\"halted\":%s}\n",
                plate_ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
                rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
@@ -2254,6 +2311,7 @@ int main(int argc, char **argv) {
                n_ipath,
                req_ver[0] ? req_ver : "",
                rr.includes_n, incj,
+               stems_n, stemsj,
                rr.exit_code, rr.halted ? "true" : "false");
       }
     }
@@ -2940,6 +2998,7 @@ int main(int argc, char **argv) {
       {"cli_preload_ok_plate", "programs/proof/1271_cli_preload_ok_plate.sh", "run plate preload_ok/preload_miss dual of PRELOADOK"},
       {"haspreload", "programs/proof/1272_haspreload.cubalc", "HASPRELOAD soft -I request bag probe"},
       {"cli_haspreload", "programs/proof/1272_cli_haspreload.sh", "HASPRELOAD after run -I"},
+      {"cli_include_stems_plate", "programs/proof/1273_cli_include_stems_plate.sh", "run plate include_stems dual of INCLUDESTEMS"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
