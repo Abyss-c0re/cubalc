@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 309,
-  "program": "programs/realworld/svc_guidematch_route_board.cubalc",
-  "theme": "GUIDE MATCH/NTH/LASTMATCH fleet playbook cold-route (no glue)",
-  "version": "1.15.800-usability",
+  "iter": 310,
+  "program": "programs/realworld/svc_discover_open_board.cubalc",
+  "theme": "DISCOVER fleet open plate match bag+first+next (post-onboard)",
+  "version": "1.15.802-usability",
   "pass": true,
-  "prior_note": "iter 308 NTHTOPIC roster; this iter first realworld 1350 GUIDE MATCH one-shot playbook route",
+  "prior_note": "iter 309 GUIDE MATCH; this iter first realworld 1352 DISCOVER + 1353 discover_boot open plate",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate gmr",
+      "cmd": "seed agent plate dso",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "match",
-      "cmd": "GUIDE MATCH p → cap GUIDE_MATCH_N=4",
+      "name": "open",
+      "cmd": "DISCOVER all n=8 first=general",
       "ok": true,
-      "note": "match"
+      "note": "open"
     },
     {
-      "name": "nth",
-      "cmd": "GUIDE NTH 1 plate + GUIDENTH 2 p2p",
+      "name": "filter",
+      "cmd": "DISCOVER p n=4 first=cap + mesh",
       "ok": true,
-      "note": "nth"
-    },
-    {
-      "name": "last",
-      "cmd": "GUIDE LASTMATCH protect + OR general",
-      "ok": true,
-      "note": "last"
+      "note": "filter"
     },
     {
       "name": "chain",
-      "cmd": "MATCH→NTH→LASTMATCH no glue",
+      "cmd": "DISCOVER→GUIDE first→RUNSNIP plate",
       "ok": true,
       "note": "chain"
     },
     {
       "name": "soft",
-      "cmd": "miss/empty/OOR + OR recover",
+      "cmd": "zzz miss + bare recover + forms",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "plate surface + MATCH lib",
+      "cmd": "plate surface + DISCOVER lib",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "FIRST PICK forms PLAYGUIDE",
+      "cmd": "EXPLORE lib + RELATED bag",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + HASTOPIC p false friend",
+      "cmd": "PRINT clobber + DEFINED wrong knob",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "CLI duals red; guidematch PASS; runsnipmatch not in binary"
+      "note": "540/708 discover PASS; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -4920,10 +4914,57 @@
       "title": "GUIDEMATCH forms→cap mesh→p2p synonym rewrite (same table)",
       "detail": "GUIDE PICK mesh → p2p; GUIDEMATCH forms → cap. Hardcoded synonym table shared with MATCHTOPICS.",
       "repro": "GUIDE PICK mesh → p2p"
+    },
+    {
+      "id": "W606",
+      "severity": "med",
+      "area": "lang|names",
+      "title": "DISCOVER uses DISCOVER_N not DISCOVER_MATCH_N (GUIDE_MATCH_N false friend)",
+      "detail": "Agents copying GUIDE MATCH knobs look for DISCOVER_MATCH_N/I — undefined. Correct: DISCOVER_N · DISCOVER_FIRST · DISCOVER_FILTER · DISCOVER_NEXT_N · DISCOVER_RELATED_N.",
+      "repro": "DISCOVER p; PRINT DISCOVER_N  # 4; DISCOVER_MATCH_N not defined"
+    },
+    {
+      "id": "W607",
+      "severity": "high",
+      "area": "lang|eqs",
+      "title": "SYS EQS on undefined special name hard-fails unknown form",
+      "detail": "SYS EQS DISCOVER_MATCH_N \"4\" → unknown form DISCOVER_MATCH_N (not soft miss). Probe must use DEFINED DISCOVER_MATCH_N. Agents cannot cheaply compare missing knobs via EQS.",
+      "repro": "SYS EQS DISCOVER_MATCH_N 4 → unknown form hard fail"
+    },
+    {
+      "id": "W608",
+      "severity": "low",
+      "area": "lang|discover",
+      "title": "DISCOVER first-of-substring same class as MATCH/PICK (p→cap)",
+      "detail": "DISCOVER p → DISCOVER_FIRST=cap not plate. Fleet open always starts cap for needle p unless exact topic needle.",
+      "repro": "DISCOVER p → first cap"
+    },
+    {
+      "id": "W609",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers DISCOVER plate JSON in LAST",
+      "detail": "Capture body before PRINT; probe-mark loses cubalc.discover.v1 in LAST.",
+      "repro": "DISCOVER p; PRINT x; SYS HASI LAST cubalc.discover.v1 → 0"
+    },
+    {
+      "id": "W610",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS/META omit trailing NL (reconfirmed dso)",
+      "detail": "STATUS last probe:4:pb without $; META no final NL.",
+      "repro": "cat -A DSO STATUS"
+    },
+    {
+      "id": "W611",
+      "severity": "low",
+      "area": "lang|discover",
+      "title": "bare DISCOVER opens full catalog filter=* n=8 first=general",
+      "detail": "Positive ops default: empty needle is all-topics open not soft miss. Soft miss only on unknown filter (zzz_nope).",
+      "repro": "DISCOVER → n=8 first=general; DISCOVER zzz → OK=0"
     }
   ],
   "workarounds": [
-    "BUMPFLAT for single named counter + explicit delta",
     "empty INCFLAT only when all-int inventory intended",
     "omit agent/schema from MERGEFLAT overlay peers",
     "re-SETP identity after merge if patch untrusted",
@@ -4971,15 +5012,13 @@
     {
       "id": "WA-GMR",
       "note": "use GUIDE MATCH not RUNSNIP MATCH until duals ship; GUIDE NTH for non-first slots; capture body before PRINT"
+    },
+    {
+      "id": "WA-DSO",
+      "note": "use DISCOVER_N not DISCOVER_MATCH_N; DEFINED for missing knobs not SYS EQS; capture body before PRINT"
     }
   ],
   "language_gaps": [
-    "RUNSNIP nested asserts pollute parent plate (W555)",
-    "SYS EMPTY TOPIC_SNIP polarity easy to misread (W557)",
-    "ERRTIPS keyword heuristics not structured taxonomy (W559)",
-    "unknown noise no empty soft-miss (W563)",
-    "PRINT clobber after ERRTIPS bag (W561)",
-    "EACH TOPIC requires END (W564)",
     "ERRRUN nested snip stdout noise (W565)",
     "MATCH substring on topic ids not glob (W567)",
     "RELATEDTOPIC curated asymmetric graph (W569)",
@@ -5013,10 +5052,15 @@
     "GUIDE_MATCH_N family + GUIDE_MATCH_I slot knobs (W601)",
     "RUNSNIP MATCH not in binary 1.15.800 (W600) — proof ahead of ship",
     "GUIDE MATCH first-of-substring p→cap (W602)",
-    "PRINT clobber GUIDE JSON (W603)"
+    "PRINT clobber GUIDE JSON (W603)",
+    "DISCOVER/EXPLORE open plate match bag+first+next (1352)",
+    "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
+    "SYS EQS undefined special → unknown form hard-fail (W607)",
+    "discover_boot INCLUDE agent_boot+DISCOVER (1353)",
+    "chain GUIDE/RUNSNIP DISCOVER_FIRST",
+    "PRINT clobber discover plate (W609)"
   ],
   "issues_faced": [
-    "iter298: -C floor invisible to SYS ENV (W537); use CUBALC_REQUIRE_FORMS for in-lang",
     "iter298: LISTFORMS var lex_next fixed; INCLUDE stop-list filter needs quotes",
     "iter298: board 10/10 + host -C ok; selftest CLI duals still red 455/658",
     "iter299: FORMSFOR/TIPS var topic lex_next fixed + HOWTO_TOPIC dual",
@@ -5045,9 +5089,10 @@
     "iter306: selftest CLI duals still red",
     "selftest rows[512] hid matchtopics/start/formguide until cap raised; board 10/10 green; CLI duals still unknown form set",
     "NTHTOPIC var index hard-fail unknown form; LASTTOPIC_N 0 after success; board 10/10 green",
-    "RUNSNIP MATCH missing in binary while proof 1351 exists; GUIDE MATCH board 10/10+unknown green"
+    "RUNSNIP MATCH missing in binary while proof 1351 exists; GUIDE MATCH board 10/10+unknown green",
+    "probe SYS EQS DISCOVER_MATCH_N hard-failed unknown form; fixed via DEFINED; board 10/10"
   ],
-  "commit": "a7a4ca05",
-  "ts": "2026-08-10T16:59:10Z",
-  "board_commit": "a7a4ca05"
+  "commit": "pending",
+  "ts": "2026-08-10T17:24:06Z",
+  "board_commit": "pending"
 }
