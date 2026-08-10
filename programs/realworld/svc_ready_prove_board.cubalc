@@ -1,0 +1,886 @@
+# svc_ready_prove_board.cubalc — READY/NEEDREADY fleet install prove checklist
+#
+# Real use: fleet agents run install prove checklist (forms+libs+DOCTOR) via
+# READY/PROVEREADY soft plate, NEEDREADY/REQUIREREADY/MUSTREADY hard gate, or
+# INCLUDE ready_boot one-shot — then chain doctor_boot. First realworld of
+# proofs 1359 READY + 1361 ready_boot (1.15.811).
+#
+#   READY|PROVEREADY → READY_OK · READY_PASS_N · READY_FAIL_N · cubalc.ready.v1
+#   NEEDREADY|REQUIREREADY|MUSTREADY hard gate
+#   INCLUDE ready_boot → agent_boot + NEEDREADY
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rdy_$$
+#   ./out/cubalc run programs/realworld/svc_ready_prove_board.cubalc boot
+#   ./out/cubalc run ... prove|hard|bootgate|chain|soft|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt RDY_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_RDY_REQUIRE
+#
+# Edges: PRINT clobber ready JSON; READY_PASS_N not READY_LIBS_N;
+#   REQUIRE READY multiword loses to REQUIRE (W624 class); WRITE NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_ready_prove_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_ready_prove -- boot|prove|hard|bootgate|chain|soft|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_RDY_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "RDY_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sum_v = 0
+LET sum_n = 0
+LET stem_s = ""
+LET pass_n = 0
+LET fail_n = 0
+LET topic_got = ""
+
+ONEOF ACTION "boot", "prove", "hard", "bootgate", "chain", "soft", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "prove" THEN
+    LET op = "prove"
+  WHEN "hard" THEN
+    LET op = "hard"
+  WHEN "bootgate" THEN
+    LET op = "bootgate"
+  WHEN "chain" THEN
+    LET op = "chain"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-rdy\",\"schema\":\"cubalc.svc_ready_prove.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"want_filter\":\"ready_prove\",\"label\":\"rdy\",\"cfg\":{\"surface\":\"READY,PROVEREADY,NEEDREADY,REQUIREREADY,MUSTREADY,ready_boot\",\"min_pass\":10}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"peer\":\"ready_prove\",\"n\":1}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "agent"
+  SYS EQS LAST "svc-rdy"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_ready_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "rdy"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "ready_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "READY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# prove — soft READY checklist plate
+SYS EQS op "prove"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  READY
+  LET body = LAST
+  LET sum_v = READY_OK
+  LET pass_n = READY_PASS_N
+  LET fail_n = READY_FAIL_N
+  CLEAR_ERR
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF pass_n >= 10 THEN
+    LET score = score + 1
+  END
+  IF fail_n == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI body "cubalc.ready.v1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI body "form:DOCTOR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI body "lib:agent_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI body "lib:doctor_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "READY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.min_pass"
+  SYS NUM
+  IF LAST_N == 10 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "rdy"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 11 THEN
+    LET hit = 1
+    LET note_msg = "prove ok"
+    LET admit_n = 1
+    LET find_n = pass_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "prove score"
+    FAIL "prove score"
+    CLEAR_ERR
+  END
+  SYS CAT "prove:" pass_n ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "prove:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n pass_n fail_n score note_msg
+  CLEAR_ERR
+END
+
+# hard — NEEDREADY + solid aliases
+SYS EQS op "hard"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  NEEDREADY
+  LET pass_n = READY_PASS_N
+  LET fail_n = READY_FAIL_N
+  CLEAR_ERR
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  IF READY_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF pass_n >= 10 THEN
+    LET score = score + 1
+  END
+  IF fail_n == 0 THEN
+    LET score = score + 1
+  END
+  REQUIREREADY
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  MUSTREADY
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  PROVEREADY
+  IF READY_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "NEEDREADY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "REQUIREREADY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "MUSTREADY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "hard ok"
+    LET admit_n = 1
+    LET find_n = pass_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "hard score"
+    FAIL "hard score"
+    CLEAR_ERR
+  END
+  SYS CAT "hard:" pass_n ":hd"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "hard:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n pass_n score note_msg
+  CLEAR_ERR
+END
+
+# bootgate — INCLUDE ready_boot
+SYS EQS op "bootgate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  INCLUDE ready_boot
+  LET body = LAST
+  LET pass_n = READY_PASS_N
+  LET fail_n = READY_FAIL_N
+  CLEAR_ERR
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  IF READY_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF pass_n >= 10 THEN
+    LET score = score + 1
+  END
+  IF fail_n == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI body "cubalc.ready.v1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "ready_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "rdy"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "ready_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "bootgate ok"
+    LET admit_n = 1
+    LET find_n = pass_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "bootgate score"
+    FAIL "bootgate score"
+    CLEAR_ERR
+  END
+  SYS CAT "bootgate:" pass_n ":bg"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "bootgate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n pass_n score note_msg
+  CLEAR_ERR
+END
+
+# chain — ready_boot then doctor_boot
+SYS EQS op "chain"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  INCLUDE ready_boot
+  LET body = LAST
+  LET pass_n = READY_PASS_N
+  CLEAR_ERR
+  IF READY_OK == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASI body "cubalc.ready.v1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  INCLUDE doctor_boot
+  CLEAR_ERR
+  IF DOCTOR_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF DOCTOR_LIBS_N >= 1 THEN
+    LET score = score + 1
+  END
+  GETP "want_filter"
+  SYS EQS LAST "ready_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "ready_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "NEEDREADY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "rdy"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "ready_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.min_pass"
+  SYS NUM
+  IF LAST_N == 10 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "chain ok"
+    LET admit_n = 1
+    LET find_n = pass_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "chain score"
+    FAIL "chain score"
+    CLEAR_ERR
+  END
+  SYS CAT "chain:" pass_n ":ch"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "chain:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n pass_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — PROVEREADY alias + plate fields
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PROVEREADY
+  LET body = LAST
+  LET pass_n = READY_PASS_N
+  LET fail_n = READY_FAIL_N
+  CLEAR_ERR
+  IF READY_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF pass_n >= 10 THEN
+    LET score = score + 1
+  END
+  IF fail_n == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI body "form:DOCTOR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI body "lib:agent_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI body "lib:open_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-rdy"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "PROVEREADY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "MUSTREADY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "rdy"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok1:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n pass_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — plate surface + live READY
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  READY
+  LET pass_n = READY_PASS_N
+  CLEAR_ERR
+  IF READY_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF pass_n >= 10 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "READY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "NEEDREADY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "ready_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "ready_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "ready_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 7 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = pass_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n pass_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber + false friend knobs
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  READY
+  LET body = LAST
+  LET pass_n = READY_PASS_N
+  LET fail_n = READY_FAIL_N
+  LET sum_v = READY_OK
+  CLEAR_ERR
+  LET stem_s = body
+  PRINT "probe-mark"
+  CLEAR_ERR
+  SYS HASI stem_s "cubalc.ready.v1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI LAST "cubalc.ready.v1"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF pass_n >= 10 THEN
+    LET score = score + 1
+  END
+  IF fail_n == 0 THEN
+    LET score = score + 1
+  END
+  # READY_LIBS_N false friend (use READY_PASS_N)
+  DEFINED READY_LIBS_N
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  DEFINED READY_PASS_N
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "ready_prove"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "READY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = pass_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" pass_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n pass_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET body = LAST
+CLEAR_ERR
+SYS STR miss
+LET row = LAST
+CLEAR_ERR
+SYS CAT "hit=" body " miss=" row " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_ready_prove.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " find_n=" find_n " pass_n=" pass_n " fail_n=" fail_n " score=" score " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+IF hit == 0 THEN
+  IF known == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+NOTE "svc_ready_prove_board: done"
+PASS

@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 314,
-  "program": "programs/realworld/svc_doctor_boot_gate_board.cubalc",
-  "theme": "doctor_boot INCLUDE hard gate + REQUIREDOCTOR/MUSTDOCTOR solid aliases",
-  "version": "1.15.808-usability",
+  "iter": 315,
+  "program": "programs/realworld/svc_ready_prove_board.cubalc",
+  "theme": "READY/NEEDREADY fleet install prove checklist + ready_boot",
+  "version": "1.15.811-usability",
   "pass": true,
-  "prior_note": "iter 313 DOCTOR plate; this iter first realworld 1358 doctor_boot + 1357 solid aliases REQUIREDOCTOR/MUSTDOCTOR/NEED_DOCTOR",
+  "prior_note": "iter 314 doctor_boot; this iter first realworld 1359 READY + 1361 ready_boot install prove checklist",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate dbg",
+      "cmd": "seed agent plate rdy",
       "ok": true,
       "note": "boot"
     },
     {
+      "name": "prove",
+      "cmd": "READY pass_n>=10 fail=0",
+      "ok": true,
+      "note": "prove"
+    },
+    {
+      "name": "hard",
+      "cmd": "NEEDREADY REQUIREREADY MUSTREADY",
+      "ok": true,
+      "note": "hard"
+    },
+    {
       "name": "bootgate",
-      "cmd": "INCLUDE doctor_boot hard NEEDDOCTOR",
+      "cmd": "INCLUDE ready_boot",
       "ok": true,
       "note": "bootgate"
     },
     {
-      "name": "alias",
-      "cmd": "REQUIREDOCTOR MUSTDOCTOR NEED_DOCTOR",
-      "ok": true,
-      "note": "alias"
-    },
-    {
       "name": "chain",
-      "cmd": "doctor_boot→open_boot→RUNSNIP",
+      "cmd": "ready_boot→doctor_boot",
       "ok": true,
       "note": "chain"
     },
     {
       "name": "soft",
-      "cmd": "solid aliases + soft DOCTOR plate",
+      "cmd": "PROVEREADY plate fields",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "plate surface + doctor_boot",
+      "cmd": "plate surface + READY",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + solid recover",
+      "cmd": "PRINT clobber + READY_PASS_N",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "546/720 needdoctor+doctor_boot PASS; CLI duals still red"
+      "note": "ready/ready_boot PASS when registered; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -5140,10 +5146,49 @@
       "title": "WRITE STATUS/META omit trailing NL (reconfirmed dbg)",
       "detail": "STATUS last probe line without $; META no final NL.",
       "repro": "cat -A DBG STATUS"
+    },
+    {
+      "id": "W635",
+      "severity": "med",
+      "area": "lang|ready",
+      "title": "READY checklist omits lib:hold_seed and lib:ready_boot",
+      "detail": "pass bag lists agent_boot/doctor_boot/open_boot/discover_boot/onboard_boot but not hold_seed or ready_boot. Agents requiring hold_seed must DOCTOR/HASLIB separately. HASI body lib:hold_seed → 0 on green install.",
+      "repro": "READY; SYS HASI LAST lib:hold_seed → 0; lib:open_boot → 1"
+    },
+    {
+      "id": "W636",
+      "severity": "low",
+      "area": "lang|ready",
+      "title": "READY_PASS_N/FAIL_N knobs not READY_LIBS_N",
+      "detail": "DEFINED READY_LIBS_N → 0. Use READY_PASS_N (≥10 on healthy) and READY_FAIL_N. DOCTOR_LIBS_N remains separate after doctor_boot chain.",
+      "repro": "READY; PRINT READY_PASS_N  # 16"
+    },
+    {
+      "id": "W637",
+      "severity": "low",
+      "area": "lang|ready",
+      "title": "solid REQUIREREADY/MUSTREADY aliases work; multiword REQUIRE READY suspect",
+      "detail": "Positive: REQUIREREADY MUSTREADY NEEDREADY hard=1. Forms catalog lists REQUIRE READY multiword — same class as REQUIRE DOCTOR (W624); prefer solid tokens.",
+      "repro": "REQUIREREADY; MUSTREADY → OK=1"
+    },
+    {
+      "id": "W638",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers READY plate JSON in LAST",
+      "detail": "Capture body after READY before PRINT.",
+      "repro": "READY; PRINT x; SYS HASI LAST cubalc.ready.v1 → 0"
+    },
+    {
+      "id": "W639",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS/META omit trailing NL (reconfirmed rdy)",
+      "detail": "STATUS last line without $; META no final NL.",
+      "repro": "cat -A RDY STATUS"
     }
   ],
   "workarounds": [
-    "always use trailing . on path prefixes",
     "never pass empty old_pfx to RENAMEFLAT",
     "PRUNEFLAT old prefix before re-promote if re-running",
     "never SETFLAT empty needle on agent plate",
@@ -5206,15 +5251,13 @@
     {
       "id": "WA-DBG",
       "note": "INCLUDE doctor_boot then open_boot; use REQUIREDOCTOR/MUSTDOCTOR never multiword REQUIRE DOCTOR; capture body before PRINT"
+    },
+    {
+      "id": "WA-RDY",
+      "note": "use READY_PASS_N; solid NEEDREADY/REQUIREREADY; checklist libs are boot family not hold_seed; capture body before PRINT"
     }
   ],
   "language_gaps": [
-    "NTHTOPIC index literal-only (W593)",
-    "LASTTOPIC_N sticky 0 (W594)",
-    "prefer COUNTMATCHTOPICS_N over LAST_N (W595)",
-    "HASMATCHTOPICS vs HASTOPIC substring false friend (W596)",
-    "NTHTOPIC_N family size not slot (W599)",
-    "GUIDE MATCH/NTH/LASTMATCH one-shot filter+playbook (1350)",
     "GUIDEMATCH/GUIDENTH/GUIDELASTMATCH compound aliases",
     "GUIDE_MATCH_N family + GUIDE_MATCH_I slot knobs (W601)",
     "RUNSNIP MATCH not in binary 1.15.800 (W600) — proof ahead of ship",
@@ -5248,10 +5291,15 @@
     "REQUIREDOCTOR/MUSTDOCTOR/NEED_DOCTOR solid aliases (W630)",
     "REQUIRE DOCTOR multiword still dead (W624/W631)",
     "chain doctor_boot→open_boot→RUNSNIP",
-    "PRINT clobber after doctor_boot (W633)"
+    "PRINT clobber after doctor_boot (W633)",
+    "READY/PROVEREADY install prove checklist cubalc.ready.v1 (1359)",
+    "NEEDREADY/REQUIREREADY/MUSTREADY hard gates",
+    "ready_boot INCLUDE agent_boot+NEEDREADY (1361)",
+    "READY_PASS_N/FAIL_N not READY_LIBS_N (W636)",
+    "checklist omits hold_seed (W635)",
+    "PRINT clobber ready plate (W638)"
   ],
   "issues_faced": [
-    "iter299: board 10/10 green; selftest CLI duals still 57 red",
     "iter300: RELATED multi-word graph gap REQUIRE FORM (W549)",
     "iter300: all board paths green; WRITE SNIP.txt multi-line works",
     "iter300: selftest CLI duals still red (pre-existing)",
@@ -5280,9 +5328,10 @@
     "binary missing at fire start — rebuilt; OPEN board 10/10 green; OPEN_NEXT_N gap vs DISCOVER",
     "out/cubalc missing; OOM on make until disk swap + object -D_GNU_SOURCE build; board 10/10+unknown green",
     "REQUIRE DOCTOR parse fail; slim doctor plate missing http_required; binary missing thrice; board 9/9 after NEEDDOCTOR-only soft",
-    "REQUIRE DOCTOR multiword broke soft/probe scoring; solid aliases only; board 9/9; needdoctor selftest now green"
+    "REQUIRE DOCTOR multiword broke soft/probe scoring; solid aliases only; board 9/9; needdoctor selftest now green",
+    "soft HASI lib:hold_seed miss on green READY; fixed to agent_boot/open_boot; board 10/10"
   ],
-  "commit": "3f2d1928",
-  "ts": "2026-08-10T19:05:04Z",
-  "board_commit": "3f2d1928"
+  "commit": "pending",
+  "ts": "2026-08-10T19:29:43Z",
+  "board_commit": "pending"
 }
