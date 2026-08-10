@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 746,
-  "version": "1.15.773-usability",
-  "item": "HASFORM/NEEDFORM/REQUIRE FORM capability gates + CLI",
-  "item_id": 782,
-  "title": "HASFORM \u00b7 NEEDFORM \u00b7 REQUIRE FORM \u00b7 cubalc hasform|needform",
-  "commit": "1bdbf50e9aa7514259c9209ba087ef21b19499c5",
-  "summary": "HELP-catalog capability gates; soft/hard; CLI formgate.v1; catalog hoist. proof 1323 PASS.",
+  "iter": 747,
+  "version": "1.15.774-usability",
+  "item": "HASFORMS/NEEDFORMS + form_guard + CLI",
+  "item_id": 783,
+  "title": "HASFORMS \u00b7 NEEDFORMS \u00b7 form_guard \u00b7 cubalc hasforms|needforms",
+  "commit": "881694aeef9eb31bafcc1a3d49c59e22d8c50b80",
+  "summary": "multi form capability contracts; FORMMISS; form_guard lib; doctor. thrash restored. proof 1324 PASS.",
   "proofs": [
-    "1323_hasform PASS",
-    "1323_cli_hasform PASS"
+    "1324_hasforms PASS",
+    "1324_cli_hasforms PASS"
   ],
-  "when": "2026-08-10T11:00:32Z",
+  "when": "2026-08-10T11:21:33Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1bdbf50e9aa7514259c9209ba087ef21b19499c5",
-  "note": "HASFORM SORTLIBS ok; NEEDFORM missing fails; REQUIRE FORM LIBAGE"
+  "sha": "881694aeef9eb31bafcc1a3d49c59e22d8c50b80",
+  "note": "restored thrash; HASFORMS multi; INCLUDE form_guard; doctor lib_form_guard"
 }
