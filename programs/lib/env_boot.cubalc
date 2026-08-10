@@ -1,0 +1,18 @@
+# INCLUDE env_boot — agent preamble + host-env contract one-shot
+# Usability: agent_boot + env_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_ENVS = "HOME\nUSER"
+#   DEFAULT NEED_ENV_ANY = "DB_URL\nREDIS_URL"
+#   DEFAULT ENV_GUARD_SOFT = 0
+#   INCLUDE env_boot
+# Soft env miss: DEFAULT ENV_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --env
+# Twin of cap_boot (forms) / cli_session (CLI) for process env.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_ENVS = ""
+DEFAULT NEED_ENV_ANY = ""
+DEFAULT ENV_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE env_guard
