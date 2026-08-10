@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 274,
-  "program": "programs/realworld/svc_alleqflat_consistency_board.cubalc",
-  "theme": "ALLEQFLAT nest value consistency gates",
-  "version": "1.15.711-usability",
+  "iter": 275,
+  "program": "programs/realworld/svc_uniformflat_diverge_board.cubalc",
+  "theme": "UNIFORMFLAT nest consistency one-shot gates",
+  "version": "1.15.716-usability",
   "pass": true,
-  "prior_note": "iter 273 DELBYVAL; this iter first realworld 1249 ALLEQFLAT",
+  "prior_note": "iter 274 ALLEQFLAT; this iter first realworld 1252 UNIFORMFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed mixed roles + peer ok",
+      "cmd": "seed mixed roles",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "check",
-      "cmd": "mixed roles LAST_N=0",
+      "cmd": "mixed LAST_N=0",
       "ok": true,
       "note": "check"
     },
     {
       "name": "unify",
-      "cmd": "SETBYVAL then ALLEQ hit",
+      "cmd": "SETBYVAL then equal",
       "ok": true,
       "note": "unify"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER status all ok",
+      "cmd": "FROM PEER ok/fail",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost miss LAST_N=0",
+      "cmd": "ghost miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "uniform worker admit",
+      "cmd": "uniform admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "SAMEVALFLAT",
+      "cmd": "CHECKFLAT",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "empty needle mixed",
+      "cmd": "multi diverge LAST_N=0",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; alleqflat PASS"
+      "note": "cli duals red; uniformflat PASS"
     }
   ],
   "weaknesses": [
@@ -3532,6 +3532,30 @@
       "title": "WRITE eq flag omits trailing NL",
       "detail": "eq.txt is 0 or worker without final NL (W5).",
       "repro": "od -c eq.txt"
+    },
+    {
+      "id": "W434",
+      "severity": "high",
+      "area": "lang|uniform_specials",
+      "title": "UNIFORM_PATH/PATHS hard-fail under 128-var agent pressure",
+      "detail": "In lean proof SYS EQS UNIFORM_PATH works; under agent_boot+plate_peer_session+path pool, SYS EQS UNIFORM_PATH / SYS HAS UNIFORM_PATHS yield unknown form hard halt. Specials silently missing when vars[128] full (W408). Agents must gate on LAST_N only or shrink var footprint.",
+      "repro": "fat agent UNIFORMFLAT role; SYS EQS UNIFORM_PATH other.role \u2192 unknown form"
+    },
+    {
+      "id": "W435",
+      "severity": "low",
+      "area": "lang|uniformflat",
+      "title": "UNIFORMFLAT LAST_N is 0|1 equality flag like ALLEQFLAT",
+      "detail": "Same contract as W431 \u2014 not leaf count.",
+      "repro": "mixed roles \u2192 LAST_N 0"
+    },
+    {
+      "id": "W436",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE uni flag omits trailing NL",
+      "detail": "uni.txt is 0 or worker without NL (W5).",
+      "repro": "od -c uni.txt"
     }
   ],
   "workarounds": [
@@ -3561,12 +3585,12 @@
     "HASVAL/HASP after scrub for admit gates",
     "use LAST_N==1 for admit not LAST_N as count",
     "SETP re-seed mixed roles before check path",
-    "SAMEVALFLAT interchangeable with ALLEQFLAT"
+    "SAMEVALFLAT interchangeable with ALLEQFLAT",
+    "gate on LAST_N only; skip UNIFORM_PATH under agents",
+    "SETBYVAL then UNIFORMFLAT for unify-and-check",
+    "GETP diverge leaves instead of UNIFORM_PATHS bag"
   ],
   "language_gaps": [
-    "PATHBYVAL exact value match (contrast MODEFLAT key substring)",
-    "OR fallback soft-miss path for missing values",
-    "UNIQFLAT needle substring on keys (like MODEFLAT/FREQFLAT)",
     "UNIQFLAT first-seen order of unique values",
     "prefer LAST_N unique count over UNIQFLAT_N near var cap",
     "PATHSBYVAL multi reverse path bag by exact value",
@@ -3583,7 +3607,10 @@
     "HASP gone after DELBYVAL (key removed not emptied)",
     "ALLEQFLAT LAST_N 0|1 consistency flag",
     "SAMEVALFLAT alias",
-    "SETBYVAL then ALLEQFLAT for unify-and-check"
+    "SETBYVAL then ALLEQFLAT for unify-and-check",
+    "UNIFORMFLAT LAST_N 0|1 one-shot equality",
+    "UNIFORM_PATH specials unusable near var cap",
+    "CHECKFLAT alias for UNIFORMFLAT"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3630,8 +3657,10 @@
     "iter273: DELBYVAL board 9/9; re-seed SETP before del after prior scrubs",
     "iter273: SAVEPLATE after mutate for durable agent/peer plates",
     "iter274: ALLEQFLAT board 9/9; unify via SETBYVAL leader\u2192worker",
-    "iter274: LAST_N is equality bit not count (W431)"
+    "iter274: LAST_N is equality bit not count (W431)",
+    "iter275: UNIFORM_PATH hard-fail under var pressure \u2014 board uses LAST_N only (W434)",
+    "iter275: 9/9 green after special avoidance"
   ],
-  "commit": "0344fe5e",
-  "ts": "2026-08-09T23:28:34Z"
+  "commit": "pending",
+  "ts": "2026-08-10T00:22:17Z"
 }
