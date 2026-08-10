@@ -1,0 +1,17 @@
+{
+  "schema": "cubalc.meaningful_iter.v1",
+  "iter": 834,
+  "version": "1.15.826-usability",
+  "item": "cubalc run --dotenv / CUBALC_DOTENV",
+  "item_id": 834,
+  "title": "run -F|--dotenv KEY=VAL before body · SYS DOTENV dual",
+  "commit": "caac9c7b5bab688e42c7d3bf33adb5fdad66e966",
+  "summary": "Host dotenv plate load before program; hard miss; CUBALC_DOTENV_ACTIVE; proof 1374 PASS.",
+  "proofs": [
+    "1374_cli_run_dotenv PASS"
+  ],
+  "when": "2026-08-10T22:03:57Z",
+  "agent": "thalamus_meaningful_iter",
+  "sha": "caac9c7b5bab688e42c7d3bf33adb5fdad66e966",
+  "note": "restored thrash · pivoted from argv peels · agent host contract"
+}
