@@ -1,0 +1,1055 @@
+# svc_hasenv_contract_board.cubalc — HASENVALL/HASENVANY fleet host-env multi-gate
+#
+# Real use: fleet site agents gate host env contracts — ALL required secrets
+# (SITE_ID+API_KEY) and ANY location (REGION|ZONE|SITE_ID) without N× SYS HASENV
+# OR chains. First realworld of 1381 HASENVALL + 1382 HASENVANY (1.15.833+).
+#
+#   HASENVALL|NEEDENVS names… → all-present · ENVMISS/ENVHAVE
+#   HASENVANY|NEEDENVANY names… → any-present · HASENVANY_N
+#   CSV/bag · soft miss sticky ERR · hard miss exit_code 0
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_hen_$$
+#   ./out/cubalc run programs/realworld/svc_hasenv_contract_board.cubalc boot
+#   ./out/cubalc run ... all|any|miss|hard|bag|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt HEN_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_HEN_REQUIRE · synthetic CUBALC_HEN_* keys
+#
+# Edges: SYS ENV SET for probes (export host CUBALC_ARG* dead W1);
+#   NEEDENVS/NEEDENVANY miss exit_code 0; PRINT clobber ENVHAVE; WRITE NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_hasenv_contract_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_hasenv_contract -- boot|all|any|miss|hard|bag|form|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_HEN_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "HEN_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sum_v = 0
+LET sum_n = 0
+LET stem_s = ""
+LET flag_n = 0
+LET miss_n = 0
+LET have_n = 0
+
+ONEOF ACTION "boot", "all", "any", "miss", "hard", "bag", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "all" THEN
+    LET op = "all"
+  WHEN "any" THEN
+    LET op = "any"
+  WHEN "miss" THEN
+    LET op = "miss"
+  WHEN "hard" THEN
+    LET op = "hard"
+  WHEN "bag" THEN
+    LET op = "bag"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-hen\",\"schema\":\"cubalc.svc_hasenv_contract.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"want_filter\":\"host_env\",\"label\":\"hen\",\"cfg\":{\"surface\":\"HASENVALL,NEEDENVS,HASENVANY,NEEDENVANY,ENVHAVE,ENVMISS\",\"contract\":\"ALL SITE_ID+API_KEY · ANY REGION|ZONE\"}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"peer\":\"host_env\",\"n\":1}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "agent"
+  SYS EQS LAST "svc-hen"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_hasenv_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "hen"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "host_env"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASENVALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# all — HASENVALL full + partial
+SYS EQS op "all"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV UNSET CUBALC_HEN_SITE
+  SYS ENV UNSET CUBALC_HEN_KEY
+  SYS ENV SET CUBALC_HEN_SITE "cubeT"
+  HASENVALL CUBALC_HEN_SITE CUBALC_HEN_KEY
+  LET sum_v = LAST_N
+  LET have_n = HASENVALL_N
+  LET miss_n = ENVMISS_N
+  LET body = ENVHAVE
+  LET stem_s = ENVMISS
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  IF have_n == 1 THEN
+    LET score = score + 1
+  END
+  IF miss_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE body "CUBALC_HEN_SITE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE stem_s "CUBALC_HEN_KEY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ENV SET CUBALC_HEN_KEY "secret"
+  HASENVALL CUBALC_HEN_SITE CUBALC_HEN_KEY
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  IF HASENVALL_N == 2 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF ENVMISS_N == 0 THEN
+    LET score = score + 1
+  END
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "HASENVALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "SITE_ID"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "hen"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ENV UNSET CUBALC_HEN_SITE
+  SYS ENV UNSET CUBALC_HEN_KEY
+  IF score == 12 THEN
+    LET hit = 1
+    LET note_msg = "all ok"
+    LET admit_n = 1
+    LET find_n = have_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "all score"
+    FAIL "all score"
+    CLEAR_ERR
+  END
+  SYS CAT "all:2:al"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "all:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# any — HASENVANY partial location
+SYS EQS op "any"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV UNSET CUBALC_HEN_REGION
+  SYS ENV UNSET CUBALC_HEN_ZONE
+  SYS ENV UNSET CUBALC_HEN_SITE
+  SYS ENV SET CUBALC_HEN_SITE "cubeT"
+  HASENVANY CUBALC_HEN_REGION CUBALC_HEN_ZONE CUBALC_HEN_SITE
+  LET sum_v = LAST_N
+  LET have_n = HASENVANY_N
+  LET miss_n = ENVMISS_N
+  LET body = ENVHAVE
+  LET stem_s = ENVMISS
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF have_n == 1 THEN
+    LET score = score + 1
+  END
+  IF miss_n == 2 THEN
+    LET score = score + 1
+  END
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE body "CUBALC_HEN_SITE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE stem_s "CUBALC_HEN_REGION"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE stem_s "CUBALC_HEN_ZONE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ENV SET CUBALC_HEN_REGION "eu"
+  SYS ENV SET CUBALC_HEN_ZONE "z1"
+  HASENVANY CUBALC_HEN_REGION CUBALC_HEN_ZONE CUBALC_HEN_SITE
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  IF HASENVANY_N == 3 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASENVANY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "REGION"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "host_env"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ENV UNSET CUBALC_HEN_REGION
+  SYS ENV UNSET CUBALC_HEN_ZONE
+  SYS ENV UNSET CUBALC_HEN_SITE
+  IF score == 12 THEN
+    LET hit = 1
+    LET note_msg = "any ok"
+    LET admit_n = 1
+    LET find_n = have_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "any score"
+    FAIL "any score"
+    CLEAR_ERR
+  END
+  SYS CAT "any:1:an"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "any:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# miss — soft empty + sticky
+SYS EQS op "miss"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV UNSET CUBALC_HEN_A
+  SYS ENV UNSET CUBALC_HEN_B
+  HASENVALL
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASENVANY
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASENVALL CUBALC_HEN_A CUBALC_HEN_B
+  LET sum_v = LAST_N
+  LET miss_n = ENVMISS_N
+  LET sum_n = OK
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  IF miss_n == 2 THEN
+    LET score = score + 1
+  END
+  IF sum_n == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI "HASENVALL miss"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASENVANY CUBALC_HEN_A CUBALC_HEN_B
+  LET sum_v = LAST_N
+  LET flag_n = ENVMISS_N
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  IF flag_n == 2 THEN
+    LET score = score + 1
+  END
+  SYS HASI "HASENVANY miss"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "ENVMISS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "ENVHAVE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "hen"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 11 THEN
+    LET hit = 1
+    LET note_msg = "miss ok"
+    LET admit_n = 1
+    LET find_n = miss_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "miss score"
+    FAIL "miss score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE miss denied"
+    END
+  END
+  SYS CAT "miss:" miss_n ":ms"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "miss:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# hard — NEEDENVS / NEEDENVANY pass
+SYS EQS op "hard"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV SET CUBALC_HEN_SITE "s"
+  SYS ENV SET CUBALC_HEN_KEY "k"
+  NEEDENVS CUBALC_HEN_SITE CUBALC_HEN_KEY
+  LET sum_v = LAST_N
+  LET sum_n = OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF sum_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS ENV UNSET CUBALC_HEN_KEY
+  SYS ENV SET CUBALC_HEN_REGION "eu"
+  NEEDENVANY CUBALC_HEN_REGION CUBALC_HEN_ZONE
+  LET sum_v = LAST_N
+  LET sum_n = OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF sum_n == 1 THEN
+    LET score = score + 1
+  END
+  # soft ALL fails partial after hard ANY
+  HASENVALL CUBALC_HEN_SITE CUBALC_HEN_KEY
+  LET sum_v = LAST_N
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  HASENVANY CUBALC_HEN_REGION CUBALC_HEN_ZONE
+  LET sum_v = LAST_N
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "NEEDENVS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "NEEDENVANY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "API_KEY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "host_env"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ENV UNSET CUBALC_HEN_SITE
+  SYS ENV UNSET CUBALC_HEN_KEY
+  SYS ENV UNSET CUBALC_HEN_REGION
+  IF score >= 9 THEN
+    LET hit = 1
+    LET note_msg = "hard ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "hard score"
+    FAIL "hard score"
+    CLEAR_ERR
+  END
+  SYS CAT "hard:" score ":hd"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "hard:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# bag — CSV forms
+SYS EQS op "bag"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV SET CUBALC_HEN_A "1"
+  SYS ENV SET CUBALC_HEN_B "2"
+  HASENVALL "CUBALC_HEN_A,CUBALC_HEN_B"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASENVANY "CUBALC_HEN_A,CUBALC_HEN_X"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF HASENVANY_N == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE ENVMISS "CUBALC_HEN_X"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASENVALL "CUBALC_HEN_A
+CUBALC_HEN_B"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASENVALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASENVANY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "ANY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "hasenv_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "hen"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ENV UNSET CUBALC_HEN_A
+  SYS ENV UNSET CUBALC_HEN_B
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "bag ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "bag score"
+    FAIL "bag score"
+    CLEAR_ERR
+  END
+  SYS CAT "bag:1:bg"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "bag:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM discovery
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  HASFORM "HASENVALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "NEEDENVS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "HASENVANY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "NEEDENVANY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM HASENVALL
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASENVALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASENVANY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "ENVHAVE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "hasenv_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "hen"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:1:fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — plate + live dual contract (ALL secrets + ANY location)
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV SET CUBALC_HEN_SITE "gate"
+  SYS ENV SET CUBALC_HEN_KEY "gk"
+  SYS ENV SET CUBALC_HEN_ZONE "z9"
+  HASENVALL CUBALC_HEN_SITE CUBALC_HEN_KEY
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASENVANY CUBALC_HEN_REGION CUBALC_HEN_ZONE
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASENVALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASENVANY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "NEEDENVS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "ALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "host_env"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "hasenv_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ENV UNSET CUBALC_HEN_SITE
+  SYS ENV UNSET CUBALC_HEN_KEY
+  SYS ENV UNSET CUBALC_HEN_ZONE
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · ALL vs ANY
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV SET CUBALC_HEN_SITE "p"
+  SYS ENV UNSET CUBALC_HEN_KEY
+  HASENVALL CUBALC_HEN_SITE CUBALC_HEN_KEY
+  LET body = ENVHAVE
+  LET stem_s = ENVMISS
+  LET have_n = HASENVALL_N
+  LET sum_v = LAST_N
+  CLEAR_ERR
+  PRINT "probe-mark"
+  CLEAR_ERR
+  SYS HASLINE LAST "CUBALC_HEN_SITE"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE body "CUBALC_HEN_SITE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  IF have_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE stem_s "CUBALC_HEN_KEY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASENVANY CUBALC_HEN_SITE CUBALC_HEN_KEY
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "hasenv_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASENVANY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "ZONE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "host_env"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ENV UNSET CUBALC_HEN_SITE
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = have_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" have_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " have=" have_n " miss_n=" miss_n
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "hen report op=" op " score_hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

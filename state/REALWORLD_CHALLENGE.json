@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 322,
-  "program": "programs/realworld/svc_hasargany_contract_board.cubalc",
-  "theme": "HASARGANY/NEEDARGANY fleet any-of multi-arg contract",
-  "version": "1.15.832-usability",
+  "iter": 323,
+  "program": "programs/realworld/svc_hasenv_contract_board.cubalc",
+  "theme": "HASENVALL/HASENVANY fleet host-env multi-gate contract",
+  "version": "1.15.834-usability",
   "pass": true,
-  "prior_note": "iter 321 HASFLAGANY; this iter first realworld 1380 HASARGANY any-of twin of HASARGALL",
+  "prior_note": "iter 322 HASARGANY; this iter first realworld 1381 HASENVALL + 1382 HASENVANY host env",
   "tests": [
     {
       "name": "list",
@@ -15,25 +15,31 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate hay",
+      "cmd": "seed agent plate hen",
       "ok": true,
       "note": "boot"
     },
     {
+      "name": "all",
+      "cmd": "HASENVALL partial+full",
+      "ok": true,
+      "note": "all"
+    },
+    {
       "name": "any",
-      "cmd": "partial ARG0 among 0/1/2",
+      "cmd": "HASENVANY location any-of",
       "ok": true,
       "note": "any"
     },
     {
       "name": "miss",
-      "cmd": "empty + wrong index soft",
+      "cmd": "empty soft sticky ERR",
       "ok": true,
       "note": "miss"
     },
     {
       "name": "hard",
-      "cmd": "NEEDARGANY pass + ALL contrast",
+      "cmd": "NEEDENVS+NEEDENVANY pass",
       "ok": true,
       "note": "hard"
     },
@@ -44,26 +50,20 @@
       "note": "bag"
     },
     {
-      "name": "env",
-      "cmd": "CUBALC_CONFIG named env any-of",
-      "ok": true,
-      "note": "env"
-    },
-    {
       "name": "form",
-      "cmd": "HASFORM ANY/ALL",
+      "cmd": "HASFORM discovery",
       "ok": true,
       "note": "form"
     },
     {
       "name": "gate",
-      "cmd": "plate + live multi-source",
+      "cmd": "ALL secrets + ANY zone",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber ARGHAVE",
+      "cmd": "PRINT clobber ENVHAVE",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "hasargany PASS; CLI duals still red"
+      "note": "hasenvall/any PASS; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -5528,6 +5528,54 @@
       "title": "ARGHAVE bags store index strings not values",
       "detail": "ARGHAVE line is 0 not a.txt; peel values still need NTHARG/SYS ARG after admit. Agents must not treat ARGHAVE as path inventory.",
       "repro": "HASARGANY 0; ARGHAVE has 0; NTHARG 0 for path"
+    },
+    {
+      "id": "W682",
+      "severity": "high",
+      "area": "lang|needenv|exit",
+      "title": "NEEDENVS/NEEDENVANY miss leave process exit_code 0",
+      "detail": "Hard host-env gates sticky err + ok:false; exit_code/shell often 0 (NEEDFLAGANY/NEEDARGANY class). Soft HASENV* + EXIT n for agents.",
+      "repro": "NEEDENVANY REGION ZONE unset \u2192 exit_code 0"
+    },
+    {
+      "id": "W683",
+      "severity": "med",
+      "area": "lang|clear_err",
+      "title": "CLEAR_ERR after HASENV*/NEEDENV* clobbers LAST_N before score tests",
+      "detail": "Board first-fail: NEEDENVS; CLEAR_ERR; IF LAST_N==1 missed. Capture LET sum_v=LAST_N before CLEAR_ERR (W640 class).",
+      "repro": "NEEDENVS a b; CLEAR_ERR; IF LAST_N==1 # unreliable"
+    },
+    {
+      "id": "W684",
+      "severity": "low",
+      "area": "lang|hasenv|positive",
+      "title": "HASENVALL/ANY ENVHAVE/ENVMISS bags + CSV work",
+      "detail": "Positive: partial ALL splits bags; ANY hits one of REGION|ZONE|SITE; dual site contract ALL secrets + ANY location works.",
+      "repro": "HASENVALL SITE KEY partial; HASENVANY REGION ZONE SITE"
+    },
+    {
+      "id": "W685",
+      "severity": "med",
+      "area": "lang|hasenv|vs_all",
+      "title": "HASENVALL vs HASENVANY twin confusion for site env contracts",
+      "detail": "Secrets need ALL; location needs ANY. Agents copy one form for both and either over-block or under-block fleet admit.",
+      "repro": "HASENVALL REGION ZONE with only ZONE \u2192 fail; HASENVANY \u2192 hit"
+    },
+    {
+      "id": "W686",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers ENVHAVE after HASENVALL",
+      "detail": "Capture ENVHAVE/ENVMISS before PRINT.",
+      "repro": "HASENVALL a b; PRINT x; SYS HASLINE LAST SITE \u2192 0"
+    },
+    {
+      "id": "W687",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL (reconfirmed hen)",
+      "detail": "STATUS last line without $.",
+      "repro": "cat -A HEN STATUS"
     }
   ],
   "workarounds": [
@@ -5624,6 +5672,10 @@
     {
       "id": "WA-HAY",
       "note": "HASARGANY for ARG0|ENV any-of; capture ARGHAVE before PRINT; EXIT n after soft miss; NTHARG after admit for values"
+    },
+    {
+      "id": "WA-HEN",
+      "note": "ALL for secrets ANY for location; capture LAST_N/OK before CLEAR_ERR; EXIT n after soft miss; capture ENVHAVE before PRINT"
     }
   ],
   "language_gaps": [
@@ -5700,7 +5752,12 @@
     "ARGHAVE/ARGMISS split + named ENV",
     "NEEDARGANY miss exit_code 0 (W676)",
     "ANY vs ALL intake twin (W678)",
-    "ARGHAVE stores indices not values (W681)"
+    "ARGHAVE stores indices not values (W681)",
+    "HASENVALL/NEEDENVS multi host-env ALL (1381)",
+    "HASENVANY/NEEDENVANY multi host-env any-of (1382)",
+    "ENVHAVE/ENVMISS bags",
+    "NEEDENV* miss exit_code 0 (W682)",
+    "CLEAR_ERR clobbers LAST_N after env gates (W683)"
   ],
   "issues_faced": [
     "iter300: all board paths green; WRITE SNIP.txt multi-line works",
@@ -5744,9 +5801,11 @@
     "iter321: board 10/10 first pass; NEEDFLAGANY hard miss only documented not in-path",
     "iter321: selftest 561/759 hasflagany PASS; CLI duals still unknown form set",
     "iter322: board 10/10 first pass; NEEDARGANY hard miss exit_code 0 documented only",
-    "iter322: selftest 562/762 hasargany PASS; CLI duals still unknown form set"
+    "iter322: selftest 562/762 hasargany PASS; CLI duals still unknown form set",
+    "iter323: miss/hard first failed CLEAR_ERR ate LAST_N; fixed capture; board 10/10",
+    "iter323: selftest 564/767 hasenvall+hasenvany PASS; CLI duals still set"
   ],
-  "commit": "73c3a4fd",
-  "ts": "2026-08-10T23:13:59Z",
-  "board_commit": "73c3a4fd"
+  "commit": "pending",
+  "ts": "2026-08-10T23:39:57Z",
+  "board_commit": "pending"
 }
