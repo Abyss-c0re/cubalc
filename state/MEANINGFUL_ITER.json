@@ -1,18 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 820,
-  "version": "1.15.812-usability",
-  "item": "HASFLAGS / HASFLAGC soft flag-count probe",
-  "item_id": 820,
-  "title": "HASFLAGS · HASFLAGC · LISTFLAGS twin without bag clobber",
-  "commit": "9bbb03cad281269357ff88922204856ad22694a7",
-  "summary": "Soft 0|1 if flag count >= min (default 1); LISTFLAGS_N/HASFLAGS_N; proof 1359 PASS.",
+  "iter": 821,
+  "version": "1.15.813-usability",
+  "item": "ready_boot + cubalc init --ready",
+  "item_id": 821,
+  "title": "ready_boot · init --ready · NEEDREADY prove-gate scaffold",
+  "commit": "d75a554e4328576f9d12dc06fd76cee3ec33584b",
+  "summary": "INCLUDE ready_boot = agent_boot+NEEDREADY; init catalog n=12; doctor lib_ready_boot; READY need_libs; proofs 1361 PASS.",
   "proofs": [
-    "1359_hasflags PASS",
-    "1359_cli_hasflags PASS"
+    "1361_ready_boot PASS",
+    "1361_cli_init_ready PASS",
+    "1359_ready PASS",
+    "1358_cli_init_doctor PASS"
   ],
-  "when": "2026-08-10T19:15:25Z",
+  "when": "2026-08-10T19:30:15Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "9bbb03cad281269357ff88922204856ad22694a7",
-  "note": "HASFLAGS · HASFLAGC · FLAGC? · without LISTFLAGS bag clobber"
+  "sha": "d75a554e4328576f9d12dc06fd76cee3ec33584b",
+  "note": "twin of doctor_boot · completes READY triad with run -Y"
 }
