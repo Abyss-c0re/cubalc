@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 781,
-  "version": "1.15.808-usability",
-  "item": "doctor_boot + cubalc init --doctor",
-  "item_id": 817,
-  "title": "doctor_boot \u00b7 init --doctor \u00b7 lib_doctor_boot",
-  "commit": "8d88b4f79ce0ecb80d991d46ea0aef7ea0097853",
-  "summary": "INCLUDE agent_boot+NEEDDOCTOR scaffold; init n=11; doctor readiness. proof 1358 PASS.",
+  "iter": 782,
+  "version": "1.15.810-usability",
+  "item": "READY/NEEDREADY install prove checklist",
+  "item_id": 818,
+  "title": "READY|NEEDREADY \u00b7 cubalc ready \u00b7 ready.v1",
+  "commit": "f1945d2f5bf49e82e9bfa135237af9bf4699e82a",
+  "summary": "Install prove checklist forms+libs+DOCTOR without selftest soup. proof 1359 PASS.",
   "proofs": [
-    "1358_doctor_boot PASS",
-    "1358_cli_init_doctor PASS"
+    "1359_ready PASS",
+    "1359_cli_ready PASS"
   ],
-  "when": "2026-08-10T18:55:28Z",
+  "when": "2026-08-10T19:06:07Z",
   "agent": "meaningful_iter_10m",
-  "sha": "8d88b4f79ce0ecb80d991d46ea0aef7ea0097853",
-  "note": "INCLUDE doctor_boot \u00b7 cubalc init demo --doctor \u00b7 needdoctor"
+  "sha": "f1945d2f5bf49e82e9bfa135237af9bf4699e82a",
+  "note": "READY \u00b7 NEEDREADY \u00b7 cubalc ready \u00b7 READY_MISS bag"
 }
