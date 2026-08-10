@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 771,
-  "version": "1.15.798-usability",
-  "item": "HASMATCHTOPICS + NEED + COUNT topic filter gates",
-  "item_id": 807,
-  "title": "HASMATCHTOPICS|NEEDMATCHTOPICS|COUNTMATCHTOPICS · CLI duals · topicmatch.v1",
-  "commit": "d0e9eb084c84c62ef01ae88421fb36a15ef0e53b",
-  "summary": "topic filter presence/count gates dual of MATCHLIBS triad. proof 1348 PASS.",
+  "iter": 772,
+  "version": "1.15.799-usability",
+  "item": "NTHTOPIC + LASTTOPIC topic filter index duals",
+  "item_id": 808,
+  "title": "NTHTOPIC|LASTTOPIC · cubalc nthtopic|lasttopic · topicmatch.v1",
+  "commit": "97e5e0e21667dd7a6c57c7243a871d5294b018ac",
+  "summary": "0-based Nth/last matching topic dual of NTHLIB/LASTLIB; OR fallback. proof 1349 PASS.",
   "proofs": [
-    "1348_hasmatchtopics PASS",
-    "1348_cli_hasmatchtopics PASS"
+    "1349_nthtopic PASS",
+    "1349_cli_nthtopic PASS"
   ],
-  "when": "2026-08-10T16:19:03Z",
+  "when": "2026-08-10T16:28:07Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d0e9eb084c84c62ef01ae88421fb36a15ef0e53b",
-  "note": "has exit 0 always; need exit 1 on miss; count LAST_N"
+  "sha": "97e5e0e21667dd7a6c57c7243a871d5294b018ac",
+  "note": "needle p matches cap/plate/p2p/protect; chain GUIDE"
 }
