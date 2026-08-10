@@ -753,6 +753,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 723. ~~**`which` / SYS WHICH + `CUBALC_INCLUDE_PATH`**~~ **done** (project lib resolve for agents · doctor include_path_set/preload_set · dual of INCLUDE search).
 724. ~~**`cubalc cat` / `libs` + INCLUDE_PATH**~~ **done** (cat dumps project libs · libs catalogs include_path origin + dirs · agent discovery without FS browser).
 725. ~~**`CUBALC_REQUIRE_VERSION` / run `-R`**~~ **done** (host version floor without editing programs · fail plate before body · REQUIRE VERSION dual · env catalog).
+726. ~~**run plate `preload` names array**~~ **done** (JSON list of -I/CUBALC_PRELOAD short names · dual of includes paths · agents compare request vs loaded).
 
 ## Tick protocol
 

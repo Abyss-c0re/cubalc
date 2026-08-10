@@ -1849,18 +1849,36 @@ int main(int argc, char **argv) {
     }
     /* Fail-fast version floor before parse/run (agent host contract). */
     if (req_ver[0] && !run_version_ge(CUBALC_LANG_VERSION, req_ver)) {
+      char prej[512];
+      int pi;
+      size_t po = 0;
       free(expr_buf);
       if (devnull) fclose(devnull);
+      prej[po++] = '[';
+      for (pi = 0; pi < n_preload && po + 8 < sizeof prej; pi++) {
+        size_t j, sl = strlen(preload[pi]);
+        if (pi && po + 1 < sizeof prej) prej[po++] = ',';
+        if (po + 1 < sizeof prej) prej[po++] = '"';
+        for (j = 0; j < sl && po + 2 < sizeof prej; j++) {
+          char c = preload[pi][j];
+          if (c == '"' || c == '\\') { prej[po++] = '\\'; prej[po++] = c; }
+          else if ((unsigned char)c < 32) prej[po++] = ' ';
+          else prej[po++] = c;
+        }
+        if (po + 1 < sizeof prej) prej[po++] = '"';
+      }
+      if (po + 1 < sizeof prej) prej[po++] = ']';
+      prej[po] = 0;
       printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
              "\"err\":\"REQUIRE VERSION %s failed: have %s\","
              "\"require_version\":\"%s\",\"version\":\"%s\","
              "\"why_hint\":\"upgrade runtime · cubalc version · REQUIRE VERSION in-lang dual\","
-             "\"preload_n\":%d,\"include_path_n\":%d,"
+             "\"preload_n\":%d,\"preload\":%s,\"include_path_n\":%d,"
              "\"includes_n\":0,\"includes\":[],\"quiet\":%s,\"strict\":%s,"
              "\"exit_code\":1,\"halted\":false}\n",
              have_expr ? "<expr>" : (src_path ? src_path : "?"),
              req_ver, CUBALC_LANG_VERSION, req_ver, CUBALC_LANG_VERSION,
-             n_preload, n_ipath,
+             n_preload, prej, n_ipath,
              quiet ? "true" : "false", strict ? "true" : "false");
       return 1;
     }
@@ -2060,11 +2078,13 @@ int main(int argc, char **argv) {
         else whyesc[o++] = c;
       }
       whyesc[o] = 0;
-      /* includes JSON array from newline bag (LISTINCLUDES plate dual). */
+      /* includes JSON array from newline bag (LISTINCLUDES plate dual).
+       * preload JSON array of -I / CUBALC_PRELOAD names (requested, not paths). */
       {
-        char incj[768];
-        size_t io = 0;
+        char incj[768], prej[512];
+        size_t io = 0, po = 0;
         const char *ip = rr.includes;
+        int pi;
         incj[io++] = '[';
         while (*ip && io + 8 < sizeof incj) {
           const char *seg = ip;
@@ -2087,12 +2107,28 @@ int main(int argc, char **argv) {
         }
         if (io + 1 < sizeof incj) incj[io++] = ']';
         incj[io] = 0;
+        prej[po++] = '[';
+        for (pi = 0; pi < n_preload && po + 8 < sizeof prej; pi++) {
+          size_t j, sl = strlen(preload[pi]);
+          if (pi && po + 1 < sizeof prej) prej[po++] = ',';
+          if (po + 1 < sizeof prej) prej[po++] = '"';
+          for (j = 0; j < sl && po + 2 < sizeof prej; j++) {
+            char c = preload[pi][j];
+            if (c == '"' || c == '\\') { prej[po++] = '\\'; prej[po++] = c; }
+            else if ((unsigned char)c < 32) prej[po++] = ' ';
+            else prej[po++] = c;
+          }
+          if (po + 1 < sizeof prej) prej[po++] = '"';
+        }
+        if (po + 1 < sizeof prej) prej[po++] = ']';
+        prej[po] = 0;
         printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
                "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
                "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
                "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
                "\"why_hint\":\"%s\","
-               "\"quiet\":%s,\"strict\":%s,\"preload_n\":%d,\"include_path_n\":%d,"
+               "\"quiet\":%s,\"strict\":%s,"
+               "\"preload_n\":%d,\"preload\":%s,\"include_path_n\":%d,"
                "\"require_version\":\"%s\","
                "\"includes_n\":%d,\"includes\":%s,"
                "\"exit_code\":%d,\"halted\":%s}\n",
@@ -2101,7 +2137,7 @@ int main(int argc, char **argv) {
                CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc,
                whyesc,
                quiet ? "true" : "false", strict ? "true" : "false",
-               n_preload, n_ipath,
+               n_preload, prej, n_ipath,
                req_ver[0] ? req_ver : "",
                rr.includes_n, incj,
                rr.exit_code, rr.halted ? "true" : "false");
@@ -2780,6 +2816,7 @@ int main(int argc, char **argv) {
       {"cli_which_include_path", "programs/proof/1264_cli_which_include_path.sh", "which/SYS WHICH CUBALC_INCLUDE_PATH project libs"},
       {"cli_cat_libs_include_path", "programs/proof/1265_cli_cat_libs_include_path.sh", "cat/libs CUBALC_INCLUDE_PATH project lib discovery"},
       {"cli_require_version", "programs/proof/1266_cli_require_version.sh", "run -R / CUBALC_REQUIRE_VERSION host version floor"},
+      {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
