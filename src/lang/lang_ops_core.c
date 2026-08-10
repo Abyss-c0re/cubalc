@@ -2736,6 +2736,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"SNIPRUN", "SNIPRUN alias of RUNSNIP"},
       {"TOPIC", "TOPIC|TOPICCARD [topic] — one plate tips+forms+snip · dual of cubalc topic"},
       {"TOPICCARD", "TOPICCARD alias of TOPIC"},
+      {"GUIDE", "GUIDE|PLAYGUIDE [topic] — full playbook plate hint+related+tips+forms+snip · dual of cubalc guide"},
+      {"PLAYGUIDE", "PLAYGUIDE alias of GUIDE"},
       {"LISTTOPICS", "LISTTOPICS|TOPICS — bag of discovery topics · dual of cubalc topics"},
       {"HASTOPIC", "HASTOPIC name — soft 0|1 if topic known · dual of HASFORM for topics"},
       {"NEEDTOPIC", "NEEDTOPIC name — fail-fast if topic unknown"},
@@ -39056,6 +39058,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"general", "TOPICHINT"},
       {"general", "RELATEDTOPIC"},
       {"general", "FORMTOPICS"},
+      {"general", "GUIDE"},
       {"general", "WHY"},
       {"general", "CLEAR_ERR"},
       {"general", "INCLUDE"},
@@ -39071,6 +39074,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"cap", "REQUIRE FORM"},
       {"cap", "RELATEDTOPIC"},
       {"cap", "FORMTOPICS"},
+      {"cap", "GUIDE"},
       {"cap", "TIPS"},
       {"cap", "FORMSFOR"},
       {"fat", "VARROOM"},
@@ -39235,10 +39239,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NEEDTOPIC", "HASTOPIC"}, {"NEEDTOPIC", "LISTTOPICS"},
       {"TOPIC", "RELATEDTOPIC"}, {"TOPIC", "TOPICHINT"}, {"TOPIC", "TIPS"},
       {"TOPIC", "FORMSFOR"}, {"TOPIC", "SNIP"}, {"TOPIC", "LISTTOPICS"},
-      {"TOPIC", "FORMTOPICS"},
+      {"TOPIC", "FORMTOPICS"}, {"TOPIC", "GUIDE"},
+      {"GUIDE", "TOPIC"}, {"GUIDE", "TOPICHINT"}, {"GUIDE", "RELATEDTOPIC"},
+      {"GUIDE", "TIPS"}, {"GUIDE", "FORMSFOR"}, {"GUIDE", "SNIP"}, {"GUIDE", "RUNSNIP"},
       {"FORMTOPICS", "FORMSFOR"}, {"FORMTOPICS", "FORMHINT"}, {"FORMTOPICS", "RELATED"},
       {"FORMTOPICS", "TOPIC"}, {"FORMTOPICS", "TOPICHINT"}, {"FORMTOPICS", "LISTTOPICS"},
+      {"FORMTOPICS", "GUIDE"},
       {"FORMSFOR", "FORMTOPICS"}, {"FORMHINT", "FORMTOPICS"}, {"RELATED", "FORMTOPICS"},
+      {"TOPICHINT", "GUIDE"}, {"RELATEDTOPIC", "GUIDE"}, {"TIPS", "GUIDE"},
       /* lib / include */
       {"INCLUDE", "LISTLIBS"}, {"INCLUDE", "HASLIB"}, {"INCLUDE", "MATCHLIBS"},
       {"INCLUDE", "PICKLIB"}, {"INCLUDE", "RECIPE"}, {"INCLUDE", "CHECKDEPS"},
@@ -39744,11 +39752,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"general", "VERSION"}, {"general", "STATUS"}, {"general", "IDENTITY"},
       {"general", "TIPS"}, {"general", "FORMSFOR"}, {"general", "SNIP"},
       {"general", "TOPIC"}, {"general", "TOPICHINT"}, {"general", "RELATEDTOPIC"},
-      {"general", "FORMTOPICS"}, {"general", "WHY"}, {"general", "INCLUDE"},
+      {"general", "FORMTOPICS"}, {"general", "GUIDE"}, {"general", "WHY"},
+      {"general", "INCLUDE"},
       {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"},
       {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"}, {"cap", "LISTFORMS"},
       {"cap", "RELATED"}, {"cap", "RELATEDTOPIC"}, {"cap", "FORMTOPICS"},
-      {"cap", "FORMSFOR"}, {"cap", "SNIP"}, {"cap", "TOPIC"},
+      {"cap", "GUIDE"}, {"cap", "FORMSFOR"}, {"cap", "SNIP"}, {"cap", "TOPIC"},
       {"fat", "VARROOM"}, {"fat", "HASVARROOM"}, {"fat", "NEEDVARROOM"},
       {"fat", "REMAIN_MS"}, {"fat", "HAS_TIME"}, {"fat", "NEEDTIME"}, {"fat", "STATUS"},
       {"plate", "SETP"}, {"plate", "GETP"}, {"plate", "NEEDP"}, {"plate", "DEFAULTP"},
@@ -39910,6 +39919,234 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
     if (vm->trace)
       fprintf(vm->trace, "# topic %s tips=%d forms=%d snip_lines=%d\n", tup, nt, nf, ns);
+    bump(vm);
+    return 1;
+  }
+
+  /* GUIDE|PLAYGUIDE [topic] — full discovery playbook plate.
+   * Usability: TOPIC triad + TOPICHINT + RELATEDTOPIC in one call so agents after
+   * ERRTIPS/FORMTOPICS skip multi-form glue. LAST=cubalc.guide.v1 JSON.
+   * Bags: GUIDE_HINT · GUIDE_RELATED · GUIDE_TIPS · GUIDE_FORMS · GUIDE_SNIP. */
+  if (kw(&L->cur,"GUIDE")||kw(&L->cur,"PLAYGUIDE")||kw(&L->cur,"TOPICGUIDE")||
+      kw(&L->cur,"AGENTGUIDE")||kw(&L->cur,"FULLTOPIC")||kw(&L->cur,"TOPICBOARD")||
+      kw(&L->cur,"PLAYBOOKTOPIC")||kw(&L->cur,"GUIDE_TOPIC")){
+    static const struct { const char *id; const char *hint; } hints[] = {
+      {"general", "install/doctor/init surface · VERSION STATUS IDENTITY"},
+      {"cap", "HASFORM/NEEDFORMS capability floor · FORMHINT · run -C"},
+      {"fat", "VARROOM/REMAIN_MS fat nest budget · fat_session · run -T"},
+      {"plate", "SETP/NEEDP plate agent JSON · plate_session · PRETTYP"},
+      {"p2p", "SMX SERVE/DIAL mesh · CUBALC_SMX_KEY · P2P_SOFT/TIMEOUT"},
+      {"run", "ASSERT/EXPECT/WHY run probes · ERRTIPS · CLEAR_ERR"},
+      {"lib", "LISTLIBS/RECIPE INCLUDE discovery · MATCHLIBS · checkdeps"},
+      {"protect", "HOLD_FLASH/protect status · CORE_PROTECT · device/mesh-join only"},
+    };
+    static const struct { const char *topic; const char *rel; } rels[] = {
+      {"general", "cap"}, {"general", "lib"}, {"general", "run"}, {"general", "plate"},
+      {"cap", "general"}, {"cap", "run"}, {"cap", "lib"}, {"cap", "fat"},
+      {"fat", "plate"}, {"fat", "run"}, {"fat", "cap"}, {"fat", "general"},
+      {"plate", "fat"}, {"plate", "run"}, {"plate", "general"}, {"plate", "lib"},
+      {"p2p", "protect"}, {"p2p", "run"}, {"p2p", "general"}, {"p2p", "lib"},
+      {"run", "general"}, {"run", "cap"}, {"run", "plate"}, {"run", "fat"},
+      {"lib", "general"}, {"lib", "cap"}, {"lib", "plate"}, {"lib", "run"},
+      {"protect", "p2p"}, {"protect", "general"}, {"protect", "run"}, {"protect", "lib"},
+    };
+    static const struct { const char *topic; const char *tip; } tips[] = {
+      {"general", "cubalc doctor — install readiness plate"},
+      {"general", "cubalc init --list — scaffold catalog"},
+      {"general", "cubalc search KEYWORD — forms/libs/examples"},
+      {"general", "INCLUDE agent_boot — REQUIRE VERSION + VERSION plate"},
+      {"general", "HOLD_FLASH device/mesh-join only · default 1"},
+      {"cap", "INCLUDE cap_boot — agent_boot + form_guard"},
+      {"cap", "cubalc init --cap · HASFORM · NEEDFORMS · FORMHINT"},
+      {"cap", "cubalc run -C FORMS · CUBALC_REQUIRE_FORMS floor"},
+      {"cap", "LISTFORMS prefix · COUNTFORMS · cubalc listforms"},
+      {"fat", "INCLUDE fat_session durable nest"},
+      {"fat", "cubalc init --fat-session · NEED_VARROOM · time_guard"},
+      {"fat", "cubalc run -T ms · REMAIN_MS · VARROOM"},
+      {"plate", "INCLUDE plate_session · SETP NEEDP SAVEPLATE"},
+      {"plate", "cubalc plate get|set|uniform · PRETTYP"},
+      {"plate", "cubalc init --plate plate_uniform starter"},
+      {"p2p", "export CUBALC_SMX_KEY hex64 · SMX SERVE/DIAL"},
+      {"p2p", "CUBALC_P2P_TIMEOUT · CUBALC_P2P_SOFT · smx-bus prove-tcp"},
+      {"run", "cubalc run -q -e CODE · -I -L -R -C -T -s"},
+      {"run", "WHY / why_hint after ASSERT or sticky LAST_ERR"},
+      {"lib", "cubalc libs|recipe|checkdeps · INCLUDE MATCH|NEWEST"},
+      {"lib", "SORTLIBS · FRESHLIBS · LIBAGE · HASFRESH"},
+      {"protect", "cubalc protect status · docs/CORE_PROTECT.md"},
+    };
+    static const struct { const char *topic; const char *form; } forms[] = {
+      {"general", "VERSION"}, {"general", "STATUS"}, {"general", "GUIDE"},
+      {"general", "TOPIC"}, {"general", "TOPICHINT"}, {"general", "RELATEDTOPIC"},
+      {"general", "TIPS"}, {"general", "FORMSFOR"}, {"general", "INCLUDE"},
+      {"cap", "HASFORM"}, {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"},
+      {"cap", "RELATED"}, {"cap", "GUIDE"}, {"cap", "FORMSFOR"},
+      {"fat", "VARROOM"}, {"fat", "REMAIN_MS"}, {"fat", "NEEDVARROOM"}, {"fat", "GUIDE"},
+      {"plate", "SETP"}, {"plate", "GETP"}, {"plate", "NEEDP"}, {"plate", "PRETTYP"},
+      {"p2p", "SMX"}, {"p2p", "SERVE"}, {"p2p", "DIAL"},
+      {"run", "ASSERT"}, {"run", "EXPECT"}, {"run", "WHY"}, {"run", "ERRTIPS"},
+      {"lib", "LISTLIBS"}, {"lib", "RECIPE"}, {"lib", "CHECKDEPS"}, {"lib", "INCLUDE"},
+      {"protect", "HOLD_FLASH"}, {"protect", "STATUS"}, {"protect", "TIPS"},
+    };
+    static const struct { const char *topic; const char *src; } snips[] = {
+      {"general", "VERSION\nSTATUS\nPRINT \"version\" VERSION\nPASS\n"},
+      {"cap",
+       "HASFORM SORTLIBS\nASSERT LAST_N == 1\nFORMHINT SORTLIBS\nPRINT LAST\nPASS\n"},
+      {"fat", "VARROOM\nHASVARROOM 8\nASSERT LAST_N == 1\nREMAIN_MS\nPASS\n"},
+      {"plate",
+       "LET PLATE = \"{\\\"n\\\":0}\"\nSETP \"status\" \"ready\"\nNEEDP \"status\"\nPASS\n"},
+      {"p2p", "TIPS p2p\nPRINT LAST\nFORMSFOR p2p\nPRINT LAST\nPASS\n"},
+      {"run", "EXPECT 1 == 1\nWHY\nCLEAR_ERR\nPASS\n"},
+      {"lib", "HASLIB agent_boot\nASSERT LAST_N == 1\nRECIPE agent_boot\nPASS\n"},
+      {"protect", "HOLD_FLASH\nVERSION\nTIPS protect\nPASS\n"},
+    };
+    char topic[32], tup[32];
+    char tips_bag[2048], forms_bag[1024], rel_bag[256];
+    char line[CUBALC_HOST_STR_MAX];
+    char esc_tips[2400], esc_forms[1200], esc_snip[1600], esc_hint[320], esc_rel[400];
+    const char *src = NULL, *hint = NULL;
+    size_t k, o, eo;
+    int i, nt = 0, nf = 0, nr = 0, ns = 0, lines = 0;
+    const char *p;
+    int n_tips = (int)(sizeof tips / sizeof tips[0]);
+    int n_forms = (int)(sizeof forms / sizeof forms[0]);
+    int n_snips = (int)(sizeof snips / sizeof snips[0]);
+    int n_hints = (int)(sizeof hints / sizeof hints[0]);
+    int n_rels = (int)(sizeof rels / sizeof rels[0]);
+    lex_next(L);
+    topic[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(topic, sizeof topic, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0]) {
+        snprintf(topic, sizeof topic, "%s", vv->sval);
+        lex_next(L);
+      } else if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(topic, sizeof topic, "%s", vm->last_str);
+        lex_next(L);
+      } else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+                   kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
+                   kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
+        snprintf(topic, sizeof topic, "%s", L->cur.text);
+        lex_next(L);
+      }
+    }
+    if (!topic[0])
+      snprintf(topic, sizeof topic, "%s", "general");
+    for (k = 0; topic[k] && k + 1 < sizeof tup; k++) {
+      char c = topic[k];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      tup[k] = c;
+    }
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    for (i = 0; i < n_hints; i++) {
+      if (!strcmp(hints[i].id, tup)) { hint = hints[i].hint; break; }
+    }
+    rel_bag[0] = 0; o = 0;
+    for (i = 0; i < n_rels; i++) {
+      size_t ln;
+      if (strcmp(rels[i].topic, tup) != 0) continue;
+      ln = strlen(rels[i].rel);
+      if (o && o + 1 < sizeof rel_bag) rel_bag[o++] = '\n';
+      if (o + ln < sizeof rel_bag) { memcpy(rel_bag + o, rels[i].rel, ln); o += ln; }
+      rel_bag[o] = 0; nr++;
+    }
+    tips_bag[0] = 0; o = 0;
+    for (i = 0; i < n_tips; i++) {
+      size_t ln;
+      if (strcmp(tips[i].topic, tup) != 0) continue;
+      ln = strlen(tips[i].tip);
+      if (o && o + 1 < sizeof tips_bag) tips_bag[o++] = '\n';
+      if (o + ln < sizeof tips_bag) { memcpy(tips_bag + o, tips[i].tip, ln); o += ln; }
+      tips_bag[o] = 0; nt++;
+    }
+    forms_bag[0] = 0; o = 0;
+    for (i = 0; i < n_forms; i++) {
+      size_t ln;
+      if (strcmp(forms[i].topic, tup) != 0) continue;
+      ln = strlen(forms[i].form);
+      if (o && o + 1 < sizeof forms_bag) forms_bag[o++] = '\n';
+      if (o + ln < sizeof forms_bag) { memcpy(forms_bag + o, forms[i].form, ln); o += ln; }
+      forms_bag[o] = 0; nf++;
+    }
+    for (i = 0; i < n_snips; i++) {
+      if (!strcmp(snips[i].topic, tup)) { src = snips[i].src; break; }
+    }
+    if (!src) src = "";
+    for (p = src; *p; p++) if (*p == '\n') lines++;
+    if (lines == 0 && src[0]) lines = 1;
+    ns = lines;
+    if (!hint || (nt == 0 && nf == 0 && !src[0])) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "GUIDE: unknown topic — GUIDE general|cap|fat|plate|p2p|run|lib|protect");
+      var_set_str(vm, "ERR",
+                  "GUIDE: unknown topic — GUIDE general|cap|fat|plate|p2p|run|lib|protect");
+      bump(vm);
+      return 1;
+    }
+#define CUBALC_GUIDE_ESC(dst, srcv) do { \
+      eo = 0; \
+      for (p = (srcv); *p && eo + 2 < sizeof(dst); p++) { \
+        if (*p == '"' || *p == '\\') { (dst)[eo++] = '\\'; (dst)[eo++] = *p; } \
+        else if (*p == '\n') { (dst)[eo++] = '\\'; (dst)[eo++] = 'n'; } \
+        else if ((unsigned char)*p < 0x20) continue; \
+        else (dst)[eo++] = *p; \
+      } \
+      (dst)[eo] = 0; \
+    } while (0)
+    CUBALC_GUIDE_ESC(esc_hint, hint);
+    CUBALC_GUIDE_ESC(esc_rel, rel_bag);
+    CUBALC_GUIDE_ESC(esc_tips, tips_bag);
+    CUBALC_GUIDE_ESC(esc_forms, forms_bag);
+    CUBALC_GUIDE_ESC(esc_snip, src);
+#undef CUBALC_GUIDE_ESC
+    snprintf(line, sizeof line,
+      "{\"schema\":\"cubalc.guide.v1\",\"ok\":true,\"topic\":\"%s\","
+      "\"hint\":\"%s\",\"related_n\":%d,\"tips_n\":%d,\"forms_n\":%d,\"snip_lines\":%d,"
+      "\"related\":\"%s\",\"tips\":\"%s\",\"forms\":\"%s\",\"snip\":\"%s\","
+      "\"version\":\"%s\","
+      "\"note\":\"full playbook · TOPICHINT+RELATEDTOPIC+TIPS+FORMSFOR+SNIP · dual of cubalc guide\"}",
+      tup, esc_hint, nr, nt, nf, ns, esc_rel, esc_tips, esc_forms, esc_snip,
+      CUBALC_LANG_VERSION);
+    var_set_str(vm, "LAST", line);
+    var_set_str(vm, "GUIDE", line);
+    var_set_str(vm, "PLAYGUIDE", line);
+    var_set_str(vm, "GUIDE_HINT", hint);
+    var_set_str(vm, "GUIDE_RELATED", rel_bag);
+    var_set_str(vm, "GUIDE_TIPS", tips_bag);
+    var_set_str(vm, "GUIDE_FORMS", forms_bag);
+    var_set_str(vm, "GUIDE_SNIP", src);
+    var_set_str(vm, "TOPIC_NAME", tup);
+    var_set_str(vm, "TOPIC_HINT", hint);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", line);
+    vm->last_n = nt + nf + nr;
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "GUIDE_RELATED_N", nr);
+    var_set_num(vm, "GUIDE_TIPS_N", nt);
+    var_set_num(vm, "GUIDE_FORMS_N", nf);
+    var_set_num(vm, "GUIDE_SNIP_N", ns);
+    var_set_num(vm, "OK", 1);
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", "cubalc.guide.v1");
+    if (vm->trace)
+      fprintf(vm->trace, "# guide %s related=%d tips=%d forms=%d\n", tup, nr, nt, nf);
     bump(vm);
     return 1;
   }
