@@ -869,6 +869,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 839. ~~**`cubalc run -M` / `--mkdir DIR`**~~ **done** (mkdir -p before cwd/body · SYS MKDIR dual · workdir scaffold · proof 1379).
 840. ~~**`HASARGANY` / `NEEDARGANY` + CLI**~~ **done** (any-of multi CUBALC_ARGn gate · HASARGALL twin · cubalc hasargany · proof 1380).
 841. ~~**`HASENVALL` / `NEEDENVS` + CLI**~~ **done** (multi host-env ALL gate · ENVMISS bag · cubalc hasenvall|needenvs · envgate.v1 · proof 1381).
+842. ~~**`HASENVANY` / `NEEDENVANY` + CLI**~~ **done** (any-of multi host-env gate · HASENVALL twin · cubalc hasenvany|needenvany · proof 1382).
 
 ## Tick protocol
 

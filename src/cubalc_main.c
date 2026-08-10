@@ -4399,6 +4399,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"hasenvall", "programs/proof/1381_hasenvall.cubalc", "HASENVALL multi host-env ALL gate"},
       {"cli_hasenvall", "programs/proof/1381_cli_hasenvall.sh", "HASENVALL/NEEDENVS forms + CLI"},
       {"cli_envgate", "programs/proof/1381_cli_envgate.sh", "cubalc hasenvall|needenvs CLI duals"},
+      {"hasenvany", "programs/proof/1382_hasenvany.cubalc", "HASENVANY multi host-env any-of gate"},
+      {"cli_hasenvany", "programs/proof/1382_cli_hasenvany.sh", "HASENVANY/NEEDENVANY forms + CLI"},
       {"cliinfo", "programs/proof/1364_cliinfo.cubalc", "CLIINFO cubalc.cli.v1 CLI surface plate"},
       {"cli_cliinfo", "programs/proof/1364_cli_cliinfo.sh", "cubalc cliinfo plate + CLIINFO forms"},
       {"cli_boot", "programs/proof/1365_cli_boot.cubalc", "INCLUDE cli_boot agent HELPFLAG+CLIINFO"},
@@ -6652,8 +6654,14 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       /* multi host-env ALL gate (HASARGALL twin for process env) */
       {"HASENVALL", "NEEDENVS"}, {"HASENVALL", "SYS HASENV"}, {"HASENVALL", "REQUIRE ENV"},
       {"HASENVALL", "ENVMISS"}, {"HASENVALL", "ENVHAVE"}, {"HASENVALL", "HASARGALL"},
+      {"HASENVALL", "HASENVANY"}, {"HASENVALL", "NEEDENVANY"},
       {"NEEDENVS", "HASENVALL"}, {"NEEDENVS", "REQUIRE ENV"}, {"NEEDENVS", "SYS HASENV"},
       {"NEEDENVS", "USAGE"}, {"NEEDENVS", "ENVMISS"}, {"NEEDENVS", "SYS ENV SET"},
+      {"NEEDENVS", "NEEDENVANY"},
+      {"HASENVANY", "NEEDENVANY"}, {"HASENVANY", "HASENVALL"}, {"HASENVANY", "SYS HASENV"},
+      {"HASENVANY", "ENVHAVE"}, {"HASENVANY", "ENVMISS"}, {"HASENVANY", "HASARGANY"},
+      {"NEEDENVANY", "HASENVANY"}, {"NEEDENVANY", "NEEDENVS"}, {"NEEDENVANY", "REQUIRE ENV"},
+      {"NEEDENVANY", "USAGE"}, {"NEEDENVANY", "ENVMISS"}, {"NEEDENVANY", "SYS ENV SET"},
       {"HASARGC", "HASARGALL"}, {"HASARGC", "HASARG"}, {"HASARGC", "NEEDARGS"},
     };
     const char *name = (argc > 2 && argv[2][0]) ? argv[2] : "";
@@ -11894,20 +11902,34 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
   if (strcmp(cmd, "hasenvall") == 0 || strcmp(cmd, "hasallenv") == 0 ||
       strcmp(cmd, "needenvs") == 0 || strcmp(cmd, "requireenvs") == 0 ||
       strcmp(cmd, "mustenvs") == 0 || strcmp(cmd, "needenvall") == 0 ||
-      strcmp(cmd, "requireenvall") == 0) {
-    /* Usability: CLI dual of HASENVALL/NEEDENVS multi host-env gates.
+      strcmp(cmd, "requireenvall") == 0 ||
+      strcmp(cmd, "hasenvany") == 0 || strcmp(cmd, "hasanyenv") == 0 ||
+      strcmp(cmd, "needenvany") == 0 || strcmp(cmd, "requireenvany") == 0 ||
+      strcmp(cmd, "mustenvany") == 0 || strcmp(cmd, "needanyenv") == 0) {
+    /* Usability: CLI dual of HASENVALL/NEEDENVS · HASENVANY/NEEDENVANY.
      *   cubalc hasenvall HOME USER PATH
      *   cubalc needenvs CUBALC_STATE HOME
+     *   cubalc hasenvany DB_URL REDIS_URL
+     *   cubalc needenvany HOST PORT
      * Schema cubalc.envgate.v1 */
+    int is_any = (strcmp(cmd, "hasenvany") == 0 || strcmp(cmd, "hasanyenv") == 0 ||
+                  strcmp(cmd, "needenvany") == 0 || strcmp(cmd, "requireenvany") == 0 ||
+                  strcmp(cmd, "mustenvany") == 0 || strcmp(cmd, "needanyenv") == 0);
     int hard = (strcmp(cmd, "needenvs") == 0 || strcmp(cmd, "requireenvs") == 0 ||
                 strcmp(cmd, "mustenvs") == 0 || strcmp(cmd, "needenvall") == 0 ||
-                strcmp(cmd, "requireenvall") == 0);
+                strcmp(cmd, "requireenvall") == 0 ||
+                strcmp(cmd, "needenvany") == 0 || strcmp(cmd, "requireenvany") == 0 ||
+                strcmp(cmd, "mustenvany") == 0 || strcmp(cmd, "needanyenv") == 0);
     char src[1200];
     char names[32][96];
     int nname = 0, i, ai, hit = 0;
     size_t o = 0;
     cubalc_run_result rr;
-    const char *form = hard ? "NEEDENVS" : "HASENVALL";
+    const char *form;
+    if (is_any)
+      form = hard ? "NEEDENVANY" : "HASENVANY";
+    else
+      form = hard ? "NEEDENVS" : "HASENVALL";
     for (i = 2; i < argc && nname < 32; i++) {
       if (!argv[i] || !argv[i][0]) continue;
       if (!strcmp(argv[i], "--")) break;
@@ -11915,7 +11937,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     }
     if (nname == 0) {
       fprintf(stderr,
-              "usage: cubalc hasenvall|needenvs <ENV> [ENV…]\n");
+              "usage: cubalc hasenvall|needenvs <ENV> [ENV…]\n"
+              "       cubalc hasenvany|needenvany <ENV> [ENV…]\n");
       printf("{\"schema\":\"cubalc.envgate.v1\",\"ok\":false,\"cmd\":\"%s\","
              "\"err\":\"need names\",\"version\":\"%s\"}\n",
              cmd, CUBALC_LANG_VERSION);
@@ -11945,12 +11968,12 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     else
       hit = (rr.ok && !rr.err[0] && rr.last_print[0] == '1') ? 1 : 0;
     printf("{\"schema\":\"cubalc.envgate.v1\",\"ok\":%s,\"cmd\":\"%s\","
-           "\"mode\":\"%s\",\"any\":false,\"n\":%d,\"version\":\"%s\","
-           "\"note\":\"CLI dual of %s · multi host env ALL gate\","
+           "\"mode\":\"%s\",\"any\":%s,\"n\":%d,\"version\":\"%s\","
+           "\"note\":\"CLI dual of %s · multi host env %s gate\","
            "\"names\":[",
            hit ? "true" : "false", cmd,
-           hard ? "need" : "has", nname,
-           CUBALC_LANG_VERSION, form);
+           hard ? "need" : "has", is_any ? "true" : "false", nname,
+           CUBALC_LANG_VERSION, form, is_any ? "ANY" : "ALL");
     for (ai = 0; ai < nname; ai++) {
       char esc[120];
       size_t e = 0, k;
@@ -20106,6 +20129,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    hasargall|needargs n|name… [-- args]  multi arg ALL gate (cubalc.arggate.v1)\n"
       "    hasargany|needargany n|name… [-- args]  multi arg ANY gate (cubalc.arggate.v1)\n"
       "    hasenvall|needenvs ENV…          multi host-env ALL gate (cubalc.envgate.v1)\n"
+      "    hasenvany|needenvany ENV…        multi host-env ANY gate (cubalc.envgate.v1)\n"
       "    argmap|argkv [-- args…]     raw argv i=value bag (cubalc.argmap.v1)\n"
       "    findarg|argindex <tok> [-- args…]  token→index reverse NTHARG (cubalc.findarg.v1)\n"
       "    afterarg|nextarg <tok> [-- args…]  peel argv after token (cubalc.afterarg.v1)\n"
