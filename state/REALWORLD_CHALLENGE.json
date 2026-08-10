@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 280,
-  "program": "programs/realworld/svc_pruneflat_scrub_board.cubalc",
-  "theme": "PRUNEFLAT nest noise/secret write-back scrub",
-  "version": "1.15.729-usability",
+  "iter": 281,
+  "program": "programs/realworld/svc_incflat_counter_board.cubalc",
+  "theme": "INCFLAT bulk nest int counter bump",
+  "version": "1.15.734-usability",
   "pass": true,
-  "prior_note": "iter 279 FLATKV digest; this iter first realworld 1215 PRUNEFLAT/KEEPONLYFLAT/DELFLAT",
+  "prior_note": "iter 280 PRUNEFLAT scrub; this iter first realworld 1219 INCFLAT/DECFLAT/BUMPFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,61 @@
     },
     {
       "name": "boot",
-      "cmd": "seed tmp+secret+debug",
+      "cmd": "seed counters+peer",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "prune",
-      "cmd": "PRUNEFLAT tmp+debug residual",
+      "name": "bump",
+      "cmd": "INCFLAT hits x2",
       "ok": true,
-      "note": "prune"
+      "note": "bump"
     },
     {
-      "name": "keep",
-      "cmd": "KEEPONLYFLAT cfg project",
+      "name": "delta",
+      "cmd": "port +5",
       "ok": true,
-      "note": "keep"
-    },
-    {
-      "name": "secret",
-      "cmd": "sec substring scrub",
-      "ok": true,
-      "note": "secret"
+      "note": "delta"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER tmp+tmp_peer",
+      "cmd": "FROM PEER stats",
       "ok": true,
       "note": "peer"
     },
     {
+      "name": "dec",
+      "cmd": "DECFLAT errs",
+      "ok": true,
+      "note": "dec"
+    },
+    {
+      "name": "all",
+      "cmd": "empty needle all ints",
+      "ok": true,
+      "note": "all"
+    },
+    {
       "name": "soft",
-      "cmd": "ghost + empty needle",
+      "cmd": "ghost miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "share-safe no secret/debug",
+      "cmd": "hits floor",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "DELFLAT dropme",
+      "cmd": "BUMPFLAT +3",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "value miss + path sub",
+      "cmd": "hit substring + value miss",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +83,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; pruneflat PASS"
+      "note": "cli duals red; incflat PASS"
     }
   ],
   "weaknesses": [
@@ -3736,12 +3742,49 @@
       "title": "WRITE VAL/META omit trailing NL",
       "detail": "cat -A VAL ends without $ (W5 class).",
       "repro": "od -c VAL.txt"
+    },
+    {
+      "id": "W458",
+      "severity": "med",
+      "area": "lang|incflat",
+      "title": "INCFLAT needle is path substring \u2014 hit bumps hits_total and cfg.meta.hits",
+      "detail": "Needle hits/hit matches every path containing the token. Agents wanting a single counter need unique leaf names (hits_total only via full unique suffix).",
+      "repro": "INCFLAT hits \u2192 N=2 (hits_total + cfg.meta.hits)"
+    },
+    {
+      "id": "W459",
+      "severity": "low",
+      "area": "lang|incflat",
+      "title": "empty needle INCFLAT bumps all pure-int leaves only",
+      "detail": "Positive: strings/bools skipped. INCFLAT \"\" on a/b.c/s bumps a and b.c only.",
+      "repro": "INCFLAT \"\" leaves b.s string intact"
+    },
+    {
+      "id": "W460",
+      "severity": "low",
+      "area": "lang|incflat",
+      "title": "value needles soft-miss; path-only filter",
+      "detail": "INCFLAT 8080 does not match cfg.port value. Same class as PRUNEFLAT value miss.",
+      "repro": "INCFLAT 8080 \u2192 N=0"
+    },
+    {
+      "id": "W461",
+      "severity": "low",
+      "area": "lang|getp",
+      "title": "proof notes GETP strstr last-match on duplicate key names",
+      "detail": "INCFLAT proof documents avoid duplicate key names at different depths \u2014 GETP keeps last match. Realworld used unique hits_total vs hits under meta.",
+      "repro": "GETP hits with hits_total+cfg.meta.hits may surprise"
+    },
+    {
+      "id": "W462",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META omit trailing NL",
+      "detail": "cat -A VAL without final $ (W5 class).",
+      "repro": "cat -A VAL.txt"
     }
   ],
   "workarounds": [
-    "Do not late-read MODEFLAT_SRC \u2014 use MODEFLAT_FROM or pre-copy to var",
-    "Keep reverse-lookup values unique (no agent_job==role leaf)",
-    "PATHBYVAL x OR default.path for soft miss contract",
     "GETP path after PATHBYVAL for round-trip gate",
     "UNIQFLAT full key names (role not ro) for inventory scope",
     "HASLINE bag for value set membership gates",
@@ -3778,13 +3821,12 @@
     "FLATKV path must be exact nest root",
     "use unique path tokens for PRUNEFLAT not single letters",
     "TYPEP/HASP residual empty parents after prune",
-    "KEEPONLYFLAT for cfg.* share project then reload agent"
+    "KEEPONLYFLAT for cfg.* share project then reload agent",
+    "unique counter leaf names to avoid substring multi-bump",
+    "BUMPFLAT for single named counter + explicit delta",
+    "empty INCFLAT only when all-int inventory intended"
   ],
   "language_gaps": [
-    "SAMEVALFLAT alias",
-    "SETBYVAL then ALLEQFLAT for unify-and-check",
-    "UNIFORMFLAT LAST_N 0|1 one-shot equality",
-    "UNIFORM_PATH specials unusable near var cap",
     "CHECKFLAT alias for UNIFORMFLAT",
     "FIRSTUNEQFLAT LAST=path LAST_N=found",
     "PATHUNEQ alias",
@@ -3804,11 +3846,13 @@
     "PRUNEFLAT/KEEPONLYFLAT/DELFLAT write-back nest scrub",
     "path substring needles over-delete short tokens",
     "empty parent residual after child prune",
-    "LAST = full plate JSON after prune"
+    "LAST = full plate JSON after prune",
+    "INCFLAT/DECFLAT/BUMPFLAT bulk pure-int leaf bump",
+    "path substring needles multi-match counters",
+    "empty needle = all pure-int leaves",
+    "INCFLAT_DELTA/FROM/SRC specials"
   ],
   "issues_faced": [
-    "TYPEFLAT n matched agent path; used GETP for short keys",
-    "SYS EQS LASTFLATN_PATH hard-failed; used GETP meta.port",
     "GETP bool not EQS true; used TYPEFLAT kind",
     "GETP/GETFLAT role collided with nested cfg.role; renamed top key agent_role",
     "NTHFLATN port index depends on meta-before-cfg walk order",
@@ -3846,8 +3890,10 @@
     "iter279: avoided top-level host key (W445); used peer_host + site",
     "iter279: 10/10 green; flatkv/unflatkv round-trip; selftest cli duals still red",
     "iter280: alias DELFLAT c nuked 7 paths; fixed to dropme unique needle",
-    "iter280: 10/10 green after alias fix; empty tmp:{} residual documented"
+    "iter280: 10/10 green after alias fix; empty tmp:{} residual documented",
+    "iter281: 11 board actions green first pass; hits substring multi-leaf expected",
+    "iter281: selftest cli duals still red; incflat proof green"
   ],
-  "commit": "7d61a546",
-  "ts": "2026-08-10T02:49:38Z"
+  "commit": "pending",
+  "ts": "2026-08-10T03:38:54Z"
 }
