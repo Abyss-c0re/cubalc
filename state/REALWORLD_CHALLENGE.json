@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; renameflat PASS"
+      "note": "cli duals red; renameflat PASS 24"
     }
   ],
   "weaknesses": [
@@ -3921,7 +3921,6 @@
     "RENAMEFLAT_N/TOTAL/OLD/NEW/SRC specials"
   ],
   "issues_faced": [
-    "SYS EQS VALUE/PATH fragile in EACH FROM PEER; used PATH bind compares",
     "Renamed host\u2192endpoint to avoid top-level host collision",
     "Empty FREQFLAT worker count polluted by agent_job",
     "FREQFLAT_TOTAL dark after COUNTVALFLAT; used bag HASLINE",
@@ -3960,8 +3959,9 @@
     "iter282: first merge clobbered agent via peer agent key; stripped identity from PEER seed",
     "iter282: 10/10 green after fix; shallow sibling keep confirmed",
     "iter283: soft hit hard-fail on empty old_pfx; removed and used bare role miss",
-    "iter283: 9/9 green; cfg without dot hits cfgn false friend documented"
+    "iter283: 9/9 green; cfg without dot hits cfgn false friend documented",
+    "iter283: soft score==6 vs 7 checks bug; fixed threshold; empty old_pfx hard-fail"
   ],
   "commit": "pending",
-  "ts": "2026-08-10T04:54:17Z"
+  "ts": "2026-08-10T04:54:57Z"
 }

@@ -523,7 +523,7 @@ IF LAST_N == 1 THEN
     LET score = score + 1
   END
   CLEAR_ERR
-  IF score == 6 THEN
+  IF score == 7 THEN
     LET hit = 1
     LET note_msg = "soft ok"
     LET admit_n = 1
