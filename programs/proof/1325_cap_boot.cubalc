@@ -1,0 +1,23 @@
+# INCLUDE cap_boot — agent_boot + form_guard capability contract
+
+INCLUDE cap_boot
+ASSERT OK == 1
+# agent_boot + form_guard loaded
+HASINCLUDE agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE form_guard
+ASSERT LAST_N == 1
+HASINCLUDE cap_boot
+ASSERT LAST_N == 1
+
+# form surface still present
+HASFORM SORTLIBS
+ASSERT LAST_N == 1
+HASFORMS HASFORM NEEDFORM
+ASSERT LAST_N == 1
+
+VERSION
+ASSERT LAST != ""
+
+PASS
+PRINT "1325_cap_boot: PASS"

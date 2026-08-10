@@ -1,0 +1,11 @@
+# INCLUDE cap_boot — agent preamble + form capability contract one-shot
+# Usability: REQUIRE version + VERSION plate + NEED_FORMS surface gate
+#   DEFAULT NEED_FORMS = "SORTLIBS\nLIBAGE\nFRESHLIBS"
+#   INCLUDE cap_boot
+# Soft form miss: DEFAULT FORM_GUARD_SOFT = 1 before INCLUDE
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_FORMS = "HASFORM\nNEEDFORM\nHASFORMS"
+DEFAULT FORM_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE form_guard

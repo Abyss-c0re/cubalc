@@ -23,6 +23,7 @@ make all
 ./out/cubalc init --plate my_agent   # plate_session + plate_uniform + PRETTYP + save
 ./out/cubalc init --peer mesh        # multi-plate PLATE+PEER starter
 ./out/cubalc init --fat-session nest # INCLUDE fat_session durable nest one-shot
+./out/cubalc init --cap agent       # INCLUDE cap_boot form capability contract
 ./out/cubalc forms SMX   # play-form catalog
 # agents: pipe source without a temp file
 printf 'ASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -
