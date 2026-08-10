@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 315,
-  "program": "programs/realworld/svc_ready_prove_board.cubalc",
-  "theme": "READY/NEEDREADY fleet install prove checklist + ready_boot",
-  "version": "1.15.811-usability",
+  "iter": 316,
+  "program": "programs/realworld/svc_hasflagall_contract_board.cubalc",
+  "theme": "HASFLAGS/HASFLAGALL fleet CLI multi-flag contract",
+  "version": "1.15.814-usability",
   "pass": true,
-  "prior_note": "iter 314 doctor_boot; this iter first realworld 1359 READY + 1361 ready_boot install prove checklist",
+  "prior_note": "iter 315 READY prove; this iter first realworld 1359 HASFLAGS + 1362 HASFLAGALL/NEEDFLAGS CLI contract",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate rdy",
+      "cmd": "seed agent plate hfa",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "prove",
-      "cmd": "READY pass_n>=10 fail=0",
+      "name": "count",
+      "cmd": "HASFLAGS/HASFLAGC min + LISTFLAGS",
       "ok": true,
-      "note": "prove"
+      "note": "count"
     },
     {
-      "name": "hard",
-      "cmd": "NEEDREADY REQUIREREADY MUSTREADY",
+      "name": "all",
+      "cmd": "HASFLAGALL mode verbose + workers miss",
       "ok": true,
-      "note": "hard"
+      "note": "all"
     },
     {
-      "name": "bootgate",
-      "cmd": "INCLUDE ready_boot",
+      "name": "need",
+      "cmd": "NEEDFLAGS hard + soft miss",
       "ok": true,
-      "note": "bootgate"
-    },
-    {
-      "name": "chain",
-      "cmd": "ready_boot→doctor_boot",
-      "ok": true,
-      "note": "chain"
+      "note": "need"
     },
     {
       "name": "soft",
-      "cmd": "PROVEREADY plate fields",
+      "cmd": "empty + bare -- ends flags",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "plate surface + READY",
+      "cmd": "plate surface + live HASFLAGALL",
       "ok": true,
       "note": "gate"
     },
     {
+      "name": "alias",
+      "cmd": "HASFLAGC + dash names + HASFORM",
+      "ok": true,
+      "note": "alias"
+    },
+    {
       "name": "probe",
-      "cmd": "PRINT clobber + READY_PASS_N",
+      "cmd": "FLAGHAVE/MISS + PRINT clobber",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "ready/ready_boot PASS when registered; CLI duals still red"
+      "note": "hasflags/hasflagall PASS; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -5186,10 +5186,57 @@
       "title": "WRITE STATUS/META omit trailing NL (reconfirmed rdy)",
       "detail": "STATUS last line without $; META no final NL.",
       "repro": "cat -A RDY STATUS"
+    },
+    {
+      "id": "W640",
+      "severity": "med",
+      "area": "lang|clear_err",
+      "title": "CLEAR_ERR after HASFLAGALL clobbers LAST_N before soft miss tests",
+      "detail": "HASFLAGALL miss sets LAST_N=0; LET miss_n=FLAGMISS_N; CLEAR_ERR then IF LAST_N==0 fails because CLEAR_ERR rewrites LAST. Capture LAST_N into var before CLEAR_ERR. Same class as W505.",
+      "repro": "HASFLAGALL a b; LET m FLAGMISS_N; CLEAR_ERR; IF LAST_N==0  # unreliable"
+    },
+    {
+      "id": "W641",
+      "severity": "low",
+      "area": "lang|hasflagall",
+      "title": "short -w is flag name w not workers (false friend)",
+      "detail": "HASFLAGALL workers misses when CLI has -w 4; HASFLAGALL w hits. Agents must map short names explicitly.",
+      "repro": "HASFLAGALL workers with -w → FLAGMISS workers"
+    },
+    {
+      "id": "W642",
+      "severity": "low",
+      "area": "lang|forms",
+      "title": "forms catalog prefix HASFLAG returns empty despite live forms",
+      "detail": "cubalc forms hasflag n=0; HASFORM HASFLAGALL still 1. Human plane catalog incomplete for new flag gates.",
+      "repro": "cubalc forms hasflag → n=0; HASFORM HASFLAGALL → 1"
+    },
+    {
+      "id": "W643",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers FLAGHAVE bag in LAST",
+      "detail": "Capture FLAGHAVE/FLAGMISS before PRINT.",
+      "repro": "HASFLAGALL a b; PRINT x; SYS HASLINE LAST verbose → 0"
+    },
+    {
+      "id": "W644",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS/META omit trailing NL (reconfirmed hfa)",
+      "detail": "STATUS last line without $; META no final NL.",
+      "repro": "cat -A HFA STATUS"
+    },
+    {
+      "id": "W645",
+      "severity": "low",
+      "area": "lang|hasflags",
+      "title": "HASFLAGS bare -- ends flag parse (positive dual of RESTARGS)",
+      "detail": "--dry -- --notflag → HASFLAGS 1 only; LISTFLAGS_N=1. Good for option stop.",
+      "repro": "HASFLAGS 2 after -- → 0"
     }
   ],
   "workarounds": [
-    "never pass empty old_pfx to RENAMEFLAT",
     "PRUNEFLAT old prefix before re-promote if re-running",
     "never SETFLAT empty needle on agent plate",
     "use dotted cfg.port for single-leaf precision",
@@ -5255,15 +5302,13 @@
     {
       "id": "WA-RDY",
       "note": "use READY_PASS_N; solid NEEDREADY/REQUIREREADY; checklist libs are boot family not hold_seed; capture body before PRINT"
+    },
+    {
+      "id": "WA-HFA",
+      "note": "SYS ENV SET CUBALC_ARG* in-process; capture LAST_N before CLEAR_ERR; map short flags; use FLAGMISS bag"
     }
   ],
   "language_gaps": [
-    "GUIDEMATCH/GUIDENTH/GUIDELASTMATCH compound aliases",
-    "GUIDE_MATCH_N family + GUIDE_MATCH_I slot knobs (W601)",
-    "RUNSNIP MATCH not in binary 1.15.800 (W600) — proof ahead of ship",
-    "GUIDE MATCH first-of-substring p→cap (W602)",
-    "PRINT clobber GUIDE JSON (W603)",
-    "DISCOVER/EXPLORE open plate match bag+first+next (1352)",
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
     "SYS EQS undefined special → unknown form hard-fail (W607)",
     "discover_boot INCLUDE agent_boot+DISCOVER (1353)",
@@ -5297,10 +5342,15 @@
     "ready_boot INCLUDE agent_boot+NEEDREADY (1361)",
     "READY_PASS_N/FAIL_N not READY_LIBS_N (W636)",
     "checklist omits hold_seed (W635)",
-    "PRINT clobber ready plate (W638)"
+    "PRINT clobber ready plate (W638)",
+    "HASFLAGS/HASFLAGC soft flag-count probe (1359)",
+    "HASFLAGALL/NEEDFLAGS multi named-flag contract (1362)",
+    "FLAGMISS/FLAGHAVE bags + HASFLAGALL_N",
+    "CLEAR_ERR clobbers LAST_N after soft miss (W640)",
+    "short -w != workers (W641)",
+    "forms hasflag catalog empty (W642)"
   ],
   "issues_faced": [
-    "iter300: RELATED multi-word graph gap REQUIRE FORM (W549)",
     "iter300: all board paths green; WRITE SNIP.txt multi-line works",
     "iter300: selftest CLI duals still red (pre-existing)",
     "iter301: host strips ARG run — renamed action to exec (W554)",
@@ -5329,9 +5379,10 @@
     "out/cubalc missing; OOM on make until disk swap + object -D_GNU_SOURCE build; board 10/10+unknown green",
     "REQUIRE DOCTOR parse fail; slim doctor plate missing http_required; binary missing thrice; board 9/9 after NEEDDOCTOR-only soft",
     "REQUIRE DOCTOR multiword broke soft/probe scoring; solid aliases only; board 9/9; needdoctor selftest now green",
-    "soft HASI lib:hold_seed miss on green READY; fixed to agent_boot/open_boot; board 10/10"
+    "soft HASI lib:hold_seed miss on green READY; fixed to agent_boot/open_boot; board 10/10",
+    "all path CLEAR_ERR ate LAST_N==0 soft miss test; capture sum_n first; board 10/10"
   ],
-  "commit": "733776cc",
-  "ts": "2026-08-10T19:29:43Z",
-  "board_commit": "733776cc"
+  "commit": "pending",
+  "ts": "2026-08-10T19:54:32Z",
+  "board_commit": "pending"
 }
