@@ -1894,6 +1894,53 @@ static long cubalc_collect_flagmap(char *out, size_t outn) {
   return count;
 }
 
+/* Collect CUBALC_ARG0.. as newline bag of "i=value" (raw argv, flags included).
+ * LAST_N / ARGMAP_N = argc fields. Twin of FLAGMAP for full argv LOOKUP by index.
+ * Usability: SYS LOOKUP LAST "0" sep "=" without EACH SYS ARG / NTHPOS glue. */
+static long cubalc_collect_argmap(char *out, size_t outn) {
+  char envn[32];
+  const char *ac, *a;
+  int argc = 32, k;
+  size_t o = 0;
+  long count = 0;
+  if (out && outn) out[0] = 0;
+  ac = getenv("CUBALC_ARGC");
+  if (ac && ac[0]) {
+    argc = (int)strtol(ac, NULL, 10);
+    if (argc < 0) argc = 0;
+    if (argc > 32) argc = 32;
+  } else {
+    argc = 0;
+    for (k = 0; k < 32; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      if (!getenv(envn)) break;
+      argc++;
+    }
+  }
+  for (k = 0; k < argc; k++) {
+    char line[CUBALC_HOST_STR_MAX];
+    size_t llen, room;
+    snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+    a = getenv(envn);
+    if (!a) a = "";
+    snprintf(line, sizeof line, "%d=%s", k, a);
+    llen = strlen(line);
+    if (out && outn > 1) {
+      if (count > 0 && o + 1 < outn)
+        out[o++] = '\n';
+      room = outn - o - 1;
+      if (llen > room) llen = room;
+      if (llen > 0) {
+        memcpy(out + o, line, llen);
+        o += llen;
+      }
+      out[o] = 0;
+    }
+    count++;
+  }
+  return count;
+}
+
 /* Append sticky USAGE var to REQUIRE fail messages (room-limited).
  * Usability: agents set USAGE once; ARG/ARGC/FLAG fails show the contract. */
 static void cubalc_append_usage_tip(VM *vm, char *msg, size_t n) {
@@ -3555,6 +3602,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"NEEDFLAGS", "NEEDFLAGS|REQUIREFLAGS names… — fail-fast if any named flag missing · multi HASFLAG"},
       {"FLAGMAP", "FLAGMAP|FLAGKV — bag of name=value for every --flag · LOOKUP without GETFLAG each"},
       {"FLAGKV", "FLAGKV alias of FLAGMAP"},
+      {"ARGMAP", "ARGMAP|ARGKV — bag of i=value for CUBALC_ARGn (raw argv) · LOOKUP without NTH"},
+      {"ARGKV", "ARGKV alias of ARGMAP"},
       {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
       {"POSN", "POSN alias of NTHPOS — first/second file without RESTARGS+NTH"},
       {"NTHPOSPATH", "NTHPOSPATH|POSNPATH index [OR path] — NTHPOS + ABSPATH · EXIST · first file without REALPATH"},
@@ -39661,8 +39710,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASARGC", "HASARGALL"}, {"HASARGC", "HASARG"}, {"HASARGC", "NEEDARGS"},
       {"CLIINFO", "LISTFLAGS"}, {"CLIINFO", "FLAGMAP"}, {"CLIINFO", "RESTARGS"},
       {"CLIINFO", "HASFLAGALL"}, {"CLIINFO", "HASARGALL"}, {"CLIINFO", "USAGE"},
-      {"DUMPCLI", "CLIINFO"}, {"DUMPCLI", "LISTFLAGS"}, {"DUMPCLI", "FLAGMAP"},
+      {"CLIINFO", "ARGMAP"}, {"DUMPCLI", "CLIINFO"}, {"DUMPCLI", "LISTFLAGS"},
+      {"DUMPCLI", "FLAGMAP"}, {"DUMPCLI", "ARGMAP"},
       {"LISTFLAGS", "CLIINFO"}, {"FLAGMAP", "CLIINFO"}, {"RESTARGS", "CLIINFO"},
+      {"ARGMAP", "FLAGMAP"}, {"ARGMAP", "CLIINFO"}, {"ARGMAP", "ARGS"},
+      {"ARGMAP", "HASARG"}, {"ARGMAP", "NTHPOS"}, {"FLAGMAP", "ARGMAP"},
       {"FORMHINT", "HASFORM"}, {"FORMHINT", "LISTFORMS"}, {"FORMHINT", "RELATED"},
       {"FORMHINT", "FORMSFOR"}, {"FORMHINT", "TIPS"},
       {"LISTFORMS", "COUNTFORMS"}, {"LISTFORMS", "HASFORM"}, {"LISTFORMS", "FORMHINT"},
@@ -69171,6 +69223,30 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# flagmap n=%ld\n", n);
+    bump(vm); return 1;
+  }
+  /* ARGMAP|ARGKV — newline bag of i=value for every CUBALC_ARGn (raw argv).
+   * LAST = bag · LAST_N / ARGMAP_N = argc · OK=1.
+   * Usability: SYS LOOKUP LAST "0" without EACH SYS ARG / NTHPOS (flags kept).
+   * Twin of FLAGMAP for full argv; coexists with RESTARGS (non-flag only). */
+  if (kw(&L->cur,"ARGMAP") || kw(&L->cur,"ARGKV") || kw(&L->cur,"ARGV_KV") ||
+      kw(&L->cur,"ARGVMAP") || kw(&L->cur,"CLI_ARGMAP") || kw(&L->cur,"ARGS_KV") ||
+      kw(&L->cur,"KVARGS")){
+    char bag[CUBALC_HOST_STR_MAX];
+    long n;
+    lex_next(L);
+    n = cubalc_collect_argmap(bag, sizeof bag);
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "ARGMAP", bag);
+    var_set_str(vm, "ARGKV", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "ARGMAP_N", n);
+    var_set_num(vm, "ARGC", n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# argmap n=%ld\n", n);
     bump(vm); return 1;
   }
   /* NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional.
