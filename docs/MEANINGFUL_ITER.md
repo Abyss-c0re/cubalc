@@ -829,6 +829,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 799. ~~**`RELATEDTOPIC` / `cubalc relatedtopic`**~~ **done** (related discovery topic bag · cubalc.relatedtopic.v1 · twin of RELATED for topics).
 800. ~~**`FORMTOPICS` / `cubalc formtopics`**~~ **done** (form → covering topics · cubalc.formtopics.v1 · reverse of FORMSFOR).
 801. ~~**`GUIDE` / `cubalc guide`**~~ **done** (full playbook plate hint+related+tips+forms+snip · cubalc.guide.v1 · TOPIC++ for agents).
+802. ~~**`ERRGUIDE` / `cubalc errguide`**~~ **done** (ERRTIPS classify + GUIDE playbook one-shot · cubalc.errguide.v1 · twin of ERRRUN).
 
 ## Tick protocol
 
