@@ -3590,6 +3590,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"EXPLAIN", "EXPLAIN alias of WHY"},
       {"WHYERR", "WHYERR alias of WHY"},
       {"IDENTITY", "IDENTITY — cubalc.identity.v1 plate (user@host:pid + vars)"},
+      {"CLIINFO", "CLIINFO|DUMPCLI — cubalc.cli.v1 plate · argc/flags/restargs/flagmap one-shot"},
+      {"DUMPCLI", "DUMPCLI alias of CLIINFO — full CLI surface without multi GETFLAG/RESTARGS"},
       {"INCLUDE", "INCLUDE [ONCE][SOFT] path|MATCH|NTH|LASTMATCH|NEWEST|OLDEST|ALL MATCH [DEFAULT] — filter pick/bulk"},
       {"LISTINCLUDES", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N (after -I/INCLUDE)"},
       {"INCLUDES", "INCLUDES alias of LISTINCLUDES"},
@@ -39088,6 +39090,115 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace) fprintf(vm->trace, "# identity %s\n", note);
     bump(vm); return 1;
   }
+  /* CLIINFO|DUMPCLI|CLISNAP — one-shot program CLI surface plate for agents.
+   * Collects ARGC · LISTFLAGS · FLAGMAP · RESTARGS without multi-form glue.
+   * LAST = cubalc.cli.v1 JSON · LAST_N = argc · bags stashed in named vars.
+   * Usability: inspect argv after run --flags files without shell getopt. */
+  if (kw(&L->cur,"CLIINFO") || kw(&L->cur,"DUMPCLI") || kw(&L->cur,"CLISNAP") ||
+      kw(&L->cur,"CLI_INFO") || kw(&L->cur,"CLI_STATUS") || kw(&L->cur,"ARGVINFO") ||
+      kw(&L->cur,"CLI_PLATE") || kw(&L->cur,"DUMPARGS")) {
+    char flags[CUBALC_HOST_STR_MAX], fmap[CUBALC_HOST_STR_MAX], rest[CUBALC_HOST_STR_MAX];
+    char args_bag[CUBALC_HOST_STR_MAX];
+    char eflags[CUBALC_HOST_STR_MAX], efmap[CUBALC_HOST_STR_MAX], erest[CUBALC_HOST_STR_MAX];
+    char eargs[CUBALC_HOST_STR_MAX];
+    char line[CUBALC_HOST_STR_MAX];
+    char note[160];
+    const char *ac, *p;
+    long argc = 0, nflags = 0, nmap = 0, nrest = 0;
+    size_t eo, o;
+    int k;
+    char envn[32];
+    lex_next(L);
+    flags[0] = fmap[0] = rest[0] = args_bag[0] = 0;
+    ac = getenv("CUBALC_ARGC");
+    if (ac && ac[0]) {
+      argc = strtol(ac, NULL, 10);
+      if (argc < 0) argc = 0;
+      if (argc > 32) argc = 32;
+    } else {
+      for (k = 0; k < 32; k++) {
+        snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+        if (!getenv(envn)) break;
+        argc++;
+      }
+    }
+    /* raw argv bag */
+    o = 0;
+    for (k = 0; k < (int)argc; k++) {
+      const char *a;
+      size_t ln, room;
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      a = getenv(envn);
+      if (!a) a = "";
+      if (o && o + 1 < sizeof args_bag) args_bag[o++] = '\n';
+      ln = strlen(a);
+      room = sizeof args_bag - o - 1;
+      if (ln > room) ln = room;
+      if (ln > 0) {
+        memcpy(args_bag + o, a, ln);
+        o += ln;
+      }
+      args_bag[o] = 0;
+    }
+    nflags = cubalc_collect_listflags(flags, sizeof flags);
+    nmap = cubalc_collect_flagmap(fmap, sizeof fmap);
+    nrest = cubalc_collect_restargs(rest, sizeof rest);
+#define CUBALC_CLI_ESC(dst, src) do { \
+      eo = 0; \
+      for (p = (src); *p && eo + 2 < sizeof(dst); p++) { \
+        if (*p == '"' || *p == '\\') { (dst)[eo++] = '\\'; (dst)[eo++] = *p; } \
+        else if (*p == '\n') { (dst)[eo++] = '\\'; (dst)[eo++] = 'n'; } \
+        else if ((unsigned char)*p < 0x20) continue; \
+        else (dst)[eo++] = *p; \
+      } \
+      (dst)[eo] = 0; \
+    } while (0)
+    CUBALC_CLI_ESC(eflags, flags);
+    CUBALC_CLI_ESC(efmap, fmap);
+    CUBALC_CLI_ESC(erest, rest);
+    CUBALC_CLI_ESC(eargs, args_bag);
+#undef CUBALC_CLI_ESC
+    snprintf(line, sizeof line,
+      "{\"schema\":\"cubalc.cli.v1\",\"ok\":true,"
+      "\"argc\":%ld,\"flags_n\":%ld,\"flagmap_n\":%ld,\"restargs_n\":%ld,"
+      "\"version\":\"%s\","
+      "\"flags\":\"%s\",\"flagmap\":\"%s\",\"restargs\":\"%s\",\"args\":\"%s\","
+      "\"note\":\"CLI surface one-shot · dual of cubalc cliinfo · LISTFLAGS+FLAGMAP+RESTARGS\"}",
+      argc, nflags, nmap, nrest, CUBALC_LANG_VERSION,
+      eflags, efmap, erest, eargs);
+    snprintf(note, sizeof note, "argc=%ld flags=%ld rest=%ld", argc, nflags, nrest);
+    /* LAST = full plate for agents; short note in CLIINFO (like IDENTITY) so
+     * HASFORM CLIINFO is not polluted by plate-as-var form-name lookup. */
+    var_set_str(vm, "LAST", line);
+    var_set_str(vm, "CLIINFO_PLATE", line);
+    var_set_str(vm, "DUMPCLI_PLATE", line);
+    var_set_str(vm, "CLISNAP", line);
+    /* do not bind CLIINFO/DUMPCLI str vars — HASFORM CLIINFO would use plate/short as form name */
+    var_set_str(vm, "CLIINFO_SHORT", note);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", line);
+    var_set_str(vm, "LISTFLAGS", flags);
+    var_set_str(vm, "FLAGS", flags);
+    var_set_str(vm, "FLAGMAP", fmap);
+    var_set_str(vm, "FLAGKV", fmap);
+    var_set_str(vm, "RESTARGS", rest);
+    var_set_str(vm, "POSITIONALS", rest);
+    var_set_str(vm, "ARGS", args_bag);
+    var_set_num(vm, "ARGC", argc);
+    var_set_num(vm, "LISTFLAGS_N", nflags);
+    var_set_num(vm, "FLAGMAP_N", nmap);
+    var_set_num(vm, "RESTARGS_N", nrest);
+    var_set_num(vm, "CLIINFO_FLAGS_N", nflags);
+    var_set_num(vm, "CLIINFO_REST_N", nrest);
+    vm->last_n = argc;
+    var_set_num(vm, "LAST_N", argc);
+    var_set_num(vm, "OK", 1);
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
+    if (vm->trace)
+      fprintf(vm->trace, "# cliinfo %s\n", note);
+    bump(vm);
+    return 1;
+  }
   /* ASSERT expr ["why"] — optional message; fail shows got/expected from cmp. */
   if (kw(&L->cur,"ASSERT")){
     int aln = L->cur.line;
@@ -39548,6 +39659,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NEEDARGS", "HASARGALL"}, {"NEEDARGS", "HASARG"}, {"NEEDARGS", "REQUIRE ARG"},
       {"NEEDARGS", "USAGE"}, {"NEEDARGS", "ARGMISS"},
       {"HASARGC", "HASARGALL"}, {"HASARGC", "HASARG"}, {"HASARGC", "NEEDARGS"},
+      {"CLIINFO", "LISTFLAGS"}, {"CLIINFO", "FLAGMAP"}, {"CLIINFO", "RESTARGS"},
+      {"CLIINFO", "HASFLAGALL"}, {"CLIINFO", "HASARGALL"}, {"CLIINFO", "USAGE"},
+      {"DUMPCLI", "CLIINFO"}, {"DUMPCLI", "LISTFLAGS"}, {"DUMPCLI", "FLAGMAP"},
+      {"LISTFLAGS", "CLIINFO"}, {"FLAGMAP", "CLIINFO"}, {"RESTARGS", "CLIINFO"},
       {"FORMHINT", "HASFORM"}, {"FORMHINT", "LISTFORMS"}, {"FORMHINT", "RELATED"},
       {"FORMHINT", "FORMSFOR"}, {"FORMHINT", "TIPS"},
       {"LISTFORMS", "COUNTFORMS"}, {"LISTFORMS", "HASFORM"}, {"LISTFORMS", "FORMHINT"},

@@ -2675,6 +2675,48 @@ int main(int argc, char **argv) {
     }
     return ok ? 0 : 1;
   }
+  if (strcmp(cmd, "cliinfo") == 0 || strcmp(cmd, "dumpcli") == 0 ||
+      strcmp(cmd, "clisnap") == 0 || strcmp(cmd, "cli-info") == 0 ||
+      strcmp(cmd, "argvinfo") == 0 || strcmp(cmd, "cli-status") == 0) {
+    /* Usability: full CLI surface plate (dual of CLIINFO).
+     * Forwards optional trailing args after -- as CUBALC_ARGn for live inspect.
+     *   cubalc cliinfo -- --verbose --out x a.txt
+     * Schema cubalc.cli.v1 · agents skip LISTFLAGS+FLAGMAP+RESTARGS glue. */
+    cubalc_run_result rr;
+    int ok, ai, narg = 0;
+    char envn[32];
+    static const char src[] = "CLIINFO\nPASS\n";
+    /* optional live args after -- */
+    for (ai = 2; ai < argc; ai++) {
+      if (!strcmp(argv[ai], "--")) {
+        ai++;
+        break;
+      }
+    }
+    if (ai < argc) {
+      for (; ai < argc && narg < 32; ai++, narg++) {
+        snprintf(envn, sizeof envn, "CUBALC_ARG%d", narg);
+        setenv(envn, argv[ai], 1);
+      }
+      snprintf(envn, sizeof envn, "%d", narg);
+      setenv("CUBALC_ARGC", envn, 1);
+    }
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, sizeof src - 1, "<cli-cliinfo>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    if (rr.last_print[0] && strstr(rr.last_print, "cubalc.cli.v1")) {
+      printf("%s\n", rr.last_print);
+    } else if (rr.last_print[0]) {
+      printf("%s\n", rr.last_print);
+    } else {
+      printf("{\"schema\":\"cubalc.cli.v1\",\"ok\":%s,\"cmd\":\"cliinfo\","
+             "\"version\":\"%s\",\"note\":\"CLI surface · dual of CLIINFO\","
+             "\"err\":\"%s\"}\n",
+             ok ? "true" : "false", CUBALC_LANG_VERSION,
+             ok ? "" : (rr.err[0] ? rr.err : "cliinfo fail"));
+    }
+    return ok ? 0 : 1;
+  }
   if (strcmp(cmd, "needdoctor") == 0 || strcmp(cmd, "need-doctor") == 0 ||
       strcmp(cmd, "require-doctor") == 0 || strcmp(cmd, "requiredoctor") == 0) {
     /* Usability: hard install gate (dual of NEEDDOCTOR). exit 1 if not ready. */
@@ -3497,6 +3539,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_hasflagall", "programs/proof/1362_cli_hasflagall.sh", "HASFLAGALL/NEEDFLAGS forms + CLI --args"},
       {"hasargall", "programs/proof/1363_hasargall.cubalc", "HASARGALL multi arg soft gate"},
       {"cli_hasargall", "programs/proof/1363_cli_hasargall.sh", "HASARGALL/NEEDARGS forms + CLI args"},
+      {"cliinfo", "programs/proof/1364_cliinfo.cubalc", "CLIINFO cubalc.cli.v1 CLI surface plate"},
+      {"cli_cliinfo", "programs/proof/1364_cli_cliinfo.sh", "cubalc cliinfo plate + CLIINFO forms"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -18821,6 +18865,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "\n"
       "  Run & learn\n"
       "    doctor|health|needdoctor|ready|needready  install readiness / prove checklist JSON\n"
+      "    cliinfo|dumpcli [-- args…]  CLI surface plate (cubalc.cli.v1 · flags+restargs)\n"
       "    selftest|smoke         live curated usability proofs JSON\n"
       "    version|ver|-V         language version JSON plate\n"
       "    paths|where|layout     install/workspace paths JSON\n"

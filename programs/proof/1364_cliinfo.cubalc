@@ -1,0 +1,68 @@
+# CLIINFO / DUMPCLI — one-shot CLI surface plate (cubalc.cli.v1)
+
+HOLD_FLASH 1
+
+# empty argv
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV UNSET CUBALC_ARG2
+SYS ENV SET CUBALC_ARGC "0"
+CLIINFO
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT ARGC == 0
+ASSERT LISTFLAGS_N == 0
+ASSERT RESTARGS_N == 0
+SYS HASI "cubalc.cli.v1"
+ASSERT LAST_N == 1
+SYS HASI "\"argc\":0"
+ASSERT LAST_N == 1
+
+# flags + positionals
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARG1 "--out=hi.txt"
+SYS ENV SET CUBALC_ARG2 "a.txt"
+SYS ENV SET CUBALC_ARG3 "b.txt"
+SYS ENV SET CUBALC_ARGC "4"
+CLIINFO
+ASSERT OK == 1
+ASSERT ARGC == 4
+ASSERT LISTFLAGS_N == 2
+ASSERT RESTARGS_N == 2
+ASSERT FLAGMAP_N == 2
+SYS HASLINE LISTFLAGS "verbose"
+ASSERT LAST_N == 1
+SYS HASLINE LISTFLAGS "out"
+ASSERT LAST_N == 1
+SYS HASLINE RESTARGS "a.txt"
+ASSERT LAST_N == 1
+SYS HASLINE RESTARGS "b.txt"
+ASSERT LAST_N == 1
+SYS HASI "flagmap"
+ASSERT LAST_N == 1
+SYS HASI "cubalc.cli.v1"
+ASSERT LAST_N == 1
+
+# alias
+DUMPCLI
+SYS HASI "cubalc.cli.v1"
+ASSERT LAST_N == 1
+ASSERT ARGC == 4
+
+# short note var (CLIINFO_SHORT set alongside plate)
+SYS EQS CLIINFO_SHORT "argc=4 flags=2 rest=2"
+ASSERT LAST_N == 1
+
+# discoverable (quoted — bare CLIINFO could be confused with plate vars)
+HASFORM "CLIINFO"
+ASSERT LAST_N == 1
+HASFORM "DUMPCLI"
+ASSERT LAST_N == 1
+
+# RELATED by string name (avoid LAST plate being the subject)
+RELATED "CLIINFO"
+SYS HASLINE LAST "LISTFLAGS"
+ASSERT LAST_N == 1
+
+PRINT "cliinfo ok"
+PASS
