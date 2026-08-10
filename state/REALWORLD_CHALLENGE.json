@@ -4931,7 +4931,7 @@
     "iter306: selftest CLI duals still red",
     "selftest rows[512] hid matchtopics/start/formguide until cap raised; board 10/10 green; CLI duals still unknown form set"
   ],
-  "commit": "pending",
+  "commit": "353ec93f",
   "ts": "2026-08-10T16:19:57Z",
-  "board_commit": "pending"
+  "board_commit": "353ec93f"
 }
