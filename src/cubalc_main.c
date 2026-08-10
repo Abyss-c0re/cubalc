@@ -1269,6 +1269,40 @@ static int cmd_showcase(void) {
 }
 
 
+/* Usability: CUBALC_REQUIRE_VERSION / run -R — have >= need (x.y[.z]). */
+static int run_version_ge(const char *have, const char *need) {
+  long hn[3] = {0, 0, 0}, nn[3] = {0, 0, 0};
+  int hi = 0, ni = 0, c;
+  char *hp, *np;
+  char hbuf[64], nbuf[64];
+  if (!need || !need[0]) return 1;
+  if (!have || !have[0]) return 0;
+  snprintf(hbuf, sizeof hbuf, "%s", have);
+  snprintf(nbuf, sizeof nbuf, "%s", need);
+  hp = hbuf;
+  while (*hp && hi < 3) {
+    while (*hp && (*hp < '0' || *hp > '9')) hp++;
+    if (!*hp) break;
+    hn[hi++] = strtol(hp, &hp, 10);
+    if (*hp == '.') hp++;
+    else break;
+  }
+  np = nbuf;
+  while (*np && ni < 3) {
+    while (*np && (*np < '0' || *np > '9')) np++;
+    if (!*np) break;
+    nn[ni++] = strtol(np, &np, 10);
+    if (*np == '.') np++;
+    else break;
+  }
+  if (ni == 0) return 0;
+  for (c = 0; c < 3; c++) {
+    if (hn[c] > nn[c]) return 1;
+    if (hn[c] < nn[c]) return 0;
+  }
+  return 1;
+}
+
 /* Usability: cubalc run -I / CUBALC_PRELOAD — prepend INCLUDE ONCE lines. */
 static int run_safe_include_token(const char *s) {
   size_t i;
@@ -1360,7 +1394,9 @@ int main(int argc, char **argv) {
       strcmp(cmd, "-L") == 0 || strcmp(cmd, "--include-path") == 0 ||
       strcmp(cmd, "--lib-path") == 0 ||
       strncmp(cmd, "--include-path=", 15) == 0 ||
-      strncmp(cmd, "--lib-path=", 11) == 0)
+      strncmp(cmd, "--lib-path=", 11) == 0 ||
+      strcmp(cmd, "-R") == 0 || strcmp(cmd, "--require-version") == 0 ||
+      strncmp(cmd, "--require-version=", 18) == 0)
     cmd = "run";
   if (strcmp(cmd, "genesis") == 0)
     return cmd_genesis(argc > 2 ? argv[2] :
@@ -1568,7 +1604,8 @@ int main(int argc, char **argv) {
      * Quiet: -q|--quiet|--plate or CUBALC_QUIET=1 → plate-only (no board/# ok).
      * Strict: -s|--strict or CUBALC_STRICT=1 → soft last_err fails exit+plate ok.
      * Preload: -I|--include|--preload LIB + CUBALC_PRELOAD=a:b → INCLUDE ONCE before body.
-     * Path: -L|--include-path|--lib-path DIR prepends CUBALC_INCLUDE_PATH for this run. */
+     * Path: -L|--include-path|--lib-path DIR prepends CUBALC_INCLUDE_PATH for this run.
+     * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older. */
     int quiet = 0, strict = 0, i, rc;
     int plate_ok;
     int have_expr = 0;
@@ -1580,6 +1617,7 @@ int main(int argc, char **argv) {
     const char *parg[32];
     char preload[16][96];
     char ipaths[8][512];
+    char req_ver[64];
     const char *src_path = NULL;
     const char *src_label;
     const char *eq;
@@ -1590,6 +1628,7 @@ int main(int argc, char **argv) {
     cubalc_run_result rr;
     (void)ddash;
     (void)src_idx;
+    req_ver[0] = 0;
     eq = getenv("CUBALC_QUIET");
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
@@ -1598,6 +1637,10 @@ int main(int argc, char **argv) {
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
       strict = 1;
+    /* Env version floor first; CLI -R overrides. */
+    eq = getenv("CUBALC_REQUIRE_VERSION");
+    if (eq && eq[0])
+      snprintf(req_ver, sizeof req_ver, "%s", eq);
     /* Env preloads first; CLI -I appends (deduped). */
     run_preload_parse_env(preload, &n_preload, getenv("CUBALC_PRELOAD"));
     /* Scan from argv[1] so top-level cubalc -e CODE (cmd rewritten to run) works. */
@@ -1612,6 +1655,25 @@ int main(int argc, char **argv) {
       if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--strict") ||
           !strcmp(argv[i], "--fail-soft") || !strcmp(argv[i], "--strict-err")) {
         strict = 1;
+        continue;
+      }
+      /* -R x.y · --require-version · CUBALC_REQUIRE_VERSION dual */
+      if (!strcmp(argv[i], "-R") || !strcmp(argv[i], "--require-version") ||
+          !strcmp(argv[i], "--min-version")) {
+        if (i + 1 >= argc) {
+          fprintf(stderr, "cubalc run: %s needs a version like 1.15\n", argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        snprintf(req_ver, sizeof req_ver, "%s", argv[++i]);
+        continue;
+      }
+      if (!strncmp(argv[i], "--require-version=", 18)) {
+        snprintf(req_ver, sizeof req_ver, "%s", argv[i] + 18);
+        continue;
+      }
+      if (!strncmp(argv[i], "--min-version=", 14)) {
+        snprintf(req_ver, sizeof req_ver, "%s", argv[i] + 14);
         continue;
       }
       /* -I lib · --include lib · --include=lib · --preload */
@@ -1773,16 +1835,34 @@ int main(int argc, char **argv) {
     }
     if (!have_expr && !src_path) {
       fprintf(stderr,
-              "usage: cubalc run [-q] [-s] [-I LIB]... [-L DIR]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
-              "       cubalc eval [-q] [-s] [-I LIB]... [-e CODE]... <file>|-\n"
+              "usage: cubalc run [-q] [-s] [-R VER] [-I LIB]... [-L DIR]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
+              "       cubalc eval [-q] [-s] [-R VER] [-I LIB]... [-e CODE]... <file>|-\n"
               "       cubalc -e 'SYS DATE\\nPRINT LAST'   # top-level alias\n"
               "       cubalc -I agent_boot -e 'STATUS'  # preload INCLUDE ONCE\n"
               "       multiple -e join with newline; \\n \\t \\\\ escapes\n"
               "       -I/--include/--preload LIB  · CUBALC_PRELOAD=a:b\n"
               "       -L/--include-path DIR · prepends CUBALC_INCLUDE_PATH\n"
+              "       -R/--require-version X.Y · CUBALC_REQUIRE_VERSION floor\n"
               "       CUBALC_QUIET=1  → plate only · CUBALC_STRICT=1 → soft last_err fails\n");
       free(expr_buf);
       return 2;
+    }
+    /* Fail-fast version floor before parse/run (agent host contract). */
+    if (req_ver[0] && !run_version_ge(CUBALC_LANG_VERSION, req_ver)) {
+      free(expr_buf);
+      if (devnull) fclose(devnull);
+      printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
+             "\"err\":\"REQUIRE VERSION %s failed: have %s\","
+             "\"require_version\":\"%s\",\"version\":\"%s\","
+             "\"why_hint\":\"upgrade runtime · cubalc version · REQUIRE VERSION in-lang dual\","
+             "\"preload_n\":%d,\"include_path_n\":%d,"
+             "\"includes_n\":0,\"includes\":[],\"quiet\":%s,\"strict\":%s,"
+             "\"exit_code\":1,\"halted\":false}\n",
+             have_expr ? "<expr>" : (src_path ? src_path : "?"),
+             req_ver, CUBALC_LANG_VERSION, req_ver, CUBALC_LANG_VERSION,
+             n_preload, n_ipath,
+             quiet ? "true" : "false", strict ? "true" : "false");
+      return 1;
     }
     if (quiet) {
       devnull = fopen("/dev/null", "w");
@@ -2013,6 +2093,7 @@ int main(int argc, char **argv) {
                "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
                "\"why_hint\":\"%s\","
                "\"quiet\":%s,\"strict\":%s,\"preload_n\":%d,\"include_path_n\":%d,"
+               "\"require_version\":\"%s\","
                "\"includes_n\":%d,\"includes\":%s,"
                "\"exit_code\":%d,\"halted\":%s}\n",
                plate_ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
@@ -2021,6 +2102,7 @@ int main(int argc, char **argv) {
                whyesc,
                quiet ? "true" : "false", strict ? "true" : "false",
                n_preload, n_ipath,
+               req_ver[0] ? req_ver : "",
                rr.includes_n, incj,
                rr.exit_code, rr.halted ? "true" : "false");
       }
@@ -2697,6 +2779,7 @@ int main(int argc, char **argv) {
       {"cli_needinclude", "programs/proof/1263_cli_needinclude.sh", "NEEDINCLUDE after run -I preload"},
       {"cli_which_include_path", "programs/proof/1264_cli_which_include_path.sh", "which/SYS WHICH CUBALC_INCLUDE_PATH project libs"},
       {"cli_cat_libs_include_path", "programs/proof/1265_cli_cat_libs_include_path.sh", "cat/libs CUBALC_INCLUDE_PATH project lib discovery"},
+      {"cli_require_version", "programs/proof/1266_cli_require_version.sh", "run -R / CUBALC_REQUIRE_VERSION host version floor"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -4694,6 +4777,7 @@ int main(int argc, char **argv) {
       {"CUBALC_ROOT", "", 0, "install root for INCLUDE resolution"},
       {"CUBALC_INCLUDE_PATH", "", 0, "colon dirs for INCLUDE short names (after programs/lib)"},
       {"CUBALC_PRELOAD", "", 0, "colon lib names auto-INCLUDE ONCE before run body (-I dual)"},
+      {"CUBALC_REQUIRE_VERSION", "", 0, "x.y[.z] floor for run (-R dual · fail if runtime older)"},
       {"CUBALC_SEED", "", 0, "RNG seed for reproducible runs"},
       {"CUBALC_QUIET", "", 0, "1 → run plate-only no board noise"},
       {"CUBALC_STRICT", "", 0, "1 → run: soft last_err fails exit + plate ok"},
@@ -13207,6 +13291,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"CUBALC_STRICT", "1 → soft last_err fails exit"},
       {"CUBALC_INCLUDE_PATH", "colon dirs for INCLUDE short names"},
       {"CUBALC_PRELOAD", "colon libs auto-INCLUDE ONCE before run (-I)"},
+      {"CUBALC_REQUIRE_VERSION", "x.y floor for run (-R dual)"},
     };
     if (!q || !q[0]) {
       fprintf(stderr, "usage: cubalc search <keyword>\n"
