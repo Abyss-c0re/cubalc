@@ -2730,6 +2730,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"TOPICFORMS", "TOPICFORMS alias of FORMSFOR"},
       {"RELATED", "RELATED|SEEALSO form — related form-name bag · dual of cubalc related · complements FORMHINT/FORMSFOR"},
       {"SEEALSO", "SEEALSO alias of RELATED"},
+      {"SNIP", "SNIP|SNIPPET [topic] — curated mini runnable source → LAST · dual of cubalc snip"},
+      {"SNIPPET", "SNIPPET alias of SNIP"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · dotted path nest ok · write-back · multi-plate"},
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
@@ -39337,6 +39339,157 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "RELATED_N", n);
     var_set_num(vm, "SEEALSO_N", n);
     var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* SNIP|SNIPPET [topic] — curated mini runnable source by topic.
+   * Completes agent discovery triad: TIPS (prose) · FORMSFOR (names) · SNIP (paste code).
+   * Topics: general|cap|fat|plate|p2p|run|lib|protect. LAST=source · SNIP_N=lines · OK=1. */
+  if (kw(&L->cur,"SNIP")||kw(&L->cur,"SNIPPET")||kw(&L->cur,"MINI")||
+      kw(&L->cur,"SNIPPET_SRC")||kw(&L->cur,"STARTER_SRC")||kw(&L->cur,"MINIPROG")||
+      kw(&L->cur,"CODESNIP")||kw(&L->cur,"SNIPCODE")){
+    static const struct { const char *topic; const char *src; } snips[] = {
+      {"general",
+       "VERSION\n"
+       "STATUS\n"
+       "PRINT \"version\" VERSION\n"
+       "PASS\n"},
+      {"cap",
+       "HASFORM SORTLIBS\n"
+       "ASSERT LAST_N == 1 \"need SORTLIBS form\"\n"
+       "FORMHINT SORTLIBS\n"
+       "PRINT LAST\n"
+       "RELATED HASFORM\n"
+       "PRINT RELATED\n"
+       "PASS\n"},
+      {"fat",
+       "VARROOM\n"
+       "PRINT \"free_slots\" LAST_N\n"
+       "HASVARROOM 8\n"
+       "ASSERT LAST_N == 1\n"
+       "REMAIN_MS\n"
+       "PRINT \"remain_ms\" LAST_N\n"
+       "PASS\n"},
+      {"plate",
+       "LET PLATE = \"{\\\"n\\\":0,\\\"ok\\\":true}\"\n"
+       "SETP \"status\" \"ready\"\n"
+       "INCP \"n\"\n"
+       "NEEDP \"n\" \"ok\" \"status\"\n"
+       "PRETTYP\n"
+       "PRINT LAST\n"
+       "PASS\n"},
+      {"p2p",
+       "NOTE \"set CUBALC_SMX_KEY before mesh\"\n"
+       "TIPS p2p\n"
+       "PRINT LAST\n"
+       "FORMSFOR p2p\n"
+       "PRINT LAST\n"
+       "PASS\n"},
+      {"run",
+       "EXPECT 1 == 1\n"
+       "WHY\n"
+       "PRINT WHY_HINT\n"
+       "CLEAR_ERR\n"
+       "PASS \"run probe ok\"\n"},
+      {"lib",
+       "LISTLIBS\n"
+       "PRINT \"libs\" LAST_N\n"
+       "HASLIB agent_boot\n"
+       "ASSERT LAST_N == 1\n"
+       "RECIPE agent_boot\n"
+       "PRINT LAST\n"
+       "PASS\n"},
+      {"protect",
+       "HOLD_FLASH\n"
+       "PRINT \"hold_flash\" LAST_N\n"
+       "VERSION\n"
+       "STATUS\n"
+       "TIPS protect\n"
+       "PRINT LAST\n"
+       "PASS\n"},
+    };
+    char topic[32], tup[32];
+    size_t k;
+    int i, nall = (int)(sizeof snips / sizeof snips[0]);
+    const char *src = NULL;
+    int lines = 0;
+    const char *p;
+    lex_next(L);
+    topic[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(topic, sizeof topic, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0]) {
+        snprintf(topic, sizeof topic, "%s", vv->sval);
+        lex_next(L);
+      } else if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(topic, sizeof topic, "%s", vm->last_str);
+        lex_next(L);
+      } else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+                   kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
+                   kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
+        snprintf(topic, sizeof topic, "%s", L->cur.text);
+        lex_next(L);
+      }
+    }
+    if (!topic[0])
+      snprintf(topic, sizeof topic, "%s", "general");
+    for (k = 0; topic[k] && k + 1 < sizeof tup; k++) {
+      char c = topic[k];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      tup[k] = c;
+    }
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    for (i = 0; i < nall; i++) {
+      if (!strcmp(snips[i].topic, tup)) {
+        src = snips[i].src;
+        break;
+      }
+    }
+    if (!src) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "SNIP_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "SNIP: unknown topic — SNIP general|cap|fat|plate|p2p|run|lib|protect");
+      var_set_str(vm, "ERR",
+                  "SNIP: unknown topic — SNIP general|cap|fat|plate|p2p|run|lib|protect");
+      bump(vm);
+      return 1;
+    }
+    for (p = src; *p; p++)
+      if (*p == '\n') lines++;
+    if (lines == 0 && src[0]) lines = 1;
+    var_set_str(vm, "LAST", src);
+    var_set_str(vm, "SNIP", src);
+    var_set_str(vm, "SNIPPET", src);
+    var_set_str(vm, "SNIP_TOPIC", tup);
+    var_set_str(vm, "SNIPPET_TOPIC", tup);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", src);
+    vm->last_n = lines;
+    var_set_num(vm, "LAST_N", lines);
+    var_set_num(vm, "SNIP_N", lines);
+    var_set_num(vm, "SNIPPET_N", lines);
+    var_set_num(vm, "OK", 1);
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", src);
     bump(vm);
     return 1;
   }
