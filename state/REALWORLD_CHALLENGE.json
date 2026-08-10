@@ -4570,7 +4570,7 @@
     "iter298: LISTFORMS var lex_next fixed; INCLUDE stop-list filter needs quotes",
     "iter298: board 10/10 + host -C ok; selftest CLI duals still red 455/658"
   ],
-  "commit": "pending",
+  "commit": "4852ae2f",
   "ts": "2026-08-10T12:11:28Z",
-  "board_commit": "2d28e629"
+  "board_commit": "4852ae2f"
 }
