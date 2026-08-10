@@ -4088,6 +4088,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_init_ready", "programs/proof/1361_cli_init_ready.sh", "cubalc init --ready scaffold + doctor"},
       {"hasflagall", "programs/proof/1362_hasflagall.cubalc", "HASFLAGALL multi named-flag soft gate"},
       {"cli_hasflagall", "programs/proof/1362_cli_hasflagall.sh", "HASFLAGALL/NEEDFLAGS forms + CLI --args"},
+      {"hasflagany", "programs/proof/1376_hasflagany.cubalc", "HASFLAGANY multi named-flag any-of gate"},
+      {"cli_hasflagany", "programs/proof/1376_cli_hasflagany.sh", "HASFLAGANY/NEEDFLAGANY forms + CLI"},
       {"hasargall", "programs/proof/1363_hasargall.cubalc", "HASARGALL multi arg soft gate"},
       {"cli_hasargall", "programs/proof/1363_cli_hasargall.sh", "HASARGALL/NEEDARGS forms + CLI args"},
       {"cliinfo", "programs/proof/1364_cliinfo.cubalc", "CLIINFO cubalc.cli.v1 CLI surface plate"},
@@ -6319,9 +6321,14 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       /* multi CLI flag contract (HASFORMS twin for --flags) */
       {"HASFLAG", "HASFLAGALL"}, {"HASFLAG", "NEEDFLAGS"}, {"HASFLAG", "REQUIRE FLAG"},
       {"HASFLAGALL", "NEEDFLAGS"}, {"HASFLAGALL", "HASFLAG"}, {"HASFLAGALL", "FLAGMISS"},
-      {"HASFLAGALL", "HASFLAGS"}, {"HASFLAGALL", "LISTFLAGS"},
+      {"HASFLAGALL", "HASFLAGS"}, {"HASFLAGALL", "LISTFLAGS"}, {"HASFLAGALL", "HASFLAGANY"},
       {"NEEDFLAGS", "HASFLAGALL"}, {"NEEDFLAGS", "HASFLAG"}, {"NEEDFLAGS", "REQUIRE FLAG"},
-      {"NEEDFLAGS", "USAGE"}, {"NEEDFLAGS", "FLAGMISS"},
+      {"NEEDFLAGS", "USAGE"}, {"NEEDFLAGS", "FLAGMISS"}, {"NEEDFLAGS", "NEEDFLAGANY"},
+      /* multi named-flag ANY gate (HASFLAGALL twin) */
+      {"HASFLAGANY", "NEEDFLAGANY"}, {"HASFLAGANY", "HASFLAGALL"}, {"HASFLAGANY", "HASFLAG"},
+      {"HASFLAGANY", "FLAGHAVE"}, {"HASFLAGANY", "LISTFLAGS"}, {"HASFLAGANY", "FLAGMISS"},
+      {"NEEDFLAGANY", "HASFLAGANY"}, {"NEEDFLAGANY", "NEEDFLAGS"}, {"NEEDFLAGANY", "HASFLAG"},
+      {"NEEDFLAGANY", "USAGE"}, {"NEEDFLAGANY", "FLAGMISS"},
       {"HASFLAGS", "HASFLAGALL"}, {"HASFLAGS", "LISTFLAGS"}, {"HASFLAGS", "HASFLAG"},
       {"LISTFLAGS", "HASFLAGS"}, {"LISTFLAGS", "HASFLAGALL"}, {"LISTFLAGS", "FLAGMAP"},
       /* multi CLI arg contract (HASFLAGALL twin for CUBALC_ARGn) */
@@ -11406,20 +11413,29 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
   if (strcmp(cmd, "hasflagall") == 0 || strcmp(cmd, "hasallflags") == 0 ||
       strcmp(cmd, "needflags") == 0 || strcmp(cmd, "requireflags") == 0 ||
       strcmp(cmd, "mustflags") == 0 ||
+      strcmp(cmd, "hasflagany") == 0 || strcmp(cmd, "hasanyflags") == 0 ||
+      strcmp(cmd, "needflagany") == 0 || strcmp(cmd, "requireflagany") == 0 ||
+      strcmp(cmd, "mustflagany") == 0 || strcmp(cmd, "needanyflags") == 0 ||
       strcmp(cmd, "hasargall") == 0 || strcmp(cmd, "hasallargs") == 0 ||
       strcmp(cmd, "needargs") == 0 || strcmp(cmd, "requireargs") == 0 ||
       strcmp(cmd, "mustargs") == 0) {
-    /* Usability: CLI dual of HASFLAGALL/NEEDFLAGS · HASARGALL/NEEDARGS.
-     * Shell agents gate required --flags / CUBALC_ARGn without .cubalc.
+    /* Usability: CLI dual of HASFLAGALL/NEEDFLAGS · HASFLAGANY/NEEDFLAGANY ·
+     * HASARGALL/NEEDARGS. Shell agents gate required --flags / CUBALC_ARGn.
      * Optional live argv after -- :
      *   cubalc needflags out verbose -- --out=x --verbose a.txt
+     *   cubalc hasflagany json yaml -- --json a.txt
      *   cubalc needargs 0 1 -- file0 file1
      * Schema cubalc.flaggate.v1 / cubalc.arggate.v1 */
     int is_arg = (strcmp(cmd, "hasargall") == 0 || strcmp(cmd, "hasallargs") == 0 ||
                   strcmp(cmd, "needargs") == 0 || strcmp(cmd, "requireargs") == 0 ||
                   strcmp(cmd, "mustargs") == 0);
+    int is_any = (strcmp(cmd, "hasflagany") == 0 || strcmp(cmd, "hasanyflags") == 0 ||
+                  strcmp(cmd, "needflagany") == 0 || strcmp(cmd, "requireflagany") == 0 ||
+                  strcmp(cmd, "mustflagany") == 0 || strcmp(cmd, "needanyflags") == 0);
     int hard = (strcmp(cmd, "needflags") == 0 || strcmp(cmd, "requireflags") == 0 ||
                 strcmp(cmd, "mustflags") == 0 ||
+                strcmp(cmd, "needflagany") == 0 || strcmp(cmd, "requireflagany") == 0 ||
+                strcmp(cmd, "mustflagany") == 0 || strcmp(cmd, "needanyflags") == 0 ||
                 strcmp(cmd, "needargs") == 0 || strcmp(cmd, "requireargs") == 0 ||
                 strcmp(cmd, "mustargs") == 0);
     char src[1200];
@@ -11428,6 +11444,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     size_t o = 0;
     cubalc_run_result rr;
     char envn[32];
+    const char *form;
     /* collect names until -- */
     for (i = 2; i < argc && nname < 32; i++) {
       if (!argv[i] || !argv[i][0]) continue;
@@ -11449,15 +11466,20 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     if (nname == 0) {
       fprintf(stderr,
               "usage: cubalc hasflagall|needflags <flag> [flag…] [-- args…]\n"
+              "       cubalc hasflagany|needflagany <flag> [flag…] [-- args…]\n"
               "       cubalc hasargall|needargs <n|name> [n|name…] [-- args…]\n");
       printf("{\"schema\":\"cubalc.%sgate.v1\",\"ok\":false,\"cmd\":\"%s\","
              "\"err\":\"need names\",\"version\":\"%s\"}\n",
              is_arg ? "arg" : "flag", cmd, CUBALC_LANG_VERSION);
       return 2;
     }
-    o = (size_t)snprintf(src, sizeof src, "%s",
-                         is_arg ? (hard ? "NEEDARGS" : "HASARGALL")
-                                : (hard ? "NEEDFLAGS" : "HASFLAGALL"));
+    if (is_arg)
+      form = hard ? "NEEDARGS" : "HASARGALL";
+    else if (is_any)
+      form = hard ? "NEEDFLAGANY" : "HASFLAGANY";
+    else
+      form = hard ? "NEEDFLAGS" : "HASFLAGALL";
+    o = (size_t)snprintf(src, sizeof src, "%s", form);
     for (ai = 0; ai < nname && o + 2 < sizeof src; ai++) {
       const char *nm = names[ai];
       int need_q = 0, c;
@@ -11478,21 +11500,20 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     memset(&rr, 0, sizeof rr);
     (void)cubalc_run_source(src, strlen(src), is_arg ? "<cli-arggate>" : "<cli-flaggate>",
                             &rr, NULL);
-    /* hard need*: fail if runtime err (NEEDFLAGS/NEEDARGS fail_at).
+    /* hard need*: fail if runtime err (NEEDFLAGS/NEEDFLAGANY/NEEDARGS fail_at).
      * soft has*: LAST_N printed as 0|1. */
     if (hard)
       hit = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
     else
       hit = (rr.ok && !rr.err[0] && rr.last_print[0] == '1') ? 1 : 0;
     printf("{\"schema\":\"cubalc.%sgate.v1\",\"ok\":%s,\"cmd\":\"%s\","
-           "\"mode\":\"%s\",\"n\":%d,\"live_args\":%d,\"version\":\"%s\","
+           "\"mode\":\"%s\",\"any\":%s,\"n\":%d,\"live_args\":%d,\"version\":\"%s\","
            "\"note\":\"CLI dual of %s · optional -- live argv\","
            "\"names\":[",
            is_arg ? "arg" : "flag",
            hit ? "true" : "false", cmd,
-           hard ? "need" : "has", nname, nlive, CUBALC_LANG_VERSION,
-           is_arg ? (hard ? "NEEDARGS" : "HASARGALL")
-                  : (hard ? "NEEDFLAGS" : "HASFLAGALL"));
+           hard ? "need" : "has", is_any ? "true" : "false", nname, nlive,
+           CUBALC_LANG_VERSION, form);
     for (ai = 0; ai < nname; ai++) {
       char esc[120];
       size_t e = 0, k;
@@ -19637,7 +19658,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "  Run & learn\n"
       "    doctor|health|needdoctor|ready|needready  install readiness / prove checklist JSON\n"
       "    cliinfo|dumpcli [-- args…]  CLI surface plate (cubalc.cli.v1 · flags+restargs)\n"
-      "    hasflagall|needflags names… [-- args]  multi --flag gate (cubalc.flaggate.v1)\n"
+      "    hasflagall|needflags names… [-- args]  multi --flag ALL gate (cubalc.flaggate.v1)\n"
+      "    hasflagany|needflagany names… [-- args]  multi --flag ANY gate (cubalc.flaggate.v1)\n"
       "    hasargall|needargs n|name… [-- args]  multi arg gate (cubalc.arggate.v1)\n"
       "    argmap|argkv [-- args…]     raw argv i=value bag (cubalc.argmap.v1)\n"
       "    findarg|argindex <tok> [-- args…]  token→index reverse NTHARG (cubalc.findarg.v1)\n"
