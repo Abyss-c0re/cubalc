@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 312,
-  "program": "programs/realworld/svc_runsnipmatch_prove_board.cubalc",
-  "theme": "RUNSNIP MATCH/NTH/LASTMATCH fleet prove mini cold-route",
-  "version": "1.15.806-usability",
+  "iter": 313,
+  "program": "programs/realworld/svc_doctor_ready_board.cubalc",
+  "theme": "DOCTOR/NEEDDOCTOR fleet install readiness gate + open_boot chain",
+  "version": "1.15.807-usability",
   "pass": true,
-  "prior_note": "iter 311 OPEN playbook; this iter first realworld 1351 RUNSNIP MATCH prove twin of GUIDE MATCH (closes W600)",
+  "prior_note": "iter 312 RUNSNIP MATCH; this iter first realworld 1356 DOCTOR install readiness",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate rsm",
+      "cmd": "seed agent plate drd",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "match",
-      "cmd": "RUNSNIP MATCH p→cap N=4 I=0",
+      "name": "ready",
+      "cmd": "DOCTOR plate libs>=20 flags",
       "ok": true,
-      "note": "match"
+      "note": "ready"
     },
     {
-      "name": "nth",
-      "cmd": "NTH 1 plate · NTH 2 p2p · OR run",
+      "name": "gate",
+      "cmd": "NEEDDOCTOR + plate surface",
       "ok": true,
-      "note": "nth"
-    },
-    {
-      "name": "last",
-      "cmd": "LASTMATCH protect · OR general",
-      "ok": true,
-      "note": "last"
+      "note": "gate"
     },
     {
       "name": "chain",
-      "cmd": "OPEN→RUNSNIP first→MATCH→NTH plate",
+      "cmd": "DOCTOR→open_boot→RUNSNIP",
       "ok": true,
       "note": "chain"
     },
     {
       "name": "soft",
-      "cmd": "miss/empty/OOR + OR recover",
+      "cmd": "INSTALL_HEALTH + slim plate fields",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "gate",
-      "cmd": "plate surface + MATCH lib",
-      "ok": true,
-      "note": "gate"
-    },
-    {
       "name": "alias",
-      "cmd": "FIRST PICK forms SNIPRUN",
+      "cmd": "INSTALL_HEALTH NEEDDOCTOR",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + HASTOPIC + bare OPEN n=8",
+      "cmd": "PRINT clobber + DOCTOR_N false friend",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "runsnipmatch PASS; CLI duals still red; rebuilt after OOM"
+      "note": "doctor_form PASS; needdoctor/REQUIRE DOCTOR red; CLI duals red"
     }
   ],
   "weaknesses": [
@@ -5064,10 +5052,57 @@
       "title": "RUNSNIP_MATCH_N/I knobs dual of GUIDE_MATCH_N/I (positive)",
       "detail": "Family size + slot index work for prove path same as guide path. RUNSNIP_OK separates mini assert fail from filter miss.",
       "repro": "RUNSNIP NTH 1 p → MATCH_I=1 TOPIC=plate"
+    },
+    {
+      "id": "W624",
+      "severity": "high",
+      "area": "lang|require",
+      "title": "REQUIRE DOCTOR two-word form loses to generic REQUIRE parser",
+      "detail": "REQUIRE DOCTOR → sticky err REQUIRE VERSION|LIB|ENV|… not NEEDDOCTOR dual. Forms catalog lists REQUIRE DOCTOR alias but runtime does not parse it. Use NEEDDOCTOR only. Proof 1357 needdoctor fails on REQUIRE DOCTOR line.",
+      "repro": "REQUIRE DOCTOR → REQUIRE VERSION|LIB help err"
+    },
+    {
+      "id": "W625",
+      "severity": "med",
+      "area": "lang|doctor",
+      "title": "in-lang DOCTOR plate is slim vs cubalc doctor CLI JSON",
+      "detail": "CLI has http_required, cookbook[], hints[], paradigm, creed, etc. In-lang LAST plate omits http_required (HASI → 0) but keeps smx_key_configured, modular_lang, lib_* flags. Agents must not assume CLI schema in-lang.",
+      "repro": "DOCTOR; SYS HASI LAST http_required → 0; cubalc doctor has field"
+    },
+    {
+      "id": "W626",
+      "severity": "low",
+      "area": "lang|doctor",
+      "title": "DOCTOR_LIBS_N not DOCTOR_N (false friend with DISCOVER_N)",
+      "detail": "DEFINED DOCTOR_N → 0; DOCTOR_LIBS_N ≥ 20. Family of *_N knobs inconsistent across discovery surfaces.",
+      "repro": "DOCTOR; PRINT DOCTOR_LIBS_N"
+    },
+    {
+      "id": "W627",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers DOCTOR plate JSON in LAST",
+      "detail": "Capture body before PRINT; probe-mark loses cubalc.doctor.v1.",
+      "repro": "DOCTOR; PRINT x; SYS HASI LAST cubalc.doctor.v1 → 0"
+    },
+    {
+      "id": "W628",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS/META omit trailing NL (reconfirmed drd)",
+      "detail": "STATUS last line without $; META no final NL.",
+      "repro": "cat -A DRD STATUS"
+    },
+    {
+      "id": "W629",
+      "severity": "med",
+      "area": "host|build",
+      "title": "out/cubalc repeatedly deleted between challenge fires",
+      "detail": "Third fire this session with missing binary. clean/concurrent MI may rm out/. Workaround: object cache + stable copy under /mnt/data/tmp_cc/cubalc.stable.",
+      "repro": "ls out/cubalc → missing after ~25m"
     }
   ],
   "workarounds": [
-    "re-SETP identity after merge if patch untrusted",
     "use MERGEFLAT not MERGEP for nested cfg leaf sync",
     "always use trailing . on path prefixes",
     "never pass empty old_pfx to RENAMEFLAT",
@@ -5124,15 +5159,13 @@
     {
       "id": "WA-RSM",
       "note": "build with -D_GNU_SOURCE per .o; OPEN OPEN_NEEDLE after open_boot; NTH for non-first prove; capture before PRINT"
+    },
+    {
+      "id": "WA-DRD",
+      "note": "NEEDDOCTOR only never REQUIRE DOCTOR; use DOCTOR_LIBS_N; expect slim in-lang plate; keep cubalc.stable copy"
     }
   ],
   "language_gaps": [
-    "HASMATCHTOPICS/NEEDMATCHTOPICS soft/hard filter presence",
-    "substring strstr filter (W585) vs HASTOPIC exact",
-    "PICKTOPIC first-of-catalog not ranked (W586)",
-    "hardcoded synonym rewrite table (W587)",
-    "selftest rows cap silent skip fixed 512→1024 (W584)",
-    "GUIDE_TOPIC unset vs TOPIC_NAME (W590)",
     "NEEDMATCHTOPICS miss exit_code 0 (W591)",
     "PRINT clobber MATCHTOPICS bag (W589)",
     "WRITE META omit NL (W588)",
@@ -5166,10 +5199,15 @@
     "open_boot ignores OPEN_NEEDLE (W619)",
     "monorepo single-gcc OOM without object build (W618)",
     "-std=c11 needs -D_GNU_SOURCE for dirent/readdir",
-    "PRINT clobber runsnip topic (W621)"
+    "PRINT clobber runsnip topic (W621)",
+    "DOCTOR/INSTALL_HEALTH/NEEDDOCTOR install readiness (1356)",
+    "REQUIRE DOCTOR unusable — use NEEDDOCTOR (W624)",
+    "in-lang doctor plate slim vs CLI (W625)",
+    "DOCTOR_LIBS_N not DOCTOR_N (W626)",
+    "DOCTOR_OK/AGENT_BOOT/MODULAR/HOLD flags",
+    "out/cubalc vanishes between fires (W629)"
   ],
   "issues_faced": [
-    "iter299: FORMSFOR/TIPS var topic lex_next fixed + HOWTO_TOPIC dual",
     "iter299: SYS HAS substring false friend on form bags (W544)",
     "iter299: board 10/10 green; selftest CLI duals still 57 red",
     "iter300: RELATED multi-word graph gap REQUIRE FORM (W549)",
@@ -5198,9 +5236,10 @@
     "RUNSNIP MATCH missing in binary while proof 1351 exists; GUIDE MATCH board 10/10+unknown green",
     "probe SYS EQS DISCOVER_MATCH_N hard-failed unknown form; fixed via DEFINED; board 10/10",
     "binary missing at fire start — rebuilt; OPEN board 10/10 green; OPEN_NEXT_N gap vs DISCOVER",
-    "out/cubalc missing; OOM on make until disk swap + object -D_GNU_SOURCE build; board 10/10+unknown green"
+    "out/cubalc missing; OOM on make until disk swap + object -D_GNU_SOURCE build; board 10/10+unknown green",
+    "REQUIRE DOCTOR parse fail; slim doctor plate missing http_required; binary missing thrice; board 9/9 after NEEDDOCTOR-only soft"
   ],
-  "commit": "34846c7e",
-  "ts": "2026-08-10T18:28:03Z",
-  "board_commit": "34846c7e"
+  "commit": "pending",
+  "ts": "2026-08-10T18:41:35Z",
+  "board_commit": "pending"
 }
