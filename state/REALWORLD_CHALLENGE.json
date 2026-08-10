@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 307,
-  "program": "programs/realworld/svc_matchtopics_route_board.cubalc",
-  "theme": "MATCHTOPICS/PICKTOPIC fleet topic filter→playbook route",
-  "version": "1.15.798-usability",
+  "iter": 308,
+  "program": "programs/realworld/svc_nthtopic_roster_board.cubalc",
+  "theme": "NTHTOPIC/LASTTOPIC fleet topic roster index + COUNTMATCHTOPICS gate",
+  "version": "1.15.799-usability",
   "pass": true,
-  "prior_note": "iter 306 START/FORMGUIDE; this iter first realworld 1347 MATCHTOPICS/PICKTOPIC + selftest rows[512]→1024 fix (tail proofs were silent-skipped)",
+  "prior_note": "iter 307 MATCHTOPICS/PICKTOPIC; this iter first realworld 1349 NTHTOPIC/LASTTOPIC + 1348 HASMATCHTOPICS/COUNTMATCHTOPICS",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,61 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate mtr",
+      "cmd": "seed agent plate ntr",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "match",
-      "cmd": "MATCHTOPICS p=4 + mesh→p2p + cap=1",
+      "name": "nth",
+      "cmd": "NTHTOPIC 0..3 p + OOR OR general",
       "ok": true,
-      "note": "match"
+      "note": "nth"
     },
     {
-      "name": "pick",
-      "cmd": "PICKTOPIC form→cap GUIDE OR general",
+      "name": "last",
+      "cmd": "LASTTOPIC/ENDTOPIC mesh form OR",
       "ok": true,
-      "note": "pick"
+      "note": "last"
+    },
+    {
+      "name": "count",
+      "cmd": "COUNT/HAS/NEEDMATCHTOPICS gates",
+      "ok": true,
+      "note": "count"
     },
     {
       "name": "chain",
-      "cmd": "MATCHTOPICS→PICK→TOPIC plate",
+      "cmd": "COUNT→NTH 1 plate→GUIDE",
       "ok": true,
       "note": "chain"
     },
     {
       "name": "soft",
-      "cmd": "empty/miss soft + OR fallback",
+      "cmd": "OOR empty miss + OR recover",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "plate surface + live MATCH/PICK",
+      "cmd": "plate surface + NTH lib",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "FILTERTOPICS FIRSTTOPIC TOPICMATCH",
+      "cmd": "ENDTOPIC mesh form synonym",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + HASTOPIC p false friend",
+      "cmd": "PRINT clobber + HASTOPIC vs HASMATCH",
       "ok": true,
       "note": "probe"
     },
     {
       "name": "unknown",
-      "cmd": "bogon EXIT 2 shell 2",
+      "cmd": "bogon EXIT 2",
       "ok": true,
       "note": "unknown→2"
     },
@@ -71,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "536/700 after rows cap fix; matchtopics PASS; CLI duals still red (set form)"
+      "note": "CLI duals still red; nthtopic/hasmatchtopics PASS when registered"
     }
   ],
   "weaknesses": [
@@ -4810,10 +4816,65 @@
       "title": "HASMATCHTOPICS is soft presence on filter not exact topic",
       "detail": "HASMATCHTOPICS p → 1 because substring filter non-empty; not HASTOPIC. Name suggests exact topic membership but dual is MATCHLIBS-style filter presence.",
       "repro": "HASMATCHTOPICS p → 1; HASTOPIC p → 0"
+    },
+    {
+      "id": "W593",
+      "severity": "high",
+      "area": "lang|nthtopic",
+      "title": "NTHTOPIC index token rejects variables (literal only)",
+      "detail": "LET i 1; NTHTOPIC i p → unknown form 'i'. Same class as HASFLAG/HASARGC literal-only (W13/W14). Agents must hard-branch NTHTOPIC 0/1/2/3 for roster walk.",
+      "repro": "LET i 1; NTHTOPIC i p → unknown form i"
+    },
+    {
+      "id": "W594",
+      "severity": "med",
+      "area": "lang|lasttopic",
+      "title": "LASTTOPIC_N stays 0 after successful LASTTOPIC",
+      "detail": "LASTTOPIC p → LASTTOPIC=protect OK=1 but LASTTOPIC_N remains 0. NTHTOPIC_N correctly reports family size (4 for p). Asymmetric dual of NTHTOPIC_N.",
+      "repro": "LASTTOPIC p; PRINT LASTTOPIC_N  # 0"
+    },
+    {
+      "id": "W595",
+      "severity": "med",
+      "area": "lang|countmatchtopics",
+      "title": "COUNTMATCHTOPICS_N is reliable; LAST_N after count may not equal count",
+      "detail": "COUNTMATCHTOPICS p sets COUNTMATCHTOPICS_N=4; LAST_N sometimes 1 in multi-stmt -e sequences. Prefer COUNTMATCHTOPICS_N / HASMATCHTOPICS_N knobs over LAST_N for capacity plates.",
+      "repro": "COUNTMATCHTOPICS p; PRINT COUNTMATCHTOPICS_N; PRINT LAST_N"
+    },
+    {
+      "id": "W596",
+      "severity": "low",
+      "area": "lang|hasmatchtopics",
+      "title": "HASMATCHTOPICS p true while HASTOPIC p false (substring vs exact)",
+      "detail": "Reconfirmed W585/W592: filter presence ≠ topic membership. Fleet gates must choose: HASMATCHTOPICS for filter inventory, HASTOPIC for exact known topic.",
+      "repro": "HASMATCHTOPICS p → 1; HASTOPIC p → 0"
+    },
+    {
+      "id": "W597",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS/META omit trailing NL (reconfirmed ntr board)",
+      "detail": "cat -A STATUS last probe:4:pb without $; od META ends without \\n.",
+      "repro": "cat -A NTR STATUS after board"
+    },
+    {
+      "id": "W598",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers NTHTOPIC result in LAST (reconfirm)",
+      "detail": "Capture NTHTOPIC/LAST before PRINT; probe-mark path scores last != cap after PRINT.",
+      "repro": "NTHTOPIC 0 p; PRINT x; SYS EQS LAST cap → 0"
+    },
+    {
+      "id": "W599",
+      "severity": "med",
+      "area": "lang|nthtopic",
+      "title": "NTHTOPIC_N is family match count not index+1",
+      "detail": "After NTHTOPIC 0 p and NTHTOPIC 3 p, NTHTOPIC_N stays 4 (size of filtered roster), not the 1-based slot. Useful for capacity but easy to misread as 'current index'.",
+      "repro": "NTHTOPIC 3 p; PRINT NTHTOPIC_N  # 4 not 4 as index"
     }
   ],
   "workarounds": [
-    "KEEPONLYFLAT for cfg.* share project then reload agent",
     "unique counter leaf names to avoid substring multi-bump",
     "BUMPFLAT for single named counter + explicit delta",
     "empty INCFLAT only when all-int inventory intended",
@@ -4855,16 +4916,13 @@
     {
       "id": "WA-MTR",
       "note": "capture MATCHTOPICS bag before PRINT; use TOPIC_NAME not GUIDE_TOPIC; HASTOPIC for exact; EXIT n after NEEDMATCHTOPICS miss"
+    },
+    {
+      "id": "WA-NTR",
+      "note": "hardcode NTHTOPIC 0/1/2/3 branches; use COUNTMATCHTOPICS_N; ignore LASTTOPIC_N; HASTOPIC for exact"
     }
   ],
   "language_gaps": [
-    "stale binary vs catalog for multi form gates (W530)",
-    "HASFORMS_N known vs FORMS_N total dual (W531)",
-    "form_guard DEFAULT set-once / INCLUDE not ONCE (W532)",
-    "run -C vs ENV form floor visibility (W537)",
-    "LISTFORMS var lex_next / INCLUDE stop-list (W538/W539)",
-    "PRINT clobber after LISTFORMS bag (W540)",
-    "FORMSFOR/TIPS var topic lex_next (W543)",
     "SYS HAS substring vs HASLINE exact on form bags (W544)",
     "CLI tips n vs in-lang TIPS_N skew (W547)",
     "RELATED multi-word hub missing (W549)",
@@ -4897,10 +4955,16 @@
     "GUIDE_TOPIC unset vs TOPIC_NAME (W590)",
     "NEEDMATCHTOPICS miss exit_code 0 (W591)",
     "PRINT clobber MATCHTOPICS bag (W589)",
-    "WRITE META omit NL (W588)"
+    "WRITE META omit NL (W588)",
+    "NTHTOPIC/LASTTOPIC/ENDTOPIC indexed topic roster duals of NTHLIB",
+    "COUNTMATCHTOPICS/HASMATCHTOPICS/NEEDMATCHTOPICS filter capacity gates",
+    "NTHTOPIC index literal-only (W593)",
+    "LASTTOPIC_N sticky 0 (W594)",
+    "prefer COUNTMATCHTOPICS_N over LAST_N (W595)",
+    "HASMATCHTOPICS vs HASTOPIC substring false friend (W596)",
+    "NTHTOPIC_N family size not slot (W599)"
   ],
   "issues_faced": [
-    "iter297: all board paths green first pass; EXIT 2 shell 2 ok; selftest CLI duals still red",
     "iter297: form_guard soft+hard contracts; HASFORMS body var from GETP cfg.need works",
     "iter298: -C floor invisible to SYS ENV (W537); use CUBALC_REQUIRE_FORMS for in-lang",
     "iter298: LISTFORMS var lex_next fixed; INCLUDE stop-list filter needs quotes",
@@ -4929,9 +4993,10 @@
     "iter306: START+FORMGUIDE board 10/10 first pass",
     "iter306: FORMGUIDE FORMHINT needs quotes (W580); START_NEXT_N CLI skew (W581)",
     "iter306: selftest CLI duals still red",
-    "selftest rows[512] hid matchtopics/start/formguide until cap raised; board 10/10 green; CLI duals still unknown form set"
+    "selftest rows[512] hid matchtopics/start/formguide until cap raised; board 10/10 green; CLI duals still unknown form set",
+    "NTHTOPIC var index hard-fail unknown form; LASTTOPIC_N 0 after success; board 10/10 green"
   ],
-  "commit": "353ec93f",
-  "ts": "2026-08-10T16:19:57Z",
-  "board_commit": "353ec93f"
+  "commit": "pending",
+  "ts": "2026-08-10T16:34:17Z",
+  "board_commit": "pending"
 }
