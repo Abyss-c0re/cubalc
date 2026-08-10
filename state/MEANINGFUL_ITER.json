@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 740,
-  "version": "1.15.767-usability",
-  "item": "NEWESTLIB/OLDESTLIB mtime filter pick",
-  "item_id": 776,
-  "title": "NEWESTLIB/OLDESTLIB by mtime \u00b7 dual of alpha PICKLIB \u00b7 OR fallback",
-  "commit": "7e915fba1b0e8b84456b9049bac0856d0fd4c39a",
-  "summary": "Freshest/oldest matching lib stem for INCLUDE without shell ls -t. proof 1317 PASS.",
+  "iter": 741,
+  "version": "1.15.768-usability",
+  "item": "INCLUDE NEWEST/OLDEST mtime pick+include",
+  "item_id": 777,
+  "title": "INCLUDE NEWEST|OLDEST needle [DEFAULT] \u00b7 mtime one-shot \u00b7 SOFT miss",
+  "commit": "51a99149e374d6a29d5937ab3fcbd960eb6f7811",
+  "summary": "Mtime filter pick+include without NEWESTLIB+LAST glue. proof 1318 PASS.",
   "proofs": [
-    "1317_newestlib PASS",
-    "1317_cli_newestlib PASS"
+    "1318_include_newest PASS",
+    "1318_cli_include_newest PASS"
   ],
-  "when": "2026-08-10T09:46:42Z",
+  "when": "2026-08-10T09:56:15Z",
   "agent": "meaningful_iter_10m",
-  "sha": "7e915fba1b0e8b84456b9049bac0856d0fd4c39a",
-  "note": "NEWESTLIB fat\u2192fat_session; OLDESTLIB fat\u2192fat_boot; OR fallback"
+  "sha": "51a99149e374d6a29d5937ab3fcbd960eb6f7811",
+  "note": "INCLUDE NEWEST fat\u2192fat_session; OLDEST fat\u2192fat_boot; DEFAULT hold_seed"
 }
