@@ -4674,7 +4674,7 @@
     "iter300: all board paths green; WRITE SNIP.txt multi-line works",
     "iter300: selftest CLI duals still red (pre-existing)"
   ],
-  "commit": "pending",
+  "commit": "bb3efa60",
   "ts": "2026-08-10T13:14:11Z",
-  "board_commit": "41fdd026"
+  "board_commit": "bb3efa60"
 }
