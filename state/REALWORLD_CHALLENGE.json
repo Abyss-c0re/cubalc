@@ -4202,6 +4202,6 @@
     "iter289: dump writes EVIDENCE.txt 238B indented nest",
     "iter289: selftest 455/615 CLI duals still red"
   ],
-  "commit": "pending",
+  "commit": "ef586ee4",
   "ts": "2026-08-10T07:24:06Z"
 }
