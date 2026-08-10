@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 284,
-  "program": "programs/realworld/svc_setflat_status_board.cubalc",
-  "theme": "SETFLAT bulk leaf value rewrite by path needle",
-  "version": "1.15.744-usability",
+  "iter": 285,
+  "program": "programs/realworld/svc_capflat_slo_board.cubalc",
+  "theme": "CAPFLAT nest pure-int SLO ceiling clamp",
+  "version": "1.15.746-usability",
   "pass": true,
-  "prior_note": "iter 283 RENAMEFLAT promote; this iter first realworld 1218 SETFLAT/MAPFLAT",
+  "prior_note": "iter 284 SETFLAT status rewrite; this iter first realworld 1223 CAPFLAT/CLAMPFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,27 +15,27 @@
     },
     {
       "name": "boot",
-      "cmd": "seed status+debug+peer",
+      "cmd": "seed score+latency",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "flag",
-      "cmd": "status\u2192degraded x2",
+      "name": "cap",
+      "cmd": "score max 100 N=2",
       "ok": true,
-      "note": "flag"
-    },
-    {
-      "name": "port",
-      "cmd": "cfg.port\u21929090",
-      "ok": true,
-      "note": "port"
+      "note": "cap"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER tls\u21921",
+      "cmd": "FROM PEER latency west cap",
       "ok": true,
       "note": "peer"
+    },
+    {
+      "name": "floor",
+      "cmd": "under max no-op N=0",
+      "ok": true,
+      "note": "floor"
     },
     {
       "name": "soft",
@@ -45,19 +45,19 @@
     },
     {
       "name": "gate",
-      "cmd": "debug\u21920",
+      "cmd": "all scores<=100",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "MAPFLAT meta\u2192none",
+      "cmd": "CLAMPFLAT 0",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "stat substring + empty all",
+      "cmd": "empty needle + substring",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; setflat PASS"
+      "note": "cli duals red; capflat PASS"
     }
   ],
   "weaknesses": [
@@ -3890,12 +3890,49 @@
       "title": "WRITE VAL/META omit trailing NL",
       "detail": "W5 class.",
       "repro": "cat -A VAL.txt"
+    },
+    {
+      "id": "W478",
+      "severity": "med",
+      "area": "lang|capflat",
+      "title": "CAPFLAT_N is changed-count not match-count (CAPFLAT_MATCH separate)",
+      "detail": "CAPFLAT score 100 with 4 matching ints but only 2 over max \u2192 N=2 MATCH=4. Agents using N as inventory under-count under-cap leaves.",
+      "repro": "CAPFLAT score 100 \u2192 N=2 MATCH=4 MAX=100"
+    },
+    {
+      "id": "W479",
+      "severity": "med",
+      "area": "lang|capflat",
+      "title": "path substring multi-match (score hits meta.score and score.*)",
+      "detail": "Same class as INCFLAT/SETFLAT. Bare CAPFLAT 10 (no needle) clamps all pure-int leaves.",
+      "repro": "CAPFLAT score 50 clamps score.b and meta.score"
+    },
+    {
+      "id": "W480",
+      "severity": "low",
+      "area": "lang|capflat",
+      "title": "strings skipped; under-max leaves unchanged (positive)",
+      "detail": "score.a=50 under 100 stays 50; s=z string untouched by CAPFLAT 10.",
+      "repro": "CAPFLAT 10 keeps s and a under max"
+    },
+    {
+      "id": "W481",
+      "severity": "low",
+      "area": "lang|capflat",
+      "title": "CLAMPFLAT is CAPFLAT alias (max can be 0)",
+      "detail": "CLAMPFLAT score 0 zeros matching pure-int leaves.",
+      "repro": "CLAMPFLAT score 0 \u2192 score.a 0"
+    },
+    {
+      "id": "W482",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META omit trailing NL",
+      "detail": "W5 class.",
+      "repro": "cat -A VAL.txt"
     }
   ],
   "workarounds": [
-    "agent_job=runner keeps worker count role-only",
-    "SAVEPLATE after SETBYVAL/REPLACEVAL before process exit",
-    "SETP re-seed before soft/gate when prior actions rewrote roles",
     "prefer LAST_N for rewrite count gates",
     "SAVEPLATE after DELBYVAL/DROPVAL",
     "SETP re-seed roles before independent del/gate paths",
@@ -3932,13 +3969,12 @@
     "PRUNEFLAT old prefix before re-promote if re-running",
     "never SETFLAT empty needle on agent plate",
     "use dotted cfg.port for single-leaf precision",
-    "MAPFLAT not WRITEFLAT for alias"
+    "MAPFLAT not WRITEFLAT for alias",
+    "use CAPFLAT_MATCH for inventory not N alone",
+    "unique path needles to avoid meta.score multi-cap",
+    "floor path: CAPFLAT when already under \u2192 N=0 is success"
   ],
   "language_gaps": [
-    "FLATKV/LEAFKV/FLATTENP path:value inventory",
-    "UNFLATKV/FROMFLAT bag\u2192nest rebuild + UNDER/INTO",
-    "FLATKV path exact nest root not substring",
-    "empty object \u2192 empty: terminal leaf",
     "PRUNEFLAT/KEEPONLYFLAT/DELFLAT write-back nest scrub",
     "path substring needles over-delete short tokens",
     "empty parent residual after child prune",
@@ -3958,11 +3994,13 @@
     "SETFLAT/MAPFLAT bulk leaf value by path needle",
     "empty needle = all leaves (identity hazard)",
     "path substring multi-match",
-    "SETFLAT_N/TOTAL/SRC/FROM specials"
+    "SETFLAT_N/TOTAL/SRC/FROM specials",
+    "CAPFLAT/CLAMPFLAT pure-int leaf ceiling",
+    "CAPFLAT_N changed vs CAPFLAT_MATCH inventory",
+    "bare CAPFLAT max = all pure-int empty needle",
+    "path substring multi-match scores"
   ],
   "issues_faced": [
-    "FREQFLAT_TOTAL dark after COUNTVALFLAT; used bag HASLINE",
-    "iter267: MODEFLAT_TOTAL silent 0 under fat agent until var footprint cut (W408)",
     "iter267: substring needle ro matches role (W409) \u2014 probe expects fuzzy hit",
     "iter267: late MODEFLAT_SRC hard-fail; capture early or avoid (W410)",
     "iter268: agent_job=role_s false-friend first-hit for PATHBYVAL worker (W412) \u2014 seed agent_job=runner",
@@ -4000,8 +4038,10 @@
     "iter283: 9/9 green; cfg without dot hits cfgn false friend documented",
     "iter283: soft score==6 vs 7 checks bug; fixed threshold; empty old_pfx hard-fail",
     "iter284: 9/9 green first pass; empty-needle only on scratch plate",
-    "iter284: selftest cli duals still red; setflat proof green"
+    "iter284: selftest cli duals still red; setflat proof green",
+    "iter285: 9/9 green first pass; N vs MATCH distinction key for SLO gates",
+    "iter285: selftest cli duals still red; capflat proof green"
   ],
-  "commit": "444bb7c2",
-  "ts": "2026-08-10T05:18:48Z"
+  "commit": "pending",
+  "ts": "2026-08-10T05:44:02Z"
 }
