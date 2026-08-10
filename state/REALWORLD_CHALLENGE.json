@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 286,
-  "program": "programs/realworld/svc_sumflat_rollup_board.cubalc",
-  "theme": "SUMFLAT pure-int nest rollup digest",
-  "version": "1.15.749-usability",
+  "iter": 287,
+  "program": "programs/realworld/svc_recipe_libcard_board.cubalc",
+  "theme": "RECIPE/LIBCARD/CARD lib recipe inventory",
+  "version": "1.15.750-usability",
   "pass": true,
-  "prior_note": "iter 285 CAPFLAT clamp; this iter first realworld 1220 SUMFLAT/TOTALFLAT",
+  "prior_note": "iter 286 SUMFLAT rollup; this iter first realworld 1300 RECIPE/LIBCARD/CARD",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed counters",
+      "cmd": "seed agent plate",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "hits",
-      "cmd": "hits sum=3 n=2",
+      "name": "fat",
+      "cmd": "RECIPE fat_session deps=2",
       "ok": true,
-      "note": "hits"
+      "note": "fat"
     },
     {
-      "name": "port",
-      "cmd": "port sum=8080",
+      "name": "tick",
+      "cmd": "LIBCARD plate_tick def=4",
       "ok": true,
-      "note": "port"
+      "note": "tick"
     },
     {
-      "name": "peer",
-      "cmd": "stats 30 + all 35",
+      "name": "agent",
+      "cmd": "CARD agent_boot zero deps",
       "ok": true,
-      "note": "peer"
-    },
-    {
-      "name": "all",
-      "cmd": "empty all-int 8086",
-      "ok": true,
-      "note": "all"
+      "note": "agent"
     },
     {
       "name": "soft",
-      "cmd": "ghost miss",
+      "cmd": "ghost lib miss OK=0",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "hits floor",
+      "cmd": "fat deps floor",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "TOTALFLAT errs",
+      "cmd": "LIBCARD+CARD fat",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "non-int + LAST_N=sum",
+      "cmd": "LAST_N dual + DEFAULTS brace",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; sumflat PASS"
+      "note": "455/610 cli duals red; recipe PASS"
     }
   ],
   "weaknesses": [
@@ -3976,6 +3970,38 @@
       "title": "WRITE VAL/META omit trailing NL",
       "detail": "W5 class.",
       "repro": "cat -A VAL.txt"
+    },
+    {
+      "id": "W488",
+      "severity": "med",
+      "area": "lang|recipe",
+      "title": "RECIPE_DEFAULTS truncates JSON/brace DEFAULT values",
+      "detail": "LIBCARD plate_tick RECIPE_DEFAULTS line for PLATE_SEED becomes PLATE_SEED={\\ not the full JSON seed. Brace-containing DEFAULT values are bag-line truncated. Agents cannot rehydrate seed defaults from RECIPE alone; must READ lib source or use LIBDEFAULTS carefully.",
+      "repro": "LIBCARD plate_tick; PRINT RECIPE_DEFAULTS \u2192 PLATE_SEED={\\"
+    },
+    {
+      "id": "W489",
+      "severity": "med",
+      "area": "lang|recipe",
+      "title": "RECIPE LAST_N is deps_n not recipe JSON bytes",
+      "detail": "After RECIPE fat_session, LAST is full recipe JSON (bytes~662) but LAST_N is 2 (LIB_DEPS_N). False friend for size gates; use LIB_BYTES for payload size and LIB_DEPS_N / LAST_N for dep count.",
+      "repro": "RECIPE fat_session; PRINT LAST_N \u2192 2; PRINT LIB_BYTES \u2192 662"
+    },
+    {
+      "id": "W490",
+      "severity": "low",
+      "area": "lang|recipe",
+      "title": "RECIPE soft miss sets sticky err; needs CLEAR_ERR",
+      "detail": "RECIPE no_such_lib \u2192 OK=0 LAST_N=0 with sticky last_err recipe miss tip. Soft audit paths must CLEAR_ERR or later ops inherit miss noise. Shell still 0 (soft).",
+      "repro": "RECIPE ghost; without CLEAR_ERR subsequent FAIL/STATUS may show sticky"
+    },
+    {
+      "id": "W491",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META/STATUS omit trailing NL",
+      "detail": "Reconfirmed: od -c META/VAL end without \\n; STATUS last bag line no $ in cat -A.",
+      "repro": "od -c META.txt"
     }
   ],
   "workarounds": [
@@ -4044,7 +4070,12 @@
     "SUMFLAT/TOTALFLAT pure-int nest rollup read-only",
     "LAST_N = sum not count; use SUMFLAT_N for leaf count",
     "empty needle sums all pure-int (port inflation)",
-    "path substring multi-match counters"
+    "path substring multi-match counters",
+    "RECIPE/LIBCARD/CARD in-lang cubalc recipe dual",
+    "RECIPE_DEFAULTS brace/JSON truncation (W488)",
+    "LAST_N after RECIPE is deps_n not bytes (W489)",
+    "soft RECIPE miss sticky err + CLEAR_ERR",
+    "capture recipe JSON before EQS/PRINT (W4 class)"
   ],
   "issues_faced": [
     "iter268: agent_job=role_s false-friend first-hit for PATHBYVAL worker (W412) \u2014 seed agent_job=runner",
@@ -4086,8 +4117,11 @@
     "iter285: 9/9 green first pass; N vs MATCH distinction key for SLO gates",
     "iter285: selftest cli duals still red; capflat proof green",
     "iter286: 10/10 green first pass; LAST_N=sum is the main false friend",
-    "iter286: empty all includes cfg.port 8080 in total 8086"
+    "iter286: empty all includes cfg.port 8080 in total 8086",
+    "iter287: first realworld 1300 RECIPE; agent path failed until LAST captured before EQS",
+    "iter287: plate_tick DEFAULTS PLATE_SEED truncated at brace",
+    "iter287: selftest still 455/610 CLI plate duals red (set\u2192SETF)"
   ],
-  "commit": "f10da605",
-  "ts": "2026-08-10T06:09:14Z"
+  "commit": "pending",
+  "ts": "2026-08-10T06:35:39Z"
 }
