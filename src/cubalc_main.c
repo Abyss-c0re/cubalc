@@ -3234,6 +3234,8 @@ int main(int argc, char **argv) {
       {"cli_cat_libs_include_path", "programs/proof/1265_cli_cat_libs_include_path.sh", "cat/libs CUBALC_INCLUDE_PATH project lib discovery"},
       {"cli_require_version", "programs/proof/1266_cli_require_version.sh", "run -R / CUBALC_REQUIRE_VERSION host version floor"},
       {"cli_require_forms", "programs/proof/1326_cli_require_forms.sh", "run -C / CUBALC_REQUIRE_FORMS host form capability floor"},
+      {"listforms", "programs/proof/1327_listforms.cubalc", "LISTFORMS/COUNTFORMS in-lang dual of cubalc forms"},
+      {"cli_listforms", "programs/proof/1327_cli_listforms.sh", "LISTFORMS bag + COUNTFORMS + forms CLI dual"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3863,6 +3865,8 @@ int main(int argc, char **argv) {
       {"HASFORM", "flow", "HASFORM name soft 0|1 if form in HELP catalog"},
       {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "flow", "HASFORMS names… soft all present · FORMMISS bag"},
+      {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
+      {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
       {"NEEDFORMS", "flow", "NEEDFORMS names… fail-fast first missing form"},
       {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
       {"REQUIRE FORM", "flow", "REQUIRE FORM name fail if form not in HELP catalog"},
@@ -7818,6 +7822,34 @@ int main(int argc, char **argv) {
     if (hard)
       return hit ? 0 : 1;
     return 0;
+  }
+  if (strcmp(cmd, "listforms") == 0 || strcmp(cmd, "formlist") == 0 ||
+      strcmp(cmd, "countforms") == 0 || strcmp(cmd, "nforms") == 0) {
+    /* Usability: CLI dual of LISTFORMS/COUNTFORMS — form catalog bag/count without .cubalc. */
+    const char *pref = (argc > 2) ? argv[2] : "";
+    int count_only = (strcmp(cmd, "countforms") == 0 || strcmp(cmd, "nforms") == 0);
+    char src[480];
+    cubalc_run_result rr;
+    long n = 0;
+    int ok;
+    if (pref && pref[0])
+      snprintf(src, sizeof src, "COUNTFORMS %s\nPRINT LAST_N\nPASS\n", pref);
+    else
+      snprintf(src, sizeof src, "COUNTFORMS\nPRINT LAST_N\nPASS\n");
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, strlen(src), "<listforms>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    if (rr.last_print[0])
+      n = strtol(rr.last_print, NULL, 10);
+    printf("{\"schema\":\"cubalc.formlist.v1\",\"ok\":%s,\"cmd\":\"%s\","
+           "\"prefix\":\"%s\",\"n\":%ld,\"count_only\":%s,"
+           "\"version\":\"%s\","
+           "\"note\":\"CLI dual of LISTFORMS/COUNTFORMS · cubalc forms for table\","
+           "\"hint\":\"in-lang LISTFORMS %s · HASFORM name · run -C forms\"}\n",
+           ok ? "true" : "false", cmd, pref ? pref : "", n,
+           count_only ? "true" : "false", CUBALC_LANG_VERSION,
+           (pref && pref[0]) ? pref : "");
+    return ok ? 0 : 1;
   }
   if (strcmp(cmd, "plate") == 0 || strcmp(cmd, "jsonplate") == 0 ||
       strcmp(cmd, "platefile") == 0 || strcmp(cmd, "agent-plate") == 0) {
@@ -14291,6 +14323,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"HASFORM", "flow", "HASFORM name soft 0|1 if form in HELP catalog"},
       {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "flow", "HASFORMS names… soft all present · FORMMISS bag"},
+      {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
+      {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
       {"NEEDFORMS", "flow", "NEEDFORMS names… fail-fast first missing form"},
       {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
       {"REQUIRE FORM", "flow", "REQUIRE FORM name fail if form not in HELP catalog"},
@@ -15750,7 +15784,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|sortlibs|hasform|hasforms|needforms|libage|freshlibs|nthlib  filter duals\n"
+      "    picklib|listforms|countforms|hasform|hasforms|needforms|libage|nthlib  filter duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
@@ -15781,7 +15815,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
       "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|HASFORM|HASFORMS|NEEDFORMS|REQUIRE FORM|LIBAGE|MATCHLIBS|PICKLIB|HASLIB|RECIPE\n"
+      "    LISTLIBS|LISTFORMS|COUNTFORMS|HASFORM|HASFORMS|NEEDFORMS|MATCHLIBS|PICKLIB|HASLIB|RECIPE\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"

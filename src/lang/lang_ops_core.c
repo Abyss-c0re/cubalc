@@ -2055,6 +2055,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"NEEDFORM", "NEEDFORM|REQUIREFORM name — fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "HASFORMS|ALLFORMS names… — soft 0|1 all known · FORMMISS bag of missing"},
       {"NEEDFORMS", "NEEDFORMS|REQUIREFORMS names… — fail-fast if any form missing · multi HASFORM"},
+      {"LISTFORMS", "LISTFORMS|FORMLIST [prefix] — bag of HELP catalog form names · dual of cubalc forms"},
+      {"COUNTFORMS", "COUNTFORMS|NFORMS [prefix] — match count → LAST_N without bag · dual of LISTFORMS"},
       {"REQUIRE FORM", "REQUIRE FORM|OP name — fail if form missing from HELP catalog · no version glue"},
       {"HASFN", "HASFN|HASFUNC name — soft 0|1 before CALL"},
       {"HASFUNC", "HASFUNC alias of HASFN"},
@@ -37706,6 +37708,105 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "LAST_ERR", em);
       var_set_str(vm, "ERR", em);
     }
+    bump(vm);
+    return 1;
+  }
+
+
+  /* LISTFORMS [prefix] — bag of HELP-catalog form names (dual of cubalc forms).
+   * Usability: agents discover surface in-lang without shell · optional filter.
+   * COUNTFORMS prefix → LAST_N only. Bare LISTFORMS = full catalog (capped bag).
+   * LAST = newline names · LAST_N = count · soft empty OK=1. */
+  if (kw(&L->cur,"LISTFORMS") || kw(&L->cur,"FORMSLIST") ||
+      kw(&L->cur,"CATALOGFORMS") || kw(&L->cur,"FORMLIST") ||
+      kw(&L->cur,"LIST_FORMS") || kw(&L->cur,"HELPLIST") ||
+      kw(&L->cur,"COUNTFORMS") || kw(&L->cur,"NFORMS") ||
+      kw(&L->cur,"FORMCOUNT") || kw(&L->cur,"COUNT_FORMS")) {
+    int count_only = kw(&L->cur,"COUNTFORMS") || kw(&L->cur,"NFORMS") ||
+                     kw(&L->cur,"FORMCOUNT") || kw(&L->cur,"COUNT_FORMS");
+    char pref[96], pref_up[96], bag[8192];
+    int nhelp = cubalc_help_catalog_n();
+    int i, nmatch = 0;
+    size_t o = 0, a;
+    lex_next(L);
+    pref[0] = 0;
+    bag[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(pref, sizeof pref, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      /* Always lex_next after consuming a prefix token (var, LAST, or bare name).
+       * Missing advance left LISTFORMS f → unknown form 'f' (realworld 298). */
+      if (vv && vv->is_str && vv->sval[0]) {
+        snprintf(pref, sizeof pref, "%s", vv->sval);
+        lex_next(L);
+      } else if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(pref, sizeof pref, "%s", vm->last_str);
+        lex_next(L);
+      } else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+                 kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"ELSE") ||
+                 kw(&L->cur,"ELIF") || kw(&L->cur,"PASS") || kw(&L->cur,"FAIL") ||
+                 kw(&L->cur,"INCLUDE") || kw(&L->cur,"SYS") || kw(&L->cur,"HELP") ||
+                 kw(&L->cur,"REQUIRE") || kw(&L->cur,"DEFAULT") ||
+                 kw(&L->cur,"VERSION") || kw(&L->cur,"STATUS") ||
+                 kw(&L->cur,"CLEAR_ERR") || kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") ||
+                 kw(&L->cur,"FOR") || kw(&L->cur,"WHILE") || kw(&L->cur,"LOOP") ||
+                 kw(&L->cur,"EACH") || kw(&L->cur,"CUBE") || kw(&L->cur,"PLUG"))) {
+        /* form names (HASFORM/SORTLIBS/…) are valid prefixes — do not stop on them */
+        snprintf(pref, sizeof pref, "%s", L->cur.text);
+        lex_next(L);
+      }
+    }
+    for (a = 0; pref[a] && a + 1 < sizeof pref_up; a++) {
+      char c = pref[a];
+      if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+      pref_up[a] = c;
+    }
+    pref_up[a] = 0;
+    for (i = 0; i < nhelp; i++) {
+      char nm[96];
+      size_t k;
+      const char *hn = cubalc_help_catalog[i].name;
+      int hit = 1;
+      for (k = 0; hn[k] && k + 1 < sizeof nm; k++) {
+        char c = hn[k];
+        if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+        nm[k] = c;
+      }
+      nm[k] = 0;
+      if (pref_up[0] && !strstr(nm, pref_up))
+        hit = 0;
+      if (!hit) continue;
+      nmatch++;
+      if (!count_only) {
+        size_t ln = strlen(hn);
+        if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) {
+          memcpy(bag + o, hn, ln);
+          o += ln;
+        }
+        bag[o] = 0;
+      }
+    }
+    var_set_num(vm, "LAST_N", nmatch);
+    vm->last_n = nmatch;
+    var_set_num(vm, "LISTFORMS_N", nmatch);
+    var_set_num(vm, "COUNTFORMS_N", nmatch);
+    var_set_num(vm, "FORMS_N", nmatch);
+    var_set_str(vm, "LISTFORMS_FILTER", pref);
+    var_set_str(vm, "FORMS_FILTER", pref);
+    if (count_only) {
+      char nb[16];
+      snprintf(nb, sizeof nb, "%d", nmatch);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    } else {
+      var_set_str(vm, "LAST", bag);
+      var_set_str(vm, "LISTFORMS", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    }
+    var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;
   }
