@@ -847,6 +847,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 817. ~~**`doctor_boot` + `cubalc init --doctor`**~~ **done** (INCLUDE agent_boot+NEEDDOCTOR · init scaffold n=11 · doctor lib_doctor_boot).
 818. ~~**`READY` / `NEEDREADY` + CLI**~~ **done** (install prove checklist forms+libs+DOCTOR · cubalc.ready.v1 · cubalc ready).
 819. ~~**`cubalc run -Y` / `CUBALC_REQUIRE_READY`**~~ **done** (host prove checklist floor before body · dual of NEEDREADY · plate require_ready · completes -R/-C/-D gate triad).
+820. ~~**`HASFLAGS` / `HASFLAGC`**~~ **done** (soft flag-count probe · LISTFLAGS twin without bag clobber · proof 1359).
 
 ## Tick protocol
 

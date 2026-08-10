@@ -3453,6 +3453,8 @@ int main(int argc, char **argv) {
       {"ready", "programs/proof/1359_ready.cubalc", "READY install prove checklist plate"},
       {"cli_ready", "programs/proof/1359_cli_ready.sh", "cubalc ready plate + NEEDREADY forms"},
       {"cli_require_ready", "programs/proof/1360_cli_require_ready.sh", "run -Y / CUBALC_REQUIRE_READY host prove floor"},
+      {"hasflags", "programs/proof/1359_hasflags.cubalc", "HASFLAGS soft flag-count probe"},
+      {"cli_hasflags", "programs/proof/1359_cli_hasflags.sh", "HASFLAGS/HASFLAGC forms + -e smoke"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
