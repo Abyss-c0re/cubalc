@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 296,
-  "program": "programs/realworld/svc_include_all_match_board.cubalc",
-  "theme": "INCLUDE ALL MATCH bulk + INCLUDE NEWEST canary",
-  "version": "1.15.769-usability",
+  "iter": 297,
+  "program": "programs/realworld/svc_form_capability_board.cubalc",
+  "theme": "HASFORM/HASFORMS + form_guard fleet capability preflight",
+  "version": "1.15.774-usability",
   "pass": true,
-  "prior_note": "iter 295 NEWESTLIB canary; this iter first realworld 1316 INCLUDE ALL + 1318 INCLUDE NEWEST",
+  "prior_note": "iter 296 INCLUDE ALL MATCH; this iter first realworld 1323/1324 form capability gates + form_guard (rebuild exposed HASFORMS)",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate",
+      "cmd": "seed agent plate formcap",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "guard",
-      "cmd": "ALL MATCH guard n=2",
-      "ok": true,
-      "note": "guard"
-    },
-    {
-      "name": "fat",
-      "cmd": "ALL MATCH fat n=2",
-      "ok": true,
-      "note": "fat"
-    },
-    {
-      "name": "newest",
-      "cmd": "INCLUDE NEWEST/OLDEST fat",
-      "ok": true,
-      "note": "newest"
-    },
-    {
-      "name": "soft",
-      "cmd": "SOFT miss + DEFAULT fb",
-      "ok": true,
-      "note": "soft"
-    },
-    {
-      "name": "gate",
-      "cmd": "min_all floor",
-      "ok": true,
-      "note": "gate"
-    },
-    {
-      "name": "alias",
-      "cmd": "LATEST/EARLIEST",
-      "ok": true,
-      "note": "alias"
-    },
-    {
       "name": "probe",
-      "cmd": "duals + NEWEST\u2260alpha",
+      "cmd": "HASFORM SORTLIBS/LIBAGE/FRESHLIBS + KNOWNFORM + var",
       "ok": true,
       "note": "probe"
     },
     {
+      "name": "multi",
+      "cmd": "HASFORMS bulk + bag CSV + NEEDFORMS HASFORM",
+      "ok": true,
+      "note": "multi"
+    },
+    {
+      "name": "guard",
+      "cmd": "form_guard hard NEED_FORMS + REQUIRE FORM",
+      "ok": true,
+      "note": "guard"
+    },
+    {
+      "name": "soft",
+      "cmd": "FORMMISS bag + soft form_guard",
+      "ok": true,
+      "note": "soft"
+    },
+    {
+      "name": "need",
+      "cmd": "NEEDFORM/NEEDFORMS/REQUIRE FORM",
+      "ok": true,
+      "note": "need"
+    },
+    {
+      "name": "alias",
+      "cmd": "KNOWNFORM ALLFORMS REQUIREFORM FORMSOK",
+      "ok": true,
+      "note": "alias"
+    },
+    {
+      "name": "gate",
+      "cmd": "plate cfg.need CSV via HASFORMS body",
+      "ok": true,
+      "note": "gate"
+    },
+    {
       "name": "unknown",
-      "cmd": "bogus EXIT 2",
+      "cmd": "bogon EXIT 2 shell 2",
       "ok": true,
       "note": "unknown\u21922"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; include_all+newest PASS; SORTLIBS unwired"
+      "note": "455/653 CLI duals red (unknown form set); hasform proofs PASS outside suite"
     }
   ],
   "weaknesses": [
@@ -4306,6 +4306,62 @@
       "title": "WRITE VAL/META/STATUS omit trailing NL",
       "detail": "Reconfirmed STATUS last line and META without final \\n.",
       "repro": "od -c META.txt"
+    },
+    {
+      "id": "W530",
+      "severity": "high",
+      "area": "host|build",
+      "title": "Stale binary can claim HASFORMS catalog while form parse missing",
+      "detail": "MEANINGFUL_ITER + HELP catalog listed HASFORMS/NEEDFORMS and form_guard lib existed, but 1.15.773 binary returned unknown form HASFORMS until full make rebuild to 1.15.774. Agents cannot trust catalog alone without live HASFORM self-probe of HASFORMS.",
+      "repro": "pre-rebuild: HASFORMS SORTLIBS \u2192 unknown form; post-make: PASS"
+    },
+    {
+      "id": "W531",
+      "severity": "med",
+      "area": "lang|hasforms",
+      "title": "HASFORMS_N is known-count; FORMS_N is total names (false-friend dual)",
+      "detail": "HASFORMS SORTLIBS NO_SUCH LIBAGE \u2192 OK=0 HASFORMS_N=2 FORMMISS_N=1 FORMS_N=3. Agents scoring HASFORMS_N==FORMS_N for full admit must use FORMMISS_N==0 or OK==1, not HASFORMS_N alone.",
+      "repro": "HASFORMS a ghost b; PRINT HASFORMS_N FORMS_N FORMMISS_N"
+    },
+    {
+      "id": "W532",
+      "severity": "med",
+      "area": "lang|form_guard",
+      "title": "form_guard DEFAULT NEED_FORMS is set-once; second contract needs LET",
+      "detail": "DEFAULT NEED_FORMS inside form_guard skips if already bound. Soft then hard (or two different contracts) in one process cannot re-DEFAULT \u2014 use LET NEED_FORMS = bag before INCLUDE form_guard. INCLUDE form_guard also re-lists stem each time (not ONCE).",
+      "repro": "DEFAULT NEED_FORMS a; INCLUDE form_guard; DEFAULT NEED_FORMS b \u2192 skip; LET NEED_FORMS = b works"
+    },
+    {
+      "id": "W533",
+      "severity": "med",
+      "area": "lang|hasforms",
+      "title": "HASFORMS stop-list historically ate form-name idents (HASFORM as arg)",
+      "detail": "Earlier stop-list included HASFORM/NEEDFORM so NEEDFORMS HASFORM SORTLIBS saw nname=0 and hard-failed empty. Fixed by excluding form names from stop list; still REQUIRE/END/etc stop. Prefer bag strings for self-gate lists: HASFORMS \"HASFORM,NEEDFORM,HASFORMS\".",
+      "repro": "historical: NEEDFORMS HASFORM \u2192 empty names fail; bag path always worked"
+    },
+    {
+      "id": "W534",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META/STATUS omit trailing NL (reconfirmed formcap board)",
+      "detail": "od -tx1 META ends at ...5a (Z of ISO date) without 0a. Same class W5/W525/W529.",
+      "repro": "od -An -tx1 META.txt | tail -1"
+    },
+    {
+      "id": "W535",
+      "severity": "low",
+      "area": "lang|hasform",
+      "title": "Soft HASFORM/HASFORMS miss leaves sticky LAST_ERR until CLEAR_ERR",
+      "detail": "Useful for diagnostics but PRINT after soft miss without CLEAR_ERR still shows HASFORMS miss in plate JSON last_err. Agents should CLEAR_ERR after capturing FORMMISS.",
+      "repro": "HASFORMS a NOPE; PRINT without CLEAR_ERR \u2192 last_err set"
+    },
+    {
+      "id": "W536",
+      "severity": "med",
+      "area": "host|cli",
+      "title": "CLI plate duals mass-fail unknown form set (selftest 57 red)",
+      "detail": "Selftest 455/653: many cli_plate_*.sh fail with unknown form set line 3 (want SETF). In-lang flat ops PASS. Host plate CLI surface lagged behind language forms \u2014 not regressed by this board.",
+      "repro": "./out/cubalc selftest | grep cli_plate | head"
     }
   ],
   "workarounds": [
@@ -4348,7 +4404,9 @@
     "floor path: CAPFLAT when already under \u2192 N=0 is success",
     "always capture SUMFLAT_N separate from LAST_N/SUMFLAT_SUM",
     "avoid empty needle when large ports live under same plate",
-    "use unique path needles for single counter rollups"
+    "use unique path needles for single counter rollups",
+    "HASFORMS bag string for self-gate names; FORMMISS_N==0 for full admit",
+    "LET NEED_FORMS before re-INCLUDE form_guard when DEFAULT already bound"
   ],
   "language_gaps": [
     "PRETTYP/JSONPRETTY/PRETTYJSON plate evidence dump",
@@ -4390,7 +4448,10 @@
     "INCLUDE NEWEST/OLDEST/LATEST/EARLIEST one-shot",
     "INCLUDE_ALL_N this-op count dual (W526)",
     "SOFT miss vs DEFAULT fallback polarity (W527)",
-    "SORTLIBS unwired despite proof 1320 (W528)"
+    "SORTLIBS unwired despite proof 1320 (W528)",
+    "stale binary vs catalog for multi form gates (W530)",
+    "HASFORMS_N known vs FORMS_N total dual (W531)",
+    "form_guard DEFAULT set-once / INCLUDE not ONCE (W532)"
   ],
   "issues_faced": [
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
@@ -4442,8 +4503,11 @@
     "iter295: selftest CLI duals still red",
     "iter296: first realworld 1316+1318 INCLUDE ALL/NEWEST; 10/10 green first pass",
     "iter296: SORTLIBS proof red \u2014 form not in binary (W528)",
-    "iter296: guard ALL n=2; NEWEST fat_session vs OLDEST fat_boot"
+    "iter296: guard ALL n=2; NEWEST fat_session vs OLDEST fat_boot",
+    "iter297: rebuild required \u2014 HASFORMS source present, binary 1.15.773 unknown form (W530)",
+    "iter297: all board paths green first pass; EXIT 2 shell 2 ok; selftest CLI duals still red",
+    "iter297: form_guard soft+hard contracts; HASFORMS body var from GETP cfg.need works"
   ],
-  "commit": "30b0e927",
-  "ts": "2026-08-10T10:18:41Z"
+  "commit": "533bb575",
+  "ts": "2026-08-10T11:22:56Z"
 }
