@@ -7491,6 +7491,336 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* RECIPE / LIBCARD / CARD name — one-shot lib recipe plate (dual of cubalc recipe).
+   * Usability: path + deps + defaults + head without LIBINFO+LIBDEPS+LIBDEFAULTS+HEADLIB glue.
+   * LAST = cubalc.recipe.v1 JSON · RECIPE_DEPS/DEFAULTS/HEAD bags · soft miss. */
+  if (kw(&L->cur, "RECIPE") || kw(&L->cur, "LIBCARD") ||
+      kw(&L->cur, "LIB_CARD") || kw(&L->cur, "LIBRECIPE") ||
+      kw(&L->cur, "DESCRIBERECIPE") || kw(&L->cur, "CARD") ||
+      kw(&L->cur, "RECIPECARD") || kw(&L->cur, "LIB_RECIPE")) {
+    char name[160], path[768], base[160], plate[CUBALC_VAR_STR_MAX];
+    char deps_bag[CUBALC_VAR_STR_MAX], knobs_bag[CUBALC_VAR_STR_MAX];
+    char head_bag[CUBALC_VAR_STR_MAX];
+    char deps[32][96], knobs[32][160], head[8][256];
+    char *src = NULL;
+    FILE *f = NULL;
+    long sz = 0;
+    size_t nr = 0, o = 0;
+    int nlines = 0, ndep = 0, nknob = 0, nhead = 0, j;
+    const char *lp;
+    lex_next(L);
+    name[0] = 0;
+    path[0] = 0;
+    plate[0] = 0;
+    deps_bag[0] = 0;
+    knobs_bag[0] = 0;
+    head_bag[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "RECIPE: need name");
+      var_set_str(vm, "ERR", "RECIPE: need name");
+      bump(vm);
+      return 1;
+    }
+    if (!lib_resolve_path(name, path, sizeof path, base, sizeof base)) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "RECIPE miss: '%s' — programs/lib · CUBALC_INCLUDE_PATH · cubalc recipe",
+               name);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "LIB_PATH", "");
+      var_set_str(vm, "RECIPE_DEPS", "");
+      var_set_str(vm, "RECIPE_DEFAULTS", "");
+      var_set_str(vm, "RECIPE_HEAD", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    f = fopen(path, "rb");
+    if (!f) {
+      char em[192];
+      snprintf(em, sizeof em, "RECIPE open fail: '%s'", path);
+      var_set_str(vm, "LAST", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    fseek(f, 0, SEEK_END);
+    sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz < 0) sz = 0;
+    if (sz > 256 * 1024) sz = 256 * 1024;
+    src = (char *)malloc((size_t)sz + 1);
+    if (!src) {
+      fclose(f);
+      var_set_str(vm, "LAST", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "RECIPE: oom");
+      var_set_str(vm, "ERR", "RECIPE: oom");
+      bump(vm);
+      return 1;
+    }
+    nr = fread(src, 1, (size_t)sz, f);
+    fclose(f);
+    src[nr] = 0;
+    lp = src;
+    nlines = 0;
+    ndep = 0;
+    nknob = 0;
+    nhead = 0;
+    while (*lp) {
+      char raw[512];
+      size_t ri = 0;
+      const char *p;
+      while (*lp && *lp != '\n' && ri + 1 < sizeof raw)
+        raw[ri++] = *lp++;
+      raw[ri] = 0;
+      if (*lp == '\n') lp++;
+      nlines++;
+      if (nhead < 8) {
+        snprintf(head[nhead], sizeof head[0], "%s", raw);
+        nhead++;
+      }
+      p = raw;
+      while (*p == ' ' || *p == '\t') p++;
+      if (*p == '#' || !*p) continue;
+      if (p[0] == 'I' && p[1] == 'N' && p[2] == 'C' && p[3] == 'L' &&
+          p[4] == 'U' && p[5] == 'D' && p[6] == 'E' &&
+          (p[7] == ' ' || p[7] == '\t' || p[7] == '"' || p[7] == '\'')) {
+        char tok[96];
+        size_t ti = 0;
+        p += 7;
+        while (*p == ' ' || *p == '\t') p++;
+        for (;;) {
+          if (p[0] == 'O' && p[1] == 'N' && p[2] == 'C' && p[3] == 'E' &&
+              (p[4] == ' ' || p[4] == '\t' || !p[4])) {
+            p += 4; while (*p == ' ' || *p == '\t') p++; continue;
+          }
+          if (p[0] == 'S' && p[1] == 'O' && p[2] == 'F' && p[3] == 'T' &&
+              (p[4] == ' ' || p[4] == '\t' || !p[4])) {
+            p += 4; while (*p == ' ' || *p == '\t') p++; continue;
+          }
+          if (p[0] == 'O' && p[1] == 'R' &&
+              (p[2] == ' ' || p[2] == '\t' || !p[2])) {
+            p += 2; while (*p == ' ' || *p == '\t') p++; continue;
+          }
+          break;
+        }
+        if (*p == '"' || *p == '\'') {
+          char q = *p++;
+          while (*p && *p != q && ti + 1 < sizeof tok) tok[ti++] = *p++;
+          tok[ti] = 0;
+        } else {
+          while (*p && *p != ' ' && *p != '\t' && *p != '#' && ti + 1 < sizeof tok)
+            tok[ti++] = *p++;
+          tok[ti] = 0;
+        }
+        if (tok[0] && ndep < 32) {
+          const char *sl = strrchr(tok, '/');
+          const char *st = sl ? sl + 1 : tok;
+          size_t slen;
+          snprintf(deps[ndep], sizeof deps[0], "%s", st);
+          slen = strlen(deps[ndep]);
+          if (slen > 7 && strcmp(deps[ndep] + slen - 7, ".cubalc") == 0)
+            deps[ndep][slen - 7] = 0;
+          if (deps[ndep][0]) ndep++;
+        }
+      } else if (p[0] == 'D' && p[1] == 'E' && p[2] == 'F' && p[3] == 'A' &&
+                 p[4] == 'U' && p[5] == 'L' && p[6] == 'T' &&
+                 (p[7] == ' ' || p[7] == '\t')) {
+        char key[64], val[96], kv[160];
+        size_t ki = 0, vi = 0;
+        p += 7;
+        while (*p == ' ' || *p == '\t') p++;
+        while (*p && *p != ' ' && *p != '\t' && *p != '=' && ki + 1 < sizeof key)
+          key[ki++] = *p++;
+        key[ki] = 0;
+        while (*p == ' ' || *p == '\t') p++;
+        if (*p == '=') { p++; while (*p == ' ' || *p == '\t') p++; }
+        if (*p == '"' || *p == '\'') {
+          char q = *p++;
+          while (*p && *p != q && vi + 1 < sizeof val) val[vi++] = *p++;
+          val[vi] = 0;
+        } else {
+          while (*p && *p != '#' && vi + 1 < sizeof val) val[vi++] = *p++;
+          val[vi] = 0;
+          while (vi > 0 && (val[vi - 1] == ' ' || val[vi - 1] == '\t'))
+            val[--vi] = 0;
+        }
+        if (key[0] && nknob < 32) {
+          snprintf(kv, sizeof kv, "%s=%s", key, val);
+          snprintf(knobs[nknob++], sizeof knobs[0], "%s", kv);
+        }
+      }
+    }
+    free(src);
+    /* bags for in-lang HASLINE / EACH without JSON peel */
+    o = 0;
+    for (j = 0; j < ndep; j++) {
+      size_t ln = strlen(deps[j]);
+      if (j > 0 && o + 1 < sizeof deps_bag) deps_bag[o++] = '\n';
+      if (o + ln < sizeof deps_bag) {
+        memcpy(deps_bag + o, deps[j], ln);
+        o += ln;
+      }
+      deps_bag[o] = 0;
+    }
+    o = 0;
+    for (j = 0; j < nknob; j++) {
+      size_t ln = strlen(knobs[j]);
+      if (j > 0 && o + 1 < sizeof knobs_bag) knobs_bag[o++] = '\n';
+      if (o + ln < sizeof knobs_bag) {
+        memcpy(knobs_bag + o, knobs[j], ln);
+        o += ln;
+      }
+      knobs_bag[o] = 0;
+    }
+    o = 0;
+    for (j = 0; j < nhead; j++) {
+      size_t ln = strlen(head[j]);
+      if (j > 0 && o + 1 < sizeof head_bag) head_bag[o++] = '\n';
+      if (o + ln < sizeof head_bag) {
+        memcpy(head_bag + o, head[j], ln);
+        o += ln;
+      }
+      head_bag[o] = 0;
+    }
+    /* cubalc.recipe.v1 plate — dual of CLI cubalc recipe */
+    {
+      char path_esc[900];
+      size_t pi = 0, qi = 0, po = 0;
+      for (pi = 0; path[pi] && qi + 2 < sizeof path_esc; pi++) {
+        if (path[pi] == '\\' || path[pi] == '"') {
+          path_esc[qi++] = '\\';
+          path_esc[qi++] = path[pi];
+        } else if ((unsigned char)path[pi] >= 32) {
+          path_esc[qi++] = path[pi];
+        }
+      }
+      path_esc[qi] = 0;
+      po = (size_t)snprintf(plate, sizeof plate,
+               "{\"schema\":\"cubalc.recipe.v1\",\"ok\":true,\"cmd\":\"recipe\","
+               "\"stem\":\"%s\",\"path\":\"%s\",\"bytes\":%ld,\"lines\":%d,"
+               "\"deps_n\":%d,\"defaults_n\":%d,\"version\":\"%s\","
+               "\"note\":\"in-lang dual of cubalc recipe · LIBINFO+LIBDEPS+LIBDEFAULTS+HEADLIB\","
+               "\"deps\":[",
+               base, path_esc, (long)nr, nlines, ndep, nknob, CUBALC_LANG_VERSION);
+      if (po >= sizeof plate) po = sizeof plate - 1;
+      for (j = 0; j < ndep && po + 4 < sizeof plate; j++) {
+        if (j) plate[po++] = ',';
+        plate[po++] = '"';
+        {
+          size_t a;
+          for (a = 0; deps[j][a] && po + 2 < sizeof plate; a++) {
+            if (deps[j][a] == '\\' || deps[j][a] == '"') {
+              plate[po++] = '\\';
+              if (po + 1 < sizeof plate) plate[po++] = deps[j][a];
+            } else if ((unsigned char)deps[j][a] >= 32) {
+              plate[po++] = deps[j][a];
+            }
+          }
+        }
+        if (po + 1 < sizeof plate) plate[po++] = '"';
+      }
+      if (po + 16 < sizeof plate) {
+        memcpy(plate + po, "],\"defaults\":[", 14);
+        po += 14;
+      }
+      for (j = 0; j < nknob && po + 4 < sizeof plate; j++) {
+        if (j) plate[po++] = ',';
+        plate[po++] = '"';
+        {
+          size_t a;
+          for (a = 0; knobs[j][a] && po + 2 < sizeof plate; a++) {
+            if (knobs[j][a] == '\\' || knobs[j][a] == '"') {
+              plate[po++] = '\\';
+              if (po + 1 < sizeof plate) plate[po++] = knobs[j][a];
+            } else if ((unsigned char)knobs[j][a] >= 32) {
+              plate[po++] = knobs[j][a];
+            }
+          }
+        }
+        if (po + 1 < sizeof plate) plate[po++] = '"';
+      }
+      if (po + 12 < sizeof plate) {
+        memcpy(plate + po, "],\"head\":[", 10);
+        po += 10;
+      }
+      for (j = 0; j < nhead && po + 4 < sizeof plate; j++) {
+        if (j) plate[po++] = ',';
+        plate[po++] = '"';
+        {
+          size_t a;
+          for (a = 0; head[j][a] && po + 2 < sizeof plate; a++) {
+            if (head[j][a] == '\\' || head[j][a] == '"') {
+              plate[po++] = '\\';
+              if (po + 1 < sizeof plate) plate[po++] = head[j][a];
+            } else if (head[j][a] == '\t') {
+              plate[po++] = ' ';
+            } else if ((unsigned char)head[j][a] >= 32) {
+              plate[po++] = head[j][a];
+            }
+          }
+        }
+        if (po + 1 < sizeof plate) plate[po++] = '"';
+      }
+      if (po + 2 < sizeof plate) {
+        plate[po++] = ']';
+        plate[po++] = '}';
+      }
+      plate[po] = 0;
+    }
+    var_set_str(vm, "LAST", plate);
+    var_set_str(vm, "RECIPE", plate);
+    var_set_str(vm, "LIBCARD", plate);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+    vm->last_n = ndep;
+    var_set_num(vm, "LAST_N", ndep);
+    var_set_num(vm, "LIB_BYTES", (long)nr);
+    var_set_num(vm, "LIB_SIZE", (long)nr);
+    var_set_num(vm, "LIB_LINES", nlines);
+    var_set_num(vm, "LIB_DEPS_N", ndep);
+    var_set_num(vm, "RECIPE_DEPS_N", ndep);
+    var_set_num(vm, "RECIPE_DEFAULTS_N", nknob);
+    var_set_num(vm, "RECIPE_HEAD_N", nhead);
+    var_set_str(vm, "RECIPE_DEPS", deps_bag);
+    var_set_str(vm, "RECIPE_DEFAULTS", knobs_bag);
+    var_set_str(vm, "RECIPE_HEAD", head_bag);
+    var_set_str(vm, "LIB_PATH", path);
+    var_set_str(vm, "LIB_STEM", base);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTPRELOAD / PRELOADS — short-name bag of effective -I / CUBALC_PRELOAD.
    * Usability: CLI sets CUBALC_PRELOAD_ACTIVE; programs audit request vs INCLUDESTEMS. */
   if (kw(&L->cur, "LISTPRELOAD") || kw(&L->cur, "PRELOADS") ||

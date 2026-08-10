@@ -3139,6 +3139,8 @@ int main(int argc, char **argv) {
       {"cli_recipe", "programs/proof/1297_cli_recipe.sh", "cubalc recipe one plate path+deps+defaults+head"},
       {"cli_examples_fat", "programs/proof/1298_cli_examples_fat.sh", "examples/search fat_session recipe discovery polish"},
       {"cli_help_surface", "programs/proof/1299_cli_help_surface.sh", "cubalc help lists recipe fat-session run -T discovery forms"},
+      {"recipe_form", "programs/proof/1300_recipe.cubalc", "RECIPE/LIBCARD in-lang dual of cubalc recipe plate"},
+      {"cli_recipe_form", "programs/proof/1300_cli_recipe.sh", "RECIPE plate + soft miss + forms + CLI parity"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3650,6 +3652,9 @@ int main(int argc, char **argv) {
       {"LIBINFO", "flow", "LIBINFO|STATLIB name cubalc.libinfo.v1 path/bytes/lines/mtime/deps_n"},
       {"LIBTREE", "flow", "LIBTREE|LIBDEPSALL name transitive INCLUDE closure bag"},
       {"LIBDEFAULTS", "flow", "LIBDEFAULTS|LIBKNOBS name DEFAULT key=value knobs bag"},
+      {"RECIPE", "flow", "RECIPE|LIBCARD|CARD name cubalc.recipe.v1 path+deps+defaults+head dual of cubalc recipe"},
+      {"LIBCARD", "flow", "LIBCARD alias of RECIPE"},
+      {"CARD", "flow", "CARD alias of RECIPE"},
       {"INCLUDESTEMS", "flow", "INCLUDESTEMS short-name bag from loaded modules"},
       {"LISTPRELOAD", "flow", "LISTPRELOAD|PRELOADS -I/CUBALC_PRELOAD short-name bag"},
       {"PRELOADMISS", "flow", "PRELOADMISS|CHECKPRELOAD -I names not loaded bag"},
@@ -12814,6 +12819,9 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"LIBINFO", "flow", "LIBINFO|STATLIB name cubalc.libinfo.v1 path/bytes/lines/mtime/deps_n"},
       {"LIBTREE", "flow", "LIBTREE|LIBDEPSALL name transitive INCLUDE closure bag"},
       {"LIBDEFAULTS", "flow", "LIBDEFAULTS|LIBKNOBS name DEFAULT key=value knobs bag"},
+      {"RECIPE", "flow", "RECIPE|LIBCARD|CARD name cubalc.recipe.v1 path+deps+defaults+head dual of cubalc recipe"},
+      {"LIBCARD", "flow", "LIBCARD alias of RECIPE"},
+      {"CARD", "flow", "CARD alias of RECIPE"},
       {"INCLUDESTEMS", "flow", "INCLUDESTEMS short-name bag from loaded modules"},
       {"LISTPRELOAD", "flow", "LISTPRELOAD|PRELOADS -I/CUBALC_PRELOAD short-name bag"},
       {"PRELOADMISS", "flow", "PRELOADMISS|CHECKPRELOAD -I names not loaded bag"},
@@ -14280,10 +14288,10 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]\n"
       "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|HASLIB|CATLIB|GREPLIB|HEADLIB|LIBDEPS|LIBTREE|LIBDEFAULTS|LIBINFO\n"
+      "    LISTLIBS|HASLIB|CATLIB|GREPLIB|HEADLIB|LIBDEPS|LIBTREE|LIBDEFAULTS|LIBINFO|RECIPE\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
-      "  Agents: cubalc doctor · recipe fat_session · init --fat-session · examples fat\n"
+      "  Agents: cubalc doctor · RECIPE fat_session · recipe fat_session · init --fat-session\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,
       CUBALC_LANG_PARADIGM);
