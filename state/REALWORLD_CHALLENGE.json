@@ -5448,7 +5448,7 @@
     "iter317: bare path first failed expecting verbose=a.bin; FLAGMAP forces =1 and drops token; board 10/10 after bare score fix",
     "iter317: selftest 553/737 cliinfo+cli_boot PASS; mass CLI duals still unknown form set"
   ],
-  "commit": "5ad09367",
-  "ts": "2026-08-10T20:21:30Z",
-  "board_commit": "5ad09367"
+  "commit": "331fdf36",
+  "ts": "2026-08-10T20:22:13Z",
+  "board_commit": "331fdf36"
 }
