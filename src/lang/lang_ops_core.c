@@ -2746,6 +2746,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"PLAYGUIDE", "PLAYGUIDE alias of GUIDE"},
       {"LISTTOPICS", "LISTTOPICS|TOPICS — bag of discovery topics · dual of cubalc topics"},
       {"DISCOVER", "DISCOVER|EXPLORE [needle] — match bag + first-topic open plate · cubalc.discover.v1 · no MATCHTOPICS+TOPICHINT+GUIDE glue"},
+      {"OPEN", "OPEN|OPENPLAY [needle] — DISCOVER bag + full GUIDE for first · cubalc.open.v1 · no DISCOVER+GUIDE glue"},
+      {"OPENPLAY", "OPENPLAY alias of OPEN"},
       {"EXPLORE", "EXPLORE alias of DISCOVER"},
       {"HASTOPIC", "HASTOPIC name — soft 0|1 if topic known · dual of HASFORM for topics"},
       {"NEEDTOPIC", "NEEDTOPIC name — fail-fast if topic unknown"},
@@ -39262,7 +39264,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"LISTTOPICS", "RELATEDTOPIC"}, {"LISTTOPICS", "TOPICHINT"}, {"LISTTOPICS", "HASTOPIC"},
       {"LISTTOPICS", "NEEDTOPIC"}, {"LISTTOPICS", "TOPIC"}, {"LISTTOPICS", "FORMTOPICS"},
       {"LISTTOPICS", "MATCHTOPICS"}, {"LISTTOPICS", "PICKTOPIC"}, {"LISTTOPICS", "DISCOVER"},
-      {"DISCOVER", "MATCHTOPICS"}, {"DISCOVER", "GUIDE"}, {"DISCOVER", "RUNSNIP"},
+      {"DISCOVER", "MATCHTOPICS"}, {"DISCOVER", "GUIDE"}, {"DISCOVER", "RUNSNIP"}, {"DISCOVER", "OPEN"},
+      {"OPEN", "DISCOVER"}, {"OPEN", "GUIDE"}, {"OPEN", "RUNSNIP"}, {"OPEN", "GUIDEMATCH"},
       {"DISCOVER", "TOPICHINT"}, {"DISCOVER", "LISTTOPICS"}, {"DISCOVER", "START"},
       {"DISCOVER", "GUIDEMATCH"}, {"DISCOVER", "RUNSNIPMATCH"},
       {"HASTOPIC", "NEEDTOPIC"}, {"HASTOPIC", "LISTTOPICS"}, {"HASTOPIC", "TOPICHINT"},
@@ -40879,6 +40882,257 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# discover filter=%s n=%d first=%s\n",
               nlow[0] ? nlow : "*", n, first);
+    bump(vm);
+    return 1;
+  }
+
+
+  /* OPEN|OPENPLAY [needle] — DISCOVER match bag + full GUIDE playbook for first.
+   * Usability: open filter surface without DISCOVER then GUIDE DISCOVER_FIRST glue.
+   * Soft empty OK=0. LAST=cubalc.open.v1 · sets DISCOVER_* and GUIDE_* bags. */
+  if (kw(&L->cur,"OPEN")||kw(&L->cur,"OPENPLAY")||kw(&L->cur,"OPENGUIDE")||
+      kw(&L->cur,"PLAYOPEN")||kw(&L->cur,"OPEN_TOPIC")||kw(&L->cur,"DISCOVERGUIDE")){
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    static const struct { const char *id; const char *hint; } hints[] = {
+      {"general", "install/doctor/init surface · VERSION STATUS IDENTITY"},
+      {"cap", "HASFORM/NEEDFORMS capability floor · FORMHINT · run -C"},
+      {"fat", "VARROOM/REMAIN_MS fat nest budget · fat_session · run -T"},
+      {"plate", "SETP/NEEDP plate agent JSON · plate_session · PRETTYP"},
+      {"p2p", "SMX SERVE/DIAL mesh · CUBALC_SMX_KEY · P2P_SOFT/TIMEOUT"},
+      {"run", "ASSERT/EXPECT/WHY run probes · ERRTIPS · CLEAR_ERR"},
+      {"lib", "LISTLIBS/RECIPE INCLUDE discovery · MATCHLIBS · checkdeps"},
+      {"protect", "HOLD_FLASH/protect status · CORE_PROTECT · device/mesh-join only"},
+    };
+    static const struct { const char *topic; const char *rel; } rels[] = {
+      {"general", "cap"}, {"general", "lib"}, {"general", "run"}, {"general", "plate"},
+      {"cap", "general"}, {"cap", "run"}, {"cap", "lib"}, {"cap", "fat"},
+      {"fat", "plate"}, {"fat", "run"}, {"fat", "cap"}, {"fat", "general"},
+      {"plate", "fat"}, {"plate", "run"}, {"plate", "general"}, {"plate", "lib"},
+      {"p2p", "protect"}, {"p2p", "run"}, {"p2p", "general"}, {"p2p", "lib"},
+      {"run", "general"}, {"run", "cap"}, {"run", "plate"}, {"run", "fat"},
+      {"lib", "general"}, {"lib", "cap"}, {"lib", "plate"}, {"lib", "run"},
+      {"protect", "p2p"}, {"protect", "general"}, {"protect", "run"}, {"protect", "lib"},
+    };
+    static const struct { const char *topic; const char *tip; } tips[] = {
+      {"general", "cubalc doctor — install readiness plate"},
+      {"general", "cubalc init --list — scaffold catalog"},
+      {"general", "INCLUDE discover_boot — DISCOVER open plate"},
+      {"general", "OPEN general — full playbook one-shot"},
+      {"cap", "INCLUDE cap_boot — agent_boot + form_guard"},
+      {"cap", "cubalc init --cap · HASFORM · NEEDFORMS"},
+      {"fat", "INCLUDE fat_session durable nest"},
+      {"fat", "cubalc run -T ms · REMAIN_MS · VARROOM"},
+      {"plate", "INCLUDE plate_session · SETP NEEDP SAVEPLATE"},
+      {"p2p", "export CUBALC_SMX_KEY hex64 · SMX SERVE/DIAL"},
+      {"run", "cubalc run -q -e CODE · WHY after ASSERT"},
+      {"lib", "cubalc libs|recipe|checkdeps · INCLUDE MATCH"},
+      {"protect", "cubalc protect status · HOLD_FLASH device/mesh-join only"},
+    };
+    static const struct { const char *topic; const char *form; } forms[] = {
+      {"general", "VERSION"}, {"general", "STATUS"}, {"general", "OPEN"},
+      {"general", "DISCOVER"}, {"general", "GUIDE"},
+      {"cap", "HASFORM"}, {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"},
+      {"fat", "VARROOM"}, {"fat", "REMAIN_MS"},
+      {"plate", "SETP"}, {"plate", "NEEDP"}, {"plate", "PRETTYP"},
+      {"p2p", "SMX"}, {"p2p", "SERVE"}, {"p2p", "DIAL"},
+      {"run", "ASSERT"}, {"run", "EXPECT"}, {"run", "WHY"},
+      {"lib", "LISTLIBS"}, {"lib", "RECIPE"}, {"lib", "INCLUDE"},
+      {"protect", "HOLD_FLASH"}, {"protect", "STATUS"},
+    };
+    static const struct { const char *topic; const char *src; } snips[] = {
+      {"general", "VERSION\nSTATUS\nPASS\n"},
+      {"cap", "HASFORM SORTLIBS\nFORMHINT SORTLIBS\nPASS\n"},
+      {"fat", "VARROOM\nHASVARROOM 8\nPASS\n"},
+      {"plate", "SETP \"status\" \"ready\"\nNEEDP \"status\"\nPASS\n"},
+      {"p2p", "TIPS p2p\nFORMSFOR p2p\nPASS\n"},
+      {"run", "EXPECT 1 == 1\nWHY\nCLEAR_ERR\nPASS\n"},
+      {"lib", "HASLIB agent_boot\nRECIPE agent_boot\nPASS\n"},
+      {"protect", "HOLD_FLASH\nVERSION\nPASS\n"},
+    };
+    char needle[64], nlow[64], bag[256], rel_bag[256], tips_bag[2048], forms_bag[1024];
+    char next_bag[768], line[CUBALC_HOST_STR_MAX];
+    char esc_hint[320], esc_bag[400], esc_rel[400], esc_tips[2400], esc_forms[1200];
+    char esc_snip[1600], esc_next[900];
+    char matches[8][16];
+    const char *first = NULL, *hint = NULL, *src = NULL, *pp;
+    size_t k, o, eo;
+    int i, n = 0, nr = 0, nt = 0, nf = 0, ns = 0, nn = 0, lines = 0, have_filter = 0;
+    int nall = (int)(sizeof topics / sizeof topics[0]);
+    int n_hints = (int)(sizeof hints / sizeof hints[0]);
+    int n_rels = (int)(sizeof rels / sizeof rels[0]);
+    int n_tips = (int)(sizeof tips / sizeof tips[0]);
+    int n_forms = (int)(sizeof forms / sizeof forms[0]);
+    int n_snips = (int)(sizeof snips / sizeof snips[0]);
+    lex_next(L);
+    needle[0] = 0; nlow[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(needle, sizeof needle, "%s", L->cur.text); lex_next(L); have_filter = 1;
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0]) {
+        snprintf(needle, sizeof needle, "%s", vv->sval); lex_next(L); have_filter = 1;
+      } else if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(needle, sizeof needle, "%s", vm->last_str); lex_next(L); have_filter = 1;
+      } else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+                   kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
+                   kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
+        snprintf(needle, sizeof needle, "%s", L->cur.text); lex_next(L); have_filter = 1;
+      }
+    }
+    if (have_filter && needle[0]) {
+      for (k = 0; needle[k] && k + 1 < sizeof nlow; k++) {
+        char ch = needle[k];
+        if (ch >= 'A' && ch <= 'Z') ch = (char)(ch - 'A' + 'a');
+        nlow[k] = ch;
+      }
+      nlow[k] = 0;
+      if (!strcmp(nlow, "capability") || !strcmp(nlow, "forms") || !strcmp(nlow, "form"))
+        snprintf(nlow, sizeof nlow, "%s", "cap");
+      if (!strcmp(nlow, "mesh") || !strcmp(nlow, "smx") || !strcmp(nlow, "peer"))
+        snprintf(nlow, sizeof nlow, "%s", "p2p");
+      if (!strcmp(nlow, "nest") || !strcmp(nlow, "var") || !strcmp(nlow, "timeout"))
+        snprintf(nlow, sizeof nlow, "%s", "fat");
+      if (!strcmp(nlow, "json") || !strcmp(nlow, "agent"))
+        snprintf(nlow, sizeof nlow, "%s", "plate");
+      if (!strcmp(nlow, "start") || !strcmp(nlow, "all") || !strcmp(nlow, "help") ||
+          !strcmp(nlow, "default") || !strcmp(nlow, "*"))
+        snprintf(nlow, sizeof nlow, "%s", "general");
+      for (i = 0; i < nall && n < 8; i++) {
+        if (!strstr(topics[i], nlow)) continue;
+        snprintf(matches[n], sizeof matches[0], "%s", topics[i]); n++;
+      }
+    } else {
+      for (i = 0; i < nall && n < 8; i++) {
+        snprintf(matches[n], sizeof matches[0], "%s", topics[i]); n++;
+      }
+    }
+    bag[0] = 0; o = 0;
+    for (i = 0; i < n; i++) {
+      size_t ln = strlen(matches[i]);
+      if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) { memcpy(bag + o, matches[i], ln); o += ln; }
+      bag[o] = 0;
+    }
+    var_set_str(vm, "DISCOVER_FILTER", nlow);
+    var_set_str(vm, "OPEN_FILTER", nlow[0] ? nlow : "*");
+    var_set_num(vm, "DISCOVER_N", n);
+    var_set_num(vm, "OPEN_N", n);
+    var_set_str(vm, "DISCOVER_TOPICS", bag);
+    var_set_str(vm, "OPEN_TOPICS", bag);
+    if (n == 0) {
+      var_set_str(vm, "LAST", ""); vm->last_str[0] = 0; vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0); var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "OPEN: empty — DISCOVER · LISTTOPICS · cubalc open");
+      var_set_str(vm, "ERR", "OPEN: empty — DISCOVER · LISTTOPICS · cubalc open");
+      bump(vm); return 1;
+    }
+    first = matches[0];
+    for (i = 0; i < n_hints; i++)
+      if (!strcmp(hints[i].id, first)) { hint = hints[i].hint; break; }
+    if (!hint) hint = "";
+    rel_bag[0] = 0; o = 0; nr = 0;
+    for (i = 0; i < n_rels; i++) {
+      size_t ln; if (strcmp(rels[i].topic, first) != 0) continue;
+      ln = strlen(rels[i].rel);
+      if (o && o + 1 < sizeof rel_bag) rel_bag[o++] = '\n';
+      if (o + ln < sizeof rel_bag) { memcpy(rel_bag + o, rels[i].rel, ln); o += ln; }
+      rel_bag[o] = 0; nr++;
+    }
+    tips_bag[0] = 0; o = 0; nt = 0;
+    for (i = 0; i < n_tips; i++) {
+      size_t ln; if (strcmp(tips[i].topic, first) != 0) continue;
+      ln = strlen(tips[i].tip);
+      if (o && o + 1 < sizeof tips_bag) tips_bag[o++] = '\n';
+      if (o + ln < sizeof tips_bag) { memcpy(tips_bag + o, tips[i].tip, ln); o += ln; }
+      tips_bag[o] = 0; nt++;
+    }
+    forms_bag[0] = 0; o = 0; nf = 0;
+    for (i = 0; i < n_forms; i++) {
+      size_t ln; if (strcmp(forms[i].topic, first) != 0) continue;
+      ln = strlen(forms[i].form);
+      if (o && o + 1 < sizeof forms_bag) forms_bag[o++] = '\n';
+      if (o + ln < sizeof forms_bag) { memcpy(forms_bag + o, forms[i].form, ln); o += ln; }
+      forms_bag[o] = 0; nf++;
+    }
+    for (i = 0; i < n_snips; i++)
+      if (!strcmp(snips[i].topic, first)) { src = snips[i].src; break; }
+    if (!src) src = "";
+    for (pp = src; *pp; pp++) if (*pp == '\n') lines++;
+    if (lines == 0 && src[0]) lines = 1;
+    ns = lines;
+    next_bag[0] = 0; o = 0; nn = 0;
+    {
+      char cmds[4][96]; int ci;
+      snprintf(cmds[0], sizeof cmds[0], "RUNSNIP %s", first);
+      snprintf(cmds[1], sizeof cmds[1], "GUIDE %s", first);
+      snprintf(cmds[2], sizeof cmds[2], "TOPIC %s", first);
+      if (nlow[0]) snprintf(cmds[3], sizeof cmds[3], "DISCOVER %s", nlow);
+      else snprintf(cmds[3], sizeof cmds[3], "DISCOVER");
+      for (ci = 0; ci < 4; ci++) {
+        size_t ln = strlen(cmds[ci]);
+        if (o && o + 1 < sizeof next_bag) next_bag[o++] = '\n';
+        if (o + ln < sizeof next_bag) { memcpy(next_bag + o, cmds[ci], ln); o += ln; }
+        next_bag[o] = 0; nn++;
+      }
+    }
+#define CUBALC_OPEN_ESC(dst, srcv) do { \
+      eo = 0; for (pp = (srcv); *pp && eo + 2 < sizeof(dst); pp++) { \
+        if (*pp == '"' || *pp == '\\') { (dst)[eo++] = '\\'; (dst)[eo++] = *pp; } \
+        else if (*pp == '\n') { (dst)[eo++] = '\\'; (dst)[eo++] = 'n'; } \
+        else if ((unsigned char)*pp < 0x20) continue; \
+        else (dst)[eo++] = *pp; } (dst)[eo] = 0; } while (0)
+    CUBALC_OPEN_ESC(esc_hint, hint);
+    CUBALC_OPEN_ESC(esc_bag, bag);
+    CUBALC_OPEN_ESC(esc_rel, rel_bag);
+    CUBALC_OPEN_ESC(esc_tips, tips_bag);
+    CUBALC_OPEN_ESC(esc_forms, forms_bag);
+    CUBALC_OPEN_ESC(esc_snip, src);
+    CUBALC_OPEN_ESC(esc_next, next_bag);
+#undef CUBALC_OPEN_ESC
+    snprintf(line, sizeof line,
+      "{\"schema\":\"cubalc.open.v1\",\"ok\":true,\"filter\":\"%s\","
+      "\"n\":%d,\"first\":\"%s\",\"hint\":\"%s\","
+      "\"related_n\":%d,\"tips_n\":%d,\"forms_n\":%d,\"snip_lines\":%d,\"next_n\":%d,"
+      "\"topics\":\"%s\",\"related\":\"%s\",\"tips\":\"%s\",\"forms\":\"%s\","
+      "\"snip\":\"%s\",\"next\":\"%s\",\"version\":\"%s\","
+      "\"note\":\"DISCOVER bag + GUIDE playbook for first · dual of cubalc open\"}",
+      nlow[0] ? nlow : "*", n, first, esc_hint, nr, nt, nf, ns, nn,
+      esc_bag, esc_rel, esc_tips, esc_forms, esc_snip, esc_next, CUBALC_LANG_VERSION);
+    var_set_str(vm, "LAST", line);
+    var_set_str(vm, "OPEN", line);
+    var_set_str(vm, "OPENPLAY", line);
+    var_set_str(vm, "DISCOVER_FIRST", first);
+    var_set_str(vm, "OPEN_FIRST", first);
+    var_set_str(vm, "DISCOVER_HINT", hint);
+    var_set_str(vm, "DISCOVER_RELATED", rel_bag);
+    var_set_str(vm, "DISCOVER_NEXT", next_bag);
+    var_set_str(vm, "GUIDE_HINT", hint);
+    var_set_str(vm, "GUIDE_RELATED", rel_bag);
+    var_set_str(vm, "GUIDE_TIPS", tips_bag);
+    var_set_str(vm, "GUIDE_FORMS", forms_bag);
+    var_set_str(vm, "GUIDE_SNIP", src);
+    var_set_str(vm, "TOPIC_NAME", first);
+    var_set_str(vm, "TOPIC_HINT", hint);
+    var_set_str(vm, "PICKTOPIC", first);
+    var_set_str(vm, "TOPICHINT", hint);
+    var_set_num(vm, "DISCOVER_RELATED_N", nr);
+    var_set_num(vm, "DISCOVER_NEXT_N", nn);
+    var_set_num(vm, "GUIDE_RELATED_N", nr);
+    var_set_num(vm, "GUIDE_TIPS_N", nt);
+    var_set_num(vm, "GUIDE_FORMS_N", nf);
+    var_set_num(vm, "GUIDE_SNIP_N", ns);
+    var_set_num(vm, "OPEN_TIPS_N", nt);
+    var_set_num(vm, "OPEN_FORMS_N", nf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", line);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "OK", 1);
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", "cubalc.open.v1");
+    if (vm->trace)
+      fprintf(vm->trace, "# open filter=%s n=%d first=%s\n", nlow[0] ? nlow : "*", n, first);
     bump(vm);
     return 1;
   }

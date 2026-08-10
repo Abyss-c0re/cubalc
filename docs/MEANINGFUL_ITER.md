@@ -840,6 +840,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 810. ~~**`RUNSNIP MATCH` / `NTH` / `LASTMATCH` + CLI**~~ **done** (filter pick+execute curated mini · twin of GUIDE MATCH · no NTHTOPIC+RUNSNIP glue · cubalc.runsnip.v1).
 811. ~~**`DISCOVER` / `cubalc discover`**~~ **done** (match bag + first-topic open plate · cubalc.discover.v1 · no MATCHTOPICS+TOPICHINT+GUIDE glue).
 812. ~~**`discover_boot` + `cubalc init --discover`**~~ **done** (INCLUDE agent_boot+DISCOVER · init scaffold n=9 · doctor lib_discover_boot).
+813. ~~**`OPEN` / `cubalc open`**~~ **done** (DISCOVER bag + full GUIDE for first · cubalc.open.v1 · no DISCOVER+GUIDE DISCOVER_FIRST glue).
 
 ## Tick protocol
 
