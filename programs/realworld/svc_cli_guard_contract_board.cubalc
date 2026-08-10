@@ -1,0 +1,1174 @@
+# svc_cli_guard_contract_board.cubalc — cli_guard NEED_FLAGS + NEED_REST_N fleet CLI contract
+#
+# Real use: fleet agents gate CLI tools with one INCLUDE cli_guard instead of
+# N× HASFLAGALL/NEEDFLAGS + HASRESTARGS/REQUIRE RESTARGS glue. First realworld
+# of 1367 cli_guard (1.15.819) · form_guard twin for CLI surface.
+#
+#   DEFAULT NEED_FLAGS bag/CSV · NEED_REST_N min · CLI_GUARD_SOFT soft dual
+#   CLI_GUARD_OK / FLAGS_OK / REST_OK sticky knobs
+#   soft FLAGMISS · bare --flag steals rest · hard miss exit_code 0 class
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cg_$$
+#   ./out/cubalc run programs/realworld/svc_cli_guard_contract_board.cubalc boot
+#   ./out/cubalc run ... soft|miss|rest|hard|skip|bare|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt CG_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_CG_REQUIRE
+#
+# Edges: CUBALC_ARG* via SYS ENV SET only (export host dead W1);
+#   hard NEEDFLAGS/REQUIRE RESTARGS sticky err shell exit often 0;
+#   bare bool steals RESTARGS; PRINT clobber; WRITE NL; re-INCLUDE LET
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_cli_guard_contract_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_cli_guard_contract -- boot|soft|miss|rest|hard|skip|bare|form|gate|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_CG_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "CG_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sum_v = 0
+LET sum_n = 0
+LET stem_s = ""
+LET flag_n = 0
+LET rest_n = 0
+LET g_ok = 0
+LET g_f = 0
+LET g_r = 0
+
+# cli_guard knobs (LET override before each INCLUDE)
+DEFAULT NEED_FLAGS = ""
+DEFAULT NEED_REST_N = 0
+DEFAULT CLI_GUARD_SOFT = 1
+
+ONEOF ACTION "boot", "soft", "miss", "rest", "hard", "skip", "bare", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "miss" THEN
+    LET op = "miss"
+  WHEN "rest" THEN
+    LET op = "rest"
+  WHEN "hard" THEN
+    LET op = "hard"
+  WHEN "skip" THEN
+    LET op = "skip"
+  WHEN "bare" THEN
+    LET op = "bare"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-cg\",\"schema\":\"cubalc.svc_cli_guard_contract.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"want_filter\":\"cli_guard\",\"label\":\"cg\",\"cfg\":{\"surface\":\"cli_guard,NEED_FLAGS,NEED_REST_N,CLI_GUARD_SOFT,CLI_GUARD_OK,HASFLAGALL,NEEDFLAGS,HASRESTARGS\",\"contract\":\"mode,verbose + rest>=1\"}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"peer\":\"cli_guard\",\"n\":1}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "agent"
+  SYS EQS LAST "svc-cg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_cli_guard_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "cg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "cli_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "NEED_FLAGS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — soft dual full hit (flags + rest)
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV SET CUBALC_ARG0 "--mode=seal"
+  SYS ENV SET CUBALC_ARG1 "--verbose=1"
+  SYS ENV SET CUBALC_ARG2 "pack.bin"
+  SYS ENV SET CUBALC_ARGC "3"
+  LET NEED_FLAGS = "mode,verbose"
+  LET NEED_REST_N = 1
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  LET g_ok = CLI_GUARD_OK
+  LET g_f = CLI_GUARD_FLAGS_OK
+  LET g_r = CLI_GUARD_REST_OK
+  LET rest_n = RESTARGS_N
+  CLEAR_ERR
+  IF g_ok == 1 THEN
+    LET score = score + 1
+  END
+  IF g_f == 1 THEN
+    LET score = score + 1
+  END
+  IF g_r == 1 THEN
+    LET score = score + 1
+  END
+  IF rest_n == 1 THEN
+    LET score = score + 1
+  END
+  IF FLAGMISS_N == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE RESTARGS "pack.bin"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # bag newline form of NEED_FLAGS
+  LET NEED_FLAGS = "mode
+verbose"
+  LET NEED_REST_N = 1
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "cli_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "mode"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "cg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = rest_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:1:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n g_ok score note_msg
+  CLEAR_ERR
+END
+
+# miss — soft flags partial + full miss bags
+SYS EQS op "miss"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  # only mode present — verbose miss
+  SYS ENV SET CUBALC_ARG0 "--mode=seal"
+  SYS ENV SET CUBALC_ARGC "1"
+  LET NEED_FLAGS = "mode,verbose"
+  LET NEED_REST_N = 0
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  LET g_ok = CLI_GUARD_OK
+  LET g_f = CLI_GUARD_FLAGS_OK
+  LET stem_s = FLAGMISS
+  LET flag_n = FLAGMISS_N
+  CLEAR_ERR
+  IF g_ok == 0 THEN
+    LET score = score + 1
+  END
+  IF g_f == 0 THEN
+    LET score = score + 1
+  END
+  IF flag_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE stem_s "verbose"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # both missing
+  SYS ENV SET CUBALC_ARGC "0"
+  SYS ENV UNSET CUBALC_ARG0
+  LET NEED_FLAGS = "out
+verbose"
+  LET NEED_REST_N = 0
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  LET sum_n = FLAGMISS_N
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 0 THEN
+    LET score = score + 1
+  END
+  IF sum_n == 2 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE FLAGMISS "out"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE FLAGMISS "verbose"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASFLAGALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "cli_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "miss ok"
+    LET admit_n = 1
+    LET find_n = sum_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "miss score"
+    FAIL "miss score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE miss denied"
+    END
+  END
+  SYS CAT "miss:" sum_n ":ms"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "miss:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n score note_msg
+  CLEAR_ERR
+END
+
+# rest — soft rest min hit + miss (prefer --name=val so files stay rest)
+SYS EQS op "rest"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  # rest hit with 2 files
+  SYS ENV SET CUBALC_ARG0 "--mode=dry"
+  SYS ENV SET CUBALC_ARG1 "a.txt"
+  SYS ENV SET CUBALC_ARG2 "b.txt"
+  SYS ENV SET CUBALC_ARGC "3"
+  LET NEED_FLAGS = ""
+  LET NEED_REST_N = 2
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  LET g_r = CLI_GUARD_REST_OK
+  LET rest_n = RESTARGS_N
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF g_r == 1 THEN
+    LET score = score + 1
+  END
+  IF rest_n == 2 THEN
+    LET score = score + 1
+  END
+  # rest miss (flags only)
+  SYS ENV SET CUBALC_ARG0 "--mode=dry"
+  SYS ENV SET CUBALC_ARGC "1"
+  LET NEED_FLAGS = ""
+  LET NEED_REST_N = 1
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  LET g_ok = CLI_GUARD_OK
+  LET g_r = CLI_GUARD_REST_OK
+  CLEAR_ERR
+  IF g_ok == 0 THEN
+    LET score = score + 1
+  END
+  IF g_r == 0 THEN
+    LET score = score + 1
+  END
+  # rest min 1 with one file
+  SYS ENV SET CUBALC_ARG0 "--job=ingest"
+  SYS ENV SET CUBALC_ARG1 "only.bin"
+  SYS ENV SET CUBALC_ARGC "2"
+  LET NEED_FLAGS = "job"
+  LET NEED_REST_N = 1
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF CLI_GUARD_FLAGS_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF CLI_GUARD_REST_OK == 1 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "HASRESTARGS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "NEED_REST_N"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "rest ok"
+    LET admit_n = 1
+    LET find_n = rest_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "rest score"
+    FAIL "rest score"
+    CLEAR_ERR
+  END
+  SYS CAT "rest:" rest_n ":rs"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "rest:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n rest_n score note_msg
+  CLEAR_ERR
+END
+
+# hard — hard NEEDFLAGS + REQUIRE RESTARGS pass (miss leaves exit 0 — document only)
+SYS EQS op "hard"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  # hard flags hit
+  SYS ENV SET CUBALC_ARG0 "--out=y"
+  SYS ENV SET CUBALC_ARG1 "--verbose=1"
+  SYS ENV SET CUBALC_ARGC "2"
+  LET NEED_FLAGS = "out,verbose"
+  LET NEED_REST_N = 0
+  LET CLI_GUARD_SOFT = 0
+  INCLUDE cli_guard
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF CLI_GUARD_FLAGS_OK == 1 THEN
+    LET score = score + 1
+  END
+  # hard rest hit
+  SYS ENV SET CUBALC_ARG0 "only.txt"
+  SYS ENV SET CUBALC_ARGC "1"
+  LET NEED_FLAGS = ""
+  LET NEED_REST_N = 1
+  LET CLI_GUARD_SOFT = 0
+  INCLUDE cli_guard
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF CLI_GUARD_REST_OK == 1 THEN
+    LET score = score + 1
+  END
+  # hard both
+  SYS ENV SET CUBALC_ARG0 "--mode=seal"
+  SYS ENV SET CUBALC_ARG1 "f.bin"
+  SYS ENV SET CUBALC_ARGC "2"
+  LET NEED_FLAGS = "mode"
+  LET NEED_REST_N = 1
+  LET CLI_GUARD_SOFT = 0
+  INCLUDE cli_guard
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF CLI_GUARD_FLAGS_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF CLI_GUARD_REST_OK == 1 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "NEEDFLAGS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "verbose"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "cg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "hard ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "hard score"
+    FAIL "hard score"
+    CLEAR_ERR
+  END
+  SYS CAT "hard:1:hd"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "hard:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# skip — empty NEED_FLAGS + NEED_REST_N 0 both gates skip
+SYS EQS op "skip"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV SET CUBALC_ARGC "0"
+  SYS ENV UNSET CUBALC_ARG0
+  LET NEED_FLAGS = ""
+  LET NEED_REST_N = 0
+  LET CLI_GUARD_SOFT = 0
+  INCLUDE cli_guard
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF CLI_GUARD_FLAGS_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF CLI_GUARD_REST_OK == 1 THEN
+    LET score = score + 1
+  END
+  # soft skip same
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  # flags only skip rest
+  SYS ENV SET CUBALC_ARG0 "--mode=x"
+  SYS ENV SET CUBALC_ARGC "1"
+  LET NEED_FLAGS = "mode"
+  LET NEED_REST_N = 0
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF CLI_GUARD_REST_OK == 1 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "CLI_GUARD_OK"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "CLI_GUARD_SOFT"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "cli_guard_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-cg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "skip ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "skip score"
+    FAIL "skip score"
+    CLEAR_ERR
+  END
+  SYS CAT "skip:0:sk"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "skip:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# bare — bare --verbose steals file from RESTARGS → rest gate fail
+SYS EQS op "bare"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  # bare --verbose a.bin → rest may be 0; rest min 1 fails soft
+  SYS ENV SET CUBALC_ARG0 "--verbose"
+  SYS ENV SET CUBALC_ARG1 "a.bin"
+  SYS ENV SET CUBALC_ARGC "2"
+  LET NEED_FLAGS = "verbose"
+  LET NEED_REST_N = 1
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  LET g_ok = CLI_GUARD_OK
+  LET g_f = CLI_GUARD_FLAGS_OK
+  LET g_r = CLI_GUARD_REST_OK
+  LET rest_n = RESTARGS_N
+  CLEAR_ERR
+  IF g_f == 1 THEN
+    LET score = score + 1
+  END
+  IF g_r == 0 THEN
+    LET score = score + 1
+  END
+  IF g_ok == 0 THEN
+    LET score = score + 1
+  END
+  IF rest_n == 0 THEN
+    LET score = score + 1
+  END
+  # fix with =1
+  SYS ENV SET CUBALC_ARG0 "--verbose=1"
+  SYS ENV SET CUBALC_ARG1 "a.bin"
+  SYS ENV SET CUBALC_ARGC "2"
+  LET NEED_FLAGS = "verbose"
+  LET NEED_REST_N = 1
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF CLI_GUARD_REST_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF RESTARGS_N == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE RESTARGS "a.bin"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASRESTARGS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "rest"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "bare ok"
+    LET admit_n = 1
+    LET find_n = rest_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "bare score"
+    FAIL "bare score"
+    CLEAR_ERR
+  END
+  SYS CAT "bare:" rest_n ":br"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "bare:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n rest_n score note_msg
+  CLEAR_ERR
+END
+
+# form — lib discovery · HASFORM duals · doctor surface
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  HASFORM "HASFLAGALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "NEEDFLAGS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "HASRESTARGS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  REQUIRE LIB cli_guard
+  CLEAR_ERR
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  # soft empty INCLUDE still defines knobs
+  LET NEED_FLAGS = ""
+  LET NEED_REST_N = 0
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "cli_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "NEEDFLAGS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "CLI_GUARD_SOFT"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "cg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "cli_guard_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:1:fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — plate surface + live soft contract
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV SET CUBALC_ARG0 "--mode=seal"
+  SYS ENV SET CUBALC_ARG1 "--verbose=1"
+  SYS ENV SET CUBALC_ARG2 "g.bin"
+  SYS ENV SET CUBALC_ARGC "3"
+  LET NEED_FLAGS = "mode,verbose"
+  LET NEED_REST_N = 1
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "NEED_FLAGS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "NEED_REST_N"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "HASFLAGALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "cli_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "cli_guard_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "cli_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "mode"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · re-INCLUDE · capture knobs before SAY
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  SYS ENV SET CUBALC_ARG0 "--mode=x"
+  SYS ENV SET CUBALC_ARGC "1"
+  LET NEED_FLAGS = "mode,verbose"
+  LET NEED_REST_N = 0
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  LET g_ok = CLI_GUARD_OK
+  LET stem_s = FLAGMISS
+  LET flag_n = FLAGMISS_N
+  CLEAR_ERR
+  PRINT "probe-mark"
+  CLEAR_ERR
+  # PRINT clobbers LAST not CLI_GUARD_OK vars
+  IF g_ok == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE stem_s "verbose"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE LAST "verbose"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF flag_n == 1 THEN
+    LET score = score + 1
+  END
+  # re-INCLUDE with pass
+  SYS ENV SET CUBALC_ARG0 "--mode=x"
+  SYS ENV SET CUBALC_ARG1 "--verbose=1"
+  SYS ENV SET CUBALC_ARGC "2"
+  LET NEED_FLAGS = "mode,verbose"
+  LET NEED_REST_N = 0
+  LET CLI_GUARD_SOFT = 1
+  INCLUDE cli_guard
+  CLEAR_ERR
+  IF CLI_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  IF FLAGMISS_N == 0 THEN
+    LET score = score + 1
+  END
+  GETP "schema"
+  SYS HAS LAST "cli_guard_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "CLI_GUARD_OK"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "cli_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.contract"
+  SYS HAS LAST "rest"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = flag_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" flag_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# clear — wipe status bag
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+# ---- settle plate ----
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " g_ok=" g_ok " g_f=" g_f " g_r=" g_r " rest=" rest_n
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "cg report op=" op " score_hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

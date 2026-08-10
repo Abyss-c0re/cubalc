@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 317,
-  "program": "programs/realworld/svc_cliinfo_surface_board.cubalc",
-  "theme": "CLIINFO/DUMPCLI fleet CLI surface one-shot plate",
-  "version": "1.15.817-usability",
+  "iter": 318,
+  "program": "programs/realworld/svc_cli_guard_contract_board.cubalc",
+  "theme": "cli_guard NEED_FLAGS+NEED_REST_N fleet CLI contract",
+  "version": "1.15.819-usability",
   "pass": true,
-  "prior_note": "iter 316 HASFLAGALL; this iter first realworld 1364 CLIINFO/DUMPCLI cubalc.cli.v1 surface plate",
+  "prior_note": "iter 317 CLIINFO; this iter first realworld 1367 cli_guard form_guard twin for CLI",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,61 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate cis",
+      "cmd": "seed agent plate cg",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "dump",
-      "cmd": "CLIINFO flags+rest sticky knobs",
+      "name": "soft",
+      "cmd": "soft flags+rest hit CSV/bag",
       "ok": true,
-      "note": "dump"
+      "note": "soft"
     },
     {
-      "name": "empty",
-      "cmd": "empty argv soft plate",
+      "name": "miss",
+      "cmd": "soft FLAGMISS partial+full",
       "ok": true,
-      "note": "empty"
+      "note": "miss"
     },
     {
-      "name": "dual",
-      "cmd": "DUMPCLI alias + SHORT",
+      "name": "rest",
+      "cmd": "NEED_REST_N hit+miss soft",
       "ok": true,
-      "note": "dual"
+      "note": "rest"
     },
     {
-      "name": "peel",
-      "cmd": "LISTFLAGS/RESTARGS intake + bare --",
+      "name": "hard",
+      "cmd": "hard NEEDFLAGS+RESTARGS pass",
       "ok": true,
-      "note": "peel"
+      "note": "hard"
+    },
+    {
+      "name": "skip",
+      "cmd": "empty gates skip OK=1",
+      "ok": true,
+      "note": "skip"
     },
     {
       "name": "bare",
-      "cmd": "bare bool steals rest + short -w",
+      "cmd": "bare flag steals rest",
       "ok": true,
       "note": "bare"
     },
     {
       "name": "form",
-      "cmd": "HASFORM CLIINFO/DUMPCLI RELATED",
+      "cmd": "HASFORM+REQUIRE LIB cli_guard",
       "ok": true,
       "note": "form"
     },
     {
       "name": "gate",
-      "cmd": "plate surface + live CLIINFO",
+      "cmd": "plate surface + live soft",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "WRITE plate + PRINT clobber",
+      "cmd": "PRINT clobber + re-INCLUDE",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +83,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cliinfo/cli_boot PASS; CLI duals still red (set)"
+      "note": "cli_guard PASS; CLI duals still red (set)"
     }
   ],
   "weaknesses": [
@@ -5288,6 +5294,54 @@
       "title": "CLIINFO_SHORT + DUMPCLI alias + sticky knobs work (positive)",
       "detail": "Positive: CLIINFO_SHORT argc=N flags=F rest=R; DUMPCLI twin; LISTFLAGS/FLAGMAP/RESTARGS sticky after call; HASFORM CLIINFO/DUMPCLI; RELATED lists LISTFLAGS FLAGMAP RESTARGS.",
       "repro": "CLIINFO with 4 args \u2192 SHORT argc=4 flags=2 rest=2"
+    },
+    {
+      "id": "W652",
+      "severity": "high",
+      "area": "lang|cli_guard|exit",
+      "title": "cli_guard hard NEEDFLAGS/REQUIRE RESTARGS miss leaves exit_code 0",
+      "detail": "Hard path stops INCLUDE with sticky NEEDFLAGS/REQUIRE RESTARGS err and ok:false, but plate exit_code and often shell $? stay 0 (W7/W16 class). Soft CLI_GUARD_SOFT + EXIT n is reliable for agent shell status.",
+      "repro": "NEED_FLAGS=out SOFT=0 empty argv INCLUDE cli_guard \u2192 exit_code 0"
+    },
+    {
+      "id": "W653",
+      "severity": "high",
+      "area": "lang|cli_guard|bare",
+      "title": "cli_guard rest gate fails when bare --flag steals file (W12/W646)",
+      "detail": "--verbose a.bin with NEED_FLAGS=verbose NEED_REST_N=1 soft \u2192 FLAGS_OK=1 REST_OK=0 RESTARGS_N=0. Prefer --verbose=1 so a.bin stays rest. Guard does not warn about bare-bool theft.",
+      "repro": "bare --verbose a.bin; NEED_REST_N=1 \u2192 CLI_GUARD_OK 0 rest 0"
+    },
+    {
+      "id": "W654",
+      "severity": "med",
+      "area": "lang|cli_guard|reinclude",
+      "title": "cli_guard re-INCLUDE needs LET NEED_* before each call; DEFAULT is set-if-unset",
+      "detail": "DEFAULT NEED_FLAGS only binds first unset. Agents must LET NEED_FLAGS/NEED_REST_N/CLI_GUARD_SOFT before every INCLUDE cli_guard when contracts change mid-program. Positive: re-INCLUDE with new LET works (board soft/miss/probe).",
+      "repro": "DEFAULT NEED_FLAGS=out then LET NEED_FLAGS=mode INCLUDE"
+    },
+    {
+      "id": "W655",
+      "severity": "low",
+      "area": "lang|cli_guard|positive",
+      "title": "cli_guard CSV+bag NEED_FLAGS and skip-empty gates work",
+      "detail": "Positive: NEED_FLAGS mode,verbose and newline bag; empty NEED_FLAGS + NEED_REST_N 0 \u2192 CLI_GUARD_OK=1 both soft/hard; doctor lib_cli_guard true; REQUIRE LIB cli_guard.",
+      "repro": "empty NEED_* INCLUDE \u2192 OK 1; CSV mode,verbose with both flags \u2192 OK 1"
+    },
+    {
+      "id": "W656",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL (reconfirmed cg)",
+      "detail": "STATUS last line probe:1:pb without $; same W5 class.",
+      "repro": "cat -A CG STATUS"
+    },
+    {
+      "id": "W657",
+      "severity": "med",
+      "area": "lang|include_newest",
+      "title": "INCLUDE NEWEST selftest brittle when newest lib is cli_guard",
+      "detail": "include_newest proof asserts newest stem time_guard; after cli_guard land ASSERT cli_guard == time_guard fails. New lib files shift mtime ranking \u2014 proof needs stable fixture libs not live programs/lib.",
+      "repro": "selftest include_newest \u2192 cli_guard == time_guard false"
     }
   ],
   "workarounds": [
@@ -5364,6 +5418,10 @@
     {
       "id": "WA-CIS",
       "note": "use --name=val / --verbose=1 before files; capture CLIINFO_PLATE before PRINT; peel sticky LISTFLAGS/RESTARGS not GETP plate; SYS ENV SET CUBALC_ARG*"
+    },
+    {
+      "id": "WA-CG",
+      "note": "CLI_GUARD_SOFT=1 then EXIT n on CLI_GUARD_OK=0; --flag=val before files; LET NEED_* before every INCLUDE cli_guard"
     }
   ],
   "language_gaps": [
@@ -5412,7 +5470,13 @@
     "bare --flag steals rest then forces =1 (W646)",
     "short -w drops value from RESTARGS (W647)",
     "GETP not valid on CLIINFO JSON string (W648)",
-    "plate version may lag binary (W649)"
+    "plate version may lag binary (W649)",
+    "cli_guard NEED_FLAGS+NEED_REST_N form_guard twin (1367)",
+    "CLI_GUARD_OK/FLAGS_OK/REST_OK sticky knobs",
+    "hard NEEDFLAGS/RESTARGS miss exit_code 0 (W652)",
+    "bare flag steals rest under guard (W653)",
+    "LET before each re-INCLUDE cli_guard (W654)",
+    "INCLUDE NEWEST brittle vs newest lib mtime (W657)"
   ],
   "issues_faced": [
     "iter300: all board paths green; WRITE SNIP.txt multi-line works",
@@ -5446,9 +5510,11 @@
     "soft HASI lib:hold_seed miss on green READY; fixed to agent_boot/open_boot; board 10/10",
     "all path CLEAR_ERR ate LAST_N==0 soft miss test; capture sum_n first; board 10/10",
     "iter317: bare path first failed expecting verbose=a.bin; FLAGMAP forces =1 and drops token; board 10/10 after bare score fix",
-    "iter317: selftest 553/737 cliinfo+cli_boot PASS; mass CLI duals still unknown form set"
+    "iter317: selftest 553/737 cliinfo+cli_boot PASS; mass CLI duals still unknown form set",
+    "iter318: board 10/10 first pass; hard miss documented exit_code 0 not in-path tested",
+    "iter318: selftest 554/741 cli_guard PASS; include_newest fails newest=cli_guard; CLI duals still set"
   ],
-  "commit": "331fdf36",
-  "ts": "2026-08-10T20:22:13Z",
-  "board_commit": "331fdf36"
+  "commit": "pending",
+  "ts": "2026-08-10T20:45:18Z",
+  "board_commit": "pending"
 }
