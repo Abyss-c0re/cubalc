@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 278,
-  "program": "programs/realworld/svc_grepflat_scrub_board.cubalc",
-  "theme": "GREPFLAT secret leaf scrub inventory",
-  "version": "1.15.725-usability",
+  "iter": 279,
+  "program": "programs/realworld/svc_flatkv_digest_board.cubalc",
+  "theme": "FLATKV path:value nest digest + UNFLATKV rebuild",
+  "version": "1.15.727-usability",
   "pass": true,
-  "prior_note": "iter 277 UNEQPATHS bulk paths; this iter first realworld 1214 GREPFLAT/GREPVFLAT/KEEPFLAT",
+  "prior_note": "iter 278 GREPFLAT scrub; this iter first realworld 1211 FLATKV + 1212 UNFLATKV",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed secrets+token",
+      "cmd": "seed nest+peer",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "secrets",
-      "cmd": "GREPFLAT secret",
+      "name": "flat",
+      "cmd": "full FLATKV digest",
       "ok": true,
-      "note": "secrets"
+      "note": "flat"
     },
     {
-      "name": "scrub",
-      "cmd": "GREPVFLAT invert share bag",
+      "name": "slice",
+      "cmd": "relative cfg + cfg.meta",
       "ok": true,
-      "note": "scrub"
-    },
-    {
-      "name": "keep",
-      "cmd": "KEEPFLAT token + tok substring",
-      "ok": true,
-      "note": "keep"
+      "note": "slice"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER secret bag",
+      "cmd": "FROM PEER lat bag",
       "ok": true,
       "note": "peer"
     },
     {
+      "name": "rebuild",
+      "cmd": "FLATKV\u2192UNFLATKV round-trip",
+      "ok": true,
+      "note": "rebuild"
+    },
+    {
       "name": "soft",
-      "cmd": "ghost miss",
+      "cmd": "missing nest + empty unflat",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "invert clean + secret still exists",
+      "cmd": "leaf floor admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "GREPFLATI vs case-sensitive",
+      "cmd": "LEAFKV FLATTENP FROMFLAT",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "empty all + sec sub + value miss",
+      "cmd": "path exact vs GREPFLAT substring",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; grepflat PASS 31"
+      "note": "cli duals red; flatkv PASS"
     }
   ],
   "weaknesses": [
@@ -3656,6 +3656,46 @@
       "title": "WRITE LEAVES bag omits final NL on last path:value",
       "detail": "cat -A LEAVES.txt last line without $. Same W5/W10/W442 class.",
       "repro": "od -c LEAVES after scrub"
+    },
+    {
+      "id": "W448",
+      "severity": "low",
+      "area": "lang|flatkv",
+      "title": "FLATKV path arg is exact nest root not GREPFLAT-style substring",
+      "detail": "FLATKV cf soft-misses (0) while FLATKV cfg returns 4 relative leaves. Contrast GREPFLAT sec matching secret. Path exactness is safer for digests but dual surface confuses agents.",
+      "repro": "FLATKV cf \u2192 0; FLATKV cfg \u2192 4"
+    },
+    {
+      "id": "W449",
+      "severity": "low",
+      "area": "lang|flatkv",
+      "title": "empty object leaves appear as path: with empty value",
+      "detail": "empty:{} becomes empty: terminal line in FLATKV bag. Useful for schema presence; agents counting non-empty values must filter.",
+      "repro": "HASLINE FLATKV empty: \u2192 1"
+    },
+    {
+      "id": "W450",
+      "severity": "low",
+      "area": "lang|unflatkv",
+      "title": "UNFLATKV overlay merges paths; keeps unmentioned keys",
+      "detail": "Positive: plate host:old n:1 + UNFLATKV host:new zone \u2192 host=new n=1 preserved. Document for partial digest import.",
+      "repro": "UNFLATKV host:new on n:1 keeps n"
+    },
+    {
+      "id": "W451",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE LEAVES path:value bag omits final NL",
+      "detail": "od ends at empty: without \\n after last field (W5 class).",
+      "repro": "od -c LEAVES.txt after flat"
+    },
+    {
+      "id": "W452",
+      "severity": "med",
+      "area": "lang|print_json",
+      "title": "PRINT_JSON key=SPECIAL form rejects empty form name",
+      "detail": "PRINT_JSON n path=FLATKV_PATH \u2192 unknown form '' . Prefer LET p = FLATKV_PATH; PRINT_JSON n p or bare special names without key= glue.",
+      "repro": "PRINT_JSON path=FLATKV_PATH \u2192 unknown form"
     }
   ],
   "workarounds": [
@@ -3694,13 +3734,12 @@
     "EXIT 2 on unknown ACTION; REQUIRE softens non-numeric",
     "gate scrub on site/label not host when other.host collides",
     "capture LAST_N before PRINT after GREPFLAT",
-    "GREPFLATI for case-tolerant secret path inventory"
+    "GREPFLATI for case-tolerant secret path inventory",
+    "use peer_host not host when other-like leaves present",
+    "LET capture specials before PRINT_JSON",
+    "FLATKV path must be exact nest root"
   ],
   "language_gaps": [
-    "COUNTBYVAL aligns with PATHSBYVAL path count",
-    "SETBYVAL bulk rewrite exact leaf values",
-    "REPLACEVAL alias for set-by-value",
-    "SAVEPLATE required after SETBYVAL for durable agent plate",
     "DELBYVAL scrub leaves by exact value",
     "DROPVAL alias for del-by-value",
     "HASP gone after DELBYVAL (key removed not emptied)",
@@ -3720,11 +3759,13 @@
     "GREPFLAT/GREPVFLAT/GREPFLATI/KEEPFLAT path:value filter",
     "GREPFLAT_N/NEEDLE/INVERT/ICASE/SRC/FROM specials",
     "path substring needle; value needles soft-miss",
-    "plate_session may rewrite host when other.host present"
+    "plate_session may rewrite host when other.host present",
+    "FLATKV/LEAFKV/FLATTENP path:value inventory",
+    "UNFLATKV/FROMFLAT bag\u2192nest rebuild + UNDER/INTO",
+    "FLATKV path exact nest root not substring",
+    "empty object \u2192 empty: terminal leaf"
   ],
   "issues_faced": [
-    "Even median lower-mid must be taught for p50 bands",
-    "HASFLATN_N dark after FROM PEER; used COUNTFLATN LAST_N",
     "PATHSFLAT_N dark; used HASLINE on bag",
     "meta_score substring inflates score counts",
     "TYPEFLAT n matched agent path; used GETP for short keys",
@@ -3762,8 +3803,10 @@
     "iter277: LET ref_v=DIVERGEPATHS_REF then SYS EQS ref_v hard-fails unknown form; fixed via special-direct EQS",
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
     "iter278: scrub failed first on host:h1 \u2014 plate_session rewrote host to h2; gate on site/zone",
-    "iter278: 10/10 green; grepflat PASS 31; selftest 455/567 cli duals red"
+    "iter278: 10/10 green; grepflat PASS 31; selftest 455/567 cli duals red",
+    "iter279: avoided top-level host key (W445); used peer_host + site",
+    "iter279: 10/10 green; flatkv/unflatkv round-trip; selftest cli duals still red"
   ],
-  "commit": "fa05888a",
-  "ts": "2026-08-10T02:00:51Z"
+  "commit": "pending",
+  "ts": "2026-08-10T02:24:58Z"
 }
