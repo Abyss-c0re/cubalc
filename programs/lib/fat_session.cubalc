@@ -1,0 +1,16 @@
+# INCLUDE fat_session — fat nest preamble + durable PLATE one-shot
+# Usability: fat_boot (version + VARROOM) + plate_boot without agent_boot twice
+#
+#   DEFAULT NEED_VARROOM = 48
+#   DEFAULT PLATE_PATH = "state/my_agent.json"
+#   DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true,\"freq\":{\"error\":0}}"
+#   INCLUDE fat_session
+#   # VERSION · NEEDVARROOM · PLATE loaded/seeded · SETP/INCP · INCLUDE plate_save
+#
+# Composes fat_boot + plate_boot (not plate_session — avoids double agent_boot).
+# Soft room: DEFAULT VAR_GUARD_SOFT = 1 before INCLUDE.
+# HOLD_FLASH not required (runtime default 1).
+
+DEFAULT NEED_VARROOM = 48
+INCLUDE fat_boot
+INCLUDE plate_boot

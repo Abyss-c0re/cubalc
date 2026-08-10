@@ -1,0 +1,19 @@
+# INCLUDE fat_session — version + free-slot gate + durable PLATE
+
+DEFAULT NEED_VARROOM = 20
+DEFAULT PLATE_PATH = "state/meaningful_iter/mi_fat_session/plate.json"
+DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true,\"role\":\"worker\"}"
+INCLUDE fat_session
+
+ASSERT OK == 1
+ASSERT VARROOM >= 20
+ASSERT VERSION != ""
+ASSERT PLATE != ""
+
+SETP "status" "ready"
+INCP "n"
+NEEDP "n" "ok" "status" "role"
+INCLUDE plate_save
+
+PASS
+PRINT "1287_fat_session: PASS"

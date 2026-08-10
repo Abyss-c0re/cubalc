@@ -48,6 +48,7 @@ STATUS also reports `timeout_ms` / `remain_ms`.
 Mid-run probe: `WALL_MS`/`ELAPSED` (ms since start) · `REMAIN_MS` → ms left (−1 unlimited) · `HAS_TIME 200` soft · `NEEDTIME 200` fail-fast before heavy work.
 Recipe: `DEFAULT NEED_TIME = 200` · `INCLUDE time_guard` (soft: `DEFAULT TIME_GUARD_SOFT = 1`) · `cubalc doctor` → `lib_time_guard`.
 Fat nest boards: `DEFAULT NEED_VARROOM = 48` · `INCLUDE fat_boot` (agent_boot + var_guard) · `-I fat_boot` · doctor `lib_fat_boot`.
+Durable fat nest: `INCLUDE fat_session` (fat_boot + plate_boot) · doctor `lib_fat_session`.
 Scaffold: `cubalc init my_agent.cubalc --fat` · `cubalc init --list` includes fat_boot.
 After load: `LISTINCLUDES` → path bag · `INCLUDESTEMS` short names · `HASINCLUDE agent_boot` soft 0|1 · `INCLUDE_N`.
 Run plate always reports `includes_n` + `includes` paths + `include_stems` / `include_stems_n` short names (INCLUDESTEMS dual).
