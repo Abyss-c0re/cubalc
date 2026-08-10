@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 777,
-  "version": "1.15.804-usability",
-  "item": "OPEN DISCOVER bag + GUIDE first one-shot",
-  "item_id": 813,
-  "title": "OPEN|OPENPLAY \u00b7 cubalc open \u00b7 open.v1",
-  "commit": "0ecb49ccdea46fef150bed495a99edfbd8f7dc9d",
-  "summary": "Filter match bag + full GUIDE for first without DISCOVER+GUIDE glue. proof 1354 PASS.",
+  "iter": 778,
+  "version": "1.15.805-usability",
+  "item": "open_boot + cubalc init --open",
+  "item_id": 814,
+  "title": "open_boot \u00b7 init --open \u00b7 doctor lib_open_boot",
+  "commit": "b80432bca82d799f160ea250510ff3cfa9b67840",
+  "summary": "INCLUDE agent_boot+OPEN scaffold; init catalog n=10; doctor readiness. proof 1355 PASS.",
   "proofs": [
-    "1354_open PASS",
-    "1354_cli_open PASS"
+    "1355_open_boot PASS",
+    "1355_cli_init_open PASS"
   ],
-  "when": "2026-08-10T17:48:43Z",
+  "when": "2026-08-10T18:15:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0ecb49ccdea46fef150bed495a99edfbd8f7dc9d",
-  "note": "OPEN p \u2192 first=cap n=4 + GUIDE tips/forms; RUNSNIP OPEN_FIRST"
+  "sha": "b80432bca82d799f160ea250510ff3cfa9b67840",
+  "note": "INCLUDE open_boot \u00b7 RUNSNIP OPEN_FIRST \u00b7 cubalc init demo --open"
 }
