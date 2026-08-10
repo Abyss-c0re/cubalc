@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 297,
-  "program": "programs/realworld/svc_form_capability_board.cubalc",
-  "theme": "HASFORM/HASFORMS + form_guard fleet capability preflight",
-  "version": "1.15.774-usability",
+  "iter": 298,
+  "program": "programs/realworld/svc_cap_boot_admit_board.cubalc",
+  "theme": "cap_boot admit + LISTFORMS catalog + host -C form floor",
+  "version": "1.15.777-usability",
   "pass": true,
-  "prior_note": "iter 296 INCLUDE ALL MATCH; this iter first realworld 1323/1324 form capability gates + form_guard (rebuild exposed HASFORMS)",
+  "prior_note": "iter 297 HASFORM/HASFORMS board; this iter first realworld 1325 cap_boot + 1326 run -C + 1327 LISTFORMS",
   "tests": [
     {
       "name": "list",
@@ -15,51 +15,51 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate formcap",
+      "cmd": "seed agent plate capboot",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "probe",
-      "cmd": "HASFORM SORTLIBS/LIBAGE/FRESHLIBS + KNOWNFORM + var",
+      "name": "cap",
+      "cmd": "INCLUDE cap_boot + HASINCLUDE duals",
       "ok": true,
-      "note": "probe"
+      "note": "cap"
     },
     {
-      "name": "multi",
-      "cmd": "HASFORMS bulk + bag CSV + NEEDFORMS HASFORM",
+      "name": "catalog",
+      "cmd": "LISTFORMS/COUNTFORMS inventory",
       "ok": true,
-      "note": "multi"
-    },
-    {
-      "name": "guard",
-      "cmd": "form_guard hard NEED_FORMS + REQUIRE FORM",
-      "ok": true,
-      "note": "guard"
+      "note": "catalog"
     },
     {
       "name": "soft",
-      "cmd": "FORMMISS bag + soft form_guard",
+      "cmd": "soft form_guard FORMMISS",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "need",
-      "cmd": "NEEDFORM/NEEDFORMS/REQUIRE FORM",
+      "name": "floor",
+      "cmd": "CUBALC_REQUIRE_FORMS env dual",
       "ok": true,
-      "note": "need"
+      "note": "floor"
+    },
+    {
+      "name": "gate",
+      "cmd": "plate cfg.need HASFORMS",
+      "ok": true,
+      "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "KNOWNFORM ALLFORMS REQUIREFORM FORMSOK",
+      "cmd": "FORMLIST NFORMS CATALOGFORMS",
       "ok": true,
       "note": "alias"
     },
     {
-      "name": "gate",
-      "cmd": "plate cfg.need CSV via HASFORMS body",
+      "name": "probe",
+      "cmd": "COUNT vs LIST + INCLUDE quote filter",
       "ok": true,
-      "note": "gate"
+      "note": "probe"
     },
     {
       "name": "unknown",
@@ -68,10 +68,16 @@
       "note": "unknown\u21922"
     },
     {
+      "name": "host_C",
+      "cmd": "run -C HASFORM,SORTLIBS floor",
+      "ok": true,
+      "note": "-C plate require_forms; env empty"
+    },
+    {
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "455/653 CLI duals red (unknown form set); hasform proofs PASS outside suite"
+      "note": "455/658 CLI duals red; listforms PASS"
     }
   ],
   "weaknesses": [
@@ -4362,6 +4368,54 @@
       "title": "CLI plate duals mass-fail unknown form set (selftest 57 red)",
       "detail": "Selftest 455/653: many cli_plate_*.sh fail with unknown form set line 3 (want SETF). In-lang flat ops PASS. Host plate CLI surface lagged behind language forms \u2014 not regressed by this board.",
       "repro": "./out/cubalc selftest | grep cli_plate | head"
+    },
+    {
+      "id": "W537",
+      "severity": "high",
+      "area": "host|require_forms",
+      "title": "run -C sets plate require_forms but does not inject CUBALC_REQUIRE_FORMS env",
+      "detail": "cubalc run -C HASFORM,SORTLIBS puts require_forms on run JSON plate, but SYS ENV CUBALC_REQUIRE_FORMS is empty inside the program. Agents dual-checking host floor via ENV only see the env form of the floor. Prefer documenting both: -C is host-only plate field; CUBALC_REQUIRE_FORMS env is readable in-lang.",
+      "repro": "run -C HASFORM -e 'SYS ENV CUBALC_REQUIRE_FORMS OR \"\"' \u2192 empty; plate require_forms set"
+    },
+    {
+      "id": "W538",
+      "severity": "med",
+      "area": "lang|listforms",
+      "title": "LISTFORMS var prefix required lex_next (was unknown form f)",
+      "detail": "LISTFORMS f after LET f=\"HASFORM\" left token f on stream \u2192 unknown form f until lex_next after var expand. Fixed in lang_ops_core; proof 1327 extended. Bare form-name prefixes and quoted strings already worked.",
+      "repro": "historical: LET f HASFORM; LISTFORMS f \u2192 unknown form f"
+    },
+    {
+      "id": "W539",
+      "severity": "med",
+      "area": "lang|listforms",
+      "title": "LISTFORMS unquoted INCLUDE is stop-list (INCLUDE form steals token)",
+      "detail": "LISTFORMS INCLUDE does not treat INCLUDE as prefix (statement head in stop list) and runs INCLUDE needs path\u2026 Prefer LISTFORMS \"INCLUDE\" for catalog inventory of include-family forms.",
+      "repro": "LISTFORMS INCLUDE \u2192 INCLUDE needs path; LISTFORMS \"INCLUDE\" \u2192 n>=1"
+    },
+    {
+      "id": "W540",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT after LISTFORMS clobbers bag in LAST (reconfirmed)",
+      "detail": "Must LET bag = LAST before PRINT when inventorying forms. SYS HASLINE LAST after PRINT fails even when bag had the form. Same class as W4.",
+      "repro": "LISTFORMS SORT; PRINT x; SYS HASLINE LAST SORTLIBS \u2192 0"
+    },
+    {
+      "id": "W541",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META/VAL omit trailing NL (reconfirmed capboot board)",
+      "detail": "od META ends 5a (Z) without 0a. Status bag lines mixed $ presence via GREPV/PUSH.",
+      "repro": "od -An -tx1 META.txt | tail -1"
+    },
+    {
+      "id": "W542",
+      "severity": "low",
+      "area": "lang|cap_boot",
+      "title": "cap_boot re-INCLUDEs agent_boot each time (stem bag grows)",
+      "detail": "INCLUDE cap_boot after agent_boot already loaded adds another agent_boot stem in include_stems. Harmless but noisy; INCLUDE ONCE inside cap_boot would clean duals.",
+      "repro": "includes list shows agent_boot thrice after plate_peer + cap_boot"
     }
   ],
   "workarounds": [
@@ -4406,7 +4460,9 @@
     "avoid empty needle when large ports live under same plate",
     "use unique path needles for single counter rollups",
     "HASFORMS bag string for self-gate names; FORMMISS_N==0 for full admit",
-    "LET NEED_FORMS before re-INCLUDE form_guard when DEFAULT already bound"
+    "LET NEED_FORMS before re-INCLUDE form_guard when DEFAULT already bound",
+    "use CUBALC_REQUIRE_FORMS env for in-lang floor dual; -C is plate-only",
+    "LISTFORMS \"INCLUDE\" quoted; capture LAST before PRINT after LISTFORMS"
   ],
   "language_gaps": [
     "PRETTYP/JSONPRETTY/PRETTYJSON plate evidence dump",
@@ -4451,7 +4507,10 @@
     "SORTLIBS unwired despite proof 1320 (W528)",
     "stale binary vs catalog for multi form gates (W530)",
     "HASFORMS_N known vs FORMS_N total dual (W531)",
-    "form_guard DEFAULT set-once / INCLUDE not ONCE (W532)"
+    "form_guard DEFAULT set-once / INCLUDE not ONCE (W532)",
+    "run -C vs ENV form floor visibility (W537)",
+    "LISTFORMS var lex_next / INCLUDE stop-list (W538/W539)",
+    "PRINT clobber after LISTFORMS bag (W540)"
   ],
   "issues_faced": [
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
@@ -4506,9 +4565,12 @@
     "iter296: guard ALL n=2; NEWEST fat_session vs OLDEST fat_boot",
     "iter297: rebuild required \u2014 HASFORMS source present, binary 1.15.773 unknown form (W530)",
     "iter297: all board paths green first pass; EXIT 2 shell 2 ok; selftest CLI duals still red",
-    "iter297: form_guard soft+hard contracts; HASFORMS body var from GETP cfg.need works"
+    "iter297: form_guard soft+hard contracts; HASFORMS body var from GETP cfg.need works",
+    "iter298: -C floor invisible to SYS ENV (W537); use CUBALC_REQUIRE_FORMS for in-lang",
+    "iter298: LISTFORMS var lex_next fixed; INCLUDE stop-list filter needs quotes",
+    "iter298: board 10/10 + host -C ok; selftest CLI duals still red 455/658"
   ],
-  "commit": "80c2f654",
-  "ts": "2026-08-10T11:22:56Z",
+  "commit": "pending",
+  "ts": "2026-08-10T12:11:28Z",
   "board_commit": "2d28e629"
 }

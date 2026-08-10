@@ -33,5 +33,12 @@ ASSERT LAST_N == 1
 HASFORM HASFORM
 ASSERT LAST_N == 1
 
+# var prefix (lex_next after expand — was unknown form 'f')
+LET f = "HASFORM"
+LISTFORMS f
+ASSERT OK == 1
+ASSERT LISTFORMS_N >= 2
+ASSERT LISTFORMS_FILTER == "HASFORM"
+
 PASS
 PRINT "1327_listforms: PASS"
