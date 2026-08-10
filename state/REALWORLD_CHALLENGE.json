@@ -5746,7 +5746,7 @@
     "iter322: board 10/10 first pass; NEEDARGANY hard miss exit_code 0 documented only",
     "iter322: selftest 562/762 hasargany PASS; CLI duals still unknown form set"
   ],
-  "commit": "pending",
+  "commit": "73c3a4fd",
   "ts": "2026-08-10T23:13:59Z",
-  "board_commit": "pending"
+  "board_commit": "73c3a4fd"
 }
