@@ -2741,6 +2741,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"NEEDTOPIC", "NEEDTOPIC name — fail-fast if topic unknown"},
       {"TOPICHINT", "TOPICHINT|DESCRIBETOPIC name — one-line topic hint → LAST · dual of cubalc topichint"},
       {"DESCRIBETOPIC", "DESCRIBETOPIC alias of TOPICHINT"},
+      {"RELATEDTOPIC", "RELATEDTOPIC|SEETOPICS name — related discovery topic bag · dual of cubalc relatedtopic · twin of RELATED for topics"},
+      {"SEETOPICS", "SEETOPICS alias of RELATEDTOPIC"},
       {"ERRTIPS", "ERRTIPS [err] — recovery tip bag from LAST_ERR or arg · ERRTIPS_TOPIC · dual of cubalc errtips"},
       {"FIXTIPS", "FIXTIPS alias of ERRTIPS"},
       {"ERRRUN", "ERRRUN [err] — ERRTIPS classify + RUNSNIP topic one-shot · dual of cubalc errrun"},
@@ -39048,6 +39050,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"general", "IDENTITY"},
       {"general", "TIPS"},
       {"general", "FORMSFOR"},
+      {"general", "LISTTOPICS"},
+      {"general", "TOPICHINT"},
+      {"general", "RELATEDTOPIC"},
       {"general", "WHY"},
       {"general", "CLEAR_ERR"},
       {"general", "INCLUDE"},
@@ -39061,6 +39066,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"cap", "LISTFORMS"},
       {"cap", "COUNTFORMS"},
       {"cap", "REQUIRE FORM"},
+      {"cap", "RELATEDTOPIC"},
       {"cap", "TIPS"},
       {"cap", "FORMSFOR"},
       {"fat", "VARROOM"},
@@ -39213,6 +39219,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FORMSFOR", "TIPS"}, {"FORMSFOR", "RELATED"}, {"FORMSFOR", "FORMHINT"},
       {"FORMSFOR", "LISTFORMS"}, {"FORMSFOR", "HASFORM"},
       {"TIPS", "FORMSFOR"}, {"TIPS", "WHY"}, {"TIPS", "FORMHINT"}, {"TIPS", "RELATED"},
+      /* topic discovery graph (RELATED twin for topics) */
+      {"TOPICHINT", "RELATEDTOPIC"}, {"TOPICHINT", "LISTTOPICS"}, {"TOPICHINT", "TOPIC"},
+      {"TOPICHINT", "HASTOPIC"}, {"TOPICHINT", "TIPS"},
+      {"RELATEDTOPIC", "TOPICHINT"}, {"RELATEDTOPIC", "LISTTOPICS"}, {"RELATEDTOPIC", "TOPIC"},
+      {"RELATEDTOPIC", "HASTOPIC"}, {"RELATEDTOPIC", "TIPS"}, {"RELATEDTOPIC", "FORMSFOR"},
+      {"LISTTOPICS", "RELATEDTOPIC"}, {"LISTTOPICS", "TOPICHINT"}, {"LISTTOPICS", "HASTOPIC"},
+      {"LISTTOPICS", "NEEDTOPIC"}, {"LISTTOPICS", "TOPIC"},
+      {"HASTOPIC", "NEEDTOPIC"}, {"HASTOPIC", "LISTTOPICS"}, {"HASTOPIC", "TOPICHINT"},
+      {"NEEDTOPIC", "HASTOPIC"}, {"NEEDTOPIC", "LISTTOPICS"},
+      {"TOPIC", "RELATEDTOPIC"}, {"TOPIC", "TOPICHINT"}, {"TOPIC", "TIPS"},
+      {"TOPIC", "FORMSFOR"}, {"TOPIC", "SNIP"}, {"TOPIC", "LISTTOPICS"},
       /* lib / include */
       {"INCLUDE", "LISTLIBS"}, {"INCLUDE", "HASLIB"}, {"INCLUDE", "MATCHLIBS"},
       {"INCLUDE", "PICKLIB"}, {"INCLUDE", "RECIPE"}, {"INCLUDE", "CHECKDEPS"},
@@ -39717,10 +39734,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     static const struct { const char *topic; const char *form; } forms[] = {
       {"general", "VERSION"}, {"general", "STATUS"}, {"general", "IDENTITY"},
       {"general", "TIPS"}, {"general", "FORMSFOR"}, {"general", "SNIP"},
-      {"general", "TOPIC"}, {"general", "WHY"}, {"general", "INCLUDE"},
+      {"general", "TOPIC"}, {"general", "TOPICHINT"}, {"general", "RELATEDTOPIC"},
+      {"general", "WHY"}, {"general", "INCLUDE"},
       {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"},
       {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"}, {"cap", "LISTFORMS"},
-      {"cap", "RELATED"}, {"cap", "FORMSFOR"}, {"cap", "SNIP"}, {"cap", "TOPIC"},
+      {"cap", "RELATED"}, {"cap", "RELATEDTOPIC"}, {"cap", "FORMSFOR"},
+      {"cap", "SNIP"}, {"cap", "TOPIC"},
       {"fat", "VARROOM"}, {"fat", "HASVARROOM"}, {"fat", "NEEDVARROOM"},
       {"fat", "REMAIN_MS"}, {"fat", "HAS_TIME"}, {"fat", "NEEDTIME"}, {"fat", "STATUS"},
       {"plate", "SETP"}, {"plate", "GETP"}, {"plate", "NEEDP"}, {"plate", "DEFAULTP"},
@@ -40096,6 +40115,124 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(vm->last_str, sizeof vm->last_str, "%s", hint);
     vm->last_n = (long)strlen(hint);
     var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* RELATEDTOPIC|SEETOPICS name — related discovery topic bag (twin of RELATED for topics).
+   * Complements TOPICHINT (one-line docs) and LISTTOPICS (catalog): topic → neighbors.
+   * LAST = newline related topics · RELATEDTOPIC_N · RELATEDTOPIC_OF · soft miss OK=0.
+   * Dual of cubalc relatedtopic. */
+  if (kw(&L->cur,"RELATEDTOPIC")||kw(&L->cur,"SEETOPICS")||kw(&L->cur,"TOPICREL")||
+      kw(&L->cur,"NEARTOPICS")||kw(&L->cur,"TOPICSNEAR")||kw(&L->cur,"RELATEDTOPICS")||
+      kw(&L->cur,"TOPICNEIGHBORS")||kw(&L->cur,"TOPICSEEALSO")){
+    static const struct { const char *topic; const char *rel; } edges[] = {
+      {"general", "cap"}, {"general", "lib"}, {"general", "run"}, {"general", "plate"},
+      {"cap", "general"}, {"cap", "run"}, {"cap", "lib"}, {"cap", "fat"},
+      {"fat", "plate"}, {"fat", "run"}, {"fat", "cap"}, {"fat", "general"},
+      {"plate", "fat"}, {"plate", "run"}, {"plate", "general"}, {"plate", "lib"},
+      {"p2p", "protect"}, {"p2p", "run"}, {"p2p", "general"}, {"p2p", "lib"},
+      {"run", "general"}, {"run", "cap"}, {"run", "plate"}, {"run", "fat"},
+      {"lib", "general"}, {"lib", "cap"}, {"lib", "plate"}, {"lib", "run"},
+      {"protect", "p2p"}, {"protect", "general"}, {"protect", "run"}, {"protect", "lib"},
+    };
+    char name[32], tup[32], bag[512];
+    size_t k, o = 0;
+    int i, n = 0, nall = (int)(sizeof edges / sizeof edges[0]);
+    int seen = 0;
+    lex_next(L);
+    name[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RELATEDTOPIC_N", 0);
+      var_set_num(vm, "SEETOPICS_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "RELATEDTOPIC: need topic — RELATEDTOPIC cap · SEETOPICS plate");
+      var_set_str(vm, "ERR",
+                  "RELATEDTOPIC: need topic — RELATEDTOPIC cap · SEETOPICS plate");
+      bump(vm);
+      return 1;
+    }
+    for (k = 0; name[k] && k + 1 < sizeof tup; k++) {
+      char c = name[k];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      tup[k] = c;
+    }
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    bag[0] = 0;
+    for (i = 0; i < nall; i++) {
+      size_t ln;
+      if (strcmp(edges[i].topic, tup) != 0) continue;
+      seen = 1;
+      ln = strlen(edges[i].rel);
+      if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, edges[i].rel, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "RELATEDTOPIC_OF", tup);
+    var_set_str(vm, "SEETOPICS_OF", tup);
+    var_set_str(vm, "TOPIC_NAME", tup);
+    var_set_str(vm, "TOPIC", tup);
+    if (!seen || n == 0) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "RELATEDTOPIC miss: '%s' — LISTTOPICS · HASTOPIC · cubalc topics",
+               name);
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "RELATEDTOPIC", "");
+      var_set_str(vm, "SEETOPICS", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RELATEDTOPIC_N", 0);
+      var_set_num(vm, "SEETOPICS_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "RELATEDTOPIC", bag);
+    var_set_str(vm, "SEETOPICS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "RELATEDTOPIC_N", n);
+    var_set_num(vm, "SEETOPICS_N", n);
     var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;

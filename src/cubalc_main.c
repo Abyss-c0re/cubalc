@@ -3260,6 +3260,8 @@ int main(int argc, char **argv) {
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
       {"cli_topichint", "programs/proof/1339_cli_topichint.sh", "cubalc topichint plate + forms"},
+      {"relatedtopic", "programs/proof/1340_relatedtopic.cubalc", "RELATEDTOPIC related discovery topic bag"},
+      {"cli_relatedtopic", "programs/proof/1340_cli_relatedtopic.sh", "cubalc relatedtopic plate + forms"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3905,6 +3907,8 @@ int main(int argc, char **argv) {
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
       {"TOPICHINT", "flow", "TOPICHINT name one-line topic hint · dual of FORMHINT for topics"},
       {"DESCRIBETOPIC", "flow", "DESCRIBETOPIC alias of TOPICHINT"},
+      {"RELATEDTOPIC", "flow", "RELATEDTOPIC|SEETOPICS name related topic bag · twin of RELATED for topics"},
+      {"SEETOPICS", "flow", "SEETOPICS alias of RELATEDTOPIC"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
       {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
@@ -5081,7 +5085,7 @@ int main(int argc, char **argv) {
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
            "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc doctor · cubalc topichint · cubalc topics · cubalc errtips · cubalc init\n");
+           "Commands: cubalc doctor · cubalc topichint · cubalc relatedtopic · cubalc topics · cubalc errtips · cubalc init\n");
     return 0;
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
@@ -5864,6 +5868,74 @@ int main(int argc, char **argv) {
              "\"note\":\"one-line topic docs · dual of TOPICHINT · twin of formhint\"}\n",
              tup, hj, CUBALC_LANG_VERSION);
     }
+    return 0;
+  }
+  if (strcmp(cmd, "relatedtopic") == 0 || strcmp(cmd, "seetopics") == 0 ||
+      strcmp(cmd, "relatedtopics") == 0 || strcmp(cmd, "topicrel") == 0 ||
+      strcmp(cmd, "neartopics") == 0 || strcmp(cmd, "topic-neighbors") == 0) {
+    /* Usability: related discovery topic bag (dual of RELATEDTOPIC / RELATED for topics).
+     *   cubalc relatedtopic cap · cubalc seetopics plate
+     * Schema cubalc.relatedtopic.v1 */
+    static const struct { const char *topic; const char *rel; } edges[] = {
+      {"general", "cap"}, {"general", "lib"}, {"general", "run"}, {"general", "plate"},
+      {"cap", "general"}, {"cap", "run"}, {"cap", "lib"}, {"cap", "fat"},
+      {"fat", "plate"}, {"fat", "run"}, {"fat", "cap"}, {"fat", "general"},
+      {"plate", "fat"}, {"plate", "run"}, {"plate", "general"}, {"plate", "lib"},
+      {"p2p", "protect"}, {"p2p", "run"}, {"p2p", "general"}, {"p2p", "lib"},
+      {"run", "general"}, {"run", "cap"}, {"run", "plate"}, {"run", "fat"},
+      {"lib", "general"}, {"lib", "cap"}, {"lib", "plate"}, {"lib", "run"},
+      {"protect", "p2p"}, {"protect", "general"}, {"protect", "run"}, {"protect", "lib"},
+    };
+    const char *name = (argc > 2 && argv[2][0]) ? argv[2] : "";
+    char tup[32], relj[256];
+    size_t k, o = 0;
+    int i, n = 0, nall = (int)(sizeof edges / sizeof edges[0]);
+    int first = 1, seen = 0;
+    if (!name[0]) {
+      fprintf(stderr, "usage: cubalc relatedtopic|seetopics <topic>\n");
+      printf("{\"schema\":\"cubalc.relatedtopic.v1\",\"ok\":false,\"cmd\":\"relatedtopic\","
+             "\"err\":\"need topic name\",\"version\":\"%s\"}\n",
+             CUBALC_LANG_VERSION);
+      return 2;
+    }
+    for (k = 0; name[k] && k + 1 < sizeof tup; k++)
+      tup[k] = (char)((name[k] >= 'A' && name[k] <= 'Z')
+                          ? name[k] - 'A' + 'a' : name[k]);
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    relj[0] = 0;
+    for (i = 0; i < nall; i++) {
+      if (strcmp(edges[i].topic, tup) != 0) continue;
+      seen = 1;
+      if (o + 24 < sizeof relj) {
+        if (!first) relj[o++] = ',';
+        o += (size_t)snprintf(relj + o, sizeof relj - o, "\"%s\"", edges[i].rel);
+        first = 0;
+        n++;
+      }
+    }
+    if (!seen || n == 0) {
+      printf("{\"schema\":\"cubalc.relatedtopic.v1\",\"ok\":false,\"cmd\":\"relatedtopic\","
+             "\"topic\":\"%s\",\"err\":\"unknown topic\",\"version\":\"%s\","
+             "\"note\":\"LISTTOPICS · cubalc topics · HASTOPIC\"}\n",
+             tup, CUBALC_LANG_VERSION);
+      return 1;
+    }
+    printf("{\"schema\":\"cubalc.relatedtopic.v1\",\"ok\":true,\"cmd\":\"relatedtopic\","
+           "\"topic\":\"%s\",\"n\":%d,\"version\":\"%s\","
+           "\"note\":\"related topic bag · dual of RELATEDTOPIC · twin of related for topics\","
+           "\"related\":[%s]}\n",
+           tup, n, CUBALC_LANG_VERSION, relj);
     return 0;
   }
   if (strcmp(cmd, "errtips") == 0 || strcmp(cmd, "fixtips") == 0 ||
@@ -15427,6 +15499,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
       {"TOPICHINT", "flow", "TOPICHINT name one-line topic hint · dual of FORMHINT for topics"},
       {"DESCRIBETOPIC", "flow", "DESCRIBETOPIC alias of TOPICHINT"},
+      {"RELATEDTOPIC", "flow", "RELATEDTOPIC|SEETOPICS name related topic bag · twin of RELATED for topics"},
+      {"SEETOPICS", "flow", "SEETOPICS alias of RELATEDTOPIC"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
       {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
@@ -16898,6 +16972,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    topics|listtopics          discovery topic catalog (cubalc.topics.v1)\n"
       "    hastopic|needtopic <t>     soft/hard topic membership gates\n"
       "    topichint|describetopic <t>  one-line topic docs (cubalc.topichint.v1)\n"
+      "    relatedtopic|seetopics <t> related topic bag (cubalc.relatedtopic.v1)\n"
       "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
       "    errrun|recoversnip <err…>  classify + RUNSNIP topic (cubalc.errrun.v1)\n"
       "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --from lib\n"
@@ -16905,7 +16980,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|topichint|formsfor|related|snip|topic|runsnip|topics|errtips|errrun\n"
+      "    picklib|listforms|formhint|topichint|relatedtopic|formsfor|related|snip|topic|runsnip|topics|errtips|errrun\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
