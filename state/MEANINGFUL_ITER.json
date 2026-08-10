@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 766,
-  "version": "1.15.793-usability",
-  "item": "ERRGUIDE + cubalc errguide recovery playbook",
-  "item_id": 802,
-  "title": "ERRGUIDE|RECOVERGUIDE [err] · cubalc errguide · cubalc.errguide.v1",
-  "commit": "d88b379afdb98a8d5e8a3f1551418d0a0117e34b",
-  "summary": "ERRTIPS classify + GUIDE playbook one-shot; twin of ERRRUN. proof 1343 PASS.",
+  "iter": 767,
+  "version": "1.15.794-usability",
+  "item": "FORMGUIDE + cubalc formguide form playbook",
+  "item_id": 803,
+  "title": "FORMGUIDE|GUIDEFORM form · cubalc formguide · cubalc.formguide.v1",
+  "commit": "b2256e41939e16add67b7d07fef709d0a1f17320",
+  "summary": "FORMHINT+FORMTOPICS+first GUIDE one-shot; form→playbook. proof 1344 PASS.",
   "proofs": [
-    "1343_errguide PASS",
-    "1343_cli_errguide PASS"
+    "1344_formguide PASS",
+    "1344_cli_formguide PASS"
   ],
-  "when": "2026-08-10T15:17:42Z",
+  "when": "2026-08-10T15:28:12Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d88b379afdb98a8d5e8a3f1551418d0a0117e34b",
-  "note": "errguide INCLUDE→lib; bags GUIDE_RELATED/FORMS + ERRGUIDE_TOPIC"
+  "sha": "b2256e41939e16add67b7d07fef709d0a1f17320",
+  "note": "formguide HASFORM→cap; INCLUDE multi-topic first general"
 }
