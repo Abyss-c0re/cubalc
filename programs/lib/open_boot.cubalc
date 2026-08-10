@@ -1,0 +1,16 @@
+# INCLUDE open_boot — agent discovery + full playbook one-shot
+# Usability: agent_boot + OPEN (DISCOVER bag + GUIDE for first)
+#   INCLUDE open_boot
+#   # DISCOVER_* · GUIDE_* · OPEN_FIRST ready
+#   RUNSNIP OPEN_FIRST   # optional prove mini
+#
+# Filtered open (LET overwrites; DEFAULT is set-if-unset):
+#   LET OPEN_NEEDLE = "p"
+#   OPEN OPEN_NEEDLE
+#
+# Scaffold: cubalc init demo --open
+# CLI dual plate: cubalc open
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+INCLUDE agent_boot
+OPEN
