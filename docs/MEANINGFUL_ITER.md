@@ -774,6 +774,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 744. ~~**run plate `remain_ms` + STATUS budget**~~ **done** (end-of-run wall left · -1 unlimited · STATUS timeout_ms/remain_ms dual of REMAIN_MS).
 745. ~~**run plate `wall_ms` / `WALL_MS`/`ELAPSED`**~~ **done** (mono elapsed since run start · STATUS wall_ms · dual of remain_ms · agent profiling).
 746. ~~**`programs/lib/fat_session`**~~ **done** (INCLUDE fat_boot + plate_boot durable nest · doctor lib_fat_session · no double agent_boot).
+747. ~~**`LISTLIBS` / `HASLIB`**~~ **done** (in-lang dual of cubalc libs · short-name bag + soft stem probe · INCLUDE discovery without shell).
 
 ## Tick protocol
 

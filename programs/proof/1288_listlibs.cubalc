@@ -1,0 +1,24 @@
+# LISTLIBS / HASLIB — discover INCLUDE targets without shell cubalc libs
+
+LISTLIBS
+ASSERT LAST_N >= 15
+ASSERT LIBS_N == LAST_N
+LET BAG = LAST
+SYS HASLINE BAG "fat_session"
+ASSERT LAST_N == 1
+SYS HASLINE BAG "agent_boot"
+ASSERT LAST_N == 1
+SYS HASLINE BAG "var_guard"
+ASSERT LAST_N == 1
+
+HASLIB fat_session
+ASSERT LAST_N == 1
+ASSERT OK == 1
+
+HASLIB no_such_lib_xyz
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+PASS
+PRINT "1288_listlibs: PASS"
