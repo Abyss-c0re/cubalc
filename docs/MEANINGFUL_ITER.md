@@ -779,6 +779,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 749. ~~**`GREPLIB` / `SEARCHLIBS`**~~ **done** (lib content discovery · GREPLIB name needle → matching lines · SEARCHLIBS/LIBGREP needle → stems bag · soft miss · dual of shell grep across programs/lib).
 750. ~~**`HEADLIB` / `TAILLIB`**~~ **done** (peek first/last n lines of lib recipe → LAST · default 16 · LIB_PATH/STEM · HEADLIB_TOTAL · soft miss · dual of HEADFILE with INCLUDE short-name resolve · no full CATLIB).
 751. ~~**`LIBDEPS` / `INCLUDEDEPS`**~~ **done** (bag of INCLUDE stems from a lib recipe · composition graph without GREPLIB+peel · LIB_PATH/STEM · soft miss).
+752. ~~**`LIBINFO` / `STATLIB`**~~ **done** (cubalc.libinfo.v1 path/bytes/lines/mtime/deps_n · dual of cubalc cat --meta · soft miss).
 
 ## Tick protocol
 

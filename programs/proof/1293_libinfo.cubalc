@@ -1,0 +1,34 @@
+# LIBINFO / STATLIB — one-shot lib metadata (dual of cubalc cat --meta)
+
+LIBINFO fat_session
+ASSERT OK == 1
+ASSERT LIB_STEM == "fat_session"
+ASSERT LIB_PATH != ""
+ASSERT LIB_BYTES > 50
+ASSERT LIB_LINES >= 5
+ASSERT LIB_DEPS_N == 2
+ASSERT LAST_N > 50
+SYS HAS LAST "cubalc.libinfo.v1"
+ASSERT LAST_N == 1
+LIBINFO fat_session
+SYS HAS LAST "fat_session"
+ASSERT LAST_N == 1
+LIBINFO fat_session
+SYS HAS LAST "deps_n"
+ASSERT LAST_N == 1
+
+# leaf lib
+STATLIB agent_boot
+ASSERT OK == 1
+ASSERT LIB_STEM == "agent_boot"
+ASSERT LIB_DEPS_N == 0
+ASSERT LIB_BYTES > 10
+
+# soft miss
+LIBINFO no_such_lib_xyz_zzz
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+PASS
+PRINT "1293_libinfo: PASS"

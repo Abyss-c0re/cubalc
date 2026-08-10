@@ -36639,6 +36639,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HEADLIB", "HEADLIB|LIBHEAD name [n] — first n lines of lib recipe → LAST · default 16 · dual of HEADFILE"},
       {"TAILLIB", "TAILLIB|LIBTAIL name [n] — last n lines of lib recipe → LAST · default 16 · dual of TAILFILE"},
       {"LIBDEPS", "LIBDEPS|INCLUDEDEPS name — bag of INCLUDE stems from a lib recipe · composition without GREPLIB glue"},
+      {"LIBINFO", "LIBINFO|STATLIB name — cubalc.libinfo.v1 path/bytes/lines/mtime/deps_n · dual of cubalc cat --meta"},
       {"LISTPRELOAD", "LISTPRELOAD|PRELOADS — -I/CUBALC_PRELOAD short names bag (CUBALC_PRELOAD_ACTIVE)"},
       {"PRELOADS", "PRELOADS alias of LISTPRELOAD"},
       {"PRELOADMISS", "PRELOADMISS|CHECKPRELOAD — -I names not loaded · bag + LAST_N=count · PRELOAD_MISS"},

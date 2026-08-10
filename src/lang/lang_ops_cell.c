@@ -2,6 +2,8 @@
 #include "lang/cubalc_lang_internal.h"
 #include <dirent.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <time.h>
 
 /* INCLUDE lib did-you-mean — scan programs/lib for closest stem. */
 static void include_fold(char *dst, size_t n, const char *src){
@@ -6834,6 +6836,225 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     vm->last_n = ndep;
     var_set_num(vm, "LAST_N", ndep);
     var_set_num(vm, "LIBDEPS_N", ndep);
+    var_set_str(vm, "LIB_PATH", path);
+    var_set_str(vm, "LIB_STEM", base);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LIBINFO / STATLIB / LIBSTAT name — one-shot lib metadata plate (dual of cubalc cat --meta).
+   * Usability: agents get path/bytes/lines/mtime/deps_n without CATLIB or shell.
+   * LAST = cubalc.libinfo.v1 JSON · LIB_PATH/STEM/BYTES/LINES/MTIME/DEPS_N · soft miss. */
+  if (kw(&L->cur, "LIBINFO") || kw(&L->cur, "STATLIB") ||
+      kw(&L->cur, "LIBSTAT") || kw(&L->cur, "INFOLIB") ||
+      kw(&L->cur, "LIB_INFO") || kw(&L->cur, "LIBMETA") ||
+      kw(&L->cur, "METALIB") || kw(&L->cur, "DESCRIBELIB")) {
+    char name[160], path[768], base[160], plate[CUBALC_VAR_STR_MAX];
+    char *src = NULL;
+    FILE *f = NULL;
+    long sz = 0;
+    size_t nr = 0;
+    int nlines = 0, ndep = 0;
+    long mtime = 0;
+    const char *slash, *leaf, *ip, *root, *lp;
+    size_t blen;
+    struct stat st;
+    lex_next(L);
+    name[0] = 0;
+    path[0] = 0;
+    plate[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LIBINFO: need name");
+      var_set_str(vm, "ERR", "LIBINFO: need name");
+      bump(vm);
+      return 1;
+    }
+    slash = strrchr(name, '/');
+    leaf = slash ? slash + 1 : name;
+    snprintf(base, sizeof base, "%s", leaf);
+    blen = strlen(base);
+    if (blen > 7 && strcmp(base + blen - 7, ".cubalc") == 0)
+      base[blen - 7] = 0;
+    if (name[0] == '/' || strchr(name, '/')) {
+      f = fopen(name, "rb");
+      if (f) snprintf(path, sizeof path, "%s", name);
+    }
+    if (!f) {
+      char p3[768];
+      snprintf(p3, sizeof p3, "programs/lib/%s.cubalc", base);
+      f = fopen(p3, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p3);
+    }
+    if (!f) {
+      char p3[768];
+      snprintf(p3, sizeof p3, "programs/lib/%s", name);
+      f = fopen(p3, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p3);
+    }
+    if (!f) {
+      f = fopen(name, "rb");
+      if (f) snprintf(path, sizeof path, "%s", name);
+    }
+    root = getenv("CUBALC_ROOT");
+    if (!f && root && root[0]) {
+      char p2[768];
+      snprintf(p2, sizeof p2, "%s/programs/lib/%s.cubalc", root, base);
+      f = fopen(p2, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p2);
+    }
+    ip = getenv("CUBALC_INCLUDE_PATH");
+    if (!f && ip && ip[0]) {
+      const char *seg = ip;
+      while (*seg && !f) {
+        char dir[512], p3[768];
+        size_t dlen = 0;
+        while (*seg == ':') seg++;
+        if (!*seg) break;
+        while (seg[dlen] && seg[dlen] != ':' && dlen + 1 < sizeof dir)
+          dir[dlen] = seg[dlen], dlen++;
+        dir[dlen] = 0;
+        seg += dlen;
+        if (!dir[0]) continue;
+        snprintf(p3, sizeof p3, "%s/%s.cubalc", dir, base);
+        f = fopen(p3, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+        snprintf(p3, sizeof p3, "%s/%s", dir, name);
+        f = fopen(p3, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+      }
+    }
+    if (!f) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "LIBINFO miss: '%s' — programs/lib · CUBALC_INCLUDE_PATH · cubalc which",
+               name);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "LIB_PATH", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    fseek(f, 0, SEEK_END);
+    sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz < 0) sz = 0;
+    if (sz > 256 * 1024) sz = 256 * 1024;
+    src = (char *)malloc((size_t)sz + 1);
+    if (!src) {
+      fclose(f);
+      var_set_str(vm, "LAST", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LIBINFO: oom");
+      var_set_str(vm, "ERR", "LIBINFO: oom");
+      bump(vm);
+      return 1;
+    }
+    nr = fread(src, 1, (size_t)sz, f);
+    fclose(f);
+    src[nr] = 0;
+    mtime = 0;
+    if (stat(path, &st) == 0)
+      mtime = (long)st.st_mtime;
+    /* lines + INCLUDE deps count (same rules as LIBDEPS) */
+    nlines = 0;
+    ndep = 0;
+    lp = src;
+    if (nr > 0) {
+      while (*lp) {
+        const char *line = lp;
+        while (*lp && *lp != '\n') lp++;
+        nlines++;
+        while (*line == ' ' || *line == '\t') line++;
+        if (*line != '#' && line[0] == 'I' && line[1] == 'N' && line[2] == 'C' &&
+            line[3] == 'L' && line[4] == 'U' && line[5] == 'D' && line[6] == 'E' &&
+            (line[7] == ' ' || line[7] == '\t' || line[7] == '"' || line[7] == '\'' ||
+             line[7] == 0 || line[7] == '\r' || line[7] == '\n')) {
+          /* has a target after modifiers? count as dep if non-empty remainder */
+          const char *p = line + 7;
+          while (*p == ' ' || *p == '\t') p++;
+          for (;;) {
+            if (p[0] == 'O' && p[1] == 'N' && p[2] == 'C' && p[3] == 'E' &&
+                (p[4] == ' ' || p[4] == '\t' || p[4] == 0 || p[4] == '\r' || p[4] == '\n')) {
+              p += 4;
+              while (*p == ' ' || *p == '\t') p++;
+              continue;
+            }
+            if (p[0] == 'S' && p[1] == 'O' && p[2] == 'F' && p[3] == 'T' &&
+                (p[4] == ' ' || p[4] == '\t' || p[4] == 0 || p[4] == '\r' || p[4] == '\n')) {
+              p += 4;
+              while (*p == ' ' || *p == '\t') p++;
+              continue;
+            }
+            if (p[0] == 'O' && p[1] == 'R' &&
+                (p[2] == ' ' || p[2] == '\t' || p[2] == 0 || p[2] == '\r' || p[2] == '\n')) {
+              p += 2;
+              while (*p == ' ' || *p == '\t') p++;
+              continue;
+            }
+            break;
+          }
+          if (*p && *p != '\n' && *p != '\r' && *p != '#')
+            ndep++;
+        }
+        if (*lp == '\n') lp++;
+      }
+    }
+    free(src);
+    /* JSON plate — path is filesystem-local; escape " \ minimally */
+    {
+      char path_esc[900];
+      size_t pi = 0, qi = 0;
+      for (pi = 0; path[pi] && qi + 2 < sizeof path_esc; pi++) {
+        if (path[pi] == '\\' || path[pi] == '"') {
+          path_esc[qi++] = '\\';
+          path_esc[qi++] = path[pi];
+        } else if ((unsigned char)path[pi] >= 32) {
+          path_esc[qi++] = path[pi];
+        }
+      }
+      path_esc[qi] = 0;
+      snprintf(plate, sizeof plate,
+               "{\"schema\":\"cubalc.libinfo.v1\",\"ok\":true,\"stem\":\"%s\","
+               "\"path\":\"%s\",\"bytes\":%ld,\"lines\":%d,\"mtime\":%ld,"
+               "\"deps_n\":%d,\"version\":\"%s\"}",
+               base, path_esc, (long)nr, nlines, mtime, ndep, CUBALC_LANG_VERSION);
+    }
+    var_set_str(vm, "LAST", plate);
+    var_set_str(vm, "LIBINFO", plate);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+    vm->last_n = (long)nr;
+    var_set_num(vm, "LAST_N", (long)nr);
+    var_set_num(vm, "LIB_BYTES", (long)nr);
+    var_set_num(vm, "LIB_SIZE", (long)nr);
+    var_set_num(vm, "LIB_LINES", nlines);
+    var_set_num(vm, "LIB_MTIME", mtime);
+    var_set_num(vm, "LIB_DEPS_N", ndep);
     var_set_str(vm, "LIB_PATH", path);
     var_set_str(vm, "LIB_STEM", base);
     var_set_num(vm, "OK", 1);
