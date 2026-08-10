@@ -6604,6 +6604,243 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LIBDEPS / INCLUDEDEPS / LIBINCLUDES name — bag of INCLUDE stems from a lib recipe.
+   * Usability: agents see composition (what a recipe pulls) without GREPLIB+peel glue.
+   * Parses INCLUDE [ONCE] [OR|SOFT] target lines · LAST bag of short stems · soft miss. */
+  if (kw(&L->cur, "LIBDEPS") || kw(&L->cur, "INCLUDEDEPS") ||
+      kw(&L->cur, "LIBINCLUDES") || kw(&L->cur, "DEPSLIB") ||
+      kw(&L->cur, "LIB_DEPS") || kw(&L->cur, "LISTLIBDEPS") ||
+      kw(&L->cur, "LIBREQUIRE") || kw(&L->cur, "WHATINCLUDES")) {
+    char name[160], path[768], base[160];
+    char bag[CUBALC_VAR_STR_MAX];
+    char *src = NULL;
+    FILE *f = NULL;
+    long sz = 0;
+    size_t nr = 0, o = 0;
+    int ndep = 0;
+    const char *slash, *leaf, *ip, *root, *lp;
+    size_t blen;
+    lex_next(L);
+    name[0] = 0;
+    path[0] = 0;
+    bag[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LIBDEPS: need name");
+      var_set_str(vm, "ERR", "LIBDEPS: need name");
+      bump(vm);
+      return 1;
+    }
+    slash = strrchr(name, '/');
+    leaf = slash ? slash + 1 : name;
+    snprintf(base, sizeof base, "%s", leaf);
+    blen = strlen(base);
+    if (blen > 7 && strcmp(base + blen - 7, ".cubalc") == 0)
+      base[blen - 7] = 0;
+    if (name[0] == '/' || strchr(name, '/')) {
+      f = fopen(name, "rb");
+      if (f) snprintf(path, sizeof path, "%s", name);
+    }
+    if (!f) {
+      char p3[768];
+      snprintf(p3, sizeof p3, "programs/lib/%s.cubalc", base);
+      f = fopen(p3, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p3);
+    }
+    if (!f) {
+      char p3[768];
+      snprintf(p3, sizeof p3, "programs/lib/%s", name);
+      f = fopen(p3, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p3);
+    }
+    if (!f) {
+      f = fopen(name, "rb");
+      if (f) snprintf(path, sizeof path, "%s", name);
+    }
+    root = getenv("CUBALC_ROOT");
+    if (!f && root && root[0]) {
+      char p2[768];
+      snprintf(p2, sizeof p2, "%s/programs/lib/%s.cubalc", root, base);
+      f = fopen(p2, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p2);
+    }
+    ip = getenv("CUBALC_INCLUDE_PATH");
+    if (!f && ip && ip[0]) {
+      const char *seg = ip;
+      while (*seg && !f) {
+        char dir[512], p3[768];
+        size_t dlen = 0;
+        while (*seg == ':') seg++;
+        if (!*seg) break;
+        while (seg[dlen] && seg[dlen] != ':' && dlen + 1 < sizeof dir)
+          dir[dlen] = seg[dlen], dlen++;
+        dir[dlen] = 0;
+        seg += dlen;
+        if (!dir[0]) continue;
+        snprintf(p3, sizeof p3, "%s/%s.cubalc", dir, base);
+        f = fopen(p3, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+        snprintf(p3, sizeof p3, "%s/%s", dir, name);
+        f = fopen(p3, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+      }
+    }
+    if (!f) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "LIBDEPS miss: '%s' — programs/lib · CUBALC_INCLUDE_PATH · cubalc cat",
+               name);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "LIB_PATH", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    fseek(f, 0, SEEK_END);
+    sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz < 0) sz = 0;
+    if (sz > 256 * 1024) sz = 256 * 1024;
+    src = (char *)malloc((size_t)sz + 1);
+    if (!src) {
+      fclose(f);
+      var_set_str(vm, "LAST", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LIBDEPS: oom");
+      var_set_str(vm, "ERR", "LIBDEPS: oom");
+      bump(vm);
+      return 1;
+    }
+    nr = fread(src, 1, (size_t)sz, f);
+    fclose(f);
+    src[nr] = 0;
+    /* scan lines for INCLUDE [ONCE] [OR|SOFT] target */
+    lp = src;
+    o = 0;
+    ndep = 0;
+    while (*lp) {
+      const char *line = lp;
+      char tok[160];
+      size_t ti = 0;
+      while (*lp && *lp != '\n') lp++;
+      /* skip leading space on line */
+      while (*line == ' ' || *line == '\t') line++;
+      if (*line == '#' || *line == '\n' || *line == 0) {
+        if (*lp == '\n') lp++;
+        continue;
+      }
+      /* match INCLUDE as word */
+      if (!(line[0] == 'I' && line[1] == 'N' && line[2] == 'C' && line[3] == 'L' &&
+            line[4] == 'U' && line[5] == 'D' && line[6] == 'E' &&
+            (line[7] == ' ' || line[7] == '\t' || line[7] == '"' || line[7] == 0 ||
+             line[7] == '\r' || line[7] == '\n'))) {
+        if (*lp == '\n') lp++;
+        continue;
+      }
+      line += 7;
+      while (*line == ' ' || *line == '\t') line++;
+      /* skip ONCE / OR / SOFT modifiers (repeat) */
+      for (;;) {
+        if ((line[0] == 'O' && line[1] == 'N' && line[2] == 'C' && line[3] == 'E' &&
+             (line[4] == ' ' || line[4] == '\t' || line[4] == 0 || line[4] == '\r' ||
+              line[4] == '\n')) ||
+            (line[0] == 'O' && line[1] == 'R' &&
+             (line[2] == ' ' || line[2] == '\t' || line[2] == 0 || line[2] == '\r' ||
+              line[2] == '\n')) ||
+            (line[0] == 'S' && line[1] == 'O' && line[2] == 'F' && line[3] == 'T' &&
+             (line[4] == ' ' || line[4] == '\t' || line[4] == 0 || line[4] == '\r' ||
+              line[4] == '\n'))) {
+          if (line[0] == 'O' && line[1] == 'R' &&
+              !(line[0] == 'O' && line[1] == 'N')) {
+            /* OR is 2 chars — but ONCE starts with O too; already handled ONCE first */
+          }
+          if (line[0] == 'O' && line[1] == 'N')
+            line += 4;
+          else if (line[0] == 'S')
+            line += 4;
+          else
+            line += 2; /* OR */
+          while (*line == ' ' || *line == '\t') line++;
+          continue;
+        }
+        break;
+      }
+      /* extract target: "quoted" or bare token */
+      tok[0] = 0;
+      ti = 0;
+      if (*line == '"' || *line == '\'') {
+        char q = *line++;
+        while (*line && *line != q && *line != '\n' && *line != '\r' && ti + 1 < sizeof tok)
+          tok[ti++] = *line++;
+        tok[ti] = 0;
+      } else {
+        while (*line && *line != ' ' && *line != '\t' && *line != '\n' && *line != '\r' &&
+               *line != '#' && ti + 1 < sizeof tok)
+          tok[ti++] = *line++;
+        tok[ti] = 0;
+      }
+      if (tok[0]) {
+        /* stem: leaf without .cubalc */
+        const char *sl = strrchr(tok, '/');
+        const char *st = sl ? sl + 1 : tok;
+        char stem[160];
+        size_t slen;
+        snprintf(stem, sizeof stem, "%s", st);
+        slen = strlen(stem);
+        if (slen > 7 && strcmp(stem + slen - 7, ".cubalc") == 0)
+          stem[slen - 7] = 0;
+        slen = strlen(stem);
+        if (slen > 0) {
+          if (ndep > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+          if (o + slen < sizeof bag) {
+            memcpy(bag + o, stem, slen);
+            o += slen;
+          }
+          bag[o] = 0;
+          ndep++;
+        }
+      }
+      if (*lp == '\n') lp++;
+    }
+    free(src);
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LIBDEPS", bag);
+    var_set_str(vm, "INCLUDEDEPS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = ndep;
+    var_set_num(vm, "LAST_N", ndep);
+    var_set_num(vm, "LIBDEPS_N", ndep);
+    var_set_str(vm, "LIB_PATH", path);
+    var_set_str(vm, "LIB_STEM", base);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTPRELOAD / PRELOADS — short-name bag of effective -I / CUBALC_PRELOAD.
    * Usability: CLI sets CUBALC_PRELOAD_ACTIVE; programs audit request vs INCLUDESTEMS. */
   if (kw(&L->cur, "LISTPRELOAD") || kw(&L->cur, "PRELOADS") ||

@@ -36638,6 +36638,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SEARCHLIBS", "SEARCHLIBS|LIBGREP needle — stems whose source contains needle · dual of shell grep libs"},
       {"HEADLIB", "HEADLIB|LIBHEAD name [n] — first n lines of lib recipe → LAST · default 16 · dual of HEADFILE"},
       {"TAILLIB", "TAILLIB|LIBTAIL name [n] — last n lines of lib recipe → LAST · default 16 · dual of TAILFILE"},
+      {"LIBDEPS", "LIBDEPS|INCLUDEDEPS name — bag of INCLUDE stems from a lib recipe · composition without GREPLIB glue"},
       {"LISTPRELOAD", "LISTPRELOAD|PRELOADS — -I/CUBALC_PRELOAD short names bag (CUBALC_PRELOAD_ACTIVE)"},
       {"PRELOADS", "PRELOADS alias of LISTPRELOAD"},
       {"PRELOADMISS", "PRELOADMISS|CHECKPRELOAD — -I names not loaded · bag + LAST_N=count · PRELOAD_MISS"},

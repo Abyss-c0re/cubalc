@@ -1,0 +1,42 @@
+# LIBDEPS / INCLUDEDEPS — INCLUDE stems from a lib recipe
+
+LIBDEPS fat_session
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT LIB_STEM == "fat_session"
+ASSERT LIB_PATH != ""
+SYS HASLINE LAST "fat_boot"
+ASSERT LAST_N == 1
+LIBDEPS fat_session
+SYS HASLINE LAST "plate_boot"
+ASSERT LAST_N == 1
+
+LIBDEPS fat_boot
+ASSERT OK == 1
+ASSERT LAST_N == 2
+SYS HASLINE LAST "agent_boot"
+ASSERT LAST_N == 1
+LIBDEPS fat_boot
+SYS HASLINE LAST "var_guard"
+ASSERT LAST_N == 1
+
+# leaf lib with no INCLUDE body lines
+LIBDEPS agent_boot
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# INCLUDEDEPS alias
+INCLUDEDEPS plate_session
+ASSERT OK == 1
+ASSERT LAST_N == 2
+SYS HASLINE LAST "plate_boot"
+ASSERT LAST_N == 1
+
+# soft miss
+LIBDEPS no_such_lib_xyz_zzz
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+PASS
+PRINT "1292_libdeps: PASS"
