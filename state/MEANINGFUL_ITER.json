@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 752,
-  "version": "1.15.779-usability",
-  "item": "TIPS + cubalc tips topic playbooks",
-  "item_id": 788,
-  "title": "TIPS [topic] \u00b7 cubalc tips|howto \u00b7 cubalc.tips.v1",
-  "commit": "ab985651cd22b3fe771e1c0a9d660c82c10267a5",
-  "summary": "curated agent next-steps by topic; CLI JSON + in-lang bag. proof 1329 PASS.",
+  "iter": 753,
+  "version": "1.15.780-usability",
+  "item": "FORMSFOR + cubalc formsfor topic form-name bags",
+  "item_id": 789,
+  "title": "FORMSFOR [topic] \u00b7 cubalc formsfor|topicforms \u00b7 cubalc.formsfor.v1",
+  "commit": "b2a23f47ddcf6bde13cca5dc9747a8aa070ddf84",
+  "summary": "topic \u2192 form-name bag dual of TIPS prose; capability surface without LISTFORMS soup. proof 1330 PASS.",
   "proofs": [
-    "1329_tips PASS",
-    "1329_cli_tips PASS"
+    "1330_formsfor PASS",
+    "1330_cli_formsfor PASS"
   ],
-  "when": "2026-08-10T12:27:18Z",
+  "when": "2026-08-10T12:41:20Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ab985651cd22b3fe771e1c0a9d660c82c10267a5",
-  "note": "tips cap; TIPS fat bag; howto p2p alias"
+  "sha": "b2a23f47ddcf6bde13cca5dc9747a8aa070ddf84",
+  "note": "formsfor cap; TOPICFORMS lib; surface fat alias"
 }
