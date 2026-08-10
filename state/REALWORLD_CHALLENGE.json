@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 290,
-  "program": "programs/realworld/svc_matchlibs_pick_board.cubalc",
-  "theme": "MATCHLIBS/PICKLIB fleet lib stem discovery",
-  "version": "1.15.757-usability",
+  "iter": 291,
+  "program": "programs/realworld/svc_hasmatch_include_board.cubalc",
+  "theme": "HASMATCHLIBS gate + PICKLIB INCLUDE var/LAST",
+  "version": "1.15.759-usability",
   "pass": true,
-  "prior_note": "iter 289 PRETTYP evidence; this iter first realworld 1306 MATCHLIBS + 1307 PICKLIB",
+  "prior_note": "iter 290 MATCHLIBS/PICKLIB; this iter first realworld 1309 HASMATCHLIBS + 1308 INCLUDE var",
   "tests": [
     {
       "name": "list",
@@ -20,44 +20,44 @@
       "note": "boot"
     },
     {
-      "name": "plate",
-      "cmd": "MATCHLIBS plate n=11",
+      "name": "has",
+      "cmd": "HASMATCHLIBS plate/fat/PLATE",
       "ok": true,
-      "note": "plate"
+      "note": "has"
     },
     {
-      "name": "fat",
-      "cmd": "FILTERLIBS fat n=2",
+      "name": "need",
+      "cmd": "NEEDMATCHLIBS agent",
       "ok": true,
-      "note": "fat"
+      "note": "need"
     },
     {
-      "name": "pick",
-      "cmd": "PICKLIB plate_boot + OR",
+      "name": "load",
+      "cmd": "PICK+INCLUDE stem_s",
       "ok": true,
-      "note": "pick"
+      "note": "load"
     },
     {
       "name": "soft",
-      "cmd": "MATCH soft vs PICK hard miss",
+      "cmd": "ghost miss OK=0",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "min_match floor",
+      "cmd": "want_filter present",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "LIBMATCH+FIRSTLIB",
+      "cmd": "NEEDMATCH+FIRSTLIB",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "empty needle + PICKLIB_N dual",
+      "cmd": "LAST_N dual + false friend",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; matchlibs+picklib PASS"
+      "note": "cli duals red; hasmatch+include_var PASS"
     }
   ],
   "weaknesses": [
@@ -4106,6 +4106,38 @@
       "title": "WRITE VAL/META/STATUS omit trailing NL",
       "detail": "Reconfirmed: STATUS last line and META od -c end without \\n.",
       "repro": "od -c META.txt"
+    },
+    {
+      "id": "W505",
+      "severity": "high",
+      "area": "lang|clear_err",
+      "title": "CLEAR_ERR sets LAST to literal 'cleared'",
+      "detail": "After PICKLIB/RECIPE/any op, CLEAR_ERR overwrites LAST with the string cleared. INCLUDE LAST / SYS HAS LAST after CLEAR_ERR silently targets cleared and fails open. Agents must LET stem = LAST before CLEAR_ERR then INCLUDE stem.",
+      "repro": "PICKLIB fat; CLEAR_ERR; PRINT LAST \u2192 cleared; INCLUDE LAST \u2192 cannot open cleared"
+    },
+    {
+      "id": "W506",
+      "severity": "high",
+      "area": "lang|hasmatchlibs",
+      "title": "HASMATCHLIBS PLATE binds PLATE var not literal when plate loaded",
+      "detail": "Bare HASMATCHLIBS PLATE with durable PLATE JSON uses the whole plate string as needle (miss). Quoted HASMATCHLIBS \"PLATE\" or LET f=\"PLATE\"; HASMATCHLIBS f works for case-insensitive filter. Proof 1309 passes only because no plate is loaded.",
+      "repro": "with PLATE set: HASMATCHLIBS PLATE \u2192 OK=0; HASMATCHLIBS \"PLATE\" \u2192 OK=1"
+    },
+    {
+      "id": "W507",
+      "severity": "med",
+      "area": "lang|hasmatchlibs",
+      "title": "HASMATCHLIBS LAST_N is boolean hit not match count",
+      "detail": "HASMATCHLIBS plate \u2192 LAST_N=1 while MATCHLIBS plate \u2192 LAST_N>=10. Same dual class as HASDEPS/PICKLIB. Use MATCHLIBS for inventory size.",
+      "repro": "HASMATCHLIBS plate; LAST_N=1; MATCHLIBS plate; LAST_N=11"
+    },
+    {
+      "id": "W508",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META/STATUS omit trailing NL",
+      "detail": "Reconfirmed STATUS last bag line and META without final \\n.",
+      "repro": "od -c META.txt"
     }
   ],
   "workarounds": [
@@ -4151,11 +4183,6 @@
     "use unique path needles for single counter rollups"
   ],
   "language_gaps": [
-    "MERGEFLAT/OVERLAYFLAT deep leaf nest overlay",
-    "MERGEFLAT overlays identity keys if present in patch",
-    "keeps unmentioned base leaves (deep not shallow replace)",
-    "MERGEFLAT_N/SRC/FROM specials",
-    "RENAMEFLAT/MOVEFLAT leaf path prefix rewrite",
     "prefix not key-segment rename; use trailing .",
     "empty old_pfx hard-fails (not soft)",
     "RENAMEFLAT_N/TOTAL/OLD/NEW/SRC specials",
@@ -4190,12 +4217,14 @@
     "PICKLIB/FIRSTLIB first alpha + OR fallback",
     "MATCH soft miss vs PICK hard miss (W500)",
     "PICKLIB_N full count vs LAST_N=1 (W501)",
-    "alpha sort plate_peer_tick before plate_tick (W502)"
+    "alpha sort plate_peer_tick before plate_tick (W502)",
+    "HASMATCHLIBS/NEEDMATCHLIBS presence gates",
+    "INCLUDE LAST/var after PICKLIB (1308)",
+    "CLEAR_ERR sets LAST=cleared (W505)",
+    "bare PLATE token vs quoted PLATE needle (W506)",
+    "HASMATCH LAST_N boolean vs MATCHLIBS count (W507)"
   ],
   "issues_faced": [
-    "iter269: UNIQFLAT ro fuzzy key match reconfirms flat-needle substring family (W415)",
-    "iter269: multi-line uniq bag WRITE no final NL (W416)",
-    "iter270: rebuilt out/cubalc; selftest race missing proofs transient",
     "iter270: restored REALWORLD plate after accidental delete in 94cab4c1",
     "iter270: PATHSBYVAL board 9/9 green; COUNTBYVAL cross-check ok",
     "iter271: COUNTBYVAL/HASVAL board 9/9; PATHSBYVAL cross-check green",
@@ -4242,8 +4271,11 @@
     "iter289: selftest 455/615 CLI duals still red",
     "iter290: first realworld 1306+1307 MATCHLIBS/PICKLIB; 10/10 green first pass",
     "iter290: plate family 11 stems; tick picks plate_peer_tick alpha",
-    "iter290: selftest CLI duals still red"
+    "iter290: selftest CLI duals still red",
+    "iter291: first realworld 1309+1308; CLEAR_ERR LAST=cleared broke INCLUDE LAST",
+    "iter291: HASMATCHLIBS PLATE with loaded plate is false friend (use quotes)",
+    "iter291: 10/10 green after stem_s capture + quoted PLATE"
   ],
-  "commit": "ba7318b6",
-  "ts": "2026-08-10T07:48:39Z"
+  "commit": "pending",
+  "ts": "2026-08-10T08:14:59Z"
 }
