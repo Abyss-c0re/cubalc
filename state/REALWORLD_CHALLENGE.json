@@ -4088,6 +4088,6 @@
     "iter286: 10/10 green first pass; LAST_N=sum is the main false friend",
     "iter286: empty all includes cfg.port 8080 in total 8086"
   ],
-  "commit": "pending",
+  "commit": "f10da605",
   "ts": "2026-08-10T06:09:14Z"
 }
