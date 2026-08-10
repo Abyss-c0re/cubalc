@@ -1,0 +1,51 @@
+# SORTLIBS — mtime-ordered match bag (newest first by default)
+
+SORTLIBS fat
+ASSERT OK == 1
+ASSERT SORTLIBS_N == 2
+ASSERT LAST_N == 2
+# head of bag == NEWESTLIB
+ASSERT SORTLIBS_HEAD == "fat_session"
+ASSERT SORTLIBS_ORDER == "newest"
+ASSERT SORTLIBS_MTIME > 0
+ASSERT LIB_PATH != ""
+SYS NTH 0
+ASSERT LAST == "fat_session"
+SORTLIBS fat
+SYS NTH 1
+ASSERT LAST == "fat_boot"
+
+# ASC / OLDEST → oldest first
+SORTLIBS fat ASC
+ASSERT OK == 1
+ASSERT SORTLIBS_ORDER == "oldest"
+ASSERT SORTLIBS_HEAD == "fat_boot"
+SYS NTH 0
+ASSERT LAST == "fat_boot"
+SORTLIBS fat OLDEST
+SYS NTH 1
+ASSERT LAST == "fat_session"
+
+# LIBSORT alias + head matches NEWESTLIB
+LIBSORT guard
+ASSERT OK == 1
+ASSERT SORTLIBS_N == 2
+ASSERT SORTLIBS_HEAD == "time_guard"
+NEWESTLIB guard
+ASSERT LAST == "time_guard"
+
+# soft empty still OK (bag form dual of MATCHLIBS)
+SORTLIBS no_such_lib_xyz_zzz
+ASSERT OK == 1
+ASSERT SORTLIBS_N == 0
+ASSERT LAST_N == 0
+
+# head of sorted bag dual of NEWESTLIB fat
+SORTLIBS fat
+NEWESTLIB fat
+ASSERT LAST == "fat_session"
+SORTLIBS fat
+ASSERT SORTLIBS_HEAD == "fat_session"
+
+PASS
+PRINT "1320_sortlibs: PASS"

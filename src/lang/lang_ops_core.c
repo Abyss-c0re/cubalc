@@ -36649,6 +36649,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"ENDLIB", "ENDLIB alias of LASTLIB"},
       {"NEWESTLIB", "NEWESTLIB|LATESTLIB needle [OR fallback] — newest matching stem by mtime · dual of PICKLIB"},
       {"OLDESTLIB", "OLDESTLIB|EARLIESTLIB needle [OR fallback] — oldest matching stem by mtime · dual of NEWESTLIB"},
+      {"SORTLIBS", "SORTLIBS|LIBSORT needle [ASC|DESC|OLDEST|NEWEST] — mtime-ordered match bag · dual of alpha MATCHLIBS"},
+      {"LIBSORT", "LIBSORT alias of SORTLIBS"},
       {"HASLIB", "HASLIB name — soft 0|1 if stdlib/project lib stem exists · dual of LISTLIBS"},
       {"CATLIB", "CATLIB|READLIB name — soft dump lib source → LAST · dual of cubalc cat"},
       {"GREPLIB", "GREPLIB name needle — matching lines from one lib → LAST bag · soft miss"},
@@ -38079,9 +38081,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              strstr(err, "NEEDCOUNTMATCHLIBS") || strstr(err, "HASCOUNTMATCHLIBS") ||
              strstr(err, "COUNTMATCHLIBS") ||
              strstr(err, "NTHLIB") || strstr(err, "LASTLIB") ||
-             strstr(err, "PICKLIB") || strstr(err, "NEWESTLIB") || strstr(err, "OLDESTLIB"))
+             strstr(err, "PICKLIB") || strstr(err, "NEWESTLIB") || strstr(err, "OLDESTLIB") ||
+             strstr(err, "SORTLIBS") || strstr(err, "LIBSORT"))
       snprintf(hintbuf, sizeof hintbuf,
-               "MATCHLIBS · NEWESTLIB/OLDESTLIB · cubalc libs [filter] · picklib · install libs");
+               "MATCHLIBS · SORTLIBS · NEWESTLIB/OLDESTLIB · cubalc libs [filter] · picklib");
     else if (strstr(err, "NEEDDEPS") || strstr(err, "HASDEPS") ||
              strstr(err, "CHECKDEPS") || strstr(err, "DEPS_MISS"))
       snprintf(hintbuf, sizeof hintbuf,
