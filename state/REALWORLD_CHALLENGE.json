@@ -4042,6 +4042,6 @@
     "iter285: 9/9 green first pass; N vs MATCH distinction key for SLO gates",
     "iter285: selftest cli duals still red; capflat proof green"
   ],
-  "commit": "pending",
+  "commit": "176c4a56",
   "ts": "2026-08-10T05:44:02Z"
 }
