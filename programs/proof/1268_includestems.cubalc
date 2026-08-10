@@ -1,0 +1,36 @@
+# INCLUDESTEMS — short-name bag from loaded modules
+# Usability: HASLINE against agent_boot without BASENAMEALL after LISTINCLUDES.
+
+INCLUDESTEMS
+ASSERT LAST_N == 0
+
+INCLUDE hold_seed
+INCLUDE agent_boot
+
+LISTINCLUDES
+ASSERT LAST_N == 2
+SYS HAS LAST "programs/lib"
+ASSERT LAST_N == 1
+
+INCLUDESTEMS
+ASSERT LAST_N == 2
+ASSERT INCLUDESTEMS_N == 2
+SYS HAS LAST "hold_seed"
+ASSERT LAST_N == 1
+SYS HAS LAST "agent_boot"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "hold_seed"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "agent_boot"
+ASSERT LAST_N == 1
+# stems not full paths
+SYS HAS LAST "programs/lib"
+ASSERT LAST_N == 0
+
+HASINCLUDE hold_seed
+ASSERT LAST_N == 1
+NEEDINCLUDE hold_seed agent_boot
+ASSERT OK == 1
+
+PASS
+PRINT "1268_includestems: PASS"

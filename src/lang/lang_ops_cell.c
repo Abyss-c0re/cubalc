@@ -5790,6 +5790,47 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* INCLUDESTEMS / LISTINCLUDESTEMS — basenames without .cubalc from loaded modules.
+   * Usability: short-name bag for HASLINE/NEEDINCLUDE glue after -I without BASENAMEALL. */
+  if (kw(&L->cur, "INCLUDESTEMS") || kw(&L->cur, "LISTINCLUDESTEMS") ||
+      kw(&L->cur, "INCLUDE_NAMES") || kw(&L->cur, "LOADEDSTEMS") ||
+      kw(&L->cur, "INCLUDEBASENAMES") || kw(&L->cur, "STEMSINCLUDES")) {
+    char bag[4096];
+    size_t o = 0;
+    int i, n = 0;
+    lex_next(L);
+    bag[0] = 0;
+    for (i = 0; i < vm->n_included; i++) {
+      const char *p = vm->included[i];
+      const char *b = strrchr(p, '/');
+      char stem[256];
+      size_t sl;
+      b = b ? b + 1 : p;
+      snprintf(stem, sizeof stem, "%s", b);
+      sl = strlen(stem);
+      if (sl > 7 && strcmp(stem + sl - 7, ".cubalc") == 0)
+        stem[sl - 7] = 0, sl -= 7;
+      if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + sl < sizeof bag) {
+        memcpy(bag + o, stem, sl);
+        o += sl;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "INCLUDESTEMS", bag);
+    var_set_str(vm, "LOADEDSTEMS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "INCLUDE_N", n);
+    var_set_num(vm, "INCLUDESTEMS_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* HASINCLUDE name|path — soft 0|1 if a loaded INCLUDE matches stem or path.
    * Complements LISTINCLUDES · IF without bag GREP after -I preload. */
   if (kw(&L->cur, "HASINCLUDE") || kw(&L->cur, "HAVEINCLUDE") ||
