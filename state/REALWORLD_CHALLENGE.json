@@ -4002,6 +4002,6 @@
     "iter284: 9/9 green first pass; empty-needle only on scratch plate",
     "iter284: selftest cli duals still red; setflat proof green"
   ],
-  "commit": "pending",
+  "commit": "444bb7c2",
   "ts": "2026-08-10T05:18:48Z"
 }
