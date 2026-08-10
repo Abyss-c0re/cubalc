@@ -4626,7 +4626,7 @@
     "iter299: SYS HAS substring false friend on form bags (W544)",
     "iter299: board 10/10 green; selftest CLI duals still 57 red"
   ],
-  "commit": "pending",
+  "commit": "41fdd026",
   "ts": "2026-08-10T12:53:07Z",
-  "board_commit": "4852ae2f"
+  "board_commit": "41fdd026"
 }
