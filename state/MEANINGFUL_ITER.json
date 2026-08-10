@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 755,
-  "version": "1.15.782-usability",
-  "item": "SNIP + cubalc snip topic mini runnable sources",
-  "item_id": 791,
-  "title": "SNIP|SNIPPET [topic] \u00b7 cubalc snip \u00b7 cubalc.snip.v1",
-  "commit": "9a7074325e9eae092ab5fbb5baaeecb8b1d9a9e2",
-  "summary": "topic \u2192 mini runnable source; triad with TIPS+FORMSFOR. proof 1332 PASS.",
+  "iter": 756,
+  "version": "1.15.783-usability",
+  "item": "TOPIC + cubalc topic one-plate discovery triad",
+  "item_id": 792,
+  "title": "TOPIC|TOPICCARD [topic] \u00b7 cubalc topic \u00b7 cubalc.topic.v1",
+  "commit": "70c4763871c5f865e10669bb83327facd178694c",
+  "summary": "one plate tips+forms+snip; agents skip three discovery calls. proof 1333 PASS.",
   "proofs": [
-    "1332_snip PASS",
-    "1332_cli_snip PASS"
+    "1333_topic PASS",
+    "1333_cli_topic PASS"
   ],
-  "when": "2026-08-10T13:09:26Z",
+  "when": "2026-08-10T13:20:19Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9a7074325e9eae092ab5fbb5baaeecb8b1d9a9e2",
-  "note": "snip cap; SNIPPET plate; thrash restore then ship"
+  "sha": "70c4763871c5f865e10669bb83327facd178694c",
+  "note": "topic cap; TOPICCARD plate; triad productization"
 }
