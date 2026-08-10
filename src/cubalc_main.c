@@ -2568,6 +2568,7 @@ int main(int argc, char **argv) {
     int lib_form_guard = 0;
     int lib_cap_boot = 0;
     int lib_onboard_boot = 0;
+    int lib_discover_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
     int include_path_set = 0, preload_set = 0;
     const char *hx = getenv("CUBALC_SMX_KEY");
@@ -2601,6 +2602,7 @@ int main(int argc, char **argv) {
     lib_form_guard = (access("programs/lib/form_guard.cubalc", R_OK) == 0);
     lib_cap_boot = (access("programs/lib/cap_boot.cubalc", R_OK) == 0);
     lib_onboard_boot = (access("programs/lib/onboard_boot.cubalc", R_OK) == 0);
+    lib_discover_boot = (access("programs/lib/discover_boot.cubalc", R_OK) == 0);
     cookbook_ok = (access("docs/COOKBOOK.md", R_OK) == 0);
     for_agents_ok = (access("docs/FOR_AGENTS.md", R_OK) == 0);
     if (libdir_ok) {
@@ -2633,7 +2635,7 @@ int main(int argc, char **argv) {
              "\"lib_plate_uniform\":%s,\"lib_hold_seed\":%s,"
              "\"lib_var_guard\":%s,\"lib_time_guard\":%s,\"lib_fat_boot\":%s,"
              "\"lib_fat_session\":%s,\"lib_form_guard\":%s,\"lib_cap_boot\":%s,"
-             "\"lib_onboard_boot\":%s,"
+             "\"lib_onboard_boot\":%s,\"lib_discover_boot\":%s,"
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"vars_max\":%d,\"varroom_forms\":true,"
@@ -2647,6 +2649,7 @@ int main(int argc, char **argv) {
              "\"cubalc protect · cubalc smx-bus prove-tcp\","
              "\"cubalc selftest — live usability proofs\","
              "\"cubalc onboard · INCLUDE onboard_boot · cubalc init --onboard\","
+             "\"cubalc discover · INCLUDE discover_boot · cubalc init --discover\","
              "\"cubalc libs · cubalc checkdeps fat_session · recipe · INCLUDE plate_uniform\","
              "\"CUBALC_INCLUDE_PATH + cubalc which name · run -I / NEEDINCLUDE\","
              "\"cubalc plate uniform agent.json role — nest value consistency\","
@@ -2661,8 +2664,8 @@ int main(int argc, char **argv) {
              "\"programs/lib/plate_uniform.cubalc\",\"programs/lib/var_guard.cubalc\","
              "\"programs/lib/time_guard.cubalc\",\"programs/lib/fat_boot.cubalc\","
              "\"programs/lib/fat_session.cubalc\",\"programs/lib/form_guard.cubalc\","
-             "\"programs/lib/onboard_boot.cubalc\","
-             "\"cubalc init --onboard\",\"cubalc init --fat-session\",\"cubalc hasforms SORTLIBS LIBAGE\"]"
+             "\"programs/lib/onboard_boot.cubalc\",\"programs/lib/discover_boot.cubalc\","
+             "\"cubalc init --onboard\",\"cubalc init --discover\",\"cubalc init --fat-session\",\"cubalc hasforms SORTLIBS LIBAGE\"]"
              "}\n",
              ok ? "true" : "false",
              CUBALC_LANG_VERSION, CUBALC_LANG_PARADIGM, CUBALC_CREED,
@@ -2688,6 +2691,7 @@ int main(int argc, char **argv) {
              lib_form_guard ? "true" : "false",
              lib_cap_boot ? "true" : "false",
              lib_onboard_boot ? "true" : "false",
+             lib_discover_boot ? "true" : "false",
              include_path_set ? "true" : "false",
              preload_set ? "true" : "false",
              cookbook_ok ? "true" : "false",
@@ -3282,6 +3286,8 @@ int main(int argc, char **argv) {
       {"cli_runsnipmatch", "programs/proof/1351_cli_runsnipmatch.sh", "cubalc runsnip match|nth|lastmatch + forms"},
       {"discover", "programs/proof/1352_discover.cubalc", "DISCOVER match bag + first-topic open plate"},
       {"cli_discover", "programs/proof/1352_cli_discover.sh", "cubalc discover plate + forms"},
+      {"discover_boot", "programs/proof/1353_discover_boot.cubalc", "INCLUDE discover_boot agent_boot+DISCOVER"},
+      {"cli_init_discover", "programs/proof/1353_cli_init_discover.sh", "cubalc init --discover scaffold + doctor"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -7491,13 +7497,14 @@ int main(int argc, char **argv) {
      * --fat-session|--durable: INCLUDE fat_session (fat_boot+plate_boot one-shot).
  * --cap|--forms|--capability: INCLUDE cap_boot (agent_boot+form_guard).
      * --onboard|--welcome: INCLUDE onboard_boot (agent_boot + START plate).
+     * --discover|--explore: INCLUDE discover_boot (agent_boot + DISCOVER open plate).
      * --from lib: recipe-driven scaffold (LIBDEFAULTS as DEFAULT lines + INCLUDE).
      * Agents: write file then cubalc run — no cookbook prose required. */
     const char *path = "program.cubalc";
     const char *tmpl = "agent_boot";
     const char *from_lib = NULL;
     int force = 0, i, wrote = 0, existed = 0, want_plate = 0, want_peer = 0;
-    int want_fat = 0, want_fat_session = 0, want_cap = 0, want_onboard = 0;
+    int want_fat = 0, want_fat_session = 0, want_cap = 0, want_onboard = 0, want_discover = 0;
     int want_list = 0;
     char abspath[512];
     char parent[512];
@@ -7621,6 +7628,19 @@ int main(int argc, char **argv) {
       "PRINT \"hint\" START_HINT\n"
       "STATUS\n"
       "PRINT \"onboard init ok\" OK START_TOPICS_N\n";
+        static const char *body_discover =
+      "# CubalC discovery starter — generated by cubalc init --discover\n"
+      "# INCLUDE discover_boot = agent_boot + DISCOVER (match bag + first open)\n"
+      "# Optional: DEFAULT DISCOVER_NEEDLE = \"p\" before INCLUDE for filter open\n"
+      "# CLI dual: cubalc discover · in-lang DISCOVER|EXPLORE\n"
+      "INCLUDE discover_boot\n"
+      "\n"
+      "PRINT \"first\" DISCOVER_FIRST\n"
+      "PRINT \"topics_n\" DISCOVER_N\n"
+      "PRINT \"next_n\" DISCOVER_NEXT_N\n"
+      "PRINT \"hint\" DISCOVER_HINT\n"
+      "STATUS\n"
+      "PRINT \"discover init ok\" OK DISCOVER_N\n";
     const char *body = body_boot;
     from_body[0] = 0;
     for (i = 2; i < argc; i++) {
@@ -7646,6 +7666,10 @@ int main(int argc, char **argv) {
                  !strcmp(argv[i], "--agent-onboard") || !strcmp(argv[i], "--start-agent") ||
                  !strcmp(argv[i], "--bootstrap-agent") || !strcmp(argv[i], "--hello-agent")) {
         want_onboard = 1;
+      } else if (!strcmp(argv[i], "--discover") || !strcmp(argv[i], "--explore") ||
+                 !strcmp(argv[i], "--discovery") || !strcmp(argv[i], "--scout") ||
+                 !strcmp(argv[i], "--open-discover") || !strcmp(argv[i], "--discover-boot")) {
+        want_discover = 1;
       } else if (!strcmp(argv[i], "--fat") || !strcmp(argv[i], "--fat-board") ||
                  !strcmp(argv[i], "--nest") || !strcmp(argv[i], "--varroom")) {
         want_fat = 1;
@@ -7668,7 +7692,7 @@ int main(int argc, char **argv) {
     if (want_list) {
       /* Agent discovery: which scaffolds exist without reading COOKBOOK. */
       printf("# CubalC init templates version=%s\n", CUBALC_LANG_VERSION);
-      printf("# run: cubalc init [path] [--plate|--peer|--fat|--fat-session|--cap|--onboard|--from lib] [--force]\n");
+      printf("# run: cubalc init [path] [--plate|--peer|--fat|--fat-session|--cap|--onboard|--discover|--from lib] [--force]\n");
       printf("# flag\tid\thint\n");
       printf("(default)\tagent_boot\tINCLUDE agent_boot + CUBE/PLUG/STATUS\n");
       printf("--plate|-p\tplate_session\tplate_session + plate_uniform + PRETTYP + save\n");
@@ -7677,9 +7701,10 @@ int main(int argc, char **argv) {
       printf("--fat-session|--durable\tfat_session\tINCLUDE fat_session durable nest one-shot\n");
       printf("--cap|--forms|--capability\tcap_boot\tINCLUDE cap_boot form capability contract\n");
       printf("--onboard|--welcome\tonboard_boot\tINCLUDE onboard_boot agent START discovery plate\n");
+      printf("--discover|--explore\tdiscover_boot\tINCLUDE discover_boot agent DISCOVER open plate\n");
       printf("--from|--recipe|-F <lib>\tfrom_recipe\tDEFAULT knobs from lib + INCLUDE (any recipe)\n");
       printf("{\"schema\":\"cubalc.init.v1\",\"ok\":true,\"cmd\":\"init\","
-             "\"op\":\"list\",\"n\":8,\"version\":\"%s\","
+             "\"op\":\"list\",\"n\":9,\"version\":\"%s\","
              "\"note\":\"scaffold catalog — fixed templates + --from any lib recipe\","
              "\"templates\":["
              "{\"id\":\"agent_boot\",\"flags\":\"\",\"default\":true,"
@@ -7696,6 +7721,8 @@ int main(int argc, char **argv) {
              "\"hint\":\"INCLUDE cap_boot form capability contract\"},"
              "{\"id\":\"onboard_boot\",\"flags\":\"--onboard|--welcome\","
              "\"hint\":\"INCLUDE onboard_boot agent START discovery plate\"},"
+             "{\"id\":\"discover_boot\",\"flags\":\"--discover|--explore\","
+             "\"hint\":\"INCLUDE discover_boot agent DISCOVER open plate\"},"
              "{\"id\":\"from_recipe\",\"flags\":\"--from|--recipe|-F <lib>\","
              "\"hint\":\"any lib DEFAULT knobs + INCLUDE · dual of cubalc recipe\"}"
              "]}\n",
@@ -7890,6 +7917,9 @@ int main(int argc, char **argv) {
     } else if (want_peer) {
       body = body_peer;
       tmpl = "plate_peer_session";
+    } else if (want_discover) {
+      body = body_discover;
+      tmpl = "discover_boot";
     } else if (want_onboard) {
       body = body_onboard;
       tmpl = "onboard_boot";
@@ -7963,6 +7993,8 @@ int main(int argc, char **argv) {
              path, tmpl, tmpl);
     else if (want_peer)
       printf("# next: cubalc run %s · cubalc cat plate_peer_session · multi-plate PLATE+PEER\n", path);
+    else if (want_discover)
+      printf("# next: cubalc run %s · cubalc discover · GUIDE DISCOVER_FIRST · cubalc cat discover_boot\n", path);
     else if (want_onboard)
       printf("# next: cubalc run %s · cubalc onboard · GUIDE general · cubalc cat onboard_boot\n", path);
     else if (want_cap)
@@ -7988,6 +8020,8 @@ int main(int argc, char **argv) {
                ? "DEFAULT knobs from lib recipe + INCLUDE · dual of cubalc recipe"
                : (want_peer
                ? "INCLUDE plate_peer_session + PLATE/PEER SETP FROM + save both"
+               : (want_discover
+               ? "INCLUDE discover_boot agent DISCOVER open plate"
                : (want_onboard
                ? "INCLUDE onboard_boot agent START discovery plate"
                : (want_cap
@@ -7998,7 +8032,7 @@ int main(int argc, char **argv) {
                ? "INCLUDE fat_boot + plate_boot nest room + NEEDP + save"
                : (want_plate
                ? "INCLUDE plate_session + plate_uniform + PRETTYP + plate_save"
-               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter")))))));
+               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter"))))))));
     return 0;
   }
   if (strcmp(cmd, "libs") == 0 || strcmp(cmd, "lib") == 0 ||
@@ -18348,7 +18382,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
       "    errrun|recoversnip <err…>  classify + RUNSNIP topic (cubalc.errrun.v1)\n"
       "    errguide|recoverguide <err…> classify + GUIDE playbook (cubalc.errguide.v1)\n"
-      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --onboard · --from lib\n"
+      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --onboard · --discover · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"

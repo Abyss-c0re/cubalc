@@ -1,0 +1,16 @@
+# INCLUDE discover_boot — agent discovery surface one-shot
+# Usability: agent_boot (REQUIRE VERSION + VERSION) + DISCOVER open plate
+#   INCLUDE discover_boot
+#   # DISCOVER_TOPICS · DISCOVER_FIRST · DISCOVER_NEXT ready
+#   GUIDE DISCOVER_FIRST   # optional full playbook
+#   RUNSNIP DISCOVER_FIRST # optional prove mini
+#
+# Filtered open: set needle then DISCOVER (DEFAULT is set-if-unset):
+#   LET DISCOVER_NEEDLE = "p"
+#   DISCOVER DISCOVER_NEEDLE
+#
+# Scaffold: cubalc init demo --discover
+# CLI dual plate: cubalc discover
+
+INCLUDE agent_boot
+DISCOVER

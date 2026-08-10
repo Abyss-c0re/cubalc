@@ -1,0 +1,27 @@
+# INCLUDE discover_boot — agent_boot + DISCOVER one-shot
+
+INCLUDE discover_boot
+ASSERT OK == 1
+ASSERT DISCOVER_N == 8
+ASSERT DISCOVER_FIRST == "general"
+ASSERT DISCOVER_NEXT_N >= 4
+SYS HASI "cubalc.discover.v1"
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST_N >= 1
+
+# chain after lib
+GUIDE DISCOVER_FIRST
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "general"
+ASSERT GUIDE_RELATED_N >= 3
+
+# filter after boot (LET overwrites; DEFAULT is set-if-unset)
+LET DISCOVER_NEEDLE = "p"
+DISCOVER DISCOVER_NEEDLE
+ASSERT OK == 1
+ASSERT DISCOVER_FIRST == "cap"
+ASSERT DISCOVER_N == 4
+
+PASS
+PRINT "1353_discover_boot: PASS"
