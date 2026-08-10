@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 837,
-  "version": "1.15.829-usability",
-  "item": "cubalc run -E / --setenv KEY=VAL",
-  "item_id": 837,
-  "title": "run -E|--setenv inject process env after dotenv · CLI wins",
-  "commit": "b8f5e41a6962d8699b7bd0dc7dff4efe4f96dfb3",
-  "summary": "Inject KEY=VAL before body after dotenv; SETENV_N/KEYS; proof 1377 PASS.",
+  "iter": 838,
+  "version": "1.15.830-usability",
+  "item": "cubalc run -U / --unsetenv KEY",
+  "item_id": 838,
+  "title": "run -U|--unsetenv clear env after dotenv before -E",
+  "commit": "45394862305bd2d5b0918e11e930b0298a95ff9d",
+  "summary": "Clear process env keys after dotenv before setenv; UNSETENV_N/KEYS; proof 1378 PASS.",
   "proofs": [
-    "1377_cli_run_setenv PASS"
+    "1378_cli_run_unsetenv PASS"
   ],
-  "when": "2026-08-10T22:34:22Z",
+  "when": "2026-08-10T22:43:28Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "b8f5e41a6962d8699b7bd0dc7dff4efe4f96dfb3",
-  "note": "pairs run --dotenv/--cwd · agent host env contract"
+  "sha": "45394862305bd2d5b0918e11e930b0298a95ff9d",
+  "note": "pairs run -E/--dotenv · scrub then inject"
 }
