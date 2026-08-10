@@ -2732,6 +2732,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"SEEALSO", "SEEALSO alias of RELATED"},
       {"SNIP", "SNIP|SNIPPET [topic] — curated mini runnable source → LAST · dual of cubalc snip"},
       {"SNIPPET", "SNIPPET alias of SNIP"},
+      {"TOPIC", "TOPIC|TOPICCARD [topic] — one plate tips+forms+snip · dual of cubalc topic"},
+      {"TOPICCARD", "TOPICCARD alias of TOPIC"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · dotted path nest ok · write-back · multi-plate"},
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
@@ -39490,6 +39492,208 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->res)
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", src);
+    bump(vm);
+    return 1;
+  }
+
+  /* TOPIC|TOPICCARD [topic] — one discovery plate: tips + forms + snip.
+   * Usability: agents avoid 3 calls (TIPS+FORMSFOR+SNIP). LAST=cubalc.topic.v1 JSON.
+   * Bags: TOPIC_TIPS · TOPIC_FORMS · TOPIC_SNIP · counts · OK=1. */
+  if (kw(&L->cur,"TOPIC")||kw(&L->cur,"TOPICCARD")||kw(&L->cur,"TOPICINFO")||
+      kw(&L->cur,"PLAYCARD")||kw(&L->cur,"DISCOVERTOPIC")||kw(&L->cur,"AGENTTOPIC")||
+      kw(&L->cur,"TOPIC_PLATE")||kw(&L->cur,"TOPICPACK")){
+    static const struct { const char *topic; const char *tip; } tips[] = {
+      {"general", "cubalc doctor — install readiness plate"},
+      {"general", "cubalc init --list — scaffold catalog"},
+      {"general", "cubalc search KEYWORD — forms/libs/examples"},
+      {"general", "INCLUDE agent_boot — REQUIRE VERSION + VERSION plate"},
+      {"general", "HOLD_FLASH device/mesh-join only · default 1"},
+      {"cap", "INCLUDE cap_boot — agent_boot + form_guard"},
+      {"cap", "cubalc init --cap · HASFORM · NEEDFORMS · FORMHINT"},
+      {"cap", "cubalc run -C FORMS · CUBALC_REQUIRE_FORMS floor"},
+      {"cap", "LISTFORMS prefix · COUNTFORMS · cubalc listforms"},
+      {"fat", "INCLUDE fat_session durable nest"},
+      {"fat", "cubalc init --fat-session · NEED_VARROOM · time_guard"},
+      {"fat", "cubalc run -T ms · REMAIN_MS · VARROOM"},
+      {"plate", "INCLUDE plate_session · SETP NEEDP SAVEPLATE"},
+      {"plate", "cubalc plate get|set|uniform · PRETTYP"},
+      {"plate", "cubalc init --plate plate_uniform starter"},
+      {"p2p", "export CUBALC_SMX_KEY hex64 · SMX SERVE/DIAL"},
+      {"p2p", "CUBALC_P2P_TIMEOUT · CUBALC_P2P_SOFT · smx-bus prove-tcp"},
+      {"run", "cubalc run -q -e CODE · -I -L -R -C -T -s"},
+      {"run", "WHY / why_hint after ASSERT or sticky LAST_ERR"},
+      {"lib", "cubalc libs|recipe|checkdeps · INCLUDE MATCH|NEWEST"},
+      {"lib", "SORTLIBS · FRESHLIBS · LIBAGE · HASFRESH"},
+      {"protect", "cubalc protect status · docs/CORE_PROTECT.md"},
+    };
+    static const struct { const char *topic; const char *form; } forms[] = {
+      {"general", "VERSION"}, {"general", "STATUS"}, {"general", "IDENTITY"},
+      {"general", "TIPS"}, {"general", "FORMSFOR"}, {"general", "SNIP"},
+      {"general", "TOPIC"}, {"general", "WHY"}, {"general", "INCLUDE"},
+      {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"},
+      {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"}, {"cap", "LISTFORMS"},
+      {"cap", "RELATED"}, {"cap", "FORMSFOR"}, {"cap", "SNIP"}, {"cap", "TOPIC"},
+      {"fat", "VARROOM"}, {"fat", "HASVARROOM"}, {"fat", "NEEDVARROOM"},
+      {"fat", "REMAIN_MS"}, {"fat", "HAS_TIME"}, {"fat", "NEEDTIME"}, {"fat", "STATUS"},
+      {"plate", "SETP"}, {"plate", "GETP"}, {"plate", "NEEDP"}, {"plate", "DEFAULTP"},
+      {"plate", "INCP"}, {"plate", "PRETTYP"}, {"plate", "SAVEPLATE"}, {"plate", "LOADPLATE"},
+      {"p2p", "SMX"}, {"p2p", "SERVE"}, {"p2p", "DIAL"}, {"p2p", "TALK"}, {"p2p", "EXCHANGE"},
+      {"run", "ASSERT"}, {"run", "EXPECT"}, {"run", "WHY"}, {"run", "CLEAR_ERR"},
+      {"run", "FAIL"}, {"run", "PASS"}, {"run", "EXIT"},
+      {"lib", "LISTLIBS"}, {"lib", "HASLIB"}, {"lib", "MATCHLIBS"}, {"lib", "PICKLIB"},
+      {"lib", "RECIPE"}, {"lib", "CHECKDEPS"}, {"lib", "INCLUDE"},
+      {"protect", "HOLD_FLASH"}, {"protect", "STATUS"}, {"protect", "VERSION"}, {"protect", "TIPS"},
+    };
+    static const struct { const char *topic; const char *src; } snips[] = {
+      {"general", "VERSION\nSTATUS\nPRINT \"version\" VERSION\nPASS\n"},
+      {"cap",
+       "HASFORM SORTLIBS\nASSERT LAST_N == 1 \"need SORTLIBS form\"\n"
+       "FORMHINT SORTLIBS\nPRINT LAST\nRELATED HASFORM\nPRINT RELATED\nPASS\n"},
+      {"fat",
+       "VARROOM\nPRINT \"free_slots\" LAST_N\nHASVARROOM 8\nASSERT LAST_N == 1\n"
+       "REMAIN_MS\nPRINT \"remain_ms\" LAST_N\nPASS\n"},
+      {"plate",
+       "LET PLATE = \"{\\\"n\\\":0,\\\"ok\\\":true}\"\n"
+       "SETP \"status\" \"ready\"\nINCP \"n\"\nNEEDP \"n\" \"ok\" \"status\"\n"
+       "PRETTYP\nPRINT LAST\nPASS\n"},
+      {"p2p",
+       "NOTE \"set CUBALC_SMX_KEY before mesh\"\nTIPS p2p\nPRINT LAST\n"
+       "FORMSFOR p2p\nPRINT LAST\nPASS\n"},
+      {"run", "EXPECT 1 == 1\nWHY\nPRINT WHY_HINT\nCLEAR_ERR\nPASS \"run probe ok\"\n"},
+      {"lib",
+       "LISTLIBS\nPRINT \"libs\" LAST_N\nHASLIB agent_boot\nASSERT LAST_N == 1\n"
+       "RECIPE agent_boot\nPRINT LAST\nPASS\n"},
+      {"protect",
+       "HOLD_FLASH\nPRINT \"hold_flash\" LAST_N\nVERSION\nSTATUS\n"
+       "TIPS protect\nPRINT LAST\nPASS\n"},
+    };
+    char topic[32], tup[32];
+    char tips_bag[2048], forms_bag[1024];
+    char line[CUBALC_HOST_STR_MAX];
+    char esc_tips[2400], esc_forms[1200], esc_snip[2400];
+    const char *src = NULL;
+    size_t k, o, eo;
+    int i, nt = 0, nf = 0, ns = 0, lines = 0;
+    const char *p;
+    int n_tips = (int)(sizeof tips / sizeof tips[0]);
+    int n_forms = (int)(sizeof forms / sizeof forms[0]);
+    int n_snips = (int)(sizeof snips / sizeof snips[0]);
+    lex_next(L);
+    topic[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(topic, sizeof topic, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0]) {
+        snprintf(topic, sizeof topic, "%s", vv->sval);
+        lex_next(L);
+      } else if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(topic, sizeof topic, "%s", vm->last_str);
+        lex_next(L);
+      } else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+                   kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
+                   kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
+        snprintf(topic, sizeof topic, "%s", L->cur.text);
+        lex_next(L);
+      }
+    }
+    if (!topic[0])
+      snprintf(topic, sizeof topic, "%s", "general");
+    for (k = 0; topic[k] && k + 1 < sizeof tup; k++) {
+      char c = topic[k];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      tup[k] = c;
+    }
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    tips_bag[0] = 0; o = 0;
+    for (i = 0; i < n_tips; i++) {
+      size_t ln;
+      if (strcmp(tips[i].topic, tup) != 0) continue;
+      ln = strlen(tips[i].tip);
+      if (o && o + 1 < sizeof tips_bag) tips_bag[o++] = '\n';
+      if (o + ln < sizeof tips_bag) { memcpy(tips_bag + o, tips[i].tip, ln); o += ln; }
+      tips_bag[o] = 0; nt++;
+    }
+    forms_bag[0] = 0; o = 0;
+    for (i = 0; i < n_forms; i++) {
+      size_t ln;
+      if (strcmp(forms[i].topic, tup) != 0) continue;
+      ln = strlen(forms[i].form);
+      if (o && o + 1 < sizeof forms_bag) forms_bag[o++] = '\n';
+      if (o + ln < sizeof forms_bag) { memcpy(forms_bag + o, forms[i].form, ln); o += ln; }
+      forms_bag[o] = 0; nf++;
+    }
+    for (i = 0; i < n_snips; i++) {
+      if (!strcmp(snips[i].topic, tup)) { src = snips[i].src; break; }
+    }
+    if (!src) src = "";
+    for (p = src; *p; p++) if (*p == '\n') lines++;
+    if (lines == 0 && src[0]) lines = 1;
+    ns = lines;
+#define CUBALC_TOPIC_ESC(dst, srcv) do { \
+      eo = 0; \
+      for (p = (srcv); *p && eo + 2 < sizeof(dst); p++) { \
+        if (*p == '"' || *p == '\\') { (dst)[eo++] = '\\'; (dst)[eo++] = *p; } \
+        else if (*p == '\n') { (dst)[eo++] = '\\'; (dst)[eo++] = 'n'; } \
+        else if ((unsigned char)*p < 0x20) continue; \
+        else (dst)[eo++] = *p; \
+      } \
+      (dst)[eo] = 0; \
+    } while (0)
+    CUBALC_TOPIC_ESC(esc_tips, tips_bag);
+    CUBALC_TOPIC_ESC(esc_forms, forms_bag);
+    CUBALC_TOPIC_ESC(esc_snip, src);
+#undef CUBALC_TOPIC_ESC
+    if (nt == 0 && nf == 0 && !src[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "TOPIC: unknown topic — TOPIC general|cap|fat|plate|p2p|run|lib|protect");
+      var_set_str(vm, "ERR",
+                  "TOPIC: unknown topic — TOPIC general|cap|fat|plate|p2p|run|lib|protect");
+      bump(vm);
+      return 1;
+    }
+    snprintf(line, sizeof line,
+      "{\"schema\":\"cubalc.topic.v1\",\"ok\":true,\"topic\":\"%s\","
+      "\"tips_n\":%d,\"forms_n\":%d,\"snip_lines\":%d,"
+      "\"tips\":\"%s\",\"forms\":\"%s\",\"snip\":\"%s\","
+      "\"version\":\"%s\","
+      "\"note\":\"one plate triad · TIPS+FORMSFOR+SNIP · dual of cubalc topic\"}",
+      tup, nt, nf, ns, esc_tips, esc_forms, esc_snip, CUBALC_LANG_VERSION);
+    var_set_str(vm, "LAST", line);
+    var_set_str(vm, "TOPIC", line);
+    var_set_str(vm, "TOPICCARD", line);
+    var_set_str(vm, "TOPIC_TIPS", tips_bag);
+    var_set_str(vm, "TOPIC_FORMS", forms_bag);
+    var_set_str(vm, "TOPIC_SNIP", src);
+    var_set_str(vm, "TOPIC_NAME", tup);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", line);
+    vm->last_n = nt + nf;
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "TOPIC_TIPS_N", nt);
+    var_set_num(vm, "TOPIC_FORMS_N", nf);
+    var_set_num(vm, "TOPIC_SNIP_N", ns);
+    var_set_num(vm, "OK", 1);
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
+    if (vm->trace)
+      fprintf(vm->trace, "# topic %s tips=%d forms=%d snip_lines=%d\n", tup, nt, nf, ns);
     bump(vm);
     return 1;
   }
