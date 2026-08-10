@@ -781,6 +781,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 751. ~~**`LIBDEPS` / `INCLUDEDEPS`**~~ **done** (bag of INCLUDE stems from a lib recipe · composition graph without GREPLIB+peel · LIB_PATH/STEM · soft miss).
 752. ~~**`LIBINFO` / `STATLIB`**~~ **done** (cubalc.libinfo.v1 path/bytes/lines/mtime/deps_n · dual of cubalc cat --meta · soft miss).
 753. ~~**`LIBTREE` / `LIBDEPSALL`**~~ **done** (transitive INCLUDE closure BFS · full recipe composition without recursive LIBDEPS · soft miss).
+754. ~~**`LIBDEFAULTS` / `LIBKNOBS`**~~ **done** (DEFAULT key=value knobs bag from a lib · set-before-INCLUDE without CATLIB/HEADLIB parse · soft miss).
 
 ## Tick protocol
 

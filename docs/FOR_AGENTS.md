@@ -37,7 +37,7 @@ export CUBALC_PRELOAD=agent_boot:hold_seed        # colon list env dual
 cubalc run -L "$PWD/mylibs" -I my_extra prog.cubalc  # one-shot CUBALC_INCLUDE_PATH
 CUBALC_INCLUDE_PATH=$PWD/mylibs cubalc which my_extra   # resolve project lib path
 CUBALC_INCLUDE_PATH=$PWD/mylibs cubalc cat my_extra     # dump project lib source
-CUBALC_INCLUDE_PATH=$PWD/mylibs cubalc libs · in-lang LISTLIBS/LIBDEPS/LIBTREE/LIBINFO  # catalog + direct/transitive deps + meta
+CUBALC_INCLUDE_PATH=$PWD/mylibs cubalc libs · LISTLIBS/LIBTREE/LIBDEFAULTS/LIBINFO  # deps + knobs + meta
 ```
 
 Run plate includes `preload_n` / `include_path_n`. See `cubalc env PRELOAD`.

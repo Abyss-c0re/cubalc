@@ -7322,6 +7322,175 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LIBDEFAULTS / LIBKNOBS / LIBVARS name — bag of DEFAULT key=value knobs from a lib.
+   * Usability: agents see what to set before INCLUDE without CATLIB/HEADLIB parsing.
+   * LAST = newline KEY=value fields · LIBDEFAULTS_N · soft miss. */
+  if (kw(&L->cur, "LIBDEFAULTS") || kw(&L->cur, "LIBKNOBS") ||
+      kw(&L->cur, "LIBVARS") || kw(&L->cur, "DEFAULTSLIB") ||
+      kw(&L->cur, "LIB_DEFAULTS") || kw(&L->cur, "KNOBSLIB") ||
+      kw(&L->cur, "LISTDEFAULTS") || kw(&L->cur, "RECIPEKNOBS")) {
+    char name[160], path[768], base[160];
+    char bag[CUBALC_VAR_STR_MAX];
+    char *src = NULL;
+    FILE *f = NULL;
+    long sz = 0;
+    size_t nr = 0, o = 0;
+    int nknob = 0;
+    const char *lp;
+    lex_next(L);
+    name[0] = 0;
+    path[0] = 0;
+    bag[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LIBDEFAULTS: need name");
+      var_set_str(vm, "ERR", "LIBDEFAULTS: need name");
+      bump(vm);
+      return 1;
+    }
+    if (!lib_resolve_path(name, path, sizeof path, base, sizeof base)) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "LIBDEFAULTS miss: '%s' — programs/lib · CUBALC_INCLUDE_PATH · HEADLIB",
+               name);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "LIB_PATH", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    f = fopen(path, "rb");
+    if (!f) {
+      char em[192];
+      snprintf(em, sizeof em, "LIBDEFAULTS open fail: '%s'", path);
+      var_set_str(vm, "LAST", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    fseek(f, 0, SEEK_END);
+    sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz < 0) sz = 0;
+    if (sz > 256 * 1024) sz = 256 * 1024;
+    src = (char *)malloc((size_t)sz + 1);
+    if (!src) {
+      fclose(f);
+      var_set_str(vm, "LAST", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LIBDEFAULTS: oom");
+      var_set_str(vm, "ERR", "LIBDEFAULTS: oom");
+      bump(vm);
+      return 1;
+    }
+    nr = fread(src, 1, (size_t)sz, f);
+    fclose(f);
+    src[nr] = 0;
+    lp = src;
+    o = 0;
+    nknob = 0;
+    while (*lp) {
+      const char *line = lp;
+      char key[96], val[512], kv[640];
+      size_t ki = 0, vi = 0, kvl;
+      while (*lp && *lp != '\n') lp++;
+      while (*line == ' ' || *line == '\t') line++;
+      if (*line == '#' || *line == '\n' || *line == 0) {
+        if (*lp == '\n') lp++;
+        continue;
+      }
+      /* DEFAULT key [=] value */
+      if (!(line[0] == 'D' && line[1] == 'E' && line[2] == 'F' && line[3] == 'A' &&
+            line[4] == 'U' && line[5] == 'L' && line[6] == 'T' &&
+            (line[7] == ' ' || line[7] == '\t'))) {
+        if (*lp == '\n') lp++;
+        continue;
+      }
+      line += 7;
+      while (*line == ' ' || *line == '\t') line++;
+      key[0] = 0;
+      ki = 0;
+      while (*line && *line != ' ' && *line != '\t' && *line != '=' && *line != '\n' &&
+             *line != '\r' && ki + 1 < sizeof key)
+        key[ki++] = *line++;
+      key[ki] = 0;
+      while (*line == ' ' || *line == '\t') line++;
+      if (*line == '=') {
+        line++;
+        while (*line == ' ' || *line == '\t') line++;
+      }
+      val[0] = 0;
+      vi = 0;
+      if (*line == '"' || *line == '\'') {
+        char q = *line++;
+        while (*line && *line != q && *line != '\n' && *line != '\r' && vi + 1 < sizeof val)
+          val[vi++] = *line++;
+        val[vi] = 0;
+      } else {
+        /* bare value to end-of-line (trim trailing space) */
+        while (*line && *line != '\n' && *line != '\r' && *line != '#' && vi + 1 < sizeof val)
+          val[vi++] = *line++;
+        val[vi] = 0;
+        while (vi > 0 && (val[vi - 1] == ' ' || val[vi - 1] == '\t'))
+          val[--vi] = 0;
+      }
+      if (key[0]) {
+        snprintf(kv, sizeof kv, "%s=%s", key, val);
+        kvl = strlen(kv);
+        if (nknob > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + kvl < sizeof bag) {
+          memcpy(bag + o, kv, kvl);
+          o += kvl;
+        }
+        bag[o] = 0;
+        nknob++;
+      }
+      if (*lp == '\n') lp++;
+    }
+    free(src);
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LIBDEFAULTS", bag);
+    var_set_str(vm, "LIBKNOBS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = nknob;
+    var_set_num(vm, "LAST_N", nknob);
+    var_set_num(vm, "LIBDEFAULTS_N", nknob);
+    var_set_num(vm, "LIBKNOBS_N", nknob);
+    var_set_str(vm, "LIB_PATH", path);
+    var_set_str(vm, "LIB_STEM", base);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTPRELOAD / PRELOADS — short-name bag of effective -I / CUBALC_PRELOAD.
    * Usability: CLI sets CUBALC_PRELOAD_ACTIVE; programs audit request vs INCLUDESTEMS. */
   if (kw(&L->cur, "LISTPRELOAD") || kw(&L->cur, "PRELOADS") ||
