@@ -1804,8 +1804,9 @@ int main(int argc, char **argv) {
      * Preload: -I|--include|--preload LIB + CUBALC_PRELOAD=a:b → INCLUDE ONCE before body.
      * Path: -L|--include-path|--lib-path DIR prepends CUBALC_INCLUDE_PATH for this run.
      * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older.
-     * Forms: -C|--need-forms F1,F2 + CUBALC_REQUIRE_FORMS — fail if HELP catalog misses. */
-    int quiet = 0, strict = 0, req_doctor = 0, i, rc;
+     * Forms: -C|--need-forms F1,F2 + CUBALC_REQUIRE_FORMS — fail if HELP catalog misses.
+     * Ready: -Y|--need-ready + CUBALC_REQUIRE_READY — fail if READY prove checklist fails. */
+    int quiet = 0, strict = 0, req_doctor = 0, req_ready = 0, i, rc;
     int plate_ok;
     int have_expr = 0;
     int src_idx = -1;
@@ -1833,6 +1834,7 @@ int main(int argc, char **argv) {
     req_ver[0] = 0;
     req_forms[0] = 0;
     req_doctor = 0;
+    req_ready = 0;
     eq = getenv("CUBALC_QUIET");
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
@@ -1863,6 +1865,10 @@ int main(int argc, char **argv) {
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcasecmp(eq, "false") != 0 &&
         strcasecmp(eq, "no") != 0 && strcasecmp(eq, "off") != 0)
       req_doctor = 1;
+    eq = getenv("CUBALC_REQUIRE_READY");
+    if (eq && eq[0] && strcmp(eq, "0") != 0 && strcasecmp(eq, "false") != 0 &&
+        strcasecmp(eq, "no") != 0 && strcasecmp(eq, "off") != 0)
+      req_ready = 1;
     /* Env preloads first; CLI -I appends (deduped). */
     run_preload_parse_env(preload, &n_preload, getenv("CUBALC_PRELOAD"));
     /* Scan from argv[1] so top-level cubalc -e CODE (cmd rewritten to run) works. */
@@ -1963,6 +1969,13 @@ int main(int argc, char **argv) {
       if (!strcmp(argv[i], "-D") || !strcmp(argv[i], "--need-doctor") ||
           !strcmp(argv[i], "--require-doctor") || !strcmp(argv[i], "--doctor-gate")) {
         req_doctor = 1;
+        continue;
+      }
+      /* -Y · --need-ready · --require-ready · CUBALC_REQUIRE_READY dual (NEEDREADY floor) */
+      if (!strcmp(argv[i], "-Y") || !strcmp(argv[i], "--need-ready") ||
+          !strcmp(argv[i], "--require-ready") || !strcmp(argv[i], "--ready-gate") ||
+          !strcmp(argv[i], "--prove-ready")) {
+        req_ready = 1;
         continue;
       }
       /* -I lib · --include lib · --include=lib · --preload */
@@ -2133,6 +2146,8 @@ int main(int argc, char **argv) {
               "       -L/--include-path DIR · prepends CUBALC_INCLUDE_PATH\n"
               "       -R/--require-version X.Y · CUBALC_REQUIRE_VERSION floor\n"
               "       -C/--need-forms F1,F2 · CUBALC_REQUIRE_FORMS capability floor\n"
+              "       -D/--need-doctor · CUBALC_REQUIRE_DOCTOR install readiness floor\n"
+              "       -Y/--need-ready · CUBALC_REQUIRE_READY install prove checklist floor\n"
               "       -T/--timeout MS · CUBALC_RUN_TIMEOUT wall kill runaway loops\n"
               "       CUBALC_QUIET=1  → plate only · CUBALC_STRICT=1 → soft last_err fails\n");
       free(expr_buf);
@@ -2282,6 +2297,39 @@ int main(int argc, char **argv) {
                n_preload,
                req_ver[0] ? req_ver : "",
                req_forms[0] ? req_forms : "",
+               CUBALC_MAX_VARS,
+               quiet ? "true" : "false", strict ? "true" : "false");
+        return 1;
+      }
+    }
+    /* Fail-fast install prove checklist floor before body (NEEDREADY dual). */
+    if (req_ready) {
+      cubalc_run_result yr;
+      int yhit;
+      memset(&yr, 0, sizeof yr);
+      (void)cubalc_run_source("NEEDREADY\nPASS\n", 15, "<require-ready>", &yr, NULL);
+      yhit = (yr.ok && yr.asserts_fail == 0 && !yr.err[0]) ? 1 : 0;
+      if (!yhit) {
+        free(expr_buf);
+        if (devnull) fclose(devnull);
+        printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
+               "\"err\":\"REQUIRE READY failed: %s\","
+               "\"require_ready\":true,\"version\":\"%s\","
+               "\"why_hint\":\"cubalc ready · NEEDREADY · READY_MISS · doctor_boot · forms+libs\","
+               "\"preload_n\":%d,"
+               "\"require_version\":\"%s\",\"require_forms\":\"%s\","
+               "\"require_doctor\":%s,"
+               "\"includes_n\":0,\"includes\":[],"
+               "\"vars_n\":0,\"vars_max\":%d,\"vars_full\":false,"
+               "\"quiet\":%s,\"strict\":%s,"
+               "\"exit_code\":1,\"halted\":false}\n",
+               have_expr ? "<expr>" : (src_path ? src_path : "?"),
+               yr.err[0] ? yr.err : (yr.last_err[0] ? yr.last_err : "install prove failed"),
+               CUBALC_LANG_VERSION,
+               n_preload,
+               req_ver[0] ? req_ver : "",
+               req_forms[0] ? req_forms : "",
+               req_doctor ? "true" : "false",
                CUBALC_MAX_VARS,
                quiet ? "true" : "false", strict ? "true" : "false");
         return 1;
@@ -2548,6 +2596,8 @@ int main(int argc, char **argv) {
                "\"include_path_n\":%d,"
                "\"require_version\":\"%s\","
                "\"require_forms\":\"%s\","
+               "\"require_doctor\":%s,"
+               "\"require_ready\":%s,"
                "\"includes_n\":%d,\"includes\":%s,"
                "\"include_stems_n\":%d,\"include_stems\":%s,"
                "\"vars_n\":%d,\"vars_max\":%d,\"vars_full\":%s,"
@@ -2565,6 +2615,8 @@ int main(int argc, char **argv) {
                n_ipath,
                req_ver[0] ? req_ver : "",
                req_forms[0] ? req_forms : "",
+               req_doctor ? "true" : "false",
+               req_ready ? "true" : "false",
                rr.includes_n, incj,
                stems_n, stemsj,
                rr.vars_n, rr.vars_max > 0 ? rr.vars_max : CUBALC_MAX_VARS,
@@ -3400,6 +3452,7 @@ int main(int argc, char **argv) {
       {"cli_init_doctor", "programs/proof/1358_cli_init_doctor.sh", "cubalc init --doctor scaffold + doctor"},
       {"ready", "programs/proof/1359_ready.cubalc", "READY install prove checklist plate"},
       {"cli_ready", "programs/proof/1359_cli_ready.sh", "cubalc ready plate + NEEDREADY forms"},
+      {"cli_require_ready", "programs/proof/1360_cli_require_ready.sh", "run -Y / CUBALC_REQUIRE_READY host prove floor"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -5766,6 +5819,7 @@ int main(int argc, char **argv) {
       {"cap", "INCLUDE cap_boot — agent_boot + form_guard"},
       {"cap", "cubalc init --cap · HASFORM · NEEDFORMS · FORMHINT"},
       {"cap", "cubalc run -C FORMS · CUBALC_REQUIRE_FORMS floor"},
+      {"ready", "cubalc run -Y · CUBALC_REQUIRE_READY prove floor"},
       {"cap", "LISTFORMS prefix · COUNTFORMS · cubalc listforms"},
       {"fat", "INCLUDE fat_session durable nest"},
       {"fat", "cubalc init --fat-session · NEED_VARROOM · time_guard"},
@@ -8624,6 +8678,8 @@ int main(int argc, char **argv) {
       {"CUBALC_PRELOAD_ACTIVE", "", 0, "set by run to effective -I/PRELOAD list · LISTPRELOAD in-lang"},
       {"CUBALC_REQUIRE_VERSION", "", 0, "x.y[.z] floor for run (-R dual · fail if runtime older)"},
       {"CUBALC_REQUIRE_FORMS", "", 0, "comma form names for run (-C dual · NEEDFORMS floor before body)"},
+      {"CUBALC_REQUIRE_DOCTOR", "", 0, "1 to require NEEDDOCTOR before run body (-D dual)"},
+      {"CUBALC_REQUIRE_READY", "", 0, "1 to require NEEDREADY prove checklist before run body (-Y dual)"},
       {"CUBALC_SEED", "", 0, "RNG seed for reproducible runs"},
       {"CUBALC_QUIET", "", 0, "1 → run plate-only no board noise"},
       {"CUBALC_STRICT", "", 0, "1 → run: soft last_err fails exit + plate ok"},
@@ -18469,6 +18525,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"CUBALC_PRELOAD_ACTIVE", "effective -I/PRELOAD list · LISTPRELOAD"},
       {"CUBALC_REQUIRE_VERSION", "x.y floor for run (-R dual)"},
       {"CUBALC_REQUIRE_FORMS", "comma forms for run (-C dual · capability floor)"},
+      {"CUBALC_REQUIRE_DOCTOR", "1 for run -D dual · NEEDDOCTOR floor"},
+      {"CUBALC_REQUIRE_READY", "1 for run -Y dual · NEEDREADY prove floor"},
     };
     if (!q || !q[0]) {
       fprintf(stderr, "usage: cubalc search <keyword>\n"
@@ -18710,8 +18768,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
-      "    run|eval [-q][-s][-T ms][-I lib][-L dir][-R ver][-C forms][-D][-e CODE] <file|->\n"
-      "                          -q plate · -s strict · -T wall · -C form floor · -D doctor floor (NEEDDOCTOR)\n"
+      "    run|eval [-q][-s][-T ms][-I lib][-L dir][-R ver][-C forms][-D][-Y][-e CODE] <file|->\n"
+      "                          -q plate · -s strict · -T wall · -C form floor · -D doctor · -Y ready floor (NEEDREADY)\n"
       "    help|-h                this text\n"
       "\n"
       "  Law & Core safety\n"
