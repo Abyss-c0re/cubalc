@@ -751,6 +751,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 721. ~~**run plate `includes` / `includes_n`**~~ **done** (JSON array of resolved INCLUDE paths on every run plate · LISTINCLUDES dual · agents audit -I/INCLUDE without parsing source).
 722. ~~**`NEEDINCLUDE` / `HASINCLUDEALL`**~~ **done** (fail-fast / soft multi module-loaded gates · INCLUDE_MISS bag · agent boot contract after -I/INCLUDE).
 723. ~~**`which` / SYS WHICH + `CUBALC_INCLUDE_PATH`**~~ **done** (project lib resolve for agents · doctor include_path_set/preload_set · dual of INCLUDE search).
+724. ~~**`cubalc cat` / `libs` + INCLUDE_PATH**~~ **done** (cat dumps project libs · libs catalogs include_path origin + dirs · agent discovery without FS browser).
 
 ## Tick protocol
 

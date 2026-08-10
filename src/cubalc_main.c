@@ -2696,6 +2696,7 @@ int main(int argc, char **argv) {
       {"needinclude", "programs/proof/1263_needinclude.cubalc", "NEEDINCLUDE/HASINCLUDEALL loaded module gates"},
       {"cli_needinclude", "programs/proof/1263_cli_needinclude.sh", "NEEDINCLUDE after run -I preload"},
       {"cli_which_include_path", "programs/proof/1264_cli_which_include_path.sh", "which/SYS WHICH CUBALC_INCLUDE_PATH project libs"},
+      {"cli_cat_libs_include_path", "programs/proof/1265_cli_cat_libs_include_path.sh", "cat/libs CUBALC_INCLUDE_PATH project lib discovery"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -4521,7 +4522,7 @@ int main(int argc, char **argv) {
   }
   if (strcmp(cmd, "libs") == 0 || strcmp(cmd, "lib") == 0 ||
       strcmp(cmd, "stdlib") == 0) {
-    /* Usability: list programs/lib INCLUDE snippets for agents/humans */
+    /* Usability: list programs/lib + CUBALC_INCLUDE_PATH project libs for agents. */
     static const struct { const char *file; const char *hint; } known[] = {
       {"hold_seed.cubalc", "optional new-device / mesh-join HOLD_FLASH seed"},
       {"agent_boot.cubalc", "REQUIRE 1.15 + VERSION agent preamble (no HOLD_FLASH tax)"},
@@ -4540,18 +4541,22 @@ int main(int argc, char **argv) {
       {"mesh_exchange.cubalc", "SMX KEY + dual EXCHANGE peer0/peer1"},
     };
     const char *libdir = "programs/lib";
-    char paths[32][96];
-    char hints[32][120];
-    int n = 0, i, j;
+    const char *ip = getenv("CUBALC_INCLUDE_PATH");
+    char paths[64][160];
+    char hints[64][120];
+    char origins[64][24];
+    char ipdirs[8][160];
+    int n = 0, n_ip = 0, n_std = 0, i, j;
     DIR *d = opendir(libdir);
     if (d) {
       struct dirent *de;
-      while ((de = readdir(d)) != NULL && n < 32) {
+      while ((de = readdir(d)) != NULL && n < 64) {
         size_t len = strlen(de->d_name);
         if (len < 8 || strcmp(de->d_name + len - 7, ".cubalc") != 0)
           continue;
         if (de->d_name[0] == '.') continue;
         snprintf(paths[n], sizeof paths[n], "%s/%s", libdir, de->d_name);
+        snprintf(origins[n], sizeof origins[n], "%s", "stdlib");
         hints[n][0] = 0;
         for (j = 0; j < (int)(sizeof known / sizeof known[0]); j++) {
           if (strcmp(de->d_name, known[j].file) == 0) {
@@ -4562,38 +4567,106 @@ int main(int argc, char **argv) {
         if (!hints[n][0])
           snprintf(hints[n], sizeof hints[n], "INCLUDE lib snippet");
         n++;
+        n_std++;
       }
       closedir(d);
+    }
+    /* CUBALC_INCLUDE_PATH dirs — project INCLUDE short names (after programs/lib). */
+    if (ip && ip[0]) {
+      const char *seg = ip;
+      while (*seg && n < 64) {
+        char dir[160];
+        size_t dlen = 0;
+        DIR *pd;
+        while (*seg == ':') seg++;
+        if (!*seg) break;
+        while (seg[dlen] && seg[dlen] != ':' && dlen + 1 < sizeof dir)
+          dir[dlen] = seg[dlen], dlen++;
+        dir[dlen] = 0;
+        seg += dlen;
+        if (!dir[0]) continue;
+        if (n_ip < 8)
+          snprintf(ipdirs[n_ip++], sizeof ipdirs[0], "%s", dir);
+        pd = opendir(dir);
+        if (!pd) continue;
+        {
+          struct dirent *de;
+          while ((de = readdir(pd)) != NULL && n < 64) {
+            size_t len = strlen(de->d_name);
+            int already = 0;
+            if (len < 8 || strcmp(de->d_name + len - 7, ".cubalc") != 0)
+              continue;
+            if (de->d_name[0] == '.') continue;
+            snprintf(paths[n], sizeof paths[n], "%s/%s", dir, de->d_name);
+            for (j = 0; j < n; j++) {
+              const char *b1 = strrchr(paths[j], '/');
+              b1 = b1 ? b1 + 1 : paths[j];
+              if (strcmp(b1, de->d_name) == 0) { already = 1; break; }
+            }
+            if (already) continue;
+            snprintf(origins[n], sizeof origins[n], "%s", "include_path");
+            snprintf(hints[n], sizeof hints[n],
+                     "CUBALC_INCLUDE_PATH project lib");
+            n++;
+          }
+        }
+        closedir(pd);
+      }
     }
     /* stable sort by path */
     for (i = 0; i < n; i++) {
       for (j = i + 1; j < n; j++) {
         if (strcmp(paths[j], paths[i]) < 0) {
-          char tp[96], th[120];
+          char tp[160], th[120], to[24];
           snprintf(tp, sizeof tp, "%s", paths[i]);
           snprintf(th, sizeof th, "%s", hints[i]);
+          snprintf(to, sizeof to, "%s", origins[i]);
           snprintf(paths[i], sizeof paths[i], "%s", paths[j]);
           snprintf(hints[i], sizeof hints[i], "%s", hints[j]);
+          snprintf(origins[i], sizeof origins[i], "%s", origins[j]);
           snprintf(paths[j], sizeof paths[j], "%s", tp);
           snprintf(hints[j], sizeof hints[j], "%s", th);
+          snprintf(origins[j], sizeof origins[j], "%s", to);
         }
       }
     }
-    printf("# CubalC programs/lib INCLUDE catalog n=%d version=%s\n",
-           n, CUBALC_LANG_VERSION);
-    printf("# use: INCLUDE \"lib/<name>.cubalc\" or short INCLUDE hold_seed\n");
+    printf("# CubalC INCLUDE catalog n=%d stdlib=%d include_path_n=%d version=%s\n",
+           n, n_std, n_ip, CUBALC_LANG_VERSION);
+    printf("# use: INCLUDE hold_seed · CUBALC_INCLUDE_PATH for project libs · cubalc which\n");
     for (i = 0; i < n; i++)
-      printf("%s\t%s\n", paths[i], hints[i]);
+      printf("%s\t%s\t%s\n", paths[i], origins[i], hints[i]);
     printf("{\"schema\":\"cubalc.libs.v1\",\"ok\":%s,\"cmd\":\"libs\","
-           "\"dir\":\"%s\",\"n\":%d,\"version\":\"%s\","
-           "\"include_from\":\"programs/*\",\"libs\":[",
-           n > 0 ? "true" : "false", libdir, n, CUBALC_LANG_VERSION);
+           "\"dir\":\"%s\",\"n\":%d,\"n_stdlib\":%d,\"n_include_path\":%d,"
+           "\"include_path_set\":%s,\"version\":\"%s\","
+           "\"include_from\":\"programs/lib + CUBALC_INCLUDE_PATH\","
+           "\"include_path_dirs\":[",
+           n > 0 ? "true" : "false", libdir, n, n_std, n - n_std,
+           n_ip > 0 ? "true" : "false", CUBALC_LANG_VERSION);
+    for (i = 0; i < n_ip; i++) {
+      char pesc[180];
+      size_t k, o = 0;
+      for (k = 0; ipdirs[i][k] && o + 2 < sizeof pesc; k++) {
+        char c = ipdirs[i][k];
+        if (c == '"' || c == '\\') pesc[o++] = '_';
+        else pesc[o++] = c;
+      }
+      pesc[o] = 0;
+      printf("%s\"%s\"", i ? "," : "", pesc);
+    }
+    printf("],\"libs\":[");
     for (i = 0; i < n; i++) {
-      /* basename */
       const char *base = strrchr(paths[i], '/');
+      char pesc[200];
+      size_t k, o = 0;
       base = base ? base + 1 : paths[i];
-      printf("%s{\"path\":\"%s\",\"name\":\"%s\",\"hint\":\"%s\"}",
-             i ? "," : "", paths[i], base, hints[i]);
+      for (k = 0; paths[i][k] && o + 2 < sizeof pesc; k++) {
+        char c = paths[i][k];
+        if (c == '"' || c == '\\') pesc[o++] = '_';
+        else pesc[o++] = c;
+      }
+      pesc[o] = 0;
+      printf("%s{\"path\":\"%s\",\"name\":\"%s\",\"origin\":\"%s\",\"hint\":\"%s\"}",
+             i ? "," : "", pesc, base, origins[i], hints[i]);
     }
     printf("]}\n");
     return n > 0 ? 0 : 1;
@@ -5413,7 +5486,7 @@ int main(int argc, char **argv) {
       fprintf(stderr, "usage: cubalc cat <libname|path> [--meta]\n");
       return 2;
     }
-    /* candidate paths */
+    /* candidate paths (INCLUDE-style + CUBALC_INCLUDE_PATH via host find) */
     snprintf(tried[ntry++], sizeof tried[0], "%s", arg);
     {
       char base[256];
@@ -5436,14 +5509,23 @@ int main(int argc, char **argv) {
         break;
       }
     }
+    /* Usability: project libs on CUBALC_INCLUDE_PATH (same as INCLUDE/which). */
+    if (!found) {
+      cubalc_host_result hr;
+      if (cubalc_host_find_cubalc(arg, &hr) == 0 && hr.str[0] &&
+          access(hr.str, R_OK) == 0) {
+        snprintf(path, sizeof path, "%s", hr.str);
+        found = 1;
+      }
+    }
     if (!found) {
       printf("{\"schema\":\"cubalc.cat.v1\",\"ok\":false,\"cmd\":\"cat\","
-             "\"query\":\"%s\",\"err\":\"not found — try cubalc libs|examples\","
+             "\"query\":\"%s\",\"err\":\"not found — try cubalc libs|which|examples\","
              "\"version\":\"%s\",\"tried\":[",
              arg, CUBALC_LANG_VERSION);
       for (i = 0; i < ntry; i++)
         printf("%s\"%s\"", i ? "," : "", tried[i]);
-      printf("]}\n");
+      printf("],\"hint\":\"CUBALC_INCLUDE_PATH · cubalc which name\"}\n");
       return 1;
     }
     f = fopen(path, "rb");
