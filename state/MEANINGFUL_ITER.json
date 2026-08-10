@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 744,
-  "version": "1.15.771-usability",
-  "item": "FRESHLIBS/STALELIBS age-filter bags + CLI",
-  "item_id": 780,
-  "title": "FRESHLIBS|STALELIBS needle [age_sec] \u00b7 cubalc freshlibs|stalelibs \u00b7 age filter",
-  "commit": "fe70f330486e950107987a0a1a4d5b769541dc3d",
-  "summary": "age-filter match bags (\u2264max fresh / \u2265min stale); newest-first; CLI ages+mtimes. proof 1321 PASS.",
+  "iter": 745,
+  "version": "1.15.772-usability",
+  "item": "LIBAGE/HASFRESH/NEEDFRESH single-lib gates + CLI",
+  "item_id": 781,
+  "title": "LIBAGE \u00b7 HASFRESH \u00b7 NEEDFRESH \u00b7 cubalc libage|hasfresh|needfresh",
+  "commit": "192173216cf414b35ffab67f0c8409f41643b35e",
+  "summary": "single-lib age + soft/hard freshness gates; default 86400s; CLI age/fresh plates. proof 1322 PASS.",
   "proofs": [
-    "1321_freshlibs PASS",
-    "1321_cli_freshlibs PASS"
+    "1322_libage PASS",
+    "1322_cli_libage PASS"
   ],
-  "when": "2026-08-10T10:37:33Z",
+  "when": "2026-08-10T10:47:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "fe70f330486e950107987a0a1a4d5b769541dc3d",
-  "note": "FRESHLIBS fat 1e6\u21922; FRESHLIBS fat 10\u21920; STALELIBS fat 10\u21922"
+  "sha": "192173216cf414b35ffab67f0c8409f41643b35e",
+  "note": "LIBAGE fat_session\u2192age; HASFRESH max 1e6 ok; NEEDFRESH max 1 fails"
 }
