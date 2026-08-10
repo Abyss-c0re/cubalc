@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 761,
-  "version": "1.15.788-usability",
-  "item": "EACH TOPIC walk discovery topics",
-  "item_id": 797,
-  "title": "EACH TOPIC [AS name] [MATCH] \u00b7 EACHTOPICS bag",
-  "commit": "3e07abbee2e47c65e5346325c8a0dbf9ce022d61",
-  "summary": "walk discovery topics with AS/MATCH; dual of LISTTOPICS+EACH LINE. proof 1338 PASS.",
+  "iter": 762,
+  "version": "1.15.789-usability",
+  "item": "TOPICHINT + cubalc topichint topic docs",
+  "item_id": 798,
+  "title": "TOPICHINT|DESCRIBETOPIC name \u00b7 cubalc topichint \u00b7 cubalc.topichint.v1",
+  "commit": "3a614e0f1db8c334503beabd7303d0e1a78bb3af",
+  "summary": "one-line topic hint twin of FORMHINT; chain with LISTTOPICS/EACH TOPIC. proof 1339 PASS.",
   "proofs": [
-    "1338_each_topic PASS",
-    "1338_cli_each_topic PASS"
+    "1339_topichint PASS",
+    "1339_cli_topichint PASS"
   ],
-  "when": "2026-08-10T14:16:47Z",
+  "when": "2026-08-10T14:26:50Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3e07abbee2e47c65e5346325c8a0dbf9ce022d61",
-  "note": "EACH TOPIC MATCH a; AS t; HASTOPIC loop"
+  "sha": "3a614e0f1db8c334503beabd7303d0e1a78bb3af",
+  "note": "topichint cap; DESCRIBETOPIC plate; EACH TOPIC loop"
 }
