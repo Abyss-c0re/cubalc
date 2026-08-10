@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 283,
-  "program": "programs/realworld/svc_renameflat_promote_board.cubalc",
-  "theme": "RENAMEFLAT leaf path prefix promote",
-  "version": "1.15.741-usability",
+  "iter": 284,
+  "program": "programs/realworld/svc_setflat_status_board.cubalc",
+  "theme": "SETFLAT bulk leaf value rewrite by path needle",
+  "version": "1.15.744-usability",
   "pass": true,
-  "prior_note": "iter 282 MERGEFLAT overlay; this iter first realworld 1217 RENAMEFLAT/MOVEFLAT",
+  "prior_note": "iter 283 RENAMEFLAT promote; this iter first realworld 1218 SETFLAT/MAPFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed cfg nest",
+      "cmd": "seed status+debug+peer",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "promote",
-      "cmd": "cfg.\u2192config.",
+      "name": "flag",
+      "cmd": "status\u2192degraded x2",
       "ok": true,
-      "note": "promote"
+      "note": "flag"
+    },
+    {
+      "name": "port",
+      "cmd": "cfg.port\u21929090",
+      "ok": true,
+      "note": "port"
     },
     {
       "name": "peer",
-      "cmd": "tmp.\u2192meta. FROM PEER",
+      "cmd": "FROM PEER tls\u21921",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "strip",
-      "cmd": "cfg.\u2192 empty hoist",
-      "ok": true,
-      "note": "strip"
-    },
-    {
       "name": "soft",
-      "cmd": "zzz. miss + bare role miss",
+      "cmd": "ghost miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "config.port present",
+      "cmd": "debug\u21920",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "MOVEFLAT a.\u2192b.",
+      "cmd": "MAPFLAT meta\u2192none",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "cfg vs cfg. false friend",
+      "cmd": "stat substring + empty all",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; renameflat PASS 24"
+      "note": "cli duals red; setflat PASS"
     }
   ],
   "weaknesses": [
@@ -3850,12 +3850,49 @@
       "title": "WRITE VAL omit trailing NL",
       "detail": "W5 class.",
       "repro": "cat -A VAL.txt"
+    },
+    {
+      "id": "W473",
+      "severity": "high",
+      "area": "lang|setflat",
+      "title": "empty needle SETFLAT rewrites ALL leaves including identity",
+      "detail": "SETFLAT \"\" 0 on agent plate would clobber agent/schema/site. Board only uses empty needle on scratch plate. Same class as MERGEFLAT identity clobber (W463).",
+      "repro": "SETFLAT \"\" 0 on full agent \u2192 agent becomes 0"
+    },
+    {
+      "id": "W474",
+      "severity": "med",
+      "area": "lang|setflat",
+      "title": "SETFLAT needle is path substring (stat matches status)",
+      "detail": "Needle stat rewrites cfg.status and other.status. Prefer unique path suffixes or dotted cfg.status for single-leaf set.",
+      "repro": "SETFLAT stat warm \u2192 N=2 status leaves"
+    },
+    {
+      "id": "W475",
+      "severity": "low",
+      "area": "lang|setflat",
+      "title": "MAPFLAT is SETFLAT alias for string bulk map",
+      "detail": "Positive: MAPFLAT meta none sets all meta.* leaves. WRITEFLAT is not a form.",
+      "repro": "MAPFLAT meta none \u2192 role/zone none; WRITEFLAT unknown form"
+    },
+    {
+      "id": "W476",
+      "severity": "low",
+      "area": "lang|setflat",
+      "title": "ghost needle soft-miss N=0 plate unchanged",
+      "detail": "Positive soft path for status gates.",
+      "repro": "SETFLAT ghost x \u2192 N=0"
+    },
+    {
+      "id": "W477",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META omit trailing NL",
+      "detail": "W5 class.",
+      "repro": "cat -A VAL.txt"
     }
   ],
   "workarounds": [
-    "make out/cubalc when binary missing",
-    "prefer LAST_N over LAST string for count gates",
-    "HASVAL for boolean presence before COUNTBYVAL",
     "agent_job=runner keeps worker count role-only",
     "SAVEPLATE after SETBYVAL/REPLACEVAL before process exit",
     "SETP re-seed before soft/gate when prior actions rewrote roles",
@@ -3892,13 +3929,12 @@
     "use MERGEFLAT not MERGEP for nested cfg leaf sync",
     "always use trailing . on path prefixes",
     "never pass empty old_pfx to RENAMEFLAT",
-    "PRUNEFLAT old prefix before re-promote if re-running"
+    "PRUNEFLAT old prefix before re-promote if re-running",
+    "never SETFLAT empty needle on agent plate",
+    "use dotted cfg.port for single-leaf precision",
+    "MAPFLAT not WRITEFLAT for alias"
   ],
   "language_gaps": [
-    "GREPFLAT/GREPVFLAT/GREPFLATI/KEEPFLAT path:value filter",
-    "GREPFLAT_N/NEEDLE/INVERT/ICASE/SRC/FROM specials",
-    "path substring needle; value needles soft-miss",
-    "plate_session may rewrite host when other.host present",
     "FLATKV/LEAFKV/FLATTENP path:value inventory",
     "UNFLATKV/FROMFLAT bag\u2192nest rebuild + UNDER/INTO",
     "FLATKV path exact nest root not substring",
@@ -3918,11 +3954,13 @@
     "RENAMEFLAT/MOVEFLAT leaf path prefix rewrite",
     "prefix not key-segment rename; use trailing .",
     "empty old_pfx hard-fails (not soft)",
-    "RENAMEFLAT_N/TOTAL/OLD/NEW/SRC specials"
+    "RENAMEFLAT_N/TOTAL/OLD/NEW/SRC specials",
+    "SETFLAT/MAPFLAT bulk leaf value by path needle",
+    "empty needle = all leaves (identity hazard)",
+    "path substring multi-match",
+    "SETFLAT_N/TOTAL/SRC/FROM specials"
   ],
   "issues_faced": [
-    "Renamed host\u2192endpoint to avoid top-level host collision",
-    "Empty FREQFLAT worker count polluted by agent_job",
     "FREQFLAT_TOTAL dark after COUNTVALFLAT; used bag HASLINE",
     "iter267: MODEFLAT_TOTAL silent 0 under fat agent until var footprint cut (W408)",
     "iter267: substring needle ro matches role (W409) \u2014 probe expects fuzzy hit",
@@ -3960,8 +3998,10 @@
     "iter282: 10/10 green after fix; shallow sibling keep confirmed",
     "iter283: soft hit hard-fail on empty old_pfx; removed and used bare role miss",
     "iter283: 9/9 green; cfg without dot hits cfgn false friend documented",
-    "iter283: soft score==6 vs 7 checks bug; fixed threshold; empty old_pfx hard-fail"
+    "iter283: soft score==6 vs 7 checks bug; fixed threshold; empty old_pfx hard-fail",
+    "iter284: 9/9 green first pass; empty-needle only on scratch plate",
+    "iter284: selftest cli duals still red; setflat proof green"
   ],
-  "commit": "65c86a4e",
-  "ts": "2026-08-10T04:54:57Z"
+  "commit": "pending",
+  "ts": "2026-08-10T05:18:48Z"
 }
