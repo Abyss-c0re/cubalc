@@ -814,6 +814,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 784. ~~**`cap_boot` + `cubalc init --cap`**~~ **done** (agent_boot+form_guard one-shot · init --cap|--forms catalog n=7 · doctor lib_cap_boot · capability starter without cookbook).
 785. ~~**`cubalc run -C` / `CUBALC_REQUIRE_FORMS`**~~ **done** (host form capability floor before body · dual of -R version · NEEDFORMS · plate require_forms · env catalog).
 786. ~~**`LISTFORMS` / `COUNTFORMS` + CLI**~~ **done** (in-lang HELP catalog bag/count · dual of cubalc forms · agent surface discovery without shell).
+787. ~~**`FORMHINT` / CLI `formhint`**~~ **done** (HELP one-line peel → LAST · dual of HASFORM with payload · agent docs without multi-match soup).
 
 ## Tick protocol
 

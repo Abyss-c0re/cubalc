@@ -3236,6 +3236,8 @@ int main(int argc, char **argv) {
       {"cli_require_forms", "programs/proof/1326_cli_require_forms.sh", "run -C / CUBALC_REQUIRE_FORMS host form capability floor"},
       {"listforms", "programs/proof/1327_listforms.cubalc", "LISTFORMS/COUNTFORMS in-lang dual of cubalc forms"},
       {"cli_listforms", "programs/proof/1327_cli_listforms.sh", "LISTFORMS bag + COUNTFORMS + forms CLI dual"},
+      {"formhint", "programs/proof/1328_formhint.cubalc", "FORMHINT/DESCRIBEFORM HELP one-line peel"},
+      {"cli_formhint", "programs/proof/1328_cli_formhint.sh", "cubalc formhint CLI dual + forms"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3865,6 +3867,7 @@ int main(int argc, char **argv) {
       {"HASFORM", "flow", "HASFORM name soft 0|1 if form in HELP catalog"},
       {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "flow", "HASFORMS names… soft all present · FORMMISS bag"},
+      {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
       {"NEEDFORMS", "flow", "NEEDFORMS names… fail-fast first missing form"},
@@ -7850,6 +7853,45 @@ int main(int argc, char **argv) {
            count_only ? "true" : "false", CUBALC_LANG_VERSION,
            (pref && pref[0]) ? pref : "");
     return ok ? 0 : 1;
+  }
+  if (strcmp(cmd, "formhint") == 0 || strcmp(cmd, "describeform") == 0 ||
+      strcmp(cmd, "formdoc") == 0 || strcmp(cmd, "formhelp") == 0) {
+    /* Usability: CLI dual of FORMHINT — one-line HELP peel without .cubalc. */
+    const char *name = (argc > 2) ? argv[2] : "";
+    char src[320];
+    cubalc_run_result rr;
+    if (!name || !name[0]) {
+      fprintf(stderr, "usage: cubalc formhint|describeform <FormName>\n");
+      printf("{\"schema\":\"cubalc.formhint.v1\",\"ok\":false,\"cmd\":\"%s\","
+             "\"err\":\"need form name\",\"version\":\"%s\"}\n",
+             cmd, CUBALC_LANG_VERSION);
+      return 2;
+    }
+    if (strchr(name, ' ') || strchr(name, '"'))
+      snprintf(src, sizeof src, "FORMHINT \"%s\"\nPRINT LAST\nPASS\n", name);
+    else
+      snprintf(src, sizeof src, "FORMHINT %s\nPRINT LAST\nPASS\n", name);
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, strlen(src), "<formhint>", &rr, NULL);
+    {
+      int ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0] && rr.last_print[0]) ? 1 : 0;
+      /* escape hint for JSON */
+      char hintj[400];
+      size_t i, o = 0;
+      const char *h = rr.last_print;
+      for (i = 0; h[i] && o + 2 < sizeof hintj; i++) {
+        char c = h[i];
+        if (c == '"' || c == '\\') { hintj[o++] = '\\'; hintj[o++] = c; }
+        else if ((unsigned char)c < 32) hintj[o++] = ' ';
+        else hintj[o++] = c;
+      }
+      hintj[o] = 0;
+      printf("{\"schema\":\"cubalc.formhint.v1\",\"ok\":%s,\"cmd\":\"%s\","
+             "\"form\":\"%s\",\"hint\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"CLI dual of FORMHINT · HELP one-line · cubalc forms\"}\n",
+             ok ? "true" : "false", cmd, name, hintj, CUBALC_LANG_VERSION);
+      return ok ? 0 : 1;
+    }
   }
   if (strcmp(cmd, "plate") == 0 || strcmp(cmd, "jsonplate") == 0 ||
       strcmp(cmd, "platefile") == 0 || strcmp(cmd, "agent-plate") == 0) {
@@ -14323,6 +14365,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"HASFORM", "flow", "HASFORM name soft 0|1 if form in HELP catalog"},
       {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "flow", "HASFORMS names… soft all present · FORMMISS bag"},
+      {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
       {"NEEDFORMS", "flow", "NEEDFORMS names… fail-fast first missing form"},
@@ -15784,7 +15827,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|countforms|hasform|hasforms|needforms|libage|nthlib  filter duals\n"
+      "    picklib|listforms|formhint|countforms|hasform|hasforms|needforms|nthlib  filter duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
@@ -15815,7 +15858,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
       "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|LISTFORMS|COUNTFORMS|HASFORM|HASFORMS|NEEDFORMS|MATCHLIBS|PICKLIB|HASLIB|RECIPE\n"
+      "    LISTLIBS|LISTFORMS|FORMHINT|COUNTFORMS|HASFORM|HASFORMS|NEEDFORMS|MATCHLIBS|PICKLIB|RECIPE\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"

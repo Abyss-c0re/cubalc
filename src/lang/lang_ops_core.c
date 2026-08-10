@@ -2055,6 +2055,7 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"NEEDFORM", "NEEDFORM|REQUIREFORM name — fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "HASFORMS|ALLFORMS names… — soft 0|1 all known · FORMMISS bag of missing"},
       {"NEEDFORMS", "NEEDFORMS|REQUIREFORMS names… — fail-fast if any form missing · multi HASFORM"},
+      {"FORMHINT", "FORMHINT|DESCRIBEFORM name — HELP one-line hint → LAST · dual of HASFORM with payload"},
       {"LISTFORMS", "LISTFORMS|FORMLIST [prefix] — bag of HELP catalog form names · dual of cubalc forms"},
       {"COUNTFORMS", "COUNTFORMS|NFORMS [prefix] — match count → LAST_N without bag · dual of LISTFORMS"},
       {"REQUIRE FORM", "REQUIRE FORM|OP name — fail if form missing from HELP catalog · no version glue"},
@@ -37549,6 +37550,72 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm);
       return 1;
     }
+  }
+
+  /* FORMHINT|DESCRIBEFORM name — peel HELP catalog one-line hint → LAST.
+   * Usability: agent docs without HELP multi-match soup or shell cubalc forms.
+   * Soft miss OK=0 · FORM_HINT/FORM set · dual of HASFORM with payload. */
+  if (kw(&L->cur,"FORMHINT") || kw(&L->cur,"DESCRIBEFORM") ||
+      kw(&L->cur,"FORMDOC") || kw(&L->cur,"FORMHELP") ||
+      kw(&L->cur,"HINTFORM") || kw(&L->cur,"FORM_HINT") ||
+      kw(&L->cur,"WHATISFORM") || kw(&L->cur,"EXPLAINFORM")) {
+    char name[96];
+    const char *hint = NULL;
+    lex_next(L);
+    name[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "FORMHINT: need name — FORMHINT SORTLIBS · DESCRIBEFORM LIBAGE");
+      var_set_str(vm, "ERR",
+                  "FORMHINT: need name — FORMHINT SORTLIBS · DESCRIBEFORM LIBAGE");
+      bump(vm);
+      return 1;
+    }
+    if (!cubalc_form_known(name, &hint) || !hint || !hint[0]) {
+      char em[176];
+      snprintf(em, sizeof em,
+               "FORMHINT miss: '%s' — LISTFORMS · HASFORM · cubalc forms · HELP",
+               name);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "FORM", name);
+      var_set_str(vm, "FORM_HINT", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", hint);
+    var_set_str(vm, "FORM_HINT", hint);
+    var_set_str(vm, "FORMHINT", hint);
+    var_set_str(vm, "FORM", name);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hint);
+    vm->last_n = (long)strlen(hint);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
   }
 
   /* HASFORMS|NEEDFORMS name… — multi form capability gate (all-or-FORMMISS).
