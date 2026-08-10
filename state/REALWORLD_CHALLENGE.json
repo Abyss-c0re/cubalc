@@ -5092,7 +5092,7 @@
     "RUNSNIP MATCH missing in binary while proof 1351 exists; GUIDE MATCH board 10/10+unknown green",
     "probe SYS EQS DISCOVER_MATCH_N hard-failed unknown form; fixed via DEFINED; board 10/10"
   ],
-  "commit": "pending",
+  "commit": "b9e501a9",
   "ts": "2026-08-10T17:24:06Z",
-  "board_commit": "pending"
+  "board_commit": "b9e501a9"
 }
