@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 734,
-  "version": "1.15.761-usability",
-  "item": "INCLUDE MATCH|FIRST filter pick+include",
-  "item_id": 770,
-  "title": "INCLUDE MATCH needle [DEFAULT stem] \u00b7 PICKLIB+INCLUDE one-shot \u00b7 SOFT miss",
-  "commit": "4411c6b928cf42388f085de8e19b7a8b38d9566d",
-  "summary": "Filter\u2192first sorted stem\u2192INCLUDE without PICKLIB+LAST glue. proof 1311 PASS.",
+  "iter": 735,
+  "version": "1.15.762-usability",
+  "item": "INCLUDE NTH/LASTMATCH filter pick+include",
+  "item_id": 771,
+  "title": "INCLUDE NTH idx + LASTMATCH \u00b7 completes MATCH triad \u00b7 DEFAULT/SOFT",
+  "commit": "eb43df1b5a911e25e9188b8b7f3110c58b7f4ae8",
+  "summary": "Nth and last sorted filter stems one-shot INCLUDE. Completes MATCH/NTH/LAST triad. proof 1312 PASS.",
   "proofs": [
-    "1311_include_match PASS",
-    "1311_cli_include_match PASS"
+    "1312_include_nth_last PASS",
+    "1312_cli_include_nth_last PASS"
   ],
-  "when": "2026-08-10T08:38:49Z",
+  "when": "2026-08-10T08:49:10Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4411c6b928cf42388f085de8e19b7a8b38d9566d",
-  "note": "INCLUDE MATCH plate; DEFAULT hold_seed; INCLUDE SOFT MATCH miss"
+  "sha": "eb43df1b5a911e25e9188b8b7f3110c58b7f4ae8",
+  "note": "INCLUDE NTH 1 fat; LASTMATCH plate; DEFAULT hold_seed"
 }
