@@ -4444,6 +4444,6 @@
     "iter296: SORTLIBS proof red \u2014 form not in binary (W528)",
     "iter296: guard ALL n=2; NEWEST fat_session vs OLDEST fat_boot"
   ],
-  "commit": "pending",
+  "commit": "30b0e927",
   "ts": "2026-08-10T10:18:41Z"
 }
