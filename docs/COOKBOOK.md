@@ -16,6 +16,7 @@ make all
 ./out/cubalc env [pfx]   # host CUBALC_* contract (set/default/hint JSON)
 ./out/cubalc examples    # curated runnable starters (JSON · filterable)
 ./out/cubalc cat agent_boot  # dump lib/program source + meta plate
+./out/cubalc recipe fat_session  # one plate: path + deps + defaults + head
 ./out/cubalc cat plate_uniform  # nest consistency INCLUDE snippet
 ./out/cubalc init --list             # scaffold catalog JSON (agent discovery · n=5)
 ./out/cubalc init --plate my_agent   # plate_session + plate_uniform + PRETTYP + save

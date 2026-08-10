@@ -783,6 +783,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 753. ~~**`LIBTREE` / `LIBDEPSALL`**~~ **done** (transitive INCLUDE closure BFS · full recipe composition without recursive LIBDEPS · soft miss).
 754. ~~**`LIBDEFAULTS` / `LIBKNOBS`**~~ **done** (DEFAULT key=value knobs bag from a lib · set-before-INCLUDE without CATLIB/HEADLIB parse · soft miss).
 755. ~~**`cubalc init --fat-session` / `--durable`**~~ **done** (scaffold INCLUDE fat_session durable nest · catalog n=5 · doctor/cookbook hints).
+756. ~~**`cubalc recipe` / `card`**~~ **done** (one plate path+deps+defaults+head · cubalc.recipe.v1 · agent dual of LIBINFO+LIBDEPS+LIBDEFAULTS+HEADLIB without multi-form glue).
 
 ## Tick protocol
 
