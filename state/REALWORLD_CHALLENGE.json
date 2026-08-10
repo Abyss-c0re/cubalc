@@ -3807,6 +3807,6 @@
     "iter279: avoided top-level host key (W445); used peer_host + site",
     "iter279: 10/10 green; flatkv/unflatkv round-trip; selftest cli duals still red"
   ],
-  "commit": "pending",
+  "commit": "351825f7",
   "ts": "2026-08-10T02:24:58Z"
 }
