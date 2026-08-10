@@ -1,0 +1,28 @@
+# DOCTOR — in-lang install readiness (dual of cubalc doctor)
+
+DOCTOR
+ASSERT OK == 1
+ASSERT DOCTOR_OK == 1
+ASSERT DOCTOR_LIBS_N >= 20
+ASSERT DOCTOR_AGENT_BOOT == 1
+ASSERT DOCTOR_MODULAR == 1
+ASSERT DOCTOR_HOLD == 1
+SYS HASI "cubalc.doctor.v1"
+ASSERT LAST_N == 1
+SYS HASI "lib_agent_boot"
+ASSERT LAST_N == 1
+SYS HASI "lib_open_boot"
+ASSERT LAST_N == 1
+
+# alias
+INSTALL_HEALTH
+ASSERT OK == 1
+ASSERT DOCTOR_OK == 1
+
+# chain after readiness
+INCLUDE open_boot
+ASSERT OK == 1
+ASSERT OPEN_N >= 1
+
+PASS
+PRINT "1356_doctor: PASS"

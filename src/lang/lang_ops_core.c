@@ -1,5 +1,6 @@
 /* CubalC lang — lang_ops_core.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
+#include <dirent.h>
 #if !defined(CUBALC_OS_WINDOWS)
 #  include <pwd.h>
 #  include <grp.h>
@@ -3572,6 +3573,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"NEEDTIME", "NEEDTIME n — fail-fast if wall budget remaining < n ms"},
       {"WALL_MS", "WALL_MS|ELAPSED — mono ms since run start → LAST_N · dual of REMAIN_MS"},
       {"STATUS", "STATUS — cubalc.status.v1 health (ok/vars/timeout_ms/remain_ms/wall_ms)"},
+      {"DOCTOR", "DOCTOR|INSTALL_HEALTH — install readiness plate · dual of cubalc doctor · DOCTOR_OK/LIBS_N"},
+      {"INSTALL_HEALTH", "INSTALL_HEALTH alias of DOCTOR"},
       {"WHY", "WHY|EXPLAIN — cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED + hint"},
       {"EXPLAIN", "EXPLAIN alias of WHY"},
       {"WHYERR", "WHYERR alias of WHY"},
@@ -38545,6 +38548,141 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
+
+  /* DOCTOR|INSTALL_HEALTH — install readiness plate (dual of cubalc doctor).
+   * Usability: agents gate INCLUDE/init without shelling cubalc doctor.
+   * LAST=cubalc.doctor.v1 · DOCTOR_OK · DOCTOR_LIBS_N · key lib_* probes.
+   * Soft always returns 1; OK follows readiness (modular+hold+agent_boot). */
+  if (kw(&L->cur,"DOCTOR")||kw(&L->cur,"INSTALL_HEALTH")||kw(&L->cur,"INSTALLHEALTH")||
+      kw(&L->cur,"DOCTOR_JSON")||kw(&L->cur,"HEALTHCHECK")||kw(&L->cur,"CHECK_INSTALL")){
+    char line[CUBALC_HOST_STR_MAX];
+    char protect_path[640];
+    const char *libdir = "programs/lib";
+    int modular = 0, libdir_ok = 0, libs_n = 0;
+    int lib_agent_boot = 0, lib_plate_session = 0, lib_plate_uniform = 0;
+    int lib_hold_seed = 0, lib_var_guard = 0, lib_time_guard = 0;
+    int lib_fat_boot = 0, lib_fat_session = 0, lib_form_guard = 0;
+    int lib_cap_boot = 0, lib_onboard_boot = 0, lib_discover_boot = 0, lib_open_boot = 0;
+    int cookbook_ok = 0, for_agents_ok = 0;
+    int include_path_set = 0, preload_set = 0, smx_key = 0, protect_plate = 0;
+    int ok = 0, hold = CUBALC_HOLD_FLASH;
+    const char *hx = getenv("CUBALC_SMX_KEY");
+    const char *kf = getenv("CUBALC_SMX_KEY_FILE");
+    const char *ipath = getenv("CUBALC_INCLUDE_PATH");
+    const char *preload = getenv("CUBALC_PRELOAD");
+    const char *state = NULL;
+#if !defined(CUBALC_OS_WINDOWS)
+    DIR *d;
+    struct dirent *de;
+#endif
+    lex_next(L);
+    if (ipath && ipath[0]) include_path_set = 1;
+    if (preload && preload[0]) preload_set = 1;
+    if (hx && strlen(hx) >= 64) smx_key = 1;
+    else if (kf && kf[0] && access(kf, R_OK) == 0) smx_key = 1;
+    modular = (access("src/lang/lang_parse.c", R_OK) == 0 &&
+               access("include/lang/cubalc_lang_internal.h", R_OK) == 0 &&
+               access("src/lang/lang_ops_smx.c", R_OK) == 0);
+    libdir_ok = (access(libdir, R_OK) == 0);
+    lib_agent_boot = (access("programs/lib/agent_boot.cubalc", R_OK) == 0);
+    lib_plate_session = (access("programs/lib/plate_session.cubalc", R_OK) == 0);
+    lib_plate_uniform = (access("programs/lib/plate_uniform.cubalc", R_OK) == 0);
+    lib_hold_seed = (access("programs/lib/hold_seed.cubalc", R_OK) == 0);
+    lib_var_guard = (access("programs/lib/var_guard.cubalc", R_OK) == 0);
+    lib_time_guard = (access("programs/lib/time_guard.cubalc", R_OK) == 0);
+    lib_fat_boot = (access("programs/lib/fat_boot.cubalc", R_OK) == 0);
+    lib_fat_session = (access("programs/lib/fat_session.cubalc", R_OK) == 0);
+    lib_form_guard = (access("programs/lib/form_guard.cubalc", R_OK) == 0);
+    lib_cap_boot = (access("programs/lib/cap_boot.cubalc", R_OK) == 0);
+    lib_onboard_boot = (access("programs/lib/onboard_boot.cubalc", R_OK) == 0);
+    lib_discover_boot = (access("programs/lib/discover_boot.cubalc", R_OK) == 0);
+    lib_open_boot = (access("programs/lib/open_boot.cubalc", R_OK) == 0);
+    cookbook_ok = (access("docs/COOKBOOK.md", R_OK) == 0);
+    for_agents_ok = (access("docs/FOR_AGENTS.md", R_OK) == 0);
+    state = "state";
+    snprintf(protect_path, sizeof protect_path, "%s/CORE_PROTECT.json", state);
+    protect_plate = (access(protect_path, R_OK) == 0);
+#if !defined(CUBALC_OS_WINDOWS)
+    if (libdir_ok) {
+      d = opendir(libdir);
+      if (d) {
+        while ((de = readdir(d)) != NULL) {
+          size_t len = strlen(de->d_name);
+          if (len < 8 || strcmp(de->d_name + len - 7, ".cubalc") != 0) continue;
+          if (de->d_name[0] == '.') continue;
+          libs_n++;
+        }
+        closedir(d);
+      }
+    }
+#else
+    (void)libs_n;
+#endif
+    ok = modular && (hold == 1) && lib_agent_boot;
+    snprintf(line, sizeof line,
+      "{\"schema\":\"cubalc.doctor.v1\",\"ok\":%s,\"version\":\"%s\","
+      "\"hold_flash\":%d,\"modular_lang\":%s,\"smx_key_configured\":%s,"
+      "\"libs_dir_ok\":%s,\"libs_n\":%d,"
+      "\"lib_agent_boot\":%s,\"lib_plate_session\":%s,\"lib_plate_uniform\":%s,"
+      "\"lib_hold_seed\":%s,\"lib_var_guard\":%s,\"lib_time_guard\":%s,"
+      "\"lib_fat_boot\":%s,\"lib_fat_session\":%s,\"lib_form_guard\":%s,"
+      "\"lib_cap_boot\":%s,\"lib_onboard_boot\":%s,\"lib_discover_boot\":%s,"
+      "\"lib_open_boot\":%s,\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
+      "\"include_path_set\":%s,\"preload_set\":%s,\"core_protect_plate\":%s,"
+      "\"vars_max\":%d,"
+      "\"note\":\"install readiness · dual of cubalc doctor · gate INCLUDE/init\","
+      "\"next\":\"INCLUDE open_boot · cubalc init --open · cubalc selftest\"}",
+      ok ? "true" : "false", CUBALC_LANG_VERSION, hold,
+      modular ? "true" : "false", smx_key ? "true" : "false",
+      libdir_ok ? "true" : "false", libs_n,
+      lib_agent_boot ? "true" : "false",
+      lib_plate_session ? "true" : "false",
+      lib_plate_uniform ? "true" : "false",
+      lib_hold_seed ? "true" : "false",
+      lib_var_guard ? "true" : "false",
+      lib_time_guard ? "true" : "false",
+      lib_fat_boot ? "true" : "false",
+      lib_fat_session ? "true" : "false",
+      lib_form_guard ? "true" : "false",
+      lib_cap_boot ? "true" : "false",
+      lib_onboard_boot ? "true" : "false",
+      lib_discover_boot ? "true" : "false",
+      lib_open_boot ? "true" : "false",
+      cookbook_ok ? "true" : "false",
+      for_agents_ok ? "true" : "false",
+      include_path_set ? "true" : "false",
+      preload_set ? "true" : "false",
+      protect_plate ? "true" : "false",
+      CUBALC_MAX_VARS);
+    var_set_str(vm, "LAST", line);
+    var_set_str(vm, "DOCTOR", line);
+    var_set_str(vm, "INSTALL_HEALTH", line);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", line);
+    vm->last_n = ok ? 1 : 0;
+    var_set_num(vm, "LAST_N", ok ? 1 : 0);
+    var_set_num(vm, "OK", ok ? 1 : 0);
+    var_set_num(vm, "DOCTOR_OK", ok ? 1 : 0);
+    var_set_num(vm, "DOCTOR_LIBS_N", (long)libs_n);
+    var_set_num(vm, "DOCTOR_MODULAR", modular ? 1L : 0L);
+    var_set_num(vm, "DOCTOR_HOLD", (long)hold);
+    var_set_num(vm, "DOCTOR_AGENT_BOOT", lib_agent_boot ? 1L : 0L);
+    var_set_num(vm, "DOCTOR_OPEN_BOOT", lib_open_boot ? 1L : 0L);
+    var_set_num(vm, "DOCTOR_DISCOVER_BOOT", lib_discover_boot ? 1L : 0L);
+    var_set_num(vm, "DOCTOR_SMX_KEY", smx_key ? 1L : 0L);
+    if (!ok) {
+      var_set_str(vm, "LAST_ERR",
+                  "DOCTOR: not ready — need modular lang + HOLD_FLASH=1 + programs/lib/agent_boot");
+      var_set_str(vm, "ERR",
+                  "DOCTOR: not ready — need modular lang + HOLD_FLASH=1 + programs/lib/agent_boot");
+    }
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", "cubalc.doctor.v1");
+    if (vm->trace)
+      fprintf(vm->trace, "# doctor ok=%d libs_n=%d modular=%d\n", ok, libs_n, modular);
+    bump(vm);
+    return 1;
+  }
+
   /* WHY|EXPLAIN|WHYERR — agent recovery plate from sticky failure state.
    * Surfaces LAST_ERR + ASSERT_GOT/EXPECTED/OP + actionable WHY_HINT without
    * re-parsing free text. Does not rewrite OK. Complements STATUS/CLEAR_ERR.
@@ -39344,7 +39482,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FAIL", "PASS"}, {"FAIL", "WHY"}, {"FAIL", "CLEAR_ERR"}, {"FAIL", "EXPECT"},
       {"PASS", "FAIL"}, {"PASS", "NOTE"}, {"WHY", "CLEAR_ERR"}, {"WHY", "STATUS"},
       {"WHY", "TIPS"}, {"CLEAR_ERR", "WHY"}, {"CLEAR_ERR", "STATUS"},
-      {"STATUS", "IDENTITY"}, {"STATUS", "VERSION"}, {"STATUS", "VARS"},
+      {"STATUS", "IDENTITY"}, {"STATUS", "VERSION"}, {"STATUS", "VARS"}, {"STATUS", "DOCTOR"},
+      {"DOCTOR", "STATUS"}, {"DOCTOR", "VERSION"}, {"DOCTOR", "OPEN"}, {"DOCTOR", "DISCOVER"},
       {"VERSION", "REQUIRE VERSION"}, {"VERSION", "STATUS"},
       {"EXIT", "PASS"}, {"EXIT", "FAIL"}, {"EXIT", "STATUS"},
       {"NOTE", "PASS"}, {"NOTE", "TIPS"},
