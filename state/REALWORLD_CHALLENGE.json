@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 313,
-  "program": "programs/realworld/svc_doctor_ready_board.cubalc",
-  "theme": "DOCTOR/NEEDDOCTOR fleet install readiness gate + open_boot chain",
-  "version": "1.15.807-usability",
+  "iter": 314,
+  "program": "programs/realworld/svc_doctor_boot_gate_board.cubalc",
+  "theme": "doctor_boot INCLUDE hard gate + REQUIREDOCTOR/MUSTDOCTOR solid aliases",
+  "version": "1.15.808-usability",
   "pass": true,
-  "prior_note": "iter 312 RUNSNIP MATCH; this iter first realworld 1356 DOCTOR install readiness",
+  "prior_note": "iter 313 DOCTOR plate; this iter first realworld 1358 doctor_boot + 1357 solid aliases REQUIREDOCTOR/MUSTDOCTOR/NEED_DOCTOR",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate drd",
+      "cmd": "seed agent plate dbg",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "ready",
-      "cmd": "DOCTOR plate libs>=20 flags",
+      "name": "bootgate",
+      "cmd": "INCLUDE doctor_boot hard NEEDDOCTOR",
       "ok": true,
-      "note": "ready"
+      "note": "bootgate"
     },
     {
-      "name": "gate",
-      "cmd": "NEEDDOCTOR + plate surface",
+      "name": "alias",
+      "cmd": "REQUIREDOCTOR MUSTDOCTOR NEED_DOCTOR",
       "ok": true,
-      "note": "gate"
+      "note": "alias"
     },
     {
       "name": "chain",
-      "cmd": "DOCTOR→open_boot→RUNSNIP",
+      "cmd": "doctor_boot→open_boot→RUNSNIP",
       "ok": true,
       "note": "chain"
     },
     {
       "name": "soft",
-      "cmd": "INSTALL_HEALTH + slim plate fields",
+      "cmd": "solid aliases + soft DOCTOR plate",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "alias",
-      "cmd": "INSTALL_HEALTH NEEDDOCTOR",
+      "name": "gate",
+      "cmd": "plate surface + doctor_boot",
       "ok": true,
-      "note": "alias"
+      "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + DOCTOR_N false friend",
+      "cmd": "PRINT clobber + solid recover",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "doctor_form PASS; needdoctor/REQUIRE DOCTOR red; CLI duals red"
+      "note": "546/720 needdoctor+doctor_boot PASS; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -5100,10 +5100,49 @@
       "title": "out/cubalc repeatedly deleted between challenge fires",
       "detail": "Third fire this session with missing binary. clean/concurrent MI may rm out/. Workaround: object cache + stable copy under /mnt/data/tmp_cc/cubalc.stable.",
       "repro": "ls out/cubalc → missing after ~25m"
+    },
+    {
+      "id": "W630",
+      "severity": "low",
+      "area": "lang|needdoctor",
+      "title": "solid single-token REQUIREDOCTOR/MUSTDOCTOR/NEED_DOCTOR work",
+      "detail": "Positive fix path for W624: REQUIREDOCTOR MUSTDOCTOR NEED_DOCTOR all hard-gate OK=1 on ready install. Multiword REQUIRE DOCTOR still dead. Prefer solid aliases in runbooks.",
+      "repro": "REQUIREDOCTOR; MUSTDOCTOR; NEED_DOCTOR → OK=1"
+    },
+    {
+      "id": "W631",
+      "severity": "med",
+      "area": "lang|require",
+      "title": "REQUIRE DOCTOR multiword still aborts scoring paths if not CLEAR_ERR careful",
+      "detail": "Reconfirmed W624: live REQUIRE DOCTOR leaves sticky REQUIRE VERSION|LIB help and can zero board hit path even with CLEAR_ERR depending on later OK. Soft/probe boards must not invoke multiword form.",
+      "repro": "REQUIRE DOCTOR in board soft → score fail / sticky err"
+    },
+    {
+      "id": "W632",
+      "severity": "low",
+      "area": "lib|doctor_boot",
+      "title": "doctor_boot is agent_boot + NEEDDOCTOR only (no OPEN)",
+      "detail": "Unlike open_boot, doctor_boot does not open playbook — agents must chain INCLUDE open_boot after gate. Double agent_boot INCLUDE via doctor_boot+open_boot is accepted.",
+      "repro": "INCLUDE doctor_boot; INCLUDE open_boot → OPEN_N>=1"
+    },
+    {
+      "id": "W633",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers doctor_boot plate in LAST (reconfirm)",
+      "detail": "Capture body immediately after INCLUDE doctor_boot before PRINT.",
+      "repro": "INCLUDE doctor_boot; PRINT x; SYS HASI LAST cubalc.doctor.v1 → 0"
+    },
+    {
+      "id": "W634",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS/META omit trailing NL (reconfirmed dbg)",
+      "detail": "STATUS last probe line without $; META no final NL.",
+      "repro": "cat -A DBG STATUS"
     }
   ],
   "workarounds": [
-    "use MERGEFLAT not MERGEP for nested cfg leaf sync",
     "always use trailing . on path prefixes",
     "never pass empty old_pfx to RENAMEFLAT",
     "PRUNEFLAT old prefix before re-promote if re-running",
@@ -5163,14 +5202,13 @@
     {
       "id": "WA-DRD",
       "note": "NEEDDOCTOR only never REQUIRE DOCTOR; use DOCTOR_LIBS_N; expect slim in-lang plate; keep cubalc.stable copy"
+    },
+    {
+      "id": "WA-DBG",
+      "note": "INCLUDE doctor_boot then open_boot; use REQUIREDOCTOR/MUSTDOCTOR never multiword REQUIRE DOCTOR; capture body before PRINT"
     }
   ],
   "language_gaps": [
-    "NEEDMATCHTOPICS miss exit_code 0 (W591)",
-    "PRINT clobber MATCHTOPICS bag (W589)",
-    "WRITE META omit NL (W588)",
-    "NTHTOPIC/LASTTOPIC/ENDTOPIC indexed topic roster duals of NTHLIB",
-    "COUNTMATCHTOPICS/HASMATCHTOPICS/NEEDMATCHTOPICS filter capacity gates",
     "NTHTOPIC index literal-only (W593)",
     "LASTTOPIC_N sticky 0 (W594)",
     "prefer COUNTMATCHTOPICS_N over LAST_N (W595)",
@@ -5205,10 +5243,14 @@
     "in-lang doctor plate slim vs CLI (W625)",
     "DOCTOR_LIBS_N not DOCTOR_N (W626)",
     "DOCTOR_OK/AGENT_BOOT/MODULAR/HOLD flags",
-    "out/cubalc vanishes between fires (W629)"
+    "out/cubalc vanishes between fires (W629)",
+    "doctor_boot INCLUDE agent_boot+NEEDDOCTOR (1358)",
+    "REQUIREDOCTOR/MUSTDOCTOR/NEED_DOCTOR solid aliases (W630)",
+    "REQUIRE DOCTOR multiword still dead (W624/W631)",
+    "chain doctor_boot→open_boot→RUNSNIP",
+    "PRINT clobber after doctor_boot (W633)"
   ],
   "issues_faced": [
-    "iter299: SYS HAS substring false friend on form bags (W544)",
     "iter299: board 10/10 green; selftest CLI duals still 57 red",
     "iter300: RELATED multi-word graph gap REQUIRE FORM (W549)",
     "iter300: all board paths green; WRITE SNIP.txt multi-line works",
@@ -5237,9 +5279,10 @@
     "probe SYS EQS DISCOVER_MATCH_N hard-failed unknown form; fixed via DEFINED; board 10/10",
     "binary missing at fire start — rebuilt; OPEN board 10/10 green; OPEN_NEXT_N gap vs DISCOVER",
     "out/cubalc missing; OOM on make until disk swap + object -D_GNU_SOURCE build; board 10/10+unknown green",
-    "REQUIRE DOCTOR parse fail; slim doctor plate missing http_required; binary missing thrice; board 9/9 after NEEDDOCTOR-only soft"
+    "REQUIRE DOCTOR parse fail; slim doctor plate missing http_required; binary missing thrice; board 9/9 after NEEDDOCTOR-only soft",
+    "REQUIRE DOCTOR multiword broke soft/probe scoring; solid aliases only; board 9/9; needdoctor selftest now green"
   ],
-  "commit": "763205f9",
-  "ts": "2026-08-10T18:41:35Z",
-  "board_commit": "763205f9"
+  "commit": "pending",
+  "ts": "2026-08-10T19:05:04Z",
+  "board_commit": "pending"
 }
