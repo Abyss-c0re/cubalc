@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 737,
-  "version": "1.15.764-usability",
-  "item": "HASCOUNTMATCHLIBS/NEEDCOUNTMATCHLIBS min count gates",
-  "item_id": 773,
-  "title": "Soft/hard min match-count gates \u00b7 need \u2265n libs without COUNT+IF",
-  "commit": "b5a51acd1d2c92145728b0aac174543ba9040093",
-  "summary": "Thrash restored. HASCOUNTMATCHLIBS min needle; NEEDCOUNTMATCHLIBS fail. proof 1314 PASS.",
+  "iter": 738,
+  "version": "1.15.765-usability",
+  "item": "EACH LIB MATCH walk sorted lib stems",
+  "item_id": 774,
+  "title": "EACH LIB [AS name] [MATCH needle] \u00b7 no MATCHLIBS+EACH LINE glue",
+  "commit": "cafd0790c301c470a754bcaf06c1ee94fed3f93d",
+  "summary": "Walk filtered lib stems for INCLUDE/recipe loops. Soft empty. proof 1315 PASS.",
   "proofs": [
-    "1314_hascountmatchlibs PASS",
-    "1314_cli_hascountmatchlibs PASS"
+    "1315_each_lib PASS",
+    "1315_cli_each_lib PASS"
   ],
-  "when": "2026-08-10T09:08:39Z",
+  "when": "2026-08-10T09:29:03Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b5a51acd1d2c92145728b0aac174543ba9040093",
-  "note": "restored thrash; NEEDCOUNTMATCHLIBS 2 fat; HASCOUNTMATCHLIBS 50 plate soft miss"
+  "sha": "cafd0790c301c470a754bcaf06c1ee94fed3f93d",
+  "note": "EACH LIB MATCH fat; EACH LIB AS x MATCH guard; empty soft"
 }
