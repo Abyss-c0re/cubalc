@@ -1,0 +1,66 @@
+# NTHLIB / LASTLIB — index and last match stems for INCLUDE
+
+# NTHLIB 0 == PICKLIB first
+NTHLIB 0 plate
+ASSERT OK == 1
+ASSERT LAST == "plate_boot"
+ASSERT NTHLIB_N >= 10
+ASSERT NTHLIB_I == 0
+ASSERT NTHLIB_FILTER == "plate"
+
+# second sorted plate* stem
+NTHLIB 1 plate
+ASSERT OK == 1
+ASSERT LAST == "plate_both_save"
+ASSERT NTHLIB_I == 1
+
+# LASTLIB = last sorted match
+LASTLIB plate
+ASSERT OK == 1
+ASSERT LAST == "plate_uniform"
+ASSERT LASTLIB_N >= 10
+
+ENDLIB fat
+ASSERT OK == 1
+ASSERT LAST == "fat_session"
+ASSERT NTHLIB_N == 2
+
+# INDEXLIB alias
+INDEXLIB 0 agent
+ASSERT OK == 1
+ASSERT LAST == "agent_boot"
+
+# OR fallback on out-of-range / miss
+NTHLIB 99 plate OR agent_boot
+ASSERT OK == 1
+ASSERT LAST == "agent_boot"
+
+LASTLIB no_such_lib_xyz OR agent_boot
+ASSERT OK == 1
+ASSERT LAST == "agent_boot"
+ASSERT NTHLIB_N == 0
+
+# soft miss no fallback
+NTHLIB 0 no_such_lib_xyz
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+LASTLIB no_such_lib_xyz
+ASSERT OK == 0
+CLEAR_ERR
+
+# need needle / index
+NTHLIB 0 ""
+ASSERT OK == 0
+CLEAR_ERR
+
+# pick then INCLUDE
+NTHLIB 0 agent_boot
+ASSERT LAST == "agent_boot"
+INCLUDE LAST
+VERSION
+ASSERT OK == 1
+
+PASS
+PRINT "1310_nthlib: PASS"

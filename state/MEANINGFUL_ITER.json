@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 697,
-  "version": "1.15.724-usability",
-  "item": "CUBALC_MAX_VARS 256 + VARS_MAX/FULL",
-  "item_id": 733,
-  "title": "fat agent var budget 256; fix 64-slot var_slot bug; VARS max/full; STATUS vars_n",
-  "commit": "pending",
-  "summary": "Natural direction: fat REALWORLD boards drop specials under 128-var pressure (W408/W434). Raised ceiling, unified caps, sticky full err, proof 1274.",
+  "iter": 733,
+  "version": "1.15.760-usability",
+  "item": "NTHLIB/LASTLIB index and last match stems",
+  "item_id": 769,
+  "title": "NTHLIB idx + LASTLIB sorted duals of PICKLIB \u00b7 INCLUDE without MATCHLIBS+NTH",
+  "commit": "12fdeea19fa2cdf0e78db43528cf69b06677cf84",
+  "summary": "0-based Nth and last matching lib stems for INCLUDE. Completes PICKLIB family.",
   "proofs": [
-    "1274_vars_max PASS",
-    "586_vars reg PASS",
-    "12_hold_flash_plug reg PASS"
+    "1310_nthlib PASS",
+    "1310_cli_nthlib PASS"
   ],
-  "when": "2026-08-10T01:46:12Z",
-  "agent": "main_natural_evolve"
+  "when": "2026-08-10T11:30:00Z",
+  "agent": "meaningful_iter_10m",
+  "sha": "12fdeea19fa2cdf0e78db43528cf69b06677cf84",
+  "note": "NTHLIB 1 plate; LASTLIB plate; OR fallback; INCLUDE LAST"
 }

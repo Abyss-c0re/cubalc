@@ -796,6 +796,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 766. ~~**`PICKLIB` / `FIRSTLIB` needle `[OR fallback]`**~~ **done** (first sorted matching stem · INCLUDE without MATCHLIBS+NTH · soft miss / OR default).
 767. ~~**`INCLUDE` string-var / `LAST`**~~ **done** (`INCLUDE LAST` after PICKLIB · `INCLUDE lib` when lib is str var · bare stems unchanged).
 768. ~~**`HASMATCHLIBS` / `NEEDMATCHLIBS`**~~ **done** (soft 0|1 / fail-fast if any lib stem matches filter · MATCHLIBS triad gate · no bag+LINES glue).
+769. ~~**`NTHLIB` / `LASTLIB`**~~ **done** (0-based index + last sorted match stem · PICKLIB duals · INCLUDE without MATCHLIBS+NTH glue).
 
 ## Tick protocol
 
