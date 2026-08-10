@@ -2,17 +2,17 @@
   "schema": "cubalc.meaningful_iter.v1",
   "iter": 836,
   "version": "1.15.828-usability",
-  "item": "HASFLAGANY / NEEDFLAGANY any-of flags",
+  "item": "HASFLAGANY / NEEDFLAGANY",
   "item_id": 836,
-  "title": "HASFLAGANY · NEEDFLAGANY · FLAGHAVE · CLI dual flaggate any",
-  "commit": "004ffb4453168942837a4fbe7ff19a4ac183af72",
-  "summary": "Any-of multi --flag gate twin of HASFLAGALL; soft/hard; proof 1376 PASS.",
+  "title": "any-of multi named-flag gate \u00b7 FLAGHAVE bag \u00b7 hard NEEDFLAGANY",
+  "commit": "58b8e634e23a8f24047e005d8e340b96b311c53e",
+  "summary": "HASFLAGANY|HASANYFLAGS soft 0|1 if any named flag present; NEEDFLAGANY|REQUIREFLAGANY fail-fast if none. Twin of HASFLAGALL for --json OR --yaml OR --xml. Proof 1376 27 asserts + cli sh PASS.",
   "proofs": [
-    "1376_hasflagany PASS",
+    "1376_hasflagany 27/27",
     "1376_cli_hasflagany PASS"
   ],
-  "when": "2026-08-10T22:29:38Z",
+  "when": "2026-08-10T22:29:47Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "004ffb4453168942837a4fbe7ff19a4ac183af72",
-  "note": "completed partial catalog stubs · pairs HASFLAGALL"
+  "sha": "58b8e634e23a8f24047e005d8e340b96b311c53e",
+  "note": "pairs HASFLAGALL/NEEDFLAGS \u00b7 RELATED FLAGHAVE LISTFLAGS"
 }
