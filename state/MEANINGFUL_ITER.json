@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 782,
-  "version": "1.15.810-usability",
-  "item": "READY/NEEDREADY install prove checklist",
-  "item_id": 818,
-  "title": "READY|NEEDREADY \u00b7 cubalc ready \u00b7 ready.v1",
-  "commit": "f1945d2f5bf49e82e9bfa135237af9bf4699e82a",
-  "summary": "Install prove checklist forms+libs+DOCTOR without selftest soup. proof 1359 PASS.",
+  "iter": 783,
+  "version": "1.15.811-usability",
+  "item": "run -Y / CUBALC_REQUIRE_READY host prove floor",
+  "item_id": 819,
+  "title": "run -Y \u00b7 CUBALC_REQUIRE_READY \u00b7 plate require_ready",
+  "commit": "ea268448b37131aa590f4a6dba5020bf2d2ccda9",
+  "summary": "Host NEEDREADY prove checklist floor before body; completes -R/-C/-D triad. proof 1360 PASS.",
   "proofs": [
-    "1359_ready PASS",
+    "1360_cli_require_ready PASS",
     "1359_cli_ready PASS"
   ],
-  "when": "2026-08-10T19:06:07Z",
+  "when": "2026-08-10T19:12:25Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f1945d2f5bf49e82e9bfa135237af9bf4699e82a",
-  "note": "READY \u00b7 NEEDREADY \u00b7 cubalc ready \u00b7 READY_MISS bag"
+  "sha": "ea268448b37131aa590f4a6dba5020bf2d2ccda9",
+  "note": "run -Y \u00b7 --need-ready \u00b7 CUBALC_REQUIRE_READY \u00b7 require_ready plate"
 }
