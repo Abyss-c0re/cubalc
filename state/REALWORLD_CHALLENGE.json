@@ -3687,6 +3687,6 @@
     "iter276: FIRSTUNEQ LAST/LAST_N works under agent pressure (unlike UNIFORM_PATH)",
     "iter276: 9/9 green; empty needle finds first diverge among a/b/c"
   ],
-  "commit": "pending",
+  "commit": "01d5bdfc",
   "ts": "2026-08-10T01:08:57Z"
 }
