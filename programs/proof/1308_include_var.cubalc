@@ -1,0 +1,45 @@
+# INCLUDE resolves LAST and string vars (PICKLIB → INCLUDE LAST)
+
+# LAST after PICKLIB
+PICKLIB agent_boot
+ASSERT LAST == "agent_boot"
+INCLUDE LAST
+VERSION
+ASSERT OK == 1
+INCLUDESTEMS
+SYS HASLINE LAST "agent_boot"
+ASSERT LAST_N == 1
+
+# LET lib = stem then INCLUDE lib
+LET lib = "hold_seed"
+INCLUDE ONCE lib
+ASSERT OK == 1
+INCLUDESTEMS
+SYS HASLINE LAST "hold_seed"
+ASSERT LAST_N == 1
+
+# bare short name still works
+INCLUDE ONCE fat_boot
+ASSERT OK == 1
+INCLUDESTEMS
+SYS HASLINE LAST "fat_boot"
+ASSERT LAST_N == 1
+
+# quoted string still works
+INCLUDE ONCE "var_guard"
+ASSERT OK == 1
+INCLUDESTEMS
+SYS HASLINE LAST "var_guard"
+ASSERT LAST_N == 1
+
+# PICKLIB + OR + INCLUDE LAST chain
+PICKLIB no_such_xyz OR plate_boot
+ASSERT LAST == "plate_boot"
+INCLUDE ONCE LAST
+ASSERT OK == 1
+INCLUDESTEMS
+SYS HASLINE LAST "plate_boot"
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1308_include_var: PASS"

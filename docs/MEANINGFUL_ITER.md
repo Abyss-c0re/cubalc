@@ -794,6 +794,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 764. ~~**`cubalc libs [filter]`**~~ **done** (optional stem/path/hint substring · case-insensitive · `n_match`/`n_total`/`filter` plate · exit 1 on empty).
 765. ~~**`MATCHLIBS` / `FILTERLIBS` / `LIBMATCH`**~~ **done** (in-lang dual of `cubalc libs [filter]` · stem/path bag · MATCHLIBS_N · soft empty).
 766. ~~**`PICKLIB` / `FIRSTLIB` needle `[OR fallback]`**~~ **done** (first sorted matching stem · INCLUDE without MATCHLIBS+NTH · soft miss / OR default).
+767. ~~**`INCLUDE` string-var / `LAST`**~~ **done** (`INCLUDE LAST` after PICKLIB · `INCLUDE lib` when lib is str var · bare stems unchanged).
 
 ## Tick protocol
 

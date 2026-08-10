@@ -3219,6 +3219,8 @@ int main(int argc, char **argv) {
       {"cli_matchlibs", "programs/proof/1306_cli_matchlibs.sh", "MATCHLIBS bag + soft empty + forms"},
       {"picklib", "programs/proof/1307_picklib.cubalc", "PICKLIB/FIRSTLIB first match stem OR fallback"},
       {"cli_picklib", "programs/proof/1307_cli_picklib.sh", "PICKLIB plate + OR fallback + forms"},
+      {"include_var", "programs/proof/1308_include_var.cubalc", "INCLUDE LAST/str-var after PICKLIB/LET"},
+      {"cli_include_var", "programs/proof/1308_cli_include_var.sh", "INCLUDE var/LAST resolution smoke"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},

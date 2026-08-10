@@ -5690,6 +5690,7 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
    * Resolve: absolute · include_base/rel · rel · programs/rel ·
    * programs/lib/<name>[.cubalc] short form · CUBALC_ROOT · fail with tried paths.
    * Usability: INCLUDE hold_seed  or  INCLUDE "hold_seed" → programs/lib/…
+   * String-var / LAST: INCLUDE lib  after PICKLIB / LET lib = "agent_boot".
    * Soft: INCLUDE OR|SOFT|TRY name — missing file → OK=0 sticky LAST_ERR, no fatal.
    * Once: INCLUDE ONCE name — skip if same resolved path already loaded this run. */
   if (kw(&L->cur,"INCLUDE")||kw(&L->cur,"IMPORT")||kw(&L->cur,"USE")){
@@ -5707,11 +5708,22 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       lex_next(L);
     }
     if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){
-      fail_at(vm,L,"INCLUDE needs path|libname — INCLUDE hold_seed"); return -1;
+      fail_at(vm,L,"INCLUDE needs path|libname — INCLUDE hold_seed · INCLUDE LAST after PICKLIB"); return -1;
     }
     char path[768];
     char orig[512];
-    snprintf(orig, sizeof orig, "%s", L->cur.text);
+    /* Resolve IDENT as string var / LAST when set — else bare short name (lib stem). */
+    if (L->cur.kind == TK_STR) {
+      snprintf(orig, sizeof orig, "%s", L->cur.text);
+    } else if (strcmp(L->cur.text, "LAST") == 0 && vm->last_str[0]) {
+      snprintf(orig, sizeof orig, "%s", vm->last_str);
+    } else {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(orig, sizeof orig, "%s", vv->sval);
+      else
+        snprintf(orig, sizeof orig, "%s", L->cur.text);
+    }
     if (orig[0]=='/' || (vm->include_base[0]==0))
       snprintf(path,sizeof path,"%s",orig);
     else
