@@ -1,0 +1,28 @@
+# HASVARROOM n — soft 0|1 if free var slots >= n
+# Dual of NEEDVARROOM (hard) · IF without VARROOM+CMP glue.
+
+HASVARROOM 1
+ASSERT LAST_N == 1
+ASSERT HASVARROOM_N == 1
+ASSERT OK == 1
+ASSERT VARROOM > 0
+
+HASVARROOM 50
+ASSERT LAST_N == 1
+ASSERT OK == 1
+
+# absurd need → soft miss, sticky LAST_ERR, no fatal
+HASVARROOM 9999
+ASSERT LAST_N == 0
+ASSERT HASVARROOM_N == 0
+ASSERT OK == 0
+ASSERT VARROOM_NEED == 9999
+CLEAR_ERR
+
+# still can use hard gate after soft miss recovery
+NEEDVARROOM 10
+ASSERT OK == 1
+ASSERT LAST_N >= 10
+
+PASS
+PRINT "1277_hasvarroom: PASS"

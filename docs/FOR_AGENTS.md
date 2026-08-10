@@ -29,7 +29,7 @@ agent → .cubalc source → cubalc run → stdout JSON/board → agent
 ```bash
 cubalc run -I agent_boot -e 'STATUS'              # INCLUDE ONCE agent_boot first
 # STATUS/VARS + every run plate: vars_n · vars_max (256) · vars_full — fat boards no silent special drops
-# VARROOM → free slots LAST_N · NEEDVARROOM 20 fail-fast before nest specials
+# VARROOM → free slots LAST_N · HASVARROOM 20 soft 0|1 · NEEDVARROOM 20 fail-fast before nest specials
 cubalc -I plate_session my.cubalc                 # top-level -I (no run subcmd)
 export CUBALC_PRELOAD=agent_boot:hold_seed        # colon list env dual
 cubalc run -L "$PWD/mylibs" -I my_extra prog.cubalc  # one-shot CUBALC_INCLUDE_PATH

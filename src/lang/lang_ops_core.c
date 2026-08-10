@@ -36600,6 +36600,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DUMP", "DUMP — alias of PRINT_JSON"},
       {"VARS", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"VARROOM", "VARROOM|VARSLEFT — free var slots → LAST_N · dual of VARS_N/MAX"},
+      {"HASVARROOM", "HASVARROOM n — soft 0|1 if free slots >= n · sticky LAST_ERR on miss"},
       {"NEEDVARROOM", "NEEDVARROOM n — fail-fast if fewer than n free var slots"},
       {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time/vars_n|max|full)"},
       {"WHY", "WHY|EXPLAIN — cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED + hint"},
@@ -37573,19 +37574,25 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   /* VARROOM / VARSLEFT — free var-table slots → LAST_N.
+   * HASVARROOM n — soft 0|1 room >= n (sticky LAST_ERR on miss).
    * NEEDVARROOM n — fail-fast if fewer than n free (fat nest specials guard).
    * Usability: IF before SETP/ALLEQFLAT without VARS dump or plate parse. */
   if (kw(&L->cur, "VARROOM") || kw(&L->cur, "VARSLEFT") ||
       kw(&L->cur, "VARS_ROOM") || kw(&L->cur, "FREEVARS") ||
+      kw(&L->cur, "HASVARROOM") || kw(&L->cur, "HAVEVARROOM") ||
+      kw(&L->cur, "HAS_VARROOM") || kw(&L->cur, "ENOUGHVARS") ||
       kw(&L->cur, "NEEDVARROOM") || kw(&L->cur, "REQUIREVARROOM") ||
       kw(&L->cur, "NEED_VARROOM") || kw(&L->cur, "REQUIRE_VARS")) {
     int hard = kw(&L->cur, "NEEDVARROOM") || kw(&L->cur, "REQUIREVARROOM") ||
                kw(&L->cur, "NEED_VARROOM") || kw(&L->cur, "REQUIRE_VARS");
+    int soft_need = kw(&L->cur, "HASVARROOM") || kw(&L->cur, "HAVEVARROOM") ||
+                    kw(&L->cur, "HAS_VARROOM") || kw(&L->cur, "ENOUGHVARS");
     int aln = L->cur.line;
     long need = 1;
     long room;
+    int ok_room;
     lex_next(L);
-    if (hard) {
+    if (hard || soft_need) {
       if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
           L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
         need = parse_expr(vm, L);
@@ -37593,13 +37600,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     room = (long)CUBALC_MAX_VARS - (long)vm->n_vars;
     if (room < 0) room = 0;
+    ok_room = (room >= need && !vm->vars_full) ? 1 : 0;
     var_set_num(vm, "VARS_N", (long)vm->n_vars);
     var_set_num(vm, "VARS_MAX", (long)CUBALC_MAX_VARS);
     var_set_num(vm, "VARS_FULL", vm->vars_full ? 1L : 0L);
     var_set_num(vm, "VARROOM", room);
     var_set_num(vm, "VARS_LEFT", room);
+    var_set_num(vm, "VARROOM_NEED", need);
     if (hard) {
-      if (room >= need && !vm->vars_full) {
+      if (ok_room) {
         var_set_num(vm, "LAST_N", room);
         vm->last_n = room;
         {
@@ -37627,7 +37636,33 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         return -1;
       }
     }
-    /* soft VARROOM */
+    if (soft_need) {
+      /* HASVARROOM n — soft 0|1 · dual of NEEDVARROOM · IF without count compare */
+      var_set_num(vm, "LAST_N", ok_room);
+      vm->last_n = ok_room;
+      var_set_num(vm, "HASVARROOM_N", ok_room);
+      {
+        char nb[8];
+        snprintf(nb, sizeof nb, "%d", ok_room);
+        var_set_str(vm, "LAST", nb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      }
+      if (ok_room) {
+        var_set_num(vm, "OK", 1);
+      } else {
+        char em[192];
+        snprintf(em, sizeof em,
+                 "HASVARROOM miss line %d: need %ld free have %ld (used %d/%d) — "
+                 "lean LETs or NEEDVARROOM",
+                 aln, need, room, vm->n_vars, CUBALC_MAX_VARS);
+        var_set_str(vm, "ERR", em);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_num(vm, "OK", 0);
+      }
+      bump(vm);
+      return 1;
+    }
+    /* soft VARROOM count */
     var_set_num(vm, "LAST_N", room);
     vm->last_n = room;
     {
