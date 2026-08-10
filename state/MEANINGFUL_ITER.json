@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 825,
-  "version": "1.15.817-usability",
-  "item": "cli_boot + cubalc init --cli",
-  "item_id": 825,
-  "title": "cli_boot · init --cli · HELPFLAG+VERSIONFLAG+CLIINFO scaffold",
-  "commit": "4b6337ac9bec3115916e3a550b8c67b885de32f2",
-  "summary": "INCLUDE cli_boot agent CLI tool surface; init n=13; doctor lib_cli_boot; proofs 1365 PASS.",
+  "iter": 826,
+  "version": "1.15.818-usability",
+  "item": "CLI hasflagall/needflags · hasargall/needargs",
+  "item_id": 826,
+  "title": "flaggate/arggate CLI duals · optional -- live argv",
+  "commit": "5eef5da6e4bd79cc1a95d454e1a40750505137c0",
+  "summary": "Host duals of HASFLAGALL/NEEDFLAGS and HASARGALL/NEEDARGS; plates flaggate/arggate.v1; proof 1366 PASS.",
   "proofs": [
-    "1365_cli_boot PASS",
-    "1365_cli_init_cli PASS"
+    "1366_cli_flaggate PASS",
+    "1366_cli_arggate PASS"
   ],
-  "when": "2026-08-10T20:14:49Z",
+  "when": "2026-08-10T20:24:08Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "4b6337ac9bec3115916e3a550b8c67b885de32f2",
-  "note": "twin of ready_boot for product CLI tools"
+  "sha": "5eef5da6e4bd79cc1a95d454e1a40750505137c0",
+  "note": "hasforms twin for multi flag/arg contracts"
 }
