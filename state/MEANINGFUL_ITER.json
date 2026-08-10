@@ -1,19 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 672,
-  "version": "1.15.699-usability",
-  "item": "ALLEQFLAT + plate alleqflat",
-  "item_id": 708,
-  "title": "ALLEQFLAT/SAMEVALFLAT + cubalc plate alleqflat · all matching leaf values identical → LAST_N 0|1 · LAST=common value · multi-plate",
-  "commit": "e89003f8b1128c80d45078924b76bddcc1e3ab9d",
-  "summary": "Nest consistency without UNIQFLAT+LINES+CMP glue. proof 1249 + CLI PASS.",
+  "iter": 697,
+  "version": "1.15.724-usability",
+  "item": "CUBALC_MAX_VARS 256 + VARS_MAX/FULL",
+  "item_id": 733,
+  "title": "fat agent var budget 256; fix 64-slot var_slot bug; VARS max/full; STATUS vars_n",
+  "commit": "pending",
+  "summary": "Natural direction: fat REALWORLD boards drop specials under 128-var pressure (W408/W434). Raised ceiling, unified caps, sticky full err, proof 1274.",
   "proofs": [
-    "1249_alleqflat PASS",
-    "1249_cli_plate_alleqflat PASS",
-    "1248_delbyval reg PASS"
+    "1274_vars_max PASS",
+    "586_vars reg PASS",
+    "12_hold_flash_plug reg PASS"
   ],
-  "when": "2026-08-09T21:01:10Z",
-  "agent": "meaningful_iter_10m",
-  "sha": "e89003f8b1128c80d45078924b76bddcc1e3ab9d",
-  "note": "after DELBYVAL; EVOLVE_PAUSED"
+  "when": "2026-08-10T01:46:12Z",
+  "agent": "main_natural_evolve"
 }
