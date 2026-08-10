@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 739,
-  "version": "1.15.766-usability",
-  "item": "INCLUDE ALL MATCH bulk include filtered libs",
-  "item_id": 775,
-  "title": "INCLUDE ALL MATCH needle [DEFAULT] \u00b7 bulk filter include \u00b7 SOFT miss",
-  "commit": "eecdca3c5cc616c96893eed43d41758b7abe67b1",
-  "summary": "Bulk-include matching stems without EACH LIB+INCLUDE loop. proof 1316 PASS.",
+  "iter": 740,
+  "version": "1.15.767-usability",
+  "item": "NEWESTLIB/OLDESTLIB mtime filter pick",
+  "item_id": 776,
+  "title": "NEWESTLIB/OLDESTLIB by mtime \u00b7 dual of alpha PICKLIB \u00b7 OR fallback",
+  "commit": "7e915fba1b0e8b84456b9049bac0856d0fd4c39a",
+  "summary": "Freshest/oldest matching lib stem for INCLUDE without shell ls -t. proof 1317 PASS.",
   "proofs": [
-    "1316_include_all_match PASS",
-    "1316_cli_include_all_match PASS"
+    "1317_newestlib PASS",
+    "1317_cli_newestlib PASS"
   ],
-  "when": "2026-08-10T09:36:44Z",
+  "when": "2026-08-10T09:46:42Z",
   "agent": "meaningful_iter_10m",
-  "sha": "eecdca3c5cc616c96893eed43d41758b7abe67b1",
-  "note": "INCLUDE ALL MATCH guard; DEFAULT hold_seed; SOFT miss"
+  "sha": "7e915fba1b0e8b84456b9049bac0856d0fd4c39a",
+  "note": "NEWESTLIB fat\u2192fat_session; OLDESTLIB fat\u2192fat_boot; OR fallback"
 }
