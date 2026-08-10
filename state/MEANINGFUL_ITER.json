@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 743,
-  "version": "1.15.770-usability",
-  "item": "SORTLIBS + CLI sortlibs mtime bag",
-  "item_id": 779,
-  "title": "SORTLIBS|LIBSORT needle [ASC|DESC] \u00b7 cubalc sortlibs \u00b7 mtime-ordered match bag",
-  "commit": "b74e18bb4f6f97dac44c4392c95ea88d07c2a831",
-  "summary": "mtime-ordered lib stems (newest-first); dual of alpha MATCHLIBS; CLI stems+mtimes. proof 1320 PASS.",
+  "iter": 744,
+  "version": "1.15.771-usability",
+  "item": "FRESHLIBS/STALELIBS age-filter bags + CLI",
+  "item_id": 780,
+  "title": "FRESHLIBS|STALELIBS needle [age_sec] \u00b7 cubalc freshlibs|stalelibs \u00b7 age filter",
+  "commit": "fe70f330486e950107987a0a1a4d5b769541dc3d",
+  "summary": "age-filter match bags (\u2264max fresh / \u2265min stale); newest-first; CLI ages+mtimes. proof 1321 PASS.",
   "proofs": [
-    "1320_sortlibs PASS",
-    "1320_cli_sortlibs PASS"
+    "1321_freshlibs PASS",
+    "1321_cli_freshlibs PASS"
   ],
-  "when": "2026-08-10T10:23:33Z",
+  "when": "2026-08-10T10:37:33Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b74e18bb4f6f97dac44c4392c95ea88d07c2a831",
-  "note": "SORTLIBS fat \u2192 fat_session\\nfat_boot; ASC oldest-first; head dual of NEWESTLIB"
+  "sha": "fe70f330486e950107987a0a1a4d5b769541dc3d",
+  "note": "FRESHLIBS fat 1e6\u21922; FRESHLIBS fat 10\u21920; STALELIBS fat 10\u21922"
 }
