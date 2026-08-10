@@ -5282,7 +5282,7 @@
     "REQUIRE DOCTOR parse fail; slim doctor plate missing http_required; binary missing thrice; board 9/9 after NEEDDOCTOR-only soft",
     "REQUIRE DOCTOR multiword broke soft/probe scoring; solid aliases only; board 9/9; needdoctor selftest now green"
   ],
-  "commit": "pending",
+  "commit": "3f2d1928",
   "ts": "2026-08-10T19:05:04Z",
-  "board_commit": "pending"
+  "board_commit": "3f2d1928"
 }
