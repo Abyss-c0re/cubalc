@@ -3221,6 +3221,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"REQUIRE RESTARGS", "REQUIRE RESTARGS|POS [min] — fail if non-flag count < min · LAST=bag"},
       {"HASARG", "HASARG n|name — soft 0|1 if program arg present (REQUIRE ARG twin)"},
       {"HASARGC", "HASARGC [min] — soft 0|1 if ARGC >= min (default 1)"},
+      {"HASARGALL", "HASARGALL|HASALLARGS n|name… — soft 0|1 all args present · ARGMISS bag"},
+      {"NEEDARGS", "NEEDARGS|REQUIREARGS n|name… — fail-fast if any arg missing · multi HASARG"},
       {"HASFLAG", "HASFLAG name[,|alt] — soft 0|1 if any alias --name/-name · FLAG_HIT_NAME"},
       {"GETFLAG", "GETFLAG name[,|alt] [OR ENV n]* [OR fb] — string peel · CLI>ENV>default · GETFLAG_SRC"},
       {"GETFLAGPATH", "GETFLAGPATH|FLAGPATH name[,|alt] [OR ENV n]* [OR path] — path peel + ABSPATH · EXIST · soft twin of REQUIRE FLAGPATH"},
@@ -39539,6 +39541,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NEEDFLAGS", "USAGE"}, {"NEEDFLAGS", "FLAGMISS"},
       {"HASFLAGS", "HASFLAGALL"}, {"HASFLAGS", "LISTFLAGS"}, {"HASFLAGS", "HASFLAG"},
       {"LISTFLAGS", "HASFLAGS"}, {"LISTFLAGS", "HASFLAGALL"}, {"LISTFLAGS", "FLAGMAP"},
+      /* multi CLI arg contract (HASFLAGALL twin for CUBALC_ARGn / env names) */
+      {"HASARG", "HASARGALL"}, {"HASARG", "NEEDARGS"}, {"HASARG", "REQUIRE ARG"},
+      {"HASARGALL", "NEEDARGS"}, {"HASARGALL", "HASARG"}, {"HASARGALL", "ARGMISS"},
+      {"HASARGALL", "HASARGC"}, {"HASARGALL", "RESTARGS"},
+      {"NEEDARGS", "HASARGALL"}, {"NEEDARGS", "HASARG"}, {"NEEDARGS", "REQUIRE ARG"},
+      {"NEEDARGS", "USAGE"}, {"NEEDARGS", "ARGMISS"},
+      {"HASARGC", "HASARGALL"}, {"HASARGC", "HASARG"}, {"HASARGC", "NEEDARGS"},
       {"FORMHINT", "HASFORM"}, {"FORMHINT", "LISTFORMS"}, {"FORMHINT", "RELATED"},
       {"FORMHINT", "FORMSFOR"}, {"FORMHINT", "TIPS"},
       {"LISTFORMS", "COUNTFORMS"}, {"LISTFORMS", "HASFORM"}, {"LISTFORMS", "FORMHINT"},
@@ -63250,6 +63259,253 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# hasargc >= %ld (have %ld) → %ld\n", need, have, hit);
     bump(vm); return 1;
+  }
+  /* HASARGALL|NEEDARGS n|name… — multi program-arg presence gate (all-or-ARGMISS).
+   * Soft: LAST_N 0|1 · ARGMISS bag · HASARGALL_N have count.
+   * Hard NEEDARGS|REQUIREARGS fail-fast first miss (USAGE tip when set).
+   * Keys: numeric index → CUBALC_ARGn · digit str same · else getenv(name).
+   * Usability: CLI contracts without N× HASARG glue · bag/CSV/idents.
+   * Twin of HASFLAGALL for args · not HASARGS (HASARGC count alias). */
+  if (kw(&L->cur,"HASARGALL") || kw(&L->cur,"HAS_ARG_ALL") ||
+      kw(&L->cur,"HASALLARGS") || kw(&L->cur,"ALLARGS_OK") ||
+      kw(&L->cur,"ARGALL?") || kw(&L->cur,"NEEDARGS") ||
+      kw(&L->cur,"NEED_ARGS") || kw(&L->cur,"REQUIREARGS") ||
+      kw(&L->cur,"MUSTARGS") || kw(&L->cur,"REQUIRE_ARGS")) {
+    int hard = kw(&L->cur,"NEEDARGS") || kw(&L->cur,"NEED_ARGS") ||
+               kw(&L->cur,"REQUIREARGS") || kw(&L->cur,"MUSTARGS") ||
+               kw(&L->cur,"REQUIRE_ARGS");
+    char keys[32][96];
+    char envns[32][96];
+    char miss[1024], havebag[1024];
+    int nkey = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line;
+    size_t mo = 0, ho = 0;
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    while (nkey < 32) {
+      char key[96], envn[96];
+      int all_digit = 1, pi;
+      key[0] = 0;
+      envn[0] = 0;
+      if (L->cur.kind == TK_NUM) {
+        snprintf(key, sizeof key, "%ld", L->cur.num);
+        snprintf(envn, sizeof envn, "CUBALC_ARG%ld", L->cur.num);
+        lex_next(L);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (L->cur.kind == TK_IDENT &&
+            (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+             kw(&L->cur,"REQUIRE") || kw(&L->cur,"END") ||
+             kw(&L->cur,"IF") || kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") ||
+             kw(&L->cur,"PASS") || kw(&L->cur,"FAIL") || kw(&L->cur,"INCLUDE") ||
+             kw(&L->cur,"SYS") || kw(&L->cur,"HELP") || kw(&L->cur,"CLEAR_ERR") ||
+             kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"DEFAULT") ||
+             kw(&L->cur,"VERSION") || kw(&L->cur,"STATUS") || kw(&L->cur,"FOR") ||
+             kw(&L->cur,"WHILE") || kw(&L->cur,"LOOP") || kw(&L->cur,"EACH") ||
+             kw(&L->cur,"USAGE") || kw(&L->cur,"HELPFLAG") || kw(&L->cur,"CUBE") ||
+             kw(&L->cur,"PLUG") || kw(&L->cur,"HOLD_FLASH") ||
+             kw(&L->cur,"HASARG") || kw(&L->cur,"HASARGC") ||
+             kw(&L->cur,"HASFLAG") || kw(&L->cur,"HASFLAGS") ||
+             kw(&L->cur,"HASFLAGALL") || kw(&L->cur,"NEEDFLAGS") ||
+             kw(&L->cur,"LISTFLAGS") || kw(&L->cur,"GETFLAG") ||
+             kw(&L->cur,"RESTARGS") || kw(&L->cur,"HASRESTARGS")))
+          break;
+        if (L->cur.kind == TK_STR &&
+            (strchr(L->cur.text, '\n') || strchr(L->cur.text, ',') ||
+             strchr(L->cur.text, ' ') || strchr(L->cur.text, '|'))) {
+          const char *p = L->cur.text;
+          while (*p && nkey < 32) {
+            char tok[96];
+            size_t tl = 0;
+            int ad = 1;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' ||
+                   *p == '|' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != '|' && p[tl] != ':' &&
+                   tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (!tok[0]) continue;
+            for (pi = 0; tok[pi]; pi++) {
+              if (tok[pi] < '0' || tok[pi] > '9') { ad = 0; break; }
+            }
+            snprintf(keys[nkey], sizeof keys[0], "%s", tok);
+            if (ad)
+              snprintf(envns[nkey], sizeof envns[0], "CUBALC_ARG%s", tok);
+            else if (strncmp(tok, "CUBALC_ARG", 10) == 0)
+              snprintf(envns[nkey], sizeof envns[0], "%s", tok);
+            else
+              snprintf(envns[nkey], sizeof envns[0], "%s", tok);
+            nkey++;
+          }
+          lex_next(L);
+          continue;
+        }
+        {
+          Var *vv = (L->cur.kind == TK_IDENT) ? var_get(vm, L->cur.text, 0) : NULL;
+          if (vv && vv->is_str && vv->sval[0] &&
+              (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+               strchr(vv->sval, ' ') || strchr(vv->sval, '|'))) {
+            const char *p = vv->sval;
+            while (*p && nkey < 32) {
+              char tok[96];
+              size_t tl = 0;
+              int ad = 1;
+              while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' ||
+                     *p == '|' || *p == ':')
+                p++;
+              if (!*p) break;
+              while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                     p[tl] != '\t' && p[tl] != '|' && p[tl] != ':' &&
+                     tl + 1 < sizeof tok) {
+                tok[tl] = p[tl];
+                tl++;
+              }
+              tok[tl] = 0;
+              p += tl;
+              if (!tok[0]) continue;
+              for (pi = 0; tok[pi]; pi++) {
+                if (tok[pi] < '0' || tok[pi] > '9') { ad = 0; break; }
+              }
+              snprintf(keys[nkey], sizeof keys[0], "%s", tok);
+              if (ad)
+                snprintf(envns[nkey], sizeof envns[0], "CUBALC_ARG%s", tok);
+              else if (strncmp(tok, "CUBALC_ARG", 10) == 0)
+                snprintf(envns[nkey], sizeof envns[0], "%s", tok);
+              else
+                snprintf(envns[nkey], sizeof envns[0], "%s", tok);
+              nkey++;
+            }
+            lex_next(L);
+            continue;
+          }
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(key, sizeof key, "%s", vv->sval);
+          else if (vv && !vv->is_str)
+            snprintf(key, sizeof key, "%ld", vv->val);
+          else if (strcmp(L->cur.text, "LAST") == 0)
+            snprintf(key, sizeof key, "%s", vm->last_str);
+          else
+            snprintf(key, sizeof key, "%s", L->cur.text);
+        }
+        lex_next(L);
+        for (pi = 0; key[pi]; pi++) {
+          if (key[pi] < '0' || key[pi] > '9') { all_digit = 0; break; }
+        }
+        if (all_digit && key[0])
+          snprintf(envn, sizeof envn, "CUBALC_ARG%s", key);
+        else if (strncmp(key, "CUBALC_ARG", 10) == 0)
+          snprintf(envn, sizeof envn, "%s", key);
+        else
+          snprintf(envn, sizeof envn, "%s", key);
+      } else {
+        break;
+      }
+      if (!key[0]) continue;
+      snprintf(keys[nkey], sizeof keys[0], "%s", key);
+      snprintf(envns[nkey], sizeof envns[0], "%s", envn);
+      nkey++;
+    }
+    if (nkey == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDARGS n|name… — NEEDARGS 0 1 · HASARGALL bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASARGALL_N", 0);
+      var_set_num(vm, "ARGMISS_N", 0);
+      var_set_num(vm, "NEEDARGS_N", 0);
+      var_set_str(vm, "ARGMISS", "");
+      var_set_str(vm, "ARGHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASARGALL: need n|name… — HASARGALL 0 1 file");
+      var_set_str(vm, "ERR", "HASARGALL: need n|name… — HASARGALL 0 1 file");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nkey; i++) {
+      const char *val = getenv(envns[i]);
+      int hit = (val && val[0]) ? 1 : 0;
+      if (hit) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(keys[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, keys[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+        continue;
+      }
+      nmiss++;
+      if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+      {
+        size_t ln = strlen(keys[i]);
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, keys[i], ln);
+          mo += ln;
+          miss[mo] = 0;
+        }
+      }
+      if (hard) {
+        char em[280];
+        Var *vu = var_get(vm, "USAGE", 0);
+        const char *use = (vu && vu->is_str && vu->sval[0]) ? vu->sval : "";
+        if (use[0])
+          snprintf(em, sizeof em,
+                   "NEEDARGS miss line %d: '%s' (+%d more?) — set arg/env · usage: %s",
+                   aln, keys[i], nkey - i - 1, use);
+        else
+          snprintf(em, sizeof em,
+                   "NEEDARGS miss line %d: '%s' (+%d more?) — set CUBALC_ARG/env · HASARGALL · USAGE",
+                   aln, keys[i], nkey - i - 1);
+        var_set_str(vm, "ARGMISS", miss);
+        var_set_num(vm, "ARGMISS_N", nmiss);
+        var_set_str(vm, "ARGHAVE", havebag);
+        var_set_num(vm, "HASARGALL_N", nhave);
+        fail_at(vm, L, em);
+        return -1;
+      }
+    }
+    var_set_str(vm, "ARGMISS", miss);
+    var_set_str(vm, "ARGHAVE", havebag);
+    var_set_num(vm, "ARGMISS_N", nmiss);
+    var_set_num(vm, "HASARGALL_N", nhave);
+    var_set_num(vm, "NEEDARGS_N", nkey);
+    var_set_num(vm, "ARGS_NEED_N", nkey);
+    if (nmiss == 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASARGALL miss (%d/%d): %s — set args · NEEDARGS · USAGE",
+               nmiss, nkey, miss);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# hasargall n=%d have=%d miss=%d hard=%d\n",
+              nkey, nhave, nmiss, hard);
+    bump(vm);
+    return 1;
   }
   /* HASFLAG name[,|alt...] — soft 0|1 if any alias --name / -name present.
    * GETFLAG name[,|alt...] [OR|DEFAULT fallback] — LAST = value (bare → "1").

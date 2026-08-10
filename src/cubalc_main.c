@@ -3495,6 +3495,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_init_ready", "programs/proof/1361_cli_init_ready.sh", "cubalc init --ready scaffold + doctor"},
       {"hasflagall", "programs/proof/1362_hasflagall.cubalc", "HASFLAGALL multi named-flag soft gate"},
       {"cli_hasflagall", "programs/proof/1362_cli_hasflagall.sh", "HASFLAGALL/NEEDFLAGS forms + CLI --args"},
+      {"hasargall", "programs/proof/1363_hasargall.cubalc", "HASARGALL multi arg soft gate"},
+      {"cli_hasargall", "programs/proof/1363_cli_hasargall.sh", "HASARGALL/NEEDARGS forms + CLI args"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -5709,6 +5711,13 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"NEEDFLAGS", "USAGE"}, {"NEEDFLAGS", "FLAGMISS"},
       {"HASFLAGS", "HASFLAGALL"}, {"HASFLAGS", "LISTFLAGS"}, {"HASFLAGS", "HASFLAG"},
       {"LISTFLAGS", "HASFLAGS"}, {"LISTFLAGS", "HASFLAGALL"}, {"LISTFLAGS", "FLAGMAP"},
+      /* multi CLI arg contract (HASFLAGALL twin for CUBALC_ARGn) */
+      {"HASARG", "HASARGALL"}, {"HASARG", "NEEDARGS"}, {"HASARG", "REQUIRE ARG"},
+      {"HASARGALL", "NEEDARGS"}, {"HASARGALL", "HASARG"}, {"HASARGALL", "ARGMISS"},
+      {"HASARGALL", "HASARGC"}, {"HASARGALL", "RESTARGS"},
+      {"NEEDARGS", "HASARGALL"}, {"NEEDARGS", "HASARG"}, {"NEEDARGS", "REQUIRE ARG"},
+      {"NEEDARGS", "USAGE"}, {"NEEDARGS", "ARGMISS"},
+      {"HASARGC", "HASARGALL"}, {"HASARGC", "HASARG"}, {"HASARGC", "NEEDARGS"},
     };
     const char *name = (argc > 2 && argv[2][0]) ? argv[2] : "";
     char nup[96];

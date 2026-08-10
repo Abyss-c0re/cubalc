@@ -850,6 +850,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 820. ~~**`HASFLAGS` / `HASFLAGC`**~~ **done** (soft flag-count probe · LISTFLAGS twin without bag clobber · proof 1359).
 821. ~~**`ready_boot` + `cubalc init --ready`**~~ **done** (agent_boot+NEEDREADY prove gate · init scaffold n=12 · doctor lib_ready_boot · twin of doctor_boot).
 822. ~~**`HASFLAGALL` / `NEEDFLAGS`**~~ **done** (multi named-flag presence · FLAGMISS bag · HASFORMS twin for --flags · proof 1362).
+823. ~~**`HASARGALL` / `NEEDARGS`**~~ **done** (multi arg n|name presence · ARGMISS bag · HASFLAGALL twin for CUBALC_ARGn · proof 1363).
 
 ## Tick protocol
 
