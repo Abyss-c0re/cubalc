@@ -36635,6 +36635,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"MATCHLIBS", "MATCHLIBS|FILTERLIBS needle — bag of stems matching stem/path · dual of cubalc libs [filter]"},
       {"FILTERLIBS", "FILTERLIBS alias of MATCHLIBS"},
       {"LIBMATCH", "LIBMATCH alias of MATCHLIBS"},
+      {"HASMATCHLIBS", "HASMATCHLIBS|HASLIBS needle — soft 0|1 any stem matches filter · dual of MATCHLIBS bag"},
+      {"NEEDMATCHLIBS", "NEEDMATCHLIBS|NEEDLIBS needle — fail-fast if no lib matches filter · install gate"},
       {"PICKLIB", "PICKLIB|FIRSTLIB needle [OR fallback] — first matching stem · INCLUDE without MATCHLIBS+NTH"},
       {"FIRSTLIB", "FIRSTLIB alias of PICKLIB"},
       {"HASLIB", "HASLIB name — soft 0|1 if stdlib/project lib stem exists · dual of LISTLIBS"},
@@ -38062,6 +38064,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     /* Actionable recovery tips from sticky error text */
     if (!err[0] && okv)
       snprintf(hintbuf, sizeof hintbuf, "ok — no sticky LAST_ERR");
+    else if (strstr(err, "NEEDMATCHLIBS") || strstr(err, "HASMATCHLIBS"))
+      snprintf(hintbuf, sizeof hintbuf,
+               "MATCHLIBS · cubalc libs [filter] · install matching libs · PICKLIB");
     else if (strstr(err, "NEEDDEPS") || strstr(err, "HASDEPS") ||
              strstr(err, "CHECKDEPS") || strstr(err, "DEPS_MISS"))
       snprintf(hintbuf, sizeof hintbuf,

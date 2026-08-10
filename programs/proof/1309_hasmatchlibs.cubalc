@@ -1,0 +1,26 @@
+# HASMATCHLIBS / NEEDMATCHLIBS — soft/hard filter presence gates
+
+HASMATCHLIBS plate
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+HASMATCHLIBS fat
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+NEEDMATCHLIBS agent
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# miss soft
+HASMATCHLIBS no_such_lib_xyz_zzz
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# case-insensitive
+HASMATCHLIBS PLATE
+ASSERT OK == 1
+
+PASS
+PRINT "1309_hasmatchlibs: PASS"

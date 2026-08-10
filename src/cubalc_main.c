@@ -3221,6 +3221,8 @@ int main(int argc, char **argv) {
       {"cli_picklib", "programs/proof/1307_cli_picklib.sh", "PICKLIB plate + OR fallback + forms"},
       {"include_var", "programs/proof/1308_include_var.cubalc", "INCLUDE LAST/str-var after PICKLIB/LET"},
       {"cli_include_var", "programs/proof/1308_cli_include_var.sh", "INCLUDE var/LAST resolution smoke"},
+      {"hasmatchlibs", "programs/proof/1309_hasmatchlibs.cubalc", "HASMATCHLIBS/NEEDMATCHLIBS filter presence gates"},
+      {"cli_hasmatchlibs", "programs/proof/1309_cli_hasmatchlibs.sh", "HASMATCHLIBS soft + NEEDMATCHLIBS fail + forms"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3724,6 +3726,8 @@ int main(int argc, char **argv) {
       {"LISTLIBS", "flow", "LISTLIBS|LIBSTEMS short names from programs/lib · dual of cubalc libs"},
       {"MATCHLIBS", "flow", "MATCHLIBS|FILTERLIBS needle bag of stems · dual of cubalc libs [filter]"},
       {"FILTERLIBS", "flow", "FILTERLIBS alias of MATCHLIBS"},
+      {"HASMATCHLIBS", "flow", "HASMATCHLIBS needle soft 0|1 any stem matches filter"},
+      {"NEEDMATCHLIBS", "flow", "NEEDMATCHLIBS needle fail-fast if no match · install gate"},
       {"PICKLIB", "flow", "PICKLIB|FIRSTLIB needle [OR fallback] first matching stem for INCLUDE"},
       {"FIRSTLIB", "flow", "FIRSTLIB alias of PICKLIB"},
       {"HASLIB", "flow", "HASLIB name soft 0|1 if lib stem exists on INCLUDE path"},
@@ -13452,6 +13456,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"LISTLIBS", "flow", "LISTLIBS|LIBSTEMS short names from programs/lib · dual of cubalc libs"},
       {"MATCHLIBS", "flow", "MATCHLIBS|FILTERLIBS needle bag of stems · dual of cubalc libs [filter]"},
       {"FILTERLIBS", "flow", "FILTERLIBS alias of MATCHLIBS"},
+      {"HASMATCHLIBS", "flow", "HASMATCHLIBS needle soft 0|1 any stem matches filter"},
+      {"NEEDMATCHLIBS", "flow", "NEEDMATCHLIBS needle fail-fast if no match · install gate"},
       {"PICKLIB", "flow", "PICKLIB|FIRSTLIB needle [OR fallback] first matching stem for INCLUDE"},
       {"FIRSTLIB", "flow", "FIRSTLIB alias of PICKLIB"},
       {"HASLIB", "flow", "HASLIB name soft 0|1 if lib stem exists on INCLUDE path"},
@@ -14938,7 +14944,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]\n"
       "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|MATCHLIBS|PICKLIB|HASLIB|CATLIB|GREPLIB|LIBDEPS|LIBTREE|CHECKDEPS|NEEDDEPS|RECIPE\n"
+      "    LISTLIBS|MATCHLIBS|HASMATCHLIBS|NEEDMATCHLIBS|PICKLIB|HASLIB|CATLIB|LIBDEPS|CHECKDEPS|RECIPE\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"
