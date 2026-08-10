@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 302,
-  "program": "programs/realworld/svc_errtips_recover_board.cubalc",
-  "theme": "ERRTIPS sticky-error recovery tip bags fleet incident",
-  "version": "1.15.786-usability",
+  "iter": 303,
+  "program": "programs/realworld/svc_errrun_topicwalk_board.cubalc",
+  "theme": "ERRRUN recover + EACH TOPIC walk + TOPICHINT docs",
+  "version": "1.15.789-usability",
   "pass": true,
-  "prior_note": "iter 301 LISTTOPICS/TOPIC/RUNSNIP; this iter first realworld 1336 ERRTIPS/FIXTIPS",
+  "prior_note": "iter 302 ERRTIPS only; this iter first realworld 1337 ERRRUN + 1338 EACH TOPIC + 1339 TOPICHINT",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate errtips",
+      "cmd": "seed agent plate errwalk",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "class",
-      "cmd": "sticky FAIL lib/cap/p2p/run classes",
+      "name": "recover",
+      "cmd": "ERRRUN sticky/arg + RECOVERSNIP",
       "ok": true,
-      "note": "class"
+      "note": "recover"
     },
     {
-      "name": "fix",
-      "cmd": "arg override + FIXTIPS + var err",
+      "name": "walk",
+      "cmd": "EACH TOPIC n=8 + MATCH + HASTOPIC",
       "ok": true,
-      "note": "fix"
+      "note": "walk"
     },
     {
-      "name": "chain",
-      "cmd": "ERRTIPS topic \u2192 TIPS chain",
+      "name": "hint",
+      "cmd": "TOPICHINT/DESCRIBETOPIC + EACH",
       "ok": true,
-      "note": "chain"
+      "note": "hint"
     },
     {
       "name": "soft",
-      "cmd": "clean general + noise",
+      "cmd": "TOPICHINT miss + empty MATCH",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "plate surface + live class",
+      "cmd": "ERRRUN run class + LISTTOPICS",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "FIXTIPS p2p/run",
+      "cmd": "RECOVERSNIP + DESCRIBETOPIC",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + sticky classify",
+      "cmd": "PRINT clobber + MATCH p + walk",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "CLI duals still red; errtips PASS"
+      "note": "CLI duals still red; errrun/each/hint PASS"
     }
   ],
   "weaknesses": [
@@ -4578,6 +4578,46 @@
       "title": "Unknown noise still yields tips_n>=1 (general fallback), not empty soft-miss",
       "detail": "ERRTIPS \"zzzz completely unknown\" still returns a tip bag (general or nearest). Not OK=0 empty \u2014 different from HASTOPIC soft miss. Agents cannot use tips_n==0 as unknown-err signal.",
       "repro": "ERRTIPS \"zzzz noise\"; PRINT ERRTIPS_N \u2192 >=1"
+    },
+    {
+      "id": "W564",
+      "severity": "med",
+      "area": "lang|each_topic",
+      "title": "EACH TOPIC without END hard-fails (err on incomplete loop)",
+      "detail": "Bare EACH TOPIC MATCH without END \u2192 EACH TOPIC without END. Agents must always close END. Multi-line -e snippets fail easily when END omitted.",
+      "repro": "EACH TOPIC MATCH \"a\" without END \u2192 sticky err"
+    },
+    {
+      "id": "W565",
+      "severity": "med",
+      "area": "lang|errrun",
+      "title": "ERRRUN nested RUNSNIP dumps recipe/JSON noise into agent stdout",
+      "detail": "ERRRUN lib recovery runs nested SNIP that may RECIPE/PRINT liberally. Board still OK but ops logs get polluted. Prefer -q host or quieter snips for production recover paths.",
+      "repro": "ERRRUN after INCLUDE miss \u2192 recipe JSON + runsnip notes on stdout"
+    },
+    {
+      "id": "W566",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT after TOPICHINT clobbers docs in LAST (reconfirmed)",
+      "detail": "Capture body before PRINT. Probe: HASI stem VARROOM works; HASI LAST after PRINT fails.",
+      "repro": "TOPICHINT fat; PRINT x; SYS HASI LAST VARROOM \u2192 0"
+    },
+    {
+      "id": "W567",
+      "severity": "low",
+      "area": "lang|each_topic",
+      "title": "EACH TOPIC MATCH is substring on topic id (filter \"a\"/\"p\" not glob)",
+      "detail": "MATCH \"a\" hits general/cap/fat/plate; MATCH \"p\" hits plate/p2p/protect. Not regex. Empty MATCH yields 0 iterations and EACHTOPICS_N=0.",
+      "repro": "EACH TOPIC MATCH \"p\"; count \u22652"
+    },
+    {
+      "id": "W568",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META omit trailing NL (reconfirmed errwalk board)",
+      "detail": "od META ends 5a without 0a. STATUS last line no $.",
+      "repro": "od -An -tx1 META.txt | tail -1"
     }
   ],
   "workarounds": [
@@ -4632,7 +4672,9 @@
     "never name subcmd run; use exec|go|apply after cubalc run",
     "TOPIC_SNIP_N for snip presence; capture LAST before PRINT after TOPIC",
     "ERRTIPS \"explicit incident text\" for known classes; CLEAR_ERR after classify",
-    "chain: LET t=ERRTIPS_TOPIC; TIPS t for full topic tips after recovery class"
+    "chain: LET t=ERRTIPS_TOPIC; TIPS t for full topic tips after recovery class",
+    "always END after EACH TOPIC; capture TOPICHINT LAST before PRINT",
+    "use cubalc run -q for quieter ERRRUN recovery paths"
   ],
   "language_gaps": [
     "PRETTYP/JSONPRETTY/PRETTYJSON plate evidence dump",
@@ -4692,7 +4734,10 @@
     "SYS EMPTY TOPIC_SNIP polarity easy to misread (W557)",
     "ERRTIPS keyword heuristics not structured taxonomy (W559)",
     "unknown noise no empty soft-miss (W563)",
-    "PRINT clobber after ERRTIPS bag (W561)"
+    "PRINT clobber after ERRTIPS bag (W561)",
+    "EACH TOPIC requires END (W564)",
+    "ERRRUN nested snip stdout noise (W565)",
+    "MATCH substring on topic ids not glob (W567)"
   ],
   "issues_faced": [
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
@@ -4762,9 +4807,12 @@
     "iter301: board 10/10 green after exec rename; selftest CLI duals still red",
     "iter302: ERRTIPS heuristic classes lib/cap/p2p/run/fat all green",
     "iter302: chain TIPS after ERRTIPS_TOPIC works; noise falls back general (W563)",
-    "iter302: board 10/10; selftest CLI duals still red"
+    "iter302: board 10/10; selftest CLI duals still red",
+    "iter303: ERRRUN+EACH TOPIC+TOPICHINT all green first pass",
+    "iter303: EACH TOPIC without END is hard fail (W564); nested ERRRUN noisy (W565)",
+    "iter303: selftest CLI duals still red"
   ],
-  "commit": "2c87b609",
-  "ts": "2026-08-10T14:04:24Z",
+  "commit": "pending",
+  "ts": "2026-08-10T14:29:15Z",
   "board_commit": "2c87b609"
 }
