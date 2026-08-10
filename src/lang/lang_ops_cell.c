@@ -189,6 +189,175 @@ static int include_parse_want(VM *vm, Lex *L, char *want, size_t want_sz) {
   return 0;
 }
 
+/* Resolve short lib name → path (INCLUDE search order). Returns 1 if found. */
+static int lib_resolve_path(const char *name, char *path, size_t pathsz,
+                            char *base_out, size_t basesz) {
+  char base[160];
+  const char *slash, *leaf, *ip, *root;
+  size_t blen;
+  FILE *f = NULL;
+  if (!name || !name[0] || !path || pathsz < 8) return 0;
+  path[0] = 0;
+  slash = strrchr(name, '/');
+  leaf = slash ? slash + 1 : name;
+  snprintf(base, sizeof base, "%s", leaf);
+  blen = strlen(base);
+  if (blen > 7 && strcmp(base + blen - 7, ".cubalc") == 0)
+    base[blen - 7] = 0;
+  if (base_out && basesz)
+    snprintf(base_out, basesz, "%s", base);
+  if (name[0] == '/' || strchr(name, '/')) {
+    f = fopen(name, "rb");
+    if (f) { snprintf(path, pathsz, "%s", name); fclose(f); return 1; }
+  }
+  {
+    char p3[768];
+    snprintf(p3, sizeof p3, "programs/lib/%s.cubalc", base);
+    f = fopen(p3, "rb");
+    if (f) { snprintf(path, pathsz, "%s", p3); fclose(f); return 1; }
+    snprintf(p3, sizeof p3, "programs/lib/%s", name);
+    f = fopen(p3, "rb");
+    if (f) { snprintf(path, pathsz, "%s", p3); fclose(f); return 1; }
+  }
+  f = fopen(name, "rb");
+  if (f) { snprintf(path, pathsz, "%s", name); fclose(f); return 1; }
+  root = getenv("CUBALC_ROOT");
+  if (root && root[0]) {
+    char p2[768];
+    snprintf(p2, sizeof p2, "%s/programs/lib/%s.cubalc", root, base);
+    f = fopen(p2, "rb");
+    if (f) { snprintf(path, pathsz, "%s", p2); fclose(f); return 1; }
+  }
+  ip = getenv("CUBALC_INCLUDE_PATH");
+  if (ip && ip[0]) {
+    const char *seg = ip;
+    while (*seg) {
+      char dir[512], p3[768];
+      size_t dlen = 0;
+      while (*seg == ':') seg++;
+      if (!*seg) break;
+      while (seg[dlen] && seg[dlen] != ':' && dlen + 1 < sizeof dir)
+        dir[dlen] = seg[dlen], dlen++;
+      dir[dlen] = 0;
+      seg += dlen;
+      if (!dir[0]) continue;
+      snprintf(p3, sizeof p3, "%s/%s.cubalc", dir, base);
+      f = fopen(p3, "rb");
+      if (f) { snprintf(path, pathsz, "%s", p3); fclose(f); return 1; }
+      snprintf(p3, sizeof p3, "%s/%s", dir, name);
+      f = fopen(p3, "rb");
+      if (f) { snprintf(path, pathsz, "%s", p3); fclose(f); return 1; }
+    }
+  }
+  return 0;
+}
+
+/* Parse INCLUDE stems from a resolved lib path into stems[] (append, no dups vs existing). */
+static int lib_append_deps(const char *path, char stems[][96], int *nstem, int maxstem) {
+  FILE *f;
+  char *src = NULL;
+  long sz = 0;
+  size_t nr = 0;
+  const char *lp;
+  int added = 0;
+  if (!path || !path[0] || !stems || !nstem || maxstem <= 0) return 0;
+  f = fopen(path, "rb");
+  if (!f) return 0;
+  fseek(f, 0, SEEK_END);
+  sz = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  if (sz < 0) sz = 0;
+  if (sz > 256 * 1024) sz = 256 * 1024;
+  src = (char *)malloc((size_t)sz + 1);
+  if (!src) { fclose(f); return 0; }
+  nr = fread(src, 1, (size_t)sz, f);
+  fclose(f);
+  src[nr] = 0;
+  lp = src;
+  while (*lp && *nstem < maxstem) {
+    const char *line = lp;
+    char tok[160];
+    size_t ti = 0;
+    int j, dup;
+    while (*lp && *lp != '\n') lp++;
+    while (*line == ' ' || *line == '\t') line++;
+    if (*line == '#' || *line == '\n' || *line == 0) {
+      if (*lp == '\n') lp++;
+      continue;
+    }
+    if (!(line[0] == 'I' && line[1] == 'N' && line[2] == 'C' && line[3] == 'L' &&
+          line[4] == 'U' && line[5] == 'D' && line[6] == 'E' &&
+          (line[7] == ' ' || line[7] == '\t' || line[7] == '"' || line[7] == '\'' ||
+           line[7] == 0 || line[7] == '\r' || line[7] == '\n'))) {
+      if (*lp == '\n') lp++;
+      continue;
+    }
+    line += 7;
+    while (*line == ' ' || *line == '\t') line++;
+    for (;;) {
+      if (line[0] == 'O' && line[1] == 'N' && line[2] == 'C' && line[3] == 'E' &&
+          (line[4] == ' ' || line[4] == '\t' || line[4] == 0 || line[4] == '\r' ||
+           line[4] == '\n')) {
+        line += 4;
+        while (*line == ' ' || *line == '\t') line++;
+        continue;
+      }
+      if (line[0] == 'S' && line[1] == 'O' && line[2] == 'F' && line[3] == 'T' &&
+          (line[4] == ' ' || line[4] == '\t' || line[4] == 0 || line[4] == '\r' ||
+           line[4] == '\n')) {
+        line += 4;
+        while (*line == ' ' || *line == '\t') line++;
+        continue;
+      }
+      if (line[0] == 'O' && line[1] == 'R' &&
+          (line[2] == ' ' || line[2] == '\t' || line[2] == 0 || line[2] == '\r' ||
+           line[2] == '\n')) {
+        line += 2;
+        while (*line == ' ' || *line == '\t') line++;
+        continue;
+      }
+      break;
+    }
+    tok[0] = 0;
+    ti = 0;
+    if (*line == '"' || *line == '\'') {
+      char q = *line++;
+      while (*line && *line != q && *line != '\n' && *line != '\r' && ti + 1 < sizeof tok)
+        tok[ti++] = *line++;
+      tok[ti] = 0;
+    } else {
+      while (*line && *line != ' ' && *line != '\t' && *line != '\n' && *line != '\r' &&
+             *line != '#' && ti + 1 < sizeof tok)
+        tok[ti++] = *line++;
+      tok[ti] = 0;
+    }
+    if (tok[0]) {
+      const char *sl = strrchr(tok, '/');
+      const char *st = sl ? sl + 1 : tok;
+      char stem[96];
+      size_t slen;
+      snprintf(stem, sizeof stem, "%s", st);
+      slen = strlen(stem);
+      if (slen > 7 && strcmp(stem + slen - 7, ".cubalc") == 0)
+        stem[slen - 7] = 0;
+      if (stem[0]) {
+        dup = 0;
+        for (j = 0; j < *nstem; j++) {
+          if (strcmp(stems[j], stem) == 0) { dup = 1; break; }
+        }
+        if (!dup && *nstem < maxstem) {
+          snprintf(stems[*nstem], sizeof stems[0], "%s", stem);
+          (*nstem)++;
+          added++;
+        }
+      }
+    }
+    if (*lp == '\n') lp++;
+  }
+  free(src);
+  return added;
+}
+
 int cubalc_lang_ops_cell(VM *vm, Lex *L){
   /* plane ops_cell: L25536-30474 */
   /* digit-5 cell search ext: FINDLASTCELL · FIRSTNZ · LASTNZ */
@@ -7057,6 +7226,97 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     var_set_num(vm, "LIB_DEPS_N", ndep);
     var_set_str(vm, "LIB_PATH", path);
     var_set_str(vm, "LIB_STEM", base);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LIBTREE / LIBDEPSALL / DEEPTREE name — transitive INCLUDE closure (BFS).
+   * Usability: full composition of a recipe without recursive LIBDEPS walks.
+   * LAST = bag of unique dep stems (root excluded) · LIBTREE_N · soft miss. */
+  if (kw(&L->cur, "LIBTREE") || kw(&L->cur, "LIBDEPSALL") ||
+      kw(&L->cur, "DEEPTREE") || kw(&L->cur, "TRANSITIVES") ||
+      kw(&L->cur, "LIB_TREE") || kw(&L->cur, "ALLDEPS") ||
+      kw(&L->cur, "CLOSUREDEPS") || kw(&L->cur, "WALKDEPS")) {
+    char name[160], root_path[768], root_base[160];
+    char bag[CUBALC_VAR_STR_MAX];
+    char stems[64][96];
+    int nstem = 0, qi = 0, i;
+    size_t o = 0;
+    lex_next(L);
+    name[0] = 0;
+    root_path[0] = 0;
+    bag[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LIBTREE: need name");
+      var_set_str(vm, "ERR", "LIBTREE: need name");
+      bump(vm);
+      return 1;
+    }
+    if (!lib_resolve_path(name, root_path, sizeof root_path, root_base, sizeof root_base)) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "LIBTREE miss: '%s' — programs/lib · CUBALC_INCLUDE_PATH · LIBDEPS",
+               name);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "LIB_PATH", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    /* seed queue with direct deps of root (root itself not listed) */
+    nstem = 0;
+    lib_append_deps(root_path, stems, &nstem, 64);
+    qi = 0;
+    while (qi < nstem && nstem < 64) {
+      char dpath[768], dbase[160];
+      if (lib_resolve_path(stems[qi], dpath, sizeof dpath, dbase, sizeof dbase))
+        lib_append_deps(dpath, stems, &nstem, 64);
+      qi++;
+    }
+    o = 0;
+    for (i = 0; i < nstem; i++) {
+      size_t ln = strlen(stems[i]);
+      if (i > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, stems[i], ln);
+        o += ln;
+      }
+      bag[o] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LIBTREE", bag);
+    var_set_str(vm, "LIBDEPSALL", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = nstem;
+    var_set_num(vm, "LAST_N", nstem);
+    var_set_num(vm, "LIBTREE_N", nstem);
+    var_set_num(vm, "LIBDEPSALL_N", nstem);
+    var_set_str(vm, "LIB_PATH", root_path);
+    var_set_str(vm, "LIB_STEM", root_base);
     var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;

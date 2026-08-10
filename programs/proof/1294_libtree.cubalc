@@ -1,0 +1,44 @@
+# LIBTREE / LIBDEPSALL — transitive INCLUDE closure
+
+LIBTREE fat_session
+ASSERT OK == 1
+ASSERT LAST_N >= 4
+ASSERT LIB_STEM == "fat_session"
+ASSERT LIB_PATH != ""
+# direct
+SYS HASLINE LAST "fat_boot"
+ASSERT LAST_N == 1
+LIBTREE fat_session
+SYS HASLINE LAST "plate_boot"
+ASSERT LAST_N == 1
+# transitive via fat_boot
+LIBTREE fat_session
+SYS HASLINE LAST "agent_boot"
+ASSERT LAST_N == 1
+LIBTREE fat_session
+SYS HASLINE LAST "var_guard"
+ASSERT LAST_N == 1
+
+# deeper than direct LIBDEPS
+LIBDEPS fat_session
+ASSERT LAST_N == 2
+
+LIBDEPSALL plate_session
+ASSERT OK == 1
+ASSERT LAST_N >= 2
+SYS HASLINE LAST "agent_boot"
+ASSERT LAST_N == 1
+
+# leaf → empty closure
+LIBTREE agent_boot
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# soft miss
+LIBTREE no_such_lib_xyz_zzz
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+PASS
+PRINT "1294_libtree: PASS"
