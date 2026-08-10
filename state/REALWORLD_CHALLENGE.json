@@ -5200,7 +5200,7 @@
     "binary missing at fire start — rebuilt; OPEN board 10/10 green; OPEN_NEXT_N gap vs DISCOVER",
     "out/cubalc missing; OOM on make until disk swap + object -D_GNU_SOURCE build; board 10/10+unknown green"
   ],
-  "commit": "pending",
+  "commit": "34846c7e",
   "ts": "2026-08-10T18:28:03Z",
-  "board_commit": "pending"
+  "board_commit": "34846c7e"
 }
