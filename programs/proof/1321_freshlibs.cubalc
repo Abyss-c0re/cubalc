@@ -1,0 +1,55 @@
+# FRESHLIBS / STALELIBS — age-filter matching lib stems
+
+# fat libs are hours old → inside 1e6s window
+FRESHLIBS fat 1000000
+ASSERT OK == 1
+ASSERT FRESHLIBS_N == 2
+ASSERT FRESHLIBS_MODE == "fresh"
+ASSERT FRESHLIBS_AGE == 1000000
+ASSERT FRESHLIBS_HEAD == "fat_session"
+SYS HASLINE LAST "fat_session"
+ASSERT LAST_N == 1
+FRESHLIBS fat 1000000
+SYS HASLINE LAST "fat_boot"
+ASSERT LAST_N == 1
+ASSERT LIB_AGE >= 0
+
+# tight window → none (fat older than 10s)
+FRESHLIBS fat 10
+ASSERT OK == 1
+ASSERT FRESHLIBS_N == 0
+ASSERT LAST_N == 0
+
+# STALELIBS: age >= threshold
+STALELIBS fat 10
+ASSERT OK == 1
+ASSERT STALELIBS_N == 2
+ASSERT FRESHLIBS_MODE == "stale"
+ASSERT STALELIBS_HEAD == "fat_session"
+
+# very large min age → empty
+STALELIBS fat 999999999
+ASSERT OK == 1
+ASSERT STALELIBS_N == 0
+
+# RECENTLIBS alias
+RECENTLIBS guard 1000000
+ASSERT OK == 1
+ASSERT FRESHLIBS_N == 2
+SYS HASLINE LAST "time_guard"
+ASSERT LAST_N == 1
+
+# plate: some older than 1 day-ish; large window gets all plate*
+FRESHLIBS plate 9999999
+ASSERT OK == 1
+ASSERT FRESHLIBS_N >= 10
+
+# default age 86400 when omitted
+FRESHLIBS fat
+ASSERT OK == 1
+# fat is currently < 1 day on this tree
+ASSERT FRESHLIBS_N == 2
+ASSERT FRESHLIBS_AGE == 86400
+
+PASS
+PRINT "1321_freshlibs: PASS"

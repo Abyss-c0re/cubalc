@@ -807,6 +807,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 777. ~~**`INCLUDE NEWEST` / `OLDEST`**~~ **done** (mtime pick+include one-shot · no NEWESTLIB+INCLUDE LAST glue).
 778. ~~**CLI `newestlib` / `oldestlib`**~~ **done** (cubalc.libmatch.v1 mtime duals · stem+path+mtime · no .cubalc).
 779. ~~**`SORTLIBS` / CLI `sortlibs`**~~ **done** (mtime-ordered match bag · newest-first default · ASC/OLDEST · dual of alpha MATCHLIBS · no shell ls -t).
+780. ~~**`FRESHLIBS` / `STALELIBS` + CLI**~~ **done** (age-filter match bags · max/min age sec · newest-first · dual of path FRESH/KEEPSTALE for libs · no shell find -mtime).
 
 ## Tick protocol
 

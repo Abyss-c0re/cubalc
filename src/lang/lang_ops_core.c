@@ -36651,6 +36651,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"OLDESTLIB", "OLDESTLIB|EARLIESTLIB needle [OR fallback] — oldest matching stem by mtime · dual of NEWESTLIB"},
       {"SORTLIBS", "SORTLIBS|LIBSORT needle [ASC|DESC|OLDEST|NEWEST] — mtime-ordered match bag · dual of alpha MATCHLIBS"},
       {"LIBSORT", "LIBSORT alias of SORTLIBS"},
+      {"FRESHLIBS", "FRESHLIBS|RECENTLIBS needle [max_age_sec] — match stems with age≤sec · default 86400 · newest-first"},
+      {"STALELIBS", "STALELIBS|OLDERLIBS needle [min_age_sec] — match stems with age≥sec · default 86400 · dual of FRESHLIBS"},
       {"HASLIB", "HASLIB name — soft 0|1 if stdlib/project lib stem exists · dual of LISTLIBS"},
       {"CATLIB", "CATLIB|READLIB name — soft dump lib source → LAST · dual of cubalc cat"},
       {"GREPLIB", "GREPLIB name needle — matching lines from one lib → LAST bag · soft miss"},
