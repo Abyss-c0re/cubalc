@@ -3214,6 +3214,7 @@ int main(int argc, char **argv) {
       {"cli_checkdeps", "programs/proof/1302_cli_checkdeps.sh", "CHECKDEPS plate + soft miss + forms + NEEDDEPS fail"},
       {"cli_checkdeps_cmd", "programs/proof/1303_cli_checkdeps_cmd.sh", "cubalc checkdeps/hasdeps/needdeps CLI dual of CHECKDEPS"},
       {"cli_libs_recipe_meta", "programs/proof/1304_cli_libs_recipe_meta.sh", "cubalc libs stem+deps_n+defaults_n recipe meta plate"},
+      {"cli_libs_filter", "programs/proof/1305_cli_libs_filter.sh", "cubalc libs [filter] stem/path/hint substring match"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -5378,14 +5379,32 @@ int main(int argc, char **argv) {
     };
     const char *libdir = "programs/lib";
     const char *ip = getenv("CUBALC_INCLUDE_PATH");
+    const char *filter = "";
     char paths[64][160];
     char hints[64][120];
     char origins[64][24];
     char stems[64][96];
     int deps_n[64], defaults_n[64];
+    int keep[64];
     char ipdirs[8][160];
-    int n = 0, n_ip = 0, n_std = 0, i, j;
-    DIR *d = opendir(libdir);
+    int n = 0, n_ip = 0, n_std = 0, i, j, n_total = 0, n_match = 0;
+    DIR *d;
+    /* optional stem/prefix filter: cubalc libs plate · libs --filter fat · libs -q tick */
+    for (i = 2; i < argc; i++) {
+      if (!strcmp(argv[i], "--filter") || !strcmp(argv[i], "-q") ||
+          !strcmp(argv[i], "--query") || !strcmp(argv[i], "--match") ||
+          !strcmp(argv[i], "--stem") || !strcmp(argv[i], "--prefix")) {
+        if (i + 1 < argc && argv[i + 1][0] != '-')
+          filter = argv[++i];
+      } else if (!strncmp(argv[i], "--filter=", 9) && argv[i][9]) {
+        filter = argv[i] + 9;
+      } else if (!strncmp(argv[i], "--query=", 8) && argv[i][8]) {
+        filter = argv[i] + 8;
+      } else if (argv[i][0] != '-') {
+        filter = argv[i];
+      }
+    }
+    d = opendir(libdir);
     if (d) {
       struct dirent *de;
       while ((de = readdir(d)) != NULL && n < 64) {
@@ -5490,19 +5509,54 @@ int main(int argc, char **argv) {
         }
       }
     }
-    printf("# CubalC INCLUDE catalog n=%d stdlib=%d include_path_n=%d version=%s\n",
-           n, n_std, n_ip, CUBALC_LANG_VERSION);
-    printf("# cols: path origin stem deps_n defaults_n hint · cubalc recipe|checkdeps stem\n");
-    for (i = 0; i < n; i++)
+    n_total = n;
+    /* filter by stem/name/path/hint (case-insensitive substring) */
+    n_match = 0;
+    for (i = 0; i < n; i++) {
+      keep[i] = 1;
+      if (filter && filter[0]) {
+        char fup[96], hay[256];
+        size_t a, b;
+        int hit = 0;
+        for (a = 0; filter[a] && a + 1 < sizeof fup; a++) {
+          char c = filter[a];
+          if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+          fup[a] = c;
+        }
+        fup[a] = 0;
+        snprintf(hay, sizeof hay, "%s\n%s\n%s\n%s",
+                 stems[i], paths[i], origins[i], hints[i]);
+        for (b = 0; hay[b]; b++)
+          if (hay[b] >= 'A' && hay[b] <= 'Z')
+            hay[b] = (char)(hay[b] - 'A' + 'a');
+        if (fup[0] && strstr(hay, fup))
+          hit = 1;
+        keep[i] = hit;
+      }
+      if (keep[i]) n_match++;
+    }
+    if (filter && filter[0])
+      printf("# CubalC INCLUDE catalog filter=%s n=%d/%d stdlib=%d include_path_n=%d version=%s\n",
+             filter, n_match, n_total, n_std, n_ip, CUBALC_LANG_VERSION);
+    else
+      printf("# CubalC INCLUDE catalog n=%d stdlib=%d include_path_n=%d version=%s\n",
+             n_total, n_std, n_ip, CUBALC_LANG_VERSION);
+    printf("# cols: path origin stem deps_n defaults_n hint · cubalc libs [filter] · recipe|checkdeps\n");
+    for (i = 0; i < n; i++) {
+      if (!keep[i]) continue;
       printf("%s\t%s\t%s\t%d\t%d\t%s\n",
              paths[i], origins[i], stems[i], deps_n[i], defaults_n[i], hints[i]);
+    }
     printf("{\"schema\":\"cubalc.libs.v1\",\"ok\":%s,\"cmd\":\"libs\","
-           "\"dir\":\"%s\",\"n\":%d,\"n_stdlib\":%d,\"n_include_path\":%d,"
-           "\"include_path_set\":%s,\"version\":\"%s\","
-           "\"note\":\"stem+deps_n+defaults_n per lib · dual of recipe meta without multi-call\","
+           "\"dir\":\"%s\",\"n\":%d,\"n_total\":%d,\"n_match\":%d,"
+           "\"n_stdlib\":%d,\"n_include_path\":%d,"
+           "\"filter\":\"%s\",\"include_path_set\":%s,\"version\":\"%s\","
+           "\"note\":\"stem+deps_n+defaults_n · optional filter stem/path/hint\","
            "\"include_from\":\"programs/lib + CUBALC_INCLUDE_PATH\","
            "\"include_path_dirs\":[",
-           n > 0 ? "true" : "false", libdir, n, n_std, n - n_std,
+           n_match > 0 ? "true" : "false", libdir, n_match, n_total, n_match,
+           n_std, n - n_std,
+           filter && filter[0] ? filter : "",
            n_ip > 0 ? "true" : "false", CUBALC_LANG_VERSION);
     for (i = 0; i < n_ip; i++) {
       char pesc[180];
@@ -5516,24 +5570,30 @@ int main(int argc, char **argv) {
       printf("%s\"%s\"", i ? "," : "", pesc);
     }
     printf("],\"libs\":[");
-    for (i = 0; i < n; i++) {
-      const char *base = strrchr(paths[i], '/');
-      char pesc[200];
-      size_t k, o = 0;
-      base = base ? base + 1 : paths[i];
-      for (k = 0; paths[i][k] && o + 2 < sizeof pesc; k++) {
-        char c = paths[i][k];
-        if (c == '"' || c == '\\') pesc[o++] = '_';
-        else pesc[o++] = c;
+    {
+      int first = 1;
+      for (i = 0; i < n; i++) {
+        const char *base;
+        char pesc[200];
+        size_t k, o = 0;
+        if (!keep[i]) continue;
+        base = strrchr(paths[i], '/');
+        base = base ? base + 1 : paths[i];
+        for (k = 0; paths[i][k] && o + 2 < sizeof pesc; k++) {
+          char c = paths[i][k];
+          if (c == '"' || c == '\\') pesc[o++] = '_';
+          else pesc[o++] = c;
+        }
+        pesc[o] = 0;
+        printf("%s{\"path\":\"%s\",\"name\":\"%s\",\"stem\":\"%s\","
+               "\"deps_n\":%d,\"defaults_n\":%d,\"origin\":\"%s\",\"hint\":\"%s\"}",
+               first ? "" : ",", pesc, base, stems[i], deps_n[i], defaults_n[i],
+               origins[i], hints[i]);
+        first = 0;
       }
-      pesc[o] = 0;
-      printf("%s{\"path\":\"%s\",\"name\":\"%s\",\"stem\":\"%s\","
-             "\"deps_n\":%d,\"defaults_n\":%d,\"origin\":\"%s\",\"hint\":\"%s\"}",
-             i ? "," : "", pesc, base, stems[i], deps_n[i], defaults_n[i],
-             origins[i], hints[i]);
     }
     printf("]}\n");
-    return n > 0 ? 0 : 1;
+    return n_match > 0 ? 0 : 1;
   }
   if (strcmp(cmd, "env") == 0 || strcmp(cmd, "environ") == 0 ||
       strcmp(cmd, "vars") == 0 || strcmp(cmd, "env-list") == 0) {
@@ -14836,7 +14896,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
-      "    libs|lib|stdlib        list INCLUDE libs + stem/deps_n/defaults_n (recipe meta)\n"
+      "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
       "    run|eval [-q][-s][-T ms][-I lib][-L dir][-R ver][-e CODE] <file|->\n"
       "                          -q plate-only · -s soft last_err fails · -T wall budget\n"

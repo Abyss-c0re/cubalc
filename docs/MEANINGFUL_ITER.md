@@ -791,6 +791,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 761. ~~**`CHECKDEPS` / `HASDEPS` / `NEEDDEPS`**~~ **done** (root + LIBTREE disk presence gate · DEPS_MISS/OK bags · soft/hard before INCLUDE · no cascading open fails).
 762. ~~**`cubalc checkdeps|hasdeps|needdeps <lib>`**~~ **done** (CLI dual of CHECKDEPS · cubalc.checkdeps.v1 deps/ok/miss · exit 1 on miss · agent install gate without .cubalc).
 763. ~~**`cubalc libs` recipe meta**~~ **done** (`stem` · `deps_n` · `defaults_n` per lib · one plate composition discovery without multi `recipe` calls).
+764. ~~**`cubalc libs [filter]`**~~ **done** (optional stem/path/hint substring · case-insensitive · `n_match`/`n_total`/`filter` plate · exit 1 on empty).
 
 ## Tick protocol
 

@@ -21,8 +21,8 @@ printf '%s\n' "$OUT" | grep -qE '"stem":"agent_boot"[^}]*"deps_n":0|"deps_n":0[^
 # human TSV cols
 printf '%s\n' "$OUT" | grep -q 'fat_session.cubalc'
 printf '%s\n' "$OUT" | grep -q 'deps_n defaults_n\|stem deps_n'
-# note field
-printf '%s\n' "$OUT" | grep -q 'recipe meta'
+# note / header mentions deps meta
+printf '%s\n' "$OUT" | grep -q 'deps_n'
 
 # help mentions deps_n
 OUT=$("$CUBALC" help 2>&1)
