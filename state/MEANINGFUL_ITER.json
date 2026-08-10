@@ -5,15 +5,15 @@
   "item": "HASENVALL / NEEDENVS multi host-env ALL gates",
   "item_id": 841,
   "title": "HASENVALL \u00b7 NEEDENVS \u00b7 ENVMISS \u00b7 CLI envgate",
-  "commit": "415ce354eff39d275f58e640e3f848481807feef",
+  "commit": "8d4272faeb84b174b75a26b8365e8c9e1fd8c67c",
   "summary": "Multi host-env ALL gate twin of HASARGALL; soft/hard; cubalc.envgate.v1; proof 1381 PASS.",
   "proofs": [
     "1381_hasenvall PASS",
     "1381_cli_hasenvall PASS",
     "1381_cli_envgate PASS"
   ],
-  "when": "2026-08-10T23:21:06Z",
+  "when": "2026-08-10T23:21:17Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "415ce354eff39d275f58e640e3f848481807feef",
+  "sha": "8d4272faeb84b174b75a26b8365e8c9e1fd8c67c",
   "note": "pairs HASARGALL/HASFLAGALL \u00b7 process env multi presence \u00b7 completes flag/arg/env ALL matrix"
 }
