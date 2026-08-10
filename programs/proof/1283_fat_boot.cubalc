@@ -1,0 +1,20 @@
+# INCLUDE fat_boot — version floor + free-slot gate one-shot
+
+DEFAULT NEED_VARROOM = 20
+INCLUDE fat_boot
+ASSERT OK == 1
+ASSERT VARROOM >= 20
+ASSERT VARS_MAX >= 256
+# VERSION plate from agent_boot
+ASSERT VERSION != ""
+
+# soft path via LET override
+LET NEED_VARROOM = 9999
+LET VAR_GUARD_SOFT = 1
+INCLUDE var_guard
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+PASS
+PRINT "1283_fat_boot: PASS"

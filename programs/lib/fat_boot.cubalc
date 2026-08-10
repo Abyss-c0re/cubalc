@@ -1,0 +1,12 @@
+# INCLUDE fat_boot — agent preamble + free-slot gate for nest-heavy boards
+# Usability: one INCLUDE instead of agent_boot + var_guard retype
+#   DEFAULT NEED_VARROOM = 48
+#   INCLUDE fat_boot
+#   # REQUIRE VERSION · VERSION plate · NEEDVARROOM applied
+#   SETP "freq.error" 0
+# Soft var room: DEFAULT VAR_GUARD_SOFT = 1 before INCLUDE
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_VARROOM = 48
+INCLUDE agent_boot
+INCLUDE var_guard
