@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 831,
-  "version": "1.15.823-usability",
-  "item": "FINDARG / ARGINDEX reverse NTHARG",
-  "item_id": 831,
-  "title": "FINDARG · ARGINDEX · token→index · CLI dual cubalc.findarg.v1",
-  "commit": "11ea63dd1d427de784f58a5622ff1e260446ce73",
-  "summary": "Exact raw argv token to 0-based index; reverse of NTHARG; soft miss LAST_N=-1; proof 1371 PASS.",
+  "iter": 832,
+  "version": "1.15.824-usability",
+  "item": "AFTERARG / NEXTARG peel after token",
+  "item_id": 832,
+  "title": "AFTERARG · NEXTARG · OR fallback · CLI dual cubalc.afterarg.v1",
+  "commit": "6e3d545db4f9a4bd09b714a4acbb131797c20758",
+  "summary": "Peel raw argv following exact token; FINDARG+NTHARG one-shot; proof 1372 PASS.",
   "proofs": [
-    "1371_findarg PASS",
-    "1371_cli_findarg PASS"
+    "1372_afterarg PASS",
+    "1372_cli_afterarg PASS"
   ],
-  "when": "2026-08-10T21:21:30Z",
+  "when": "2026-08-10T21:37:55Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "11ea63dd1d427de784f58a5622ff1e260446ce73",
-  "note": "pairs NTHARG/ARGMAP · locate then peel"
+  "sha": "6e3d545db4f9a4bd09b714a4acbb131797c20758",
+  "note": "completes FINDARG triad with NTHARG/ARGMAP"
 }
