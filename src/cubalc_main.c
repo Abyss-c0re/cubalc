@@ -1541,6 +1541,82 @@ static void run_preload_parse_env(char preload[][96], int *n_preload, const char
   }
 }
 
+/* Usability: cubalc run --dotenv / CUBALC_DOTENV — load KEY=VAL plates before body.
+ * Dual of in-lang SYS DOTENV without rewriting every program. Paths colon-separated. */
+static void run_dotenv_add(char paths[][512], int *n, const char *path) {
+  int k;
+  if (!path || !path[0] || !n || *n >= 8) return;
+  for (k = 0; k < *n; k++)
+    if (strcmp(paths[k], path) == 0) return;
+  snprintf(paths[*n], 512, "%s", path);
+  (*n)++;
+}
+
+static void run_dotenv_parse_env(char paths[][512], int *n, const char *env) {
+  const char *p = env;
+  if (!p || !p[0]) return;
+  while (*p && *n < 8) {
+    char path[512];
+    size_t len = 0;
+    while (*p == ':' || *p == ',' || *p == ' ' || *p == '\t') p++;
+    if (!*p) break;
+    while (p[len] && p[len] != ':' && p[len] != ',' && len + 1 < sizeof path) {
+      path[len] = p[len];
+      len++;
+    }
+    path[len] = 0;
+    p += len;
+    while (len > 0 && (path[len - 1] == ' ' || path[len - 1] == '\t'))
+      path[--len] = 0;
+    if (path[0]) run_dotenv_add(paths, n, path);
+  }
+}
+
+/* Load one dotenv plate via language SYS DOTENV (shared parser/semantics).
+ * Returns 0 ok · -1 miss/fail (err filled). keys_out += DOTENV_N when possible. */
+static int run_dotenv_load_one(const char *path, long *keys_out, char *err, size_t errn) {
+  char lit[600], src[720];
+  size_t li = 0, k;
+  cubalc_run_result rr;
+  long nkeys = 0;
+  if (!path || !path[0]) {
+    if (err && errn) snprintf(err, errn, "DOTENV: empty path");
+    return -1;
+  }
+  for (k = 0; path[k] && li + 2 < sizeof lit; k++) {
+    char c = path[k];
+    if (c == '"' || c == '\\') {
+      lit[li++] = '\\';
+      lit[li++] = c;
+    } else if ((unsigned char)c < 32)
+      lit[li++] = ' ';
+    else
+      lit[li++] = c;
+  }
+  lit[li] = 0;
+  snprintf(src, sizeof src,
+           "SYS DOTENV \"%s\"\n"
+           "PRINT LAST_N\n"
+           "PASS\n",
+           lit);
+  memset(&rr, 0, sizeof rr);
+  (void)cubalc_run_source(src, strlen(src), "<run-dotenv>", &rr, NULL);
+  if (!(rr.ok && rr.asserts_fail == 0 && !rr.err[0])) {
+    if (err && errn)
+      snprintf(err, errn, "%s",
+               rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "DOTENV fail"));
+    return -1;
+  }
+  if (rr.last_print[0])
+    nkeys = strtol(rr.last_print, NULL, 10);
+  if (rr.last_err[0] && nkeys <= 0) {
+    if (err && errn) snprintf(err, errn, "%s", rr.last_err);
+    return -1;
+  }
+  if (keys_out) *keys_out += nkeys;
+  return 0;
+}
+
 /* body may be NULL when only preloads (unlikely). Caller frees return. */
 static char *run_build_with_preload(char preload[][96], int n_preload,
                                     const char *body, size_t body_len,
@@ -1803,6 +1879,7 @@ int main(int argc, char **argv) {
      * Timeout: -T MS|--timeout MS or CUBALC_RUN_TIMEOUT — wall-clock kill runaway loops.
      * Preload: -I|--include|--preload LIB + CUBALC_PRELOAD=a:b → INCLUDE ONCE before body.
      * Path: -L|--include-path|--lib-path DIR prepends CUBALC_INCLUDE_PATH for this run.
+     * Dotenv: -F|--dotenv|--env-file PATH + CUBALC_DOTENV=a:b → SYS DOTENV before body.
      * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older.
      * Forms: -C|--need-forms F1,F2 + CUBALC_REQUIRE_FORMS — fail if HELP catalog misses.
      * Ready: -Y|--need-ready + CUBALC_REQUIRE_READY — fail if READY prove checklist fails. */
@@ -1814,11 +1891,14 @@ int main(int argc, char **argv) {
     int n_parg = 0;
     int n_preload = 0;
     int n_ipath = 0;
+    int n_dotenv = 0;
     long run_timeout_ms = 0;
     int run_timeout_cli = 0;
+    long dotenv_keys = 0;
     const char *parg[32];
     char preload[16][96];
     char ipaths[8][512];
+    char dotenv_paths[8][512];
     char req_ver[64];
     char req_forms[512];
     const char *src_path = NULL;
@@ -1835,6 +1915,8 @@ int main(int argc, char **argv) {
     req_forms[0] = 0;
     req_doctor = 0;
     req_ready = 0;
+    n_dotenv = 0;
+    dotenv_keys = 0;
     eq = getenv("CUBALC_QUIET");
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
@@ -1871,6 +1953,8 @@ int main(int argc, char **argv) {
       req_ready = 1;
     /* Env preloads first; CLI -I appends (deduped). */
     run_preload_parse_env(preload, &n_preload, getenv("CUBALC_PRELOAD"));
+    /* Env dotenv paths first; CLI -F/--dotenv appends (deduped). */
+    run_dotenv_parse_env(dotenv_paths, &n_dotenv, getenv("CUBALC_DOTENV"));
     /* Scan from argv[1] so top-level cubalc -e CODE (cmd rewritten to run) works. */
     for (i = 1; i < argc; i++) {
       if (!strcmp(argv[i], "run") || !strcmp(argv[i], "eval"))
@@ -2021,6 +2105,30 @@ int main(int argc, char **argv) {
           snprintf(ipaths[n_ipath++], sizeof ipaths[0], "%s", argv[i] + 11);
         continue;
       }
+      /* -F path · --dotenv · --env-file · CUBALC_DOTENV dual — load KEY=VAL before body */
+      if (!strcmp(argv[i], "-F") || !strcmp(argv[i], "--dotenv") ||
+          !strcmp(argv[i], "--env-file") || !strcmp(argv[i], "--envfile") ||
+          !strcmp(argv[i], "--load-env")) {
+        if (i + 1 >= argc) {
+          fprintf(stderr, "cubalc run: %s needs a KEY=VAL env plate path\n", argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        run_dotenv_add(dotenv_paths, &n_dotenv, argv[++i]);
+        continue;
+      }
+      if (!strncmp(argv[i], "--dotenv=", 9)) {
+        run_dotenv_add(dotenv_paths, &n_dotenv, argv[i] + 9);
+        continue;
+      }
+      if (!strncmp(argv[i], "--env-file=", 11)) {
+        run_dotenv_add(dotenv_paths, &n_dotenv, argv[i] + 11);
+        continue;
+      }
+      if (!strncmp(argv[i], "--envfile=", 10)) {
+        run_dotenv_add(dotenv_paths, &n_dotenv, argv[i] + 10);
+        continue;
+      }
       if (!strcmp(argv[i], "-e") || !strcmp(argv[i], "--expr") ||
           !strcmp(argv[i], "--code") || !strcmp(argv[i], "-c")) {
         const char *chunk;
@@ -2137,12 +2245,14 @@ int main(int argc, char **argv) {
     }
     if (!have_expr && !src_path) {
       fprintf(stderr,
-              "usage: cubalc run [-q] [-s] [-T MS] [-R VER] [-C FORMS] [-I LIB]... [-L DIR]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
+              "usage: cubalc run [-q] [-s] [-T MS] [-R VER] [-C FORMS] [-I LIB]... [-L DIR]... [-F ENV]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
               "       cubalc eval [-q] [-s] [-T MS] [-R VER] [-C FORMS] [-I LIB]... [-e CODE]... <file>|-\n"
               "       cubalc -e 'SYS DATE\\nPRINT LAST'   # top-level alias\n"
               "       cubalc -I agent_boot -e 'STATUS'  # preload INCLUDE ONCE\n"
+              "       cubalc -F .env -e 'SYS ENV NAME'  # dotenv KEY=VAL before body\n"
               "       multiple -e join with newline; \\n \\t \\\\ escapes\n"
               "       -I/--include/--preload LIB  · CUBALC_PRELOAD=a:b\n"
+              "       -F/--dotenv/--env-file PATH · CUBALC_DOTENV=a:b (SYS DOTENV dual)\n"
               "       -L/--include-path DIR · prepends CUBALC_INCLUDE_PATH\n"
               "       -R/--require-version X.Y · CUBALC_REQUIRE_VERSION floor\n"
               "       -C/--need-forms F1,F2 · CUBALC_REQUIRE_FORMS capability floor\n"
@@ -2152,6 +2262,57 @@ int main(int argc, char **argv) {
               "       CUBALC_QUIET=1  → plate only · CUBALC_STRICT=1 → soft last_err fails\n");
       free(expr_buf);
       return 2;
+    }
+    /* Load KEY=VAL env plates into this process before gates/body (SYS DOTENV dual).
+     * Hard-fail missing/unreadable paths so agents see a clear host contract. */
+    if (n_dotenv > 0) {
+      int di;
+      char derr[240];
+      dotenv_keys = 0;
+      for (di = 0; di < n_dotenv; di++) {
+        derr[0] = 0;
+        if (run_dotenv_load_one(dotenv_paths[di], &dotenv_keys, derr, sizeof derr) != 0) {
+          free(expr_buf);
+          if (devnull) fclose(devnull);
+          printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
+                 "\"err\":\"DOTENV failed: %s\","
+                 "\"dotenv\":\"%s\",\"dotenv_n\":%d,\"dotenv_keys\":%ld,"
+                 "\"version\":\"%s\","
+                 "\"why_hint\":\"cubalc run -F|--dotenv path · CUBALC_DOTENV · SYS DOTENV in-lang\","
+                 "\"exit_code\":1,\"halted\":false}\n",
+                 have_expr ? "<expr>" : (src_path ? src_path : "?"),
+                 derr[0] ? derr : "load fail",
+                 dotenv_paths[di], n_dotenv, dotenv_keys,
+                 CUBALC_LANG_VERSION);
+          return 1;
+        }
+      }
+      {
+        char joined[4096];
+        size_t o = 0;
+        int k;
+        joined[0] = 0;
+        for (k = 0; k < n_dotenv; k++) {
+          size_t L = strlen(dotenv_paths[k]);
+          if (k && o + 1 < sizeof joined) joined[o++] = ':';
+          if (o + L >= sizeof joined) L = sizeof joined - o - 1;
+          if (L > 0) {
+            memcpy(joined + o, dotenv_paths[k], L);
+            o += L;
+          }
+        }
+        joined[o] = 0;
+        if (joined[0])
+          setenv("CUBALC_DOTENV_ACTIVE", joined, 1);
+      }
+      {
+        char kb[32];
+        snprintf(kb, sizeof kb, "%ld", dotenv_keys);
+        setenv("CUBALC_DOTENV_KEYS", kb, 1);
+      }
+    } else {
+      unsetenv("CUBALC_DOTENV_ACTIVE");
+      unsetenv("CUBALC_DOTENV_KEYS");
     }
     /* Publish wall budget for run_source (CLI -T wins over prior env). */
     if (run_timeout_cli || run_timeout_ms > 0) {
@@ -3777,6 +3938,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"include_path_soft", "programs/proof/1259_include_path_soft.cubalc", "CUBALC_INCLUDE_PATH + INCLUDE SOFT MISS/SUGGEST"},
       {"cli_include_path", "programs/proof/1259_cli_include_path.sh", "CUBALC_INCLUDE_PATH private lib resolve"},
       {"cli_run_preload", "programs/proof/1260_cli_run_preload.sh", "run -I/CUBALC_PRELOAD + -L include-path preload"},
+      {"cli_run_dotenv", "programs/proof/1374_cli_run_dotenv.sh", "run -F/--dotenv/CUBALC_DOTENV KEY=VAL before body"},
       {"listincludes", "programs/proof/1261_listincludes.cubalc", "LISTINCLUDES/HASINCLUDE loaded module audit"},
       {"cli_listincludes", "programs/proof/1261_cli_listincludes.sh", "LISTINCLUDES after run -I preload"},
       {"cli_run_includes", "programs/proof/1262_cli_run_includes.sh", "run plate includes_n/includes LISTINCLUDES dual"},
@@ -9206,6 +9368,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"CUBALC_INCLUDE_PATH", "", 0, "colon dirs for INCLUDE short names (after programs/lib)"},
       {"CUBALC_PRELOAD", "", 0, "colon lib names auto-INCLUDE ONCE before run body (-I dual)"},
       {"CUBALC_PRELOAD_ACTIVE", "", 0, "set by run to effective -I/PRELOAD list · LISTPRELOAD in-lang"},
+      {"CUBALC_DOTENV", "", 0, "colon KEY=VAL plate paths auto-load before run body (-F/--dotenv dual)"},
+      {"CUBALC_DOTENV_ACTIVE", "", 0, "set by run to effective dotenv paths after successful load"},
       {"CUBALC_REQUIRE_VERSION", "", 0, "x.y[.z] floor for run (-R dual · fail if runtime older)"},
       {"CUBALC_REQUIRE_FORMS", "", 0, "comma form names for run (-C dual · NEEDFORMS floor before body)"},
       {"CUBALC_REQUIRE_DOCTOR", "", 0, "1 to require NEEDDOCTOR before run body (-D dual)"},
@@ -19182,6 +19346,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"CUBALC_INCLUDE_PATH", "colon dirs for INCLUDE short names"},
       {"CUBALC_PRELOAD", "colon libs auto-INCLUDE ONCE before run (-I)"},
       {"CUBALC_PRELOAD_ACTIVE", "effective -I/PRELOAD list · LISTPRELOAD"},
+      {"CUBALC_DOTENV", "colon KEY=VAL plates before run (-F/--dotenv dual)"},
+      {"CUBALC_DOTENV_ACTIVE", "effective dotenv paths after load"},
       {"CUBALC_REQUIRE_VERSION", "x.y floor for run (-R dual)"},
       {"CUBALC_REQUIRE_FORMS", "comma forms for run (-C dual · capability floor)"},
       {"CUBALC_REQUIRE_DOCTOR", "1 for run -D dual · NEEDDOCTOR floor"},
