@@ -2755,6 +2755,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"RECOVERSNIP", "RECOVERSNIP alias of ERRRUN"},
       {"ERRGUIDE", "ERRGUIDE [err] — ERRTIPS classify + GUIDE playbook one-shot · dual of cubalc errguide"},
       {"RECOVERGUIDE", "RECOVERGUIDE alias of ERRGUIDE"},
+      {"START", "START|ONBOARD — agent onboarding plate topics+next+general guide · dual of cubalc onboard"},
+      {"ONBOARD", "ONBOARD alias of START"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · dotted path nest ok · write-back · multi-plate"},
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
@@ -39062,7 +39064,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"general", "TOPICHINT"},
       {"general", "RELATEDTOPIC"},
       {"general", "FORMTOPICS"},
+      {"general", "FORMGUIDE"},
       {"general", "GUIDE"},
+      {"general", "START"},
       {"general", "WHY"},
       {"general", "CLEAR_ERR"},
       {"general", "INCLUDE"},
@@ -39296,6 +39300,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"VERSION", "REQUIRE VERSION"}, {"VERSION", "STATUS"},
       {"EXIT", "PASS"}, {"EXIT", "FAIL"}, {"EXIT", "STATUS"},
       {"NOTE", "PASS"}, {"NOTE", "TIPS"},
+      {"START", "GUIDE"}, {"START", "TIPS"}, {"START", "LISTTOPICS"},
+      {"START", "VERSION"}, {"START", "STATUS"}, {"START", "ERRGUIDE"},
+      {"START", "FORMGUIDE"}, {"START", "TOPIC"},
+      {"ONBOARD", "START"}, {"GUIDE", "START"}, {"TIPS", "START"},
       /* p2p */
       {"SMX", "SERVE"}, {"SMX", "DIAL"}, {"SMX", "TALK"}, {"SMX", "EXCHANGE"},
       {"SERVE", "DIAL"}, {"SERVE", "SMX"}, {"DIAL", "SERVE"}, {"DIAL", "SMX"},
@@ -41416,6 +41424,95 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# errguide topic=%s tips=%d related=%d forms=%d\n",
               topic, n, nr, nf);
+    bump(vm);
+    return 1;
+  }
+
+  /* START|ONBOARD|WELCOME — agent onboarding plate (dual of cubalc onboard).
+   * Usability: first-call surface without cookbook — topics catalog + next commands
+   * + general guide hint. LAST=cubalc.start.v1 · START_NEXT · START_TOPICS bags. */
+  if (kw(&L->cur,"START")||kw(&L->cur,"ONBOARD")||kw(&L->cur,"WELCOME")||
+      kw(&L->cur,"BEGIN")||kw(&L->cur,"AGENTSTART")||kw(&L->cur,"BOOTSTRAP")||
+      kw(&L->cur,"HELLO_AGENT")||kw(&L->cur,"START_HERE")){
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    static const char *nexts[] = {
+      "cubalc doctor",
+      "cubalc onboard",
+      "cubalc guide general",
+      "cubalc topics",
+      "cubalc init --list",
+      "cubalc search KEYWORD",
+      "INCLUDE agent_boot",
+      "cubalc formguide HASFORM",
+      "cubalc errguide LAST_ERR",
+      "HOLD_FLASH device/mesh-join only",
+    };
+    static const char *hint =
+      "install/doctor/init surface · VERSION STATUS IDENTITY · GUIDE general";
+    char topics_bag[256], next_bag[1024], line[CUBALC_HOST_STR_MAX];
+    char esc_topics[400], esc_next[1400], esc_hint[320];
+    size_t o, eo;
+    int i, nt = (int)(sizeof topics / sizeof topics[0]);
+    int nn = (int)(sizeof nexts / sizeof nexts[0]);
+    const char *p;
+    lex_next(L);
+    topics_bag[0] = 0; o = 0;
+    for (i = 0; i < nt; i++) {
+      size_t ln = strlen(topics[i]);
+      if (o && o + 1 < sizeof topics_bag) topics_bag[o++] = '\n';
+      if (o + ln < sizeof topics_bag) { memcpy(topics_bag + o, topics[i], ln); o += ln; }
+      topics_bag[o] = 0;
+    }
+    next_bag[0] = 0; o = 0;
+    for (i = 0; i < nn; i++) {
+      size_t ln = strlen(nexts[i]);
+      if (o && o + 1 < sizeof next_bag) next_bag[o++] = '\n';
+      if (o + ln < sizeof next_bag) { memcpy(next_bag + o, nexts[i], ln); o += ln; }
+      next_bag[o] = 0;
+    }
+#define CUBALC_ST_ESC(dst, srcv) do { \
+      eo = 0; \
+      for (p = (srcv); *p && eo + 2 < sizeof(dst); p++) { \
+        if (*p == '"' || *p == '\\') { (dst)[eo++] = '\\'; (dst)[eo++] = *p; } \
+        else if (*p == '\n') { (dst)[eo++] = '\\'; (dst)[eo++] = 'n'; } \
+        else if ((unsigned char)*p < 0x20) continue; \
+        else (dst)[eo++] = *p; \
+      } \
+      (dst)[eo] = 0; \
+    } while (0)
+    CUBALC_ST_ESC(esc_topics, topics_bag);
+    CUBALC_ST_ESC(esc_next, next_bag);
+    CUBALC_ST_ESC(esc_hint, hint);
+#undef CUBALC_ST_ESC
+    snprintf(line, sizeof line,
+      "{\"schema\":\"cubalc.start.v1\",\"ok\":true,\"cmd\":\"start\","
+      "\"version\":\"%s\",\"topics_n\":%d,\"next_n\":%d,"
+      "\"hint\":\"%s\",\"topics\":\"%s\",\"next\":\"%s\","
+      "\"note\":\"agent onboarding · dual of cubalc onboard · chain GUIDE/TIPS/doctor\"}",
+      CUBALC_LANG_VERSION, nt, nn, esc_hint, esc_topics, esc_next);
+    var_set_str(vm, "LAST", line);
+    var_set_str(vm, "START", line);
+    var_set_str(vm, "ONBOARD", line);
+    var_set_str(vm, "WELCOME", line);
+    var_set_str(vm, "START_TOPICS", topics_bag);
+    var_set_str(vm, "START_NEXT", next_bag);
+    var_set_str(vm, "START_HINT", hint);
+    var_set_str(vm, "GUIDE_HINT", hint);
+    var_set_str(vm, "LISTTOPICS", topics_bag);
+    var_set_str(vm, "TOPIC_NAME", "general");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", line);
+    vm->last_n = nt + nn;
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "START_TOPICS_N", nt);
+    var_set_num(vm, "START_NEXT_N", nn);
+    var_set_num(vm, "LISTTOPICS_N", nt);
+    var_set_num(vm, "OK", 1);
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", "cubalc.start.v1");
+    if (vm->trace)
+      fprintf(vm->trace, "# start onboard topics=%d next=%d\n", nt, nn);
     bump(vm);
     return 1;
   }

@@ -3260,6 +3260,8 @@ int main(int argc, char **argv) {
       {"cli_errguide", "programs/proof/1343_cli_errguide.sh", "cubalc errguide plate + forms"},
       {"formguide", "programs/proof/1344_formguide.cubalc", "FORMGUIDE form docs+topics+first playbook"},
       {"cli_formguide", "programs/proof/1344_cli_formguide.sh", "cubalc formguide plate + forms"},
+      {"start", "programs/proof/1345_start.cubalc", "START/ONBOARD agent onboarding plate"},
+      {"cli_onboard", "programs/proof/1345_cli_onboard.sh", "cubalc onboard plate + forms"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -3923,6 +3925,8 @@ int main(int argc, char **argv) {
       {"TOPICSOF", "flow", "TOPICSOF alias of FORMTOPICS"},
       {"FORMGUIDE", "flow", "FORMGUIDE form FORMHINT+topics+first GUIDE · cubalc formguide dual"},
       {"GUIDEFORM", "flow", "GUIDEFORM alias of FORMGUIDE"},
+      {"START", "flow", "START|ONBOARD agent onboarding plate topics+next · cubalc onboard dual"},
+      {"ONBOARD", "flow", "ONBOARD alias of START"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
       {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
@@ -5090,6 +5094,61 @@ int main(int argc, char **argv) {
     printf("]}\n");
     return 0;
   }
+  if (strcmp(cmd, "onboard") == 0 || strcmp(cmd, "welcome") == 0 ||
+      strcmp(cmd, "begin") == 0 || strcmp(cmd, "agent-start") == 0 ||
+      strcmp(cmd, "hello-agent") == 0 || strcmp(cmd, "bootstrap") == 0) {
+    /* Usability: agent onboarding JSON (dual of START/ONBOARD).
+     *   cubalc onboard · cubalc welcome
+     * Schema cubalc.start.v1 · (cubalc start remains cookbook alias). */
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    static const char *nexts[] = {
+      "cubalc doctor",
+      "cubalc guide general",
+      "cubalc topics",
+      "cubalc init --list",
+      "cubalc search KEYWORD",
+      "INCLUDE agent_boot",
+      "cubalc formguide HASFORM",
+      "cubalc errguide LAST_ERR",
+      "HOLD_FLASH device/mesh-join only",
+    };
+    static const char *hint =
+      "install/doctor/init surface · VERSION STATUS IDENTITY · GUIDE general";
+    int i, nt = (int)(sizeof topics / sizeof topics[0]);
+    int nn = (int)(sizeof nexts / sizeof nexts[0]);
+    char hj[320];
+    size_t o = 0, j;
+    for (j = 0; hint[j] && o + 2 < sizeof hj; j++) {
+      char c = hint[j];
+      if (c == '"' || c == '\\') { hj[o++] = '\\'; hj[o++] = c; }
+      else hj[o++] = c;
+    }
+    hj[o] = 0;
+    printf("{\"schema\":\"cubalc.start.v1\",\"ok\":true,\"cmd\":\"onboard\","
+           "\"version\":\"%s\",\"topics_n\":%d,\"next_n\":%d,"
+           "\"hint\":\"%s\","
+           "\"note\":\"agent onboarding · dual of START/ONBOARD · chain guide/doctor/init\","
+           "\"topics\":[",
+           CUBALC_LANG_VERSION, nt, nn, hj);
+    for (i = 0; i < nt; i++)
+      printf("%s\"%s\"", i ? "," : "", topics[i]);
+    printf("],\"next\":[");
+    for (i = 0; i < nn; i++) {
+      char esc[160];
+      size_t e = 0;
+      for (j = 0; nexts[i][j] && e + 2 < sizeof esc; j++) {
+        char c = nexts[i][j];
+        if (c == '"' || c == '\\') { esc[e++] = '\\'; esc[e++] = c; }
+        else esc[e++] = c;
+      }
+      esc[e] = 0;
+      printf("%s\"%s\"", i ? "," : "", esc);
+    }
+    printf("]}\n");
+    return 0;
+  }
   if (strcmp(cmd, "cookbook") == 0 || strcmp(cmd, "start") == 0) {
     printf("CubalC cookbook paths (read these first):\n"
            "  docs/COOKBOOK.md          # hold → place → plug → decide → smx\n"
@@ -5101,7 +5160,8 @@ int main(int argc, char **argv) {
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
            "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc doctor · cubalc formguide · cubalc guide · cubalc errguide · cubalc topics · cubalc init\n");
+           "Commands: cubalc onboard · cubalc doctor · cubalc guide · cubalc formguide · cubalc topics · cubalc init\n"
+           "Agent first plate: cubalc onboard  (in-lang START|ONBOARD → cubalc.start.v1)\n");
     return 0;
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
@@ -16125,6 +16185,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"TOPICSOF", "flow", "TOPICSOF alias of FORMTOPICS"},
       {"FORMGUIDE", "flow", "FORMGUIDE form FORMHINT+topics+first GUIDE · cubalc formguide dual"},
       {"GUIDEFORM", "flow", "GUIDEFORM alias of FORMGUIDE"},
+      {"START", "flow", "START|ONBOARD agent onboarding plate topics+next · cubalc onboard dual"},
+      {"ONBOARD", "flow", "ONBOARD alias of START"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
       {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
@@ -17588,7 +17650,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    paths|where|layout     install/workspace paths JSON\n"
       "    which|locate|resolve   resolve name → path/kind (lib/form/bin)\n"
       "    search|find|query      keyword search forms/libs/examples/env\n"
-      "    cookbook|start         paths to starters\n"
+      "    cookbook|start         paths to starters (legacy; agents prefer onboard)\n"
+      "    onboard|welcome|begin  agent onboarding plate (cubalc.start.v1 · dual of START)\n"
       "    tips|howto|next [topic]  curated agent next-steps JSON (cap|fat|plate|run…)\n"
       "    formsfor|topicforms [topic]  form-name bag by topic (cubalc.formsfor.v1)\n"
       "    related|seealso <form>     related form-name bag (cubalc.related.v1)\n"
@@ -17610,7 +17673,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
+      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|onboard|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"

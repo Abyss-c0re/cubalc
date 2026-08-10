@@ -1,0 +1,40 @@
+# START / ONBOARD — agent onboarding plate (cubalc.start.v1)
+
+START
+ASSERT OK == 1
+ASSERT START_TOPICS_N == 8
+ASSERT START_NEXT_N >= 8
+SYS HASI "cubalc.start.v1"
+ASSERT LAST_N == 1
+SYS HASI "general"
+ASSERT LAST_N == 1
+SYS HASI "cap"
+ASSERT LAST_N == 1
+# next steps bag
+# LAST is JSON; probe START_NEXT
+LET N = START_NEXT
+SYS HASI "cubalc doctor"
+ASSERT LAST_N == 1
+SYS HASI "INCLUDE agent_boot"
+ASSERT LAST_N == 1
+SYS HASI "cubalc guide"
+ASSERT LAST_N == 1
+
+# alias
+ONBOARD
+ASSERT OK == 1
+ASSERT START_TOPICS_N == 8
+ASSERT TOPIC_NAME == "general"
+
+WELCOME
+ASSERT OK == 1
+ASSERT START_NEXT_N >= 8
+
+# chain into GUIDE general
+START
+GUIDE general
+ASSERT OK == 1
+ASSERT GUIDE_RELATED_N >= 3
+
+PASS
+PRINT "1345_start: PASS"

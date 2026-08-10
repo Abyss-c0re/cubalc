@@ -831,6 +831,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 801. ~~**`GUIDE` / `cubalc guide`**~~ **done** (full playbook plate hint+related+tips+forms+snip · cubalc.guide.v1 · TOPIC++ for agents).
 802. ~~**`ERRGUIDE` / `cubalc errguide`**~~ **done** (ERRTIPS classify + GUIDE playbook one-shot · cubalc.errguide.v1 · twin of ERRRUN).
 803. ~~**`FORMGUIDE` / `cubalc formguide`**~~ **done** (FORMHINT + covering topics + first-topic GUIDE · cubalc.formguide.v1 · form→playbook).
+804. ~~**`START` / `cubalc onboard`**~~ **done** (agent onboarding plate topics+next · cubalc.start.v1 · CLI start stays cookbook).
 
 ## Tick protocol
 
