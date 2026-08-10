@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 770,
-  "version": "1.15.797-usability",
-  "item": "MATCHTOPICS + PICKTOPIC topic filter duals",
-  "item_id": 806,
-  "title": "MATCHTOPICS|PICKTOPIC · cubalc matchtopics|picktopic · cubalc.topicmatch.v1",
-  "commit": "0cce8aceab09615b42bcf7d26cb7881f9153a303",
-  "summary": "topic filter/first duals of MATCHLIBS/PICKLIB; mesh→p2p; OR fallback. proof 1347 PASS.",
+  "iter": 771,
+  "version": "1.15.798-usability",
+  "item": "HASMATCHTOPICS + NEED + COUNT topic filter gates",
+  "item_id": 807,
+  "title": "HASMATCHTOPICS|NEEDMATCHTOPICS|COUNTMATCHTOPICS · CLI duals · topicmatch.v1",
+  "commit": "d0e9eb084c84c62ef01ae88421fb36a15ef0e53b",
+  "summary": "topic filter presence/count gates dual of MATCHLIBS triad. proof 1348 PASS.",
   "proofs": [
-    "1347_matchtopics PASS",
-    "1347_cli_matchtopics PASS"
+    "1348_hasmatchtopics PASS",
+    "1348_cli_hasmatchtopics PASS"
   ],
-  "when": "2026-08-10T16:10:28Z",
+  "when": "2026-08-10T16:19:03Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0cce8aceab09615b42bcf7d26cb7881f9153a303",
-  "note": "restored thrash mid-tick; CLI verified topicmatch.v1 in binary"
+  "sha": "d0e9eb084c84c62ef01ae88421fb36a15ef0e53b",
+  "note": "has exit 0 always; need exit 1 on miss; count LAST_N"
 }
