@@ -2362,7 +2362,7 @@ int main(int argc, char **argv) {
                "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
                "\"why_hint\":\"%s\","
                "\"quiet\":%s,\"strict\":%s,"
-               "\"timeout_ms\":%d,\"timed_out\":%s,\"remain_ms\":%d,"
+               "\"timeout_ms\":%d,\"timed_out\":%s,\"remain_ms\":%d,\"wall_ms\":%d,"
                "\"preload_n\":%d,\"preload\":%s,"
                "\"preload_ok\":%s,\"preload_miss_n\":%d,\"preload_miss\":%s,"
                "\"include_path_n\":%d,"
@@ -2378,7 +2378,7 @@ int main(int argc, char **argv) {
                quiet ? "true" : "false", strict ? "true" : "false",
                rr.timeout_ms > 0 ? rr.timeout_ms : (int)run_timeout_ms,
                rr.timed_out ? "true" : "false",
-               rr.remain_ms,
+               rr.remain_ms, rr.wall_ms,
                n_preload, prej,
                pmiss_n == 0 ? "true" : "false", pmiss_n, pmiss,
                n_ipath,
@@ -3110,6 +3110,8 @@ int main(int argc, char **argv) {
       {"cli_fat_boot", "programs/proof/1283_cli_fat_boot.sh", "fat_boot lib + doctor lib_fat_boot"},
       {"cli_init_fat", "programs/proof/1284_cli_init_fat.sh", "cubalc init --fat fat_boot nest scaffold"},
       {"cli_remain_ms_plate", "programs/proof/1285_cli_remain_ms_plate.sh", "run plate remain_ms dual of REMAIN_MS + STATUS"},
+      {"wall_ms", "programs/proof/1286_wall_ms.cubalc", "WALL_MS/ELAPSED mono elapsed since run start"},
+      {"cli_wall_ms_plate", "programs/proof/1286_cli_wall_ms_plate.sh", "run plate wall_ms + WALL_MS form + STATUS"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3376,6 +3378,7 @@ int main(int argc, char **argv) {
       {"REMAIN_MS", "flow", "REMAIN_MS|BUDGETLEFT wall budget left ms · -1 unlimited"},
       {"HAS_TIME", "flow", "HAS_TIME n soft 0|1 if remaining >= n"},
       {"NEEDTIME", "flow", "NEEDTIME n fail-fast if wall remaining < n ms"},
+      {"WALL_MS", "flow", "WALL_MS|ELAPSED mono ms since run start → LAST_N"},
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
       {"IDENTITY", "flow", "IDENTITY — cubalc.identity.v1 user@host:pid plate"},
       {"SETP", "flow", "SETP [FROM plate] key value — set key · JSON-shaped strings auto-raw · paths ok · multi-plate"},
@@ -11807,6 +11810,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"REMAIN_MS", "flow", "REMAIN_MS|BUDGETLEFT wall budget left ms · -1 unlimited"},
       {"HAS_TIME", "flow", "HAS_TIME n soft 0|1 if remaining >= n"},
       {"NEEDTIME", "flow", "NEEDTIME n fail-fast if wall remaining < n ms"},
+      {"WALL_MS", "flow", "WALL_MS|ELAPSED mono ms since run start → LAST_N"},
       {"STATUS", "flow", "STATUS agent health plate"},
       {"IDENTITY", "flow", "IDENTITY user@host:pid plate"},
       {"SYS PID", "host", "SYS PID process id"},
@@ -12533,6 +12537,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"REMAIN_MS", "flow", "REMAIN_MS|BUDGETLEFT wall budget left ms · -1 unlimited"},
       {"HAS_TIME", "flow", "HAS_TIME n soft 0|1 if remaining >= n"},
       {"NEEDTIME", "flow", "NEEDTIME n fail-fast if wall remaining < n ms"},
+      {"WALL_MS", "flow", "WALL_MS|ELAPSED mono ms since run start → LAST_N"},
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
       {"IDENTITY", "flow", "IDENTITY — cubalc.identity.v1 user@host:pid plate"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},

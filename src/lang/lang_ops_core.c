@@ -36619,7 +36619,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"REMAIN_MS", "REMAIN_MS|BUDGETLEFT — wall budget remaining ms → LAST_N (-1 unlimited)"},
       {"HAS_TIME", "HAS_TIME n — soft 0|1 if remaining >= n · sticky LAST_ERR on miss"},
       {"NEEDTIME", "NEEDTIME n — fail-fast if wall budget remaining < n ms"},
-      {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time/vars_n|max|full/timeout_ms/remain_ms)"},
+      {"WALL_MS", "WALL_MS|ELAPSED — mono ms since run start → LAST_N · dual of REMAIN_MS"},
+      {"STATUS", "STATUS — cubalc.status.v1 health (ok/vars/timeout_ms/remain_ms/wall_ms)"},
       {"WHY", "WHY|EXPLAIN — cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED + hint"},
       {"EXPLAIN", "EXPLAIN alias of WHY"},
       {"WHYERR", "WHYERR alias of WHY"},
@@ -37809,6 +37810,31 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
   }
 
+  /* WALL_MS / ELAPSED / ELAPSED_MS — mono ms since run start → LAST_N.
+   * Usability: profile mid-run without SYS MONOTONIC glue; dual of REMAIN_MS. */
+  if (kw(&L->cur, "WALL_MS") || kw(&L->cur, "WALLMS") ||
+      kw(&L->cur, "ELAPSED") || kw(&L->cur, "ELAPSED_MS") ||
+      kw(&L->cur, "RUN_ELAPSED") || kw(&L->cur, "RUNTIME_MS")) {
+    long wall = 0;
+    char nb[24];
+    lex_next(L);
+    if (vm->run_start_ms > 0) {
+      long now = cubalc_lang_mono_ms();
+      if (now >= vm->run_start_ms)
+        wall = now - vm->run_start_ms;
+    }
+    var_set_num(vm, "WALL_MS", wall);
+    var_set_num(vm, "ELAPSED_MS", wall);
+    var_set_num(vm, "LAST_N", wall);
+    vm->last_n = wall;
+    snprintf(nb, sizeof nb, "%ld", wall);
+    var_set_str(vm, "LAST", nb);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* VARS / LOCALS — dump all program variables as one JSON line for agents.
    * Complements PRINT_JSON (named/snapshot): full LET/SYS table without guessing names. */
   if (kw(&L->cur,"VARS")||kw(&L->cur,"LOCALS")||kw(&L->cur,"SHOW_VARS")||
@@ -37927,20 +37953,28 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     {
       long rem = cubalc_lang_timeout_remain_ms(vm);
       long tms = vm->run_timeout_ms > 0 ? vm->run_timeout_ms : 0L;
+      long wall = 0;
+      if (vm->run_start_ms > 0) {
+        long now = cubalc_lang_mono_ms();
+        if (now >= vm->run_start_ms)
+          wall = now - vm->run_start_ms;
+      }
       snprintf(line, sizeof line,
         "{\"schema\":\"cubalc.status.v1\",\"ok\":%s,\"last_err\":\"%s\","
         "\"version\":\"%s\",\"time\":%ld,\"n\":%d,\"hold\":%d,\"unity\":%ld,"
         "\"last_n\":%ld,\"expect_ok\":%ld,\"smx_ok\":%ld,\"smx_talks\":%ld,"
         "\"sp\":%d,\"stmts\":%d,\"vars_n\":%d,\"vars_max\":%d,\"vars_full\":%s,"
-        "\"timeout_ms\":%ld,\"remain_ms\":%ld}",
+        "\"timeout_ms\":%ld,\"remain_ms\":%ld,\"wall_ms\":%ld}",
         okv ? "true" : "false", esc, CUBALC_LANG_VERSION, tsec,
         vm->ch.n_cubes, vm->hold_flash,
         (long)lround(vm->ch.unity * 100.0), vm->last_n, exp_ok, smx, talks,
         vm->sp, vm->res ? vm->res->stmts : 0,
         vm->n_vars, CUBALC_MAX_VARS, vm->vars_full ? "true" : "false",
-        tms, rem < 0 ? -1L : rem);
+        tms, rem < 0 ? -1L : rem, wall);
       var_set_num(vm, "TIMEOUT_MS", tms);
       var_set_num(vm, "REMAIN_MS", rem < 0 ? -1L : rem);
+      var_set_num(vm, "WALL_MS", wall);
+      var_set_num(vm, "ELAPSED_MS", wall);
     }
     if (vm->trace) fprintf(vm->trace, "%s\n", line);
     if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);

@@ -772,6 +772,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 742. ~~**`programs/lib/fat_boot`**~~ **done** (INCLUDE agent_boot + var_guard one-shot · DEFAULT NEED_VARROOM · doctor lib_fat_boot · fat nest preamble).
 743. ~~**`cubalc init --fat`**~~ **done** (scaffold fat_boot + plate_boot nest room · --list catalog n=4 · libs hints fat/time/var_guard).
 744. ~~**run plate `remain_ms` + STATUS budget**~~ **done** (end-of-run wall left · -1 unlimited · STATUS timeout_ms/remain_ms dual of REMAIN_MS).
+745. ~~**run plate `wall_ms` / `WALL_MS`/`ELAPSED`**~~ **done** (mono elapsed since run start · STATUS wall_ms · dual of remain_ms · agent profiling).
 
 ## Tick protocol
 

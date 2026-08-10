@@ -148,6 +148,7 @@ typedef struct {
   /* Wall-clock run budget: CUBALC_RUN_TIMEOUT / cubalc run -T (0 = unlimited). */
   long run_timeout_ms;   /* requested budget ms */
   long run_deadline_ms;  /* mono ms absolute; 0 = no deadline */
+  long run_start_ms;     /* mono ms at run start · wall/elapsed dual of remain */
 } VM;
 
 

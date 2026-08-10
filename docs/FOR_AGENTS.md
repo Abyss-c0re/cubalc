@@ -43,9 +43,9 @@ CUBALC_INCLUDE_PATH=$PWD/mylibs cubalc libs             # catalog + include_path
 Run plate includes `preload_n` / `include_path_n`. See `cubalc env PRELOAD`.
 Host version floor: `export CUBALC_REQUIRE_VERSION=1.15` or `cubalc run -R 1.15` (fail if runtime older).
 Wall budget for runaway loops: `cubalc run -T 5000` or `export CUBALC_RUN_TIMEOUT=5000` (ms).
-Plate: `timeout_ms` · `timed_out` · `remain_ms` (−1 unlimited) · in-lang `TIMEOUT_MS` / `TIMED_OUT` · SLEEP clamps to remaining.
+Plate: `timeout_ms` · `timed_out` · `remain_ms` (−1 unlimited) · `wall_ms` (elapsed) · in-lang `TIMEOUT_MS` / `TIMED_OUT` · SLEEP clamps to remaining.
 STATUS also reports `timeout_ms` / `remain_ms`.
-Mid-run probe: `REMAIN_MS` → ms left (−1 unlimited) · `HAS_TIME 200` soft · `NEEDTIME 200` fail-fast before heavy work.
+Mid-run probe: `WALL_MS`/`ELAPSED` (ms since start) · `REMAIN_MS` → ms left (−1 unlimited) · `HAS_TIME 200` soft · `NEEDTIME 200` fail-fast before heavy work.
 Recipe: `DEFAULT NEED_TIME = 200` · `INCLUDE time_guard` (soft: `DEFAULT TIME_GUARD_SOFT = 1`) · `cubalc doctor` → `lib_time_guard`.
 Fat nest boards: `DEFAULT NEED_VARROOM = 48` · `INCLUDE fat_boot` (agent_boot + var_guard) · `-I fat_boot` · doctor `lib_fat_boot`.
 Scaffold: `cubalc init my_agent.cubalc --fat` · `cubalc init --list` includes fat_boot.

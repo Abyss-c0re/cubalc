@@ -96,8 +96,9 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     if (tms < 0) tms = 0;
     if (tms > 86400000L) tms = 86400000L; /* cap 24h */
     vm.run_timeout_ms = tms;
+    vm.run_start_ms = cubalc_lang_mono_ms();
     if (tms > 0)
-      vm.run_deadline_ms = cubalc_lang_mono_ms() + tms;
+      vm.run_deadline_ms = vm.run_start_ms + tms;
     else
       vm.run_deadline_ms = 0;
   }
@@ -141,6 +142,8 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     /* Usability: end-of-run wall budget left (dual of REMAIN_MS form). */
     {
       long rem = cubalc_lang_timeout_remain_ms(&vm);
+      long now = cubalc_lang_mono_ms();
+      long wall = 0;
       if (out->timed_out)
         out->remain_ms = 0;
       else if (rem < 0)
@@ -149,6 +152,12 @@ static int run_source_inner(const char *src, size_t n, const char *name,
         out->remain_ms = 2147483647;
       else
         out->remain_ms = (int)rem;
+      if (vm.run_start_ms > 0 && now >= vm.run_start_ms)
+        wall = now - vm.run_start_ms;
+      if (wall > 2147483647L) wall = 2147483647L;
+      out->wall_ms = (int)wall;
+      var_set_num(&vm, "WALL_MS", wall);
+      var_set_num(&vm, "ELAPSED_MS", wall);
     }
     if (vm.fatal && !out->err[0]) snprintf(out->err,sizeof out->err,"%s",vm.err);
     /* Usability: surface sticky LAST_ERR/ERR on plate even when run ok

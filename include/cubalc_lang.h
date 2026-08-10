@@ -38,6 +38,7 @@ typedef struct cubalc_run_result {
   int timeout_ms;     /* requested budget (0 = none) */
   int timed_out;      /* 1 if run aborted for exceeding budget */
   int remain_ms;      /* ms left at end of run · -1 unlimited · dual of REMAIN_MS */
+  int wall_ms;        /* elapsed mono ms for this run · dual of REMAIN_MS budget plane */
 } cubalc_run_result;
 
 int cubalc_run_file(const char *path, cubalc_run_result *out, FILE *trace);
