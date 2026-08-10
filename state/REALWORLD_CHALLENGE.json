@@ -4342,6 +4342,6 @@
     "iter293: 10/10 green after STR shuttle; soft polarity vs HASMATCH documented",
     "iter293: selftest CLI duals still red"
   ],
-  "commit": "pending",
+  "commit": "50839a98",
   "ts": "2026-08-10T09:03:58Z"
 }
