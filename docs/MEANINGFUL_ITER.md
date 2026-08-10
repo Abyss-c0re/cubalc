@@ -788,6 +788,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 758. ~~**`cubalc help` product surface sync**~~ **done** (recipe · init --fat-session · run -T/-I/-L/-R/-e · discovery forms LISTLIBS…LIBINFO · agent one-liner).
 759. ~~**`RECIPE` / `LIBCARD` / `CARD`**~~ **done** (in-lang dual of `cubalc recipe` · cubalc.recipe.v1 + RECIPE_DEPS/DEFAULTS/HEAD bags · soft miss · no LIBINFO+LIBDEPS+LIBDEFAULTS+HEADLIB glue).
 760. ~~**`cubalc init --from|--recipe|-F <lib>`**~~ **done** (scaffold any lib: LIBDEFAULTS as DEFAULT lines + INCLUDE · catalog n=6 · dual of cubalc recipe / RECIPE).
+761. ~~**`CHECKDEPS` / `HASDEPS` / `NEEDDEPS`**~~ **done** (root + LIBTREE disk presence gate · DEPS_MISS/OK bags · soft/hard before INCLUDE · no cascading open fails).
 
 ## Tick protocol
 

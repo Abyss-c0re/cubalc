@@ -3142,6 +3142,8 @@ int main(int argc, char **argv) {
       {"recipe_form", "programs/proof/1300_recipe.cubalc", "RECIPE/LIBCARD in-lang dual of cubalc recipe plate"},
       {"cli_recipe_form", "programs/proof/1300_cli_recipe.sh", "RECIPE plate + soft miss + forms + CLI parity"},
       {"cli_init_from", "programs/proof/1301_cli_init_from.sh", "cubalc init --from lib recipe scaffold knobs+INCLUDE"},
+      {"checkdeps", "programs/proof/1302_checkdeps.cubalc", "CHECKDEPS/HASDEPS/NEEDDEPS install gate for lib+tree"},
+      {"cli_checkdeps", "programs/proof/1302_cli_checkdeps.sh", "CHECKDEPS plate + soft miss + forms + NEEDDEPS fail"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3652,6 +3654,10 @@ int main(int argc, char **argv) {
       {"LIBDEPS", "flow", "LIBDEPS|INCLUDEDEPS name bag of INCLUDE stems from lib recipe"},
       {"LIBINFO", "flow", "LIBINFO|STATLIB name cubalc.libinfo.v1 path/bytes/lines/mtime/deps_n"},
       {"LIBTREE", "flow", "LIBTREE|LIBDEPSALL name transitive INCLUDE closure bag"},
+      {"CHECKDEPS", "flow", "CHECKDEPS name DEPS_MISS bag root+tree disk audit before INCLUDE"},
+      {"HASDEPS", "flow", "HASDEPS|DEPSOK name soft 0|1 all deps on disk"},
+      {"NEEDDEPS", "flow", "NEEDDEPS name fail-fast if root/LIBTREE dep missing"},
+      {"DEPSOK", "flow", "DEPSOK alias of HASDEPS"},
       {"LIBDEFAULTS", "flow", "LIBDEFAULTS|LIBKNOBS name DEFAULT key=value knobs bag"},
       {"RECIPE", "flow", "RECIPE|LIBCARD|CARD name cubalc.recipe.v1 path+deps+defaults+head dual of cubalc recipe"},
       {"LIBCARD", "flow", "LIBCARD alias of RECIPE"},
@@ -13044,6 +13050,10 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"LIBDEPS", "flow", "LIBDEPS|INCLUDEDEPS name bag of INCLUDE stems from lib recipe"},
       {"LIBINFO", "flow", "LIBINFO|STATLIB name cubalc.libinfo.v1 path/bytes/lines/mtime/deps_n"},
       {"LIBTREE", "flow", "LIBTREE|LIBDEPSALL name transitive INCLUDE closure bag"},
+      {"CHECKDEPS", "flow", "CHECKDEPS name DEPS_MISS bag root+tree disk audit before INCLUDE"},
+      {"HASDEPS", "flow", "HASDEPS|DEPSOK name soft 0|1 all deps on disk"},
+      {"NEEDDEPS", "flow", "NEEDDEPS name fail-fast if root/LIBTREE dep missing"},
+      {"DEPSOK", "flow", "DEPSOK alias of HASDEPS"},
       {"LIBDEFAULTS", "flow", "LIBDEFAULTS|LIBKNOBS name DEFAULT key=value knobs bag"},
       {"RECIPE", "flow", "RECIPE|LIBCARD|CARD name cubalc.recipe.v1 path+deps+defaults+head dual of cubalc recipe"},
       {"LIBCARD", "flow", "LIBCARD alias of RECIPE"},
@@ -14514,7 +14524,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]\n"
       "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|HASLIB|CATLIB|GREPLIB|HEADLIB|LIBDEPS|LIBTREE|LIBDEFAULTS|LIBINFO|RECIPE\n"
+      "    LISTLIBS|HASLIB|CATLIB|GREPLIB|HEADLIB|LIBDEPS|LIBTREE|CHECKDEPS|NEEDDEPS|LIBDEFAULTS|LIBINFO|RECIPE\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · RECIPE fat_session · init --from plate_tick · init --fat-session\n"

@@ -7322,6 +7322,211 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* CHECKDEPS / HASDEPS / NEEDDEPS name — install-layout gate for a lib + transitive
+   * INCLUDE closure (disk presence, not yet-loaded). Usability: fail-fast before
+   * INCLUDE fat_session when a dep is missing, without cascading open errors.
+   *   HASDEPS fat_session     → LAST_N 0|1 soft
+   *   CHECKDEPS fat_session   → DEPS_MISS bag · LAST_N=miss count · always OK=1 audit
+   *   NEEDDEPS fat_session    → fatal if any stem missing (root or tree)
+   */
+  if (kw(&L->cur, "CHECKDEPS") || kw(&L->cur, "HASDEPS") ||
+      kw(&L->cur, "NEEDDEPS") || kw(&L->cur, "DEPSOK") ||
+      kw(&L->cur, "VERIFYDEPS") || kw(&L->cur, "DEPSMISS") ||
+      kw(&L->cur, "NEEDLIBTREE") || kw(&L->cur, "HASLIBTREE") ||
+      kw(&L->cur, "CHECKLIBTREE") || kw(&L->cur, "REQUIREDEPS")) {
+    char name[160], root_path[768], root_base[160];
+    char stems[64][96];
+    char miss[CUBALC_VAR_STR_MAX], okbag[CUBALC_VAR_STR_MAX];
+    int nstem = 0, nmiss = 0, nok = 0, qi = 0, i;
+    int hard = 0, as_ok = 0, as_miss = 0;
+    int aln = L->cur.line;
+    size_t mo = 0, oo = 0;
+    if (kw(&L->cur, "NEEDDEPS") || kw(&L->cur, "NEEDLIBTREE") ||
+        kw(&L->cur, "REQUIREDEPS"))
+      hard = 1;
+    else if (kw(&L->cur, "HASDEPS") || kw(&L->cur, "DEPSOK") ||
+             kw(&L->cur, "HASLIBTREE") || kw(&L->cur, "VERIFYDEPS"))
+      as_ok = 1;
+    else
+      as_miss = 1; /* CHECKDEPS / DEPSMISS / CHECKLIBTREE */
+    lex_next(L);
+    name[0] = 0;
+    root_path[0] = 0;
+    miss[0] = 0;
+    okbag[0] = 0;
+    if (kw(&L->cur, "LIB") || kw(&L->cur, "OF") || kw(&L->cur, "FOR") ||
+        kw(&L->cur, "MODULE") || kw(&L->cur, "RECIPE"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      if (hard) {
+        fail_at(vm, L, "NEEDDEPS needs lib name — NEEDDEPS fat_session");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CHECKDEPS: need name");
+      var_set_str(vm, "ERR", "CHECKDEPS: need name");
+      bump(vm);
+      return 1;
+    }
+    /* collect root + transitive deps */
+    nstem = 0;
+    if (!lib_resolve_path(name, root_path, sizeof root_path, root_base, sizeof root_base)) {
+      /* root itself missing */
+      snprintf(stems[0], sizeof stems[0], "%s", name);
+      {
+        const char *slash = strrchr(name, '/');
+        const char *leaf = slash ? slash + 1 : name;
+        size_t blen;
+        snprintf(stems[0], sizeof stems[0], "%s", leaf);
+        blen = strlen(stems[0]);
+        if (blen > 7 && strcmp(stems[0] + blen - 7, ".cubalc") == 0)
+          stems[0][blen - 7] = 0;
+      }
+      nstem = 1;
+      /* cannot walk further */
+    } else {
+      snprintf(stems[nstem++], sizeof stems[0], "%s", root_base);
+      lib_append_deps(root_path, stems, &nstem, 64);
+      qi = 1; /* start after root — expand each known stem */
+      while (qi < nstem && nstem < 64) {
+        char dpath[768], dbase[160];
+        if (lib_resolve_path(stems[qi], dpath, sizeof dpath, dbase, sizeof dbase))
+          lib_append_deps(dpath, stems, &nstem, 64);
+        qi++;
+      }
+    }
+    mo = 0;
+    oo = 0;
+    nmiss = 0;
+    nok = 0;
+    for (i = 0; i < nstem; i++) {
+      char pth[768], base[160];
+      size_t ln = strlen(stems[i]);
+      if (!stems[i][0]) continue;
+      if (lib_resolve_path(stems[i], pth, sizeof pth, base, sizeof base)) {
+        if (nok > 0 && oo + 1 < sizeof okbag) okbag[oo++] = '\n';
+        if (oo + ln < sizeof okbag) {
+          memcpy(okbag + oo, stems[i], ln);
+          oo += ln;
+        }
+        okbag[oo] = 0;
+        nok++;
+      } else {
+        if (nmiss > 0 && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, stems[i], ln);
+          mo += ln;
+        }
+        miss[mo] = 0;
+        nmiss++;
+      }
+    }
+    var_set_str(vm, "DEPS_MISS", miss);
+    var_set_str(vm, "DEPS_OK", okbag);
+    var_set_num(vm, "DEPS_MISS_N", nmiss);
+    var_set_num(vm, "DEPS_OK_N", nok);
+    var_set_num(vm, "DEPS_N", nstem);
+    var_set_str(vm, "LIB_STEM", root_base[0] ? root_base : name);
+    var_set_str(vm, "LIB_PATH", root_path);
+    var_set_num(vm, "CHECKDEPS_N", nstem);
+
+    if (hard) {
+      if (nmiss == 0) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+        if (vm->res) vm->res->asserts_ok++;
+        if (vm->trace)
+          fprintf(vm->trace, "# needdeps ok %s n=%d\n", name, nstem);
+        bump(vm);
+        return 1;
+      }
+      {
+        char msg[240];
+        char flat[160];
+        size_t fi = 0;
+        const char *mp;
+        flat[0] = 0;
+        for (mp = miss; *mp && fi + 1 < sizeof flat; mp++) {
+          if (*mp == '\n') {
+            if (fi > 0 && flat[fi - 1] != ',') {
+              flat[fi++] = ',';
+              if (fi + 1 < sizeof flat) flat[fi++] = ' ';
+            }
+          } else {
+            flat[fi++] = *mp;
+          }
+        }
+        flat[fi] = 0;
+        snprintf(msg, sizeof msg,
+                 "NEEDDEPS missing line %d: %s — cubalc libs · cubalc recipe %s · "
+                 "CHECKDEPS / HASDEPS",
+                 aln, flat[0] ? flat : "?", name);
+        var_set_str(vm, "ERR", msg);
+        var_set_str(vm, "LAST_ERR", msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+    }
+
+    if (as_ok) {
+      int ok = (nmiss == 0 && nstem > 0);
+      /* empty name already handled; nstem==0 shouldn't happen */
+      if (nstem == 0) ok = 0;
+      var_set_num(vm, "LAST_N", ok);
+      vm->last_n = ok;
+      if (ok) {
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+      } else {
+        var_set_str(vm, "LAST", miss[0] ? miss : "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", miss[0] ? miss : "0");
+        var_set_num(vm, "OK", 0);
+        {
+          char em[192];
+          snprintf(em, sizeof em,
+                   "HASDEPS miss line %d: %s — cubalc libs · CHECKDEPS",
+                   aln, miss[0] ? miss : name);
+          var_set_str(vm, "ERR", em);
+          var_set_str(vm, "LAST_ERR", em);
+        }
+      }
+      bump(vm);
+      return 1;
+    }
+
+    /* CHECKDEPS / DEPSMISS — audit bag; OK=1; LAST_N = miss count */
+    var_set_str(vm, "LAST", miss);
+    var_set_str(vm, "CHECKDEPS", miss);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", miss);
+    vm->last_n = nmiss;
+    var_set_num(vm, "LAST_N", nmiss);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LIBDEFAULTS / LIBKNOBS / LIBVARS name — bag of DEFAULT key=value knobs from a lib.
    * Usability: agents see what to set before INCLUDE without CATLIB/HEADLIB parsing.
    * LAST = newline KEY=value fields · LIBDEFAULTS_N · soft miss. */

@@ -1,0 +1,47 @@
+# CHECKDEPS / HASDEPS / NEEDDEPS — install gate for lib + transitive deps
+
+# complete fat nest tree on disk
+HASDEPS fat_session
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT DEPS_MISS_N == 0
+ASSERT DEPS_N >= 3
+ASSERT DEPS_OK_N == DEPS_N
+SYS HASLINE DEPS_OK "fat_session"
+ASSERT LAST_N == 1
+SYS HASLINE DEPS_OK "fat_boot"
+ASSERT LAST_N == 1
+SYS HASLINE DEPS_OK "plate_boot"
+ASSERT LAST_N == 1
+
+CHECKDEPS fat_session
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT DEPS_MISS_N == 0
+
+# leaf with no deps still ok
+HASDEPS agent_boot
+ASSERT OK == 1
+ASSERT DEPS_N == 1
+ASSERT DEPS_OK_N == 1
+
+NEEDDEPS plate_tick
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# missing root
+HASDEPS no_such_lib_xyz_zzz
+ASSERT OK == 0
+ASSERT DEPS_MISS_N >= 1
+SYS HASLINE DEPS_MISS "no_such_lib_xyz_zzz"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+CHECKDEPS no_such_lib_xyz_zzz
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+ASSERT DEPS_MISS_N >= 1
+CLEAR_ERR
+
+PASS
+PRINT "1302_checkdeps: PASS"

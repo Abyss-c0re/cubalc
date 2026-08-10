@@ -36641,6 +36641,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"LIBDEPS", "LIBDEPS|INCLUDEDEPS name — bag of INCLUDE stems from a lib recipe · composition without GREPLIB glue"},
       {"LIBINFO", "LIBINFO|STATLIB name — cubalc.libinfo.v1 path/bytes/lines/mtime/deps_n · dual of cubalc cat --meta"},
       {"LIBTREE", "LIBTREE|LIBDEPSALL name — transitive INCLUDE closure bag · full recipe composition without recursive LIBDEPS"},
+      {"CHECKDEPS", "CHECKDEPS name — DEPS_MISS bag + LAST_N=miss · root+LIBTREE disk presence audit · before INCLUDE"},
+      {"HASDEPS", "HASDEPS|DEPSOK name — soft 0|1 all root+transitive deps on disk · dual of CHECKDEPS"},
+      {"NEEDDEPS", "NEEDDEPS name — fail-fast if any root/LIBTREE dep missing · install gate before INCLUDE"},
+      {"DEPSOK", "DEPSOK alias of HASDEPS"},
       {"LIBDEFAULTS", "LIBDEFAULTS|LIBKNOBS name — DEFAULT key=value knobs bag · set-before-INCLUDE without CATLIB parse"},
       {"RECIPE", "RECIPE|LIBCARD|CARD name — cubalc.recipe.v1 path+deps+defaults+head · dual of cubalc recipe · no multi-form glue"},
       {"LIBCARD", "LIBCARD alias of RECIPE — in-lang dual of cubalc card"},
@@ -38053,6 +38057,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     /* Actionable recovery tips from sticky error text */
     if (!err[0] && okv)
       snprintf(hintbuf, sizeof hintbuf, "ok — no sticky LAST_ERR");
+    else if (strstr(err, "NEEDDEPS") || strstr(err, "HASDEPS") ||
+             strstr(err, "CHECKDEPS") || strstr(err, "DEPS_MISS"))
+      snprintf(hintbuf, sizeof hintbuf,
+               "CHECKDEPS/HASDEPS · cubalc libs · cubalc recipe · install missing deps");
     else if (strstr(err, "INCLUDE") || strstr(err, "include") ||
              strstr(err, "REQUIRE LIB") || strstr(err, "lib missing"))
       snprintf(hintbuf, sizeof hintbuf,
