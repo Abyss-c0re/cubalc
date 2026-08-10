@@ -1,0 +1,19 @@
+# LISTPRELOAD — effective -I / CUBALC_PRELOAD short-name bag
+# Without CLI preload env, bag empty unless CUBALC_PRELOAD set.
+
+LISTPRELOAD
+# may be 0 when run without -I/PRELOAD
+ASSERT OK == 1
+
+# env dual (CLI publishes PRELOAD_ACTIVE; proof may set PRELOAD)
+SYS ENV SET CUBALC_PRELOAD_ACTIVE "hold_seed:agent_boot"
+LISTPRELOAD
+ASSERT LAST_N == 2
+SYS HASLINE LAST "hold_seed"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "agent_boot"
+ASSERT LAST_N == 1
+ASSERT PRELOAD_N == 2
+
+PASS
+PRINT "1269_listpreload: PASS"

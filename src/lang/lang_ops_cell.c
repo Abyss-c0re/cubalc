@@ -5790,6 +5790,56 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LISTPRELOAD / PRELOADS — short-name bag of effective -I / CUBALC_PRELOAD.
+   * Usability: CLI sets CUBALC_PRELOAD_ACTIVE; programs audit request vs INCLUDESTEMS. */
+  if (kw(&L->cur, "LISTPRELOAD") || kw(&L->cur, "PRELOADS") ||
+      kw(&L->cur, "PRELOADLIST") || kw(&L->cur, "LIST_PRELOAD") ||
+      kw(&L->cur, "PRELOAD_NAMES") || kw(&L->cur, "PRELOADED")) {
+    const char *env = getenv("CUBALC_PRELOAD_ACTIVE");
+    char bag[1024];
+    size_t o = 0;
+    int n = 0;
+    lex_next(L);
+    if (!env || !env[0])
+      env = getenv("CUBALC_PRELOAD");
+    bag[0] = 0;
+    if (env && env[0]) {
+      const char *p = env;
+      while (*p) {
+        char name[96];
+        size_t len = 0;
+        while (*p == ':' || *p == ',' || *p == ' ' || *p == '\t') p++;
+        if (!*p) break;
+        while (p[len] && p[len] != ':' && p[len] != ',' && p[len] != ' ' &&
+               p[len] != '\t' && len + 1 < sizeof name) {
+          name[len] = p[len];
+          len++;
+        }
+        name[len] = 0;
+        p += len;
+        if (!name[0]) continue;
+        if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + len < sizeof bag) {
+          memcpy(bag + o, name, len);
+          o += len;
+        }
+        bag[o] = 0;
+        n++;
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTPRELOAD", bag);
+    var_set_str(vm, "PRELOADS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "PRELOAD_N", n);
+    var_set_num(vm, "LISTPRELOAD_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* INCLUDESTEMS / LISTINCLUDESTEMS — basenames without .cubalc from loaded modules.
    * Usability: short-name bag for HASLINE/NEEDINCLUDE glue after -I without BASENAMEALL. */
   if (kw(&L->cur, "INCLUDESTEMS") || kw(&L->cur, "LISTINCLUDESTEMS") ||

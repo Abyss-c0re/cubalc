@@ -41,6 +41,7 @@ Host version floor: `export CUBALC_REQUIRE_VERSION=1.15` or `cubalc run -R 1.15`
 After load: `LISTINCLUDES` → path bag · `INCLUDESTEMS` short names · `HASINCLUDE agent_boot` soft 0|1 · `INCLUDE_N`.
 Run plate always reports `includes_n` + `includes` JSON array (same modules · no parse).
 Also `preload_n` + `preload` short-name array from `-I` / `CUBALC_PRELOAD` (request vs loaded).
+In-lang: `LISTPRELOAD` → same short names (via `CUBALC_PRELOAD_ACTIVE`) · compare to `INCLUDESTEMS`.
 Gates: `NEEDINCLUDE agent_boot plate_session` fail-fast · `HASINCLUDEALL a b` soft + `INCLUDE_MISS` bag.
 
 ## Durable agent state (plates)

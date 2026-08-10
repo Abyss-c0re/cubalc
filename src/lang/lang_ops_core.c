@@ -36610,6 +36610,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"LOADED", "LOADED alias of LISTINCLUDES"},
       {"INCLUDESTEMS", "INCLUDESTEMS|LISTINCLUDESTEMS — short names bag from loaded modules (no .cubalc)"},
       {"LISTINCLUDESTEMS", "LISTINCLUDESTEMS alias of INCLUDESTEMS"},
+      {"LISTPRELOAD", "LISTPRELOAD|PRELOADS — -I/CUBALC_PRELOAD short names bag (CUBALC_PRELOAD_ACTIVE)"},
+      {"PRELOADS", "PRELOADS alias of LISTPRELOAD"},
       {"HASINCLUDE", "HASINCLUDE name|path — soft 0|1 if module loaded · stem/path match · dual of LISTINCLUDES"},
       {"HASINCLUDEALL", "HASINCLUDEALL a b… — soft 0|1 all loaded · INCLUDE_MISS bag of missing"},
       {"NEEDINCLUDE", "NEEDINCLUDE a b… — fail-fast if any module not loaded · after -I/INCLUDE"},

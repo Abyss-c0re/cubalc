@@ -1847,6 +1847,27 @@ int main(int argc, char **argv) {
       free(expr_buf);
       return 2;
     }
+    /* Publish effective preload list for in-lang LISTPRELOAD / agents. */
+    if (n_preload > 0) {
+      char joined[512];
+      size_t o = 0;
+      int k;
+      joined[0] = 0;
+      for (k = 0; k < n_preload; k++) {
+        size_t L = strlen(preload[k]);
+        if (k && o + 1 < sizeof joined) joined[o++] = ':';
+        if (o + L >= sizeof joined) L = sizeof joined - o - 1;
+        if (L > 0) {
+          memcpy(joined + o, preload[k], L);
+          o += L;
+        }
+      }
+      joined[o] = 0;
+      if (joined[0])
+        setenv("CUBALC_PRELOAD_ACTIVE", joined, 1);
+    } else {
+      unsetenv("CUBALC_PRELOAD_ACTIVE");
+    }
     /* Fail-fast version floor before parse/run (agent host contract). */
     if (req_ver[0] && !run_version_ge(CUBALC_LANG_VERSION, req_ver)) {
       char prej[512];
@@ -2819,6 +2840,8 @@ int main(int argc, char **argv) {
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
+      {"listpreload", "programs/proof/1269_listpreload.cubalc", "LISTPRELOAD effective -I/PRELOAD bag"},
+      {"cli_listpreload", "programs/proof/1269_cli_listpreload.sh", "LISTPRELOAD after run -I · PRELOAD_ACTIVE"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3313,6 +3336,7 @@ int main(int argc, char **argv) {
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"LISTINCLUDES", "flow", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N"},
       {"INCLUDESTEMS", "flow", "INCLUDESTEMS short-name bag from loaded modules"},
+      {"LISTPRELOAD", "flow", "LISTPRELOAD|PRELOADS -I/CUBALC_PRELOAD short-name bag"},
       {"HASINCLUDE", "flow", "HASINCLUDE name|path — soft 0|1 if module loaded this run"},
       {"HASINCLUDEALL", "flow", "HASINCLUDEALL a b… soft all-loaded · INCLUDE_MISS bag"},
       {"NEEDINCLUDE", "flow", "NEEDINCLUDE a b… fail-fast if any module not loaded"},
@@ -4817,6 +4841,7 @@ int main(int argc, char **argv) {
       {"CUBALC_ROOT", "", 0, "install root for INCLUDE resolution"},
       {"CUBALC_INCLUDE_PATH", "", 0, "colon dirs for INCLUDE short names (after programs/lib)"},
       {"CUBALC_PRELOAD", "", 0, "colon lib names auto-INCLUDE ONCE before run body (-I dual)"},
+      {"CUBALC_PRELOAD_ACTIVE", "", 0, "set by run to effective -I/PRELOAD list · LISTPRELOAD in-lang"},
       {"CUBALC_REQUIRE_VERSION", "", 0, "x.y[.z] floor for run (-R dual · fail if runtime older)"},
       {"CUBALC_SEED", "", 0, "RNG seed for reproducible runs"},
       {"CUBALC_QUIET", "", 0, "1 → run plate-only no board noise"},
@@ -11437,6 +11462,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"INCLUDE", "flow", "INCLUDE [ONCE] path|libname → programs/lib/"},
       {"LISTINCLUDES", "flow", "LISTINCLUDES|LOADED bag of included paths · INCLUDE_N"},
       {"INCLUDESTEMS", "flow", "INCLUDESTEMS short-name bag from loaded modules"},
+      {"LISTPRELOAD", "flow", "LISTPRELOAD -I preload short-name bag"},
       {"HASINCLUDE", "flow", "HASINCLUDE name soft 0|1 if module loaded"},
       {"HASINCLUDEALL", "flow", "HASINCLUDEALL a b soft all loaded"},
       {"NEEDINCLUDE", "flow", "NEEDINCLUDE a b fail-fast not loaded"},
@@ -13332,6 +13358,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"CUBALC_STRICT", "1 → soft last_err fails exit"},
       {"CUBALC_INCLUDE_PATH", "colon dirs for INCLUDE short names"},
       {"CUBALC_PRELOAD", "colon libs auto-INCLUDE ONCE before run (-I)"},
+      {"CUBALC_PRELOAD_ACTIVE", "effective -I/PRELOAD list · LISTPRELOAD"},
       {"CUBALC_REQUIRE_VERSION", "x.y floor for run (-R dual)"},
     };
     if (!q || !q[0]) {

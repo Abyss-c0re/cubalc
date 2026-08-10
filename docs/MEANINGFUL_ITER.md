@@ -755,6 +755,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 725. ~~**`CUBALC_REQUIRE_VERSION` / run `-R`**~~ **done** (host version floor without editing programs · fail plate before body · REQUIRE VERSION dual · env catalog).
 726. ~~**run plate `preload` names array**~~ **done** (JSON list of -I/CUBALC_PRELOAD short names · dual of includes paths · agents compare request vs loaded).
 727. ~~**`INCLUDESTEMS` / `LISTINCLUDESTEMS`**~~ **done** (short-name bag from loaded modules · HASLINE/NEEDINCLUDE without BASENAMEALL after -I).
+728. ~~**`LISTPRELOAD` / `CUBALC_PRELOAD_ACTIVE`**~~ **done** (in-lang bag of effective -I/PRELOAD names · run publishes PRELOAD_ACTIVE · dual of plate preload[]).
 
 ## Tick protocol
 
