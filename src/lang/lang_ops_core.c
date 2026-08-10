@@ -2741,6 +2741,10 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"LISTTOPICS", "LISTTOPICS|TOPICS — bag of discovery topics · dual of cubalc topics"},
       {"HASTOPIC", "HASTOPIC name — soft 0|1 if topic known · dual of HASFORM for topics"},
       {"NEEDTOPIC", "NEEDTOPIC name — fail-fast if topic unknown"},
+      {"MATCHTOPICS", "MATCHTOPICS|FILTERTOPICS needle — bag of topics matching filter · dual of MATCHLIBS for topics"},
+      {"FILTERTOPICS", "FILTERTOPICS alias of MATCHTOPICS"},
+      {"PICKTOPIC", "PICKTOPIC|FIRSTTOPIC needle [OR fallback] — first matching topic · dual of PICKLIB"},
+      {"FIRSTTOPIC", "FIRSTTOPIC alias of PICKTOPIC"},
       {"TOPICHINT", "TOPICHINT|DESCRIBETOPIC name — one-line topic hint → LAST · dual of cubalc topichint"},
       {"DESCRIBETOPIC", "DESCRIBETOPIC alias of TOPICHINT"},
       {"RELATEDTOPIC", "RELATEDTOPIC|SEETOPICS name — related discovery topic bag · dual of cubalc relatedtopic · twin of RELATED for topics"},
@@ -39243,8 +39247,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"RELATEDTOPIC", "FORMTOPICS"},
       {"LISTTOPICS", "RELATEDTOPIC"}, {"LISTTOPICS", "TOPICHINT"}, {"LISTTOPICS", "HASTOPIC"},
       {"LISTTOPICS", "NEEDTOPIC"}, {"LISTTOPICS", "TOPIC"}, {"LISTTOPICS", "FORMTOPICS"},
+      {"LISTTOPICS", "MATCHTOPICS"}, {"LISTTOPICS", "PICKTOPIC"},
       {"HASTOPIC", "NEEDTOPIC"}, {"HASTOPIC", "LISTTOPICS"}, {"HASTOPIC", "TOPICHINT"},
       {"NEEDTOPIC", "HASTOPIC"}, {"NEEDTOPIC", "LISTTOPICS"},
+      {"MATCHTOPICS", "PICKTOPIC"}, {"MATCHTOPICS", "LISTTOPICS"}, {"MATCHTOPICS", "HASTOPIC"},
+      {"MATCHTOPICS", "TOPICHINT"}, {"MATCHTOPICS", "GUIDE"},
+      {"PICKTOPIC", "MATCHTOPICS"}, {"PICKTOPIC", "GUIDE"}, {"PICKTOPIC", "TOPIC"},
+      {"PICKTOPIC", "TOPICHINT"}, {"PICKTOPIC", "HASTOPIC"},
       {"TOPIC", "RELATEDTOPIC"}, {"TOPIC", "TOPICHINT"}, {"TOPIC", "TIPS"},
       {"TOPIC", "FORMSFOR"}, {"TOPIC", "SNIP"}, {"TOPIC", "LISTTOPICS"},
       {"TOPIC", "FORMTOPICS"}, {"TOPIC", "GUIDE"},
@@ -40282,6 +40291,216 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
     }
     (void)aln;
+    bump(vm);
+    return 1;
+  }
+
+
+  /* MATCHTOPICS|FILTERTOPICS needle — bag of discovery topics matching filter.
+   * Dual of MATCHLIBS for the fixed topic catalog. Soft empty OK=0.
+   * Dual of cubalc matchtopics. */
+  if (kw(&L->cur,"MATCHTOPICS")||kw(&L->cur,"FILTERTOPICS")||kw(&L->cur,"TOPICMATCH")||
+      kw(&L->cur,"MATCH_TOPICS")||kw(&L->cur,"TOPICFILTER")||kw(&L->cur,"GREPTOPICS")){
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    char needle[64], nlow[64], bag[256];
+    size_t k, o = 0;
+    int i, n = 0, nall = (int)(sizeof topics / sizeof topics[0]);
+    lex_next(L);
+    needle[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(needle, sizeof needle, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(needle, sizeof needle, "%s", vm->last_str);
+      else
+        snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!needle[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "MATCHTOPICS_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "MATCHTOPICS: need needle — MATCHTOPICS cap · FILTERTOPICS p");
+      var_set_str(vm, "ERR",
+                  "MATCHTOPICS: need needle — MATCHTOPICS cap · FILTERTOPICS p");
+      bump(vm);
+      return 1;
+    }
+    for (k = 0; needle[k] && k + 1 < sizeof nlow; k++) {
+      char ch = needle[k];
+      if (ch >= 'A' && ch <= 'Z') ch = (char)(ch - 'A' + 'a');
+      nlow[k] = ch;
+    }
+    nlow[k] = 0;
+    if (!strcmp(nlow, "capability") || !strcmp(nlow, "forms") || !strcmp(nlow, "form"))
+      snprintf(nlow, sizeof nlow, "%s", "cap");
+    if (!strcmp(nlow, "mesh") || !strcmp(nlow, "smx") || !strcmp(nlow, "peer"))
+      snprintf(nlow, sizeof nlow, "%s", "p2p");
+    if (!strcmp(nlow, "nest") || !strcmp(nlow, "var") || !strcmp(nlow, "timeout"))
+      snprintf(nlow, sizeof nlow, "%s", "fat");
+    if (!strcmp(nlow, "json") || !strcmp(nlow, "agent"))
+      snprintf(nlow, sizeof nlow, "%s", "plate");
+    if (!strcmp(nlow, "start") || !strcmp(nlow, "all") || !strcmp(nlow, "help") ||
+        !strcmp(nlow, "default") || !strcmp(nlow, "*"))
+      snprintf(nlow, sizeof nlow, "%s", "general");
+    bag[0] = 0;
+    for (i = 0; i < nall; i++) {
+      size_t ln;
+      if (!strstr(topics[i], nlow)) continue;
+      ln = strlen(topics[i]);
+      if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) { memcpy(bag + o, topics[i], ln); o += ln; }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "MATCHTOPICS_FILTER", nlow);
+    if (n == 0) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "MATCHTOPICS", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "MATCHTOPICS_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "MATCHTOPICS: empty — LISTTOPICS · HASTOPIC · cubalc topics");
+      var_set_str(vm, "ERR",
+                  "MATCHTOPICS: empty — LISTTOPICS · HASTOPIC · cubalc topics");
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "MATCHTOPICS", bag);
+    var_set_str(vm, "FILTERTOPICS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "MATCHTOPICS_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* PICKTOPIC|FIRSTTOPIC needle [OR fallback] — first matching discovery topic.
+   * Dual of PICKLIB. Soft miss OK=0 · OR fallback. Dual of cubalc picktopic. */
+  if (kw(&L->cur,"PICKTOPIC")||kw(&L->cur,"FIRSTTOPIC")||kw(&L->cur,"TOPICPICK")||
+      kw(&L->cur,"PICK_TOPIC")||kw(&L->cur,"CHOOSETOPIC")||kw(&L->cur,"SELECTTOPIC")){
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    char needle[64], nlow[64], fallback[64];
+    const char *pick = NULL;
+    size_t k;
+    int i, nall = (int)(sizeof topics / sizeof topics[0]);
+    int have_or = 0;
+    lex_next(L);
+    needle[0] = 0;
+    fallback[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(needle, sizeof needle, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(needle, sizeof needle, "%s", vm->last_str);
+      else
+        snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (kw(&L->cur,"OR") || kw(&L->cur,"ELSE") || kw(&L->cur,"DEFAULT")) {
+      lex_next(L);
+      have_or = 1;
+      if (L->cur.kind == TK_STR) {
+        snprintf(fallback, sizeof fallback, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str)
+          snprintf(fallback, sizeof fallback, "%s", vv->sval);
+        else
+          snprintf(fallback, sizeof fallback, "%s", L->cur.text);
+        lex_next(L);
+      }
+    }
+    if (!needle[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "PICKTOPIC: need needle — PICKTOPIC cap · FIRSTTOPIC plate OR general");
+      var_set_str(vm, "ERR",
+                  "PICKTOPIC: need needle — PICKTOPIC cap · FIRSTTOPIC plate OR general");
+      bump(vm);
+      return 1;
+    }
+    for (k = 0; needle[k] && k + 1 < sizeof nlow; k++) {
+      char ch = needle[k];
+      if (ch >= 'A' && ch <= 'Z') ch = (char)(ch - 'A' + 'a');
+      nlow[k] = ch;
+    }
+    nlow[k] = 0;
+    if (!strcmp(nlow, "capability") || !strcmp(nlow, "forms") || !strcmp(nlow, "form"))
+      snprintf(nlow, sizeof nlow, "%s", "cap");
+    if (!strcmp(nlow, "mesh") || !strcmp(nlow, "smx") || !strcmp(nlow, "peer"))
+      snprintf(nlow, sizeof nlow, "%s", "p2p");
+    if (!strcmp(nlow, "nest") || !strcmp(nlow, "var") || !strcmp(nlow, "timeout"))
+      snprintf(nlow, sizeof nlow, "%s", "fat");
+    if (!strcmp(nlow, "json") || !strcmp(nlow, "agent"))
+      snprintf(nlow, sizeof nlow, "%s", "plate");
+    if (!strcmp(nlow, "start") || !strcmp(nlow, "all") || !strcmp(nlow, "help") ||
+        !strcmp(nlow, "default") || !strcmp(nlow, "*"))
+      snprintf(nlow, sizeof nlow, "%s", "general");
+    for (i = 0; i < nall; i++) {
+      if (strstr(topics[i], nlow)) { pick = topics[i]; break; }
+    }
+    var_set_str(vm, "PICKTOPIC_FILTER", nlow);
+    if (!pick) {
+      if (have_or && fallback[0]) {
+        var_set_str(vm, "LAST", fallback);
+        var_set_str(vm, "PICKTOPIC", fallback);
+        var_set_str(vm, "TOPIC_NAME", fallback);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", fallback);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_num(vm, "OK", 1);
+        bump(vm);
+        return 1;
+      }
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "PICKTOPIC", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "PICKTOPIC miss — MATCHTOPICS · LISTTOPICS · PICKTOPIC x OR general");
+      var_set_str(vm, "ERR",
+                  "PICKTOPIC miss — MATCHTOPICS · LISTTOPICS · PICKTOPIC x OR general");
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", pick);
+    var_set_str(vm, "PICKTOPIC", pick);
+    var_set_str(vm, "FIRSTTOPIC", pick);
+    var_set_str(vm, "TOPIC_NAME", pick);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", pick);
+    vm->last_n = 1;
+    var_set_num(vm, "LAST_N", 1);
+    var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;
   }

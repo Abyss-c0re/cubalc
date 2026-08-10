@@ -3270,6 +3270,8 @@ int main(int argc, char **argv) {
       {"cli_onboard", "programs/proof/1345_cli_onboard.sh", "cubalc onboard plate + forms"},
       {"onboard_boot", "programs/proof/1346_onboard_boot.cubalc", "INCLUDE onboard_boot agent_boot+START"},
       {"cli_init_onboard", "programs/proof/1346_cli_init_onboard.sh", "cubalc init --onboard scaffold + doctor"},
+      {"matchtopics", "programs/proof/1347_matchtopics.cubalc", "MATCHTOPICS/PICKTOPIC topic filter duals"},
+      {"cli_matchtopics", "programs/proof/1347_cli_matchtopics.sh", "cubalc matchtopics|picktopic plate + forms"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -3925,6 +3927,10 @@ int main(int argc, char **argv) {
       {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
       {"EACH TOPIC", "flow", "EACH TOPIC [AS name] [MATCH] walk discovery topics · dual of LISTTOPICS"},
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
+      {"MATCHTOPICS", "flow", "MATCHTOPICS needle topic bag filter · dual of MATCHLIBS for topics"},
+      {"FILTERTOPICS", "flow", "FILTERTOPICS alias of MATCHTOPICS"},
+      {"PICKTOPIC", "flow", "PICKTOPIC needle [OR fb] first matching topic · dual of PICKLIB"},
+      {"FIRSTTOPIC", "flow", "FIRSTTOPIC alias of PICKTOPIC"},
       {"TOPICHINT", "flow", "TOPICHINT name one-line topic hint · dual of FORMHINT for topics"},
       {"DESCRIBETOPIC", "flow", "DESCRIBETOPIC alias of TOPICHINT"},
       {"RELATEDTOPIC", "flow", "RELATEDTOPIC|SEETOPICS name related topic bag · twin of RELATED for topics"},
@@ -5886,6 +5892,92 @@ int main(int argc, char **argv) {
     printf("]}\n");
     return 0;
   }
+
+  if (strcmp(cmd, "matchtopics") == 0 || strcmp(cmd, "filtertopics") == 0 ||
+      strcmp(cmd, "topicmatch") == 0 || strcmp(cmd, "greptopics") == 0 ||
+      strcmp(cmd, "picktopic") == 0 || strcmp(cmd, "firsttopic") == 0 ||
+      strcmp(cmd, "topicpick") == 0) {
+    /* Usability: filter/first discovery topic (dual of MATCHTOPICS/PICKTOPIC).
+     * Schema cubalc.topicmatch.v1 */
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    const char *needle = (argc > 2 && argv[2][0]) ? argv[2] : "";
+    const char *fallback = NULL;
+    char nlow[64], bagj[256];
+    size_t k, o = 0;
+    int i, n = 0, nall = (int)(sizeof topics / sizeof topics[0]);
+    int is_pick = (strcmp(cmd, "picktopic") == 0 || strcmp(cmd, "firsttopic") == 0 ||
+                   strcmp(cmd, "topicpick") == 0);
+    int first = 1;
+    const char *pick = NULL;
+    if (!needle[0]) {
+      fprintf(stderr, "usage: cubalc matchtopics|picktopic <needle> [OR fallback]\n");
+      printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":false,\"cmd\":\"%s\","
+             "\"err\":\"need needle\",\"version\":\"%s\"}\n",
+             is_pick ? "picktopic" : "matchtopics", CUBALC_LANG_VERSION);
+      return 2;
+    }
+    if (is_pick && argc > 3 &&
+        (!strcmp(argv[3], "OR") || !strcmp(argv[3], "or") ||
+         !strcmp(argv[3], "ELSE") || !strcmp(argv[3], "DEFAULT")) &&
+        argc > 4 && argv[4][0])
+      fallback = argv[4];
+    for (k = 0; needle[k] && k + 1 < sizeof nlow; k++)
+      nlow[k] = (char)((needle[k] >= 'A' && needle[k] <= 'Z')
+                           ? needle[k] - 'A' + 'a' : needle[k]);
+    nlow[k] = 0;
+    if (!strcmp(nlow, "capability") || !strcmp(nlow, "forms") || !strcmp(nlow, "form"))
+      snprintf(nlow, sizeof nlow, "%s", "cap");
+    if (!strcmp(nlow, "mesh") || !strcmp(nlow, "smx") || !strcmp(nlow, "peer"))
+      snprintf(nlow, sizeof nlow, "%s", "p2p");
+    if (!strcmp(nlow, "nest") || !strcmp(nlow, "var") || !strcmp(nlow, "timeout"))
+      snprintf(nlow, sizeof nlow, "%s", "fat");
+    if (!strcmp(nlow, "json") || !strcmp(nlow, "agent"))
+      snprintf(nlow, sizeof nlow, "%s", "plate");
+    if (!strcmp(nlow, "start") || !strcmp(nlow, "all") || !strcmp(nlow, "help") ||
+        !strcmp(nlow, "default") || !strcmp(nlow, "*"))
+      snprintf(nlow, sizeof nlow, "%s", "general");
+    bagj[0] = 0;
+    for (i = 0; i < nall; i++) {
+      if (!strstr(topics[i], nlow)) continue;
+      if (!pick) pick = topics[i];
+      if (!first && o + 1 < sizeof bagj) bagj[o++] = ',';
+      o += (size_t)snprintf(bagj + o, sizeof bagj - o, "\"%s\"", topics[i]);
+      first = 0;
+      n++;
+    }
+    if (is_pick) {
+      if (!pick) {
+        if (fallback && fallback[0]) {
+          printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":true,\"cmd\":\"picktopic\","
+                 "\"filter\":\"%s\",\"topic\":\"%s\",\"fallback\":true,\"n\":1,"
+                 "\"version\":\"%s\"}\n",
+                 nlow, fallback, CUBALC_LANG_VERSION);
+          return 0;
+        }
+        printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":false,\"cmd\":\"picktopic\","
+               "\"filter\":\"%s\",\"err\":\"no match\",\"version\":\"%s\"}\n",
+               nlow, CUBALC_LANG_VERSION);
+        return 1;
+      }
+      printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":true,\"cmd\":\"picktopic\","
+             "\"filter\":\"%s\",\"topic\":\"%s\",\"n\":1,\"version\":\"%s\"}\n",
+             nlow, pick, CUBALC_LANG_VERSION);
+      return 0;
+    }
+    if (n == 0) {
+      printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":false,\"cmd\":\"matchtopics\","
+             "\"filter\":\"%s\",\"n\":0,\"err\":\"empty\",\"version\":\"%s\"}\n",
+             nlow, CUBALC_LANG_VERSION);
+      return 1;
+    }
+    printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":true,\"cmd\":\"matchtopics\","
+           "\"filter\":\"%s\",\"n\":%d,\"version\":\"%s\",\"topics\":[%s]}\n",
+           nlow, n, CUBALC_LANG_VERSION, bagj);
+    return 0;
+  }
+
   if (strcmp(cmd, "topichint") == 0 || strcmp(cmd, "describetopic") == 0 ||
       strcmp(cmd, "topicdoc") == 0 || strcmp(cmd, "topichelp") == 0 ||
       strcmp(cmd, "hinttopic") == 0 || strcmp(cmd, "topic-hint") == 0) {
@@ -16211,6 +16303,10 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
       {"EACH TOPIC", "flow", "EACH TOPIC [AS name] [MATCH] walk discovery topics · dual of LISTTOPICS"},
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
+      {"MATCHTOPICS", "flow", "MATCHTOPICS needle topic bag filter · dual of MATCHLIBS for topics"},
+      {"FILTERTOPICS", "flow", "FILTERTOPICS alias of MATCHTOPICS"},
+      {"PICKTOPIC", "flow", "PICKTOPIC needle [OR fb] first matching topic · dual of PICKLIB"},
+      {"FIRSTTOPIC", "flow", "FIRSTTOPIC alias of PICKTOPIC"},
       {"TOPICHINT", "flow", "TOPICHINT name one-line topic hint · dual of FORMHINT for topics"},
       {"DESCRIBETOPIC", "flow", "DESCRIBETOPIC alias of TOPICHINT"},
       {"RELATEDTOPIC", "flow", "RELATEDTOPIC|SEETOPICS name related topic bag · twin of RELATED for topics"},
@@ -17694,6 +17790,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    runsnip|sniprun [topic]    execute curated SNIP mini (cubalc.runsnip.v1)\n"
       "    topics|listtopics          discovery topic catalog (cubalc.topics.v1)\n"
       "    hastopic|needtopic <t>     soft/hard topic membership gates\n"
+      "    matchtopics|picktopic <q>  filter/first discovery topic (cubalc.topicmatch.v1)\n"
       "    topichint|describetopic <t>  one-line topic docs (cubalc.topichint.v1)\n"
       "    relatedtopic|seetopics <t> related topic bag (cubalc.relatedtopic.v1)\n"
       "    formtopics|topicsof <form> topics covering form (cubalc.formtopics.v1)\n"
@@ -17707,7 +17804,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|onboard|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
+      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|onboard|matchtopics|picktopic|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
