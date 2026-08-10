@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 285,
-  "program": "programs/realworld/svc_capflat_slo_board.cubalc",
-  "theme": "CAPFLAT nest pure-int SLO ceiling clamp",
-  "version": "1.15.746-usability",
+  "iter": 286,
+  "program": "programs/realworld/svc_sumflat_rollup_board.cubalc",
+  "theme": "SUMFLAT pure-int nest rollup digest",
+  "version": "1.15.749-usability",
   "pass": true,
-  "prior_note": "iter 284 SETFLAT status rewrite; this iter first realworld 1223 CAPFLAT/CLAMPFLAT",
+  "prior_note": "iter 285 CAPFLAT clamp; this iter first realworld 1220 SUMFLAT/TOTALFLAT",
   "tests": [
     {
       "name": "list",
@@ -15,27 +15,33 @@
     },
     {
       "name": "boot",
-      "cmd": "seed score+latency",
+      "cmd": "seed counters",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "cap",
-      "cmd": "score max 100 N=2",
+      "name": "hits",
+      "cmd": "hits sum=3 n=2",
       "ok": true,
-      "note": "cap"
+      "note": "hits"
+    },
+    {
+      "name": "port",
+      "cmd": "port sum=8080",
+      "ok": true,
+      "note": "port"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER latency west cap",
+      "cmd": "stats 30 + all 35",
       "ok": true,
       "note": "peer"
     },
     {
-      "name": "floor",
-      "cmd": "under max no-op N=0",
+      "name": "all",
+      "cmd": "empty all-int 8086",
       "ok": true,
-      "note": "floor"
+      "note": "all"
     },
     {
       "name": "soft",
@@ -45,19 +51,19 @@
     },
     {
       "name": "gate",
-      "cmd": "all scores<=100",
+      "cmd": "hits floor",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "CLAMPFLAT 0",
+      "cmd": "TOTALFLAT errs",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "empty needle + substring",
+      "cmd": "non-int + LAST_N=sum",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; capflat PASS"
+      "note": "cli duals red; sumflat PASS"
     }
   ],
   "weaknesses": [
@@ -3930,12 +3936,49 @@
       "title": "WRITE VAL/META omit trailing NL",
       "detail": "W5 class.",
       "repro": "cat -A VAL.txt"
+    },
+    {
+      "id": "W483",
+      "severity": "high",
+      "area": "lang|sumflat",
+      "title": "SUMFLAT LAST_N is the SUM not the leaf count",
+      "detail": "After SUMFLAT port, LAST_N=8080 (sum) while SUMFLAT_N=1 (count). Agents that treat LAST_N as bag/line count get false inventory. Prefer SUMFLAT_SUM + SUMFLAT_N specials.",
+      "repro": "SUMFLAT port \u2192 LAST_N 8080 SUMFLAT_N 1"
+    },
+    {
+      "id": "W484",
+      "severity": "med",
+      "area": "lang|sumflat",
+      "title": "path substring multi-leaf (hits matches hits_total + cfg.meta.hits)",
+      "detail": "Same class as INCFLAT/SETFLAT/CAPFLAT. Empty needle sums all pure-int including large ports (8086).",
+      "repro": "SUMFLAT hits \u2192 3; SUMFLAT \"\" \u2192 8086"
+    },
+    {
+      "id": "W485",
+      "severity": "low",
+      "area": "lang|sumflat",
+      "title": "read-only \u2014 plate leaves unchanged after SUMFLAT",
+      "detail": "Positive: rollup does not mutate counters. FROM PEER also read-only on peer ints.",
+      "repro": "SUMFLAT hits; GETP hits_total still 1"
+    },
+    {
+      "id": "W486",
+      "severity": "low",
+      "area": "lang|sumflat",
+      "title": "non-int leaves skipped (string/bool/null sum 0)",
+      "detail": "Positive soft: SUMFLAT \"\" on non-int-only plate \u2192 N=0 sum=0.",
+      "repro": "SUMFLAT \"\" on hi/true/null \u2192 0"
+    },
+    {
+      "id": "W487",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META omit trailing NL",
+      "detail": "W5 class.",
+      "repro": "cat -A VAL.txt"
     }
   ],
   "workarounds": [
-    "prefer LAST_N for rewrite count gates",
-    "SAVEPLATE after DELBYVAL/DROPVAL",
-    "SETP re-seed roles before independent del/gate paths",
     "HASVAL/HASP after scrub for admit gates",
     "use LAST_N==1 for admit not LAST_N as count",
     "SETP re-seed mixed roles before check path",
@@ -3972,13 +4015,12 @@
     "MAPFLAT not WRITEFLAT for alias",
     "use CAPFLAT_MATCH for inventory not N alone",
     "unique path needles to avoid meta.score multi-cap",
-    "floor path: CAPFLAT when already under \u2192 N=0 is success"
+    "floor path: CAPFLAT when already under \u2192 N=0 is success",
+    "always capture SUMFLAT_N separate from LAST_N/SUMFLAT_SUM",
+    "avoid empty needle when large ports live under same plate",
+    "use unique path needles for single counter rollups"
   ],
   "language_gaps": [
-    "PRUNEFLAT/KEEPONLYFLAT/DELFLAT write-back nest scrub",
-    "path substring needles over-delete short tokens",
-    "empty parent residual after child prune",
-    "LAST = full plate JSON after prune",
     "INCFLAT/DECFLAT/BUMPFLAT bulk pure-int leaf bump",
     "path substring needles multi-match counters",
     "empty needle = all pure-int leaves",
@@ -3998,11 +4040,13 @@
     "CAPFLAT/CLAMPFLAT pure-int leaf ceiling",
     "CAPFLAT_N changed vs CAPFLAT_MATCH inventory",
     "bare CAPFLAT max = all pure-int empty needle",
-    "path substring multi-match scores"
+    "path substring multi-match scores",
+    "SUMFLAT/TOTALFLAT pure-int nest rollup read-only",
+    "LAST_N = sum not count; use SUMFLAT_N for leaf count",
+    "empty needle sums all pure-int (port inflation)",
+    "path substring multi-match counters"
   ],
   "issues_faced": [
-    "iter267: substring needle ro matches role (W409) \u2014 probe expects fuzzy hit",
-    "iter267: late MODEFLAT_SRC hard-fail; capture early or avoid (W410)",
     "iter268: agent_job=role_s false-friend first-hit for PATHBYVAL worker (W412) \u2014 seed agent_job=runner",
     "iter268: rebuilt out/cubalc (W414) before board tests",
     "iter269: UNIQFLAT ro fuzzy key match reconfirms flat-needle substring family (W415)",
@@ -4040,8 +4084,10 @@
     "iter284: 9/9 green first pass; empty-needle only on scratch plate",
     "iter284: selftest cli duals still red; setflat proof green",
     "iter285: 9/9 green first pass; N vs MATCH distinction key for SLO gates",
-    "iter285: selftest cli duals still red; capflat proof green"
+    "iter285: selftest cli duals still red; capflat proof green",
+    "iter286: 10/10 green first pass; LAST_N=sum is the main false friend",
+    "iter286: empty all includes cfg.port 8080 in total 8086"
   ],
-  "commit": "176c4a56",
-  "ts": "2026-08-10T05:44:02Z"
+  "commit": "pending",
+  "ts": "2026-08-10T06:09:14Z"
 }
