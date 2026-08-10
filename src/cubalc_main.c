@@ -3249,6 +3249,8 @@ int main(int argc, char **argv) {
       {"cli_freshlibs", "programs/proof/1321_cli_freshlibs.sh", "cubalc freshlibs/stalelibs CLI dual + forms"},
       {"libage", "programs/proof/1322_libage.cubalc", "LIBAGE/HASFRESH/NEEDFRESH single-lib freshness gates"},
       {"cli_libage", "programs/proof/1322_cli_libage.sh", "cubalc libage/hasfresh/needfresh CLI dual + forms"},
+      {"hasform", "programs/proof/1323_hasform.cubalc", "HASFORM/NEEDFORM/REQUIRE FORM capability gates"},
+      {"cli_hasform", "programs/proof/1323_cli_hasform.sh", "cubalc hasform/needform CLI dual + forms"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3774,6 +3776,9 @@ int main(int argc, char **argv) {
       {"LIBAGE", "flow", "LIBAGE name lib age seconds → LAST_N · soft miss"},
       {"HASFRESH", "flow", "HASFRESH name [max_age] soft 0|1 if exists and age≤max"},
       {"NEEDFRESH", "flow", "NEEDFRESH name [max_age] fail-fast if missing or stale"},
+      {"HASFORM", "flow", "HASFORM name soft 0|1 if form in HELP catalog"},
+      {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
+      {"REQUIRE FORM", "flow", "REQUIRE FORM name fail if form not in HELP catalog"},
       {"HASLIB", "flow", "HASLIB name soft 0|1 if lib stem exists on INCLUDE path"},
       {"CATLIB", "flow", "CATLIB|READLIB name soft dump lib source → LAST · dual of cubalc cat"},
       {"GREPLIB", "flow", "GREPLIB name needle matching lines from one lib · soft miss"},
@@ -7629,6 +7634,47 @@ int main(int argc, char **argv) {
       /* hasfresh always exit 0 with ok reflecting freshness (agents parse plate) */
       return 0;
     }
+  }
+  if (strcmp(cmd, "hasform") == 0 || strcmp(cmd, "formexists") == 0 ||
+      strcmp(cmd, "needform") == 0 || strcmp(cmd, "requireform") == 0 ||
+      strcmp(cmd, "knownform") == 0) {
+    /* Usability: CLI dual of HASFORM/NEEDFORM — capability gate without .cubalc.
+     *   cubalc hasform SORTLIBS · cubalc needform LIBAGE
+     * Uses in-lang catalog (HELP/HASFORM) via cubalc_run_source. */
+    const char *name = (argc > 2) ? argv[2] : "";
+    int hard = (strcmp(cmd, "needform") == 0 || strcmp(cmd, "requireform") == 0);
+    char src[400];
+    cubalc_run_result rr;
+    int hit = 0;
+    if (!name || !name[0]) {
+      fprintf(stderr,
+              "usage: cubalc hasform|formexists <FormName>\n"
+              "       cubalc needform|requireform <FormName>\n");
+      printf("{\"schema\":\"cubalc.formgate.v1\",\"ok\":false,\"cmd\":\"%s\","
+             "\"err\":\"need form name\",\"version\":\"%s\"}\n",
+             cmd, CUBALC_LANG_VERSION);
+      return 2;
+    }
+    if (strchr(name, ' ') || strchr(name, '"'))
+      snprintf(src, sizeof src,
+               "HASFORM \"%s\"\nASSERT LAST_N == 1\nPASS\n", name);
+    else
+      snprintf(src, sizeof src,
+               "HASFORM %s\nASSERT LAST_N == 1\nPASS\n", name);
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, strlen(src), "<hasform>", &rr, NULL);
+    hit = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    printf("{\"schema\":\"cubalc.formgate.v1\",\"ok\":%s,\"cmd\":\"%s\","
+           "\"form\":\"%s\",\"known\":%s,\"mode\":\"%s\","
+           "\"version\":\"%s\","
+           "\"note\":\"CLI dual of HASFORM/NEEDFORM · HELP catalog capability gate\"}\n",
+           hit ? "true" : "false", cmd, name,
+           hit ? "true" : "false",
+           hard ? "need" : "has",
+           CUBALC_LANG_VERSION);
+    if (hard)
+      return hit ? 0 : 1;
+    return 0;
   }
   if (strcmp(cmd, "plate") == 0 || strcmp(cmd, "jsonplate") == 0 ||
       strcmp(cmd, "platefile") == 0 || strcmp(cmd, "agent-plate") == 0) {
@@ -14099,6 +14145,9 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"LIBAGE", "flow", "LIBAGE name lib age seconds → LAST_N · soft miss"},
       {"HASFRESH", "flow", "HASFRESH name [max_age] soft 0|1 if exists and age≤max"},
       {"NEEDFRESH", "flow", "NEEDFRESH name [max_age] fail-fast if missing or stale"},
+      {"HASFORM", "flow", "HASFORM name soft 0|1 if form in HELP catalog"},
+      {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
+      {"REQUIRE FORM", "flow", "REQUIRE FORM name fail if form not in HELP catalog"},
       {"HASLIB", "flow", "HASLIB name soft 0|1 if lib stem exists on INCLUDE path"},
       {"CATLIB", "flow", "CATLIB|READLIB name soft dump lib source → LAST · dual of cubalc cat"},
       {"GREPLIB", "flow", "GREPLIB name needle matching lines from one lib · soft miss"},
@@ -15554,7 +15603,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|newestlib|sortlibs|freshlibs|libage|hasfresh|needfresh|nthlib  filter duals\n"
+      "    picklib|sortlibs|freshlibs|libage|hasform|needform|hasfresh|nthlib  filter duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
