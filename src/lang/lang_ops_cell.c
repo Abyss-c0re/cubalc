@@ -7655,6 +7655,198 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* NEWESTLIB|OLDESTLIB needle [OR fallback] — pick matching stem by mtime.
+   * Usability: freshest/oldest recipe among filter matches without shell ls -t.
+   * Dual of PICKLIB (alpha first) · LAST = stem · NEWESTLIB_MTIME epoch · soft. */
+  if (kw(&L->cur, "NEWESTLIB") || kw(&L->cur, "LATESTLIB") ||
+      kw(&L->cur, "FRESHLIB") || kw(&L->cur, "NEWLIB") ||
+      kw(&L->cur, "OLDESTLIB") || kw(&L->cur, "EARLIESTLIB") ||
+      kw(&L->cur, "STALELIB") || kw(&L->cur, "OLDLIB") ||
+      kw(&L->cur, "NEWEST_LIB") || kw(&L->cur, "OLDEST_LIB")) {
+    char needle[96], fup[96], fb[96], pick[96], pick_path[768];
+    int want_old = 0, have_fb = 0, nstem = 0, j;
+    long best_mt = 0;
+    int have_best = 0;
+    size_t a;
+    DIR *d;
+    struct dirent *ent;
+    const char *ip;
+    if (kw(&L->cur, "OLDESTLIB") || kw(&L->cur, "EARLIESTLIB") ||
+        kw(&L->cur, "STALELIB") || kw(&L->cur, "OLDLIB") ||
+        kw(&L->cur, "OLDEST_LIB"))
+      want_old = 1;
+    lex_next(L);
+    needle[0] = 0;
+    fb[0] = 0;
+    pick[0] = 0;
+    pick_path[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(needle, sizeof needle, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(needle, sizeof needle, "%s", vm->last_str);
+      else
+        snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (kw(&L->cur, "OR") || kw(&L->cur, "ELSE") || kw(&L->cur, "DEFAULT") ||
+        kw(&L->cur, "FALLBACK")) {
+      lex_next(L);
+      if (L->cur.kind == TK_STR) {
+        snprintf(fb, sizeof fb, "%s", L->cur.text);
+        have_fb = 1;
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str)
+          snprintf(fb, sizeof fb, "%s", vv->sval);
+        else if (strcmp(L->cur.text, "LAST") == 0)
+          snprintf(fb, sizeof fb, "%s", vm->last_str);
+        else
+          snprintf(fb, sizeof fb, "%s", L->cur.text);
+        have_fb = 1;
+        lex_next(L);
+      }
+    }
+    if (!needle[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "NEWESTLIB_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "NEWESTLIB: need needle — NEWESTLIB plate · OLDESTLIB fat");
+      var_set_str(vm, "ERR",
+                  "NEWESTLIB: need needle — NEWESTLIB plate · OLDESTLIB fat");
+      bump(vm);
+      return 1;
+    }
+    for (a = 0; needle[a] && a + 1 < sizeof fup; a++) {
+      char c = needle[a];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      fup[a] = c;
+    }
+    fup[a] = 0;
+    {
+      char dirs[10][160];
+      int nd = 0, di;
+      char seen[96][96];
+      int nseen = 0;
+      snprintf(dirs[nd++], sizeof dirs[0], "%s", "programs/lib");
+      ip = getenv("CUBALC_INCLUDE_PATH");
+      if (ip && ip[0]) {
+        const char *p = ip;
+        while (*p && nd < 10) {
+          char dir[160];
+          size_t len = 0;
+          while (*p == ':' || *p == ' ' || *p == '\t') p++;
+          if (!*p) break;
+          while (p[len] && p[len] != ':' && len + 1 < sizeof dir) {
+            dir[len] = p[len];
+            len++;
+          }
+          dir[len] = 0;
+          p += len;
+          if (dir[0])
+            snprintf(dirs[nd++], sizeof dirs[0], "%s", dir);
+        }
+      }
+      for (di = 0; di < nd; di++) {
+        d = opendir(dirs[di]);
+        if (!d) continue;
+        while ((ent = readdir(d)) != NULL && nseen < 96) {
+          size_t len = strlen(ent->d_name);
+          char stem[96], hay[192], full[768];
+          int dup = 0;
+          size_t b;
+          struct stat st;
+          if (len < 8 || strcmp(ent->d_name + len - 7, ".cubalc") != 0)
+            continue;
+          if (ent->d_name[0] == '.') continue;
+          if (len - 7 >= sizeof stem) continue;
+          memcpy(stem, ent->d_name, len - 7);
+          stem[len - 7] = 0;
+          for (j = 0; j < nseen; j++) {
+            if (strcmp(seen[j], stem) == 0) { dup = 1; break; }
+          }
+          if (dup) continue;
+          snprintf(full, sizeof full, "%s/%s", dirs[di], ent->d_name);
+          snprintf(hay, sizeof hay, "%s", full);
+          for (b = 0; hay[b]; b++)
+            if (hay[b] >= 'A' && hay[b] <= 'Z')
+              hay[b] = (char)(hay[b] - 'A' + 'a');
+          {
+            char stem_l[96];
+            for (b = 0; stem[b] && b + 1 < sizeof stem_l; b++) {
+              char c = stem[b];
+              if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+              stem_l[b] = c;
+            }
+            stem_l[b] = 0;
+            if (!strstr(stem_l, fup) && !strstr(hay, fup))
+              continue;
+          }
+          if (stat(full, &st) != 0) continue;
+          snprintf(seen[nseen++], sizeof seen[0], "%s", stem);
+          nstem++;
+          if (!have_best ||
+              (want_old ? (st.st_mtime < best_mt) : (st.st_mtime > best_mt)) ||
+              (st.st_mtime == best_mt && strcmp(stem, pick) < 0)) {
+            best_mt = (long)st.st_mtime;
+            have_best = 1;
+            snprintf(pick, sizeof pick, "%s", stem);
+            snprintf(pick_path, sizeof pick_path, "%s", full);
+          }
+        }
+        closedir(d);
+      }
+    }
+    var_set_num(vm, "NEWESTLIB_N", nstem);
+    var_set_num(vm, "OLDESTLIB_N", nstem);
+    var_set_num(vm, "MATCHLIBS_N", nstem);
+    var_set_str(vm, "MATCHLIBS_FILTER", needle);
+    var_set_str(vm, "NEWESTLIB_FILTER", needle);
+    if (have_best) {
+      var_set_str(vm, "LAST", pick);
+      var_set_str(vm, want_old ? "OLDESTLIB" : "NEWESTLIB", pick);
+      var_set_str(vm, "LIB_PATH", pick_path);
+      var_set_num(vm, "NEWESTLIB_MTIME", best_mt);
+      var_set_num(vm, "OLDESTLIB_MTIME", best_mt);
+      var_set_num(vm, "LIB_MTIME", best_mt);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", pick);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+    } else if (have_fb) {
+      var_set_str(vm, "LAST", fb);
+      var_set_str(vm, want_old ? "OLDESTLIB" : "NEWESTLIB", fb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      var_set_num(vm, "NEWESTLIB_FALLBACK", 1);
+    } else {
+      char em[176];
+      snprintf(em, sizeof em,
+               "%s miss: '%s' — MATCHLIBS · cubalc libs %s · OR fallback",
+               want_old ? "OLDESTLIB" : "NEWESTLIB", needle, needle);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    bump(vm);
+    return 1;
+  }
+
   /* CATLIB / READLIB / LIBSRC name — soft dump lib source → LAST (dual of cubalc cat).
    * Usability: agents inspect INCLUDE recipes without shell · resolve like INCLUDE short name.
    * LAST_N = bytes (capped) · LIB_PATH · soft miss OK=0 sticky LAST_ERR. */

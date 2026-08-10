@@ -1,0 +1,47 @@
+# NEWESTLIB / OLDESTLIB — mtime pick among filter matches
+
+# fat_session is newer than fat_boot (see programs/lib mtimes)
+NEWESTLIB fat
+ASSERT OK == 1
+ASSERT LAST == "fat_session"
+ASSERT NEWESTLIB_N == 2
+ASSERT NEWESTLIB_MTIME > 0
+ASSERT LIB_PATH != ""
+
+OLDESTLIB fat
+ASSERT OK == 1
+ASSERT LAST == "fat_boot"
+ASSERT OLDESTLIB_N == 2
+
+# LATESTLIB alias
+LATESTLIB guard
+ASSERT OK == 1
+ASSERT NEWESTLIB_N == 2
+# time_guard is newer than var_guard on this tree
+ASSERT LAST == "time_guard"
+
+
+# plate newest among many
+NEWESTLIB plate
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT NEWESTLIB_N >= 10
+
+# OR fallback
+NEWESTLIB no_such_lib_xyz OR agent_boot
+ASSERT OK == 1
+ASSERT LAST == "agent_boot"
+ASSERT NEWESTLIB_FALLBACK == 1
+
+# soft miss
+OLDESTLIB no_such_lib_xyz
+ASSERT OK == 0
+CLEAR_ERR
+
+# INCLUDE after newest pick
+NEWESTLIB fat
+INCLUDE LAST
+ASSERT OK == 1
+
+PASS
+PRINT "1317_newestlib: PASS"

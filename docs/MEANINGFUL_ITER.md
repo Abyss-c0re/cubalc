@@ -803,6 +803,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 773. ~~**`HASCOUNTMATCHLIBS` / `NEEDCOUNTMATCHLIBS`**~~ **done** (soft/hard min match-count gates · install “need ≥n libs” without COUNT+IF glue).
 774. ~~**`EACH LIB` [MATCH needle]**~~ **done** (walk sorted lib stems · optional filter · no MATCHLIBS+EACH LINE glue).
 775. ~~**`INCLUDE ALL MATCH`**~~ **done** (bulk-include every matching lib · no EACH LIB+INCLUDE glue · DEFAULT/SOFT).
+776. ~~**`NEWESTLIB` / `OLDESTLIB`**~~ **done** (mtime pick among filter matches · dual of alpha PICKLIB · no shell ls -t).
 
 ## Tick protocol
 
