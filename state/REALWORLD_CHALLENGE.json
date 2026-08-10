@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 291,
-  "program": "programs/realworld/svc_hasmatch_include_board.cubalc",
-  "theme": "HASMATCHLIBS gate + PICKLIB INCLUDE var/LAST",
-  "version": "1.15.759-usability",
+  "iter": 292,
+  "program": "programs/realworld/svc_nthlib_roster_board.cubalc",
+  "theme": "NTHLIB/LASTLIB indexed lib stem roster",
+  "version": "1.15.760-usability",
   "pass": true,
-  "prior_note": "iter 290 MATCHLIBS/PICKLIB; this iter first realworld 1309 HASMATCHLIBS + 1308 INCLUDE var",
+  "prior_note": "iter 291 HASMATCH+INCLUDE; this iter first realworld 1310 NTHLIB/LASTLIB",
   "tests": [
     {
       "name": "list",
@@ -20,44 +20,44 @@
       "note": "boot"
     },
     {
-      "name": "has",
-      "cmd": "HASMATCHLIBS plate/fat/PLATE",
+      "name": "first",
+      "cmd": "NTHLIB 0 plate_boot",
       "ok": true,
-      "note": "has"
+      "note": "first"
     },
     {
-      "name": "need",
-      "cmd": "NEEDMATCHLIBS agent",
+      "name": "second",
+      "cmd": "NTHLIB 1 plate_both_save",
       "ok": true,
-      "note": "need"
+      "note": "second"
     },
     {
-      "name": "load",
-      "cmd": "PICK+INCLUDE stem_s",
+      "name": "last",
+      "cmd": "LASTLIB plate_uniform + ENDLIB",
       "ok": true,
-      "note": "load"
+      "note": "last"
     },
     {
       "name": "soft",
-      "cmd": "ghost miss OK=0",
+      "cmd": "OOR OR + ghost miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "want_filter present",
+      "cmd": "family size floor",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "NEEDMATCH+FIRSTLIB",
+      "cmd": "INDEXLIB+ENDLIB",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "LAST_N dual + false friend",
+      "cmd": "LAST_N dual + CLEAR_ERR",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; hasmatch+include_var PASS"
+      "note": "cli duals red; nthlib PASS; include_match broken"
     }
   ],
   "weaknesses": [
@@ -4138,6 +4138,46 @@
       "title": "WRITE VAL/META/STATUS omit trailing NL",
       "detail": "Reconfirmed STATUS last bag line and META without final \\n.",
       "repro": "od -c META.txt"
+    },
+    {
+      "id": "W509",
+      "severity": "med",
+      "area": "lang|nthlib",
+      "title": "NTHLIB arg order is index then needle (opposite of PICKLIB)",
+      "detail": "NTHLIB 0 plate works; NTHLIB plate 0 parses as unknown form plate. PICKLIB is needle-first. Agents mixing the two families will mis-order args silently into parse fails.",
+      "repro": "NTHLIB plate 0 \u2192 unknown form plate; NTHLIB 0 plate \u2192 plate_boot"
+    },
+    {
+      "id": "W510",
+      "severity": "med",
+      "area": "lang|nthlib",
+      "title": "NTHLIB LAST_N=1 hit but NTHLIB_N is full family size",
+      "detail": "NTHLIB 0 plate \u2192 LAST_N=1 while NTHLIB_N=11. Same dual as PICKLIB_N. Size gates must use NTHLIB_N not LAST_N.",
+      "repro": "NTHLIB 0 plate; PRINT LAST_N \u2192 1; PRINT NTHLIB_N \u2192 11"
+    },
+    {
+      "id": "W511",
+      "severity": "high",
+      "area": "lang|include_match",
+      "title": "INCLUDE MATCH/FIRST not wired \u2014 treats MATCH as stem",
+      "detail": "proof 1311_include_match fails: INCLUDE MATCH agent_boot \u2192 cannot open MATCH. Forms catalog has no INCLUDE MATCH. Binary 1.15.760 advertises proof without runtime form. Leave for MEANINGFUL_ITER.",
+      "repro": "INCLUDE MATCH agent_boot \u2192 INCLUDE cannot open MATCH"
+    },
+    {
+      "id": "W512",
+      "severity": "low",
+      "area": "lang|clear_err",
+      "title": "CLEAR_ERR LAST=cleared reconfirmed after NTHLIB",
+      "detail": "NTHLIB 0 agent_boot; CLEAR_ERR; LAST is cleared. Capture stem before CLEAR_ERR for INCLUDE.",
+      "repro": "NTHLIB 0 agent_boot; CLEAR_ERR; SYS EQS LAST cleared \u2192 1"
+    },
+    {
+      "id": "W513",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META/STATUS omit trailing NL",
+      "detail": "Reconfirmed STATUS last line and META without final \\n.",
+      "repro": "od -c META.txt"
     }
   ],
   "workarounds": [
@@ -4183,11 +4223,6 @@
     "use unique path needles for single counter rollups"
   ],
   "language_gaps": [
-    "prefix not key-segment rename; use trailing .",
-    "empty old_pfx hard-fails (not soft)",
-    "RENAMEFLAT_N/TOTAL/OLD/NEW/SRC specials",
-    "SETFLAT/MAPFLAT bulk leaf value by path needle",
-    "empty needle = all leaves (identity hazard)",
     "path substring multi-match",
     "SETFLAT_N/TOTAL/SRC/FROM specials",
     "CAPFLAT/CLAMPFLAT pure-int leaf ceiling",
@@ -4222,12 +4257,14 @@
     "INCLUDE LAST/var after PICKLIB (1308)",
     "CLEAR_ERR sets LAST=cleared (W505)",
     "bare PLATE token vs quoted PLATE needle (W506)",
-    "HASMATCH LAST_N boolean vs MATCHLIBS count (W507)"
+    "HASMATCH LAST_N boolean vs MATCHLIBS count (W507)",
+    "NTHLIB/LASTLIB/ENDLIB/INDEXLIB indexed stems",
+    "NTHLIB index-then-needle vs PICKLIB needle-first (W509)",
+    "NTHLIB_N family size vs LAST_N=1 (W510)",
+    "INCLUDE MATCH not implemented 1.15.760 (W511)",
+    "CLEAR_ERR LAST=cleared after NTHLIB (W512)"
   ],
   "issues_faced": [
-    "iter270: restored REALWORLD plate after accidental delete in 94cab4c1",
-    "iter270: PATHSBYVAL board 9/9 green; COUNTBYVAL cross-check ok",
-    "iter271: COUNTBYVAL/HASVAL board 9/9; PATHSBYVAL cross-check green",
     "iter271: test -f REALWORLD plate before git add (W421 lesson)",
     "iter272: SETBYVAL board 9/9; SAVEPLATE after mutate for durability",
     "iter272: soft/gate re-seed workers after prior set path rewrites",
@@ -4274,8 +4311,11 @@
     "iter290: selftest CLI duals still red",
     "iter291: first realworld 1309+1308; CLEAR_ERR LAST=cleared broke INCLUDE LAST",
     "iter291: HASMATCHLIBS PLATE with loaded plate is false friend (use quotes)",
-    "iter291: 10/10 green after stem_s capture + quoted PLATE"
+    "iter291: 10/10 green after stem_s capture + quoted PLATE",
+    "iter292: first realworld 1310 NTHLIB; 10/10 green first pass",
+    "iter292: INCLUDE MATCH proof 1311 red \u2014 form not wired (W511)",
+    "iter292: NTH 0/1/last plate stems alpha-stable"
   ],
-  "commit": "1a2c9ccb",
-  "ts": "2026-08-10T08:14:59Z"
+  "commit": "pending",
+  "ts": "2026-08-10T08:38:58Z"
 }
