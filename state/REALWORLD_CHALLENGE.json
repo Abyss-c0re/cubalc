@@ -5143,7 +5143,7 @@
     "probe SYS EQS DISCOVER_MATCH_N hard-failed unknown form; fixed via DEFINED; board 10/10",
     "binary missing at fire start — rebuilt; OPEN board 10/10 green; OPEN_NEXT_N gap vs DISCOVER"
   ],
-  "commit": "pending",
+  "commit": "b20b51ec",
   "ts": "2026-08-10T17:56:51Z",
-  "board_commit": "pending"
+  "board_commit": "b20b51ec"
 }
