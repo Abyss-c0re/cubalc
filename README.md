@@ -26,15 +26,6 @@ CubalC is a **machine language for agents and hosts**:
 4. **SMX2** seals matrices with HMAC for local or P2P exchange.
 5. **SYS** reaches the host (files, env, optional HTTP) without making HTTP the core.
 
-### What it is not
-
-| Not this | Because |
-|----------|---------|
-| Python runtime | Product path is pure C |
-| “Prose as code” | Prefer matrix + asserts |
-| Device flasher | Devices free — no auto-flash |
-| HTTP mesh | Wire is SMX2 binary only |
-
 ---
 
 ## 60-second start
