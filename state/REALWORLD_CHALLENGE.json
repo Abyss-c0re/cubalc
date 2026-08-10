@@ -3962,6 +3962,6 @@
     "iter283: 9/9 green; cfg without dot hits cfgn false friend documented",
     "iter283: soft score==6 vs 7 checks bug; fixed threshold; empty old_pfx hard-fail"
   ],
-  "commit": "pending",
+  "commit": "65c86a4e",
   "ts": "2026-08-10T04:54:57Z"
 }
