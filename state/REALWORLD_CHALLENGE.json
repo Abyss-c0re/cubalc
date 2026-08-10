@@ -4764,7 +4764,7 @@
     "iter302: chain TIPS after ERRTIPS_TOPIC works; noise falls back general (W563)",
     "iter302: board 10/10; selftest CLI duals still red"
   ],
-  "commit": "pending",
+  "commit": "2c87b609",
   "ts": "2026-08-10T14:04:24Z",
-  "board_commit": "51ba8a4f"
+  "board_commit": "2c87b609"
 }
