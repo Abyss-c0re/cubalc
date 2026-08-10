@@ -837,6 +837,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 807. ~~**`HASMATCHTOPICS` / `NEEDMATCHTOPICS` / `COUNTMATCHTOPICS` + CLI**~~ **done** (topic filter gates dual of MATCHLIBS triad · topicmatch.v1).
 808. ~~**`NTHTOPIC` / `LASTTOPIC` + CLI**~~ **done** (0-based Nth/last matching topic · dual of NTHLIB/LASTLIB · topicmatch.v1).
 809. ~~**`GUIDE MATCH` / `NTH` / `LASTMATCH` + CLI**~~ **done** (filter pick+full playbook one-shot · no NTHTOPIC+GUIDE glue · cubalc.guide.v1).
+810. ~~**`RUNSNIP MATCH` / `NTH` / `LASTMATCH` + CLI**~~ **done** (filter pick+execute curated mini · twin of GUIDE MATCH · no NTHTOPIC+RUNSNIP glue · cubalc.runsnip.v1).
 
 ## Tick protocol
 

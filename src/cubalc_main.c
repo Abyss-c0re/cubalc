@@ -3278,6 +3278,8 @@ int main(int argc, char **argv) {
       {"cli_nthtopic", "programs/proof/1349_cli_nthtopic.sh", "cubalc nthtopic|lasttopic plate + forms"},
       {"guidematch", "programs/proof/1350_guidematch.cubalc", "GUIDE MATCH|NTH|LASTMATCH filter pick+playbook"},
       {"cli_guidematch", "programs/proof/1350_cli_guidematch.sh", "cubalc guide match|nth|lastmatch + forms"},
+      {"runsnipmatch", "programs/proof/1351_runsnipmatch.cubalc", "RUNSNIP MATCH|NTH|LASTMATCH filter pick+execute"},
+      {"cli_runsnipmatch", "programs/proof/1351_cli_runsnipmatch.sh", "cubalc runsnip match|nth|lastmatch + forms"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -3929,8 +3931,11 @@ int main(int argc, char **argv) {
       {"SEEALSO", "flow", "SEEALSO alias of RELATED"},
       {"SNIP", "flow", "SNIP|SNIPPET [topic] mini runnable source · cubalc snip dual"},
       {"SNIPPET", "flow", "SNIPPET alias of SNIP"},
-      {"RUNSNIP", "flow", "RUNSNIP|SNIPRUN [topic] execute curated SNIP mini · cubalc runsnip dual"},
+      {"RUNSNIP", "flow", "RUNSNIP|SNIPRUN [topic]|MATCH|NTH|LASTMATCH execute SNIP · filter pick+run · cubalc runsnip dual"},
       {"SNIPRUN", "flow", "SNIPRUN alias of RUNSNIP"},
+      {"RUNSNIPMATCH", "flow", "RUNSNIPMATCH needle [OR fb] first matching topic RUNSNIP · no PICKTOPIC+RUNSNIP glue"},
+      {"RUNSNIPNTH", "flow", "RUNSNIPNTH idx needle [OR fb] Nth matching topic RUNSNIP · no NTHTOPIC+RUNSNIP glue"},
+      {"RUNSNIPLASTMATCH", "flow", "RUNSNIPLASTMATCH needle [OR fb] last matching topic RUNSNIP · no LASTTOPIC+RUNSNIP glue"},
       {"TOPIC", "flow", "TOPIC|TOPICCARD [topic] tips+forms+snip one plate · cubalc topic dual"},
       {"TOPICCARD", "flow", "TOPICCARD alias of TOPIC"},
       {"GUIDE", "flow", "GUIDE|PLAYGUIDE [topic]|MATCH|NTH|LASTMATCH full playbook · filter pick+guide · cubalc guide dual"},
@@ -5777,16 +5782,117 @@ int main(int argc, char **argv) {
   }
   if (strcmp(cmd, "runsnip") == 0 || strcmp(cmd, "sniprun") == 0 ||
       strcmp(cmd, "snip-run") == 0 || strcmp(cmd, "run-snip") == 0 ||
-      strcmp(cmd, "exec-snip") == 0 || strcmp(cmd, "play-snip") == 0) {
+      strcmp(cmd, "exec-snip") == 0 || strcmp(cmd, "play-snip") == 0 ||
+      strcmp(cmd, "runsnipmatch") == 0 || strcmp(cmd, "matchrunsnip") == 0 ||
+      strcmp(cmd, "runsnipnth") == 0 || strcmp(cmd, "nthrunsnip") == 0 ||
+      strcmp(cmd, "runsniplastmatch") == 0 || strcmp(cmd, "lastmatchrunsnip") == 0) {
     /* Usability: execute curated SNIP mini without temp files (dual of RUNSNIP).
-     *   cubalc runsnip · cubalc runsnip cap · cubalc sniprun plate
+     *   cubalc runsnip · cubalc runsnip match p · cubalc runsnip nth 1 p
+     *   cubalc runsnipmatch p · cubalc runsnipnth 1 p · cubalc runsniplastmatch p
      * Schema cubalc.runsnip.v1 · nested run plate fields + topic. */
-    char src[480];
+    static const char *topic_ids[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    char src[640];
     cubalc_run_result rr;
-    const char *topic = (argc > 2 && argv[2][0]) ? argv[2] : "general";
-    char tup[32];
+    const char *topic = "general";
+    const char *needle = NULL, *fallback = NULL, *mpick = NULL;
+    char tup[32], nlow[64], matches[8][16];
     size_t k;
-    int ok;
+    int ok, i, m_idx = 0, m_n = 0, mode_filt = 0, ai = 2;
+    int n_topic_ids = (int)(sizeof topic_ids / sizeof topic_ids[0]);
+    nlow[0] = 0;
+    if (strcmp(cmd, "runsnipmatch") == 0 || strcmp(cmd, "matchrunsnip") == 0)
+      mode_filt = 1;
+    else if (strcmp(cmd, "runsnipnth") == 0 || strcmp(cmd, "nthrunsnip") == 0)
+      mode_filt = 2;
+    else if (strcmp(cmd, "runsniplastmatch") == 0 || strcmp(cmd, "lastmatchrunsnip") == 0)
+      mode_filt = 3;
+    if (mode_filt == 0 && argc > 2 && argv[2] && argv[2][0]) {
+      if (!strcmp(argv[2], "match") || !strcmp(argv[2], "first") ||
+          !strcmp(argv[2], "pick")) {
+        mode_filt = 1;
+        ai = 3;
+      } else if (!strcmp(argv[2], "nth") || !strcmp(argv[2], "index")) {
+        mode_filt = 2;
+        ai = 3;
+      } else if (!strcmp(argv[2], "lastmatch") || !strcmp(argv[2], "endmatch") ||
+                 !strcmp(argv[2], "matchlast")) {
+        mode_filt = 3;
+        ai = 3;
+      } else {
+        topic = argv[2];
+      }
+    }
+    if (mode_filt != 0) {
+      if (mode_filt == 2) {
+        if (argc <= ai || !argv[ai] || !argv[ai][0]) {
+          fprintf(stderr, "usage: cubalc runsnip nth <idx> <needle> [OR fallback]\n");
+          printf("{\"schema\":\"cubalc.runsnip.v1\",\"ok\":false,\"cmd\":\"runsnipnth\","
+                 "\"err\":\"need idx and needle\",\"version\":\"%s\"}\n",
+                 CUBALC_LANG_VERSION);
+          return 2;
+        }
+        m_idx = atoi(argv[ai]);
+        ai++;
+      }
+      if (argc <= ai || !argv[ai] || !argv[ai][0]) {
+        fprintf(stderr, "usage: cubalc runsnip match|lastmatch <needle> [OR fallback]\n");
+        printf("{\"schema\":\"cubalc.runsnip.v1\",\"ok\":false,\"cmd\":\"runsnipmatch\","
+               "\"err\":\"need needle\",\"version\":\"%s\"}\n",
+               CUBALC_LANG_VERSION);
+        return 2;
+      }
+      needle = argv[ai];
+      ai++;
+      if (argc > ai + 1 && argv[ai] &&
+          (!strcmp(argv[ai], "OR") || !strcmp(argv[ai], "or") ||
+           !strcmp(argv[ai], "ELSE") || !strcmp(argv[ai], "DEFAULT")) &&
+          argv[ai + 1] && argv[ai + 1][0])
+        fallback = argv[ai + 1];
+      for (k = 0; needle[k] && k + 1 < sizeof nlow; k++)
+        nlow[k] = (char)((needle[k] >= 'A' && needle[k] <= 'Z')
+                             ? needle[k] - 'A' + 'a' : needle[k]);
+      nlow[k] = 0;
+      if (!strcmp(nlow, "capability") || !strcmp(nlow, "forms") || !strcmp(nlow, "form"))
+        snprintf(nlow, sizeof nlow, "%s", "cap");
+      if (!strcmp(nlow, "mesh") || !strcmp(nlow, "smx") || !strcmp(nlow, "peer"))
+        snprintf(nlow, sizeof nlow, "%s", "p2p");
+      if (!strcmp(nlow, "nest") || !strcmp(nlow, "var") || !strcmp(nlow, "timeout"))
+        snprintf(nlow, sizeof nlow, "%s", "fat");
+      if (!strcmp(nlow, "json") || !strcmp(nlow, "agent"))
+        snprintf(nlow, sizeof nlow, "%s", "plate");
+      if (!strcmp(nlow, "start") || !strcmp(nlow, "help") || !strcmp(nlow, "all") ||
+          !strcmp(nlow, "default") || !strcmp(nlow, "*"))
+        snprintf(nlow, sizeof nlow, "%s", "general");
+      m_n = 0;
+      for (i = 0; i < n_topic_ids && m_n < 8; i++) {
+        if (!strstr(topic_ids[i], nlow)) continue;
+        snprintf(matches[m_n], sizeof matches[0], "%s", topic_ids[i]);
+        m_n++;
+      }
+      if (mode_filt == 3) {
+        if (m_n > 0) { mpick = matches[m_n - 1]; m_idx = m_n - 1; }
+      } else if (mode_filt == 1) {
+        if (m_n > 0) { mpick = matches[0]; m_idx = 0; }
+      } else {
+        if (m_idx < 0) m_idx = 0;
+        if (m_idx < m_n) mpick = matches[m_idx];
+      }
+      if (!mpick) {
+        if (fallback && fallback[0]) {
+          topic = fallback;
+        } else {
+          printf("{\"schema\":\"cubalc.runsnip.v1\",\"ok\":false,\"cmd\":\"runsnipmatch\","
+                 "\"filter\":\"%s\",\"idx\":%d,\"match_n\":%d,\"err\":\"no match\","
+                 "\"version\":\"%s\"}\n",
+                 nlow, m_idx, m_n, CUBALC_LANG_VERSION);
+          return 1;
+        }
+      } else {
+        topic = mpick;
+      }
+    }
     for (k = 0; topic[k] && k + 1 < sizeof tup; k++)
       tup[k] = (char)((topic[k] >= 'A' && topic[k] <= 'Z')
                           ? topic[k] - 'A' + 'a' : topic[k]);
@@ -5821,22 +5927,27 @@ int main(int argc, char **argv) {
     ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
     {
       char lastj[400];
-      size_t i, o = 0;
+      size_t i2, o = 0;
       const char *h = rr.last_print[0] ? rr.last_print : (rr.last_err[0] ? rr.last_err : "");
-      for (i = 0; h[i] && o + 2 < sizeof lastj; i++) {
-        char c = h[i];
+      const char *cmd_out = mode_filt == 1 ? "runsnipmatch" :
+                            mode_filt == 2 ? "runsnipnth" :
+                            mode_filt == 3 ? "runsniplastmatch" : "runsnip";
+      for (i2 = 0; h[i2] && o + 2 < sizeof lastj; i2++) {
+        char c = h[i2];
         if (c == '"' || c == '\\') { lastj[o++] = '\\'; lastj[o++] = c; }
         else if (c == '\n') { lastj[o++] = '\\'; lastj[o++] = 'n'; }
         else if ((unsigned char)c < 32) lastj[o++] = ' ';
         else lastj[o++] = c;
       }
       lastj[o] = 0;
-      printf("{\"schema\":\"cubalc.runsnip.v1\",\"ok\":%s,\"cmd\":\"runsnip\","
+      printf("{\"schema\":\"cubalc.runsnip.v1\",\"ok\":%s,\"cmd\":\"%s\","
              "\"topic\":\"%s\",\"asserts_ok\":%d,\"asserts_fail\":%d,\"stmts\":%d,"
+             "\"filter\":\"%s\",\"match_i\":%d,\"match_n\":%d,\"filter_mode\":%d,"
              "\"last\":\"%s\",\"version\":\"%s\","
-             "\"note\":\"execute curated SNIP mini · dual of in-lang RUNSNIP · no temp file\","
+             "\"note\":\"execute curated SNIP · MATCH|NTH|LASTMATCH filter pick · dual of RUNSNIP\","
              "\"topics\":[\"general\",\"cap\",\"fat\",\"plate\",\"p2p\",\"run\",\"lib\",\"protect\"]}\n",
-             ok ? "true" : "false", tup, rr.asserts_ok, rr.asserts_fail, rr.stmts,
+             ok ? "true" : "false", cmd_out, tup, rr.asserts_ok, rr.asserts_fail, rr.stmts,
+             mode_filt ? nlow : "", m_idx, mode_filt ? m_n : 0, mode_filt,
              lastj, CUBALC_LANG_VERSION);
     }
     return ok ? 0 : 1;
@@ -18083,7 +18194,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    related|seealso <form>     related form-name bag (cubalc.related.v1)\n"
       "    snip|snippet [topic]       mini runnable source JSON (cubalc.snip.v1)\n"
       "    topic|topiccard [topic]    tips+forms+snip one plate (cubalc.topic.v1)\n"
-      "    runsnip|sniprun [topic]    execute curated SNIP mini (cubalc.runsnip.v1)\n"
+      "    runsnip|sniprun [topic]|match|nth|lastmatch  execute SNIP · filter pick (cubalc.runsnip.v1)\n"
       "    topics|listtopics          discovery topic catalog (cubalc.topics.v1)\n"
       "    hastopic|needtopic <t>     soft/hard topic membership gates\n"
       "    matchtopics|picktopic <q>  filter/first discovery topic (cubalc.topicmatch.v1)\n"
@@ -18102,7 +18213,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|guidematch|guidenth|guidelastmatch|onboard|matchtopics|picktopic|hasmatchtopics|nthtopic|lasttopic|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
+      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|guidematch|guidenth|guidelastmatch|runsnipmatch|runsnipnth|runsniplastmatch|onboard|matchtopics|picktopic|hasmatchtopics|nthtopic|lasttopic|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"

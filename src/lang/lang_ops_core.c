@@ -2732,8 +2732,11 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"SEEALSO", "SEEALSO alias of RELATED"},
       {"SNIP", "SNIP|SNIPPET [topic] — curated mini runnable source → LAST · dual of cubalc snip"},
       {"SNIPPET", "SNIPPET alias of SNIP"},
-      {"RUNSNIP", "RUNSNIP|SNIPRUN [topic] — execute curated SNIP mini program one-shot · dual of cubalc runsnip"},
+      {"RUNSNIP", "RUNSNIP|SNIPRUN [topic]|MATCH|NTH|LASTMATCH — execute SNIP mini · filter pick+run · dual of cubalc runsnip"},
       {"SNIPRUN", "SNIPRUN alias of RUNSNIP"},
+      {"RUNSNIPMATCH", "RUNSNIPMATCH|MATCHRUNSNIP needle [OR fb] — first matching topic RUNSNIP · no PICKTOPIC+RUNSNIP glue"},
+      {"RUNSNIPNTH", "RUNSNIPNTH|NTHRUNSNIP idx needle [OR fb] — Nth matching topic RUNSNIP · no NTHTOPIC+RUNSNIP glue"},
+      {"RUNSNIPLASTMATCH", "RUNSNIPLASTMATCH|LASTMATCHRUNSNIP needle [OR fb] — last matching topic RUNSNIP · no LASTTOPIC+RUNSNIP glue"},
       {"TOPIC", "TOPIC|TOPICCARD [topic] — one plate tips+forms+snip · dual of cubalc topic"},
       {"TOPICCARD", "TOPICCARD alias of TOPIC"},
       {"GUIDE", "GUIDE|PLAYGUIDE [topic]|MATCH|NTH|LASTMATCH — full playbook · filter pick+guide one-shot · dual of cubalc guide"},
@@ -39281,6 +39284,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"TOPIC", "FORMTOPICS"}, {"TOPIC", "GUIDE"},
       {"GUIDE", "TOPIC"}, {"GUIDE", "TOPICHINT"}, {"GUIDE", "RELATEDTOPIC"},
       {"GUIDE", "TIPS"}, {"GUIDE", "FORMSFOR"}, {"GUIDE", "SNIP"}, {"GUIDE", "RUNSNIP"},
+      {"RUNSNIP", "GUIDE"}, {"RUNSNIP", "SNIP"}, {"RUNSNIP", "RUNSNIPMATCH"}, {"RUNSNIP", "MATCHTOPICS"},
+      {"RUNSNIPMATCH", "RUNSNIPNTH"}, {"RUNSNIPMATCH", "RUNSNIPLASTMATCH"}, {"RUNSNIPMATCH", "RUNSNIP"},
+      {"RUNSNIPMATCH", "GUIDEMATCH"}, {"RUNSNIPMATCH", "PICKTOPIC"},
+      {"RUNSNIPNTH", "RUNSNIPMATCH"}, {"RUNSNIPNTH", "NTHTOPIC"}, {"RUNSNIPNTH", "RUNSNIP"},
+      {"RUNSNIPLASTMATCH", "RUNSNIPMATCH"}, {"RUNSNIPLASTMATCH", "LASTTOPIC"}, {"RUNSNIPLASTMATCH", "RUNSNIP"},
       {"GUIDE", "GUIDEMATCH"}, {"GUIDE", "GUIDENTH"}, {"GUIDE", "GUIDELASTMATCH"}, {"GUIDE", "MATCHTOPICS"},
       {"GUIDE", "ERRGUIDE"}, {"ERRGUIDE", "GUIDE"}, {"ERRGUIDE", "ERRTIPS"},
       {"ERRGUIDE", "ERRRUN"}, {"ERRGUIDE", "WHY"}, {"ERRRUN", "ERRGUIDE"},
@@ -39598,7 +39606,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * Topics match SNIP: general|cap|fat|plate|p2p|run|lib|protect. */
   if (kw(&L->cur,"RUNSNIP")||kw(&L->cur,"SNIPRUN")||kw(&L->cur,"RUN_SNIP")||
       kw(&L->cur,"EXEC_SNIP")||kw(&L->cur,"APPLY_SNIP")||kw(&L->cur,"DOSNIP")||
-      kw(&L->cur,"RUNMINI")||kw(&L->cur,"PLAYSNIP")){
+      kw(&L->cur,"RUNMINI")||kw(&L->cur,"PLAYSNIP")||
+      kw(&L->cur,"RUNSNIPMATCH")||kw(&L->cur,"MATCHRUNSNIP")||kw(&L->cur,"PICKRUNSNIP")||
+      kw(&L->cur,"FIRSTRUNSNIP")||kw(&L->cur,"RUNSNIPPICK")||
+      kw(&L->cur,"RUNSNIPNTH")||kw(&L->cur,"NTHRUNSNIP")||kw(&L->cur,"INDEXRUNSNIP")||
+      kw(&L->cur,"RUNSNIPLASTMATCH")||kw(&L->cur,"LASTMATCHRUNSNIP")||
+      kw(&L->cur,"RUNSNIPENDMATCH")||kw(&L->cur,"ENDMATCHRUNSNIP")){
     static const struct { const char *topic; const char *src; } snips[] = {
       {"general",
        "VERSION\n"
@@ -39659,34 +39672,198 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
        "PRINT LAST\n"
        "PASS\n"},
     };
+    static const char *topic_ids[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
     char topic[32], tup[32];
+    char m_needle[64], m_fallback[64], nlow[64];
+    char matches[8][16];
     size_t k;
     int i, nall = (int)(sizeof snips / sizeof snips[0]);
-    const char *src = NULL;
+    int n_topic_ids = (int)(sizeof topic_ids / sizeof topic_ids[0]);
+    const char *src = NULL, *mpick = NULL;
     cubalc_run_result rr;
     int ok;
+    int mode_filt = 0; /* 0 direct · 1 first · 2 nth · 3 lastmatch */
+    int m_idx = 0, m_n = 0, m_have_or = 0;
+    if (kw(&L->cur,"RUNSNIPMATCH")||kw(&L->cur,"MATCHRUNSNIP")||kw(&L->cur,"PICKRUNSNIP")||
+        kw(&L->cur,"FIRSTRUNSNIP")||kw(&L->cur,"RUNSNIPPICK"))
+      mode_filt = 1;
+    else if (kw(&L->cur,"RUNSNIPNTH")||kw(&L->cur,"NTHRUNSNIP")||kw(&L->cur,"INDEXRUNSNIP"))
+      mode_filt = 2;
+    else if (kw(&L->cur,"RUNSNIPLASTMATCH")||kw(&L->cur,"LASTMATCHRUNSNIP")||
+             kw(&L->cur,"RUNSNIPENDMATCH")||kw(&L->cur,"ENDMATCHRUNSNIP"))
+      mode_filt = 3;
     lex_next(L);
     topic[0] = 0;
-    if (L->cur.kind == TK_STR) {
-      snprintf(topic, sizeof topic, "%s", L->cur.text);
-      lex_next(L);
-    } else if (L->cur.kind == TK_IDENT) {
-      Var *vv = var_get(vm, L->cur.text, 0);
-      if (vv && vv->is_str && vv->sval[0]) {
-        snprintf(topic, sizeof topic, "%s", vv->sval);
+    m_needle[0] = 0;
+    m_fallback[0] = 0;
+    /* RUNSNIP MATCH|FIRST|PICK · NTH · LASTMATCH (not bare RUNSNIP LAST) */
+    if (mode_filt == 0) {
+      if (kw(&L->cur,"MATCH")||kw(&L->cur,"FIRST")||kw(&L->cur,"PICK")) {
+        mode_filt = 1;
         lex_next(L);
-      } else if (strcmp(L->cur.text, "LAST") == 0) {
-        snprintf(topic, sizeof topic, "%s", vm->last_str);
+      } else if (kw(&L->cur,"NTH")||kw(&L->cur,"INDEX")) {
+        mode_filt = 2;
         lex_next(L);
-      } else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
-                   kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
-                   kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
-        snprintf(topic, sizeof topic, "%s", L->cur.text);
+      } else if (kw(&L->cur,"LASTMATCH")||kw(&L->cur,"ENDMATCH")||
+                 kw(&L->cur,"MATCHLAST")) {
+        mode_filt = 3;
         lex_next(L);
       }
     }
-    if (!topic[0])
-      snprintf(topic, sizeof topic, "%s", "general");
+    if (mode_filt != 0) {
+      if (mode_filt == 2) {
+        long idx_l = 0;
+        int have_idx = 0;
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+            (L->cur.kind == TK_IDENT && (strcmp(L->cur.text,"LAST_N")==0 ||
+             strcmp(L->cur.text,"OK")==0 || strcmp(L->cur.text,"N")==0))) {
+          idx_l = parse_expr(vm, L);
+          have_idx = 1;
+        }
+        if (!have_idx) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_num(vm, "RUNSNIP_OK", 0);
+          var_set_str(vm, "LAST_ERR",
+                      "RUNSNIPNTH: need idx — RUNSNIP NTH 0 p · RUNSNIPNTH 1 plate");
+          var_set_str(vm, "ERR",
+                      "RUNSNIPNTH: need idx — RUNSNIP NTH 0 p · RUNSNIPNTH 1 plate");
+          bump(vm);
+          return 1;
+        }
+        m_idx = (int)idx_l;
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(m_needle, sizeof m_needle, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(m_needle, sizeof m_needle, "%s", vv->sval);
+        else if (strcmp(L->cur.text, "LAST") == 0)
+          snprintf(m_needle, sizeof m_needle, "%s", vm->last_str);
+        else
+          snprintf(m_needle, sizeof m_needle, "%s", L->cur.text);
+        lex_next(L);
+      }
+      if (kw(&L->cur,"OR") || kw(&L->cur,"ELSE") || kw(&L->cur,"DEFAULT")) {
+        lex_next(L);
+        m_have_or = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(m_fallback, sizeof m_fallback, "%s", L->cur.text);
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str)
+            snprintf(m_fallback, sizeof m_fallback, "%s", vv->sval);
+          else
+            snprintf(m_fallback, sizeof m_fallback, "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+      if (!m_needle[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "RUNSNIP_OK", 0);
+        var_set_str(vm, "LAST_ERR",
+                    "RUNSNIPMATCH: need needle — RUNSNIP MATCH p · RUNSNIPNTH 1 plate");
+        var_set_str(vm, "ERR",
+                    "RUNSNIPMATCH: need needle — RUNSNIP MATCH p · RUNSNIPNTH 1 plate");
+        bump(vm);
+        return 1;
+      }
+      for (k = 0; m_needle[k] && k + 1 < sizeof nlow; k++) {
+        char ch = m_needle[k];
+        if (ch >= 'A' && ch <= 'Z') ch = (char)(ch - 'A' + 'a');
+        nlow[k] = ch;
+      }
+      nlow[k] = 0;
+      if (!strcmp(nlow, "capability") || !strcmp(nlow, "forms") || !strcmp(nlow, "form"))
+        snprintf(nlow, sizeof nlow, "%s", "cap");
+      if (!strcmp(nlow, "mesh") || !strcmp(nlow, "smx") || !strcmp(nlow, "peer"))
+        snprintf(nlow, sizeof nlow, "%s", "p2p");
+      if (!strcmp(nlow, "nest") || !strcmp(nlow, "var") || !strcmp(nlow, "timeout"))
+        snprintf(nlow, sizeof nlow, "%s", "fat");
+      if (!strcmp(nlow, "json") || !strcmp(nlow, "agent"))
+        snprintf(nlow, sizeof nlow, "%s", "plate");
+      if (!strcmp(nlow, "start") || !strcmp(nlow, "all") || !strcmp(nlow, "help") ||
+          !strcmp(nlow, "default") || !strcmp(nlow, "*"))
+        snprintf(nlow, sizeof nlow, "%s", "general");
+      m_n = 0;
+      for (i = 0; i < n_topic_ids && m_n < 8; i++) {
+        if (!strstr(topic_ids[i], nlow)) continue;
+        snprintf(matches[m_n], sizeof matches[0], "%s", topic_ids[i]);
+        m_n++;
+      }
+      if (mode_filt == 3) {
+        if (m_n > 0) { mpick = matches[m_n - 1]; m_idx = m_n - 1; }
+      } else if (mode_filt == 1) {
+        if (m_n > 0) { mpick = matches[0]; m_idx = 0; }
+      } else {
+        if (m_idx < 0) m_idx = 0;
+        if (m_idx < m_n) mpick = matches[m_idx];
+      }
+      var_set_str(vm, "MATCHTOPICS_FILTER", nlow);
+      var_set_str(vm, "RUNSNIP_FILTER", nlow);
+      var_set_num(vm, "MATCHTOPICS_N", m_n);
+      var_set_num(vm, "RUNSNIP_MATCH_N", m_n);
+      var_set_num(vm, "RUNSNIP_MATCH_I", m_idx);
+      if (!mpick) {
+        if (m_have_or && m_fallback[0]) {
+          snprintf(topic, sizeof topic, "%s", m_fallback);
+        } else {
+          char em[192];
+          snprintf(em, sizeof em,
+                   "RUNSNIPMATCH miss idx=%d filter='%s' n=%d — MATCHTOPICS · PICKTOPIC · OR fallback",
+                   m_idx, nlow, m_n);
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_num(vm, "RUNSNIP_OK", 0);
+          var_set_str(vm, "LAST_ERR", em);
+          var_set_str(vm, "ERR", em);
+          bump(vm);
+          return 1;
+        }
+      } else {
+        snprintf(topic, sizeof topic, "%s", mpick);
+      }
+      var_set_str(vm, "PICKTOPIC", topic);
+      var_set_str(vm, "NTHTOPIC", topic);
+      var_set_str(vm, "LASTTOPIC", topic);
+      var_set_str(vm, "RUNSNIPMATCH", topic);
+    } else {
+      if (L->cur.kind == TK_STR) {
+        snprintf(topic, sizeof topic, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0]) {
+          snprintf(topic, sizeof topic, "%s", vv->sval);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(topic, sizeof topic, "%s", vm->last_str);
+          lex_next(L);
+        } else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+                     kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
+                     kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
+          snprintf(topic, sizeof topic, "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+      if (!topic[0])
+        snprintf(topic, sizeof topic, "%s", "general");
+    }
     for (k = 0; topic[k] && k + 1 < sizeof tup; k++) {
       char c = topic[k];
       if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
@@ -39708,6 +39885,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (!strcmp(snips[i].topic, tup)) { src = snips[i].src; break; }
     }
     var_set_str(vm, "RUNSNIP_TOPIC", tup);
+    var_set_str(vm, "TOPIC_NAME", tup);
     var_set_str(vm, "SNIPRUN_TOPIC", tup);
     if (!src) {
       var_set_str(vm, "LAST", "");
