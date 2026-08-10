@@ -5628,7 +5628,7 @@
     "iter320: board 10/10 first pass; all path scores full green",
     "iter320: selftest 560/753 findarg/afterarg/firstarg PASS; CLI duals still set"
   ],
-  "commit": "pending",
-  "ts": "2026-08-10T21:59:31Z",
-  "board_commit": "pending"
+  "commit": "3bf806c0",
+  "ts": "2026-08-10T21:59:32Z",
+  "board_commit": "3bf806c0"
 }
