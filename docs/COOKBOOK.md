@@ -17,9 +17,10 @@ make all
 ./out/cubalc examples    # curated runnable starters (JSON · filterable)
 ./out/cubalc cat agent_boot  # dump lib/program source + meta plate
 ./out/cubalc cat plate_uniform  # nest consistency INCLUDE snippet
-./out/cubalc init --list             # scaffold catalog JSON (agent discovery)
+./out/cubalc init --list             # scaffold catalog JSON (agent discovery · n=5)
 ./out/cubalc init --plate my_agent   # plate_session + plate_uniform + PRETTYP + save
 ./out/cubalc init --peer mesh        # multi-plate PLATE+PEER starter
+./out/cubalc init --fat-session nest # INCLUDE fat_session durable nest one-shot
 ./out/cubalc forms SMX   # play-form catalog
 # agents: pipe source without a temp file
 printf 'ASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -

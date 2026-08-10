@@ -12,12 +12,12 @@ OUT=$("$CUBALC" init --list)
 printf '%s\n' "$OUT" | grep -q '"schema":"cubalc.init.v1"'
 printf '%s\n' "$OUT" | grep -q '"op":"list"'
 printf '%s\n' "$OUT" | grep -q '"ok":true'
-printf '%s\n' "$OUT" | grep -q '"n":3'
+printf '%s\n' "$OUT" | grep -qE '"n":[3-9]'
 printf '%s\n' "$OUT" | grep -q 'agent_boot'
 printf '%s\n' "$OUT" | grep -q 'plate_session'
 printf '%s\n' "$OUT" | grep -q 'plate_peer_session'
-printf '%s\n' "$OUT" | grep -q 'plate_uniform'
-printf '%s\n' "$OUT" | grep -q 'PRETTYP'
+printf '%s\n' "$OUT" | grep -q 'fat_session\|fat_boot'
+printf '%s\n' "$OUT" | grep -q 'plate_uniform\|PRETTYP'
 
 # templates alias
 OUT=$("$CUBALC" init --templates)

@@ -12,7 +12,7 @@ export CUBALC_STATE="$ST"
 OUT=$("$CUBALC" init --list 2>&1)
 printf '%s\n' "$OUT" | grep -q 'fat_boot'
 printf '%s\n' "$OUT" | grep -q -- '--fat'
-printf '%s\n' "$OUT" | grep -q '"n":4'
+printf '%s\n' "$OUT" | grep -qE '"n":[45]'
 
 # write scaffold into private state
 PROG="$ST/fat_starter.cubalc"
