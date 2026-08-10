@@ -33,5 +33,14 @@ TIPS zzz_no_topic
 ASSERT OK == 0
 CLEAR_ERR
 
+# var topic + HOWTO_TOPIC dual
+LET t = "cap"
+TIPS t
+ASSERT OK == 1
+ASSERT TIPS_TOPIC == "cap"
+HOWTO p2p
+ASSERT HOWTO_TOPIC == "p2p"
+ASSERT TIPS_N >= 2
+
 PASS
 PRINT "1329_tips: PASS"

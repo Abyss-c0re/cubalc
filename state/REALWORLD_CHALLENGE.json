@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 298,
-  "program": "programs/realworld/svc_cap_boot_admit_board.cubalc",
-  "theme": "cap_boot admit + LISTFORMS catalog + host -C form floor",
-  "version": "1.15.777-usability",
+  "iter": 299,
+  "program": "programs/realworld/svc_topic_runbook_board.cubalc",
+  "theme": "TIPS+FORMSFOR+FORMHINT topic runbook discovery",
+  "version": "1.15.780-usability",
   "pass": true,
-  "prior_note": "iter 297 HASFORM/HASFORMS board; this iter first realworld 1325 cap_boot + 1326 run -C + 1327 LISTFORMS",
+  "prior_note": "iter 298 cap_boot/LISTFORMS; this iter first realworld 1328 FORMHINT + 1329 TIPS + 1330 FORMSFOR",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate capboot",
+      "cmd": "seed agent plate topicrb",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "cap",
-      "cmd": "INCLUDE cap_boot + HASINCLUDE duals",
+      "name": "tips",
+      "cmd": "TIPS var topic + general",
       "ok": true,
-      "note": "cap"
+      "note": "tips"
     },
     {
-      "name": "catalog",
-      "cmd": "LISTFORMS/COUNTFORMS inventory",
+      "name": "forms",
+      "cmd": "FORMSFOR + HAS vs HASLINE",
       "ok": true,
-      "note": "catalog"
+      "note": "forms"
+    },
+    {
+      "name": "hint",
+      "cmd": "FORMHINT/DESCRIBEFORM soft miss",
+      "ok": true,
+      "note": "hint"
+    },
+    {
+      "name": "digest",
+      "cmd": "tips+forms+hint packet",
+      "ok": true,
+      "note": "digest"
     },
     {
       "name": "soft",
-      "cmd": "soft form_guard FORMMISS",
+      "cmd": "unknown topic soft miss",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "floor",
-      "cmd": "CUBALC_REQUIRE_FORMS env dual",
-      "ok": true,
-      "note": "floor"
-    },
-    {
       "name": "gate",
-      "cmd": "plate cfg.need HASFORMS",
+      "cmd": "plate surface contract",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "FORMLIST NFORMS CATALOGFORMS",
+      "cmd": "HOWTO TOPICFORMS PLAYBOOK",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "COUNT vs LIST + INCLUDE quote filter",
+      "cmd": "PRINT clobber + topic aliases",
       "ok": true,
       "note": "probe"
     },
@@ -68,16 +74,10 @@
       "note": "unknown\u21922"
     },
     {
-      "name": "host_C",
-      "cmd": "run -C HASFORM,SORTLIBS floor",
-      "ok": true,
-      "note": "-C plate require_forms; env empty"
-    },
-    {
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "455/658 CLI duals red; listforms PASS"
+      "note": "455/664 CLI duals red; tips/formsfor PASS"
     }
   ],
   "weaknesses": [
@@ -4416,6 +4416,54 @@
       "title": "cap_boot re-INCLUDEs agent_boot each time (stem bag grows)",
       "detail": "INCLUDE cap_boot after agent_boot already loaded adds another agent_boot stem in include_stems. Harmless but noisy; INCLUDE ONCE inside cap_boot would clean duals.",
       "repro": "includes list shows agent_boot thrice after plate_peer + cap_boot"
+    },
+    {
+      "id": "W543",
+      "severity": "high",
+      "area": "lang|formsfor",
+      "title": "FORMSFOR/TIPS var topic missing lex_next (unknown form t)",
+      "detail": "LET t=\"plate\"; FORMSFOR t left token t on stream \u2192 unknown form t. Same class as LISTFORMS (W538). Fixed: always lex_next after var/LAST/bare topic expand. Proofs 1329/1330 extended.",
+      "repro": "historical: LET t plate; FORMSFOR t \u2192 unknown form t"
+    },
+    {
+      "id": "W544",
+      "severity": "med",
+      "area": "lang|has",
+      "title": "SYS HAS is substring; SYS HASLINE is exact field (false friend on form bags)",
+      "detail": "FORMSFOR plate bag has SETP: SYS HAS bag \"SET\" \u2192 1 (substring); SYS HASLINE bag \"SET\" \u2192 0. Agents matching form names must use HASLINE/HASLINEI not HAS.",
+      "repro": "FORMSFOR plate; SYS HAS LAST SET \u2192 1; HASLINE SET \u2192 0"
+    },
+    {
+      "id": "W545",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT after FORMSFOR/TIPS clobbers bag in LAST (reconfirmed)",
+      "detail": "Must LET bag = LAST before any PRINT when inventorying topics. Probe path: capture stem then PRINT mark; HASLINE LAST SETP fails.",
+      "repro": "FORMSFOR plate; PRINT x; SYS HASLINE LAST SETP \u2192 0"
+    },
+    {
+      "id": "W546",
+      "severity": "low",
+      "area": "lang|howto",
+      "title": "HOWTO_TOPIC was unset until dual of TIPS_TOPIC added",
+      "detail": "HOWTO p2p set TIPS_TOPIC but HOWTO_TOPIC was empty/0. Realworld 299 sets HOWTO_TOPIC/PLAYBOOK_TOPIC/HOWTO_N alongside TIPS_* for alias agents.",
+      "repro": "pre-fix: HOWTO p2p; PRINT HOWTO_TOPIC \u2192 empty"
+    },
+    {
+      "id": "W547",
+      "severity": "low",
+      "area": "host|cli",
+      "title": "CLI tips n may exceed in-lang TIPS_N for same topic",
+      "detail": "cubalc tips plate reports n=4; in-lang TIPS plate often TIPS_N=3 (table rows differ from CLI pack). Agents should treat >= floor not exact dual.",
+      "repro": "TIPS plate \u2192 3; cubalc tips plate \u2192 n=4"
+    },
+    {
+      "id": "W548",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META omit trailing NL (reconfirmed topic runbook)",
+      "detail": "od META ends 5a without 0a. STATUS last line without $.",
+      "repro": "od -An -tx1 META.txt | tail -1"
     }
   ],
   "workarounds": [
@@ -4462,7 +4510,9 @@
     "HASFORMS bag string for self-gate names; FORMMISS_N==0 for full admit",
     "LET NEED_FORMS before re-INCLUDE form_guard when DEFAULT already bound",
     "use CUBALC_REQUIRE_FORMS env for in-lang floor dual; -C is plate-only",
-    "LISTFORMS \"INCLUDE\" quoted; capture LAST before PRINT after LISTFORMS"
+    "LISTFORMS \"INCLUDE\" quoted; capture LAST before PRINT after LISTFORMS",
+    "LET bag=LAST before PRINT after FORMSFOR/TIPS; HASLINE for exact form names",
+    "use FORMSFOR topic_var after lex_next fix; aliases forms\u2192cap mesh\u2192p2p"
   ],
   "language_gaps": [
     "PRETTYP/JSONPRETTY/PRETTYJSON plate evidence dump",
@@ -4510,7 +4560,10 @@
     "form_guard DEFAULT set-once / INCLUDE not ONCE (W532)",
     "run -C vs ENV form floor visibility (W537)",
     "LISTFORMS var lex_next / INCLUDE stop-list (W538/W539)",
-    "PRINT clobber after LISTFORMS bag (W540)"
+    "PRINT clobber after LISTFORMS bag (W540)",
+    "FORMSFOR/TIPS var topic lex_next (W543)",
+    "SYS HAS substring vs HASLINE exact on form bags (W544)",
+    "CLI tips n vs in-lang TIPS_N skew (W547)"
   ],
   "issues_faced": [
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
@@ -4568,9 +4621,12 @@
     "iter297: form_guard soft+hard contracts; HASFORMS body var from GETP cfg.need works",
     "iter298: -C floor invisible to SYS ENV (W537); use CUBALC_REQUIRE_FORMS for in-lang",
     "iter298: LISTFORMS var lex_next fixed; INCLUDE stop-list filter needs quotes",
-    "iter298: board 10/10 + host -C ok; selftest CLI duals still red 455/658"
+    "iter298: board 10/10 + host -C ok; selftest CLI duals still red 455/658",
+    "iter299: FORMSFOR/TIPS var topic lex_next fixed + HOWTO_TOPIC dual",
+    "iter299: SYS HAS substring false friend on form bags (W544)",
+    "iter299: board 10/10 green; selftest CLI duals still 57 red"
   ],
-  "commit": "4852ae2f",
-  "ts": "2026-08-10T12:11:28Z",
+  "commit": "pending",
+  "ts": "2026-08-10T12:53:07Z",
   "board_commit": "4852ae2f"
 }

@@ -60,5 +60,12 @@ FORMSFOR zzz_no_topic
 ASSERT OK == 0
 CLEAR_ERR
 
+# var topic (lex_next after expand)
+LET t = "plate"
+FORMSFOR t
+ASSERT OK == 1
+ASSERT FORMSFOR_TOPIC == "plate"
+ASSERT FORMSFOR_N >= 5
+
 PASS
 PRINT "1330_formsfor: PASS"

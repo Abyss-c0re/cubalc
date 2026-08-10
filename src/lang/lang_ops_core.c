@@ -2728,6 +2728,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"TIPS", "TIPS [topic] — curated agent next-steps bag · dual of cubalc tips"},
       {"FORMSFOR", "FORMSFOR|TOPICFORMS [topic] — curated form-name bag by topic · dual of cubalc formsfor"},
       {"TOPICFORMS", "TOPICFORMS alias of FORMSFOR"},
+      {"RELATED", "RELATED|SEEALSO form — related form-name bag · dual of cubalc related · complements FORMHINT/FORMSFOR"},
+      {"SEEALSO", "SEEALSO alias of RELATED"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · dotted path nest ok · write-back · multi-plate"},
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
@@ -38950,11 +38952,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lex_next(L);
     } else if (L->cur.kind == TK_IDENT) {
       Var *vv = var_get(vm, L->cur.text, 0);
-      if (vv && vv->is_str && vv->sval[0])
+      /* Always lex_next after consuming topic (var/LAST/bare) — same class as LISTFORMS.
+       * Missing advance: FORMSFOR t / TIPS t → unknown form 't' (realworld 299). */
+      if (vv && vv->is_str && vv->sval[0]) {
         snprintf(topic, sizeof topic, "%s", vv->sval);
-      else if (strcmp(L->cur.text, "LAST") == 0)
+        lex_next(L);
+      } else if (strcmp(L->cur.text, "LAST") == 0) {
         snprintf(topic, sizeof topic, "%s", vm->last_str);
-      else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+        lex_next(L);
+      } else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
                  kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
                  kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
         snprintf(topic, sizeof topic, "%s", L->cur.text);
@@ -38996,10 +39002,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_str(vm, "LAST", bag);
     var_set_str(vm, "TIPS", bag);
     var_set_str(vm, "TIPS_TOPIC", tup);
+    var_set_str(vm, "HOWTO_TOPIC", tup);
+    var_set_str(vm, "PLAYBOOK_TOPIC", tup);
     snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
     vm->last_n = n;
     var_set_num(vm, "LAST_N", n);
     var_set_num(vm, "TIPS_N", n);
+    var_set_num(vm, "HOWTO_N", n);
     var_set_num(vm, "OK", n > 0 ? 1 : 0);
     if (n == 0) {
       var_set_str(vm, "LAST_ERR",
@@ -39097,11 +39106,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lex_next(L);
     } else if (L->cur.kind == TK_IDENT) {
       Var *vv = var_get(vm, L->cur.text, 0);
-      if (vv && vv->is_str && vv->sval[0])
+      /* Always lex_next after consuming topic (var/LAST/bare) — same class as LISTFORMS.
+       * Missing advance: FORMSFOR t / TIPS t → unknown form 't' (realworld 299). */
+      if (vv && vv->is_str && vv->sval[0]) {
         snprintf(topic, sizeof topic, "%s", vv->sval);
-      else if (strcmp(L->cur.text, "LAST") == 0)
+        lex_next(L);
+      } else if (strcmp(L->cur.text, "LAST") == 0) {
         snprintf(topic, sizeof topic, "%s", vm->last_str);
-      else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+        lex_next(L);
+      } else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
                  kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
                  kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
         snprintf(topic, sizeof topic, "%s", L->cur.text);
@@ -39158,6 +39171,172 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "ERR",
                   "FORMSFOR: unknown topic — FORMSFOR general|cap|fat|plate|p2p|run|lib|protect");
     }
+    bump(vm);
+    return 1;
+  }
+
+  /* RELATED|SEEALSO form — curated related form-name bag (dual of cubalc related).
+   * Complements FORMHINT (one-line docs) and FORMSFOR (topic surface): form → neighbors.
+   * LAST = newline related names · RELATED_N · RELATED_OF · soft miss OK=0. */
+  if (kw(&L->cur,"RELATED")||kw(&L->cur,"SEEALSO")||kw(&L->cur,"FORMSLIKE")||
+      kw(&L->cur,"NEARFORMS")||kw(&L->cur,"WITHFORMS")||kw(&L->cur,"FORMREL")||
+      kw(&L->cur,"RELATEDFORMS")||kw(&L->cur,"NEIGHBORS")){
+    static const struct { const char *form; const char *rel; } edges[] = {
+      /* capability */
+      {"HASFORM", "NEEDFORM"}, {"HASFORM", "HASFORMS"}, {"HASFORM", "NEEDFORMS"},
+      {"HASFORM", "FORMHINT"}, {"HASFORM", "LISTFORMS"}, {"HASFORM", "COUNTFORMS"},
+      {"HASFORM", "REQUIRE FORM"}, {"HASFORM", "FORMSFOR"}, {"HASFORM", "TIPS"},
+      {"NEEDFORM", "HASFORM"}, {"NEEDFORM", "NEEDFORMS"}, {"NEEDFORM", "HASFORMS"},
+      {"NEEDFORM", "FORMHINT"}, {"NEEDFORM", "REQUIRE FORM"},
+      {"HASFORMS", "NEEDFORMS"}, {"HASFORMS", "HASFORM"}, {"HASFORMS", "FORMMISS"},
+      {"NEEDFORMS", "HASFORMS"}, {"NEEDFORMS", "NEEDFORM"}, {"NEEDFORMS", "HASFORM"},
+      {"FORMHINT", "HASFORM"}, {"FORMHINT", "LISTFORMS"}, {"FORMHINT", "RELATED"},
+      {"FORMHINT", "FORMSFOR"}, {"FORMHINT", "TIPS"},
+      {"LISTFORMS", "COUNTFORMS"}, {"LISTFORMS", "HASFORM"}, {"LISTFORMS", "FORMHINT"},
+      {"LISTFORMS", "FORMSFOR"}, {"COUNTFORMS", "LISTFORMS"}, {"COUNTFORMS", "HASFORM"},
+      {"FORMSFOR", "TIPS"}, {"FORMSFOR", "RELATED"}, {"FORMSFOR", "FORMHINT"},
+      {"FORMSFOR", "LISTFORMS"}, {"FORMSFOR", "HASFORM"},
+      {"TIPS", "FORMSFOR"}, {"TIPS", "WHY"}, {"TIPS", "FORMHINT"}, {"TIPS", "RELATED"},
+      /* lib / include */
+      {"INCLUDE", "LISTLIBS"}, {"INCLUDE", "HASLIB"}, {"INCLUDE", "MATCHLIBS"},
+      {"INCLUDE", "PICKLIB"}, {"INCLUDE", "RECIPE"}, {"INCLUDE", "CHECKDEPS"},
+      {"LISTLIBS", "HASLIB"}, {"LISTLIBS", "MATCHLIBS"}, {"LISTLIBS", "RECIPE"},
+      {"LISTLIBS", "CATLIB"}, {"MATCHLIBS", "PICKLIB"}, {"MATCHLIBS", "NTHLIB"},
+      {"MATCHLIBS", "SORTLIBS"}, {"MATCHLIBS", "FRESHLIBS"},
+      {"PICKLIB", "MATCHLIBS"}, {"PICKLIB", "NTHLIB"}, {"PICKLIB", "INCLUDE"},
+      {"RECIPE", "LIBDEPS"}, {"RECIPE", "LIBDEFAULTS"}, {"RECIPE", "CHECKDEPS"},
+      {"RECIPE", "LIBINFO"}, {"CHECKDEPS", "HASDEPS"}, {"CHECKDEPS", "NEEDDEPS"},
+      {"CHECKDEPS", "RECIPE"}, {"SORTLIBS", "NEWESTLIB"}, {"SORTLIBS", "OLDESTLIB"},
+      {"SORTLIBS", "FRESHLIBS"}, {"FRESHLIBS", "STALELIBS"}, {"FRESHLIBS", "LIBAGE"},
+      {"LIBAGE", "HASFRESH"}, {"LIBAGE", "NEEDFRESH"}, {"LIBAGE", "FRESHLIBS"},
+      {"CATLIB", "HEADLIB"}, {"CATLIB", "TAILLIB"}, {"CATLIB", "GREPLIB"},
+      /* plate */
+      {"SETP", "GETP"}, {"SETP", "NEEDP"}, {"SETP", "DEFAULTP"}, {"SETP", "INCP"},
+      {"SETP", "DELP"}, {"SETP", "SAVEPLATE"}, {"SETP", "LOADPLATE"},
+      {"GETP", "SETP"}, {"GETP", "NEEDP"}, {"GETP", "GETPN"}, {"GETP", "HASP"},
+      {"NEEDP", "SETP"}, {"NEEDP", "GETP"}, {"NEEDP", "HASP"}, {"NEEDP", "DEFAULTP"},
+      {"DEFAULTP", "SETP"}, {"DEFAULTP", "NEEDP"}, {"INCP", "SETP"}, {"INCP", "GETPN"},
+      {"DELP", "SETP"}, {"DELP", "GETP"}, {"PRETTYP", "DUMPP"}, {"PRETTYP", "SAVEPLATE"},
+      {"DUMPP", "PRETTYP"}, {"DUMPP", "GETP"}, {"SAVEPLATE", "LOADPLATE"},
+      {"SAVEPLATE", "SETP"}, {"LOADPLATE", "SAVEPLATE"}, {"LOADPLATE", "NEEDP"},
+      /* fat / budget */
+      {"VARROOM", "HASVARROOM"}, {"VARROOM", "NEEDVARROOM"}, {"VARROOM", "VARS"},
+      {"HASVARROOM", "NEEDVARROOM"}, {"HASVARROOM", "VARROOM"},
+      {"NEEDVARROOM", "HASVARROOM"}, {"NEEDVARROOM", "VARROOM"},
+      {"REMAIN_MS", "HAS_TIME"}, {"REMAIN_MS", "NEEDTIME"}, {"REMAIN_MS", "WALL_MS"},
+      {"HAS_TIME", "NEEDTIME"}, {"HAS_TIME", "REMAIN_MS"},
+      {"NEEDTIME", "HAS_TIME"}, {"NEEDTIME", "REMAIN_MS"},
+      /* run / status */
+      {"ASSERT", "EXPECT"}, {"ASSERT", "WHY"}, {"ASSERT", "FAIL"}, {"ASSERT", "PASS"},
+      {"EXPECT", "ASSERT"}, {"EXPECT", "WHY"}, {"EXPECT", "CLEAR_ERR"}, {"EXPECT", "FAIL"},
+      {"FAIL", "PASS"}, {"FAIL", "WHY"}, {"FAIL", "CLEAR_ERR"}, {"FAIL", "EXPECT"},
+      {"PASS", "FAIL"}, {"PASS", "NOTE"}, {"WHY", "CLEAR_ERR"}, {"WHY", "STATUS"},
+      {"WHY", "TIPS"}, {"CLEAR_ERR", "WHY"}, {"CLEAR_ERR", "STATUS"},
+      {"STATUS", "IDENTITY"}, {"STATUS", "VERSION"}, {"STATUS", "VARS"},
+      {"VERSION", "REQUIRE VERSION"}, {"VERSION", "STATUS"},
+      {"EXIT", "PASS"}, {"EXIT", "FAIL"}, {"EXIT", "STATUS"},
+      {"NOTE", "PASS"}, {"NOTE", "TIPS"},
+      /* p2p */
+      {"SMX", "SERVE"}, {"SMX", "DIAL"}, {"SMX", "TALK"}, {"SMX", "EXCHANGE"},
+      {"SERVE", "DIAL"}, {"SERVE", "SMX"}, {"DIAL", "SERVE"}, {"DIAL", "SMX"},
+      {"TALK", "SMX"}, {"TALK", "EXCHANGE"}, {"EXCHANGE", "SMX"}, {"EXCHANGE", "TALK"},
+      /* protect / core */
+      {"HOLD_FLASH", "STATUS"}, {"HOLD_FLASH", "VERSION"}, {"HOLD_FLASH", "TIPS"},
+    };
+    char name[96], nup[96], bag[4096];
+    size_t k, o = 0;
+    int i, n = 0, nall = (int)(sizeof edges / sizeof edges[0]);
+    int seen = 0;
+    lex_next(L);
+    name[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RELATED_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "RELATED: need form — RELATED HASFORM · SEEALSO SETP");
+      var_set_str(vm, "ERR",
+                  "RELATED: need form — RELATED HASFORM · SEEALSO SETP");
+      bump(vm);
+      return 1;
+    }
+    /* normalize compare key: uppercase alnum, map space to space */
+    for (k = 0; name[k] && k + 1 < sizeof nup; k++) {
+      char c = name[k];
+      if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+      nup[k] = c;
+    }
+    nup[k] = 0;
+    bag[0] = 0;
+    for (i = 0; i < nall; i++) {
+      char fup[96];
+      size_t j, ln;
+      int match;
+      for (j = 0; edges[i].form[j] && j + 1 < sizeof fup; j++) {
+        char c = edges[i].form[j];
+        if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+        fup[j] = c;
+      }
+      fup[j] = 0;
+      match = !strcmp(fup, nup);
+      if (!match) continue;
+      seen = 1;
+      ln = strlen(edges[i].rel);
+      if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, edges[i].rel, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "RELATED_OF", name);
+    var_set_str(vm, "SEEALSO_OF", name);
+    var_set_str(vm, "FORM", name);
+    if (!seen || n == 0) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "RELATED miss: '%s' — FORMHINT · FORMSFOR · LISTFORMS · cubalc related",
+               name);
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "RELATED", "");
+      var_set_str(vm, "SEEALSO", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RELATED_N", 0);
+      var_set_num(vm, "SEEALSO_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "RELATED", bag);
+    var_set_str(vm, "SEEALSO", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "RELATED_N", n);
+    var_set_num(vm, "SEEALSO_N", n);
+    var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;
   }
