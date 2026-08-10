@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 275,
-  "program": "programs/realworld/svc_uniformflat_diverge_board.cubalc",
-  "theme": "UNIFORMFLAT nest consistency one-shot gates",
-  "version": "1.15.716-usability",
+  "iter": 276,
+  "program": "programs/realworld/svc_firstuneq_diverge_board.cubalc",
+  "theme": "FIRSTUNEQFLAT first diverge path locate",
+  "version": "1.15.721-usability",
   "pass": true,
-  "prior_note": "iter 274 ALLEQFLAT; this iter first realworld 1252 UNIFORMFLAT",
+  "prior_note": "iter 275 UNIFORMFLAT; this iter first realworld 1250 FIRSTUNEQFLAT",
   "tests": [
     {
       "name": "list",
@@ -20,44 +20,44 @@
       "note": "boot"
     },
     {
-      "name": "check",
-      "cmd": "mixed LAST_N=0",
+      "name": "find",
+      "cmd": "other.role/host paths",
       "ok": true,
-      "note": "check"
+      "note": "find"
     },
     {
       "name": "unify",
-      "cmd": "SETBYVAL then equal",
+      "cmd": "SETBYVAL then miss",
       "ok": true,
       "note": "unify"
     },
     {
       "name": "peer",
-      "cmd": "FROM PEER ok/fail",
+      "cmd": "b.status diverge",
       "ok": true,
       "note": "peer"
     },
     {
       "name": "soft",
-      "cmd": "ghost miss",
+      "cmd": "ghost + single leaf",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "uniform admit",
+      "cmd": "no diverge admit",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "CHECKFLAT",
+      "cmd": "PATHUNEQ",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "multi diverge LAST_N=0",
+      "cmd": "empty needle + role",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +65,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; uniformflat PASS"
+      "note": "cli duals red; firstuneq PASS"
     }
   ],
   "weaknesses": [
@@ -3556,12 +3556,33 @@
       "title": "WRITE uni flag omits trailing NL",
       "detail": "uni.txt is 0 or worker without NL (W5).",
       "repro": "od -c uni.txt"
+    },
+    {
+      "id": "W437",
+      "severity": "low",
+      "area": "lang|firstuneq",
+      "title": "FIRSTUNEQFLAT LAST is diverge path; LAST_N is found 0|1",
+      "detail": "Usable under agent var pressure without FIRSTUNEQ specials \u2014 LAST path + LAST_N found flag. Contrast UNIFORM_PATH specials (W434).",
+      "repro": "FIRSTUNEQFLAT role \u2192 LAST=other.role LAST_N=1"
+    },
+    {
+      "id": "W438",
+      "severity": "low",
+      "area": "lang|firstuneq",
+      "title": "single-leaf needles never diverge (soft miss)",
+      "detail": "FIRSTUNEQFLAT label/agent_job \u2192 LAST_N 0 even when present. Uniform by definition for N=1.",
+      "repro": "FIRSTUNEQFLAT label \u2192 0"
+    },
+    {
+      "id": "W439",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE diverge path omits trailing NL",
+      "detail": "path.txt other.role without final NL (W5).",
+      "repro": "od -c path.txt"
     }
   ],
   "workarounds": [
-    "Swap LET PLATE for temporary unflat targets; reload session after",
-    "Exact changelog HASLINE needles with spaces around arrow",
-    "Curated peer seeds for stable DIFFFLAT lines",
     "Capture MODEFLAT win via LAST_N immediately; avoid MODEFLAT_TOTAL under fat agents",
     "Predeclare path pool; reuse body/row/score to stay under 128 vars",
     "Do not late-read MODEFLAT_SRC \u2014 use MODEFLAT_FROM or pre-copy to var",
@@ -3588,12 +3609,12 @@
     "SAMEVALFLAT interchangeable with ALLEQFLAT",
     "gate on LAST_N only; skip UNIFORM_PATH under agents",
     "SETBYVAL then UNIFORMFLAT for unify-and-check",
-    "GETP diverge leaves instead of UNIFORM_PATHS bag"
+    "GETP diverge leaves instead of UNIFORM_PATHS bag",
+    "use LAST for diverge path not FIRSTUNEQ specials",
+    "SETBYVAL then FIRSTUNEQ miss for unify verify",
+    "single-leaf needles always soft-miss diverge"
   ],
   "language_gaps": [
-    "UNIQFLAT first-seen order of unique values",
-    "prefer LAST_N unique count over UNIQFLAT_N near var cap",
-    "PATHSBYVAL multi reverse path bag by exact value",
     "HEAD path bag equals PATHBYVAL first path",
     "COUNTBYVAL LAST_N aligns with PATHSBYVAL count",
     "COUNTBYVAL LAST_N exact leaf value counts",
@@ -3610,7 +3631,10 @@
     "SETBYVAL then ALLEQFLAT for unify-and-check",
     "UNIFORMFLAT LAST_N 0|1 one-shot equality",
     "UNIFORM_PATH specials unusable near var cap",
-    "CHECKFLAT alias for UNIFORMFLAT"
+    "CHECKFLAT alias for UNIFORMFLAT",
+    "FIRSTUNEQFLAT LAST=path LAST_N=found",
+    "PATHUNEQ alias",
+    "prefer LAST path over specials under var cap"
   ],
   "issues_faced": [
     "GETP FROM custom INTO name broken \u2014 PLATE swap + disk reload",
@@ -3659,8 +3683,10 @@
     "iter274: ALLEQFLAT board 9/9; unify via SETBYVAL leader\u2192worker",
     "iter274: LAST_N is equality bit not count (W431)",
     "iter275: UNIFORM_PATH hard-fail under var pressure \u2014 board uses LAST_N only (W434)",
-    "iter275: 9/9 green after special avoidance"
+    "iter275: 9/9 green after special avoidance",
+    "iter276: FIRSTUNEQ LAST/LAST_N works under agent pressure (unlike UNIFORM_PATH)",
+    "iter276: 9/9 green; empty needle finds first diverge among a/b/c"
   ],
-  "commit": "12aa2885",
-  "ts": "2026-08-10T00:22:17Z"
+  "commit": "pending",
+  "ts": "2026-08-10T01:08:57Z"
 }
