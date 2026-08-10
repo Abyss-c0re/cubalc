@@ -1,0 +1,89 @@
+# INCLUDE cli_guard — multi-flag + min restargs contract (form_guard twin for CLI)
+
+HOLD_FLASH 1
+
+# --- skip both gates when defaults empty ---
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV SET CUBALC_ARGC "0"
+DEFAULT NEED_FLAGS = ""
+DEFAULT NEED_REST_N = 0
+DEFAULT CLI_GUARD_SOFT = 0
+INCLUDE cli_guard
+ASSERT CLI_GUARD_OK == 1
+ASSERT CLI_GUARD_FLAGS_OK == 1
+ASSERT CLI_GUARD_REST_OK == 1
+
+# --- hard flags miss ---
+# (separate process would fatal; soft path exercises FLAGMISS)
+SYS ENV SET CUBALC_ARGC "0"
+LET NEED_FLAGS = "out"
+LET NEED_REST_N = 0
+LET CLI_GUARD_SOFT = 1
+INCLUDE cli_guard
+ASSERT CLI_GUARD_OK == 0
+ASSERT CLI_GUARD_FLAGS_OK == 0
+ASSERT FLAGMISS_N >= 1
+SYS HASLINE FLAGMISS "out"
+ASSERT LAST_N == 1
+
+# --- hard flags hit (soft mode still 1) ---
+SYS ENV SET CUBALC_ARG0 "--out=x"
+SYS ENV SET CUBALC_ARG1 "--verbose"
+SYS ENV SET CUBALC_ARGC "2"
+LET NEED_FLAGS = "out\nverbose"
+LET CLI_GUARD_SOFT = 1
+INCLUDE cli_guard
+ASSERT CLI_GUARD_FLAGS_OK == 1
+ASSERT CLI_GUARD_OK == 1
+
+# --- rest min miss soft ---
+SYS ENV SET CUBALC_ARG0 "--dry"
+SYS ENV SET CUBALC_ARGC "1"
+LET NEED_FLAGS = ""
+LET NEED_REST_N = 1
+LET CLI_GUARD_SOFT = 1
+INCLUDE cli_guard
+ASSERT CLI_GUARD_REST_OK == 0
+ASSERT CLI_GUARD_OK == 0
+
+# --- rest min hit ---
+SYS ENV SET CUBALC_ARG0 "--dry"
+SYS ENV SET CUBALC_ARG1 "a.txt"
+SYS ENV SET CUBALC_ARGC "2"
+# bare --dry may consume a.txt as value — use = form
+SYS ENV SET CUBALC_ARG0 "--mode=dry"
+SYS ENV SET CUBALC_ARG1 "a.txt"
+SYS ENV SET CUBALC_ARGC "2"
+LET NEED_FLAGS = ""
+LET NEED_REST_N = 1
+LET CLI_GUARD_SOFT = 1
+INCLUDE cli_guard
+ASSERT CLI_GUARD_REST_OK == 1
+ASSERT CLI_GUARD_OK == 1
+
+# --- hard NEEDFLAGS path (must pass) ---
+SYS ENV SET CUBALC_ARG0 "--out=y"
+SYS ENV SET CUBALC_ARGC "1"
+LET NEED_FLAGS = "out"
+LET NEED_REST_N = 0
+LET CLI_GUARD_SOFT = 0
+INCLUDE cli_guard
+ASSERT CLI_GUARD_OK == 1
+
+# --- hard RESTARGS path ---
+SYS ENV SET CUBALC_ARG0 "only.txt"
+SYS ENV SET CUBALC_ARGC "1"
+LET NEED_FLAGS = ""
+LET NEED_REST_N = 1
+LET CLI_GUARD_SOFT = 0
+INCLUDE cli_guard
+ASSERT CLI_GUARD_REST_OK == 1
+ASSERT CLI_GUARD_OK == 1
+
+# chain with cli_boot
+INCLUDE cli_boot
+ASSERT OK == 1
+
+PASS
+PRINT "1367_cli_guard: PASS"

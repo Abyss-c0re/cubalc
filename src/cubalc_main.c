@@ -2791,6 +2791,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     int lib_doctor_boot = 0;
     int lib_ready_boot = 0;
     int lib_cli_boot = 0;
+    int lib_cli_guard = 0;
     int cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
     int include_path_set = 0, preload_set = 0;
     const char *hx = getenv("CUBALC_SMX_KEY");
@@ -2829,6 +2830,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     lib_doctor_boot = (access("programs/lib/doctor_boot.cubalc", R_OK) == 0);
     lib_ready_boot = (access("programs/lib/ready_boot.cubalc", R_OK) == 0);
     lib_cli_boot = (access("programs/lib/cli_boot.cubalc", R_OK) == 0);
+    lib_cli_guard = (access("programs/lib/cli_guard.cubalc", R_OK) == 0);
     cookbook_ok = (access("docs/COOKBOOK.md", R_OK) == 0);
     for_agents_ok = (access("docs/FOR_AGENTS.md", R_OK) == 0);
     if (libdir_ok) {
@@ -2862,7 +2864,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"lib_var_guard\":%s,\"lib_time_guard\":%s,\"lib_fat_boot\":%s,"
              "\"lib_fat_session\":%s,\"lib_form_guard\":%s,\"lib_cap_boot\":%s,"
              "\"lib_onboard_boot\":%s,\"lib_discover_boot\":%s,\"lib_open_boot\":%s,\"lib_doctor_boot\":%s,"
-             "\"lib_ready_boot\":%s,\"lib_cli_boot\":%s,"
+             "\"lib_ready_boot\":%s,\"lib_cli_boot\":%s,\"lib_cli_guard\":%s,"
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"vars_max\":%d,\"varroom_forms\":true,"
@@ -2923,6 +2925,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              lib_doctor_boot ? "true" : "false",
              lib_ready_boot ? "true" : "false",
              lib_cli_boot ? "true" : "false",
+             lib_cli_guard ? "true" : "false",
              include_path_set ? "true" : "false",
              preload_set ? "true" : "false",
              cookbook_ok ? "true" : "false",
@@ -3548,6 +3551,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_init_cli", "programs/proof/1365_cli_init_cli.sh", "cubalc init --cli scaffold + doctor"},
       {"cli_flaggate", "programs/proof/1366_cli_flaggate.sh", "cubalc hasflagall|needflags CLI duals"},
       {"cli_arggate", "programs/proof/1366_cli_arggate.sh", "cubalc hasargall|needargs CLI duals"},
+      {"cli_guard", "programs/proof/1367_cli_guard.cubalc", "INCLUDE cli_guard NEED_FLAGS+NEED_REST_N"},
+      {"cli_cli_guard", "programs/proof/1367_cli_cli_guard.sh", "cli_guard soft/hard + doctor lib"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -8604,6 +8609,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"doctor_boot.cubalc", "agent_boot + NEEDDOCTOR hard install gate · init --doctor"},
       {"ready_boot.cubalc", "agent_boot + NEEDREADY prove checklist · init --ready · run -Y"},
       {"cli_boot.cubalc", "agent_boot + HELPFLAG + VERSIONFLAG + CLIINFO · init --cli"},
+      {"cli_guard.cubalc", "NEED_FLAGS + NEED_REST_N CLI contract · soft CLI_GUARD_SOFT · form_guard twin"},
     };
     const char *libdir = "programs/lib";
     const char *ip = getenv("CUBALC_INCLUDE_PATH");
