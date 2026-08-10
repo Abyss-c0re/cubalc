@@ -4244,6 +4244,6 @@
     "iter290: plate family 11 stems; tick picks plate_peer_tick alpha",
     "iter290: selftest CLI duals still red"
   ],
-  "commit": "pending",
+  "commit": "ba7318b6",
   "ts": "2026-08-10T07:48:39Z"
 }
