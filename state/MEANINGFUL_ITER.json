@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 783,
-  "version": "1.15.811-usability",
-  "item": "run -Y / CUBALC_REQUIRE_READY host prove floor",
-  "item_id": 819,
-  "title": "run -Y \u00b7 CUBALC_REQUIRE_READY \u00b7 plate require_ready",
-  "commit": "ea268448b37131aa590f4a6dba5020bf2d2ccda9",
-  "summary": "Host NEEDREADY prove checklist floor before body; completes -R/-C/-D triad. proof 1360 PASS.",
+  "iter": 820,
+  "version": "1.15.812-usability",
+  "item": "HASFLAGS / HASFLAGC soft flag-count probe",
+  "item_id": 820,
+  "title": "HASFLAGS · HASFLAGC · LISTFLAGS twin without bag clobber",
+  "commit": "9bbb03cad281269357ff88922204856ad22694a7",
+  "summary": "Soft 0|1 if flag count >= min (default 1); LISTFLAGS_N/HASFLAGS_N; proof 1359 PASS.",
   "proofs": [
-    "1360_cli_require_ready PASS",
-    "1359_cli_ready PASS"
+    "1359_hasflags PASS",
+    "1359_cli_hasflags PASS"
   ],
-  "when": "2026-08-10T19:12:25Z",
-  "agent": "meaningful_iter_10m",
-  "sha": "ea268448b37131aa590f4a6dba5020bf2d2ccda9",
-  "note": "run -Y \u00b7 --need-ready \u00b7 CUBALC_REQUIRE_READY \u00b7 require_ready plate"
+  "when": "2026-08-10T19:15:25Z",
+  "agent": "thalamus_meaningful_iter",
+  "sha": "9bbb03cad281269357ff88922204856ad22694a7",
+  "note": "HASFLAGS · HASFLAGC · FLAGC? · without LISTFLAGS bag clobber"
 }
