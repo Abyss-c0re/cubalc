@@ -6373,6 +6373,237 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* HEADLIB / LIBHEAD / PEEKLIB name [n] — first n lines of a lib recipe → LAST bag.
+   * TAILLIB / LIBTAIL name [n] — last n lines (default 16, cap 256).
+   * Usability: peek INCLUDE recipe headers without full CATLIB clobber · dual of
+   * HEADFILE/TAILFILE with short-name resolve (programs/lib · INCLUDE_PATH). Soft miss. */
+  if (kw(&L->cur, "HEADLIB") || kw(&L->cur, "LIBHEAD") ||
+      kw(&L->cur, "PEEKLIB") || kw(&L->cur, "TOPLIB") ||
+      kw(&L->cur, "HEAD_LIB") || kw(&L->cur, "LIB_HEAD") ||
+      kw(&L->cur, "TAILLIB") || kw(&L->cur, "LIBTAIL") ||
+      kw(&L->cur, "BOTTOMLIB") || kw(&L->cur, "ENDLIB") ||
+      kw(&L->cur, "TAIL_LIB") || kw(&L->cur, "LIB_TAIL")) {
+    int want_tail = kw(&L->cur, "TAILLIB") || kw(&L->cur, "LIBTAIL") ||
+                    kw(&L->cur, "BOTTOMLIB") || kw(&L->cur, "ENDLIB") ||
+                    kw(&L->cur, "TAIL_LIB") || kw(&L->cur, "LIB_TAIL");
+    char name[160], path[768], base[160];
+    char bag[CUBALC_VAR_STR_MAX];
+    char *src = NULL;
+    FILE *f = NULL;
+    long sz = 0, nwant = 16, total = 0, kept = 0;
+    size_t nr = 0, o = 0;
+    const char *slash, *leaf, *ip, *root, *lp, *ls;
+    size_t blen, llen;
+    lex_next(L);
+    name[0] = 0;
+    path[0] = 0;
+    bag[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      nwant = parse_expr(vm, L);
+    } else if (L->cur.kind == TK_STR) {
+      nwant = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && !vv->is_str)
+        nwant = vv->val;
+      else if (vv && vv->is_str)
+        nwant = atol(vv->sval);
+      else if (strcmp(L->cur.text, "LAST_N") == 0)
+        nwant = vm->last_n;
+      lex_next(L);
+    }
+    if (nwant < 0) nwant = 0;
+    if (nwant > 256) nwant = 256;
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", want_tail ? "TAILLIB: need name" : "HEADLIB: need name");
+      var_set_str(vm, "ERR", want_tail ? "TAILLIB: need name" : "HEADLIB: need name");
+      bump(vm);
+      return 1;
+    }
+    slash = strrchr(name, '/');
+    leaf = slash ? slash + 1 : name;
+    snprintf(base, sizeof base, "%s", leaf);
+    blen = strlen(base);
+    if (blen > 7 && strcmp(base + blen - 7, ".cubalc") == 0)
+      base[blen - 7] = 0;
+    if (name[0] == '/' || strchr(name, '/')) {
+      f = fopen(name, "rb");
+      if (f) snprintf(path, sizeof path, "%s", name);
+    }
+    if (!f) {
+      char p3[768];
+      snprintf(p3, sizeof p3, "programs/lib/%s.cubalc", base);
+      f = fopen(p3, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p3);
+    }
+    if (!f) {
+      char p3[768];
+      snprintf(p3, sizeof p3, "programs/lib/%s", name);
+      f = fopen(p3, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p3);
+    }
+    if (!f) {
+      f = fopen(name, "rb");
+      if (f) snprintf(path, sizeof path, "%s", name);
+    }
+    root = getenv("CUBALC_ROOT");
+    if (!f && root && root[0]) {
+      char p2[768];
+      snprintf(p2, sizeof p2, "%s/programs/lib/%s.cubalc", root, base);
+      f = fopen(p2, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p2);
+    }
+    ip = getenv("CUBALC_INCLUDE_PATH");
+    if (!f && ip && ip[0]) {
+      const char *seg = ip;
+      while (*seg && !f) {
+        char dir[512], p3[768];
+        size_t dlen = 0;
+        while (*seg == ':') seg++;
+        if (!*seg) break;
+        while (seg[dlen] && seg[dlen] != ':' && dlen + 1 < sizeof dir)
+          dir[dlen] = seg[dlen], dlen++;
+        dir[dlen] = 0;
+        seg += dlen;
+        if (!dir[0]) continue;
+        snprintf(p3, sizeof p3, "%s/%s.cubalc", dir, base);
+        f = fopen(p3, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+        snprintf(p3, sizeof p3, "%s/%s", dir, name);
+        f = fopen(p3, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", p3); break; }
+      }
+    }
+    if (!f) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "%s miss: '%s' — programs/lib · CUBALC_INCLUDE_PATH · cubalc cat",
+               want_tail ? "TAILLIB" : "HEADLIB", name);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "LIB_PATH", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    fseek(f, 0, SEEK_END);
+    sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz < 0) sz = 0;
+    if (sz > 256 * 1024) sz = 256 * 1024;
+    src = (char *)malloc((size_t)sz + 1);
+    if (!src) {
+      fclose(f);
+      var_set_str(vm, "LAST", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", want_tail ? "TAILLIB: oom" : "HEADLIB: oom");
+      var_set_str(vm, "ERR", want_tail ? "TAILLIB: oom" : "HEADLIB: oom");
+      bump(vm);
+      return 1;
+    }
+    nr = fread(src, 1, (size_t)sz, f);
+    fclose(f);
+    src[nr] = 0;
+    /* count total lines */
+    total = 0;
+    lp = src;
+    if (nr == 0) {
+      total = 0;
+    } else {
+      while (*lp) {
+        while (*lp && *lp != '\n') lp++;
+        total++;
+        if (*lp == '\n') lp++;
+      }
+    }
+    o = 0;
+    kept = 0;
+    if (want_tail) {
+      long skip = total > nwant ? total - nwant : 0;
+      long seen = 0;
+      lp = src;
+      while (*lp) {
+        ls = lp;
+        while (*lp && *lp != '\n') lp++;
+        llen = (size_t)(lp - ls);
+        if (seen >= skip) {
+          if (kept > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+          if (o + llen < sizeof bag) {
+            memcpy(bag + o, ls, llen);
+            o += llen;
+          }
+          bag[o] = 0;
+          kept++;
+        }
+        seen++;
+        if (*lp == '\n') lp++;
+      }
+    } else {
+      lp = src;
+      while (*lp && kept < nwant) {
+        ls = lp;
+        while (*lp && *lp != '\n') lp++;
+        llen = (size_t)(lp - ls);
+        if (kept > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + llen < sizeof bag) {
+          memcpy(bag + o, ls, llen);
+          o += llen;
+        }
+        bag[o] = 0;
+        kept++;
+        if (*lp == '\n') lp++;
+      }
+    }
+    free(src);
+    var_set_str(vm, "LAST", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = kept;
+    var_set_num(vm, "LAST_N", kept);
+    var_set_str(vm, "LIB_PATH", path);
+    var_set_str(vm, "LIB_STEM", base);
+    if (want_tail) {
+      var_set_str(vm, "TAILLIB", bag);
+      var_set_str(vm, "LIBTAIL", bag);
+      var_set_num(vm, "TAILLIB_N", kept);
+      var_set_num(vm, "TAILLIB_TOTAL", total);
+      var_set_num(vm, "TAILLIB_WANT", nwant);
+    } else {
+      var_set_str(vm, "HEADLIB", bag);
+      var_set_str(vm, "LIBHEAD", bag);
+      var_set_num(vm, "HEADLIB_N", kept);
+      var_set_num(vm, "HEADLIB_TOTAL", total);
+      var_set_num(vm, "HEADLIB_WANT", nwant);
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTPRELOAD / PRELOADS — short-name bag of effective -I / CUBALC_PRELOAD.
    * Usability: CLI sets CUBALC_PRELOAD_ACTIVE; programs audit request vs INCLUDESTEMS. */
   if (kw(&L->cur, "LISTPRELOAD") || kw(&L->cur, "PRELOADS") ||

@@ -1,0 +1,41 @@
+# HEADLIB / TAILLIB — peek lib recipe lines (dual of HEADFILE + INCLUDE resolve)
+
+HEADLIB fat_session
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+ASSERT LAST_N <= 16
+ASSERT LIB_STEM == "fat_session"
+ASSERT LIB_PATH != ""
+SYS HAS LAST "INCLUDE"
+ASSERT LAST_N == 1
+
+# explicit n
+HEADLIB fat_session 5
+ASSERT OK == 1
+ASSERT LAST_N == 5
+ASSERT HEADLIB_WANT == 5
+ASSERT HEADLIB_TOTAL >= 5
+
+# LIBHEAD alias
+LIBHEAD agent_boot 3
+ASSERT OK == 1
+ASSERT LAST_N == 3
+SYS HAS LAST "agent_boot"
+ASSERT LAST_N == 1
+
+# TAILLIB last lines
+TAILLIB fat_session 3
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT LIB_STEM == "fat_session"
+SYS HAS LAST "plate_boot"
+ASSERT LAST_N == 1
+
+# soft miss
+HEADLIB no_such_lib_xyz_zzz 4
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+PASS
+PRINT "1291_headlib: PASS"
