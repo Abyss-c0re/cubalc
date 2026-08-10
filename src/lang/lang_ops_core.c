@@ -3608,6 +3608,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"GETARG", "GETARG alias of NTHARG — raw argv peel (not non-flag NTHPOS)"},
       {"FINDARG", "FINDARG|ARGINDEX token — 0-based index of exact raw argv · -1 miss · FINDARG_HIT"},
       {"ARGINDEX", "ARGINDEX alias of FINDARG — reverse of NTHARG (token → index)"},
+      {"AFTERARG", "AFTERARG|NEXTARG token [OR fallback] — peel argv after exact token · FINDARG+NTHARG glue"},
+      {"NEXTARG", "NEXTARG alias of AFTERARG — value following flag/subcmd token"},
       {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
       {"POSN", "POSN alias of NTHPOS — first/second file without RESTARGS+NTH"},
       {"NTHPOSPATH", "NTHPOSPATH|POSNPATH index [OR path] — NTHPOS + ABSPATH · EXIST · first file without REALPATH"},
@@ -39724,7 +39726,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NTHARG", "SYS ARG"}, {"NTHARG", "FINDARG"}, {"NTHPOS", "NTHARG"},
       {"GETARG", "NTHARG"},
       {"FINDARG", "NTHARG"}, {"FINDARG", "ARGMAP"}, {"FINDARG", "HASARG"},
-      {"FINDARG", "SYS ARGS"}, {"ARGINDEX", "FINDARG"}, {"ARGINDEX", "NTHARG"},
+      {"FINDARG", "SYS ARGS"}, {"FINDARG", "AFTERARG"}, {"ARGINDEX", "FINDARG"},
+      {"ARGINDEX", "NTHARG"},
+      {"AFTERARG", "FINDARG"}, {"AFTERARG", "NTHARG"}, {"AFTERARG", "GETFLAG"},
+      {"AFTERARG", "ARGMAP"}, {"NEXTARG", "AFTERARG"}, {"NEXTARG", "FINDARG"},
       {"FORMHINT", "HASFORM"}, {"FORMHINT", "LISTFORMS"}, {"FORMHINT", "RELATED"},
       {"FORMHINT", "FORMSFOR"}, {"FORMHINT", "TIPS"},
       {"LISTFORMS", "COUNTFORMS"}, {"LISTFORMS", "HASFORM"}, {"LISTFORMS", "FORMHINT"},
@@ -69398,6 +69403,90 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", hit ? 1L : 0L);
     if (vm->trace)
       fprintf(vm->trace, "# findarg hit=%ld idx=%ld token=%s\n", hit, idx, needle);
+    bump(vm);
+    return 1;
+  }
+  /* AFTERARG|NEXTARG token [OR fallback] — peel CUBALC_ARG after first exact match.
+   * LAST = next raw argv · LAST_N 1 if next present (0 miss/fallback) · AFTERARG_HIT.
+   * AFTERARG_FROM = index of token (-1 miss) · AFTERARG_N = index of value (-1 miss).
+   * Completes FINDARG triad: locate + peel-by-index + peel-after without glue.
+   * Usability: AFTERARG "--out" OR "a.txt" · AFTERARG "run" for tool --v run script. */
+  if (kw(&L->cur,"AFTERARG") || kw(&L->cur,"NEXTARG") || kw(&L->cur,"ARGAFTER") ||
+      kw(&L->cur,"FOLLOWARG") || kw(&L->cur,"PEELAFTER") || kw(&L->cur,"VALUEAFTER") ||
+      kw(&L->cur,"ARGNEXT") || kw(&L->cur,"GETAFTER")){
+    char needle[CUBALC_HOST_STR_MAX], field[CUBALC_HOST_STR_MAX], fb[512], envn[32];
+    const char *ac, *a, *val;
+    int argc = 32, k, have_fb = 0;
+    long from = -1, next_i = -1, hit = 0;
+    lex_next(L);
+    needle[0] = 0;
+    field[0] = 0;
+    fb[0] = 0;
+    if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+      fail_at(vm, L, "AFTERARG needs token — AFTERARG \"--out\" [OR \"default\"]");
+      return -1;
+    }
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "AFTERARG token OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    ac = getenv("CUBALC_ARGC");
+    if (ac && ac[0]) {
+      argc = (int)strtol(ac, NULL, 10);
+      if (argc < 0) argc = 0;
+      if (argc > 32) argc = 32;
+    } else {
+      argc = 0;
+      for (k = 0; k < 32; k++) {
+        snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+        if (!getenv(envn)) break;
+        argc++;
+      }
+    }
+    for (k = 0; k < argc; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      a = getenv(envn);
+      if (!a) a = "";
+      if (strcmp(a, needle) == 0) {
+        from = (long)k;
+        break;
+      }
+    }
+    if (from >= 0 && from + 1 < (long)argc) {
+      next_i = from + 1;
+      snprintf(envn, sizeof envn, "CUBALC_ARG%ld", next_i);
+      val = getenv(envn);
+      if (val) {
+        snprintf(field, sizeof field, "%s", val);
+        hit = 1;
+      }
+    }
+    if (!hit) {
+      if (have_fb)
+        snprintf(field, sizeof field, "%s", fb);
+      else
+        field[0] = 0;
+    }
+    var_set_str(vm, "LAST", field);
+    var_set_str(vm, "AFTERARG", field);
+    var_set_str(vm, "NEXTARG", field);
+    var_set_str(vm, "ARG", field);
+    var_set_str(vm, "AFTERARG_TOKEN", needle);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", field);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    var_set_num(vm, "AFTERARG_FROM", from);
+    var_set_num(vm, "AFTERARG_N", hit ? next_i : -1L);
+    var_set_num(vm, "AFTERARG_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# afterarg from=%ld next=%ld hit=%ld token=%s\n",
+              from, next_i, hit, needle);
     bump(vm);
     return 1;
   }

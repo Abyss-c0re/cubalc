@@ -859,6 +859,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 829. ~~**`ARGMAP` / `ARGKV` + CLI**~~ **done** (raw argv i=value bag · FLAGMAP twin · LOOKUP without NTH · cubalc argmap · proof 1369).
 830. ~~**`NTHARG` / `GETARG`**~~ **done** (peel CUBALC_ARGi raw with OR fallback · NTHPOS twin keeping flags · proof 1370).
 831. ~~**`FINDARG` / `ARGINDEX` + CLI**~~ **done** (exact raw argv token → 0-based index · reverse NTHARG · cubalc findarg · proof 1371).
+832. ~~**`AFTERARG` / `NEXTARG` + CLI**~~ **done** (peel argv after exact token · FINDARG+NTHARG one-shot · cubalc afterarg · proof 1372).
 
 ## Tick protocol
 
