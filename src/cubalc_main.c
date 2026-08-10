@@ -3138,6 +3138,7 @@ int main(int argc, char **argv) {
       {"cli_libdefaults", "programs/proof/1295_cli_libdefaults.sh", "LIBDEFAULTS knobs + soft miss + forms"},
       {"cli_recipe", "programs/proof/1297_cli_recipe.sh", "cubalc recipe one plate path+deps+defaults+head"},
       {"cli_examples_fat", "programs/proof/1298_cli_examples_fat.sh", "examples/search fat_session recipe discovery polish"},
+      {"cli_help_surface", "programs/proof/1299_cli_help_surface.sh", "cubalc help lists recipe fat-session run -T discovery forms"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -14232,6 +14233,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
     return nh > 0 ? 0 : 1;
   }
   if (strcmp(cmd, "help") == 0 || strcmp(cmd, "-h") == 0) {
+    /* Usability: keep help in sync with product surface agents actually use
+     * (recipe, init --fat-session, run -T/-I, discovery forms). */
     fprintf(stderr,
       "CubalC %s — pure-C COP/flow (matrix SoT · SMX2 · no HTTP required)\n"
       "\n"
@@ -14243,14 +14246,16 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    which|locate|resolve   resolve name → path/kind (lib/form/bin)\n"
       "    search|find|query      keyword search forms/libs/examples/env\n"
       "    cookbook|start         paths to starters\n"
-      "    init|new|scaffold [f]  starter · --list · --plate (uniform+pretty) · --peer\n"
-      "    examples|starters [p]  curated runnable programs (JSON)\n"
+      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session\n"
+      "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
+      "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib        list programs/lib INCLUDE snippets\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
-      "    run|eval [-q] [-s] <file|->  -q plate-only · -s soft last_err fails\n"
+      "    run|eval [-q][-s][-T ms][-I lib][-L dir][-R ver][-e CODE] <file|->\n"
+      "                          -q plate-only · -s soft last_err fails · -T wall budget\n"
       "    help|-h                this text\n"
       "\n"
       "  Law & Core safety\n"
@@ -14273,9 +14278,12 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "\n"
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
-      "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS ENV|READ|WRITE · INCLUDE\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR · DEFAULT|DEFINED|TYPEOF|UNSET · STATUS|IDENTITY · PRINT_JSON · INCLUDE\n"
+      "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
+      "    LISTLIBS|HASLIB|CATLIB|GREPLIB|HEADLIB|LIBDEPS|LIBTREE|LIBDEFAULTS|LIBINFO\n"
+      "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
+      "  Agents: cubalc doctor · recipe fat_session · init --fat-session · examples fat\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,
       CUBALC_LANG_PARADIGM);

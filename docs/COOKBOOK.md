@@ -26,7 +26,7 @@ make all
 ./out/cubalc forms SMX   # play-form catalog
 # agents: pipe source without a temp file
 printf 'ASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -
-./out/cubalc help
+./out/cubalc help            # recipe · init --fat-session · run -T/-I · discovery forms
 ```
 
 `doctor` / `health` plate fields agents use: `libs_dir` · `libs_n` · `lib_agent_boot` ·
