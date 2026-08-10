@@ -757,6 +757,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 727. ~~**`INCLUDESTEMS` / `LISTINCLUDESTEMS`**~~ **done** (short-name bag from loaded modules · HASLINE/NEEDINCLUDE without BASENAMEALL after -I).
 728. ~~**`LISTPRELOAD` / `CUBALC_PRELOAD_ACTIVE`**~~ **done** (in-lang bag of effective -I/PRELOAD names · run publishes PRELOAD_ACTIVE · dual of plate preload[]).
 729. ~~**`PRELOADMISS` / `PRELOADOK` / `NEEDPRELOAD`**~~ **done** (-I request vs loaded audit · miss bag + soft 0|1 + fail-fast · no LISTPRELOAD∖INCLUDESTEMS glue).
+730. ~~**run plate `preload_ok` / `preload_miss` / `preload_miss_n`**~~ **done** (CLI dual of PRELOADOK/PRELOADMISS · agents audit -I vs includes without in-lang forms).
 
 ## Tick protocol
 
