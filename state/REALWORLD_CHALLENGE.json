@@ -3928,6 +3928,6 @@
     "iter282: first merge clobbered agent via peer agent key; stripped identity from PEER seed",
     "iter282: 10/10 green after fix; shallow sibling keep confirmed"
   ],
-  "commit": "pending",
+  "commit": "9b5d15b5",
   "ts": "2026-08-10T04:29:32Z"
 }
