@@ -1,0 +1,18 @@
+# INCLUDE cli_session — CLI tool preamble + surface contract one-shot
+# Usability: cli_boot (USAGE/HELPFLAG/VERSIONFLAG/CLIINFO) + cli_guard
+# without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT USAGE = "mytool --out PATH files…"
+#   DEFAULT PROG_VERSION = "1.0.0"
+#   DEFAULT NEED_FLAGS = "out"
+#   DEFAULT NEED_REST_N = 1
+#   DEFAULT CLI_GUARD_SOFT = 0
+#   INCLUDE cli_session
+#   # help/version auto · CLIINFO plate · NEEDFLAGS/RESTARGS gate applied
+#
+# Soft contract: DEFAULT CLI_GUARD_SOFT = 1 before INCLUDE.
+# Scaffold: cubalc init demo --cli-session
+# HOLD_FLASH not required (runtime default 1).
+
+INCLUDE cli_boot
+INCLUDE cli_guard

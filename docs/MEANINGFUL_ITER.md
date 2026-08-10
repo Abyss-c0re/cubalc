@@ -855,6 +855,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 825. ~~**`cli_boot` + `cubalc init --cli`**~~ **done** (agent_boot+HELPFLAG+VERSIONFLAG+CLIINFO · init scaffold n=13 · doctor lib_cli_boot · proof 1365).
 826. ~~**CLI `hasflagall`/`needflags` · `hasargall`/`needargs`**~~ **done** (host duals of multi flag/arg gates · cubalc.flaggate.v1/arggate.v1 · optional `--` live argv · proof 1366).
 827. ~~**`cli_guard` lib**~~ **done** (DEFAULT NEED_FLAGS + NEED_REST_N · soft/hard · form_guard twin for CLI · doctor lib_cli_guard · proof 1367).
+828. ~~**`cli_session` + `cubalc init --cli-session`**~~ **done** (cli_boot+cli_guard one-shot · init n=14 · doctor lib_cli_session · proof 1368).
 
 ## Tick protocol
 
