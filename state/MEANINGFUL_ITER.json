@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 764,
-  "version": "1.15.791-usability",
-  "item": "FORMTOPICS + cubalc formtopics reverse FORMSFOR",
-  "item_id": 800,
-  "title": "FORMTOPICS|TOPICSOF form · cubalc formtopics · cubalc.formtopics.v1",
-  "commit": "2381f167da59fe41046e6f3bb8f51db4bee318ec",
-  "summary": "form→covering topics reverse of FORMSFOR; chain with TOPICHINT/TOPIC. proof 1341 PASS.",
+  "iter": 765,
+  "version": "1.15.792-usability",
+  "item": "GUIDE + cubalc guide full playbook plate",
+  "item_id": 801,
+  "title": "GUIDE|PLAYGUIDE [topic] · cubalc guide · cubalc.guide.v1",
+  "commit": "aa868d11f2cf9cd9a77ae522a26dd86c14459a12",
+  "summary": "full playbook plate: hint+related+tips+forms+snip; chain FORMTOPICS→GUIDE. proof 1342 PASS.",
   "proofs": [
-    "1341_formtopics PASS",
-    "1341_cli_formtopics PASS"
+    "1342_guide PASS",
+    "1342_cli_guide PASS"
   ],
-  "when": "2026-08-10T14:58:12Z",
+  "when": "2026-08-10T15:07:53Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2381f167da59fe41046e6f3bb8f51db4bee318ec",
-  "note": "formtopics HASFORM→cap; INCLUDE multi-topic; STATUS general/fat/protect"
+  "sha": "aa868d11f2cf9cd9a77ae522a26dd86c14459a12",
+  "note": "restored thrash first; guide cap related general/run/lib/fat"
 }
