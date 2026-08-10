@@ -784,6 +784,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 754. ~~**`LIBDEFAULTS` / `LIBKNOBS`**~~ **done** (DEFAULT key=value knobs bag from a lib · set-before-INCLUDE without CATLIB/HEADLIB parse · soft miss).
 755. ~~**`cubalc init --fat-session` / `--durable`**~~ **done** (scaffold INCLUDE fat_session durable nest · catalog n=5 · doctor/cookbook hints).
 756. ~~**`cubalc recipe` / `card`**~~ **done** (one plate path+deps+defaults+head · cubalc.recipe.v1 · agent dual of LIBINFO+LIBDEPS+LIBDEFAULTS+HEADLIB without multi-form glue).
+757. ~~**examples/search fat nest discovery**~~ **done** (examples tag=fat · fat_session/fat_boot/var_guard/time_guard · search init/recipe/fat aliases · agent find durable nest without cookbook).
 
 ## Tick protocol
 

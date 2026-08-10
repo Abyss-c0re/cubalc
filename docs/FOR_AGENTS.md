@@ -50,6 +50,7 @@ Recipe: `DEFAULT NEED_TIME = 200` · `INCLUDE time_guard` (soft: `DEFAULT TIME_G
 Fat nest boards: `DEFAULT NEED_VARROOM = 48` · `INCLUDE fat_boot` (agent_boot + var_guard) · `-I fat_boot` · doctor `lib_fat_boot`.
 Durable fat nest: `INCLUDE fat_session` (fat_boot + plate_boot) · doctor `lib_fat_session`.
 Scaffold: `cubalc init my.cubalc --fat-session` (or `--durable`) · `--fat` fat_boot · `cubalc init --list`.
+Discover: `cubalc examples fat` · `cubalc search fat_session` · `cubalc search recipe`.
 After load: `LISTINCLUDES` → path bag · `INCLUDESTEMS` short names · `HASINCLUDE agent_boot` soft 0|1 · `INCLUDE_N`.
 Run plate always reports `includes_n` + `includes` paths + `include_stems` / `include_stems_n` short names (INCLUDESTEMS dual).
 Also `preload_n` + `preload` short-name array from `-I` / `CUBALC_PRELOAD` (request).

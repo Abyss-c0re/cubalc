@@ -15,6 +15,7 @@ make all
 ./out/cubalc libs        # programs/lib INCLUDE catalog (JSON)
 ./out/cubalc env [pfx]   # host CUBALC_* contract (set/default/hint JSON)
 ./out/cubalc examples    # curated runnable starters (JSON · filterable)
+./out/cubalc examples fat  # fat_session / fat_boot / var_guard / time_guard
 ./out/cubalc cat agent_boot  # dump lib/program source + meta plate
 ./out/cubalc recipe fat_session  # one plate: path + deps + defaults + head
 ./out/cubalc cat plate_uniform  # nest consistency INCLUDE snippet
