@@ -1731,6 +1731,7 @@ int main(int argc, char **argv) {
      *   multiple -e join with newline; \n \t \\ escapes expanded in each chunk.
      * Quiet: -q|--quiet|--plate or CUBALC_QUIET=1 → plate-only (no board/# ok).
      * Strict: -s|--strict or CUBALC_STRICT=1 → soft last_err fails exit+plate ok.
+     * Timeout: -T MS|--timeout MS or CUBALC_RUN_TIMEOUT — wall-clock kill runaway loops.
      * Preload: -I|--include|--preload LIB + CUBALC_PRELOAD=a:b → INCLUDE ONCE before body.
      * Path: -L|--include-path|--lib-path DIR prepends CUBALC_INCLUDE_PATH for this run.
      * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older. */
@@ -1742,6 +1743,8 @@ int main(int argc, char **argv) {
     int n_parg = 0;
     int n_preload = 0;
     int n_ipath = 0;
+    long run_timeout_ms = 0;
+    int run_timeout_cli = 0;
     const char *parg[32];
     char preload[16][96];
     char ipaths[8][512];
@@ -1765,6 +1768,16 @@ int main(int argc, char **argv) {
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
       strict = 1;
+    /* Env wall budget first; CLI -T overrides. */
+    eq = getenv("CUBALC_RUN_TIMEOUT");
+    if (eq && eq[0]) {
+      char *end = NULL;
+      long t = strtol(eq, &end, 10);
+      if (end != eq && t > 0) {
+        if (t > 86400000L) t = 86400000L;
+        run_timeout_ms = t;
+      }
+    }
     /* Env version floor first; CLI -R overrides. */
     eq = getenv("CUBALC_REQUIRE_VERSION");
     if (eq && eq[0])
@@ -1783,6 +1796,47 @@ int main(int argc, char **argv) {
       if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--strict") ||
           !strcmp(argv[i], "--fail-soft") || !strcmp(argv[i], "--strict-err")) {
         strict = 1;
+        continue;
+      }
+      /* -T ms · --timeout · CUBALC_RUN_TIMEOUT dual — wall-clock kill */
+      if (!strcmp(argv[i], "-T") || !strcmp(argv[i], "--timeout") ||
+          !strcmp(argv[i], "--time-limit") || !strcmp(argv[i], "--max-ms")) {
+        long t;
+        char *end = NULL;
+        if (i + 1 >= argc) {
+          fprintf(stderr, "cubalc run: %s needs milliseconds (e.g. 5000)\n", argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        t = strtol(argv[++i], &end, 10);
+        if (end == argv[i] || t < 0) {
+          fprintf(stderr, "cubalc run: bad timeout ms '%s'\n", argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        if (t > 86400000L) t = 86400000L;
+        run_timeout_ms = t;
+        run_timeout_cli = 1;
+        continue;
+      }
+      if (!strncmp(argv[i], "--timeout=", 10) ||
+          !strncmp(argv[i], "--time-limit=", 13) ||
+          !strncmp(argv[i], "--max-ms=", 9)) {
+        const char *v = argv[i];
+        long t;
+        char *end = NULL;
+        if (!strncmp(v, "--timeout=", 10)) v += 10;
+        else if (!strncmp(v, "--time-limit=", 13)) v += 13;
+        else v += 9;
+        t = strtol(v, &end, 10);
+        if (end == v || t < 0) {
+          fprintf(stderr, "cubalc run: bad timeout ms '%s'\n", v);
+          free(expr_buf);
+          return 2;
+        }
+        if (t > 86400000L) t = 86400000L;
+        run_timeout_ms = t;
+        run_timeout_cli = 1;
         continue;
       }
       /* -R x.y · --require-version · CUBALC_REQUIRE_VERSION dual */
@@ -1963,17 +2017,29 @@ int main(int argc, char **argv) {
     }
     if (!have_expr && !src_path) {
       fprintf(stderr,
-              "usage: cubalc run [-q] [-s] [-R VER] [-I LIB]... [-L DIR]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
-              "       cubalc eval [-q] [-s] [-R VER] [-I LIB]... [-e CODE]... <file>|-\n"
+              "usage: cubalc run [-q] [-s] [-T MS] [-R VER] [-I LIB]... [-L DIR]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
+              "       cubalc eval [-q] [-s] [-T MS] [-R VER] [-I LIB]... [-e CODE]... <file>|-\n"
               "       cubalc -e 'SYS DATE\\nPRINT LAST'   # top-level alias\n"
               "       cubalc -I agent_boot -e 'STATUS'  # preload INCLUDE ONCE\n"
               "       multiple -e join with newline; \\n \\t \\\\ escapes\n"
               "       -I/--include/--preload LIB  · CUBALC_PRELOAD=a:b\n"
               "       -L/--include-path DIR · prepends CUBALC_INCLUDE_PATH\n"
               "       -R/--require-version X.Y · CUBALC_REQUIRE_VERSION floor\n"
+              "       -T/--timeout MS · CUBALC_RUN_TIMEOUT wall kill runaway loops\n"
               "       CUBALC_QUIET=1  → plate only · CUBALC_STRICT=1 → soft last_err fails\n");
       free(expr_buf);
       return 2;
+    }
+    /* Publish wall budget for run_source (CLI -T wins over prior env). */
+    if (run_timeout_cli || run_timeout_ms > 0) {
+      char tb[32];
+      if (run_timeout_ms > 0) {
+        snprintf(tb, sizeof tb, "%ld", run_timeout_ms);
+        setenv("CUBALC_RUN_TIMEOUT", tb, 1);
+      } else if (run_timeout_cli) {
+        /* explicit -T 0 clears budget */
+        unsetenv("CUBALC_RUN_TIMEOUT");
+      }
     }
     /* Publish effective preload list for in-lang LISTPRELOAD / agents. */
     if (n_preload > 0) {
@@ -2296,6 +2362,7 @@ int main(int argc, char **argv) {
                "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
                "\"why_hint\":\"%s\","
                "\"quiet\":%s,\"strict\":%s,"
+               "\"timeout_ms\":%d,\"timed_out\":%s,"
                "\"preload_n\":%d,\"preload\":%s,"
                "\"preload_ok\":%s,\"preload_miss_n\":%d,\"preload_miss\":%s,"
                "\"include_path_n\":%d,"
@@ -2309,6 +2376,8 @@ int main(int argc, char **argv) {
                CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc,
                whyesc,
                quiet ? "true" : "false", strict ? "true" : "false",
+               rr.timeout_ms > 0 ? rr.timeout_ms : (int)run_timeout_ms,
+               rr.timed_out ? "true" : "false",
                n_preload, prej,
                pmiss_n == 0 ? "true" : "false", pmiss_n, pmiss,
                n_ipath,
@@ -2414,6 +2483,7 @@ int main(int argc, char **argv) {
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"vars_max\":%d,\"varroom_forms\":true,"
+             "\"run_timeout\":true,"
              "\"var_budget\":\"STATUS/VARS/run plate vars_n|max|full · "
              "VARROOM/HASVARROOM/NEEDVARROOM · INCLUDE var_guard\","
              "\"nest_check\":\"%s\","
@@ -2426,6 +2496,7 @@ int main(int argc, char **argv) {
              "\"CUBALC_INCLUDE_PATH + cubalc which name · run -I / NEEDINCLUDE\","
              "\"cubalc plate uniform agent.json role — nest value consistency\","
              "\"VARROOM/HASVARROOM/NEEDVARROOM · INCLUDE var_guard (vars_max=%d)\","
+             "\"cubalc run -T MS · CUBALC_RUN_TIMEOUT wall kill runaway loops\","
              "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
@@ -3022,6 +3093,8 @@ int main(int argc, char **argv) {
       {"cli_doctor_vars_max", "programs/proof/1278_cli_doctor_vars_max.sh", "cubalc doctor vars_max/var budget plate"},
       {"var_guard", "programs/proof/1279_var_guard.cubalc", "INCLUDE var_guard NEED_VARROOM free-slot gate"},
       {"cli_var_guard", "programs/proof/1279_cli_var_guard.sh", "var_guard lib + doctor lib_var_guard"},
+      {"run_timeout", "programs/proof/1280_run_timeout.cubalc", "CUBALC_RUN_TIMEOUT wall kill + TIMEOUT_MS specials"},
+      {"cli_run_timeout", "programs/proof/1280_cli_run_timeout.sh", "cubalc run -T / timed_out plate dual"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -5033,6 +5106,7 @@ int main(int argc, char **argv) {
       {"CUBALC_SEED", "", 0, "RNG seed for reproducible runs"},
       {"CUBALC_QUIET", "", 0, "1 → run plate-only no board noise"},
       {"CUBALC_STRICT", "", 0, "1 → run: soft last_err fails exit + plate ok"},
+      {"CUBALC_RUN_TIMEOUT", "", 0, "ms wall budget for run (-T dual · kill runaway loops)"},
       {"CUBALC_ARG0", "", 0, "SYS ARG 0 — script arg without shell glue"},
       {"CUBALC_ARG1", "", 0, "SYS ARG 1"},
       {"CUBALC_ARG2", "", 0, "SYS ARG 2"},
@@ -13559,6 +13633,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"CUBALC_SEED", "RNG seed for reproducible runs"},
       {"CUBALC_QUIET", "1 → run plate-only"},
       {"CUBALC_STRICT", "1 → soft last_err fails exit"},
+      {"CUBALC_RUN_TIMEOUT", "ms wall budget for run (-T dual)"},
       {"CUBALC_INCLUDE_PATH", "colon dirs for INCLUDE short names"},
       {"CUBALC_PRELOAD", "colon libs auto-INCLUDE ONCE before run (-I)"},
       {"CUBALC_PRELOAD_ACTIVE", "effective -I/PRELOAD list · LISTPRELOAD"},

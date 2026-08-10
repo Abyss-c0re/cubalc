@@ -766,6 +766,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 736. ~~**`HASVARROOM`**~~ **done** (soft 0|1 free slots >= n · sticky LAST_ERR on miss · dual of NEEDVARROOM · IF without count compare).
 737. ~~**`cubalc doctor` vars_max / var budget**~~ **done** (install plate reports CUBALC_MAX_VARS + VARROOM forms · fat-board readiness without STATUS).
 738. ~~**`programs/lib/var_guard`**~~ **done** (INCLUDE NEED_VARROOM free-slot gate · soft VAR_GUARD_SOFT · doctor lib_var_guard · fat nest recipe).
+739. ~~**`cubalc run -T` / `CUBALC_RUN_TIMEOUT`**~~ **done** (wall-clock kill runaway loops · plate timed_out/timeout_ms · SLEEP clamps · TIMEOUT_MS specials · env catalog).
 
 ## Tick protocol
 

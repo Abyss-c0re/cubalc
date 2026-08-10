@@ -34,6 +34,9 @@ typedef struct cubalc_run_result {
   int vars_n;         /* live program vars at end of run */
   int vars_max;       /* CUBALC_MAX_VARS ceiling */
   int vars_full;      /* 1 if create failed once (specials may be dark) */
+  /* Usability: wall-clock budget (-T / CUBALC_RUN_TIMEOUT) for runaway agents. */
+  int timeout_ms;     /* requested budget (0 = none) */
+  int timed_out;      /* 1 if run aborted for exceeding budget */
 } cubalc_run_result;
 
 int cubalc_run_file(const char *path, cubalc_run_result *out, FILE *trace);

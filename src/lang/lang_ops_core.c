@@ -24759,11 +24759,25 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         lex_next(L);
       if (ms < 0) ms = 0;
       if (ms > 60000) ms = 60000; /* hard cap — avoid hung agents */
+      /* Honor CUBALC_RUN_TIMEOUT / -T: clamp or fail before long sleep. */
+      if (vm->run_deadline_ms > 0) {
+        long rem = cubalc_lang_timeout_remain_ms(vm);
+        if (rem <= 0) {
+          cubalc_lang_check_timeout(vm, L->cur.line);
+          bump(vm); return 1;
+        }
+        if (ms > rem) ms = rem;
+      }
       if (ms > 0) {
         struct timespec ts;
         ts.tv_sec = ms / 1000;
         ts.tv_nsec = (ms % 1000) * 1000000L;
         nanosleep(&ts, NULL);
+      }
+      /* After sleep, surface budget expiry so loops stop cleanly. */
+      if (vm->run_deadline_ms > 0 && cubalc_lang_timeout_remain_ms(vm) <= 0) {
+        cubalc_lang_check_timeout(vm, L->cur.line);
+        bump(vm); return 1;
       }
       vm->last_n = ms;
       var_set_num(vm, "LAST_N", ms);

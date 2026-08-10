@@ -28,6 +28,52 @@ void cubalc_lang_fail_at(VM *vm, int line, const char *msg) {
   cubalc_lang_fail(vm, ebuf);
 }
 void cubalc_lang_bump(VM *vm) { if (vm->res) vm->res->stmts++; }
+
+/* Usability: wall-clock run budget (CUBALC_RUN_TIMEOUT / cubalc run -T).
+ * Agents bound runaway loops without shell timeout(1). */
+long cubalc_lang_mono_ms(void) {
+  struct timespec ts;
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+    return 0;
+  return (long)ts.tv_sec * 1000L + (long)(ts.tv_nsec / 1000000L);
+}
+long cubalc_lang_timeout_remain_ms(VM *vm) {
+  long now, left;
+  if (!vm || vm->run_deadline_ms <= 0)
+    return -1; /* unlimited */
+  now = cubalc_lang_mono_ms();
+  left = vm->run_deadline_ms - now;
+  return left < 0 ? 0 : left;
+}
+int cubalc_lang_check_timeout(VM *vm, int line) {
+  char msg[192];
+  long left;
+  if (!vm || vm->fatal || vm->run_deadline_ms <= 0)
+    return 0;
+  left = cubalc_lang_timeout_remain_ms(vm);
+  if (left > 0)
+    return 0;
+  if (vm->res) {
+    vm->res->timed_out = 1;
+    if (vm->run_timeout_ms > 0)
+      vm->res->timeout_ms = (int)vm->run_timeout_ms;
+  }
+  if (line > 0)
+    snprintf(msg, sizeof msg,
+             "TIMEOUT line %d: exceeded CUBALC_RUN_TIMEOUT %ldms — "
+             "raise -T / CUBALC_RUN_TIMEOUT or lean the loop",
+             line, vm->run_timeout_ms > 0 ? vm->run_timeout_ms : 0L);
+  else
+    snprintf(msg, sizeof msg,
+             "TIMEOUT: exceeded CUBALC_RUN_TIMEOUT %ldms — "
+             "raise -T / CUBALC_RUN_TIMEOUT or lean the loop",
+             vm->run_timeout_ms > 0 ? vm->run_timeout_ms : 0L);
+  cubalc_lang_fail(vm, msg);
+  var_set_num(vm, "TIMED_OUT", 1);
+  var_set_num(vm, "TIMEOUT_MS", vm->run_timeout_ms);
+  var_set_num(vm, "OK", 0);
+  return 1;
+}
 int cubalc_lang_kw(const Tok *t, const char *k) {
   return t->kind == TK_IDENT && strcasecmp(t->text, k) == 0;
 }

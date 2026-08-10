@@ -145,12 +145,19 @@ typedef struct {
   cubalc_smx_ctx smx;
   int smx_ok;
   int smx_talks;
+  /* Wall-clock run budget: CUBALC_RUN_TIMEOUT / cubalc run -T (0 = unlimited). */
+  long run_timeout_ms;   /* requested budget ms */
+  long run_deadline_ms;  /* mono ms absolute; 0 = no deadline */
 } VM;
 
 
 void cubalc_lang_fail(VM *vm, const char *msg);
 void cubalc_lang_fail_at(VM *vm, int line, const char *msg);
 void cubalc_lang_bump(VM *vm);
+/* Usability: CUBALC_RUN_TIMEOUT / -T wall budget helpers (mono ms). */
+long cubalc_lang_mono_ms(void);
+long cubalc_lang_timeout_remain_ms(VM *vm); /* -1 unlimited · 0 expired · else left */
+int  cubalc_lang_check_timeout(VM *vm, int line); /* 1 if fatal timed out */
 int  cubalc_lang_kw(const Tok *t, const char *k);
 void cubalc_lang_lex_skip(Lex *L);
 void cubalc_lang_lex_next(Lex *L);

@@ -1,0 +1,21 @@
+# CUBALC_RUN_TIMEOUT wall budget — agent-readable TIMEOUT_MS specials
+# Host sets env before run (CLI -T dual). Budget publishes TIMEOUT_MS / RUN_TIMEOUT.
+# Without budget (selftest default): soft skip — CLI proof covers -T kill path.
+
+DEFINED TIMEOUT_MS
+IF LAST_N == 0
+  PASS
+  PRINT "1280_run_timeout: SKIP (no CUBALC_RUN_TIMEOUT)"
+ELSE
+  ASSERT TIMEOUT_MS >= 1
+  ASSERT RUN_TIMEOUT == TIMEOUT_MS
+  ASSERT TIMED_OUT == 0
+
+  # Short sleep under budget must succeed
+  SYS SLEEP 20
+  ASSERT OK == 1
+  ASSERT TIMED_OUT == 0
+
+  PASS
+  PRINT "1280_run_timeout: PASS"
+END

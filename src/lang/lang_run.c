@@ -54,6 +54,8 @@ static void fill_err_src(cubalc_run_result *out, const char *src, size_t n) {
 
 int cubalc_lang_exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2){
   while (!vm->fatal && !vm->halt){
+    if (cubalc_lang_check_timeout(vm, L->cur.line))
+      return -1;
     skip_nl(L);
     if (L->cur.kind==TK_EOF) break;
     if (stop1 && kw(&L->cur,stop1)) break;
@@ -82,9 +84,26 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     else vm.rng = (uint32_t)time(NULL) ^ 0xC3C3C3C3u;
     if (!vm.rng) vm.rng = 1;
   }
+  /* Usability: CUBALC_RUN_TIMEOUT ms wall budget (cubalc run -T dual). */
+  {
+    const char *te = getenv("CUBALC_RUN_TIMEOUT");
+    long tms = 0;
+    if (te && te[0]) {
+      char *end = NULL;
+      tms = strtol(te, &end, 10);
+      if (end == te) tms = 0;
+    }
+    if (tms < 0) tms = 0;
+    if (tms > 86400000L) tms = 86400000L; /* cap 24h */
+    vm.run_timeout_ms = tms;
+    if (tms > 0)
+      vm.run_deadline_ms = cubalc_lang_mono_ms() + tms;
+    else
+      vm.run_deadline_ms = 0;
+  }
   vm.ch.hold_flash=1;
   snprintf(vm.ch.creed,sizeof vm.ch.creed,"%s",CUBALC_CREED);
-  if (out){ memset(out,0,sizeof*out); out->ok=1; }
+  if (out){ memset(out,0,sizeof*out); out->ok=1; out->timeout_ms=(int)vm.run_timeout_ms; }
   if (name && name[0]){
     const char *sl = cubalc_path_slash(name);
     if (sl){
@@ -94,9 +113,17 @@ static int run_source_inner(const char *src, size_t n, const char *name,
       vm.include_base[nbase] = 0;
     } else vm.include_base[0]=0;
   }
+  /* Publish budget so agents can read TIMEOUT_MS without env glue. */
+  if (vm.run_timeout_ms > 0) {
+    var_set_num(&vm, "TIMEOUT_MS", vm.run_timeout_ms);
+    var_set_num(&vm, "RUN_TIMEOUT", vm.run_timeout_ms);
+    var_set_num(&vm, "TIMED_OUT", 0);
+  }
 
   Lex L; lex_init(&L, src, n);
   while (!vm.fatal && !vm.halt && L.cur.kind != TK_EOF){
+    if (cubalc_lang_check_timeout(&vm, L.cur.line))
+      break;
     skip_nl(&L);
     if (L.cur.kind==TK_EOF) break;
     if (parse_form(&vm, &L) < 0) break;
@@ -110,6 +137,7 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     out->ok = !vm.fatal && out->asserts_fail==0 && !(vm.halt && vm.exit_code != 0);
     out->n_cubes = vm.ch.n_cubes;
     out->unity = vm.ch.unity;
+    out->timeout_ms = (int)vm.run_timeout_ms;
     if (vm.fatal && !out->err[0]) snprintf(out->err,sizeof out->err,"%s",vm.err);
     /* Usability: surface sticky LAST_ERR/ERR on plate even when run ok
      * (soft FAIL/EXPECT probes leave agent-readable reason). */
