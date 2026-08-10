@@ -2743,6 +2743,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"DESCRIBETOPIC", "DESCRIBETOPIC alias of TOPICHINT"},
       {"RELATEDTOPIC", "RELATEDTOPIC|SEETOPICS name — related discovery topic bag · dual of cubalc relatedtopic · twin of RELATED for topics"},
       {"SEETOPICS", "SEETOPICS alias of RELATEDTOPIC"},
+      {"FORMTOPICS", "FORMTOPICS|TOPICSOF form — topics covering a form · reverse FORMSFOR · dual of cubalc formtopics"},
+      {"TOPICSOF", "TOPICSOF alias of FORMTOPICS"},
       {"ERRTIPS", "ERRTIPS [err] — recovery tip bag from LAST_ERR or arg · ERRTIPS_TOPIC · dual of cubalc errtips"},
       {"FIXTIPS", "FIXTIPS alias of ERRTIPS"},
       {"ERRRUN", "ERRRUN [err] — ERRTIPS classify + RUNSNIP topic one-shot · dual of cubalc errrun"},
@@ -39053,6 +39055,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"general", "LISTTOPICS"},
       {"general", "TOPICHINT"},
       {"general", "RELATEDTOPIC"},
+      {"general", "FORMTOPICS"},
       {"general", "WHY"},
       {"general", "CLEAR_ERR"},
       {"general", "INCLUDE"},
@@ -39067,6 +39070,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"cap", "COUNTFORMS"},
       {"cap", "REQUIRE FORM"},
       {"cap", "RELATEDTOPIC"},
+      {"cap", "FORMTOPICS"},
       {"cap", "TIPS"},
       {"cap", "FORMSFOR"},
       {"fat", "VARROOM"},
@@ -39224,12 +39228,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"TOPICHINT", "HASTOPIC"}, {"TOPICHINT", "TIPS"},
       {"RELATEDTOPIC", "TOPICHINT"}, {"RELATEDTOPIC", "LISTTOPICS"}, {"RELATEDTOPIC", "TOPIC"},
       {"RELATEDTOPIC", "HASTOPIC"}, {"RELATEDTOPIC", "TIPS"}, {"RELATEDTOPIC", "FORMSFOR"},
+      {"RELATEDTOPIC", "FORMTOPICS"},
       {"LISTTOPICS", "RELATEDTOPIC"}, {"LISTTOPICS", "TOPICHINT"}, {"LISTTOPICS", "HASTOPIC"},
-      {"LISTTOPICS", "NEEDTOPIC"}, {"LISTTOPICS", "TOPIC"},
+      {"LISTTOPICS", "NEEDTOPIC"}, {"LISTTOPICS", "TOPIC"}, {"LISTTOPICS", "FORMTOPICS"},
       {"HASTOPIC", "NEEDTOPIC"}, {"HASTOPIC", "LISTTOPICS"}, {"HASTOPIC", "TOPICHINT"},
       {"NEEDTOPIC", "HASTOPIC"}, {"NEEDTOPIC", "LISTTOPICS"},
       {"TOPIC", "RELATEDTOPIC"}, {"TOPIC", "TOPICHINT"}, {"TOPIC", "TIPS"},
       {"TOPIC", "FORMSFOR"}, {"TOPIC", "SNIP"}, {"TOPIC", "LISTTOPICS"},
+      {"TOPIC", "FORMTOPICS"},
+      {"FORMTOPICS", "FORMSFOR"}, {"FORMTOPICS", "FORMHINT"}, {"FORMTOPICS", "RELATED"},
+      {"FORMTOPICS", "TOPIC"}, {"FORMTOPICS", "TOPICHINT"}, {"FORMTOPICS", "LISTTOPICS"},
+      {"FORMSFOR", "FORMTOPICS"}, {"FORMHINT", "FORMTOPICS"}, {"RELATED", "FORMTOPICS"},
       /* lib / include */
       {"INCLUDE", "LISTLIBS"}, {"INCLUDE", "HASLIB"}, {"INCLUDE", "MATCHLIBS"},
       {"INCLUDE", "PICKLIB"}, {"INCLUDE", "RECIPE"}, {"INCLUDE", "CHECKDEPS"},
@@ -39735,11 +39744,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"general", "VERSION"}, {"general", "STATUS"}, {"general", "IDENTITY"},
       {"general", "TIPS"}, {"general", "FORMSFOR"}, {"general", "SNIP"},
       {"general", "TOPIC"}, {"general", "TOPICHINT"}, {"general", "RELATEDTOPIC"},
-      {"general", "WHY"}, {"general", "INCLUDE"},
+      {"general", "FORMTOPICS"}, {"general", "WHY"}, {"general", "INCLUDE"},
       {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"},
       {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"}, {"cap", "LISTFORMS"},
-      {"cap", "RELATED"}, {"cap", "RELATEDTOPIC"}, {"cap", "FORMSFOR"},
-      {"cap", "SNIP"}, {"cap", "TOPIC"},
+      {"cap", "RELATED"}, {"cap", "RELATEDTOPIC"}, {"cap", "FORMTOPICS"},
+      {"cap", "FORMSFOR"}, {"cap", "SNIP"}, {"cap", "TOPIC"},
       {"fat", "VARROOM"}, {"fat", "HASVARROOM"}, {"fat", "NEEDVARROOM"},
       {"fat", "REMAIN_MS"}, {"fat", "HAS_TIME"}, {"fat", "NEEDTIME"}, {"fat", "STATUS"},
       {"plate", "SETP"}, {"plate", "GETP"}, {"plate", "NEEDP"}, {"plate", "DEFAULTP"},
@@ -40233,6 +40242,152 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "LAST_N", n);
     var_set_num(vm, "RELATEDTOPIC_N", n);
     var_set_num(vm, "SEETOPICS_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* FORMTOPICS|TOPICSOF form — reverse of FORMSFOR: form → topics that list it.
+   * Usability: after FORMHINT/RELATED, agents learn which discovery topics cover a form
+   * without scanning FORMSFOR for every topic. LAST=newline topics · FORMTOPICS_N ·
+   * FORMTOPICS_OF · soft miss OK=0. Dual of cubalc formtopics. */
+  if (kw(&L->cur,"FORMTOPICS")||kw(&L->cur,"TOPICSOF")||kw(&L->cur,"TOPICSFOR")||
+      kw(&L->cur,"FORMTOPIC")||kw(&L->cur,"WHERETOPIC")||kw(&L->cur,"COVERTOPICS")||
+      kw(&L->cur,"TOPICCOVER")||kw(&L->cur,"FORM_TOPICS")||kw(&L->cur,"TOPICSOFFORM")){
+    /* Keep in sync with FORMSFOR rows (+ discovery extras for reverse lookup). */
+    static const struct { const char *topic; const char *form; } rows[] = {
+      {"general", "VERSION"}, {"general", "STATUS"}, {"general", "IDENTITY"},
+      {"general", "TIPS"}, {"general", "FORMSFOR"}, {"general", "LISTTOPICS"},
+      {"general", "TOPICHINT"}, {"general", "RELATEDTOPIC"}, {"general", "FORMTOPICS"},
+      {"general", "WHY"}, {"general", "CLEAR_ERR"}, {"general", "INCLUDE"},
+      {"general", "REQUIRE VERSION"}, {"general", "VARS"}, {"general", "TOPIC"},
+      {"general", "SNIP"}, {"general", "RUNSNIP"}, {"general", "ERRTIPS"},
+      {"general", "ERRRUN"}, {"general", "HASTOPIC"}, {"general", "NEEDTOPIC"},
+      {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"},
+      {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"}, {"cap", "LISTFORMS"},
+      {"cap", "COUNTFORMS"}, {"cap", "REQUIRE FORM"}, {"cap", "RELATEDTOPIC"},
+      {"cap", "FORMTOPICS"}, {"cap", "TIPS"}, {"cap", "FORMSFOR"},
+      {"cap", "RELATED"}, {"cap", "SNIP"}, {"cap", "TOPIC"},
+      {"fat", "VARROOM"}, {"fat", "HASVARROOM"}, {"fat", "NEEDVARROOM"},
+      {"fat", "REMAIN_MS"}, {"fat", "HAS_TIME"}, {"fat", "NEEDTIME"},
+      {"fat", "STATUS"}, {"fat", "VARS"}, {"fat", "TIPS"},
+      {"plate", "SETP"}, {"plate", "GETP"}, {"plate", "NEEDP"},
+      {"plate", "DEFAULTP"}, {"plate", "INCP"}, {"plate", "DELP"},
+      {"plate", "PRETTYP"}, {"plate", "DUMPP"}, {"plate", "SAVEPLATE"},
+      {"plate", "LOADPLATE"},
+      {"p2p", "SMX"}, {"p2p", "SERVE"}, {"p2p", "DIAL"}, {"p2p", "TALK"},
+      {"p2p", "EXCHANGE"}, {"p2p", "TIPS"},
+      {"run", "ASSERT"}, {"run", "EXPECT"}, {"run", "FAIL"}, {"run", "PASS"},
+      {"run", "NOTE"}, {"run", "EXIT"}, {"run", "WHY"}, {"run", "CLEAR_ERR"},
+      {"run", "TIPS"}, {"run", "ERRTIPS"}, {"run", "ERRRUN"},
+      {"lib", "LISTLIBS"}, {"lib", "HASLIB"}, {"lib", "MATCHLIBS"},
+      {"lib", "PICKLIB"}, {"lib", "RECIPE"}, {"lib", "CHECKDEPS"},
+      {"lib", "SORTLIBS"}, {"lib", "FRESHLIBS"}, {"lib", "LIBAGE"},
+      {"lib", "INCLUDE"},
+      {"protect", "HOLD_FLASH"}, {"protect", "STATUS"}, {"protect", "VERSION"},
+      {"protect", "TIPS"},
+    };
+    char name[96], nup[96], bag[512];
+    char seen_topics[16][32];
+    size_t k, o = 0;
+    int i, n = 0, nall = (int)(sizeof rows / sizeof rows[0]);
+    int nseen = 0;
+    lex_next(L);
+    name[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FORMTOPICS_N", 0);
+      var_set_num(vm, "TOPICSOF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "FORMTOPICS: need form — FORMTOPICS HASFORM · TOPICSOF SETP");
+      var_set_str(vm, "ERR",
+                  "FORMTOPICS: need form — FORMTOPICS HASFORM · TOPICSOF SETP");
+      bump(vm);
+      return 1;
+    }
+    for (k = 0; name[k] && k + 1 < sizeof nup; k++) {
+      char c = name[k];
+      if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+      nup[k] = c;
+    }
+    nup[k] = 0;
+    bag[0] = 0;
+    for (i = 0; i < nall; i++) {
+      char fup[96];
+      size_t j, ln;
+      int match, already = 0, si;
+      for (j = 0; rows[i].form[j] && j + 1 < sizeof fup; j++) {
+        char c = rows[i].form[j];
+        if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+        fup[j] = c;
+      }
+      fup[j] = 0;
+      match = !strcmp(fup, nup);
+      if (!match) continue;
+      for (si = 0; si < nseen; si++) {
+        if (!strcmp(seen_topics[si], rows[i].topic)) { already = 1; break; }
+      }
+      if (already) continue;
+      if (nseen < (int)(sizeof seen_topics / sizeof seen_topics[0])) {
+        snprintf(seen_topics[nseen], sizeof seen_topics[0], "%s", rows[i].topic);
+        nseen++;
+      }
+      ln = strlen(rows[i].topic);
+      if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, rows[i].topic, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "FORMTOPICS_OF", name);
+    var_set_str(vm, "TOPICSOF_OF", name);
+    var_set_str(vm, "FORM", name);
+    if (n == 0) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "FORMTOPICS miss: '%s' — FORMHINT · FORMSFOR · LISTFORMS · cubalc formtopics",
+               name);
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "FORMTOPICS", "");
+      var_set_str(vm, "TOPICSOF", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FORMTOPICS_N", 0);
+      var_set_num(vm, "TOPICSOF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FORMTOPICS", bag);
+    var_set_str(vm, "TOPICSOF", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "FORMTOPICS_N", n);
+    var_set_num(vm, "TOPICSOF_N", n);
     var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;

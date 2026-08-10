@@ -827,6 +827,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 797. ~~**`EACH TOPIC`**~~ **done** (walk discovery topics · MATCH filter · dual of LISTTOPICS+EACH LINE · agent topic loops).
 798. ~~**`TOPICHINT` / `cubalc topichint`**~~ **done** (one-line topic docs · cubalc.topichint.v1 · twin of FORMHINT for discovery topics).
 799. ~~**`RELATEDTOPIC` / `cubalc relatedtopic`**~~ **done** (related discovery topic bag · cubalc.relatedtopic.v1 · twin of RELATED for topics).
+800. ~~**`FORMTOPICS` / `cubalc formtopics`**~~ **done** (form → covering topics · cubalc.formtopics.v1 · reverse of FORMSFOR).
 
 ## Tick protocol
 
