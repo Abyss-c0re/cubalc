@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 299,
-  "program": "programs/realworld/svc_topic_runbook_board.cubalc",
-  "theme": "TIPS+FORMSFOR+FORMHINT topic runbook discovery",
-  "version": "1.15.780-usability",
+  "iter": 300,
+  "program": "programs/realworld/svc_related_snip_board.cubalc",
+  "theme": "RELATED neighbors + SNIP mini sources fleet packet",
+  "version": "1.15.782-usability",
   "pass": true,
-  "prior_note": "iter 298 cap_boot/LISTFORMS; this iter first realworld 1328 FORMHINT + 1329 TIPS + 1330 FORMSFOR",
+  "prior_note": "iter 299 TIPS/FORMSFOR/FORMHINT; this iter first realworld 1331 RELATED + 1332 SNIP",
   "tests": [
     {
       "name": "list",
@@ -15,39 +15,39 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate topicrb",
+      "cmd": "seed agent plate relsnip",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "tips",
-      "cmd": "TIPS var topic + general",
+      "name": "related",
+      "cmd": "RELATED SETP/HASFORM neighbors",
       "ok": true,
-      "note": "tips"
+      "note": "related"
     },
     {
-      "name": "forms",
-      "cmd": "FORMSFOR + HAS vs HASLINE",
+      "name": "snip",
+      "cmd": "SNIP plate/cap + forms\u2192cap",
       "ok": true,
-      "note": "forms"
+      "note": "snip"
     },
     {
-      "name": "hint",
-      "cmd": "FORMHINT/DESCRIBEFORM soft miss",
+      "name": "pair",
+      "cmd": "RELATED+SNIP evidence packet",
       "ok": true,
-      "note": "hint"
-    },
-    {
-      "name": "digest",
-      "cmd": "tips+forms+hint packet",
-      "ok": true,
-      "note": "digest"
+      "note": "pair"
     },
     {
       "name": "soft",
-      "cmd": "unknown topic soft miss",
+      "cmd": "miss form/topic/multi-word/empty",
       "ok": true,
       "note": "soft"
+    },
+    {
+      "name": "write",
+      "cmd": "materialize SNIP.txt",
+      "ok": true,
+      "note": "write"
     },
     {
       "name": "gate",
@@ -57,13 +57,13 @@
     },
     {
       "name": "alias",
-      "cmd": "HOWTO TOPICFORMS PLAYBOOK",
+      "cmd": "SEEALSO SNIPPET duals",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + topic aliases",
+      "cmd": "PRINT clobber HAS vs HASLINE multi-word",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "455/664 CLI duals red; tips/formsfor PASS"
+      "note": "CLI duals still red; related+snip PASS"
     }
   ],
   "weaknesses": [
@@ -4464,6 +4464,46 @@
       "title": "WRITE META omit trailing NL (reconfirmed topic runbook)",
       "detail": "od META ends 5a without 0a. STATUS last line without $.",
       "repro": "od -An -tx1 META.txt | tail -1"
+    },
+    {
+      "id": "W549",
+      "severity": "med",
+      "area": "lang|related",
+      "title": "RELATED multi-word forms soft-miss even when listed as neighbors",
+      "detail": "HASFORM related bag includes \"REQUIRE FORM\", but RELATED \"REQUIRE FORM\" \u2192 OK=0 RELATED_N=0. Graph edges keyed on single-token forms; multi-word catalog entries are one-way leaves not hubs.",
+      "repro": "RELATED \"REQUIRE FORM\" \u2192 miss; RELATED HASFORM HASI REQUIRE FORM hit"
+    },
+    {
+      "id": "W550",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT after RELATED/SNIP clobbers bag/source in LAST (reconfirmed)",
+      "detail": "Must LET body=LAST before PRINT. Probe: capture then PRINT mark; HASLINE LAST GETP fails.",
+      "repro": "RELATED SETP; PRINT x; SYS HASLINE LAST GETP \u2192 0"
+    },
+    {
+      "id": "W551",
+      "severity": "med",
+      "area": "lang|has",
+      "title": "SYS HAS substring false friend on RELATED bags (reconfirmed)",
+      "detail": "RELATED SETP bag has GETP: SYS HAS bag \"GET\" \u2192 1; HASLINE bag \"GET\" \u2192 0. Prefer HASLINE for form-name membership.",
+      "repro": "RELATED SETP; SYS HAS LAST GET \u2192 1"
+    },
+    {
+      "id": "W552",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META omit trailing NL; SNIP body preserves internal NL",
+      "detail": "META ends without 0a. SNIP.txt materialize keeps multi-line source (positive). STATUS last line no $.",
+      "repro": "od META; cat SNIP.txt"
+    },
+    {
+      "id": "W553",
+      "severity": "low",
+      "area": "lang|related",
+      "title": "Bare RELATED with no name soft-fails OK=0 (good) but same sticky LAST_ERR class",
+      "detail": "RELATED alone \u2192 OK=0 without hard halt. Agents must CLEAR_ERR before next assert path.",
+      "repro": "RELATED; CLEAR_ERR"
     }
   ],
   "workarounds": [
@@ -4512,7 +4552,9 @@
     "use CUBALC_REQUIRE_FORMS env for in-lang floor dual; -C is plate-only",
     "LISTFORMS \"INCLUDE\" quoted; capture LAST before PRINT after LISTFORMS",
     "LET bag=LAST before PRINT after FORMSFOR/TIPS; HASLINE for exact form names",
-    "use FORMSFOR topic_var after lex_next fix; aliases forms\u2192cap mesh\u2192p2p"
+    "use FORMSFOR topic_var after lex_next fix; aliases forms\u2192cap mesh\u2192p2p",
+    "RELATED single-token hubs only; use HASFORM then RELATED of primary form",
+    "LET body=LAST before PRINT after RELATED/SNIP; HASLINE for exact neighbors"
   ],
   "language_gaps": [
     "PRETTYP/JSONPRETTY/PRETTYJSON plate evidence dump",
@@ -4563,7 +4605,10 @@
     "PRINT clobber after LISTFORMS bag (W540)",
     "FORMSFOR/TIPS var topic lex_next (W543)",
     "SYS HAS substring vs HASLINE exact on form bags (W544)",
-    "CLI tips n vs in-lang TIPS_N skew (W547)"
+    "CLI tips n vs in-lang TIPS_N skew (W547)",
+    "RELATED multi-word hub missing (W549)",
+    "HAS substring vs HASLINE on neighbor bags (W551)",
+    "PRINT clobber after RELATED/SNIP (W550)"
   ],
   "issues_faced": [
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
@@ -4624,9 +4669,12 @@
     "iter298: board 10/10 + host -C ok; selftest CLI duals still red 455/658",
     "iter299: FORMSFOR/TIPS var topic lex_next fixed + HOWTO_TOPIC dual",
     "iter299: SYS HAS substring false friend on form bags (W544)",
-    "iter299: board 10/10 green; selftest CLI duals still 57 red"
+    "iter299: board 10/10 green; selftest CLI duals still 57 red",
+    "iter300: RELATED multi-word graph gap REQUIRE FORM (W549)",
+    "iter300: all board paths green; WRITE SNIP.txt multi-line works",
+    "iter300: selftest CLI duals still red (pre-existing)"
   ],
-  "commit": "41fdd026",
-  "ts": "2026-08-10T12:53:07Z",
+  "commit": "pending",
+  "ts": "2026-08-10T13:14:11Z",
   "board_commit": "41fdd026"
 }
