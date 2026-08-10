@@ -4996,7 +4996,7 @@
     "selftest rows[512] hid matchtopics/start/formguide until cap raised; board 10/10 green; CLI duals still unknown form set",
     "NTHTOPIC var index hard-fail unknown form; LASTTOPIC_N 0 after success; board 10/10 green"
   ],
-  "commit": "pending",
+  "commit": "132b4c73",
   "ts": "2026-08-10T16:34:17Z",
-  "board_commit": "pending"
+  "board_commit": "132b4c73"
 }
