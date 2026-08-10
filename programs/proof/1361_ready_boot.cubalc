@@ -1,0 +1,18 @@
+# INCLUDE ready_boot — agent_boot + NEEDREADY hard install prove gate
+
+INCLUDE ready_boot
+ASSERT OK == 1
+ASSERT READY_OK == 1
+ASSERT READY_PASS_N >= 10
+ASSERT READY_FAIL_N == 0
+SYS HASI "cubalc.ready.v1"
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST_N >= 1
+
+# still chainable after hard prove
+INCLUDE doctor_boot
+ASSERT DOCTOR_OK == 1
+
+PASS
+PRINT "1361_ready_boot: PASS"

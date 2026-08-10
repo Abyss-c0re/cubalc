@@ -38714,7 +38714,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       "DOCTOR", "NEEDDOCTOR", "OPEN", "DISCOVER", "HASLIB", "INCLUDE", "VERSION", "STATUS"
     };
     static const char *need_libs[] = {
-      "agent_boot", "doctor_boot", "open_boot", "discover_boot", "onboard_boot"
+      "agent_boot", "doctor_boot", "ready_boot", "open_boot", "discover_boot", "onboard_boot"
     };
     int hard = kw(&L->cur,"NEEDREADY")||kw(&L->cur,"NEED_READY")||
                kw(&L->cur,"REQUIREREADY")||kw(&L->cur,"REQUIRE_READY")||

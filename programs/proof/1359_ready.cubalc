@@ -13,6 +13,8 @@ SYS HASI "lib:agent_boot"
 ASSERT LAST_N == 1
 SYS HASI "lib:doctor_boot"
 ASSERT LAST_N == 1
+SYS HASI "lib:ready_boot"
+ASSERT LAST_N == 1
 
 # hard twin passes on healthy install
 NEEDREADY

@@ -1,0 +1,13 @@
+# INCLUDE ready_boot — agent preamble + hard install prove checklist one-shot
+# Usability: agent_boot (REQUIRE VERSION + VERSION) + NEEDREADY hard gate
+#   INCLUDE ready_boot
+#   # READY plate set · READY_OK == 1 or fail-fast (forms+libs+DOCTOR)
+# Soft twin: READY alone (no fail). Hard twin: NEEDREADY / REQUIRE READY.
+# Host dual: cubalc run -Y · CUBALC_REQUIRE_READY=1 · cubalc ready
+#
+# Scaffold: cubalc init demo --ready
+# CLI dual: cubalc ready · cubalc needdoctor · run -Y
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+INCLUDE agent_boot
+NEEDREADY

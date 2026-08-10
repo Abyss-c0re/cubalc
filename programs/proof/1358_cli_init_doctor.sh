@@ -7,7 +7,7 @@ TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
 OUT=$("$CUBALC" init --list 2>&1)
-printf '%s\n' "$OUT" | grep -qE '"n":(10|11)'
+printf '%s\n' "$OUT" | grep -qE '"n":(10|11|12)'
 printf '%s\n' "$OUT" | grep -q 'doctor_boot'
 printf '%s\n' "$OUT" | grep -q -- '--doctor'
 
