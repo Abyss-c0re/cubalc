@@ -5514,7 +5514,7 @@
     "iter318: board 10/10 first pass; hard miss documented exit_code 0 not in-path tested",
     "iter318: selftest 554/741 cli_guard PASS; include_newest fails newest=cli_guard; CLI duals still set"
   ],
-  "commit": "pending",
+  "commit": "a13bd33b",
   "ts": "2026-08-10T20:45:18Z",
-  "board_commit": "pending"
+  "board_commit": "a13bd33b"
 }
