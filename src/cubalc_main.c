@@ -2703,7 +2703,37 @@ int main(int argc, char **argv) {
     }
     return ok ? 0 : 1;
   }
-  if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
+    if (strcmp(cmd, "needready") == 0 || strcmp(cmd, "need-ready") == 0 ||
+      strcmp(cmd, "require-ready") == 0 || strcmp(cmd, "requireready") == 0 ||
+      strcmp(cmd, "mustready") == 0) {
+    /* Usability: hard install prove gate (dual of NEEDREADY). exit 1 if checklist fails.
+     * Completes ready triad: cubalc ready (soft) · cubalc needready (hard) · run -Y. */
+    cubalc_run_result rr;
+    int ok;
+    static const char src_nr[] = "NEEDREADY\nPASS\n";
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src_nr, sizeof src_nr - 1, "<cli-needready>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    {
+      const char *em = ok ? "" : (rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "not ready"));
+      char esc[240];
+      size_t e = 0, k;
+      for (k = 0; em[k] && e + 2 < sizeof esc; k++) {
+        char c = em[k];
+        if (c == '"' || c == '\\') { esc[e++] = '\\'; esc[e++] = c; }
+        else if ((unsigned char)c < 32) esc[e++] = ' ';
+        else esc[e++] = c;
+      }
+      esc[e] = 0;
+      printf("{\"schema\":\"cubalc.ready.v1\",\"ok\":%s,\"cmd\":\"needready\","
+             "\"version\":\"%s\","
+             "\"note\":\"hard install prove gate · dual of NEEDREADY · exit 1 if checklist fails\","
+             "\"err\":\"%s\"}\n",
+             ok ? "true" : "false", CUBALC_LANG_VERSION, esc);
+    }
+    return ok ? 0 : 1;
+  }
+if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     /* Usability: one JSON plate for agents/humans — is this install ready?
      * Also surfaces INCLUDE lib layout + nest-check readiness (plate_uniform). */
     char dir[512], protect_path[640], key_preview[16];
@@ -3459,8 +3489,12 @@ int main(int argc, char **argv) {
       {"cli_require_ready", "programs/proof/1360_cli_require_ready.sh", "run -Y / CUBALC_REQUIRE_READY host prove floor"},
       {"hasflags", "programs/proof/1359_hasflags.cubalc", "HASFLAGS soft flag-count probe"},
       {"cli_hasflags", "programs/proof/1359_cli_hasflags.sh", "HASFLAGS/HASFLAGC forms + -e smoke"},
-      {"ready_boot", "programs/proof/1361_ready_boot.cubalc", "INCLUDE ready_boot agent_boot+NEEDREADY"},
+            {"ready_boot", "programs/proof/1361_ready_boot.cubalc", "INCLUDE ready_boot agent_boot+NEEDREADY"},
+      {"needready", "programs/proof/1362_needready.cubalc", "NEEDREADY hard prove gate twin of READY"},
+      {"cli_needready", "programs/proof/1362_cli_needready.sh", "cubalc needready + NEEDREADY forms"},
       {"cli_init_ready", "programs/proof/1361_cli_init_ready.sh", "cubalc init --ready scaffold + doctor"},
+      {"hasflagall", "programs/proof/1362_hasflagall.cubalc", "HASFLAGALL multi named-flag soft gate"},
+      {"cli_hasflagall", "programs/proof/1362_cli_hasflagall.sh", "HASFLAGALL/NEEDFLAGS forms + CLI --args"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -5667,6 +5701,14 @@ int main(int argc, char **argv) {
       {"SERVE", "DIAL"}, {"SERVE", "SMX"}, {"DIAL", "SERVE"}, {"DIAL", "SMX"},
       {"TALK", "SMX"}, {"TALK", "EXCHANGE"}, {"EXCHANGE", "SMX"}, {"EXCHANGE", "TALK"},
       {"HOLD_FLASH", "STATUS"}, {"HOLD_FLASH", "VERSION"}, {"HOLD_FLASH", "TIPS"},
+      /* multi CLI flag contract (HASFORMS twin for --flags) */
+      {"HASFLAG", "HASFLAGALL"}, {"HASFLAG", "NEEDFLAGS"}, {"HASFLAG", "REQUIRE FLAG"},
+      {"HASFLAGALL", "NEEDFLAGS"}, {"HASFLAGALL", "HASFLAG"}, {"HASFLAGALL", "FLAGMISS"},
+      {"HASFLAGALL", "HASFLAGS"}, {"HASFLAGALL", "LISTFLAGS"},
+      {"NEEDFLAGS", "HASFLAGALL"}, {"NEEDFLAGS", "HASFLAG"}, {"NEEDFLAGS", "REQUIRE FLAG"},
+      {"NEEDFLAGS", "USAGE"}, {"NEEDFLAGS", "FLAGMISS"},
+      {"HASFLAGS", "HASFLAGALL"}, {"HASFLAGS", "LISTFLAGS"}, {"HASFLAGS", "HASFLAG"},
+      {"LISTFLAGS", "HASFLAGS"}, {"LISTFLAGS", "HASFLAGALL"}, {"LISTFLAGS", "FLAGMAP"},
     };
     const char *name = (argc > 2 && argv[2][0]) ? argv[2] : "";
     char nup[96];
@@ -18769,7 +18811,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "CubalC %s — pure-C COP/flow (matrix SoT · SMX2 · no HTTP required)\n"
       "\n"
       "  Run & learn\n"
-      "    doctor|health|needdoctor|ready  install readiness / prove checklist JSON\n"
+      "    doctor|health|needdoctor|ready|needready  install readiness / prove checklist JSON\n"
       "    selftest|smoke         live curated usability proofs JSON\n"
       "    version|ver|-V         language version JSON plate\n"
       "    paths|where|layout     install/workspace paths JSON\n"

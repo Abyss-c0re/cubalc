@@ -1,0 +1,96 @@
+# HASFLAGALL / NEEDFLAGS — multi named-flag presence gate (HASFORMS twin for --flags)
+
+HOLD_FLASH 1
+
+# clear CLI bag
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV UNSET CUBALC_ARG2
+SYS ENV UNSET CUBALC_ARG3
+SYS ENV SET CUBALC_ARGC "0"
+
+# empty names soft → 0
+HASFLAGALL
+ASSERT LAST_N == 0
+ASSERT FLAGMISS_N == 0
+
+# missing all
+HASFLAGALL verbose out workers
+ASSERT LAST_N == 0
+ASSERT FLAGMISS_N == 3
+SYS HASLINE FLAGMISS "verbose"
+ASSERT LAST_N == 1
+SYS HASLINE FLAGMISS "workers"
+ASSERT LAST_N == 1
+ASSERT HASFLAGALL_N == 0
+ASSERT NEEDFLAGS_N == 3
+
+# partial hit
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARG1 "file.txt"
+SYS ENV SET CUBALC_ARGC "2"
+HASFLAGALL verbose out
+ASSERT LAST_N == 0
+ASSERT FLAGMISS_N == 1
+SYS HASLINE FLAGMISS "out"
+ASSERT LAST_N == 1
+SYS HASLINE FLAGHAVE "verbose"
+ASSERT LAST_N == 1
+ASSERT HASFLAGALL_N == 1
+
+# all present (bare + =val + short)
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARG1 "--out=hi.txt"
+SYS ENV SET CUBALC_ARG2 "-w"
+SYS ENV SET CUBALC_ARG3 "4"
+SYS ENV SET CUBALC_ARGC "4"
+# note: -w alone is flag name "w" not "workers"
+HASFLAGALL verbose out w
+ASSERT LAST_N == 1
+ASSERT FLAGMISS_N == 0
+ASSERT HASFLAGALL_N == 3
+ASSERT OK == 1
+
+# bag / CSV form
+HASFLAGALL "verbose,out,w"
+ASSERT LAST_N == 1
+
+# hard twin passes when present
+NEEDFLAGS verbose out
+ASSERT LAST_N == 1
+ASSERT OK == 1
+
+# dash-prefixed names strip (quoted; bare --x is not a TK_IDENT)
+HASFLAGALL "--verbose" "--out"
+ASSERT LAST_N == 1
+
+# soft miss keeps sticky ERR
+SYS ENV SET CUBALC_ARG0 "--only"
+SYS ENV SET CUBALC_ARGC "1"
+HASFLAGALL verbose out
+ASSERT LAST_N == 0
+ASSERT OK == 0
+SYS HASI "HASFLAGALL miss"
+ASSERT LAST_N == 1
+
+# IF branch without N× HASFLAG
+SYS ENV SET CUBALC_ARG0 "--mode=x"
+SYS ENV SET CUBALC_ARG1 "--dry"
+SYS ENV SET CUBALC_ARGC "2"
+HASFLAGALL mode dry
+IF LAST_N == 1
+  LET gate "ok"
+ELSE
+  LET gate "no"
+END
+SYS EQS gate "ok"
+ASSERT LAST_N == 1
+
+# forms discoverable
+HASFORM HASFLAGALL
+ASSERT LAST_N == 1
+HASFORM NEEDFLAGS
+ASSERT LAST_N == 1
+
+PRINT "hasflagall ok"
+PASS
