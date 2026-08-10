@@ -1,0 +1,845 @@
+# svc_prettyp_evidence_board.cubalc — PRETTYP/JSONPRETTY plate evidence dump
+#
+# Real use: oncall agents pretty-print agent/peer nest plates into ticket
+# evidence packets without shelling jq. First realworld of proof 1255
+# PRETTYP/JSONPRETTY/PRETTYJSON.
+#
+#   PRETTYP|JSONPRETTY|PRETTYJSON [FROM plate]
+#   LAST = 2-space indented JSON · LAST_N = bytes · PRETTYP_TRUNC · PRETTYP_SRC
+#   empty object → compact "{}" · plate unchanged (read-only pretty)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_spp_$$
+#   ./out/cubalc run programs/realworld/svc_prettyp_evidence_board.cubalc boot
+#   ./out/cubalc run ... dump|peer|empty|soft|gate|alias|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SPP_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_SPP_REQUIRE
+#
+# Edges: capture pretty before EQS/PRINT (W4); LAST_N=bytes dual;
+#   empty "{}" compact; FROM PEER leaves PLATE intact; WRITE NL; REQUIRE softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_prettyp_evidence_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_prettyp_evidence -- boot|dump|peer|empty|soft|gate|alias|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SPP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SPP_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "EVIDENCE.txt"
+LET evidence_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sum_v = 0
+LET sum_n = 0
+LET trunc_n = 0
+LET src_s = ""
+LET pretty_s = ""
+
+ONEOF ACTION "boot", "dump", "peer", "empty", "soft", "gate", "alias", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "dump" THEN
+    LET op = "dump"
+  WHEN "peer" THEN
+    LET op = "peer"
+  WHEN "empty" THEN
+    LET op = "empty"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "alias" THEN
+    LET op = "alias"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-prettyp\",\"schema\":\"cubalc.svc_prettyp_evidence.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"pretty\",\"n\":1,\"cfg\":{\"meta\":{\"role\":\"worker\",\"hits\":2},\"port\":8080}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"a\":{\"status\":\"ok\",\"lat\":40},\"b\":2,\"tag\":\"peer\"}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "agent"
+  SYS EQS LAST "svc-prettyp"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_prettyp_evidence"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "pretty"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.meta.hits"
+  SYS EQS LAST "2"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# dump — PRETTYP agent plate evidence
+SYS EQS op "dump"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PRETTYP
+  LET pretty_s = LAST
+  LET sum_n = LAST_N
+  LET trunc_n = PRETTYP_TRUNC
+  LET src_s = PRETTYP_SRC
+  CLEAR_ERR
+  IF sum_n > 10 THEN
+    LET score = score + 1
+  END
+  IF trunc_n == 0 THEN
+    LET score = score + 1
+  END
+  SYS EQS src_s "PLATE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS pretty_s "meta"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS pretty_s "role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS pretty_s "\n"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS pretty_s "  "
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # plate leaves intact (read-only pretty)
+  GETP "n"
+  SYS EQS LAST "1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-prettyp"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "pretty"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "dump ok"
+    LET admit_n = 1
+    LET find_n = sum_n
+    SYS WRITE evidence_path pretty_s
+    CLEAR_ERR
+  ELSE
+    LET miss = 1
+    LET note_msg = "dump score"
+    FAIL "dump score"
+    CLEAR_ERR
+  END
+  SYS CAT "dump:" sum_n ":dp"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "dump:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n trunc_n score note_msg
+  CLEAR_ERR
+END
+
+# peer — PRETTYP FROM PEER
+SYS EQS op "peer"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PRETTYP FROM PEER
+  LET pretty_s = LAST
+  LET sum_n = LAST_N
+  LET sum_v = PRETTYP_FROM
+  LET src_s = PRETTYP_SRC
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS src_s "PEER"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sum_n > 10 THEN
+    LET score = score + 1
+  END
+  SYS HAS pretty_s "status"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS pretty_s "ok"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS pretty_s "lat"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # agent plate still intact after FROM
+  GETP "agent"
+  SYS EQS LAST "svc-prettyp"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "n"
+  SYS EQS LAST "1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP FROM PEER "a.status"
+  SYS EQS LAST "ok"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "peer ok"
+    LET admit_n = 1
+    LET find_n = sum_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "peer score"
+    FAIL "peer score"
+    CLEAR_ERR
+  END
+  SYS CAT "peer:" sum_n ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peer:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n sum_v score note_msg
+  CLEAR_ERR
+END
+
+# empty — compact "{}" + nested empty
+SYS EQS op "empty"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  LET PLATE = "{}"
+  PRETTYP
+  LET pretty_s = LAST
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  SYS EQS pretty_s "{}"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sum_n == 2 THEN
+    LET score = score + 1
+  END
+  LET PLATE = "{\"x\":{}}"
+  PRETTYP
+  LET pretty_s = LAST
+  CLEAR_ERR
+  SYS HAS pretty_s "x"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS pretty_s "{}"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # restore durable plate
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "pretty"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-prettyp"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "empty ok"
+    LET admit_n = 1
+    LET find_n = 2
+  ELSE
+    LET miss = 1
+    LET note_msg = "empty score"
+    FAIL "empty score"
+    CLEAR_ERR
+  END
+  SYS CAT "empty:2:em"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "empty:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — ghost path / no-field still prettys current plate (no hard miss form)
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  # PRETTYP has no needle miss — soft path: HAS on pretty for ghost key
+  PRETTYP
+  LET pretty_s = LAST
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  SYS HAS pretty_s "ghostpath_xyz"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS pretty_s "nope_field"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # still has real keys
+  SYS HAS pretty_s "agent"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sum_n > 10 THEN
+    LET score = score + 1
+  END
+  GETP "agent"
+  SYS EQS LAST "svc-prettyp"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "pretty"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok1:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — evidence byte floor
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PRETTYP
+  LET pretty_s = LAST
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  IF sum_n >= 20 THEN
+    LET score = score + 1
+  END
+  SYS HAS pretty_s "svc_prettyp"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_prettyp_evidence"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.port"
+  SYS EQS LAST "8080"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-prettyp"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET admit_n = 1
+    LET find_n = sum_n
+    LET note_msg = "gate ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n score note_msg
+  CLEAR_ERR
+END
+
+# alias — JSONPRETTY + PRETTYJSON
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  JSONPRETTY
+  LET pretty_s = LAST
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  SYS HAS pretty_s "agent"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sum_n > 10 THEN
+    LET score = score + 1
+  END
+  PRETTYJSON
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "pretty"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "\n"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "pretty"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "alias ok"
+    LET admit_n = 1
+    LET find_n = sum_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias score"
+    FAIL "alias score"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:" sum_n ":as"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — LAST_N=bytes dual + substring false friend + PRINT clobber
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  PRETTYP
+  LET pretty_s = LAST
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  # LAST_N is byte length not line count
+  IF sum_n > 50 THEN
+    LET score = score + 1
+  END
+  SYS LINES pretty_s
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF find_n > 1 THEN
+    LET score = score + 1
+  END
+  IF sum_n != find_n THEN
+    LET score = score + 1
+  END
+  # substring: "role" hits cfg.meta.role and maybe role field
+  SYS HAS pretty_s "role"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # false friend: "port" only in cfg.port value path
+  SYS HAS pretty_s "port"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # PRINT clobber — do not use LAST after PRINT
+  PRINT "probe_mark"
+  SYS HAS LAST "agent"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS pretty_s "agent"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.meta.role"
+  SYS EQS LAST "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "prettyp"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = sum_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" sum_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n sum_n find_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET body = LAST
+CLEAR_ERR
+SYS STR miss
+LET row = LAST
+CLEAR_ERR
+SYS CAT "hit=" body " miss=" row " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_prettyp_evidence.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " find_n=" find_n " bytes=" sum_n " trunc=" trunc_n " score=" score " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n sum_n note_msg
+NOTE "svc_prettyp_evidence_board: end"

@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 288,
-  "program": "programs/realworld/svc_checkdeps_install_board.cubalc",
-  "theme": "CHECKDEPS/HASDEPS/NEEDDEPS lib install gate",
-  "version": "1.15.752-usability",
+  "iter": 289,
+  "program": "programs/realworld/svc_prettyp_evidence_board.cubalc",
+  "theme": "PRETTYP/JSONPRETTY plate evidence dump",
+  "version": "1.15.754-usability",
   "pass": true,
-  "prior_note": "iter 287 RECIPE libcard; this iter first realworld 1302 CHECKDEPS/HASDEPS/NEEDDEPS",
+  "prior_note": "iter 288 CHECKDEPS install gate; this iter first realworld 1255 PRETTYP/JSONPRETTY",
   "tests": [
     {
       "name": "list",
@@ -20,44 +20,44 @@
       "note": "boot"
     },
     {
-      "name": "fat",
-      "cmd": "HASDEPS fat_session deps=5",
+      "name": "dump",
+      "cmd": "PRETTYP agent 238B",
       "ok": true,
-      "note": "fat"
+      "note": "dump"
     },
     {
-      "name": "check",
-      "cmd": "CHECKDEPS empty miss LAST_N=0",
+      "name": "peer",
+      "cmd": "FROM PEER 77B",
       "ok": true,
-      "note": "check"
+      "note": "peer"
     },
     {
-      "name": "leaf",
-      "cmd": "NEEDDEPS+HASDEPS agent_boot",
+      "name": "empty",
+      "cmd": "compact {}",
       "ok": true,
-      "note": "leaf"
+      "note": "empty"
     },
     {
       "name": "soft",
-      "cmd": "ghost HASDEPS OK=0 CHECKDEPS OK=1",
+      "cmd": "ghost key HAS miss",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "min_deps floor",
+      "cmd": "byte floor",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "HAS/CHECK/NEED dual",
+      "cmd": "JSONPRETTY+PRETTYJSON",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "LAST_N dual + OK always1",
+      "cmd": "LAST_N bytes + PRINT clobber",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "455/613 cli duals red; checkdeps PASS"
+      "note": "455/615 cli duals red; prettyp PASS"
     }
   ],
   "weaknesses": [
@@ -4034,6 +4034,38 @@
       "title": "WRITE VAL/META/STATUS omit trailing NL",
       "detail": "Reconfirmed: od -c META ends without \\n; STATUS last bag line no $ in cat -A.",
       "repro": "od -c META.txt"
+    },
+    {
+      "id": "W496",
+      "severity": "med",
+      "area": "lang|prettyp",
+      "title": "PRETTYP LAST_N is byte length not line count",
+      "detail": "PRETTYP agent nest \u2192 LAST_N=238 (bytes) while multi-line evidence has many lines. Size gates using LAST_N as line count are wrong; use SYS LINES on captured pretty string for line inventory.",
+      "repro": "PRETTYP; PRINT LAST_N \u2192 238 bytes not ~15 lines"
+    },
+    {
+      "id": "W497",
+      "severity": "low",
+      "area": "lang|prettyp",
+      "title": "PRETTYP has no path needle / soft-miss form",
+      "detail": "Unlike *FLAT ops, PRETTYP always dumps whole plate. Ghost-key audit is SYS HAS pretty \"ghost\" after dump, not a soft PRETTYP miss. Empty \"{}\" is compact two-byte success not miss.",
+      "repro": "PRETTYP; no ghostpath form \u2014 HAS on LAST for key absence"
+    },
+    {
+      "id": "W498",
+      "severity": "med",
+      "area": "lang|print",
+      "title": "PRINT clobbers PRETTYP LAST before evidence WRITE",
+      "detail": "Reconfirmed W4: PRINT after PRETTYP loses pretty body. Agents must LET pretty_s = LAST immediately and WRITE pretty_s; SYS HAS LAST after PRINT is false friend.",
+      "repro": "PRETTYP; PRINT x; SYS HAS LAST agent \u2192 0"
+    },
+    {
+      "id": "W499",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META/STATUS omit trailing NL",
+      "detail": "Reconfirmed: STATUS last bag line and META od -c end without \\n.",
+      "repro": "od -c META.txt"
     }
   ],
   "workarounds": [
@@ -4112,7 +4144,12 @@
     "CHECKDEPS OK always 1 on miss (W492)",
     "HASDEPS LAST_N boolean vs DEPS_N (W493)",
     "CHECKDEPS LAST_N=0 success inverse of HASDEPS (W494)",
-    "DEPS_OK / DEPS_MISS bags for install plans"
+    "DEPS_OK / DEPS_MISS bags for install plans",
+    "PRETTYP/JSONPRETTY/PRETTYJSON plate evidence dump",
+    "LAST_N after PRETTYP is bytes not lines (W496)",
+    "no needle soft-miss form \u2014 HAS on pretty body (W497)",
+    "capture pretty_s before PRINT/EQS (W498/W4)",
+    "empty object compact {}"
   ],
   "issues_faced": [
     "iter268: agent_job=role_s false-friend first-hit for PATHBYVAL worker (W412) \u2014 seed agent_job=runner",
@@ -4160,8 +4197,11 @@
     "iter287: selftest still 455/610 CLI plate duals red (set\u2192SETF)",
     "iter288: first realworld 1302 CHECKDEPS; 10/10 green first pass",
     "iter288: CHECKDEPS OK=1 on miss is the main false friend",
-    "iter288: selftest 455/613 still CLI duals red"
+    "iter288: selftest 455/613 still CLI duals red",
+    "iter289: first realworld 1255 PRETTYP; 10/10 green first pass",
+    "iter289: dump writes EVIDENCE.txt 238B indented nest",
+    "iter289: selftest 455/615 CLI duals still red"
   ],
-  "commit": "221bc3cc",
-  "ts": "2026-08-10T06:58:58Z"
+  "commit": "pending",
+  "ts": "2026-08-10T07:24:06Z"
 }
