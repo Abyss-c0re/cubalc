@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 756,
-  "version": "1.15.783-usability",
-  "item": "TOPIC + cubalc topic one-plate discovery triad",
-  "item_id": 792,
-  "title": "TOPIC|TOPICCARD [topic] \u00b7 cubalc topic \u00b7 cubalc.topic.v1",
-  "commit": "70c4763871c5f865e10669bb83327facd178694c",
-  "summary": "one plate tips+forms+snip; agents skip three discovery calls. proof 1333 PASS.",
+  "iter": 757,
+  "version": "1.15.784-usability",
+  "item": "RUNSNIP + cubalc runsnip execute topic minis",
+  "item_id": 793,
+  "title": "RUNSNIP|SNIPRUN [topic] \u00b7 cubalc runsnip \u00b7 cubalc.runsnip.v1",
+  "commit": "5944de8555b33d9eebdb1b8afc42ea06bcbf84ca",
+  "summary": "execute curated SNIP mini one-shot; no temp paste. proof 1334 PASS.",
   "proofs": [
-    "1333_topic PASS",
-    "1333_cli_topic PASS"
+    "1334_runsnip PASS",
+    "1334_cli_runsnip PASS"
   ],
-  "when": "2026-08-10T13:20:19Z",
+  "when": "2026-08-10T13:26:30Z",
   "agent": "meaningful_iter_10m",
-  "sha": "70c4763871c5f865e10669bb83327facd178694c",
-  "note": "topic cap; TOPICCARD plate; triad productization"
+  "sha": "5944de8555b33d9eebdb1b8afc42ea06bcbf84ca",
+  "note": "runsnip cap; SNIPRUN fat; nested cubalc_run_source"
 }
