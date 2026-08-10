@@ -865,6 +865,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 835. ~~**`cubalc run --cwd` / `CUBALC_CWD`**~~ **done** (host chdir before body · SYS CHDIR dual · abs program path · proof 1375).
 836. ~~**`HASFLAGANY` / `NEEDFLAGANY` + CLI**~~ **done** (any-of multi --flag gate · HASFLAGALL twin · cubalc hasflagany · proof 1376).
 837. ~~**`cubalc run -E` / `--setenv KEY=VAL`**~~ **done** (inject process env after dotenv · SYS ENV SET dual · CLI wins · proof 1377).
+838. ~~**`cubalc run -U` / `--unsetenv KEY`**~~ **done** (clear process env after dotenv, before -E · SYS ENV UNSET dual · proof 1378).
 
 ## Tick protocol
 

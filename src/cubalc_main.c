@@ -1910,6 +1910,7 @@ int main(int argc, char **argv) {
      * Path: -L|--include-path|--lib-path DIR prepends CUBALC_INCLUDE_PATH for this run.
      * Dotenv: -F|--dotenv|--env-file PATH + CUBALC_DOTENV=a:b → SYS DOTENV before body.
      * Setenv: -E|--setenv KEY=VAL (repeatable) — process env inject after dotenv (CLI wins).
+     * Unsetenv: -U|--unsetenv KEY (repeatable) — clear keys after dotenv, before -E.
      * Cwd: --cwd|--cd|--chdir DIR + CUBALC_CWD — chdir before body (relative plates).
      * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older.
      * Forms: -C|--need-forms F1,F2 + CUBALC_REQUIRE_FORMS — fail if HELP catalog misses.
@@ -1924,6 +1925,7 @@ int main(int argc, char **argv) {
     int n_ipath = 0;
     int n_dotenv = 0;
     int n_setenv = 0;
+    int n_unsetenv = 0;
     long run_timeout_ms = 0;
     int run_timeout_cli = 0;
     long dotenv_keys = 0;
@@ -1932,6 +1934,7 @@ int main(int argc, char **argv) {
     char ipaths[8][512];
     char dotenv_paths[8][512];
     char setenv_kvs[32][384];
+    char unsetenv_keys[32][192];
     char run_cwd[512];
     char src_abs[1024];
     char req_ver[64];
@@ -1952,6 +1955,7 @@ int main(int argc, char **argv) {
     req_ready = 0;
     n_dotenv = 0;
     n_setenv = 0;
+    n_unsetenv = 0;
     dotenv_keys = 0;
     run_cwd[0] = 0;
     src_abs[0] = 0;
@@ -2228,6 +2232,35 @@ int main(int argc, char **argv) {
           snprintf(setenv_kvs[n_setenv++], sizeof setenv_kvs[0], "%s", argv[i] + 3);
         continue;
       }
+      /* -U KEY · --unsetenv · --env-unset · clear process env after dotenv, before -E */
+      if (!strcmp(argv[i], "-U") || !strcmp(argv[i], "--unsetenv") ||
+          !strcmp(argv[i], "--env-unset") || !strcmp(argv[i], "--unexport")) {
+        if (i + 1 >= argc) {
+          fprintf(stderr, "cubalc run: %s needs KEY name\n", argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        if (n_unsetenv < 32)
+          snprintf(unsetenv_keys[n_unsetenv++], sizeof unsetenv_keys[0], "%s", argv[++i]);
+        else
+          i++;
+        continue;
+      }
+      if (!strncmp(argv[i], "--unsetenv=", 11)) {
+        if (n_unsetenv < 32)
+          snprintf(unsetenv_keys[n_unsetenv++], sizeof unsetenv_keys[0], "%s", argv[i] + 11);
+        continue;
+      }
+      if (!strncmp(argv[i], "--env-unset=", 12)) {
+        if (n_unsetenv < 32)
+          snprintf(unsetenv_keys[n_unsetenv++], sizeof unsetenv_keys[0], "%s", argv[i] + 12);
+        continue;
+      }
+      if (!strncmp(argv[i], "-U", 2) && argv[i][2] == '=' ) {
+        if (n_unsetenv < 32)
+          snprintf(unsetenv_keys[n_unsetenv++], sizeof unsetenv_keys[0], "%s", argv[i] + 3);
+        continue;
+      }
       if (!strcmp(argv[i], "-e") || !strcmp(argv[i], "--expr") ||
           !strcmp(argv[i], "--code") || !strcmp(argv[i], "-c")) {
         const char *chunk;
@@ -2350,11 +2383,13 @@ int main(int argc, char **argv) {
               "       cubalc -I agent_boot -e 'STATUS'  # preload INCLUDE ONCE\n"
               "       cubalc -F .env -e 'SYS ENV NAME'  # dotenv KEY=VAL before body\n"
               "       cubalc -E FOO=bar -e 'SYS ENV FOO'  # inject env (after dotenv)\n"
+              "       cubalc -U SECRET -E SECRET=new -e '…'  # clear then inject\n"
               "       cubalc --cwd state -e 'SYS LIST .\\nPRINT LAST'  # chdir before body\n"
               "       multiple -e join with newline; \\n \\t \\\\ escapes\n"
               "       -I/--include/--preload LIB  · CUBALC_PRELOAD=a:b\n"
               "       -F/--dotenv/--env-file PATH · CUBALC_DOTENV=a:b (SYS DOTENV dual)\n"
               "       -E|--setenv KEY=VAL · inject process env after dotenv (SYS ENV SET dual)\n"
+              "       -U|--unsetenv KEY · clear env after dotenv, before -E (SYS ENV UNSET dual)\n"
               "       --cwd|--cd|--chdir DIR · CUBALC_CWD (SYS CHDIR dual before body)\n"
               "       -L/--include-path DIR · prepends CUBALC_INCLUDE_PATH\n"
               "       -R/--require-version X.Y · CUBALC_REQUIRE_VERSION floor\n"
@@ -2452,7 +2487,38 @@ int main(int argc, char **argv) {
       unsetenv("CUBALC_DOTENV_ACTIVE");
       unsetenv("CUBALC_DOTENV_KEYS");
     }
-    /* Inject KEY=VAL pairs after dotenv so CLI -E wins (dual of SYS ENV SET). */
+    /* Clear KEY names after dotenv, before -E (dual of SYS ENV UNSET).
+     * Idempotent: unsetenv of missing keys is success. */
+    if (n_unsetenv > 0) {
+      int ui;
+      char ubag[2048];
+      size_t uo = 0;
+      ubag[0] = 0;
+      for (ui = 0; ui < n_unsetenv; ui++) {
+        const char *k = unsetenv_keys[ui];
+        size_t kl;
+        if (!k || !k[0]) continue;
+        unsetenv(k);
+        kl = strlen(k);
+        if (uo && uo + 1 < sizeof ubag) ubag[uo++] = '\n';
+        if (uo + kl < sizeof ubag) {
+          memcpy(ubag + uo, k, kl);
+          uo += kl;
+          ubag[uo] = 0;
+        }
+      }
+      {
+        char nb[16];
+        snprintf(nb, sizeof nb, "%d", n_unsetenv);
+        setenv("CUBALC_UNSETENV_N", nb, 1);
+      }
+      if (ubag[0])
+        setenv("CUBALC_UNSETENV_KEYS", ubag, 1);
+    } else {
+      unsetenv("CUBALC_UNSETENV_N");
+      unsetenv("CUBALC_UNSETENV_KEYS");
+    }
+    /* Inject KEY=VAL pairs after dotenv/unset so CLI -E wins (dual of SYS ENV SET). */
     if (n_setenv > 0) {
       int si;
       char serr[200];
@@ -4124,6 +4190,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_run_dotenv", "programs/proof/1374_cli_run_dotenv.sh", "run -F/--dotenv/CUBALC_DOTENV KEY=VAL before body"},
       {"cli_run_cwd", "programs/proof/1375_cli_run_cwd.sh", "run --cwd/CUBALC_CWD chdir before body"},
       {"cli_run_setenv", "programs/proof/1377_cli_run_setenv.sh", "run -E/--setenv KEY=VAL inject after dotenv"},
+      {"cli_run_unsetenv", "programs/proof/1378_cli_run_unsetenv.sh", "run -U/--unsetenv KEY clear before -E"},
       {"listincludes", "programs/proof/1261_listincludes.cubalc", "LISTINCLUDES/HASINCLUDE loaded module audit"},
       {"cli_listincludes", "programs/proof/1261_cli_listincludes.sh", "LISTINCLUDES after run -I preload"},
       {"cli_run_includes", "programs/proof/1262_cli_run_includes.sh", "run plate includes_n/includes LISTINCLUDES dual"},
@@ -9564,6 +9631,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"CUBALC_DOTENV_ACTIVE", "", 0, "set by run to effective dotenv paths after successful load"},
       {"CUBALC_SETENV_N", "", 0, "count of -E/--setenv KEY=VAL injects applied by run"},
       {"CUBALC_SETENV_KEYS", "", 0, "newline bag of keys set by run -E/--setenv"},
+      {"CUBALC_UNSETENV_N", "", 0, "count of -U/--unsetenv KEY clears applied by run"},
+      {"CUBALC_UNSETENV_KEYS", "", 0, "newline bag of keys cleared by run -U/--unsetenv"},
       {"CUBALC_CWD", "", 0, "chdir before run body (--cwd/--cd dual · relative plates)"},
       {"CUBALC_CWD_ACTIVE", "", 0, "set by run to absolute cwd after successful --cwd"},
       {"CUBALC_REQUIRE_VERSION", "", 0, "x.y[.z] floor for run (-R dual · fail if runtime older)"},
@@ -19560,6 +19629,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"CUBALC_DOTENV_ACTIVE", "effective dotenv paths after load"},
       {"CUBALC_SETENV_N", "count of run -E/--setenv injects"},
       {"CUBALC_SETENV_KEYS", "keys bag from run -E/--setenv"},
+      {"CUBALC_UNSETENV_N", "count of run -U/--unsetenv clears"},
+      {"CUBALC_UNSETENV_KEYS", "keys bag from run -U/--unsetenv"},
       {"CUBALC_CWD", "chdir before run body (--cwd dual)"},
       {"CUBALC_CWD_ACTIVE", "absolute cwd after --cwd"},
       {"CUBALC_REQUIRE_VERSION", "x.y floor for run (-R dual)"},
