@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 754,
-  "version": "1.15.781-usability",
-  "item": "RELATED + cubalc related form neighbor bags",
-  "item_id": 790,
-  "title": "RELATED|SEEALSO form \u00b7 cubalc related \u00b7 cubalc.related.v1",
-  "commit": "c5003de5e77c5576ad6aa9073bb8c6740683ca3c",
-  "summary": "form \u2192 related form-name bag dual of FORMSFOR; complements FORMHINT. proof 1331 PASS.",
+  "iter": 755,
+  "version": "1.15.782-usability",
+  "item": "SNIP + cubalc snip topic mini runnable sources",
+  "item_id": 791,
+  "title": "SNIP|SNIPPET [topic] \u00b7 cubalc snip \u00b7 cubalc.snip.v1",
+  "commit": "9a7074325e9eae092ab5fbb5baaeecb8b1d9a9e2",
+  "summary": "topic \u2192 mini runnable source; triad with TIPS+FORMSFOR. proof 1332 PASS.",
   "proofs": [
-    "1331_related PASS",
-    "1331_cli_related PASS"
+    "1332_snip PASS",
+    "1332_cli_snip PASS"
   ],
-  "when": "2026-08-10T12:58:44Z",
+  "when": "2026-08-10T13:09:26Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c5003de5e77c5576ad6aa9073bb8c6740683ca3c",
-  "note": "related HASFORM; seealso SETP; TIPS/FORMSFOR topic lex_next fix"
+  "sha": "9a7074325e9eae092ab5fbb5baaeecb8b1d9a9e2",
+  "note": "snip cap; SNIPPET plate; thrash restore then ship"
 }
