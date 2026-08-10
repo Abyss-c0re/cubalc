@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 767,
-  "version": "1.15.794-usability",
-  "item": "FORMGUIDE + cubalc formguide form playbook",
-  "item_id": 803,
-  "title": "FORMGUIDE|GUIDEFORM form · cubalc formguide · cubalc.formguide.v1",
-  "commit": "b2256e41939e16add67b7d07fef709d0a1f17320",
-  "summary": "FORMHINT+FORMTOPICS+first GUIDE one-shot; form→playbook. proof 1344 PASS.",
+  "iter": 768,
+  "version": "1.15.795-usability",
+  "item": "START + cubalc onboard agent onboarding plate",
+  "item_id": 804,
+  "title": "START|ONBOARD · cubalc onboard · cubalc.start.v1",
+  "commit": "ee81bdc377804a0a39e662a16bb4bd75ca7c688e",
+  "summary": "agent first-call plate: topics+next+hint; CLI start stays cookbook. proof 1345 PASS.",
   "proofs": [
-    "1344_formguide PASS",
-    "1344_cli_formguide PASS"
+    "1345_start PASS",
+    "1345_cli_onboard PASS"
   ],
-  "when": "2026-08-10T15:28:12Z",
+  "when": "2026-08-10T15:37:08Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b2256e41939e16add67b7d07fef709d0a1f17320",
-  "note": "formguide HASFORM→cap; INCLUDE multi-topic first general"
+  "sha": "ee81bdc377804a0a39e662a16bb4bd75ca7c688e",
+  "note": "onboard/welcome CLI; START_NEXT/START_TOPICS bags; chain GUIDE"
 }
