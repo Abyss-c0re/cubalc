@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 759,
-  "version": "1.15.786-usability",
-  "item": "ERRTIPS + cubalc errtips recovery tip bags",
-  "item_id": 795,
-  "title": "ERRTIPS|FIXTIPS [err] \u00b7 cubalc errtips \u00b7 cubalc.errtips.v1",
-  "commit": "426a81ba2acc4181e220029864054da7708c1d67",
-  "summary": "LAST_ERR\u2192tip bag + inferred topic; chain TIPS/TOPIC/RUNSNIP. proof 1336 PASS.",
+  "iter": 760,
+  "version": "1.15.787-usability",
+  "item": "ERRRUN + cubalc errrun classify+RUNSNIP one-shot",
+  "item_id": 796,
+  "title": "ERRRUN|RECOVERSNIP [err] \u00b7 cubalc errrun \u00b7 cubalc.errrun.v1",
+  "commit": "a186fb51578c85d18495f3ad0f8504974d3be37f",
+  "summary": "ERRTIPS classify + RUNSNIP topic; soft-fail \u2192 prove recovery surface. proof 1337 PASS.",
   "proofs": [
-    "1336_errtips PASS",
-    "1336_cli_errtips PASS"
+    "1337_errrun PASS",
+    "1337_cli_errrun PASS"
   ],
-  "when": "2026-08-10T13:53:56Z",
+  "when": "2026-08-10T14:10:07Z",
   "agent": "meaningful_iter_10m",
-  "sha": "426a81ba2acc4181e220029864054da7708c1d67",
-  "note": "errtips lib/cap/p2p/run; FIXTIPS fat; report-only"
+  "sha": "a186fb51578c85d18495f3ad0f8504974d3be37f",
+  "note": "errrun lib/cap/p2p; thrash restore then ship"
 }
