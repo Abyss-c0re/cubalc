@@ -37246,6 +37246,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FINDI", "SYS FINDI|INDEXI|FIND I hay needle — case-insensitive index → LAST_N (-1 miss)"},
       {"SYS INDEXI", "SYS INDEXI hay needle — alias of SYS FINDI"},
       {"EACH LINE", "EACH LINE [as name] [IN str|obj field] … END — walk newline fields (LIST/GREP/bag field)"},
+      {"EACH LIB", "EACH LIB [AS name] [MATCH needle] … END — walk sorted lib stems · filter optional · no MATCHLIBS+EACH LINE"},
       {"EACH KEY", "EACH KEY|KEYS [AS name] OF|FROM plate|LAST|PLATE [path] … END — walk plate keys · nest path ok · VALUE bound"},
       {"EACH KEYS", "EACH KEYS alias of EACH KEY"},
       {"EACH PLATEKEY", "EACH PLATEKEY alias of EACH KEY"},

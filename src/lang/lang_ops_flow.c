@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <dirent.h>
 
 static ClassDef *oop_find_class(VM *vm, const char *name){
   int i;
@@ -18618,10 +18619,204 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
                    kw(&L->cur,"FLATPATHS")||kw(&L->cur,"PATHLEAF")||kw(&L->cur,"PATHLEAVES")||
                    kw(&L->cur,"LEAFKV")||kw(&L->cur,"FLATLEAF")||kw(&L->cur,"MATCHLEAF")||
                    kw(&L->cur,"MATCHLEAVES"));
-    if (!is_cell && !is_cube && !is_line && !is_obj && !is_prop && !is_meth && !is_key && !is_flat){
-      fail(vm,"EACH CUBE|CELL|LINE|PROP|METHOD|OBJ|KEY|KEYNEST|FLAT as name"); return -1;
+    int is_lib = (kw(&L->cur,"LIB")||kw(&L->cur,"LIBS")||kw(&L->cur,"STEM")||
+                  kw(&L->cur,"STEMS")||kw(&L->cur,"MODULE")||kw(&L->cur,"MODULES")||
+                  kw(&L->cur,"LIBSTEM")||kw(&L->cur,"LIBSTEMS")||kw(&L->cur,"STDLIB")||
+                  kw(&L->cur,"MATCHLIB")||kw(&L->cur,"MATCHLIBS"));
+    if (!is_cell && !is_cube && !is_line && !is_obj && !is_prop && !is_meth && !is_key &&
+        !is_flat && !is_lib){
+      fail(vm,"EACH CUBE|CELL|LINE|PROP|METHOD|OBJ|KEY|KEYNEST|FLAT|LIB as name"); return -1;
     }
     lex_next(L);
+    if (is_lib){
+      /* EACH LIB [AS name] [MATCH|FILTER needle] … END
+       * Walk sorted lib stems (programs/lib + CUBALC_INCLUDE_PATH).
+       * Optional MATCH filter (case-insensitive stem/path) · no filter = all stems.
+       * Binds name (default LIB) + LINE/STEM · IT 0-based · LIB_N 1-based · EACHLIBS_N.
+       * Usability: no MATCHLIBS/LISTLIBS + EACH LINE glue for INCLUDE/recipe walks. */
+      char lname[48], needle[96], fup[96];
+      char stems[96][96];
+      int nstem = 0, i, j;
+      long idx = 0;
+      size_t a;
+      DIR *d;
+      struct dirent *ent;
+      const char *ip;
+      snprintf(lname, sizeof lname, "LIB");
+      needle[0] = 0;
+      fup[0] = 0;
+      if (kw(&L->cur,"AS")||kw(&L->cur,"->")){
+        lex_next(L);
+        if (L->cur.kind!=TK_IDENT){ fail(vm,"EACH LIB as name"); return -1; }
+        snprintf(lname, sizeof lname, "%s", L->cur.text); lex_next(L);
+      } else if (L->cur.kind==TK_IDENT &&
+                 strcmp(L->cur.text,"MATCH")!=0 && strcmp(L->cur.text,"FILTER")!=0 &&
+                 strcmp(L->cur.text,"WHERE")!=0 && strcmp(L->cur.text,"WITH")!=0 &&
+                 strcmp(L->cur.text,"OF")!=0 && strcmp(L->cur.text,"IN")!=0 &&
+                 strcmp(L->cur.text,"FROM")!=0 && strcmp(L->cur.text,"END")!=0){
+        /* bare bind name if not a filter keyword */
+        snprintf(lname, sizeof lname, "%s", L->cur.text); lex_next(L);
+      }
+      if (kw(&L->cur,"MATCH")||kw(&L->cur,"FILTER")||kw(&L->cur,"WHERE")||
+          kw(&L->cur,"WITH")||kw(&L->cur,"OF")||kw(&L->cur,"IN")||kw(&L->cur,"FROM")||
+          kw(&L->cur,"LIKE")||kw(&L->cur,"FOR")){
+        lex_next(L);
+        if (L->cur.kind == TK_STR) {
+          snprintf(needle, sizeof needle, "%s", L->cur.text);
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(needle, sizeof needle, "%s", vv->sval);
+          else if (strcmp(L->cur.text, "LAST") == 0)
+            snprintf(needle, sizeof needle, "%s", vm->last_str);
+          else
+            snprintf(needle, sizeof needle, "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+      if (needle[0]) {
+        for (a = 0; needle[a] && a + 1 < sizeof fup; a++) {
+          char c = needle[a];
+          if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+          fup[a] = c;
+        }
+        fup[a] = 0;
+      }
+      {
+        char dirs[10][160];
+        int nd = 0, di;
+        snprintf(dirs[nd++], sizeof dirs[0], "%s", "programs/lib");
+        ip = getenv("CUBALC_INCLUDE_PATH");
+        if (ip && ip[0]) {
+          const char *p = ip;
+          while (*p && nd < 10) {
+            char dir[160];
+            size_t len = 0;
+            while (*p == ':' || *p == ' ' || *p == '\t') p++;
+            if (!*p) break;
+            while (p[len] && p[len] != ':' && len + 1 < sizeof dir) {
+              dir[len] = p[len];
+              len++;
+            }
+            dir[len] = 0;
+            p += len;
+            if (dir[0])
+              snprintf(dirs[nd++], sizeof dirs[0], "%s", dir);
+          }
+        }
+        for (di = 0; di < nd; di++) {
+          d = opendir(dirs[di]);
+          if (!d) continue;
+          while ((ent = readdir(d)) != NULL && nstem < 96) {
+            size_t len = strlen(ent->d_name);
+            char stem[96], hay[192];
+            int dup = 0;
+            size_t b;
+            if (len < 8 || strcmp(ent->d_name + len - 7, ".cubalc") != 0)
+              continue;
+            if (ent->d_name[0] == '.') continue;
+            if (len - 7 >= sizeof stem) continue;
+            memcpy(stem, ent->d_name, len - 7);
+            stem[len - 7] = 0;
+            for (j = 0; j < nstem; j++) {
+              if (strcmp(stems[j], stem) == 0) { dup = 1; break; }
+            }
+            if (dup) continue;
+            if (fup[0]) {
+              snprintf(hay, sizeof hay, "%s/%s", dirs[di], ent->d_name);
+              for (b = 0; hay[b]; b++)
+                if (hay[b] >= 'A' && hay[b] <= 'Z')
+                  hay[b] = (char)(hay[b] - 'A' + 'a');
+              {
+                char stem_l[96];
+                for (b = 0; stem[b] && b + 1 < sizeof stem_l; b++) {
+                  char c = stem[b];
+                  if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+                  stem_l[b] = c;
+                }
+                stem_l[b] = 0;
+                if (!strstr(stem_l, fup) && !strstr(hay, fup))
+                  continue;
+              }
+            }
+            snprintf(stems[nstem++], sizeof stems[0], "%s", stem);
+          }
+          closedir(d);
+        }
+      }
+      for (i = 1; i < nstem; i++) {
+        char tmp[96];
+        snprintf(tmp, sizeof tmp, "%s", stems[i]);
+        j = i;
+        while (j > 0 && strcmp(stems[j - 1], tmp) > 0) {
+          snprintf(stems[j], sizeof stems[0], "%s", stems[j - 1]);
+          j--;
+        }
+        snprintf(stems[j], sizeof stems[0], "%s", tmp);
+      }
+      skip_nl(L);
+      {
+        Lex body_start = *L;
+        int depth = 1;
+        while (L->cur.kind != TK_EOF) {
+          if (block_scan_step(L, &depth, 0)) break;
+        }
+        if (depth != 0) { fail(vm, "EACH LIB without END"); return -1; }
+        var_set_num(vm, "EACHLIBS_N", nstem);
+        var_set_num(vm, "MATCHLIBS_N", nstem);
+        if (needle[0]) {
+          var_set_str(vm, "MATCHLIBS_FILTER", needle);
+          var_set_str(vm, "EACHLIBS_FILTER", needle);
+        } else {
+          var_set_str(vm, "EACHLIBS_FILTER", "");
+        }
+        for (i = 0; i < nstem && !vm->fatal && !vm->halt; i++) {
+          var_set_str(vm, lname, stems[i]);
+          var_set_str(vm, "LIB", stems[i]);
+          var_set_str(vm, "LINE", stems[i]);
+          var_set_str(vm, "STEM", stems[i]);
+          var_set_num(vm, "IT", idx);
+          var_set_num(vm, "IDX", idx);
+          var_set_num(vm, "LIB_N", idx + 1);
+          var_set_num(vm, "LINE_N", idx + 1);
+          var_set_num(vm, "OK", 1);
+          vm->break_loop = 0;
+          vm->continue_loop = 0;
+          {
+            Lex body = body_start;
+            if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+          }
+          if (vm->break_loop) { vm->break_loop = 0; break; }
+          vm->continue_loop = 0;
+          idx++;
+        }
+        if (kw(&L->cur, "END")) lex_next(L);
+        var_set_num(vm, "LAST_N", nstem);
+        var_set_num(vm, "EACH_N", nstem);
+        var_set_num(vm, "OK", 1);
+        {
+          char bag[4096];
+          size_t o = 0;
+          bag[0] = 0;
+          for (i = 0; i < nstem; i++) {
+            size_t ln = strlen(stems[i]);
+            if (i > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+            if (o + ln < sizeof bag) {
+              memcpy(bag + o, stems[i], ln);
+              o += ln;
+            }
+            bag[o] = 0;
+          }
+          var_set_str(vm, "LAST", bag);
+          var_set_str(vm, "EACHLIBS", bag);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+          vm->last_n = nstem;
+        }
+        bump(vm);
+        return 1;
+      }
+    }
     if (is_key){
       /* EACH KEY|KEYS [AS name] OF|FROM plate|LAST|PLATE [path] ... END
        * EACH KEYNEST|NESTKEY [AS name] nest [FROM plate] ... END

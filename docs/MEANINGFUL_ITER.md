@@ -801,6 +801,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 771. ~~**`INCLUDE NTH` / `LASTMATCH`**~~ **done** (index + last sorted filter pick+include · completes MATCH triad · no NTHLIB/LASTLIB+INCLUDE LAST glue).
 772. ~~**`COUNTMATCHLIBS` + CLI `picklib`/`hasmatchlibs`/`needmatchlibs`**~~ **done** (count without bag · shell duals cubalc.libmatch.v1 · agent filter gates).
 773. ~~**`HASCOUNTMATCHLIBS` / `NEEDCOUNTMATCHLIBS`**~~ **done** (soft/hard min match-count gates · install “need ≥n libs” without COUNT+IF glue).
+774. ~~**`EACH LIB` [MATCH needle]**~~ **done** (walk sorted lib stems · optional filter · no MATCHLIBS+EACH LINE glue).
 
 ## Tick protocol
 

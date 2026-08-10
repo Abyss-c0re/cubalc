@@ -1,0 +1,66 @@
+# EACH LIB [MATCH needle] — walk sorted lib stems
+
+LET n = 0
+EACH LIB MATCH fat
+  LET n = n + 1
+  IF n == 1
+    ASSERT LIB == "fat_boot"
+  END
+  IF n == 2
+    ASSERT LIB == "fat_session"
+  END
+END
+ASSERT n == 2
+ASSERT EACHLIBS_N == 2
+ASSERT MATCHLIBS_N == 2
+
+# all libs
+LET n = 0
+EACH LIB
+  LET n = n + 1
+END
+ASSERT n >= 15
+ASSERT EACHLIBS_N >= 15
+
+# plate filter + STEM/LINE dual binds
+LET first = ""
+LET last = ""
+LET n = 0
+EACH LIB MATCH plate
+  LET n = n + 1
+  IF n == 1
+    LET first = STEM
+  END
+  LET last = LINE
+END
+ASSERT first == "plate_boot"
+ASSERT last == "plate_uniform"
+ASSERT n >= 10
+
+# custom bind name
+LET n = 0
+LET saw_time = 0
+LET saw_var = 0
+EACH LIB AS x MATCH guard
+  LET n = n + 1
+  IF x == "time_guard"
+    LET saw_time = 1
+  END
+  IF x == "var_guard"
+    LET saw_var = 1
+  END
+END
+ASSERT n == 2
+ASSERT saw_time == 1
+ASSERT saw_var == 1
+
+# empty filter soft empty walk
+LET n = 0
+EACH LIB MATCH no_such_lib_xyz_zzz
+  LET n = n + 1
+END
+ASSERT n == 0
+ASSERT EACHLIBS_N == 0
+
+PASS
+PRINT "1315_each_lib: PASS"
