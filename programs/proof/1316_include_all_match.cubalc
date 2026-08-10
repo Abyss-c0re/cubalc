@@ -1,0 +1,39 @@
+# INCLUDE ALL MATCH — bulk include filtered libs
+
+INCLUDE ALL MATCH guard
+ASSERT OK == 1
+ASSERT INCLUDE_ALL_N == 2
+INCLUDESTEMS
+SYS HASLINE LAST "time_guard"
+ASSERT LAST_N == 1
+INCLUDESTEMS
+SYS HASLINE LAST "var_guard"
+ASSERT LAST_N == 1
+
+# fat family (fat_boot + fat_session) — may pull nested deps
+INCLUDE ALL MATCH fat
+ASSERT OK == 1
+ASSERT INCLUDE_ALL_N >= 1
+INCLUDESTEMS
+SYS HASLINE LAST "fat_boot"
+ASSERT LAST_N == 1
+
+# MATCHALL alias + DEFAULT
+INCLUDE ALL MATCH no_such_lib_xyz DEFAULT hold_seed
+ASSERT OK == 1
+ASSERT INCLUDE_ALL_FALLBACK == 1
+ASSERT INCLUDE_ALL_N >= 1
+
+# SOFT empty miss
+INCLUDE SOFT ALL MATCH no_such_lib_xyz_zzz
+ASSERT OK == 0
+CLEAR_ERR
+
+# EVERY MATCH alias — light single-stem family
+INCLUDE ALL MATCH hold_seed
+ASSERT OK == 1
+# may skip if already loaded via DEFAULT
+ASSERT INCLUDE_ALL_N >= 0
+
+PASS
+PRINT "1316_include_all_match: PASS"

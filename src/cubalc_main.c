@@ -3235,6 +3235,8 @@ int main(int argc, char **argv) {
       {"cli_hascountmatchlibs", "programs/proof/1314_cli_hascountmatchlibs.sh", "min count gates soft/hard + forms"},
       {"each_lib", "programs/proof/1315_each_lib.cubalc", "EACH LIB MATCH walk sorted lib stems without MATCHLIBS+EACH LINE"},
       {"cli_each_lib", "programs/proof/1315_cli_each_lib.sh", "EACH LIB MATCH plate/fat + forms"},
+      {"include_all_match", "programs/proof/1316_include_all_match.cubalc", "INCLUDE ALL MATCH bulk include filtered libs"},
+      {"cli_include_all_match", "programs/proof/1316_cli_include_all_match.sh", "INCLUDE ALL MATCH guard/fat + DEFAULT + SOFT"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3734,7 +3736,7 @@ int main(int argc, char **argv) {
       {"NEEDFILLPFILE", "flow", "NEEDFILLPFILE|FILLPFILE STRICT tmpl [out] — fail if {{key}} missing · no write"},
       {"SUBSTPLATEFILE", "flow", "SUBSTPLATEFILE alias of FILLPFILE"},
       {"EXPANDPFILE", "flow", "EXPANDPFILE alias of FILLPFILE"},
-      {"INCLUDE", "flow", "INCLUDE [ONCE][SOFT] path|MATCH|NTH idx|LASTMATCH needle [DEFAULT] — filter pick"},
+      {"INCLUDE", "flow", "INCLUDE [ONCE][SOFT] path|MATCH|NTH|LASTMATCH|ALL MATCH needle [DEFAULT]"},
       {"LISTINCLUDES", "flow", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N"},
       {"LISTLIBS", "flow", "LISTLIBS|LIBSTEMS short names from programs/lib · dual of cubalc libs"},
       {"MATCHLIBS", "flow", "MATCHLIBS|FILTERLIBS needle bag of stems · dual of cubalc libs [filter]"},
@@ -12943,7 +12945,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"HOLD_FLASH", "law", "device/mesh-join only · default 1 · not language PLUG"},
       {"CUBE", "core", "place cube"},
       {"PLUG", "core", "wire cubes · denied only if HOLD_FLASH 0"},
-      {"INCLUDE", "flow", "INCLUDE [ONCE][SOFT] path|MATCH|NTH|LASTMATCH needle [DEFAULT stem]"},
+      {"INCLUDE", "flow", "INCLUDE [ONCE][SOFT] path|MATCH|NTH|LASTMATCH|ALL MATCH needle"},
       {"LISTINCLUDES", "flow", "LISTINCLUDES|LOADED bag of included paths · INCLUDE_N"},
       {"INCLUDESTEMS", "flow", "INCLUDESTEMS short-name bag from loaded modules"},
       {"LISTPRELOAD", "flow", "LISTPRELOAD -I preload short-name bag"},
@@ -13653,7 +13655,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"HOLD_FLASH", "law", "device/mesh-join only · default 1 · not language PLUG"},
       {"CUBE", "core", "place cube · CUBE name ROLE host|body"},
       {"PLUG", "core", "wire cubes · denied only if HOLD_FLASH 0"},
-      {"INCLUDE", "flow", "INCLUDE [ONCE][SOFT] path|MATCH|NTH idx|LASTMATCH needle [DEFAULT] — filter pick"},
+      {"INCLUDE", "flow", "INCLUDE [ONCE][SOFT] path|MATCH|NTH|LASTMATCH|ALL MATCH needle [DEFAULT]"},
       {"LISTINCLUDES", "flow", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N"},
       {"LISTLIBS", "flow", "LISTLIBS|LIBSTEMS short names from programs/lib · dual of cubalc libs"},
       {"MATCHLIBS", "flow", "MATCHLIBS|FILTERLIBS needle bag of stems · dual of cubalc libs [filter]"},
@@ -15154,7 +15156,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "\n"
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
-      "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|NTH|LASTMATCH\n"
+      "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
       "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
       "    LISTLIBS|MATCHLIBS|COUNTMATCHLIBS|HASCOUNTMATCHLIBS|NEEDCOUNTMATCHLIBS|PICKLIB|HASLIB|RECIPE\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"

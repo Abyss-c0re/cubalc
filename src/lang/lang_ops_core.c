@@ -36625,7 +36625,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXPLAIN", "EXPLAIN alias of WHY"},
       {"WHYERR", "WHYERR alias of WHY"},
       {"IDENTITY", "IDENTITY — cubalc.identity.v1 plate (user@host:pid + vars)"},
-      {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname|LAST|MATCH|NTH idx|LASTMATCH needle [DEFAULT stem] — filter pick+include · SOFT MISS"},
+      {"INCLUDE", "INCLUDE [ONCE][SOFT] path|libname|MATCH|NTH|LASTMATCH|ALL MATCH needle [DEFAULT] — filter pick/bulk · SOFT MISS"},
       {"LISTINCLUDES", "LISTINCLUDES|INCLUDES|LOADED — bag of resolved INCLUDE paths · INCLUDE_N (after -I/INCLUDE)"},
       {"INCLUDES", "INCLUDES alias of LISTINCLUDES"},
       {"LOADED", "LOADED alias of LISTINCLUDES"},
