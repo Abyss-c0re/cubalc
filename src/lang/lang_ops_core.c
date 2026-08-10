@@ -36639,6 +36639,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NEEDMATCHLIBS", "NEEDMATCHLIBS|NEEDLIBS needle — fail-fast if no lib matches filter · install gate"},
       {"COUNTMATCHLIBS", "COUNTMATCHLIBS|COUNTLIBS needle — match count → LAST_N without bag · dual of MATCHLIBS_N"},
       {"COUNTLIBS", "COUNTLIBS alias of COUNTMATCHLIBS"},
+      {"HASCOUNTMATCHLIBS", "HASCOUNTMATCHLIBS|HASCOUNTLIBS min needle — soft 0|1 if match count ≥ min"},
+      {"NEEDCOUNTMATCHLIBS", "NEEDCOUNTMATCHLIBS|NEEDCOUNTLIBS min needle — fail-fast if match count < min"},
       {"PICKLIB", "PICKLIB|FIRSTLIB needle [OR fallback] — first matching stem · INCLUDE without MATCHLIBS+NTH"},
       {"FIRSTLIB", "FIRSTLIB alias of PICKLIB"},
       {"NTHLIB", "NTHLIB idx needle [OR fallback] — 0-based Nth matching stem · INCLUDE without MATCHLIBS+NTH"},
@@ -38071,10 +38073,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (!err[0] && okv)
       snprintf(hintbuf, sizeof hintbuf, "ok — no sticky LAST_ERR");
     else if (strstr(err, "NEEDMATCHLIBS") || strstr(err, "HASMATCHLIBS") ||
+             strstr(err, "NEEDCOUNTMATCHLIBS") || strstr(err, "HASCOUNTMATCHLIBS") ||
+             strstr(err, "COUNTMATCHLIBS") ||
              strstr(err, "NTHLIB") || strstr(err, "LASTLIB") ||
              strstr(err, "PICKLIB"))
       snprintf(hintbuf, sizeof hintbuf,
-               "MATCHLIBS · cubalc libs [filter] · PICKLIB/NTHLIB/LASTLIB · install libs");
+               "MATCHLIBS · COUNTMATCHLIBS · cubalc libs [filter] · picklib · install libs");
     else if (strstr(err, "NEEDDEPS") || strstr(err, "HASDEPS") ||
              strstr(err, "CHECKDEPS") || strstr(err, "DEPS_MISS"))
       snprintf(hintbuf, sizeof hintbuf,

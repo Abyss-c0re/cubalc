@@ -3231,6 +3231,8 @@ int main(int argc, char **argv) {
       {"cli_include_nth_last", "programs/proof/1312_cli_include_nth_last.sh", "INCLUDE NTH/LASTMATCH plate + DEFAULT + forms"},
       {"countmatchlibs", "programs/proof/1313_countmatchlibs.cubalc", "COUNTMATCHLIBS count without bag materialize"},
       {"cli_libmatch", "programs/proof/1313_cli_libmatch.sh", "cubalc picklib/countmatchlibs/hasmatchlibs/needmatchlibs CLI"},
+      {"hascountmatchlibs", "programs/proof/1314_hascountmatchlibs.cubalc", "HASCOUNTMATCHLIBS/NEEDCOUNTMATCHLIBS min count gates"},
+      {"cli_hascountmatchlibs", "programs/proof/1314_cli_hascountmatchlibs.sh", "min count gates soft/hard + forms"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3738,6 +3740,8 @@ int main(int argc, char **argv) {
       {"NEEDMATCHLIBS", "flow", "NEEDMATCHLIBS needle fail-fast if no match · install gate"},
       {"COUNTMATCHLIBS", "flow", "COUNTMATCHLIBS|COUNTLIBS needle match count → LAST_N without bag"},
       {"COUNTLIBS", "flow", "COUNTLIBS alias of COUNTMATCHLIBS"},
+      {"HASCOUNTMATCHLIBS", "flow", "HASCOUNTMATCHLIBS min needle soft 0|1 if count ≥ min"},
+      {"NEEDCOUNTMATCHLIBS", "flow", "NEEDCOUNTMATCHLIBS min needle fail if count < min"},
       {"PICKLIB", "flow", "PICKLIB|FIRSTLIB needle [OR fallback] first matching stem for INCLUDE"},
       {"FIRSTLIB", "flow", "FIRSTLIB alias of PICKLIB"},
       {"NTHLIB", "flow", "NTHLIB idx needle [OR fallback] 0-based Nth matching stem for INCLUDE"},
@@ -13654,6 +13658,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"NEEDMATCHLIBS", "flow", "NEEDMATCHLIBS needle fail-fast if no match · install gate"},
       {"COUNTMATCHLIBS", "flow", "COUNTMATCHLIBS|COUNTLIBS needle match count → LAST_N without bag"},
       {"COUNTLIBS", "flow", "COUNTLIBS alias of COUNTMATCHLIBS"},
+      {"HASCOUNTMATCHLIBS", "flow", "HASCOUNTMATCHLIBS min needle soft 0|1 if count ≥ min"},
+      {"NEEDCOUNTMATCHLIBS", "flow", "NEEDCOUNTMATCHLIBS min needle fail if count < min"},
       {"PICKLIB", "flow", "PICKLIB|FIRSTLIB needle [OR fallback] first matching stem for INCLUDE"},
       {"FIRSTLIB", "flow", "FIRSTLIB alias of PICKLIB"},
       {"NTHLIB", "flow", "NTHLIB idx needle [OR fallback] 0-based Nth matching stem for INCLUDE"},
@@ -15145,7 +15151,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|NTH|LASTMATCH\n"
       "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|MATCHLIBS|COUNTMATCHLIBS|HASMATCHLIBS|NEEDMATCHLIBS|PICKLIB|NTHLIB|LASTLIB|HASLIB|RECIPE\n"
+      "    LISTLIBS|MATCHLIBS|COUNTMATCHLIBS|HASCOUNTMATCHLIBS|NEEDCOUNTMATCHLIBS|PICKLIB|HASLIB|RECIPE\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"

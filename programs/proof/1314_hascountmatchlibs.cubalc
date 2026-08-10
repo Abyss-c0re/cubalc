@@ -1,0 +1,39 @@
+# HASCOUNTMATCHLIBS / NEEDCOUNTMATCHLIBS — min match-count gates
+
+HASCOUNTMATCHLIBS 1 plate
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASCOUNTMATCHLIBS_N >= 10
+ASSERT HASCOUNTMATCHLIBS_MIN == 1
+
+HASCOUNTMATCHLIBS 2 fat
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASCOUNTMATCHLIBS_N == 2
+
+NEEDCOUNTMATCHLIBS 2 fat
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# soft fail: need 50 plate libs
+HASCOUNTMATCHLIBS 50 plate
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT HASCOUNTMATCHLIBS_N >= 10
+CLEAR_ERR
+
+# soft miss zero matches
+HASCOUNTMATCHLIBS 1 no_such_lib_xyz_zzz
+ASSERT OK == 0
+CLEAR_ERR
+
+# default min=1 when only needle (numeric parse: if needle starts as ident)
+HASCOUNTMATCHLIBS agent
+ASSERT OK == 1
+
+# COUNTLIBS alias path still works after gates
+COUNTMATCHLIBS fat
+ASSERT LAST_N == 2
+
+PASS
+PRINT "1314_hascountmatchlibs: PASS"

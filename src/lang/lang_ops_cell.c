@@ -6625,6 +6625,197 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* HASCOUNTMATCHLIBS|NEEDCOUNTMATCHLIBS min needle — soft 0|1 / fail if count < min.
+   * Usability: install gates “need ≥2 fat libs” without COUNTMATCHLIBS+IF compare glue.
+   * Completes count · soft min · hard min triad. */
+  if (kw(&L->cur, "HASCOUNTMATCHLIBS") || kw(&L->cur, "NEEDCOUNTMATCHLIBS") ||
+      kw(&L->cur, "HASCOUNTLIBS") || kw(&L->cur, "NEEDCOUNTLIBS") ||
+      kw(&L->cur, "REQUIRECOUNTLIBS") || kw(&L->cur, "REQUIRECOUNTMATCHLIBS") ||
+      kw(&L->cur, "HAS_COUNTMATCHLIBS") || kw(&L->cur, "NEED_COUNTMATCHLIBS") ||
+      kw(&L->cur, "MINMATCHLIBS") || kw(&L->cur, "NEEDMINLIBS")) {
+    char needle[96], fup[96];
+    int nmatch = 0, j, hard = 0, aln = L->cur.line;
+    int min_n = 1, have_min = 0;
+    size_t a;
+    DIR *d;
+    struct dirent *ent;
+    const char *ip;
+    char stems[96][96];
+    int nstem = 0;
+    if (kw(&L->cur, "NEEDCOUNTMATCHLIBS") || kw(&L->cur, "NEEDCOUNTLIBS") ||
+        kw(&L->cur, "REQUIRECOUNTLIBS") || kw(&L->cur, "REQUIRECOUNTMATCHLIBS") ||
+        kw(&L->cur, "NEED_COUNTMATCHLIBS") || kw(&L->cur, "MINMATCHLIBS") ||
+        kw(&L->cur, "NEEDMINLIBS"))
+      hard = 1;
+    lex_next(L);
+    needle[0] = 0;
+    /* min then needle · min defaults to 1 if omitted before str needle is ambiguous */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS) {
+      min_n = (int)parse_expr(vm, L);
+      have_min = 1;
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vi = var_get(vm, L->cur.text, 0);
+      if (vi && !vi->is_str) {
+        min_n = (int)vi->val;
+        have_min = 1;
+        lex_next(L);
+      }
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(needle, sizeof needle, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(needle, sizeof needle, "%s", vm->last_str);
+      else
+        snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!have_min) min_n = 1;
+    if (min_n < 0) min_n = 0;
+    if (!needle[0]) {
+      if (hard) {
+        fail_at(vm, L,
+                "NEEDCOUNTMATCHLIBS needs min needle — NEEDCOUNTMATCHLIBS 2 fat");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "MATCHLIBS_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASCOUNTMATCHLIBS: need min needle");
+      var_set_str(vm, "ERR", "HASCOUNTMATCHLIBS: need min needle");
+      bump(vm);
+      return 1;
+    }
+    for (a = 0; needle[a] && a + 1 < sizeof fup; a++) {
+      char c = needle[a];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      fup[a] = c;
+    }
+    fup[a] = 0;
+    {
+      char dirs[10][160];
+      int nd = 0, di;
+      snprintf(dirs[nd++], sizeof dirs[0], "%s", "programs/lib");
+      ip = getenv("CUBALC_INCLUDE_PATH");
+      if (ip && ip[0]) {
+        const char *p = ip;
+        while (*p && nd < 10) {
+          char dir[160];
+          size_t len = 0;
+          while (*p == ':' || *p == ' ' || *p == '\t') p++;
+          if (!*p) break;
+          while (p[len] && p[len] != ':' && len + 1 < sizeof dir) {
+            dir[len] = p[len];
+            len++;
+          }
+          dir[len] = 0;
+          p += len;
+          if (dir[0])
+            snprintf(dirs[nd++], sizeof dirs[0], "%s", dir);
+        }
+      }
+      for (di = 0; di < nd; di++) {
+        d = opendir(dirs[di]);
+        if (!d) continue;
+        while ((ent = readdir(d)) != NULL && nstem < 96) {
+          size_t len = strlen(ent->d_name);
+          char stem[96], hay[192];
+          int dup = 0;
+          size_t b;
+          if (len < 8 || strcmp(ent->d_name + len - 7, ".cubalc") != 0)
+            continue;
+          if (ent->d_name[0] == '.') continue;
+          if (len - 7 >= sizeof stem) continue;
+          memcpy(stem, ent->d_name, len - 7);
+          stem[len - 7] = 0;
+          for (j = 0; j < nstem; j++) {
+            if (strcmp(stems[j], stem) == 0) { dup = 1; break; }
+          }
+          if (dup) continue;
+          snprintf(hay, sizeof hay, "%s/%s", dirs[di], ent->d_name);
+          for (b = 0; hay[b]; b++)
+            if (hay[b] >= 'A' && hay[b] <= 'Z')
+              hay[b] = (char)(hay[b] - 'A' + 'a');
+          {
+            char stem_l[96];
+            for (b = 0; stem[b] && b + 1 < sizeof stem_l; b++) {
+              char c = stem[b];
+              if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+              stem_l[b] = c;
+            }
+            stem_l[b] = 0;
+            if (!strstr(stem_l, fup) && !strstr(hay, fup))
+              continue;
+          }
+          snprintf(stems[nstem++], sizeof stems[0], "%s", stem);
+        }
+        closedir(d);
+      }
+    }
+    nmatch = nstem;
+    var_set_num(vm, "MATCHLIBS_N", nmatch);
+    var_set_num(vm, "COUNTMATCHLIBS_N", nmatch);
+    var_set_num(vm, "HASCOUNTMATCHLIBS_MIN", min_n);
+    var_set_str(vm, "MATCHLIBS_FILTER", needle);
+    var_set_str(vm, "COUNTMATCHLIBS_FILTER", needle);
+    {
+      int ok = (nmatch >= min_n);
+      if (hard) {
+        if (ok) {
+          var_set_str(vm, "LAST", "1");
+          snprintf(vm->last_str, sizeof vm->last_str, "1");
+          vm->last_n = 1;
+          var_set_num(vm, "LAST_N", 1);
+          var_set_num(vm, "OK", 1);
+          if (vm->res) vm->res->asserts_ok++;
+          bump(vm);
+          return 1;
+        }
+        {
+          char msg[200];
+          snprintf(msg, sizeof msg,
+                   "NEEDCOUNTMATCHLIBS miss line %d: need ≥%d '%s' have %d — MATCHLIBS · cubalc libs %s",
+                   aln, min_n, needle, nmatch, needle);
+          var_set_str(vm, "ERR", msg);
+          var_set_str(vm, "LAST_ERR", msg);
+          if (vm->res) vm->res->asserts_fail++;
+          fail(vm, msg);
+          return -1;
+        }
+      }
+      /* soft HASCOUNTMATCHLIBS */
+      {
+        char nb[4];
+        snprintf(nb, sizeof nb, "%d", ok ? 1 : 0);
+        var_set_str(vm, "LAST", nb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      }
+      vm->last_n = ok ? 1 : 0;
+      var_set_num(vm, "LAST_N", ok ? 1 : 0);
+      var_set_num(vm, "HASCOUNTMATCHLIBS_N", nmatch);
+      if (ok) {
+        var_set_num(vm, "OK", 1);
+      } else {
+        char em[176];
+        snprintf(em, sizeof em,
+                 "HASCOUNTMATCHLIBS miss: need ≥%d '%s' have %d — COUNTMATCHLIBS",
+                 min_n, needle, nmatch);
+        var_set_str(vm, "ERR", em);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_num(vm, "OK", 0);
+      }
+      bump(vm);
+      return 1;
+    }
+  }
+
   /* HASMATCHLIBS / NEEDMATCHLIBS needle — soft 0|1 / fail-fast if any stem matches filter.
    * Usability: agent install/discovery gate without MATCHLIBS bag + LINES compare.
    * Completes MATCHLIBS triad (bag · soft probe · hard gate). */
