@@ -3848,6 +3848,6 @@
     "iter280: alias DELFLAT c nuked 7 paths; fixed to dropme unique needle",
     "iter280: 10/10 green after alias fix; empty tmp:{} residual documented"
   ],
-  "commit": "pending",
+  "commit": "7d61a546",
   "ts": "2026-08-10T02:49:38Z"
 }
