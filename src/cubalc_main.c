@@ -3242,6 +3242,8 @@ int main(int argc, char **argv) {
       {"cli_tips", "programs/proof/1329_cli_tips.sh", "cubalc tips plate + topics + forms"},
       {"formsfor", "programs/proof/1330_formsfor.cubalc", "FORMSFOR/TOPICFORMS topic form-name bags"},
       {"cli_formsfor", "programs/proof/1330_cli_formsfor.sh", "cubalc formsfor plate + topics + forms"},
+      {"related", "programs/proof/1331_related.cubalc", "RELATED/SEEALSO form neighbor bag"},
+      {"cli_related", "programs/proof/1331_cli_related.sh", "cubalc related plate + forms"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3874,6 +3876,8 @@ int main(int argc, char **argv) {
       {"TIPS", "flow", "TIPS [topic] curated agent next-steps bag · cubalc tips dual"},
       {"FORMSFOR", "flow", "FORMSFOR|TOPICFORMS [topic] form-name bag by topic · cubalc formsfor dual"},
       {"TOPICFORMS", "flow", "TOPICFORMS alias of FORMSFOR"},
+      {"RELATED", "flow", "RELATED|SEEALSO form related form-name bag · cubalc related dual"},
+      {"SEEALSO", "flow", "SEEALSO alias of RELATED"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
@@ -5045,7 +5049,7 @@ int main(int argc, char **argv) {
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
            "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc doctor · cubalc tips · cubalc formsfor · cubalc init · cubalc run <file>\n");
+           "Commands: cubalc doctor · cubalc tips · cubalc formsfor · cubalc related · cubalc init\n");
     return 0;
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
@@ -5260,6 +5264,116 @@ int main(int argc, char **argv) {
     }
     printf("],\"n\":%d}\n", n);
     return n > 0 ? 0 : 1;
+  }
+  if (strcmp(cmd, "related") == 0 || strcmp(cmd, "seealso") == 0 ||
+      strcmp(cmd, "formslike") == 0 || strcmp(cmd, "nearforms") == 0 ||
+      strcmp(cmd, "formrel") == 0 || strcmp(cmd, "neighbors") == 0) {
+    /* Usability: related form-name bag for one form (dual of RELATED / FORMSFOR).
+     *   cubalc related HASFORM · cubalc seealso SETP
+     * Schema cubalc.related.v1 · complements formhint + formsfor. */
+    static const struct { const char *form; const char *rel; } edges[] = {
+      {"HASFORM", "NEEDFORM"}, {"HASFORM", "HASFORMS"}, {"HASFORM", "NEEDFORMS"},
+      {"HASFORM", "FORMHINT"}, {"HASFORM", "LISTFORMS"}, {"HASFORM", "COUNTFORMS"},
+      {"HASFORM", "REQUIRE FORM"}, {"HASFORM", "FORMSFOR"}, {"HASFORM", "TIPS"},
+      {"NEEDFORM", "HASFORM"}, {"NEEDFORM", "NEEDFORMS"}, {"NEEDFORM", "HASFORMS"},
+      {"NEEDFORM", "FORMHINT"}, {"NEEDFORM", "REQUIRE FORM"},
+      {"HASFORMS", "NEEDFORMS"}, {"HASFORMS", "HASFORM"},
+      {"NEEDFORMS", "HASFORMS"}, {"NEEDFORMS", "NEEDFORM"}, {"NEEDFORMS", "HASFORM"},
+      {"FORMHINT", "HASFORM"}, {"FORMHINT", "LISTFORMS"}, {"FORMHINT", "RELATED"},
+      {"FORMHINT", "FORMSFOR"}, {"FORMHINT", "TIPS"},
+      {"LISTFORMS", "COUNTFORMS"}, {"LISTFORMS", "HASFORM"}, {"LISTFORMS", "FORMHINT"},
+      {"LISTFORMS", "FORMSFOR"}, {"COUNTFORMS", "LISTFORMS"}, {"COUNTFORMS", "HASFORM"},
+      {"FORMSFOR", "TIPS"}, {"FORMSFOR", "RELATED"}, {"FORMSFOR", "FORMHINT"},
+      {"FORMSFOR", "LISTFORMS"}, {"FORMSFOR", "HASFORM"},
+      {"TIPS", "FORMSFOR"}, {"TIPS", "WHY"}, {"TIPS", "FORMHINT"}, {"TIPS", "RELATED"},
+      {"INCLUDE", "LISTLIBS"}, {"INCLUDE", "HASLIB"}, {"INCLUDE", "MATCHLIBS"},
+      {"INCLUDE", "PICKLIB"}, {"INCLUDE", "RECIPE"}, {"INCLUDE", "CHECKDEPS"},
+      {"LISTLIBS", "HASLIB"}, {"LISTLIBS", "MATCHLIBS"}, {"LISTLIBS", "RECIPE"},
+      {"LISTLIBS", "CATLIB"}, {"MATCHLIBS", "PICKLIB"}, {"MATCHLIBS", "NTHLIB"},
+      {"MATCHLIBS", "SORTLIBS"}, {"MATCHLIBS", "FRESHLIBS"},
+      {"PICKLIB", "MATCHLIBS"}, {"PICKLIB", "NTHLIB"}, {"PICKLIB", "INCLUDE"},
+      {"RECIPE", "LIBDEPS"}, {"RECIPE", "LIBDEFAULTS"}, {"RECIPE", "CHECKDEPS"},
+      {"RECIPE", "LIBINFO"}, {"CHECKDEPS", "HASDEPS"}, {"CHECKDEPS", "NEEDDEPS"},
+      {"CHECKDEPS", "RECIPE"}, {"SORTLIBS", "NEWESTLIB"}, {"SORTLIBS", "OLDESTLIB"},
+      {"SORTLIBS", "FRESHLIBS"}, {"FRESHLIBS", "STALELIBS"}, {"FRESHLIBS", "LIBAGE"},
+      {"LIBAGE", "HASFRESH"}, {"LIBAGE", "NEEDFRESH"}, {"LIBAGE", "FRESHLIBS"},
+      {"CATLIB", "HEADLIB"}, {"CATLIB", "TAILLIB"}, {"CATLIB", "GREPLIB"},
+      {"SETP", "GETP"}, {"SETP", "NEEDP"}, {"SETP", "DEFAULTP"}, {"SETP", "INCP"},
+      {"SETP", "DELP"}, {"SETP", "SAVEPLATE"}, {"SETP", "LOADPLATE"},
+      {"GETP", "SETP"}, {"GETP", "NEEDP"}, {"GETP", "GETPN"}, {"GETP", "HASP"},
+      {"NEEDP", "SETP"}, {"NEEDP", "GETP"}, {"NEEDP", "HASP"}, {"NEEDP", "DEFAULTP"},
+      {"DEFAULTP", "SETP"}, {"DEFAULTP", "NEEDP"}, {"INCP", "SETP"}, {"INCP", "GETPN"},
+      {"DELP", "SETP"}, {"DELP", "GETP"}, {"PRETTYP", "DUMPP"}, {"PRETTYP", "SAVEPLATE"},
+      {"DUMPP", "PRETTYP"}, {"DUMPP", "GETP"}, {"SAVEPLATE", "LOADPLATE"},
+      {"SAVEPLATE", "SETP"}, {"LOADPLATE", "SAVEPLATE"}, {"LOADPLATE", "NEEDP"},
+      {"VARROOM", "HASVARROOM"}, {"VARROOM", "NEEDVARROOM"}, {"VARROOM", "VARS"},
+      {"HASVARROOM", "NEEDVARROOM"}, {"HASVARROOM", "VARROOM"},
+      {"NEEDVARROOM", "HASVARROOM"}, {"NEEDVARROOM", "VARROOM"},
+      {"REMAIN_MS", "HAS_TIME"}, {"REMAIN_MS", "NEEDTIME"}, {"REMAIN_MS", "WALL_MS"},
+      {"HAS_TIME", "NEEDTIME"}, {"HAS_TIME", "REMAIN_MS"},
+      {"NEEDTIME", "HAS_TIME"}, {"NEEDTIME", "REMAIN_MS"},
+      {"ASSERT", "EXPECT"}, {"ASSERT", "WHY"}, {"ASSERT", "FAIL"}, {"ASSERT", "PASS"},
+      {"EXPECT", "ASSERT"}, {"EXPECT", "WHY"}, {"EXPECT", "CLEAR_ERR"}, {"EXPECT", "FAIL"},
+      {"FAIL", "PASS"}, {"FAIL", "WHY"}, {"FAIL", "CLEAR_ERR"}, {"FAIL", "EXPECT"},
+      {"PASS", "FAIL"}, {"PASS", "NOTE"}, {"WHY", "CLEAR_ERR"}, {"WHY", "STATUS"},
+      {"WHY", "TIPS"}, {"CLEAR_ERR", "WHY"}, {"CLEAR_ERR", "STATUS"},
+      {"STATUS", "IDENTITY"}, {"STATUS", "VERSION"}, {"STATUS", "VARS"},
+      {"VERSION", "REQUIRE VERSION"}, {"VERSION", "STATUS"},
+      {"EXIT", "PASS"}, {"EXIT", "FAIL"}, {"EXIT", "STATUS"},
+      {"NOTE", "PASS"}, {"NOTE", "TIPS"},
+      {"SMX", "SERVE"}, {"SMX", "DIAL"}, {"SMX", "TALK"}, {"SMX", "EXCHANGE"},
+      {"SERVE", "DIAL"}, {"SERVE", "SMX"}, {"DIAL", "SERVE"}, {"DIAL", "SMX"},
+      {"TALK", "SMX"}, {"TALK", "EXCHANGE"}, {"EXCHANGE", "SMX"}, {"EXCHANGE", "TALK"},
+      {"HOLD_FLASH", "STATUS"}, {"HOLD_FLASH", "VERSION"}, {"HOLD_FLASH", "TIPS"},
+    };
+    const char *name = (argc > 2 && argv[2][0]) ? argv[2] : "";
+    char nup[96];
+    char forms_json[2048];
+    size_t k, fo = 0;
+    int i, n = 0, nall = (int)(sizeof edges / sizeof edges[0]), seen = 0;
+    if (!name[0]) {
+      fprintf(stderr, "usage: cubalc related|seealso <FormName>\n");
+      printf("{\"schema\":\"cubalc.related.v1\",\"ok\":false,\"cmd\":\"related\","
+             "\"err\":\"need form name\",\"version\":\"%s\"}\n",
+             CUBALC_LANG_VERSION);
+      return 2;
+    }
+    for (k = 0; name[k] && k + 1 < sizeof nup; k++) {
+      char c = name[k];
+      if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+      nup[k] = c;
+    }
+    nup[k] = 0;
+    forms_json[0] = 0;
+    for (i = 0; i < nall; i++) {
+      char fup[96];
+      size_t j, ln;
+      for (j = 0; edges[i].form[j] && j + 1 < sizeof fup; j++) {
+        char c = edges[i].form[j];
+        if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+        fup[j] = c;
+      }
+      fup[j] = 0;
+      if (strcmp(fup, nup) != 0) continue;
+      seen = 1;
+      ln = strlen(edges[i].rel);
+      if (fo && fo + 1 < sizeof forms_json) forms_json[fo++] = ',';
+      if (fo + ln + 3 < sizeof forms_json) {
+        forms_json[fo++] = '"';
+        memcpy(forms_json + fo, edges[i].rel, ln);
+        fo += ln;
+        forms_json[fo++] = '"';
+        forms_json[fo] = 0;
+      }
+      n++;
+    }
+    printf("{\"schema\":\"cubalc.related.v1\",\"ok\":%s,\"cmd\":\"related\","
+           "\"form\":\"%s\",\"n\":%d,\"version\":\"%s\","
+           "\"note\":\"related form-name bag · dual of in-lang RELATED · complements formhint/formsfor\","
+           "\"related\":[%s]}\n",
+           (seen && n > 0) ? "true" : "false", name, n, CUBALC_LANG_VERSION,
+           forms_json);
+    return (seen && n > 0) ? 0 : 1;
   }
   if (strcmp(cmd, "init") == 0 || strcmp(cmd, "new") == 0 ||
       strcmp(cmd, "scaffold") == 0 || strcmp(cmd, "create") == 0) {
@@ -14588,6 +14702,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"TIPS", "flow", "TIPS [topic] curated agent next-steps bag · cubalc tips dual"},
       {"FORMSFOR", "flow", "FORMSFOR|TOPICFORMS [topic] form-name bag by topic · cubalc formsfor dual"},
       {"TOPICFORMS", "flow", "TOPICFORMS alias of FORMSFOR"},
+      {"RELATED", "flow", "RELATED|SEEALSO form related form-name bag · cubalc related dual"},
+      {"SEEALSO", "flow", "SEEALSO alias of RELATED"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
@@ -16047,12 +16163,13 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cookbook|start         paths to starters\n"
       "    tips|howto|next [topic]  curated agent next-steps JSON (cap|fat|plate|run…)\n"
       "    formsfor|topicforms [topic]  form-name bag by topic (cubalc.formsfor.v1)\n"
+      "    related|seealso <form>     related form-name bag (cubalc.related.v1)\n"
       "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|formsfor|countforms|hasform|hasforms|needforms|nthlib  filter duals\n"
+      "    picklib|listforms|formhint|formsfor|related|countforms|hasform|hasforms|needforms|nthlib  duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
@@ -16082,8 +16199,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|FORMSFOR|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|LISTFORMS|FORMHINT|FORMSFOR|COUNTFORMS|HASFORM|HASFORMS|NEEDFORMS|MATCHLIBS|PICKLIB|RECIPE\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|FORMSFOR|RELATED|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
+      "    LISTLIBS|LISTFORMS|FORMHINT|FORMSFOR|RELATED|COUNTFORMS|HASFORM|HASFORMS|NEEDFORMS|MATCHLIBS|PICKLIB|RECIPE\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"
