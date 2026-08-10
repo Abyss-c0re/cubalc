@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 300,
-  "program": "programs/realworld/svc_related_snip_board.cubalc",
-  "theme": "RELATED neighbors + SNIP mini sources fleet packet",
-  "version": "1.15.782-usability",
+  "iter": 301,
+  "program": "programs/realworld/svc_topic_runsnip_board.cubalc",
+  "theme": "LISTTOPICS + TOPIC triad + RUNSNIP execute fleet admit",
+  "version": "1.15.785-usability",
   "pass": true,
-  "prior_note": "iter 299 TIPS/FORMSFOR/FORMHINT; this iter first realworld 1331 RELATED + 1332 SNIP",
+  "prior_note": "iter 300 RELATED+SNIP; this iter first realworld 1333 TOPIC + 1334 RUNSNIP + 1335 LISTTOPICS",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate relsnip",
+      "cmd": "seed agent plate topicrun",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "related",
-      "cmd": "RELATED SETP/HASFORM neighbors",
+      "name": "catalog",
+      "cmd": "LISTTOPICS n=8 + HASTOPIC",
       "ok": true,
-      "note": "related"
+      "note": "catalog"
     },
     {
-      "name": "snip",
-      "cmd": "SNIP plate/cap + forms\u2192cap",
+      "name": "topic",
+      "cmd": "TOPIC plate triad tips/forms/snip",
       "ok": true,
-      "note": "snip"
+      "note": "topic"
     },
     {
-      "name": "pair",
-      "cmd": "RELATED+SNIP evidence packet",
+      "name": "exec",
+      "cmd": "RUNSNIP plate/cap (not named run)",
       "ok": true,
-      "note": "pair"
+      "note": "exec"
     },
     {
       "name": "soft",
-      "cmd": "miss form/topic/multi-word/empty",
+      "cmd": "unknown topic soft miss",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "write",
-      "cmd": "materialize SNIP.txt",
-      "ok": true,
-      "note": "write"
-    },
-    {
       "name": "gate",
-      "cmd": "plate surface contract",
+      "cmd": "NEEDTOPIC + plate surface",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "SEEALSO SNIPPET duals",
+      "cmd": "TOPICCARD SNIPRUN TOPICS",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber HAS vs HASLINE multi-word",
+      "cmd": "var topic + PRINT clobber",
       "ok": true,
       "note": "probe"
     },
@@ -74,10 +68,16 @@
       "note": "unknown\u21922"
     },
     {
+      "name": "run_strip",
+      "cmd": "cubalc run prog run \u2192 list (W15 reconfirm)",
+      "ok": true,
+      "note": "host strips run"
+    },
+    {
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "CLI duals still red; related+snip PASS"
+      "note": "455/674 CLI duals red; topic/runsnip PASS"
     }
   ],
   "weaknesses": [
@@ -4504,6 +4504,46 @@
       "title": "Bare RELATED with no name soft-fails OK=0 (good) but same sticky LAST_ERR class",
       "detail": "RELATED alone \u2192 OK=0 without hard halt. Agents must CLEAR_ERR before next assert path.",
       "repro": "RELATED; CLEAR_ERR"
+    },
+    {
+      "id": "W554",
+      "severity": "high",
+      "area": "host|cli",
+      "title": "host strips positional ARG run (reconfirmed on RUNSNIP board)",
+      "detail": "cubalc run prog.cubalc run never reaches ACTION=run (defaults list). Board renamed action to exec|runsnip|go. Same class as W15; still a footgun for any agent subcmd named run.",
+      "repro": "cubalc run svc_topic_runsnip_board.cubalc run \u2192 list path"
+    },
+    {
+      "id": "W555",
+      "severity": "med",
+      "area": "lang|runsnip",
+      "title": "RUNSNIP nested asserts can inflate parent asserts_ok plate field",
+      "detail": "Outer run JSON asserts_ok rises after RUNSNIP plate (nested PASS/ASSERT). Agents scoring host plate unity must not treat parent asserts_ok as only outer program checks.",
+      "repro": "RUNSNIP plate; plate asserts_ok includes nested snip asserts"
+    },
+    {
+      "id": "W556",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT after TOPIC clobbers triad bag in LAST (reconfirmed)",
+      "detail": "Capture TOPIC LAST body before PRINT. Probe: HASI stem RECIPE works; HASI LAST RECIPE after PRINT fails.",
+      "repro": "TOPIC lib; PRINT x; SYS HASI LAST RECIPE \u2192 0"
+    },
+    {
+      "id": "W557",
+      "severity": "low",
+      "area": "lang|topic",
+      "title": "SYS EMPTY TOPIC_SNIP is inverted membership (empty\u21921)",
+      "detail": "Proof uses SYS EMPTY TOPIC_SNIP; LAST_N==0 means non-empty. Easy to misread as presence check. Prefer TOPIC_SNIP_N >= 1 for snip lines.",
+      "repro": "TOPIC plate; SYS EMPTY TOPIC_SNIP \u2192 LAST_N 0 when snip present"
+    },
+    {
+      "id": "W558",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META omit trailing NL (reconfirmed topic runsnip)",
+      "detail": "od META ends 5a without 0a. STATUS last line no $.",
+      "repro": "od -An -tx1 META.txt | tail -1"
     }
   ],
   "workarounds": [
@@ -4554,7 +4594,9 @@
     "LET bag=LAST before PRINT after FORMSFOR/TIPS; HASLINE for exact form names",
     "use FORMSFOR topic_var after lex_next fix; aliases forms\u2192cap mesh\u2192p2p",
     "RELATED single-token hubs only; use HASFORM then RELATED of primary form",
-    "LET body=LAST before PRINT after RELATED/SNIP; HASLINE for exact neighbors"
+    "LET body=LAST before PRINT after RELATED/SNIP; HASLINE for exact neighbors",
+    "never name subcmd run; use exec|go|apply after cubalc run",
+    "TOPIC_SNIP_N for snip presence; capture LAST before PRINT after TOPIC"
   ],
   "language_gaps": [
     "PRETTYP/JSONPRETTY/PRETTYJSON plate evidence dump",
@@ -4608,7 +4650,10 @@
     "CLI tips n vs in-lang TIPS_N skew (W547)",
     "RELATED multi-word hub missing (W549)",
     "HAS substring vs HASLINE on neighbor bags (W551)",
-    "PRINT clobber after RELATED/SNIP (W550)"
+    "PRINT clobber after RELATED/SNIP (W550)",
+    "host strips positional run (W554/W15)",
+    "RUNSNIP nested asserts pollute parent plate (W555)",
+    "SYS EMPTY TOPIC_SNIP polarity easy to misread (W557)"
   ],
   "issues_faced": [
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
@@ -4672,9 +4717,12 @@
     "iter299: board 10/10 green; selftest CLI duals still 57 red",
     "iter300: RELATED multi-word graph gap REQUIRE FORM (W549)",
     "iter300: all board paths green; WRITE SNIP.txt multi-line works",
-    "iter300: selftest CLI duals still red (pre-existing)"
+    "iter300: selftest CLI duals still red (pre-existing)",
+    "iter301: host strips ARG run \u2014 renamed action to exec (W554)",
+    "iter301: RUNSNIP nested asserts inflate parent plate (W555)",
+    "iter301: board 10/10 green after exec rename; selftest CLI duals still red"
   ],
-  "commit": "bb3efa60",
-  "ts": "2026-08-10T13:14:11Z",
+  "commit": "pending",
+  "ts": "2026-08-10T13:39:52Z",
   "board_commit": "bb3efa60"
 }
