@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 768,
-  "version": "1.15.795-usability",
-  "item": "START + cubalc onboard agent onboarding plate",
-  "item_id": 804,
-  "title": "START|ONBOARD · cubalc onboard · cubalc.start.v1",
-  "commit": "ee81bdc377804a0a39e662a16bb4bd75ca7c688e",
-  "summary": "agent first-call plate: topics+next+hint; CLI start stays cookbook. proof 1345 PASS.",
+  "iter": 769,
+  "version": "1.15.796-usability",
+  "item": "onboard_boot + cubalc init --onboard scaffold",
+  "item_id": 805,
+  "title": "onboard_boot · init --onboard · doctor lib_onboard_boot",
+  "commit": "3d175dbef60d1b4824c4b60968ab58802cdab899",
+  "summary": "INCLUDE agent_boot+START; init scaffold catalog n=8; doctor flag. proof 1346 PASS.",
   "proofs": [
-    "1345_start PASS",
-    "1345_cli_onboard PASS"
+    "1346_onboard_boot PASS",
+    "1346_cli_init_onboard PASS"
   ],
-  "when": "2026-08-10T15:37:08Z",
+  "when": "2026-08-10T15:49:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ee81bdc377804a0a39e662a16bb4bd75ca7c688e",
-  "note": "onboard/welcome CLI; START_NEXT/START_TOPICS bags; chain GUIDE"
+  "sha": "3d175dbef60d1b4824c4b60968ab58802cdab899",
+  "note": "init --onboard|--welcome; relaxed older init-list n greps"
 }
