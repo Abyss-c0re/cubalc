@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 778,
-  "version": "1.15.805-usability",
-  "item": "open_boot + cubalc init --open",
-  "item_id": 814,
-  "title": "open_boot \u00b7 init --open \u00b7 doctor lib_open_boot",
-  "commit": "b80432bca82d799f160ea250510ff3cfa9b67840",
-  "summary": "INCLUDE agent_boot+OPEN scaffold; init catalog n=10; doctor readiness. proof 1355 PASS.",
+  "iter": 779,
+  "version": "1.15.806-usability",
+  "item": "DOCTOR in-lang install readiness plate",
+  "item_id": 815,
+  "title": "DOCTOR|INSTALL_HEALTH \u00b7 dual of cubalc doctor",
+  "commit": "6cd7eb2d14add9ddb92d26a393c2c0ddf91762cf",
+  "summary": "In-lang install readiness DOCTOR_OK/LIBS_N plate without shell. proof 1356 PASS.",
   "proofs": [
-    "1355_open_boot PASS",
-    "1355_cli_init_open PASS"
+    "1356_doctor PASS",
+    "1356_cli_doctor PASS"
   ],
-  "when": "2026-08-10T18:15:48Z",
-  "agent": "nanobot_thalamus",
-  "sha": "b80432bca82d799f160ea250510ff3cfa9b67840",
-  "note": "INCLUDE open_boot \u00b7 RUNSNIP OPEN_FIRST \u00b7 cubalc init demo --open",
-  "tip": "46891bd9 VERSION plate on main"
+  "when": "2026-08-10T18:28:10Z",
+  "agent": "meaningful_iter_10m",
+  "sha": "6cd7eb2d14add9ddb92d26a393c2c0ddf91762cf",
+  "note": "DOCTOR \u00b7 ASSERT DOCTOR_OK \u00b7 INCLUDE open_boot when ready"
 }
