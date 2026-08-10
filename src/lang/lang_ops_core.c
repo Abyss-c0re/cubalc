@@ -3604,6 +3604,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"FLAGKV", "FLAGKV alias of FLAGMAP"},
       {"ARGMAP", "ARGMAP|ARGKV — bag of i=value for CUBALC_ARGn (raw argv) · LOOKUP without NTH"},
       {"ARGKV", "ARGKV alias of ARGMAP"},
+      {"NTHARG", "NTHARG|GETARG index [OR fallback] — peel CUBALC_ARGi raw argv · flags kept"},
+      {"GETARG", "GETARG alias of NTHARG — raw argv peel (not non-flag NTHPOS)"},
       {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
       {"POSN", "POSN alias of NTHPOS — first/second file without RESTARGS+NTH"},
       {"NTHPOSPATH", "NTHPOSPATH|POSNPATH index [OR path] — NTHPOS + ABSPATH · EXIST · first file without REALPATH"},
@@ -39714,7 +39716,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DUMPCLI", "FLAGMAP"}, {"DUMPCLI", "ARGMAP"},
       {"LISTFLAGS", "CLIINFO"}, {"FLAGMAP", "CLIINFO"}, {"RESTARGS", "CLIINFO"},
       {"ARGMAP", "FLAGMAP"}, {"ARGMAP", "CLIINFO"}, {"ARGMAP", "ARGS"},
-      {"ARGMAP", "HASARG"}, {"ARGMAP", "NTHPOS"}, {"FLAGMAP", "ARGMAP"},
+      {"ARGMAP", "HASARG"}, {"ARGMAP", "NTHPOS"}, {"ARGMAP", "NTHARG"},
+      {"FLAGMAP", "ARGMAP"},
+      {"NTHARG", "ARGMAP"}, {"NTHARG", "HASARG"}, {"NTHARG", "NTHPOS"},
+      {"NTHARG", "SYS ARG"}, {"NTHPOS", "NTHARG"}, {"GETARG", "NTHARG"},
       {"FORMHINT", "HASFORM"}, {"FORMHINT", "LISTFORMS"}, {"FORMHINT", "RELATED"},
       {"FORMHINT", "FORMSFOR"}, {"FORMHINT", "TIPS"},
       {"LISTFORMS", "COUNTFORMS"}, {"LISTFORMS", "HASFORM"}, {"LISTFORMS", "FORMHINT"},
@@ -69248,6 +69253,90 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# argmap n=%ld\n", n);
     bump(vm); return 1;
+  }
+  /* NTHARG|GETARG index [OR fallback] — peel CUBALC_ARGi raw (flags kept).
+   * LAST = value · LAST_N 1 if present (0 if miss/used fallback) · NTHARG_N=index.
+   * Twin of NTHPOS (non-flag only). Usability: first/second argv without ARGMAP+LOOKUP.
+   * Index not via parse_expr (OR would be boolean). */
+  if (kw(&L->cur,"NTHARG") || kw(&L->cur,"GETARG") || kw(&L->cur,"ARGVAT") ||
+      kw(&L->cur,"ARGAT") || kw(&L->cur,"NTHARGV") || kw(&L->cur,"PEELARG") ||
+      kw(&L->cur,"GETARGV")){
+    long idx = 0, hit = 0;
+    char field[CUBALC_HOST_STR_MAX], fb[512], envn[32];
+    const char *val;
+    int have_fb = 0;
+    lex_next(L);
+    field[0] = 0;
+    fb[0] = 0;
+    if (L->cur.kind == TK_NUM) {
+      idx = L->cur.num;
+      lex_next(L);
+    } else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx = -L->cur.num;
+        lex_next(L);
+      } else {
+        fail_at(vm, L, "NTHARG needs index — NTHARG 0 [OR \"fallback\"]");
+        return -1;
+      }
+    } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"OR") && !kw(&L->cur,"DEFAULT") &&
+               !kw(&L->cur,"ELSE") && !kw(&L->cur,"FALLBACK")) {
+      if (strcmp(L->cur.text, "LAST_N") == 0)
+        idx = vm->last_n;
+      else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && !vv->is_str) idx = vv->val;
+        else if (vv && vv->is_str) idx = strtol(vv->sval, NULL, 10);
+        else {
+          fail_at(vm, L, "NTHARG needs index — NTHARG 0 [OR \"fallback\"]");
+          return -1;
+        }
+      }
+      lex_next(L);
+    } else if (L->cur.kind == TK_LPAREN) {
+      idx = parse_expr(vm, L);
+    } else {
+      fail_at(vm, L, "NTHARG needs index — NTHARG 0 [OR \"fallback\"]");
+      return -1;
+    }
+    if (idx < 0) idx = 0;
+    if (idx > 31) idx = 31;
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "NTHARG n OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    snprintf(envn, sizeof envn, "CUBALC_ARG%ld", idx);
+    val = getenv(envn);
+    if (val && val[0]) {
+      snprintf(field, sizeof field, "%s", val);
+      hit = 1;
+    } else if (have_fb) {
+      snprintf(field, sizeof field, "%s", fb);
+      hit = 0;
+    } else {
+      field[0] = 0;
+      hit = 0;
+    }
+    var_set_str(vm, "LAST", field);
+    var_set_str(vm, "NTHARG", field);
+    var_set_str(vm, "GETARG", field);
+    var_set_str(vm, "ARG", field);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", field);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    var_set_num(vm, "NTHARG_N", idx);
+    var_set_num(vm, "NTHARG_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# ntharg %ld hit=%d\n", idx, hit ? 1 : 0);
+    bump(vm);
+    return 1;
   }
   /* NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional.
    * LAST = field · LAST_N 1 if present (0 if miss/used fallback) · NTHPOS_N=index.

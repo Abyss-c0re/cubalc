@@ -3617,6 +3617,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_init_cli_session", "programs/proof/1368_cli_init_cli_session.sh", "cubalc init --cli-session scaffold"},
       {"argmap", "programs/proof/1369_argmap.cubalc", "ARGMAP raw argv i=value bag twin FLAGMAP"},
       {"cli_argmap", "programs/proof/1369_cli_argmap.sh", "cubalc argmap plate + ARGMAP forms"},
+      {"ntharg", "programs/proof/1370_ntharg.cubalc", "NTHARG raw argv peel with OR fallback"},
+      {"cli_ntharg", "programs/proof/1370_cli_ntharg.sh", "NTHARG/GETARG forms + -e smoke"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
