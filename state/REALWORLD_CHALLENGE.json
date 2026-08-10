@@ -5382,7 +5382,7 @@
     "soft HASI lib:hold_seed miss on green READY; fixed to agent_boot/open_boot; board 10/10",
     "all path CLEAR_ERR ate LAST_N==0 soft miss test; capture sum_n first; board 10/10"
   ],
-  "commit": "pending",
+  "commit": "3c2ab38d",
   "ts": "2026-08-10T19:54:32Z",
-  "board_commit": "pending"
+  "board_commit": "3c2ab38d"
 }
