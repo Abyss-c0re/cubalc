@@ -4508,6 +4508,7 @@
     "iter297: all board paths green first pass; EXIT 2 shell 2 ok; selftest CLI duals still red",
     "iter297: form_guard soft+hard contracts; HASFORMS body var from GETP cfg.need works"
   ],
-  "commit": "2d28e629",
-  "ts": "2026-08-10T11:22:56Z"
+  "commit": "80c2f654",
+  "ts": "2026-08-10T11:22:56Z",
+  "board_commit": "2d28e629"
 }
