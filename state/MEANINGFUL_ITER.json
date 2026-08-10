@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 769,
-  "version": "1.15.796-usability",
-  "item": "onboard_boot + cubalc init --onboard scaffold",
-  "item_id": 805,
-  "title": "onboard_boot · init --onboard · doctor lib_onboard_boot",
-  "commit": "3d175dbef60d1b4824c4b60968ab58802cdab899",
-  "summary": "INCLUDE agent_boot+START; init scaffold catalog n=8; doctor flag. proof 1346 PASS.",
+  "iter": 770,
+  "version": "1.15.797-usability",
+  "item": "MATCHTOPICS + PICKTOPIC topic filter duals",
+  "item_id": 806,
+  "title": "MATCHTOPICS|PICKTOPIC · cubalc matchtopics|picktopic · cubalc.topicmatch.v1",
+  "commit": "0cce8aceab09615b42bcf7d26cb7881f9153a303",
+  "summary": "topic filter/first duals of MATCHLIBS/PICKLIB; mesh→p2p; OR fallback. proof 1347 PASS.",
   "proofs": [
-    "1346_onboard_boot PASS",
-    "1346_cli_init_onboard PASS"
+    "1347_matchtopics PASS",
+    "1347_cli_matchtopics PASS"
   ],
-  "when": "2026-08-10T15:49:00Z",
+  "when": "2026-08-10T16:10:28Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3d175dbef60d1b4824c4b60968ab58802cdab899",
-  "note": "init --onboard|--welcome; relaxed older init-list n greps"
+  "sha": "0cce8aceab09615b42bcf7d26cb7881f9153a303",
+  "note": "restored thrash mid-tick; CLI verified topicmatch.v1 in binary"
 }
