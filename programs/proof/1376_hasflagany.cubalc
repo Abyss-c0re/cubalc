@@ -1,0 +1,95 @@
+# HASFLAGANY / NEEDFLAGANY — multi named-flag any-of gate (HASFLAGALL twin)
+
+HOLD_FLASH 1
+
+# clear CLI bag
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV UNSET CUBALC_ARG2
+SYS ENV UNSET CUBALC_ARG3
+SYS ENV SET CUBALC_ARGC "0"
+
+# empty names soft → 0
+HASFLAGANY
+ASSERT LAST_N == 0
+ASSERT HASFLAGANY_N == 0
+
+# missing all
+HASFLAGANY verbose out workers
+ASSERT LAST_N == 0
+ASSERT FLAGMISS_N == 3
+SYS HASLINE FLAGMISS "verbose"
+ASSERT LAST_N == 1
+SYS HASLINE FLAGMISS "workers"
+ASSERT LAST_N == 1
+ASSERT HASFLAGANY_N == 0
+ASSERT NEEDFLAGANY_N == 3
+
+# partial hit (any-of succeeds with one)
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARG1 "file.txt"
+SYS ENV SET CUBALC_ARGC "2"
+HASFLAGANY verbose out
+ASSERT LAST_N == 1
+ASSERT HASFLAGANY_N == 1
+SYS HASLINE FLAGHAVE "verbose"
+ASSERT LAST_N == 1
+SYS HASLINE FLAGMISS "out"
+ASSERT LAST_N == 1
+ASSERT OK == 1
+
+# all present
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARG1 "--out=hi.txt"
+SYS ENV SET CUBALC_ARG2 "-w"
+SYS ENV SET CUBALC_ARG3 "4"
+SYS ENV SET CUBALC_ARGC "4"
+HASFLAGANY verbose out w
+ASSERT LAST_N == 1
+ASSERT HASFLAGANY_N == 3
+ASSERT FLAGMISS_N == 0
+ASSERT OK == 1
+
+# bag / CSV form
+HASFLAGANY "verbose,out,w"
+ASSERT LAST_N == 1
+
+# hard twin passes when any present
+NEEDFLAGANY verbose out
+ASSERT LAST_N == 1
+ASSERT OK == 1
+
+# dash-prefixed names strip
+HASFLAGANY "--verbose" "--out"
+ASSERT LAST_N == 1
+
+# soft miss keeps sticky ERR
+SYS ENV SET CUBALC_ARG0 "--only"
+SYS ENV SET CUBALC_ARGC "1"
+HASFLAGANY verbose out
+ASSERT LAST_N == 0
+ASSERT OK == 0
+SYS HASI "HASFLAGANY miss"
+ASSERT LAST_N == 1
+
+# IF branch without N× HASFLAG
+SYS ENV SET CUBALC_ARG0 "--mode=x"
+SYS ENV SET CUBALC_ARG1 "--dry"
+SYS ENV SET CUBALC_ARGC "2"
+HASFLAGANY mode dry
+IF LAST_N == 1
+  LET gate "ok"
+ELSE
+  LET gate "no"
+END
+SYS EQS gate "ok"
+ASSERT LAST_N == 1
+
+# forms discoverable
+HASFORM HASFLAGANY
+ASSERT LAST_N == 1
+HASFORM NEEDFLAGANY
+ASSERT LAST_N == 1
+
+PRINT "hasflagany ok"
+PASS

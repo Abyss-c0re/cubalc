@@ -3600,6 +3600,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"HASFLAGC", "HASFLAGC alias of HASFLAGS — flag-count probe without LISTFLAGS bag"},
       {"HASFLAGALL", "HASFLAGALL|HASALLFLAGS names… — soft 0|1 all named flags present · FLAGMISS bag"},
       {"NEEDFLAGS", "NEEDFLAGS|REQUIREFLAGS names… — fail-fast if any named flag missing · multi HASFLAG"},
+      {"HASFLAGANY", "HASFLAGANY|HASANYFLAGS names… — soft 0|1 if any named flag present · FLAGHAVE bag"},
+      {"NEEDFLAGANY", "NEEDFLAGANY|REQUIREFLAGANY names… — fail-fast if none of named flags present · any-of"},
       {"FLAGMAP", "FLAGMAP|FLAGKV — bag of name=value for every --flag · LOOKUP without GETFLAG each"},
       {"FLAGKV", "FLAGKV alias of FLAGMAP"},
       {"ARGMAP", "ARGMAP|ARGKV — bag of i=value for CUBALC_ARGn (raw argv) · LOOKUP without NTH"},
@@ -39709,6 +39711,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NEEDFLAGS", "USAGE"}, {"NEEDFLAGS", "FLAGMISS"},
       {"HASFLAGS", "HASFLAGALL"}, {"HASFLAGS", "LISTFLAGS"}, {"HASFLAGS", "HASFLAG"},
       {"LISTFLAGS", "HASFLAGS"}, {"LISTFLAGS", "HASFLAGALL"}, {"LISTFLAGS", "FLAGMAP"},
+      /* any-of multi CLI flag contract (HASFLAGALL twin) */
+      {"HASFLAGANY", "NEEDFLAGANY"}, {"HASFLAGANY", "HASFLAGALL"}, {"HASFLAGANY", "HASFLAG"},
+      {"HASFLAGANY", "FLAGHAVE"}, {"HASFLAGANY", "LISTFLAGS"},
+      {"NEEDFLAGANY", "HASFLAGANY"}, {"NEEDFLAGANY", "NEEDFLAGS"}, {"NEEDFLAGANY", "HASFLAG"},
+      {"NEEDFLAGANY", "USAGE"}, {"NEEDFLAGANY", "FLAGMISS"},
       /* multi CLI arg contract (HASFLAGALL twin for CUBALC_ARGn / env names) */
       {"HASARG", "HASARGALL"}, {"HASARG", "NEEDARGS"}, {"HASARG", "REQUIRE ARG"},
       {"HASARGALL", "NEEDARGS"}, {"HASARGALL", "HASARG"}, {"HASARGALL", "ARGMISS"},
@@ -69032,6 +69039,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
            kw(&L->cur,"USAGE") || kw(&L->cur,"HELPFLAG") || kw(&L->cur,"CUBE") ||
            kw(&L->cur,"PLUG") || kw(&L->cur,"HOLD_FLASH") ||
            kw(&L->cur,"HASFLAG") || kw(&L->cur,"HASFLAGS") ||
+           kw(&L->cur,"HASFLAGALL") || kw(&L->cur,"NEEDFLAGS") ||
+           kw(&L->cur,"HASFLAGANY") || kw(&L->cur,"NEEDFLAGANY") ||
            kw(&L->cur,"LISTFLAGS") || kw(&L->cur,"GETFLAG") ||
            kw(&L->cur,"FLAGMAP") || kw(&L->cur,"HASRESTARGS")))
         break;
@@ -69219,6 +69228,234 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     if (vm->trace)
       fprintf(vm->trace, "# hasflagall n=%d have=%d miss=%d hard=%d\n",
+              nname, nhave, nmiss, hard);
+    bump(vm);
+    return 1;
+  }
+  /* HASFLAGANY|NEEDFLAGANY name… — multi named-flag any-of gate (HASFLAGALL twin).
+   * Soft: LAST_N 1 if any present · FLAGHAVE bag of hits · FLAGMISS of absences.
+   * Hard NEEDFLAGANY fail-fast if none of the names present (USAGE tip when set).
+   * Usability: --json OR --yaml OR --xml without N× HASFLAG + IF glue. */
+  if (kw(&L->cur,"HASFLAGANY") || kw(&L->cur,"HAS_FLAG_ANY") ||
+      kw(&L->cur,"HASANYFLAGS") || kw(&L->cur,"ANYFLAGS_OK") ||
+      kw(&L->cur,"FLAGANY?") || kw(&L->cur,"NEEDFLAGANY") ||
+      kw(&L->cur,"NEED_FLAG_ANY") || kw(&L->cur,"REQUIREFLAGANY") ||
+      kw(&L->cur,"MUSTFLAGANY") || kw(&L->cur,"REQUIRE_FLAG_ANY") ||
+      kw(&L->cur,"NEEDANYFLAGS") || kw(&L->cur,"REQUIREANYFLAGS")) {
+    int hard = kw(&L->cur,"NEEDFLAGANY") || kw(&L->cur,"NEED_FLAG_ANY") ||
+               kw(&L->cur,"REQUIREFLAGANY") || kw(&L->cur,"MUSTFLAGANY") ||
+               kw(&L->cur,"REQUIRE_FLAG_ANY") || kw(&L->cur,"NEEDANYFLAGS") ||
+               kw(&L->cur,"REQUIREANYFLAGS");
+    char names[32][96];
+    char miss[1024], havebag[1024];
+    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line;
+    size_t mo = 0, ho = 0;
+    char val[CUBALC_HOST_STR_MAX];
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    while (nname < 32) {
+      while (L->cur.kind == TK_MINUS) lex_next(L);
+      if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT)
+        break;
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+           kw(&L->cur,"REQUIRE") || kw(&L->cur,"END") ||
+           kw(&L->cur,"IF") || kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") ||
+           kw(&L->cur,"PASS") || kw(&L->cur,"FAIL") || kw(&L->cur,"INCLUDE") ||
+           kw(&L->cur,"SYS") || kw(&L->cur,"HELP") || kw(&L->cur,"CLEAR_ERR") ||
+           kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"DEFAULT") ||
+           kw(&L->cur,"VERSION") || kw(&L->cur,"STATUS") || kw(&L->cur,"FOR") ||
+           kw(&L->cur,"WHILE") || kw(&L->cur,"LOOP") || kw(&L->cur,"EACH") ||
+           kw(&L->cur,"USAGE") || kw(&L->cur,"HELPFLAG") || kw(&L->cur,"CUBE") ||
+           kw(&L->cur,"PLUG") || kw(&L->cur,"HOLD_FLASH") ||
+           kw(&L->cur,"HASFLAG") || kw(&L->cur,"HASFLAGS") ||
+           kw(&L->cur,"HASFLAGALL") || kw(&L->cur,"NEEDFLAGS") ||
+           kw(&L->cur,"HASFLAGANY") || kw(&L->cur,"NEEDFLAGANY") ||
+           kw(&L->cur,"LISTFLAGS") || kw(&L->cur,"GETFLAG") ||
+           kw(&L->cur,"FLAGMAP") || kw(&L->cur,"HASRESTARGS")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ') || strchr(s, '|')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[96];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' ||
+                   *p == '|' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != '|' && p[tl] != ':' &&
+                   tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            while (tok[0] == '-')
+              memmove(tok, tok + 1, strlen(tok));
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        {
+          char tok[96];
+          snprintf(tok, sizeof tok, "%s", s);
+          while (tok[0] == '-')
+            memmove(tok, tok + 1, strlen(tok));
+          if (tok[0])
+            snprintf(names[nname++], sizeof names[0], "%s", tok);
+        }
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' ') || strchr(vv->sval, '|'))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[96];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' ||
+                   *p == '|' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != '|' && p[tl] != ':' &&
+                   tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            while (tok[0] == '-')
+              memmove(tok, tok + 1, strlen(tok));
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0]) {
+          char tok[96];
+          snprintf(tok, sizeof tok, "%s", vv->sval);
+          while (tok[0] == '-')
+            memmove(tok, tok + 1, strlen(tok));
+          if (tok[0])
+            snprintf(names[nname++], sizeof names[0], "%s", tok);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          char tok[96];
+          snprintf(tok, sizeof tok, "%s", vm->last_str);
+          while (tok[0] == '-')
+            memmove(tok, tok + 1, strlen(tok));
+          if (tok[0])
+            snprintf(names[nname++], sizeof names[0], "%s", tok);
+          lex_next(L);
+        } else {
+          char tok[96];
+          snprintf(tok, sizeof tok, "%s", L->cur.text);
+          while (tok[0] == '-')
+            memmove(tok, tok + 1, strlen(tok));
+          if (tok[0])
+            snprintf(names[nname++], sizeof names[0], "%s", tok);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDFLAGANY name… — NEEDFLAGANY json yaml · HASFLAGANY bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASFLAGANY_N", 0);
+      var_set_num(vm, "FLAGMISS_N", 0);
+      var_set_num(vm, "NEEDFLAGANY_N", 0);
+      var_set_str(vm, "FLAGMISS", "");
+      var_set_str(vm, "FLAGHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASFLAGANY: need names — HASFLAGANY json yaml xml");
+      var_set_str(vm, "ERR", "HASFLAGANY: need names — HASFLAGANY json yaml xml");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      int hit;
+      val[0] = 0;
+      hit = cubalc_scan_cli_flag(names[i], val, sizeof val);
+      if (hit) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, names[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+      } else {
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+      }
+    }
+    var_set_str(vm, "FLAGMISS", miss);
+    var_set_str(vm, "FLAGHAVE", havebag);
+    var_set_num(vm, "FLAGMISS_N", nmiss);
+    var_set_num(vm, "HASFLAGANY_N", nhave);
+    var_set_num(vm, "NEEDFLAGANY_N", nname);
+    var_set_num(vm, "FLAGS_ANY_N", nname);
+    if (nhave > 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else if (hard) {
+      char em[280];
+      Var *vu = var_get(vm, "USAGE", 0);
+      const char *use = (vu && vu->is_str && vu->sval[0]) ? vu->sval : "";
+      if (use[0])
+        snprintf(em, sizeof em,
+                 "NEEDFLAGANY miss line %d: need one of %d flags — usage: %s",
+                 aln, nname, use);
+      else
+        snprintf(em, sizeof em,
+                 "NEEDFLAGANY miss line %d: need one of [%s] — pass any --flag · HASFLAGANY · USAGE",
+                 aln, miss[0] ? miss : "?");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      fail_at(vm, L, em);
+      return -1;
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASFLAGANY miss (0/%d): need one of %s — NEEDFLAGANY · USAGE",
+               nname, miss[0] ? miss : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# hasflagany n=%d have=%d miss=%d hard=%d\n",
               nname, nhave, nmiss, hard);
     bump(vm);
     return 1;
