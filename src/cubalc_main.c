@@ -3631,6 +3631,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     int lib_cli_boot = 0;
     int lib_cli_guard = 0;
     int lib_cli_session = 0;
+    int lib_env_guard = 0;
     int cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
     int include_path_set = 0, preload_set = 0;
     const char *hx = getenv("CUBALC_SMX_KEY");
@@ -3671,6 +3672,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     lib_cli_boot = (access("programs/lib/cli_boot.cubalc", R_OK) == 0);
     lib_cli_guard = (access("programs/lib/cli_guard.cubalc", R_OK) == 0);
     lib_cli_session = (access("programs/lib/cli_session.cubalc", R_OK) == 0);
+    lib_env_guard = (access("programs/lib/env_guard.cubalc", R_OK) == 0);
     cookbook_ok = (access("docs/COOKBOOK.md", R_OK) == 0);
     for_agents_ok = (access("docs/FOR_AGENTS.md", R_OK) == 0);
     if (libdir_ok) {
@@ -3705,7 +3707,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"lib_fat_session\":%s,\"lib_form_guard\":%s,\"lib_cap_boot\":%s,"
              "\"lib_onboard_boot\":%s,\"lib_discover_boot\":%s,\"lib_open_boot\":%s,\"lib_doctor_boot\":%s,"
              "\"lib_ready_boot\":%s,\"lib_cli_boot\":%s,\"lib_cli_guard\":%s,"
-             "\"lib_cli_session\":%s,"
+             "\"lib_cli_session\":%s,\"lib_env_guard\":%s,"
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"vars_max\":%d,\"varroom_forms\":true,"
@@ -3726,6 +3728,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"INCLUDE fat_session · cubalc init --fat-session durable nest (vars_max=%d)\","
              "\"cubalc run -T MS · INCLUDE time_guard · REMAIN_MS/NEEDTIME\","
              "\"INCLUDE form_guard · NEEDFORMS / HASFORMS capability contract\","
+             "\"INCLUDE env_guard · NEED_ENVS / NEED_ENV_ANY host env contract\","
              "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
@@ -3734,6 +3737,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"programs/lib/plate_uniform.cubalc\",\"programs/lib/var_guard.cubalc\","
              "\"programs/lib/time_guard.cubalc\",\"programs/lib/fat_boot.cubalc\","
              "\"programs/lib/fat_session.cubalc\",\"programs/lib/form_guard.cubalc\","
+             "\"programs/lib/env_guard.cubalc\","
              "\"programs/lib/onboard_boot.cubalc\",\"programs/lib/discover_boot.cubalc\","
              "\"cubalc init --onboard\",\"cubalc init --discover\",\"cubalc init --fat-session\",\"cubalc hasforms SORTLIBS LIBAGE\"]"
              "}\n",
@@ -3768,6 +3772,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              lib_cli_boot ? "true" : "false",
              lib_cli_guard ? "true" : "false",
              lib_cli_session ? "true" : "false",
+             lib_env_guard ? "true" : "false",
              include_path_set ? "true" : "false",
              preload_set ? "true" : "false",
              cookbook_ok ? "true" : "false",
@@ -4401,6 +4406,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_envgate", "programs/proof/1381_cli_envgate.sh", "cubalc hasenvall|needenvs CLI duals"},
       {"hasenvany", "programs/proof/1382_hasenvany.cubalc", "HASENVANY multi host-env any-of gate"},
       {"cli_hasenvany", "programs/proof/1382_cli_hasenvany.sh", "HASENVANY/NEEDENVANY forms + CLI"},
+      {"env_guard", "programs/proof/1383_env_guard.cubalc", "INCLUDE env_guard NEED_ENVS+NEED_ENV_ANY"},
+      {"cli_env_guard", "programs/proof/1383_cli_env_guard.sh", "env_guard soft/hard + doctor lib"},
       {"cliinfo", "programs/proof/1364_cliinfo.cubalc", "CLIINFO cubalc.cli.v1 CLI surface plate"},
       {"cli_cliinfo", "programs/proof/1364_cli_cliinfo.sh", "cubalc cliinfo plate + CLIINFO forms"},
       {"cli_boot", "programs/proof/1365_cli_boot.cubalc", "INCLUDE cli_boot agent HELPFLAG+CLIINFO"},

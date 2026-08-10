@@ -1,0 +1,58 @@
+# INCLUDE env_guard — fail-fast host env contract (ALL + optional ANY)
+# Usability: agent host-config gate without N× SYS HASENV / REQUIRE ENV glue.
+#
+#   DEFAULT NEED_ENVS = "HOME\nUSER"              # all-of (HASENVALL / NEEDENVS)
+#   DEFAULT NEED_ENV_ANY = "DB_URL\nREDIS_URL"    # any-of (HASENVANY / NEEDENVANY)
+#   DEFAULT ENV_GUARD_SOFT = 0                   # 1 → soft HAS* (OK=0, no fatal)
+#   INCLUDE env_guard
+#
+# Empty NEED_ENVS skips ALL gate. Empty NEED_ENV_ANY skips ANY gate.
+# Soft dual leaves ENVMISS / ENVHAVE bags for agents (CLEAR_ERR after).
+# Twin of form_guard / cli_guard for process env · pairs HASENVALL/HASENVANY.
+# HOLD_FLASH not required (same policy as form_guard / cli_guard / var_guard).
+
+DEFAULT NEED_ENVS = ""
+DEFAULT NEED_ENV_ANY = ""
+DEFAULT ENV_GUARD_SOFT = 0
+
+# --- ALL-of: multi host env must all be non-empty ---
+SYS EMPTY NEED_ENVS
+IF LAST_N == 1
+  LET ENV_GUARD_ALL_OK = 1
+ELSE
+  IF ENV_GUARD_SOFT
+    HASENVALL NEED_ENVS
+    LET ENV_GUARD_ALL_OK = LAST_N
+  ELSE
+    NEEDENVS NEED_ENVS
+    LET ENV_GUARD_ALL_OK = 1
+  END
+END
+
+# --- ANY-of: at least one of the named envs present ---
+SYS EMPTY NEED_ENV_ANY
+IF LAST_N == 1
+  LET ENV_GUARD_ANY_OK = 1
+ELSE
+  IF ENV_GUARD_SOFT
+    HASENVANY NEED_ENV_ANY
+    LET ENV_GUARD_ANY_OK = LAST_N
+  ELSE
+    NEEDENVANY NEED_ENV_ANY
+    LET ENV_GUARD_ANY_OK = 1
+  END
+END
+
+# overall soft status (hard paths already failed fatally if miss)
+IF ENV_GUARD_ALL_OK
+  IF ENV_GUARD_ANY_OK
+    LET ENV_GUARD_OK = 1
+    LET OK = 1
+  ELSE
+    LET ENV_GUARD_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET ENV_GUARD_OK = 0
+  LET OK = 0
+END
