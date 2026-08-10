@@ -1,0 +1,37 @@
+# TIPS — curated agent next-steps bag
+
+TIPS
+ASSERT OK == 1
+ASSERT TIPS_TOPIC == "general"
+ASSERT TIPS_N >= 3
+ASSERT LAST_N >= 3
+
+TIPS cap
+ASSERT OK == 1
+ASSERT TIPS_TOPIC == "cap"
+ASSERT TIPS_N >= 3
+SYS HASI "cap_boot"
+ASSERT LAST_N == 1
+
+TIPS fat
+ASSERT OK == 1
+ASSERT TIPS_TOPIC == "fat"
+SYS HASI "fat_session"
+ASSERT LAST_N == 1
+
+TIPS run
+ASSERT OK == 1
+ASSERT TIPS_N >= 2
+
+# alias
+HOWTO p2p
+ASSERT OK == 1
+ASSERT TIPS_TOPIC == "p2p"
+
+# unknown soft fail
+TIPS zzz_no_topic
+ASSERT OK == 0
+CLEAR_ERR
+
+PASS
+PRINT "1329_tips: PASS"

@@ -2725,6 +2725,7 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"EXPECT", "EXPECT expr [\"why\"] — soft check with got/expected · OK/LAST_ERR"},
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
+      {"TIPS", "TIPS [topic] — curated agent next-steps bag · dual of cubalc tips"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · dotted path nest ok · write-back · multi-plate"},
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
@@ -38907,6 +38908,105 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->trace) fprintf(vm->trace, "# exit 0\n");
     }
     bump(vm); return 1;
+  }
+  /* TIPS [topic] — curated agent next-steps bag (dual of cubalc tips).
+   * Usability: recover/start without cookbook · topics general|cap|fat|plate|p2p|run|lib|protect.
+   * LAST = newline tips · LAST_N = count · TIPS_TOPIC set · OK=1. */
+  if (kw(&L->cur,"TIPS")||kw(&L->cur,"TIP")||kw(&L->cur,"HOWTO")||
+      kw(&L->cur,"PLAYBOOK")||kw(&L->cur,"NEXTSTEPS")||kw(&L->cur,"AGENTTIPS")){
+    static const struct { const char *topic; const char *tip; } tips[] = {
+      {"general", "cubalc doctor — install readiness plate"},
+      {"general", "cubalc init --list — scaffold catalog"},
+      {"general", "cubalc search KEYWORD — forms/libs/examples"},
+      {"general", "INCLUDE agent_boot — REQUIRE VERSION + VERSION plate"},
+      {"general", "HOLD_FLASH device/mesh-join only · default 1"},
+      {"cap", "INCLUDE cap_boot — agent_boot + form_guard"},
+      {"cap", "cubalc init --cap · HASFORM · NEEDFORMS · FORMHINT"},
+      {"cap", "cubalc run -C FORMS · CUBALC_REQUIRE_FORMS floor"},
+      {"cap", "LISTFORMS prefix · COUNTFORMS · cubalc listforms"},
+      {"fat", "INCLUDE fat_session durable nest"},
+      {"fat", "cubalc init --fat-session · NEED_VARROOM · time_guard"},
+      {"fat", "cubalc run -T ms · REMAIN_MS · VARROOM"},
+      {"plate", "INCLUDE plate_session · SETP NEEDP SAVEPLATE"},
+      {"plate", "cubalc plate get|set|uniform · PRETTYP"},
+      {"plate", "cubalc init --plate plate_uniform starter"},
+      {"p2p", "export CUBALC_SMX_KEY hex64 · SMX SERVE/DIAL"},
+      {"p2p", "CUBALC_P2P_TIMEOUT · CUBALC_P2P_SOFT · smx-bus prove-tcp"},
+      {"run", "cubalc run -q -e CODE · -I -L -R -C -T -s"},
+      {"run", "WHY / why_hint after ASSERT or sticky LAST_ERR"},
+      {"lib", "cubalc libs|recipe|checkdeps · INCLUDE MATCH|NEWEST"},
+      {"lib", "SORTLIBS · FRESHLIBS · LIBAGE · HASFRESH"},
+      {"protect", "cubalc protect status · docs/CORE_PROTECT.md"},
+    };
+    char topic[32], tup[32], bag[4096];
+    size_t k, o = 0;
+    int i, n = 0, nall = (int)(sizeof tips / sizeof tips[0]);
+    lex_next(L);
+    topic[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(topic, sizeof topic, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(topic, sizeof topic, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(topic, sizeof topic, "%s", vm->last_str);
+      else if (!(kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+                 kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"PASS") ||
+                 kw(&L->cur,"FAIL") || kw(&L->cur,"NOTE") || kw(&L->cur,"STATUS"))) {
+        snprintf(topic, sizeof topic, "%s", L->cur.text);
+        lex_next(L);
+      }
+    }
+    if (!topic[0])
+      snprintf(topic, sizeof topic, "%s", "general");
+    for (k = 0; topic[k] && k + 1 < sizeof tup; k++) {
+      char c = topic[k];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      tup[k] = c;
+    }
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    bag[0] = 0;
+    for (i = 0; i < nall; i++) {
+      int hit = !strcmp(tips[i].topic, tup);
+      size_t ln;
+      if (!hit) continue;
+      ln = strlen(tips[i].tip);
+      if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, tips[i].tip, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "TIPS", bag);
+    var_set_str(vm, "TIPS_TOPIC", tup);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "TIPS_N", n);
+    var_set_num(vm, "OK", n > 0 ? 1 : 0);
+    if (n == 0) {
+      var_set_str(vm, "LAST_ERR",
+                  "TIPS: unknown topic — TIPS general|cap|fat|plate|p2p|run|lib|protect");
+      var_set_str(vm, "ERR",
+                  "TIPS: unknown topic — TIPS general|cap|fat|plate|p2p|run|lib|protect");
+    }
+    bump(vm);
+    return 1;
   }
   /* NOTE ["text"] — agent breadcrumb / step log. Sets LAST + NOTE, does not
    * change OK, EXPECT_OK, or sticky LAST_ERR (unlike PASS/FAIL). Trace: # note: */
