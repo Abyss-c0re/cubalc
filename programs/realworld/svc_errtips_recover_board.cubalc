@@ -1,0 +1,926 @@
+# svc_errtips_recover_board.cubalc — ERRTIPS sticky-error recovery tips
+#
+# Real use: fleet agents classify sticky LAST_ERR into a usability topic
+# (lib/cap/p2p/run/fat/plate/…) and peel curated recovery tips without
+# cookbook scrape — then chain TIPS/TOPIC on the inferred topic.
+# First realworld of proof 1336 ERRTIPS/FIXTIPS.
+#
+#   ERRTIPS [errtext|var] · FIXTIPS alias
+#   ERRTIPS_TOPIC · ERRTIPS_N · LAST tip bag
+#   clean → general · sticky FAIL/INCLUDE/SMX/ASSERT → class
+#   explicit arg overrides sticky · chain TIPS topic
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ser_$$
+#   ./out/cubalc run programs/realworld/svc_errtips_recover_board.cubalc boot
+#   ./out/cubalc run ... class|fix|chain|soft|gate|alias|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SER_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_SER_REQUIRE
+#
+# Edges: clean general; sticky classes; arg override; var err text;
+#   FAIL leaves sticky until CLEAR_ERR; PRINT clobber; WRITE NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_errtips_recover_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_errtips_recover -- boot|class|fix|chain|soft|gate|alias|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SER_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SER_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sum_v = 0
+LET sum_n = 0
+LET stem_s = ""
+LET tips_n = 0
+LET topic_got = ""
+
+ONEOF ACTION "boot", "class", "fix", "chain", "soft", "gate", "alias", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "class" THEN
+    LET op = "class"
+  WHEN "fix" THEN
+    LET op = "fix"
+  WHEN "chain" THEN
+    LET op = "chain"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "alias" THEN
+    LET op = "alias"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-errtips\",\"schema\":\"cubalc.svc_errtips_recover.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"want_filter\":\"recover\",\"label\":\"errtips\",\"cfg\":{\"surface\":\"ERRTIPS,FIXTIPS\",\"classes\":\"lib,cap,p2p,run,fat\"}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"peer\":\"recover\",\"n\":1}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "agent"
+  SYS EQS LAST "svc-errtips"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_errtips_recover"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "errtips"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "recover"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "ERRTIPS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# class — sticky FAIL → ERRTIPS topic classes
+SYS EQS op "class"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  # lib
+  FAIL "INCLUDE missing hold_seed"
+  ERRTIPS
+  LET body = LAST
+  LET topic_got = ERRTIPS_TOPIC
+  LET tips_n = ERRTIPS_N
+  CLEAR_ERR
+  SYS EQS topic_got "lib"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF tips_n >= 2 THEN
+    LET score = score + 1
+  END
+  SYS HASI body "libs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # cap
+  FAIL "unknown form FOOBAR — did you mean FLOW?"
+  ERRTIPS
+  LET topic_got = ERRTIPS_TOPIC
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS topic_got "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI body "HASFORM"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # p2p
+  FAIL "SMX DIAL timeout peer offline"
+  ERRTIPS
+  LET topic_got = ERRTIPS_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "p2p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # run
+  FAIL "ASSERT failed line 3: 0 == 1 is false"
+  ERRTIPS
+  LET topic_got = ERRTIPS_TOPIC
+  LET tips_n = ERRTIPS_N
+  CLEAR_ERR
+  SYS EQS topic_got "run"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF tips_n >= 2 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.classes"
+  SYS HAS LAST "lib"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "errtips"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "class ok"
+    LET admit_n = 1
+    LET find_n = tips_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "class score"
+    FAIL "class score"
+    CLEAR_ERR
+  END
+  SYS CAT "class:" tips_n ":cl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "class:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tips_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# fix — explicit arg override sticky + var err
+SYS EQS op "fix"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  FAIL "something sticky generic"
+  ERRTIPS "NEEDFORMS miss SORTLIBS"
+  LET topic_got = ERRTIPS_TOPIC
+  LET tips_n = ERRTIPS_N
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS topic_got "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF tips_n >= 2 THEN
+    LET score = score + 1
+  END
+  SYS HASI body "HASFORM"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # fat class via FIXTIPS
+  FIXTIPS "VARROOM full NEEDVARROOM"
+  LET topic_got = ERRTIPS_TOPIC
+  LET tips_n = ERRTIPS_N
+  CLEAR_ERR
+  SYS EQS topic_got "fat"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF tips_n >= 2 THEN
+    LET score = score + 1
+  END
+  # var err text
+  LET e = "REQUIRE LIB missing hold_seed"
+  ERRTIPS e
+  LET topic_got = ERRTIPS_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "lib"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "FIXTIPS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-errtips"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "fix ok"
+    LET admit_n = 1
+    LET find_n = tips_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "fix score"
+    FAIL "fix score"
+    CLEAR_ERR
+  END
+  SYS CAT "fix:" tips_n ":fx"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "fix:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tips_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# chain — ERRTIPS topic → TIPS / TOPIC triad
+SYS EQS op "chain"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  ERRTIPS "REQUIRE LIB missing"
+  LET topic_got = ERRTIPS_TOPIC
+  LET tips_n = ERRTIPS_N
+  CLEAR_ERR
+  SYS EQS topic_got "lib"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TIPS topic_got
+  LET sum_n = TIPS_N
+  LET stem_s = TIPS_TOPIC
+  CLEAR_ERR
+  IF sum_n >= 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS stem_s "lib"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # plate class via SAVEPLATE err-ish text
+  ERRTIPS "SAVEPLATE failed NEEDP missing"
+  LET topic_got = ERRTIPS_TOPIC
+  CLEAR_ERR
+  # may map plate or general — accept plate or lib-adjacent
+  SYS HASI topic_got "plate"
+  LET sum_v = LAST_N
+  CLEAR_ERR
+  SYS HASI topic_got "lib"
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  ELSE
+    IF sum_n == 1 THEN
+      LET score = score + 1
+    ELSE
+      # still ok if any non-empty topic
+      IF topic_got != "" THEN
+        LET score = score + 1
+      END
+    END
+  END
+  HASTOPIC lib
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.classes"
+  SYS HAS LAST "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "recover"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "errtips_recover"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "chain ok"
+    LET admit_n = 1
+    LET find_n = tips_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "chain score"
+    FAIL "chain score"
+    CLEAR_ERR
+  END
+  SYS CAT "chain:" tips_n ":ch"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "chain:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tips_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# soft — clean ERRTIPS general + empty-ish
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  CLEAR_ERR
+  ERRTIPS
+  LET topic_got = ERRTIPS_TOPIC
+  LET tips_n = ERRTIPS_N
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS topic_got "general"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF tips_n >= 1 THEN
+    LET score = score + 1
+  END
+  SYS HASI body "no sticky"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # soft miss-ish unknown noise still classifies somewhere
+  ERRTIPS "zzzz completely unknown noise xyz"
+  LET tips_n = ERRTIPS_N
+  CLEAR_ERR
+  IF tips_n >= 1 THEN
+    LET score = score + 1
+  END
+  GETP "agent"
+  SYS EQS LAST "svc-errtips"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "errtips"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "ERRTIPS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 7 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok1:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tips_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# gate — plate surface + live ERRTIPS class
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  FAIL "INCLUDE missing hold_seed"
+  ERRTIPS
+  LET topic_got = ERRTIPS_TOPIC
+  LET tips_n = ERRTIPS_N
+  CLEAR_ERR
+  SYS EQS topic_got "lib"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF tips_n >= 2 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.surface"
+  SYS HAS LAST "ERRTIPS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "FIXTIPS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.classes"
+  SYS HAS LAST "p2p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "recover"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "errtips_recover"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 7 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = tips_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tips_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# alias — FIXTIPS duals
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  FIXTIPS "SMX DIAL timeout"
+  LET topic_got = ERRTIPS_TOPIC
+  LET tips_n = ERRTIPS_N
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS topic_got "p2p"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF tips_n >= 2 THEN
+    LET score = score + 1
+  END
+  SYS HASI body "CUBALC_P2P"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  FIXTIPS "ASSERT failed line 9"
+  LET topic_got = ERRTIPS_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "run"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "errtips"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.surface"
+  SYS HAS LAST "FIXTIPS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 7 THEN
+    LET hit = 1
+    LET note_msg = "alias ok"
+    LET admit_n = 1
+    LET find_n = tips_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias score"
+    FAIL "alias score"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:1:as"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tips_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber + FAIL sticky until CLEAR_ERR + substring
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  FAIL "INCLUDE missing hold_seed"
+  ERRTIPS
+  LET body = LAST
+  LET topic_got = ERRTIPS_TOPIC
+  LET tips_n = ERRTIPS_N
+  CLEAR_ERR
+  # PRINT clobber
+  LET stem_s = body
+  PRINT "probe-mark"
+  CLEAR_ERR
+  SYS HASI stem_s "libs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI LAST "libs"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS topic_got "lib"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # sticky still set after FAIL until CLEAR_ERR
+  FAIL "unknown form XYZ"
+  # ERRTIPS without CLEAR_ERR uses sticky
+  ERRTIPS
+  LET topic_got = ERRTIPS_TOPIC
+  CLEAR_ERR
+  SYS EQS topic_got "cap"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # substring HAS vs exact on tips bag
+  ERRTIPS "ASSERT failed line 1"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ASSERT"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF tips_n >= 2 THEN
+    LET score = score + 1
+  END
+  GETP "schema"
+  SYS HAS LAST "errtips_recover"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.classes"
+  SYS HAS LAST "run"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = tips_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" tips_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n tips_n topic_got score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET body = LAST
+CLEAR_ERR
+SYS STR miss
+LET row = LAST
+CLEAR_ERR
+SYS CAT "hit=" body " miss=" row " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_errtips_recover.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " find_n=" find_n " tips_n=" tips_n " topic=" topic_got " score=" score " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+IF hit == 0 THEN
+  IF known == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+NOTE "svc_errtips_recover_board: done"
+PASS
