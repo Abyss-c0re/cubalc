@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 287,
-  "program": "programs/realworld/svc_recipe_libcard_board.cubalc",
-  "theme": "RECIPE/LIBCARD/CARD lib recipe inventory",
-  "version": "1.15.750-usability",
+  "iter": 288,
+  "program": "programs/realworld/svc_checkdeps_install_board.cubalc",
+  "theme": "CHECKDEPS/HASDEPS/NEEDDEPS lib install gate",
+  "version": "1.15.752-usability",
   "pass": true,
-  "prior_note": "iter 286 SUMFLAT rollup; this iter first realworld 1300 RECIPE/LIBCARD/CARD",
+  "prior_note": "iter 287 RECIPE libcard; this iter first realworld 1302 CHECKDEPS/HASDEPS/NEEDDEPS",
   "tests": [
     {
       "name": "list",
@@ -21,43 +21,43 @@
     },
     {
       "name": "fat",
-      "cmd": "RECIPE fat_session deps=2",
+      "cmd": "HASDEPS fat_session deps=5",
       "ok": true,
       "note": "fat"
     },
     {
-      "name": "tick",
-      "cmd": "LIBCARD plate_tick def=4",
+      "name": "check",
+      "cmd": "CHECKDEPS empty miss LAST_N=0",
       "ok": true,
-      "note": "tick"
+      "note": "check"
     },
     {
-      "name": "agent",
-      "cmd": "CARD agent_boot zero deps",
+      "name": "leaf",
+      "cmd": "NEEDDEPS+HASDEPS agent_boot",
       "ok": true,
-      "note": "agent"
+      "note": "leaf"
     },
     {
       "name": "soft",
-      "cmd": "ghost lib miss OK=0",
+      "cmd": "ghost HASDEPS OK=0 CHECKDEPS OK=1",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "fat deps floor",
+      "cmd": "min_deps floor",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "LIBCARD+CARD fat",
+      "cmd": "HAS/CHECK/NEED dual",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "LAST_N dual + DEFAULTS brace",
+      "cmd": "LAST_N dual + OK always1",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "455/610 cli duals red; recipe PASS"
+      "note": "455/613 cli duals red; checkdeps PASS"
     }
   ],
   "weaknesses": [
@@ -4002,6 +4002,38 @@
       "title": "WRITE VAL/META/STATUS omit trailing NL",
       "detail": "Reconfirmed: od -c META/VAL end without \\n; STATUS last bag line no $ in cat -A.",
       "repro": "od -c META.txt"
+    },
+    {
+      "id": "W492",
+      "severity": "high",
+      "area": "lang|checkdeps",
+      "title": "CHECKDEPS OK stays 1 on miss; success is LAST_N==0",
+      "detail": "CHECKDEPS ghostlib returns OK=1 with LAST_N>=1 miss bag. Agents that branch on OK alone admit incomplete trees. Complete install is empty miss bag (LAST_N=0) or DEPS_MISS_N==0. HASDEPS correctly sets OK=0 on miss.",
+      "repro": "CHECKDEPS no_such \u2192 OK=1 LAST_N=1; HASDEPS no_such \u2192 OK=0"
+    },
+    {
+      "id": "W493",
+      "severity": "med",
+      "area": "lang|hasdeps",
+      "title": "HASDEPS LAST_N is boolean hit not DEPS_N",
+      "detail": "HASDEPS fat_session \u2192 LAST_N=1 while DEPS_N=5. Size gates must use DEPS_N/DEPS_OK_N not LAST_N. Same dual class as SUMFLAT LAST_N=sum and RECIPE LAST_N=deps_n.",
+      "repro": "HASDEPS fat_session; PRINT LAST_N \u2192 1; PRINT DEPS_N \u2192 5"
+    },
+    {
+      "id": "W494",
+      "severity": "med",
+      "area": "lang|checkdeps",
+      "title": "CHECKDEPS LAST_N=0 means success (empty miss) \u2014 inverse of HASDEPS",
+      "detail": "On complete tree CHECKDEPS LAST_N=0; HASDEPS LAST_N=1. Mixing the two without reading DEPS_* fields inverts the gate. Prefer DEPS_MISS_N==0 for both.",
+      "repro": "CHECKDEPS fat; LAST_N=0 ok; HASDEPS fat; LAST_N=1 ok"
+    },
+    {
+      "id": "W495",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META/STATUS omit trailing NL",
+      "detail": "Reconfirmed: od -c META ends without \\n; STATUS last bag line no $ in cat -A.",
+      "repro": "od -c META.txt"
     }
   ],
   "workarounds": [
@@ -4075,7 +4107,12 @@
     "RECIPE_DEFAULTS brace/JSON truncation (W488)",
     "LAST_N after RECIPE is deps_n not bytes (W489)",
     "soft RECIPE miss sticky err + CLEAR_ERR",
-    "capture recipe JSON before EQS/PRINT (W4 class)"
+    "capture recipe JSON before EQS/PRINT (W4 class)",
+    "CHECKDEPS/HASDEPS/NEEDDEPS install gate",
+    "CHECKDEPS OK always 1 on miss (W492)",
+    "HASDEPS LAST_N boolean vs DEPS_N (W493)",
+    "CHECKDEPS LAST_N=0 success inverse of HASDEPS (W494)",
+    "DEPS_OK / DEPS_MISS bags for install plans"
   ],
   "issues_faced": [
     "iter268: agent_job=role_s false-friend first-hit for PATHBYVAL worker (W412) \u2014 seed agent_job=runner",
@@ -4120,8 +4157,11 @@
     "iter286: empty all includes cfg.port 8080 in total 8086",
     "iter287: first realworld 1300 RECIPE; agent path failed until LAST captured before EQS",
     "iter287: plate_tick DEFAULTS PLATE_SEED truncated at brace",
-    "iter287: selftest still 455/610 CLI plate duals red (set\u2192SETF)"
+    "iter287: selftest still 455/610 CLI plate duals red (set\u2192SETF)",
+    "iter288: first realworld 1302 CHECKDEPS; 10/10 green first pass",
+    "iter288: CHECKDEPS OK=1 on miss is the main false friend",
+    "iter288: selftest 455/613 still CLI duals red"
   ],
-  "commit": "17d99fd7",
-  "ts": "2026-08-10T06:35:39Z"
+  "commit": "pending",
+  "ts": "2026-08-10T06:58:58Z"
 }
