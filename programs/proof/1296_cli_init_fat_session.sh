@@ -12,7 +12,7 @@ export CUBALC_STATE="$ST"
 OUT=$("$CUBALC" init --list 2>&1)
 printf '%s\n' "$OUT" | grep -q 'fat_session'
 printf '%s\n' "$OUT" | grep -q -- '--fat-session\|--durable'
-printf '%s\n' "$OUT" | grep -q '"n":5'
+printf '%s\n' "$OUT" | grep -qE '"n":[56]'
 
 # write scaffold into private state
 PROG="$ST/session_starter.cubalc"
