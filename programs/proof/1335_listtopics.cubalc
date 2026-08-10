@@ -1,0 +1,37 @@
+# LISTTOPICS / HASTOPIC / NEEDTOPIC — discovery topic catalog
+
+LISTTOPICS
+ASSERT OK == 1
+ASSERT LISTTOPICS_N == 8
+ASSERT LAST_N == 8
+SYS HASI "general"
+ASSERT LAST_N == 1
+SYS HASI "cap"
+ASSERT LAST_N == 1
+SYS HASI "protect"
+ASSERT LAST_N == 1
+
+TOPICS
+ASSERT OK == 1
+ASSERT TOPICS_N == 8
+
+HASTOPIC cap
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASTOPIC_N == 1
+
+HASTOPIC forms
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "cap"
+
+HASTOPIC zzz_nope
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+NEEDTOPIC plate
+ASSERT OK == 1
+
+# NEEDTOPIC miss is fatal — probe via soft path only above
+PASS
+PRINT "1335_listtopics: PASS"

@@ -3250,6 +3250,8 @@ int main(int argc, char **argv) {
       {"cli_topic", "programs/proof/1333_cli_topic.sh", "cubalc topic plate + forms"},
       {"runsnip", "programs/proof/1334_runsnip.cubalc", "RUNSNIP/SNIPRUN execute topic mini"},
       {"cli_runsnip", "programs/proof/1334_cli_runsnip.sh", "cubalc runsnip plate + topics"},
+      {"listtopics", "programs/proof/1335_listtopics.cubalc", "LISTTOPICS/HASTOPIC/NEEDTOPIC topic catalog"},
+      {"cli_listtopics", "programs/proof/1335_cli_listtopics.sh", "cubalc topics plate + hastopic"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3890,6 +3892,9 @@ int main(int argc, char **argv) {
       {"SNIPRUN", "flow", "SNIPRUN alias of RUNSNIP"},
       {"TOPIC", "flow", "TOPIC|TOPICCARD [topic] tips+forms+snip one plate · cubalc topic dual"},
       {"TOPICCARD", "flow", "TOPICCARD alias of TOPIC"},
+      {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
+      {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
+      {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
@@ -5061,7 +5066,7 @@ int main(int argc, char **argv) {
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
            "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc doctor · cubalc topic · cubalc runsnip · cubalc snip · cubalc init\n");
+           "Commands: cubalc doctor · cubalc topics · cubalc topic · cubalc runsnip · cubalc init\n");
     return 0;
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
@@ -5706,6 +5711,77 @@ int main(int argc, char **argv) {
              lastj, CUBALC_LANG_VERSION);
     }
     return ok ? 0 : 1;
+  }
+  if (strcmp(cmd, "topics") == 0 || strcmp(cmd, "listtopics") == 0 ||
+      strcmp(cmd, "topiclist") == 0 || strcmp(cmd, "discovery-topics") == 0 ||
+      strcmp(cmd, "hastopic") == 0 || strcmp(cmd, "needtopic") == 0) {
+    /* Usability: discovery topic catalog (dual of LISTTOPICS/HASTOPIC).
+     *   cubalc topics · cubalc hastopic cap · cubalc needtopic plate
+     * Schema cubalc.topics.v1 · agents list topics without hardcoding. */
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    static const char *hints[] = {
+      "install/doctor/init surface",
+      "HASFORM/NEEDFORMS capability floor",
+      "VARROOM/REMAIN_MS fat nest budget",
+      "SETP/NEEDP plate agent JSON",
+      "SMX SERVE/DIAL mesh",
+      "ASSERT/EXPECT/WHY run probes",
+      "LISTLIBS/RECIPE INCLUDE discovery",
+      "HOLD_FLASH/protect status"
+    };
+    int nall = (int)(sizeof topics / sizeof topics[0]);
+    int i, is_has = (strcmp(cmd, "hastopic") == 0);
+    int is_need = (strcmp(cmd, "needtopic") == 0);
+    if (is_has || is_need) {
+      const char *name = (argc > 2 && argv[2][0]) ? argv[2] : "";
+      char tup[32];
+      size_t k;
+      int hit = 0;
+      if (!name[0]) {
+        fprintf(stderr, "usage: cubalc hastopic|needtopic <topic>\n");
+        printf("{\"schema\":\"cubalc.topics.v1\",\"ok\":false,\"cmd\":\"%s\","
+               "\"err\":\"need topic name\",\"version\":\"%s\"}\n",
+               cmd, CUBALC_LANG_VERSION);
+        return 2;
+      }
+      for (k = 0; name[k] && k + 1 < sizeof tup; k++)
+        tup[k] = (char)((name[k] >= 'A' && name[k] <= 'Z')
+                            ? name[k] - 'A' + 'a' : name[k]);
+      tup[k] = 0;
+      if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+        snprintf(tup, sizeof tup, "%s", "cap");
+      if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+        snprintf(tup, sizeof tup, "%s", "p2p");
+      if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+        snprintf(tup, sizeof tup, "%s", "fat");
+      if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+        snprintf(tup, sizeof tup, "%s", "plate");
+      if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+          !strcmp(tup, "default") || !strcmp(tup, "*"))
+        snprintf(tup, sizeof tup, "%s", "general");
+      for (i = 0; i < nall; i++)
+        if (!strcmp(topics[i], tup)) { hit = 1; break; }
+      printf("{\"schema\":\"cubalc.topics.v1\",\"ok\":%s,\"cmd\":\"%s\","
+             "\"topic\":\"%s\",\"known\":%s,\"mode\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"CLI dual of HASTOPIC/NEEDTOPIC · cubalc topics catalog\"}\n",
+             hit ? "true" : "false", cmd, tup, hit ? "true" : "false",
+             is_need ? "need" : "has", CUBALC_LANG_VERSION);
+      if (is_need) return hit ? 0 : 1;
+      return 0;
+    }
+    printf("{\"schema\":\"cubalc.topics.v1\",\"ok\":true,\"cmd\":\"topics\","
+           "\"n\":%d,\"version\":\"%s\","
+           "\"note\":\"discovery topic catalog · dual of LISTTOPICS · use with topic/tips/snip/runsnip\","
+           "\"topics\":[",
+           nall, CUBALC_LANG_VERSION);
+    for (i = 0; i < nall; i++) {
+      printf("%s{\"id\":\"%s\",\"hint\":\"%s\"}",
+             i ? "," : "", topics[i], hints[i]);
+    }
+    printf("]}\n");
+    return 0;
   }
   if (strcmp(cmd, "init") == 0 || strcmp(cmd, "new") == 0 ||
       strcmp(cmd, "scaffold") == 0 || strcmp(cmd, "create") == 0) {
@@ -15042,6 +15118,9 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"SNIPRUN", "flow", "SNIPRUN alias of RUNSNIP"},
       {"TOPIC", "flow", "TOPIC|TOPICCARD [topic] tips+forms+snip one plate · cubalc topic dual"},
       {"TOPICCARD", "flow", "TOPICCARD alias of TOPIC"},
+      {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
+      {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
+      {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"FORMHINT", "flow", "FORMHINT name HELP one-line hint → LAST · dual of HASFORM"},
       {"LISTFORMS", "flow", "LISTFORMS [prefix] bag of HELP form names · dual of cubalc forms"},
       {"COUNTFORMS", "flow", "COUNTFORMS [prefix] match count → LAST_N"},
@@ -16505,12 +16584,14 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    snip|snippet [topic]       mini runnable source JSON (cubalc.snip.v1)\n"
       "    topic|topiccard [topic]    tips+forms+snip one plate (cubalc.topic.v1)\n"
       "    runsnip|sniprun [topic]    execute curated SNIP mini (cubalc.runsnip.v1)\n"
+      "    topics|listtopics          discovery topic catalog (cubalc.topics.v1)\n"
+      "    hastopic|needtopic <t>     soft/hard topic membership gates\n"
       "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|formsfor|related|snip|topic|runsnip|countforms|hasform  duals\n"
+      "    picklib|listforms|formhint|formsfor|related|snip|topic|runsnip|topics|hastopic  duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
@@ -16540,8 +16621,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|LISTFORMS|FORMHINT|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|COUNTFORMS|HASFORM|HASFORMS|NEEDFORMS|MATCHLIBS\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|LISTTOPICS|EXIT|CLEAR_ERR|WHY · STATUS\n"
+      "    LISTLIBS|LISTFORMS|LISTTOPICS|FORMHINT|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|HASTOPIC|HASFORM|HASFORMS|NEEDFORMS\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"

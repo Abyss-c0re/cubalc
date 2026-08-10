@@ -2736,6 +2736,9 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"SNIPRUN", "SNIPRUN alias of RUNSNIP"},
       {"TOPIC", "TOPIC|TOPICCARD [topic] — one plate tips+forms+snip · dual of cubalc topic"},
       {"TOPICCARD", "TOPICCARD alias of TOPIC"},
+      {"LISTTOPICS", "LISTTOPICS|TOPICS — bag of discovery topics · dual of cubalc topics"},
+      {"HASTOPIC", "HASTOPIC name — soft 0|1 if topic known · dual of HASFORM for topics"},
+      {"NEEDTOPIC", "NEEDTOPIC name — fail-fast if topic unknown"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"SETP", "SETP [FROM plate] key value — set key on PLATE or named plate · dotted path nest ok · write-back · multi-plate"},
       {"INCP", "INCP [FROM plate] key [delta] — bump numeric key · dotted path nest ok · write-back · default +1"},
@@ -39872,6 +39875,123 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
     if (vm->trace)
       fprintf(vm->trace, "# topic %s tips=%d forms=%d snip_lines=%d\n", tup, nt, nf, ns);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTTOPICS|TOPICS — bag of curated discovery topics (dual of cubalc topics).
+   * Complements TIPS/FORMSFOR/SNIP/TOPIC/RUNSNIP — agents discover topic names
+   * without hardcoding. LAST=newline bag · LAST_N=count · OK=1.
+   * HASTOPIC|NEEDTOPIC name — soft/hard membership gate (twin of HASFORM). */
+  if (kw(&L->cur,"LISTTOPICS")||kw(&L->cur,"TOPICS")||kw(&L->cur,"TOPICLIST")||
+      kw(&L->cur,"LIST_TOPICS")||kw(&L->cur,"DISCOVERY_TOPICS")){
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    char bag[256];
+    size_t o = 0;
+    int i, n = (int)(sizeof topics / sizeof topics[0]);
+    lex_next(L);
+    bag[0] = 0;
+    for (i = 0; i < n; i++) {
+      size_t ln = strlen(topics[i]);
+      if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) { memcpy(bag + o, topics[i], ln); o += ln; }
+      bag[o] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTTOPICS", bag);
+    var_set_str(vm, "TOPICS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "LISTTOPICS_N", n);
+    var_set_num(vm, "TOPICS_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+  if (kw(&L->cur,"HASTOPIC")||kw(&L->cur,"KNOWNTOPIC")||kw(&L->cur,"ISTOPIC")||
+      kw(&L->cur,"NEEDTOPIC")||kw(&L->cur,"REQUIRETOPIC")||kw(&L->cur,"REQUIRE TOPIC")){
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    int hard = kw(&L->cur,"NEEDTOPIC")||kw(&L->cur,"REQUIRETOPIC")||
+               kw(&L->cur,"REQUIRE TOPIC");
+    char name[32], nup[32], tup[32];
+    size_t k;
+    int i, nall = (int)(sizeof topics / sizeof topics[0]), hit = 0;
+    int aln = L->cur.line;
+    lex_next(L);
+    name[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "HASTOPIC_N", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "HASTOPIC: need name — HASTOPIC cap · NEEDTOPIC plate");
+      var_set_str(vm, "ERR",
+                  "HASTOPIC: need name — HASTOPIC cap · NEEDTOPIC plate");
+      if (hard) { fail(vm, "NEEDTOPIC: need name"); return -1; }
+      bump(vm);
+      return 1;
+    }
+    for (k = 0; name[k] && k + 1 < sizeof tup; k++) {
+      char c = name[k];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      tup[k] = c;
+    }
+    tup[k] = 0;
+    /* aliases match TIPS/TOPIC surface */
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    for (i = 0; i < nall; i++) {
+      if (!strcmp(topics[i], tup)) { hit = 1; break; }
+    }
+    var_set_str(vm, "TOPIC_NAME", tup);
+    var_set_str(vm, "HASTOPIC_OF", tup);
+    var_set_num(vm, "LAST_N", hit ? 1 : 0);
+    vm->last_n = hit ? 1 : 0;
+    var_set_num(vm, "HASTOPIC_N", hit ? 1 : 0);
+    var_set_str(vm, "LAST", hit ? "1" : "0");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hit ? "1" : "0");
+    var_set_num(vm, "OK", hit ? 1 : 0);
+    if (!hit) {
+      char em[160];
+      snprintf(em, sizeof em,
+               "%s miss: '%s' — LISTTOPICS · TOPIC · TIPS · cubalc topics",
+               hard ? "NEEDTOPIC" : "HASTOPIC", name);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      if (hard) {
+        fail(vm, em);
+        return -1;
+      }
+    }
+    (void)aln;
     bump(vm);
     return 1;
   }

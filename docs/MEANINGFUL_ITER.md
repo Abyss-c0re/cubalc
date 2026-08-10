@@ -821,6 +821,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 791. ~~**`SNIP` / `cubalc snip`**~~ **done** (topic → mini runnable source · cubalc.snip.v1 · triad with TIPS prose + FORMSFOR names).
 792. ~~**`TOPIC` / `cubalc topic`**~~ **done** (one plate tips+forms+snip · cubalc.topic.v1 · agents skip three discovery calls).
 793. ~~**`RUNSNIP` / `cubalc runsnip`**~~ **done** (execute curated SNIP mini one-shot · cubalc.runsnip.v1 · no temp file paste).
+794. ~~**`LISTTOPICS` / `HASTOPIC` / `cubalc topics`**~~ **done** (discovery topic catalog + soft/hard gates · cubalc.topics.v1 · no hardcode topic names).
 
 ## Tick protocol
 
