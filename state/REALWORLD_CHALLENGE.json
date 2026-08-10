@@ -3729,6 +3729,6 @@
     "iter277: LET ref_v=DIVERGEPATHS_REF then SYS EQS ref_v hard-fails unknown form; fixed via special-direct EQS",
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red"
   ],
-  "commit": "eeabca4e",
+  "commit": "6a3002c4",
   "ts": "2026-08-10T01:49:46Z"
 }
