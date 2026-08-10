@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 295,
-  "program": "programs/realworld/svc_newestlib_canary_board.cubalc",
-  "theme": "NEWESTLIB/OLDESTLIB mtime canary pick",
-  "version": "1.15.767-usability",
+  "iter": 296,
+  "program": "programs/realworld/svc_include_all_match_board.cubalc",
+  "theme": "INCLUDE ALL MATCH bulk + INCLUDE NEWEST canary",
+  "version": "1.15.769-usability",
   "pass": true,
-  "prior_note": "iter 294 EACH LIB walk; this iter first realworld 1317 NEWESTLIB/OLDESTLIB",
+  "prior_note": "iter 295 NEWESTLIB canary; this iter first realworld 1316 INCLUDE ALL + 1318 INCLUDE NEWEST",
   "tests": [
     {
       "name": "list",
@@ -20,44 +20,44 @@
       "note": "boot"
     },
     {
-      "name": "new",
-      "cmd": "NEWESTLIB fat\u2192fat_session",
-      "ok": true,
-      "note": "new"
-    },
-    {
-      "name": "old",
-      "cmd": "OLDESTLIB fat\u2192fat_boot",
-      "ok": true,
-      "note": "old"
-    },
-    {
       "name": "guard",
-      "cmd": "LATESTLIB time_guard",
+      "cmd": "ALL MATCH guard n=2",
       "ok": true,
       "note": "guard"
     },
     {
+      "name": "fat",
+      "cmd": "ALL MATCH fat n=2",
+      "ok": true,
+      "note": "fat"
+    },
+    {
+      "name": "newest",
+      "cmd": "INCLUDE NEWEST/OLDEST fat",
+      "ok": true,
+      "note": "newest"
+    },
+    {
       "name": "soft",
-      "cmd": "ghost miss + OR fallback",
+      "cmd": "SOFT miss + DEFAULT fb",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "family size + canary stem",
+      "cmd": "min_all floor",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "LATEST vs OLDEST dual",
+      "cmd": "LATEST/EARLIEST",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "LAST_N dual + INCLUDE stem",
+      "cmd": "duals + NEWEST\u2260alpha",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; newestlib PASS"
+      "note": "cli duals red; include_all+newest PASS; SORTLIBS unwired"
     }
   ],
   "weaknesses": [
@@ -4274,6 +4274,38 @@
       "title": "WRITE VAL/META/STATUS omit trailing NL",
       "detail": "Reconfirmed STATUS last line and META without final \\n.",
       "repro": "od -c META.txt"
+    },
+    {
+      "id": "W526",
+      "severity": "med",
+      "area": "lang|include_all",
+      "title": "INCLUDE ALL MATCH INCLUDE_ALL_N is this-op count not total loaded stems",
+      "detail": "INCLUDE ALL MATCH guard \u2192 INCLUDE_ALL_N=2 while INCLUDESTEMS bag is larger (prior includes). Agents must not treat INCLUDE_ALL_N as fleet-wide load size.",
+      "repro": "INCLUDE ALL MATCH guard; PRINT INCLUDE_ALL_N \u2192 2; INCLUDESTEMS may have more"
+    },
+    {
+      "id": "W527",
+      "severity": "med",
+      "area": "lang|include_soft",
+      "title": "INCLUDE SOFT ALL MATCH miss OK=0; DEFAULT path soft-succeeds without SOFT",
+      "detail": "SOFT ALL ghost \u2192 OK=0. ALL MATCH ghost DEFAULT hold_seed \u2192 OK=1 FALLBACK=1. Two miss styles in one family; agents need distinct branches.",
+      "repro": "INCLUDE SOFT ALL MATCH no_such \u2192 OK=0; \u2026 DEFAULT hold_seed \u2192 OK=1"
+    },
+    {
+      "id": "W528",
+      "severity": "high",
+      "area": "lang|sortlibs",
+      "title": "SORTLIBS proof 1320 exists but form not wired in 1.15.769",
+      "detail": "programs/proof/1320_sortlibs.cubalc fails: unknown form SORTLIBS. Document for MEANINGFUL_ITER; use MATCHLIBS+NEWESTLIB until linked.",
+      "repro": "SORTLIBS fat \u2192 unknown form SORTLIBS"
+    },
+    {
+      "id": "W529",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META/STATUS omit trailing NL",
+      "detail": "Reconfirmed STATUS last line and META without final \\n.",
+      "repro": "od -c META.txt"
     }
   ],
   "workarounds": [
@@ -4319,11 +4351,6 @@
     "use unique path needles for single counter rollups"
   ],
   "language_gaps": [
-    "CHECKDEPS/HASDEPS/NEEDDEPS install gate",
-    "CHECKDEPS OK always 1 on miss (W492)",
-    "HASDEPS LAST_N boolean vs DEPS_N (W493)",
-    "CHECKDEPS LAST_N=0 success inverse of HASDEPS (W494)",
-    "DEPS_OK / DEPS_MISS bags for install plans",
     "PRETTYP/JSONPRETTY/PRETTYJSON plate evidence dump",
     "LAST_N after PRETTYP is bytes not lines (W496)",
     "no needle soft-miss form \u2014 HAS on pretty body (W497)",
@@ -4358,12 +4385,14 @@
     "LAST_N=1 vs NEWESTLIB_N family (W522)",
     "mtime order vs alpha PICKLIB first (W523)",
     "CLEAR_ERR before INCLUDE after NEWESTLIB (W524)",
-    "NEWESTLIB_MTIME / FALLBACK fields"
+    "NEWESTLIB_MTIME / FALLBACK fields",
+    "INCLUDE ALL MATCH bulk filter include",
+    "INCLUDE NEWEST/OLDEST/LATEST/EARLIEST one-shot",
+    "INCLUDE_ALL_N this-op count dual (W526)",
+    "SOFT miss vs DEFAULT fallback polarity (W527)",
+    "SORTLIBS unwired despite proof 1320 (W528)"
   ],
   "issues_faced": [
-    "iter276: FIRSTUNEQ LAST/LAST_N works under agent pressure (unlike UNIFORM_PATH)",
-    "iter276: 9/9 green; empty needle finds first diverge among a/b/c",
-    "iter277: LET ref_v=DIVERGEPATHS_REF then SYS EQS ref_v hard-fails unknown form; fixed via special-direct EQS",
     "iter277: 10/10 board green; PATHS multi-line no final NL; selftest 455/566 cli duals red",
     "iter278: scrub failed first on host:h1 \u2014 plate_session rewrote host to h2; gate on site/zone",
     "iter278: 10/10 green; grepflat PASS 31; selftest 455/567 cli duals red",
@@ -4410,8 +4439,11 @@
     "iter294: plate walk first=plate_boot last=plate_uniform alpha stable",
     "iter295: first realworld 1317 NEWESTLIB; 10/10 green first pass",
     "iter295: fat canary fat_session vs baseline fat_boot mtime split",
-    "iter295: selftest CLI duals still red"
+    "iter295: selftest CLI duals still red",
+    "iter296: first realworld 1316+1318 INCLUDE ALL/NEWEST; 10/10 green first pass",
+    "iter296: SORTLIBS proof red \u2014 form not in binary (W528)",
+    "iter296: guard ALL n=2; NEWEST fat_session vs OLDEST fat_boot"
   ],
-  "commit": "b4f954c5",
-  "ts": "2026-08-10T09:53:46Z"
+  "commit": "pending",
+  "ts": "2026-08-10T10:18:41Z"
 }

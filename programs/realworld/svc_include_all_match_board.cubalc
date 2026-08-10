@@ -1,0 +1,836 @@
+# svc_include_all_match_board.cubalc — INCLUDE ALL MATCH + INCLUDE NEWEST bulk load
+#
+# Real use: fleet agents bulk-INCLUDE filtered lib families for bootstrap and
+# one-shot mtime canary INCLUDE without per-stem PICK loops. First realworld
+# of proofs 1316 INCLUDE ALL MATCH + 1318 INCLUDE NEWEST/OLDEST.
+#
+#   INCLUDE [ONCE] ALL MATCH needle [DEFAULT fb]
+#   INCLUDE [ONCE] NEWEST|OLDEST|LATEST|EARLIEST needle [DEFAULT fb]
+#   INCLUDE SOFT ALL MATCH ghost → OK=0 · INCLUDE_ALL_N · INCLUDE_MATCH
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sia_$$
+#   ./out/cubalc run programs/realworld/svc_include_all_match_board.cubalc boot
+#   ./out/cubalc run ... guard|fat|newest|soft|gate|alias|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SIA_REPORT.txt agent.json peer.json
+# Env: HOST_S ROLE_S CUBALC_SIA_REQUIRE
+#
+# Edges: SOFT empty miss; DEFAULT fallback; INCLUDE_ALL_N dual;
+#   NEWEST≠OLDEST; SORTLIBS not wired (note); WRITE NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_include_all_match_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_include_all_match -- boot|guard|fat|newest|soft|gate|alias|probe|list -- [--host=H] [--role=R]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeT"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SIA_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "peer.json"
+LET peer_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SIA_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sum_v = 0
+LET sum_n = 0
+LET stem_s = ""
+LET all_n = 0
+
+ONEOF ACTION "boot", "guard", "fat", "newest", "soft", "gate", "alias", "list", "ls", "probe", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "guard" THEN
+    LET op = "guard"
+  WHEN "fat" THEN
+    LET op = "fat"
+  WHEN "newest" THEN
+    LET op = "newest"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "alias" THEN
+    LET op = "alias"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS TRIM host_s
+  LET host_s = LAST
+  SYS TRIM role_s
+  LET role_s = LAST
+  CLEAR_ERR
+  LET PLATE_PATH = agent_path
+  SYS CAT "{\"agent\":\"svc-include-all\",\"schema\":\"cubalc.svc_include_all_match.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"want_filter\":\"guard\",\"label\":\"includeall\",\"cfg\":{\"min_all\":2,\"want_new\":\"fat_session\"}}"
+  LET PLATE_SEED = LAST
+  CLEAR_ERR
+  LET PEER_PATH = peer_path
+  SYS CAT "{\"peer\":\"bulk\",\"n\":1}"
+  LET PEER_SEED = LAST
+  CLEAR_ERR
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  SYS SAVEPLATE agent_path PLATE
+  CLEAR_ERR
+  LET score = 0
+  GETP "agent"
+  SYS EQS LAST "svc-include-all"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_include_all_match"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "includeall"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 5 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# guard — INCLUDE ALL MATCH guard (time + var)
+SYS EQS op "guard"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  INCLUDE ONCE ALL MATCH guard
+  LET all_n = INCLUDE_ALL_N
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF all_n == 2 THEN
+    LET score = score + 1
+  END
+  INCLUDESTEMS
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "time_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE body "var_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-include-all"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "includeall"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 7 THEN
+    LET hit = 1
+    LET note_msg = "guard ok"
+    LET admit_n = all_n
+    LET find_n = all_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "guard score"
+    FAIL "guard score"
+    CLEAR_ERR
+  END
+  SYS CAT "guard:" all_n ":gd"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "guard:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n all_n score note_msg
+  CLEAR_ERR
+END
+
+# fat — INCLUDE ALL MATCH fat family
+SYS EQS op "fat"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  INCLUDE ONCE ALL MATCH fat
+  LET all_n = INCLUDE_ALL_N
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  IF all_n >= 1 THEN
+    LET score = score + 1
+  END
+  INCLUDESTEMS
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "fat_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.min_all"
+  SYS EQS LAST "2"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-include-all"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "fat ok"
+    LET admit_n = all_n
+    LET find_n = all_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "fat score"
+    FAIL "fat score"
+    CLEAR_ERR
+  END
+  SYS CAT "fat:" all_n ":ft"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "fat:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n all_n score note_msg
+  CLEAR_ERR
+END
+
+# newest — INCLUDE NEWEST/OLDEST one-shot
+SYS EQS op "newest"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  INCLUDE ONCE NEWEST fat
+  LET stem_s = INCLUDE_MATCH
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS stem_s "fat_session"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF NEWESTLIB_MTIME > 0 THEN
+    LET score = score + 1
+  END
+  INCLUDE ONCE OLDEST fat
+  LET body = INCLUDE_MATCH
+  CLEAR_ERR
+  SYS EQS body "fat_boot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS stem_s body
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.want_new"
+  SYS EQS LAST "fat_session"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "includeall"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 7 THEN
+    LET hit = 1
+    LET note_msg = "newest ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "newest score"
+    FAIL "newest score"
+    CLEAR_ERR
+  END
+  SYS CAT "newest:" stem_s ":nw"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "newest:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n stem_s body score note_msg
+  CLEAR_ERR
+END
+
+# soft — SOFT ALL miss + DEFAULT fallback
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  INCLUDE SOFT ALL MATCH no_such_lib_xyz_zzz
+  LET sum_v = OK
+  CLEAR_ERR
+  IF sum_v == 0 THEN
+    LET score = score + 1
+  END
+  INCLUDE SOFT NEWEST no_such_lib_xyz_zzz
+  LET admit_n = OK
+  CLEAR_ERR
+  IF admit_n == 0 THEN
+    LET score = score + 1
+  END
+  INCLUDE ONCE ALL MATCH no_such_lib_xyz DEFAULT hold_seed
+  LET find_n = INCLUDE_ALL_FALLBACK
+  LET all_n = INCLUDE_ALL_N
+  CLEAR_ERR
+  IF find_n == 1 THEN
+    LET score = score + 1
+  END
+  IF all_n >= 1 THEN
+    LET score = score + 1
+  END
+  INCLUDESTEMS
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "hold_seed"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-include-all"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "includeall"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE soft denied"
+    END
+  END
+  SYS CAT "soft:ok1:sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n all_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — min_all floor via INCLUDE ALL MATCH guard
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  INCLUDE ONCE ALL MATCH guard
+  LET all_n = INCLUDE_ALL_N
+  CLEAR_ERR
+  IF all_n >= 2 THEN
+    LET score = score + 1
+  END
+  GETP "cfg.min_all"
+  SYS EQS LAST "2"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "svc_include_all_match"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "want_filter"
+  SYS EQS LAST "guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-include-all"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "cfg.want_new"
+  SYS EQS LAST "fat_session"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET admit_n = 1
+    LET find_n = all_n
+    LET note_msg = "gate ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n all_n score note_msg
+  CLEAR_ERR
+END
+
+# alias — LATEST / EARLIEST INCLUDE
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  INCLUDE ONCE LATEST guard
+  LET stem_s = INCLUDE_MATCH
+  CLEAR_ERR
+  SYS EQS stem_s "time_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  INCLUDE ONCE EARLIEST hold
+  LET body = INCLUDE_MATCH
+  CLEAR_ERR
+  SYS EQS body "hold_seed"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  INCLUDE ONCE NEWEST fat
+  LET row = INCLUDE_MATCH
+  CLEAR_ERR
+  SYS EQS row "fat_session"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "label"
+  SYS EQS LAST "includeall"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-include-all"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 6 THEN
+    LET hit = 1
+    LET note_msg = "alias ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias score"
+    FAIL "alias score"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:" stem_s ":as"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n stem_s body score note_msg
+  CLEAR_ERR
+END
+
+# probe — duals + SORTLIBS gap + DEFAULT fallback
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET PLATE_PATH = agent_path
+  LET PEER_PATH = peer_path
+  INCLUDE plate_peer_session
+  CLEAR_ERR
+  LET score = 0
+  INCLUDE ONCE ALL MATCH guard
+  LET all_n = INCLUDE_ALL_N
+  CLEAR_ERR
+  IF all_n == 2 THEN
+    LET score = score + 1
+  END
+  # INCLUDE_ALL_N is count of matched includes this op (not total loaded)
+  INCLUDESTEMS
+  LET body = LAST
+  SYS LINES body
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF find_n >= all_n THEN
+    LET score = score + 1
+  END
+  # DEFAULT NEWEST miss
+  INCLUDE ONCE NEWEST no_such_lib_xyz DEFAULT hold_seed
+  LET sum_v = INCLUDE_MATCH_FALLBACK
+  LET stem_s = INCLUDE_MATCH
+  CLEAR_ERR
+  IF sum_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS stem_s "hold_seed"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # SOFT ALL miss OK=0 vs hard ALL without DEFAULT sticky/fail path
+  INCLUDE SOFT ALL MATCH ghostpath_lib_999
+  LET admit_n = OK
+  CLEAR_ERR
+  IF admit_n == 0 THEN
+    LET score = score + 1
+  END
+  # NEWEST ≠ alpha first
+  INCLUDE ONCE NEWEST fat
+  LET stem_s = INCLUDE_MATCH
+  CLEAR_ERR
+  SYS EQS stem_s "fat_boot"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS stem_s "fat_session"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "schema"
+  SYS HAS LAST "include_all"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETP "agent"
+  SYS EQS LAST "svc-include-all"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = all_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" all_n ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n all_n stem_s score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET bag_n = 0
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS STR hit
+LET body = LAST
+CLEAR_ERR
+SYS STR miss
+LET row = LAST
+CLEAR_ERR
+SYS CAT "hit=" body " miss=" row " op=" op " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "schema=cubalc.svc_include_all_match.v1 host=" host_s " role=" role_s " req=" require_hit " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " find_n=" find_n " all_n=" all_n " score=" score " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF require_hit > 0 THEN
+  IF miss == 1 THEN
+    EXIT 2 "REQUIRE miss"
+  END
+  IF hit == 0 THEN
+    IF known == 1 THEN
+      EXIT 2 "REQUIRE no hit"
+    END
+  END
+END
+
+PRINT_JSON op hit miss admit_n bag_n all_n note_msg
+NOTE "svc_include_all_match_board: end"
