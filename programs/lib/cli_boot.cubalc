@@ -1,0 +1,25 @@
+# INCLUDE cli_boot — agent preamble + CLI tool surface one-shot
+# Usability: agent_boot + sticky USAGE defaults + HELPFLAG + VERSIONFLAG + CLIINFO
+#   INCLUDE cli_boot
+#   # CLIINFO plate · HELPFLAG/VERSIONFLAG auto-exit when --help/--version
+# Override before INCLUDE (DEFAULT is set-if-unset):
+#   DEFAULT USAGE = "tool [--verbose] file…"
+#   DEFAULT PROG_VERSION = "0.1.0"
+#   LET USAGE = "mytool --out PATH files…"   # always overwrite
+#
+# Scaffold: cubalc init demo --cli
+# Host dual: cubalc cliinfo [-- args…]
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+INCLUDE agent_boot
+
+# Product CLI sticky usage / version (tools override before INCLUDE)
+DEFAULT USAGE = "cubalc-tool [--help] [--version] [args…]"
+DEFAULT PROG_VERSION = "0.1.0"
+
+# Auto --help / --version exit 0 (no HASFLAG+IF+EXIT glue)
+HELPFLAG
+VERSIONFLAG
+
+# Full CLI surface plate for agents (argc/flags/restargs)
+CLIINFO

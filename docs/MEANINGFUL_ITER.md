@@ -852,6 +852,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 822. ~~**`HASFLAGALL` / `NEEDFLAGS`**~~ **done** (multi named-flag presence · FLAGMISS bag · HASFORMS twin for --flags · proof 1362).
 823. ~~**`HASARGALL` / `NEEDARGS`**~~ **done** (multi arg n|name presence · ARGMISS bag · HASFLAGALL twin for CUBALC_ARGn · proof 1363).
 824. ~~**`CLIINFO` / `DUMPCLI` + CLI**~~ **done** (cubalc.cli.v1 one-shot argc/flags/flagmap/restargs · cubalc cliinfo · proof 1364).
+825. ~~**`cli_boot` + `cubalc init --cli`**~~ **done** (agent_boot+HELPFLAG+VERSIONFLAG+CLIINFO · init scaffold n=13 · doctor lib_cli_boot · proof 1365).
 
 ## Tick protocol
 

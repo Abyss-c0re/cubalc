@@ -1,0 +1,36 @@
+# INCLUDE cli_boot — agent_boot + HELPFLAG + VERSIONFLAG + CLIINFO
+
+# empty argv — no help/version hit
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV SET CUBALC_ARGC "0"
+
+INCLUDE cli_boot
+ASSERT OK == 1
+VERSION
+ASSERT LAST_N >= 1
+SYS HASI "cubalc.cli.v1"
+ASSERT LAST_N == 1
+ASSERT ARGC == 0
+ASSERT HELPFLAG_HIT == 0
+ASSERT VERSIONFLAG_HIT == 0
+
+# usage sticky available
+SYS LEN USAGE
+ASSERT LAST_N >= 1
+
+# with flags + file (=val so next is positional)
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARG1 "--out=x"
+SYS ENV SET CUBALC_ARG2 "a.txt"
+SYS ENV SET CUBALC_ARGC "3"
+CLIINFO
+ASSERT LISTFLAGS_N == 2
+ASSERT RESTARGS_N == 1
+
+# chain ready after cli boot
+INCLUDE ready_boot
+ASSERT READY_OK == 1
+
+PASS
+PRINT "1365_cli_boot: PASS"
