@@ -1,18 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 741,
-  "version": "1.15.768-usability",
-  "item": "INCLUDE NEWEST/OLDEST mtime pick+include",
-  "item_id": 777,
-  "title": "INCLUDE NEWEST|OLDEST needle [DEFAULT] \u00b7 mtime one-shot \u00b7 SOFT miss",
-  "commit": "51a99149e374d6a29d5937ab3fcbd960eb6f7811",
-  "summary": "Mtime filter pick+include without NEWESTLIB+LAST glue. proof 1318 PASS.",
+  "iter": 742,
+  "version": "1.15.769-usability",
+  "item": "CLI newestlib/oldestlib mtime duals",
+  "item_id": 778,
+  "title": "cubalc newestlib|oldestlib \u00b7 cubalc.libmatch.v1 stem+path+mtime",
+  "commit": "6739dddcc669813cb50cabdca62bd87390be7981",
+  "summary": "Thrash restored. Shell mtime filter duals of NEWESTLIB. proof 1319 PASS.",
   "proofs": [
-    "1318_include_newest PASS",
-    "1318_cli_include_newest PASS"
+    "1319_cli_newestlib_cmd PASS"
   ],
-  "when": "2026-08-10T09:56:15Z",
+  "when": "2026-08-10T10:06:43Z",
   "agent": "meaningful_iter_10m",
-  "sha": "51a99149e374d6a29d5937ab3fcbd960eb6f7811",
-  "note": "INCLUDE NEWEST fat\u2192fat_session; OLDEST fat\u2192fat_boot; DEFAULT hold_seed"
+  "sha": "6739dddcc669813cb50cabdca62bd87390be7981",
+  "note": "restored thrash; cubalc newestlib fat\u2192fat_session; oldestlib fat\u2192fat_boot"
 }
