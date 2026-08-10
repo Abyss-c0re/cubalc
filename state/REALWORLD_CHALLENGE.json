@@ -3661,6 +3661,6 @@
     "iter275: UNIFORM_PATH hard-fail under var pressure \u2014 board uses LAST_N only (W434)",
     "iter275: 9/9 green after special avoidance"
   ],
-  "commit": "pending",
+  "commit": "12aa2885",
   "ts": "2026-08-10T00:22:17Z"
 }
