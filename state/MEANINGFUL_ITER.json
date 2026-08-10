@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 779,
-  "version": "1.15.806-usability",
-  "item": "DOCTOR in-lang install readiness plate",
-  "item_id": 815,
-  "title": "DOCTOR|INSTALL_HEALTH \u00b7 dual of cubalc doctor",
-  "commit": "6cd7eb2d14add9ddb92d26a393c2c0ddf91762cf",
-  "summary": "In-lang install readiness DOCTOR_OK/LIBS_N plate without shell. proof 1356 PASS.",
+  "iter": 780,
+  "version": "1.15.807-usability",
+  "item": "NEEDDOCTOR hard gate + run -D",
+  "item_id": 816,
+  "title": "NEEDDOCTOR|REQUIRE DOCTOR \u00b7 cubalc needdoctor \u00b7 run -D",
+  "commit": "b13e7eaaa88a076f0c09830ef36618f9cc74a36f",
+  "summary": "Hard install readiness gate + host preflight dual of soft DOCTOR. proof 1357 PASS.",
   "proofs": [
-    "1356_doctor PASS",
-    "1356_cli_doctor PASS"
+    "1357_needdoctor PASS",
+    "1357_cli_needdoctor PASS"
   ],
-  "when": "2026-08-10T18:28:10Z",
+  "when": "2026-08-10T18:41:59Z",
   "agent": "meaningful_iter_10m",
-  "sha": "6cd7eb2d14add9ddb92d26a393c2c0ddf91762cf",
-  "note": "DOCTOR \u00b7 ASSERT DOCTOR_OK \u00b7 INCLUDE open_boot when ready"
+  "sha": "b13e7eaaa88a076f0c09830ef36618f9cc74a36f",
+  "note": "NEEDDOCTOR \u00b7 cubalc needdoctor \u00b7 run -D / CUBALC_REQUIRE_DOCTOR"
 }
