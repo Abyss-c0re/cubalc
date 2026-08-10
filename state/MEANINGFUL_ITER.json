@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 733,
-  "version": "1.15.760-usability",
-  "item": "NTHLIB/LASTLIB index and last match stems",
-  "item_id": 769,
-  "title": "NTHLIB idx + LASTLIB sorted duals of PICKLIB \u00b7 INCLUDE without MATCHLIBS+NTH",
-  "commit": "4fdd19f9afea9f0e203d90cf81f95561cf4cb360",
-  "summary": "0-based Nth and last matching lib stems for INCLUDE. Completes PICKLIB family.",
+  "iter": 734,
+  "version": "1.15.761-usability",
+  "item": "INCLUDE MATCH|FIRST filter pick+include",
+  "item_id": 770,
+  "title": "INCLUDE MATCH needle [DEFAULT stem] \u00b7 PICKLIB+INCLUDE one-shot \u00b7 SOFT miss",
+  "commit": "1e311526ebcc12bc02a4d3560650c978fb07c371",
+  "summary": "Filter\u2192first sorted stem\u2192INCLUDE without PICKLIB+LAST glue. proof 1311 PASS.",
   "proofs": [
-    "1310_nthlib PASS",
-    "1310_cli_nthlib PASS"
+    "1311_include_match PASS",
+    "1311_cli_include_match PASS"
   ],
-  "when": "2026-08-10T11:30:00Z",
+  "when": "2026-08-10T08:38:49Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4fdd19f9afea9f0e203d90cf81f95561cf4cb360",
-  "note": "NTHLIB 1 plate; LASTLIB plate; OR fallback; INCLUDE LAST"
+  "sha": "1e311526ebcc12bc02a4d3560650c978fb07c371",
+  "note": "INCLUDE MATCH plate; DEFAULT hold_seed; INCLUDE SOFT MATCH miss"
 }

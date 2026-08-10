@@ -1,0 +1,49 @@
+# INCLUDE MATCH|FIRST — PICKLIB + INCLUDE one-shot
+
+INCLUDE MATCH agent_boot
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "agent_boot"
+INCLUDESTEMS
+SYS HASLINE LAST "agent_boot"
+ASSERT LAST_N == 1
+
+# first sorted plate* → plate_boot
+INCLUDE ONCE MATCH plate
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "plate_boot"
+INCLUDESTEMS
+SYS HASLINE LAST "plate_boot"
+ASSERT LAST_N == 1
+
+# FIRST alias
+INCLUDE ONCE FIRST fat
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "fat_boot"
+
+# DEFAULT fallback on miss
+INCLUDE ONCE MATCH no_such_lib_xyz_zzz DEFAULT hold_seed
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "hold_seed"
+INCLUDESTEMS
+SYS HASLINE LAST "hold_seed"
+ASSERT LAST_N == 1
+
+# SOFT miss without DEFAULT
+INCLUDE SOFT MATCH no_such_lib_xyz_zzz
+ASSERT OK == 0
+ASSERT INCLUDE_OK == 0
+CLEAR_ERR
+
+# PICK alias
+INCLUDE ONCE PICK time_guard
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "time_guard"
+
+# needle from var
+LET want = "var_guard"
+INCLUDE ONCE MATCH want
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "var_guard"
+
+PASS
+PRINT "1311_include_match: PASS"

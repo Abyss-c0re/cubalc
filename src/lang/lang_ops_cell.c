@@ -5691,6 +5691,7 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
    * programs/lib/<name>[.cubalc] short form · CUBALC_ROOT · fail with tried paths.
    * Usability: INCLUDE hold_seed  or  INCLUDE "hold_seed" → programs/lib/…
    * String-var / LAST: INCLUDE lib  after PICKLIB / LET lib = "agent_boot".
+   * Filter: INCLUDE MATCH|FIRST needle [DEFAULT stem] — PICKLIB+INCLUDE one-shot.
    * Soft: INCLUDE OR|SOFT|TRY name — missing file → OK=0 sticky LAST_ERR, no fatal.
    * Once: INCLUDE ONCE name — skip if same resolved path already loaded this run. */
   if (kw(&L->cur,"INCLUDE")||kw(&L->cur,"IMPORT")||kw(&L->cur,"USE")){
@@ -5707,28 +5708,197 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
         soft = 1;
       lex_next(L);
     }
-    if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){
-      fail_at(vm,L,"INCLUDE needs path|libname — INCLUDE hold_seed · INCLUDE LAST after PICKLIB"); return -1;
-    }
     char path[768];
     char orig[512];
-    /* Resolve IDENT as string var / LAST when set — else bare short name (lib stem). */
-    if (L->cur.kind == TK_STR) {
-      snprintf(orig, sizeof orig, "%s", L->cur.text);
-    } else if (strcmp(L->cur.text, "LAST") == 0 && vm->last_str[0]) {
-      snprintf(orig, sizeof orig, "%s", vm->last_str);
+    orig[0] = 0;
+    path[0] = 0;
+    /* INCLUDE MATCH|FIRST|PICK needle [DEFAULT|ELSE|FALLBACK stem]
+     * Usability: filter → first sorted stem → INCLUDE without PICKLIB+LAST glue. */
+    if (kw(&L->cur,"MATCH") || kw(&L->cur,"FIRST") || kw(&L->cur,"PICK") ||
+        kw(&L->cur,"MATCHFIRST") || kw(&L->cur,"FIRSTMATCH") ||
+        kw(&L->cur,"PICKMATCH") || kw(&L->cur,"MATCHLIB")) {
+      char needle[96], fup[96], fb[96];
+      char stems[96][96];
+      int nstem = 0, i, j, have_fb = 0;
+      size_t a;
+      DIR *d;
+      struct dirent *ent;
+      const char *ip;
+      lex_next(L);
+      needle[0] = 0;
+      fb[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        snprintf(needle, sizeof needle, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(needle, sizeof needle, "%s", vv->sval);
+        else if (strcmp(L->cur.text, "LAST") == 0)
+          snprintf(needle, sizeof needle, "%s", vm->last_str);
+        else
+          snprintf(needle, sizeof needle, "%s", L->cur.text);
+        lex_next(L);
+      }
+      if (kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") || kw(&L->cur,"FALLBACK") ||
+          kw(&L->cur,"ORDEFAULT")) {
+        lex_next(L);
+        if (L->cur.kind == TK_STR) {
+          snprintf(fb, sizeof fb, "%s", L->cur.text);
+          have_fb = 1;
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fb, sizeof fb, "%s", vv->sval);
+          else if (strcmp(L->cur.text, "LAST") == 0)
+            snprintf(fb, sizeof fb, "%s", vm->last_str);
+          else
+            snprintf(fb, sizeof fb, "%s", L->cur.text);
+          have_fb = 1;
+          lex_next(L);
+        }
+      }
+      if (!needle[0]) {
+        fail_at(vm, L,
+                "INCLUDE MATCH needs needle — INCLUDE MATCH plate · DEFAULT agent_boot");
+        return -1;
+      }
+      for (a = 0; needle[a] && a + 1 < sizeof fup; a++) {
+        char c = needle[a];
+        if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+        fup[a] = c;
+      }
+      fup[a] = 0;
+      {
+        char dirs[10][160];
+        int nd = 0, di;
+        snprintf(dirs[nd++], sizeof dirs[0], "%s", "programs/lib");
+        ip = getenv("CUBALC_INCLUDE_PATH");
+        if (ip && ip[0]) {
+          const char *p = ip;
+          while (*p && nd < 10) {
+            char dir[160];
+            size_t len = 0;
+            while (*p == ':' || *p == ' ' || *p == '\t') p++;
+            if (!*p) break;
+            while (p[len] && p[len] != ':' && len + 1 < sizeof dir) {
+              dir[len] = p[len];
+              len++;
+            }
+            dir[len] = 0;
+            p += len;
+            if (dir[0])
+              snprintf(dirs[nd++], sizeof dirs[0], "%s", dir);
+          }
+        }
+        for (di = 0; di < nd; di++) {
+          d = opendir(dirs[di]);
+          if (!d) continue;
+          while ((ent = readdir(d)) != NULL && nstem < 96) {
+            size_t len = strlen(ent->d_name);
+            char stem[96], hay[192];
+            int dup = 0;
+            size_t b;
+            if (len < 8 || strcmp(ent->d_name + len - 7, ".cubalc") != 0)
+              continue;
+            if (ent->d_name[0] == '.') continue;
+            if (len - 7 >= sizeof stem) continue;
+            memcpy(stem, ent->d_name, len - 7);
+            stem[len - 7] = 0;
+            for (j = 0; j < nstem; j++) {
+              if (strcmp(stems[j], stem) == 0) { dup = 1; break; }
+            }
+            if (dup) continue;
+            snprintf(hay, sizeof hay, "%s/%s", dirs[di], ent->d_name);
+            for (b = 0; hay[b]; b++)
+              if (hay[b] >= 'A' && hay[b] <= 'Z')
+                hay[b] = (char)(hay[b] - 'A' + 'a');
+            {
+              char stem_l[96];
+              for (b = 0; stem[b] && b + 1 < sizeof stem_l; b++) {
+                char c = stem[b];
+                if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+                stem_l[b] = c;
+              }
+              stem_l[b] = 0;
+              if (!strstr(stem_l, fup) && !strstr(hay, fup))
+                continue;
+            }
+            snprintf(stems[nstem++], sizeof stems[0], "%s", stem);
+          }
+          closedir(d);
+        }
+      }
+      for (i = 1; i < nstem; i++) {
+        char tmp[96];
+        snprintf(tmp, sizeof tmp, "%s", stems[i]);
+        j = i;
+        while (j > 0 && strcmp(stems[j - 1], tmp) > 0) {
+          snprintf(stems[j], sizeof stems[0], "%s", stems[j - 1]);
+          j--;
+        }
+        snprintf(stems[j], sizeof stems[0], "%s", tmp);
+      }
+      var_set_num(vm, "MATCHLIBS_N", nstem);
+      var_set_num(vm, "PICKLIB_N", nstem);
+      var_set_str(vm, "MATCHLIBS_FILTER", needle);
+      var_set_str(vm, "INCLUDE_MATCH_FILTER", needle);
+      if (nstem > 0) {
+        snprintf(orig, sizeof orig, "%s", stems[0]);
+        var_set_str(vm, "INCLUDE_MATCH", orig);
+        var_set_str(vm, "PICKLIB", orig);
+      } else if (have_fb) {
+        snprintf(orig, sizeof orig, "%s", fb);
+        var_set_str(vm, "INCLUDE_MATCH", orig);
+        var_set_num(vm, "INCLUDE_MATCH_FALLBACK", 1);
+      } else {
+        char msg[192];
+        snprintf(msg, sizeof msg,
+                 "INCLUDE MATCH miss line %d: '%s' — MATCHLIBS · cubalc libs %s · DEFAULT stem",
+                 aln, needle, needle);
+        if (soft) {
+          var_set_str(vm, "ERR", msg);
+          var_set_str(vm, "LAST_ERR", msg);
+          var_set_str(vm, "INCLUDE_MISS", needle);
+          var_set_str(vm, "INCLUDE_MATCH", "");
+          var_set_str(vm, "INCLUDE_PATH", "");
+          var_set_str(vm, "LAST", needle);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", needle);
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_num(vm, "INCLUDE_OK", 0);
+          bump(vm);
+          return 1;
+        }
+        var_set_str(vm, "ERR", msg);
+        var_set_str(vm, "LAST_ERR", msg);
+        fail(vm, msg);
+        return -1;
+      }
     } else {
-      Var *vv = var_get(vm, L->cur.text, 0);
-      if (vv && vv->is_str && vv->sval[0])
-        snprintf(orig, sizeof orig, "%s", vv->sval);
-      else
+      if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){
+        fail_at(vm,L,"INCLUDE needs path|libname|MATCH — INCLUDE hold_seed · INCLUDE MATCH plate"); return -1;
+      }
+      /* Resolve IDENT as string var / LAST when set — else bare short name (lib stem). */
+      if (L->cur.kind == TK_STR) {
         snprintf(orig, sizeof orig, "%s", L->cur.text);
+      } else if (strcmp(L->cur.text, "LAST") == 0 && vm->last_str[0]) {
+        snprintf(orig, sizeof orig, "%s", vm->last_str);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(orig, sizeof orig, "%s", vv->sval);
+        else
+          snprintf(orig, sizeof orig, "%s", L->cur.text);
+      }
+      lex_next(L);
     }
     if (orig[0]=='/' || (vm->include_base[0]==0))
       snprintf(path,sizeof path,"%s",orig);
     else
       snprintf(path,sizeof path,"%s/%s", vm->include_base, orig);
-    lex_next(L);
     FILE *f=fopen(path,"rb");
     if (!f && orig[0] != '/'){
       f = fopen(orig, "rb");
