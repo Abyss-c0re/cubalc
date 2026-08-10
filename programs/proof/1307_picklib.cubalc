@@ -1,0 +1,45 @@
+# PICKLIB / FIRSTLIB — first matching stem for INCLUDE
+
+PICKLIB plate
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LAST == "plate_boot"
+ASSERT PICKLIB_N >= 10
+ASSERT PICKLIB_FILTER == "plate"
+
+FIRSTLIB fat
+ASSERT OK == 1
+ASSERT LAST == "fat_boot"
+ASSERT PICKLIB_N == 2
+
+# tick family first alpha (sorted): plate_peer_tick before plate_tick
+PICKLIB tick
+ASSERT OK == 1
+ASSERT LAST == "plate_peer_tick"
+
+# OR fallback on miss
+PICKLIB no_such_lib_xyz OR agent_boot
+ASSERT OK == 1
+ASSERT LAST == "agent_boot"
+ASSERT PICKLIB_N == 0
+
+# soft miss no fallback
+PICKLIB no_such_lib_xyz
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# need needle
+PICKLIB ""
+ASSERT OK == 0
+CLEAR_ERR
+
+# pick then INCLUDE by resolved stem (INCLUDE takes short name, not LAST var)
+PICKLIB agent_boot
+ASSERT LAST == "agent_boot"
+INCLUDE agent_boot
+VERSION
+ASSERT OK == 1
+
+PASS
+PRINT "1307_picklib: PASS"

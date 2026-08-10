@@ -36635,6 +36635,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"MATCHLIBS", "MATCHLIBS|FILTERLIBS needle — bag of stems matching stem/path · dual of cubalc libs [filter]"},
       {"FILTERLIBS", "FILTERLIBS alias of MATCHLIBS"},
       {"LIBMATCH", "LIBMATCH alias of MATCHLIBS"},
+      {"PICKLIB", "PICKLIB|FIRSTLIB needle [OR fallback] — first matching stem · INCLUDE without MATCHLIBS+NTH"},
+      {"FIRSTLIB", "FIRSTLIB alias of PICKLIB"},
       {"HASLIB", "HASLIB name — soft 0|1 if stdlib/project lib stem exists · dual of LISTLIBS"},
       {"CATLIB", "CATLIB|READLIB name — soft dump lib source → LAST · dual of cubalc cat"},
       {"GREPLIB", "GREPLIB name needle — matching lines from one lib → LAST bag · soft miss"},
