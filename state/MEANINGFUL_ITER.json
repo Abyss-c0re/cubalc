@@ -1,18 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 748,
-  "version": "1.15.775-usability",
-  "item": "cap_boot + cubalc init --cap",
-  "item_id": 784,
-  "title": "cap_boot \u00b7 init --cap|--forms \u00b7 doctor lib_cap_boot \u00b7 catalog n=7",
-  "commit": "37814ebce39187af6a8d6469cf190fc63f422c59",
-  "summary": "agent_boot+form_guard one-shot; init --cap scaffold; doctor/catalog. proof 1325 PASS.",
+  "iter": 749,
+  "version": "1.15.776-usability",
+  "item": "run -C / CUBALC_REQUIRE_FORMS form floor",
+  "item_id": 785,
+  "title": "cubalc run -C|--need-forms \u00b7 CUBALC_REQUIRE_FORMS \u00b7 plate require_forms",
+  "commit": "6233a5e4e7c07103e1222774284b60296cd41cec",
+  "summary": "host form capability floor before body; NEEDFORMS dual of -R; env catalog. proof 1326 PASS.",
   "proofs": [
-    "1325_cap_boot PASS",
-    "1325_cli_init_cap PASS"
+    "1326_cli_require_forms PASS"
   ],
-  "when": "2026-08-10T11:40:03Z",
+  "when": "2026-08-10T11:48:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "37814ebce39187af6a8d6469cf190fc63f422c59",
-  "note": "INCLUDE cap_boot; cubalc init --cap; doctor lib_cap_boot true"
+  "sha": "6233a5e4e7c07103e1222774284b60296cd41cec",
+  "note": "run -C SORTLIBS,LIBAGE ok; -C missing fails; env CUBALC_REQUIRE_FORMS"
 }
