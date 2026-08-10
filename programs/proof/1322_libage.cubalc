@@ -1,0 +1,57 @@
+# LIBAGE / HASFRESH / NEEDFRESH — single-lib freshness gates
+
+LIBAGE fat_session
+ASSERT OK == 1
+ASSERT LAST_N > 0
+ASSERT LIB_AGE > 0
+ASSERT LIB_MTIME > 0
+ASSERT LIB_PATH != ""
+ASSERT LIB_STEM == "fat_session"
+
+# soft miss
+LIBAGE no_such_lib_xyz_zzz
+ASSERT OK == 0
+ASSERT LIB_AGE == -1
+CLEAR_ERR
+
+# HASFRESH: fat_session is hours old → fresh within 1e6s
+HASFRESH fat_session 1000000
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASFRESH_N == 1
+ASSERT LIB_AGE >= 0
+
+# tight window → not fresh
+HASFRESH fat_session 5
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# default max_age 86400 — fat_session currently < 1 day on this tree
+HASFRESH fat_session
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASFRESH_AGE == 86400
+
+# ISFRESH alias
+ISFRESH hold_seed 9999999
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# missing lib
+HASFRESH no_such_lib_xyz_zzz 1000
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# NEEDFRESH hard pass
+NEEDFRESH fat_session 1000000
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# agent_boot is multi-day → need with huge window
+NEEDFRESH agent_boot 99999999
+ASSERT OK == 1
+
+PASS
+PRINT "1322_libage: PASS"

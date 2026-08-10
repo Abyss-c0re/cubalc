@@ -3247,6 +3247,8 @@ int main(int argc, char **argv) {
       {"cli_sortlibs", "programs/proof/1320_cli_sortlibs.sh", "cubalc sortlibs CLI dual of SORTLIBS + forms"},
       {"freshlibs", "programs/proof/1321_freshlibs.cubalc", "FRESHLIBS/STALELIBS age-filter match bags"},
       {"cli_freshlibs", "programs/proof/1321_cli_freshlibs.sh", "cubalc freshlibs/stalelibs CLI dual + forms"},
+      {"libage", "programs/proof/1322_libage.cubalc", "LIBAGE/HASFRESH/NEEDFRESH single-lib freshness gates"},
+      {"cli_libage", "programs/proof/1322_cli_libage.sh", "cubalc libage/hasfresh/needfresh CLI dual + forms"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -3769,6 +3771,9 @@ int main(int argc, char **argv) {
       {"LIBSORT", "flow", "LIBSORT alias of SORTLIBS"},
       {"FRESHLIBS", "flow", "FRESHLIBS needle [max_age_sec] match stems age≤sec · default 86400"},
       {"STALELIBS", "flow", "STALELIBS needle [min_age_sec] match stems age≥sec · dual of FRESHLIBS"},
+      {"LIBAGE", "flow", "LIBAGE name lib age seconds → LAST_N · soft miss"},
+      {"HASFRESH", "flow", "HASFRESH name [max_age] soft 0|1 if exists and age≤max"},
+      {"NEEDFRESH", "flow", "NEEDFRESH name [max_age] fail-fast if missing or stale"},
       {"HASLIB", "flow", "HASLIB name soft 0|1 if lib stem exists on INCLUDE path"},
       {"CATLIB", "flow", "CATLIB|READLIB name soft dump lib source → LAST · dual of cubalc cat"},
       {"GREPLIB", "flow", "GREPLIB name needle matching lines from one lib · soft miss"},
@@ -7506,6 +7511,123 @@ int main(int argc, char **argv) {
         printf("%s%ld", i ? "," : "", mtimes[i]);
       printf("]}\n");
       return ok ? 0 : 1;
+    }
+  }
+  if (strcmp(cmd, "libage") == 0 || strcmp(cmd, "ageoflib") == 0 ||
+      strcmp(cmd, "hasfresh") == 0 || strcmp(cmd, "isfresh") == 0 ||
+      strcmp(cmd, "needfresh") == 0 || strcmp(cmd, "requirefresh") == 0) {
+    /* Usability: CLI dual of LIBAGE/HASFRESH/NEEDFRESH — single-lib age + freshness
+     * gates without .cubalc. cubalc libage fat_session · hasfresh fat_session 86400
+     * Schema cubalc.libmatch.v1 · mode age|has|need */
+    const char *name = (argc > 2) ? argv[2] : "";
+    long max_age = 86400;
+    int mode_age = 0, mode_need = 0;
+    char path[768], base[160];
+    struct stat st;
+    time_t now = time(NULL);
+    long age = -1, mtime = 0;
+    int ok = 0, fresh = 0;
+    path[0] = 0;
+    base[0] = 0;
+    if (strcmp(cmd, "libage") == 0 || strcmp(cmd, "ageoflib") == 0)
+      mode_age = 1;
+    else if (strcmp(cmd, "needfresh") == 0 || strcmp(cmd, "requirefresh") == 0)
+      mode_need = 1;
+    if (!mode_age && argc > 3 && argv[3][0]) {
+      char *end = NULL;
+      long v = strtol(argv[3], &end, 10);
+      if (end && end != argv[3] && !*end && v >= 0)
+        max_age = v;
+    }
+    if (!name || !name[0]) {
+      fprintf(stderr,
+              "usage: cubalc libage|ageoflib <lib>\n"
+              "       cubalc hasfresh|isfresh <lib> [max_age_sec]\n"
+              "       cubalc needfresh|requirefresh <lib> [max_age_sec]\n"
+              "  default max_age: 86400 (1 day)\n");
+      printf("{\"schema\":\"cubalc.libmatch.v1\",\"ok\":false,\"cmd\":\"%s\","
+             "\"err\":\"need lib name\",\"version\":\"%s\"}\n",
+             cmd, CUBALC_LANG_VERSION);
+      return 2;
+    }
+    /* resolve like INCLUDE short name */
+    {
+      size_t blen;
+      const char *slash = strrchr(name, '/');
+      const char *leaf = slash ? slash + 1 : name;
+      const char *ip, *root;
+      FILE *f = NULL;
+      snprintf(base, sizeof base, "%s", leaf);
+      blen = strlen(base);
+      if (blen > 7 && strcmp(base + blen - 7, ".cubalc") == 0)
+        base[blen - 7] = 0;
+      if (name[0] == '/' || strchr(name, '/')) {
+        f = fopen(name, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", name); fclose(f); }
+      }
+      if (!path[0]) {
+        char p3[768];
+        snprintf(p3, sizeof p3, "programs/lib/%s.cubalc", base);
+        f = fopen(p3, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", p3); fclose(f); }
+      }
+      root = getenv("CUBALC_ROOT");
+      if (!path[0] && root && root[0]) {
+        char p2[768];
+        snprintf(p2, sizeof p2, "%s/programs/lib/%s.cubalc", root, base);
+        f = fopen(p2, "rb");
+        if (f) { snprintf(path, sizeof path, "%s", p2); fclose(f); }
+      }
+      ip = getenv("CUBALC_INCLUDE_PATH");
+      if (!path[0] && ip && ip[0]) {
+        const char *seg = ip;
+        while (*seg && !path[0]) {
+          char dir[512], p3[768];
+          size_t dlen = 0;
+          while (*seg == ':') seg++;
+          if (!*seg) break;
+          while (seg[dlen] && seg[dlen] != ':' && dlen + 1 < sizeof dir)
+            dir[dlen] = seg[dlen], dlen++;
+          dir[dlen] = 0;
+          seg += dlen;
+          if (!dir[0]) continue;
+          snprintf(p3, sizeof p3, "%s/%s.cubalc", dir, base);
+          f = fopen(p3, "rb");
+          if (f) { snprintf(path, sizeof path, "%s", p3); fclose(f); }
+        }
+      }
+    }
+    if (path[0] && stat(path, &st) == 0) {
+      mtime = (long)st.st_mtime;
+      age = (long)now - mtime;
+      if (age < 0) age = 0;
+      ok = 1;
+      fresh = (age <= max_age) ? 1 : 0;
+    }
+    if (mode_age) {
+      printf("{\"schema\":\"cubalc.libmatch.v1\",\"ok\":%s,\"cmd\":\"%s\","
+             "\"mode\":\"age\",\"stem\":\"%s\",\"path\":\"%s\","
+             "\"mtime\":%ld,\"age\":%ld,\"version\":\"%s\","
+             "\"note\":\"CLI dual of LIBAGE · seconds since mtime\"}\n",
+             ok ? "true" : "false", cmd, base[0] ? base : name,
+             path, mtime, age, CUBALC_LANG_VERSION);
+      return ok ? 0 : 1;
+    }
+    {
+      int gate_ok = ok && fresh;
+      printf("{\"schema\":\"cubalc.libmatch.v1\",\"ok\":%s,\"cmd\":\"%s\","
+             "\"mode\":\"%s\",\"stem\":\"%s\",\"path\":\"%s\","
+             "\"mtime\":%ld,\"age\":%ld,\"max_age\":%ld,\"fresh\":%s,"
+             "\"version\":\"%s\","
+             "\"note\":\"CLI dual of HASFRESH/NEEDFRESH · single-lib freshness gate\"}\n",
+             gate_ok ? "true" : "false", cmd,
+             mode_need ? "need" : "has",
+             base[0] ? base : name, path, mtime, age, max_age,
+             fresh ? "true" : "false", CUBALC_LANG_VERSION);
+      if (mode_need)
+        return gate_ok ? 0 : 1;
+      /* hasfresh always exit 0 with ok reflecting freshness (agents parse plate) */
+      return 0;
     }
   }
   if (strcmp(cmd, "plate") == 0 || strcmp(cmd, "jsonplate") == 0 ||
@@ -13974,6 +14096,9 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"LIBSORT", "flow", "LIBSORT alias of SORTLIBS"},
       {"FRESHLIBS", "flow", "FRESHLIBS needle [max_age_sec] match stems age≤sec · default 86400"},
       {"STALELIBS", "flow", "STALELIBS needle [min_age_sec] match stems age≥sec · dual of FRESHLIBS"},
+      {"LIBAGE", "flow", "LIBAGE name lib age seconds → LAST_N · soft miss"},
+      {"HASFRESH", "flow", "HASFRESH name [max_age] soft 0|1 if exists and age≤max"},
+      {"NEEDFRESH", "flow", "NEEDFRESH name [max_age] fail-fast if missing or stale"},
       {"HASLIB", "flow", "HASLIB name soft 0|1 if lib stem exists on INCLUDE path"},
       {"CATLIB", "flow", "CATLIB|READLIB name soft dump lib source → LAST · dual of cubalc cat"},
       {"GREPLIB", "flow", "GREPLIB name needle matching lines from one lib · soft miss"},
@@ -15429,7 +15554,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|newestlib|sortlibs|freshlibs|stalelibs|countmatchlibs|nthlib  filter duals\n"
+      "    picklib|newestlib|sortlibs|freshlibs|libage|hasfresh|needfresh|nthlib  filter duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
@@ -15460,7 +15585,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
       "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR|WHY · STATUS|IDENTITY\n"
-      "    LISTLIBS|MATCHLIBS|SORTLIBS|FRESHLIBS|STALELIBS|PICKLIB|NEWESTLIB|HASLIB|RECIPE\n"
+      "    LISTLIBS|MATCHLIBS|SORTLIBS|FRESHLIBS|LIBAGE|HASFRESH|NEEDFRESH|PICKLIB|HASLIB|RECIPE\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"

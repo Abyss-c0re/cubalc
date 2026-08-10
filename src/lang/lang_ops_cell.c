@@ -8323,6 +8323,168 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LIBAGE name · HASFRESH name [max_age] · NEEDFRESH name [max_age]
+   * Usability: single-lib freshness contract before INCLUDE — age seconds + soft/hard
+   * gates without LIBINFO JSON peel or FRESHLIBS bag. Default max_age 86400.
+   * LIBAGE → LAST_N=age · HASFRESH → LAST_N 0|1 · NEEDFRESH fail if missing/stale. */
+  if (kw(&L->cur, "LIBAGE") || kw(&L->cur, "AGEOFLIB") ||
+      kw(&L->cur, "LIB_AGE") || kw(&L->cur, "MTIMEAGE") ||
+      kw(&L->cur, "AGE_LIB") || kw(&L->cur, "STATLIBAGE") ||
+      kw(&L->cur, "HASFRESH") || kw(&L->cur, "ISFRESH") ||
+      kw(&L->cur, "LIBFRESH") || kw(&L->cur, "HAS_FRESH") ||
+      kw(&L->cur, "NEEDFRESH") || kw(&L->cur, "REQUIREFRESH") ||
+      kw(&L->cur, "NEED_FRESH") || kw(&L->cur, "REQUIRE_FRESH")) {
+    int mode_age = 0, mode_has = 0, mode_need = 0;
+    char name[160], path[768], base[160];
+    long max_age = 86400, age = -1, mtime = 0;
+    int have_max = 0, aln = L->cur.line;
+    struct stat st;
+    time_t now = time(NULL);
+    if (kw(&L->cur, "LIBAGE") || kw(&L->cur, "AGEOFLIB") ||
+        kw(&L->cur, "LIB_AGE") || kw(&L->cur, "MTIMEAGE") ||
+        kw(&L->cur, "AGE_LIB") || kw(&L->cur, "STATLIBAGE"))
+      mode_age = 1;
+    else if (kw(&L->cur, "NEEDFRESH") || kw(&L->cur, "REQUIREFRESH") ||
+             kw(&L->cur, "NEED_FRESH") || kw(&L->cur, "REQUIRE_FRESH"))
+      mode_need = 1;
+    else
+      mode_has = 1;
+    lex_next(L);
+    name[0] = 0;
+    path[0] = 0;
+    base[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!mode_age) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        max_age = (long)parse_expr(vm, L);
+        have_max = 1;
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && !vv->is_str) {
+          max_age = (long)vv->val;
+          have_max = 1;
+          lex_next(L);
+        }
+      }
+      if (kw(&L->cur, "SEC") || kw(&L->cur, "SECS") || kw(&L->cur, "SECONDS") ||
+          kw(&L->cur, "S") || kw(&L->cur, "AGE"))
+        lex_next(L);
+      (void)have_max;
+      if (max_age < 0) max_age = 0;
+    }
+    if (!name[0]) {
+      if (mode_need) {
+        fail_at(vm, L, "NEEDFRESH needs name — NEEDFRESH fat_session 86400");
+        return -1;
+      }
+      var_set_str(vm, "LAST", mode_age ? "" : "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", mode_age ? "" : "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "LIB_AGE", -1);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  mode_age ? "LIBAGE: need name — LIBAGE fat_session"
+                           : "HASFRESH: need name — HASFRESH fat_session 86400");
+      var_set_str(vm, "ERR",
+                  mode_age ? "LIBAGE: need name — LIBAGE fat_session"
+                           : "HASFRESH: need name — HASFRESH fat_session 86400");
+      bump(vm);
+      return 1;
+    }
+    if (!lib_resolve_path(name, path, sizeof path, base, sizeof base) ||
+        stat(path, &st) != 0) {
+      char em[192];
+      snprintf(em, sizeof em,
+               "%s miss: '%s' — cubalc which · HASLIB · LIBAGE · install lib",
+               mode_need ? "NEEDFRESH" : (mode_age ? "LIBAGE" : "HASFRESH"),
+               name);
+      if (mode_need) {
+        fail_at(vm, L, em);
+        return -1;
+      }
+      var_set_str(vm, "LAST", mode_age ? "" : "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", mode_age ? "" : "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "LIB_AGE", -1);
+      var_set_num(vm, "LIB_MTIME", 0);
+      var_set_str(vm, "LIB_PATH", "");
+      var_set_str(vm, "LIB_STEM", base[0] ? base : name);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    mtime = (long)st.st_mtime;
+    age = (long)now - mtime;
+    if (age < 0) age = 0;
+    var_set_str(vm, "LIB_PATH", path);
+    var_set_str(vm, "LIB_STEM", base);
+    var_set_num(vm, "LIB_MTIME", mtime);
+    var_set_num(vm, "LIB_AGE", age);
+    var_set_num(vm, "HASFRESH_AGE", max_age);
+    var_set_num(vm, "NEEDFRESH_AGE", max_age);
+    if (mode_age) {
+      char abuf[32];
+      snprintf(abuf, sizeof abuf, "%ld", age);
+      var_set_str(vm, "LAST", abuf);
+      var_set_str(vm, "LIBAGE", abuf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", abuf);
+      vm->last_n = age;
+      var_set_num(vm, "LAST_N", age);
+      var_set_num(vm, "OK", 1);
+      bump(vm);
+      return 1;
+    }
+    {
+      int fresh = (age <= max_age) ? 1 : 0;
+      char em[200];
+      var_set_num(vm, "LAST_N", fresh);
+      vm->last_n = fresh;
+      {
+        char nb[8];
+        snprintf(nb, sizeof nb, "%d", fresh);
+        var_set_str(vm, "LAST", nb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      }
+      var_set_num(vm, "HASFRESH_N", fresh);
+      if (fresh) {
+        var_set_num(vm, "OK", 1);
+        bump(vm);
+        return 1;
+      }
+      snprintf(em, sizeof em,
+               "%s stale: '%s' age=%ld > %ld — FRESHLIBS · touch/update lib · LIBAGE",
+               mode_need ? "NEEDFRESH" : "HASFRESH", base[0] ? base : name,
+               age, max_age);
+      if (mode_need) {
+        fail_at(vm, L, em);
+        (void)aln;
+        return -1;
+      }
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+  }
+
   /* CATLIB / READLIB / LIBSRC name — soft dump lib source → LAST (dual of cubalc cat).
    * Usability: agents inspect INCLUDE recipes without shell · resolve like INCLUDE short name.
    * LAST_N = bytes (capped) · LIB_PATH · soft miss OK=0 sticky LAST_ERR. */
