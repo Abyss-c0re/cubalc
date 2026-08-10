@@ -2960,6 +2960,67 @@ int main(int argc, char **argv) {
            CUBALC_LANG_VERSION);
     return ok ? 0 : 1;
   }
+  if (strcmp(cmd, "firstarg") == 0 || strcmp(cmd, "headarg") == 0 ||
+      strcmp(cmd, "argv0") == 0 || strcmp(cmd, "lastarg") == 0 ||
+      strcmp(cmd, "tailarg") == 0 || strcmp(cmd, "argvlast") == 0) {
+    /* Usability: CLI dual of FIRSTARG/LASTARG — end peels without .cubalc.
+     *   cubalc firstarg -- --verbose file.txt
+     *   cubalc lastarg -- a b c
+     * Schema cubalc.endarg.v1 · which=first|last · value + hit. */
+    cubalc_run_result rr;
+    int ok, ai, narg = 0, want_last = 0;
+    long hit = 0;
+    char envn[32];
+    char esc_val[CUBALC_HOST_STR_MAX];
+    size_t e = 0, k;
+    static const char src_first[] = "FIRSTARG\nPRINT LAST\nPASS\n";
+    static const char src_last[] = "LASTARG\nPRINT LAST\nPASS\n";
+    want_last = (strcmp(cmd, "lastarg") == 0 || strcmp(cmd, "tailarg") == 0 ||
+                 strcmp(cmd, "argvlast") == 0);
+    for (ai = 2; ai < argc; ai++) {
+      if (!strcmp(argv[ai], "--")) {
+        ai++;
+        break;
+      }
+    }
+    if (ai < argc) {
+      for (; ai < argc && narg < 32; ai++, narg++) {
+        snprintf(envn, sizeof envn, "CUBALC_ARG%d", narg);
+        setenv(envn, argv[ai], 1);
+      }
+      snprintf(envn, sizeof envn, "%d", narg);
+      setenv("CUBALC_ARGC", envn, 1);
+    }
+    memset(&rr, 0, sizeof rr);
+    if (want_last)
+      (void)cubalc_run_source(src_last, sizeof src_last - 1, "<cli-lastarg>", &rr, NULL);
+    else
+      (void)cubalc_run_source(src_first, sizeof src_first - 1, "<cli-firstarg>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    hit = (rr.last_print[0] != 0) ? 1 : 0;
+    for (k = 0; rr.last_print[k] && e + 2 < sizeof esc_val; k++) {
+      char c = rr.last_print[k];
+      if (c == '"' || c == '\\') {
+        esc_val[e++] = '\\';
+        esc_val[e++] = c;
+      } else if (c == '\n') {
+        esc_val[e++] = '\\';
+        esc_val[e++] = 'n';
+      } else if ((unsigned char)c < 32)
+        esc_val[e++] = ' ';
+      else
+        esc_val[e++] = c;
+    }
+    esc_val[e] = 0;
+    printf("{\"schema\":\"cubalc.endarg.v1\",\"ok\":%s,\"cmd\":\"%s\","
+           "\"which\":\"%s\",\"hit\":%s,\"value\":\"%s\",\"live_args\":%d,"
+           "\"version\":\"%s\","
+           "\"note\":\"CLI dual of FIRSTARG/LASTARG · raw argv end peels\"}\n",
+           ok ? "true" : "false", want_last ? "lastarg" : "firstarg",
+           want_last ? "last" : "first", hit ? "true" : "false", esc_val, narg,
+           CUBALC_LANG_VERSION);
+    return ok ? 0 : 1;
+  }
   if (strcmp(cmd, "needdoctor") == 0 || strcmp(cmd, "need-doctor") == 0 ||
       strcmp(cmd, "require-doctor") == 0 || strcmp(cmd, "requiredoctor") == 0) {
     /* Usability: hard install gate (dual of NEEDDOCTOR). exit 1 if not ready. */
@@ -3810,6 +3871,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_findarg", "programs/proof/1371_cli_findarg.sh", "cubalc findarg plate + FINDARG forms"},
       {"afterarg", "programs/proof/1372_afterarg.cubalc", "AFTERARG peel argv after exact token"},
       {"cli_afterarg", "programs/proof/1372_cli_afterarg.sh", "cubalc afterarg plate + AFTERARG forms"},
+      {"firstarg", "programs/proof/1373_firstarg.cubalc", "FIRSTARG/LASTARG raw argv end peels"},
+      {"cli_firstarg", "programs/proof/1373_cli_firstarg.sh", "cubalc firstarg|lastarg + end peels"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -19334,6 +19397,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    argmap|argkv [-- args…]     raw argv i=value bag (cubalc.argmap.v1)\n"
       "    findarg|argindex <tok> [-- args…]  token→index reverse NTHARG (cubalc.findarg.v1)\n"
       "    afterarg|nextarg <tok> [-- args…]  peel argv after token (cubalc.afterarg.v1)\n"
+      "    firstarg|lastarg [-- args…]  raw argv end peels (cubalc.endarg.v1)\n"
       "    selftest|smoke         live curated usability proofs JSON\n"
       "    version|ver|-V         language version JSON plate\n"
       "    paths|where|layout     install/workspace paths JSON\n"

@@ -3610,6 +3610,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"ARGINDEX", "ARGINDEX alias of FINDARG — reverse of NTHARG (token → index)"},
       {"AFTERARG", "AFTERARG|NEXTARG token [OR fallback] — peel argv after exact token · FINDARG+NTHARG glue"},
       {"NEXTARG", "NEXTARG alias of AFTERARG — value following flag/subcmd token"},
+      {"FIRSTARG", "FIRSTARG|HEADARG [OR fallback] — peel CUBALC_ARG0 raw · NTHARG 0 without index"},
+      {"LASTARG", "LASTARG|TAILARG [OR fallback] — peel last CUBALC_ARGi · no ARGC-1 glue"},
       {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
       {"POSN", "POSN alias of NTHPOS — first/second file without RESTARGS+NTH"},
       {"NTHPOSPATH", "NTHPOSPATH|POSNPATH index [OR path] — NTHPOS + ABSPATH · EXIST · first file without REALPATH"},
@@ -39730,6 +39732,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"ARGINDEX", "NTHARG"},
       {"AFTERARG", "FINDARG"}, {"AFTERARG", "NTHARG"}, {"AFTERARG", "GETFLAG"},
       {"AFTERARG", "ARGMAP"}, {"NEXTARG", "AFTERARG"}, {"NEXTARG", "FINDARG"},
+      {"FIRSTARG", "LASTARG"}, {"FIRSTARG", "NTHARG"}, {"FIRSTARG", "ARGMAP"},
+      {"FIRSTARG", "SYS ARGS"}, {"LASTARG", "FIRSTARG"}, {"LASTARG", "NTHARG"},
+      {"LASTARG", "ARGMAP"}, {"HEADARG", "FIRSTARG"}, {"TAILARG", "LASTARG"},
       {"FORMHINT", "HASFORM"}, {"FORMHINT", "LISTFORMS"}, {"FORMHINT", "RELATED"},
       {"FORMHINT", "FORMSFOR"}, {"FORMHINT", "TIPS"},
       {"LISTFORMS", "COUNTFORMS"}, {"LISTFORMS", "HASFORM"}, {"LISTFORMS", "FORMHINT"},
@@ -69487,6 +69492,94 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# afterarg from=%ld next=%ld hit=%ld token=%s\n",
               from, next_i, hit, needle);
+    bump(vm);
+    return 1;
+  }
+  /* FIRSTARG|HEADARG [OR fallback] · LASTARG|TAILARG [OR fallback]
+   * Peel first / last CUBALC_ARGi raw (flags kept). LAST_N 1 hit / 0 miss·fallback.
+   * FIRSTARG_N=0 · LASTARG_N=argc-1 when hit. Completes NTHARG ends without ARGC glue.
+   * Usability: FIRSTARG OR "help" · LASTARG for trailing path after mixed flags. */
+  if (kw(&L->cur,"FIRSTARG") || kw(&L->cur,"HEADARG") || kw(&L->cur,"ARGV0") ||
+      kw(&L->cur,"ARG0") || kw(&L->cur,"FIRSTARGV") || kw(&L->cur,"PEELFIRST") ||
+      kw(&L->cur,"LASTARG") || kw(&L->cur,"TAILARG") || kw(&L->cur,"ARGVLAST") ||
+      kw(&L->cur,"ARGLAST") || kw(&L->cur,"LASTARGV") || kw(&L->cur,"PEELLAST")){
+    char op[24], field[CUBALC_HOST_STR_MAX], fb[512], envn[32];
+    const char *ac, *val;
+    int argc = 32, k, have_fb = 0, want_last = 0;
+    long idx = 0, hit = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    for (char *q = op; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    want_last = (strcmp(op, "LASTARG") == 0 || strcmp(op, "TAILARG") == 0 ||
+                 strcmp(op, "ARGVLAST") == 0 || strcmp(op, "ARGLAST") == 0 ||
+                 strcmp(op, "LASTARGV") == 0 || strcmp(op, "PEELLAST") == 0);
+    lex_next(L);
+    field[0] = 0;
+    fb[0] = 0;
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, want_last
+                ? "LASTARG OR \"fallback\""
+                : "FIRSTARG OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    ac = getenv("CUBALC_ARGC");
+    if (ac && ac[0]) {
+      argc = (int)strtol(ac, NULL, 10);
+      if (argc < 0) argc = 0;
+      if (argc > 32) argc = 32;
+    } else {
+      argc = 0;
+      for (k = 0; k < 32; k++) {
+        snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+        if (!getenv(envn)) break;
+        argc++;
+      }
+    }
+    if (argc > 0) {
+      idx = want_last ? (long)(argc - 1) : 0L;
+      snprintf(envn, sizeof envn, "CUBALC_ARG%ld", idx);
+      val = getenv(envn);
+      if (val && val[0]) {
+        snprintf(field, sizeof field, "%s", val);
+        hit = 1;
+      } else if (val) {
+        /* present empty string still counts as slot hit for end peels */
+        field[0] = 0;
+        hit = 1;
+      }
+    }
+    if (!hit) {
+      if (have_fb)
+        snprintf(field, sizeof field, "%s", fb);
+      else
+        field[0] = 0;
+      idx = want_last ? -1L : 0L;
+    }
+    var_set_str(vm, "LAST", field);
+    var_set_str(vm, "ARG", field);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", field);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    if (want_last) {
+      var_set_str(vm, "LASTARG", field);
+      var_set_str(vm, "TAILARG", field);
+      var_set_num(vm, "LASTARG_N", hit ? idx : -1L);
+      var_set_num(vm, "LASTARG_HIT", hit ? 1L : 0L);
+    } else {
+      var_set_str(vm, "FIRSTARG", field);
+      var_set_str(vm, "HEADARG", field);
+      var_set_num(vm, "FIRSTARG_N", hit ? 0L : -1L);
+      var_set_num(vm, "FIRSTARG_HIT", hit ? 1L : 0L);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s hit=%ld idx=%ld\n", want_last ? "lastarg" : "firstarg",
+              hit, idx);
     bump(vm);
     return 1;
   }
