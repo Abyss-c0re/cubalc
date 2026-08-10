@@ -1,0 +1,56 @@
+# INCLUDE NTH / LASTMATCH — index and last filter pick+include
+
+# NTH 0 == first (agent family only agent_boot)
+INCLUDE ONCE NTH 0 agent
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "agent_boot"
+ASSERT INCLUDE_MATCH_I == 0
+
+# fat family: fat_boot, fat_session
+INCLUDE ONCE NTH 0 fat
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "fat_boot"
+ASSERT INCLUDE_MATCH_I == 0
+
+INCLUDE ONCE NTH 1 fat
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "fat_session"
+ASSERT INCLUDE_MATCH_I == 1
+
+# LASTMATCH last sorted fat*
+INCLUDE ONCE LASTMATCH fat
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "fat_session"
+
+# ENDMATCH on guard* → var_guard after time_guard
+INCLUDE ONCE ENDMATCH guard
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "var_guard"
+
+# plate last without executing heavy middle stems: only LASTMATCH
+INCLUDE ONCE LASTMATCH plate
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "plate_uniform"
+
+# DEFAULT on out-of-range
+INCLUDE ONCE NTH 99 fat DEFAULT hold_seed
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "hold_seed"
+ASSERT INCLUDE_MATCH_FALLBACK == 1
+
+# SOFT miss
+INCLUDE SOFT LASTMATCH no_such_lib_xyz_zzz
+ASSERT OK == 0
+CLEAR_ERR
+
+# NTHMATCH alias
+INCLUDE ONCE NTHMATCH 0 hold
+ASSERT OK == 1
+ASSERT INCLUDE_MATCH == "hold_seed"
+
+# parity with NTHLIB without include
+NTHLIB 1 fat
+ASSERT LAST == "fat_session"
+
+PASS
+PRINT "1312_include_nth_last: PASS"

@@ -5691,7 +5691,7 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
    * programs/lib/<name>[.cubalc] short form · CUBALC_ROOT · fail with tried paths.
    * Usability: INCLUDE hold_seed  or  INCLUDE "hold_seed" → programs/lib/…
    * String-var / LAST: INCLUDE lib  after PICKLIB / LET lib = "agent_boot".
-   * Filter: INCLUDE MATCH|FIRST needle [DEFAULT stem] — PICKLIB+INCLUDE one-shot.
+   * Filter: INCLUDE MATCH|FIRST|NTH|LASTMATCH needle [DEFAULT stem] — pick+include one-shot.
    * Soft: INCLUDE OR|SOFT|TRY name — missing file → OK=0 sticky LAST_ERR, no fatal.
    * Once: INCLUDE ONCE name — skip if same resolved path already loaded this run. */
   if (kw(&L->cur,"INCLUDE")||kw(&L->cur,"IMPORT")||kw(&L->cur,"USE")){
@@ -5712,21 +5712,55 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     char orig[512];
     orig[0] = 0;
     path[0] = 0;
-    /* INCLUDE MATCH|FIRST|PICK needle [DEFAULT|ELSE|FALLBACK stem]
-     * Usability: filter → first sorted stem → INCLUDE without PICKLIB+LAST glue. */
+    /* INCLUDE MATCH|FIRST|PICK | NTH idx | LASTMATCH|ENDMATCH needle [DEFAULT stem]
+     * Usability: filter pick family → INCLUDE without PICKLIB/NTHLIB/LASTLIB+LAST glue. */
     if (kw(&L->cur,"MATCH") || kw(&L->cur,"FIRST") || kw(&L->cur,"PICK") ||
         kw(&L->cur,"MATCHFIRST") || kw(&L->cur,"FIRSTMATCH") ||
-        kw(&L->cur,"PICKMATCH") || kw(&L->cur,"MATCHLIB")) {
+        kw(&L->cur,"PICKMATCH") || kw(&L->cur,"MATCHLIB") ||
+        kw(&L->cur,"NTH") || kw(&L->cur,"NTHMATCH") || kw(&L->cur,"MATCHNTH") ||
+        kw(&L->cur,"INCLUDENTH") ||
+        kw(&L->cur,"LASTMATCH") || kw(&L->cur,"ENDMATCH") ||
+        kw(&L->cur,"MATCHLAST") || kw(&L->cur,"LASTLIBINC") ||
+        kw(&L->cur,"INCLASTMATCH")) {
       char needle[96], fup[96], fb[96];
       char stems[96][96];
       int nstem = 0, i, j, have_fb = 0;
+      int mode = 1; /* 1=first 2=last 3=nth */
+      int want_idx = 0, have_idx = 0;
       size_t a;
       DIR *d;
       struct dirent *ent;
       const char *ip;
+      if (kw(&L->cur,"LASTMATCH") || kw(&L->cur,"ENDMATCH") ||
+          kw(&L->cur,"MATCHLAST") || kw(&L->cur,"LASTLIBINC") ||
+          kw(&L->cur,"INCLASTMATCH"))
+        mode = 2;
+      else if (kw(&L->cur,"NTH") || kw(&L->cur,"NTHMATCH") ||
+               kw(&L->cur,"MATCHNTH") || kw(&L->cur,"INCLUDENTH"))
+        mode = 3;
       lex_next(L);
       needle[0] = 0;
       fb[0] = 0;
+      /* NTH: index then needle */
+      if (mode == 3) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+            L->cur.kind == TK_MINUS) {
+          want_idx = (int)parse_expr(vm, L);
+          have_idx = 1;
+        } else if (L->cur.kind == TK_IDENT) {
+          Var *vi = var_get(vm, L->cur.text, 0);
+          if (vi && !vi->is_str) {
+            want_idx = (int)vi->val;
+            have_idx = 1;
+            lex_next(L);
+          }
+        }
+        if (!have_idx) {
+          fail_at(vm, L,
+                  "INCLUDE NTH needs index — INCLUDE NTH 1 plate · DEFAULT agent_boot");
+          return -1;
+        }
+      }
       if (L->cur.kind == TK_STR) {
         snprintf(needle, sizeof needle, "%s", L->cur.text);
         lex_next(L);
@@ -5761,7 +5795,7 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       }
       if (!needle[0]) {
         fail_at(vm, L,
-                "INCLUDE MATCH needs needle — INCLUDE MATCH plate · DEFAULT agent_boot");
+                "INCLUDE MATCH needs needle — INCLUDE MATCH plate · INCLUDE NTH 1 plate · INCLUDE LASTMATCH plate");
         return -1;
       }
       for (a = 0; needle[a] && a + 1 < sizeof fup; a++) {
@@ -5840,46 +5874,73 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
         }
         snprintf(stems[j], sizeof stems[0], "%s", tmp);
       }
-      var_set_num(vm, "MATCHLIBS_N", nstem);
-      var_set_num(vm, "PICKLIB_N", nstem);
-      var_set_str(vm, "MATCHLIBS_FILTER", needle);
-      var_set_str(vm, "INCLUDE_MATCH_FILTER", needle);
-      if (nstem > 0) {
-        snprintf(orig, sizeof orig, "%s", stems[0]);
-        var_set_str(vm, "INCLUDE_MATCH", orig);
-        var_set_str(vm, "PICKLIB", orig);
-      } else if (have_fb) {
-        snprintf(orig, sizeof orig, "%s", fb);
-        var_set_str(vm, "INCLUDE_MATCH", orig);
-        var_set_num(vm, "INCLUDE_MATCH_FALLBACK", 1);
-      } else {
-        char msg[192];
-        snprintf(msg, sizeof msg,
-                 "INCLUDE MATCH miss line %d: '%s' — MATCHLIBS · cubalc libs %s · DEFAULT stem",
-                 aln, needle, needle);
-        if (soft) {
+      {
+        int pick_i = 0;
+        int ok_pick = 0;
+        if (mode == 2)
+          pick_i = nstem > 0 ? nstem - 1 : 0;
+        else if (mode == 3)
+          pick_i = want_idx;
+        else
+          pick_i = 0;
+        if (nstem > 0 && pick_i >= 0 && pick_i < nstem)
+          ok_pick = 1;
+        var_set_num(vm, "MATCHLIBS_N", nstem);
+        var_set_num(vm, "PICKLIB_N", nstem);
+        var_set_num(vm, "NTHLIB_N", nstem);
+        var_set_num(vm, "INCLUDE_MATCH_I", ok_pick ? pick_i : -1);
+        var_set_str(vm, "MATCHLIBS_FILTER", needle);
+        var_set_str(vm, "INCLUDE_MATCH_FILTER", needle);
+        if (ok_pick) {
+          snprintf(orig, sizeof orig, "%s", stems[pick_i]);
+          var_set_str(vm, "INCLUDE_MATCH", orig);
+          var_set_str(vm, "PICKLIB", orig);
+          if (mode == 3)
+            var_set_str(vm, "NTHLIB", orig);
+          if (mode == 2)
+            var_set_str(vm, "LASTLIB", orig);
+        } else if (have_fb) {
+          snprintf(orig, sizeof orig, "%s", fb);
+          var_set_str(vm, "INCLUDE_MATCH", orig);
+          var_set_num(vm, "INCLUDE_MATCH_FALLBACK", 1);
+        } else {
+          char msg[200];
+          if (mode == 3)
+            snprintf(msg, sizeof msg,
+                     "INCLUDE NTH miss line %d: idx=%d '%s' — MATCHLIBS · DEFAULT stem",
+                     aln, want_idx, needle);
+          else if (mode == 2)
+            snprintf(msg, sizeof msg,
+                     "INCLUDE LASTMATCH miss line %d: '%s' — MATCHLIBS · cubalc libs %s · DEFAULT stem",
+                     aln, needle, needle);
+          else
+            snprintf(msg, sizeof msg,
+                     "INCLUDE MATCH miss line %d: '%s' — MATCHLIBS · cubalc libs %s · DEFAULT stem",
+                     aln, needle, needle);
+          if (soft) {
+            var_set_str(vm, "ERR", msg);
+            var_set_str(vm, "LAST_ERR", msg);
+            var_set_str(vm, "INCLUDE_MISS", needle);
+            var_set_str(vm, "INCLUDE_MATCH", "");
+            var_set_str(vm, "INCLUDE_PATH", "");
+            var_set_str(vm, "LAST", needle);
+            snprintf(vm->last_str, sizeof vm->last_str, "%s", needle);
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_num(vm, "INCLUDE_OK", 0);
+            bump(vm);
+            return 1;
+          }
           var_set_str(vm, "ERR", msg);
           var_set_str(vm, "LAST_ERR", msg);
-          var_set_str(vm, "INCLUDE_MISS", needle);
-          var_set_str(vm, "INCLUDE_MATCH", "");
-          var_set_str(vm, "INCLUDE_PATH", "");
-          var_set_str(vm, "LAST", needle);
-          snprintf(vm->last_str, sizeof vm->last_str, "%s", needle);
-          vm->last_n = 0;
-          var_set_num(vm, "LAST_N", 0);
-          var_set_num(vm, "OK", 0);
-          var_set_num(vm, "INCLUDE_OK", 0);
-          bump(vm);
-          return 1;
+          fail(vm, msg);
+          return -1;
         }
-        var_set_str(vm, "ERR", msg);
-        var_set_str(vm, "LAST_ERR", msg);
-        fail(vm, msg);
-        return -1;
       }
     } else {
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){
-        fail_at(vm,L,"INCLUDE needs path|libname|MATCH — INCLUDE hold_seed · INCLUDE MATCH plate"); return -1;
+        fail_at(vm,L,"INCLUDE needs path|libname|MATCH|NTH|LASTMATCH — INCLUDE hold_seed · INCLUDE MATCH plate"); return -1;
       }
       /* Resolve IDENT as string var / LAST when set — else bare short name (lib stem). */
       if (L->cur.kind == TK_STR) {
