@@ -2739,6 +2739,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"LISTTOPICS", "LISTTOPICS|TOPICS — bag of discovery topics · dual of cubalc topics"},
       {"HASTOPIC", "HASTOPIC name — soft 0|1 if topic known · dual of HASFORM for topics"},
       {"NEEDTOPIC", "NEEDTOPIC name — fail-fast if topic unknown"},
+      {"TOPICHINT", "TOPICHINT|DESCRIBETOPIC name — one-line topic hint → LAST · dual of cubalc topichint"},
+      {"DESCRIBETOPIC", "DESCRIBETOPIC alias of TOPICHINT"},
       {"ERRTIPS", "ERRTIPS [err] — recovery tip bag from LAST_ERR or arg · ERRTIPS_TOPIC · dual of cubalc errtips"},
       {"FIXTIPS", "FIXTIPS alias of ERRTIPS"},
       {"ERRRUN", "ERRRUN [err] — ERRTIPS classify + RUNSNIP topic one-shot · dual of cubalc errrun"},
@@ -39997,6 +39999,104 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
     }
     (void)aln;
+    bump(vm);
+    return 1;
+  }
+
+  /* TOPICHINT|DESCRIBETOPIC name — one-line discovery topic hint → LAST.
+   * Twin of FORMHINT for topics. Soft miss OK=0 · TOPIC_HINT/TOPIC_NAME set.
+   * Dual of cubalc topichint. Complements LISTTOPICS/HASTOPIC/TOPIC plate. */
+  if (kw(&L->cur,"TOPICHINT")||kw(&L->cur,"DESCRIBETOPIC")||kw(&L->cur,"TOPICDOC")||
+      kw(&L->cur,"TOPICHELP")||kw(&L->cur,"HINTTOPIC")||kw(&L->cur,"TOPIC_HINT")||
+      kw(&L->cur,"WHATISTOPIC")||kw(&L->cur,"EXPLAINTOPIC")){
+    static const struct { const char *id; const char *hint; } rows[] = {
+      {"general", "install/doctor/init surface · VERSION STATUS IDENTITY"},
+      {"cap", "HASFORM/NEEDFORMS capability floor · FORMHINT · run -C"},
+      {"fat", "VARROOM/REMAIN_MS fat nest budget · fat_session · run -T"},
+      {"plate", "SETP/NEEDP plate agent JSON · plate_session · PRETTYP"},
+      {"p2p", "SMX SERVE/DIAL mesh · CUBALC_SMX_KEY · P2P_SOFT/TIMEOUT"},
+      {"run", "ASSERT/EXPECT/WHY run probes · ERRTIPS · CLEAR_ERR"},
+      {"lib", "LISTLIBS/RECIPE INCLUDE discovery · MATCHLIBS · checkdeps"},
+      {"protect", "HOLD_FLASH/protect status · CORE_PROTECT · device/mesh-join only"},
+    };
+    char name[32], tup[32];
+    const char *hint = NULL;
+    size_t k;
+    int i, nall = (int)(sizeof rows / sizeof rows[0]);
+    lex_next(L);
+    name[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(name, sizeof name, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(name, sizeof name, "%s", vm->last_str);
+      else
+        snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (!name[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  "TOPICHINT: need name — TOPICHINT cap · DESCRIBETOPIC plate");
+      var_set_str(vm, "ERR",
+                  "TOPICHINT: need name — TOPICHINT cap · DESCRIBETOPIC plate");
+      bump(vm);
+      return 1;
+    }
+    for (k = 0; name[k] && k + 1 < sizeof tup; k++) {
+      char c = name[k];
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      tup[k] = c;
+    }
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    for (i = 0; i < nall; i++) {
+      if (!strcmp(rows[i].id, tup)) { hint = rows[i].hint; break; }
+    }
+    var_set_str(vm, "TOPIC_NAME", tup);
+    var_set_str(vm, "TOPIC", tup);
+    if (!hint) {
+      char em[176];
+      snprintf(em, sizeof em,
+               "TOPICHINT miss: '%s' — LISTTOPICS · HASTOPIC · cubalc topics",
+               name);
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "TOPIC_HINT", "");
+      var_set_str(vm, "TOPICHINT", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", hint);
+    var_set_str(vm, "TOPIC_HINT", hint);
+    var_set_str(vm, "TOPICHINT", hint);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hint);
+    vm->last_n = (long)strlen(hint);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;
   }

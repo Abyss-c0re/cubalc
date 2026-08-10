@@ -3258,6 +3258,8 @@ int main(int argc, char **argv) {
       {"cli_errrun", "programs/proof/1337_cli_errrun.sh", "cubalc errrun plate + topics"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
+      {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
+      {"cli_topichint", "programs/proof/1339_cli_topichint.sh", "cubalc topichint plate + forms"},
       {"cli_run_preload_plate", "programs/proof/1267_cli_run_preload_plate.sh", "run plate preload JSON array of -I names"},
       {"includestems", "programs/proof/1268_includestems.cubalc", "INCLUDESTEMS short-name bag from loaded modules"},
       {"cli_includestems", "programs/proof/1268_cli_includestems.sh", "INCLUDESTEMS after run -I preload"},
@@ -3901,6 +3903,8 @@ int main(int argc, char **argv) {
       {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
       {"EACH TOPIC", "flow", "EACH TOPIC [AS name] [MATCH] walk discovery topics · dual of LISTTOPICS"},
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
+      {"TOPICHINT", "flow", "TOPICHINT name one-line topic hint · dual of FORMHINT for topics"},
+      {"DESCRIBETOPIC", "flow", "DESCRIBETOPIC alias of TOPICHINT"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
       {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
@@ -5077,7 +5081,7 @@ int main(int argc, char **argv) {
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
            "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc doctor · cubalc errrun · cubalc errtips · cubalc topics · cubalc init\n");
+           "Commands: cubalc doctor · cubalc topichint · cubalc topics · cubalc errtips · cubalc init\n");
     return 0;
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
@@ -5792,6 +5796,74 @@ int main(int argc, char **argv) {
              i ? "," : "", topics[i], hints[i]);
     }
     printf("]}\n");
+    return 0;
+  }
+  if (strcmp(cmd, "topichint") == 0 || strcmp(cmd, "describetopic") == 0 ||
+      strcmp(cmd, "topicdoc") == 0 || strcmp(cmd, "topichelp") == 0 ||
+      strcmp(cmd, "hinttopic") == 0 || strcmp(cmd, "topic-hint") == 0) {
+    /* Usability: one-line topic hint (dual of TOPICHINT / FORMHINT for topics).
+     *   cubalc topichint cap · cubalc describetopic plate
+     * Schema cubalc.topichint.v1 */
+    static const struct { const char *id; const char *hint; } rows[] = {
+      {"general", "install/doctor/init surface · VERSION STATUS IDENTITY"},
+      {"cap", "HASFORM/NEEDFORMS capability floor · FORMHINT · run -C"},
+      {"fat", "VARROOM/REMAIN_MS fat nest budget · fat_session · run -T"},
+      {"plate", "SETP/NEEDP plate agent JSON · plate_session · PRETTYP"},
+      {"p2p", "SMX SERVE/DIAL mesh · CUBALC_SMX_KEY · P2P_SOFT/TIMEOUT"},
+      {"run", "ASSERT/EXPECT/WHY run probes · ERRTIPS · CLEAR_ERR"},
+      {"lib", "LISTLIBS/RECIPE INCLUDE discovery · MATCHLIBS · checkdeps"},
+      {"protect", "HOLD_FLASH/protect status · CORE_PROTECT · device/mesh-join only"},
+    };
+    const char *name = (argc > 2 && argv[2][0]) ? argv[2] : "";
+    char tup[32];
+    size_t k;
+    int i, nall = (int)(sizeof rows / sizeof rows[0]);
+    const char *hint = NULL;
+    if (!name[0]) {
+      fprintf(stderr, "usage: cubalc topichint|describetopic <topic>\n");
+      printf("{\"schema\":\"cubalc.topichint.v1\",\"ok\":false,\"cmd\":\"topichint\","
+             "\"err\":\"need topic name\",\"version\":\"%s\"}\n",
+             CUBALC_LANG_VERSION);
+      return 2;
+    }
+    for (k = 0; name[k] && k + 1 < sizeof tup; k++)
+      tup[k] = (char)((name[k] >= 'A' && name[k] <= 'Z')
+                          ? name[k] - 'A' + 'a' : name[k]);
+    tup[k] = 0;
+    if (!strcmp(tup, "capability") || !strcmp(tup, "forms") || !strcmp(tup, "form"))
+      snprintf(tup, sizeof tup, "%s", "cap");
+    if (!strcmp(tup, "mesh") || !strcmp(tup, "smx") || !strcmp(tup, "peer"))
+      snprintf(tup, sizeof tup, "%s", "p2p");
+    if (!strcmp(tup, "nest") || !strcmp(tup, "var") || !strcmp(tup, "timeout"))
+      snprintf(tup, sizeof tup, "%s", "fat");
+    if (!strcmp(tup, "json") || !strcmp(tup, "agent"))
+      snprintf(tup, sizeof tup, "%s", "plate");
+    if (!strcmp(tup, "start") || !strcmp(tup, "all") || !strcmp(tup, "help") ||
+        !strcmp(tup, "default") || !strcmp(tup, "*"))
+      snprintf(tup, sizeof tup, "%s", "general");
+    for (i = 0; i < nall; i++)
+      if (!strcmp(rows[i].id, tup)) { hint = rows[i].hint; break; }
+    if (!hint) {
+      printf("{\"schema\":\"cubalc.topichint.v1\",\"ok\":false,\"cmd\":\"topichint\","
+             "\"topic\":\"%s\",\"err\":\"unknown topic\",\"version\":\"%s\","
+             "\"note\":\"LISTTOPICS · cubalc topics · HASTOPIC\"}\n",
+             tup, CUBALC_LANG_VERSION);
+      return 1;
+    }
+    {
+      char hj[280];
+      size_t j, o = 0;
+      for (j = 0; hint[j] && o + 2 < sizeof hj; j++) {
+        char c = hint[j];
+        if (c == '"' || c == '\\') { hj[o++] = '\\'; hj[o++] = c; }
+        else hj[o++] = c;
+      }
+      hj[o] = 0;
+      printf("{\"schema\":\"cubalc.topichint.v1\",\"ok\":true,\"cmd\":\"topichint\","
+             "\"topic\":\"%s\",\"hint\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"one-line topic docs · dual of TOPICHINT · twin of formhint\"}\n",
+             tup, hj, CUBALC_LANG_VERSION);
+    }
     return 0;
   }
   if (strcmp(cmd, "errtips") == 0 || strcmp(cmd, "fixtips") == 0 ||
@@ -15353,6 +15425,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"LISTTOPICS", "flow", "LISTTOPICS|TOPICS bag of discovery topics · cubalc topics dual"},
       {"EACH TOPIC", "flow", "EACH TOPIC [AS name] [MATCH] walk discovery topics · dual of LISTTOPICS"},
       {"HASTOPIC", "flow", "HASTOPIC name soft 0|1 if topic known"},
+      {"TOPICHINT", "flow", "TOPICHINT name one-line topic hint · dual of FORMHINT for topics"},
+      {"DESCRIBETOPIC", "flow", "DESCRIBETOPIC alias of TOPICHINT"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
       {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
@@ -16823,6 +16897,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    runsnip|sniprun [topic]    execute curated SNIP mini (cubalc.runsnip.v1)\n"
       "    topics|listtopics          discovery topic catalog (cubalc.topics.v1)\n"
       "    hastopic|needtopic <t>     soft/hard topic membership gates\n"
+      "    topichint|describetopic <t>  one-line topic docs (cubalc.topichint.v1)\n"
       "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
       "    errrun|recoversnip <err…>  classify + RUNSNIP topic (cubalc.errrun.v1)\n"
       "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --from lib\n"
@@ -16830,7 +16905,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|formsfor|related|snip|topic|runsnip|topics|errtips|errrun · EACH TOPIC\n"
+      "    picklib|listforms|formhint|topichint|formsfor|related|snip|topic|runsnip|topics|errtips|errrun\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
@@ -16861,7 +16936,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS … · INCLUDE [ONCE][SOFT]|MATCH|ALL MATCH\n"
       "    ASSERT|EXPECT|FAIL|PASS|NOTE|TIPS|ERRTIPS|ERRRUN|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|LISTTOPICS|EXIT|CLEAR_ERR|WHY\n"
-      "    LISTLIBS|LISTFORMS|LISTTOPICS|FORMHINT|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|ERRTIPS|ERRRUN|HASTOPIC|HASFORM\n"
+      "    LISTLIBS|LISTFORMS|LISTTOPICS|FORMHINT|TOPICHINT|FORMSFOR|RELATED|SNIP|RUNSNIP|TOPIC|ERRTIPS|ERRRUN|HASTOPIC\n"
       "    DEFAULT|DEFINED|TYPEOF|UNSET · PRINT_JSON · VARS · REQUIRE LIB|VERSION|ENV\n"
       "\n"
       "  Agents: cubalc doctor · checkdeps fat_session · init --from plate_tick · RECIPE\n"
