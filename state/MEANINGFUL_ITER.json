@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 830,
-  "version": "1.15.822-usability",
-  "item": "NTHARG / GETARG raw argv peel",
-  "item_id": 830,
-  "title": "NTHARG · GETARG · OR fallback · NTHPOS twin for CUBALC_ARGn",
-  "commit": "299591f641cd775e436a7abb12f4deb90f58769b",
-  "summary": "Peel CUBALC_ARGi with hit/index side vars; flags kept unlike NTHPOS; proof 1370 PASS.",
+  "iter": 831,
+  "version": "1.15.823-usability",
+  "item": "FINDARG / ARGINDEX reverse NTHARG",
+  "item_id": 831,
+  "title": "FINDARG · ARGINDEX · token→index · CLI dual cubalc.findarg.v1",
+  "commit": "11ea63dd1d427de784f58a5622ff1e260446ce73",
+  "summary": "Exact raw argv token to 0-based index; reverse of NTHARG; soft miss LAST_N=-1; proof 1371 PASS.",
   "proofs": [
-    "1370_ntharg PASS",
-    "1370_cli_ntharg PASS"
+    "1371_findarg PASS",
+    "1371_cli_findarg PASS"
   ],
-  "when": "2026-08-10T21:04:17Z",
+  "when": "2026-08-10T21:21:30Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "299591f641cd775e436a7abb12f4deb90f58769b",
-  "note": "restored thrash first · pairs ARGMAP/CLIINFO"
+  "sha": "11ea63dd1d427de784f58a5622ff1e260446ce73",
+  "note": "pairs NTHARG/ARGMAP · locate then peel"
 }
