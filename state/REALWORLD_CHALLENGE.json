@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 293,
-  "program": "programs/realworld/svc_countmatchlibs_board.cubalc",
-  "theme": "COUNTMATCHLIBS fleet filter inventory size",
-  "version": "1.15.763-usability",
+  "iter": 294,
+  "program": "programs/realworld/svc_eachlib_walk_board.cubalc",
+  "theme": "EACH LIB MATCH walk + HASCOUNTMATCHLIBS gate",
+  "version": "1.15.765-usability",
   "pass": true,
-  "prior_note": "iter 292 NTHLIB roster; this iter first realworld 1313 COUNTMATCHLIBS/COUNTLIBS",
+  "prior_note": "iter 293 COUNTMATCHLIBS size; this iter first realworld 1315 EACH LIB + 1314 HASCOUNTMATCHLIBS",
   "tests": [
     {
       "name": "list",
@@ -20,38 +20,44 @@
       "note": "boot"
     },
     {
-      "name": "plate",
-      "cmd": "COUNTMATCHLIBS plate n=11",
-      "ok": true,
-      "note": "plate"
-    },
-    {
       "name": "fat",
-      "cmd": "COUNTLIBS fat n=2",
+      "cmd": "EACH MATCH fat n=2",
       "ok": true,
       "note": "fat"
     },
     {
+      "name": "plate",
+      "cmd": "STEM first/last plate*",
+      "ok": true,
+      "note": "plate"
+    },
+    {
+      "name": "all",
+      "cmd": "EACH LIB n=20",
+      "ok": true,
+      "note": "all"
+    },
+    {
       "name": "soft",
-      "cmd": "ghost OK=1 count 0 vs HASMATCH OK=0",
+      "cmd": "empty walk + min50 fail",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "gate",
-      "cmd": "min_count floor",
+      "cmd": "HASCOUNTMATCH 2 fat",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "alias",
-      "cmd": "COUNTLIBS==COUNTMATCHLIBS",
+      "cmd": "AS x MATCH guard",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "probe",
-      "cmd": "LAST count string vs MATCHLIBS bag",
+      "cmd": "LAST_N dual + alpha first",
       "ok": true,
       "note": "probe"
     },
@@ -65,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "cli duals red; countmatchlibs PASS"
+      "note": "cli duals red; each_lib+hascount PASS"
     }
   ],
   "weaknesses": [
@@ -4204,6 +4210,38 @@
       "title": "WRITE VAL/META/STATUS omit trailing NL",
       "detail": "Reconfirmed STATUS last line and META without final \\n.",
       "repro": "od -c META.txt"
+    },
+    {
+      "id": "W518",
+      "severity": "med",
+      "area": "lang|hascountmatchlibs",
+      "title": "HASCOUNTMATCHLIBS LAST_N is boolean hit not match count",
+      "detail": "HASCOUNTMATCHLIBS 1 plate \u2192 LAST_N=1 while HASCOUNTMATCHLIBS_N>=10. Size gates must use HASCOUNTMATCHLIBS_N or COUNTMATCHLIBS. Same dual class as HASMATCH/PICKLIB.",
+      "repro": "HASCOUNTMATCHLIBS 1 plate; PRINT LAST_N \u2192 1; PRINT HASCOUNTMATCHLIBS_N \u2192 11"
+    },
+    {
+      "id": "W519",
+      "severity": "med",
+      "area": "lang|hascountmatchlibs",
+      "title": "HASCOUNTMATCHLIBS soft-fails high min while COUNTMATCH still reports real N",
+      "detail": "HASCOUNTMATCHLIBS 50 plate \u2192 OK=0 LAST_N=0 but HASCOUNTMATCHLIBS_N still >=10. Agents that only check LAST_N lose the actual inventory size.",
+      "repro": "HASCOUNTMATCHLIBS 50 plate \u2192 OK=0; HASCOUNTMATCHLIBS_N still 11"
+    },
+    {
+      "id": "W520",
+      "severity": "low",
+      "area": "lang|each_lib",
+      "title": "EACH LIB MATCH empty filter is soft zero-walk not OK fail",
+      "detail": "EACH LIB MATCH ghost runs zero iterations with EACHLIBS_N=0 and no sticky err. Different from NEEDCOUNTMATCH hard path. Positive for soft inventory digests.",
+      "repro": "EACH LIB MATCH no_such \u2026 END \u2192 n=0 EACHLIBS_N=0"
+    },
+    {
+      "id": "W521",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/META/STATUS omit trailing NL",
+      "detail": "Reconfirmed STATUS last bag line and META without final \\n.",
+      "repro": "od -c META.txt"
     }
   ],
   "workarounds": [
@@ -4249,11 +4287,6 @@
     "use unique path needles for single counter rollups"
   ],
   "language_gaps": [
-    "path substring multi-match scores",
-    "SUMFLAT/TOTALFLAT pure-int nest rollup read-only",
-    "LAST_N = sum not count; use SUMFLAT_N for leaf count",
-    "empty needle sums all pure-int (port inflation)",
-    "path substring multi-match counters",
     "RECIPE/LIBCARD/CARD in-lang cubalc recipe dual",
     "RECIPE_DEFAULTS brace/JSON truncation (W488)",
     "LAST_N after RECIPE is deps_n not bytes (W489)",
@@ -4288,12 +4321,14 @@
     "LAST is count string not stem bag (W514)",
     "soft miss OK=1 vs HASMATCH OK=0 (W515)",
     "SYS EQS two-var parse fail (W516)",
-    "quoted PLATE for case-insensitive with plate loaded"
+    "quoted PLATE for case-insensitive with plate loaded",
+    "EACH LIB [AS] MATCH stem walk inventory",
+    "HASCOUNTMATCHLIBS/NEEDCOUNTMATCHLIBS min gates",
+    "HASCOUNT LAST_N boolean vs _N count (W518)",
+    "high min soft-fail still exposes HASCOUNTMATCHLIBS_N (W519)",
+    "empty MATCH walk soft zero (W520)"
   ],
   "issues_faced": [
-    "iter273: DELBYVAL board 9/9; re-seed SETP before del after prior scrubs",
-    "iter273: SAVEPLATE after mutate for durable agent/peer plates",
-    "iter274: ALLEQFLAT board 9/9; unify via SETBYVAL leader\u2192worker",
     "iter274: LAST_N is equality bit not count (W431)",
     "iter275: UNIFORM_PATH hard-fail under var pressure \u2014 board uses LAST_N only (W434)",
     "iter275: 9/9 green after special avoidance",
@@ -4340,8 +4375,11 @@
     "iter292: NTH 0/1/last plate stems alpha-stable",
     "iter293: first realworld 1313 COUNTMATCHLIBS; plate blocked on SYS EQS two-var",
     "iter293: 10/10 green after STR shuttle; soft polarity vs HASMATCH documented",
-    "iter293: selftest CLI duals still red"
+    "iter293: selftest CLI duals still red",
+    "iter294: first realworld 1315+1314 EACH LIB + HASCOUNTMATCH; 10/10 green first pass",
+    "iter294: rebuilt out/cubalc mid-cycle (was missing); version 1.15.765",
+    "iter294: plate walk first=plate_boot last=plate_uniform alpha stable"
   ],
-  "commit": "50839a98",
-  "ts": "2026-08-10T09:03:58Z"
+  "commit": "pending",
+  "ts": "2026-08-10T09:35:00Z"
 }
