@@ -3894,6 +3894,6 @@
     "iter281: 11 board actions green first pass; hits substring multi-leaf expected",
     "iter281: selftest cli duals still red; incflat proof green"
   ],
-  "commit": "pending",
+  "commit": "9853d72e",
   "ts": "2026-08-10T03:38:54Z"
 }
