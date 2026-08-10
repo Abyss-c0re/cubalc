@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 750,
-  "version": "1.15.777-usability",
-  "item": "LISTFORMS/COUNTFORMS + CLI formlist",
-  "item_id": 786,
-  "title": "LISTFORMS \u00b7 COUNTFORMS \u00b7 cubalc listforms|countforms \u00b7 dual of cubalc forms",
-  "commit": "ac409d5932923ddc0d4ffeb6161243d5b88869ac",
-  "summary": "in-lang HELP catalog bag/count; CLI formlist.v1; thrash restored. proof 1327 PASS.",
+  "iter": 751,
+  "version": "1.15.778-usability",
+  "item": "FORMHINT + CLI formhint HELP peel",
+  "item_id": 787,
+  "title": "FORMHINT|DESCRIBEFORM \u00b7 cubalc formhint \u00b7 HELP one-line payload",
+  "commit": "dea08b9c2a1852b3ad5badb4e8bfae7b78c27505",
+  "summary": "one-line form docs peel; dual of HASFORM with payload; CLI formhint.v1. proof 1328 PASS.",
   "proofs": [
-    "1327_listforms PASS",
-    "1327_cli_listforms PASS"
+    "1328_formhint PASS",
+    "1328_cli_formhint PASS"
   ],
-  "when": "2026-08-10T12:06:42Z",
+  "when": "2026-08-10T12:16:23Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ac409d5932923ddc0d4ffeb6161243d5b88869ac",
-  "note": "restored thrash; LISTFORMS SORT; COUNTFORMS FORM; CLI countforms n"
+  "sha": "dea08b9c2a1852b3ad5badb4e8bfae7b78c27505",
+  "note": "FORMHINT SORTLIBS\u2192hint; miss soft; cubalc formhint dual"
 }
