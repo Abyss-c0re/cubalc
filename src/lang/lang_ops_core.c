@@ -3547,6 +3547,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"HASRESTARGS", "HASRESTARGS|HASPOS [min] — soft 0|1 if non-flag count >= min (default 1)"},
       {"LISTFLAGS", "LISTFLAGS|FLAGS — bag of flag names (no dashes) from CUBALC_ARGn · LAST_N=count"},
       {"FLAGS", "FLAGS alias of LISTFLAGS — discover --flags without EACH ARGS"},
+      {"HASFLAGS", "HASFLAGS|HASFLAGC [min] — soft 0|1 if flag count >= min (default 1) · LISTFLAGS_N"},
+      {"HASFLAGC", "HASFLAGC alias of HASFLAGS — flag-count probe without LISTFLAGS bag"},
       {"FLAGMAP", "FLAGMAP|FLAGKV — bag of name=value for every --flag · LOOKUP without GETFLAG each"},
       {"FLAGKV", "FLAGKV alias of FLAGMAP"},
       {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
@@ -3577,6 +3579,9 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"INSTALL_HEALTH", "INSTALL_HEALTH alias of DOCTOR"},
       {"NEEDDOCTOR", "NEEDDOCTOR|REQUIRE DOCTOR — fail-fast if install not ready · hard twin of DOCTOR"},
       {"REQUIRE DOCTOR", "REQUIRE DOCTOR alias of NEEDDOCTOR"},
+      {"READY", "READY|PROVEREADY — install prove checklist plate · forms+libs+DOCTOR · cubalc.ready.v1"},
+      {"PROVEREADY", "PROVEREADY alias of READY"},
+      {"NEEDREADY", "NEEDREADY|REQUIRE READY — fail-fast if READY checklist fails · hard twin of READY"},
       {"WHY", "WHY|EXPLAIN — cubalc.why.v1 recovery plate from LAST_ERR + ASSERT_GOT/EXPECTED + hint"},
       {"EXPLAIN", "EXPLAIN alias of WHY"},
       {"WHYERR", "WHYERR alias of WHY"},
@@ -38696,6 +38701,131 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     return 1;
   }
 
+
+  /* READY|PROVEREADY [soft] · NEEDREADY|REQUIRE READY —
+   * Install prove checklist beyond soft DOCTOR: key forms + key libs + doctor ok.
+   * Usability: agents prove surface after doctor_boot without cubalc selftest (heavy).
+   * LAST=cubalc.ready.v1 · READY_OK · READY_PASS_N · READY_FAIL_N · READY_MISS bag. */
+  if (kw(&L->cur,"READY")||kw(&L->cur,"PROVEREADY")||kw(&L->cur,"INSTALL_READY")||
+      kw(&L->cur,"READYCHECK")||kw(&L->cur,"PROVE_INSTALL")||kw(&L->cur,"CHECK_READY")||
+      kw(&L->cur,"NEEDREADY")||kw(&L->cur,"NEED_READY")||kw(&L->cur,"REQUIREREADY")||
+      kw(&L->cur,"REQUIRE_READY")||kw(&L->cur,"REQUIRE READY")||kw(&L->cur,"MUSTREADY")){
+    static const char *need_forms[] = {
+      "DOCTOR", "NEEDDOCTOR", "OPEN", "DISCOVER", "HASLIB", "INCLUDE", "VERSION", "STATUS"
+    };
+    static const char *need_libs[] = {
+      "agent_boot", "doctor_boot", "open_boot", "discover_boot", "onboard_boot"
+    };
+    int hard = kw(&L->cur,"NEEDREADY")||kw(&L->cur,"NEED_READY")||
+               kw(&L->cur,"REQUIREREADY")||kw(&L->cur,"REQUIRE_READY")||
+               kw(&L->cur,"REQUIRE READY")||kw(&L->cur,"MUSTREADY");
+    char line[CUBALC_HOST_STR_MAX];
+    char miss[1024], pass_bag[1024], esc_miss[1200], esc_pass[1200];
+    char path[128];
+    const char *p;
+    size_t o = 0, po = 0, eo = 0;
+    int i, n_forms = (int)(sizeof need_forms / sizeof need_forms[0]);
+    int n_libs = (int)(sizeof need_libs / sizeof need_libs[0]);
+    int pass_n = 0, fail_n = 0;
+    int modular = 0, hold_ok = 0, doctor_ok = 0, ready = 0;
+    int hold = CUBALC_HOLD_FLASH;
+    lex_next(L);
+    miss[0] = 0;
+    pass_bag[0] = 0;
+    modular = (access("src/lang/lang_parse.c", R_OK) == 0 &&
+               access("include/lang/cubalc_lang_internal.h", R_OK) == 0 &&
+               access("src/lang/lang_ops_smx.c", R_OK) == 0);
+    hold_ok = (hold == 1);
+    doctor_ok = modular && hold_ok &&
+                (access("programs/lib/agent_boot.cubalc", R_OK) == 0);
+    /* structural checks */
+    #define CUBALC_READY_PUSH(bag, bag_o, bag_sz, label, hit) do { \
+      size_t __ln = strlen(label); \
+      if (hit) { \
+        if ((bag_o) && (bag_o) + 1 < (bag_sz)) (bag)[(bag_o)++] = '\n'; \
+        if ((bag_o) + __ln < (bag_sz)) { memcpy((bag) + (bag_o), (label), __ln); (bag_o) += __ln; } \
+        (bag)[(bag_o)] = 0; pass_n++; \
+      } else { \
+        if (o && o + 1 < sizeof miss) miss[o++] = '\n'; \
+        if (o + __ln < sizeof miss) { memcpy(miss + o, (label), __ln); o += __ln; } \
+        miss[o] = 0; fail_n++; \
+      } \
+    } while (0)
+    CUBALC_READY_PUSH(pass_bag, po, sizeof pass_bag, "modular_lang", modular);
+    CUBALC_READY_PUSH(pass_bag, po, sizeof pass_bag, "hold_flash", hold_ok);
+    CUBALC_READY_PUSH(pass_bag, po, sizeof pass_bag, "doctor_ok", doctor_ok);
+    for (i = 0; i < n_forms; i++) {
+      int hit = cubalc_form_known(need_forms[i], NULL) ? 1 : 0;
+      char lab[64];
+      snprintf(lab, sizeof lab, "form:%s", need_forms[i]);
+      CUBALC_READY_PUSH(pass_bag, po, sizeof pass_bag, lab, hit);
+    }
+    for (i = 0; i < n_libs; i++) {
+      snprintf(path, sizeof path, "programs/lib/%s.cubalc", need_libs[i]);
+      {
+        int hit = (access(path, R_OK) == 0) ? 1 : 0;
+        char lab[64];
+        snprintf(lab, sizeof lab, "lib:%s", need_libs[i]);
+        CUBALC_READY_PUSH(pass_bag, po, sizeof pass_bag, lab, hit);
+      }
+    }
+    #undef CUBALC_READY_PUSH
+    ready = (fail_n == 0) ? 1 : 0;
+#define CUBALC_READY_ESC(dst, srcv) do { \
+      eo = 0; \
+      for (p = (srcv); *p && eo + 2 < sizeof(dst); p++) { \
+        if (*p == '"' || *p == '\\') { (dst)[eo++] = '\\'; (dst)[eo++] = *p; } \
+        else if (*p == '\n') { (dst)[eo++] = '\\'; (dst)[eo++] = 'n'; } \
+        else if ((unsigned char)*p < 0x20) continue; \
+        else (dst)[eo++] = *p; \
+      } \
+      (dst)[eo] = 0; \
+    } while (0)
+    CUBALC_READY_ESC(esc_miss, miss);
+    CUBALC_READY_ESC(esc_pass, pass_bag);
+#undef CUBALC_READY_ESC
+    snprintf(line, sizeof line,
+      "{\"schema\":\"cubalc.ready.v1\",\"ok\":%s,\"pass_n\":%d,\"fail_n\":%d,"
+      "\"version\":\"%s\",\"doctor_ok\":%s,\"modular\":%s,\"hold_flash\":%d,"
+      "\"pass\":\"%s\",\"miss\":\"%s\","
+      "\"note\":\"install prove checklist · forms+libs+DOCTOR · dual of cubalc ready\"}",
+      ready ? "true" : "false", pass_n, fail_n, CUBALC_LANG_VERSION,
+      doctor_ok ? "true" : "false", modular ? "true" : "false", hold,
+      esc_pass, esc_miss);
+    var_set_str(vm, "LAST", line);
+    var_set_str(vm, "READY", line);
+    var_set_str(vm, "PROVEREADY", line);
+    var_set_str(vm, "READY_MISS", miss);
+    var_set_str(vm, "READY_PASS", pass_bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", line);
+    vm->last_n = ready ? 1 : 0;
+    var_set_num(vm, "LAST_N", ready ? 1 : 0);
+    var_set_num(vm, "OK", ready ? 1 : 0);
+    var_set_num(vm, "READY_OK", ready ? 1 : 0);
+    var_set_num(vm, "READY_PASS_N", (long)pass_n);
+    var_set_num(vm, "READY_FAIL_N", (long)fail_n);
+    if (!ready) {
+      char em[240];
+      snprintf(em, sizeof em,
+               "%s: %d check(s) failed — READY_MISS · DOCTOR · cubalc ready",
+               hard ? "NEEDREADY" : "READY", fail_n);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+      if (hard) {
+        if (vm->res)
+          snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
+        fail(vm, em);
+        return -1;
+      }
+    }
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
+    if (vm->trace)
+      fprintf(vm->trace, "# ready ok=%d pass=%d fail=%d hard=%d\n", ready, pass_n, fail_n, hard);
+    bump(vm);
+    return 1;
+  }
+
   /* WHY|EXPLAIN|WHYERR — agent recovery plate from sticky failure state.
    * Surfaces LAST_ERR + ASSERT_GOT/EXPECTED/OP + actionable WHY_HINT without
    * re-parsing free text. Does not rewrite OK. Complements STATUS/CLEAR_ERR.
@@ -39498,6 +39628,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"STATUS", "IDENTITY"}, {"STATUS", "VERSION"}, {"STATUS", "VARS"}, {"STATUS", "DOCTOR"},
       {"DOCTOR", "STATUS"}, {"DOCTOR", "VERSION"}, {"DOCTOR", "OPEN"}, {"DOCTOR", "DISCOVER"},
       {"DOCTOR", "NEEDDOCTOR"}, {"NEEDDOCTOR", "DOCTOR"}, {"NEEDDOCTOR", "REQUIRE DOCTOR"},
+      {"DOCTOR", "READY"}, {"READY", "DOCTOR"}, {"READY", "NEEDREADY"}, {"NEEDREADY", "READY"},
       {"VERSION", "REQUIRE VERSION"}, {"VERSION", "STATUS"},
       {"EXIT", "PASS"}, {"EXIT", "FAIL"}, {"EXIT", "STATUS"},
       {"NOTE", "PASS"}, {"NOTE", "TIPS"},
@@ -68370,6 +68501,44 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# listflags n=%ld\n", n);
+    bump(vm); return 1;
+  }
+  /* HASFLAGS|HASFLAGC [min] — soft 0|1 if flag count >= min (default 1).
+   * LAST "0"|"1" · LISTFLAGS_N / HASFLAGS_N = have count · bag not in LAST.
+   * Twin of LISTFLAGS count without bag clobber. Usability: IF HASFLAGS 1
+   * without LISTFLAGS + IF LAST_N soup (HASRESTARGS parity for flags). */
+  if (kw(&L->cur,"HASFLAGS") || kw(&L->cur,"HASFLAGC") || kw(&L->cur,"FLAGC?") ||
+      kw(&L->cur,"ENOUGHFLAGS") || kw(&L->cur,"HAS_FLAGS") || kw(&L->cur,"FLAGS?") ||
+      kw(&L->cur,"HASNFLAGS") || kw(&L->cur,"NFLAGS?")){
+    long need = 1, have, hit;
+    char bag[CUBALC_HOST_STR_MAX];
+    char buf[8];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") && !kw(&L->cur,"END") &&
+         !kw(&L->cur,"IF") && !kw(&L->cur,"HASARG") && !kw(&L->cur,"HASFLAG") &&
+         !kw(&L->cur,"REQUIRE") && !kw(&L->cur,"RESTARGS") && !kw(&L->cur,"USAGE") &&
+         !kw(&L->cur,"LISTFLAGS") && !kw(&L->cur,"HASRESTARGS") && !kw(&L->cur,"FLAGMAP"))){
+      need = parse_expr(vm, L);
+    }
+    if (need < 0) need = 0;
+    if (need > 32) need = 32;
+    have = cubalc_collect_listflags(bag, sizeof bag);
+    hit = (have >= need) ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASFLAGS_N", hit);
+    var_set_num(vm, "LISTFLAGS_N", have);
+    var_set_num(vm, "FLAGC_N", have);
+    var_set_num(vm, "OK", 1);
+    snprintf(buf, sizeof buf, "%ld", hit);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (have > 0)
+      var_set_str(vm, "LISTFLAGS", bag);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasflags >= %ld (have %ld) → %ld\n", need, have, hit);
     bump(vm); return 1;
   }
   /* FLAGMAP|FLAGKV — newline bag of name=value for every CLI flag.

@@ -2599,6 +2599,30 @@ int main(int argc, char **argv) {
     /* Pure C: braincube solves · algocube optimizes · emits .cubalc */
     return cubalc_cmd_evolve(argc - 1, argv + 1);
   }
+  if (strcmp(cmd, "ready") == 0 || strcmp(cmd, "proveready") == 0 ||
+      strcmp(cmd, "install-ready") == 0 || strcmp(cmd, "check-ready") == 0) {
+    /* Usability: install prove checklist (dual of READY). Soft by default.
+     *   cubalc ready · cubalc proveready
+     * Schema cubalc.ready.v1 · agents skip multi HASFORM+HASLIB glue. */
+    cubalc_run_result rr;
+    int ok;
+    static const char src[] = "READY\nPASS\n";
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, sizeof src - 1, "<cli-ready>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    /* Prefer nested LAST if it is ready plate; else synthesize. */
+    if (rr.last_print[0] && strstr(rr.last_print, "cubalc.ready.v1")) {
+      printf("%s\n", rr.last_print);
+    } else {
+      printf("{\"schema\":\"cubalc.ready.v1\",\"ok\":%s,\"cmd\":\"ready\","
+             "\"version\":\"%s\","
+             "\"note\":\"install prove checklist · dual of READY\","
+             "\"err\":\"%s\"}\n",
+             ok ? "true" : "false", CUBALC_LANG_VERSION,
+             ok ? "" : (rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "not ready")));
+    }
+    return ok ? 0 : 1;
+  }
   if (strcmp(cmd, "needdoctor") == 0 || strcmp(cmd, "need-doctor") == 0 ||
       strcmp(cmd, "require-doctor") == 0 || strcmp(cmd, "requiredoctor") == 0) {
     /* Usability: hard install gate (dual of NEEDDOCTOR). exit 1 if not ready. */
@@ -3374,6 +3398,8 @@ int main(int argc, char **argv) {
       {"cli_needdoctor", "programs/proof/1357_cli_needdoctor.sh", "cubalc needdoctor + run -D preflight"},
       {"doctor_boot", "programs/proof/1358_doctor_boot.cubalc", "INCLUDE doctor_boot agent_boot+NEEDDOCTOR"},
       {"cli_init_doctor", "programs/proof/1358_cli_init_doctor.sh", "cubalc init --doctor scaffold + doctor"},
+      {"ready", "programs/proof/1359_ready.cubalc", "READY install prove checklist plate"},
+      {"cli_ready", "programs/proof/1359_cli_ready.sh", "cubalc ready plate + NEEDREADY forms"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -3763,6 +3789,8 @@ int main(int argc, char **argv) {
       {"INSTALL_HEALTH", "flow", "INSTALL_HEALTH alias of DOCTOR"},
       {"NEEDDOCTOR", "flow", "NEEDDOCTOR|REQUIRE DOCTOR fail-fast if install not ready"},
       {"REQUIRE DOCTOR", "flow", "REQUIRE DOCTOR alias of NEEDDOCTOR"},
+      {"READY", "flow", "READY|PROVEREADY install prove checklist · cubalc.ready.v1"},
+      {"NEEDREADY", "flow", "NEEDREADY|REQUIRE READY fail-fast if READY checklist fails"},
       {"IDENTITY", "flow", "IDENTITY — cubalc.identity.v1 user@host:pid plate"},
       {"SETP", "flow", "SETP [FROM plate] key value — set key · JSON-shaped strings auto-raw · paths ok · multi-plate"},
       {"DEFAULTP", "flow", "DEFAULTP [FROM plate] key value — set-if-missing · JSON-shaped strings auto-raw · paths ok"},
@@ -18645,7 +18673,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "CubalC %s — pure-C COP/flow (matrix SoT · SMX2 · no HTTP required)\n"
       "\n"
       "  Run & learn\n"
-      "    doctor|health          install readiness JSON (agents/humans)\n"
+      "    doctor|health|needdoctor|ready  install readiness / prove checklist JSON\n"
       "    selftest|smoke         live curated usability proofs JSON\n"
       "    version|ver|-V         language version JSON plate\n"
       "    paths|where|layout     install/workspace paths JSON\n"
@@ -18677,7 +18705,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|guidematch|guidenth|guidelastmatch|runsnipmatch|runsnipnth|runsniplastmatch|discover|explore|onboard|matchtopics|picktopic|hasmatchtopics|nthtopic|lasttopic|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
+      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|guidematch|guidenth|guidelastmatch|runsnipmatch|runsnipnth|runsniplastmatch|discover|explore|ready|proveready|onboard|matchtopics|picktopic|hasmatchtopics|nthtopic|lasttopic|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"

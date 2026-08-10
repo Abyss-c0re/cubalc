@@ -1,0 +1,31 @@
+# READY — install prove checklist (forms + libs + doctor)
+
+READY
+ASSERT OK == 1
+ASSERT READY_OK == 1
+ASSERT READY_PASS_N >= 10
+ASSERT READY_FAIL_N == 0
+SYS HASI "cubalc.ready.v1"
+ASSERT LAST_N == 1
+SYS HASI "form:DOCTOR"
+ASSERT LAST_N == 1
+SYS HASI "lib:agent_boot"
+ASSERT LAST_N == 1
+SYS HASI "lib:doctor_boot"
+ASSERT LAST_N == 1
+
+# hard twin passes on healthy install
+NEEDREADY
+ASSERT OK == 1
+ASSERT READY_OK == 1
+
+# alias
+PROVEREADY
+ASSERT READY_OK == 1
+
+# chain after prove
+INCLUDE doctor_boot
+ASSERT DOCTOR_OK == 1
+
+PASS
+PRINT "1359_ready: PASS"
