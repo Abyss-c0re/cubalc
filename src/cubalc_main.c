@@ -3258,6 +3258,8 @@ int main(int argc, char **argv) {
       {"cli_errrun", "programs/proof/1337_cli_errrun.sh", "cubalc errrun plate + topics"},
       {"errguide", "programs/proof/1343_errguide.cubalc", "ERRGUIDE classify+GUIDE recovery playbook"},
       {"cli_errguide", "programs/proof/1343_cli_errguide.sh", "cubalc errguide plate + forms"},
+      {"formguide", "programs/proof/1344_formguide.cubalc", "FORMGUIDE form docs+topics+first playbook"},
+      {"cli_formguide", "programs/proof/1344_cli_formguide.sh", "cubalc formguide plate + forms"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -3919,6 +3921,8 @@ int main(int argc, char **argv) {
       {"SEETOPICS", "flow", "SEETOPICS alias of RELATEDTOPIC"},
       {"FORMTOPICS", "flow", "FORMTOPICS|TOPICSOF form topics covering form · reverse FORMSFOR"},
       {"TOPICSOF", "flow", "TOPICSOF alias of FORMTOPICS"},
+      {"FORMGUIDE", "flow", "FORMGUIDE form FORMHINT+topics+first GUIDE · cubalc formguide dual"},
+      {"GUIDEFORM", "flow", "GUIDEFORM alias of FORMGUIDE"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
       {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
@@ -5097,7 +5101,7 @@ int main(int argc, char **argv) {
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
            "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc doctor · cubalc guide · cubalc errguide · cubalc topics · cubalc errtips · cubalc init\n");
+           "Commands: cubalc doctor · cubalc formguide · cubalc guide · cubalc errguide · cubalc topics · cubalc init\n");
     return 0;
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
@@ -6047,6 +6051,161 @@ int main(int argc, char **argv) {
            "\"note\":\"topics covering form · dual of FORMTOPICS · reverse of formsfor\","
            "\"topics\":[%s]}\n",
            nup, n, CUBALC_LANG_VERSION, relj);
+    return 0;
+  }
+  if (strcmp(cmd, "formguide") == 0 || strcmp(cmd, "guideform") == 0 ||
+      strcmp(cmd, "form-guide") == 0 || strcmp(cmd, "formcard") == 0 ||
+      strcmp(cmd, "playform") == 0 || strcmp(cmd, "formboard") == 0) {
+    /* Usability: FORMHINT + covering topics + first-topic GUIDE (dual of FORMGUIDE).
+     *   cubalc formguide HASFORM · cubalc guideform SETP
+     * Schema cubalc.formguide.v1 */
+    static const struct { const char *topic; const char *form; } rows[] = {
+      {"general", "VERSION"}, {"general", "STATUS"}, {"general", "IDENTITY"},
+      {"general", "TIPS"}, {"general", "FORMSFOR"}, {"general", "LISTTOPICS"},
+      {"general", "TOPICHINT"}, {"general", "RELATEDTOPIC"}, {"general", "FORMTOPICS"},
+      {"general", "FORMGUIDE"}, {"general", "GUIDE"}, {"general", "WHY"},
+      {"general", "INCLUDE"}, {"general", "TOPIC"}, {"general", "SNIP"},
+      {"general", "ERRTIPS"}, {"general", "ERRGUIDE"}, {"general", "HASTOPIC"},
+      {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"},
+      {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"}, {"cap", "LISTFORMS"},
+      {"cap", "COUNTFORMS"}, {"cap", "REQUIRE FORM"}, {"cap", "RELATEDTOPIC"},
+      {"cap", "FORMTOPICS"}, {"cap", "FORMGUIDE"}, {"cap", "TIPS"},
+      {"cap", "FORMSFOR"}, {"cap", "RELATED"}, {"cap", "GUIDE"}, {"cap", "TOPIC"},
+      {"fat", "VARROOM"}, {"fat", "HASVARROOM"}, {"fat", "NEEDVARROOM"},
+      {"fat", "REMAIN_MS"}, {"fat", "HAS_TIME"}, {"fat", "NEEDTIME"},
+      {"fat", "STATUS"}, {"fat", "GUIDE"},
+      {"plate", "SETP"}, {"plate", "GETP"}, {"plate", "NEEDP"},
+      {"plate", "DEFAULTP"}, {"plate", "PRETTYP"}, {"plate", "SAVEPLATE"},
+      {"plate", "LOADPLATE"},
+      {"p2p", "SMX"}, {"p2p", "SERVE"}, {"p2p", "DIAL"}, {"p2p", "TALK"},
+      {"p2p", "EXCHANGE"},
+      {"run", "ASSERT"}, {"run", "EXPECT"}, {"run", "FAIL"}, {"run", "PASS"},
+      {"run", "WHY"}, {"run", "CLEAR_ERR"}, {"run", "ERRTIPS"}, {"run", "ERRGUIDE"},
+      {"lib", "LISTLIBS"}, {"lib", "HASLIB"}, {"lib", "MATCHLIBS"},
+      {"lib", "PICKLIB"}, {"lib", "RECIPE"}, {"lib", "CHECKDEPS"},
+      {"lib", "INCLUDE"},
+      {"protect", "HOLD_FLASH"}, {"protect", "STATUS"}, {"protect", "VERSION"},
+    };
+    static const struct { const char *id; const char *hint; } thints[] = {
+      {"general", "install/doctor/init surface · VERSION STATUS IDENTITY"},
+      {"cap", "HASFORM/NEEDFORMS capability floor · FORMHINT · run -C"},
+      {"fat", "VARROOM/REMAIN_MS fat nest budget · fat_session · run -T"},
+      {"plate", "SETP/NEEDP plate agent JSON · plate_session · PRETTYP"},
+      {"p2p", "SMX SERVE/DIAL mesh · CUBALC_SMX_KEY · P2P_SOFT/TIMEOUT"},
+      {"run", "ASSERT/EXPECT/WHY run probes · ERRTIPS · CLEAR_ERR"},
+      {"lib", "LISTLIBS/RECIPE INCLUDE discovery · MATCHLIBS · checkdeps"},
+      {"protect", "HOLD_FLASH/protect status · CORE_PROTECT · device/mesh-join only"},
+    };
+    static const struct { const char *topic; const char *rel; } rels[] = {
+      {"general", "cap"}, {"general", "lib"}, {"general", "run"}, {"general", "plate"},
+      {"cap", "general"}, {"cap", "run"}, {"cap", "lib"}, {"cap", "fat"},
+      {"fat", "plate"}, {"fat", "run"}, {"fat", "cap"}, {"fat", "general"},
+      {"plate", "fat"}, {"plate", "run"}, {"plate", "general"}, {"plate", "lib"},
+      {"p2p", "protect"}, {"p2p", "run"}, {"p2p", "general"}, {"p2p", "lib"},
+      {"run", "general"}, {"run", "cap"}, {"run", "plate"}, {"run", "fat"},
+      {"lib", "general"}, {"lib", "cap"}, {"lib", "plate"}, {"lib", "run"},
+      {"protect", "p2p"}, {"protect", "general"}, {"protect", "run"}, {"protect", "lib"},
+    };
+    const char *name = (argc > 2 && argv[2][0]) ? argv[2] : "";
+    char nup[96], topicsj[400], relj[256], thj[320], fhj[400], src[360];
+    char seen_topics[16][32];
+    char first_topic[32];
+    const char *topic_hint = NULL;
+    cubalc_run_result rr;
+    size_t k, o = 0, j;
+    int i, n = 0, nr = 0, nall = (int)(sizeof rows / sizeof rows[0]);
+    int nseen = 0, first = 1;
+    int n_th = (int)(sizeof thints / sizeof thints[0]);
+    int n_rels = (int)(sizeof rels / sizeof rels[0]);
+    if (!name[0]) {
+      fprintf(stderr, "usage: cubalc formguide|guideform <FormName>\n");
+      printf("{\"schema\":\"cubalc.formguide.v1\",\"ok\":false,\"cmd\":\"formguide\","
+             "\"err\":\"need form name\",\"version\":\"%s\"}\n",
+             CUBALC_LANG_VERSION);
+      return 2;
+    }
+    for (k = 0; name[k] && k + 1 < sizeof nup; k++) {
+      char c = name[k];
+      if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+      nup[k] = c;
+    }
+    nup[k] = 0;
+    topicsj[0] = 0; first_topic[0] = 0; nseen = 0; n = 0; first = 1; o = 0;
+    for (i = 0; i < nall; i++) {
+      char fup[96];
+      size_t jj;
+      int match, already = 0, si;
+      for (jj = 0; rows[i].form[jj] && jj + 1 < sizeof fup; jj++) {
+        char c = rows[i].form[jj];
+        if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+        fup[jj] = c;
+      }
+      fup[jj] = 0;
+      match = !strcmp(fup, nup);
+      if (!match) continue;
+      for (si = 0; si < nseen; si++) {
+        if (!strcmp(seen_topics[si], rows[i].topic)) { already = 1; break; }
+      }
+      if (already) continue;
+      if (nseen < (int)(sizeof seen_topics / sizeof seen_topics[0])) {
+        snprintf(seen_topics[nseen], sizeof seen_topics[0], "%s", rows[i].topic);
+        nseen++;
+      }
+      if (!first_topic[0])
+        snprintf(first_topic, sizeof first_topic, "%s", rows[i].topic);
+      if (!first && o + 1 < sizeof topicsj) topicsj[o++] = ',';
+      o += (size_t)snprintf(topicsj + o, sizeof topicsj - o, "\"%s\"", rows[i].topic);
+      first = 0; n++;
+    }
+    if (n == 0) {
+      printf("{\"schema\":\"cubalc.formguide.v1\",\"ok\":false,\"cmd\":\"formguide\","
+             "\"form\":\"%s\",\"err\":\"no covering topics\",\"version\":\"%s\","
+             "\"note\":\"FORMHINT · FORMTOPICS · cubalc formtopics\"}\n",
+             nup, CUBALC_LANG_VERSION);
+      return 1;
+    }
+    for (i = 0; i < n_th; i++)
+      if (!strcmp(thints[i].id, first_topic)) { topic_hint = thints[i].hint; break; }
+    if (!topic_hint) topic_hint = "";
+    relj[0] = 0; o = 0; nr = 0; first = 1;
+    for (i = 0; i < n_rels; i++) {
+      if (strcmp(rels[i].topic, first_topic) != 0) continue;
+      if (!first && o + 1 < sizeof relj) relj[o++] = ',';
+      o += (size_t)snprintf(relj + o, sizeof relj - o, "\"%s\"", rels[i].rel);
+      first = 0; nr++;
+    }
+    o = 0;
+    for (j = 0; topic_hint[j] && o + 2 < sizeof thj; j++) {
+      char c = topic_hint[j];
+      if (c == '"' || c == '\\') { thj[o++] = '\\'; thj[o++] = c; }
+      else thj[o++] = c;
+    }
+    thj[o] = 0;
+    /* form hint via nested FORMHINT */
+    if (strchr(name, ' ') || strchr(name, '"'))
+      snprintf(src, sizeof src, "FORMHINT \"%s\"\nPRINT LAST\nPASS\n", name);
+    else
+      snprintf(src, sizeof src, "FORMHINT %s\nPRINT LAST\nPASS\n", name);
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, strlen(src), "<formguide-hint>", &rr, NULL);
+    {
+      const char *h = (rr.ok && rr.last_print[0]) ? rr.last_print : nup;
+      o = 0;
+      for (j = 0; h[j] && o + 2 < sizeof fhj; j++) {
+        char c = h[j];
+        if (c == '"' || c == '\\') { fhj[o++] = '\\'; fhj[o++] = c; }
+        else if ((unsigned char)c < 32) fhj[o++] = ' ';
+        else fhj[o++] = c;
+      }
+      fhj[o] = 0;
+    }
+    printf("{\"schema\":\"cubalc.formguide.v1\",\"ok\":true,\"cmd\":\"formguide\","
+           "\"form\":\"%s\",\"form_hint\":\"%s\",\"topic\":\"%s\",\"topic_hint\":\"%s\","
+           "\"topics_n\":%d,\"related_n\":%d,\"version\":\"%s\","
+           "\"note\":\"FORMHINT+FORMTOPICS+first GUIDE · dual of FORMGUIDE\","
+           "\"topics\":[%s],\"related\":[%s]}\n",
+           nup, fhj, first_topic, thj, n, nr, CUBALC_LANG_VERSION,
+           topicsj, relj);
     return 0;
   }
   if (strcmp(cmd, "guide") == 0 || strcmp(cmd, "playguide") == 0 ||
@@ -15964,6 +16123,8 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"SEETOPICS", "flow", "SEETOPICS alias of RELATEDTOPIC"},
       {"FORMTOPICS", "flow", "FORMTOPICS|TOPICSOF form topics covering form · reverse FORMSFOR"},
       {"TOPICSOF", "flow", "TOPICSOF alias of FORMTOPICS"},
+      {"FORMGUIDE", "flow", "FORMGUIDE form FORMHINT+topics+first GUIDE · cubalc formguide dual"},
+      {"GUIDEFORM", "flow", "GUIDEFORM alias of FORMGUIDE"},
       {"NEEDTOPIC", "flow", "NEEDTOPIC name fail-fast if topic unknown"},
       {"ERRTIPS", "flow", "ERRTIPS [err] recovery tip bag + topic · cubalc errtips dual"},
       {"FIXTIPS", "flow", "FIXTIPS alias of ERRTIPS"},
@@ -17439,6 +17600,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    topichint|describetopic <t>  one-line topic docs (cubalc.topichint.v1)\n"
       "    relatedtopic|seetopics <t> related topic bag (cubalc.relatedtopic.v1)\n"
       "    formtopics|topicsof <form> topics covering form (cubalc.formtopics.v1)\n"
+      "    formguide|guideform <form> form docs+topics+playbook (cubalc.formguide.v1)\n"
       "    guide|playguide [topic]    full playbook plate (cubalc.guide.v1)\n"
       "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
       "    errrun|recoversnip <err…>  classify + RUNSNIP topic (cubalc.errrun.v1)\n"
@@ -17448,7 +17610,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|guide|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
+      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
