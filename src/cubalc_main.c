@@ -3274,6 +3274,8 @@ int main(int argc, char **argv) {
       {"cli_matchtopics", "programs/proof/1347_cli_matchtopics.sh", "cubalc matchtopics|picktopic plate + forms"},
       {"hasmatchtopics", "programs/proof/1348_hasmatchtopics.cubalc", "HAS/NEED/COUNT MATCHTOPICS filter gates"},
       {"cli_hasmatchtopics", "programs/proof/1348_cli_hasmatchtopics.sh", "cubalc has|need|count matchtopics CLI"},
+      {"nthtopic", "programs/proof/1349_nthtopic.cubalc", "NTHTOPIC/LASTTOPIC topic filter index duals"},
+      {"cli_nthtopic", "programs/proof/1349_cli_nthtopic.sh", "cubalc nthtopic|lasttopic plate + forms"},
       {"each_topic", "programs/proof/1338_each_topic.cubalc", "EACH TOPIC walk discovery topics"},
       {"cli_each_topic", "programs/proof/1338_cli_each_topic.sh", "EACH TOPIC forms + -e smoke"},
       {"topichint", "programs/proof/1339_topichint.cubalc", "TOPICHINT one-line topic docs"},
@@ -3941,6 +3943,9 @@ int main(int argc, char **argv) {
       {"HASMATCHTOPICS", "flow", "HASMATCHTOPICS needle soft 0|1 any topic matches filter"},
       {"NEEDMATCHTOPICS", "flow", "NEEDMATCHTOPICS needle fail-fast if no topic match"},
       {"COUNTMATCHTOPICS", "flow", "COUNTMATCHTOPICS needle match count → LAST_N without bag"},
+      {"NTHTOPIC", "flow", "NTHTOPIC idx needle [OR fb] 0-based Nth matching topic · dual of NTHLIB"},
+      {"LASTTOPIC", "flow", "LASTTOPIC needle [OR fb] last matching topic · dual of LASTLIB"},
+      {"ENDTOPIC", "flow", "ENDTOPIC alias of LASTTOPIC"},
       {"TOPICHINT", "flow", "TOPICHINT name one-line topic hint · dual of FORMHINT for topics"},
       {"DESCRIBETOPIC", "flow", "DESCRIBETOPIC alias of TOPICHINT"},
       {"RELATEDTOPIC", "flow", "RELATEDTOPIC|SEETOPICS name related topic bag · twin of RELATED for topics"},
@@ -6045,6 +6050,109 @@ int main(int argc, char **argv) {
            nlow, n, n > 0 ? "true" : "false",
            mode_need ? "need" : "has", CUBALC_LANG_VERSION);
     if (mode_need) return n > 0 ? 0 : 1;
+    return 0;
+  }
+
+
+  if (strcmp(cmd, "nthtopic") == 0 || strcmp(cmd, "indextopic") == 0 ||
+      strcmp(cmd, "topicnth") == 0 || strcmp(cmd, "lasttopic") == 0 ||
+      strcmp(cmd, "endtopic") == 0 || strcmp(cmd, "topiclast") == 0) {
+    /* Usability: Nth/last matching topic (dual of NTHTOPIC/LASTTOPIC).
+     *   cubalc nthtopic 1 p · cubalc lasttopic p
+     * Schema cubalc.topicmatch.v1 */
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    int mode_last = (strcmp(cmd, "lasttopic") == 0 || strcmp(cmd, "endtopic") == 0 ||
+                     strcmp(cmd, "topiclast") == 0);
+    int idx = 0, ai = 2, i, n = 0, nall = (int)(sizeof topics / sizeof topics[0]);
+    const char *needle = "";
+    const char *fallback = NULL;
+    char nlow[64];
+    char matches[8][16];
+    size_t k;
+    const char *pick = NULL;
+    if (!mode_last) {
+      if (argc <= 3 || !argv[2] || !argv[2][0]) {
+        fprintf(stderr, "usage: cubalc nthtopic <idx> <needle> [OR fallback]\n");
+        printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":false,\"cmd\":\"nthtopic\","
+               "\"err\":\"need idx and needle\",\"version\":\"%s\"}\n",
+               CUBALC_LANG_VERSION);
+        return 2;
+      }
+      idx = atoi(argv[2]);
+      needle = argv[3] ? argv[3] : "";
+      ai = 4;
+    } else {
+      if (argc <= 2 || !argv[2] || !argv[2][0]) {
+        fprintf(stderr, "usage: cubalc lasttopic <needle> [OR fallback]\n");
+        printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":false,\"cmd\":\"lasttopic\","
+               "\"err\":\"need needle\",\"version\":\"%s\"}\n",
+               CUBALC_LANG_VERSION);
+        return 2;
+      }
+      needle = argv[2];
+      ai = 3;
+    }
+    if (argc > ai + 1 && argv[ai] &&
+        (!strcmp(argv[ai], "OR") || !strcmp(argv[ai], "or") ||
+         !strcmp(argv[ai], "ELSE") || !strcmp(argv[ai], "DEFAULT")) &&
+        argv[ai + 1] && argv[ai + 1][0])
+      fallback = argv[ai + 1];
+    if (!needle[0]) {
+      printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":false,\"cmd\":\"%s\","
+             "\"err\":\"need needle\",\"version\":\"%s\"}\n",
+             mode_last ? "lasttopic" : "nthtopic", CUBALC_LANG_VERSION);
+      return 2;
+    }
+    for (k = 0; needle[k] && k + 1 < sizeof nlow; k++)
+      nlow[k] = (char)((needle[k] >= 'A' && needle[k] <= 'Z')
+                           ? needle[k] - 'A' + 'a' : needle[k]);
+    nlow[k] = 0;
+    if (!strcmp(nlow, "capability") || !strcmp(nlow, "forms") || !strcmp(nlow, "form"))
+      snprintf(nlow, sizeof nlow, "%s", "cap");
+    if (!strcmp(nlow, "mesh") || !strcmp(nlow, "smx") || !strcmp(nlow, "peer"))
+      snprintf(nlow, sizeof nlow, "%s", "p2p");
+    if (!strcmp(nlow, "nest") || !strcmp(nlow, "var") || !strcmp(nlow, "timeout"))
+      snprintf(nlow, sizeof nlow, "%s", "fat");
+    if (!strcmp(nlow, "json") || !strcmp(nlow, "agent"))
+      snprintf(nlow, sizeof nlow, "%s", "plate");
+    if (!strcmp(nlow, "start") || !strcmp(nlow, "all") || !strcmp(nlow, "help") ||
+        !strcmp(nlow, "default") || !strcmp(nlow, "*"))
+      snprintf(nlow, sizeof nlow, "%s", "general");
+    for (i = 0; i < nall && n < 8; i++) {
+      if (!strstr(topics[i], nlow)) continue;
+      snprintf(matches[n], sizeof matches[0], "%s", topics[i]);
+      n++;
+    }
+    if (mode_last) {
+      if (n > 0) { pick = matches[n - 1]; idx = n - 1; }
+    } else {
+      if (idx < 0) idx = 0;
+      if (idx < n) pick = matches[idx];
+    }
+    if (!pick) {
+      if (fallback && fallback[0]) {
+        printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":true,\"cmd\":\"%s\","
+               "\"filter\":\"%s\",\"idx\":%d,\"topic\":\"%s\",\"fallback\":true,"
+               "\"match_n\":%d,\"version\":\"%s\"}\n",
+               mode_last ? "lasttopic" : "nthtopic",
+               nlow, idx, fallback, n, CUBALC_LANG_VERSION);
+        return 0;
+      }
+      printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":false,\"cmd\":\"%s\","
+             "\"filter\":\"%s\",\"idx\":%d,\"match_n\":%d,\"err\":\"no match\","
+             "\"version\":\"%s\"}\n",
+             mode_last ? "lasttopic" : "nthtopic",
+             nlow, idx, n, CUBALC_LANG_VERSION);
+      return 1;
+    }
+    printf("{\"schema\":\"cubalc.topicmatch.v1\",\"ok\":true,\"cmd\":\"%s\","
+           "\"filter\":\"%s\",\"idx\":%d,\"topic\":\"%s\",\"match_n\":%d,"
+           "\"version\":\"%s\","
+           "\"note\":\"Nth/last matching topic · dual of NTHTOPIC/LASTTOPIC\"}\n",
+           mode_last ? "lasttopic" : "nthtopic",
+           nlow, idx, pick, n, CUBALC_LANG_VERSION);
     return 0;
   }
 
@@ -16380,6 +16488,9 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"HASMATCHTOPICS", "flow", "HASMATCHTOPICS needle soft 0|1 any topic matches filter"},
       {"NEEDMATCHTOPICS", "flow", "NEEDMATCHTOPICS needle fail-fast if no topic match"},
       {"COUNTMATCHTOPICS", "flow", "COUNTMATCHTOPICS needle match count → LAST_N without bag"},
+      {"NTHTOPIC", "flow", "NTHTOPIC idx needle [OR fb] 0-based Nth matching topic · dual of NTHLIB"},
+      {"LASTTOPIC", "flow", "LASTTOPIC needle [OR fb] last matching topic · dual of LASTLIB"},
+      {"ENDTOPIC", "flow", "ENDTOPIC alias of LASTTOPIC"},
       {"TOPICHINT", "flow", "TOPICHINT name one-line topic hint · dual of FORMHINT for topics"},
       {"DESCRIBETOPIC", "flow", "DESCRIBETOPIC alias of TOPICHINT"},
       {"RELATEDTOPIC", "flow", "RELATEDTOPIC|SEETOPICS name related topic bag · twin of RELATED for topics"},
@@ -17865,6 +17976,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    hastopic|needtopic <t>     soft/hard topic membership gates\n"
       "    matchtopics|picktopic <q>  filter/first discovery topic (cubalc.topicmatch.v1)\n"
       "    hasmatchtopics|needmatchtopics|countmatchtopics <q>  topic filter gates\n"
+      "    nthtopic|lasttopic …        Nth/last matching topic (cubalc.topicmatch.v1)\n"
       "    topichint|describetopic <t>  one-line topic docs (cubalc.topichint.v1)\n"
       "    relatedtopic|seetopics <t> related topic bag (cubalc.relatedtopic.v1)\n"
       "    formtopics|topicsof <form> topics covering form (cubalc.formtopics.v1)\n"
@@ -17878,7 +17990,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|onboard|matchtopics|picktopic|hasmatchtopics|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
+      "    picklib|listforms|formhint|topichint|relatedtopic|formtopics|formguide|guide|onboard|matchtopics|picktopic|hasmatchtopics|nthtopic|lasttopic|formsfor|related|snip|topic|runsnip|topics|errtips|errrun|errguide\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"

@@ -835,6 +835,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 805. ~~**`onboard_boot` + `cubalc init --onboard`**~~ **done** (INCLUDE agent_boot+START · init scaffold n=8 · doctor lib_onboard_boot).
 806. ~~**`MATCHTOPICS` / `PICKTOPIC` + CLI**~~ **done** (topic filter/first duals of MATCHLIBS/PICKLIB · cubalc.topicmatch.v1).
 807. ~~**`HASMATCHTOPICS` / `NEEDMATCHTOPICS` / `COUNTMATCHTOPICS` + CLI**~~ **done** (topic filter gates dual of MATCHLIBS triad · topicmatch.v1).
+808. ~~**`NTHTOPIC` / `LASTTOPIC` + CLI**~~ **done** (0-based Nth/last matching topic · dual of NTHLIB/LASTLIB · topicmatch.v1).
 
 ## Tick protocol
 

@@ -2748,6 +2748,9 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"HASMATCHTOPICS", "HASMATCHTOPICS needle — soft 0|1 if any topic matches filter · dual of HASMATCHLIBS"},
       {"NEEDMATCHTOPICS", "NEEDMATCHTOPICS needle — fail-fast if no topic matches filter"},
       {"COUNTMATCHTOPICS", "COUNTMATCHTOPICS needle — match count → LAST_N without bag · dual of COUNTMATCHLIBS"},
+      {"NTHTOPIC", "NTHTOPIC idx needle [OR fallback] — 0-based Nth matching topic · dual of NTHLIB"},
+      {"LASTTOPIC", "LASTTOPIC needle [OR fallback] — last matching topic · dual of LASTLIB / PICKTOPIC"},
+      {"ENDTOPIC", "ENDTOPIC alias of LASTTOPIC"},
       {"TOPICHINT", "TOPICHINT|DESCRIBETOPIC name — one-line topic hint → LAST · dual of cubalc topichint"},
       {"DESCRIBETOPIC", "DESCRIBETOPIC alias of TOPICHINT"},
       {"RELATEDTOPIC", "RELATEDTOPIC|SEETOPICS name — related discovery topic bag · dual of cubalc relatedtopic · twin of RELATED for topics"},
@@ -39263,6 +39266,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NEEDMATCHTOPICS", "HASMATCHTOPICS"}, {"NEEDMATCHTOPICS", "MATCHTOPICS"},
       {"COUNTMATCHTOPICS", "MATCHTOPICS"}, {"COUNTMATCHTOPICS", "HASMATCHTOPICS"},
       {"COUNTMATCHTOPICS", "PICKTOPIC"},
+      {"NTHTOPIC", "PICKTOPIC"}, {"NTHTOPIC", "LASTTOPIC"}, {"NTHTOPIC", "MATCHTOPICS"},
+      {"NTHTOPIC", "GUIDE"}, {"LASTTOPIC", "NTHTOPIC"}, {"LASTTOPIC", "PICKTOPIC"},
+      {"LASTTOPIC", "MATCHTOPICS"}, {"LASTTOPIC", "GUIDE"},
       {"TOPIC", "RELATEDTOPIC"}, {"TOPIC", "TOPICHINT"}, {"TOPIC", "TIPS"},
       {"TOPIC", "FORMSFOR"}, {"TOPIC", "SNIP"}, {"TOPIC", "LISTTOPICS"},
       {"TOPIC", "FORMTOPICS"}, {"TOPIC", "GUIDE"},
@@ -40616,6 +40622,172 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
     }
     (void)aln;
+    bump(vm);
+    return 1;
+  }
+
+
+  /* NTHTOPIC idx needle [OR fallback] · LASTTOPIC|ENDTOPIC needle [OR fallback]
+   * 0-based index / last matching discovery topic (dual of NTHLIB/LASTLIB).
+   * Usability: no MATCHTOPICS+NTH/POP glue. Soft miss OK=0. Dual of cubalc nthtopic|lasttopic. */
+  if (kw(&L->cur,"NTHTOPIC")||kw(&L->cur,"INDEXTOPIC")||kw(&L->cur,"TOPICNTH")||
+      kw(&L->cur,"LASTTOPIC")||kw(&L->cur,"ENDTOPIC")||kw(&L->cur,"TOPICLAST")){
+    static const char *topics[] = {
+      "general", "cap", "fat", "plate", "p2p", "run", "lib", "protect"
+    };
+    int mode_last = kw(&L->cur,"LASTTOPIC")||kw(&L->cur,"ENDTOPIC")||kw(&L->cur,"TOPICLAST");
+    char needle[64], nlow[64], fallback[64];
+    char matches[8][16];
+    const char *pick = NULL;
+    size_t k;
+    int i, n = 0, nall = (int)(sizeof topics / sizeof topics[0]);
+    int idx = 0, have_or = 0, have_idx = 0;
+    long idx_l = 0;
+    lex_next(L);
+    needle[0] = 0;
+    fallback[0] = 0;
+    if (!mode_last) {
+      /* NTHTOPIC idx needle */
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          (L->cur.kind == TK_IDENT && (strcmp(L->cur.text,"LAST_N")==0 ||
+           strcmp(L->cur.text,"OK")==0 || strcmp(L->cur.text,"N")==0))) {
+        idx_l = parse_expr(vm, L);
+        have_idx = 1;
+      }
+      if (!have_idx) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR",
+                    "NTHTOPIC: need idx — NTHTOPIC 0 p · NTHTOPIC 1 plate");
+        var_set_str(vm, "ERR",
+                    "NTHTOPIC: need idx — NTHTOPIC 0 p · NTHTOPIC 1 plate");
+        bump(vm);
+        return 1;
+      }
+      idx = (int)idx_l;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(needle, sizeof needle, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(needle, sizeof needle, "%s", vm->last_str);
+      else
+        snprintf(needle, sizeof needle, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (kw(&L->cur,"OR") || kw(&L->cur,"ELSE") || kw(&L->cur,"DEFAULT")) {
+      lex_next(L);
+      have_or = 1;
+      if (L->cur.kind == TK_STR) {
+        snprintf(fallback, sizeof fallback, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str)
+          snprintf(fallback, sizeof fallback, "%s", vv->sval);
+        else
+          snprintf(fallback, sizeof fallback, "%s", L->cur.text);
+        lex_next(L);
+      }
+    }
+    if (!needle[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  mode_last
+                    ? "LASTTOPIC: need needle — LASTTOPIC p · ENDTOPIC plate OR general"
+                    : "NTHTOPIC: need needle — NTHTOPIC 0 p · NTHTOPIC 1 plate");
+      var_set_str(vm, "ERR",
+                  mode_last
+                    ? "LASTTOPIC: need needle — LASTTOPIC p · ENDTOPIC plate OR general"
+                    : "NTHTOPIC: need needle — NTHTOPIC 0 p · NTHTOPIC 1 plate");
+      bump(vm);
+      return 1;
+    }
+    for (k = 0; needle[k] && k + 1 < sizeof nlow; k++) {
+      char ch = needle[k];
+      if (ch >= 'A' && ch <= 'Z') ch = (char)(ch - 'A' + 'a');
+      nlow[k] = ch;
+    }
+    nlow[k] = 0;
+    if (!strcmp(nlow, "capability") || !strcmp(nlow, "forms") || !strcmp(nlow, "form"))
+      snprintf(nlow, sizeof nlow, "%s", "cap");
+    if (!strcmp(nlow, "mesh") || !strcmp(nlow, "smx") || !strcmp(nlow, "peer"))
+      snprintf(nlow, sizeof nlow, "%s", "p2p");
+    if (!strcmp(nlow, "nest") || !strcmp(nlow, "var") || !strcmp(nlow, "timeout"))
+      snprintf(nlow, sizeof nlow, "%s", "fat");
+    if (!strcmp(nlow, "json") || !strcmp(nlow, "agent"))
+      snprintf(nlow, sizeof nlow, "%s", "plate");
+    if (!strcmp(nlow, "start") || !strcmp(nlow, "all") || !strcmp(nlow, "help") ||
+        !strcmp(nlow, "default") || !strcmp(nlow, "*"))
+      snprintf(nlow, sizeof nlow, "%s", "general");
+    for (i = 0; i < nall && n < 8; i++) {
+      if (!strstr(topics[i], nlow)) continue;
+      snprintf(matches[n], sizeof matches[0], "%s", topics[i]);
+      n++;
+    }
+    var_set_str(vm, "MATCHTOPICS_FILTER", nlow);
+    var_set_num(vm, "MATCHTOPICS_N", n);
+    var_set_num(vm, "NTHTOPIC_N", n);
+    if (mode_last) {
+      if (n > 0) pick = matches[n - 1];
+      idx = n > 0 ? n - 1 : 0;
+    } else {
+      if (idx < 0) idx = 0;
+      if (idx < n) pick = matches[idx];
+    }
+    var_set_num(vm, "NTHTOPIC_I", idx);
+    if (!pick) {
+      if (have_or && fallback[0]) {
+        var_set_str(vm, "LAST", fallback);
+        var_set_str(vm, "NTHTOPIC", fallback);
+        var_set_str(vm, "LASTTOPIC", fallback);
+        var_set_str(vm, "TOPIC_NAME", fallback);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", fallback);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_num(vm, "OK", 1);
+        bump(vm);
+        return 1;
+      }
+      {
+        char em[192];
+        snprintf(em, sizeof em,
+                 "%s miss idx=%d filter='%s' n=%d — MATCHTOPICS · PICKTOPIC · OR fallback",
+                 mode_last ? "LASTTOPIC" : "NTHTOPIC", idx, nlow, n);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "NTHTOPIC", "");
+        var_set_str(vm, "LASTTOPIC", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+        bump(vm);
+        return 1;
+      }
+    }
+    var_set_str(vm, "LAST", pick);
+    var_set_str(vm, "NTHTOPIC", pick);
+    var_set_str(vm, "LASTTOPIC", pick);
+    var_set_str(vm, "ENDTOPIC", pick);
+    var_set_str(vm, "TOPIC_NAME", pick);
+    var_set_str(vm, "PICKTOPIC", pick);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", pick);
+    vm->last_n = 1;
+    var_set_num(vm, "LAST_N", 1);
+    var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;
   }

@@ -1,0 +1,68 @@
+# NTHTOPIC / LASTTOPIC — index/last duals of NTHLIB/LASTLIB for topics
+# Note: needle "p" matches cap/plate/p2p/protect (substring)
+
+NTHTOPIC 0 p
+ASSERT OK == 1
+ASSERT NTHTOPIC == "cap"
+ASSERT TOPIC_NAME == "cap"
+
+NTHTOPIC 1 p
+ASSERT OK == 1
+ASSERT NTHTOPIC == "plate"
+
+NTHTOPIC 2 p
+ASSERT OK == 1
+ASSERT NTHTOPIC == "p2p"
+
+NTHTOPIC 3 p
+ASSERT OK == 1
+ASSERT NTHTOPIC == "protect"
+
+LASTTOPIC p
+ASSERT OK == 1
+ASSERT LASTTOPIC == "protect"
+ASSERT ENDTOPIC == "protect"
+
+# exact-ish filter
+NTHTOPIC 0 lib
+ASSERT OK == 1
+ASSERT NTHTOPIC == "lib"
+
+LASTTOPIC mesh
+ASSERT OK == 1
+ASSERT LASTTOPIC == "p2p"
+
+# chain to GUIDE
+NTHTOPIC 0 plate
+GUIDE LAST
+ASSERT OK == 1
+ASSERT GUIDE_RELATED_N >= 3
+
+# OR fallback
+NTHTOPIC 9 p OR general
+ASSERT OK == 1
+ASSERT NTHTOPIC == "general"
+
+LASTTOPIC zzz OR run
+ASSERT OK == 1
+ASSERT LASTTOPIC == "run"
+
+# soft miss
+NTHTOPIC 5 p
+ASSERT OK == 0
+CLEAR_ERR
+
+LASTTOPIC zzz
+ASSERT OK == 0
+CLEAR_ERR
+
+NTHTOPIC
+ASSERT OK == 0
+CLEAR_ERR
+
+ENDTOPIC fat
+ASSERT OK == 1
+ASSERT LASTTOPIC == "fat"
+
+PASS
+PRINT "1349_nthtopic: PASS"
