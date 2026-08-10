@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 773,
-  "version": "1.15.800-usability",
-  "item": "GUIDE MATCH|NTH|LASTMATCH filter pick + playbook one-shot",
-  "item_id": 809,
-  "title": "GUIDE MATCH|NTH|LASTMATCH \u00b7 cubalc guide match|nth|lastmatch \u00b7 guide.v1",
-  "commit": "cc72516b0b7d0a51aa904a92250ce6beba024a56",
-  "summary": "Filter-pick topic then full guide plate without NTHTOPIC+GUIDE glue. proof 1350 PASS.",
+  "iter": 774,
+  "version": "1.15.801-usability",
+  "item": "RUNSNIP MATCH|NTH|LASTMATCH filter pick + execute mini",
+  "item_id": 810,
+  "title": "RUNSNIP MATCH|NTH|LASTMATCH \u00b7 cubalc runsnip match|nth|lastmatch \u00b7 runsnip.v1",
+  "commit": "3c9a24642b8ba17425427c6b1a016d6ebede33c0",
+  "summary": "Filter-pick topic then execute curated SNIP without NTHTOPIC+RUNSNIP glue. proof 1351 PASS.",
   "proofs": [
-    "1350_guidematch PASS",
-    "1350_cli_guidematch PASS"
+    "1351_runsnipmatch PASS",
+    "1351_cli_runsnipmatch PASS"
   ],
-  "when": "2026-08-10T16:41:54Z",
+  "when": "2026-08-10T16:57:35Z",
   "agent": "meaningful_iter_10m",
-  "sha": "cc72516b0b7d0a51aa904a92250ce6beba024a56",
-  "note": "GUIDE MATCH p \u2192 cap playbook; GUIDE NTH 1 p \u2192 plate; LASTMATCH \u2192 protect"
+  "sha": "3c9a24642b8ba17425427c6b1a016d6ebede33c0",
+  "note": "RUNSNIP MATCH p \u2192 cap mini; NTH 1 p \u2192 plate; LASTMATCH \u2192 protect"
 }
