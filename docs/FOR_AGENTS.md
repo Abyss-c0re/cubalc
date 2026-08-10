@@ -44,6 +44,7 @@ Also `preload_n` + `preload` short-name array from `-I` / `CUBALC_PRELOAD` (requ
 Plate dual of PRELOADOK/PRELOADMISS: `preload_ok` · `preload_miss_n` · `preload_miss[]` (request vs includes stems).
 In-lang: `LISTPRELOAD` → same short names (via `CUBALC_PRELOAD_ACTIVE`) · `INCLUDESTEMS` loaded.
 Audit -I vs loaded (no bag diff glue): `PRELOADMISS` miss bag · `PRELOADOK` soft 0|1 · `NEEDPRELOAD` fail-fast.
+Request probe: `HASPRELOAD agent_boot` soft 0|1 (was `-I` asked?) · dual of `HASINCLUDE` (did it load?).
 Gates: `NEEDINCLUDE agent_boot plate_session` fail-fast · `HASINCLUDEALL a b` soft + `INCLUDE_MISS` bag.
 
 ## Durable agent state (plates)

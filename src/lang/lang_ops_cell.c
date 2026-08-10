@@ -5979,6 +5979,78 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     return 1;
   }
 
+  /* HASPRELOAD name — soft 0|1 if name is in -I / CUBALC_PRELOAD request bag.
+   * Dual of HASINCLUDE (loaded) · IF branch on launch contract without LISTPRELOAD+HASLINE. */
+  if (kw(&L->cur, "HASPRELOAD") || kw(&L->cur, "HAVEPRELOAD") ||
+      kw(&L->cur, "ISPRELOAD") || kw(&L->cur, "PRELOADHAS") ||
+      kw(&L->cur, "INPRELOAD")) {
+    char want[256], wstem[96];
+    const char *env;
+    int hit = 0, n_req = 0;
+    size_t wlen;
+    lex_next(L);
+    if (kw(&L->cur, "LIB") || kw(&L->cur, "OF") || kw(&L->cur, "MODULE") ||
+        kw(&L->cur, "NAME"))
+      lex_next(L);
+    if (!include_parse_want(vm, L, want, sizeof want)) {
+      fail(vm, "HASPRELOAD name");
+      return -1;
+    }
+    {
+      const char *slash = strrchr(want, '/');
+      snprintf(wstem, sizeof wstem, "%s", slash ? slash + 1 : want);
+    }
+    wlen = strlen(wstem);
+    if (wlen > 7 && strcmp(wstem + wlen - 7, ".cubalc") == 0)
+      wstem[wlen - 7] = 0;
+    env = getenv("CUBALC_PRELOAD_ACTIVE");
+    if (!env || !env[0])
+      env = getenv("CUBALC_PRELOAD");
+    if (env && env[0] && wstem[0]) {
+      const char *p = env;
+      while (*p) {
+        char name[96], nstem[96];
+        size_t len = 0, nlen;
+        const char *slash;
+        while (*p == ':' || *p == ',' || *p == ' ' || *p == '\t') p++;
+        if (!*p) break;
+        while (p[len] && p[len] != ':' && p[len] != ',' && p[len] != ' ' &&
+               p[len] != '\t' && len + 1 < sizeof name) {
+          name[len] = p[len];
+          len++;
+        }
+        name[len] = 0;
+        p += len;
+        if (!name[0]) continue;
+        n_req++;
+        slash = strrchr(name, '/');
+        snprintf(nstem, sizeof nstem, "%s", slash ? slash + 1 : name);
+        nlen = strlen(nstem);
+        if (nlen > 7 && strcmp(nstem + nlen - 7, ".cubalc") == 0)
+          nstem[nlen - 7] = 0;
+        if (strcmp(nstem, wstem) == 0 || strcmp(name, want) == 0 ||
+            strcmp(nstem, want) == 0) {
+          hit = 1;
+          break;
+        }
+      }
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "HASPRELOAD_N", hit);
+    var_set_num(vm, "PRELOAD_N", n_req);
+    var_set_str(vm, "PRELOAD_WANT", want);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* INCLUDESTEMS / LISTINCLUDESTEMS — basenames without .cubalc from loaded modules.
    * Usability: short-name bag for HASLINE/NEEDINCLUDE glue after -I without BASENAMEALL. */
   if (kw(&L->cur, "INCLUDESTEMS") || kw(&L->cur, "LISTINCLUDESTEMS") ||

@@ -1,0 +1,38 @@
+# HASPRELOAD — soft 0|1 if name is in -I / CUBALC_PRELOAD request bag
+# Dual of HASINCLUDE (loaded) · no LISTPRELOAD+HASLINE glue.
+
+# empty request
+HASPRELOAD agent_boot
+ASSERT LAST_N == 0
+ASSERT HASPRELOAD_N == 0
+ASSERT OK == 1
+
+# inject request bag
+SYS ENV SET CUBALC_PRELOAD_ACTIVE "agent_boot:hold_seed"
+HASPRELOAD agent_boot
+ASSERT LAST_N == 1
+HASPRELOAD hold_seed
+ASSERT LAST_N == 1
+HASPRELOAD no_such_lib_zzz
+ASSERT LAST_N == 0
+ASSERT PRELOAD_N == 2
+
+# stem / .cubalc tolerant
+HASPRELOAD "hold_seed.cubalc"
+ASSERT LAST_N == 1
+
+# request ≠ loaded: HASPRELOAD 1 while HASINCLUDE may still be 0
+HASPRELOAD agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE agent_boot
+ASSERT LAST_N == 0
+
+# after INCLUDE, both true for hold_seed
+INCLUDE hold_seed
+HASPRELOAD hold_seed
+ASSERT LAST_N == 1
+HASINCLUDE hold_seed
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1272_haspreload: PASS"

@@ -36615,6 +36615,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PRELOADMISS", "PRELOADMISS|CHECKPRELOAD — -I names not loaded · bag + LAST_N=count · PRELOAD_MISS"},
       {"PRELOADOK", "PRELOADOK|HASPRELOADALL — soft 0|1 all -I preloads loaded · sticky LAST_ERR on miss"},
       {"NEEDPRELOAD", "NEEDPRELOAD — fail-fast if any -I/PRELOAD name not loaded this run"},
+      {"HASPRELOAD", "HASPRELOAD name — soft 0|1 if name in -I/CUBALC_PRELOAD request bag · dual of HASINCLUDE"},
       {"HASINCLUDE", "HASINCLUDE name|path — soft 0|1 if module loaded · stem/path match · dual of LISTINCLUDES"},
       {"HASINCLUDEALL", "HASINCLUDEALL a b… — soft 0|1 all loaded · INCLUDE_MISS bag of missing"},
       {"NEEDINCLUDE", "NEEDINCLUDE a b… — fail-fast if any module not loaded · after -I/INCLUDE"},
