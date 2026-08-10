@@ -3241,6 +3241,7 @@ int main(int argc, char **argv) {
       {"cli_newestlib", "programs/proof/1317_cli_newestlib.sh", "NEWESTLIB/OLDESTLIB plate + OR fallback + forms"},
       {"include_newest", "programs/proof/1318_include_newest.cubalc", "INCLUDE NEWEST/OLDEST mtime pick+include one-shot"},
       {"cli_include_newest", "programs/proof/1318_cli_include_newest.sh", "INCLUDE NEWEST fat + OLDEST + DEFAULT + forms"},
+      {"cli_newestlib_cmd", "programs/proof/1319_cli_newestlib_cmd.sh", "cubalc newestlib/oldestlib CLI dual of NEWESTLIB"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
       {"cli_plate_getn", "programs/proof/1202_cli_plate_getn.sh", "cubalc plate getn GETPN dual paths"},
       {"getobj", "programs/proof/1170_getobj.cubalc", "GETOBJ/SETOBJ peel and nest nested plate objects multi-plate"},
@@ -7042,17 +7043,17 @@ int main(int argc, char **argv) {
       strcmp(cmd, "countmatchlibs") == 0 || strcmp(cmd, "countlibs") == 0 ||
       strcmp(cmd, "hasmatchlibs") == 0 || strcmp(cmd, "needmatchlibs") == 0 ||
       strcmp(cmd, "lastlib") == 0 || strcmp(cmd, "nthlib") == 0 ||
+      strcmp(cmd, "newestlib") == 0 || strcmp(cmd, "latestlib") == 0 ||
+      strcmp(cmd, "oldestlib") == 0 || strcmp(cmd, "earliestlib") == 0 ||
       strcmp(cmd, "libpick") == 0 || strcmp(cmd, "libcount") == 0) {
     /* Usability: CLI duals of PICKLIB/COUNTMATCHLIBS/HASMATCHLIBS/NEEDMATCHLIBS/
-     * LASTLIB/NTHLIB — filter lib discovery without a .cubalc program.
-     *   cubalc picklib plate
-     *   cubalc countmatchlibs plate
-     *   cubalc hasmatchlibs fat · needmatchlibs fat   # exit 1 if none
-     *   cubalc lastlib plate · nthlib 1 plate
-     * Schema cubalc.libmatch.v1 */
+     * LASTLIB/NTHLIB/NEWESTLIB/OLDESTLIB — filter lib discovery without .cubalc.
+     *   cubalc picklib plate · newestlib fat · oldestlib fat
+     * Schema cubalc.libmatch.v1 (+ mtime for newest/oldest) */
     const char *filter = "";
-    int want_idx = -1; /* -1 first/pick, -2 last, >=0 nth, -3 count, -4 has, -5 need */
+    int want_idx = -1;
     char stems[96][96];
+    char stem_paths[96][768];
     int nstem = 0, i, j;
     char fup[96];
     size_t a;
@@ -7060,6 +7061,7 @@ int main(int argc, char **argv) {
     struct dirent *ent;
     const char *ip;
     int mode_count = 0, mode_has = 0, mode_need = 0, mode_last = 0, mode_nth = 0;
+    int mode_newest = 0, mode_oldest = 0;
     if (strcmp(cmd, "countmatchlibs") == 0 || strcmp(cmd, "countlibs") == 0 ||
         strcmp(cmd, "libcount") == 0)
       mode_count = 1;
@@ -7071,7 +7073,10 @@ int main(int argc, char **argv) {
       mode_last = 1;
     else if (strcmp(cmd, "nthlib") == 0)
       mode_nth = 1;
-    /* args: [idx] filter */
+    else if (strcmp(cmd, "newestlib") == 0 || strcmp(cmd, "latestlib") == 0)
+      mode_newest = 1;
+    else if (strcmp(cmd, "oldestlib") == 0 || strcmp(cmd, "earliestlib") == 0)
+      mode_oldest = 1;
     if (mode_nth) {
       if (argc > 2 && argv[2][0]) {
         char *end = NULL;
@@ -7092,7 +7097,8 @@ int main(int argc, char **argv) {
               "usage: cubalc picklib|firstlib <filter>\n"
               "       cubalc countmatchlibs|countlibs <filter>\n"
               "       cubalc hasmatchlibs|needmatchlibs <filter>\n"
-              "       cubalc lastlib <filter> · nthlib <idx> <filter>\n");
+              "       cubalc lastlib|newestlib|oldestlib <filter>\n"
+              "       cubalc nthlib <idx> <filter>\n");
       printf("{\"schema\":\"cubalc.libmatch.v1\",\"ok\":false,\"cmd\":\"%s\","
              "\"err\":\"need filter\",\"version\":\"%s\"}\n",
              cmd, CUBALC_LANG_VERSION);
@@ -7159,27 +7165,53 @@ int main(int argc, char **argv) {
             if (!strstr(stem_l, fup) && !strstr(hay, fup))
               continue;
           }
-          snprintf(stems[nstem++], sizeof stems[0], "%s", stem);
+          snprintf(stems[nstem], sizeof stems[0], "%s", stem);
+          snprintf(stem_paths[nstem], sizeof stem_paths[0], "%s/%s",
+                   dirs[di], ent->d_name);
+          nstem++;
         }
         closedir(d);
       }
     }
     for (i = 1; i < nstem; i++) {
-      char tmp[96];
+      char tmp[96], tp[768];
       snprintf(tmp, sizeof tmp, "%s", stems[i]);
+      snprintf(tp, sizeof tp, "%s", stem_paths[i]);
       j = i;
       while (j > 0 && strcmp(stems[j - 1], tmp) > 0) {
         snprintf(stems[j], sizeof stems[0], "%s", stems[j - 1]);
+        snprintf(stem_paths[j], sizeof stem_paths[0], "%s", stem_paths[j - 1]);
         j--;
       }
       snprintf(stems[j], sizeof stems[0], "%s", tmp);
+      snprintf(stem_paths[j], sizeof stem_paths[0], "%s", tp);
     }
     {
       const char *pick = "";
       int pick_i = -1;
       int ok = 0;
+      long mtime = 0;
       if (mode_count || mode_has || mode_need) {
         ok = (nstem > 0);
+      } else if (mode_newest || mode_oldest) {
+        long best_mt = 0;
+        int have_best = 0;
+        for (i = 0; i < nstem; i++) {
+          struct stat st;
+          if (stat(stem_paths[i], &st) != 0) continue;
+          if (!have_best ||
+              (mode_oldest ? (st.st_mtime < best_mt) : (st.st_mtime > best_mt)) ||
+              (st.st_mtime == best_mt && strcmp(stems[i], stems[pick_i < 0 ? 0 : pick_i]) < 0)) {
+            best_mt = (long)st.st_mtime;
+            have_best = 1;
+            pick_i = i;
+          }
+        }
+        if (have_best) {
+          pick = stems[pick_i];
+          mtime = best_mt;
+          ok = 1;
+        }
       } else if (mode_last) {
         if (nstem > 0) {
           pick_i = nstem - 1;
@@ -7194,7 +7226,6 @@ int main(int argc, char **argv) {
           ok = 1;
         }
       } else {
-        /* pick / first */
         if (nstem > 0) {
           pick_i = 0;
           pick = stems[0];
@@ -7203,19 +7234,22 @@ int main(int argc, char **argv) {
       }
       printf("{\"schema\":\"cubalc.libmatch.v1\",\"ok\":%s,\"cmd\":\"%s\","
              "\"filter\":\"%s\",\"n\":%d,\"index\":%d,\"stem\":\"%s\","
+             "\"mtime\":%ld,\"path\":\"%s\","
              "\"version\":\"%s\","
-             "\"note\":\"CLI dual of PICKLIB/COUNTMATCHLIBS/HASMATCHLIBS · cubalc libs [filter]\","
+             "\"note\":\"CLI dual of PICKLIB/NEWESTLIB/OLDESTLIB · cubalc libs [filter]\","
              "\"stems\":[",
              ok ? "true" : "false", cmd, filter, nstem, pick_i,
-             pick[0] ? pick : "", CUBALC_LANG_VERSION);
+             pick[0] ? pick : "", mtime,
+             (ok && pick_i >= 0) ? stem_paths[pick_i] : "",
+             CUBALC_LANG_VERSION);
       for (i = 0; i < nstem; i++)
         printf("%s\"%s\"", i ? "," : "", stems[i]);
       printf("]}\n");
       if (mode_need)
         return ok ? 0 : 1;
       if (mode_has || mode_count)
-        return 0; /* soft always 0; ok field carries presence/count */
-      return ok ? 0 : 1; /* pick/nth/last miss → exit 1 */
+        return 0;
+      return ok ? 0 : 1;
     }
   }
   if (strcmp(cmd, "plate") == 0 || strcmp(cmd, "jsonplate") == 0 ||
@@ -15135,7 +15169,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
       "    checkdeps|hasdeps|needdeps <lib>  root+LIBTREE disk gate (cubalc.checkdeps.v1)\n"
-      "    picklib|countmatchlibs|hasmatchlibs|needmatchlibs|nthlib|lastlib  filter duals\n"
+      "    picklib|newestlib|oldestlib|countmatchlibs|hasmatchlibs|nthlib  filter duals\n"
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"

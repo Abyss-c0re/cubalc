@@ -805,6 +805,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 775. ~~**`INCLUDE ALL MATCH`**~~ **done** (bulk-include every matching lib · no EACH LIB+INCLUDE glue · DEFAULT/SOFT).
 776. ~~**`NEWESTLIB` / `OLDESTLIB`**~~ **done** (mtime pick among filter matches · dual of alpha PICKLIB · no shell ls -t).
 777. ~~**`INCLUDE NEWEST` / `OLDEST`**~~ **done** (mtime pick+include one-shot · no NEWESTLIB+INCLUDE LAST glue).
+778. ~~**CLI `newestlib` / `oldestlib`**~~ **done** (cubalc.libmatch.v1 mtime duals · stem+path+mtime · no .cubalc).
 
 ## Tick protocol
 
