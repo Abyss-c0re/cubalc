@@ -1,0 +1,74 @@
+# DISCOVER / EXPLORE — match bag + first-topic open plate one-shot
+# Usability: no MATCHTOPICS + PICKTOPIC + TOPICHINT + GUIDE glue after onboard
+
+# all topics, first = general
+DISCOVER
+ASSERT OK == 1
+ASSERT DISCOVER_N == 8
+ASSERT DISCOVER_FIRST == "general"
+ASSERT DISCOVER_NEXT_N >= 4
+SYS HASI "cubalc.discover.v1"
+ASSERT LAST_N == 1
+SYS HASI "install"
+ASSERT LAST_N == 1
+
+# filter p → cap first (cap/plate/p2p/protect)
+DISCOVER p
+ASSERT OK == 1
+ASSERT DISCOVER_N == 4
+ASSERT DISCOVER_FIRST == "cap"
+ASSERT DISCOVER_FILTER == "p"
+ASSERT PICKTOPIC == "cap"
+ASSERT TOPIC_NAME == "cap"
+SYS HASI "HASFORM"
+ASSERT LAST_N == 1
+# topics bag
+SYS HASLINE DISCOVER_TOPICS "cap"
+ASSERT LAST_N == 1
+SYS HASLINE DISCOVER_TOPICS "protect"
+ASSERT LAST_N == 1
+
+# chain to full GUIDE via first
+GUIDE DISCOVER_FIRST
+ASSERT OK == 1
+ASSERT TOPIC_NAME == "cap"
+ASSERT GUIDE_RELATED_N >= 3
+
+# chain RUNSNIP
+DISCOVER plate
+ASSERT DISCOVER_FIRST == "plate"
+RUNSNIP DISCOVER_FIRST
+ASSERT OK == 1
+ASSERT RUNSNIP_TOPIC == "plate"
+ASSERT RUNSNIP_OK == 1
+
+# synonym
+DISCOVER mesh
+ASSERT OK == 1
+ASSERT DISCOVER_FIRST == "p2p"
+ASSERT DISCOVER_N == 1
+
+DISCOVER forms
+ASSERT DISCOVER_FIRST == "cap"
+
+# alias
+EXPLORE lib
+ASSERT OK == 1
+ASSERT DISCOVER_FIRST == "lib"
+ASSERT DISCOVER_N == 1
+SYS HASLINE DISCOVER_NEXT "GUIDE lib"
+ASSERT LAST_N == 1
+
+# related bag populated
+DISCOVER cap
+ASSERT DISCOVER_RELATED_N >= 3
+SYS HASLINE DISCOVER_RELATED "general"
+ASSERT LAST_N == 1
+
+# soft empty
+DISCOVER zzz_nope
+ASSERT OK == 0
+CLEAR_ERR
+
+PASS
+PRINT "1352_discover: PASS"
