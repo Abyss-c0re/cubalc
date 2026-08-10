@@ -5687,7 +5687,7 @@
     "iter321: board 10/10 first pass; NEEDFLAGANY hard miss only documented not in-path",
     "iter321: selftest 561/759 hasflagany PASS; CLI duals still unknown form set"
   ],
-  "commit": "pending",
+  "commit": "677512a3",
   "ts": "2026-08-10T22:49:06Z",
-  "board_commit": "pending"
+  "board_commit": "677512a3"
 }
