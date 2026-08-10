@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 822,
-  "version": "1.15.814-usability",
-  "item": "HASFLAGALL / NEEDFLAGS multi named-flag contract",
-  "item_id": 822,
-  "title": "HASFLAGALL · NEEDFLAGS · FLAGMISS bag · multi HASFLAG",
-  "commit": "6a71fe35bb140b6f8b213b00876ea04371f86973",
-  "summary": "Soft 0|1 all named flags present; NEEDFLAGS fail-fast + USAGE; FLAGMISS/FLAGHAVE; proof 1362 PASS.",
+  "iter": 823,
+  "version": "1.15.815-usability",
+  "item": "HASARGALL / NEEDARGS multi program-arg contract",
+  "item_id": 823,
+  "title": "HASARGALL · NEEDARGS · ARGMISS bag · multi HASARG",
+  "commit": "8cb58c7090e6464034190e92b971b1dfc14d075b",
+  "summary": "Soft 0|1 all n|name args present; NEEDARGS fail-fast + USAGE; ARGMISS/ARGHAVE; proof 1363 PASS.",
   "proofs": [
-    "1362_hasflagall PASS",
-    "1362_cli_hasflagall PASS",
-    "1359_hasflags regression PASS"
+    "1363_hasargall PASS",
+    "1363_cli_hasargall PASS",
+    "1362_hasflagall regression PASS"
   ],
-  "when": "2026-08-10T19:42:03Z",
+  "when": "2026-08-10T19:54:24Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "6a71fe35bb140b6f8b213b00876ea04371f86973",
-  "note": "HASFORMS twin for --flags · not HASFLAGS count-only probe"
+  "sha": "8cb58c7090e6464034190e92b971b1dfc14d075b",
+  "note": "HASFLAGALL twin for CUBALC_ARGn · not HASARGS count alias"
 }
