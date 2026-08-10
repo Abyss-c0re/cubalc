@@ -5,7 +5,7 @@
   "item": "INCLUDE MATCH|FIRST filter pick+include",
   "item_id": 770,
   "title": "INCLUDE MATCH needle [DEFAULT stem] \u00b7 PICKLIB+INCLUDE one-shot \u00b7 SOFT miss",
-  "commit": "1e311526ebcc12bc02a4d3560650c978fb07c371",
+  "commit": "4411c6b928cf42388f085de8e19b7a8b38d9566d",
   "summary": "Filter\u2192first sorted stem\u2192INCLUDE without PICKLIB+LAST glue. proof 1311 PASS.",
   "proofs": [
     "1311_include_match PASS",
@@ -13,6 +13,6 @@
   ],
   "when": "2026-08-10T08:38:49Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1e311526ebcc12bc02a4d3560650c978fb07c371",
+  "sha": "4411c6b928cf42388f085de8e19b7a8b38d9566d",
   "note": "INCLUDE MATCH plate; DEFAULT hold_seed; INCLUDE SOFT MATCH miss"
 }
