@@ -5331,7 +5331,7 @@
     "REQUIRE DOCTOR multiword broke soft/probe scoring; solid aliases only; board 9/9; needdoctor selftest now green",
     "soft HASI lib:hold_seed miss on green READY; fixed to agent_boot/open_boot; board 10/10"
   ],
-  "commit": "pending",
+  "commit": "733776cc",
   "ts": "2026-08-10T19:29:43Z",
-  "board_commit": "pending"
+  "board_commit": "733776cc"
 }
