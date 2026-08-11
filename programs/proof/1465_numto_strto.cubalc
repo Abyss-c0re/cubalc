@@ -1,0 +1,66 @@
+# NUMTO / STRTO — in-place type coerce on named vars
+
+HOLD_FLASH 1
+
+# peel then NUMTO then INC
+LET s = "count:42"
+AFTERIN s ":"
+ASSERT s == "42"
+NUMTO s
+ASSERT NUMTO_OK == 1
+ASSERT LAST_N == 42
+INC s
+ASSERT s == 43
+
+# partial parse
+LET p = "12x"
+NUMTO p
+ASSERT p == 12
+ASSERT NUMTO_OK == 1
+
+# empty / non-numeric
+LET e = ""
+NUMTO e
+ASSERT e == 0
+ASSERT NUMTO_OK == 0
+LET z = "abc"
+NUMTO z
+ASSERT z == 0
+ASSERT NUMTO_OK == 0
+
+# already num
+LET n = 99
+NUMTO n
+ASSERT n == 99
+ASSERT NUMTO_OK == 1
+
+# STRTO for templates
+LET c = 7
+STRTO c
+ASSERT c == "7"
+APPENDTO c " retries"
+ASSERT c == "7 retries"
+
+# INTTO / TOSTR aliases
+LET a = "5"
+INTTO a
+ASSERT a == 5
+TOSTR a
+ASSERT a == "5"
+
+# BETWEENIN chain
+LET br = "x[100]y"
+BETWEENIN br "[" "]"
+NUMTO br
+MUL br 2
+ASSERT br == 200
+STRTO br
+ASSERT br == "200"
+
+HASFORM "NUMTO"
+ASSERT LAST_N == 1
+HASFORM "STRTO"
+ASSERT LAST_N == 1
+
+PRINT "1465_numto_strto ok"
+PASS

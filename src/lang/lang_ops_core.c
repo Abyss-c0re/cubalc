@@ -3876,6 +3876,10 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"DROPLINEIN", "DROPLINEIN name line — drop first exact bag field · DROPLINEIN_HIT (not GREPVIN)"},
       {"REMOVELINEIN", "REMOVELINEIN alias of DROPLINEIN"},
       {"ACKIN", "ACKIN alias of DROPLINEIN — work-queue ack"},
+      {"NUMTO", "NUMTO name — coerce var to number (strtol) in place · NUMTO_OK"},
+      {"STRTO", "STRTO name — coerce var to decimal string (itoa) in place"},
+      {"INTTO", "INTTO alias of NUMTO"},
+      {"TOSTR", "TOSTR alias of STRTO"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -73792,6 +73796,114 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s hit=%ld n=%ld\n", op, name, hit, nfields);
+    bump(vm);
+    return 1;
+  }
+  /* NUMTO name — coerce named var to numeric (strtol) in place.
+   * STRTO name — coerce named var to decimal string (itoa) in place.
+   * NUMTO_OK = 1 if digits consumed (partial "12x"→12 OK); miss/empty → 0.
+   * LAST = decimal text always; LAST_N = numeric value.
+   * Usability: after BEFOREIN/BETWEENIN peels, INC without LET n = SYS NUM s glue;
+   * dual of NUMF/STRF for plain vars (not object fields). */
+  if (kw(&L->cur,"NUMTO")||kw(&L->cur,"INTTO")||kw(&L->cur,"ATOITO")||
+      kw(&L->cur,"TONUM")||kw(&L->cur,"ASNUMTO")||kw(&L->cur,"PARSEINTO")||
+      kw(&L->cur,"STRTO")||kw(&L->cur,"ITOATO")||kw(&L->cur,"TOSTR")||
+      kw(&L->cur,"ASSTRTO")||kw(&L->cur,"STRINGIFY")){
+    char op[24], name[48], cur[CUBALC_HOST_STR_MAX], buf[48];
+    int to_str = 0, parse_ok = 0;
+    long nval = 0;
+    char *endp = NULL;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "STRTO") == 0 || strcmp(op, "ITOATO") == 0 ||
+        strcmp(op, "TOSTR") == 0 || strcmp(op, "ASSTRTO") == 0 ||
+        strcmp(op, "STRINGIFY") == 0)
+      to_str = 1;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, to_str ? "STRTO needs name — STRTO n"
+                      : "NUMTO needs name — NUMTO s");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    cur[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+
+    if (to_str) {
+      if (vv && !vv->is_str)
+        nval = vv->val;
+      else {
+        endp = NULL;
+        nval = strtol(cur, &endp, 10);
+        if (cur[0] && endp && endp != cur)
+          parse_ok = 1;
+        /* stringify raw text if non-numeric? keep original when already str non-num */
+        if (!parse_ok && vv && vv->is_str) {
+          /* keep string as-is */
+          snprintf(buf, sizeof buf, "%s", cur);
+          /* truncate to buf only if huge — prefer full cur via var_set_str */
+          var_set_str(vm, name, cur);
+          var_set_str(vm, "LAST", cur);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", cur);
+          var_set_num(vm, "LAST_N", (long)strlen(cur));
+          vm->last_n = (long)strlen(cur);
+          var_set_num(vm, "STRTO_N", (long)strlen(cur));
+          var_set_num(vm, "NUMTO_OK", 0);
+          var_set_num(vm, "OK", 1);
+          if (vm->trace)
+            fprintf(vm->trace, "# STRTO %s (keep)\n", name);
+          bump(vm);
+          return 1;
+        }
+      }
+      snprintf(buf, sizeof buf, "%ld", nval);
+      var_set_str(vm, name, buf);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      var_set_num(vm, "LAST_N", nval);
+      vm->last_n = nval;
+      var_set_num(vm, "STRTO_N", nval);
+      var_set_num(vm, "NUMTO_OK", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# STRTO %s -> %s\n", name, buf);
+      bump(vm);
+      return 1;
+    }
+
+    /* NUMTO */
+    endp = NULL;
+    nval = strtol(cur, &endp, 10);
+    if (cur[0] && endp && endp != cur)
+      parse_ok = 1;
+    else if (vv && !vv->is_str) {
+      nval = vv->val;
+      parse_ok = 1;
+    } else {
+      nval = 0;
+      parse_ok = 0;
+    }
+    var_set_num(vm, name, nval);
+    snprintf(buf, sizeof buf, "%ld", nval);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    var_set_num(vm, "LAST_N", nval);
+    vm->last_n = nval;
+    var_set_num(vm, "NUMTO_N", nval);
+    var_set_num(vm, "NUMTO_OK", parse_ok ? 1 : 0);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# NUMTO %s -> %ld ok=%d\n", name, nval, parse_ok);
     bump(vm);
     return 1;
   }
