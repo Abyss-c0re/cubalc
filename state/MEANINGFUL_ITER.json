@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 871,
-  "version": "1.15.864-usability",
-  "item": "TRYNEW / NEW SOFT soft instance create",
-  "item_id": 871,
-  "title": "TRYNEW \u00b7 NEW SOFT \u00b7 soft miss class/redefine \u00b7 no fatal",
-  "commit": "4744656238dd6467b165757493193f69273f57a9",
-  "summary": "TRYNEW/NEW SOFT OK=0 LAST_ERR on miss; hard NEW fatal dual; proof 1410 PASS.",
+  "iter": 872,
+  "version": "1.15.865-usability",
+  "item": "TRYCLONE / CLONE SOFT soft prototype clone",
+  "item_id": 872,
+  "title": "TRYCLONE \u00b7 CLONE SOFT \u00b7 soft miss/redefine \u00b7 twin TRYNEW",
+  "commit": "4731ef21c40f904a5bd4e9f5a6e337d94f842229",
+  "summary": "TRYCLONE/CLONE SOFT OK=0 LAST_ERR on miss source/redefine; hard CLONE fatal dual; proof 1411 PASS.",
   "proofs": [
-    "1410_trynew PASS",
-    "1410_cli_trynew PASS"
+    "1411_tryclone PASS",
+    "1411_cli_tryclone PASS"
   ],
-  "when": "2026-08-11T04:44:52Z",
+  "when": "2026-08-11T04:53:49Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "4744656238dd6467b165757493193f69273f57a9",
-  "note": "optional OOP plugins without HASCLASS+IF+NEW glue"
+  "sha": "4731ef21c40f904a5bd4e9f5a6e337d94f842229",
+  "note": "optional prototype spawn without HASOBJ+IF+CLONE glue"
 }
