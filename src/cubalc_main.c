@@ -3649,6 +3649,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     int lib_class_guard = 0, lib_class_boot = 0;
     int lib_method_guard = 0, lib_method_boot = 0;
     int lib_field_guard = 0, lib_field_boot = 0;
+    int lib_oop_session = 0, lib_oop_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
     int include_path_set = 0, preload_set = 0;
     const char *hx = getenv("CUBALC_SMX_KEY");
@@ -3718,6 +3719,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     lib_method_boot = (access("programs/lib/method_boot.cubalc", R_OK) == 0);
     lib_field_guard = (access("programs/lib/field_guard.cubalc", R_OK) == 0);
     lib_field_boot = (access("programs/lib/field_boot.cubalc", R_OK) == 0);
+    lib_oop_session = (access("programs/lib/oop_session.cubalc", R_OK) == 0);
+    lib_oop_boot = (access("programs/lib/oop_boot.cubalc", R_OK) == 0);
     cookbook_ok = (access("docs/COOKBOOK.md", R_OK) == 0);
     for_agents_ok = (access("docs/FOR_AGENTS.md", R_OK) == 0);
     if (libdir_ok) {
@@ -3764,7 +3767,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"lib_plate_guard\":%s,\"lib_key_boot\":%s,"
              "\"lib_fn_guard\":%s,\"lib_fn_boot\":%s,"
              "\"lib_class_guard\":%s,\"lib_class_boot\":%s,"
-             "\"lib_method_guard\":%s,\"lib_method_boot\":%s,\"lib_field_guard\":%s,\"lib_field_boot\":%s,"
+             "\"lib_method_guard\":%s,\"lib_method_boot\":%s,\"lib_field_guard\":%s,\"lib_field_boot\":%s,\"lib_oop_session\":%s,\"lib_oop_boot\":%s,"
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"vars_max\":%d,\"varroom_forms\":true,"
@@ -3814,6 +3817,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"INCLUDE method_boot · cubalc init --method METHOD catalog starter\","
              "\"INCLUDE field_guard · NEED_FIELDS / NEED_FIELD_ANY Class.field\","
              "\"INCLUDE field_boot · cubalc init --field FIELD catalog starter\","
+             "\"INCLUDE oop_session · class+method+field OOP catalog\","
+             "\"INCLUDE oop_boot · cubalc init --oop OOP catalog starter\","
              "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
@@ -3895,6 +3900,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              lib_method_boot ? "true" : "false",
              lib_field_guard ? "true" : "false",
              lib_field_boot ? "true" : "false",
+             lib_oop_session ? "true" : "false",
+             lib_oop_boot ? "true" : "false",
              include_path_set ? "true" : "false",
              preload_set ? "true" : "false",
              cookbook_ok ? "true" : "false",
@@ -4720,6 +4727,10 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_field_guard", "programs/proof/1403_cli_field_guard.sh", "field_guard soft/hard + doctor"},
       {"field_boot", "programs/proof/1403_field_boot.cubalc", "INCLUDE field_boot agent_boot+field_guard"},
       {"cli_init_field", "programs/proof/1403_cli_init_field.sh", "cubalc init --field scaffold + doctor"},
+      {"oop_session", "programs/proof/1404_oop_session.cubalc", "INCLUDE oop_session class+method+field"},
+      {"cli_oop_session", "programs/proof/1404_cli_oop_session.sh", "oop_session soft/hard + doctor"},
+      {"oop_boot", "programs/proof/1404_oop_boot.cubalc", "INCLUDE oop_boot agent_boot+oop_session"},
+      {"cli_init_oop", "programs/proof/1404_cli_init_oop.sh", "cubalc init --oop scaffold + doctor"},
       {"cli_form_guard", "programs/proof/1386_cli_form_guard.sh", "form_guard lib + CLI + formgate any"},
       {"cap_boot", "programs/proof/1325_cap_boot.cubalc", "INCLUDE cap_boot agent_boot+form_guard"},
       {"cli_init_cap", "programs/proof/1325_cli_init_cap.sh", "cubalc init --cap scaffold + doctor lib_cap_boot"},
@@ -9043,6 +9054,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
      * --class|--class-boot|--class-guard|--need-classes: INCLUDE class_boot (agent_boot+class_guard).
      * --method|--method-boot|--method-guard|--need-methods: INCLUDE method_boot (agent_boot+method_guard).
      * --field|--field-boot|--field-guard|--need-fields: INCLUDE field_boot (agent_boot+field_guard).
+     * --oop|--oop-boot|--oop-session|--oop-guard|--need-oop: INCLUDE oop_boot (agent_boot+oop_session).
      * --from lib: recipe-driven scaffold (LIBDEFAULTS as DEFAULT lines + INCLUDE).
      * Agents: write file then cubalc run — no cookbook prose required. */
     const char *path = "program.cubalc";
@@ -9050,7 +9062,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     const char *from_lib = NULL;
     int force = 0, i, wrote = 0, existed = 0, want_plate = 0, want_peer = 0;
     int want_fat = 0, want_fat_session = 0, want_cap = 0, want_onboard = 0, want_discover = 0, want_open = 0, want_doctor = 0;
-    int want_ready = 0, want_cli = 0, want_cli_session = 0, want_env = 0, want_arg = 0, want_time = 0, want_tool = 0, want_product = 0, want_path = 0, want_rw = 0, want_bin = 0, want_lib = 0, want_host = 0, want_full = 0, want_key = 0, want_fn = 0, want_class = 0, want_method = 0, want_field = 0;
+    int want_ready = 0, want_cli = 0, want_cli_session = 0, want_env = 0, want_arg = 0, want_time = 0, want_tool = 0, want_product = 0, want_path = 0, want_rw = 0, want_bin = 0, want_lib = 0, want_host = 0, want_full = 0, want_key = 0, want_fn = 0, want_class = 0, want_method = 0, want_field = 0, want_oop = 0;
     int want_list = 0;
     char abspath[512];
     char parent[512];
@@ -9509,6 +9521,24 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       "PRINT \"field_ok\" FIELD_GUARD_OK\n"
       "STATUS\n"
       "PRINT \"field init ok\" OK FIELD_GUARD_OK\n";
+    static const char *body_oop =
+      "# CubalC OOP catalog starter — generated by cubalc init --oop\n"
+      "# INCLUDE oop_boot = agent_boot + oop_session (class+method+field guards)\n"
+      "# Define CLASS/METHOD/FIELD then set NEED_CLASSES/METHODS/FIELDS, or soft *_GUARD_SOFT=1\n"
+      "DEFAULT NEED_CLASSES = \"\"\n"
+      "DEFAULT NEED_CLASS_ANY = \"\"\n"
+      "DEFAULT CLASS_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_METHODS = \"\"\n"
+      "DEFAULT NEED_METHOD_ANY = \"\"\n"
+      "DEFAULT METHOD_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_FIELDS = \"\"\n"
+      "DEFAULT NEED_FIELD_ANY = \"\"\n"
+      "DEFAULT FIELD_GUARD_SOFT = 0\n"
+      "INCLUDE oop_boot\n"
+      "\n"
+      "PRINT \"oop_ok\" OOP_SESSION_OK\n"
+      "STATUS\n"
+      "PRINT \"oop init ok\" OK OOP_SESSION_OK\n";
     const char *body = body_boot;
     from_body[0] = 0;
     for (i = 2; i < argc; i++) {
@@ -9670,6 +9700,14 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
                  !strcmp(argv[i], "--need-field") || !strcmp(argv[i], "--fields") ||
                  !strcmp(argv[i], "--oopfield") || !strcmp(argv[i], "--schema-field")) {
         want_field = 1;
+      } else if (!strcmp(argv[i], "--oop") || !strcmp(argv[i], "--oop-boot") ||
+                 !strcmp(argv[i], "--oopboot") || !strcmp(argv[i], "--oop_boot") ||
+                 !strcmp(argv[i], "--oop-session") || !strcmp(argv[i], "--oopsession") ||
+                 !strcmp(argv[i], "--oop_session") || !strcmp(argv[i], "--oop-guard") ||
+                 !strcmp(argv[i], "--oopguard") || !strcmp(argv[i], "--oop_guard") ||
+                 !strcmp(argv[i], "--need-oop") || !strcmp(argv[i], "--need-oop-session") ||
+                 !strcmp(argv[i], "--oopcatalog")) {
+        want_oop = 1;
       } else if (!strcmp(argv[i], "--cli-session") || !strcmp(argv[i], "--clisession") ||
                  !strcmp(argv[i], "--cli-guard") || !strcmp(argv[i], "--cliguard") ||
                  !strcmp(argv[i], "--cli_session") || !strcmp(argv[i], "--tool-session") ||
@@ -9733,9 +9771,10 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       printf("--class|--class-boot|--class-guard|--need-classes\tclass_boot\tINCLUDE class_boot agent_boot+class_guard\n");
       printf("--method|--method-boot|--method-guard|--need-methods\tmethod_boot\tINCLUDE method_boot agent_boot+method_guard\n");
       printf("--field|--field-boot|--field-guard|--need-fields\tfield_boot\tINCLUDE field_boot agent_boot+field_guard\n");
+      printf("--oop|--oop-boot|--oop-session|--oop-guard|--need-oop\toop_boot\tINCLUDE oop_boot agent_boot+oop_session\n");
       printf("--from|--recipe|-F <lib>\tfrom_recipe\tDEFAULT knobs from lib + INCLUDE (any recipe)\n");
       printf("{\"schema\":\"cubalc.init.v1\",\"ok\":true,\"cmd\":\"init\","
-             "\"op\":\"list\",\"n\":30,\"version\":\"%s\","
+             "\"op\":\"list\",\"n\":31,\"version\":\"%s\","
              "\"note\":\"scaffold catalog — fixed templates + --from any lib recipe\","
              "\"templates\":["
              "{\"id\":\"agent_boot\",\"flags\":\"\",\"default\":true,"
@@ -9999,6 +10038,9 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     } else if (want_env) {
       body = body_env;
       tmpl = "env_boot";
+    } else if (want_oop) {
+      body = body_oop;
+      tmpl = "oop_boot";
     } else if (want_field) {
       body = body_field;
       tmpl = "field_boot";
@@ -10135,6 +10177,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       printf("# next: cubalc run %s · DEFAULT NEED_TIME · INCLUDE time_boot\n", path);
     else if (want_env)
       printf("# next: cubalc run %s · DEFAULT NEED_ENVS · INCLUDE env_boot\n", path);
+    else if (want_oop)
+      printf("# next: cubalc run %s · DEFAULT NEED_CLASSES/METHODS/FIELDS · INCLUDE oop_boot\n", path);
     else if (want_field)
       printf("# next: cubalc run %s · DEFAULT NEED_FIELDS Class.field · INCLUDE field_boot\n", path);
     else if (want_method)
@@ -10204,6 +10248,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
                ? "INCLUDE time_boot agent_boot+time_guard wall-budget starter"
                : (want_env
                ? "INCLUDE env_boot agent_boot+env_guard host env contract"
+               : (want_oop
+               ? "INCLUDE oop_boot agent_boot+oop_session OOP catalog contract"
                : (want_field
                ? "INCLUDE field_boot agent_boot+field_guard FIELD catalog contract"
                : (want_method
@@ -10252,7 +10298,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
                ? "INCLUDE fat_boot + plate_boot nest room + NEEDP + save"
                : (want_plate
                ? "INCLUDE plate_session + plate_uniform + PRETTYP + plate_save"
-               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter")))))))))))))))))))))))))))));
+               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter"))))))))))))))))))))))))))))));
     return 0;
   }
   if (strcmp(cmd, "libs") == 0 || strcmp(cmd, "lib") == 0 ||
@@ -10313,6 +10359,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"method_boot.cubalc", "agent_boot + method_guard one-shot · init --method METHOD catalog"},
       {"field_guard.cubalc", "NEED_FIELDS + NEED_FIELD_ANY Class.field · soft FIELD_GUARD_SOFT"},
       {"field_boot.cubalc", "agent_boot + field_guard one-shot · init --field FIELD catalog"},
+      {"oop_session.cubalc", "class+method+field guards · OOP_SESSION_OK · soft *_GUARD_SOFT"},
+      {"oop_boot.cubalc", "agent_boot + oop_session one-shot · init --oop OOP catalog"},
       {"env_guard.cubalc", "NEED_ENVS + NEED_ENV_ANY host env contract · soft ENV_GUARD_SOFT"},
       {"env_boot.cubalc", "agent_boot + env_guard one-shot · init --env · host config"},
     };
@@ -20984,7 +21032,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
       "    errrun|recoversnip <err…>  classify + RUNSNIP topic (cubalc.errrun.v1)\n"
       "    errguide|recoverguide <err…> classify + GUIDE playbook (cubalc.errguide.v1)\n"
-      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --onboard · --discover · --open · --doctor · --ready · --cli · --cli-session · --full-cli · --product · --path · --rw · --bin · --lib-boot · --host · --fleet · --key · --fn · --class · --method · --field · --env · --arg · --time · --from lib\n"
+      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --onboard · --discover · --open · --doctor · --ready · --cli · --cli-session · --full-cli · --product · --path · --rw · --bin · --lib-boot · --host · --fleet · --key · --fn · --class · --method · --field · --oop · --env · --arg · --time · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"
