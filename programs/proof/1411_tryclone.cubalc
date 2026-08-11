@@ -1,0 +1,81 @@
+# TRYCLONE / CLONE SOFT — soft clone without fatal on miss/redefine
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell proto 1 10 0
+SETF proto age 2
+
+# hard CLONEOBJ still works
+CLONEOBJ proto child
+ASSERT OK == 1
+ASSERT CLONEOBJ_N == 1
+HASOBJ child
+ASSERT LAST_N == 1
+GETF child energy
+ASSERT LAST_N == 10
+
+# TRYCLONE success
+TRYCLONE proto twin
+ASSERT OK == 1
+ASSERT TRYCLONE_N == 1
+ASSERT CLONEOBJ_N == 1
+ASSERT LAST == "twin"
+HASOBJ twin
+ASSERT LAST_N == 1
+GETF twin age
+ASSERT LAST_N == 2
+
+# TRYCLONE missing source — soft
+TRYCLONE missing_zz ghost
+ASSERT OK == 0
+ASSERT TRYCLONE_N == 0
+SYS HASI LAST_ERR "source"
+ASSERT LAST_N == 1
+HASOBJ ghost
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# TRYCLONE redefine dst — soft (hard would fatal)
+TRYCLONE proto child
+ASSERT OK == 0
+ASSERT TRYCLONE_N == 0
+SYS HASI LAST_ERR "redefine"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# CLONE SOFT keyword redefine
+CLONE SOFT proto child
+ASSERT OK == 0
+CLEAR_ERR
+
+# CLONE SOFT success
+CLONE SOFT proto spare
+ASSERT OK == 1
+HASOBJ spare
+ASSERT LAST_N == 1
+GETF spare energy
+ASSERT LAST_N == 10
+
+# SOFTCLONE alias success
+SOFTCLONE proto spare2
+ASSERT OK == 1
+HASOBJ spare2
+ASSERT LAST_N == 1
+
+# AS sugar soft
+TRYCLONE proto AS named
+ASSERT OK == 1
+HASOBJ named
+ASSERT LAST_N == 1
+
+# hard CLONEOBJ redefine still fails (assert via EXPECT soft status not used;
+# process-level dual covered by cli_tryclone)
+HASFORM "TRYCLONE"
+ASSERT LAST_N == 1
+HASFORM "CLONEOBJ"
+ASSERT LAST_N == 1
+
+PRINT "1411_tryclone ok"
+PASS

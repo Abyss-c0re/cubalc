@@ -16903,24 +16903,39 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* CLONEOBJ|COPYOBJ|DUPLOBJ src dst — shallow copy live object fields into
-   * new instance of same class. Does not re-run init (snapshot clone).
-   * Soft miss src OK=0; dst live already → fatal redefine.
-   * Usability: template/prototype + pool spawn without field-by-field SETF. */
-  if (kw(&L->cur, "CLONEOBJ") || kw(&L->cur, "COPYOBJ") ||
+  /* CLONEOBJ|COPYOBJ|DUPLOBJ|TRYCLONE src dst — shallow copy live object fields
+   * into new instance of same class. Does not re-run init (snapshot clone).
+   * Soft miss src always OK=0. TRYCLONE|CLONE SOFT|CLONEOBJ SOFT: dst redefine
+   * / pool full also soft (OK=0 LAST_ERR) — twin of TRYNEW for prototypes.
+   * Hard CLONEOBJ: dst live already → fatal redefine.
+   * Usability: optional template spawn without HASOBJ+IF+CLONE glue. */
+  if (kw(&L->cur, "TRYCLONE") || kw(&L->cur, "SOFTCLONE") ||
+      kw(&L->cur, "CLONEOBJSOFT") || kw(&L->cur, "TRYCOPYOBJ") ||
+      kw(&L->cur, "CLONEOBJ") || kw(&L->cur, "COPYOBJ") ||
       kw(&L->cur, "DUPLOBJ") || kw(&L->cur, "CLONE") ||
       kw(&L->cur, "OBJCLONE") || kw(&L->cur, "OBJCOPY") ||
       kw(&L->cur, "DUP_OBJ") || kw(&L->cur, "COPY_OBJ")) {
     char sname[48], dname[48];
     ObjInst *src, *dst;
     ClassDef *cd;
-    int fi;
+    int fi, soft = 0, rc;
+    char op0[32];
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    if (strcmp(op0, "TRYCLONE") == 0 || strcmp(op0, "SOFTCLONE") == 0 ||
+        strcmp(op0, "CLONEOBJSOFT") == 0 || strcmp(op0, "TRYCOPYOBJ") == 0)
+      soft = 1;
     lex_next(L);
-    if (oop_read_name(vm, L, sname, sizeof sname, "CLONEOBJ src") < 0)
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPTIONAL") || kw(&L->cur, "MAYBE") ||
+                  kw(&L->cur, "OPT"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_read_name(vm, L, sname, sizeof sname, soft ? "TRYCLONE src" : "CLONEOBJ src") < 0)
       return -1;
     if (kw(&L->cur, "AS") || kw(&L->cur, "TO") || kw(&L->cur, "INTO"))
       lex_next(L);
-    if (oop_read_name(vm, L, dname, sizeof dname, "CLONEOBJ dst") < 0)
+    if (oop_read_name(vm, L, dname, sizeof dname, soft ? "TRYCLONE dst" : "CLONEOBJ dst") < 0)
       return -1;
     src = oop_find_obj(vm, sname);
     if (!src) {
@@ -16929,6 +16944,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", 0);
       vm->last_n = 0;
       var_set_num(vm, "CLONEOBJ_N", 0);
+      var_set_num(vm, "TRYCLONE_N", 0);
       var_set_num(vm, "OK", 0);
       var_set_str(vm, "LAST_ERR", "CLONEOBJ: unknown source");
       var_set_str(vm, "ERR", "CLONEOBJ: unknown source");
@@ -16940,8 +16956,16 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     cd = &vm->classes[src->class_idx];
     /* allocate dst without ctor (field defaults then overwrite from src) */
-    if (oop_new_instance(vm, cd->name, dname, -1, NULL, 0, 0) < 0)
-      return -1;
+    rc = oop_new_instance(vm, cd->name, dname, -1, NULL, 0, soft);
+    if (rc == -1) return -1;
+    if (rc == -2) {
+      /* soft redefine / pool full — sticky already set by oop_new_instance */
+      var_set_num(vm, "CLONEOBJ_N", 0);
+      var_set_num(vm, "TRYCLONE_N", 0);
+      if (vm->trace) fprintf(vm->trace, "# TRYCLONE soft miss %s -> %s\n", sname, dname);
+      bump(vm);
+      return 1;
+    }
     dst = oop_find_obj(vm, dname);
     if (!dst) {
       fail(vm, "CLONEOBJ alloc fail"); return -1;
@@ -16964,8 +16988,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "LAST_N", cd->n_fields);
     vm->last_n = cd->n_fields;
     var_set_num(vm, "CLONEOBJ_N", 1);
+    if (soft) var_set_num(vm, "TRYCLONE_N", 1);
     var_set_num(vm, "NFIELDS", cd->n_fields);
     var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# %s %s -> %s\n", soft ? "TRYCLONE" : "CLONEOBJ", sname, dname);
     bump(vm);
     return 1;
   }

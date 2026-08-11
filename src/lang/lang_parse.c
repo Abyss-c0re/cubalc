@@ -55,7 +55,7 @@ static const char *const form_suggest_pool[] = {
   "JOINF", "WORDSF", "INCF", "CATF", "REPLACEF", "NUMF", "STRF",
   "HOLD_FLASH", "CUBE", "PLUG", "FLOW", "IMPULSE", "SYS", "SMX", "LET",
   "IF", "LOOP", "WHILE", "FOR", "FN", "CALL", "TRYCALL", "DUMPOBJ",
-  "CLONEOBJ", "DELETEOBJ", "SENDALL", "GETFALL", "SETFALL", "WHEREOBJ",
+  "TRYCLONE", "CLONEOBJ", "DELETEOBJ", "SENDALL", "GETFALL", "SETFALL", "WHEREOBJ",
   NULL
 };
 

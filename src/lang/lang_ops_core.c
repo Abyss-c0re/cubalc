@@ -2046,6 +2046,7 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"FREEALL", "FREEALL alias of DELETEALL"},
       {"CLEAROBJS", "CLEAROBJS alias of DELETEALL"},
       {"CLONEOBJ", "CLONEOBJ|COPYOBJ src dst — shallow field copy same class · no init re-run"},
+      {"TRYCLONE", "TRYCLONE|CLONE SOFT src dst — soft miss/redefine OK=0 LAST_ERR (twin TRYNEW)"},
       {"COPYOBJ", "COPYOBJ alias of CLONEOBJ"},
       {"RENAMEOBJ", "RENAMEOBJ|MOVEOBJ old [AS|TO] new — rename live slot in place · soft miss"},
       {"MOVEOBJ", "MOVEOBJ alias of RENAMEOBJ"},
