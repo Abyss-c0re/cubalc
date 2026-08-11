@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 326,
-  "program": "programs/realworld/svc_time_boot_budget_board.cubalc",
-  "theme": "time_boot/time_guard fleet wall-budget contract",
-  "version": "1.15.842-usability",
+  "iter": 327,
+  "program": "programs/realworld/svc_product_session_fleet_board.cubalc",
+  "theme": "product_session fleet product-tool contract (cli+arg+env+time)",
+  "version": "1.15.845-usability",
   "pass": true,
-  "prior_note": "iter 325 arg_guard; this iter first realworld 1390 time_boot wall budget lib",
+  "prior_note": "iter 326 time_boot; this iter first realworld 1392 product_session fleet",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,61 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate tb",
+      "cmd": "seed agent plate psf",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "soft",
-      "cmd": "soft NEED_TIME under unlimited",
+      "name": "pass",
+      "cmd": "product_session flags+rest+HOME+time",
       "ok": true,
-      "note": "soft"
+      "note": "pass PSO=1"
     },
     {
-      "name": "remain",
-      "cmd": "REMAIN_MS WALL_MS TIMEOUT_MS",
+      "name": "soft_flag",
+      "cmd": "CLI_GUARD_SOFT missing flag",
       "ok": true,
-      "note": "remain"
+      "note": "soft_flag"
     },
     {
-      "name": "hard",
-      "cmd": "NEEDTIME 1 hard pass",
+      "name": "soft_env",
+      "cmd": "ENV_GUARD_SOFT MISSING_PSF_ENV",
       "ok": true,
-      "note": "hard"
+      "note": "soft_env"
     },
     {
-      "name": "tight_unlim",
-      "cmd": "tight without -T",
+      "name": "soft_arg",
+      "cmd": "ARG_GUARD_SOFT NEED_ARGS 0",
       "ok": true,
-      "note": "tight unlimited branch"
+      "note": "soft_arg"
     },
     {
-      "name": "tight_T",
-      "cmd": "tight with -T 80 soft miss",
+      "name": "soft_time",
+      "cmd": "huge NEED_TIME soft unlimited",
       "ok": true,
-      "note": "tight limited"
+      "note": "soft_time unlim"
+    },
+    {
+      "name": "soft_time_T",
+      "cmd": "soft_time -T 80/120",
+      "ok": true,
+      "note": "soft_time limited"
     },
     {
       "name": "form",
-      "cmd": "HASLIB time_boot/time_guard",
+      "cmd": "HASLIB product/tool HASINCLUDE stack",
       "ok": true,
       "note": "form"
     },
     {
       "name": "gate",
-      "cmd": "plate + live soft gate",
+      "cmd": "plate + soft product gate",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber remain capture",
+      "cmd": "PRINT clobber PSO capture",
       "ok": true,
       "note": "probe"
     },
@@ -74,8 +80,14 @@
       "note": "unknown\u21922"
     },
     {
-      "name": "hard_miss_exit",
-      "cmd": "NEEDTIME hard miss -T 25",
+      "name": "tight_T40",
+      "cmd": "soft_time -T 40 host TIMEOUT",
+      "ok": false,
+      "note": "stack too heavy for 40ms"
+    },
+    {
+      "name": "hard_flag_exit",
+      "cmd": "NEEDFLAGS hard miss exit_code 0",
       "ok": false,
       "note": "exit_code 0 class"
     },
@@ -83,7 +95,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "time_boot/time_guard PASS; CLI duals still red"
+      "note": "575/787 product_session PASS; CLI duals still set"
     }
   ],
   "weaknesses": [
@@ -5726,23 +5738,49 @@
       "title": "WRITE STATUS omit trailing NL (reconfirmed tb)",
       "detail": "STATUS last line without $.",
       "repro": "cat -A TB STATUS"
+    },
+    {
+      "id": "W706",
+      "severity": "med",
+      "area": "host|timeout",
+      "title": "product_session INCLUDE stack burns tight -T budgets before soft_time gate",
+      "detail": "INCLUDE product_session pulls tool_session\u2192cli_boot\u2192agent_boot + cli_guard+arg_guard+env_guard+time_guard. Under cubalc run -T 40 the host TIMEOUT fires mid-boot (wall~40ms) before soft HAS_TIME can return PRODUCT_SESSION_OK=0. -T 80/120 completes. Soft wall probes need headroom for the compose cost itself.",
+      "repro": "cubalc run -T 40 programs/realworld/svc_product_session_fleet_board.cubalc soft_time \u2192 TIMEOUT; -T 80 ok"
+    },
+    {
+      "id": "W707",
+      "severity": "low",
+      "area": "lang|form",
+      "title": "PRODUCT_SESSION_OK / TOOL_SESSION_OK are sticky vars not HASFORM forms",
+      "detail": "HASFORM PRODUCT_SESSION_OK and HASFORM TOOL_SESSION_OK return 0; agents must use HASLIB product_session / HASINCLUDE or read the var after INCLUDE. Forms catalog does not list session sticky knobs.",
+      "repro": "HASFORM PRODUCT_SESSION_OK \u2192 0; after INCLUDE product_session PRODUCT_SESSION_OK is 0|1"
+    },
+    {
+      "id": "W708",
+      "severity": "med",
+      "area": "host|exit",
+      "title": "product_session hard NEEDFLAGS miss leaves exit_code 0 (shell 0)",
+      "detail": "Hard CLI_GUARD_SOFT=0 + NEED_FLAGS missing \u2192 ok:false + LAST_ERR NEEDFLAGS miss but plate exit_code 0 and shell 0. Same class as W7/W652/W700 \u2014 only EXIT n propagates shell rc. Fleet agents cannot gate on process status alone.",
+      "repro": "cubalc run -e '\u2026 NEED_FLAGS=missing INCLUDE product_session' \u2192 exit_code 0 shell 0"
+    },
+    {
+      "id": "W709",
+      "severity": "low",
+      "area": "lang|include",
+      "title": "product_session re-INCLUDEs agent_boot (triple boot on fleet boards)",
+      "detail": "Boards that INCLUDE agent_boot then INCLUDE product_session get agent_boot again via cli_boot. Works but inflates includes_n (~14) and var pressure (vars_n~200/256). No INCLUDE-once for composed sessions.",
+      "repro": "INCLUDE agent_boot; INCLUDE product_session \u2192 includes list agent_boot \u00d73"
+    },
+    {
+      "id": "W710",
+      "severity": "low",
+      "area": "host|cli",
+      "title": "CLI dual selftests still fail unknown form set (cli_init_product_session)",
+      "detail": "product_session lang proof 1392 PASS (40 asserts); cli_init_product_session.sh FAILS with unknown form 'set' line 2 \u2014 shell dual scaffolding regression class, not product_session lib itself. Same as cli_init_tool_session / cli_init_time.",
+      "repro": "cubalc selftest | grep cli_init_product"
     }
   ],
   "workarounds": [
-    "PRUNEFLAT old prefix before re-promote if re-running",
-    "never SETFLAT empty needle on agent plate",
-    "use dotted cfg.port for single-leaf precision",
-    "MAPFLAT not WRITEFLAT for alias",
-    "use CAPFLAT_MATCH for inventory not N alone",
-    "unique path needles to avoid meta.score multi-cap",
-    "floor path: CAPFLAT when already under \u2192 N=0 is success",
-    "always capture SUMFLAT_N separate from LAST_N/SUMFLAT_SUM",
-    "avoid empty needle when large ports live under same plate",
-    "use unique path needles for single counter rollups",
-    "HASFORMS bag string for self-gate names; FORMMISS_N==0 for full admit",
-    "LET NEED_FORMS before re-INCLUDE form_guard when DEFAULT already bound",
-    "use CUBALC_REQUIRE_FORMS env for in-lang floor dual; -C is plate-only",
-    "LISTFORMS \"INCLUDE\" quoted; capture LAST before PRINT after LISTFORMS",
     "LET bag=LAST before PRINT after FORMSFOR/TIPS; HASLINE for exact form names",
     "use FORMSFOR topic_var after lex_next fix; aliases forms\u2192cap mesh\u2192p2p",
     "RELATED single-token hubs only; use HASFORM then RELATED of primary form",
@@ -5838,7 +5876,11 @@
     {
       "id": "WA-TB",
       "note": "detect unlimited via REMAIN_MS==-1; use OK not LAST_N after NEEDTIME; TIME_GUARD_SOFT=1 then EXIT n; run -T for real budget tests"
-    }
+    },
+    "LET all NEED_* + *_GUARD_SOFT before each re-INCLUDE product_session (DEFAULT sticky)",
+    "Capture PRODUCT_SESSION_OK into LET before PRINT (PRINT clobber LAST only)",
+    "Use -T >= 80 for soft_time paths that INCLUDE product_session",
+    "Exit via EXIT n for shell rc; ignore plate exit_code on hard guard miss"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -5936,11 +5978,16 @@
     "NEEDTIME hard miss exit_code 0 (W700)",
     "TIMEOUT_UNLIMITED var sticky 0 (W701)",
     "NEEDTIME success LAST_N=remain not 1 (W702)",
-    "HAS_TIME soft miss OK may stay 1 (W703)"
+    "HAS_TIME soft miss OK may stay 1 (W703)",
+    "product_session tool+env+time one-shot (1392)",
+    "PRODUCT_SESSION_OK / TOOL_SESSION_OK sticky knobs",
+    "product_session stack -T headroom (W706)",
+    "HASFORM misses session knobs (W707)",
+    "hard NEEDFLAGS under product_session exit_code 0 (W708)",
+    "triple agent_boot via product_session (W709)",
+    "cli_init_product set dual still red (W710)"
   ],
   "issues_faced": [
-    "iter300: all board paths green; WRITE SNIP.txt multi-line works",
-    "iter300: selftest CLI duals still red (pre-existing)",
     "iter301: host strips ARG run \u2014 renamed action to exec (W554)",
     "iter301: RUNSNIP nested asserts inflate parent plate (W555)",
     "iter301: board 10/10 green after exec rename; selftest CLI duals still red",
@@ -5988,9 +6035,11 @@
     "iter325: board 10/10 first pass; include_newest selftest brittle (newest=arg_guard)",
     "iter325: selftest 569/778 arg_guard PASS; CLI duals still unknown form set",
     "iter326: hard/tight first failed LAST_N==-1 vs 1 and TIMEOUT_UNLIMITED false friend; fixed REMAIN_MS detect + OK checks",
-    "iter326: selftest 572/784 time_boot+time_guard PASS; CLI duals still set"
+    "iter326: selftest 572/784 time_boot+time_guard PASS; CLI duals still set",
+    "iter327: product_session fleet board 11/12 green; -T 40 TIMEOUT; hard NEEDFLAGS exit_code 0",
+    "iter327: selftest 575/787 product_session+tool_session PASS; CLI duals still set"
   ],
-  "commit": "4f3c0585",
-  "ts": "2026-08-11T00:59:07Z",
-  "board_commit": "4f3c0585"
+  "commit": "",
+  "ts": "2026-08-11T01:23:06Z",
+  "board_commit": ""
 }
