@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 369,
-  "program": "programs/realworld/svc_ifnum_type_admit_board.cubalc",
-  "theme": "IFNUM/IFSTR/IFVARTYPE config type admit gates",
-  "version": "1.15.944-usability",
+  "iter": 370,
+  "program": "programs/realworld/svc_ifzero_retry_quota_board.cubalc",
+  "theme": "IFZERO/IFNZ/IFPOS/IFNEG retry quota sign gates",
+  "version": "1.15.948-usability",
   "pass": true,
-  "prior_note": "iter 368 IFJSONHAS; this iter first realworld of 1488 IFNUM (MI 949)",
+  "prior_note": "iter 369 IFNUM; this iter first realworld of 1489 IFZERO (MI 950)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed budget + IFNUM",
+      "cmd": "seed tries + IFZERO",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFNUM/IFSTR/IFVARTYPE stickies 10/10",
+      "cmd": "IFZERO/IFNZ/IFPOS/IFNEG stickies 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "undef/str0/NUMTO coerce/deny-nan 10/10",
+      "cmd": "str0/undef/class/spend 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "budget+role type admit ladder 10/10",
+      "cmd": "admit/exhaust/overdraft 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "type then numeric scale 10/10",
+      "cmd": "countdown 3\u21920 ladder 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFNUM/IFSTR/IFVARTYPE/IFKIND",
+      "cmd": "HASFORM IFZERO/IFNZ/IFPOS/IFNEG",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "dual budget+role contract 10/10",
+      "cmd": "pos admit zero/neg deny 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "STRTO NUM WRITE NL",
+      "cmd": "disk NUMTO STRTO WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -7130,6 +7130,30 @@
       "title": "Nested IFNUM/IFSTR inside FN steals END (W853 class); bare type-IF in action IF bleeds",
       "detail": "Nested IFSTR+IFNUM in peel_budget and bare IFVARTYPE in soft action IF caused list\u2192soft bleed + unknown END. Sequential CALL is_num/is_str + FN ghost_* helpers required.",
       "repro": "FN peel with nested IFSTR\u2026IFNUM\u2026; soft bare IFVARTYPE \u2192 END leak"
+    },
+    {
+      "id": "W883",
+      "severity": "high",
+      "area": "lang|fn|keyword",
+      "title": "Var named tries is TRIES block opener in FN body scan",
+      "detail": "block_scan_step treats TRIES|RETRY|ATTEMPT as body openers (depth++). LET tries=\u2026 inside FN admit_retry never finds END \u2192 \"FN without END\". Case-insensitive. Rename to try_n/quota_n.",
+      "repro": "FN f\\n  LET tries = 1\\n  IF tries > 0 THEN\\n    \u2026\\n  END\\nEND \u2192 FN without END"
+    },
+    {
+      "id": "W884",
+      "severity": "low",
+      "area": "lang|ifzero",
+      "title": "IFZERO/IFNZ/IFPOS/IFNEG work (positive; first realworld 1489)",
+      "detail": "1489 green. Stickies IFZERO_N IFZERO_VAL IFNZ_N IFPOS_N IFNEG_N. Str \"0\" not zero; undef not zero. spend_try DEC + class_quota healthy/empty/overdraft solid for retry pools.",
+      "repro": "CALL is_zero; CALL is_pos; CALL admit_retry; CALL spend_try"
+    },
+    {
+      "id": "W885",
+      "severity": "low",
+      "area": "lang|ifzero",
+      "title": "str \"0\" and undef are neither zero nor nz (type-strict sign)",
+      "detail": "IFZERO/IFNZ require numeric vars. Str \"0\" fails both; undef fails both. Agents must NUMTO config peels before sign gates (pairs with W880).",
+      "repro": "LET v=\"0\"; IFZERO v \u2192 0; IFNZ v \u2192 0"
     }
   ],
   "workarounds": [
@@ -7270,10 +7294,14 @@
       "id": "WA-ITN",
       "for": "W880+W882",
       "note": "NUMTO+NUMTO_OK for coerce; sequential CALL type probes; no bare IFNUM in action IF"
+    },
+    {
+      "id": "WA-IZQ",
+      "for": "W883",
+      "note": "never name counters tries/retry inside FN; use try_n; FN-wrap IFZERO helpers"
     }
   ],
   "language_gaps": [
-    "SETLINEIN pad past-end + negative index\u21920 (W847/W848); FINDLINEIN exact bag ops positive (W849)",
     "COUNTIN substr vs COUNTLINEIN exact (W850); MOVELINEIN HIT soft/no-op (W851)",
     "IFGT/IFHASLINE cannot nest in IF END framing (W853); IFGTE absent use IFGE (W854)",
     "LPADTO truncates when wider (W856); SUMIN proof not linked in 1.15.930 binary (W857)",
@@ -7284,7 +7312,8 @@
     "IFBIG live 1.15.940 (W868 closed); empty/miss size dual (W871); FN-wrap (W873)",
     "IFEQFILE live 1.15.941 (1486); miss=diff empty=eq (W874); FN-wrap STATUS bare STRTO (W876)",
     "IFJSONHAS live 1.15.942 (1487); KEY glue eats var key (W877); nested END frames (W879)",
-    "IFNUM live 1.15.943 (1488); SYS NUM soft zero (W880); nested type-IF END (W882)"
+    "IFNUM live 1.15.943 (1488); SYS NUM soft zero (W880); nested type-IF END (W882)",
+    "IFZERO live 1.15.948 (1489); TRIES keyword traps var tries (W883); str0/undef type-strict (W885)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7431,9 +7460,14 @@
       "iter": 369,
       "issue": "Nested IFSTR/IFNUM + bare soft type-IFs stole END. SYS NUM softens abc\u21920 OK=1 so deny-nan failed; PRINT+CLEAR_ERR ate LAST before SYS NUM. Fixed NUMTO+NUMTO_OK + sequential FNs.",
       "resolution": "first realworld 1488; document W880\u2013W882"
+    },
+    {
+      "iter": 370,
+      "issue": "FN without END until renamed tries\u2192try_n (TRIES is block opener in block_scan_step). First-try logic green after rename.",
+      "resolution": "first realworld 1489; document W883\u2013W885"
     }
   ],
-  "commit": "46e67a89",
-  "ts": 1786483229,
-  "board_commit": "46e67a89"
+  "commit": "pending",
+  "ts": 1786486271,
+  "board_commit": "pending"
 }
