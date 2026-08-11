@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 370,
-  "program": "programs/realworld/svc_ifzero_retry_quota_board.cubalc",
-  "theme": "IFZERO/IFNZ/IFPOS/IFNEG retry quota sign gates",
-  "version": "1.15.948-usability",
+  "iter": 371,
+  "program": "programs/realworld/svc_ifblank_note_hygiene_board.cubalc",
+  "theme": "IFBLANK/IFNOTBLANK note/label field hygiene gates",
+  "version": "1.15.949-usability",
   "pass": true,
-  "prior_note": "iter 369 IFNUM; this iter first realworld of 1489 IFZERO (MI 950)",
+  "prior_note": "iter 370 IFZERO; this iter first realworld of 1492 IFBLANK (MI 953)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed tries + IFZERO",
+      "cmd": "seed empty + IFBLANK",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFZERO/IFNZ/IFPOS/IFNEG stickies 10/10",
+      "cmd": "IFBLANK/IFNOTBLANK stickies + num dual 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "str0/undef/class/spend 10/10",
+      "cmd": "undef/seed/admit/ws 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "admit/exhaust/overdraft 10/10",
+      "cmd": "field class admit/deny/seed 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "countdown 3\u21920 ladder 10/10",
+      "cmd": "blank\u2192seed\u2192admit ladder 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFZERO/IFNZ/IFPOS/IFNEG",
+      "cmd": "HASFORM IFBLANK/IFNOTBLANK",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "pos admit zero/neg deny 10/10",
+      "cmd": "title/body blank contract 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "disk NUMTO STRTO WRITE NL",
+      "cmd": "disk note STRTO WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -7154,6 +7154,30 @@
       "title": "str \"0\" and undef are neither zero nor nz (type-strict sign)",
       "detail": "IFZERO/IFNZ require numeric vars. Str \"0\" fails both; undef fails both. Agents must NUMTO config peels before sign gates (pairs with W880).",
       "repro": "LET v=\"0\"; IFZERO v \u2192 0; IFNZ v \u2192 0"
+    },
+    {
+      "id": "W886",
+      "severity": "low",
+      "area": "lang|ifblank",
+      "title": "IFBLANK treats pure whitespace as blank; num/0 is NOT blank",
+      "detail": "\"\" and \" \\t\\n \" are blank. Numeric 0 is IFNOTBLANK (not string blank). Undef is blank. Agents must not use IFBLANK for zero-value numeric gates \u2014 that is IFZERO.",
+      "repro": "LET fld=0; IFBLANK fld \u2192 0; IFNOTBLANK fld \u2192 1; LET fld=\" \\t \"; IFBLANK \u2192 1"
+    },
+    {
+      "id": "W887",
+      "severity": "low",
+      "area": "lang|ifblank",
+      "title": "IFBLANK/IFNOTBLANK work (positive; first realworld 1492)",
+      "detail": "1492 green in 1.15.949. Stickies IFBLANK_N IFNOTBLANK_N. seed_if_blank + admit_note solid for ticket note hygiene. First-try green board with FN-wrap.",
+      "repro": "CALL is_blank; CALL is_filled; CALL seed_if_blank; CALL admit_note"
+    },
+    {
+      "id": "W888",
+      "severity": "low",
+      "area": "lang|ifblank",
+      "title": "FN-wrap still required for IFBLANK inside action IF (W853 class)",
+      "detail": "Board uses CALL is_blank/is_filled exclusively. Same END framing discipline as IFZERO/IFNUM. Avoid var name tries (W883).",
+      "repro": "IF LAST_N==1 THEN IFBLANK fld \u2026 END leaks"
     }
   ],
   "workarounds": [
@@ -7299,10 +7323,14 @@
       "id": "WA-IZQ",
       "for": "W883",
       "note": "never name counters tries/retry inside FN; use try_n; FN-wrap IFZERO helpers"
+    },
+    {
+      "id": "WA-IBL",
+      "for": "W886+W888",
+      "note": "FN is_blank/is_filled; seed default-note on blank; never IFBLANK for numeric zero"
     }
   ],
   "language_gaps": [
-    "COUNTIN substr vs COUNTLINEIN exact (W850); MOVELINEIN HIT soft/no-op (W851)",
     "IFGT/IFHASLINE cannot nest in IF END framing (W853); IFGTE absent use IFGE (W854)",
     "LPADTO truncates when wider (W856); SUMIN proof not linked in 1.15.930 binary (W857)",
     "SUMIN LAST_N vs CLEAR_ERR (W859); non-num skip + int AVGIN (W860); SUMIN linked 1.15.933",
@@ -7313,7 +7341,8 @@
     "IFEQFILE live 1.15.941 (1486); miss=diff empty=eq (W874); FN-wrap STATUS bare STRTO (W876)",
     "IFJSONHAS live 1.15.942 (1487); KEY glue eats var key (W877); nested END frames (W879)",
     "IFNUM live 1.15.943 (1488); SYS NUM soft zero (W880); nested type-IF END (W882)",
-    "IFZERO live 1.15.948 (1489); TRIES keyword traps var tries (W883); str0/undef type-strict (W885)"
+    "IFZERO live 1.15.948 (1489); TRIES keyword traps var tries (W883); str0/undef type-strict (W885)",
+    "IFBLANK live 1.15.949 (1492); ws blank num not blank (W886); FN-wrap (W888)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7465,9 +7494,14 @@
       "iter": 370,
       "issue": "FN without END until renamed tries\u2192try_n (TRIES is block opener in block_scan_step). First-try logic green after rename.",
       "resolution": "first realworld 1489; document W883\u2013W885"
+    },
+    {
+      "iter": 371,
+      "issue": "First-try green. Documented num/0 not blank dual and ws blank.",
+      "resolution": "first realworld 1492; document W886\u2013W888"
     }
   ],
-  "commit": "b34a9144",
-  "ts": 1786486271,
-  "board_commit": "b34a9144"
+  "commit": "pending",
+  "ts": 1786487633,
+  "board_commit": "pending"
 }
