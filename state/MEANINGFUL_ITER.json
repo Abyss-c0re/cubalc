@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 875,
-  "version": "1.15.868-usability",
-  "item": "ENSURENEW / NEW OR keep-or-create live instances",
-  "item_id": 875,
-  "title": "ENSURENEW \u00b7 NEW OR \u00b7 ENSURENEW_N 0|1 \u00b7 twin TRYNEW",
-  "commit": "d1a15ab19ded3a39084841cc0699c56dd7b6fcd0",
-  "summary": "ENSURENEW/NEW OR keep live or soft create; mismatch/class miss OK=0; proof 1414 PASS.",
+  "iter": 876,
+  "version": "1.15.869-usability",
+  "item": "ISCLASS / ISA soft instance-of probe + NEEDISA",
+  "item_id": 876,
+  "title": "ISCLASS \u00b7 ISA \u00b7 NEEDISA \u00b7 instance-of without CLASSNAME+EQS",
+  "commit": "43f93da3998bda39ce6b469cc5ca731ac0409a23",
+  "summary": "ISCLASS/ISA soft 0|1 instance-of; NEEDISA fail-fast; proof 1415 PASS.",
   "proofs": [
-    "1414_ensurenew PASS",
-    "1414_cli_ensurenew PASS"
+    "1415_isclass PASS",
+    "1415_cli_isclass PASS"
   ],
-  "when": "2026-08-11T05:44:14Z",
+  "when": "2026-08-11T05:53:56Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "d1a15ab19ded3a39084841cc0699c56dd7b6fcd0",
-  "note": "idempotent object boot without HASOBJ+IF+NEW glue"
+  "sha": "43f93da3998bda39ce6b469cc5ca731ac0409a23",
+  "note": "type gates after ENSURENEW without CLASSNAME+EQS glue"
 }
