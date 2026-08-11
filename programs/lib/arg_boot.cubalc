@@ -1,0 +1,18 @@
+# INCLUDE arg_boot — agent preamble + program-arg contract one-shot
+# Usability: agent_boot + arg_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_ARGS = "0\n1"
+#   DEFAULT NEED_ARG_ANY = "FILE\nHOST"
+#   DEFAULT ARG_GUARD_SOFT = 0
+#   INCLUDE arg_boot
+# Soft arg miss: DEFAULT ARG_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --arg
+# Twin of env_boot (host env) / cap_boot (forms) / cli_session (flags) for CUBALC_ARGn.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_ARGS = ""
+DEFAULT NEED_ARG_ANY = ""
+DEFAULT ARG_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE arg_guard

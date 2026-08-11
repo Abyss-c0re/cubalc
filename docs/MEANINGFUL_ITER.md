@@ -877,6 +877,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 847. ~~**`cli_guard` ALL+ANY**~~ **done** (NEED_FLAGS + NEED_FLAG_ANY · CLI_GUARD_OK · form_guard twin · proof 1387).
 
 848. ~~**`arg_guard` lib**~~ **done** (NEED_ARGS + NEED_ARG_ANY · ARG_GUARD_OK · env_guard twin for CUBALC_ARGn · doctor lib_arg_guard · proof 1388).
+849. ~~**`arg_boot` + `cubalc init --arg`**~~ **done** (agent_boot+arg_guard one-shot · init --arg|--args|--arg-guard catalog n=16 · doctor lib_arg_boot · proof 1389).
 
 ## Tick protocol
 
