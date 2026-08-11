@@ -4991,6 +4991,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"NEW", "oop", "NEW Class instance [args] — construct object (init)"},
       {"TRYNEW", "oop", "TRYNEW|NEW SOFT Class inst — soft miss OK=0 no fatal"},
       {"TRYCLONE", "oop", "TRYCLONE|CLONE SOFT src dst — soft miss/redefine OK=0 no fatal"},
+      {"TRYRENAME", "oop", "TRYRENAME|RENAMEOBJ SOFT old [AS|TO] new — soft miss/redefine OK=0 no fatal"},
+      {"RENAMEOBJ", "oop", "RENAMEOBJ|MOVEOBJ old [AS|TO] new — rename live slot · soft miss"},
       {"SEND", "oop", "SEND obj method [args] — method call · THIS set"},
       {"TRYSEND", "oop", "TRYSEND|SEND SOFT — soft method miss OK=0 sticky LAST_ERR"},
       {"GETF", "oop", "GETF obj field [OR def] — read field · TRYGETF soft"},
