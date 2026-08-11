@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 354,
-  "program": "programs/realworld/svc_pushto_queue_board.cubalc",
-  "theme": "PUSHTO named work bags + FIFO/LIFO + SPLITTO bag hygiene",
-  "version": "1.15.913-usability",
+  "iter": 355,
+  "program": "programs/realworld/svc_mul_coalesce_scale_board.cubalc",
+  "theme": "MUL/DIVBY weight scale + COALESCETO defaults + NTHIN peels",
+  "version": "1.15.916-usability",
   "pass": true,
-  "prior_note": "iter 353 APPENDTO msg; this iter first realworld of 1456 PUSHTO + 1457 HASEMPTY + 1458 SPLITTO/GREPIN",
+  "prior_note": "iter 354 PUSHTO queue; this iter first realworld of 1459 MUL/DIVBY + 1460 COALESCETO/NTHIN",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed + PUSHTO seed",
+      "cmd": "seed + MUL weight *2",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "LIFO PUSHTO/POPFROM/HASINBAG 10/10",
+      "cmd": "MUL/DIVBY/MODBY/ABS/NEG/MULTO 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "empty POP + HASEMPTY/HASDEFINED 10/10",
+      "cmd": "DIVBY0 + COALESCETO empty + NTHIN OR 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "fifo",
-      "cmd": "SHIFTFROM/UNSHIFTTO/DEQUEUEFROM 10/10",
+      "name": "scale",
+      "cmd": "canary weight MUL/CLAMP pipeline 10/10",
       "ok": true,
-      "note": "fifo 10/10"
+      "note": "scale 10/10"
     },
     {
-      "name": "hygiene",
-      "cmd": "SPLITTO/SORTIN/UNIQIN/GREPIN/JOINTO 10/10",
+      "name": "peel",
+      "cmd": "HEADIN/TAILIN/NTHIN bag intact 10/10",
       "ok": true,
-      "note": "hygiene 10/10"
+      "note": "peel 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM PUSHTO\u2026; DEQUEUEFROM alias lag",
+      "cmd": "HASFORM MUL/COALESCETO/NTHIN",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "enqueue/dequeue + REQUIRE",
+      "cmd": "scale+coalesce+peel + REQUIRE",
       "ok": true,
       "note": "gate"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1456/1457/1458 PASS; CLI duals still red",
+      "cmd": "selftest; 1459/1460/1461 PASS; CLI duals still red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -6770,6 +6770,30 @@
       "title": "PUSHTO/POPFROM/SHIFTFROM/LINESIN/HASINBAG work (positive)",
       "detail": "Named work bags: LIFO POPFROM, FIFO SHIFTFROM/UNSHIFTTO, empty POP soft LAST_N=0, HASINBAG exact (not substring). SPLITTO BY sep + SORTIN/UNIQIN/GREPIN/GREPVIN/JOINTO hygiene chain solid for CSV intake.",
       "repro": "PUSHTO work job-a; POPFROM work; SPLITTO csv BY ,"
+    },
+    {
+      "id": "W838",
+      "severity": "med",
+      "area": "lang|clear_err",
+      "title": "CLEAR_ERR after NTHIN/HEADIN clobbers LAST peel value",
+      "detail": "NTHIN bag 9 OR \"miss\"; CLEAR_ERR; SYS EQS LAST \"miss\" fails. Capture LET peel = LAST before CLEAR_ERR. Same class as CLAMP LAST_N (W830). Peels and OR fallbacks must be snapped into vars immediately.",
+      "repro": "NTHIN bag 9 OR miss; CLEAR_ERR; LAST not miss"
+    },
+    {
+      "id": "W839",
+      "severity": "low",
+      "area": "lang|mul",
+      "title": "MUL/DIVBY/ABS/NEG + COALESCETO/NTHIN work (positive)",
+      "detail": "MUL default *2; MUL BY n; DIVBY 0 soft zeros; MUL missing\u21920; COALESCETO_I index or -1; NTHIN OOR OR fallback NTHIN_N=0; HEADIN/TAILIN leave bag intact. Good canary scale + config default surface.",
+      "repro": "MUL weight BY 3; COALESCETO path \"\" OR default; HEADIN samples"
+    },
+    {
+      "id": "W840",
+      "severity": "low",
+      "area": "lang|headin",
+      "title": "HEADIN takes bag only (no count); HEADIN bag 2 is parse error",
+      "detail": "HEADIN bag 2 \u2192 unknown form '2'. Proof 1460 uses bare HEADIN bag. Multi-line head needs TAKE/SYS HEAD or loop NTHIN.",
+      "repro": "HEADIN bag 2 hard-fail; HEADIN bag ok"
     }
   ],
   "workarounds": [
@@ -6898,7 +6922,6 @@
     "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
   ],
   "language_gaps": [
-    "HASFORM lag HASMETHODS/ANYCLASS (W775)",
     "HASFIELDS/HASFIELDANY/HASMETHODANY/HASOBJS preflight (1423-1426)",
     "bare status field keyword collide (W779)",
     "HASOBJS partial N vs OK (W780)",
@@ -6959,10 +6982,14 @@
       "iter": 354,
       "gap": "Named bags close the SYS PUSH/POP gap for in-process queues; block-form IFEMPTY still needs FN trampoline; alias HASFORM lag continues.",
       "want": "IF-safe IFEMPTY; HASFORM lists DEQUEUEFROM/EMPTYTO aliases"
+    },
+    {
+      "iter": 355,
+      "gap": "In-place scale + coalesce is excellent for canary ops; CLEAR_ERR still hostile to LAST peels; HEADIN cannot take N.",
+      "want": "CLEAR_ERR preserve LAST optional; HEADIN bag n multi-line"
     }
   ],
   "issues_faced": [
-    "iter336: pass 9/10 until LET body=LAST before dual SYS HAS (W759)",
     "iter336: HASFORM bare SETMATCHFILE 0; SYS SETMATCHFILE 1 (W757)",
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
     "iter337: CLEAR_ERR LAST='cleared' broke fresh/stale HASLINE/EQS until capture-before-clear (W763)",
@@ -7033,9 +7060,14 @@
       "iter": 354,
       "issue": "IFEMPTY cannot nest in action IF (W835); DEQUEUEFROM HASFORM lag (W836). Board uses HASEMPTY probes and DEQUEUEFROM by name.",
       "resolution": "first realworld 1456+1457+1458; document W835\u2013W837"
+    },
+    {
+      "iter": 355,
+      "issue": "CLEAR_ERR after NTHIN lost OR fallback LAST (W838); form expected LENOF absent but 1461 landed. Fixed capture + tolerate LENOF.",
+      "resolution": "first realworld 1459+1460; document W838\u2013W840"
     }
   ],
-  "commit": "a9597b3d",
-  "ts": 1786457670,
+  "commit": "dbba9b61",
+  "ts": 1786459197,
   "board_commit": "767d4822"
 }

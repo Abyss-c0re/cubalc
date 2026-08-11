@@ -1,0 +1,925 @@
+# svc_mul_coalesce_scale_board.cubalc — MUL/DIVBY weight scale + COALESCETO/NTHIN
+#
+# Real use: canary agents scale weights/budgets in place (MUL/DIVBY/MODBY),
+# pick first non-empty config path (COALESCETO/NVLTO), and peel HEAD/TAIL/NTH
+# samples from latency bags without LET a = a * n / SYS NTH glue.
+# First realworld of 1459 MUL/DIVBY/ABS/NEG (1.15.914+ · MI 921) + 1460
+# COALESCETO/NTHIN/HEADIN/TAILIN (MI 922). Distinct from canary_weight_mul
+# (bag SETMATCH) and svc_toggle_clamp_slo (CLAMP bounds) — this board is
+# *in-place numeric scale + default coalesce + bag peels*.
+#
+#   MUL|MULTO var [BY n] · DIVBY · MODBY · ABS · NEG
+#   COALESCETO|NVLTO dest a OR b OR lit · COALESCETO_I
+#   NTHIN bag i [OR fb] · HEADIN · TAILIN · peels leave bag intact
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_mcs_$$
+#   ./out/cubalc run programs/realworld/svc_mul_coalesce_scale_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|scale|peel|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt MCS_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_MCS_REQUIRE
+#
+# Edges: MUL missing→0; DIVBY 0 soft→0; COALESCETO all empty I=-1;
+#   NTHIN OOR OR fallback; HEADIN no count arg; CLEAR_ERR clobbers LAST after NTHIN;
+#   LENOF may lag (1461); WRITE NL; PRINT clobber
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+NOTE "svc_mul_coalesce_scale_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_mul_coalesce_scale -- boot|pass|soft|scale|peel|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_MCS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "MCS_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET weight = 0
+LET samples = ""
+LET path = ""
+LET peel = ""
+
+ONEOF ACTION "boot", "pass", "soft", "scale", "peel", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-mcs\",\"schema\":\"cubalc.svc_mul_coalesce_scale.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"mcs\",\"want_filter\":\"mul_coalesce_scale\",\"cfg\":{\"surface\":\"MUL,DIVBY,MODBY,ABS,NEG,COALESCETO,NVLTO,NTHIN,HEADIN,TAILIN\",\"contract\":\"canary weight scale + config default coalesce + sample peels\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  LET weight = 5
+  MUL weight
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-mcs"
+  IF LAST_N == 1 THEN
+    IF weight == 10 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET score = 1
+      LET find_n = weight
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot weight"
+      FAIL "boot weight"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score weight note_msg
+  CLEAR_ERR
+END
+
+# pass — MUL/DIVBY/MODBY/ABS/NEG
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET n = 5
+  MUL n
+  CLEAR_ERR
+  IF n == 10 THEN
+    LET score = score + 1
+  END
+  MUL n BY 3
+  CLEAR_ERR
+  IF n == 30 THEN
+    LET score = score + 1
+  END
+  IF MUL_N == 1 THEN
+    LET score = score + 1
+  END
+  DIVBY n 4
+  CLEAR_ERR
+  IF n == 7 THEN
+    LET score = score + 1
+  END
+  LET r = 17
+  MODBY r 5
+  CLEAR_ERR
+  IF r == 2 THEN
+    LET score = score + 1
+  END
+  LET d = -9
+  ABS d
+  CLEAR_ERR
+  IF d == 9 THEN
+    LET score = score + 1
+  END
+  NEG d
+  CLEAR_ERR
+  IF d == -9 THEN
+    LET score = score + 1
+  END
+  LET s = 4
+  MULTO s 2
+  CLEAR_ERR
+  IF s == 8 THEN
+    LET score = score + 1
+  END
+  LET tries = 1
+  MUL tries BY 2
+  INC tries
+  CLAMP tries 0 10
+  CLEAR_ERR
+  IF tries == 3 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "mul_coalesce_scale"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = n
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score n note_msg
+  CLEAR_ERR
+END
+
+# soft — DIVBY 0 · missing MUL · COALESCETO empty
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET z = 10
+  DIVBY z 0
+  CLEAR_ERR
+  IF z == 0 THEN
+    LET score = score + 1
+  END
+  MUL miss BY 5
+  CLEAR_ERR
+  IF miss == 0 THEN
+    LET score = score + 1
+  END
+  LET a = ""
+  LET b = "second"
+  COALESCETO pick a OR b OR "third"
+  CLEAR_ERR
+  SYS EQS pick "second"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF COALESCETO_I == 1 THEN
+    LET score = score + 1
+  END
+  LET e1 = ""
+  LET e2 = ""
+  COALESCETO none e1 OR e2
+  CLEAR_ERR
+  SYS EQS none ""
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF COALESCETO_I == -1 THEN
+    LET score = score + 1
+  END
+  COALESCETO path "" OR "default.txt"
+  CLEAR_ERR
+  SYS EQS path "default.txt"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NVLTO nvl "" OR "ok"
+  CLEAR_ERR
+  SYS EQS nvl "ok"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NTHIN samples 9 OR "miss"
+  LET peel = LAST
+  CLEAR_ERR
+  SYS EQS peel "miss"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = COALESCETO_I
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score path note_msg
+  CLEAR_ERR
+END
+
+# scale — canary weight pipeline
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET weight = 10
+  MUL weight BY 3
+  CLEAR_ERR
+  IF weight == 30 THEN
+    LET score = score + 1
+  END
+  DIVBY weight 2
+  CLEAR_ERR
+  IF weight == 15 THEN
+    LET score = score + 1
+  END
+  MODBY weight 4
+  CLEAR_ERR
+  IF weight == 3 THEN
+    LET score = score + 1
+  END
+  MUL weight BY 10
+  CLAMP weight 0 100
+  CLEAR_ERR
+  IF weight == 30 THEN
+    LET score = score + 1
+  END
+  LET delta = -12
+  ABS delta
+  CLEAR_ERR
+  IF delta == 12 THEN
+    LET score = score + 1
+  END
+  NEG delta
+  CLEAR_ERR
+  IF delta == -12 THEN
+    LET score = score + 1
+  END
+  LET weight = 50
+  MUL weight
+  CLEAR_ERR
+  IF weight == 100 THEN
+    LET score = score + 1
+  END
+  DIVBY weight 5
+  CLEAR_ERR
+  IF weight == 20 THEN
+    LET score = score + 1
+  END
+  LET z = 8
+  DIVBY z 0
+  CLEAR_ERR
+  IF z == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "MUL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET admit_n = 1
+    LET find_n = weight
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score weight note_msg
+  CLEAR_ERR
+END
+
+# peel — HEADIN/TAILIN/NTHIN + bag intact + PUSHTO chain
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET samples = "one
+two
+three"
+  HEADIN samples
+  LET peel = LAST
+  CLEAR_ERR
+  SYS EQS peel "one"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TAILIN samples
+  LET peel = LAST
+  CLEAR_ERR
+  SYS EQS peel "three"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NTHIN samples 1
+  LET peel = LAST
+  CLEAR_ERR
+  SYS EQS peel "two"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF NTHIN_N == 1 THEN
+    LET score = score + 1
+  END
+  NTHIN samples 9 OR "miss"
+  LET peel = LAST
+  CLEAR_ERR
+  SYS EQS peel "miss"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF NTHIN_N == 0 THEN
+    LET score = score + 1
+  END
+  # bag unchanged by peels
+  LINESIN samples
+  IF LAST_N == 3 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HEADIN samples
+  SYS EQS LAST "one"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CLEARSTR work
+  PUSHTO work "job-a"
+  PUSHTO work "job-b"
+  HEADIN work
+  LET peel = LAST
+  CLEAR_ERR
+  SYS EQS peel "job-a"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "NTHIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score peel note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM · LENOF miss
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "MUL"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASFORM "DIVBY"
+  LET weight = LAST_N
+  CLEAR_ERR
+  HASFORM "ABS"
+  LET find_n = LAST_N
+  CLEAR_ERR
+  HASFORM "COALESCETO"
+  LET depth = LAST_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF weight == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF find_n == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF depth == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  HASFORM "NTHIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "HEADIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "TAILIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "NEG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # LENOF may land mid-series (1461) — accept either
+  HASFORM "LENOF"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "mul_coalesce_scale"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — scale + coalesce + peel admit
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET weight = 25
+  MUL weight BY 2
+  CLAMP weight 0 100
+  CLEAR_ERR
+  IF weight == 50 THEN
+    LET score = score + 1
+  END
+  COALESCETO path "" OR "cfg/default.json"
+  CLEAR_ERR
+  SYS EQS path "cfg/default.json"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET samples = "p50
+p95
+p99"
+  HEADIN samples
+  SYS EQS LAST "p50"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TAILIN samples
+  SYS EQS LAST "p99"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NTHIN samples 1
+  SYS EQS LAST "p95"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-mcs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "mul_coalesce_scale"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = weight
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score weight path note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · WRITE NL
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET weight = 3
+  MUL weight BY 3
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF weight == 9 THEN
+    LET score = score + 1
+  END
+  LET body = "keep-me"
+  CLEAR_ERR
+  SYS EQS LAST "cleared"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "mul_coalesce_scale"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "pushto_queue"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  COALESCETO path "" OR "x"
+  SYS EQS path "x"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NTHIN samples 0 OR "none"
+  # samples may be empty
+  IF LAST_N >= 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = weight
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " weight=" weight " path=" path
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "mcs report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS
