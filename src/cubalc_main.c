@@ -9835,6 +9835,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"hint\":\"INCLUDE method_boot agent_boot+method_guard METHOD catalog\"},"
              "{\"id\":\"field_boot\",\"flags\":\"--field|--field-boot|--field-guard|--need-fields\","
              "\"hint\":\"INCLUDE field_boot agent_boot+field_guard FIELD catalog\"},"
+             "{\"id\":\"oop_boot\",\"flags\":\"--oop|--oop-boot|--oop-session|--oop-guard|--need-oop\","
+             "\"hint\":\"INCLUDE oop_boot agent_boot+oop_session OOP catalog\"},"
              "{\"id\":\"from_recipe\",\"flags\":\"--from|--recipe|-F <lib>\","
              "\"hint\":\"any lib DEFAULT knobs + INCLUDE · dual of cubalc recipe\"}"
              "]}\n",
