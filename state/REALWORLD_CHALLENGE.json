@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 331,
-  "program": "programs/realworld/svc_oop_boot_catalog_board.cubalc",
-  "theme": "oop_boot/oop_session fleet full OOP catalog contract",
-  "version": "1.15.858-usability",
+  "iter": 332,
+  "program": "programs/realworld/svc_live_boot_fleet_board.cubalc",
+  "theme": "live_boot/live_session fleet OOP catalog + live instances",
+  "version": "1.15.861-usability",
   "pass": true,
-  "prior_note": "iter 330 class_boot; this iter first realworld 1404 oop_session class+method+field",
+  "prior_note": "iter 331 oop_boot; this iter first realworld 1406 live_session + obj_guard instances",
   "tests": [
     {
       "name": "list",
@@ -15,33 +15,27 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate sob",
+      "cmd": "seed agent plate slv",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "full plane class+method+field",
+      "cmd": "catalog+objs w0/w1/q0",
       "ok": true,
-      "note": "pass OOP=1"
+      "note": "pass LIVE=1"
+    },
+    {
+      "name": "soft_obj",
+      "cmd": "OBJMISS sinks LIVE OOP stays 1",
+      "ok": true,
+      "note": "soft_obj"
     },
     {
       "name": "soft_cls",
-      "cmd": "class soft miss sinks OOP",
+      "cmd": "CLASS miss sinks LIVE objs ok",
       "ok": true,
       "note": "soft_cls"
-    },
-    {
-      "name": "soft_meth",
-      "cmd": "method soft miss sinks OOP",
-      "ok": true,
-      "note": "soft_meth"
-    },
-    {
-      "name": "soft_fld",
-      "cmd": "field soft miss sinks OOP",
-      "ok": true,
-      "note": "soft_fld"
     },
     {
       "name": "hard",
@@ -50,20 +44,26 @@
       "note": "hard"
     },
     {
+      "name": "spawn",
+      "cmd": "NEW w2 then NEED_OBJS gate",
+      "ok": true,
+      "note": "spawn"
+    },
+    {
       "name": "form",
-      "cmd": "HASLIB oop stack HASFORM knobs miss",
+      "cmd": "HASLIB live stack",
       "ok": true,
       "note": "form"
     },
     {
       "name": "gate",
-      "cmd": "plate + soft full plane",
+      "cmd": "plate + soft full live",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + FLDHAVE lines",
+      "cmd": "PRINT clobber + OBJHAVE",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "oop_* PASS; CLI duals still set"
+      "note": "live_* PASS; CLI duals still set"
     }
   ],
   "weaknesses": [
@@ -5952,12 +5952,49 @@
       "title": "hard oop_session miss still exit_code 0 (FAIL sticky)",
       "detail": "Hard CLASS/METHOD/FIELD miss sets last_err via FAIL but process continues/exit_code 0. EXIT n required for shell contracts (W726 class).",
       "repro": "hard nosuch INCLUDE oop_session \u2192 shell 0"
+    },
+    {
+      "id": "W735",
+      "severity": "med",
+      "area": "lang|send",
+      "title": "SEND method body LET LAST / field mutate may not surface to host",
+      "detail": "METHOD ping with LET LAST=\"pong\"; SEND w ping leaves host LAST empty. METHOD bump with LET load=load+1; GETF load stayed 0. Agents need SETF THIS / documented return forms. Live fleet board dropped SEND score requirement.",
+      "repro": "SEND w2 ping; LAST empty; SEND bump; GETF load \u2192 0"
+    },
+    {
+      "id": "W736",
+      "severity": "med",
+      "area": "lang|live",
+      "title": "LIVE_SESSION_OK = OOP_SESSION_OK && OBJ_GUARD_OK",
+      "detail": "Either catalog miss or instance miss zeros LIVE. Soft_obj keeps OOP=1 while LIVE=0; soft_cls keeps OBJ=1 while LIVE=0. Inspect both planes.",
+      "repro": "NEED_OBJS nosuch soft \u2192 LIVE=0 OBJ=0 OOP=1"
+    },
+    {
+      "id": "W737",
+      "severity": "high",
+      "area": "host|vars",
+      "title": "live_boot stack pushes vars_n ~240/256 on board actions",
+      "detail": "live_boot\u2192agent+live_session\u2192oop(class/method/field)+obj_guard + plate_peer. Solo spawn hit vars_n=241. Fat fleet boards near vars_full silent drops risk.",
+      "repro": "run spawn action; plate vars_n near 256"
+    },
+    {
+      "id": "W738",
+      "severity": "low",
+      "area": "lang|hasobj",
+      "title": "HASOBJ exact instance name only",
+      "detail": "HASOBJ w does not match w0. Exact NEW name required before SEND.",
+      "repro": "HASOBJ w \u2192 0; HASOBJ w0 \u2192 1"
+    },
+    {
+      "id": "W739",
+      "severity": "low",
+      "area": "lang|form",
+      "title": "LIVE_SESSION_OK not a HASFORM form",
+      "detail": "HASFORM LIVE_SESSION_OK \u2192 0; use HASLIB live_session or sticky var.",
+      "repro": "HASFORM LIVE_SESSION_OK \u2192 0"
     }
   ],
   "workarounds": [
-    "HASFORM ERRGUIDE before recover paths; rebuild if miss",
-    "FORMTOPICS \"FORMTOPICS\" quoted; LET body=LAST before PRINT after GUIDE",
-    "FORMGUIDE \"FORMHINT\" quoted; LET body=LAST before PRINT after START",
     "START_NEXT_N >= 8 floor; chain START then GUIDE general for playbook",
     {
       "id": "WA-MTR",
@@ -6054,7 +6091,10 @@
     "SYS HASLINE CLASSHAVE for multiline bags not PRINT alone",
     "DEFINE CLASS/METHOD/FIELD before INCLUDE oop_*; LET all NEED_* + *_GUARD_SOFT each re-INCLUDE",
     "On OOP_SESSION_OK=0 inspect CLASS/METHOD/FIELD_GUARD_OK + *MISS bags for root plane",
-    "EXIT n after hard oop miss for shell rc"
+    "EXIT n after hard oop miss for shell rc",
+    "NEW instances before NEED_OBJS gate; LET all NEED_* + soft flags each re-INCLUDE live_*",
+    "On LIVE=0 check OOP_SESSION_OK vs OBJ_GUARD_OK + OBJMISS/CLASSMISS",
+    "Avoid relying on METHOD LET LAST for host shuttles; prefer GETF after SETF THIS"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6187,11 +6227,15 @@
     "OOP_SESSION_OK combines three guards (W730)",
     "Class.method/field exact dots (W731)",
     "oop stack vars pressure (W732)",
-    "HASFORM misses OOP_SESSION_OK (W733)"
+    "HASFORM misses OOP_SESSION_OK (W733)",
+    "live_session oop+obj one-shot (1406)",
+    "live_boot agent_boot+live_session",
+    "LIVE_SESSION_OK dual plane (W736)",
+    "SEND METHOD LAST shuttle weak (W735)",
+    "live stack vars_n pressure (W737)",
+    "HASOBJ exact (W738)"
   ],
   "issues_faced": [
-    "iter304: RELATEDTOPIC mesh board 10/10; first hop fat via NTH+TOPICHINT",
-    "iter304: plate\u2260cap adjacency (W569); HAS substring fa\u2192fat (W571)",
     "iter304: selftest CLI duals still red",
     "iter305: rebuild required for ERRGUIDE (W574); GUIDE+FORMTOPICS already wired",
     "iter305: board 10/10; FORMTOPICS quoted self-name (W576)",
@@ -6239,9 +6283,11 @@
     "iter330: class_boot catalog board 10/10; fixed FAIL LAST_ERR in class/fn/method guards",
     "iter330: FAIL still no halt/exit_code 0 (W726); selftest class_* PASS CLI duals red",
     "iter331: oop_boot catalog board 11/11 green; triple plane soft miss paths",
-    "iter331: selftest oop_session/oop_boot PASS; CLI duals still set"
+    "iter331: selftest oop_session/oop_boot PASS; CLI duals still set",
+    "iter332: live_boot fleet board 11/11; SEND/METHOD LAST shuttle weak (W735); vars_n~240",
+    "iter332: selftest live_session/live_boot PASS; CLI duals still set"
   ],
-  "commit": "dfe8ddd2",
-  "ts": "2026-08-11T03:49:36Z",
-  "board_commit": "dfe8ddd2"
+  "commit": "",
+  "ts": "2026-08-11T04:15:32Z",
+  "board_commit": ""
 }
