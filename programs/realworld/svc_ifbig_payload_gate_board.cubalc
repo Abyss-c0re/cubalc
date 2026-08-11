@@ -1,0 +1,937 @@
+# svc_ifbig_payload_gate_board.cubalc — IFBIG/IFSMALL/IFSIZE payload gates
+#
+# Real use: intake agents admit artifacts by byte size (min payload,
+# max empty, inclusive band) without SYS SIZE + IF glue. First realworld
+# of 1484 IFBIG/IFSMALL/IFSIZE (1.15.940 · MI ~940; was unlinked as
+# 1483/W868). Distinct from payload_size_gate (older surface) — this
+# board is *content-branch path size for artifact admit*.
+#
+#   IFBIG · IFSMALL · IFSIZE · IFSIZE_BYTES · IFSIZE_MIN/MAX · stickies
+#   FN-wrap (W853)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ibp_$$
+#   ./out/cubalc run programs/realworld/svc_ifbig_payload_gate_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|peel|scale|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt IBP_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_IBP_REQUIRE
+#
+# Edges: empty not big / is small max0; miss not big + is small;
+#   IFBIG high min fails; IFSIZE band; default IFBIG min1; WRITE NL
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+FN is_big
+  IFBIG p minb
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN is_big_def
+  IFBIG p
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN is_small
+  IFSMALL p maxb
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN is_small_def
+  IFSMALL p
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN in_size
+  IFSIZE p minb maxb
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN admit_payload
+  IFBIG p minb
+    IFSIZE p minb maxb
+      LET state = "admit"
+    ELSE
+      LET state = "deny-oversize"
+    END
+  ELSE
+    LET state = "deny-undersize"
+  END
+END
+
+NOTE "svc_ifbig_payload_gate_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_ifbig_payload_gate -- boot|pass|soft|peel|scale|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_IBP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "IBP_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "payloads"
+LET pay_dir = LAST
+SYS JOIN pay_dir "bundle.bin"
+LET pay_path = LAST
+SYS JOIN pay_dir "empty.bin"
+LET empty_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET path = ""
+LET msg = ""
+LET peeld = ""
+LET p = ""
+LET minb = 0
+LET maxb = 0
+LET state = ""
+LET depth = 0
+LET weight = 0
+LET saved = 0
+LET nbytes = 0
+
+ONEOF ACTION "boot", "pass", "soft", "peel", "scale", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-ibp\",\"schema\":\"cubalc.svc_ifbig_payload_gate.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"ibp\",\"want_filter\":\"ifbig_payload_gate\",\"cfg\":{\"surface\":\"IFBIG,IFSMALL,IFSIZE,IFSIZE_BYTES\",\"contract\":\"path size branches for payload admit\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  SYS MKDIR pay_dir
+  CLEAR_ERR
+  SYS WRITE pay_path "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  CLEAR_ERR
+  LET p = pay_path
+  LET minb = 1
+  CALL is_big
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ibp"
+  IF LAST_N == 1 THEN
+    IF ok_v == 1 THEN
+      IF IFBIG_N == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+        LET find_n = IFSIZE_BYTES
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot sticky"
+        FAIL "boot sticky"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot big"
+      FAIL "boot big"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# pass — IFBIG/IFSMALL/IFSIZE core 10/10
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR pay_dir
+  CLEAR_ERR
+  SYS WRITE pay_path "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  SYS WRITE empty_path ""
+  CLEAR_ERR
+  LET p = pay_path
+  LET minb = 1
+  CALL is_big
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFBIG_N == 1 THEN
+    LET score = score + 1
+  END
+  LET nbytes = IFSIZE_BYTES
+  IF nbytes > 0 THEN
+    LET score = score + 1
+  END
+  CALL is_big_def
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET minb = 999999
+  CALL is_big
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET p = empty_path
+  LET minb = 1
+  CALL is_big
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF IFSIZE_BYTES == 0 THEN
+    LET score = score + 1
+  END
+  CALL is_small_def
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = pay_path
+  LET minb = 1
+  LET maxb = 10000
+  CALL in_size
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFSIZE_N == 1 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score nbytes note_msg
+  CLEAR_ERR
+END
+
+# soft — miss · tight band · small max0
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR pay_dir
+  CLEAR_ERR
+  SYS WRITE pay_path "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  SYS WRITE empty_path ""
+  CLEAR_ERR
+  LET p = "/no/such/cubalc_ibp_zz"
+  LET minb = 1
+  CALL is_big
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL is_small_def
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = empty_path
+  LET maxb = 0
+  CALL is_small
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = pay_path
+  LET maxb = 0
+  CALL is_small
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET minb = 1
+  LET maxb = 2
+  CALL in_size
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET maxb = 10000
+  CALL in_size
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFSIZE_MIN == 1 THEN
+    LET score = score + 1
+  END
+  IF IFSIZE_MAX == 10000 THEN
+    LET score = score + 1
+  END
+  LET minb = 8
+  LET maxb = 64
+  CALL admit_payload
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET minb = 100
+  CALL admit_payload
+  SYS EQS state "deny-undersize"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# peel — multi payload class
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR pay_dir
+  CLEAR_ERR
+  SYS JOIN pay_dir "tiny.bin"
+  LET tiny = LAST
+  SYS JOIN pay_dir "mid.bin"
+  LET mid = LAST
+  SYS JOIN pay_dir "fat.bin"
+  LET fat = LAST
+  SYS WRITE tiny "xx"
+  SYS WRITE mid "xxxxxxxxxxxxxxxx"
+  SYS WRITE fat "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  CLEAR_ERR
+  LET p = tiny
+  LET minb = 8
+  CALL is_big
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET p = mid
+  CALL is_big
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = fat
+  LET minb = 32
+  CALL is_big
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET nbytes = IFSIZE_BYTES
+  IF nbytes >= 32 THEN
+    LET score = score + 1
+  END
+  LET minb = 8
+  LET maxb = 32
+  LET p = mid
+  CALL in_size
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = fat
+  CALL in_size
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET minb = 8
+  LET maxb = 128
+  CALL admit_payload
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET maxb = 40
+  CALL admit_payload
+  SYS EQS state "deny-oversize"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifbig_payload_gate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = nbytes
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score nbytes note_msg
+  CLEAR_ERR
+END
+
+# scale — threshold ladder
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR pay_dir
+  CLEAR_ERR
+  SYS WRITE pay_path "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  CLEAR_ERR
+  LET p = pay_path
+  LET minb = 1
+  CALL is_big
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET minb = 16
+  CALL is_big
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET minb = 32
+  CALL is_big
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET minb = 33
+  CALL is_big
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET minb = 1
+  LET maxb = 32
+  CALL in_size
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET maxb = 31
+  CALL in_size
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET minb = 8
+  LET maxb = 64
+  CALL admit_payload
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET minb = 64
+  CALL admit_payload
+  SYS EQS state "deny-undersize"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "IFSIZE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "IFBIG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFSMALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFSIZE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFSIZE_BYTES"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "IFBIG_N"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "IFSMALL_N"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "IFSIZE_N"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifbig_payload_gate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "IFBIG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — admit mid payload 8..4096
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR pay_dir
+  CLEAR_ERR
+  SYS WRITE pay_path "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  CLEAR_ERR
+  LET p = pay_path
+  LET minb = 8
+  LET maxb = 4096
+  CALL admit_payload
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL is_big
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL in_size
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET nbytes = IFSIZE_BYTES
+  IF nbytes == 32 THEN
+    LET score = score + 1
+  END
+  SYS WRITE empty_path ""
+  CLEAR_ERR
+  LET p = empty_path
+  CALL admit_payload
+  SYS EQS state "deny-undersize"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF require_hit > 0 THEN
+    IF score < 4 THEN
+      LET miss = 1
+      LET note_msg = "gate require"
+      FAIL "gate require"
+      CLEAR_ERR
+    END
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ibp"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF IFBIG_N >= 0 THEN
+    LET score = score + 1
+  END
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = nbytes
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  SYS CAT "gate:" score ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score nbytes note_msg
+  CLEAR_ERR
+END
+
+# probe
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR pay_dir
+  CLEAR_ERR
+  SYS WRITE pay_path "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  CLEAR_ERR
+  LET p = pay_path
+  LET minb = 1
+  CALL is_big
+  LET saved = IFBIG_N
+  LET nbytes = IFSIZE_BYTES
+  PRINT "probe-big" saved nbytes
+  CLEAR_ERR
+  IF saved == 1 THEN
+    LET score = score + 1
+  END
+  STRTO saved
+  SYS WRITE val_path saved
+  CLEAR_ERR
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS CAT "ibp host=" host_s " role=" role_s " big=" saved
+  LET row = LAST
+  CLEAR_ERR
+  SYS WRITE meta_path row
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "big=1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "IFSMALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF nbytes == 32 THEN
+    LET score = score + 1
+  END
+  IF score >= 5 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = nbytes
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS CAT "{\"ok\":true,\"agent\":\"svc-ibp\",\"op\":\"" op "\",\"hit\":" hit ",\"miss\":" miss ",\"score\":" score ",\"admit_n\":" admit_n ",\"bag_n\":" bag_n ",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"note\":\"" note_msg "\",\"require_hit\":" require_hit "}"
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+IF miss == 1 THEN
+  IF hit == 0 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

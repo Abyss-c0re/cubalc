@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 365,
-  "program": "programs/realworld/svc_iffresh_cache_ttl_board.cubalc",
-  "theme": "IFFRESH/IFSTALE cache TTL admit + stale rebuild",
-  "version": "1.15.938-usability",
+  "iter": 366,
+  "program": "programs/realworld/svc_ifbig_payload_gate_board.cubalc",
+  "theme": "IFBIG/IFSMALL/IFSIZE payload byte-size admit gates",
+  "version": "1.15.940-usability",
   "pass": true,
-  "prior_note": "iter 364 IFENV; this iter first realworld of 1482 IFFRESH/IFSTALE",
+  "prior_note": "iter 365 IFFRESH; this iter first realworld of 1484 IFBIG (W868 closed)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed cache + IFFRESH 3600",
+      "cmd": "seed payload + IFBIG",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFFRESH/IFSTALE miss duals 10/10",
+      "cmd": "IFBIG/IFSMALL/IFSIZE stickies 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "rebuild keep admit IFBIG absent 10/10",
+      "cmd": "miss empty tight band admit 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "multi-entry + rebuild c 10/10",
+      "cmd": "tiny/mid/fat class 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "TTL ladder 10/10",
+      "cmd": "threshold ladder 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFFRESH/IFSTALE",
+      "cmd": "HASFORM IFBIG/IFSMALL/IFSIZE",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "fresh admit deny miss 9/9",
+      "cmd": "8..4096 admit empty deny 9/9",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "sticky WRITE NL",
+      "cmd": "BYTES WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -69,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1482 flaky rebuild assert; IFBIG unlinked; CLI duals red",
+      "cmd": "selftest; 1484 PASS; CLI duals still red",
       "ok": false,
-      "note": "board green; CLI duals still red"
+      "note": "proofs green; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -7034,6 +7034,30 @@
       "title": "IFFRESH/IFSTALE work (positive; FN-wrap)",
       "detail": "Cache TTL admit + stale rebuild board first-try green after dropping bare IFFRESH inside action IF. Stickies AGE/LIMIT. Good lease/cache surface.",
       "repro": "CALL is_fresh; CALL rebuild_if_stale; CALL admit_cache"
+    },
+    {
+      "id": "W871",
+      "severity": "low",
+      "area": "lang|ifbig",
+      "title": "IFBIG default min=1; empty is small not big; miss is small",
+      "detail": "IFBIG path (no min) treats size\u22651 as big. Empty file IFSIZE_BYTES=0 not big; IFSMALL default max0 true. Missing path not big + is small. IFSIZE inclusive band with sticky MIN/MAX/BYTES.",
+      "repro": "IFBIG empty \u2192 0; IFSMALL empty \u2192 1; IFBIG miss \u2192 0"
+    },
+    {
+      "id": "W872",
+      "severity": "low",
+      "area": "lang|ifbig",
+      "title": "IFBIG/IFSMALL/IFSIZE work (positive; W868 closed)",
+      "detail": "1484 green in 1.15.940. FN-wrap required. Nested IFBIG+IFSIZE admit/deny-oversize/deny-undersize solid for intake. First-try green board.",
+      "repro": "CALL is_big; CALL in_size; CALL admit_payload"
+    },
+    {
+      "id": "W873",
+      "severity": "med",
+      "area": "lang|ifbig",
+      "title": "IFBIG still needs FN-wrap inside action IF (W853 class)",
+      "detail": "Same END framing as IFENV/IFFRESH. Board uses CALL helpers exclusively. Var thresholds minb/maxb work as IFBIG p minb.",
+      "repro": "IF LAST_N==1 THEN IFBIG p 1 \u2026 END leaks"
     }
   ],
   "workarounds": [
@@ -7240,7 +7264,8 @@
     "SUMIN LAST_N vs CLEAR_ERR (W859); non-num skip + int AVGIN (W860); SUMIN linked 1.15.933",
     "IFFILE/IFDIR kind strict (W862); IFENV proof flaky needs name (W863)",
     "IFENV presence-only + FN-wrap (W865/W867); 1480 green W863 closed",
-    "IFBIG unlinked 1.15.937 (W868); IFFRESH miss/stale dual (W869)"
+    "IFBIG unlinked 1.15.937 (W868); IFFRESH miss/stale dual (W869)",
+    "IFBIG live 1.15.940 (W868 closed); empty/miss size dual (W871); FN-wrap (W873)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7367,9 +7392,14 @@
       "iter": 365,
       "issue": "Removed invalid CALL and bare IFFRESH inside pass IF. Official 1482 proof still flaky on nested rebuild assert in some trees; board rebuild under STATE green. IFBIG unlinked (W868).",
       "resolution": "first realworld 1482; document W868\u2013W870"
+    },
+    {
+      "iter": 366,
+      "issue": "First-try green. W868 IFBIG now live via 1484; used FN-wrap throughout.",
+      "resolution": "first realworld 1484; document W871\u2013W873"
     }
   ],
-  "commit": "f82fe9a7",
-  "ts": 1786477206,
-  "board_commit": "f82fe9a7"
+  "commit": "61dd0bf1",
+  "ts": 1786478649,
+  "board_commit": "61dd0bf1"
 }
