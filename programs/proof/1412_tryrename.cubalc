@@ -1,0 +1,108 @@
+# TRYRENAME / RENAMEOBJ SOFT — soft rename without fatal on miss/redefine
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell tmp 1 10 0
+SETF tmp age 3
+
+# hard RENAMEOBJ still works
+RENAMEOBJ tmp cell_a
+ASSERT OK == 1
+ASSERT RENAMEOBJ_N == 1
+ASSERT LAST == "cell_a"
+ASSERT RENAME_FROM == "tmp"
+HASOBJ cell_a
+ASSERT LAST_N == 1
+GETF cell_a energy
+ASSERT LAST_N == 10
+
+# TRYRENAME success
+TRYRENAME cell_a twin
+ASSERT OK == 1
+ASSERT TRYRENAME_N == 1
+ASSERT RENAMEOBJ_N == 1
+ASSERT LAST == "twin"
+ASSERT RENAME_FROM == "cell_a"
+HASOBJ twin
+ASSERT LAST_N == 1
+HASOBJ cell_a
+ASSERT LAST_N == 0
+GETF twin age
+ASSERT LAST_N == 3
+
+# TRYRENAME missing source — soft
+TRYRENAME missing_zz ghost
+ASSERT OK == 0
+ASSERT TRYRENAME_N == 0
+SYS HASI LAST_ERR "unknown"
+ASSERT LAST_N == 1
+HASOBJ ghost
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# prepare redefine target
+NEW Cell held 1 1 0
+
+# TRYRENAME redefine dst — soft (hard would fatal)
+TRYRENAME twin held
+ASSERT OK == 0
+ASSERT TRYRENAME_N == 0
+SYS HASI LAST_ERR "redefine"
+ASSERT LAST_N == 1
+# source still under old name
+HASOBJ twin
+ASSERT LAST_N == 1
+HASOBJ held
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# RENAMEOBJ SOFT keyword redefine
+RENAMEOBJ SOFT twin held
+ASSERT OK == 0
+CLEAR_ERR
+
+# RENAMEOBJ SOFT success
+RENAMEOBJ SOFT twin spare
+ASSERT OK == 1
+HASOBJ spare
+ASSERT LAST_N == 1
+HASOBJ twin
+ASSERT LAST_N == 0
+GETF spare energy
+ASSERT LAST_N == 10
+
+# SOFTRENAME alias success
+SOFTRENAME spare spare2
+ASSERT OK == 1
+HASOBJ spare2
+ASSERT LAST_N == 1
+
+# MOVEOBJ SOFT success + AS sugar
+MOVEOBJ SOFT spare2 AS named
+ASSERT OK == 1
+HASOBJ named
+ASSERT LAST_N == 1
+
+# TRYMOVEOBJ alias
+TRYMOVEOBJ named TO final
+ASSERT OK == 1
+HASOBJ final
+ASSERT LAST_N == 1
+GETF final age
+ASSERT LAST_N == 3
+
+# no-op same name via soft path
+TRYRENAME final final
+ASSERT OK == 1
+ASSERT TRYRENAME_N == 1
+
+# hard RENAMEOBJ redefine still fails at process level (cli proof)
+HASFORM "TRYRENAME"
+ASSERT LAST_N == 1
+HASFORM "RENAMEOBJ"
+ASSERT LAST_N == 1
+
+PRINT "1412_tryrename ok"
+PASS

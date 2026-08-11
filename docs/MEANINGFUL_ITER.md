@@ -901,6 +901,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 870. ~~**`service_session` / `service_boot` + `cubalc init --service`**~~ **done** (full_session+live_session · SERVICE_SESSION_OK · catalog n=34 · proof 1409).
 871. ~~**`TRYNEW` / `NEW SOFT`**~~ **done** (soft instance create · OK=0 LAST_ERR on miss class/redefine · proof 1410).
 872. ~~**`TRYCLONE` / `CLONE SOFT`**~~ **done** (soft clone miss/redefine · OK=0 LAST_ERR · twin TRYNEW · proof 1411).
+873. ~~**`TRYRENAME` / `RENAMEOBJ SOFT`**~~ **done** (soft rename miss/redefine · OK=0 LAST_ERR · twin TRYCLONE · proof 1412).
 
 
 ## Tick protocol

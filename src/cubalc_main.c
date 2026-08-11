@@ -4771,6 +4771,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_trynew", "programs/proof/1410_cli_trynew.sh", "TRYNEW soft + hard NEW dual"},
       {"tryclone", "programs/proof/1411_tryclone.cubalc", "TRYCLONE/CLONE SOFT soft redefine/miss"},
       {"cli_tryclone", "programs/proof/1411_cli_tryclone.sh", "TRYCLONE soft + hard CLONE dual"},
+      {"tryrename", "programs/proof/1412_tryrename.cubalc", "TRYRENAME/RENAMEOBJ SOFT soft redefine/miss"},
+      {"cli_tryrename", "programs/proof/1412_cli_tryrename.sh", "TRYRENAME soft + hard RENAME dual"},
       {"cli_form_guard", "programs/proof/1386_cli_form_guard.sh", "form_guard lib + CLI + formgate any"},
       {"cap_boot", "programs/proof/1325_cap_boot.cubalc", "INCLUDE cap_boot agent_boot+form_guard"},
       {"cli_init_cap", "programs/proof/1325_cli_init_cap.sh", "cubalc init --cap scaffold + doctor lib_cap_boot"},

@@ -2049,6 +2049,7 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"TRYCLONE", "TRYCLONE|CLONE SOFT src dst — soft miss/redefine OK=0 LAST_ERR (twin TRYNEW)"},
       {"COPYOBJ", "COPYOBJ alias of CLONEOBJ"},
       {"RENAMEOBJ", "RENAMEOBJ|MOVEOBJ old [AS|TO] new — rename live slot in place · soft miss"},
+      {"TRYRENAME", "TRYRENAME|RENAMEOBJ SOFT old [AS|TO] new — soft miss/redefine OK=0 LAST_ERR (twin TRYCLONE)"},
       {"MOVEOBJ", "MOVEOBJ alias of RENAMEOBJ"},
       {"HASFIELD", "HASFIELD obj|Class field — soft 0|1 before GETF"},
       {"LISTFIELDS", "LISTFIELDS Class|obj — field name bag · NFIELDS"},

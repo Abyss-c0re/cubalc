@@ -16996,24 +16996,41 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* RENAMEOBJ|MOVEOBJ|RENOBJ old [AS|TO] new — rename live object slot in place.
-   * Soft miss old OK=0. Live destination → fatal redefine. Dead destination
-   * name cleared so pool recycle stays unique. Updates THIS if receiver.
+  /* RENAMEOBJ|MOVEOBJ|TRYRENAME old [AS|TO] new — rename live object slot in place.
+   * Soft miss old always OK=0. Hard RENAMEOBJ: live destination → fatal redefine.
+   * TRYRENAME|RENAMEOBJ SOFT|MOVE SOFT: redefine also soft (OK=0 LAST_ERR) —
+   * twin of TRYCLONE for promote-after-clone pipelines without HASOBJ+IF glue.
+   * Dead destination name cleared so pool recycle stays unique. Updates THIS.
    * Usability: promote temp/proto names after CLONE without re-NEW. */
-  if (kw(&L->cur, "RENAMEOBJ") || kw(&L->cur, "MOVEOBJ") ||
+  if (kw(&L->cur, "TRYRENAME") || kw(&L->cur, "SOFTRENAME") ||
+      kw(&L->cur, "RENAMEOBJSOFT") || kw(&L->cur, "TRYMOVEOBJ") ||
+      kw(&L->cur, "SOFTMOVEOBJ") || kw(&L->cur, "TRYRENOBJ") ||
+      kw(&L->cur, "RENAMEOBJ") || kw(&L->cur, "MOVEOBJ") ||
       kw(&L->cur, "RENOBJ") || kw(&L->cur, "OBJRENAME") ||
       kw(&L->cur, "RENAME_OBJ") || kw(&L->cur, "MVOBJ") ||
       kw(&L->cur, "OBJMOVE") || kw(&L->cur, "ALIASOBJ")) {
     char oname[48], nname[48], oldn[48];
     ObjInst *ob;
     ClassDef *cd;
-    int i;
+    int i, soft = 0;
+    char op0[32];
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    if (strcmp(op0, "TRYRENAME") == 0 || strcmp(op0, "SOFTRENAME") == 0 ||
+        strcmp(op0, "RENAMEOBJSOFT") == 0 || strcmp(op0, "TRYMOVEOBJ") == 0 ||
+        strcmp(op0, "SOFTMOVEOBJ") == 0 || strcmp(op0, "TRYRENOBJ") == 0)
+      soft = 1;
     lex_next(L);
-    if (oop_read_name(vm, L, oname, sizeof oname, "RENAMEOBJ old") < 0)
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPTIONAL") || kw(&L->cur, "MAYBE") ||
+                  kw(&L->cur, "OPT"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_read_name(vm, L, oname, sizeof oname, soft ? "TRYRENAME old" : "RENAMEOBJ old") < 0)
       return -1;
     if (kw(&L->cur, "AS") || kw(&L->cur, "TO") || kw(&L->cur, "INTO"))
       lex_next(L);
-    if (oop_read_name(vm, L, nname, sizeof nname, "RENAMEOBJ new") < 0)
+    if (oop_read_name(vm, L, nname, sizeof nname, soft ? "TRYRENAME new" : "RENAMEOBJ new") < 0)
       return -1;
     ob = oop_find_obj(vm, oname);
     if (!ob) {
@@ -17022,9 +17039,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", 0);
       vm->last_n = 0;
       var_set_num(vm, "RENAMEOBJ_N", 0);
+      var_set_num(vm, "TRYRENAME_N", 0);
       var_set_num(vm, "OK", 0);
       var_set_str(vm, "LAST_ERR", "RENAMEOBJ: unknown object");
       var_set_str(vm, "ERR", "RENAMEOBJ: unknown object");
+      if (vm->trace) fprintf(vm->trace, "# TRYRENAME soft miss %s\n", oname);
       bump(vm);
       return 1;
     }
@@ -17035,12 +17054,31 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", 1);
       vm->last_n = 1;
       var_set_num(vm, "RENAMEOBJ_N", 1);
+      if (soft) var_set_num(vm, "TRYRENAME_N", 1);
       var_set_num(vm, "OK", 1);
       bump(vm);
       return 1;
     }
     /* destination live already? */
     if (oop_find_obj(vm, nname)) {
+      if (soft) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "RENAMEOBJ_N", 0);
+        var_set_num(vm, "TRYRENAME_N", 0);
+        var_set_num(vm, "OK", 0);
+        {
+          char msg[96];
+          snprintf(msg, sizeof msg, "RENAMEOBJ: redefine %s", nname);
+          var_set_str(vm, "LAST_ERR", msg);
+          var_set_str(vm, "ERR", msg);
+        }
+        if (vm->trace) fprintf(vm->trace, "# TRYRENAME soft redefine %s -> %s\n", oname, nname);
+        bump(vm);
+        return 1;
+      }
       snprintf(vm->err, sizeof vm->err, "RENAMEOBJ destination live %s", nname);
       fail(vm, vm->err);
       return -1;
@@ -17071,7 +17109,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "LAST_N", 1);
     vm->last_n = 1;
     var_set_num(vm, "RENAMEOBJ_N", 1);
+    if (soft) var_set_num(vm, "TRYRENAME_N", 1);
     var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# %s %s -> %s\n", soft ? "TRYRENAME" : "RENAMEOBJ", oname, nname);
     bump(vm);
     return 1;
   }
