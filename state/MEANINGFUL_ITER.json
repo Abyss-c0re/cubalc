@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 887,
-  "version": "1.15.880-usability",
-  "item": "HASOBJS / NEEDOBJS multi live-object soft/hard gates",
-  "item_id": 887,
-  "title": "HASOBJS · NEEDOBJS · OBJMISS · HASCLASSES twin for instances",
-  "commit": "502be068227f73946fe85ed59d0128ba4d507cb4",
-  "summary": "HASOBJS soft all live objs + OBJMISS; NEEDOBJS hard; proof 1426 PASS.",
+  "iter": 888,
+  "version": "1.15.881-usability",
+  "item": "HASOBJANY / NEEDOBJANY any-of multi live-object gates",
+  "item_id": 888,
+  "title": "HASOBJANY · NEEDOBJANY · OBJHAVE · HASOBJS twin",
+  "commit": "aeb554ab822748d9c97e154ac5c1d0e6c8433fea",
+  "summary": "HASOBJANY soft any live + OBJHAVE/MISS; NEEDOBJANY hard; proof 1427 PASS.",
   "proofs": [
-    "1426_hasobjs PASS",
-    "1426_cli_hasobjs PASS"
+    "1427_hasobjany PASS",
+    "1427_cli_hasobjany PASS"
   ],
-  "when": "2026-08-11T07:53:38Z",
+  "when": "2026-08-11T08:04:53Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "502be068227f73946fe85ed59d0128ba4d507cb4",
-  "note": "live_session contracts without N x HASOBJ IF glue"
+  "sha": "aeb554ab822748d9c97e154ac5c1d0e6c8433fea",
+  "note": "optional peer/worker OR without N x HASOBJ IF glue; avoid ANYOBJ=PICKOBJ"
 }
