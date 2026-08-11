@@ -1,0 +1,1012 @@
+# svc_ifeqfile_plate_sync_board.cubalc — IFEQFILE/IFDIFFILE plate content sync
+#
+# Real use: replica/local plate content equality for promote & drift admit
+# without shell cmp or SYS EQFILE+IF glue. First realworld of 1486
+# IFEQFILE/IFDIFFILE/IFSAMEFILE (1.15.941 · MI 947). Distinct from
+# fleet_drift / mesh_keydiffp (bag/key surface) — this board is
+# *byte-identical plate pair branches for sync/skip/copy*.
+#
+#   IFEQFILE · IFDIFFILE · IFSAMEFILE · EQFILE · EQFILE_BYTES · stickies
+#   FN-wrap (W853) · copy-if-differ promote · empty-empty equal · miss=diff
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ifs_$$
+#   ./out/cubalc run programs/realworld/svc_ifeqfile_plate_sync_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|peel|scale|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt IFS_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_IFS_REQUIRE
+#
+# Edges: miss → not equal + is diff; empty==empty; same skip; differ copy;
+#   FN-wrap required; WRITE NL; PRINT_JSON
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+FN files_eq
+  IFEQFILE left right
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN files_same
+  IFSAMEFILE left right
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN files_diff
+  IFDIFFILE left right
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+# promote: copy left→right only when content differs (or miss)
+FN sync_if_diff
+  IFDIFFILE left right
+    SYS COPY left right
+    LET state = "copied"
+    LET ok_v = 1
+  ELSE
+    LET state = "skip-same"
+    LET ok_v = 0
+  END
+END
+
+# admit only when pair is byte-identical (synced)
+FN admit_synced
+  IFEQFILE left right
+    LET state = "admit"
+    LET ok_v = 1
+  ELSE
+    LET state = "deny-drift"
+    LET ok_v = 0
+  END
+END
+
+NOTE "svc_ifeqfile_plate_sync_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_ifeqfile_plate_sync -- boot|pass|soft|peel|scale|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_IFS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "IFS_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "plates"
+LET plate_dir = LAST
+SYS JOIN plate_dir "local.json"
+LET local_path = LAST
+SYS JOIN plate_dir "replica.json"
+LET replica_path = LAST
+SYS JOIN plate_dir "empty_a"
+LET empty_a = LAST
+SYS JOIN plate_dir "empty_b"
+LET empty_b = LAST
+SYS JOIN plate_dir "ghost.json"
+LET ghost_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET path = ""
+LET msg = ""
+LET left = ""
+LET right = ""
+LET state = ""
+LET nbytes = 0
+LET depth = 0
+LET saved = 0
+
+ONEOF ACTION "boot", "pass", "soft", "peel", "scale", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-ifs\",\"schema\":\"cubalc.svc_ifeqfile_plate_sync.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"ifs\",\"want_filter\":\"ifeqfile_plate_sync\",\"cfg\":{\"surface\":\"IFEQFILE,IFDIFFILE,IFSAMEFILE,EQFILE,EQFILE_BYTES\",\"contract\":\"byte-identical plate pair branches for sync/skip\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  SYS MKDIR plate_dir
+  CLEAR_ERR
+  SYS WRITE local_path "{\"rev\":1,\"ok\":true,\"site\":\"local\"}"
+  SYS WRITE replica_path "{\"rev\":1,\"ok\":true,\"site\":\"local\"}"
+  CLEAR_ERR
+  LET left = local_path
+  LET right = replica_path
+  CALL files_eq
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ifs"
+  IF LAST_N == 1 THEN
+    IF ok_v == 1 THEN
+      IF IFEQFILE_N == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+        LET find_n = EQFILE_BYTES
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot sticky"
+        FAIL "boot sticky"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot eq"
+      FAIL "boot eq"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# pass — IFEQFILE/IFDIFFILE/IFSAMEFILE core 10/10
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR plate_dir
+  CLEAR_ERR
+  SYS WRITE local_path "{\"rev\":1,\"ok\":true}"
+  SYS WRITE replica_path "{\"rev\":1,\"ok\":true}"
+  SYS WRITE empty_a ""
+  SYS WRITE empty_b ""
+  CLEAR_ERR
+  LET left = local_path
+  LET right = replica_path
+  CALL files_eq
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFEQFILE_N == 1 THEN
+    LET score = score + 1
+  END
+  IF EQFILE == 1 THEN
+    LET score = score + 1
+  END
+  IF EQFILE_BYTES > 0 THEN
+    LET score = score + 1
+  END
+  CALL files_same
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL files_diff
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  SYS WRITE replica_path "{\"rev\":2,\"ok\":true}"
+  CLEAR_ERR
+  CALL files_eq
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF EQFILE == 0 THEN
+    LET score = score + 1
+  END
+  CALL files_diff
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFDIFFILE_N == 1 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 10
+    LET nbytes = EQFILE_BYTES
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score nbytes note_msg
+  CLEAR_ERR
+END
+
+# soft — miss · empty · drift copy
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR plate_dir
+  CLEAR_ERR
+  SYS WRITE local_path "{\"rev\":1}"
+  SYS WRITE replica_path "{\"rev\":9}"
+  SYS WRITE empty_a ""
+  SYS WRITE empty_b ""
+  CLEAR_ERR
+  # miss right → not equal
+  LET left = local_path
+  LET right = "/no/such/cubalc_ifs_zz"
+  CALL files_eq
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  # miss → is diff
+  CALL files_diff
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # empty == empty
+  LET left = empty_a
+  LET right = empty_b
+  CALL files_eq
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # empty == empty → not diff
+  CALL files_diff
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  # both miss → not equal (soft)
+  LET left = "/no/such/cubalc_ifs_a"
+  LET right = "/no/such/cubalc_ifs_b"
+  CALL files_eq
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL files_diff
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # sync_if_diff: differ → copy
+  LET left = local_path
+  LET right = replica_path
+  CALL sync_if_diff
+  SYS EQS state "copied"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # after copy → equal
+  CALL files_eq
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # sync again → skip-same
+  CALL sync_if_diff
+  SYS EQS state "skip-same"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # admit_synced after sync
+  CALL admit_synced
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# peel — multi plate class (tiny / mid / fat content)
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR plate_dir
+  CLEAR_ERR
+  SYS JOIN plate_dir "tiny_a.json"
+  LET tiny_a = LAST
+  SYS JOIN plate_dir "tiny_b.json"
+  LET tiny_b = LAST
+  SYS JOIN plate_dir "mid_a.json"
+  LET mid_a = LAST
+  SYS JOIN plate_dir "mid_b.json"
+  LET mid_b = LAST
+  SYS JOIN plate_dir "fat_a.json"
+  LET fat_a = LAST
+  SYS JOIN plate_dir "fat_b.json"
+  LET fat_b = LAST
+  SYS WRITE tiny_a "{}"
+  SYS WRITE tiny_b "{}"
+  SYS WRITE mid_a "{\"k\":\"mid\",\"n\":42}"
+  SYS WRITE mid_b "{\"k\":\"mid\",\"n\":42}"
+  SYS WRITE fat_a "{\"k\":\"fat\",\"blob\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+  SYS WRITE fat_b "{\"k\":\"fat\",\"blob\":\"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\"}"
+  CLEAR_ERR
+  LET left = tiny_a
+  LET right = tiny_b
+  CALL files_eq
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET left = mid_a
+  LET right = mid_b
+  CALL files_eq
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF EQFILE_BYTES > 10 THEN
+    LET score = score + 1
+  END
+  LET left = fat_a
+  LET right = fat_b
+  CALL files_eq
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL files_diff
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL sync_if_diff
+  SYS EQS state "copied"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL files_eq
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET nbytes = EQFILE_BYTES
+  IF nbytes > 40 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifeqfile_plate_sync"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = nbytes
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score nbytes note_msg
+  CLEAR_ERR
+END
+
+# scale — content ladder: same → drift → heal → re-admit
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR plate_dir
+  CLEAR_ERR
+  SYS WRITE local_path "{\"rev\":1,\"stage\":\"alpha\"}"
+  SYS WRITE replica_path "{\"rev\":1,\"stage\":\"alpha\"}"
+  CLEAR_ERR
+  LET left = local_path
+  LET right = replica_path
+  CALL admit_synced
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # introduce drift
+  SYS WRITE replica_path "{\"rev\":2,\"stage\":\"beta\"}"
+  CLEAR_ERR
+  CALL admit_synced
+  SYS EQS state "deny-drift"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL files_diff
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # heal via sync
+  CALL sync_if_diff
+  SYS EQS state "copied"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL admit_synced
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # bump local, re-drift
+  SYS WRITE local_path "{\"rev\":3,\"stage\":\"gamma\"}"
+  CLEAR_ERR
+  CALL files_eq
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL sync_if_diff
+  SYS EQS state "copied"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL files_same
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "IFEQFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM surface
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "IFEQFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFDIFFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFSAMEFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "WHENEQFILE"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "WHENDIFFILE"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "IFEQFILE_N"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "EQFILE"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifeqfile_plate_sync"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "IFEQFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "IFDIFFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — promote admit only when synced; deny drift; empty pair admit
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR plate_dir
+  CLEAR_ERR
+  SYS WRITE local_path "{\"gate\":1}"
+  SYS WRITE replica_path "{\"gate\":1}"
+  SYS WRITE empty_a ""
+  SYS WRITE empty_b ""
+  CLEAR_ERR
+  LET left = local_path
+  LET right = replica_path
+  CALL admit_synced
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE replica_path "{\"gate\":99}"
+  CLEAR_ERR
+  CALL admit_synced
+  SYS EQS state "deny-drift"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL sync_if_diff
+  SYS EQS state "copied"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL admit_synced
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # empty pair admit
+  LET left = empty_a
+  LET right = empty_b
+  CALL admit_synced
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # miss pair deny
+  LET left = local_path
+  LET right = ghost_path
+  CALL admit_synced
+  SYS EQS state "deny-drift"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # ghost miss → diff true
+  CALL files_diff
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # require_hit soft gate (env optional)
+  IF require_hit >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "byte-identical"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  SYS CAT "gate:" score ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# probe — WRITE NL · REPORT · NUM shuttle · sticky bytes
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR plate_dir
+  CLEAR_ERR
+  SYS WRITE local_path "{\"probe\":1,\"n\":7}"
+  SYS WRITE replica_path "{\"probe\":1,\"n\":7}"
+  CLEAR_ERR
+  LET left = local_path
+  LET right = replica_path
+  CALL files_eq
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET nbytes = EQFILE_BYTES
+  IF nbytes > 0 THEN
+    LET score = score + 1
+  END
+  SYS CAT "eq_bytes=" nbytes " eq=" EQFILE " hit=" IFEQFILE_N
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE report_path body
+  CLEAR_ERR
+  SYS READ report_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "eq_bytes="
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET saved = nbytes
+  STRTO saved
+  SYS WRITE val_path saved
+  CLEAR_ERR
+  SYS READ val_path
+  SYS NUM
+  IF OK == 1 THEN
+    IF LAST_N == nbytes THEN
+      LET score = score + 1
+    END
+  END
+  CLEAR_ERR
+  SYS WRITE meta_path "ifs_probe"
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "ifs_probe"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # WRITE without trailing NL (W5 class)
+  SYS WRITE meta_path "no_nl_end"
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "no_nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # capture before PRINT_JSON (W4 class)
+  LET saved = nbytes
+  PRINT_JSON saved score
+  CLEAR_ERR
+  IF saved == nbytes THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ifs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # differ sticky after probe mutate
+  SYS WRITE replica_path "{\"probe\":2}"
+  CLEAR_ERR
+  CALL files_diff
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = saved
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score saved note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+# settle plate
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS CAT "{\"ok\":true,\"agent\":\"svc-ifs\",\"op\":\"" op "\",\"hit\":" hit ",\"miss\":" miss ",\"score\":" score ",\"admit_n\":" admit_n ",\"bag_n\":" bag_n ",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"note\":\"" note_msg "\",\"require_hit\":" require_hit "}"
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " score=" score " note=" note_msg " admit=" admit_n
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+STATUS
+CLEAR_ERR
+
+IF miss == 1 THEN
+  IF hit == 0 THEN
+    EXIT 1 note_msg
+  END
+END
+
+NOTE "svc_ifeqfile_plate_sync_board: done"
+PASS

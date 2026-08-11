@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 366,
-  "program": "programs/realworld/svc_ifbig_payload_gate_board.cubalc",
-  "theme": "IFBIG/IFSMALL/IFSIZE payload byte-size admit gates",
-  "version": "1.15.940-usability",
+  "iter": 367,
+  "program": "programs/realworld/svc_ifeqfile_plate_sync_board.cubalc",
+  "theme": "IFEQFILE/IFDIFFILE/IFSAMEFILE plate content sync gates",
+  "version": "1.15.942-usability",
   "pass": true,
-  "prior_note": "iter 365 IFFRESH; this iter first realworld of 1484 IFBIG (W868 closed)",
+  "prior_note": "iter 366 IFBIG; this iter first realworld of 1486 IFEQFILE (MI 947)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed payload + IFBIG",
+      "cmd": "seed identical plates + IFEQFILE",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFBIG/IFSMALL/IFSIZE stickies 10/10",
+      "cmd": "IFEQFILE/IFDIFFILE/IFSAMEFILE stickies 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "miss empty tight band admit 10/10",
+      "cmd": "miss/empty/copy-if-diff/skip-same 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "tiny/mid/fat class 10/10",
+      "cmd": "tiny\u00b7mid\u00b7fat plate class 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "threshold ladder 10/10",
+      "cmd": "admit-drift-heal ladder 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFBIG/IFSMALL/IFSIZE",
+      "cmd": "HASFORM IFEQFILE/IFDIFFILE/IFSAMEFILE",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "8..4096 admit empty deny 9/9",
+      "cmd": "synced admit empty admit miss deny 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "BYTES WRITE NL",
+      "cmd": "BYTES WRITE NL NUM STRTO",
       "ok": true,
       "note": "probe"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1484 PASS; CLI duals still red",
+      "cmd": "selftest; proofs green; CLI duals still red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -7058,6 +7058,30 @@
       "title": "IFBIG still needs FN-wrap inside action IF (W853 class)",
       "detail": "Same END framing as IFENV/IFFRESH. Board uses CALL helpers exclusively. Var thresholds minb/maxb work as IFBIG p minb.",
       "repro": "IF LAST_N==1 THEN IFBIG p 1 \u2026 END leaks"
+    },
+    {
+      "id": "W874",
+      "severity": "low",
+      "area": "lang|ifeqfile",
+      "title": "IFDIFFILE true on miss (any side); both-miss also differ",
+      "detail": "Missing path is never equal: IFEQFILE\u21920 IFDIFFILE\u21921. Both missing also IFDIFFILE true. Empty files are equal (EQFILE_BYTES=0). Useful for replica promote (copy-if-diff seeds missing replica) but agents must not treat miss as content-drift alone.",
+      "repro": "IFDIFFILE local /no/such \u2192 1; IFEQFILE empty_a empty_b \u2192 1"
+    },
+    {
+      "id": "W875",
+      "severity": "low",
+      "area": "lang|ifeqfile",
+      "title": "IFEQFILE/IFDIFFILE/IFSAMEFILE work (positive; first realworld 1486)",
+      "detail": "1486 green in 1.15.941+. Stickies IFEQFILE_N EQFILE EQFILE_BYTES IFDIFFILE_N. IFSAMEFILE alias of IFEQFILE. FN-wrap required. copy-if-diff + admit-synced solid for plate promote.",
+      "repro": "CALL files_eq; CALL files_diff; CALL sync_if_diff; CALL admit_synced"
+    },
+    {
+      "id": "W876",
+      "severity": "med",
+      "area": "lang|ifeqfile",
+      "title": "IFEQFILE still needs FN-wrap inside action IF (W853 class)",
+      "detail": "Same END framing as IFBIG/IFENV/IFFRESH. Board uses CALL helpers exclusively. STATUS takes no status-string args (STATUS alone stamps cubalc.status.v1). WRITE num needs STRTO for VAL shuttle.",
+      "repro": "IF LAST_N==1 THEN IFEQFILE left right \u2026 END leaks; STATUS \"ok\" \u2192 unknown form ok"
     }
   ],
   "workarounds": [
@@ -7183,74 +7207,14 @@
     "CSV/newline bags for method priority lists",
     "REQUIRE LIB \"hold_seed\" quoted",
     "LET call_or=CALL_OR; LET ret_n=LAST_N immediately after TRYCALL/TRYSEND OR",
-    "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
+    "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings",
+    {
+      "id": "WA-IFS",
+      "for": "W876",
+      "note": "FN files_eq/files_diff/sync_if_diff/admit_synced; STATUS bare; STRTO before WRITE val_path"
+    }
   ],
   "language_gaps": [
-    "bare status field keyword collide (W779)",
-    "HASOBJS partial N vs OK (W780)",
-    "HASFNS/HASFNANY/HASOBJANY runbook+slot admit (1429/1432/1427)",
-    "HASFNS partial N vs OK (W784)",
-    "HASFORM lag ALLFNS/ANYFN/OBJANY (W786)",
-    "method_guard+field_guard dual Class.method/field preflight (1428/1430)",
-    "re-INCLUDE LET knobs for guard re-eval (W789)",
-    "GUARD_OK requires ALL when BOTH NEED sets non-empty (W790)",
-    "obj_guard+class_guard dual live/CLASS preflight (1434/1435)",
-    "re-INCLUDE LET knobs for obj/class guards (W793)",
-    "OBJ_GUARD_OK ALL+ANY coupling (W794)",
-    "CALLANY/TRYCALLANY first-defined FN dispatch (1438)",
-    "CALLANY string RET LAST dual ASSERT vs LET (W798)",
-    "CALLANY LAST_N capture before EQS (W799)",
-    "SENDANY/TRYSENDANY first-existing method dispatch (1439)",
-    "SENDANY LAST_N capture before EQS (W805)",
-    "TRYSENDANY soft obj and method miss (W804)",
-    "CALL OR / SEND OR soft plugin defaults (1441/1442)",
-    "OR fallback string LET vs hit RET (W808)",
-    "capture CALL_OR/SEND_OR/LAST_N before CLEAR_ERR (W810)",
-    {
-      "iter": 347,
-      "gap": "CALLANY/SENDANY multi-plugin OR is excellent for ops priority chains, but string RET from hit paths is unusable in agents \u2014 forces FN/METHOD name gates + numeric contracts only. Single-name SENDANY also awkward vs SEND OR.",
-      "want": "Hit RET strings in LAST like soft OR fallbacks; allow SENDANY single method token"
-    },
-    {
-      "iter": 348,
-      "gap": "Host CLASS floor is solid for deploy contracts, but CLASS redefine silent-fail and REQUIRE LIB non-executing are footguns; agents need INCLUDE ONCE + -I dual documented in one place.",
-      "want": "CLASS redefine sticky err with tip; REQUIRE LIB optional EXECUTE/LOAD alias that includes"
-    },
-    {
-      "iter": 349,
-      "gap": "RETRY/ATTEMPT is excellent for flaky hooks but unusable nested in IF without FN trampoline; PASS/FAIL inside RETRY collide with block stack. TIMEIT same class.",
-      "want": "Block stack that allows RETRY/TIMEIT inside IF without END theft; document FN pattern in COOKBOOK"
-    },
-    {
-      "iter": 350,
-      "gap": "TRY/CATCH+REQUIRE OK is the right ops recovery story, but block nesting still forces FN trampolines and REQUIRE OK exit_code field lies relative to shell/ok.",
-      "want": "IF-safe TRY blocks; exit_code mirrors shell on REQUIRE OK miss"
-    },
-    {
-      "iter": 351,
-      "gap": "IFERR+INC is the right error-budget story but still needs FN trampoline; TOGGLE/CLAMP proof shipped before runtime.",
-      "want": "IF-safe IFERR blocks; land 1453 forms in binary with selftest green"
-    },
-    {
-      "iter": 352,
-      "gap": "SETMIN seed semantics: missing vs 0 are different; agents trip on LET x=0 before SETMIN. CLAMP LAST_N fragile under CLEAR_ERR.",
-      "want": "SETMIN first-write always adopts sample when unset; document seed rules; LAST_N sticky across CLEAR_ERR for clamp ret"
-    },
-    {
-      "iter": 353,
-      "gap": "In-place string mutation is solid; HASFORM lags some aliases (EMPTYTO). PUSHTO bag is the natural next realworld once stable.",
-      "want": "HASFORM lists all aliases; realworld PUSHTO intake board"
-    },
-    {
-      "iter": 354,
-      "gap": "Named bags close the SYS PUSH/POP gap for in-process queues; block-form IFEMPTY still needs FN trampoline; alias HASFORM lag continues.",
-      "want": "IF-safe IFEMPTY; HASFORM lists DEQUEUEFROM/EMPTYTO aliases"
-    },
-    {
-      "iter": 355,
-      "gap": "In-place scale + coalesce is excellent for canary ops; CLEAR_ERR still hostile to LAST peels; HEADIN cannot take N.",
-      "want": "CLEAR_ERR preserve LAST optional; HEADIN bag n multi-line"
-    },
     {
       "iter": 356,
       "gap": "Named-var string probes+peels close SYS LEFT/BEFORE gaps for path admit; AFTER miss empty vs BEFORE keep is easy to misuse.",
@@ -7265,7 +7229,8 @@
     "IFFILE/IFDIR kind strict (W862); IFENV proof flaky needs name (W863)",
     "IFENV presence-only + FN-wrap (W865/W867); 1480 green W863 closed",
     "IFBIG unlinked 1.15.937 (W868); IFFRESH miss/stale dual (W869)",
-    "IFBIG live 1.15.940 (W868 closed); empty/miss size dual (W871); FN-wrap (W873)"
+    "IFBIG live 1.15.940 (W868 closed); empty/miss size dual (W871); FN-wrap (W873)",
+    "IFEQFILE live 1.15.941 (1486); miss=diff empty=eq (W874); FN-wrap STATUS bare STRTO (W876)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7397,9 +7362,14 @@
       "iter": 366,
       "issue": "First-try green. W868 IFBIG now live via 1484; used FN-wrap throughout.",
       "resolution": "first realworld 1484; document W871\u2013W873"
+    },
+    {
+      "iter": 367,
+      "issue": "First draft: STATUS \"ok\" note_msg unknown form (STATUS is report-only). probe 9/10 until STRTO before WRITE VAL. Then green.",
+      "resolution": "first realworld 1486; document W874\u2013W876; STATUS bare + PASS/EXIT miss"
     }
   ],
-  "commit": "61dd0bf1",
-  "ts": 1786478649,
-  "board_commit": "61dd0bf1"
+  "commit": "pending",
+  "ts": 1786480227,
+  "board_commit": "pending"
 }
