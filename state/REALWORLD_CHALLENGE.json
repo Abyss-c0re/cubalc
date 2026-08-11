@@ -7575,7 +7575,7 @@
       "resolution": "first realworld 1494 + lang fix block_scan_step; document W892\u2013W894"
     }
   ],
-  "commit": "pending",
+  "commit": "7442f46d",
   "ts": 1786491255,
-  "board_commit": "pending"
+  "board_commit": "7442f46d"
 }
