@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 882,
-  "version": "1.15.875-usability",
-  "item": "HASCLASSANY / NEEDCLASSANY any-of multi CLASS gates",
-  "item_id": 882,
-  "title": "HASCLASSANY \u00b7 NEEDCLASSANY \u00b7 CLASSHAVE \u00b7 HASCLASSES twin",
-  "commit": "aea4f8d2c030ac2fff136fddb8f490610af2257d",
-  "summary": "HASCLASSANY soft any CLASS defined + CLASSHAVE/MISS; NEEDCLASSANY hard; proof 1421 PASS.",
+  "iter": 883,
+  "version": "1.15.876-usability",
+  "item": "HASMETHODS / NEEDMETHODS multi method soft/hard gates",
+  "item_id": 883,
+  "title": "HASMETHODS · NEEDMETHODS · METHODMISS · HASCLASSES twin for methods",
+  "commit": "cbb233f457ca70e22d0a13e62dc59ef2ef193b9a",
+  "summary": "HASMETHODS soft all methods on Class|obj + METHODMISS; NEEDMETHODS hard; proof 1422 PASS.",
   "proofs": [
-    "1421_hasclassany PASS",
-    "1421_cli_hasclassany PASS"
+    "1422_hasmethods PASS",
+    "1422_cli_hasmethods PASS"
   ],
-  "when": "2026-08-11T06:53:58Z",
+  "when": "2026-08-11T07:18:29Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "aea4f8d2c030ac2fff136fddb8f490610af2257d",
-  "note": "optional plugin class OR without N x HASCLASS IF glue"
+  "sha": "cbb233f457ca70e22d0a13e62dc59ef2ef193b9a",
+  "note": "agent SEND contracts without N x HASMETHOD IF glue; TICK method name safe"
 }
