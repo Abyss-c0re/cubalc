@@ -1,20 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 867,
-  "version": "1.15.860-usability",
-  "item": "live_session + live_boot + cubalc init --live",
-  "item_id": 867,
-  "title": "live_session \u00b7 live_boot \u00b7 LIVE_SESSION_OK \u00b7 init --live \u00b7 doctor",
-  "commit": "ab8ff795531f1e4ba4d216471f3abd290c4480d7",
-  "summary": "oop_session+obj_guard LIVE_SESSION_OK; init --live n=33; proof 1406 PASS; thrash restore.",
+  "iter": 868,
+  "version": "1.15.861-usability",
+  "item": "HARDFAIL + guard hard paths",
+  "item_id": 868,
+  "title": "HARDFAIL \u00b7 FATAL \u00b7 guards halt exit 1 \u00b7 no run -s",
+  "commit": "54e9531ba90c558d4519fb7bad1bd80608f0ef84",
+  "summary": "HARDFAIL sticky+halt exit 1; *guard hard paths; FAIL soft dual; proof 1407 PASS.",
   "proofs": [
-    "1406_live_session PASS",
-    "1406_live_boot PASS",
-    "1406_cli_live_session PASS",
-    "1406_cli_init_live PASS"
+    "1407_hardfail PASS",
+    "1407_cli_hardfail PASS"
   ],
-  "when": "2026-08-11T04:05:49Z",
+  "when": "2026-08-11T04:14:34Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "ab8ff795531f1e4ba4d216471f3abd290c4480d7",
-  "note": "full live OOP plane \u00b7 catalog + NEW instances one INCLUDE before SEND"
+  "sha": "54e9531ba90c558d4519fb7bad1bd80608f0ef84",
+  "note": "agents get real hard contract exits without CUBALC_STRICT"
 }
