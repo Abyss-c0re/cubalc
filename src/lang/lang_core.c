@@ -1380,7 +1380,9 @@ int cubalc_lang_block_scan_step(Lex *L, int *depth, int allow_until){
       kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||
       kw(&L->cur,"TIMEIT")||kw(&L->cur,"BENCH")||kw(&L->cur,"ELAPSED")||
       kw(&L->cur,"TIMING")||kw(&L->cur,"MEASURE")||
-      kw(&L->cur,"RETRY")||kw(&L->cur,"ATTEMPT")||kw(&L->cur,"TRIES")){
+      kw(&L->cur,"RETRY")||kw(&L->cur,"ATTEMPT")||kw(&L->cur,"TRIES")||
+      kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"WITHCLEANUP")||
+      kw(&L->cur,"ENSURE")){
     (*depth)++;
     lex_next(L);
     return 0;

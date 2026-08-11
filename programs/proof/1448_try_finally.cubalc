@@ -1,0 +1,73 @@
+# TRY … FINALLY … END — always-run cleanup (temp files / locks)
+
+HOLD_FLASH 1
+
+# success path still runs FINALLY
+LET cleaned = 0
+LET body_ran = 0
+TRY
+  LET body_ran = 1
+  PASS
+FINALLY
+  LET cleaned = 1
+END
+ASSERT body_ran == 1
+ASSERT cleaned == 1
+ASSERT FINALLY_N == 1
+
+# soft FAIL in body still cleans
+LET cleaned = 0
+TRY
+  FAIL "soft body"
+FINALLY
+  LET cleaned = 1
+END
+ASSERT cleaned == 1
+CLEAR_ERR
+
+# bare TRY without FINALLY still works
+TRY
+  LET x = 7
+END
+ASSERT x == 7
+ASSERT FINALLY_N == 0
+
+# GUARD alias
+LET cleaned = 0
+GUARD
+  LET y = 1
+FINALLY
+  LET cleaned = cleaned + 1
+END
+ASSERT y == 1
+ASSERT cleaned == 1
+
+# nested IF inside TRY + cleanup
+LET cleaned = 0
+TRY
+  IF 1
+    LET z = 3
+  END
+FINALLY
+  LET cleaned = 1
+END
+ASSERT z == 3
+ASSERT cleaned == 1
+
+# CLEANUP alias of FINALLY
+LET cleaned = 0
+TRY
+  LET w = 2
+CLEANUP
+  LET cleaned = 1
+END
+ASSERT w == 2
+ASSERT cleaned == 1
+
+HASFORM "TRY"
+ASSERT LAST_N == 1
+HASFORM "FINALLY"
+ASSERT LAST_N == 1
+
+PRINT "1448_try_finally ok"
+PASS

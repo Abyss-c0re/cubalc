@@ -24974,6 +24974,144 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (kw(&L->cur,"END")) lex_next(L);
     bump(vm); return 1;
   }
+  /* TRY … [FINALLY …] END — always run FINALLY after body (cleanup).
+   * Aliases: GUARD|WITHCLEANUP|ENSURE. Body EXIT/RET/BREAK still runs cleanup.
+   * Usability: temp files/locks without duplicate RM on every success/fail path. */
+  if (kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"WITHCLEANUP")||
+      kw(&L->cur,"ENSURE")||kw(&L->cur,"TRYFINALLY")||kw(&L->cur,"PROTECTED")){
+    int aln = L->cur.line;
+    Lex try_start, fin_start;
+    int depth = 1;
+    int has_finally = 0;
+    int body_rc = 0, fin_rc = 0;
+    int saved_halt = 0, saved_return = 0, saved_break = 0, saved_continue = 0;
+    int saved_fatal = 0, saved_exit = 0;
+    lex_next(L);
+    skip_nl(L);
+    try_start = *L;
+    while (L->cur.kind != TK_EOF && depth > 0) {
+      if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+        lex_next(L);
+        if (kw(&L->cur,"IF")) lex_next(L);
+        continue;
+      }
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+          kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+          kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||
+          kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"BENCH")||
+          kw(&L->cur,"RETRY")||kw(&L->cur,"ATTEMPT")||kw(&L->cur,"TRIES")||
+          kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"WITHCLEANUP")||
+          kw(&L->cur,"ENSURE"))
+        depth++;
+      else if ((kw(&L->cur,"FINALLY")||kw(&L->cur,"CLEANUP")||kw(&L->cur,"ALWAYS")||
+                kw(&L->cur,"AFTERALL")) && depth == 1) {
+        has_finally = 1;
+        break;
+      } else if (kw(&L->cur,"END")) {
+        depth--;
+        if (depth == 0) break;
+      }
+      lex_next(L);
+    }
+    if (depth > 1 || (depth == 1 && L->cur.kind == TK_EOF && !has_finally)) {
+      char ebuf[160];
+      snprintf(ebuf, sizeof ebuf,
+               "TRY without END line %d — TRY … [FINALLY …] END", aln);
+      fail(vm, ebuf); return -1;
+    }
+        /* run try body until FINALLY|CLEANUP|ALWAYS|AFTERALL|END (or halt/fatal) */
+    {
+      Lex body = try_start;
+      body_rc = 0;
+      while (!vm->fatal && !vm->halt) {
+        if (cubalc_lang_check_timeout(vm, body.cur.line)) { body_rc = -1; break; }
+        skip_nl(&body);
+        if (body.cur.kind == TK_EOF) break;
+        if (kw(&body.cur, "END") || kw(&body.cur, "FINALLY") ||
+            kw(&body.cur, "CLEANUP") || kw(&body.cur, "ALWAYS") ||
+            kw(&body.cur, "AFTERALL"))
+          break;
+        if (vm->break_loop || vm->continue_loop || vm->return_fn || vm->halt) break;
+        {
+          int r = parse_form(vm, &body);
+          if (r < 0) { body_rc = -1; break; }
+          if (r == 0) break;
+        }
+        if (vm->break_loop || vm->continue_loop || vm->return_fn || vm->halt) break;
+      }
+      if (vm->fatal) body_rc = -1;
+    }
+    saved_halt = vm->halt;
+    saved_exit = vm->exit_code;
+    saved_return = vm->return_fn;
+    saved_break = vm->break_loop;
+    saved_continue = vm->continue_loop;
+    saved_fatal = vm->fatal;
+    /* allow FINALLY to run even if body halted/fatal */
+    vm->halt = 0;
+    vm->return_fn = 0;
+    vm->break_loop = 0;
+    vm->continue_loop = 0;
+    if (saved_fatal) vm->fatal = 0;
+
+    if (has_finally) {
+      /* consume FINALLY|CLEANUP|ALWAYS|AFTERALL */
+      lex_next(L);
+      skip_nl(L);
+      fin_start = *L;
+      depth = 1;
+      while (L->cur.kind != TK_EOF && depth > 0) {
+        if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+          lex_next(L);
+          if (kw(&L->cur,"IF")) lex_next(L);
+          continue;
+        }
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+            kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+            kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||
+            kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"BENCH")||
+            kw(&L->cur,"RETRY")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||
+            kw(&L->cur,"WITHCLEANUP")||kw(&L->cur,"ENSURE"))
+          depth++;
+        else if (kw(&L->cur,"END")) {
+          depth--;
+          if (depth == 0) break;
+        }
+        lex_next(L);
+      }
+      if (depth != 0) {
+        char ebuf[160];
+        snprintf(ebuf, sizeof ebuf,
+                 "FINALLY without END line %d — TRY … FINALLY … END", aln);
+        fail(vm, ebuf); return -1;
+      }
+      {
+        Lex fbody = fin_start;
+        fin_rc = exec_stmts_until(vm, &fbody, "END", NULL);
+      }
+    } else {
+      /* no finally — L sits on END */
+    }
+    if (kw(&L->cur,"END")) lex_next(L);
+
+    /* restore body control; keep finally fatal if it failed harder */
+    if (saved_fatal && !vm->fatal) vm->fatal = 1;
+    if (saved_halt) {
+      vm->halt = 1;
+      vm->exit_code = saved_exit;
+    }
+    if (saved_return) vm->return_fn = 1;
+    if (saved_break) vm->break_loop = 1;
+    if (saved_continue) vm->continue_loop = 1;
+
+    var_set_num(vm, "FINALLY_N", has_finally ? 1 : 0);
+    var_set_num(vm, "TRY_N", 1);
+    if (vm->fatal) return -1;
+    if (body_rc < 0 && saved_fatal) return -1;
+    /* non-fatal body_rc -1 only if fatal which we handled */
+    bump(vm);
+    return 1;
+  }
   if (kw(&L->cur,"IF")){
     lex_next(L);
     /* chain: IF c [THEN] ... ELIF c [THEN] ... ELSE ... END
@@ -25065,7 +25203,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       }
     }
   }
-  if (kw(&L->cur,"END")||kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")||kw(&L->cur,"THEN")){
+  if (kw(&L->cur,"END")||kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")||kw(&L->cur,"THEN")||
+      kw(&L->cur,"FINALLY")||kw(&L->cur,"CLEANUP")||kw(&L->cur,"ALWAYS")||kw(&L->cur,"AFTERALL")){
     return 0; /* stop marker for nested bodies */
   }
 
