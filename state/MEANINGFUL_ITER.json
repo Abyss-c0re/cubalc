@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 950,
-  "version": "1.15.944-usability",
-  "item": "IFZERO / IFNZ / IFPOS / IFNEG",
-  "item_id": 950,
-  "title": "IFZERO \u00b7 IFNZ \u00b7 IFPOS \u00b7 IFNEG \u00b7 numeric sign branches",
-  "commit": "00f179d0",
-  "summary": "Numeric ==0/!=0/>0/<0 branches; no IFEQN/IFGT glue; proof 1489 PASS.",
+  "iter": 951,
+  "version": "1.15.945-usability",
+  "item": "IFCANREAD / IFCANWRITE / IFCANEXEC",
+  "item_id": 951,
+  "title": "IFCANREAD \u00b7 IFCANWRITE \u00b7 IFCANEXEC \u00b7 path access branches",
+  "commit": "175abe25",
+  "summary": "Path R_OK/W_OK/X_OK branches; no SYS CANREAD+IF glue; proof 1490 PASS.",
   "proofs": [
-    "1489_ifzero_ifnz_ifpos_ifneg PASS",
-    "1488_ifnum regression PASS"
+    "1490_ifcanread_ifcanwrite PASS",
+    "1489_ifzero regression PASS"
   ],
-  "when": "2026-08-11T21:20:43Z",
+  "when": "2026-08-11T21:30:27Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "00f179d0d5d68d06be27ff5b272e145996997444",
-  "note": "retry/counter gates without IFEQN n 0 glue"
+  "sha": "175abe256659d1259a8685ec77d5fd077199ea4d",
+  "note": "pre-flight plate I/O without access probe glue"
 }
