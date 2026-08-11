@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 920,
-  "version": "1.15.913-usability",
-  "item": "SPLITTO / JOINTO / GREPIN / SORTIN / UNIQIN vars",
-  "item_id": 920,
-  "title": "SPLITTO \u00b7 JOINTO \u00b7 GREPIN \u00b7 SORTIN \u00b7 UNIQIN \u00b7 bag hygiene in place",
-  "commit": "95fb36cf",
-  "summary": "In-place split/join/filter/sort/dedupe on named bag vars; no LET=SYS glue; proof 1458 PASS.",
+  "iter": 921,
+  "version": "1.15.914-usability",
+  "item": "MUL / DIVBY / MODBY / ABS / NEG vars",
+  "item_id": 921,
+  "title": "MUL \u00b7 DIVBY \u00b7 MODBY \u00b7 ABS \u00b7 NEG \u00b7 in-place numeric scale",
+  "commit": "80d3db22",
+  "summary": "In-place mul/div/mod/abs/neg on numeric vars; no LET x=x*n glue; proof 1459 PASS.",
   "proofs": [
-    "1458_splitto_bag_hygiene PASS",
-    "1458_cli_splitto_bag_hygiene PASS",
-    "1457_ifempty_ifdefined regression PASS",
-    "1456_pushto_bag regression PASS"
+    "1459_mul_divby_abs PASS",
+    "1459_cli_mul_divby_abs PASS",
+    "1458_splitto_bag_hygiene regression PASS",
+    "1452_inc_dec_swap regression PASS"
   ],
-  "when": "2026-08-11T14:09:01Z",
+  "when": "2026-08-11T14:18:22Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "95fb36cf275b2e85c514399d6803a951f1f08435",
-  "note": "agent bag hygiene after thrash restore; work queues without SYS soup"
+  "sha": "80d3db2235af7e8176f00262738a8a056de5526f",
+  "note": "agent counter scale without arithmetic LET soup"
 }
