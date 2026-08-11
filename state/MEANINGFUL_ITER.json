@@ -1,21 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 865,
-  "version": "1.15.858-usability",
-  "item": "oop_session + oop_boot + cubalc init --oop",
-  "item_id": 865,
-  "title": "oop_session \u00b7 oop_boot \u00b7 OOP_SESSION_OK \u00b7 init --oop \u00b7 doctor",
-  "commit": "84177591e6187132f05962243171a0687bfbcc9b",
-  "fix_commit": "65b5e915ef306af95c6e4aaf7d38ed972794d841",
-  "summary": "class+method+field OOP_SESSION_OK; init --oop n=31; list JSON oop_boot; proof 1404 PASS.",
+  "iter": 866,
+  "version": "1.15.859-usability",
+  "item": "obj_guard + obj_boot + cubalc init --obj",
+  "item_id": 866,
+  "title": "obj_guard \u00b7 obj_boot \u00b7 OBJ_GUARD_OK \u00b7 init --obj \u00b7 doctor",
+  "commit": "0496ae953a7d2c3fa93983ab624928a3fd3782cb",
+  "summary": "NEED_OBJS/NEED_OBJ_ANY live instances; HASOBJ; init --obj n=32; proof 1405 PASS.",
   "proofs": [
-    "1404_oop_session PASS",
-    "1404_oop_boot PASS",
-    "1404_cli_oop_session PASS",
-    "1404_cli_init_oop PASS"
+    "1405_obj_guard PASS",
+    "1405_obj_boot PASS",
+    "1405_cli_obj_guard PASS",
+    "1405_cli_init_obj PASS"
   ],
-  "when": "2026-08-11T03:44:06Z",
+  "when": "2026-08-11T03:53:47Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "84177591e6187132f05962243171a0687bfbcc9b",
-  "note": "host_session twin for OOP plane \u00b7 one INCLUDE before NEW/SEND"
+  "sha": "0496ae953a7d2c3fa93983ab624928a3fd3782cb",
+  "note": "class_guard twin for live NEW instance catalog before SEND/GETF"
 }
