@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 850,
-  "version": "1.15.842-usability",
-  "item": "time_boot + cubalc init --time",
-  "item_id": 850,
-  "title": "time_boot \u00b7 init --time \u00b7 doctor lib_time_boot",
-  "commit": "1b960445949e0a6b300d924b12597e7212f853b4",
-  "summary": "agent_boot+time_guard one-shot; init --time catalog n=17; doctor lib_time_boot; proof 1390 PASS.",
+  "iter": 851,
+  "version": "1.15.843-usability",
+  "item": "tool_session + cubalc init --full-cli",
+  "item_id": 851,
+  "title": "tool_session \u00b7 init --full-cli \u00b7 TOOL_SESSION_OK \u00b7 doctor",
+  "commit": "9628f94e92aa68b42adb359033e0102c2234581b",
+  "summary": "cli_boot+cli_guard+arg_guard one-shot; init --full-cli catalog n=18; doctor lib_tool_session; proof 1391 PASS.",
   "proofs": [
-    "1390_time_boot PASS",
-    "1390_cli_init_time PASS"
+    "1391_tool_session PASS",
+    "1391_cli_init_tool_session PASS"
   ],
-  "when": "2026-08-11T00:45:08Z",
+  "when": "2026-08-11T00:56:23Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "1b960445949e0a6b300d924b12597e7212f853b4",
-  "note": "pairs fat_boot/env_boot \u00b7 wall-budget starter for run -T without cookbook"
+  "sha": "9628f94e92aa68b42adb359033e0102c2234581b",
+  "note": "pairs cli_session \u00b7 full product CLI flags+args without triple INCLUDE"
 }
