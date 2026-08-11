@@ -1,14 +1,15 @@
 # INCLUDE class_guard - fail-fast CLASS catalog contract (ALL + optional ANY)
-# Usability: agent OOP gate without Nx LISTCLASSES / REQUIRE CLASS glue.
+# Usability: agent OOP gate via native HASCLASS (no LISTCLASSES+HASLINE soup).
 #
 #   DEFAULT NEED_CLASSES = "Ticket\nOrder"
 #   DEFAULT NEED_CLASS_ANY = "Cell\nAgent"
 #   DEFAULT CLASS_GUARD_SOFT = 0
 #   INCLUDE class_guard
 #
-# Note: hard path uses LISTCLASSES+HASLINE+FAIL (not REQUIRE CLASS) because
-# REQUIRE CLASS can break IF/END nesting when present as text inside INCLUDE.
-# Soft dual leaves CLASSMISS / CLASSHAVE bags. Twin of fn_guard for CLASSes.
+# Spec: each entry is a CLASS name. Soft dual leaves CLASSMISS / CLASSHAVE bags.
+# Twin of field_guard/method_guard (native probes) for class plane.
+# Hard path: HARDFAIL (not REQUIRE CLASS — can break IF/END nesting in INCLUDE).
+# Multi duals: HASCLASSES / NEEDCLASSES / HASCLASSANY / NEEDCLASSANY still available.
 
 DEFAULT NEED_CLASSES = ""
 DEFAULT NEED_CLASS_ANY = ""
@@ -26,10 +27,8 @@ ELSE
   LET CLASSHAVE = ""
   LET CLASSMISS_N = 0
   LET CLASSHAVE_N = 0
-  LISTCLASSES
-  LET _CLASS_CAT = LAST
   EACH LINE b IN NEED_CLASSES
-    SYS HASLINE _CLASS_CAT b
+    HASCLASS b
     IF LAST_N == 1
       LET CLASSHAVE_N = CLASSHAVE_N + 1
       IF CLASSHAVE == ""
@@ -67,10 +66,8 @@ ELSE
   LET CLASSANY_HIT = 0
   LET CLASSANY_HAVE = ""
   LET CLASSANY_MISS = ""
-  LISTCLASSES
-  LET _CLASS_CAT = LAST
   EACH LINE b IN NEED_CLASS_ANY
-    SYS HASLINE _CLASS_CAT b
+    HASCLASS b
     IF LAST_N == 1
       LET CLASSANY_HIT = 1
       IF CLASSANY_HAVE == ""
