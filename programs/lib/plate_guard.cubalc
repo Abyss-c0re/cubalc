@@ -1,8 +1,8 @@
 # INCLUDE plate_guard — fail-fast PLATE key contract (ALL + optional ANY)
-# Usability: agent plate schema gate without N× HASP / NEEDP / REQUIRE JSONHASALL glue.
+# Usability: agent plate schema gate without N× HASP / NEEDP soup.
 #
 #   DEFAULT NEED_KEYS = "n\nok\nrole"           # all-of (HASPALL / NEEDP)
-#   DEFAULT NEED_KEY_ANY = "status\nready"      # any-of
+#   DEFAULT NEED_KEY_ANY = "status\nready"      # any-of (HASPANY / NEEDPANY)
 #   DEFAULT PLATE_GUARD_SOFT = 0                # 1 → soft (OK=0, no fatal)
 #   INCLUDE plate_guard
 #   # PLATE_GUARD_OK · KEYMISS / KEYHAVE bags (soft)
@@ -10,7 +10,8 @@
 # Empty NEED_KEYS skips ALL gate. Empty NEED_KEY_ANY skips ANY gate.
 # Soft dual leaves KEYMISS / KEYHAVE bags for agents (CLEAR_ERR after).
 # Operates on PLATE var (set via plate_boot / plate_session / LET PLATE).
-# Twin of path_guard (fs) / bin_guard (PATH tools) / lib_guard (modules) for plates.
+# Twin of form_guard / obj_guard / path_guard for plates.
+# Hard ALL: NEEDP · Hard ANY: NEEDPANY · Soft: HASPALL / HASPANY.
 # HOLD_FLASH not required (same policy as path_guard / form_guard).
 
 DEFAULT NEED_KEYS = ""
@@ -26,43 +27,30 @@ IF LAST_N == 1
   LET KEYMISS_N = 0
   LET KEYHAVE_N = 0
 ELSE
-  LET KEYMISS = ""
-  LET KEYHAVE = ""
-  LET KEYMISS_N = 0
-  LET KEYHAVE_N = 0
   IF PLATE_GUARD_SOFT
-    EACH LINE k IN NEED_KEYS
-      HASP k
-      IF LAST_N == 1
-        LET KEYHAVE_N = KEYHAVE_N + 1
-        IF KEYHAVE == ""
-          LET KEYHAVE = k
-        ELSE
-          LET KEYHAVE = KEYHAVE + "\n" + k
-        END
-      ELSE
-        LET KEYMISS_N = KEYMISS_N + 1
-        IF KEYMISS == ""
-          LET KEYMISS = k
-        ELSE
-          LET KEYMISS = KEYMISS + "\n" + k
-        END
-      END
-    END
-    IF KEYMISS_N == 0
-      LET PLATE_GUARD_ALL_OK = 1
-      LET OK = 1
+    HASPALL NEED_KEYS
+    LET PLATE_GUARD_ALL_OK = LAST_N
+    IF LAST_N == 1
+      LET KEYHAVE = NEED_KEYS
+      LET KEYMISS = ""
+      LET KEYMISS_N = 0
+      LET KEYHAVE_N = HASPALL_HIT
     ELSE
-      LET PLATE_GUARD_ALL_OK = 0
+      # HASPALL_MISS bag when miss
+      LET KEYMISS = HASPALL_MISS
+      LET KEYMISS_N = HASPALL_MISS_N
+      LET KEYHAVE = ""
+      LET KEYHAVE_N = 0
       LET OK = 0
       LET LAST_ERR = "PLATE_GUARD ALL miss — missing: " + KEYMISS
       LET ERR = LAST_ERR
     END
   ELSE
-    EACH LINE k IN NEED_KEYS
-      NEEDP k
-    END
+    NEEDP NEED_KEYS
     LET PLATE_GUARD_ALL_OK = 1
+    LET KEYMISS = ""
+    LET KEYMISS_N = 0
+    LET KEYHAVE = NEED_KEYS
   END
 END
 
@@ -71,45 +59,13 @@ SYS EMPTY NEED_KEY_ANY
 IF LAST_N == 1
   LET PLATE_GUARD_ANY_OK = 1
 ELSE
-  LET KEY_ANY_HIT = 0
-  LET KEY_ANY_HAVE = ""
-  LET KEY_ANY_MISS = ""
-  EACH LINE k IN NEED_KEY_ANY
-    HASP k
-    IF LAST_N == 1
-      LET KEY_ANY_HIT = 1
-      IF KEY_ANY_HAVE == ""
-        LET KEY_ANY_HAVE = k
-      ELSE
-        LET KEY_ANY_HAVE = KEY_ANY_HAVE + "\n" + k
-      END
-    ELSE
-      IF KEY_ANY_MISS == ""
-        LET KEY_ANY_MISS = k
-      ELSE
-        LET KEY_ANY_MISS = KEY_ANY_MISS + "\n" + k
-      END
-    END
-  END
-  IF KEY_ANY_HIT == 1
-    LET PLATE_GUARD_ANY_OK = 1
-    IF KEYHAVE == ""
-      LET KEYHAVE = KEY_ANY_HAVE
-    END
+  IF PLATE_GUARD_SOFT
+    HASPANY NEED_KEY_ANY
+    LET PLATE_GUARD_ANY_OK = LAST_N
+    # KEYHAVE / KEYMISS / KEYHAVE_N / KEYMISS_N from HASPANY
   ELSE
-    LET PLATE_GUARD_ANY_OK = 0
-    IF PLATE_GUARD_SOFT
-      LET OK = 0
-      IF KEYMISS == ""
-        LET KEYMISS = KEY_ANY_MISS
-      END
-      LET LAST_ERR = "PLATE_GUARD ANY miss — need one of: " + NEED_KEY_ANY
-      LET ERR = LAST_ERR
-    ELSE
-      LET LAST_ERR = "PLATE_GUARD ANY miss — need one of: " + NEED_KEY_ANY
-      LET ERR = LAST_ERR
-      HARDFAIL LAST_ERR
-    END
+    NEEDPANY NEED_KEY_ANY
+    LET PLATE_GUARD_ANY_OK = 1
   END
 END
 

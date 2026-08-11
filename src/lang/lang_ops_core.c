@@ -45033,37 +45033,50 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* NEEDP|REQUIREP [FROM plate] key… — fail-fast if plate missing any key.
    * HASP [FROM plate] key — soft single-key presence → LAST_N 0|1 (no ERR on miss).
    * HASPALL [FROM plate] key… — soft multi-key all-present → LAST_N 0|1.
+   * HASPANY|NEEDPANY [FROM plate] key… — multi-key any-of (HASPALL twin).
    * KEYSP [FROM plate] [path] — bag of keys → LAST · LAST_N=count.
    * Optional path peels nest object first (KEYSOBJ dual without separate form):
    *   KEYSP "cfg" · KEYSP "cfg.flags" · KEYSP FROM PEER "meta"
    * Keys for NEEDP/HASP may be dotted/slash nest paths (same as GETP "freq.error"):
    *   NEEDP "host" "freq.error"
    *   HASPALL "meta.role" "meta.n" FROM PEER
+   *   HASPANY "status" "ready" FROM PEER
    * FROM: multi-plate twin of SETP/MERGEP FROM (probe without clobbering PLATE):
    *   HASP FROM peer "host"
    *   NEEDP "agent" "n" FROM session
    *   KEYSP FROM peer
-   * NEEDP_FROM/HASP_FROM/HASPALL_FROM/KEYSP_FROM = 0|1.
-   * NEEDP lists missing keys in error (soft twin HASPALL / JSONMISS). */
+   * NEEDP_FROM/HASP_FROM/HASPALL_FROM/HASPANY_FROM/NEEDPANY_FROM/KEYSP_FROM = 0|1.
+   * NEEDP lists missing keys in error (soft twin HASPALL / JSONMISS).
+   * NEEDPANY fail-fast if none present (soft twin HASPANY · KEYHAVE bag). */
   if (kw(&L->cur,"NEEDP") || kw(&L->cur,"REQUIREP") || kw(&L->cur,"PLATE_NEED") ||
       kw(&L->cur,"NEEDPLATEK") || kw(&L->cur,"REQUIRE_P") ||
       kw(&L->cur,"HASP") || kw(&L->cur,"PLATE_HAS") || kw(&L->cur,"MHASP") ||
       kw(&L->cur,"HASPALL") || kw(&L->cur,"PLATE_HASALL") || kw(&L->cur,"MHASPALL") ||
+      kw(&L->cur,"HASPANY") || kw(&L->cur,"PLATE_HASANY") || kw(&L->cur,"MHASPANY") ||
+      kw(&L->cur,"HAS_P_ANY") || kw(&L->cur,"ANYKEYSP") || kw(&L->cur,"HASSOMEP") ||
+      kw(&L->cur,"NEEDPANY") || kw(&L->cur,"REQUIREPANY") || kw(&L->cur,"MUSTPANY") ||
+      kw(&L->cur,"NEED_P_ANY") || kw(&L->cur,"REQUIRE_P_ANY") || kw(&L->cur,"PLATE_NEEDANY") ||
       kw(&L->cur,"KEYSP") || kw(&L->cur,"PLATE_KEYS") || kw(&L->cur,"MKEYSP") ||
       kw(&L->cur,"KEYS_P") || kw(&L->cur,"LISTPKEYS")) {
     char plate[CUBALC_HOST_STR_MAX], keys_nl[CUBALC_HOST_STR_MAX];
     char arg[CUBALC_HOST_STR_MAX], key[96];
     char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr, miss;
-    int is_need = 0, is_has = 0, is_hasall = 0, is_keys = 0;
+    int is_need = 0, is_has = 0, is_hasall = 0, is_hasany = 0, is_needany = 0, is_keys = 0;
     int have_from = 0;
     size_t olen = 0;
     int aln = L->cur.line;
     Var *pv;
 
-    if (kw(&L->cur,"NEEDP") || kw(&L->cur,"REQUIREP") || kw(&L->cur,"PLATE_NEED") ||
+    if (kw(&L->cur,"NEEDPANY") || kw(&L->cur,"REQUIREPANY") || kw(&L->cur,"MUSTPANY") ||
+        kw(&L->cur,"NEED_P_ANY") || kw(&L->cur,"REQUIRE_P_ANY") || kw(&L->cur,"PLATE_NEEDANY"))
+      is_needany = 1;
+    else if (kw(&L->cur,"NEEDP") || kw(&L->cur,"REQUIREP") || kw(&L->cur,"PLATE_NEED") ||
         kw(&L->cur,"NEEDPLATEK") || kw(&L->cur,"REQUIRE_P"))
       is_need = 1;
+    else if (kw(&L->cur,"HASPANY") || kw(&L->cur,"PLATE_HASANY") || kw(&L->cur,"MHASPANY") ||
+             kw(&L->cur,"HAS_P_ANY") || kw(&L->cur,"ANYKEYSP") || kw(&L->cur,"HASSOMEP"))
+      is_hasany = 1;
     else if (kw(&L->cur,"HASPALL") || kw(&L->cur,"PLATE_HASALL") || kw(&L->cur,"MHASPALL"))
       is_hasall = 1;
     else if (kw(&L->cur,"HASP") || kw(&L->cur,"PLATE_HAS") || kw(&L->cur,"MHASP"))
@@ -45321,6 +45334,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
            kw(&L->cur,"INCP") || kw(&L->cur,"DELP") || kw(&L->cur,"GETP") ||
            kw(&L->cur,"MERGEP") || kw(&L->cur,"DEFAULTP") || kw(&L->cur,"TOGGLEP") ||
            kw(&L->cur,"NEEDP") || kw(&L->cur,"HASP") || kw(&L->cur,"KEYSP") ||
+           kw(&L->cur,"HASPALL") || kw(&L->cur,"HASPANY") || kw(&L->cur,"NEEDPANY") ||
+           kw(&L->cur,"REQUIREPANY") || kw(&L->cur,"MUSTPANY") ||
            kw(&L->cur,"INCLUDE") || kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") ||
            kw(&L->cur,"PASS") || kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT")))
         break;
@@ -45332,6 +45347,39 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         break;
       }
       if (!arg[0]) continue;
+      if (strchr(arg, '\n') || strchr(arg, ',') || strchr(arg, ' ') ||
+          strchr(arg, '|') || strchr(arg, ':')) {
+        const char *p = arg;
+        while (*p) {
+          char tok[96];
+          size_t tl = 0;
+          while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r' ||
+                 *p == ',' || *p == ':' || *p == '|')
+            p++;
+          if (!*p) break;
+          while (p[tl] && p[tl] != '\n' && p[tl] != '\r' && p[tl] != ',' &&
+                 p[tl] != ' ' && p[tl] != '\t' && p[tl] != ':' && p[tl] != '|' &&
+                 tl + 1 < sizeof tok) {
+            tok[tl] = p[tl];
+            tl++;
+          }
+          tok[tl] = 0;
+          p += tl;
+          if (!tok[0]) continue;
+          if (olen > 0) {
+            if (olen + 1 >= sizeof keys_nl) break;
+            keys_nl[olen++] = '\n';
+            keys_nl[olen] = 0;
+          }
+          {
+            size_t al = strlen(tok);
+            if (olen + al + 1 >= sizeof keys_nl) break;
+            memcpy(keys_nl + olen, tok, al + 1);
+            olen += al;
+          }
+        }
+        continue;
+      }
       if (olen > 0) {
         if (olen + 1 >= sizeof keys_nl) break;
         keys_nl[olen++] = '\n';
@@ -45390,29 +45438,131 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         fail(vm, "NEEDP [FROM plate] key… — need at least one required key");
         return -1;
       }
-      var_set_num(vm, "LAST_N", 0);
-      vm->last_n = 0;
-      var_set_num(vm, "HASPALL_N", 0);
-      var_set_num(vm, "HASPALL_FROM", have_from ? 1 : 0);
-      var_set_num(vm, "NEEDP_FROM", have_from ? 1 : 0);
-      var_set_num(vm, "OK", 1);
-      bump(vm); return 1;
-    }
-
-    memset(&hr, 0, sizeof hr);
-    if (cubalc_host_json_has_keys(plate, keys_nl, 1, &hr) != 0) {
-      if (is_need) {
-        fail(vm, "NEEDP: plate key check failed");
+      if (is_needany) {
+        fail(vm, "NEEDPANY [FROM plate] key… — need at least one candidate key");
         return -1;
       }
       var_set_num(vm, "LAST_N", 0);
       vm->last_n = 0;
       var_set_num(vm, "HASPALL_N", 0);
       var_set_num(vm, "HASPALL_FROM", have_from ? 1 : 0);
-      var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "HASPALL: fail");
-      var_set_str(vm, "ERR", hr.err[0] ? hr.err : "HASPALL: fail");
+      var_set_num(vm, "HASPANY_N", 0);
+      var_set_num(vm, "HASPANY_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "NEEDPANY_N", 0);
+      var_set_num(vm, "NEEDPANY_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "NEEDP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "KEYHAVE", "");
+      var_set_str(vm, "KEYMISS", "");
+      var_set_num(vm, "KEYHAVE_N", 0);
+      var_set_num(vm, "KEYMISS_N", 0);
+      if (is_hasany) {
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "HASPANY: need keys — HASPANY status ready");
+        var_set_str(vm, "ERR", "HASPANY: need keys — HASPANY status ready");
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+      } else {
+        var_set_num(vm, "OK", 1);
+      }
       bump(vm); return 1;
+    }
+
+    memset(&hr, 0, sizeof hr);
+    /* want_all=0 for any-of; 1 for all-of */
+    if (cubalc_host_json_has_keys(plate, keys_nl,
+                                  (is_hasany || is_needany) ? 0 : 1, &hr) != 0) {
+      if (is_need || is_needany) {
+        fail(vm, is_needany ? "NEEDPANY: plate key check failed" : "NEEDP: plate key check failed");
+        return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "HASPALL_N", 0);
+      var_set_num(vm, "HASPALL_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "HASPANY_N", 0);
+      var_set_num(vm, "HASPANY_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : ((is_hasany) ? "HASPANY: fail" : "HASPALL: fail"));
+      var_set_str(vm, "ERR", hr.err[0] ? hr.err : ((is_hasany) ? "HASPANY: fail" : "HASPALL: fail"));
+      bump(vm); return 1;
+    }
+
+    if (is_needany || is_hasany) {
+      cubalc_host_result have, missb;
+      char flat[160];
+      size_t mi = 0;
+      const char *mp;
+      long any_hit = hr.n; /* 0|1 any present */
+      long nname = 0;
+      const char *p;
+      memset(&have, 0, sizeof have);
+      memset(&missb, 0, sizeof missb);
+      cubalc_host_json_filter_req_keys(plate, keys_nl, 1, &have);
+      cubalc_host_json_filter_req_keys(plate, keys_nl, 0, &missb);
+      var_set_str(vm, "KEYHAVE", have.str);
+      var_set_str(vm, "KEYMISS", missb.str);
+      var_set_num(vm, "KEYHAVE_N", have.n);
+      var_set_num(vm, "KEYMISS_N", missb.n);
+      var_set_num(vm, "HASPANY_N", have.n);
+      var_set_num(vm, "HASPANY_HIT", any_hit);
+      var_set_num(vm, "HASPANY_FROM", have_from ? 1 : 0);
+      p = keys_nl;
+      if (*p) nname = 1;
+      for (; *p; p++) if (*p == '\n') nname++;
+      var_set_num(vm, "NEEDPANY_N", nname);
+      var_set_num(vm, "HASPANY_KEYS_N", nname);
+      var_set_num(vm, "NEEDPANY_FROM", have_from ? 1 : 0);
+      if (any_hit) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+        if (is_needany && vm->res) vm->res->asserts_ok++;
+        if (vm->trace)
+          fprintf(vm->trace, "# %s hit have=%ld from=%d\n",
+                  is_needany ? "needpany" : "haspany", have.n, have_from);
+        bump(vm); return 1;
+      }
+      if (is_needany) {
+        char msg[320];
+        flat[0] = 0; mi = 0;
+        for (mp = keys_nl; *mp && mi + 1 < sizeof flat; mp++) {
+          if (*mp == '\n' || *mp == '\r') {
+            if (mi > 0 && flat[mi - 1] != ',') {
+              flat[mi++] = ',';
+              if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+            }
+          } else {
+            flat[mi++] = *mp;
+          }
+        }
+        flat[mi] = 0;
+        if (!flat[0]) snprintf(flat, sizeof flat, "?");
+        snprintf(msg, sizeof msg,
+                 "NEEDPANY miss line %d: need one of [%s] — soft twin HASPANY / KEYHAVE",
+                 aln, flat);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      /* soft HASPANY miss */
+      {
+        char em[240];
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        snprintf(em, sizeof em,
+                 "HASPANY miss (0/%ld): need one of %s — NEEDPANY · SETP",
+                 nname, missb.str[0] ? missb.str : "?");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+        if (vm->trace)
+          fprintf(vm->trace, "# haspany miss n=%ld from=%d\n", nname, have_from);
+        bump(vm); return 1;
+      }
     }
 
     if (is_need) {

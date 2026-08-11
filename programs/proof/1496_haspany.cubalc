@@ -1,0 +1,84 @@
+# HASPANY / NEEDPANY — multi plate key any-of (HASPALL twin)
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"n\":1,\"ok\":true,\"role\":\"worker\",\"status\":\"ready\"}"
+
+# empty soft → 0
+HASPANY
+ASSERT LAST_N == 0
+ASSERT HASPANY_N == 0
+ASSERT OK == 0
+
+# missing all
+HASPANY nosuch_a nosuch_b
+ASSERT LAST_N == 0
+ASSERT KEYMISS_N == 2
+ASSERT HASPANY_N == 0
+ASSERT NEEDPANY_N == 2
+ASSERT OK == 0
+SYS HASLINE KEYMISS "nosuch_a"
+ASSERT LAST_N == 1
+
+# partial hit (any-of succeeds with one real key)
+HASPANY nosuch_a role status
+ASSERT LAST_N == 1
+ASSERT HASPANY_N >= 1
+ASSERT OK == 1
+SYS HASLINE KEYHAVE "role"
+ASSERT LAST_N == 1
+SYS HASLINE KEYMISS "nosuch_a"
+ASSERT LAST_N == 1
+
+# all present
+HASPANY n ok role
+ASSERT LAST_N == 1
+ASSERT HASPANY_N == 3
+ASSERT KEYMISS_N == 0
+ASSERT OK == 1
+
+# bag / CSV / NL
+HASPANY "n,ok"
+ASSERT LAST_N == 1
+HASPANY "status\nready"
+ASSERT LAST_N == 1
+
+# hard twin passes when any present
+NEEDPANY nosuch_z status
+ASSERT LAST_N == 1
+ASSERT OK == 1
+
+# soft miss sticky ERR
+HASPANY nosuch_d nosuch_e
+ASSERT LAST_N == 0
+ASSERT OK == 0
+SYS HASI LAST_ERR "HASPANY miss"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# multi-plate FROM
+LET PEER = "{\"host\":\"a\",\"agent\":\"x\"}"
+HASPANY "host" "missing" FROM PEER
+ASSERT LAST_N == 1
+ASSERT HASPANY_FROM == 1
+SYS HASLINE KEYHAVE "host"
+ASSERT LAST_N == 1
+
+# discoverable
+HASFORM HASPANY
+ASSERT LAST_N == 1
+HASFORM NEEDPANY
+ASSERT LAST_N == 1
+
+# plate_guard ANY dual
+LET NEED_KEYS = ""
+LET NEED_KEY_ANY = "role\nnosuch_cubalc_z"
+LET PLATE_GUARD_SOFT = 1
+INCLUDE plate_guard
+ASSERT PLATE_GUARD_ANY_OK == 1
+ASSERT PLATE_GUARD_OK == 1
+SYS HASLINE KEYHAVE "role"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+PASS
