@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 913,
-  "version": "1.15.906-usability",
-  "item": "IFERR / IFOK / HASERR / HASOK",
-  "item_id": 913,
-  "title": "IFERR \u00b7 IFOK \u00b7 HASERR \u00b7 HASOK \u00b7 soft-status branches",
-  "commit": "cb21b873",
-  "summary": "IFERR/IFOK multi-line soft-status branches + HASERR/HASOK probes; no IF OK glue; proof 1451 PASS.",
+  "iter": 914,
+  "version": "1.15.907-usability",
+  "item": "INC / DEC / SWAP vars",
+  "item_id": 914,
+  "title": "INC \u00b7 DEC \u00b7 BUMP \u00b7 SWAP \u00b7 XCHG \u00b7 var counters/dual-buffer",
+  "commit": "efc4619d",
+  "summary": "INC/DEC bump numeric vars; SWAP exchanges two vars; no LET x=x+1/temp glue; proof 1452 PASS.",
   "proofs": [
-    "1451_iferr_ifok PASS",
-    "1451_cli_iferr_ifok PASS",
-    "1450_require_ok regression PASS"
+    "1452_inc_dec_swap PASS",
+    "1452_cli_inc_dec_swap PASS",
+    "1451_iferr_ifok regression PASS"
   ],
-  "when": "2026-08-11T12:38:13Z",
+  "when": "2026-08-11T12:48:02Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "cb21b8733796cb397aa63abdf97fa51f7cf869e9",
-  "note": "multi-line soft recovery/success branches without numeric OK compares"
+  "sha": "efc4619d5dc133fdce58fd8e1ed485c70dc8c8a0",
+  "note": "agent counters and dual buffers without arithmetic LET soup"
 }
