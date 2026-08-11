@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 367,
-  "program": "programs/realworld/svc_ifeqfile_plate_sync_board.cubalc",
-  "theme": "IFEQFILE/IFDIFFILE/IFSAMEFILE plate content sync gates",
-  "version": "1.15.942-usability",
+  "iter": 368,
+  "program": "programs/realworld/svc_ifjsonhas_contract_board.cubalc",
+  "theme": "IFJSONHAS/IFJSONMISS/IFHASJSON plate key contract gates",
+  "version": "1.15.943-usability",
   "pass": true,
-  "prior_note": "iter 366 IFBIG; this iter first realworld of 1486 IFEQFILE (MI 947)",
+  "prior_note": "iter 367 IFEQFILE; this iter first realworld of 1487 IFJSONHAS (MI 948)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed identical plates + IFEQFILE",
+      "cmd": "seed contract + IFJSONHAS",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFEQFILE/IFDIFFILE/IFSAMEFILE stickies 10/10",
+      "cmd": "IFJSONHAS/IFJSONMISS/IFHASJSON stickies 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "miss/empty/copy-if-diff/skip-same 10/10",
+      "cmd": "empty/bad/seed/admit 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "tiny\u00b7mid\u00b7fat plate class 10/10",
+      "cmd": "tiny\u00b7mid\u00b7fat / deny ladder 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "admit-drift-heal ladder 10/10",
+      "cmd": "bare\u2192seed\u2192admit\u2192strip 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFEQFILE/IFDIFFILE/IFSAMEFILE",
+      "cmd": "HASFORM IFJSONHAS/IFJSONMISS/IFHASJSON",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "synced admit empty admit miss deny 10/10",
+      "cmd": "full admit / partial deny 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "BYTES WRITE NL NUM STRTO",
+      "cmd": "disk plate STRTO NUM WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -7082,6 +7082,30 @@
       "title": "IFEQFILE still needs FN-wrap inside action IF (W853 class)",
       "detail": "Same END framing as IFBIG/IFENV/IFFRESH. Board uses CALL helpers exclusively. STATUS takes no status-string args (STATUS alone stamps cubalc.status.v1). WRITE num needs STRTO for VAL shuttle.",
       "repro": "IF LAST_N==1 THEN IFEQFILE left right \u2026 END leaks; STATUS \"ok\" \u2192 unknown form ok"
+    },
+    {
+      "id": "W877",
+      "severity": "med",
+      "area": "lang|ifjsonhas",
+      "title": "IFJSONHAS second-arg var named key is consumed as KEY glue",
+      "detail": "After plate arg, KEY|FIELD|HAS|FOR|WITH glue tokens are skipped. LET key=\"ok\"; IFJSONHAS plate key \u2192 fails \"needs plate key\" because key is eaten as glue. Use jkey/k or quoted \"ok\". Proof uses k not key.",
+      "repro": "LET key=\"ok\"; IFJSONHAS plate key \u2192 fail; LET jkey=\"ok\"; IFJSONHAS plate jkey \u2192 ok"
+    },
+    {
+      "id": "W878",
+      "severity": "low",
+      "area": "lang|ifjsonhas",
+      "title": "IFJSONHAS/IFJSONMISS work (positive; first realworld 1486\u21921487)",
+      "detail": "1487 green. Stickies IFJSONHAS_N JSONHAS_N IFJSONMISS_N. Empty/non-json \u2192 miss. IFHASJSON alias. seed-if-miss + admit-contract solid for plate contracts.",
+      "repro": "CALL has_key; CALL miss_key; CALL seed_if_miss; CALL admit_contract"
+    },
+    {
+      "id": "W879",
+      "severity": "med",
+      "area": "lang|ifjsonhas",
+      "title": "Nested IFJSONHAS inside FN steals END frames (W853 class)",
+      "detail": "Triple-nested IFJSONHAS in admit_contract FN broke action dispatch (gate score FAIL under form). Sequential CALL has_key + IF ok_v == works. Bare IFJSONHAS inside action IF also leaks END.",
+      "repro": "FN admit with nested IFJSONHAS\u2026; form action hits gate FAIL / unknown END"
     }
   ],
   "workarounds": [
@@ -7212,14 +7236,14 @@
       "id": "WA-IFS",
       "for": "W876",
       "note": "FN files_eq/files_diff/sync_if_diff/admit_synced; STATUS bare; STRTO before WRITE val_path"
+    },
+    {
+      "id": "WA-IJH",
+      "for": "W877+W879",
+      "note": "jkey not key; sequential CALL has_key for multi-key admit; no bare IFJSONHAS in action IF"
     }
   ],
   "language_gaps": [
-    {
-      "iter": 356,
-      "gap": "Named-var string probes+peels close SYS LEFT/BEFORE gaps for path admit; AFTER miss empty vs BEFORE keep is easy to misuse.",
-      "want": "Docs for miss asymmetry; optional AFTER keep-on-miss flag"
-    },
     "NUMTO strtol partial/float trunc (W844); CLEAR_ERR vs LAST_N after NUMTO (W845)",
     "SETLINEIN pad past-end + negative index\u21920 (W847/W848); FINDLINEIN exact bag ops positive (W849)",
     "COUNTIN substr vs COUNTLINEIN exact (W850); MOVELINEIN HIT soft/no-op (W851)",
@@ -7230,7 +7254,8 @@
     "IFENV presence-only + FN-wrap (W865/W867); 1480 green W863 closed",
     "IFBIG unlinked 1.15.937 (W868); IFFRESH miss/stale dual (W869)",
     "IFBIG live 1.15.940 (W868 closed); empty/miss size dual (W871); FN-wrap (W873)",
-    "IFEQFILE live 1.15.941 (1486); miss=diff empty=eq (W874); FN-wrap STATUS bare STRTO (W876)"
+    "IFEQFILE live 1.15.941 (1486); miss=diff empty=eq (W874); FN-wrap STATUS bare STRTO (W876)",
+    "IFJSONHAS live 1.15.942 (1487); KEY glue eats var key (W877); nested END frames (W879)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7367,9 +7392,14 @@
       "iter": 367,
       "issue": "First draft: STATUS \"ok\" note_msg unknown form (STATUS is report-only). probe 9/10 until STRTO before WRITE VAL. Then green.",
       "resolution": "first realworld 1486; document W874\u2013W876; STATUS bare + PASS/EXIT miss"
+    },
+    {
+      "iter": 368,
+      "issue": "Draft: nested IFJSONHAS in FN stole END (form\u2192gate FAIL). Then IFJSONHAS plate key failed \u2014 KEY glue. Renamed jkey + sequential admit.",
+      "resolution": "first realworld 1487; document W877\u2013W879"
     }
   ],
-  "commit": "33d8ae7a",
-  "ts": 1786480227,
-  "board_commit": "33d8ae7a"
+  "commit": "pending",
+  "ts": 1786481724,
+  "board_commit": "pending"
 }
