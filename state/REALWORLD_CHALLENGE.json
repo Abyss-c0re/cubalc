@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 333,
-  "program": "programs/realworld/svc_service_boot_fleet_board.cubalc",
-  "theme": "service_session fleet product+host+live contract",
-  "version": "1.15.863-usability",
+  "iter": 334,
+  "program": "programs/realworld/svc_trynew_clone_fleet_board.cubalc",
+  "theme": "TRYNEW/TRYCLONE soft fleet spawn+clone contract",
+  "version": "1.15.866-usability",
   "pass": true,
-  "prior_note": "iter 332 live_boot; this iter first realworld 1409 service_session mega stack",
+  "prior_note": "iter 333 service_session; this iter first realworld 1410 TRYNEW + 1411 TRYCLONE",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "lean SYS WRITE agent plate",
+      "cmd": "lean agent plate",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "NEED_LIBS+NEED_OBJS service green",
+      "cmd": "TRYNEW+TRYCLONE success energy copy",
       "ok": true,
-      "note": "pass SSO=1 vars_full"
+      "note": "pass"
     },
     {
-      "name": "soft_obj",
-      "cmd": "OBJMISS sinks SERVICE FULL stays 1",
+      "name": "soft_new",
+      "cmd": "missing CLASS soft no HASOBJ",
       "ok": true,
-      "note": "soft_obj"
+      "note": "soft_new score 9/10"
     },
     {
-      "name": "soft_lib",
-      "cmd": "LIBMISS sinks FULL LIVE stays 1",
+      "name": "soft_clone",
+      "cmd": "missing source soft + clone energy",
       "ok": true,
-      "note": "soft_lib"
+      "note": "soft_clone"
     },
     {
-      "name": "hard",
-      "cmd": "hard libs+objs",
+      "name": "redef",
+      "cmd": "soft redefine NEW/CLONE",
       "ok": true,
-      "note": "hard"
+      "note": "redef"
     },
     {
       "name": "form",
-      "cmd": "HASLIB service/full/live stack",
+      "cmd": "ops work; HASFORM TRYNEW may lag",
       "ok": true,
       "note": "form"
     },
     {
       "name": "gate",
-      "cmd": "soft full service gate",
+      "cmd": "optional plugin soft + spawn gate",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber SSO capture",
+      "cmd": "PRINT clobber TRYNEW_N",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "service_* PASS; CLI duals still set"
+      "note": "trynew/tryclone near-pass HASFORM lag; CLI duals red"
     }
   ],
   "weaknesses": [
@@ -6026,21 +6026,49 @@
       "title": "SERVICE_SESSION_OK not HASFORM form",
       "detail": "HASFORM SERVICE_SESSION_OK \u2192 0; use HASLIB service_session or sticky var.",
       "repro": "HASFORM SERVICE_SESSION_OK \u2192 0"
+    },
+    {
+      "id": "W745",
+      "severity": "med",
+      "area": "lang|form",
+      "title": "HASFORM TRYNEW/TRYCLONE lag ops (forms catalog incomplete)",
+      "detail": "TRYNEW and TRYCLONE ops work (TRYNEW_N/TRYCLONE_N, soft miss) but HASFORM TRYNEW and HASFORM TRYCLONE return 0. Proofs 1410/1411 assert HASFORM and fail last assert. Agents must probe via TRYNEW soft miss not HASFORM.",
+      "repro": "HASFORM TRYNEW \u2192 0; TRYNEW Ticket t works"
+    },
+    {
+      "id": "W746",
+      "severity": "low",
+      "area": "lang|trynew",
+      "title": "TRYNEW soft miss LAST_ERR \"unknown CLASS Name\"",
+      "detail": "Useful message; SYS HASI LAST_ERR CLASS hits. TRYNEW_N=0 OK=0 no HASOBJ.",
+      "repro": "TRYNEW Ghost g \u2192 OK=0 TRYNEW_N=0"
+    },
+    {
+      "id": "W747",
+      "severity": "low",
+      "area": "lang|tryclone",
+      "title": "TRYCLONE miss LAST_ERR \"CLONEOBJ: unknown source\"",
+      "detail": "Source miss soft; redefine miss says redefine. TRYCLONE AS sugar works; SOFTCLONE alias works.",
+      "repro": "TRYCLONE missing x \u2192 unknown source"
+    },
+    {
+      "id": "W748",
+      "severity": "low",
+      "area": "host|rebuild",
+      "title": "out/cubalc vanishes; lang_ops_core.o OOM on -O2 compile",
+      "detail": "Monorepo gcc -O2 on lang_ops_core.c OOM-killed; agents rebuild with -O0 or reuse stale .o. Binary often missing between fires (W629 class).",
+      "repro": "make -j out/cubalc; lang_ops_core Killed"
+    },
+    {
+      "id": "W749",
+      "severity": "med",
+      "area": "lang|clone",
+      "title": "TRYCLONE redefine is soft but hard CLONEOBJ redefine still fatal",
+      "detail": "Soft path good for fleet; hard CLONEOBJ same-name still process-fatal. Agents must use TRYCLONE for optional replica slots.",
+      "repro": "CLONEOBJ p child twice hard-fail; TRYCLONE p child soft redefine"
     }
   ],
   "workarounds": [
-    {
-      "id": "WA-GMR",
-      "note": "use GUIDE MATCH not RUNSNIP MATCH until duals ship; GUIDE NTH for non-first slots; capture body before PRINT"
-    },
-    {
-      "id": "WA-DSO",
-      "note": "use DISCOVER_N not DISCOVER_MATCH_N; DEFINED for missing knobs not SYS EQS; capture body before PRINT"
-    },
-    {
-      "id": "WA-OPB",
-      "note": "use GUIDE_* after OPEN not OPEN_NEXT; capture body before PRINT; exact needle for non-first topics"
-    },
     {
       "id": "WA-RSM",
       "note": "build with -D_GNU_SOURCE per .o; OPEN OPEN_NEEDLE after open_boot; NTH for non-first prove; capture before PRINT"
@@ -6122,7 +6150,10 @@
     "Avoid relying on METHOD LET LAST for host shuttles; prefer GETF after SETF THIS",
     "service_session boards: avoid plate_peer; SYS WRITE agent.json; lean NEED_OBJS+NEED_LIBS only",
     "Empty NEED_FIELDS/METHODS under vars pressure; soft *_GUARD_SOFT=1 for live/host duals",
-    "On SERVICE=0 inspect FULL vs LIVE vs HOST_SESSION_OK + *MISS bags"
+    "On SERVICE=0 inspect FULL vs LIVE vs HOST_SESSION_OK + *MISS bags",
+    "TRYNEW Class name for optional plugins; check OK/TRYNEW_N not HASFORM",
+    "TRYCLONE proto replica for soft replicas; CLONE SOFT/SOFTCLONE aliases",
+    "CLEAR_ERR after soft miss before next spawn"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6267,11 +6298,14 @@
     "SERVICE_SESSION_OK dual FULL\u2227LIVE (W742)",
     "vars_full under service stack (W740)",
     "HARDFAIL exits rc 1 (W741)",
-    "plate_peer incompatible with service stack (W743)"
+    "plate_peer incompatible with service stack (W743)",
+    "TRYNEW/NEW SOFT soft instance create (1410)",
+    "TRYCLONE/CLONE SOFT soft prototype clone (1411)",
+    "TRYNEW_N/TRYCLONE_N sticky knobs",
+    "HASFORM lags TRYNEW/TRYCLONE (W745)",
+    "lang_ops_core OOM rebuild (W748)"
   ],
   "issues_faced": [
-    "iter305: board 10/10; FORMTOPICS quoted self-name (W576)",
-    "iter305: selftest CLI duals still red",
     "iter306: START+FORMGUIDE board 10/10 first pass",
     "iter306: FORMGUIDE FORMHINT needs quotes (W580); START_NEXT_N CLI skew (W581)",
     "iter306: selftest CLI duals still red",
@@ -6319,9 +6353,11 @@
     "iter332: live_boot fleet board 11/11; SEND/METHOD LAST shuttle weak (W735); vars_n~240",
     "iter332: selftest live_session/live_boot PASS; CLI duals still set",
     "iter333: service_session fleet board 10/10 lean (no plate_peer); vars_full=true still",
-    "iter333: HARDFAIL field miss under vars_full (W741); plate_peer+service unusable (W743)"
+    "iter333: HARDFAIL field miss under vars_full (W741); plate_peer+service unusable (W743)",
+    "iter334: TRYNEW/TRYCLONE fleet board 10/10; HASFORM lag W745; soft scores 8-9/10",
+    "iter334: rebuilt binary via -O0 lang_ops_core after OOM; proofs near-pass"
   ],
-  "commit": "4e72ee3e",
-  "ts": "2026-08-11T04:42:51Z",
-  "board_commit": "4e72ee3e"
+  "commit": "",
+  "ts": "2026-08-11T05:09:28Z",
+  "board_commit": ""
 }

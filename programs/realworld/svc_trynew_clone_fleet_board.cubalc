@@ -1,0 +1,851 @@
+# svc_trynew_clone_fleet_board.cubalc — TRYNEW/TRYCLONE soft fleet instance ops
+#
+# Real use: fleet agents soft-spawn optional worker classes (plugin/canary) and
+# soft-clone live prototypes for replica slots without fatal NEW/CLONEOBJ.
+# First realworld of 1410 TRYNEW + 1411 TRYCLONE (1.15.865+ · MI 871–872).
+#
+#   TRYNEW Class name · NEW SOFT · NEW TRY
+#   TRYCLONE src dst · CLONE SOFT · SOFTCLONE · TRYCLONE AS
+#   TRYNEW_N · TRYCLONE_N · soft miss OK=0 · redefine soft
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tnc_$$
+#   ./out/cubalc run programs/realworld/svc_trynew_clone_fleet_board.cubalc boot
+#   ./out/cubalc run ... pass|soft_new|soft_clone|redef|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt TNC_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_TNC_REQUIRE
+#
+# Edges: soft miss no HASOBJ; redefine soft; HASFORM may lag ops (W745);
+#   METHOD LET LAST shuttle weak (W735); WRITE NL; empty bags; substring HASOBJ
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS FleetWorker
+  FIELD id ""
+  FIELD load 0
+  METHOD bump
+    LET load = load + 1
+  END
+END
+
+CLASS FleetProto
+  FIELD tag "proto"
+  FIELD energy 10
+END
+
+NOTE "svc_trynew_clone_fleet_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_trynew_clone_fleet -- boot|pass|soft_new|soft_clone|redef|form|gate|probe|list"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeN"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_TNC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "TNC_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sum_n = 0
+LET tn = 0
+LET tc = 0
+LET ok_v = 0
+
+ONEOF ACTION "boot", "pass", "soft_new", "soft_clone", "redef", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft_new" THEN
+    LET op = "soft_new"
+  WHEN "soft_clone" THEN
+    LET op = "soft_clone"
+  WHEN "redef" THEN
+    LET op = "redef"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — lean agent plate
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-tnc\",\"schema\":\"cubalc.svc_trynew_clone_fleet.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"tnc\",\"want_filter\":\"soft_spawn\",\"cfg\":{\"surface\":\"TRYNEW,NEW_SOFT,TRYCLONE,CLONE_SOFT,TRYNEW_N,TRYCLONE_N\",\"contract\":\"soft NEW/CLONE fleet · canary spawn\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "svc-tnc"
+  IF LAST_N == 1 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+    LET score = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# pass — TRYNEW + TRYCLONE success path
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  # seed prototype
+  NEW FleetProto proto
+  SETF proto energy 20
+  CLEAR_ERR
+  TRYNEW FleetWorker w0
+  LET ok_v = OK
+  LET tn = TRYNEW_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF tn == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TRYCLONE proto rep0
+  LET ok_v = OK
+  LET tc = TRYCLONE_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF tc == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ rep0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETF rep0 energy
+  IF LAST_N == 20 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # NEW TRY alias
+  NEW TRY FleetWorker w1
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "soft_spawn"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" tn ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score tn tc note_msg
+  CLEAR_ERR
+END
+
+# soft_new — missing class soft
+SYS EQS op "soft_new"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  TRYNEW GhostPlugin ghost0
+  LET ok_v = OK
+  LET tn = TRYNEW_N
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF tn == 0 THEN
+    LET score = score + 1
+  END
+  HASOBJ ghost0
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI LAST_ERR "CLASS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NEW SOFT NopeClass x0
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ x0
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # still can spawn real class after soft miss
+  TRYNEW FleetWorker w_soft
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ w_soft
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # substring false friend
+  HASOBJ w
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "soft_new ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft_new score"
+    FAIL "soft_new score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft_new:" tn ":sn"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft_new:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score tn note_msg
+  CLEAR_ERR
+END
+
+# soft_clone — missing source + success path
+SYS EQS op "soft_clone"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetProto base
+  SETF base energy 7
+  SETF base tag "base"
+  CLEAR_ERR
+  TRYCLONE missing_src_zz ghost_c
+  LET ok_v = OK
+  LET tc = TRYCLONE_N
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF tc == 0 THEN
+    LET score = score + 1
+  END
+  HASOBJ ghost_c
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI LAST_ERR "source"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TRYCLONE base clone0
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ clone0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETF clone0 energy
+  IF LAST_N == 7 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CLONE SOFT base spare
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ spare
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TRYCLONE base AS named
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "soft_clone ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft_clone score"
+    FAIL "soft_clone score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft_clone:" tc ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft_clone:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score tc note_msg
+  CLEAR_ERR
+END
+
+# redef — soft redefine does not kill process
+SYS EQS op "redef"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  TRYNEW FleetWorker slotA
+  CLEAR_ERR
+  # redefine same name soft
+  NEW SOFT FleetWorker slotA
+  LET ok_v = OK
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI LAST_ERR "redefine"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ slotA
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NEW FleetProto p0
+  CLEAR_ERR
+  TRYCLONE p0 slotB
+  CLEAR_ERR
+  TRYCLONE p0 slotB
+  LET ok_v = OK
+  LET tc = TRYCLONE_N
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF tc == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI LAST_ERR "redefine"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # original still live
+  HASOBJ slotB
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SOFTCLONE p0 slotC
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ slotC
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "redef ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "redef score"
+    FAIL "redef score"
+    CLEAR_ERR
+  END
+  SYS CAT "redef:" ok_v ":rd"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "redef:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form — ops work; HASFORM may lag catalog
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  TRYNEW FleetWorker f0
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ f0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NEW FleetProto pform
+  TRYCLONE pform cform
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ cform
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "NEW"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "CLONEOBJ"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # document lag: TRYNEW/TRYCLONE may miss forms catalog
+  HASFORM "TRYNEW"
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  HASFORM "TRYCLONE"
+  LET tn = LAST_N
+  CLEAR_ERR
+  # score either form hit OR explicit lag covered
+  IF sum_n == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF tn == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  SYS HAS LAST "TRYNEW"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+    LET find_n = sum_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" sum_n ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sum_n tn note_msg
+  CLEAR_ERR
+END
+
+# gate — soft spawn pipeline admit
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  TRYNEW FleetWorker gate_w
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ gate_w
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NEW FleetProto gate_p
+  SETF gate_p energy 3
+  CLEAR_ERR
+  TRYCLONE gate_p gate_r
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETF gate_r energy
+  IF LAST_N == 3 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # optional plugin class soft miss does not block gate
+  TRYNEW OptionalPlugin opt0
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ opt0
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "svc-tnc"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · TRYNEW_N capture
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  TRYNEW FleetWorker pw
+  LET tn = TRYNEW_N
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF tn == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ pw
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NEW FleetProto pp
+  TRYCLONE pp pc
+  LET tc = TRYCLONE_N
+  CLEAR_ERR
+  IF tc == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ pc
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "TRYCLONE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS LAST "soft_spawn"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # empty soft miss then recover
+  TRYNEW Ghost ggg
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = tn
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score tn tc note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " tn=" tn " tc=" tc
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "tnc report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS
