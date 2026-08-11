@@ -6039,7 +6039,7 @@
     "iter327: product_session fleet board 11/12 green; -T 40 TIMEOUT; hard NEEDFLAGS exit_code 0",
     "iter327: selftest 575/787 product_session+tool_session PASS; CLI duals still set"
   ],
-  "commit": "",
+  "commit": "36fbf8df",
   "ts": "2026-08-11T01:23:06Z",
-  "board_commit": ""
+  "board_commit": "36fbf8df"
 }
