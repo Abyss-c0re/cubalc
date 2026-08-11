@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 921,
-  "version": "1.15.914-usability",
-  "item": "MUL / DIVBY / MODBY / ABS / NEG vars",
-  "item_id": 921,
-  "title": "MUL \u00b7 DIVBY \u00b7 MODBY \u00b7 ABS \u00b7 NEG \u00b7 in-place numeric scale",
-  "commit": "80d3db22",
-  "summary": "In-place mul/div/mod/abs/neg on numeric vars; no LET x=x*n glue; proof 1459 PASS.",
+  "iter": 922,
+  "version": "1.15.915-usability",
+  "item": "COALESCETO / NTHIN / HEADIN / TAILIN vars",
+  "item_id": 922,
+  "title": "COALESCETO \u00b7 NVLTO \u00b7 NTHIN \u00b7 HEADIN \u00b7 TAILIN \u00b7 defaults + bag peels",
+  "commit": "df8ab2a5",
+  "summary": "First non-empty into named var; bag field peels to LAST; no IFEMPTY/SYS NTH glue; proof 1460 PASS.",
   "proofs": [
-    "1459_mul_divby_abs PASS",
-    "1459_cli_mul_divby_abs PASS",
-    "1458_splitto_bag_hygiene regression PASS",
-    "1452_inc_dec_swap regression PASS"
+    "1460_coalesceto_nthin PASS",
+    "1460_cli_coalesceto_nthin PASS",
+    "1459_mul_divby_abs regression PASS"
   ],
-  "when": "2026-08-11T14:18:22Z",
+  "when": "2026-08-11T14:28:25Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "80d3db2235af7e8176f00262738a8a056de5526f",
-  "note": "agent counter scale without arithmetic LET soup"
+  "sha": "df8ab2a5ac596f58b1e4617636b9e52a4df27298",
+  "note": "agent config defaults and bag peeks without EMPTY+NTH soup"
 }
