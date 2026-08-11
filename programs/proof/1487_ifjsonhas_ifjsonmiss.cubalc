@@ -1,0 +1,110 @@
+# IFJSONHAS / IFJSONMISS — JSON plate key branches
+
+HOLD_FLASH 1
+
+LET plate = "{\"ok\":1,\"n\":42,\"role\":\"agent\"}"
+LET empty = "{}"
+LET bad = "not-json"
+
+# present key
+IFJSONHAS plate "ok"
+  LET h = 1
+ELSE
+  LET h = 0
+END
+ASSERT h == 1
+ASSERT IFJSONHAS_N == 1
+ASSERT JSONHAS_N == 1
+
+# missing key
+IFJSONHAS plate "missing"
+  LET h = 1
+ELSE
+  LET h = 0
+END
+ASSERT h == 0
+ASSERT IFJSONHAS_N == 0
+
+# bare key ident as literal key name when no var
+IFJSONHAS plate role
+  LET h = 1
+ELSE
+  LET h = 0
+END
+ASSERT h == 1
+
+# key from string var
+LET k = "n"
+IFJSONHAS plate k
+  LET h = 1
+ELSE
+  LET h = 0
+END
+ASSERT h == 1
+
+# IFJSONMISS true when absent
+IFJSONMISS plate "err"
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+ASSERT IFJSONMISS_N == 1
+
+# IFJSONMISS false when present
+IFJSONMISS plate "ok"
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+
+# empty plate → miss
+IFJSONMISS empty "ok"
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+
+# nest: default if miss
+IFJSONMISS plate "status"
+  LET plate2 = "{\"ok\":1,\"n\":42,\"role\":\"agent\",\"status\":\"seeded\"}"
+  LET did = 1
+ELSE
+  LET plate2 = plate
+  LET did = 0
+END
+ASSERT did == 1
+IFJSONHAS plate2 "status"
+  LET h = 1
+ELSE
+  LET h = 0
+END
+ASSERT h == 1
+
+# literal plate string
+IFJSONHAS "{\"x\":1}" "x"
+  LET h = 1
+ELSE
+  LET h = 0
+END
+ASSERT h == 1
+
+# IFHASJSON alias
+IFHASJSON plate "ok"
+  LET h = 1
+ELSE
+  LET h = 0
+END
+ASSERT h == 1
+
+HASFORM "IFJSONHAS"
+ASSERT LAST_N == 1
+HASFORM "IFJSONMISS"
+ASSERT LAST_N == 1
+HASFORM "IFHASJSON"
+ASSERT LAST_N == 1
+
+PRINT "1487_ifjsonhas_ifjsonmiss ok"
+PASS

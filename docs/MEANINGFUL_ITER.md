@@ -980,6 +980,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 947. ~~**`IFEQFILE` / `IFDIFFILE` / `IFSAMEFILE`**~~ **done** (file content equality branches · no SYS EQFILE+IF glue · proof 1486).
 
+948. ~~**`IFJSONHAS` / `IFJSONMISS`**~~ **done** (JSON plate key branches · no SYS JSONHAS+IF glue · proof 1487).
+
 
 
 
