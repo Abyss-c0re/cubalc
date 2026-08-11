@@ -1,0 +1,37 @@
+# INCLUDE bin_boot — agent_boot + bin_guard one-shot
+
+HOLD_FLASH 1
+
+DEFAULT NEED_BINS = ""
+DEFAULT NEED_BIN_ANY = ""
+DEFAULT BIN_GUARD_SOFT = 0
+INCLUDE bin_boot
+ASSERT OK == 1
+ASSERT BIN_GUARD_OK == 1
+HASINCLUDE agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE bin_guard
+ASSERT LAST_N == 1
+HASINCLUDE bin_boot
+ASSERT LAST_N == 1
+HASLIB bin_boot
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST != ""
+
+# soft miss
+LET NEED_BINS = "nosuch_bin_boot_miss"
+LET NEED_BIN_ANY = ""
+LET BIN_GUARD_SOFT = 1
+INCLUDE bin_boot
+ASSERT BIN_GUARD_OK == 0
+CLEAR_ERR
+
+# hard pass
+LET NEED_BINS = "sh"
+LET BIN_GUARD_SOFT = 0
+INCLUDE bin_boot
+ASSERT BIN_GUARD_OK == 1
+
+PASS
+PRINT "1396_bin_boot: PASS"

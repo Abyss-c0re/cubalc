@@ -884,6 +884,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 853. ~~**`TIME_GUARD_OK` + in-lang DOCTOR product dual**~~ **done** (time_guard publishes TIME_GUARD_OK · fix undeclared lib_tool_session · doctor lib_product_session · proof 1393).
 854. ~~**`path_guard` / `path_boot` + `cubalc init --path`**~~ **done** (NEED_PATHS/NEED_PATH_ANY · PATH_GUARD_OK · catalog n=20 · doctor lib_path_* · proof 1394).
 855. ~~**`rw_guard` / `rw_boot` + `cubalc init --rw`**~~ **done** (NEED_READ_PATHS/NEED_WRITE_PATHS · RW_GUARD_OK · catalog n=21 · doctor lib_rw_* · proof 1395).
+856. ~~**`bin_guard` / `bin_boot` + `cubalc init --bin`**~~ **done** (NEED_BINS/NEED_BIN_ANY · BIN_GUARD_OK · catalog n=22 · doctor lib_bin_* · proof 1396).
 
 
 ## Tick protocol

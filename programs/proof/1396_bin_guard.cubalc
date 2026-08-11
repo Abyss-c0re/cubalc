@@ -1,0 +1,83 @@
+# INCLUDE bin_guard — multi PATH tool ALL + ANY contract
+
+HOLD_FLASH 1
+
+# --- skip both gates when empty ---
+DEFAULT NEED_BINS = ""
+DEFAULT NEED_BIN_ANY = ""
+DEFAULT BIN_GUARD_SOFT = 0
+INCLUDE bin_guard
+ASSERT BIN_GUARD_OK == 1
+ASSERT BIN_GUARD_ALL_OK == 1
+ASSERT BIN_GUARD_ANY_OK == 1
+
+# --- soft ALL miss ---
+LET NEED_BINS = "sh\nnosuch_cubalc_bin_all"
+LET NEED_BIN_ANY = ""
+LET BIN_GUARD_SOFT = 1
+INCLUDE bin_guard
+ASSERT BIN_GUARD_OK == 0
+ASSERT BIN_GUARD_ALL_OK == 0
+ASSERT BINMISS_N >= 1
+SYS HASLINE BINMISS "nosuch_cubalc_bin_all"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# --- soft ALL hit ---
+LET NEED_BINS = "sh\nls"
+LET BIN_GUARD_SOFT = 1
+INCLUDE bin_guard
+ASSERT BIN_GUARD_ALL_OK == 1
+ASSERT BIN_GUARD_OK == 1
+ASSERT BINHAVE_N >= 2
+
+# --- soft ANY miss ---
+LET NEED_BINS = ""
+LET NEED_BIN_ANY = "nosuch_cubalc_a\nnosuch_cubalc_b"
+LET BIN_GUARD_SOFT = 1
+INCLUDE bin_guard
+ASSERT BIN_GUARD_ANY_OK == 0
+ASSERT BIN_GUARD_OK == 0
+CLEAR_ERR
+
+# --- soft ANY hit ---
+LET NEED_BIN_ANY = "nosuch_cubalc_a\nsh"
+LET BIN_GUARD_SOFT = 1
+INCLUDE bin_guard
+ASSERT BIN_GUARD_ANY_OK == 1
+ASSERT BIN_GUARD_OK == 1
+CLEAR_ERR
+
+# --- hard ALL ---
+LET NEED_BINS = "sh\nls"
+LET NEED_BIN_ANY = ""
+LET BIN_GUARD_SOFT = 0
+INCLUDE bin_guard
+ASSERT BIN_GUARD_OK == 1
+
+# --- hard ANY ---
+LET NEED_BINS = ""
+LET NEED_BIN_ANY = "nosuch_cubalc_z\nsh"
+LET BIN_GUARD_SOFT = 0
+INCLUDE bin_guard
+ASSERT BIN_GUARD_ANY_OK == 1
+ASSERT BIN_GUARD_OK == 1
+
+# --- combined ---
+LET NEED_BINS = "sh"
+LET NEED_BIN_ANY = "ls\nnosuch_cubalc_z"
+LET BIN_GUARD_SOFT = 1
+INCLUDE bin_guard
+ASSERT BIN_GUARD_ALL_OK == 1
+ASSERT BIN_GUARD_ANY_OK == 1
+ASSERT BIN_GUARD_OK == 1
+
+HASFORM "SYS WHICHBIN"
+ASSERT LAST_N == 1
+HASFORM "REQUIRE BIN"
+ASSERT LAST_N == 1
+HASLIB bin_guard
+ASSERT LAST_N == 1
+
+PRINT "1396_bin_guard ok"
+PASS

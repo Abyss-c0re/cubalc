@@ -1,0 +1,124 @@
+# INCLUDE bin_guard — fail-fast host PATH tool contract (ALL + optional ANY)
+# Usability: agent external-tool gate without N× SYS WHICHBIN / REQUIRE BIN glue.
+#
+#   DEFAULT NEED_BINS = "sh\nls"                 # all-of (REQUIRE BIN / WHICHBIN)
+#   DEFAULT NEED_BIN_ANY = "python3\npython"     # any-of
+#   DEFAULT BIN_GUARD_SOFT = 0                   # 1 → soft (OK=0, no fatal)
+#   INCLUDE bin_guard
+#
+# Empty NEED_BINS skips ALL gate. Empty NEED_BIN_ANY skips ANY gate.
+# Soft dual leaves BINMISS / BINHAVE bags for agents (CLEAR_ERR after).
+# Twin of path_guard / env_guard for host executables · pairs SYS WHICHBIN.
+# HOLD_FLASH not required (same policy as path_guard / rw_guard).
+
+DEFAULT NEED_BINS = ""
+DEFAULT NEED_BIN_ANY = ""
+DEFAULT BIN_GUARD_SOFT = 0
+
+# --- ALL-of: every tool must resolve X_OK on PATH ---
+SYS EMPTY NEED_BINS
+IF LAST_N == 1
+  LET BIN_GUARD_ALL_OK = 1
+  LET BINMISS = ""
+  LET BINHAVE = ""
+  LET BINMISS_N = 0
+  LET BINHAVE_N = 0
+ELSE
+  LET BINMISS = ""
+  LET BINHAVE = ""
+  LET BINMISS_N = 0
+  LET BINHAVE_N = 0
+  IF BIN_GUARD_SOFT
+    EACH LINE b IN NEED_BINS
+      SYS WHICHBIN b
+      IF LAST_N == 1
+        LET BINHAVE_N = BINHAVE_N + 1
+        IF BINHAVE == ""
+          LET BINHAVE = b
+        ELSE
+          LET BINHAVE = BINHAVE + "\n" + b
+        END
+      ELSE
+        LET BINMISS_N = BINMISS_N + 1
+        IF BINMISS == ""
+          LET BINMISS = b
+        ELSE
+          LET BINMISS = BINMISS + "\n" + b
+        END
+      END
+    END
+    IF BINMISS_N == 0
+      LET BIN_GUARD_ALL_OK = 1
+      LET OK = 1
+    ELSE
+      LET BIN_GUARD_ALL_OK = 0
+      LET OK = 0
+      LET LAST_ERR = "BIN_GUARD ALL miss — missing: " + BINMISS
+      LET ERR = LAST_ERR
+    END
+  ELSE
+    EACH LINE b IN NEED_BINS
+      REQUIRE BIN b
+    END
+    LET BIN_GUARD_ALL_OK = 1
+  END
+END
+
+# --- ANY-of: at least one tool present ---
+SYS EMPTY NEED_BIN_ANY
+IF LAST_N == 1
+  LET BIN_GUARD_ANY_OK = 1
+ELSE
+  LET BIN_ANY_HIT = 0
+  LET BIN_ANY_HAVE = ""
+  LET BIN_ANY_MISS = ""
+  EACH LINE b IN NEED_BIN_ANY
+    SYS WHICHBIN b
+    IF LAST_N == 1
+      LET BIN_ANY_HIT = 1
+      IF BIN_ANY_HAVE == ""
+        LET BIN_ANY_HAVE = b
+      ELSE
+        LET BIN_ANY_HAVE = BIN_ANY_HAVE + "\n" + b
+      END
+    ELSE
+      IF BIN_ANY_MISS == ""
+        LET BIN_ANY_MISS = b
+      ELSE
+        LET BIN_ANY_MISS = BIN_ANY_MISS + "\n" + b
+      END
+    END
+  END
+  IF BIN_ANY_HIT == 1
+    LET BIN_GUARD_ANY_OK = 1
+    IF BINHAVE == ""
+      LET BINHAVE = BIN_ANY_HAVE
+    END
+  ELSE
+    LET BIN_GUARD_ANY_OK = 0
+    IF BIN_GUARD_SOFT
+      LET OK = 0
+      IF BINMISS == ""
+        LET BINMISS = BIN_ANY_MISS
+      END
+      LET LAST_ERR = "BIN_GUARD ANY miss — need one of: " + NEED_BIN_ANY
+      LET ERR = LAST_ERR
+    ELSE
+      FAIL "BIN_GUARD ANY miss — need one of: " + NEED_BIN_ANY
+    END
+  END
+END
+
+# overall soft status (hard paths already failed fatally if miss)
+IF BIN_GUARD_ALL_OK
+  IF BIN_GUARD_ANY_OK
+    LET BIN_GUARD_OK = 1
+    LET OK = 1
+  ELSE
+    LET BIN_GUARD_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET BIN_GUARD_OK = 0
+  LET OK = 0
+END

@@ -38836,6 +38836,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     int lib_tool_session = 0, lib_product_session = 0;
     int lib_path_guard = 0, lib_path_boot = 0;
     int lib_rw_guard = 0, lib_rw_boot = 0;
+    int lib_bin_guard = 0, lib_bin_boot = 0;
     int lib_cap_boot = 0, lib_onboard_boot = 0, lib_discover_boot = 0, lib_open_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0;
     int include_path_set = 0, preload_set = 0, smx_key = 0, protect_plate = 0;
@@ -38878,6 +38879,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     lib_path_boot = (access("programs/lib/path_boot.cubalc", R_OK) == 0);
     lib_rw_guard = (access("programs/lib/rw_guard.cubalc", R_OK) == 0);
     lib_rw_boot = (access("programs/lib/rw_boot.cubalc", R_OK) == 0);
+    lib_bin_guard = (access("programs/lib/bin_guard.cubalc", R_OK) == 0);
+    lib_bin_boot = (access("programs/lib/bin_boot.cubalc", R_OK) == 0);
     lib_cap_boot = (access("programs/lib/cap_boot.cubalc", R_OK) == 0);
     lib_onboard_boot = (access("programs/lib/onboard_boot.cubalc", R_OK) == 0);
     lib_discover_boot = (access("programs/lib/discover_boot.cubalc", R_OK) == 0);
@@ -38915,6 +38918,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       "\"lib_tool_session\":%s,\"lib_product_session\":%s,"
       "\"lib_path_guard\":%s,\"lib_path_boot\":%s,"
       "\"lib_rw_guard\":%s,\"lib_rw_boot\":%s,"
+      "\"lib_bin_guard\":%s,\"lib_bin_boot\":%s,"
       "\"lib_cap_boot\":%s,\"lib_onboard_boot\":%s,\"lib_discover_boot\":%s,"
       "\"lib_open_boot\":%s,\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
       "\"include_path_set\":%s,\"preload_set\":%s,\"core_protect_plate\":%s,"
@@ -38944,6 +38948,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lib_path_boot ? "true" : "false",
       lib_rw_guard ? "true" : "false",
       lib_rw_boot ? "true" : "false",
+      lib_bin_guard ? "true" : "false",
+      lib_bin_boot ? "true" : "false",
       lib_cap_boot ? "true" : "false",
       lib_onboard_boot ? "true" : "false",
       lib_discover_boot ? "true" : "false",

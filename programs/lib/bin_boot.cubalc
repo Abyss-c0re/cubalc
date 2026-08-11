@@ -1,0 +1,18 @@
+# INCLUDE bin_boot — agent preamble + host PATH tool contract one-shot
+# Usability: agent_boot + bin_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_BINS = "sh\nls"
+#   DEFAULT NEED_BIN_ANY = "python3\npython"
+#   DEFAULT BIN_GUARD_SOFT = 0
+#   INCLUDE bin_boot
+# Soft miss: DEFAULT BIN_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --bin
+# Twin of path_boot (existence) / rw_boot (access) for PATH tools.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_BINS = ""
+DEFAULT NEED_BIN_ANY = ""
+DEFAULT BIN_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE bin_guard
