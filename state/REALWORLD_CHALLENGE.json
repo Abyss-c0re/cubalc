@@ -6585,7 +6585,7 @@
     "iter338: capture LAST_ERR before CLEAR_ERR on soft TRYDELETE (W763/W751 class)",
     "iter338: all actions green; trydelete/hasclass proofs PASS; CLI duals still set\u2192SETF"
   ],
-  "commit": "pending",
+  "commit": "50c4cc00",
   "ts": "2026-08-11T06:46:24Z",
-  "board_commit": "pending"
+  "board_commit": "50c4cc00"
 }
