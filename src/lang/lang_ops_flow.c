@@ -16722,6 +16722,187 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* HASCLASSANY|NEEDCLASSANY name… — multi CLASS any-of gate (HASCLASSES twin).
+   * Soft: LAST_N 1 if any CLASS defined · CLASSHAVE bag · CLASSMISS bag.
+   * NEEDCLASSANY fail-fast if none of the listed classes exist.
+   * Usability: optional plugin class OR without N× HASCLASS IF glue. */
+  if (kw(&L->cur, "HASCLASSANY") || kw(&L->cur, "HAS_CLASS_ANY") ||
+      kw(&L->cur, "ANYCLASS") || kw(&L->cur, "CLASSANY") ||
+      kw(&L->cur, "HASANYCLASS") || kw(&L->cur, "NEEDCLASSANY") ||
+      kw(&L->cur, "NEED_CLASS_ANY") || kw(&L->cur, "REQUIRECLASSANY") ||
+      kw(&L->cur, "MUSTCLASSANY")) {
+    int hard = kw(&L->cur, "NEEDCLASSANY") || kw(&L->cur, "NEED_CLASS_ANY") ||
+               kw(&L->cur, "REQUIRECLASSANY") || kw(&L->cur, "MUSTCLASSANY");
+    char names[32][48];
+    char miss[1024], havebag[1024];
+    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line;
+    size_t mo = 0, ho = 0;
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "HASCLASS") ||
+           kw(&L->cur, "HASCLASSES") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "HASFORM") || oop_stmt_kw(L)))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *pp = s;
+          while (*pp && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*pp == ' ' || *pp == '\t' || *pp == '\n' || *pp == ',' || *pp == ':')
+              pp++;
+            if (!*pp) break;
+            while (pp[tl] && pp[tl] != '\n' && pp[tl] != ',' && pp[tl] != ' ' &&
+                   pp[tl] != '\t' && pp[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = pp[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            pp += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *pp = vv->sval;
+          while (*pp && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*pp == ' ' || *pp == '\t' || *pp == '\n' || *pp == ',' || *pp == ':')
+              pp++;
+            if (!*pp) break;
+            while (pp[tl] && pp[tl] != '\n' && pp[tl] != ',' && pp[tl] != ' ' &&
+                   pp[tl] != '\t' && pp[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = pp[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            pp += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] && !oop_find_class(vm, L->cur.text)) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDCLASSANY name… — NEEDCLASSANY Ticket Cell · HASCLASSANY bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASCLASSANY_N", 0);
+      var_set_num(vm, "CLASSMISS_N", 0);
+      var_set_num(vm, "CLASSHAVE_N", 0);
+      var_set_str(vm, "CLASSMISS", "");
+      var_set_str(vm, "CLASSHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASCLASSANY: need names — HASCLASSANY Ticket Ghost");
+      var_set_str(vm, "ERR", "HASCLASSANY: need names — HASCLASSANY Ticket Ghost");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      if (oop_find_class(vm, names[i])) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, names[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+      } else {
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+      }
+    }
+    var_set_str(vm, "CLASSMISS", miss);
+    var_set_str(vm, "CLASSHAVE", havebag);
+    var_set_num(vm, "CLASSMISS_N", nmiss);
+    var_set_num(vm, "CLASSHAVE_N", nhave);
+    var_set_num(vm, "HASCLASSANY_N", nhave);
+    var_set_num(vm, "NEEDCLASSANY_N", nname);
+    var_set_num(vm, "CLASSES_ANY_N", nname);
+    if (nhave > 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else if (hard) {
+      char em[240];
+      snprintf(em, sizeof em,
+               "NEEDCLASSANY miss line %d: need one of [%s] — CLASS/INCLUDE · HASCLASSANY · LISTCLASSES",
+               aln, miss[0] ? miss : "?");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      fail_at(vm, L, em);
+      return -1;
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASCLASSANY miss (0/%d): need one of %s — NEEDCLASSANY · INCLUDE",
+               nname, miss[0] ? miss : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%d have=%d miss=%d\n",
+              hard ? "NEEDCLASSANY" : "HASCLASSANY", nname, nhave, nmiss);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTCLASSES|CLASSES — newline bag of defined class names.
    * LAST = bag; LAST_N / NCLASSES = count. Agent discovery after INCLUDE. */
   if (kw(&L->cur, "LISTCLASSES") || kw(&L->cur, "CLASSES") ||
