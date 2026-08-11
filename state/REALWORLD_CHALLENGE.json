@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 328,
-  "program": "programs/realworld/svc_lib_boot_module_board.cubalc",
-  "theme": "lib_boot/lib_guard fleet module roster contract",
-  "version": "1.15.851-usability",
+  "iter": 329,
+  "program": "programs/realworld/svc_fn_boot_catalog_board.cubalc",
+  "theme": "fn_boot/fn_guard fleet FN catalog contract",
+  "version": "1.15.853-usability",
   "pass": true,
-  "prior_note": "iter 327 product_session; this iter first realworld 1397 lib_boot + fix REQUIRE LIB bare stem",
+  "prior_note": "iter 328 lib_boot; this iter first realworld 1400 fn_boot FN catalog gate",
   "tests": [
     {
       "name": "list",
@@ -15,19 +15,19 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate slb",
+      "cmd": "seed agent plate sfc",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "NEED_LIBS agent_boot+hold_seed ANY lib_guard",
+      "cmd": "NEED_FNALL rb_ping+rb_admit ANY rb_release",
       "ok": true,
-      "note": "pass LGO=1"
+      "note": "pass FGO=1"
     },
     {
       "name": "soft_all",
-      "cmd": "soft ALL miss + LIBMISS bag + HASLIB agent false-friend",
+      "cmd": "soft ALL miss FNMISS + HASFN rb false-friend",
       "ok": true,
       "note": "soft_all"
     },
@@ -39,13 +39,13 @@
     },
     {
       "name": "hard",
-      "cmd": "hard ALL+ANY present modules",
+      "cmd": "hard ALL present runbook FNs",
       "ok": true,
       "note": "hard"
     },
     {
       "name": "form",
-      "cmd": "HASLIB/HASINCLUDE stack HASFORM knobs miss",
+      "cmd": "HASLIB/HASINCLUDE HASFORM knobs miss",
       "ok": true,
       "note": "form"
     },
@@ -57,7 +57,7 @@
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + multiline LIBHAVE",
+      "cmd": "PRINT clobber + multiline FNHAVE",
       "ok": true,
       "note": "probe"
     },
@@ -69,21 +69,15 @@
     },
     {
       "name": "hard_miss_exit",
-      "cmd": "REQUIRE LIB nosuch exit_code 0",
+      "cmd": "hard nosuch FAIL LAST_ERR exit_code 0",
       "ok": false,
-      "note": "exit_code 0 class"
-    },
-    {
-      "name": "require_lib_bare",
-      "cmd": "REQUIRE LIB hold_seed bare after fix",
-      "ok": true,
-      "note": "fix W711"
+      "note": "FAIL LAST_ERR form + exit 0"
     },
     {
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "584/807 require_lib+lib_boot PASS; CLI duals still set"
+      "note": "590/819 fn_guard+fn_boot PASS; CLI duals still set"
     }
   ],
   "weaknesses": [
@@ -5830,12 +5824,57 @@
       "title": "SYS RM OR path is not valid \u2014 use SYS RM path",
       "detail": "SYS RM OR agent_path parses as unknown form agent_path. Soft-missing is built into SYS RM without OR glue (unlike SYS READ OR).",
       "repro": "SYS RM OR p \u2192 unknown form; SYS RM p ok"
+    },
+    {
+      "id": "W719",
+      "severity": "high",
+      "area": "lang|fail",
+      "title": "FAIL LAST_ERR is unknown form \u2014 hard fn_guard message path broken",
+      "detail": "fn_guard hard ALL miss does LET LAST_ERR=msg; FAIL LAST_ERR. FAIL treats LAST_ERR as form name \u2192 unknown form LAST_ERR, loses the real miss text. Agents need FAIL \"literal\" or FAIL with quoted expression. Soft path LAST_ERR bag still works.",
+      "repro": "LET NEED_FNALL=nosuch; FN_GUARD_SOFT=0; INCLUDE fn_guard \u2192 err unknown form LAST_ERR"
+    },
+    {
+      "id": "W720",
+      "severity": "med",
+      "area": "lang|include",
+      "title": "REQUIRE FN inside INCLUDE can break IF/END nesting",
+      "detail": "fn_guard comment documents hard path uses HASFN+FAIL not REQUIRE FN because REQUIRE FN breaks IF/END nesting when present as text inside INCLUDE files. Twin of fragile multi-word REQUIRE forms.",
+      "repro": "see programs/lib/fn_guard.cubalc header; REQUIRE FN in INCLUDE hard path"
+    },
+    {
+      "id": "W721",
+      "severity": "low",
+      "area": "lang|hasfn",
+      "title": "HASFN exact FN name only (substring false friend)",
+      "detail": "HASFN rb does not match rb_ping. Exact catalog stem required before dispatch.",
+      "repro": "HASFN rb \u2192 0; HASFN rb_ping \u2192 1"
+    },
+    {
+      "id": "W722",
+      "severity": "med",
+      "area": "host|exit",
+      "title": "hard fn_guard miss leaves exit_code 0 / shell 0",
+      "detail": "Even when FAIL fires (or form-breaks), plate exit_code stays 0. Same NEED* hard-miss class.",
+      "repro": "hard nosuch INCLUDE fn_guard \u2192 shell 0 exit_code 0"
+    },
+    {
+      "id": "W723",
+      "severity": "low",
+      "area": "host|print",
+      "title": "FNHAVE multiline bag: PRINT shows first line; PRINT quiet inside INCLUDE",
+      "detail": "FNHAVE is newline-joined; PRINT FNHAVE truncates. Also PRINT lines inside INCLUDE libs may not appear on host stdout (observed during DBG inject). Use SYS WRITE / SYS LINES / HASLINE.",
+      "repro": "PRINT inside programs/lib/*.cubalc often silent; outer PRINT FNHAVE first line only"
+    },
+    {
+      "id": "W724",
+      "severity": "med",
+      "area": "lang|api",
+      "title": "fn_guard knob thrash NEED_FNS vs NEED_FNALL / NEED_FN_ANY vs NEED_FNANY",
+      "detail": "During MEANINGFUL_ITER churn, knobs briefly diverged (NEED_FNS/NEED_FN_ANY vs proofs NEED_FNALL/NEED_FNANY) so soft ANY never ran and empty-contract FN_GUARD_OK stayed 0. Stabilized on NEED_FNALL+NEED_FNANY matching proofs 1400.",
+      "repro": "historical: LET NEED_FNANY=x while guard read NEED_FN_ANY \u2192 silent skip/miss"
     }
   ],
   "workarounds": [
-    "LET body=LAST before PRINT after RELATED/SNIP; HASLINE for exact neighbors",
-    "never name subcmd run; use exec|go|apply after cubalc run",
-    "TOPIC_SNIP_N for snip presence; capture LAST before PRINT after TOPIC",
     "ERRTIPS \"explicit incident text\" for known classes; CLEAR_ERR after classify",
     "chain: LET t=ERRTIPS_TOPIC; TIPS t for full topic tips after recovery class",
     "always END after EACH TOPIC; capture TOPICHINT LAST before PRINT",
@@ -5932,7 +5971,10 @@
     "Exit via EXIT n for shell rc; ignore plate exit_code on hard guard miss",
     "REQUIRE LIB \"stem\" when same-named string var may exist",
     "LET NEED_LIBS/NEED_LIB_ANY + LIB_GUARD_SOFT before each re-INCLUDE lib_guard",
-    "SYS HASLINE LIBMISS / LIBHAVE for multiline bags not PRINT alone"
+    "SYS HASLINE LIBMISS / LIBHAVE for multiline bags not PRINT alone",
+    "DEFINE fleet FNs before INCLUDE fn_guard; LET NEED_FNALL/NEED_FNANY + FN_GUARD_SOFT each re-INCLUDE",
+    "Prefer soft FN_GUARD_SOFT=1 and read FN_GUARD_OK / FNMISS; avoid relying on FAIL LAST_ERR",
+    "SYS HASLINE FNHAVE/FNMISS for multiline bags"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6046,11 +6088,16 @@
     "hard lib_guard miss exit_code 0 (W714)",
     "LIBHAVE multiline PRINT (W715)",
     "ENSUREPLATE no reseed (W717)",
-    "SYS RM no OR glue (W718)"
+    "SYS RM no OR glue (W718)",
+    "fn_guard NEED_FNALL/NEED_FNANY (1400)",
+    "fn_boot agent_boot+fn_guard one-shot",
+    "HASFN+FAIL hard path (not REQUIRE FN in INCLUDE)",
+    "FAIL LAST_ERR unknown form (W719)",
+    "HASFN exact (W721)",
+    "PRINT quiet in INCLUDE (W723)",
+    "knob name thrash NEED_FN* (W724)"
   ],
   "issues_faced": [
-    "iter302: ERRTIPS heuristic classes lib/cap/p2p/run/fat all green",
-    "iter302: chain TIPS after ERRTIPS_TOPIC works; noise falls back general (W563)",
     "iter302: board 10/10; selftest CLI duals still red",
     "iter303: ERRRUN+EACH TOPIC+TOPICHINT all green first pass",
     "iter303: EACH TOPIC without END is hard fail (W564); nested ERRRUN noisy (W565)",
@@ -6098,9 +6145,11 @@
     "iter327: selftest 575/787 product_session+tool_session PASS; CLI duals still set",
     "iter328: lib_boot module board 10/10; fixed REQUIRE LIB bare stem (W711) after MI857 break",
     "iter328: selftest 584/807 require_lib+lib_guard+lib_boot PASS; CLI duals still set",
-    "iter328: auto-seed plate via SYS RM+ENSUREPLATE seed; solo+seq 10/10 green"
+    "iter328: auto-seed plate via SYS RM+ENSUREPLATE seed; solo+seq 10/10 green",
+    "iter329: fn_boot catalog board 10/10 solo+seq; FAIL LAST_ERR hard path broken (W719)",
+    "iter329: selftest 590/819 fn_guard+fn_boot PASS; CLI duals still set"
   ],
-  "commit": "90fe21b7",
-  "ts": "2026-08-11T02:20:28Z",
-  "board_commit": "56984bd7"
+  "commit": "",
+  "ts": "2026-08-11T03:04:03Z",
+  "board_commit": ""
 }
