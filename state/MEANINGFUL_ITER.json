@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 906,
-  "version": "1.15.899-usability",
-  "item": "SENDANY / TRYSENDANY \u2026 OR fallback",
-  "item_id": 906,
-  "title": "SENDANY OR \u00b7 TRYSENDANY OR \u00b7 SENDANY_OR \u00b7 multi-method default",
-  "commit": "afd52fca",
-  "summary": "SENDANY/TRYSENDANY accept OR|DEFAULT|FALLBACK on obj/method miss (LAST=fb, OK=1, SENDANY_OR=1); CALLANY OR twin; proof 1444 PASS.",
+  "iter": 907,
+  "version": "1.15.900-usability",
+  "item": "cubalc run -K / --require-classes / CUBALC_REQUIRE_CLASSES",
+  "item_id": 907,
+  "title": "require-classes \u00b7 -K \u00b7 NEEDCLASSES dual \u00b7 host CLASS floor",
+  "commit": "f56dfcfb",
+  "summary": "run -K/--require-classes + CUBALC_REQUIRE_CLASSES fail if CLASS surface misses after -I (NEEDCLASSES dual of -N FNs); plate require_classes; proof 1445 PASS.",
   "proofs": [
-    "1444_sendany_or PASS",
-    "1444_cli_sendany_or PASS",
-    "1439/1443 regression PASS"
+    "1445_cli_require_classes PASS",
+    "1440_cli_require_fns regression PASS"
   ],
-  "when": "2026-08-11T11:18:05Z",
+  "when": "2026-08-11T11:35:41Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "afd52fca2ac01c9a5c175132ab1a5e065d2a179f",
-  "note": "optional multi-method hooks with default without HASMETHODANY+IF+SEND glue"
+  "sha": "f56dfcfbd59cfa50ce59a17ef8508a02dd09b5e7",
+  "note": "agent host OOP floor without rewriting body NEEDCLASSES"
 }
