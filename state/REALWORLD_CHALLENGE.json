@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 325,
-  "program": "programs/realworld/svc_arg_guard_contract_board.cubalc",
-  "theme": "arg_guard NEED_ARGS+NEED_ARG_ANY fleet multi-arg contract",
-  "version": "1.15.840-usability",
+  "iter": 326,
+  "program": "programs/realworld/svc_time_boot_budget_board.cubalc",
+  "theme": "time_boot/time_guard fleet wall-budget contract",
+  "version": "1.15.842-usability",
   "pass": true,
-  "prior_note": "iter 324 env_guard; this iter first realworld 1388 arg_guard ALL+ANY program-arg twin",
+  "prior_note": "iter 325 arg_guard; this iter first realworld 1390 time_boot wall budget lib",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate ag",
+      "cmd": "seed agent plate tb",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "soft",
-      "cmd": "soft ALL+ANY env hit",
+      "cmd": "soft NEED_TIME under unlimited",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "miss",
-      "cmd": "soft ALL/ANY miss ARGMISS",
+      "name": "remain",
+      "cmd": "REMAIN_MS WALL_MS TIMEOUT_MS",
       "ok": true,
-      "note": "miss"
+      "note": "remain"
     },
     {
       "name": "hard",
-      "cmd": "hard NEEDARGS/ANY pass",
+      "cmd": "NEEDTIME 1 hard pass",
       "ok": true,
       "note": "hard"
     },
     {
-      "name": "skip",
-      "cmd": "empty gates skip OK=1",
+      "name": "tight_unlim",
+      "cmd": "tight without -T",
       "ok": true,
-      "note": "skip"
+      "note": "tight unlimited branch"
     },
     {
-      "name": "combo",
-      "cmd": "ALL positionals+ANY FILE",
+      "name": "tight_T",
+      "cmd": "tight with -T 80 soft miss",
       "ok": true,
-      "note": "combo"
+      "note": "tight limited"
     },
     {
       "name": "form",
-      "cmd": "HASLIB arg_guard",
+      "cmd": "HASLIB time_boot/time_guard",
       "ok": true,
       "note": "form"
     },
     {
       "name": "gate",
-      "cmd": "plate + live combo soft",
+      "cmd": "plate + live soft gate",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + re-INCLUDE",
+      "cmd": "PRINT clobber remain capture",
       "ok": true,
       "note": "probe"
     },
@@ -74,10 +74,16 @@
       "note": "unknown\u21922"
     },
     {
+      "name": "hard_miss_exit",
+      "cmd": "NEEDTIME hard miss -T 25",
+      "ok": false,
+      "note": "exit_code 0 class"
+    },
+    {
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "arg_guard PASS; CLI duals still red"
+      "note": "time_boot/time_guard PASS; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -5672,6 +5678,54 @@
       "title": "WRITE STATUS omit trailing NL (reconfirmed ag)",
       "detail": "STATUS last line without $.",
       "repro": "cat -A AG STATUS"
+    },
+    {
+      "id": "W700",
+      "severity": "high",
+      "area": "lang|needtime|exit",
+      "title": "NEEDTIME hard miss leaves process exit_code 0",
+      "detail": "Hard wall gate sticky NEEDTIME err + asserts_fail; exit_code often 0 (guard class W688/W694). Soft HAS_TIME/TIME_GUARD_SOFT + EXIT n for agents.",
+      "repro": "cubalc run -T 25 -e NEEDTIME 10000 \u2192 exit_code 0"
+    },
+    {
+      "id": "W701",
+      "severity": "high",
+      "area": "lang|timeout_unlimited",
+      "title": "TIMEOUT_UNLIMITED sticky var stays 0 even when REMAIN_MS=-1",
+      "detail": "After agent_boot with no -T: REMAIN_MS=-1 but PRINT TIMEOUT_UNLIMITED \u2192 0. Bare TIMEOUT_UNLIMITED as form is unknown. Agents must detect unlimited via REMAIN_MS == -1 not TIMEOUT_UNLIMITED var.",
+      "repro": "REMAIN_MS \u2192 -1; PRINT TIMEOUT_UNLIMITED \u2192 0"
+    },
+    {
+      "id": "W702",
+      "severity": "med",
+      "area": "lang|needtime|last_n",
+      "title": "NEEDTIME/time_guard success leaves LAST_N as remain (-1 unlimited) not 1",
+      "detail": "After INCLUDE time_guard hard pass, LAST_N is -1 (remain), not success 1. Use OK == 1 for pass tests, not LAST_N == 1.",
+      "repro": "NEEDTIME 1; PRINT LAST_N \u2192 -1; PRINT OK \u2192 1"
+    },
+    {
+      "id": "W703",
+      "severity": "med",
+      "area": "lang|has_time|ok",
+      "title": "HAS_TIME soft miss may leave OK=1 with sticky LAST_ERR",
+      "detail": "HAS_TIME 500 under -T 100 \u2192 LAST_N=0 sticky HAS_TIME miss but OK can stay 1 until time_guard soft path sets OK=0. Agents must check LAST_N/LAST_ERR not only OK for raw HAS_TIME.",
+      "repro": "HAS_TIME 500 with -T 100; PRINT OK may be 1"
+    },
+    {
+      "id": "W704",
+      "severity": "low",
+      "area": "lang|time_boot|positive",
+      "title": "time_boot/time_guard soft under unlimited always admit",
+      "detail": "Positive: NEED_TIME huge with REMAIN_MS=-1 still OK; HASLIB time_boot/time_guard; soft miss under -T works with ENVMISS-class sticky text.",
+      "repro": "INCLUDE time_guard NEED 999999 unlimited \u2192 OK 1"
+    },
+    {
+      "id": "W705",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL (reconfirmed tb)",
+      "detail": "STATUS last line without $.",
+      "repro": "cat -A TB STATUS"
     }
   ],
   "workarounds": [
@@ -5780,6 +5834,10 @@
     {
       "id": "WA-AG",
       "note": "ARG_GUARD_SOFT=1 then EXIT n on ARG_GUARD_OK=0; LET NEED_* before every INCLUDE; NTHARG after admit for values"
+    },
+    {
+      "id": "WA-TB",
+      "note": "detect unlimited via REMAIN_MS==-1; use OK not LAST_N after NEEDTIME; TIME_GUARD_SOFT=1 then EXIT n; run -T for real budget tests"
     }
   ],
   "language_gaps": [
@@ -5872,7 +5930,13 @@
     "ARG_GUARD_OK/ALL_OK/ANY_OK sticky knobs",
     "hard NEEDARGS* miss exit_code 0 (W694)",
     "LET before each re-INCLUDE arg_guard (W695)",
-    "ARGHAVE indices not values (W697)"
+    "ARGHAVE indices not values (W697)",
+    "time_boot agent_boot+time_guard (1390)",
+    "HAS_TIME/NEEDTIME/REMAIN_MS wall probes",
+    "NEEDTIME hard miss exit_code 0 (W700)",
+    "TIMEOUT_UNLIMITED var sticky 0 (W701)",
+    "NEEDTIME success LAST_N=remain not 1 (W702)",
+    "HAS_TIME soft miss OK may stay 1 (W703)"
   ],
   "issues_faced": [
     "iter300: all board paths green; WRITE SNIP.txt multi-line works",
@@ -5922,9 +5986,11 @@
     "iter324: hard/skip first failed plate surface NEEDENVS vs NEED_ENVS; board 10/10 after fix",
     "iter324: selftest 567/773 env_guard+env_boot PASS; CLI duals still set",
     "iter325: board 10/10 first pass; include_newest selftest brittle (newest=arg_guard)",
-    "iter325: selftest 569/778 arg_guard PASS; CLI duals still unknown form set"
+    "iter325: selftest 569/778 arg_guard PASS; CLI duals still unknown form set",
+    "iter326: hard/tight first failed LAST_N==-1 vs 1 and TIMEOUT_UNLIMITED false friend; fixed REMAIN_MS detect + OK checks",
+    "iter326: selftest 572/784 time_boot+time_guard PASS; CLI duals still set"
   ],
-  "commit": "391a8756",
-  "ts": "2026-08-11T00:29:08Z",
-  "board_commit": "391a8756"
+  "commit": "pending",
+  "ts": "2026-08-11T00:59:07Z",
+  "board_commit": "pending"
 }
