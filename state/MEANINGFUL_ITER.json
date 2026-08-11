@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 885,
-  "version": "1.15.878-usability",
-  "item": "HASFIELDS / NEEDFIELDS multi field soft/hard gates",
-  "item_id": 885,
-  "title": "HASFIELDS · NEEDFIELDS · FIELDMISS · HASMETHODS twin for fields",
-  "commit": "94946c82033da38d3a3add72a90e202dc789d2ea",
-  "summary": "HASFIELDS soft all fields on Class|obj + FIELDMISS; NEEDFIELDS hard; proof 1424 PASS.",
+  "iter": 886,
+  "version": "1.15.879-usability",
+  "item": "HASFIELDANY / NEEDFIELDANY any-of multi field gates",
+  "item_id": 886,
+  "title": "HASFIELDANY · NEEDFIELDANY · FIELDHAVE · HASFIELDS twin",
+  "commit": "4a75f2ba547177a41cb33db4b3a80f917e43e68b",
+  "summary": "HASFIELDANY soft any field on Class|obj + FIELDHAVE/MISS; NEEDFIELDANY hard; proof 1425 PASS.",
   "proofs": [
-    "1424_hasfields PASS",
-    "1424_cli_hasfields PASS"
+    "1425_hasfieldany PASS",
+    "1425_cli_hasfieldany PASS"
   ],
-  "when": "2026-08-11T07:41:03Z",
+  "when": "2026-08-11T07:43:32Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "94946c82033da38d3a3add72a90e202dc789d2ea",
-  "note": "agent GETF/SETF contracts without N x HASFIELD IF glue"
+  "sha": "4a75f2ba547177a41cb33db4b3a80f917e43e68b",
+  "note": "optional GETF/SETF plugin field OR without N x HASFIELD IF glue"
 }
