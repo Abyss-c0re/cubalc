@@ -1,0 +1,44 @@
+# INCLUDE obj_boot - agent_boot + obj_guard one-shot
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD id
+  METHOD ping
+    LET LAST = "pong"
+  END
+END
+
+NEW Ticket t1
+
+DEFAULT NEED_OBJS = ""
+DEFAULT NEED_OBJ_ANY = ""
+DEFAULT OBJ_GUARD_SOFT = 0
+INCLUDE obj_boot
+ASSERT OK == 1
+ASSERT OBJ_GUARD_OK == 1
+HASINCLUDE agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE obj_guard
+ASSERT LAST_N == 1
+HASINCLUDE obj_boot
+ASSERT LAST_N == 1
+HASLIB obj_boot
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST != ""
+
+LET NEED_OBJS = "nosuch_obj_boot_miss"
+LET NEED_OBJ_ANY = ""
+LET OBJ_GUARD_SOFT = 1
+INCLUDE obj_boot
+ASSERT OBJ_GUARD_OK == 0
+CLEAR_ERR
+
+LET NEED_OBJS = "t1"
+LET OBJ_GUARD_SOFT = 0
+INCLUDE obj_boot
+ASSERT OBJ_GUARD_OK == 1
+
+PRINT "1405_obj_boot: PASS"
+PASS

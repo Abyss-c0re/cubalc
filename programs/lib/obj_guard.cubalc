@@ -1,0 +1,113 @@
+# INCLUDE obj_guard — fail-fast live OOP instance catalog (ALL + optional ANY)
+# Usability: agent gate before SEND/GETF without N× HASOBJ / LISTOBJS glue.
+#
+#   DEFAULT NEED_OBJS = "t1\norder1"
+#   DEFAULT NEED_OBJ_ANY = "slot_a\nslot_b"
+#   DEFAULT OBJ_GUARD_SOFT = 0
+#   INCLUDE obj_guard
+#
+# Spec: each entry is a live instance name (NEW Class name). Soft dual leaves
+# OBJMISS / OBJHAVE bags. Twin of class_guard for the live object plane.
+# Note: hard path uses HASOBJ+FAIL (not REQUIRE OBJ) because REQUIRE OBJ
+# can break IF/END nesting when present as text inside INCLUDE.
+
+DEFAULT NEED_OBJS = ""
+DEFAULT NEED_OBJ_ANY = ""
+DEFAULT OBJ_GUARD_SOFT = 0
+
+SYS EMPTY NEED_OBJS
+IF LAST_N == 1
+  LET OBJ_GUARD_ALL_OK = 1
+  LET OBJMISS = ""
+  LET OBJHAVE = ""
+  LET OBJMISS_N = 0
+  LET OBJHAVE_N = 0
+ELSE
+  LET OBJMISS = ""
+  LET OBJHAVE = ""
+  LET OBJMISS_N = 0
+  LET OBJHAVE_N = 0
+  EACH LINE b IN NEED_OBJS
+    HASOBJ b
+    IF LAST_N == 1
+      LET OBJHAVE_N = OBJHAVE_N + 1
+      IF OBJHAVE == ""
+        LET OBJHAVE = b
+      ELSE
+        LET OBJHAVE = OBJHAVE + "\n" + b
+      END
+    ELSE
+      LET OBJMISS_N = OBJMISS_N + 1
+      IF OBJMISS == ""
+        LET OBJMISS = b
+      ELSE
+        LET OBJMISS = OBJMISS + "\n" + b
+      END
+    END
+  END
+  IF OBJMISS_N == 0
+    LET OBJ_GUARD_ALL_OK = 1
+    LET OK = 1
+  ELSE
+    LET OBJ_GUARD_ALL_OK = 0
+    LET OK = 0
+    LET LAST_ERR = "OBJ_GUARD ALL miss - missing: " + OBJMISS
+    LET ERR = LAST_ERR
+    IF OBJ_GUARD_SOFT == 0
+      FAIL "OBJ_GUARD hard miss — see ERR/OBJMISS"
+    END
+  END
+END
+
+SYS EMPTY NEED_OBJ_ANY
+IF LAST_N == 1
+  LET OBJ_GUARD_ANY_OK = 1
+ELSE
+  LET OBJANY_HIT = 0
+  LET OBJANY_HAVE = ""
+  LET OBJANY_MISS = ""
+  EACH LINE b IN NEED_OBJ_ANY
+    HASOBJ b
+    IF LAST_N == 1
+      LET OBJANY_HIT = 1
+      IF OBJANY_HAVE == ""
+        LET OBJANY_HAVE = b
+      ELSE
+        LET OBJANY_HAVE = OBJANY_HAVE + "\n" + b
+      END
+    ELSE
+      IF OBJANY_MISS == ""
+        LET OBJANY_MISS = b
+      ELSE
+        LET OBJANY_MISS = OBJANY_MISS + "\n" + b
+      END
+    END
+  END
+  IF OBJANY_HIT == 1
+    LET OBJ_GUARD_ANY_OK = 1
+    IF OBJHAVE == ""
+      LET OBJHAVE = OBJANY_HAVE
+    END
+  ELSE
+    LET OBJ_GUARD_ANY_OK = 0
+    LET OK = 0
+    LET LAST_ERR = "OBJ_GUARD ANY miss - need one of: " + NEED_OBJ_ANY
+    LET ERR = LAST_ERR
+    IF OBJ_GUARD_SOFT == 0
+      FAIL "OBJ_GUARD hard miss — see ERR/OBJMISS"
+    END
+  END
+END
+
+IF OBJ_GUARD_ALL_OK
+  IF OBJ_GUARD_ANY_OK
+    LET OBJ_GUARD_OK = 1
+    LET OK = 1
+  ELSE
+    LET OBJ_GUARD_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET OBJ_GUARD_OK = 0
+  LET OK = 0
+END

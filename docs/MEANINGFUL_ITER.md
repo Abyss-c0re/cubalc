@@ -894,6 +894,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 863. ~~**`method_guard` / `method_boot` + `cubalc init --method`**~~ **done** (NEED_METHODS/NEED_METHOD_ANY Class.method · METHOD_GUARD_OK · LISTMETHODS+HASLINE · catalog n=29 · proof 1402).
 864. ~~**`field_guard` / `field_boot` + `cubalc init --field`**~~ **done** (NEED_FIELDS/NEED_FIELD_ANY Class.field · FIELD_GUARD_OK · LISTFIELDS+HASLINE · catalog n=30 · proof 1403).
 865. ~~**`oop_session` / `oop_boot` + `cubalc init --oop`**~~ **done** (class+method+field · OOP_SESSION_OK · catalog n=31 · proof 1404).
+866. ~~**`obj_guard` / `obj_boot` + `cubalc init --obj`**~~ **done** (NEED_OBJS/NEED_OBJ_ANY live instances · OBJ_GUARD_OK · HASOBJ · catalog n=32 · proof 1405).
 
 
 ## Tick protocol

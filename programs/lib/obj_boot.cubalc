@@ -1,0 +1,18 @@
+# INCLUDE obj_boot — agent preamble + live OOP instance catalog contract one-shot
+# Usability: agent_boot + obj_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_OBJS = "t1\norder1"
+#   DEFAULT NEED_OBJ_ANY = "slot_a\nslot_b"
+#   DEFAULT OBJ_GUARD_SOFT = 0
+#   INCLUDE obj_boot
+# Soft miss: DEFAULT OBJ_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --obj
+# Twin of class_boot / method_boot / field_boot for the live instance plane.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_OBJS = ""
+DEFAULT NEED_OBJ_ANY = ""
+DEFAULT OBJ_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE obj_guard
