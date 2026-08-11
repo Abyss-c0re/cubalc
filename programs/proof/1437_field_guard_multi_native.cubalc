@@ -1,0 +1,115 @@
+# field_guard + HASFIELDS Class.field bag (no N× HASFIELD soup)
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD id
+  FIELD kind
+  METHOD ping
+    LET LAST = "pong"
+  END
+END
+
+CLASS Order
+  FIELD n
+  METHOD pay
+    LET n = 1
+  END
+END
+
+# empty skip
+DEFAULT NEED_FIELDS = ""
+DEFAULT NEED_FIELD_ANY = ""
+DEFAULT FIELD_GUARD_SOFT = 0
+INCLUDE field_guard
+ASSERT FIELD_GUARD_OK == 1
+ASSERT FIELD_GUARD_ALL_OK == 1
+ASSERT FIELD_GUARD_ANY_OK == 1
+
+# soft ALL multi-class hit
+LET NEED_FIELDS = "Ticket.id\nTicket.kind\nOrder.n"
+LET NEED_FIELD_ANY = ""
+LET FIELD_GUARD_SOFT = 1
+INCLUDE field_guard
+ASSERT FIELD_GUARD_ALL_OK == 1
+ASSERT FIELD_GUARD_OK == 1
+ASSERT FLDHAVE_N >= 3
+ASSERT FLDMISS_N == 0
+
+# soft ALL miss
+LET NEED_FIELDS = "Ticket.id\nGhost.nope"
+LET FIELD_GUARD_SOFT = 1
+INCLUDE field_guard
+ASSERT FIELD_GUARD_ALL_OK == 0
+ASSERT FIELD_GUARD_OK == 0
+ASSERT FLDMISS_N >= 1
+SYS HASI FLDMISS "Ghost.nope"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# soft ANY hit
+LET NEED_FIELDS = ""
+LET NEED_FIELD_ANY = "Ghost.x\nTicket.id"
+LET FIELD_GUARD_SOFT = 1
+INCLUDE field_guard
+ASSERT FIELD_GUARD_ANY_OK == 1
+ASSERT FIELD_GUARD_OK == 1
+ASSERT FLDHAVE_N >= 1
+SYS HASI FLDHAVE "Ticket.id"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# soft ANY all-miss
+LET NEED_FIELD_ANY = "Ghost.a\nGhost.b"
+LET FIELD_GUARD_SOFT = 1
+INCLUDE field_guard
+ASSERT FIELD_GUARD_ANY_OK == 0
+ASSERT FIELD_GUARD_OK == 0
+ASSERT FLDHAVE_N == 0
+CLEAR_ERR
+
+# hard ALL
+LET NEED_FIELDS = "Ticket.id\nOrder.n"
+LET NEED_FIELD_ANY = ""
+LET FIELD_GUARD_SOFT = 0
+INCLUDE field_guard
+ASSERT FIELD_GUARD_OK == 1
+
+# hard ANY
+LET NEED_FIELDS = ""
+LET NEED_FIELD_ANY = "Ghost.z\nTicket.kind"
+LET FIELD_GUARD_SOFT = 0
+INCLUDE field_guard
+ASSERT FIELD_GUARD_ANY_OK == 1
+ASSERT FIELD_GUARD_OK == 1
+
+# combined soft
+LET NEED_FIELDS = "Ticket.id"
+LET NEED_FIELD_ANY = "Order.n\nGhost.z"
+LET FIELD_GUARD_SOFT = 1
+INCLUDE field_guard
+ASSERT FIELD_GUARD_ALL_OK == 1
+ASSERT FIELD_GUARD_ANY_OK == 1
+ASSERT FIELD_GUARD_OK == 1
+
+# direct dotted bag
+HASFIELDS "Ticket.id\nOrder.n"
+ASSERT LAST_N == 1
+HASFIELDANY "Ghost.x\nTicket.kind"
+ASSERT LAST_N == 1
+SYS HASI FLDHAVE "Ticket.kind"
+ASSERT LAST_N == 1
+
+# classic Class fields… still works
+HASFIELDS Ticket id kind
+ASSERT LAST_N == 1
+
+HASFORM "HASFIELDS"
+ASSERT LAST_N == 1
+HASFORM "HASFIELDANY"
+ASSERT LAST_N == 1
+HASLIB field_guard
+ASSERT LAST_N == 1
+
+PRINT "1437_field_guard_multi_native ok"
+PASS

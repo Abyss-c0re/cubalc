@@ -927,6 +927,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 896. ~~**`obj_guard` native HASOBJS/NEEDOBJS + HASOBJANY/NEEDOBJANY**~~ **done** (lib rewrite · drop N× HASOBJ soup · twin of fn_guard · proof 1434).
 897. ~~**`class_guard` native HASCLASSES/NEEDCLASSES + HASCLASSANY/NEEDCLASSANY**~~ **done** (lib rewrite · drop N× HASCLASS soup · twin of obj/fn_guard · proof 1435).
 898. ~~**`method_guard` multi HASMETHODS/HASMETHODANY + Class.method bags**~~ **done** (dotted multi-class bag form · drop N× HASMETHOD soup · proof 1436).
+899. ~~**`field_guard` multi HASFIELDS/HASFIELDANY + Class.field bags**~~ **done** (dotted multi-class bag form · drop N× HASFIELD soup · proof 1437).
+
 
 
 

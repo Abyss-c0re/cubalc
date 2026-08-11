@@ -19305,30 +19305,32 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* HASFIELDS|NEEDFIELDS Class|obj field… — multi field capability gate (all-or-FIELDMISS).
-   * Soft: LAST_N 0|1 · FIELDMISS bag · NEEDFIELDS fail-fast first miss.
-   * Usability: agent GETF/SETF contracts without N× HASFIELD glue · bag/CSV/idents.
-   * Twin of HASMETHODS for OOP field plane · dual REQUIRE FIELD multi. */
+  /* HASFIELDS|NEEDFIELDS Class|obj field… | Class.field bag —
+   * multi field capability gate (all-or-FIELDMISS).
+   * Soft: LAST_N 0|1 · FIELDMISS/FLDMISS bag · NEEDFIELDS fail-fast first miss.
+   * Forms: HASFIELDS Cell x y · HASFIELDS bag_of_Class.field (multi-class).
+   * Usability: agent GETF/SETF / field_guard contracts without N× HASFIELD soup. */
   if (kw(&L->cur, "HASFIELDS") || kw(&L->cur, "HAS_FIELDS") ||
       kw(&L->cur, "ALLFIELDS") || kw(&L->cur, "FIELDSOK") ||
       kw(&L->cur, "NEEDFIELDS") || kw(&L->cur, "NEED_FIELDS") ||
       kw(&L->cur, "REQUIREFIELDS") || kw(&L->cur, "MUSTFIELDS")) {
     int hard = kw(&L->cur, "NEEDFIELDS") || kw(&L->cur, "NEED_FIELDS") ||
                kw(&L->cur, "REQUIREFIELDS") || kw(&L->cur, "MUSTFIELDS");
+    char first[1024];
     char target[48];
     char names[32][48];
     char miss[1024];
     ClassDef *cd = NULL;
     ObjInst *ob;
-    int nname = 0, nmiss = 0, i, aln = L->cur.line;
+    int nname = 0, nmiss = 0, i, aln = L->cur.line, dotted = 0;
     size_t mo = 0;
     lex_next(L);
     miss[0] = 0;
+    first[0] = 0;
     target[0] = 0;
-    /* target Class|obj */
     if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
       if (hard) {
-        fail_at(vm, L, "NEEDFIELDS Class|obj field… — NEEDFIELDS Cell x y");
+        fail_at(vm, L, "NEEDFIELDS Class|obj field… — NEEDFIELDS Cell x · bag Class.field");
         return -1;
       }
       var_set_str(vm, "LAST", "0");
@@ -19337,16 +19339,17 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", 0);
       var_set_num(vm, "HASFIELDS_N", 0);
       var_set_num(vm, "FIELDMISS_N", 0);
+      var_set_num(vm, "FLDMISS_N", 0);
       var_set_str(vm, "FIELDMISS", "");
       var_set_str(vm, "FLDMISS", "");
       var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", "HASFIELDS: need Class|obj field… — HASFIELDS Cell x");
-      var_set_str(vm, "ERR", "HASFIELDS: need Class|obj field… — HASFIELDS Cell x");
+      var_set_str(vm, "LAST_ERR", "HASFIELDS: need Class|obj field… or Class.field bag");
+      var_set_str(vm, "ERR", "HASFIELDS: need Class|obj field… or Class.field bag");
       bump(vm);
       return 1;
     }
     if (L->cur.kind == TK_STR) {
-      snprintf(target, sizeof target, "%s", L->cur.text);
+      snprintf(first, sizeof first, "%s", L->cur.text);
       lex_next(L);
     } else {
       char id[48];
@@ -19354,20 +19357,159 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(id, sizeof id, "%s", L->cur.text);
       lex_next(L);
       if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
-        snprintf(target, sizeof target, "%s", id);
+        snprintf(first, sizeof first, "%s", id);
       } else {
         vv = var_get(vm, id, 0);
         if (vv && vv->is_str && vv->sval[0])
-          snprintf(target, sizeof target, "%s", vv->sval);
+          snprintf(first, sizeof first, "%s", vv->sval);
         else
-          snprintf(target, sizeof target, "%s", id);
+          snprintf(first, sizeof first, "%s", id);
       }
     }
-    /* field name list */
+    if (strchr(first, '.')) {
+      int more = (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT);
+      if (more && L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASFIELDS") ||
+           kw(&L->cur, "HASFIELDANY") || kw(&L->cur, "NEEDFIELDS") ||
+           kw(&L->cur, "NEEDFIELDANY") || kw(&L->cur, "LISTFIELDS") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ")))
+        more = 0;
+      if (!more || strchr(first, '\n') || strchr(first, ',') || strchr(first, ' '))
+        dotted = 1;
+    }
+    if (dotted) {
+      const char *p = first;
+      while (*p && nname < 32) {
+        char tok[48];
+        size_t tl = 0;
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+          p++;
+        if (!*p) break;
+        while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+               p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+          tok[tl] = p[tl];
+          tl++;
+        }
+        tok[tl] = 0;
+        p += tl;
+        if (tok[0])
+          snprintf(names[nname++], sizeof names[0], "%s", tok);
+      }
+      if (nname == 0) {
+        if (hard) {
+          fail_at(vm, L, "NEEDFIELDS Class.field… — NEEDFIELDS Ticket.id Order.n");
+          return -1;
+        }
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASFIELDS_N", 0);
+        var_set_num(vm, "FIELDMISS_N", 0);
+        var_set_num(vm, "FLDMISS_N", 0);
+        var_set_str(vm, "FIELDMISS", "");
+        var_set_str(vm, "FLDMISS", "");
+        var_set_str(vm, "FIELD_ON", "*");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "HASFIELDS: need Class.field bag");
+        var_set_str(vm, "ERR", "HASFIELDS: need Class.field bag");
+        bump(vm);
+        return 1;
+      }
+      for (i = 0; i < nname; i++) {
+        char cname[48], fname[48];
+        const char *dot = strchr(names[i], '.');
+        int hit = 0;
+        cname[0] = 0;
+        fname[0] = 0;
+        if (dot && dot != names[i] && dot[1]) {
+          size_t cl = (size_t)(dot - names[i]);
+          if (cl + 1 < sizeof cname) {
+            memcpy(cname, names[i], cl);
+            cname[cl] = 0;
+          }
+          snprintf(fname, sizeof fname, "%s", dot + 1);
+          ob = oop_find_obj(vm, cname);
+          if (ob)
+            cd = &vm->classes[ob->class_idx];
+          else
+            cd = oop_find_class(vm, cname);
+          if (cd && oop_field_idx(cd, fname) >= 0)
+            hit = 1;
+        }
+        if (hit)
+          continue;
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+        if (hard) {
+          char em[220];
+          snprintf(em, sizeof em,
+                   "NEEDFIELDS miss line %d: '%s' (+%d more?) — CLASS FIELD · HASFIELD · LISTFIELDS",
+                   aln, names[i], nname - i - 1);
+          fail_at(vm, L, em);
+          return -1;
+        }
+      }
+      var_set_str(vm, "FIELDMISS", miss);
+      var_set_str(vm, "FLDMISS", miss);
+      var_set_num(vm, "FIELDMISS_N", nmiss);
+      var_set_num(vm, "FLDMISS_N", nmiss);
+      var_set_num(vm, "HASFIELDS_N", nname - nmiss);
+      var_set_num(vm, "NEEDFIELDS_N", nname);
+      var_set_num(vm, "FIELDS_N", nname);
+      var_set_str(vm, "FIELD_ON", "*");
+      if (nmiss == 0) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+      } else {
+        char em[220];
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        snprintf(em, sizeof em,
+                 "HASFIELDS miss (%d/%d): %s — CLASS FIELD · NEEDFIELDS · LISTFIELDS",
+                 nmiss, nname, miss);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# %s dotted n=%d miss=%d\n",
+                hard ? "NEEDFIELDS" : "HASFIELDS", nname, nmiss);
+      bump(vm);
+      return 1;
+    }
+    /* classic Class|obj field… form */
+    snprintf(target, sizeof target, "%s", first);
     while (nname < 32 &&
            (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
-      /* Do NOT use oop_stmt_kw here: it treats TICK/FIELD/FIELD as stmt heads,
-       * but those are common FIELD names (Cell.x). Narrow control-only stop list. */
       if (L->cur.kind == TK_IDENT &&
           (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
            kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
@@ -19444,7 +19586,6 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
                    strchr(vv->sval, '.') == NULL &&
                    !strchr(vv->sval, '\n') && !strchr(vv->sval, ',') &&
                    !strchr(vv->sval, ' ')) {
-          /* single-token string-var field name (mirrors HASFIELD expand) */
           snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
           lex_next(L);
         } else {
@@ -19464,6 +19605,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", 0);
       var_set_num(vm, "HASFIELDS_N", 0);
       var_set_num(vm, "FIELDMISS_N", 0);
+      var_set_num(vm, "FLDMISS_N", 0);
       var_set_str(vm, "FIELDMISS", "");
       var_set_str(vm, "FLDMISS", "");
       var_set_str(vm, "FIELD_ON", target);
@@ -19537,10 +19679,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* HASFIELDANY|NEEDFIELDANY Class|obj field… — multi field any-of gate (HASFIELDS twin).
-   * Soft: LAST_N 1 if any listed field exists · FIELDHAVE bag · FIELDMISS bag.
-   * NEEDFIELDANY fail-fast if none of the listed fields exist on Class|obj.
-   * Usability: optional GETF/SETF plugin field OR without N× HASFIELD IF glue. */
+  /* HASFIELDANY|NEEDFIELDANY Class|obj field… | Class.field bag —
+   * multi field any-of gate (HASFIELDS twin).
+   * Soft: LAST_N 1 if any match · FIELDHAVE/FLDHAVE · FIELDMISS/FLDMISS.
+   * Forms: HASFIELDANY Cell alive · HASFIELDANY bag_of_Class.field.
+   * NEEDFIELDANY fail-fast if none match. */
   if (kw(&L->cur, "HASFIELDANY") || kw(&L->cur, "HAS_FIELD_ANY") ||
       kw(&L->cur, "ANYFIELD") || kw(&L->cur, "FIELDANY") ||
       kw(&L->cur, "HASANYFIELD") || kw(&L->cur, "NEEDFIELDANY") ||
@@ -19548,20 +19691,22 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       kw(&L->cur, "MUSTFIELDANY")) {
     int hard = kw(&L->cur, "NEEDFIELDANY") || kw(&L->cur, "NEED_FIELD_ANY") ||
                kw(&L->cur, "REQUIREFIELDANY") || kw(&L->cur, "MUSTFIELDANY");
+    char first[1024];
     char target[48];
     char names[32][48];
     char miss[1024], havebag[1024];
     ClassDef *cd = NULL;
     ObjInst *ob;
-    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line;
+    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line, dotted = 0;
     size_t mo = 0, ho = 0;
     lex_next(L);
     miss[0] = 0;
     havebag[0] = 0;
+    first[0] = 0;
     target[0] = 0;
     if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
       if (hard) {
-        fail_at(vm, L, "NEEDFIELDANY Class|obj field… — NEEDFIELDANY Cell alive energy");
+        fail_at(vm, L, "NEEDFIELDANY Class|obj field… — NEEDFIELDANY Cell alive · bag Class.field");
         return -1;
       }
       var_set_str(vm, "LAST", "0");
@@ -19571,18 +19716,20 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "HASFIELDANY_N", 0);
       var_set_num(vm, "FIELDMISS_N", 0);
       var_set_num(vm, "FIELDHAVE_N", 0);
+      var_set_num(vm, "FLDMISS_N", 0);
+      var_set_num(vm, "FLDHAVE_N", 0);
       var_set_str(vm, "FIELDMISS", "");
       var_set_str(vm, "FIELDHAVE", "");
       var_set_str(vm, "FLDMISS", "");
       var_set_str(vm, "FLDHAVE", "");
       var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", "HASFIELDANY: need Class|obj field… — HASFIELDANY Cell alive");
-      var_set_str(vm, "ERR", "HASFIELDANY: need Class|obj field… — HASFIELDANY Cell alive");
+      var_set_str(vm, "LAST_ERR", "HASFIELDANY: need Class|obj field… or Class.field bag");
+      var_set_str(vm, "ERR", "HASFIELDANY: need Class|obj field… or Class.field bag");
       bump(vm);
       return 1;
     }
     if (L->cur.kind == TK_STR) {
-      snprintf(target, sizeof target, "%s", L->cur.text);
+      snprintf(first, sizeof first, "%s", L->cur.text);
       lex_next(L);
     } else {
       char id[48];
@@ -19590,18 +19737,178 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(id, sizeof id, "%s", L->cur.text);
       lex_next(L);
       if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
-        snprintf(target, sizeof target, "%s", id);
+        snprintf(first, sizeof first, "%s", id);
       } else {
         vv = var_get(vm, id, 0);
         if (vv && vv->is_str && vv->sval[0])
-          snprintf(target, sizeof target, "%s", vv->sval);
+          snprintf(first, sizeof first, "%s", vv->sval);
         else
-          snprintf(target, sizeof target, "%s", id);
+          snprintf(first, sizeof first, "%s", id);
       }
     }
+    if (strchr(first, '.')) {
+      int more = (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT);
+      if (more && L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASFIELDS") ||
+           kw(&L->cur, "HASFIELDANY") || kw(&L->cur, "NEEDFIELDS") ||
+           kw(&L->cur, "NEEDFIELDANY") || kw(&L->cur, "LISTFIELDS") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ")))
+        more = 0;
+      if (!more || strchr(first, '\n') || strchr(first, ',') || strchr(first, ' '))
+        dotted = 1;
+    }
+    if (dotted) {
+      const char *p = first;
+      while (*p && nname < 32) {
+        char tok[48];
+        size_t tl = 0;
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+          p++;
+        if (!*p) break;
+        while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+               p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+          tok[tl] = p[tl];
+          tl++;
+        }
+        tok[tl] = 0;
+        p += tl;
+        if (tok[0])
+          snprintf(names[nname++], sizeof names[0], "%s", tok);
+      }
+      if (nname == 0) {
+        if (hard) {
+          fail_at(vm, L, "NEEDFIELDANY Class.field… — NEEDFIELDANY Ticket.id Order.n");
+          return -1;
+        }
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASFIELDANY_N", 0);
+        var_set_num(vm, "FIELDMISS_N", 0);
+        var_set_num(vm, "FIELDHAVE_N", 0);
+        var_set_num(vm, "FLDMISS_N", 0);
+        var_set_num(vm, "FLDHAVE_N", 0);
+        var_set_str(vm, "FIELDMISS", "");
+        var_set_str(vm, "FIELDHAVE", "");
+        var_set_str(vm, "FLDMISS", "");
+        var_set_str(vm, "FLDHAVE", "");
+        var_set_str(vm, "FIELD_ON", "*");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "HASFIELDANY: need Class.field bag");
+        var_set_str(vm, "ERR", "HASFIELDANY: need Class.field bag");
+        bump(vm);
+        return 1;
+      }
+      for (i = 0; i < nname; i++) {
+        char cname[48], fname[48];
+        const char *dot = strchr(names[i], '.');
+        int hit = 0;
+        if (dot && dot != names[i] && dot[1]) {
+          size_t cl = (size_t)(dot - names[i]);
+          if (cl + 1 < sizeof cname) {
+            memcpy(cname, names[i], cl);
+            cname[cl] = 0;
+          } else
+            cname[0] = 0;
+          snprintf(fname, sizeof fname, "%s", dot + 1);
+          ob = oop_find_obj(vm, cname);
+          if (ob)
+            cd = &vm->classes[ob->class_idx];
+          else
+            cd = oop_find_class(vm, cname);
+          if (cd && oop_field_idx(cd, fname) >= 0)
+            hit = 1;
+        }
+        if (hit) {
+          nhave++;
+          if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+          {
+            size_t ln = strlen(names[i]);
+            if (ho + ln < sizeof havebag) {
+              memcpy(havebag + ho, names[i], ln);
+              ho += ln;
+              havebag[ho] = 0;
+            }
+          }
+        } else {
+          nmiss++;
+          if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+          {
+            size_t ln = strlen(names[i]);
+            if (mo + ln < sizeof miss) {
+              memcpy(miss + mo, names[i], ln);
+              mo += ln;
+              miss[mo] = 0;
+            }
+          }
+        }
+      }
+      var_set_str(vm, "FIELDMISS", miss);
+      var_set_str(vm, "FIELDHAVE", havebag);
+      var_set_str(vm, "FLDMISS", miss);
+      var_set_str(vm, "FLDHAVE", havebag);
+      var_set_num(vm, "FIELDMISS_N", nmiss);
+      var_set_num(vm, "FIELDHAVE_N", nhave);
+      var_set_num(vm, "FLDMISS_N", nmiss);
+      var_set_num(vm, "FLDHAVE_N", nhave);
+      var_set_num(vm, "HASFIELDANY_N", nhave);
+      var_set_num(vm, "NEEDFIELDANY_N", nname);
+      var_set_num(vm, "FIELDS_ANY_N", nname);
+      var_set_str(vm, "FIELD_ON", "*");
+      if (nhave > 0) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+      } else if (hard) {
+        char em[240];
+        snprintf(em, sizeof em,
+                 "NEEDFIELDANY miss line %d: need one of [%s] — CLASS FIELD · HASFIELDANY · LISTFIELDS",
+                 aln, miss[0] ? miss : "?");
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        fail_at(vm, L, em);
+        return -1;
+      } else {
+        char em[240];
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        snprintf(em, sizeof em,
+                 "HASFIELDANY miss (0/%d): need one of %s — NEEDFIELDANY · LISTFIELDS",
+                 nname, miss[0] ? miss : "?");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# %s dotted n=%d have=%d miss=%d\n",
+                hard ? "NEEDFIELDANY" : "HASFIELDANY", nname, nhave, nmiss);
+      bump(vm);
+      return 1;
+    }
+    /* classic Class|obj field… form */
+    snprintf(target, sizeof target, "%s", first);
     while (nname < 32 &&
            (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
-      /* Narrow stop list — do not treat TICK/FIELD/METHOD as terminators. */
       if (L->cur.kind == TK_IDENT &&
           (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
            kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
@@ -19698,6 +20005,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "HASFIELDANY_N", 0);
       var_set_num(vm, "FIELDMISS_N", 0);
       var_set_num(vm, "FIELDHAVE_N", 0);
+      var_set_num(vm, "FLDMISS_N", 0);
+      var_set_num(vm, "FLDHAVE_N", 0);
       var_set_str(vm, "FIELDMISS", "");
       var_set_str(vm, "FIELDHAVE", "");
       var_set_str(vm, "FLDMISS", "");

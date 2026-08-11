@@ -1,5 +1,5 @@
 # INCLUDE field_guard - fail-fast Class.field catalog contract (ALL + optional ANY)
-# Usability: agent OOP field gate via native HASCLASS/HASFIELD (no LISTFIELDS+HASLINE soup).
+# Usability: agent OOP field gate via native multi forms (no N× HASFIELD soup).
 #
 #   DEFAULT NEED_FIELDS = "Ticket.id\nTicket.kind"
 #   DEFAULT NEED_FIELD_ANY = "Order.n\nTicket.n"
@@ -7,8 +7,9 @@
 #   INCLUDE field_guard
 #
 # Spec: each entry is Class.field (dot). Soft dual leaves FLDMISS / FLDHAVE bags.
-# Twin of method_guard (native HASMETHOD) for field plane.
-# Hard path: HARDFAIL (not REQUIRE FIELD — can break IF/END nesting in INCLUDE).
+# Twin of method_guard multi path for the field plane.
+# Hard ALL: NEEDFIELDS · Hard ANY: NEEDFIELDANY · Soft: HASFIELDS / HASFIELDANY
+# (dotted multi-class bag form). REQUIRE FIELD avoided — IF/END nesting.
 
 DEFAULT NEED_FIELDS = ""
 DEFAULT NEED_FIELD_ANY = ""
@@ -22,73 +23,20 @@ IF LAST_N == 1
   LET FLDMISS_N = 0
   LET FLDHAVE_N = 0
 ELSE
-  LET FLDMISS = ""
-  LET FLDHAVE = ""
-  LET FLDMISS_N = 0
-  LET FLDHAVE_N = 0
-  EACH LINE b IN NEED_FIELDS
-    SYS BEFORE b "."
-    LET _fcn = LAST
-    SYS AFTER b "."
-    LET _ffn = LAST
-    SYS EMPTY _fcn
-    IF LAST_N == 1
-      LET FLDMISS_N = FLDMISS_N + 1
-      IF FLDMISS == ""
-        LET FLDMISS = b
-      ELSE
-        LET FLDMISS = FLDMISS + "\n" + b
-      END
-    ELSE
-      SYS EMPTY _ffn
-      IF LAST_N == 1
-        LET FLDMISS_N = FLDMISS_N + 1
-        IF FLDMISS == ""
-          LET FLDMISS = b
-        ELSE
-          LET FLDMISS = FLDMISS + "\n" + b
-        END
-      ELSE
-        HASCLASS _fcn
-        IF LAST_N == 0
-          LET FLDMISS_N = FLDMISS_N + 1
-          IF FLDMISS == ""
-            LET FLDMISS = b
-          ELSE
-            LET FLDMISS = FLDMISS + "\n" + b
-          END
-        ELSE
-          HASFIELD _fcn _ffn
-          IF LAST_N == 1
-            LET FLDHAVE_N = FLDHAVE_N + 1
-            IF FLDHAVE == ""
-              LET FLDHAVE = b
-            ELSE
-              LET FLDHAVE = FLDHAVE + "\n" + b
-            END
-          ELSE
-            LET FLDMISS_N = FLDMISS_N + 1
-            IF FLDMISS == ""
-              LET FLDMISS = b
-            ELSE
-              LET FLDMISS = FLDMISS + "\n" + b
-            END
-          END
-        END
-      END
+  IF FIELD_GUARD_SOFT
+    HASFIELDS NEED_FIELDS
+    LET FIELD_GUARD_ALL_OK = LAST_N
+    LET FLDHAVE_N = HASFIELDS_N
+    IF FLDMISS_N == 0
+      LET FLDHAVE = NEED_FIELDS
     END
-  END
-  IF FLDMISS_N == 0
-    LET FIELD_GUARD_ALL_OK = 1
-    LET OK = 1
   ELSE
-    LET FIELD_GUARD_ALL_OK = 0
-    LET OK = 0
-    LET LAST_ERR = "FIELD_GUARD ALL miss - missing: " + FLDMISS
-    LET ERR = LAST_ERR
-    IF FIELD_GUARD_SOFT == 0
-      HARDFAIL "FIELD_GUARD hard miss — see ERR/FLDMISS"
-    END
+    NEEDFIELDS NEED_FIELDS
+    LET FIELD_GUARD_ALL_OK = 1
+    LET FLDMISS = ""
+    LET FLDMISS_N = 0
+    LET FLDHAVE = NEED_FIELDS
+    LET FLDHAVE_N = NEEDFIELDS_N
   END
 END
 
@@ -96,70 +44,14 @@ SYS EMPTY NEED_FIELD_ANY
 IF LAST_N == 1
   LET FIELD_GUARD_ANY_OK = 1
 ELSE
-  LET FLDANY_HIT = 0
-  LET FLDANY_HAVE = ""
-  LET FLDANY_MISS = ""
-  EACH LINE b IN NEED_FIELD_ANY
-    SYS BEFORE b "."
-    LET _fcn = LAST
-    SYS AFTER b "."
-    LET _ffn = LAST
-    SYS EMPTY _fcn
-    IF LAST_N == 1
-      IF FLDANY_MISS == ""
-        LET FLDANY_MISS = b
-      ELSE
-        LET FLDANY_MISS = FLDANY_MISS + "\n" + b
-      END
-    ELSE
-      SYS EMPTY _ffn
-      IF LAST_N == 1
-        IF FLDANY_MISS == ""
-          LET FLDANY_MISS = b
-        ELSE
-          LET FLDANY_MISS = FLDANY_MISS + "\n" + b
-        END
-      ELSE
-        HASCLASS _fcn
-        IF LAST_N == 0
-          IF FLDANY_MISS == ""
-            LET FLDANY_MISS = b
-          ELSE
-            LET FLDANY_MISS = FLDANY_MISS + "\n" + b
-          END
-        ELSE
-          HASFIELD _fcn _ffn
-          IF LAST_N == 1
-            LET FLDANY_HIT = 1
-            IF FLDANY_HAVE == ""
-              LET FLDANY_HAVE = b
-            ELSE
-              LET FLDANY_HAVE = FLDANY_HAVE + "\n" + b
-            END
-          ELSE
-            IF FLDANY_MISS == ""
-              LET FLDANY_MISS = b
-            ELSE
-              LET FLDANY_MISS = FLDANY_MISS + "\n" + b
-            END
-          END
-        END
-      END
-    END
-  END
-  IF FLDANY_HIT == 1
-    LET FIELD_GUARD_ANY_OK = 1
-    IF FLDHAVE == ""
-      LET FLDHAVE = FLDANY_HAVE
-    END
+  IF FIELD_GUARD_SOFT
+    HASFIELDANY NEED_FIELD_ANY
+    LET FIELD_GUARD_ANY_OK = LAST_N
+    # FLDHAVE / FLDMISS from HASFIELDANY
   ELSE
-    LET FIELD_GUARD_ANY_OK = 0
-    LET OK = 0
-    LET LAST_ERR = "FIELD_GUARD ANY miss - need one of: " + NEED_FIELD_ANY
-    LET ERR = LAST_ERR
-    IF FIELD_GUARD_SOFT == 0
-      HARDFAIL "FIELD_GUARD hard miss — see ERR/FLDMISS"
-    END
+    NEEDFIELDANY NEED_FIELD_ANY
+    LET FIELD_GUARD_ANY_OK = 1
+    LET FLDHAVE_N = NEEDFIELDANY_N
   END
 END
 
