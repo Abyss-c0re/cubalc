@@ -6749,7 +6749,7 @@
     "iter341: first-try green HASFNS+HASFNANY+HASOBJANY board 10/10 actions",
     "iter341: proofs 1427/1429/1432 PASS; quoted REQUIRE LIB hold_seed"
   ],
-  "commit": "pending",
+  "commit": "1da089ca",
   "ts": "2026-08-11T08:49:36Z",
-  "board_commit": "pending"
+  "board_commit": "1da089ca"
 }
