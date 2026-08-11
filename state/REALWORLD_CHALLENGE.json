@@ -6547,7 +6547,7 @@
     "iter337: RMALL OK=0 on dir FAIL despite N files removed (W765)",
     "iter337: board all actions green; selftest CLI duals still set\u2192SETF red"
   ],
-  "commit": "bf6fff83",
+  "commit": "c96ebb1b",
   "ts": "2026-08-11T06:22:16Z",
-  "board_commit": "bf6fff83"
+  "board_commit": "c96ebb1b"
 }
