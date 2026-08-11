@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 856,
-  "version": "1.15.848-usability",
-  "item": "bin_guard + bin_boot + cubalc init --bin",
-  "item_id": 856,
-  "title": "bin_guard \u00b7 bin_boot \u00b7 BIN_GUARD_OK \u00b7 init --bin \u00b7 doctor",
-  "commit": "4eaab00dd338fd4ccb649ae532256b8847de5901",
-  "summary": "NEED_BINS/NEED_BIN_ANY PATH tool contract; init --bin catalog n=22; doctor lib_bin_*; proof 1396 PASS.",
+  "iter": 857,
+  "version": "1.15.849-usability",
+  "item": "lib_guard + lib_boot + REQUIRE LIB var + init --lib-boot",
+  "item_id": 857,
+  "title": "lib_guard \u00b7 lib_boot \u00b7 LIB_GUARD_OK \u00b7 REQUIRE LIB var \u00b7 init --lib-boot",
+  "commit": "b0e429f749f49bdec7c0f367e9e0ec13d7041063",
+  "summary": "NEED_LIBS/NEED_LIB_ANY module contract; REQUIRE LIB resolve_str_arg; init --lib-boot catalog n=23; proof 1397 PASS.",
   "proofs": [
-    "1396_bin_guard PASS",
-    "1396_bin_boot PASS",
-    "1396_cli_bin_guard PASS",
-    "1396_cli_init_bin PASS"
+    "1397_lib_guard PASS",
+    "1397_lib_boot PASS",
+    "1397_cli_lib_guard PASS",
+    "1397_cli_init_lib PASS"
   ],
-  "when": "2026-08-11T01:54:38Z",
+  "when": "2026-08-11T02:05:49Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "4eaab00dd338fd4ccb649ae532256b8847de5901",
-  "note": "path/rw twin for external tools on PATH before SPAWN"
+  "sha": "b0e429f749f49bdec7c0f367e9e0ec13d7041063",
+  "note": "bin_guard twin for INCLUDE-path modules \u00b7 REQUIRE LIB var fix"
 }
