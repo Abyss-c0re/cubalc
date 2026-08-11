@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 851,
-  "version": "1.15.843-usability",
-  "item": "tool_session + cubalc init --full-cli",
-  "item_id": 851,
-  "title": "tool_session \u00b7 init --full-cli \u00b7 TOOL_SESSION_OK \u00b7 doctor",
-  "commit": "9628f94e92aa68b42adb359033e0102c2234581b",
-  "summary": "cli_boot+cli_guard+arg_guard one-shot; init --full-cli catalog n=18; doctor lib_tool_session; proof 1391 PASS.",
+  "iter": 852,
+  "version": "1.15.844-usability",
+  "item": "product_session + cubalc init --product",
+  "item_id": 852,
+  "title": "product_session \u00b7 init --product \u00b7 PRODUCT_SESSION_OK \u00b7 doctor",
+  "commit": "e98682fa5ef454846ff57e36ad1d0493b655e551",
+  "summary": "tool_session+env_guard+time_guard one-shot; init --product catalog n=19; doctor lib_product_session; proof 1392 PASS.",
   "proofs": [
-    "1391_tool_session PASS",
-    "1391_cli_init_tool_session PASS"
+    "1392_product_session PASS",
+    "1392_cli_init_product_session PASS"
   ],
-  "when": "2026-08-11T00:56:23Z",
+  "when": "2026-08-11T01:18:05Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "9628f94e92aa68b42adb359033e0102c2234581b",
-  "note": "pairs cli_session \u00b7 full product CLI flags+args without triple INCLUDE"
+  "sha": "e98682fa5ef454846ff57e36ad1d0493b655e551",
+  "note": "pairs tool_session \u00b7 product CLI flags+args+env+time one INCLUDE"
 }
