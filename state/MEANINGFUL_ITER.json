@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 907,
-  "version": "1.15.900-usability",
-  "item": "cubalc run -K / --require-classes / CUBALC_REQUIRE_CLASSES",
-  "item_id": 907,
-  "title": "require-classes \u00b7 -K \u00b7 NEEDCLASSES dual \u00b7 host CLASS floor",
-  "commit": "f56dfcfb",
-  "summary": "run -K/--require-classes + CUBALC_REQUIRE_CLASSES fail if CLASS surface misses after -I (NEEDCLASSES dual of -N FNs); plate require_classes; proof 1445 PASS.",
+  "iter": 908,
+  "version": "1.15.901-usability",
+  "item": "TIMEIT / BENCH / ELAPSED block",
+  "item_id": 908,
+  "title": "TIMEIT \u00b7 BENCH \u00b7 ELAPSED \u00b7 TIMEIT_MS \u00b7 wall measure body",
+  "commit": "fcf75e14",
+  "summary": "TIMEIT|BENCH|ELAPSED \u2026 END measures mono wall ms into LAST_N/TIMEIT_MS; no SYS MS delta glue; proof 1446 PASS.",
   "proofs": [
-    "1445_cli_require_classes PASS",
-    "1440_cli_require_fns regression PASS"
+    "1446_timeit PASS",
+    "1446_cli_timeit PASS"
   ],
-  "when": "2026-08-11T11:35:41Z",
+  "when": "2026-08-11T11:48:42Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "f56dfcfbd59cfa50ce59a17ef8508a02dd09b5e7",
-  "note": "agent host OOP floor without rewriting body NEEDCLASSES"
+  "sha": "fcf75e14bbbe0cacce031bdd997bb9b29e294626",
+  "note": "agent timing of hooks/sleep/backoff without arithmetic plate glue"
 }
