@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 932,
-  "version": "1.15.925-usability",
-  "item": "MOVELINEIN vars",
-  "item_id": 932,
-  "title": "MOVELINEIN \u00b7 bag field move by index",
-  "commit": "dc4ba072",
-  "summary": "Move bag field from\u2192to index on named vars; promote/demote without DROP+INSERT glue; proof 1470 PASS.",
+  "iter": 933,
+  "version": "1.15.926-usability",
+  "item": "COUNTIN / COUNTLINEIN vars",
+  "item_id": 933,
+  "title": "COUNTIN \u00b7 COUNTLINEIN \u00b7 tally probes",
+  "commit": "746d7a57",
+  "summary": "Needle and exact-bag tallies on named vars \u2192 LAST_N; no loop glue; proof 1471 PASS.",
   "proofs": [
-    "1470_movelinein PASS",
-    "1470_cli_movelinein PASS",
-    "1469_insertlinein regression PASS"
+    "1471_countin_countlinein PASS",
+    "1471_cli_countin_countlinein PASS",
+    "1470_movelinein regression PASS"
   ],
-  "when": "2026-08-11T16:26:59Z",
+  "when": "2026-08-11T16:36:50Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "dc4ba072d79112adb3ad079a439f7e8e8c3d6d95",
-  "note": "agent priority promote/demote without bag rebuild"
+  "sha": "746d7a57ca4f579d257175c10ccda334e3e8e84f",
+  "note": "agent path depth / multi-ack tallies without EACH"
 }
