@@ -1,20 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 870,
-  "version": "1.15.863-usability",
-  "item": "service_session + service_boot + cubalc init --service-boot",
-  "item_id": 870,
-  "title": "service_session \u00b7 service_boot \u00b7 SERVICE_SESSION_OK \u00b7 init --service-boot",
-  "commit": "f3e87d2c9e9683178a99333e4800ab5cb6d1ef5b",
-  "summary": "full_session+live_session SERVICE_SESSION_OK; init --service-boot n=34; proof 1409 PASS.",
+  "iter": 871,
+  "version": "1.15.864-usability",
+  "item": "TRYNEW / NEW SOFT soft instance create",
+  "item_id": 871,
+  "title": "TRYNEW \u00b7 NEW SOFT \u00b7 soft miss class/redefine \u00b7 no fatal",
+  "commit": "4744656238dd6467b165757493193f69273f57a9",
+  "summary": "TRYNEW/NEW SOFT OK=0 LAST_ERR on miss; hard NEW fatal dual; proof 1410 PASS.",
   "proofs": [
-    "1409_service_session PASS",
-    "1409_service_boot PASS",
-    "1409_cli_service_session PASS",
-    "1409_cli_init_service PASS"
+    "1410_trynew PASS",
+    "1410_cli_trynew PASS"
   ],
-  "when": "2026-08-11T04:34:13Z",
+  "when": "2026-08-11T04:44:52Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "f3e87d2c9e9683178a99333e4800ab5cb6d1ef5b",
-  "note": "fleet service one INCLUDE \u00b7 bare --service remains product_session"
+  "sha": "4744656238dd6467b165757493193f69273f57a9",
+  "note": "optional OOP plugins without HASCLASS+IF+NEW glue"
 }
