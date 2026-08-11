@@ -3880,6 +3880,9 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"STRTO", "STRTO name — coerce var to decimal string (itoa) in place"},
       {"INTTO", "INTTO alias of NUMTO"},
       {"TOSTR", "TOSTR alias of STRTO"},
+      {"LPADTO", "LPADTO|PADTO name width [pad] — left-pad var in place (promotes num)"},
+      {"RPADTO", "RPADTO name width [pad] — right-pad var in place"},
+      {"PADTO", "PADTO alias of LPADTO"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -73904,6 +73907,114 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# NUMTO %s -> %ld ok=%d\n", name, nval, parse_ok);
+    bump(vm);
+    return 1;
+  }
+  /* LPADTO name width [pad] — left-pad named var to width in place (promotes num).
+   * RPADTO name width [pad] — right-pad named var to width in place.
+   * PADTO alias of LPADTO. Default pad=' '. Longer than width → truncate to width.
+   * LAST = result; LAST_N = length.
+   * Usability: fixed-width plate IDs after STRTO/NUMTO without LET=SYS LPAD glue;
+   * dual of LPADF/RPADF for plain vars. */
+  if (kw(&L->cur,"LPADTO")||kw(&L->cur,"PADTO")||kw(&L->cur,"PADLEFTTO")||
+      kw(&L->cur,"STRPADTO")||kw(&L->cur,"LEFTPADTO")||
+      kw(&L->cur,"RPADTO")||kw(&L->cur,"PADRIGHTTO")||kw(&L->cur,"RIGHTPADTO")){
+    char op[24], name[48];
+    char cur[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], pad[16];
+    int is_left = 1;
+    long width = 0, max_w = (long)(CUBALC_HOST_STR_MAX - 1), out_n = 0;
+    char padc = ' ';
+    size_t sn, need, o, take, i;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "RPADTO") == 0 || strcmp(op, "PADRIGHTTO") == 0 ||
+        strcmp(op, "RIGHTPADTO") == 0)
+      is_left = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, is_left ? "LPADTO needs name width [pad] — LPADTO id 6 \"0\""
+                       : "RPADTO needs name width [pad] — RPADTO label 10");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "TO") || kw(&L->cur, "WIDTH") || kw(&L->cur, "OF") ||
+        kw(&L->cur, "BY") || kw(&L->cur, "FOR"))
+      lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &width)) {
+      fail(vm, is_left ? "LPADTO needs width — LPADTO id 6 \"0\""
+                       : "RPADTO needs width — RPADTO label 10");
+      return -1;
+    }
+    if (width < 0) width = 0;
+    if (width > max_w) width = max_w;
+    pad[0] = 0;
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+        (L->cur.kind == TK_NUM /* allow literal? skip */)) {
+      /* optional pad char — only if string/ident (not next statement keyword) */
+      if (L->cur.kind == TK_STR ||
+          (L->cur.kind == TK_IDENT && var_get(vm, L->cur.text, 0) &&
+           var_get(vm, L->cur.text, 0)->is_str)) {
+        if (resolve_str_arg(vm, L, pad, sizeof pad) == 0 && pad[0])
+          padc = pad[0];
+      } else if (L->cur.kind == TK_IDENT &&
+                 (strcmp(L->cur.text, "WITH") == 0 ||
+                  strcmp(L->cur.text, "PAD") == 0 ||
+                  strcmp(L->cur.text, "CHAR") == 0 ||
+                  strcmp(L->cur.text, "BY") == 0)) {
+        lex_next(L);
+        if (resolve_str_arg(vm, L, pad, sizeof pad) == 0 && pad[0])
+          padc = pad[0];
+      }
+    }
+    cur[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+    sn = strlen(cur);
+    out[0] = 0;
+    if ((long)sn >= width) {
+      take = (size_t)width;
+      if (take >= sizeof out) take = sizeof out - 1;
+      memcpy(out, cur, take);
+      out[take] = 0;
+    } else {
+      need = (size_t)width - sn;
+      if (is_left) {
+        o = 0;
+        for (i = 0; i < need && o + 1 < sizeof out; i++) out[o++] = padc;
+        take = sn;
+        if (o + take >= sizeof out) take = sizeof out - 1 - o;
+        if (take) memcpy(out + o, cur, take);
+        o += take;
+        out[o] = 0;
+      } else {
+        o = 0;
+        take = sn;
+        if (take >= sizeof out) take = sizeof out - 1;
+        if (take) memcpy(out, cur, take);
+        o = take;
+        for (i = 0; i < need && o + 1 < sizeof out; i++) out[o++] = padc;
+        out[o] = 0;
+      }
+    }
+    out_n = (long)strlen(out);
+    var_set_str(vm, name, out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    var_set_num(vm, "LAST_N", out_n);
+    vm->last_n = out_n;
+    var_set_num(vm, is_left ? "LPADTO_N" : "RPADTO_N", out_n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s w=%ld len=%ld\n", op, name, width, out_n);
     bump(vm);
     return 1;
   }

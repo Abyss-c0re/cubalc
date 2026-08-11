@@ -1,0 +1,53 @@
+# LPADTO / RPADTO — in-place pad on named vars
+
+HOLD_FLASH 1
+
+# zero-pad id after counter
+LET id = 42
+LPADTO id 6 "0"
+ASSERT id == "000042"
+ASSERT LAST_N == 6
+
+# space left-pad default (len 2 → need 3 spaces for width 5)
+LET s = "hi"
+LPADTO s 5
+ASSERT s == "   hi"
+
+# right-pad
+LET lab = "ok"
+RPADTO lab 5 "."
+ASSERT lab == "ok..."
+
+# PADTO alias
+LET n = 7
+PADTO n 3 "0"
+ASSERT n == "007"
+
+# already wide → truncate to width
+LET long = "abcdef"
+LPADTO long 3
+ASSERT long == "abc"
+
+# chain NUMTO STRTO LPADTO
+LET raw = "count:9"
+AFTERIN raw ":"
+NUMTO raw
+INC raw
+STRTO raw
+LPADTO raw 4 "0"
+ASSERT raw == "0010"
+
+# WITH pad keyword
+LET w = "x"
+LPADTO w 4 WITH "0"
+ASSERT w == "000x"
+
+HASFORM "LPADTO"
+ASSERT LAST_N == 1
+HASFORM "RPADTO"
+ASSERT LAST_N == 1
+HASFORM "PADTO"
+ASSERT LAST_N == 1
+
+PRINT "1466_lpadto_rpadto ok"
+PASS
