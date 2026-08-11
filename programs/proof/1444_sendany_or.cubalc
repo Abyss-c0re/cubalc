@@ -1,0 +1,85 @@
+# SENDANY / TRYSENDANY … OR fallback — multi-method default (CALLANY OR twin)
+
+HOLD_FLASH 1
+
+CLASS Cell
+  FIELD n 0
+  METHOD tick
+    GETF THIS n
+    LET v = LAST_N + 1
+    SETF THIS n v
+    RET v
+  END
+  METHOD bump d
+    GETF THIS n
+    LET v = LAST_N + d
+    SETF THIS n v
+    RET v
+  END
+END
+
+NEW Cell c
+SETF c n 0
+
+# hit — OR unused
+SENDANY c ghost_m tick update OR 99
+ASSERT OK == 1
+ASSERT SEND_N == 1
+ASSERT SENDANY_N == 1
+ASSERT SENDANY_OR == 0
+ASSERT SENDANY_METHOD == "tick"
+ASSERT LAST_N == 1
+
+# method miss with string fallback (hard becomes soft via OR)
+SENDANY c ghost_a ghost_b OR "idle"
+ASSERT OK == 1
+ASSERT SEND_N == 0
+ASSERT SENDANY_N == 0
+ASSERT SENDANY_OR == 1
+ASSERT LAST == "idle"
+ASSERT SENDANY_METHOD == ""
+
+# object miss with numeric OR
+SENDANY missing_obj tick update OR 0
+ASSERT OK == 1
+ASSERT SENDANY_OR == 1
+ASSERT LAST_N == 0
+
+# DEFAULT keyword
+TRYSENDANY c no_a no_b DEFAULT 42
+ASSERT SENDANY_OR == 1
+ASSERT LAST_N == 42
+
+# FALLBACK alias
+SENDANY c ghost2 FALLBACK "z"
+ASSERT SENDANY_OR == 1
+ASSERT LAST == "z"
+
+# success with args; trailing OR discarded
+SETF c n 0
+SENDANY c ghost_m bump WITH 3 OR 99
+ASSERT SEND_N == 1
+ASSERT SENDANY_OR == 0
+ASSERT SENDANY_METHOD == "bump"
+ASSERT LAST_N == 3
+
+# bare TRYSENDANY miss still soft without OR
+TRYSENDANY c totally_missing_a totally_missing_b
+ASSERT OK == 0
+ASSERT SEND_N == 0
+ASSERT SENDANY_OR == 0
+CLEAR_ERR
+
+# bag of method names + OR miss
+LET hooks = "nope_a\nnope_b"
+SENDANY c hooks OR "bag_fb"
+ASSERT SENDANY_OR == 1
+ASSERT LAST == "bag_fb"
+
+HASFORM "SENDANY"
+ASSERT LAST_N == 1
+HASFORM "TRYSENDANY"
+ASSERT LAST_N == 1
+
+PRINT "1444_sendany_or ok"
+PASS

@@ -1375,10 +1375,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* SENDANY|TRYSENDANY obj methods… [WITH args…] — SEND first existing method.
-   * Soft TRYSENDANY: OK=0 if obj miss or none of methods exist.
-   * Usability: OOP plugin hooks without HASMETHODANY+IF+SEND glue · bag/CSV.
-   * Twin of CALLANY for method plane. 0-arity when no WITH. */
+  /* SENDANY|TRYSENDANY obj methods… [WITH args…] [OR|DEFAULT fb]
+   * Soft TRYSENDANY: OK=0 if obj/method miss (no OR). Hard SENDANY: fail-fast.
+   * … OR fb → miss/soft arity → LAST=fb, OK=1, SENDANY_OR=1 (CALLANY OR twin).
+   * Usability: multi-method hooks with default without HASMETHODANY+IF+SEND glue.
+   * Twin of CALLANY OR for method plane. 0-arity when no WITH. */
   if (kw(&L->cur, "SENDANY") || kw(&L->cur, "SEND_ANY") ||
       kw(&L->cur, "SENDFIRST") || kw(&L->cur, "FIRSTMETHOD") ||
       kw(&L->cur, "INVOKEANY") || kw(&L->cur, "CALLMETHODANY") ||
@@ -1409,6 +1410,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
            kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
            kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
            kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "OR") || kw(&L->cur, "FALLBACK") ||
            kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
            kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
            kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
@@ -1485,12 +1487,30 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         kw(&L->cur, "ON"))
       lex_next(L);
     if (nname == 0) {
+      char fb0[256];
+      int or0 = call_parse_or_fallback(vm, L, fb0, sizeof fb0);
+      if (or0 < 0) return -1;
+      if (or0 > 0) {
+        call_apply_or_last(vm, fb0);
+        var_set_num(vm, "SEND_N", 0);
+        var_set_num(vm, "SENDANY_N", 0);
+        var_set_num(vm, "TRYSENDANY_N", 0);
+        var_set_num(vm, "SENDANY_OR", 1);
+        var_set_str(vm, "SENDANY_METHOD", "");
+        var_set_str(vm, "METHOD", "");
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST_ERR", "");
+        var_set_str(vm, "ERR", "");
+        bump(vm);
+        return 1;
+      }
       if (soft) {
         var_set_num(vm, "LAST_N", 0);
         vm->last_n = 0;
         var_set_num(vm, "SEND_N", 0);
         var_set_num(vm, "SENDANY_N", 0);
         var_set_num(vm, "TRYSENDANY_N", 0);
+        var_set_num(vm, "SENDANY_OR", 0);
         var_set_str(vm, "SENDANY_METHOD", "");
         var_set_str(vm, "METHOD", "");
         var_set_num(vm, "OK", 0);
@@ -1499,7 +1519,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         bump(vm);
         return 1;
       }
-      fail_at(vm, L, "SENDANY obj methods… [WITH args] — SENDANY obj tick update");
+      fail_at(vm, L, "SENDANY obj methods… [WITH args] [OR fb] — SENDANY obj tick update");
       return -1;
     }
     ob = oop_find_obj(vm, oname);
@@ -1514,12 +1534,34 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         if (L->cur.kind == TK_STR) lex_next(L);
         else (void)parse_expr(vm, L);
       }
+      {
+        char fb[256];
+        int or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+        if (or_rc < 0) return -1;
+        if (or_rc > 0) {
+          call_apply_or_last(vm, fb);
+          var_set_num(vm, "SEND_N", 0);
+          var_set_num(vm, "SENDANY_N", 0);
+          var_set_num(vm, "TRYSENDANY_N", 0);
+          var_set_num(vm, "SENDANY_OR", 1);
+          var_set_str(vm, "SENDANY_METHOD", "");
+          var_set_str(vm, "METHOD", "");
+          var_set_num(vm, "OK", 1);
+          var_set_str(vm, "LAST_ERR", "");
+          var_set_str(vm, "ERR", "");
+          if (vm->trace)
+            fprintf(vm->trace, "# SENDANY OR fallback after obj miss %s\n", oname);
+          bump(vm);
+          return 1;
+        }
+      }
       if (soft) {
         var_set_num(vm, "LAST_N", 0);
         vm->last_n = 0;
         var_set_num(vm, "SEND_N", 0);
         var_set_num(vm, "SENDANY_N", 0);
         var_set_num(vm, "TRYSENDANY_N", 0);
+        var_set_num(vm, "SENDANY_OR", 0);
         var_set_str(vm, "SENDANY_METHOD", "");
         var_set_str(vm, "METHOD", "");
         var_set_num(vm, "OK", 0);
@@ -1560,12 +1602,35 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (L->cur.kind == TK_STR) lex_next(L);
           else (void)parse_expr(vm, L);
         }
+        {
+          char fb[256];
+          int or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+          if (or_rc < 0) return -1;
+          if (or_rc > 0) {
+            call_apply_or_last(vm, fb);
+            var_set_num(vm, "SEND_N", 0);
+            var_set_num(vm, "SENDANY_N", 0);
+            var_set_num(vm, "TRYSENDANY_N", 0);
+            var_set_num(vm, "SENDANY_OR", 1);
+            var_set_str(vm, "SENDANY_METHOD", "");
+            var_set_str(vm, "METHOD", "");
+            var_set_num(vm, "OK", 1);
+            var_set_str(vm, "LAST_ERR", "");
+            var_set_str(vm, "ERR", "");
+            if (vm->trace)
+              fprintf(vm->trace, "# SENDANY OR fallback after method miss %s\n",
+                      ebuf[0] ? ebuf : "?");
+            bump(vm);
+            return 1;
+          }
+        }
         if (soft) {
           var_set_num(vm, "LAST_N", 0);
           vm->last_n = 0;
           var_set_num(vm, "SEND_N", 0);
           var_set_num(vm, "SENDANY_N", 0);
           var_set_num(vm, "TRYSENDANY_N", 0);
+          var_set_num(vm, "SENDANY_OR", 0);
           var_set_str(vm, "SENDANY_METHOD", "");
           var_set_str(vm, "METHOD", "");
           var_set_num(vm, "OK", 0);
@@ -1586,9 +1651,27 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       ag = oop_arity_gate(vm, "SENDANY", qname, md->params, md->n_params, got, soft);
       if (ag < 0) return -1;
       if (ag > 0) {
+        char fb[256];
+        int or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+        if (or_rc < 0) return -1;
+        if (or_rc > 0) {
+          call_apply_or_last(vm, fb);
+          var_set_num(vm, "SEND_N", 0);
+          var_set_num(vm, "SENDANY_N", 0);
+          var_set_num(vm, "TRYSENDANY_N", 0);
+          var_set_num(vm, "SENDANY_OR", 1);
+          var_set_str(vm, "SENDANY_METHOD", md->name);
+          var_set_str(vm, "METHOD", md->name);
+          var_set_num(vm, "OK", 1);
+          var_set_str(vm, "LAST_ERR", "");
+          var_set_str(vm, "ERR", "");
+          bump(vm);
+          return 1;
+        }
         var_set_num(vm, "SEND_N", 0);
         var_set_num(vm, "SENDANY_N", 0);
         var_set_num(vm, "TRYSENDANY_N", 0);
+        var_set_num(vm, "SENDANY_OR", 0);
         var_set_str(vm, "SENDANY_METHOD", md->name);
         var_set_str(vm, "METHOD", md->name);
         bump(vm);
@@ -1602,6 +1685,13 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_str(vm, "SENDANY_METHOD", md->name);
     var_set_str(vm, "METHOD", md->name);
     var_set_str(vm, "OBJ", oname);
+    /* discard unused OR after successful SENDANY */
+    {
+      char fb[256];
+      int or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+      if (or_rc < 0) return -1;
+      var_set_num(vm, "SENDANY_OR", 0);
+    }
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# SENDANY %s.%s (of %d)\n", oname, md->name, nname);
