@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 953,
-  "version": "1.15.947-usability",
-  "item": "IFBLANK / IFNOTBLANK",
-  "item_id": 953,
-  "title": "IFBLANK \u00b7 IFNOTBLANK \u00b7 whitespace string branches",
-  "commit": "85ded04d",
-  "summary": "Whitespace/blank string branches; no SYS BLANK+IF glue; proof 1492 PASS.",
+  "iter": 954,
+  "version": "1.15.948-usability",
+  "item": "IFLEN / IFLONG / IFSHORT",
+  "item_id": 954,
+  "title": "IFLEN \u00b7 IFLONG \u00b7 IFSHORT \u00b7 string length branches",
+  "commit": "ffd1ed98",
+  "summary": "String length ==/>=/<= branches; no LENOF+IF glue; proof 1493 PASS.",
   "proofs": [
-    "1492_ifblank_ifnotblank PASS",
-    "1491_ifjsoneq regression PASS"
+    "1493_iflen_iflong_ifshort PASS",
+    "1492_ifblank regression PASS"
   ],
-  "when": "2026-08-11T21:47:13Z",
+  "when": "2026-08-11T21:58:40Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "85ded04d320f55e79a5e752e19bb2a081612fed5",
-  "note": "msg/form field gates without BLANK probe glue"
+  "sha": "ffd1ed98c767bce7f4fc9c51710d07bf39e9f0f9",
+  "note": "password/field length gates without LENOF probe glue"
 }
