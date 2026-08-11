@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 925,
-  "version": "1.15.918-usability",
-  "item": "STRIPPREFIXTO / STRIPSUFFIXTO vars",
-  "item_id": 925,
-  "title": "STRIPPREFIXTO \u00b7 STRIPSUFFIXTO \u00b7 drop affix in place",
-  "commit": "f09818a6",
-  "summary": "In-place leading/trailing affix drop on named vars with HIT; path roots/ext without STARTSIN+MIDTO glue; proof 1463 PASS.",
+  "iter": 926,
+  "version": "1.15.919-usability",
+  "item": "ENSUREIN / DROPLINEIN vars",
+  "item_id": 926,
+  "title": "ENSUREIN \u00b7 DROPLINEIN \u00b7 work-bag set ops",
+  "commit": "afae6b7d",
+  "summary": "Idempotent bag add + exact-line drop on named vars with HIT; work sets without HASINBAG+IF+PUSHTO; proof 1464 PASS.",
   "proofs": [
-    "1463_stripprefixto PASS",
-    "1463_cli_stripprefixto PASS",
-    "1462_leftto_beforein regression PASS"
+    "1464_ensurein_droplinein PASS",
+    "1464_cli_ensurein_droplinein PASS",
+    "1463_stripprefixto regression PASS",
+    "1456_pushto_bag regression PASS"
   ],
-  "when": "2026-08-11T15:06:38Z",
+  "when": "2026-08-11T15:17:06Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "f09818a697d2baa35392aa35a9aa60e25f19f064",
-  "note": "agent path/ext peels without SYS string soup"
+  "sha": "afae6b7db920e82c19e8ac127ff274682ed84de1",
+  "note": "agent work-queue ensure/ack without IF glue"
 }
