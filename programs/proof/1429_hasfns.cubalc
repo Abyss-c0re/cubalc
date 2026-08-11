@@ -1,0 +1,68 @@
+# HASFNS / NEEDFNS — multi FN soft/hard capability gate
+
+HOLD_FLASH 1
+
+FN add a b
+  RET a + b
+END
+
+FN greet name
+  RET name
+END
+
+# all hit
+HASFNS add greet
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASFNS_N == 2
+ASSERT FNMISS_N == 0
+ASSERT FNMISS == ""
+
+# partial miss soft
+HASFNS add ghost_fn greet
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT HASFNS_N == 2
+ASSERT FNMISS_N == 1
+SYS HASI FNMISS "ghost_fn"
+ASSERT LAST_N == 1
+
+# ALLFNS alias
+ALLFNS add greet
+ASSERT LAST_N == 1
+
+# bag / CSV
+LET need = "ghost,add,greet"
+HASFNS need
+ASSERT LAST_N == 0
+ASSERT HASFNS_N == 2
+ASSERT FNMISS_N == 1
+
+LET need = "add,greet"
+HASFNS need
+ASSERT LAST_N == 1
+ASSERT HASFNS_N == 2
+
+# all miss soft
+HASFNS nope_x nope_y
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT FNMISS_N == 2
+
+# empty soft
+HASFNS
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+# HASFUNCS alias
+HASFUNCS add
+ASSERT LAST_N == 1
+
+HASFORM "HASFNS"
+ASSERT LAST_N == 1
+HASFORM "NEEDFNS"
+ASSERT LAST_N == 1
+
+PRINT "1429_hasfns ok"
+PASS

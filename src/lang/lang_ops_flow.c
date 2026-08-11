@@ -20218,6 +20218,196 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     bump(vm);
     return 1;
   }
+  /* HASFNS|NEEDFNS name… — multi FN capability gate (all-or-FNMISS).
+   * Soft: LAST_N 0|1 · FNMISS bag · NEEDFNS fail-fast first miss.
+   * Usability: agent CALL contracts without N× HASFN glue · bag/CSV/idents.
+   * Twin of HASOBJS for FN plane · dual of single HASFN. */
+  if (kw(&L->cur, "HASFNS") || kw(&L->cur, "HAS_FNS") ||
+      kw(&L->cur, "ALLFNS") || kw(&L->cur, "FNSOK") ||
+      kw(&L->cur, "HASFUNCS") || kw(&L->cur, "ALLFUNCS") ||
+      kw(&L->cur, "NEEDFNS") || kw(&L->cur, "NEED_FNS") ||
+      kw(&L->cur, "REQUIREFNS") || kw(&L->cur, "MUSTFNS") ||
+      kw(&L->cur, "NEEDFUNCS") || kw(&L->cur, "REQUIREFUNCS")) {
+    int hard = kw(&L->cur, "NEEDFNS") || kw(&L->cur, "NEED_FNS") ||
+               kw(&L->cur, "REQUIREFNS") || kw(&L->cur, "MUSTFNS") ||
+               kw(&L->cur, "NEEDFUNCS") || kw(&L->cur, "REQUIREFUNCS");
+    char names[32][48];
+    char miss[1024];
+    int nname = 0, nmiss = 0, i, j, aln = L->cur.line;
+    size_t mo = 0;
+    lex_next(L);
+    miss[0] = 0;
+    if (kw(&L->cur, "FN") || kw(&L->cur, "FUNC") || kw(&L->cur, "FUNCTION") ||
+        kw(&L->cur, "OF"))
+      lex_next(L);
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "FN") ||
+           kw(&L->cur, "HASFN") || kw(&L->cur, "HASFNS") || kw(&L->cur, "NEEDFNS") ||
+           kw(&L->cur, "HASFNANY") || kw(&L->cur, "NEEDFNANY") ||
+           kw(&L->cur, "LISTFNS") || kw(&L->cur, "CALL") || kw(&L->cur, "FNINFO") ||
+           kw(&L->cur, "SEND") || kw(&L->cur, "GETF") || kw(&L->cur, "SETF")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0]) {
+          int already = 0;
+          for (j = 0; j < vm->n_fns; j++) {
+            if (strcmp(vm->fns[j].name, L->cur.text) == 0) {
+              already = 1;
+              break;
+            }
+          }
+          if (!already) {
+            snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+            lex_next(L);
+          } else {
+            snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+            lex_next(L);
+          }
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDFNS name… — NEEDFNS add greet · HASFNS bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASFNS_N", 0);
+      var_set_num(vm, "FNMISS_N", 0);
+      var_set_str(vm, "FNMISS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASFNS: need names — HASFNS add greet");
+      var_set_str(vm, "ERR", "HASFNS: need names — HASFNS add greet");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      int hit = 0;
+      for (j = 0; j < vm->n_fns; j++) {
+        if (strcmp(vm->fns[j].name, names[i]) == 0) {
+          hit = 1;
+          break;
+        }
+      }
+      if (hit)
+        continue;
+      nmiss++;
+      if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+      {
+        size_t ln = strlen(names[i]);
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, names[i], ln);
+          mo += ln;
+          miss[mo] = 0;
+        }
+      }
+      if (hard) {
+        char em[220];
+        snprintf(em, sizeof em,
+                 "NEEDFNS miss line %d: '%s' (+%d more?) — DEFINE/INCLUDE · HASFN · LISTFNS",
+                 aln, names[i], nname - i - 1);
+        fail_at(vm, L, em);
+        return -1;
+      }
+    }
+    var_set_str(vm, "FNMISS", miss);
+    var_set_num(vm, "FNMISS_N", nmiss);
+    var_set_num(vm, "HASFNS_N", nname - nmiss);
+    var_set_num(vm, "NEEDFNS_N", nname);
+    var_set_num(vm, "FNS_N", nname);
+    if (nmiss == 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else {
+      char em[220];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASFNS miss (%d/%d): %s — DEFINE/INCLUDE · NEEDFNS · LISTFNS",
+               nmiss, nname, miss);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%d miss=%d\n",
+              hard ? "NEEDFNS" : "HASFNS", nname, nmiss);
+    bump(vm);
+    return 1;
+  }
+
 
   /* DUMPOBJ|INSPECT|OBJDUMP|DUMPF obj — field:value bag of live object state.
    * Complements LISTFIELDS (names only): one-shot snapshot for agents without
