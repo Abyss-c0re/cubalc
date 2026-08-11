@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 345,
-  "program": "programs/realworld/svc_sendany_method_dispatch_board.cubalc",
-  "theme": "SENDANY/TRYSENDANY first-existing method dispatch on live workers",
-  "version": "1.15.895-usability",
+  "iter": 346,
+  "program": "programs/realworld/svc_soft_or_fallback_board.cubalc",
+  "theme": "CALL/SEND OR soft plugin defaults (TRYCALL OR + TRYSEND OR)",
+  "version": "1.15.897-usability",
   "pass": true,
-  "prior_note": "iter 344 CALLANY FN hooks; this iter first SENDANY realworld (1439 OOP twin)",
+  "prior_note": "iter 345 SENDANY; this iter first CALL OR + SEND OR dual realworld (1441/1442)",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + SENDANY tick",
+      "cmd": "seed agent + TRYCALL ping OR",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "tick/update/SENDFIRST refresh 10/10",
+      "cmd": "hit OR unused call+send 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "TRYSENDANY method+obj miss + recover",
+      "cmd": "miss OR fallback + bare TRY 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "bag",
-      "cmd": "newline bag + CSV method lists",
+      "name": "call",
+      "cmd": "DEFAULT/FALLBACK + multi-arg",
       "ok": true,
-      "note": "bag 10/10"
+      "note": "call 10/10"
     },
     {
-      "name": "args",
-      "cmd": "WITH bump arity + field state",
+      "name": "send",
+      "cmd": "SEND OR obj/method miss + bump",
       "ok": true,
-      "note": "args 10/10"
+      "note": "send 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM SENDANY family",
+      "cmd": "HASFORM TRYCALL/TRYSEND",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "dispatch + soft + REQUIRE",
+      "cmd": "hit+fallback + REQUIRE",
       "ok": true,
       "note": "gate"
     },
@@ -69,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1439 PASS",
+      "cmd": "selftest; 1441/1442 PASS",
       "ok": false,
-      "note": "proof green; CLI duals still red"
+      "note": "proofs green; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -6530,6 +6530,46 @@
       "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
       "detail": "Board uses REQUIRE LIB \"hold_seed\".",
       "repro": "REQUIRE LIB hold_seed \u2192 fail"
+    },
+    {
+      "id": "W808",
+      "severity": "med",
+      "area": "lang|call_or",
+      "title": "OR fallback strings LET-assignable; hit FN string RET still not (W798 class)",
+      "detail": "TRYCALL ghost OR \"default_hi\"; LET b=LAST; SYS EQS b default_hi \u2192 1. TRYCALL greet \"agent\" OR x; LET b=LAST often empty while CALLED=1. Prefer CALL_OR/CALLED for hit, body EQS only for OR fallback strings.",
+      "repro": "TRYCALL ghost OR idle; LET b=LAST works; hit greet RET may not"
+    },
+    {
+      "id": "W809",
+      "severity": "low",
+      "area": "lang|send_or",
+      "title": "SEND \u2026 OR implies soft miss (object or method); SEND_OR=1 OK=1",
+      "detail": "Positive: SEND missing_obj tick OR 0 \u2192 SEND_OR 1 without hard fail. Bare TRYSEND miss still OK=0 without OR.",
+      "repro": "SEND missing tick OR 0 \u2192 OR 1; TRYSEND c ghost \u2192 OK 0"
+    },
+    {
+      "id": "W810",
+      "severity": "med",
+      "area": "lang|last_n",
+      "title": "CALL_OR/SEND_OR and LAST_N must be captured before CLEAR_ERR",
+      "detail": "Gate path lost LAST_N==7 after CLEAR_ERR until LET ret_n=LAST_N. Same capture class as W799/W805.",
+      "repro": "TRYCALL ping OR 0; CLEAR_ERR; LAST_N not 7"
+    },
+    {
+      "id": "W811",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE META omit trailing NL",
+      "detail": "W5 class reconfirmed on SOF META.",
+      "repro": "od -c META.txt"
+    },
+    {
+      "id": "W812",
+      "severity": "low",
+      "area": "lang|require_lib",
+      "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
+      "detail": "Board uses REQUIRE LIB \"hold_seed\".",
+      "repro": "REQUIRE LIB hold_seed \u2192 fail"
     }
   ],
   "workarounds": [
@@ -6652,7 +6692,10 @@
     "LET ret_n=LAST_N immediately after CALLANY before EQS/CLEAR_ERR",
     "REQUIRE LIB \"hold_seed\" quoted",
     "LET ret_n=LAST_N; LET meth=SENDANY_METHOD immediately after SENDANY",
-    "CSV/newline bags for method priority lists"
+    "CSV/newline bags for method priority lists",
+    "REQUIRE LIB \"hold_seed\" quoted",
+    "LET call_or=CALL_OR; LET ret_n=LAST_N immediately after TRYCALL/TRYSEND OR",
+    "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6843,7 +6886,10 @@
     "CALLANY LAST_N capture before EQS (W799)",
     "SENDANY/TRYSENDANY first-existing method dispatch (1439)",
     "SENDANY LAST_N capture before EQS (W805)",
-    "TRYSENDANY soft obj and method miss (W804)"
+    "TRYSENDANY soft obj and method miss (W804)",
+    "CALL OR / SEND OR soft plugin defaults (1441/1442)",
+    "OR fallback string LET vs hit RET (W808)",
+    "capture CALL_OR/SEND_OR/LAST_N before CLEAR_ERR (W810)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6927,9 +6973,12 @@
     "iter344: capture LAST_N before EQS after numeric CALLANY (W799)",
     "iter344: board green after capture fixes; proof 1438 PASS",
     "iter345: first-try green SENDANY method dispatch board",
-    "iter345: proof 1439 PASS; capture LAST_N before EQS"
+    "iter345: proof 1439 PASS; capture LAST_N before EQS",
+    "iter346: gate 8\u21929 after LAST_N capture before CLEAR_ERR (W810)",
+    "iter346: OR fallback strings LET-able; hit string RET still weak (W808)",
+    "iter346: board green; proofs 1441/1442 PASS"
   ],
-  "commit": "6991b982",
-  "ts": "2026-08-11T10:29:48Z",
-  "board_commit": "6991b982"
+  "commit": "pending",
+  "ts": "2026-08-11T10:54:49Z",
+  "board_commit": "pending"
 }
