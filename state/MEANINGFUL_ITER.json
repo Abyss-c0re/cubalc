@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 938,
-  "version": "1.15.931-usability",
-  "item": "SUMIN / MAXIN / MININ / AVGIN",
-  "item_id": 938,
-  "title": "SUMIN · MAXIN · MININ · AVGIN · numeric bag aggregates",
-  "commit": "6daa3c9f",
-  "summary": "Numeric bag field aggregates → LAST_N; no EACH+INC glue; proof 1476 PASS.",
+  "iter": 939,
+  "version": "1.15.932-usability",
+  "item": "IFFN / IFCLASS",
+  "item_id": 939,
+  "title": "IFFN · IFCLASS · capability branches",
+  "commit": "70f70137",
+  "summary": "FN/CLASS defined branches with ELSE/END; no HASFN+IF glue; proof 1477 PASS.",
   "proofs": [
-    "1476_sumin_maxin PASS",
-    "1471_countin regression PASS",
+    "1477_iffn_ifclass PASS",
+    "1476_sumin regression PASS",
     "1475_ifstartsi regression PASS",
-    "1472_ifgt regression PASS"
+    "1474_ifbetween regression PASS"
   ],
-  "when": "2026-08-11T17:58:19Z",
+  "when": "2026-08-11T18:09:07Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "6daa3c9f4a3fe8d7a35b74da6a8622bd70416ea8",
-  "note": "score/metric bags without loop glue"
+  "sha": "70f701371815bdb64ba148cfc8e2dec4c701b46e",
+  "note": "soft plugin/class paths without probe+IF glue"
 }
