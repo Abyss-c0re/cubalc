@@ -6978,7 +6978,7 @@
     "iter346: OR fallback strings LET-able; hit string RET still weak (W808)",
     "iter346: board green; proofs 1441/1442 PASS"
   ],
-  "commit": "pending",
+  "commit": "767d4822",
   "ts": "2026-08-11T10:54:49Z",
-  "board_commit": "pending"
+  "board_commit": "767d4822"
 }
