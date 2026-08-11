@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 861,
-  "version": "1.15.853-usability",
-  "item": "fn_guard + fn_boot + cubalc init --fn",
-  "item_id": 861,
-  "title": "fn_guard \u00b7 fn_boot \u00b7 FN_GUARD_OK \u00b7 init --fn \u00b7 doctor",
-  "commit": "1da04aea82406de419ce8590f19bd85b310c4dfa",
-  "summary": "NEED_FNALL/NEED_FNANY FN catalog; HASFN hard path (no REQUIRE FN in INCLUDE); init --fn n=27; proof 1400_fn PASS.",
+  "iter": 862,
+  "version": "1.15.854-usability",
+  "item": "class_guard + class_boot + cubalc init --class",
+  "item_id": 862,
+  "title": "class_guard \u00b7 class_boot \u00b7 CLASS_GUARD_OK \u00b7 init --class \u00b7 doctor",
+  "commit": "c567e0d2564827eec4a821707768e7617aba6c47",
+  "summary": "NEED_CLASSES/NEED_CLASS_ANY OOP catalog; LISTCLASSES+HASLINE; init --class n=28; proof 1401 PASS.",
   "proofs": [
-    "1400_fn_guard PASS",
-    "1400_fn_boot PASS",
-    "1400_cli_fn_guard PASS",
-    "1400_cli_init_fn PASS"
+    "1401_class_guard PASS",
+    "1401_class_boot PASS",
+    "1401_cli_class_guard PASS",
+    "1401_cli_init_class PASS"
   ],
-  "when": "2026-08-11T02:51:30Z",
+  "when": "2026-08-11T03:04:55Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "1da04aea82406de419ce8590f19bd85b310c4dfa",
-  "note": "bin/lib twin for defined FNs \u00b7 REQUIRE FN nesting footgun documented"
+  "sha": "c567e0d2564827eec4a821707768e7617aba6c47",
+  "note": "fn_guard twin for CLASS catalogs \u00b7 hard path avoids REQUIRE CLASS"
 }
