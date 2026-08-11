@@ -907,6 +907,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 876. ~~**`ISCLASS` / `ISA` / `NEEDISA`**~~ **done** (soft instance-of probe + fail-fast · no CLASSNAME+EQS glue · proof 1415).
 877. ~~**`ENSURECLONE` / `CLONE OR`**~~ **done** (keep live dst or soft clone · ENSURECLONE_N 0|1 · twin ENSURENEW · proof 1416).
 878. ~~**`BINDTHIS` / `USEOBJ` / `CLEARTHIS` / `HASTHIS`**~~ **done** (bind THIS without SEND · soft miss · multi-step GETF/SETF THIS · proof 1417).
+879. ~~**`TRYDELETE` / `DELETEOBJ SOFT`**~~ **done** (explicit soft free · TRYDELETE_N · twin TRYCLONE/TRYSWAP · proof 1418).
 
 
 ## Tick protocol

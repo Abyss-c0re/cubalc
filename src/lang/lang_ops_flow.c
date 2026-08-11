@@ -17180,17 +17180,34 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* DELETEOBJ|FREEOBJ|DELOBJ|DISPOSE name — mark live object dead (free slot).
+  /* DELETEOBJ|FREEOBJ|TRYDELETE|SOFTDELETE name — mark live object dead (free slot).
    * Note: DESTROY is cube DECONSTRUCT (ops_cell) — not this form.
-   * Soft OK=0 if missing. NEW reuses same name. Usability: pool recycle. */
-  if (kw(&L->cur, "DELETEOBJ") || kw(&L->cur, "FREEOBJ") ||
+   * Soft OK=0 if missing (always soft). NEW reuses same name. Usability: pool recycle.
+   * TRYDELETE|DELETEOBJ SOFT|SOFTDELETE — explicit TRY* dual of DELETEOBJ (twin TRYCLONE/
+   * TRYRENAME/TRYSWAP) · sets TRYDELETE_N · agent GC without HASOBJ+IF glue. */
+  if (kw(&L->cur, "TRYDELETE") || kw(&L->cur, "SOFTDELETE") ||
+      kw(&L->cur, "DELETEOBJSOFT") || kw(&L->cur, "TRYFREEOBJ") ||
+      kw(&L->cur, "TRYDELOBJ") || kw(&L->cur, "SOFTFREE") ||
+      kw(&L->cur, "TRYDISPOSE") || kw(&L->cur, "SOFTDISPOSE") ||
+      kw(&L->cur, "DELETEOBJ") || kw(&L->cur, "FREEOBJ") ||
       kw(&L->cur, "DELOBJ") || kw(&L->cur, "RELEASE") ||
       kw(&L->cur, "KILLOBJ") || kw(&L->cur, "DISPOSE") ||
       kw(&L->cur, "UNOBJ") || kw(&L->cur, "OBJDEL") ||
       kw(&L->cur, "DEL_OBJ") || kw(&L->cur, "FREESLOT")) {
-    char oname[48];
+    char oname[48], op0[32];
     ObjInst *ob;
+    int soft_try = 0;
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    soft_try = (strcmp(op0, "TRYDELETE") == 0 || strcmp(op0, "SOFTDELETE") == 0 ||
+                strcmp(op0, "DELETEOBJSOFT") == 0 || strcmp(op0, "TRYFREEOBJ") == 0 ||
+                strcmp(op0, "TRYDELOBJ") == 0 || strcmp(op0, "SOFTFREE") == 0 ||
+                strcmp(op0, "TRYDISPOSE") == 0 || strcmp(op0, "SOFTDISPOSE") == 0);
     lex_next(L);
+    /* DELETEOBJ SOFT name · FREE SOFT name */
+    if (!soft_try && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY"))) {
+      soft_try = 1;
+      lex_next(L);
+    }
     if (L->cur.kind == TK_STR) {
       snprintf(oname, sizeof oname, "%s", L->cur.text);
       lex_next(L);
@@ -17203,7 +17220,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         lex_next(L);
       }
     } else {
-      fail(vm, "DELETEOBJ name"); return -1;
+      fail(vm, soft_try ? "TRYDELETE name" : "DELETEOBJ name"); return -1;
     }
     ob = oop_find_obj(vm, oname);
     if (!ob) {
@@ -17212,8 +17229,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_str(vm, "LAST", "");
       vm->last_str[0] = 0;
       var_set_num(vm, "OK", 0);
+      var_set_num(vm, "DELETEOBJ_N", 0);
+      var_set_num(vm, "FREEOBJ_N", 0);
+      var_set_num(vm, "TRYDELETE_N", 0);
       var_set_str(vm, "LAST_ERR", "DELETEOBJ: unknown object");
       var_set_str(vm, "ERR", "DELETEOBJ: unknown object");
+      if (vm->trace) fprintf(vm->trace, "# TRYDELETE soft miss %s\n", oname);
       bump(vm);
       return 1;
     }
@@ -17227,7 +17248,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     vm->last_n = 1;
     var_set_num(vm, "DELETEOBJ_N", 1);
     var_set_num(vm, "FREEOBJ_N", 1);
+    if (soft_try) var_set_num(vm, "TRYDELETE_N", 1);
     var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# %s %s\n", soft_try ? "TRYDELETE" : "DELETEOBJ", oname);
     bump(vm);
     return 1;
   }

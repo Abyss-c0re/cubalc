@@ -2047,6 +2047,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"ISCLASS", "ISCLASS|ISA|OFCLASS obj Class — soft 0|1 instance-of probe · LAST=actual class"},
       {"NEEDISA", "NEEDISA|REQUIREISA obj Class — fail-fast if not instance of Class"},
       {"DELETEOBJ", "DELETEOBJ|FREEOBJ name — free object slot · NEW reuses name (not cube DESTROY)"},
+      {"TRYDELETE", "TRYDELETE|DELETEOBJ SOFT|SOFTDELETE name — soft free slot · TRYDELETE_N · twin TRYCLONE/TRYSWAP"},
+      {"SOFTDELETE", "SOFTDELETE alias of TRYDELETE"},
       {"DELETEALL", "DELETEALL|FREEALL [Class] — free every live object · optional class filter"},
       {"FREEALL", "FREEALL alias of DELETEALL"},
       {"CLEAROBJS", "CLEAROBJS alias of DELETEALL"},
