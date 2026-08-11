@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 339,
-  "program": "programs/realworld/svc_capability_admit_board.cubalc",
-  "theme": "HASCLASSANY/HASMETHODS free-form capability admit",
-  "version": "1.15.876-usability",
+  "iter": 340,
+  "program": "programs/realworld/svc_schema_live_ready_board.cubalc",
+  "theme": "HASFIELDS/HASFIELDANY/HASMETHODANY/HASOBJS schema live preflight",
+  "version": "1.15.880-usability",
   "pass": true,
-  "prior_note": "iter 338 TRYDELETE retire; this iter first free-form HASCLASSANY+HASMETHODS (1421/1422) mesh capability admit",
+  "prior_note": "iter 339 HASCLASSANY+HASMETHODS; this iter first free-form field/method-any + live HASOBJS triad (1423-1426)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + HASCLASSANY Mesh*",
+      "cmd": "seed agent + HASFIELDS zone/status/load",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "any-of class + HASMETHODS + live inst 10/10",
+      "cmd": "fields+any field/method+HASOBJS 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "all-miss any/methods empty soft 10/10",
+      "cmd": "all-miss empty soft 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "methods",
-      "cmd": "CSV bag + partial METHODMISS + ALLMETHODS",
+      "name": "fields",
+      "cmd": "ALLFIELDS partial FIELDMISS live FIELD_ON",
       "ok": true,
-      "note": "methods 10/10"
+      "note": "fields 10/10"
     },
     {
       "name": "any",
-      "cmd": "ANYCLASS + CSV opts CLASSHAVE 10/10",
+      "cmd": "HASFIELDANY/HASMETHODANY CSV 10/10",
       "ok": true,
       "note": "any 10/10"
     },
     {
+      "name": "objs",
+      "cmd": "HASOBJS/ALLOBJS partial OBJMISS CSV",
+      "ok": true,
+      "note": "objs 10/10"
+    },
+    {
       "name": "form",
-      "cmd": "HASFORM HASCLASSANY; HASMETHODS lag",
+      "cmd": "HASFORM lag aliases documented",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "admit pipeline + REQUIRE",
+      "cmd": "preflight + soft + REQUIRE",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + CLEAR_ERR LAST",
+      "cmd": "PRINT clobber CLEAR_ERR LAST",
       "ok": true,
       "note": "probe"
     },
@@ -69,9 +75,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "1421/1422 PASS; full selftest OOM mid-run; CLI duals red",
+      "cmd": "selftest 621/884; 1423-1426 PASS; CLI duals red",
       "ok": false,
-      "note": "proofs fixed; selftest truncated OOM"
+      "note": "proofs green; CLI dual mass-fail; a few non-cli red pre-existing"
     }
   ],
   "weaknesses": [
@@ -6298,6 +6304,46 @@
       "title": "SYS WRITE META omit trailing NL",
       "detail": "W5 class reconfirmed on CAP META.",
       "repro": "od -c META.txt"
+    },
+    {
+      "id": "W779",
+      "severity": "high",
+      "area": "lang|hasfieldany",
+      "title": "bare field name status truncates HASFIELDANY (STATUS form keyword)",
+      "detail": "ANYFIELD DeployUnit zone status only collects zone (FIELDHAVE_N=1); CSV zone,status yields FIELDHAVE_N=2. Same class as HASMETHODS init keyword collide (W774). Agents must CSV bag field/method lists when names match forms (status/init/birth).",
+      "repro": "HASFIELDANY DeployUnit zone status \u2192 have=1 zone; LET o=zone,status; HASFIELDANY DeployUnit o \u2192 have=2"
+    },
+    {
+      "id": "W780",
+      "severity": "low",
+      "area": "lang|hasobjs",
+      "title": "HASOBJS partial miss OK=0 but HASOBJS_N counts live hits",
+      "detail": "HASOBJS a ghost b \u2192 OK=0 HASOBJS_N=2 OBJMISS=ghost. Gate on OBJMISS_N not only OK.",
+      "repro": "HASOBJS live ghost \u2192 N=1 miss bag"
+    },
+    {
+      "id": "W781",
+      "severity": "med",
+      "area": "lang|hasform",
+      "title": "HASFORM may lag ALLFIELDS/ANYFIELD/ALLOBJS aliases",
+      "detail": "Primary HASFIELDS/HASFIELDANY/HASMETHODANY/HASOBJS often cataloged; aliases ALLFIELDS/ANYFIELD/ALLOBJS may miss while ops work.",
+      "repro": "HASFORM ALLFIELDS vs ALLFIELDS DeployUnit zone"
+    },
+    {
+      "id": "W782",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE META omit trailing NL",
+      "detail": "W5 class reconfirmed on SLR META.",
+      "repro": "od -c META.txt"
+    },
+    {
+      "id": "W783",
+      "severity": "low",
+      "area": "lang|require_lib",
+      "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
+      "detail": "Board uses REQUIRE LIB \"hold_seed\"; bare still fails in 1.15.880.",
+      "repro": "REQUIRE LIB hold_seed \u2192 fail"
     }
   ],
   "workarounds": [
@@ -6401,7 +6447,10 @@
     "REQUIRE LIB \"hold_seed\" with quotes",
     "HASMETHODS use CSV bag for init/birth/etc",
     "NEW Class inst ctor_args when METHOD init has params",
-    "relink out/cubalc from .o if forms catalog \u2260 runtime"
+    "relink out/cubalc from .o if forms catalog \u2260 runtime",
+    "CSV bags for HASFIELDANY/HASMETHODANY when names are forms (status/init)",
+    "REQUIRE LIB \"hold_seed\" quoted",
+    "HASOBJS gate on OBJMISS_N + live names not bare OK"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6574,7 +6623,10 @@
     "HASCLASSANY/HASMETHODS free capability admit (1421/1422)",
     "REQUIRE LIB bare stem broken (W773)",
     "HASMETHODS keyword method-name collide (W774)",
-    "HASFORM lag HASMETHODS/ANYCLASS (W775)"
+    "HASFORM lag HASMETHODS/ANYCLASS (W775)",
+    "HASFIELDS/HASFIELDANY/HASMETHODANY/HASOBJS preflight (1423-1426)",
+    "bare status field keyword collide (W779)",
+    "HASOBJS partial N vs OK (W780)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6644,9 +6696,12 @@
     "iter339: binary catalog/runtime split until relink lang_ops_flow (W776)",
     "iter339: HASMETHODS init keyword truncate \u2014 CSV bag workaround (W774); fixed proof 1422",
     "iter339: NEW auto-init arity when METHOD init present (W777)",
-    "iter339: board all green; full selftest OOM killed"
+    "iter339: board all green; full selftest OOM killed",
+    "iter340: ANYFIELD bare status truncated field list \u2014 CSV fix (W779)",
+    "iter340: all actions green; proofs 1423-1426 PASS",
+    "iter340: selftest 621/884 CLI duals still red; kvfileensure/pickobj/preload pre-existing"
   ],
-  "commit": "0120e90e",
-  "ts": "2026-08-11T07:18:27Z",
-  "board_commit": "0120e90e"
+  "commit": "pending",
+  "ts": "2026-08-11T08:00:16Z",
+  "board_commit": "pending"
 }
