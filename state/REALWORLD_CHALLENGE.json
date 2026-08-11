@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 349,
-  "program": "programs/realworld/svc_retry_hook_board.cubalc",
-  "theme": "RETRY/ATTEMPT flaky probe hooks + TIMEIT wall (EVERY backoff)",
-  "version": "1.15.903-usability",
+  "iter": 350,
+  "program": "programs/realworld/svc_try_catch_recover_board.cubalc",
+  "theme": "TRY/CATCH soft recovery + REQUIRE OK/NEEDOK status floor",
+  "version": "1.15.905-usability",
   "pass": true,
-  "prior_note": "iter 348 host -K CLASS floor; this iter first realworld of 1447 RETRY + 1446 TIMEIT",
+  "prior_note": "iter 349 RETRY/TIMEIT; this iter first realworld of 1449 TRY/CATCH + 1450 REQUIRE OK",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed + RETRY first-hit",
+      "cmd": "seed + try_ok CATCH_N=0 FINALLY_N=1",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "first-try + ATTEMPT + RETRY 0 clamp 10/10",
+      "cmd": "success skip CATCH + OK aliases 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "exhaust RETRY_OK=0 + recovery 10/10",
+      "cmd": "FAIL\u2192CATCH+ONERR+REQUIRE after catch 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "late",
-      "cmd": "succeed on Nth + var max 10/10",
+      "name": "catch",
+      "cmd": "CATCH/ONERR dual recover 10/10",
       "ok": true,
-      "note": "late 10/10"
+      "note": "catch 10/10"
     },
     {
-      "name": "every",
-      "cmd": "EVERY ms backoff hit+exhaust 10/10",
+      "name": "need",
+      "cmd": "NEEDOK/MUSTOK/ASSERTOK/SUCCESS 10/10",
       "ok": true,
-      "note": "every 10/10"
+      "note": "need 10/10"
     },
     {
-      "name": "time",
-      "cmd": "TIMEIT/BENCH/MEASURE wrap 10/10",
+      "name": "finally",
+      "cmd": "FINALLY/CLEANUP always-run 10/10",
       "ok": true,
-      "note": "time 10/10"
+      "note": "finally 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM RETRY/TIMEIT/TRY",
+      "cmd": "HASFORM TRY/CATCH/ONERR/NEEDOK",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "pipeline + REQUIRE",
+      "cmd": "recover pipeline + REQUIRE env",
       "ok": true,
       "note": "gate"
     },
@@ -68,6 +68,12 @@
       "note": "probe"
     },
     {
+      "name": "require_ok_miss",
+      "cmd": "FAIL; REQUIRE OK \u2192 ok:false shell1 exit_code0",
+      "ok": true,
+      "note": "W823"
+    },
+    {
       "name": "unknown",
       "cmd": "bogon EXIT 2",
       "ok": true,
@@ -75,7 +81,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1446/1447/1448 PASS; CLI duals still red",
+      "cmd": "selftest; 1449/1450 PASS; CLI duals still red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -6656,6 +6662,30 @@
       "title": "After CALL of FN containing failed RETRY, OK may be 1 while RETRY_OK=0",
       "detail": "FN RET hits after RETRY exhaust leaves OK=1 (CALL succeeded) even though RETRY_OK=0. Agents must read RETRY_OK not OK after CALL-wrapped retries.",
       "repro": "FN f; RETRY 2; FAIL x; END; RET hits; END; CALL f \u2192 OK1 RETRY_OK0"
+    },
+    {
+      "id": "W823",
+      "severity": "med",
+      "area": "host|require_ok",
+      "title": "REQUIRE OK miss: plate exit_code 0 while shell $? is 1 and ok:false",
+      "detail": "After FAIL then REQUIRE OK, run JSON has ok:false and last_err REQUIRE OK failed, shell rc=1, but exit_code field stays 0. Agents reading only exit_code miss the failure; shell and ok flag disagree with exit_code. Twin of W7 class for soft-status floor.",
+      "repro": "cubalc run -e 'FAIL x; REQUIRE OK' \u2192 shell 1 ok:false exit_code:0"
+    },
+    {
+      "id": "W824",
+      "severity": "high",
+      "area": "lang|try_frame",
+      "title": "TRY/CATCH nested inside IF steals outer END (same class as RETRY W821)",
+      "detail": "Bare TRY\u2026CATCH\u2026END inside SYS EQS IF\u2026THEN leaves outer END as unknown form END. Workaround: FN wrap TRY/CATCH and CALL from action arms. Confirmed 1.15.905; FN path green for full recover board.",
+      "repro": "IF 1 THEN; TRY; FAIL x; CATCH; CLEAR_ERR; PASS; END; END \u2192 unknown form END"
+    },
+    {
+      "id": "W825",
+      "severity": "low",
+      "area": "lang|catch",
+      "title": "ONERR is working CATCH alias; CLEANUP is FINALLY alias",
+      "detail": "Positive: ONERR and CLEANUP duals fire CATCH_N/FINALLY_N correctly. Good for ops runbook synonyms.",
+      "repro": "TRY; FAIL y; ONERR; CLEAR_ERR; PASS; END \u2192 CATCH_N 1"
     }
   ],
   "workarounds": [
@@ -6784,7 +6814,6 @@
     "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
   ],
   "language_gaps": [
-    "HASFORM lag KNOWNCLASS/TYPEDEFINED/FREEOBJ (W768)",
     "CLEAR_ERR LAST=cleared reconfirmed (W772)",
     "HASCLASSANY/HASMETHODS free capability admit (1421/1422)",
     "REQUIRE LIB bare stem broken (W773)",
@@ -6825,10 +6854,14 @@
       "iter": 349,
       "gap": "RETRY/ATTEMPT is excellent for flaky hooks but unusable nested in IF without FN trampoline; PASS/FAIL inside RETRY collide with block stack. TIMEIT same class.",
       "want": "Block stack that allows RETRY/TIMEIT inside IF without END theft; document FN pattern in COOKBOOK"
+    },
+    {
+      "iter": 350,
+      "gap": "TRY/CATCH+REQUIRE OK is the right ops recovery story, but block nesting still forces FN trampolines and REQUIRE OK exit_code field lies relative to shell/ok.",
+      "want": "IF-safe TRY blocks; exit_code mirrors shell on REQUIRE OK miss"
     }
   ],
   "issues_faced": [
-    "iter334: TRYNEW/TRYCLONE fleet board 10/10; HASFORM lag W745; soft scores 8-9/10",
     "iter334: rebuilt binary via -O0 lang_ops_core after OOM; proofs near-pass",
     "iter335: HASFORM TRYSWAP/SWAPOBJ miss while ops work \u2014 1413 assert fail W750",
     "iter335: soft_rn score 8 until LET err_s=LAST_ERR before CLEAR_ERR W751",
@@ -6879,9 +6912,14 @@
       "iter": 349,
       "issue": "RETRY/TIMEIT inside action IF arms broke whole-file END framing (W821). Fixed by FN-wrapping all RETRY/TIMEIT; IF outside RETRY inside FN also stole FN END. Soft scored OK after CALL wrongly.",
       "resolution": "FN helpers only; score RETRY_OK not OK (W822); form expects TRY present in 1.15.903"
+    },
+    {
+      "iter": 350,
+      "issue": "TRY/CATCH cannot nest in IF (W824); REQUIRE OK plate exit_code 0 vs shell 1 (W823). Board uses FN helpers for all TRY/CATCH/REQUIRE OK paths.",
+      "resolution": "FN-wrapped recover + needok helpers; document W823\u2013W825"
     }
   ],
-  "commit": "4fd1580b",
-  "ts": 1786450519,
+  "commit": "371c939f",
+  "ts": 1786451677,
   "board_commit": "767d4822"
 }
