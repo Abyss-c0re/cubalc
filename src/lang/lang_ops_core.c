@@ -3843,6 +3843,12 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"GREPVIN", "GREPVIN|DROPIN name needle — drop bag fields containing needle"},
       {"SORTIN", "SORTIN name — lex sort bag fields in place"},
       {"UNIQIN", "UNIQIN|DEDUPIN name — sort+adjacent dedupe bag fields in place"},
+      {"MUL", "MUL|MULTO name [BY] n — numeric var *= n (default 2)"},
+      {"MULTO", "MULTO alias of MUL"},
+      {"DIVBY", "DIVBY|IDIVTO name [BY] n — integer divide var (default 2; /0→0)"},
+      {"MODBY", "MODBY|REMTO name [BY] n — remainder into var (default 2; %0→0)"},
+      {"ABS", "ABS|ABSTO name — absolute value in place"},
+      {"NEG", "NEG|NEGTO name — negate numeric var in place"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -72856,6 +72862,126 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s n=%ld\n", op, name, nfields);
+    bump(vm);
+    return 1;
+  }
+  /* MUL|MULTO name [BY] n — numeric var *= n (default 2).
+   * DIVBY|IDIVTO name [BY] n — integer divide (default 2; n==0 soft → 0).
+   * MODBY|REMTO name [BY] n — remainder (n==0 soft → 0).
+   * ABS|ABSTO name — absolute value in place.
+   * NEG|NEGTO name — negate in place.
+   * Usability: scale counters without LET x = x * 2 / SYS DIV glue. */
+  if (kw(&L->cur,"MUL")||kw(&L->cur,"MULTO")||kw(&L->cur,"MULT")||
+      kw(&L->cur,"MULTIPLY")||kw(&L->cur,"MULBY")||kw(&L->cur,"SCALEV")||
+      kw(&L->cur,"DIVBY")||kw(&L->cur,"IDIVTO")||kw(&L->cur,"DIVTO")||
+      kw(&L->cur,"QUOTTO")||kw(&L->cur,"IDIV")||
+      kw(&L->cur,"MODBY")||kw(&L->cur,"REMTO")||kw(&L->cur,"MODTO")||
+      kw(&L->cur,"REMAINDER")||
+      kw(&L->cur,"ABS")||kw(&L->cur,"ABSTO")||kw(&L->cur,"IABS")||
+      kw(&L->cur,"ABSVAL")||kw(&L->cur,"MAG")||
+      kw(&L->cur,"NEG")||kw(&L->cur,"NEGTO")||kw(&L->cur,"NEGATE")||
+      kw(&L->cur,"FLIPSIGN")||kw(&L->cur,"CHS")){
+    char op[24], name[48];
+    int mode = 0; /* 0 mul, 1 div, 2 mod, 3 abs, 4 neg */
+    long cur = 0, factor = 2, nv;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "DIVBY") == 0 || strcmp(op, "IDIVTO") == 0 ||
+        strcmp(op, "DIVTO") == 0 || strcmp(op, "QUOTTO") == 0 ||
+        strcmp(op, "IDIV") == 0)
+      mode = 1;
+    else if (strcmp(op, "MODBY") == 0 || strcmp(op, "REMTO") == 0 ||
+             strcmp(op, "MODTO") == 0 || strcmp(op, "REMAINDER") == 0)
+      mode = 2;
+    else if (strcmp(op, "ABS") == 0 || strcmp(op, "ABSTO") == 0 ||
+             strcmp(op, "IABS") == 0 || strcmp(op, "ABSVAL") == 0 ||
+             strcmp(op, "MAG") == 0)
+      mode = 3;
+    else if (strcmp(op, "NEG") == 0 || strcmp(op, "NEGTO") == 0 ||
+             strcmp(op, "NEGATE") == 0 || strcmp(op, "FLIPSIGN") == 0 ||
+             strcmp(op, "CHS") == 0)
+      mode = 4;
+    else
+      mode = 0;
+    /* TIMES is also LOOP TIMES — only treat as MUL when next is IDENT (var name).
+     * LOOP TIMES n consumes TIMES then a number; MUL TIMES name looks wrong.
+     * We use TIMES as alias only when form is TIMES name … */
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, mode == 0 ? "MUL needs name [n] — MUL score BY 2"
+           : mode == 1 ? "DIVBY needs name [n] — DIVBY total 3"
+           : mode == 2 ? "MODBY needs name [n] — MODBY n 10"
+           : mode == 3 ? "ABS needs name — ABS delta"
+                       : "NEG needs name — NEG delta");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (mode <= 2) {
+      if (kw(&L->cur, "BY") || kw(&L->cur, "OF") || kw(&L->cur, "WITH") ||
+          kw(&L->cur, "TIMES") || kw(&L->cur, "/"))
+        lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN ||
+          (L->cur.kind == TK_IDENT && !kw(&L->cur, "END") && !kw(&L->cur, "IF") &&
+           !kw(&L->cur, "LET") && !kw(&L->cur, "PASS") && !kw(&L->cur, "FAIL") &&
+           !kw(&L->cur, "ASSERT") && !kw(&L->cur, "PRINT") && !kw(&L->cur, "INC") &&
+           !kw(&L->cur, "DEC") && !kw(&L->cur, "MUL") && !kw(&L->cur, "DIVBY") &&
+           !kw(&L->cur, "MODBY") && !kw(&L->cur, "ABS") && !kw(&L->cur, "NEG") &&
+           !kw(&L->cur, "ZERO") && !kw(&L->cur, "CLAMP"))) {
+        if (!cubalc_read_num_atom(vm, L, &factor))
+          factor = (mode == 0) ? 2 : 2;
+      } else {
+        factor = 2; /* default scale */
+      }
+    }
+    vv = var_get(vm, name, 0);
+    if (vv && !vv->is_str) {
+      cur = vv->val;
+    } else if (vv && vv->is_str) {
+      char *end = NULL;
+      cur = strtol(vv->sval, &end, 10);
+      if (!(end && end != vv->sval && *end == 0))
+        cur = 0;
+    } else {
+      cur = 0;
+    }
+    if (mode == 0) {
+      nv = cur * factor;
+      var_set_num(vm, "MUL_N", 1);
+      var_set_num(vm, "MULTO_N", 1);
+    } else if (mode == 1) {
+      if (factor == 0) nv = 0;
+      else nv = cur / factor;
+      var_set_num(vm, "DIVBY_N", 1);
+    } else if (mode == 2) {
+      if (factor == 0) nv = 0;
+      else nv = cur % factor;
+      var_set_num(vm, "MODBY_N", 1);
+    } else if (mode == 3) {
+      nv = (cur < 0) ? -cur : cur;
+      var_set_num(vm, "ABS_N", 1);
+    } else {
+      nv = -cur;
+      var_set_num(vm, "NEG_N", 1);
+    }
+    var_set_num(vm, name, nv);
+    var_set_num(vm, "LAST_N", nv);
+    vm->last_n = nv;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", nv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> %ld\n", op, name, nv);
     bump(vm);
     return 1;
   }

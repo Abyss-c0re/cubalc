@@ -1,0 +1,68 @@
+# MUL / DIVBY / MODBY / ABS / NEG — numeric in-place without LET glue
+
+HOLD_FLASH 1
+
+# MUL default *2
+LET n = 5
+MUL n
+ASSERT n == 10
+ASSERT LAST_N == 10
+
+# MUL BY
+MUL n BY 3
+ASSERT n == 30
+ASSERT MUL_N == 1
+
+# DIVBY
+DIVBY n 4
+ASSERT n == 7
+
+# MODBY
+LET r = 17
+MODBY r 5
+ASSERT r == 2
+ASSERT MODBY_N == 1
+
+# ABS
+LET d = -9
+ABS d
+ASSERT d == 9
+ASSERT ABS_N == 1
+
+# NEG
+NEG d
+ASSERT d == -9
+ASSERT NEG_N == 1
+
+# missing starts 0 then mul
+MUL miss BY 5
+ASSERT miss == 0
+
+# /0 soft
+LET z = 10
+DIVBY z 0
+ASSERT z == 0
+
+# chain with INC/CLAMP
+LET tries = 1
+MUL tries BY 2
+INC tries
+CLAMP tries 0 10
+ASSERT tries == 3
+
+# MULTO alias
+LET s = 4
+MULTO s 2
+ASSERT s == 8
+
+HASFORM "MUL"
+ASSERT LAST_N == 1
+HASFORM "DIVBY"
+ASSERT LAST_N == 1
+HASFORM "ABS"
+ASSERT LAST_N == 1
+HASFORM "NEG"
+ASSERT LAST_N == 1
+
+PRINT "1459_mul_divby_abs ok"
+PASS
