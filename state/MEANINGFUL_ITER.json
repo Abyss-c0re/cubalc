@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 901,
-  "version": "1.15.894-usability",
-  "item": "SENDANY / TRYSENDANY first existing method dispatch",
-  "item_id": 901,
-  "title": "SENDANY \u00b7 TRYSENDANY \u00b7 SENDFIRST \u00b7 WITH args \u00b7 CALLANY twin",
-  "commit": "f28d2595",
-  "summary": "SENDANY sends first existing method from name bag/list with optional WITH args; TRYSENDANY soft; SENDANY_METHOD plate; proof 1439 PASS.",
+  "iter": 902,
+  "version": "1.15.895-usability",
+  "item": "cubalc run -N / --require-fns / CUBALC_REQUIRE_FNS",
+  "item_id": 902,
+  "title": "run -N \u00b7 --require-fns \u00b7 CUBALC_REQUIRE_FNS \u00b7 NEEDFNS host floor",
+  "commit": "f9c254e6",
+  "summary": "Host FN capability floor after -I preload via NEEDFNS dual; plate require_fns; proof 1440 PASS.",
   "proofs": [
-    "1439_sendany PASS",
-    "1439_cli_sendany PASS",
-    "876/1438 regression PASS"
+    "1440_cli_require_fns PASS",
+    "1326_cli_require_forms regression PASS"
   ],
-  "when": "2026-08-11T10:07:17Z",
+  "when": "2026-08-11T10:20:33Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "f28d25957c16da3c37677861de7eb1ff45da1562",
-  "note": "OOP plugin hook dispatch without HASMETHODANY+IF+SEND soup; restored thrash before ship"
+  "sha": "f9c254e6fc395497cd0d901067178f2d6f8d7b1f",
+  "note": "agent run -I lib -N greet,hello without in-body NEEDFNS glue"
 }
