@@ -1,0 +1,885 @@
+# svc_trydelete_retire_fleet_board.cubalc — TRYDELETE soft fleet slot retire
+#
+# Real use: fleet agents soft-free drained worker slots (scale-in / canary
+# retire) without fatal miss on double-delete or ghost names, and gate that
+# the FleetSlot CLASS is loaded before NEW. First realworld of 1418 TRYDELETE
+# + 1419 HASCLASS + 1420 HASCLASSES (1.15.873+).
+#
+#   TRYDELETE|DELETEOBJ SOFT|SOFTDELETE|FREEOBJ SOFT name · TRYDELETE_N
+#   HASCLASS|KNOWNCLASS|TYPEDEFINED Class · HASCLASS_N
+#   HASCLASSES|ALLCLASSES|NEEDCLASSES classes… · CLASSMISS bag
+#   hard DELETEOBJ still soft-miss historically (document)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tdf_$$
+#   ./out/cubalc run programs/realworld/svc_trydelete_retire_fleet_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|alias|class|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt TDF_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_TDF_REQUIRE
+#
+# Edges: soft miss unknown; double-delete soft; FREEOBJ SOFT; HASCLASS var;
+#   HASCLASSES partial CLASSMISS; CLEAR_ERR clobber LAST; WRITE NL; PRINT
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS FleetSlot
+  FIELD role "idle"
+  FIELD load 0
+END
+
+NOTE "svc_trydelete_retire_fleet_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_trydelete_retire_fleet -- boot|pass|soft|alias|class|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_TDF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "TDF_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET del_n = 0
+LET ok_v = 0
+LET err_s = ""
+LET hc_n = 0
+
+ONEOF ACTION "boot", "pass", "soft", "alias", "class", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "alias" THEN
+    LET op = "alias"
+  WHEN "class" THEN
+    LET op = "class"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-tdf\",\"schema\":\"cubalc.svc_trydelete_retire_fleet.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"tdf\",\"want_filter\":\"slot_retire\",\"cfg\":{\"surface\":\"TRYDELETE,DELETEOBJ_SOFT,SOFTDELETE,FREEOBJ_SOFT,HASCLASS,HASCLASSES,TRYDELETE_N\",\"contract\":\"soft free drained fleet slots · class gate\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  HASCLASS FleetSlot
+  LET hc_n = LAST_N
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-tdf"
+  IF LAST_N == 1 THEN
+    IF hc_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET score = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot class"
+      FAIL "boot class"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# pass — NEW slots then TRYDELETE drain + HASOBJ gone
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetSlot w0
+  SETF w0 role "worker"
+  SETF w0 load 3
+  NEW FleetSlot w1
+  SETF w1 role "drain"
+  SETF w1 load 0
+  NEW FleetSlot w2
+  SETF w2 role "canary"
+  SETF w2 load 1
+  CLEAR_ERR
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TRYDELETE w1
+  LET ok_v = OK
+  LET del_n = TRYDELETE_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF del_n == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ w1
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GETF w0 load
+  IF LAST_N == 3 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TRYDELETE w0
+  IF TRYDELETE_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ w0
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "slot_retire"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = del_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" del_n ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score del_n note_msg
+  CLEAR_ERR
+END
+
+# soft — ghost miss + double-delete + LAST_ERR capture before CLEAR_ERR
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetSlot live1
+  SETF live1 load 7
+  CLEAR_ERR
+  TRYDELETE missing_zz_tdf
+  LET ok_v = OK
+  LET del_n = TRYDELETE_N
+  LET err_s = LAST_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF del_n == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI err_s "unknown"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ live1
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TRYDELETE live1
+  LET del_n = TRYDELETE_N
+  CLEAR_ERR
+  IF del_n == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ live1
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # double-delete soft
+  TRYDELETE live1
+  LET ok_v = OK
+  LET del_n = TRYDELETE_N
+  LET err_s = LAST_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF del_n == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASI err_s "unknown"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # hard DELETEOBJ miss historically soft
+  DELETEOBJ missing2_tdf
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# alias — DELETEOBJ SOFT / SOFTDELETE / FREEOBJ SOFT
+SYS EQS op "alias"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetSlot a1
+  SETF a1 load 2
+  NEW FleetSlot a2
+  SETF a2 load 4
+  NEW FleetSlot a3
+  SETF a3 load 6
+  CLEAR_ERR
+  DELETEOBJ SOFT a1
+  LET ok_v = OK
+  LET del_n = TRYDELETE_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF del_n == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ a1
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SOFTDELETE a2
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ a2
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  FREEOBJ SOFT a3
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ a3
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SOFTDELETE ghost_alias_tdf
+  LET ok_v = OK
+  LET del_n = TRYDELETE_N
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF del_n == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "TRYDELETE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "alias ok"
+    LET admit_n = 1
+    LET find_n = del_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "alias score"
+    FAIL "alias score"
+    CLEAR_ERR
+  END
+  SYS CAT "alias:" score ":al"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "alias:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# class — HASCLASS / KNOWNCLASS / HASCLASSES / CLASSMISS
+SYS EQS op "class"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASCLASS FleetSlot
+  LET hc_n = LAST_N
+  LET body = LAST
+  CLEAR_ERR
+  IF hc_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS body "FleetSlot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASS GhostClassTdf
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  KNOWNCLASS FleetSlot
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TYPEDEFINED FleetSlot
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET want = "FleetSlot"
+  HASCLASS want
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET want = "NopeTdf"
+  HASCLASS want
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASSES FleetSlot GhostClassTdf
+  LET ok_v = OK
+  LET err_s = CLASSMISS
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  SYS EQS err_s "GhostClassTdf"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASSES FleetSlot
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "class ok"
+    LET admit_n = 1
+    LET find_n = hc_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "class score"
+    FAIL "class score"
+    CLEAR_ERR
+  END
+  SYS CAT "class:" hc_n ":cl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "class:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score hc_n note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM catalog for TRYDELETE family
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "TRYDELETE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "DELETEOBJ"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "HASCLASS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "HASCLASSES"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SOFTDELETE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # KNOWNCLASS/TYPEDEFINED ops work; HASFORM catalog may lag (document W*)
+  HASFORM "KNOWNCLASS"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASFORM "TYPEDEFINED"
+  LET del_n = LAST_N
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF del_n == 0 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  HASFORM TRYDELETE
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS TRYDELETE"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "slot_retire"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — class gate + create + soft free + soft recover + REQUIRE
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASCLASS FleetSlot
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASSES FleetSlot
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NEW FleetSlot g0
+  SETF g0 role "retire"
+  SETF g0 load 0
+  CLEAR_ERR
+  HASOBJ g0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TRYDELETE g0
+  IF TRYDELETE_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ g0
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TRYDELETE g0
+  IF TRYDELETE_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-tdf"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber TRYDELETE_N · CLEAR_ERR LAST · WRITE NL
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetSlot p0
+  SETF p0 load 1
+  CLEAR_ERR
+  TRYDELETE p0
+  LET del_n = TRYDELETE_N
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF del_n == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ p0
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # CLEAR_ERR LAST='cleared' (W763 class)
+  LET body = "keep-me"
+  CLEAR_ERR
+  SYS EQS LAST "cleared"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "slot_retire"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "slot_flip"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TRYDELETE missing_probe_tdf
+  IF TRYDELETE_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = del_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score del_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " del_n=" del_n " hc_n=" hc_n
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "tdf report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

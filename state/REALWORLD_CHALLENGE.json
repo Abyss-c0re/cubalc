@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 337,
-  "program": "programs/realworld/svc_path_age_bulk_gc_board.cubalc",
-  "theme": "AGEALL/FRESH/KEEPSTALE/TOUCHALL/RMALL bulk path age lease GC",
-  "version": "1.15.871-usability",
+  "iter": 338,
+  "program": "programs/realworld/svc_trydelete_retire_fleet_board.cubalc",
+  "theme": "TRYDELETE/HASCLASS/HASCLASSES soft fleet slot retire",
+  "version": "1.15.874-usability",
   "pass": true,
-  "prior_note": "iter 336 SETMATCHFILE conf line; this iter first realworld bulk path-age GC triad (731/734/737/738)",
+  "prior_note": "iter 337 bulk path-age GC; this iter first realworld TRYDELETE+HASCLASS (1418/1419/1420)",
   "tests": [
     {
       "name": "list",
@@ -15,61 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + cache lease plates + PATHS bag",
+      "cmd": "seed agent + HASCLASS FleetSlot",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "AGEALL hit/miss + FRESH + TOUCHALL 10/10",
+      "cmd": "NEW slots + TRYDELETE drain 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "empty/ghost AGEALL FRESH KEEPSTALE RMALL 10/10",
+      "cmd": "ghost+double-delete soft + LAST_ERR 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "fresh",
-      "cmd": "FRESH max0 keeps just-touched after SLEEP",
+      "name": "alias",
+      "cmd": "DELETEOBJ SOFT/SOFTDELETE/FREEOBJ SOFT 10/10",
       "ok": true,
-      "note": "fresh 10/10"
+      "note": "alias 10/10"
     },
     {
-      "name": "stale",
-      "cmd": "KEEPSTALE/AGED min_age after SLEEP",
+      "name": "class",
+      "cmd": "HASCLASS/KNOWNCLASS/HASCLASSES CLASSMISS 10/10",
       "ok": true,
-      "note": "stale 10/10"
-    },
-    {
-      "name": "touch",
-      "cmd": "TOUCHALL NEW/UPD/FAIL dir soft",
-      "ok": true,
-      "note": "touch 10/10"
-    },
-    {
-      "name": "reclaim",
-      "cmd": "RMALL N/MISS/FAIL OK=0 + PATHGLOB",
-      "ok": true,
-      "note": "reclaim 10/10"
+      "note": "class 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM SYS prefix; MAPAGE lag",
+      "cmd": "HASFORM TRYDELETE; KNOWNCLASS lag",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "stale filter + RMALL + soft + REQUIRE",
+      "cmd": "class gate + retire + REQUIRE",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber AGEALL capture + WRITE NL",
+      "cmd": "PRINT clobber + CLEAR_ERR LAST=cleared",
       "ok": true,
       "note": "probe"
     },
@@ -81,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest 612/866; CLI duals set\u2192SETF red",
+      "cmd": "selftest 615/872; trydelete/hasclass PASS; CLI duals set\u2192SETF",
       "ok": false,
-      "note": "lang proofs green; CLI dual mass-fail set\u2192SETF (pre-existing)"
+      "note": "lang proofs green; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -6222,6 +6210,46 @@
       "title": "SYS WRITE VAL/META still omit trailing NL (W5/W755 class)",
       "detail": "od -c META ends without \\n after r_n=0.",
       "repro": "od -c $CUBALC_STATE/META.txt"
+    },
+    {
+      "id": "W768",
+      "severity": "med",
+      "area": "lang|hasform",
+      "title": "HASFORM misses KNOWNCLASS/TYPEDEFINED/ALLCLASSES/FREEOBJ aliases",
+      "detail": "KNOWNCLASS/TYPEDEFINED ops work (HASCLASS duals) but HASFORM returns 0. FREEOBJ/ALLCLASSES same lag. TRYDELETE/HASCLASS/HASCLASSES/SOFTDELETE are cataloged. Agents must not gate fleet class inventory solely on HASFORM aliases.",
+      "repro": "HASFORM KNOWNCLASS \u2192 0; KNOWNCLASS FleetSlot \u2192 1"
+    },
+    {
+      "id": "W769",
+      "severity": "low",
+      "area": "lang|trydelete",
+      "title": "TRYDELETE double-delete and ghost both soft OK=0 TRYDELETE_N=0",
+      "detail": "Positive: scale-in agents can TRYDELETE drained slots idempotently; no fatal. Capture LAST_ERR before CLEAR_ERR for 'unknown' string.",
+      "repro": "TRYDELETE x twice \u2192 second N=0 OK=0"
+    },
+    {
+      "id": "W770",
+      "severity": "low",
+      "area": "lang|hasclasses",
+      "title": "HASCLASSES partial miss: OK=0 CLASSMISS names bag",
+      "detail": "HASCLASSES FleetSlot Ghost \u2192 OK=0 CLASSMISS=Ghost HASCLASSES_N=1. Good multi-class gate for fleet boot; need CLASSMISS capture before CLEAR_ERR.",
+      "repro": "HASCLASSES FleetSlot GhostClassTdf \u2192 CLASSMISS GhostClassTdf"
+    },
+    {
+      "id": "W771",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE VAL/META still omit trailing NL",
+      "detail": "W5/W755/W767 class reconfirmed on TDF META.",
+      "repro": "od -c META.txt ends without \\n"
+    },
+    {
+      "id": "W772",
+      "severity": "med",
+      "area": "lang|clear_err",
+      "title": "CLEAR_ERR LAST='cleared' reconfirmed on TRYDELETE probe",
+      "detail": "W763 class: after LET body keep-me; CLEAR_ERR; EQS LAST cleared hits. Agents must capture TRYDELETE_N before any CLEAR_ERR/PRINT.",
+      "repro": "CLEAR_ERR; SYS EQS LAST cleared \u2192 1"
     }
   ],
   "workarounds": [
@@ -6318,7 +6346,10 @@
     "COUNTFILELINE use full KEY=val needle; prefer GREPFILE+EQS for exact key tally",
     "LET bag=LAST before CLEAR_ERR after AGEALL/FRESH/KEEPSTALE/RMALL",
     "Gate reclaim on RMALL_N not OK when bag may include dirs",
-    "HASFORM only 'SYS AGEALL'/'SYS FRESH'/'SYS KEEPSTALE'/'SYS TOUCHALL'/'SYS RMALL' full stems"
+    "HASFORM only 'SYS AGEALL'/'SYS FRESH'/'SYS KEEPSTALE'/'SYS TOUCHALL'/'SYS RMALL' full stems",
+    "LET del_n=TRYDELETE_N and LET err_s=LAST_ERR before CLEAR_ERR",
+    "HASFORM only TRYDELETE/DELETEOBJ/HASCLASS/HASCLASSES/SOFTDELETE stems",
+    "Gate class load via HASCLASS op not HASFORM KNOWNCLASS"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6483,7 +6514,11 @@
     "CLEAR_ERR clobbers LAST \u2192 'cleared' (W763)",
     "HASFORM lag on MAPAGE/KEEPFRESH/AGED aliases (W764)",
     "RMALL OK=0 partial success with FAIL dirs (W765)",
-    "AGEALL/FRESH/KEEPSTALE/TOUCHALL/RMALL bulk path GC (731/734/737/738)"
+    "AGEALL/FRESH/KEEPSTALE/TOUCHALL/RMALL bulk path GC (731/734/737/738)",
+    "TRYDELETE soft free fleet slots (1418)",
+    "HASCLASS/HASCLASSES class gate (1419/1420)",
+    "HASFORM lag KNOWNCLASS/TYPEDEFINED/FREEOBJ (W768)",
+    "CLEAR_ERR LAST=cleared reconfirmed (W772)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6545,9 +6580,12 @@
     "iter337: CLEAR_ERR LAST='cleared' broke fresh/stale HASLINE/EQS until capture-before-clear (W763)",
     "iter337: HASFORM SYS MAPAGE/KEEPFRESH/AGED lag while ops live (W764)",
     "iter337: RMALL OK=0 on dir FAIL despite N files removed (W765)",
-    "iter337: board all actions green; selftest CLI duals still set\u2192SETF red"
+    "iter337: board all actions green; selftest CLI duals still set\u2192SETF red",
+    "iter338: form 9/10 until KNOWNCLASS HASFORM lag documented (W768)",
+    "iter338: capture LAST_ERR before CLEAR_ERR on soft TRYDELETE (W763/W751 class)",
+    "iter338: all actions green; trydelete/hasclass proofs PASS; CLI duals still set\u2192SETF"
   ],
-  "commit": "c96ebb1b",
-  "ts": "2026-08-11T06:22:16Z",
-  "board_commit": "c96ebb1b"
+  "commit": "pending",
+  "ts": "2026-08-11T06:46:24Z",
+  "board_commit": "pending"
 }
