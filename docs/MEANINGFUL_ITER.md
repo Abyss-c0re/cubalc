@@ -930,6 +930,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 899. ~~**`field_guard` multi HASFIELDS/HASFIELDANY + Class.field bags**~~ **done** (dotted multi-class bag form · drop N× HASFIELD soup · proof 1437).
 900. ~~**`CALLANY` / `TRYCALLANY`**~~ **done** (first-defined FN dispatch · WITH args · HASFNANY twin · proof 1438).
 901. ~~**`SENDANY` / `TRYSENDANY`**~~ **done** (first existing method dispatch · WITH args · CALLANY twin · proof 1439).
+902. ~~**`cubalc run -N` / `--require-fns` / `CUBALC_REQUIRE_FNS`**~~ **done** (host FN floor after -I preload · NEEDFNS dual · proof 1440).
+
 
 
 
