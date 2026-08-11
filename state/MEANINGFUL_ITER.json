@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 852,
-  "version": "1.15.844-usability",
-  "item": "product_session + cubalc init --product",
-  "item_id": 852,
-  "title": "product_session \u00b7 init --product \u00b7 PRODUCT_SESSION_OK \u00b7 doctor",
-  "commit": "e98682fa5ef454846ff57e36ad1d0493b655e551",
-  "summary": "tool_session+env_guard+time_guard one-shot; init --product catalog n=19; doctor lib_product_session; proof 1392 PASS.",
+  "iter": 853,
+  "version": "1.15.845-usability",
+  "item": "TIME_GUARD_OK + in-lang DOCTOR product dual",
+  "item_id": 853,
+  "title": "TIME_GUARD_OK \u00b7 doctor lib_product_session \u00b7 product_session soft status",
+  "commit": "6449c7436406c24e2c83c902ffe085ea9121487f",
+  "summary": "time_guard publishes TIME_GUARD_OK; fix DOCTOR undeclared lib_tool_session + lib_product_session; proof 1393 PASS.",
   "proofs": [
+    "1393_time_guard_ok PASS",
     "1392_product_session PASS",
-    "1392_cli_init_product_session PASS"
+    "1390_time_boot PASS"
   ],
-  "when": "2026-08-11T01:18:05Z",
+  "when": "2026-08-11T01:22:21Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "e98682fa5ef454846ff57e36ad1d0493b655e551",
-  "note": "pairs tool_session \u00b7 product CLI flags+args+env+time one INCLUDE"
+  "sha": "6449c7436406c24e2c83c902ffe085ea9121487f",
+  "note": "completes product_session soft combine promised at 852"
 }
