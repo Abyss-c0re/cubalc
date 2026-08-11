@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 895,
-  "version": "1.15.888-usability",
-  "item": "fn_guard native HASFNANY/NEEDFNANY ANY path",
-  "item_id": 895,
-  "title": "fn_guard \u00b7 HASFNANY \u00b7 NEEDFNANY \u00b7 ANY-path duals",
-  "commit": "dc7a60e8",
-  "summary": "fn_guard ANY path uses native HASFNANY (soft) / NEEDFNANY (hard) instead of N\u00d7 HASFN soup; ALL path already HASFNS/NEEDFNS; proofs pass.",
+  "iter": 896,
+  "version": "1.15.889-usability",
+  "item": "obj_guard native HASOBJS/NEEDOBJS + HASOBJANY/NEEDOBJANY",
+  "item_id": 896,
+  "title": "obj_guard \u00b7 HASOBJS \u00b7 NEEDOBJS \u00b7 HASOBJANY \u00b7 NEEDOBJANY \u00b7 native multi",
+  "commit": "2a53bfd1",
+  "summary": "obj_guard ALL/ANY use native HASOBJS/NEEDOBJS + HASOBJANY/NEEDOBJANY instead of N\u00d7 HASOBJ soup; twin of fn_guard; proofs 1434 PASS.",
   "proofs": [
-    "1433_fn_guard_any_native PASS",
-    "1433_cli_fn_guard_any PASS"
+    "1434_obj_guard_native PASS",
+    "1434_cli_obj_guard_native PASS",
+    "1405_obj_guard regression PASS"
   ],
-  "when": "2026-08-11T09:05:34Z",
+  "when": "2026-08-11T09:15:57Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "dc7a60e8f1669414a5734aee2df92833dd244f7c",
-  "note": "agent language-plane FN gate ANY path without N\u00d7 HASFN glue; twin of HASFNS/NEEDFNS ALL path"
+  "sha": "2a53bfd17d74c2203063fdeb6a574128b7d0421c",
+  "note": "agent live-object gate without N\u00d7 HASOBJ glue; twin of fn_guard native multi"
 }
