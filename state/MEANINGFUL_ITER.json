@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 855,
-  "version": "1.15.847-usability",
-  "item": "rw_guard + rw_boot + cubalc init --rw",
-  "item_id": 855,
-  "title": "rw_guard \u00b7 rw_boot \u00b7 RW_GUARD_OK \u00b7 init --rw \u00b7 doctor",
-  "commit": "aba54916e1767e552bc71bddb3103c54fd88ad4a",
-  "summary": "NEED_READ/WRITE_PATHS access contract; init --rw catalog n=21; doctor lib_rw_*; proof 1395 PASS.",
+  "iter": 856,
+  "version": "1.15.848-usability",
+  "item": "bin_guard + bin_boot + cubalc init --bin",
+  "item_id": 856,
+  "title": "bin_guard \u00b7 bin_boot \u00b7 BIN_GUARD_OK \u00b7 init --bin \u00b7 doctor",
+  "commit": "4eaab00dd338fd4ccb649ae532256b8847de5901",
+  "summary": "NEED_BINS/NEED_BIN_ANY PATH tool contract; init --bin catalog n=22; doctor lib_bin_*; proof 1396 PASS.",
   "proofs": [
-    "1395_rw_guard PASS",
-    "1395_rw_boot PASS",
-    "1395_cli_rw_guard PASS",
-    "1395_cli_init_rw PASS"
+    "1396_bin_guard PASS",
+    "1396_bin_boot PASS",
+    "1396_cli_bin_guard PASS",
+    "1396_cli_init_bin PASS"
   ],
-  "when": "2026-08-11T01:43:47Z",
+  "when": "2026-08-11T01:54:38Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "aba54916e1767e552bc71bddb3103c54fd88ad4a",
-  "note": "path_guard twin for CANREAD/CANWRITE access rights before IO"
+  "sha": "4eaab00dd338fd4ccb649ae532256b8847de5901",
+  "note": "path/rw twin for external tools on PATH before SPAWN"
 }
