@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 351,
-  "program": "programs/realworld/svc_iferr_budget_board.cubalc",
-  "theme": "IFERR/IFOK error budget + INC/DEC/SWAP counters",
-  "version": "1.15.907-usability",
+  "iter": 352,
+  "program": "programs/realworld/svc_toggle_clamp_slo_board.cubalc",
+  "theme": "TOGGLE/CLAMP/SETMIN/SETMAX canary flags + SLO extremes",
+  "version": "1.15.908-usability",
   "pass": true,
-  "prior_note": "iter 350 TRY/CATCH+REQUIRE OK; this iter first realworld of 1451 IFERR/IFOK + 1452 INC/DEC/SWAP",
+  "prior_note": "iter 351 IFERR+INC; this iter first realworld of 1453 TOGGLE/CLAMP/SETMIN/SETMAX (closes W827)",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed + IFOK INC oks",
+      "cmd": "seed + TOGGLE maint",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFOK INC/BUMP + IFERR skip + HASOK 10/10",
+      "cmd": "TOGGLE/FLIP cycle 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "IFERR/WHENERR tally + ELSE + DEC 10/10",
+      "cmd": "CLAMP high/low/in-range BOUND 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "ok",
-      "cmd": "HASERR/HASOK + INC create 10/10",
+      "name": "clamp",
+      "cmd": "INC then CLAMP budget 10/10",
       "ok": true,
-      "note": "ok 10/10"
+      "note": "clamp 10/10"
     },
     {
-      "name": "swap",
-      "cmd": "SWAP/XCHG string+num dual buffers 10/10",
+      "name": "peak",
+      "cmd": "SETMAX/SETMIN/MAXTO/MINTO 10/10",
       "ok": true,
-      "note": "swap 10/10"
+      "note": "peak 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFERR/INC/SWAP; TOGGLE miss",
+      "cmd": "HASFORM TOGGLE/CLAMP/SETMAX",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "budget pipeline + REQUIRE",
+      "cmd": "canary pipeline + REQUIRE",
       "ok": true,
       "note": "gate"
     },
@@ -69,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1451/1452 PASS; 1453 TOGGLE not in binary; CLI duals red",
+      "cmd": "selftest; 1453 PASS; CLI duals still red",
       "ok": false,
-      "note": "proofs green; 1453 ahead of runtime"
+      "note": "proof green; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -6698,6 +6698,30 @@
       "title": "INC creates missing var at 0 then +n; BUMP alias of INC +1",
       "detail": "Positive: INC fresh_cnt creates and sets 1; INC BY n and DEC n work; SWAP mixed string/num works; XCHG alias of SWAP. Good for error-budget counters without LET glue.",
       "repro": "INC fresh; INC fresh BY 4; DEC fresh 2"
+    },
+    {
+      "id": "W829",
+      "severity": "high",
+      "area": "lang|setmin",
+      "title": "SETMIN after LET x=0 keeps 0 as running min (never adopts positive samples)",
+      "detail": "LET worst = 0; SETMIN worst 10 leaves worst=0 because min(0,10)=0. Proof 1453 seeds via SETMIN alone (no prior LET). Agents must not pre-init extreme trackers to 0; omit LET or UNSET first. SETMAX with LET best=0 still works (max path).",
+      "repro": "LET worst = 0; SETMIN worst 10 \u2192 worst 0; bare SETMIN worst 10 \u2192 10"
+    },
+    {
+      "id": "W830",
+      "severity": "med",
+      "area": "lang|clear_err",
+      "title": "CLEAR_ERR after CLAMP/SETMAX clobbers LAST_N (not CLAMP_CHANGED)",
+      "detail": "CLAMP weight 0 100; CLEAR_ERR; LAST_N no longer 100 (board saw LAST_N=7). CLAMP_CHANGED and the var itself survive. Capture LET ret_n = LAST_N before CLEAR_ERR. Same class as PRINT clobber (W4).",
+      "repro": "CLAMP w 0 100; CLEAR_ERR; PRINT LAST_N  # not 100"
+    },
+    {
+      "id": "W831",
+      "severity": "low",
+      "area": "lang|toggle",
+      "title": "TOGGLE missing\u21921, FLIP/BOUND/MAXTO/MINTO aliases work (positive)",
+      "detail": "TOGGLE creates bool 1; second TOGGLE \u2192 0; FLIP dual; BOUND=CLAMP; MAXTO/MINTO=SETMAX/SETMIN. CLAMP_CHANGED 1 only when value moves. Good for canary weight + SLO peak/floor without IF+LET.",
+      "repro": "TOGGLE canary; CLAMP weight 0 100; SETMAX best 15"
     }
   ],
   "workarounds": [
@@ -6826,7 +6850,6 @@
     "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
   ],
   "language_gaps": [
-    "HASCLASSANY/HASMETHODS free capability admit (1421/1422)",
     "REQUIRE LIB bare stem broken (W773)",
     "HASMETHODS keyword method-name collide (W774)",
     "HASFORM lag HASMETHODS/ANYCLASS (W775)",
@@ -6875,10 +6898,14 @@
       "iter": 351,
       "gap": "IFERR+INC is the right error-budget story but still needs FN trampoline; TOGGLE/CLAMP proof shipped before runtime.",
       "want": "IF-safe IFERR blocks; land 1453 forms in binary with selftest green"
+    },
+    {
+      "iter": 352,
+      "gap": "SETMIN seed semantics: missing vs 0 are different; agents trip on LET x=0 before SETMIN. CLAMP LAST_N fragile under CLEAR_ERR.",
+      "want": "SETMIN first-write always adopts sample when unset; document seed rules; LAST_N sticky across CLEAR_ERR for clamp ret"
     }
   ],
   "issues_faced": [
-    "iter335: HASFORM TRYSWAP/SWAPOBJ miss while ops work \u2014 1413 assert fail W750",
     "iter335: soft_rn score 8 until LET err_s=LAST_ERR before CLEAR_ERR W751",
     "iter335: binary vanished mid-suite concurrent make; relink to 1.15.867",
     "iter336: pass 9/10 until LET body=LAST before dual SYS HAS (W759)",
@@ -6937,9 +6964,14 @@
       "iter": 351,
       "issue": "IFERR/IFOK cannot nest in IF (W826); 1453 TOGGLE not in binary (W827). Board uses FN helpers for all status branches.",
       "resolution": "FN-wrapped budget_fail/ok/else + INC/DEC/SWAP actions; document W826\u2013W828"
+    },
+    {
+      "iter": 352,
+      "issue": "SETMIN after LET=0 stuck at 0 (W829); CLEAR_ERR ate LAST_N after CLAMP (W830). Board omitted pre-init of extremes; capture LAST_N before CLEAR_ERR.",
+      "resolution": "first realworld 1453; document W829\u2013W831; W827 forms now live in 1.15.908"
     }
   ],
-  "commit": "134d77a0",
-  "ts": 1786453169,
+  "commit": "11c15c84",
+  "ts": 1786454749,
   "board_commit": "767d4822"
 }

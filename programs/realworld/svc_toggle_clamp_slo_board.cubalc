@@ -1,0 +1,886 @@
+# svc_toggle_clamp_slo_board.cubalc — TOGGLE/CLAMP/SETMIN/SETMAX canary + SLO
+#
+# Real use: deploy agents flip maint/canary bool flags, clamp canary weight and
+# retry budgets into [lo,hi], and track running peak/floor latency samples
+# without IF + LET glue. First realworld of 1453 TOGGLE/FLIP/CLAMP/BOUND/
+# SETMIN/SETMAX/MAXTO/MINTO (1.15.908+ · MI 915). Distinct from
+# toggle_flag_board (file TOGGLELINE exact rows) and canary_weight_mul_board
+# (bag SETMATCH weights) — this board is *program-var* flag + bounds + extremes.
+#
+#   TOGGLE|FLIP var · TOGGLE_N
+#   CLAMP|BOUND var lo [TO] hi · CLAMP_CHANGED · LAST_N
+#   SETMAX|MAXTO best sample · SETMIN|MINTO worst sample
+#   Pairs with INC for tries then CLAMP (budget ceil)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tcs_$$
+#   ./out/cubalc run programs/realworld/svc_toggle_clamp_slo_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|clamp|peak|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt TCS_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_TCS_REQUIRE
+#
+# Edges: TOGGLE missing→1; CLAMP_CHANGED 0 on in-range; CLEAR_ERR clobbers LAST_N
+#   after CLAMP (capture first); SETMIN after LET x=0 keeps 0 as min (W829);
+#   SETMAX ignores lower; INC then CLAMP; PRINT clobber; WRITE NL
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+NOTE "svc_toggle_clamp_slo_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_toggle_clamp_slo -- boot|pass|soft|clamp|peak|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_TCS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "TCS_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET maint = 0
+LET canary = 0
+LET weight = 0
+LET tries = 0
+# do NOT LET best/worst/peak/floor = 0 — SETMIN treats 0 as running min (W829)
+LET ch = 0
+
+ONEOF ACTION "boot", "pass", "soft", "clamp", "peak", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clamp" THEN
+    LET op = "clamp"
+  WHEN "peak" THEN
+    LET op = "peak"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-tcs\",\"schema\":\"cubalc.svc_toggle_clamp_slo.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"tcs\",\"want_filter\":\"toggle_clamp_slo\",\"cfg\":{\"surface\":\"TOGGLE,FLIP,CLAMP,BOUND,SETMAX,SETMIN,MAXTO,MINTO,CLAMP_CHANGED,TOGGLE_N\",\"contract\":\"canary flags + weight clamp + SLO peak/floor without IF LET glue\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  TOGGLE maint
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-tcs"
+  IF LAST_N == 1 THEN
+    IF maint == 1 THEN
+      IF ok_v == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+        LET find_n = maint
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot toggle_n"
+        FAIL "boot toggle_n"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot maint"
+      FAIL "boot maint"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score maint note_msg
+  CLEAR_ERR
+END
+
+# pass — TOGGLE/FLIP cycle · TOGGLE_N
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  # fresh canary missing → 1
+  TOGGLE canary
+  CLEAR_ERR
+  IF canary == 1 THEN
+    LET score = score + 1
+  END
+  IF TOGGLE_N == 1 THEN
+    LET score = score + 1
+  END
+  TOGGLE canary
+  CLEAR_ERR
+  IF canary == 0 THEN
+    LET score = score + 1
+  END
+  FLIP canary
+  CLEAR_ERR
+  IF canary == 1 THEN
+    LET score = score + 1
+  END
+  FLIP canary
+  CLEAR_ERR
+  IF canary == 0 THEN
+    LET score = score + 1
+  END
+  TOGGLE maint
+  CLEAR_ERR
+  # maint may already be 1 from boot in same process — start clean
+  LET maint = 0
+  TOGGLE maint
+  CLEAR_ERR
+  IF maint == 1 THEN
+    LET score = score + 1
+  END
+  TOGGLE maint
+  CLEAR_ERR
+  IF maint == 0 THEN
+    LET score = score + 1
+  END
+  TOGGLE verbose
+  CLEAR_ERR
+  IF verbose == 1 THEN
+    LET score = score + 1
+  END
+  TOGGLE verbose
+  CLEAR_ERR
+  IF verbose == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "toggle_clamp_slo"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = canary
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score canary maint note_msg
+  CLEAR_ERR
+END
+
+# soft — CLAMP high/low/in-range · BOUND · TO keyword
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET weight = 150
+  CLAMP weight 0 100
+  LET ret_n = LAST_N
+  LET ch = CLAMP_CHANGED
+  CLEAR_ERR
+  IF weight == 100 THEN
+    LET score = score + 1
+  END
+  IF ch == 1 THEN
+    LET score = score + 1
+  END
+  IF ret_n == 100 THEN
+    LET score = score + 1
+  END
+  CLAMP weight 0 100
+  LET ch = CLAMP_CHANGED
+  CLEAR_ERR
+  IF ch == 0 THEN
+    LET score = score + 1
+  END
+  IF weight == 100 THEN
+    LET score = score + 1
+  END
+  LET weight = -5
+  CLAMP weight 0 TO 100
+  CLEAR_ERR
+  IF weight == 0 THEN
+    LET score = score + 1
+  END
+  LET weight = 50
+  CLAMP weight 0 100
+  LET ch = CLAMP_CHANGED
+  CLEAR_ERR
+  IF weight == 50 THEN
+    LET score = score + 1
+  END
+  IF ch == 0 THEN
+    LET score = score + 1
+  END
+  LET weight = 200
+  BOUND weight 1 8
+  CLEAR_ERR
+  IF weight == 8 THEN
+    LET score = score + 1
+  END
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = weight
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score weight note_msg
+  CLEAR_ERR
+END
+
+# clamp — INC then CLAMP budget · multi bound
+SYS EQS op "clamp"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET tries = 0
+  INC tries
+  INC tries BY 9
+  CLEAR_ERR
+  IF tries == 10 THEN
+    LET score = score + 1
+  END
+  CLAMP tries 0 5
+  CLEAR_ERR
+  IF tries == 5 THEN
+    LET score = score + 1
+  END
+  IF CLAMP_CHANGED == 1 THEN
+    LET score = score + 1
+  END
+  CLAMP tries 0 5
+  CLEAR_ERR
+  IF CLAMP_CHANGED == 0 THEN
+    LET score = score + 1
+  END
+  LET weight = 12
+  CLAMP weight 0 5
+  CLEAR_ERR
+  IF weight == 5 THEN
+    LET score = score + 1
+  END
+  LET weight = -3
+  CLAMP weight 0 TO 10
+  CLEAR_ERR
+  IF weight == 0 THEN
+    LET score = score + 1
+  END
+  LET weight = 100
+  BOUND weight 1 8
+  CLEAR_ERR
+  IF weight == 8 THEN
+    LET score = score + 1
+  END
+  LET weight = 3
+  BOUND weight 1 8
+  CLEAR_ERR
+  IF weight == 3 THEN
+    LET score = score + 1
+  END
+  IF CLAMP_CHANGED == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "CLAMP"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "clamp ok"
+    LET admit_n = 1
+    LET find_n = tries
+  ELSE
+    LET miss = 1
+    LET note_msg = "clamp score"
+    FAIL "clamp score"
+    CLEAR_ERR
+  END
+  SYS CAT "clamp:" score ":cl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "clamp:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score tries weight note_msg
+  CLEAR_ERR
+END
+
+# peak — SETMAX/SETMIN/MAXTO/MINTO running extremes
+SYS EQS op "peak"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SETMAX best 10
+  CLEAR_ERR
+  IF best == 10 THEN
+    LET score = score + 1
+  END
+  SETMAX best 7
+  CLEAR_ERR
+  IF best == 10 THEN
+    LET score = score + 1
+  END
+  SETMAX best 15
+  LET ret_n = LAST_N
+  CLEAR_ERR
+  IF best == 15 THEN
+    LET score = score + 1
+  END
+  IF ret_n == 15 THEN
+    LET score = score + 1
+  END
+  SETMIN worst 10
+  CLEAR_ERR
+  IF worst == 10 THEN
+    LET score = score + 1
+  END
+  SETMIN worst 3
+  CLEAR_ERR
+  IF worst == 3 THEN
+    LET score = score + 1
+  END
+  SETMIN worst 8
+  CLEAR_ERR
+  IF worst == 3 THEN
+    LET score = score + 1
+  END
+  MAXTO peak 42
+  CLEAR_ERR
+  IF peak == 42 THEN
+    LET score = score + 1
+  END
+  MINTO floor 9
+  CLEAR_ERR
+  IF floor == 9 THEN
+    LET score = score + 1
+  END
+  MINTO floor 20
+  CLEAR_ERR
+  IF floor == 9 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peak ok"
+    LET admit_n = 1
+    LET find_n = best
+  ELSE
+    LET miss = 1
+    LET note_msg = "peak score"
+    FAIL "peak score"
+    CLEAR_ERR
+  END
+  SYS CAT "peak:" score ":pk"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peak:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score best worst peak floor note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM surface
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "TOGGLE"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASFORM "FLIP"
+  LET ch = LAST_N
+  CLEAR_ERR
+  HASFORM "CLAMP"
+  LET weight = LAST_N
+  CLEAR_ERR
+  HASFORM "BOUND"
+  LET tries = LAST_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF ch == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF weight == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF tries == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  HASFORM "SETMAX"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SETMIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "MAXTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "MINTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS TOGGLE"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "toggle_clamp_slo"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — canary pipeline + REQUIRE
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET canary = 0
+  TOGGLE canary
+  CLEAR_ERR
+  IF canary == 1 THEN
+    LET score = score + 1
+  END
+  LET weight = 120
+  CLAMP weight 0 100
+  CLEAR_ERR
+  IF weight == 100 THEN
+    LET score = score + 1
+  END
+  SETMAX best 25
+  SETMAX best 40
+  CLEAR_ERR
+  IF best == 40 THEN
+    LET score = score + 1
+  END
+  SETMIN worst 12
+  SETMIN worst 5
+  CLEAR_ERR
+  IF worst == 5 THEN
+    LET score = score + 1
+  END
+  LET tries = 0
+  INC tries BY 8
+  CLAMP tries 0 3
+  CLEAR_ERR
+  IF tries == 3 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-tcs"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "toggle_clamp_slo"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = weight
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score canary weight best worst note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · WRITE NL
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  TOGGLE probe_flag
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF probe_flag == 1 THEN
+    LET score = score + 1
+  END
+  LET body = "keep-me"
+  CLEAR_ERR
+  SYS EQS LAST "cleared"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "toggle_clamp_slo"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "iferr_budget"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET weight = 999
+  CLAMP weight 0 1
+  IF weight == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SETMAX peak 1
+  SETMAX peak 0
+  IF peak == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = weight
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " maint=" maint " canary=" canary " weight=" weight " best=" best " worst=" worst
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "tcs report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS
