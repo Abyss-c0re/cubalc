@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 924,
-  "version": "1.15.917-usability",
-  "item": "LEFTTO / RIGHTTO / MIDTO / BEFOREIN / AFTERIN / BETWEENIN vars",
-  "item_id": 924,
-  "title": "LEFTTO \u00b7 RIGHTTO \u00b7 MIDTO \u00b7 BEFOREIN \u00b7 AFTERIN \u00b7 BETWEENIN \u00b7 string peels",
-  "commit": "ef8e1eef",
-  "summary": "In-place string slices and delimiter peels on named vars; no LET=SYS LEFT/BEFORE glue; proof 1462 PASS.",
+  "iter": 925,
+  "version": "1.15.918-usability",
+  "item": "STRIPPREFIXTO / STRIPSUFFIXTO vars",
+  "item_id": 925,
+  "title": "STRIPPREFIXTO \u00b7 STRIPSUFFIXTO \u00b7 drop affix in place",
+  "commit": "f09818a6",
+  "summary": "In-place leading/trailing affix drop on named vars with HIT; path roots/ext without STARTSIN+MIDTO glue; proof 1463 PASS.",
   "proofs": [
-    "1462_leftto_beforein PASS",
-    "1462_cli_leftto_beforein PASS",
-    "1461_lenof_startsin regression PASS"
+    "1463_stripprefixto PASS",
+    "1463_cli_stripprefixto PASS",
+    "1462_leftto_beforein regression PASS"
   ],
-  "when": "2026-08-11T14:48:12Z",
+  "when": "2026-08-11T15:06:38Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "ef8e1eeffbf273715bfcc04a0a26a1e7060ec931",
-  "note": "agent path/log peels without SYS string soup"
+  "sha": "f09818a697d2baa35392aa35a9aa60e25f19f064",
+  "note": "agent path/ext peels without SYS string soup"
 }
