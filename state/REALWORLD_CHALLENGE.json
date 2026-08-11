@@ -6287,7 +6287,7 @@
     "iter332: live_boot fleet board 11/11; SEND/METHOD LAST shuttle weak (W735); vars_n~240",
     "iter332: selftest live_session/live_boot PASS; CLI duals still set"
   ],
-  "commit": "",
+  "commit": "3f849c0b",
   "ts": "2026-08-11T04:15:32Z",
-  "board_commit": ""
+  "board_commit": "3f849c0b"
 }
