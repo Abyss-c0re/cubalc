@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 933,
-  "version": "1.15.926-usability",
-  "item": "COUNTIN / COUNTLINEIN vars",
-  "item_id": 933,
-  "title": "COUNTIN \u00b7 COUNTLINEIN \u00b7 tally probes",
-  "commit": "746d7a57",
-  "summary": "Needle and exact-bag tallies on named vars \u2192 LAST_N; no loop glue; proof 1471 PASS.",
+  "iter": 934,
+  "version": "1.15.927-usability",
+  "item": "IFGT / IFLT / IFGE / IFLE / IFEQN / IFNEQN",
+  "item_id": 934,
+  "title": "IFGT \u00b7 IFLT \u00b7 IFGE \u00b7 IFLE \u00b7 IFEQN \u00b7 IFNEQN \u00b7 numeric branches",
+  "commit": "23e24a7a",
+  "summary": "Numeric var branches with ELSE/END; no IF n > 0 glue; proof 1472 PASS.",
   "proofs": [
-    "1471_countin_countlinein PASS",
-    "1471_cli_countin_countlinein PASS",
-    "1470_movelinein regression PASS"
+    "1472_ifgt_ifeqn PASS",
+    "1472_cli_ifgt_ifeqn PASS",
+    "1467_ifstarts regression PASS",
+    "1471_countin regression PASS"
   ],
-  "when": "2026-08-11T16:36:50Z",
+  "when": "2026-08-11T16:56:09Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "746d7a57ca4f579d257175c10ccda334e3e8e84f",
-  "note": "agent path depth / multi-ack tallies without EACH"
+  "sha": "23e24a7a643d75b30f5bb43b9d3ce8d83eb705cf",
+  "note": "agent threshold gates without probe+IF glue"
 }
