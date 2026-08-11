@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 939,
-  "version": "1.15.932-usability",
-  "item": "IFFN / IFCLASS",
-  "item_id": 939,
-  "title": "IFFN · IFCLASS · capability branches",
-  "commit": "70f70137",
-  "summary": "FN/CLASS defined branches with ELSE/END; no HASFN+IF glue; proof 1477 PASS.",
+  "iter": 940,
+  "version": "1.15.933-usability",
+  "item": "IFOBJ / IFMETHOD",
+  "item_id": 940,
+  "title": "IFOBJ · IFMETHOD · live object and method branches",
+  "commit": "e28c6b0b",
+  "summary": "Live object/method branches with ELSE/END; no HASOBJ+IF glue; proof 1478 PASS.",
   "proofs": [
-    "1477_iffn_ifclass PASS",
+    "1478_ifobj_ifmethod PASS",
+    "1477_iffn regression PASS",
     "1476_sumin regression PASS",
-    "1475_ifstartsi regression PASS",
-    "1474_ifbetween regression PASS"
+    "1475_ifstartsi regression PASS"
   ],
-  "when": "2026-08-11T18:09:07Z",
+  "when": "2026-08-11T18:18:59Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "70f701371815bdb64ba148cfc8e2dec4c701b46e",
-  "note": "soft plugin/class paths without probe+IF glue"
+  "sha": "e28c6b0b31a40e2af718fa102ec17303bb155206",
+  "note": "soft SEND/session paths without probe+IF glue"
 }
