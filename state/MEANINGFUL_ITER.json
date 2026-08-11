@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 874,
-  "version": "1.15.867-usability",
-  "item": "TRYSWAP / SWAPOBJ soft live-slot name role flip",
-  "item_id": 874,
-  "title": "TRYSWAP \u00b7 SWAPOBJ \u00b7 soft miss role flip \u00b7 no temp+RENAME",
-  "commit": "5bc200fd4f7e1aef469f8ca8321dc3fcd91d6546",
-  "summary": "SWAPOBJ/TRYSWAP swap live names; soft miss OK=0 LAST_ERR; proof 1413 PASS.",
+  "iter": 875,
+  "version": "1.15.868-usability",
+  "item": "ENSURENEW / NEW OR keep-or-create live instances",
+  "item_id": 875,
+  "title": "ENSURENEW \u00b7 NEW OR \u00b7 ENSURENEW_N 0|1 \u00b7 twin TRYNEW",
+  "commit": "d1a15ab19ded3a39084841cc0699c56dd7b6fcd0",
+  "summary": "ENSURENEW/NEW OR keep live or soft create; mismatch/class miss OK=0; proof 1414 PASS.",
   "proofs": [
-    "1413_tryswap PASS",
-    "1413_cli_tryswap PASS"
+    "1414_ensurenew PASS",
+    "1414_cli_ensurenew PASS"
   ],
-  "when": "2026-08-11T05:35:39Z",
+  "when": "2026-08-11T05:44:14Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "5bc200fd4f7e1aef469f8ca8321dc3fcd91d6546",
-  "note": "primary/backup promote without HASOBJ+temp rename glue"
+  "sha": "d1a15ab19ded3a39084841cc0699c56dd7b6fcd0",
+  "note": "idempotent object boot without HASOBJ+IF+NEW glue"
 }
