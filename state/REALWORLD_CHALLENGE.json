@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 340,
-  "program": "programs/realworld/svc_schema_live_ready_board.cubalc",
-  "theme": "HASFIELDS/HASFIELDANY/HASMETHODANY/HASOBJS schema live preflight",
-  "version": "1.15.880-usability",
+  "iter": 341,
+  "program": "programs/realworld/svc_fn_slot_admit_board.cubalc",
+  "theme": "HASFNS/HASFNANY/HASOBJANY runbook FN + live slot admit",
+  "version": "1.15.886-usability",
   "pass": true,
-  "prior_note": "iter 339 HASCLASSANY+HASMETHODS; this iter first free-form field/method-any + live HASOBJS triad (1423-1426)",
+  "prior_note": "iter 340 schema fields/objs; this iter first free-form HASFNS+HASFNANY+HASOBJANY (1429/1432/1427)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + HASFIELDS zone/status/load",
+      "cmd": "seed agent + HASFNS score/notify/rollback",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "fields+any field/method+HASOBJS 10/10",
+      "cmd": "HASFNS+HASFNANY+HASOBJANY+TRYCALL 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "all-miss empty soft 10/10",
+      "cmd": "all-miss FN/obj empty soft 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "fields",
-      "cmd": "ALLFIELDS partial FIELDMISS live FIELD_ON",
+      "name": "fns",
+      "cmd": "ALLFNS partial FNMISS CSV HASFUNCS",
       "ok": true,
-      "note": "fields 10/10"
+      "note": "fns 10/10"
     },
     {
       "name": "any",
-      "cmd": "HASFIELDANY/HASMETHODANY CSV 10/10",
+      "cmd": "HASFNANY ANYFN multi FNHAVE",
       "ok": true,
       "note": "any 10/10"
     },
     {
-      "name": "objs",
-      "cmd": "HASOBJS/ALLOBJS partial OBJMISS CSV",
+      "name": "slots",
+      "cmd": "HASOBJANY OBJANY multi OBJHAVE",
       "ok": true,
-      "note": "objs 10/10"
+      "note": "slots 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM lag aliases documented",
+      "cmd": "HASFORM lag aliases",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "preflight + soft + REQUIRE",
+      "cmd": "admit pipeline + REQUIRE",
       "ok": true,
       "note": "gate"
     },
@@ -75,9 +75,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest 621/884; 1423-1426 PASS; CLI duals red",
+      "cmd": "selftest; 1427/1429/1432 PASS",
       "ok": false,
-      "note": "proofs green; CLI dual mass-fail; a few non-cli red pre-existing"
+      "note": "proofs green; full suite see CLI dual reds"
     }
   ],
   "weaknesses": [
@@ -6344,6 +6344,46 @@
       "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
       "detail": "Board uses REQUIRE LIB \"hold_seed\"; bare still fails in 1.15.880.",
       "repro": "REQUIRE LIB hold_seed \u2192 fail"
+    },
+    {
+      "id": "W784",
+      "severity": "low",
+      "area": "lang|hasfns",
+      "title": "HASFNS partial miss OK=0 but HASFNS_N counts live FN hits",
+      "detail": "HASFNS score ghost notify \u2192 OK=0 HASFNS_N=2 FNMISS=ghost. Same class as HASOBJS (W780). Gate on FNMISS_N not bare OK.",
+      "repro": "HASFNS score ghost_fn notify \u2192 N=2 miss bag"
+    },
+    {
+      "id": "W785",
+      "severity": "low",
+      "area": "lang|hasobjany",
+      "title": "HASOBJANY multi-hit OBJHAVE bag; OBJHAVE_N counts lives present",
+      "detail": "Positive: opts ghost,s0,s1,s2 \u2192 OBJHAVE_N=3. Dual of HASOBJS all-of for optional primary slot pick.",
+      "repro": "HASOBJANY ghost w0 w1 \u2192 have bag multi"
+    },
+    {
+      "id": "W786",
+      "severity": "med",
+      "area": "lang|hasform",
+      "title": "HASFORM may lag ALLFNS/ANYFN/OBJANY aliases",
+      "detail": "Primary HASFNS/HASFNANY/HASOBJANY often cataloged; aliases may miss while ops work (W781 class).",
+      "repro": "HASFORM ALLFNS vs ALLFNS score notify"
+    },
+    {
+      "id": "W787",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE META omit trailing NL",
+      "detail": "W5 class reconfirmed on FSA META.",
+      "repro": "od -c META.txt"
+    },
+    {
+      "id": "W788",
+      "severity": "low",
+      "area": "lang|require_lib",
+      "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
+      "detail": "Board uses REQUIRE LIB \"hold_seed\"; bare still fails 1.15.886.",
+      "repro": "REQUIRE LIB hold_seed \u2192 fail"
     }
   ],
   "workarounds": [
@@ -6450,7 +6490,10 @@
     "relink out/cubalc from .o if forms catalog \u2260 runtime",
     "CSV bags for HASFIELDANY/HASMETHODANY when names are forms (status/init)",
     "REQUIRE LIB \"hold_seed\" quoted",
-    "HASOBJS gate on OBJMISS_N + live names not bare OK"
+    "HASOBJS gate on OBJMISS_N + live names not bare OK",
+    "REQUIRE LIB \"hold_seed\" quoted",
+    "HASFNS gate on FNMISS_N + HASFNS_N not bare OK",
+    "CSV bags for multi FN/slot names"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6626,7 +6669,10 @@
     "HASFORM lag HASMETHODS/ANYCLASS (W775)",
     "HASFIELDS/HASFIELDANY/HASMETHODANY/HASOBJS preflight (1423-1426)",
     "bare status field keyword collide (W779)",
-    "HASOBJS partial N vs OK (W780)"
+    "HASOBJS partial N vs OK (W780)",
+    "HASFNS/HASFNANY/HASOBJANY runbook+slot admit (1429/1432/1427)",
+    "HASFNS partial N vs OK (W784)",
+    "HASFORM lag ALLFNS/ANYFN/OBJANY (W786)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6699,9 +6745,11 @@
     "iter339: board all green; full selftest OOM killed",
     "iter340: ANYFIELD bare status truncated field list \u2014 CSV fix (W779)",
     "iter340: all actions green; proofs 1423-1426 PASS",
-    "iter340: selftest 621/884 CLI duals still red; kvfileensure/pickobj/preload pre-existing"
+    "iter340: selftest 621/884 CLI duals still red; kvfileensure/pickobj/preload pre-existing",
+    "iter341: first-try green HASFNS+HASFNANY+HASOBJANY board 10/10 actions",
+    "iter341: proofs 1427/1429/1432 PASS; quoted REQUIRE LIB hold_seed"
   ],
-  "commit": "c1e40dd8",
-  "ts": "2026-08-11T08:00:16Z",
-  "board_commit": "c1e40dd8"
+  "commit": "pending",
+  "ts": "2026-08-11T08:49:36Z",
+  "board_commit": "pending"
 }
