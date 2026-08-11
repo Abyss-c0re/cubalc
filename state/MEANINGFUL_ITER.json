@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 878,
-  "version": "1.15.871-usability",
-  "item": "BINDTHIS / USEOBJ / CLEARTHIS / HASTHIS",
-  "item_id": 878,
-  "title": "BINDTHIS \u00b7 USEOBJ \u00b7 CLEARTHIS \u00b7 HASTHIS \u00b7 THIS without SEND",
-  "commit": "c6f2f717ce2fcdc67cc35c81dc7b5b80bef74fba",
-  "summary": "BINDTHIS sets THIS/SELF soft; CLEARTHIS/HASTHIS duals; proof 1417 PASS.",
+  "iter": 879,
+  "version": "1.15.872-usability",
+  "item": "TRYDELETE / DELETEOBJ SOFT explicit soft free",
+  "item_id": 879,
+  "title": "TRYDELETE \u00b7 DELETEOBJ SOFT \u00b7 TRYDELETE_N \u00b7 twin TRYCLONE/TRYSWAP",
+  "commit": "f671bb95b9fa9208aa0260c9765f6871dfec778c",
+  "summary": "TRYDELETE soft free OK=0 LAST_ERR on miss; TRYDELETE_N on free; proof 1418 PASS.",
   "proofs": [
-    "1417_bindthis PASS",
-    "1417_cli_bindthis PASS"
+    "1418_trydelete PASS",
+    "1418_cli_trydelete PASS"
   ],
-  "when": "2026-08-11T06:13:47Z",
+  "when": "2026-08-11T06:23:36Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "c6f2f717ce2fcdc67cc35c81dc7b5b80bef74fba",
-  "note": "multi-step GETF/SETF THIS without method or name spam"
+  "sha": "f671bb95b9fa9208aa0260c9765f6871dfec778c",
+  "note": "explicit TRY* free dual for agent GC without HASOBJ+IF glue"
 }
