@@ -1,0 +1,944 @@
+# svc_pushto_queue_board.cubalc — PUSHTO named work bags + bag hygiene
+#
+# Real use: fleet agents maintain in-memory job queues (LIFO/FIFO) and scrub
+# CSV/line bags without SYS PUSH/POP/LINES glue: PUSHTO/POPFROM/SHIFTFROM,
+# LINESIN/HASINBAG, HASEMPTY empty-queue gates, SPLITTO/GREPIN/SORTIN/UNIQIN
+# for intake hygiene. First realworld of 1456 PUSHTO bag (1.15.911+ · MI 918)
+# + 1457 IFEMPTY/HASEMPTY (MI 919) + 1458 SPLITTO/GREPIN (MI 920). Distinct
+# from work_queue_bag_board (plate STATUS bag) and queue_case_dispatch —
+# this board is *named var bags* for in-process workers.
+#
+#   PUSHTO|UNSHIFTTO bag line · POPFROM|SHIFTFROM|DEQUEUEFROM
+#   LINESIN · HASINBAG|BAGHAS · HASEMPTY · HASDEFINED
+#   SPLITTO var BY sep · JOINTO · GREPIN|GREPVIN · SORTIN · UNIQIN
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ptq_$$
+#   ./out/cubalc run programs/realworld/svc_pushto_queue_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|fifo|hygiene|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt PTQ_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_PTQ_REQUIRE
+#
+# Edges: empty POP soft LAST_N=0; IFEMPTY nested in IF steals END (use HASEMPTY);
+#   DEQUEUEFROM works but HASFORM miss (W832 class); multi-line bag EQS ok;
+#   PRINT_JSON may flatten newlines; WRITE NL; substring HASINBAG exact
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+NOTE "svc_pushto_queue_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_pushto_queue -- boot|pass|soft|fifo|hygiene|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_PTQ_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "PTQ_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET work = ""
+LET q = ""
+LET popped = ""
+LET shifted = ""
+LET depth = 0
+
+ONEOF ACTION "boot", "pass", "soft", "fifo", "hygiene", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "fifo" THEN
+    LET op = "fifo"
+  WHEN "hygiene" THEN
+    LET op = "hygiene"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-ptq\",\"schema\":\"cubalc.svc_pushto_queue.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"ptq\",\"want_filter\":\"pushto_queue\",\"cfg\":{\"surface\":\"PUSHTO,POPFROM,SHIFTFROM,UNSHIFTTO,DEQUEUEFROM,LINESIN,HASINBAG,HASEMPTY,SPLITTO,GREPIN,SORTIN,UNIQIN\",\"contract\":\"named work bags LIFO/FIFO + intake hygiene without SYS bag glue\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  CLEARSTR work
+  PUSHTO work "seed"
+  LINESIN work
+  LET depth = LAST_N
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ptq"
+  IF LAST_N == 1 THEN
+    IF depth == 1 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET score = 1
+      LET find_n = depth
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot depth"
+      FAIL "boot depth"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score depth note_msg
+  CLEAR_ERR
+END
+
+# pass — PUSHTO LIFO stack + HASINBAG + LINESIN
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR work
+  PUSHTO work "job-a"
+  PUSHTO work "job-b"
+  PUSHTO work "job-c"
+  CLEAR_ERR
+  LINESIN work
+  LET depth = LAST_N
+  CLEAR_ERR
+  IF depth == 3 THEN
+    LET score = score + 1
+  END
+  HASINBAG work "job-b"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASINBAG work "job-z"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  BAGHAS work "job-a"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  POPFROM work
+  LET popped = LAST
+  CLEAR_ERR
+  SYS EQS popped "job-c"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LINESIN work
+  LET depth = LAST_N
+  CLEAR_ERR
+  IF depth == 2 THEN
+    LET score = score + 1
+  END
+  HASINBAG work "job-c"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  POPFROM work
+  LET popped = LAST
+  CLEAR_ERR
+  SYS EQS popped "job-b"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  POPFROM work
+  LET popped = LAST
+  CLEAR_ERR
+  SYS EQS popped "job-a"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LINESIN work
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = depth
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — empty pop · HASEMPTY · HASDEFINED
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR emptyq
+  POPFROM emptyq
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  HASEMPTY emptyq
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASDEFINED emptyq
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASDEFINED ghost_ptq
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASEMPTY ghost_ptq
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  PUSHTO emptyq "one"
+  HASEMPTY emptyq
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LINESIN emptyq
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SHIFTFROM emptyq
+  LET shifted = LAST
+  CLEAR_ERR
+  SYS EQS shifted "one"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASEMPTY emptyq
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = ok_v
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# fifo — SHIFTFROM/UNSHIFTTO/DEQUEUEFROM
+SYS EQS op "fifo"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR q
+  PUSHTO q "1"
+  PUSHTO q "2"
+  PUSHTO q "3"
+  CLEAR_ERR
+  LINESIN q
+  IF LAST_N == 3 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SHIFTFROM q
+  LET shifted = LAST
+  CLEAR_ERR
+  SYS EQS shifted "1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LINESIN q
+  IF LAST_N == 2 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  UNSHIFTTO q "front"
+  CLEAR_ERR
+  SHIFTFROM q
+  LET shifted = LAST
+  CLEAR_ERR
+  SYS EQS shifted "front"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # remaining 2,3 — DEQUEUEFROM = FIFO alias
+  DEQUEUEFROM q
+  LET shifted = LAST
+  CLEAR_ERR
+  SYS EQS shifted "2"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  DEQUEUEFROM q
+  LET shifted = LAST
+  CLEAR_ERR
+  SYS EQS shifted "3"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASEMPTY q
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  PUSHTO q "x"
+  UNSHIFTTO q "y"
+  SHIFTFROM q
+  LET shifted = LAST
+  CLEAR_ERR
+  SYS EQS shifted "y"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  POPFROM q
+  LET popped = LAST
+  CLEAR_ERR
+  SYS EQS popped "x"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "pushto_queue"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "fifo ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "fifo score"
+    FAIL "fifo score"
+    CLEAR_ERR
+  END
+  SYS CAT "fifo:" score ":ff"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "fifo:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# hygiene — SPLITTO/SORTIN/UNIQIN/GREPIN/JOINTO
+SYS EQS op "hygiene"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET csv = "c,a,b,a"
+  SPLITTO csv BY ","
+  LET depth = LAST_N
+  CLEAR_ERR
+  IF depth == 4 THEN
+    LET score = score + 1
+  END
+  IF SPLITTO_N == 4 THEN
+    LET score = score + 1
+  END
+  SORTIN csv
+  CLEAR_ERR
+  LINESIN csv
+  IF LAST_N == 4 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  UNIQIN csv
+  CLEAR_ERR
+  LINESIN csv
+  IF LAST_N == 3 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF UNIQIN_N == 3 THEN
+    LET score = score + 1
+  END
+  HASINBAG csv "b"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  GREPIN csv "a"
+  CLEAR_ERR
+  LINESIN csv
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET bag2 = "err:boom
+ok:1
+err:fail
+ok:2"
+  GREPVIN bag2 "err"
+  CLEAR_ERR
+  LINESIN bag2
+  IF LAST_N == 2 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF GREPVIN_N == 2 THEN
+    LET score = score + 1
+  END
+  LET path = "a/x/b/x/c"
+  SPLITTO path BY "/"
+  GREPVIN path "x"
+  JOINTO path WITH "."
+  CLEAR_ERR
+  SYS EQS path "a.b.c"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "hygiene ok"
+    LET admit_n = 1
+    LET find_n = depth
+  ELSE
+    LET miss = 1
+    LET note_msg = "hygiene score"
+    FAIL "hygiene score"
+    CLEAR_ERR
+  END
+  SYS CAT "hygiene:" score ":hy"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "hygiene:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score path note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM surface
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "PUSHTO"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASFORM "POPFROM"
+  LET depth = LAST_N
+  CLEAR_ERR
+  HASFORM "SHIFTFROM"
+  LET find_n = LAST_N
+  CLEAR_ERR
+  HASFORM "LINESIN"
+  LET nrep = LAST_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF depth == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF find_n == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF nrep == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  HASFORM "HASINBAG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "HASEMPTY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SPLITTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "GREPIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # DEQUEUEFROM works but may miss HASFORM (alias lag)
+  HASFORM "DEQUEUEFROM"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "pushto_queue"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — enqueue/dequeue pipeline + REQUIRE
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR work
+  PUSHTO work "admit-1"
+  PUSHTO work "admit-2"
+  CLEAR_ERR
+  LINESIN work
+  IF LAST_N == 2 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASINBAG work "admit-1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SHIFTFROM work
+  LET shifted = LAST
+  CLEAR_ERR
+  SYS EQS shifted "admit-1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  POPFROM work
+  LET popped = LAST
+  CLEAR_ERR
+  SYS EQS popped "admit-2"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASEMPTY work
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ptq"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "pushto_queue"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · WRITE NL
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR work
+  PUSHTO work "p1"
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LINESIN work
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET body = "keep-me"
+  CLEAR_ERR
+  SYS EQS LAST "cleared"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "pushto_queue"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "appendto_msg"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  POPFROM work
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASEMPTY work
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " depth=" depth
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "ptq report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

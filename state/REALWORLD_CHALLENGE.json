@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 353,
-  "program": "programs/realworld/svc_appendto_msg_board.cubalc",
-  "theme": "APPENDTO/REPLACEIN message builder + scrub (COPYTO/ZERO/CLEARSTR)",
-  "version": "1.15.911-usability",
+  "iter": 354,
+  "program": "programs/realworld/svc_pushto_queue_board.cubalc",
+  "theme": "PUSHTO named work bags + FIFO/LIFO + SPLITTO bag hygiene",
+  "version": "1.15.913-usability",
   "pass": true,
-  "prior_note": "iter 352 TOGGLE/CLAMP; this iter first realworld of 1454 APPENDTO/COPYTO + 1455 REPLACEIN/TRIMTO/ZERO",
+  "prior_note": "iter 353 APPENDTO msg; this iter first realworld of 1456 PUSHTO + 1457 HASEMPTY + 1458 SPLITTO/GREPIN",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed + APPENDTO boot",
+      "cmd": "seed + PUSHTO seed",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "APPENDTO/CATTO/PREPENDTO/PREFIXTO 10/10",
+      "cmd": "LIFO PUSHTO/POPFROM/HASINBAG 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "REPLACEIN/GSUBTO/TRIMTO scrub 10/10",
+      "cmd": "empty POP + HASEMPTY/HASDEFINED 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "scrub",
-      "cmd": "UPPERTO/LOWERTO/ZERO/CLEARSTR 10/10",
+      "name": "fifo",
+      "cmd": "SHIFTFROM/UNSHIFTTO/DEQUEUEFROM 10/10",
       "ok": true,
-      "note": "scrub 10/10"
+      "note": "fifo 10/10"
     },
     {
-      "name": "copy",
-      "cmd": "COPYTO/COPYV independence 10/10",
+      "name": "hygiene",
+      "cmd": "SPLITTO/SORTIN/UNIQIN/GREPIN/JOINTO 10/10",
       "ok": true,
-      "note": "copy 10/10"
+      "note": "hygiene 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM APPENDTO\u2026; EMPTYTO miss HASFORM",
+      "cmd": "HASFORM PUSHTO\u2026; DEQUEUEFROM alias lag",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "assemble scrub + REQUIRE",
+      "cmd": "enqueue/dequeue + REQUIRE",
       "ok": true,
       "note": "gate"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1454/1455/1456 PASS; CLI duals still red",
+      "cmd": "selftest; 1456/1457/1458 PASS; CLI duals still red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -6746,6 +6746,30 @@
       "title": "PUSHTO bag ops landed 1.15.911 (1456); earlier 1.15.910 HASFORM 0",
       "detail": "Mid-challenge version jump: 1.15.910 PUSHTO unknown; 1.15.911 proof 1456 green. Boards that probe HASFORM PUSHTO must tolerate both until pin. Positive for named work queues once stable.",
       "repro": "version gate; PUSHTO work a; LINESIN work"
+    },
+    {
+      "id": "W835",
+      "severity": "high",
+      "area": "lang|ifempty_frame",
+      "title": "IFEMPTY nested inside IF steals outer END (W821 class)",
+      "detail": "IFEMPTY q \u2026 END inside SYS EQS IF\u2026THEN leaves outer END as unknown form END. Prefer HASEMPTY/HASDEFINED probes (LAST_N) inside action IF arms, or FN-wrap IFEMPTY blocks.",
+      "repro": "IF 1 THEN; IFEMPTY q; LET x=1; END; END \u2192 unknown form END"
+    },
+    {
+      "id": "W836",
+      "severity": "low",
+      "area": "lang|hasform",
+      "title": "DEQUEUEFROM works but HASFORM DEQUEUEFROM is 0",
+      "detail": "DEQUEUEFROM is live FIFO alias of SHIFTFROM; HASFORM returns 0. Same class as EMPTYTO (W832). Agents should probe HASFORM SHIFTFROM or try-call.",
+      "repro": "DEQUEUEFROM q; HASFORM DEQUEUEFROM \u2192 0; HASFORM SHIFTFROM \u2192 1"
+    },
+    {
+      "id": "W837",
+      "severity": "low",
+      "area": "lang|pushto",
+      "title": "PUSHTO/POPFROM/SHIFTFROM/LINESIN/HASINBAG work (positive)",
+      "detail": "Named work bags: LIFO POPFROM, FIFO SHIFTFROM/UNSHIFTTO, empty POP soft LAST_N=0, HASINBAG exact (not substring). SPLITTO BY sep + SORTIN/UNIQIN/GREPIN/GREPVIN/JOINTO hygiene chain solid for CSV intake.",
+      "repro": "PUSHTO work job-a; POPFROM work; SPLITTO csv BY ,"
     }
   ],
   "workarounds": [
@@ -6874,7 +6898,6 @@
     "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
   ],
   "language_gaps": [
-    "HASMETHODS keyword method-name collide (W774)",
     "HASFORM lag HASMETHODS/ANYCLASS (W775)",
     "HASFIELDS/HASFIELDANY/HASMETHODANY/HASOBJS preflight (1423-1426)",
     "bare status field keyword collide (W779)",
@@ -6931,10 +6954,14 @@
       "iter": 353,
       "gap": "In-place string mutation is solid; HASFORM lags some aliases (EMPTYTO). PUSHTO bag is the natural next realworld once stable.",
       "want": "HASFORM lists all aliases; realworld PUSHTO intake board"
+    },
+    {
+      "iter": 354,
+      "gap": "Named bags close the SYS PUSH/POP gap for in-process queues; block-form IFEMPTY still needs FN trampoline; alias HASFORM lag continues.",
+      "want": "IF-safe IFEMPTY; HASFORM lists DEQUEUEFROM/EMPTYTO aliases"
     }
   ],
   "issues_faced": [
-    "iter335: binary vanished mid-suite concurrent make; relink to 1.15.867",
     "iter336: pass 9/10 until LET body=LAST before dual SYS HAS (W759)",
     "iter336: HASFORM bare SETMATCHFILE 0; SYS SETMATCHFILE 1 (W757)",
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7001,9 +7028,14 @@
       "iter": 353,
       "issue": "Form path expected PUSHTO absent; 1.15.911 registered PUSHTO. EMPTYTO works without HASFORM. Fixed form scoring to accept either.",
       "resolution": "first realworld 1454+1455; document W832\u2013W834"
+    },
+    {
+      "iter": 354,
+      "issue": "IFEMPTY cannot nest in action IF (W835); DEQUEUEFROM HASFORM lag (W836). Board uses HASEMPTY probes and DEQUEUEFROM by name.",
+      "resolution": "first realworld 1456+1457+1458; document W835\u2013W837"
     }
   ],
-  "commit": "42581d15",
-  "ts": 1786456179,
+  "commit": "686d4149",
+  "ts": 1786457670,
   "board_commit": "767d4822"
 }
