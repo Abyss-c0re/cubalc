@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 849,
-  "version": "1.15.841-usability",
-  "item": "arg_boot + cubalc init --arg",
-  "item_id": 849,
-  "title": "arg_boot \u00b7 init --arg \u00b7 doctor lib_arg_boot",
-  "commit": "1d1801bcc4c7c89310fdc4311b3b66935cf2cc71",
-  "summary": "agent_boot+arg_guard one-shot; init --arg catalog n=16; doctor lib_arg_boot; proof 1389 PASS.",
+  "iter": 850,
+  "version": "1.15.842-usability",
+  "item": "time_boot + cubalc init --time",
+  "item_id": 850,
+  "title": "time_boot \u00b7 init --time \u00b7 doctor lib_time_boot",
+  "commit": "1b960445949e0a6b300d924b12597e7212f853b4",
+  "summary": "agent_boot+time_guard one-shot; init --time catalog n=17; doctor lib_time_boot; proof 1390 PASS.",
   "proofs": [
-    "1389_arg_boot PASS",
-    "1389_cli_init_arg PASS"
+    "1390_time_boot PASS",
+    "1390_cli_init_time PASS"
   ],
-  "when": "2026-08-11T00:33:24Z",
+  "when": "2026-08-11T00:45:08Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "1d1801bcc4c7c89310fdc4311b3b66935cf2cc71",
-  "note": "pairs env_boot/cap_boot \u00b7 program-arg starter without cookbook"
+  "sha": "1b960445949e0a6b300d924b12597e7212f853b4",
+  "note": "pairs fat_boot/env_boot \u00b7 wall-budget starter for run -T without cookbook"
 }
