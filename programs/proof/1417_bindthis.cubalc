@@ -1,0 +1,84 @@
+# BINDTHIS / USEOBJ / CLEARTHIS / HASTHIS — THIS bind without SEND
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell alpha 1 10 0
+SETF alpha age 3
+NEW Cell beta 1 5 0
+SETF beta age 9
+
+# no THIS yet
+HASTHIS
+ASSERT LAST_N == 0
+
+# bind alpha
+BINDTHIS alpha
+ASSERT OK == 1
+ASSERT BINDTHIS_N == 1
+ASSERT LAST == "alpha"
+HASTHIS
+ASSERT LAST_N == 1
+ASSERT LAST == "alpha"
+
+# operate via THIS
+GETF THIS age
+ASSERT LAST_N == 3
+SETF THIS age 11
+GETF alpha age
+ASSERT LAST_N == 11
+GETF THIS energy
+ASSERT LAST_N == 10
+
+# rebind to beta via USEOBJ
+USEOBJ beta
+ASSERT OK == 1
+GETF THIS age
+ASSERT LAST_N == 9
+SETF THIS energy 42
+GETF beta energy
+ASSERT LAST_N == 42
+
+# ASTHIS alias
+ASTHIS alpha
+GETF THIS age
+ASSERT LAST_N == 11
+
+# soft miss
+BINDTHIS missing_zz
+ASSERT OK == 0
+ASSERT BINDTHIS_N == 0
+SYS HASI LAST_ERR "unknown"
+ASSERT LAST_N == 1
+# THIS should still be previous (alpha) — soft miss does not clear
+# Actually we don't clear on miss — alpha still bound
+HASTHIS
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# CLEARTHIS
+CLEARTHIS
+ASSERT OK == 1
+ASSERT CLEARTHIS_N == 1
+HASTHIS
+ASSERT LAST_N == 0
+# clear again — already empty
+CLEARTHIS
+ASSERT CLEARTHIS_N == 0
+
+# SETTHIS alias + after clear soft miss then success
+SETHIS beta
+ASSERT OK == 1
+GETF THIS energy
+ASSERT LAST_N == 42
+
+HASFORM "BINDTHIS"
+ASSERT LAST_N == 1
+HASFORM "CLEARTHIS"
+ASSERT LAST_N == 1
+HASFORM "HASTHIS"
+ASSERT LAST_N == 1
+
+PRINT "1417_bindthis ok"
+PASS

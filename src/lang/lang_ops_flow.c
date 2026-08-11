@@ -17051,7 +17051,108 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* HASOBJ|LIVES|ISOBJ|ALIVEOBJ name — soft probe if live object exists.
+    /* BINDTHIS|USEOBJ|ASTHIS|SETHIS name — bind THIS/SELF to live object without SEND.
+   * Soft miss OK=0 sticky LAST_ERR. Usability: multi-step GETF/SETF THIS after
+   * ENSURENEW without inventing a method or hard-coding the slot name each line.
+   * CLEARTHIS|UNBINDTHIS clears the binding. */
+  if (kw(&L->cur, "BINDTHIS") || kw(&L->cur, "USEOBJ") ||
+      kw(&L->cur, "ASTHIS") || kw(&L->cur, "SETHIS") ||
+      kw(&L->cur, "USETHIS") || kw(&L->cur, "ASOBJ") ||
+      kw(&L->cur, "FOCUSOBJ") || kw(&L->cur, "SELECTOBJ") ||
+      kw(&L->cur, "TRYBINDTHIS") || kw(&L->cur, "TRYUSEOBJ")) {
+    char oname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int soft = 1; /* always soft — bind is never fatal */
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "BINDTHIS name"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "BINDTHIS_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "BINDTHIS: unknown object");
+      var_set_str(vm, "ERR", "BINDTHIS: unknown object");
+      if (vm->trace) fprintf(vm->trace, "# BINDTHIS soft miss %s\n", oname);
+      bump(vm);
+      return 1;
+    }
+    snprintf(vm->this_obj, sizeof vm->this_obj, "%s", oname);
+    var_set_str(vm, "THIS", oname);
+    var_set_str(vm, "SELF", oname);
+    var_set_str(vm, "OBJECT", oname);
+    if (ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cd = &vm->classes[ob->class_idx];
+      var_set_str(vm, "CLASS", cd->name);
+    }
+    var_set_str(vm, "LAST", oname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "BINDTHIS_N", 1);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "ERR", "");
+    if (vm->trace) fprintf(vm->trace, "# BINDTHIS %s\n", oname);
+    bump(vm);
+    return 1;
+  }
+
+  /* CLEARTHIS|UNBINDTHIS|NOTHIS|DROPTHIS — clear THIS/SELF binding.
+   * Always soft OK=1. LAST_N=1 if had binding, 0 if already empty. */
+  if (kw(&L->cur, "CLEARTHIS") || kw(&L->cur, "UNBINDTHIS") ||
+      kw(&L->cur, "NOTHIS") || kw(&L->cur, "DROPTHIS") ||
+      kw(&L->cur, "RELEASETTHIS") || kw(&L->cur, "UNFOCUS") ||
+      kw(&L->cur, "CLEAR_THIS")) {
+    int had = vm->this_obj[0] ? 1 : 0;
+    lex_next(L);
+    vm->this_obj[0] = 0;
+    var_set_str(vm, "THIS", "");
+    var_set_str(vm, "SELF", "");
+    var_set_num(vm, "LAST_N", had);
+    vm->last_n = had;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", had);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "CLEARTHIS_N", had);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# CLEARTHIS had=%d\n", had);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASTHIS|BOUNDTHIS — soft 0|1 probe if THIS is bound to a live object.
+   * LAST = bound name when live, else "". Usability: IF before SETF THIS. */
+  if (kw(&L->cur, "HASTHIS") || kw(&L->cur, "BOUNDTHIS") ||
+      kw(&L->cur, "THIS?") || kw(&L->cur, "HASTHISOBJ") ||
+      kw(&L->cur, "THISBOUND")) {
+    int hit = 0;
+    lex_next(L);
+    if (vm->this_obj[0] && oop_find_obj(vm, vm->this_obj)) {
+      hit = 1;
+      var_set_str(vm, "LAST", vm->this_obj);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", vm->this_obj);
+    } else {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASTHIS_N", hit);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+/* HASOBJ|LIVES|ISOBJ|ALIVEOBJ name — soft probe if live object exists.
    * LAST_N 1|0. Usability: IF before SEND/GETF without fatal. */
   if (kw(&L->cur, "HASOBJ") || kw(&L->cur, "LIVES") || kw(&L->cur, "ISOBJ") ||
       kw(&L->cur, "ALIVEOBJ") || kw(&L->cur, "OBJ?") || kw(&L->cur, "HASOBJECT") ||
