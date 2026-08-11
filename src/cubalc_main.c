@@ -4581,6 +4581,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_init_tool_session", "programs/proof/1391_cli_init_tool_session.sh", "cubalc init --full-cli scaffold"},
       {"product_session", "programs/proof/1392_product_session.cubalc", "INCLUDE product_session tool+env+time"},
       {"cli_init_product_session", "programs/proof/1392_cli_init_product_session.sh", "cubalc init --product scaffold"},
+      {"time_guard_ok", "programs/proof/1393_time_guard_ok.cubalc", "TIME_GUARD_OK + product_session soft status"},
       {"cli_form_guard", "programs/proof/1386_cli_form_guard.sh", "form_guard lib + CLI + formgate any"},
       {"cap_boot", "programs/proof/1325_cap_boot.cubalc", "INCLUDE cap_boot agent_boot+form_guard"},
       {"cli_init_cap", "programs/proof/1325_cli_init_cap.sh", "cubalc init --cap scaffold + doctor lib_cap_boot"},
