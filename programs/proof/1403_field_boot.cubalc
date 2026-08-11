@@ -1,0 +1,42 @@
+# INCLUDE field_boot - agent_boot + field_guard one-shot
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD id
+  METHOD ping
+    LET LAST = "pong"
+  END
+END
+
+DEFAULT NEED_FIELDS = ""
+DEFAULT NEED_FIELD_ANY = ""
+DEFAULT FIELD_GUARD_SOFT = 0
+INCLUDE field_boot
+ASSERT OK == 1
+ASSERT FIELD_GUARD_OK == 1
+HASINCLUDE agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE field_guard
+ASSERT LAST_N == 1
+HASINCLUDE field_boot
+ASSERT LAST_N == 1
+HASLIB field_boot
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST != ""
+
+LET NEED_FIELDS = "nosuch_field_boot_miss"
+LET NEED_FIELD_ANY = ""
+LET FIELD_GUARD_SOFT = 1
+INCLUDE field_boot
+ASSERT FIELD_GUARD_OK == 0
+CLEAR_ERR
+
+LET NEED_FIELDS = "Ticket.id"
+LET FIELD_GUARD_SOFT = 0
+INCLUDE field_boot
+ASSERT FIELD_GUARD_OK == 1
+
+PRINT "1403_field_boot: PASS"
+PASS

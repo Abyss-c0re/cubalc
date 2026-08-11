@@ -1,0 +1,18 @@
+# INCLUDE field_boot - agent preamble + Class.field catalog contract one-shot
+# Usability: agent_boot + field_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_FIELDS = "Ticket.id\nTicket.kind"
+#   DEFAULT NEED_FIELD_ANY = "Order.n\nTicket.n"
+#   DEFAULT FIELD_GUARD_SOFT = 0
+#   INCLUDE field_boot
+# Soft miss: DEFAULT FIELD_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --field
+# Twin of method_boot (METHOD catalog) / class_boot (CLASS catalog) for field plane.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_FIELDS = ""
+DEFAULT NEED_FIELD_ANY = ""
+DEFAULT FIELD_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE field_guard

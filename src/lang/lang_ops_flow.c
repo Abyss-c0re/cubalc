@@ -16927,7 +16927,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* HASFIELD obj|Class field — soft 0|1 probe before GETF/SETF. */
+  /* HASFIELD obj|Class field — soft 0|1 probe before GETF/SETF.
+   * Class/obj and field names expand string-vars (FIELD_ON / name bags).
+   * Twin of HASMETHOD resolve. */
   if (kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASF") ||
       kw(&L->cur, "FIELD?") || kw(&L->cur, "HASFILD") ||
       kw(&L->cur, "HAS_FIELD")) {
@@ -16942,7 +16944,19 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (L->cur.kind == TK_STR) {
       snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
     } else {
-      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
     }
     if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
       fail(vm, "HASFIELD field"); return -1;
@@ -16950,7 +16964,15 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (L->cur.kind == TK_STR) {
       snprintf(fname, sizeof fname, "%s", L->cur.text); lex_next(L);
     } else {
-      snprintf(fname, sizeof fname, "%s", L->cur.text); lex_next(L);
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
     }
     ob = oop_find_obj(vm, a);
     if (ob) cd = &vm->classes[ob->class_idx];
@@ -16970,7 +16992,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* LISTFIELDS Class|obj — newline bag of field names. */
+  /* LISTFIELDS Class|obj — newline bag of field names.
+   * String-var expands (FIELD_ON / class name bags) · twin of LISTMETHODS. */
   if (kw(&L->cur, "LISTFIELDS") || kw(&L->cur, "FIELDS") ||
       kw(&L->cur, "FIELDLIST") || kw(&L->cur, "LISTF")) {
     char a[48], bag[2048];
@@ -16985,7 +17008,19 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (L->cur.kind == TK_STR) {
       snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
     } else {
-      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
     }
     ob = oop_find_obj(vm, a);
     if (ob) cd = &vm->classes[ob->class_idx];
