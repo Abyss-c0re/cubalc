@@ -1,0 +1,66 @@
+# HASMETHODANY / NEEDMETHODANY — any-of multi method soft/hard gate
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+# any hit (ghost missing) — CSV avoids bare-ident stop issues
+LET opts = "ghost_zz,tick,nope_zz"
+HASMETHODANY Cell opts
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASMETHODANY_N == 1
+ASSERT METHODHAVE_N == 1
+ASSERT METHODHAVE == "tick"
+ASSERT METHODMISS_N == 2
+SYS HASI METHODMISS "ghost_zz"
+ASSERT LAST_N == 1
+
+# all miss soft
+LET opts = "ghost_zz,nope_zz"
+HASMETHODANY Cell opts
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT HASMETHODANY_N == 0
+ASSERT METHODHAVE == ""
+ASSERT METHODMISS_N == 2
+
+# bare safe idents (tick/die not control keywords after stop-list fix)
+HASMETHODANY Cell tick die
+ASSERT LAST_N == 1
+ASSERT METHODHAVE_N == 2
+
+# ANYMETHOD alias + bag
+LET opts = "nope,birth,ghost"
+ANYMETHOD Cell opts
+ASSERT LAST_N == 1
+ASSERT METHODHAVE == "birth"
+
+# live object target
+NEW Cell c1 1 4 0
+HASMETHODANY c1 nope after_div
+ASSERT LAST_N == 1
+ASSERT METHOD_ON == "c1"
+SYS HASI METHODHAVE "after_div"
+ASSERT LAST_N == 1
+
+# unknown class soft — all miss
+LET opts = "tick,init"
+HASMETHODANY Ghost opts
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT METHODHAVE_N == 0
+
+# empty soft
+HASMETHODANY Cell
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+HASFORM "HASMETHODANY"
+ASSERT LAST_N == 1
+HASFORM "NEEDMETHODANY"
+ASSERT LAST_N == 1
+
+PRINT "1423_hasmethodany ok"
+PASS
