@@ -988,6 +988,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 951. ~~**`IFCANREAD` / `IFCANWRITE` / `IFCANEXEC`**~~ **done** (path access branches · no SYS CANREAD+IF glue · proof 1490).
 
+952. ~~**`IFJSONEQ` / `IFJSONNEQ` / `IFSAMEJSON`**~~ **done** (plate equality branches · no SYS JSONEQ+IF glue · proof 1491).
+
 
 
 

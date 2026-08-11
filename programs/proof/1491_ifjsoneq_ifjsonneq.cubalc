@@ -1,0 +1,93 @@
+# IFJSONEQ / IFJSONNEQ — plate equality branches
+
+HOLD_FLASH 1
+
+LET a = "{\"ok\":1,\"n\":2}"
+LET b = "{\"n\":2,\"ok\":1}"
+LET c = "{\"ok\":1,\"n\":3}"
+LET empty = "{}"
+
+# order-independent equality
+IFJSONEQ a b
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+ASSERT IFJSONEQ_N == 1
+ASSERT JSONEQ == 1
+
+# different values
+IFJSONEQ a c
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 0
+ASSERT JSONEQ == 0
+
+# empty vs content
+IFJSONEQ a empty
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 0
+
+# IFJSONNEQ true when differ
+IFJSONNEQ a c
+  LET d = 1
+ELSE
+  LET d = 0
+END
+ASSERT d == 1
+ASSERT IFJSONNEQ_N == 1
+
+# IFJSONNEQ false when same
+IFJSONNEQ a b
+  LET d = 1
+ELSE
+  LET d = 0
+END
+ASSERT d == 0
+
+# IFSAMEJSON alias
+IFSAMEJSON a b
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+# literal plates
+IFJSONEQ "{\"x\":1}" "{\"x\":1}"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+# nest: resync if differ
+IFJSONNEQ a c
+  LET c = a
+  LET did = 1
+ELSE
+  LET did = 0
+END
+ASSERT did == 1
+IFJSONEQ a c
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+HASFORM "IFJSONEQ"
+ASSERT LAST_N == 1
+HASFORM "IFJSONNEQ"
+ASSERT LAST_N == 1
+HASFORM "IFSAMEJSON"
+ASSERT LAST_N == 1
+
+PRINT "1491_ifjsoneq_ifjsonneq ok"
+PASS
