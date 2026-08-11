@@ -1,5 +1,5 @@
 # INCLUDE class_guard - fail-fast CLASS catalog contract (ALL + optional ANY)
-# Usability: agent OOP gate via native HASCLASS (no LISTCLASSES+HASLINE soup).
+# Usability: agent OOP class gate via native multi forms (no N× HASCLASS soup).
 #
 #   DEFAULT NEED_CLASSES = "Ticket\nOrder"
 #   DEFAULT NEED_CLASS_ANY = "Cell\nAgent"
@@ -7,9 +7,9 @@
 #   INCLUDE class_guard
 #
 # Spec: each entry is a CLASS name. Soft dual leaves CLASSMISS / CLASSHAVE bags.
-# Twin of field_guard/method_guard (native probes) for class plane.
-# Hard path: HARDFAIL (not REQUIRE CLASS — can break IF/END nesting in INCLUDE).
-# Multi duals: HASCLASSES / NEEDCLASSES / HASCLASSANY / NEEDCLASSANY still available.
+# Twin of fn_guard / obj_guard for the CLASS plane.
+# Hard ALL: NEEDCLASSES · Hard ANY: NEEDCLASSANY · Soft: HASCLASSES / HASCLASSANY.
+# Multi duals still available directly. (REQUIRE CLASS avoided — IF/END nesting.)
 
 DEFAULT NEED_CLASSES = ""
 DEFAULT NEED_CLASS_ANY = ""
@@ -23,39 +23,20 @@ IF LAST_N == 1
   LET CLASSMISS_N = 0
   LET CLASSHAVE_N = 0
 ELSE
-  LET CLASSMISS = ""
-  LET CLASSHAVE = ""
-  LET CLASSMISS_N = 0
-  LET CLASSHAVE_N = 0
-  EACH LINE b IN NEED_CLASSES
-    HASCLASS b
-    IF LAST_N == 1
-      LET CLASSHAVE_N = CLASSHAVE_N + 1
-      IF CLASSHAVE == ""
-        LET CLASSHAVE = b
-      ELSE
-        LET CLASSHAVE = CLASSHAVE + "\n" + b
-      END
-    ELSE
-      LET CLASSMISS_N = CLASSMISS_N + 1
-      IF CLASSMISS == ""
-        LET CLASSMISS = b
-      ELSE
-        LET CLASSMISS = CLASSMISS + "\n" + b
-      END
+  IF CLASS_GUARD_SOFT
+    HASCLASSES NEED_CLASSES
+    LET CLASS_GUARD_ALL_OK = LAST_N
+    LET CLASSHAVE_N = HASCLASSES_N
+    IF CLASSMISS_N == 0
+      LET CLASSHAVE = NEED_CLASSES
     END
-  END
-  IF CLASSMISS_N == 0
-    LET CLASS_GUARD_ALL_OK = 1
-    LET OK = 1
   ELSE
-    LET CLASS_GUARD_ALL_OK = 0
-    LET OK = 0
-    LET LAST_ERR = "CLASS_GUARD ALL miss - missing: " + CLASSMISS
-    LET ERR = LAST_ERR
-    IF CLASS_GUARD_SOFT == 0
-      HARDFAIL "CLASS_GUARD hard miss — see ERR/CLASSMISS"
-    END
+    NEEDCLASSES NEED_CLASSES
+    LET CLASS_GUARD_ALL_OK = 1
+    LET CLASSMISS = ""
+    LET CLASSMISS_N = 0
+    LET CLASSHAVE = NEED_CLASSES
+    LET CLASSHAVE_N = NEEDCLASSES_N
   END
 END
 
@@ -63,39 +44,14 @@ SYS EMPTY NEED_CLASS_ANY
 IF LAST_N == 1
   LET CLASS_GUARD_ANY_OK = 1
 ELSE
-  LET CLASSANY_HIT = 0
-  LET CLASSANY_HAVE = ""
-  LET CLASSANY_MISS = ""
-  EACH LINE b IN NEED_CLASS_ANY
-    HASCLASS b
-    IF LAST_N == 1
-      LET CLASSANY_HIT = 1
-      IF CLASSANY_HAVE == ""
-        LET CLASSANY_HAVE = b
-      ELSE
-        LET CLASSANY_HAVE = CLASSANY_HAVE + "\n" + b
-      END
-    ELSE
-      IF CLASSANY_MISS == ""
-        LET CLASSANY_MISS = b
-      ELSE
-        LET CLASSANY_MISS = CLASSANY_MISS + "\n" + b
-      END
-    END
-  END
-  IF CLASSANY_HIT == 1
-    LET CLASS_GUARD_ANY_OK = 1
-    IF CLASSHAVE == ""
-      LET CLASSHAVE = CLASSANY_HAVE
-    END
+  IF CLASS_GUARD_SOFT
+    HASCLASSANY NEED_CLASS_ANY
+    LET CLASS_GUARD_ANY_OK = LAST_N
+    # CLASSHAVE / CLASSMISS / CLASSHAVE_N / CLASSMISS_N from HASCLASSANY
   ELSE
-    LET CLASS_GUARD_ANY_OK = 0
-    LET OK = 0
-    LET LAST_ERR = "CLASS_GUARD ANY miss - need one of: " + NEED_CLASS_ANY
-    LET ERR = LAST_ERR
-    IF CLASS_GUARD_SOFT == 0
-      HARDFAIL "CLASS_GUARD hard miss — see ERR/CLASSMISS"
-    END
+    NEEDCLASSANY NEED_CLASS_ANY
+    LET CLASS_GUARD_ANY_OK = 1
+    LET CLASSHAVE_N = NEEDCLASSANY_N
   END
 END
 

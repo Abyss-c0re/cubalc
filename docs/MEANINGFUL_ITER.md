@@ -925,6 +925,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 894. ~~**`fn_guard` native HASFNS/NEEDFNS ALL**~~ **done** (lib rewrite · drop N× HASFN soup on ALL · proof 1432_fn_guard_native).
 895. ~~**`fn_guard` native HASFNANY/NEEDFNANY ANY**~~ **done** (lib rewrite · drop N× HASFN soup on ANY · NEEDFNANY hard · proof 1433).
 896. ~~**`obj_guard` native HASOBJS/NEEDOBJS + HASOBJANY/NEEDOBJANY**~~ **done** (lib rewrite · drop N× HASOBJ soup · twin of fn_guard · proof 1434).
+897. ~~**`class_guard` native HASCLASSES/NEEDCLASSES + HASCLASSANY/NEEDCLASSANY**~~ **done** (lib rewrite · drop N× HASCLASS soup · twin of obj/fn_guard · proof 1435).
+
 
 
 
