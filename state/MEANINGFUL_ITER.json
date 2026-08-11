@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 881,
-  "version": "1.15.874-usability",
-  "item": "HASCLASSES / NEEDCLASSES multi CLASS capability gates",
-  "item_id": 881,
-  "title": "HASCLASSES \u00b7 NEEDCLASSES \u00b7 CLASSMISS bag \u00b7 HASFORMS twin",
-  "commit": "64ec7ae835fb4d437c413b714f5a4d44c55d9919",
-  "summary": "HASCLASSES soft all CLASS defined + CLASSMISS; NEEDCLASSES hard; proof 1420 PASS.",
+  "iter": 882,
+  "version": "1.15.875-usability",
+  "item": "HASCLASSANY / NEEDCLASSANY any-of multi CLASS gates",
+  "item_id": 882,
+  "title": "HASCLASSANY \u00b7 NEEDCLASSANY \u00b7 CLASSHAVE \u00b7 HASCLASSES twin",
+  "commit": "aea4f8d2c030ac2fff136fddb8f490610af2257d",
+  "summary": "HASCLASSANY soft any CLASS defined + CLASSHAVE/MISS; NEEDCLASSANY hard; proof 1421 PASS.",
   "proofs": [
-    "1420_hasclasses PASS",
-    "1420_cli_hasclasses PASS"
+    "1421_hasclassany PASS",
+    "1421_cli_hasclassany PASS"
   ],
-  "when": "2026-08-11T06:43:18Z",
+  "when": "2026-08-11T06:53:58Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "64ec7ae835fb4d437c413b714f5a4d44c55d9919",
-  "note": "multi CLASS boot contracts without N x HASCLASS glue"
+  "sha": "aea4f8d2c030ac2fff136fddb8f490610af2257d",
+  "note": "optional plugin class OR without N x HASCLASS IF glue"
 }
