@@ -1,0 +1,103 @@
+# TRYSWAP / SWAPOBJ SOFT — role flip without temp+RENAME glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell primary 1 10 0
+SETF primary age 5
+NEW Cell backup 1 3 0
+SETF backup age 1
+
+# hard SWAPOBJ success
+SWAPOBJ primary WITH backup
+ASSERT OK == 1
+ASSERT SWAPOBJ_N == 1
+ASSERT LAST == "backup"
+ASSERT SWAP_A == "primary"
+ASSERT SWAP_B == "backup"
+# names swapped: old primary slot is now "backup", old backup is "primary"
+GETF backup age
+ASSERT LAST_N == 5
+GETF primary age
+ASSERT LAST_N == 1
+
+# swap back via TRYSWAP
+TRYSWAP primary backup
+ASSERT OK == 1
+ASSERT TRYSWAP_N == 1
+ASSERT SWAPOBJ_N == 1
+GETF primary age
+ASSERT LAST_N == 5
+GETF backup age
+ASSERT LAST_N == 1
+
+# soft miss one side
+TRYSWAP primary missing_zz
+ASSERT OK == 0
+ASSERT TRYSWAP_N == 0
+SYS HASI LAST_ERR "unknown"
+ASSERT LAST_N == 1
+# primary still intact
+GETF primary age
+ASSERT LAST_N == 5
+CLEAR_ERR
+
+# soft miss both
+TRYSWAP ghost_a ghost_b
+ASSERT OK == 0
+SYS HASI LAST_ERR "unknown"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# SWAPOBJ SOFT keyword miss
+SWAPOBJ SOFT primary missing_zz
+ASSERT OK == 0
+CLEAR_ERR
+
+# SOFTSWAP alias success
+SOFTSWAP primary WITH backup
+ASSERT OK == 1
+GETF backup age
+ASSERT LAST_N == 5
+# restore
+SWAPOBJ primary backup
+ASSERT OK == 1
+
+# EXCHANGEOBJ / XCHOBJ aliases
+EXCHANGEOBJ primary AND backup
+ASSERT OK == 1
+GETF primary age
+ASSERT LAST_N == 1
+XCHOBJ primary backup
+ASSERT OK == 1
+GETF primary age
+ASSERT LAST_N == 5
+
+# no-op same name
+TRYSWAP primary primary
+ASSERT OK == 1
+ASSERT TRYSWAP_N == 1
+GETF primary age
+ASSERT LAST_N == 5
+
+# no-op missing same name — soft zero
+TRYSWAP missing_zz missing_zz
+ASSERT OK == 0
+CLEAR_ERR
+
+# double swap identity
+SWAPOBJ primary backup
+SWAPOBJ primary backup
+GETF primary age
+ASSERT LAST_N == 5
+GETF backup age
+ASSERT LAST_N == 1
+
+HASFORM "TRYSWAP"
+ASSERT LAST_N == 1
+HASFORM "SWAPOBJ"
+ASSERT LAST_N == 1
+
+PRINT "1413_tryswap ok"
+PASS

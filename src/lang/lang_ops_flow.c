@@ -17116,6 +17116,143 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SWAPOBJ|EXCHANGEOBJ|XCHOBJ a [WITH|AND] b — swap live object slot names.
+   * Soft miss either side always OK=0 LAST_ERR. TRYSWAP|SWAPOBJ SOFT same soft path.
+   * No-op same name OK=1. Dead slots holding either name cleared for pool uniqueness.
+   * Updates THIS if receiver is either side. Usability: role flip / primary-backup
+   * without temp+RENAMEOBJ+RENAMEOBJ glue (agent promote/demote). */
+  if (kw(&L->cur, "TRYSWAP") || kw(&L->cur, "SOFTSWAP") ||
+      kw(&L->cur, "TRYSWAPOBJ") || kw(&L->cur, "SOFTSWAPOBJ") ||
+      kw(&L->cur, "SWAPOBJSOFT") || kw(&L->cur, "TRYXCHOBJ") ||
+      kw(&L->cur, "SWAPOBJ") || kw(&L->cur, "EXCHANGEOBJ") ||
+      kw(&L->cur, "XCHOBJ") || kw(&L->cur, "OBJSWAP") ||
+      kw(&L->cur, "SWAP_OBJ") || kw(&L->cur, "XCHGOBJ") ||
+      kw(&L->cur, "SWAPNAMES") || kw(&L->cur, "NAMESWAP")) {
+    char aname[48], bname[48], tmpn[48];
+    ObjInst *oa, *ob;
+    ClassDef *cd;
+    int i, soft = 0;
+    char op0[32];
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    if (strcmp(op0, "TRYSWAP") == 0 || strcmp(op0, "SOFTSWAP") == 0 ||
+        strcmp(op0, "TRYSWAPOBJ") == 0 || strcmp(op0, "SOFTSWAPOBJ") == 0 ||
+        strcmp(op0, "SWAPOBJSOFT") == 0 || strcmp(op0, "TRYXCHOBJ") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPTIONAL") || kw(&L->cur, "MAYBE") ||
+                  kw(&L->cur, "OPT"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_read_name(vm, L, aname, sizeof aname, soft ? "TRYSWAP a" : "SWAPOBJ a") < 0)
+      return -1;
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "AND") || kw(&L->cur, "TO") ||
+        kw(&L->cur, "AS") || kw(&L->cur, "FOR"))
+      lex_next(L);
+    if (oop_read_name(vm, L, bname, sizeof bname, soft ? "TRYSWAP b" : "SWAPOBJ b") < 0)
+      return -1;
+    /* no-op same name */
+    if (strcmp(aname, bname) == 0) {
+      oa = oop_find_obj(vm, aname);
+      if (!oa) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "SWAPOBJ_N", 0);
+        var_set_num(vm, "TRYSWAP_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "SWAPOBJ: unknown object");
+        var_set_str(vm, "ERR", "SWAPOBJ: unknown object");
+        bump(vm);
+        return 1;
+      }
+      var_set_str(vm, "LAST", aname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", aname);
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_num(vm, "SWAPOBJ_N", 1);
+      if (soft) var_set_num(vm, "TRYSWAP_N", 1);
+      var_set_num(vm, "OK", 1);
+      bump(vm);
+      return 1;
+    }
+    oa = oop_find_obj(vm, aname);
+    ob = oop_find_obj(vm, bname);
+    if (!oa || !ob) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "SWAPOBJ_N", 0);
+      var_set_num(vm, "TRYSWAP_N", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char msg[96];
+        if (!oa && !ob)
+          snprintf(msg, sizeof msg, "SWAPOBJ: unknown objects %s and %s", aname, bname);
+        else if (!oa)
+          snprintf(msg, sizeof msg, "SWAPOBJ: unknown object %s", aname);
+        else
+          snprintf(msg, sizeof msg, "SWAPOBJ: unknown object %s", bname);
+        var_set_str(vm, "LAST_ERR", msg);
+        var_set_str(vm, "ERR", msg);
+      }
+      if (vm->trace) fprintf(vm->trace, "# TRYSWAP soft miss %s <-> %s\n", aname, bname);
+      bump(vm);
+      return 1;
+    }
+    /* clear dead slots that hold either name (pool uniqueness) */
+    for (i = 0; i < vm->n_objs; i++) {
+      if (&vm->objs[i] == oa || &vm->objs[i] == ob) continue;
+      if (!vm->objs[i].live &&
+          (strcmp(vm->objs[i].name, aname) == 0 ||
+           strcmp(vm->objs[i].name, bname) == 0))
+        vm->objs[i].name[0] = 0;
+    }
+    /* swap names via temp (no third live slot needed) */
+    snprintf(tmpn, sizeof tmpn, "%s", oa->name);
+    snprintf(oa->name, sizeof oa->name, "%s", bname);
+    snprintf(ob->name, sizeof ob->name, "%s", tmpn);
+    /* THIS follows the receiver instance (by pointer), rename both sides */
+    if (strcmp(vm->this_obj, aname) == 0) {
+      snprintf(vm->this_obj, sizeof vm->this_obj, "%s", bname);
+      var_set_str(vm, "THIS", bname);
+      var_set_str(vm, "SELF", bname);
+    } else if (strcmp(vm->this_obj, bname) == 0) {
+      snprintf(vm->this_obj, sizeof vm->this_obj, "%s", aname);
+      var_set_str(vm, "THIS", aname);
+      var_set_str(vm, "SELF", aname);
+    }
+    /* rebind class-name vars for both new slot names */
+    if (oa->class_idx >= 0 && oa->class_idx < vm->n_classes) {
+      cd = &vm->classes[oa->class_idx];
+      var_set_str(vm, oa->name, cd->name);
+    }
+    if (ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cd = &vm->classes[ob->class_idx];
+      var_set_str(vm, ob->name, cd->name);
+      var_set_str(vm, "CLASS", cd->name);
+    }
+    var_set_str(vm, "LAST", bname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bname);
+    var_set_str(vm, "OBJECT", bname);
+    var_set_str(vm, "SWAPOBJ", bname);
+    var_set_str(vm, "SWAP_A", aname);
+    var_set_str(vm, "SWAP_B", bname);
+    var_set_str(vm, "SWAP_FROM", aname);
+    var_set_str(vm, "SWAP_TO", bname);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "SWAPOBJ_N", 1);
+    if (soft) var_set_num(vm, "TRYSWAP_N", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# %s %s <-> %s\n", soft ? "TRYSWAP" : "SWAPOBJ", aname, bname);
+    bump(vm);
+    return 1;
+  }
+
   /* HASFIELD obj|Class field — soft 0|1 probe before GETF/SETF.
    * Class/obj and field names expand string-vars (FIELD_ON / name bags).
    * Twin of HASMETHOD resolve. */
