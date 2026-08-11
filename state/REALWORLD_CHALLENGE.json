@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 334,
-  "program": "programs/realworld/svc_trynew_clone_fleet_board.cubalc",
-  "theme": "TRYNEW/TRYCLONE soft fleet spawn+clone contract",
-  "version": "1.15.866-usability",
+  "iter": 335,
+  "program": "programs/realworld/svc_tryrename_swap_fleet_board.cubalc",
+  "theme": "TRYRENAME/TRYSWAP soft fleet canary rename + primary/backup swap",
+  "version": "1.15.867-usability",
   "pass": true,
-  "prior_note": "iter 333 service_session; this iter first realworld 1410 TRYNEW + 1411 TRYCLONE",
+  "prior_note": "iter 334 trynew/clone; this iter first realworld 1412 TRYRENAME + 1413 TRYSWAP fleet slots",
   "tests": [
     {
       "name": "list",
@@ -15,51 +15,57 @@
     },
     {
       "name": "boot",
-      "cmd": "lean agent plate",
+      "cmd": "lean agent plate SYS WRITE",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "TRYNEW+TRYCLONE success energy copy",
+      "cmd": "TRYRENAME canary\u2192live + TRYSWAP primary/backup fields 10/10",
       "ok": true,
       "note": "pass"
     },
     {
-      "name": "soft_new",
-      "cmd": "missing CLASS soft no HASOBJ",
+      "name": "soft_rn",
+      "cmd": "miss+redefine soft LAST_ERR capture 10/10",
       "ok": true,
-      "note": "soft_new score 9/10"
+      "note": "soft_rn"
     },
     {
-      "name": "soft_clone",
-      "cmd": "missing source soft + clone energy",
+      "name": "soft_sw",
+      "cmd": "miss one side + SOFTSWAP + same-name 10/10",
       "ok": true,
-      "note": "soft_clone"
+      "note": "soft_sw"
     },
     {
       "name": "redef",
-      "cmd": "soft redefine NEW/CLONE",
+      "cmd": "SOFTRENAME/MOVEOBJ SOFT/TRYMOVEOBJ chain 10/10",
       "ok": true,
       "note": "redef"
     },
     {
       "name": "form",
-      "cmd": "ops work; HASFORM TRYNEW may lag",
+      "cmd": "ops work; HASFORM TRYSWAP/SWAPOBJ miss (score 8)",
       "ok": true,
       "note": "form"
     },
     {
       "name": "gate",
-      "cmd": "optional plugin soft + spawn gate",
+      "cmd": "promote+swap+soft miss recover + REQUIRE env",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber TRYNEW_N",
+      "cmd": "PRINT clobber capture TRYRENAME_N; substring HASOBJ p",
       "ok": true,
       "note": "probe"
+    },
+    {
+      "name": "clear",
+      "cmd": "clear bag",
+      "ok": true,
+      "note": "clear"
     },
     {
       "name": "unknown",
@@ -71,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "trynew/tryclone near-pass HASFORM lag; CLI duals red"
+      "note": "tryrename PASS39; tryswap FAIL HASFORM; CLI duals red set\u2192SETF"
     }
   ],
   "weaknesses": [
@@ -6066,6 +6072,62 @@
       "title": "TRYCLONE redefine is soft but hard CLONEOBJ redefine still fatal",
       "detail": "Soft path good for fleet; hard CLONEOBJ same-name still process-fatal. Agents must use TRYCLONE for optional replica slots.",
       "repro": "CLONEOBJ p child twice hard-fail; TRYCLONE p child soft redefine"
+    },
+    {
+      "id": "W750",
+      "severity": "high",
+      "area": "lang|hasform",
+      "title": "HASFORM misses TRYSWAP/SWAPOBJ while ops execute",
+      "detail": "TRYSWAP and SWAPOBJ run (OK=1, fields flip) but HASFORM \"TRYSWAP\" and HASFORM \"SWAPOBJ\" return 0. TRYRENAME/RENAMEOBJ register. 1413_tryswap ASSERT line 98 fails solely on HASFORM. form action score 8/10. Agents cannot REQUIRE FORM / doctor on swap surface.",
+      "repro": "TRYSWAP a b; HASFORM \"TRYSWAP\" \u2192 0; same for SWAPOBJ"
+    },
+    {
+      "id": "W751",
+      "severity": "med",
+      "area": "lang|soft_err",
+      "title": "CLEAR_ERR before reading LAST_ERR wipes soft-miss signal",
+      "detail": "TRYRENAME miss leaves LAST_ERR 'RENAMEOBJ: unknown object' but CLEAR_ERR before SYS HASI LAST_ERR always fails. Must LET err_s = LAST_ERR first. Soft boards lose 2 score points until capture pattern used.",
+      "repro": "TRYRENAME miss zz; CLEAR_ERR; SYS HASI LAST_ERR unknown \u2192 0"
+    },
+    {
+      "id": "W752",
+      "severity": "med",
+      "area": "host|cli_dual",
+      "title": "CLI dual selftests mass-fail: unknown form 'set' \u2192 SETF?",
+      "detail": "Nearly all programs/proof/*_cli_*.sh selftests fail with unknown form 'set' line 2. Language proofs green; dual shell harness broken. n_fail ~251 on 1.15.867. Not introduced by realworld board.",
+      "repro": "cubalc selftest | grep cli_tryrename"
+    },
+    {
+      "id": "W753",
+      "severity": "low",
+      "area": "lang|rename",
+      "title": "TRYRENAME moves name; old HASOBJ 0 \u2014 external bags hold stale names",
+      "detail": "Canary\u2192live rename drops canary identity. Fleet status bags that key by name must rewrite after rename; no rename event hook. Soft redefine to taken name fails with redefine in LAST_ERR.",
+      "repro": "TRYRENAME canary live; HASOBJ canary \u2192 0"
+    },
+    {
+      "id": "W754",
+      "severity": "low",
+      "area": "lang|swap",
+      "title": "TRYSWAP flips identity not field values in place",
+      "detail": "After TRYSWAP primary backup, GETF primary load is old backup load. Names stay; object slots exchange. Role labels in fields do not auto-update \u2014 ops agents must SETF role after swap or store role only in name.",
+      "repro": "SETF primary load 9; SETF backup load 2; TRYSWAP; GETF primary load \u2192 2"
+    },
+    {
+      "id": "W755",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE VAL/META still omit trailing NL (W5 class)",
+      "detail": "cat -A VAL.txt shows no $ newline after op=... line. Plate consumers using line-based tools need explicit NL in SYS CAT body.",
+      "repro": "cat -A STATE/VAL.txt"
+    },
+    {
+      "id": "W756",
+      "severity": "med",
+      "area": "host|rebuild",
+      "title": "out/cubalc deleted mid-session by concurrent make -O2",
+      "detail": "Parallel agent make -j rm -f out/cubalc and recompiles lang_ops_core -O2 (OOM risk). Board suite mid-run hit exit 127. Reuse .o link or -O0 rebuild required (W748 family).",
+      "repro": "ls out/cubalc during make -j"
     }
   ],
   "workarounds": [
@@ -6153,7 +6215,10 @@
     "On SERVICE=0 inspect FULL vs LIVE vs HOST_SESSION_OK + *MISS bags",
     "TRYNEW Class name for optional plugins; check OK/TRYNEW_N not HASFORM",
     "TRYCLONE proto replica for soft replicas; CLONE SOFT/SOFTCLONE aliases",
-    "CLEAR_ERR after soft miss before next spawn"
+    "CLEAR_ERR after soft miss before next spawn",
+    "capture LAST_ERR into var before CLEAR_ERR on soft miss",
+    "score thresholds \u22658 when HASFORM lags; assert ops not catalog",
+    "relink out/*.o when binary missing; avoid -O2 lang_ops_core if OOM"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6303,7 +6368,12 @@
     "TRYCLONE/CLONE SOFT soft prototype clone (1411)",
     "TRYNEW_N/TRYCLONE_N sticky knobs",
     "HASFORM lags TRYNEW/TRYCLONE (W745)",
-    "lang_ops_core OOM rebuild (W748)"
+    "lang_ops_core OOM rebuild (W748)",
+    "TRYRENAME/RENAMEOBJ SOFT soft rename (1412)",
+    "TRYSWAP/SWAPOBJ SOFT soft name swap (1413)",
+    "HASFORM misses TRYSWAP/SWAPOBJ (W750)",
+    "CLEAR_ERR before LAST_ERR capture (W751)",
+    "CLI dual set\u2192SETF mass fail (W752)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6355,9 +6425,12 @@
     "iter333: service_session fleet board 10/10 lean (no plate_peer); vars_full=true still",
     "iter333: HARDFAIL field miss under vars_full (W741); plate_peer+service unusable (W743)",
     "iter334: TRYNEW/TRYCLONE fleet board 10/10; HASFORM lag W745; soft scores 8-9/10",
-    "iter334: rebuilt binary via -O0 lang_ops_core after OOM; proofs near-pass"
+    "iter334: rebuilt binary via -O0 lang_ops_core after OOM; proofs near-pass",
+    "iter335: HASFORM TRYSWAP/SWAPOBJ miss while ops work \u2014 1413 assert fail W750",
+    "iter335: soft_rn score 8 until LET err_s=LAST_ERR before CLEAR_ERR W751",
+    "iter335: binary vanished mid-suite concurrent make; relink to 1.15.867"
   ],
-  "commit": "596f0721",
-  "ts": "2026-08-11T05:09:28Z",
-  "board_commit": "596f0721"
+  "commit": "pending",
+  "ts": "2026-08-11T05:32:13Z",
+  "board_commit": "pending"
 }
