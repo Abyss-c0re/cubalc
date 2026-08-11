@@ -25209,6 +25209,170 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     bump(vm);
     return 1;
   }
+  /* HASERR|HASOK — soft-status probes → LAST_N 0|1 (no mutate OK/ERR).
+   * HASERR: OK==0 or sticky LAST_ERR. HASOK: OK!=0 and no LAST_ERR.
+   * Usability: IF HASERR without reading LAST_ERR strings. */
+  if (kw(&L->cur,"HASERR")||kw(&L->cur,"HAS_ERR")||kw(&L->cur,"HASERROR")||
+      kw(&L->cur,"ISERR")||kw(&L->cur,"ERRED")||kw(&L->cur,"FAILED")||
+      kw(&L->cur,"HASOK")||kw(&L->cur,"HAS_OK")||kw(&L->cur,"ISOK")||
+      kw(&L->cur,"OKP")||kw(&L->cur,"SUCCEEDED")){
+    char op[24];
+    int want_ok = 0;
+    Var *ov, *ev;
+    long okv = 1;
+    int has_err = 0, hit = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "HASOK") == 0 || strcmp(op, "HAS_OK") == 0 ||
+        strcmp(op, "ISOK") == 0 || strcmp(op, "OKP") == 0 ||
+        strcmp(op, "SUCCEEDED") == 0)
+      want_ok = 1;
+    lex_next(L);
+    ov = var_get(vm, "OK", 0);
+    ev = var_get(vm, "LAST_ERR", 0);
+    if (ov) okv = ov->val;
+    if (okv == 0) has_err = 1;
+    if (ev && ev->is_str && ev->sval[0]) has_err = 1;
+    hit = want_ok ? (!has_err ? 1 : 0) : (has_err ? 1 : 0);
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, want_ok ? "HASOK_N" : "HASERR_N", hit);
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    /* do not change OK */
+    bump(vm);
+    return 1;
+  }
+  /* IFERR|WHENERR … [ELSE …] END — body if soft fail (OK==0 or LAST_ERR).
+   * IFOK|WHENOK … [ELSE …] END — body if clean success.
+   * Usability: multi-line soft recovery without IF OK == 0 / TRY CATCH glue. */
+  if (kw(&L->cur,"IFERR")||kw(&L->cur,"WHENERR")||kw(&L->cur,"ONSOFT")||
+      kw(&L->cur,"IFERROR")||kw(&L->cur,"WHENERROR")||kw(&L->cur,"IFFAIL")||
+      kw(&L->cur,"IFOK")||kw(&L->cur,"WHENOK")||kw(&L->cur,"ONOK")||
+      kw(&L->cur,"IFSUCCESS")||kw(&L->cur,"WHENSUCCESS")){
+    int aln = L->cur.line;
+    int want_ok = 0;
+    int take = 0;
+    Var *ov, *ev;
+    long okv = 1;
+    int has_err = 0;
+    Lex body_start;
+    int depth = 1;
+    char op[24];
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "IFOK") == 0 || strcmp(op, "WHENOK") == 0 ||
+        strcmp(op, "ONOK") == 0 || strcmp(op, "IFSUCCESS") == 0 ||
+        strcmp(op, "WHENSUCCESS") == 0)
+      want_ok = 1;
+    lex_next(L);
+    skip_nl(L);
+    if (kw(&L->cur,"THEN")) { lex_next(L); skip_nl(L); }
+    ov = var_get(vm, "OK", 0);
+    ev = var_get(vm, "LAST_ERR", 0);
+    if (ov) okv = ov->val;
+    if (okv == 0) has_err = 1;
+    if (ev && ev->is_str && ev->sval[0]) has_err = 1;
+    take = want_ok ? (!has_err) : has_err;
+    body_start = *L;
+    while (L->cur.kind != TK_EOF && depth > 0) {
+      if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+        lex_next(L);
+        if (kw(&L->cur,"IF")) lex_next(L);
+        continue;
+      }
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+          kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+          kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+          kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
+          kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+        depth++;
+      else if (kw(&L->cur,"ELSE") && depth == 1) break;
+      else if (kw(&L->cur,"END")) {
+        depth--;
+        if (depth == 0) break;
+      }
+      lex_next(L);
+    }
+    if (depth > 1 || (depth == 1 && L->cur.kind == TK_EOF)) {
+      char ebuf[160];
+      snprintf(ebuf, sizeof ebuf,
+               "%s without END line %d — %s … [ELSE …] END",
+               want_ok ? "IFOK" : "IFERR", aln, want_ok ? "IFOK" : "IFERR");
+      fail(vm, ebuf); return -1;
+    }
+    if (take) {
+      Lex body = body_start;
+      if (exec_stmts_until(vm, &body, "END", "ELSE") < 0) return -1;
+      /* skip to END */
+      depth = 1;
+      while (L->cur.kind != TK_EOF && depth > 0) {
+        if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+          lex_next(L);
+          if (kw(&L->cur,"IF")) lex_next(L);
+          continue;
+        }
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+            kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+            kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
+            kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+          depth++;
+        else if (kw(&L->cur,"END")) {
+          depth--;
+          if (depth == 0) break;
+        }
+        lex_next(L);
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      var_set_num(vm, want_ok ? "IFOK_N" : "IFERR_N", 1);
+      bump(vm); return 1;
+    }
+    /* not taken — optional ELSE */
+    if (kw(&L->cur,"ELSE")) {
+      lex_next(L);
+      skip_nl(L);
+      {
+        Lex body = *L;
+        if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+      }
+      depth = 1;
+      while (L->cur.kind != TK_EOF && depth > 0) {
+        if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+          lex_next(L);
+          if (kw(&L->cur,"IF")) lex_next(L);
+          continue;
+        }
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+            kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+            kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
+            kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+          depth++;
+        else if (kw(&L->cur,"END")) {
+          depth--;
+          if (depth == 0) break;
+        }
+        lex_next(L);
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      var_set_num(vm, want_ok ? "IFOK_N" : "IFERR_N", 0);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"END")) lex_next(L);
+    var_set_num(vm, want_ok ? "IFOK_N" : "IFERR_N", 0);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"IF")){
     lex_next(L);
     /* chain: IF c [THEN] ... ELIF c [THEN] ... ELSE ... END

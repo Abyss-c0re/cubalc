@@ -1,0 +1,76 @@
+# IFERR / IFOK / HASERR / HASOK — soft-status branches + probes
+
+HOLD_FLASH 1
+
+# HASERR/HASOK probes
+PASS
+HASOK
+ASSERT LAST_N == 1
+HASERR
+ASSERT LAST_N == 0
+
+FAIL "soft"
+HASERR
+ASSERT LAST_N == 1
+HASOK
+ASSERT LAST_N == 0
+CLEAR_ERR
+PASS
+
+# IFERR recovery branch
+LET recovered = 0
+FAIL "x"
+IFERR
+  LET recovered = 1
+  CLEAR_ERR
+  PASS
+END
+ASSERT recovered == 1
+ASSERT OK == 1
+
+# IFERR not taken on success
+LET recovered = 0
+PASS
+IFERR
+  LET recovered = 1
+END
+ASSERT recovered == 0
+
+# IFOK taken on success
+LET good = 0
+PASS
+IFOK
+  LET good = 1
+END
+ASSERT good == 1
+
+# IFOK ELSE on fail
+LET path = ""
+FAIL "y"
+IFOK
+  LET path = "ok"
+ELSE
+  LET path = "err"
+  CLEAR_ERR
+  PASS
+END
+ASSERT path == "err"
+
+# WHENERR alias
+LET n = 0
+FAIL "z"
+WHENERR
+  LET n = 1
+  CLEAR_ERR
+END
+ASSERT n == 1
+
+HASFORM "IFERR"
+ASSERT LAST_N == 1
+HASFORM "IFOK"
+ASSERT LAST_N == 1
+HASFORM "HASERR"
+ASSERT LAST_N == 1
+
+PRINT "1451_iferr_ifok ok"
+PASS
