@@ -939,6 +939,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 908. ~~**`TIMEIT` / `BENCH` / `ELAPSED` block**~~ **done** (wall mono ms body measure · TIMEIT_MS · no SYS MS delta glue · proof 1446).
 909. ~~**`RETRY` / `ATTEMPT` n [EVERY ms] block**~~ **done** (re-run until OK · backoff · RETRY_N · flaky hooks · proof 1447).
 910. ~~**`TRY` / `FINALLY` / `GUARD` cleanup block**~~ **done** (always-run cleanup · EXIT-safe · temp files/locks · proof 1448).
+911. ~~**`TRY` / `CATCH` / `ONERR` soft recovery**~~ **done** (CATCH arm on OK==0/LAST_ERR · FINALLY still runs · proof 1449).
 
 
 

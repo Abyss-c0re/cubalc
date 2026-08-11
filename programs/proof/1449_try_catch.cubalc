@@ -1,0 +1,79 @@
+# TRY … CATCH … FINALLY — soft recovery + always cleanup
+
+HOLD_FLASH 1
+
+# soft fail triggers CATCH; FINALLY still runs
+LET caught = 0
+LET cleaned = 0
+TRY
+  FAIL "soft miss"
+CATCH
+  LET caught = 1
+  CLEAR_ERR
+  PASS
+FINALLY
+  LET cleaned = 1
+END
+ASSERT caught == 1
+ASSERT cleaned == 1
+ASSERT CATCH_N == 1
+ASSERT FINALLY_N == 1
+ASSERT OK == 1
+
+# success skips CATCH
+LET caught = 0
+LET cleaned = 0
+TRY
+  PASS
+CATCH
+  LET caught = 1
+FINALLY
+  LET cleaned = 1
+END
+ASSERT caught == 0
+ASSERT cleaned == 1
+ASSERT CATCH_N == 0
+ASSERT FINALLY_N == 1
+
+# CATCH only (no FINALLY)
+LET caught = 0
+TRY
+  FAIL "x"
+CATCH
+  LET caught = 1
+  CLEAR_ERR
+  PASS
+END
+ASSERT caught == 1
+ASSERT CATCH_N == 1
+ASSERT FINALLY_N == 0
+
+# ONERR alias
+LET caught = 0
+TRY
+  FAIL "y"
+ONERR
+  LET caught = 1
+  CLEAR_ERR
+END
+ASSERT caught == 1
+CLEAR_ERR
+
+# FINALLY-only still works (regression)
+LET cleaned = 0
+TRY
+  LET z = 1
+FINALLY
+  LET cleaned = 1
+END
+ASSERT z == 1
+ASSERT cleaned == 1
+ASSERT CATCH_N == 0
+
+HASFORM "CATCH"
+ASSERT LAST_N == 1
+HASFORM "ONERR"
+ASSERT LAST_N == 1
+
+PRINT "1449_try_catch ok"
+PASS

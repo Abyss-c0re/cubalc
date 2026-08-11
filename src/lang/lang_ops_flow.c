@@ -24974,18 +24974,21 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (kw(&L->cur,"END")) lex_next(L);
     bump(vm); return 1;
   }
-  /* TRY … [FINALLY …] END — always run FINALLY after body (cleanup).
-   * Aliases: GUARD|WITHCLEANUP|ENSURE. Body EXIT/RET/BREAK still runs cleanup.
-   * Usability: temp files/locks without duplicate RM on every success/fail path. */
+  /* TRY … [CATCH …] [FINALLY …] END — soft recovery + always cleanup.
+   * CATCH|ONERR|EXCEPT runs when body soft-fails (OK==0 or sticky LAST_ERR) and not EXIT/fatal.
+   * FINALLY|CLEANUP|ALWAYS always runs (EXIT-safe). Aliases: GUARD|WITHCLEANUP|ENSURE.
+   * Usability: recover soft TRYCALL/EXPECT without IF OK glue; still free temps. */
   if (kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"WITHCLEANUP")||
       kw(&L->cur,"ENSURE")||kw(&L->cur,"TRYFINALLY")||kw(&L->cur,"PROTECTED")){
     int aln = L->cur.line;
-    Lex try_start, fin_start;
+    Lex try_start, catch_start, fin_start;
     int depth = 1;
-    int has_finally = 0;
-    int body_rc = 0, fin_rc = 0;
+    int has_catch = 0, has_finally = 0;
+    int body_rc = 0, catch_rc = 0, fin_rc = 0;
     int saved_halt = 0, saved_return = 0, saved_break = 0, saved_continue = 0;
     int saved_fatal = 0, saved_exit = 0;
+    int soft_fail = 0, ran_catch = 0;
+    Var *ov, *ev;
     lex_next(L);
     skip_nl(L);
     try_start = *L;
@@ -25003,8 +25006,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"WITHCLEANUP")||
           kw(&L->cur,"ENSURE"))
         depth++;
-      else if ((kw(&L->cur,"FINALLY")||kw(&L->cur,"CLEANUP")||kw(&L->cur,"ALWAYS")||
-                kw(&L->cur,"AFTERALL")) && depth == 1) {
+      else if ((kw(&L->cur,"CATCH")||kw(&L->cur,"ONERR")||kw(&L->cur,"ON_ERR")||
+                kw(&L->cur,"EXCEPT")||kw(&L->cur,"RECOVER")) && depth == 1) {
+        has_catch = 1;
+        break;
+      } else if ((kw(&L->cur,"FINALLY")||kw(&L->cur,"CLEANUP")||kw(&L->cur,"ALWAYS")||
+                  kw(&L->cur,"AFTERALL")) && depth == 1) {
         has_finally = 1;
         break;
       } else if (kw(&L->cur,"END")) {
@@ -25013,13 +25020,13 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       }
       lex_next(L);
     }
-    if (depth > 1 || (depth == 1 && L->cur.kind == TK_EOF && !has_finally)) {
+    if (depth > 1 || (depth == 1 && L->cur.kind == TK_EOF && !has_catch && !has_finally)) {
       char ebuf[160];
       snprintf(ebuf, sizeof ebuf,
-               "TRY without END line %d — TRY … [FINALLY …] END", aln);
+               "TRY without END line %d — TRY … [CATCH …] [FINALLY …] END", aln);
       fail(vm, ebuf); return -1;
     }
-        /* run try body until FINALLY|CLEANUP|ALWAYS|AFTERALL|END (or halt/fatal) */
+    /* run try body until CATCH|FINALLY|END (or halt/fatal) */
     {
       Lex body = try_start;
       body_rc = 0;
@@ -25027,9 +25034,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         if (cubalc_lang_check_timeout(vm, body.cur.line)) { body_rc = -1; break; }
         skip_nl(&body);
         if (body.cur.kind == TK_EOF) break;
-        if (kw(&body.cur, "END") || kw(&body.cur, "FINALLY") ||
-            kw(&body.cur, "CLEANUP") || kw(&body.cur, "ALWAYS") ||
-            kw(&body.cur, "AFTERALL"))
+        if (kw(&body.cur, "END") || kw(&body.cur, "CATCH") ||
+            kw(&body.cur, "ONERR") || kw(&body.cur, "ON_ERR") ||
+            kw(&body.cur, "EXCEPT") || kw(&body.cur, "RECOVER") ||
+            kw(&body.cur, "FINALLY") || kw(&body.cur, "CLEANUP") ||
+            kw(&body.cur, "ALWAYS") || kw(&body.cur, "AFTERALL"))
           break;
         if (vm->break_loop || vm->continue_loop || vm->return_fn || vm->halt) break;
         {
@@ -25047,18 +25056,24 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     saved_break = vm->break_loop;
     saved_continue = vm->continue_loop;
     saved_fatal = vm->fatal;
-    /* allow FINALLY to run even if body halted/fatal */
+    ov = var_get(vm, "OK", 0);
+    ev = var_get(vm, "LAST_ERR", 0);
+    soft_fail = (!saved_fatal && !saved_halt &&
+                 ((ov && ov->val == 0) ||
+                  (ev && ev->is_str && ev->sval[0])));
+
+    /* allow CATCH/FINALLY to run even if body halted/fatal */
     vm->halt = 0;
     vm->return_fn = 0;
     vm->break_loop = 0;
     vm->continue_loop = 0;
     if (saved_fatal) vm->fatal = 0;
 
-    if (has_finally) {
-      /* consume FINALLY|CLEANUP|ALWAYS|AFTERALL */
-      lex_next(L);
+    /* optional CATCH arm (soft fail only) */
+    if (has_catch) {
+      lex_next(L); /* CATCH|ONERR|… */
       skip_nl(L);
-      fin_start = *L;
+      catch_start = *L;
       depth = 1;
       while (L->cur.kind != TK_EOF && depth > 0) {
         if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
@@ -25073,28 +25088,107 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"RETRY")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||
             kw(&L->cur,"WITHCLEANUP")||kw(&L->cur,"ENSURE"))
           depth++;
-        else if (kw(&L->cur,"END")) {
+        else if ((kw(&L->cur,"FINALLY")||kw(&L->cur,"CLEANUP")||kw(&L->cur,"ALWAYS")||
+                  kw(&L->cur,"AFTERALL")) && depth == 1) {
+          has_finally = 1;
+          break;
+        } else if (kw(&L->cur,"END")) {
           depth--;
           if (depth == 0) break;
         }
         lex_next(L);
       }
-      if (depth != 0) {
+      if (depth > 1 || (depth == 1 && L->cur.kind == TK_EOF && !has_finally)) {
         char ebuf[160];
         snprintf(ebuf, sizeof ebuf,
-                 "FINALLY without END line %d — TRY … FINALLY … END", aln);
+                 "CATCH without END line %d — TRY … CATCH … [FINALLY …] END", aln);
         fail(vm, ebuf); return -1;
       }
-      {
-        Lex fbody = fin_start;
-        fin_rc = exec_stmts_until(vm, &fbody, "END", NULL);
+      if (soft_fail) {
+        Lex cbody = catch_start;
+        catch_rc = 0;
+        while (!vm->fatal && !vm->halt) {
+          if (cubalc_lang_check_timeout(vm, cbody.cur.line)) { catch_rc = -1; break; }
+          skip_nl(&cbody);
+          if (cbody.cur.kind == TK_EOF) break;
+          if (kw(&cbody.cur, "END") || kw(&cbody.cur, "FINALLY") ||
+              kw(&cbody.cur, "CLEANUP") || kw(&cbody.cur, "ALWAYS") ||
+              kw(&cbody.cur, "AFTERALL"))
+            break;
+          if (vm->break_loop || vm->continue_loop || vm->return_fn || vm->halt) break;
+          {
+            int r = parse_form(vm, &cbody);
+            if (r < 0) { catch_rc = -1; break; }
+            if (r == 0) break;
+          }
+          if (vm->break_loop || vm->continue_loop || vm->return_fn || vm->halt) break;
+        }
+        if (vm->fatal) catch_rc = -1;
+        ran_catch = 1;
+        /* catch may EXIT — remember for after finally */
+        if (vm->halt && !saved_halt) {
+          saved_halt = 1;
+          saved_exit = vm->exit_code;
+        }
+        if (vm->return_fn) saved_return = 1;
+        if (vm->fatal) saved_fatal = 1;
+        vm->halt = 0;
+        vm->return_fn = 0;
+        vm->break_loop = 0;
+        vm->continue_loop = 0;
+        if (vm->fatal) vm->fatal = 0;
       }
-    } else {
-      /* no finally — L sits on END */
+      /* if catch not taken, L already at FINALLY or END */
+    }
+
+    if (has_finally ||
+        kw(&L->cur,"FINALLY")||kw(&L->cur,"CLEANUP")||kw(&L->cur,"ALWAYS")||
+        kw(&L->cur,"AFTERALL")) {
+      if (!has_finally &&
+          (kw(&L->cur,"FINALLY")||kw(&L->cur,"CLEANUP")||kw(&L->cur,"ALWAYS")||
+           kw(&L->cur,"AFTERALL")))
+        has_finally = 1;
+      if (has_finally &&
+          (kw(&L->cur,"FINALLY")||kw(&L->cur,"CLEANUP")||kw(&L->cur,"ALWAYS")||
+           kw(&L->cur,"AFTERALL"))) {
+        lex_next(L);
+        skip_nl(L);
+        fin_start = *L;
+        depth = 1;
+        while (L->cur.kind != TK_EOF && depth > 0) {
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+              kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+              kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||
+              kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"BENCH")||
+              kw(&L->cur,"RETRY")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||
+              kw(&L->cur,"WITHCLEANUP")||kw(&L->cur,"ENSURE"))
+            depth++;
+          else if (kw(&L->cur,"END")) {
+            depth--;
+            if (depth == 0) break;
+          }
+          lex_next(L);
+        }
+        if (depth != 0) {
+          char ebuf[160];
+          snprintf(ebuf, sizeof ebuf,
+                   "FINALLY without END line %d — TRY … FINALLY … END", aln);
+          fail(vm, ebuf); return -1;
+        }
+        {
+          Lex fbody = fin_start;
+          fin_rc = exec_stmts_until(vm, &fbody, "END", NULL);
+        }
+      }
     }
     if (kw(&L->cur,"END")) lex_next(L);
 
-    /* restore body control; keep finally fatal if it failed harder */
+    /* restore body/catch control; keep later fatal if set */
     if (saved_fatal && !vm->fatal) vm->fatal = 1;
     if (saved_halt) {
       vm->halt = 1;
@@ -25104,11 +25198,14 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (saved_break) vm->break_loop = 1;
     if (saved_continue) vm->continue_loop = 1;
 
+    var_set_num(vm, "CATCH_N", ran_catch ? 1 : 0);
     var_set_num(vm, "FINALLY_N", has_finally ? 1 : 0);
     var_set_num(vm, "TRY_N", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# TRY catch=%d finally=%d soft_fail=%d\n",
+              ran_catch, has_finally, soft_fail);
     if (vm->fatal) return -1;
     if (body_rc < 0 && saved_fatal) return -1;
-    /* non-fatal body_rc -1 only if fatal which we handled */
     bump(vm);
     return 1;
   }
@@ -25204,7 +25301,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
   }
   if (kw(&L->cur,"END")||kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")||kw(&L->cur,"THEN")||
-      kw(&L->cur,"FINALLY")||kw(&L->cur,"CLEANUP")||kw(&L->cur,"ALWAYS")||kw(&L->cur,"AFTERALL")){
+      kw(&L->cur,"FINALLY")||kw(&L->cur,"CLEANUP")||kw(&L->cur,"ALWAYS")||kw(&L->cur,"AFTERALL")||
+      kw(&L->cur,"CATCH")||kw(&L->cur,"ONERR")||kw(&L->cur,"ON_ERR")||kw(&L->cur,"EXCEPT")||
+      kw(&L->cur,"RECOVER")){
     return 0; /* stop marker for nested bodies */
   }
 

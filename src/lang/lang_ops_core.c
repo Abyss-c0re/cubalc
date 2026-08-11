@@ -2823,11 +2823,14 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"ASSERT", "ASSERT expr [\"why\"] — fail with got/expected · string ==/!= content compare"},
       {"EXPECT", "EXPECT expr [\"why\"] — soft check with got/expected · OK/LAST_ERR"},
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
-      {"TRY", "TRY|GUARD … [FINALLY …] END — always-run cleanup after body · temp files/locks"},
+      {"TRY", "TRY|GUARD … [CATCH …] [FINALLY …] END — soft recovery + always cleanup"},
+      {"CATCH", "CATCH|ONERR|EXCEPT — soft-fail arm of TRY (OK==0 or LAST_ERR)"},
+      {"ONERR", "ONERR alias of CATCH"},
+      {"EXCEPT", "EXCEPT alias of CATCH"},
       {"FINALLY", "FINALLY|CLEANUP|ALWAYS — cleanup arm of TRY/GUARD"},
-      {"GUARD", "GUARD alias of TRY … FINALLY"},
-      {"WITHCLEANUP", "WITHCLEANUP alias of TRY … FINALLY"},
-      {"ENSURE", "ENSURE alias of TRY … FINALLY (block · not ENSURENEW)"},
+      {"GUARD", "GUARD alias of TRY … CATCH/FINALLY"},
+      {"WITHCLEANUP", "WITHCLEANUP alias of TRY"},
+      {"ENSURE", "ENSURE block alias of TRY (not ENSURENEW)"},
       {"RETRY", "RETRY|ATTEMPT n [EVERY ms] … END — re-run until OK=1 · RETRY_N/RETRY_OK · flaky hooks"},
       {"ATTEMPT", "ATTEMPT alias of RETRY"},
       {"TRIES", "TRIES alias of RETRY"},
@@ -2913,6 +2916,9 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"REQUIREP", "REQUIREP alias of NEEDP"},
       {"HASP", "HASP [FROM plate] key — soft 0|1 presence · dotted path nest ok · multi-plate · no GETP miss ERR"},
       {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · dotted path nest ok · multi-plate"},
+      {"HASPANY", "HASPANY|PLATEHASANY keys… — soft 0|1 if any key present · KEYHAVE bag · multi-plate"},
+      {"NEEDPANY", "NEEDPANY|REQUIREPANY keys… — fail-fast if none of keys present · multi-plate"},
+      {"REQUIREPANY", "REQUIREPANY alias of NEEDPANY"},
       {"KEYSP", "KEYSP [FROM plate] [path] — key bag → LAST · nest path ok · multi-plate · no JSONKEYS glue"},
       {"PATHKEYS", "PATHKEYS|LEAFKEYS|DOTPATHS [FROM plate] [path] — dotted leaf path bag · multi-plate · no KEYSP+GETOBJ walk"},
       {"LEAFKEYS", "LEAFKEYS alias of PATHKEYS"},
@@ -30036,6 +30042,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              kw(&L->cur,"SETP") || kw(&L->cur,"INCP") || kw(&L->cur,"DELP") ||
              kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") || kw(&L->cur,"FILLP") ||
              kw(&L->cur,"FILLPFILE") || kw(&L->cur,"DUMPP") || kw(&L->cur,"NEEDP") ||
+             kw(&L->cur,"HASPANY") || kw(&L->cur,"NEEDPANY") || kw(&L->cur,"REQUIREPANY") ||
              kw(&L->cur,"EQP") || kw(&L->cur,"NEQP") || kw(&L->cur,"DIFFP") ||
              kw(&L->cur,"STABLEP") || kw(&L->cur,"SAMEKEYSP") || kw(&L->cur,"EQKEYSP") ||
              kw(&L->cur,"CHANGELOGP") || kw(&L->cur,"SUBSETP") || kw(&L->cur,"COVERSP") ||
