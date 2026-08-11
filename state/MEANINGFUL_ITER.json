@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 911,
-  "version": "1.15.904-usability",
-  "item": "TRY / CATCH / ONERR soft recovery",
-  "item_id": 911,
-  "title": "TRY \u00b7 CATCH \u00b7 ONERR \u00b7 EXCEPT \u00b7 soft-fail recovery arm",
-  "commit": "e5f4f104",
-  "summary": "TRY\u2026CATCH\u2026[FINALLY]\u2026END runs CATCH on soft fail (OK==0/LAST_ERR); FINALLY still always; proof 1449 PASS.",
+  "iter": 912,
+  "version": "1.15.905-usability",
+  "item": "REQUIRE OK / NEEDOK soft-status floor",
+  "item_id": 912,
+  "title": "REQUIRE OK \u00b7 NEEDOK \u00b7 MUSTOK \u00b7 ASSERTOK \u00b7 soft-status gate",
+  "commit": "67f9e1b2",
+  "summary": "REQUIRE OK / NEEDOK fail-fast if OK==0 or sticky LAST_ERR after soft ops; proof 1450 PASS.",
   "proofs": [
-    "1449_try_catch PASS",
-    "1449_cli_try_catch PASS",
-    "1448_try_finally regression PASS"
+    "1450_require_ok PASS",
+    "1450_cli_require_ok PASS",
+    "1449_try_catch regression PASS"
   ],
-  "when": "2026-08-11T12:18:18Z",
+  "when": "2026-08-11T12:28:15Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "e5f4f1047e3d9715d8ddb1dbde87b80d7d2aa050",
-  "note": "soft TRYCALL/EXPECT recovery without IF OK glue; cleanup preserved"
+  "sha": "67f9e1b23b1cb01c55af9ce278f54adc4e650e71",
+  "note": "fail-closed soft status without IF OK == 0 glue after TRYCALL/EXPECT"
 }
