@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 352,
-  "program": "programs/realworld/svc_toggle_clamp_slo_board.cubalc",
-  "theme": "TOGGLE/CLAMP/SETMIN/SETMAX canary flags + SLO extremes",
-  "version": "1.15.908-usability",
+  "iter": 353,
+  "program": "programs/realworld/svc_appendto_msg_board.cubalc",
+  "theme": "APPENDTO/REPLACEIN message builder + scrub (COPYTO/ZERO/CLEARSTR)",
+  "version": "1.15.911-usability",
   "pass": true,
-  "prior_note": "iter 351 IFERR+INC; this iter first realworld of 1453 TOGGLE/CLAMP/SETMIN/SETMAX (closes W827)",
+  "prior_note": "iter 352 TOGGLE/CLAMP; this iter first realworld of 1454 APPENDTO/COPYTO + 1455 REPLACEIN/TRIMTO/ZERO",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed + TOGGLE maint",
+      "cmd": "seed + APPENDTO boot",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "TOGGLE/FLIP cycle 10/10",
+      "cmd": "APPENDTO/CATTO/PREPENDTO/PREFIXTO 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "CLAMP high/low/in-range BOUND 10/10",
+      "cmd": "REPLACEIN/GSUBTO/TRIMTO scrub 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "clamp",
-      "cmd": "INC then CLAMP budget 10/10",
+      "name": "scrub",
+      "cmd": "UPPERTO/LOWERTO/ZERO/CLEARSTR 10/10",
       "ok": true,
-      "note": "clamp 10/10"
+      "note": "scrub 10/10"
     },
     {
-      "name": "peak",
-      "cmd": "SETMAX/SETMIN/MAXTO/MINTO 10/10",
+      "name": "copy",
+      "cmd": "COPYTO/COPYV independence 10/10",
       "ok": true,
-      "note": "peak 10/10"
+      "note": "copy 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM TOGGLE/CLAMP/SETMAX",
+      "cmd": "HASFORM APPENDTO\u2026; EMPTYTO miss HASFORM",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "canary pipeline + REQUIRE",
+      "cmd": "assemble scrub + REQUIRE",
       "ok": true,
       "note": "gate"
     },
@@ -69,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1453 PASS; CLI duals still red",
+      "cmd": "selftest; 1454/1455/1456 PASS; CLI duals still red",
       "ok": false,
-      "note": "proof green; CLI duals still red"
+      "note": "proofs green; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -6722,6 +6722,30 @@
       "title": "TOGGLE missing\u21921, FLIP/BOUND/MAXTO/MINTO aliases work (positive)",
       "detail": "TOGGLE creates bool 1; second TOGGLE \u2192 0; FLIP dual; BOUND=CLAMP; MAXTO/MINTO=SETMAX/SETMIN. CLAMP_CHANGED 1 only when value moves. Good for canary weight + SLO peak/floor without IF+LET.",
       "repro": "TOGGLE canary; CLAMP weight 0 100; SETMAX best 15"
+    },
+    {
+      "id": "W832",
+      "severity": "low",
+      "area": "lang|hasform",
+      "title": "EMPTYTO works but HASFORM EMPTYTO is 0",
+      "detail": "EMPTYTO buf clears string like CLEARSTR, yet HASFORM \"EMPTYTO\" returns 0. CLEARSTR is discoverable. Agents listing forms miss EMPTYTO alias.",
+      "repro": "EMPTYTO buf; HASFORM EMPTYTO \u2192 0; HASFORM CLEARSTR \u2192 1"
+    },
+    {
+      "id": "W833",
+      "severity": "low",
+      "area": "lang|appendto",
+      "title": "APPENDTO/CATTO/PREPENDTO/COPYTO/REPLACEIN/ZERO work (positive)",
+      "detail": "In-place message build without LET CAT glue: multi-part CATTO, numeric APPENDTO, GSUBTO empty delete, TRIMTO+UPPERTO chain, COPYTO independence, ZERO counters. REPLACEIN_N counts replacements. Good alert/runbook surface.",
+      "repro": "APPENDTO msg \"hi\"; REPLACEIN s aa WITH XX; ZERO retries"
+    },
+    {
+      "id": "W834",
+      "severity": "med",
+      "area": "lang|pushto",
+      "title": "PUSHTO bag ops landed 1.15.911 (1456); earlier 1.15.910 HASFORM 0",
+      "detail": "Mid-challenge version jump: 1.15.910 PUSHTO unknown; 1.15.911 proof 1456 green. Boards that probe HASFORM PUSHTO must tolerate both until pin. Positive for named work queues once stable.",
+      "repro": "version gate; PUSHTO work a; LINESIN work"
     }
   ],
   "workarounds": [
@@ -6850,7 +6874,6 @@
     "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
   ],
   "language_gaps": [
-    "REQUIRE LIB bare stem broken (W773)",
     "HASMETHODS keyword method-name collide (W774)",
     "HASFORM lag HASMETHODS/ANYCLASS (W775)",
     "HASFIELDS/HASFIELDANY/HASMETHODANY/HASOBJS preflight (1423-1426)",
@@ -6903,10 +6926,14 @@
       "iter": 352,
       "gap": "SETMIN seed semantics: missing vs 0 are different; agents trip on LET x=0 before SETMIN. CLAMP LAST_N fragile under CLEAR_ERR.",
       "want": "SETMIN first-write always adopts sample when unset; document seed rules; LAST_N sticky across CLEAR_ERR for clamp ret"
+    },
+    {
+      "iter": 353,
+      "gap": "In-place string mutation is solid; HASFORM lags some aliases (EMPTYTO). PUSHTO bag is the natural next realworld once stable.",
+      "want": "HASFORM lists all aliases; realworld PUSHTO intake board"
     }
   ],
   "issues_faced": [
-    "iter335: soft_rn score 8 until LET err_s=LAST_ERR before CLEAR_ERR W751",
     "iter335: binary vanished mid-suite concurrent make; relink to 1.15.867",
     "iter336: pass 9/10 until LET body=LAST before dual SYS HAS (W759)",
     "iter336: HASFORM bare SETMATCHFILE 0; SYS SETMATCHFILE 1 (W757)",
@@ -6969,9 +6996,14 @@
       "iter": 352,
       "issue": "SETMIN after LET=0 stuck at 0 (W829); CLEAR_ERR ate LAST_N after CLAMP (W830). Board omitted pre-init of extremes; capture LAST_N before CLEAR_ERR.",
       "resolution": "first realworld 1453; document W829\u2013W831; W827 forms now live in 1.15.908"
+    },
+    {
+      "iter": 353,
+      "issue": "Form path expected PUSHTO absent; 1.15.911 registered PUSHTO. EMPTYTO works without HASFORM. Fixed form scoring to accept either.",
+      "resolution": "first realworld 1454+1455; document W832\u2013W834"
     }
   ],
-  "commit": "e280a5a9",
-  "ts": 1786454749,
+  "commit": "64cc2d60",
+  "ts": 1786456179,
   "board_commit": "767d4822"
 }

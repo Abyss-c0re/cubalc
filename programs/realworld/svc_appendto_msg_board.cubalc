@@ -1,0 +1,946 @@
+# svc_appendto_msg_board.cubalc — APPENDTO/REPLACEIN message builder + scrub
+#
+# Real use: ops agents assemble alert/runbook lines and scrub secrets without
+# LET x = CAT a b / SYS REPLACE glue: in-place APPENDTO/PREPENDTO, COPYTO dual
+# buffer, REPLACEIN/GSUBTO, TRIMTO/UPPERTO, ZERO counters, CLEARSTR recycle.
+# First realworld of 1454 APPENDTO/PREPENDTO/COPYTO (1.15.909+ · MI 916) +
+# 1455 REPLACEIN/TRIMTO/UPPERTO/ZERO/CLEARSTR (MI 917). Distinct from
+# alert_template_digest (FILLP) and column_align_export — this board is
+# *in-place var mutation* for message pipelines. PUSHTO bag (1456) may lag.
+#
+#   APPENDTO|CATTO var parts… · PREPENDTO|PREFIXTO · COPYTO|COPYV
+#   REPLACEIN|GSUBTO var old [WITH] new · REPLACEIN_N
+#   TRIMTO · UPPERTO · LOWERTO · ZERO · CLEARSTR|EMPTYTO
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_atm_$$
+#   ./out/cubalc run programs/realworld/svc_appendto_msg_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|scrub|copy|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt ATM_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_ATM_REQUIRE
+#
+# Edges: APPENDTO missing creates; COPYTO independence; REPLACEIN count;
+#   GSUBTO empty delete; ZERO vs CLEARSTR; EMPTYTO may miss HASFORM;
+#   CLEAR_ERR LAST_N; WRITE NL; PUSHTO form may lag bag ops
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+NOTE "svc_appendto_msg_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_appendto_msg -- boot|pass|soft|scrub|copy|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_ATM_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "ATM_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET msg = ""
+LET log = ""
+LET left = ""
+LET right = ""
+LET retries = 0
+LET nrep = 0
+
+ONEOF ACTION "boot", "pass", "soft", "scrub", "copy", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "scrub" THEN
+    LET op = "scrub"
+  WHEN "copy" THEN
+    LET op = "copy"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-atm\",\"schema\":\"cubalc.svc_appendto_msg.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"atm\",\"want_filter\":\"appendto_msg\",\"cfg\":{\"surface\":\"APPENDTO,CATTO,PREPENDTO,PREFIXTO,COPYTO,COPYV,REPLACEIN,GSUBTO,TRIMTO,UPPERTO,LOWERTO,ZERO,CLEARSTR,EMPTYTO\",\"contract\":\"in-place message build + scrub without CAT LET glue\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  APPENDTO msg "boot"
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-atm"
+  IF LAST_N == 1 THEN
+    SYS EQS msg "boot"
+    IF LAST_N == 1 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET score = 1
+      LET find_n = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot msg"
+      FAIL "boot msg"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score msg note_msg
+  CLEAR_ERR
+END
+
+# pass — APPENDTO/CATTO/PREPENDTO build
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET msg = "hi"
+  APPENDTO msg " "
+  APPENDTO msg "world"
+  CLEAR_ERR
+  SYS EQS msg "hi world"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF APPENDTO_N == 1 THEN
+    LET score = score + 1
+  END
+  LET s = "a"
+  CATTO s "b" "c"
+  CLEAR_ERR
+  SYS EQS s "abc"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET t = "n="
+  APPENDTO t 42
+  CLEAR_ERR
+  SYS EQS t "n=42"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET log = "body"
+  PREPENDTO log "head:"
+  CLEAR_ERR
+  SYS EQS log "head:body"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET p = "z"
+  PREFIXTO p "x" "y"
+  CLEAR_ERR
+  SYS EQS p "xyz"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  APPENDTO fresh "start"
+  CLEAR_ERR
+  SYS EQS fresh "start"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET line = ""
+  APPENDTO line "  Ready  "
+  TRIMTO line
+  UPPERTO line
+  CLEAR_ERR
+  SYS EQS line "READY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "appendto_msg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score msg note_msg
+  CLEAR_ERR
+END
+
+# soft — REPLACEIN/GSUBTO scrub · empty delete
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET s = "aa-bb-aa"
+  REPLACEIN s "aa" WITH "XX"
+  LET nrep = LAST_N
+  CLEAR_ERR
+  SYS EQS s "XX-bb-XX"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF nrep == 2 THEN
+    LET score = score + 1
+  END
+  IF REPLACEIN_N == 2 THEN
+    LET score = score + 1
+  END
+  LET p = "foo/bar/foo"
+  GSUBTO p "foo" ""
+  CLEAR_ERR
+  SYS EQS p "/bar/"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET secret = "token=sekrit;ok"
+  REPLACEIN secret "sekrit" WITH "***"
+  CLEAR_ERR
+  SYS EQS secret "token=***;ok"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # no match leaves string
+  REPLACEIN secret "zzz" WITH "q"
+  CLEAR_ERR
+  SYS EQS secret "token=***;ok"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET dirty = "  hi  "
+  TRIMTO dirty
+  CLEAR_ERR
+  SYS EQS dirty "hi"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF TRIMTO_N == 1 THEN
+    LET score = score + 1
+  END
+  LOWERTO dirty
+  CLEAR_ERR
+  SYS EQS dirty "hi"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = nrep
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score nrep note_msg
+  CLEAR_ERR
+END
+
+# scrub — UPPERTO/LOWERTO/ZERO/CLEARSTR chain
+SYS EQS op "scrub"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET name = "AgEnT"
+  UPPERTO name
+  CLEAR_ERR
+  SYS EQS name "AGENT"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LOWERTO name
+  CLEAR_ERR
+  SYS EQS name "agent"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET retries = 5
+  ZERO retries
+  CLEAR_ERR
+  IF retries == 0 THEN
+    LET score = score + 1
+  END
+  IF ZERO_N == 1 THEN
+    LET score = score + 1
+  END
+  LET msg = "built"
+  CLEARSTR msg
+  CLEAR_ERR
+  SYS EQS msg ""
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF CLEARSTR_N == 1 THEN
+    LET score = score + 1
+  END
+  LET buf = "x"
+  EMPTYTO buf
+  CLEAR_ERR
+  SYS EQS buf ""
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET n = 42
+  UPPERTO n
+  CLEAR_ERR
+  SYS EQS n "42"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET line = ""
+  APPENDTO line "  Ready  "
+  TRIMTO line
+  UPPERTO line
+  CLEAR_ERR
+  SYS EQS line "READY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ZERO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scrub ok"
+    LET admit_n = 1
+    LET find_n = retries
+  ELSE
+    LET miss = 1
+    LET note_msg = "scrub score"
+    FAIL "scrub score"
+    CLEAR_ERR
+  END
+  SYS CAT "scrub:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scrub:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score name note_msg
+  CLEAR_ERR
+END
+
+# copy — COPYTO/COPYV independence + dual buffer
+SYS EQS op "copy"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET a = 7
+  COPYTO a TO b
+  CLEAR_ERR
+  IF b == 7 THEN
+    LET score = score + 1
+  END
+  IF COPYTO_N == 1 THEN
+    LET score = score + 1
+  END
+  LET left = "alpha"
+  COPYV left right
+  CLEAR_ERR
+  SYS EQS right "alpha"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  APPENDTO right "!"
+  CLEAR_ERR
+  SYS EQS left "alpha"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS right "alpha!"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET cur = "now"
+  LET prev = ""
+  COPYTO cur TO prev
+  LET cur = "next"
+  CLEAR_ERR
+  SYS EQS prev "now"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS cur "next"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # COPY num then mutate source
+  LET a = 1
+  COPYTO a TO b
+  LET a = 99
+  CLEAR_ERR
+  IF b == 1 THEN
+    LET score = score + 1
+  END
+  IF a == 99 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "COPYTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "copy ok"
+    LET admit_n = 1
+    LET find_n = b
+  ELSE
+    LET miss = 1
+    LET note_msg = "copy score"
+    FAIL "copy score"
+    CLEAR_ERR
+  END
+  SYS CAT "copy:" score ":cp"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "copy:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score left right note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM · PUSHTO miss
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "APPENDTO"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASFORM "PREPENDTO"
+  LET nrep = LAST_N
+  CLEAR_ERR
+  HASFORM "COPYTO"
+  LET retries = LAST_N
+  CLEAR_ERR
+  HASFORM "REPLACEIN"
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF nrep == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF retries == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF find_n == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  HASFORM "TRIMTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "UPPERTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "ZERO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "CLEARSTR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # PUSHTO landed mid-iter (1456) — form present even if bag ops partial
+  HASFORM "PUSHTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "appendto_msg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — assemble scrub admit
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR msg
+  APPENDTO msg "ALERT "
+  APPENDTO msg "sev=high"
+  CLEAR_ERR
+  SYS HAS msg "ALERT"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  PREPENDTO msg "cube:"
+  CLEAR_ERR
+  SYS STARTS msg "cube:"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  REPLACEIN msg "high" WITH "crit"
+  CLEAR_ERR
+  SYS HAS msg "crit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET retries = 3
+  ZERO retries
+  CLEAR_ERR
+  IF retries == 0 THEN
+    LET score = score + 1
+  END
+  COPYTO msg TO log
+  CLEAR_ERR
+  SYS EQS log msg
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-atm"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "appendto_msg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score msg note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · WRITE NL
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  APPENDTO msg "probe"
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS msg "probe"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET body = "keep-me"
+  CLEAR_ERR
+  SYS EQS LAST "cleared"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "appendto_msg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "toggle_clamp_slo"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  ZERO retries
+  IF retries == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CLEARSTR msg
+  SYS EQS msg ""
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " msg=" msg " retries=" retries
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "atm report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS
