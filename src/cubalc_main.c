@@ -1962,6 +1962,7 @@ int main(int argc, char **argv) {
      * Floor: -R|--require-version X.Y + CUBALC_REQUIRE_VERSION — fail if runtime older.
      * Forms: -C|--need-forms F1,F2 + CUBALC_REQUIRE_FORMS — fail if HELP catalog misses.
      * FNs: -N|--require-fns F1,F2 + CUBALC_REQUIRE_FNS — fail if preload FN surface misses.
+     * Classes: -K|--require-classes C1,C2 + CUBALC_REQUIRE_CLASSES — fail if CLASS surface misses.
      * Ready: -Y|--need-ready + CUBALC_REQUIRE_READY — fail if READY prove checklist fails. */
     int quiet = 0, strict = 0, req_doctor = 0, req_ready = 0, i, rc;
     int plate_ok;
@@ -1990,6 +1991,7 @@ int main(int argc, char **argv) {
     char req_ver[64];
     char req_forms[512];
     char req_fns[512];
+    char req_classes[512];
     const char *src_path = NULL;
     const char *src_label;
     const char *eq;
@@ -2003,6 +2005,7 @@ int main(int argc, char **argv) {
     req_ver[0] = 0;
     req_forms[0] = 0;
     req_fns[0] = 0;
+    req_classes[0] = 0;
     req_doctor = 0;
     req_ready = 0;
     n_dotenv = 0;
@@ -2041,6 +2044,9 @@ int main(int argc, char **argv) {
     eq = getenv("CUBALC_REQUIRE_FNS");
     if (eq && eq[0])
       snprintf(req_fns, sizeof req_fns, "%s", eq);
+    eq = getenv("CUBALC_REQUIRE_CLASSES");
+    if (eq && eq[0])
+      snprintf(req_classes, sizeof req_classes, "%s", eq);
     eq = getenv("CUBALC_REQUIRE_DOCTOR");
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcasecmp(eq, "false") != 0 &&
         strcasecmp(eq, "no") != 0 && strcasecmp(eq, "off") != 0)
@@ -2179,6 +2185,36 @@ int main(int argc, char **argv) {
       }
       if (!strncmp(argv[i], "--fns-need=", 11)) {
         snprintf(req_fns, sizeof req_fns, "%s", argv[i] + 11);
+        continue;
+      }
+      /* -K C1,C2 · --require-classes · CUBALC_REQUIRE_CLASSES dual (NEEDCLASSES after -I) */
+      if (!strcmp(argv[i], "-K") || !strcmp(argv[i], "--require-classes") ||
+          !strcmp(argv[i], "--need-classes") || !strcmp(argv[i], "--classes-need") ||
+          !strcmp(argv[i], "--require-class") || !strcmp(argv[i], "--need-class")) {
+        if (i + 1 >= argc) {
+          fprintf(stderr,
+                  "cubalc run: %s needs CLASS names (e.g. Cell,Ticket) — use with -I lib\n",
+                  argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        snprintf(req_classes, sizeof req_classes, "%s", argv[++i]);
+        continue;
+      }
+      if (!strncmp(argv[i], "--require-classes=", 18)) {
+        snprintf(req_classes, sizeof req_classes, "%s", argv[i] + 18);
+        continue;
+      }
+      if (!strncmp(argv[i], "--need-classes=", 15)) {
+        snprintf(req_classes, sizeof req_classes, "%s", argv[i] + 15);
+        continue;
+      }
+      if (!strncmp(argv[i], "--require-class=", 16)) {
+        snprintf(req_classes, sizeof req_classes, "%s", argv[i] + 16);
+        continue;
+      }
+      if (!strncmp(argv[i], "--classes-need=", 15)) {
+        snprintf(req_classes, sizeof req_classes, "%s", argv[i] + 15);
         continue;
       }
       /* -D · --need-doctor · --require-doctor · CUBALC_REQUIRE_DOCTOR dual */
@@ -2493,7 +2529,7 @@ int main(int argc, char **argv) {
     }
     if (!have_expr && !src_path) {
       fprintf(stderr,
-              "usage: cubalc run [-q] [-s] [-T MS] [-R VER] [-C FORMS] [-N FNS] [-I LIB]... [-L DIR]... [-F ENV]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
+              "usage: cubalc run [-q] [-s] [-T MS] [-R VER] [-C FORMS] [-N FNS] [-K CLASSES] [-I LIB]... [-L DIR]... [-F ENV]... [-e CODE]... <file.cubalc>|- [-- args…]\n"
               "       cubalc eval [-q] [-s] [-T MS] [-R VER] [-C FORMS] [-I LIB]... [-e CODE]... <file>|-\n"
               "       cubalc -e 'SYS DATE\\nPRINT LAST'   # top-level alias\n"
               "       cubalc -I agent_boot -e 'STATUS'  # preload INCLUDE ONCE\n"
@@ -2513,6 +2549,7 @@ int main(int argc, char **argv) {
               "       -R/--require-version X.Y · CUBALC_REQUIRE_VERSION floor\n"
               "       -C/--need-forms F1,F2 · CUBALC_REQUIRE_FORMS capability floor\n"
               "       -N/--require-fns F1,F2 · CUBALC_REQUIRE_FNS FN floor after -I\n"
+              "       -K/--require-classes C1,C2 · CUBALC_REQUIRE_CLASSES CLASS floor after -I\n"
               "       -D/--need-doctor · CUBALC_REQUIRE_DOCTOR install readiness floor\n"
               "       -Y/--need-ready · CUBALC_REQUIRE_READY install prove checklist floor\n"
               "       -T/--timeout MS · CUBALC_RUN_TIMEOUT wall kill runaway loops\n"
@@ -2892,6 +2929,58 @@ int main(int argc, char **argv) {
         return 1;
       }
     }
+    /* Fail-fast CLASS catalog floor after preloads (NEEDCLASSES dual · OOP host contract). */
+    if (req_classes[0]) {
+      char cls[512], need_body[700];
+      size_t a, b, glen = 0;
+      char *gate_src = NULL;
+      cubalc_run_result nr;
+      int nhit;
+      for (a = 0, b = 0; req_classes[a] && b + 1 < sizeof cls; a++) {
+        char c = req_classes[a];
+        if (c == ',' || c == ':' || c == ';' || c == '|')
+          c = ' ';
+        cls[b++] = c;
+      }
+      cls[b] = 0;
+      snprintf(need_body, sizeof need_body, "NEEDCLASSES %s\nPASS\n", cls);
+      gate_src = run_build_with_preload(preload, n_preload, need_body,
+                                        strlen(need_body), &glen);
+      memset(&nr, 0, sizeof nr);
+      if (gate_src) {
+        (void)cubalc_run_source(gate_src, glen, "<require-classes>", &nr, NULL);
+        free(gate_src);
+      } else {
+        (void)cubalc_run_source(need_body, strlen(need_body), "<require-classes>", &nr, NULL);
+      }
+      nhit = (nr.ok && nr.asserts_fail == 0 && !nr.err[0]) ? 1 : 0;
+      if (!nhit) {
+        free(expr_buf);
+        if (devnull) fclose(devnull);
+        printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"%s\","
+               "\"err\":\"REQUIRE CLASSES failed: %s\","
+               "\"require_classes\":\"%s\",\"version\":\"%s\","
+               "\"why_hint\":\"cubalc run -I lib -K classes · NEEDCLASSES · HASCLASSES · CLASS/INCLUDE\","
+               "\"preload_n\":%d,"
+               "\"require_version\":\"%s\","
+               "\"require_forms\":\"%s\","
+               "\"require_fns\":\"%s\","
+               "\"includes_n\":0,\"includes\":[],"
+               "\"vars_n\":0,\"vars_max\":%d,\"vars_full\":false,"
+               "\"quiet\":%s,\"strict\":%s,"
+               "\"exit_code\":1,\"halted\":false}\n",
+               have_expr ? "<expr>" : (src_path ? src_path : "?"),
+               nr.err[0] ? nr.err : (nr.last_err[0] ? nr.last_err : "missing CLASS"),
+               req_classes, CUBALC_LANG_VERSION,
+               n_preload,
+               req_ver[0] ? req_ver : "",
+               req_forms[0] ? req_forms : "",
+               req_fns[0] ? req_fns : "",
+               CUBALC_MAX_VARS,
+               quiet ? "true" : "false", strict ? "true" : "false");
+        return 1;
+      }
+    }
     /* Fail-fast install readiness floor before body (NEEDDOCTOR dual). */
     if (req_doctor) {
       cubalc_run_result dr;
@@ -3218,6 +3307,7 @@ int main(int argc, char **argv) {
                "\"require_version\":\"%s\","
                "\"require_forms\":\"%s\","
                "\"require_fns\":\"%s\","
+               "\"require_classes\":\"%s\","
                "\"require_doctor\":%s,"
                "\"require_ready\":%s,"
                "\"includes_n\":%d,\"includes\":%s,"
@@ -3238,6 +3328,7 @@ int main(int argc, char **argv) {
                req_ver[0] ? req_ver : "",
                req_forms[0] ? req_forms : "",
                req_fns[0] ? req_fns : "",
+               req_classes[0] ? req_classes : "",
                req_doctor ? "true" : "false",
                req_ready ? "true" : "false",
                rr.includes_n, incj,
@@ -4570,6 +4661,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_require_version", "programs/proof/1266_cli_require_version.sh", "run -R / CUBALC_REQUIRE_VERSION host version floor"},
       {"cli_require_forms", "programs/proof/1326_cli_require_forms.sh", "run -C / CUBALC_REQUIRE_FORMS host form capability floor"},
       {"cli_require_fns", "programs/proof/1440_cli_require_fns.sh", "run -N / CUBALC_REQUIRE_FNS host FN floor after preload"},
+      {"cli_require_classes", "programs/proof/1445_cli_require_classes.sh", "run -K / CUBALC_REQUIRE_CLASSES host CLASS floor after preload"},
       {"listforms", "programs/proof/1327_listforms.cubalc", "LISTFORMS/COUNTFORMS in-lang dual of cubalc forms"},
       {"cli_listforms", "programs/proof/1327_cli_listforms.sh", "LISTFORMS bag + COUNTFORMS + forms CLI dual"},
       {"formhint", "programs/proof/1328_formhint.cubalc", "FORMHINT/DESCRIBEFORM HELP one-line peel"},
@@ -11154,6 +11246,7 @@ if (strcmp(cmd, "env") == 0 || strcmp(cmd, "environ") == 0 ||
       {"CUBALC_REQUIRE_VERSION", "", 0, "x.y[.z] floor for run (-R dual · fail if runtime older)"},
       {"CUBALC_REQUIRE_FORMS", "", 0, "comma form names for run (-C dual · NEEDFORMS floor before body)"},
       {"CUBALC_REQUIRE_FNS", "", 0, "comma FN names for run (-N dual · NEEDFNS after -I preload)"},
+      {"CUBALC_REQUIRE_CLASSES", "", 0, "comma CLASS names for run (-K dual · NEEDCLASSES after -I preload)"},
       {"CUBALC_REQUIRE_DOCTOR", "", 0, "1 to require NEEDDOCTOR before run body (-D dual)"},
       {"CUBALC_REQUIRE_READY", "", 0, "1 to require NEEDREADY prove checklist before run body (-Y dual)"},
       {"CUBALC_SEED", "", 0, "RNG seed for reproducible runs"},

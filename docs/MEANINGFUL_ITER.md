@@ -935,6 +935,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 904. ~~**`TRYSEND` / `SEND … OR` fallback**~~ **done** (soft method default · SEND_OR · CALL OR twin · proof 1442).
 905. ~~**`CALLANY` / `TRYCALLANY … OR` fallback**~~ **done** (multi-plugin default · CALLANY_OR · CALL OR twin · proof 1443).
 906. ~~**`SENDANY` / `TRYSENDANY … OR` fallback**~~ **done** (multi-method default · SENDANY_OR · CALLANY OR twin · proof 1444).
+907. ~~**`cubalc run -K` / `--require-classes` / `CUBALC_REQUIRE_CLASSES`**~~ **done** (host CLASS floor after -I · NEEDCLASSES dual · proof 1445).
 
 
 
