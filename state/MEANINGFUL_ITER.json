@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 845,
-  "version": "1.15.837-usability",
-  "item": "HASFORMANY / NEEDFORMANY any-of forms",
-  "item_id": 845,
-  "title": "HASFORMANY \u00b7 NEEDFORMANY \u00b7 FORMHAVE \u00b7 CLI formgate any",
-  "commit": "14fd3869f996b6298e9fd90fdaafdec69aea706d",
-  "summary": "Any-of multi form capability gate twin of HASFORMS; soft/hard; formgate.v1 any; proof 1385 PASS.",
+  "iter": 846,
+  "version": "1.15.838-usability",
+  "item": "form_guard ALL+ANY NEED_FORM_ANY",
+  "item_id": 846,
+  "title": "form_guard \u00b7 NEED_FORMS \u00b7 NEED_FORM_ANY \u00b7 FORM_GUARD_OK",
+  "commit": "02c4f60896c705f82bd6f554d3480f069780d1e3",
+  "summary": "form_guard ALL+ANY twin of env_guard; FORM_GUARD_OK; cap_boot pass-through; proof 1386 PASS.",
   "proofs": [
-    "1385_hasformany PASS",
-    "1385_cli_hasformany PASS"
+    "1386_form_guard PASS",
+    "1386_cli_form_guard PASS"
   ],
-  "when": "2026-08-11T00:05:56Z",
+  "when": "2026-08-11T00:14:47Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "14fd3869f996b6298e9fd90fdaafdec69aea706d",
-  "note": "pairs HASFORMS \u00b7 completes flag/arg/env/form ALL+ANY matrix \u00b7 thrash restore first"
+  "sha": "02c4f60896c705f82bd6f554d3480f069780d1e3",
+  "note": "pairs env_guard \u00b7 uses HASFORMS/HASFORMANY \u00b7 capability contract complete"
 }
