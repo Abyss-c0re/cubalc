@@ -897,6 +897,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 866. ~~**`obj_guard` / `obj_boot` + `cubalc init --obj`**~~ **done** (NEED_OBJS/NEED_OBJ_ANY live instances · OBJ_GUARD_OK · HASOBJ · catalog n=32 · proof 1405).
 867. ~~**`live_session` / `live_boot` + `cubalc init --live`**~~ **done** (oop_session+obj_guard · LIVE_SESSION_OK · catalog n=33 · proof 1406).
 868. ~~**`HARDFAIL` + guard hard paths**~~ **done** (FAIL sticky + halt exit 1 · guards stop without run -s · proof 1407).
+869. ~~**`cubalc guards` / contracts catalog**~~ **done** (NEED_* + soft + HARDFAIL plane map · cubalc.guards.v1 · proof 1408).
 
 
 ## Tick protocol
