@@ -1,0 +1,18 @@
+# INCLUDE method_boot - agent preamble + Class.method catalog contract one-shot
+# Usability: agent_boot + method_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_METHODS = "Ticket.init\nTicket.bump"
+#   DEFAULT NEED_METHOD_ANY = "Order.pay\nTicket.pay"
+#   DEFAULT METHOD_GUARD_SOFT = 0
+#   INCLUDE method_boot
+# Soft miss: DEFAULT METHOD_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --method
+# Twin of class_boot (CLASS catalog) / fn_boot (FN catalog) for method plane.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_METHODS = ""
+DEFAULT NEED_METHOD_ANY = ""
+DEFAULT METHOD_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE method_guard

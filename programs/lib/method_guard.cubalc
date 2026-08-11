@@ -1,0 +1,187 @@
+# INCLUDE method_guard - fail-fast Class.method catalog contract (ALL + optional ANY)
+# Usability: agent OOP method gate without Nx HASMETHOD / LISTMETHODS glue.
+#
+#   DEFAULT NEED_METHODS = "Ticket.init\nTicket.bump"
+#   DEFAULT NEED_METHOD_ANY = "Order.pay\nTicket.pay"
+#   DEFAULT METHOD_GUARD_SOFT = 0
+#   INCLUDE method_guard
+#
+# Spec: each entry is Class.method (dot). Class must exist (LISTCLASSES) and
+# method must appear in LISTMETHODS Class (SYS HASLINE). Soft dual leaves
+# METHMISS / METHHAVE bags. Twin of class_guard for method plane.
+# Note: hard path uses LISTMETHODS+HASLINE+FAIL (not REQUIRE METHOD) because
+# REQUIRE METHOD can break IF/END nesting when present as text inside INCLUDE.
+
+DEFAULT NEED_METHODS = ""
+DEFAULT NEED_METHOD_ANY = ""
+DEFAULT METHOD_GUARD_SOFT = 0
+
+SYS EMPTY NEED_METHODS
+IF LAST_N == 1
+  LET METHOD_GUARD_ALL_OK = 1
+  LET METHMISS = ""
+  LET METHHAVE = ""
+  LET METHMISS_N = 0
+  LET METHHAVE_N = 0
+ELSE
+  LET METHMISS = ""
+  LET METHHAVE = ""
+  LET METHMISS_N = 0
+  LET METHHAVE_N = 0
+  LISTCLASSES
+  LET _METH_CLASS_CAT = LAST
+  EACH LINE b IN NEED_METHODS
+    SYS BEFORE b "."
+    LET _mcn = LAST
+    SYS AFTER b "."
+    LET _mmn = LAST
+    SYS EMPTY _mcn
+    IF LAST_N == 1
+      LET METHMISS_N = METHMISS_N + 1
+      IF METHMISS == ""
+        LET METHMISS = b
+      ELSE
+        LET METHMISS = METHMISS + "\n" + b
+      END
+    ELSE
+      SYS EMPTY _mmn
+      IF LAST_N == 1
+        LET METHMISS_N = METHMISS_N + 1
+        IF METHMISS == ""
+          LET METHMISS = b
+        ELSE
+          LET METHMISS = METHMISS + "\n" + b
+        END
+      ELSE
+        SYS HASLINE _METH_CLASS_CAT _mcn
+        IF LAST_N == 0
+          LET METHMISS_N = METHMISS_N + 1
+          IF METHMISS == ""
+            LET METHMISS = b
+          ELSE
+            LET METHMISS = METHMISS + "\n" + b
+          END
+        ELSE
+          LISTMETHODS _mcn
+          LET _mcat = LAST
+          SYS HASLINE _mcat _mmn
+          IF LAST_N == 1
+            LET METHHAVE_N = METHHAVE_N + 1
+            IF METHHAVE == ""
+              LET METHHAVE = b
+            ELSE
+              LET METHHAVE = METHHAVE + "\n" + b
+            END
+          ELSE
+            LET METHMISS_N = METHMISS_N + 1
+            IF METHMISS == ""
+              LET METHMISS = b
+            ELSE
+              LET METHMISS = METHMISS + "\n" + b
+            END
+          END
+        END
+      END
+    END
+  END
+  IF METHMISS_N == 0
+    LET METHOD_GUARD_ALL_OK = 1
+    LET OK = 1
+  ELSE
+    LET METHOD_GUARD_ALL_OK = 0
+    LET OK = 0
+    LET LAST_ERR = "METHOD_GUARD ALL miss - missing: " + METHMISS
+    LET ERR = LAST_ERR
+    IF METHOD_GUARD_SOFT == 0
+      FAIL LAST_ERR
+    END
+  END
+END
+
+SYS EMPTY NEED_METHOD_ANY
+IF LAST_N == 1
+  LET METHOD_GUARD_ANY_OK = 1
+ELSE
+  LET METHANY_HIT = 0
+  LET METHANY_HAVE = ""
+  LET METHANY_MISS = ""
+  LISTCLASSES
+  LET _METH_CLASS_CAT = LAST
+  EACH LINE b IN NEED_METHOD_ANY
+    SYS BEFORE b "."
+    LET _mcn = LAST
+    SYS AFTER b "."
+    LET _mmn = LAST
+    SYS EMPTY _mcn
+    IF LAST_N == 1
+      IF METHANY_MISS == ""
+        LET METHANY_MISS = b
+      ELSE
+        LET METHANY_MISS = METHANY_MISS + "\n" + b
+      END
+    ELSE
+      SYS EMPTY _mmn
+      IF LAST_N == 1
+        IF METHANY_MISS == ""
+          LET METHANY_MISS = b
+        ELSE
+          LET METHANY_MISS = METHANY_MISS + "\n" + b
+        END
+      ELSE
+        SYS HASLINE _METH_CLASS_CAT _mcn
+        IF LAST_N == 0
+          IF METHANY_MISS == ""
+            LET METHANY_MISS = b
+          ELSE
+            LET METHANY_MISS = METHANY_MISS + "\n" + b
+          END
+        ELSE
+          LISTMETHODS _mcn
+          LET _mcat = LAST
+          SYS HASLINE _mcat _mmn
+          IF LAST_N == 1
+            LET METHANY_HIT = 1
+            IF METHANY_HAVE == ""
+              LET METHANY_HAVE = b
+            ELSE
+              LET METHANY_HAVE = METHANY_HAVE + "\n" + b
+            END
+          ELSE
+            IF METHANY_MISS == ""
+              LET METHANY_MISS = b
+            ELSE
+              LET METHANY_MISS = METHANY_MISS + "\n" + b
+            END
+          END
+        END
+      END
+    END
+  END
+  IF METHANY_HIT == 1
+    LET METHOD_GUARD_ANY_OK = 1
+    IF METHHAVE == ""
+      LET METHHAVE = METHANY_HAVE
+    END
+  ELSE
+    LET METHOD_GUARD_ANY_OK = 0
+    LET OK = 0
+    LET LAST_ERR = "METHOD_GUARD ANY miss - need one of: " + NEED_METHOD_ANY
+    LET ERR = LAST_ERR
+    IF METHOD_GUARD_SOFT == 0
+      FAIL LAST_ERR
+    END
+  END
+END
+
+IF METHOD_GUARD_ALL_OK
+  IF METHOD_GUARD_ANY_OK
+    LET METHOD_GUARD_OK = 1
+    LET OK = 1
+  ELSE
+    LET METHOD_GUARD_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET METHOD_GUARD_OK = 0
+  LET OK = 0
+END

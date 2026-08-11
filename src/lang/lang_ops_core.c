@@ -38843,6 +38843,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     int lib_plate_guard = 0, lib_key_boot = 0;
     int lib_fn_guard = 0, lib_fn_boot = 0;
     int lib_class_guard = 0, lib_class_boot = 0;
+    int lib_method_guard = 0, lib_method_boot = 0;
     int lib_cap_boot = 0, lib_onboard_boot = 0, lib_discover_boot = 0, lib_open_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0;
     int include_path_set = 0, preload_set = 0, smx_key = 0, protect_plate = 0;
@@ -38899,6 +38900,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     lib_fn_boot = (access("programs/lib/fn_boot.cubalc", R_OK) == 0);
     lib_class_guard = (access("programs/lib/class_guard.cubalc", R_OK) == 0);
     lib_class_boot = (access("programs/lib/class_boot.cubalc", R_OK) == 0);
+    lib_method_guard = (access("programs/lib/method_guard.cubalc", R_OK) == 0);
+    lib_method_boot = (access("programs/lib/method_boot.cubalc", R_OK) == 0);
     lib_cap_boot = (access("programs/lib/cap_boot.cubalc", R_OK) == 0);
     lib_onboard_boot = (access("programs/lib/onboard_boot.cubalc", R_OK) == 0);
     lib_discover_boot = (access("programs/lib/discover_boot.cubalc", R_OK) == 0);
@@ -38986,6 +38989,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lib_fn_boot ? "true" : "false",
       lib_class_guard ? "true" : "false",
       lib_class_boot ? "true" : "false",
+      lib_method_guard ? "true" : "false",
+      lib_method_boot ? "true" : "false",
       lib_cap_boot ? "true" : "false",
       lib_onboard_boot ? "true" : "false",
       lib_discover_boot ? "true" : "false",
