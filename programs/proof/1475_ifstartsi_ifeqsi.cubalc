@@ -1,0 +1,103 @@
+# IFSTARTSI / IFENDSI / IFCONTAINSI / IFEQSI — case-insensitive string branches
+
+HOLD_FLASH 1
+
+# IFSTARTSI path roots
+LET path = "/TMP/Work/File.TXT"
+IFSTARTSI path "/tmp/"
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 1
+ASSERT IFSTARTSI_N == 1
+
+# case-sensitive twin still strict
+IFSTARTS path "/tmp/"
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 0
+
+# IFENDSI extension
+IFENDSI path ".txt"
+  LET ext = 1
+ELSE
+  LET ext = 0
+END
+ASSERT ext == 1
+ASSERT IFENDSI_N == 1
+
+IFENDS path ".txt"
+  LET ext = 1
+ELSE
+  LET ext = 0
+END
+ASSERT ext == 0
+
+# IFCONTAINSI / IFHASI
+IFCONTAINSI path "work"
+  LET mid = 1
+ELSE
+  LET mid = 0
+END
+ASSERT mid == 1
+ASSERT IFCONTAINSI_N == 1
+
+IFHASI path "MISSING"
+  LET mid = 1
+ELSE
+  LET mid = 0
+END
+ASSERT mid == 0
+
+# IFEQSI role
+LET role = "Admin"
+IFEQSI role "admin"
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+ASSERT IFEQSI_N == 1
+
+IFEQS role "admin"
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 0
+
+# miss + ELSE
+IFSTARTSI path "/var/"
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+ASSERT IFSTARTSI_N == 0
+
+# nest with IFBETWEEN
+LET code = 200
+LET msg = "Error:Timeout"
+IFBETWEEN code 200 299
+  IFCONTAINSI msg "error:"
+    LET sev = "warn"
+  ELSE
+    LET sev = "ok"
+  END
+ELSE
+  LET sev = "fail"
+END
+ASSERT sev == "warn"
+
+HASFORM "IFSTARTSI"
+ASSERT LAST_N == 1
+HASFORM "IFEQSI"
+ASSERT LAST_N == 1
+HASFORM "IFCONTAINSI"
+ASSERT LAST_N == 1
+
+PRINT "1475_ifstartsi_ifeqsi ok"
+PASS
