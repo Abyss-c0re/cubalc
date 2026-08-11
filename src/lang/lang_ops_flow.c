@@ -16509,6 +16509,56 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* HASCLASS|KNOWNCLASS|CLASS? name — soft 0|1 probe if CLASS is defined.
+   * Complements REQUIRE CLASS (fail-fast) and LISTCLASSES+HASLINE glue.
+   * String-var class names expand. LAST = name when hit, else "".
+   * Usability: IF before ENSURENEW/TRYNEW without bag materialize. */
+  if (kw(&L->cur, "HASCLASS") || kw(&L->cur, "KNOWNCLASS") ||
+      kw(&L->cur, "CLASS?") || kw(&L->cur, "HAS_CLASS") ||
+      kw(&L->cur, "ISDEFINEDCLASS") || kw(&L->cur, "CLASSDEF?") ||
+      kw(&L->cur, "TYPEDEFINED") || kw(&L->cur, "HASTYPE")) {
+    char cname[48];
+    int hit = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASCLASS name"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(cname, sizeof cname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_class(vm, id))
+        snprintf(cname, sizeof cname, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(cname, sizeof cname, "%s", vv->sval);
+        else
+          snprintf(cname, sizeof cname, "%s", id);
+      }
+    }
+    hit = oop_find_class(vm, cname) ? 1 : 0;
+    if (hit) {
+      var_set_str(vm, "LAST", cname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", cname);
+      var_set_str(vm, "CLASS", cname);
+    } else {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASCLASS_N", hit);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# HASCLASS %s -> %d\n", cname, hit);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTCLASSES|CLASSES — newline bag of defined class names.
    * LAST = bag; LAST_N / NCLASSES = count. Agent discovery after INCLUDE. */
   if (kw(&L->cur, "LISTCLASSES") || kw(&L->cur, "CLASSES") ||

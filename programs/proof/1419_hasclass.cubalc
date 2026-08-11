@@ -1,0 +1,51 @@
+# HASCLASS / KNOWNCLASS — soft probe if CLASS is defined
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD id
+END
+
+# hit
+HASCLASS Ticket
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASCLASS_N == 1
+ASSERT LAST == "Ticket"
+
+# miss
+HASCLASS Ghost
+ASSERT LAST_N == 0
+ASSERT LAST == ""
+
+# KNOWNCLASS alias
+KNOWNCLASS Ticket
+ASSERT LAST_N == 1
+
+# string-var class name
+LET want = "Ticket"
+HASCLASS want
+ASSERT LAST_N == 1
+LET want = "Nope"
+HASCLASS want
+ASSERT LAST_N == 0
+
+# after INCLUDE lib class
+INCLUDE life_cell
+HASCLASS Cell
+ASSERT LAST_N == 1
+ASSERT LAST == "Cell"
+
+# TYPEDEFINED alias
+TYPEDEFINED Cell
+ASSERT LAST_N == 1
+
+# dual of REQUIRE CLASS soft path
+HASCLASS MissingPlugin
+ASSERT LAST_N == 0
+
+HASFORM "HASCLASS"
+ASSERT LAST_N == 1
+
+PRINT "1419_hasclass ok"
+PASS

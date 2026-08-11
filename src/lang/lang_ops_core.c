@@ -2045,6 +2045,7 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"CLEARTHIS", "CLEARTHIS|UNBINDTHIS — clear THIS/SELF binding"},
       {"HASTHIS", "HASTHIS|BOUNDTHIS — soft 0|1 if THIS bound to live object"},
       {"ISCLASS", "ISCLASS|ISA|OFCLASS obj Class — soft 0|1 instance-of probe · LAST=actual class"},
+      {"HASCLASS", "HASCLASS|KNOWNCLASS name — soft 0|1 if CLASS defined · dual REQUIRE CLASS"},
       {"NEEDISA", "NEEDISA|REQUIREISA obj Class — fail-fast if not instance of Class"},
       {"DELETEOBJ", "DELETEOBJ|FREEOBJ name — free object slot · NEW reuses name (not cube DESTROY)"},
       {"TRYDELETE", "TRYDELETE|DELETEOBJ SOFT|SOFTDELETE name — soft free slot · TRYDELETE_N · twin TRYCLONE/TRYSWAP"},
