@@ -992,6 +992,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 953. ~~**`IFBLANK` / `IFNOTBLANK`**~~ **done** (whitespace string branches · no SYS BLANK+IF glue · proof 1492).
 
+954. ~~**`IFLEN` / `IFLONG` / `IFSHORT`**~~ **done** (string length branches · no LENOF+IF glue · proof 1493).
+
 
 
 

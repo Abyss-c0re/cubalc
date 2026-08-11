@@ -1,0 +1,119 @@
+# IFLEN / IFLONG / IFSHORT — string length branches
+
+HOLD_FLASH 1
+
+LET s = "hello"
+LET empty = ""
+LET n = 42
+# u undefined
+
+IFLEN s 5
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+ASSERT IFLEN_N == 1
+ASSERT IFLEN_LEN == 5
+ASSERT IFLEN_LIMIT == 5
+
+IFLEN s 4
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 0
+
+IFLEN empty 0
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+IFLEN u 0
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+# numeric → decimal length ("42" → 2)
+IFLEN n 2
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+IFLONG s 5
+  LET L = 1
+ELSE
+  LET L = 0
+END
+ASSERT L == 1
+ASSERT IFLONG_N == 1
+
+IFLONG s 6
+  LET L = 1
+ELSE
+  LET L = 0
+END
+ASSERT L == 0
+
+IFLONG s 3
+  LET L = 1
+ELSE
+  LET L = 0
+END
+ASSERT L == 1
+
+IFSHORT s 5
+  LET sh = 1
+ELSE
+  LET sh = 0
+END
+ASSERT sh == 1
+ASSERT IFSHORT_N == 1
+
+IFSHORT s 4
+  LET sh = 1
+ELSE
+  LET sh = 0
+END
+ASSERT sh == 0
+
+IFSHORT empty 0
+  LET sh = 1
+ELSE
+  LET sh = 0
+END
+ASSERT sh == 1
+
+# nest: min password length
+LET pw = "secret"
+IFLONG pw 6
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+# var limit
+LET min = 4
+IFLONG s min
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+HASFORM "IFLEN"
+ASSERT LAST_N == 1
+HASFORM "IFLONG"
+ASSERT LAST_N == 1
+HASFORM "IFSHORT"
+ASSERT LAST_N == 1
+
+PRINT "1493_iflen_iflong_ifshort ok"
+PASS
