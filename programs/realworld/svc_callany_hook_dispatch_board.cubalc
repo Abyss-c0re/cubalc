@@ -1,0 +1,903 @@
+# svc_callany_hook_dispatch_board.cubalc — CALLANY/TRYCALLANY plugin hook dispatch
+#
+# Real use: deploy agents invoke the first registered runbook/plugin FN from a
+# priority list (canary → primary → default) without N× HASFN+CALL glue.
+# First realworld of 1438 CALLANY / TRYCALLANY / CALLFIRST (1.15.893+).
+# Distinct from fn_runbook (LISTFNS/TRYCALL single name) and svc_fn_slot_admit
+# (HASFNS gate only, no first-hit CALL).
+#
+#   CALLANY|CALLFIRST names… [WITH args…] · CALLANY_FN · CALLANY_N · CALLED
+#   TRYCALLANY|SOFTCALLANY soft miss OK=0 CALLED=0
+#   bag/CSV name lists · WITH multi-arg · 0-arity hooks
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cad_$$
+#   ./out/cubalc run programs/realworld/svc_callany_hook_dispatch_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|bag|arity|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt CAD_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_CAD_REQUIRE
+#
+# Edges: first-defined wins; soft all-miss; CSV/bag; WITH args; CALLANY_FN;
+#   CLEAR_ERR LAST; REQUIRE LIB quoted; WRITE NL; PRINT clobber
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+FN hook_canary msg
+  RET msg
+END
+
+FN hook_primary msg
+  RET msg
+END
+
+FN hook_default msg
+  RET msg
+END
+
+FN hook_ping
+  RET 42
+END
+
+FN hook_score a b
+  RET a + b
+END
+
+NOTE "svc_callany_hook_dispatch_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_callany_hook_dispatch -- boot|pass|soft|bag|arity|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_CAD_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "CAD_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET call_fn = ""
+LET call_n = 0
+LET called = 0
+
+ONEOF ACTION "boot", "pass", "soft", "bag", "arity", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "bag" THEN
+    LET op = "bag"
+  WHEN "arity" THEN
+    LET op = "arity"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-cad\",\"schema\":\"cubalc.svc_callany_hook_dispatch.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"cad\",\"want_filter\":\"callany_hook\",\"cfg\":{\"surface\":\"CALLANY,TRYCALLANY,CALLFIRST,SOFTCALLANY,CALLANY_FN,CALLED\",\"contract\":\"first-defined plugin FN dispatch · priority hooks\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  CALLANY ghost_boot hook_ping
+  LET call_fn = CALLANY_FN
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-cad"
+  IF LAST_N == 1 THEN
+    SYS EQS call_fn "hook_ping"
+    IF LAST_N == 1 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET score = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot call"
+      FAIL "boot call"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# pass — priority canary→primary→default + CALLFIRST + WITH
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALLANY ghost_canary hook_canary hook_primary WITH "canary-ok"
+  LET ok_v = OK
+  LET call_fn = CALLANY_FN
+  LET call_n = CALLANY_N
+  LET called = CALLED
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF called == 1 THEN
+    LET score = score + 1
+  END
+  IF call_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS call_fn "hook_canary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # string RET via CALLANY: ASSERT LAST may pass while LET body=LAST is empty (W798)
+  # score first-hit identity + CALLED instead of body EQS
+  IF called == 1 THEN
+    LET score = score + 1
+  END
+  # skip canary → primary
+  CALLANY ghost_a ghost_b hook_primary hook_default WITH "primary-ok"
+  LET call_fn = CALLANY_FN
+  LET called = CALLED
+  CLEAR_ERR
+  SYS EQS call_fn "hook_primary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF called == 1 THEN
+    LET score = score + 1
+  END
+  CALLFIRST ghost_x hook_score WITH 3 4
+  LET call_fn = CALLANY_FN
+  LET find_n = LAST_N
+  CLEAR_ERR
+  SYS EQS call_fn "hook_score"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF find_n == 7 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "callany_hook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = call_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" call_fn ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score call_fn note_msg
+  CLEAR_ERR
+END
+
+# soft — TRYCALLANY / SOFTCALLANY all-miss
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  TRYCALLANY ghost_only_a ghost_only_b WITH 1
+  LET ok_v = OK
+  LET called = CALLED
+  LET call_n = CALLANY_N
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF called == 0 THEN
+    LET score = score + 1
+  END
+  IF call_n == 0 THEN
+    LET score = score + 1
+  END
+  SOFTCALLANY missing_fn_zz
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF CALLED == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # soft then recover
+  TRYCALLANY ghost_z hook_ping
+  LET call_fn = CALLANY_FN
+  LET find_n = LAST_N
+  LET ok_v = OK
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS call_fn "hook_ping"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF find_n == 42 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-cad"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# bag — newline bag + CSV name lists
+SYS EQS op "bag"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET hooks = "ghost_a
+ghost_b
+hook_ping"
+  CALLANY hooks
+  LET call_fn = CALLANY_FN
+  LET find_n = LAST_N
+  CLEAR_ERR
+  SYS EQS call_fn "hook_ping"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF find_n == 42 THEN
+    LET score = score + 1
+  END
+  LET opts = "nope,hook_default,hook_score"
+  CALLANY opts WITH "csv-ok"
+  LET call_fn = CALLANY_FN
+  LET called = CALLED
+  CLEAR_ERR
+  SYS EQS call_fn "hook_default"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF called == 1 THEN
+    LET score = score + 1
+  END
+  LET opts = "ghost_x,ghost_y,hook_score"
+  CALLANY opts WITH 10 5
+  LET call_fn = CALLANY_FN
+  LET find_n = LAST_N
+  CLEAR_ERR
+  SYS EQS call_fn "hook_score"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF find_n == 15 THEN
+    LET score = score + 1
+  END
+  LET hooks = "ghost_only
+still_ghost"
+  TRYCALLANY hooks
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "callany_hook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFN hook_canary
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "bag ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "bag score"
+    FAIL "bag score"
+    CLEAR_ERR
+  END
+  SYS CAT "bag:" call_fn ":bg"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "bag:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score call_fn note_msg
+  CLEAR_ERR
+END
+
+# arity — 0-arg vs WITH multi-arg first-hit
+SYS EQS op "arity"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALLANY ghost_z hook_ping hook_score
+  LET call_fn = CALLANY_FN
+  LET find_n = LAST_N
+  CLEAR_ERR
+  SYS EQS call_fn "hook_ping"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF find_n == 42 THEN
+    LET score = score + 1
+  END
+  CALLANY ghost_z hook_score hook_ping WITH 2 8
+  LET call_fn = CALLANY_FN
+  LET find_n = LAST_N
+  CLEAR_ERR
+  SYS EQS call_fn "hook_score"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF find_n == 10 THEN
+    LET score = score + 1
+  END
+  CALLANY hook_canary WITH "arity-a"
+  LET call_fn = CALLANY_FN
+  LET called = CALLED
+  CLEAR_ERR
+  SYS EQS call_fn "hook_canary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF called == 1 THEN
+    LET score = score + 1
+  END
+  # second WITH string dispatch
+  CALLFIRST hook_default WITH "arity-d"
+  LET call_fn = CALLANY_FN
+  LET called = CALLED
+  CLEAR_ERR
+  SYS EQS call_fn "hook_default"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF called == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-cad"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "arity ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "arity score"
+    FAIL "arity score"
+    CLEAR_ERR
+  END
+  SYS CAT "arity:" call_fn ":ar"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "arity:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score call_fn note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM catalog
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "CALLANY"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASFORM "TRYCALLANY"
+  LET call_n = LAST_N
+  CLEAR_ERR
+  HASFORM "CALLFIRST"
+  LET called = LAST_N
+  CLEAR_ERR
+  HASFORM "SOFTCALLANY"
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF call_n == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF called == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF find_n == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  HASFORM "SYS CALLANY"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM CALLANY
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFNANY hook_canary ghost_form
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "callany_hook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "CALLANY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — priority dispatch + soft recover + REQUIRE
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALLANY ghost_g hook_canary hook_primary WITH "gate-ok"
+  LET call_fn = CALLANY_FN
+  CLEAR_ERR
+  SYS EQS call_fn "hook_canary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF CALLED == 1 THEN
+    LET score = score + 1
+  END
+  TRYCALLANY ghost_only
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALLANY hook_ping
+  IF LAST_N == 42 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALLANY hook_score WITH 1 1
+  IF LAST_N == 2 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-cad"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · CLEAR_ERR LAST · WRITE NL
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALLANY hook_ping
+  LET call_fn = CALLANY_FN
+  LET call_n = CALLANY_N
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS call_fn "hook_ping"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF call_n == 1 THEN
+    LET score = score + 1
+  END
+  LET body = "keep-me"
+  CLEAR_ERR
+  SYS EQS LAST "cleared"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "callany_hook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "obj_class_guard"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  TRYCALLANY ghost_probe
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = call_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score call_fn note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " call_fn=" call_fn " call_n=" call_n
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "cad report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

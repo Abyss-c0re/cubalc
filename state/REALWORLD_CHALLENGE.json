@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 343,
-  "program": "programs/realworld/svc_obj_class_guard_board.cubalc",
-  "theme": "obj_guard+class_guard dual live-instance/CLASS preflight",
-  "version": "1.15.890-usability",
+  "iter": 344,
+  "program": "programs/realworld/svc_callany_hook_dispatch_board.cubalc",
+  "theme": "CALLANY/TRYCALLANY first-defined plugin hook dispatch",
+  "version": "1.15.893-usability",
   "pass": true,
-  "prior_note": "iter 342 method+field guard; this iter first dual obj_guard+class_guard realworld (1434/1435 native multi)",
+  "prior_note": "iter 343 obj+class guard; this iter first CALLANY realworld (1438)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + NEW + soft dual guards",
+      "cmd": "seed agent + CALLANY hook_ping",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "hard ALL+ANY obj+class 10/10",
+      "cmd": "priority hooks + CALLFIRST score 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "OBJMISS/CLASSMISS + empty skip 10/10",
+      "cmd": "TRYCALLANY/SOFTCALLANY miss + recover",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "obj",
-      "cmd": "obj_guard soft ANY + HASOBJS dual",
+      "name": "bag",
+      "cmd": "newline bag + CSV name lists",
       "ok": true,
-      "note": "obj 10/10"
+      "note": "bag 10/10"
     },
     {
-      "name": "cls",
-      "cmd": "class_guard soft ANY + HASCLASSES dual",
+      "name": "arity",
+      "cmd": "0-arg vs WITH multi-arg first-hit",
       "ok": true,
-      "note": "cls 10/10"
-    },
-    {
-      "name": "combo",
-      "cmd": "dual planes + ALL miss OK=0",
-      "ok": true,
-      "note": "combo 10/10"
+      "note": "arity 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM free duals",
+      "cmd": "HASFORM CALLANY family",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "soft pass + recover + REQUIRE",
+      "cmd": "dispatch + soft + REQUIRE",
       "ok": true,
       "note": "gate"
     },
@@ -75,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1434/1435 PASS",
+      "cmd": "selftest; 1438 PASS",
       "ok": false,
-      "note": "proofs green; CLI duals still red"
+      "note": "proof green; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -6456,6 +6450,46 @@
       "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
       "detail": "Board uses REQUIRE LIB \"hold_seed\".",
       "repro": "REQUIRE LIB hold_seed \u2192 fail"
+    },
+    {
+      "id": "W798",
+      "severity": "high",
+      "area": "lang|callany",
+      "title": "CALLANY string RET: ASSERT LAST may pass while LET body=LAST / SYS EQS LAST empty",
+      "detail": "After CALLANY hello WITH \"world\", ASSERT LAST == \"world\" can pass in-file but PRINT LAST is blank and LET body=LAST; SYS EQS body \"world\" \u2192 0. Numeric RET (LAST_N) reliable. Agents must score on CALLANY_FN/CALLED not body EQS for string hooks.",
+      "repro": "CALLANY hello WITH world; LET b=LAST; SYS EQS b world \u2192 0; ASSERT LAST == world may 1"
+    },
+    {
+      "id": "W799",
+      "severity": "med",
+      "area": "lang|last_n",
+      "title": "CALLANY numeric RET LAST_N must be captured before EQS/CLEAR_ERR",
+      "detail": "Same class as guard capture: SYS EQS CALLANY_FN clobbers LAST_N; LET find_n=LAST_N immediately after CALL.",
+      "repro": "CALLANY score WITH 3 4; SYS EQS CALLANY_FN score; IF LAST_N==7 miss"
+    },
+    {
+      "id": "W800",
+      "severity": "low",
+      "area": "lang|callany",
+      "title": "CALLANY first-defined wins among ghost+real list",
+      "detail": "Positive: ghost_canary hook_canary hook_primary \u2192 CALLANY_FN=hook_canary. Good priority plugin dispatch.",
+      "repro": "CALLANY ghost primary default \u2192 first live FN"
+    },
+    {
+      "id": "W801",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE META omit trailing NL",
+      "detail": "W5 class reconfirmed on CAD META.",
+      "repro": "od -c META.txt"
+    },
+    {
+      "id": "W802",
+      "severity": "low",
+      "area": "lang|require_lib",
+      "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
+      "detail": "Board uses REQUIRE LIB \"hold_seed\".",
+      "repro": "REQUIRE LIB hold_seed \u2192 fail"
     }
   ],
   "workarounds": [
@@ -6572,7 +6606,10 @@
     "REQUIRE LIB \"hold_seed\" quoted",
     "NEW instances before NEED_OBJS gate",
     "LET NEED_* then INCLUDE obj_guard/class_guard each time",
-    "Read ALL_OK/ANY_OK separately when both NEED sets set"
+    "Read ALL_OK/ANY_OK separately when both NEED sets set",
+    "REQUIRE LIB \"hold_seed\" quoted",
+    "Score CALLANY on CALLANY_FN/CALLED/CALLANY_N not string body EQS",
+    "LET ret_n=LAST_N immediately after CALLANY before EQS/CLEAR_ERR"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6757,7 +6794,10 @@
     "GUARD_OK requires ALL when BOTH NEED sets non-empty (W790)",
     "obj_guard+class_guard dual live/CLASS preflight (1434/1435)",
     "re-INCLUDE LET knobs for obj/class guards (W793)",
-    "OBJ_GUARD_OK ALL+ANY coupling (W794)"
+    "OBJ_GUARD_OK ALL+ANY coupling (W794)",
+    "CALLANY/TRYCALLANY first-defined FN dispatch (1438)",
+    "CALLANY string RET LAST dual ASSERT vs LET (W798)",
+    "CALLANY LAST_N capture before EQS (W799)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6836,9 +6876,12 @@
     "iter342: first-try green method_guard+field_guard dual board",
     "iter342: proofs 1428/1430 PASS; re-INCLUDE LET knobs pattern",
     "iter343: first-try green obj_guard+class_guard dual board",
-    "iter343: proofs 1434/1435 PASS; NEW-before-obj-gate documented"
+    "iter343: proofs 1434/1435 PASS; NEW-before-obj-gate documented",
+    "iter344: CALLANY string RET LAST not LET-assignable \u2014 score via CALLANY_FN (W798)",
+    "iter344: capture LAST_N before EQS after numeric CALLANY (W799)",
+    "iter344: board green after capture fixes; proof 1438 PASS"
   ],
-  "commit": "dbd6869c",
-  "ts": "2026-08-11T09:39:52Z",
-  "board_commit": "dbd6869c"
+  "commit": "pending",
+  "ts": "2026-08-11T10:06:41Z",
+  "board_commit": "pending"
 }
