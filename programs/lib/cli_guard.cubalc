@@ -1,26 +1,30 @@
-# INCLUDE cli_guard — fail-fast CLI surface contract (flags + restargs)
-# Usability: agent CLI tools gate required --flags / min positionals without
-# N× HASFLAG/NEEDFLAGS + HASRESTARGS glue.
+# INCLUDE cli_guard — fail-fast CLI surface contract (flags ALL + ANY + restargs)
+# Usability: agent CLI tools gate required --flags / any-of flags / min positionals
+# without N× HASFLAG/NEEDFLAGS/HASFLAGANY glue.
 #
-#   DEFAULT NEED_FLAGS = "out\nverbose"   # bag / CSV / idents for HASFLAGALL
+#   DEFAULT NEED_FLAGS = "out\nverbose"   # all-of (HASFLAGALL / NEEDFLAGS)
+#   DEFAULT NEED_FLAG_ANY = "json\nyaml"  # any-of (HASFLAGANY / NEEDFLAGANY)
 #   DEFAULT NEED_REST_N = 1               # min non-flag positionals
 #   DEFAULT CLI_GUARD_SOFT = 0            # 1 → soft HAS* (OK=0, no fatal)
 #   INCLUDE cli_boot                      # optional preamble
 #   INCLUDE cli_guard
 #
-# Empty NEED_FLAGS skips flag gate. NEED_REST_N 0 skips rest gate.
-# Soft dual leaves FLAGMISS / RESTARGS_N for agents (CLEAR_ERR after).
+# Empty NEED_FLAGS skips ALL flag gate. Empty NEED_FLAG_ANY skips ANY flag gate.
+# NEED_REST_N 0 skips rest gate.
+# Soft dual leaves FLAGMISS / FLAGHAVE / RESTARGS_N for agents (CLEAR_ERR after).
 # Scaffold: cubalc init --cli then DEFAULT NEED_FLAGS before INCLUDE cli_guard
+# Twin of form_guard / env_guard for CLI --flags · pairs HASFLAGALL/HASFLAGANY.
 # HOLD_FLASH not required (same policy as form_guard / var_guard).
 
 DEFAULT NEED_FLAGS = ""
+DEFAULT NEED_FLAG_ANY = ""
 DEFAULT NEED_REST_N = 0
 DEFAULT CLI_GUARD_SOFT = 0
 
-# --- flags: multi named --flag presence ---
+# --- ALL-of: multi named --flag presence ---
 SYS EMPTY NEED_FLAGS
 IF LAST_N == 1
-  # no flag contract
+  # no all-flag contract
   LET CLI_GUARD_FLAGS_OK = 1
 ELSE
   IF CLI_GUARD_SOFT
@@ -29,6 +33,20 @@ ELSE
   ELSE
     NEEDFLAGS NEED_FLAGS
     LET CLI_GUARD_FLAGS_OK = 1
+  END
+END
+
+# --- ANY-of: at least one of the named flags present ---
+SYS EMPTY NEED_FLAG_ANY
+IF LAST_N == 1
+  LET CLI_GUARD_FLAG_ANY_OK = 1
+ELSE
+  IF CLI_GUARD_SOFT
+    HASFLAGANY NEED_FLAG_ANY
+    LET CLI_GUARD_FLAG_ANY_OK = LAST_N
+  ELSE
+    NEEDFLAGANY NEED_FLAG_ANY
+    LET CLI_GUARD_FLAG_ANY_OK = 1
   END
 END
 
@@ -47,9 +65,14 @@ END
 
 # overall soft status (hard paths already failed fatally if miss)
 IF CLI_GUARD_FLAGS_OK
-  IF CLI_GUARD_REST_OK
-    LET CLI_GUARD_OK = 1
-    LET OK = 1
+  IF CLI_GUARD_FLAG_ANY_OK
+    IF CLI_GUARD_REST_OK
+      LET CLI_GUARD_OK = 1
+      LET OK = 1
+    ELSE
+      LET CLI_GUARD_OK = 0
+      LET OK = 0
+    END
   ELSE
     LET CLI_GUARD_OK = 0
     LET OK = 0
