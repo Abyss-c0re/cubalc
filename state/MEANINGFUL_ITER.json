@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 884,
-  "version": "1.15.877-usability",
-  "item": "HASMETHODANY / NEEDMETHODANY any-of multi method gates",
-  "item_id": 884,
-  "title": "HASMETHODANY · NEEDMETHODANY · METHODHAVE · HASMETHODS twin",
-  "commit": "00fe632eca6e8dcec06d906d5e57db313372c879",
-  "summary": "HASMETHODANY soft any method on Class|obj + METHODHAVE/MISS; NEEDMETHODANY hard; proof 1423 PASS.",
+  "iter": 885,
+  "version": "1.15.878-usability",
+  "item": "HASFIELDS / NEEDFIELDS multi field soft/hard gates",
+  "item_id": 885,
+  "title": "HASFIELDS · NEEDFIELDS · FIELDMISS · HASMETHODS twin for fields",
+  "commit": "8d1e779a62383eb83bb7d0c31d8e4490fffab2fe",
+  "summary": "HASFIELDS soft all fields on Class|obj + FIELDMISS; NEEDFIELDS hard; proof 1424 PASS.",
   "proofs": [
-    "1423_hasmethodany PASS",
-    "1423_cli_hasmethodany PASS"
+    "1424_hasfields PASS",
+    "1424_cli_hasfields PASS"
   ],
-  "when": "2026-08-11T07:23:50Z",
+  "when": "2026-08-11T07:33:32Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "00fe632eca6e8dcec06d906d5e57db313372c879",
-  "note": "optional SEND plugin method OR without N x HASMETHOD IF glue"
+  "sha": "8d1e779a62383eb83bb7d0c31d8e4490fffab2fe",
+  "note": "agent GETF/SETF contracts without N x HASFIELD IF glue"
 }
