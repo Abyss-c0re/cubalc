@@ -1,0 +1,29 @@
+# INCLUDE host_boot — agent preamble + full host contract one-shot
+# Usability: agent_boot + host_session without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_PATHS = ""
+#   DEFAULT NEED_READ_PATHS = ""
+#   DEFAULT NEED_WRITE_PATHS = ""
+#   DEFAULT NEED_BINS = ""
+#   DEFAULT NEED_LIBS = ""
+#   INCLUDE host_boot
+# Soft miss: set PATH/RW/BIN/LIB_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --host
+# Twin of product_session (flags+env+time) for path+rw+bin+lib host readiness.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_PATHS = ""
+DEFAULT NEED_PATH_ANY = ""
+DEFAULT PATH_GUARD_SOFT = 0
+DEFAULT NEED_READ_PATHS = ""
+DEFAULT NEED_WRITE_PATHS = ""
+DEFAULT RW_GUARD_SOFT = 0
+DEFAULT NEED_BINS = ""
+DEFAULT NEED_BIN_ANY = ""
+DEFAULT BIN_GUARD_SOFT = 0
+DEFAULT NEED_LIBS = ""
+DEFAULT NEED_LIB_ANY = ""
+DEFAULT LIB_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE host_session

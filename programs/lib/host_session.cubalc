@@ -1,0 +1,52 @@
+# INCLUDE host_session — full host layout+access+tools+modules contract one-shot
+# Usability: path_guard + rw_guard + bin_guard + lib_guard without multi INCLUDE
+# for agents that need host readiness before product work.
+#
+#   DEFAULT NEED_PATHS = "programs/lib\nprograms/proof"
+#   DEFAULT NEED_PATH_ANY = ""
+#   DEFAULT NEED_READ_PATHS = "programs/lib"
+#   DEFAULT NEED_WRITE_PATHS = "state"
+#   DEFAULT NEED_BINS = "sh"
+#   DEFAULT NEED_BIN_ANY = ""
+#   DEFAULT NEED_LIBS = "agent_boot"
+#   DEFAULT NEED_LIB_ANY = ""
+#   DEFAULT PATH_GUARD_SOFT = 0
+#   DEFAULT RW_GUARD_SOFT = 0
+#   DEFAULT BIN_GUARD_SOFT = 0
+#   DEFAULT LIB_GUARD_SOFT = 0
+#   INCLUDE host_session
+#   # HOST_SESSION_OK combines path+rw+bin+lib soft status
+#
+# Soft: set *_GUARD_SOFT = 1 before INCLUDE.
+# Scaffold: cubalc init demo --host
+# Twin of product_session (CLI+env+time) for host filesystem/tools/modules.
+# HOLD_FLASH not required (runtime default 1).
+
+INCLUDE path_guard
+INCLUDE rw_guard
+INCLUDE bin_guard
+INCLUDE lib_guard
+
+# combined soft status (hard paths already failed fatally)
+IF PATH_GUARD_OK
+  IF RW_GUARD_OK
+    IF BIN_GUARD_OK
+      IF LIB_GUARD_OK
+        LET HOST_SESSION_OK = 1
+        LET OK = 1
+      ELSE
+        LET HOST_SESSION_OK = 0
+        LET OK = 0
+      END
+    ELSE
+      LET HOST_SESSION_OK = 0
+      LET OK = 0
+    END
+  ELSE
+    LET HOST_SESSION_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET HOST_SESSION_OK = 0
+  LET OK = 0
+END
