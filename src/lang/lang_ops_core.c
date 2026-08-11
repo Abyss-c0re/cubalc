@@ -2422,6 +2422,7 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"EXPLAINOBJ", "EXPLAINOBJ alias of OBJINFO"},
       {"NEW", "NEW Class instance [args] — construct object (calls init)"},
       {"TRYNEW", "TRYNEW|NEW SOFT Class instance — soft miss OK=0 LAST_ERR (no fatal)"},
+      {"ENSURENEW", "ENSURENEW|GETORNEW|NEW OR Class inst — live keep or soft NEW · ENSURENEW_N 0|1"},
       {"SEND", "SEND obj method [args] — message / method call (THIS set)"},
       {"TRYSEND", "TRYSEND|SEND SOFT obj method [args] — soft miss OK=0 sticky LAST_ERR"},
       {"SENDSOFT", "SENDSOFT alias of TRYSEND"},

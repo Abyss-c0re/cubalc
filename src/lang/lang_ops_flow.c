@@ -739,14 +739,124 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* ENSURENEW|GETORNEW|NEW OR Class instance [ctor]
+   * If live instance already exists under name → OK=1 ENSURENEW_N=0 (no re-init).
+   * If missing → soft NEW (class miss / pool full → OK=0 LAST_ERR like TRYNEW).
+   * Wrong-class live name → soft OK=0 LAST_ERR (no silent retype).
+   * Usability: agent boot “need this object” without HASOBJ+IF+NEW glue. */
+  if (kw(&L->cur, "ENSURENEW") || kw(&L->cur, "GETORNEW") ||
+      kw(&L->cur, "ENSUREOBJ") || kw(&L->cur, "NEEDINSTANCE") ||
+      kw(&L->cur, "MAKEIF") || kw(&L->cur, "CREATEIF") ||
+      kw(&L->cur, "NEWIFMISS") || kw(&L->cur, "ENSUREINSTANCE")) {
+    char cname[48], oname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int rc, soft_new = 1;
+    char op0[32];
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    lex_next(L);
+    /* NEW OR Class … two-token form handled under NEW below; this is one-token ENSURE* */
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail_at(vm, L, "ENSURENEW needs ClassName instance — ENSURENEW Ticket t"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(cname, sizeof cname, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_class(vm, id))
+        snprintf(cname, sizeof cname, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(cname, sizeof cname, "%s", vv->sval);
+        else
+          snprintf(cname, sizeof cname, "%s", id);
+      }
+    }
+    if (oop_read_name(vm, L, oname, sizeof oname, "ENSURENEW instance name") < 0)
+      return -1;
+    ob = oop_find_obj(vm, oname);
+    if (ob) {
+      /* already live */
+      if (ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+        cd = &vm->classes[ob->class_idx];
+        if (cname[0] && strcmp(cd->name, cname) != 0) {
+          char msg[96];
+          snprintf(msg, sizeof msg, "ENSURENEW: class mismatch %s is %s not %s",
+                   oname, cd->name, cname);
+          var_set_str(vm, "LAST_ERR", msg);
+          var_set_str(vm, "ERR", msg);
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          var_set_num(vm, "LAST_N", 0);
+          vm->last_n = 0;
+          var_set_num(vm, "OK", 0);
+          var_set_num(vm, "ENSURENEW_N", 0);
+          var_set_num(vm, "ENSURED", 0);
+          if (vm->trace) fprintf(vm->trace, "# ENSURENEW class mismatch %s\n", oname);
+          bump(vm);
+          return 1;
+        }
+        var_set_str(vm, "CLASS", cd->name);
+      }
+      var_set_str(vm, "LAST", oname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+      var_set_str(vm, "OBJECT", oname);
+      var_set_num(vm, "LAST_N", 0); /* 0 = already present (created=0) */
+      vm->last_n = 0;
+      var_set_num(vm, "ENSURENEW_N", 0);
+      var_set_num(vm, "ENSURED", 1);
+      var_set_num(vm, "OK", 1);
+      /* wipe sticky err after successful ensure-hit */
+      var_set_str(vm, "LAST_ERR", "");
+      var_set_str(vm, "ERR", "");
+      if (vm->trace) fprintf(vm->trace, "# ENSURENEW already %s\n", oname);
+      bump(vm);
+      return 1;
+    }
+    /* missing → soft NEW */
+    (void)soft_new;
+    rc = oop_new_instance(vm, cname, oname, -1, L, 1, 1);
+    if (rc == -1) return -1;
+    if (rc == -2) {
+      var_set_num(vm, "ENSURENEW_N", 0);
+      var_set_num(vm, "ENSURED", 0);
+      if (vm->trace) fprintf(vm->trace, "# ENSURENEW soft miss %s %s\n", cname, oname);
+      bump(vm);
+      return 1;
+    }
+    var_set_num(vm, "OK", 1);
+    var_set_num(vm, "ENSURENEW_N", 1);
+    var_set_num(vm, "ENSURED", 1);
+    var_set_num(vm, "TRYNEW_N", 1);
+    var_set_str(vm, "LAST", oname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+    var_set_num(vm, "LAST_N", 1); /* 1 = newly created */
+    vm->last_n = 1;
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "ERR", "");
+    if (vm->trace) fprintf(vm->trace, "# ENSURENEW created %s %s\n", cname, oname);
+    bump(vm);
+    return 1;
+  }
+
   /* NEW ClassName instance [ctor args…]
    * NEW SOFT|TRY … — soft dual of TRYNEW (same sticky miss).
    * instance may be bare token, "str", or string-var value (dynamic slot names). */
   if (kw(&L->cur, "NEW") || kw(&L->cur, "MAKE") || kw(&L->cur, "CREATE")) {
     char cname[48], oname[48];
-    int soft = 0, rc;
+    int soft = 0, ensure = 0, rc;
     lex_next(L);
-    if (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") || kw(&L->cur, "OPTIONAL") ||
+    if (kw(&L->cur, "OR") || kw(&L->cur, "ENSURE") || kw(&L->cur, "IFMISS") ||
+        kw(&L->cur, "UNLESS")) {
+      /* NEW OR Class name — ensure-live dual of ENSURENEW */
+      ensure = 1;
+      soft = 1;
+      lex_next(L);
+    } else if (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") || kw(&L->cur, "OPTIONAL") ||
         kw(&L->cur, "MAYBE") || kw(&L->cur, "OPT")) {
       soft = 1;
       lex_next(L);
@@ -776,9 +886,50 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     if (oop_read_name(vm, L, oname, sizeof oname, "NEW instance name") < 0)
       return -1;
+    if (ensure) {
+      ObjInst *eob = oop_find_obj(vm, oname);
+      if (eob) {
+        ClassDef *ecd;
+        if (eob->class_idx >= 0 && eob->class_idx < vm->n_classes) {
+          ecd = &vm->classes[eob->class_idx];
+          if (cname[0] && strcmp(ecd->name, cname) != 0) {
+            char msg[96];
+            snprintf(msg, sizeof msg, "ENSURENEW: class mismatch %s is %s not %s",
+                     oname, ecd->name, cname);
+            var_set_str(vm, "LAST_ERR", msg);
+            var_set_str(vm, "ERR", msg);
+            var_set_num(vm, "OK", 0);
+            var_set_num(vm, "ENSURENEW_N", 0);
+            var_set_num(vm, "ENSURED", 0);
+            var_set_num(vm, "LAST_N", 0);
+            vm->last_n = 0;
+            bump(vm);
+            return 1;
+          }
+          var_set_str(vm, "CLASS", ecd->name);
+        }
+        var_set_str(vm, "LAST", oname);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+        var_set_str(vm, "OBJECT", oname);
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "ENSURENEW_N", 0);
+        var_set_num(vm, "ENSURED", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST_ERR", "");
+        var_set_str(vm, "ERR", "");
+        if (vm->trace) fprintf(vm->trace, "# NEW OR already %s\n", oname);
+        bump(vm);
+        return 1;
+      }
+    }
     rc = oop_new_instance(vm, cname, oname, -1, L, 1, soft);
     if (rc == -1) return -1;
     if (rc == -2) {
+      if (ensure) {
+        var_set_num(vm, "ENSURENEW_N", 0);
+        var_set_num(vm, "ENSURED", 0);
+      }
       if (vm->trace) fprintf(vm->trace, "# NEW SOFT miss %s %s\n", cname, oname);
       bump(vm);
       return 1;
@@ -790,6 +941,16 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
       var_set_num(vm, "LAST_N", 1);
       vm->last_n = 1;
+    }
+    if (ensure) {
+      var_set_num(vm, "ENSURENEW_N", 1);
+      var_set_num(vm, "ENSURED", 1);
+      var_set_str(vm, "LAST", oname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST_ERR", "");
+      var_set_str(vm, "ERR", "");
     }
     if (vm->trace) fprintf(vm->trace, "# NEW %s %s\n", cname, oname);
     bump(vm);

@@ -45,7 +45,7 @@ static int form_edit_dist(const char *a, const char *b){
 
 /* Curated high-frequency forms agents mistype — not full ISA soup. */
 static const char *const form_suggest_pool[] = {
-  "CLASS", "NEW", "SEND", "TRYSEND", "GETF", "SETF", "TRYGETF", "TRYSETF",
+  "CLASS", "NEW", "TRYNEW", "ENSURENEW", "SEND", "TRYSEND", "GETF", "SETF", "TRYGETF", "TRYSETF",
   "HASOBJ", "HASFIELD", "HASMETHOD", "LISTOBJS", "LISTFIELDS", "LISTMETHODS",
   "LISTCLASSES", "EACH", "INCLUDE", "ASSERT", "EXPECT", "PRINT", "PRINT_JSON",
   "VARS", "STATUS", "IDENTITY", "VERSION", "REQUIRE", "DEFAULT", "DEFINED",
