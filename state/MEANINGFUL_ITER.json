@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 944,
-  "version": "1.15.937-usability",
-  "item": "IFFRESH / IFSTALE",
-  "item_id": 944,
-  "title": "IFFRESH · IFSTALE · path age branches",
-  "commit": "a99d56ed",
-  "summary": "Path age branches with ELSE/END; no SYS AGE+IF glue; proof 1482 PASS.",
+  "iter": 945,
+  "version": "1.15.939-usability",
+  "item": "IFBIG / IFSMALL / IFSIZE",
+  "item_id": 945,
+  "title": "IFBIG \u00b7 IFSMALL \u00b7 IFSIZE \u00b7 path size branches",
+  "commit": "b75daf0a",
+  "summary": "Path size branches with ELSE/END; no SYS SIZE+IF glue; proof 1484 PASS. EEG var_get peel fix so main builds.",
   "proofs": [
-    "1482_iffresh_ifstale PASS",
-    "1481_iffield regression PASS",
-    "1480_ifenv regression PASS",
-    "1479_iffile regression PASS"
+    "1484_ifbig_ifsmall_ifsize PASS",
+    "1482_iffresh_ifstale regression PASS",
+    "1483_eeg_state_matrix regression PASS"
   ],
-  "when": "2026-08-11T19:18:54Z",
+  "when": "2026-08-11T19:44:42Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "a99d56ed049e5c5f922c54f34dd9ad357a1c271a",
-  "note": "plate rebuild gates without age probe+IF glue"
+  "sha": "b75daf0a4652bceae921553dd6ea5ab90647148d",
+  "note": "plate overflow/empty/band gates without size probe+IF glue"
 }
