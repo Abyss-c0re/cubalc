@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 909,
-  "version": "1.15.902-usability",
-  "item": "RETRY / ATTEMPT n [EVERY ms] block",
-  "item_id": 909,
-  "title": "RETRY \u00b7 ATTEMPT \u00b7 EVERY backoff \u00b7 RETRY_N \u00b7 until OK",
-  "commit": "11ab6866",
-  "summary": "RETRY n [EVERY ms] \u2026 END re-runs until OK=1; RETRY_N/RETRY_OK; flaky hook recovery without LOOP+BREAKIF glue; proof 1447 PASS.",
+  "iter": 910,
+  "version": "1.15.903-usability",
+  "item": "TRY / FINALLY / GUARD cleanup block",
+  "item_id": 910,
+  "title": "TRY \u00b7 FINALLY \u00b7 GUARD \u00b7 CLEANUP \u00b7 always-run teardown",
+  "commit": "a8bfcc34",
+  "summary": "TRY\u2026FINALLY\u2026END always runs cleanup after body (EXIT-safe); temp files/locks without path-duplicated RM; proof 1448 PASS.",
   "proofs": [
-    "1447_retry PASS",
-    "1447_cli_retry PASS",
-    "1446_timeit regression PASS"
+    "1448_try_finally PASS",
+    "1448_cli_try_finally PASS",
+    "1447_retry regression PASS"
   ],
-  "when": "2026-08-11T11:58:07Z",
+  "when": "2026-08-11T12:09:21Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "11ab6866637581adcca51463139ac3ba1eb978f3",
-  "note": "optional backoff between soft-fail attempts for agent plugins"
+  "sha": "a8bfcc3438188f8f0a658ca1e235368133b6e307",
+  "note": "EXIT inside TRY still runs FINALLY for agent temp cleanup"
 }
