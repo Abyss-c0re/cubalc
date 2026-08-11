@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 902,
-  "version": "1.15.895-usability",
-  "item": "cubalc run -N / --require-fns / CUBALC_REQUIRE_FNS",
-  "item_id": 902,
-  "title": "run -N \u00b7 --require-fns \u00b7 CUBALC_REQUIRE_FNS \u00b7 NEEDFNS host floor",
-  "commit": "f9c254e6",
-  "summary": "Host FN capability floor after -I preload via NEEDFNS dual; plate require_fns; proof 1440 PASS.",
+  "iter": 903,
+  "version": "1.15.896-usability",
+  "item": "TRYCALL / CALL \u2026 OR fallback",
+  "item_id": 903,
+  "title": "TRYCALL OR \u00b7 CALL OR \u00b7 CALL_OR \u00b7 soft plugin default",
+  "commit": "d47698e2",
+  "summary": "CALL/TRYCALL accept OR|DEFAULT fallback on miss (LAST=fb, OK=1, CALL_OR=1); number args no longer swallow OR; proof 1441 PASS.",
   "proofs": [
-    "1440_cli_require_fns PASS",
-    "1326_cli_require_forms regression PASS"
+    "1441_call_or PASS",
+    "1441_cli_call_or PASS",
+    "932_fn_trycall regression PASS"
   ],
-  "when": "2026-08-11T10:20:33Z",
+  "when": "2026-08-11T10:38:24Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "f9c254e6fc395497cd0d901067178f2d6f8d7b1f",
-  "note": "agent run -I lib -N greet,hello without in-body NEEDFNS glue"
+  "sha": "d47698e22d872388e779a6a2d441746fde815415",
+  "note": "optional plugin CALL with default without HASFN+IF glue"
 }
