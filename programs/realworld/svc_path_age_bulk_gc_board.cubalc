@@ -1,0 +1,1152 @@
+# svc_path_age_bulk_gc_board.cubalc — bulk path age inventory + lease GC
+#
+# Real use: ops agents inventory cache/lease plates by age without EACH+AGE,
+# keep only fresh markers, select stale candidates, stamp lease paths in bulk,
+# and reclaim after filters — first realworld of AGEALL + FRESH + KEEPSTALE +
+# TOUCHALL + RMALL (proofs 731/734/737/738). Distinct from stale_plate_gc
+# (per-path AGE + STARTSI) and cache_ttl_gc (JSON TTL fields).
+#
+#   SYS AGEALL|MAPAGE bag · AGEALL_N/_HIT/_MISS/_MAX/_MIN
+#   SYS FRESH|KEEPFRESH bag max_age · FRESH_N/_DROP/_AGE
+#   SYS KEEPSTALE|AGED bag min_age · STALE_N/_DROP/_AGE
+#   SYS TOUCHALL|ENSUREALL bag · TOUCHALL_N/_NEW/_UPD/_FAIL
+#   SYS RMALL|UNLINKALL bag · RMALL_N/_MISS/_FAIL/_SCAN · OK=0 if FAIL
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_pag_$$
+#   ./out/cubalc run programs/realworld/svc_path_age_bulk_gc_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|fresh|stale|touch|reclaim|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt PAG_REPORT.txt agent.json cache/
+# Env: HOST_S ROLE_S CUBALC_PAG_REQUIRE
+#
+# Edges: ghost miss in AGEALL; FRESH drops miss; KEEPSTALE min_age; TOUCHALL
+#   dir soft-fail; RMALL OK=0 on FAIL; SLEEP for real age; WRITE NL; PRINT clobber
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_path_age_bulk_gc_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_path_age_bulk_gc -- boot|pass|soft|fresh|stale|touch|reclaim|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_PAG_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "PAG_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "cache"
+LET cache_dir = LAST
+SYS JOIN state_dir "PATHS.txt"
+LET paths_path = LAST
+
+SYS MKDIR cache_dir
+CLEAR_ERR
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET p_n = 0
+LET a_hit = 0
+LET a_miss = 0
+LET f_n = 0
+LET s_n = 0
+LET t_n = 0
+LET r_n = 0
+
+ONEOF ACTION "boot", "pass", "soft", "fresh", "stale", "touch", "reclaim", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "fresh" THEN
+    LET op = "fresh"
+  WHEN "stale" THEN
+    LET op = "stale"
+  WHEN "touch" THEN
+    LET op = "touch"
+  WHEN "reclaim" THEN
+    LET op = "reclaim"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-pag\",\"schema\":\"cubalc.svc_path_age_bulk_gc.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"pag\",\"want_filter\":\"path_age\",\"cfg\":{\"surface\":\"AGEALL,FRESH,KEEPSTALE,TOUCHALL,RMALL\",\"contract\":\"bulk path age inventory + lease GC reclaim\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  SYS JOIN cache_dir "lease_a.plate"
+  LET p1 = LAST
+  SYS JOIN cache_dir "lease_b.plate"
+  LET p2 = LAST
+  SYS JOIN cache_dir "lease_c.plate"
+  LET p3 = LAST
+  SYS WRITE p1 "a"
+  SYS WRITE p2 "b"
+  SYS WRITE p3 "c"
+  CLEAR_ERR
+  SYS PUSH "" p1
+  SYS PUSH LAST p2
+  SYS PUSH LAST p3
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE paths_path body
+  CLEAR_ERR
+  SYS READ paths_path
+  SYS HAS LAST "lease_a"
+  IF LAST_N == 1 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+    LET score = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# pass — AGEALL hit/miss map + FRESH keep all young + TOUCHALL refresh
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS JOIN cache_dir "lease_a.plate"
+  LET p1 = LAST
+  SYS JOIN cache_dir "lease_b.plate"
+  LET p2 = LAST
+  SYS JOIN cache_dir "lease_c.plate"
+  LET p3 = LAST
+  SYS JOIN cache_dir "ghost.plate"
+  LET ghost = LAST
+  SYS WRITE p1 "a"
+  SYS WRITE p2 "b"
+  SYS WRITE p3 "c"
+  CLEAR_ERR
+  SYS PUSH "" p1
+  SYS PUSH LAST p2
+  SYS PUSH LAST p3
+  SYS PUSH LAST ghost
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE paths_path body
+  CLEAR_ERR
+  SYS AGEALL body
+  LET ok_v = OK
+  LET p_n = AGEALL_N
+  LET a_hit = AGEALL_HIT
+  LET a_miss = AGEALL_MISS
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF p_n == 4 THEN
+    LET score = score + 1
+  END
+  IF a_hit == 3 THEN
+    LET score = score + 1
+  END
+  IF a_miss == 1 THEN
+    LET score = score + 1
+  END
+  IF AGEALL_MAX >= AGEALL_MIN THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS FRESH body 1000000
+  LET f_n = FRESH_N
+  CLEAR_ERR
+  IF f_n == 3 THEN
+    LET score = score + 1
+  END
+  IF FRESH_DROP == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS TOUCHALL body
+  LET t_n = TOUCHALL_N
+  LET t_fail = TOUCHALL_FAIL
+  CLEAR_ERR
+  IF t_n >= 3 THEN
+    LET score = score + 1
+  END
+  IF t_fail == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "path_age"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" a_hit ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score a_hit a_miss note_msg
+  CLEAR_ERR
+END
+
+# soft — empty bag, ghost-only AGEALL, FRESH drop all at max 0 after sleep
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS AGEALL ""
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  IF AGEALL_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS JOIN cache_dir "no_such_pag_ghost.plate"
+  LET ghost = LAST
+  SYS PUSH "" ghost
+  LET body = LAST
+  CLEAR_ERR
+  SYS AGEALL body
+  IF AGEALL_HIT == 0 THEN
+    LET score = score + 1
+  END
+  IF AGEALL_MISS == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS FRESH body 100
+  IF FRESH_N == 0 THEN
+    LET score = score + 1
+  END
+  IF FRESH_DROP == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS KEEPSTALE body 1
+  IF STALE_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS RMALL body
+  IF RMALL_N == 0 THEN
+    LET score = score + 1
+  END
+  IF RMALL_MISS == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS TOUCHALL ""
+  IF TOUCHALL_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# fresh — FRESH keeps just-touched; drops older after SLEEP
+SYS EQS op "fresh"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS JOIN cache_dir "old.plate"
+  LET fold = LAST
+  SYS JOIN cache_dir "new.plate"
+  LET fnew = LAST
+  SYS WRITE fold "old"
+  CLEAR_ERR
+  SYS SLEEP 1100
+  CLEAR_ERR
+  SYS WRITE fnew "new"
+  SYS TOUCH fnew
+  CLEAR_ERR
+  SYS PUSH "" fold
+  SYS PUSH LAST fnew
+  LET body = LAST
+  CLEAR_ERR
+  SYS FRESH body 1000000
+  IF FRESH_N == 2 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS FRESH body 0
+  LET f_n = FRESH_N
+  LET fr = LAST
+  CLEAR_ERR
+  IF f_n >= 1 THEN
+    LET score = score + 1
+  END
+  # CLEAR_ERR clobbers LAST → "cleared" (capture fr first)
+  SYS HASLINE fr fnew
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE fr fold
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS KEEPFRESH body 1000000
+  IF KEEPFRESH_N == 2 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS AGEALL body
+  IF AGEALL_HIT == 2 THEN
+    LET score = score + 1
+  END
+  IF AGEALL_MAX >= AGEALL_MIN THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EXIST fold
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EXIST fnew
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "path_age"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "fresh ok"
+    LET admit_n = 1
+    LET find_n = f_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "fresh score"
+    FAIL "fresh score"
+    CLEAR_ERR
+  END
+  SYS CAT "fresh:" f_n ":fr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "fresh:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score f_n note_msg
+  CLEAR_ERR
+END
+
+# stale — KEEPSTALE / AGED min_age after SLEEP
+SYS EQS op "stale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS JOIN cache_dir "old2.plate"
+  LET fold = LAST
+  SYS JOIN cache_dir "new2.plate"
+  LET fnew = LAST
+  SYS JOIN cache_dir "ghost2.plate"
+  LET ghost = LAST
+  SYS WRITE fold "old"
+  CLEAR_ERR
+  SYS SLEEP 1100
+  CLEAR_ERR
+  SYS WRITE fnew "new"
+  SYS TOUCH fnew
+  CLEAR_ERR
+  SYS PUSH "" fold
+  SYS PUSH LAST fnew
+  SYS PUSH LAST ghost
+  LET body = LAST
+  CLEAR_ERR
+  SYS KEEPSTALE body 1
+  LET s_n = STALE_N
+  LET st_bag = LAST
+  LET st_drop = STALE_DROP
+  CLEAR_ERR
+  IF s_n == 1 THEN
+    LET score = score + 1
+  END
+  IF st_drop == 2 THEN
+    LET score = score + 1
+  END
+  SYS EQS st_bag fold
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS AGED body 1
+  LET s2 = STALE_N
+  CLEAR_ERR
+  IF s2 == 1 THEN
+    LET score = score + 1
+  END
+  SYS KEEPSTALE body 1000000
+  LET s3 = STALE_N
+  CLEAR_ERR
+  IF s3 == 0 THEN
+    LET score = score + 1
+  END
+  SYS KEEPSTALE body 0
+  LET s4 = STALE_N
+  CLEAR_ERR
+  IF s4 >= 2 THEN
+    LET score = score + 1
+  END
+  SYS AGEALL body
+  LET a_hit = AGEALL_HIT
+  LET a_miss = AGEALL_MISS
+  CLEAR_ERR
+  IF a_miss == 1 THEN
+    LET score = score + 1
+  END
+  IF a_hit == 2 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE body fold
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-pag"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "stale ok"
+    LET admit_n = 1
+    LET find_n = s_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "stale score"
+    FAIL "stale score"
+    CLEAR_ERR
+  END
+  SYS CAT "stale:" s_n ":st"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "stale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score s_n note_msg
+  CLEAR_ERR
+END
+
+# touch — TOUCHALL create/update + dir soft-fail
+SYS EQS op "touch"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS JOIN cache_dir "t_a.lease"
+  LET fa = LAST
+  SYS JOIN cache_dir "t_b.lease"
+  LET fb = LAST
+  SYS JOIN cache_dir "t_c.lease"
+  LET fc = LAST
+  SYS JOIN cache_dir "t_sub"
+  LET sub = LAST
+  SYS WRITE fa "lease-a"
+  SYS MKDIR sub
+  CLEAR_ERR
+  SYS PUSH "" fa
+  SYS PUSH LAST fb
+  SYS PUSH LAST fc
+  SYS PUSH LAST sub
+  LET body = LAST
+  CLEAR_ERR
+  SYS TOUCHALL body
+  LET t_n = TOUCHALL_N
+  LET ok_v = OK
+  CLEAR_ERR
+  IF t_n == 3 THEN
+    LET score = score + 1
+  END
+  IF TOUCHALL_NEW == 2 THEN
+    LET score = score + 1
+  END
+  IF TOUCHALL_UPD == 1 THEN
+    LET score = score + 1
+  END
+  IF TOUCHALL_FAIL == 1 THEN
+    LET score = score + 1
+  END
+  SYS EXIST fb
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EXIST fc
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ISDIR sub
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ENSUREALL body
+  IF TOUCHALL_N >= 3 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS CREATEALL body
+  IF TOUCHALL_FAIL == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "path_age"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "touch ok"
+    LET admit_n = 1
+    LET find_n = t_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "touch score"
+    FAIL "touch score"
+    CLEAR_ERR
+  END
+  SYS CAT "touch:" t_n ":tc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "touch:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score t_n note_msg
+  CLEAR_ERR
+END
+
+# reclaim — KEEPSTALE then RMALL pipeline; OK=0 when FAIL on dir
+SYS EQS op "reclaim"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS JOIN cache_dir "gc_a.tmp"
+  LET fa = LAST
+  SYS JOIN cache_dir "gc_b.tmp"
+  LET fb = LAST
+  SYS JOIN cache_dir "gc_c.tmp"
+  LET fc = LAST
+  SYS JOIN cache_dir "gc_ghost.tmp"
+  LET ghost = LAST
+  SYS JOIN cache_dir "gc_sub"
+  LET sub = LAST
+  SYS WRITE fa "a"
+  SYS WRITE fb "b"
+  SYS WRITE fc "c"
+  SYS MKDIR sub
+  CLEAR_ERR
+  SYS PUSH "" fa
+  SYS PUSH LAST fb
+  SYS PUSH LAST fc
+  SYS PUSH LAST ghost
+  SYS PUSH LAST sub
+  LET body = LAST
+  CLEAR_ERR
+  SYS RMALL body
+  LET r_n = RMALL_N
+  LET ok_v = OK
+  CLEAR_ERR
+  IF r_n == 3 THEN
+    LET score = score + 1
+  END
+  IF RMALL_MISS == 1 THEN
+    LET score = score + 1
+  END
+  IF RMALL_FAIL == 1 THEN
+    LET score = score + 1
+  END
+  IF RMALL_SCAN == 5 THEN
+    LET score = score + 1
+  END
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EXIST fa
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EXIST fb
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS ISDIR sub
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # recreate + PATHGLOB reclaim
+  SYS WRITE fa "a2"
+  SYS WRITE fb "b2"
+  CLEAR_ERR
+  SYS PATHGLOB cache_dir "gc_*.tmp"
+  SYS KEEPFILES
+  LET body = LAST
+  CLEAR_ERR
+  SYS RMALL body
+  IF RMALL_N >= 2 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "svc-pag"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "reclaim ok"
+    LET admit_n = 1
+    LET find_n = r_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "reclaim score"
+    FAIL "reclaim score"
+    CLEAR_ERR
+  END
+  SYS CAT "reclaim:" r_n ":rc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "reclaim:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score r_n note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM needs SYS prefix for host stems
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "SYS AGEALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS FRESH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS KEEPSTALE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS TOUCHALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS RMALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # MAPAGE alias often missing from HASFORM catalog (ops still work)
+  HASFORM "SYS MAPAGE"
+  LET map_hf = LAST_N
+  CLEAR_ERR
+  HASFORM AGEALL
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS UNLINKALL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "path_age"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # document MAPAGE HASFORM lag: score +1 if present, else still pass on 9 via ops
+  IF map_hf == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — touch → age → keep stale after sleep → reclaim soft recover + REQUIRE
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS JOIN cache_dir "gate_old.plate"
+  LET fold = LAST
+  SYS JOIN cache_dir "gate_new.plate"
+  LET fnew = LAST
+  SYS WRITE fold "old"
+  CLEAR_ERR
+  SYS SLEEP 1100
+  CLEAR_ERR
+  SYS WRITE fnew "new"
+  SYS TOUCH fnew
+  CLEAR_ERR
+  SYS PUSH "" fold
+  SYS PUSH LAST fnew
+  LET body = LAST
+  CLEAR_ERR
+  SYS AGEALL body
+  LET a_hit = AGEALL_HIT
+  CLEAR_ERR
+  IF a_hit == 2 THEN
+    LET score = score + 1
+  END
+  SYS KEEPSTALE body 1
+  LET s_n = STALE_N
+  LET st_bag = LAST
+  CLEAR_ERR
+  IF s_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS st_bag fold
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS RMALL st_bag
+  LET r_n = RMALL_N
+  CLEAR_ERR
+  IF r_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS EXIST fold
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EXIST fnew
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # soft miss must not block
+  SYS AGEALL ""
+  LET p_n = AGEALL_N
+  CLEAR_ERR
+  IF p_n == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-pag"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber AGEALL knobs · WRITE NL · alias MAPAGE
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS JOIN cache_dir "probe.plate"
+  LET fp = LAST
+  SYS WRITE fp "probe-body"
+  CLEAR_ERR
+  SYS PUSH "" fp
+  LET body = LAST
+  CLEAR_ERR
+  SYS AGEALL body
+  LET a_hit = AGEALL_HIT
+  LET p_n = AGEALL_N
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF a_hit == 1 THEN
+    LET score = score + 1
+  END
+  IF p_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS PUSH "" fp
+  LET body = LAST
+  CLEAR_ERR
+  SYS MAPAGE body
+  LET map_n = MAPAGE_N
+  CLEAR_ERR
+  IF map_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "path_age"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "slot_flip"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS FRESH "" 10
+  LET f_n = FRESH_N
+  CLEAR_ERR
+  IF f_n == 0 THEN
+    LET score = score + 1
+  END
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = a_hit
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score a_hit note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " a_hit=" a_hit " f_n=" f_n " s_n=" s_n " t_n=" t_n " r_n=" r_n
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "pag report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

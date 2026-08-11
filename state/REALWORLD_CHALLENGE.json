@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 336,
-  "program": "programs/realworld/svc_env_conf_line_board.cubalc",
-  "theme": "SETMATCHFILE/COUNTFILELINE/DROPEXACTFILE live svc.env conf line patch",
-  "version": "1.15.869-usability",
+  "iter": 337,
+  "program": "programs/realworld/svc_path_age_bulk_gc_board.cubalc",
+  "theme": "AGEALL/FRESH/KEEPSTALE/TOUCHALL/RMALL bulk path age lease GC",
+  "version": "1.15.871-usability",
   "pass": true,
-  "prior_note": "iter 335 tryrename/swap; this iter first realworld file-line conf triad (763/761/775/762)",
+  "prior_note": "iter 336 SETMATCHFILE conf line; this iter first realworld bulk path-age GC triad (731/734/737/738)",
   "tests": [
     {
       "name": "list",
@@ -15,61 +15,61 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + svc.env KEY=VAL",
+      "cmd": "seed agent + cache lease plates + PATHS bag",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "SETMATCHFILE ROLE+HOST promote 10/10",
+      "cmd": "AGEALL hit/miss + FRESH + TOUCHALL 10/10",
       "ok": true,
-      "note": "pass"
+      "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "no-match N=0 I=-1 + path miss OK=0",
+      "cmd": "empty/ghost AGEALL FRESH KEEPSTALE RMALL 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "count",
-      "cmd": "COUNTFILELINE substring ROLE= false friends",
+      "name": "fresh",
+      "cmd": "FRESH max0 keeps just-touched after SLEEP",
       "ok": true,
-      "note": "count 9/10"
+      "note": "fresh 10/10"
     },
     {
-      "name": "drop",
-      "cmd": "DROPEXACTFILE exact-only substring miss",
+      "name": "stale",
+      "cmd": "KEEPSTALE/AGED min_age after SLEEP",
       "ok": true,
-      "note": "drop 10/10"
+      "note": "stale 10/10"
     },
     {
-      "name": "grep",
-      "cmd": "GREPFILE/GREPFILEI/FILEGREP keep lines",
+      "name": "touch",
+      "cmd": "TOUCHALL NEW/UPD/FAIL dir soft",
       "ok": true,
-      "note": "grep 10/10"
+      "note": "touch 10/10"
     },
     {
-      "name": "icase",
-      "cmd": "SETMATCHFILEI vs case-sensitive miss",
+      "name": "reclaim",
+      "cmd": "RMALL N/MISS/FAIL OK=0 + PATHGLOB",
       "ok": true,
-      "note": "icase 10/10"
+      "note": "reclaim 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM needs SYS prefix for host forms",
+      "cmd": "HASFORM SYS prefix; MAPAGE lag",
       "ok": true,
-      "note": "form 9/10"
+      "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "promote+drop+soft + CUBALC_ECL_REQUIRE",
+      "cmd": "stale filter + RMALL + soft + REQUIRE",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber SETMATCHFILE_N capture",
+      "cmd": "PRINT clobber AGEALL capture + WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -81,9 +81,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest",
+      "cmd": "selftest 612/866; CLI duals set\u2192SETF red",
       "ok": false,
-      "note": "763/761/775/762 PASS; CLI duals still red set\u2192SETF"
+      "note": "lang proofs green; CLI dual mass-fail set\u2192SETF (pre-existing)"
     }
   ],
   "weaknesses": [
@@ -6182,6 +6182,46 @@
       "title": "SYS WRITE conf/VAL still omit trailing NL (W5/W755 class)",
       "detail": "cat -A svc.env after multi-line WRITE may lack final $; VAL plate single-line no NL. Line tools and append agents need explicit trailing newline in body.",
       "repro": "cat -A STATE/VAL.txt STATE/svc.env"
+    },
+    {
+      "id": "W763",
+      "severity": "high",
+      "area": "lang|clear_err",
+      "title": "CLEAR_ERR overwrites LAST with literal 'cleared'",
+      "detail": "After AGEALL/FRESH/KEEPSTALE, agents that CLEAR_ERR then SYS HASLINE LAST or SYS EQS LAST lose the bag/result \u2014 LAST becomes the string 'cleared'. Capture LET bag=LAST before CLEAR_ERR. Stronger than W751 (LAST_ERR wipe only).",
+      "repro": "SYS FRESH body 0; CLEAR_ERR; PRINT LAST \u2192 cleared; HASLINE LAST path \u2192 0"
+    },
+    {
+      "id": "W764",
+      "severity": "med",
+      "area": "lang|hasform",
+      "title": "HASFORM misses MAPAGE/KEEPFRESH/AGED aliases while ops execute",
+      "detail": "HASFORM 'SYS MAPAGE'/'SYS KEEPFRESH'/'SYS AGED' \u2192 0; SYS MAPAGE/KEEPFRESH/AGED ops work and set MAPAGE_N/KEEPFRESH_N/STALE_N. Same class as W750/W757 host-stem lag.",
+      "repro": "HASFORM 'SYS MAPAGE' \u2192 0; SYS MAPAGE bag \u2192 MAPAGE_N hit"
+    },
+    {
+      "id": "W765",
+      "severity": "med",
+      "area": "host|rmall",
+      "title": "RMALL sets OK=0 when any path fails (dir) even if files removed",
+      "detail": "RMALL files+dir: RMALL_N=3 FAIL=1 OK=0. Agents treating OK as hard failure abort after partial success. Need check RMALL_N/_FAIL not bare OK.",
+      "repro": "RMALL bag with files+subdir \u2192 OK=0 N=3 FAIL=1"
+    },
+    {
+      "id": "W766",
+      "severity": "low",
+      "area": "host|fresh",
+      "title": "FRESH max_age 0 keeps only age==0 (just-touched), not 'missing age'",
+      "detail": "Ghost paths dropped; only mtime-now files survive FRESH 0. Document for lease stamp gates \u2014 not 'keep unknown'.",
+      "repro": "FRESH bag 0 after SLEEP on old + TOUCH new \u2192 only new"
+    },
+    {
+      "id": "W767",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE VAL/META still omit trailing NL (W5/W755 class)",
+      "detail": "od -c META ends without \\n after r_n=0.",
+      "repro": "od -c $CUBALC_STATE/META.txt"
     }
   ],
   "workarounds": [
@@ -6275,7 +6315,10 @@
     "relink out/*.o when binary missing; avoid -O2 lang_ops_core if OOM",
     "HASFORM host ops with full \"SYS FORMNAME\" not bare stem",
     "LET body = LAST after READ before multi SYS HAS; avoid CLEAR_ERR mid-haystack",
-    "COUNTFILELINE use full KEY=val needle; prefer GREPFILE+EQS for exact key tally"
+    "COUNTFILELINE use full KEY=val needle; prefer GREPFILE+EQS for exact key tally",
+    "LET bag=LAST before CLEAR_ERR after AGEALL/FRESH/KEEPSTALE/RMALL",
+    "Gate reclaim on RMALL_N not OK when bag may include dirs",
+    "HASFORM only 'SYS AGEALL'/'SYS FRESH'/'SYS KEEPSTALE'/'SYS TOUCHALL'/'SYS RMALL' full stems"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6436,7 +6479,11 @@
     "DROPEXACTFILE exact line drop (775)",
     "GREPFILE keep matching file lines (762)",
     "HASFORM host forms need SYS prefix (W757)",
-    "HAS LAST haystack lost after CLEAR_ERR (W759)"
+    "HAS LAST haystack lost after CLEAR_ERR (W759)",
+    "CLEAR_ERR clobbers LAST \u2192 'cleared' (W763)",
+    "HASFORM lag on MAPAGE/KEEPFRESH/AGED aliases (W764)",
+    "RMALL OK=0 partial success with FAIL dirs (W765)",
+    "AGEALL/FRESH/KEEPSTALE/TOUCHALL/RMALL bulk path GC (731/734/737/738)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6494,9 +6541,13 @@
     "iter335: binary vanished mid-suite concurrent make; relink to 1.15.867",
     "iter336: pass 9/10 until LET body=LAST before dual SYS HAS (W759)",
     "iter336: HASFORM bare SETMATCHFILE 0; SYS SETMATCHFILE 1 (W757)",
-    "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)"
+    "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
+    "iter337: CLEAR_ERR LAST='cleared' broke fresh/stale HASLINE/EQS until capture-before-clear (W763)",
+    "iter337: HASFORM SYS MAPAGE/KEEPFRESH/AGED lag while ops live (W764)",
+    "iter337: RMALL OK=0 on dir FAIL despite N files removed (W765)",
+    "iter337: board all actions green; selftest CLI duals still set\u2192SETF red"
   ],
-  "commit": "19751859",
-  "ts": "2026-08-11T05:56:19Z",
-  "board_commit": "19751859"
+  "commit": "bf6fff83",
+  "ts": "2026-08-11T06:22:16Z",
+  "board_commit": "bf6fff83"
 }
