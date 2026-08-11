@@ -1,18 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 868,
-  "version": "1.15.861-usability",
-  "item": "HARDFAIL + guard hard paths",
-  "item_id": 868,
-  "title": "HARDFAIL \u00b7 FATAL \u00b7 guards halt exit 1 \u00b7 no run -s",
-  "commit": "54e9531ba90c558d4519fb7bad1bd80608f0ef84",
-  "summary": "HARDFAIL sticky+halt exit 1; *guard hard paths; FAIL soft dual; proof 1407 PASS.",
+  "iter": 869,
+  "version": "1.15.862-usability",
+  "item": "cubalc guards contract catalog",
+  "item_id": 869,
+  "title": "cubalc guards \u00b7 contracts \u00b7 NEED_*/HARDFAIL map \u00b7 cubalc.guards.v1",
+  "commit": "8845d622223f01479ec93648c7a44e881b666a1a",
+  "summary": "CLI guards catalog NEED_*+soft+hardfail plane map; filter; proof 1408 PASS.",
   "proofs": [
-    "1407_hardfail PASS",
-    "1407_cli_hardfail PASS"
+    "1408_cli_guards PASS"
   ],
-  "when": "2026-08-11T04:14:34Z",
+  "when": "2026-08-11T04:24:08Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "54e9531ba90c558d4519fb7bad1bd80608f0ef84",
-  "note": "agents get real hard contract exits without CUBALC_STRICT"
+  "sha": "8845d622223f01479ec93648c7a44e881b666a1a",
+  "note": "agents discover INCLUDE contracts without reading every guard source"
 }
