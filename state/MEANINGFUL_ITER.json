@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 854,
-  "version": "1.15.846-usability",
-  "item": "path_guard + path_boot + cubalc init --path",
-  "item_id": 854,
-  "title": "path_guard \u00b7 path_boot \u00b7 PATH_GUARD_OK \u00b7 init --path \u00b7 doctor",
-  "commit": "342412a2684d177f351d804e15d419d162361acd",
-  "summary": "NEED_PATHS/NEED_PATH_ANY host path contract; init --path catalog n=20; doctor lib_path_*; proof 1394 PASS.",
+  "iter": 855,
+  "version": "1.15.847-usability",
+  "item": "rw_guard + rw_boot + cubalc init --rw",
+  "item_id": 855,
+  "title": "rw_guard \u00b7 rw_boot \u00b7 RW_GUARD_OK \u00b7 init --rw \u00b7 doctor",
+  "commit": "aba54916e1767e552bc71bddb3103c54fd88ad4a",
+  "summary": "NEED_READ/WRITE_PATHS access contract; init --rw catalog n=21; doctor lib_rw_*; proof 1395 PASS.",
   "proofs": [
-    "1394_path_guard PASS",
-    "1394_path_boot PASS",
-    "1394_cli_path_guard PASS",
-    "1394_cli_init_path PASS"
+    "1395_rw_guard PASS",
+    "1395_rw_boot PASS",
+    "1395_cli_rw_guard PASS",
+    "1395_cli_init_rw PASS"
   ],
-  "when": "2026-08-11T01:34:33Z",
+  "when": "2026-08-11T01:43:47Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "342412a2684d177f351d804e15d419d162361acd",
-  "note": "env_guard twin for filesystem layout gates before READ/WRITE"
+  "sha": "aba54916e1767e552bc71bddb3103c54fd88ad4a",
+  "note": "path_guard twin for CANREAD/CANWRITE access rights before IO"
 }
