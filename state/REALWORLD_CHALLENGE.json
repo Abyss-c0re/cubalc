@@ -6321,7 +6321,7 @@
     "iter333: service_session fleet board 10/10 lean (no plate_peer); vars_full=true still",
     "iter333: HARDFAIL field miss under vars_full (W741); plate_peer+service unusable (W743)"
   ],
-  "commit": "",
+  "commit": "4e72ee3e",
   "ts": "2026-08-11T04:42:51Z",
-  "board_commit": ""
+  "board_commit": "4e72ee3e"
 }
