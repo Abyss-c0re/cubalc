@@ -2,17 +2,17 @@
   "schema": "cubalc.meaningful_iter.v1",
   "iter": 873,
   "version": "1.15.866-usability",
-  "item": "TRYRENAME / RENAMEOBJ SOFT soft object rename",
+  "item": "TRYRENAME / RENAMEOBJ SOFT soft live-slot rename",
   "item_id": 873,
-  "title": "TRYRENAME · RENAMEOBJ SOFT · soft miss/redefine · twin TRYCLONE",
-  "commit": "75c5a2622b2e037d0cc54a25a371c2b15f5ce766",
-  "summary": "TRYRENAME/RENAMEOBJ SOFT OK=0 LAST_ERR on miss source/redefine; hard RENAMEOBJ fatal dual; proof 1412 PASS.",
+  "title": "TRYRENAME \u00b7 RENAMEOBJ SOFT \u00b7 soft miss/redefine \u00b7 twin TRYCLONE",
+  "commit": "6958af23d90c6eb5263cd4dc78f4a4f924cdad23",
+  "summary": "TRYRENAME/RENAMEOBJ SOFT OK=0 LAST_ERR on miss source/redefine; hard RENAMEOBJ redefine still fatal; proof 1412 PASS.",
   "proofs": [
     "1412_tryrename PASS",
     "1412_cli_tryrename PASS"
   ],
-  "when": "2026-08-11T05:10:46Z",
+  "when": "2026-08-11T05:11:34Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "75c5a2622b2e037d0cc54a25a371c2b15f5ce766",
-  "note": "promote temp/proto names after CLONE without HASOBJ+IF+RENAME glue"
+  "sha": "6958af23d90c6eb5263cd4dc78f4a4f924cdad23",
+  "note": "optional promote-after-clone without HASOBJ+IF+RENAME glue"
 }
