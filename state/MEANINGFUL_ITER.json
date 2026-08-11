@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 876,
-  "version": "1.15.869-usability",
-  "item": "ISCLASS / ISA soft instance-of probe + NEEDISA",
-  "item_id": 876,
-  "title": "ISCLASS \u00b7 ISA \u00b7 NEEDISA \u00b7 instance-of without CLASSNAME+EQS",
-  "commit": "43f93da3998bda39ce6b469cc5ca731ac0409a23",
-  "summary": "ISCLASS/ISA soft 0|1 instance-of; NEEDISA fail-fast; proof 1415 PASS.",
+  "iter": 877,
+  "version": "1.15.870-usability",
+  "item": "ENSURECLONE / CLONE OR keep-or-clone live prototypes",
+  "item_id": 877,
+  "title": "ENSURECLONE \u00b7 CLONE OR \u00b7 ENSURECLONE_N 0|1 \u00b7 twin ENSURENEW",
+  "commit": "b93f3373110e27f5b4fa007f23f9c34cbcabecc6",
+  "summary": "ENSURECLONE/CLONE OR keep live dst or soft clone; miss source OK=0; proof 1416 PASS.",
   "proofs": [
-    "1415_isclass PASS",
-    "1415_cli_isclass PASS"
+    "1416_ensureclone PASS",
+    "1416_cli_ensureclone PASS"
   ],
-  "when": "2026-08-11T05:53:56Z",
+  "when": "2026-08-11T06:04:36Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "43f93da3998bda39ce6b469cc5ca731ac0409a23",
-  "note": "type gates after ENSURENEW without CLASSNAME+EQS glue"
+  "sha": "b93f3373110e27f5b4fa007f23f9c34cbcabecc6",
+  "note": "idempotent prototype spawn without HASOBJ+IF+CLONE glue"
 }
