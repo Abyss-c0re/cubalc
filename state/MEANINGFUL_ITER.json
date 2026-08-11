@@ -1,20 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 847,
-  "version": "1.15.839-usability",
-  "item": "cli_guard ALL+ANY NEED_FLAG_ANY",
-  "item_id": 847,
-  "title": "cli_guard \u00b7 NEED_FLAGS \u00b7 NEED_FLAG_ANY \u00b7 CLI_GUARD_OK",
-  "commit": "4b49df14b93ca86d9bddb4a9b152adc7c5b2b0ce",
-  "summary": "cli_guard ALL+ANY twin of form_guard/env_guard; CLI_GUARD_FLAG_ANY_OK; proof 1387 PASS; legacy 1367 PASS.",
+  "iter": 848,
+  "version": "1.15.840-usability",
+  "item": "arg_guard lib NEED_ARGS + NEED_ARG_ANY",
+  "item_id": 848,
+  "title": "arg_guard \u00b7 NEED_ARGS \u00b7 NEED_ARG_ANY \u00b7 doctor lib_arg_guard",
+  "commit": "896772a82998ae6c5fc27da94ee40304ceb844a4",
+  "summary": "INCLUDE arg_guard program-arg ALL/ANY contract twin of env_guard; doctor lib_arg_guard; proof 1388 PASS.",
   "proofs": [
-    "1387_cli_guard_any PASS",
-    "1387_cli_cli_guard_any PASS",
-    "1367_cli_guard PASS",
-    "1367_cli_cli_guard PASS"
+    "1388_arg_guard PASS",
+    "1388_cli_arg_guard PASS"
   ],
-  "when": "2026-08-11T00:20:54Z",
+  "when": "2026-08-11T00:24:00Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "4b49df14b93ca86d9bddb4a9b152adc7c5b2b0ce",
-  "note": "pairs form_guard/env_guard \u00b7 uses HASFLAGALL/HASFLAGANY \u00b7 CLI surface contract complete"
+  "sha": "896772a82998ae6c5fc27da94ee40304ceb844a4",
+  "note": "pairs form/env/cli_guard \u00b7 completes guard matrix for CUBALC_ARGn"
 }
