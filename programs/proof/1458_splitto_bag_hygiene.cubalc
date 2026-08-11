@@ -1,0 +1,74 @@
+# SPLITTO / JOINTO / GREPIN / SORTIN / UNIQIN — bag hygiene in place
+
+HOLD_FLASH 1
+
+# SPLITTO
+LET csv = "a,b,c"
+SPLITTO csv BY ","
+ASSERT csv == "a
+b
+c"
+ASSERT LAST_N == 3
+ASSERT SPLITTO_N == 3
+
+# JOINTO
+JOINTO csv WITH "-"
+ASSERT csv == "a-b-c"
+ASSERT JOINTO_N == 3
+
+# rebuild bag for filter/sort
+LET bag = "err:boom
+ok:1
+err:fail
+ok:2"
+GREPIN bag "err"
+ASSERT bag == "err:boom
+err:fail"
+ASSERT GREPIN_N == 2
+
+# GREPVIN
+LET bag2 = "err:boom
+ok:1
+err:fail
+ok:2"
+GREPVIN bag2 "err"
+ASSERT bag2 == "ok:1
+ok:2"
+ASSERT GREPVIN_N == 2
+
+# SORTIN + UNIQIN
+LET s = "c
+a
+b
+a"
+SORTIN s
+ASSERT s == "a
+a
+b
+c"
+UNIQIN s
+ASSERT s == "a
+b
+c"
+ASSERT UNIQIN_N == 3
+
+# chain: split then grepin
+LET path = "a/x/b/x/c"
+SPLITTO path BY "/"
+GREPVIN path "x"
+JOINTO path WITH "."
+ASSERT path == "a.b.c"
+
+HASFORM "SPLITTO"
+ASSERT LAST_N == 1
+HASFORM "JOINTO"
+ASSERT LAST_N == 1
+HASFORM "GREPIN"
+ASSERT LAST_N == 1
+HASFORM "SORTIN"
+ASSERT LAST_N == 1
+HASFORM "UNIQIN"
+ASSERT LAST_N == 1
+
+PRINT "1458_splitto_bag_hygiene ok"
+PASS

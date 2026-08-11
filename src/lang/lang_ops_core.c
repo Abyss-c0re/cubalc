@@ -3837,6 +3837,12 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"SHIFTFROM", "SHIFTFROM|DEQUEUEFROM name — FIFO peel first field → LAST"},
       {"LINESIN", "LINESIN|NLINES name — bag field count → LAST_N"},
       {"HASINBAG", "HASINBAG|BAGHAS name line — exact bag field membership → LAST_N 0|1"},
+      {"SPLITTO", "SPLITTO name [BY] sep — split string var → newline bag in place"},
+      {"JOINTO", "JOINTO name [WITH] sep — join bag fields with sep in place"},
+      {"GREPIN", "GREPIN|KEEPIN name needle — keep bag fields containing needle"},
+      {"GREPVIN", "GREPVIN|DROPIN name needle — drop bag fields containing needle"},
+      {"SORTIN", "SORTIN name — lex sort bag fields in place"},
+      {"UNIQIN", "UNIQIN|DEDUPIN name — sort+adjacent dedupe bag fields in place"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -72585,6 +72591,273 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm);
       return 1;
     }
+  }
+  /* SPLITTO name [BY] sep — split string var into newline bag in place.
+   * JOINTO name [WITH] sep — join bag fields with sep in place.
+   * GREPIN|KEEPIN name needle — keep fields containing needle.
+   * GREPVIN|DROPIN name needle — drop fields containing needle.
+   * SORTIN name — lex sort bag fields in place.
+   * UNIQIN name — adjacent-dedupe after sort (sorts first).
+   * Usability: bag hygiene on named vars without LET x = SYS SPLIT/GREP x glue. */
+  if (kw(&L->cur,"SPLITTO")||kw(&L->cur,"FIELDSINTO")||kw(&L->cur,"BAGSPLIT")||
+      kw(&L->cur,"JOINTO")||kw(&L->cur,"JOINBAG")||kw(&L->cur,"BAGJOIN")||
+      kw(&L->cur,"GREPIN")||kw(&L->cur,"KEEPIN")||kw(&L->cur,"FILTERIN")||
+      kw(&L->cur,"GREPVIN")||kw(&L->cur,"DROPIN")||kw(&L->cur,"VGREPIN")||
+      kw(&L->cur,"SORTIN")||kw(&L->cur,"SORTBAGIN")||kw(&L->cur,"BAGSORT")||
+      kw(&L->cur,"UNIQIN")||kw(&L->cur,"DEDUPIN")||kw(&L->cur,"UNIQUEIN")||
+      kw(&L->cur,"BAGUNIQ")){
+    char op[24], name[48];
+    int mode = 0; /* 0 split, 1 join, 2 grepin, 3 grepv, 4 sort, 5 uniq */
+    char cur[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    char arg[CUBALC_HOST_STR_MAX];
+    Var *vv;
+    long nfields = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "JOINTO") == 0 || strcmp(op, "JOINBAG") == 0 ||
+        strcmp(op, "BAGJOIN") == 0)
+      mode = 1;
+    else if (strcmp(op, "GREPIN") == 0 || strcmp(op, "KEEPIN") == 0 ||
+             strcmp(op, "FILTERIN") == 0)
+      mode = 2;
+    else if (strcmp(op, "GREPVIN") == 0 || strcmp(op, "DROPIN") == 0 ||
+             strcmp(op, "VGREPIN") == 0)
+      mode = 3;
+    else if (strcmp(op, "SORTIN") == 0 || strcmp(op, "SORTBAGIN") == 0 ||
+             strcmp(op, "BAGSORT") == 0)
+      mode = 4;
+    else if (strcmp(op, "UNIQIN") == 0 || strcmp(op, "DEDUPIN") == 0 ||
+             strcmp(op, "UNIQUEIN") == 0 || strcmp(op, "BAGUNIQ") == 0)
+      mode = 5;
+    else
+      mode = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, mode == 0 ? "SPLITTO needs name [BY] sep — SPLITTO csv BY \",\""
+           : mode == 1 ? "JOINTO needs name [WITH] sep — JOINTO bag WITH \",\""
+           : mode <= 3 ? "GREPIN needs name needle — GREPIN bag \"err\""
+                       : "SORTIN needs name — SORTIN bag");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    cur[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+
+    if (mode == 0) {
+      /* SPLITTO */
+      size_t sepn, o = 0;
+      const char *p, *hit;
+      if (kw(&L->cur, "BY") || kw(&L->cur, "ON") || kw(&L->cur, "WITH") ||
+          kw(&L->cur, "SEP"))
+        lex_next(L);
+      if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+        fail(vm, "SPLITTO needs sep — SPLITTO csv BY \",\"");
+        return -1;
+      }
+      sepn = strlen(arg);
+      out[0] = 0;
+      if (sepn == 0) {
+        snprintf(out, sizeof out, "%s", cur);
+        nfields = cur[0] ? 1 : 0;
+      } else {
+        p = cur;
+        nfields = 0;
+        for (;;) {
+          hit = strstr(p, arg);
+          if (!hit) {
+            size_t rest = strlen(p);
+            if (o && o + 1 < sizeof out) out[o++] = '\n';
+            if (o + rest >= sizeof out) rest = sizeof out - 1 - o;
+            if (rest) memcpy(out + o, p, rest);
+            o += rest;
+            out[o] = 0;
+            nfields++;
+            break;
+          }
+          {
+            size_t pre = (size_t)(hit - p);
+            if (o && o + 1 < sizeof out) out[o++] = '\n';
+            if (o + pre >= sizeof out) pre = sizeof out - 1 - o;
+            if (pre) { memcpy(out + o, p, pre); o += pre; }
+            out[o] = 0;
+            nfields++;
+            p = hit + sepn;
+            if (o >= sizeof out - 1) break;
+            if (!*p) {
+              /* trailing sep → empty field */
+              if (o + 1 < sizeof out) { out[o++] = '\n'; out[o] = 0; }
+              nfields++;
+              break;
+            }
+          }
+        }
+      }
+      var_set_num(vm, "SPLITTO_N", nfields);
+    } else if (mode == 1) {
+      /* JOINTO */
+      size_t sepn, o = 0;
+      const char *p, *start;
+      int first = 1;
+      if (kw(&L->cur, "WITH") || kw(&L->cur, "BY") || kw(&L->cur, "SEP") ||
+          kw(&L->cur, "USING"))
+        lex_next(L);
+      if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+        /* default join with empty sep (concat fields) */
+        arg[0] = 0;
+      }
+      sepn = strlen(arg);
+      out[0] = 0;
+      p = cur;
+      nfields = 0;
+      if (!cur[0]) {
+        nfields = 0;
+      } else {
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          {
+            size_t fl = (size_t)(p - start);
+            if (!first && sepn) {
+              if (o + sepn < sizeof out) {
+                memcpy(out + o, arg, sepn); o += sepn;
+              } else if (o < sizeof out - 1) {
+                size_t take = sizeof out - 1 - o;
+                memcpy(out + o, arg, take); o += take;
+              }
+            }
+            first = 0;
+            if (o + fl < sizeof out) {
+              memcpy(out + o, start, fl); o += fl;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, start, take); o += take;
+            }
+            out[o] = 0;
+            nfields++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_num(vm, "JOINTO_N", nfields);
+    } else if (mode == 2 || mode == 3) {
+      /* GREPIN / GREPVIN */
+      size_t o = 0;
+      const char *p, *start;
+      int first = 1;
+      if (kw(&L->cur, "FOR") || kw(&L->cur, "WITH") || kw(&L->cur, "MATCHING"))
+        lex_next(L);
+      if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+        fail(vm, "GREPIN needs needle — GREPIN bag \"err\"");
+        return -1;
+      }
+      out[0] = 0;
+      p = cur;
+      nfields = 0;
+      if (cur[0]) {
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          {
+            size_t fl = (size_t)(p - start);
+            char field[CUBALC_HOST_STR_MAX];
+            int match;
+            if (fl >= sizeof field) fl = sizeof field - 1;
+            memcpy(field, start, fl);
+            field[fl] = 0;
+            match = (arg[0] == 0) ? 1 : (strstr(field, arg) != NULL);
+            if ((mode == 2 && match) || (mode == 3 && !match)) {
+              if (!first && o + 1 < sizeof out) out[o++] = '\n';
+              first = 0;
+              if (o + fl < sizeof out) {
+                memcpy(out + o, field, fl); o += fl;
+              } else if (o < sizeof out - 1) {
+                size_t take = sizeof out - 1 - o;
+                memcpy(out + o, field, take); o += take;
+              }
+              out[o] = 0;
+              nfields++;
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_num(vm, mode == 2 ? "GREPIN_N" : "GREPVIN_N", nfields);
+    } else {
+      /* SORTIN / UNIQIN — collect fields, qsort, optional dedupe */
+      enum { MAXF = 512, MAXFL = 256 };
+      char fields[MAXF][MAXFL];
+      int idx[MAXF];
+      int nf = 0, i, j;
+      const char *p, *start;
+      size_t o = 0;
+      int first = 1;
+      p = cur;
+      if (cur[0]) {
+        while (*p && nf < MAXF) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          {
+            size_t fl = (size_t)(p - start);
+            if (fl >= MAXFL) fl = MAXFL - 1;
+            memcpy(fields[nf], start, fl);
+            fields[nf][fl] = 0;
+            idx[nf] = nf;
+            nf++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      /* simple insertion sort by field text */
+      for (i = 1; i < nf; i++) {
+        int key = idx[i];
+        j = i - 1;
+        while (j >= 0 && strcmp(fields[idx[j]], fields[key]) > 0) {
+          idx[j + 1] = idx[j];
+          j--;
+        }
+        idx[j + 1] = key;
+      }
+      out[0] = 0;
+      nfields = 0;
+      for (i = 0; i < nf; i++) {
+        const char *f = fields[idx[i]];
+        size_t fl;
+        if (mode == 5 && i > 0 && strcmp(fields[idx[i - 1]], f) == 0)
+          continue; /* uniq */
+        fl = strlen(f);
+        if (!first && o + 1 < sizeof out) out[o++] = '\n';
+        first = 0;
+        if (o + fl < sizeof out) {
+          memcpy(out + o, f, fl); o += fl;
+        } else if (o < sizeof out - 1) {
+          size_t take = sizeof out - 1 - o;
+          memcpy(out + o, f, take); o += take;
+        }
+        out[o] = 0;
+        nfields++;
+      }
+      var_set_num(vm, mode == 5 ? "UNIQIN_N" : "SORTIN_N", nfields);
+    }
+
+    var_set_str(vm, name, out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    var_set_num(vm, "LAST_N", nfields);
+    vm->last_n = nfields;
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s n=%ld\n", op, name, nfields);
+    bump(vm);
+    return 1;
   }
   return 0;
 }
