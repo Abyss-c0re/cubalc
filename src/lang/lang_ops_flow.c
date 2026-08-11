@@ -1244,6 +1244,240 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SENDANY|TRYSENDANY obj methods… [WITH args…] — SEND first existing method.
+   * Soft TRYSENDANY: OK=0 if obj miss or none of methods exist.
+   * Usability: OOP plugin hooks without HASMETHODANY+IF+SEND glue · bag/CSV.
+   * Twin of CALLANY for method plane. 0-arity when no WITH. */
+  if (kw(&L->cur, "SENDANY") || kw(&L->cur, "SEND_ANY") ||
+      kw(&L->cur, "SENDFIRST") || kw(&L->cur, "FIRSTMETHOD") ||
+      kw(&L->cur, "INVOKEANY") || kw(&L->cur, "CALLMETHODANY") ||
+      kw(&L->cur, "TRYSENDANY") || kw(&L->cur, "TRY_SEND_ANY") ||
+      kw(&L->cur, "SOFTSENDANY") || kw(&L->cur, "SENDANYSOFT") ||
+      kw(&L->cur, "NEEDSENDANY") || kw(&L->cur, "REQUIRESENDANY")) {
+    int soft = kw(&L->cur, "TRYSENDANY") || kw(&L->cur, "TRY_SEND_ANY") ||
+               kw(&L->cur, "SOFTSENDANY") || kw(&L->cur, "SENDANYSOFT");
+    char oname[48];
+    char names[32][48];
+    char mname[48];
+    int nname = 0, i, aln = L->cur.line;
+    ObjInst *ob;
+    ClassDef *cd = NULL;
+    MethodDef *md = NULL;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail_at(vm, L, "SENDANY needs object methods… [WITH args] — SENDANY obj tick update");
+      return -1;
+    }
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "WITH") || kw(&L->cur, "ARGS") || kw(&L->cur, "USING") ||
+           kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "SEND") || kw(&L->cur, "TRYSEND") || kw(&L->cur, "SENDANY") ||
+           kw(&L->cur, "TRYSENDANY") || kw(&L->cur, "SENDALL") || kw(&L->cur, "CALL") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "LISTMETHODS") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "GETF") ||
+           kw(&L->cur, "SETF")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] &&
+                   !strchr(vv->sval, '\n') && !strchr(vv->sval, ',') &&
+                   !strchr(vv->sval, ' ')) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "ARGS") || kw(&L->cur, "USING") ||
+        kw(&L->cur, "ON"))
+      lex_next(L);
+    if (nname == 0) {
+      if (soft) {
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "SEND_N", 0);
+        var_set_num(vm, "SENDANY_N", 0);
+        var_set_num(vm, "TRYSENDANY_N", 0);
+        var_set_str(vm, "SENDANY_METHOD", "");
+        var_set_str(vm, "METHOD", "");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "SENDANY: need methods — SENDANY obj tick update WITH arg");
+        var_set_str(vm, "ERR", "SENDANY: need methods — SENDANY obj tick update WITH arg");
+        bump(vm);
+        return 1;
+      }
+      fail_at(vm, L, "SENDANY obj methods… [WITH args] — SENDANY obj tick update");
+      return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      char sug[48], ebuf[160], base[96];
+      oop_suggest_obj(vm, oname, sug, sizeof sug);
+      snprintf(base, sizeof base, "SENDANY unknown object %s", oname);
+      oop_err_suggest(ebuf, sizeof ebuf, base, sug);
+      while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
+             L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+        if (L->cur.kind == TK_STR) lex_next(L);
+        else (void)parse_expr(vm, L);
+      }
+      if (soft) {
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "SEND_N", 0);
+        var_set_num(vm, "SENDANY_N", 0);
+        var_set_num(vm, "TRYSENDANY_N", 0);
+        var_set_str(vm, "SENDANY_METHOD", "");
+        var_set_str(vm, "METHOD", "");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+        bump(vm);
+        return 1;
+      }
+      fail(vm, ebuf);
+      return -1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    for (i = 0; i < nname; i++) {
+      md = oop_find_method(cd, names[i]);
+      if (md) {
+        snprintf(mname, sizeof mname, "%s", names[i]);
+        break;
+      }
+    }
+    if (!md) {
+      char ebuf[220];
+      size_t o = 0;
+      ebuf[0] = 0;
+      for (i = 0; i < nname && o + 50 < sizeof ebuf; i++) {
+        int ln;
+        if (i && o + 1 < sizeof ebuf) { ebuf[o++] = ','; ebuf[o] = 0; }
+        ln = snprintf(ebuf + o, sizeof ebuf - o, "%s", names[i]);
+        if (ln > 0) o += (size_t)ln;
+      }
+      {
+        char msg[300];
+        snprintf(msg, sizeof msg,
+                 "SENDANY miss line %d: %s none of [%s] — CLASS METHOD · HASMETHODANY · LISTMETHODS",
+                 aln, cd->name, ebuf[0] ? ebuf : "?");
+        while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
+               L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+               (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+          if (L->cur.kind == TK_STR) lex_next(L);
+          else (void)parse_expr(vm, L);
+        }
+        if (soft) {
+          var_set_num(vm, "LAST_N", 0);
+          vm->last_n = 0;
+          var_set_num(vm, "SEND_N", 0);
+          var_set_num(vm, "SENDANY_N", 0);
+          var_set_num(vm, "TRYSENDANY_N", 0);
+          var_set_str(vm, "SENDANY_METHOD", "");
+          var_set_str(vm, "METHOD", "");
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", msg);
+          var_set_str(vm, "ERR", msg);
+          bump(vm);
+          return 1;
+        }
+        fail_at(vm, L, msg);
+        return -1;
+      }
+    }
+    {
+      int got = oop_bind_args(vm, L, md->params, md->n_params);
+      char qname[96];
+      int ag;
+      snprintf(qname, sizeof qname, "%s.%s", cd->name, md->name);
+      ag = oop_arity_gate(vm, "SENDANY", qname, md->params, md->n_params, got, soft);
+      if (ag < 0) return -1;
+      if (ag > 0) {
+        var_set_num(vm, "SEND_N", 0);
+        var_set_num(vm, "SENDANY_N", 0);
+        var_set_num(vm, "TRYSENDANY_N", 0);
+        var_set_str(vm, "SENDANY_METHOD", md->name);
+        var_set_str(vm, "METHOD", md->name);
+        bump(vm);
+        return 1;
+      }
+    }
+    if (oop_run_method(vm, ob, md) < 0) return -1;
+    var_set_num(vm, "SEND_N", 1);
+    var_set_num(vm, "SENDANY_N", 1);
+    var_set_num(vm, "TRYSENDANY_N", 1);
+    var_set_str(vm, "SENDANY_METHOD", md->name);
+    var_set_str(vm, "METHOD", md->name);
+    var_set_str(vm, "OBJ", oname);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# SENDANY %s.%s (of %d)\n", oname, md->name, nname);
+    bump(vm);
+    return 1;
+  }
+
   /* SENDALL|BROADCAST [Class] method [args]
    * — invoke method on every live object (optional class filter).
    * Skips objects missing the method (soft). LAST_N/SENDALL_N = call count.

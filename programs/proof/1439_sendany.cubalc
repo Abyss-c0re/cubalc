@@ -1,0 +1,101 @@
+# SENDANY / TRYSENDANY — first existing method dispatch (CALLANY twin)
+
+HOLD_FLASH 1
+
+CLASS Cell
+  FIELD n 0
+  METHOD tick
+    GETF THIS n
+    LET v = LAST_N + 1
+    SETF THIS n v
+    RET v
+  END
+  METHOD update
+    GETF THIS n
+    LET v = LAST_N + 10
+    SETF THIS n v
+    RET v
+  END
+  METHOD bump d
+    GETF THIS n
+    LET v = LAST_N + d
+    SETF THIS n v
+    RET v
+  END
+END
+
+NEW Cell c
+SETF c n 0
+
+# first hit among ghosts + real (0-arity)
+SENDANY c ghost_m tick update
+ASSERT OK == 1
+ASSERT SEND_N == 1
+ASSERT SENDANY_N == 1
+ASSERT SENDANY_METHOD == "tick"
+ASSERT METHOD == "tick"
+ASSERT LAST_N == 1
+
+# SENDFIRST alias
+CLASS Node
+  FIELD v 0
+  METHOD refresh
+    SETF THIS v 5
+    RET 5
+  END
+  METHOD sync
+    SETF THIS v 9
+    RET 9
+  END
+END
+NEW Node n1
+SENDFIRST n1 ghost_x refresh sync
+ASSERT SENDANY_METHOD == "refresh"
+ASSERT LAST_N == 5
+
+# WITH args
+NEW Cell c2
+SETF c2 n 0
+SENDANY c2 ghost_add bump WITH 3
+ASSERT SENDANY_METHOD == "bump"
+ASSERT LAST_N == 3
+
+# bag of method names
+LET hooks = "nope\nupdate\ntick"
+NEW Cell c3
+SETF c3 n 0
+SENDANY c3 hooks
+ASSERT SENDANY_METHOD == "update"
+ASSERT LAST_N == 10
+
+# CSV bag
+LET opts = "ghost,tick,update"
+NEW Cell c4
+SETF c4 n 0
+SENDANY c4 opts
+ASSERT SENDANY_METHOD == "tick"
+ASSERT LAST_N == 1
+
+# soft miss methods
+TRYSENDANY c ghost_a ghost_b
+ASSERT OK == 0
+ASSERT SENDANY_N == 0
+CLEAR_ERR
+
+# soft miss object
+TRYSENDANY missing_obj tick update
+ASSERT OK == 0
+CLEAR_ERR
+
+# SOFTSENDANY alias
+SOFTSENDANY c missing_only
+ASSERT OK == 0
+CLEAR_ERR
+
+HASFORM "SENDANY"
+ASSERT LAST_N == 1
+HASFORM "TRYSENDANY"
+ASSERT LAST_N == 1
+
+PRINT "1439_sendany ok"
+PASS
