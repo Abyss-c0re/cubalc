@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 943,
-  "version": "1.15.936-usability",
-  "item": "IFFIELD / IFHASFIELD",
-  "item_id": 943,
-  "title": "IFFIELD · IFHASFIELD · field exists branches",
-  "commit": "67281995",
-  "summary": "Field exists branches with ELSE/END; no HASFIELD+IF glue; proof 1481 PASS.",
+  "iter": 944,
+  "version": "1.15.937-usability",
+  "item": "IFFRESH / IFSTALE",
+  "item_id": 944,
+  "title": "IFFRESH · IFSTALE · path age branches",
+  "commit": "a99d56ed",
+  "summary": "Path age branches with ELSE/END; no SYS AGE+IF glue; proof 1482 PASS.",
   "proofs": [
-    "1481_iffield PASS",
+    "1482_iffresh_ifstale PASS",
+    "1481_iffield regression PASS",
     "1480_ifenv regression PASS",
-    "1479_iffile regression PASS",
-    "1478_ifobj regression PASS"
+    "1479_iffile regression PASS"
   ],
-  "when": "2026-08-11T19:08:27Z",
+  "when": "2026-08-11T19:18:54Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "67281995657d3a010d21d0cd8d56dda85942e485",
-  "note": "soft GETF/SETF paths without probe+IF glue"
+  "sha": "a99d56ed049e5c5f922c54f34dd9ad357a1c271a",
+  "note": "plate rebuild gates without age probe+IF glue"
 }
