@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 948,
-  "version": "1.15.942-usability",
-  "item": "IFJSONHAS / IFJSONMISS",
-  "item_id": 948,
-  "title": "IFJSONHAS \u00b7 IFJSONMISS \u00b7 JSON plate key branches",
-  "commit": "bbd64ccc",
-  "summary": "JSON key present/missing branches; no SYS JSONHAS+IF glue; proof 1487 PASS.",
+  "iter": 949,
+  "version": "1.15.943-usability",
+  "item": "IFNUM / IFSTR / IFVARTYPE",
+  "item_id": 949,
+  "title": "IFNUM \u00b7 IFSTR \u00b7 IFVARTYPE \u00b7 var type branches",
+  "commit": "dd680777",
+  "summary": "Var type branches; no TYPEOF+IF glue; IFVARTYPE avoids IFCLASS IFTYPE alias; proof 1488 PASS.",
   "proofs": [
-    "1487_ifjsonhas_ifjsonmiss PASS",
-    "1486_ifeqfile regression PASS"
+    "1488_ifnum_ifstr_iftype PASS",
+    "1487_ifjsonhas regression PASS"
   ],
-  "when": "2026-08-11T20:31:14Z",
+  "when": "2026-08-11T21:05:28Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "bbd64ccc021fa63227adad997b1939da1ae39b94",
-  "note": "plate contract gates without key probe+IF glue"
+  "sha": "dd6807770a845f7316af0b87d8304413c0f4498a",
+  "note": "coerce/branch without TYPEOF probe glue; thrash restore mid-tick"
 }
