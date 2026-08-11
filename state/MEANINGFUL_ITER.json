@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 922,
-  "version": "1.15.915-usability",
-  "item": "COALESCETO / NTHIN / HEADIN / TAILIN vars",
-  "item_id": 922,
-  "title": "COALESCETO \u00b7 NVLTO \u00b7 NTHIN \u00b7 HEADIN \u00b7 TAILIN \u00b7 defaults + bag peels",
-  "commit": "df8ab2a5",
-  "summary": "First non-empty into named var; bag field peels to LAST; no IFEMPTY/SYS NTH glue; proof 1460 PASS.",
+  "iter": 923,
+  "version": "1.15.916-usability",
+  "item": "LENOF / STARTSIN / ENDSIN / CONTAINSIN / EQSIN / INDEXIN vars",
+  "item_id": 923,
+  "title": "LENOF \u00b7 STARTSIN \u00b7 ENDSIN \u00b7 CONTAINSIN \u00b7 EQSIN \u00b7 INDEXIN \u00b7 var string probes",
+  "commit": "481ebc3d",
+  "summary": "Named-var string probes for IF guards without SYS LEN/HAS/EQS glue; proof 1461 PASS.",
   "proofs": [
-    "1460_coalesceto_nthin PASS",
-    "1460_cli_coalesceto_nthin PASS",
-    "1459_mul_divby_abs regression PASS"
+    "1461_lenof_startsin PASS",
+    "1461_cli_lenof_startsin PASS",
+    "1460_coalesceto_nthin regression PASS"
   ],
-  "when": "2026-08-11T14:28:25Z",
+  "when": "2026-08-11T14:38:26Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "df8ab2a5ac596f58b1e4617636b9e52a4df27298",
-  "note": "agent config defaults and bag peeks without EMPTY+NTH soup"
+  "sha": "481ebc3d2524aa325899da3f166e7dccacca51b9",
+  "note": "agent path/message IF guards without SYS string soup"
 }
