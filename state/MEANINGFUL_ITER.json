@@ -1,17 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 869,
-  "version": "1.15.862-usability",
-  "item": "cubalc guards contract catalog",
-  "item_id": 869,
-  "title": "cubalc guards \u00b7 contracts \u00b7 NEED_*/HARDFAIL map \u00b7 cubalc.guards.v1",
-  "commit": "8845d622223f01479ec93648c7a44e881b666a1a",
-  "summary": "CLI guards catalog NEED_*+soft+hardfail plane map; filter; proof 1408 PASS.",
+  "iter": 870,
+  "version": "1.15.863-usability",
+  "item": "service_session + service_boot + cubalc init --service-boot",
+  "item_id": 870,
+  "title": "service_session \u00b7 service_boot \u00b7 SERVICE_SESSION_OK \u00b7 init --service-boot",
+  "commit": "f3e87d2c9e9683178a99333e4800ab5cb6d1ef5b",
+  "summary": "full_session+live_session SERVICE_SESSION_OK; init --service-boot n=34; proof 1409 PASS.",
   "proofs": [
-    "1408_cli_guards PASS"
+    "1409_service_session PASS",
+    "1409_service_boot PASS",
+    "1409_cli_service_session PASS",
+    "1409_cli_init_service PASS"
   ],
-  "when": "2026-08-11T04:24:08Z",
+  "when": "2026-08-11T04:34:13Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "8845d622223f01479ec93648c7a44e881b666a1a",
-  "note": "agents discover INCLUDE contracts without reading every guard source"
+  "sha": "f3e87d2c9e9683178a99333e4800ab5cb6d1ef5b",
+  "note": "fleet service one INCLUDE \u00b7 bare --service remains product_session"
 }
