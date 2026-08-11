@@ -22151,9 +22151,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
-  /* CALLANY|TRYCALLANY names… [WITH args…] — call first defined FN (HASFNANY dispatch).
-   * Soft TRYCALLANY: OK=0 if none defined. Hard CALLANY: fail-fast.
-   * Usability: plugin hooks without HASFNANY+IF+CALL glue · bag/CSV/idents.
+  /* CALLANY|TRYCALLANY names… [WITH args…] [OR|DEFAULT fb]
+   * Soft TRYCALLANY: OK=0 if none defined (no OR). Hard CALLANY: fail-fast.
+   * … OR fb → none defined / soft arity miss → LAST=fb, OK=1, CALLANY_OR=1 (CALL OR twin).
+   * Usability: multi-plugin hooks with default without HASFNANY+IF+CALL glue.
    * 0-arity when no WITH; WITH introduces shared args for the chosen FN. */
   if (kw(&L->cur, "CALLANY") || kw(&L->cur, "CALL_ANY") ||
       kw(&L->cur, "CALLFIRST") || kw(&L->cur, "FIRSTFN") ||
@@ -22180,6 +22181,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
            kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
            kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
            kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "OR") || kw(&L->cur, "FALLBACK") ||
            kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
            kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
            kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
@@ -22255,12 +22257,30 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         kw(&L->cur, "ON"))
       lex_next(L);
     if (nname == 0) {
+      char fb0[256];
+      int or0 = call_parse_or_fallback(vm, L, fb0, sizeof fb0);
+      if (or0 < 0) return -1;
+      if (or0 > 0) {
+        call_apply_or_last(vm, fb0);
+        var_set_num(vm, "CALLED", 0);
+        var_set_num(vm, "CALLANY_N", 0);
+        var_set_num(vm, "TRYCALLANY_N", 0);
+        var_set_num(vm, "CALLANY_OR", 1);
+        var_set_str(vm, "CALLANY_FN", "");
+        var_set_str(vm, "FN", "");
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST_ERR", "");
+        var_set_str(vm, "ERR", "");
+        bump(vm);
+        return 1;
+      }
       if (soft) {
         var_set_num(vm, "LAST_N", 0);
         vm->last_n = 0;
         var_set_num(vm, "CALLED", 0);
         var_set_num(vm, "CALLANY_N", 0);
         var_set_num(vm, "TRYCALLANY_N", 0);
+        var_set_num(vm, "CALLANY_OR", 0);
         var_set_str(vm, "CALLANY_FN", "");
         var_set_str(vm, "FN", "");
         var_set_num(vm, "OK", 0);
@@ -22269,7 +22289,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         bump(vm);
         return 1;
       }
-      fail_at(vm, L, "CALLANY names… [WITH args] — CALLANY greeter hello WITH x");
+      fail_at(vm, L, "CALLANY names… [WITH args] [OR fb] — CALLANY greeter hello WITH x");
       return -1;
     }
     for (i = 0; i < nname; i++) {
@@ -22297,17 +22317,40 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         snprintf(msg, sizeof msg,
                  "CALLANY miss line %d: none of [%s] defined — DEFINE/INCLUDE · HASFNANY · LISTFNS",
                  aln, ebuf[0] ? ebuf : "?");
-        /* drain args so soft recovery can continue */
+        /* drain args so soft/OR recovery can continue (stop at OR via oop_stmt_kw) */
         while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
                L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
                (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
           if (L->cur.kind == TK_STR) lex_next(L);
           else (void)parse_expr(vm, L);
         }
+        {
+          char fb[256];
+          int or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+          if (or_rc < 0) return -1;
+          if (or_rc > 0) {
+            call_apply_or_last(vm, fb);
+            var_set_num(vm, "CALLED", 0);
+            var_set_num(vm, "CALLANY_N", 0);
+            var_set_num(vm, "TRYCALLANY_N", 0);
+            var_set_num(vm, "CALLANY_OR", 1);
+            var_set_str(vm, "CALLANY_FN", "");
+            var_set_str(vm, "FN", "");
+            var_set_num(vm, "OK", 1);
+            var_set_str(vm, "LAST_ERR", "");
+            var_set_str(vm, "ERR", "");
+            if (vm->trace)
+              fprintf(vm->trace, "# CALLANY OR fallback after miss [%s]\n",
+                      ebuf[0] ? ebuf : "?");
+            bump(vm);
+            return 1;
+          }
+        }
         if (soft) {
           var_set_num(vm, "CALLED", 0);
           var_set_num(vm, "CALLANY_N", 0);
           var_set_num(vm, "TRYCALLANY_N", 0);
+          var_set_num(vm, "CALLANY_OR", 0);
           var_set_num(vm, "LAST_N", 0);
           vm->last_n = 0;
           var_set_str(vm, "CALLANY_FN", "");
@@ -22327,9 +22370,27 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       int ag = oop_arity_gate(vm, "CALLANY", fn->name, fn->params, fn->n_params, got, soft);
       if (ag < 0) return -1;
       if (ag > 0) {
+        char fb[256];
+        int or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+        if (or_rc < 0) return -1;
+        if (or_rc > 0) {
+          call_apply_or_last(vm, fb);
+          var_set_num(vm, "CALLED", 0);
+          var_set_num(vm, "CALLANY_N", 0);
+          var_set_num(vm, "TRYCALLANY_N", 0);
+          var_set_num(vm, "CALLANY_OR", 1);
+          var_set_str(vm, "FN", fn->name);
+          var_set_str(vm, "CALLANY_FN", fn->name);
+          var_set_num(vm, "OK", 1);
+          var_set_str(vm, "LAST_ERR", "");
+          var_set_str(vm, "ERR", "");
+          bump(vm);
+          return 1;
+        }
         var_set_num(vm, "CALLED", 0);
         var_set_num(vm, "CALLANY_N", 0);
         var_set_num(vm, "TRYCALLANY_N", 0);
+        var_set_num(vm, "CALLANY_OR", 0);
         var_set_str(vm, "FN", fn->name);
         var_set_str(vm, "CALLANY_FN", fn->name);
         bump(vm);
@@ -22348,6 +22409,13 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       if (exec_stmts_until(vm, &fl, "END", NULL) < 0) return -1;
     }
     vm->return_fn = 0;
+    /* discard unused OR fallback after successful CALLANY */
+    {
+      char fb[256];
+      int or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+      if (or_rc < 0) return -1;
+      var_set_num(vm, "CALLANY_OR", 0);
+    }
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# CALLANY hit %s (of %d)\n", fn->name, nname);

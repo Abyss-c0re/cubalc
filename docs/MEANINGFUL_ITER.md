@@ -933,6 +933,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 902. ~~**`cubalc run -N` / `--require-fns` / `CUBALC_REQUIRE_FNS`**~~ **done** (host FN floor after -I preload · NEEDFNS dual · proof 1440).
 903. ~~**`TRYCALL` / `CALL … OR` fallback**~~ **done** (soft plugin default · CALL_OR · GETF/ENV twin · proof 1441).
 904. ~~**`TRYSEND` / `SEND … OR` fallback**~~ **done** (soft method default · SEND_OR · CALL OR twin · proof 1442).
+905. ~~**`CALLANY` / `TRYCALLANY … OR` fallback**~~ **done** (multi-plugin default · CALLANY_OR · CALL OR twin · proof 1443).
 
 
 

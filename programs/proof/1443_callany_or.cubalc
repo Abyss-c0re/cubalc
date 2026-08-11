@@ -1,0 +1,78 @@
+# CALLANY / TRYCALLANY … OR fallback — multi-plugin default (CALL OR twin)
+
+HOLD_FLASH 1
+
+FN hello name
+  RET name
+END
+
+FN add a b
+  RET a + b
+END
+
+FN ping
+  RET 7
+END
+
+# hit — OR unused
+CALLANY ghost_a hello ping WITH "world" OR "fallback"
+ASSERT OK == 1
+ASSERT CALLED == 1
+ASSERT CALLANY_N == 1
+ASSERT CALLANY_OR == 0
+ASSERT CALLANY_FN == "hello"
+ASSERT LAST == "world"
+
+# miss all with string fallback (hard CALLANY becomes soft via OR)
+CALLANY ghost_only_a ghost_only_b WITH "x" OR "default_hi"
+ASSERT OK == 1
+ASSERT CALLED == 0
+ASSERT CALLANY_N == 0
+ASSERT CALLANY_OR == 1
+ASSERT LAST == "default_hi"
+ASSERT CALLANY_FN == ""
+
+# numeric DEFAULT alias
+TRYCALLANY missing_a missing_b DEFAULT 42
+ASSERT OK == 1
+ASSERT CALLANY_OR == 1
+ASSERT LAST_N == 42
+
+# FALLBACK alias + 0-arity miss
+CALLANY no_plugin FALLBACK "z"
+ASSERT CALLANY_OR == 1
+ASSERT LAST == "z"
+
+# successful multi-arg still works; trailing OR discarded
+CALLANY ghost_z add WITH 3 4 OR 99
+ASSERT CALLED == 1
+ASSERT CALLANY_OR == 0
+ASSERT CALLANY_FN == "add"
+ASSERT LAST_N == 7
+
+# 0-arity hit with unused OR
+CALLANY ghost_z ping OR 0
+ASSERT CALLANY_OR == 0
+ASSERT CALLANY_FN == "ping"
+ASSERT LAST_N == 7
+
+# bare TRYCALLANY miss still soft without OR
+TRYCALLANY totally_missing_a totally_missing_b
+ASSERT OK == 0
+ASSERT CALLED == 0
+ASSERT CALLANY_OR == 0
+CLEAR_ERR
+
+# bag of names + OR miss
+LET hooks = "nope_a\nnope_b"
+CALLANY hooks OR "bag_fb"
+ASSERT CALLANY_OR == 1
+ASSERT LAST == "bag_fb"
+
+HASFORM "CALLANY"
+ASSERT LAST_N == 1
+HASFORM "TRYCALLANY"
+ASSERT LAST_N == 1
+
+PRINT "1443_callany_or ok"
+PASS
