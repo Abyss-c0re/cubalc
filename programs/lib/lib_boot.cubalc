@@ -1,0 +1,18 @@
+# INCLUDE lib_boot — agent preamble + INCLUDE-path lib contract one-shot
+# Usability: agent_boot + lib_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_LIBS = "agent_boot\nplate_session"
+#   DEFAULT NEED_LIB_ANY = "path_boot\nrw_boot"
+#   DEFAULT LIB_GUARD_SOFT = 0
+#   INCLUDE lib_boot
+# Soft miss: DEFAULT LIB_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --lib
+# Twin of bin_boot (PATH tools) / path_boot (fs) for programs/lib modules.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_LIBS = ""
+DEFAULT NEED_LIB_ANY = ""
+DEFAULT LIB_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE lib_guard

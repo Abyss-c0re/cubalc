@@ -1,0 +1,124 @@
+# INCLUDE lib_guard — fail-fast INCLUDE-path lib contract (ALL + optional ANY)
+# Usability: agent module gate without N× HASLIB / REQUIRE LIB glue.
+#
+#   DEFAULT NEED_LIBS = "agent_boot\nplate_session"   # all-of (REQUIRE LIB / HASLIB)
+#   DEFAULT NEED_LIB_ANY = "path_boot\nrw_boot"       # any-of
+#   DEFAULT LIB_GUARD_SOFT = 0                       # 1 → soft (OK=0, no fatal)
+#   INCLUDE lib_guard
+#
+# Empty NEED_LIBS skips ALL gate. Empty NEED_LIB_ANY skips ANY gate.
+# Soft dual leaves LIBMISS / LIBHAVE bags for agents (CLEAR_ERR after).
+# Twin of bin_guard (PATH tools) / form_guard (HELP forms) for programs/lib.
+# HOLD_FLASH not required (same policy as path_guard / bin_guard).
+
+DEFAULT NEED_LIBS = ""
+DEFAULT NEED_LIB_ANY = ""
+DEFAULT LIB_GUARD_SOFT = 0
+
+# --- ALL-of: every lib stem must resolve on INCLUDE path ---
+SYS EMPTY NEED_LIBS
+IF LAST_N == 1
+  LET LIB_GUARD_ALL_OK = 1
+  LET LIBMISS = ""
+  LET LIBHAVE = ""
+  LET LIBMISS_N = 0
+  LET LIBHAVE_N = 0
+ELSE
+  LET LIBMISS = ""
+  LET LIBHAVE = ""
+  LET LIBMISS_N = 0
+  LET LIBHAVE_N = 0
+  IF LIB_GUARD_SOFT
+    EACH LINE b IN NEED_LIBS
+      HASLIB b
+      IF LAST_N == 1
+        LET LIBHAVE_N = LIBHAVE_N + 1
+        IF LIBHAVE == ""
+          LET LIBHAVE = b
+        ELSE
+          LET LIBHAVE = LIBHAVE + "\n" + b
+        END
+      ELSE
+        LET LIBMISS_N = LIBMISS_N + 1
+        IF LIBMISS == ""
+          LET LIBMISS = b
+        ELSE
+          LET LIBMISS = LIBMISS + "\n" + b
+        END
+      END
+    END
+    IF LIBMISS_N == 0
+      LET LIB_GUARD_ALL_OK = 1
+      LET OK = 1
+    ELSE
+      LET LIB_GUARD_ALL_OK = 0
+      LET OK = 0
+      LET LAST_ERR = "LIB_GUARD ALL miss — missing: " + LIBMISS
+      LET ERR = LAST_ERR
+    END
+  ELSE
+    EACH LINE b IN NEED_LIBS
+      REQUIRE LIB b
+    END
+    LET LIB_GUARD_ALL_OK = 1
+  END
+END
+
+# --- ANY-of: at least one lib present ---
+SYS EMPTY NEED_LIB_ANY
+IF LAST_N == 1
+  LET LIB_GUARD_ANY_OK = 1
+ELSE
+  LET LIB_ANY_HIT = 0
+  LET LIB_ANY_HAVE = ""
+  LET LIB_ANY_MISS = ""
+  EACH LINE b IN NEED_LIB_ANY
+    HASLIB b
+    IF LAST_N == 1
+      LET LIB_ANY_HIT = 1
+      IF LIB_ANY_HAVE == ""
+        LET LIB_ANY_HAVE = b
+      ELSE
+        LET LIB_ANY_HAVE = LIB_ANY_HAVE + "\n" + b
+      END
+    ELSE
+      IF LIB_ANY_MISS == ""
+        LET LIB_ANY_MISS = b
+      ELSE
+        LET LIB_ANY_MISS = LIB_ANY_MISS + "\n" + b
+      END
+    END
+  END
+  IF LIB_ANY_HIT == 1
+    LET LIB_GUARD_ANY_OK = 1
+    IF LIBHAVE == ""
+      LET LIBHAVE = LIB_ANY_HAVE
+    END
+  ELSE
+    LET LIB_GUARD_ANY_OK = 0
+    IF LIB_GUARD_SOFT
+      LET OK = 0
+      IF LIBMISS == ""
+        LET LIBMISS = LIB_ANY_MISS
+      END
+      LET LAST_ERR = "LIB_GUARD ANY miss — need one of: " + NEED_LIB_ANY
+      LET ERR = LAST_ERR
+    ELSE
+      FAIL "LIB_GUARD ANY miss — need one of: " + NEED_LIB_ANY
+    END
+  END
+END
+
+# overall soft status (hard paths already failed fatally if miss)
+IF LIB_GUARD_ALL_OK
+  IF LIB_GUARD_ANY_OK
+    LET LIB_GUARD_OK = 1
+    LET OK = 1
+  ELSE
+    LET LIB_GUARD_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET LIB_GUARD_OK = 0
+  LET OK = 0
+END

@@ -38837,6 +38837,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     int lib_path_guard = 0, lib_path_boot = 0;
     int lib_rw_guard = 0, lib_rw_boot = 0;
     int lib_bin_guard = 0, lib_bin_boot = 0;
+    int lib_lib_guard = 0, lib_lib_boot = 0;
     int lib_cap_boot = 0, lib_onboard_boot = 0, lib_discover_boot = 0, lib_open_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0;
     int include_path_set = 0, preload_set = 0, smx_key = 0, protect_plate = 0;
@@ -38881,6 +38882,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     lib_rw_boot = (access("programs/lib/rw_boot.cubalc", R_OK) == 0);
     lib_bin_guard = (access("programs/lib/bin_guard.cubalc", R_OK) == 0);
     lib_bin_boot = (access("programs/lib/bin_boot.cubalc", R_OK) == 0);
+    lib_lib_guard = (access("programs/lib/lib_guard.cubalc", R_OK) == 0);
+    lib_lib_boot = (access("programs/lib/lib_boot.cubalc", R_OK) == 0);
     lib_cap_boot = (access("programs/lib/cap_boot.cubalc", R_OK) == 0);
     lib_onboard_boot = (access("programs/lib/onboard_boot.cubalc", R_OK) == 0);
     lib_discover_boot = (access("programs/lib/discover_boot.cubalc", R_OK) == 0);
@@ -38919,6 +38922,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       "\"lib_path_guard\":%s,\"lib_path_boot\":%s,"
       "\"lib_rw_guard\":%s,\"lib_rw_boot\":%s,"
       "\"lib_bin_guard\":%s,\"lib_bin_boot\":%s,"
+      "\"lib_lib_guard\":%s,\"lib_lib_boot\":%s,"
       "\"lib_cap_boot\":%s,\"lib_onboard_boot\":%s,\"lib_discover_boot\":%s,"
       "\"lib_open_boot\":%s,\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
       "\"include_path_set\":%s,\"preload_set\":%s,\"core_protect_plate\":%s,"
@@ -38950,6 +38954,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lib_rw_boot ? "true" : "false",
       lib_bin_guard ? "true" : "false",
       lib_bin_boot ? "true" : "false",
+      lib_lib_guard ? "true" : "false",
+      lib_lib_boot ? "true" : "false",
       lib_cap_boot ? "true" : "false",
       lib_onboard_boot ? "true" : "false",
       lib_discover_boot ? "true" : "false",
@@ -61445,12 +61451,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       char name[160];
       cubalc_host_result hr;
       lex_next(L);
-      if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT){
-        fail(vm, "REQUIRE LIB name|path");
+      name[0] = 0;
+      /* Usability: REQUIRE LIB stem_var after EACH LINE / PICKLIB (twin of REQUIRE BIN). */
+      if (resolve_str_arg(vm, L, name, sizeof name) != 0) {
+        fail(vm, "REQUIRE LIB \"name\"|var|LAST");
         return -1;
       }
-      snprintf(name, sizeof name, "%s", L->cur.text);
-      lex_next(L);
+      if (!name[0]) {
+        fail(vm, "REQUIRE LIB empty name");
+        return -1;
+      }
       if (cubalc_host_find_cubalc(name, &hr) != 0){
         char msg[160];
         snprintf(msg, sizeof msg,

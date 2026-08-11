@@ -1,0 +1,80 @@
+# INCLUDE lib_guard — multi INCLUDE-path lib ALL + ANY contract
+
+HOLD_FLASH 1
+
+DEFAULT NEED_LIBS = ""
+DEFAULT NEED_LIB_ANY = ""
+DEFAULT LIB_GUARD_SOFT = 0
+INCLUDE lib_guard
+ASSERT LIB_GUARD_OK == 1
+ASSERT LIB_GUARD_ALL_OK == 1
+ASSERT LIB_GUARD_ANY_OK == 1
+
+# soft ALL miss
+LET NEED_LIBS = "agent_boot\nnosuch_cubalc_lib_all"
+LET NEED_LIB_ANY = ""
+LET LIB_GUARD_SOFT = 1
+INCLUDE lib_guard
+ASSERT LIB_GUARD_OK == 0
+ASSERT LIB_GUARD_ALL_OK == 0
+ASSERT LIBMISS_N >= 1
+SYS HASLINE LIBMISS "nosuch_cubalc_lib_all"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# soft ALL hit
+LET NEED_LIBS = "agent_boot\nbin_guard"
+LET LIB_GUARD_SOFT = 1
+INCLUDE lib_guard
+ASSERT LIB_GUARD_ALL_OK == 1
+ASSERT LIB_GUARD_OK == 1
+ASSERT LIBHAVE_N >= 2
+
+# soft ANY miss
+LET NEED_LIBS = ""
+LET NEED_LIB_ANY = "nosuch_lib_a\nnosuch_lib_b"
+LET LIB_GUARD_SOFT = 1
+INCLUDE lib_guard
+ASSERT LIB_GUARD_ANY_OK == 0
+ASSERT LIB_GUARD_OK == 0
+CLEAR_ERR
+
+# soft ANY hit
+LET NEED_LIB_ANY = "nosuch_lib_a\nagent_boot"
+LET LIB_GUARD_SOFT = 1
+INCLUDE lib_guard
+ASSERT LIB_GUARD_ANY_OK == 1
+ASSERT LIB_GUARD_OK == 1
+CLEAR_ERR
+
+# hard ALL
+LET NEED_LIBS = "agent_boot\nbin_boot"
+LET NEED_LIB_ANY = ""
+LET LIB_GUARD_SOFT = 0
+INCLUDE lib_guard
+ASSERT LIB_GUARD_OK == 1
+
+# hard ANY
+LET NEED_LIBS = ""
+LET NEED_LIB_ANY = "nosuch_lib_z\nagent_boot"
+LET LIB_GUARD_SOFT = 0
+INCLUDE lib_guard
+ASSERT LIB_GUARD_ANY_OK == 1
+ASSERT LIB_GUARD_OK == 1
+
+# combined
+LET NEED_LIBS = "agent_boot"
+LET NEED_LIB_ANY = "bin_guard\nnosuch_lib_z"
+LET LIB_GUARD_SOFT = 1
+INCLUDE lib_guard
+ASSERT LIB_GUARD_ALL_OK == 1
+ASSERT LIB_GUARD_ANY_OK == 1
+ASSERT LIB_GUARD_OK == 1
+
+HASFORM HASLIB
+ASSERT LAST_N == 1
+HASLIB lib_guard
+ASSERT LAST_N == 1
+
+PRINT "1397_lib_guard ok"
+PASS

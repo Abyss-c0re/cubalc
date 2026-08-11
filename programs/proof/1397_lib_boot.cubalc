@@ -1,0 +1,35 @@
+# INCLUDE lib_boot — agent_boot + lib_guard one-shot
+
+HOLD_FLASH 1
+
+DEFAULT NEED_LIBS = ""
+DEFAULT NEED_LIB_ANY = ""
+DEFAULT LIB_GUARD_SOFT = 0
+INCLUDE lib_boot
+ASSERT OK == 1
+ASSERT LIB_GUARD_OK == 1
+HASINCLUDE agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE lib_guard
+ASSERT LAST_N == 1
+HASINCLUDE lib_boot
+ASSERT LAST_N == 1
+HASLIB lib_boot
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST != ""
+
+LET NEED_LIBS = "nosuch_lib_boot_miss"
+LET NEED_LIB_ANY = ""
+LET LIB_GUARD_SOFT = 1
+INCLUDE lib_boot
+ASSERT LIB_GUARD_OK == 0
+CLEAR_ERR
+
+LET NEED_LIBS = "agent_boot"
+LET LIB_GUARD_SOFT = 0
+INCLUDE lib_boot
+ASSERT LIB_GUARD_OK == 1
+
+PASS
+PRINT "1397_lib_boot: PASS"
