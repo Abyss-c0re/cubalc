@@ -17379,30 +17379,32 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* HASMETHODS|NEEDMETHODS Class|obj method… — multi method capability gate (all-or-METHODMISS).
-   * Soft: LAST_N 0|1 · METHODMISS bag · NEEDMETHODS fail-fast first miss.
-   * Usability: agent SEND contracts without N× HASMETHOD glue · bag/CSV/idents.
-   * Twin of HASCLASSES for OOP method plane · dual REQUIRE METHOD multi. */
+  /* HASMETHODS|NEEDMETHODS Class|obj method… | Class.method bag —
+   * multi method capability gate (all-or-METHODMISS).
+   * Soft: LAST_N 0|1 · METHODMISS/METHMISS bag · NEEDMETHODS fail-fast first miss.
+   * Forms: HASMETHODS Cell tick init · HASMETHODS bag_of_Class.method (multi-class).
+   * Usability: agent SEND / method_guard contracts without N× HASMETHOD soup. */
   if (kw(&L->cur, "HASMETHODS") || kw(&L->cur, "HAS_METHODS") ||
       kw(&L->cur, "ALLMETHODS") || kw(&L->cur, "METHODSOK") ||
       kw(&L->cur, "NEEDMETHODS") || kw(&L->cur, "NEED_METHODS") ||
       kw(&L->cur, "REQUIREMETHODS") || kw(&L->cur, "MUSTMETHODS")) {
     int hard = kw(&L->cur, "NEEDMETHODS") || kw(&L->cur, "NEED_METHODS") ||
                kw(&L->cur, "REQUIREMETHODS") || kw(&L->cur, "MUSTMETHODS");
+    char first[1024];
     char target[48];
     char names[32][48];
     char miss[1024];
     ClassDef *cd = NULL;
     ObjInst *ob;
-    int nname = 0, nmiss = 0, i, aln = L->cur.line;
+    int nname = 0, nmiss = 0, i, aln = L->cur.line, dotted = 0;
     size_t mo = 0;
     lex_next(L);
     miss[0] = 0;
+    first[0] = 0;
     target[0] = 0;
-    /* target Class|obj */
     if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
       if (hard) {
-        fail_at(vm, L, "NEEDMETHODS Class|obj method… — NEEDMETHODS Cell tick init");
+        fail_at(vm, L, "NEEDMETHODS Class|obj method… — NEEDMETHODS Cell tick · bag Class.method");
         return -1;
       }
       var_set_str(vm, "LAST", "0");
@@ -17411,16 +17413,17 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", 0);
       var_set_num(vm, "HASMETHODS_N", 0);
       var_set_num(vm, "METHODMISS_N", 0);
+      var_set_num(vm, "METHMISS_N", 0);
       var_set_str(vm, "METHODMISS", "");
       var_set_str(vm, "METHMISS", "");
       var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", "HASMETHODS: need Class|obj method… — HASMETHODS Cell tick");
-      var_set_str(vm, "ERR", "HASMETHODS: need Class|obj method… — HASMETHODS Cell tick");
+      var_set_str(vm, "LAST_ERR", "HASMETHODS: need Class|obj method… or Class.method bag");
+      var_set_str(vm, "ERR", "HASMETHODS: need Class|obj method… or Class.method bag");
       bump(vm);
       return 1;
     }
     if (L->cur.kind == TK_STR) {
-      snprintf(target, sizeof target, "%s", L->cur.text);
+      snprintf(first, sizeof first, "%s", L->cur.text);
       lex_next(L);
     } else {
       char id[48];
@@ -17428,20 +17431,157 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(id, sizeof id, "%s", L->cur.text);
       lex_next(L);
       if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
-        snprintf(target, sizeof target, "%s", id);
+        snprintf(first, sizeof first, "%s", id);
       } else {
         vv = var_get(vm, id, 0);
         if (vv && vv->is_str && vv->sval[0])
-          snprintf(target, sizeof target, "%s", vv->sval);
+          snprintf(first, sizeof first, "%s", vv->sval);
         else
-          snprintf(target, sizeof target, "%s", id);
+          snprintf(first, sizeof first, "%s", id);
       }
     }
-    /* method name list */
+    /* Class.method bag mode when first has dots and is bag/CSV or lone Class.method */
+    if (strchr(first, '.')) {
+      int more = (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT);
+      if (more && L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ")))
+        more = 0;
+      if (!more || strchr(first, '\n') || strchr(first, ',') || strchr(first, ' '))
+        dotted = 1;
+    }
+    if (dotted) {
+      const char *p = first;
+      while (*p && nname < 32) {
+        char tok[48];
+        size_t tl = 0;
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+          p++;
+        if (!*p) break;
+        while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+               p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+          tok[tl] = p[tl];
+          tl++;
+        }
+        tok[tl] = 0;
+        p += tl;
+        if (tok[0])
+          snprintf(names[nname++], sizeof names[0], "%s", tok);
+      }
+      if (nname == 0) {
+        if (hard) {
+          fail_at(vm, L, "NEEDMETHODS Class.method… — NEEDMETHODS Ticket.ping Order.pay");
+          return -1;
+        }
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASMETHODS_N", 0);
+        var_set_num(vm, "METHODMISS_N", 0);
+        var_set_num(vm, "METHMISS_N", 0);
+        var_set_str(vm, "METHODMISS", "");
+        var_set_str(vm, "METHMISS", "");
+        var_set_str(vm, "METHOD_ON", "*");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "HASMETHODS: need Class.method bag");
+        var_set_str(vm, "ERR", "HASMETHODS: need Class.method bag");
+        bump(vm);
+        return 1;
+      }
+      for (i = 0; i < nname; i++) {
+        char cname[48], mname[48];
+        const char *dot = strchr(names[i], '.');
+        int hit = 0;
+        cname[0] = 0;
+        mname[0] = 0;
+        if (dot && dot != names[i] && dot[1]) {
+          size_t cl = (size_t)(dot - names[i]);
+          if (cl + 1 < sizeof cname) {
+            memcpy(cname, names[i], cl);
+            cname[cl] = 0;
+          }
+          snprintf(mname, sizeof mname, "%s", dot + 1);
+          ob = oop_find_obj(vm, cname);
+          if (ob)
+            cd = &vm->classes[ob->class_idx];
+          else
+            cd = oop_find_class(vm, cname);
+          if (cd && oop_find_method(cd, mname))
+            hit = 1;
+        }
+        if (hit)
+          continue;
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+        if (hard) {
+          char em[220];
+          snprintf(em, sizeof em,
+                   "NEEDMETHODS miss line %d: '%s' (+%d more?) — CLASS METHOD · HASMETHOD · LISTMETHODS",
+                   aln, names[i], nname - i - 1);
+          fail_at(vm, L, em);
+          return -1;
+        }
+      }
+      var_set_str(vm, "METHODMISS", miss);
+      var_set_str(vm, "METHMISS", miss);
+      var_set_num(vm, "METHODMISS_N", nmiss);
+      var_set_num(vm, "METHMISS_N", nmiss);
+      var_set_num(vm, "HASMETHODS_N", nname - nmiss);
+      var_set_num(vm, "NEEDMETHODS_N", nname);
+      var_set_num(vm, "METHODS_N", nname);
+      var_set_str(vm, "METHOD_ON", "*");
+      if (nmiss == 0) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+      } else {
+        char em[220];
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        snprintf(em, sizeof em,
+                 "HASMETHODS miss (%d/%d): %s — CLASS METHOD · NEEDMETHODS · LISTMETHODS",
+                 nmiss, nname, miss);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# %s dotted n=%d miss=%d\n",
+                hard ? "NEEDMETHODS" : "HASMETHODS", nname, nmiss);
+      bump(vm);
+      return 1;
+    }
+    /* classic Class|obj method… form */
+    snprintf(target, sizeof target, "%s", first);
     while (nname < 32 &&
            (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
-      /* Do NOT use oop_stmt_kw here: it treats TICK/METHOD/FIELD as stmt heads,
-       * but those are common METHOD names (Cell.tick). Narrow control-only stop list. */
       if (L->cur.kind == TK_IDENT &&
           (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
            kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
@@ -17515,7 +17655,6 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
                    strchr(vv->sval, '.') == NULL &&
                    !strchr(vv->sval, '\n') && !strchr(vv->sval, ',') &&
                    !strchr(vv->sval, ' ')) {
-          /* single-token string-var method name (mirrors HASMETHOD expand) */
           snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
           lex_next(L);
         } else {
@@ -17535,6 +17674,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", 0);
       var_set_num(vm, "HASMETHODS_N", 0);
       var_set_num(vm, "METHODMISS_N", 0);
+      var_set_num(vm, "METHMISS_N", 0);
       var_set_str(vm, "METHODMISS", "");
       var_set_str(vm, "METHMISS", "");
       var_set_str(vm, "METHOD_ON", target);
@@ -17608,10 +17748,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* HASMETHODANY|NEEDMETHODANY Class|obj method… — multi method any-of gate (HASMETHODS twin).
-   * Soft: LAST_N 1 if any listed method exists · METHODHAVE bag · METHODMISS bag.
-   * NEEDMETHODANY fail-fast if none of the listed methods exist on Class|obj.
-   * Usability: optional SEND plugin method OR without N× HASMETHOD IF glue. */
+  /* HASMETHODANY|NEEDMETHODANY Class|obj method… | Class.method bag —
+   * multi method any-of gate (HASMETHODS twin).
+   * Soft: LAST_N 1 if any match · METHODHAVE/METHHAVE · METHODMISS/METHMISS.
+   * Forms: HASMETHODANY Cell tick die · HASMETHODANY bag_of_Class.method.
+   * NEEDMETHODANY fail-fast if none match. */
   if (kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "HAS_METHOD_ANY") ||
       kw(&L->cur, "ANYMETHOD") || kw(&L->cur, "METHODANY") ||
       kw(&L->cur, "HASANYMETHOD") || kw(&L->cur, "NEEDMETHODANY") ||
@@ -17619,20 +17760,22 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       kw(&L->cur, "MUSTMETHODANY")) {
     int hard = kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEED_METHOD_ANY") ||
                kw(&L->cur, "REQUIREMETHODANY") || kw(&L->cur, "MUSTMETHODANY");
+    char first[1024];
     char target[48];
     char names[32][48];
     char miss[1024], havebag[1024];
     ClassDef *cd = NULL;
     ObjInst *ob;
-    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line;
+    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line, dotted = 0;
     size_t mo = 0, ho = 0;
     lex_next(L);
     miss[0] = 0;
     havebag[0] = 0;
+    first[0] = 0;
     target[0] = 0;
     if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
       if (hard) {
-        fail_at(vm, L, "NEEDMETHODANY Class|obj method… — NEEDMETHODANY Cell tick die");
+        fail_at(vm, L, "NEEDMETHODANY Class|obj method… — NEEDMETHODANY Cell tick · bag Class.method");
         return -1;
       }
       var_set_str(vm, "LAST", "0");
@@ -17642,18 +17785,20 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "HASMETHODANY_N", 0);
       var_set_num(vm, "METHODMISS_N", 0);
       var_set_num(vm, "METHODHAVE_N", 0);
+      var_set_num(vm, "METHMISS_N", 0);
+      var_set_num(vm, "METHHAVE_N", 0);
       var_set_str(vm, "METHODMISS", "");
       var_set_str(vm, "METHODHAVE", "");
       var_set_str(vm, "METHMISS", "");
       var_set_str(vm, "METHHAVE", "");
       var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", "HASMETHODANY: need Class|obj method… — HASMETHODANY Cell tick");
-      var_set_str(vm, "ERR", "HASMETHODANY: need Class|obj method… — HASMETHODANY Cell tick");
+      var_set_str(vm, "LAST_ERR", "HASMETHODANY: need Class|obj method… or Class.method bag");
+      var_set_str(vm, "ERR", "HASMETHODANY: need Class|obj method… or Class.method bag");
       bump(vm);
       return 1;
     }
     if (L->cur.kind == TK_STR) {
-      snprintf(target, sizeof target, "%s", L->cur.text);
+      snprintf(first, sizeof first, "%s", L->cur.text);
       lex_next(L);
     } else {
       char id[48];
@@ -17661,18 +17806,175 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(id, sizeof id, "%s", L->cur.text);
       lex_next(L);
       if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
-        snprintf(target, sizeof target, "%s", id);
+        snprintf(first, sizeof first, "%s", id);
       } else {
         vv = var_get(vm, id, 0);
         if (vv && vv->is_str && vv->sval[0])
-          snprintf(target, sizeof target, "%s", vv->sval);
+          snprintf(first, sizeof first, "%s", vv->sval);
         else
-          snprintf(target, sizeof target, "%s", id);
+          snprintf(first, sizeof first, "%s", id);
       }
     }
+    if (strchr(first, '.')) {
+      int more = (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT);
+      if (more && L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ")))
+        more = 0;
+      if (!more || strchr(first, '\n') || strchr(first, ',') || strchr(first, ' '))
+        dotted = 1;
+    }
+    if (dotted) {
+      const char *p = first;
+      while (*p && nname < 32) {
+        char tok[48];
+        size_t tl = 0;
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+          p++;
+        if (!*p) break;
+        while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+               p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+          tok[tl] = p[tl];
+          tl++;
+        }
+        tok[tl] = 0;
+        p += tl;
+        if (tok[0])
+          snprintf(names[nname++], sizeof names[0], "%s", tok);
+      }
+      if (nname == 0) {
+        if (hard) {
+          fail_at(vm, L, "NEEDMETHODANY Class.method… — NEEDMETHODANY Ticket.ping Order.pay");
+          return -1;
+        }
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASMETHODANY_N", 0);
+        var_set_num(vm, "METHODMISS_N", 0);
+        var_set_num(vm, "METHODHAVE_N", 0);
+        var_set_num(vm, "METHMISS_N", 0);
+        var_set_num(vm, "METHHAVE_N", 0);
+        var_set_str(vm, "METHODMISS", "");
+        var_set_str(vm, "METHODHAVE", "");
+        var_set_str(vm, "METHMISS", "");
+        var_set_str(vm, "METHHAVE", "");
+        var_set_str(vm, "METHOD_ON", "*");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "HASMETHODANY: need Class.method bag");
+        var_set_str(vm, "ERR", "HASMETHODANY: need Class.method bag");
+        bump(vm);
+        return 1;
+      }
+      for (i = 0; i < nname; i++) {
+        char cname[48], mname[48];
+        const char *dot = strchr(names[i], '.');
+        int hit = 0;
+        if (dot && dot != names[i] && dot[1]) {
+          size_t cl = (size_t)(dot - names[i]);
+          if (cl + 1 < sizeof cname) {
+            memcpy(cname, names[i], cl);
+            cname[cl] = 0;
+          } else
+            cname[0] = 0;
+          snprintf(mname, sizeof mname, "%s", dot + 1);
+          ob = oop_find_obj(vm, cname);
+          if (ob)
+            cd = &vm->classes[ob->class_idx];
+          else
+            cd = oop_find_class(vm, cname);
+          if (cd && oop_find_method(cd, mname))
+            hit = 1;
+        }
+        if (hit) {
+          nhave++;
+          if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+          {
+            size_t ln = strlen(names[i]);
+            if (ho + ln < sizeof havebag) {
+              memcpy(havebag + ho, names[i], ln);
+              ho += ln;
+              havebag[ho] = 0;
+            }
+          }
+        } else {
+          nmiss++;
+          if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+          {
+            size_t ln = strlen(names[i]);
+            if (mo + ln < sizeof miss) {
+              memcpy(miss + mo, names[i], ln);
+              mo += ln;
+              miss[mo] = 0;
+            }
+          }
+        }
+      }
+      var_set_str(vm, "METHODMISS", miss);
+      var_set_str(vm, "METHODHAVE", havebag);
+      var_set_str(vm, "METHMISS", miss);
+      var_set_str(vm, "METHHAVE", havebag);
+      var_set_num(vm, "METHODMISS_N", nmiss);
+      var_set_num(vm, "METHODHAVE_N", nhave);
+      var_set_num(vm, "METHMISS_N", nmiss);
+      var_set_num(vm, "METHHAVE_N", nhave);
+      var_set_num(vm, "HASMETHODANY_N", nhave);
+      var_set_num(vm, "NEEDMETHODANY_N", nname);
+      var_set_num(vm, "METHODS_ANY_N", nname);
+      var_set_str(vm, "METHOD_ON", "*");
+      if (nhave > 0) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+      } else if (hard) {
+        char em[240];
+        snprintf(em, sizeof em,
+                 "NEEDMETHODANY miss line %d: need one of [%s] — CLASS METHOD · HASMETHODANY · LISTMETHODS",
+                 aln, miss[0] ? miss : "?");
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        fail_at(vm, L, em);
+        return -1;
+      } else {
+        char em[240];
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        snprintf(em, sizeof em,
+                 "HASMETHODANY miss (0/%d): need one of %s — NEEDMETHODANY · LISTMETHODS",
+                 nname, miss[0] ? miss : "?");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# %s dotted n=%d have=%d miss=%d\n",
+                hard ? "NEEDMETHODANY" : "HASMETHODANY", nname, nhave, nmiss);
+      bump(vm);
+      return 1;
+    }
+    /* classic Class|obj method… form */
+    snprintf(target, sizeof target, "%s", first);
     while (nname < 32 &&
            (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
-      /* Narrow stop list — do not treat TICK/METHOD/FIELD as terminators. */
       if (L->cur.kind == TK_IDENT &&
           (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
            kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
@@ -17766,6 +18068,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "HASMETHODANY_N", 0);
       var_set_num(vm, "METHODMISS_N", 0);
       var_set_num(vm, "METHODHAVE_N", 0);
+      var_set_num(vm, "METHMISS_N", 0);
+      var_set_num(vm, "METHHAVE_N", 0);
       var_set_str(vm, "METHODMISS", "");
       var_set_str(vm, "METHODHAVE", "");
       var_set_str(vm, "METHMISS", "");
