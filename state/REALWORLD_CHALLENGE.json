@@ -6082,7 +6082,7 @@
     "iter328: lib_boot module board 10/10; fixed REQUIRE LIB bare stem (W711) after MI857 break",
     "iter328: selftest 584/807 require_lib+lib_guard+lib_boot PASS; CLI duals still set"
   ],
-  "commit": "",
+  "commit": "90fe21b7",
   "ts": "2026-08-11T02:18:13Z",
-  "board_commit": ""
+  "board_commit": "90fe21b7"
 }
