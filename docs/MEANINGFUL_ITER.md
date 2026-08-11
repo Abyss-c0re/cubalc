@@ -966,6 +966,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 935. ~~**`IFHASLINE` / `IFINBAG`**~~ **done** (bag membership branches · no HASINBAG+IF LAST_N glue · proof 1473).
 936. ~~**`IFBETWEEN` / `IFINRANGE` / `IFWITHIN`**~~ **done** (inclusive numeric range branch · no INRANGE+IF glue · proof 1474).
 937. ~~**`IFSTARTSI` / `IFENDSI` / `IFCONTAINSI` / `IFEQSI`**~~ **done** (case-insensitive string branches · no UPPER+probe glue · proof 1475).
+938. ~~**`SUMIN` / `MAXIN` / `MININ` / `AVGIN`**~~ **done** (numeric bag aggregates on vars → LAST_N · no EACH+INC glue · proof 1476).
 
 
 

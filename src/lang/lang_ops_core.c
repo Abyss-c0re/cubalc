@@ -3917,6 +3917,10 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"COUNTIN", "COUNTIN name needle — non-overlapping hit count → LAST_N (no mutate)"},
       {"COUNTLINEIN", "COUNTLINEIN name line — exact bag field count → LAST_N (no mutate)"},
       {"OCCURSIN", "OCCURSIN alias of COUNTIN"},
+      {"SUMIN", "SUMIN|BAGSUM name — sum numeric bag fields → LAST_N (no mutate)"},
+      {"MAXIN", "MAXIN|BAGMAX name — max numeric bag field → LAST_N"},
+      {"MININ", "MININ|BAGMIN name — min numeric bag field → LAST_N"},
+      {"AVGIN", "AVGIN|MEANIN name — integer avg of numeric bag fields → LAST_N"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -74530,6 +74534,133 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s -> %ld\n", op, name, count);
+    bump(vm);
+    return 1;
+  }
+  /* SUMIN|MAXIN|MININ|AVGIN name — numeric bag field aggregates → LAST_N (no mutate).
+   * Walks newline fields; strtol per field; skips empty/non-numeric.
+   * Empty bag or no nums → 0. AVGIN is integer average (sum/count).
+   * Usability: score/metric bags without EACH LINE + INC glue · dual of SYS SUM on bag. */
+  if (kw(&L->cur,"SUMIN")||kw(&L->cur,"BAGSUM")||kw(&L->cur,"SUMBAGIN")||
+      kw(&L->cur,"TOTALIN")||kw(&L->cur,"SUMLINESIN")||
+      kw(&L->cur,"MAXIN")||kw(&L->cur,"BAGMAX")||kw(&L->cur,"MAXBAGIN")||
+      kw(&L->cur,"MAXLINESIN")||
+      kw(&L->cur,"MININ")||kw(&L->cur,"BAGMIN")||kw(&L->cur,"MINBAGIN")||
+      kw(&L->cur,"MINLINESIN")||
+      kw(&L->cur,"AVGIN")||kw(&L->cur,"BAGAVG")||kw(&L->cur,"AVGBAGIN")||
+      kw(&L->cur,"MEANIN")||kw(&L->cur,"AVGLINESIN")){
+    char op[24], name[48];
+    char cur[CUBALC_HOST_STR_MAX];
+    int mode = 0; /* 0 sum, 1 max, 2 min, 3 avg */
+    long sum = 0, mx = 0, mn = 0, nnum = 0, out = 0;
+    const char *p, *start;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "MAXIN") == 0 || strcmp(op, "BAGMAX") == 0 ||
+        strcmp(op, "MAXBAGIN") == 0 || strcmp(op, "MAXLINESIN") == 0)
+      mode = 1;
+    else if (strcmp(op, "MININ") == 0 || strcmp(op, "BAGMIN") == 0 ||
+             strcmp(op, "MINBAGIN") == 0 || strcmp(op, "MINLINESIN") == 0)
+      mode = 2;
+    else if (strcmp(op, "AVGIN") == 0 || strcmp(op, "BAGAVG") == 0 ||
+             strcmp(op, "AVGBAGIN") == 0 || strcmp(op, "MEANIN") == 0 ||
+             strcmp(op, "AVGLINESIN") == 0)
+      mode = 3;
+    else
+      mode = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, mode == 1 ? "MAXIN needs name — MAXIN scores"
+           : mode == 2 ? "MININ needs name — MININ scores"
+           : mode == 3 ? "AVGIN needs name — AVGIN scores"
+                       : "SUMIN needs name — SUMIN scores");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "OF") || kw(&L->cur, "IN") || kw(&L->cur, "FROM") ||
+        kw(&L->cur, "BAG"))
+      lex_next(L);
+    cur[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+    p = cur;
+    while (*p || (cur[0] && p == cur)) {
+      char *end = NULL;
+      long v;
+      size_t fl;
+      if (!cur[0]) break;
+      start = p;
+      while (*p && *p != '\n') p++;
+      fl = (size_t)(p - start);
+      if (fl > 0) {
+        char tmp[64];
+        if (fl >= sizeof tmp) fl = sizeof tmp - 1;
+        memcpy(tmp, start, fl);
+        tmp[fl] = 0;
+        v = strtol(tmp, &end, 10);
+        if (end && end != tmp) {
+          /* accept trailing junk after number only if we parsed something */
+          if (nnum == 0) { mx = v; mn = v; }
+          else {
+            if (v > mx) mx = v;
+            if (v < mn) mn = v;
+          }
+          sum += v;
+          nnum++;
+        }
+      }
+      if (*p == '\n') p++;
+      else break;
+    }
+    if (nnum == 0)
+      out = 0;
+    else if (mode == 1) out = mx;
+    else if (mode == 2) out = mn;
+    else if (mode == 3) out = sum / nnum;
+    else out = sum;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", out);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "SUMIN_COUNT", nnum);
+    var_set_num(vm, "SUMIN_SUM", sum);
+    if (mode == 0) {
+      var_set_num(vm, "SUMIN_N", out);
+      var_set_num(vm, "MAXIN_N", 0);
+      var_set_num(vm, "MININ_N", 0);
+      var_set_num(vm, "AVGIN_N", 0);
+    } else if (mode == 1) {
+      var_set_num(vm, "MAXIN_N", out);
+      var_set_num(vm, "SUMIN_N", 0);
+      var_set_num(vm, "MININ_N", 0);
+      var_set_num(vm, "AVGIN_N", 0);
+    } else if (mode == 2) {
+      var_set_num(vm, "MININ_N", out);
+      var_set_num(vm, "SUMIN_N", 0);
+      var_set_num(vm, "MAXIN_N", 0);
+      var_set_num(vm, "AVGIN_N", 0);
+    } else {
+      var_set_num(vm, "AVGIN_N", out);
+      var_set_num(vm, "SUMIN_N", 0);
+      var_set_num(vm, "MAXIN_N", 0);
+      var_set_num(vm, "MININ_N", 0);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> %ld (n=%ld)\n", op, name, out, nnum);
     bump(vm);
     return 1;
   }

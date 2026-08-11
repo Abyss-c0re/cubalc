@@ -1,0 +1,69 @@
+# SUMIN / MAXIN / MININ / AVGIN — numeric bag aggregates on vars
+
+HOLD_FLASH 1
+
+LET scores = ""
+PUSHTO scores "10"
+PUSHTO scores "30"
+PUSHTO scores "20"
+
+SUMIN scores
+ASSERT LAST_N == 60
+ASSERT SUMIN_N == 60
+ASSERT SUMIN_COUNT == 3
+ASSERT SUMIN_SUM == 60
+
+MAXIN scores
+ASSERT LAST_N == 30
+ASSERT MAXIN_N == 30
+
+MININ scores
+ASSERT LAST_N == 10
+ASSERT MININ_N == 10
+
+AVGIN scores
+ASSERT LAST_N == 20
+ASSERT AVGIN_N == 20
+
+# skip non-numeric
+LET mixed = ""
+PUSHTO mixed "5"
+PUSHTO mixed "x"
+PUSHTO mixed "15"
+SUMIN mixed
+ASSERT LAST_N == 20
+ASSERT SUMIN_COUNT == 2
+
+# empty bag
+LET empty = ""
+SUMIN empty
+ASSERT LAST_N == 0
+ASSERT SUMIN_COUNT == 0
+MAXIN empty
+ASSERT LAST_N == 0
+
+# single field num promote from non-bag
+LET one = "42"
+SUMIN one
+ASSERT LAST_N == 42
+MININ one
+ASSERT LAST_N == 42
+
+# agent pattern: gate on total
+SUMIN scores
+IFGT LAST_N 50
+  LET pass = 1
+ELSE
+  LET pass = 0
+END
+ASSERT pass == 1
+
+HASFORM "SUMIN"
+ASSERT LAST_N == 1
+HASFORM "MAXIN"
+ASSERT LAST_N == 1
+HASFORM "AVGIN"
+ASSERT LAST_N == 1
+
+PRINT "1476_sumin_maxin ok"
+PASS
