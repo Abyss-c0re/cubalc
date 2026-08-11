@@ -38849,6 +38849,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     int lib_oop_session = 0, lib_oop_boot = 0;
     int lib_obj_guard = 0, lib_obj_boot = 0;
     int lib_live_session = 0, lib_live_boot = 0;
+    int lib_service_session = 0, lib_service_boot = 0;
     int lib_cap_boot = 0, lib_onboard_boot = 0, lib_discover_boot = 0, lib_open_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0;
     int include_path_set = 0, preload_set = 0, smx_key = 0, protect_plate = 0;
@@ -38915,6 +38916,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     lib_obj_boot = (access("programs/lib/obj_boot.cubalc", R_OK) == 0);
     lib_live_session = (access("programs/lib/live_session.cubalc", R_OK) == 0);
     lib_live_boot = (access("programs/lib/live_boot.cubalc", R_OK) == 0);
+    lib_service_session = (access("programs/lib/service_session.cubalc", R_OK) == 0);
+    lib_service_boot = (access("programs/lib/service_boot.cubalc", R_OK) == 0);
     lib_cap_boot = (access("programs/lib/cap_boot.cubalc", R_OK) == 0);
     lib_onboard_boot = (access("programs/lib/onboard_boot.cubalc", R_OK) == 0);
     lib_discover_boot = (access("programs/lib/discover_boot.cubalc", R_OK) == 0);
@@ -38964,6 +38967,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       "\"lib_oop_session\":%s,\"lib_oop_boot\":%s,"
       "\"lib_obj_guard\":%s,\"lib_obj_boot\":%s,"
       "\"lib_live_session\":%s,\"lib_live_boot\":%s,"
+      "\"lib_service_session\":%s,\"lib_service_boot\":%s,"
       "\"lib_cap_boot\":%s,\"lib_onboard_boot\":%s,\"lib_discover_boot\":%s,"
       "\"lib_open_boot\":%s,\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
       "\"include_path_set\":%s,\"preload_set\":%s,\"core_protect_plate\":%s,"
@@ -39017,6 +39021,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lib_obj_boot ? "true" : "false",
       lib_live_session ? "true" : "false",
       lib_live_boot ? "true" : "false",
+      lib_service_session ? "true" : "false",
+      lib_service_boot ? "true" : "false",
       lib_cap_boot ? "true" : "false",
       lib_onboard_boot ? "true" : "false",
       lib_discover_boot ? "true" : "false",
