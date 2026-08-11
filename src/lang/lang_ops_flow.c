@@ -11,6 +11,142 @@
 #include <time.h>
 #include <unistd.h>
 
+
+/* CLI flag/arg probes for IFHASFLAG/IFHASARG (flow plane).
+ * Mirrors lang_ops_core HASFLAG/HASARG without cross-TU static dependency. */
+static int mi_scan_cli_flag(const char *name, char *out, size_t outn) {
+  char envn[32];
+  const char *ac;
+  int argc = 32, k;
+  size_t nlen;
+  if (!name || !name[0]) return 0;
+  while (name[0] == '-') name++;
+  if (!name[0]) return 0;
+  nlen = strlen(name);
+  ac = getenv("CUBALC_ARGC");
+  if (ac && ac[0]) {
+    argc = (int)strtol(ac, NULL, 10);
+    if (argc < 0) argc = 0;
+    if (argc > 32) argc = 32;
+  } else {
+    argc = 0;
+    for (k = 0; k < 32; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      if (!getenv(envn)) break;
+      argc++;
+    }
+  }
+  for (k = 0; k < argc; k++) {
+    const char *a, *p;
+    size_t al;
+    snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+    a = getenv(envn);
+    if (!a || a[0] != '-') continue;
+    p = a + 1;
+    if (*p == '-') p++;
+    if (!*p) continue;
+    al = strlen(p);
+    if (al >= nlen && strncmp(p, name, nlen) == 0) {
+      if (p[nlen] == '=') {
+        if (out && outn) snprintf(out, outn, "%s", p + nlen + 1);
+        return 2;
+      }
+      if (p[nlen] == 0) {
+        if (k + 1 < argc) {
+          char env2[32];
+          const char *b;
+          snprintf(env2, sizeof env2, "CUBALC_ARG%d", k + 1);
+          b = getenv(env2);
+          if (b && b[0] && b[0] != '-') {
+            if (out && outn) snprintf(out, outn, "%s", b);
+            return 2;
+          }
+        }
+        if (out && outn) snprintf(out, outn, "1");
+        return 1;
+      }
+    }
+  }
+  if (out && outn) out[0] = 0;
+  return 0;
+}
+
+static int mi_read_flag_aliases(Lex *L, char *bag, size_t bagn,
+                                char *first, size_t firstn) {
+  int n = 0;
+  if (bag && bagn) bag[0] = 0;
+  if (first && firstn) first[0] = 0;
+  for (;;) {
+    char name[96];
+    size_t bl;
+    while (L->cur.kind == TK_MINUS) lex_next(L);
+    if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT)
+      break;
+    if (n > 0 && (kw(&L->cur, "OR") || kw(&L->cur, "DEFAULT") ||
+                  kw(&L->cur, "ELSE") || kw(&L->cur, "FALLBACK") ||
+                  kw(&L->cur, "THEN") || kw(&L->cur, "END") ||
+                  kw(&L->cur, "IF") || kw(&L->cur, "LET")))
+      break;
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    while (name[0] == '-')
+      memmove(name, name + 1, strlen(name));
+    if (!name[0]) {
+      if (L->cur.kind == TK_COMMA || L->cur.kind == TK_PIPE) {
+        lex_next(L);
+        continue;
+      }
+      break;
+    }
+    if (n == 0 && first && firstn)
+      snprintf(first, firstn, "%s", name);
+    if (bag && bagn) {
+      bl = strlen(bag);
+      if (bl > 0 && bl + 1 < bagn) {
+        bag[bl++] = '\n';
+        bag[bl] = 0;
+      }
+      if (bl + strlen(name) < bagn)
+        snprintf(bag + bl, bagn - bl, "%s", name);
+    }
+    n++;
+    if (L->cur.kind == TK_COMMA || L->cur.kind == TK_PIPE) {
+      lex_next(L);
+      continue;
+    }
+    break;
+  }
+  return n;
+}
+
+static int mi_scan_cli_flag_any(const char *names_bag, char *out, size_t outn,
+                                char *hit_name, size_t hitn) {
+  const char *p = names_bag;
+  if (hit_name && hitn) hit_name[0] = 0;
+  if (!p || !p[0]) {
+    if (out && outn) out[0] = 0;
+    return 0;
+  }
+  while (*p) {
+    char name[96];
+    size_t i = 0;
+    int hit;
+    while (*p && *p != '\n' && i + 1 < sizeof name)
+      name[i++] = *p++;
+    name[i] = 0;
+    if (*p == '\n') p++;
+    if (!name[0]) continue;
+    hit = mi_scan_cli_flag(name, out, outn);
+    if (hit) {
+      if (hit_name && hitn)
+        snprintf(hit_name, hitn, "%s", name);
+      return hit;
+    }
+  }
+  if (out && outn) out[0] = 0;
+  return 0;
+}
+
 static ClassDef *oop_find_class(VM *vm, const char *name){
   int i;
   for (i = 0; i < vm->n_classes; i++)
@@ -25298,7 +25434,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
           kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
@@ -25333,7 +25469,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
             kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25367,7 +25503,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
             kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25769,7 +25905,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -25814,7 +25950,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25850,7 +25986,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25960,7 +26096,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -26003,7 +26139,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26041,7 +26177,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26131,7 +26267,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -26172,7 +26308,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
             kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26213,7 +26349,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
             kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26305,7 +26441,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -26351,7 +26487,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
             kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26394,7 +26530,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
             kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26513,7 +26649,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -26563,7 +26699,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26611,7 +26747,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26753,7 +26889,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -26806,7 +26942,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26859,7 +26995,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26961,7 +27097,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -27017,7 +27153,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27069,7 +27205,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27165,7 +27301,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -27219,7 +27355,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
             kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27274,7 +27410,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
             kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27393,7 +27529,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -27449,7 +27585,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
             kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27506,7 +27642,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
             kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27953,7 +28089,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -28033,7 +28169,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -28102,7 +28238,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -28258,7 +28394,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -28342,7 +28478,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -28411,7 +28547,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -28566,7 +28702,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -28645,7 +28781,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -28712,7 +28848,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -28858,7 +28994,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -28933,7 +29069,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -28998,7 +29134,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -29433,7 +29569,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -29508,7 +29644,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -29578,7 +29714,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -29696,7 +29832,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -29774,7 +29910,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -29845,7 +29981,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
               kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -29969,7 +30105,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
           kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
           kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -30049,7 +30185,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -30121,7 +30257,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
             kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
               kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -30282,7 +30418,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||kw(&L->cur,"WHENBLANK")||
           kw(&L->cur,"WHENNOTBLANK")||
           kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -30364,7 +30500,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||kw(&L->cur,"WHENBLANK")||
             kw(&L->cur,"WHENNOTBLANK")||
             kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -30439,7 +30575,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||kw(&L->cur,"WHENBLANK")||
             kw(&L->cur,"WHENNOTBLANK")||
             kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -30613,9 +30749,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||kw(&L->cur,"WHENBLANK")||
             kw(&L->cur,"WHENNOTBLANK")||
             kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||
-            kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
             kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -30698,9 +30834,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||kw(&L->cur,"WHENBLANK")||
             kw(&L->cur,"WHENNOTBLANK")||
             kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||
-            kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
             kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -30777,9 +30913,361 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||kw(&L->cur,"WHENBLANK")||
             kw(&L->cur,"WHENNOTBLANK")||
             kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
-            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||
-            kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||
+            kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
+            kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
+            kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+            kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+            kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
+            kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+            depth++;
+          else if (kw(&L->cur,"END")) {
+            depth--;
+            if (depth == 0) break;
+          }
+          lex_next(L);
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        var_set_num(vm, ntag, 0);
+        bump(vm); return 1;
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      var_set_num(vm, ntag, 0);
+      bump(vm); return 1;
+    }
+  }
+
+
+
+  /* IFHASFLAG name[,|alt...] … [ELSE …] END — body if CLI --flag present.
+   * IFNOFLAG name[,|alt...] … — body if flag missing (default path).
+   * IFHASARG n|name … — body if CUBALC_ARGn / named arg non-empty.
+   * IFNOARG n|name … — body if arg missing/empty.
+   * Sets FLAG_HIT_NAME / ARG on hit. Complements HASFLAG/HASARG + IF LAST_N.
+   * Usability: CLI tool branches without probe glue. */
+  if (kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"IFFLAG")||
+      kw(&L->cur,"WHENFLAG")||kw(&L->cur,"IFOPT")||kw(&L->cur,"WHENOPT")||
+      kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"IFMISSFLAG")||
+      kw(&L->cur,"WHENMISSFLAG")||kw(&L->cur,"IFNFLAG")||
+      kw(&L->cur,"IFHASARG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"IFARG")||
+      kw(&L->cur,"WHENARG")||
+      kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENNOARG")||kw(&L->cur,"IFMISSARG")||
+      kw(&L->cur,"WHENMISSARG")||kw(&L->cur,"IFNARG")){
+    int aln = L->cur.line;
+    int mode = 0; /* 0 hasflag, 1 noflag, 2 hasarg, 3 noarg */
+    int take = 0, hit = 0;
+    char op[32], name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX];
+    char envn[96], key[96];
+    const char *aval = NULL;
+    Lex body_start;
+    int depth = 1;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "IFNOFLAG") == 0 || strcmp(op, "WHENNOFLAG") == 0 ||
+        strcmp(op, "IFMISSFLAG") == 0 || strcmp(op, "WHENMISSFLAG") == 0 ||
+        strcmp(op, "IFNFLAG") == 0)
+      mode = 1;
+    else if (strcmp(op, "IFHASARG") == 0 || strcmp(op, "WHENHASARG") == 0 ||
+             strcmp(op, "IFARG") == 0 || strcmp(op, "WHENARG") == 0)
+      mode = 2;
+    else if (strcmp(op, "IFNOARG") == 0 || strcmp(op, "WHENNOARG") == 0 ||
+             strcmp(op, "IFMISSARG") == 0 || strcmp(op, "WHENMISSARG") == 0 ||
+             strcmp(op, "IFNARG") == 0)
+      mode = 3;
+    else
+      mode = 0;
+    lex_next(L);
+    name[0] = aliases[0] = hitnm[0] = val[0] = key[0] = envn[0] = 0;
+
+    if (mode == 0 || mode == 1) {
+      int nac = mi_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+      if (nac <= 0 || !name[0]) {
+        fail(vm, mode == 1 ? "IFNOFLAG needs name — IFNOFLAG quiet|q … END"
+                           : "IFHASFLAG needs name — IFHASFLAG verbose|v … END");
+        return -1;
+      }
+      hit = mi_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm) ? 1 : 0;
+      take = (mode == 0) ? hit : !hit;
+    } else {
+      /* HASARG / NOARG */
+      if (L->cur.kind == TK_NUM) {
+        snprintf(envn, sizeof envn, "CUBALC_ARG%ld", L->cur.num);
+        snprintf(key, sizeof key, "%ld", L->cur.num);
+        snprintf(name, sizeof name, "%s", key);
+        lex_next(L);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        int all_digit = 1, pi;
+        snprintf(key, sizeof key, "%s", L->cur.text);
+        snprintf(name, sizeof name, "%s", key);
+        for (pi = 0; key[pi]; pi++) {
+          if (key[pi] < '0' || key[pi] > '9') { all_digit = 0; break; }
+        }
+        if (all_digit && key[0])
+          snprintf(envn, sizeof envn, "CUBALC_ARG%s", key);
+        else if (strncmp(key, "CUBALC_ARG", 10) == 0)
+          snprintf(envn, sizeof envn, "%s", key);
+        else
+          snprintf(envn, sizeof envn, "%s", key);
+        lex_next(L);
+      } else {
+        fail(vm, mode == 3 ? "IFNOARG needs n|name — IFNOARG 0 … END"
+                           : "IFHASARG needs n|name — IFHASARG 0 … END");
+        return -1;
+      }
+      aval = getenv(envn);
+      hit = (aval && aval[0]) ? 1 : 0;
+      if (hit && aval) snprintf(val, sizeof val, "%s", aval);
+      take = (mode == 2) ? hit : !hit;
+    }
+
+    skip_nl(L);
+    if (kw(&L->cur,"THEN")) { lex_next(L); skip_nl(L); }
+
+    body_start = *L;
+    while (L->cur.kind != TK_EOF && depth > 0) {
+      if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+        lex_next(L);
+        if (kw(&L->cur,"IF")) lex_next(L);
+        continue;
+      }
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+            kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
+            kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+            kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+            kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||
+            kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||
+            kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
+            kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
+            kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
+            kw(&L->cur,"WHENINBAG")||
+            kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
+            kw(&L->cur,"WHENBETWEEN")||
+            kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
+            kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
+            kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
+            kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
+            kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
+            kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
+            kw(&L->cur,"WHENEXIST")||
+            kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
+            kw(&L->cur,"WHENHASENV")||
+            kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
+            kw(&L->cur,"WHENHASFIELD")||
+            kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||
+            kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||
+            kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
+            kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
+            kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
+            kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+            kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+            kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFJSONHAS")||kw(&L->cur,"IFJSONMISS")||
+            kw(&L->cur,"IFHASJSON")||kw(&L->cur,"WHENJSONHAS")||kw(&L->cur,"WHENJSONMISS")||
+            kw(&L->cur,"WHENHASJSON")||kw(&L->cur,"IFNUM")||kw(&L->cur,"IFSTR")||
+            kw(&L->cur,"IFVARTYPE")||kw(&L->cur,"IFKIND")||kw(&L->cur,"WHENNUM")||
+            kw(&L->cur,"WHENSTR")||kw(&L->cur,"WHENVARTYPE")||
+            kw(&L->cur,"IFZERO")||kw(&L->cur,"IFNZ")||kw(&L->cur,"IFPOS")||
+            kw(&L->cur,"IFNEG")||kw(&L->cur,"WHENZERO")||kw(&L->cur,"WHENNZ")||
+            kw(&L->cur,"WHENPOS")||kw(&L->cur,"WHENNEG")||
+            kw(&L->cur,"IFCANREAD")||kw(&L->cur,"IFCANWRITE")||kw(&L->cur,"IFCANEXEC")||
+            kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||
+            kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
+            kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||
+            kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||kw(&L->cur,"WHENBLANK")||
+            kw(&L->cur,"WHENNOTBLANK")||
+            kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||
+            kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||
+            kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
+            kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||
+            kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||
+            kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
+            kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
+            kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+            kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+            kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
+            kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+        depth++;
+      else if (kw(&L->cur,"ELSE") && depth == 1) break;
+      else if (kw(&L->cur,"END")) {
+        depth--;
+        if (depth == 0) break;
+      }
+      lex_next(L);
+    }
+    if (depth > 1 || (depth == 1 && L->cur.kind == TK_EOF)) {
+      char ebuf[160];
+      const char *tag = mode == 1 ? "IFNOFLAG" : mode == 2 ? "IFHASARG"
+                       : mode == 3 ? "IFNOARG" : "IFHASFLAG";
+      snprintf(ebuf, sizeof ebuf, "%s without END line %d — %s name … [ELSE …] END", tag, aln, tag);
+      fail(vm, ebuf); return -1;
+    }
+    {
+      const char *ntag = mode == 1 ? "IFNOFLAG_N" : mode == 2 ? "IFHASARG_N"
+                       : mode == 3 ? "IFNOARG_N" : "IFHASFLAG_N";
+      var_set_num(vm, "IFHASFLAG_HIT", hit);
+      var_set_str(vm, "VAR", name);
+      if (mode <= 1) {
+        var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
+        var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+        if (hit && val[0]) {
+          var_set_str(vm, "FLAG", val);
+          var_set_str(vm, "FLAG_VAL", val);
+        }
+        var_set_str(vm, "HASFLAG", name);
+      } else {
+        var_set_str(vm, "HASARG", key);
+        if (hit && val[0]) var_set_str(vm, "ARG", val);
+      }
+      if (take) {
+        Lex body = body_start;
+        if (exec_stmts_until(vm, &body, "END", "ELSE") < 0) return -1;
+        depth = 1;
+        while (L->cur.kind != TK_EOF && depth > 0) {
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+            kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
+            kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+            kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+            kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||
+            kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||
+            kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
+            kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
+            kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
+            kw(&L->cur,"WHENINBAG")||
+            kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
+            kw(&L->cur,"WHENBETWEEN")||
+            kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
+            kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
+            kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
+            kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
+            kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
+            kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
+            kw(&L->cur,"WHENEXIST")||
+            kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
+            kw(&L->cur,"WHENHASENV")||
+            kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
+            kw(&L->cur,"WHENHASFIELD")||
+            kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||
+            kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||
+            kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
+            kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
+            kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
+            kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+            kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+            kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFJSONHAS")||kw(&L->cur,"IFJSONMISS")||
+            kw(&L->cur,"IFHASJSON")||kw(&L->cur,"WHENJSONHAS")||kw(&L->cur,"WHENJSONMISS")||
+            kw(&L->cur,"WHENHASJSON")||kw(&L->cur,"IFNUM")||kw(&L->cur,"IFSTR")||
+            kw(&L->cur,"IFVARTYPE")||kw(&L->cur,"IFKIND")||kw(&L->cur,"WHENNUM")||
+            kw(&L->cur,"WHENSTR")||kw(&L->cur,"WHENVARTYPE")||
+            kw(&L->cur,"IFZERO")||kw(&L->cur,"IFNZ")||kw(&L->cur,"IFPOS")||
+            kw(&L->cur,"IFNEG")||kw(&L->cur,"WHENZERO")||kw(&L->cur,"WHENNZ")||
+            kw(&L->cur,"WHENPOS")||kw(&L->cur,"WHENNEG")||
+            kw(&L->cur,"IFCANREAD")||kw(&L->cur,"IFCANWRITE")||kw(&L->cur,"IFCANEXEC")||
+            kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||
+            kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
+            kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||
+            kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||kw(&L->cur,"WHENBLANK")||
+            kw(&L->cur,"WHENNOTBLANK")||
+            kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||
+            kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||
+            kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
+            kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||
+            kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||
+            kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
+            kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
+            kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+            kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+            kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
+            kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+            depth++;
+          else if (kw(&L->cur,"END")) {
+            depth--;
+            if (depth == 0) break;
+          }
+          lex_next(L);
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        var_set_num(vm, ntag, 1);
+        bump(vm); return 1;
+      }
+      if (kw(&L->cur,"ELSE")) {
+        lex_next(L);
+        skip_nl(L);
+        {
+          Lex body = *L;
+          if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+        }
+        depth = 1;
+        while (L->cur.kind != TK_EOF && depth > 0) {
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+            kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
+            kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+            kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+            kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||
+            kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||
+            kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
+            kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
+            kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
+            kw(&L->cur,"WHENINBAG")||
+            kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
+            kw(&L->cur,"WHENBETWEEN")||
+            kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
+            kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
+            kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
+            kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
+            kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
+            kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
+            kw(&L->cur,"WHENEXIST")||
+            kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
+            kw(&L->cur,"WHENHASENV")||
+            kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
+            kw(&L->cur,"WHENHASFIELD")||
+            kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||
+            kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||
+            kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
+            kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
+            kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
+            kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+            kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+            kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFJSONHAS")||kw(&L->cur,"IFJSONMISS")||
+            kw(&L->cur,"IFHASJSON")||kw(&L->cur,"WHENJSONHAS")||kw(&L->cur,"WHENJSONMISS")||
+            kw(&L->cur,"WHENHASJSON")||kw(&L->cur,"IFNUM")||kw(&L->cur,"IFSTR")||
+            kw(&L->cur,"IFVARTYPE")||kw(&L->cur,"IFKIND")||kw(&L->cur,"WHENNUM")||
+            kw(&L->cur,"WHENSTR")||kw(&L->cur,"WHENVARTYPE")||
+            kw(&L->cur,"IFZERO")||kw(&L->cur,"IFNZ")||kw(&L->cur,"IFPOS")||
+            kw(&L->cur,"IFNEG")||kw(&L->cur,"WHENZERO")||kw(&L->cur,"WHENNZ")||
+            kw(&L->cur,"WHENPOS")||kw(&L->cur,"WHENNEG")||
+            kw(&L->cur,"IFCANREAD")||kw(&L->cur,"IFCANWRITE")||kw(&L->cur,"IFCANEXEC")||
+            kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||
+            kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
+            kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||
+            kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||kw(&L->cur,"WHENBLANK")||
+            kw(&L->cur,"WHENNOTBLANK")||
+            kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
+            kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||
+            kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||
+            kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
+            kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||
+            kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||
+            kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
             kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
             kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||

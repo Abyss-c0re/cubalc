@@ -1,0 +1,115 @@
+# IFHASFLAG / IFNOFLAG / IFHASARG / IFNOARG — CLI presence branches
+# Run with: cubalc run this.cubalc -- --verbose -q path.txt
+# Without flags, IFNOFLAG/IFNOARG paths exercise defaults.
+
+HOLD_FLASH 1
+
+# --- flags (may or may not be present depending on host argv) ---
+# HASFLAG soft probe for setup visibility
+HASFLAG verbose|v
+LET has_v = LAST_N
+
+IFHASFLAG verbose|v
+  LET vf = 1
+ELSE
+  LET vf = 0
+END
+# must agree with HASFLAG
+ASSERT vf == has_v
+ASSERT IFHASFLAG_N == has_v
+
+IFNOFLAG verbose|v
+  LET nf = 1
+ELSE
+  LET nf = 0
+END
+# inverse of has
+ASSERT nf == (1 - has_v)
+ASSERT IFNOFLAG_N == (1 - has_v)
+
+# unlikely flag should miss
+IFHASFLAG totally_missing_flag_xyz
+  LET miss = 1
+ELSE
+  LET miss = 0
+END
+ASSERT miss == 0
+
+IFNOFLAG totally_missing_flag_xyz
+  LET missn = 1
+ELSE
+  LET missn = 0
+END
+ASSERT missn == 1
+ASSERT IFNOFLAG_N == 1
+
+# --- args via env (CUBALC_ARGn set by host runner) ---
+# Always-safe: invent private env keys for unit proof of IFHASARG path
+# by temporarily setting via shell is not available — use SYS SETENV
+SYS SETENV MI_IFARG_TEST "hello"
+IFHASARG MI_IFARG_TEST
+  LET ha = 1
+ELSE
+  LET ha = 0
+END
+ASSERT ha == 1
+ASSERT IFHASARG_N == 1
+ASSERT ARG == "hello"
+
+IFNOARG MI_IFARG_TEST
+  LET na = 1
+ELSE
+  LET na = 0
+END
+ASSERT na == 0
+
+SYS UNSETENV MI_IFARG_TEST
+IFHASARG MI_IFARG_TEST
+  LET ha2 = 1
+ELSE
+  LET ha2 = 0
+END
+ASSERT ha2 == 0
+
+IFNOARG MI_IFARG_TEST
+  LET na2 = 1
+ELSE
+  LET na2 = 0
+END
+ASSERT na2 == 1
+ASSERT IFNOARG_N == 1
+
+# CUBALC_ARG index form (soft): HASARG 0 may or may not exist
+HASARG 0
+LET a0 = LAST_N
+IFHASARG 0
+  LET ia = 1
+ELSE
+  LET ia = 0
+END
+ASSERT ia == a0
+
+IFNOARG 0
+  LET ina = 1
+ELSE
+  LET ina = 0
+END
+ASSERT ina == (1 - a0)
+
+# aliases WHEN*
+WHENHASFLAG totally_missing_flag_xyz
+  LET w = 1
+ELSE
+  LET w = 0
+END
+ASSERT w == 0
+
+WHENNOFLAG totally_missing_flag_xyz
+  LET w = 1
+ELSE
+  LET w = 0
+END
+ASSERT w == 1
+
+PRINT "ok ifhasflag ifnoflag ifhasarg ifnoarg"
+PASS

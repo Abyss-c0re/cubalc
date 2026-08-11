@@ -996,6 +996,9 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 955. ~~**`IFLINES` / `IFMANY` / `IFFEW`**~~ **done** (bag field-count branches · no LINESIN+IF glue · proof 1494).
 
+956. ~~**`IFHASFLAG` / `IFNOFLAG` / `IFHASARG` / `IFNOARG`**~~ **done** (CLI flag/arg branches · no HASFLAG+IF glue · proof 1495).
+
+
 
 
 
