@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 940,
-  "version": "1.15.933-usability",
-  "item": "IFOBJ / IFMETHOD",
-  "item_id": 940,
-  "title": "IFOBJ · IFMETHOD · live object and method branches",
-  "commit": "e28c6b0b",
-  "summary": "Live object/method branches with ELSE/END; no HASOBJ+IF glue; proof 1478 PASS.",
+  "iter": 941,
+  "version": "1.15.934-usability",
+  "item": "IFFILE / IFDIR / IFEXIST",
+  "item_id": 941,
+  "title": "IFFILE · IFDIR · IFEXIST · path existence branches",
+  "commit": "6363673b",
+  "summary": "Path existence branches with ELSE/END; no SYS ISFILE+IF glue; proof 1479 PASS.",
   "proofs": [
-    "1478_ifobj_ifmethod PASS",
+    "1479_iffile_ifexist PASS",
+    "1478_ifobj regression PASS",
     "1477_iffn regression PASS",
-    "1476_sumin regression PASS",
-    "1475_ifstartsi regression PASS"
+    "1476_sumin regression PASS"
   ],
-  "when": "2026-08-11T18:18:59Z",
+  "when": "2026-08-11T18:28:14Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "e28c6b0b31a40e2af718fa102ec17303bb155206",
-  "note": "soft SEND/session paths without probe+IF glue"
+  "sha": "6363673b728906db84afd98aabf0ebd23543538f",
+  "note": "plate/path gates without probe+IF glue"
 }
