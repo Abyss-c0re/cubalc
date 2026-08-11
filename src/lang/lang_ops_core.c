@@ -2774,6 +2774,7 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"ASSERT", "ASSERT expr [\"why\"] — fail with got/expected · string ==/!= content compare"},
       {"EXPECT", "EXPECT expr [\"why\"] — soft check with got/expected · OK/LAST_ERR"},
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
+      {"HARDFAIL", "HARDFAIL [\"why\"] — FAIL + halt exit 1 · guard hard path · no run -s"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"TIPS", "TIPS [topic] — curated agent next-steps bag · dual of cubalc tips"},
       {"FORMSFOR", "FORMSFOR|TOPICFORMS [topic] — curated form-name bag by topic · dual of cubalc formsfor"},
@@ -39634,6 +39635,51 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace) fprintf(vm->trace, "# fail: %s\n", msg);
     bump(vm); return 1;
   }
+  /* HARDFAIL|FATAL|FAILHARD ["why"] — soft FAIL sticky + halt exit 1.
+   * Usability: guard hard paths stop the program without cubalc run -s / STRICT.
+   * Soft dual remains FAIL/SOFTFAIL. Twin of EXIT 1 with FAIL-shaped messages. */
+  if (kw(&L->cur,"HARDFAIL")||kw(&L->cur,"FATAL")||kw(&L->cur,"FAILHARD")||
+      kw(&L->cur,"HARD_FAIL")||kw(&L->cur,"ABORTFAIL")||kw(&L->cur,"DIEFAIL")){
+    int aln = L->cur.line;
+    lex_next(L);
+    char why[CUBALC_HOST_STR_MAX];
+    why[0] = 0;
+    /* STR, string-var, or LAST — agent: HARDFAIL LAST_ERR after LET ERR=… */
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      if (resolve_str_arg(vm, L, why, sizeof why) != 0)
+        why[0] = 0;
+      /* peel trailing CAT fragments: "a" + VAR already unresolved — use simple msg */
+      while (L->cur.kind == TK_PLUS || (L->cur.kind == TK_IDENT &&
+             !strcmp(L->cur.text, "+"))) {
+        /* skip broken concat tails left by old FAIL "x" + VAR style */
+        if (L->cur.kind == TK_PLUS) lex_next(L);
+        else lex_next(L);
+        char skip[96];
+        (void)resolve_str_arg(vm, L, skip, sizeof skip);
+      }
+    }
+    char msg[200];
+    if (why[0])
+      snprintf(msg, sizeof msg, "HARDFAIL line %d: %s", aln, why);
+    else
+      snprintf(msg, sizeof msg, "HARDFAIL line %d", aln);
+    var_set_str(vm, "ERR", msg);
+    var_set_str(vm, "LAST_ERR", msg);
+    var_set_str(vm, "LAST", msg);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+    vm->last_n = (long)strlen(msg);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", 0);
+    var_set_num(vm, "EXPECT_OK", 0);
+    var_set_num(vm, "HARDFAIL", 1);
+    vm->halt = 1;
+    vm->exit_code = 1;
+    vm->break_loop = 1;
+    vm->return_fn = 1;
+    var_set_num(vm, "EXIT", 1);
+    if (vm->trace) fprintf(vm->trace, "# hardfail: %s\n", msg);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"PASS")||kw(&L->cur,"MARK_PASS")||kw(&L->cur,"OKAY")){
     int aln = L->cur.line;
     lex_next(L);
@@ -40153,7 +40199,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       /* run / status */
       {"ASSERT", "EXPECT"}, {"ASSERT", "WHY"}, {"ASSERT", "FAIL"}, {"ASSERT", "PASS"},
       {"EXPECT", "ASSERT"}, {"EXPECT", "WHY"}, {"EXPECT", "CLEAR_ERR"}, {"EXPECT", "FAIL"},
-      {"FAIL", "PASS"}, {"FAIL", "WHY"}, {"FAIL", "CLEAR_ERR"}, {"FAIL", "EXPECT"},
+      {"FAIL", "PASS"}, {"FAIL", "WHY"}, {"FAIL", "CLEAR_ERR"}, {"FAIL", "HARDFAIL"},
+      {"HARDFAIL", "FAIL"}, {"HARDFAIL", "EXIT"}, {"HARDFAIL", "CLEAR_ERR"}, {"HARDFAIL", "WHY"},
       {"PASS", "FAIL"}, {"PASS", "NOTE"}, {"WHY", "CLEAR_ERR"}, {"WHY", "STATUS"},
       {"WHY", "TIPS"}, {"CLEAR_ERR", "WHY"}, {"CLEAR_ERR", "STATUS"},
       {"STATUS", "IDENTITY"}, {"STATUS", "VERSION"}, {"STATUS", "VARS"}, {"STATUS", "DOCTOR"},

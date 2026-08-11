@@ -104,7 +104,9 @@ ELSE
       LET LAST_ERR = "PATH_GUARD ANY miss — need one of: " + NEED_PATH_ANY
       LET ERR = LAST_ERR
     ELSE
-      FAIL "PATH_GUARD ANY miss — need one of: " + NEED_PATH_ANY
+      LET LAST_ERR = "PATH_GUARD ANY miss — need one of: " + NEED_PATH_ANY
+      LET ERR = LAST_ERR
+      HARDFAIL LAST_ERR
     END
   END
 END

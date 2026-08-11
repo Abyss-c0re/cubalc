@@ -1,0 +1,31 @@
+# HARDFAIL — soft FAIL dual that halts with exit 1
+
+HOLD_FLASH 1
+
+# soft FAIL continues
+FAIL "soft_only"
+ASSERT OK == 0
+SYS HASI LAST_ERR "FAIL"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# HARDFAIL form present
+HASFORM "HARDFAIL"
+ASSERT LAST_N == 1
+HASFORM "FAIL"
+ASSERT LAST_N == 1
+
+# hard path via class_guard without run -s (this file soft-checks via EXIT path below)
+CLASS Ticket
+  FIELD id
+END
+DEFAULT NEED_CLASSES = ""
+DEFAULT CLASS_GUARD_SOFT = 0
+INCLUDE class_guard
+ASSERT CLASS_GUARD_OK == 1
+
+# prove HARDFAIL message shape without killing this proof: use soft probe of form only
+# dedicated CLI smoke verifies process rc
+
+PRINT "1407_hardfail ok"
+PASS

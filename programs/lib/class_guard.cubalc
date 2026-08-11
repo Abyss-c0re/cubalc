@@ -55,7 +55,7 @@ ELSE
     LET LAST_ERR = "CLASS_GUARD ALL miss - missing: " + CLASSMISS
     LET ERR = LAST_ERR
     IF CLASS_GUARD_SOFT == 0
-      FAIL "CLASS_GUARD hard miss — see ERR/CLASSMISS"
+      HARDFAIL "CLASS_GUARD hard miss — see ERR/CLASSMISS"
     END
   END
 END
@@ -97,7 +97,7 @@ ELSE
     LET LAST_ERR = "CLASS_GUARD ANY miss - need one of: " + NEED_CLASS_ANY
     LET ERR = LAST_ERR
     IF CLASS_GUARD_SOFT == 0
-      FAIL "CLASS_GUARD hard miss — see ERR/CLASSMISS"
+      HARDFAIL "CLASS_GUARD hard miss — see ERR/CLASSMISS"
     END
   END
 END

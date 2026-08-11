@@ -53,7 +53,7 @@ ELSE
     LET LAST_ERR = "FN_GUARD ALL miss - missing: " + FNMISS
     LET ERR = LAST_ERR
     IF FN_GUARD_SOFT == 0
-      FAIL "FN_GUARD hard miss — see ERR/FNMISS"
+      HARDFAIL "FN_GUARD hard miss — see ERR/FNMISS"
     END
   END
 END
@@ -93,7 +93,7 @@ ELSE
     LET LAST_ERR = "FN_GUARD ANY miss - need one of: " + NEED_FNANY
     LET ERR = LAST_ERR
     IF FN_GUARD_SOFT == 0
-      FAIL "FN_GUARD hard miss — see ERR/FNMISS"
+      HARDFAIL "FN_GUARD hard miss — see ERR/FNMISS"
     END
   END
 END

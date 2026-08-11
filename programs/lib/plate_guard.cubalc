@@ -106,7 +106,9 @@ ELSE
       LET LAST_ERR = "PLATE_GUARD ANY miss — need one of: " + NEED_KEY_ANY
       LET ERR = LAST_ERR
     ELSE
-      FAIL "PLATE_GUARD ANY miss — need one of: " + NEED_KEY_ANY
+      LET LAST_ERR = "PLATE_GUARD ANY miss — need one of: " + NEED_KEY_ANY
+      LET ERR = LAST_ERR
+      HARDFAIL LAST_ERR
     END
   END
 END

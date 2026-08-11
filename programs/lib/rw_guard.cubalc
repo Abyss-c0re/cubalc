@@ -55,7 +55,9 @@ ELSE
       LET LAST_ERR = "RW_GUARD READ miss — unreadable: " + READMISS
       LET ERR = LAST_ERR
     ELSE
-      FAIL "RW_GUARD READ miss — unreadable: " + READMISS
+      LET LAST_ERR = "RW_GUARD READ miss — unreadable: " + READMISS
+      LET ERR = LAST_ERR
+      HARDFAIL LAST_ERR
     END
   END
 END
@@ -100,7 +102,9 @@ ELSE
       LET LAST_ERR = "RW_GUARD WRITE miss — unwritable: " + WRITEMISS
       LET ERR = LAST_ERR
     ELSE
-      FAIL "RW_GUARD WRITE miss — unwritable: " + WRITEMISS
+      LET LAST_ERR = "RW_GUARD WRITE miss — unwritable: " + WRITEMISS
+      LET ERR = LAST_ERR
+      HARDFAIL LAST_ERR
     END
   END
 END

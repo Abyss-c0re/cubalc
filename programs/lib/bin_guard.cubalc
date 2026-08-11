@@ -104,7 +104,9 @@ ELSE
       LET LAST_ERR = "BIN_GUARD ANY miss — need one of: " + NEED_BIN_ANY
       LET ERR = LAST_ERR
     ELSE
-      FAIL "BIN_GUARD ANY miss — need one of: " + NEED_BIN_ANY
+      LET LAST_ERR = "BIN_GUARD ANY miss — need one of: " + NEED_BIN_ANY
+      LET ERR = LAST_ERR
+      HARDFAIL LAST_ERR
     END
   END
 END

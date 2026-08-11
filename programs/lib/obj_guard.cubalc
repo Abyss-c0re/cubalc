@@ -54,7 +54,7 @@ ELSE
     LET LAST_ERR = "OBJ_GUARD ALL miss - missing: " + OBJMISS
     LET ERR = LAST_ERR
     IF OBJ_GUARD_SOFT == 0
-      FAIL "OBJ_GUARD hard miss — see ERR/OBJMISS"
+      HARDFAIL "OBJ_GUARD hard miss — see ERR/OBJMISS"
     END
   END
 END
@@ -94,7 +94,7 @@ ELSE
     LET LAST_ERR = "OBJ_GUARD ANY miss - need one of: " + NEED_OBJ_ANY
     LET ERR = LAST_ERR
     IF OBJ_GUARD_SOFT == 0
-      FAIL "OBJ_GUARD hard miss — see ERR/OBJMISS"
+      HARDFAIL "OBJ_GUARD hard miss — see ERR/OBJMISS"
     END
   END
 END

@@ -93,7 +93,7 @@ ELSE
     LET LAST_ERR = "METHOD_GUARD ALL miss - missing: " + METHMISS
     LET ERR = LAST_ERR
     IF METHOD_GUARD_SOFT == 0
-      FAIL "METHOD_GUARD hard miss — see ERR/METHMISS"
+      HARDFAIL "METHOD_GUARD hard miss — see ERR/METHMISS"
     END
   END
 END
@@ -168,7 +168,7 @@ ELSE
     LET LAST_ERR = "METHOD_GUARD ANY miss - need one of: " + NEED_METHOD_ANY
     LET ERR = LAST_ERR
     IF METHOD_GUARD_SOFT == 0
-      FAIL "METHOD_GUARD hard miss — see ERR/METHMISS"
+      HARDFAIL "METHOD_GUARD hard miss — see ERR/METHMISS"
     END
   END
 END

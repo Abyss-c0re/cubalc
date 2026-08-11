@@ -93,7 +93,7 @@ ELSE
     LET LAST_ERR = "FIELD_GUARD ALL miss - missing: " + FLDMISS
     LET ERR = LAST_ERR
     IF FIELD_GUARD_SOFT == 0
-      FAIL "FIELD_GUARD hard miss — see ERR/FIELDMISS"
+      HARDFAIL "FIELD_GUARD hard miss — see ERR/FIELDMISS"
     END
   END
 END
@@ -168,7 +168,7 @@ ELSE
     LET LAST_ERR = "FIELD_GUARD ANY miss - need one of: " + NEED_FIELD_ANY
     LET ERR = LAST_ERR
     IF FIELD_GUARD_SOFT == 0
-      FAIL "FIELD_GUARD hard miss — see ERR/FIELDMISS"
+      HARDFAIL "FIELD_GUARD hard miss — see ERR/FIELDMISS"
     END
   END
 END
