@@ -1,0 +1,62 @@
+# INSERTLINEIN — insert bag field at 0-based index
+
+HOLD_FLASH 1
+
+PUSHTO work "a"
+PUSHTO work "c"
+
+# insert middle
+INSERTLINEIN work 1 "b"
+ASSERT work == "a
+b
+c"
+ASSERT INSERTLINEIN_HIT == 1
+LINESIN work
+ASSERT LAST_N == 3
+
+# insert head
+INSERTLINEIN work 0 "head"
+ASSERT work == "head
+a
+b
+c"
+
+# insert tail (past end appends)
+INSLINEIN work 99 "tail"
+ASSERT work == "head
+a
+b
+c
+tail"
+
+# empty bag
+CLEARSTR empty
+INSERTLINEIN empty 0 "first"
+ASSERT empty == "first"
+
+# priority: promote after FINDLINEIN
+LET q = "low
+med
+high"
+FINDLINEIN q "high"
+# insert urgent at front
+INSERTLINEIN q 0 "urgent"
+ASSERT q == "urgent
+low
+med
+high"
+
+# chain SETLINEIN after insert
+SETLINEIN q 1 "low2"
+ASSERT q == "urgent
+low2
+med
+high"
+
+HASFORM "INSERTLINEIN"
+ASSERT LAST_N == 1
+HASFORM "INSLINEIN"
+ASSERT LAST_N == 1
+
+PRINT "1469_insertlinein ok"
+PASS

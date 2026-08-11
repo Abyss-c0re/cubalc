@@ -5265,6 +5265,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"SETLINEIN", "flow", "SETLINEIN name i value — set bag field by index"},
       {"DROPNTHIN", "flow", "DROPNTHIN|DROPATIN name i — drop bag field by index · HIT"},
       {"DROPATIN", "flow", "DROPATIN alias of DROPNTHIN"},
+      {"INSERTLINEIN", "flow", "INSERTLINEIN|INSLINEIN name i line — insert bag field at index"},
+      {"INSLINEIN", "flow", "INSLINEIN alias of INSERTLINEIN"},
       {"DEFAULT", "flow", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"DEFINED", "flow", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"TYPEOF", "flow", "TYPEOF name — LAST undef|num|str · LAST_N 0|1|2"},

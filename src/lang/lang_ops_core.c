@@ -3891,6 +3891,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"SETLINEIN", "SETLINEIN name i value — set bag field by 0-based index"},
       {"DROPNTHIN", "DROPNTHIN|DROPATIN name i — drop bag field by 0-based index · HIT"},
       {"DROPATIN", "DROPATIN alias of DROPNTHIN"},
+      {"INSERTLINEIN", "INSERTLINEIN|INSLINEIN name i line — insert bag field at index"},
+      {"INSLINEIN", "INSLINEIN alias of INSERTLINEIN"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -74029,16 +74031,19 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* FINDLINEIN name line — 0-based exact bag field index → LAST_N (−1 miss).
    * SETLINEIN name i value — set bag field by 0-based index (extend empty if past end).
    * DROPNTHIN|DROPATIN name i — drop bag field by 0-based index · HIT 0|1.
-   * Usability: locate-then-update/ack work bags without NTHIN+rebuild glue;
-   * dual of SYS FINDLINE/SETLINE/DROPNTH for named vars. */
+   * INSERTLINEIN|INSLINEIN name i line — insert field at 0-based index (append if past end).
+   * Usability: locate-then-update/ack/insert work bags without NTHIN+rebuild glue;
+   * dual of SYS FINDLINE/SETLINE/DROPNTH/INSERTLINE for named vars. */
   if (kw(&L->cur,"FINDLINEIN")||kw(&L->cur,"LINEINDEXIN")||kw(&L->cur,"INDEXLINEIN")||
       kw(&L->cur,"BAGFINDIN")||kw(&L->cur,"FINDBAGIN")||
       kw(&L->cur,"SETLINEIN")||kw(&L->cur,"PUTLINEIN")||kw(&L->cur,"REPLACELINEIN")||
       kw(&L->cur,"BAGSETIN")||kw(&L->cur,"SETBAGIN")||
       kw(&L->cur,"DROPNTHIN")||kw(&L->cur,"DROPATIN")||kw(&L->cur,"DELETEATIN")||
-      kw(&L->cur,"BAGDROPAT")||kw(&L->cur,"REMOVENTHIN")){
+      kw(&L->cur,"BAGDROPAT")||kw(&L->cur,"REMOVENTHIN")||
+      kw(&L->cur,"INSERTLINEIN")||kw(&L->cur,"INSLINEIN")||kw(&L->cur,"INSERTATIN")||
+      kw(&L->cur,"BAGINSERTIN")||kw(&L->cur,"SPLICEIN")){
     char op[24], name[48];
-    int mode = 0; /* 0 find, 1 set, 2 dropnth */
+    int mode = 0; /* 0 find, 1 set, 2 dropnth, 3 insert */
     char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
     char line[CUBALC_HOST_STR_MAX], val[CUBALC_HOST_STR_MAX];
     long idx = 0, hit = 0, nfields = 0, found = -1;
@@ -74061,12 +74066,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
              strcmp(op, "DELETEATIN") == 0 || strcmp(op, "BAGDROPAT") == 0 ||
              strcmp(op, "REMOVENTHIN") == 0)
       mode = 2;
+    else if (strcmp(op, "INSERTLINEIN") == 0 || strcmp(op, "INSLINEIN") == 0 ||
+             strcmp(op, "INSERTATIN") == 0 || strcmp(op, "BAGINSERTIN") == 0 ||
+             strcmp(op, "SPLICEIN") == 0)
+      mode = 3;
     else
       mode = 0;
     lex_next(L);
     if (L->cur.kind != TK_IDENT) {
       fail(vm, mode == 0 ? "FINDLINEIN needs name line — FINDLINEIN work \"job\""
            : mode == 1 ? "SETLINEIN needs name i value — SETLINEIN work 0 \"x\""
+           : mode == 3 ? "INSERTLINEIN needs name i line — INSERTLINEIN work 0 \"x\""
                        : "DROPNTHIN needs name i — DROPNTHIN work 0");
       return -1;
     }
@@ -74125,24 +74135,26 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       return 1;
     }
 
-    /* SETLINEIN / DROPNTHIN need index */
+    /* SETLINEIN / DROPNTHIN / INSERTLINEIN need index */
     if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "OF") ||
         kw(&L->cur, "NTH"))
       lex_next(L);
     if (!cubalc_read_num_atom(vm, L, &idx)) {
       fail(vm, mode == 1 ? "SETLINEIN needs i — SETLINEIN work 0 \"x\""
-                         : "DROPNTHIN needs i — DROPNTHIN work 0");
+           : mode == 3 ? "INSERTLINEIN needs i — INSERTLINEIN work 0 \"x\""
+                       : "DROPNTHIN needs i — DROPNTHIN work 0");
       return -1;
     }
     if (idx < 0) idx = 0;
 
-    if (mode == 1) {
+    if (mode == 1 || mode == 3) {
       if (kw(&L->cur, "TO") || kw(&L->cur, "WITH") || kw(&L->cur, "AS") ||
-          kw(&L->cur, "VALUE") || kw(&L->cur, "="))
+          kw(&L->cur, "VALUE") || kw(&L->cur, "LINE") || kw(&L->cur, "="))
         lex_next(L);
       val[0] = 0;
       if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
-        fail(vm, "SETLINEIN needs value — SETLINEIN work 0 \"x\"");
+        fail(vm, mode == 3 ? "INSERTLINEIN needs line — INSERTLINEIN work 0 \"x\""
+                           : "SETLINEIN needs value — SETLINEIN work 0 \"x\"");
         return -1;
       }
     }
@@ -74154,8 +74166,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     fi = 0;
     hit = 0;
     p = bag;
-    if (!bag[0] && mode == 1) {
-      /* empty bag: pad empty fields then set */
+    if (!bag[0] && (mode == 1 || mode == 3)) {
+      /* empty bag: pad empty fields then set/insert value */
       long i;
       for (i = 0; i < idx; i++) {
         if (!first && o + 1 < sizeof out) out[o++] = '\n';
@@ -74173,14 +74185,26 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       out[o] = 0;
       hit = 1;
     } else {
-      while (*p || (bag[0] && p == bag && fi == 0 && bag[0])) {
-        if (!bag[0]) break;
+      while (bag[0] && *p) {
         start = p;
         while (*p && *p != '\n') p++;
         {
           size_t fl = (size_t)(p - start);
           int drop_this = (mode == 2 && fi == idx);
           int set_this = (mode == 1 && fi == idx);
+          int ins_before = (mode == 3 && fi == idx && !hit);
+          if (ins_before) {
+            size_t vl = strlen(val);
+            if (!first && o + 1 < sizeof out) out[o++] = '\n';
+            if (o + vl < sizeof out) { memcpy(out + o, val, vl); o += vl; }
+            else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, val, take); o += take;
+            }
+            out[o] = 0;
+            first = 0;
+            hit = 1;
+          }
           if (drop_this) {
             hit = 1;
           } else {
@@ -74226,6 +74250,18 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           fi++;
         }
       }
+      /* INSERTLINEIN past end: append (no empty pad — priority/queue tail) */
+      if (mode == 3 && !hit) {
+        size_t vl = strlen(val);
+        if (!first && o + 1 < sizeof out) out[o++] = '\n';
+        if (o + vl < sizeof out) { memcpy(out + o, val, vl); o += vl; }
+        else if (o < sizeof out - 1) {
+          size_t take = sizeof out - 1 - o;
+          memcpy(out + o, val, take); o += take;
+        }
+        out[o] = 0;
+        hit = 1;
+      }
     }
 
     nfields = 0;
@@ -74246,10 +74282,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "SETLINEIN_N", nfields);
       var_set_num(vm, "SETLINEIN_HIT", hit);
       var_set_num(vm, "DROPNTHIN_HIT", 0);
+      var_set_num(vm, "INSERTLINEIN_HIT", 0);
+    } else if (mode == 3) {
+      var_set_num(vm, "INSERTLINEIN_N", nfields);
+      var_set_num(vm, "INSERTLINEIN_HIT", hit);
+      var_set_num(vm, "SETLINEIN_HIT", 0);
+      var_set_num(vm, "DROPNTHIN_HIT", 0);
     } else {
       var_set_num(vm, "DROPNTHIN_HIT", hit);
       var_set_num(vm, "DROPNTHIN_N", nfields);
       var_set_num(vm, "SETLINEIN_HIT", 0);
+      var_set_num(vm, "INSERTLINEIN_HIT", 0);
     }
     var_set_num(vm, "OK", 1);
     if (vm->trace)
