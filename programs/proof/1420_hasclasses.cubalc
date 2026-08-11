@@ -1,0 +1,60 @@
+# HASCLASSES / NEEDCLASSES — multi CLASS soft/hard gate (HASFORMS twin)
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD id
+END
+
+CLASS Order
+  FIELD n
+END
+
+# all hit
+HASCLASSES Ticket Order
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASCLASSES_N == 2
+ASSERT CLASSMISS_N == 0
+ASSERT CLASSMISS == ""
+
+# partial miss soft
+HASCLASSES Ticket Ghost
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT HASCLASSES_N == 1
+ASSERT CLASSMISS_N == 1
+ASSERT CLASSMISS == "Ghost"
+
+# bag form
+LET need = "Ticket\nOrder"
+HASCLASSES need
+ASSERT LAST_N == 1
+
+LET need = "Ticket,Ghost,Order"
+HASCLASSES need
+ASSERT LAST_N == 0
+ASSERT CLASSMISS_N == 1
+ASSERT CLASSMISS == "Ghost"
+
+# after INCLUDE
+INCLUDE life_cell
+HASCLASSES Ticket Cell
+ASSERT LAST_N == 1
+
+# ALLCLASSES alias
+ALLCLASSES Ticket Order Cell
+ASSERT LAST_N == 1
+
+# empty soft miss
+HASCLASSES
+ASSERT LAST_N == 0
+ASSERT OK == 0
+
+HASFORM "HASCLASSES"
+ASSERT LAST_N == 1
+HASFORM "NEEDCLASSES"
+ASSERT LAST_N == 1
+
+PRINT "1420_hasclasses ok"
+PASS

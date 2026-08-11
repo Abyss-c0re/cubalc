@@ -909,6 +909,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 878. ~~**`BINDTHIS` / `USEOBJ` / `CLEARTHIS` / `HASTHIS`**~~ **done** (bind THIS without SEND · soft miss · multi-step GETF/SETF THIS · proof 1417).
 879. ~~**`TRYDELETE` / `DELETEOBJ SOFT`**~~ **done** (explicit soft free · TRYDELETE_N · twin TRYCLONE/TRYSWAP · proof 1418).
 880. ~~**`HASCLASS` / `KNOWNCLASS`**~~ **done** (soft 0|1 CLASS defined probe · dual REQUIRE CLASS · no LISTCLASSES+HASLINE · proof 1419).
+881. ~~**`HASCLASSES` / `NEEDCLASSES`**~~ **done** (multi CLASS soft/hard gate · CLASSMISS bag · HASFORMS twin · proof 1420).
 
 
 ## Tick protocol
