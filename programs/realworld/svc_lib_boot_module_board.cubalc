@@ -149,35 +149,47 @@ IF LAST_N == 1 THEN
   EXIT 2 "unknown subcmd"
 END
 
-# ensure agent plate for plate-using ops (standalone actions without prior boot)
+# ensure agent plate for plate-using ops (standalone without prior boot).
+# ENSUREPLATE will not reseed an existing {}; seed before first INCLUDE only.
 SYS EQS op "list"
 IF LAST_N == 0 THEN
   SYS EQS op "clear"
   IF LAST_N == 0 THEN
-    LET PLATE_PATH = agent_path
-    LET PEER_PATH = peer_path
-    INCLUDE plate_peer_session
+    LET need_seed = 1
+    SYS EXIST agent_path
+    IF LAST_N == 1 THEN
+      SYS READ OR agent_path OR ""
+      SYS HAS LAST "svc-slb"
+      IF LAST_N == 1 THEN
+        LET need_seed = 0
+      END
+      CLEAR_ERR
+    END
     CLEAR_ERR
-    GETP "agent"
-    SYS EQS LAST "svc-slb"
-    IF LAST_N == 0 THEN
+    IF need_seed == 1 THEN
       SYS TRIM host_s
       LET host_s = LAST
       SYS TRIM role_s
       LET role_s = LAST
       CLEAR_ERR
+      LET PLATE_PATH = agent_path
+      LET PEER_PATH = peer_path
       SYS CAT "{\"agent\":\"svc-slb\",\"schema\":\"cubalc.svc_lib_boot_module.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"want_filter\":\"lib_roster\",\"label\":\"slb\",\"cfg\":{\"surface\":\"lib_boot,lib_guard,NEED_LIBS,NEED_LIB_ANY,LIB_GUARD_SOFT,LIB_GUARD_OK,LIBHAVE,LIBMISS,HASLIB\",\"contract\":\"INCLUDE-path module gate · init --lib\"}}"
       LET PLATE_SEED = LAST
       CLEAR_ERR
       SYS CAT "{\"peer\":\"lib_roster\",\"n\":1}"
       LET PEER_SEED = LAST
       CLEAR_ERR
+      # replace empty/wrong plate file so ENSUREPLATE can take seed
+      SYS RM agent_path
+      CLEAR_ERR
+      SYS RM peer_path
+      CLEAR_ERR
       INCLUDE plate_peer_session
       CLEAR_ERR
       SYS SAVEPLATE agent_path PLATE
       CLEAR_ERR
     END
-    CLEAR_ERR
   END
 END
 

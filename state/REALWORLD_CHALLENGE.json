@@ -5814,6 +5814,22 @@
       "title": "lib_boot re-INCLUDEs agent_boot (double boot on boards)",
       "detail": "Boards INCLUDE agent_boot then lib_boot \u2192 agent_boot again. Works; inflates includes_n. Prefer INCLUDE lib_boot alone when board only needs path+guard.",
       "repro": "includes list agent_boot \u00d72 after lib_boot"
+    },
+    {
+      "id": "W717",
+      "severity": "med",
+      "area": "host|plate",
+      "title": "ENSUREPLATE does not reseed existing non-empty/empty file",
+      "detail": "First INCLUDE plate_boot with DEFAULT PLATE_SEED={} creates agent.json as {}. Later LET PLATE_SEED=full; INCLUDE plate_peer_session leaves {}. Agents must SYS RM path before re-INCLUDE with new seed, or seed before first INCLUDE only. Auto-seed boards need soft exist+HAS content probe.",
+      "repro": "INCLUDE plate with seed {}; then LET PLATE_SEED=real; INCLUDE again \u2192 still {}"
+    },
+    {
+      "id": "W718",
+      "severity": "low",
+      "area": "host|rm",
+      "title": "SYS RM OR path is not valid \u2014 use SYS RM path",
+      "detail": "SYS RM OR agent_path parses as unknown form agent_path. Soft-missing is built into SYS RM without OR glue (unlike SYS READ OR).",
+      "repro": "SYS RM OR p \u2192 unknown form; SYS RM p ok"
     }
   ],
   "workarounds": [
@@ -6028,10 +6044,11 @@
     "string-var shadow REQUIRE LIB (W712)",
     "HASLIB exact stem (W713)",
     "hard lib_guard miss exit_code 0 (W714)",
-    "LIBHAVE multiline PRINT (W715)"
+    "LIBHAVE multiline PRINT (W715)",
+    "ENSUREPLATE no reseed (W717)",
+    "SYS RM no OR glue (W718)"
   ],
   "issues_faced": [
-    "iter301: board 10/10 green after exec rename; selftest CLI duals still red",
     "iter302: ERRTIPS heuristic classes lib/cap/p2p/run/fat all green",
     "iter302: chain TIPS after ERRTIPS_TOPIC works; noise falls back general (W563)",
     "iter302: board 10/10; selftest CLI duals still red",
@@ -6080,9 +6097,10 @@
     "iter327: product_session fleet board 11/12 green; -T 40 TIMEOUT; hard NEEDFLAGS exit_code 0",
     "iter327: selftest 575/787 product_session+tool_session PASS; CLI duals still set",
     "iter328: lib_boot module board 10/10; fixed REQUIRE LIB bare stem (W711) after MI857 break",
-    "iter328: selftest 584/807 require_lib+lib_guard+lib_boot PASS; CLI duals still set"
+    "iter328: selftest 584/807 require_lib+lib_guard+lib_boot PASS; CLI duals still set",
+    "iter328: auto-seed plate via SYS RM+ENSUREPLATE seed; solo+seq 10/10 green"
   ],
   "commit": "90fe21b7",
-  "ts": "2026-08-11T02:18:13Z",
+  "ts": "2026-08-11T02:20:28Z",
   "board_commit": "d5de92fb"
 }
