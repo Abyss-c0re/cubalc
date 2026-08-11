@@ -1,0 +1,67 @@
+# PUSHTO / POPFROM / SHIFTFROM / LINESIN / HASINBAG — named work bags
+
+HOLD_FLASH 1
+
+# PUSHTO builds bag
+PUSHTO work "a"
+PUSHTO work "b"
+PUSHTO work "c"
+ASSERT work == "a
+b
+c"
+LINESIN work
+ASSERT LAST_N == 3
+
+# HASINBAG
+HASINBAG work "b"
+ASSERT LAST_N == 1
+HASINBAG work "z"
+ASSERT LAST_N == 0
+
+# POPFROM LIFO
+POPFROM work
+ASSERT LAST == "c"
+ASSERT work == "a
+b"
+ASSERT LAST_N == 1
+
+# SHIFTFROM FIFO
+SHIFTFROM work
+ASSERT LAST == "a"
+ASSERT work == "b"
+
+# UNSHIFTTO front
+UNSHIFTTO work "front"
+ASSERT work == "front
+b"
+
+# empty pop soft
+CLEARSTR emptyq
+POPFROM emptyq
+ASSERT LAST_N == 0
+ASSERT emptyq == ""
+
+# DEQUEUEFROM alias
+PUSHTO q "1"
+PUSHTO q "2"
+DEQUEUEFROM q
+ASSERT LAST == "1"
+ASSERT q == "2"
+
+# BAGHAS alias
+BAGHAS q "2"
+ASSERT LAST_N == 1
+
+HASFORM "PUSHTO"
+ASSERT LAST_N == 1
+HASFORM "POPFROM"
+ASSERT LAST_N == 1
+HASFORM "SHIFTFROM"
+ASSERT LAST_N == 1
+HASFORM "LINESIN"
+ASSERT LAST_N == 1
+HASFORM "HASINBAG"
+ASSERT LAST_N == 1
+
+PRINT "1456_pushto_bag ok"
+PASS
