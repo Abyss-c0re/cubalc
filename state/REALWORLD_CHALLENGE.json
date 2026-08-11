@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 347,
-  "program": "programs/realworld/svc_callany_or_fallback_board.cubalc",
-  "theme": "CALLANY/SENDANY OR multi-plugin soft defaults (TRYCALLANY OR + TRYSENDANY OR)",
-  "version": "1.15.899-usability",
+  "iter": 348,
+  "program": "programs/realworld/svc_host_class_floor_board.cubalc",
+  "theme": "host CLASS floor fleet admit (run -K / NEEDCLASSES / HASCLASSES)",
+  "version": "1.15.900-usability",
   "pass": true,
-  "prior_note": "iter 346 CALL/SEND OR single-name; this iter first CALLANY OR + SENDANY OR dual realworld (1443/1444)",
+  "prior_note": "iter 347 CALLANY/SENDANY OR; this iter first realworld of 1445 host -K/--require-classes",
   "tests": [
     {
       "name": "list",
@@ -15,57 +15,63 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + TRYCALLANY ghost hook_ping OR",
+      "cmd": "seed + HASCLASS + HASCLASSES 3",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "multi-name hit OR unused call+send 10+/10",
+      "cmd": "ALLCLASSES bag REQUIRE NEW SEND LIST 10/10",
       "ok": true,
-      "note": "pass 12/12"
+      "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "all-miss OR fallback + bare TRY 10/10",
+      "cmd": "partial CLASSMISS + empty + substring 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "call",
-      "cmd": "DEFAULT/FALLBACK + priority chain + WITH num",
+      "name": "any",
+      "cmd": "HASCLASSANY CLASSHAVE bag 10/10",
       "ok": true,
-      "note": "call 10/10"
+      "note": "any 10/10"
     },
     {
-      "name": "send",
-      "cmd": "SENDANY multi-method + obj miss + WITH",
+      "name": "need",
+      "cmd": "NEEDCLASSES hit + var expand + SEND 10/10",
       "ok": true,
-      "note": "send 10/10"
-    },
-    {
-      "name": "bag",
-      "cmd": "bag name lists hit+miss call/send 11/11",
-      "ok": true,
-      "note": "bag 11/11"
+      "note": "need 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM CALLANY/TRYCALLANY/SENDANY",
+      "cmd": "HASFORM HASCLASSES/NEEDCLASSES",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "hit+fallback + REQUIRE",
+      "cmd": "admit path + CUBALC_HCF_REQUIRE",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber CLEAR_ERR LAST",
+      "cmd": "PRINT clobber HASLINE exact",
       "ok": true,
       "note": "probe"
+    },
+    {
+      "name": "host_K",
+      "cmd": "-I fleet_class_floor -K classes hit",
+      "ok": true,
+      "note": "host -K green"
+    },
+    {
+      "name": "host_K_miss",
+      "cmd": "-K without -I / missing class shell\u22600",
+      "ok": true,
+      "note": "host miss"
     },
     {
       "name": "unknown",
@@ -75,9 +81,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1443/1444 PASS; CLI duals still red (set form)",
+      "cmd": "selftest; 1445 shell PASS; CLI duals still red (set form)",
       "ok": false,
-      "note": "proofs green; CLI duals still red"
+      "note": "proofs/shell green; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -6600,6 +6606,30 @@
       "title": "SENDANY with single bare method name hard-fails parse",
       "detail": "SENDANY w1 tick OR 0 \u2192 sticky err SENDANY obj methods\u2026 (expects multi-name list). Need bag or \u22652 method tokens even when only one is real. Single-name soft defaults stay on SEND/TRYSEND OR (1442).",
       "repro": "SENDANY w1 tick OR 0 hard-fail; SENDANY w1 ghost tick OR 0 ok"
+    },
+    {
+      "id": "W816",
+      "severity": "high",
+      "area": "lang|class_redef",
+      "title": "CLASS redefine after -I/INCLUDE silently aborts run (ok:false exit 0 empty err)",
+      "detail": "Preload -I fleet_class_floor then CLASS FleetWorker\u2026 in main or bare INCLUDE same lib re-executes CLASS and stops after few stmts with ok:false, exit_code 0, empty err/last_err. INCLUDE ONCE skips correctly. Agents combining host -K catalog libs with in-file CLASS must use INCLUDE ONCE or omit redefinition.",
+      "repro": "cubalc run -I fleet_class_floor -e 'CLASS FleetWorker\\n FIELD n\\nEND\\nPASS' \u2192 ok:false stmts~4"
+    },
+    {
+      "id": "W817",
+      "severity": "high",
+      "area": "lang|require_lib",
+      "title": "REQUIRE LIB only proves path exists \u2014 does not execute module (no CLASS/FN register)",
+      "detail": "REQUIRE LIB \"life_cell\" prints require lib \u2192 path and OK=1 but HASCLASS Cell stays 0 and includes_n=0. INCLUDE life_cell registers CLASS. Proof 590 documents presence gate; agents still confuse REQUIRE LIB with INCLUDE. Pair: REQUIRE LIB stem; INCLUDE ONCE stem.",
+      "repro": "REQUIRE LIB life_cell; HASCLASS Cell \u2192 0; INCLUDE life_cell; HASCLASS Cell \u2192 1"
+    },
+    {
+      "id": "W818",
+      "severity": "high",
+      "area": "host|require_classes",
+      "title": "Host -K/CUBALC_REQUIRE_CLASSES only sees -I preload, not main-file CLASS or later INCLUDE",
+      "detail": "cubalc run -K FleetWorker prog.cubalc fails even when prog REQUIREs/INCLUDEs fleet_class_floor and defines CLASS \u2014 floor runs NEEDCLASSES after -I only, before main body. Correct: cubalc run -I fleet_class_floor -K FleetWorker prog. Twin of require-fns -N preload contract.",
+      "repro": "cubalc run -K FleetWorker board.cubalc \u2192 REQUIRE CLASSES failed; add -I fleet_class_floor \u2192 ok"
     }
   ],
   "workarounds": [
@@ -6728,7 +6758,6 @@
     "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
   ],
   "language_gaps": [
-    "TRYDELETE soft free fleet slots (1418)",
     "HASCLASS/HASCLASSES class gate (1419/1420)",
     "HASFORM lag KNOWNCLASS/TYPEDEFINED/FREEOBJ (W768)",
     "CLEAR_ERR LAST=cleared reconfirmed (W772)",
@@ -6761,10 +6790,14 @@
       "iter": 347,
       "gap": "CALLANY/SENDANY multi-plugin OR is excellent for ops priority chains, but string RET from hit paths is unusable in agents \u2014 forces FN/METHOD name gates + numeric contracts only. Single-name SENDANY also awkward vs SEND OR.",
       "want": "Hit RET strings in LAST like soft OR fallbacks; allow SENDANY single method token"
+    },
+    {
+      "iter": 348,
+      "gap": "Host CLASS floor is solid for deploy contracts, but CLASS redefine silent-fail and REQUIRE LIB non-executing are footguns; agents need INCLUDE ONCE + -I dual documented in one place.",
+      "want": "CLASS redefine sticky err with tip; REQUIRE LIB optional EXECUTE/LOAD alias that includes"
     }
   ],
   "issues_faced": [
-    "iter333: service_session fleet board 10/10 lean (no plate_peer); vars_full=true still",
     "iter333: HARDFAIL field miss under vars_full (W741); plate_peer+service unusable (W743)",
     "iter334: TRYNEW/TRYCLONE fleet board 10/10; HASFORM lag W745; soft scores 8-9/10",
     "iter334: rebuilt binary via -O0 lang_ops_core after OOM; proofs near-pass",
@@ -6807,9 +6840,14 @@
       "iter": 347,
       "issue": "Board initially scored SYS EQS body \"prod\"/\"live\" on CALLANY/SENDANY hit RET strings; both fail (W813/W814). Worked around by scoring CALLANY_FN/SENDANY_METHOD + numeric LAST_N only; soft OR strings still EQS-able.",
       "resolution": "Rewrote call/bag score paths; documented W813\u2013W815"
+    },
+    {
+      "iter": 348,
+      "issue": "Board first redefined CLASS after -I (silent abort W816); REQUIRE LIB alone left HASCLASS 0 (W817). Fixed with REQUIRE LIB + INCLUDE ONCE fleet_class_floor; host tests use -I for -K.",
+      "resolution": "lib programs/lib/fleet_class_floor.cubalc + INCLUDE ONCE; document W816\u2013W818"
     }
   ],
-  "commit": "0e73b4c7",
-  "ts": 1786447308,
+  "commit": "efb9a3f1",
+  "ts": 1786448891,
   "board_commit": "767d4822"
 }

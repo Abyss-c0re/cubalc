@@ -1,0 +1,909 @@
+# svc_host_class_floor_board.cubalc — host CLASS floor + NEEDCLASSES fleet admit
+#
+# Real use: deploy agents require a fleet OOP type catalog to be present after
+# -I preload before NEW/SEND dispatch. Host contract:
+#   cubalc run -I fleet_class_floor -K FleetWorker,FleetQueue …
+#   CUBALC_REQUIRE_CLASSES=FleetWorker,FleetQueue
+# First realworld of 1445 run -K/--require-classes / CUBALC_REQUIRE_CLASSES
+# (1.15.900+ · MI 907). Twin of 1440 -N/--require-fns. Distinct from
+# svc_class_boot_catalog (INCLUDE class_boot knobs) and svc_obj_class_guard
+# (obj+class_guard dual) — this board is *host floor + native HASCLASSES*.
+#
+#   HASCLASS / KNOWNCLASS · HASCLASSES / ALLCLASSES / NEEDCLASSES
+#   HASCLASSANY / NEEDCLASSANY · CLASSMISS / CLASSHAVE · HASCLASSES_N
+#   REQUIRE CLASS · LISTCLASSES · bag/CSV class lists
+#   Host: -K / --require-classes / CUBALC_REQUIRE_CLASSES after -I only
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_hcf_$$
+#   ./out/cubalc run -I fleet_class_floor programs/realworld/svc_host_class_floor_board.cubalc boot
+#   ./out/cubalc run -I fleet_class_floor ... pass|soft|any|need|form|gate|probe|list
+#   ./out/cubalc run -I fleet_class_floor -K FleetWorker,FleetQueue ... gate
+#
+# Plate: STATUS.txt VAL.txt META.txt HCF_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_HCF_REQUIRE
+#
+# Edges: host -K only sees -I preload (not main-file CLASS / later INCLUDE);
+#   CLASS redefine after -I silent abort ok:false exit 0; REQUIRE LIB ≠ INCLUDE;
+#   NEEDCLASSES miss exit_code 0; string var HASCLASSES expands; empty soft miss;
+#   CLASSMISS exact; HASLINE substring false friend; WRITE NL; PRINT clobber
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+# REQUIRE LIB only proves path exists — does NOT execute CLASS body (W817).
+# Must INCLUDE (or host -I) to register classes. Bare INCLUDE re-runs after -I
+# and CLASS redefine silently aborts (W816) — INCLUDE ONCE is required.
+REQUIRE LIB "fleet_class_floor"
+INCLUDE ONCE fleet_class_floor
+
+NOTE "svc_host_class_floor_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_host_class_floor -- boot|pass|soft|any|need|form|gate|probe|list|clear [-I fleet_class_floor] [-K classes]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_HCF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "HCF_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET class_n = 0
+LET miss_n = 0
+LET have_n = 0
+LET miss_bag = ""
+LET have_bag = ""
+
+ONEOF ACTION "boot", "pass", "soft", "any", "need", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "any" THEN
+    LET op = "any"
+  WHEN "need" THEN
+    LET op = "need"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-hcf\",\"schema\":\"cubalc.svc_host_class_floor.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"hcf\",\"want_filter\":\"host_class_floor\",\"cfg\":{\"surface\":\"HASCLASS,HASCLASSES,HASCLASSANY,NEEDCLASSES,REQUIRE CLASS,LISTCLASSES,-K,CUBALC_REQUIRE_CLASSES\",\"contract\":\"host CLASS floor after -I preload + native multi CLASS admit\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  HASCLASS FleetWorker
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASCLASSES FleetWorker FleetQueue FleetCanary
+  LET class_n = HASCLASSES_N
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-hcf"
+  IF LAST_N == 1 THEN
+    IF ok_v == 1 THEN
+      IF class_n == 3 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+        LET find_n = class_n
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot class_n"
+        FAIL "boot class_n"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot hasclass"
+      FAIL "boot hasclass"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score class_n note_msg
+  CLEAR_ERR
+END
+
+# pass — all-present multi CLASS + bag form + REQUIRE CLASS + NEW/SEND
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASCLASSES FleetWorker FleetQueue
+  LET ok_v = OK
+  LET class_n = HASCLASSES_N
+  LET miss_n = CLASSMISS_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF class_n == 2 THEN
+    LET score = score + 1
+  END
+  IF miss_n == 0 THEN
+    LET score = score + 1
+  END
+  ALLCLASSES FleetWorker FleetQueue FleetCanary
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET need = "FleetWorker\nFleetQueue"
+  HASCLASSES need
+  LET ok_v = LAST_N
+  LET class_n = HASCLASSES_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF class_n == 2 THEN
+    LET score = score + 1
+  END
+  REQUIRE CLASS FleetWorker
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NEW FleetWorker w0
+  SETF w0 load 0
+  CLEAR_ERR
+  SEND w0 ping
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF find_n == 1 THEN
+    LET score = score + 1
+  END
+  LISTCLASSES
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "FleetWorker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "FleetQueue"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score class_n find_n note_msg
+  CLEAR_ERR
+END
+
+# soft — partial miss + empty + CLASSMISS exact + substring false friend
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASCLASSES FleetWorker GhostPluginHcf
+  LET ok_v = OK
+  LET class_n = HASCLASSES_N
+  LET miss_n = CLASSMISS_N
+  LET miss_bag = CLASSMISS
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF class_n == 1 THEN
+    LET score = score + 1
+  END
+  IF miss_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS miss_bag "GhostPluginHcf"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # substring false friend — Fleet is not FleetWorker
+  HASCLASS Fleet
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS "FleetWorker" "Fleet"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # empty HASCLASSES soft miss
+  HASCLASSES
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # CSV bag partial
+  LET need = "FleetWorker,GhostPluginHcf,FleetQueue"
+  HASCLASSES need
+  LET class_n = HASCLASSES_N
+  LET miss_n = CLASSMISS_N
+  LET miss_bag = CLASSMISS
+  CLEAR_ERR
+  IF class_n == 2 THEN
+    LET score = score + 1
+  END
+  IF miss_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS miss_bag "GhostPluginHcf"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score miss_bag note_msg
+  CLEAR_ERR
+END
+
+# any — HASCLASSANY / CLASSHAVE first-hit
+SYS EQS op "any"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASCLASSANY GhostPluginHcf FleetWorker SpectreHcf
+  LET ok_v = OK
+  LET have_n = HASCLASSANY_N
+  LET have_bag = CLASSHAVE
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF have_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS have_bag "FleetWorker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASSANY GhostA GhostB
+  LET ok_v = OK
+  LET have_n = HASCLASSANY_N
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF have_n == 0 THEN
+    LET score = score + 1
+  END
+  LET opts = "GhostA\nFleetCanary\nGhostB"
+  HASCLASSANY opts
+  LET ok_v = LAST_N
+  LET have_bag = CLASSHAVE
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS have_bag "FleetCanary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # empty any soft miss
+  HASCLASSANY
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASS FleetCanary
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "host_class_floor"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "any ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "any score"
+    FAIL "any score"
+    CLEAR_ERR
+  END
+  SYS CAT "any:" score ":ay"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "any:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score have_bag note_msg
+  CLEAR_ERR
+END
+
+# need — NEEDCLASSES hit (hard miss left to host -K tests; soft probe via HAS)
+# In-program NEEDCLASSES on present classes; document miss → ok:false exit_code 0
+SYS EQS op "need"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEEDCLASSES FleetWorker FleetQueue
+  LET ok_v = OK
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  NEEDCLASSES FleetWorker
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  REQUIRE CLASS FleetQueue
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  REQUIRE CLASS FleetCanary
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # string var expands to class name (unlike HASFLAG W13)
+  LET cname = "FleetWorker"
+  HASCLASSES cname
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # bare undefined token soft-misses as class name
+  HASCLASSES totally_undefined_class_hcf
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # bag via multi-line string works
+  LET need = "FleetWorker\nFleetCanary"
+  HASCLASSES need
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NEW FleetQueue q0
+  CLEAR_ERR
+  SEND q0 push
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF find_n == 1 THEN
+    LET score = score + 1
+  END
+  SEND q0 push
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF find_n == 2 THEN
+    LET score = score + 1
+  END
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "need ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "need score"
+    FAIL "need score"
+    CLEAR_ERR
+  END
+  SYS CAT "need:" score ":nd"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "need:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM surface
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "HASCLASSES"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASFORM "NEEDCLASSES"
+  LET class_n = LAST_N
+  CLEAR_ERR
+  HASFORM "HASCLASS"
+  LET miss_n = LAST_N
+  CLEAR_ERR
+  HASFORM "HASCLASSANY"
+  LET have_n = LAST_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF class_n == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF miss_n == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF have_n == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  HASFORM "LISTCLASSES"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS HASCLASSES"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASS FleetWorker
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "host_class_floor"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "NEEDCLASSES"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — full admit path + REQUIRE env
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASCLASSES FleetWorker FleetQueue FleetCanary
+  LET ok_v = OK
+  LET class_n = HASCLASSES_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF class_n == 3 THEN
+    LET score = score + 1
+  END
+  HASCLASSANY GhostX FleetWorker
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NEEDCLASSES FleetWorker
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  NEW FleetWorker g0
+  SETF g0 load 0
+  CLEAR_ERR
+  SEND g0 bump 3
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF find_n == 3 THEN
+    LET score = score + 1
+  END
+  HASCLASSES FleetWorker GhostPluginHcf
+  IF OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-hcf"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · CLEAR_ERR · WRITE NL · LISTCLASSES bag
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASCLASS FleetWorker
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET body = "keep-me"
+  CLEAR_ERR
+  SYS EQS LAST "cleared"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "host_class_floor"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "callany_or_fallback"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LISTCLASSES
+  LET body = LAST
+  CLEAR_ERR
+  SYS HASLINE body "FleetCanary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # HASLINE substring false friend
+  SYS HASLINE body "Fleet"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = ok_v
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " class_n=" class_n " miss_n=" miss_n " have=" have_bag
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "hcf report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

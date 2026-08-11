@@ -1,0 +1,35 @@
+# fleet_class_floor.cubalc — OOP CLASS catalog for host -K / NEEDCLASSES floor
+#
+# Preload with:
+#   cubalc run -I fleet_class_floor -K FleetWorker,FleetQueue,FleetCanary …
+# Used by programs/realworld/svc_host_class_floor_board.cubalc (iter 348).
+# Host CLASS floor only sees -I preloads — CLASS in the main file is too late.
+
+CLASS FleetWorker
+  FIELD id ""
+  FIELD load 0
+  METHOD ping
+    RET 1
+  END
+  METHOD bump d
+    GETF THIS load
+    LET v = LAST_N + d
+    SETF THIS load v
+    RET v
+  END
+END
+
+CLASS FleetQueue
+  FIELD depth 0
+  METHOD push
+    GETF THIS depth
+    LET v = LAST_N + 1
+    SETF THIS depth v
+    RET v
+  END
+END
+
+CLASS FleetCanary
+  FIELD tag "canary"
+  FIELD energy 10
+END
