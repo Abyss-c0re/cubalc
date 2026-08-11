@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 344,
-  "program": "programs/realworld/svc_callany_hook_dispatch_board.cubalc",
-  "theme": "CALLANY/TRYCALLANY first-defined plugin hook dispatch",
-  "version": "1.15.893-usability",
+  "iter": 345,
+  "program": "programs/realworld/svc_sendany_method_dispatch_board.cubalc",
+  "theme": "SENDANY/TRYSENDANY first-existing method dispatch on live workers",
+  "version": "1.15.895-usability",
   "pass": true,
-  "prior_note": "iter 343 obj+class guard; this iter first CALLANY realworld (1438)",
+  "prior_note": "iter 344 CALLANY FN hooks; this iter first SENDANY realworld (1439 OOP twin)",
   "tests": [
     {
       "name": "list",
@@ -15,37 +15,37 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + CALLANY hook_ping",
+      "cmd": "seed agent + SENDANY tick",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "priority hooks + CALLFIRST score 10/10",
+      "cmd": "tick/update/SENDFIRST refresh 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "TRYCALLANY/SOFTCALLANY miss + recover",
+      "cmd": "TRYSENDANY method+obj miss + recover",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "bag",
-      "cmd": "newline bag + CSV name lists",
+      "cmd": "newline bag + CSV method lists",
       "ok": true,
       "note": "bag 10/10"
     },
     {
-      "name": "arity",
-      "cmd": "0-arg vs WITH multi-arg first-hit",
+      "name": "args",
+      "cmd": "WITH bump arity + field state",
       "ok": true,
-      "note": "arity 10/10"
+      "note": "args 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM CALLANY family",
+      "cmd": "HASFORM SENDANY family",
       "ok": true,
       "note": "form 10/10"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1438 PASS",
+      "cmd": "selftest; 1439 PASS",
       "ok": false,
       "note": "proof green; CLI duals still red"
     }
@@ -6490,6 +6490,46 @@
       "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
       "detail": "Board uses REQUIRE LIB \"hold_seed\".",
       "repro": "REQUIRE LIB hold_seed \u2192 fail"
+    },
+    {
+      "id": "W803",
+      "severity": "low",
+      "area": "lang|sendany",
+      "title": "SENDANY first-existing method wins among ghost+real list",
+      "detail": "Positive: SENDANY w ghost tick update \u2192 SENDANY_METHOD=tick LAST_N mutates field. Good canary method priority without HASMETHOD+SEND glue.",
+      "repro": "SENDANY c ghost_m tick update \u2192 METHOD tick"
+    },
+    {
+      "id": "W804",
+      "severity": "low",
+      "area": "lang|sendany",
+      "title": "TRYSENDANY soft-miss both missing methods and missing object",
+      "detail": "TRYSENDANY obj ghost_a ghost_b \u2192 OK=0; TRYSENDANY missing_obj tick \u2192 OK=0. Capture SENDANY_N before CLEAR_ERR.",
+      "repro": "TRYSENDANY missing tick \u2192 OK 0"
+    },
+    {
+      "id": "W805",
+      "severity": "med",
+      "area": "lang|last_n",
+      "title": "SENDANY RET LAST_N must be captured before EQS/CLEAR_ERR",
+      "detail": "Same W799 class as CALLANY: SYS EQS SENDANY_METHOD clobbers LAST_N; LET ret_n=LAST_N immediately after SEND.",
+      "repro": "SENDANY c tick; SYS EQS SENDANY_METHOD tick; LAST_N not ret"
+    },
+    {
+      "id": "W806",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE META omit trailing NL",
+      "detail": "W5 class reconfirmed on SAD META.",
+      "repro": "od -c META.txt"
+    },
+    {
+      "id": "W807",
+      "severity": "low",
+      "area": "lang|require_lib",
+      "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
+      "detail": "Board uses REQUIRE LIB \"hold_seed\".",
+      "repro": "REQUIRE LIB hold_seed \u2192 fail"
     }
   ],
   "workarounds": [
@@ -6609,7 +6649,10 @@
     "Read ALL_OK/ANY_OK separately when both NEED sets set",
     "REQUIRE LIB \"hold_seed\" quoted",
     "Score CALLANY on CALLANY_FN/CALLED/CALLANY_N not string body EQS",
-    "LET ret_n=LAST_N immediately after CALLANY before EQS/CLEAR_ERR"
+    "LET ret_n=LAST_N immediately after CALLANY before EQS/CLEAR_ERR",
+    "REQUIRE LIB \"hold_seed\" quoted",
+    "LET ret_n=LAST_N; LET meth=SENDANY_METHOD immediately after SENDANY",
+    "CSV/newline bags for method priority lists"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6797,7 +6840,10 @@
     "OBJ_GUARD_OK ALL+ANY coupling (W794)",
     "CALLANY/TRYCALLANY first-defined FN dispatch (1438)",
     "CALLANY string RET LAST dual ASSERT vs LET (W798)",
-    "CALLANY LAST_N capture before EQS (W799)"
+    "CALLANY LAST_N capture before EQS (W799)",
+    "SENDANY/TRYSENDANY first-existing method dispatch (1439)",
+    "SENDANY LAST_N capture before EQS (W805)",
+    "TRYSENDANY soft obj and method miss (W804)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6879,9 +6925,11 @@
     "iter343: proofs 1434/1435 PASS; NEW-before-obj-gate documented",
     "iter344: CALLANY string RET LAST not LET-assignable \u2014 score via CALLANY_FN (W798)",
     "iter344: capture LAST_N before EQS after numeric CALLANY (W799)",
-    "iter344: board green after capture fixes; proof 1438 PASS"
+    "iter344: board green after capture fixes; proof 1438 PASS",
+    "iter345: first-try green SENDANY method dispatch board",
+    "iter345: proof 1439 PASS; capture LAST_N before EQS"
   ],
-  "commit": "1491a543",
-  "ts": "2026-08-11T10:06:41Z",
-  "board_commit": "1491a543"
+  "commit": "pending",
+  "ts": "2026-08-11T10:29:48Z",
+  "board_commit": "pending"
 }
