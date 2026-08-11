@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 955,
-  "version": "1.15.949-usability",
-  "item": "IFLINES / IFMANY / IFFEW",
-  "item_id": 955,
-  "title": "IFLINES · IFMANY · IFFEW · bag field-count branches",
-  "commit": "2636b6b7",
-  "summary": "Bag field count ==/>=/<= branches; no LINESIN+IF glue; proof 1494 PASS.",
+  "iter": 956,
+  "version": "1.15.950-usability",
+  "item": "IFHASFLAG / IFNOFLAG / IFHASARG / IFNOARG",
+  "item_id": 956,
+  "title": "IFHASFLAG · IFNOFLAG · IFHASARG · IFNOARG · CLI presence branches",
+  "commit": "1f6ee61a",
+  "summary": "CLI flag/arg present/missing branches; no HASFLAG+IF glue; proof 1495 PASS.",
   "proofs": [
-    "1494_iflines_ifmany_iffew PASS",
-    "1493_iflen regression PASS",
-    "1492_ifblank regression PASS"
+    "1495_ifhasflag_ifhasarg PASS (no flags + --verbose)",
+    "1494_iflines regression PASS"
   ],
-  "when": "2026-08-11T22:29:29Z",
+  "when": "2026-08-11T22:37:36Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "2636b6b72c984ed628de0f9fe5865c360b2537a6",
-  "note": "LIST/GREP work-queue gates without LINESIN probe glue"
+  "sha": "1f6ee61ae2a0d786d9cc254ad61a12c144441851",
+  "note": "CLI tool default/usage branches without HASFLAG probe soup"
 }
