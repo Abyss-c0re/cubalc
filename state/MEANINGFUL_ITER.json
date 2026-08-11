@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 952,
-  "version": "1.15.946-usability",
-  "item": "IFJSONEQ / IFJSONNEQ / IFSAMEJSON",
-  "item_id": 952,
-  "title": "IFJSONEQ \u00b7 IFJSONNEQ \u00b7 IFSAMEJSON \u00b7 plate equality branches",
-  "commit": "6832241d",
-  "summary": "Order-independent plate equality branches; no SYS JSONEQ+IF glue; proof 1491 PASS.",
+  "iter": 953,
+  "version": "1.15.947-usability",
+  "item": "IFBLANK / IFNOTBLANK",
+  "item_id": 953,
+  "title": "IFBLANK \u00b7 IFNOTBLANK \u00b7 whitespace string branches",
+  "commit": "85ded04d",
+  "summary": "Whitespace/blank string branches; no SYS BLANK+IF glue; proof 1492 PASS.",
   "proofs": [
-    "1491_ifjsoneq_ifjsonneq PASS",
-    "1490_ifcanread regression PASS"
+    "1492_ifblank_ifnotblank PASS",
+    "1491_ifjsoneq regression PASS"
   ],
-  "when": "2026-08-11T21:37:19Z",
+  "when": "2026-08-11T21:47:13Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "6832241d15a15dfe0de5225d2dd03346d1a93d11",
-  "note": "plate verify/resync without JSONEQ probe glue"
+  "sha": "85ded04d320f55e79a5e752e19bb2a081612fed5",
+  "note": "msg/form field gates without BLANK probe glue"
 }
