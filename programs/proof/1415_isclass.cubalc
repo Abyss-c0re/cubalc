@@ -1,0 +1,68 @@
+# ISCLASS / ISA / NEEDISA — soft instance-of probe without CLASSNAME+EQS glue
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD id
+END
+
+CLASS Other
+  FIELD x
+END
+
+NEW Ticket t1
+NEW Other o1
+
+# soft hit
+ISCLASS t1 Ticket
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT ISCLASS_N == 1
+ASSERT LAST == "Ticket"
+
+# ISA alias
+ISA t1 Ticket
+ASSERT LAST_N == 1
+
+# OFCLASS sugar
+OFCLASS t1 OF Ticket
+ASSERT LAST_N == 1
+
+# wrong class
+ISCLASS t1 Other
+ASSERT LAST_N == 0
+ASSERT LAST == "Ticket"
+
+# missing object
+ISCLASS missing_zz Ticket
+ASSERT LAST_N == 0
+ASSERT LAST == ""
+
+# INSTANCEOF alias
+INSTANCEOF o1 Other
+ASSERT LAST_N == 1
+INSTANCEOF o1 Ticket
+ASSERT LAST_N == 0
+
+# string-var class name
+LET want = "Ticket"
+ISCLASS t1 want
+ASSERT LAST_N == 1
+
+# NEEDISA success
+NEEDISA t1 Ticket
+ASSERT OK == 1
+ASSERT NEEDISA_N == 1
+ASSERT LAST == "t1"
+
+# CLASSNAME still works
+CLASSNAME t1
+ASSERT LAST == "Ticket"
+
+HASFORM "ISCLASS"
+ASSERT LAST_N == 1
+HASFORM "NEEDISA"
+ASSERT LAST_N == 1
+
+PRINT "1415_isclass ok"
+PASS

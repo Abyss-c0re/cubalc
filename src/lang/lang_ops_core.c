@@ -2041,6 +2041,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"HASMETHOD", "HASMETHOD obj|Class method — soft 0|1 before SEND"},
       {"LISTMETHODS", "LISTMETHODS Class|obj — method name bag · NMETHODS"},
       {"HASOBJ", "HASOBJ|LIVES name — soft live-object probe 0|1"},
+      {"ISCLASS", "ISCLASS|ISA|OFCLASS obj Class — soft 0|1 instance-of probe · LAST=actual class"},
+      {"NEEDISA", "NEEDISA|REQUIREISA obj Class — fail-fast if not instance of Class"},
       {"DELETEOBJ", "DELETEOBJ|FREEOBJ name — free object slot · NEW reuses name (not cube DESTROY)"},
       {"DELETEALL", "DELETEALL|FREEALL [Class] — free every live object · optional class filter"},
       {"FREEALL", "FREEALL alias of DELETEALL"},

@@ -16383,6 +16383,132 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* ISCLASS|ISA|OFCLASS|INSTANCEOF obj Class — soft 0|1 probe if live obj
+   * is an instance of Class. Complements CLASSNAME + EQS without string glue.
+   * Miss obj / wrong class / unknown Class → LAST_N=0 OK=1 (probe, not fail).
+   * LAST = actual class name when live, else "". Usability: agent IF after
+   * ENSURENEW/TRYNEW without CLASSNAME+EQS dual. */
+  if (kw(&L->cur, "ISCLASS") || kw(&L->cur, "ISA") ||
+      kw(&L->cur, "OFCLASS") || kw(&L->cur, "INSTANCEOF") ||
+      kw(&L->cur, "IS_A") || kw(&L->cur, "ISINSTANCE") ||
+      kw(&L->cur, "OBJISA") || kw(&L->cur, "TYPEIS")) {
+    char oname[48], cname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int hit = 0;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "ISCLASS object Class"); return -1;
+    }
+    if (kw(&L->cur, "OF") || kw(&L->cur, "AS") || kw(&L->cur, "IS"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "ISCLASS object Class"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(cname, sizeof cname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_class(vm, id))
+        snprintf(cname, sizeof cname, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(cname, sizeof cname, "%s", vv->sval);
+        else
+          snprintf(cname, sizeof cname, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cd = &vm->classes[ob->class_idx];
+      var_set_str(vm, "LAST", cd->name);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", cd->name);
+      var_set_str(vm, "CLASS", cd->name);
+      var_set_str(vm, "OBJECT", oname);
+      if (cname[0] && strcmp(cd->name, cname) == 0)
+        hit = 1;
+    } else {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "ISCLASS_N", hit);
+    var_set_num(vm, "ISA_N", hit);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# ISCLASS %s %s -> %d\n", oname, cname, hit);
+    bump(vm);
+    return 1;
+  }
+
+  /* NEEDISA|REQUIRE ISA|NEEDCLASS_OF obj Class — fail-fast if not instance.
+   * Soft dual is ISCLASS. Usability: agent contract after ENSURENEW. */
+  if (kw(&L->cur, "NEEDISA") || kw(&L->cur, "NEEDISCLASS") ||
+      kw(&L->cur, "REQUIREISA") || kw(&L->cur, "NEEDINSTANCEOF")) {
+    char oname[48], cname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int hit = 0;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "NEEDISA object Class"); return -1;
+    }
+    if (kw(&L->cur, "OF") || kw(&L->cur, "AS") || kw(&L->cur, "IS"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "NEEDISA object Class"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(cname, sizeof cname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_class(vm, id))
+        snprintf(cname, sizeof cname, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(cname, sizeof cname, "%s", vv->sval);
+        else
+          snprintf(cname, sizeof cname, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cd = &vm->classes[ob->class_idx];
+      if (cname[0] && strcmp(cd->name, cname) == 0)
+        hit = 1;
+      else {
+        snprintf(vm->err, sizeof vm->err,
+                 "NEEDISA: %s is %s not %s", oname, cd->name, cname);
+      }
+    } else {
+      snprintf(vm->err, sizeof vm->err, "NEEDISA: unknown object %s", oname);
+    }
+    if (!hit) {
+      fail(vm, vm->err);
+      return -1;
+    }
+    var_set_str(vm, "LAST", oname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_str(vm, "CLASS", cname);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "NEEDISA_N", 1);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTCLASSES|CLASSES — newline bag of defined class names.
    * LAST = bag; LAST_N / NCLASSES = count. Agent discovery after INCLUDE. */
   if (kw(&L->cur, "LISTCLASSES") || kw(&L->cur, "CLASSES") ||

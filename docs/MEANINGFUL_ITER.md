@@ -904,6 +904,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 873. ~~**`TRYRENAME` / `RENAMEOBJ SOFT`**~~ **done** (soft rename miss/redefine · OK=0 LAST_ERR · twin TRYCLONE · proof 1412).
 874. ~~**`TRYSWAP` / `SWAPOBJ`**~~ **done** (soft name role flip · OK=0 LAST_ERR on miss · no temp+RENAME glue · proof 1413).
 875. ~~**`ENSURENEW` / `NEW OR`**~~ **done** (keep live or soft create · ENSURENEW_N 0|1 · twin TRYNEW · proof 1414).
+876. ~~**`ISCLASS` / `ISA` / `NEEDISA`**~~ **done** (soft instance-of probe + fail-fast · no CLASSNAME+EQS glue · proof 1415).
 
 
 ## Tick protocol
