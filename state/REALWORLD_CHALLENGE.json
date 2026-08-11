@@ -6838,7 +6838,7 @@
     "iter343: first-try green obj_guard+class_guard dual board",
     "iter343: proofs 1434/1435 PASS; NEW-before-obj-gate documented"
   ],
-  "commit": "pending",
+  "commit": "dbd6869c",
   "ts": "2026-08-11T09:39:52Z",
-  "board_commit": "pending"
+  "board_commit": "dbd6869c"
 }
