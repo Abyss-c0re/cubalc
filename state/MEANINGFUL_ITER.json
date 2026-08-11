@@ -1,18 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 888,
-  "version": "1.15.881-usability",
-  "item": "HASOBJANY / NEEDOBJANY any-of multi live-object gates",
-  "item_id": 888,
-  "title": "HASOBJANY · NEEDOBJANY · OBJHAVE · HASOBJS twin",
-  "commit": "aeb554ab822748d9c97e154ac5c1d0e6c8433fea",
-  "summary": "HASOBJANY soft any live + OBJHAVE/MISS; NEEDOBJANY hard; proof 1427 PASS.",
+  "iter": 889,
+  "version": "1.15.882-usability",
+  "item": "method_guard native HASCLASS/HASMETHOD",
+  "item_id": 889,
+  "title": "method_guard · HASCLASS · HASMETHOD · drop LISTMETHODS soup",
+  "commit": "5c8e7def5b29731683beb49d16e981a90dea5bbe",
+  "summary": "method_guard rewritten to HASCLASS+HASMETHOD; METHMISS surface kept; 1428+1402 PASS.",
   "proofs": [
-    "1427_hasobjany PASS",
-    "1427_cli_hasobjany PASS"
+    "1428_method_guard_native PASS",
+    "1428_cli_method_guard_native PASS",
+    "1402_method_guard PASS",
+    "1402_method_boot PASS"
   ],
-  "when": "2026-08-11T08:04:53Z",
+  "when": "2026-08-11T08:13:32Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "aeb554ab822748d9c97e154ac5c1d0e6c8433fea",
-  "note": "optional peer/worker OR without N x HASOBJ IF glue; avoid ANYOBJ=PICKOBJ"
+  "sha": "5c8e7def5b29731683beb49d16e981a90dea5bbe",
+  "note": "lib usability — INCLUDE method_boot without LISTMETHODS+HASLINE glue"
 }
