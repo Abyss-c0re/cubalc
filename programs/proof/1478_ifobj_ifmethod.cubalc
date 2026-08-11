@@ -1,0 +1,100 @@
+# IFOBJ / IFMETHOD — live object and method capability branches
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD id
+  METHOD open
+    RET 1
+  END
+  METHOD close
+    RET 0
+  END
+END
+
+NEW Ticket t1
+
+# IFOBJ hit
+IFOBJ t1
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 1
+ASSERT IFOBJ_N == 1
+
+# miss
+IFOBJ ghost
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 0
+ASSERT IFOBJ_N == 0
+
+# IFHASOBJ alias
+IFHASOBJ t1
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+
+# IFMETHOD on live obj
+IFMETHOD t1 open
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+ASSERT IFMETHOD_N == 1
+
+# IFMETHOD on Class
+IFMETHOD Ticket close
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+
+# method miss
+IFMETHOD t1 explode
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+ASSERT IFMETHOD_N == 0
+
+# nest with IFCLASS
+IFCLASS Ticket
+  IFOBJ t1
+    IFMETHOD t1 open
+      LET state = "ready"
+    ELSE
+      LET state = "no-meth"
+    END
+  ELSE
+    LET state = "no-obj"
+  END
+ELSE
+  LET state = "no-class"
+END
+ASSERT state == "ready"
+
+# soft SEND path
+IFMETHOD t1 open
+  SEND t1 open
+  LET opened = 1
+ELSE
+  LET opened = 0
+END
+ASSERT opened == 1
+
+HASFORM "IFOBJ"
+ASSERT LAST_N == 1
+HASFORM "IFMETHOD"
+ASSERT LAST_N == 1
+
+PRINT "1478_ifobj_ifmethod ok"
+PASS
