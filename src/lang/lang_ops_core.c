@@ -2103,6 +2103,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"NEEDFORM", "NEEDFORM|REQUIREFORM name — fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "HASFORMS|ALLFORMS names… — soft 0|1 all known · FORMMISS bag of missing"},
       {"NEEDFORMS", "NEEDFORMS|REQUIREFORMS names… — fail-fast if any form missing · multi HASFORM"},
+      {"HASFORMANY", "HASFORMANY|HASANYFORMS names… — soft 0|1 if any form known · FORMHAVE bag"},
+      {"NEEDFORMANY", "NEEDFORMANY|REQUIREFORMANY names… — fail-fast if none of forms known · any-of"},
       {"FORMHINT", "FORMHINT|DESCRIBEFORM name — HELP one-line hint → LAST · dual of HASFORM with payload"},
       {"LISTFORMS", "LISTFORMS|FORMLIST [prefix] — bag of HELP catalog form names · dual of cubalc forms"},
       {"COUNTFORMS", "COUNTFORMS|NFORMS [prefix] — match count → LAST_N without bag · dual of LISTFORMS"},
@@ -37913,6 +37915,191 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     return 1;
   }
 
+  /* HASFORMANY|NEEDFORMANY name… — multi form any-of capability gate (HASFORMS twin).
+   * Soft: LAST_N 1 if any known · FORMHAVE bag · FORMMISS of unknowns.
+   * Hard NEEDFORMANY fail-fast if none of the listed forms exist.
+   * Usability: need SORTLIBS OR WALK OR PATHGLOB without N× HASFORM + IF glue. */
+  if (kw(&L->cur,"HASFORMANY") || kw(&L->cur,"HAS_FORM_ANY") ||
+      kw(&L->cur,"HASANYFORMS") || kw(&L->cur,"ANYFORMS_OK") ||
+      kw(&L->cur,"FORMANY?") || kw(&L->cur,"NEEDFORMANY") ||
+      kw(&L->cur,"NEED_FORM_ANY") || kw(&L->cur,"REQUIREFORMANY") ||
+      kw(&L->cur,"MUSTFORMANY") || kw(&L->cur,"REQUIRE_FORM_ANY") ||
+      kw(&L->cur,"NEEDANYFORMS") || kw(&L->cur,"REQUIREANYFORMS")) {
+    int hard = kw(&L->cur,"NEEDFORMANY") || kw(&L->cur,"NEED_FORM_ANY") ||
+               kw(&L->cur,"REQUIREFORMANY") || kw(&L->cur,"MUSTFORMANY") ||
+               kw(&L->cur,"REQUIRE_FORM_ANY") || kw(&L->cur,"NEEDANYFORMS") ||
+               kw(&L->cur,"REQUIREANYFORMS");
+    char names[32][96];
+    char miss[1024], havebag[1024];
+    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line;
+    size_t mo = 0, ho = 0;
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+           kw(&L->cur,"REQUIRE") || kw(&L->cur,"END") ||
+           kw(&L->cur,"IF") || kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") ||
+           kw(&L->cur,"PASS") || kw(&L->cur,"FAIL") || kw(&L->cur,"INCLUDE") ||
+           kw(&L->cur,"SYS") || kw(&L->cur,"HELP") || kw(&L->cur,"CLEAR_ERR") ||
+           kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"DEFAULT") ||
+           kw(&L->cur,"VERSION") || kw(&L->cur,"STATUS") || kw(&L->cur,"FOR") ||
+           kw(&L->cur,"WHILE") || kw(&L->cur,"LOOP") || kw(&L->cur,"EACH") ||
+           kw(&L->cur,"CUBE") || kw(&L->cur,"PLUG") || kw(&L->cur,"HOLD_FLASH")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[96];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':' ||
+                   *p == '|')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && p[tl] != '|' &&
+                   tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' ') || strchr(vv->sval, '|'))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[96];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':' ||
+                   *p == '|')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && p[tl] != '|' &&
+                   tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0]) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDFORMANY name… — NEEDFORMANY SORTLIBS WALK · HASFORMANY bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASFORMANY_N", 0);
+      var_set_num(vm, "FORMMISS_N", 0);
+      var_set_num(vm, "NEEDFORMANY_N", 0);
+      var_set_str(vm, "FORMMISS", "");
+      var_set_str(vm, "FORMHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASFORMANY: need names — HASFORMANY SORTLIBS WALK PATHGLOB");
+      var_set_str(vm, "ERR", "HASFORMANY: need names — HASFORMANY SORTLIBS WALK PATHGLOB");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      int hit = cubalc_form_known(names[i], NULL) ? 1 : 0;
+      if (hit) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, names[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+      } else {
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+      }
+    }
+    var_set_str(vm, "FORMMISS", miss);
+    var_set_str(vm, "FORMHAVE", havebag);
+    var_set_num(vm, "FORMMISS_N", nmiss);
+    var_set_num(vm, "HASFORMANY_N", nhave);
+    var_set_num(vm, "NEEDFORMANY_N", nname);
+    var_set_num(vm, "FORMS_ANY_N", nname);
+    if (nhave > 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else if (hard) {
+      char em[240];
+      snprintf(em, sizeof em,
+               "NEEDFORMANY miss line %d: need one of [%s] — cubalc forms · HASFORMANY · upgrade",
+               aln, miss[0] ? miss : "?");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      fail_at(vm, L, em);
+      return -1;
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASFORMANY miss (0/%d): need one of %s — NEEDFORMANY · upgrade runtime",
+               nname, miss[0] ? miss : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# hasformany n=%d have=%d miss=%d hard=%d\n",
+              nname, nhave, nmiss, hard);
+    bump(vm);
+    return 1;
+  }
+
 
   /* LISTFORMS [prefix] — bag of HELP-catalog form names (dual of cubalc forms).
    * Usability: agents discover surface in-lang without shell · optional filter.
@@ -39562,6 +39749,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"cap", "NEEDFORM"},
       {"cap", "HASFORMS"},
       {"cap", "NEEDFORMS"},
+      {"cap", "HASFORMANY"},
+      {"cap", "NEEDFORMANY"},
       {"cap", "FORMHINT"},
       {"cap", "LISTFORMS"},
       {"cap", "COUNTFORMS"},
@@ -39713,7 +39902,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"NEEDFORM", "HASFORM"}, {"NEEDFORM", "NEEDFORMS"}, {"NEEDFORM", "HASFORMS"},
       {"NEEDFORM", "FORMHINT"}, {"NEEDFORM", "REQUIRE FORM"},
       {"HASFORMS", "NEEDFORMS"}, {"HASFORMS", "HASFORM"}, {"HASFORMS", "FORMMISS"},
+      {"HASFORMS", "HASFORMANY"}, {"HASFORMS", "NEEDFORMANY"},
       {"NEEDFORMS", "HASFORMS"}, {"NEEDFORMS", "NEEDFORM"}, {"NEEDFORMS", "HASFORM"},
+      {"NEEDFORMS", "NEEDFORMANY"},
+      {"HASFORMANY", "NEEDFORMANY"}, {"HASFORMANY", "HASFORMS"}, {"HASFORMANY", "HASFORM"},
+      {"HASFORMANY", "FORMHAVE"}, {"HASFORMANY", "FORMMISS"}, {"HASFORMANY", "LISTFORMS"},
+      {"NEEDFORMANY", "HASFORMANY"}, {"NEEDFORMANY", "NEEDFORMS"}, {"NEEDFORMANY", "NEEDFORM"},
+      {"NEEDFORMANY", "FORMMISS"}, {"NEEDFORMANY", "FORMHAVE"},
       /* multi CLI flag contract (HASFORMS twin for --flags) */
       {"HASFLAG", "HASFLAGALL"}, {"HASFLAG", "NEEDFLAGS"}, {"HASFLAG", "REQUIRE FLAG"},
       {"HASFLAGALL", "NEEDFLAGS"}, {"HASFLAGALL", "HASFLAG"}, {"HASFLAGALL", "FLAGMISS"},
@@ -40514,7 +40709,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"general", "TOPIC"}, {"general", "TOPICHINT"}, {"general", "RELATEDTOPIC"},
       {"general", "FORMTOPICS"}, {"general", "GUIDE"}, {"general", "WHY"},
       {"general", "INCLUDE"},
-      {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"},
+      {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"}, {"cap", "HASFORMANY"},
       {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"}, {"cap", "LISTFORMS"},
       {"cap", "RELATED"}, {"cap", "RELATEDTOPIC"}, {"cap", "FORMTOPICS"},
       {"cap", "GUIDE"}, {"cap", "FORMSFOR"}, {"cap", "SNIP"}, {"cap", "TOPIC"},
@@ -42374,7 +42569,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"general", "REQUIRE VERSION"}, {"general", "VARS"}, {"general", "TOPIC"},
       {"general", "SNIP"}, {"general", "RUNSNIP"}, {"general", "ERRTIPS"},
       {"general", "ERRRUN"}, {"general", "HASTOPIC"}, {"general", "NEEDTOPIC"},
-      {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"},
+      {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"}, {"cap", "HASFORMANY"},
       {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"}, {"cap", "LISTFORMS"},
       {"cap", "COUNTFORMS"}, {"cap", "REQUIRE FORM"}, {"cap", "RELATEDTOPIC"},
       {"cap", "FORMTOPICS"}, {"cap", "TIPS"}, {"cap", "FORMSFOR"},
@@ -42519,7 +42714,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"general", "VARS"}, {"general", "TOPIC"}, {"general", "SNIP"},
       {"general", "RUNSNIP"}, {"general", "ERRTIPS"}, {"general", "ERRRUN"},
       {"general", "ERRGUIDE"}, {"general", "HASTOPIC"}, {"general", "NEEDTOPIC"},
-      {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"},
+      {"cap", "HASFORM"}, {"cap", "NEEDFORM"}, {"cap", "HASFORMS"}, {"cap", "HASFORMANY"},
       {"cap", "NEEDFORMS"}, {"cap", "FORMHINT"}, {"cap", "LISTFORMS"},
       {"cap", "COUNTFORMS"}, {"cap", "REQUIRE FORM"}, {"cap", "RELATEDTOPIC"},
       {"cap", "FORMTOPICS"}, {"cap", "FORMGUIDE"}, {"cap", "TIPS"},

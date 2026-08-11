@@ -4543,6 +4543,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_hasform", "programs/proof/1323_cli_hasform.sh", "cubalc hasform/needform CLI dual + forms"},
       {"hasforms", "programs/proof/1324_hasforms.cubalc", "HASFORMS/NEEDFORMS multi form gates + form_guard"},
       {"cli_hasforms", "programs/proof/1324_cli_hasforms.sh", "cubalc hasforms/needforms CLI + form_guard lib"},
+      {"hasformany", "programs/proof/1385_hasformany.cubalc", "HASFORMANY multi form any-of gate"},
+      {"cli_hasformany", "programs/proof/1385_cli_hasformany.sh", "HASFORMANY/NEEDFORMANY forms + CLI"},
       {"cap_boot", "programs/proof/1325_cap_boot.cubalc", "INCLUDE cap_boot agent_boot+form_guard"},
       {"cli_init_cap", "programs/proof/1325_cli_init_cap.sh", "cubalc init --cap scaffold + doctor lib_cap_boot"},
       {"getpn_path", "programs/proof/1202_getpn_path.cubalc", "GETPN + path SYS JSONN numeric peel"},
@@ -5084,6 +5086,9 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"HASFORM", "flow", "HASFORM name soft 0|1 if form in HELP catalog"},
       {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "flow", "HASFORMS names… soft all present · FORMMISS bag"},
+      {"NEEDFORMS", "flow", "NEEDFORMS names… fail-fast if any form missing · multi HASFORM"},
+      {"HASFORMANY", "flow", "HASFORMANY names… soft 0|1 if any form known · FORMHAVE bag"},
+      {"NEEDFORMANY", "flow", "NEEDFORMANY names… fail-fast if none of forms known · any-of"},
       {"TIPS", "flow", "TIPS [topic] curated agent next-steps bag · cubalc tips dual"},
       {"FORMSFOR", "flow", "FORMSFOR|TOPICFORMS [topic] form-name bag by topic · cubalc formsfor dual"},
       {"TOPICFORMS", "flow", "TOPICFORMS alias of FORMSFOR"},
@@ -6593,7 +6598,13 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"NEEDFORM", "HASFORM"}, {"NEEDFORM", "NEEDFORMS"}, {"NEEDFORM", "HASFORMS"},
       {"NEEDFORM", "FORMHINT"}, {"NEEDFORM", "REQUIRE FORM"},
       {"HASFORMS", "NEEDFORMS"}, {"HASFORMS", "HASFORM"},
+      {"HASFORMS", "HASFORMANY"}, {"HASFORMS", "NEEDFORMANY"},
       {"NEEDFORMS", "HASFORMS"}, {"NEEDFORMS", "NEEDFORM"}, {"NEEDFORMS", "HASFORM"},
+      {"NEEDFORMS", "NEEDFORMANY"},
+      {"HASFORMANY", "NEEDFORMANY"}, {"HASFORMANY", "HASFORMS"}, {"HASFORMANY", "HASFORM"},
+      {"HASFORMANY", "FORMHAVE"}, {"HASFORMANY", "FORMMISS"}, {"HASFORMANY", "LISTFORMS"},
+      {"NEEDFORMANY", "HASFORMANY"}, {"NEEDFORMANY", "NEEDFORMS"}, {"NEEDFORMANY", "NEEDFORM"},
+      {"NEEDFORMANY", "FORMMISS"}, {"NEEDFORMANY", "FORMHAVE"},
       {"FORMHINT", "HASFORM"}, {"FORMHINT", "LISTFORMS"}, {"FORMHINT", "RELATED"},
       {"FORMHINT", "FORMSFOR"}, {"FORMHINT", "TIPS"},
       {"LISTFORMS", "COUNTFORMS"}, {"LISTFORMS", "HASFORM"}, {"LISTFORMS", "FORMHINT"},
@@ -12063,58 +12074,93 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       strcmp(cmd, "needform") == 0 || strcmp(cmd, "requireform") == 0 ||
       strcmp(cmd, "knownform") == 0 ||
       strcmp(cmd, "hasforms") == 0 || strcmp(cmd, "needforms") == 0 ||
-      strcmp(cmd, "requireforms") == 0 || strcmp(cmd, "allforms") == 0) {
-    /* Usability: CLI dual of HASFORM/NEEDFORM/HASFORMS/NEEDFORMS — capability gates
-     * without .cubalc. cubalc hasform SORTLIBS · hasforms SORTLIBS LIBAGE */
-    int multi = (strcmp(cmd, "hasforms") == 0 || strcmp(cmd, "needforms") == 0 ||
+      strcmp(cmd, "requireforms") == 0 || strcmp(cmd, "allforms") == 0 ||
+      strcmp(cmd, "hasformany") == 0 || strcmp(cmd, "hasanyforms") == 0 ||
+      strcmp(cmd, "needformany") == 0 || strcmp(cmd, "requireformany") == 0 ||
+      strcmp(cmd, "mustformany") == 0 || strcmp(cmd, "needanyforms") == 0) {
+    /* Usability: CLI dual of HASFORM/NEEDFORM/HASFORMS/NEEDFORMS/HASFORMANY/NEEDFORMANY.
+     * cubalc hasform SORTLIBS · hasforms SORTLIBS LIBAGE · hasformany WALK PATHGLOB */
+    int is_any = (strcmp(cmd, "hasformany") == 0 || strcmp(cmd, "hasanyforms") == 0 ||
+                  strcmp(cmd, "needformany") == 0 || strcmp(cmd, "requireformany") == 0 ||
+                  strcmp(cmd, "mustformany") == 0 || strcmp(cmd, "needanyforms") == 0);
+    int multi = is_any ||
+                (strcmp(cmd, "hasforms") == 0 || strcmp(cmd, "needforms") == 0 ||
                  strcmp(cmd, "requireforms") == 0 || strcmp(cmd, "allforms") == 0);
     int hard = (strcmp(cmd, "needform") == 0 || strcmp(cmd, "requireform") == 0 ||
-                strcmp(cmd, "needforms") == 0 || strcmp(cmd, "requireforms") == 0);
+                strcmp(cmd, "needforms") == 0 || strcmp(cmd, "requireforms") == 0 ||
+                strcmp(cmd, "needformany") == 0 || strcmp(cmd, "requireformany") == 0 ||
+                strcmp(cmd, "mustformany") == 0 || strcmp(cmd, "needanyforms") == 0);
     char src[800];
     cubalc_run_result rr;
     int hit = 0, i, narg = 0;
     size_t o = 0;
+    const char *form;
     if (argc <= 2 || !argv[2] || !argv[2][0]) {
       fprintf(stderr,
               "usage: cubalc hasform|formexists <FormName>\n"
               "       cubalc needform|requireform <FormName>\n"
-              "       cubalc hasforms|needforms <Form> [Form…]\n");
+              "       cubalc hasforms|needforms <Form> [Form…]\n"
+              "       cubalc hasformany|needformany <Form> [Form…]\n");
       printf("{\"schema\":\"cubalc.formgate.v1\",\"ok\":false,\"cmd\":\"%s\","
              "\"err\":\"need form name\",\"version\":\"%s\"}\n",
              cmd, CUBALC_LANG_VERSION);
       return 2;
     }
-    if (multi || argc > 3) {
-      o = (size_t)snprintf(src, sizeof src, "%s", hard ? "NEEDFORMS" : "HASFORMS");
+    if (is_any)
+      form = hard ? "NEEDFORMANY" : "HASFORMANY";
+    else if (multi || argc > 3)
+      form = hard ? "NEEDFORMS" : "HASFORMS";
+    else
+      form = hard ? "NEEDFORM" : "HASFORM";
+    if (multi || is_any || argc > 3) {
+      o = (size_t)snprintf(src, sizeof src, "%s", form);
       for (i = 2; i < argc && o + 2 < sizeof src; i++) {
         if (!argv[i] || !argv[i][0]) continue;
         narg++;
         o += (size_t)snprintf(src + o, sizeof src - o, " %s", argv[i]);
       }
-      o += (size_t)snprintf(src + o, sizeof src - o,
-                            "\nASSERT LAST_N == 1\nPASS\n");
+      /* soft any/all: PRINT LAST_N; hard: ASSERT succeeds only if pass */
+      if (hard)
+        o += (size_t)snprintf(src + o, sizeof src - o,
+                              "\nASSERT LAST_N == 1\nPASS\n");
+      else
+        o += (size_t)snprintf(src + o, sizeof src - o,
+                              "\nPRINT LAST_N\nPASS\n");
     } else {
       const char *name = argv[2];
       narg = 1;
-      if (strchr(name, ' ') || strchr(name, '"'))
-        snprintf(src, sizeof src,
-                 "HASFORM \"%s\"\nASSERT LAST_N == 1\nPASS\n", name);
-      else
-        snprintf(src, sizeof src,
-                 "HASFORM %s\nASSERT LAST_N == 1\nPASS\n", name);
+      if (hard) {
+        if (strchr(name, ' ') || strchr(name, '"'))
+          snprintf(src, sizeof src,
+                   "%s \"%s\"\nASSERT LAST_N == 1\nPASS\n", form, name);
+        else
+          snprintf(src, sizeof src,
+                   "%s %s\nASSERT LAST_N == 1\nPASS\n", form, name);
+      } else {
+        if (strchr(name, ' ') || strchr(name, '"'))
+          snprintf(src, sizeof src,
+                   "%s \"%s\"\nPRINT LAST_N\nPASS\n", form, name);
+        else
+          snprintf(src, sizeof src,
+                   "%s %s\nPRINT LAST_N\nPASS\n", form, name);
+      }
     }
     memset(&rr, 0, sizeof rr);
     (void)cubalc_run_source(src, strlen(src), "<hasform>", &rr, NULL);
-    hit = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    if (hard)
+      hit = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    else
+      hit = (rr.ok && !rr.err[0] && rr.last_print[0] == '1') ? 1 : 0;
     printf("{\"schema\":\"cubalc.formgate.v1\",\"ok\":%s,\"cmd\":\"%s\","
-           "\"n\":%d,\"known\":%s,\"mode\":\"%s\","
+           "\"n\":%d,\"known\":%s,\"mode\":\"%s\",\"any\":%s,"
            "\"version\":\"%s\","
-           "\"note\":\"CLI dual of HASFORM/HASFORMS · HELP catalog capability gate\","
+           "\"note\":\"CLI dual of %s · HELP catalog capability gate\","
            "\"forms\":[",
            hit ? "true" : "false", cmd, narg,
            hit ? "true" : "false",
            hard ? "need" : "has",
-           CUBALC_LANG_VERSION);
+           is_any ? "true" : "false",
+           CUBALC_LANG_VERSION, form);
     for (i = 2; i < argc; i++) {
       if (!argv[i] || !argv[i][0]) continue;
       printf("%s\"%s\"", (i == 2) ? "" : ",", argv[i]);
@@ -18663,6 +18709,9 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       {"HASFORM", "flow", "HASFORM name soft 0|1 if form in HELP catalog"},
       {"NEEDFORM", "flow", "NEEDFORM name fail-fast if form missing · dual of HASFORM"},
       {"HASFORMS", "flow", "HASFORMS names… soft all present · FORMMISS bag"},
+      {"NEEDFORMS", "flow", "NEEDFORMS names… fail-fast if any form missing · multi HASFORM"},
+      {"HASFORMANY", "flow", "HASFORMANY names… soft 0|1 if any form known · FORMHAVE bag"},
+      {"NEEDFORMANY", "flow", "NEEDFORMANY names… fail-fast if none of forms known · any-of"},
       {"TIPS", "flow", "TIPS [topic] curated agent next-steps bag · cubalc tips dual"},
       {"FORMSFOR", "flow", "FORMSFOR|TOPICFORMS [topic] form-name bag by topic · cubalc formsfor dual"},
       {"TOPICFORMS", "flow", "TOPICFORMS alias of FORMSFOR"},
@@ -20176,6 +20225,9 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    hasargany|needargany n|name… [-- args]  multi arg ANY gate (cubalc.arggate.v1)\n"
       "    hasenvall|needenvs ENV…          multi host-env ALL gate (cubalc.envgate.v1)\n"
       "    hasenvany|needenvany ENV…        multi host-env ANY gate (cubalc.envgate.v1)\n"
+      "    hasform|needform FORM            single form capability gate (cubalc.formgate.v1)\n"
+      "    hasforms|needforms FORM…         multi form ALL gate (cubalc.formgate.v1)\n"
+      "    hasformany|needformany FORM…     multi form ANY gate (cubalc.formgate.v1)\n"
       "    argmap|argkv [-- args…]     raw argv i=value bag (cubalc.argmap.v1)\n"
       "    findarg|argindex <tok> [-- args…]  token→index reverse NTHARG (cubalc.findarg.v1)\n"
       "    afterarg|nextarg <tok> [-- args…]  peel argv after token (cubalc.afterarg.v1)\n"
