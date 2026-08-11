@@ -6701,7 +6701,7 @@
     "iter340: all actions green; proofs 1423-1426 PASS",
     "iter340: selftest 621/884 CLI duals still red; kvfileensure/pickobj/preload pre-existing"
   ],
-  "commit": "pending",
+  "commit": "c1e40dd8",
   "ts": "2026-08-11T08:00:16Z",
-  "board_commit": "pending"
+  "board_commit": "c1e40dd8"
 }
