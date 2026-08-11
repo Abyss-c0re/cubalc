@@ -1,0 +1,83 @@
+# IFFN / IFCLASS — capability branches
+
+HOLD_FLASH 1
+
+FN greet
+  RET "hi"
+END
+
+# IFFN hit
+IFFN greet
+  CALL greet
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 1
+ASSERT IFFN_N == 1
+ASSERT LAST == "hi"
+
+# miss + ELSE
+IFFN missing_hook
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 0
+ASSERT IFFN_N == 0
+
+# IFHASFN alias
+IFHASFN greet
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+
+CLASS Ticket
+  FIELD id
+END
+
+IFCLASS Ticket
+  LET c = 1
+ELSE
+  LET c = 0
+END
+ASSERT c == 1
+ASSERT IFCLASS_N == 1
+
+IFCLASS Ghost
+  LET c = 1
+ELSE
+  LET c = 0
+END
+ASSERT c == 0
+ASSERT IFCLASS_N == 0
+
+# nest with IFEMPTY
+IFFN greet
+  IFEMPTY msg
+    LET state = "ready"
+  ELSE
+    LET state = "msg"
+  END
+ELSE
+  LET state = "no-fn"
+END
+ASSERT state == "ready"
+
+# soft plugin pattern
+IFFN missing_hook
+  CALL missing_hook
+ELSE
+  LET fallback = 1
+END
+ASSERT fallback == 1
+
+HASFORM "IFFN"
+ASSERT LAST_N == 1
+HASFORM "IFCLASS"
+ASSERT LAST_N == 1
+
+PRINT "1477_iffn_ifclass ok"
+PASS
