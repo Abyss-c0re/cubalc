@@ -1,0 +1,29 @@
+# INCLUDE time_boot — agent_boot + time_guard wall-budget contract
+
+HOLD_FLASH 1
+
+# default empty-ish budget under unlimited host
+DEFAULT NEED_TIME = 1
+DEFAULT TIME_GUARD_SOFT = 0
+INCLUDE time_boot
+ASSERT OK == 1
+HASINCLUDE agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE time_guard
+ASSERT LAST_N == 1
+HASINCLUDE time_boot
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST != ""
+ASSERT TIMEOUT_UNLIMITED == 1
+ASSERT REMAIN_MS == -1
+
+# soft path still ok under unlimited
+LET NEED_TIME = 999999
+LET TIME_GUARD_SOFT = 1
+INCLUDE time_boot
+ASSERT LAST_N == 1
+ASSERT OK == 1
+
+PASS
+PRINT "1390_time_boot: PASS"

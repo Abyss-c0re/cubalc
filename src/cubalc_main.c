@@ -3635,6 +3635,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     int lib_env_boot = 0;
     int lib_arg_guard = 0;
     int lib_arg_boot = 0;
+    int lib_time_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
     int include_path_set = 0, preload_set = 0;
     const char *hx = getenv("CUBALC_SMX_KEY");
@@ -3679,6 +3680,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     lib_env_boot = (access("programs/lib/env_boot.cubalc", R_OK) == 0);
     lib_arg_guard = (access("programs/lib/arg_guard.cubalc", R_OK) == 0);
     lib_arg_boot = (access("programs/lib/arg_boot.cubalc", R_OK) == 0);
+    lib_time_boot = (access("programs/lib/time_boot.cubalc", R_OK) == 0);
     cookbook_ok = (access("docs/COOKBOOK.md", R_OK) == 0);
     for_agents_ok = (access("docs/FOR_AGENTS.md", R_OK) == 0);
     if (libdir_ok) {
@@ -3714,7 +3716,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"lib_onboard_boot\":%s,\"lib_discover_boot\":%s,\"lib_open_boot\":%s,\"lib_doctor_boot\":%s,"
              "\"lib_ready_boot\":%s,\"lib_cli_boot\":%s,\"lib_cli_guard\":%s,"
              "\"lib_cli_session\":%s,\"lib_env_guard\":%s,\"lib_env_boot\":%s,"
-             "\"lib_arg_guard\":%s,\"lib_arg_boot\":%s,"
+             "\"lib_arg_guard\":%s,\"lib_arg_boot\":%s,\"lib_time_boot\":%s,"
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"vars_max\":%d,\"varroom_forms\":true,"
@@ -3739,6 +3741,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"INCLUDE env_boot · cubalc init --env host env starter\","
              "\"INCLUDE arg_guard · NEED_ARGS / NEED_ARG_ANY program-arg contract\","
              "\"INCLUDE arg_boot · cubalc init --arg program-arg starter\","
+             "\"INCLUDE time_boot · cubalc init --time wall-budget starter\","
              "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
@@ -3748,6 +3751,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"programs/lib/time_guard.cubalc\",\"programs/lib/fat_boot.cubalc\","
              "\"programs/lib/fat_session.cubalc\",\"programs/lib/form_guard.cubalc\","
              "\"programs/lib/env_guard.cubalc\",\"programs/lib/env_boot.cubalc\","
+             "\"programs/lib/time_boot.cubalc\","
              "\"programs/lib/onboard_boot.cubalc\",\"programs/lib/discover_boot.cubalc\","
              "\"cubalc init --onboard\",\"cubalc init --discover\",\"cubalc init --fat-session\",\"cubalc hasforms SORTLIBS LIBAGE\"]"
              "}\n",
@@ -3786,6 +3790,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              lib_env_boot ? "true" : "false",
              lib_arg_guard ? "true" : "false",
              lib_arg_boot ? "true" : "false",
+             lib_time_boot ? "true" : "false",
              include_path_set ? "true" : "false",
              preload_set ? "true" : "false",
              cookbook_ok ? "true" : "false",
@@ -4560,6 +4565,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_arg_guard", "programs/proof/1388_cli_arg_guard.sh", "arg_guard soft/hard + doctor lib"},
       {"arg_boot", "programs/proof/1389_arg_boot.cubalc", "INCLUDE arg_boot agent_boot+arg_guard"},
       {"cli_init_arg", "programs/proof/1389_cli_init_arg.sh", "cubalc init --arg scaffold + doctor"},
+      {"time_boot", "programs/proof/1390_time_boot.cubalc", "INCLUDE time_boot agent_boot+time_guard"},
+      {"cli_init_time", "programs/proof/1390_cli_init_time.sh", "cubalc init --time scaffold + doctor"},
       {"cli_form_guard", "programs/proof/1386_cli_form_guard.sh", "form_guard lib + CLI + formgate any"},
       {"cap_boot", "programs/proof/1325_cap_boot.cubalc", "INCLUDE cap_boot agent_boot+form_guard"},
       {"cli_init_cap", "programs/proof/1325_cli_init_cap.sh", "cubalc init --cap scaffold + doctor lib_cap_boot"},
@@ -8869,6 +8876,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
      * --cli-session|--cli-guard: INCLUDE cli_session (cli_boot + cli_guard one-shot).
      * --env|--env-boot|--env-guard|--hostenv: INCLUDE env_boot (agent_boot + env_guard).
      * --arg|--arg-boot|--arg-guard|--args|--need-arg: INCLUDE arg_boot (agent_boot + arg_guard).
+     * --time|--time-boot|--timeout-boot|--need-time: INCLUDE time_boot (agent_boot + time_guard).
      * --from lib: recipe-driven scaffold (LIBDEFAULTS as DEFAULT lines + INCLUDE).
      * Agents: write file then cubalc run — no cookbook prose required. */
     const char *path = "program.cubalc";
@@ -8876,7 +8884,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     const char *from_lib = NULL;
     int force = 0, i, wrote = 0, existed = 0, want_plate = 0, want_peer = 0;
     int want_fat = 0, want_fat_session = 0, want_cap = 0, want_onboard = 0, want_discover = 0, want_open = 0, want_doctor = 0;
-    int want_ready = 0, want_cli = 0, want_cli_session = 0, want_env = 0, want_arg = 0;
+    int want_ready = 0, want_cli = 0, want_cli_session = 0, want_env = 0, want_arg = 0, want_time = 0;
     int want_list = 0;
     char abspath[512];
     char parent[512];
@@ -9105,6 +9113,18 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       "PRINT \"arg_any_ok\" ARG_GUARD_ANY_OK\n"
       "STATUS\n"
       "PRINT \"arg init ok\" OK ARG_GUARD_OK\n";
+    static const char *body_time =
+      "# CubalC wall-budget starter — generated by cubalc init --time\n"
+      "# INCLUDE time_boot = agent_boot + time_guard (NEED_TIME / REMAIN_MS)\n"
+      "# Override NEED_TIME before INCLUDE; soft via TIME_GUARD_SOFT=1\n"
+      "DEFAULT NEED_TIME = 100\n"
+      "DEFAULT TIME_GUARD_SOFT = 0\n"
+      "INCLUDE time_boot\n"
+      "\n"
+      "PRINT \"timeout_unlimited\" TIMEOUT_UNLIMITED\n"
+      "PRINT \"remain_ms\" REMAIN_MS\n"
+      "STATUS\n"
+      "PRINT \"time init ok\" OK\n";
     const char *body = body_boot;
     from_body[0] = 0;
     for (i = 2; i < argc; i++) {
@@ -9154,6 +9174,14 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
                  !strcmp(argv[i], "--need-args") || !strcmp(argv[i], "--arg-contract") ||
                  !strcmp(argv[i], "--positional") || !strcmp(argv[i], "--positionals")) {
         want_arg = 1;
+      } else if (!strcmp(argv[i], "--time") || !strcmp(argv[i], "--time-boot") ||
+                 !strcmp(argv[i], "--timeboot") || !strcmp(argv[i], "--time_boot") ||
+                 !strcmp(argv[i], "--timeout-boot") || !strcmp(argv[i], "--timeoutboot") ||
+                 !strcmp(argv[i], "--need-time") || !strcmp(argv[i], "--needtime") ||
+                 !strcmp(argv[i], "--time-guard") || !strcmp(argv[i], "--timeguard") ||
+                 !strcmp(argv[i], "--wall-budget") || !strcmp(argv[i], "--wallbudget") ||
+                 !strcmp(argv[i], "--budget-boot") || !strcmp(argv[i], "--run-timeout-boot")) {
+        want_time = 1;
       } else if (!strcmp(argv[i], "--env") || !strcmp(argv[i], "--env-boot") ||
                  !strcmp(argv[i], "--envboot") || !strcmp(argv[i], "--env_boot") ||
                  !strcmp(argv[i], "--env-guard") || !strcmp(argv[i], "--envguard") ||
@@ -9192,7 +9220,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     if (want_list) {
       /* Agent discovery: which scaffolds exist without reading COOKBOOK. */
       printf("# CubalC init templates version=%s\n", CUBALC_LANG_VERSION);
-      printf("# run: cubalc init [path] [--plate|--peer|--fat|--fat-session|--cap|--onboard|--discover|--open|--doctor|--ready|--cli|--cli-session|--env|--arg|--from lib] [--force]\n");
+      printf("# run: cubalc init [path] [--plate|--peer|--fat|--fat-session|--cap|--onboard|--discover|--open|--doctor|--ready|--cli|--cli-session|--env|--arg|--time|--from lib] [--force]\n");
       printf("# flag\tid\thint\n");
       printf("(default)\tagent_boot\tINCLUDE agent_boot + CUBE/PLUG/STATUS\n");
       printf("--plate|-p\tplate_session\tplate_session + plate_uniform + PRETTYP + save\n");
@@ -9209,9 +9237,10 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       printf("--cli-session|--cli-guard\tcli_session\tINCLUDE cli_session cli_boot+cli_guard\n");
       printf("--env|--env-boot|--env-guard|--hostenv\tenv_boot\tINCLUDE env_boot agent_boot+env_guard\n");
       printf("--arg|--args|--arg-boot|--arg-guard\targ_boot\tINCLUDE arg_boot agent_boot+arg_guard\n");
+      printf("--time|--time-boot|--timeout-boot|--need-time\ttime_boot\tINCLUDE time_boot agent_boot+time_guard\n");
       printf("--from|--recipe|-F <lib>\tfrom_recipe\tDEFAULT knobs from lib + INCLUDE (any recipe)\n");
       printf("{\"schema\":\"cubalc.init.v1\",\"ok\":true,\"cmd\":\"init\","
-             "\"op\":\"list\",\"n\":16,\"version\":\"%s\","
+             "\"op\":\"list\",\"n\":17,\"version\":\"%s\","
              "\"note\":\"scaffold catalog — fixed templates + --from any lib recipe\","
              "\"templates\":["
              "{\"id\":\"agent_boot\",\"flags\":\"\",\"default\":true,"
@@ -9244,6 +9273,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"hint\":\"INCLUDE env_boot agent_boot+env_guard host env contract\"},"
              "{\"id\":\"arg_boot\",\"flags\":\"--arg|--args|--arg-boot|--arg-guard\","
              "\"hint\":\"INCLUDE arg_boot agent_boot+arg_guard program-arg contract\"},"
+             "{\"id\":\"time_boot\",\"flags\":\"--time|--time-boot|--timeout-boot|--need-time\","
+             "\"hint\":\"INCLUDE time_boot agent_boot+time_guard wall-budget starter\"},"
              "{\"id\":\"from_recipe\",\"flags\":\"--from|--recipe|-F <lib>\","
              "\"hint\":\"any lib DEFAULT knobs + INCLUDE · dual of cubalc recipe\"}"
              "]}\n",
@@ -9441,6 +9472,9 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     } else if (want_arg) {
       body = body_arg;
       tmpl = "arg_boot";
+    } else if (want_time) {
+      body = body_time;
+      tmpl = "time_boot";
     } else if (want_env) {
       body = body_env;
       tmpl = "env_boot";
@@ -9537,6 +9571,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       printf("# next: cubalc run %s · cubalc cat plate_peer_session · multi-plate PLATE+PEER\n", path);
     else if (want_arg)
       printf("# next: cubalc run %s · DEFAULT NEED_ARGS · INCLUDE arg_boot\n", path);
+    else if (want_time)
+      printf("# next: cubalc run %s · DEFAULT NEED_TIME · INCLUDE time_boot\n", path);
     else if (want_env)
       printf("# next: cubalc run %s · DEFAULT NEED_ENVS · INCLUDE env_boot\n", path);
     else if (want_cli_session)
@@ -9578,6 +9614,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
                ? "INCLUDE plate_peer_session + PLATE/PEER SETP FROM + save both"
                : (want_arg
                ? "INCLUDE arg_boot agent_boot+arg_guard program-arg contract"
+               : (want_time
+               ? "INCLUDE time_boot agent_boot+time_guard wall-budget starter"
                : (want_env
                ? "INCLUDE env_boot agent_boot+env_guard host env contract"
                : (want_cli_session
@@ -9602,7 +9640,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
                ? "INCLUDE fat_boot + plate_boot nest room + NEEDP + save"
                : (want_plate
                ? "INCLUDE plate_session + plate_uniform + PRETTYP + plate_save"
-               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter")))))))))))))));
+               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter"))))))))))))))));
     return 0;
   }
   if (strcmp(cmd, "libs") == 0 || strcmp(cmd, "lib") == 0 ||
@@ -9638,6 +9676,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_session.cubalc", "cli_boot + cli_guard one-shot · init --cli-session"},
       {"arg_guard.cubalc", "NEED_ARGS + NEED_ARG_ANY program-arg contract · soft ARG_GUARD_SOFT"},
       {"arg_boot.cubalc", "agent_boot + arg_guard one-shot · init --arg · positionals"},
+      {"time_boot.cubalc", "agent_boot + time_guard one-shot · init --time · wall budget"},
       {"env_guard.cubalc", "NEED_ENVS + NEED_ENV_ANY host env contract · soft ENV_GUARD_SOFT"},
       {"env_boot.cubalc", "agent_boot + env_guard one-shot · init --env · host config"},
     };
@@ -20309,7 +20348,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
       "    errrun|recoversnip <err…>  classify + RUNSNIP topic (cubalc.errrun.v1)\n"
       "    errguide|recoverguide <err…> classify + GUIDE playbook (cubalc.errguide.v1)\n"
-      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --onboard · --discover · --open · --doctor · --ready · --cli · --cli-session · --env · --arg · --from lib\n"
+      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --onboard · --discover · --open · --doctor · --ready · --cli · --cli-session · --env · --arg · --time · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"

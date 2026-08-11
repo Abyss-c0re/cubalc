@@ -1,0 +1,16 @@
+# INCLUDE time_boot — agent preamble + wall-budget contract one-shot
+# Usability: agent_boot + time_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_TIME = 200
+#   DEFAULT TIME_GUARD_SOFT = 0
+#   INCLUDE time_boot
+# Soft budget miss: DEFAULT TIME_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --time
+# Twin of fat_boot (var room) / env_boot (host env) for -T / CUBALC_RUN_TIMEOUT.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_TIME = 100
+DEFAULT TIME_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE time_guard
