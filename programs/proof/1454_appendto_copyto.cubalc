@@ -1,0 +1,69 @@
+# APPENDTO / PREPENDTO / COPYTO — string build + var copy without LET glue
+
+HOLD_FLASH 1
+
+# APPENDTO builds message
+LET msg = "hi"
+APPENDTO msg " "
+APPENDTO msg "world"
+ASSERT msg == "hi world"
+ASSERT LAST_N == 8
+ASSERT APPENDTO_N == 1
+
+# multi-part + CATTO alias
+LET s = "a"
+CATTO s "b" "c"
+ASSERT s == "abc"
+
+# numeric parts
+LET t = "n="
+APPENDTO t 42
+ASSERT t == "n=42"
+
+# PREPENDTO
+LET log = "body"
+PREPENDTO log "head:"
+ASSERT log == "head:body"
+
+# PREFIXTO multi
+LET p = "z"
+PREFIXTO p "x" "y"
+ASSERT p == "xyz"
+
+# missing starts empty
+APPENDTO fresh "start"
+ASSERT fresh == "start"
+
+# COPYTO num
+LET a = 7
+COPYTO a TO b
+ASSERT b == 7
+ASSERT COPYTO_N == 1
+
+# COPYTO str
+LET left = "alpha"
+COPYV left right
+ASSERT right == "alpha"
+
+# COPY then mutate independence
+APPENDTO right "!"
+ASSERT left == "alpha"
+ASSERT right == "alpha!"
+
+# dual buffer with SWAP twin
+LET cur = "now"
+LET prev = ""
+COPYTO cur TO prev
+LET cur = "next"
+ASSERT prev == "now"
+ASSERT cur == "next"
+
+HASFORM "APPENDTO"
+ASSERT LAST_N == 1
+HASFORM "PREPENDTO"
+ASSERT LAST_N == 1
+HASFORM "COPYTO"
+ASSERT LAST_N == 1
+
+PRINT "1454_appendto_copyto ok"
+PASS

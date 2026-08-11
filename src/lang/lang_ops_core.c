@@ -3812,6 +3812,12 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"MINTO", "MINTO alias of SETMIN"},
       {"SETMAX", "SETMAX|MAXTO name val — running max into name · no IF+LET"},
       {"MAXTO", "MAXTO alias of SETMAX"},
+      {"APPENDTO", "APPENDTO|CATTO name part… — append strings onto var · no LET=CAT glue"},
+      {"CATTO", "CATTO alias of APPENDTO"},
+      {"PREPENDTO", "PREPENDTO|PREFIXTO name part… — prepend strings onto var"},
+      {"PREFIXTO", "PREFIXTO alias of PREPENDTO"},
+      {"COPYTO", "COPYTO|COPYV src [TO] dst — copy var (num/str) · dual buffer seed"},
+      {"COPYV", "COPYV alias of COPYTO"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -71881,6 +71887,211 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s -> %ld\n", is_max ? "SETMAX" : "SETMIN", name, nv);
+    bump(vm);
+    return 1;
+  }
+  /* APPENDTO|CATTO name part [part…] — append string parts onto named var.
+   * PREPENDTO|PREFIXTO name part [part…] — prepend parts.
+   * Missing var starts empty. Numeric vars promoted via itoa.
+   * Usability: build logs/messages without LET msg = CAT msg "…" glue. */
+  if (kw(&L->cur,"APPENDTO")||kw(&L->cur,"CATTO")||kw(&L->cur,"STRCATTO")||
+      kw(&L->cur,"ADDSTR")||kw(&L->cur,"CONCATTO")||
+      kw(&L->cur,"PREPENDTO")||kw(&L->cur,"PREFIXTO")||kw(&L->cur,"PRECATTO")||
+      kw(&L->cur,"FRONTTO")||kw(&L->cur,"UNSHIFTSTR")){
+    char op[24], name[48];
+    int is_pre = 0;
+    char cur[CUBALC_HOST_STR_MAX];
+    char part[CUBALC_HOST_STR_MAX];
+    char out[CUBALC_HOST_STR_MAX];
+    int nparts = 0;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "PREPENDTO") == 0 || strcmp(op, "PREFIXTO") == 0 ||
+        strcmp(op, "PRECATTO") == 0 || strcmp(op, "FRONTTO") == 0 ||
+        strcmp(op, "UNSHIFTSTR") == 0)
+      is_pre = 1;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, is_pre ? "PREPENDTO needs name part — PREPENDTO msg \"x\""
+                      : "APPENDTO needs name part — APPENDTO msg \"x\"");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "BY") || kw(&L->cur, "AND"))
+      lex_next(L);
+    cur[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str) {
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    } else if (vv && !vv->is_str) {
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+    }
+    out[0] = 0;
+    /* accumulate parts first for prepend order (left-to-right as written) */
+    {
+      char acc[CUBALC_HOST_STR_MAX];
+      acc[0] = 0;
+      while (1) {
+        if (L->cur.kind == TK_EOF || L->cur.kind == TK_NL)
+          break;
+        if (L->cur.kind == TK_IDENT &&
+            (kw(&L->cur, "END") || kw(&L->cur, "IF") || kw(&L->cur, "LET") ||
+             kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "ASSERT") ||
+             kw(&L->cur, "EXPECT") || kw(&L->cur, "PRINT") || kw(&L->cur, "INC") ||
+             kw(&L->cur, "DEC") || kw(&L->cur, "SWAP") || kw(&L->cur, "TOGGLE") ||
+             kw(&L->cur, "CLAMP") || kw(&L->cur, "SETMIN") || kw(&L->cur, "SETMAX") ||
+             kw(&L->cur, "APPENDTO") || kw(&L->cur, "CATTO") ||
+             kw(&L->cur, "PREPENDTO") || kw(&L->cur, "PREFIXTO") ||
+             kw(&L->cur, "COPYTO") || kw(&L->cur, "COPYV") ||
+             kw(&L->cur, "DEFAULT") || kw(&L->cur, "UNSET") ||
+             kw(&L->cur, "HASFORM") || kw(&L->cur, "SYS") ||
+             kw(&L->cur, "INCLUDE") || kw(&L->cur, "NOTE") ||
+             kw(&L->cur, "EXIT") || kw(&L->cur, "RETURN") ||
+             kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") ||
+             kw(&L->cur, "FOR") || kw(&L->cur, "EACH") ||
+             kw(&L->cur, "CASE") || kw(&L->cur, "TRY") ||
+             kw(&L->cur, "IFERR") || kw(&L->cur, "IFOK")))
+          break;
+        if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT &&
+            L->cur.kind != TK_NUM && L->cur.kind != TK_MINUS)
+          break;
+        /* numeric atom as decimal string */
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+            (L->cur.kind == TK_IDENT && var_get(vm, L->cur.text, 0) &&
+             !var_get(vm, L->cur.text, 0)->is_str &&
+             strcmp(L->cur.text, "LAST") != 0)) {
+          long n = 0;
+          if (cubalc_read_num_atom(vm, L, &n)) {
+            char nb[32];
+            size_t al, bl;
+            snprintf(nb, sizeof nb, "%ld", n);
+            bl = strlen(acc);
+            al = strlen(nb);
+            if (bl + al + 1 < sizeof acc) {
+              memcpy(acc + bl, nb, al + 1);
+              nparts++;
+            }
+            continue;
+          }
+        }
+        if (resolve_str_arg(vm, L, part, sizeof part) != 0)
+          break;
+        {
+          size_t al = strlen(part), bl = strlen(acc);
+          if (bl + al + 1 < sizeof acc) {
+            memcpy(acc + bl, part, al + 1);
+            nparts++;
+          }
+        }
+      }
+      if (nparts < 1) {
+        fail(vm, is_pre ? "PREPENDTO needs part — PREPENDTO msg \"pre\""
+                        : "APPENDTO needs part — APPENDTO msg \"x\"");
+        return -1;
+      }
+      if (is_pre) {
+        size_t al = strlen(acc), bl = strlen(cur);
+        if (al + bl + 1 >= sizeof out) {
+          /* truncate carefully: keep prefix parts, clip cur */
+          snprintf(out, sizeof out, "%s", acc);
+        } else {
+          memcpy(out, acc, al);
+          memcpy(out + al, cur, bl + 1);
+        }
+      } else {
+        size_t al = strlen(cur), bl = strlen(acc);
+        if (al + bl + 1 >= sizeof out) {
+          snprintf(out, sizeof out, "%s", cur);
+          {
+            size_t o = strlen(out), room = sizeof out - 1 - o;
+            if (room > 0) {
+              size_t take = bl < room ? bl : room;
+              memcpy(out + o, acc, take);
+              out[o + take] = 0;
+            }
+          }
+        } else {
+          memcpy(out, cur, al);
+          memcpy(out + al, acc, bl + 1);
+        }
+      }
+    }
+    var_set_str(vm, name, out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    {
+      long ln = (long)strlen(out);
+      var_set_num(vm, "LAST_N", ln);
+      vm->last_n = ln;
+      var_set_num(vm, is_pre ? "PREPENDTO_N" : "APPENDTO_N", (long)nparts);
+      var_set_num(vm, is_pre ? "PREFIXTO_N" : "CATTO_N", (long)nparts);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s parts=%d len=%ld\n",
+              is_pre ? "PREPENDTO" : "APPENDTO", name, nparts, (long)strlen(out));
+    bump(vm);
+    return 1;
+  }
+  /* COPYTO|COPYV|COPYVAR src [TO|INTO] dst — copy one var into another (num or str).
+   * Soft: missing src → empty/0. Usability: dual buffer seed without LET dst = src. */
+  if (kw(&L->cur,"COPYTO")||kw(&L->cur,"COPYV")||kw(&L->cur,"COPYVAR")||
+      kw(&L->cur,"VARCOPY")||kw(&L->cur,"CLONEV")||kw(&L->cur,"DUPVAR")){
+    char src[48], dst[48];
+    Var *vs;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, "COPYTO needs src dst — COPYTO a TO b");
+      return -1;
+    }
+    snprintf(src, sizeof src, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "TO") || kw(&L->cur, "INTO") || kw(&L->cur, "AS") ||
+        kw(&L->cur, "=>") || kw(&L->cur, "AND") || kw(&L->cur, ","))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, "COPYTO needs dst — COPYTO a TO b");
+      return -1;
+    }
+    snprintf(dst, sizeof dst, "%s", L->cur.text);
+    lex_next(L);
+    vs = var_get(vm, src, 0);
+    if (vs && vs->is_str) {
+      var_set_str(vm, dst, vs->sval);
+      var_set_str(vm, "LAST", vs->sval);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", vs->sval);
+      {
+        long ln = (long)strlen(vs->sval);
+        var_set_num(vm, "LAST_N", ln);
+        vm->last_n = ln;
+      }
+    } else if (vs && !vs->is_str) {
+      char nb[32];
+      var_set_num(vm, dst, vs->val);
+      var_set_num(vm, "LAST_N", vs->val);
+      vm->last_n = vs->val;
+      snprintf(nb, sizeof nb, "%ld", vs->val);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    } else {
+      /* missing src → empty string dest (soft) */
+      var_set_str(vm, dst, "");
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+    }
+    var_set_num(vm, "COPYTO_N", 1);
+    var_set_num(vm, "COPYV_N", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# COPYTO %s -> %s\n", src, dst);
     bump(vm);
     return 1;
   }
