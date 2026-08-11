@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 949,
-  "version": "1.15.943-usability",
-  "item": "IFNUM / IFSTR / IFVARTYPE",
-  "item_id": 949,
-  "title": "IFNUM \u00b7 IFSTR \u00b7 IFVARTYPE \u00b7 var type branches",
-  "commit": "dd680777",
-  "summary": "Var type branches; no TYPEOF+IF glue; IFVARTYPE avoids IFCLASS IFTYPE alias; proof 1488 PASS.",
+  "iter": 950,
+  "version": "1.15.944-usability",
+  "item": "IFZERO / IFNZ / IFPOS / IFNEG",
+  "item_id": 950,
+  "title": "IFZERO \u00b7 IFNZ \u00b7 IFPOS \u00b7 IFNEG \u00b7 numeric sign branches",
+  "commit": "00f179d0",
+  "summary": "Numeric ==0/!=0/>0/<0 branches; no IFEQN/IFGT glue; proof 1489 PASS.",
   "proofs": [
-    "1488_ifnum_ifstr_iftype PASS",
-    "1487_ifjsonhas regression PASS"
+    "1489_ifzero_ifnz_ifpos_ifneg PASS",
+    "1488_ifnum regression PASS"
   ],
-  "when": "2026-08-11T21:05:28Z",
+  "when": "2026-08-11T21:20:43Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "dd6807770a845f7316af0b87d8304413c0f4498a",
-  "note": "coerce/branch without TYPEOF probe glue; thrash restore mid-tick"
+  "sha": "00f179d0d5d68d06be27ff5b272e145996997444",
+  "note": "retry/counter gates without IFEQN n 0 glue"
 }
