@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 368,
-  "program": "programs/realworld/svc_ifjsonhas_contract_board.cubalc",
-  "theme": "IFJSONHAS/IFJSONMISS/IFHASJSON plate key contract gates",
-  "version": "1.15.943-usability",
+  "iter": 369,
+  "program": "programs/realworld/svc_ifnum_type_admit_board.cubalc",
+  "theme": "IFNUM/IFSTR/IFVARTYPE config type admit gates",
+  "version": "1.15.944-usability",
   "pass": true,
-  "prior_note": "iter 367 IFEQFILE; this iter first realworld of 1487 IFJSONHAS (MI 948)",
+  "prior_note": "iter 368 IFJSONHAS; this iter first realworld of 1488 IFNUM (MI 949)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed contract + IFJSONHAS",
+      "cmd": "seed budget + IFNUM",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFJSONHAS/IFJSONMISS/IFHASJSON stickies 10/10",
+      "cmd": "IFNUM/IFSTR/IFVARTYPE stickies 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "empty/bad/seed/admit 10/10",
+      "cmd": "undef/str0/NUMTO coerce/deny-nan 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "tiny\u00b7mid\u00b7fat / deny ladder 10/10",
+      "cmd": "budget+role type admit ladder 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "bare\u2192seed\u2192admit\u2192strip 10/10",
+      "cmd": "type then numeric scale 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFJSONHAS/IFJSONMISS/IFHASJSON",
+      "cmd": "HASFORM IFNUM/IFSTR/IFVARTYPE/IFKIND",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "full admit / partial deny 10/10",
+      "cmd": "dual budget+role contract 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "disk plate STRTO NUM WRITE NL",
+      "cmd": "STRTO NUM WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -7106,6 +7106,30 @@
       "title": "Nested IFJSONHAS inside FN steals END frames (W853 class)",
       "detail": "Triple-nested IFJSONHAS in admit_contract FN broke action dispatch (gate score FAIL under form). Sequential CALL has_key + IF ok_v == works. Bare IFJSONHAS inside action IF also leaks END.",
       "repro": "FN admit with nested IFJSONHAS\u2026; form action hits gate FAIL / unknown END"
+    },
+    {
+      "id": "W880",
+      "severity": "med",
+      "area": "lang|num",
+      "title": "SYS NUM softens non-numeric to 0 with OK=1; prefer NUMTO_OK",
+      "detail": "PRINT \"abc\"; SYS NUM \u2192 OK=1 LAST_N=0 (no fail). NUMTO v on \"abc\" sets NUMTO_OK=0. Agents cannot use SYS NUM alone for nan gates on config peels; use NUMTO+NUMTO_OK or dual type+digit checks.",
+      "repro": "PRINT \"abc\"; SYS NUM \u2192 OK 1 LAST_N 0; NUMTO v; NUMTO_OK==0"
+    },
+    {
+      "id": "W881",
+      "severity": "low",
+      "area": "lang|ifnum",
+      "title": "IFNUM/IFSTR/IFVARTYPE work (positive; first realworld 1488)",
+      "detail": "1488 green. Stickies IFNUM_N IFSTR_N TYPEOF_N IFVARTYPE_N. Str \"0\" is str not num. Undef is neither. IFKIND alias. admit_budget/role + peel_budget solid for typed config.",
+      "repro": "CALL is_num; CALL is_str; CALL is_kind; CALL admit_budget"
+    },
+    {
+      "id": "W882",
+      "severity": "med",
+      "area": "lang|ifnum",
+      "title": "Nested IFNUM/IFSTR inside FN steals END (W853 class); bare type-IF in action IF bleeds",
+      "detail": "Nested IFSTR+IFNUM in peel_budget and bare IFVARTYPE in soft action IF caused list\u2192soft bleed + unknown END. Sequential CALL is_num/is_str + FN ghost_* helpers required.",
+      "repro": "FN peel with nested IFSTR\u2026IFNUM\u2026; soft bare IFVARTYPE \u2192 END leak"
     }
   ],
   "workarounds": [
@@ -7241,10 +7265,14 @@
       "id": "WA-IJH",
       "for": "W877+W879",
       "note": "jkey not key; sequential CALL has_key for multi-key admit; no bare IFJSONHAS in action IF"
+    },
+    {
+      "id": "WA-ITN",
+      "for": "W880+W882",
+      "note": "NUMTO+NUMTO_OK for coerce; sequential CALL type probes; no bare IFNUM in action IF"
     }
   ],
   "language_gaps": [
-    "NUMTO strtol partial/float trunc (W844); CLEAR_ERR vs LAST_N after NUMTO (W845)",
     "SETLINEIN pad past-end + negative index\u21920 (W847/W848); FINDLINEIN exact bag ops positive (W849)",
     "COUNTIN substr vs COUNTLINEIN exact (W850); MOVELINEIN HIT soft/no-op (W851)",
     "IFGT/IFHASLINE cannot nest in IF END framing (W853); IFGTE absent use IFGE (W854)",
@@ -7255,7 +7283,8 @@
     "IFBIG unlinked 1.15.937 (W868); IFFRESH miss/stale dual (W869)",
     "IFBIG live 1.15.940 (W868 closed); empty/miss size dual (W871); FN-wrap (W873)",
     "IFEQFILE live 1.15.941 (1486); miss=diff empty=eq (W874); FN-wrap STATUS bare STRTO (W876)",
-    "IFJSONHAS live 1.15.942 (1487); KEY glue eats var key (W877); nested END frames (W879)"
+    "IFJSONHAS live 1.15.942 (1487); KEY glue eats var key (W877); nested END frames (W879)",
+    "IFNUM live 1.15.943 (1488); SYS NUM soft zero (W880); nested type-IF END (W882)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7397,9 +7426,14 @@
       "iter": 368,
       "issue": "Draft: nested IFJSONHAS in FN stole END (form\u2192gate FAIL). Then IFJSONHAS plate key failed \u2014 KEY glue. Renamed jkey + sequential admit.",
       "resolution": "first realworld 1487; document W877\u2013W879"
+    },
+    {
+      "iter": 369,
+      "issue": "Nested IFSTR/IFNUM + bare soft type-IFs stole END. SYS NUM softens abc\u21920 OK=1 so deny-nan failed; PRINT+CLEAR_ERR ate LAST before SYS NUM. Fixed NUMTO+NUMTO_OK + sequential FNs.",
+      "resolution": "first realworld 1488; document W880\u2013W882"
     }
   ],
-  "commit": "a9420051",
-  "ts": 1786481724,
-  "board_commit": "a9420051"
+  "commit": "pending",
+  "ts": 1786483229,
+  "board_commit": "pending"
 }
