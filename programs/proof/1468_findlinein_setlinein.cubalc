@@ -1,0 +1,70 @@
+# FINDLINEIN / SETLINEIN / DROPNTHIN — bag index ops on named vars
+
+HOLD_FLASH 1
+
+PUSHTO work "a"
+PUSHTO work "b"
+PUSHTO work "c"
+
+# FINDLINEIN
+FINDLINEIN work "b"
+ASSERT LAST_N == 1
+FINDLINEIN work "z"
+ASSERT LAST_N == -1
+
+# SETLINEIN in place
+SETLINEIN work 1 "B"
+ASSERT work == "a
+B
+c"
+ASSERT SETLINEIN_HIT == 1
+
+# FINDLINEIN after set
+FINDLINEIN work "B"
+ASSERT LAST_N == 1
+
+# DROPNTHIN middle
+DROPNTHIN work 1
+ASSERT DROPNTHIN_HIT == 1
+ASSERT work == "a
+c"
+
+# DROPATIN alias head
+DROPATIN work 0
+ASSERT work == "c"
+
+# miss drop
+DROPNTHIN work 5
+ASSERT DROPNTHIN_HIT == 0
+ASSERT work == "c"
+
+# SETLINEIN past end pads
+LET bag = "x"
+SETLINEIN bag 2 "z"
+ASSERT bag == "x
+
+z"
+ASSERT SETLINEIN_HIT == 1
+
+# empty bag set
+CLEARSTR empty
+SETLINEIN empty 0 "first"
+ASSERT empty == "first"
+
+# chain with ENSUREIN
+ENSUREIN q "todo"
+ENSUREIN q "done"
+FINDLINEIN q "todo"
+SETLINEIN q LAST_N "doing"
+ASSERT q == "doing
+done"
+
+HASFORM "FINDLINEIN"
+ASSERT LAST_N == 1
+HASFORM "SETLINEIN"
+ASSERT LAST_N == 1
+HASFORM "DROPNTHIN"
+ASSERT LAST_N == 1
+
+PRINT "1468_findlinein_setlinein ok"
+PASS

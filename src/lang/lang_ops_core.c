@@ -3887,6 +3887,10 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"LPADTO", "LPADTO|PADTO name width [pad] — left-pad var in place (promotes num)"},
       {"RPADTO", "RPADTO name width [pad] — right-pad var in place"},
       {"PADTO", "PADTO alias of LPADTO"},
+      {"FINDLINEIN", "FINDLINEIN name line — 0-based exact bag index → LAST_N (−1 miss)"},
+      {"SETLINEIN", "SETLINEIN name i value — set bag field by 0-based index"},
+      {"DROPNTHIN", "DROPNTHIN|DROPATIN name i — drop bag field by 0-based index · HIT"},
+      {"DROPATIN", "DROPATIN alias of DROPNTHIN"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -74019,6 +74023,237 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s w=%ld len=%ld\n", op, name, width, out_n);
+    bump(vm);
+    return 1;
+  }
+  /* FINDLINEIN name line — 0-based exact bag field index → LAST_N (−1 miss).
+   * SETLINEIN name i value — set bag field by 0-based index (extend empty if past end).
+   * DROPNTHIN|DROPATIN name i — drop bag field by 0-based index · HIT 0|1.
+   * Usability: locate-then-update/ack work bags without NTHIN+rebuild glue;
+   * dual of SYS FINDLINE/SETLINE/DROPNTH for named vars. */
+  if (kw(&L->cur,"FINDLINEIN")||kw(&L->cur,"LINEINDEXIN")||kw(&L->cur,"INDEXLINEIN")||
+      kw(&L->cur,"BAGFINDIN")||kw(&L->cur,"FINDBAGIN")||
+      kw(&L->cur,"SETLINEIN")||kw(&L->cur,"PUTLINEIN")||kw(&L->cur,"REPLACELINEIN")||
+      kw(&L->cur,"BAGSETIN")||kw(&L->cur,"SETBAGIN")||
+      kw(&L->cur,"DROPNTHIN")||kw(&L->cur,"DROPATIN")||kw(&L->cur,"DELETEATIN")||
+      kw(&L->cur,"BAGDROPAT")||kw(&L->cur,"REMOVENTHIN")){
+    char op[24], name[48];
+    int mode = 0; /* 0 find, 1 set, 2 dropnth */
+    char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    char line[CUBALC_HOST_STR_MAX], val[CUBALC_HOST_STR_MAX];
+    long idx = 0, hit = 0, nfields = 0, found = -1;
+    const char *p, *start;
+    size_t o = 0;
+    int first = 1;
+    long fi = 0;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "SETLINEIN") == 0 || strcmp(op, "PUTLINEIN") == 0 ||
+        strcmp(op, "REPLACELINEIN") == 0 || strcmp(op, "BAGSETIN") == 0 ||
+        strcmp(op, "SETBAGIN") == 0)
+      mode = 1;
+    else if (strcmp(op, "DROPNTHIN") == 0 || strcmp(op, "DROPATIN") == 0 ||
+             strcmp(op, "DELETEATIN") == 0 || strcmp(op, "BAGDROPAT") == 0 ||
+             strcmp(op, "REMOVENTHIN") == 0)
+      mode = 2;
+    else
+      mode = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, mode == 0 ? "FINDLINEIN needs name line — FINDLINEIN work \"job\""
+           : mode == 1 ? "SETLINEIN needs name i value — SETLINEIN work 0 \"x\""
+                       : "DROPNTHIN needs name i — DROPNTHIN work 0");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    bag[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(bag, sizeof bag, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(bag, sizeof bag, "%ld", vv->val);
+
+    if (mode == 0) {
+      /* FINDLINEIN */
+      size_t llen;
+      if (kw(&L->cur, "WITH") || kw(&L->cur, "OF") || kw(&L->cur, "LINE") ||
+          kw(&L->cur, "FOR"))
+        lex_next(L);
+      line[0] = 0;
+      if (resolve_str_arg(vm, L, line, sizeof line) != 0) {
+        fail(vm, "FINDLINEIN needs line — FINDLINEIN work \"job\"");
+        return -1;
+      }
+      llen = strlen(line);
+      found = -1;
+      fi = 0;
+      p = bag;
+      while (*p || (bag[0] && p == bag)) {
+        if (!bag[0]) break;
+        start = p;
+        while (*p && *p != '\n') p++;
+        {
+          size_t fl = (size_t)(p - start);
+          if (fl == llen && (fl == 0 || memcmp(start, line, fl) == 0)) {
+            found = fi;
+            break;
+          }
+        }
+        fi++;
+        if (*p == '\n') p++;
+        else break;
+      }
+      var_set_num(vm, "LAST_N", found);
+      vm->last_n = found;
+      {
+        char nb[32];
+        snprintf(nb, sizeof nb, "%ld", found);
+        var_set_str(vm, "LAST", nb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      }
+      var_set_num(vm, "FINDLINEIN_N", found);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# FINDLINEIN %s -> %ld\n", name, found);
+      bump(vm);
+      return 1;
+    }
+
+    /* SETLINEIN / DROPNTHIN need index */
+    if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "OF") ||
+        kw(&L->cur, "NTH"))
+      lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &idx)) {
+      fail(vm, mode == 1 ? "SETLINEIN needs i — SETLINEIN work 0 \"x\""
+                         : "DROPNTHIN needs i — DROPNTHIN work 0");
+      return -1;
+    }
+    if (idx < 0) idx = 0;
+
+    if (mode == 1) {
+      if (kw(&L->cur, "TO") || kw(&L->cur, "WITH") || kw(&L->cur, "AS") ||
+          kw(&L->cur, "VALUE") || kw(&L->cur, "="))
+        lex_next(L);
+      val[0] = 0;
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+        fail(vm, "SETLINEIN needs value — SETLINEIN work 0 \"x\"");
+        return -1;
+      }
+    }
+
+    /* rebuild bag */
+    out[0] = 0;
+    o = 0;
+    first = 1;
+    fi = 0;
+    hit = 0;
+    p = bag;
+    if (!bag[0] && mode == 1) {
+      /* empty bag: pad empty fields then set */
+      long i;
+      for (i = 0; i < idx; i++) {
+        if (!first && o + 1 < sizeof out) out[o++] = '\n';
+        first = 0;
+      }
+      if (!first && o + 1 < sizeof out) out[o++] = '\n';
+      {
+        size_t vl = strlen(val);
+        if (o + vl < sizeof out) { memcpy(out + o, val, vl); o += vl; }
+        else if (o < sizeof out - 1) {
+          size_t take = sizeof out - 1 - o;
+          memcpy(out + o, val, take); o += take;
+        }
+      }
+      out[o] = 0;
+      hit = 1;
+    } else {
+      while (*p || (bag[0] && p == bag && fi == 0 && bag[0])) {
+        if (!bag[0]) break;
+        start = p;
+        while (*p && *p != '\n') p++;
+        {
+          size_t fl = (size_t)(p - start);
+          int drop_this = (mode == 2 && fi == idx);
+          int set_this = (mode == 1 && fi == idx);
+          if (drop_this) {
+            hit = 1;
+          } else {
+            if (!first && o + 1 < sizeof out) out[o++] = '\n';
+            if (set_this) {
+              size_t vl = strlen(val);
+              if (o + vl < sizeof out) { memcpy(out + o, val, vl); o += vl; }
+              else if (o < sizeof out - 1) {
+                size_t take = sizeof out - 1 - o;
+                memcpy(out + o, val, take); o += take;
+              }
+              hit = 1;
+            } else {
+              if (o + fl < sizeof out) { memcpy(out + o, start, fl); o += fl; }
+              else if (o < sizeof out - 1) {
+                size_t take = sizeof out - 1 - o;
+                memcpy(out + o, start, take); o += take;
+              }
+            }
+            out[o] = 0;
+            first = 0;
+          }
+        }
+        fi++;
+        if (*p == '\n') p++;
+        else break;
+      }
+      /* SETLINEIN past end: append empties then value */
+      if (mode == 1 && !hit) {
+        while (fi <= idx) {
+          if (!first && o + 1 < sizeof out) out[o++] = '\n';
+          if (fi == idx) {
+            size_t vl = strlen(val);
+            if (o + vl < sizeof out) { memcpy(out + o, val, vl); o += vl; }
+            else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, val, take); o += take;
+            }
+            hit = 1;
+          }
+          out[o] = 0;
+          first = 0;
+          fi++;
+        }
+      }
+    }
+
+    nfields = 0;
+    if (out[0]) {
+      p = out;
+      while (*p) {
+        while (*p && *p != '\n') p++;
+        nfields++;
+        if (*p == '\n') p++;
+      }
+    }
+    var_set_str(vm, name, out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    var_set_num(vm, "LAST_N", mode == 2 ? hit : nfields);
+    vm->last_n = mode == 2 ? hit : nfields;
+    if (mode == 1) {
+      var_set_num(vm, "SETLINEIN_N", nfields);
+      var_set_num(vm, "SETLINEIN_HIT", hit);
+      var_set_num(vm, "DROPNTHIN_HIT", 0);
+    } else {
+      var_set_num(vm, "DROPNTHIN_HIT", hit);
+      var_set_num(vm, "DROPNTHIN_N", nfields);
+      var_set_num(vm, "SETLINEIN_HIT", 0);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s idx=%ld hit=%ld n=%ld\n", op, name, idx, hit, nfields);
     bump(vm);
     return 1;
   }
