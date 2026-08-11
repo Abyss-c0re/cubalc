@@ -1,0 +1,60 @@
+# INCLUDE arg_guard — fail-fast program-arg contract (ALL + optional ANY)
+# Usability: agent CLI positionals / named env args without N× HASARG glue.
+#
+#   DEFAULT NEED_ARGS = "0\n1"                 # all-of (HASARGALL / NEEDARGS)
+#   DEFAULT NEED_ARG_ANY = "FILE\nHOST"        # any-of (HASARGANY / NEEDARGANY)
+#   DEFAULT ARG_GUARD_SOFT = 0                 # 1 → soft HAS* (OK=0, no fatal)
+#   INCLUDE arg_guard
+#
+# Keys: numeric index → CUBALC_ARGn · else process env name (same as HASARG*).
+# Empty NEED_ARGS skips ALL gate. Empty NEED_ARG_ANY skips ANY gate.
+# Soft dual leaves ARGMISS / ARGHAVE bags for agents (CLEAR_ERR after).
+# Twin of form_guard / env_guard / cli_guard for CUBALC_ARGn · pairs HASARGALL/HASARGANY.
+# Compose with cli_guard when both --flags and positionals matter.
+# HOLD_FLASH not required (same policy as form_guard / cli_guard / env_guard).
+
+DEFAULT NEED_ARGS = ""
+DEFAULT NEED_ARG_ANY = ""
+DEFAULT ARG_GUARD_SOFT = 0
+
+# --- ALL-of: multi program-arg / env name presence ---
+SYS EMPTY NEED_ARGS
+IF LAST_N == 1
+  LET ARG_GUARD_ALL_OK = 1
+ELSE
+  IF ARG_GUARD_SOFT
+    HASARGALL NEED_ARGS
+    LET ARG_GUARD_ALL_OK = LAST_N
+  ELSE
+    NEEDARGS NEED_ARGS
+    LET ARG_GUARD_ALL_OK = 1
+  END
+END
+
+# --- ANY-of: at least one of the named args present ---
+SYS EMPTY NEED_ARG_ANY
+IF LAST_N == 1
+  LET ARG_GUARD_ANY_OK = 1
+ELSE
+  IF ARG_GUARD_SOFT
+    HASARGANY NEED_ARG_ANY
+    LET ARG_GUARD_ANY_OK = LAST_N
+  ELSE
+    NEEDARGANY NEED_ARG_ANY
+    LET ARG_GUARD_ANY_OK = 1
+  END
+END
+
+# overall soft status (hard paths already failed fatally if miss)
+IF ARG_GUARD_ALL_OK
+  IF ARG_GUARD_ANY_OK
+    LET ARG_GUARD_OK = 1
+    LET OK = 1
+  ELSE
+    LET ARG_GUARD_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET ARG_GUARD_OK = 0
+  LET OK = 0
+END

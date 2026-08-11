@@ -38832,7 +38832,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     int modular = 0, libdir_ok = 0, libs_n = 0;
     int lib_agent_boot = 0, lib_plate_session = 0, lib_plate_uniform = 0;
     int lib_hold_seed = 0, lib_var_guard = 0, lib_time_guard = 0;
-    int lib_fat_boot = 0, lib_fat_session = 0, lib_form_guard = 0, lib_env_guard = 0, lib_env_boot = 0;
+    int lib_fat_boot = 0, lib_fat_session = 0, lib_form_guard = 0, lib_env_guard = 0, lib_env_boot = 0, lib_arg_guard = 0;
     int lib_cap_boot = 0, lib_onboard_boot = 0, lib_discover_boot = 0, lib_open_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0;
     int include_path_set = 0, preload_set = 0, smx_key = 0, protect_plate = 0;
@@ -38866,6 +38866,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     lib_form_guard = (access("programs/lib/form_guard.cubalc", R_OK) == 0);
     lib_env_guard = (access("programs/lib/env_guard.cubalc", R_OK) == 0);
     lib_env_boot = (access("programs/lib/env_boot.cubalc", R_OK) == 0);
+    lib_arg_guard = (access("programs/lib/arg_guard.cubalc", R_OK) == 0);
     lib_cap_boot = (access("programs/lib/cap_boot.cubalc", R_OK) == 0);
     lib_onboard_boot = (access("programs/lib/onboard_boot.cubalc", R_OK) == 0);
     lib_discover_boot = (access("programs/lib/discover_boot.cubalc", R_OK) == 0);
@@ -38899,7 +38900,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       "\"lib_agent_boot\":%s,\"lib_plate_session\":%s,\"lib_plate_uniform\":%s,"
       "\"lib_hold_seed\":%s,\"lib_var_guard\":%s,\"lib_time_guard\":%s,"
       "\"lib_fat_boot\":%s,\"lib_fat_session\":%s,\"lib_form_guard\":%s,"
-      "\"lib_env_guard\":%s,\"lib_env_boot\":%s,"
+      "\"lib_env_guard\":%s,\"lib_env_boot\":%s,\"lib_arg_guard\":%s,"
       "\"lib_cap_boot\":%s,\"lib_onboard_boot\":%s,\"lib_discover_boot\":%s,"
       "\"lib_open_boot\":%s,\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
       "\"include_path_set\":%s,\"preload_set\":%s,\"core_protect_plate\":%s,"
@@ -38920,6 +38921,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lib_form_guard ? "true" : "false",
       lib_env_guard ? "true" : "false",
       lib_env_boot ? "true" : "false",
+      lib_arg_guard ? "true" : "false",
       lib_cap_boot ? "true" : "false",
       lib_onboard_boot ? "true" : "false",
       lib_discover_boot ? "true" : "false",
