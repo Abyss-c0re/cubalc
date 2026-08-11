@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 928,
-  "version": "1.15.921-usability",
-  "item": "LPADTO / RPADTO vars",
-  "item_id": 928,
-  "title": "LPADTO \u00b7 RPADTO \u00b7 in-place pad",
-  "commit": "d593080e",
-  "summary": "In-place left/right pad on named vars; promotes num; plate IDs without LET=SYS LPAD; proof 1466 PASS.",
+  "iter": 929,
+  "version": "1.15.922-usability",
+  "item": "IFSTARTS / IFENDS / IFCONTAINS / IFEQS",
+  "item_id": 929,
+  "title": "IFSTARTS \u00b7 IFENDS \u00b7 IFCONTAINS \u00b7 IFEQS \u00b7 string branches",
+  "commit": "bb191feb",
+  "summary": "String content branches on named vars with ELSE/END; no STARTSIN+IF LAST_N glue; proof 1467 PASS.",
   "proofs": [
-    "1466_lpadto_rpadto PASS",
-    "1466_cli_lpadto_rpadto PASS",
-    "1465_numto_strto regression PASS"
+    "1467_ifstarts_ifcontains PASS",
+    "1467_cli_ifstarts_ifcontains PASS",
+    "1457_ifempty regression PASS",
+    "1466_lpadto regression PASS"
   ],
-  "when": "2026-08-11T15:36:47Z",
+  "when": "2026-08-11T15:48:11Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "d593080e0850e97c84aa7d8b1af2c2a33a678bf2",
-  "note": "agent fixed-width IDs without SYS pad glue"
+  "sha": "bb191febb8af35cfbaadd393437b48602ff8bc98",
+  "note": "agent path/role branches without probe+IF glue"
 }
