@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 896,
-  "version": "1.15.889-usability",
-  "item": "obj_guard native HASOBJS/NEEDOBJS + HASOBJANY/NEEDOBJANY",
-  "item_id": 896,
-  "title": "obj_guard \u00b7 HASOBJS \u00b7 NEEDOBJS \u00b7 HASOBJANY \u00b7 NEEDOBJANY \u00b7 native multi",
-  "commit": "2a53bfd1",
-  "summary": "obj_guard ALL/ANY use native HASOBJS/NEEDOBJS + HASOBJANY/NEEDOBJANY instead of N\u00d7 HASOBJ soup; twin of fn_guard; proofs 1434 PASS.",
+  "iter": 897,
+  "version": "1.15.890-usability",
+  "item": "class_guard native HASCLASSES/NEEDCLASSES + HASCLASSANY/NEEDCLASSANY",
+  "item_id": 897,
+  "title": "class_guard \u00b7 HASCLASSES \u00b7 NEEDCLASSES \u00b7 HASCLASSANY \u00b7 NEEDCLASSANY \u00b7 native multi",
+  "commit": "ab6a946d",
+  "summary": "class_guard ALL/ANY use native HASCLASSES/NEEDCLASSES + HASCLASSANY/NEEDCLASSANY instead of N\u00d7 HASCLASS soup; twin of obj/fn_guard; proofs 1435 PASS.",
   "proofs": [
-    "1434_obj_guard_native PASS",
-    "1434_cli_obj_guard_native PASS",
-    "1405_obj_guard regression PASS"
+    "1435_class_guard_multi_native PASS",
+    "1435_cli_class_guard_multi_native PASS",
+    "1401_class_guard regression PASS"
   ],
-  "when": "2026-08-11T09:15:57Z",
+  "when": "2026-08-11T09:25:28Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "2a53bfd17d74c2203063fdeb6a574128b7d0421c",
-  "note": "agent live-object gate without N\u00d7 HASOBJ glue; twin of fn_guard native multi"
+  "sha": "ab6a946d913f6f488ecfcd13a35b37e7c2a01e40",
+  "note": "agent CLASS gate without N\u00d7 HASCLASS glue; twin of obj_guard/fn_guard native multi"
 }
