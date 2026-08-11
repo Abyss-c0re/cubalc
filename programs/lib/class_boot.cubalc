@@ -1,0 +1,18 @@
+# INCLUDE class_boot - agent preamble + CLASS catalog contract one-shot
+# Usability: agent_boot + class_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_CLASSES = "Ticket\nOrder"
+#   DEFAULT NEED_CLASS_ANY = "Cell\nAgent"
+#   DEFAULT CLASS_GUARD_SOFT = 0
+#   INCLUDE class_boot
+# Soft miss: DEFAULT CLASS_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --class
+# Twin of fn_boot (FN catalog) for CLASS catalogs.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_CLASSES = ""
+DEFAULT NEED_CLASS_ANY = ""
+DEFAULT CLASS_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE class_guard

@@ -890,6 +890,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 859. ~~**`full_session` / `full_boot` + `cubalc init --fleet`**~~ **done** (product+host · FULL_SESSION_OK · catalog n=25 · doctor lib_full_* · proof 1399).
 860. ~~**`plate_guard` / `key_boot` + `cubalc init --key`**~~ **done** (NEED_KEYS/NEED_KEY_ANY · PLATE_GUARD_OK · catalog n=26 · doctor lib_plate_guard/lib_key_boot · proof 1400).
 861. ~~**`fn_guard` / `fn_boot` + `cubalc init --fn`**~~ **done** (NEED_FNALL/NEED_FNANY · FN_GUARD_OK · HASFN hard path · catalog n=27 · proof 1400_fn · note: REQUIRE FN breaks IF/END nesting).
+862. ~~**`class_guard` / `class_boot` + `cubalc init --class`**~~ **done** (NEED_CLASSES/NEED_CLASS_ANY · CLASS_GUARD_OK · LISTCLASSES+HASLINE · catalog n=28 · proof 1401).
 
 
 ## Tick protocol
