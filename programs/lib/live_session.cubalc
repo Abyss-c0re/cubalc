@@ -1,0 +1,41 @@
+# INCLUDE live_session — full OOP catalog + live instance contract one-shot
+# Usability: oop_session (class+method+field) + obj_guard without multi INCLUDE
+# for agents that need CLASS/METHOD/FIELD readiness and NEW instances before SEND/GETF.
+#
+#   DEFAULT NEED_CLASSES = "Ticket\nOrder"
+#   DEFAULT NEED_CLASS_ANY = ""
+#   DEFAULT NEED_METHODS = "Ticket.init\nTicket.bump"
+#   DEFAULT NEED_METHOD_ANY = ""
+#   DEFAULT NEED_FIELDS = "Ticket.id\nOrder.n"
+#   DEFAULT NEED_FIELD_ANY = ""
+#   DEFAULT NEED_OBJS = "t1\norder1"
+#   DEFAULT NEED_OBJ_ANY = ""
+#   DEFAULT CLASS_GUARD_SOFT = 0
+#   DEFAULT METHOD_GUARD_SOFT = 0
+#   DEFAULT FIELD_GUARD_SOFT = 0
+#   DEFAULT OBJ_GUARD_SOFT = 0
+#   INCLUDE live_session
+#   # LIVE_SESSION_OK combines OOP_SESSION_OK + OBJ_GUARD_OK
+#
+# Soft: set *_GUARD_SOFT = 1 before INCLUDE.
+# Scaffold: cubalc init demo --live
+# Twin of oop_session (catalog only) / obj_guard (instances only) for live OOP plane.
+# HOLD_FLASH not required (runtime default 1).
+# Note: does not INCLUDE agent_boot — use live_boot for preamble + contract.
+
+INCLUDE oop_session
+INCLUDE obj_guard
+
+# combined soft status (hard paths already FAIL-sticky; run -s for exit)
+IF OOP_SESSION_OK
+  IF OBJ_GUARD_OK
+    LET LIVE_SESSION_OK = 1
+    LET OK = 1
+  ELSE
+    LET LIVE_SESSION_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET LIVE_SESSION_OK = 0
+  LET OK = 0
+END
