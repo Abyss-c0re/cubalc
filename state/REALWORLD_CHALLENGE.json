@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 360,
-  "program": "programs/realworld/svc_ifgt_ifhasline_admit_board.cubalc",
-  "theme": "IFGT/IFEQN + IFHASLINE pool admit branches",
-  "version": "1.15.928-usability",
+  "iter": 361,
+  "program": "programs/realworld/svc_lpadto_ticket_path_board.cubalc",
+  "theme": "LPADTO/RPADTO + STRIPPREFIXTO ticket/path intake",
+  "version": "1.15.931-usability",
   "pass": true,
-  "prior_note": "iter 359 MOVELINEIN; this iter first realworld of 1472 IFGT/IFEQN + 1473 IFHASLINE/IFINBAG",
+  "prior_note": "iter 360 IFGT/IFHASLINE; this iter first realworld of 1466 LPADTO + 1463 STRIPPREFIXTO (1476 SUMIN not in binary yet)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "IFGT retries + IFHASLINE ready",
+      "cmd": "LPADTO ticket 000042",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFGT/IFLT/IFGE/IFLE/IFEQN/IFNEQN/IFHASLINE 10/10",
+      "cmd": "LPAD/RPAD/PAD/STRIP 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "exact miss ghost IFGTE absent nest idle 10/10",
+      "cmd": "trunc miss empty affix aliases 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "admit/backpressure/no-ready + burn retry 10/10",
+      "cmd": "ticket chain + state path strip 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "load band canary ack 10/10",
+      "cmd": "multi-ticket pad release root 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFGT family + IFHASLINE",
+      "cmd": "HASFORM LPADTO/STRIP*",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "full admit contract 9/9",
+      "cmd": "padded ticket + releases root 9/9",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "sticky IFGT_N WRITE NL",
+      "cmd": "WRITE NL ticket plate",
       "ok": true,
       "note": "probe"
     },
@@ -69,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1472/1473 PASS; CLI duals still red",
+      "cmd": "selftest; 1463/1466 PASS; 1476 SUMIN not linked; CLI duals red",
       "ok": false,
-      "note": "proofs green; CLI duals still red"
+      "note": "proofs green where linked; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -6914,6 +6914,30 @@
       "title": "IFGT/IFHASLINE/IFINBAG work (positive exact + sticky)",
       "detail": "Numeric family + exact bag membership with sticky IFGT_N/IFHASLINE_N. Ghost bag false; substr \"bet\" not match \"beta\". Nest IFHASLINE+IFGT for admit/backpressure inside FN. Solid pool admit surface.",
       "repro": "CALL admit_depth; CALL gt_ab; IFHASLINE exact only"
+    },
+    {
+      "id": "W856",
+      "severity": "med",
+      "area": "lang|lpadto",
+      "title": "LPADTO truncates when already wider than width",
+      "detail": "LPADTO long 3 on \"abcdef\" yields \"abc\" (not keep-all). Agents expecting pad-only must LENOF-guard first. LAST_N after LPADTO is final width; capture before SYS EQS/CLEAR_ERR.",
+      "repro": "LPADTO long 3 with abcdef \u2192 abc"
+    },
+    {
+      "id": "W857",
+      "severity": "high",
+      "area": "host|binary",
+      "title": "1476 SUMIN/MAXIN proof present but form not in binary 1.15.930",
+      "detail": "programs/proof/1476_sumin_maxin.cubalc exists; ./out/cubalc forms SUMIN n=0; run \u2192 unknown form SUMIN (suggests SETMIN). VERSION file 1.15.931 vs binary 1.15.930. Need relink/catalog before realworld SUMIN board.",
+      "repro": "cubalc run 1476 \u2192 unknown form SUMIN; forms SUMIN n=0"
+    },
+    {
+      "id": "W858",
+      "severity": "low",
+      "area": "lang|lpadto",
+      "title": "LPADTO/RPADTO/STRIPPREFIXTO work (positive)",
+      "detail": "Zero-pad tickets, space/dot column pad, strip path root+ext with HIT sticky, empty affix no-op, DROPPREFIXTO aliases, NUMTO+STRTO+LPAD chain, WITH pad keyword. Solid intake ticket/path surface.",
+      "repro": "LPADTO id 6 0; STRIPPREFIXTO path /tmp/; STRIPSUFFIXTO path .json"
     }
   ],
   "workarounds": [
@@ -7115,7 +7139,8 @@
     "NUMTO strtol partial/float trunc (W844); CLEAR_ERR vs LAST_N after NUMTO (W845)",
     "SETLINEIN pad past-end + negative index\u21920 (W847/W848); FINDLINEIN exact bag ops positive (W849)",
     "COUNTIN substr vs COUNTLINEIN exact (W850); MOVELINEIN HIT soft/no-op (W851)",
-    "IFGT/IFHASLINE cannot nest in IF END framing (W853); IFGTE absent use IFGE (W854)"
+    "IFGT/IFHASLINE cannot nest in IF END framing (W853); IFGTE absent use IFGE (W854)",
+    "LPADTO truncates when wider (W856); SUMIN proof not linked in 1.15.930 binary (W857)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7217,9 +7242,14 @@
       "iter": 360,
       "issue": "First draft: IFGT/IFHASLINE nested in action IF stole END; boot body ran after list (read miss). Fixed FN+CALL wrap (W853).",
       "resolution": "first realworld 1472+1473; document W853\u2013W855"
+    },
+    {
+      "iter": 361,
+      "issue": "Chose 1466+1463 after 1476 SUMIN unknown in binary (W857). pass 9/10 until LAST_N snap before SYS EQS after LPADTO.",
+      "resolution": "first realworld 1466+1463; document W856\u2013W858"
     }
   ],
-  "commit": "acc14298",
-  "ts": 1786469797,
-  "board_commit": "acc14298"
+  "commit": "d28e4ba5",
+  "ts": 1786471143,
+  "board_commit": "d28e4ba5"
 }
