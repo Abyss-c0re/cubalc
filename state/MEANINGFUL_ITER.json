@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 908,
-  "version": "1.15.901-usability",
-  "item": "TIMEIT / BENCH / ELAPSED block",
-  "item_id": 908,
-  "title": "TIMEIT \u00b7 BENCH \u00b7 ELAPSED \u00b7 TIMEIT_MS \u00b7 wall measure body",
-  "commit": "fcf75e14",
-  "summary": "TIMEIT|BENCH|ELAPSED \u2026 END measures mono wall ms into LAST_N/TIMEIT_MS; no SYS MS delta glue; proof 1446 PASS.",
+  "iter": 909,
+  "version": "1.15.902-usability",
+  "item": "RETRY / ATTEMPT n [EVERY ms] block",
+  "item_id": 909,
+  "title": "RETRY \u00b7 ATTEMPT \u00b7 EVERY backoff \u00b7 RETRY_N \u00b7 until OK",
+  "commit": "11ab6866",
+  "summary": "RETRY n [EVERY ms] \u2026 END re-runs until OK=1; RETRY_N/RETRY_OK; flaky hook recovery without LOOP+BREAKIF glue; proof 1447 PASS.",
   "proofs": [
-    "1446_timeit PASS",
-    "1446_cli_timeit PASS"
+    "1447_retry PASS",
+    "1447_cli_retry PASS",
+    "1446_timeit regression PASS"
   ],
-  "when": "2026-08-11T11:48:42Z",
+  "when": "2026-08-11T11:58:07Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "fcf75e14bbbe0cacce031bdd997bb9b29e294626",
-  "note": "agent timing of hooks/sleep/backoff without arithmetic plate glue"
+  "sha": "11ab6866637581adcca51463139ac3ba1eb978f3",
+  "note": "optional backoff between soft-fail attempts for agent plugins"
 }
