@@ -6,14 +6,15 @@
   "item_id": 865,
   "title": "oop_session \u00b7 oop_boot \u00b7 OOP_SESSION_OK \u00b7 init --oop \u00b7 doctor",
   "commit": "84177591e6187132f05962243171a0687bfbcc9b",
-  "summary": "class+method+field combined OOP catalog; OOP_SESSION_OK; init --oop n=31; proof 1404 PASS.",
+  "fix_commit": "65b5e915ef306af95c6e4aaf7d38ed972794d841",
+  "summary": "class+method+field OOP_SESSION_OK; init --oop n=31; list JSON oop_boot; proof 1404 PASS.",
   "proofs": [
     "1404_oop_session PASS",
     "1404_oop_boot PASS",
     "1404_cli_oop_session PASS",
     "1404_cli_init_oop PASS"
   ],
-  "when": "2026-08-11T03:43:32Z",
+  "when": "2026-08-11T03:44:06Z",
   "agent": "thalamus_meaningful_iter",
   "sha": "84177591e6187132f05962243171a0687bfbcc9b",
   "note": "host_session twin for OOP plane \u00b7 one INCLUDE before NEW/SEND"
