@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 891,
-  "version": "1.15.884-usability",
-  "item": "field_guard native HASCLASS/HASFIELD",
-  "item_id": 891,
-  "title": "field_guard · HASCLASS · HASFIELD · drop LISTFIELDS soup",
-  "commit": "f8ffd16e5df5f4a3f441b146ee4b15eb2e73d6d6",
-  "summary": "field_guard rewritten to HASCLASS+HASFIELD; FLDMISS surface kept; 1430+1403 PASS.",
+  "iter": 892,
+  "version": "1.15.885-usability",
+  "item": "class_guard native HASCLASS",
+  "item_id": 892,
+  "title": "class_guard · HASCLASS · drop LISTCLASSES soup",
+  "commit": "57e93c06bdd55ffdcd6bd44d3b46948bed5c3ecb",
+  "summary": "class_guard rewritten to HASCLASS; CLASSMISS surface kept; 1431+1401 PASS.",
   "proofs": [
-    "1430_field_guard_native PASS",
-    "1430_cli_field_guard_native PASS",
-    "1403_field_guard PASS",
-    "1403_field_boot PASS"
+    "1431_class_guard_native PASS",
+    "1431_cli_class_guard_native PASS",
+    "1401_class_guard PASS",
+    "1401_class_boot PASS"
   ],
-  "when": "2026-08-11T08:23:27Z",
+  "when": "2026-08-11T08:32:37Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "f8ffd16e5df5f4a3f441b146ee4b15eb2e73d6d6",
-  "note": "lib usability — INCLUDE field_boot without LISTFIELDS+HASLINE glue"
+  "sha": "57e93c06bdd55ffdcd6bd44d3b46948bed5c3ecb",
+  "note": "lib usability — INCLUDE class_boot without LISTCLASSES+HASLINE glue"
 }
