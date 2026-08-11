@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 327,
-  "program": "programs/realworld/svc_product_session_fleet_board.cubalc",
-  "theme": "product_session fleet product-tool contract (cli+arg+env+time)",
-  "version": "1.15.845-usability",
+  "iter": 328,
+  "program": "programs/realworld/svc_lib_boot_module_board.cubalc",
+  "theme": "lib_boot/lib_guard fleet module roster contract",
+  "version": "1.15.851-usability",
   "pass": true,
-  "prior_note": "iter 326 time_boot; this iter first realworld 1392 product_session fleet",
+  "prior_note": "iter 327 product_session; this iter first realworld 1397 lib_boot + fix REQUIRE LIB bare stem",
   "tests": [
     {
       "name": "list",
@@ -15,61 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate psf",
+      "cmd": "seed agent plate slb",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "product_session flags+rest+HOME+time",
+      "cmd": "NEED_LIBS agent_boot+hold_seed ANY lib_guard",
       "ok": true,
-      "note": "pass PSO=1"
+      "note": "pass LGO=1"
     },
     {
-      "name": "soft_flag",
-      "cmd": "CLI_GUARD_SOFT missing flag",
+      "name": "soft_all",
+      "cmd": "soft ALL miss + LIBMISS bag + HASLIB agent false-friend",
       "ok": true,
-      "note": "soft_flag"
+      "note": "soft_all"
     },
     {
-      "name": "soft_env",
-      "cmd": "ENV_GUARD_SOFT MISSING_PSF_ENV",
+      "name": "soft_any",
+      "cmd": "soft ANY miss then hit",
       "ok": true,
-      "note": "soft_env"
+      "note": "soft_any"
     },
     {
-      "name": "soft_arg",
-      "cmd": "ARG_GUARD_SOFT NEED_ARGS 0",
+      "name": "hard",
+      "cmd": "hard ALL+ANY present modules",
       "ok": true,
-      "note": "soft_arg"
-    },
-    {
-      "name": "soft_time",
-      "cmd": "huge NEED_TIME soft unlimited",
-      "ok": true,
-      "note": "soft_time unlim"
-    },
-    {
-      "name": "soft_time_T",
-      "cmd": "soft_time -T 80/120",
-      "ok": true,
-      "note": "soft_time limited"
+      "note": "hard"
     },
     {
       "name": "form",
-      "cmd": "HASLIB product/tool HASINCLUDE stack",
+      "cmd": "HASLIB/HASINCLUDE stack HASFORM knobs miss",
       "ok": true,
       "note": "form"
     },
     {
       "name": "gate",
-      "cmd": "plate + soft product gate",
+      "cmd": "plate + soft combined gate",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber PSO capture",
+      "cmd": "PRINT clobber + multiline LIBHAVE",
       "ok": true,
       "note": "probe"
     },
@@ -80,22 +68,22 @@
       "note": "unknown\u21922"
     },
     {
-      "name": "tight_T40",
-      "cmd": "soft_time -T 40 host TIMEOUT",
-      "ok": false,
-      "note": "stack too heavy for 40ms"
-    },
-    {
-      "name": "hard_flag_exit",
-      "cmd": "NEEDFLAGS hard miss exit_code 0",
+      "name": "hard_miss_exit",
+      "cmd": "REQUIRE LIB nosuch exit_code 0",
       "ok": false,
       "note": "exit_code 0 class"
+    },
+    {
+      "name": "require_lib_bare",
+      "cmd": "REQUIRE LIB hold_seed bare after fix",
+      "ok": true,
+      "note": "fix W711"
     },
     {
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "575/787 product_session PASS; CLI duals still set"
+      "note": "584/807 require_lib+lib_boot PASS; CLI duals still set"
     }
   ],
   "weaknesses": [
@@ -5778,12 +5766,57 @@
       "title": "CLI dual selftests still fail unknown form set (cli_init_product_session)",
       "detail": "product_session lang proof 1392 PASS (40 asserts); cli_init_product_session.sh FAILS with unknown form 'set' line 2 \u2014 shell dual scaffolding regression class, not product_session lib itself. Same as cli_init_tool_session / cli_init_time.",
       "repro": "cubalc selftest | grep cli_init_product"
+    },
+    {
+      "id": "W711",
+      "severity": "high",
+      "area": "lang|require_lib",
+      "title": "REQUIRE LIB bare IDENT broke after var-only resolve (MI857) \u2014 fixed",
+      "detail": "b0e429f7 switched REQUIRE LIB/BIN to resolve_str_arg which only accepted STR|defined-str-var|LAST. Bare REQUIRE LIB hold_seed and REQUIRE BIN sh hard-failed with REQUIRE LIB \"name\"|var|LAST; require_lib selftest red; all realworld boards using REQUIRE LIB hold_seed died at line 2. Fix: resolve_str_arg expands str/num vars and falls back to literal IDENT when undefined.",
+      "repro": "pre-fix: REQUIRE LIB hold_seed \u2192 fail; post-fix \u2192 programs/lib/hold_seed.cubalc"
+    },
+    {
+      "id": "W712",
+      "severity": "med",
+      "area": "lang|require_lib",
+      "title": "String-var shadow steals REQUIRE LIB bare stem",
+      "detail": "LET hold_seed = \"nosuch_shadow\"; REQUIRE LIB hold_seed resolves the var value not the literal stem. Defined string vars always win over bare name. Agents must quote REQUIRE LIB \"hold_seed\" when a same-named var may exist, or use a non-colliding stem var name in EACH LINE loops only.",
+      "repro": "LET hold_seed=\"nosuch_shadow\"; REQUIRE LIB hold_seed \u2192 missing nosuch_shadow"
+    },
+    {
+      "id": "W713",
+      "severity": "low",
+      "area": "lang|haslib",
+      "title": "HASLIB exact stem only (substring false friend)",
+      "detail": "HASLIB agent does not match agent_boot. Exact INCLUDE-path stem required. Good for security; agents must not assume prefix match.",
+      "repro": "HASLIB agent \u2192 0 while HASLIB agent_boot \u2192 1"
+    },
+    {
+      "id": "W714",
+      "severity": "med",
+      "area": "host|exit",
+      "title": "hard REQUIRE LIB / lib_guard miss leaves exit_code 0",
+      "detail": "LIB_GUARD_SOFT=0 + NEED_LIBS=nosuch \u2192 ok:false asserts_fail LAST_ERR but plate exit_code 0 shell 0. Same class as other hard NEED* gates.",
+      "repro": "INCLUDE lib_guard with missing NEED_LIBS hard \u2192 exit_code 0"
+    },
+    {
+      "id": "W715",
+      "severity": "low",
+      "area": "host|print",
+      "title": "LIBHAVE multiline bag: PRINT shows first line only",
+      "detail": "LIBHAVE is newline-joined stems; PRINT LIBHAVE truncates display at first NL. Use SYS LINES / SYS HASLINE / PRINT_JSON have_n or WRITE bag file.",
+      "repro": "INCLUDE soft ALL hit 2 libs; PRINT LIBHAVE \u2192 single line"
+    },
+    {
+      "id": "W716",
+      "severity": "low",
+      "area": "lang|include",
+      "title": "lib_boot re-INCLUDEs agent_boot (double boot on boards)",
+      "detail": "Boards INCLUDE agent_boot then lib_boot \u2192 agent_boot again. Works; inflates includes_n. Prefer INCLUDE lib_boot alone when board only needs path+guard.",
+      "repro": "includes list agent_boot \u00d72 after lib_boot"
     }
   ],
   "workarounds": [
-    "LET bag=LAST before PRINT after FORMSFOR/TIPS; HASLINE for exact form names",
-    "use FORMSFOR topic_var after lex_next fix; aliases forms\u2192cap mesh\u2192p2p",
-    "RELATED single-token hubs only; use HASFORM then RELATED of primary form",
     "LET body=LAST before PRINT after RELATED/SNIP; HASLINE for exact neighbors",
     "never name subcmd run; use exec|go|apply after cubalc run",
     "TOPIC_SNIP_N for snip presence; capture LAST before PRINT after TOPIC",
@@ -5880,7 +5913,10 @@
     "LET all NEED_* + *_GUARD_SOFT before each re-INCLUDE product_session (DEFAULT sticky)",
     "Capture PRODUCT_SESSION_OK into LET before PRINT (PRINT clobber LAST only)",
     "Use -T >= 80 for soft_time paths that INCLUDE product_session",
-    "Exit via EXIT n for shell rc; ignore plate exit_code on hard guard miss"
+    "Exit via EXIT n for shell rc; ignore plate exit_code on hard guard miss",
+    "REQUIRE LIB \"stem\" when same-named string var may exist",
+    "LET NEED_LIBS/NEED_LIB_ANY + LIB_GUARD_SOFT before each re-INCLUDE lib_guard",
+    "SYS HASLINE LIBMISS / LIBHAVE for multiline bags not PRINT alone"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -5985,11 +6021,16 @@
     "HASFORM misses session knobs (W707)",
     "hard NEEDFLAGS under product_session exit_code 0 (W708)",
     "triple agent_boot via product_session (W709)",
-    "cli_init_product set dual still red (W710)"
+    "cli_init_product set dual still red (W710)",
+    "lib_guard NEED_LIBS/NEED_LIB_ANY (1397)",
+    "lib_boot agent_boot+lib_guard one-shot",
+    "REQUIRE LIB bare+var dual restored (W711 fix)",
+    "string-var shadow REQUIRE LIB (W712)",
+    "HASLIB exact stem (W713)",
+    "hard lib_guard miss exit_code 0 (W714)",
+    "LIBHAVE multiline PRINT (W715)"
   ],
   "issues_faced": [
-    "iter301: host strips ARG run \u2014 renamed action to exec (W554)",
-    "iter301: RUNSNIP nested asserts inflate parent plate (W555)",
     "iter301: board 10/10 green after exec rename; selftest CLI duals still red",
     "iter302: ERRTIPS heuristic classes lib/cap/p2p/run/fat all green",
     "iter302: chain TIPS after ERRTIPS_TOPIC works; noise falls back general (W563)",
@@ -6037,9 +6078,11 @@
     "iter326: hard/tight first failed LAST_N==-1 vs 1 and TIMEOUT_UNLIMITED false friend; fixed REMAIN_MS detect + OK checks",
     "iter326: selftest 572/784 time_boot+time_guard PASS; CLI duals still set",
     "iter327: product_session fleet board 11/12 green; -T 40 TIMEOUT; hard NEEDFLAGS exit_code 0",
-    "iter327: selftest 575/787 product_session+tool_session PASS; CLI duals still set"
+    "iter327: selftest 575/787 product_session+tool_session PASS; CLI duals still set",
+    "iter328: lib_boot module board 10/10; fixed REQUIRE LIB bare stem (W711) after MI857 break",
+    "iter328: selftest 584/807 require_lib+lib_guard+lib_boot PASS; CLI duals still set"
   ],
-  "commit": "36fbf8df",
-  "ts": "2026-08-11T01:23:06Z",
-  "board_commit": "36fbf8df"
+  "commit": "",
+  "ts": "2026-08-11T02:18:13Z",
+  "board_commit": ""
 }

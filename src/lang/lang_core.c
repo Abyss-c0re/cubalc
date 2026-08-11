@@ -1163,10 +1163,22 @@ int cubalc_lang_resolve_str_arg(VM *vm, Lex *L, char *out, size_t outn){
     }
     Var *v = var_get(vm, L->cur.text, 0);
     if (v && v->is_str){
+      /* prefer defined string var (REQUIRE LIB b after EACH LINE / PICKLIB) */
       snprintf(out, outn, "%s", v->sval);
       lex_next(L);
       return 0;
     }
+    if (v && !v->is_str){
+      /* numeric var → decimal (SYS CAT "x=" hit must not print name "hit") */
+      snprintf(out, outn, "%ld", v->val);
+      lex_next(L);
+      return 0;
+    }
+    /* undefined bare IDENT → literal stem/name (REQUIRE LIB hold_seed · REQUIRE BIN sh).
+     * Restores pre-var-resolve dual: var when set, else unquoted name. */
+    snprintf(out, outn, "%s", L->cur.text);
+    lex_next(L);
+    return 0;
   }
   return -1;
 }
