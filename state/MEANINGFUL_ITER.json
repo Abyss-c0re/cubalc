@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 893,
-  "version": "1.15.886-usability",
-  "item": "HASFNANY / NEEDFNANY any-of multi FN gates",
-  "item_id": 893,
-  "title": "HASFNANY · NEEDFNANY · FNHAVE · HASFNS twin",
-  "commit": "390036e6971e862e3561061b1df2c77b2f71db95",
-  "summary": "HASFNANY soft any FN + FNHAVE/MISS; NEEDFNANY hard; proof 1432 PASS.",
+  "iter": 894,
+  "version": "1.15.887-usability",
+  "item": "fn_guard native HASFNS/NEEDFNS ALL path",
+  "item_id": 894,
+  "title": "fn_guard \u00b7 HASFNS \u00b7 NEEDFNS \u00b7 FNHAVE/FNMISS dual",
+  "commit": "9aeb7a6a651aa8e1aa39cfc7a8f4e4a495b22e47",
+  "summary": "fn_guard ALL path uses native HASFNS (soft) / NEEDFNS (hard) instead of N\u00d7 HASFN soup; ANY path keeps HASFN+HARDFAIL duals; proofs 1432 PASS.",
   "proofs": [
-    "1432_hasfnany PASS",
-    "1432_cli_hasfnany PASS"
+    "1432_fn_guard_native PASS",
+    "1432_cli_fn_guard_native PASS"
   ],
-  "when": "2026-08-11T08:44:44Z",
+  "when": "2026-08-11T11:50:00Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "390036e6971e862e3561061b1df2c77b2f71db95",
-  "note": "optional CALL plugin FN OR without N x HASFN IF glue"
+  "sha": "9aeb7a6a651aa8e1aa39cfc7a8f4e4a495b22e47",
+  "note": "agent language-plane FN gate without N\u00d7 HASFN glue; twin of obj/class_guard"
 }
