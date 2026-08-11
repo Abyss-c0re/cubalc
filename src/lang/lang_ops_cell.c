@@ -5347,6 +5347,95 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     do_foldbits(vm, id, bits);
     bump(vm); return 1;
   }
+  /* EEGOPEN path — set EEG_PATH for EEGREAD stream */
+  if (kw(&L->cur,"EEGOPEN")||kw(&L->cur,"EEG_SOURCE")||kw(&L->cur,"BRAINOPEN")){
+    lex_next(L);
+    char path[CUBALC_HOST_STR_MAX]; path[0]=0;
+    if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+      fail(vm,"EEGOPEN path"); return -1;
+    }
+    var_set_str(vm,"EEG_PATH",path);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  /* EEGCH n — channel count (1..16, default 8) */
+  if (kw(&L->cur,"EEGCH")||kw(&L->cur,"EEG_CH")||kw(&L->cur,"BRAINCH")){
+    lex_next(L);
+    long n = parse_expr(vm, L);
+    if (n < 1) n = 1;
+    if (n > CUBALC_EEG_MAX_CH) n = CUBALC_EEG_MAX_CH;
+    var_set_num(vm,"EEG_CH",n);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  /* EEGSCALE µV — magnitude scale for band thresholds */
+  if (kw(&L->cur,"EEGSCALE")||kw(&L->cur,"EEG_SCALE")||kw(&L->cur,"BRAINSCALE")){
+    lex_next(L);
+    long n = parse_expr(vm, L);
+    if (n < 1) n = (long)CUBALC_EEG_DEF_SCALE;
+    var_set_num(vm,"EEG_SCALE",n);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  /* EEGWIN n — samples per window before pack */
+  if (kw(&L->cur,"EEGWIN")||kw(&L->cur,"EEG_WIN")||kw(&L->cur,"BRAINWIN")){
+    lex_next(L);
+    long n = parse_expr(vm, L);
+    if (n < 1) n = 16;
+    if (n > CUBALC_EEG_MAX_WIN) n = CUBALC_EEG_MAX_WIN;
+    var_set_num(vm,"EEG_WIN",n);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  /* EEGDEMO [cube] — synthetic multi-channel window → State Matrix */
+  if (kw(&L->cur,"EEGDEMO")||kw(&L->cur,"BRAINDEMO")||kw(&L->cur,"EEGSYNTH")){
+    lex_next(L);
+    char id[48]="eeg";
+    if (L->cur.kind==TK_IDENT){
+      snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    }
+    do_eegdemo(vm, id);
+    bump(vm); return 1;
+  }
+  /* EEGPACK cube csv|LAST — one multi-channel sample line → matrix fold */
+  if (kw(&L->cur,"EEGPACK")||kw(&L->cur,"BRAINPACK")||kw(&L->cur,"EEGSAMPLE")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"EEGPACK cube csv"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    char csv[CUBALC_HOST_STR_MAX]; csv[0]=0;
+    if (resolve_str_arg(vm, L, csv, sizeof csv)!=0){
+      fail(vm,"EEGPACK cube \"ch0,ch1,…\"|LAST"); return -1;
+    }
+    do_eegpack_csv(vm, id, csv);
+    bump(vm); return 1;
+  }
+  /* EEGREAD [cube] — read window from EEG_PATH / CUBALC_EEG_PATH → fold */
+  if (kw(&L->cur,"EEGREAD")||kw(&L->cur,"BRAINREAD")||kw(&L->cur,"EEGFRAME")){
+    lex_next(L);
+    char id[48]="eeg";
+    if (L->cur.kind==TK_IDENT){
+      snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    }
+    do_eegread(vm, id);
+    bump(vm); return 1;
+  }
+  /* EEGFOLD cube — re-fold last EEG_BITS into cube (after pack) */
+  if (kw(&L->cur,"EEGFOLD")||kw(&L->cur,"BRAINFOLD")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"EEGFOLD cube"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    char bits[CUBALC_ATOM_BITS + 1]; bits[0]=0;
+    for (int i = 0; i < vm->n_vars; i++) {
+      if (vm->vars[i].is_str && strcmp(vm->vars[i].name,"EEG_BITS")==0) {
+        snprintf(bits,sizeof bits,"%s",vm->vars[i].sval);
+        break;
+      }
+    }
+    if (!bits[0]){ fail(vm,"EEGFOLD need EEG_BITS (run EEGDEMO/PACK/READ first)"); return -1; }
+    do_foldbits(vm, id, bits);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
   /* COP matrix algebra (digit-5/7): CLEAR|NOT|COPY|AND|OR|XOR|NAND|XNOR|NOR|ANDN|ORN */
   if (kw(&L->cur,"CLEARBITS")||kw(&L->cur,"ZEROBITS")||kw(&L->cur,"CLRBITS")||
       kw(&L->cur,"NOTBITS")||kw(&L->cur,"INVERTBITS")||kw(&L->cur,"FLIPBITS")||

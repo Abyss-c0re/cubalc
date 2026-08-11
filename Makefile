@@ -32,7 +32,7 @@ LDFLAGS ?= $(LDFLAGS_SYS)
 
 CORE_SRC = \
 	src/cubalc_main.c src/cubalc_core.c src/cubalc_algocube.c src/cubalc_evolve.c \
-	src/cubalc_smx.c src/cubalc_cubechain.c src/cubalc_hw.c \
+	src/cubalc_smx.c src/cubalc_cubechain.c src/cubalc_hw.c src/cubalc_eeg.c \
 	src/cubalc_translate.c src/cubalc_hostops.c src/cubalc_async.c \
 	src/cubalc_isa.c src/cubalc_jit.c
 
@@ -55,7 +55,8 @@ SRC = $(CORE_SRC) $(LANG_SRC)
 HDR = \
 	include/cubalc.h include/cubalc_law.h include/cubalc_platform.h \
 	include/cubalc_algocube.h include/cubalc_evolve.h include/cubalc_smx.h \
-	include/cubalc_cubechain.h include/cubalc_hw.h include/cubalc_lang.h \
+	include/cubalc_cubechain.h include/cubalc_hw.h include/cubalc_eeg.h \
+	include/cubalc_lang.h \
 	include/lang/cubalc_lang_internal.h \
 	include/cubalc_translate.h include/cubalc_hostops.h include/cubalc_async.h \
 	include/cubalc_isa.h include/cubalc_jit.h
@@ -71,15 +72,20 @@ endif
 
 BIN := $(BUILD)/cubalc$(EXE)
 SOLVER_BIN := $(BUILD)/matrix_harmonic_solver$(EXE)
+EEG_BIN := $(BUILD)/eeg_matrix_stream$(EXE)
 
 # Light sources for standalone harmonic solver (no monorepo main/lang)
 SOLVER_SRC = \
 	tools/matrix_harmonic_solver.c \
 	src/cubalc_core.c src/cubalc_algocube.c src/cubalc_hw.c
 
+EEG_SRC = \
+	tools/eeg_matrix_stream.c \
+	src/cubalc_core.c src/cubalc_algocube.c src/cubalc_hw.c src/cubalc_eeg.c
+
 .PHONY: all clean test law install human demo peers oversee jit-test \
 	evolve evolve-loop showcase science universal-iter modular-check \
-	matrix-solver
+	matrix-solver eeg-stream
 
 all: $(BIN)
 
@@ -96,8 +102,16 @@ $(SOLVER_BIN): $(SOLVER_SRC) $(HDR)
 	$(CC) $(CFLAGS) -o $@ $(SOLVER_SRC) $(LDFLAGS)
 	@echo "built $@ backend-ready ($(CUBALC_TARGET) USE_OPENCL=$(USE_OPENCL))"
 
+# Real-time EEG → State Matrix streamer (standalone)
+eeg-stream: $(EEG_BIN)
+
+$(EEG_BIN): $(EEG_SRC) $(HDR) include/cubalc_eeg.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -o $@ $(EEG_SRC) $(LDFLAGS)
+	@echo "built $@ EEG→matrix ($(CUBALC_TARGET))"
+
 clean:
-	rm -f $(BIN) $(SOLVER_BIN)
+	rm -f $(BIN) $(SOLVER_BIN) $(EEG_BIN)
 
 modular-check:
 	@test -f src/lang/lang_parse.c && test -f include/lang/cubalc_lang_internal.h

@@ -1233,6 +1233,126 @@ void cubalc_lang_do_foldbits(VM *vm, const char *id, const char *bits){
     id, n, (unsigned)vm->ch.cubes[ix].atom.digit);
 }
 
+/* EEG → State Matrix: fold packed brain window into cube atom SoT */
+void cubalc_lang_do_eeg_fold_matrix(VM *vm, const char *id, const cubalc_matrix *m){
+  if (!vm || !m) return;
+  char bits[CUBALC_ATOM_BITS + 1];
+  cubalc_eeg_matrix_bits(m, bits, sizeof bits);
+  do_foldbits(vm, id && id[0] ? id : "eeg", bits);
+  var_set_str(vm, "EEG_BITS", bits);
+  var_set_num(vm, "EEG_SET", (long)m->set);
+  int ix = find_cube(vm, id && id[0] ? id : "eeg");
+  long dig = 0;
+  if (ix >= 0) dig = (long)vm->ch.cubes[ix].atom.digit;
+  else dig = (long)cubalc_algocube_digit(m);
+  var_set_num(vm, "EEG_DIGIT", dig);
+  var_set_num(vm, "DIGIT", dig);
+  var_set_num(vm, "OK", 1);
+  if (vm->trace) fprintf(vm->trace, "# EEGFOLD %s set=%u digit=%ld\n",
+    id && id[0] ? id : "eeg", (unsigned)m->set, dig);
+}
+
+void cubalc_lang_do_eegdemo(VM *vm, const char *id){
+  ensure_world(vm);
+  long nch = var_get(vm, "EEG_CH", 0);
+  if (nch < 1) nch = CUBALC_EEG_DEF_CH;
+  if (nch > CUBALC_EEG_MAX_CH) nch = CUBALC_EEG_MAX_CH;
+  long seed = var_get(vm, "EEG_SEED", 0);
+  if (seed == 0) seed = 0xC0BEA160L;
+  cubalc_eeg_frame fr;
+  cubalc_eeg_demo_frame(&fr, (int)nch, seed);
+  long sc = var_get(vm, "EEG_SCALE", 0);
+  if (sc > 0) fr.scale_uv = (float)sc;
+  cubalc_matrix m;
+  if (cubalc_eeg_pack_matrix(&fr, &m) != 0) {
+    var_set_num(vm, "OK", 0);
+    return;
+  }
+  var_set_num(vm, "EEG_CH", (long)fr.n_ch);
+  var_set_num(vm, "EEG_WIN", (long)fr.n_samp);
+  var_set_num(vm, "EEG_SEQ", var_get(vm, "EEG_SEQ", 0) + 1);
+  do_eeg_fold_matrix(vm, id && id[0] ? id : "eeg", &m);
+}
+
+void cubalc_lang_do_eegpack_csv(VM *vm, const char *id, const char *csv){
+  ensure_world(vm);
+  long nch = var_get(vm, "EEG_CH", 0);
+  if (nch < 1) nch = CUBALC_EEG_DEF_CH;
+  long sc = var_get(vm, "EEG_SCALE", 0);
+  float scale = sc > 0 ? (float)sc : CUBALC_EEG_DEF_SCALE;
+  cubalc_matrix m;
+  if (cubalc_eeg_pack_csv_line(csv, (int)nch, scale, &m) != 0) {
+    var_set_num(vm, "OK", 0);
+    var_set_str(vm, "LAST_ERR", "EEGPACK need CSV sample line");
+    return;
+  }
+  var_set_num(vm, "EEG_SEQ", var_get(vm, "EEG_SEQ", 0) + 1);
+  do_eeg_fold_matrix(vm, id && id[0] ? id : "eeg", &m);
+}
+
+void cubalc_lang_do_eegread(VM *vm, const char *id){
+  ensure_world(vm);
+  const char *path = NULL;
+  /* EEG_PATH var preferred */
+  for (int i = 0; i < vm->n_vars; i++) {
+    if (vm->vars[i].is_str &&
+        (strcmp(vm->vars[i].name, "EEG_PATH") == 0 ||
+         strcmp(vm->vars[i].name, "eeg_path") == 0)) {
+      path = vm->vars[i].sval;
+      break;
+    }
+  }
+  if (!path || !path[0]) {
+    const char *env = getenv("CUBALC_EEG_PATH");
+    if (env && env[0]) path = env;
+  }
+  if (!path || !path[0]) {
+    var_set_num(vm, "OK", 0);
+    var_set_str(vm, "LAST_ERR", "EEGREAD need EEG_PATH or CUBALC_EEG_PATH");
+    return;
+  }
+  long nch = var_get(vm, "EEG_CH", 0);
+  if (nch < 1) nch = CUBALC_EEG_DEF_CH;
+  long sc = var_get(vm, "EEG_SCALE", 0);
+  float scale = sc > 0 ? (float)sc : CUBALC_EEG_DEF_SCALE;
+  long win = var_get(vm, "EEG_WIN", 0);
+  if (win < 1) win = 16;
+  if (win > CUBALC_EEG_MAX_WIN) win = CUBALC_EEG_MAX_WIN;
+
+  FILE *fp = fopen(path, "rb");
+  if (!fp) {
+    var_set_num(vm, "OK", 0);
+    var_set_str(vm, "LAST_ERR", "EEGREAD open failed");
+    return;
+  }
+  cubalc_eeg_frame fr;
+  cubalc_eeg_frame_init(&fr, (int)nch, scale);
+  float ch[CUBALC_EEG_MAX_CH];
+  cubalc_matrix m;
+  int packed = 0;
+  for (int i = 0; i < (int)win * 4; i++) {
+    int rc = cubalc_eeg_read_csv_sample(fp, ch, (int)nch);
+    if (rc < 0) break;
+    if (rc > 0) continue;
+    int pr = cubalc_eeg_window_push(&fr, ch, (int)nch, (int)win, 0, &m);
+    if (pr == 1) { packed = 1; break; }
+  }
+  if (!packed && fr.n_samp > 0) {
+    if (cubalc_eeg_window_push(&fr, ch, (int)nch, (int)win, 1, &m) == 1)
+      packed = 1;
+  }
+  fclose(fp);
+  if (!packed) {
+    var_set_num(vm, "OK", 0);
+    var_set_str(vm, "LAST_ERR", "EEGREAD no samples");
+    return;
+  }
+  var_set_num(vm, "EEG_CH", (long)fr.n_ch);
+  var_set_num(vm, "EEG_WIN", (long)fr.n_samp);
+  var_set_num(vm, "EEG_SEQ", var_get(vm, "EEG_SEQ", 0) + 1);
+  do_eeg_fold_matrix(vm, id && id[0] ? id : "eeg", &m);
+}
+
 /* Braincube decide: State Matrix → algocube digit 0..9 into var DECIDE + cube digit */
 long cubalc_lang_do_decide(VM *vm, const char *id){
   ensure_world(vm);
@@ -1374,7 +1494,7 @@ int cubalc_lang_block_scan_step(Lex *L, int *depth, int allow_until){
   if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||kw(&L->cur,"DEF")||
       kw(&L->cur,"CLASS")||kw(&L->cur,"TYPE")||
       kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||
-      kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
+      kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
       kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")||
       kw(&L->cur,"FORCELL")||kw(&L->cur,"EACHCELL")||kw(&L->cur,"FOREACHCELL")||
       kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||kw(&L->cur,"FOREACHBIT")||

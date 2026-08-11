@@ -1,0 +1,12 @@
+# eeg_boot — real-time EEG as State Matrix plane
+# INCLUDE eeg_boot then EEGDEMO / EEGREAD / EEGPACK
+# Law: brain samples fold into atom SoT · binary · no prose on the wire
+
+DEFAULT EEG_CH = 8
+DEFAULT EEG_SCALE = 50
+DEFAULT EEG_WIN = 32
+DEFAULT EEG_SEQ = 0
+DEFAULT EEG_SEED = 0xC0BEA160
+
+# Optional path from host env (device bridge FIFO/CSV)
+# EEGOPEN "/tmp/eeg.fifo"   or   LET EEG_PATH = "/path/to/stream.csv"

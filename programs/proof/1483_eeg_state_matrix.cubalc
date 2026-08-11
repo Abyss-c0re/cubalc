@@ -1,0 +1,46 @@
+# Proof 1483 — EEG → State Matrix (brain window folds into atom SoT)
+# Real-time path: EEGDEMO / EEGPACK / EEGFOLD; hardware via EEGOPEN+EEGREAD
+
+HOLD_FLASH 1
+GENESIS "NEXUS_COORD v1 | from=proof | type=eeg_state_matrix | hold_flash=1 |"
+
+EEGCH 8
+EEGSCALE 50
+EEGWIN 32
+
+CUBE eeg ROLE brain PROTON 1
+CUBE hive ROLE nanobot_hive PROTON 1
+
+EEGDEMO eeg
+ASSERT OK == 1
+ASSERT EEG_SET >= 1
+ASSERT EEG_DIGIT >= 0
+ASSERT EEG_DIGIT <= 9
+ASSERT DIGIT(eeg) >= 0
+ASSERT DIGIT(eeg) <= 9
+ASSERT EEG_CH == 8
+ASSERT EEG_WIN >= 1
+
+# second window with different seed should still pack
+LET EEG_SEED = 99
+EEGDEMO eeg
+ASSERT OK == 1
+ASSERT EEG_SEQ >= 2
+
+# one-shot multi-channel CSV sample
+EEGPACK eeg "12.5,-3.2,40.0,0.1,-55.0,8.8,2.2,-1.0"
+ASSERT OK == 1
+ASSERT EEG_SET >= 0
+
+# re-fold last bits into hive for harmony path
+EEGFOLD hive
+ASSERT OK == 1
+ASSERT DIGIT(hive) >= 0
+
+PLUG eeg hive
+FLOW 1
+HARMONY hive
+ASSERT HARMONY >= 0
+ASSERT HIVE_N >= 1
+
+PRINT "proof1483" EEG_SET EEG_DIGIT EEG_SEQ HARMONY

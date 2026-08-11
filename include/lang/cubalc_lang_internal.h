@@ -10,6 +10,7 @@
 #include "cubalc_cubechain.h"
 #include "cubalc_async.h"
 #include "cubalc_hw.h"
+#include "cubalc_eeg.h"
 #include "cubalc_hostops.h"
 #include "cubalc_smx.h"
 
@@ -193,6 +194,11 @@ long cubalc_lang_do_harmony(VM *vm, const char *target);
 long cubalc_lang_do_resolve(VM *vm, const char *target);
 void cubalc_lang_do_setdigit(VM *vm, const char *id, long d);
 void cubalc_lang_do_foldbits(VM *vm, const char *id, const char *bits);
+/* EEG → State Matrix (brain samples fold into atom SoT) */
+void cubalc_lang_do_eeg_fold_matrix(VM *vm, const char *id, const cubalc_matrix *m);
+void cubalc_lang_do_eegdemo(VM *vm, const char *id);
+void cubalc_lang_do_eegpack_csv(VM *vm, const char *id, const char *csv);
+void cubalc_lang_do_eegread(VM *vm, const char *id);
 int  cubalc_lang_resolve_str_arg(VM *vm, Lex *L, char *out, size_t outn);
 
 long cubalc_lang_parse_expr(VM *vm, Lex *L);
@@ -248,6 +254,10 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L);
 #define do_resolve            cubalc_lang_do_resolve
 #define do_setdigit           cubalc_lang_do_setdigit
 #define do_foldbits           cubalc_lang_do_foldbits
+#define do_eeg_fold_matrix    cubalc_lang_do_eeg_fold_matrix
+#define do_eegdemo            cubalc_lang_do_eegdemo
+#define do_eegpack_csv        cubalc_lang_do_eegpack_csv
+#define do_eegread            cubalc_lang_do_eegread
 #define resolve_str_arg       cubalc_lang_resolve_str_arg
 #define parse_expr            cubalc_lang_parse_expr
 #define parse_prim            cubalc_lang_parse_prim
