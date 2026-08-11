@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 886,
-  "version": "1.15.879-usability",
-  "item": "HASFIELDANY / NEEDFIELDANY any-of multi field gates",
-  "item_id": 886,
-  "title": "HASFIELDANY · NEEDFIELDANY · FIELDHAVE · HASFIELDS twin",
-  "commit": "4a75f2ba547177a41cb33db4b3a80f917e43e68b",
-  "summary": "HASFIELDANY soft any field on Class|obj + FIELDHAVE/MISS; NEEDFIELDANY hard; proof 1425 PASS.",
+  "iter": 887,
+  "version": "1.15.880-usability",
+  "item": "HASOBJS / NEEDOBJS multi live-object soft/hard gates",
+  "item_id": 887,
+  "title": "HASOBJS · NEEDOBJS · OBJMISS · HASCLASSES twin for instances",
+  "commit": "502be068227f73946fe85ed59d0128ba4d507cb4",
+  "summary": "HASOBJS soft all live objs + OBJMISS; NEEDOBJS hard; proof 1426 PASS.",
   "proofs": [
-    "1425_hasfieldany PASS",
-    "1425_cli_hasfieldany PASS"
+    "1426_hasobjs PASS",
+    "1426_cli_hasobjs PASS"
   ],
-  "when": "2026-08-11T07:43:32Z",
+  "when": "2026-08-11T07:53:38Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "4a75f2ba547177a41cb33db4b3a80f917e43e68b",
-  "note": "optional GETF/SETF plugin field OR without N x HASFIELD IF glue"
+  "sha": "502be068227f73946fe85ed59d0128ba4d507cb4",
+  "note": "live_session contracts without N x HASOBJ IF glue"
 }
