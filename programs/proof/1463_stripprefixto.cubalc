@@ -1,0 +1,62 @@
+# STRIPPREFIXTO / STRIPSUFFIXTO — in-place affix drop on named vars
+
+HOLD_FLASH 1
+
+# strip path root
+LET path = "/tmp/work/file.txt"
+STRIPPREFIXTO path "/tmp/"
+ASSERT path == "work/file.txt"
+ASSERT STRIPPREFIXTO_HIT == 1
+ASSERT LAST == "work/file.txt"
+
+# strip extension
+STRIPSUFFIXTO path ".txt"
+ASSERT path == "work/file"
+ASSERT STRIPSUFFIXTO_HIT == 1
+
+# miss prefix — unchanged, HIT=0
+LET p2 = "rel/path"
+STRIPPREFIXTO p2 "/tmp/"
+ASSERT p2 == "rel/path"
+ASSERT STRIPPREFIXTO_HIT == 0
+
+# miss suffix
+LET p3 = "note.md"
+STRIPSUFFIXTO p3 ".txt"
+ASSERT p3 == "note.md"
+ASSERT STRIPSUFFIXTO_HIT == 0
+
+# aliases
+LET a = "pre:value"
+DROPPREFIXTO a "pre:"
+ASSERT a == "value"
+LET b = "name.cubalc"
+DROPSUFFIXTO b ".cubalc"
+ASSERT b == "name"
+
+# empty affix no-op
+LET c = "keep"
+STRIPPREFIXTO c ""
+ASSERT c == "keep"
+ASSERT STRIPPREFIXTO_HIT == 0
+
+# chain: path peel
+LET full = "/home/agent/state/plate.json"
+STRIPPREFIXTO full "/home/agent/"
+STRIPSUFFIXTO full ".json"
+ASSERT full == "state/plate"
+ASSERT STRIPSUFFIXTO_HIT == 1
+
+# num promote
+LET n = 12345
+STRIPPREFIXTO n "12"
+ASSERT n == "345"
+ASSERT STRIPPREFIXTO_HIT == 1
+
+HASFORM "STRIPPREFIXTO"
+ASSERT LAST_N == 1
+HASFORM "STRIPSUFFIXTO"
+ASSERT LAST_N == 1
+
+PRINT "1463_stripprefixto ok"
+PASS

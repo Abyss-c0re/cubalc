@@ -953,6 +953,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 922. ~~**`COALESCETO` / `NTHIN` / `HEADIN` / `TAILIN` vars**~~ **done** (default chains + bag peels · no IFEMPTY/SYS NTH glue · proof 1460).
 923. ~~**`LENOF` / `STARTSIN` / `ENDSIN` / `CONTAINSIN` / `EQSIN` / `INDEXIN` vars**~~ **done** (string probes on named vars · IF guards without SYS LEN/HAS glue · proof 1461).
 924. ~~**`LEFTTO` / `RIGHTTO` / `MIDTO` / `BEFOREIN` / `AFTERIN` / `BETWEENIN` vars**~~ **done** (in-place string peels · no LET=SYS LEFT/BEFORE glue · proof 1462).
+925. ~~**`STRIPPREFIXTO` / `STRIPSUFFIXTO` vars**~~ **done** (drop leading/trailing affix in place · HIT · path roots/ext without STARTSIN+MIDTO · proof 1463).
 
 
 

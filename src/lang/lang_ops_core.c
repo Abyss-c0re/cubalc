@@ -3868,6 +3868,10 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"BEFOREIN", "BEFOREIN name needle — keep text before first needle"},
       {"AFTERIN", "AFTERIN name needle — keep text after first needle"},
       {"BETWEENIN", "BETWEENIN name lo hi — peel between delimiters in place"},
+      {"STRIPPREFIXTO", "STRIPPREFIXTO name prefix — drop leading affix if present (HIT)"},
+      {"STRIPSUFFIXTO", "STRIPSUFFIXTO name suffix — drop trailing affix if present (HIT)"},
+      {"DROPPREFIXTO", "DROPPREFIXTO alias of STRIPPREFIXTO"},
+      {"DROPSUFFIXTO", "DROPSUFFIXTO alias of STRIPSUFFIXTO"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -73545,6 +73549,93 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s len=%ld\n", op, name, out_n);
+    bump(vm);
+    return 1;
+  }
+  /* STRIPPREFIXTO name prefix — drop leading affix if present (in place).
+   * STRIPSUFFIXTO name suffix — drop trailing affix if present (in place).
+   * HIT=1 when shortened. Empty affix is no-op (HIT=0).
+   * Usability: path roots / extensions without STARTSIN+MIDTO or SYS STRIPPREFIX glue. */
+  if (kw(&L->cur,"STRIPPREFIXTO")||kw(&L->cur,"DROPPREFIXTO")||kw(&L->cur,"UNPREFIXTO")||
+      kw(&L->cur,"STRIPPRE")||kw(&L->cur,"CHOPPREFIX")||
+      kw(&L->cur,"STRIPSUFFIXTO")||kw(&L->cur,"DROPSUFFIXTO")||kw(&L->cur,"UNSUFFIXTO")||
+      kw(&L->cur,"STRIPSUF")||kw(&L->cur,"CHOPSUFFIX")){
+    char op[24], name[48];
+    char cur[CUBALC_HOST_STR_MAX], aff[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    int is_suf = 0;
+    long hit = 0, out_n = 0;
+    size_t cn, an;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "STRIPSUFFIXTO") == 0 || strcmp(op, "DROPSUFFIXTO") == 0 ||
+        strcmp(op, "UNSUFFIXTO") == 0 || strcmp(op, "STRIPSUF") == 0 ||
+        strcmp(op, "CHOPSUFFIX") == 0)
+      is_suf = 1;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, is_suf ? "STRIPSUFFIXTO needs name suffix — STRIPSUFFIXTO path \".txt\""
+                      : "STRIPPREFIXTO needs name prefix — STRIPPREFIXTO path \"/tmp/\"");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "OF") || kw(&L->cur, "WITH") || kw(&L->cur, "AFFIX") ||
+        kw(&L->cur, "PREFIX") || kw(&L->cur, "SUFFIX") || kw(&L->cur, "FROM"))
+      lex_next(L);
+    aff[0] = 0;
+    if (resolve_str_arg(vm, L, aff, sizeof aff) != 0) {
+      fail(vm, is_suf ? "STRIPSUFFIXTO needs suffix" : "STRIPPREFIXTO needs prefix");
+      return -1;
+    }
+    cur[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+    cn = strlen(cur);
+    an = strlen(aff);
+    snprintf(out, sizeof out, "%s", cur);
+    hit = 0;
+    if (an > 0 && an <= cn) {
+      if (!is_suf) {
+        if (memcmp(cur, aff, an) == 0) {
+          snprintf(out, sizeof out, "%s", cur + an);
+          hit = 1;
+        }
+      } else {
+        if (memcmp(cur + cn - an, aff, an) == 0) {
+          size_t keep = cn - an;
+          if (keep >= sizeof out) keep = sizeof out - 1;
+          memcpy(out, cur, keep);
+          out[keep] = 0;
+          hit = 1;
+        }
+      }
+    }
+    out_n = (long)strlen(out);
+    var_set_str(vm, name, out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    var_set_num(vm, "LAST_N", out_n);
+    vm->last_n = out_n;
+    if (is_suf) {
+      var_set_num(vm, "STRIPSUFFIXTO_N", out_n);
+      var_set_num(vm, "STRIPSUFFIXTO_HIT", hit);
+      var_set_num(vm, "STRIPPREFIXTO_HIT", 0);
+    } else {
+      var_set_num(vm, "STRIPPREFIXTO_N", out_n);
+      var_set_num(vm, "STRIPPREFIXTO_HIT", hit);
+      var_set_num(vm, "STRIPSUFFIXTO_HIT", 0);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s hit=%ld len=%ld\n", op, name, hit, out_n);
     bump(vm);
     return 1;
   }
