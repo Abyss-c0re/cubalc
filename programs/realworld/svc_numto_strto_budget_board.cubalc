@@ -1,0 +1,976 @@
+# svc_numto_strto_budget_board.cubalc — NUMTO/STRTO retry+budget coerce
+#
+# Real use: job agents peel metric/log fields (retries=N, budget_ms=N,
+# count:N) then NUMTO in place for INC/MUL/clamp math, and STRTO back
+# for template rows / human digests — without LET x = SYS NUM glue.
+# First realworld of 1465 NUMTO/STRTO (1.15.919+ · MI 927). Distinct
+# from rate_budget_ledger (plate counters) and job_retry_where (WHERE
+# filters) — this board is *named-var type coerce after peel*.
+#
+#   NUMTO · INTTO · STRTO · TOSTR · NUMTO_OK · APPENDTO chain
+#   + AFTERIN/BEFOREIN/BETWEENIN peels feeding coerce
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_nsb_$$
+#   ./out/cubalc run programs/realworld/svc_numto_strto_budget_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|peel|scale|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt NSB_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_NSB_REQUIRE
+#
+# Edges: NUMTO non-num → 0 + NUMTO_OK=0; partial "12x"→12; float "3.7"→3
+#   (strtol trunc); ghost NUMTO 0; STRTO then APPENDTO template;
+#   INTTO/TOSTR aliases; WRITE NL; REQUIRE soft; PRINT clobber
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+NOTE "svc_numto_strto_budget_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_numto_strto_budget -- boot|pass|soft|peel|scale|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_NSB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "NSB_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET path = ""
+LET msg = ""
+LET peeld = ""
+LET budget = 0
+LET retries = 0
+LET depth = 0
+LET weight = 0
+
+ONEOF ACTION "boot", "pass", "soft", "peel", "scale", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-nsb\",\"schema\":\"cubalc.svc_numto_strto_budget.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"nsb\",\"want_filter\":\"numto_strto_budget\",\"cfg\":{\"surface\":\"NUMTO,INTTO,STRTO,TOSTR,NUMTO_OK,APPENDTO\",\"contract\":\"peel metric fields then in-place num/str coerce for budget math + digests\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  # seed: peel retries=3 then NUMTO
+  LET msg = "retries=3"
+  AFTERIN msg "="
+  NUMTO msg
+  LET find_n = LAST_N
+  LET ok_v = NUMTO_OK
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-nsb"
+  IF LAST_N == 1 THEN
+    IF find_n == 3 THEN
+      IF ok_v == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot numto_ok"
+        FAIL "boot numto_ok"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot num"
+      FAIL "boot num"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# pass — NUMTO / STRTO / INTTO / TOSTR core contract 10/10
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET msg = "count:42"
+  AFTERIN msg ":"
+  CLEAR_ERR
+  NUMTO msg
+  LET find_n = LAST_N
+  LET ok_v = NUMTO_OK
+  CLEAR_ERR
+  IF msg == 42 THEN
+    LET score = score + 1
+  END
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF find_n == 42 THEN
+    LET score = score + 1
+  END
+  INC msg
+  CLEAR_ERR
+  IF msg == 43 THEN
+    LET score = score + 1
+  END
+  STRTO msg
+  CLEAR_ERR
+  SYS EQS msg "43"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  APPENDTO msg " retries"
+  CLEAR_ERR
+  SYS EQS msg "43 retries"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # INTTO alias
+  LET a = "5"
+  INTTO a
+  CLEAR_ERR
+  IF a == 5 THEN
+    LET score = score + 1
+  END
+  TOSTR a
+  CLEAR_ERR
+  SYS EQS a "5"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # already numeric
+  LET n = 99
+  NUMTO n
+  LET ok_v = NUMTO_OK
+  CLEAR_ERR
+  IF n == 99 THEN
+    IF ok_v == 1 THEN
+      LET score = score + 1
+    END
+  END
+  # BETWEENIN chain peel + coerce
+  LET br = "x[100]y"
+  BETWEENIN br "[" "]"
+  NUMTO br
+  MUL br 2
+  CLEAR_ERR
+  IF br == 200 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — miss paths · non-num · partial · float trunc · ghost · false friends
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  # empty → 0 OK=0
+  LET e = ""
+  NUMTO e
+  CLEAR_ERR
+  IF e == 0 THEN
+    IF NUMTO_OK == 0 THEN
+      LET score = score + 1
+    END
+  END
+  # non-numeric
+  LET z = "abc"
+  NUMTO z
+  CLEAR_ERR
+  IF z == 0 THEN
+    IF NUMTO_OK == 0 THEN
+      LET score = score + 1
+    END
+  END
+  # partial parse strtol
+  LET p = "12x"
+  NUMTO p
+  CLEAR_ERR
+  IF p == 12 THEN
+    IF NUMTO_OK == 1 THEN
+      LET score = score + 1
+    END
+  END
+  # float trunc (strtol) — 3.7 → 3 not 3.7
+  LET f = "3.7"
+  NUMTO f
+  CLEAR_ERR
+  IF f == 3 THEN
+    IF NUMTO_OK == 1 THEN
+      LET score = score + 1
+    END
+  END
+  # ghost named var
+  NUMTO ghost_nsb
+  CLEAR_ERR
+  IF ghost_nsb == 0 THEN
+    IF NUMTO_OK == 0 THEN
+      LET score = score + 1
+    END
+  END
+  # leading junk fails whole? strtol of "x42" → 0 OK=0
+  LET junk = "x42"
+  NUMTO junk
+  CLEAR_ERR
+  IF junk == 0 THEN
+    IF NUMTO_OK == 0 THEN
+      LET score = score + 1
+    END
+  END
+  # STRTO of 0 stays "0"
+  LET zero = 0
+  STRTO zero
+  CLEAR_ERR
+  SYS EQS zero "0"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # substring false friend: CONTAINSIN "trie" true but STARTSIN "trie" false
+  LET line = "retries=2"
+  CONTAINSIN line "trie"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  STARTSIN line "trie"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # host default intact
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# peel — real log/metric lines → field peel → NUMTO
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  # job=api budget_ms=150 retries=2
+  LET line = "job=api budget_ms=150 retries=2"
+  AFTERIN line "budget_ms="
+  BEFOREIN line " "
+  CLEAR_ERR
+  NUMTO line
+  CLEAR_ERR
+  IF line == 150 THEN
+    LET score = score + 1
+  END
+  IF NUMTO_OK == 1 THEN
+    LET score = score + 1
+  END
+  LET budget = line
+  # retries peel from fresh line
+  LET line2 = "job=api budget_ms=150 retries=2"
+  AFTERIN line2 "retries="
+  CLEAR_ERR
+  NUMTO line2
+  CLEAR_ERR
+  IF line2 == 2 THEN
+    LET score = score + 1
+  END
+  LET retries = line2
+  # count:N style
+  LET c = "count:7"
+  AFTERIN c ":"
+  NUMTO c
+  CLEAR_ERR
+  IF c == 7 THEN
+    LET score = score + 1
+  END
+  # latency[42]ms
+  LET lat = "latency[42]ms"
+  BETWEENIN lat "[" "]"
+  NUMTO lat
+  CLEAR_ERR
+  IF lat == 42 THEN
+    LET score = score + 1
+  END
+  # multi-hop after peels leave empties safely
+  LET bare = "retries="
+  AFTERIN bare "="
+  CLEAR_ERR
+  NUMTO bare
+  CLEAR_ERR
+  IF bare == 0 THEN
+    IF NUMTO_OK == 0 THEN
+      LET score = score + 1
+    END
+  END
+  # signed ok
+  LET neg = "delta=-3"
+  AFTERIN neg "="
+  NUMTO neg
+  CLEAR_ERR
+  IF neg == -3 THEN
+    LET score = score + 1
+  END
+  # hex? strtol base 10 — 0x10 should not be 16
+  LET hx = "0x10"
+  NUMTO hx
+  CLEAR_ERR
+  IF hx == 0 THEN
+    IF NUMTO_OK == 1 THEN
+      LET score = score + 1
+    END
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "numto_strto_budget"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # budget still held
+  IF budget == 150 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = budget
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score budget retries note_msg
+  CLEAR_ERR
+END
+
+# scale — budget math + STRTO digest templates
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET b = "budget_ms=100"
+  AFTERIN b "="
+  NUMTO b
+  MUL b 2
+  CLEAR_ERR
+  IF b == 200 THEN
+    LET score = score + 1
+  END
+  STRTO b
+  APPENDTO b "ms"
+  CLEAR_ERR
+  SYS EQS b "200ms"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # retry burn: start 5, DEC twice, template remain
+  LET r = "retries=5"
+  AFTERIN r "="
+  NUMTO r
+  DEC r
+  DEC r
+  CLEAR_ERR
+  IF r == 3 THEN
+    LET score = score + 1
+  END
+  STRTO r
+  APPENDTO r " left"
+  CLEAR_ERR
+  SYS EQS r "3 left"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # clamp style via IF after NUMTO
+  LET raw = "budget_ms=9999"
+  AFTERIN raw "="
+  NUMTO raw
+  CLEAR_ERR
+  IF raw > 500 THEN
+    LET raw = 500
+  END
+  CLEAR_ERR
+  IF raw == 500 THEN
+    LET score = score + 1
+  END
+  # floor empty budget soft
+  LET empty_b = "budget_ms="
+  AFTERIN empty_b "="
+  NUMTO empty_b
+  CLEAR_ERR
+  IF NUMTO_OK == 0 THEN
+    LET score = score + 1
+  END
+  # dual coerce round-trip
+  LET t = 42
+  STRTO t
+  NUMTO t
+  CLEAR_ERR
+  IF t == 42 THEN
+    IF NUMTO_OK == 1 THEN
+      LET score = score + 1
+    END
+  END
+  # INC after STRTO needs re-NUMTO
+  LET s = 7
+  STRTO s
+  CLEAR_ERR
+  # INC on string "7"? may promote or fail — capture behavior
+  INC s
+  CLEAR_ERR
+  # if string INC works as num promote:
+  IF s == 8 THEN
+    LET score = score + 1
+  ELSE
+    # if stuck as string, re-NUMTO path
+    NUMTO s
+    INC s
+    CLEAR_ERR
+    IF s == 8 THEN
+      LET score = score + 1
+    ELSE
+      IF s == 9 THEN
+        LET score = score + 1
+      END
+    END
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "NUMTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM surface
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "NUMTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "STRTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "INTTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "TOSTR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "APPENDTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "AFTERIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "BEFOREIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "BETWEENIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "NUMTO_OK"
+  # form may or may not catalog sticky knobs — soft credit either way if exists
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "numto_strto_budget"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — admit when peeled budget within band and retries remain
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET line = "svc=api budget_ms=120 retries=3 host=web01"
+  # extract budget
+  LET b = line
+  AFTERIN b "budget_ms="
+  BEFOREIN b " "
+  NUMTO b
+  CLEAR_ERR
+  IF b == 120 THEN
+    LET score = score + 1
+  END
+  IF NUMTO_OK == 1 THEN
+    LET score = score + 1
+  END
+  # band: 50..500
+  IF b >= 50 THEN
+    IF b <= 500 THEN
+      LET score = score + 1
+    END
+  END
+  # retries remain
+  LET r = line
+  AFTERIN r "retries="
+  BEFOREIN r " "
+  NUMTO r
+  CLEAR_ERR
+  IF r == 3 THEN
+    LET score = score + 1
+  END
+  IF r > 0 THEN
+    LET score = score + 1
+  END
+  # digest row
+  STRTO b
+  APPENDTO b "ms"
+  STRTO r
+  SYS CAT "admit budget=" b " retries=" r
+  LET peeld = LAST
+  CLEAR_ERR
+  CONTAINSIN peeld "120ms"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-nsb"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # REQUIRE soft path when env set
+  IF require_hit > 0 THEN
+    IF score < 9 THEN
+      LET miss = 1
+      LET note_msg = "gate require"
+      FAIL "gate require"
+      CLEAR_ERR
+    END
+  END
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  SYS CAT "gate:" score ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score peeld note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber + WRITE NL + VAL shuttle
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET msg = "budget_ms=88"
+  AFTERIN msg "="
+  NUMTO msg
+  LET find_n = LAST_N
+  CLEAR_ERR
+  # capture before PRINT
+  LET saved = find_n
+  PRINT "probe-budget" saved
+  CLEAR_ERR
+  # LAST may be clobbered (W4)
+  IF saved == 88 THEN
+    LET score = score + 1
+  END
+  STRTO msg
+  SYS WRITE val_path msg
+  CLEAR_ERR
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "88"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS CAT "nsb host=" host_s " role=" role_s " budget=" msg
+  LET row = LAST
+  CLEAR_ERR
+  SYS WRITE meta_path row
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "budget=88"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS CAT "score=" score " find=" find_n
+  LET row = LAST
+  CLEAR_ERR
+  SYS WRITE report_path row
+  CLEAR_ERR
+  # soft REQUIRE non-num
+  IF require_hit == 0 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "STRTO"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 5 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+# persist bag
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+# agent.json stamp
+SYS CAT "{\"ok\":true,\"agent\":\"svc-nsb\",\"op\":\"" op "\",\"hit\":" hit ",\"miss\":" miss ",\"score\":" score ",\"admit_n\":" admit_n ",\"bag_n\":" bag_n ",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"note\":\"" note_msg "\",\"require_hit\":" require_hit "}"
+LET body = LAST
+CLEAR_ERR
+# keep full agent boot contract if present — only overwrite status fields via VAL
+SYS WRITE val_path body
+CLEAR_ERR
+
+IF miss == 1 THEN
+  IF hit == 0 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS
