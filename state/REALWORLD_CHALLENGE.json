@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 342,
-  "program": "programs/realworld/svc_method_field_guard_board.cubalc",
-  "theme": "method_guard+field_guard dual Class.method/field preflight",
-  "version": "1.15.888-usability",
+  "iter": 343,
+  "program": "programs/realworld/svc_obj_class_guard_board.cubalc",
+  "theme": "obj_guard+class_guard dual live-instance/CLASS preflight",
+  "version": "1.15.890-usability",
   "pass": true,
-  "prior_note": "iter 341 HASFNS/HASOBJANY; this iter first dual method_guard+field_guard realworld (1428/1430 native)",
+  "prior_note": "iter 342 method+field guard; this iter first dual obj_guard+class_guard realworld (1434/1435 native multi)",
   "tests": [
     {
       "name": "list",
@@ -15,37 +15,37 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + soft dual guards",
+      "cmd": "seed agent + NEW + soft dual guards",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "hard ALL+ANY method+field 10/10",
+      "cmd": "hard ALL+ANY obj+class 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "soft miss bags METHMISS/FLDMISS 10/10",
+      "cmd": "OBJMISS/CLASSMISS + empty skip 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "meth",
-      "cmd": "method_guard soft ANY METHHAVE",
+      "name": "obj",
+      "cmd": "obj_guard soft ANY + HASOBJS dual",
       "ok": true,
-      "note": "meth 10/10"
+      "note": "obj 10/10"
     },
     {
-      "name": "fld",
-      "cmd": "field_guard soft ANY FLDHAVE",
+      "name": "cls",
+      "cmd": "class_guard soft ANY + HASCLASSES dual",
       "ok": true,
-      "note": "fld 10/10"
+      "note": "cls 10/10"
     },
     {
       "name": "combo",
-      "cmd": "dual planes + combined ALL miss",
+      "cmd": "dual planes + ALL miss OK=0",
       "ok": true,
       "note": "combo 10/10"
     },
@@ -75,7 +75,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1428/1430 PASS",
+      "cmd": "selftest; 1434/1435 PASS",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -6416,6 +6416,46 @@
       "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
       "detail": "Board uses REQUIRE LIB \"hold_seed\".",
       "repro": "REQUIRE LIB hold_seed \u2192 fail"
+    },
+    {
+      "id": "W793",
+      "severity": "med",
+      "area": "lang|include",
+      "title": "obj_guard/class_guard re-INCLUDE LET knobs (W789 class)",
+      "detail": "Same re-INCLUDE pattern as method_guard: LET NEED_OBJS/NEED_CLASSES then INCLUDE each eval. Empty NEED skips to OK=1.",
+      "repro": "LET NEED_OBJS=...; INCLUDE obj_guard; LET NEED_OBJS=miss; INCLUDE obj_guard"
+    },
+    {
+      "id": "W794",
+      "severity": "low",
+      "area": "lang|guard",
+      "title": "OBJ_GUARD_OK fails when ALL soft-miss even if ANY hits",
+      "detail": "W790 class on obj plane: NEED_OBJS miss + NEED_OBJ_ANY hit \u2192 GUARD_OK 0. Read ALL_OK/ANY_OK separately.",
+      "repro": "NEED_OBJS c0\\nghost + NEED_OBJ_ANY c0 soft \u2192 OK 0 ALL 0 ANY 1"
+    },
+    {
+      "id": "W795",
+      "severity": "low",
+      "area": "lang|obj_guard",
+      "title": "NEW must precede NEED_OBJS live gate",
+      "detail": "obj_guard checks live instance names; agents must NEW FleetWorker w0 before INCLUDE obj_guard with NEED_OBJS=w0.",
+      "repro": "INCLUDE obj_guard NEED_OBJS=w0 without NEW \u2192 soft miss"
+    },
+    {
+      "id": "W796",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE META omit trailing NL",
+      "detail": "W5 class reconfirmed on OCG META.",
+      "repro": "od -c META.txt"
+    },
+    {
+      "id": "W797",
+      "severity": "low",
+      "area": "lang|require_lib",
+      "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
+      "detail": "Board uses REQUIRE LIB \"hold_seed\".",
+      "repro": "REQUIRE LIB hold_seed \u2192 fail"
     }
   ],
   "workarounds": [
@@ -6528,7 +6568,11 @@
     "CSV bags for multi FN/slot names",
     "REQUIRE LIB \"hold_seed\" quoted",
     "LET NEED_* then INCLUDE method_guard/field_guard each time",
-    "Read ALL_OK/ANY_OK separately; clear ALL NEED when testing ANY-only"
+    "Read ALL_OK/ANY_OK separately; clear ALL NEED when testing ANY-only",
+    "REQUIRE LIB \"hold_seed\" quoted",
+    "NEW instances before NEED_OBJS gate",
+    "LET NEED_* then INCLUDE obj_guard/class_guard each time",
+    "Read ALL_OK/ANY_OK separately when both NEED sets set"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6710,7 +6754,10 @@
     "HASFORM lag ALLFNS/ANYFN/OBJANY (W786)",
     "method_guard+field_guard dual Class.method/field preflight (1428/1430)",
     "re-INCLUDE LET knobs for guard re-eval (W789)",
-    "GUARD_OK requires ALL when BOTH NEED sets non-empty (W790)"
+    "GUARD_OK requires ALL when BOTH NEED sets non-empty (W790)",
+    "obj_guard+class_guard dual live/CLASS preflight (1434/1435)",
+    "re-INCLUDE LET knobs for obj/class guards (W793)",
+    "OBJ_GUARD_OK ALL+ANY coupling (W794)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6787,9 +6834,11 @@
     "iter341: first-try green HASFNS+HASFNANY+HASOBJANY board 10/10 actions",
     "iter341: proofs 1427/1429/1432 PASS; quoted REQUIRE LIB hold_seed",
     "iter342: first-try green method_guard+field_guard dual board",
-    "iter342: proofs 1428/1430 PASS; re-INCLUDE LET knobs pattern"
+    "iter342: proofs 1428/1430 PASS; re-INCLUDE LET knobs pattern",
+    "iter343: first-try green obj_guard+class_guard dual board",
+    "iter343: proofs 1434/1435 PASS; NEW-before-obj-gate documented"
   ],
-  "commit": "e0a19aae",
-  "ts": "2026-08-11T09:14:29Z",
-  "board_commit": "e0a19aae"
+  "commit": "pending",
+  "ts": "2026-08-11T09:39:52Z",
+  "board_commit": "pending"
 }

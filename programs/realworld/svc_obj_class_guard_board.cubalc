@@ -1,0 +1,1058 @@
+# svc_obj_class_guard_board.cubalc — obj_guard + class_guard dual fleet ready
+#
+# Real use: fleet agents gate live instance names (ALL + any-of primary)
+# and CLASS catalog (plugin types) via INCLUDE obj_guard / class_guard
+# before SEND — native HASOBJS/HASOBJANY + HASCLASSES/HASCLASSANY path.
+# First realworld dual of 1434 obj_guard_native + 1435 class_guard multi
+# (1.15.890+). Distinct from svc_live_boot_fleet (full live_session stack)
+# and svc_class_boot_catalog (CLASS only) / svc_fn_slot_admit (free HASOBJS).
+#
+#   NEED_OBJS · NEED_OBJ_ANY · OBJ_GUARD_SOFT → OBJ_GUARD_OK/ALL/ANY · OBJMISS
+#   NEED_CLASSES · NEED_CLASS_ANY · CLASS_GUARD_SOFT → CLASS_GUARD_* · CLASSMISS
+#   INCLUDE obj_guard|class_guard · re-INCLUDE after LET · empty skip
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ocg_$$
+#   ./out/cubalc run programs/realworld/svc_obj_class_guard_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|obj|cls|combo|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt OCG_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_OCG_REQUIRE
+#
+# Edges: NEW before obj gate; LET knobs each re-INCLUDE; soft miss bags;
+#   GUARD_OK ALL+ANY coupling (W790 class); CLEAR_ERR LAST; REQUIRE LIB quoted
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+CLASS FleetWorker
+  FIELD id ""
+  FIELD load 0
+  METHOD ping
+    SETF THIS load 0
+  END
+END
+
+CLASS FleetQueue
+  FIELD depth 0
+  METHOD push
+    LET depth = depth + 1
+  END
+END
+
+CLASS FleetCanary
+  FIELD tag "canary"
+END
+
+NOTE "svc_obj_class_guard_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_obj_class_guard -- boot|pass|soft|obj|cls|combo|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_OCG_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "OCG_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET allo = 0
+LET anyo = 0
+LET obg = 0
+LET clg = 0
+LET miss_s = ""
+LET have_s = ""
+
+ONEOF ACTION "boot", "pass", "soft", "obj", "cls", "combo", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "obj" THEN
+    LET op = "obj"
+  WHEN "cls" THEN
+    LET op = "cls"
+  WHEN "combo" THEN
+    LET op = "combo"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-ocg\",\"schema\":\"cubalc.svc_obj_class_guard.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"ocg\",\"want_filter\":\"obj_class_guard\",\"cfg\":{\"surface\":\"obj_guard,class_guard,NEED_OBJS,NEED_OBJ_ANY,NEED_CLASSES,NEED_CLASS_ANY,OBJMISS,CLASSMISS\",\"contract\":\"live instances + CLASS catalog dual preflight\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  NEW FleetWorker w0
+  NEW FleetQueue q0
+  CLEAR_ERR
+  LET NEED_OBJS = "w0\nq0"
+  LET NEED_OBJ_ANY = ""
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  LET obg = OBJ_GUARD_OK
+  CLEAR_ERR
+  LET NEED_CLASSES = "FleetWorker\nFleetQueue"
+  LET NEED_CLASS_ANY = ""
+  LET CLASS_GUARD_SOFT = 1
+  INCLUDE class_guard
+  LET clg = CLASS_GUARD_OK
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ocg"
+  IF LAST_N == 1 THEN
+    IF obg == 1 THEN
+      IF clg == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot class"
+        FAIL "boot class"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot obj"
+      FAIL "boot obj"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# pass — hard ALL+ANY both planes (spawn first)
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetWorker w0
+  NEW FleetWorker w1
+  NEW FleetQueue q0
+  CLEAR_ERR
+  LET NEED_OBJS = "w0\nw1\nq0"
+  LET NEED_OBJ_ANY = "ghost_slot\nw0"
+  LET OBJ_GUARD_SOFT = 0
+  INCLUDE obj_guard
+  LET obg = OBJ_GUARD_OK
+  LET allo = OBJ_GUARD_ALL_OK
+  LET anyo = OBJ_GUARD_ANY_OK
+  CLEAR_ERR
+  IF obg == 1 THEN
+    LET score = score + 1
+  END
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  LET NEED_CLASSES = "FleetWorker\nFleetQueue\nFleetCanary"
+  LET NEED_CLASS_ANY = "GhostCls\nFleetCanary"
+  LET CLASS_GUARD_SOFT = 0
+  INCLUDE class_guard
+  LET clg = CLASS_GUARD_OK
+  LET allo = CLASS_GUARD_ALL_OK
+  LET anyo = CLASS_GUARD_ANY_OK
+  CLEAR_ERR
+  IF clg == 1 THEN
+    LET score = score + 1
+  END
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASS FleetCanary
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "obj_class_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = obg
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" obg ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score obg clg note_msg
+  CLEAR_ERR
+END
+
+# soft — miss bags both planes + empty skip
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetWorker w0
+  CLEAR_ERR
+  LET NEED_OBJS = "w0\nghost_obj_all"
+  LET NEED_OBJ_ANY = ""
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  LET allo = OBJ_GUARD_ALL_OK
+  LET obg = OBJ_GUARD_OK
+  LET miss_s = OBJMISS
+  CLEAR_ERR
+  IF allo == 0 THEN
+    LET score = score + 1
+  END
+  IF obg == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI miss_s "ghost_obj_all"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_OBJS = ""
+  LET NEED_OBJ_ANY = "ghostA\nghostB"
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  LET anyo = OBJ_GUARD_ANY_OK
+  CLEAR_ERR
+  IF anyo == 0 THEN
+    LET score = score + 1
+  END
+  LET NEED_CLASSES = "FleetWorker\nGhostClassAll"
+  LET NEED_CLASS_ANY = ""
+  LET CLASS_GUARD_SOFT = 1
+  INCLUDE class_guard
+  LET allo = CLASS_GUARD_ALL_OK
+  LET clg = CLASS_GUARD_OK
+  LET miss_s = CLASSMISS
+  CLEAR_ERR
+  IF allo == 0 THEN
+    LET score = score + 1
+  END
+  IF clg == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI miss_s "GhostClassAll"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_CLASSES = ""
+  LET NEED_CLASS_ANY = "GhostX\nGhostY"
+  LET CLASS_GUARD_SOFT = 1
+  INCLUDE class_guard
+  LET anyo = CLASS_GUARD_ANY_OK
+  CLEAR_ERR
+  IF anyo == 0 THEN
+    LET score = score + 1
+  END
+  LET NEED_OBJS = ""
+  LET NEED_OBJ_ANY = ""
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  IF OBJ_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_CLASSES = ""
+  LET NEED_CLASS_ANY = ""
+  LET CLASS_GUARD_SOFT = 1
+  INCLUDE class_guard
+  IF CLASS_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# obj — obj_guard soft ANY + native HASOBJS duals
+SYS EQS op "obj"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetWorker s0
+  NEW FleetWorker s1
+  NEW FleetQueue q0
+  CLEAR_ERR
+  LET NEED_OBJS = "s0\ns1\nq0"
+  LET NEED_OBJ_ANY = ""
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  LET allo = OBJ_GUARD_ALL_OK
+  LET have_s = OBJHAVE
+  CLEAR_ERR
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF OBJHAVE_N >= 3 THEN
+    LET score = score + 1
+  END
+  SYS HASI have_s "s0"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_OBJS = ""
+  LET NEED_OBJ_ANY = "ghost_a\ns1"
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  LET anyo = OBJ_GUARD_ANY_OK
+  LET have_s = OBJHAVE
+  CLEAR_ERR
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  IF OBJ_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASI have_s "s1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJS s0 s1
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJANY ghost_z s0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "obj_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "obj ok"
+    LET admit_n = 1
+    LET find_n = anyo
+  ELSE
+    LET miss = 1
+    LET note_msg = "obj score"
+    FAIL "obj score"
+    CLEAR_ERR
+  END
+  SYS CAT "obj:" anyo ":ob"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "obj:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score anyo note_msg
+  CLEAR_ERR
+END
+
+# cls — class_guard soft ANY + HASCLASSES duals
+SYS EQS op "cls"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_CLASSES = "FleetWorker\nFleetQueue"
+  LET NEED_CLASS_ANY = ""
+  LET CLASS_GUARD_SOFT = 1
+  INCLUDE class_guard
+  LET allo = CLASS_GUARD_ALL_OK
+  LET have_s = CLASSHAVE
+  CLEAR_ERR
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF CLASSHAVE_N >= 2 THEN
+    LET score = score + 1
+  END
+  SYS HASI have_s "FleetWorker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_CLASSES = ""
+  LET NEED_CLASS_ANY = "GhostA\nFleetCanary"
+  LET CLASS_GUARD_SOFT = 1
+  INCLUDE class_guard
+  LET anyo = CLASS_GUARD_ANY_OK
+  LET have_s = CLASSHAVE
+  CLEAR_ERR
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  IF CLASS_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASI have_s "FleetCanary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASSES FleetWorker FleetQueue
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASSANY GhostZ FleetCanary
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "class_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "cls ok"
+    LET admit_n = 1
+    LET find_n = anyo
+  ELSE
+    LET miss = 1
+    LET note_msg = "cls score"
+    FAIL "cls score"
+    CLEAR_ERR
+  END
+  SYS CAT "cls:" anyo ":cl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "cls:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score anyo note_msg
+  CLEAR_ERR
+END
+
+# combo — dual soft pass + ALL miss coupling
+SYS EQS op "combo"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetWorker c0
+  NEW FleetQueue cq
+  CLEAR_ERR
+  LET NEED_OBJS = "c0\ncq"
+  LET NEED_OBJ_ANY = "ghost\nc0"
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  LET obg = OBJ_GUARD_OK
+  LET allo = OBJ_GUARD_ALL_OK
+  LET anyo = OBJ_GUARD_ANY_OK
+  CLEAR_ERR
+  IF obg == 1 THEN
+    LET score = score + 1
+  END
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  LET NEED_CLASSES = "FleetWorker\nFleetQueue"
+  LET NEED_CLASS_ANY = "FleetCanary\nGhost"
+  LET CLASS_GUARD_SOFT = 1
+  INCLUDE class_guard
+  LET clg = CLASS_GUARD_OK
+  LET allo = CLASS_GUARD_ALL_OK
+  LET anyo = CLASS_GUARD_ANY_OK
+  CLEAR_ERR
+  IF clg == 1 THEN
+    LET score = score + 1
+  END
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  # ALL miss + ANY hit → overall OK 0 (W790 class)
+  LET NEED_OBJS = "c0\nghost_all"
+  LET NEED_OBJ_ANY = "c0"
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  LET allo = OBJ_GUARD_ALL_OK
+  LET obg = OBJ_GUARD_OK
+  CLEAR_ERR
+  IF allo == 0 THEN
+    LET score = score + 1
+  END
+  IF obg == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ocg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "combo ok"
+    LET admit_n = 1
+    LET find_n = obg
+  ELSE
+    LET miss = 1
+    LET note_msg = "combo score"
+    FAIL "combo score"
+    CLEAR_ERR
+  END
+  SYS CAT "combo:" score ":cb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "combo:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM free duals used by guards
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "HASOBJS"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASFORM "HASOBJANY"
+  LET allo = LAST_N
+  CLEAR_ERR
+  HASFORM "HASCLASSES"
+  LET anyo = LAST_N
+  CLEAR_ERR
+  HASFORM "HASCLASSANY"
+  LET clg = LAST_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF allo == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF anyo == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF clg == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  HASFORM "HASOBJ"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "HASCLASS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS HASOBJS"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "obj_class_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "obj_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — dual soft pass + soft recover + REQUIRE
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetWorker g0
+  NEW FleetQueue gq
+  CLEAR_ERR
+  LET NEED_OBJS = "g0\ngq"
+  LET NEED_OBJ_ANY = "g0"
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  IF OBJ_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_CLASSES = "FleetWorker\nFleetQueue"
+  LET NEED_CLASS_ANY = "FleetCanary"
+  LET CLASS_GUARD_SOFT = 1
+  INCLUDE class_guard
+  IF CLASS_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_OBJS = "ghost_only"
+  LET NEED_OBJ_ANY = ""
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  IF OBJ_GUARD_OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_CLASSES = "GhostOnly"
+  LET NEED_CLASS_ANY = ""
+  LET CLASS_GUARD_SOFT = 1
+  INCLUDE class_guard
+  IF CLASS_GUARD_OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ g0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASS FleetCanary
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ocg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · CLEAR_ERR LAST · WRITE NL
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  NEW FleetWorker p0
+  CLEAR_ERR
+  LET NEED_OBJS = "p0"
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE obj_guard
+  LET obg = OBJ_GUARD_OK
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF obg == 1 THEN
+    LET score = score + 1
+  END
+  LET body = "keep-me"
+  CLEAR_ERR
+  SYS EQS LAST "cleared"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_CLASSES = "FleetWorker"
+  LET CLASS_GUARD_SOFT = 1
+  INCLUDE class_guard
+  IF CLASS_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "obj_class_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "method_field_guard"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASCLASS FleetQueue
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = obg
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score obg note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " obg=" obg " clg=" clg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "ocg report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS
