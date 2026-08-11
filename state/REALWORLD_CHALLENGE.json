@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 335,
-  "program": "programs/realworld/svc_tryrename_swap_fleet_board.cubalc",
-  "theme": "TRYRENAME/TRYSWAP soft fleet canary rename + primary/backup swap",
-  "version": "1.15.867-usability",
+  "iter": 336,
+  "program": "programs/realworld/svc_env_conf_line_board.cubalc",
+  "theme": "SETMATCHFILE/COUNTFILELINE/DROPEXACTFILE live svc.env conf line patch",
+  "version": "1.15.869-usability",
   "pass": true,
-  "prior_note": "iter 334 trynew/clone; this iter first realworld 1412 TRYRENAME + 1413 TRYSWAP fleet slots",
+  "prior_note": "iter 335 tryrename/swap; this iter first realworld file-line conf triad (763/761/775/762)",
   "tests": [
     {
       "name": "list",
@@ -15,57 +15,63 @@
     },
     {
       "name": "boot",
-      "cmd": "lean agent plate SYS WRITE",
+      "cmd": "seed agent + svc.env KEY=VAL",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "TRYRENAME canary\u2192live + TRYSWAP primary/backup fields 10/10",
+      "cmd": "SETMATCHFILE ROLE+HOST promote 10/10",
       "ok": true,
       "note": "pass"
     },
     {
-      "name": "soft_rn",
-      "cmd": "miss+redefine soft LAST_ERR capture 10/10",
+      "name": "soft",
+      "cmd": "no-match N=0 I=-1 + path miss OK=0",
       "ok": true,
-      "note": "soft_rn"
+      "note": "soft 10/10"
     },
     {
-      "name": "soft_sw",
-      "cmd": "miss one side + SOFTSWAP + same-name 10/10",
+      "name": "count",
+      "cmd": "COUNTFILELINE substring ROLE= false friends",
       "ok": true,
-      "note": "soft_sw"
+      "note": "count 9/10"
     },
     {
-      "name": "redef",
-      "cmd": "SOFTRENAME/MOVEOBJ SOFT/TRYMOVEOBJ chain 10/10",
+      "name": "drop",
+      "cmd": "DROPEXACTFILE exact-only substring miss",
       "ok": true,
-      "note": "redef"
+      "note": "drop 10/10"
+    },
+    {
+      "name": "grep",
+      "cmd": "GREPFILE/GREPFILEI/FILEGREP keep lines",
+      "ok": true,
+      "note": "grep 10/10"
+    },
+    {
+      "name": "icase",
+      "cmd": "SETMATCHFILEI vs case-sensitive miss",
+      "ok": true,
+      "note": "icase 10/10"
     },
     {
       "name": "form",
-      "cmd": "ops work; HASFORM TRYSWAP/SWAPOBJ miss (score 8)",
+      "cmd": "HASFORM needs SYS prefix for host forms",
       "ok": true,
-      "note": "form"
+      "note": "form 9/10"
     },
     {
       "name": "gate",
-      "cmd": "promote+swap+soft miss recover + REQUIRE env",
+      "cmd": "promote+drop+soft + CUBALC_ECL_REQUIRE",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber capture TRYRENAME_N; substring HASOBJ p",
+      "cmd": "PRINT clobber SETMATCHFILE_N capture",
       "ok": true,
       "note": "probe"
-    },
-    {
-      "name": "clear",
-      "cmd": "clear bag",
-      "ok": true,
-      "note": "clear"
     },
     {
       "name": "unknown",
@@ -77,7 +83,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "tryrename PASS39; tryswap FAIL HASFORM; CLI duals red set\u2192SETF"
+      "note": "763/761/775/762 PASS; CLI duals still red set\u2192SETF"
     }
   ],
   "weaknesses": [
@@ -6128,6 +6134,54 @@
       "title": "out/cubalc deleted mid-session by concurrent make -O2",
       "detail": "Parallel agent make -j rm -f out/cubalc and recompiles lang_ops_core -O2 (OOM risk). Board suite mid-run hit exit 127. Reuse .o link or -O0 rebuild required (W748 family).",
       "repro": "ls out/cubalc during make -j"
+    },
+    {
+      "id": "W757",
+      "severity": "high",
+      "area": "lang|hasform",
+      "title": "HASFORM bare host stems miss; need SYS prefix",
+      "detail": "HASFORM \"SETMATCHFILE\"/\"COUNTFILELINE\"/\"DROPEXACTFILE\"/\"GREPFILE\" \u2192 0 while ops work. HASFORM \"SYS SETMATCHFILE\" \u2192 1. Agents probing form catalogs with bare dual names false-miss. form action documents bare-stem lag.",
+      "repro": "HASFORM \"SETMATCHFILE\" \u2192 0; HASFORM \"SYS SETMATCHFILE\" \u2192 1"
+    },
+    {
+      "id": "W758",
+      "severity": "med",
+      "area": "host|countfileline",
+      "title": "COUNTFILELINE is substring-of-line not KEY= exact",
+      "detail": "Needle ROLE= matches both ROLE=primary and ROLE_BAK=idle. ROLE=prim matches ROLE=primary. Ops tallying keys must use stricter needles or GREPFILE+EQS. Distinct from bag COUNTLINE exact-field (649).",
+      "repro": "COUNTFILELINE conf \"ROLE=\" with ROLE_BAK line \u2192 2"
+    },
+    {
+      "id": "W759",
+      "severity": "med",
+      "area": "lang|has_last",
+      "title": "SYS HAS LAST after CLEAR_ERR loses haystack",
+      "detail": "SYS READ conf; SYS HAS LAST \"A\"; CLEAR_ERR; SYS HAS LAST \"B\" \u2014 second HAS sees empty/clobbered LAST. Must LET body=LAST then SYS HAS body. Cost pass score 9\u219210 when fixed.",
+      "repro": "READ; HAS LAST a; CLEAR_ERR; HAS LAST b \u2192 false friend"
+    },
+    {
+      "id": "W760",
+      "severity": "low",
+      "area": "host|setmatchfile",
+      "title": "SETMATCHFILE soft no-match OK=1 N=0 I=-1 vs path miss OK=0",
+      "detail": "Asymmetric soft contract: missing needle stays OK; missing file fails OK. Good for optional patches but agents must branch on SETMATCHFILE_N not only OK. FILESETMATCH alias same.",
+      "repro": "SETMATCHFILE conf missing= x \u2192 OK1 N0 I-1; bad path \u2192 OK0"
+    },
+    {
+      "id": "W761",
+      "severity": "low",
+      "area": "host|dropexactfile",
+      "title": "DROPEXACTFILE requires full exact line; substring soft-noops",
+      "detail": "DROPEXACTFILE conf \"STAGE\" leaves STAGE=canary; only full \"STAGE=canary\" drops. Soft miss line still OK=1. Correct for safety; easy to misread as DROPFILELINE substring.",
+      "repro": "DROPEXACTFILE conf STAGE; line remains"
+    },
+    {
+      "id": "W762",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE conf/VAL still omit trailing NL (W5/W755 class)",
+      "detail": "cat -A svc.env after multi-line WRITE may lack final $; VAL plate single-line no NL. Line tools and append agents need explicit trailing newline in body.",
+      "repro": "cat -A STATE/VAL.txt STATE/svc.env"
     }
   ],
   "workarounds": [
@@ -6218,7 +6272,10 @@
     "CLEAR_ERR after soft miss before next spawn",
     "capture LAST_ERR into var before CLEAR_ERR on soft miss",
     "score thresholds \u22658 when HASFORM lags; assert ops not catalog",
-    "relink out/*.o when binary missing; avoid -O2 lang_ops_core if OOM"
+    "relink out/*.o when binary missing; avoid -O2 lang_ops_core if OOM",
+    "HASFORM host ops with full \"SYS FORMNAME\" not bare stem",
+    "LET body = LAST after READ before multi SYS HAS; avoid CLEAR_ERR mid-haystack",
+    "COUNTFILELINE use full KEY=val needle; prefer GREPFILE+EQS for exact key tally"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6373,7 +6430,13 @@
     "TRYSWAP/SWAPOBJ SOFT soft name swap (1413)",
     "HASFORM misses TRYSWAP/SWAPOBJ (W750)",
     "CLEAR_ERR before LAST_ERR capture (W751)",
-    "CLI dual set\u2192SETF mass fail (W752)"
+    "CLI dual set\u2192SETF mass fail (W752)",
+    "SETMATCHFILE/FILESETMATCH first-line conf patch (763)",
+    "COUNTFILELINE substring line tally (761)",
+    "DROPEXACTFILE exact line drop (775)",
+    "GREPFILE keep matching file lines (762)",
+    "HASFORM host forms need SYS prefix (W757)",
+    "HAS LAST haystack lost after CLEAR_ERR (W759)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6428,9 +6491,12 @@
     "iter334: rebuilt binary via -O0 lang_ops_core after OOM; proofs near-pass",
     "iter335: HASFORM TRYSWAP/SWAPOBJ miss while ops work \u2014 1413 assert fail W750",
     "iter335: soft_rn score 8 until LET err_s=LAST_ERR before CLEAR_ERR W751",
-    "iter335: binary vanished mid-suite concurrent make; relink to 1.15.867"
+    "iter335: binary vanished mid-suite concurrent make; relink to 1.15.867",
+    "iter336: pass 9/10 until LET body=LAST before dual SYS HAS (W759)",
+    "iter336: HASFORM bare SETMATCHFILE 0; SYS SETMATCHFILE 1 (W757)",
+    "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)"
   ],
-  "commit": "d1120478",
-  "ts": "2026-08-11T05:32:13Z",
-  "board_commit": "d1120478"
+  "commit": "pending",
+  "ts": "2026-08-11T05:56:19Z",
+  "board_commit": "pending"
 }

@@ -1,0 +1,1082 @@
+# svc_env_conf_line_board.cubalc — live service env conf line ops
+#
+# Real use: ops agents patch unit/env conf on disk without full rewrite —
+# promote ROLE, retarget HOST, drop DEBUG, tally KEY= lines, grep active keys.
+# First realworld triad of SETMATCHFILE + COUNTFILELINE + DROPEXACTFILE + GREPFILE
+# (proofs 763/761/775/762 · bag SETMATCH roster is separate).
+#
+#   SYS SETMATCHFILE|FILESETMATCH path needle value · SETMATCHFILE_N/_I/_TOTAL
+#   SYS SETMATCHFILEI icase first hit
+#   SYS COUNTFILELINE|FILECOUNTLINE path needle → LAST_N (substring line hit)
+#   SYS DROPEXACTFILE|DROPFILEEXACT path exact_line
+#   SYS GREPFILE|FILEGREP path needle → bag of matching lines
+#   soft: no-match OK=1 N=0 I=-1; path miss OK=0
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ecl_$$
+#   ./out/cubalc run programs/realworld/svc_env_conf_line_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|count|drop|grep|icase|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt ECL_REPORT.txt agent.json svc.env
+# Env: HOST_S ROLE_S CUBALC_ECL_REQUIRE
+#
+# Edges: SETMATCH first-only; substring COUNT false friends; exact DROP;
+#   soft miss path/no-match; WRITE NL; PRINT clobber knobs; empty conf
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "svc_env_conf_line_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_env_conf_line -- boot|pass|soft|count|drop|grep|icase|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_ECL_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "ECL_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "svc.env"
+LET conf_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sm_n = 0
+LET sm_i = -1
+LET sm_tot = 0
+LET cnt_n = 0
+LET ok_v = 0
+
+ONEOF ACTION "boot", "pass", "soft", "count", "drop", "grep", "icase", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "count" THEN
+    LET op = "count"
+  WHEN "drop" THEN
+    LET op = "drop"
+  WHEN "grep" THEN
+    LET op = "grep"
+  WHEN "icase" THEN
+    LET op = "icase"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-ecl\",\"schema\":\"cubalc.svc_env_conf_line.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"ecl\",\"want_filter\":\"conf_line\",\"cfg\":{\"surface\":\"SETMATCHFILE,COUNTFILELINE,DROPEXACTFILE,GREPFILE,SETMATCHFILEI,SETMATCHFILE_N\",\"contract\":\"live svc.env line patch · promote/drop/tally\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  # seed conf — multi-line KEY=VAL (no trailing NL may stick — document)
+  SYS CAT "ROLE=" role_s "
+HOST=" host_s "
+DEBUG=0
+STAGE=canary
+"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE conf_path body
+  CLEAR_ERR
+  SYS READ conf_path
+  SYS HAS LAST "ROLE="
+  IF LAST_N == 1 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+    LET score = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# pass — promote ROLE + retarget HOST via SETMATCHFILE
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  # ensure conf exists
+  SYS READ OR conf_path OR ""
+  SYS HAS LAST "ROLE="
+  IF LAST_N == 0 THEN
+    SYS CAT "ROLE=worker
+HOST=cubeR
+DEBUG=0
+STAGE=canary
+"
+    LET body = LAST
+    SYS WRITE conf_path body
+    CLEAR_ERR
+  END
+  CLEAR_ERR
+  SYS CAT "ROLE=" role_s
+  LET body = LAST
+  CLEAR_ERR
+  SYS SETMATCHFILE conf_path body "ROLE=primary"
+  LET ok_v = OK
+  LET sm_n = SETMATCHFILE_N
+  LET sm_i = SETMATCHFILE_I
+  LET sm_tot = SETMATCHFILE_TOTAL
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF sm_n == 1 THEN
+    LET score = score + 1
+  END
+  IF sm_i >= 0 THEN
+    LET score = score + 1
+  END
+  IF sm_tot >= 3 THEN
+    LET score = score + 1
+  END
+  SYS LINEAT conf_path sm_i
+  SYS EQS LAST "ROLE=primary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS CAT "HOST=" host_s
+  LET body = LAST
+  CLEAR_ERR
+  SYS SETMATCHFILE conf_path body "HOST=edge1"
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  IF SETMATCHFILE_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ conf_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ROLE=primary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "HOST=edge1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "conf_line"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" sm_n ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sm_n sm_i note_msg
+  CLEAR_ERR
+END
+
+# soft — no-match soft + path miss
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS READ OR conf_path OR ""
+  SYS HAS LAST "ROLE="
+  IF LAST_N == 0 THEN
+    SYS WRITE conf_path "ROLE=worker
+HOST=cubeR
+"
+    CLEAR_ERR
+  END
+  CLEAR_ERR
+  SYS SETMATCHFILE conf_path "MISSING=zz" "X=1"
+  LET ok_v = OK
+  LET sm_n = SETMATCHFILE_N
+  LET sm_i = SETMATCHFILE_I
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF sm_n == 0 THEN
+    LET score = score + 1
+  END
+  IF sm_i == -1 THEN
+    LET score = score + 1
+  END
+  SYS SETMATCHFILE "/no/such/ecl.env" "a=" "b=1"
+  LET ok_v = OK
+  LET sm_n = SETMATCHFILE_N
+  LET err_s = LAST_ERR
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF sm_n == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI err_s "SETMATCHFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS COUNTFILELINE "/no/such/ecl.env" "a"
+  LET ok_v = OK
+  LET err_s = LAST_ERR
+  CLEAR_ERR
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI err_s "read"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # FILESETMATCH alias soft no-match
+  SYS FILESETMATCH conf_path "ZZZ=1" "Y=2"
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  IF SETMATCHFILE_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" sm_n ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sm_n note_msg
+  CLEAR_ERR
+END
+
+# count — COUNTFILELINE exactness / substring false friends
+SYS EQS op "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS WRITE conf_path "ROLE=primary
+HOST=edge1
+DEBUG=0
+ROLE_BAK=idle
+"
+  CLEAR_ERR
+  SYS COUNTFILELINE conf_path "ROLE=primary"
+  LET cnt_n = LAST_N
+  CLEAR_ERR
+  IF cnt_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS COUNTFILELINE conf_path "ROLE="
+  LET cnt_n = LAST_N
+  CLEAR_ERR
+  # both ROLE=primary and ROLE_BAK=idle contain "ROLE="
+  IF cnt_n == 2 THEN
+    LET score = score + 1
+  END
+  SYS COUNTFILELINE conf_path "ROLE"
+  LET cnt_n = LAST_N
+  CLEAR_ERR
+  IF cnt_n == 2 THEN
+    LET score = score + 1
+  END
+  # substring false friend: ROLE=prim matches ROLE=primary
+  SYS COUNTFILELINE conf_path "ROLE=prim"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS COUNTFILELINE conf_path "NOPE="
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS COUNTFILELINEI conf_path "host=edge1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS FILECOUNTLINE conf_path "DEBUG=0"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "svc-ecl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "count ok"
+    LET admit_n = 1
+    LET find_n = cnt_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "count score"
+    FAIL "count score"
+    CLEAR_ERR
+  END
+  SYS CAT "count:" cnt_n ":ct"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "count:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score cnt_n note_msg
+  CLEAR_ERR
+END
+
+# drop — DROPEXACTFILE exact line only
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS WRITE conf_path "ROLE=primary
+HOST=edge1
+DEBUG=0
+STAGE=canary
+"
+  CLEAR_ERR
+  SYS DROPEXACTFILE conf_path "DEBUG=0"
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ conf_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "DEBUG=0"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # substring is NOT enough for drop
+  SYS DROPEXACTFILE conf_path "STAGE"
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ conf_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "STAGE=canary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS DROPEXACTFILE conf_path "STAGE=canary"
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ conf_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "STAGE=canary"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # soft miss line
+  SYS DROPEXACTFILE conf_path "NOPE=1"
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS COUNTFILELINE conf_path "ROLE=primary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "DROPEXACTFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "drop ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "drop score"
+    FAIL "drop score"
+    CLEAR_ERR
+  END
+  SYS CAT "drop:1:dp"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "drop:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# grep — GREPFILE keep matching lines
+SYS EQS op "grep"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS WRITE conf_path "ROLE=primary
+HOST=edge1
+DEBUG=0
+STAGE=canary
+"
+  CLEAR_ERR
+  SYS GREPFILE conf_path "ROLE="
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ROLE=primary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "HOST="
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS LINES body
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS GREPFILE conf_path "HOST="
+  SYS HAS LAST "HOST=edge1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS GREPFILE conf_path "NOPE"
+  SYS LINES LAST
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS GREPFILEI conf_path "debug="
+  SYS HAS LAST "DEBUG=0"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS FILEGREP conf_path "STAGE="
+  SYS HAS LAST "STAGE=canary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "GREPFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "grep ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "grep score"
+    FAIL "grep score"
+    CLEAR_ERR
+  END
+  SYS CAT "grep:1:gp"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "grep:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# icase — SETMATCHFILEI
+SYS EQS op "icase"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS WRITE conf_path "ROLE=worker
+HOST=cubeR
+DEBUG=0
+"
+  CLEAR_ERR
+  SYS SETMATCHFILEI conf_path "host=cuber" "HOST=edge1"
+  LET sm_n = SETMATCHFILE_N
+  CLEAR_ERR
+  IF sm_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS LINEAT conf_path SETMATCHFILE_I
+  SYS EQS LAST "HOST=edge1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS SETMATCHFILEI conf_path "role=WORKER" "ROLE=primary"
+  IF SETMATCHFILE_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ conf_path
+  SYS HAS LAST "ROLE=primary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # case-sensitive miss then icase hit already proved
+  SYS SETMATCHFILE conf_path "host=edge1" "HOST=edge2"
+  IF SETMATCHFILE_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS SETMATCHFILE conf_path "HOST=edge1" "HOST=edge2"
+  IF SETMATCHFILE_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "SETMATCHFILEI"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS COUNTFILELINE conf_path "HOST=edge2"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "icase ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "icase score"
+    FAIL "icase score"
+    CLEAR_ERR
+  END
+  SYS CAT "icase:" sm_n ":ic"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "icase:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sm_n note_msg
+  CLEAR_ERR
+END
+
+# form
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS WRITE conf_path "ROLE=worker
+"
+  CLEAR_ERR
+  SYS SETMATCHFILE conf_path "ROLE=worker" "ROLE=x"
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS COUNTFILELINE conf_path "ROLE=x"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS DROPEXACTFILE conf_path "ROLE=x"
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # host forms register as "SYS SETMATCHFILE" — bare stem HASFORM often 0
+  HASFORM "SYS SETMATCHFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS COUNTFILELINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS DROPEXACTFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS GREPFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SETMATCHFILE"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "SETMATCHFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:1:fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — promote pipeline + soft recover + REQUIRE
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS WRITE conf_path "ROLE=canary
+HOST=cubeR
+DEBUG=1
+"
+  CLEAR_ERR
+  SYS SETMATCHFILE conf_path "ROLE=canary" "ROLE=live"
+  IF SETMATCHFILE_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS SETMATCHFILE conf_path "HOST=cubeR" "HOST=prod1"
+  IF SETMATCHFILE_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS DROPEXACTFILE conf_path "DEBUG=1"
+  IF OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS COUNTFILELINE conf_path "ROLE=live"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # soft miss must not block
+  SYS SETMATCHFILE conf_path "MISSING=zz" "X=1"
+  IF SETMATCHFILE_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ conf_path
+  SYS HAS LAST "ROLE=live"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "svc-ecl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber SETMATCHFILE_N · WRITE NL · substring
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS WRITE conf_path "ROLE=worker
+HOST=cubeR
+"
+  CLEAR_ERR
+  SYS SETMATCHFILE conf_path "ROLE=worker" "ROLE=primary"
+  LET sm_n = SETMATCHFILE_N
+  LET sm_i = SETMATCHFILE_I
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sm_n == 1 THEN
+    LET score = score + 1
+  END
+  IF sm_i == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ conf_path
+  SYS HAS LAST "ROLE=primary"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # substring false friend on conf name path vs content
+  SYS COUNTFILELINE conf_path "ROLE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "conf_line"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS LAST "slot_flip"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS SETMATCHFILE conf_path "NOPE" "X"
+  IF SETMATCHFILE_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = sm_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sm_n sm_i note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " sm_n=" sm_n " cnt=" cnt_n
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "ecl report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS
