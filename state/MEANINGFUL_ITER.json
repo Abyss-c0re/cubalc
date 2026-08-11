@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 859,
-  "version": "1.15.851-usability",
-  "item": "full_session + full_boot + cubalc init --fleet",
-  "item_id": 859,
-  "title": "full_session \u00b7 full_boot \u00b7 FULL_SESSION_OK \u00b7 init --fleet \u00b7 doctor",
-  "commit": "cc55ca7bcefada1fa247e4eee94943c1cd3f179e",
-  "summary": "product+host one-shot FULL_SESSION_OK; init --fleet catalog n=25; doctor lib_full_*; proof 1399 PASS.",
+  "iter": 860,
+  "version": "1.15.852-usability",
+  "item": "plate_guard + key_boot + cubalc init --key",
+  "item_id": 860,
+  "title": "plate_guard \u00b7 key_boot \u00b7 PLATE_GUARD_OK \u00b7 init --key \u00b7 doctor",
+  "commit": "a73849b693d7abcd15d376f0cd6293e135dd6e99",
+  "summary": "NEED_KEYS/NEED_KEY_ANY plate schema; key_boot one-shot; init --key catalog n=26; proof 1400 PASS.",
   "proofs": [
-    "1399_full_session PASS",
-    "1399_full_boot PASS",
-    "1399_cli_full_session PASS",
-    "1399_cli_init_full PASS"
+    "1400_plate_guard PASS",
+    "1400_key_boot PASS",
+    "1400_cli_plate_guard PASS",
+    "1400_cli_init_key PASS"
   ],
-  "when": "2026-08-11T02:24:36Z",
+  "when": "2026-08-11T02:35:39Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "cc55ca7bcefada1fa247e4eee94943c1cd3f179e",
-  "note": "unifies product_session + host_session for fleet service preflight"
+  "sha": "a73849b693d7abcd15d376f0cd6293e135dd6e99",
+  "note": "path/bin twin for durable PLATE key contracts before agent work"
 }
