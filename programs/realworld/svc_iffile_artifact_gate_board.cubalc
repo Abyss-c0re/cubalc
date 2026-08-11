@@ -1,0 +1,978 @@
+# svc_iffile_artifact_gate_board.cubalc — IFFILE/IFDIR/IFEXIST artifact gates
+#
+# Real use: deploy/intake agents branch on path kind (file vs dir vs any)
+# before READ/WRITE without SYS EXIST + IF glue. First realworld of 1479
+# IFFILE/IFDIR/IFEXIST/IFEXISTS (1.15.934+ · MI ~936). Distinct from
+# artifact_wait_board (poll loops) and stage_outdir_intake — this board
+# is *content-branch path existence for artifact admit*.
+#
+#   IFFILE · IFDIR · IFEXIST · IFEXISTS · sticky IFFILE_N/IFDIR_N
+#   nest IFEXIST+IFFILE load · FN-wrap (W853 class)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ifa_$$
+#   ./out/cubalc run programs/realworld/svc_iffile_artifact_gate_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|peel|scale|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt IFA_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_IFA_REQUIRE
+#
+# Edges: IFFILE miss on dir; IFDIR miss on file; IFEXIST any;
+#   var path IFEXISTS; ghost path false; FN-wrap required; WRITE NL
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+# IFFILE/IFDIR/IFEXIST steal outer IF END — FN helpers (W853)
+FN check_file
+  IFFILE p
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN check_dir
+  IFDIR p
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN check_exist
+  IFEXIST p
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN check_exists_alias
+  IFEXISTS p
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN load_if_file
+  IFEXIST p
+    IFFILE p
+      SYS READ p
+      LET body = LAST
+      LET state = "loaded"
+    ELSE
+      LET body = ""
+      LET state = "dir-not-file"
+    END
+  ELSE
+    LET body = "missing"
+    LET state = "missing"
+  END
+END
+
+FN admit_artifact
+  IFEXIST p
+    IFFILE p
+      LET state = "admit-file"
+    ELSE
+      IFDIR p
+        LET state = "admit-dir"
+      ELSE
+        LET state = "admit-other"
+      END
+    END
+  ELSE
+    LET state = "deny-missing"
+  END
+END
+
+NOTE "svc_iffile_artifact_gate_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_iffile_artifact_gate -- boot|pass|soft|peel|scale|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_IFA_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "IFA_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "artifacts"
+LET art_dir = LAST
+SYS JOIN art_dir "bundle.json"
+LET art_file = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET path = ""
+LET msg = ""
+LET peeld = ""
+LET p = ""
+LET state = ""
+LET depth = 0
+LET weight = 0
+
+ONEOF ACTION "boot", "pass", "soft", "peel", "scale", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-ifa\",\"schema\":\"cubalc.svc_iffile_artifact_gate.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"ifa\",\"want_filter\":\"iffile_artifact_gate\",\"cfg\":{\"surface\":\"IFFILE,IFDIR,IFEXIST,IFEXISTS\",\"contract\":\"path kind branches for artifact admit before READ\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  SYS CAT "{\"artifact\":\"bundle\",\"schema\":\"cubalc.artifact.v1\",\"ok\":1}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE art_file body
+  CLEAR_ERR
+  LET p = art_file
+  CALL check_file
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ifa"
+  IF LAST_N == 1 THEN
+    IF ok_v == 1 THEN
+      IF IFFILE_N == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+        LET find_n = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot sticky"
+        FAIL "boot sticky"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot file"
+      FAIL "boot file"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# pass — IFFILE/IFDIR/IFEXIST core 10/10
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  # ensure fixtures
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  SYS CAT "{\"ok\":1}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE art_file body
+  CLEAR_ERR
+  LET p = art_file
+  CALL check_file
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFFILE_N == 1 THEN
+    LET score = score + 1
+  END
+  # file is not dir
+  CALL check_dir
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET p = art_dir
+  CALL check_dir
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFDIR_N == 1 THEN
+    LET score = score + 1
+  END
+  # dir is not file
+  CALL check_file
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET p = art_file
+  CALL check_exist
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFEXIST_N == 1 THEN
+    LET score = score + 1
+  END
+  CALL check_exists_alias
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = art_dir
+  CALL check_exist
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — miss paths · ghost · load nest
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET p = "/no/such/cubalc_ifa_path_zz"
+  CALL check_file
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL check_dir
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL check_exist
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF IFEXIST_N == 0 THEN
+    LET score = score + 1
+  END
+  # empty path?
+  LET p = ""
+  CALL check_exist
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  # load missing
+  LET p = "/no/such/cubalc_ifa_path_zz"
+  CALL load_if_file
+  SYS EQS state "missing"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS body "missing"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # dir as load → dir-not-file
+  LET p = art_dir
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  CALL load_if_file
+  SYS EQS state "dir-not-file"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # file load
+  SYS CAT "{\"ok\":1,\"soft\":1}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE art_file body
+  CLEAR_ERR
+  LET p = art_file
+  CALL load_if_file
+  SYS EQS state "loaded"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "soft"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# peel — release layout: root dir + manifest file
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS JOIN state_dir "releases"
+  LET rel_root = LAST
+  SYS JOIN rel_root "app"
+  LET rel_app = LAST
+  SYS JOIN rel_app "manifest.json"
+  LET man_path = LAST
+  SYS MKDIR rel_root
+  SYS MKDIR rel_app
+  CLEAR_ERR
+  SYS CAT "{\"name\":\"app\",\"ver\":\"1.2.3\",\"ok\":1}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE man_path body
+  CLEAR_ERR
+  LET p = rel_root
+  CALL check_dir
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = rel_app
+  CALL check_dir
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = man_path
+  CALL check_file
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL admit_artifact
+  SYS EQS state "admit-file"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL load_if_file
+  SYS HAS body "1.2.3"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # missing bin → deny
+  SYS JOIN rel_app "bin"
+  LET p = LAST
+  CALL admit_artifact
+  SYS EQS state "deny-missing"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # dir admit
+  LET p = rel_app
+  CALL admit_artifact
+  SYS EQS state "admit-dir"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "iffile_artifact_gate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# scale — multi artifact batch admit
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS JOIN state_dir "batch"
+  LET batch = LAST
+  SYS MKDIR batch
+  CLEAR_ERR
+  SYS JOIN batch "a.bin"
+  LET f1 = LAST
+  SYS JOIN batch "b.bin"
+  LET f2 = LAST
+  SYS JOIN batch "notes"
+  LET d1 = LAST
+  SYS WRITE f1 "AAA"
+  SYS WRITE f2 "BBB"
+  SYS MKDIR d1
+  CLEAR_ERR
+  LET p = f1
+  CALL check_file
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = f2
+  CALL check_file
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = d1
+  CALL check_dir
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET p = f1
+  CALL load_if_file
+  SYS EQS body "AAA"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET p = f2
+  CALL load_if_file
+  SYS EQS body "BBB"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # ghost sibling
+  SYS JOIN batch "c.bin"
+  LET p = LAST
+  CALL check_exist
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET admit_n = 0
+  LET p = f1
+  CALL admit_artifact
+  SYS EQS state "admit-file"
+  IF LAST_N == 1 THEN
+    LET admit_n = admit_n + 1
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET p = d1
+  CALL admit_artifact
+  SYS EQS state "admit-dir"
+  IF LAST_N == 1 THEN
+    LET admit_n = admit_n + 1
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF admit_n == 2 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "IFFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET find_n = admit_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score admit_n note_msg
+  CLEAR_ERR
+END
+
+# form
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "IFFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFDIR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFEXIST"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFEXISTS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFFILE_N"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "IFDIR_N"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "IFEXIST_N"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "iffile_artifact_gate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "IFFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — require manifest file under releases
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS JOIN state_dir "releases"
+  LET rel_root = LAST
+  SYS JOIN rel_root "app"
+  LET rel_app = LAST
+  SYS JOIN rel_app "manifest.json"
+  LET man_path = LAST
+  SYS MKDIR rel_root
+  SYS MKDIR rel_app
+  CLEAR_ERR
+  SYS CAT "{\"name\":\"app\",\"gate\":1}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE man_path body
+  CLEAR_ERR
+  LET p = man_path
+  CALL check_file
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL admit_artifact
+  SYS EQS state "admit-file"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL load_if_file
+  SYS HAS body "gate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # reject if only dir
+  LET p = rel_app
+  CALL check_file
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET p = rel_app
+  CALL check_dir
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF require_hit > 0 THEN
+    IF score < 4 THEN
+      LET miss = 1
+      LET note_msg = "gate require"
+      FAIL "gate require"
+      CLEAR_ERR
+    END
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ifa"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF IFFILE_N >= 0 THEN
+    LET score = score + 1
+  END
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  SYS CAT "gate:" score ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# probe
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  SYS CAT "{\"probe\":1}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE art_file body
+  CLEAR_ERR
+  LET p = art_file
+  CALL check_file
+  LET saved = IFFILE_N
+  PRINT "probe-file" saved
+  CLEAR_ERR
+  IF saved == 1 THEN
+    LET score = score + 1
+  END
+  CALL load_if_file
+  SYS HAS body "probe"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  STRTO saved
+  SYS WRITE val_path saved
+  CLEAR_ERR
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS CAT "ifa host=" host_s " role=" role_s " file=" saved
+  LET row = LAST
+  CLEAR_ERR
+  SYS WRITE meta_path row
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "file=1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "IFEXIST"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 5 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = saved
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS CAT "{\"ok\":true,\"agent\":\"svc-ifa\",\"op\":\"" op "\",\"hit\":" hit ",\"miss\":" miss ",\"score\":" score ",\"admit_n\":" admit_n ",\"bag_n\":" bag_n ",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"note\":\"" note_msg "\",\"require_hit\":" require_hit "}"
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+IF miss == 1 THEN
+  IF hit == 0 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

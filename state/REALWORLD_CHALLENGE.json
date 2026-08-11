@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 362,
-  "program": "programs/realworld/svc_sumin_latency_digest_board.cubalc",
-  "theme": "SUMIN/MAXIN/AVGIN latency digest + IFBETWEEN SLO bands",
-  "version": "1.15.933-usability",
+  "iter": 363,
+  "program": "programs/realworld/svc_iffile_artifact_gate_board.cubalc",
+  "theme": "IFFILE/IFDIR/IFEXIST artifact path admit gates",
+  "version": "1.15.935-usability",
   "pass": true,
-  "prior_note": "iter 361 LPADTO; this iter first realworld of 1476 SUMIN (now linked) + 1474 IFBETWEEN",
+  "prior_note": "iter 362 SUMIN; this iter first realworld of 1479 IFFILE/IFDIR/IFEXIST",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed SUMIN 60 count 3",
+      "cmd": "seed artifact file + IFFILE",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "SUMIN/MAXIN/MININ/AVGIN stickies 10/10",
+      "cmd": "IFFILE/IFDIR/IFEXIST duals 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "empty/mixed skip/single/IFBETWEEN 10/10",
+      "cmd": "miss/empty/load nest 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "latency samples + SLO band 10/10",
+      "cmd": "release layout manifest admit 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "HTTP band retries re-sum noise 10/10",
+      "cmd": "batch multi-file admit 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM SUMIN/IFBETWEEN",
+      "cmd": "HASFORM IFFILE/IFDIR/IFEXIST",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "avg+max+sum SLO admit 9/9",
+      "cmd": "manifest file required 9/9",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "WRITE sum plate NL",
+      "cmd": "sticky IFFILE_N WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1476/1474 PASS; CLI duals still red",
+      "cmd": "selftest; 1479 PASS; 1480 IFENV flaky; CLI duals red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -6962,6 +6962,30 @@
       "title": "SUMIN+IFBETWEEN work (positive; IFBETWEEN FN-wrap)",
       "detail": "Inclusive bands, reversed bounds auto-swap, IFINRANGE TO keyword, string HTTP codes. IFBETWEEN still needs FN+CALL inside action IF (W853). W857 resolved: SUMIN live in 1.15.933.",
       "repro": "SUMIN samples; CALL band_total; IFBETWEEN inclusive 5 5"
+    },
+    {
+      "id": "W862",
+      "severity": "low",
+      "area": "lang|iffile",
+      "title": "IFFILE vs IFDIR vs IFEXIST are strict kind probes",
+      "detail": "IFFILE false on directories; IFDIR false on regular files; IFEXIST true for either. Nested IFEXIST+IFFILE load pattern solid for artifact READ. Empty path soft-misses. Stickies IFFILE_N/IFDIR_N/IFEXIST_N.",
+      "repro": "IFFILE on dir \u2192 0; IFDIR on file \u2192 0; IFEXIST both \u2192 1"
+    },
+    {
+      "id": "W863",
+      "severity": "med",
+      "area": "lang|ifenv",
+      "title": "1480 IFENV proof fails mid-run (IFENV needs name)",
+      "detail": "Proof asserts 6 then errors IFENV needs name \u2014 likely SYS ENV UNSET or str-var key edge after nest. Form catalog lists IFENV. Defer realworld IFENV until proof green; use SYS ENV OR for now.",
+      "repro": "cubalc run 1480_ifenv \u2192 asserts_ok 6 then IFENV needs name"
+    },
+    {
+      "id": "W864",
+      "severity": "low",
+      "area": "lang|iffile",
+      "title": "IFFILE/IFDIR/IFEXIST work (positive; FN-wrap)",
+      "detail": "First-try green artifact gate board. FN+CALL required inside action IF (W853). IFEXISTS alias accepts var path. Good deploy/intake surface for manifest admit.",
+      "repro": "CALL check_file; CALL load_if_file; CALL admit_artifact"
     }
   ],
   "workarounds": [
@@ -7165,7 +7189,8 @@
     "COUNTIN substr vs COUNTLINEIN exact (W850); MOVELINEIN HIT soft/no-op (W851)",
     "IFGT/IFHASLINE cannot nest in IF END framing (W853); IFGTE absent use IFGE (W854)",
     "LPADTO truncates when wider (W856); SUMIN proof not linked in 1.15.930 binary (W857)",
-    "SUMIN LAST_N vs CLEAR_ERR (W859); non-num skip + int AVGIN (W860); SUMIN linked 1.15.933"
+    "SUMIN LAST_N vs CLEAR_ERR (W859); non-num skip + int AVGIN (W860); SUMIN linked 1.15.933",
+    "IFFILE/IFDIR kind strict (W862); IFENV proof flaky needs name (W863)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7277,9 +7302,14 @@
       "iter": 362,
       "issue": "soft 7/10 then 11/10: CLEAR_ERR ate LAST_N after SUMIN (W859); score var name collision risk with band_rev fixed; dropped 11th host check.",
       "resolution": "first realworld 1476+1474; document W859\u2013W861; W857 SUMIN now linked"
+    },
+    {
+      "iter": 363,
+      "issue": "First-try green IFFILE board. 1480 IFENV still red (W863) so deferred. FN-wrap used throughout.",
+      "resolution": "first realworld 1479; document W862\u2013W864"
     }
   ],
-  "commit": "b9294c25",
-  "ts": 1786472709,
-  "board_commit": "b9294c25"
+  "commit": "a5d76167",
+  "ts": 1786474130,
+  "board_commit": "a5d76167"
 }
