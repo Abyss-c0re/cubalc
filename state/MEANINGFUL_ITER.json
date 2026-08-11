@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 904,
-  "version": "1.15.897-usability",
-  "item": "TRYSEND / SEND \u2026 OR fallback",
-  "item_id": 904,
-  "title": "TRYSEND OR \u00b7 SEND OR \u00b7 SEND_OR \u00b7 soft method default",
-  "commit": "90f267ff",
-  "summary": "SEND/TRYSEND accept OR|DEFAULT fallback on obj/method miss (LAST=fb, OK=1, SEND_OR=1); CALL OR twin; proof 1442 PASS.",
+  "iter": 905,
+  "version": "1.15.898-usability",
+  "item": "CALLANY / TRYCALLANY \u2026 OR fallback",
+  "item_id": 905,
+  "title": "CALLANY OR \u00b7 TRYCALLANY OR \u00b7 CALLANY_OR \u00b7 multi-plugin default",
+  "commit": "ee6748b8",
+  "summary": "CALLANY/TRYCALLANY accept OR|DEFAULT|FALLBACK on all-miss (LAST=fb, OK=1, CALLANY_OR=1); CALL OR twin for multi-name dispatch; proof 1443 PASS.",
   "proofs": [
-    "1442_send_or PASS",
-    "1442_cli_send_or PASS",
-    "876/1441/1439 regression PASS"
+    "1443_callany_or PASS",
+    "1443_cli_callany_or PASS",
+    "1438/1441 regression PASS"
   ],
-  "when": "2026-08-11T10:46:44Z",
+  "when": "2026-08-11T11:07:36Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "90f267ff6282da82f0ded8567b852867a7fa9457",
-  "note": "optional method hooks with default without HASMETHOD+IF glue"
+  "sha": "ee6748b8ddf82325a5b96bf2acf2480ebd94956c",
+  "note": "optional multi-plugin hooks with default without HASFNANY+IF+CALL glue"
 }
