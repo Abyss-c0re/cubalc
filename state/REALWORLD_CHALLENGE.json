@@ -6430,7 +6430,7 @@
     "iter335: soft_rn score 8 until LET err_s=LAST_ERR before CLEAR_ERR W751",
     "iter335: binary vanished mid-suite concurrent make; relink to 1.15.867"
   ],
-  "commit": "pending",
+  "commit": "d1120478",
   "ts": "2026-08-11T05:32:13Z",
-  "board_commit": "pending"
+  "board_commit": "d1120478"
 }
