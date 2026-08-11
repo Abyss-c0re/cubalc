@@ -982,6 +982,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 948. ~~**`IFJSONHAS` / `IFJSONMISS`**~~ **done** (JSON plate key branches · no SYS JSONHAS+IF glue · proof 1487).
 
+949. ~~**`IFNUM` / `IFSTR` / `IFVARTYPE`**~~ **done** (var type branches · no TYPEOF+IF glue · proof 1488).
+
 
 
 

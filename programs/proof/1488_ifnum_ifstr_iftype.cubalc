@@ -1,0 +1,113 @@
+# IFNUM / IFSTR / IFVARTYPE — var type branches
+
+HOLD_FLASH 1
+
+LET n = 42
+LET s = "hello"
+# u never defined
+
+IFNUM n
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+ASSERT IFNUM_N == 1
+ASSERT TYPEOF_N == 1
+
+IFNUM s
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 0
+
+IFNUM u
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 0
+
+IFSTR s
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 1
+ASSERT IFSTR_N == 1
+ASSERT TYPEOF_N == 2
+
+IFSTR n
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+
+IFSTR u
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+
+IFVARTYPE n num
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 1
+ASSERT IFVARTYPE_N == 1
+ASSERT IFVARTYPE_WANT == 1
+
+IFVARTYPE s str
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 1
+
+IFVARTYPE u undef
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 1
+
+IFVARTYPE n str
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 0
+
+IFVARTYPE s 2
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 1
+
+IFSTR n
+  LET ok = 0
+ELSE
+  IFNUM n
+    INC n
+    LET ok = 1
+  ELSE
+    LET ok = 0
+  END
+END
+ASSERT ok == 1
+ASSERT n == 43
+
+HASFORM "IFNUM"
+ASSERT LAST_N == 1
+HASFORM "IFSTR"
+ASSERT LAST_N == 1
+HASFORM "IFVARTYPE"
+ASSERT LAST_N == 1
+
+PRINT "1488_ifnum_ifstr_iftype ok"
+PASS
