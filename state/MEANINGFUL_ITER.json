@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 947,
-  "version": "1.15.941-usability",
-  "item": "IFEQFILE / IFDIFFILE / IFSAMEFILE",
-  "item_id": 947,
-  "title": "IFEQFILE \u00b7 IFDIFFILE \u00b7 IFSAMEFILE \u00b7 content equality branches",
-  "commit": "88a2d14a",
-  "summary": "File content identity branches with ELSE/END; no SYS EQFILE+IF glue; proof 1486 PASS.",
+  "iter": 948,
+  "version": "1.15.942-usability",
+  "item": "IFJSONHAS / IFJSONMISS",
+  "item_id": 948,
+  "title": "IFJSONHAS \u00b7 IFJSONMISS \u00b7 JSON plate key branches",
+  "commit": "bbd64ccc",
+  "summary": "JSON key present/missing branches; no SYS JSONHAS+IF glue; proof 1487 PASS.",
   "proofs": [
-    "1486_ifeqfile_ifdiffile PASS",
-    "1485_ifnewer regression PASS"
+    "1487_ifjsonhas_ifjsonmiss PASS",
+    "1486_ifeqfile regression PASS"
   ],
-  "when": "2026-08-11T20:20:34Z",
+  "when": "2026-08-11T20:31:14Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "88a2d14a1386524b5acada182db8f7a55b4a4001",
-  "note": "plate sync/skip-copy without content probe+IF glue"
+  "sha": "bbd64ccc021fa63227adad997b1939da1ae39b94",
+  "note": "plate contract gates without key probe+IF glue"
 }
