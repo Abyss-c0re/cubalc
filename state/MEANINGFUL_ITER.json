@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 897,
-  "version": "1.15.890-usability",
-  "item": "class_guard native HASCLASSES/NEEDCLASSES + HASCLASSANY/NEEDCLASSANY",
-  "item_id": 897,
-  "title": "class_guard \u00b7 HASCLASSES \u00b7 NEEDCLASSES \u00b7 HASCLASSANY \u00b7 NEEDCLASSANY \u00b7 native multi",
-  "commit": "ab6a946d",
-  "summary": "class_guard ALL/ANY use native HASCLASSES/NEEDCLASSES + HASCLASSANY/NEEDCLASSANY instead of N\u00d7 HASCLASS soup; twin of obj/fn_guard; proofs 1435 PASS.",
+  "iter": 898,
+  "version": "1.15.891-usability",
+  "item": "method_guard multi HASMETHODS/HASMETHODANY + Class.method bags",
+  "item_id": 898,
+  "title": "method_guard \u00b7 HASMETHODS \u00b7 NEEDMETHODS \u00b7 HASMETHODANY \u00b7 Class.method bag",
+  "commit": "88ee2636",
+  "summary": "HASMETHODS/HASMETHODANY accept multi-class Class.method bags; method_guard uses native multi forms instead of N\u00d7 HASMETHOD soup; proofs 1436 PASS.",
   "proofs": [
-    "1435_class_guard_multi_native PASS",
-    "1435_cli_class_guard_multi_native PASS",
-    "1401_class_guard regression PASS"
+    "1436_method_guard_multi_native PASS",
+    "1436_cli_method_guard_multi_native PASS",
+    "1402/1422/1423/1428 regression PASS"
   ],
-  "when": "2026-08-11T09:25:28Z",
+  "when": "2026-08-11T09:39:48Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "ab6a946d913f6f488ecfcd13a35b37e7c2a01e40",
-  "note": "agent CLASS gate without N\u00d7 HASCLASS glue; twin of obj_guard/fn_guard native multi"
+  "sha": "88ee263694b2457ab9de22b7b8e64e44c3f54178",
+  "note": "agent Class.method catalog without EACH+HASMETHOD glue; twin of class/obj/fn_guard multi"
 }
