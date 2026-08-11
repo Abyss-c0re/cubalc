@@ -1,0 +1,115 @@
+# IFEQFILE / IFDIFFILE — file content equality branches
+
+HOLD_FLASH 1
+
+SYS MKDIR "state/meaningful_iter/mi_ifeqfile"
+SYS WRITE "state/meaningful_iter/mi_ifeqfile/a.json" "{\"ok\":1,\"n\":42}"
+SYS WRITE "state/meaningful_iter/mi_ifeqfile/b.json" "{\"ok\":1,\"n\":42}"
+SYS WRITE "state/meaningful_iter/mi_ifeqfile/c.json" "{\"ok\":1,\"n\":99}"
+SYS WRITE "state/meaningful_iter/mi_ifeqfile/empty_a" ""
+SYS WRITE "state/meaningful_iter/mi_ifeqfile/empty_b" ""
+
+# identical content
+IFEQFILE "state/meaningful_iter/mi_ifeqfile/a.json" "state/meaningful_iter/mi_ifeqfile/b.json"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+ASSERT IFEQFILE_N == 1
+ASSERT EQFILE == 1
+ASSERT EQFILE_BYTES > 0
+
+# different content
+IFEQFILE "state/meaningful_iter/mi_ifeqfile/a.json" "state/meaningful_iter/mi_ifeqfile/c.json"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 0
+ASSERT IFEQFILE_N == 0
+ASSERT EQFILE == 0
+
+# miss → not equal
+IFEQFILE "state/meaningful_iter/mi_ifeqfile/a.json" "state/meaningful_iter/mi_ifeqfile/nope.json"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 0
+
+# empty files equal
+IFEQFILE "state/meaningful_iter/mi_ifeqfile/empty_a" "state/meaningful_iter/mi_ifeqfile/empty_b"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+# IFDIFFILE true when differ
+IFDIFFILE "state/meaningful_iter/mi_ifeqfile/a.json" "state/meaningful_iter/mi_ifeqfile/c.json"
+  LET d = 1
+ELSE
+  LET d = 0
+END
+ASSERT d == 1
+ASSERT IFDIFFILE_N == 1
+
+# IFDIFFILE true when miss
+IFDIFFILE "state/meaningful_iter/mi_ifeqfile/a.json" "state/meaningful_iter/mi_ifeqfile/nope2.json"
+  LET d = 1
+ELSE
+  LET d = 0
+END
+ASSERT d == 1
+
+# IFDIFFILE false when same
+IFDIFFILE "state/meaningful_iter/mi_ifeqfile/a.json" "state/meaningful_iter/mi_ifeqfile/b.json"
+  LET d = 1
+ELSE
+  LET d = 0
+END
+ASSERT d == 0
+
+# nest: copy only if differ
+IFDIFFILE "state/meaningful_iter/mi_ifeqfile/a.json" "state/meaningful_iter/mi_ifeqfile/c.json"
+  SYS COPY "state/meaningful_iter/mi_ifeqfile/a.json" "state/meaningful_iter/mi_ifeqfile/c.json"
+  LET did = 1
+ELSE
+  LET did = 0
+END
+ASSERT did == 1
+IFEQFILE "state/meaningful_iter/mi_ifeqfile/a.json" "state/meaningful_iter/mi_ifeqfile/c.json"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+# var paths
+LET left = "state/meaningful_iter/mi_ifeqfile/a.json"
+LET right = "state/meaningful_iter/mi_ifeqfile/b.json"
+IFEQFILE left right
+  LET v = 1
+ELSE
+  LET v = 0
+END
+ASSERT v == 1
+
+# IFSAMEFILE alias
+IFSAMEFILE left right
+  LET v = 1
+ELSE
+  LET v = 0
+END
+ASSERT v == 1
+
+HASFORM "IFEQFILE"
+ASSERT LAST_N == 1
+HASFORM "IFDIFFILE"
+ASSERT LAST_N == 1
+HASFORM "IFSAMEFILE"
+ASSERT LAST_N == 1
+
+PRINT "1486_ifeqfile_ifdiffile ok"
+PASS

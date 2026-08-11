@@ -978,6 +978,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 946. ~~**`IFNEWER` / `IFOLDER` / `IFOUTOFDATE`**~~ **done** (relative mtime / make rebuild gates · no dual MTIME+IF glue · proof 1485).
 
+947. ~~**`IFEQFILE` / `IFDIFFILE` / `IFSAMEFILE`**~~ **done** (file content equality branches · no SYS EQFILE+IF glue · proof 1486).
+
 
 
 

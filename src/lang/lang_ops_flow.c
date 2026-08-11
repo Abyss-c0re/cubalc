@@ -25293,7 +25293,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         if (kw(&L->cur,"IF")) lex_next(L);
         continue;
       }
-      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
           kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
@@ -25324,7 +25324,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")) lex_next(L);
           continue;
         }
-        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25354,7 +25354,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")) lex_next(L);
           continue;
         }
-        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25500,7 +25500,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         continue;
       }
       if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
-          kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"IFUNDEF")||kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -25531,7 +25531,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           continue;
         }
         if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
-            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"IFUNDEF")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
@@ -25563,7 +25563,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           continue;
         }
         if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
-            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"IFUNDEF")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
@@ -25717,7 +25717,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
           kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
           kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
-          kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -25758,7 +25758,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
               kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
               kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
-              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25790,7 +25790,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
               kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
               kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
-              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25894,9 +25894,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
           kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
           kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
-          kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
-          kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -25933,9 +25933,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
               kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
               kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
-              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
-              kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25967,9 +25967,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
               kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
               kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
-              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
-              kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26055,7 +26055,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
           kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
           kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
-          kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -26092,7 +26092,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
             kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
             kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
-            kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+            kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26129,7 +26129,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
             kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
             kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
-            kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+            kw(&L->cur,"WHENINBAG")||kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26217,7 +26217,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
           kw(&L->cur,"WHENINBAG")||
           kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
-          kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -26259,7 +26259,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
             kw(&L->cur,"WHENINBAG")||
             kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
-            kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+            kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26298,7 +26298,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
             kw(&L->cur,"WHENINBAG")||
             kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
-            kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+            kw(&L->cur,"WHENBETWEEN")||kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26413,7 +26413,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
           kw(&L->cur,"WHENBETWEEN")||
           kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
-          kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -26459,7 +26459,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
               kw(&L->cur,"WHENBETWEEN")||
               kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
-              kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26503,7 +26503,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
               kw(&L->cur,"WHENBETWEEN")||
               kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
-              kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26641,7 +26641,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
           kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
           kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
-          kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -26690,7 +26690,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
               kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
               kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
-              kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26739,7 +26739,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
               kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
               kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
-              kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26837,7 +26837,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
           kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
           kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
-          kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -26889,7 +26889,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
               kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
               kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
-              kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -26937,7 +26937,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
               kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
               kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
-              kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"WHENEXIST")||kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27029,7 +27029,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
           kw(&L->cur,"WHENEXIST")||
           kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
-          kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -27079,7 +27079,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
             kw(&L->cur,"WHENEXIST")||
             kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
-            kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+            kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27130,7 +27130,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
             kw(&L->cur,"WHENEXIST")||
             kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
-            kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+            kw(&L->cur,"WHENHASENV")||kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27245,7 +27245,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
           kw(&L->cur,"WHENHASENV")||
           kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
-          kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -27297,7 +27297,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
             kw(&L->cur,"WHENHASENV")||
             kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
-            kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+            kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27350,7 +27350,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
             kw(&L->cur,"WHENHASENV")||
             kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
-            kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+            kw(&L->cur,"WHENHASFIELD")||kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27481,6 +27481,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||kw(&L->cur,"WHENSIZE")||
           kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||kw(&L->cur,"IFOUTOFDATE")||
           kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"IFSAMEFILE")||
+          kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -27783,7 +27785,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
           kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
           kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
-          kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+          kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+          kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+          kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+          kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -27851,7 +27857,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
               kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
               kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
-              kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -27908,7 +27918,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
               kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
               kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
-              kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -28052,7 +28066,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
           kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
           kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
-          kw(&L->cur,"WHENOUTOFDATE")||
+          kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+          kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+          kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+          kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+          kw(&L->cur,"WHENSAMEFILE")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -28124,7 +28142,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
               kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
               kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
-              kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -28181,7 +28203,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
               kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
               kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
-              kw(&L->cur,"WHENOUTOFDATE")||
+              kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||
               kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
               kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
               kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -28198,6 +28224,296 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       }
       if (kw(&L->cur,"END")) lex_next(L);
       var_set_num(vm, ntag, 0);
+      bump(vm); return 1;
+    }
+  }
+
+
+  /* IFEQFILE|IFSAMEFILE a b … [ELSE …] END — body if regular files have identical content.
+   * IFDIFFILE a b … — body if differ or either missing/non-file.
+   * Complements SYS EQFILE + IF LAST_N. Streamed byte compare (no full load).
+   * Usability: skip COPY / verify plate sync without EQFILE probe glue. */
+  if (kw(&L->cur,"IFEQFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"IFSAMEFILE")||
+      kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFFILEEQ")||kw(&L->cur,"WHENFILEEQ")||
+      kw(&L->cur,"IFIDENTICAL")||kw(&L->cur,"WHENIDENTICAL")||
+      kw(&L->cur,"IFDIFFILE")||kw(&L->cur,"WHENDIFFILE")||kw(&L->cur,"IFDIFFFILE")||
+      kw(&L->cur,"WHENDIFFFILE")||kw(&L->cur,"IFNEQFILE")||kw(&L->cur,"WHENNEQFILE")||
+      kw(&L->cur,"IFDIFFER")||kw(&L->cur,"WHENDIFFER")){
+    int aln = L->cur.line;
+    int is_diff = 0;
+    int take = 0;
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX], op[32];
+    long eq = 0, bytes = 0;
+    cubalc_host_result ha, hb;
+    Lex body_start;
+    int depth = 1;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "IFDIFFILE") == 0 || strcmp(op, "WHENDIFFILE") == 0 ||
+        strcmp(op, "IFDIFFFILE") == 0 || strcmp(op, "WHENDIFFFILE") == 0 ||
+        strcmp(op, "IFNEQFILE") == 0 || strcmp(op, "WHENNEQFILE") == 0 ||
+        strcmp(op, "IFDIFFER") == 0 || strcmp(op, "WHENDIFFER") == 0)
+      is_diff = 1;
+    lex_next(L);
+    /* Glue only — never eat LEFT/RIGHT/A/B (common path var names). */
+    if (kw(&L->cur, "PATH") || kw(&L->cur, "FILE") || kw(&L->cur, "OF"))
+      lex_next(L);
+    a[0] = 0; b[0] = 0;
+    if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+      fail(vm, is_diff ? "IFDIFFILE needs a b — IFDIFFILE p1 p2 … END"
+                       : "IFEQFILE needs a b — IFEQFILE p1 p2 … END");
+      return -1;
+    }
+    /* Optional glue — avoid eating common path var names like A/B. */
+    if (kw(&L->cur, "AND") || kw(&L->cur, "VS") || kw(&L->cur, "VERSUS") ||
+        kw(&L->cur, "WITH") || kw(&L->cur, "AGAINST") || kw(&L->cur, "TO") ||
+        kw(&L->cur, "COMPARE") || kw(&L->cur, "EQ") || kw(&L->cur, "NE"))
+      lex_next(L);
+    if (resolve_str_arg(vm, L, b, sizeof b) != 0) {
+      fail(vm, is_diff ? "IFDIFFILE needs a b — IFDIFFILE p1 p2 … END"
+                       : "IFEQFILE needs a b — IFEQFILE p1 p2 … END");
+      return -1;
+    }
+    skip_nl(L);
+    if (kw(&L->cur,"THEN")) { lex_next(L); skip_nl(L); }
+
+    eq = 0; bytes = 0;
+    cubalc_host_path_kind(a, &ha);
+    cubalc_host_path_kind(b, &hb);
+    if (ha.ok && ha.code == 1 && hb.ok && hb.code == 1) {
+      if (ha.n != hb.n) {
+        eq = 0; bytes = 0;
+      } else if (ha.n == 0) {
+        eq = 1; bytes = 0;
+      } else {
+        FILE *fa = fopen(a, "rb");
+        FILE *fb = fopen(b, "rb");
+        if (!fa || !fb) {
+          eq = 0; bytes = 0;
+        } else {
+          char ba[4096], bb[4096];
+          size_t na, nb;
+          int differ = 0;
+          long total = 0;
+          while (!differ) {
+            na = fread(ba, 1, sizeof ba, fa);
+            nb = fread(bb, 1, sizeof bb, fb);
+            if (na != nb) { differ = 1; break; }
+            if (na == 0) break;
+            if (memcmp(ba, bb, na) != 0) { differ = 1; break; }
+            total += (long)na;
+          }
+          eq = differ ? 0 : 1;
+          bytes = eq ? total : 0;
+        }
+        if (fa) fclose(fa);
+        if (fb) fclose(fb);
+      }
+    } else {
+      /* miss or non-file → not equal */
+      eq = 0; bytes = 0;
+    }
+    take = is_diff ? (eq ? 0 : 1) : (eq ? 1 : 0);
+
+    body_start = *L;
+    while (L->cur.kind != TK_EOF && depth > 0) {
+      if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+        lex_next(L);
+        if (kw(&L->cur,"IF")) lex_next(L);
+        continue;
+      }
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+          kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+          kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+          kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+          kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||
+          kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||
+          kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
+          kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
+          kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
+          kw(&L->cur,"WHENINBAG")||
+          kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
+          kw(&L->cur,"WHENBETWEEN")||
+          kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
+          kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
+          kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
+          kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
+          kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
+          kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
+          kw(&L->cur,"WHENEXIST")||
+          kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
+          kw(&L->cur,"WHENHASENV")||
+          kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
+          kw(&L->cur,"WHENHASFIELD")||
+          kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||
+          kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||
+          kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
+          kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
+          kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
+          kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+          kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+          kw(&L->cur,"WHENSAMEFILE")||
+          kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
+          kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+          kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+          kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
+          kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+        depth++;
+      else if (kw(&L->cur,"ELSE") && depth == 1) break;
+      else if (kw(&L->cur,"END")) {
+        depth--;
+        if (depth == 0) break;
+      }
+      lex_next(L);
+    }
+    if (depth > 1 || (depth == 1 && L->cur.kind == TK_EOF)) {
+      char ebuf[160];
+      const char *tag = is_diff ? "IFDIFFILE" : "IFEQFILE";
+      snprintf(ebuf, sizeof ebuf,
+               "%s without END line %d — %s a b … [ELSE …] END",
+               tag, aln, tag);
+      fail(vm, ebuf); return -1;
+    }
+    {
+      const char *ntag = is_diff ? "IFDIFFILE_N" : "IFEQFILE_N";
+      var_set_num(vm, "IFEQFILE_N", eq);
+      var_set_num(vm, "EQFILE", eq);
+      var_set_num(vm, "SAMEFILE", eq);
+      var_set_num(vm, "EQFILE_BYTES", bytes);
+      var_set_num(vm, "IFEQFILE_BYTES", bytes);
+      var_set_str(vm, "PATH", a);
+      var_set_str(vm, "PATH_A", a);
+      var_set_str(vm, "PATH_B", b);
+      var_set_str(vm, "REF", b);
+      if (take) {
+        Lex body = body_start;
+        if (exec_stmts_until(vm, &body, "END", "ELSE") < 0) return -1;
+        depth = 1;
+        while (L->cur.kind != TK_EOF && depth > 0) {
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+              kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+              kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+              kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||
+              kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||
+              kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
+              kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
+              kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
+              kw(&L->cur,"WHENINBAG")||
+              kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
+              kw(&L->cur,"WHENBETWEEN")||
+              kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
+              kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
+              kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
+              kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
+              kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
+              kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
+              kw(&L->cur,"WHENEXIST")||
+              kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
+              kw(&L->cur,"WHENHASENV")||
+              kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
+              kw(&L->cur,"WHENHASFIELD")||
+              kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||
+              kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||
+              kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
+              kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
+              kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
+              kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||
+              kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+              kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
+              kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+            depth++;
+          else if (kw(&L->cur,"END")) {
+            depth--;
+            if (depth == 0) break;
+          }
+          lex_next(L);
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        var_set_num(vm, ntag, 1);
+        if (!is_diff) var_set_num(vm, "IFEQFILE_N", 1);
+        else var_set_num(vm, "IFDIFFILE_N", 1);
+        bump(vm); return 1;
+      }
+      if (kw(&L->cur,"ELSE")) {
+        lex_next(L);
+        skip_nl(L);
+        {
+          Lex body = *L;
+          if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+        }
+        depth = 1;
+        while (L->cur.kind != TK_EOF && depth > 0) {
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+              kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+              kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+              kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||
+              kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||
+              kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
+              kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
+              kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
+              kw(&L->cur,"WHENINBAG")||
+              kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
+              kw(&L->cur,"WHENBETWEEN")||
+              kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
+              kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
+              kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
+              kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
+              kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
+              kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
+              kw(&L->cur,"WHENEXIST")||
+              kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
+              kw(&L->cur,"WHENHASENV")||
+              kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
+              kw(&L->cur,"WHENHASFIELD")||
+              kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||
+              kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||
+              kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
+              kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
+              kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
+              kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||
+              kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+              kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
+              kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+            depth++;
+          else if (kw(&L->cur,"END")) {
+            depth--;
+            if (depth == 0) break;
+          }
+          lex_next(L);
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        var_set_num(vm, ntag, 0);
+        if (!is_diff) var_set_num(vm, "IFEQFILE_N", 0);
+        else var_set_num(vm, "IFDIFFILE_N", 0);
+        /* keep EQFILE as content result (0|1), not take flag */
+        var_set_num(vm, "EQFILE", eq);
+        bump(vm); return 1;
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      var_set_num(vm, ntag, 0);
+      if (!is_diff) var_set_num(vm, "IFEQFILE_N", 0);
+      else var_set_num(vm, "IFDIFFILE_N", 0);
+      var_set_num(vm, "EQFILE", eq);
       bump(vm); return 1;
     }
   }
