@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 373,
-  "program": "programs/realworld/svc_iflines_queue_depth_board.cubalc",
-  "theme": "IFLINES/IFMANY/IFFEW work-queue depth admit gates",
+  "iter": 374,
+  "program": "programs/realworld/svc_ifhasflag_cli_contract_board.cubalc",
+  "theme": "IFHASFLAG/IFNOFLAG/IFHASARG/IFNOARG CLI contract gates",
   "version": "1.15.950-usability",
   "pass": true,
-  "prior_note": "iter 372 IFLEN; this iter first realworld of 1494 IFLINES (MI 955); fixed block_scan_step",
+  "prior_note": "iter 373 IFLINES; this iter first realworld of 1495 IFHASFLAG (MI 956)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed 3-field bag + IFLINES",
+      "cmd": "IFNOFLAG bogon sticky",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFLINES/IFMANY/IFFEW stickies 10/10",
+      "cmd": "HASFLAG dual + SETENV arg 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "empty/undef/num/band 10/10",
+      "cmd": "dry-run/apply/deny-no-target 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "depth class admit/overflow 10/10",
+      "cmd": "mode class ladder 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "depth ladder 10/10",
+      "cmd": "setenv/unsetenv ladder 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFLINES/IFMANY/IFFEW",
+      "cmd": "HASFORM IFHASFLAG/IFHASARG",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "band 1..8 admit 10/10",
+      "cmd": "require target admit 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "disk hits STRTO WRITE NL",
+      "cmd": "mode plate STRTO WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -72,12 +72,6 @@
       "cmd": "selftest; proofs green; CLI duals still red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
-    },
-    {
-      "name": "langfix",
-      "cmd": "block_scan_step IFLINES in FN",
-      "ok": true,
-      "note": "FN+IFLINES green after patch"
     }
   ],
   "weaknesses": [
@@ -7232,6 +7226,30 @@
       "title": "IFLINES/IFMANY/IFFEW work after FN fix (first realworld 1494)",
       "detail": "1494 green. admit_depth min/max band via sequential IFMANY+IFFEW solid for queue depth. FN-wrap works post W892 fix.",
       "repro": "CALL is_exact_n; CALL is_many; CALL admit_depth"
+    },
+    {
+      "id": "W895",
+      "severity": "med",
+      "area": "lang|ifhasarg",
+      "title": "IFHASARG/IFNOARG do not resolve var name to env key string",
+      "detail": "LET arg_name=\"CUBALC_IHF_TARGET\"; IFHASARG arg_name looks for env key literally \"arg_name\" (miss). Bare IFHASARG CUBALC_IHF_TARGET works with SYS SETENV. Unlike IFLEN tok lim_n var limit dual.",
+      "repro": "SYS SETENV CUBALC_IHF_TARGET x; LET k=\"CUBALC_IHF_TARGET\"; IFHASARG k \u2192 0; IFHASARG CUBALC_IHF_TARGET \u2192 1"
+    },
+    {
+      "id": "W896",
+      "severity": "low",
+      "area": "lang|ifhasflag",
+      "title": "IFHASFLAG agrees with HASFLAG; IFNOFLAG is exact inverse",
+      "detail": "IFHASFLAG_N == HASFLAG LAST_N. Missing flag IFNOFLAG true. SETENV+IFHASARG for named deploy target solid for dry-run vs apply.",
+      "repro": "HASFLAG verbose|v; IFHASFLAG verbose|v \u2192 same; IFNOFLAG missing \u2192 1"
+    },
+    {
+      "id": "W897",
+      "severity": "low",
+      "area": "lang|ifhasflag",
+      "title": "IFHASFLAG/IFHASARG work (positive; first realworld 1495)",
+      "detail": "1495 green. FN-wrap works (W892 list). pick_mode apply/dry-run + admit_deploy require target. Documents W895 var name trap.",
+      "repro": "CALL has_target; CALL pick_mode; CALL admit_deploy"
     }
   ],
   "workarounds": [
@@ -7392,10 +7410,14 @@
       "id": "WA-ILQ",
       "for": "W892",
       "note": "patched block_scan_step; FN is_exact_n/is_many/is_few; qbag not bag for work queue"
+    },
+    {
+      "id": "WA-IHF",
+      "for": "W895",
+      "note": "bare env key in IFHASARG CUBALC_IHF_TARGET; FN has_target/no_target; SETENV/UNSETENV for tests"
     }
   ],
   "language_gaps": [
-    "SUMIN LAST_N vs CLEAR_ERR (W859); non-num skip + int AVGIN (W860); SUMIN linked 1.15.933",
     "IFFILE/IFDIR kind strict (W862); IFENV proof flaky needs name (W863)",
     "IFENV presence-only + FN-wrap (W865/W867); 1480 green W863 closed",
     "IFBIG unlinked 1.15.937 (W868); IFFRESH miss/stale dual (W869)",
@@ -7406,7 +7428,8 @@
     "IFZERO live 1.15.948 (1489); TRIES keyword traps var tries (W883); str0/undef type-strict (W885)",
     "IFBLANK live 1.15.949 (1492); ws blank num not blank (W886); FN-wrap (W888)",
     "IFLEN live 1.15.950 (1493); num decimal len + undef0 (W889); FN-wrap (W891)",
-    "IFLINES FN block_scan miss (W892 fixed); num\u21921 field empty0 (W893); first realworld 1494"
+    "IFLINES FN block_scan miss (W892 fixed); num\u21921 field empty0 (W893); first realworld 1494",
+    "IFHASFLAG live 1.15.950 (1495); IFHASARG no var peel (W895); HASFLAG dual (W896)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7573,9 +7596,14 @@
       "iter": 373,
       "issue": "IFLINES in FN \u2192 unknown END until block_scan_step patched (W892). Rebuilt cubalc. Board then green 10/10 all actions.",
       "resolution": "first realworld 1494 + lang fix block_scan_step; document W892\u2013W894"
+    },
+    {
+      "iter": 374,
+      "issue": "IFHASARG arg_name (var) always miss until bare env key. pass/soft 7/10 \u2192 green after has_target FN.",
+      "resolution": "first realworld 1495; document W895\u2013W897"
     }
   ],
-  "commit": "7442f46d",
-  "ts": 1786491255,
-  "board_commit": "7442f46d"
+  "commit": "pending",
+  "ts": 1786492268,
+  "board_commit": "pending"
 }

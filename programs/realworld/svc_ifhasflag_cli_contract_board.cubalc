@@ -1,0 +1,981 @@
+# svc_ifhasflag_cli_contract_board.cubalc — IFHASFLAG/IFHASARG CLI contracts
+#
+# Real use: deploy/ops agents branch on CLI flag/arg presence without
+# HASFLAG+IF glue — dry-run vs apply, require TARGET env. First
+# realworld of 1495 IFHASFLAG/IFNOFLAG/IFHASARG/IFNOARG (1.15.950 ·
+# MI 956). Distinct from svc_hasflag*_contract (HASFLAG surface) —
+# this board is *flag/arg presence branches for admit/mode*.
+#
+#   IFHASFLAG · IFNOFLAG · IFHASARG · IFNOARG · stickies · SETENV
+#   FN-wrap (W853/W892) · miss flag · inverse dual · env arg name
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ihf_$$
+#   ./out/cubalc run programs/realworld/svc_ifhasflag_cli_contract_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|peel|scale|form|gate|probe|list
+#   optional: ... gate -- --verbose
+#
+# Plate: STATUS.txt VAL.txt META.txt IHF_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_IHF_REQUIRE ILN-style TARGET via SETENV
+#
+# Edges: missing flag IFNOFLAG; IFHASFLAG == HASFLAG; IFHASARG via
+#   SETENV name; UNSETENV miss; FN-wrap; STATUS bare; STRTO VAL
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+FN has_verbose
+  IFHASFLAG verbose|v
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN no_verbose
+  IFNOFLAG verbose|v
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN has_bogon_flag
+  IFHASFLAG totally_missing_flag_ihf
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN no_bogon_flag
+  IFNOFLAG totally_missing_flag_ihf
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+# IFHASARG uses bare env key name (var arg_name is NOT resolved — W895)
+FN has_target
+  IFHASARG CUBALC_IHF_TARGET
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN no_target
+  IFNOARG CUBALC_IHF_TARGET
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+# mode: apply only with target; dry-run otherwise
+FN pick_mode
+  LET state = "dry-run"
+  LET ok_v = 1
+  CALL has_target
+  IF ok_v == 1 THEN
+    LET state = "apply"
+    LET ok_v = 1
+  END
+  IF ok_v == 0 THEN
+    LET state = "dry-run"
+    LET ok_v = 1
+  END
+END
+
+# admit deploy only when target present
+FN admit_deploy
+  LET state = "deny-no-target"
+  LET ok_v = 0
+  CALL has_target
+  IF ok_v == 1 THEN
+    LET state = "admit"
+    LET ok_v = 1
+  END
+END
+
+NOTE "svc_ifhasflag_cli_contract_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_ifhasflag_cli_contract -- boot|pass|soft|peel|scale|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_IHF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "IHF_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "cli"
+LET cli_dir = LAST
+SYS JOIN cli_dir "mode.txt"
+LET mode_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET arg_name = ""
+LET state = ""
+LET saved = 0
+LET verb_hit = 0
+LET has_v = 0
+
+ONEOF ACTION "boot", "pass", "soft", "peel", "scale", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-ihf\",\"schema\":\"cubalc.svc_ifhasflag_cli_contract.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"ihf\",\"want_filter\":\"ifhasflag_cli_contract\",\"cfg\":{\"surface\":\"IFHASFLAG,IFNOFLAG,IFHASARG,IFNOARG,IFHASFLAG_N\",\"contract\":\"CLI flag/arg presence branches for deploy mode\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  SYS MKDIR cli_dir
+  CLEAR_ERR
+  CALL no_bogon_flag
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ihf"
+  IF LAST_N == 1 THEN
+    IF ok_v == 1 THEN
+      IF IFNOFLAG_N == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+        LET find_n = IFNOFLAG_N
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot sticky"
+        FAIL "boot sticky"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot noflag"
+      FAIL "boot noflag"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# pass — core duals 10/10
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFLAG verbose|v
+  LET has_v = LAST_N
+  CLEAR_ERR
+  CALL has_verbose
+  IF ok_v == has_v THEN
+    LET score = score + 1
+  END
+  IF IFHASFLAG_N == has_v THEN
+    LET score = score + 1
+  END
+  CALL no_verbose
+  LET saved = ok_v + has_v
+  IF saved == 1 THEN
+    LET score = score + 1
+  END
+  CALL has_bogon_flag
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL no_bogon_flag
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS SETENV CUBALC_IHF_TARGET "prod-west"
+  CLEAR_ERR
+  CALL has_target
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFHASARG_N == 1 THEN
+    LET score = score + 1
+  END
+  CALL no_target
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  SYS UNSETENV CUBALC_IHF_TARGET
+  CLEAR_ERR
+  CALL has_target
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL no_target
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score has_v note_msg
+  CLEAR_ERR
+END
+
+# soft — mode pick · miss paths
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS UNSETENV CUBALC_IHF_TARGET
+  CLEAR_ERR
+  CALL pick_mode
+  SYS EQS state "dry-run"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL admit_deploy
+  SYS EQS state "deny-no-target"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS SETENV CUBALC_IHF_TARGET "stage"
+  CLEAR_ERR
+  CALL admit_deploy
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL pick_mode
+  SYS EQS state "apply"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL has_bogon_flag
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL no_bogon_flag
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL has_target
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS UNSETENV CUBALC_IHF_TARGET
+  CLEAR_ERR
+  CALL no_target
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL pick_mode
+  SYS EQS state "dry-run"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL admit_deploy
+  SYS EQS state "deny-no-target"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# peel — multi contract class
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS SETENV CUBALC_IHF_TARGET "prod"
+  CLEAR_ERR
+  CALL admit_deploy
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS UNSETENV CUBALC_IHF_TARGET
+  CLEAR_ERR
+  CALL admit_deploy
+  SYS EQS state "deny-no-target"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL no_bogon_flag
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL has_bogon_flag
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  HASFLAG verbose|v
+  LET has_v = LAST_N
+  CLEAR_ERR
+  CALL has_verbose
+  IF ok_v == has_v THEN
+    LET score = score + 1
+  END
+  CALL no_verbose
+  LET saved = ok_v + has_v
+  IF saved == 1 THEN
+    LET score = score + 1
+  END
+  SYS SETENV CUBALC_IHF_TARGET "canary"
+  CLEAR_ERR
+  CALL pick_mode
+  SYS EQS state "apply"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS UNSETENV CUBALC_IHF_TARGET
+  CLEAR_ERR
+  CALL pick_mode
+  SYS EQS state "dry-run"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifhasflag_cli_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# scale — setenv/unsetenv ladder
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS UNSETENV CUBALC_IHF_TARGET
+  CLEAR_ERR
+  CALL no_target
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL admit_deploy
+  SYS EQS state "deny-no-target"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS SETENV CUBALC_IHF_TARGET "a"
+  CLEAR_ERR
+  CALL has_target
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL admit_deploy
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS SETENV CUBALC_IHF_TARGET "b"
+  CLEAR_ERR
+  CALL pick_mode
+  SYS EQS state "apply"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS UNSETENV CUBALC_IHF_TARGET
+  CLEAR_ERR
+  CALL pick_mode
+  SYS EQS state "dry-run"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL no_bogon_flag
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL has_bogon_flag
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "IFHASFLAG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "IFHASFLAG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFNOFLAG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFHASARG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFNOARG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "WHENHASFLAG"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "WHENNOFLAG"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "IFHASFLAG_N"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifhasflag_cli_contract"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "IFHASFLAG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "IFHASARG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — require target; dry-run without
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS UNSETENV CUBALC_IHF_TARGET
+  CLEAR_ERR
+  CALL admit_deploy
+  SYS EQS state "deny-no-target"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL pick_mode
+  SYS EQS state "dry-run"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS SETENV CUBALC_IHF_TARGET "prod-east"
+  CLEAR_ERR
+  CALL admit_deploy
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL pick_mode
+  SYS EQS state "apply"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL no_bogon_flag
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL has_bogon_flag
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  HASFLAG verbose|v
+  LET has_v = LAST_N
+  CLEAR_ERR
+  CALL has_verbose
+  IF ok_v == has_v THEN
+    LET score = score + 1
+  END
+  CALL has_target
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF require_hit >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "deploy mode"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS UNSETENV CUBALC_IHF_TARGET
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  SYS CAT "gate:" score ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# probe — mode plate · WRITE NL · NUM
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR cli_dir
+  CLEAR_ERR
+  SYS SETENV CUBALC_IHF_TARGET "probe-site"
+  CLEAR_ERR
+  CALL admit_deploy
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL pick_mode
+  SYS EQS state "apply"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE mode_path state
+  CLEAR_ERR
+  SYS READ mode_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "apply"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET saved = IFHASARG_N
+  IF saved == 1 THEN
+    LET score = score + 1
+  END
+  STRTO saved
+  SYS WRITE val_path saved
+  CLEAR_ERR
+  SYS READ val_path
+  SYS NUM
+  IF OK == 1 THEN
+    IF LAST_N == 1 THEN
+      LET score = score + 1
+    END
+  END
+  CLEAR_ERR
+  SYS CAT "ifhasarg=" IFHASARG_N " ifnoflag=" IFNOFLAG_N
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE report_path body
+  CLEAR_ERR
+  SYS READ report_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifhasarg="
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE meta_path "ihf_probe"
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "ihf_probe"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE meta_path "no_nl_end"
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "no_nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET saved = 1
+  PRINT_JSON saved score
+  CLEAR_ERR
+  IF saved == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-ihf"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS UNSETENV CUBALC_IHF_TARGET
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = saved
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score saved note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS CAT "{\"ok\":true,\"agent\":\"svc-ihf\",\"op\":\"" op "\",\"hit\":" hit ",\"miss\":" miss ",\"score\":" score ",\"admit_n\":" admit_n ",\"bag_n\":" bag_n ",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"note\":\"" note_msg "\",\"require_hit\":" require_hit "}"
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " score=" score " note=" note_msg " admit=" admit_n
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+STATUS
+CLEAR_ERR
+
+IF miss == 1 THEN
+  IF hit == 0 THEN
+    EXIT 1 note_msg
+  END
+END
+
+NOTE "svc_ifhasflag_cli_contract_board: done"
+PASS
