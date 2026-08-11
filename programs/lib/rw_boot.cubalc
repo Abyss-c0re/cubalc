@@ -1,0 +1,18 @@
+# INCLUDE rw_boot — agent preamble + host READ/WRITE access contract one-shot
+# Usability: agent_boot + rw_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_READ_PATHS = "/etc/passwd\n/tmp"
+#   DEFAULT NEED_WRITE_PATHS = "/tmp"
+#   DEFAULT RW_GUARD_SOFT = 0
+#   INCLUDE rw_boot
+# Soft access miss: DEFAULT RW_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --rw
+# Twin of path_boot (existence) for access rights · pairs SYS CANREAD/CANWRITE.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_READ_PATHS = ""
+DEFAULT NEED_WRITE_PATHS = ""
+DEFAULT RW_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE rw_guard

@@ -1,0 +1,38 @@
+# INCLUDE rw_boot — agent_boot + rw_guard one-shot
+
+HOLD_FLASH 1
+
+DEFAULT NEED_READ_PATHS = ""
+DEFAULT NEED_WRITE_PATHS = ""
+DEFAULT RW_GUARD_SOFT = 0
+INCLUDE rw_boot
+ASSERT OK == 1
+ASSERT RW_GUARD_OK == 1
+HASINCLUDE agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE rw_guard
+ASSERT LAST_N == 1
+HASINCLUDE rw_boot
+ASSERT LAST_N == 1
+HASLIB rw_boot
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST != ""
+
+# soft miss composition
+LET NEED_READ_PATHS = "/no/such/rw_boot_miss"
+LET NEED_WRITE_PATHS = ""
+LET RW_GUARD_SOFT = 1
+INCLUDE rw_boot
+ASSERT RW_GUARD_OK == 0
+CLEAR_ERR
+
+# hard pass
+LET NEED_READ_PATHS = "/tmp"
+LET NEED_WRITE_PATHS = "/tmp"
+LET RW_GUARD_SOFT = 0
+INCLUDE rw_boot
+ASSERT RW_GUARD_OK == 1
+
+PASS
+PRINT "1395_rw_boot: PASS"

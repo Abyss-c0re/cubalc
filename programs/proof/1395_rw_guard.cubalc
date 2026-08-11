@@ -1,0 +1,85 @@
+# INCLUDE rw_guard — multi host-path READ/WRITE access contract (path_guard twin for rights)
+
+HOLD_FLASH 1
+
+# --- skip both gates when empty ---
+DEFAULT NEED_READ_PATHS = ""
+DEFAULT NEED_WRITE_PATHS = ""
+DEFAULT RW_GUARD_SOFT = 0
+INCLUDE rw_guard
+ASSERT RW_GUARD_OK == 1
+ASSERT RW_GUARD_READ_OK == 1
+ASSERT RW_GUARD_WRITE_OK == 1
+
+# --- soft READ miss ---
+LET NEED_READ_PATHS = "/tmp\n/no/such/cubalc_rw_guard_read"
+LET NEED_WRITE_PATHS = ""
+LET RW_GUARD_SOFT = 1
+INCLUDE rw_guard
+ASSERT RW_GUARD_OK == 0
+ASSERT RW_GUARD_READ_OK == 0
+ASSERT READMISS_N >= 1
+SYS HASLINE READMISS "/no/such/cubalc_rw_guard_read"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# --- soft READ hit ---
+LET NEED_READ_PATHS = "/tmp\n/etc"
+LET RW_GUARD_SOFT = 1
+INCLUDE rw_guard
+ASSERT RW_GUARD_READ_OK == 1
+ASSERT RW_GUARD_OK == 1
+ASSERT READHAVE_N >= 2
+
+# --- soft WRITE miss ---
+LET NEED_READ_PATHS = ""
+LET NEED_WRITE_PATHS = "/no/such/cubalc_rw_guard_write"
+LET RW_GUARD_SOFT = 1
+INCLUDE rw_guard
+ASSERT RW_GUARD_WRITE_OK == 0
+ASSERT RW_GUARD_OK == 0
+CLEAR_ERR
+
+# --- soft WRITE hit ---
+LET NEED_WRITE_PATHS = "/tmp"
+LET RW_GUARD_SOFT = 1
+INCLUDE rw_guard
+ASSERT RW_GUARD_WRITE_OK == 1
+ASSERT RW_GUARD_OK == 1
+ASSERT WRITEHAVE_N >= 1
+CLEAR_ERR
+
+# --- hard READ path ---
+LET NEED_READ_PATHS = "/tmp\n/etc"
+LET NEED_WRITE_PATHS = ""
+LET RW_GUARD_SOFT = 0
+INCLUDE rw_guard
+ASSERT RW_GUARD_OK == 1
+
+# --- hard WRITE path ---
+LET NEED_READ_PATHS = ""
+LET NEED_WRITE_PATHS = "/tmp"
+LET RW_GUARD_SOFT = 0
+INCLUDE rw_guard
+ASSERT RW_GUARD_WRITE_OK == 1
+ASSERT RW_GUARD_OK == 1
+
+# --- combined READ + WRITE soft ---
+LET NEED_READ_PATHS = "/tmp\n/etc"
+LET NEED_WRITE_PATHS = "/tmp"
+LET RW_GUARD_SOFT = 1
+INCLUDE rw_guard
+ASSERT RW_GUARD_READ_OK == 1
+ASSERT RW_GUARD_WRITE_OK == 1
+ASSERT RW_GUARD_OK == 1
+
+# discoverable
+HASFORM "SYS CANREAD"
+ASSERT LAST_N == 1
+HASFORM "SYS CANWRITE"
+ASSERT LAST_N == 1
+HASLIB rw_guard
+ASSERT LAST_N == 1
+
+PRINT "1395_rw_guard ok"
+PASS

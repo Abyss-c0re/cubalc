@@ -1,0 +1,120 @@
+# INCLUDE rw_guard — fail-fast host path READ/WRITE access contract
+# Usability: agent access gate without N× SYS CANREAD / CANWRITE glue.
+#
+#   DEFAULT NEED_READ_PATHS = "/etc/passwd\n/tmp"     # all-of readable
+#   DEFAULT NEED_WRITE_PATHS = "/tmp\n/var/tmp"       # all-of writable
+#   DEFAULT RW_GUARD_SOFT = 0                        # 1 → soft (OK=0, no fatal)
+#   INCLUDE rw_guard
+#
+# Empty NEED_READ_PATHS skips READ gate. Empty NEED_WRITE_PATHS skips WRITE gate.
+# Soft dual leaves READMISS / WRITEMISS / READHAVE / WRITEHAVE bags (CLEAR_ERR after).
+# Twin of path_guard (existence) for access rights · pairs SYS CANREAD / CANWRITE.
+# HOLD_FLASH not required (same policy as path_guard / env_guard / form_guard).
+
+DEFAULT NEED_READ_PATHS = ""
+DEFAULT NEED_WRITE_PATHS = ""
+DEFAULT RW_GUARD_SOFT = 0
+
+# --- ALL-of: every path must be readable ---
+SYS EMPTY NEED_READ_PATHS
+IF LAST_N == 1
+  LET RW_GUARD_READ_OK = 1
+  LET READMISS = ""
+  LET READHAVE = ""
+  LET READMISS_N = 0
+  LET READHAVE_N = 0
+ELSE
+  LET READMISS = ""
+  LET READHAVE = ""
+  LET READMISS_N = 0
+  LET READHAVE_N = 0
+  EACH LINE p IN NEED_READ_PATHS
+    SYS CANREAD p
+    IF LAST_N == 1
+      LET READHAVE_N = READHAVE_N + 1
+      IF READHAVE == ""
+        LET READHAVE = p
+      ELSE
+        LET READHAVE = READHAVE + "\n" + p
+      END
+    ELSE
+      LET READMISS_N = READMISS_N + 1
+      IF READMISS == ""
+        LET READMISS = p
+      ELSE
+        LET READMISS = READMISS + "\n" + p
+      END
+    END
+  END
+  IF READMISS_N == 0
+    LET RW_GUARD_READ_OK = 1
+  ELSE
+    LET RW_GUARD_READ_OK = 0
+    IF RW_GUARD_SOFT
+      LET OK = 0
+      LET LAST_ERR = "RW_GUARD READ miss — unreadable: " + READMISS
+      LET ERR = LAST_ERR
+    ELSE
+      FAIL "RW_GUARD READ miss — unreadable: " + READMISS
+    END
+  END
+END
+
+# --- ALL-of: every path must be writable ---
+SYS EMPTY NEED_WRITE_PATHS
+IF LAST_N == 1
+  LET RW_GUARD_WRITE_OK = 1
+  LET WRITEMISS = ""
+  LET WRITEHAVE = ""
+  LET WRITEMISS_N = 0
+  LET WRITEHAVE_N = 0
+ELSE
+  LET WRITEMISS = ""
+  LET WRITEHAVE = ""
+  LET WRITEMISS_N = 0
+  LET WRITEHAVE_N = 0
+  EACH LINE p IN NEED_WRITE_PATHS
+    SYS CANWRITE p
+    IF LAST_N == 1
+      LET WRITEHAVE_N = WRITEHAVE_N + 1
+      IF WRITEHAVE == ""
+        LET WRITEHAVE = p
+      ELSE
+        LET WRITEHAVE = WRITEHAVE + "\n" + p
+      END
+    ELSE
+      LET WRITEMISS_N = WRITEMISS_N + 1
+      IF WRITEMISS == ""
+        LET WRITEMISS = p
+      ELSE
+        LET WRITEMISS = WRITEMISS + "\n" + p
+      END
+    END
+  END
+  IF WRITEMISS_N == 0
+    LET RW_GUARD_WRITE_OK = 1
+  ELSE
+    LET RW_GUARD_WRITE_OK = 0
+    IF RW_GUARD_SOFT
+      LET OK = 0
+      LET LAST_ERR = "RW_GUARD WRITE miss — unwritable: " + WRITEMISS
+      LET ERR = LAST_ERR
+    ELSE
+      FAIL "RW_GUARD WRITE miss — unwritable: " + WRITEMISS
+    END
+  END
+END
+
+# overall soft status (hard paths already failed fatally if miss)
+IF RW_GUARD_READ_OK
+  IF RW_GUARD_WRITE_OK
+    LET RW_GUARD_OK = 1
+    LET OK = 1
+  ELSE
+    LET RW_GUARD_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET RW_GUARD_OK = 0
+  LET OK = 0
+END
