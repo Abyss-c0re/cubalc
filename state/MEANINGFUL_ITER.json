@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 872,
-  "version": "1.15.865-usability",
-  "item": "TRYCLONE / CLONE SOFT soft prototype clone",
-  "item_id": 872,
-  "title": "TRYCLONE \u00b7 CLONE SOFT \u00b7 soft miss/redefine \u00b7 twin TRYNEW",
-  "commit": "4731ef21c40f904a5bd4e9f5a6e337d94f842229",
-  "summary": "TRYCLONE/CLONE SOFT OK=0 LAST_ERR on miss source/redefine; hard CLONE fatal dual; proof 1411 PASS.",
+  "iter": 873,
+  "version": "1.15.866-usability",
+  "item": "TRYRENAME / RENAMEOBJ SOFT soft object rename",
+  "item_id": 873,
+  "title": "TRYRENAME · RENAMEOBJ SOFT · soft miss/redefine · twin TRYCLONE",
+  "commit": "75c5a2622b2e037d0cc54a25a371c2b15f5ce766",
+  "summary": "TRYRENAME/RENAMEOBJ SOFT OK=0 LAST_ERR on miss source/redefine; hard RENAMEOBJ fatal dual; proof 1412 PASS.",
   "proofs": [
-    "1411_tryclone PASS",
-    "1411_cli_tryclone PASS"
+    "1412_tryrename PASS",
+    "1412_cli_tryrename PASS"
   ],
-  "when": "2026-08-11T04:53:49Z",
+  "when": "2026-08-11T05:10:46Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "4731ef21c40f904a5bd4e9f5a6e337d94f842229",
-  "note": "optional prototype spawn without HASOBJ+IF+CLONE glue"
+  "sha": "75c5a2622b2e037d0cc54a25a371c2b15f5ce766",
+  "note": "promote temp/proto names after CLONE without HASOBJ+IF+RENAME glue"
 }
