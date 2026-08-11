@@ -1,0 +1,76 @@
+# IFENV / IFHASENV — host env set branches
+
+HOLD_FLASH 1
+
+# PATH almost always set
+IFENV PATH
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 1
+ASSERT IFENV_N == 1
+
+# miss + ELSE
+IFENV CUBALC_MI_NO_SUCH_ENV_ZZ
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 0
+ASSERT IFENV_N == 0
+
+# quoted name
+IFENV "PATH"
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# IFHASENV alias
+IFHASENV PATH
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+
+# str-var key
+LET key = "PATH"
+IFENV key
+  LET v = 1
+ELSE
+  LET v = 0
+END
+ASSERT v == 1
+
+# nest with IFEMPTY / set then branch
+SYS ENV SET CUBALC_MI_IFENV_TEST "yes"
+IFENV CUBALC_MI_IFENV_TEST
+  IFEMPTY msg
+    LET state = "cfg"
+  ELSE
+    LET state = "msg"
+  END
+ELSE
+  LET state = "no-env"
+END
+ASSERT state == "cfg"
+SYS ENV UNSET CUBALC_MI_IFENV_TEST
+
+# soft config path
+IFENV CUBALC_MI_IFENV_TEST
+  LET mode = "on"
+ELSE
+  LET mode = "default"
+END
+ASSERT mode == "default"
+
+HASFORM "IFENV"
+ASSERT LAST_N == 1
+HASFORM "IFHASENV"
+ASSERT LAST_N == 1
+
+PRINT "1480_ifenv ok"
+PASS
