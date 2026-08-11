@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 934,
-  "version": "1.15.927-usability",
-  "item": "IFGT / IFLT / IFGE / IFLE / IFEQN / IFNEQN",
-  "item_id": 934,
-  "title": "IFGT \u00b7 IFLT \u00b7 IFGE \u00b7 IFLE \u00b7 IFEQN \u00b7 IFNEQN \u00b7 numeric branches",
-  "commit": "23e24a7a",
-  "summary": "Numeric var branches with ELSE/END; no IF n > 0 glue; proof 1472 PASS.",
+  "iter": 935,
+  "version": "1.15.928-usability",
+  "item": "IFHASLINE / IFINBAG",
+  "item_id": 935,
+  "title": "IFHASLINE · IFINBAG · bag membership branches",
+  "commit": "323c345a",
+  "summary": "Bag membership branches with ELSE/END; no HASINBAG+IF LAST_N glue; proof 1473 PASS.",
   "proofs": [
-    "1472_ifgt_ifeqn PASS",
-    "1472_cli_ifgt_ifeqn PASS",
-    "1467_ifstarts regression PASS",
-    "1471_countin regression PASS"
+    "1473_ifhasline_ifinbag PASS",
+    "1472_ifgt_ifeqn regression PASS",
+    "1467_ifstarts_ifcontains regression PASS",
+    "1471_countin_countlinein regression PASS"
   ],
-  "when": "2026-08-11T16:56:09Z",
+  "when": "2026-08-11T17:25:00Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "23e24a7a643d75b30f5bb43b9d3ce8d83eb705cf",
-  "note": "agent threshold gates without probe+IF glue"
+  "sha": "323c345a3b737cc53807e403934ffdd02aa84115",
+  "note": "work-queue ack without probe+IF glue"
 }
