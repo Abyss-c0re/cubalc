@@ -2045,6 +2045,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"NEEDMETHODANY", "NEEDMETHODANY|REQUIREMETHODANY Class|obj methods… — fail-fast if none match"},
       {"LISTMETHODS", "LISTMETHODS Class|obj — method name bag · NMETHODS"},
       {"HASOBJ", "HASOBJ|LIVES name — soft live-object probe 0|1"},
+      {"HASOBJS", "HASOBJS|ALLOBJS names… — soft 0|1 all live · OBJMISS bag"},
+      {"NEEDOBJS", "NEEDOBJS|REQUIREOBJS names… — fail-fast if any live obj missing · multi HASOBJ"},
       {"BINDTHIS", "BINDTHIS|USEOBJ|ASTHIS name — bind THIS/SELF to live object · soft miss"},
       {"CLEARTHIS", "CLEARTHIS|UNBINDTHIS — clear THIS/SELF binding"},
       {"HASTHIS", "HASTHIS|BOUNDTHIS — soft 0|1 if THIS bound to live object"},

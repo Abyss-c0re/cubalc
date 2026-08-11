@@ -1,0 +1,61 @@
+# HASOBJS / NEEDOBJS — multi live-object soft/hard gate
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 4 0
+NEW Cell b 1 2 1
+
+# all hit
+HASOBJS a b
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASOBJS_N == 2
+ASSERT OBJMISS_N == 0
+ASSERT OBJMISS == ""
+
+# partial miss soft
+HASOBJS a ghost_zz b
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT HASOBJS_N == 2
+ASSERT OBJMISS_N == 1
+SYS HASI OBJMISS "ghost_zz"
+ASSERT LAST_N == 1
+
+# ALLOBJS alias
+ALLOBJS a b
+ASSERT LAST_N == 1
+
+# bag / CSV
+LET need = "ghost,a,b"
+HASOBJS need
+ASSERT LAST_N == 0
+ASSERT HASOBJS_N == 2
+ASSERT OBJMISS_N == 1
+
+LET need = "a,b"
+HASOBJS need
+ASSERT LAST_N == 1
+ASSERT HASOBJS_N == 2
+
+# all miss soft
+HASOBJS nope_x nope_y
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT OBJMISS_N == 2
+
+# empty soft
+HASOBJS
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+HASFORM "HASOBJS"
+ASSERT LAST_N == 1
+HASFORM "NEEDOBJS"
+ASSERT LAST_N == 1
+
+PRINT "1426_hasobjs ok"
+PASS

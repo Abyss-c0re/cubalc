@@ -18049,6 +18049,173 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* HASOBJS|NEEDOBJS name… — multi live-object capability gate (all-or-OBJMISS).
+   * Soft: LAST_N 0|1 · OBJMISS bag · NEEDOBJS fail-fast first miss.
+   * Usability: agent live_session contracts without N× HASOBJ glue · bag/CSV/idents.
+   * Twin of HASCLASSES for live instances · dual of obj_guard ALL path. */
+  if (kw(&L->cur, "HASOBJS") || kw(&L->cur, "HAS_OBJS") ||
+      kw(&L->cur, "ALLOBJS") || kw(&L->cur, "OBJSOK") ||
+      kw(&L->cur, "NEEDOBJS") || kw(&L->cur, "NEED_OBJS") ||
+      kw(&L->cur, "REQUIREOBJS") || kw(&L->cur, "MUSTOBJS")) {
+    int hard = kw(&L->cur, "NEEDOBJS") || kw(&L->cur, "NEED_OBJS") ||
+               kw(&L->cur, "REQUIREOBJS") || kw(&L->cur, "MUSTOBJS");
+    char names[32][48];
+    char miss[1024];
+    int nname = 0, nmiss = 0, i, aln = L->cur.line;
+    size_t mo = 0;
+    lex_next(L);
+    miss[0] = 0;
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "HASOBJ") ||
+           kw(&L->cur, "HASOBJS") || kw(&L->cur, "NEEDOBJS") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASCLASS") ||
+           kw(&L->cur, "HASFORM") || kw(&L->cur, "SEND") || kw(&L->cur, "GETF") ||
+           kw(&L->cur, "SETF") || kw(&L->cur, "DELETEOBJ") ||
+           kw(&L->cur, "TRYDELETE")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] && !oop_find_obj(vm, L->cur.text)) {
+          /* expand string-var object name when ident is not a live obj */
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDOBJS name… — NEEDOBJS a b · HASOBJS bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASOBJS_N", 0);
+      var_set_num(vm, "OBJMISS_N", 0);
+      var_set_str(vm, "OBJMISS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASOBJS: need names — HASOBJS a b");
+      var_set_str(vm, "ERR", "HASOBJS: need names — HASOBJS a b");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      if (oop_find_obj(vm, names[i]))
+        continue;
+      nmiss++;
+      if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+      {
+        size_t ln = strlen(names[i]);
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, names[i], ln);
+          mo += ln;
+          miss[mo] = 0;
+        }
+      }
+      if (hard) {
+        char em[220];
+        snprintf(em, sizeof em,
+                 "NEEDOBJS miss line %d: '%s' (+%d more?) — NEW/ENSURENEW · HASOBJ · LISTOBJS",
+                 aln, names[i], nname - i - 1);
+        fail_at(vm, L, em);
+        return -1;
+      }
+    }
+    var_set_str(vm, "OBJMISS", miss);
+    var_set_num(vm, "OBJMISS_N", nmiss);
+    var_set_num(vm, "HASOBJS_N", nname - nmiss);
+    var_set_num(vm, "NEEDOBJS_N", nname);
+    var_set_num(vm, "OBJS_N", nname);
+    if (nmiss == 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else {
+      char em[220];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASOBJS miss (%d/%d): %s — NEW/ENSURENEW · NEEDOBJS · LISTOBJS",
+               nmiss, nname, miss);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%d miss=%d\n",
+              hard ? "NEEDOBJS" : "HASOBJS", nname, nmiss);
+    bump(vm);
+    return 1;
+  }
+
   /* DELETEOBJ|FREEOBJ|TRYDELETE|SOFTDELETE name — mark live object dead (free slot).
    * Note: DESTROY is cube DECONSTRUCT (ops_cell) — not this form.
    * Soft OK=0 if missing (always soft). NEW reuses same name. Usability: pool recycle.
