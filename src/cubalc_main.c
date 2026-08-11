@@ -4797,6 +4797,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_hasobjs", "programs/proof/1426_cli_hasobjs.sh", "HASOBJS + NEEDOBJS dual"},
       {"hasobjany", "programs/proof/1427_hasobjany.cubalc", "HASOBJANY soft any-of live-obj gate"},
       {"cli_hasobjany", "programs/proof/1427_cli_hasobjany.sh", "HASOBJANY + NEEDOBJANY dual"},
+      {"method_guard_native", "programs/proof/1428_method_guard_native.cubalc", "method_guard via HASCLASS/HASMETHOD"},
+      {"cli_method_guard_native", "programs/proof/1428_cli_method_guard_native.sh", "method_guard native + 1402 regression"},
       {"tryclone", "programs/proof/1411_tryclone.cubalc", "TRYCLONE/CLONE SOFT soft redefine/miss"},
       {"cli_tryclone", "programs/proof/1411_cli_tryclone.sh", "TRYCLONE soft + hard CLONE dual"},
       {"tryrename", "programs/proof/1412_tryrename.cubalc", "TRYRENAME/RENAMEOBJ SOFT soft redefine/miss"},
