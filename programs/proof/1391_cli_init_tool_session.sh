@@ -7,7 +7,7 @@ TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
 OUT=$("$CUBALC" init --list 2>&1)
-printf '%s\n' "$OUT" | grep -qE '"n":(17|18|19|20|21|22|23|24|25|26)'
+printf '%s\n' "$OUT" | grep -qE '"n":(17|18|19|20|21|22|23|24|25|26|27)'
 printf '%s\n' "$OUT" | grep -q 'tool_session'
 printf '%s\n' "$OUT" | grep -qE -- '--full-cli|--tool-full|--cli-full'
 

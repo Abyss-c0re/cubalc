@@ -1,0 +1,40 @@
+# INCLUDE key_boot — agent_boot + plate_boot + plate_guard one-shot
+
+HOLD_FLASH 1
+
+SYS STATE
+LET st = LAST
+SYS JOIN st "mi_key_boot"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "agent.json"
+LET path = LAST
+SYS RM path
+
+DEFAULT PLATE_PATH = path
+DEFAULT PLATE_SEED = "{\"n\":1,\"ok\":true,\"role\":\"worker\"}"
+DEFAULT NEED_KEYS = "n\nok"
+DEFAULT NEED_KEY_ANY = ""
+DEFAULT PLATE_GUARD_SOFT = 0
+INCLUDE key_boot
+ASSERT PLATE_GUARD_OK == 1
+ASSERT PLATE_GUARD_ALL_OK == 1
+ASSERT OK == 1
+HASP "n"
+ASSERT LAST_N == 1
+HASINCLUDE key_boot
+ASSERT LAST_N == 1
+HASLIB key_boot
+ASSERT LAST_N == 1
+HASLIB plate_guard
+ASSERT LAST_N == 1
+
+# soft miss after seed
+LET NEED_KEYS = "n\nnosuch_key_boot"
+LET PLATE_GUARD_SOFT = 1
+INCLUDE plate_guard
+ASSERT PLATE_GUARD_OK == 0
+CLEAR_ERR
+
+PASS
+PRINT "1400_key_boot: PASS"

@@ -1,0 +1,86 @@
+# INCLUDE plate_guard — multi PLATE key ALL + ANY contract
+
+HOLD_FLASH 1
+
+# seed plate for contract tests
+LET PLATE = "{\"n\":1,\"ok\":true,\"role\":\"worker\",\"status\":\"ready\"}"
+
+# --- skip both gates when empty ---
+DEFAULT NEED_KEYS = ""
+DEFAULT NEED_KEY_ANY = ""
+DEFAULT PLATE_GUARD_SOFT = 0
+INCLUDE plate_guard
+ASSERT PLATE_GUARD_OK == 1
+ASSERT PLATE_GUARD_ALL_OK == 1
+ASSERT PLATE_GUARD_ANY_OK == 1
+
+# --- soft ALL miss ---
+LET NEED_KEYS = "n\nnosuch_cubalc_key_all"
+LET NEED_KEY_ANY = ""
+LET PLATE_GUARD_SOFT = 1
+INCLUDE plate_guard
+ASSERT PLATE_GUARD_OK == 0
+ASSERT PLATE_GUARD_ALL_OK == 0
+ASSERT KEYMISS_N >= 1
+SYS HASLINE KEYMISS "nosuch_cubalc_key_all"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# --- soft ALL hit ---
+LET NEED_KEYS = "n\nok"
+LET PLATE_GUARD_SOFT = 1
+INCLUDE plate_guard
+ASSERT PLATE_GUARD_ALL_OK == 1
+ASSERT PLATE_GUARD_OK == 1
+ASSERT KEYHAVE_N >= 2
+
+# --- soft ANY miss ---
+LET NEED_KEYS = ""
+LET NEED_KEY_ANY = "nosuch_cubalc_a\nnosuch_cubalc_b"
+LET PLATE_GUARD_SOFT = 1
+INCLUDE plate_guard
+ASSERT PLATE_GUARD_ANY_OK == 0
+ASSERT PLATE_GUARD_OK == 0
+CLEAR_ERR
+
+# --- soft ANY hit ---
+LET NEED_KEY_ANY = "nosuch_cubalc_a\nrole"
+LET PLATE_GUARD_SOFT = 1
+INCLUDE plate_guard
+ASSERT PLATE_GUARD_ANY_OK == 1
+ASSERT PLATE_GUARD_OK == 1
+CLEAR_ERR
+
+# --- hard ALL ---
+LET NEED_KEYS = "n\nok\nrole"
+LET NEED_KEY_ANY = ""
+LET PLATE_GUARD_SOFT = 0
+INCLUDE plate_guard
+ASSERT PLATE_GUARD_OK == 1
+
+# --- hard ANY ---
+LET NEED_KEYS = ""
+LET NEED_KEY_ANY = "nosuch_cubalc_z\nstatus"
+LET PLATE_GUARD_SOFT = 0
+INCLUDE plate_guard
+ASSERT PLATE_GUARD_ANY_OK == 1
+ASSERT PLATE_GUARD_OK == 1
+
+# --- combined ---
+LET NEED_KEYS = "n"
+LET NEED_KEY_ANY = "ok\nnosuch_cubalc_z"
+LET PLATE_GUARD_SOFT = 1
+INCLUDE plate_guard
+ASSERT PLATE_GUARD_ALL_OK == 1
+ASSERT PLATE_GUARD_ANY_OK == 1
+ASSERT PLATE_GUARD_OK == 1
+
+HASFORM "HASP"
+ASSERT LAST_N == 1
+HASFORM "NEEDP"
+ASSERT LAST_N == 1
+HASLIB plate_guard
+ASSERT LAST_N == 1
+
+PASS
+PRINT "1400_plate_guard: PASS"

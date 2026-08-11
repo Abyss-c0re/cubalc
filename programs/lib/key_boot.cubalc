@@ -1,0 +1,23 @@
+# INCLUDE key_boot — agent preamble + durable PLATE + key contract one-shot
+# Usability: agent_boot + plate_boot + plate_guard without three INCLUDEs.
+#
+#   DEFAULT PLATE_PATH = "state/agent_plate.json"
+#   DEFAULT PLATE_SEED = "{\"n\":0,\"ok\":true}"
+#   DEFAULT NEED_KEYS = "n\nok"
+#   DEFAULT NEED_KEY_ANY = ""
+#   DEFAULT PLATE_GUARD_SOFT = 0
+#   INCLUDE key_boot
+# Soft miss: DEFAULT PLATE_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --key
+# Twin of path_boot (fs) / bin_boot (PATH tools) / lib_boot (modules) for plate schema.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT PLATE_PATH = "state/agent_plate.json"
+DEFAULT PLATE_SEED = "{}"
+DEFAULT NEED_KEYS = ""
+DEFAULT NEED_KEY_ANY = ""
+DEFAULT PLATE_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE plate_boot
+INCLUDE plate_guard
