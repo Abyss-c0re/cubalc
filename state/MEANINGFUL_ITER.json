@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 918,
-  "version": "1.15.911-usability",
-  "item": "PUSHTO / POPFROM / SHIFTFROM / LINESIN / HASINBAG vars",
-  "item_id": 918,
-  "title": "PUSHTO \u00b7 POPFROM \u00b7 SHIFTFROM \u00b7 LINESIN \u00b7 HASINBAG \u00b7 named work bags",
-  "commit": "fa4c3a36",
-  "summary": "Named-var bag push/pop/shift/count/has; agent work queues without LET=SYS PUSH glue; proof 1456 PASS.",
+  "iter": 919,
+  "version": "1.15.912-usability",
+  "item": "IFEMPTY / IFNONEMPTY / IFDEFINED / IFUNDEF + HASEMPTY",
+  "item_id": 919,
+  "title": "IFEMPTY \u00b7 IFNONEMPTY \u00b7 IFDEFINED \u00b7 IFUNDEF \u00b7 HASEMPTY \u00b7 var-presence branches",
+  "commit": "e93def8d",
+  "summary": "Branch on missing/empty/defined vars; HASEMPTY probe; no IF DEFINED/SYS EMPTY glue; proof 1457 PASS.",
   "proofs": [
-    "1456_pushto_bag PASS",
-    "1456_cli_pushto_bag PASS",
-    "1455_replacein_trimto regression PASS"
+    "1457_ifempty_ifdefined PASS",
+    "1457_cli_ifempty_ifdefined PASS",
+    "1456_pushto_bag regression PASS",
+    "1451_iferr_ifok regression PASS"
   ],
-  "when": "2026-08-11T13:48:56Z",
+  "when": "2026-08-11T13:58:38Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "fa4c3a36c6f363327e5c139a87ead5a27253deb4",
-  "note": "agent work queues on vars without SYS bag + LET soup"
+  "sha": "e93def8dd306b01862cfa33aa594254966be15b9",
+  "note": "agent gates on empty queues/messages without EMPTY+IF soup"
 }
