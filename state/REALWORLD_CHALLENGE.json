@@ -6149,7 +6149,7 @@
     "iter329: fn_boot catalog board 10/10 solo+seq; FAIL LAST_ERR hard path broken (W719)",
     "iter329: selftest 590/819 fn_guard+fn_boot PASS; CLI duals still set"
   ],
-  "commit": "",
+  "commit": "6a148c48",
   "ts": "2026-08-11T03:04:03Z",
-  "board_commit": ""
+  "board_commit": "6a148c48"
 }
