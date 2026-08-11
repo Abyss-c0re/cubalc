@@ -284,15 +284,58 @@ static int oop_stmt_kw(Lex *L){
           kw(&L->cur, "GETF") || kw(&L->cur, "SETF") || kw(&L->cur, "METHOD") ||
           kw(&L->cur, "FIELD") || kw(&L->cur, "ENTITY") || kw(&L->cur, "SPAWN") ||
           kw(&L->cur, "TICK") || kw(&L->cur, "SCENE") || kw(&L->cur, "FLOW") ||
-          kw(&L->cur, "PLUG") || kw(&L->cur, "TYPE"));
+          kw(&L->cur, "PLUG") || kw(&L->cur, "TYPE") ||
+          /* OR/DEFAULT/ELSE/FALLBACK: end of arg lists for CALL/GETF duals */
+          kw(&L->cur, "OR") || kw(&L->cur, "DEFAULT") || kw(&L->cur, "ELSE") ||
+          kw(&L->cur, "FALLBACK") || kw(&L->cur, "ELIF"));
 }
+/* Parse optional OR|DEFAULT|ELSE|FALLBACK value after CALL/TRYCALL args.
+ * Returns 1 if present (fb filled), 0 if none. Leaves cursor after fallback. */
+static int call_parse_or_fallback(VM *vm, Lex *L, char *fb, size_t fbn){
+  fb[0] = 0;
+  if (!(kw(&L->cur, "OR") || kw(&L->cur, "DEFAULT") || kw(&L->cur, "ELSE") ||
+        kw(&L->cur, "FALLBACK")))
+    return 0;
+  lex_next(L);
+  if (L->cur.kind == TK_STR) {
+    snprintf(fb, fbn, "%s", L->cur.text);
+    lex_next(L);
+    return 1;
+  }
+  if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+      L->cur.kind == TK_LPAREN ||
+      (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+    long v;
+    if (L->cur.kind == TK_IDENT) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(fb, fbn, "%s", sv->sval);
+        lex_next(L);
+        return 1;
+      }
+      if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(fb, fbn, "%s", vm->last_str);
+        lex_next(L);
+        return 1;
+      }
+    }
+    v = parse_expr(vm, L);
+    snprintf(fb, fbn, "%ld", v);
+    return 1;
+  }
+  fail(vm, "CALL … OR fallback — TRYCALL greeter name OR \"hi\"");
+  return -1;
+}
+
 static int oop_bind_args(VM *vm, Lex *L, char params[][32], int n_params){
   int ai = 0;
   while (ai < 8 &&
          (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT || L->cur.kind == TK_STR ||
           L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN)) {
     char an[16];
+    long v;
     snprintf(an, sizeof an, "ARG%d", ai);
+    if (oop_stmt_kw(L)) break; /* OR/DEFAULT/ELSE end of arg list (CALL … OR fb) */
     if (L->cur.kind == TK_STR) {
       var_set_str(vm, an, L->cur.text);
       if (ai < n_params && params[ai][0])
@@ -313,20 +356,41 @@ static int oop_bind_args(VM *vm, Lex *L, char params[][32], int n_params){
             var_set_str(vm, params[ai], sv->sval);
           lex_next(L);
         } else {
-          long v = parse_expr(vm, L);
+          /* bare numeric-ish ident / var — single atom, not 4 OR 99 expr */
+          v = parse_prim(vm, L);
           var_set_num(vm, an, v);
           if (ai < n_params && params[ai][0])
             var_set_num(vm, params[ai], v);
         }
       }
-    } else {
-      if (oop_stmt_kw(L)) break;
-      {
-        long v = parse_expr(vm, L);
-        var_set_num(vm, an, v);
-        if (ai < n_params && params[ai][0])
-          var_set_num(vm, params[ai], v);
+    } else if (L->cur.kind == TK_NUM) {
+      /* single number token — do not parse_expr (would swallow OR fallback) */
+      v = strtol(L->cur.text, NULL, 10);
+      lex_next(L);
+      var_set_num(vm, an, v);
+      if (ai < n_params && params[ai][0])
+        var_set_num(vm, params[ai], v);
+    } else if (L->cur.kind == TK_MINUS) {
+      /* unary minus number or parenthesized expr */
+      lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        v = -strtol(L->cur.text, NULL, 10);
+        lex_next(L);
+      } else if (L->cur.kind == TK_LPAREN) {
+        v = -parse_expr(vm, L);
+      } else {
+        v = -parse_prim(vm, L);
       }
+      var_set_num(vm, an, v);
+      if (ai < n_params && params[ai][0])
+        var_set_num(vm, params[ai], v);
+    } else if (L->cur.kind == TK_LPAREN) {
+      v = parse_expr(vm, L);
+      var_set_num(vm, an, v);
+      if (ai < n_params && params[ai][0])
+        var_set_num(vm, params[ai], v);
+    } else {
+      break;
     }
     ai++;
   }
@@ -21797,9 +21861,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (vm->trace) fprintf(vm->trace, "# FN %s params=%d len=%zu\n", fname, n_params, blen);
     bump(vm); return 1;
   }
-  /* CALL name [args] · TRYCALL|CALLSOFT|CALL SOFT — soft miss OK=0.
-   * Complements HASFN/FNINFO. Bare CALL still fatal on unknown FN.
-   * Usability: agent optional hooks after LISTFNS without fatal CALL. */
+  /* CALL name [args] [OR|DEFAULT fallback] · TRYCALL|CALL SOFT — soft miss.
+   * TRYCALL … OR val / CALL … OR val — miss → LAST=fallback, OK=1, CALL_OR=1
+   * (GETF/ENV dual). Bare CALL still fatal without OR. Complements HASFN/FNINFO.
+   * Usability: optional plugin hooks with default without IF HASFN glue. */
   if (kw(&L->cur,"CALL")||kw(&L->cur,"RUNFN")||kw(&L->cur,"DO")||
       kw(&L->cur,"CALLIF")||kw(&L->cur,"CALLNZ")||kw(&L->cur,"CALLZ")||
       kw(&L->cur,"CALLWHEN")||kw(&L->cur,"CALLUNLESS")||
@@ -21904,19 +21969,60 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     for (i=0;i<vm->n_fns;i++) if (strcmp(vm->fns[i].name,fname)==0){ fn=&vm->fns[i]; break; }
     if (!fn){
-      char sug[48], ebuf[160], base[96];
+      char sug[48], ebuf[160], base[96], fb[256];
+      int or_rc;
       oop_suggest_fn(vm, fname, sug, sizeof sug);
       snprintf(base, sizeof base, "CALL unknown FN %s", fname);
       oop_err_suggest(ebuf, sizeof ebuf, base, sug);
-      if (soft) {
-        while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
-               L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
-               (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
-          if (L->cur.kind == TK_STR) lex_next(L);
-          else (void)parse_expr(vm, L);
+      /* drain args but stop at OR/DEFAULT (oop_stmt_kw) */
+      while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
+             L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+        if (L->cur.kind == TK_STR) lex_next(L);
+        else (void)parse_expr(vm, L);
+      }
+      or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+      if (or_rc < 0) return -1;
+      if (or_rc > 0) {
+        /* CALL/TRYCALL … OR fallback — soft miss with default (GETF OR twin) */
+        if (fb[0] && (fb[0] == '-' || (fb[0] >= '0' && fb[0] <= '9'))) {
+          long v = 0;
+          char *end = NULL;
+          v = strtol(fb, &end, 10);
+          if (end && end != fb && !*end) {
+            var_set_num(vm, "LAST_N", v);
+            vm->last_n = v;
+            var_set_str(vm, "LAST", fb);
+            snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+          } else {
+            var_set_str(vm, "LAST", fb);
+            snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+            var_set_num(vm, "LAST_N", 0);
+            vm->last_n = 0;
+          }
+        } else {
+          var_set_str(vm, "LAST", fb);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+          var_set_num(vm, "LAST_N", 0);
+          vm->last_n = 0;
         }
         var_set_num(vm, "CALLED", 0);
         var_set_num(vm, "TRYCALL_N", 0);
+        var_set_num(vm, "CALL_OR", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "FN", fname);
+        /* clear sticky err — fallback recovered */
+        var_set_str(vm, "LAST_ERR", "");
+        var_set_str(vm, "ERR", "");
+        if (vm->trace)
+          fprintf(vm->trace, "# CALL OR fallback after miss FN %s\n", fname);
+        bump(vm);
+        return 1;
+      }
+      if (soft) {
+        var_set_num(vm, "CALLED", 0);
+        var_set_num(vm, "TRYCALL_N", 0);
+        var_set_num(vm, "CALL_OR", 0);
         var_set_num(vm, "LAST_N", 0);
         vm->last_n = 0;
         var_set_num(vm, "OK", 0);
@@ -21933,8 +22039,27 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       int ag = oop_arity_gate(vm, "CALL", fn->name, fn->params, fn->n_params, got, soft);
       if (ag < 0) return -1;
       if (ag > 0) {
+        char fb[256];
+        int or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+        if (or_rc < 0) return -1;
+        if (or_rc > 0) {
+          var_set_str(vm, "LAST", fb);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+          var_set_num(vm, "LAST_N", 0);
+          vm->last_n = 0;
+          var_set_num(vm, "CALLED", 0);
+          var_set_num(vm, "TRYCALL_N", 0);
+          var_set_num(vm, "CALL_OR", 1);
+          var_set_num(vm, "OK", 1);
+          var_set_str(vm, "FN", fn->name);
+          var_set_str(vm, "LAST_ERR", "");
+          var_set_str(vm, "ERR", "");
+          bump(vm);
+          return 1;
+        }
         var_set_num(vm, "CALLED", 0);
         var_set_num(vm, "TRYCALL_N", 0);
+        var_set_num(vm, "CALL_OR", 0);
         var_set_str(vm, "FN", fn->name);
         bump(vm);
         return 1;
@@ -21949,6 +22074,13 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       if (exec_stmts_until(vm, &fl, "END", NULL)<0) return -1;
     }
     vm->return_fn = 0;
+    /* discard unused OR fallback after successful CALL */
+    {
+      char fb[256];
+      int or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+      if (or_rc < 0) return -1;
+      var_set_num(vm, "CALL_OR", 0);
+    }
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }

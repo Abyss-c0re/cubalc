@@ -1,0 +1,61 @@
+# TRYCALL / CALL … OR fallback — soft plugin default (GETF OR twin)
+
+HOLD_FLASH 1
+
+FN greet name
+  RET name
+END
+
+FN add a b
+  RET a + b
+END
+
+# hit — OR unused
+TRYCALL greet "agent" OR "fallback"
+ASSERT OK == 1
+ASSERT CALLED == 1
+ASSERT CALL_OR == 0
+ASSERT LAST == "agent"
+
+# miss soft with string fallback
+TRYCALL ghost_fn "x" OR "default_hi"
+ASSERT OK == 1
+ASSERT CALLED == 0
+ASSERT CALL_OR == 1
+ASSERT LAST == "default_hi"
+
+# CALL … OR implies soft miss
+CALL nosuch_plugin OR 42
+ASSERT OK == 1
+ASSERT CALLED == 0
+ASSERT CALL_OR == 1
+ASSERT LAST_N == 42
+
+# numeric fallback via DEFAULT keyword
+TRYCALL missing_add 1 2 DEFAULT 0
+ASSERT OK == 1
+ASSERT CALL_OR == 1
+ASSERT LAST_N == 0
+
+# successful multi-arg still works with trailing OR discarded
+CALL add 3 4 OR 99
+ASSERT CALLED == 1
+ASSERT CALL_OR == 0
+ASSERT LAST_N == 7
+
+# bare TRYCALL miss still soft without OR
+TRYCALL totally_missing
+ASSERT OK == 0
+ASSERT CALLED == 0
+CLEAR_ERR
+
+# FALLBACK alias
+TRYCALL ghost2 OR "z"
+ASSERT CALL_OR == 1
+ASSERT LAST == "z"
+
+HASFORM "TRYCALL"
+ASSERT LAST_N == 1
+
+PRINT "1441_call_or ok"
+PASS

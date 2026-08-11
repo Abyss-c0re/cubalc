@@ -2802,7 +2802,7 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"SCENE", "SCENE name — tag current engine scene/level"},
       {"FN", "FN name [params] … END — reusable function · CALL / RET"},
       {"CALL", "CALL name|obj method [args] — FN or object method"},
-      {"TRYCALL", "TRYCALL|CALL SOFT name [args] — soft miss OK=0 sticky LAST_ERR · twin TRYSEND"},
+      {"TRYCALL", "TRYCALL|CALL SOFT name [args] [OR fb] — soft miss · OR → LAST=fb OK=1 CALL_OR"},
       {"CALLANY", "CALLANY|CALLFIRST names… [WITH args] — call first defined FN · HASFNANY dispatch"},
       {"TRYCALLANY", "TRYCALLANY|SOFTCALLANY names… [WITH args] — soft CALLANY if none defined"},
       {"CALLFIRST", "CALLFIRST alias of CALLANY"},
