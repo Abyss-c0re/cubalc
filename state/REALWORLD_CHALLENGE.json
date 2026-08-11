@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 355,
-  "program": "programs/realworld/svc_mul_coalesce_scale_board.cubalc",
-  "theme": "MUL/DIVBY weight scale + COALESCETO defaults + NTHIN peels",
-  "version": "1.15.916-usability",
+  "iter": 356,
+  "program": "programs/realworld/svc_lenof_path_peel_board.cubalc",
+  "theme": "LENOF/STARTSIN probes + LEFTTO/BEFOREIN/AFTERIN path peels",
+  "version": "1.15.917-usability",
   "pass": true,
-  "prior_note": "iter 354 PUSHTO queue; this iter first realworld of 1459 MUL/DIVBY + 1460 COALESCETO/NTHIN",
+  "prior_note": "iter 355 MUL/COALESCETO; this iter first realworld of 1461 LENOF/STARTSIN + 1462 LEFTTO/BEFOREIN",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed + MUL weight *2",
+      "cmd": "seed + LENOF 15",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "MUL/DIVBY/MODBY/ABS/NEG/MULTO 10/10",
+      "cmd": "LENOF/STARTSIN/ENDSIN/CONTAINSIN/INDEXIN 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "DIVBY0 + COALESCETO empty + NTHIN OR 10/10",
+      "cmd": "ghost LENOF + BEFORE/AFTER miss + false friends 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "scale",
-      "cmd": "canary weight MUL/CLAMP pipeline 10/10",
-      "ok": true,
-      "note": "scale 10/10"
-    },
-    {
       "name": "peel",
-      "cmd": "HEADIN/TAILIN/NTHIN bag intact 10/10",
+      "cmd": "BEFOREIN/AFTERIN/BETWEENIN route hops 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
+      "name": "slice",
+      "cmd": "LEFTTO/RIGHTTO/MIDTO/SLICETO 10/10",
+      "ok": true,
+      "note": "slice 10/10"
+    },
+    {
       "name": "form",
-      "cmd": "HASFORM MUL/COALESCETO/NTHIN",
+      "cmd": "HASFORM LENOF/LEFTTO/BEFOREIN",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "scale+coalesce+peel + REQUIRE",
+      "cmd": "release path admit + REQUIRE",
       "ok": true,
       "note": "gate"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1459/1460/1461 PASS; CLI duals still red",
+      "cmd": "selftest; 1461/1462 PASS; CLI duals still red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -6794,6 +6794,30 @@
       "title": "HEADIN takes bag only (no count); HEADIN bag 2 is parse error",
       "detail": "HEADIN bag 2 \u2192 unknown form '2'. Proof 1460 uses bare HEADIN bag. Multi-line head needs TAKE/SYS HEAD or loop NTHIN.",
       "repro": "HEADIN bag 2 hard-fail; HEADIN bag ok"
+    },
+    {
+      "id": "W841",
+      "severity": "low",
+      "area": "lang|beforein",
+      "title": "BEFOREIN miss keeps string; AFTERIN miss empties (asymmetric)",
+      "detail": "BEFOREIN z \":\" on \"nocolon\" leaves z unchanged; AFTERIN z2 \":\" yields \"\". Agents must not assume symmetric delimiter miss behavior. Multi AFTERIN chain peels successive segments (a/b/c \u2192 c).",
+      "repro": "BEFOREIN z \":\" keeps; AFTERIN z2 \":\" \u2192 empty"
+    },
+    {
+      "id": "W842",
+      "severity": "low",
+      "area": "lang|lenof",
+      "title": "LENOF/STARTSIN/LEFTTO/BEFOREIN peels work (positive)",
+      "detail": "In-place path/log surgery without SYS LEFT/BEFORE: INDEXIN miss=-1; BETWEENIN_N=len; CONTAINSIN vs STARTSIN substring false friends; LEFTTO 0\u2192empty, LEFTTO huge keeps all. Good deploy path admit surface.",
+      "repro": "LENOF msg; BEFOREIN path \"/\"; AFTERIN path \"/\"; LEFTTO s 3"
+    },
+    {
+      "id": "W843",
+      "severity": "med",
+      "area": "host|state",
+      "title": "REALWORLD_CHALLENGE.json was deleted from worktree mid-session",
+      "detail": "state/REALWORLD_CHALLENGE.json missing at iter start (git status deleted); restored via git checkout HEAD --. Other state plates also deleted. Challenge runners must restore plate before update; do not assume state/ persists across fires.",
+      "repro": "ls state/REALWORLD_CHALLENGE.json \u2192 missing; git checkout HEAD -- state/REALWORLD_CHALLENGE.json"
     }
   ],
   "workarounds": [
@@ -6922,7 +6946,6 @@
     "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
   ],
   "language_gaps": [
-    "HASFIELDS/HASFIELDANY/HASMETHODANY/HASOBJS preflight (1423-1426)",
     "bare status field keyword collide (W779)",
     "HASOBJS partial N vs OK (W780)",
     "HASFNS/HASFNANY/HASOBJANY runbook+slot admit (1429/1432/1427)",
@@ -6987,10 +7010,14 @@
       "iter": 355,
       "gap": "In-place scale + coalesce is excellent for canary ops; CLEAR_ERR still hostile to LAST peels; HEADIN cannot take N.",
       "want": "CLEAR_ERR preserve LAST optional; HEADIN bag n multi-line"
+    },
+    {
+      "iter": 356,
+      "gap": "Named-var string probes+peels close SYS LEFT/BEFORE gaps for path admit; AFTER miss empty vs BEFORE keep is easy to misuse.",
+      "want": "Docs for miss asymmetry; optional AFTER keep-on-miss flag"
     }
   ],
   "issues_faced": [
-    "iter336: HASFORM bare SETMATCHFILE 0; SYS SETMATCHFILE 1 (W757)",
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
     "iter337: CLEAR_ERR LAST='cleared' broke fresh/stale HASLINE/EQS until capture-before-clear (W763)",
     "iter337: HASFORM SYS MAPAGE/KEEPFRESH/AGED lag while ops live (W764)",
@@ -7065,9 +7092,14 @@
       "iter": 355,
       "issue": "CLEAR_ERR after NTHIN lost OR fallback LAST (W838); form expected LENOF absent but 1461 landed. Fixed capture + tolerate LENOF.",
       "resolution": "first realworld 1459+1460; document W838\u2013W840"
+    },
+    {
+      "iter": 356,
+      "issue": "State plate deleted at fire start; gate LENOF of v1.2.3 is 6 not 5. Restored plate; fixed gate count.",
+      "resolution": "first realworld 1461+1462; document W841\u2013W843"
     }
   ],
-  "commit": "4b5fa67f",
-  "ts": 1786459197,
+  "commit": "844a5204",
+  "ts": 1786460723,
   "board_commit": "767d4822"
 }
