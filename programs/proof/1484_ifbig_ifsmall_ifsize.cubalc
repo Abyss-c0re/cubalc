@@ -1,0 +1,131 @@
+# IFBIG / IFSMALL / IFSIZE — path size branches
+
+HOLD_FLASH 1
+
+SYS MKDIR "state/meaningful_iter/mi_ifsize"
+SYS WRITE "state/meaningful_iter/mi_ifsize/big.json" "{\"payload\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+SYS WRITE "state/meaningful_iter/mi_ifsize/empty.json" ""
+SYS TOUCH "state/meaningful_iter/mi_ifsize/zero.dat"
+
+# non-empty content → IFBIG default (min 1)
+IFBIG "state/meaningful_iter/mi_ifsize/big.json"
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 1
+ASSERT IFBIG_N == 1
+ASSERT IFSIZE_BYTES > 0
+
+# empty file not big with default
+IFBIG "state/meaningful_iter/mi_ifsize/empty.json"
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+ASSERT IFBIG_N == 0
+ASSERT IFSIZE_BYTES == 0
+
+# big with high min fails
+IFBIG "state/meaningful_iter/mi_ifsize/big.json" 999999
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+
+# missing → not big
+IFBIG "state/meaningful_iter/mi_ifsize/nope.json" 1
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+
+# empty → IFSMALL default max 0
+IFSMALL "state/meaningful_iter/mi_ifsize/empty.json"
+  LET s = 1
+ELSE
+  LET s = 0
+END
+ASSERT s == 1
+ASSERT IFSMALL_N == 1
+
+# missing → small
+IFSMALL "state/meaningful_iter/mi_ifsize/nope2.json"
+  LET s = 1
+ELSE
+  LET s = 0
+END
+ASSERT s == 1
+
+# contentful file not small with max 0
+IFSMALL "state/meaningful_iter/mi_ifsize/big.json" 0
+  LET s = 1
+ELSE
+  LET s = 0
+END
+ASSERT s == 0
+
+# IFSIZE range includes big.json
+IFSIZE "state/meaningful_iter/mi_ifsize/big.json" 1 10000
+  LET z = 1
+ELSE
+  LET z = 0
+END
+ASSERT z == 1
+ASSERT IFSIZE_N == 1
+ASSERT IFSIZE_MIN == 1
+ASSERT IFSIZE_MAX == 10000
+
+# IFSIZE band too tight
+IFSIZE "state/meaningful_iter/mi_ifsize/big.json" 1 2
+  LET z = 1
+ELSE
+  LET z = 0
+END
+ASSERT z == 0
+
+# miss not in range
+IFSIZE "state/meaningful_iter/mi_ifsize/nope3.json" 0 10
+  LET z = 1
+ELSE
+  LET z = 0
+END
+ASSERT z == 0
+
+# nest: rotate if big
+IFBIG "state/meaningful_iter/mi_ifsize/big.json" 10
+  SYS WRITE "state/meaningful_iter/mi_ifsize/rotated.flag" "1"
+  LET did = 1
+ELSE
+  LET did = 0
+END
+ASSERT did == 1
+IFFILE "state/meaningful_iter/mi_ifsize/rotated.flag"
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+# var path + min
+LET p = "state/meaningful_iter/mi_ifsize/big.json"
+LET lim = 5
+IFBIG p lim
+  LET v = 1
+ELSE
+  LET v = 0
+END
+ASSERT v == 1
+
+HASFORM "IFBIG"
+ASSERT LAST_N == 1
+HASFORM "IFSMALL"
+ASSERT LAST_N == 1
+HASFORM "IFSIZE"
+ASSERT LAST_N == 1
+
+PRINT "1484_ifbig_ifsmall_ifsize ok"
+PASS

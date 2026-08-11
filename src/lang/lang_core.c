@@ -1254,14 +1254,17 @@ void cubalc_lang_do_eeg_fold_matrix(VM *vm, const char *id, const cubalc_matrix 
 
 void cubalc_lang_do_eegdemo(VM *vm, const char *id){
   ensure_world(vm);
-  long nch = var_get(vm, "EEG_CH", 0);
+  Var *_vg_nch = var_get(vm, "EEG_CH", 0);
+  long nch = (_vg_nch && !_vg_nch->is_str) ? _vg_nch->val : 0;
   if (nch < 1) nch = CUBALC_EEG_DEF_CH;
   if (nch > CUBALC_EEG_MAX_CH) nch = CUBALC_EEG_MAX_CH;
-  long seed = var_get(vm, "EEG_SEED", 0);
+  Var *_vg_seed = var_get(vm, "EEG_SEED", 0);
+  long seed = (_vg_seed && !_vg_seed->is_str) ? _vg_seed->val : 0;
   if (seed == 0) seed = 0xC0BEA160L;
   cubalc_eeg_frame fr;
   cubalc_eeg_demo_frame(&fr, (int)nch, seed);
-  long sc = var_get(vm, "EEG_SCALE", 0);
+  Var *_vg_sc = var_get(vm, "EEG_SCALE", 0);
+  long sc = (_vg_sc && !_vg_sc->is_str) ? _vg_sc->val : 0;
   if (sc > 0) fr.scale_uv = (float)sc;
   cubalc_matrix m;
   if (cubalc_eeg_pack_matrix(&fr, &m) != 0) {
@@ -1270,15 +1273,21 @@ void cubalc_lang_do_eegdemo(VM *vm, const char *id){
   }
   var_set_num(vm, "EEG_CH", (long)fr.n_ch);
   var_set_num(vm, "EEG_WIN", (long)fr.n_samp);
-  var_set_num(vm, "EEG_SEQ", var_get(vm, "EEG_SEQ", 0) + 1);
+  {
+    Var *_vg_seq = var_get(vm, "EEG_SEQ", 0);
+    long _seq = (_vg_seq && !_vg_seq->is_str) ? _vg_seq->val : 0;
+    var_set_num(vm, "EEG_SEQ", _seq + 1);
+  }
   do_eeg_fold_matrix(vm, id && id[0] ? id : "eeg", &m);
 }
 
 void cubalc_lang_do_eegpack_csv(VM *vm, const char *id, const char *csv){
   ensure_world(vm);
-  long nch = var_get(vm, "EEG_CH", 0);
+  Var *_vg_nch = var_get(vm, "EEG_CH", 0);
+  long nch = (_vg_nch && !_vg_nch->is_str) ? _vg_nch->val : 0;
   if (nch < 1) nch = CUBALC_EEG_DEF_CH;
-  long sc = var_get(vm, "EEG_SCALE", 0);
+  Var *_vg_sc = var_get(vm, "EEG_SCALE", 0);
+  long sc = (_vg_sc && !_vg_sc->is_str) ? _vg_sc->val : 0;
   float scale = sc > 0 ? (float)sc : CUBALC_EEG_DEF_SCALE;
   cubalc_matrix m;
   if (cubalc_eeg_pack_csv_line(csv, (int)nch, scale, &m) != 0) {
@@ -1286,7 +1295,11 @@ void cubalc_lang_do_eegpack_csv(VM *vm, const char *id, const char *csv){
     var_set_str(vm, "LAST_ERR", "EEGPACK need CSV sample line");
     return;
   }
-  var_set_num(vm, "EEG_SEQ", var_get(vm, "EEG_SEQ", 0) + 1);
+  {
+    Var *_vg_seq = var_get(vm, "EEG_SEQ", 0);
+    long _seq = (_vg_seq && !_vg_seq->is_str) ? _vg_seq->val : 0;
+    var_set_num(vm, "EEG_SEQ", _seq + 1);
+  }
   do_eeg_fold_matrix(vm, id && id[0] ? id : "eeg", &m);
 }
 
@@ -1311,11 +1324,14 @@ void cubalc_lang_do_eegread(VM *vm, const char *id){
     var_set_str(vm, "LAST_ERR", "EEGREAD need EEG_PATH or CUBALC_EEG_PATH");
     return;
   }
-  long nch = var_get(vm, "EEG_CH", 0);
+  Var *_vg_nch = var_get(vm, "EEG_CH", 0);
+  long nch = (_vg_nch && !_vg_nch->is_str) ? _vg_nch->val : 0;
   if (nch < 1) nch = CUBALC_EEG_DEF_CH;
-  long sc = var_get(vm, "EEG_SCALE", 0);
+  Var *_vg_sc = var_get(vm, "EEG_SCALE", 0);
+  long sc = (_vg_sc && !_vg_sc->is_str) ? _vg_sc->val : 0;
   float scale = sc > 0 ? (float)sc : CUBALC_EEG_DEF_SCALE;
-  long win = var_get(vm, "EEG_WIN", 0);
+  Var *_vg_win = var_get(vm, "EEG_WIN", 0);
+  long win = (_vg_win && !_vg_win->is_str) ? _vg_win->val : 0;
   if (win < 1) win = 16;
   if (win > CUBALC_EEG_MAX_WIN) win = CUBALC_EEG_MAX_WIN;
 
@@ -1349,7 +1365,11 @@ void cubalc_lang_do_eegread(VM *vm, const char *id){
   }
   var_set_num(vm, "EEG_CH", (long)fr.n_ch);
   var_set_num(vm, "EEG_WIN", (long)fr.n_samp);
-  var_set_num(vm, "EEG_SEQ", var_get(vm, "EEG_SEQ", 0) + 1);
+  {
+    Var *_vg_seq = var_get(vm, "EEG_SEQ", 0);
+    long _seq = (_vg_seq && !_vg_seq->is_str) ? _vg_seq->val : 0;
+    var_set_num(vm, "EEG_SEQ", _seq + 1);
+  }
   do_eeg_fold_matrix(vm, id && id[0] ? id : "eeg", &m);
 }
 

@@ -974,6 +974,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 943. ~~**`IFFIELD` / `IFHASFIELD`**~~ **done** (field exists branch · no HASFIELD+IF LAST_N glue · proof 1481).
 944. ~~**`IFFRESH` / `IFSTALE`**~~ **done** (path age branches · no SYS AGE+IF glue · proof 1482).
 
+945. ~~**`IFBIG` / `IFSMALL` / `IFSIZE`**~~ **done** (path size branches · no SYS SIZE+IF glue · proof 1484).
+
 
 
 
