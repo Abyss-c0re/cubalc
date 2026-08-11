@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 848,
-  "version": "1.15.840-usability",
-  "item": "arg_guard lib NEED_ARGS + NEED_ARG_ANY",
-  "item_id": 848,
-  "title": "arg_guard \u00b7 NEED_ARGS \u00b7 NEED_ARG_ANY \u00b7 doctor lib_arg_guard",
-  "commit": "896772a82998ae6c5fc27da94ee40304ceb844a4",
-  "summary": "INCLUDE arg_guard program-arg ALL/ANY contract twin of env_guard; doctor lib_arg_guard; proof 1388 PASS.",
+  "iter": 849,
+  "version": "1.15.841-usability",
+  "item": "arg_boot + cubalc init --arg",
+  "item_id": 849,
+  "title": "arg_boot \u00b7 init --arg \u00b7 doctor lib_arg_boot",
+  "commit": "1d1801bcc4c7c89310fdc4311b3b66935cf2cc71",
+  "summary": "agent_boot+arg_guard one-shot; init --arg catalog n=16; doctor lib_arg_boot; proof 1389 PASS.",
   "proofs": [
-    "1388_arg_guard PASS",
-    "1388_cli_arg_guard PASS"
+    "1389_arg_boot PASS",
+    "1389_cli_init_arg PASS"
   ],
-  "when": "2026-08-11T00:24:00Z",
+  "when": "2026-08-11T00:33:24Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "896772a82998ae6c5fc27da94ee40304ceb844a4",
-  "note": "pairs form/env/cli_guard \u00b7 completes guard matrix for CUBALC_ARGn"
+  "sha": "1d1801bcc4c7c89310fdc4311b3b66935cf2cc71",
+  "note": "pairs env_boot/cap_boot \u00b7 program-arg starter without cookbook"
 }
