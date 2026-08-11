@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 946,
-  "version": "1.15.940-usability",
-  "item": "IFNEWER / IFOLDER / IFOUTOFDATE",
-  "item_id": 946,
-  "title": "IFNEWER \u00b7 IFOLDER \u00b7 IFOUTOFDATE \u00b7 relative mtime rebuild gates",
-  "commit": "2a0dd62e",
-  "summary": "Make-style path mtime branches; no dual MTIME+IF glue; proof 1485 PASS.",
+  "iter": 947,
+  "version": "1.15.941-usability",
+  "item": "IFEQFILE / IFDIFFILE / IFSAMEFILE",
+  "item_id": 947,
+  "title": "IFEQFILE \u00b7 IFDIFFILE \u00b7 IFSAMEFILE \u00b7 content equality branches",
+  "commit": "88a2d14a",
+  "summary": "File content identity branches with ELSE/END; no SYS EQFILE+IF glue; proof 1486 PASS.",
   "proofs": [
-    "1485_ifnewer_ifolder_ifoutofdate PASS",
-    "1484_ifbig regression PASS"
+    "1486_ifeqfile_ifdiffile PASS",
+    "1485_ifnewer regression PASS"
   ],
-  "when": "2026-08-11T20:05:54Z",
+  "when": "2026-08-11T20:20:34Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "2a0dd62e7210110737ce72f20f3b3e255de5aefd",
-  "note": "derived-plate rebuild without relative mtime probe glue; thrash restore mid-tick"
+  "sha": "88a2d14a1386524b5acada182db8f7a55b4a4001",
+  "note": "plate sync/skip-copy without content probe+IF glue"
 }
