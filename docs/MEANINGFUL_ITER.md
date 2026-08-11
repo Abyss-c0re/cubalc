@@ -918,6 +918,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 887. ~~**`HASOBJS` / `NEEDOBJS`**~~ **done** (multi live-object soft/hard gate · OBJMISS bag · HASCLASSES twin for instances · proof 1426).
 888. ~~**`HASOBJANY` / `NEEDOBJANY`**~~ **done** (any-of multi live-object gate · OBJHAVE bag · HASOBJS twin · proof 1427).
 889. ~~**`method_guard` native HASCLASS/HASMETHOD**~~ **done** (lib rewrite · drop LISTMETHODS+HASLINE soup · proof 1428 + 1402 regression).
+890. ~~**`HASFNS` / `NEEDFNS`**~~ **done** (multi FN soft/hard gate · FNMISS bag · HASOBJS dual for FN plane · proof 1429).
+891. ~~**`field_guard` native HASCLASS/HASFIELD**~~ **done** (lib rewrite · drop LISTFIELDS+HASLINE soup · proof 1430 + 1403 regression).
 
 
 ## Tick protocol

@@ -1,16 +1,14 @@
 # INCLUDE field_guard - fail-fast Class.field catalog contract (ALL + optional ANY)
-# Usability: agent OOP field gate without Nx HASFIELD / LISTFIELDS glue.
+# Usability: agent OOP field gate via native HASCLASS/HASFIELD (no LISTFIELDS+HASLINE soup).
 #
 #   DEFAULT NEED_FIELDS = "Ticket.id\nTicket.kind"
 #   DEFAULT NEED_FIELD_ANY = "Order.n\nTicket.n"
 #   DEFAULT FIELD_GUARD_SOFT = 0
 #   INCLUDE field_guard
 #
-# Spec: each entry is Class.field (dot). Class must exist (LISTCLASSES) and
-# field must appear in LISTFIELDS Class (SYS HASLINE). Soft dual leaves
-# FLDMISS / FLDHAVE bags. Twin of method_guard for field plane.
-# Note: hard path uses LISTFIELDS+HASLINE+FAIL (not REQUIRE FIELD) because
-# REQUIRE FIELD can break IF/END nesting when present as text inside INCLUDE.
+# Spec: each entry is Class.field (dot). Soft dual leaves FLDMISS / FLDHAVE bags.
+# Twin of method_guard (native HASMETHOD) for field plane.
+# Hard path: HARDFAIL (not REQUIRE FIELD — can break IF/END nesting in INCLUDE).
 
 DEFAULT NEED_FIELDS = ""
 DEFAULT NEED_FIELD_ANY = ""
@@ -28,8 +26,6 @@ ELSE
   LET FLDHAVE = ""
   LET FLDMISS_N = 0
   LET FLDHAVE_N = 0
-  LISTCLASSES
-  LET _FLD_CLASS_CAT = LAST
   EACH LINE b IN NEED_FIELDS
     SYS BEFORE b "."
     LET _fcn = LAST
@@ -53,7 +49,7 @@ ELSE
           LET FLDMISS = FLDMISS + "\n" + b
         END
       ELSE
-        SYS HASLINE _FLD_CLASS_CAT _fcn
+        HASCLASS _fcn
         IF LAST_N == 0
           LET FLDMISS_N = FLDMISS_N + 1
           IF FLDMISS == ""
@@ -62,9 +58,7 @@ ELSE
             LET FLDMISS = FLDMISS + "\n" + b
           END
         ELSE
-          LISTFIELDS _fcn
-          LET _fcat = LAST
-          SYS HASLINE _fcat _ffn
+          HASFIELD _fcn _ffn
           IF LAST_N == 1
             LET FLDHAVE_N = FLDHAVE_N + 1
             IF FLDHAVE == ""
@@ -93,7 +87,7 @@ ELSE
     LET LAST_ERR = "FIELD_GUARD ALL miss - missing: " + FLDMISS
     LET ERR = LAST_ERR
     IF FIELD_GUARD_SOFT == 0
-      HARDFAIL "FIELD_GUARD hard miss — see ERR/FIELDMISS"
+      HARDFAIL "FIELD_GUARD hard miss — see ERR/FLDMISS"
     END
   END
 END
@@ -105,8 +99,6 @@ ELSE
   LET FLDANY_HIT = 0
   LET FLDANY_HAVE = ""
   LET FLDANY_MISS = ""
-  LISTCLASSES
-  LET _FLD_CLASS_CAT = LAST
   EACH LINE b IN NEED_FIELD_ANY
     SYS BEFORE b "."
     LET _fcn = LAST
@@ -128,7 +120,7 @@ ELSE
           LET FLDANY_MISS = FLDANY_MISS + "\n" + b
         END
       ELSE
-        SYS HASLINE _FLD_CLASS_CAT _fcn
+        HASCLASS _fcn
         IF LAST_N == 0
           IF FLDANY_MISS == ""
             LET FLDANY_MISS = b
@@ -136,9 +128,7 @@ ELSE
             LET FLDANY_MISS = FLDANY_MISS + "\n" + b
           END
         ELSE
-          LISTFIELDS _fcn
-          LET _fcat = LAST
-          SYS HASLINE _fcat _ffn
+          HASFIELD _fcn _ffn
           IF LAST_N == 1
             LET FLDANY_HIT = 1
             IF FLDANY_HAVE == ""
@@ -168,7 +158,7 @@ ELSE
     LET LAST_ERR = "FIELD_GUARD ANY miss - need one of: " + NEED_FIELD_ANY
     LET ERR = LAST_ERR
     IF FIELD_GUARD_SOFT == 0
-      HARDFAIL "FIELD_GUARD hard miss — see ERR/FIELDMISS"
+      HARDFAIL "FIELD_GUARD hard miss — see ERR/FLDMISS"
     END
   END
 END
