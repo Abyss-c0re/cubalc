@@ -3818,6 +3818,13 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"PREFIXTO", "PREFIXTO alias of PREPENDTO"},
       {"COPYTO", "COPYTO|COPYV src [TO] dst — copy var (num/str) · dual buffer seed"},
       {"COPYV", "COPYV alias of COPYTO"},
+      {"REPLACEIN", "REPLACEIN|GSUBTO name needle [WITH] repl — in-place REPLACEALL · no LET glue"},
+      {"GSUBTO", "GSUBTO alias of REPLACEIN"},
+      {"TRIMTO", "TRIMTO|STRIPTO name — in-place whitespace trim on var"},
+      {"UPPERTO", "UPPERTO name — in-place ASCII upper on var"},
+      {"LOWERTO", "LOWERTO name — in-place ASCII lower on var"},
+      {"ZERO", "ZERO name — set numeric var to 0 · counter reset"},
+      {"CLEARSTR", "CLEARSTR|EMPTYTO name — set string var to empty"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -72092,6 +72099,203 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# COPYTO %s -> %s\n", src, dst);
+    bump(vm);
+    return 1;
+  }
+  /* REPLACEIN|GSUBTO name needle [WITH] repl — in-place REPLACEALL on var.
+   * TRIMTO|STRIPTO name — in-place whitespace trim.
+   * UPPERTO|LOWERTO name — in-place ASCII case.
+   * Usability: mutate string vars without LET x = REPLACEALL/TRIM/UPPER x … glue. */
+  if (kw(&L->cur,"REPLACEIN")||kw(&L->cur,"GSUBTO")||kw(&L->cur,"SUBSTIN")||
+      kw(&L->cur,"REPLACEALLIN")||kw(&L->cur,"REPINTO")||kw(&L->cur,"GSUBIN")||
+      kw(&L->cur,"TRIMTO")||kw(&L->cur,"STRIPTO")||kw(&L->cur,"TRIMV")||
+      kw(&L->cur,"UPPERTO")||kw(&L->cur,"UCASETO")||kw(&L->cur,"TOUPPERV")||
+      kw(&L->cur,"LOWERTO")||kw(&L->cur,"LCASETO")||kw(&L->cur,"TOLOWERV")){
+    char op[24], name[48];
+    int mode = 0; /* 0=replace, 1=trim, 2=upper, 3=lower */
+    char cur[CUBALC_HOST_STR_MAX];
+    char out[CUBALC_HOST_STR_MAX];
+    Var *vv;
+    long did = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "TRIMTO") == 0 || strcmp(op, "STRIPTO") == 0 ||
+        strcmp(op, "TRIMV") == 0)
+      mode = 1;
+    else if (strcmp(op, "UPPERTO") == 0 || strcmp(op, "UCASETO") == 0 ||
+             strcmp(op, "TOUPPERV") == 0)
+      mode = 2;
+    else if (strcmp(op, "LOWERTO") == 0 || strcmp(op, "LCASETO") == 0 ||
+             strcmp(op, "TOLOWERV") == 0)
+      mode = 3;
+    else
+      mode = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, mode == 0 ? "REPLACEIN needs name needle repl — REPLACEIN s \"a\" \"b\""
+           : mode == 1 ? "TRIMTO needs name — TRIMTO s"
+           : mode == 2 ? "UPPERTO needs name — UPPERTO s"
+                       : "LOWERTO needs name — LOWERTO s");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    cur[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+    /* else missing → empty */
+
+    if (mode == 0) {
+      char olds[CUBALC_HOST_STR_MAX], news[CUBALC_HOST_STR_MAX];
+      size_t oldn, newn, o;
+      const char *srcp;
+      olds[0] = news[0] = 0;
+      if (kw(&L->cur, "OF") || kw(&L->cur, "FROM"))
+        lex_next(L);
+      if (resolve_str_arg(vm, L, olds, sizeof olds) != 0) {
+        fail(vm, "REPLACEIN needs needle — REPLACEIN s \"old\" \"new\"");
+        return -1;
+      }
+      if (kw(&L->cur, "WITH") || kw(&L->cur, "TO") || kw(&L->cur, "BY") ||
+          kw(&L->cur, "=>") || kw(&L->cur, ","))
+        lex_next(L);
+      if (resolve_str_arg(vm, L, news, sizeof news) != 0) {
+        /* allow empty replacement: REPLACEIN s "x" ""  via empty string only.
+         * If missing token, treat as empty repl (delete all needles). */
+        news[0] = 0;
+      }
+      oldn = strlen(olds);
+      newn = strlen(news);
+      out[0] = 0;
+      o = 0;
+      if (oldn == 0) {
+        snprintf(out, sizeof out, "%s", cur);
+        did = 0;
+      } else {
+        srcp = cur;
+        for (;;) {
+          const char *p = strstr(srcp, olds);
+          if (!p) {
+            size_t rest = strlen(srcp);
+            if (o + rest >= sizeof out) rest = sizeof out - 1 - o;
+            if (rest) memcpy(out + o, srcp, rest);
+            o += rest;
+            out[o] = 0;
+            break;
+          }
+          {
+            size_t pre = (size_t)(p - srcp);
+            if (o + pre >= sizeof out) pre = sizeof out - 1 - o;
+            if (pre) { memcpy(out + o, srcp, pre); o += pre; }
+            if (o + newn < sizeof out) {
+              memcpy(out + o, news, newn); o += newn;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, news, take); o += take;
+            }
+            out[o] = 0;
+            did++;
+            srcp = p + oldn;
+            if (o >= sizeof out - 1) break;
+          }
+        }
+      }
+      var_set_num(vm, "REPLACEIN_N", did);
+      var_set_num(vm, "GSUBTO_N", did);
+    } else if (mode == 1) {
+      char *a = cur, *b = cur + strlen(cur);
+      size_t n;
+      while (*a == ' ' || *a == '\t' || *a == '\n' || *a == '\r') a++;
+      while (b > a && (b[-1] == ' ' || b[-1] == '\t' || b[-1] == '\n' || b[-1] == '\r')) b--;
+      n = (size_t)(b - a);
+      if (n >= sizeof out) n = sizeof out - 1;
+      memcpy(out, a, n); out[n] = 0;
+      var_set_num(vm, "TRIMTO_N", 1);
+    } else if (mode == 2) {
+      size_t i, n = strlen(cur);
+      if (n >= sizeof out) n = sizeof out - 1;
+      for (i = 0; i < n; i++) {
+        char c = cur[i];
+        if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+        out[i] = c;
+      }
+      out[n] = 0;
+      var_set_num(vm, "UPPERTO_N", 1);
+    } else {
+      size_t i, n = strlen(cur);
+      if (n >= sizeof out) n = sizeof out - 1;
+      for (i = 0; i < n; i++) {
+        char c = cur[i];
+        if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+        out[i] = c;
+      }
+      out[n] = 0;
+      var_set_num(vm, "LOWERTO_N", 1);
+    }
+
+    var_set_str(vm, name, out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    {
+      long ln = (long)strlen(out);
+      var_set_num(vm, "LAST_N", mode == 0 ? did : ln);
+      vm->last_n = mode == 0 ? did : ln;
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s len=%ld\n", op, name, (long)strlen(out));
+    bump(vm);
+    return 1;
+  }
+  /* ZERO name — set numeric 0. CLEARSTR|EMPTYTO name — set empty string.
+   * Usability: reset counters/buffers without LET name = 0 / LET name = "". */
+  if (kw(&L->cur,"ZERO")||kw(&L->cur,"ZEROV")||kw(&L->cur,"ZEROOUT")||
+      kw(&L->cur,"CLEARSTR")||kw(&L->cur,"EMPTYTO")||kw(&L->cur,"CLEARS")||
+      kw(&L->cur,"BLANKTO")||kw(&L->cur,"ERASESTR")){
+    char op[24], name[48];
+    int is_zero = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "ZERO") == 0 || strcmp(op, "ZEROV") == 0 ||
+        strcmp(op, "ZEROOUT") == 0)
+      is_zero = 1;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, is_zero ? "ZERO needs name — ZERO retries"
+                       : "CLEARSTR needs name — CLEARSTR msg");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (is_zero) {
+      var_set_num(vm, name, 0);
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      var_set_num(vm, "ZERO_N", 1);
+    } else {
+      var_set_str(vm, name, "");
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "CLEARSTR_N", 1);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s\n", is_zero ? "ZERO" : "CLEARSTR", name);
     bump(vm);
     return 1;
   }

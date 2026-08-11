@@ -945,6 +945,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 914. ~~**`INC` / `DEC` / `SWAP` vars**~~ **done** (counter bump + dual-buffer exchange · no LET x=x+1 glue · proof 1452).
 915. ~~**`TOGGLE` / `CLAMP` / `SETMIN` / `SETMAX` vars**~~ **done** (flag flip + in-place clamp + running min/max · no IF+LET/CLAMPN glue · proof 1453).
 916. ~~**`APPENDTO` / `PREPENDTO` / `COPYTO` vars**~~ **done** (string build + var copy · no LET=CAT dual-buffer glue · proof 1454).
+917. ~~**`REPLACEIN` / `TRIMTO` / `UPPERTO` / `LOWERTO` / `ZERO` / `CLEARSTR` vars**~~ **done** (in-place string mutate + counter/buffer reset · no LET=SYS glue · proof 1455).
 
 
 

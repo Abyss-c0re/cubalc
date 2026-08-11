@@ -1,0 +1,71 @@
+# REPLACEIN / TRIMTO / UPPERTO / LOWERTO / ZERO / CLEARSTR
+
+HOLD_FLASH 1
+
+# REPLACEIN all occurrences
+LET s = "aa-bb-aa"
+REPLACEIN s "aa" WITH "XX"
+ASSERT s == "XX-bb-XX"
+ASSERT LAST_N == 2
+ASSERT REPLACEIN_N == 2
+
+# GSUBTO alias + empty repl (delete)
+LET p = "foo/bar/foo"
+GSUBTO p "foo" ""
+ASSERT p == "/bar/"
+
+# TRIMTO
+LET dirty = "  hi  "
+TRIMTO dirty
+ASSERT dirty == "hi"
+ASSERT TRIMTO_N == 1
+
+# UPPERTO / LOWERTO
+LET name = "AgEnT"
+UPPERTO name
+ASSERT name == "AGENT"
+LOWERTO name
+ASSERT name == "agent"
+
+# ZERO counter
+LET retries = 5
+ZERO retries
+ASSERT retries == 0
+ASSERT ZERO_N == 1
+
+# CLEARSTR buffer
+LET msg = "built"
+CLEARSTR msg
+ASSERT msg == ""
+ASSERT CLEARSTR_N == 1
+
+# EMPTYTO alias
+LET buf = "x"
+EMPTYTO buf
+ASSERT buf == ""
+
+# chain: append then normalize
+LET line = ""
+APPENDTO line "  Ready  "
+TRIMTO line
+UPPERTO line
+ASSERT line == "READY"
+
+# numeric promoted then upper (itoa path)
+LET n = 42
+UPPERTO n
+ASSERT n == "42"
+
+HASFORM "REPLACEIN"
+ASSERT LAST_N == 1
+HASFORM "TRIMTO"
+ASSERT LAST_N == 1
+HASFORM "UPPERTO"
+ASSERT LAST_N == 1
+HASFORM "ZERO"
+ASSERT LAST_N == 1
+HASFORM "CLEARSTR"
+ASSERT LAST_N == 1
+
+PRINT "1455_replacein_trimto ok"
+PASS
