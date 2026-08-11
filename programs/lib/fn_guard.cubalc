@@ -1,5 +1,5 @@
 # INCLUDE fn_guard - fail-fast FN catalog contract (ALL + optional ANY)
-# Usability: agent language-plane gate via native HASFNS/NEEDFNS (no N× HASFN soup).
+# Usability: agent language-plane gate via native multi FN forms (no N× HASFN soup).
 #
 #   DEFAULT NEED_FNALL = "add\nping"
 #   DEFAULT NEED_FNANY = "greet\nhello"
@@ -8,8 +8,8 @@
 #
 # Spec: each entry is a FN name. Soft dual leaves FNMISS / FNHAVE bags.
 # Twin of obj_guard / class_guard for the FN plane.
-# Hard ALL path: NEEDFNS (native multi). Hard ANY: HASFN+HARDFAIL (no HASFNANY yet).
-# Multi duals: HASFNS / NEEDFNS / ALLFNS / REQUIREFNS still available.
+# Hard ALL: NEEDFNS · Hard ANY: NEEDFNANY · Soft: HASFNS / HASFNANY.
+# Multi duals: HASFNS / NEEDFNS / HASFNANY / NEEDFNANY still available directly.
 
 DEFAULT NEED_FNALL = ""
 DEFAULT NEED_FNANY = ""
@@ -44,40 +44,14 @@ SYS EMPTY NEED_FNANY
 IF LAST_N == 1
   LET FN_GUARD_ANY_OK = 1
 ELSE
-  LET FNANY_HIT = 0
-  LET FNANY_HAVE = ""
-  LET FNANY_MISS = ""
-  EACH LINE b IN NEED_FNANY
-    HASFN b
-    IF LAST_N == 1
-      LET FNANY_HIT = 1
-      IF FNANY_HAVE == ""
-        LET FNANY_HAVE = b
-      ELSE
-        LET FNANY_HAVE = FNANY_HAVE + "\n" + b
-      END
-    ELSE
-      IF FNANY_MISS == ""
-        LET FNANY_MISS = b
-      ELSE
-        LET FNANY_MISS = FNANY_MISS + "\n" + b
-      END
-    END
-  END
-  IF FNANY_HIT == 1
-    LET FN_GUARD_ANY_OK = 1
-    IF FNHAVE == ""
-      LET FNHAVE = FNANY_HAVE
-    END
+  IF FN_GUARD_SOFT
+    HASFNANY NEED_FNANY
+    LET FN_GUARD_ANY_OK = LAST_N
+    # FNHAVE / FNMISS / FNHAVE_N / FNMISS_N from HASFNANY
   ELSE
-    LET FN_GUARD_ANY_OK = 0
-    LET OK = 0
-    LET LAST_ERR = "FN_GUARD ANY miss - need one of: " + NEED_FNANY
-    LET ERR = LAST_ERR
-    LET FNMISS = FNANY_MISS
-    IF FN_GUARD_SOFT == 0
-      HARDFAIL "FN_GUARD hard miss — see ERR/FNMISS"
-    END
+    NEEDFNANY NEED_FNANY
+    LET FN_GUARD_ANY_OK = 1
+    LET FNHAVE_N = NEEDFNANY_N
   END
 END
 

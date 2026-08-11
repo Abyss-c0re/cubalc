@@ -1,0 +1,93 @@
+# fn_guard ANY path via native HASFNANY/NEEDFNANY (no N× HASFN soup)
+
+HOLD_FLASH 1
+
+FN add a b
+  RET a + b
+END
+
+FN ping
+  RET 1
+END
+
+FN greet name
+  RET name
+END
+
+# empty ANY skip
+DEFAULT NEED_FNALL = ""
+DEFAULT NEED_FNANY = ""
+DEFAULT FN_GUARD_SOFT = 0
+INCLUDE fn_guard
+ASSERT FN_GUARD_ANY_OK == 1
+ASSERT FN_GUARD_OK == 1
+
+# soft ANY hit — native HASFNANY bags
+LET NEED_FNALL = ""
+LET NEED_FNANY = "ghost_fn\nping"
+LET FN_GUARD_SOFT = 1
+INCLUDE fn_guard
+ASSERT FN_GUARD_ANY_OK == 1
+ASSERT FN_GUARD_OK == 1
+ASSERT FNHAVE_N >= 1
+SYS HASI FNHAVE "ping"
+ASSERT LAST_N == 1
+SYS HASI FNMISS "ghost_fn"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# soft ANY all-miss
+LET NEED_FNANY = "ghostA\nghostB"
+LET FN_GUARD_SOFT = 1
+INCLUDE fn_guard
+ASSERT FN_GUARD_ANY_OK == 0
+ASSERT FN_GUARD_OK == 0
+ASSERT FNHAVE_N == 0
+ASSERT FNMISS_N >= 2
+CLEAR_ERR
+
+# hard ANY hit via NEEDFNANY
+LET NEED_FNANY = "ghost_z\nadd"
+LET FN_GUARD_SOFT = 0
+INCLUDE fn_guard
+ASSERT FN_GUARD_ANY_OK == 1
+ASSERT FN_GUARD_OK == 1
+
+# soft ALL + soft ANY combined
+LET NEED_FNALL = "add\nping"
+LET NEED_FNANY = "greet\nghost_z"
+LET FN_GUARD_SOFT = 1
+INCLUDE fn_guard
+ASSERT FN_GUARD_ALL_OK == 1
+ASSERT FN_GUARD_ANY_OK == 1
+ASSERT FN_GUARD_OK == 1
+
+# soft ALL miss + soft ANY hit → overall fail
+LET NEED_FNALL = "add\nghost_all"
+LET NEED_FNANY = "ping"
+LET FN_GUARD_SOFT = 1
+INCLUDE fn_guard
+ASSERT FN_GUARD_ALL_OK == 0
+ASSERT FN_GUARD_ANY_OK == 1
+ASSERT FN_GUARD_OK == 0
+CLEAR_ERR
+
+# hard ALL + hard ANY
+LET NEED_FNALL = "add"
+LET NEED_FNANY = "ping\ngreet"
+LET FN_GUARD_SOFT = 0
+INCLUDE fn_guard
+ASSERT FN_GUARD_OK == 1
+
+# surface still discoverable
+HASFNANY add ghost_x
+ASSERT LAST_N == 1
+HASFORM "HASFNANY"
+ASSERT LAST_N == 1
+HASFORM "NEEDFNANY"
+ASSERT LAST_N == 1
+HASLIB fn_guard
+ASSERT LAST_N == 1
+
+PRINT "1433_fn_guard_any_native ok"
+PASS
