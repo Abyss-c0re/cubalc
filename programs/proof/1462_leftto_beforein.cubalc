@@ -1,0 +1,65 @@
+# LEFTTO / RIGHTTO / MIDTO / BEFOREIN / AFTERIN / BETWEENIN
+
+HOLD_FLASH 1
+
+# LEFTTO / RIGHTTO
+LET s = "abcdef"
+LEFTTO s 3
+ASSERT s == "abc"
+ASSERT LAST_N == 3
+
+LET t = "abcdef"
+RIGHTTO t 2
+ASSERT t == "ef"
+
+# MIDTO / SLICETO
+LET m = "hello"
+MIDTO m 1 3
+ASSERT m == "ell"
+
+LET m2 = "hello"
+SLICETO m2 2
+ASSERT m2 == "llo"
+
+# BEFOREIN / AFTERIN path peels
+LET path = "dir/file.txt"
+BEFOREIN path "/"
+ASSERT path == "dir"
+
+LET path2 = "dir/file.txt"
+AFTERIN path2 "/"
+ASSERT path2 == "file.txt"
+
+# BETWEENIN
+LET br = "x[hello]y"
+BETWEENIN br "[" "]"
+ASSERT br == "hello"
+ASSERT BETWEENIN_N == 5
+
+# miss needle BEFORE keeps all
+LET z = "nocolon"
+BEFOREIN z ":"
+ASSERT z == "nocolon"
+
+# AFTER miss → empty
+LET z2 = "nocolon"
+AFTERIN z2 ":"
+ASSERT z2 == ""
+
+# chain with INDEXIN
+LET p = "a/b/c"
+AFTERIN p "/"
+AFTERIN p "/"
+ASSERT p == "c"
+
+HASFORM "LEFTTO"
+ASSERT LAST_N == 1
+HASFORM "BEFOREIN"
+ASSERT LAST_N == 1
+HASFORM "BETWEENIN"
+ASSERT LAST_N == 1
+HASFORM "MIDTO"
+ASSERT LAST_N == 1
+
+PRINT "1462_leftto_beforein ok"
+PASS

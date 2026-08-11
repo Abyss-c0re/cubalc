@@ -3861,6 +3861,13 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"CONTAINSIN", "CONTAINSIN|HASSTRIN name needle — 0|1 contains probe"},
       {"EQSIN", "EQSIN name other — 0|1 exact string equality of vars/lits"},
       {"INDEXIN", "INDEXIN|FINDAT name needle — 0-based index or −1"},
+      {"LEFTTO", "LEFTTO name n — keep first n chars in place"},
+      {"RIGHTTO", "RIGHTTO name n — keep last n chars in place"},
+      {"MIDTO", "MIDTO|SLICETO name start [len] — 0-based slice in place"},
+      {"SLICETO", "SLICETO alias of MIDTO"},
+      {"BEFOREIN", "BEFOREIN name needle — keep text before first needle"},
+      {"AFTERIN", "AFTERIN name needle — keep text after first needle"},
+      {"BETWEENIN", "BETWEENIN name lo hi — peel between delimiters in place"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -73334,6 +73341,210 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s -> %ld\n", op, name, hit);
+    bump(vm);
+    return 1;
+  }
+  /* LEFTTO name n — keep first n chars in place.
+   * RIGHTTO name n — keep last n chars in place.
+   * MIDTO|SLICETO name start [len] — 0-based slice in place (len omit→to end).
+   * BEFOREIN name needle — keep text before first needle (drop needle+rest).
+   * AFTERIN name needle — keep text after first needle.
+   * BETWEENIN name lo hi — peel between first lo and next hi delimiters.
+   * Usability: path/log peels without LET x = SYS LEFT/BEFORE x glue. */
+  if (kw(&L->cur,"LEFTTO")||kw(&L->cur,"KEEPLEFT")||kw(&L->cur,"TRUNCATELEFT")||
+      kw(&L->cur,"RIGHTTO")||kw(&L->cur,"KEEPRIGHT")||kw(&L->cur,"TAILER")||
+      kw(&L->cur,"MIDTO")||kw(&L->cur,"SLICETO")||kw(&L->cur,"SUBSTRTO")||
+      kw(&L->cur,"BEFOREIN")||kw(&L->cur,"KEEPBEFORE")||kw(&L->cur,"PREFIXCUT")||
+      kw(&L->cur,"AFTERIN")||kw(&L->cur,"KEEPAFTER")||kw(&L->cur,"SUFFIXCUT")||
+      kw(&L->cur,"BETWEENIN")||kw(&L->cur,"MIDOFIN")||kw(&L->cur,"EXTRACTIN")){
+    char op[24], name[48];
+    char cur[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+    int mode = 0; /* 0 left, 1 right, 2 mid, 3 before, 4 after, 5 between */
+    long n = 0, start = 0, len = -1, out_n = 0;
+    size_t cn;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "RIGHTTO") == 0 || strcmp(op, "KEEPRIGHT") == 0 ||
+        strcmp(op, "TAILER") == 0)
+      mode = 1;
+    else if (strcmp(op, "MIDTO") == 0 || strcmp(op, "SLICETO") == 0 ||
+             strcmp(op, "SUBSTRTO") == 0)
+      mode = 2;
+    else if (strcmp(op, "BEFOREIN") == 0 || strcmp(op, "KEEPBEFORE") == 0 ||
+             strcmp(op, "PREFIXCUT") == 0)
+      mode = 3;
+    else if (strcmp(op, "AFTERIN") == 0 || strcmp(op, "KEEPAFTER") == 0 ||
+             strcmp(op, "SUFFIXCUT") == 0)
+      mode = 4;
+    else if (strcmp(op, "BETWEENIN") == 0 || strcmp(op, "MIDOFIN") == 0 ||
+             strcmp(op, "EXTRACTIN") == 0)
+      mode = 5;
+    else
+      mode = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, mode == 0 ? "LEFTTO needs name n — LEFTTO s 5"
+           : mode == 1 ? "RIGHTTO needs name n — RIGHTTO s 3"
+           : mode == 2 ? "MIDTO needs name start [len] — MIDTO s 2 4"
+           : mode == 3 ? "BEFOREIN needs name needle — BEFOREIN path \"/\""
+           : mode == 4 ? "AFTERIN needs name needle — AFTERIN path \"/\""
+                       : "BETWEENIN needs name lo hi — BETWEENIN s \"[\" \"]\"");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    cur[0] = out[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+    cn = strlen(cur);
+
+    if (mode == 0 || mode == 1) {
+      if (kw(&L->cur, "BY") || kw(&L->cur, "OF") || kw(&L->cur, "TO") ||
+          kw(&L->cur, "CHARS") || kw(&L->cur, "N"))
+        lex_next(L);
+      if (!cubalc_read_num_atom(vm, L, &n)) {
+        fail(vm, mode == 0 ? "LEFTTO needs n — LEFTTO s 5" : "RIGHTTO needs n — RIGHTTO s 3");
+        return -1;
+      }
+      if (n < 0) n = 0;
+      if ((size_t)n > cn) n = (long)cn;
+      if (mode == 0) {
+        memcpy(out, cur, (size_t)n);
+        out[n] = 0;
+      } else {
+        memcpy(out, cur + (cn - (size_t)n), (size_t)n);
+        out[n] = 0;
+      }
+      out_n = n;
+      var_set_num(vm, mode == 0 ? "LEFTTO_N" : "RIGHTTO_N", out_n);
+    } else if (mode == 2) {
+      if (kw(&L->cur, "FROM") || kw(&L->cur, "AT") || kw(&L->cur, "START"))
+        lex_next(L);
+      if (!cubalc_read_num_atom(vm, L, &start)) {
+        fail(vm, "MIDTO needs start — MIDTO s 2 4");
+        return -1;
+      }
+      if (kw(&L->cur, "FOR") || kw(&L->cur, "LEN") || kw(&L->cur, "COUNT") ||
+          kw(&L->cur, "TO") || kw(&L->cur, ","))
+        lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+          (L->cur.kind == TK_IDENT && var_get(vm, L->cur.text, 0) &&
+           !var_get(vm, L->cur.text, 0)->is_str)) {
+        if (!cubalc_read_num_atom(vm, L, &len))
+          len = -1;
+      }
+      if (start < 0) start = 0;
+      if ((size_t)start > cn) start = (long)cn;
+      if (len < 0)
+        len = (long)(cn - (size_t)start);
+      if ((size_t)(start + len) > cn)
+        len = (long)(cn - (size_t)start);
+      if (len < 0) len = 0;
+      memcpy(out, cur + (size_t)start, (size_t)len);
+      out[len] = 0;
+      out_n = len;
+      var_set_num(vm, "MIDTO_N", out_n);
+      var_set_num(vm, "SLICETO_N", out_n);
+    } else if (mode == 3 || mode == 4) {
+      const char *p;
+      size_t an;
+      if (kw(&L->cur, "OF") || kw(&L->cur, "AT") || kw(&L->cur, "NEEDLE") ||
+          kw(&L->cur, "SEP"))
+        lex_next(L);
+      a[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, mode == 3 ? "BEFOREIN needs needle" : "AFTERIN needs needle");
+        return -1;
+      }
+      an = strlen(a);
+      if (an == 0) {
+        if (mode == 3)
+          snprintf(out, sizeof out, "%s", cur);
+        else
+          out[0] = 0;
+      } else {
+        p = strstr(cur, a);
+        if (!p) {
+          /* no needle: BEFORE keeps all, AFTER empty */
+          if (mode == 3)
+            snprintf(out, sizeof out, "%s", cur);
+          else
+            out[0] = 0;
+        } else if (mode == 3) {
+          size_t pre = (size_t)(p - cur);
+          if (pre >= sizeof out) pre = sizeof out - 1;
+          memcpy(out, cur, pre);
+          out[pre] = 0;
+        } else {
+          snprintf(out, sizeof out, "%s", p + an);
+        }
+      }
+      out_n = (long)strlen(out);
+      var_set_num(vm, mode == 3 ? "BEFOREIN_N" : "AFTERIN_N", out_n);
+    } else {
+      /* BETWEENIN lo hi */
+      const char *p, *q;
+      size_t al, bl;
+      if (kw(&L->cur, "FROM") || kw(&L->cur, "OF") || kw(&L->cur, "BETWEEN"))
+        lex_next(L);
+      a[0] = b[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "BETWEENIN needs lo hi — BETWEENIN s \"[\" \"]\"");
+        return -1;
+      }
+      if (kw(&L->cur, "AND") || kw(&L->cur, "TO") || kw(&L->cur, "UNTIL") ||
+          kw(&L->cur, ","))
+        lex_next(L);
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0) {
+        fail(vm, "BETWEENIN needs hi — BETWEENIN s \"[\" \"]\"");
+        return -1;
+      }
+      al = strlen(a);
+      bl = strlen(b);
+      out[0] = 0;
+      if (al == 0) {
+        p = cur;
+      } else {
+        p = strstr(cur, a);
+        if (p) p = p + al;
+        else p = NULL;
+      }
+      if (p) {
+        if (bl == 0) {
+          snprintf(out, sizeof out, "%s", p);
+        } else {
+          q = strstr(p, b);
+          if (q) {
+            size_t mid = (size_t)(q - p);
+            if (mid >= sizeof out) mid = sizeof out - 1;
+            memcpy(out, p, mid);
+            out[mid] = 0;
+          } else {
+            snprintf(out, sizeof out, "%s", p);
+          }
+        }
+      }
+      out_n = (long)strlen(out);
+      var_set_num(vm, "BETWEENIN_N", out_n);
+    }
+
+    var_set_str(vm, name, out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    var_set_num(vm, "LAST_N", out_n);
+    vm->last_n = out_n;
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s len=%ld\n", op, name, out_n);
     bump(vm);
     return 1;
   }
