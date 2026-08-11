@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 361,
-  "program": "programs/realworld/svc_lpadto_ticket_path_board.cubalc",
-  "theme": "LPADTO/RPADTO + STRIPPREFIXTO ticket/path intake",
-  "version": "1.15.931-usability",
+  "iter": 362,
+  "program": "programs/realworld/svc_sumin_latency_digest_board.cubalc",
+  "theme": "SUMIN/MAXIN/AVGIN latency digest + IFBETWEEN SLO bands",
+  "version": "1.15.933-usability",
   "pass": true,
-  "prior_note": "iter 360 IFGT/IFHASLINE; this iter first realworld of 1466 LPADTO + 1463 STRIPPREFIXTO (1476 SUMIN not in binary yet)",
+  "prior_note": "iter 361 LPADTO; this iter first realworld of 1476 SUMIN (now linked) + 1474 IFBETWEEN",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "LPADTO ticket 000042",
+      "cmd": "seed SUMIN 60 count 3",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "LPAD/RPAD/PAD/STRIP 10/10",
+      "cmd": "SUMIN/MAXIN/MININ/AVGIN stickies 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "trunc miss empty affix aliases 10/10",
+      "cmd": "empty/mixed skip/single/IFBETWEEN 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "ticket chain + state path strip 10/10",
+      "cmd": "latency samples + SLO band 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "multi-ticket pad release root 10/10",
+      "cmd": "HTTP band retries re-sum noise 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM LPADTO/STRIP*",
+      "cmd": "HASFORM SUMIN/IFBETWEEN",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "padded ticket + releases root 9/9",
+      "cmd": "avg+max+sum SLO admit 9/9",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "WRITE NL ticket plate",
+      "cmd": "WRITE sum plate NL",
       "ok": true,
       "note": "probe"
     },
@@ -69,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1463/1466 PASS; 1476 SUMIN not linked; CLI duals red",
+      "cmd": "selftest; 1476/1474 PASS; CLI duals still red",
       "ok": false,
-      "note": "proofs green where linked; CLI duals still red"
+      "note": "proofs green; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -6938,6 +6938,30 @@
       "title": "LPADTO/RPADTO/STRIPPREFIXTO work (positive)",
       "detail": "Zero-pad tickets, space/dot column pad, strip path root+ext with HIT sticky, empty affix no-op, DROPPREFIXTO aliases, NUMTO+STRTO+LPAD chain, WITH pad keyword. Solid intake ticket/path surface.",
       "repro": "LPADTO id 6 0; STRIPPREFIXTO path /tmp/; STRIPSUFFIXTO path .json"
+    },
+    {
+      "id": "W859",
+      "severity": "med",
+      "area": "lang|sumin",
+      "title": "CLEAR_ERR after SUMIN/MAXIN clobbers LAST_N (stickies survive)",
+      "detail": "Same class as NUMTO (W845): capture LET total=LAST_N / LET cnt=SUMIN_COUNT before CLEAR_ERR. SUMIN_N/SUMIN_COUNT/MAXIN_N remain sticky. Soft scored 7/10 until snap.",
+      "repro": "SUMIN empty; CLEAR_ERR; LAST_N not 0; SUMIN_COUNT still 0"
+    },
+    {
+      "id": "W860",
+      "severity": "low",
+      "area": "lang|sumin",
+      "title": "SUMIN skips non-numeric lines; empty \u2192 0 count 0",
+      "detail": "Mixed bag 5/x/15 \u2192 sum 20 count 2. Empty bag sum/max 0. Single-field \"42\" promotes. AVGIN integer divide (165/4=41).",
+      "repro": "SUMIN mixed with x skipped; AVGIN 12,45,8,100 \u2192 41"
+    },
+    {
+      "id": "W861",
+      "severity": "low",
+      "area": "lang|ifbetween",
+      "title": "SUMIN+IFBETWEEN work (positive; IFBETWEEN FN-wrap)",
+      "detail": "Inclusive bands, reversed bounds auto-swap, IFINRANGE TO keyword, string HTTP codes. IFBETWEEN still needs FN+CALL inside action IF (W853). W857 resolved: SUMIN live in 1.15.933.",
+      "repro": "SUMIN samples; CALL band_total; IFBETWEEN inclusive 5 5"
     }
   ],
   "workarounds": [
@@ -7140,7 +7164,8 @@
     "SETLINEIN pad past-end + negative index\u21920 (W847/W848); FINDLINEIN exact bag ops positive (W849)",
     "COUNTIN substr vs COUNTLINEIN exact (W850); MOVELINEIN HIT soft/no-op (W851)",
     "IFGT/IFHASLINE cannot nest in IF END framing (W853); IFGTE absent use IFGE (W854)",
-    "LPADTO truncates when wider (W856); SUMIN proof not linked in 1.15.930 binary (W857)"
+    "LPADTO truncates when wider (W856); SUMIN proof not linked in 1.15.930 binary (W857)",
+    "SUMIN LAST_N vs CLEAR_ERR (W859); non-num skip + int AVGIN (W860); SUMIN linked 1.15.933"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7247,9 +7272,14 @@
       "iter": 361,
       "issue": "Chose 1466+1463 after 1476 SUMIN unknown in binary (W857). pass 9/10 until LAST_N snap before SYS EQS after LPADTO.",
       "resolution": "first realworld 1466+1463; document W856\u2013W858"
+    },
+    {
+      "iter": 362,
+      "issue": "soft 7/10 then 11/10: CLEAR_ERR ate LAST_N after SUMIN (W859); score var name collision risk with band_rev fixed; dropped 11th host check.",
+      "resolution": "first realworld 1476+1474; document W859\u2013W861; W857 SUMIN now linked"
     }
   ],
-  "commit": "d28e4ba5",
-  "ts": 1786471143,
-  "board_commit": "d28e4ba5"
+  "commit": "b9294c25",
+  "ts": 1786472709,
+  "board_commit": "b9294c25"
 }

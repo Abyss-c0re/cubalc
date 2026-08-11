@@ -1,0 +1,962 @@
+# svc_sumin_latency_digest_board.cubalc — SUMIN/MAXIN/AVGIN latency digest
+#
+# Real use: SLO/canary agents tally sample bags (latency_ms lines) with
+# SUMIN/MAXIN/MININ/AVGIN then band-gate totals via IFBETWEEN without
+# rebuilding via EACH+INC glue. First realworld of 1476 SUMIN family
+# (1.15.933 · MI ~935; was unlinked at iter 361 W857) + 1474 IFBETWEEN
+# for inclusive SLO bands. Distinct from latency_slo_board (plate
+# counters) and multi_probe_rollup — this board is *named-var bag
+# numeric aggregates + range admit*.
+#
+#   SUMIN · MAXIN · MININ · AVGIN · SUMIN_COUNT · SUMIN_SUM
+#   IFBETWEEN · IFINRANGE · sticky IFBETWEEN_N
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sld_$$
+#   ./out/cubalc run programs/realworld/svc_sumin_latency_digest_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|peel|scale|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SLD_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_SLD_REQUIRE
+#
+# Edges: non-num lines skipped; empty sum/max 0 count 0; single field
+#   promote; IFBETWEEN inclusive + reversed bounds; IF* FN-wrap (W853);
+#   WRITE NL; REQUIRE soft
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+# IFBETWEEN steals outer IF END — FN helpers (W853 class)
+FN band_total
+  IFBETWEEN total lo hi
+    LET state = "inband"
+  ELSE
+    LET state = "oor"
+  END
+END
+
+FN band_http
+  IFBETWEEN code 200 299
+    LET state = "ok"
+  ELSE
+    LET state = "bad"
+  END
+END
+
+FN band_retries
+  IFINRANGE retries 1 TO 5
+    LET state = "retry-ok"
+  ELSE
+    LET state = "retry-bad"
+  END
+END
+
+FN band_inclusive5
+  IFBETWEEN n 5 5
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN band_rev
+  IFBETWEEN weight 100 0
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+NOTE "svc_sumin_latency_digest_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_sumin_latency_digest -- boot|pass|soft|peel|scale|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SLD_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SLD_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET path = ""
+LET msg = ""
+LET peeld = ""
+LET samples = ""
+LET total = 0
+LET mx = 0
+LET mn = 0
+LET av = 0
+LET cnt = 0
+LET lo = 0
+LET hi = 0
+LET state = ""
+LET code = 0
+LET retries = 0
+LET n = 0
+LET depth = 0
+LET weight = 0
+
+ONEOF ACTION "boot", "pass", "soft", "peel", "scale", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-sld\",\"schema\":\"cubalc.svc_sumin_latency_digest.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"sld\",\"want_filter\":\"sumin_latency_digest\",\"cfg\":{\"surface\":\"SUMIN,MAXIN,MININ,AVGIN,IFBETWEEN,IFINRANGE\",\"contract\":\"sample bag aggregates + inclusive SLO band admit\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  CLEARSTR samples
+  PUSHTO samples "10"
+  PUSHTO samples "30"
+  PUSHTO samples "20"
+  SUMIN samples
+  LET total = LAST_N
+  LET cnt = SUMIN_COUNT
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-sld"
+  IF LAST_N == 1 THEN
+    IF total == 60 THEN
+      IF cnt == 3 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+        LET find_n = total
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot count"
+        FAIL "boot count"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot sum"
+      FAIL "boot sum"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# pass — SUMIN/MAXIN/MININ/AVGIN + stickies 10/10
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR samples
+  PUSHTO samples "10"
+  PUSHTO samples "30"
+  PUSHTO samples "20"
+  CLEAR_ERR
+  SUMIN samples
+  LET total = LAST_N
+  CLEAR_ERR
+  IF total == 60 THEN
+    LET score = score + 1
+  END
+  IF SUMIN_N == 60 THEN
+    LET score = score + 1
+  END
+  IF SUMIN_COUNT == 3 THEN
+    LET score = score + 1
+  END
+  IF SUMIN_SUM == 60 THEN
+    LET score = score + 1
+  END
+  MAXIN samples
+  LET mx = LAST_N
+  CLEAR_ERR
+  IF mx == 30 THEN
+    LET score = score + 1
+  END
+  IF MAXIN_N == 30 THEN
+    LET score = score + 1
+  END
+  MININ samples
+  LET mn = LAST_N
+  CLEAR_ERR
+  IF mn == 10 THEN
+    LET score = score + 1
+  END
+  IF MININ_N == 10 THEN
+    LET score = score + 1
+  END
+  AVGIN samples
+  LET av = LAST_N
+  CLEAR_ERR
+  IF av == 20 THEN
+    LET score = score + 1
+  END
+  IF AVGIN_N == 20 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — empty · mixed skip · single · IFBETWEEN edges
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR empty
+  SUMIN empty
+  LET find_n = LAST_N
+  LET cnt = SUMIN_COUNT
+  CLEAR_ERR
+  IF find_n == 0 THEN
+    LET score = score + 1
+  END
+  IF cnt == 0 THEN
+    LET score = score + 1
+  END
+  MAXIN empty
+  LET mx = LAST_N
+  CLEAR_ERR
+  IF mx == 0 THEN
+    LET score = score + 1
+  END
+  CLEARSTR mixed
+  PUSHTO mixed "5"
+  PUSHTO mixed "x"
+  PUSHTO mixed "15"
+  SUMIN mixed
+  LET total = LAST_N
+  LET cnt = SUMIN_COUNT
+  CLEAR_ERR
+  IF total == 20 THEN
+    LET score = score + 1
+  END
+  IF cnt == 2 THEN
+    LET score = score + 1
+  END
+  LET one = "42"
+  SUMIN one
+  LET find_n = LAST_N
+  CLEAR_ERR
+  IF find_n == 42 THEN
+    LET score = score + 1
+  END
+  MININ one
+  LET mn = LAST_N
+  CLEAR_ERR
+  IF mn == 42 THEN
+    LET score = score + 1
+  END
+  # IFBETWEEN inclusive single point
+  LET n = 5
+  CALL band_inclusive5
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # reversed bounds auto-swap
+  LET weight = 50
+  CALL band_rev
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # out of range zero
+  LET total = 0
+  LET lo = 1
+  LET hi = 10
+  CALL band_total
+  SYS EQS state "oor"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 10 checks: empty×3 + mix×2 + single×2 + IFBETWEEN×3
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# peel — latency samples + SLO band
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR samples
+  PUSHTO samples "12"
+  PUSHTO samples "45"
+  PUSHTO samples "8"
+  PUSHTO samples "100"
+  CLEAR_ERR
+  SUMIN samples
+  LET total = LAST_N
+  LET cnt = SUMIN_COUNT
+  CLEAR_ERR
+  IF total == 165 THEN
+    LET score = score + 1
+  END
+  IF cnt == 4 THEN
+    LET score = score + 1
+  END
+  MAXIN samples
+  LET mx = LAST_N
+  CLEAR_ERR
+  IF mx == 100 THEN
+    LET score = score + 1
+  END
+  MININ samples
+  LET mn = LAST_N
+  CLEAR_ERR
+  IF mn == 8 THEN
+    LET score = score + 1
+  END
+  AVGIN samples
+  LET av = LAST_N
+  CLEAR_ERR
+  IF av == 41 THEN
+    LET score = score + 1
+  END
+  # total band 100..200 inband
+  LET lo = 100
+  LET hi = 200
+  CALL band_total
+  SYS EQS state "inband"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # tight band OOR
+  LET lo = 0
+  LET hi = 50
+  CALL band_total
+  SYS EQS state "oor"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # p99-ish: max under 150
+  LET lo = 0
+  LET hi = 150
+  LET total = mx
+  CALL band_total
+  SYS EQS state "inband"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "sumin_latency_digest"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = total
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score mx av note_msg
+  CLEAR_ERR
+END
+
+# scale — multi window + HTTP code band + retries
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR samples
+  PUSHTO samples "50"
+  PUSHTO samples "60"
+  PUSHTO samples "70"
+  SUMIN samples
+  LET total = LAST_N
+  CLEAR_ERR
+  IF total == 180 THEN
+    LET score = score + 1
+  END
+  AVGIN samples
+  LET av = LAST_N
+  CLEAR_ERR
+  IF av == 60 THEN
+    LET score = score + 1
+  END
+  LET code = 200
+  CALL band_http
+  SYS EQS state "ok"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET code = "503"
+  CALL band_http
+  SYS EQS state "bad"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET retries = 3
+  CALL band_retries
+  SYS EQS state "retry-ok"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET retries = 0
+  CALL band_retries
+  SYS EQS state "retry-bad"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # append noise sample and re-sum
+  PUSHTO samples "x"
+  PUSHTO samples "20"
+  SUMIN samples
+  LET total = LAST_N
+  LET cnt = SUMIN_COUNT
+  CLEAR_ERR
+  IF total == 200 THEN
+    LET score = score + 1
+  END
+  IF cnt == 4 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "SUMIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score total note_msg
+  CLEAR_ERR
+END
+
+# form
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "SUMIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "MAXIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "MININ"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "AVGIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFBETWEEN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFINRANGE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SUMIN_COUNT"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "MAXIN_N"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "AVGIN_N"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "sumin_latency_digest"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — admit when avg in SLO and max under hard cap
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR samples
+  PUSHTO samples "20"
+  PUSHTO samples "25"
+  PUSHTO samples "30"
+  PUSHTO samples "22"
+  CLEAR_ERR
+  SUMIN samples
+  LET total = LAST_N
+  LET cnt = SUMIN_COUNT
+  CLEAR_ERR
+  AVGIN samples
+  LET av = LAST_N
+  CLEAR_ERR
+  MAXIN samples
+  LET mx = LAST_N
+  CLEAR_ERR
+  IF cnt == 4 THEN
+    LET score = score + 1
+  END
+  # avg SLO 1..50
+  LET total = av
+  LET lo = 1
+  LET hi = 50
+  CALL band_total
+  SYS EQS state "inband"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # max hard cap 100
+  LET total = mx
+  LET lo = 0
+  LET hi = 100
+  CALL band_total
+  SYS EQS state "inband"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # budget sum under 200
+  SUMIN samples
+  LET total = LAST_N
+  CLEAR_ERR
+  LET lo = 0
+  LET hi = 200
+  CALL band_total
+  SYS EQS state "inband"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF av >= 20 THEN
+    LET score = score + 1
+  END
+  IF require_hit > 0 THEN
+    IF score < 4 THEN
+      LET miss = 1
+      LET note_msg = "gate require"
+      FAIL "gate require"
+      CLEAR_ERR
+    END
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-sld"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF IFBETWEEN_N >= 0 THEN
+    LET score = score + 1
+  END
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  SYS CAT "gate:" score ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score av mx note_msg
+  CLEAR_ERR
+END
+
+# probe
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR samples
+  PUSHTO samples "11"
+  PUSHTO samples "22"
+  SUMIN samples
+  LET total = LAST_N
+  CLEAR_ERR
+  LET saved = total
+  PRINT "probe-sum" saved
+  CLEAR_ERR
+  IF saved == 33 THEN
+    LET score = score + 1
+  END
+  STRTO saved
+  SYS WRITE val_path saved
+  CLEAR_ERR
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "33"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS CAT "sld host=" host_s " role=" role_s " sum=" saved
+  LET row = LAST
+  CLEAR_ERR
+  SYS WRITE meta_path row
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "sum=33"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "AVGIN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  MAXIN samples
+  LET mx = LAST_N
+  CLEAR_ERR
+  IF mx == 22 THEN
+    LET score = score + 1
+  END
+  IF score >= 5 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = saved
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS CAT "{\"ok\":true,\"agent\":\"svc-sld\",\"op\":\"" op "\",\"hit\":" hit ",\"miss\":" miss ",\"score\":" score ",\"admit_n\":" admit_n ",\"bag_n\":" bag_n ",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"note\":\"" note_msg "\",\"require_hit\":" require_hit "}"
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+IF miss == 1 THEN
+  IF hit == 0 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS
