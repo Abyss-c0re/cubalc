@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 879,
-  "version": "1.15.872-usability",
-  "item": "TRYDELETE / DELETEOBJ SOFT explicit soft free",
-  "item_id": 879,
-  "title": "TRYDELETE \u00b7 DELETEOBJ SOFT \u00b7 TRYDELETE_N \u00b7 twin TRYCLONE/TRYSWAP",
-  "commit": "f671bb95b9fa9208aa0260c9765f6871dfec778c",
-  "summary": "TRYDELETE soft free OK=0 LAST_ERR on miss; TRYDELETE_N on free; proof 1418 PASS.",
+  "iter": 880,
+  "version": "1.15.873-usability",
+  "item": "HASCLASS / KNOWNCLASS soft CLASS defined probe",
+  "item_id": 880,
+  "title": "HASCLASS \u00b7 KNOWNCLASS \u00b7 soft dual REQUIRE CLASS",
+  "commit": "f1cee57756afe167aa3a772ee49dbc62beeb4a2c",
+  "summary": "HASCLASS soft 0|1 if CLASS defined; no LISTCLASSES+HASLINE; proof 1419 PASS.",
   "proofs": [
-    "1418_trydelete PASS",
-    "1418_cli_trydelete PASS"
+    "1419_hasclass PASS",
+    "1419_cli_hasclass PASS"
   ],
-  "when": "2026-08-11T06:23:36Z",
+  "when": "2026-08-11T06:33:26Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "f671bb95b9fa9208aa0260c9765f6871dfec778c",
-  "note": "explicit TRY* free dual for agent GC without HASOBJ+IF glue"
+  "sha": "f1cee57756afe167aa3a772ee49dbc62beeb4a2c",
+  "note": "IF before ENSURENEW without bag materialize"
 }
