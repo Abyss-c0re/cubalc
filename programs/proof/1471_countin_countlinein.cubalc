@@ -1,0 +1,52 @@
+# COUNTIN / COUNTLINEIN — tally probes on named vars
+
+HOLD_FLASH 1
+
+# path depth via slash count
+LET path = "/a/b/c/d"
+COUNTIN path "/"
+ASSERT LAST_N == 4
+ASSERT COUNTIN_N == 4
+
+# non-overlapping
+LET s = "aaa"
+COUNTIN s "aa"
+ASSERT LAST_N == 1
+
+# empty needle → 0
+COUNTIN s ""
+ASSERT LAST_N == 0
+
+# miss
+COUNTIN s "z"
+ASSERT LAST_N == 0
+
+# COUNTLINEIN exact bag fields
+PUSHTO work "a"
+PUSHTO work "b"
+PUSHTO work "a"
+PUSHTO work "a"
+COUNTLINEIN work "a"
+ASSERT LAST_N == 3
+COUNTLINEIN work "b"
+ASSERT LAST_N == 1
+COUNTLINEIN work "z"
+ASSERT LAST_N == 0
+
+# OCCURSIN alias
+LET log = "err:1 err:2 err:3"
+OCCURSIN log "err:"
+ASSERT LAST_N == 3
+
+# num promote
+LET n = 10101
+COUNTIN n "1"
+ASSERT LAST_N == 3
+
+HASFORM "COUNTIN"
+ASSERT LAST_N == 1
+HASFORM "COUNTLINEIN"
+ASSERT LAST_N == 1
+
+PRINT "1471_countin_countlinein ok"
+PASS

@@ -3895,6 +3895,9 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"INSLINEIN", "INSLINEIN alias of INSERTLINEIN"},
       {"MOVELINEIN", "MOVELINEIN|MOVEATIN name from to — move bag field to final index · HIT"},
       {"MOVEATIN", "MOVEATIN alias of MOVELINEIN"},
+      {"COUNTIN", "COUNTIN name needle — non-overlapping hit count → LAST_N (no mutate)"},
+      {"COUNTLINEIN", "COUNTLINEIN name line — exact bag field count → LAST_N (no mutate)"},
+      {"OCCURSIN", "OCCURSIN alias of COUNTIN"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -74410,6 +74413,104 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s from=%ld to=%ld hit=%ld\n", op, name, from_i, to_i, hit);
+    bump(vm);
+    return 1;
+  }
+  /* COUNTIN name needle — non-overlapping needle hit count in var → LAST_N (no mutate).
+   * COUNTLINEIN name line — exact bag field match count → LAST_N (no mutate).
+   * Empty needle → 0. Usability: path depth / work multi-ack tallies without loop glue;
+   * dual of COUNTINF (OOP) and SYS COUNTLINE / COUNTMATCH for named vars. */
+  if (kw(&L->cur,"COUNTIN")||kw(&L->cur,"OCCURSIN")||kw(&L->cur,"NCOUNTIN")||
+      kw(&L->cur,"TALLYIN")||kw(&L->cur,"HITCOUNTIN")||
+      kw(&L->cur,"COUNTLINEIN")||kw(&L->cur,"COUNTBAGIN")||kw(&L->cur,"NLINEIN")||
+      kw(&L->cur,"TALLYLINEIN")||kw(&L->cur,"BAGCOUNTIN")){
+    char op[24], name[48];
+    char cur[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+    int is_line = 0;
+    long count = 0;
+    size_t nn, cn;
+    const char *p, *start;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "COUNTLINEIN") == 0 || strcmp(op, "COUNTBAGIN") == 0 ||
+        strcmp(op, "NLINEIN") == 0 || strcmp(op, "TALLYLINEIN") == 0 ||
+        strcmp(op, "BAGCOUNTIN") == 0)
+      is_line = 1;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, is_line ? "COUNTLINEIN needs name line — COUNTLINEIN work \"job\""
+                       : "COUNTIN needs name needle — COUNTIN path \"/\"");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "OF") || kw(&L->cur, "WITH") || kw(&L->cur, "NEEDLE") ||
+        kw(&L->cur, "LINE") || kw(&L->cur, "FOR"))
+      lex_next(L);
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+      fail(vm, is_line ? "COUNTLINEIN needs line" : "COUNTIN needs needle");
+      return -1;
+    }
+    cur[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+    nn = strlen(needle);
+    cn = strlen(cur);
+    count = 0;
+    if (is_line) {
+      /* exact bag field matches */
+      p = cur;
+      while (*p || (cur[0] && p == cur)) {
+        if (!cur[0]) break;
+        start = p;
+        while (*p && *p != '\n') p++;
+        {
+          size_t fl = (size_t)(p - start);
+          if (fl == nn && (fl == 0 || memcmp(start, needle, fl) == 0))
+            count++;
+        }
+        if (*p == '\n') p++;
+        else break;
+      }
+    } else {
+      /* non-overlapping substring hits */
+      if (nn > 0 && cn >= nn) {
+        p = cur;
+        while (*p) {
+          const char *hit = strstr(p, needle);
+          if (!hit) break;
+          count++;
+          p = hit + nn;
+        }
+      }
+    }
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", count);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "LAST_N", count);
+    vm->last_n = count;
+    if (is_line) {
+      var_set_num(vm, "COUNTLINEIN_N", count);
+      var_set_num(vm, "COUNTIN_N", 0);
+    } else {
+      var_set_num(vm, "COUNTIN_N", count);
+      var_set_num(vm, "COUNTLINEIN_N", 0);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> %ld\n", op, name, count);
     bump(vm);
     return 1;
   }
