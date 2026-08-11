@@ -1,0 +1,66 @@
+# HASFIELDANY / NEEDFIELDANY — any-of multi field soft/hard gate
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+# any hit (ghost missing) — CSV bag
+LET opts = "ghost_zz,alive,nope_zz"
+HASFIELDANY Cell opts
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASFIELDANY_N == 1
+ASSERT FIELDHAVE_N == 1
+ASSERT FIELDHAVE == "alive"
+ASSERT FIELDMISS_N == 2
+SYS HASI FIELDMISS "ghost_zz"
+ASSERT LAST_N == 1
+
+# all miss soft
+LET opts = "ghost_zz,nope_zz"
+HASFIELDANY Cell opts
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT HASFIELDANY_N == 0
+ASSERT FIELDHAVE == ""
+ASSERT FIELDMISS_N == 2
+
+# bare safe idents
+HASFIELDANY Cell alive energy
+ASSERT LAST_N == 1
+ASSERT FIELDHAVE_N == 2
+
+# ANYFIELD alias + bag
+LET opts = "nope,ready,ghost"
+ANYFIELD Cell opts
+ASSERT LAST_N == 1
+ASSERT FIELDHAVE == "ready"
+
+# live object target
+NEW Cell c1 1 4 0
+HASFIELDANY c1 nope age
+ASSERT LAST_N == 1
+ASSERT FIELD_ON == "c1"
+SYS HASI FIELDHAVE "age"
+ASSERT LAST_N == 1
+
+# unknown class soft — all miss
+LET opts = "alive,energy"
+HASFIELDANY Ghost opts
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT FIELDHAVE_N == 0
+
+# empty soft
+HASFIELDANY Cell
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+HASFORM "HASFIELDANY"
+ASSERT LAST_N == 1
+HASFORM "NEEDFIELDANY"
+ASSERT LAST_N == 1
+
+PRINT "1425_hasfieldany ok"
+PASS

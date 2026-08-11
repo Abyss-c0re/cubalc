@@ -2075,6 +2075,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"HASFIELD", "HASFIELD obj|Class field — soft 0|1 before GETF"},
       {"HASFIELDS", "HASFIELDS|ALLFIELDS Class|obj fields… — soft all fields · FIELDMISS bag"},
       {"NEEDFIELDS", "NEEDFIELDS|REQUIREFIELDS Class|obj fields… — fail-fast multi HASFIELD"},
+      {"HASFIELDANY", "HASFIELDANY|ANYFIELD Class|obj fields… — soft any field · FIELDHAVE bag"},
+      {"NEEDFIELDANY", "NEEDFIELDANY|REQUIREFIELDANY Class|obj fields… — fail-fast if none match"},
       {"LISTFIELDS", "LISTFIELDS Class|obj — field name bag · NFIELDS"},
       {"FIELDINFO", "FIELDINFO [JSON] Class|obj field — kind/default plate · SETF/NEW prep"},
       {"DUMPFIELD", "DUMPFIELD alias of FIELDINFO"},
