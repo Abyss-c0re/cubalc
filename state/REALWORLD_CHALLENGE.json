@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 341,
-  "program": "programs/realworld/svc_fn_slot_admit_board.cubalc",
-  "theme": "HASFNS/HASFNANY/HASOBJANY runbook FN + live slot admit",
-  "version": "1.15.886-usability",
+  "iter": 342,
+  "program": "programs/realworld/svc_method_field_guard_board.cubalc",
+  "theme": "method_guard+field_guard dual Class.method/field preflight",
+  "version": "1.15.888-usability",
   "pass": true,
-  "prior_note": "iter 340 schema fields/objs; this iter first free-form HASFNS+HASFNANY+HASOBJANY (1429/1432/1427)",
+  "prior_note": "iter 341 HASFNS/HASOBJANY; this iter first dual method_guard+field_guard realworld (1428/1430 native)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + HASFNS score/notify/rollback",
+      "cmd": "seed agent + soft dual guards",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "HASFNS+HASFNANY+HASOBJANY+TRYCALL 10/10",
+      "cmd": "hard ALL+ANY method+field 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "all-miss FN/obj empty soft 10/10",
+      "cmd": "soft miss bags METHMISS/FLDMISS 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "fns",
-      "cmd": "ALLFNS partial FNMISS CSV HASFUNCS",
+      "name": "meth",
+      "cmd": "method_guard soft ANY METHHAVE",
       "ok": true,
-      "note": "fns 10/10"
+      "note": "meth 10/10"
     },
     {
-      "name": "any",
-      "cmd": "HASFNANY ANYFN multi FNHAVE",
+      "name": "fld",
+      "cmd": "field_guard soft ANY FLDHAVE",
       "ok": true,
-      "note": "any 10/10"
+      "note": "fld 10/10"
     },
     {
-      "name": "slots",
-      "cmd": "HASOBJANY OBJANY multi OBJHAVE",
+      "name": "combo",
+      "cmd": "dual planes + combined ALL miss",
       "ok": true,
-      "note": "slots 10/10"
+      "note": "combo 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM lag aliases",
+      "cmd": "HASFORM free duals",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "admit pipeline + REQUIRE",
+      "cmd": "soft pass + recover + REQUIRE",
       "ok": true,
       "note": "gate"
     },
@@ -75,9 +75,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1427/1429/1432 PASS",
+      "cmd": "selftest; 1428/1430 PASS",
       "ok": false,
-      "note": "proofs green; full suite see CLI dual reds"
+      "note": "proofs green; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -6384,6 +6384,38 @@
       "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
       "detail": "Board uses REQUIRE LIB \"hold_seed\"; bare still fails 1.15.886.",
       "repro": "REQUIRE LIB hold_seed \u2192 fail"
+    },
+    {
+      "id": "W789",
+      "severity": "med",
+      "area": "lang|include",
+      "title": "method_guard/field_guard require LET knobs before each re-INCLUDE",
+      "detail": "INCLUDE is sticky once; agents must LET NEED_* + *_SOFT then INCLUDE again to re-evaluate. Empty NEED skips to OK=1. Documented re-INCLUDE pattern for dual plane gates.",
+      "repro": "LET NEED_METHODS=...; INCLUDE method_guard; LET NEED_METHODS=miss; INCLUDE method_guard"
+    },
+    {
+      "id": "W790",
+      "severity": "low",
+      "area": "lang|guard",
+      "title": "METHOD_GUARD_OK fails if ALL soft-miss even when ANY hits in same include",
+      "detail": "Soft dual: ALL miss + ANY hit \u2192 overall GUARD_OK=0 (combo path). Agents must clear NEED_METHODS when testing ANY-only, or treat ALL_OK/ANY_OK separately.",
+      "repro": "NEED_METHODS miss line + NEED_METHOD_ANY hit \u2192 GUARD_OK 0 ALL 0 ANY 1"
+    },
+    {
+      "id": "W791",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE META omit trailing NL",
+      "detail": "W5 class reconfirmed on MFG META.",
+      "repro": "od -c META.txt"
+    },
+    {
+      "id": "W792",
+      "severity": "low",
+      "area": "lang|require_lib",
+      "title": "REQUIRE LIB quoted stem still required (W773 reconfirm)",
+      "detail": "Board uses REQUIRE LIB \"hold_seed\".",
+      "repro": "REQUIRE LIB hold_seed \u2192 fail"
     }
   ],
   "workarounds": [
@@ -6493,7 +6525,10 @@
     "HASOBJS gate on OBJMISS_N + live names not bare OK",
     "REQUIRE LIB \"hold_seed\" quoted",
     "HASFNS gate on FNMISS_N + HASFNS_N not bare OK",
-    "CSV bags for multi FN/slot names"
+    "CSV bags for multi FN/slot names",
+    "REQUIRE LIB \"hold_seed\" quoted",
+    "LET NEED_* then INCLUDE method_guard/field_guard each time",
+    "Read ALL_OK/ANY_OK separately; clear ALL NEED when testing ANY-only"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6672,7 +6707,10 @@
     "HASOBJS partial N vs OK (W780)",
     "HASFNS/HASFNANY/HASOBJANY runbook+slot admit (1429/1432/1427)",
     "HASFNS partial N vs OK (W784)",
-    "HASFORM lag ALLFNS/ANYFN/OBJANY (W786)"
+    "HASFORM lag ALLFNS/ANYFN/OBJANY (W786)",
+    "method_guard+field_guard dual Class.method/field preflight (1428/1430)",
+    "re-INCLUDE LET knobs for guard re-eval (W789)",
+    "GUARD_OK requires ALL when BOTH NEED sets non-empty (W790)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6747,9 +6785,11 @@
     "iter340: all actions green; proofs 1423-1426 PASS",
     "iter340: selftest 621/884 CLI duals still red; kvfileensure/pickobj/preload pre-existing",
     "iter341: first-try green HASFNS+HASFNANY+HASOBJANY board 10/10 actions",
-    "iter341: proofs 1427/1429/1432 PASS; quoted REQUIRE LIB hold_seed"
+    "iter341: proofs 1427/1429/1432 PASS; quoted REQUIRE LIB hold_seed",
+    "iter342: first-try green method_guard+field_guard dual board",
+    "iter342: proofs 1428/1430 PASS; re-INCLUDE LET knobs pattern"
   ],
-  "commit": "1da089ca",
-  "ts": "2026-08-11T08:49:36Z",
-  "board_commit": "1da089ca"
+  "commit": "pending",
+  "ts": "2026-08-11T09:14:29Z",
+  "board_commit": "pending"
 }

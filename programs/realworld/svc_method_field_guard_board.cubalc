@@ -1,0 +1,1050 @@
+# svc_method_field_guard_board.cubalc — method_guard + field_guard dual preflight
+#
+# Real use: mesh agents preflight Class.method + Class.field contracts via
+# INCLUDE method_guard / field_guard (native HASMETHOD/HASFIELD path, no
+# LISTMETHODS+HASLINE soup) before SEND/NEW — soft ALL/ANY duals + miss bags.
+# First realworld dual of 1428 method_guard_native + 1430 field_guard_native
+# (1.15.888+). Distinct from svc_schema_live_ready (free HASFIELDS multi),
+# svc_fn_boot_catalog (FN plane), svc_class_boot_catalog (CLASS names only).
+#
+#   NEED_METHODS Class.method bag · NEED_METHOD_ANY · METHOD_GUARD_SOFT
+#   NEED_FIELDS Class.field bag · NEED_FIELD_ANY · FIELD_GUARD_SOFT
+#   INCLUDE method_guard|field_guard → *_GUARD_OK / ALL_OK / ANY_OK
+#   METHMISS/METHHAVE · FLDMISS/FLDHAVE bags · re-INCLUDE after LET
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_mfg_$$
+#   ./out/cubalc run programs/realworld/svc_method_field_guard_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|meth|fld|combo|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt MFG_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_MFG_REQUIRE
+#
+# Edges: LET knobs before each re-INCLUDE; soft miss bags; empty skip;
+#   Class.method/field exact; CLEAR_ERR LAST; REQUIRE LIB quoted; WRITE NL
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+CLASS MeshSvc
+  FIELD zone "east"
+  FIELD status "idle"
+  FIELD load 0
+  METHOD ping
+    SETF THIS status "pong"
+  END
+  METHOD health
+    SETF THIS status "ok"
+  END
+  METHOD deploy
+    SETF THIS status "deployed"
+  END
+END
+
+CLASS MeshPay
+  FIELD n 0
+  FIELD currency "usd"
+  METHOD pay
+    LET n = n + 1
+  END
+  METHOD refund
+    LET n = 0
+  END
+END
+
+NOTE "svc_method_field_guard_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_method_field_guard -- boot|pass|soft|meth|fld|combo|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_MFG_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "MFG_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET allo = 0
+LET anyo = 0
+LET fgo = 0
+LET mgo = 0
+LET miss_s = ""
+LET have_s = ""
+
+ONEOF ACTION "boot", "pass", "soft", "meth", "fld", "combo", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "meth" THEN
+    LET op = "meth"
+  WHEN "fld" THEN
+    LET op = "fld"
+  WHEN "combo" THEN
+    LET op = "combo"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-mfg\",\"schema\":\"cubalc.svc_method_field_guard.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"mfg\",\"want_filter\":\"method_field_guard\",\"cfg\":{\"surface\":\"method_guard,field_guard,NEED_METHODS,NEED_FIELDS,METHOD_GUARD_SOFT,FIELD_GUARD_SOFT,METHMISS,FLDMISS\",\"contract\":\"Class.method + Class.field dual preflight\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  LET NEED_METHODS = "MeshSvc.ping\nMeshSvc.health"
+  LET NEED_METHOD_ANY = ""
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  LET mgo = METHOD_GUARD_OK
+  CLEAR_ERR
+  LET NEED_FIELDS = "MeshSvc.zone\nMeshSvc.load"
+  LET NEED_FIELD_ANY = ""
+  LET FIELD_GUARD_SOFT = 1
+  INCLUDE field_guard
+  LET fgo = FIELD_GUARD_OK
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-mfg"
+  IF LAST_N == 1 THEN
+    IF mgo == 1 THEN
+      IF fgo == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot field"
+        FAIL "boot field"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot meth"
+      FAIL "boot meth"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# pass — ALL methods + ALL fields hit hard
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_METHODS = "MeshSvc.ping\nMeshSvc.health\nMeshPay.pay"
+  LET NEED_METHOD_ANY = "MeshPay.refund\nGhost.nope"
+  LET METHOD_GUARD_SOFT = 0
+  INCLUDE method_guard
+  LET mgo = METHOD_GUARD_OK
+  LET allo = METHOD_GUARD_ALL_OK
+  LET anyo = METHOD_GUARD_ANY_OK
+  CLEAR_ERR
+  IF mgo == 1 THEN
+    LET score = score + 1
+  END
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  LET NEED_FIELDS = "MeshSvc.zone\nMeshSvc.status\nMeshPay.n"
+  LET NEED_FIELD_ANY = "MeshPay.currency\nGhost.nope"
+  LET FIELD_GUARD_SOFT = 0
+  INCLUDE field_guard
+  LET fgo = FIELD_GUARD_OK
+  LET allo = FIELD_GUARD_ALL_OK
+  LET anyo = FIELD_GUARD_ANY_OK
+  CLEAR_ERR
+  IF fgo == 1 THEN
+    LET score = score + 1
+  END
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  HASMETHOD MeshSvc ping
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFIELD MeshSvc zone
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "method_field_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = mgo
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" mgo ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score mgo fgo note_msg
+  CLEAR_ERR
+END
+
+# soft — method miss + field miss bags
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_METHODS = "MeshSvc.ping\nGhost.nope"
+  LET NEED_METHOD_ANY = ""
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  LET allo = METHOD_GUARD_ALL_OK
+  LET mgo = METHOD_GUARD_OK
+  LET miss_s = METHMISS
+  CLEAR_ERR
+  IF allo == 0 THEN
+    LET score = score + 1
+  END
+  IF mgo == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI miss_s "Ghost.nope"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_METHODS = ""
+  LET NEED_METHOD_ANY = "Ghost.a\nGhost.b"
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  LET anyo = METHOD_GUARD_ANY_OK
+  CLEAR_ERR
+  IF anyo == 0 THEN
+    LET score = score + 1
+  END
+  LET NEED_FIELDS = "MeshSvc.zone\nGhost.nope"
+  LET NEED_FIELD_ANY = ""
+  LET FIELD_GUARD_SOFT = 1
+  INCLUDE field_guard
+  LET allo = FIELD_GUARD_ALL_OK
+  LET fgo = FIELD_GUARD_OK
+  LET miss_s = FLDMISS
+  CLEAR_ERR
+  IF allo == 0 THEN
+    LET score = score + 1
+  END
+  IF fgo == 0 THEN
+    LET score = score + 1
+  END
+  SYS HASI miss_s "Ghost.nope"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_FIELDS = ""
+  LET NEED_FIELD_ANY = "Ghost.a\nGhost.b"
+  LET FIELD_GUARD_SOFT = 1
+  INCLUDE field_guard
+  LET anyo = FIELD_GUARD_ANY_OK
+  CLEAR_ERR
+  IF anyo == 0 THEN
+    LET score = score + 1
+  END
+  # empty skip soft OK
+  LET NEED_METHODS = ""
+  LET NEED_METHOD_ANY = ""
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  IF METHOD_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_FIELDS = ""
+  LET NEED_FIELD_ANY = ""
+  LET FIELD_GUARD_SOFT = 1
+  INCLUDE field_guard
+  IF FIELD_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# meth — method_guard soft ANY hit + METHHAVE
+SYS EQS op "meth"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_METHODS = "MeshSvc.ping\nMeshSvc.deploy"
+  LET NEED_METHOD_ANY = ""
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  LET allo = METHOD_GUARD_ALL_OK
+  LET have_s = METHHAVE
+  CLEAR_ERR
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF METHHAVE_N >= 2 THEN
+    LET score = score + 1
+  END
+  SYS HASI have_s "MeshSvc.ping"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_METHODS = ""
+  LET NEED_METHOD_ANY = "Ghost.nope\nMeshPay.pay"
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  LET anyo = METHOD_GUARD_ANY_OK
+  LET have_s = METHHAVE
+  CLEAR_ERR
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  IF METHOD_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASI have_s "MeshPay.pay"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASMETHODS MeshSvc ping health deploy
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASMETHODANY MeshSvc ghost_m health
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "method_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "meth ok"
+    LET admit_n = 1
+    LET find_n = anyo
+  ELSE
+    LET miss = 1
+    LET note_msg = "meth score"
+    FAIL "meth score"
+    CLEAR_ERR
+  END
+  SYS CAT "meth:" anyo ":mt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "meth:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score anyo note_msg
+  CLEAR_ERR
+END
+
+# fld — field_guard soft ANY + FLDHAVE
+SYS EQS op "fld"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_FIELDS = "MeshSvc.zone\nMeshSvc.load"
+  LET NEED_FIELD_ANY = ""
+  LET FIELD_GUARD_SOFT = 1
+  INCLUDE field_guard
+  LET allo = FIELD_GUARD_ALL_OK
+  LET have_s = FLDHAVE
+  CLEAR_ERR
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF FLDHAVE_N >= 2 THEN
+    LET score = score + 1
+  END
+  SYS HASI have_s "MeshSvc.zone"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_FIELDS = ""
+  LET NEED_FIELD_ANY = "Ghost.nope\nMeshPay.currency"
+  LET FIELD_GUARD_SOFT = 1
+  INCLUDE field_guard
+  LET anyo = FIELD_GUARD_ANY_OK
+  LET have_s = FLDHAVE
+  CLEAR_ERR
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  IF FIELD_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  SYS HASI have_s "MeshPay.currency"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET need = "zone,load"
+  HASFIELDS MeshSvc need
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET opts = "ghost,zone"
+  HASFIELDANY MeshSvc opts
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "field_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "fld ok"
+    LET admit_n = 1
+    LET find_n = anyo
+  ELSE
+    LET miss = 1
+    LET note_msg = "fld score"
+    FAIL "fld score"
+    CLEAR_ERR
+  END
+  SYS CAT "fld:" anyo ":fd"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "fld:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score anyo note_msg
+  CLEAR_ERR
+END
+
+# combo — soft ALL+ANY both planes together
+SYS EQS op "combo"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_METHODS = "MeshSvc.ping\nMeshSvc.health"
+  LET NEED_METHOD_ANY = "MeshPay.refund\nGhost.z"
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  LET mgo = METHOD_GUARD_OK
+  LET allo = METHOD_GUARD_ALL_OK
+  LET anyo = METHOD_GUARD_ANY_OK
+  CLEAR_ERR
+  IF mgo == 1 THEN
+    LET score = score + 1
+  END
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  LET NEED_FIELDS = "MeshSvc.zone\nMeshPay.n"
+  LET NEED_FIELD_ANY = "MeshPay.currency\nGhost.z"
+  LET FIELD_GUARD_SOFT = 1
+  INCLUDE field_guard
+  LET fgo = FIELD_GUARD_OK
+  LET allo = FIELD_GUARD_ALL_OK
+  LET anyo = FIELD_GUARD_ANY_OK
+  CLEAR_ERR
+  IF fgo == 1 THEN
+    LET score = score + 1
+  END
+  IF allo == 1 THEN
+    LET score = score + 1
+  END
+  IF anyo == 1 THEN
+    LET score = score + 1
+  END
+  # combined fail: ALL miss method + ANY hit field
+  LET NEED_METHODS = "MeshSvc.ping\nGhost.all"
+  LET NEED_METHOD_ANY = "MeshPay.pay"
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  LET allo = METHOD_GUARD_ALL_OK
+  LET mgo = METHOD_GUARD_OK
+  CLEAR_ERR
+  IF allo == 0 THEN
+    LET score = score + 1
+  END
+  IF mgo == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-mfg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "combo ok"
+    LET admit_n = 1
+    LET find_n = mgo
+  ELSE
+    LET miss = 1
+    LET note_msg = "combo score"
+    FAIL "combo score"
+    CLEAR_ERR
+  END
+  SYS CAT "combo:" score ":cb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "combo:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM for free duals used by guards
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "HASMETHODS"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASFORM "HASFIELDS"
+  LET allo = LAST_N
+  CLEAR_ERR
+  HASFORM "HASMETHODANY"
+  LET anyo = LAST_N
+  CLEAR_ERR
+  HASFORM "HASFIELDANY"
+  LET fgo = LAST_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF allo == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF anyo == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF fgo == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  HASFORM "HASMETHOD"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "HASFIELD"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS HASMETHODS"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "method_field_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "method_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — dual soft pass + soft recover + REQUIRE
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_METHODS = "MeshSvc.ping\nMeshSvc.health"
+  LET NEED_METHOD_ANY = "MeshPay.pay"
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  IF METHOD_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_FIELDS = "MeshSvc.zone\nMeshPay.n"
+  LET NEED_FIELD_ANY = "MeshPay.currency"
+  LET FIELD_GUARD_SOFT = 1
+  INCLUDE field_guard
+  IF FIELD_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # soft miss must not block
+  LET NEED_METHODS = "Ghost.only"
+  LET NEED_METHOD_ANY = ""
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  IF METHOD_GUARD_OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_FIELDS = "Ghost.only"
+  LET NEED_FIELD_ANY = ""
+  LET FIELD_GUARD_SOFT = 1
+  INCLUDE field_guard
+  IF FIELD_GUARD_OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASMETHOD MeshSvc deploy
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFIELD MeshSvc load
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-mfg"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe — PRINT clobber · CLEAR_ERR LAST · WRITE NL
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_METHODS = "MeshSvc.ping"
+  LET NEED_METHOD_ANY = ""
+  LET METHOD_GUARD_SOFT = 1
+  INCLUDE method_guard
+  LET mgo = METHOD_GUARD_OK
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF mgo == 1 THEN
+    LET score = score + 1
+  END
+  LET body = "keep-me"
+  CLEAR_ERR
+  SYS EQS LAST "cleared"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET NEED_FIELDS = "MeshSvc.zone"
+  LET FIELD_GUARD_SOFT = 1
+  INCLUDE field_guard
+  IF FIELD_GUARD_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "method_field_guard"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "fn_slot_admit"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASMETHOD MeshSvc health
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = mgo
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score mgo note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " mgo=" mgo " fgo=" fgo
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "mfg report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS
