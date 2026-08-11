@@ -3849,6 +3849,12 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"MODBY", "MODBY|REMTO name [BY] n — remainder into var (default 2; %0→0)"},
       {"ABS", "ABS|ABSTO name — absolute value in place"},
       {"NEG", "NEG|NEGTO name — negate numeric var in place"},
+      {"COALESCETO", "COALESCETO|NVLTO name a [OR b]… — first non-empty into name · default chains"},
+      {"NVLTO", "NVLTO alias of COALESCETO"},
+      {"COALESCETO BLANK", "COALESCETO BLANK name a OR b… — first non-blank into name"},
+      {"NTHIN", "NTHIN name i [OR fallback] — 0-based bag field → LAST (var unchanged)"},
+      {"HEADIN", "HEADIN name [OR fallback] — first bag field → LAST"},
+      {"TAILIN", "TAILIN name [OR fallback] — last bag field → LAST"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -72982,6 +72988,217 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s -> %ld\n", op, name, nv);
+    bump(vm);
+    return 1;
+  }
+  /* COALESCETO|NVLTO name a [OR b] [OR c…] — first non-empty into name.
+   * COALESCETO BLANK name a OR b… — first non-blank (not only whitespace).
+   * All empty → name "" · LAST_N=0 · COALESCETO_I = 0-based pick (−1 if none).
+   * Usability: default chains without nested IFEMPTY + LET glue. */
+  if (kw(&L->cur,"COALESCETO")||kw(&L->cur,"NVLTO")||kw(&L->cur,"FIRSTTO")||
+      kw(&L->cur,"ORTO")||kw(&L->cur,"DEFAULTTO")||kw(&L->cur,"PICKSTRTO")||
+      kw(&L->cur,"COALESCEV")||kw(&L->cur,"NVLINTO")){
+    char name[48];
+    char chosen[CUBALC_HOST_STR_MAX], arg[CUBALC_HOST_STR_MAX];
+    int skip_blank = 0, got = 0, parts = 0, pick_i = -1;
+    long out_n = 0;
+    lex_next(L);
+    if (kw(&L->cur,"BLANK") || kw(&L->cur,"NB") || kw(&L->cur,"NONBLANK") ||
+        kw(&L->cur,"TRIM") || kw(&L->cur,"WS")) {
+      skip_blank = 1;
+      lex_next(L);
+    }
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, "COALESCETO needs name a [OR b]… — COALESCETO path a OR b OR \"def\"");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "FROM") || kw(&L->cur, "=") || kw(&L->cur, "TO") ||
+        kw(&L->cur, "WITH"))
+      lex_next(L);
+    chosen[0] = 0;
+    while (1) {
+      if (L->cur.kind == TK_EOF || L->cur.kind == TK_NL)
+        break;
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "END") || kw(&L->cur, "IF") || kw(&L->cur, "LET") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "ASSERT") ||
+           kw(&L->cur, "EXPECT") || kw(&L->cur, "PRINT") || kw(&L->cur, "INC") ||
+           kw(&L->cur, "DEC") || kw(&L->cur, "MUL") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "COALESCETO") || kw(&L->cur, "NVLTO") ||
+           kw(&L->cur, "IFEMPTY") || kw(&L->cur, "IFOK") || kw(&L->cur, "IFERR") ||
+           kw(&L->cur, "HASFORM") || kw(&L->cur, "SYS") || kw(&L->cur, "NOTE") ||
+           kw(&L->cur, "EXIT") || kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") ||
+           kw(&L->cur, "FOR") || kw(&L->cur, "EACH") || kw(&L->cur, "CASE") ||
+           kw(&L->cur, "TRY") || kw(&L->cur, "APPENDTO") || kw(&L->cur, "PUSHTO") ||
+           kw(&L->cur, "ZERO") || kw(&L->cur, "CLEARSTR") || kw(&L->cur, "SWAP")))
+        break;
+      if (kw(&L->cur, "OR") || kw(&L->cur, "ELSE") || kw(&L->cur, "DEFAULT") ||
+          kw(&L->cur, ",") || kw(&L->cur, "||")) {
+        lex_next(L);
+        continue;
+      }
+      arg[0] = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS) {
+        long n = 0;
+        if (!cubalc_read_num_atom(vm, L, &n))
+          break;
+        snprintf(arg, sizeof arg, "%ld", n);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, arg, sizeof arg) != 0)
+          break;
+      } else {
+        break;
+      }
+      {
+        int empty = (arg[0] == 0);
+        if (skip_blank && !empty) {
+          const char *p = arg;
+          while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+          empty = (*p == 0);
+        }
+        if (!got && !empty) {
+          snprintf(chosen, sizeof chosen, "%s", arg);
+          got = 1;
+          pick_i = parts;
+        }
+        parts++;
+      }
+    }
+    if (parts < 1) {
+      fail(vm, "COALESCETO needs values — COALESCETO path a OR b OR \"def\"");
+      return -1;
+    }
+    var_set_str(vm, name, chosen);
+    var_set_str(vm, "LAST", chosen);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", chosen);
+    out_n = (long)strlen(chosen);
+    var_set_num(vm, "LAST_N", out_n);
+    vm->last_n = out_n;
+    var_set_num(vm, "COALESCETO_N", out_n);
+    var_set_num(vm, "NVLTO_N", out_n);
+    var_set_num(vm, "COALESCETO_I", (long)pick_i);
+    var_set_num(vm, "COALESCETO_PARTS", (long)parts);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# COALESCETO %s pick=%d len=%ld\n", name, pick_i, out_n);
+    bump(vm);
+    return 1;
+  }
+  /* NTHIN name i [OR fallback] — 0-based bag field peel → LAST (name unchanged).
+   * HEADIN name / TAILIN name — first/last field → LAST.
+   * Usability: read work bag without LET x = SYS NTH i bag glue. */
+  if (kw(&L->cur,"NTHIN")||kw(&L->cur,"BAGNTH")||kw(&L->cur,"FIELDAT")||
+      kw(&L->cur,"HEADIN")||kw(&L->cur,"FIRSTIN")||kw(&L->cur,"BAGHEAD")||
+      kw(&L->cur,"TAILIN")||kw(&L->cur,"LASTIN")||kw(&L->cur,"BAGTAIL")){
+    char op[24], name[48], bag[CUBALC_HOST_STR_MAX], field[CUBALC_HOST_STR_MAX];
+    char fb[CUBALC_HOST_STR_MAX];
+    int mode = 0; /* 0 nth, 1 head, 2 tail */
+    long want = 0, at = 0, found = 0, have_fb = 0;
+    const char *p, *start;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "HEADIN") == 0 || strcmp(op, "FIRSTIN") == 0 ||
+        strcmp(op, "BAGHEAD") == 0)
+      mode = 1;
+    else if (strcmp(op, "TAILIN") == 0 || strcmp(op, "LASTIN") == 0 ||
+             strcmp(op, "BAGTAIL") == 0)
+      mode = 2;
+    else
+      mode = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, mode == 0 ? "NTHIN needs name i — NTHIN bag 0"
+           : mode == 1 ? "HEADIN needs name — HEADIN bag"
+                       : "TAILIN needs name — TAILIN bag");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    bag[0] = field[0] = fb[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(bag, sizeof bag, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(bag, sizeof bag, "%ld", vv->val);
+    if (mode == 0) {
+      if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "OF"))
+        lex_next(L);
+      if (!cubalc_read_num_atom(vm, L, &want)) {
+        fail(vm, "NTHIN needs index — NTHIN bag 0");
+        return -1;
+      }
+      if (want < 0) want = 0;
+    }
+    if (kw(&L->cur, "OR") || kw(&L->cur, "DEFAULT") || kw(&L->cur, "ELSE") ||
+        kw(&L->cur, "FALLBACK")) {
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0)
+        fb[0] = 0;
+      have_fb = 1;
+    }
+    p = bag;
+    if (mode == 1) {
+      /* first field */
+      start = p;
+      while (*p && *p != '\n') p++;
+      if (bag[0]) {
+        size_t fl = (size_t)(p - start);
+        if (fl >= sizeof field) fl = sizeof field - 1;
+        memcpy(field, start, fl);
+        field[fl] = 0;
+        found = 1;
+      }
+    } else if (mode == 2) {
+      const char *last = bag;
+      if (bag[0]) {
+        for (p = bag; *p; p++)
+          if (*p == '\n') last = p + 1;
+        snprintf(field, sizeof field, "%s", last);
+        found = 1;
+      }
+    } else {
+      at = 0;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        if (at == want) {
+          size_t fl = (size_t)(p - start);
+          if (fl >= sizeof field) fl = sizeof field - 1;
+          memcpy(field, start, fl);
+          field[fl] = 0;
+          found = 1;
+          break;
+        }
+        at++;
+        if (*p == '\n') p++;
+      }
+    }
+    if (!found) {
+      if (have_fb)
+        snprintf(field, sizeof field, "%s", fb);
+      else
+        field[0] = 0;
+    }
+    var_set_str(vm, "LAST", field);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", field);
+    {
+      long ln = (long)strlen(field);
+      var_set_num(vm, "LAST_N", found ? 1 : 0);
+      vm->last_n = found ? 1 : 0;
+      var_set_num(vm, mode == 1 ? "HEADIN_N" : mode == 2 ? "TAILIN_N" : "NTHIN_N",
+                  found);
+      var_set_num(vm, "NTHIN_LEN", ln);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s found=%ld\n", op, name, found);
     bump(vm);
     return 1;
   }

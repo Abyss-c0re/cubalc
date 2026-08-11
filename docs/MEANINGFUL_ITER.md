@@ -950,6 +950,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 919. ~~**`IFEMPTY` / `IFNONEMPTY` / `IFDEFINED` / `IFUNDEF` + `HASEMPTY`**~~ **done** (var-presence branches · no IF DEFINED/SYS EMPTY glue · proof 1457).
 920. ~~**`SPLITTO` / `JOINTO` / `GREPIN` / `SORTIN` / `UNIQIN` vars**~~ **done** (bag hygiene in place · no LET=SYS SPLIT/GREP glue · proof 1458).
 921. ~~**`MUL` / `DIVBY` / `MODBY` / `ABS` / `NEG` vars**~~ **done** (in-place scale/div/mod/abs/neg · no LET x=x*2 glue · proof 1459).
+922. ~~**`COALESCETO` / `NTHIN` / `HEADIN` / `TAILIN` vars**~~ **done** (default chains + bag peels · no IFEMPTY/SYS NTH glue · proof 1460).
 
 
 

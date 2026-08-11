@@ -1,0 +1,76 @@
+# COALESCETO / NTHIN / HEADIN / TAILIN — defaults + bag peels
+
+HOLD_FLASH 1
+
+# COALESCETO first non-empty
+LET a = ""
+LET b = "second"
+COALESCETO pick a OR b OR "third"
+ASSERT pick == "second"
+ASSERT COALESCETO_I == 1
+ASSERT LAST_N == 6
+
+# all empty → ""
+LET e1 = ""
+LET e2 = ""
+COALESCETO none e1 OR e2
+ASSERT none == ""
+ASSERT COALESCETO_I == -1
+
+# literal fallback
+COALESCETO path "" OR "default.txt"
+ASSERT path == "default.txt"
+
+# BLANK mode
+LET ws = "   "
+COALESCETO BLANK clean ws OR "x"
+ASSERT clean == "x"
+
+# NVLTO alias
+NVLTO nvl "" OR "ok"
+ASSERT nvl == "ok"
+
+# bag peels
+LET bag = "one
+two
+three"
+HEADIN bag
+ASSERT LAST == "one"
+ASSERT HEADIN_N == 1
+
+TAILIN bag
+ASSERT LAST == "three"
+
+NTHIN bag 1
+ASSERT LAST == "two"
+ASSERT NTHIN_N == 1
+
+# NTHIN miss + OR
+NTHIN bag 9 OR "miss"
+ASSERT LAST == "miss"
+ASSERT NTHIN_N == 0
+
+# bag unchanged by peels
+ASSERT bag == "one
+two
+three"
+
+# chain with PUSHTO
+PUSHTO work "job-a"
+PUSHTO work "job-b"
+HEADIN work
+ASSERT LAST == "job-a"
+SHIFTFROM work
+ASSERT LAST == "job-a"
+
+HASFORM "COALESCETO"
+ASSERT LAST_N == 1
+HASFORM "NTHIN"
+ASSERT LAST_N == 1
+HASFORM "HEADIN"
+ASSERT LAST_N == 1
+HASFORM "TAILIN"
+ASSERT LAST_N == 1
+
+PRINT "1460_coalesceto_nthin ok"
+PASS
