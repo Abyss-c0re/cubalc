@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 926,
-  "version": "1.15.919-usability",
-  "item": "ENSUREIN / DROPLINEIN vars",
-  "item_id": 926,
-  "title": "ENSUREIN \u00b7 DROPLINEIN \u00b7 work-bag set ops",
-  "commit": "afae6b7d",
-  "summary": "Idempotent bag add + exact-line drop on named vars with HIT; work sets without HASINBAG+IF+PUSHTO; proof 1464 PASS.",
+  "iter": 927,
+  "version": "1.15.920-usability",
+  "item": "NUMTO / STRTO vars",
+  "item_id": 927,
+  "title": "NUMTO \u00b7 STRTO \u00b7 in-place type coerce",
+  "commit": "c9b876a1",
+  "summary": "In-place strtol/itoa coerce on named vars with NUMTO_OK; peel\u2192INC without LET=SYS NUM; proof 1465 PASS.",
   "proofs": [
-    "1464_ensurein_droplinein PASS",
-    "1464_cli_ensurein_droplinein PASS",
-    "1463_stripprefixto regression PASS",
-    "1456_pushto_bag regression PASS"
+    "1465_numto_strto PASS",
+    "1465_cli_numto_strto PASS",
+    "1464_ensurein regression PASS",
+    "1462_leftto regression PASS"
   ],
-  "when": "2026-08-11T15:17:06Z",
+  "when": "2026-08-11T15:26:56Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "afae6b7db920e82c19e8ac127ff274682ed84de1",
-  "note": "agent work-queue ensure/ack without IF glue"
+  "sha": "c9b876a12aad46f6a158530f47ab6f4009786d17",
+  "note": "agent peel\u2192arith/template without type glue"
 }
