@@ -911,6 +911,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 880. ~~**`HASCLASS` / `KNOWNCLASS`**~~ **done** (soft 0|1 CLASS defined probe · dual REQUIRE CLASS · no LISTCLASSES+HASLINE · proof 1419).
 881. ~~**`HASCLASSES` / `NEEDCLASSES`**~~ **done** (multi CLASS soft/hard gate · CLASSMISS bag · HASFORMS twin · proof 1420).
 882. ~~**`HASCLASSANY` / `NEEDCLASSANY`**~~ **done** (any-of multi CLASS gate · CLASSHAVE bag · HASCLASSES twin · proof 1421).
+883. ~~**`HASMETHODS` / `NEEDMETHODS`**~~ **done** (multi METHOD soft/hard gate · METHODMISS bag · HASCLASSES twin for methods · proof 1422).
 
 
 ## Tick protocol

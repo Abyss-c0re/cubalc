@@ -1,0 +1,63 @@
+# HASMETHODS / NEEDMETHODS — multi method soft/hard gate (HASCLASSES twin)
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+# all hit on class — use CSV bag so init/birth never become bare idents
+# (bare method names that are statement keywords truncate the list — W774).
+LET need = "tick,init,birth"
+HASMETHODS Cell need
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASMETHODS_N == 3
+ASSERT METHODMISS_N == 0
+ASSERT METHODMISS == ""
+ASSERT METHOD_ON == "Cell"
+
+# partial miss soft
+LET need = "tick,no_such_zz,birth"
+HASMETHODS Cell need
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT HASMETHODS_N == 2
+ASSERT METHODMISS_N == 1
+SYS HASI METHODMISS "no_such_zz"
+ASSERT LAST_N == 1
+
+# ALLMETHODS alias (tick/die are safe bare idents)
+ALLMETHODS Cell tick die
+ASSERT LAST_N == 1
+
+# bag / CSV methods again
+LET need = "tick,init,birth"
+HASMETHODS Cell need
+ASSERT LAST_N == 1
+ASSERT HASMETHODS_N == 3
+
+# live object target
+NEW Cell c1 1 4 0
+HASMETHODS c1 tick after_div
+ASSERT LAST_N == 1
+ASSERT METHOD_ON == "c1"
+
+# unknown class soft — all miss via CSV
+LET need = "tick,init"
+HASMETHODS Ghost need
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT METHODMISS_N == 2
+
+# empty methods soft
+HASMETHODS Cell
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+HASFORM "HASMETHODS"
+ASSERT LAST_N == 1
+HASFORM "NEEDMETHODS"
+ASSERT LAST_N == 1
+
+PRINT "1422_hasmethods ok"
+PASS

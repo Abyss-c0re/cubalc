@@ -2039,6 +2039,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"SHUFFLEINST", "SHUFFLEINST alias of SHUFFLEOBJS"},
       {"OBJSHUFFLE", "OBJSHUFFLE alias of SHUFFLEOBJS"},
       {"HASMETHOD", "HASMETHOD obj|Class method — soft 0|1 before SEND"},
+      {"HASMETHODS", "HASMETHODS|ALLMETHODS Class|obj methods… — soft all methods · METHODMISS bag"},
+      {"NEEDMETHODS", "NEEDMETHODS|REQUIREMETHODS Class|obj methods… — fail-fast multi HASMETHOD"},
       {"LISTMETHODS", "LISTMETHODS Class|obj — method name bag · NMETHODS"},
       {"HASOBJ", "HASOBJ|LIVES name — soft live-object probe 0|1"},
       {"BINDTHIS", "BINDTHIS|USEOBJ|ASTHIS name — bind THIS/SELF to live object · soft miss"},
