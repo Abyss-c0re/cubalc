@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <time.h>
 
 static ClassDef *oop_find_class(VM *vm, const char *name){
   int i;
@@ -24715,6 +24716,77 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (kw(&L->cur,"END")) lex_next(L);
     var_set_num(vm,"OK",1);
     bump(vm); return 1;
+  }
+  /* RETRY n [EVERY|SLEEP|BACKOFF ms] … END — re-run body until OK=1 or n exhausted.
+   * Clears OK before each attempt so soft TRYCALL/EXPECT must re-establish success.
+   * Optional EVERY sleeps between failed attempts (capped 60s). RETRY_N attempts used.
+   * Usability: agent flaky hooks without LOOP+BREAKIF+SLEEP glue. */
+  if (kw(&L->cur,"RETRY")||kw(&L->cur,"ATTEMPT")||kw(&L->cur,"TRIES")||
+      kw(&L->cur,"RETRYN")||kw(&L->cur,"NRETRY")){
+    long ntry, every_ms = 0, attempt, okv;
+    Lex save;
+    int depth = 1;
+    Var *ov;
+    lex_next(L);
+    ntry = parse_expr(vm, L);
+    if (ntry < 1) ntry = 1;
+    if (ntry > 10000) ntry = 10000;
+    if (kw(&L->cur,"EVERY")||kw(&L->cur,"SLEEP")||kw(&L->cur,"BACKOFF")||
+        kw(&L->cur,"WAIT")||kw(&L->cur,"DELAY")||kw(&L->cur,"PAUSE")){
+      lex_next(L);
+      every_ms = parse_expr(vm, L);
+      if (every_ms < 0) every_ms = 0;
+      if (every_ms > 60000) every_ms = 60000;
+      if (kw(&L->cur,"MS")||kw(&L->cur,"MILLIS")||kw(&L->cur,"MILLISECONDS"))
+        lex_next(L);
+    }
+    skip_nl(L);
+    save = *L;
+    while (L->cur.kind != TK_EOF) {
+      if (block_scan_step(L, &depth, 0)) break;
+    }
+    if (depth != 0) { fail(vm, "RETRY without END"); return -1; }
+    okv = 0;
+    for (attempt = 1; attempt <= ntry && !vm->fatal && !vm->halt; attempt++) {
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "IT", attempt - 1);
+      var_set_num(vm, "RETRY_I", attempt);
+      vm->break_loop = 0;
+      vm->continue_loop = 0;
+      {
+        Lex body = save;
+        if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+      }
+      if (vm->break_loop) { vm->break_loop = 0; break; }
+      vm->continue_loop = 0;
+      ov = var_get(vm, "OK", 0);
+      okv = ov ? ov->val : 0;
+      if (okv) break;
+      if (attempt < ntry && every_ms > 0) {
+        struct timespec ts;
+        ts.tv_sec = every_ms / 1000L;
+        ts.tv_nsec = (every_ms % 1000L) * 1000000L;
+        nanosleep(&ts, NULL);
+      }
+    }
+    if (kw(&L->cur, "END")) lex_next(L);
+    var_set_num(vm, "RETRY_N", attempt > ntry ? ntry : attempt);
+    var_set_num(vm, "RETRY_OK", okv ? 1 : 0);
+    var_set_num(vm, "LAST_N", attempt > ntry ? ntry : attempt);
+    vm->last_n = attempt > ntry ? ntry : attempt;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", vm->last_n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    /* leave OK as final body OK (0 if all attempts failed) */
+    var_set_num(vm, "OK", okv ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# RETRY attempts=%ld ok=%ld every=%ld\n",
+              attempt > ntry ? ntry : attempt, okv, every_ms);
+    bump(vm);
+    return 1;
   }
   /* TIMEIT|BENCH|ELAPSED|TIMING|MEASURE … END — wall mono ms for body.
    * LAST_N/TIMEIT_MS/BENCH_MS/ELAPSED = elapsed; OK=1.

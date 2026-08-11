@@ -937,6 +937,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 906. ~~**`SENDANY` / `TRYSENDANY … OR` fallback**~~ **done** (multi-method default · SENDANY_OR · CALLANY OR twin · proof 1444).
 907. ~~**`cubalc run -K` / `--require-classes` / `CUBALC_REQUIRE_CLASSES`**~~ **done** (host CLASS floor after -I · NEEDCLASSES dual · proof 1445).
 908. ~~**`TIMEIT` / `BENCH` / `ELAPSED` block**~~ **done** (wall mono ms body measure · TIMEIT_MS · no SYS MS delta glue · proof 1446).
+909. ~~**`RETRY` / `ATTEMPT` n [EVERY ms] block**~~ **done** (re-run until OK · backoff · RETRY_N · flaky hooks · proof 1447).
 
 
 

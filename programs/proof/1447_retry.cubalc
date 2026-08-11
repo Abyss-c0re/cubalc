@@ -1,0 +1,71 @@
+# RETRY n [EVERY ms] — re-run body until OK (flaky agent hooks)
+
+HOLD_FLASH 1
+
+# success on first try
+LET hits = 0
+RETRY 3
+  LET hits = hits + 1
+  PASS
+END
+ASSERT OK == 1
+ASSERT RETRY_OK == 1
+ASSERT RETRY_N == 1
+ASSERT hits == 1
+
+# fail all attempts
+LET hits = 0
+RETRY 3
+  LET hits = hits + 1
+  FAIL "soft"
+END
+ASSERT OK == 0
+ASSERT RETRY_OK == 0
+ASSERT RETRY_N == 3
+ASSERT hits == 3
+CLEAR_ERR
+
+# succeed on 3rd attempt
+LET hits = 0
+RETRY 5
+  LET hits = hits + 1
+  IF hits == 3
+    PASS
+  ELSE
+    FAIL "not yet"
+  END
+END
+ASSERT OK == 1
+ASSERT RETRY_OK == 1
+ASSERT RETRY_N == 3
+ASSERT hits == 3
+CLEAR_ERR
+
+# EVERY backoff (small) still reaches success
+LET hits = 0
+RETRY 4 EVERY 5
+  LET hits = hits + 1
+  IF hits >= 2
+    PASS
+  ELSE
+    FAIL "once"
+  END
+END
+ASSERT RETRY_OK == 1
+ASSERT RETRY_N == 2
+CLEAR_ERR
+
+# TRYCALL soft miss then hit via delayed FN... use FAIL/PASS path already
+# ATTEMPT alias
+ATTEMPT 1
+  PASS
+END
+ASSERT RETRY_OK == 1
+
+HASFORM "RETRY"
+ASSERT LAST_N == 1
+HASFORM "ATTEMPT"
+ASSERT LAST_N == 1
+
+PRINT "1447_retry ok"
+PASS
