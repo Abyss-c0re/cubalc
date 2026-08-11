@@ -1,0 +1,113 @@
+# IFNEWER / IFOLDER / IFOUTOFDATE — relative mtime branches
+# FS often has 1s mtime resolution — use ≥1s gaps between writes.
+
+HOLD_FLASH 1
+
+SYS MKDIR "state/meaningful_iter/mi_ifnewer"
+SYS WRITE "state/meaningful_iter/mi_ifnewer/src.json" "{\"v\":1}"
+SYS SLEEP 1100
+SYS WRITE "state/meaningful_iter/mi_ifnewer/dst.json" "{\"v\":1}"
+
+IFNEWER "state/meaningful_iter/mi_ifnewer/src.json" "state/meaningful_iter/mi_ifnewer/dst.json"
+  LET n = 1
+ELSE
+  LET n = 0
+END
+ASSERT n == 0
+ASSERT IFNEWER_N == 0
+
+IFNEWER "state/meaningful_iter/mi_ifnewer/dst.json" "state/meaningful_iter/mi_ifnewer/src.json"
+  LET n = 1
+ELSE
+  LET n = 0
+END
+ASSERT n == 1
+ASSERT IFNEWER_N == 1
+ASSERT IFNEWER_MTIME > 0
+
+IFNEWER "state/meaningful_iter/mi_ifnewer/src.json" "state/meaningful_iter/mi_ifnewer/nope.ref"
+  LET n = 1
+ELSE
+  LET n = 0
+END
+ASSERT n == 1
+
+IFNEWER "state/meaningful_iter/mi_ifnewer/nope.a" "state/meaningful_iter/mi_ifnewer/src.json"
+  LET n = 1
+ELSE
+  LET n = 0
+END
+ASSERT n == 0
+
+IFOLDER "state/meaningful_iter/mi_ifnewer/src.json" "state/meaningful_iter/mi_ifnewer/dst.json"
+  LET o = 1
+ELSE
+  LET o = 0
+END
+ASSERT o == 1
+ASSERT IFOLDER_N == 1
+
+IFOLDER "state/meaningful_iter/mi_ifnewer/nope.b" "state/meaningful_iter/mi_ifnewer/src.json"
+  LET o = 1
+ELSE
+  LET o = 0
+END
+ASSERT o == 1
+
+IFOLDER "state/meaningful_iter/mi_ifnewer/dst.json" "state/meaningful_iter/mi_ifnewer/src.json"
+  LET o = 1
+ELSE
+  LET o = 0
+END
+ASSERT o == 0
+
+IFOUTOFDATE "state/meaningful_iter/mi_ifnewer/out.cache" "state/meaningful_iter/mi_ifnewer/src.json"
+  SYS WRITE "state/meaningful_iter/mi_ifnewer/out.cache" "built"
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 1
+ASSERT IFOUTOFDATE_N == 1
+IFFILE "state/meaningful_iter/mi_ifnewer/out.cache"
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+IFOUTOFDATE "state/meaningful_iter/mi_ifnewer/out.cache" "state/meaningful_iter/mi_ifnewer/src.json"
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+
+SYS SLEEP 1100
+SYS WRITE "state/meaningful_iter/mi_ifnewer/src.json" "{\"v\":2}"
+IFOUTOFDATE "state/meaningful_iter/mi_ifnewer/out.cache" "state/meaningful_iter/mi_ifnewer/src.json"
+  SYS WRITE "state/meaningful_iter/mi_ifnewer/out.cache" "rebuilt"
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 1
+
+LET tgt = "state/meaningful_iter/mi_ifnewer/out.cache"
+LET src = "state/meaningful_iter/mi_ifnewer/src.json"
+IFOUTOFDATE tgt src
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+
+HASFORM "IFNEWER"
+ASSERT LAST_N == 1
+HASFORM "IFOLDER"
+ASSERT LAST_N == 1
+HASFORM "IFOUTOFDATE"
+ASSERT LAST_N == 1
+
+PRINT "1485_ifnewer_ifolder_ifoutofdate ok"
+PASS

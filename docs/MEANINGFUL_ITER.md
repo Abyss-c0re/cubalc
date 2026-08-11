@@ -976,6 +976,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 945. ~~**`IFBIG` / `IFSMALL` / `IFSIZE`**~~ **done** (path size branches · no SYS SIZE+IF glue · proof 1484).
 
+946. ~~**`IFNEWER` / `IFOLDER` / `IFOUTOFDATE`**~~ **done** (relative mtime / make rebuild gates · no dual MTIME+IF glue · proof 1485).
+
 
 
 
