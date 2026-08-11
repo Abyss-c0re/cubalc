@@ -1,0 +1,61 @@
+# MOVELINEIN — move bag field between indices on named vars
+
+HOLD_FLASH 1
+
+PUSHTO work "a"
+PUSHTO work "b"
+PUSHTO work "c"
+PUSHTO work "d"
+
+# promote last to front
+MOVELINEIN work 3 0
+ASSERT work == "d
+a
+b
+c"
+ASSERT MOVELINEIN_HIT == 1
+
+# demote front to end
+MOVEATIN work 0 99
+ASSERT work == "a
+b
+c
+d"
+ASSERT MOVELINEIN_HIT == 1
+
+# no-op same index
+MOVELINEIN work 1 1
+ASSERT work == "a
+b
+c
+d"
+ASSERT MOVELINEIN_HIT == 1
+
+# soft miss OOR
+MOVELINEIN work 9 0
+ASSERT MOVELINEIN_HIT == 0
+ASSERT work == "a
+b
+c
+d"
+
+# FINDLINEIN then promote
+FINDLINEIN work "c"
+MOVELINEIN work LAST_N 0
+ASSERT work == "c
+a
+b
+d"
+
+# empty soft
+CLEARSTR empty
+MOVELINEIN empty 0 1
+ASSERT MOVELINEIN_HIT == 0
+
+HASFORM "MOVELINEIN"
+ASSERT LAST_N == 1
+HASFORM "MOVEATIN"
+ASSERT LAST_N == 1
+
+PRINT "1470_movelinein ok"
+PASS

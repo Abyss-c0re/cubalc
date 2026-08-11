@@ -3893,6 +3893,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"DROPATIN", "DROPATIN alias of DROPNTHIN"},
       {"INSERTLINEIN", "INSERTLINEIN|INSLINEIN name i line — insert bag field at index"},
       {"INSLINEIN", "INSLINEIN alias of INSERTLINEIN"},
+      {"MOVELINEIN", "MOVELINEIN|MOVEATIN name from to — move bag field to final index · HIT"},
+      {"MOVEATIN", "MOVEATIN alias of MOVELINEIN"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -74297,6 +74299,117 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s idx=%ld hit=%ld n=%ld\n", op, name, idx, hit, nfields);
+    bump(vm);
+    return 1;
+  }
+  /* MOVELINEIN|MOVEATIN name from to — move 0-based bag field to final index in place.
+   * LAST_N / MOVELINEIN_HIT = 1 success, 0 soft miss (from OOR / empty / to<0).
+   * to >= n → end. Usability: promote/demote priority queues without DROPNTHIN+INSERTLINEIN glue;
+   * dual of SYS MOVELINE for named vars. */
+  if (kw(&L->cur,"MOVELINEIN")||kw(&L->cur,"MOVEATIN")||kw(&L->cur,"MOVEBAGIN")||
+      kw(&L->cur,"REORDERIN")||kw(&L->cur,"SHIFTTOIN")||kw(&L->cur,"PROMOTEIN")||
+      kw(&L->cur,"DEMOTEIN")){
+    enum { MV_MAX = 256, MV_FLEN = 192 };
+    char op[24], name[48];
+    char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    char fields[MV_MAX][MV_FLEN];
+    char held[MV_FLEN];
+    const char *p, *start;
+    long from_i = 0, to_i = 0, n = 0, hit = 0;
+    size_t flen, o = 0;
+    int i, first = 1;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, "MOVELINEIN needs name from to — MOVELINEIN work 2 0");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "FROM") || kw(&L->cur, "AT") || kw(&L->cur, "OF") ||
+        kw(&L->cur, "INDEX"))
+      lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &from_i)) {
+      fail(vm, "MOVELINEIN needs from — MOVELINEIN work 2 0");
+      return -1;
+    }
+    if (kw(&L->cur, "TO") || kw(&L->cur, "INTO") || kw(&L->cur, "AT") ||
+        kw(&L->cur, ","))
+      lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &to_i)) {
+      fail(vm, "MOVELINEIN needs to — MOVELINEIN work 2 0");
+      return -1;
+    }
+    bag[0] = out[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(bag, sizeof bag, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(bag, sizeof bag, "%ld", vv->val);
+    n = 0;
+    if (bag[0]) {
+      p = bag;
+      while (*p && n < MV_MAX) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen >= MV_FLEN) flen = MV_FLEN - 1;
+        memcpy(fields[n], start, flen);
+        fields[n][flen] = 0;
+        n++;
+        if (*p == '\n') p++;
+      }
+    }
+    if (n <= 0 || from_i < 0 || from_i >= n || to_i < 0) {
+      snprintf(out, sizeof out, "%s", bag);
+      hit = 0;
+    } else {
+      hit = 1;
+      if (to_i >= n) to_i = n - 1;
+      if (from_i != to_i) {
+        snprintf(held, sizeof held, "%s", fields[from_i]);
+        if (from_i < to_i) {
+          for (i = (int)from_i; i < (int)to_i; i++)
+            memcpy(fields[i], fields[i + 1], MV_FLEN);
+          memcpy(fields[to_i], held, MV_FLEN);
+        } else {
+          for (i = (int)from_i; i > (int)to_i; i--)
+            memcpy(fields[i], fields[i - 1], MV_FLEN);
+          memcpy(fields[to_i], held, MV_FLEN);
+        }
+      }
+      o = 0; first = 1;
+      for (i = 0; i < (int)n; i++) {
+        flen = strlen(fields[i]);
+        if (!first && o + 1 < sizeof out) out[o++] = '\n';
+        first = 0;
+        if (o + flen < sizeof out) {
+          memcpy(out + o, fields[i], flen);
+          o += flen;
+        } else if (o < sizeof out - 1) {
+          size_t take = sizeof out - 1 - o;
+          memcpy(out + o, fields[i], take);
+          o += take;
+        }
+        out[o] = 0;
+      }
+    }
+    var_set_str(vm, name, out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "MOVELINEIN_HIT", hit);
+    var_set_num(vm, "MOVELINEIN_N", hit);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s from=%ld to=%ld hit=%ld\n", op, name, from_i, to_i, hit);
     bump(vm);
     return 1;
   }

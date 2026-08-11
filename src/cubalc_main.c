@@ -5267,6 +5267,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"DROPATIN", "flow", "DROPATIN alias of DROPNTHIN"},
       {"INSERTLINEIN", "flow", "INSERTLINEIN|INSLINEIN name i line — insert bag field at index"},
       {"INSLINEIN", "flow", "INSLINEIN alias of INSERTLINEIN"},
+      {"MOVELINEIN", "flow", "MOVELINEIN|MOVEATIN name from to — move bag field · HIT"},
+      {"MOVEATIN", "flow", "MOVEATIN alias of MOVELINEIN"},
       {"DEFAULT", "flow", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"DEFINED", "flow", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"TYPEOF", "flow", "TYPEOF name — LAST undef|num|str · LAST_N 0|1|2"},

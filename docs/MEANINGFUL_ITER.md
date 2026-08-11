@@ -960,6 +960,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 929. ~~**`IFSTARTS` / `IFENDS` / `IFCONTAINS` / `IFEQS`**~~ **done** (string content branches · no STARTSIN+IF LAST_N glue · proof 1467).
 930. ~~**`FINDLINEIN` / `SETLINEIN` / `DROPNTHIN` vars**~~ **done** (bag index locate/set/drop · work queues without NTHIN+rebuild · proof 1468).
 931. ~~**`INSERTLINEIN` vars**~~ **done** (insert bag field at 0-based index · priority queues · completes SET/DROP triad · proof 1469).
+932. ~~**`MOVELINEIN` vars**~~ **done** (move bag field from→to index · promote/demote without DROP+INSERT glue · proof 1470).
 
 
 
