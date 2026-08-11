@@ -5924,7 +5924,7 @@
     "iter325: board 10/10 first pass; include_newest selftest brittle (newest=arg_guard)",
     "iter325: selftest 569/778 arg_guard PASS; CLI duals still unknown form set"
   ],
-  "commit": "pending",
+  "commit": "391a8756",
   "ts": "2026-08-11T00:29:08Z",
-  "board_commit": "pending"
+  "board_commit": "391a8756"
 }
