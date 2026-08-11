@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 942,
-  "version": "1.15.935-usability",
-  "item": "IFENV / IFHASENV",
-  "item_id": 942,
-  "title": "IFENV · IFHASENV · host env set branches",
-  "commit": "4fc4f334",
-  "summary": "Host env set branches with ELSE/END; no SYS HASENV+IF glue; proof 1480 PASS.",
+  "iter": 943,
+  "version": "1.15.936-usability",
+  "item": "IFFIELD / IFHASFIELD",
+  "item_id": 943,
+  "title": "IFFIELD · IFHASFIELD · field exists branches",
+  "commit": "67281995",
+  "summary": "Field exists branches with ELSE/END; no HASFIELD+IF glue; proof 1481 PASS.",
   "proofs": [
-    "1480_ifenv PASS",
+    "1481_iffield PASS",
+    "1480_ifenv regression PASS",
     "1479_iffile regression PASS",
-    "1478_ifobj regression PASS",
-    "1475_ifstartsi regression PASS"
+    "1478_ifobj regression PASS"
   ],
-  "when": "2026-08-11T18:54:09Z",
+  "when": "2026-08-11T19:08:27Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "4fc4f334d894f6736de2b3b28bc4b1d1a599dd35",
-  "note": "optional PATH/CUBALC_* config without probe+IF glue"
+  "sha": "67281995657d3a010d21d0cd8d56dda85942e485",
+  "note": "soft GETF/SETF paths without probe+IF glue"
 }
