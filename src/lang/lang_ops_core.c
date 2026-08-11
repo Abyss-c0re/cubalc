@@ -3872,6 +3872,10 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"STRIPSUFFIXTO", "STRIPSUFFIXTO name suffix — drop trailing affix if present (HIT)"},
       {"DROPPREFIXTO", "DROPPREFIXTO alias of STRIPPREFIXTO"},
       {"DROPSUFFIXTO", "DROPSUFFIXTO alias of STRIPSUFFIXTO"},
+      {"ENSUREIN", "ENSUREIN name line — append exact bag field if missing · ENSUREIN_HIT"},
+      {"DROPLINEIN", "DROPLINEIN name line — drop first exact bag field · DROPLINEIN_HIT (not GREPVIN)"},
+      {"REMOVELINEIN", "REMOVELINEIN alias of DROPLINEIN"},
+      {"ACKIN", "ACKIN alias of DROPLINEIN — work-queue ack"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -73636,6 +73640,158 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s hit=%ld len=%ld\n", op, name, hit, out_n);
+    bump(vm);
+    return 1;
+  }
+  /* ENSUREIN name line — append exact bag field if missing (idempotent work set).
+   * DROPLINEIN name line — drop first exact bag field (ack without substring GREPVIN).
+   * ENSUREIN_HIT 1=added 0=already present; DROPLINEIN_HIT 1=dropped 0=miss.
+   * LAST_N = hit; LAST = bag after mutate; LINESIN dual via LAST bag length count.
+   * Usability: work-bag sets without HASINBAG+IF+PUSHTO / EACH rebuild glue.
+   * Note: DROPIN stays GREPVIN (substring filter); DROPLINEIN is exact membership. */
+  if (kw(&L->cur,"ENSUREIN")||kw(&L->cur,"BAGENSUREIN")||kw(&L->cur,"ADDIFMISSINGIN")||
+      kw(&L->cur,"ENSUREBAGIN")||kw(&L->cur,"ENSURELINEIN")||
+      kw(&L->cur,"DROPLINEIN")||kw(&L->cur,"REMOVELINEIN")||kw(&L->cur,"ACKLINEIN")||
+      kw(&L->cur,"DROPBAGLINEIN")||kw(&L->cur,"ACKIN")){
+    char op[24], name[48];
+    int is_drop = 0;
+    char bag[CUBALC_HOST_STR_MAX], line[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    long hit = 0, nfields = 0;
+    size_t llen, blen;
+    const char *p, *start;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "DROPLINEIN") == 0 || strcmp(op, "REMOVELINEIN") == 0 ||
+        strcmp(op, "ACKLINEIN") == 0 || strcmp(op, "DROPBAGLINEIN") == 0 ||
+        strcmp(op, "ACKIN") == 0)
+      is_drop = 1;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, is_drop ? "DROPLINEIN needs name line — DROPLINEIN work \"job\""
+                       : "ENSUREIN needs name line — ENSUREIN work \"job\"");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "OF") || kw(&L->cur, "LINE") ||
+        kw(&L->cur, "FOR") || kw(&L->cur, "AND"))
+      lex_next(L);
+    line[0] = 0;
+    if (resolve_str_arg(vm, L, line, sizeof line) != 0) {
+      fail(vm, is_drop ? "DROPLINEIN needs line" : "ENSUREIN needs line");
+      return -1;
+    }
+    bag[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(bag, sizeof bag, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(bag, sizeof bag, "%ld", vv->val);
+    llen = strlen(line);
+    blen = strlen(bag);
+    hit = 0;
+    out[0] = 0;
+
+    if (!is_drop) {
+      /* ENSUREIN: membership probe then optional PUSHTO */
+      int present = 0;
+      p = bag;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        {
+          size_t fl = (size_t)(p - start);
+          if (fl == llen && (fl == 0 || memcmp(start, line, fl) == 0)) {
+            present = 1;
+            break;
+          }
+        }
+        if (*p == '\n') p++;
+      }
+      if (present) {
+        snprintf(out, sizeof out, "%s", bag);
+        hit = 0;
+      } else {
+        size_t o = 0;
+        if (blen == 0) {
+          if (llen < sizeof out) { memcpy(out, line, llen); o = llen; }
+          else { o = sizeof out - 1; memcpy(out, line, o); }
+          out[o] = 0;
+        } else {
+          if (blen < sizeof out) { memcpy(out, bag, blen); o = blen; }
+          else { o = sizeof out - 1; memcpy(out, bag, o); }
+          if (o + 1 < sizeof out) out[o++] = '\n';
+          if (o + llen < sizeof out) { memcpy(out + o, line, llen); o += llen; }
+          else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, line, take); o += take;
+          }
+          out[o] = 0;
+        }
+        hit = 1;
+      }
+    } else {
+      /* DROPLINEIN: drop first exact field */
+      size_t o = 0;
+      int first = 1;
+      p = bag;
+      while (*p || (p == bag && bag[0] == 0 && 0)) {
+        if (!*p && p != bag) break;
+        if (!bag[0]) break;
+        start = p;
+        while (*p && *p != '\n') p++;
+        {
+          size_t fl = (size_t)(p - start);
+          int match = (fl == llen && (fl == 0 || memcmp(start, line, fl) == 0));
+          if (match && !hit) {
+            hit = 1; /* skip this field once */
+          } else {
+            if (!first && o + 1 < sizeof out) out[o++] = '\n';
+            if (o + fl < sizeof out) { memcpy(out + o, start, fl); o += fl; }
+            else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, start, take); o += take;
+            }
+            out[o] = 0;
+            first = 0;
+          }
+        }
+        if (*p == '\n') p++;
+        else break;
+      }
+    }
+
+    nfields = 0;
+    if (out[0]) {
+      p = out;
+      while (*p) {
+        while (*p && *p != '\n') p++;
+        nfields++;
+        if (*p == '\n') p++;
+      }
+    }
+    var_set_str(vm, name, out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    if (is_drop) {
+      var_set_num(vm, "DROPLINEIN_HIT", hit);
+      var_set_num(vm, "DROPLINEIN_N", nfields);
+      var_set_num(vm, "ENSUREIN_HIT", 0);
+    } else {
+      var_set_num(vm, "ENSUREIN_HIT", hit);
+      var_set_num(vm, "ENSUREIN_N", nfields);
+      var_set_num(vm, "DROPLINEIN_HIT", 0);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s hit=%ld n=%ld\n", op, name, hit, nfields);
     bump(vm);
     return 1;
   }

@@ -1,0 +1,67 @@
+# ENSUREIN / DROPLINEIN — work-bag set ops on named vars
+
+HOLD_FLASH 1
+
+# ENSUREIN adds once
+ENSUREIN work "a"
+ASSERT ENSUREIN_HIT == 1
+ENSUREIN work "b"
+ENSUREIN work "a"
+ASSERT ENSUREIN_HIT == 0
+ASSERT work == "a
+b"
+LINESIN work
+ASSERT LAST_N == 2
+
+# DROPLINEIN exact ack (not substring)
+PUSHTO work "error:timeout"
+PUSHTO work "ok"
+DROPLINEIN work "b"
+ASSERT DROPLINEIN_HIT == 1
+ASSERT work == "a
+error:timeout
+ok"
+
+# miss drop
+DROPLINEIN work "missing"
+ASSERT DROPLINEIN_HIT == 0
+ASSERT LAST_N == 0
+
+# ACKIN alias
+ACKIN work "a"
+ASSERT DROPLINEIN_HIT == 1
+ASSERT work == "error:timeout
+ok"
+
+# exact only — substring "error" must not drop "error:timeout"
+DROPLINEIN work "error"
+ASSERT DROPLINEIN_HIT == 0
+HASINBAG work "error:timeout"
+ASSERT LAST_N == 1
+
+# REMOVELINEIN alias
+REMOVELINEIN work "ok"
+ASSERT DROPLINEIN_HIT == 1
+ASSERT work == "error:timeout"
+
+# empty bag ensure
+ENSUREIN empty "first"
+ASSERT empty == "first"
+ASSERT ENSUREIN_HIT == 1
+
+# GREPVIN DROPIN still substring (regression: DROPIN ≠ DROPLINEIN)
+LET bag = "aa
+ab
+bb"
+DROPIN bag "a"
+ASSERT bag == "bb"
+
+HASFORM "ENSUREIN"
+ASSERT LAST_N == 1
+HASFORM "DROPLINEIN"
+ASSERT LAST_N == 1
+HASFORM "ACKIN"
+ASSERT LAST_N == 1
+
+PRINT "1464_ensurein_droplinein ok"
+PASS
