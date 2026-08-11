@@ -1,20 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 892,
-  "version": "1.15.885-usability",
-  "item": "class_guard native HASCLASS",
-  "item_id": 892,
-  "title": "class_guard · HASCLASS · drop LISTCLASSES soup",
-  "commit": "57e93c06bdd55ffdcd6bd44d3b46948bed5c3ecb",
-  "summary": "class_guard rewritten to HASCLASS; CLASSMISS surface kept; 1431+1401 PASS.",
+  "iter": 893,
+  "version": "1.15.886-usability",
+  "item": "HASFNANY / NEEDFNANY any-of multi FN gates",
+  "item_id": 893,
+  "title": "HASFNANY · NEEDFNANY · FNHAVE · HASFNS twin",
+  "commit": "390036e6971e862e3561061b1df2c77b2f71db95",
+  "summary": "HASFNANY soft any FN + FNHAVE/MISS; NEEDFNANY hard; proof 1432 PASS.",
   "proofs": [
-    "1431_class_guard_native PASS",
-    "1431_cli_class_guard_native PASS",
-    "1401_class_guard PASS",
-    "1401_class_boot PASS"
+    "1432_hasfnany PASS",
+    "1432_cli_hasfnany PASS"
   ],
-  "when": "2026-08-11T08:32:37Z",
+  "when": "2026-08-11T08:44:44Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "57e93c06bdd55ffdcd6bd44d3b46948bed5c3ecb",
-  "note": "lib usability — INCLUDE class_boot without LISTCLASSES+HASLINE glue"
+  "sha": "390036e6971e862e3561061b1df2c77b2f71db95",
+  "note": "optional CALL plugin FN OR without N x HASFN IF glue"
 }
