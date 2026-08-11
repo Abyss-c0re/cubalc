@@ -1,0 +1,1062 @@
+# svc_service_boot_fleet_board.cubalc — service_session fleet product+host+live gate
+#
+# Real use: fleet services gate product+host (full_session) AND live OOP
+# (live_session) via INCLUDE service_session — init --service (MI 870 / 1409).
+# First realworld of service_session. LEAN board: no plate_peer (vars_full at
+# 256 under service stack + plate_peer + agent_boot).
+#
+#   NEED_LIBS · NEED_OBJS · NEED_CLASSES · NEED_METHODS · NEED_FIELDS
+#   *_GUARD_SOFT · INCLUDE service_session → SERVICE_SESSION_OK
+#   FULL_SESSION_OK · LIVE_SESSION_OK · HOST_SESSION_OK
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ssv_$$
+#   ./out/cubalc run programs/realworld/svc_service_boot_fleet_board.cubalc boot
+#   ./out/cubalc run ... pass|soft_obj|soft_lib|hard|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt SSV_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_SSV_REQUIRE
+#
+# Edges: service stack vars_n~200+; vars_full→parse collapse (W740);
+#   plate_peer+service unusable together; hard FAIL exit_code 0; WRITE NL;
+#   HASOBJ exact; SERVICE zeros if FULL or LIVE miss; empty NEED_* skips
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS SvcJob
+  FIELD id ""
+  FIELD status "open"
+  METHOD ping
+    LET status = "ok"
+  END
+END
+
+NEW SvcJob j0
+NEW SvcJob j1
+
+NOTE "svc_service_boot_fleet_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_service_boot_fleet -- boot|pass|soft_obj|soft_lib|hard|form|gate|probe|list"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeS"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_SSV_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SSV_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET sso = 0
+LET fso = 0
+LET lso = 0
+LET hso = 0
+LET miss_n = 0
+LET have_n = 0
+
+ONEOF ACTION "boot", "pass", "soft_obj", "soft_lib", "hard", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft_obj" THEN
+    LET op = "soft_obj"
+  WHEN "soft_lib" THEN
+    LET op = "soft_lib"
+  WHEN "hard" THEN
+    LET op = "hard"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+# boot — lean agent plate via SYS WRITE (no plate_peer: vars)
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-ssv\",\"schema\":\"cubalc.svc_service_boot_fleet.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"ssv\",\"want_filter\":\"service_fleet\"}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "svc-ssv"
+  IF LAST_N == 1 THEN
+    LET hit = 1
+    LET note_msg = "boot ok"
+    LET admit_n = 1
+    LET score = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# helper: zero all NEED knobs then set what we need (avoid DEFAULT sticky traps)
+# pass
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_FLAGS = ""
+  LET NEED_FLAG_ANY = ""
+  LET NEED_REST_N = 0
+  LET NEED_ARGS = ""
+  LET NEED_ARG_ANY = ""
+  LET NEED_ENVS = ""
+  LET NEED_ENV_ANY = ""
+  LET NEED_TIME = 1
+  LET NEED_PATHS = ""
+  LET NEED_PATH_ANY = ""
+  LET NEED_READ_PATHS = ""
+  LET NEED_WRITE_PATHS = ""
+  LET NEED_BINS = ""
+  LET NEED_BIN_ANY = ""
+  LET NEED_LIBS = "agent_boot"
+  LET NEED_LIB_ANY = ""
+  LET NEED_CLASSES = ""
+  LET NEED_CLASS_ANY = ""
+  LET NEED_METHODS = ""
+  LET NEED_METHOD_ANY = ""
+  LET NEED_FIELDS = ""
+  LET NEED_FIELD_ANY = ""
+  LET NEED_OBJS = "j0\nj1"
+  LET NEED_OBJ_ANY = ""
+  LET CLI_GUARD_SOFT = 0
+  LET ARG_GUARD_SOFT = 0
+  LET ENV_GUARD_SOFT = 0
+  LET TIME_GUARD_SOFT = 0
+  LET PATH_GUARD_SOFT = 0
+  LET RW_GUARD_SOFT = 0
+  LET BIN_GUARD_SOFT = 0
+  LET LIB_GUARD_SOFT = 0
+  LET CLASS_GUARD_SOFT = 0
+  LET METHOD_GUARD_SOFT = 0
+  LET FIELD_GUARD_SOFT = 0
+  LET OBJ_GUARD_SOFT = 0
+  INCLUDE service_session
+  LET sso = SERVICE_SESSION_OK
+  LET fso = FULL_SESSION_OK
+  LET lso = LIVE_SESSION_OK
+  CLEAR_ERR
+  IF sso == 1 THEN
+    LET score = score + 1
+  END
+  IF fso == 1 THEN
+    LET score = score + 1
+  END
+  IF lso == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ j1
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB service_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB full_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB live_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "svc-ssv"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" sso ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sso fso lso note_msg
+  CLEAR_ERR
+END
+
+# soft_obj
+SYS EQS op "soft_obj"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_FLAGS = ""
+  LET NEED_FLAG_ANY = ""
+  LET NEED_REST_N = 0
+  LET NEED_ARGS = ""
+  LET NEED_ARG_ANY = ""
+  LET NEED_ENVS = ""
+  LET NEED_ENV_ANY = ""
+  LET NEED_TIME = 1
+  LET NEED_PATHS = ""
+  LET NEED_PATH_ANY = ""
+  LET NEED_READ_PATHS = ""
+  LET NEED_WRITE_PATHS = ""
+  LET NEED_BINS = ""
+  LET NEED_BIN_ANY = ""
+  LET NEED_LIBS = ""
+  LET NEED_LIB_ANY = ""
+  LET NEED_CLASSES = ""
+  LET NEED_CLASS_ANY = ""
+  LET NEED_METHODS = ""
+  LET NEED_METHOD_ANY = ""
+  LET NEED_FIELDS = ""
+  LET NEED_FIELD_ANY = ""
+  LET NEED_OBJS = "j0\nnosuch_svc_obj_ssv"
+  LET NEED_OBJ_ANY = ""
+  LET CLI_GUARD_SOFT = 0
+  LET ARG_GUARD_SOFT = 0
+  LET ENV_GUARD_SOFT = 0
+  LET TIME_GUARD_SOFT = 0
+  LET PATH_GUARD_SOFT = 0
+  LET RW_GUARD_SOFT = 0
+  LET BIN_GUARD_SOFT = 0
+  LET LIB_GUARD_SOFT = 0
+  LET CLASS_GUARD_SOFT = 0
+  LET METHOD_GUARD_SOFT = 0
+  LET FIELD_GUARD_SOFT = 0
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE service_session
+  LET sso = SERVICE_SESSION_OK
+  LET fso = FULL_SESSION_OK
+  LET lso = LIVE_SESSION_OK
+  LET miss_n = OBJMISS_N
+  CLEAR_ERR
+  IF sso == 0 THEN
+    LET score = score + 1
+  END
+  IF lso == 0 THEN
+    LET score = score + 1
+  END
+  IF fso == 1 THEN
+    LET score = score + 1
+  END
+  IF miss_n >= 1 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE OBJMISS "nosuch_svc_obj_ssv"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ j
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB service_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB live_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft_obj ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft_obj score"
+    FAIL "soft_obj score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft_obj:" miss_n ":so"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft_obj:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sso lso note_msg
+  CLEAR_ERR
+END
+
+# soft_lib — host lib miss
+SYS EQS op "soft_lib"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_FLAGS = ""
+  LET NEED_FLAG_ANY = ""
+  LET NEED_REST_N = 0
+  LET NEED_ARGS = ""
+  LET NEED_ARG_ANY = ""
+  LET NEED_ENVS = ""
+  LET NEED_ENV_ANY = ""
+  LET NEED_TIME = 1
+  LET NEED_PATHS = ""
+  LET NEED_PATH_ANY = ""
+  LET NEED_READ_PATHS = ""
+  LET NEED_WRITE_PATHS = ""
+  LET NEED_BINS = ""
+  LET NEED_BIN_ANY = ""
+  LET NEED_LIBS = "nosuch_svc_lib_ssv"
+  LET NEED_LIB_ANY = ""
+  LET NEED_CLASSES = ""
+  LET NEED_CLASS_ANY = ""
+  LET NEED_METHODS = ""
+  LET NEED_METHOD_ANY = ""
+  LET NEED_FIELDS = ""
+  LET NEED_FIELD_ANY = ""
+  LET NEED_OBJS = "j0"
+  LET NEED_OBJ_ANY = ""
+  LET CLI_GUARD_SOFT = 0
+  LET ARG_GUARD_SOFT = 0
+  LET ENV_GUARD_SOFT = 0
+  LET TIME_GUARD_SOFT = 0
+  LET PATH_GUARD_SOFT = 0
+  LET RW_GUARD_SOFT = 0
+  LET BIN_GUARD_SOFT = 0
+  LET LIB_GUARD_SOFT = 1
+  LET CLASS_GUARD_SOFT = 0
+  LET METHOD_GUARD_SOFT = 0
+  LET FIELD_GUARD_SOFT = 0
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE service_session
+  LET sso = SERVICE_SESSION_OK
+  LET fso = FULL_SESSION_OK
+  LET lso = LIVE_SESSION_OK
+  LET hso = HOST_SESSION_OK
+  LET miss_n = LIBMISS_N
+  CLEAR_ERR
+  IF sso == 0 THEN
+    LET score = score + 1
+  END
+  IF fso == 0 THEN
+    LET score = score + 1
+  END
+  IF hso == 0 THEN
+    LET score = score + 1
+  END
+  IF lso == 1 THEN
+    LET score = score + 1
+  END
+  IF miss_n >= 1 THEN
+    LET score = score + 1
+  END
+  SYS HASLINE LIBMISS "nosuch_svc_lib_ssv"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB full_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB live_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft_lib ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft_lib score"
+    FAIL "soft_lib score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft_lib:" miss_n ":sl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft_lib:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sso hso note_msg
+  CLEAR_ERR
+END
+
+# hard
+SYS EQS op "hard"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_FLAGS = ""
+  LET NEED_FLAG_ANY = ""
+  LET NEED_REST_N = 0
+  LET NEED_ARGS = ""
+  LET NEED_ARG_ANY = ""
+  LET NEED_ENVS = ""
+  LET NEED_ENV_ANY = ""
+  LET NEED_TIME = 1
+  LET NEED_PATHS = ""
+  LET NEED_PATH_ANY = ""
+  LET NEED_READ_PATHS = ""
+  LET NEED_WRITE_PATHS = ""
+  LET NEED_BINS = ""
+  LET NEED_BIN_ANY = ""
+  LET NEED_LIBS = "agent_boot"
+  LET NEED_LIB_ANY = ""
+  LET NEED_CLASSES = ""
+  LET NEED_CLASS_ANY = ""
+  LET NEED_METHODS = ""
+  LET NEED_METHOD_ANY = ""
+  LET NEED_FIELDS = ""
+  LET NEED_FIELD_ANY = ""
+  LET NEED_OBJS = "j0"
+  LET NEED_OBJ_ANY = ""
+  LET CLI_GUARD_SOFT = 0
+  LET ARG_GUARD_SOFT = 0
+  LET ENV_GUARD_SOFT = 0
+  LET TIME_GUARD_SOFT = 0
+  LET PATH_GUARD_SOFT = 0
+  LET RW_GUARD_SOFT = 0
+  LET BIN_GUARD_SOFT = 0
+  LET LIB_GUARD_SOFT = 0
+  LET CLASS_GUARD_SOFT = 0
+  LET METHOD_GUARD_SOFT = 0
+  LET FIELD_GUARD_SOFT = 0
+  LET OBJ_GUARD_SOFT = 0
+  INCLUDE service_session
+  LET sso = SERVICE_SESSION_OK
+  LET fso = FULL_SESSION_OK
+  LET lso = LIVE_SESSION_OK
+  CLEAR_ERR
+  IF sso == 1 THEN
+    LET score = score + 1
+  END
+  IF fso == 1 THEN
+    LET score = score + 1
+  END
+  IF lso == 1 THEN
+    LET score = score + 1
+  END
+  HASLIB service_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB full_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB live_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "service_fleet"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "hard ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "hard score"
+    FAIL "hard score"
+    CLEAR_ERR
+  END
+  SYS CAT "hard:" sso ":hd"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "hard:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sso note_msg
+  CLEAR_ERR
+END
+
+# form
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_FLAGS = ""
+  LET NEED_FLAG_ANY = ""
+  LET NEED_REST_N = 0
+  LET NEED_ARGS = ""
+  LET NEED_ARG_ANY = ""
+  LET NEED_ENVS = ""
+  LET NEED_ENV_ANY = ""
+  LET NEED_TIME = 1
+  LET NEED_PATHS = ""
+  LET NEED_PATH_ANY = ""
+  LET NEED_READ_PATHS = ""
+  LET NEED_WRITE_PATHS = ""
+  LET NEED_BINS = ""
+  LET NEED_BIN_ANY = ""
+  LET NEED_LIBS = ""
+  LET NEED_LIB_ANY = ""
+  LET NEED_CLASSES = ""
+  LET NEED_CLASS_ANY = ""
+  LET NEED_METHODS = ""
+  LET NEED_METHOD_ANY = ""
+  LET NEED_FIELDS = ""
+  LET NEED_FIELD_ANY = ""
+  LET NEED_OBJS = ""
+  LET NEED_OBJ_ANY = ""
+  LET CLI_GUARD_SOFT = 0
+  LET ARG_GUARD_SOFT = 0
+  LET ENV_GUARD_SOFT = 0
+  LET TIME_GUARD_SOFT = 0
+  LET PATH_GUARD_SOFT = 0
+  LET RW_GUARD_SOFT = 0
+  LET BIN_GUARD_SOFT = 0
+  LET LIB_GUARD_SOFT = 0
+  LET CLASS_GUARD_SOFT = 0
+  LET METHOD_GUARD_SOFT = 0
+  LET FIELD_GUARD_SOFT = 0
+  LET OBJ_GUARD_SOFT = 0
+  INCLUDE service_session
+  CLEAR_ERR
+  HASLIB service_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB full_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB live_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB product_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB host_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASINCLUDE service_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SERVICE_SESSION_OK"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "HASOBJ"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:1:fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_FLAGS = ""
+  LET NEED_FLAG_ANY = ""
+  LET NEED_REST_N = 0
+  LET NEED_ARGS = ""
+  LET NEED_ARG_ANY = ""
+  LET NEED_ENVS = ""
+  LET NEED_ENV_ANY = ""
+  LET NEED_TIME = 1
+  LET NEED_PATHS = ""
+  LET NEED_PATH_ANY = ""
+  LET NEED_READ_PATHS = ""
+  LET NEED_WRITE_PATHS = ""
+  LET NEED_BINS = ""
+  LET NEED_BIN_ANY = ""
+  LET NEED_LIBS = "agent_boot"
+  LET NEED_LIB_ANY = ""
+  LET NEED_CLASSES = ""
+  LET NEED_CLASS_ANY = ""
+  LET NEED_METHODS = ""
+  LET NEED_METHOD_ANY = ""
+  LET NEED_FIELDS = ""
+  LET NEED_FIELD_ANY = ""
+  LET NEED_OBJS = "j0\nj1"
+  LET NEED_OBJ_ANY = ""
+  LET CLI_GUARD_SOFT = 1
+  LET ARG_GUARD_SOFT = 1
+  LET ENV_GUARD_SOFT = 1
+  LET TIME_GUARD_SOFT = 1
+  LET PATH_GUARD_SOFT = 1
+  LET RW_GUARD_SOFT = 1
+  LET BIN_GUARD_SOFT = 1
+  LET LIB_GUARD_SOFT = 1
+  LET CLASS_GUARD_SOFT = 1
+  LET METHOD_GUARD_SOFT = 1
+  LET FIELD_GUARD_SOFT = 1
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE service_session
+  LET sso = SERVICE_SESSION_OK
+  LET fso = FULL_SESSION_OK
+  LET lso = LIVE_SESSION_OK
+  CLEAR_ERR
+  IF sso == 1 THEN
+    LET score = score + 1
+  END
+  IF fso == 1 THEN
+    LET score = score + 1
+  END
+  IF lso == 1 THEN
+    LET score = score + 1
+  END
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB service_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "svc-ssv"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 8 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sso note_msg
+  CLEAR_ERR
+END
+
+# probe
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET NEED_FLAGS = ""
+  LET NEED_FLAG_ANY = ""
+  LET NEED_REST_N = 0
+  LET NEED_ARGS = ""
+  LET NEED_ARG_ANY = ""
+  LET NEED_ENVS = ""
+  LET NEED_ENV_ANY = ""
+  LET NEED_TIME = 1
+  LET NEED_PATHS = ""
+  LET NEED_PATH_ANY = ""
+  LET NEED_READ_PATHS = ""
+  LET NEED_WRITE_PATHS = ""
+  LET NEED_BINS = ""
+  LET NEED_BIN_ANY = ""
+  LET NEED_LIBS = ""
+  LET NEED_LIB_ANY = ""
+  LET NEED_CLASSES = ""
+  LET NEED_CLASS_ANY = ""
+  LET NEED_METHODS = ""
+  LET NEED_METHOD_ANY = ""
+  LET NEED_FIELDS = ""
+  LET NEED_FIELD_ANY = ""
+  LET NEED_OBJS = "j0"
+  LET NEED_OBJ_ANY = ""
+  LET CLI_GUARD_SOFT = 1
+  LET ARG_GUARD_SOFT = 1
+  LET ENV_GUARD_SOFT = 1
+  LET TIME_GUARD_SOFT = 1
+  LET PATH_GUARD_SOFT = 1
+  LET RW_GUARD_SOFT = 1
+  LET BIN_GUARD_SOFT = 1
+  LET LIB_GUARD_SOFT = 1
+  LET CLASS_GUARD_SOFT = 1
+  LET METHOD_GUARD_SOFT = 1
+  LET FIELD_GUARD_SOFT = 1
+  LET OBJ_GUARD_SOFT = 1
+  INCLUDE service_session
+  LET sso = SERVICE_SESSION_OK
+  LET have_n = OBJHAVE_N
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF sso == 1 THEN
+    LET score = score + 1
+  END
+  IF have_n >= 1 THEN
+    LET score = score + 1
+  END
+  HASLIB service_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB full_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASLIB live_session
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  SYS HAS LAST "ssv"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeS"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 9 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = sso
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score sso have_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " sso=" sso " fso=" fso " lso=" lso " hso=" hso " miss_n=" miss_n
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "ssv report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

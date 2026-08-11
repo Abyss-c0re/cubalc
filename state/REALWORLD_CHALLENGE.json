@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 332,
-  "program": "programs/realworld/svc_live_boot_fleet_board.cubalc",
-  "theme": "live_boot/live_session fleet OOP catalog + live instances",
-  "version": "1.15.861-usability",
+  "iter": 333,
+  "program": "programs/realworld/svc_service_boot_fleet_board.cubalc",
+  "theme": "service_session fleet product+host+live contract",
+  "version": "1.15.863-usability",
   "pass": true,
-  "prior_note": "iter 331 oop_boot; this iter first realworld 1406 live_session + obj_guard instances",
+  "prior_note": "iter 332 live_boot; this iter first realworld 1409 service_session mega stack",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate slv",
+      "cmd": "lean SYS WRITE agent plate",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "catalog+objs w0/w1/q0",
+      "cmd": "NEED_LIBS+NEED_OBJS service green",
       "ok": true,
-      "note": "pass LIVE=1"
+      "note": "pass SSO=1 vars_full"
     },
     {
       "name": "soft_obj",
-      "cmd": "OBJMISS sinks LIVE OOP stays 1",
+      "cmd": "OBJMISS sinks SERVICE FULL stays 1",
       "ok": true,
       "note": "soft_obj"
     },
     {
-      "name": "soft_cls",
-      "cmd": "CLASS miss sinks LIVE objs ok",
+      "name": "soft_lib",
+      "cmd": "LIBMISS sinks FULL LIVE stays 1",
       "ok": true,
-      "note": "soft_cls"
+      "note": "soft_lib"
     },
     {
       "name": "hard",
-      "cmd": "hard ALL + ANY duals",
+      "cmd": "hard libs+objs",
       "ok": true,
       "note": "hard"
     },
     {
-      "name": "spawn",
-      "cmd": "NEW w2 then NEED_OBJS gate",
-      "ok": true,
-      "note": "spawn"
-    },
-    {
       "name": "form",
-      "cmd": "HASLIB live stack",
+      "cmd": "HASLIB service/full/live stack",
       "ok": true,
       "note": "form"
     },
     {
       "name": "gate",
-      "cmd": "plate + soft full live",
+      "cmd": "soft full service gate",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + OBJHAVE",
+      "cmd": "PRINT clobber SSO capture",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "live_* PASS; CLI duals still set"
+      "note": "service_* PASS; CLI duals still set"
     }
   ],
   "weaknesses": [
@@ -5992,18 +5986,49 @@
       "title": "LIVE_SESSION_OK not a HASFORM form",
       "detail": "HASFORM LIVE_SESSION_OK \u2192 0; use HASLIB live_session or sticky var.",
       "repro": "HASFORM LIVE_SESSION_OK \u2192 0"
+    },
+    {
+      "id": "W740",
+      "severity": "high",
+      "area": "host|vars",
+      "title": "service_session hits vars_full=true (256/256) on realworld boards",
+      "detail": "service_session pulls full_session+live_session (~20 include stems). Board actions report vars_n=256 vars_full=true. plate_peer_session+service is unusable. Field/method hard gates under vars_full may HARDFAIL spuriously. Lean NEED_* (objs+libs only) required.",
+      "repro": "INCLUDE service_session after agent_boot+CLASS+NEW \u2192 vars_full true"
+    },
+    {
+      "id": "W741",
+      "severity": "high",
+      "area": "lang|hardfail",
+      "title": "HARDFAIL now exits process (rc 1) \u2014 field miss under vars_full kills agents",
+      "detail": "Unlike soft FAIL, HARDFAIL line FIELD_GUARD hard miss halted run exit_code 1. Progress from W726 for hard paths, but vars_full false-negative field catalogs become fatal. Prefer soft FIELD_GUARD_SOFT=1 or empty NEED_FIELDS when near vars_max.",
+      "repro": "NEED_FIELDS=SvcJob.id hard under vars_full \u2192 HARDFAIL exit 1"
+    },
+    {
+      "id": "W742",
+      "severity": "med",
+      "area": "lang|service",
+      "title": "SERVICE_SESSION_OK = FULL_SESSION_OK && LIVE_SESSION_OK",
+      "detail": "Host LIB miss zeros FULL and SERVICE while LIVE can stay 1; OBJ miss zeros LIVE and SERVICE while FULL stays 1. Inspect both planes + HOST_SESSION_OK.",
+      "repro": "soft_lib vs soft_obj dual plane split"
+    },
+    {
+      "id": "W743",
+      "severity": "med",
+      "area": "host|plate",
+      "title": "plate_peer_session + service_session exceeds var budget",
+      "detail": "Combining plate_peer with service stack overflows 256 slots mid-include (unknown form empty / parse collapse). Fleet service boards must use SYS WRITE agent plates not plate_peer_session.",
+      "repro": "INCLUDE plate_peer_session then service_session \u2192 vars_full + hard fail"
+    },
+    {
+      "id": "W744",
+      "severity": "low",
+      "area": "lang|form",
+      "title": "SERVICE_SESSION_OK not HASFORM form",
+      "detail": "HASFORM SERVICE_SESSION_OK \u2192 0; use HASLIB service_session or sticky var.",
+      "repro": "HASFORM SERVICE_SESSION_OK \u2192 0"
     }
   ],
   "workarounds": [
-    "START_NEXT_N >= 8 floor; chain START then GUIDE general for playbook",
-    {
-      "id": "WA-MTR",
-      "note": "capture MATCHTOPICS bag before PRINT; use TOPIC_NAME not GUIDE_TOPIC; HASTOPIC for exact; EXIT n after NEEDMATCHTOPICS miss"
-    },
-    {
-      "id": "WA-NTR",
-      "note": "hardcode NTHTOPIC 0/1/2/3 branches; use COUNTMATCHTOPICS_N; ignore LASTTOPIC_N; HASTOPIC for exact"
-    },
     {
       "id": "WA-GMR",
       "note": "use GUIDE MATCH not RUNSNIP MATCH until duals ship; GUIDE NTH for non-first slots; capture body before PRINT"
@@ -6094,7 +6119,10 @@
     "EXIT n after hard oop miss for shell rc",
     "NEW instances before NEED_OBJS gate; LET all NEED_* + soft flags each re-INCLUDE live_*",
     "On LIVE=0 check OOP_SESSION_OK vs OBJ_GUARD_OK + OBJMISS/CLASSMISS",
-    "Avoid relying on METHOD LET LAST for host shuttles; prefer GETF after SETF THIS"
+    "Avoid relying on METHOD LET LAST for host shuttles; prefer GETF after SETF THIS",
+    "service_session boards: avoid plate_peer; SYS WRITE agent.json; lean NEED_OBJS+NEED_LIBS only",
+    "Empty NEED_FIELDS/METHODS under vars pressure; soft *_GUARD_SOFT=1 for live/host duals",
+    "On SERVICE=0 inspect FULL vs LIVE vs HOST_SESSION_OK + *MISS bags"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6233,11 +6261,15 @@
     "LIVE_SESSION_OK dual plane (W736)",
     "SEND METHOD LAST shuttle weak (W735)",
     "live stack vars_n pressure (W737)",
-    "HASOBJ exact (W738)"
+    "HASOBJ exact (W738)",
+    "service_session full+live one-shot (1409)",
+    "service_boot defaults+service_session",
+    "SERVICE_SESSION_OK dual FULL\u2227LIVE (W742)",
+    "vars_full under service stack (W740)",
+    "HARDFAIL exits rc 1 (W741)",
+    "plate_peer incompatible with service stack (W743)"
   ],
   "issues_faced": [
-    "iter304: selftest CLI duals still red",
-    "iter305: rebuild required for ERRGUIDE (W574); GUIDE+FORMTOPICS already wired",
     "iter305: board 10/10; FORMTOPICS quoted self-name (W576)",
     "iter305: selftest CLI duals still red",
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6285,9 +6317,11 @@
     "iter331: oop_boot catalog board 11/11 green; triple plane soft miss paths",
     "iter331: selftest oop_session/oop_boot PASS; CLI duals still set",
     "iter332: live_boot fleet board 11/11; SEND/METHOD LAST shuttle weak (W735); vars_n~240",
-    "iter332: selftest live_session/live_boot PASS; CLI duals still set"
+    "iter332: selftest live_session/live_boot PASS; CLI duals still set",
+    "iter333: service_session fleet board 10/10 lean (no plate_peer); vars_full=true still",
+    "iter333: HARDFAIL field miss under vars_full (W741); plate_peer+service unusable (W743)"
   ],
-  "commit": "3f849c0b",
-  "ts": "2026-08-11T04:15:32Z",
-  "board_commit": "3f849c0b"
+  "commit": "",
+  "ts": "2026-08-11T04:42:51Z",
+  "board_commit": ""
 }
