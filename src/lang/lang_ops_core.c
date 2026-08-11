@@ -2073,6 +2073,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"EXCHANGEOBJ", "EXCHANGEOBJ alias of SWAPOBJ"},
       {"XCHOBJ", "XCHOBJ alias of SWAPOBJ"},
       {"HASFIELD", "HASFIELD obj|Class field — soft 0|1 before GETF"},
+      {"HASFIELDS", "HASFIELDS|ALLFIELDS Class|obj fields… — soft all fields · FIELDMISS bag"},
+      {"NEEDFIELDS", "NEEDFIELDS|REQUIREFIELDS Class|obj fields… — fail-fast multi HASFIELD"},
       {"LISTFIELDS", "LISTFIELDS Class|obj — field name bag · NFIELDS"},
       {"FIELDINFO", "FIELDINFO [JSON] Class|obj field — kind/default plate · SETF/NEW prep"},
       {"DUMPFIELD", "DUMPFIELD alias of FIELDINFO"},

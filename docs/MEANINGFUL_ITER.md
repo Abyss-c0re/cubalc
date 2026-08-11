@@ -913,6 +913,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 882. ~~**`HASCLASSANY` / `NEEDCLASSANY`**~~ **done** (any-of multi CLASS gate · CLASSHAVE bag · HASCLASSES twin · proof 1421).
 883. ~~**`HASMETHODS` / `NEEDMETHODS`**~~ **done** (multi METHOD soft/hard gate · METHODMISS bag · HASCLASSES twin for methods · proof 1422).
 884. ~~**`HASMETHODANY` / `NEEDMETHODANY`**~~ **done** (any-of multi METHOD gate · METHODHAVE bag · HASMETHODS twin · proof 1423).
+885. ~~**`HASFIELDS` / `NEEDFIELDS`**~~ **done** (multi FIELD soft/hard gate · FIELDMISS bag · HASMETHODS twin for fields · proof 1424).
 
 
 ## Tick protocol

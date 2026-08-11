@@ -1,0 +1,62 @@
+# HASFIELDS / NEEDFIELDS — multi field soft/hard gate (HASMETHODS twin)
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+# all hit on class — CSV bag
+LET need = "alive,energy,age"
+HASFIELDS Cell need
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASFIELDS_N == 3
+ASSERT FIELDMISS_N == 0
+ASSERT FIELDMISS == ""
+ASSERT FIELD_ON == "Cell"
+
+# partial miss soft
+LET need = "alive,no_such_zz,energy"
+HASFIELDS Cell need
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT HASFIELDS_N == 2
+ASSERT FIELDMISS_N == 1
+SYS HASI FIELDMISS "no_such_zz"
+ASSERT LAST_N == 1
+
+# ALLFIELDS alias (safe bare idents)
+ALLFIELDS Cell alive energy
+ASSERT LAST_N == 1
+
+# bag / CSV fields again
+LET need = "alive,energy,age"
+HASFIELDS Cell need
+ASSERT LAST_N == 1
+ASSERT HASFIELDS_N == 3
+
+# live object target
+NEW Cell c1 1 4 0
+HASFIELDS c1 alive ready
+ASSERT LAST_N == 1
+ASSERT FIELD_ON == "c1"
+
+# unknown class soft — all miss via CSV
+LET need = "alive,energy"
+HASFIELDS Ghost need
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT FIELDMISS_N == 2
+
+# empty fields soft
+HASFIELDS Cell
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+HASFORM "HASFIELDS"
+ASSERT LAST_N == 1
+HASFORM "NEEDFIELDS"
+ASSERT LAST_N == 1
+
+PRINT "1424_hasfields ok"
+PASS
