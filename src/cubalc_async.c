@@ -548,30 +548,7 @@ int cubalc_async_compat_batch(const cubalc_chain *ch, float *out, int n_cap) {
   cubalc_matrix mats[CUBALC_MAX_CUBES];
   for (int i = 0; i < n; i++)
     mats[i] = ch->cubes[i].atom.matrix;
-
-  int nw = G.n_workers;
-  if (nw > n) nw = n;
-  if (nw < 1) nw = 1;
-  pthread_t th[CUBALC_ASYNC_MAX_WORKERS];
-  compat_args_t args[CUBALC_ASYNC_MAX_WORKERS];
-  int chunk = (n + nw - 1) / nw;
-  int nt = 0;
-  for (int w = 0; w < nw; w++) {
-    int i0 = w * chunk;
-    int i1 = i0 + chunk;
-    if (i0 >= n) break;
-    if (i1 > n) i1 = n;
-    args[nt].mats = mats;
-    args[nt].n = n;
-    args[nt].out = out;
-    args[nt].i0 = i0;
-    args[nt].i1 = i1;
-    if (pthread_create(&th[nt], NULL, compat_th, &args[nt]) != 0)
-      compat_th(&args[nt]);
-    else
-      nt++;
-  }
-  for (int w = 0; w < nt; w++)
-    pthread_join(th[w], NULL);
+  /* Native hw path — multi-thread CPU / OpenCL when live */
+  if (cubalc_hw_compat_batch(mats, n, out) != 0) return -1;
   return n;
 }

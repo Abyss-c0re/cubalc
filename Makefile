@@ -70,9 +70,16 @@ ifeq ($(USE_OPENCL),1)
 endif
 
 BIN := $(BUILD)/cubalc$(EXE)
+SOLVER_BIN := $(BUILD)/matrix_harmonic_solver$(EXE)
+
+# Light sources for standalone harmonic solver (no monorepo main/lang)
+SOLVER_SRC = \
+	tools/matrix_harmonic_solver.c \
+	src/cubalc_core.c src/cubalc_algocube.c src/cubalc_hw.c
 
 .PHONY: all clean test law install human demo peers oversee jit-test \
-	evolve evolve-loop showcase science universal-iter modular-check
+	evolve evolve-loop showcase science universal-iter modular-check \
+	matrix-solver
 
 all: $(BIN)
 
@@ -81,8 +88,16 @@ $(BIN): $(SRC) $(HDR)
 	$(CC) $(CFLAGS) -o $@ $(SRC) $(LDFLAGS)
 	@echo "built $@ ($(CUBALC_TARGET))"
 
+# Standalone matrix harmonic solver — CPU multi-thread + optional OpenCL
+matrix-solver: $(SOLVER_BIN)
+
+$(SOLVER_BIN): $(SOLVER_SRC) $(HDR)
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -o $@ $(SOLVER_SRC) $(LDFLAGS)
+	@echo "built $@ backend-ready ($(CUBALC_TARGET) USE_OPENCL=$(USE_OPENCL))"
+
 clean:
-	rm -f $(BIN)
+	rm -f $(BIN) $(SOLVER_BIN)
 
 modular-check:
 	@test -f src/lang/lang_parse.c && test -f include/lang/cubalc_lang_internal.h

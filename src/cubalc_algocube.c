@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include "cubalc_algocube.h"
+#include "cubalc_hw.h"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -89,6 +90,16 @@ int cubalc_algocube_harmony(const cubalc_matrix *const *mats, int n, cubalc_algo
   if (n == 1) {
     out->unity = 1.f; out->consensus = *mats[0];
     out->digit = cubalc_algocube_digit(&out->consensus); out->ok = 1; return 0;
+  }
+  /* n≥4 → raw CubalC hw path (CPU multi-thread / OpenCL GPU when live). */
+  if (n >= 4) {
+    float u = 0.f;
+    if (cubalc_hw_harmony_solve(mats, n, &u, &out->consensus) == 0) {
+      out->unity = u;
+      out->digit = cubalc_algocube_digit(&out->consensus);
+      out->ok = 1;
+      return 0;
+    }
   }
   double sum = 0.0; int pairs = 0;
   for (int i = 0; i < n; i++)
