@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 372,
-  "program": "programs/realworld/svc_iflen_ticket_id_board.cubalc",
-  "theme": "IFLEN/IFLONG/IFSHORT ticket ID length admit gates",
+  "iter": 373,
+  "program": "programs/realworld/svc_iflines_queue_depth_board.cubalc",
+  "theme": "IFLINES/IFMANY/IFFEW work-queue depth admit gates",
   "version": "1.15.950-usability",
   "pass": true,
-  "prior_note": "iter 371 IFBLANK; this iter first realworld of 1493 IFLEN (MI 954)",
+  "prior_note": "iter 372 IFLEN; this iter first realworld of 1494 IFLINES (MI 955); fixed block_scan_step",
   "tests": [
     {
       "name": "list",
@@ -15,13 +15,13 @@
     },
     {
       "name": "boot",
-      "cmd": "seed hello + IFLEN",
+      "cmd": "seed 3-field bag + IFLINES",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFLEN/IFLONG/IFSHORT stickies 10/10",
+      "cmd": "IFLINES/IFMANY/IFFEW stickies 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
@@ -33,31 +33,31 @@
     },
     {
       "name": "peel",
-      "cmd": "short/admit/long class 10/10",
+      "cmd": "depth class admit/overflow 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "limit ladder 10/10",
+      "cmd": "depth ladder 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFLEN/IFLONG/IFSHORT",
+      "cmd": "HASFORM IFLINES/IFMANY/IFFEW",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "band 6..16 admit 10/10",
+      "cmd": "band 1..8 admit 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "disk ID STRTO WRITE NL",
+      "cmd": "disk hits STRTO WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -72,6 +72,12 @@
       "cmd": "selftest; proofs green; CLI duals still red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
+    },
+    {
+      "name": "langfix",
+      "cmd": "block_scan_step IFLINES in FN",
+      "ok": true,
+      "note": "FN+IFLINES green after patch"
     }
   ],
   "weaknesses": [
@@ -7202,6 +7208,30 @@
       "title": "FN-wrap still required; avoid tries/key keyword traps (W883/W877)",
       "detail": "Board uses CALL helpers + lim_n/min_n/max_n names. Nested IF ok_v in admit_id stayed shallow and green.",
       "repro": "IF LAST_N==1 THEN IFLEN tok 5 \u2026 END leaks"
+    },
+    {
+      "id": "W892",
+      "severity": "high",
+      "area": "lang|fn|block_scan",
+      "title": "IFLINES/IFMANY/IFFEW missing from block_scan_step (FN body)",
+      "detail": "FN containing IFLINES closed early on first END \u2192 unknown form END. Forms were in flow IF scanners but not cubalc_lang_block_scan_step. Fixed: added IFLINES/IFMANY/IFFEW/WHEN* + IFHASFLAG/IFHASARG family to block_scan_step. Same class as lagging WHEN* lists.",
+      "repro": "FN f\\n  IFLINES bag 1\\n    \u2026\\n  END\\nEND \u2192 unknown END (pre-fix)"
+    },
+    {
+      "id": "W893",
+      "severity": "low",
+      "area": "lang|iflines",
+      "title": "IFLINES promotes num to 1 field; empty/undef = 0 fields",
+      "detail": "IFLINES 42 1 true. Empty and undef match IFLINES x 0. IFMANY is fields>=min; IFFEW fields<=max. Stickies IFLINES_NFIELDS/LINES/NFIELDS.",
+      "repro": "LET n=42; IFLINES n 1 \u2192 1; IFLINES empty 0 \u2192 1"
+    },
+    {
+      "id": "W894",
+      "severity": "low",
+      "area": "lang|iflines",
+      "title": "IFLINES/IFMANY/IFFEW work after FN fix (first realworld 1494)",
+      "detail": "1494 green. admit_depth min/max band via sequential IFMANY+IFFEW solid for queue depth. FN-wrap works post W892 fix.",
+      "repro": "CALL is_exact_n; CALL is_many; CALL admit_depth"
     }
   ],
   "workarounds": [
@@ -7357,10 +7387,14 @@
       "id": "WA-ILN",
       "for": "W889+W891",
       "note": "FN is_exact_len/is_long_enough/is_short_enough; admit_id via long then short; lim_n var limit"
+    },
+    {
+      "id": "WA-ILQ",
+      "for": "W892",
+      "note": "patched block_scan_step; FN is_exact_n/is_many/is_few; qbag not bag for work queue"
     }
   ],
   "language_gaps": [
-    "LPADTO truncates when wider (W856); SUMIN proof not linked in 1.15.930 binary (W857)",
     "SUMIN LAST_N vs CLEAR_ERR (W859); non-num skip + int AVGIN (W860); SUMIN linked 1.15.933",
     "IFFILE/IFDIR kind strict (W862); IFENV proof flaky needs name (W863)",
     "IFENV presence-only + FN-wrap (W865/W867); 1480 green W863 closed",
@@ -7371,7 +7405,8 @@
     "IFNUM live 1.15.943 (1488); SYS NUM soft zero (W880); nested type-IF END (W882)",
     "IFZERO live 1.15.948 (1489); TRIES keyword traps var tries (W883); str0/undef type-strict (W885)",
     "IFBLANK live 1.15.949 (1492); ws blank num not blank (W886); FN-wrap (W888)",
-    "IFLEN live 1.15.950 (1493); num decimal len + undef0 (W889); FN-wrap (W891)"
+    "IFLEN live 1.15.950 (1493); num decimal len + undef0 (W889); FN-wrap (W891)",
+    "IFLINES FN block_scan miss (W892 fixed); num\u21921 field empty0 (W893); first realworld 1494"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7533,9 +7568,14 @@
       "iter": 372,
       "issue": "First-try green. Documented num\u2192decimal length and undef/empty len0 duals.",
       "resolution": "first realworld 1493; document W889\u2013W891"
+    },
+    {
+      "iter": 373,
+      "issue": "IFLINES in FN \u2192 unknown END until block_scan_step patched (W892). Rebuilt cubalc. Board then green 10/10 all actions.",
+      "resolution": "first realworld 1494 + lang fix block_scan_step; document W892\u2013W894"
     }
   ],
-  "commit": "f793ccc6",
-  "ts": 1786489133,
-  "board_commit": "f793ccc6"
+  "commit": "pending",
+  "ts": 1786491255,
+  "board_commit": "pending"
 }
