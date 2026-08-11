@@ -962,6 +962,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 931. ~~**`INSERTLINEIN` vars**~~ **done** (insert bag field at 0-based index · priority queues · completes SET/DROP triad · proof 1469).
 932. ~~**`MOVELINEIN` vars**~~ **done** (move bag field from→to index · promote/demote without DROP+INSERT glue · proof 1470).
 933. ~~**`COUNTIN` / `COUNTLINEIN` vars**~~ **done** (needle / exact-bag tallies → LAST_N · no loop glue · dual COUNTINF/COUNTLINE · proof 1471).
+934. ~~**`IFGT` / `IFLT` / `IFGE` / `IFLE` / `IFEQN` / `IFNEQN`**~~ **done** (numeric var branches · no IF n > 0 glue · proof 1472).
 
 
 

@@ -1,0 +1,86 @@
+# IFGT / IFLT / IFGE / IFLE / IFEQN / IFNEQN — numeric branches
+
+HOLD_FLASH 1
+
+LET retries = 3
+IFGT retries 0
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+ASSERT IFGT_N == 1
+
+IFGT retries 5
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 0
+
+IFLE retries 3
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+IFGE retries 3
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+IFLT retries 3
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 0
+
+IFEQN retries 3
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+IFNEQN retries 0
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+# string promote via strtol
+LET s = "10"
+IFGT s 5
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+# nest with IFEMPTY
+LET n = 0
+IFEQN n 0
+  IFEMPTY msg
+    LET state = "idle"
+  ELSE
+    LET state = "msg"
+  END
+ELSE
+  LET state = "busy"
+END
+ASSERT state == "idle"
+
+HASFORM "IFGT"
+ASSERT LAST_N == 1
+HASFORM "IFEQN"
+ASSERT LAST_N == 1
+HASFORM "IFLE"
+ASSERT LAST_N == 1
+
+PRINT "1472_ifgt_ifeqn ok"
+PASS
