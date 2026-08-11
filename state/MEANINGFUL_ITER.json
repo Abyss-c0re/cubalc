@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 923,
-  "version": "1.15.916-usability",
-  "item": "LENOF / STARTSIN / ENDSIN / CONTAINSIN / EQSIN / INDEXIN vars",
-  "item_id": 923,
-  "title": "LENOF \u00b7 STARTSIN \u00b7 ENDSIN \u00b7 CONTAINSIN \u00b7 EQSIN \u00b7 INDEXIN \u00b7 var string probes",
-  "commit": "481ebc3d",
-  "summary": "Named-var string probes for IF guards without SYS LEN/HAS/EQS glue; proof 1461 PASS.",
+  "iter": 924,
+  "version": "1.15.917-usability",
+  "item": "LEFTTO / RIGHTTO / MIDTO / BEFOREIN / AFTERIN / BETWEENIN vars",
+  "item_id": 924,
+  "title": "LEFTTO \u00b7 RIGHTTO \u00b7 MIDTO \u00b7 BEFOREIN \u00b7 AFTERIN \u00b7 BETWEENIN \u00b7 string peels",
+  "commit": "ef8e1eef",
+  "summary": "In-place string slices and delimiter peels on named vars; no LET=SYS LEFT/BEFORE glue; proof 1462 PASS.",
   "proofs": [
-    "1461_lenof_startsin PASS",
-    "1461_cli_lenof_startsin PASS",
-    "1460_coalesceto_nthin regression PASS"
+    "1462_leftto_beforein PASS",
+    "1462_cli_leftto_beforein PASS",
+    "1461_lenof_startsin regression PASS"
   ],
-  "when": "2026-08-11T14:38:26Z",
+  "when": "2026-08-11T14:48:12Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "481ebc3d2524aa325899da3f166e7dccacca51b9",
-  "note": "agent path/message IF guards without SYS string soup"
+  "sha": "ef8e1eeffbf273715bfcc04a0a26a1e7060ec931",
+  "note": "agent path/log peels without SYS string soup"
 }
