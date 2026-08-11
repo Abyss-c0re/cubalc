@@ -873,6 +873,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 843. ~~**`env_guard` lib**~~ **done** (DEFAULT NEED_ENVS + NEED_ENV_ANY · soft/hard · form_guard/cli_guard twin for host env · doctor lib_env_guard · proof 1383).
 844. ~~**`env_boot` + `cubalc init --env`**~~ **done** (agent_boot+env_guard one-shot · init --env|--env-guard|--hostenv catalog n=15 · doctor lib_env_boot · proof 1384).
 845. ~~**`HASFORMANY` / `NEEDFORMANY` + CLI**~~ **done** (any-of multi form capability gate · HASFORMS twin · cubalc hasformany|needformany · formgate.v1 any · proof 1385).
+846. ~~**`form_guard` ALL+ANY**~~ **done** (NEED_FORMS + NEED_FORM_ANY · FORM_GUARD_OK · env_guard twin · cap_boot DEFAULT · proof 1386).
 
 ## Tick protocol
 
