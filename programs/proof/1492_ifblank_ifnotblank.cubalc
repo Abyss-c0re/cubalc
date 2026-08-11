@@ -1,0 +1,97 @@
+# IFBLANK / IFNOTBLANK — whitespace string branches
+
+HOLD_FLASH 1
+
+LET empty = ""
+LET ws = "  \t\n  "
+LET msg = "hello"
+LET n = 0
+# u undefined
+
+IFBLANK empty
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 1
+ASSERT IFBLANK_N == 1
+
+IFBLANK ws
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 1
+
+IFBLANK msg
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+
+IFBLANK n
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+
+IFBLANK u
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 1
+
+IFNOTBLANK msg
+  LET nb = 1
+ELSE
+  LET nb = 0
+END
+ASSERT nb == 1
+ASSERT IFNOTBLANK_N == 1
+
+IFNOTBLANK ws
+  LET nb = 1
+ELSE
+  LET nb = 0
+END
+ASSERT nb == 0
+
+IFNOTBLANK empty
+  LET nb = 1
+ELSE
+  LET nb = 0
+END
+ASSERT nb == 0
+
+IFNOTBLANK n
+  LET nb = 1
+ELSE
+  LET nb = 0
+END
+ASSERT nb == 1
+
+IFNOTBLANK u
+  LET nb = 1
+ELSE
+  LET nb = 0
+END
+ASSERT nb == 0
+
+# nest: require content
+IFBLANK ws
+  LET cleaned = "default"
+ELSE
+  LET cleaned = ws
+END
+ASSERT cleaned == "default"
+
+HASFORM "IFBLANK"
+ASSERT LAST_N == 1
+HASFORM "IFNOTBLANK"
+ASSERT LAST_N == 1
+
+PRINT "1492_ifblank_ifnotblank ok"
+PASS

@@ -990,6 +990,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 952. ~~**`IFJSONEQ` / `IFJSONNEQ` / `IFSAMEJSON`**~~ **done** (plate equality branches · no SYS JSONEQ+IF glue · proof 1491).
 
+953. ~~**`IFBLANK` / `IFNOTBLANK`**~~ **done** (whitespace string branches · no SYS BLANK+IF glue · proof 1492).
+
 
 
 
