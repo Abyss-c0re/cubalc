@@ -6929,7 +6929,7 @@
     "iter345: first-try green SENDANY method dispatch board",
     "iter345: proof 1439 PASS; capture LAST_N before EQS"
   ],
-  "commit": "pending",
+  "commit": "6991b982",
   "ts": "2026-08-11T10:29:48Z",
-  "board_commit": "pending"
+  "board_commit": "6991b982"
 }
