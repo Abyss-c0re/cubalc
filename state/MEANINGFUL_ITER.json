@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 936,
-  "version": "1.15.929-usability",
-  "item": "IFBETWEEN / IFINRANGE / IFWITHIN",
-  "item_id": 936,
-  "title": "IFBETWEEN · IFINRANGE · IFWITHIN · inclusive range branches",
-  "commit": "bbe87a80",
-  "summary": "Inclusive numeric range branches with ELSE/END; no INRANGE+IF glue; proof 1474 PASS.",
+  "iter": 937,
+  "version": "1.15.930-usability",
+  "item": "IFSTARTSI / IFENDSI / IFCONTAINSI / IFEQSI",
+  "item_id": 937,
+  "title": "IFSTARTSI · IFENDSI · IFCONTAINSI · IFEQSI · case-insensitive branches",
+  "commit": "7dd855d4",
+  "summary": "Case-insensitive string branches with ELSE/END; no UPPER+probe glue; proof 1475 PASS.",
   "proofs": [
-    "1474_ifbetween_ifinrange PASS",
+    "1475_ifstartsi_ifeqsi PASS",
+    "1474_ifbetween regression PASS",
     "1473_ifhasline regression PASS",
-    "1472_ifgt regression PASS",
     "1467_ifstarts regression PASS"
   ],
-  "when": "2026-08-11T17:38:47Z",
+  "when": "2026-08-11T17:48:20Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "bbe87a8076372d412ee7de500a59de978c789409",
-  "note": "port/retry/status gates without probe+IF glue"
+  "sha": "7dd855d4df15b9ad0906a239fa0116567b223f86",
+  "note": "log/path/role gates without case fold glue"
 }
