@@ -942,6 +942,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 911. ~~**`TRY` / `CATCH` / `ONERR` soft recovery**~~ **done** (CATCH arm on OK==0/LAST_ERR · FINALLY still runs · proof 1449).
 912. ~~**`REQUIRE OK` / `NEEDOK` soft-status floor**~~ **done** (fail-fast if OK==0/LAST_ERR · after soft ops · proof 1450).
 913. ~~**`IFERR` / `IFOK` / `HASERR` / `HASOK`**~~ **done** (soft-status branches + probes · no IF OK glue · proof 1451).
+914. ~~**`INC` / `DEC` / `SWAP` vars**~~ **done** (counter bump + dual-buffer exchange · no LET x=x+1 glue · proof 1452).
 
 
 

@@ -1,0 +1,65 @@
+# INC / DEC / SWAP — var counters + dual buffer without LET glue
+
+HOLD_FLASH 1
+
+# INC default +1, creates if missing
+INC retries
+ASSERT retries == 1
+ASSERT LAST_N == 1
+INC retries
+ASSERT retries == 2
+
+# INC by n / BY keyword
+INC retries BY 3
+ASSERT retries == 5
+ASSERT INC_N == 1
+
+# DEC
+DEC retries
+ASSERT retries == 4
+DEC retries 2
+ASSERT retries == 2
+ASSERT DEC_N == 1
+
+# BUMP alias
+BUMP hits
+ASSERT hits == 1
+
+# SWAP nums
+LET a = 10
+LET b = 20
+SWAP a b
+ASSERT a == 20
+ASSERT b == 10
+ASSERT SWAP_N == 1
+
+# SWAP strings
+LET s = "left"
+LET t = "right"
+SWAP s WITH t
+ASSERT s == "right"
+ASSERT t == "left"
+
+# SWAP mixed creates properly
+LET n = 7
+LET m = "hi"
+SWAP n m
+ASSERT n == "hi"
+ASSERT m == 7
+
+# XCHG alias
+LET x = 1
+LET y = 2
+XCHG x y
+ASSERT x == 2
+ASSERT y == 1
+
+HASFORM "INC"
+ASSERT LAST_N == 1
+HASFORM "DEC"
+ASSERT LAST_N == 1
+HASFORM "SWAP"
+ASSERT LAST_N == 1
+
+PRINT "1452_inc_dec_swap ok"
+PASS
