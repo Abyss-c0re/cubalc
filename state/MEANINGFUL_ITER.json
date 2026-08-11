@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 935,
-  "version": "1.15.928-usability",
-  "item": "IFHASLINE / IFINBAG",
-  "item_id": 935,
-  "title": "IFHASLINE · IFINBAG · bag membership branches",
-  "commit": "323c345a",
-  "summary": "Bag membership branches with ELSE/END; no HASINBAG+IF LAST_N glue; proof 1473 PASS.",
+  "iter": 936,
+  "version": "1.15.929-usability",
+  "item": "IFBETWEEN / IFINRANGE / IFWITHIN",
+  "item_id": 936,
+  "title": "IFBETWEEN · IFINRANGE · IFWITHIN · inclusive range branches",
+  "commit": "bbe87a80",
+  "summary": "Inclusive numeric range branches with ELSE/END; no INRANGE+IF glue; proof 1474 PASS.",
   "proofs": [
-    "1473_ifhasline_ifinbag PASS",
-    "1472_ifgt_ifeqn regression PASS",
-    "1467_ifstarts_ifcontains regression PASS",
-    "1471_countin_countlinein regression PASS"
+    "1474_ifbetween_ifinrange PASS",
+    "1473_ifhasline regression PASS",
+    "1472_ifgt regression PASS",
+    "1467_ifstarts regression PASS"
   ],
-  "when": "2026-08-11T17:25:00Z",
+  "when": "2026-08-11T17:38:47Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "323c345a3b737cc53807e403934ffdd02aa84115",
-  "note": "work-queue ack without probe+IF glue"
+  "sha": "bbe87a8076372d412ee7de500a59de978c789409",
+  "note": "port/retry/status gates without probe+IF glue"
 }
