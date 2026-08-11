@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 350,
-  "program": "programs/realworld/svc_try_catch_recover_board.cubalc",
-  "theme": "TRY/CATCH soft recovery + REQUIRE OK/NEEDOK status floor",
-  "version": "1.15.905-usability",
+  "iter": 351,
+  "program": "programs/realworld/svc_iferr_budget_board.cubalc",
+  "theme": "IFERR/IFOK error budget + INC/DEC/SWAP counters",
+  "version": "1.15.907-usability",
   "pass": true,
-  "prior_note": "iter 349 RETRY/TIMEIT; this iter first realworld of 1449 TRY/CATCH + 1450 REQUIRE OK",
+  "prior_note": "iter 350 TRY/CATCH+REQUIRE OK; this iter first realworld of 1451 IFERR/IFOK + 1452 INC/DEC/SWAP",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed + try_ok CATCH_N=0 FINALLY_N=1",
+      "cmd": "seed + IFOK INC oks",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "success skip CATCH + OK aliases 10/10",
+      "cmd": "IFOK INC/BUMP + IFERR skip + HASOK 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "FAIL\u2192CATCH+ONERR+REQUIRE after catch 10/10",
+      "cmd": "IFERR/WHENERR tally + ELSE + DEC 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "catch",
-      "cmd": "CATCH/ONERR dual recover 10/10",
+      "name": "ok",
+      "cmd": "HASERR/HASOK + INC create 10/10",
       "ok": true,
-      "note": "catch 10/10"
+      "note": "ok 10/10"
     },
     {
-      "name": "need",
-      "cmd": "NEEDOK/MUSTOK/ASSERTOK/SUCCESS 10/10",
+      "name": "swap",
+      "cmd": "SWAP/XCHG string+num dual buffers 10/10",
       "ok": true,
-      "note": "need 10/10"
-    },
-    {
-      "name": "finally",
-      "cmd": "FINALLY/CLEANUP always-run 10/10",
-      "ok": true,
-      "note": "finally 10/10"
+      "note": "swap 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM TRY/CATCH/ONERR/NEEDOK",
+      "cmd": "HASFORM IFERR/INC/SWAP; TOGGLE miss",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "recover pipeline + REQUIRE env",
+      "cmd": "budget pipeline + REQUIRE",
       "ok": true,
       "note": "gate"
     },
@@ -68,12 +62,6 @@
       "note": "probe"
     },
     {
-      "name": "require_ok_miss",
-      "cmd": "FAIL; REQUIRE OK \u2192 ok:false shell1 exit_code0",
-      "ok": true,
-      "note": "W823"
-    },
-    {
       "name": "unknown",
       "cmd": "bogon EXIT 2",
       "ok": true,
@@ -81,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1449/1450 PASS; CLI duals still red",
+      "cmd": "selftest; 1451/1452 PASS; 1453 TOGGLE not in binary; CLI duals red",
       "ok": false,
-      "note": "proofs green; CLI duals still red"
+      "note": "proofs green; 1453 ahead of runtime"
     }
   ],
   "weaknesses": [
@@ -6686,6 +6674,30 @@
       "title": "ONERR is working CATCH alias; CLEANUP is FINALLY alias",
       "detail": "Positive: ONERR and CLEANUP duals fire CATCH_N/FINALLY_N correctly. Good for ops runbook synonyms.",
       "repro": "TRY; FAIL y; ONERR; CLEAR_ERR; PASS; END \u2192 CATCH_N 1"
+    },
+    {
+      "id": "W826",
+      "severity": "high",
+      "area": "lang|iferr_frame",
+      "title": "IFERR/IFOK nested inside IF steals outer END (W821 class)",
+      "detail": "IFERR\u2026END or IFOK\u2026ELSE\u2026END inside SYS EQS IF\u2026THEN leaves outer END as unknown form END. Same framing class as RETRY/TIMEIT/TRY. Workaround: FN-wrap status branches and CALL from action arms.",
+      "repro": "IF 1 THEN; FAIL x; IFERR; CLEAR_ERR; PASS; END; END \u2192 unknown form END"
+    },
+    {
+      "id": "W827",
+      "severity": "med",
+      "area": "lang|toggle",
+      "title": "TOGGLE/CLAMP/SETMIN/SETMAX var forms (1453) not in 1.15.907 runtime",
+      "detail": "Proof 1453 and MI notes exist, but HASFORM TOGGLE/CLAMP/SETMAX \u2192 0 and TOGGLE hard-fails unknown form. INC/DEC/SWAP (1452) and IFERR (1451) are live. Agents must use LET+IF for flags/bounds until binary ships 1453.",
+      "repro": "HASFORM TOGGLE \u2192 0; ./out/cubalc run programs/proof/1453_toggle_clamp_setminmax.cubalc fails"
+    },
+    {
+      "id": "W828",
+      "severity": "low",
+      "area": "lang|inc",
+      "title": "INC creates missing var at 0 then +n; BUMP alias of INC +1",
+      "detail": "Positive: INC fresh_cnt creates and sets 1; INC BY n and DEC n work; SWAP mixed string/num works; XCHG alias of SWAP. Good for error-budget counters without LET glue.",
+      "repro": "INC fresh; INC fresh BY 4; DEC fresh 2"
     }
   ],
   "workarounds": [
@@ -6814,7 +6826,6 @@
     "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
   ],
   "language_gaps": [
-    "CLEAR_ERR LAST=cleared reconfirmed (W772)",
     "HASCLASSANY/HASMETHODS free capability admit (1421/1422)",
     "REQUIRE LIB bare stem broken (W773)",
     "HASMETHODS keyword method-name collide (W774)",
@@ -6859,10 +6870,14 @@
       "iter": 350,
       "gap": "TRY/CATCH+REQUIRE OK is the right ops recovery story, but block nesting still forces FN trampolines and REQUIRE OK exit_code field lies relative to shell/ok.",
       "want": "IF-safe TRY blocks; exit_code mirrors shell on REQUIRE OK miss"
+    },
+    {
+      "iter": 351,
+      "gap": "IFERR+INC is the right error-budget story but still needs FN trampoline; TOGGLE/CLAMP proof shipped before runtime.",
+      "want": "IF-safe IFERR blocks; land 1453 forms in binary with selftest green"
     }
   ],
   "issues_faced": [
-    "iter334: rebuilt binary via -O0 lang_ops_core after OOM; proofs near-pass",
     "iter335: HASFORM TRYSWAP/SWAPOBJ miss while ops work \u2014 1413 assert fail W750",
     "iter335: soft_rn score 8 until LET err_s=LAST_ERR before CLEAR_ERR W751",
     "iter335: binary vanished mid-suite concurrent make; relink to 1.15.867",
@@ -6917,9 +6932,14 @@
       "iter": 350,
       "issue": "TRY/CATCH cannot nest in IF (W824); REQUIRE OK plate exit_code 0 vs shell 1 (W823). Board uses FN helpers for all TRY/CATCH/REQUIRE OK paths.",
       "resolution": "FN-wrapped recover + needok helpers; document W823\u2013W825"
+    },
+    {
+      "iter": 351,
+      "issue": "IFERR/IFOK cannot nest in IF (W826); 1453 TOGGLE not in binary (W827). Board uses FN helpers for all status branches.",
+      "resolution": "FN-wrapped budget_fail/ok/else + INC/DEC/SWAP actions; document W826\u2013W828"
     }
   ],
-  "commit": "179de235",
-  "ts": 1786451677,
+  "commit": "d91c29b0",
+  "ts": 1786453169,
   "board_commit": "767d4822"
 }
