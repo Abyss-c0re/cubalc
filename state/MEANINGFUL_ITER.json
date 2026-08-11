@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 844,
-  "version": "1.15.836-usability",
-  "item": "env_boot + cubalc init --env",
-  "item_id": 844,
-  "title": "env_boot \u00b7 init --env \u00b7 doctor lib_env_boot",
-  "commit": "fc04dd0aee3716a7dbdbe516ce94d61ce2b2ffd9",
-  "summary": "agent_boot+env_guard one-shot; init --env catalog n=15; doctor lib_env_boot; proof 1384 PASS.",
+  "iter": 845,
+  "version": "1.15.837-usability",
+  "item": "HASFORMANY / NEEDFORMANY any-of forms",
+  "item_id": 845,
+  "title": "HASFORMANY \u00b7 NEEDFORMANY \u00b7 FORMHAVE \u00b7 CLI formgate any",
+  "commit": "14fd3869f996b6298e9fd90fdaafdec69aea706d",
+  "summary": "Any-of multi form capability gate twin of HASFORMS; soft/hard; formgate.v1 any; proof 1385 PASS.",
   "proofs": [
-    "1384_env_boot PASS",
-    "1384_cli_init_env PASS"
+    "1385_hasformany PASS",
+    "1385_cli_hasformany PASS"
   ],
-  "when": "2026-08-10T23:55:09Z",
+  "when": "2026-08-11T00:05:56Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "fc04dd0aee3716a7dbdbe516ce94d61ce2b2ffd9",
-  "note": "pairs cap_boot/cli_session \u00b7 host env starter without cookbook"
+  "sha": "14fd3869f996b6298e9fd90fdaafdec69aea706d",
+  "note": "pairs HASFORMS \u00b7 completes flag/arg/env/form ALL+ANY matrix \u00b7 thrash restore first"
 }
