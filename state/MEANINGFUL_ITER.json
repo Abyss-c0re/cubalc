@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 914,
-  "version": "1.15.907-usability",
-  "item": "INC / DEC / SWAP vars",
-  "item_id": 914,
-  "title": "INC \u00b7 DEC \u00b7 BUMP \u00b7 SWAP \u00b7 XCHG \u00b7 var counters/dual-buffer",
-  "commit": "efc4619d",
-  "summary": "INC/DEC bump numeric vars; SWAP exchanges two vars; no LET x=x+1/temp glue; proof 1452 PASS.",
+  "iter": 915,
+  "version": "1.15.908-usability",
+  "item": "TOGGLE / CLAMP / SETMIN / SETMAX vars",
+  "item_id": 915,
+  "title": "TOGGLE \u00b7 CLAMP \u00b7 SETMIN \u00b7 SETMAX \u00b7 var flags/bounds/running extremes",
+  "commit": "6a1975b8",
+  "summary": "TOGGLE flips 0\u21941 flags; CLAMP writes bounds in place; SETMIN/SETMAX running extremes without IF+LET/CLAMPN glue; proof 1453 PASS.",
   "proofs": [
-    "1452_inc_dec_swap PASS",
-    "1452_cli_inc_dec_swap PASS",
-    "1451_iferr_ifok regression PASS"
+    "1453_toggle_clamp_setminmax PASS",
+    "1453_cli_toggle_clamp_setminmax PASS",
+    "1452_inc_dec_swap regression PASS"
   ],
-  "when": "2026-08-11T12:48:02Z",
+  "when": "2026-08-11T13:19:14Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "efc4619d5dc133fdce58fd8e1ed485c70dc8c8a0",
-  "note": "agent counters and dual buffers without arithmetic LET soup"
+  "sha": "6a1975b86968d74b8362d8e3ca21d77b8d2707e1",
+  "note": "agent counters/flags/bounds without arithmetic LET soup"
 }
