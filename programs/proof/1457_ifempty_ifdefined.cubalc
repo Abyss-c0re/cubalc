@@ -1,0 +1,81 @@
+# IFEMPTY / IFNONEMPTY / IFDEFINED / IFUNDEF / HASEMPTY
+
+HOLD_FLASH 1
+
+# IFUNDEF on missing
+IFUNDEF ghost
+  LET saw_undef = 1
+ELSE
+  LET saw_undef = 0
+END
+ASSERT saw_undef == 1
+
+# IFDEFINED after set
+LET msg = "hi"
+IFDEFINED msg
+  LET saw_def = 1
+ELSE
+  LET saw_def = 0
+END
+ASSERT saw_def == 1
+
+# IFEMPTY missing
+IFEMPTY missing_var
+  LET e1 = 1
+ELSE
+  LET e1 = 0
+END
+ASSERT e1 == 1
+
+# IFEMPTY empty string
+LET blank = ""
+IFEMPTY blank
+  LET e2 = 1
+ELSE
+  LET e2 = 0
+END
+ASSERT e2 == 1
+
+# IFNONEMPTY
+IFNONEMPTY msg
+  LET ne = 1
+ELSE
+  LET ne = 0
+END
+ASSERT ne == 1
+
+# IFEMPTY else branch
+IFEMPTY msg
+  LET took = 0
+ELSE
+  LET took = 1
+END
+ASSERT took == 1
+
+# probes
+HASEMPTY blank
+ASSERT LAST_N == 1
+HASEMPTY msg
+ASSERT LAST_N == 0
+HASDEFINED msg
+ASSERT LAST_N == 1
+HASDEFINED ghost2
+ASSERT LAST_N == 0
+
+# nested with CLEARSTR
+LET buf = "x"
+CLEARSTR buf
+IFEMPTY buf
+  APPENDTO buf "filled"
+END
+ASSERT buf == "filled"
+
+HASFORM "IFEMPTY"
+ASSERT LAST_N == 1
+HASFORM "IFDEFINED"
+ASSERT LAST_N == 1
+HASFORM "HASEMPTY"
+ASSERT LAST_N == 1
+
+PRINT "1457_ifempty_ifdefined ok"
+PASS

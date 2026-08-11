@@ -947,6 +947,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 916. ~~**`APPENDTO` / `PREPENDTO` / `COPYTO` vars**~~ **done** (string build + var copy · no LET=CAT dual-buffer glue · proof 1454).
 917. ~~**`REPLACEIN` / `TRIMTO` / `UPPERTO` / `LOWERTO` / `ZERO` / `CLEARSTR` vars**~~ **done** (in-place string mutate + counter/buffer reset · no LET=SYS glue · proof 1455).
 918. ~~**`PUSHTO` / `POPFROM` / `SHIFTFROM` / `LINESIN` / `HASINBAG` vars**~~ **done** (named-var work bags · no LET=SYS PUSH/POP glue · proof 1456).
+919. ~~**`IFEMPTY` / `IFNONEMPTY` / `IFDEFINED` / `IFUNDEF` + `HASEMPTY`**~~ **done** (var-presence branches · no IF DEFINED/SYS EMPTY glue · proof 1457).
 
 
 

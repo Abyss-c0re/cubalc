@@ -25293,7 +25293,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         if (kw(&L->cur,"IF")) lex_next(L);
         continue;
       }
-      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
           kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
@@ -25324,7 +25324,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")) lex_next(L);
           continue;
         }
-        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25354,7 +25354,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")) lex_next(L);
           continue;
         }
-        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25371,6 +25371,218 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     if (kw(&L->cur,"END")) lex_next(L);
     var_set_num(vm, want_ok ? "IFOK_N" : "IFERR_N", 0);
+    bump(vm); return 1;
+  }
+  /* HASEMPTY|HASDEFINED name — soft 0|1 var probes (no branch).
+   * empty: missing or zero-length string; num is non-empty.
+   * defined: var slot exists. Usability: IF HASEMPTY without SYS EMPTY glue. */
+  if (kw(&L->cur,"HASEMPTY")||kw(&L->cur,"ISEMPTYV")||kw(&L->cur,"VAREMPTY")||
+      kw(&L->cur,"HASDEFINED")||kw(&L->cur,"ISDEFINEDV")||kw(&L->cur,"VARDEFINED")||
+      kw(&L->cur,"HASUNDEF")||kw(&L->cur,"ISUNDEF")||kw(&L->cur,"UNDEFINED")||
+      kw(&L->cur,"HASNONEMPTY")||kw(&L->cur,"NONEMPTYV")){
+    char op[24], name[48];
+    int mode = 0; /* 0 empty, 1 defined, 2 undef, 3 nonempty */
+    Var *vv;
+    int hit = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "HASDEFINED") == 0 || strcmp(op, "ISDEFINEDV") == 0 ||
+        strcmp(op, "VARDEFINED") == 0)
+      mode = 1;
+    else if (strcmp(op, "HASUNDEF") == 0 || strcmp(op, "ISUNDEF") == 0 ||
+             strcmp(op, "UNDEFINED") == 0)
+      mode = 2;
+    else if (strcmp(op, "HASNONEMPTY") == 0 || strcmp(op, "NONEMPTYV") == 0)
+      mode = 3;
+    else
+      mode = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASEMPTY needs name — HASEMPTY msg");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    vv = var_get(vm, name, 0);
+    if (mode == 1)
+      hit = vv ? 1 : 0;
+    else if (mode == 2)
+      hit = vv ? 0 : 1;
+    else if (mode == 3) {
+      if (!vv) hit = 0;
+      else if (vv->is_str) hit = vv->sval[0] ? 1 : 0;
+      else hit = 1; /* num always nonempty */
+    } else {
+      if (!vv) hit = 1;
+      else if (vv->is_str) hit = vv->sval[0] ? 0 : 1;
+      else hit = 0;
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, mode == 1 ? "HASDEFINED_N" : mode == 2 ? "HASUNDEF_N"
+                 : mode == 3 ? "HASNONEMPTY_N" : "HASEMPTY_N", hit);
+    bump(vm);
+    return 1;
+  }
+  /* IFEMPTY name … [ELSE …] END — body if var missing or empty string.
+   * IFNONEMPTY name … — body if str non-empty or num present.
+   * IFDEFINED name … — body if var exists.
+   * IFUNDEF name … — body if var missing.
+   * Usability: gate on msg/queues without IF DEFINED / SYS EMPTY glue. */
+  if (kw(&L->cur,"IFEMPTY")||kw(&L->cur,"WHENEMPTY")||kw(&L->cur,"IFE")||
+      kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"WHENNONEMPTY")||kw(&L->cur,"IFNE")||
+      kw(&L->cur,"IFDEFINED")||kw(&L->cur,"WHENDEFINED")||kw(&L->cur,"IFDEF")||
+      kw(&L->cur,"IFUNDEF")||kw(&L->cur,"WHENUNDEF")||kw(&L->cur,"IFNDEF")||
+      kw(&L->cur,"IFMISSING")||kw(&L->cur,"WHENMISSING")){
+    int aln = L->cur.line;
+    int mode = 0; /* 0 empty, 1 nonempty, 2 defined, 3 undef */
+    int take = 0;
+    char name[48], op[24];
+    Var *vv;
+    Lex body_start;
+    int depth = 1;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "IFNONEMPTY") == 0 || strcmp(op, "WHENNONEMPTY") == 0 ||
+        strcmp(op, "IFNE") == 0)
+      mode = 1;
+    else if (strcmp(op, "IFDEFINED") == 0 || strcmp(op, "WHENDEFINED") == 0 ||
+             strcmp(op, "IFDEF") == 0)
+      mode = 2;
+    else if (strcmp(op, "IFUNDEF") == 0 || strcmp(op, "WHENUNDEF") == 0 ||
+             strcmp(op, "IFNDEF") == 0 || strcmp(op, "IFMISSING") == 0 ||
+             strcmp(op, "WHENMISSING") == 0)
+      mode = 3;
+    else
+      mode = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "IFEMPTY needs name — IFEMPTY msg … END");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    skip_nl(L);
+    if (kw(&L->cur,"THEN")) { lex_next(L); skip_nl(L); }
+    vv = var_get(vm, name, 0);
+    if (mode == 2)
+      take = vv ? 1 : 0;
+    else if (mode == 3)
+      take = vv ? 0 : 1;
+    else if (mode == 1) {
+      if (!vv) take = 0;
+      else if (vv->is_str) take = vv->sval[0] ? 1 : 0;
+      else take = 1;
+    } else {
+      if (!vv) take = 1;
+      else if (vv->is_str) take = vv->sval[0] ? 0 : 1;
+      else take = 0;
+    }
+    body_start = *L;
+    while (L->cur.kind != TK_EOF && depth > 0) {
+      if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+        lex_next(L);
+        if (kw(&L->cur,"IF")) lex_next(L);
+        continue;
+      }
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+          kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+          kw(&L->cur,"IFUNDEF")||kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
+          kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+          kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+          kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
+          kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+        depth++;
+      else if (kw(&L->cur,"ELSE") && depth == 1) break;
+      else if (kw(&L->cur,"END")) {
+        depth--;
+        if (depth == 0) break;
+      }
+      lex_next(L);
+    }
+    if (depth > 1 || (depth == 1 && L->cur.kind == TK_EOF)) {
+      char ebuf[160];
+      snprintf(ebuf, sizeof ebuf,
+               "IFEMPTY without END line %d — IFEMPTY name … [ELSE …] END", aln);
+      fail(vm, ebuf); return -1;
+    }
+    if (take) {
+      Lex body = body_start;
+      if (exec_stmts_until(vm, &body, "END", "ELSE") < 0) return -1;
+      depth = 1;
+      while (L->cur.kind != TK_EOF && depth > 0) {
+        if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+          lex_next(L);
+          if (kw(&L->cur,"IF")) lex_next(L);
+          continue;
+        }
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+            kw(&L->cur,"IFUNDEF")||
+            kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+            kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
+            kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+          depth++;
+        else if (kw(&L->cur,"END")) {
+          depth--;
+          if (depth == 0) break;
+        }
+        lex_next(L);
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      var_set_num(vm, mode == 1 ? "IFNONEMPTY_N" : mode == 2 ? "IFDEFINED_N"
+                   : mode == 3 ? "IFUNDEF_N" : "IFEMPTY_N", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"ELSE")) {
+      lex_next(L);
+      skip_nl(L);
+      {
+        Lex body = *L;
+        if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+      }
+      depth = 1;
+      while (L->cur.kind != TK_EOF && depth > 0) {
+        if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+          lex_next(L);
+          if (kw(&L->cur,"IF")) lex_next(L);
+          continue;
+        }
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+            kw(&L->cur,"IFUNDEF")||
+            kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+            kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
+            kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+          depth++;
+        else if (kw(&L->cur,"END")) {
+          depth--;
+          if (depth == 0) break;
+        }
+        lex_next(L);
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      var_set_num(vm, mode == 1 ? "IFNONEMPTY_N" : mode == 2 ? "IFDEFINED_N"
+                   : mode == 3 ? "IFUNDEF_N" : "IFEMPTY_N", 0);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"END")) lex_next(L);
+    var_set_num(vm, mode == 1 ? "IFNONEMPTY_N" : mode == 2 ? "IFDEFINED_N"
+                 : mode == 3 ? "IFUNDEF_N" : "IFEMPTY_N", 0);
     bump(vm); return 1;
   }
   if (kw(&L->cur,"IF")){
