@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 338,
-  "program": "programs/realworld/svc_trydelete_retire_fleet_board.cubalc",
-  "theme": "TRYDELETE/HASCLASS/HASCLASSES soft fleet slot retire",
-  "version": "1.15.874-usability",
+  "iter": 339,
+  "program": "programs/realworld/svc_capability_admit_board.cubalc",
+  "theme": "HASCLASSANY/HASMETHODS free-form capability admit",
+  "version": "1.15.876-usability",
   "pass": true,
-  "prior_note": "iter 337 bulk path-age GC; this iter first realworld TRYDELETE+HASCLASS (1418/1419/1420)",
+  "prior_note": "iter 338 TRYDELETE retire; this iter first free-form HASCLASSANY+HASMETHODS (1421/1422) mesh capability admit",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent + HASCLASS FleetSlot",
+      "cmd": "seed agent + HASCLASSANY Mesh*",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "NEW slots + TRYDELETE drain 10/10",
+      "cmd": "any-of class + HASMETHODS + live inst 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "ghost+double-delete soft + LAST_ERR 10/10",
+      "cmd": "all-miss any/methods empty soft 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "alias",
-      "cmd": "DELETEOBJ SOFT/SOFTDELETE/FREEOBJ SOFT 10/10",
+      "name": "methods",
+      "cmd": "CSV bag + partial METHODMISS + ALLMETHODS",
       "ok": true,
-      "note": "alias 10/10"
+      "note": "methods 10/10"
     },
     {
-      "name": "class",
-      "cmd": "HASCLASS/KNOWNCLASS/HASCLASSES CLASSMISS 10/10",
+      "name": "any",
+      "cmd": "ANYCLASS + CSV opts CLASSHAVE 10/10",
       "ok": true,
-      "note": "class 10/10"
+      "note": "any 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM TRYDELETE; KNOWNCLASS lag",
+      "cmd": "HASFORM HASCLASSANY; HASMETHODS lag",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "class gate + retire + REQUIRE",
+      "cmd": "admit pipeline + REQUIRE",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + CLEAR_ERR LAST=cleared",
+      "cmd": "PRINT clobber + CLEAR_ERR LAST",
       "ok": true,
       "note": "probe"
     },
@@ -69,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest 615/872; trydelete/hasclass PASS; CLI duals set\u2192SETF",
+      "cmd": "1421/1422 PASS; full selftest OOM mid-run; CLI duals red",
       "ok": false,
-      "note": "lang proofs green; CLI duals still red"
+      "note": "proofs fixed; selftest truncated OOM"
     }
   ],
   "weaknesses": [
@@ -6250,6 +6250,54 @@
       "title": "CLEAR_ERR LAST='cleared' reconfirmed on TRYDELETE probe",
       "detail": "W763 class: after LET body keep-me; CLEAR_ERR; EQS LAST cleared hits. Agents must capture TRYDELETE_N before any CLEAR_ERR/PRINT.",
       "repro": "CLEAR_ERR; SYS EQS LAST cleared \u2192 1"
+    },
+    {
+      "id": "W773",
+      "severity": "high",
+      "area": "lang|require_lib",
+      "title": "bare REQUIRE LIB hold_seed fails; quoted stem required",
+      "detail": "REQUIRE LIB hold_seed \u2192 sticky REQUIRE LIB name|var|LAST with zero stmts. REQUIRE LIB \"hold_seed\" works. Breaks all prior realworld boards using bare stem. Regression noticed 1.15.875+.",
+      "repro": "REQUIRE LIB hold_seed \u2192 fail; REQUIRE LIB \"hold_seed\" \u2192 include"
+    },
+    {
+      "id": "W774",
+      "severity": "high",
+      "area": "lang|hasmethods",
+      "title": "HASMETHODS bare method idents that are keywords truncate list",
+      "detail": "HASMETHODS Cell tick init birth leaves init as next form (unknown form init). CSV bag or careful quoting required. init/birth especially toxic after another bare method. Confirmed broke proof 1422 until CSV rewrite.",
+      "repro": "HASMETHODS Cell tick init \u2192 unknown form init; LET need=tick,init; HASMETHODS Cell need works"
+    },
+    {
+      "id": "W775",
+      "severity": "med",
+      "area": "lang|hasform",
+      "title": "HASFORM misses HASMETHODS/NEEDMETHODS/ANYCLASS/ALLMETHODS",
+      "detail": "HASCLASSANY/NEEDCLASSANY cataloged; HASMETHODS ops work but HASFORM 0. Same alias lag class as W768.",
+      "repro": "HASFORM HASMETHODS \u2192 0; HASMETHODS MeshHttp ping \u2192 1"
+    },
+    {
+      "id": "W776",
+      "severity": "med",
+      "area": "host|binary",
+      "title": "stale/partial cubalc binary: catalog HASCLASSANY but runtime unknown form",
+      "detail": "out/cubalc can list HASCLASSANY in forms while statement dispatch returns unknown form until relink with fresh lang_ops_flow.o. Concurrent make may delete binary mid-suite (W756 class).",
+      "repro": "forms shows HASCLASSANY; run HASCLASSANY \u2192 unknown form until relink"
+    },
+    {
+      "id": "W777",
+      "severity": "low",
+      "area": "lang|new",
+      "title": "NEW Class inst auto-calls init when METHOD init present",
+      "detail": "NEW MeshHttp svc0 fails with init needs 1 arg; NEW MeshHttp svc0 \"east\" succeeds. SEND init after bare NEW is wrong pattern when init arity > 0.",
+      "repro": "NEW MeshHttp x \u2192 needs 1 arg; NEW MeshHttp x east ok"
+    },
+    {
+      "id": "W778",
+      "severity": "low",
+      "area": "host|write",
+      "title": "SYS WRITE META omit trailing NL",
+      "detail": "W5 class reconfirmed on CAP META.",
+      "repro": "od -c META.txt"
     }
   ],
   "workarounds": [
@@ -6349,7 +6397,11 @@
     "HASFORM only 'SYS AGEALL'/'SYS FRESH'/'SYS KEEPSTALE'/'SYS TOUCHALL'/'SYS RMALL' full stems",
     "LET del_n=TRYDELETE_N and LET err_s=LAST_ERR before CLEAR_ERR",
     "HASFORM only TRYDELETE/DELETEOBJ/HASCLASS/HASCLASSES/SOFTDELETE stems",
-    "Gate class load via HASCLASS op not HASFORM KNOWNCLASS"
+    "Gate class load via HASCLASS op not HASFORM KNOWNCLASS",
+    "REQUIRE LIB \"hold_seed\" with quotes",
+    "HASMETHODS use CSV bag for init/birth/etc",
+    "NEW Class inst ctor_args when METHOD init has params",
+    "relink out/cubalc from .o if forms catalog \u2260 runtime"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6518,7 +6570,11 @@
     "TRYDELETE soft free fleet slots (1418)",
     "HASCLASS/HASCLASSES class gate (1419/1420)",
     "HASFORM lag KNOWNCLASS/TYPEDEFINED/FREEOBJ (W768)",
-    "CLEAR_ERR LAST=cleared reconfirmed (W772)"
+    "CLEAR_ERR LAST=cleared reconfirmed (W772)",
+    "HASCLASSANY/HASMETHODS free capability admit (1421/1422)",
+    "REQUIRE LIB bare stem broken (W773)",
+    "HASMETHODS keyword method-name collide (W774)",
+    "HASFORM lag HASMETHODS/ANYCLASS (W775)"
   ],
   "issues_faced": [
     "iter306: START+FORMGUIDE board 10/10 first pass",
@@ -6583,9 +6639,14 @@
     "iter337: board all actions green; selftest CLI duals still set\u2192SETF red",
     "iter338: form 9/10 until KNOWNCLASS HASFORM lag documented (W768)",
     "iter338: capture LAST_ERR before CLEAR_ERR on soft TRYDELETE (W763/W751 class)",
-    "iter338: all actions green; trydelete/hasclass proofs PASS; CLI duals still set\u2192SETF"
+    "iter338: all actions green; trydelete/hasclass proofs PASS; CLI duals still set\u2192SETF",
+    "iter339: bare REQUIRE LIB hold_seed dead \u2014 quoted stem required (W773)",
+    "iter339: binary catalog/runtime split until relink lang_ops_flow (W776)",
+    "iter339: HASMETHODS init keyword truncate \u2014 CSV bag workaround (W774); fixed proof 1422",
+    "iter339: NEW auto-init arity when METHOD init present (W777)",
+    "iter339: board all green; full selftest OOM killed"
   ],
-  "commit": "50c4cc00",
-  "ts": "2026-08-11T06:46:24Z",
-  "board_commit": "50c4cc00"
+  "commit": "pending",
+  "ts": "2026-08-11T07:18:27Z",
+  "board_commit": "pending"
 }
