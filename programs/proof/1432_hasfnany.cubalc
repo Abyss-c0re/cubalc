@@ -1,0 +1,60 @@
+# HASFNANY / NEEDFNANY — any-of multi FN soft/hard gate
+
+HOLD_FLASH 1
+
+FN add a b
+  RET a + b
+END
+
+FN greet name
+  RET name
+END
+
+# any hit
+HASFNANY ghost_fn add
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASFNANY_N == 1
+ASSERT FNHAVE_N == 1
+ASSERT FNHAVE == "add"
+ASSERT FNMISS_N == 1
+SYS HASI FNMISS "ghost_fn"
+ASSERT LAST_N == 1
+
+# all miss soft
+HASFNANY ghost_x ghost_y
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT HASFNANY_N == 0
+ASSERT FNHAVE == ""
+ASSERT FNMISS_N == 2
+
+# bag form
+LET opts = "ghost,greet,nope"
+HASFNANY opts
+ASSERT LAST_N == 1
+ASSERT FNHAVE == "greet"
+
+# ANYFN alias
+ANYFN ghost_zz add
+ASSERT LAST_N == 1
+ASSERT FNHAVE == "add"
+
+# all hit
+HASFNANY add greet
+ASSERT LAST_N == 1
+ASSERT FNHAVE_N == 2
+
+# empty soft
+HASFNANY
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+HASFORM "HASFNANY"
+ASSERT LAST_N == 1
+HASFORM "NEEDFNANY"
+ASSERT LAST_N == 1
+
+PRINT "1432_hasfnany ok"
+PASS

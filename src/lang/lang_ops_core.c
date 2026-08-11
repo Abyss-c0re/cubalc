@@ -2150,6 +2150,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"CANCALLFN", "CANCALLFN alias of HASFN"},
       {"HASFNS", "HASFNS|ALLFNS names… — soft 0|1 all FN · FNMISS bag"},
       {"NEEDFNS", "NEEDFNS|REQUIREFNS names… — fail-fast multi HASFN"},
+      {"HASFNANY", "HASFNANY|ANYFN names… — soft 0|1 if any FN defined · FNHAVE bag"},
+      {"NEEDFNANY", "NEEDFNANY|REQUIREFNANY names… — fail-fast if none of FNs defined"},
       {"ALLFNS", "ALLFNS alias of HASFNS"},
       {"REQUIREFNS", "REQUIREFNS alias of NEEDFNS"},
       {"HASFUNCS", "HASFUNCS alias of HASFNS"},

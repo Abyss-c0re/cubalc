@@ -921,6 +921,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 890. ~~**`HASFNS` / `NEEDFNS`**~~ **done** (multi FN soft/hard gate · FNMISS bag · HASOBJS dual for FN plane · proof 1429).
 891. ~~**`field_guard` native HASCLASS/HASFIELD**~~ **done** (lib rewrite · drop LISTFIELDS+HASLINE soup · proof 1430 + 1403 regression).
 892. ~~**`class_guard` native HASCLASS**~~ **done** (lib rewrite · drop LISTCLASSES+HASLINE soup · proof 1431 + 1401 regression).
+893. ~~**`HASFNANY` / `NEEDFNANY`**~~ **done** (any-of multi FN gate · FNHAVE bag · HASFNS twin · proof 1432).
 
 
 ## Tick protocol
