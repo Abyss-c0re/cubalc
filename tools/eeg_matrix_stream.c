@@ -15,6 +15,7 @@
 #include "cubalc_eeg.h"
 #include "cubalc_hw.h"
 #include "cubalc_algocube.h"
+#include "cubalc_viz_matrix.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +25,9 @@
 
 static volatile int g_stop = 0;
 static void on_sig(int s) { (void)s; g_stop = 1; }
+static cubalc_viz_ring g_ring;
+static cubalc_viz_frame g_prev;
+static int g_has_prev;
 
 static long mono_ms(void) {
   struct timespec ts;
@@ -31,47 +35,74 @@ static long mono_ms(void) {
   return (long)ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
 }
 
-static void write_status(const char *path, const cubalc_matrix *m, int n_ch,
+static void write_status(const char *state_dir, const cubalc_matrix *m, int n_ch,
                          long seq, float unity, int digit, long ms) {
+  char path[512], vizj[512], vizb[512], hist[512];
+  snprintf(path, sizeof path, "%s/eeg_matrix_status.json", state_dir);
+  snprintf(vizj, sizeof vizj, "%s/matrix_viz_frame.json", state_dir);
+  snprintf(vizb, sizeof vizb, "%s/matrix_viz_frame.bin", state_dir);
+  snprintf(hist, sizeof hist, "%s/matrix_viz_history.json", state_dir);
+
   FILE *f = fopen(path, "wb");
-  if (!f) return;
-  char bits[CUBALC_ATOM_BITS + 1];
-  cubalc_eeg_matrix_bits(m, bits, sizeof bits);
-  time_t now = time(NULL);
-  char iso[40];
-  struct tm tm;
-  gmtime_r(&now, &tm);
-  strftime(iso, sizeof iso, "%Y-%m-%dT%H:%M:%SZ", &tm);
-  fprintf(f,
-    "{\n"
-    "  \"schema\": \"cube.eeg.matrix.stream.v1\",\n"
-    "  \"engine\": \"cubalc_eeg\",\n"
-    "  \"standalone\": true,\n"
-    "  \"grok_tui\": false,\n"
-    "  \"ts\": \"%s\",\n"
-    "  \"ok\": true,\n"
-    "  \"n_ch\": %d,\n"
-    "  \"seq\": %ld,\n"
-    "  \"set\": %u,\n"
-    "  \"digit\": %d,\n"
-    "  \"unity\": %.6f,\n"
-    "  \"backend\": \"%s\",\n"
-    "  \"solve_ms\": %ld,\n"
-    "  \"bits\": \"%s\",\n"
-    "  \"law\": \"eeg_window→state_matrix;harmony=mean_unity\"\n"
-    "}\n",
-    iso, n_ch, seq, m ? (unsigned)m->set : 0u, digit, unity,
-    cubalc_hw_backend(), ms, bits);
-  fclose(f);
-  /* plate mirror */
+  if (f) {
+    char bits[CUBALC_ATOM_BITS + 1];
+    cubalc_eeg_matrix_bits(m, bits, sizeof bits);
+    time_t now = time(NULL);
+    char iso[40];
+    struct tm tm;
+    gmtime_r(&now, &tm);
+    strftime(iso, sizeof iso, "%Y-%m-%dT%H:%M:%SZ", &tm);
+    fprintf(f,
+      "{\n"
+      "  \"schema\": \"cube.eeg.matrix.stream.v1\",\n"
+      "  \"engine\": \"cubalc_eeg+viz\",\n"
+      "  \"standalone\": true,\n"
+      "  \"grok_tui\": false,\n"
+      "  \"ts\": \"%s\",\n"
+      "  \"ok\": true,\n"
+      "  \"n_ch\": %d,\n"
+      "  \"seq\": %ld,\n"
+      "  \"set\": %u,\n"
+      "  \"digit\": %d,\n"
+      "  \"unity\": %.6f,\n"
+      "  \"backend\": \"%s\",\n"
+      "  \"solve_ms\": %ld,\n"
+      "  \"bits\": \"%s\",\n"
+      "  \"viz\": \"%s\",\n"
+      "  \"law\": \"eeg_window→state_matrix;raw_c_viz;realtime\"\n"
+      "}\n",
+      iso, n_ch, seq, m ? (unsigned)m->set : 0u, digit, unity,
+      cubalc_hw_backend(), ms, bits, vizj);
+    fclose(f);
+  }
+
+  /* Raw C viz frame — JSON + binary + history ring */
+  cubalc_viz_frame vf;
+  cubalc_viz_from_matrix(m, &vf, (uint32_t)seq, unity, digit, n_ch,
+                         "eeg", cubalc_hw_backend());
+  if (g_has_prev)
+    cubalc_viz_heat_blend(&vf, &g_prev, 0.82f);
+  g_prev = vf;
+  g_has_prev = 1;
+  cubalc_viz_ring_push(&g_ring, &vf);
+  cubalc_viz_write_json_path(&vf, vizj);
+  cubalc_viz_write_bin_path(&vf, vizb);
+  cubalc_viz_ring_write_json_path(&g_ring, 48, hist);
+
+  /* plate mirrors for human UIs */
   FILE *p = fopen("/opt/nexuscore/plates/EEG_MATRIX_STATUS.json", "wb");
   if (p) {
+    char bits[CUBALC_ATOM_BITS + 1];
+    cubalc_eeg_matrix_bits(m, bits, sizeof bits);
     fprintf(p,
       "{\"schema\":\"cube.eeg.matrix.stream.v1\",\"seq\":%ld,\"digit\":%d,"
       "\"unity\":%.4f,\"backend\":\"%s\",\"bits\":\"%s\"}\n",
       seq, digit, unity, cubalc_hw_backend(), bits);
     fclose(p);
   }
+  cubalc_viz_write_json_path(&vf, "/opt/nexuscore/plates/MATRIX_VIZ_FRAME.json");
+  cubalc_viz_ring_write_json_path(&g_ring, 48,
+                                  "/opt/nexuscore/plates/MATRIX_VIZ_HISTORY.json");
 }
 
 int main(int argc, char **argv) {
@@ -100,6 +131,8 @@ int main(int argc, char **argv) {
   if (hz <= 0) hz = 10.0;
 
   cubalc_hw_init(0);
+  cubalc_viz_ring_init(&g_ring);
+  g_has_prev = 0;
   signal(SIGINT, on_sig);
   signal(SIGTERM, on_sig);
 
@@ -110,8 +143,6 @@ int main(int argc, char **argv) {
     else
       state = "state";
   }
-  char status_path[512];
-  snprintf(status_path, sizeof status_path, "%s/eeg_matrix_status.json", state);
 
   cubalc_eeg_frame fr;
   cubalc_eeg_frame_init(&fr, n_ch, CUBALC_EEG_DEF_SCALE);
@@ -120,7 +151,7 @@ int main(int argc, char **argv) {
   long seq = 0;
   long seed = 1;
 
-  printf("eeg-matrix-stream ch=%d win=%d hz=%.1f backend=%s demo=%d\n",
+  printf("eeg-matrix-stream ch=%d win=%d hz=%.1f backend=%s demo=%d viz=on\n",
          n_ch, win, hz, cubalc_hw_backend(), demo);
 
   do {
@@ -168,10 +199,10 @@ int main(int argc, char **argv) {
       if (n_mats >= 2)
         unity = cubalc_hw_harmony_unity(mats, n_mats);
       long ms = mono_ms() - t0;
-      write_status(status_path, &m, n_ch, seq, unity, digit, ms);
+      write_status(state, &m, n_ch, seq, unity, digit, ms);
       char bits[CUBALC_ATOM_BITS + 1];
       cubalc_eeg_matrix_bits(&m, bits, sizeof bits);
-      printf("eeg seq=%ld digit=%d set=%u unity=%.4f bits=%.16s… ms=%ld\n",
+      printf("eeg seq=%ld digit=%d set=%u unity=%.4f bits=%.16s… ms=%ld viz\n",
              seq, digit, (unsigned)m.set, unity, bits, ms);
     }
 
