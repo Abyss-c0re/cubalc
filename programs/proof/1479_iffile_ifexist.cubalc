@@ -1,0 +1,90 @@
+# IFFILE / IFDIR / IFEXIST — path existence branches
+
+HOLD_FLASH 1
+
+SYS MKDIR "state/meaningful_iter/mi_iffile"
+SYS WRITE "state/meaningful_iter/mi_iffile/plate.json" "{\"ok\":1}"
+
+# IFFILE hit
+IFFILE "state/meaningful_iter/mi_iffile/plate.json"
+  LET f = 1
+ELSE
+  LET f = 0
+END
+ASSERT f == 1
+ASSERT IFFILE_N == 1
+
+# IFFILE miss on dir
+IFFILE "state/meaningful_iter/mi_iffile"
+  LET f = 1
+ELSE
+  LET f = 0
+END
+ASSERT f == 0
+
+# IFDIR hit
+IFDIR "state/meaningful_iter/mi_iffile"
+  LET d = 1
+ELSE
+  LET d = 0
+END
+ASSERT d == 1
+ASSERT IFDIR_N == 1
+
+# IFDIR miss on file
+IFDIR "state/meaningful_iter/mi_iffile/plate.json"
+  LET d = 1
+ELSE
+  LET d = 0
+END
+ASSERT d == 0
+
+# IFEXIST any
+IFEXIST "state/meaningful_iter/mi_iffile/plate.json"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+ASSERT IFEXIST_N == 1
+
+IFEXIST "state/meaningful_iter/mi_iffile/nope.json"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 0
+
+# var path + IFEXISTS alias
+LET p = "state/meaningful_iter/mi_iffile/plate.json"
+IFEXISTS p
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+# nest: load plate if present
+IFEXIST p
+  IFFILE p
+    SYS READ p
+    LET body = LAST
+  ELSE
+    LET body = ""
+  END
+ELSE
+  LET body = "missing"
+END
+ASSERT body != "missing"
+SYS HAS body "ok"
+ASSERT LAST_N == 1
+
+HASFORM "IFFILE"
+ASSERT LAST_N == 1
+HASFORM "IFDIR"
+ASSERT LAST_N == 1
+HASFORM "IFEXIST"
+ASSERT LAST_N == 1
+
+PRINT "1479_iffile_ifexist ok"
+PASS
