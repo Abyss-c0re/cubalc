@@ -17190,13 +17190,16 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* CLONEOBJ|COPYOBJ|DUPLOBJ|TRYCLONE src dst — shallow copy live object fields
-   * into new instance of same class. Does not re-run init (snapshot clone).
-   * Soft miss src always OK=0. TRYCLONE|CLONE SOFT|CLONEOBJ SOFT: dst redefine
-   * / pool full also soft (OK=0 LAST_ERR) — twin of TRYNEW for prototypes.
+  /* CLONEOBJ|COPYOBJ|DUPLOBJ|TRYCLONE|ENSURECLONE src dst — shallow copy live
+   * object fields into new instance of same class. Does not re-run init.
+   * Soft miss src always OK=0. TRYCLONE|CLONE SOFT: dst redefine/pool soft.
+   * ENSURECLONE|CLONE OR: if dst already live → keep (ENSURECLONE_N=0);
+   * if missing → soft clone (ENSURECLONE_N=1). Twin of ENSURENEW for protos.
    * Hard CLONEOBJ: dst live already → fatal redefine.
-   * Usability: optional template spawn without HASOBJ+IF+CLONE glue. */
-  if (kw(&L->cur, "TRYCLONE") || kw(&L->cur, "SOFTCLONE") ||
+   * Usability: template spawn without HASOBJ+IF+CLONE glue. */
+  if (kw(&L->cur, "ENSURECLONE") || kw(&L->cur, "GETORCLONE") ||
+      kw(&L->cur, "CLONEIFMISS") || kw(&L->cur, "ENSURECOPY") ||
+      kw(&L->cur, "TRYCLONE") || kw(&L->cur, "SOFTCLONE") ||
       kw(&L->cur, "CLONEOBJSOFT") || kw(&L->cur, "TRYCOPYOBJ") ||
       kw(&L->cur, "CLONEOBJ") || kw(&L->cur, "COPYOBJ") ||
       kw(&L->cur, "DUPLOBJ") || kw(&L->cur, "CLONE") ||
@@ -17205,25 +17208,56 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     char sname[48], dname[48];
     ObjInst *src, *dst;
     ClassDef *cd;
-    int fi, soft = 0, rc;
+    int fi, soft = 0, ensure = 0, rc;
     char op0[32];
     snprintf(op0, sizeof op0, "%s", L->cur.text);
-    if (strcmp(op0, "TRYCLONE") == 0 || strcmp(op0, "SOFTCLONE") == 0 ||
+    if (strcmp(op0, "ENSURECLONE") == 0 || strcmp(op0, "GETORCLONE") == 0 ||
+        strcmp(op0, "CLONEIFMISS") == 0 || strcmp(op0, "ENSURECOPY") == 0) {
+      ensure = 1;
+      soft = 1;
+    } else if (strcmp(op0, "TRYCLONE") == 0 || strcmp(op0, "SOFTCLONE") == 0 ||
         strcmp(op0, "CLONEOBJSOFT") == 0 || strcmp(op0, "TRYCOPYOBJ") == 0)
       soft = 1;
     lex_next(L);
-    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+    if (!soft && !ensure && (kw(&L->cur, "OR") || kw(&L->cur, "ENSURE") ||
+                  kw(&L->cur, "IFMISS") || kw(&L->cur, "UNLESS"))) {
+      /* CLONE OR src dst — ensure dual of ENSURECLONE */
+      ensure = 1;
+      soft = 1;
+      lex_next(L);
+    } else if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
                   kw(&L->cur, "OPTIONAL") || kw(&L->cur, "MAYBE") ||
                   kw(&L->cur, "OPT"))) {
       soft = 1;
       lex_next(L);
     }
-    if (oop_read_name(vm, L, sname, sizeof sname, soft ? "TRYCLONE src" : "CLONEOBJ src") < 0)
+    if (oop_read_name(vm, L, sname, sizeof sname,
+                      ensure ? "ENSURECLONE src" : (soft ? "TRYCLONE src" : "CLONEOBJ src")) < 0)
       return -1;
     if (kw(&L->cur, "AS") || kw(&L->cur, "TO") || kw(&L->cur, "INTO"))
       lex_next(L);
-    if (oop_read_name(vm, L, dname, sizeof dname, soft ? "TRYCLONE dst" : "CLONEOBJ dst") < 0)
+    if (oop_read_name(vm, L, dname, sizeof dname,
+                      ensure ? "ENSURECLONE dst" : (soft ? "TRYCLONE dst" : "CLONEOBJ dst")) < 0)
       return -1;
+    /* ENSURECLONE: dst already live → keep without re-clone */
+    if (ensure && oop_find_obj(vm, dname)) {
+      var_set_str(vm, "LAST", dname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", dname);
+      var_set_str(vm, "OBJECT", dname);
+      var_set_str(vm, "CLONEOBJ", dname);
+      var_set_str(vm, "CLONE_SRC", sname);
+      var_set_num(vm, "LAST_N", 0); /* 0 = already present */
+      vm->last_n = 0;
+      var_set_num(vm, "CLONEOBJ_N", 0);
+      var_set_num(vm, "ENSURECLONE_N", 0);
+      var_set_num(vm, "ENSURED", 1);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "LAST_ERR", "");
+      var_set_str(vm, "ERR", "");
+      if (vm->trace) fprintf(vm->trace, "# ENSURECLONE already %s\n", dname);
+      bump(vm);
+      return 1;
+    }
     src = oop_find_obj(vm, sname);
     if (!src) {
       var_set_str(vm, "LAST", "");
@@ -17232,6 +17266,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       vm->last_n = 0;
       var_set_num(vm, "CLONEOBJ_N", 0);
       var_set_num(vm, "TRYCLONE_N", 0);
+      if (ensure) {
+        var_set_num(vm, "ENSURECLONE_N", 0);
+        var_set_num(vm, "ENSURED", 0);
+      }
       var_set_num(vm, "OK", 0);
       var_set_str(vm, "LAST_ERR", "CLONEOBJ: unknown source");
       var_set_str(vm, "ERR", "CLONEOBJ: unknown source");
@@ -17249,6 +17287,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       /* soft redefine / pool full — sticky already set by oop_new_instance */
       var_set_num(vm, "CLONEOBJ_N", 0);
       var_set_num(vm, "TRYCLONE_N", 0);
+      if (ensure) {
+        var_set_num(vm, "ENSURECLONE_N", 0);
+        var_set_num(vm, "ENSURED", 0);
+      }
       if (vm->trace) fprintf(vm->trace, "# TRYCLONE soft miss %s -> %s\n", sname, dname);
       bump(vm);
       return 1;
@@ -17275,10 +17317,18 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "LAST_N", cd->n_fields);
     vm->last_n = cd->n_fields;
     var_set_num(vm, "CLONEOBJ_N", 1);
-    if (soft) var_set_num(vm, "TRYCLONE_N", 1);
+    if (soft && !ensure) var_set_num(vm, "TRYCLONE_N", 1);
+    if (ensure) {
+      var_set_num(vm, "ENSURECLONE_N", 1);
+      var_set_num(vm, "ENSURED", 1);
+      var_set_str(vm, "LAST_ERR", "");
+      var_set_str(vm, "ERR", "");
+    }
     var_set_num(vm, "NFIELDS", cd->n_fields);
     var_set_num(vm, "OK", 1);
-    if (vm->trace) fprintf(vm->trace, "# %s %s -> %s\n", soft ? "TRYCLONE" : "CLONEOBJ", sname, dname);
+    if (vm->trace) fprintf(vm->trace, "# %s %s -> %s\n",
+                           ensure ? "ENSURECLONE" : (soft ? "TRYCLONE" : "CLONEOBJ"),
+                           sname, dname);
     bump(vm);
     return 1;
   }

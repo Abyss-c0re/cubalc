@@ -1,0 +1,76 @@
+# ENSURECLONE / CLONE OR — keep live dst or soft-clone without HASOBJ+IF+CLONE
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell proto 1 10 0
+SETF proto age 7
+
+# first ensure creates
+ENSURECLONE proto twin
+ASSERT OK == 1
+ASSERT ENSURECLONE_N == 1
+ASSERT ENSURED == 1
+ASSERT LAST == "twin"
+HASOBJ twin
+ASSERT LAST_N == 1
+GETF twin age
+ASSERT LAST_N == 7
+GETF twin energy
+ASSERT LAST_N == 10
+
+# mutate twin then re-ensure — must keep (no re-clone overwrite)
+SETF twin age 99
+ENSURECLONE proto twin
+ASSERT OK == 1
+ASSERT ENSURECLONE_N == 0
+ASSERT ENSURED == 1
+ASSERT LAST_N == 0
+GETF twin age
+ASSERT LAST_N == 99
+
+# CLONE OR sugar create
+CLONE OR proto spare
+ASSERT OK == 1
+ASSERT ENSURECLONE_N == 1
+HASOBJ spare
+ASSERT LAST_N == 1
+GETF spare age
+ASSERT LAST_N == 7
+
+# CLONE OR already
+CLONE OR proto spare
+ASSERT OK == 1
+ASSERT ENSURECLONE_N == 0
+
+# GETORCLONE alias
+GETORCLONE proto g1
+ASSERT ENSURECLONE_N == 1
+GETORCLONE proto g1
+ASSERT ENSURECLONE_N == 0
+
+# soft miss source
+ENSURECLONE missing_zz ghost
+ASSERT OK == 0
+ASSERT ENSURECLONE_N == 0
+ASSERT ENSURED == 0
+SYS HASI LAST_ERR "source"
+ASSERT LAST_N == 1
+HASOBJ ghost
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# hard CLONEOBJ still works
+CLONEOBJ proto hard1
+ASSERT OK == 1
+HASOBJ hard1
+ASSERT LAST_N == 1
+
+HASFORM "ENSURECLONE"
+ASSERT LAST_N == 1
+HASFORM "TRYCLONE"
+ASSERT LAST_N == 1
+
+PRINT "1416_ensureclone ok"
+PASS
