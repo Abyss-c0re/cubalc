@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 930,
-  "version": "1.15.923-usability",
-  "item": "FINDLINEIN / SETLINEIN / DROPNTHIN vars",
-  "item_id": 930,
-  "title": "FINDLINEIN \u00b7 SETLINEIN \u00b7 DROPNTHIN \u00b7 bag index ops",
-  "commit": "4977f88f",
-  "summary": "Bag index locate/set/drop on named vars; work queues without NTHIN+rebuild; proof 1468 PASS.",
+  "iter": 931,
+  "version": "1.15.924-usability",
+  "item": "INSERTLINEIN vars",
+  "item_id": 931,
+  "title": "INSERTLINEIN \u00b7 bag field insert by index",
+  "commit": "7501975a",
+  "summary": "Insert bag field at 0-based index on named vars; priority queues; completes SET/DROP triad; proof 1469 PASS.",
   "proofs": [
-    "1468_findlinein_setlinein PASS",
-    "1468_cli_findlinein_setlinein PASS",
-    "1464_ensurein regression PASS"
+    "1469_insertlinein PASS",
+    "1469_cli_insertlinein PASS",
+    "1468_findlinein regression PASS"
   ],
-  "when": "2026-08-11T15:56:56Z",
+  "when": "2026-08-11T16:11:52Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "4977f88fa749a9b76249e1fe2a0cff08bf55d27f",
-  "note": "agent work-queue index update without bag rebuild"
+  "sha": "7501975ad4d50a7f8eb5f5b539447bd3933b0d2d",
+  "note": "agent priority insert without bag rebuild"
 }
