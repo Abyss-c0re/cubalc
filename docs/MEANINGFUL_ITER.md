@@ -994,6 +994,9 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 954. ~~**`IFLEN` / `IFLONG` / `IFSHORT`**~~ **done** (string length branches · no LENOF+IF glue · proof 1493).
 
+955. ~~**`IFLINES` / `IFMANY` / `IFFEW`**~~ **done** (bag field-count branches · no LINESIN+IF glue · proof 1494).
+
+
 
 
 

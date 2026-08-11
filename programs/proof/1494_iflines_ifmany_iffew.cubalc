@@ -1,0 +1,160 @@
+# IFLINES / IFMANY / IFFEW — bag field-count branches
+
+HOLD_FLASH 1
+
+# three-field bag via PUSHTO (same as work queues)
+LET bag = ""
+PUSHTO bag "a"
+PUSHTO bag "b"
+PUSHTO bag "c"
+
+LET empty = ""
+LET one = ""
+PUSHTO one "solo"
+LET n = 42
+# u undefined
+
+IFLINES bag 3
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+ASSERT IFLINES_N == 1
+ASSERT IFLINES_NFIELDS == 3
+ASSERT IFLINES_LIMIT == 3
+ASSERT LINES == 3
+ASSERT NFIELDS == 3
+
+IFLINES bag 2
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 0
+
+IFLINES empty 0
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+IFLINES u 0
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+# numeric → one decimal field
+IFLINES n 1
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+IFLINES one 1
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+IFMANY bag 3
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+ASSERT IFMANY_N == 1
+
+IFMANY bag 4
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+
+IFMANY bag 1
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+
+# empty not many when min=1
+IFMANY empty 1
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+
+IFFEW bag 3
+  LET f = 1
+ELSE
+  LET f = 0
+END
+ASSERT f == 1
+ASSERT IFFEW_N == 1
+
+IFFEW bag 2
+  LET f = 1
+ELSE
+  LET f = 0
+END
+ASSERT f == 0
+
+IFFEW empty 0
+  LET f = 1
+ELSE
+  LET f = 0
+END
+ASSERT f == 1
+
+# work-queue style: process when any hits
+LET hits = ""
+PUSHTO hits "err1"
+PUSHTO hits "err2"
+IFMANY hits 1
+  LET has_work = 1
+ELSE
+  LET has_work = 0
+END
+ASSERT has_work == 1
+
+# aliases
+WHENLINES bag 3
+  LET w = 1
+ELSE
+  LET w = 0
+END
+ASSERT w == 1
+
+WHENMANY bag 2
+  LET w = 1
+ELSE
+  LET w = 0
+END
+ASSERT w == 1
+
+WHENFEW bag 10
+  LET w = 1
+ELSE
+  LET w = 0
+END
+ASSERT w == 1
+
+# limit from var
+LET need = 3
+IFLINES bag need
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+PRINT "ok iflines ifmany iffew"
+PASS
