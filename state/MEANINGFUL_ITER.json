@@ -4,15 +4,15 @@
   "version": "1.15.883-usability",
   "item": "HASFNS/NEEDFNS multi FN capability gates",
   "item_id": 890,
-  "title": "HASFNS · NEEDFNS · ALLFNS · HASFUNCS · FNMISS bag",
-  "commit": "c214cd0c8845b4ab25565dad020b621e8c563364",
-  "summary": "Soft all-present HASFNS + hard NEEDFNS for FN plane (HASOBJS dual). Bag/CSV/idents, FNMISS bag, ALLFNS/HASFUNCS aliases. Proof 1429 PASS.",
+  "title": "HASFNS · NEEDFNS · FNMISS bag · HASFN twin",
+  "commit": "330ae034c787d2858d1f9cb1dfd5a3508e5d7cc9",
+  "summary": "HASFNS soft all-or-FNMISS + NEEDFNS hard; bag/CSV/idents; ALLFNS/REQUIREFNS aliases; proof 1429 PASS.",
   "proofs": [
     "1429_hasfns PASS",
     "1429_cli_hasfns PASS"
   ],
-  "when": "2026-08-11T08:20:52Z",
+  "when": "2026-08-11T08:21:09Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "c214cd0c8845b4ab25565dad020b621e8c563364",
-  "note": "lib usability — multi FN soft/hard gates without N× HASFN glue"
+  "sha": "330ae034c787d2858d1f9cb1dfd5a3508e5d7cc9",
+  "note": "agent CALL contracts without N× HASFN glue; twin of HASOBJS for FN plane"
 }
