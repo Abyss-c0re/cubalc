@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 359,
-  "program": "programs/realworld/svc_movelinein_priority_board.cubalc",
-  "theme": "MOVELINEIN/COUNTLINEIN priority queue reorder + tally",
+  "iter": 360,
+  "program": "programs/realworld/svc_ifgt_ifhasline_admit_board.cubalc",
+  "theme": "IFGT/IFEQN + IFHASLINE pool admit branches",
   "version": "1.15.928-usability",
   "pass": true,
-  "prior_note": "iter 358 FINDLINEIN runbook; this iter first realworld of 1470 MOVELINEIN + 1471 COUNTIN/COUNTLINEIN",
+  "prior_note": "iter 359 MOVELINEIN; this iter first realworld of 1472 IFGT/IFEQN + 1473 IFHASLINE/IFINBAG",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed + promote p0 to front",
+      "cmd": "IFGT retries + IFHASLINE ready",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "MOVELINEIN/MOVEATIN/COUNTIN/COUNTLINEIN 10/10",
+      "cmd": "IFGT/IFLT/IFGE/IFLE/IFEQN/IFNEQN/IFHASLINE 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "OOR/empty/non-overlap/exact 10/10",
+      "cmd": "exact miss ghost IFGTE absent nest idle 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "p0 promote demote + severity tally 10/10",
+      "cmd": "admit/backpressure/no-ready + burn retry 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "multi promote path depth OCCURSIN 10/10",
+      "cmd": "load band canary ack 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM MOVELINEIN/COUNTIN",
+      "cmd": "HASFORM IFGT family + IFHASLINE",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "p0 front admit + false friends 9/9",
+      "cmd": "full admit contract 9/9",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT capture WRITE NL",
+      "cmd": "sticky IFGT_N WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1470/1471 PASS; CLI duals still red",
+      "cmd": "selftest; 1472/1473 PASS; CLI duals still red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -6890,6 +6890,30 @@
       "title": "MOVELINEIN/COUNTIN/COUNTLINEIN/OCCURSIN work (positive)",
       "detail": "FINDLINEIN then MOVELINEIN idx 0 promotes P0; COUNTIN path \"/\" depth; OCCURSIN log \"err:\"; COUNTLINEIN exact a-count. Solid incident priority queue + path/log tally without rebuild.",
       "repro": "FINDLINEIN q p0:outage; MOVELINEIN q idx 0; COUNTIN q p2:"
+    },
+    {
+      "id": "W853",
+      "severity": "high",
+      "area": "lang|ifgt",
+      "title": "IFGT/IFHASLINE/IFEQN steal outer IF END (cannot nest in IF)",
+      "detail": "IFGT inside SYS EQS IF LAST_N==1 THEN ... END closes the outer IF on the first END; following forms run unconditionally (boot body leaked after list). Same class as IFERR/IFEMPTY (W821/W826/W835). Workaround: FN helpers + CALL; IFHASLINE may nest IFGT inside FN.",
+      "repro": "IF LAST_N==1 THEN IFGT x 0 ... END PRINT always \u2192 PRINT runs even when IF false"
+    },
+    {
+      "id": "W854",
+      "severity": "low",
+      "area": "lang|ifgt",
+      "title": "IFGTE is not a form; use IFGE (HASFORM IFGTE=0)",
+      "detail": "Agents typing IFGTE from gte habit get unknown form. Catalog has IFGE/IFLE not IFGTE/IFLTE. String promote works: IFGT \"10\" 5 true via strtol.",
+      "repro": "HASFORM IFGTE \u2192 0; HASFORM IFGE \u2192 1"
+    },
+    {
+      "id": "W855",
+      "severity": "low",
+      "area": "lang|ifhasline",
+      "title": "IFGT/IFHASLINE/IFINBAG work (positive exact + sticky)",
+      "detail": "Numeric family + exact bag membership with sticky IFGT_N/IFHASLINE_N. Ghost bag false; substr \"bet\" not match \"beta\". Nest IFHASLINE+IFGT for admit/backpressure inside FN. Solid pool admit surface.",
+      "repro": "CALL admit_depth; CALL gt_ab; IFHASLINE exact only"
     }
   ],
   "workarounds": [
@@ -7090,7 +7114,8 @@
     },
     "NUMTO strtol partial/float trunc (W844); CLEAR_ERR vs LAST_N after NUMTO (W845)",
     "SETLINEIN pad past-end + negative index\u21920 (W847/W848); FINDLINEIN exact bag ops positive (W849)",
-    "COUNTIN substr vs COUNTLINEIN exact (W850); MOVELINEIN HIT soft/no-op (W851)"
+    "COUNTIN substr vs COUNTLINEIN exact (W850); MOVELINEIN HIT soft/no-op (W851)",
+    "IFGT/IFHASLINE cannot nest in IF END framing (W853); IFGTE absent use IFGE (W854)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7187,9 +7212,14 @@
       "iter": 359,
       "issue": "First-try green. Documented COUNTIN substr vs COUNTLINEIN exact (W850) and MOVELINEIN soft HIT semantics (W851).",
       "resolution": "first realworld 1470+1471; document W850\u2013W852"
+    },
+    {
+      "iter": 360,
+      "issue": "First draft: IFGT/IFHASLINE nested in action IF stole END; boot body ran after list (read miss). Fixed FN+CALL wrap (W853).",
+      "resolution": "first realworld 1472+1473; document W853\u2013W855"
     }
   ],
-  "commit": "5b76a740",
-  "ts": 1786468136,
-  "board_commit": "5b76a740"
+  "commit": "acc14298",
+  "ts": 1786469797,
+  "board_commit": "acc14298"
 }

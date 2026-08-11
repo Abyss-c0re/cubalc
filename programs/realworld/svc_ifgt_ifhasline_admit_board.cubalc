@@ -1,0 +1,1064 @@
+# svc_ifgt_ifhasline_admit_board.cubalc — IFGT/IFEQN + IFHASLINE admit gates
+#
+# Real use: pool/job agents branch on numeric budget (retries, depth, load)
+# and exact bag membership (ready/hold/drain) without SYS EQ/HASLINE glue.
+# First realworld of 1472 IFGT/IFLT/IFGE/IFLE/IFEQN/IFNEQN (1.15.926+ ·
+# MI ~933) + 1473 IFHASLINE/IFINBAG. Distinct from load_backpressure
+# (plate counters) and movelinein_priority (reorder) — this board is
+# *content-branch admit: numeric + exact bag membership*.
+#
+#   IFGT · IFLT · IFGE · IFLE · IFEQN · IFNEQN · IFHASLINE · IFINBAG
+#   sticky IFGT_N / IFHASLINE_N · nest IFHASLINE+IFGT inside FN only
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_iha_$$
+#   ./out/cubalc run programs/realworld/svc_ifgt_ifhasline_admit_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|peel|scale|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt IHA_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_IHA_REQUIRE
+#
+# Edges: IF* numeric/bag forms steal outer IF END (W853) — FN+CALL;
+#   string promote IFGT "10" 5; IFHASLINE exact not substr; missing bag
+#   false; IFGTE not a form (use IFGE); WRITE NL; REQUIRE soft
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+# --- helpers: IFGT/IFHASLINE must not sit inside IF (END framing) ---
+
+FN gt_ab
+  IFGT a b
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN lt_ab
+  IFLT a b
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN ge_ab
+  IFGE a b
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN le_ab
+  IFLE a b
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN eqn_ab
+  IFEQN a b
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN neqn_ab
+  IFNEQN a b
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN hasline_work
+  IFHASLINE work needle
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN inbag_work
+  IFINBAG work needle
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN hasline_ghost
+  IFHASLINE ghost_iha "x"
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN idle_ifempty
+  IFEQN n 0
+    IFEMPTY msg
+      LET state = "idle"
+    ELSE
+      LET state = "msg"
+    END
+  ELSE
+    LET state = "busy"
+  END
+END
+
+FN admit_depth
+  IFHASLINE work "ready"
+    IFGT depth maxd
+      LET state = "backpressure"
+    ELSE
+      LET state = "admit"
+    END
+  ELSE
+    LET state = "no-ready"
+  END
+END
+
+FN admit_retries
+  IFHASLINE work "ready"
+    IFGT retries 0
+      LET state = "admit"
+    ELSE
+      LET state = "deny-retries"
+    END
+  ELSE
+    LET state = "deny-ready"
+  END
+END
+
+FN band_load
+  IFLE load 5
+    LET state = "green"
+  ELSE
+    LET state = "hot"
+  END
+END
+
+FN hot_if_ge
+  IFGE load 8
+    LET state = "hot"
+  ELSE
+    LET state = "green"
+  END
+END
+
+FN canary_load
+  IFHASLINE work "canary"
+    IFGT load 5
+      LET state = "canary-hot"
+    ELSE
+      LET state = "canary-ok"
+    END
+  ELSE
+    LET state = "no-canary"
+  END
+END
+
+FN drop_canary_if
+  IFHASLINE work "canary"
+    DROPLINEIN work "canary"
+  END
+END
+
+FN exhaust_retries
+  IFEQN retries 0
+    LET state = "exhausted"
+  ELSE
+    LET state = "retry"
+  END
+END
+
+FN gate_full
+  IFHASLINE work "ready"
+    IFGT depth maxd
+      LET state = "deny-depth"
+    ELSE
+      IFGT retries 0
+        LET state = "admit"
+      ELSE
+        LET state = "deny-retries"
+      END
+    END
+  ELSE
+    LET state = "deny-ready"
+  END
+END
+
+FN burn_retry
+  IFGT retries 0
+    DEC retries
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+NOTE "svc_ifgt_ifhasline_admit_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_ifgt_ifhasline_admit -- boot|pass|soft|peel|scale|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_IHA_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "IHA_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET path = ""
+LET msg = ""
+LET peeld = ""
+LET work = ""
+LET needle = ""
+LET depth = 0
+LET weight = 0
+LET state = ""
+LET retries = 0
+LET maxd = 0
+LET load = 0
+LET a = 0
+LET b = 0
+LET n = 0
+LET saved = 0
+
+ONEOF ACTION "boot", "pass", "soft", "peel", "scale", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-iha\",\"schema\":\"cubalc.svc_ifgt_ifhasline_admit.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"iha\",\"want_filter\":\"ifgt_ifhasline_admit\",\"cfg\":{\"surface\":\"IFGT,IFLT,IFGE,IFLE,IFEQN,IFNEQN,IFHASLINE,IFINBAG\",\"contract\":\"numeric + exact bag-membership branches for pool/job admit (FN-wrapped)\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  LET a = 3
+  LET b = 0
+  CALL gt_ab
+  LET find_n = ok_v
+  CLEARSTR work
+  PUSHTO work "ready"
+  PUSHTO work "hold"
+  LET needle = "ready"
+  CALL hasline_work
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-iha"
+  IF LAST_N == 1 THEN
+    IF find_n == 1 THEN
+      IF ok_v == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot hasline"
+        FAIL "boot hasline"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot ifgt"
+      FAIL "boot ifgt"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# pass — numeric + bag branch core 10/10
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET a = 3
+  LET b = 0
+  CALL gt_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFGT_N == 1 THEN
+    LET score = score + 1
+  END
+  LET a = 3
+  LET b = 5
+  CALL gt_ab
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET a = 3
+  LET b = 3
+  CALL le_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL ge_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL lt_ab
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL eqn_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET a = 3
+  LET b = 0
+  CALL neqn_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # string promote
+  LET a = "10"
+  LET b = 5
+  CALL gt_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CLEARSTR work
+  PUSHTO work "alpha"
+  PUSHTO work "beta"
+  LET needle = "beta"
+  CALL hasline_work
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — miss · exact · ghost · nest idle · IFGTE absent
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR work
+  PUSHTO work "alpha"
+  PUSHTO work "beta"
+  PUSHTO work "gamma"
+  LET needle = "delta"
+  CALL hasline_work
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  IF IFHASLINE_N == 0 THEN
+    LET score = score + 1
+  END
+  LET needle = "bet"
+  CALL hasline_work
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL hasline_ghost
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET needle = "alpha"
+  CALL inbag_work
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET n = 0
+  LET msg = ""
+  CALL idle_ifempty
+  SYS EQS state "idle"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET a = 3
+  LET b = 3
+  CALL gt_ab
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  CALL ge_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  HASFORM "IFGTE"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# peel — pool admit ready + depth band
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR work
+  PUSHTO work "ready"
+  PUSHTO work "drain"
+  PUSHTO work "hold"
+  LET depth = 2
+  LET maxd = 8
+  CALL admit_depth
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET depth = 12
+  CALL admit_depth
+  SYS EQS state "backpressure"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  DROPLINEIN work "ready"
+  CLEAR_ERR
+  LET depth = 2
+  CALL admit_depth
+  SYS EQS state "no-ready"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET needle = "hold"
+  CALL inbag_work
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET retries = 2
+  CALL burn_retry
+  IF retries == 1 THEN
+    LET score = score + 1
+  END
+  LET a = retries
+  LET b = 1
+  CALL eqn_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET a = "7"
+  LET b = 5
+  CALL ge_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET a = "7"
+  LET b = 10
+  CALL lt_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifgt_ifhasline_admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# scale — multi-band + ack canary
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR work
+  PUSHTO work "worker-a"
+  PUSHTO work "worker-b"
+  PUSHTO work "canary"
+  LET load = 3
+  CALL band_load
+  SYS EQS state "green"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET load = 9
+  CALL hot_if_ge
+  SYS EQS state "hot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL canary_load
+  SYS EQS state "canary-hot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL drop_canary_if
+  LET needle = "canary"
+  CALL hasline_work
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  HASINBAG work "worker-a"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET retries = 0
+  CALL exhaust_retries
+  SYS EQS state "exhausted"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET a = 0
+  LET b = 1
+  CALL neqn_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LINESIN work
+  LET depth = LAST_N
+  CLEAR_ERR
+  LET a = depth
+  LET b = 2
+  CALL eqn_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "IFHASLINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# form
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "IFGT"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFLT"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFGE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFLE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFEQN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFNEQN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFHASLINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFINBAG"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFEMPTY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifgt_ifhasline_admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CLEARSTR work
+  PUSHTO work "ready"
+  PUSHTO work "pool-a"
+  LET depth = 4
+  LET maxd = 10
+  LET retries = 2
+  CALL gate_full
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET a = depth
+  LET b = 4
+  CALL eqn_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET a = depth
+  LET b = maxd
+  CALL le_ab
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET needle = "pool-a"
+  CALL inbag_work
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET retries = 0
+  CALL admit_retries
+  SYS EQS state "deny-retries"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF require_hit > 0 THEN
+    IF score < 4 THEN
+      LET miss = 1
+      LET note_msg = "gate require"
+      FAIL "gate require"
+      CLEAR_ERR
+    END
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-iha"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF IFHASLINE_N >= 0 THEN
+    LET score = score + 1
+  END
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  SYS CAT "gate:" score ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# probe
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  LET a = 5
+  LET b = 0
+  CALL gt_ab
+  LET saved = IFGT_N
+  PRINT "probe-ifgt" saved
+  CLEAR_ERR
+  IF saved == 1 THEN
+    LET score = score + 1
+  END
+  LET retries = 5
+  STRTO retries
+  SYS WRITE val_path retries
+  CLEAR_ERR
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "5"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS CAT "iha host=" host_s " role=" role_s " retries=" retries
+  LET row = LAST
+  CLEAR_ERR
+  SYS WRITE meta_path row
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "retries=5"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "IFEQN"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CLEARSTR work
+  PUSHTO work "ready"
+  LET needle = "ready"
+  CALL hasline_work
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF ok_v == 1 THEN
+    LET find_n = 1
+  END
+  IF score >= 5 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS CAT "{\"ok\":true,\"agent\":\"svc-iha\",\"op\":\"" op "\",\"hit\":" hit ",\"miss\":" miss ",\"score\":" score ",\"admit_n\":" admit_n ",\"bag_n\":" bag_n ",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"note\":\"" note_msg "\",\"require_hit\":" require_hit "}"
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+IF miss == 1 THEN
+  IF hit == 0 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS
