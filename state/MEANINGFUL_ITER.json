@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 900,
-  "version": "1.15.893-usability",
-  "item": "CALLANY / TRYCALLANY first-defined FN dispatch",
-  "item_id": 900,
-  "title": "CALLANY \u00b7 TRYCALLANY \u00b7 CALLFIRST \u00b7 WITH args \u00b7 HASFNANY twin",
-  "commit": "f24ccde1",
-  "summary": "CALLANY calls first defined FN from name bag/list with optional WITH args; TRYCALLANY soft; CALLANY_FN plate; proof 1438 PASS.",
+  "iter": 901,
+  "version": "1.15.894-usability",
+  "item": "SENDANY / TRYSENDANY first existing method dispatch",
+  "item_id": 901,
+  "title": "SENDANY \u00b7 TRYSENDANY \u00b7 SENDFIRST \u00b7 WITH args \u00b7 CALLANY twin",
+  "commit": "f28d2595",
+  "summary": "SENDANY sends first existing method from name bag/list with optional WITH args; TRYSENDANY soft; SENDANY_METHOD plate; proof 1439 PASS.",
   "proofs": [
-    "1438_callany PASS",
-    "1438_cli_callany PASS"
+    "1439_sendany PASS",
+    "1439_cli_sendany PASS",
+    "876/1438 regression PASS"
   ],
-  "when": "2026-08-11T09:56:40Z",
+  "when": "2026-08-11T10:07:17Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "f24ccde16211970635332801edcdad7da828ac81",
-  "note": "plugin hook dispatch without HASFNANY+IF+CALL soup"
+  "sha": "f28d25957c16da3c37677861de7eb1ff45da1562",
+  "note": "OOP plugin hook dispatch without HASMETHODANY+IF+SEND soup; restored thrash before ship"
 }
