@@ -1,0 +1,112 @@
+# INCLUDE fn_guard - fail-fast FN catalog contract (ALL + optional ANY)
+# Usability: agent language-plane gate without Nx HASFN glue.
+#
+#   DEFAULT NEED_FNALL = "add\nping"
+#   DEFAULT NEED_FNANY = "greet\nhello"
+#   DEFAULT FN_GUARD_SOFT = 0
+#   INCLUDE fn_guard
+#
+# Note: hard path uses HASFN+FAIL (not REQUIRE FN) because REQUIRE FN
+# breaks IF/END nesting when present as text inside INCLUDE files.
+# Soft dual leaves FNMISS / FNHAVE bags. Twin of bin_guard for FNs.
+
+DEFAULT NEED_FNALL = ""
+DEFAULT NEED_FNANY = ""
+DEFAULT FN_GUARD_SOFT = 0
+
+SYS EMPTY NEED_FNALL
+IF LAST_N == 1
+  LET FN_GUARD_ALL_OK = 1
+  LET FNMISS = ""
+  LET FNHAVE = ""
+  LET FNMISS_N = 0
+  LET FNHAVE_N = 0
+ELSE
+  LET FNMISS = ""
+  LET FNHAVE = ""
+  LET FNMISS_N = 0
+  LET FNHAVE_N = 0
+  EACH LINE b IN NEED_FNALL
+    HASFN b
+    IF LAST_N == 1
+      LET FNHAVE_N = FNHAVE_N + 1
+      IF FNHAVE == ""
+        LET FNHAVE = b
+      ELSE
+        LET FNHAVE = FNHAVE + "\n" + b
+      END
+    ELSE
+      LET FNMISS_N = FNMISS_N + 1
+      IF FNMISS == ""
+        LET FNMISS = b
+      ELSE
+        LET FNMISS = FNMISS + "\n" + b
+      END
+    END
+  END
+  IF FNMISS_N == 0
+    LET FN_GUARD_ALL_OK = 1
+    LET OK = 1
+  ELSE
+    LET FN_GUARD_ALL_OK = 0
+    LET OK = 0
+    LET LAST_ERR = "FN_GUARD ALL miss - missing: " + FNMISS
+    LET ERR = LAST_ERR
+    IF FN_GUARD_SOFT == 0
+      FAIL LAST_ERR
+    END
+  END
+END
+
+SYS EMPTY NEED_FNANY
+IF LAST_N == 1
+  LET FN_GUARD_ANY_OK = 1
+ELSE
+  LET FNANY_HIT = 0
+  LET FNANY_HAVE = ""
+  LET FNANY_MISS = ""
+  EACH LINE b IN NEED_FNANY
+    HASFN b
+    IF LAST_N == 1
+      LET FNANY_HIT = 1
+      IF FNANY_HAVE == ""
+        LET FNANY_HAVE = b
+      ELSE
+        LET FNANY_HAVE = FNANY_HAVE + "\n" + b
+      END
+    ELSE
+      IF FNANY_MISS == ""
+        LET FNANY_MISS = b
+      ELSE
+        LET FNANY_MISS = FNANY_MISS + "\n" + b
+      END
+    END
+  END
+  IF FNANY_HIT == 1
+    LET FN_GUARD_ANY_OK = 1
+    IF FNHAVE == ""
+      LET FNHAVE = FNANY_HAVE
+    END
+  ELSE
+    LET FN_GUARD_ANY_OK = 0
+    LET OK = 0
+    LET LAST_ERR = "FN_GUARD ANY miss - need one of: " + NEED_FNANY
+    LET ERR = LAST_ERR
+    IF FN_GUARD_SOFT == 0
+      FAIL LAST_ERR
+    END
+  END
+END
+
+IF FN_GUARD_ALL_OK
+  IF FN_GUARD_ANY_OK
+    LET FN_GUARD_OK = 1
+    LET OK = 1
+  ELSE
+    LET FN_GUARD_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET FN_GUARD_OK = 0
+  LET OK = 0
+END

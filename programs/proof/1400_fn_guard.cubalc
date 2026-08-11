@@ -1,0 +1,89 @@
+# INCLUDE fn_guard — multi FN catalog ALL + ANY contract
+
+HOLD_FLASH 1
+
+FN add a b
+  RET a + b
+END
+
+FN ping
+  RET 1
+END
+
+# --- skip both gates when empty ---
+DEFAULT NEED_FNALL = ""
+DEFAULT NEED_FNANY = ""
+DEFAULT FN_GUARD_SOFT = 0
+INCLUDE fn_guard
+ASSERT FN_GUARD_OK == 1
+ASSERT FN_GUARD_ALL_OK == 1
+ASSERT FN_GUARD_ANY_OK == 1
+
+# --- soft ALL miss ---
+LET NEED_FNALL = "add\nnosuch_cubalc_fn_all"
+LET NEED_FNANY = ""
+LET FN_GUARD_SOFT = 1
+INCLUDE fn_guard
+ASSERT FN_GUARD_OK == 0
+ASSERT FN_GUARD_ALL_OK == 0
+ASSERT FNMISS_N >= 1
+SYS HASLINE FNMISS "nosuch_cubalc_fn_all"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# --- soft ALL hit ---
+LET NEED_FNALL = "add\nping"
+LET FN_GUARD_SOFT = 1
+INCLUDE fn_guard
+ASSERT FN_GUARD_ALL_OK == 1
+ASSERT FN_GUARD_OK == 1
+ASSERT FNHAVE_N >= 2
+
+# --- soft ANY miss ---
+LET NEED_FNALL = ""
+LET NEED_FNANY = "nosuch_cubalc_a\nnosuch_cubalc_b"
+LET FN_GUARD_SOFT = 1
+INCLUDE fn_guard
+ASSERT FN_GUARD_ANY_OK == 0
+ASSERT FN_GUARD_OK == 0
+CLEAR_ERR
+
+# --- soft ANY hit ---
+LET NEED_FNANY = "nosuch_cubalc_a\nping"
+LET FN_GUARD_SOFT = 1
+INCLUDE fn_guard
+ASSERT FN_GUARD_ANY_OK == 1
+ASSERT FN_GUARD_OK == 1
+CLEAR_ERR
+
+# --- hard ALL ---
+LET NEED_FNALL = "add\nping"
+LET NEED_FNANY = ""
+LET FN_GUARD_SOFT = 0
+INCLUDE fn_guard
+ASSERT FN_GUARD_OK == 1
+
+# --- hard ANY ---
+LET NEED_FNALL = ""
+LET NEED_FNANY = "nosuch_cubalc_z\nadd"
+LET FN_GUARD_SOFT = 0
+INCLUDE fn_guard
+ASSERT FN_GUARD_ANY_OK == 1
+ASSERT FN_GUARD_OK == 1
+
+# --- combined ---
+LET NEED_FNALL = "add"
+LET NEED_FNANY = "ping\nnosuch_cubalc_z"
+LET FN_GUARD_SOFT = 1
+INCLUDE fn_guard
+ASSERT FN_GUARD_ALL_OK == 1
+ASSERT FN_GUARD_ANY_OK == 1
+ASSERT FN_GUARD_OK == 1
+
+HASFORM "HASFN"
+ASSERT LAST_N == 1
+HASLIB fn_guard
+ASSERT LAST_N == 1
+
+PRINT "1400_fn_guard ok"
+PASS

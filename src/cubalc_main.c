@@ -3645,6 +3645,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     int lib_host_session = 0, lib_host_boot = 0;
     int lib_full_session = 0, lib_full_boot = 0;
     int lib_plate_guard = 0, lib_key_boot = 0;
+    int lib_fn_guard = 0, lib_fn_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
     int include_path_set = 0, preload_set = 0;
     const char *hx = getenv("CUBALC_SMX_KEY");
@@ -3706,6 +3707,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     lib_full_boot = (access("programs/lib/full_boot.cubalc", R_OK) == 0);
     lib_plate_guard = (access("programs/lib/plate_guard.cubalc", R_OK) == 0);
     lib_key_boot = (access("programs/lib/key_boot.cubalc", R_OK) == 0);
+    lib_fn_guard = (access("programs/lib/fn_guard.cubalc", R_OK) == 0);
+    lib_fn_boot = (access("programs/lib/fn_boot.cubalc", R_OK) == 0);
     cookbook_ok = (access("docs/COOKBOOK.md", R_OK) == 0);
     for_agents_ok = (access("docs/FOR_AGENTS.md", R_OK) == 0);
     if (libdir_ok) {
@@ -3750,6 +3753,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"lib_host_session\":%s,\"lib_host_boot\":%s,"
              "\"lib_full_session\":%s,\"lib_full_boot\":%s,"
              "\"lib_plate_guard\":%s,\"lib_key_boot\":%s,"
+             "\"lib_fn_guard\":%s,\"lib_fn_boot\":%s,"
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"vars_max\":%d,\"varroom_forms\":true,"
@@ -3791,6 +3795,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"INCLUDE full_boot · cubalc init --fleet product+host starter\","
              "\"INCLUDE plate_guard · NEED_KEYS / NEED_KEY_ANY plate schema\","
              "\"INCLUDE key_boot · cubalc init --key plate schema starter\","
+             "\"INCLUDE fn_guard · NEED_FNALL / NEED_FNANY FN catalog\","
+             "\"INCLUDE fn_boot · cubalc init --fn FN catalog starter\","
              "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
@@ -3864,6 +3870,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              lib_full_boot ? "true" : "false",
              lib_plate_guard ? "true" : "false",
              lib_key_boot ? "true" : "false",
+             lib_fn_guard ? "true" : "false",
+             lib_fn_boot ? "true" : "false",
              include_path_set ? "true" : "false",
              preload_set ? "true" : "false",
              cookbook_ok ? "true" : "false",
@@ -4673,6 +4681,10 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"cli_plate_guard", "programs/proof/1400_cli_plate_guard.sh", "plate_guard soft/hard + doctor"},
       {"key_boot", "programs/proof/1400_key_boot.cubalc", "INCLUDE key_boot plate_boot+plate_guard"},
       {"cli_init_key", "programs/proof/1400_cli_init_key.sh", "cubalc init --key scaffold + doctor"},
+      {"fn_guard", "programs/proof/1400_fn_guard.cubalc", "INCLUDE fn_guard NEED_FNALL+NEED_FNANY"},
+      {"cli_fn_guard", "programs/proof/1400_cli_fn_guard.sh", "fn_guard soft/hard + doctor"},
+      {"fn_boot", "programs/proof/1400_fn_boot.cubalc", "INCLUDE fn_boot agent_boot+fn_guard"},
+      {"cli_init_fn", "programs/proof/1400_cli_init_fn.sh", "cubalc init --fn scaffold + doctor"},
       {"cli_form_guard", "programs/proof/1386_cli_form_guard.sh", "form_guard lib + CLI + formgate any"},
       {"cap_boot", "programs/proof/1325_cap_boot.cubalc", "INCLUDE cap_boot agent_boot+form_guard"},
       {"cli_init_cap", "programs/proof/1325_cli_init_cap.sh", "cubalc init --cap scaffold + doctor lib_cap_boot"},
@@ -8992,6 +9004,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
      * --host|--host-boot|--host-session: INCLUDE host_boot (agent_boot + host_session).
      * --fleet|--full-session|--full-boot|--service-full: INCLUDE full_boot (product+host).
      * --key|--key-boot|--plate-guard|--need-keys: INCLUDE key_boot (plate_boot+plate_guard).
+     * --fn|--fn-boot|--fn-guard|--need-fns: INCLUDE fn_boot (agent_boot+fn_guard).
      * --from lib: recipe-driven scaffold (LIBDEFAULTS as DEFAULT lines + INCLUDE).
      * Agents: write file then cubalc run — no cookbook prose required. */
     const char *path = "program.cubalc";
@@ -8999,7 +9012,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     const char *from_lib = NULL;
     int force = 0, i, wrote = 0, existed = 0, want_plate = 0, want_peer = 0;
     int want_fat = 0, want_fat_session = 0, want_cap = 0, want_onboard = 0, want_discover = 0, want_open = 0, want_doctor = 0;
-    int want_ready = 0, want_cli = 0, want_cli_session = 0, want_env = 0, want_arg = 0, want_time = 0, want_tool = 0, want_product = 0, want_path = 0, want_rw = 0, want_bin = 0, want_lib = 0, want_host = 0, want_full = 0, want_key = 0;
+    int want_ready = 0, want_cli = 0, want_cli_session = 0, want_env = 0, want_arg = 0, want_time = 0, want_tool = 0, want_product = 0, want_path = 0, want_rw = 0, want_bin = 0, want_lib = 0, want_host = 0, want_full = 0, want_key = 0, want_fn = 0;
     int want_list = 0;
     char abspath[512];
     char parent[512];
@@ -9410,6 +9423,18 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       "PRINT \"plate_ok\" PLATE_GUARD_OK\n"
       "STATUS\n"
       "PRINT \"key init ok\" OK PLATE_GUARD_OK\n";
+    static const char *body_fn =
+      "# CubalC FN catalog starter — generated by cubalc init --fn\n"
+      "# INCLUDE fn_boot = agent_boot + fn_guard (NEED_FNALL / NEED_FNANY)\n"
+      "# Define FNs then set NEED_FNALL before INCLUDE, or soft-check with FN_GUARD_SOFT=1\n"
+      "DEFAULT NEED_FNALL = \"\"\n"
+      "DEFAULT NEED_FNANY = \"\"\n"
+      "DEFAULT FN_GUARD_SOFT = 0\n"
+      "INCLUDE fn_boot\n"
+      "\n"
+      "PRINT \"fn_ok\" FN_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"fn init ok\" OK FN_GUARD_OK\n";
 const char *body = body_boot;
     from_body[0] = 0;
     for (i = 2; i < argc; i++) {
@@ -9543,6 +9568,13 @@ const char *body = body_boot;
                  !strcmp(argv[i], "--schemaboot") || !strcmp(argv[i], "--plate-schema") ||
                  !strcmp(argv[i], "--key-guard") || !strcmp(argv[i], "--keyguard")) {
         want_key = 1;
+      } else if (!strcmp(argv[i], "--fn") || !strcmp(argv[i], "--fn-boot") ||
+                 !strcmp(argv[i], "--fnboot") || !strcmp(argv[i], "--fn_boot") ||
+                 !strcmp(argv[i], "--fn-guard") || !strcmp(argv[i], "--fnguard") ||
+                 !strcmp(argv[i], "--fn_guard") || !strcmp(argv[i], "--need-fns") ||
+                 !strcmp(argv[i], "--needfns") || !strcmp(argv[i], "--funcs") ||
+                 !strcmp(argv[i], "--func-guard") || !strcmp(argv[i], "--function-guard")) {
+        want_fn = 1;
       } else if (!strcmp(argv[i], "--cli-session") || !strcmp(argv[i], "--clisession") ||
                  !strcmp(argv[i], "--cli-guard") || !strcmp(argv[i], "--cliguard") ||
                  !strcmp(argv[i], "--cli_session") || !strcmp(argv[i], "--tool-session") ||
@@ -9575,7 +9607,7 @@ const char *body = body_boot;
     if (want_list) {
       /* Agent discovery: which scaffolds exist without reading COOKBOOK. */
       printf("# CubalC init templates version=%s\n", CUBALC_LANG_VERSION);
-      printf("# run: cubalc init [path] [--plate|--peer|--fat|--fat-session|--cap|--onboard|--discover|--open|--doctor|--ready|--cli|--cli-session|--full-cli|--product|--path|--rw|--bin|--lib-boot|--host|--fleet|--key|--key|--env|--arg|--time|--from lib] [--force]\n");
+      printf("# run: cubalc init [path] [--plate|--peer|--fat|--fat-session|--cap|--onboard|--discover|--open|--doctor|--ready|--cli|--cli-session|--full-cli|--product|--path|--rw|--bin|--lib-boot|--host|--fleet|--key|--fn|--key|--fn|--fn|--env|--arg|--time|--from lib] [--force]\n");
       printf("# flag\tid\thint\n");
       printf("(default)\tagent_boot\tINCLUDE agent_boot + CUBE/PLUG/STATUS\n");
       printf("--plate|-p\tplate_session\tplate_session + plate_uniform + PRETTYP + save\n");
@@ -9602,9 +9634,10 @@ const char *body = body_boot;
       printf("--host|--host-boot|--host-session\thost_boot\tINCLUDE host_boot path+rw+bin+lib readiness\n");
       printf("--fleet|--full-session|--full-boot|--service-full\tfull_boot\tINCLUDE full_boot product+host\n");
       printf("--key|--key-boot|--plate-guard|--need-keys\tkey_boot\tINCLUDE key_boot plate schema contract\n");
+      printf("--fn|--fn-boot|--fn-guard|--need-fns\tfn_boot\tINCLUDE fn_boot agent_boot+fn_guard\n");
       printf("--from|--recipe|-F <lib>\tfrom_recipe\tDEFAULT knobs from lib + INCLUDE (any recipe)\n");
       printf("{\"schema\":\"cubalc.init.v1\",\"ok\":true,\"cmd\":\"init\","
-             "\"op\":\"list\",\"n\":26,\"version\":\"%s\","
+             "\"op\":\"list\",\"n\":27,\"version\":\"%s\","
              "\"note\":\"scaffold catalog — fixed templates + --from any lib recipe\","
              "\"templates\":["
              "{\"id\":\"agent_boot\",\"flags\":\"\",\"default\":true,"
@@ -9657,6 +9690,8 @@ const char *body = body_boot;
              "\"hint\":\"INCLUDE full_boot product_session+host_session full service\"},"
              "{\"id\":\"key_boot\",\"flags\":\"--key|--key-boot|--plate-guard|--need-keys\","
              "\"hint\":\"INCLUDE key_boot plate_boot+plate_guard plate schema\"},"
+             "{\"id\":\"fn_boot\",\"flags\":\"--fn|--fn-boot|--fn-guard|--need-fns\","
+             "\"hint\":\"INCLUDE fn_boot agent_boot+fn_guard FN catalog\"},"
              "{\"id\":\"from_recipe\",\"flags\":\"--from|--recipe|-F <lib>\","
              "\"hint\":\"any lib DEFAULT knobs + INCLUDE · dual of cubalc recipe\"}"
              "]}\n",
@@ -9860,6 +9895,9 @@ const char *body = body_boot;
     } else if (want_env) {
       body = body_env;
       tmpl = "env_boot";
+    } else if (want_fn) {
+      body = body_fn;
+      tmpl = "fn_boot";
     } else if (want_key) {
       body = body_key;
       tmpl = "key_boot";
@@ -9984,6 +10022,8 @@ const char *body = body_boot;
       printf("# next: cubalc run %s · DEFAULT NEED_TIME · INCLUDE time_boot\n", path);
     else if (want_env)
       printf("# next: cubalc run %s · DEFAULT NEED_ENVS · INCLUDE env_boot\n", path);
+    else if (want_fn)
+      printf("# next: cubalc run %s · DEFAULT NEED_FNALL · DEFINE FNs · INCLUDE fn_boot\n", path);
     else if (want_key)
       printf("# next: cubalc run %s · DEFAULT NEED_KEYS · INCLUDE key_boot\n", path);
     else if (want_full)
@@ -10045,6 +10085,8 @@ const char *body = body_boot;
                ? "INCLUDE time_boot agent_boot+time_guard wall-budget starter"
                : (want_env
                ? "INCLUDE env_boot agent_boot+env_guard host env contract"
+               : (want_fn
+               ? "INCLUDE fn_boot agent_boot+fn_guard FN catalog contract"
                : (want_key
                ? "INCLUDE key_boot plate_boot+plate_guard plate schema"
                : (want_full
@@ -10085,7 +10127,7 @@ const char *body = body_boot;
                ? "INCLUDE fat_boot + plate_boot nest room + NEEDP + save"
                : (want_plate
                ? "INCLUDE plate_session + plate_uniform + PRETTYP + plate_save"
-               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter")))))))))))))))))))))))));
+               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter"))))))))))))))))))))))))));
     return 0;
   }
   if (strcmp(cmd, "libs") == 0 || strcmp(cmd, "lib") == 0 ||
@@ -10138,6 +10180,8 @@ const char *body = body_boot;
       {"full_boot.cubalc", "full_session one-shot · init --fleet product+host starter"},
       {"plate_guard.cubalc", "NEED_KEYS + NEED_KEY_ANY plate schema · soft PLATE_GUARD_SOFT"},
       {"key_boot.cubalc", "agent_boot + plate_boot + plate_guard · init --key schema"},
+      {"fn_guard.cubalc", "NEED_FNALL + NEED_FNANY FN catalog · soft FN_GUARD_SOFT"},
+      {"fn_boot.cubalc", "agent_boot + fn_guard one-shot · init --fn FN catalog"},
       {"env_guard.cubalc", "NEED_ENVS + NEED_ENV_ANY host env contract · soft ENV_GUARD_SOFT"},
       {"env_boot.cubalc", "agent_boot + env_guard one-shot · init --env · host config"},
     };
@@ -20809,7 +20853,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
       "    errrun|recoversnip <err…>  classify + RUNSNIP topic (cubalc.errrun.v1)\n"
       "    errguide|recoverguide <err…> classify + GUIDE playbook (cubalc.errguide.v1)\n"
-      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --onboard · --discover · --open · --doctor · --ready · --cli · --cli-session · --full-cli · --product · --path · --rw · --bin · --lib-boot · --host · --fleet · --key · --env · --arg · --time · --from lib\n"
+      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --onboard · --discover · --open · --doctor · --ready · --cli · --cli-session · --full-cli · --product · --path · --rw · --bin · --lib-boot · --host · --fleet · --key · --fn · --env · --arg · --time · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"

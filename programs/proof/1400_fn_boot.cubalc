@@ -1,0 +1,45 @@
+# INCLUDE fn_boot — agent_boot + fn_guard one-shot
+
+HOLD_FLASH 1
+
+FN add a b
+  RET a + b
+END
+
+FN ping
+  RET 1
+END
+
+DEFAULT NEED_FNALL = ""
+DEFAULT NEED_FNANY = ""
+DEFAULT FN_GUARD_SOFT = 0
+INCLUDE fn_boot
+ASSERT OK == 1
+ASSERT FN_GUARD_OK == 1
+HASINCLUDE agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE fn_guard
+ASSERT LAST_N == 1
+HASINCLUDE fn_boot
+ASSERT LAST_N == 1
+HASLIB fn_boot
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST != ""
+
+# soft miss
+LET NEED_FNALL = "nosuch_fn_boot_miss"
+LET NEED_FNANY = ""
+LET FN_GUARD_SOFT = 1
+INCLUDE fn_boot
+ASSERT FN_GUARD_OK == 0
+CLEAR_ERR
+
+# hard pass
+LET NEED_FNALL = "add"
+LET FN_GUARD_SOFT = 0
+INCLUDE fn_boot
+ASSERT FN_GUARD_OK == 1
+
+PRINT "1400_fn_boot: PASS"
+PASS

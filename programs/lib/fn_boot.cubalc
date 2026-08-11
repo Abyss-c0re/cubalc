@@ -1,0 +1,18 @@
+# INCLUDE fn_boot — agent preamble + FN catalog contract one-shot
+# Usability: agent_boot + fn_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_FNALL = "add\nping"
+#   DEFAULT NEED_FNANY = "greet\nhello"
+#   DEFAULT FN_GUARD_SOFT = 0
+#   INCLUDE fn_boot
+# Soft miss: DEFAULT FN_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --fn
+# Twin of bin_boot (PATH tools) / lib_boot (modules) for FN catalogs.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_FNALL = ""
+DEFAULT NEED_FNANY = ""
+DEFAULT FN_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE fn_guard
