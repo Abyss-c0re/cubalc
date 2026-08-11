@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 862,
-  "version": "1.15.854-usability",
-  "item": "class_guard + class_boot + cubalc init --class",
-  "item_id": 862,
-  "title": "class_guard \u00b7 class_boot \u00b7 CLASS_GUARD_OK \u00b7 init --class \u00b7 doctor",
-  "commit": "c567e0d2564827eec4a821707768e7617aba6c47",
-  "summary": "NEED_CLASSES/NEED_CLASS_ANY OOP catalog; LISTCLASSES+HASLINE; init --class n=28; proof 1401 PASS.",
+  "iter": 863,
+  "version": "1.15.856-usability",
+  "item": "method_guard + method_boot + cubalc init --method",
+  "item_id": 863,
+  "title": "method_guard \u00b7 method_boot \u00b7 METHOD_GUARD_OK \u00b7 init --method \u00b7 doctor",
+  "commit": "21336ea5021b7cde49c8b7089664294d5312ab57",
+  "summary": "NEED_METHODS/NEED_METHOD_ANY Class.method; LISTMETHODS+HASLINE; init --method n=29; proof 1402 PASS.",
   "proofs": [
-    "1401_class_guard PASS",
-    "1401_class_boot PASS",
-    "1401_cli_class_guard PASS",
-    "1401_cli_init_class PASS"
+    "1402_method_guard PASS",
+    "1402_method_boot PASS",
+    "1402_cli_method_guard PASS",
+    "1402_cli_init_method PASS"
   ],
-  "when": "2026-08-11T03:04:55Z",
+  "when": "2026-08-11T03:22:48Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "c567e0d2564827eec4a821707768e7617aba6c47",
-  "note": "fn_guard twin for CLASS catalogs \u00b7 hard path avoids REQUIRE CLASS"
+  "sha": "21336ea5021b7cde49c8b7089664294d5312ab57",
+  "note": "class_guard twin for METHOD catalogs \u00b7 hard path avoids REQUIRE METHOD"
 }
