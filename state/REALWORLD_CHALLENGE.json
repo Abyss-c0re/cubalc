@@ -5990,7 +5990,7 @@
     "iter326: hard/tight first failed LAST_N==-1 vs 1 and TIMEOUT_UNLIMITED false friend; fixed REMAIN_MS detect + OK checks",
     "iter326: selftest 572/784 time_boot+time_guard PASS; CLI duals still set"
   ],
-  "commit": "pending",
+  "commit": "4f3c0585",
   "ts": "2026-08-11T00:59:07Z",
-  "board_commit": "pending"
+  "board_commit": "4f3c0585"
 }
