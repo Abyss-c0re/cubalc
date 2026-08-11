@@ -1,0 +1,93 @@
+# IFSTARTS / IFENDS / IFCONTAINS / IFEQS — string content branches
+
+HOLD_FLASH 1
+
+# IFSTARTS path root
+LET path = "/tmp/work/file.txt"
+IFSTARTS path "/tmp/"
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 1
+ASSERT IFSTARTS_N == 1
+
+# miss + ELSE
+IFSTARTS path "/var/"
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 0
+ASSERT IFSTARTS_N == 0
+
+# IFENDS extension
+IFENDS path ".txt"
+  LET ext = 1
+ELSE
+  LET ext = 0
+END
+ASSERT ext == 1
+
+# IFCONTAINS / IFHAS
+IFCONTAINS path "work"
+  LET mid = 1
+ELSE
+  LET mid = 0
+END
+ASSERT mid == 1
+IFHAS path "missing"
+  LET mid = 1
+ELSE
+  LET mid = 0
+END
+ASSERT mid == 0
+
+# IFEQS exact
+LET role = "admin"
+IFEQS role "admin"
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+IFEQS role "user"
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 0
+
+# promotes num
+LET n = 42
+IFEQS n "42"
+  LET n_ok = 1
+ELSE
+  LET n_ok = 0
+END
+ASSERT n_ok == 1
+
+# nested with IFEMPTY
+LET msg = "error:timeout"
+IFNONEMPTY msg
+  IFSTARTS msg "error:"
+    LET sev = "err"
+  ELSE
+    LET sev = "info"
+  END
+ELSE
+  LET sev = "empty"
+END
+ASSERT sev == "err"
+
+HASFORM "IFSTARTS"
+ASSERT LAST_N == 1
+HASFORM "IFENDS"
+ASSERT LAST_N == 1
+HASFORM "IFCONTAINS"
+ASSERT LAST_N == 1
+HASFORM "IFEQS"
+ASSERT LAST_N == 1
+
+PRINT "1467_ifstarts_ifcontains ok"
+PASS

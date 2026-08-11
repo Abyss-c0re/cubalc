@@ -25293,7 +25293,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         if (kw(&L->cur,"IF")) lex_next(L);
         continue;
       }
-      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
           kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
           kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
@@ -25324,7 +25324,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")) lex_next(L);
           continue;
         }
-        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25354,7 +25354,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")) lex_next(L);
           continue;
         }
-        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
             kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
@@ -25500,7 +25500,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         continue;
       }
       if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
-          kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+          kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
           kw(&L->cur,"IFUNDEF")||kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
           kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
@@ -25531,7 +25531,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           continue;
         }
         if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
-            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
             kw(&L->cur,"IFUNDEF")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
@@ -25563,7 +25563,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           continue;
         }
         if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
-            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+            kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
             kw(&L->cur,"IFUNDEF")||
             kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
             kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
@@ -25584,6 +25584,185 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, mode == 1 ? "IFNONEMPTY_N" : mode == 2 ? "IFDEFINED_N"
                  : mode == 3 ? "IFUNDEF_N" : "IFEMPTY_N", 0);
     bump(vm); return 1;
+  }
+  /* IFSTARTS name needle … [ELSE …] END — body if var starts with needle.
+   * IFENDS name needle … — body if ends with needle.
+   * IFCONTAINS|IFHAS name needle … — body if contains needle.
+   * IFEQS name other … — body if exact string equality (promotes num).
+   * Usability: path/protocol branches without STARTSIN/ENDSIN/CONTAINSIN + IF LAST_N. */
+  if (kw(&L->cur,"IFSTARTS")||kw(&L->cur,"WHENSTARTS")||kw(&L->cur,"IFPREFIX")||
+      kw(&L->cur,"IFENDS")||kw(&L->cur,"WHENENDS")||kw(&L->cur,"IFSUFFIX")||
+      kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"WHENCONTAINS")||kw(&L->cur,"IFHAS")||
+      kw(&L->cur,"WHENHAS")||kw(&L->cur,"IFINCLUDES")||
+      kw(&L->cur,"IFEQS")||kw(&L->cur,"WHENEQS")||kw(&L->cur,"IFSTREQ")||
+      kw(&L->cur,"IFEQUALSTR")){
+    int aln = L->cur.line;
+    int mode = 0; /* 0 starts, 1 ends, 2 contains, 3 eqs */
+    int take = 0;
+    char name[48], op[24];
+    char cur[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+    size_t cn, nn;
+    Var *vv;
+    Lex body_start;
+    int depth = 1;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "IFENDS") == 0 || strcmp(op, "WHENENDS") == 0 ||
+        strcmp(op, "IFSUFFIX") == 0)
+      mode = 1;
+    else if (strcmp(op, "IFCONTAINS") == 0 || strcmp(op, "WHENCONTAINS") == 0 ||
+             strcmp(op, "IFHAS") == 0 || strcmp(op, "WHENHAS") == 0 ||
+             strcmp(op, "IFINCLUDES") == 0)
+      mode = 2;
+    else if (strcmp(op, "IFEQS") == 0 || strcmp(op, "WHENEQS") == 0 ||
+             strcmp(op, "IFSTREQ") == 0 || strcmp(op, "IFEQUALSTR") == 0)
+      mode = 3;
+    else
+      mode = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, mode == 0 ? "IFSTARTS needs name needle — IFSTARTS path \"/tmp/\" … END"
+           : mode == 1 ? "IFENDS needs name needle — IFENDS file \".json\" … END"
+           : mode == 2 ? "IFCONTAINS needs name needle — IFCONTAINS msg \"err\" … END"
+                       : "IFEQS needs name other — IFEQS role \"admin\" … END");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "OF") || kw(&L->cur, "NEEDLE") ||
+        kw(&L->cur, "PREFIX") || kw(&L->cur, "SUFFIX") || kw(&L->cur, "AS"))
+      lex_next(L);
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+      fail(vm, mode == 3 ? "IFEQS needs other — IFEQS a b … END"
+                         : "IFSTARTS needs needle — IFSTARTS path \"/\" … END");
+      return -1;
+    }
+    skip_nl(L);
+    if (kw(&L->cur,"THEN")) { lex_next(L); skip_nl(L); }
+    cur[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+    cn = strlen(cur);
+    nn = strlen(needle);
+    take = 0;
+    if (mode == 0) {
+      /* starts */
+      if (nn == 0) take = 1;
+      else if (nn <= cn && memcmp(cur, needle, nn) == 0) take = 1;
+    } else if (mode == 1) {
+      if (nn == 0) take = 1;
+      else if (nn <= cn && memcmp(cur + cn - nn, needle, nn) == 0) take = 1;
+    } else if (mode == 2) {
+      if (nn == 0) take = 1;
+      else if (strstr(cur, needle) != NULL) take = 1;
+    } else {
+      take = (strcmp(cur, needle) == 0) ? 1 : 0;
+    }
+    body_start = *L;
+    while (L->cur.kind != TK_EOF && depth > 0) {
+      if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+        lex_next(L);
+        if (kw(&L->cur,"IF")) lex_next(L);
+        continue;
+      }
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+          kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+          kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+          kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+          kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
+          kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+          kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+          kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
+          kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+        depth++;
+      else if (kw(&L->cur,"ELSE") && depth == 1) break;
+      else if (kw(&L->cur,"END")) {
+        depth--;
+        if (depth == 0) break;
+      }
+      lex_next(L);
+    }
+    if (depth > 1 || (depth == 1 && L->cur.kind == TK_EOF)) {
+      char ebuf[160];
+      snprintf(ebuf, sizeof ebuf,
+               "IFSTARTS without END line %d — IFSTARTS name needle … [ELSE …] END", aln);
+      fail(vm, ebuf); return -1;
+    }
+    {
+      const char *ntag = mode == 1 ? "IFENDS_N" : mode == 2 ? "IFCONTAINS_N"
+                        : mode == 3 ? "IFEQS_N" : "IFSTARTS_N";
+      if (take) {
+        Lex body = body_start;
+        if (exec_stmts_until(vm, &body, "END", "ELSE") < 0) return -1;
+        depth = 1;
+        while (L->cur.kind != TK_EOF && depth > 0) {
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+              kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+              kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+              kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+              kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
+              kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+            depth++;
+          else if (kw(&L->cur,"END")) {
+            depth--;
+            if (depth == 0) break;
+          }
+          lex_next(L);
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        var_set_num(vm, ntag, 1);
+        bump(vm); return 1;
+      }
+      if (kw(&L->cur,"ELSE")) {
+        lex_next(L);
+        skip_nl(L);
+        {
+          Lex body = *L;
+          if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+        }
+        depth = 1;
+        while (L->cur.kind != TK_EOF && depth > 0) {
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+              kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+              kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+              kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+              kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
+              kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+            depth++;
+          else if (kw(&L->cur,"END")) {
+            depth--;
+            if (depth == 0) break;
+          }
+          lex_next(L);
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        var_set_num(vm, ntag, 0);
+        bump(vm); return 1;
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      var_set_num(vm, ntag, 0);
+      bump(vm); return 1;
+    }
   }
   if (kw(&L->cur,"IF")){
     lex_next(L);
