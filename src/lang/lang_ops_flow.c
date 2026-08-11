@@ -21718,6 +21718,210 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
+  /* CALLANY|TRYCALLANY names… [WITH args…] — call first defined FN (HASFNANY dispatch).
+   * Soft TRYCALLANY: OK=0 if none defined. Hard CALLANY: fail-fast.
+   * Usability: plugin hooks without HASFNANY+IF+CALL glue · bag/CSV/idents.
+   * 0-arity when no WITH; WITH introduces shared args for the chosen FN. */
+  if (kw(&L->cur, "CALLANY") || kw(&L->cur, "CALL_ANY") ||
+      kw(&L->cur, "CALLFIRST") || kw(&L->cur, "FIRSTFN") ||
+      kw(&L->cur, "CALLFNANY") || kw(&L->cur, "RUNFNANY") ||
+      kw(&L->cur, "TRYCALLANY") || kw(&L->cur, "TRY_CALL_ANY") ||
+      kw(&L->cur, "SOFTCALLANY") || kw(&L->cur, "CALLANYSOFT") ||
+      kw(&L->cur, "NEEDCALLANY") || kw(&L->cur, "REQUIRECALLANY")) {
+    int soft = kw(&L->cur, "TRYCALLANY") || kw(&L->cur, "TRY_CALL_ANY") ||
+               kw(&L->cur, "SOFTCALLANY") || kw(&L->cur, "CALLANYSOFT");
+    char names[32][48];
+    char fname[48];
+    int nname = 0, i, j, aln = L->cur.line;
+    FnDef *fn = NULL;
+    lex_next(L);
+    if (kw(&L->cur, "OF") || kw(&L->cur, "FN") || kw(&L->cur, "FROM"))
+      lex_next(L);
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "WITH") || kw(&L->cur, "ARGS") || kw(&L->cur, "USING") ||
+           kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CALL") || kw(&L->cur, "TRYCALL") || kw(&L->cur, "CALLANY") ||
+           kw(&L->cur, "TRYCALLANY") || kw(&L->cur, "HASFN") || kw(&L->cur, "HASFNS") ||
+           kw(&L->cur, "HASFNANY") || kw(&L->cur, "LISTFNS") || kw(&L->cur, "FNINFO") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "SEND") ||
+           kw(&L->cur, "RET") || kw(&L->cur, "RETURN")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] &&
+                   !strchr(vv->sval, '\n') && !strchr(vv->sval, ',') &&
+                   !strchr(vv->sval, ' ')) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "ARGS") || kw(&L->cur, "USING") ||
+        kw(&L->cur, "ON"))
+      lex_next(L);
+    if (nname == 0) {
+      if (soft) {
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "CALLED", 0);
+        var_set_num(vm, "CALLANY_N", 0);
+        var_set_num(vm, "TRYCALLANY_N", 0);
+        var_set_str(vm, "CALLANY_FN", "");
+        var_set_str(vm, "FN", "");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "CALLANY: need FN names — CALLANY greeter hello WITH arg");
+        var_set_str(vm, "ERR", "CALLANY: need FN names — CALLANY greeter hello WITH arg");
+        bump(vm);
+        return 1;
+      }
+      fail_at(vm, L, "CALLANY names… [WITH args] — CALLANY greeter hello WITH x");
+      return -1;
+    }
+    for (i = 0; i < nname; i++) {
+      for (j = 0; j < vm->n_fns; j++) {
+        if (strcmp(vm->fns[j].name, names[i]) == 0) {
+          fn = &vm->fns[j];
+          snprintf(fname, sizeof fname, "%s", names[i]);
+          break;
+        }
+      }
+      if (fn) break;
+    }
+    if (!fn) {
+      char ebuf[220];
+      size_t o = 0;
+      ebuf[0] = 0;
+      for (i = 0; i < nname && o + 50 < sizeof ebuf; i++) {
+        int ln;
+        if (i && o + 1 < sizeof ebuf) { ebuf[o++] = ','; ebuf[o] = 0; }
+        ln = snprintf(ebuf + o, sizeof ebuf - o, "%s", names[i]);
+        if (ln > 0) o += (size_t)ln;
+      }
+      {
+        char msg[280];
+        snprintf(msg, sizeof msg,
+                 "CALLANY miss line %d: none of [%s] defined — DEFINE/INCLUDE · HASFNANY · LISTFNS",
+                 aln, ebuf[0] ? ebuf : "?");
+        /* drain args so soft recovery can continue */
+        while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
+               L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+               (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+          if (L->cur.kind == TK_STR) lex_next(L);
+          else (void)parse_expr(vm, L);
+        }
+        if (soft) {
+          var_set_num(vm, "CALLED", 0);
+          var_set_num(vm, "CALLANY_N", 0);
+          var_set_num(vm, "TRYCALLANY_N", 0);
+          var_set_num(vm, "LAST_N", 0);
+          vm->last_n = 0;
+          var_set_str(vm, "CALLANY_FN", "");
+          var_set_str(vm, "FN", "");
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", msg);
+          var_set_str(vm, "ERR", msg);
+          bump(vm);
+          return 1;
+        }
+        fail_at(vm, L, msg);
+        return -1;
+      }
+    }
+    {
+      int got = oop_bind_args(vm, L, fn->params, fn->n_params);
+      int ag = oop_arity_gate(vm, "CALLANY", fn->name, fn->params, fn->n_params, got, soft);
+      if (ag < 0) return -1;
+      if (ag > 0) {
+        var_set_num(vm, "CALLED", 0);
+        var_set_num(vm, "CALLANY_N", 0);
+        var_set_num(vm, "TRYCALLANY_N", 0);
+        var_set_str(vm, "FN", fn->name);
+        var_set_str(vm, "CALLANY_FN", fn->name);
+        bump(vm);
+        return 1;
+      }
+    }
+    var_set_num(vm, "CALLED", 1);
+    var_set_num(vm, "CALLANY_N", 1);
+    var_set_num(vm, "TRYCALLANY_N", 1);
+    var_set_str(vm, "FN", fn->name);
+    var_set_str(vm, "CALLANY_FN", fn->name);
+    vm->return_fn = 0;
+    {
+      Lex fl;
+      lex_init(&fl, fn->body, fn->len);
+      if (exec_stmts_until(vm, &fl, "END", NULL) < 0) return -1;
+    }
+    vm->return_fn = 0;
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# CALLANY hit %s (of %d)\n", fn->name, nname);
+    bump(vm);
+    return 1;
+  }
+
   /* RET [expr] — early return from FN (digit-4 control flow)
      RETIF cond [expr] / RETNZ / RETZ / RETUNLESS — conditional return (digit-1) */
   if (kw(&L->cur,"RET")||kw(&L->cur,"RETURN")||

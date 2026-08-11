@@ -1,0 +1,69 @@
+# CALLANY / TRYCALLANY — first-defined FN dispatch (HASFNANY twin)
+
+HOLD_FLASH 1
+
+FN hello name
+  RET name
+END
+
+FN add a b
+  RET a + b
+END
+
+FN ping
+  RET 7
+END
+
+# first hit among ghosts + real
+CALLANY ghost_fn hello ping WITH "world"
+ASSERT OK == 1
+ASSERT CALLED == 1
+ASSERT CALLANY_N == 1
+ASSERT CALLANY_FN == "hello"
+ASSERT FN == "hello"
+ASSERT LAST == "world"
+
+# 0-arity first hit
+CALLANY ghost_z ping hello
+ASSERT OK == 1
+ASSERT CALLANY_FN == "ping"
+ASSERT LAST_N == 7
+
+# CALLFIRST alias + WITH multi-arg
+CALLFIRST ghost_x add WITH 3 4
+ASSERT LAST_N == 7
+ASSERT CALLANY_FN == "add"
+
+# bag of names
+LET hooks = "ghost_a\nghost_b\nping"
+CALLANY hooks
+ASSERT CALLANY_FN == "ping"
+ASSERT LAST_N == 7
+
+# CSV bag + WITH
+LET opts = "nope,hello,add"
+CALLANY opts WITH "agent"
+ASSERT CALLANY_FN == "hello"
+ASSERT LAST == "agent"
+
+# soft miss
+TRYCALLANY ghost_only_a ghost_only_b WITH 1
+ASSERT OK == 0
+ASSERT CALLED == 0
+ASSERT CALLANY_N == 0
+CLEAR_ERR
+
+# SOFTCALLANY alias
+SOFTCALLANY missing_fn
+ASSERT OK == 0
+CLEAR_ERR
+
+# hard miss fails in separate CLI proof
+
+HASFORM "CALLANY"
+ASSERT LAST_N == 1
+HASFORM "TRYCALLANY"
+ASSERT LAST_N == 1
+
+PRINT "1438_callany ok"
+PASS
