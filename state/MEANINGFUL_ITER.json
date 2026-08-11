@@ -1,19 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 945,
-  "version": "1.15.939-usability",
-  "item": "IFBIG / IFSMALL / IFSIZE",
-  "item_id": 945,
-  "title": "IFBIG \u00b7 IFSMALL \u00b7 IFSIZE \u00b7 path size branches",
-  "commit": "b75daf0a",
-  "summary": "Path size branches with ELSE/END; no SYS SIZE+IF glue; proof 1484 PASS. EEG var_get peel fix so main builds.",
+  "iter": 946,
+  "version": "1.15.940-usability",
+  "item": "IFNEWER / IFOLDER / IFOUTOFDATE",
+  "item_id": 946,
+  "title": "IFNEWER \u00b7 IFOLDER \u00b7 IFOUTOFDATE \u00b7 relative mtime rebuild gates",
+  "commit": "2a0dd62e",
+  "summary": "Make-style path mtime branches; no dual MTIME+IF glue; proof 1485 PASS.",
   "proofs": [
-    "1484_ifbig_ifsmall_ifsize PASS",
-    "1482_iffresh_ifstale regression PASS",
-    "1483_eeg_state_matrix regression PASS"
+    "1485_ifnewer_ifolder_ifoutofdate PASS",
+    "1484_ifbig regression PASS"
   ],
-  "when": "2026-08-11T19:44:42Z",
+  "when": "2026-08-11T20:05:54Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "b75daf0a4652bceae921553dd6ea5ab90647148d",
-  "note": "plate overflow/empty/band gates without size probe+IF glue"
+  "sha": "2a0dd62e7210110737ce72f20f3b3e255de5aefd",
+  "note": "derived-plate rebuild without relative mtime probe glue; thrash restore mid-tick"
 }
