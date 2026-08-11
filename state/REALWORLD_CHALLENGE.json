@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 324,
-  "program": "programs/realworld/svc_env_guard_contract_board.cubalc",
-  "theme": "env_guard NEED_ENVS+NEED_ENV_ANY fleet host-env contract",
-  "version": "1.15.836-usability",
+  "iter": 325,
+  "program": "programs/realworld/svc_arg_guard_contract_board.cubalc",
+  "theme": "arg_guard NEED_ARGS+NEED_ARG_ANY fleet multi-arg contract",
+  "version": "1.15.840-usability",
   "pass": true,
-  "prior_note": "iter 323 HASENVALL/ANY forms; this iter first realworld 1383 env_guard + 1384 env_boot lib",
+  "prior_note": "iter 324 env_guard; this iter first realworld 1388 arg_guard ALL+ANY program-arg twin",
   "tests": [
     {
       "name": "list",
@@ -15,25 +15,25 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate eg",
+      "cmd": "seed agent plate ag",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "soft",
-      "cmd": "soft ALL+ANY hits CSV/bag",
+      "cmd": "soft ALL+ANY env hit",
       "ok": true,
       "note": "soft"
     },
     {
       "name": "miss",
-      "cmd": "soft ALL/ANY miss ENVMISS",
+      "cmd": "soft ALL/ANY miss ARGMISS",
       "ok": true,
       "note": "miss"
     },
     {
       "name": "hard",
-      "cmd": "hard NEEDENVS/ANY pass",
+      "cmd": "hard NEEDARGS/ANY pass",
       "ok": true,
       "note": "hard"
     },
@@ -45,13 +45,13 @@
     },
     {
       "name": "combo",
-      "cmd": "ALL+ANY dual site contract",
+      "cmd": "ALL positionals+ANY FILE",
       "ok": true,
       "note": "combo"
     },
     {
       "name": "form",
-      "cmd": "HASLIB env_guard/env_boot",
+      "cmd": "HASLIB arg_guard",
       "ok": true,
       "note": "form"
     },
@@ -77,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "env_guard/env_boot PASS; CLI duals still red"
+      "note": "arg_guard PASS; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -5624,6 +5624,54 @@
       "title": "WRITE STATUS omit trailing NL (reconfirmed eg)",
       "detail": "STATUS last line without $.",
       "repro": "cat -A EG STATUS"
+    },
+    {
+      "id": "W694",
+      "severity": "high",
+      "area": "lang|arg_guard|exit",
+      "title": "arg_guard hard NEEDARGS/NEEDARGANY miss leaves exit_code 0",
+      "detail": "Hard path sticky err + ok:false; exit_code often 0 (env_guard W688 / cli_guard W652 class). Soft ARG_GUARD_SOFT=1 + EXIT n for agents.",
+      "repro": "NEED_ARGS=0 SOFT=0 empty argv INCLUDE arg_guard \u2192 exit_code 0"
+    },
+    {
+      "id": "W695",
+      "severity": "med",
+      "area": "lang|arg_guard|reinclude",
+      "title": "arg_guard re-INCLUDE needs LET NEED_ARGS/ANY/SOFT before each call",
+      "detail": "DEFAULT set-if-unset; LET before every INCLUDE when contract changes (env_guard W689 twin).",
+      "repro": "LET NEED_ARGS then INCLUDE twice with different contracts"
+    },
+    {
+      "id": "W696",
+      "severity": "low",
+      "area": "lang|arg_guard|positive",
+      "title": "arg_guard empty skip + ALL+ANY combo + named env ANY work",
+      "detail": "Positive: empty NEED_* \u2192 ARG_GUARD_OK=1; soft ALL 0,1 + ANY CUBALC_AG_FILE; HASLIB arg_guard.",
+      "repro": "empty INCLUDE \u2192 OK 1; combo ARG0+1 + FILE env"
+    },
+    {
+      "id": "W697",
+      "severity": "med",
+      "area": "lang|arg_guard|arghave",
+      "title": "ARGHAVE after arg_guard stores indices/names not path values",
+      "detail": "Same as HASARGANY W681: ARGHAVE line is 0 or CUBALC_AG_FILE not a.txt. Peel with NTHARG after admit.",
+      "repro": "ARG_GUARD hit; ARGHAVE has 0; NTHARG 0 for path"
+    },
+    {
+      "id": "W698",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers ARGMISS after arg_guard soft miss",
+      "detail": "Capture ARGMISS/ARG_GUARD_OK before PRINT.",
+      "repro": "INCLUDE miss; PRINT x; SYS HASLINE LAST 0 \u2192 0"
+    },
+    {
+      "id": "W699",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL (reconfirmed ag)",
+      "detail": "STATUS last line without $.",
+      "repro": "cat -A AG STATUS"
     }
   ],
   "workarounds": [
@@ -5728,6 +5776,10 @@
     {
       "id": "WA-EG",
       "note": "ENV_GUARD_SOFT=1 then EXIT n on ENV_GUARD_OK=0; LET NEED_* before every INCLUDE env_guard; capture ENVMISS before PRINT"
+    },
+    {
+      "id": "WA-AG",
+      "note": "ARG_GUARD_SOFT=1 then EXIT n on ARG_GUARD_OK=0; LET NEED_* before every INCLUDE; NTHARG after admit for values"
     }
   ],
   "language_gaps": [
@@ -5815,7 +5867,12 @@
     "ENV_GUARD_OK/ALL_OK/ANY_OK sticky knobs",
     "hard NEEDENV* miss exit_code 0 (W688)",
     "LET before each re-INCLUDE env_guard (W689)",
-    "plate surface NEED_ENVS underscore (W691)"
+    "plate surface NEED_ENVS underscore (W691)",
+    "arg_guard NEED_ARGS+NEED_ARG_ANY (1388)",
+    "ARG_GUARD_OK/ALL_OK/ANY_OK sticky knobs",
+    "hard NEEDARGS* miss exit_code 0 (W694)",
+    "LET before each re-INCLUDE arg_guard (W695)",
+    "ARGHAVE indices not values (W697)"
   ],
   "issues_faced": [
     "iter300: all board paths green; WRITE SNIP.txt multi-line works",
@@ -5863,9 +5920,11 @@
     "iter323: miss/hard first failed CLEAR_ERR ate LAST_N; fixed capture; board 10/10",
     "iter323: selftest 564/767 hasenvall+hasenvany PASS; CLI duals still set",
     "iter324: hard/skip first failed plate surface NEEDENVS vs NEED_ENVS; board 10/10 after fix",
-    "iter324: selftest 567/773 env_guard+env_boot PASS; CLI duals still set"
+    "iter324: selftest 567/773 env_guard+env_boot PASS; CLI duals still set",
+    "iter325: board 10/10 first pass; include_newest selftest brittle (newest=arg_guard)",
+    "iter325: selftest 569/778 arg_guard PASS; CLI duals still unknown form set"
   ],
-  "commit": "8da162fc",
-  "ts": "2026-08-11T00:05:55Z",
-  "board_commit": "8da162fc"
+  "commit": "pending",
+  "ts": "2026-08-11T00:29:08Z",
+  "board_commit": "pending"
 }
