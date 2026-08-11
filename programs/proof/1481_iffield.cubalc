@@ -1,0 +1,77 @@
+# IFFIELD / IFHASFIELD — field exists branches
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD id
+  FIELD status
+  METHOD open
+    RET 1
+  END
+END
+
+NEW Ticket t1
+
+# IFFIELD on live obj
+IFFIELD t1 id
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 1
+ASSERT IFFIELD_N == 1
+
+# IFFIELD on Class
+IFFIELD Ticket status
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 1
+
+# miss
+IFFIELD t1 ghost_field
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 0
+ASSERT IFFIELD_N == 0
+
+# IFHASFIELD alias
+IFHASFIELD t1 id
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+
+# nest with IFOBJ / soft GETF path
+IFOBJ t1
+  IFFIELD t1 id
+    SETF t1 id 42
+    GETF t1 id
+    LET v = LAST_N
+  ELSE
+    LET v = -1
+  END
+ELSE
+  LET v = -2
+END
+ASSERT v == 42
+
+# method is not a field
+IFFIELD t1 open
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+
+HASFORM "IFFIELD"
+ASSERT LAST_N == 1
+HASFORM "IFHASFIELD"
+ASSERT LAST_N == 1
+
+PRINT "1481_iffield ok"
+PASS

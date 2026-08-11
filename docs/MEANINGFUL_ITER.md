@@ -971,6 +971,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 940. ~~**`IFOBJ` / `IFMETHOD`**~~ **done** (live object/method branches · no HASOBJ+IF LAST_N glue · proof 1478).
 941. ~~**`IFFILE` / `IFDIR` / `IFEXIST`**~~ **done** (path existence branches · no SYS ISFILE+IF glue · proof 1479).
 942. ~~**`IFENV` / `IFHASENV`**~~ **done** (host env set branch · no SYS HASENV+IF glue · proof 1480).
+943. ~~**`IFFIELD` / `IFHASFIELD`**~~ **done** (field exists branch · no HASFIELD+IF LAST_N glue · proof 1481).
 
 
 
