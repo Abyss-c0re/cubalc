@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 916,
-  "version": "1.15.909-usability",
-  "item": "APPENDTO / PREPENDTO / COPYTO vars",
-  "item_id": 916,
-  "title": "APPENDTO \u00b7 PREPENDTO \u00b7 COPYTO \u00b7 string build + var copy",
-  "commit": "2bb7f65f",
-  "summary": "APPENDTO/PREPENDTO build strings on vars; COPYTO seeds dual buffers without LET=CAT glue; proof 1454 PASS.",
+  "iter": 917,
+  "version": "1.15.910-usability",
+  "item": "REPLACEIN / TRIMTO / UPPERTO / LOWERTO / ZERO / CLEARSTR vars",
+  "item_id": 917,
+  "title": "REPLACEIN \u00b7 TRIMTO \u00b7 UPPERTO \u00b7 LOWERTO \u00b7 ZERO \u00b7 CLEARSTR \u00b7 in-place mutate",
+  "commit": "24de78c9",
+  "summary": "In-place REPLACEALL/trim/case on vars; ZERO/CLEARSTR resets; no LET=SYS glue; proof 1455 PASS.",
   "proofs": [
-    "1454_appendto_copyto PASS",
-    "1454_cli_appendto_copyto PASS",
-    "1453_toggle_clamp_setminmax regression PASS"
+    "1455_replacein_trimto PASS",
+    "1455_cli_replacein_trimto PASS",
+    "1454_appendto_copyto regression PASS"
   ],
-  "when": "2026-08-11T13:28:15Z",
+  "when": "2026-08-11T13:38:25Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "2bb7f65f827db7c6607713510e82060ffe8e62f1",
-  "note": "agent log/message assembly and dual buffers without CAT LET soup"
+  "sha": "24de78c92cdf986bb10b9700db4665dd108116b2",
+  "note": "agent string normalize and counter reset without LET soup"
 }
