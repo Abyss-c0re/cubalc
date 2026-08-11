@@ -1,0 +1,48 @@
+# TIMEIT / BENCH — wall mono measure body (no SYS MS delta glue)
+
+HOLD_FLASH 1
+
+# empty body still ok (may be 0 ms)
+TIMEIT
+END
+ASSERT OK == 1
+ASSERT TIMEIT_N == 1
+ASSERT LAST_N >= 0
+ASSERT TIMEIT_MS == LAST_N
+
+# sleep so elapsed is measurable
+TIMEIT
+  SYS SLEEP 25
+END
+ASSERT OK == 1
+ASSERT TIMEIT_MS >= 20
+ASSERT LAST_N >= 20
+ASSERT BENCH_MS == TIMEIT_MS
+ASSERT ELAPSED == TIMEIT_MS
+
+# BENCH alias + nested IF inside timed body
+LET n = 0
+BENCH
+  IF 1
+    LET n = 1
+  END
+  SYS SLEEP 5
+END
+ASSERT n == 1
+ASSERT BENCH_MS >= 0
+
+# MEASURE alias
+MEASURE
+  LET x = 42
+END
+ASSERT x == 42
+ASSERT TIMEIT_N == 1
+
+# form discoverable
+HASFORM "TIMEIT"
+ASSERT LAST_N == 1
+HASFORM "BENCH"
+ASSERT LAST_N == 1
+
+PRINT "1446_timeit ok"
+PASS

@@ -24716,6 +24716,46 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm,"OK",1);
     bump(vm); return 1;
   }
+  /* TIMEIT|BENCH|ELAPSED|TIMING|MEASURE … END — wall mono ms for body.
+   * LAST_N/TIMEIT_MS/BENCH_MS/ELAPSED = elapsed; OK=1.
+   * Usability: agent measure hooks without SYS MS + LET delta glue. */
+  if (kw(&L->cur,"TIMEIT")||kw(&L->cur,"BENCH")||kw(&L->cur,"ELAPSED")||
+      kw(&L->cur,"TIMING")||kw(&L->cur,"MEASURE")){
+    long t0, t1, dt;
+    Lex save;
+    int depth = 1;
+    char nb[32];
+    lex_next(L);
+    skip_nl(L);
+    save = *L;
+    while (L->cur.kind != TK_EOF) {
+      if (block_scan_step(L, &depth, 0)) break;
+    }
+    if (depth != 0) { fail(vm, "TIMEIT without END"); return -1; }
+    t0 = cubalc_lang_mono_ms();
+    {
+      Lex body = save;
+      if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+    }
+    t1 = cubalc_lang_mono_ms();
+    dt = t1 - t0;
+    if (dt < 0) dt = 0;
+    if (kw(&L->cur, "END")) lex_next(L);
+    var_set_num(vm, "LAST_N", dt);
+    vm->last_n = dt;
+    var_set_num(vm, "TIMEIT_MS", dt);
+    var_set_num(vm, "BENCH_MS", dt);
+    var_set_num(vm, "ELAPSED", dt);
+    var_set_num(vm, "TIMEIT_N", 1);
+    snprintf(nb, sizeof nb, "%ld", dt);
+    var_set_str(vm, "LAST", nb);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# TIMEIT %ld ms\n", dt);
+    bump(vm);
+    return 1;
+  }
   if (kw(&L->cur,"LOOP")||kw(&L->cur,"TIMES")){
     lex_next(L);
     long times=parse_expr(vm,L);
