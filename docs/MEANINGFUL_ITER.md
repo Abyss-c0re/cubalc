@@ -984,6 +984,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 949. ~~**`IFNUM` / `IFSTR` / `IFVARTYPE`**~~ **done** (var type branches · no TYPEOF+IF glue · proof 1488).
 
+950. ~~**`IFZERO` / `IFNZ` / `IFPOS` / `IFNEG`**~~ **done** (numeric sign branches · no IFEQN/IFGT glue · proof 1489).
+
 
 
 

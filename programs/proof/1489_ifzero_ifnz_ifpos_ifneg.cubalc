@@ -1,0 +1,134 @@
+# IFZERO / IFNZ / IFPOS / IFNEG — numeric sign branches
+
+HOLD_FLASH 1
+
+LET z = 0
+LET p = 7
+LET n = -3
+LET s = "0"
+# u undefined
+
+IFZERO z
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+ASSERT IFZERO_N == 1
+ASSERT IFZERO_VAL == 0
+
+IFZERO p
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 0
+
+IFZERO s
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 0
+
+IFZERO u
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 0
+
+IFNZ p
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 1
+ASSERT IFNZ_N == 1
+
+IFNZ z
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+
+IFNZ n
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 1
+
+IFPOS p
+  LET c = 1
+ELSE
+  LET c = 0
+END
+ASSERT c == 1
+ASSERT IFPOS_N == 1
+
+IFPOS z
+  LET c = 1
+ELSE
+  LET c = 0
+END
+ASSERT c == 0
+
+IFPOS n
+  LET c = 1
+ELSE
+  LET c = 0
+END
+ASSERT c == 0
+
+IFNEG n
+  LET d = 1
+ELSE
+  LET d = 0
+END
+ASSERT d == 1
+ASSERT IFNEG_N == 1
+
+IFNEG p
+  LET d = 1
+ELSE
+  LET d = 0
+END
+ASSERT d == 0
+
+IFNEG z
+  LET d = 1
+ELSE
+  LET d = 0
+END
+ASSERT d == 0
+
+# nest: countdown gate
+LET tries = 2
+IFNZ tries
+  DEC tries
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+ASSERT tries == 1
+IFZERO tries
+  LET ok = 0
+ELSE
+  LET ok = 1
+END
+ASSERT ok == 1
+
+HASFORM "IFZERO"
+ASSERT LAST_N == 1
+HASFORM "IFNZ"
+ASSERT LAST_N == 1
+HASFORM "IFPOS"
+ASSERT LAST_N == 1
+HASFORM "IFNEG"
+ASSERT LAST_N == 1
+
+PRINT "1489_ifzero_ifnz_ifpos_ifneg ok"
+PASS
