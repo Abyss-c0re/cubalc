@@ -1,0 +1,48 @@
+# INCLUDE product_session — full product CLI+host contract one-shot
+# Usability: tool_session (cli_boot+cli_guard+arg_guard) + env_guard + time_guard
+# without multi INCLUDE / double agent_boot for real product tools.
+#
+#   DEFAULT USAGE = "mytool --out PATH [--json] files…"
+#   DEFAULT PROG_VERSION = "1.0.0"
+#   DEFAULT NEED_FLAGS = "out"
+#   DEFAULT NEED_FLAG_ANY = "json\nyaml"
+#   DEFAULT NEED_REST_N = 1
+#   DEFAULT NEED_ARGS = ""
+#   DEFAULT NEED_ARG_ANY = ""
+#   DEFAULT NEED_ENVS = "HOME"
+#   DEFAULT NEED_ENV_ANY = "API_KEY\nTOKEN"
+#   DEFAULT NEED_TIME = 200                 # ms left under -T / CUBALC_RUN_TIMEOUT
+#   DEFAULT CLI_GUARD_SOFT = 0
+#   DEFAULT ARG_GUARD_SOFT = 0
+#   DEFAULT ENV_GUARD_SOFT = 0
+#   DEFAULT TIME_GUARD_SOFT = 0
+#   INCLUDE product_session
+#   # HELPFLAG/VERSIONFLAG · CLIINFO · flag+arg+env+time contracts · PRODUCT_SESSION_OK
+#
+# Soft: set *_GUARD_SOFT = 1 before INCLUDE (combined PRODUCT_SESSION_OK).
+# Scaffold: cubalc init demo --product
+# Completes tool_session (flags+args) with host env + wall budget for fleet tools.
+# HOLD_FLASH not required (runtime default 1).
+
+INCLUDE tool_session
+INCLUDE env_guard
+INCLUDE time_guard
+
+# combined soft status (hard paths already failed fatally)
+IF TOOL_SESSION_OK
+  IF ENV_GUARD_OK
+    IF TIME_GUARD_OK
+      LET PRODUCT_SESSION_OK = 1
+      LET OK = 1
+    ELSE
+      LET PRODUCT_SESSION_OK = 0
+      LET OK = 0
+    END
+  ELSE
+    LET PRODUCT_SESSION_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET PRODUCT_SESSION_OK = 0
+  LET OK = 0
+END

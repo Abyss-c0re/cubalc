@@ -880,6 +880,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 849. ~~**`arg_boot` + `cubalc init --arg`**~~ **done** (agent_boot+arg_guard one-shot · init --arg|--args|--arg-guard catalog n=16 · doctor lib_arg_boot · proof 1389).
 850. ~~**`time_boot` + `cubalc init --time`**~~ **done** (agent_boot+time_guard one-shot · init --time|--timeout-boot catalog n=17 · doctor lib_time_boot · proof 1390).
 851. ~~**`tool_session` + `cubalc init --full-cli`**~~ **done** (cli_boot+cli_guard+arg_guard · TOOL_SESSION_OK · catalog n=18 · doctor lib_tool_session · proof 1391).
+852. ~~**`product_session` + `cubalc init --product`**~~ **done** (tool_session+env_guard+time_guard · PRODUCT_SESSION_OK · catalog n=19 · doctor lib_product_session · TIME_GUARD_OK · proof 1392).
+
 
 ## Tick protocol
 
