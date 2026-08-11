@@ -1,0 +1,1067 @@
+# svc_retry_hook_board.cubalc — RETRY/ATTEMPT flaky probe hooks + TIMEIT wall
+#
+# Real use: deploy agents re-run flaky health/plugin hooks until OK without
+# manual LET hits + WHILE/IF FAIL glue. Optional EVERY ms backoff and TIMEIT
+# wall-clock for SLO probes. First realworld of 1447 RETRY/ATTEMPT (1.15.902+
+# · MI 909) + 1446 TIMEIT/BENCH (MI 908). Distinct from retry_backoff_board
+# (plate ATTEMPT counter math) and dlq_retry (queue requeue) — this board is
+# *language RETRY block* for in-process hook resilience.
+#
+#   RETRY n [EVERY ms] … END · ATTEMPT alias
+#   RETRY_OK · RETRY_N · OK after block
+#   TIMEIT|BENCH|MEASURE … END · TIMEIT_MS · BENCH_MS · ELAPSED
+#   Body PASS → success stop · FAIL → soft retry · exhaust → OK=0
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rhk_$$
+#   ./out/cubalc run programs/realworld/svc_retry_hook_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|late|every|time|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt RHK_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_RHK_REQUIRE
+#
+# Edges: RETRY/TIMEIT nested in IF breaks END framing (W821) — wrap in FN;
+#   RETRY 0 clamps to 1; CALL after exhaust leaves OK=1 while RETRY_OK=0 (W822);
+#   IF outside RETRY inside FN steals FN END; TIMEIT nests RETRY; var n works;
+#   PRINT clobber; WRITE NL; TRY/FINALLY ok in 1.15.903
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+# --- RETRY helpers (must be FN: RETRY inside IF steals END — W821) ---
+
+FN retry_first max
+  LET hits = 0
+  RETRY max
+    LET hits = hits + 1
+    PASS
+  END
+  RET hits
+END
+
+FN retry_exhaust max
+  LET hits = 0
+  RETRY max
+    LET hits = hits + 1
+    FAIL "probe down"
+  END
+  RET hits
+END
+
+FN retry_late max need
+  LET hits = 0
+  RETRY max
+    LET hits = hits + 1
+    IF hits == need THEN
+      PASS
+    ELSE
+      FAIL "not yet"
+    END
+  END
+  RET hits
+END
+
+FN retry_every max
+  LET hits = 0
+  RETRY max EVERY 5
+    LET hits = hits + 1
+    IF hits >= 2 THEN
+      PASS
+    ELSE
+      FAIL "once"
+    END
+  END
+  RET hits
+END
+
+FN retry_every_exhaust max
+  LET hits = 0
+  RETRY max EVERY 1
+    LET hits = hits + 1
+    FAIL "down"
+  END
+  RET hits
+END
+
+FN retry_zero
+  LET hits = 0
+  RETRY 0
+    LET hits = hits + 1
+    PASS
+  END
+  RET hits
+END
+
+FN attempt_first
+  LET hits = 0
+  ATTEMPT 2
+    LET hits = hits + 1
+    PASS
+  END
+  RET hits
+END
+
+FN time_retry_ok
+  TIMEIT
+    RETRY 2
+      PASS
+    END
+  END
+  RET TIMEIT_MS
+END
+
+FN time_retry_fail
+  BENCH
+    RETRY 2
+      FAIL "x"
+    END
+  END
+  RET BENCH_MS
+END
+
+FN time_sleep
+  MEASURE
+    SYS SLEEP 15
+  END
+  RET TIMEIT_MS
+END
+
+FN time_retry_slow
+  TIMEIT
+    RETRY 3 EVERY 1
+      FAIL "slow"
+    END
+  END
+  RET TIMEIT_MS
+END
+
+FN timeit_empty
+  TIMEIT
+    LET _t = 1
+  END
+  RET TIMEIT_MS
+END
+
+NOTE "svc_retry_hook_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_retry_hook -- boot|pass|soft|late|every|time|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_RHK_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "RHK_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET retry_ok = 0
+LET retry_n = 0
+LET hits = 0
+LET time_ms = 0
+
+ONEOF ACTION "boot", "pass", "soft", "late", "every", "time", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "late" THEN
+    LET op = "late"
+  WHEN "every" THEN
+    LET op = "every"
+  WHEN "time" THEN
+    LET op = "time"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-rhk\",\"schema\":\"cubalc.svc_retry_hook.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"rhk\",\"want_filter\":\"retry_hook\",\"cfg\":{\"surface\":\"RETRY,ATTEMPT,RETRY_OK,RETRY_N,EVERY,TIMEIT,BENCH,MEASURE,TIMEIT_MS\",\"contract\":\"flaky probe/hook re-run until OK with optional backoff + wall measure\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  CALL retry_first 3
+  LET hits = LAST_N
+  LET retry_ok = RETRY_OK
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-rhk"
+  IF LAST_N == 1 THEN
+    IF retry_ok == 1 THEN
+      IF retry_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+        LET find_n = hits
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot retry_n"
+        FAIL "boot retry_n"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot retry_ok"
+      FAIL "boot retry_ok"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score retry_n hits note_msg
+  CLEAR_ERR
+END
+
+# pass — first-try · ATTEMPT · RETRY 0 clamp
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL retry_first 5
+  LET hits = LAST_N
+  LET ok_v = OK
+  LET retry_ok = RETRY_OK
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF retry_ok == 1 THEN
+    LET score = score + 1
+  END
+  IF retry_n == 1 THEN
+    LET score = score + 1
+  END
+  IF hits == 1 THEN
+    LET score = score + 1
+  END
+  CALL attempt_first
+  LET hits = LAST_N
+  LET retry_ok = RETRY_OK
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  IF retry_ok == 1 THEN
+    LET score = score + 1
+  END
+  IF retry_n == 1 THEN
+    LET score = score + 1
+  END
+  IF hits == 1 THEN
+    LET score = score + 1
+  END
+  CALL retry_zero
+  LET hits = LAST_N
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  IF retry_n == 1 THEN
+    LET score = score + 1
+  END
+  IF hits == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "retry_hook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = retry_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score retry_ok retry_n note_msg
+  CLEAR_ERR
+END
+
+# soft — exhaust · recovery
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL retry_exhaust 3
+  LET hits = LAST_N
+  LET ok_v = OK
+  LET retry_ok = RETRY_OK
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  # after CALL+RET, OK may stay 1 even when RETRY_OK=0 (W822) — score RETRY_OK
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF retry_ok == 0 THEN
+    LET score = score + 1
+  END
+  IF retry_n == 3 THEN
+    LET score = score + 1
+  END
+  IF hits == 3 THEN
+    LET score = score + 1
+  END
+  CALL retry_exhaust 2
+  LET hits = LAST_N
+  LET retry_n = RETRY_N
+  LET retry_ok = RETRY_OK
+  CLEAR_ERR
+  IF retry_n == 2 THEN
+    LET score = score + 1
+  END
+  IF retry_ok == 0 THEN
+    LET score = score + 1
+  END
+  IF hits == 2 THEN
+    LET score = score + 1
+  END
+  CALL retry_first 2
+  LET hits = LAST_N
+  IF RETRY_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF hits == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = retry_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score retry_ok hits note_msg
+  CLEAR_ERR
+END
+
+# late — succeed on Nth · var max
+SYS EQS op "late"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL retry_late 5 3
+  LET hits = LAST_N
+  LET ok_v = OK
+  LET retry_ok = RETRY_OK
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF retry_ok == 1 THEN
+    LET score = score + 1
+  END
+  IF retry_n == 3 THEN
+    LET score = score + 1
+  END
+  IF hits == 3 THEN
+    LET score = score + 1
+  END
+  LET n = 4
+  CALL retry_late n 2
+  LET hits = LAST_N
+  LET retry_ok = RETRY_OK
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  IF retry_ok == 1 THEN
+    LET score = score + 1
+  END
+  IF retry_n == 2 THEN
+    LET score = score + 1
+  END
+  IF hits == 2 THEN
+    LET score = score + 1
+  END
+  CALL retry_exhaust 2
+  LET hits = LAST_N
+  IF RETRY_OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF hits == 2 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "RETRY_OK"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "late ok"
+    LET admit_n = 1
+    LET find_n = retry_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "late score"
+    FAIL "late score"
+    CLEAR_ERR
+  END
+  SYS CAT "late:" score ":lt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "late:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score retry_n hits note_msg
+  CLEAR_ERR
+END
+
+# every — EVERY ms backoff
+SYS EQS op "every"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL retry_every 4
+  LET hits = LAST_N
+  LET retry_ok = RETRY_OK
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  IF retry_ok == 1 THEN
+    LET score = score + 1
+  END
+  IF retry_n == 2 THEN
+    LET score = score + 1
+  END
+  IF hits == 2 THEN
+    LET score = score + 1
+  END
+  CALL retry_every_exhaust 2
+  LET hits = LAST_N
+  LET retry_ok = RETRY_OK
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  IF retry_ok == 0 THEN
+    LET score = score + 1
+  END
+  IF retry_n == 2 THEN
+    LET score = score + 1
+  END
+  IF hits == 2 THEN
+    LET score = score + 1
+  END
+  CALL retry_first 3
+  LET hits = LAST_N
+  IF RETRY_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF hits == 1 THEN
+    LET score = score + 1
+  END
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-rhk"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "every ok"
+    LET admit_n = 1
+    LET find_n = retry_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "every score"
+    FAIL "every score"
+    CLEAR_ERR
+  END
+  SYS CAT "every:" score ":ev"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "every:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score retry_n note_msg
+  CLEAR_ERR
+END
+
+# time — TIMEIT/BENCH wrap RETRY
+SYS EQS op "time"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL time_retry_ok
+  LET time_ms = LAST_N
+  LET ok_v = OK
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF time_ms >= 0 THEN
+    LET score = score + 1
+  END
+  CALL time_retry_fail
+  LET time_ms = LAST_N
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  IF retry_n == 2 THEN
+    LET score = score + 1
+  END
+  IF time_ms >= 0 THEN
+    LET score = score + 1
+  END
+  CALL time_sleep
+  LET time_ms = LAST_N
+  CLEAR_ERR
+  IF time_ms >= 10 THEN
+    LET score = score + 1
+  END
+  CALL timeit_empty
+  LET time_ms = LAST_N
+  CLEAR_ERR
+  IF time_ms >= 0 THEN
+    LET score = score + 1
+  END
+  # ELAPSED dual of TIMEIT_MS (after last TIMEIT via FN)
+  IF ELAPSED == time_ms THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL time_retry_slow
+  LET time_ms = LAST_N
+  LET retry_n = RETRY_N
+  CLEAR_ERR
+  IF retry_n == 3 THEN
+    LET score = score + 1
+  END
+  IF time_ms >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "TIMEIT"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 9 THEN
+    LET hit = 1
+    LET note_msg = "time ok"
+    LET admit_n = 1
+    LET find_n = time_ms
+  ELSE
+    LET miss = 1
+    LET note_msg = "time score"
+    FAIL "time score"
+    CLEAR_ERR
+  END
+  SYS CAT "time:" score ":tm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "time:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score time_ms retry_n note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM · TRY missing
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "RETRY"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  HASFORM "ATTEMPT"
+  LET retry_ok = LAST_N
+  CLEAR_ERR
+  HASFORM "TIMEIT"
+  LET retry_n = LAST_N
+  CLEAR_ERR
+  HASFORM "BENCH"
+  LET hits = LAST_N
+  CLEAR_ERR
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF retry_ok == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF retry_n == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  IF hits == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  HASFORM "MEASURE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  ELSE
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # TRY/FINALLY present in 1.15.903+ (1448)
+  HASFORM "TRY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "FINALLY"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS RETRY"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "retry_hook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL retry_first 3
+  IF RETRY_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL retry_exhaust 2
+  IF RETRY_OK == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL time_retry_ok
+  LET time_ms = LAST_N
+  IF time_ms >= 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL attempt_first
+  IF RETRY_OK == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-rhk"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "retry_hook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "retry_hookx"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 9 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  IF require_hit > 0 THEN
+    IF hit == 0 THEN
+      EXIT 2 "REQUIRE gate denied"
+    END
+  END
+  SYS CAT "gate:" hit ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# probe
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL retry_first 2
+  LET hits = LAST_N
+  LET retry_n = RETRY_N
+  LET retry_ok = RETRY_OK
+  CLEAR_ERR
+  LET body = "probe-mark"
+  PRINT body
+  CLEAR_ERR
+  SYS EQS LAST "probe-mark"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF retry_ok == 1 THEN
+    LET score = score + 1
+  END
+  IF retry_n == 1 THEN
+    LET score = score + 1
+  END
+  LET body = "keep-me"
+  CLEAR_ERR
+  SYS EQS LAST "cleared"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "retry_hook"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "host_class_floor"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE val_path "probe-nl"
+  SYS READ val_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "probe-nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL timeit_empty
+  LET time_ms = LAST_N
+  CLEAR_ERR
+  IF time_ms >= 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score >= 8 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = retry_n
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pb"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score retry_ok note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET bag_n = LAST_N
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " admit=" admit_n " bag_n=" bag_n " find=" find_n " note=" note_msg
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "host=" host_s " role=" role_s " require=" require_hit " retry_ok=" retry_ok " retry_n=" retry_n " time_ms=" time_ms
+LET body = LAST
+CLEAR_ERR
+SYS WRITE meta_path body
+CLEAR_ERR
+
+SYS CAT "rhk report op=" op " hit=" hit " bag_n=" bag_n " note=" note_msg " date=" run_date
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+IF known == 0 THEN
+  FAIL "unknown path"
+  CLEAR_ERR
+  EXIT 2 "unknown path"
+END
+
+IF hit == 0 THEN
+  IF miss == 1 THEN
+    EXIT 1 note_msg
+  END
+END
+
+PASS

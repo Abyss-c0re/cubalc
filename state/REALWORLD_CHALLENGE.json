@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 348,
-  "program": "programs/realworld/svc_host_class_floor_board.cubalc",
-  "theme": "host CLASS floor fleet admit (run -K / NEEDCLASSES / HASCLASSES)",
-  "version": "1.15.900-usability",
+  "iter": 349,
+  "program": "programs/realworld/svc_retry_hook_board.cubalc",
+  "theme": "RETRY/ATTEMPT flaky probe hooks + TIMEIT wall (EVERY backoff)",
+  "version": "1.15.903-usability",
   "pass": true,
-  "prior_note": "iter 347 CALLANY/SENDANY OR; this iter first realworld of 1445 host -K/--require-classes",
+  "prior_note": "iter 348 host -K CLASS floor; this iter first realworld of 1447 RETRY + 1446 TIMEIT",
   "tests": [
     {
       "name": "list",
@@ -15,63 +15,57 @@
     },
     {
       "name": "boot",
-      "cmd": "seed + HASCLASS + HASCLASSES 3",
+      "cmd": "seed + RETRY first-hit",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "ALLCLASSES bag REQUIRE NEW SEND LIST 10/10",
+      "cmd": "first-try + ATTEMPT + RETRY 0 clamp 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "partial CLASSMISS + empty + substring 10/10",
+      "cmd": "exhaust RETRY_OK=0 + recovery 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
-      "name": "any",
-      "cmd": "HASCLASSANY CLASSHAVE bag 10/10",
+      "name": "late",
+      "cmd": "succeed on Nth + var max 10/10",
       "ok": true,
-      "note": "any 10/10"
+      "note": "late 10/10"
     },
     {
-      "name": "need",
-      "cmd": "NEEDCLASSES hit + var expand + SEND 10/10",
+      "name": "every",
+      "cmd": "EVERY ms backoff hit+exhaust 10/10",
       "ok": true,
-      "note": "need 10/10"
+      "note": "every 10/10"
+    },
+    {
+      "name": "time",
+      "cmd": "TIMEIT/BENCH/MEASURE wrap 10/10",
+      "ok": true,
+      "note": "time 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM HASCLASSES/NEEDCLASSES",
+      "cmd": "HASFORM RETRY/TIMEIT/TRY",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "admit path + CUBALC_HCF_REQUIRE",
+      "cmd": "pipeline + REQUIRE",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber HASLINE exact",
+      "cmd": "PRINT clobber WRITE NL",
       "ok": true,
       "note": "probe"
-    },
-    {
-      "name": "host_K",
-      "cmd": "-I fleet_class_floor -K classes hit",
-      "ok": true,
-      "note": "host -K green"
-    },
-    {
-      "name": "host_K_miss",
-      "cmd": "-K without -I / missing class shell\u22600",
-      "ok": true,
-      "note": "host miss"
     },
     {
       "name": "unknown",
@@ -81,9 +75,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1445 shell PASS; CLI duals still red (set form)",
+      "cmd": "selftest; 1446/1447/1448 PASS; CLI duals still red",
       "ok": false,
-      "note": "proofs/shell green; CLI duals still red"
+      "note": "proofs green; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -6630,6 +6624,38 @@
       "title": "Host -K/CUBALC_REQUIRE_CLASSES only sees -I preload, not main-file CLASS or later INCLUDE",
       "detail": "cubalc run -K FleetWorker prog.cubalc fails even when prog REQUIREs/INCLUDEs fleet_class_floor and defines CLASS \u2014 floor runs NEEDCLASSES after -I only, before main body. Correct: cubalc run -I fleet_class_floor -K FleetWorker prog. Twin of require-fns -N preload contract.",
       "repro": "cubalc run -K FleetWorker board.cubalc \u2192 REQUIRE CLASSES failed; add -I fleet_class_floor \u2192 ok"
+    },
+    {
+      "id": "W819",
+      "severity": "low",
+      "area": "lang|retry",
+      "title": "RETRY 0 clamps to 1 attempt",
+      "detail": "RETRY 0 \u2026 END still runs body once (RETRY_N=1). Agents cannot express zero-attempt skip with RETRY 0; use IF gate instead.",
+      "repro": "RETRY 0; PASS; END \u2192 RETRY_N 1"
+    },
+    {
+      "id": "W820",
+      "severity": "med",
+      "area": "lang|try_finally",
+      "title": "TRY/FINALLY landed in 1.15.903 (proof 1448); earlier 1.15.902 lacked form",
+      "detail": "At 1.15.902 HASFORM TRY=0 and TRY was unknown form (suggest TRYNEW). 1.15.903 runs 1448 green. Positive note for ops cleanup locks/temps.",
+      "repro": "version gate; TRY body FINALLY cleanup END"
+    },
+    {
+      "id": "W821",
+      "severity": "high",
+      "area": "lang|retry_frame",
+      "title": "RETRY/TIMEIT nested inside IF steals outer END (unknown form END)",
+      "detail": "RETRY\u2026PASS/FAIL\u2026END or TIMEIT\u2026END inside SYS EQS IF\u2026THEN breaks framing: outer IF END becomes unknown form END and rest of file may run as top-level. Workaround: wrap RETRY/TIMEIT only inside FN bodies and CALL from IF arms. Same class as CASE heavy-arm (W27).",
+      "repro": "IF 1 THEN; RETRY 2; PASS; END; END \u2192 unknown form END"
+    },
+    {
+      "id": "W822",
+      "severity": "med",
+      "area": "lang|retry_ok",
+      "title": "After CALL of FN containing failed RETRY, OK may be 1 while RETRY_OK=0",
+      "detail": "FN RET hits after RETRY exhaust leaves OK=1 (CALL succeeded) even though RETRY_OK=0. Agents must read RETRY_OK not OK after CALL-wrapped retries.",
+      "repro": "FN f; RETRY 2; FAIL x; END; RET hits; END; CALL f \u2192 OK1 RETRY_OK0"
     }
   ],
   "workarounds": [
@@ -6758,7 +6784,6 @@
     "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings"
   ],
   "language_gaps": [
-    "HASCLASS/HASCLASSES class gate (1419/1420)",
     "HASFORM lag KNOWNCLASS/TYPEDEFINED/FREEOBJ (W768)",
     "CLEAR_ERR LAST=cleared reconfirmed (W772)",
     "HASCLASSANY/HASMETHODS free capability admit (1421/1422)",
@@ -6795,10 +6820,14 @@
       "iter": 348,
       "gap": "Host CLASS floor is solid for deploy contracts, but CLASS redefine silent-fail and REQUIRE LIB non-executing are footguns; agents need INCLUDE ONCE + -I dual documented in one place.",
       "want": "CLASS redefine sticky err with tip; REQUIRE LIB optional EXECUTE/LOAD alias that includes"
+    },
+    {
+      "iter": 349,
+      "gap": "RETRY/ATTEMPT is excellent for flaky hooks but unusable nested in IF without FN trampoline; PASS/FAIL inside RETRY collide with block stack. TIMEIT same class.",
+      "want": "Block stack that allows RETRY/TIMEIT inside IF without END theft; document FN pattern in COOKBOOK"
     }
   ],
   "issues_faced": [
-    "iter333: HARDFAIL field miss under vars_full (W741); plate_peer+service unusable (W743)",
     "iter334: TRYNEW/TRYCLONE fleet board 10/10; HASFORM lag W745; soft scores 8-9/10",
     "iter334: rebuilt binary via -O0 lang_ops_core after OOM; proofs near-pass",
     "iter335: HASFORM TRYSWAP/SWAPOBJ miss while ops work \u2014 1413 assert fail W750",
@@ -6845,9 +6874,14 @@
       "iter": 348,
       "issue": "Board first redefined CLASS after -I (silent abort W816); REQUIRE LIB alone left HASCLASS 0 (W817). Fixed with REQUIRE LIB + INCLUDE ONCE fleet_class_floor; host tests use -I for -K.",
       "resolution": "lib programs/lib/fleet_class_floor.cubalc + INCLUDE ONCE; document W816\u2013W818"
+    },
+    {
+      "iter": 349,
+      "issue": "RETRY/TIMEIT inside action IF arms broke whole-file END framing (W821). Fixed by FN-wrapping all RETRY/TIMEIT; IF outside RETRY inside FN also stole FN END. Soft scored OK after CALL wrongly.",
+      "resolution": "FN helpers only; score RETRY_OK not OK (W822); form expects TRY present in 1.15.903"
     }
   ],
-  "commit": "9b32aeb3",
-  "ts": 1786448891,
+  "commit": "3900afac",
+  "ts": 1786450519,
   "board_commit": "767d4822"
 }
