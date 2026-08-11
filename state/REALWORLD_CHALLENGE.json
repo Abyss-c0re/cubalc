@@ -5865,7 +5865,7 @@
     "iter324: hard/skip first failed plate surface NEEDENVS vs NEED_ENVS; board 10/10 after fix",
     "iter324: selftest 567/773 env_guard+env_boot PASS; CLI duals still set"
   ],
-  "commit": "pending",
+  "commit": "8da162fc",
   "ts": "2026-08-11T00:05:55Z",
-  "board_commit": "pending"
+  "board_commit": "8da162fc"
 }
