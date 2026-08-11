@@ -1,0 +1,83 @@
+# IFFRESH / IFSTALE — path age branches
+
+HOLD_FLASH 1
+
+SYS MKDIR "state/meaningful_iter/mi_iffresh"
+SYS WRITE "state/meaningful_iter/mi_iffresh/plate.json" "{\"ok\":1}"
+
+# freshly written → IFFRESH with large max
+IFFRESH "state/meaningful_iter/mi_iffresh/plate.json" 3600
+  LET f = 1
+ELSE
+  LET f = 0
+END
+ASSERT f == 1
+ASSERT IFFRESH_N == 1
+ASSERT IFFRESH_AGE >= 0
+ASSERT IFFRESH_LIMIT == 3600
+
+# IFFRESH with max 0 only if age==0 may flake; use huge max default
+IFFRESH "state/meaningful_iter/mi_iffresh/plate.json"
+  LET f = 1
+ELSE
+  LET f = 0
+END
+ASSERT f == 1
+
+# missing → not fresh
+IFFRESH "state/meaningful_iter/mi_iffresh/nope.json" 3600
+  LET f = 1
+ELSE
+  LET f = 0
+END
+ASSERT f == 0
+ASSERT IFFRESH_N == 0
+
+# missing → stale
+IFSTALE "state/meaningful_iter/mi_iffresh/nope.json" 1
+  LET s = 1
+ELSE
+  LET s = 0
+END
+ASSERT s == 1
+ASSERT IFSTALE_N == 1
+
+# fresh file not stale with high min
+IFSTALE "state/meaningful_iter/mi_iffresh/plate.json" 99999999
+  LET s = 1
+ELSE
+  LET s = 0
+END
+ASSERT s == 0
+
+# nest: rebuild if stale
+IFSTALE "state/meaningful_iter/mi_iffresh/nope2.json" 60
+  SYS WRITE "state/meaningful_iter/mi_iffresh/nope2.json" "rebuilt"
+  LET did = 1
+ELSE
+  LET did = 0
+END
+ASSERT did == 1
+IFFILE "state/meaningful_iter/mi_iffresh/nope2.json"
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+# var path
+LET p = "state/meaningful_iter/mi_iffresh/plate.json"
+IFFRESH p 86400
+  LET v = 1
+ELSE
+  LET v = 0
+END
+ASSERT v == 1
+
+HASFORM "IFFRESH"
+ASSERT LAST_N == 1
+HASFORM "IFSTALE"
+ASSERT LAST_N == 1
+
+PRINT "1482_iffresh_ifstale ok"
+PASS
