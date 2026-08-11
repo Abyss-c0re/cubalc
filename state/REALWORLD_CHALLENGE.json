@@ -6881,7 +6881,7 @@
     "iter344: capture LAST_N before EQS after numeric CALLANY (W799)",
     "iter344: board green after capture fixes; proof 1438 PASS"
   ],
-  "commit": "pending",
+  "commit": "1491a543",
   "ts": "2026-08-11T10:06:41Z",
-  "board_commit": "pending"
+  "board_commit": "1491a543"
 }
