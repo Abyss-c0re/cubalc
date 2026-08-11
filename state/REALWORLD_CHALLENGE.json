@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 329,
-  "program": "programs/realworld/svc_fn_boot_catalog_board.cubalc",
-  "theme": "fn_boot/fn_guard fleet FN catalog contract",
-  "version": "1.15.853-usability",
+  "iter": 330,
+  "program": "programs/realworld/svc_class_boot_catalog_board.cubalc",
+  "theme": "class_boot/class_guard fleet CLASS catalog contract",
+  "version": "1.15.856-usability",
   "pass": true,
-  "prior_note": "iter 328 lib_boot; this iter first realworld 1400 fn_boot FN catalog gate",
+  "prior_note": "iter 329 fn_boot; this iter first realworld 1401 class_boot OOP catalog + FAIL LAST_ERR guard fix",
   "tests": [
     {
       "name": "list",
@@ -15,19 +15,19 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate sfc",
+      "cmd": "seed agent plate scc",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "NEED_FNALL rb_ping+rb_admit ANY rb_release",
+      "cmd": "NEED_CLASSES FleetTicket+FleetOrder ANY FleetCell",
       "ok": true,
-      "note": "pass FGO=1"
+      "note": "pass CGO=1"
     },
     {
       "name": "soft_all",
-      "cmd": "soft ALL miss FNMISS + HASFN rb false-friend",
+      "cmd": "soft ALL miss CLASSMISS + HASLINE Fleet false-friend",
       "ok": true,
       "note": "soft_all"
     },
@@ -39,13 +39,13 @@
     },
     {
       "name": "hard",
-      "cmd": "hard ALL present runbook FNs",
+      "cmd": "hard ALL present fleet classes",
       "ok": true,
       "note": "hard"
     },
     {
       "name": "form",
-      "cmd": "HASLIB/HASINCLUDE HASFORM knobs miss",
+      "cmd": "HASLIB/HASINCLUDE LISTCLASSES HASFORM knobs miss",
       "ok": true,
       "note": "form"
     },
@@ -57,7 +57,7 @@
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber + multiline FNHAVE",
+      "cmd": "PRINT clobber + multiline CLASSHAVE",
       "ok": true,
       "note": "probe"
     },
@@ -68,16 +68,16 @@
       "note": "unknown\u21922"
     },
     {
-      "name": "hard_miss_exit",
-      "cmd": "hard nosuch FAIL LAST_ERR exit_code 0",
-      "ok": false,
-      "note": "FAIL LAST_ERR form + exit 0"
+      "name": "hard_miss",
+      "cmd": "hard nosuch FAIL message path",
+      "ok": true,
+      "note": "FAIL string ok after fix; exit_code 0"
     },
     {
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "590/819 fn_guard+fn_boot PASS; CLI duals still set"
+      "note": "class_guard+boot PASS; CLI duals still set"
     }
   ],
   "weaknesses": [
@@ -5872,12 +5872,49 @@
       "title": "fn_guard knob thrash NEED_FNS vs NEED_FNALL / NEED_FN_ANY vs NEED_FNANY",
       "detail": "During MEANINGFUL_ITER churn, knobs briefly diverged (NEED_FNS/NEED_FN_ANY vs proofs NEED_FNALL/NEED_FNANY) so soft ANY never ran and empty-contract FN_GUARD_OK stayed 0. Stabilized on NEED_FNALL+NEED_FNANY matching proofs 1400.",
       "repro": "historical: LET NEED_FNANY=x while guard read NEED_FN_ANY \u2192 silent skip/miss"
+    },
+    {
+      "id": "W725",
+      "severity": "high",
+      "area": "lang|fail",
+      "title": "FAIL LAST_ERR was unknown form \u2014 fixed to literal FAIL strings in guards",
+      "detail": "class_guard/fn_guard/method_guard hard path used FAIL LAST_ERR which parse-failed as form name. Replaced with FAIL \"\u2026 hard miss \u2014 see ERR/\u2026MISS\". ERR/CLASSMISS bags still hold detail. FAIL still does not halt process or set exit_code (continues after FAIL).",
+      "repro": "pre-fix: FAIL LAST_ERR \u2192 unknown form; post: FAIL \"CLASS_GUARD hard miss\u2026\" sticky last_err, shell 0"
+    },
+    {
+      "id": "W726",
+      "severity": "med",
+      "area": "lang|fail",
+      "title": "FAIL does not halt or set process exit_code",
+      "detail": "After FAIL \"msg\", subsequent PRINT still runs; plate exit_code stays 0 and shell 0. Agents must EXIT n after hard gates for CLI contracts.",
+      "repro": "INCLUDE class_guard hard miss; PRINT nope still executes; exit_code 0"
+    },
+    {
+      "id": "W727",
+      "severity": "low",
+      "area": "lang|listclasses",
+      "title": "LISTCLASSES+HASLINE is exact class name only",
+      "detail": "SYS HASLINE LISTCLASSES \"Fleet\" does not match FleetTicket. Exact OOP catalog stem required before NEW.",
+      "repro": "HASLINE catalog Fleet \u2192 0; FleetTicket \u2192 1"
+    },
+    {
+      "id": "W728",
+      "severity": "low",
+      "area": "lang|include",
+      "title": "REQUIRE CLASS avoided inside INCLUDE (IF/END nesting)",
+      "detail": "class_guard uses LISTCLASSES+HASLINE+FAIL not REQUIRE CLASS \u2014 same INCLUDE nesting fragility as REQUIRE FN (W720).",
+      "repro": "see programs/lib/class_guard.cubalc header"
+    },
+    {
+      "id": "W729",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE META/VAL omit trailing NL",
+      "detail": "od -c META ends without \\n (W5 class continues).",
+      "repro": "od -c STATE/META.txt"
     }
   ],
   "workarounds": [
-    "ERRTIPS \"explicit incident text\" for known classes; CLEAR_ERR after classify",
-    "chain: LET t=ERRTIPS_TOPIC; TIPS t for full topic tips after recovery class",
-    "always END after EACH TOPIC; capture TOPICHINT LAST before PRINT",
     "use cubalc run -q for quieter ERRRUN recovery paths",
     "SYS NTH 0 body; LET n=LAST; TOPICHINT n \u2014 never TOPICHINT LAST after PRINT",
     "HASLINE for exact neighbor topic ids; do not assume full mesh",
@@ -5974,7 +6011,10 @@
     "SYS HASLINE LIBMISS / LIBHAVE for multiline bags not PRINT alone",
     "DEFINE fleet FNs before INCLUDE fn_guard; LET NEED_FNALL/NEED_FNANY + FN_GUARD_SOFT each re-INCLUDE",
     "Prefer soft FN_GUARD_SOFT=1 and read FN_GUARD_OK / FNMISS; avoid relying on FAIL LAST_ERR",
-    "SYS HASLINE FNHAVE/FNMISS for multiline bags"
+    "SYS HASLINE FNHAVE/FNMISS for multiline bags",
+    "DEFINE CLASS types before INCLUDE class_guard; LET NEED_CLASSES/NEED_CLASS_ANY each re-INCLUDE",
+    "After hard CLASS_GUARD miss check ERR/CLASSMISS then EXIT n for shell rc",
+    "SYS HASLINE CLASSHAVE for multiline bags not PRINT alone"
   ],
   "language_gaps": [
     "DISCOVER_N/FIRST/FILTER/NEXT/RELATED knobs (not MATCH_N)",
@@ -6095,11 +6135,15 @@
     "FAIL LAST_ERR unknown form (W719)",
     "HASFN exact (W721)",
     "PRINT quiet in INCLUDE (W723)",
-    "knob name thrash NEED_FN* (W724)"
+    "knob name thrash NEED_FN* (W724)",
+    "class_guard NEED_CLASSES/NEED_CLASS_ANY (1401)",
+    "class_boot agent_boot+class_guard one-shot",
+    "LISTCLASSES+HASLINE hard path (not REQUIRE CLASS)",
+    "FAIL LAST_ERR fixed to literal (W725)",
+    "FAIL no halt/exit_code (W726)",
+    "LISTCLASSES exact HASLINE (W727)"
   ],
   "issues_faced": [
-    "iter302: board 10/10; selftest CLI duals still red",
-    "iter303: ERRRUN+EACH TOPIC+TOPICHINT all green first pass",
     "iter303: EACH TOPIC without END is hard fail (W564); nested ERRRUN noisy (W565)",
     "iter303: selftest CLI duals still red",
     "iter304: RELATEDTOPIC mesh board 10/10; first hop fat via NTH+TOPICHINT",
@@ -6147,9 +6191,11 @@
     "iter328: selftest 584/807 require_lib+lib_guard+lib_boot PASS; CLI duals still set",
     "iter328: auto-seed plate via SYS RM+ENSUREPLATE seed; solo+seq 10/10 green",
     "iter329: fn_boot catalog board 10/10 solo+seq; FAIL LAST_ERR hard path broken (W719)",
-    "iter329: selftest 590/819 fn_guard+fn_boot PASS; CLI duals still set"
+    "iter329: selftest 590/819 fn_guard+fn_boot PASS; CLI duals still set",
+    "iter330: class_boot catalog board 10/10; fixed FAIL LAST_ERR in class/fn/method guards",
+    "iter330: FAIL still no halt/exit_code 0 (W726); selftest class_* PASS CLI duals red"
   ],
-  "commit": "6a148c48",
-  "ts": "2026-08-11T03:04:03Z",
-  "board_commit": "6a148c48"
+  "commit": "",
+  "ts": "2026-08-11T03:27:54Z",
+  "board_commit": ""
 }
