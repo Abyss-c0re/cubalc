@@ -1,0 +1,63 @@
+# TRYNEW / NEW SOFT — soft instance create without fatal on missing class
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD id
+  METHOD ping
+    LET LAST = "pong"
+  END
+END
+
+# hard NEW still works
+NEW Ticket t1
+HASOBJ t1
+ASSERT LAST_N == 1
+SEND t1 ping
+ASSERT LAST == "pong"
+
+# TRYNEW success
+TRYNEW Ticket t2
+ASSERT OK == 1
+ASSERT TRYNEW_N == 1
+ASSERT LAST == "t2"
+HASOBJ t2
+ASSERT LAST_N == 1
+
+# TRYNEW missing class — soft
+TRYNEW Ghost g1
+ASSERT OK == 0
+ASSERT TRYNEW_N == 0
+SYS HASI LAST_ERR "CLASS"
+ASSERT LAST_N == 1
+HASOBJ g1
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# NEW SOFT missing class
+NEW SOFT Nope x1
+ASSERT OK == 0
+HASOBJ x1
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# NEW SOFT redefine — soft
+NEW SOFT Ticket t1
+ASSERT OK == 0
+SYS HASI LAST_ERR "redefine"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# NEW TRY alias success
+NEW TRY Ticket t3
+ASSERT OK == 1
+HASOBJ t3
+ASSERT LAST_N == 1
+
+HASFORM "TRYNEW"
+ASSERT LAST_N == 1
+HASFORM "NEW"
+ASSERT LAST_N == 1
+
+PRINT "1410_trynew ok"
+PASS

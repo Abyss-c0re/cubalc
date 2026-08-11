@@ -452,22 +452,45 @@ static int oop_run_method(VM *vm, ObjInst *ob, MethodDef *md){
   return 0;
 }
 static int oop_new_instance(VM *vm, const char *cname, const char *oname,
-                            int cube_idx, Lex *L, int bind_ctor){
+                            int cube_idx, Lex *L, int bind_ctor, int soft){
   int ci = oop_find_class_idx(vm, cname);
   ClassDef *cd;
   ObjInst *ob;
   int fi, i, reuse = -1;
   MethodDef *initm;
+  /* soft=1 → sticky LAST_ERR/OK=0, return -2 (no fatal). Usability: TRYNEW. */
   if (ci < 0) {
     char sug[48], ebuf[160], base[96];
     oop_suggest_class(vm, cname, sug, sizeof sug);
     snprintf(base, sizeof base, "unknown CLASS %s", cname);
     oop_err_suggest(ebuf, sizeof ebuf, base, sug);
+    if (soft) {
+      var_set_str(vm, "ERR", ebuf);
+      var_set_str(vm, "LAST_ERR", ebuf);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "TRYNEW_N", 0);
+      return -2;
+    }
     fail(vm, ebuf);
     return -1;
   }
   if (oop_find_obj(vm, oname)) {
     snprintf(vm->err, sizeof vm->err, "object redefine %s", oname);
+    if (soft) {
+      var_set_str(vm, "ERR", vm->err);
+      var_set_str(vm, "LAST_ERR", vm->err);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "TRYNEW_N", 0);
+      return -2;
+    }
     fail(vm, vm->err);
     return -1;
   }
@@ -485,6 +508,17 @@ static int oop_new_instance(VM *vm, const char *cname, const char *oname,
     }
   }
   if (reuse < 0 && vm->n_objs >= CUBALC_MAX_OBJS) {
+    if (soft) {
+      var_set_str(vm, "ERR", "too many objects");
+      var_set_str(vm, "LAST_ERR", "too many objects");
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "TRYNEW_N", 0);
+      return -2;
+    }
     fail(vm, "too many objects");
     return -1;
   }
@@ -656,18 +690,107 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* TRYNEW|SOFTNEW|NEW SOFT Class instance [ctor]
+   * Soft miss: unknown CLASS / redefine / pool full → OK=0 LAST_ERR, no fatal.
+   * Usability: optional plugin classes without dual HASCLASS+IF+NEW glue. */
+  if (kw(&L->cur, "TRYNEW") || kw(&L->cur, "SOFTNEW") || kw(&L->cur, "NEWSOFT") ||
+      kw(&L->cur, "TRYMAKE") || kw(&L->cur, "TRYCREATE") || kw(&L->cur, "MAYBENEW") ||
+      kw(&L->cur, "OPTNEW") || kw(&L->cur, "NEWTRY")) {
+    char cname[48], oname[48];
+    int rc;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail_at(vm, L, "TRYNEW needs ClassName instance — TRYNEW Ticket t"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(cname, sizeof cname, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_class(vm, id))
+        snprintf(cname, sizeof cname, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(cname, sizeof cname, "%s", vv->sval);
+        else
+          snprintf(cname, sizeof cname, "%s", id);
+      }
+    }
+    if (oop_read_name(vm, L, oname, sizeof oname, "TRYNEW instance name") < 0)
+      return -1;
+    rc = oop_new_instance(vm, cname, oname, -1, L, 1, 1);
+    if (rc == -1) return -1;
+    if (rc == -2) {
+      if (vm->trace) fprintf(vm->trace, "# TRYNEW soft miss %s %s\n", cname, oname);
+      bump(vm);
+      return 1;
+    }
+    var_set_num(vm, "OK", 1);
+    var_set_num(vm, "TRYNEW_N", 1);
+    var_set_str(vm, "LAST", oname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    if (vm->trace) fprintf(vm->trace, "# TRYNEW %s %s\n", cname, oname);
+    bump(vm);
+    return 1;
+  }
+
   /* NEW ClassName instance [ctor args…]
+   * NEW SOFT|TRY … — soft dual of TRYNEW (same sticky miss).
    * instance may be bare token, "str", or string-var value (dynamic slot names). */
   if (kw(&L->cur, "NEW") || kw(&L->cur, "MAKE") || kw(&L->cur, "CREATE")) {
     char cname[48], oname[48];
+    int soft = 0, rc;
     lex_next(L);
-    if (L->cur.kind != TK_IDENT) { fail_at(vm, L, "NEW needs ClassName instance — NEW Ticket t"); return -1; }
-    snprintf(cname, sizeof cname, "%s", L->cur.text);
-    lex_next(L);
+    if (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") || kw(&L->cur, "OPTIONAL") ||
+        kw(&L->cur, "MAYBE") || kw(&L->cur, "OPT")) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail_at(vm, L, "NEW needs ClassName instance — NEW Ticket t"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(cname, sizeof cname, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_class(vm, id))
+        snprintf(cname, sizeof cname, "%s", id);
+      else if (!soft) {
+        /* hard NEW: keep bare class token (historical) */
+        snprintf(cname, sizeof cname, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(cname, sizeof cname, "%s", vv->sval);
+        else
+          snprintf(cname, sizeof cname, "%s", id);
+      }
+    }
     if (oop_read_name(vm, L, oname, sizeof oname, "NEW instance name") < 0)
       return -1;
-    if (oop_new_instance(vm, cname, oname, -1, L, 1) < 0) return -1;
+    rc = oop_new_instance(vm, cname, oname, -1, L, 1, soft);
+    if (rc == -1) return -1;
+    if (rc == -2) {
+      if (vm->trace) fprintf(vm->trace, "# NEW SOFT miss %s %s\n", cname, oname);
+      bump(vm);
+      return 1;
+    }
     var_set_num(vm, "OK", 1);
+    if (soft) {
+      var_set_num(vm, "TRYNEW_N", 1);
+      var_set_str(vm, "LAST", oname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+    }
     if (vm->trace) fprintf(vm->trace, "# NEW %s %s\n", cname, oname);
     bump(vm);
     return 1;
@@ -712,7 +835,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       } else break;
     }
     place_cube(vm, oname, role, proton);
-    if (oop_new_instance(vm, cname, oname, find_cube(vm, oname), L, 1) < 0)
+    if (oop_new_instance(vm, cname, oname, find_cube(vm, oname), L, 1, 0) < 0)
       return -1;
     var_set_num(vm, "OK", 1);
     var_set_str(vm, "ENTITY", oname);
@@ -769,7 +892,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (strcmp(role, id) == 0 && cd->role[0])
       snprintf(role, sizeof role, "%s", cd->role);
     place_cube(vm, id, role, proton);
-    if (oop_new_instance(vm, of_class, id, find_cube(vm, id), L, 1) < 0)
+    if (oop_new_instance(vm, of_class, id, find_cube(vm, id), L, 1, 0) < 0)
       return -1;
     var_set_str(vm, "ENTITY", id);
     var_set_num(vm, "OK", 1);
@@ -16817,7 +16940,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     cd = &vm->classes[src->class_idx];
     /* allocate dst without ctor (field defaults then overwrite from src) */
-    if (oop_new_instance(vm, cd->name, dname, -1, NULL, 0) < 0)
+    if (oop_new_instance(vm, cd->name, dname, -1, NULL, 0, 0) < 0)
       return -1;
     dst = oop_find_obj(vm, dname);
     if (!dst) {

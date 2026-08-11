@@ -899,6 +899,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 868. ~~**`HARDFAIL` + guard hard paths**~~ **done** (FAIL sticky + halt exit 1 · guards stop without run -s · proof 1407).
 869. ~~**`cubalc guards` / contracts catalog**~~ **done** (NEED_* + soft + HARDFAIL plane map · cubalc.guards.v1 · proof 1408).
 870. ~~**`service_session` / `service_boot` + `cubalc init --service`**~~ **done** (full_session+live_session · SERVICE_SESSION_OK · catalog n=34 · proof 1409).
+871. ~~**`TRYNEW` / `NEW SOFT`**~~ **done** (soft instance create · OK=0 LAST_ERR on miss class/redefine · proof 1410).
 
 
 ## Tick protocol
