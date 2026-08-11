@@ -6357,7 +6357,7 @@
     "iter334: TRYNEW/TRYCLONE fleet board 10/10; HASFORM lag W745; soft scores 8-9/10",
     "iter334: rebuilt binary via -O0 lang_ops_core after OOM; proofs near-pass"
   ],
-  "commit": "",
+  "commit": "596f0721",
   "ts": "2026-08-11T05:09:28Z",
-  "board_commit": ""
+  "board_commit": "596f0721"
 }
