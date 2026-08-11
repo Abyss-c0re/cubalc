@@ -3268,7 +3268,11 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|…|JSONEQ|EQP|JSONNEQ|NEQP|JSONSUBSET|PLATEFILE — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|OK|ARG|… — fail-fast gates · REQUIRE OK soft-status floor"},
+      {"REQUIRE OK", "REQUIRE OK|SUCCESS [\"why\"] — fail if OK==0 or sticky LAST_ERR · after TRYCALL/EXPECT"},
+      {"NEEDOK", "NEEDOK|MUSTOK|ASSERTOK [\"why\"] — standalone REQUIRE OK"},
+      {"MUSTOK", "MUSTOK alias of NEEDOK"},
+      {"ASSERTOK", "ASSERTOK alias of NEEDOK"},
       {"REQUIRE JSONEQ", "REQUIRE JSONEQ|SAMEJSON a b — fail-fast plate equality · lists changed keys · soft SYS JSONEQ"},
       {"REQUIRE SAMEJSON", "REQUIRE SAMEJSON alias of REQUIRE JSONEQ"},
       {"REQUIRE EQP", "REQUIRE EQP|SAMEP a b — fail-fast multi-plate equality · soft twin EQP · lists DIFFP keys"},
@@ -61383,6 +61387,51 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace) fprintf(vm->trace, "# version %s\n", ver);
     bump(vm); return 1;
   }
+  /* NEEDOK|MUSTOK|ASSERTOK|CHECKOK ["why"] — standalone REQUIRE OK (no REQUIRE prefix).
+   * Usability: one-token soft-status floor after TRYCALL/EXPECT/FAIL chains. */
+  if (kw(&L->cur,"NEEDOK")||kw(&L->cur,"MUSTOK")||kw(&L->cur,"ASSERTOK")||
+      kw(&L->cur,"CHECKOK")||kw(&L->cur,"OKCHECK")||kw(&L->cur,"ENSUREOK")||
+      kw(&L->cur,"NEED_OK")||kw(&L->cur,"MUST_OK")||kw(&L->cur,"ASSERT_OK")){
+    int aln = L->cur.line;
+    char why[120];
+    Var *ov, *ev;
+    long okv = 1;
+    int bad = 0;
+    lex_next(L);
+    why[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(why, sizeof why, "%s", L->cur.text);
+      lex_next(L);
+    }
+    ov = var_get(vm, "OK", 0);
+    ev = var_get(vm, "LAST_ERR", 0);
+    if (ov) okv = ov->val;
+    if (okv == 0) bad = 1;
+    if (ev && ev->is_str && ev->sval[0]) bad = 1;
+    if (bad) {
+      char msg[220];
+      const char *err = (ev && ev->is_str && ev->sval[0]) ? ev->sval : "OK=0";
+      if (why[0])
+        snprintf(msg, sizeof msg,
+                 "NEEDOK failed line %d: %s — %s · CATCH/CLEAR_ERR · WHY",
+                 aln, why, err);
+      else
+        snprintf(msg, sizeof msg,
+                 "NEEDOK failed line %d: %s — CATCH/CLEAR_ERR · WHY",
+                 aln, err);
+      if (vm->res) vm->res->asserts_fail++;
+      fail(vm, msg);
+      return -1;
+    }
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "REQUIRE_OK", 1);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", "ok");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", "ok");
+    if (vm->res) vm->res->asserts_ok++;
+    bump(vm); return 1;
+  }
   /* REQUIRE VERSION "x.y[.z]" — fail-fast if runtime older than need.
    * REQUIRE LIB|MODULE name — fail-fast if INCLUDE-style path not found.
    * REQUIRE ENV|VAR name — fail-fast if host env missing or empty.
@@ -61391,10 +61440,58 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * REQUIRE PATH|DIR|REG path — fail-fast if host path missing / wrong kind.
    * REQUIRE BIN|CMD|EXE name — fail-fast if host executable not on PATH.
    * REQUIRE FN|CLASS|METHOD — fail-fast language-plane after INCLUDE (HASFN soft twin).
+   * REQUIRE OK ["why"] — fail-fast if soft OK==0 or sticky LAST_ERR (after TRYCALL/EXPECT).
    * Usability: agents refuse missing stdlib / old runtime / host config / tools / symbols. */
   if (kw(&L->cur,"REQUIRE")||kw(&L->cur,"NEED")||kw(&L->cur,"REQUIRES")){
     int aln = L->cur.line;
     lex_next(L);
+    /* REQUIRE OK|SUCCESS|PASS ["why"] — soft-status gate (no IF OK glue after soft ops).
+     * Fails if OK==0 or sticky LAST_ERR non-empty. Success: LAST_N=1, REQUIRE_OK=1. */
+    if (kw(&L->cur,"OK")||kw(&L->cur,"SUCCESS")||kw(&L->cur,"GOOD")||
+        kw(&L->cur,"SOFTOK")||kw(&L->cur,"STATUSOK")||
+        (kw(&L->cur,"PASS") && 1)){
+      /* PASS as REQUIRE PASS only — REQUIRE PASS ["why"] */
+      char why[120];
+      Var *ov, *ev;
+      long okv = 1;
+      int bad = 0;
+      lex_next(L);
+      why[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        snprintf(why, sizeof why, "%s", L->cur.text);
+        lex_next(L);
+      }
+      ov = var_get(vm, "OK", 0);
+      ev = var_get(vm, "LAST_ERR", 0);
+      if (ov) okv = ov->val;
+      else okv = 1;
+      if (okv == 0) bad = 1;
+      if (ev && ev->is_str && ev->sval[0]) bad = 1;
+      if (bad) {
+        char msg[220];
+        const char *err = (ev && ev->is_str && ev->sval[0]) ? ev->sval : "OK=0";
+        if (why[0])
+          snprintf(msg, sizeof msg,
+                   "REQUIRE OK failed line %d: %s — %s · CATCH/CLEAR_ERR · WHY",
+                   aln, why, err);
+        else
+          snprintf(msg, sizeof msg,
+                   "REQUIRE OK failed line %d: %s — CATCH/CLEAR_ERR · WHY · EXPECT/TRYCALL",
+                   aln, err);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_num(vm, "REQUIRE_OK", 1);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "LAST", "ok");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "ok");
+      if (vm->trace) fprintf(vm->trace, "# require ok\n");
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     /* REQUIRE FN|FUNC|FUNCTION name — defined FN must exist (after INCLUDE).
      * On success: LAST = name, REQUIRE_FN = name, LAST_N=1, OK=1.
      * Usability: fail-fast optional-lib surface without HASFN + IF + FAIL glue. */

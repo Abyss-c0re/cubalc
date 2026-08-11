@@ -1,0 +1,47 @@
+# REQUIRE OK / NEEDOK — fail-fast soft-status floor after soft ops
+
+HOLD_FLASH 1
+
+# success after PASS
+PASS
+REQUIRE OK
+ASSERT LAST_N == 1
+ASSERT REQUIRE_OK == 1
+ASSERT OK == 1
+
+# REQUIRE SUCCESS alias
+REQUIRE SUCCESS
+ASSERT REQUIRE_OK == 1
+
+# NEEDOK after clean PASS
+NEEDOK
+ASSERT LAST_N == 1
+
+# soft fail then CLEAR_ERR then NEEDOK
+FAIL "soft"
+CLEAR_ERR
+PASS
+NEEDOK "recovered"
+ASSERT OK == 1
+
+# soft fail then CATCH recovery then REQUIRE OK
+TRY
+  FAIL "x"
+CATCH
+  CLEAR_ERR
+  PASS
+END
+REQUIRE OK
+ASSERT OK == 1
+
+# MUSTOK / ASSERTOK aliases
+MUSTOK
+ASSERTOK
+
+HASFORM "NEEDOK"
+ASSERT LAST_N == 1
+HASFORM "REQUIRE"
+ASSERT LAST_N == 1
+
+PRINT "1450_require_ok ok"
+PASS
