@@ -6881,7 +6881,7 @@
       "resolution": "FN helpers only; score RETRY_OK not OK (W822); form expects TRY present in 1.15.903"
     }
   ],
-  "commit": "3900afac",
+  "commit": "4fd1580b",
   "ts": 1786450519,
   "board_commit": "767d4822"
 }
