@@ -6646,7 +6646,7 @@
     "iter339: NEW auto-init arity when METHOD init present (W777)",
     "iter339: board all green; full selftest OOM killed"
   ],
-  "commit": "pending",
+  "commit": "0120e90e",
   "ts": "2026-08-11T07:18:27Z",
-  "board_commit": "pending"
+  "board_commit": "0120e90e"
 }
