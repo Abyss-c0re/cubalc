@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 898,
-  "version": "1.15.891-usability",
-  "item": "method_guard multi HASMETHODS/HASMETHODANY + Class.method bags",
-  "item_id": 898,
-  "title": "method_guard \u00b7 HASMETHODS \u00b7 NEEDMETHODS \u00b7 HASMETHODANY \u00b7 Class.method bag",
-  "commit": "88ee2636",
-  "summary": "HASMETHODS/HASMETHODANY accept multi-class Class.method bags; method_guard uses native multi forms instead of N\u00d7 HASMETHOD soup; proofs 1436 PASS.",
+  "iter": 899,
+  "version": "1.15.892-usability",
+  "item": "field_guard multi HASFIELDS/HASFIELDANY + Class.field bags",
+  "item_id": 899,
+  "title": "field_guard \u00b7 HASFIELDS \u00b7 NEEDFIELDS \u00b7 HASFIELDANY \u00b7 Class.field bag",
+  "commit": "e5c85df3",
+  "summary": "HASFIELDS/HASFIELDANY accept multi-class Class.field bags; field_guard uses native multi forms instead of N\u00d7 HASFIELD soup; proofs 1437 PASS.",
   "proofs": [
-    "1436_method_guard_multi_native PASS",
-    "1436_cli_method_guard_multi_native PASS",
-    "1402/1422/1423/1428 regression PASS"
+    "1437_field_guard_multi_native PASS",
+    "1437_cli_field_guard_multi_native PASS",
+    "1403/1424/1425/1430 regression PASS"
   ],
-  "when": "2026-08-11T09:39:48Z",
+  "when": "2026-08-11T09:47:47Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "88ee263694b2457ab9de22b7b8e64e44c3f54178",
-  "note": "agent Class.method catalog without EACH+HASMETHOD glue; twin of class/obj/fn_guard multi"
+  "sha": "e5c85df37135db5397910878d70bbc7b3b8fc6c5",
+  "note": "agent Class.field catalog without EACH+HASFIELD glue; twin of method_guard multi"
 }
