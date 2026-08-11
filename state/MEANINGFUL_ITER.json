@@ -1,18 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 954,
-  "version": "1.15.948-usability",
-  "item": "IFLEN / IFLONG / IFSHORT",
-  "item_id": 954,
-  "title": "IFLEN \u00b7 IFLONG \u00b7 IFSHORT \u00b7 string length branches",
-  "commit": "ffd1ed98",
-  "summary": "String length ==/>=/<= branches; no LENOF+IF glue; proof 1493 PASS.",
+  "iter": 955,
+  "version": "1.15.949-usability",
+  "item": "IFLINES / IFMANY / IFFEW",
+  "item_id": 955,
+  "title": "IFLINES · IFMANY · IFFEW · bag field-count branches",
+  "commit": "2636b6b7",
+  "summary": "Bag field count ==/>=/<= branches; no LINESIN+IF glue; proof 1494 PASS.",
   "proofs": [
-    "1493_iflen_iflong_ifshort PASS",
+    "1494_iflines_ifmany_iffew PASS",
+    "1493_iflen regression PASS",
     "1492_ifblank regression PASS"
   ],
-  "when": "2026-08-11T21:58:40Z",
+  "when": "2026-08-11T22:29:29Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "ffd1ed98c767bce7f4fc9c51710d07bf39e9f0f9",
-  "note": "password/field length gates without LENOF probe glue"
+  "sha": "2636b6b72c984ed628de0f9fe5865c360b2537a6",
+  "note": "LIST/GREP work-queue gates without LINESIN probe glue"
 }
