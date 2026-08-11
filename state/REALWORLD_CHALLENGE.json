@@ -6195,7 +6195,7 @@
     "iter330: class_boot catalog board 10/10; fixed FAIL LAST_ERR in class/fn/method guards",
     "iter330: FAIL still no halt/exit_code 0 (W726); selftest class_* PASS CLI duals red"
   ],
-  "commit": "",
+  "commit": "6da461bf",
   "ts": "2026-08-11T03:27:54Z",
-  "board_commit": ""
+  "board_commit": "6da461bf"
 }
