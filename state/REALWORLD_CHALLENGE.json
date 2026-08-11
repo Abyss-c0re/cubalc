@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 357,
-  "program": "programs/realworld/svc_numto_strto_budget_board.cubalc",
-  "theme": "NUMTO/STRTO retry+budget coerce after field peels",
-  "version": "1.15.920-usability",
+  "iter": 358,
+  "program": "programs/realworld/svc_findlinein_runbook_board.cubalc",
+  "theme": "FINDLINEIN/SETLINEIN/INSERTLINEIN runbook step bag ops",
+  "version": "1.15.924-usability",
   "pass": true,
-  "prior_note": "iter 356 LENOF/BEFOREIN; this iter first realworld of 1465 NUMTO/STRTO",
+  "prior_note": "iter 357 NUMTO/STRTO; this iter first realworld of 1468 FINDLINEIN/SETLINEIN + 1469 INSERTLINEIN",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed peel retries=3 + NUMTO",
+      "cmd": "seed queue + promote deploy",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "NUMTO/STRTO/INTTO/TOSTR/APPENDTO 10/10",
+      "cmd": "FINDLINEIN/SETLINEIN/DROP/INSERT 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "empty/non-num/partial/float/ghost/junk 10/10",
+      "cmd": "miss/exact/OOR/pad/empty 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "budget_ms/retries/count/BETWEENIN 10/10",
+      "cmd": "ENSUREIN promote insert blocker ack 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "MUL/DEC/STRTO digest + clamp 10/10",
+      "cmd": "priority insert DROPATIN shift 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM NUMTO/STRTO/INTTO/TOSTR",
+      "cmd": "HASFORM FINDLINEIN/SETLINEIN/INSERT",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "budget band + retries admit 9/9",
+      "cmd": "doing present + no blocker admit 9/9",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT capture WRITE NL VAL shuttle",
+      "cmd": "PRINT capture SETLINEIN -1 WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest 628/902; 1465 PASS; CLI duals still red set\to SETF",
+      "cmd": "selftest 628/902; 1468/1469 PASS; CLI duals red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -6842,6 +6842,30 @@
       "title": "NUMTO/STRTO/INTTO/TOSTR + peel chain work (positive)",
       "detail": "In-place coerce after AFTERIN/BETWEENIN: peel retries=N/budget_ms=N, NUMTO, INC/MUL/DEC, STRTO+APPENDTO digests. Empty/non-num \u2192 0 NUMTO_OK=0 soft. INTTO/TOSTR aliases. Ghost NUMTO creates 0 OK=0. Good job budget/retry surface without SYS NUM glue.",
       "repro": "AFTERIN s \"=\"; NUMTO s; STRTO s; APPENDTO s \" left\""
+    },
+    {
+      "id": "W847",
+      "severity": "med",
+      "area": "lang|setlinein",
+      "title": "SETLINEIN past end pads blank lines (sparse bag)",
+      "detail": "SETLINEIN bag 2 \"z\" on bag=\"x\" yields three lines with empty middle (x\\n\\nz). Useful for sparse index maps but surprise for agents who expect append-only. LINESIN becomes 3. Capture intent: prefer INSERTLINEIN/PUSHTO for dense queues.",
+      "repro": "LET bag=x; SETLINEIN bag 2 z \u2192 x\\n\\nz; LINESIN=3"
+    },
+    {
+      "id": "W848",
+      "severity": "med",
+      "area": "lang|setlinein",
+      "title": "SETLINEIN -1 hits index 0 (no hard reject)",
+      "detail": "SETLINEIN q -1 \"X\" on a\\nb replaces head with X and SETLINEIN_HIT=1. Negative indices are not rejected; agents must clamp idx>=0 after FINDLINEIN miss (-1) before SETLINEIN or they clobber line 0.",
+      "repro": "SETLINEIN q -1 X \u2192 head becomes X HIT=1"
+    },
+    {
+      "id": "W849",
+      "severity": "low",
+      "area": "lang|findlinein",
+      "title": "FINDLINEIN/SETLINEIN/INSERTLINEIN/DROPNTHIN work (positive exact)",
+      "detail": "Exact line find (not substring): FINDLINEIN miss=-1; SETLINEIN_HIT; INSERTLINEIN past-end appends; DROPATIN head; DROPLINEIN exact ack keeps error:timeout when dropping error. Capture LET idx=LAST_N before PRINT/CLEAR_ERR. Good runbook promote surface.",
+      "repro": "FINDLINEIN work todo:deploy; SETLINEIN work idx doing:deploy; INSERTLINEIN work 0 blocker"
     }
   ],
   "workarounds": [
@@ -7040,7 +7064,8 @@
       "gap": "Named-var string probes+peels close SYS LEFT/BEFORE gaps for path admit; AFTER miss empty vs BEFORE keep is easy to misuse.",
       "want": "Docs for miss asymmetry; optional AFTER keep-on-miss flag"
     },
-    "NUMTO strtol partial/float trunc (W844); CLEAR_ERR vs LAST_N after NUMTO (W845)"
+    "NUMTO strtol partial/float trunc (W844); CLEAR_ERR vs LAST_N after NUMTO (W845)",
+    "SETLINEIN pad past-end + negative index\u21920 (W847/W848); FINDLINEIN exact bag ops positive (W849)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7127,9 +7152,14 @@
       "iter": 357,
       "issue": "pass scored 9/10: CLEAR_ERR after NUMTO ate LAST_N (W845). soft scored 9/10: false-friend needle \"try\" not in \"retries\" (no y). Fixed capture + CONTAINSIN trie.",
       "resolution": "first realworld 1465 NUMTO/STRTO; document W844\u2013W846"
+    },
+    {
+      "iter": 358,
+      "issue": "First-try green. Documented SETLINEIN pad (W847) and SETLINEIN -1\u21920 (W848) from probe edges; PRINT before SETLINEIN LAST_N must capture (W4 class).",
+      "resolution": "first realworld 1468+1469; document W847\u2013W849"
     }
   ],
-  "commit": "4049ff24",
-  "ts": 1786462239,
-  "board_commit": "4049ff24"
+  "commit": "8bfd10ca",
+  "ts": 1786465166,
+  "board_commit": "8bfd10ca"
 }
