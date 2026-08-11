@@ -16502,7 +16502,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
   }
 
   /* HASMETHOD obj|Class method — LAST_N 1|0 soft probe before SEND.
-   * First arg object (live) or ClassName. Usability: agent IF without fatal. */
+   * First arg object (live) or ClassName. String-vars expand (METHOD_ON / name bags).
+   * Usability: agent IF without fatal · twin of SEND method-name resolve. */
   if (kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETH") ||
       kw(&L->cur, "CANCALL") || kw(&L->cur, "RESPONDS") ||
       kw(&L->cur, "RESPONDSTO") || kw(&L->cur, "METHOD?")) {
@@ -16519,8 +16520,20 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(a, sizeof a, "%s", L->cur.text);
       lex_next(L);
     } else {
-      snprintf(a, sizeof a, "%s", L->cur.text);
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
       lex_next(L);
+      /* prefer live obj / class literal; else expand string-var (METHOD_ON) */
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
     }
     if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
       fail(vm, "HASMETHOD method"); return -1;
@@ -16529,8 +16542,15 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(mname, sizeof mname, "%s", L->cur.text);
       lex_next(L);
     } else {
-      snprintf(mname, sizeof mname, "%s", L->cur.text);
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
       lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mname, sizeof mname, "%s", vv->sval);
+      else
+        snprintf(mname, sizeof mname, "%s", id);
     }
     ob = oop_find_obj(vm, a);
     if (ob)
@@ -16556,7 +16576,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
   }
 
   /* LISTMETHODS Class|obj — newline bag of method names on class/object.
-   * LAST_N / NMETHODS = count. Soft empty if unknown. */
+   * LAST_N / NMETHODS = count. Soft empty if unknown. String-var expands (METHOD_ON). */
   if (kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "METHODS") ||
       kw(&L->cur, "METHODLIST") || kw(&L->cur, "LISTMETH")) {
     char a[48], bag[2048];
@@ -16572,8 +16592,19 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(a, sizeof a, "%s", L->cur.text);
       lex_next(L);
     } else {
-      snprintf(a, sizeof a, "%s", L->cur.text);
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
       lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
     }
     ob = oop_find_obj(vm, a);
     if (ob)
