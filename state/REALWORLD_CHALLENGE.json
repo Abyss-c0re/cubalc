@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 358,
-  "program": "programs/realworld/svc_findlinein_runbook_board.cubalc",
-  "theme": "FINDLINEIN/SETLINEIN/INSERTLINEIN runbook step bag ops",
-  "version": "1.15.924-usability",
+  "iter": 359,
+  "program": "programs/realworld/svc_movelinein_priority_board.cubalc",
+  "theme": "MOVELINEIN/COUNTLINEIN priority queue reorder + tally",
+  "version": "1.15.928-usability",
   "pass": true,
-  "prior_note": "iter 357 NUMTO/STRTO; this iter first realworld of 1468 FINDLINEIN/SETLINEIN + 1469 INSERTLINEIN",
+  "prior_note": "iter 358 FINDLINEIN runbook; this iter first realworld of 1470 MOVELINEIN + 1471 COUNTIN/COUNTLINEIN",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed queue + promote deploy",
+      "cmd": "seed + promote p0 to front",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "FINDLINEIN/SETLINEIN/DROP/INSERT 10/10",
+      "cmd": "MOVELINEIN/MOVEATIN/COUNTIN/COUNTLINEIN 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "miss/exact/OOR/pad/empty 10/10",
+      "cmd": "OOR/empty/non-overlap/exact 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "ENSUREIN promote insert blocker ack 10/10",
+      "cmd": "p0 promote demote + severity tally 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "priority insert DROPATIN shift 10/10",
+      "cmd": "multi promote path depth OCCURSIN 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM FINDLINEIN/SETLINEIN/INSERT",
+      "cmd": "HASFORM MOVELINEIN/COUNTIN",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "doing present + no blocker admit 9/9",
+      "cmd": "p0 front admit + false friends 9/9",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT capture SETLINEIN -1 WRITE NL",
+      "cmd": "PRINT capture WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest 628/902; 1468/1469 PASS; CLI duals red",
+      "cmd": "selftest; 1470/1471 PASS; CLI duals still red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -6866,6 +6866,30 @@
       "title": "FINDLINEIN/SETLINEIN/INSERTLINEIN/DROPNTHIN work (positive exact)",
       "detail": "Exact line find (not substring): FINDLINEIN miss=-1; SETLINEIN_HIT; INSERTLINEIN past-end appends; DROPATIN head; DROPLINEIN exact ack keeps error:timeout when dropping error. Capture LET idx=LAST_N before PRINT/CLEAR_ERR. Good runbook promote surface.",
       "repro": "FINDLINEIN work todo:deploy; SETLINEIN work idx doing:deploy; INSERTLINEIN work 0 blocker"
+    },
+    {
+      "id": "W850",
+      "severity": "med",
+      "area": "lang|countin",
+      "title": "COUNTIN is substring (non-overlapping); COUNTLINEIN is exact field",
+      "detail": "COUNTIN bag \"p0:\" tallies across whole bag string including mid-line; COUNTLINEIN work \"p0\" misses line \"p0:outage\". COUNTIN \"aa\" in \"aaa\" yields 1 (non-overlapping). Empty needle \u2192 0. Agents must pick exact vs substr for severity digests.",
+      "repro": "COUNTLINEIN work p0 \u2192 0 on p0:outage; COUNTIN work p0: \u2192 1; COUNTIN aaa aa \u2192 1"
+    },
+    {
+      "id": "W851",
+      "severity": "low",
+      "area": "lang|movelinein",
+      "title": "MOVELINEIN same-index is HIT=1 no-op; OOR HIT=0 leaves bag",
+      "detail": "MOVELINEIN work 1 1 \u2192 HIT=1 unchanged; MOVELINEIN work 9 0 \u2192 HIT=0 unchanged; empty bag soft HIT=0. MOVEATIN dest past end demotes to tail. Good promote/demote surface with soft miss.",
+      "repro": "MOVELINEIN work 1 1 HIT=1; MOVELINEIN work 9 0 HIT=0"
+    },
+    {
+      "id": "W852",
+      "severity": "low",
+      "area": "lang|movelinein",
+      "title": "MOVELINEIN/COUNTIN/COUNTLINEIN/OCCURSIN work (positive)",
+      "detail": "FINDLINEIN then MOVELINEIN idx 0 promotes P0; COUNTIN path \"/\" depth; OCCURSIN log \"err:\"; COUNTLINEIN exact a-count. Solid incident priority queue + path/log tally without rebuild.",
+      "repro": "FINDLINEIN q p0:outage; MOVELINEIN q idx 0; COUNTIN q p2:"
     }
   ],
   "workarounds": [
@@ -7065,7 +7089,8 @@
       "want": "Docs for miss asymmetry; optional AFTER keep-on-miss flag"
     },
     "NUMTO strtol partial/float trunc (W844); CLEAR_ERR vs LAST_N after NUMTO (W845)",
-    "SETLINEIN pad past-end + negative index\u21920 (W847/W848); FINDLINEIN exact bag ops positive (W849)"
+    "SETLINEIN pad past-end + negative index\u21920 (W847/W848); FINDLINEIN exact bag ops positive (W849)",
+    "COUNTIN substr vs COUNTLINEIN exact (W850); MOVELINEIN HIT soft/no-op (W851)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7157,9 +7182,14 @@
       "iter": 358,
       "issue": "First-try green. Documented SETLINEIN pad (W847) and SETLINEIN -1\u21920 (W848) from probe edges; PRINT before SETLINEIN LAST_N must capture (W4 class).",
       "resolution": "first realworld 1468+1469; document W847\u2013W849"
+    },
+    {
+      "iter": 359,
+      "issue": "First-try green. Documented COUNTIN substr vs COUNTLINEIN exact (W850) and MOVELINEIN soft HIT semantics (W851).",
+      "resolution": "first realworld 1470+1471; document W850\u2013W852"
     }
   ],
-  "commit": "8bfd10ca",
-  "ts": 1786465166,
-  "board_commit": "8bfd10ca"
+  "commit": "5b76a740",
+  "ts": 1786468136,
+  "board_commit": "5b76a740"
 }
