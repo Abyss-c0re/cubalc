@@ -6241,7 +6241,7 @@
     "iter331: oop_boot catalog board 11/11 green; triple plane soft miss paths",
     "iter331: selftest oop_session/oop_boot PASS; CLI duals still set"
   ],
-  "commit": "",
+  "commit": "dfe8ddd2",
   "ts": "2026-08-11T03:49:36Z",
-  "board_commit": ""
+  "board_commit": "dfe8ddd2"
 }
