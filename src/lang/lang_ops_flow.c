@@ -291,6 +291,25 @@ static int oop_stmt_kw(Lex *L){
 }
 /* Parse optional OR|DEFAULT|ELSE|FALLBACK value after CALL/TRYCALL args.
  * Returns 1 if present (fb filled), 0 if none. Leaves cursor after fallback. */
+static void call_apply_or_last(VM *vm, const char *fb){
+  if (!fb) fb = "";
+  if (fb[0] && (fb[0] == '-' || (fb[0] >= '0' && fb[0] <= '9'))) {
+    char *end = NULL;
+    long v = strtol(fb, &end, 10);
+    if (end && end != fb && !*end) {
+      var_set_num(vm, "LAST_N", v);
+      vm->last_n = v;
+      var_set_str(vm, "LAST", fb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+      return;
+    }
+  }
+  var_set_str(vm, "LAST", fb);
+  snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+  var_set_num(vm, "LAST_N", 0);
+  vm->last_n = 0;
+}
+
 static int call_parse_or_fallback(VM *vm, Lex *L, char *fb, size_t fbn){
   fb[0] = 0;
   if (!(kw(&L->cur, "OR") || kw(&L->cur, "DEFAULT") || kw(&L->cur, "ELSE") ||
@@ -1185,20 +1204,21 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* SEND obj method [args]
-   * TRYSEND|SENDSOFT|SEND SOFT — soft miss OK=0 for unknown obj/method.
-   * Method may be IDENT, "string", or string-var (LISTMETHODS walk).
-   * Bare SEND still fatal. Usability: agent dispatch after HASMETHOD. */
+  /* SEND obj method [args] [OR|DEFAULT fallback]
+   * TRYSEND|SEND SOFT — soft miss OK=0; … OR fb → LAST=fb OK=1 SEND_OR=1 (CALL OR twin).
+   * Method may be IDENT, "string", or string-var. Bare SEND still fatal without OR.
+   * Usability: optional method hooks with default without HASMETHOD+IF glue. */
   if (kw(&L->cur, "SEND") || kw(&L->cur, "CALLMETHOD") || kw(&L->cur, "INVOKE") ||
       kw(&L->cur, "DOMETHOD") || kw(&L->cur, "MSG") || kw(&L->cur, "EMIT") ||
       kw(&L->cur, "TRYSEND") || kw(&L->cur, "SENDSOFT") ||
       kw(&L->cur, "SOFTSEND") || kw(&L->cur, "TRYCALLMETHOD") ||
       kw(&L->cur, "TRYINVOKE")) {
-    char oname[48], mname[48], op[24];
+    char oname[48], mname[48], op[24], fb[256];
     ObjInst *ob;
     ClassDef *cd;
     MethodDef *md;
     int soft = 0;
+    int or_rc;
     snprintf(op, sizeof op, "%s", L->cur.text);
     {
       char *q;
@@ -1240,25 +1260,38 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       oop_suggest_obj(vm, oname, sug, sizeof sug);
       snprintf(base, sizeof base, "SEND unknown object %s", oname);
       oop_err_suggest(ebuf, sizeof ebuf, base, sug);
-      if (!soft) {
-        fail(vm, ebuf); return -1;
-      }
-      /* drain optional args so next form stays aligned */
       while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
              L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
              (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
         if (L->cur.kind == TK_STR) lex_next(L);
         else (void)parse_expr(vm, L);
       }
-      var_set_num(vm, "LAST_N", 0);
-      vm->last_n = 0;
-      var_set_num(vm, "SEND_N", 0);
-      var_set_num(vm, "TRYSEND_N", 0);
-      var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", ebuf);
-      var_set_str(vm, "ERR", ebuf);
-      bump(vm);
-      return 1;
+      or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+      if (or_rc < 0) return -1;
+      if (or_rc > 0) {
+        call_apply_or_last(vm, fb);
+        var_set_num(vm, "SEND_N", 0);
+        var_set_num(vm, "TRYSEND_N", 0);
+        var_set_num(vm, "SEND_OR", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST_ERR", "");
+        var_set_str(vm, "ERR", "");
+        bump(vm);
+        return 1;
+      }
+      if (soft) {
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "SEND_N", 0);
+        var_set_num(vm, "TRYSEND_N", 0);
+        var_set_num(vm, "SEND_OR", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+        bump(vm);
+        return 1;
+      }
+      fail(vm, ebuf); return -1;
     }
     cd = &vm->classes[ob->class_idx];
     md = oop_find_method(cd, mname);
@@ -1267,24 +1300,39 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       oop_suggest_method(cd, mname, sug, sizeof sug);
       snprintf(base, sizeof base, "SEND unknown METHOD %s.%s", cd->name, mname);
       oop_err_suggest(ebuf, sizeof ebuf, base, sug);
-      if (!soft) {
-        fail(vm, ebuf); return -1;
-      }
       while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
              L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
              (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
         if (L->cur.kind == TK_STR) lex_next(L);
         else (void)parse_expr(vm, L);
       }
-      var_set_num(vm, "LAST_N", 0);
-      vm->last_n = 0;
-      var_set_num(vm, "SEND_N", 0);
-      var_set_num(vm, "TRYSEND_N", 0);
-      var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", ebuf);
-      var_set_str(vm, "ERR", ebuf);
-      bump(vm);
-      return 1;
+      or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+      if (or_rc < 0) return -1;
+      if (or_rc > 0) {
+        call_apply_or_last(vm, fb);
+        var_set_num(vm, "SEND_N", 0);
+        var_set_num(vm, "TRYSEND_N", 0);
+        var_set_num(vm, "SEND_OR", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "METHOD", mname);
+        var_set_str(vm, "LAST_ERR", "");
+        var_set_str(vm, "ERR", "");
+        bump(vm);
+        return 1;
+      }
+      if (soft) {
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "SEND_N", 0);
+        var_set_num(vm, "TRYSEND_N", 0);
+        var_set_num(vm, "SEND_OR", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+        bump(vm);
+        return 1;
+      }
+      fail(vm, ebuf); return -1;
     }
     {
       int got = oop_bind_args(vm, L, md->params, md->n_params);
@@ -1294,15 +1342,34 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       ag = oop_arity_gate(vm, "SEND", qname, md->params, md->n_params, got, soft);
       if (ag < 0) return -1;
       if (ag > 0) {
+        or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+        if (or_rc < 0) return -1;
+        if (or_rc > 0) {
+          call_apply_or_last(vm, fb);
+          var_set_num(vm, "SEND_N", 0);
+          var_set_num(vm, "TRYSEND_N", 0);
+          var_set_num(vm, "SEND_OR", 1);
+          var_set_num(vm, "OK", 1);
+          var_set_str(vm, "LAST_ERR", "");
+          var_set_str(vm, "ERR", "");
+          bump(vm);
+          return 1;
+        }
         var_set_num(vm, "SEND_N", 0);
         var_set_num(vm, "TRYSEND_N", 0);
+        var_set_num(vm, "SEND_OR", 0);
         bump(vm);
         return 1;
       }
     }
     if (oop_run_method(vm, ob, md) < 0) return -1;
+    /* discard unused OR after successful SEND */
+    or_rc = call_parse_or_fallback(vm, L, fb, sizeof fb);
+    if (or_rc < 0) return -1;
+    var_set_num(vm, "SEND_OR", 0);
     var_set_num(vm, "SEND_N", 1);
     var_set_num(vm, "TRYSEND_N", 1);
+    var_set_str(vm, "METHOD", md->name);
     var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;

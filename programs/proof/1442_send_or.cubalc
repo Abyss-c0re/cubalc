@@ -1,0 +1,71 @@
+# TRYSEND / SEND … OR fallback — soft method default (CALL OR twin)
+
+HOLD_FLASH 1
+
+CLASS Cell
+  FIELD n 0
+  METHOD tick
+    GETF THIS n
+    LET v = LAST_N + 1
+    SETF THIS n v
+    RET v
+  END
+  METHOD bump d
+    GETF THIS n
+    LET v = LAST_N + d
+    SETF THIS n v
+    RET v
+  END
+END
+
+NEW Cell c
+SETF c n 0
+
+# hit — OR unused
+TRYSEND c tick OR 99
+ASSERT OK == 1
+ASSERT SEND_N == 1
+ASSERT SEND_OR == 0
+ASSERT LAST_N == 1
+
+# method miss with string fallback
+TRYSEND c ghost_meth OR "idle"
+ASSERT OK == 1
+ASSERT SEND_N == 0
+ASSERT SEND_OR == 1
+ASSERT LAST == "idle"
+
+# SEND … OR implies soft (object miss)
+SEND missing_obj tick OR 0
+ASSERT OK == 1
+ASSERT SEND_OR == 1
+ASSERT LAST_N == 0
+
+# DEFAULT keyword + numeric
+TRYSEND c no_such DEFAULT 42
+ASSERT SEND_OR == 1
+ASSERT LAST_N == 42
+
+# success with args; trailing OR discarded
+SETF c n 0
+SEND c bump 3 OR 99
+ASSERT SEND_N == 1
+ASSERT SEND_OR == 0
+ASSERT LAST_N == 3
+
+# bare TRYSEND miss still soft without OR
+TRYSEND c totally_missing
+ASSERT OK == 0
+ASSERT SEND_N == 0
+CLEAR_ERR
+
+# FALLBACK alias
+TRYSEND c ghost2 FALLBACK "z"
+ASSERT SEND_OR == 1
+ASSERT LAST == "z"
+
+HASFORM "TRYSEND"
+ASSERT LAST_N == 1
+
+PRINT "1442_send_or ok"
+PASS
