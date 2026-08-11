@@ -1,0 +1,91 @@
+# IFBETWEEN / IFINRANGE — inclusive numeric range branches
+
+HOLD_FLASH 1
+
+LET port = 8080
+IFBETWEEN port 1 65535
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+ASSERT IFBETWEEN_N == 1
+ASSERT IFBETWEEN_LO == 1
+ASSERT IFBETWEEN_HI == 65535
+ASSERT IFBETWEEN_X == 8080
+
+# out of range + ELSE
+IFBETWEEN port 1 1023
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 0
+ASSERT IFBETWEEN_N == 0
+
+# IFINRANGE alias + TO keyword
+LET retries = 3
+IFINRANGE retries 1 TO 5
+  LET r = 1
+ELSE
+  LET r = 0
+END
+ASSERT r == 1
+ASSERT IFINRANGE_N == 1
+
+# boundaries inclusive
+LET n = 5
+IFBETWEEN n 5 5
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 1
+
+LET n = 0
+IFBETWEEN n 1 10
+  LET b = 1
+ELSE
+  LET b = 0
+END
+ASSERT b == 0
+
+# reversed bounds auto-swap
+LET score = 50
+IFBETWEEN score 100 0
+  LET s = 1
+ELSE
+  LET s = 0
+END
+ASSERT s == 1
+
+# string promote
+LET s = "200"
+IFBETWEEN s 200 299
+  LET http = "ok"
+ELSE
+  LET http = "bad"
+END
+ASSERT http == "ok"
+
+# nest with IFHASLINE
+LET work = ""
+PUSHTO work "job"
+IFBETWEEN retries 1 5
+  IFHASLINE work "job"
+    LET state = "run"
+  ELSE
+    LET state = "idle"
+  END
+ELSE
+  LET state = "giveup"
+END
+ASSERT state == "run"
+
+HASFORM "IFBETWEEN"
+ASSERT LAST_N == 1
+HASFORM "IFINRANGE"
+ASSERT LAST_N == 1
+
+PRINT "1474_ifbetween_ifinrange ok"
+PASS

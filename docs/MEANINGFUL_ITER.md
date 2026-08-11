@@ -964,6 +964,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 933. ~~**`COUNTIN` / `COUNTLINEIN` vars**~~ **done** (needle / exact-bag tallies → LAST_N · no loop glue · dual COUNTINF/COUNTLINE · proof 1471).
 934. ~~**`IFGT` / `IFLT` / `IFGE` / `IFLE` / `IFEQN` / `IFNEQN`**~~ **done** (numeric var branches · no IF n > 0 glue · proof 1472).
 935. ~~**`IFHASLINE` / `IFINBAG`**~~ **done** (bag membership branches · no HASINBAG+IF LAST_N glue · proof 1473).
+936. ~~**`IFBETWEEN` / `IFINRANGE` / `IFWITHIN`**~~ **done** (inclusive numeric range branch · no INRANGE+IF glue · proof 1474).
 
 
 
