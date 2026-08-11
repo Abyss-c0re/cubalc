@@ -1,0 +1,68 @@
+# LENOF / STARTSIN / ENDSIN / CONTAINSIN / EQSIN / INDEXIN
+
+HOLD_FLASH 1
+
+LET msg = "hello/world.log"
+
+LENOF msg
+ASSERT LAST_N == 15
+ASSERT LENOF_N == 15
+
+STARTSIN msg "hello"
+ASSERT LAST_N == 1
+STARTSIN msg "nope"
+ASSERT LAST_N == 0
+
+ENDSIN msg ".log"
+ASSERT LAST_N == 1
+ENDSIN msg ".txt"
+ASSERT LAST_N == 0
+
+CONTAINSIN msg "world"
+ASSERT LAST_N == 1
+HASSTRIN msg "xyz"
+ASSERT LAST_N == 0
+
+LET a = "same"
+LET b = "same"
+EQSIN a b
+ASSERT LAST_N == 1
+EQSIN a "other"
+ASSERT LAST_N == 0
+
+INDEXIN msg "/"
+ASSERT LAST_N == 5
+INDEXIN msg ":"
+ASSERT LAST_N == -1
+
+# missing var
+LENOF ghost
+ASSERT LAST_N == 0
+
+# IF guard pattern
+STARTSIN msg "hello"
+IF LAST_N
+  LET ok_path = 1
+ELSE
+  LET ok_path = 0
+END
+ASSERT ok_path == 1
+
+# promote num
+LET n = 42
+LENOF n
+ASSERT LAST_N == 2
+EQSIN n "42"
+ASSERT LAST_N == 1
+
+HASFORM "LENOF"
+ASSERT LAST_N == 1
+HASFORM "STARTSIN"
+ASSERT LAST_N == 1
+HASFORM "CONTAINSIN"
+ASSERT LAST_N == 1
+HASFORM "INDEXIN"
+ASSERT LAST_N == 1
+
+PRINT "1461_lenof_startsin ok"
+PASS

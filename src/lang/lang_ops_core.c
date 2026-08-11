@@ -3855,6 +3855,12 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"NTHIN", "NTHIN name i [OR fallback] — 0-based bag field → LAST (var unchanged)"},
       {"HEADIN", "HEADIN name [OR fallback] — first bag field → LAST"},
       {"TAILIN", "TAILIN name [OR fallback] — last bag field → LAST"},
+      {"LENOF", "LENOF name — string length of var → LAST_N (missing→0)"},
+      {"STARTSIN", "STARTSIN name prefix — 0|1 prefix probe · IF LAST_N"},
+      {"ENDSIN", "ENDSIN name suffix — 0|1 suffix probe"},
+      {"CONTAINSIN", "CONTAINSIN|HASSTRIN name needle — 0|1 contains probe"},
+      {"EQSIN", "EQSIN name other — 0|1 exact string equality of vars/lits"},
+      {"INDEXIN", "INDEXIN|FINDAT name needle — 0-based index or −1"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -73199,6 +73205,135 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s found=%ld\n", op, name, found);
+    bump(vm);
+    return 1;
+  }
+  /* LENOF name — string length of var → LAST_N (missing→0).
+   * STARTSIN name prefix — 0|1 prefix probe.
+   * ENDSIN name suffix — 0|1 suffix probe.
+   * CONTAINSIN|HASSTRIN name needle — 0|1 contains probe.
+   * EQSIN name other — 0|1 exact string equality.
+   * INDEXIN name needle — 0-based index or −1 if missing.
+   * Usability: IF guards on named vars without SYS LEN/STARTS/HAS/EQS glue. */
+  if (kw(&L->cur,"LENOF")||kw(&L->cur,"STRLENOF")||kw(&L->cur,"LENV")||
+      kw(&L->cur,"LENGTHOF")||kw(&L->cur,"BYTELEN")||
+      kw(&L->cur,"STARTSIN")||kw(&L->cur,"PREFIXOF")||kw(&L->cur,"HASPREFIXIN")||
+      kw(&L->cur,"ENDSIN")||kw(&L->cur,"SUFFIXOF")||kw(&L->cur,"HASSUFFIXIN")||
+      kw(&L->cur,"CONTAINSIN")||kw(&L->cur,"HASSTRIN")||kw(&L->cur,"INCLUDESIN")||
+      kw(&L->cur,"STRHASIN")||
+      kw(&L->cur,"EQSIN")||kw(&L->cur,"STREQIN")||kw(&L->cur,"SAMESTRIN")||
+      kw(&L->cur,"INDEXIN")||kw(&L->cur,"FINDAT")||kw(&L->cur,"STRINDEXIN")||
+      kw(&L->cur,"POSIN")){
+    char op[24], name[48], cur[CUBALC_HOST_STR_MAX], arg[CUBALC_HOST_STR_MAX];
+    int mode = 0; /* 0 len, 1 starts, 2 ends, 3 contains, 4 eqs, 5 index */
+    long hit = 0;
+    Var *vv;
+    size_t cn, an;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "STARTSIN") == 0 || strcmp(op, "PREFIXOF") == 0 ||
+        strcmp(op, "HASPREFIXIN") == 0)
+      mode = 1;
+    else if (strcmp(op, "ENDSIN") == 0 || strcmp(op, "SUFFIXOF") == 0 ||
+             strcmp(op, "HASSUFFIXIN") == 0)
+      mode = 2;
+    else if (strcmp(op, "CONTAINSIN") == 0 || strcmp(op, "HASSTRIN") == 0 ||
+             strcmp(op, "INCLUDESIN") == 0 || strcmp(op, "STRHASIN") == 0)
+      mode = 3;
+    else if (strcmp(op, "EQSIN") == 0 || strcmp(op, "STREQIN") == 0 ||
+             strcmp(op, "SAMESTRIN") == 0)
+      mode = 4;
+    else if (strcmp(op, "INDEXIN") == 0 || strcmp(op, "FINDAT") == 0 ||
+             strcmp(op, "STRINDEXIN") == 0 || strcmp(op, "POSIN") == 0)
+      mode = 5;
+    else
+      mode = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, mode == 0 ? "LENOF needs name — LENOF msg"
+           : mode == 1 ? "STARTSIN needs name prefix — STARTSIN path \"/tmp\""
+           : mode == 2 ? "ENDSIN needs name suffix — ENDSIN file \".log\""
+           : mode == 3 ? "CONTAINSIN needs name needle — CONTAINSIN s \"err\""
+           : mode == 4 ? "EQSIN needs name other — EQSIN a b"
+                       : "INDEXIN needs name needle — INDEXIN s \":\"");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    cur[0] = 0;
+    vv = var_get(vm, name, 0);
+    if (vv && vv->is_str)
+      snprintf(cur, sizeof cur, "%s", vv->sval);
+    else if (vv && !vv->is_str)
+      snprintf(cur, sizeof cur, "%ld", vv->val);
+    cn = strlen(cur);
+
+    if (mode == 0) {
+      hit = (long)cn;
+      var_set_num(vm, "LENOF_N", hit);
+      var_set_num(vm, "LAST_N", hit);
+      vm->last_n = hit;
+      {
+        char nb[32];
+        snprintf(nb, sizeof nb, "%ld", hit);
+        var_set_str(vm, "LAST", nb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      }
+    } else {
+      if (kw(&L->cur, "WITH") || kw(&L->cur, "OF") || kw(&L->cur, "TO") ||
+          kw(&L->cur, "EQ") || kw(&L->cur, "=="))
+        lex_next(L);
+      arg[0] = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS) {
+        long n = 0;
+        if (cubalc_read_num_atom(vm, L, &n))
+          snprintf(arg, sizeof arg, "%ld", n);
+      } else if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+        fail(vm, mode == 1 ? "STARTSIN needs prefix"
+             : mode == 2 ? "ENDSIN needs suffix"
+             : mode == 3 ? "CONTAINSIN needs needle"
+             : mode == 4 ? "EQSIN needs other"
+                         : "INDEXIN needs needle");
+        return -1;
+      }
+      an = strlen(arg);
+      if (mode == 1) {
+        hit = (an == 0) ? 1 : ((cn >= an && memcmp(cur, arg, an) == 0) ? 1 : 0);
+        var_set_num(vm, "STARTSIN_N", hit);
+      } else if (mode == 2) {
+        hit = (an == 0) ? 1 : ((cn >= an && memcmp(cur + (cn - an), arg, an) == 0) ? 1 : 0);
+        var_set_num(vm, "ENDSIN_N", hit);
+      } else if (mode == 3) {
+        hit = (an == 0) ? 1 : (strstr(cur, arg) != NULL ? 1 : 0);
+        var_set_num(vm, "CONTAINSIN_N", hit);
+      } else if (mode == 4) {
+        hit = (strcmp(cur, arg) == 0) ? 1 : 0;
+        var_set_num(vm, "EQSIN_N", hit);
+      } else {
+        if (an == 0) {
+          hit = 0;
+        } else {
+          const char *p = strstr(cur, arg);
+          hit = p ? (long)(p - cur) : -1L;
+        }
+        var_set_num(vm, "INDEXIN_N", hit);
+      }
+      var_set_num(vm, "LAST_N", hit);
+      vm->last_n = hit;
+      {
+        char nb[32];
+        snprintf(nb, sizeof nb, "%ld", hit);
+        var_set_str(vm, "LAST", nb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      }
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> %ld\n", op, name, hit);
     bump(vm);
     return 1;
   }
