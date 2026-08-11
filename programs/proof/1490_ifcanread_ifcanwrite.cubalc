@@ -1,0 +1,85 @@
+# IFCANREAD / IFCANWRITE / IFCANEXEC — path access branches
+
+HOLD_FLASH 1
+
+SYS MKDIR "state/meaningful_iter/mi_ifcan"
+SYS WRITE "state/meaningful_iter/mi_ifcan/plate.json" "{\"ok\":1}"
+
+# readable file
+IFCANREAD "state/meaningful_iter/mi_ifcan/plate.json"
+  LET r = 1
+ELSE
+  LET r = 0
+END
+ASSERT r == 1
+ASSERT IFCANREAD_N == 1
+
+# writable file (we just wrote it)
+IFCANWRITE "state/meaningful_iter/mi_ifcan/plate.json"
+  LET w = 1
+ELSE
+  LET w = 0
+END
+ASSERT w == 1
+ASSERT IFCANWRITE_N == 1
+
+# missing path not readable
+IFCANREAD "state/meaningful_iter/mi_ifcan/nope.json"
+  LET r = 1
+ELSE
+  LET r = 0
+END
+ASSERT r == 0
+ASSERT IFCANREAD_N == 0
+
+# missing not writable
+IFCANWRITE "state/meaningful_iter/mi_ifcan/nope2.json"
+  LET w = 1
+ELSE
+  LET w = 0
+END
+ASSERT w == 0
+
+# dir is typically executable (search)
+IFCANEXEC "state/meaningful_iter/mi_ifcan"
+  LET x = 1
+ELSE
+  LET x = 0
+END
+ASSERT x == 1
+ASSERT IFCANEXEC_N == 1
+
+# nest: write only if can write
+LET p = "state/meaningful_iter/mi_ifcan/out.json"
+IFCANWRITE "state/meaningful_iter/mi_ifcan"
+  SYS WRITE p "{\"wrote\":1}"
+  LET did = 1
+ELSE
+  LET did = 0
+END
+ASSERT did == 1
+IFFILE p
+  LET ok = 1
+ELSE
+  LET ok = 0
+END
+ASSERT ok == 1
+
+# var path
+LET rp = "state/meaningful_iter/mi_ifcan/plate.json"
+IFCANREAD rp
+  LET v = 1
+ELSE
+  LET v = 0
+END
+ASSERT v == 1
+
+HASFORM "IFCANREAD"
+ASSERT LAST_N == 1
+HASFORM "IFCANWRITE"
+ASSERT LAST_N == 1
+HASFORM "IFCANEXEC"
+ASSERT LAST_N == 1
+
+PRINT "1490_ifcanread_ifcanwrite ok"
+PASS

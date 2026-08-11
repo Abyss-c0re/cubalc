@@ -986,6 +986,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 950. ~~**`IFZERO` / `IFNZ` / `IFPOS` / `IFNEG`**~~ **done** (numeric sign branches · no IFEQN/IFGT glue · proof 1489).
 
+951. ~~**`IFCANREAD` / `IFCANWRITE` / `IFCANEXEC`**~~ **done** (path access branches · no SYS CANREAD+IF glue · proof 1490).
+
 
 
 
