@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 363,
-  "program": "programs/realworld/svc_iffile_artifact_gate_board.cubalc",
-  "theme": "IFFILE/IFDIR/IFEXIST artifact path admit gates",
-  "version": "1.15.935-usability",
+  "iter": 364,
+  "program": "programs/realworld/svc_ifenv_feature_gate_board.cubalc",
+  "theme": "IFENV/IFHASENV feature flag + soft default gates",
+  "version": "1.15.936-usability",
   "pass": true,
-  "prior_note": "iter 362 SUMIN; this iter first realworld of 1479 IFFILE/IFDIR/IFEXIST",
+  "prior_note": "iter 363 IFFILE; this iter first realworld of 1480 IFENV (W863 resolved)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed artifact file + IFFILE",
+      "cmd": "IFENV PATH sticky",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFFILE/IFDIR/IFEXIST duals 10/10",
+      "cmd": "IFENV/IFHASENV quoted var-key SET/UNSET 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "miss/empty/load nest 10/10",
+      "cmd": "defaults nest IFEMPTY miss 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "release layout manifest admit 10/10",
+      "cmd": "flag ladder admit-full 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "batch multi-file admit 10/10",
+      "cmd": "multi-flag inventory 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFFILE/IFDIR/IFEXIST",
+      "cmd": "HASFORM IFENV/IFHASENV",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "manifest file required 9/9",
+      "cmd": "require flag+mode admit 9/9",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "sticky IFFILE_N WRITE NL",
+      "cmd": "sticky WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; 1479 PASS; 1480 IFENV flaky; CLI duals red",
+      "cmd": "selftest; 1480 PASS; CLI duals still red",
       "ok": false,
       "note": "proofs green; CLI duals still red"
     }
@@ -6986,6 +6986,30 @@
       "title": "IFFILE/IFDIR/IFEXIST work (positive; FN-wrap)",
       "detail": "First-try green artifact gate board. FN+CALL required inside action IF (W853). IFEXISTS alias accepts var path. Good deploy/intake surface for manifest admit.",
       "repro": "CALL check_file; CALL load_if_file; CALL admit_artifact"
+    },
+    {
+      "id": "W865",
+      "severity": "low",
+      "area": "lang|ifenv",
+      "title": "IFENV is presence-only (not value truth)",
+      "detail": "IFENV FLAG hits when set to any non-empty? Actually host env set branch \u2014 empty string may still count as set depending on SYS ENV SET. Board treats SET/UNSET as on/off. Agents must SYS ENV read value separately after presence. Quoted names and var keys work.",
+      "repro": "SYS ENV SET CUBALC_IFE_FLAG 1; IFENV CUBALC_IFE_FLAG \u2192 on; UNSET \u2192 off"
+    },
+    {
+      "id": "W866",
+      "severity": "low",
+      "area": "lang|ifenv",
+      "title": "IFENV/IFHASENV work (positive; W863 resolved)",
+      "detail": "1480 green in 1.15.936. FN-wrap required inside action IF. Soft defaults via ELSE; nest IFENV+IFEMPTY for cfg vs msg. Feature ladder admit-full/flag-only/deny solid for release gates.",
+      "repro": "CALL admit_features; CALL mode_from_ife; CALL env_var_key"
+    },
+    {
+      "id": "W867",
+      "severity": "med",
+      "area": "lang|ifenv",
+      "title": "IFENV still needs FN-wrap inside action IF (W853 class)",
+      "detail": "Same END framing as IFGT/IFFILE: bare IFENV inside SYS EQS IF steals outer END. Board uses CALL helpers exclusively. No regression vs nested IFENV+IFEMPTY inside FN.",
+      "repro": "IF LAST_N==1 THEN IFENV PATH \u2026 END leaks"
     }
   ],
   "workarounds": [
@@ -7190,7 +7214,8 @@
     "IFGT/IFHASLINE cannot nest in IF END framing (W853); IFGTE absent use IFGE (W854)",
     "LPADTO truncates when wider (W856); SUMIN proof not linked in 1.15.930 binary (W857)",
     "SUMIN LAST_N vs CLEAR_ERR (W859); non-num skip + int AVGIN (W860); SUMIN linked 1.15.933",
-    "IFFILE/IFDIR kind strict (W862); IFENV proof flaky needs name (W863)"
+    "IFFILE/IFDIR kind strict (W862); IFENV proof flaky needs name (W863)",
+    "IFENV presence-only + FN-wrap (W865/W867); 1480 green W863 closed"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7307,9 +7332,14 @@
       "iter": 363,
       "issue": "First-try green IFFILE board. 1480 IFENV still red (W863) so deferred. FN-wrap used throughout.",
       "resolution": "first realworld 1479; document W862\u2013W864"
+    },
+    {
+      "iter": 364,
+      "issue": "First-try green. W863 IFENV proof now PASS; FN-wrap used throughout for W853/W867.",
+      "resolution": "first realworld 1480; document W865\u2013W867"
     }
   ],
-  "commit": "a5d76167",
-  "ts": 1786474130,
-  "board_commit": "a5d76167"
+  "commit": "87eb1959",
+  "ts": 1786475633,
+  "board_commit": "87eb1959"
 }
