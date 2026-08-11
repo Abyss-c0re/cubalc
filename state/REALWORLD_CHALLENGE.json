@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 323,
-  "program": "programs/realworld/svc_hasenv_contract_board.cubalc",
-  "theme": "HASENVALL/HASENVANY fleet host-env multi-gate contract",
-  "version": "1.15.834-usability",
+  "iter": 324,
+  "program": "programs/realworld/svc_env_guard_contract_board.cubalc",
+  "theme": "env_guard NEED_ENVS+NEED_ENV_ANY fleet host-env contract",
+  "version": "1.15.836-usability",
   "pass": true,
-  "prior_note": "iter 322 HASARGANY; this iter first realworld 1381 HASENVALL + 1382 HASENVANY host env",
+  "prior_note": "iter 323 HASENVALL/ANY forms; this iter first realworld 1383 env_guard + 1384 env_boot lib",
   "tests": [
     {
       "name": "list",
@@ -15,55 +15,55 @@
     },
     {
       "name": "boot",
-      "cmd": "seed agent plate hen",
+      "cmd": "seed agent plate eg",
       "ok": true,
       "note": "boot"
     },
     {
-      "name": "all",
-      "cmd": "HASENVALL partial+full",
+      "name": "soft",
+      "cmd": "soft ALL+ANY hits CSV/bag",
       "ok": true,
-      "note": "all"
-    },
-    {
-      "name": "any",
-      "cmd": "HASENVANY location any-of",
-      "ok": true,
-      "note": "any"
+      "note": "soft"
     },
     {
       "name": "miss",
-      "cmd": "empty soft sticky ERR",
+      "cmd": "soft ALL/ANY miss ENVMISS",
       "ok": true,
       "note": "miss"
     },
     {
       "name": "hard",
-      "cmd": "NEEDENVS+NEEDENVANY pass",
+      "cmd": "hard NEEDENVS/ANY pass",
       "ok": true,
       "note": "hard"
     },
     {
-      "name": "bag",
-      "cmd": "CSV bag forms",
+      "name": "skip",
+      "cmd": "empty gates skip OK=1",
       "ok": true,
-      "note": "bag"
+      "note": "skip"
+    },
+    {
+      "name": "combo",
+      "cmd": "ALL+ANY dual site contract",
+      "ok": true,
+      "note": "combo"
     },
     {
       "name": "form",
-      "cmd": "HASFORM discovery",
+      "cmd": "HASLIB env_guard/env_boot",
       "ok": true,
       "note": "form"
     },
     {
       "name": "gate",
-      "cmd": "ALL secrets + ANY zone",
+      "cmd": "plate + live combo soft",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "PRINT clobber ENVHAVE",
+      "cmd": "PRINT clobber + re-INCLUDE",
       "ok": true,
       "note": "probe"
     },
@@ -77,7 +77,7 @@
       "name": "selftest",
       "cmd": "selftest",
       "ok": false,
-      "note": "hasenvall/any PASS; CLI duals still red"
+      "note": "env_guard/env_boot PASS; CLI duals still red"
     }
   ],
   "weaknesses": [
@@ -5576,6 +5576,54 @@
       "title": "WRITE STATUS omit trailing NL (reconfirmed hen)",
       "detail": "STATUS last line without $.",
       "repro": "cat -A HEN STATUS"
+    },
+    {
+      "id": "W688",
+      "severity": "high",
+      "area": "lang|env_guard|exit",
+      "title": "env_guard hard NEEDENVS/NEEDENVANY miss leaves exit_code 0",
+      "detail": "Hard path stops INCLUDE with sticky err + ok:false; exit_code often 0 (cli_guard W652 / NEEDENV W682 class). Soft ENV_GUARD_SOFT=1 + EXIT n for agents.",
+      "repro": "NEED_ENVS unset SOFT=0 INCLUDE env_guard \u2192 exit_code 0"
+    },
+    {
+      "id": "W689",
+      "severity": "med",
+      "area": "lang|env_guard|reinclude",
+      "title": "env_guard re-INCLUDE needs LET NEED_ENVS/ANY/SOFT before each call",
+      "detail": "DEFAULT is set-if-unset; agents must LET contract knobs every INCLUDE when changing mid-program (cli_guard W654 twin).",
+      "repro": "DEFAULT NEED_ENVS then LET override INCLUDE"
+    },
+    {
+      "id": "W690",
+      "severity": "low",
+      "area": "lang|env_guard|positive",
+      "title": "env_guard CSV+bag + empty skip + dual ALL+ANY work",
+      "detail": "Positive: empty NEED_* \u2192 ENV_GUARD_OK=1; soft ALL+ANY combo; HASLIB env_guard/env_boot; ENVHAVE on partial ANY.",
+      "repro": "empty INCLUDE \u2192 OK 1; combo secrets+location soft hit"
+    },
+    {
+      "id": "W691",
+      "severity": "low",
+      "area": "lang|plate|surface",
+      "title": "Agent plate surface strings must match exact knob names (NEED_ENVS not NEEDENVS)",
+      "detail": "Board first-fail hard path: SYS HAS surface NEEDENVS missed; plate listed NEED_ENVS. Underscore discipline between form names and DEFAULT knobs.",
+      "repro": "GETP cfg.surface HAS NEEDENVS \u2192 0; NEED_ENVS \u2192 1"
+    },
+    {
+      "id": "W692",
+      "severity": "low",
+      "area": "host|print",
+      "title": "PRINT clobbers ENVMISS after env_guard soft miss",
+      "detail": "Capture ENVMISS/ENV_GUARD_OK before PRINT.",
+      "repro": "INCLUDE env_guard miss; PRINT x; SYS HASLINE LAST KEY \u2192 0"
+    },
+    {
+      "id": "W693",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE STATUS omit trailing NL (reconfirmed eg)",
+      "detail": "STATUS last line without $.",
+      "repro": "cat -A EG STATUS"
     }
   ],
   "workarounds": [
@@ -5676,6 +5724,10 @@
     {
       "id": "WA-HEN",
       "note": "ALL for secrets ANY for location; capture LAST_N/OK before CLEAR_ERR; EXIT n after soft miss; capture ENVHAVE before PRINT"
+    },
+    {
+      "id": "WA-EG",
+      "note": "ENV_GUARD_SOFT=1 then EXIT n on ENV_GUARD_OK=0; LET NEED_* before every INCLUDE env_guard; capture ENVMISS before PRINT"
     }
   ],
   "language_gaps": [
@@ -5757,7 +5809,13 @@
     "HASENVANY/NEEDENVANY multi host-env any-of (1382)",
     "ENVHAVE/ENVMISS bags",
     "NEEDENV* miss exit_code 0 (W682)",
-    "CLEAR_ERR clobbers LAST_N after env gates (W683)"
+    "CLEAR_ERR clobbers LAST_N after env gates (W683)",
+    "env_guard NEED_ENVS+NEED_ENV_ANY (1383)",
+    "env_boot agent_boot+env_guard (1384)",
+    "ENV_GUARD_OK/ALL_OK/ANY_OK sticky knobs",
+    "hard NEEDENV* miss exit_code 0 (W688)",
+    "LET before each re-INCLUDE env_guard (W689)",
+    "plate surface NEED_ENVS underscore (W691)"
   ],
   "issues_faced": [
     "iter300: all board paths green; WRITE SNIP.txt multi-line works",
@@ -5803,9 +5861,11 @@
     "iter322: board 10/10 first pass; NEEDARGANY hard miss exit_code 0 documented only",
     "iter322: selftest 562/762 hasargany PASS; CLI duals still unknown form set",
     "iter323: miss/hard first failed CLEAR_ERR ate LAST_N; fixed capture; board 10/10",
-    "iter323: selftest 564/767 hasenvall+hasenvany PASS; CLI duals still set"
+    "iter323: selftest 564/767 hasenvall+hasenvany PASS; CLI duals still set",
+    "iter324: hard/skip first failed plate surface NEEDENVS vs NEED_ENVS; board 10/10 after fix",
+    "iter324: selftest 567/773 env_guard+env_boot PASS; CLI duals still set"
   ],
-  "commit": "e518bf55",
-  "ts": "2026-08-10T23:39:57Z",
-  "board_commit": "e518bf55"
+  "commit": "pending",
+  "ts": "2026-08-11T00:05:55Z",
+  "board_commit": "pending"
 }
