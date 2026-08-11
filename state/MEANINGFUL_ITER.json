@@ -1,18 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 890,
-  "version": "1.15.883-usability",
-  "item": "HASFNS/NEEDFNS multi FN capability gates",
-  "item_id": 890,
-  "title": "HASFNS · NEEDFNS · ALLFNS · HASFUNCS · FNMISS bag",
-  "commit": "c214cd0c8845b4ab25565dad020b621e8c563364",
-  "summary": "Soft all-present HASFNS + hard NEEDFNS for FN plane (HASOBJS dual). Bag/CSV/idents, FNMISS bag, ALLFNS/HASFUNCS aliases. Proof 1429 PASS.",
+  "iter": 891,
+  "version": "1.15.884-usability",
+  "item": "field_guard native HASCLASS/HASFIELD",
+  "item_id": 891,
+  "title": "field_guard · HASCLASS · HASFIELD · drop LISTFIELDS soup",
+  "commit": "f8ffd16e5df5f4a3f441b146ee4b15eb2e73d6d6",
+  "summary": "field_guard rewritten to HASCLASS+HASFIELD; FLDMISS surface kept; 1430+1403 PASS.",
   "proofs": [
-    "1429_hasfns PASS",
-    "1429_cli_hasfns PASS"
+    "1430_field_guard_native PASS",
+    "1430_cli_field_guard_native PASS",
+    "1403_field_guard PASS",
+    "1403_field_boot PASS"
   ],
-  "when": "2026-08-11T08:21:30Z",
+  "when": "2026-08-11T08:23:27Z",
   "agent": "thalamus_meaningful_iter",
-  "sha": "c214cd0c8845b4ab25565dad020b621e8c563364",
-  "note": "lib usability — multi FN soft/hard gates without N× HASFN glue"
+  "sha": "f8ffd16e5df5f4a3f441b146ee4b15eb2e73d6d6",
+  "note": "lib usability — INCLUDE field_boot without LISTFIELDS+HASLINE glue"
 }
