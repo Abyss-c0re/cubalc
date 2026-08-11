@@ -1,0 +1,83 @@
+# TOGGLE / CLAMP / SETMIN / SETMAX — var flags, bounds, running extremes
+
+HOLD_FLASH 1
+
+# TOGGLE missing → 1
+TOGGLE verbose
+ASSERT verbose == 1
+ASSERT LAST_N == 1
+ASSERT TOGGLE_N == 1
+
+# TOGGLE 1 → 0
+TOGGLE verbose
+ASSERT verbose == 0
+
+# FLIP alias
+FLIP verbose
+ASSERT verbose == 1
+
+# CLAMP high
+LET retries = 12
+CLAMP retries 0 5
+ASSERT retries == 5
+ASSERT LAST_N == 5
+ASSERT CLAMP_CHANGED == 1
+
+# CLAMP already in range
+CLAMP retries 0 5
+ASSERT retries == 5
+ASSERT CLAMP_CHANGED == 0
+
+# CLAMP low + TO keyword
+LET n = -3
+CLAMP n 0 TO 10
+ASSERT n == 0
+
+# BOUND alias
+LET w = 100
+BOUND w 1 8
+ASSERT w == 8
+
+# SETMAX running best
+SETMAX best 10
+ASSERT best == 10
+SETMAX best 7
+ASSERT best == 10
+SETMAX best 15
+ASSERT best == 15
+ASSERT LAST_N == 15
+
+# SETMIN running worst
+SETMIN worst 10
+ASSERT worst == 10
+SETMIN worst 3
+ASSERT worst == 3
+SETMIN worst 8
+ASSERT worst == 3
+
+# MAXTO / MINTO aliases
+MAXTO peak 42
+ASSERT peak == 42
+MINTO floor 9
+ASSERT floor == 9
+MINTO floor 20
+ASSERT floor == 9
+
+# CLAMP after INC without LET glue
+LET tries = 0
+INC tries
+INC tries BY 9
+CLAMP tries 0 5
+ASSERT tries == 5
+
+HASFORM "TOGGLE"
+ASSERT LAST_N == 1
+HASFORM "CLAMP"
+ASSERT LAST_N == 1
+HASFORM "SETMIN"
+ASSERT LAST_N == 1
+HASFORM "SETMAX"
+ASSERT LAST_N == 1
+
+PRINT "1453_toggle_clamp_setminmax ok"
+PASS

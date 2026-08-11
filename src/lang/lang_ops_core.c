@@ -3802,6 +3802,16 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"ADDTO", "ADDTO alias of INC"},
       {"SWAP", "SWAP|XCHG a b — exchange two vars · dual buffer without temp LET"},
       {"XCHG", "XCHG alias of SWAP"},
+      {"TOGGLE", "TOGGLE|FLIP name — 0↔1 flag (missing→1) · no IF+LET glue"},
+      {"FLIP", "FLIP alias of TOGGLE"},
+      {"CLAMP", "CLAMP|BOUND|CLIP name lo [TO] hi — clamp var in place · no LET+CLAMPN glue"},
+      {"BOUND", "BOUND alias of CLAMP (var)"},
+      {"CLIP", "CLIP alias of CLAMP (var)"},
+      {"CLAMPV", "CLAMPV alias of CLAMP (var)"},
+      {"SETMIN", "SETMIN|MINTO name val — running min into name · no IF+LET"},
+      {"MINTO", "MINTO alias of SETMIN"},
+      {"SETMAX", "SETMAX|MAXTO name val — running max into name · no IF+LET"},
+      {"MAXTO", "MAXTO alias of SETMAX"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
       {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
@@ -71681,6 +71691,196 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(vm->last_str, sizeof vm->last_str, "%s", "swapped");
     if (vm->trace)
       fprintf(vm->trace, "# SWAP %s <-> %s\n", a, b);
+    bump(vm);
+    return 1;
+  }
+  /* TOGGLE|FLIP name — 0↔1 flag (missing/non-num → 1).
+   * Usability: feature flags without IF name == 0 THEN LET name = 1 ELSE LET name = 0. */
+  if (kw(&L->cur,"TOGGLE")||kw(&L->cur,"FLIP")||kw(&L->cur,"TOGGLEV")||
+      kw(&L->cur,"FLIPVAR")||kw(&L->cur,"FLIPFLAGV")||kw(&L->cur,"NOTV")){
+    char name[48];
+    long cur = 0, nv;
+    Var *vv;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, "TOGGLE needs name — TOGGLE verbose");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    vv = var_get(vm, name, 0);
+    if (vv && !vv->is_str) {
+      cur = vv->val;
+    } else if (vv && vv->is_str) {
+      char *end = NULL;
+      cur = strtol(vv->sval, &end, 10);
+      if (!(end && end != vv->sval && *end == 0))
+        cur = 0; /* non-numeric str → treat as 0 → flip to 1 */
+    } else {
+      cur = 0; /* missing → 1 */
+    }
+    nv = (cur == 0) ? 1 : 0;
+    var_set_num(vm, name, nv);
+    var_set_num(vm, "LAST_N", nv);
+    vm->last_n = nv;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", nv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "TOGGLE_N", nv);
+    var_set_num(vm, "FLIP_N", nv);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# TOGGLE %s -> %ld\n", name, nv);
+    bump(vm);
+    return 1;
+  }
+  /* CLAMP|BOUND|CLIP name lo [TO] hi — clamp numeric var into [lo,hi] in place.
+   * Missing var treated as 0. LAST_N = result · CLAMP_CHANGED 0|1.
+   * Usability: INC retries then CLAMP retries 0 5 without LET retries = CLAMPN … glue. */
+  if (kw(&L->cur,"CLAMP")||kw(&L->cur,"BOUND")||kw(&L->cur,"CLIP")||
+      kw(&L->cur,"CLAMPV")||kw(&L->cur,"BOUNDV")||kw(&L->cur,"CLIPV")||
+      kw(&L->cur,"SATURATE")||kw(&L->cur,"SATV")){
+    char name[48];
+    long lo, hi, cur = 0, nv;
+    int changed;
+    Var *vv;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, "CLAMP needs name lo hi — CLAMP retries 0 5");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &lo)) {
+      fail(vm, "CLAMP needs name lo hi — CLAMP retries 0 5");
+      return -1;
+    }
+    if (kw(&L->cur, "TO") || kw(&L->cur, "AND") || kw(&L->cur, ",") ||
+        kw(&L->cur, "..") || kw(&L->cur, "THROUGH") || kw(&L->cur, "THRU") ||
+        kw(&L->cur, "DOTDOT"))
+      lex_next(L);
+    if (!cubalc_read_num_atom(vm, L, &hi)) {
+      fail(vm, "CLAMP needs hi — CLAMP retries 0 5");
+      return -1;
+    }
+    if (lo > hi) { long t = lo; lo = hi; hi = t; }
+    vv = var_get(vm, name, 0);
+    if (vv && !vv->is_str) {
+      cur = vv->val;
+    } else if (vv && vv->is_str) {
+      char *end = NULL;
+      cur = strtol(vv->sval, &end, 10);
+      if (!(end && end != vv->sval && *end == 0))
+        cur = 0;
+    } else {
+      cur = 0;
+    }
+    nv = cur;
+    if (nv < lo) nv = lo;
+    if (nv > hi) nv = hi;
+    changed = (nv != cur) ? 1 : 0;
+    var_set_num(vm, name, nv);
+    var_set_num(vm, "LAST_N", nv);
+    vm->last_n = nv;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", nv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "CLAMP_N", 1);
+    var_set_num(vm, "CLAMP_LO", lo);
+    var_set_num(vm, "CLAMP_HI", hi);
+    var_set_num(vm, "CLAMP_CHANGED", (long)changed);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# CLAMP %s [%ld..%ld] -> %ld\n", name, lo, hi, nv);
+    bump(vm);
+    return 1;
+  }
+  /* SETMIN|MINTO name val — name = min(name, val); missing name → val.
+   * SETMAX|MAXTO name val — name = max(name, val).
+   * Usability: running best/worst without IF score > best THEN LET best = score. */
+  if (kw(&L->cur,"SETMIN")||kw(&L->cur,"MINTO")||kw(&L->cur,"MINV")||
+      kw(&L->cur,"KEEPMIN")||kw(&L->cur,"MINVAR")||
+      kw(&L->cur,"SETMAX")||kw(&L->cur,"MAXTO")||kw(&L->cur,"MAXV")||
+      kw(&L->cur,"KEEPMAX")||kw(&L->cur,"MAXVAR")){
+    char op[24], name[48];
+    int is_max = 0;
+    long val, cur = 0, nv;
+    int have = 0;
+    Var *vv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "SETMAX") == 0 || strcmp(op, "MAXTO") == 0 ||
+        strcmp(op, "MAXV") == 0 || strcmp(op, "KEEPMAX") == 0 ||
+        strcmp(op, "MAXVAR") == 0)
+      is_max = 1;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, is_max ? "SETMAX needs name val — SETMAX best score"
+                      : "SETMIN needs name val — SETMIN worst score");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (kw(&L->cur, "TO") || kw(&L->cur, "WITH") || kw(&L->cur, "OF") ||
+        kw(&L->cur, "=") || kw(&L->cur, "BY"))
+      lex_next(L);
+    if (L->cur.kind == TK_EOF || (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "END") || kw(&L->cur, "IF") || kw(&L->cur, "LET") ||
+         kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "ASSERT") ||
+         kw(&L->cur, "PRINT") || kw(&L->cur, "INC") || kw(&L->cur, "DEC") ||
+         kw(&L->cur, "TOGGLE") || kw(&L->cur, "CLAMP") || kw(&L->cur, "SWAP") ||
+         kw(&L->cur, "SETMIN") || kw(&L->cur, "SETMAX")))) {
+      fail(vm, is_max ? "SETMAX needs value — SETMAX best score"
+                      : "SETMIN needs value — SETMIN worst score");
+      return -1;
+    }
+    val = parse_expr(vm, L);
+    vv = var_get(vm, name, 0);
+    if (vv && !vv->is_str) {
+      cur = vv->val;
+      have = 1;
+    } else if (vv && vv->is_str) {
+      char *end = NULL;
+      cur = strtol(vv->sval, &end, 10);
+      if (end && end != vv->sval && *end == 0)
+        have = 1;
+      else {
+        cur = 0;
+        have = 0;
+      }
+    } else {
+      have = 0;
+    }
+    if (!have)
+      nv = val;
+    else if (is_max)
+      nv = (val > cur) ? val : cur;
+    else
+      nv = (val < cur) ? val : cur;
+    var_set_num(vm, name, nv);
+    var_set_num(vm, "LAST_N", nv);
+    vm->last_n = nv;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", nv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, is_max ? "SETMAX_N" : "SETMIN_N", 1);
+    var_set_num(vm, is_max ? "MAXTO_N" : "MINTO_N", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> %ld\n", is_max ? "SETMAX" : "SETMIN", name, nv);
     bump(vm);
     return 1;
   }

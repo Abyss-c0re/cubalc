@@ -943,6 +943,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 912. ~~**`REQUIRE OK` / `NEEDOK` soft-status floor**~~ **done** (fail-fast if OK==0/LAST_ERR · after soft ops · proof 1450).
 913. ~~**`IFERR` / `IFOK` / `HASERR` / `HASOK`**~~ **done** (soft-status branches + probes · no IF OK glue · proof 1451).
 914. ~~**`INC` / `DEC` / `SWAP` vars**~~ **done** (counter bump + dual-buffer exchange · no LET x=x+1 glue · proof 1452).
+915. ~~**`TOGGLE` / `CLAMP` / `SETMIN` / `SETMAX` vars**~~ **done** (flag flip + in-place clamp + running min/max · no IF+LET/CLAMPN glue · proof 1453).
 
 
 
