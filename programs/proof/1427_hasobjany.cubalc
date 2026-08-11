@@ -1,0 +1,57 @@
+# HASOBJANY / NEEDOBJANY — any-of multi live-object soft/hard gate
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 4 0
+NEW Cell b 1 2 1
+
+# any hit (ghost missing)
+HASOBJANY a ghost_zz
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASOBJANY_N == 1
+ASSERT OBJHAVE_N == 1
+ASSERT OBJHAVE == "a"
+ASSERT OBJMISS_N == 1
+SYS HASI OBJMISS "ghost_zz"
+ASSERT LAST_N == 1
+
+# all miss soft
+HASOBJANY ghost_x ghost_y
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT HASOBJANY_N == 0
+ASSERT OBJHAVE == ""
+ASSERT OBJMISS_N == 2
+
+# bag form
+LET opts = "ghost,a,b"
+HASOBJANY opts
+ASSERT LAST_N == 1
+ASSERT OBJHAVE_N == 2
+
+# OBJANY alias (not ANYOBJ — that is PICKOBJ)
+OBJANY ghost_zz a
+ASSERT LAST_N == 1
+ASSERT OBJHAVE == "a"
+
+# all hit
+HASOBJANY a b
+ASSERT LAST_N == 1
+ASSERT OBJHAVE_N == 2
+
+# empty soft
+HASOBJANY
+ASSERT LAST_N == 0
+ASSERT OK == 0
+CLEAR_ERR
+
+HASFORM "HASOBJANY"
+ASSERT LAST_N == 1
+HASFORM "NEEDOBJANY"
+ASSERT LAST_N == 1
+
+PRINT "1427_hasobjany ok"
+PASS

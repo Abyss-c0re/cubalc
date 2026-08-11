@@ -18079,6 +18079,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
            kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
            kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "HASOBJ") ||
            kw(&L->cur, "HASOBJS") || kw(&L->cur, "NEEDOBJS") ||
+           kw(&L->cur, "HASOBJANY") || kw(&L->cur, "NEEDOBJANY") ||
            kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASCLASS") ||
            kw(&L->cur, "HASFORM") || kw(&L->cur, "SEND") || kw(&L->cur, "GETF") ||
            kw(&L->cur, "SETF") || kw(&L->cur, "DELETEOBJ") ||
@@ -18212,6 +18213,191 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# %s n=%d miss=%d\n",
               hard ? "NEEDOBJS" : "HASOBJS", nname, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASOBJANY|NEEDOBJANY name… — multi live-object any-of gate (HASOBJS twin).
+   * Soft: LAST_N 1 if any live · OBJHAVE bag · OBJMISS bag.
+   * NEEDOBJANY fail-fast if none of the listed objects exist.
+   * Usability: optional peer/session OR without N× HASOBJ IF glue. */
+  if (kw(&L->cur, "HASOBJANY") || kw(&L->cur, "HAS_OBJ_ANY") ||
+      kw(&L->cur, "OBJANY") || kw(&L->cur, "HASANYOBJ") ||
+      kw(&L->cur, "LIVESANY") || kw(&L->cur, "NEEDOBJANY") ||
+      kw(&L->cur, "NEED_OBJ_ANY") || kw(&L->cur, "REQUIREOBJANY") ||
+      kw(&L->cur, "MUSTOBJANY")) {
+    int hard = kw(&L->cur, "NEEDOBJANY") || kw(&L->cur, "NEED_OBJ_ANY") ||
+               kw(&L->cur, "REQUIREOBJANY") || kw(&L->cur, "MUSTOBJANY");
+    char names[32][48];
+    char miss[1024], havebag[1024];
+    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line;
+    size_t mo = 0, ho = 0;
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "HASOBJ") ||
+           kw(&L->cur, "HASOBJS") || kw(&L->cur, "NEEDOBJS") ||
+           kw(&L->cur, "HASOBJANY") || kw(&L->cur, "NEEDOBJANY") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASCLASS") ||
+           kw(&L->cur, "HASFORM") || kw(&L->cur, "SEND") || kw(&L->cur, "GETF") ||
+           kw(&L->cur, "SETF") || kw(&L->cur, "DELETEOBJ") ||
+           kw(&L->cur, "TRYDELETE")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] && !oop_find_obj(vm, L->cur.text)) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDOBJANY name… — NEEDOBJANY a b · HASOBJANY bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASOBJANY_N", 0);
+      var_set_num(vm, "OBJMISS_N", 0);
+      var_set_num(vm, "OBJHAVE_N", 0);
+      var_set_str(vm, "OBJMISS", "");
+      var_set_str(vm, "OBJHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASOBJANY: need names — HASOBJANY a b");
+      var_set_str(vm, "ERR", "HASOBJANY: need names — HASOBJANY a b");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      if (oop_find_obj(vm, names[i])) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, names[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+      } else {
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+      }
+    }
+    var_set_str(vm, "OBJMISS", miss);
+    var_set_str(vm, "OBJHAVE", havebag);
+    var_set_num(vm, "OBJMISS_N", nmiss);
+    var_set_num(vm, "OBJHAVE_N", nhave);
+    var_set_num(vm, "HASOBJANY_N", nhave);
+    var_set_num(vm, "NEEDOBJANY_N", nname);
+    var_set_num(vm, "OBJS_ANY_N", nname);
+    if (nhave > 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else if (hard) {
+      char em[240];
+      snprintf(em, sizeof em,
+               "NEEDOBJANY miss line %d: need one of [%s] — NEW/ENSURENEW · HASOBJANY · LISTOBJS",
+               aln, miss[0] ? miss : "?");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      fail_at(vm, L, em);
+      return -1;
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASOBJANY miss (0/%d): need one of %s — NEEDOBJANY · NEW/ENSURENEW",
+               nname, miss[0] ? miss : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%d have=%d miss=%d\n",
+              hard ? "NEEDOBJANY" : "HASOBJANY", nname, nhave, nmiss);
     bump(vm);
     return 1;
   }

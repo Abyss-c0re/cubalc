@@ -2047,6 +2047,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"HASOBJ", "HASOBJ|LIVES name — soft live-object probe 0|1"},
       {"HASOBJS", "HASOBJS|ALLOBJS names… — soft 0|1 all live · OBJMISS bag"},
       {"NEEDOBJS", "NEEDOBJS|REQUIREOBJS names… — fail-fast if any live obj missing · multi HASOBJ"},
+      {"HASOBJANY", "HASOBJANY|OBJANY|LIVESANY names… — soft 0|1 if any live · OBJHAVE bag"},
+      {"NEEDOBJANY", "NEEDOBJANY|REQUIREOBJANY names… — fail-fast if none of objs live"},
       {"BINDTHIS", "BINDTHIS|USEOBJ|ASTHIS name — bind THIS/SELF to live object · soft miss"},
       {"CLEARTHIS", "CLEARTHIS|UNBINDTHIS — clear THIS/SELF binding"},
       {"HASTHIS", "HASTHIS|BOUNDTHIS — soft 0|1 if THIS bound to live object"},
