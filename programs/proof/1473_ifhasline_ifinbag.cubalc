@@ -1,0 +1,82 @@
+# IFHASLINE / IFINBAG — bag membership branches
+
+HOLD_FLASH 1
+
+# build bag
+LET work = ""
+PUSHTO work "alpha"
+PUSHTO work "beta"
+PUSHTO work "gamma"
+
+# hit
+IFHASLINE work "beta"
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 1
+ASSERT IFHASLINE_N == 1
+
+# miss + ELSE
+IFHASLINE work "delta"
+  LET hit = 1
+ELSE
+  LET hit = 0
+END
+ASSERT hit == 0
+ASSERT IFHASLINE_N == 0
+
+# IFINBAG alias
+IFINBAG work "alpha"
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+ASSERT IFINBAG_N == 1
+
+# missing var → false
+IFHASLINE missing "x"
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+
+# nest with IFEMPTY / IFGT
+LET n = 2
+IFHASLINE work "gamma"
+  IFGT n 0
+    LET state = "ready"
+  ELSE
+    LET state = "zero"
+  END
+ELSE
+  LET state = "no-gamma"
+END
+ASSERT state == "ready"
+
+# substring must not match (exact field)
+IFHASLINE work "bet"
+  LET sub = 1
+ELSE
+  LET sub = 0
+END
+ASSERT sub == 0
+
+# ack pattern: drop if present
+IFHASLINE work "beta"
+  DROPLINEIN work "beta"
+END
+HASINBAG work "beta"
+ASSERT LAST_N == 0
+HASINBAG work "alpha"
+ASSERT LAST_N == 1
+
+HASFORM "IFHASLINE"
+ASSERT LAST_N == 1
+HASFORM "IFINBAG"
+ASSERT LAST_N == 1
+
+PRINT "1473_ifhasline_ifinbag ok"
+PASS
