@@ -6789,7 +6789,7 @@
     "iter342: first-try green method_guard+field_guard dual board",
     "iter342: proofs 1428/1430 PASS; re-INCLUDE LET knobs pattern"
   ],
-  "commit": "pending",
+  "commit": "e0a19aae",
   "ts": "2026-08-11T09:14:29Z",
-  "board_commit": "pending"
+  "board_commit": "e0a19aae"
 }
