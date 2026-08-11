@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 371,
-  "program": "programs/realworld/svc_ifblank_note_hygiene_board.cubalc",
-  "theme": "IFBLANK/IFNOTBLANK note/label field hygiene gates",
-  "version": "1.15.949-usability",
+  "iter": 372,
+  "program": "programs/realworld/svc_iflen_ticket_id_board.cubalc",
+  "theme": "IFLEN/IFLONG/IFSHORT ticket ID length admit gates",
+  "version": "1.15.950-usability",
   "pass": true,
-  "prior_note": "iter 370 IFZERO; this iter first realworld of 1492 IFBLANK (MI 953)",
+  "prior_note": "iter 371 IFBLANK; this iter first realworld of 1493 IFLEN (MI 954)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed empty + IFBLANK",
+      "cmd": "seed hello + IFLEN",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "IFBLANK/IFNOTBLANK stickies + num dual 10/10",
+      "cmd": "IFLEN/IFLONG/IFSHORT stickies 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "undef/seed/admit/ws 10/10",
+      "cmd": "empty/undef/num/band 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "field class admit/deny/seed 10/10",
+      "cmd": "short/admit/long class 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "blank\u2192seed\u2192admit ladder 10/10",
+      "cmd": "limit ladder 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFBLANK/IFNOTBLANK",
+      "cmd": "HASFORM IFLEN/IFLONG/IFSHORT",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "title/body blank contract 10/10",
+      "cmd": "band 6..16 admit 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "disk note STRTO WRITE NL",
+      "cmd": "disk ID STRTO WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -7178,6 +7178,30 @@
       "title": "FN-wrap still required for IFBLANK inside action IF (W853 class)",
       "detail": "Board uses CALL is_blank/is_filled exclusively. Same END framing discipline as IFZERO/IFNUM. Avoid var name tries (W883).",
       "repro": "IF LAST_N==1 THEN IFBLANK fld \u2026 END leaks"
+    },
+    {
+      "id": "W889",
+      "severity": "low",
+      "area": "lang|iflen",
+      "title": "IFLEN promotes num to decimal string length; undef/empty len 0",
+      "detail": "IFLEN 42 2 is true (\"42\" len 2). Undef and empty match IFLEN x 0. IFLONG is LEN>=min inclusive; IFSHORT LEN<=max inclusive. Stickies IFLEN_LEN/IFLEN_LIMIT after probe.",
+      "repro": "LET n=42; IFLEN n 2 \u2192 1; IFLEN u 0 \u2192 1; IFLONG s 5 on hello \u2192 1"
+    },
+    {
+      "id": "W890",
+      "severity": "low",
+      "area": "lang|iflen",
+      "title": "IFLEN/IFLONG/IFSHORT work (positive; first realworld 1493)",
+      "detail": "1493 green. Var limits work (lim_n). admit_id min/max band via sequential IFLONG+IFSHORT solid for ticket intake. First-try green with FN-wrap.",
+      "repro": "CALL is_exact_len; CALL is_long_enough; CALL admit_id"
+    },
+    {
+      "id": "W891",
+      "severity": "low",
+      "area": "lang|iflen",
+      "title": "FN-wrap still required; avoid tries/key keyword traps (W883/W877)",
+      "detail": "Board uses CALL helpers + lim_n/min_n/max_n names. Nested IF ok_v in admit_id stayed shallow and green.",
+      "repro": "IF LAST_N==1 THEN IFLEN tok 5 \u2026 END leaks"
     }
   ],
   "workarounds": [
@@ -7328,10 +7352,14 @@
       "id": "WA-IBL",
       "for": "W886+W888",
       "note": "FN is_blank/is_filled; seed default-note on blank; never IFBLANK for numeric zero"
+    },
+    {
+      "id": "WA-ILN",
+      "for": "W889+W891",
+      "note": "FN is_exact_len/is_long_enough/is_short_enough; admit_id via long then short; lim_n var limit"
     }
   ],
   "language_gaps": [
-    "IFGT/IFHASLINE cannot nest in IF END framing (W853); IFGTE absent use IFGE (W854)",
     "LPADTO truncates when wider (W856); SUMIN proof not linked in 1.15.930 binary (W857)",
     "SUMIN LAST_N vs CLEAR_ERR (W859); non-num skip + int AVGIN (W860); SUMIN linked 1.15.933",
     "IFFILE/IFDIR kind strict (W862); IFENV proof flaky needs name (W863)",
@@ -7342,7 +7370,8 @@
     "IFJSONHAS live 1.15.942 (1487); KEY glue eats var key (W877); nested END frames (W879)",
     "IFNUM live 1.15.943 (1488); SYS NUM soft zero (W880); nested type-IF END (W882)",
     "IFZERO live 1.15.948 (1489); TRIES keyword traps var tries (W883); str0/undef type-strict (W885)",
-    "IFBLANK live 1.15.949 (1492); ws blank num not blank (W886); FN-wrap (W888)"
+    "IFBLANK live 1.15.949 (1492); ws blank num not blank (W886); FN-wrap (W888)",
+    "IFLEN live 1.15.950 (1493); num decimal len + undef0 (W889); FN-wrap (W891)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7499,9 +7528,14 @@
       "iter": 371,
       "issue": "First-try green. Documented num/0 not blank dual and ws blank.",
       "resolution": "first realworld 1492; document W886\u2013W888"
+    },
+    {
+      "iter": 372,
+      "issue": "First-try green. Documented num\u2192decimal length and undef/empty len0 duals.",
+      "resolution": "first realworld 1493; document W889\u2013W891"
     }
   ],
-  "commit": "5135c7cf",
-  "ts": 1786487633,
-  "board_commit": "5135c7cf"
+  "commit": "pending",
+  "ts": 1786489133,
+  "board_commit": "pending"
 }
