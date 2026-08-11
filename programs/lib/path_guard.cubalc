@@ -1,0 +1,124 @@
+# INCLUDE path_guard — fail-fast host path contract (ALL + optional ANY)
+# Usability: agent file/dir layout gate without N× SYS EXIST / REQUIRE PATH glue.
+#
+#   DEFAULT NEED_PATHS = "/etc/passwd\n/tmp"       # all-of
+#   DEFAULT NEED_PATH_ANY = "/var/run/app.sock\n/tmp/app.sock"  # any-of
+#   DEFAULT PATH_GUARD_SOFT = 0                    # 1 → soft (OK=0, no fatal)
+#   INCLUDE path_guard
+#
+# Empty NEED_PATHS skips ALL gate. Empty NEED_PATH_ANY skips ANY gate.
+# Soft dual leaves PATHMISS / PATHHAVE bags for agents (CLEAR_ERR after).
+# Twin of env_guard / arg_guard for host filesystem · pairs SYS EXIST / REQUIRE PATH.
+# HOLD_FLASH not required (same policy as form_guard / env_guard / arg_guard).
+
+DEFAULT NEED_PATHS = ""
+DEFAULT NEED_PATH_ANY = ""
+DEFAULT PATH_GUARD_SOFT = 0
+
+# --- ALL-of: every path must exist ---
+SYS EMPTY NEED_PATHS
+IF LAST_N == 1
+  LET PATH_GUARD_ALL_OK = 1
+  LET PATHMISS = ""
+  LET PATHHAVE = ""
+  LET PATHMISS_N = 0
+  LET PATHHAVE_N = 0
+ELSE
+  LET PATHMISS = ""
+  LET PATHHAVE = ""
+  LET PATHMISS_N = 0
+  LET PATHHAVE_N = 0
+  IF PATH_GUARD_SOFT
+    EACH LINE p IN NEED_PATHS
+      SYS EXIST p
+      IF LAST_N == 1
+        LET PATHHAVE_N = PATHHAVE_N + 1
+        IF PATHHAVE == ""
+          LET PATHHAVE = p
+        ELSE
+          LET PATHHAVE = PATHHAVE + "\n" + p
+        END
+      ELSE
+        LET PATHMISS_N = PATHMISS_N + 1
+        IF PATHMISS == ""
+          LET PATHMISS = p
+        ELSE
+          LET PATHMISS = PATHMISS + "\n" + p
+        END
+      END
+    END
+    IF PATHMISS_N == 0
+      LET PATH_GUARD_ALL_OK = 1
+      LET OK = 1
+    ELSE
+      LET PATH_GUARD_ALL_OK = 0
+      LET OK = 0
+      LET LAST_ERR = "PATH_GUARD ALL miss — missing: " + PATHMISS
+      LET ERR = LAST_ERR
+    END
+  ELSE
+    EACH LINE p IN NEED_PATHS
+      REQUIRE PATH p
+    END
+    LET PATH_GUARD_ALL_OK = 1
+  END
+END
+
+# --- ANY-of: at least one path must exist ---
+SYS EMPTY NEED_PATH_ANY
+IF LAST_N == 1
+  LET PATH_GUARD_ANY_OK = 1
+ELSE
+  LET PATH_ANY_HIT = 0
+  LET PATH_ANY_HAVE = ""
+  LET PATH_ANY_MISS = ""
+  EACH LINE p IN NEED_PATH_ANY
+    SYS EXIST p
+    IF LAST_N == 1
+      LET PATH_ANY_HIT = 1
+      IF PATH_ANY_HAVE == ""
+        LET PATH_ANY_HAVE = p
+      ELSE
+        LET PATH_ANY_HAVE = PATH_ANY_HAVE + "\n" + p
+      END
+    ELSE
+      IF PATH_ANY_MISS == ""
+        LET PATH_ANY_MISS = p
+      ELSE
+        LET PATH_ANY_MISS = PATH_ANY_MISS + "\n" + p
+      END
+    END
+  END
+  IF PATH_ANY_HIT == 1
+    LET PATH_GUARD_ANY_OK = 1
+    IF PATHHAVE == ""
+      LET PATHHAVE = PATH_ANY_HAVE
+    END
+  ELSE
+    LET PATH_GUARD_ANY_OK = 0
+    IF PATH_GUARD_SOFT
+      LET OK = 0
+      IF PATHMISS == ""
+        LET PATHMISS = PATH_ANY_MISS
+      END
+      LET LAST_ERR = "PATH_GUARD ANY miss — need one of: " + NEED_PATH_ANY
+      LET ERR = LAST_ERR
+    ELSE
+      FAIL "PATH_GUARD ANY miss — need one of: " + NEED_PATH_ANY
+    END
+  END
+END
+
+# overall soft status (hard paths already failed fatally if miss)
+IF PATH_GUARD_ALL_OK
+  IF PATH_GUARD_ANY_OK
+    LET PATH_GUARD_OK = 1
+    LET OK = 1
+  ELSE
+    LET PATH_GUARD_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET PATH_GUARD_OK = 0
+  LET OK = 0
+END

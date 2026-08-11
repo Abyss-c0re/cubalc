@@ -3638,6 +3638,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     int lib_time_boot = 0;
     int lib_tool_session = 0;
     int lib_product_session = 0;
+    int lib_path_guard = 0, lib_path_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0, libdir_ok = 0;
     int include_path_set = 0, preload_set = 0;
     const char *hx = getenv("CUBALC_SMX_KEY");
@@ -3685,6 +3686,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     lib_time_boot = (access("programs/lib/time_boot.cubalc", R_OK) == 0);
     lib_tool_session = (access("programs/lib/tool_session.cubalc", R_OK) == 0);
     lib_product_session = (access("programs/lib/product_session.cubalc", R_OK) == 0);
+    lib_path_guard = (access("programs/lib/path_guard.cubalc", R_OK) == 0);
+    lib_path_boot = (access("programs/lib/path_boot.cubalc", R_OK) == 0);
     cookbook_ok = (access("docs/COOKBOOK.md", R_OK) == 0);
     for_agents_ok = (access("docs/FOR_AGENTS.md", R_OK) == 0);
     if (libdir_ok) {
@@ -3722,6 +3725,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"lib_cli_session\":%s,\"lib_env_guard\":%s,\"lib_env_boot\":%s,"
              "\"lib_arg_guard\":%s,\"lib_arg_boot\":%s,\"lib_time_boot\":%s,"
              "\"lib_tool_session\":%s,\"lib_product_session\":%s,"
+             "\"lib_path_guard\":%s,\"lib_path_boot\":%s,"
              "\"include_path_set\":%s,\"preload_set\":%s,"
              "\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
              "\"vars_max\":%d,\"varroom_forms\":true,"
@@ -3749,6 +3753,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"INCLUDE time_boot · cubalc init --time wall-budget starter\","
              "\"INCLUDE tool_session · cubalc init --full-cli flags+args CLI\","
              "\"INCLUDE product_session · cubalc init --product flags+args+env+time\","
+             "\"INCLUDE path_guard · NEED_PATHS / NEED_PATH_ANY host path contract\","
+             "\"INCLUDE path_boot · cubalc init --path host path starter\","
              "\"cubalc env · docs/COOKBOOK.md · docs/FOR_AGENTS.md\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
@@ -3759,7 +3765,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"programs/lib/fat_session.cubalc\",\"programs/lib/form_guard.cubalc\","
              "\"programs/lib/env_guard.cubalc\",\"programs/lib/env_boot.cubalc\","
              "\"programs/lib/time_boot.cubalc\",\"programs/lib/tool_session.cubalc\","
-             "\"programs/lib/product_session.cubalc\","
+             "\"programs/lib/product_session.cubalc\",\"programs/lib/path_guard.cubalc\","
+             "\"programs/lib/path_boot.cubalc\","
              "\"programs/lib/onboard_boot.cubalc\",\"programs/lib/discover_boot.cubalc\","
              "\"cubalc init --onboard\",\"cubalc init --discover\",\"cubalc init --fat-session\",\"cubalc hasforms SORTLIBS LIBAGE\"]"
              "}\n",
@@ -3801,6 +3808,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              lib_time_boot ? "true" : "false",
              lib_tool_session ? "true" : "false",
              lib_product_session ? "true" : "false",
+             lib_path_guard ? "true" : "false",
+             lib_path_boot ? "true" : "false",
              include_path_set ? "true" : "false",
              preload_set ? "true" : "false",
              cookbook_ok ? "true" : "false",
@@ -4582,6 +4591,10 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"product_session", "programs/proof/1392_product_session.cubalc", "INCLUDE product_session tool+env+time"},
       {"cli_init_product_session", "programs/proof/1392_cli_init_product_session.sh", "cubalc init --product scaffold"},
       {"time_guard_ok", "programs/proof/1393_time_guard_ok.cubalc", "TIME_GUARD_OK + product_session soft status"},
+      {"path_guard", "programs/proof/1394_path_guard.cubalc", "INCLUDE path_guard NEED_PATHS+NEED_PATH_ANY"},
+      {"cli_path_guard", "programs/proof/1394_cli_path_guard.sh", "path_guard soft/hard + doctor lib"},
+      {"path_boot", "programs/proof/1394_path_boot.cubalc", "INCLUDE path_boot agent_boot+path_guard"},
+      {"cli_init_path", "programs/proof/1394_cli_init_path.sh", "cubalc init --path scaffold + doctor"},
       {"cli_form_guard", "programs/proof/1386_cli_form_guard.sh", "form_guard lib + CLI + formgate any"},
       {"cap_boot", "programs/proof/1325_cap_boot.cubalc", "INCLUDE cap_boot agent_boot+form_guard"},
       {"cli_init_cap", "programs/proof/1325_cli_init_cap.sh", "cubalc init --cap scaffold + doctor lib_cap_boot"},
@@ -8894,6 +8907,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
      * --time|--time-boot|--timeout-boot|--need-time: INCLUDE time_boot (agent_boot + time_guard).
      * --full-cli|--cli-full|--tool-full|--flags-args: INCLUDE tool_session (cli_boot+cli_guard+arg_guard).
      * --product|--app|--product-session|--full-product|--service: INCLUDE product_session (tool+env+time).
+     * --path|--path-boot|--path-guard|--hostpath: INCLUDE path_boot (agent_boot + path_guard).
      * --from lib: recipe-driven scaffold (LIBDEFAULTS as DEFAULT lines + INCLUDE).
      * Agents: write file then cubalc run — no cookbook prose required. */
     const char *path = "program.cubalc";
@@ -8901,7 +8915,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     const char *from_lib = NULL;
     int force = 0, i, wrote = 0, existed = 0, want_plate = 0, want_peer = 0;
     int want_fat = 0, want_fat_session = 0, want_cap = 0, want_onboard = 0, want_discover = 0, want_open = 0, want_doctor = 0;
-    int want_ready = 0, want_cli = 0, want_cli_session = 0, want_env = 0, want_arg = 0, want_time = 0, want_tool = 0, want_product = 0;
+    int want_ready = 0, want_cli = 0, want_cli_session = 0, want_env = 0, want_arg = 0, want_time = 0, want_tool = 0, want_product = 0, want_path = 0;
     int want_list = 0;
     char abspath[512];
     char parent[512];
@@ -9192,7 +9206,19 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       "PRINT \"product_ok\" PRODUCT_SESSION_OK\n"
       "STATUS\n"
       "PRINT \"product session init ok\" OK PRODUCT_SESSION_OK\n";
-    const char *body = body_boot;
+        static const char *body_path =
+      "# CubalC host-path starter — generated by cubalc init --path\n"
+      "# INCLUDE path_boot = agent_boot + path_guard (NEED_PATHS / NEED_PATH_ANY)\n"
+      "# Override NEED_PATHS before INCLUDE; soft via PATH_GUARD_SOFT=1\n"
+      "DEFAULT NEED_PATHS = \"\"\n"
+      "DEFAULT NEED_PATH_ANY = \"\"\n"
+      "DEFAULT PATH_GUARD_SOFT = 0\n"
+      "INCLUDE path_boot\n"
+      "\n"
+      "PRINT \"path_ok\" PATH_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"path init ok\" OK PATH_GUARD_OK\n";
+const char *body = body_boot;
     from_body[0] = 0;
     for (i = 2; i < argc; i++) {
       if (!strcmp(argv[i], "--force") || !strcmp(argv[i], "-f") ||
@@ -9271,6 +9297,14 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
                  !strcmp(argv[i], "--cli-env-time") || !strcmp(argv[i], "--clienvtime") ||
                  !strcmp(argv[i], "--full-app") || !strcmp(argv[i], "--fullapp")) {
         want_product = 1;
+      } else if (!strcmp(argv[i], "--path") || !strcmp(argv[i], "--path-boot") ||
+                 !strcmp(argv[i], "--pathboot") || !strcmp(argv[i], "--path_boot") ||
+                 !strcmp(argv[i], "--path-guard") || !strcmp(argv[i], "--pathguard") ||
+                 !strcmp(argv[i], "--path_guard") || !strcmp(argv[i], "--hostpath") ||
+                 !strcmp(argv[i], "--host-path") || !strcmp(argv[i], "--need-path") ||
+                 !strcmp(argv[i], "--need-paths") || !strcmp(argv[i], "--fs-guard") ||
+                 !strcmp(argv[i], "--fsguard") || !strcmp(argv[i], "--layout-guard")) {
+        want_path = 1;
       } else if (!strcmp(argv[i], "--cli-session") || !strcmp(argv[i], "--clisession") ||
                  !strcmp(argv[i], "--cli-guard") || !strcmp(argv[i], "--cliguard") ||
                  !strcmp(argv[i], "--cli_session") || !strcmp(argv[i], "--tool-session") ||
@@ -9303,7 +9337,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     if (want_list) {
       /* Agent discovery: which scaffolds exist without reading COOKBOOK. */
       printf("# CubalC init templates version=%s\n", CUBALC_LANG_VERSION);
-      printf("# run: cubalc init [path] [--plate|--peer|--fat|--fat-session|--cap|--onboard|--discover|--open|--doctor|--ready|--cli|--cli-session|--full-cli|--product|--env|--arg|--time|--from lib] [--force]\n");
+      printf("# run: cubalc init [path] [--plate|--peer|--fat|--fat-session|--cap|--onboard|--discover|--open|--doctor|--ready|--cli|--cli-session|--full-cli|--product|--path|--env|--arg|--time|--from lib] [--force]\n");
       printf("# flag\tid\thint\n");
       printf("(default)\tagent_boot\tINCLUDE agent_boot + CUBE/PLUG/STATUS\n");
       printf("--plate|-p\tplate_session\tplate_session + plate_uniform + PRETTYP + save\n");
@@ -9323,9 +9357,10 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       printf("--time|--time-boot|--timeout-boot|--need-time\ttime_boot\tINCLUDE time_boot agent_boot+time_guard\n");
       printf("--full-cli|--cli-full|--tool-full|--flags-args\ttool_session\tINCLUDE tool_session cli+arg guards\n");
       printf("--product|--app|--product-session|--full-product|--service\tproduct_session\tINCLUDE product_session tool+env+time\n");
+      printf("--path|--path-boot|--path-guard|--hostpath\tpath_boot\tINCLUDE path_boot agent_boot+path_guard\n");
       printf("--from|--recipe|-F <lib>\tfrom_recipe\tDEFAULT knobs from lib + INCLUDE (any recipe)\n");
       printf("{\"schema\":\"cubalc.init.v1\",\"ok\":true,\"cmd\":\"init\","
-             "\"op\":\"list\",\"n\":19,\"version\":\"%s\","
+             "\"op\":\"list\",\"n\":20,\"version\":\"%s\","
              "\"note\":\"scaffold catalog — fixed templates + --from any lib recipe\","
              "\"templates\":["
              "{\"id\":\"agent_boot\",\"flags\":\"\",\"default\":true,"
@@ -9364,6 +9399,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
              "\"hint\":\"INCLUDE tool_session cli_boot+cli_guard+arg_guard full CLI\"},"
              "{\"id\":\"product_session\",\"flags\":\"--product|--app|--product-session|--full-product|--service\","
              "\"hint\":\"INCLUDE product_session tool_session+env_guard+time_guard product CLI\"},"
+             "{\"id\":\"path_boot\",\"flags\":\"--path|--path-boot|--path-guard|--hostpath\","
+             "\"hint\":\"INCLUDE path_boot agent_boot+path_guard host path contract\"},"
              "{\"id\":\"from_recipe\",\"flags\":\"--from|--recipe|-F <lib>\","
              "\"hint\":\"any lib DEFAULT knobs + INCLUDE · dual of cubalc recipe\"}"
              "]}\n",
@@ -9567,6 +9604,9 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
     } else if (want_env) {
       body = body_env;
       tmpl = "env_boot";
+    } else if (want_path) {
+      body = body_path;
+      tmpl = "path_boot";
     } else if (want_product) {
       body = body_product;
       tmpl = "product_session";
@@ -9670,6 +9710,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       printf("# next: cubalc run %s · DEFAULT NEED_TIME · INCLUDE time_boot\n", path);
     else if (want_env)
       printf("# next: cubalc run %s · DEFAULT NEED_ENVS · INCLUDE env_boot\n", path);
+    else if (want_path)
+      printf("# next: cubalc run %s · DEFAULT NEED_PATHS · INCLUDE path_boot\n", path);
     else if (want_product)
       printf("# next: cubalc run %s · DEFAULT NEED_FLAGS/NEED_ENVS/NEED_TIME · INCLUDE product_session\n", path);
     else if (want_tool)
@@ -9717,6 +9759,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
                ? "INCLUDE time_boot agent_boot+time_guard wall-budget starter"
                : (want_env
                ? "INCLUDE env_boot agent_boot+env_guard host env contract"
+               : (want_path
+               ? "INCLUDE path_boot agent_boot+path_guard host path contract"
                : (want_product
                ? "INCLUDE product_session tool_session+env_guard+time_guard product CLI"
                : (want_tool
@@ -9743,7 +9787,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
                ? "INCLUDE fat_boot + plate_boot nest room + NEEDP + save"
                : (want_plate
                ? "INCLUDE plate_session + plate_uniform + PRETTYP + plate_save"
-               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter"))))))))))))))))));
+               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter")))))))))))))))))));
     return 0;
   }
   if (strcmp(cmd, "libs") == 0 || strcmp(cmd, "lib") == 0 ||
@@ -9782,6 +9826,8 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"time_boot.cubalc", "agent_boot + time_guard one-shot · init --time · wall budget"},
       {"tool_session.cubalc", "cli_boot + cli_guard + arg_guard · init --full-cli full CLI"},
       {"product_session.cubalc", "tool_session + env_guard + time_guard · init --product product CLI"},
+      {"path_guard.cubalc", "NEED_PATHS + NEED_PATH_ANY host path contract · soft PATH_GUARD_SOFT"},
+      {"path_boot.cubalc", "agent_boot + path_guard one-shot · init --path · host layout"},
       {"env_guard.cubalc", "NEED_ENVS + NEED_ENV_ANY host env contract · soft ENV_GUARD_SOFT"},
       {"env_boot.cubalc", "agent_boot + env_guard one-shot · init --env · host config"},
     };
@@ -20453,7 +20499,7 @@ if (ai >= argc || !argv[ai] || !argv[ai][0]) {
       "    errtips|fixtips <err…>     recovery tip bag + topic (cubalc.errtips.v1)\n"
       "    errrun|recoversnip <err…>  classify + RUNSNIP topic (cubalc.errrun.v1)\n"
       "    errguide|recoverguide <err…> classify + GUIDE playbook (cubalc.errguide.v1)\n"
-      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --onboard · --discover · --open · --doctor · --ready · --cli · --cli-session · --full-cli · --product · --env · --arg · --time · --from lib\n"
+      "    init|new|scaffold [f]  --list · --plate · --peer · --fat · --fat-session · --cap · --onboard · --discover · --open · --doctor · --ready · --cli · --cli-session · --full-cli · --product · --path · --env · --arg · --time · --from lib\n"
       "    examples|starters [p]  curated runnable programs (JSON · examples fat)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
       "    recipe|card <lib>      path+deps+defaults+head one plate (cubalc.recipe.v1)\n"

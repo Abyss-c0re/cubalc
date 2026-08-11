@@ -1,0 +1,82 @@
+# INCLUDE path_guard — multi host-path ALL + ANY contract (env_guard twin for paths)
+
+HOLD_FLASH 1
+
+# --- skip both gates when empty ---
+DEFAULT NEED_PATHS = ""
+DEFAULT NEED_PATH_ANY = ""
+DEFAULT PATH_GUARD_SOFT = 0
+INCLUDE path_guard
+ASSERT PATH_GUARD_OK == 1
+ASSERT PATH_GUARD_ALL_OK == 1
+ASSERT PATH_GUARD_ANY_OK == 1
+
+# --- soft ALL miss ---
+LET NEED_PATHS = "/tmp\n/no/such/cubalc_path_guard_all"
+LET NEED_PATH_ANY = ""
+LET PATH_GUARD_SOFT = 1
+INCLUDE path_guard
+ASSERT PATH_GUARD_OK == 0
+ASSERT PATH_GUARD_ALL_OK == 0
+ASSERT PATHMISS_N >= 1
+SYS HASLINE PATHMISS "/no/such/cubalc_path_guard_all"
+ASSERT LAST_N == 1
+CLEAR_ERR
+
+# --- soft ALL hit ---
+LET NEED_PATHS = "/tmp\n/etc"
+LET PATH_GUARD_SOFT = 1
+INCLUDE path_guard
+ASSERT PATH_GUARD_ALL_OK == 1
+ASSERT PATH_GUARD_OK == 1
+ASSERT PATHHAVE_N >= 2
+
+# --- soft ANY miss ---
+LET NEED_PATHS = ""
+LET NEED_PATH_ANY = "/no/such/cubalc_a\n/no/such/cubalc_b"
+LET PATH_GUARD_SOFT = 1
+INCLUDE path_guard
+ASSERT PATH_GUARD_ANY_OK == 0
+ASSERT PATH_GUARD_OK == 0
+CLEAR_ERR
+
+# --- soft ANY hit with one ---
+LET NEED_PATH_ANY = "/no/such/cubalc_a\n/tmp"
+LET PATH_GUARD_SOFT = 1
+INCLUDE path_guard
+ASSERT PATH_GUARD_ANY_OK == 1
+ASSERT PATH_GUARD_OK == 1
+CLEAR_ERR
+
+# --- hard ALL path ---
+LET NEED_PATHS = "/tmp\n/etc"
+LET NEED_PATH_ANY = ""
+LET PATH_GUARD_SOFT = 0
+INCLUDE path_guard
+ASSERT PATH_GUARD_OK == 1
+
+# --- hard ANY path ---
+LET NEED_PATHS = ""
+LET NEED_PATH_ANY = "/no/such/cubalc_z\n/tmp"
+LET PATH_GUARD_SOFT = 0
+INCLUDE path_guard
+ASSERT PATH_GUARD_ANY_OK == 1
+ASSERT PATH_GUARD_OK == 1
+
+# --- combined ALL + ANY soft ---
+LET NEED_PATHS = "/tmp\n/etc"
+LET NEED_PATH_ANY = "/tmp\n/no/such/cubalc_z"
+LET PATH_GUARD_SOFT = 1
+INCLUDE path_guard
+ASSERT PATH_GUARD_ALL_OK == 1
+ASSERT PATH_GUARD_ANY_OK == 1
+ASSERT PATH_GUARD_OK == 1
+
+# discoverable
+HASFORM REQUIRE
+ASSERT LAST_N == 1
+HASLIB path_guard
+ASSERT LAST_N == 1
+
+PRINT "1394_path_guard ok"
+PASS

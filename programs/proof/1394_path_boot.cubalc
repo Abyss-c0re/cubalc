@@ -1,0 +1,37 @@
+# INCLUDE path_boot — agent_boot + path_guard one-shot
+
+HOLD_FLASH 1
+
+DEFAULT NEED_PATHS = ""
+DEFAULT NEED_PATH_ANY = ""
+DEFAULT PATH_GUARD_SOFT = 0
+INCLUDE path_boot
+ASSERT OK == 1
+ASSERT PATH_GUARD_OK == 1
+HASINCLUDE agent_boot
+ASSERT LAST_N == 1
+HASINCLUDE path_guard
+ASSERT LAST_N == 1
+HASINCLUDE path_boot
+ASSERT LAST_N == 1
+HASLIB path_boot
+ASSERT LAST_N == 1
+VERSION
+ASSERT LAST != ""
+
+# soft miss composition
+LET NEED_PATHS = "/no/such/path_boot_miss"
+LET NEED_PATH_ANY = ""
+LET PATH_GUARD_SOFT = 1
+INCLUDE path_boot
+ASSERT PATH_GUARD_OK == 0
+CLEAR_ERR
+
+# hard pass
+LET NEED_PATHS = "/tmp"
+LET PATH_GUARD_SOFT = 0
+INCLUDE path_boot
+ASSERT PATH_GUARD_OK == 1
+
+PASS
+PRINT "1394_path_boot: PASS"

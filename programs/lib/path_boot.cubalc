@@ -1,0 +1,18 @@
+# INCLUDE path_boot — agent preamble + host path contract one-shot
+# Usability: agent_boot + path_guard without two INCLUDEs or double agent_boot.
+#
+#   DEFAULT NEED_PATHS = "/etc/passwd\n/tmp"
+#   DEFAULT NEED_PATH_ANY = "/var/run/app.sock\n/tmp/app.sock"
+#   DEFAULT PATH_GUARD_SOFT = 0
+#   INCLUDE path_boot
+# Soft path miss: DEFAULT PATH_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --path
+# Twin of env_boot (host env) / arg_boot (args) / cap_boot (forms) for filesystem.
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_PATHS = ""
+DEFAULT NEED_PATH_ANY = ""
+DEFAULT PATH_GUARD_SOFT = 0
+INCLUDE agent_boot
+INCLUDE path_guard
