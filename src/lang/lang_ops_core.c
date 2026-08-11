@@ -38839,6 +38839,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     int lib_bin_guard = 0, lib_bin_boot = 0;
     int lib_lib_guard = 0, lib_lib_boot = 0;
     int lib_host_session = 0, lib_host_boot = 0;
+    int lib_full_session = 0, lib_full_boot = 0;
     int lib_cap_boot = 0, lib_onboard_boot = 0, lib_discover_boot = 0, lib_open_boot = 0;
     int cookbook_ok = 0, for_agents_ok = 0;
     int include_path_set = 0, preload_set = 0, smx_key = 0, protect_plate = 0;
@@ -38887,6 +38888,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     lib_lib_boot = (access("programs/lib/lib_boot.cubalc", R_OK) == 0);
     lib_host_session = (access("programs/lib/host_session.cubalc", R_OK) == 0);
     lib_host_boot = (access("programs/lib/host_boot.cubalc", R_OK) == 0);
+    lib_full_session = (access("programs/lib/full_session.cubalc", R_OK) == 0);
+    lib_full_boot = (access("programs/lib/full_boot.cubalc", R_OK) == 0);
     lib_cap_boot = (access("programs/lib/cap_boot.cubalc", R_OK) == 0);
     lib_onboard_boot = (access("programs/lib/onboard_boot.cubalc", R_OK) == 0);
     lib_discover_boot = (access("programs/lib/discover_boot.cubalc", R_OK) == 0);
@@ -38927,6 +38930,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       "\"lib_bin_guard\":%s,\"lib_bin_boot\":%s,"
       "\"lib_lib_guard\":%s,\"lib_lib_boot\":%s,"
       "\"lib_host_session\":%s,\"lib_host_boot\":%s,"
+      "\"lib_full_session\":%s,\"lib_full_boot\":%s,"
       "\"lib_cap_boot\":%s,\"lib_onboard_boot\":%s,\"lib_discover_boot\":%s,"
       "\"lib_open_boot\":%s,\"docs_cookbook\":%s,\"docs_for_agents\":%s,"
       "\"include_path_set\":%s,\"preload_set\":%s,\"core_protect_plate\":%s,"
@@ -38962,6 +38966,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lib_lib_boot ? "true" : "false",
       lib_host_session ? "true" : "false",
       lib_host_boot ? "true" : "false",
+      lib_full_session ? "true" : "false",
+      lib_full_boot ? "true" : "false",
       lib_cap_boot ? "true" : "false",
       lib_onboard_boot ? "true" : "false",
       lib_discover_boot ? "true" : "false",

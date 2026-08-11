@@ -1,0 +1,42 @@
+# INCLUDE full_boot — agent preamble + full product+host contract one-shot
+# Usability: product_session + host_session without multi INCLUDE.
+# product_session already pulls agent_boot via tool_session/cli_boot.
+#
+#   DEFAULT NEED_FLAGS = ""
+#   DEFAULT NEED_ENVS = ""
+#   DEFAULT NEED_TIME = 1
+#   DEFAULT NEED_PATHS = ""
+#   DEFAULT NEED_BINS = ""
+#   DEFAULT NEED_LIBS = ""
+#   INCLUDE full_boot
+# Soft miss: set *_GUARD_SOFT = 1 before INCLUDE
+#
+# Scaffold: cubalc init demo --fleet
+# Twin of host_boot (host only) / product_session (CLI only).
+# HOLD_FLASH not required (runtime default 1 · same as agent_boot).
+
+DEFAULT NEED_FLAGS = ""
+DEFAULT NEED_FLAG_ANY = ""
+DEFAULT NEED_REST_N = 0
+DEFAULT NEED_ARGS = ""
+DEFAULT NEED_ARG_ANY = ""
+DEFAULT NEED_ENVS = ""
+DEFAULT NEED_ENV_ANY = ""
+DEFAULT NEED_TIME = 1
+DEFAULT CLI_GUARD_SOFT = 0
+DEFAULT ARG_GUARD_SOFT = 0
+DEFAULT ENV_GUARD_SOFT = 0
+DEFAULT TIME_GUARD_SOFT = 0
+DEFAULT NEED_PATHS = ""
+DEFAULT NEED_PATH_ANY = ""
+DEFAULT PATH_GUARD_SOFT = 0
+DEFAULT NEED_READ_PATHS = ""
+DEFAULT NEED_WRITE_PATHS = ""
+DEFAULT RW_GUARD_SOFT = 0
+DEFAULT NEED_BINS = ""
+DEFAULT NEED_BIN_ANY = ""
+DEFAULT BIN_GUARD_SOFT = 0
+DEFAULT NEED_LIBS = ""
+DEFAULT NEED_LIB_ANY = ""
+DEFAULT LIB_GUARD_SOFT = 0
+INCLUDE full_session

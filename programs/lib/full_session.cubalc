@@ -1,0 +1,54 @@
+# INCLUDE full_session — product CLI + host readiness one-shot
+# Usability: product_session (flags+args+env+time) + host_session (path+rw+bin+lib)
+# without multi INCLUDE / double agent_boot for real fleet services.
+#
+#   DEFAULT USAGE = "mysvc --out PATH files…"
+#   DEFAULT PROG_VERSION = "1.0.0"
+#   DEFAULT NEED_FLAGS = "out"
+#   DEFAULT NEED_FLAG_ANY = ""
+#   DEFAULT NEED_REST_N = 0
+#   DEFAULT NEED_ARGS = ""
+#   DEFAULT NEED_ARG_ANY = ""
+#   DEFAULT NEED_ENVS = "HOME"
+#   DEFAULT NEED_ENV_ANY = ""
+#   DEFAULT NEED_TIME = 200
+#   DEFAULT NEED_PATHS = ""
+#   DEFAULT NEED_PATH_ANY = ""
+#   DEFAULT NEED_READ_PATHS = ""
+#   DEFAULT NEED_WRITE_PATHS = ""
+#   DEFAULT NEED_BINS = ""
+#   DEFAULT NEED_BIN_ANY = ""
+#   DEFAULT NEED_LIBS = ""
+#   DEFAULT NEED_LIB_ANY = ""
+#   DEFAULT CLI_GUARD_SOFT = 0
+#   DEFAULT ARG_GUARD_SOFT = 0
+#   DEFAULT ENV_GUARD_SOFT = 0
+#   DEFAULT TIME_GUARD_SOFT = 0
+#   DEFAULT PATH_GUARD_SOFT = 0
+#   DEFAULT RW_GUARD_SOFT = 0
+#   DEFAULT BIN_GUARD_SOFT = 0
+#   DEFAULT LIB_GUARD_SOFT = 0
+#   INCLUDE full_session
+#   # FULL_SESSION_OK combines PRODUCT_SESSION_OK + HOST_SESSION_OK
+#
+# Soft: set *_GUARD_SOFT = 1 before INCLUDE.
+# Scaffold: cubalc init demo --fleet
+# Twin of host_session (host only) / product_session (CLI only) for full service.
+# HOLD_FLASH not required (runtime default 1).
+
+INCLUDE product_session
+INCLUDE host_session
+
+# combined soft status (hard paths already failed fatally)
+IF PRODUCT_SESSION_OK
+  IF HOST_SESSION_OK
+    LET FULL_SESSION_OK = 1
+    LET OK = 1
+  ELSE
+    LET FULL_SESSION_OK = 0
+    LET OK = 0
+  END
+ELSE
+  LET FULL_SESSION_OK = 0
+  LET OK = 0
+END
