@@ -5,13 +5,13 @@
   "item": "COALESCEP/NVLP multi-plate first non-empty any-of value",
   "item_id": "mi_coalescep",
   "title": "COALESCEP \u00b7 NVLP \u00b7 PLATECOALESCE peel first non-empty any-of VALUE from PLATE or FROM plate",
-  "commit": "c9d1e466",
+  "commit": "4c926db0",
   "summary": "Multi-plate dual of SYS JSONCOALESCE: COALESCEP|NVLP|PNVL [FROM plate] key\u2026 [OR|DEFAULT def] \u2192 LAST=value \u00b7 LAST_N 0|1 \u00b7 COALESCEP_N 1-based \u00b7 COALESCEP_KEY \u00b7 COALESCEP_HIT \u00b7 COALESCEP_FROM. Skips empty/null; keeps 0/false. Proofs 1502 PASS (36 asserts).",
   "proofs": [
     "1502_coalescep + 1502_cli_coalescep PASS"
   ],
   "when": "2026-08-12T05:29:19Z",
   "agent": "nanobot-cubalc",
-  "sha": "c9d1e466484bac520666d9f3684ebeae75961cf5",
+  "sha": "4c926db09e3fb2084c1b3ebd8dae9d80af781795",
   "note": "Plate-session dual of JSONCOALESCE; FROM named plate; OR/DEFAULT fallback; aliases NVLP/PNVL/PLATECOALESCE/COALESCE_P/HITCOALESCEP/FIRSTNONEMPTYP"
 }
