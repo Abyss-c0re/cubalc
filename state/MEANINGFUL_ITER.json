@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 967,
-  "version": "1.15.967-usability",
-  "item": "EXACTP/SCHEMAP multi-plate dual of JSONEXACT",
-  "item_id": "mi_exactp",
-  "title": "EXACTP \u00b7 SCHEMAP exact key-set (HASALL+ONLY) on PLATE or FROM plate",
-  "commit": "522370fe",
-  "summary": "Multi-plate dual of SYS JSONEXACT/JSONSCHEMA: EXACTP|SCHEMAP [FROM plate] key\u2026 \u2192 LAST=plate \u00b7 LAST_N 0|1 \u00b7 EXACTP_N \u00b7 EXACTP_HIT/EXTRA/MISS/LISTED \u00b7 EXACTP_FROM. Empty schema+empty plate \u2192 match. Proofs 1507 PASS (46 asserts).",
+  "iter": 968,
+  "version": "1.15.968-usability",
+  "item": "ONLYP/NOEXTRAP soft multi-plate dual of REQUIRE JSONONLY",
+  "item_id": "mi_onlyp",
+  "title": "ONLYP \u00b7 NOEXTRAP soft no-extra keys on PLATE or FROM plate",
+  "commit": "df36968d",
+  "summary": "Multi-plate soft dual of REQUIRE JSONONLY/NOEXTRA/JSONSTRICT: ONLYP|NOEXTRAP [FROM plate] allow\u2026 \u2192 LAST=plate \u00b7 LAST_N 0|1 \u00b7 ONLYP_N \u00b7 ONLYP_EXTRA \u00b7 ONLYP_LISTED \u00b7 ONLYP_FROM. Empty allow+empty plate match. Supersets allowed (missing keys OK). Soft twin of fail-fast JSONONLY for plate-session agents. Proofs 1508 PASS (37 asserts + CLI).",
   "proofs": [
-    "1507_exactp + 1507_cli_exactp PASS"
+    "1508_onlyp + 1508_cli_onlyp PASS"
   ],
-  "when": "2026-08-12T13:55:36Z",
+  "when": "2026-08-12T14:23:06Z",
   "agent": "nanobot-cubalc",
-  "sha": "522370fea2f68f5ee19c7c96ad20503c6699e9c7",
-  "note": "Plate-session dual of JSONEXACT/JSONSCHEMA; FROM named plate; aliases PLATEEXACTP/KEYSEXACTP/SAMEKEYSP/PEXACT",
-  "state_commit": "608877a8"
+  "sha": "df36968d0557a0309f8113371c3af717a64205f4",
+  "note": "Plate-session dual of JSONONLY/NOEXTRA; FROM named plate; aliases JSONONLYP/STRICTP/ALLOWONLYP/PLATEONLYP; dual contract with EXTRAP",
+  "state_commit": "df36968d"
 }

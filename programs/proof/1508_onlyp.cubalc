@@ -1,0 +1,101 @@
+# ONLYP / NOEXTRAP — multi-plate soft dual of REQUIRE JSONONLY / NOEXTRA
+# soft no-extra keys on PLATE or FROM named plate · LAST_N 0|1 · ONLYP_EXTRA/FROM
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\"}"
+
+# no extras vs full allow
+ONLYP "ok" "n" "err"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT ONLYP_N == 1
+ASSERT ONLYP_EXTRA == 0
+ASSERT ONLYP_LISTED == 3
+# LAST kept as plate
+SYS HAS LAST "n"
+ASSERT LAST_N == 1
+
+# extra key present
+LET NOISY = "{\"ok\":true,\"n\":1,\"noise\":9}"
+LET PLATE = NOISY
+ONLYP "ok" "n"
+ASSERT LAST_N == 0
+ASSERT ONLYP_EXTRA == 1
+ASSERT ONLYP_N == 0
+ASSERT ONLYP_LISTED == 2
+
+# supersets allowed (missing required is OK for ONLYP — only forbids extras)
+LET THIN = "{\"ok\":true}"
+LET PLATE = THIN
+ONLYP "ok" "n" "err"
+ASSERT LAST_N == 1
+ASSERT ONLYP_EXTRA == 0
+ASSERT ONLYP_LISTED == 3
+
+# aliases
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\"}"
+NOEXTRAP "ok" "n" "err"
+ASSERT LAST_N == 1
+JSONONLYP "ok" "n" "err"
+ASSERT LAST_N == 1
+STRICTP "ok" "n" "err"
+ASSERT LAST_N == 1
+ALLOWONLYP "ok" "n" "err"
+ASSERT LAST_N == 1
+PLATEONLYP "ok" "n" "err"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+LET PEER = "{\"p\":\"\",\"q\":\"two\",\"role\":\"agent\",\"noise\":9}"
+ONLYP "p" "q" "role" FROM PEER
+ASSERT LAST_N == 0
+ASSERT ONLYP_FROM == 1
+ASSERT ONLYP_EXTRA == 1
+
+ONLYP FROM PEER "p" "q" "role" "noise"
+ASSERT LAST_N == 1
+ASSERT ONLYP_FROM == 1
+ASSERT ONLYP_EXTRA == 0
+ASSERT NOEXTRAP_FROM == 1
+
+# empty allow + empty plate match
+SYS JSONOBJ
+LET EMPTY = LAST
+ONLYP FROM EMPTY
+ASSERT LAST_N == 1
+ASSERT ONLYP_LISTED == 0
+ASSERT ONLYP_EXTRA == 0
+
+# empty allow on non-empty plate - all keys extra
+ONLYP
+ASSERT LAST_N == 0
+ASSERT ONLYP_EXTRA == 3
+
+# PLATE unchanged by FROM peels
+SYS HAS PLATE "err"
+ASSERT LAST_N == 1
+
+# agent pattern: soft only-gate (no fail-fast)
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\"}"
+ONLYP "ok" "n" "err"
+IF LAST_N THEN
+  PASS "only ok"
+ELSE
+  FAIL "should match"
+END
+ASSERT OK == 1
+
+# EXTRAP dual contract
+EXTRAP "ok" "n" "err"
+ASSERT LAST_N == 0
+ONLYP "ok" "n" "err"
+ASSERT LAST_N == 1
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\",\"x\":1}"
+EXTRAP "ok" "n" "err"
+ASSERT LAST_N == 1
+ONLYP "ok" "n" "err"
+ASSERT LAST_N == 0
+ASSERT ONLYP_EXTRA == 1
+
+PASS "onlyp/noextrap ok"
