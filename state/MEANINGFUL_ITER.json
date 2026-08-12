@@ -5,13 +5,13 @@
   "item": "SYS JSONCOALESCE/JSONNVL first non-empty any-of value",
   "item_id": "mi_jsoncoalesce",
   "title": "SYS JSONCOALESCE \u00b7 JSONNVL \u00b7 JCOALESCE peel first non-empty any-of VALUE",
-  "commit": "cb745937",
+  "commit": "70f6ffe4",
   "summary": "Soft dual of JSONHITVAL that skips empty/null values: SYS JSONCOALESCE|JSONNVL [plate] key\u2026 [OR|DEFAULT def] \u2192 LAST=value \u00b7 LAST_N 0|1 \u00b7 JSONCOALESCE_N 1-based \u00b7 JSONCOALESCE_KEY \u00b7 JSONCOALESCE_HIT \u00b7 OF bag \u00b7 aliases JCOALESCE/JNVL/JSONOR. Proofs 1501 PASS.",
   "proofs": [
     "1501_jsoncoalesce + 1501_cli_jsoncoalesce PASS"
   ],
   "when": "2026-08-12T02:27:51Z",
   "agent": "nanobot-cubalc",
-  "sha": "cb745937a5d251f4d0b1a40e2d41e0c9c2f9ebc6",
+  "sha": "70f6ffe47e373a930e2392b7feb0fe69f88017d8",
   "note": "Skips empty string and JSON null; keeps false/0 as substance; OR/DEFAULT fallback; dual of JSONHITVAL"
 }
