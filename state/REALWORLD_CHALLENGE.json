@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 374,
-  "program": "programs/realworld/svc_ifhasflag_cli_contract_board.cubalc",
-  "theme": "IFHASFLAG/IFNOFLAG/IFHASARG/IFNOARG CLI contract gates",
+  "iter": 375,
+  "program": "programs/realworld/svc_ifcan_artifact_access_board.cubalc",
+  "theme": "IFCANREAD/IFCANWRITE/IFCANEXEC artifact path access gates",
   "version": "1.15.950-usability",
   "pass": true,
-  "prior_note": "iter 373 IFLINES; this iter first realworld of 1495 IFHASFLAG (MI 956)",
+  "prior_note": "iter 374 IFHASFLAG; this iter first realworld of 1490 IFCANREAD (MI 951)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "IFNOFLAG bogon sticky",
+      "cmd": "seed artifact + IFCANREAD",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "HASFLAG dual + SETENV arg 10/10",
+      "cmd": "read/write/exec + miss soft 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "dry-run/apply/deny-no-target 10/10",
+      "cmd": "miss/write-if-can/admit 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "mode class ladder 10/10",
+      "cmd": "path class ladder 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "setenv/unsetenv ladder 10/10",
+      "cmd": "write/load ladder 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFHASFLAG/IFHASARG",
+      "cmd": "HASFORM IFCANREAD/WRITE/EXEC",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "require target admit 10/10",
+      "cmd": "wrote+admit miss deny 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "mode plate STRTO WRITE NL",
+      "cmd": "STRTO WRITE NL stickies",
       "ok": true,
       "note": "probe"
     },
@@ -7250,6 +7250,30 @@
       "title": "IFHASFLAG/IFHASARG work (positive; first realworld 1495)",
       "detail": "1495 green. FN-wrap works (W892 list). pick_mode apply/dry-run + admit_deploy require target. Documents W895 var name trap.",
       "repro": "CALL has_target; CALL pick_mode; CALL admit_deploy"
+    },
+    {
+      "id": "W898",
+      "severity": "low",
+      "area": "lang|ifcan",
+      "title": "IFCANREAD/WRITE miss path soft-false; dir typically IFCANEXEC",
+      "detail": "Missing path not readable and not writable (IFCANREAD_N=0). Stage dir usually executable (search bit). write_if_can on dir WRITE + admit_load on file READ solid for deploy artifact stage.",
+      "repro": "IFCANREAD /no/such \u2192 0; IFCANEXEC stage_dir \u2192 1; IFCANWRITE stage_dir \u2192 1"
+    },
+    {
+      "id": "W899",
+      "severity": "low",
+      "area": "lang|ifcan",
+      "title": "IFCANREAD/IFCANWRITE/IFCANEXEC work (positive; first realworld 1490)",
+      "detail": "1490 green. Var path pth works. Stickies IFCANREAD_N IFCANWRITE_N IFCANEXEC_N. FN-wrap green (in block_scan). First-try green board.",
+      "repro": "CALL can_read; CALL can_write; CALL write_if_can; CALL admit_load"
+    },
+    {
+      "id": "W900",
+      "severity": "low",
+      "area": "lang|ifcan",
+      "title": "IFCANWRITE on file vs dir both true after create; no chmod surface",
+      "detail": "Board cannot exercise deny-nowrite without chmod. Language has no IFCANWRITE-after-chmod dual in-agent without SYS CHMOD. Soft miss only for missing paths.",
+      "repro": "would need SYS CHMOD 0 stage; IFCANWRITE \u2192 0 (not tested here)"
     }
   ],
   "workarounds": [
@@ -7415,10 +7439,14 @@
       "id": "WA-IHF",
       "for": "W895",
       "note": "bare env key in IFHASARG CUBALC_IHF_TARGET; FN has_target/no_target; SETENV/UNSETENV for tests"
+    },
+    {
+      "id": "WA-ICA",
+      "for": "W898+W899",
+      "note": "FN can_read/can_write/can_exec; write_if_can on stage_dir; admit_load on art_path"
     }
   ],
   "language_gaps": [
-    "IFFILE/IFDIR kind strict (W862); IFENV proof flaky needs name (W863)",
     "IFENV presence-only + FN-wrap (W865/W867); 1480 green W863 closed",
     "IFBIG unlinked 1.15.937 (W868); IFFRESH miss/stale dual (W869)",
     "IFBIG live 1.15.940 (W868 closed); empty/miss size dual (W871); FN-wrap (W873)",
@@ -7429,7 +7457,8 @@
     "IFBLANK live 1.15.949 (1492); ws blank num not blank (W886); FN-wrap (W888)",
     "IFLEN live 1.15.950 (1493); num decimal len + undef0 (W889); FN-wrap (W891)",
     "IFLINES FN block_scan miss (W892 fixed); num\u21921 field empty0 (W893); first realworld 1494",
-    "IFHASFLAG live 1.15.950 (1495); IFHASARG no var peel (W895); HASFLAG dual (W896)"
+    "IFHASFLAG live 1.15.950 (1495); IFHASARG no var peel (W895); HASFLAG dual (W896)",
+    "IFCANREAD live 1.15.950 (1490); miss soft-false (W898); no chmod dual in board (W900)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7601,9 +7630,14 @@
       "iter": 374,
       "issue": "IFHASARG arg_name (var) always miss until bare env key. pass/soft 7/10 \u2192 green after has_target FN.",
       "resolution": "first realworld 1495; document W895\u2013W897"
+    },
+    {
+      "iter": 375,
+      "issue": "First-try green. Documented miss soft dual and lack of chmod deny path in board.",
+      "resolution": "first realworld 1490; document W898\u2013W900"
     }
   ],
-  "commit": "c580c8fb",
-  "ts": 1786492268,
-  "board_commit": "c580c8fb"
+  "commit": "pending",
+  "ts": 1786493644,
+  "board_commit": "pending"
 }
