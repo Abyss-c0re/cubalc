@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 961,
-  "version": "1.15.961-usability",
-  "item": "SYS JSONCOALESCE/JSONNVL first non-empty any-of value",
-  "item_id": "mi_jsoncoalesce",
-  "title": "SYS JSONCOALESCE \u00b7 JSONNVL \u00b7 JCOALESCE peel first non-empty any-of VALUE",
-  "commit": "70f6ffe4",
-  "summary": "Soft dual of JSONHITVAL that skips empty/null values: SYS JSONCOALESCE|JSONNVL [plate] key\u2026 [OR|DEFAULT def] \u2192 LAST=value \u00b7 LAST_N 0|1 \u00b7 JSONCOALESCE_N 1-based \u00b7 JSONCOALESCE_KEY \u00b7 JSONCOALESCE_HIT \u00b7 OF bag \u00b7 aliases JCOALESCE/JNVL/JSONOR. Proofs 1501 PASS.",
+  "iter": 962,
+  "version": "1.15.962-usability",
+  "item": "COALESCEP/NVLP multi-plate first non-empty any-of value",
+  "item_id": "mi_coalescep",
+  "title": "COALESCEP \u00b7 NVLP \u00b7 PLATECOALESCE peel first non-empty any-of VALUE from PLATE or FROM plate",
+  "commit": "c9d1e466",
+  "summary": "Multi-plate dual of SYS JSONCOALESCE: COALESCEP|NVLP|PNVL [FROM plate] key\u2026 [OR|DEFAULT def] \u2192 LAST=value \u00b7 LAST_N 0|1 \u00b7 COALESCEP_N 1-based \u00b7 COALESCEP_KEY \u00b7 COALESCEP_HIT \u00b7 COALESCEP_FROM. Skips empty/null; keeps 0/false. Proofs 1502 PASS (36 asserts).",
   "proofs": [
-    "1501_jsoncoalesce + 1501_cli_jsoncoalesce PASS"
+    "1502_coalescep + 1502_cli_coalescep PASS"
   ],
-  "when": "2026-08-12T02:27:51Z",
+  "when": "2026-08-12T05:29:19Z",
   "agent": "nanobot-cubalc",
-  "sha": "70f6ffe47e373a930e2392b7feb0fe69f88017d8",
-  "note": "Skips empty string and JSON null; keeps false/0 as substance; OR/DEFAULT fallback; dual of JSONHITVAL"
+  "sha": "c9d1e466484bac520666d9f3684ebeae75961cf5",
+  "note": "Plate-session dual of JSONCOALESCE; FROM named plate; OR/DEFAULT fallback; aliases NVLP/PNVL/PLATECOALESCE/COALESCE_P/HITCOALESCEP/FIRSTNONEMPTYP"
 }

@@ -2927,6 +2927,10 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"HASP", "HASP [FROM plate] key — soft 0|1 presence · dotted path nest ok · multi-plate · no GETP miss ERR"},
       {"HASPALL", "HASPALL [FROM plate] key… — soft 0|1 all-present · dotted path nest ok · multi-plate"},
       {"HASPANY", "HASPANY|PLATEHASANY keys… — soft 0|1 if any key present · KEYHAVE bag · multi-plate"},
+      {"COALESCEP", "COALESCEP|NVLP [FROM plate] key… [OR def] — first non-empty any-of value · multi-plate dual of JSONCOALESCE"},
+      {"NVLP", "NVLP alias of COALESCEP"},
+      {"PLATECOALESCE", "PLATECOALESCE alias of COALESCEP"},
+      {"PNVL", "PNVL alias of COALESCEP"},
       {"NEEDPANY", "NEEDPANY|REQUIREPANY keys… — fail-fast if none of keys present · multi-plate"},
       {"REQUIREPANY", "REQUIREPANY alias of NEEDPANY"},
       {"KEYSP", "KEYSP [FROM plate] [path] — key bag → LAST · nest path ok · multi-plate · no JSONKEYS glue"},
@@ -3370,6 +3374,16 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"WHENJSONHAS", "WHENJSONHAS alias of IFJSONHAS"},
       {"WHENJSONMISS", "WHENJSONMISS alias of IFJSONMISS"},
       {"WHENHASJSON", "WHENHASJSON alias of IFJSONHAS"},
+      {"IFJSONHASANY", "IFJSONHASANY|IFHASJSONANY plate key… [ELSE …] END — body if any key present"},
+      {"IFHASJSONANY", "IFHASJSONANY alias of IFJSONHASANY"},
+      {"WHENJSONHASANY", "WHENJSONHASANY alias of IFJSONHASANY"},
+      {"WHENHASJSONANY", "WHENHASJSONANY alias of IFJSONHASANY"},
+      {"IFJSONHASALL", "IFJSONHASALL|IFJSONNEED plate key… [ELSE …] END — body if all keys present"},
+      {"IFHASJSONALL", "IFHASJSONALL alias of IFJSONHASALL"},
+      {"WHENJSONHASALL", "WHENJSONHASALL alias of IFJSONHASALL"},
+      {"WHENHASJSONALL", "WHENHASJSONALL alias of IFJSONHASALL"},
+      {"IFJSONNEED", "IFJSONNEED alias of IFJSONHASALL"},
+      {"WHENJSONNEED", "WHENJSONNEED alias of IFJSONHASALL"},
       {"IFNUM", "IFNUM name … [ELSE …] END — body if var is numeric"},
       {"IFSTR", "IFSTR name … [ELSE …] END — body if var is string"},
       {"IFVARTYPE", "IFVARTYPE|IFKIND name kind … [ELSE …] END — kind num|str|undef"},
@@ -45997,6 +46011,188 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
   }
+  /* COALESCEP|NVLP|HITCOALESCEP [FROM plate] key… [OR|DEFAULT def]
+   * — first non-empty any-of value from PLATE (or FROM named plate).
+   * Multi-plate dual of SYS JSONCOALESCE · plate_session agents peel preferred keys
+   * without SYS JSONCOALESCE PLATE glue / multi GETP+IFEMPTY.
+   * LAST=value · LAST_N 0|1 · COALESCEP_N=1-based · COALESCEP_KEY · COALESCEP_HIT · OR default. */
+  if (kw(&L->cur,"COALESCEP") || kw(&L->cur,"NVLP") || kw(&L->cur,"PLATECOALESCE") ||
+      kw(&L->cur,"COALESCE_P") || kw(&L->cur,"PNVL") || kw(&L->cur,"HITCOALESCEP") ||
+      kw(&L->cur,"FIRSTNONEMPTYP") || kw(&L->cur,"PLATENVL") || kw(&L->cur,"MCOALESCEP") ||
+      kw(&L->cur,"ORP") || kw(&L->cur,"DEFAULTVALP")) {
+    char plate[CUBALC_HOST_STR_MAX], keys_nl[CUBALC_HOST_STR_MAX];
+    char arg[CUBALC_HOST_STR_MAX], deflt[CUBALC_HOST_STR_MAX];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0;
+    size_t olen = 0;
+    Var *pv;
+
+    lex_next(L);
+    plate[0] = 0; keys_nl[0] = 0; deflt[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+           L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSEVAL") ||
+           kw(&L->cur,"FALLBACK") || kw(&L->cur,"DEF") || kw(&L->cur,"WITH") ||
+           kw(&L->cur,"AS") || kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+           kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM") ||
+           kw(&L->cur,"END") || kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") ||
+           kw(&L->cur,"IF") || kw(&L->cur,"LET") || kw(&L->cur,"SYS") ||
+           kw(&L->cur,"ASSERT") || kw(&L->cur,"PRINT") || kw(&L->cur,"PASS") ||
+           kw(&L->cur,"FAIL") || kw(&L->cur,"FOR") || kw(&L->cur,"WHILE") ||
+           kw(&L->cur,"LOOP") || kw(&L->cur,"JSON") || kw(&L->cur,"SETP") ||
+           kw(&L->cur,"GETP") || kw(&L->cur,"HASP") || kw(&L->cur,"NEEDP") ||
+           kw(&L->cur,"HASPANY") || kw(&L->cur,"COALESCEP") || kw(&L->cur,"NVLP"))) {
+        break;
+      }
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(arg, sizeof arg, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+        break;
+      }
+      if (!arg[0]) continue;
+      if (olen > 0) {
+        if (olen + 1 >= sizeof keys_nl) break;
+        keys_nl[olen++] = '\n';
+        keys_nl[olen] = 0;
+      }
+      {
+        size_t al = strlen(arg);
+        if (olen + al + 1 >= sizeof keys_nl) break;
+        memcpy(keys_nl + olen, arg, al + 1);
+        olen += al;
+      }
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSEVAL") ||
+        kw(&L->cur,"FALLBACK") || kw(&L->cur,"DEF") || kw(&L->cur,"WITH") ||
+        kw(&L->cur,"AS")) {
+      lex_next(L);
+      if (resolve_str_arg(vm, L, arg, sizeof arg) == 0)
+        snprintf(deflt, sizeof deflt, "%s", arg);
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_coalesce(plate, keys_nl, deflt, &hr) != 0) {
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "COALESCEP_N", 0);
+      var_set_num(vm, "COALESCEP_HIT", 0);
+      var_set_num(vm, "NVLP_N", 0);
+      var_set_num(vm, "COALESCEP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "COALESCEP_KEY", "");
+      var_set_str(vm, "NVLP_KEY", "");
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "COALESCEP: fail");
+        var_set_str(vm, "ERR", "COALESCEP: fail");
+      }
+      bump(vm); return 1;
+    }
+    if (hr.n) {
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "COALESCEP_HIT", 1);
+    } else if (hr.str[0]) {
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "COALESCEP_HIT", 0);
+    } else {
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "COALESCEP_HIT", 0);
+    }
+    var_set_num(vm, "COALESCEP_N", (long)hr.code);
+    var_set_num(vm, "NVLP_N", (long)hr.code);
+    var_set_num(vm, "JSONCOALESCE_N", (long)hr.code);
+    var_set_str(vm, "COALESCEP_KEY", hr.err);
+    var_set_str(vm, "NVLP_KEY", hr.err);
+    var_set_str(vm, "JSONCOALESCE_KEY", hr.err);
+    var_set_num(vm, "COALESCEP_FROM", have_from ? 1 : 0);
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# coalescep hit=%ld idx=%d key=%s from=%d val=%s\n",
+              hr.n, hr.code, hr.err, have_from, hr.str);
+    bump(vm); return 1;
+  }
+
   /* SAVEP [FROM plate] path — persist PLATE (default) or any plate var to disk.
    * Twin of plate_save INCLUDE + multi-plate dual of LOADPLATE INTO:
    *   SETP "role" "worker"

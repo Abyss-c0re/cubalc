@@ -1,0 +1,93 @@
+# COALESCEP / NVLP — multi-plate dual of SYS JSONCOALESCE
+# first non-empty any-of value from PLATE or FROM named plate
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\",\"version\":\"1.2\",\"msg\":\"hello\"}"
+
+# first non-empty among candidates (skips empty err)
+COALESCEP "missing" "err" "msg" "n"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+ASSERT COALESCEP_N == 3
+ASSERT COALESCEP_HIT == 1
+SYS EQS COALESCEP_KEY "msg"
+ASSERT LAST_N == 1
+
+# second candidate when first empty
+COALESCEP "err" "version"
+ASSERT LAST_N == 1
+SYS EQS LAST "1.2"
+ASSERT LAST_N == 1
+ASSERT COALESCEP_N == 2
+SYS EQS COALESCEP_KEY "version"
+ASSERT LAST_N == 1
+
+# all miss / empty → no default → LAST empty LAST_N 0
+COALESCEP "a" "b" "err"
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+ASSERT COALESCEP_HIT == 0
+ASSERT COALESCEP_N == 0
+
+# OR default when miss
+COALESCEP "a" "b" OR "fallback"
+ASSERT LAST_N == 1
+SYS EQS LAST "fallback"
+ASSERT LAST_N == 1
+ASSERT COALESCEP_HIT == 0
+ASSERT COALESCEP_N == 0
+SYS EMPTY COALESCEP_KEY
+ASSERT LAST_N == 1
+
+# DEFAULT alias
+COALESCEP "gone" DEFAULT "dflt"
+ASSERT LAST_N == 1
+SYS EQS LAST "dflt"
+ASSERT LAST_N == 1
+
+# aliases
+NVLP "n"
+ASSERT LAST_N == 1
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+PNVL "msg"
+ASSERT LAST_N == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+LET PEER = "{\"p\":\"\",\"q\":\"two\",\"role\":\"agent\"}"
+COALESCEP "p" "q" FROM PEER
+ASSERT LAST_N == 1
+SYS EQS LAST "two"
+ASSERT LAST_N == 1
+ASSERT COALESCEP_FROM == 1
+SYS EQS COALESCEP_KEY "q"
+ASSERT LAST_N == 1
+
+# FROM then keys
+COALESCEP FROM PEER "missing" "role" OR "none"
+ASSERT LAST_N == 1
+SYS EQS LAST "agent"
+ASSERT LAST_N == 1
+ASSERT COALESCEP_HIT == 1
+
+# keeps false/0 substance (JSON false → "false" or empty?)
+SYS JSONOBJ "z" 0 "f" false "e" ""
+LET Z = LAST
+COALESCEP "e" "z" FROM Z
+ASSERT LAST_N == 1
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+SYS EQS COALESCEP_KEY "z"
+ASSERT LAST_N == 1
+
+# PLATE unchanged by FROM peels
+SYS HAS PLATE "msg"
+ASSERT LAST_N == 1
+
+PASS "coalescep ok"
