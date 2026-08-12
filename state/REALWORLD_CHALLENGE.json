@@ -7696,7 +7696,7 @@
     "iter380: WRITE multi-arg host_s form error (W924); gate equal-mtime deny until SLEEP 1100",
     "iter380: out/cubalc thrash mid-run; linked stable /tmp/cubalc_stable"
   ],
-  "commit": "",
+  "commit": "898a87af",
   "ts": "2026-08-12T05:25:19+03:00",
-  "board_commit": ""
+  "board_commit": "898a87af"
 }
