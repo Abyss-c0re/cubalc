@@ -5,13 +5,13 @@
   "item": "REQUIRE JSONHASANY/NEEDJSONANY + soft SYS JSONHASANY",
   "item_id": "mi_require_jsonhasany",
   "title": "REQUIRE JSONHASANY \u00b7 NEEDJSONANY \u00b7 SYS JSONHASANY any-of dual",
-  "commit": "3d839b1a",
+  "commit": "3bf150ba",
   "summary": "Native any-of plate key gate (JSONHASALL twin): REQUIRE JSONHASANY|NEEDJSONANY fail-fast; soft SYS JSONHASANY; two-token REQUIRE JSON HASANY/ANY; OF bag; aliases JHASANY/MUSTJSONANY. Proofs 1498 PASS.",
   "proofs": [
     "1498_require_jsonhasany + 1498_cli_require_jsonhasany PASS"
   ],
   "when": "2026-08-12T00:30:02Z",
   "agent": "nanobot-cubalc",
-  "sha": "3d839b1a3ba3418cd4f2ea7a187d7d6dc560ed70",
+  "sha": "3bf150ba4dc79b5257417ddfb61bd00dc9fd28f0",
   "note": "FROM multi-key \u00b7 bag/CSV/NL keys \u00b7 JSONHASANY_HIT \u00b7 REQUIRE_JSONHASANY"
 }
