@@ -5,14 +5,14 @@
   "item": "ONLYP/NOEXTRAP soft multi-plate dual of REQUIRE JSONONLY",
   "item_id": "mi_onlyp",
   "title": "ONLYP \u00b7 NOEXTRAP soft no-extra keys on PLATE or FROM plate",
-  "commit": "df36968d",
+  "commit": "881cee68",
   "summary": "Multi-plate soft dual of REQUIRE JSONONLY/NOEXTRA/JSONSTRICT: ONLYP|NOEXTRAP [FROM plate] allow\u2026 \u2192 LAST=plate \u00b7 LAST_N 0|1 \u00b7 ONLYP_N \u00b7 ONLYP_EXTRA \u00b7 ONLYP_LISTED \u00b7 ONLYP_FROM. Empty allow+empty plate match. Supersets allowed (missing keys OK). Soft twin of fail-fast JSONONLY for plate-session agents. Proofs 1508 PASS (37 asserts + CLI).",
   "proofs": [
     "1508_onlyp + 1508_cli_onlyp PASS"
   ],
-  "when": "2026-08-12T14:23:06Z",
+  "when": "2026-08-12T14:26:17Z",
   "agent": "nanobot-cubalc",
-  "sha": "df36968d0557a0309f8113371c3af717a64205f4",
+  "sha": "881cee6889a5cd09747be6e955e5342f44ae3cbf",
   "note": "Plate-session dual of JSONONLY/NOEXTRA; FROM named plate; aliases JSONONLYP/STRICTP/ALLOWONLYP/PLATEONLYP; dual contract with EXTRAP",
-  "state_commit": "df36968d"
+  "state_commit": "881cee68"
 }
