@@ -7532,7 +7532,7 @@
     "iter377: thrased tree missing out/cubalc + REALWORLD state; restored Makefile/include/src/proof from HEAD; modular link rebuild; JSONHITKEY first realworld green",
     "iter377: SYS JSON var-key FROM plate empty (W904) \u2014 EQS-branch peel workaround"
   ],
-  "commit": "6e8c9bf6",
+  "commit": "83dd3e84",
   "ts": "2026-08-12T04:19:08+03:00",
-  "board_commit": ""
+  "board_commit": "83dd3e84"
 }
