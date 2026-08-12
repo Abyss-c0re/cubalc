@@ -1,0 +1,124 @@
+# IFONLYP / IFEXACTP — plate allow-list / exact-schema branches
+# Soft twins of SYS ONLYP/EXACTP as IF/WHEN contract branches for agents.
+
+HOLD_FLASH 1
+
+LET plate = "{\"ok\":1,\"n\":42,\"role\":\"agent\"}"
+LET noisy = "{\"ok\":1,\"n\":42,\"role\":\"agent\",\"noise\":9}"
+LET thin = "{\"ok\":1}"
+LET empty = "{}"
+
+# ONLYP: no extras beyond allow-list (missing keys OK)
+IFONLYP plate "ok" "n" "role"
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+ASSERT IFONLYP_N == 1
+ASSERT ONLYP_N == 1
+ASSERT ONLYP_EXTRA == 0
+
+# ONLYP rejects extras
+IFONLYP noisy "ok" "n" "role"
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 0
+ASSERT IFONLYP_N == 0
+ASSERT ONLYP_EXTRA == 1
+
+# thin plate still only-ok (missing required is fine for ONLY)
+IFONLYP thin "ok" "n" "role"
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+ASSERT ONLYP_EXTRA == 0
+
+# EXACTP: HASALL + no extras
+IFEXACTP plate "ok" "n" "role"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+ASSERT IFEXACTP_N == 1
+ASSERT EXACTP_N == 1
+ASSERT IFEXACTP_EXTRA == 0
+ASSERT IFEXACTP_MISS == 0
+ASSERT IFEXACTP_HIT == 3
+ASSERT IFEXACTP_LISTED == 3
+
+# EXACT fails on missing key
+IFEXACTP thin "ok" "n" "role"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 0
+ASSERT IFEXACTP_N == 0
+ASSERT IFEXACTP_MISS >= 1
+
+# EXACT fails on extras
+IFEXACTP noisy "ok" "n" "role"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 0
+ASSERT IFEXACTP_EXTRA == 1
+
+# aliases
+IFNOEXTRAP plate "ok" "n" "role"
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+IFSCHEMAP plate "ok" "n" "role"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+IFJSONONLYP plate "ok" "n" "role"
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+IFJSONEXACTP plate "ok" "n" "role"
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+# empty plate + empty allow (only keys collected = none) → only true, exact true
+IFONLYP empty
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+IFEXACTP empty
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+
+# discovery
+HASFORM "IFONLYP"
+ASSERT LAST_N == 1
+HASFORM "IFEXACTP"
+ASSERT LAST_N == 1
+HASFORM "IFSCHEMAP"
+ASSERT LAST_N == 1
+HASFORM "IFNOEXTRAP"
+ASSERT LAST_N == 1
+
+PRINT "1511_ifonlyp_ifexactp ok"

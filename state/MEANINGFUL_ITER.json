@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 970,
-  "version": "1.15.970-usability",
-  "item": "IFJSONHASALL/IFJSONHASANY multi-key plate contract branches",
-  "item_id": "mi_ifjsonhasall",
-  "title": "IFJSONHASALL \u00b7 IFJSONHASANY multi-key plate branches for agents",
-  "commit": "72b05622",
-  "summary": "Multi-key plate contract branches: IFJSONHASALL|IFJSONNEED|IFHASJSONALL plate key\u2026 and IFJSONHASANY|IFHASJSONANY plate key\u2026 wire into cubalc_host_json_has_keys (soft twins of SYS JSONHASALL/JSONHASANY). Sets IFJSONHASALL_N/IFJSONHASANY_N + JSONHASALL_N/JSONHASANY_N. Complements single-key IFJSONHAS/IFJSONMISS. Proofs 1510 PASS (19 asserts + CLI WHEN/IFHAS dual + soft SYS dual).",
+  "iter": 971,
+  "version": "1.15.971-usability",
+  "item": "IFONLYP/IFEXACTP plate allow-list and exact-schema branches",
+  "item_id": "mi_ifonlyp_ifexactp",
+  "title": "IFONLYP \u00b7 IFEXACTP plate contract branches for agents",
+  "commit": "210c9a3c",
+  "summary": "Plate allow-list / exact-schema IF/WHEN branches: IFONLYP|IFNOEXTRAP|IFJSONONLYP|IFSTRICTP|WHENONLYP plate allow\u2026 and IFEXACTP|IFSCHEMAP|IFJSONEXACTP|WHENEXACTP plate key\u2026 wire into cubalc_host_json_filter_plate_keys (+ has_keys for exact). Soft twins of SYS ONLYP/EXACTP. Sets IFONLYP_N/ONLYP_N/ONLYP_EXTRA and IFEXACTP_N/EXACTP_N/HIT/EXTRA/MISS/LISTED. Complements IFJSONHASALL/ANY. Proofs 1511 PASS (31 asserts + CLI WHEN dual + soft SYS FROM plate dual).",
   "proofs": [
-    "1510_ifjsonhasall_any + 1510_cli_ifjsonhasall_any PASS"
+    "1511_ifonlyp_ifexactp + 1511_cli_ifonlyp_ifexactp PASS"
   ],
-  "when": "2026-08-12T18:58:27Z",
+  "when": "2026-08-12T22:00:28Z",
   "agent": "nanobot-cubalc",
-  "sha": "72b05622bad4e6fcb9d47d29e66405fa31dbb7b7",
-  "note": "Multi-key plate contract branches without JSONHASALL probe + IF LAST_N glue; dual soft SYS JSONHASALL/ANY + branch forms",
-  "state_commit": "72b05622"
+  "sha": "210c9a3c6e646af3f03df70b19f5555ccba18720",
+  "note": "Allow-list / exact schema plate branches without ONLYP/EXACTP probe + IF LAST_N glue; dual soft SYS ONLYP/EXACTP + branch forms",
+  "state_commit": "210c9a3c"
 }
