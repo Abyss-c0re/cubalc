@@ -2947,6 +2947,14 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"FOUNDKEYSP", "FOUNDKEYSP alias of PRESENTP"},
       {"PLATEPRESENTP", "PLATEPRESENTP alias of PRESENTP"},
       {"FOUNDP", "FOUNDP alias of PRESENTP"},
+      {"EXTRAP", "EXTRAP|UNKNOWNKEYSP [FROM plate] allow… — bag of plate keys not in allow-list · multi-plate dual of JSONEXTRA"},
+      {"UNKNOWNKEYSP", "UNKNOWNKEYSP alias of EXTRAP"},
+      {"PLATEEXTRAP", "PLATEEXTRAP alias of EXTRAP"},
+      {"EXTRAKEYSP", "EXTRAKEYSP alias of EXTRAP"},
+      {"KNOWNP", "KNOWNP|ALLOWEDKEYSP [FROM plate] allow… — bag of plate keys in allow-list · multi-plate dual of JSONKNOWN"},
+      {"ALLOWEDKEYSP", "ALLOWEDKEYSP alias of KNOWNP"},
+      {"PLATEKNOWNP", "PLATEKNOWNP alias of KNOWNP"},
+      {"KNOWNKEYSP", "KNOWNKEYSP alias of KNOWNP"},
       {"NEEDPANY", "NEEDPANY|REQUIREPANY keys… — fail-fast if none of keys present · multi-plate"},
       {"REQUIREPANY", "REQUIREPANY alias of NEEDPANY"},
       {"KEYSP", "KEYSP [FROM plate] [path] — key bag → LAST · nest path ok · multi-plate · no JSONKEYS glue"},
@@ -46545,7 +46553,200 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  /* COALESCEP|NVLP|HITCOALESCEP [FROM plate] key… [OR|DEFAULT def]
+    /* EXTRAP|UNKNOWNP|EXTRAKEYSP [FROM plate] allow...
+   * KNOWNP|ALLOWEDKEYSP|KNOWNKEYSP [FROM plate] allow...
+   * -- bag of plate keys outside/inside allow-list from PLATE (or FROM named plate).
+   * Multi-plate dual of SYS JSONEXTRA / JSONKNOWN.
+   * LAST=bag · LAST_N=count · EXTRAP_N / KNOWNP_N · EXTRAP_FROM / KNOWNP_FROM.
+   * Empty allow-list: EXTRA = all plate keys; KNOWN = empty. */
+  if (kw(&L->cur,"EXTRAP") || kw(&L->cur,"EXTRAKEYS_P") || kw(&L->cur,"PLATEEXTRAP") ||
+      kw(&L->cur,"EXTRAKEYSP") || kw(&L->cur,"EXTRA_P") || kw(&L->cur,"KEYEXTRAP") ||
+      kw(&L->cur,"MEXTRAP") || kw(&L->cur,"UNKNOWNKEYS_P") ||
+      kw(&L->cur,"UNKNOWNKEYSP") ||
+      kw(&L->cur,"KNOWNP") || kw(&L->cur,"ALLOWEDKEYSP") || kw(&L->cur,"PLATEKNOWNP") ||
+      kw(&L->cur,"KNOWNKEYSP") || kw(&L->cur,"KNOWN_P") || kw(&L->cur,"KEYKNOWNP") ||
+      kw(&L->cur,"MKNOWNP") || kw(&L->cur,"KNOWNKEYS_P") || kw(&L->cur,"ALLOWEDKEYS_P") ||
+      kw(&L->cur,"ALLOWEDKEYSP")) {
+    char plate[CUBALC_HOST_STR_MAX], allowed_nl[CUBALC_HOST_STR_MAX];
+    char arg[CUBALC_HOST_STR_MAX], op[32];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, want_extra = 1;
+    size_t olen = 0;
+    Var *pv;
+
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "KNOWNP") == 0 || strcmp(op, "ALLOWEDKEYSP") == 0 ||
+        strcmp(op, "PLATEKNOWNP") == 0 || strcmp(op, "KNOWNKEYSP") == 0 ||
+        strcmp(op, "KNOWN_P") == 0 || strcmp(op, "KEYKNOWNP") == 0 ||
+        strcmp(op, "MKNOWNP") == 0 || strcmp(op, "KNOWNKEYS_P") == 0 ||
+        strcmp(op, "ALLOWEDKEYS_P") == 0 || strcmp(op, "ALLOWEDKEYSP") == 0)
+      want_extra = 0;
+
+    lex_next(L);
+    plate[0] = 0; allowed_nl[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+           L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"END") || kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") ||
+           kw(&L->cur,"IF") || kw(&L->cur,"LET") || kw(&L->cur,"SYS") ||
+           kw(&L->cur,"ASSERT") || kw(&L->cur,"PRINT") || kw(&L->cur,"PASS") ||
+           kw(&L->cur,"FAIL") || kw(&L->cur,"FOR") || kw(&L->cur,"WHILE") ||
+           kw(&L->cur,"LOOP") || kw(&L->cur,"JSON") || kw(&L->cur,"SETP") ||
+           kw(&L->cur,"GETP") || kw(&L->cur,"HASP") || kw(&L->cur,"NEEDP") ||
+           kw(&L->cur,"HASPANY") || kw(&L->cur,"COALESCEP") || kw(&L->cur,"NVLP") ||
+           kw(&L->cur,"HITVALP") || kw(&L->cur,"FIRSTVALP") || kw(&L->cur,"HITKEYP") ||
+           kw(&L->cur,"EXTRAP") || kw(&L->cur,"KNOWNP") || kw(&L->cur,"FROM") ||
+           kw(&L->cur,"USING") || kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+           kw(&L->cur,"PLATEFROM") || kw(&L->cur,"WITH") || kw(&L->cur,"AS"))) {
+        break;
+      }
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(arg, sizeof arg, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+        break;
+      }
+      if (!arg[0]) continue;
+      if (olen > 0) {
+        if (olen + 1 >= sizeof allowed_nl) break;
+        allowed_nl[olen++] = '\n';
+        allowed_nl[olen] = 0;
+      }
+      {
+        size_t al = strlen(arg);
+        if (olen + al + 1 >= sizeof allowed_nl) break;
+        memcpy(allowed_nl + olen, arg, al + 1);
+        olen += al;
+      }
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_filter_plate_keys(plate, allowed_nl, want_extra, &hr) != 0) {
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      if (want_extra) {
+        var_set_num(vm, "EXTRAP_N", 0);
+        var_set_num(vm, "UNKNOWNKEYSP_N", 0);
+        var_set_num(vm, "JSONEXTRA_N", 0);
+        var_set_num(vm, "JSONUNKNOWN_N", 0);
+      } else {
+        var_set_num(vm, "KNOWNP_N", 0);
+        var_set_num(vm, "ALLOWEDKEYSP_N", 0);
+        var_set_num(vm, "JSONKNOWN_N", 0);
+        var_set_num(vm, "JSONALLOWED_N", 0);
+      }
+      var_set_num(vm, want_extra ? "EXTRAP_FROM" : "KNOWNP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", want_extra ? "EXTRAP: fail" : "KNOWNP: fail");
+        var_set_str(vm, "ERR", want_extra ? "EXTRAP: fail" : "KNOWNP: fail");
+      }
+      bump(vm); return 1;
+    }
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    if (want_extra) {
+      var_set_num(vm, "EXTRAP_N", hr.n);
+      var_set_num(vm, "UNKNOWNKEYSP_N", hr.n);
+      var_set_num(vm, "JSONEXTRA_N", hr.n);
+      var_set_num(vm, "JSONUNKNOWN_N", hr.n);
+      var_set_num(vm, "EXTRAP_FROM", have_from ? 1 : 0);
+    } else {
+      var_set_num(vm, "KNOWNP_N", hr.n);
+      var_set_num(vm, "ALLOWEDKEYSP_N", hr.n);
+      var_set_num(vm, "JSONKNOWN_N", hr.n);
+      var_set_num(vm, "JSONALLOWED_N", hr.n);
+      var_set_num(vm, "KNOWNP_FROM", have_from ? 1 : 0);
+    }
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%ld from=%d bag=%s\n",
+              want_extra ? "extrap" : "knownp", hr.n, have_from, hr.str);
+    bump(vm); return 1;
+  }
+
+/* COALESCEP|NVLP|HITCOALESCEP [FROM plate] key… [OR|DEFAULT def]
    * — first non-empty any-of value from PLATE (or FROM named plate).
    * Multi-plate dual of SYS JSONCOALESCE · plate_session agents peel preferred keys
    * without SYS JSONCOALESCE PLATE glue / multi GETP+IFEMPTY.

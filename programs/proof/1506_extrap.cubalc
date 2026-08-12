@@ -1,0 +1,110 @@
+# EXTRAP / KNOWNP — multi-plate dual of SYS JSONEXTRA / JSONKNOWN
+# bag of plate keys outside/inside allow-list from PLATE or FROM named plate
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\",\"debug\":1,\"trace\":0}"
+
+# no extras vs full allow
+EXTRAP "ok" "n" "err" "debug" "trace"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT EXTRAP_N == 0
+
+# two unknown (allow ok,n,err → debug+trace extra)
+EXTRAP "ok" "n" "err"
+ASSERT LAST_N == 2
+ASSERT EXTRAP_N == 2
+SYS HASLINE LAST "debug"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "trace"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 0
+
+# known dual
+KNOWNP "ok" "missing" "n" "debug"
+ASSERT LAST_N == 3
+ASSERT KNOWNP_N == 3
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "debug"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "missing"
+ASSERT LAST_N == 0
+
+# aliases
+UNKNOWNKEYSP "ok" "n" "err"
+ASSERT LAST_N == 2
+EXTRAKEYSP "ok" "n" "err" "debug" "trace"
+ASSERT LAST_N == 0
+ALLOWEDKEYSP "ok" "zzz"
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+KNOWNKEYSP "ok" "n"
+ASSERT LAST_N == 2
+
+# multi-plate FROM
+LET PEER = "{\"p\":\"\",\"q\":\"two\",\"role\":\"agent\",\"noise\":9}"
+EXTRAP "p" "q" "role" FROM PEER
+ASSERT LAST_N == 1
+SYS EQS LAST "noise"
+ASSERT LAST_N == 1
+ASSERT EXTRAP_FROM == 1
+
+KNOWNP FROM PEER "p" "gone" "role"
+ASSERT LAST_N == 2
+ASSERT KNOWNP_FROM == 1
+SYS HASLINE LAST "p"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "role"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "gone"
+ASSERT LAST_N == 0
+
+# empty allow-list → all plate keys extra; known empty
+EXTRAP
+ASSERT LAST_N == 5
+ASSERT EXTRAP_N == 5
+KNOWNP
+ASSERT LAST_N == 0
+
+# empty plate
+SYS JSONOBJ
+LET EMPTY = LAST
+EXTRAP "ok" "n" FROM EMPTY
+ASSERT LAST_N == 0
+KNOWNP "ok" FROM EMPTY
+ASSERT LAST_N == 0
+
+# PLATE unchanged by FROM peels
+SYS HAS PLATE "trace"
+ASSERT LAST_N == 1
+
+# agent pattern: contract MISS + EXTRA
+# allow ok,n,version → extras = err,debug,trace (3)
+MISSP "ok" "n" "version"
+ASSERT LAST_N == 1
+SYS EQS LAST "version"
+ASSERT LAST_N == 1
+EXTRAP "ok" "n" "version"
+ASSERT LAST_N == 3
+ASSERT EXTRAP_N == 3
+SYS HASLINE LAST "err"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "debug"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "trace"
+ASSERT LAST_N == 1
+
+IF LAST_N THEN
+  PASS "schema has extras as expected"
+ELSE
+  FAIL "should report extras"
+END
+ASSERT OK == 1
+
+PASS "extrap/knownp ok"
