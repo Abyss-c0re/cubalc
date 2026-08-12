@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 964,
-  "version": "1.15.964-usability",
-  "item": "HITVALP/FIRSTVALP multi-plate first present any-of VALUE",
-  "item_id": "mi_hitvalp",
-  "title": "HITVALP \u00b7 FIRSTVALP \u00b7 WHICHVALP first present any-of VALUE from PLATE or FROM plate",
-  "commit": "999a6e78",
-  "summary": "Multi-plate dual of SYS JSONHITVAL: HITVALP|FIRSTVALP|WHICHVALP [FROM plate] key\u2026 \u2192 LAST=value \u00b7 LAST_N 0|1 \u00b7 HITVALP_N 1-based \u00b7 HITVALP_HIT \u00b7 HITVALP_KEY \u00b7 HITVALP_FROM. Presence dual of COALESCEP (empty/0/false still present). Proofs 1504 PASS (35 asserts).",
+  "iter": 965,
+  "version": "1.15.965-usability",
+  "item": "MISSP/PRESENTP multi-plate dual of JSONMISS/JSONPRESENT",
+  "item_id": "mi_missp",
+  "title": "MISSP \u00b7 PRESENTP bag of missing/present required keys from PLATE or FROM plate",
+  "commit": "15d3ba0a",
+  "summary": "Multi-plate dual of SYS JSONMISS/JSONPRESENT: MISSP|PRESENTP [FROM plate] key\u2026 \u2192 LAST=bag \u00b7 LAST_N=count \u00b7 MISSP_N/PRESENTP_N \u00b7 MISSP_FROM/PRESENTP_FROM. Presence dual of COALESCEP (null/false/0/empty still present). Proofs 1505 PASS (40 asserts).",
   "proofs": [
-    "1504_hitvalp + 1504_cli_hitvalp PASS"
+    "1505_missp + 1505_cli_missp PASS"
   ],
-  "when": "2026-08-12T14:10:00Z",
+  "when": "2026-08-12T12:19:42Z",
   "agent": "nanobot-cubalc",
-  "sha": "999a6e78cbd9e188476a28f13e3da80b352fbc7b",
-  "note": "Plate-session dual of JSONHITVAL; FROM named plate; aliases FIRSTVALP/WHICHVALP/PLATEHITVALP/HITVAL_P/VALHITP/FIRSTPRESENTVALP",
-  "state_commit": "b0547b6a"
+  "sha": "15d3ba0a159490593047e9a35b03679dc631a3b2",
+  "note": "Plate-session dual of JSONMISS/JSONPRESENT; FROM named plate; aliases MISSINGKEYSP/ABSENTP/PLATEMISSP and FOUNDKEYSP/FOUNDP/PLATEPRESENTP",
+  "state_commit": "6b009ede"
 }
