@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 959,
-  "version": "1.15.959-usability",
-  "item": "SYS JSONHITKEY/JSONFIRST any-of first present key",
-  "item_id": "mi_jsonhitkey",
-  "title": "SYS JSONHITKEY \u00b7 JSONFIRST \u00b7 JHITKEY name which any-of key hit",
-  "commit": "b2b3a355",
-  "summary": "Soft dual of JSONHASANY that names WHICH key hit: SYS JSONHITKEY|JSONFIRST [plate] key\u2026 \u2192 LAST=key \u00b7 LAST_N 0|1 \u00b7 JSONHITKEY_N 1-based \u00b7 OF bag \u00b7 aliases JHITKEY/JSONWHICH/FIRSTKEY. Proofs 1499 PASS.",
+  "iter": 960,
+  "version": "1.15.960-usability",
+  "item": "SYS JSONHITVAL/JSONFIRSTVAL any-of first present value",
+  "item_id": "mi_jsonhitval",
+  "title": "SYS JSONHITVAL · JSONFIRSTVAL · JHITVAL peel first any-of key VALUE",
+  "commit": "pending",
+  "summary": "Soft dual of JSONHITKEY that peels VALUE: SYS JSONHITVAL|JSONFIRSTVAL [plate] key… → LAST=value · LAST_N 0|1 · JSONHITVAL_N 1-based · JSONHITVAL_KEY name · OF bag · aliases JHITVAL/FIRSTJSONVAL. Proofs 1500 PASS.",
   "proofs": [
-    "1499_jsonhitkey + 1499_cli_jsonhitkey PASS"
+    "1500_jsonhitval + 1500_cli_jsonhitval PASS"
   ],
-  "when": "2026-08-12T00:59:40Z",
+  "when": "2026-08-12T01:24:15Z",
   "agent": "nanobot-cubalc",
-  "sha": "b2b3a35537c09f3588829fe08b27d63542e92f05",
-  "note": "FROM multi-key \u00b7 bag/CSV/NL keys \u00b7 JSONHITKEY_HIT \u00b7 JSONHASANY twin that names hit"
+  "sha": "pending",
+  "note": "FROM multi-key · bag/CSV/NL keys · JSONHITVAL_HIT · JSONHITKEY twin that peels value"
 }

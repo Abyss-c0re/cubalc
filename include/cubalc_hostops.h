@@ -627,6 +627,11 @@ int cubalc_host_json_has_keys(const char *json, const char *keys_nl, int want_al
  * Usability: JSONHASANY twin that names WHICH key hit without multi JSONHAS+IF. */
 int cubalc_host_json_first_key(const char *json, const char *keys_nl,
                                cubalc_host_result *r);
+/* first present key VALUE among candidates (order of keys_nl).
+ * r->str = decoded value (empty if none) · r->n = 0|1 · r->code = 1-based index · r->err = key name on hit.
+ * Usability: JSONHITKEY twin that peels VALUE without multi JSON+IF glue. */
+int cubalc_host_json_first_val(const char *json, const char *keys_nl,
+                               cubalc_host_result *r);
 /* filter required keys into bag: want_present=0 → missing names, 1 → present.
  * r->str = newline bag · r->n = count. Soft always OK. Null/false still present.
  * Usability: after JSONHASALL fail, report WHICH keys without multi JSONHAS. */

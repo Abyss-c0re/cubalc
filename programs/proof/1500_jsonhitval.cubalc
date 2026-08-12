@@ -1,0 +1,106 @@
+# JSONHITVAL / JSONFIRSTVAL — first present candidate VALUE among any-of keys
+# Soft dual of JSONHITKEY that peels VALUE. LAST=value · LAST_N 0|1 · JSONHITVAL_N=1-based · JSONHITVAL_KEY=name
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" "" "version" "1.2"
+LET plate = LAST
+
+# first of several present (order of candidates)
+SYS JSONHITVAL plate "missing" "ok" "n"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+ASSERT JSONHITVAL_N == 2
+ASSERT JSONHITVAL_HIT == 1
+SYS EQS JSONHITVAL_KEY "ok"
+ASSERT LAST_N == 1
+
+# second candidate when first missing
+SYS JSONHITVAL plate "gone" "n" "ok"
+ASSERT LAST_N == 1
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+ASSERT JSONHITVAL_N == 2
+SYS EQS JSONHITVAL_KEY "n"
+ASSERT LAST_N == 1
+
+# miss all → empty LAST, LAST_N 0
+SYS JSONHITVAL plate "a" "b" "c"
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+ASSERT JSONHITVAL_HIT == 0
+ASSERT JSONHITVAL_N == 0
+
+# aliases
+SYS JSONFIRSTVAL plate "version" "missing"
+ASSERT LAST_N == 1
+SYS EQS LAST "1.2"
+ASSERT LAST_N == 1
+SYS JHITVAL plate "n"
+ASSERT LAST_N == 1
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# OF bag form
+SYS JOIN "" "miss\nerr\nnada"
+LET kbag = LAST
+SYS JSONHITVAL plate OF kbag
+ASSERT LAST_N == 1
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+ASSERT JSONHITVAL_N == 2
+SYS EQS JSONHITVAL_KEY "err"
+ASSERT LAST_N == 1
+
+# bare keys on LAST plate
+SYS JSONOBJ "p" 1 "q" 2
+SYS JSONHITVAL "miss" "q"
+ASSERT LAST_N == 1
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+# null/false/0 still present (null→"", false→"0" or "false" depending on path_get)
+SYS JSONOBJ "gone" null "flag" false "z" 0
+LET p4 = LAST
+SYS JSONHITVAL p4 "nope" "gone"
+ASSERT LAST_N == 1
+ASSERT JSONHITVAL_HIT == 1
+SYS EQS JSONHITVAL_KEY "gone"
+ASSERT LAST_N == 1
+SYS JSONHITVAL p4 "flag"
+ASSERT LAST_N == 1
+SYS EQS JSONHITVAL_KEY "flag"
+ASSERT LAST_N == 1
+SYS JSONHITVAL p4 "z"
+ASSERT LAST_N == 1
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# agent pattern: pick first available status value
+SYS JSONOBJ "legacy_status" "ok" "code" 0
+LET agent = LAST
+SYS JSONHITVAL agent "status" "state" "legacy_status" "role"
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+ASSERT JSONHITVAL_N == 3
+SYS EQS JSONHITVAL_KEY "legacy_status"
+ASSERT LAST_N == 1
+
+# empty candidate list → miss
+SYS JSONOBJ "a" 1
+SYS JSONHITVAL LAST
+ASSERT LAST_N == 0
+
+# string value peel
+SYS JSONOBJ "msg" "hello" "alt" "world"
+LET splate = LAST
+SYS JSONHITVAL splate "no" "msg" "alt"
+ASSERT LAST_N == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+PASS "jsonhitval ready"
