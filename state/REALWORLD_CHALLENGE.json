@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 376,
-  "program": "programs/realworld/svc_ifjsoneq_plate_sync_board.cubalc",
-  "theme": "IFJSONEQ/IFJSONNEQ/IFSAMEJSON plate semantic equality sync",
-  "version": "1.15.950-usability",
+  "iter": 377,
+  "program": "programs/realworld/svc_jsonhitkey_identity_peel_board.cubalc",
+  "theme": "JSONHITKEY/JSONFIRST multi-vendor identity/status key peel",
+  "version": "1.15.959-usability",
   "pass": true,
-  "prior_note": "iter 375 IFCANREAD; this iter first realworld of 1491 IFJSONEQ (MI 952)",
+  "prior_note": "iter 376 IFJSONEQ; this iter first realworld of 1499 JSONHITKEY (MI 959) + REQUIRE JSONHASANY (MI 958)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "key-order equal plates + IFJSONEQ",
+      "cmd": "vendor intake agent_id+legacy_status seed",
       "ok": true,
-      "note": "boot"
+      "note": "boot hit_idx=3"
     },
     {
       "name": "pass",
-      "cmd": "order dual / neq / empty 10/10",
+      "cmd": "id/status order dual / miss / uuid 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "resync/skip-same/admit 10/10",
+      "cmd": "admit/deny \u00b7 OF bag \u00b7 null/false \u00b7 empty cand 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "disk plates class 10/10",
+      "cmd": "disk plates \u00b7 EQS peel \u00b7 var-key fail 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "admit-drift-heal ladder 10/10",
+      "cmd": "admit ladder \u00b7 HASPANY/NEEDPANY 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFJSONEQ/IFJSONNEQ/IFSAMEJSON",
+      "cmd": "HASFORM JSONHITKEY/JSONFIRST/JSONHASANY/HASPANY",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "synced admit drift deny 10/10",
+      "cmd": "admit + REQUIRE JSONHASANY 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "disk STRTO WRITE NL",
+      "cmd": "disk STRTO WRITE NL NUM shuttle",
       "ok": true,
       "note": "probe"
     },
@@ -71,7 +71,7 @@
       "name": "selftest",
       "cmd": "selftest; proofs green; CLI duals still red",
       "ok": false,
-      "note": "proofs green; CLI duals still red"
+      "note": "proofs green 628/902; CLI duals set\u2192SETF red"
     }
   ],
   "weaknesses": [
@@ -7298,113 +7298,57 @@
       "title": "resync assigns plate vars not disk files",
       "detail": "resync_if_neq sets right=left in memory only. Disk materialize still needs SYS WRITE after. Board peels disk READ into left/right then compares \u2014 write-back optional for agents.",
       "repro": "CALL resync_if_neq; right var updated; replica.json file unchanged until WRITE"
+    },
+    {
+      "id": "W904",
+      "severity": "med",
+      "area": "lang|json_key",
+      "title": "SYS JSON var-key FROM plate does not peel (literals only)",
+      "detail": "After JSONHITKEY sets hit_key, SYS JSON hit_key FROM plate returns LAST empty LAST_N 0. SYS JSON \"legacy_status\" FROM plate works. Agents must EQS-branch known candidate keys then peel with literals \u2014 same class as HASFLAG var reject (W13).",
+      "repro": "LET sk=legacy_status; SYS JSON sk FROM plate \u2192 empty; SYS JSON \"legacy_status\" FROM plate \u2192 ok"
+    },
+    {
+      "id": "W905",
+      "severity": "low",
+      "area": "lang|jsonhitkey",
+      "title": "JSONHITKEY candidate order is argument order not plate key order",
+      "detail": "SYS JSONHITKEY plate \"status\" \"legacy_status\" prefers status even when legacy_status appears first in JSON object. Intentional for vendor priority lists; agents must not assume plate key order.",
+      "repro": "plate {legacy_status,status}; JSONHITKEY status legacy_status \u2192 status idx 1"
+    },
+    {
+      "id": "W906",
+      "severity": "low",
+      "area": "lang|jsonhitkey",
+      "title": "null/false JSON values still count as present for JSONHITKEY",
+      "detail": "Keys with null or false values hit (same presence model as JSONHAS). Empty string likely present too. Agents wanting truthy status must peel value after hitkey.",
+      "repro": "JSONHITKEY plate gone flag with gone:null \u2192 gone"
+    },
+    {
+      "id": "W907",
+      "severity": "low",
+      "area": "lang|jsonhitkey",
+      "title": "JSONHITKEY/JSONFIRST work (positive; first realworld 1499)",
+      "detail": "1499 green. Stickies JSONHITKEY_N 1-based \u00b7 JSONHITKEY_HIT \u00b7 OF bag \u00b7 aliases JSONFIRST/JHITKEY/JSONWHICH. Soft dual of JSONHASANY that names WHICH key. Multi-vendor identity peel solid with FN-wrap + EQS peel.",
+      "repro": "CALL resolve_id_key; CALL resolve_status_key; CALL admit_identity; CALL peel_status_val"
+    },
+    {
+      "id": "W908",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL/STATUS/REPORT omit trailing NL (reconfirm W5/W10)",
+      "detail": "cat -A STATUS last line probe:10:pr without $; VAL/META/REPORT single lines without NL. Agents piping to line tools should normalize.",
+      "repro": "cat -A VAL.txt ends without $"
+    },
+    {
+      "id": "W909",
+      "severity": "low",
+      "area": "lang|require_jsonhasany",
+      "title": "REQUIRE JSONHASANY miss ok:false but shell exit often 0 (W7 class)",
+      "detail": "Hard any-of miss sets asserts_fail + sticky REQUIRE JSONHASANY none, exit_code stays 0 unless EXIT n. Soft twin SYS JSONHASANY LAST_N 0. Gate path used REQUIRE only when keys present.",
+      "repro": "REQUIRE JSONHASANY plate x y on {a:1} \u2192 err; shell $? 0"
     }
   ],
   "workarounds": [
-    {
-      "id": "WA-RSM",
-      "note": "build with -D_GNU_SOURCE per .o; OPEN OPEN_NEEDLE after open_boot; NTH for non-first prove; capture before PRINT"
-    },
-    {
-      "id": "WA-DRD",
-      "note": "NEEDDOCTOR only never REQUIRE DOCTOR; use DOCTOR_LIBS_N; expect slim in-lang plate; keep cubalc.stable copy"
-    },
-    {
-      "id": "WA-DBG",
-      "note": "INCLUDE doctor_boot then open_boot; use REQUIREDOCTOR/MUSTDOCTOR never multiword REQUIRE DOCTOR; capture body before PRINT"
-    },
-    {
-      "id": "WA-RDY",
-      "note": "use READY_PASS_N; solid NEEDREADY/REQUIREREADY; checklist libs are boot family not hold_seed; capture body before PRINT"
-    },
-    {
-      "id": "WA-HFA",
-      "note": "SYS ENV SET CUBALC_ARG* in-process; capture LAST_N before CLEAR_ERR; map short flags; use FLAGMISS bag"
-    },
-    {
-      "id": "WA-CIS",
-      "note": "use --name=val / --verbose=1 before files; capture CLIINFO_PLATE before PRINT; peel sticky LISTFLAGS/RESTARGS not GETP plate; SYS ENV SET CUBALC_ARG*"
-    },
-    {
-      "id": "WA-CG",
-      "note": "CLI_GUARD_SOFT=1 then EXIT n on CLI_GUARD_OK=0; --flag=val before files; LET NEED_* before every INCLUDE cli_guard"
-    },
-    {
-      "id": "WA-NAA",
-      "note": "use NTHARG_HIT + LET peel=LAST after OR; NTHARG for flags-kept, NTHPOS for files-only; SYS LOOKUP ARGMAP i =; capture LAST_N before LET"
-    },
-    {
-      "id": "WA-AVN",
-      "note": "FINDARG_HIT not LAST_N==0; AFTERARG full --name=val token or space form; LET peel=LAST before PRINT; chain AFTERARG for run script"
-    },
-    {
-      "id": "WA-HFY",
-      "note": "HASFLAGANY for format any-of; capture FLAGHAVE before PRINT; EXIT n after soft miss; map short -w as w"
-    },
-    {
-      "id": "WA-HAY",
-      "note": "HASARGANY for ARG0|ENV any-of; capture ARGHAVE before PRINT; EXIT n after soft miss; NTHARG after admit for values"
-    },
-    {
-      "id": "WA-HEN",
-      "note": "ALL for secrets ANY for location; capture LAST_N/OK before CLEAR_ERR; EXIT n after soft miss; capture ENVHAVE before PRINT"
-    },
-    {
-      "id": "WA-EG",
-      "note": "ENV_GUARD_SOFT=1 then EXIT n on ENV_GUARD_OK=0; LET NEED_* before every INCLUDE env_guard; capture ENVMISS before PRINT"
-    },
-    {
-      "id": "WA-AG",
-      "note": "ARG_GUARD_SOFT=1 then EXIT n on ARG_GUARD_OK=0; LET NEED_* before every INCLUDE; NTHARG after admit for values"
-    },
-    {
-      "id": "WA-TB",
-      "note": "detect unlimited via REMAIN_MS==-1; use OK not LAST_N after NEEDTIME; TIME_GUARD_SOFT=1 then EXIT n; run -T for real budget tests"
-    },
-    "LET all NEED_* + *_GUARD_SOFT before each re-INCLUDE product_session (DEFAULT sticky)",
-    "Capture PRODUCT_SESSION_OK into LET before PRINT (PRINT clobber LAST only)",
-    "Use -T >= 80 for soft_time paths that INCLUDE product_session",
-    "Exit via EXIT n for shell rc; ignore plate exit_code on hard guard miss",
-    "REQUIRE LIB \"stem\" when same-named string var may exist",
-    "LET NEED_LIBS/NEED_LIB_ANY + LIB_GUARD_SOFT before each re-INCLUDE lib_guard",
-    "SYS HASLINE LIBMISS / LIBHAVE for multiline bags not PRINT alone",
-    "DEFINE fleet FNs before INCLUDE fn_guard; LET NEED_FNALL/NEED_FNANY + FN_GUARD_SOFT each re-INCLUDE",
-    "Prefer soft FN_GUARD_SOFT=1 and read FN_GUARD_OK / FNMISS; avoid relying on FAIL LAST_ERR",
-    "SYS HASLINE FNHAVE/FNMISS for multiline bags",
-    "DEFINE CLASS types before INCLUDE class_guard; LET NEED_CLASSES/NEED_CLASS_ANY each re-INCLUDE",
-    "After hard CLASS_GUARD miss check ERR/CLASSMISS then EXIT n for shell rc",
-    "SYS HASLINE CLASSHAVE for multiline bags not PRINT alone",
-    "DEFINE CLASS/METHOD/FIELD before INCLUDE oop_*; LET all NEED_* + *_GUARD_SOFT each re-INCLUDE",
-    "On OOP_SESSION_OK=0 inspect CLASS/METHOD/FIELD_GUARD_OK + *MISS bags for root plane",
-    "EXIT n after hard oop miss for shell rc",
-    "NEW instances before NEED_OBJS gate; LET all NEED_* + soft flags each re-INCLUDE live_*",
-    "On LIVE=0 check OOP_SESSION_OK vs OBJ_GUARD_OK + OBJMISS/CLASSMISS",
-    "Avoid relying on METHOD LET LAST for host shuttles; prefer GETF after SETF THIS",
-    "service_session boards: avoid plate_peer; SYS WRITE agent.json; lean NEED_OBJS+NEED_LIBS only",
-    "Empty NEED_FIELDS/METHODS under vars pressure; soft *_GUARD_SOFT=1 for live/host duals",
-    "On SERVICE=0 inspect FULL vs LIVE vs HOST_SESSION_OK + *MISS bags",
-    "TRYNEW Class name for optional plugins; check OK/TRYNEW_N not HASFORM",
-    "TRYCLONE proto replica for soft replicas; CLONE SOFT/SOFTCLONE aliases",
-    "CLEAR_ERR after soft miss before next spawn",
-    "capture LAST_ERR into var before CLEAR_ERR on soft miss",
-    "score thresholds \u22658 when HASFORM lags; assert ops not catalog",
-    "relink out/*.o when binary missing; avoid -O2 lang_ops_core if OOM",
-    "HASFORM host ops with full \"SYS FORMNAME\" not bare stem",
-    "LET body = LAST after READ before multi SYS HAS; avoid CLEAR_ERR mid-haystack",
-    "COUNTFILELINE use full KEY=val needle; prefer GREPFILE+EQS for exact key tally",
-    "LET bag=LAST before CLEAR_ERR after AGEALL/FRESH/KEEPSTALE/RMALL",
-    "Gate reclaim on RMALL_N not OK when bag may include dirs",
-    "HASFORM only 'SYS AGEALL'/'SYS FRESH'/'SYS KEEPSTALE'/'SYS TOUCHALL'/'SYS RMALL' full stems",
-    "LET del_n=TRYDELETE_N and LET err_s=LAST_ERR before CLEAR_ERR",
-    "HASFORM only TRYDELETE/DELETEOBJ/HASCLASS/HASCLASSES/SOFTDELETE stems",
-    "Gate class load via HASCLASS op not HASFORM KNOWNCLASS",
-    "REQUIRE LIB \"hold_seed\" with quotes",
-    "HASMETHODS use CSV bag for init/birth/etc",
-    "NEW Class inst ctor_args when METHOD init has params",
-    "relink out/cubalc from .o if forms catalog \u2260 runtime",
-    "CSV bags for HASFIELDANY/HASMETHODANY when names are forms (status/init)",
-    "REQUIRE LIB \"hold_seed\" quoted",
-    "HASOBJS gate on OBJMISS_N + live names not bare OK",
     "REQUIRE LIB \"hold_seed\" quoted",
     "HASFNS gate on FNMISS_N + HASFNS_N not bare OK",
     "CSV bags for multi FN/slot names",
@@ -7473,10 +7417,14 @@
       "id": "WA-IJE",
       "for": "W901+W903",
       "note": "FN plates_eq/neq; use IFJSONEQ for semantic, IFEQFILE for byte; WRITE after resync for disk"
+    },
+    {
+      "id": "WA904",
+      "for": "W904",
+      "fix": "After JSONHITKEY, EQS-branch known candidate keys and SYS JSON \"literal\" FROM plate"
     }
   ],
   "language_gaps": [
-    "IFBIG unlinked 1.15.937 (W868); IFFRESH miss/stale dual (W869)",
     "IFBIG live 1.15.940 (W868 closed); empty/miss size dual (W871); FN-wrap (W873)",
     "IFEQFILE live 1.15.941 (1486); miss=diff empty=eq (W874); FN-wrap STATUS bare STRTO (W876)",
     "IFJSONHAS live 1.15.942 (1487); KEY glue eats var key (W877); nested END frames (W879)",
@@ -7487,99 +7435,10 @@
     "IFLINES FN block_scan miss (W892 fixed); num\u21921 field empty0 (W893); first realworld 1494",
     "IFHASFLAG live 1.15.950 (1495); IFHASARG no var peel (W895); HASFLAG dual (W896)",
     "IFCANREAD live 1.15.950 (1490); miss soft-false (W898); no chmod dual in board (W900)",
-    "IFJSONEQ live 1.15.950 (1491); order-independent (W901); var resync not disk (W903)"
+    "IFJSONEQ live 1.15.950 (1491); order-independent (W901); var resync not disk (W903)",
+    "JSONHITKEY live 1.15.959 (1499); var-key SYS JSON peel fail (W904); candidate order = arg order (W905); null/false present (W906)"
   ],
   "issues_faced": [
-    "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
-    "iter337: CLEAR_ERR LAST='cleared' broke fresh/stale HASLINE/EQS until capture-before-clear (W763)",
-    "iter337: HASFORM SYS MAPAGE/KEEPFRESH/AGED lag while ops live (W764)",
-    "iter337: RMALL OK=0 on dir FAIL despite N files removed (W765)",
-    "iter337: board all actions green; selftest CLI duals still set\u2192SETF red",
-    "iter338: form 9/10 until KNOWNCLASS HASFORM lag documented (W768)",
-    "iter338: capture LAST_ERR before CLEAR_ERR on soft TRYDELETE (W763/W751 class)",
-    "iter338: all actions green; trydelete/hasclass proofs PASS; CLI duals still set\u2192SETF",
-    "iter339: bare REQUIRE LIB hold_seed dead \u2014 quoted stem required (W773)",
-    "iter339: binary catalog/runtime split until relink lang_ops_flow (W776)",
-    "iter339: HASMETHODS init keyword truncate \u2014 CSV bag workaround (W774); fixed proof 1422",
-    "iter339: NEW auto-init arity when METHOD init present (W777)",
-    "iter339: board all green; full selftest OOM killed",
-    "iter340: ANYFIELD bare status truncated field list \u2014 CSV fix (W779)",
-    "iter340: all actions green; proofs 1423-1426 PASS",
-    "iter340: selftest 621/884 CLI duals still red; kvfileensure/pickobj/preload pre-existing",
-    "iter341: first-try green HASFNS+HASFNANY+HASOBJANY board 10/10 actions",
-    "iter341: proofs 1427/1429/1432 PASS; quoted REQUIRE LIB hold_seed",
-    "iter342: first-try green method_guard+field_guard dual board",
-    "iter342: proofs 1428/1430 PASS; re-INCLUDE LET knobs pattern",
-    "iter343: first-try green obj_guard+class_guard dual board",
-    "iter343: proofs 1434/1435 PASS; NEW-before-obj-gate documented",
-    "iter344: CALLANY string RET LAST not LET-assignable \u2014 score via CALLANY_FN (W798)",
-    "iter344: capture LAST_N before EQS after numeric CALLANY (W799)",
-    "iter344: board green after capture fixes; proof 1438 PASS",
-    "iter345: first-try green SENDANY method dispatch board",
-    "iter345: proof 1439 PASS; capture LAST_N before EQS",
-    "iter346: gate 8\u21929 after LAST_N capture before CLEAR_ERR (W810)",
-    "iter346: OR fallback strings LET-able; hit string RET still weak (W808)",
-    "iter346: board green; proofs 1441/1442 PASS",
-    {
-      "iter": 347,
-      "issue": "Board initially scored SYS EQS body \"prod\"/\"live\" on CALLANY/SENDANY hit RET strings; both fail (W813/W814). Worked around by scoring CALLANY_FN/SENDANY_METHOD + numeric LAST_N only; soft OR strings still EQS-able.",
-      "resolution": "Rewrote call/bag score paths; documented W813\u2013W815"
-    },
-    {
-      "iter": 348,
-      "issue": "Board first redefined CLASS after -I (silent abort W816); REQUIRE LIB alone left HASCLASS 0 (W817). Fixed with REQUIRE LIB + INCLUDE ONCE fleet_class_floor; host tests use -I for -K.",
-      "resolution": "lib programs/lib/fleet_class_floor.cubalc + INCLUDE ONCE; document W816\u2013W818"
-    },
-    {
-      "iter": 349,
-      "issue": "RETRY/TIMEIT inside action IF arms broke whole-file END framing (W821). Fixed by FN-wrapping all RETRY/TIMEIT; IF outside RETRY inside FN also stole FN END. Soft scored OK after CALL wrongly.",
-      "resolution": "FN helpers only; score RETRY_OK not OK (W822); form expects TRY present in 1.15.903"
-    },
-    {
-      "iter": 350,
-      "issue": "TRY/CATCH cannot nest in IF (W824); REQUIRE OK plate exit_code 0 vs shell 1 (W823). Board uses FN helpers for all TRY/CATCH/REQUIRE OK paths.",
-      "resolution": "FN-wrapped recover + needok helpers; document W823\u2013W825"
-    },
-    {
-      "iter": 351,
-      "issue": "IFERR/IFOK cannot nest in IF (W826); 1453 TOGGLE not in binary (W827). Board uses FN helpers for all status branches.",
-      "resolution": "FN-wrapped budget_fail/ok/else + INC/DEC/SWAP actions; document W826\u2013W828"
-    },
-    {
-      "iter": 352,
-      "issue": "SETMIN after LET=0 stuck at 0 (W829); CLEAR_ERR ate LAST_N after CLAMP (W830). Board omitted pre-init of extremes; capture LAST_N before CLEAR_ERR.",
-      "resolution": "first realworld 1453; document W829\u2013W831; W827 forms now live in 1.15.908"
-    },
-    {
-      "iter": 353,
-      "issue": "Form path expected PUSHTO absent; 1.15.911 registered PUSHTO. EMPTYTO works without HASFORM. Fixed form scoring to accept either.",
-      "resolution": "first realworld 1454+1455; document W832\u2013W834"
-    },
-    {
-      "iter": 354,
-      "issue": "IFEMPTY cannot nest in action IF (W835); DEQUEUEFROM HASFORM lag (W836). Board uses HASEMPTY probes and DEQUEUEFROM by name.",
-      "resolution": "first realworld 1456+1457+1458; document W835\u2013W837"
-    },
-    {
-      "iter": 355,
-      "issue": "CLEAR_ERR after NTHIN lost OR fallback LAST (W838); form expected LENOF absent but 1461 landed. Fixed capture + tolerate LENOF.",
-      "resolution": "first realworld 1459+1460; document W838\u2013W840"
-    },
-    {
-      "iter": 356,
-      "issue": "State plate deleted at fire start; gate LENOF of v1.2.3 is 6 not 5. Restored plate; fixed gate count.",
-      "resolution": "first realworld 1461+1462; document W841\u2013W843"
-    },
-    {
-      "iter": 357,
-      "issue": "pass scored 9/10: CLEAR_ERR after NUMTO ate LAST_N (W845). soft scored 9/10: false-friend needle \"try\" not in \"retries\" (no y). Fixed capture + CONTAINSIN trie.",
-      "resolution": "first realworld 1465 NUMTO/STRTO; document W844\u2013W846"
-    },
-    {
-      "iter": 358,
-      "issue": "First-try green. Documented SETLINEIN pad (W847) and SETLINEIN -1\u21920 (W848) from probe edges; PRINT before SETLINEIN LAST_N must capture (W4 class).",
-      "resolution": "first realworld 1468+1469; document W847\u2013W849"
-    },
     {
       "iter": 359,
       "issue": "First-try green. Documented COUNTIN substr vs COUNTLINEIN exact (W850) and MOVELINEIN soft HIT semantics (W851).",
@@ -7669,9 +7528,11 @@
       "iter": 376,
       "issue": "First-try green. Documented key-order equality dual vs IFEQFILE and in-memory resync.",
       "resolution": "first realworld 1491; document W901\u2013W903"
-    }
+    },
+    "iter377: thrased tree missing out/cubalc + REALWORLD state; restored Makefile/include/src/proof from HEAD; modular link rebuild; JSONHITKEY first realworld green",
+    "iter377: SYS JSON var-key FROM plate empty (W904) \u2014 EQS-branch peel workaround"
   ],
-  "commit": "90a74c82",
-  "ts": 1786495150,
-  "board_commit": "90a74c82"
+  "commit": "6e8c9bf6",
+  "ts": "2026-08-12T04:19:08+03:00",
+  "board_commit": ""
 }
