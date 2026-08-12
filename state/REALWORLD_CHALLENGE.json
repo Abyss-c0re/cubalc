@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 377,
-  "program": "programs/realworld/svc_jsonhitkey_identity_peel_board.cubalc",
-  "theme": "JSONHITKEY/JSONFIRST multi-vendor identity/status key peel",
-  "version": "1.15.959-usability",
+  "iter": 378,
+  "program": "programs/realworld/svc_jsonhitval_status_admit_board.cubalc",
+  "theme": "JSONHITVAL/JSONFIRSTVAL multi-vendor status value admit",
+  "version": "1.15.960-usability",
   "pass": true,
-  "prior_note": "iter 376 IFJSONEQ; this iter first realworld of 1499 JSONHITKEY (MI 959) + REQUIRE JSONHASANY (MI 958)",
+  "prior_note": "iter 377 JSONHITKEY; this iter first realworld of 1500 JSONHITVAL (MI 960) \u2014 value peel closes W904 for admit",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "vendor intake agent_id+legacy_status seed",
+      "cmd": "intake legacy_status=ok peel",
       "ok": true,
-      "note": "boot hit_idx=3"
+      "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "id/status order dual / miss / uuid 10/10",
+      "cmd": "status/id order dual / miss 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "admit/deny \u00b7 OF bag \u00b7 null/false \u00b7 empty cand 10/10",
+      "cmd": "admit/deny \u00b7 OF bag \u00b7 null/false \u00b7 empty 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "disk plates \u00b7 EQS peel \u00b7 var-key fail 10/10",
+      "cmd": "disk one-shot value \u00b7 hitkey dual 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "admit ladder \u00b7 HASPANY/NEEDPANY 10/10",
+      "cmd": "identified+ready ladder \u00b7 bool coerce 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM JSONHITKEY/JSONFIRST/JSONHASANY/HASPANY",
+      "cmd": "HASFORM JSONHITVAL/JSONFIRSTVAL/KEY",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "admit + REQUIRE JSONHASANY 10/10",
+      "cmd": "admit identified ready 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "disk STRTO WRITE NL NUM shuttle",
+      "cmd": "disk STRTO WRITE NL NUM",
       "ok": true,
       "note": "probe"
     },
@@ -69,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest; proofs green; CLI duals still red",
+      "cmd": "selftest; proofs green; CLI duals red",
       "ok": false,
-      "note": "proofs green 628/902; CLI duals set\u2192SETF red"
+      "note": "628/902; CLI set\u2192SETF red"
     }
   ],
   "weaknesses": [
@@ -7346,11 +7346,57 @@
       "title": "REQUIRE JSONHASANY miss ok:false but shell exit often 0 (W7 class)",
       "detail": "Hard any-of miss sets asserts_fail + sticky REQUIRE JSONHASANY none, exit_code stays 0 unless EXIT n. Soft twin SYS JSONHASANY LAST_N 0. Gate path used REQUIRE only when keys present.",
       "repro": "REQUIRE JSONHASANY plate x y on {a:1} \u2192 err; shell $? 0"
+    },
+    {
+      "id": "W910",
+      "severity": "med",
+      "area": "lang|fn_ok_v",
+      "title": "Helper FN ok_v=1 on presence breaks deny ladders if not reset",
+      "detail": "peel_status_val sets ok_v=1 for any status key. admit FN then EQS ready/ok/live without resetting ok_v leaves ok_v=1 and deny-status never applies \u2014 state stuck at default deny. Agents must LET ok_v=0 + state=deny-status before value EQS chain.",
+      "repro": "CALL peel_status_val on phase=gamma; EQS not ready/ok/live; IF ok_v==0 never true"
+    },
+    {
+      "id": "W911",
+      "severity": "low",
+      "area": "lang|jsonhitval",
+      "title": "JSONHITVAL bool/null coerce: true\u21921 false\u21920 null\u2192empty",
+      "detail": "Boolean true peels as string 1, false as 0, null as empty string but still HIT. Agents admitting on truthy status must not treat null hit as ready; use EQS after peel.",
+      "repro": "JSONHITVAL ok:true \u2192 LAST 1; gone:null \u2192 LAST empty HIT 1"
+    },
+    {
+      "id": "W912",
+      "severity": "low",
+      "area": "lang|jsonhitval",
+      "title": "JSONHITVAL/JSONFIRSTVAL work (positive; first realworld 1500)",
+      "detail": "1500 green. Stickies JSONHITVAL_N 1-based \u00b7 JSONHITVAL_HIT \u00b7 JSONHITVAL_KEY \u00b7 OF bag \u00b7 aliases JSONFIRSTVAL/JHITVAL. Closes W904 EQS-branch peel for common multi-vendor status/id value path.",
+      "repro": "CALL peel_status_val; CALL peel_id_val; CALL admit_ready"
+    },
+    {
+      "id": "W913",
+      "severity": "low",
+      "area": "lang|jsonhitval",
+      "title": "JSONHITVAL does not update JSONHITKEY stickies",
+      "detail": "After JSONHITVAL, JSONHITKEY_N/HIT stay 0. Separate sticky families. Capture JSONHITVAL_KEY for which-key.",
+      "repro": "JSONHITVAL plate b; PRINT JSONHITKEY_N \u2192 0"
+    },
+    {
+      "id": "W914",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL reconfirm on JHV plates",
+      "detail": "STATUS last line and META/REPORT/VAL lack final NL (cat -A).",
+      "repro": "cat -A META.txt \u2192 no_nl_end without $"
+    },
+    {
+      "id": "W915",
+      "severity": "low",
+      "area": "host|version",
+      "title": "Binary run plate version lag vs VERSION file",
+      "detail": "VERSION file 1.15.960-usability while run JSON may report 1.15.959-usability depending on build stamp; proofs still pass.",
+      "repro": "cat VERSION; cubalc run -e \u2026 version field"
     }
   ],
   "workarounds": [
-    "REQUIRE LIB \"hold_seed\" quoted",
-    "HASFNS gate on FNMISS_N + HASFNS_N not bare OK",
     "CSV bags for multi FN/slot names",
     "REQUIRE LIB \"hold_seed\" quoted",
     "LET NEED_* then INCLUDE method_guard/field_guard each time",
@@ -7422,10 +7468,19 @@
       "id": "WA904",
       "for": "W904",
       "fix": "After JSONHITKEY, EQS-branch known candidate keys and SYS JSON \"literal\" FROM plate"
+    },
+    {
+      "id": "WA910",
+      "for": "W910",
+      "fix": "After CALL peel_*_val, LET ok_v=0 and state=deny-status before EQS ready/ok/live chain"
+    },
+    {
+      "id": "WA912",
+      "for": "W904",
+      "fix": "Prefer JSONHITVAL over JSONHITKEY+EQS-branch+SYS JSON for multi-vendor value peel"
     }
   ],
   "language_gaps": [
-    "IFBIG live 1.15.940 (W868 closed); empty/miss size dual (W871); FN-wrap (W873)",
     "IFEQFILE live 1.15.941 (1486); miss=diff empty=eq (W874); FN-wrap STATUS bare STRTO (W876)",
     "IFJSONHAS live 1.15.942 (1487); KEY glue eats var key (W877); nested END frames (W879)",
     "IFNUM live 1.15.943 (1488); SYS NUM soft zero (W880); nested type-IF END (W882)",
@@ -7436,19 +7491,10 @@
     "IFHASFLAG live 1.15.950 (1495); IFHASARG no var peel (W895); HASFLAG dual (W896)",
     "IFCANREAD live 1.15.950 (1490); miss soft-false (W898); no chmod dual in board (W900)",
     "IFJSONEQ live 1.15.950 (1491); order-independent (W901); var resync not disk (W903)",
-    "JSONHITKEY live 1.15.959 (1499); var-key SYS JSON peel fail (W904); candidate order = arg order (W905); null/false present (W906)"
+    "JSONHITKEY live 1.15.959 (1499); var-key SYS JSON peel fail (W904); candidate order = arg order (W905); null/false present (W906)",
+    "JSONHITVAL live 1.15.960 (1500); ok_v presence sticky breaks deny (W910); bool/null coerce (W911); no JSONHITKEY sticky share (W913)"
   ],
   "issues_faced": [
-    {
-      "iter": 359,
-      "issue": "First-try green. Documented COUNTIN substr vs COUNTLINEIN exact (W850) and MOVELINEIN soft HIT semantics (W851).",
-      "resolution": "first realworld 1470+1471; document W850\u2013W852"
-    },
-    {
-      "iter": 360,
-      "issue": "First draft: IFGT/IFHASLINE nested in action IF stole END; boot body ran after list (read miss). Fixed FN+CALL wrap (W853).",
-      "resolution": "first realworld 1472+1473; document W853\u2013W855"
-    },
     {
       "iter": 361,
       "issue": "Chose 1466+1463 after 1476 SUMIN unknown in binary (W857). pass 9/10 until LAST_N snap before SYS EQS after LPADTO.",
@@ -7530,9 +7576,11 @@
       "resolution": "first realworld 1491; document W901\u2013W903"
     },
     "iter377: thrased tree missing out/cubalc + REALWORLD state; restored Makefile/include/src/proof from HEAD; modular link rebuild; JSONHITKEY first realworld green",
-    "iter377: SYS JSON var-key FROM plate empty (W904) \u2014 EQS-branch peel workaround"
+    "iter377: SYS JSON var-key FROM plate empty (W904) \u2014 EQS-branch peel workaround",
+    "iter378: admit deny-status dead until ok_v reset after peel presence (W910) \u2014 fixed in board",
+    "iter378: JSONHITVAL first realworld green; closes W904 EQS peel for status/id values"
   ],
-  "commit": "83dd3e84",
-  "ts": "2026-08-12T04:19:08+03:00",
-  "board_commit": "83dd3e84"
+  "commit": "",
+  "ts": "2026-08-12T04:31:03+03:00",
+  "board_commit": ""
 }
