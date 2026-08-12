@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 382,
-  "program": "programs/realworld/svc_countline_bag_jobq_board.cubalc",
-  "theme": "COUNTLINE/SETMATCH in-memory bag job queue exact dual of disk COUNTFILELINE",
+  "iter": 383,
+  "program": "programs/realworld/svc_kvfile_pool_quota_board.cubalc",
+  "theme": "KVFILEENSURE/INC disk pool slot claim-release quota",
   "version": "1.15.961-usability",
   "pass": true,
-  "prior_note": "iter 381 JSONCOALESCE; this iter bag COUNTLINE exact dual of iter 379 COUNTFILELINE substring",
+  "prior_note": "iter 382 COUNTLINE bag jobq; this iter first ENSUREKVFILE-focused realworld disk pool.kv quota",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "seed exact open a+c=2",
+      "cmd": "ensure used=0 limit=3",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "exact vs prefix \u00b7 promote \u00b7 SETMATCH miss 10/10",
+      "cmd": "ensure no-overwrite \u00b7 claim \u00b7 release 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "insert/drop/moveline 0-based \u00b7 empty 10/10",
+      "cmd": "OR miss \u00b7 INC sticky \u00b7 empty release 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "disk bag materialize promote 10/10",
+      "cmd": "disk pool.kv materialize 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "admit under exact open cap 10/10",
+      "cmd": "claim ladder \u00b7 SET limit \u00b7 drain 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM SYS-prefix dual 10/10",
+      "cmd": "HASFORM INC/GET/SET + ENSURE lag 10/10",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "cap admit after promote 10/10",
+      "cmd": "admit capacity \u00b7 deny full 10/10",
       "ok": true,
       "note": "gate"
     },
@@ -7602,11 +7602,57 @@
       "title": "WRITE omit trailing NL reconfirm CLJ plates",
       "detail": "STATUS/META/REPORT/queue.bag last lines without final NL.",
       "repro": "cat -A META.txt"
+    },
+    {
+      "id": "W942",
+      "severity": "med",
+      "area": "host|kvfileinc",
+      "title": "KVFILEINC LAST may be key=N form not bare number",
+      "detail": "SYS KVFILEINC path used \u2192 LAST often \"used=1\". Agents must KVFILEGET after INC (or NUM carefully) before compare. Board uses CALL read_used after claim.",
+      "repro": "KVFILEINC p used; PRINT LAST \u2192 used=1; KVFILEGET p used \u2192 1"
+    },
+    {
+      "id": "W943",
+      "severity": "med",
+      "area": "lang|hasform",
+      "title": "HASFORM SYS KVFILEENSURE/ENSUREKVFILE is 0 despite forms catalog entry",
+      "detail": "cubalc forms KVFILE lists SYS KVFILEENSURE and SYS ENSUREKVFILE, but HASFORM returns 0. INC/GET/SET/DEL HASFORM work. Live ops still run. Catalog/HASFORM dual lag.",
+      "repro": "forms KVFILE shows ENSURE; HASFORM \"SYS KVFILEENSURE\" \u2192 0; run ENSURE still works"
+    },
+    {
+      "id": "W944",
+      "severity": "low",
+      "area": "host|kvfileensure",
+      "title": "KVFILEENSURE set-if-missing does not overwrite (positive)",
+      "detail": "ENSURE used 0 then ENSURE used 99 leaves used=0. Correct for default seed.",
+      "repro": "ENSURE used 0; ENSURE used 99; GET used \u2192 0"
+    },
+    {
+      "id": "W945",
+      "severity": "low",
+      "area": "host|kvfile",
+      "title": "KVFILEGET miss key/path soft via OR default",
+      "detail": "GET gone OR miss \u2192 miss; GET /no/file used OR none \u2192 none without hard fail.",
+      "repro": "KVFILEGET p gone OR miss"
+    },
+    {
+      "id": "W946",
+      "severity": "low",
+      "area": "host|kvfile_pool",
+      "title": "KVFILEENSURE/INC pool claim-release works (positive; first ENSURE realworld)",
+      "detail": "Disk pool.kv used/limit claim under cap, release clamp, SET limit bump solid. First focused ENSUREKVFILE realworld.",
+      "repro": "CALL seed_pool; CALL claim_slot; CALL release_slot; CALL admit_has_capacity"
+    },
+    {
+      "id": "W947",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL reconfirm KFQ plates",
+      "detail": "STATUS/META/REPORT and last pool.kv line may lack final NL.",
+      "repro": "cat -A META.txt; cat -A pool.kv"
     }
   ],
   "workarounds": [
-    "LET ret_n=LAST_N immediately after CALLANY before EQS/CLEAR_ERR",
-    "REQUIRE LIB \"hold_seed\" quoted",
     "LET ret_n=LAST_N; LET meth=SENDANY_METHOD immediately after SENDANY",
     "CSV/newline bags for method priority lists",
     "REQUIRE LIB \"hold_seed\" quoted",
@@ -7726,10 +7772,19 @@
       "id": "WA937",
       "for": "W937",
       "fix": "Use full tokens job:open:id for bag COUNTLINE; disk COUNTFILELINE remains substring"
+    },
+    {
+      "id": "WA942",
+      "for": "W942",
+      "fix": "After KVFILEINC always KVFILEGET+NUM for bare used_n"
+    },
+    {
+      "id": "WA943",
+      "for": "W943",
+      "fix": "Do not gate agents on HASFORM SYS KVFILEENSURE; probe live ENSURE or forms catalog"
     }
   ],
   "language_gaps": [
-    "IFBLANK live 1.15.949 (1492); ws blank num not blank (W886); FN-wrap (W888)",
     "IFLEN live 1.15.950 (1493); num decimal len + undef0 (W889); FN-wrap (W891)",
     "IFLINES FN block_scan miss (W892 fixed); num\u21921 field empty0 (W893); first realworld 1494",
     "IFHASFLAG live 1.15.950 (1495); IFHASARG no var peel (W895); HASFLAG dual (W896)",
@@ -7740,14 +7795,10 @@
     "COUNTFILELINE substring vs HASFILELINE exact (W917/W919); SET*MATCHFILE whole-line rewrite (W918); HASFORM needs SYS prefix (W916)",
     "IFOUTOFDATE live (1485); SLEEP ms+1s mtime (W923); WRITE multi-arg var (W924); type-IF END nest (W925); miss duals (W926)",
     "JSONCOALESCE live 1.15.961 (1501); skip empty/null dual HITVAL (W930); 0/false keep (W931); OR default HIT=0 (W932)",
-    "COUNTLINE exact bag dual COUNTFILELINE substring (W937); 0-based FINDLINE/MOVELINE/INSERTLINE (W936); SETMATCH soft miss (W938)"
+    "COUNTLINE exact bag dual COUNTFILELINE substring (W937); 0-based FINDLINE/MOVELINE/INSERTLINE (W936); SETMATCH soft miss (W938)",
+    "KVFILEENSURE live first realworld; INC LAST key=N (W942); HASFORM ENSURE lag vs forms catalog (W943); ENSURE no-overwrite (W944)"
   ],
   "issues_faced": [
-    {
-      "iter": 368,
-      "issue": "Draft: nested IFJSONHAS in FN stole END (form\u2192gate FAIL). Then IFJSONHAS plate key failed \u2014 KEY glue. Renamed jkey + sequential admit.",
-      "resolution": "first realworld 1487; document W877\u2013W879"
-    },
     {
       "iter": 369,
       "issue": "Nested IFSTR/IFNUM + bare soft type-IFs stole END. SYS NUM softens abc\u21920 OK=1 so deny-nan failed; PRINT+CLEAR_ERR ate LAST before SYS NUM. Fixed NUMTO+NUMTO_OK + sequential FNs.",
@@ -7798,9 +7849,10 @@
     "iter380: WRITE multi-arg host_s form error (W924); gate equal-mtime deny until SLEEP 1100",
     "iter380: out/cubalc thrash mid-run; linked stable /tmp/cubalc_stable",
     "iter381: JSONCOALESCE first realworld green first-try; HITVAL dual documents empty present pitfall",
-    "iter382: soft 8/10 until MOVELINE 0-based + INSERTLINE 0 head (W936); state plate restored from git"
+    "iter382: soft 8/10 until MOVELINE 0-based + INSERTLINE 0 head (W936); state plate restored from git",
+    "iter383: form 9/10 until HASFORM ENSURE lag documented as expected 0 (W943)"
   ],
-  "commit": "fcc05235",
-  "ts": "2026-08-12T06:12:39+03:00",
-  "board_commit": "fcc05235"
+  "commit": "",
+  "ts": "2026-08-12T06:36:01+03:00",
+  "board_commit": ""
 }

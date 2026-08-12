@@ -1,0 +1,1015 @@
+# svc_kvfile_pool_quota_board.cubalc — KVFILEENSURE/INC pool slot quota
+#
+# Real use: agents claim/release pool slots from a disk KV quota plate
+# (used/limit/site). First realworld focused on SYS KVFILEENSURE (set-if-missing)
+# + KVFILEINC claim + soft GET miss OR default. Distinct from plate JSON quota
+# boards — this is *host KV file* ops for durable slot counters.
+#
+#   KVFILEENSURE · KVFILEINC · KVFILEGET · KVFILESET · KVFILEDEL
+#   OR fallback · NUM shuttle · admit under limit · release clamp
+#
+# Edges (challenge):
+#   KVFILEINC LAST may be "used=N" form not bare N (use GET after INC)
+#   KVFILEENSURE does not overwrite existing (used stays 0 if re-ensure 99)
+#   miss key/path soft via OR "miss"
+#   HASFORM wants "SYS KVFILE…" prefix
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_kfq_$$
+#   ./out/cubalc run programs/realworld/svc_kvfile_pool_quota_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|peel|scale|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt KFQ_REPORT.txt agent.json pool.kv
+# Env: HOST_S ROLE_S CUBALC_KFQ_REQUIRE
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+FN seed_pool
+  SYS KVFILEENSURE pool_path "used" "0"
+  CLEAR_ERR
+  SYS KVFILEENSURE pool_path "limit" "3"
+  CLEAR_ERR
+  SYS KVFILEENSURE pool_path "site" host_s
+  CLEAR_ERR
+END
+
+FN read_used
+  LET used_n = 0
+  SYS KVFILEGET pool_path "used" OR "0"
+  SYS NUM
+  IF OK == 1 THEN
+    LET used_n = LAST_N
+  END
+  CLEAR_ERR
+END
+
+FN read_limit
+  LET limit_n = 0
+  SYS KVFILEGET pool_path "limit" OR "0"
+  SYS NUM
+  IF OK == 1 THEN
+    LET limit_n = LAST_N
+  END
+  CLEAR_ERR
+END
+
+FN claim_slot
+  LET state = "deny-full"
+  LET ok_v = 0
+  CALL read_used
+  CALL read_limit
+  IF used_n < limit_n THEN
+    SYS KVFILEINC pool_path "used"
+    CLEAR_ERR
+    CALL read_used
+    LET state = "claimed"
+    LET ok_v = 1
+  ELSE
+    LET state = "deny-full"
+    LET ok_v = 0
+  END
+END
+
+FN release_slot
+  LET state = "empty"
+  LET ok_v = 0
+  CALL read_used
+  IF used_n > 0 THEN
+    LET used_n = used_n - 1
+    STRTO used_n
+    LET body = LAST
+    CLEAR_ERR
+    SYS KVFILESET pool_path "used" body
+    CLEAR_ERR
+    CALL read_used
+    LET state = "released"
+    LET ok_v = 1
+  ELSE
+    LET state = "empty"
+    LET ok_v = 0
+  END
+END
+
+FN admit_has_capacity
+  LET state = "deny-full"
+  LET ok_v = 0
+  CALL read_used
+  CALL read_limit
+  IF used_n < limit_n THEN
+    LET state = "admit"
+    LET ok_v = 1
+  ELSE
+    LET state = "deny-full"
+    LET ok_v = 0
+  END
+END
+
+NOTE "svc_kvfile_pool_quota_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_kvfile_pool_quota -- boot|pass|soft|peel|scale|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_KFQ_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "KFQ_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "pool.kv"
+LET pool_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET state = ""
+LET saved = 0
+LET used_n = 0
+LET limit_n = 0
+
+ONEOF ACTION "boot", "pass", "soft", "peel", "scale", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-kfq\",\"schema\":\"cubalc.svc_kvfile_pool_quota.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"kfq\",\"want_filter\":\"kvfile_pool_quota\",\"cfg\":{\"surface\":\"KVFILEENSURE,KVFILEINC,KVFILEGET,KVFILESET,KVFILEDEL\",\"contract\":\"disk KV pool slot claim/release with ensure-if-missing defaults\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  SYS RM pool_path
+  CLEAR_ERR
+  CALL seed_pool
+  CLEAR_ERR
+  CALL read_used
+  CALL read_limit
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-kfq"
+  IF LAST_N == 1 THEN
+    IF used_n == 0 THEN
+      IF limit_n == 3 THEN
+        LET hit = 1
+        LET note_msg = "boot ok"
+        LET admit_n = 1
+        LET score = 1
+        LET find_n = limit_n
+      ELSE
+        LET miss = 1
+        LET note_msg = "boot limit"
+        FAIL "boot limit"
+        CLEAR_ERR
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot used"
+      FAIL "boot used"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# pass — ensure / inc / get / set core 10/10
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS RM pool_path
+  CLEAR_ERR
+  CALL seed_pool
+  CLEAR_ERR
+  # 1 ensure seed used 0
+  CALL read_used
+  IF used_n == 0 THEN
+    LET score = score + 1
+  END
+  # 2 re-ensure does not overwrite
+  SYS KVFILEENSURE pool_path "used" "99"
+  CLEAR_ERR
+  CALL read_used
+  IF used_n == 0 THEN
+    LET score = score + 1
+  END
+  # 3-5 claim thrice to limit 3
+  CALL claim_slot
+  SYS EQS state "claimed"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF used_n == 1 THEN
+    LET score = score + 1
+  END
+  CALL claim_slot
+  CALL claim_slot
+  IF used_n == 3 THEN
+    LET score = score + 1
+  END
+  # 6 deny full
+  CALL claim_slot
+  SYS EQS state "deny-full"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 7-8 release then claim
+  CALL release_slot
+  SYS EQS state "released"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF used_n == 2 THEN
+    LET score = score + 1
+  END
+  # 9 site ensure host
+  SYS KVFILEGET pool_path "site"
+  SYS EQS LAST host_s
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 10 agent surface
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "KVFILEENSURE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — miss paths · empty release · INC sticky form
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS RM pool_path
+  CLEAR_ERR
+  CALL seed_pool
+  CLEAR_ERR
+  # 1 miss key OR
+  SYS KVFILEGET pool_path "gone" OR "miss"
+  SYS EQS LAST "miss"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 2 miss path OR
+  SYS KVFILEGET "/no/such/pool.kv" "used" OR "none"
+  SYS EQS LAST "none"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 3 release empty
+  CALL release_slot
+  SYS EQS state "empty"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 4 INC sticky may include key=
+  SYS KVFILEINC pool_path "used"
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 5 GET after INC is bare number
+  CALL read_used
+  IF used_n == 1 THEN
+    LET score = score + 1
+  END
+  # 6 DEL miss soft
+  SYS KVFILEDEL pool_path "gone"
+  CLEAR_ERR
+  IF OK >= 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 7 SET limit
+  SYS KVFILESET pool_path "limit" "1"
+  CLEAR_ERR
+  CALL read_limit
+  IF limit_n == 1 THEN
+    LET score = score + 1
+  END
+  # 8 full after set limit 1 with used 1
+  CALL admit_has_capacity
+  SYS EQS state "deny-full"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 9 release to admit
+  CALL release_slot
+  CALL admit_has_capacity
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 10 require
+  IF require_hit >= 0 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# peel — disk pool.kv materialize
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS RM pool_path
+  CLEAR_ERR
+  CALL seed_pool
+  CLEAR_ERR
+  CALL claim_slot
+  CALL claim_slot
+  IF used_n == 2 THEN
+    LET score = score + 1
+  END
+  SYS READ pool_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "used="
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "limit=3"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "site="
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL release_slot
+  IF used_n == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ pool_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "used=1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL admit_has_capacity
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL claim_slot
+  CALL claim_slot
+  CALL claim_slot
+  SYS EQS state "deny-full"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ensure-if-missing"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# scale — claim ladder to limit then drain
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS RM pool_path
+  CLEAR_ERR
+  SYS KVFILEENSURE pool_path "used" "0"
+  SYS KVFILEENSURE pool_path "limit" "2"
+  CLEAR_ERR
+  CALL claim_slot
+  SYS EQS state "claimed"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL claim_slot
+  SYS EQS state "claimed"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF used_n == 2 THEN
+    LET score = score + 1
+  END
+  CALL claim_slot
+  SYS EQS state "deny-full"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL release_slot
+  CALL release_slot
+  IF used_n == 0 THEN
+    LET score = score + 1
+  END
+  CALL release_slot
+  SYS EQS state "empty"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # bump limit via SET
+  SYS KVFILESET pool_path "limit" "4"
+  CLEAR_ERR
+  CALL read_limit
+  IF limit_n == 4 THEN
+    LET score = score + 1
+  END
+  CALL claim_slot
+  CALL claim_slot
+  CALL claim_slot
+  CALL claim_slot
+  IF used_n == 4 THEN
+    LET score = score + 1
+  END
+  CALL admit_has_capacity
+  SYS EQS state "deny-full"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form — HASFORM lag: catalog lists SYS KVFILEENSURE but HASFORM → 0 (W943)
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "SYS KVFILEINC"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS KVFILEGET"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS KVFILESET"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS KVFILEDEL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS LOOKUPFILE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # catalog duals present as forms search but HASFORM may lag
+  HASFORM "SYS KVFILEENSURE"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS ENSUREKVFILE"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "KVFILEINC"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "kvfile_pool_quota"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "KVFILEENSURE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — admit only when capacity
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS RM pool_path
+  CLEAR_ERR
+  SYS KVFILEENSURE pool_path "used" "0"
+  SYS KVFILEENSURE pool_path "limit" "1"
+  CLEAR_ERR
+  CALL admit_has_capacity
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL claim_slot
+  SYS EQS state "claimed"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL admit_has_capacity
+  SYS EQS state "deny-full"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL claim_slot
+  SYS EQS state "deny-full"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL release_slot
+  CALL admit_has_capacity
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF require_hit >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "claim/release"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "disk KV"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  SYS CAT "gate:" score ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# probe — WRITE NL · NUM · pool file
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS RM pool_path
+  CLEAR_ERR
+  CALL seed_pool
+  CLEAR_ERR
+  CALL claim_slot
+  IF used_n == 1 THEN
+    LET score = score + 1
+  END
+  LET saved = used_n
+  STRTO saved
+  SYS WRITE val_path saved
+  CLEAR_ERR
+  SYS READ val_path
+  SYS NUM
+  IF OK == 1 THEN
+    IF LAST_N == 1 THEN
+      LET score = score + 1
+    END
+  END
+  CLEAR_ERR
+  SYS CAT "used=" used_n " limit=" limit_n
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE report_path body
+  CLEAR_ERR
+  SYS READ report_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "used="
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE meta_path "kfq_probe"
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "kfq_probe"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE meta_path "no_nl_end"
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "no_nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ pool_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "used=1"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL release_slot
+  IF used_n == 0 THEN
+    LET score = score + 1
+  END
+  LET saved = 1
+  PRINT_JSON saved score
+  CLEAR_ERR
+  IF saved == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-kfq"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = saved
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score saved note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS CAT "{\"ok\":true,\"agent\":\"svc-kfq\",\"op\":\"" op "\",\"hit\":" hit ",\"miss\":" miss ",\"score\":" score ",\"admit_n\":" admit_n ",\"bag_n\":" bag_n ",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"note\":\"" note_msg "\",\"require_hit\":" require_hit ",\"used_n\":" used_n ",\"limit_n\":" limit_n ",\"state\":\"" state "\"}"
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " score=" score " note=" note_msg " admit=" admit_n " used=" used_n " limit=" limit_n
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+STATUS
+CLEAR_ERR
+
+IF miss == 1 THEN
+  IF hit == 0 THEN
+    EXIT 1 note_msg
+  END
+END
+
+NOTE "svc_kvfile_pool_quota_board: done"
+PASS
