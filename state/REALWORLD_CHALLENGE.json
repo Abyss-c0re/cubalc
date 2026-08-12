@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 380,
-  "program": "programs/realworld/svc_ifoutofdate_rebuild_gate_board.cubalc",
-  "theme": "IFOUTOFDATE/IFNEWER/IFOLDER relative mtime rebuild/promote/gc gate",
-  "version": "1.15.960-usability",
+  "iter": 381,
+  "program": "programs/realworld/svc_jsoncoalesce_status_default_board.cubalc",
+  "theme": "JSONCOALESCE/JSONNVL first non-empty status peel + OR default",
+  "version": "1.15.961-usability",
   "pass": true,
-  "prior_note": "iter 379 COUNTFILELINE jobq; this iter first realworld of 1485 IFNEWER/IFOLDER/IFOUTOFDATE (vs IFFRESH TTL)",
+  "prior_note": "iter 380 IFOUTOFDATE; this iter first realworld of 1501 JSONCOALESCE (MI 961) dual of JSONHITVAL",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed dist newer stamp admit",
+      "cmd": "blank status \u2192 legacy ok idx3",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "newer/older/outofdate + rebuild 10/10",
+      "cmd": "coalesce vs hitval dual \u00b7 null skip \u00b7 id 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "miss paths \u00b7 SLEEP1 \u00b7 GC \u00b7 same-path 10/10",
+      "cmd": "OR default \u00b7 0/false \u00b7 OF bag \u00b7 deny-default 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "disk rebuild promote deny ladder 10/10",
+      "cmd": "disk intake/peer peel dual 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "missing dist rebuild \u00b7 src bump \u00b7 gc 10/10",
+      "cmd": "admit ladder \u00b7 DEFAULT form 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFOUTOFDATE/IFNEWER/IFOLDER 10/10",
+      "cmd": "HASFORM JSONCOALESCE/JSONNVL 10/10",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "miss-ref admit \u00b7 rebuild \u00b7 stamp advance 10/10",
+      "cmd": "admit usable \u00b7 deny default/status 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "STRTO WRITE NL NUM MTIME",
+      "cmd": "STRTO WRITE NL NUM",
       "ok": true,
       "note": "probe"
     },
@@ -7506,11 +7506,57 @@
       "title": "WRITE omit trailing NL reconfirm IOD plates",
       "detail": "STATUS/META/REPORT lack final NL.",
       "repro": "cat -A META.txt"
+    },
+    {
+      "id": "W930",
+      "severity": "low",
+      "area": "lang|jsoncoalesce",
+      "title": "JSONCOALESCE skips empty/null; dual of JSONHITVAL present-empty",
+      "detail": "JSONHITVAL on status:\"\" returns empty with key=status. JSONCOALESCE skips blank/null and peels next non-empty (legacy_status). Agents admitting on usable status must prefer COALESCE.",
+      "repro": "plate status=\"\" legacy=ok; HITVAL\u2192\"\" status; COALESCE\u2192ok legacy_status"
+    },
+    {
+      "id": "W931",
+      "severity": "low",
+      "area": "lang|jsoncoalesce",
+      "title": "false and 0 have substance (not skipped); null and \"\" skipped",
+      "detail": "JSONCOALESCE treats false\u2192\"0\" and numeric 0 as non-empty. null and empty string skipped. Whitespace-only may also skip.",
+      "repro": "COALESCE f:false t:true \u2192 0 key f; gone:null name:ok \u2192 ok"
+    },
+    {
+      "id": "W932",
+      "severity": "low",
+      "area": "lang|jsoncoalesce",
+      "title": "OR/DEFAULT fallback sets HIT=0 and empty KEY",
+      "detail": "JSONCOALESCE plate a b OR fallback yields LAST=fallback but JSONCOALESCE_HIT=0 JSONCOALESCE_N=0 empty KEY. Agents must not treat default as a plate hit.",
+      "repro": "COALESCE miss OR unknown \u2192 val unknown HIT 0"
+    },
+    {
+      "id": "W933",
+      "severity": "low",
+      "area": "lang|jsoncoalesce",
+      "title": "JSONCOALESCE/JSONNVL work (positive; first realworld 1501)",
+      "detail": "1501 green. Stickies JSONCOALESCE_N 1-based \u00b7 HIT \u00b7 KEY \u00b7 OF bag \u00b7 aliases JSONNVL/JCOALESCE \u00b7 OR/DEFAULT. Multi-vendor blank-status admit solid.",
+      "repro": "CALL peel_status_coalesce; CALL admit_ready; CALL hitval_status dual"
+    },
+    {
+      "id": "W934",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL reconfirm JCO plates",
+      "detail": "STATUS last line and META/REPORT without final NL.",
+      "repro": "cat -A META.txt"
+    },
+    {
+      "id": "W935",
+      "severity": "low",
+      "area": "host|version",
+      "title": "selftest/run plate version lag vs VERSION 1.15.961",
+      "detail": "VERSION 1.15.961-usability; selftest may report 1.15.959-usability depending on binary stamp. Proofs still green.",
+      "repro": "cat VERSION; cubalc selftest version field"
     }
   ],
   "workarounds": [
-    "LET NEED_* then INCLUDE obj_guard/class_guard each time",
-    "Read ALL_OK/ANY_OK separately when both NEED sets set",
     "REQUIRE LIB \"hold_seed\" quoted",
     "Score CALLANY on CALLANY_FN/CALLED/CALLANY_N not string body EQS",
     "LET ret_n=LAST_N immediately after CALLANY before EQS/CLEAR_ERR",
@@ -7614,10 +7660,19 @@
       "id": "WA925",
       "for": "W925",
       "fix": "FN-wrap all IFNEWER/IFOLDER/IFOUTOFDATE; CALL from action IF blocks"
+    },
+    {
+      "id": "WA930",
+      "for": "W930",
+      "fix": "Prefer JSONCOALESCE over JSONHITVAL when early keys may be blank; OR default for miss"
+    },
+    {
+      "id": "WA932",
+      "for": "W932",
+      "fix": "Check JSONCOALESCE_HIT==1 before treating value as plate-derived; HIT=0 means OR default"
     }
   ],
   "language_gaps": [
-    "IFNUM live 1.15.943 (1488); SYS NUM soft zero (W880); nested type-IF END (W882)",
     "IFZERO live 1.15.948 (1489); TRIES keyword traps var tries (W883); str0/undef type-strict (W885)",
     "IFBLANK live 1.15.949 (1492); ws blank num not blank (W886); FN-wrap (W888)",
     "IFLEN live 1.15.950 (1493); num decimal len + undef0 (W889); FN-wrap (W891)",
@@ -7628,14 +7683,10 @@
     "JSONHITKEY live 1.15.959 (1499); var-key SYS JSON peel fail (W904); candidate order = arg order (W905); null/false present (W906)",
     "JSONHITVAL live 1.15.960 (1500); ok_v presence sticky breaks deny (W910); bool/null coerce (W911); no JSONHITKEY sticky share (W913)",
     "COUNTFILELINE substring vs HASFILELINE exact (W917/W919); SET*MATCHFILE whole-line rewrite (W918); HASFORM needs SYS prefix (W916)",
-    "IFOUTOFDATE live (1485); SLEEP ms+1s mtime (W923); WRITE multi-arg var (W924); type-IF END nest (W925); miss duals (W926)"
+    "IFOUTOFDATE live (1485); SLEEP ms+1s mtime (W923); WRITE multi-arg var (W924); type-IF END nest (W925); miss duals (W926)",
+    "JSONCOALESCE live 1.15.961 (1501); skip empty/null dual HITVAL (W930); 0/false keep (W931); OR default HIT=0 (W932)"
   ],
   "issues_faced": [
-    {
-      "iter": 366,
-      "issue": "First-try green. W868 IFBIG now live via 1484; used FN-wrap throughout.",
-      "resolution": "first realworld 1484; document W871\u2013W873"
-    },
     {
       "iter": 367,
       "issue": "First draft: STATUS \"ok\" note_msg unknown form (STATUS is report-only). probe 9/10 until STRTO before WRITE VAL. Then green.",
@@ -7694,9 +7745,10 @@
     "iter379: note:JOB:open false-friend inflates open backlog (W917) \u2014 real ops trap",
     "iter380: bare IFNEWER inside IF LAST_N stole END (W925) \u2014 FN-wrap check_*",
     "iter380: WRITE multi-arg host_s form error (W924); gate equal-mtime deny until SLEEP 1100",
-    "iter380: out/cubalc thrash mid-run; linked stable /tmp/cubalc_stable"
+    "iter380: out/cubalc thrash mid-run; linked stable /tmp/cubalc_stable",
+    "iter381: JSONCOALESCE first realworld green first-try; HITVAL dual documents empty present pitfall"
   ],
-  "commit": "898a87af",
-  "ts": "2026-08-12T05:25:19+03:00",
-  "board_commit": "898a87af"
+  "commit": "",
+  "ts": "2026-08-12T05:43:59+03:00",
+  "board_commit": ""
 }
