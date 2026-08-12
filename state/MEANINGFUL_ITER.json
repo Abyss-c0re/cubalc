@@ -5,7 +5,7 @@
   "item": "IFMISSP/IFEXTRAP plate missing-keys and extra-keys diagnostic branches",
   "item_id": "mi_ifmissp_ifextrap",
   "title": "IFMISSP \u00b7 IFEXTRAP plate contract diagnostic branches for agents",
-  "commit": "PENDING",
+  "commit": "026cf94f",
   "summary": "Plate missing-keys / extra-keys IF/WHEN branches: IFMISSP|IFABSENTP|IFMISSINGKEYSP|WHENMISSP and IFEXTRAP|IFUNKNOWNKEYSP|WHENEXTRAP. Soft twins complementary to IFONLYP/IFEXACTP and IFJSONHASALL/ANY. Proofs 1512 PASS (26 asserts + CLI dual).",
   "proofs": [
     "programs/proof/1512_ifmissp_ifextrap.cubalc",
