@@ -1,0 +1,111 @@
+# EXACTP / SCHEMAP — multi-plate dual of SYS JSONEXACT / JSONSCHEMA
+# exact key-set (HASALL+ONLY) on PLATE or FROM named plate · LAST_N 0|1 · HIT/EXTRA/MISS
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\"}"
+
+# exact match
+EXACTP "ok" "n" "err"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT EXACTP_N == 1
+ASSERT EXACTP_HIT == 3
+ASSERT EXACTP_EXTRA == 0
+ASSERT EXACTP_MISS == 0
+ASSERT EXACTP_LISTED == 3
+# LAST kept as plate
+SYS HAS LAST "n"
+ASSERT LAST_N == 1
+
+# missing only
+LET THIN = "{\"ok\":true,\"n\":3}"
+LET PLATE = THIN
+EXACTP "ok" "n" "version"
+ASSERT LAST_N == 0
+ASSERT EXACTP_MISS == 1
+ASSERT EXACTP_EXTRA == 0
+ASSERT EXACTP_HIT == 2
+
+# extra key only
+LET NOISY = "{\"ok\":true,\"n\":1,\"noise\":9}"
+LET PLATE = NOISY
+EXACTP "ok" "n"
+ASSERT LAST_N == 0
+ASSERT EXACTP_EXTRA == 1
+ASSERT EXACTP_HIT == 2
+ASSERT EXACTP_MISS == 0
+
+# both miss and extra
+EXACTP "ok" "version"
+ASSERT LAST_N == 0
+ASSERT EXACTP_MISS == 1
+ASSERT EXACTP_EXTRA == 2
+ASSERT EXACTP_HIT == 1
+
+# aliases
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\"}"
+SCHEMAP "ok" "n" "err"
+ASSERT LAST_N == 1
+PLATEEXACTP "ok" "n" "err"
+ASSERT LAST_N == 1
+KEYSEXACTP "ok" "n" "err"
+ASSERT LAST_N == 1
+SAMEKEYSP "ok" "n" "err"
+ASSERT LAST_N == 1
+PEXACT "ok" "n" "err"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+LET PEER = "{\"p\":\"\",\"q\":\"two\",\"role\":\"agent\"}"
+EXACTP "p" "q" "role" FROM PEER
+ASSERT LAST_N == 1
+ASSERT EXACTP_FROM == 1
+ASSERT EXACTP_HIT == 3
+ASSERT EXACTP_EXTRA == 0
+
+EXACTP FROM PEER "p" "role"
+ASSERT LAST_N == 0
+ASSERT EXACTP_EXTRA == 1
+ASSERT EXACTP_HIT == 2
+ASSERT SCHEMAP_FROM == 1
+
+# empty schema + empty plate → match
+SYS JSONOBJ
+LET EMPTY = LAST
+EXACTP FROM EMPTY
+ASSERT LAST_N == 1
+ASSERT EXACTP_LISTED == 0
+ASSERT EXACTP_HIT == 0
+ASSERT EXACTP_EXTRA == 0
+
+# empty schema on non-empty plate → extras
+EXACTP
+ASSERT LAST_N == 0
+ASSERT EXACTP_EXTRA == 3
+
+# PLATE unchanged by FROM peels
+SYS HAS PLATE "err"
+ASSERT LAST_N == 1
+
+# agent pattern: soft schema gate
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\"}"
+EXACTP "ok" "n" "err"
+IF LAST_N THEN
+  PASS "schema exact"
+ELSE
+  FAIL "should match"
+END
+ASSERT OK == 1
+
+# miss+extra agent contract
+MISSP "ok" "n" "version"
+ASSERT LAST_N == 1
+EXTRAP "ok" "n" "version"
+ASSERT LAST_N == 1
+EXACTP "ok" "n" "version"
+ASSERT LAST_N == 0
+ASSERT EXACTP_MISS == 1
+ASSERT EXACTP_EXTRA == 1
+
+PASS "exactp/schemap ok"
