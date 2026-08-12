@@ -1,0 +1,85 @@
+# REQUIRE ONLYP / NOEXTRAP / EXACTP — fail-fast multi-plate twins of soft ONLYP / EXACTP
+# Soft twins: ONLYP · EXACTP · SYS JSONEXTRA · SYS JSONEXACT
+# Usability: plate-session agent hard gates without ONLYP+IF LAST_N FAIL glue.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" ""
+LET plate = LAST
+
+# success: no extras
+REQUIRE ONLYP plate "ok" "n" "err"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONEXTRA_N == 0
+ASSERT REQUIRE_JSON_EXTRA == 0
+# LAST kept as plate
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 3
+
+# aliases
+SYS JSONOBJ "a" 1 "b" 2
+LET p2 = LAST
+REQUIRE NOEXTRAP p2 "a" "b"
+ASSERT OK == 1
+REQUIRE JSONONLYP p2 "a" "b"
+ASSERT OK == 1
+REQUIRE STRICTP p2 "a" "b"
+ASSERT OK == 1
+REQUIRE ALLOWONLYP p2 "a" "b"
+ASSERT OK == 1
+REQUIRE PLATEONLYP p2 "a" "b"
+ASSERT OK == 1
+
+# bare allow on LAST plate
+SYS JSONOBJ "p" 1 "q" 2
+REQUIRE ONLYP "p" "q"
+ASSERT OK == 1
+
+# soft twin still works (no fail)
+SYS JSONOBJ "ok" true "n" 1 "noise" 9
+LET soft = LAST
+LET PLATE = soft
+ONLYP "ok" "n"
+ASSERT LAST_N == 0
+ASSERT ONLYP_EXTRA == 1
+ASSERT OK == 1
+
+# superset allow-list ok (missing keys OK for ONLYP)
+SYS JSONOBJ "a" 1
+LET small = LAST
+REQUIRE ONLYP small "a" "b" "c"
+ASSERT OK == 1
+
+# EXACTP success
+SYS JSONOBJ "status" "ready" "code" 0
+LET agent = LAST
+REQUIRE EXACTP agent "status" "code"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONEXACT_N == 1
+ASSERT JSONEXACT_EXTRA == 0
+
+# EXACTP aliases
+REQUIRE SCHEMAP agent "status" "code"
+ASSERT OK == 1
+REQUIRE PLATEEXACTP agent "status" "code"
+ASSERT OK == 1
+REQUIRE KEYSEXACTP agent "status" "code"
+ASSERT OK == 1
+REQUIRE SAMEKEYSP agent "status" "code"
+ASSERT OK == 1
+REQUIRE PEXACT agent "status" "code"
+ASSERT OK == 1
+
+# dual contract: soft EXACTP + hard REQUIRE EXACTP
+LET PLATE = agent
+EXACTP "status" "code"
+ASSERT LAST_N == 1
+ASSERT EXACTP_EXTRA == 0
+ASSERT EXACTP_MISS == 0
+REQUIRE EXACTP PLATE "status" "code"
+ASSERT OK == 1
+
+PASS "REQUIRE ONLYP / EXACTP gated"
+ASSERT OK == 1

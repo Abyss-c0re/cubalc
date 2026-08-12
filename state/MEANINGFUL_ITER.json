@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 968,
-  "version": "1.15.968-usability",
-  "item": "ONLYP/NOEXTRAP soft multi-plate dual of REQUIRE JSONONLY",
-  "item_id": "mi_onlyp",
-  "title": "ONLYP \u00b7 NOEXTRAP soft no-extra keys on PLATE or FROM plate",
-  "commit": "881cee68",
-  "summary": "Multi-plate soft dual of REQUIRE JSONONLY/NOEXTRA/JSONSTRICT: ONLYP|NOEXTRAP [FROM plate] allow\u2026 \u2192 LAST=plate \u00b7 LAST_N 0|1 \u00b7 ONLYP_N \u00b7 ONLYP_EXTRA \u00b7 ONLYP_LISTED \u00b7 ONLYP_FROM. Empty allow+empty plate match. Supersets allowed (missing keys OK). Soft twin of fail-fast JSONONLY for plate-session agents. Proofs 1508 PASS (37 asserts + CLI).",
+  "iter": 969,
+  "version": "1.15.969-usability",
+  "item": "REQUIRE ONLYP/EXACTP fail-fast multi-plate twins of soft ONLYP/EXACTP",
+  "item_id": "mi_require_onlyp",
+  "title": "REQUIRE ONLYP · EXACTP hard gates for plate-session agents",
+  "commit": "PENDING",
+  "summary": "Fail-fast multi-plate twins of soft ONLYP/NOEXTRAP and EXACTP: REQUIRE ONLYP|NOEXTRAP|JSONONLYP|STRICTP|ALLOWONLYP|PLATEONLYP [plate] allow… and REQUIRE EXACTP|SCHEMAP|PLATEEXACTP|KEYSEXACTP|SAMEKEYSP|PEXACT [plate] key… wire into existing REQUIRE JSONONLY/JSONEXACT paths. Soft twins remain non-fatal. Proofs 1509 PASS (44 asserts + CLI hard/soft dual).",
   "proofs": [
-    "1508_onlyp + 1508_cli_onlyp PASS"
+    "1509_require_onlyp + 1509_cli_require_onlyp PASS"
   ],
-  "when": "2026-08-12T14:26:28Z",
+  "when": "2026-08-12T18:45:00Z",
   "agent": "nanobot-cubalc",
-  "sha": "881cee6889a5cd09747be6e955e5342f44ae3cbf",
-  "note": "Plate-session dual of JSONONLY/NOEXTRA; FROM named plate; aliases JSONONLYP/STRICTP/ALLOWONLYP/PLATEONLYP; dual contract with EXTRAP",
-  "state_commit": "0fdb5a4b"
+  "sha": "PENDING",
+  "note": "Plate-session hard gates without ONLYP+IF LAST_N FAIL glue; dual contract soft ONLYP/EXACTP + hard REQUIRE ONLYP/EXACTP",
+  "state_commit": "PENDING"
 }

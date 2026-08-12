@@ -3502,6 +3502,12 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"REQUIRE JSONONLY", "REQUIRE JSONONLY|NOEXTRA|JSONSTRICT [plate] allow… — fail if extras · soft SYS JSONEXTRA"},
       {"REQUIRE NOEXTRA", "REQUIRE NOEXTRA alias of REQUIRE JSONONLY"},
       {"REQUIRE JSONSTRICT", "REQUIRE JSONSTRICT alias of REQUIRE JSONONLY"},
+      {"REQUIRE ONLYP", "REQUIRE ONLYP|NOEXTRAP [plate] allow… — fail-fast no-extra keys · soft twin ONLYP · multi-plate dual of REQUIRE JSONONLY"},
+      {"REQUIRE NOEXTRAP", "REQUIRE NOEXTRAP alias of REQUIRE ONLYP"},
+      {"REQUIRE JSONONLYP", "REQUIRE JSONONLYP alias of REQUIRE ONLYP"},
+      {"REQUIRE STRICTP", "REQUIRE STRICTP alias of REQUIRE ONLYP"},
+      {"REQUIRE EXACTP", "REQUIRE EXACTP|SCHEMAP [plate] key… — fail-fast exact key-set · soft twin EXACTP · dual REQUIRE JSONEXACT"},
+      {"REQUIRE SCHEMAP", "REQUIRE SCHEMAP alias of REQUIRE EXACTP"},
       {"REQUIRE JSONEXACT", "REQUIRE JSONEXACT|JSONSCHEMA [plate] key… — exact key set (HASALL+ONLY) · soft SYS JSONEXACT"},
       {"REQUIRE JSONSCHEMA", "REQUIRE JSONSCHEMA alias of REQUIRE JSONEXACT"},
       {"JSONEXACT", "JSONEXACT|JSONSCHEMA [plate] key… — soft exact key-set → LAST_N 0|1 · HIT/EXTRA/MISS"},
@@ -65042,13 +65048,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     /* REQUIRE JSONHASALL|JSONNEED|JSONKEYS [plate] key [key…]
      * REQUIRE JSONHASANY|NEEDJSONANY [plate] key [key…] — fail-fast any-of (HASALL twin).
-     * REQUIRE JSONONLY|NOEXTRA|JSONSTRICT [plate] allow [key…]
-     * REQUIRE JSONEXACT|JSONSCHEMA [plate] key [key…] — HASALL + ONLY one-shot.
-     * Soft twins: SYS JSONHASALL / JSONHASANY / JSONEXTRA / JSONEXACT. LAST=plate on success.
-     * Usability: full plate schema gate without multi-probe IF+FAIL glue. */
+     * REQUIRE JSONONLY|NOEXTRA|JSONSTRICT|ONLYP|NOEXTRAP [plate] allow [key…]
+     * REQUIRE JSONEXACT|JSONSCHEMA|EXACTP|SCHEMAP [plate] key [key…] — HASALL + ONLY one-shot.
+     * Soft twins: SYS JSONHASALL / JSONHASANY / JSONEXTRA / JSONEXACT · ONLYP / EXACTP.
+     * Usability: full plate schema gate without multi-probe IF+FAIL glue.
+     * ONLYP/EXACTP aliases = fail-fast multi-plate twins of soft ONLYP/EXACTP. */
     if (kw(&L->cur,"JSONHASALL") || kw(&L->cur,"JSONNEED") || kw(&L->cur,"JSONKEYS") ||
         kw(&L->cur,"JHASALL") || kw(&L->cur,"NEEDKEYS") || kw(&L->cur,"PLATEKEYS") ||
         kw(&L->cur,"JSONONLY") || kw(&L->cur,"JONLY") || kw(&L->cur,"JSONSTRICT") ||
+        kw(&L->cur,"ONLYP") || kw(&L->cur,"NOEXTRAP") || kw(&L->cur,"JSONONLYP") ||
+        kw(&L->cur,"STRICTP") || kw(&L->cur,"ALLOWONLYP") || kw(&L->cur,"PLATEONLYP") ||
+        kw(&L->cur,"ONLY_P") || kw(&L->cur,"NOEXTRA_P") || kw(&L->cur,"JSONONLY_P") ||
         kw(&L->cur,"JSONHASANY") || kw(&L->cur,"NEEDJSONANY") || kw(&L->cur,"JHASANY") ||
         kw(&L->cur,"HASANYJSON") || kw(&L->cur,"JSONANYKEY") || kw(&L->cur,"MUSTJSONANY") ||
         kw(&L->cur,"REQUIREJSONANY") || kw(&L->cur,"NEEDANYJSON") || kw(&L->cur,"JSONNEEDANY") ||
@@ -65056,6 +65066,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         kw(&L->cur,"JSONALLOW") || kw(&L->cur,"STRICTJSON") ||
         kw(&L->cur,"JSONEXACT") || kw(&L->cur,"JEXACT") || kw(&L->cur,"JSONSCHEMA") ||
         kw(&L->cur,"EXACTKEYS") || kw(&L->cur,"PLATEEXACT") || kw(&L->cur,"SCHEMA") ||
+        kw(&L->cur,"EXACTP") || kw(&L->cur,"SCHEMAP") || kw(&L->cur,"PLATEEXACTP") ||
+        kw(&L->cur,"KEYSEXACTP") || kw(&L->cur,"SAMEKEYSP") || kw(&L->cur,"PEXACT") ||
         kw(&L->cur,"JSON") || kw(&L->cur,"PLATE")){
       char plate[CUBALC_HOST_STR_MAX], keys_nl[CUBALC_HOST_STR_MAX];
       char arg[CUBALC_HOST_STR_MAX], bag[CUBALC_HOST_STR_MAX];
@@ -65063,12 +65075,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       size_t olen = 0;
       cubalc_host_result hr, xr;
       if (kw(&L->cur,"JSONEXACT") || kw(&L->cur,"JEXACT") || kw(&L->cur,"JSONSCHEMA") ||
-          kw(&L->cur,"EXACTKEYS") || kw(&L->cur,"PLATEEXACT") || kw(&L->cur,"SCHEMA")) {
+          kw(&L->cur,"EXACTKEYS") || kw(&L->cur,"PLATEEXACT") || kw(&L->cur,"SCHEMA") ||
+          kw(&L->cur,"EXACTP") || kw(&L->cur,"SCHEMAP") || kw(&L->cur,"PLATEEXACTP") ||
+          kw(&L->cur,"KEYSEXACTP") || kw(&L->cur,"SAMEKEYSP") || kw(&L->cur,"PEXACT")) {
         want_exact = 1;
         lex_next(L);
       } else if (kw(&L->cur,"JSONONLY") || kw(&L->cur,"JONLY") || kw(&L->cur,"JSONSTRICT") ||
           kw(&L->cur,"NOEXTRA") || kw(&L->cur,"ALLOWONLY") || kw(&L->cur,"PLATEONLY") ||
-          kw(&L->cur,"JSONALLOW") || kw(&L->cur,"STRICTJSON")) {
+          kw(&L->cur,"JSONALLOW") || kw(&L->cur,"STRICTJSON") ||
+          kw(&L->cur,"ONLYP") || kw(&L->cur,"NOEXTRAP") || kw(&L->cur,"JSONONLYP") ||
+          kw(&L->cur,"STRICTP") || kw(&L->cur,"ALLOWONLYP") || kw(&L->cur,"PLATEONLYP") ||
+          kw(&L->cur,"ONLY_P") || kw(&L->cur,"NOEXTRA_P") || kw(&L->cur,"JSONONLY_P")) {
         want_only = 1;
         lex_next(L);
       } else if (kw(&L->cur,"JSONHASANY") || kw(&L->cur,"NEEDJSONANY") || kw(&L->cur,"JHASANY") ||
@@ -65447,9 +65464,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(plate, sizeof plate, "%s", "{}");
       if (!keys_nl[0]) {
         fail_at(vm, L, want_exact
-                ? "REQUIRE JSONEXACT [plate] key… — need schema keys"
+                ? "REQUIRE EXACTP/JSONEXACT [plate] key… — need schema keys"
                 : (want_only
-                   ? "REQUIRE JSONONLY [plate] allow… — need allow-list keys"
+                   ? "REQUIRE ONLYP/JSONONLY [plate] allow… — need allow-list keys"
                    : (want_any
                       ? "REQUIRE JSONHASANY [plate] key… — need at least one candidate key"
                       : "REQUIRE JSONHASALL [plate] key… — need at least one key")));
@@ -65505,15 +65522,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         if (bad) {
           if (miss_flat[0] && extra_flat[0])
             snprintf(msg, sizeof msg,
-                     "REQUIRE JSONEXACT line %d missing: %s · extra: %s — soft SYS JSONEXACT",
+                     "REQUIRE EXACTP/JSONEXACT line %d missing: %s · extra: %s — soft EXACTP / SYS JSONEXACT",
                      aln, miss_flat, extra_flat);
           else if (miss_flat[0])
             snprintf(msg, sizeof msg,
-                     "REQUIRE JSONEXACT line %d missing: %s — soft SYS JSONEXACT",
+                     "REQUIRE EXACTP/JSONEXACT line %d missing: %s — soft EXACTP / SYS JSONEXACT",
                      aln, miss_flat);
           else
             snprintf(msg, sizeof msg,
-                     "REQUIRE JSONEXACT line %d extra: %s — soft SYS JSONEXACT",
+                     "REQUIRE EXACTP/JSONEXACT line %d extra: %s — soft EXACTP / SYS JSONEXACT",
                      aln, extra_flat);
           if (vm->res) vm->res->asserts_fail++;
           fail(vm, msg);
@@ -65560,7 +65577,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           if (!flat[0])
             snprintf(flat, sizeof flat, "?");
           snprintf(msg, sizeof msg,
-                   "REQUIRE JSONONLY extra line %d: %s — soft twin SYS JSONEXTRA",
+                   "REQUIRE ONLYP/JSONONLY extra line %d: %s — soft twin ONLYP / SYS JSONEXTRA",
                    aln, flat);
           if (vm->res) vm->res->asserts_fail++;
           fail(vm, msg);
@@ -65641,7 +65658,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONHASANY|JSONONLY|JSONEXACT|JSONEQ|JSONNEQ|JSONSUBSET|JSONTYPE|PLATEFILE …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONHASANY|JSONONLY|ONLYP|JSONEXACT|EXACTP|JSONEQ|JSONNEQ|JSONSUBSET|JSONTYPE|PLATEFILE …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||
