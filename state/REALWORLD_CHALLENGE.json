@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 384,
-  "program": "programs/realworld/svc_jsonpluck_handoff_export_board.cubalc",
-  "theme": "JSONPLUCK/JSONPICK allowlist handoff value-bag export",
+  "iter": 385,
+  "program": "programs/realworld/svc_insertmatchfile_runbook_inject_board.cubalc",
+  "theme": "INSERTMATCHFILE/BEFOREMATCHFILE disk runbook step inject + substring false-friend",
   "version": "1.15.961-usability",
   "pass": true,
-  "prior_note": "iter 383 KVFILEENSURE pool; this iter JSONPLUCK handoff export without secrets",
+  "prior_note": "iter 384 JSONPLUCK handoff; this iter first focused AFTERMATCHFILE/INSERTMATCHFILE runbook inject",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "peer\u2192handoff hit=3",
+      "cmd": "seed inject scan after build order",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "pluck dual scrub miss-middle 10/10",
+      "cmd": "after/before inject \u00b7 order 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "all-miss OF bag JSONPICK 10/10",
+      "cmd": "miss \u00b7 false-friend \u00b7 empty/nopath 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "disk handoff.bag 10/10",
+      "cmd": "full pipeline disk 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "admit ladder deny miss 10/10",
+      "cmd": "admit after inject 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM JSONPLUCK 10/10",
+      "cmd": "HASFORM SYS-prefix dual 10/10",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "complete admit scrub 10/10",
+      "cmd": "require scan step 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "STRTO WRITE NL NUM",
+      "cmd": "STRTO WRITE NL NUM order idx",
       "ok": true,
       "note": "probe"
     },
@@ -69,9 +69,9 @@
     },
     {
       "name": "selftest",
-      "cmd": "selftest after proof restore 628/274",
+      "cmd": "selftest 628/274 CLI duals red",
       "ok": false,
-      "note": "proofs restored; CLI duals red"
+      "note": "baseline; CLI set\u2192SETF red"
     }
   ],
   "weaknesses": [
@@ -7698,10 +7698,57 @@
       "title": "programs/proof thrash deletes selftest corpus (env)",
       "detail": "Proofs vanished mid-iter \u2192 selftest 2/902; restored git checkout programs/proof. Workspace thrash not language.",
       "repro": "selftest n_missing 900"
+    },
+    {
+      "id": "W954",
+      "severity": "high",
+      "area": "host|insertmatchfile",
+      "title": "INSERTMATCHFILE/AFTERMATCHFILE match is substring (false-friend step:build-extra)",
+      "detail": "Needle step:build matches step:build-extra first; inject lands after false friend, before real step:build. Same class as SETMATCHFILE whole-line rewrite (W918). Prefer unique full tokens; verify with FINDLINE order.",
+      "repro": "book with build-extra then build; INSERTMATCHFILE step:build step:injected \u2192 after build-extra"
+    },
+    {
+      "id": "W955",
+      "severity": "low",
+      "area": "host|insertmatchfile",
+      "title": "INSERTMATCHFILE miss marker is soft (no inject)",
+      "detail": "Missing marker leaves file unchanged; HASFILELINE new \u2192 0. Empty file and missing path soft.",
+      "repro": "INSERTMATCHFILE p step:gone step:x; HASFILELINE step:x \u2192 0"
+    },
+    {
+      "id": "W956",
+      "severity": "low",
+      "area": "host|beforematchfile",
+      "title": "BEFOREMATCHFILE inserts immediately before first substring match",
+      "detail": "Symmetric to AFTER/INSERTMATCH after. Deploy approve order verified FINDLINE approve then deploy consecutive.",
+      "repro": "BEFOREMATCHFILE step:deploy step:approve"
+    },
+    {
+      "id": "W957",
+      "severity": "low",
+      "area": "host|runbook_inject",
+      "title": "INSERTMATCHFILE/AFTER/BEFORE runbook inject works (positive; first focused AFTER realworld)",
+      "detail": "Disk runbook inject after build/test and before deploy solid; order_ok via FINDLINE 0-based consecutive indices.",
+      "repro": "CALL inject_after_build; CALL order_ok_scan_after_build"
+    },
+    {
+      "id": "W958",
+      "severity": "low",
+      "area": "lang|hasform",
+      "title": "HASFORM bare INSERTMATCHFILE/AFTERMATCHFILE is 0; need SYS prefix",
+      "detail": "Same W916/W939 class.",
+      "repro": "HASFORM INSERTMATCHFILE \u21920; HASFORM \"SYS INSERTMATCHFILE\" \u21921"
+    },
+    {
+      "id": "W959",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL reconfirm IMF plates",
+      "detail": "STATUS/META/REPORT last lines lack final NL; runbook may keep internal NL.",
+      "repro": "cat -A META.txt"
     }
   ],
   "workarounds": [
-    "REQUIRE LIB \"hold_seed\" quoted",
     "LET call_or=CALL_OR; LET ret_n=LAST_N immediately after TRYCALL/TRYSEND OR",
     "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings",
     {
@@ -7838,10 +7885,14 @@
       "id": "WA951",
       "for": "W951",
       "fix": "export_bag separate from STATUS bag"
+    },
+    {
+      "id": "WA954",
+      "for": "W954",
+      "fix": "Use unique full step tokens; FINDLINE-verify inject order after INSERTMATCHFILE"
     }
   ],
   "language_gaps": [
-    "IFLINES FN block_scan miss (W892 fixed); num\u21921 field empty0 (W893); first realworld 1494",
     "IFHASFLAG live 1.15.950 (1495); IFHASARG no var peel (W895); HASFLAG dual (W896)",
     "IFCANREAD live 1.15.950 (1490); miss soft-false (W898); no chmod dual in board (W900)",
     "IFJSONEQ live 1.15.950 (1491); order-independent (W901); var resync not disk (W903)",
@@ -7852,14 +7903,10 @@
     "JSONCOALESCE live 1.15.961 (1501); skip empty/null dual HITVAL (W930); 0/false keep (W931); OR default HIT=0 (W932)",
     "COUNTLINE exact bag dual COUNTFILELINE substring (W937); 0-based FINDLINE/MOVELINE/INSERTLINE (W936); SETMATCH soft miss (W938)",
     "KVFILEENSURE live first realworld; INC LAST key=N (W942); HASFORM ENSURE lag vs forms catalog (W943); ENSURE no-overwrite (W944)",
-    "JSONPLUCK handoff; JSONHAS var lag (W948); miss empty slots (W949); STATUS bag clobber (W951)"
+    "JSONPLUCK handoff; JSONHAS var lag (W948); miss empty slots (W949); STATUS bag clobber (W951)",
+    "INSERTMATCHFILE substring false-friend (W954); miss soft (W955); BEFOREMATCH order (W956); first AFTER realworld (W957)"
   ],
   "issues_faced": [
-    {
-      "iter": 370,
-      "issue": "FN without END until renamed tries\u2192try_n (TRIES is block opener in block_scan_step). First-try logic green after rename.",
-      "resolution": "first realworld 1489; document W883\u2013W885"
-    },
     {
       "iter": 371,
       "issue": "First-try green. Documented num/0 not blank dual and ws blank.",
@@ -7902,9 +7949,10 @@
     "iter381: JSONCOALESCE first realworld green first-try; HITVAL dual documents empty present pitfall",
     "iter382: soft 8/10 until MOVELINE 0-based + INSERTLINE 0 head (W936); state plate restored from git",
     "iter383: form 9/10 until HASFORM ENSURE lag documented as expected 0 (W943)",
-    "iter384: STATUS bag clobber fixed export_bag; proofs thrash restored; state plate restored after accidental delete"
+    "iter384: STATUS bag clobber fixed export_bag; proofs thrash restored; state plate restored after accidental delete",
+    "iter385: first-try green; step:build-extra false-friend documented W954"
   ],
-  "commit": "831bdea8",
-  "ts": "2026-08-12T07:02:53+03:00",
-  "board_commit": "831bdea8"
+  "commit": "",
+  "ts": "2026-08-12T07:24:26+03:00",
+  "board_commit": ""
 }
