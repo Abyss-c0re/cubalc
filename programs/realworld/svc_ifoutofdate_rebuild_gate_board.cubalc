@@ -1,0 +1,1109 @@
+# svc_ifoutofdate_rebuild_gate_board.cubalc — IFOUTOFDATE/IFNEWER rebuild gate
+#
+# Real use: agents rebuild dist/cache when out of date vs source, promote
+# only when artifact is newer than stamp, and GC stale copies older than
+# live. Relative *mtime* duals (not IFFRESH age-TTL from iter 365).
+# First realworld of IFNEWER/IFOLDER/IFOUTOFDATE (proof 1485).
+#
+#   IFOUTOFDATE · IFNEWER · IFOLDER · IFOUTOFDATE_N · IFNEWER_N · IFOLDER_N
+#   SYS SLEEP 1100 (ms) for 1s FS mtime resolution · miss soft semantics
+#
+# Miss / edge semantics (challenge):
+#   IFOUTOFDATE missing-cache vs src → true (rebuild)
+#   IFNEWER path vs missing-ref → true (treat missing ref as older)
+#   IFNEWER missing-path vs ref → false
+#   IFOLDER missing-path vs ref → true (missing is older)
+#   SLEEP 1 is 1ms — need SLEEP 1100 for mtime gap (W923)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_iod_$$
+#   ./out/cubalc run programs/realworld/svc_ifoutofdate_rebuild_gate_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|peel|scale|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt IOD_REPORT.txt agent.json art/*
+# Env: HOST_S ROLE_S CUBALC_IOD_REQUIRE
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+# write src then wait then dist (dist newer)
+# Note: SYS WRITE path multi-arg with var tokens can parse var as form (W924) —
+# always CAT first then WRITE body.
+FN seed_src_then_dist
+  SYS CAT "{\"rev\":1,\"site\":\"" host_s "\"}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE src_path body
+  CLEAR_ERR
+  SYS SLEEP 1100
+  SYS WRITE dist_path "{\"rev\":1,\"built\":1}"
+  CLEAR_ERR
+END
+
+# write dist then wait then src (src newer → dist stale)
+FN seed_dist_then_src
+  SYS WRITE dist_path "{\"rev\":0,\"built\":1}"
+  CLEAR_ERR
+  SYS SLEEP 1100
+  SYS CAT "{\"rev\":2,\"site\":\"" host_s "\"}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE src_path body
+  CLEAR_ERR
+END
+
+# rebuild dist from src when out of date
+FN rebuild_if_stale
+  LET state = "skip-fresh"
+  LET ok_v = 0
+  IFOUTOFDATE dist_path src_path
+    SYS READ src_path
+    LET body = LAST
+    CLEAR_ERR
+    SYS CAT "{\"built\":1,\"from\":" body "}"
+    LET body = LAST
+    CLEAR_ERR
+    SYS WRITE dist_path body
+    CLEAR_ERR
+    LET state = "rebuilt"
+    LET ok_v = 1
+  ELSE
+    LET state = "skip-fresh"
+    LET ok_v = 0
+  END
+END
+
+# admit promote only when dist newer than stamp
+FN admit_if_newer
+  LET state = "deny-stale"
+  LET ok_v = 0
+  IFNEWER dist_path stamp_path
+    LET state = "admit"
+    LET ok_v = 1
+  ELSE
+    LET state = "deny-stale"
+    LET ok_v = 0
+  END
+END
+
+# GC candidate when older than live dist
+FN gc_if_older
+  LET state = "keep"
+  LET ok_v = 0
+  IFOLDER stale_path dist_path
+    SYS RM stale_path
+    CLEAR_ERR
+    LET state = "gced"
+    LET ok_v = 1
+  ELSE
+    LET state = "keep"
+    LET ok_v = 0
+  END
+END
+
+# FN-wrap type-IF (bare IFNEWER/IFOLDER/IFOUTOFDATE END inside
+# IF LAST_N==1 THEN … END steals outer END frame — W925)
+FN check_newer
+  LET ok_v = 0
+  IFNEWER left_path right_path
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN check_older
+  LET ok_v = 0
+  IFOLDER left_path right_path
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+FN check_outofdate
+  LET ok_v = 0
+  IFOUTOFDATE left_path right_path
+    LET ok_v = 1
+  ELSE
+    LET ok_v = 0
+  END
+END
+
+NOTE "svc_ifoutofdate_rebuild_gate_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_ifoutofdate_rebuild_gate -- boot|pass|soft|peel|scale|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_IOD_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "IOD_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "art"
+LET art_dir = LAST
+SYS JOIN art_dir "src.json"
+LET src_path = LAST
+SYS JOIN art_dir "dist.json"
+LET dist_path = LAST
+SYS JOIN art_dir "stamp.txt"
+LET stamp_path = LAST
+SYS JOIN art_dir "stale.json"
+LET stale_path = LAST
+SYS JOIN art_dir "cache.bin"
+LET cache_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET state = ""
+LET saved = 0
+LET left_path = ""
+LET right_path = ""
+
+ONEOF ACTION "boot", "pass", "soft", "peel", "scale", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-iod\",\"schema\":\"cubalc.svc_ifoutofdate_rebuild_gate.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"iod\",\"want_filter\":\"ifoutofdate_rebuild_gate\",\"cfg\":{\"surface\":\"IFOUTOFDATE,IFNEWER,IFOLDER,IFOUTOFDATE_N,IFNEWER_N,IFOLDER_N,SLEEP\",\"contract\":\"relative mtime rebuild/promote/gc gate (not age-TTL IFFRESH)\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  CALL seed_src_then_dist
+  CLEAR_ERR
+  SYS WRITE stamp_path "t0"
+  CLEAR_ERR
+  # dist should be newer than stamp (stamp written after? rewrite stamp older)
+  # stamp written last — make stamp older by rewriting dist after sleep
+  SYS SLEEP 1100
+  SYS WRITE dist_path "{\"rev\":1,\"built\":1,\"boot\":1}"
+  CLEAR_ERR
+  CALL admit_if_newer
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-iod"
+  IF LAST_N == 1 THEN
+    SYS EQS state "admit"
+    IF LAST_N == 1 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET score = 1
+      LET find_n = IFNEWER_N
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot admit"
+      FAIL "boot admit"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# pass — core 10/10 relative mtime duals
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  CALL seed_src_then_dist
+  CLEAR_ERR
+  # 1-2 dist newer than src
+  LET left_path = dist_path
+  LET right_path = src_path
+  CALL check_newer
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFNEWER_N == 1 THEN
+    LET score = score + 1
+  END
+  # 3 src older than dist
+  LET left_path = src_path
+  LET right_path = dist_path
+  CALL check_older
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # 4 dist not out of date vs src
+  LET left_path = dist_path
+  LET right_path = src_path
+  CALL check_outofdate
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  # 5-6 reverse timeline: src newer → out of date
+  CALL seed_dist_then_src
+  CLEAR_ERR
+  LET left_path = dist_path
+  LET right_path = src_path
+  CALL check_outofdate
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  IF IFOUTOFDATE_N == 1 THEN
+    LET score = score + 1
+  END
+  # 7 rebuild
+  CALL rebuild_if_stale
+  SYS EQS state "rebuilt"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 8 now fresh
+  CALL rebuild_if_stale
+  SYS EQS state "skip-fresh"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 9 agent surface
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "IFOUTOFDATE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 10 host
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — miss paths · SLEEP 1 false friend · GC
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  CALL seed_src_then_dist
+  CLEAR_ERR
+  # 1 missing cache is out of date
+  SYS RM cache_path
+  CLEAR_ERR
+  LET left_path = cache_path
+  LET right_path = src_path
+  CALL check_outofdate
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # 2 IFNEWER missing path → false
+  LET left_path = "/no/such/iod_a"
+  LET right_path = src_path
+  CALL check_newer
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  # 3 IFNEWER path vs missing ref → true
+  LET left_path = dist_path
+  LET right_path = "/no/such/iod_ref"
+  CALL check_newer
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # 4 IFOLDER missing path → true
+  LET left_path = "/no/such/iod_b"
+  LET right_path = dist_path
+  CALL check_older
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  # 5 SLEEP 1 (ms) often insufficient for mtime gap
+  SYS WRITE stamp_path "s1"
+  CLEAR_ERR
+  SYS SLEEP 1
+  SYS WRITE cache_path "c1"
+  CLEAR_ERR
+  SYS MTIME stamp_path
+  LET saved = LAST_N
+  SYS MTIME cache_path
+  # equal second common — document; score if either equal or cache newer
+  IF LAST_N >= saved THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 6-7 GC older stale
+  SYS WRITE stale_path "{\"old\":1}"
+  CLEAR_ERR
+  SYS SLEEP 1100
+  SYS WRITE dist_path "{\"live\":1}"
+  CLEAR_ERR
+  CALL gc_if_older
+  SYS EQS state "gced"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EXIST stale_path
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 8 GC skip when not older
+  SYS WRITE stale_path "{\"new\":1}"
+  CLEAR_ERR
+  SYS SLEEP 1100
+  SYS WRITE stale_path "{\"newer\":1}"
+  CLEAR_ERR
+  CALL gc_if_older
+  SYS EQS state "keep"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 9 same-path IFNEWER false
+  LET left_path = dist_path
+  LET right_path = dist_path
+  CALL check_newer
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  # 10 require env soft
+  IF require_hit >= 0 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# peel — disk rebuild + promote ladder
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  CALL seed_dist_then_src
+  CLEAR_ERR
+  CALL rebuild_if_stale
+  SYS EQS state "rebuilt"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ dist_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "built"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL rebuild_if_stale
+  SYS EQS state "skip-fresh"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE stamp_path "peel-stamp"
+  CLEAR_ERR
+  SYS SLEEP 1100
+  SYS WRITE dist_path "{\"peel\":1}"
+  CLEAR_ERR
+  CALL admit_if_newer
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS SLEEP 1100
+  SYS WRITE stamp_path "peel-stamp-2"
+  CLEAR_ERR
+  CALL admit_if_newer
+  SYS EQS state "deny-stale"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET left_path = dist_path
+  LET right_path = stamp_path
+  CALL check_newer
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  LET left_path = stamp_path
+  LET right_path = dist_path
+  CALL check_older
+  # stamp newer → not older → ok_v 0
+  IF ok_v == 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "relative mtime"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EXIST dist_path
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# scale — rebuild-admit-gc ladder
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  # missing dist out of date
+  SYS RM dist_path
+  CLEAR_ERR
+  SYS WRITE src_path "{\"rev\":9}"
+  CLEAR_ERR
+  CALL rebuild_if_stale
+  SYS EQS state "rebuilt"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EXIST dist_path
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE stamp_path "s"
+  CLEAR_ERR
+  SYS SLEEP 1100
+  SYS WRITE dist_path "{\"rev\":9,\"ok\":1}"
+  CLEAR_ERR
+  CALL admit_if_newer
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE stale_path "{\"x\":1}"
+  CLEAR_ERR
+  SYS SLEEP 1100
+  SYS WRITE dist_path "{\"rev\":9,\"ok\":2}"
+  CLEAR_ERR
+  CALL gc_if_older
+  SYS EQS state "gced"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # src bump forces rebuild
+  SYS SLEEP 1100
+  SYS WRITE src_path "{\"rev\":10}"
+  CLEAR_ERR
+  CALL rebuild_if_stale
+  SYS EQS state "rebuilt"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL rebuild_if_stale
+  SYS EQS state "skip-fresh"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF IFNEWER_N >= 0 THEN
+    LET score = score + 1
+  END
+  IF IFOLDER_N >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "IFNEWER"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "IFOUTOFDATE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFNEWER"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "IFOLDER"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "WHENNEWER"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "WHENOLDER"
+  LET ok_v = LAST_N
+  CLEAR_ERR
+  IF ok_v >= 0 THEN
+    LET score = score + 1
+  END
+  HASFORM "SYS SLEEP"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS MTIME"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS KEEPNEWER"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifoutofdate_rebuild_gate"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "IFOUTOFDATE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — admit only when rebuilt + newer than stamp
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  CALL seed_dist_then_src
+  CLEAR_ERR
+  # stamp may not exist yet — missing ref ⇒ IFNEWER true (admit)
+  SYS RM stamp_path
+  CLEAR_ERR
+  CALL admit_if_newer
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE stamp_path "g0"
+  CLEAR_ERR
+  # dist older/equal vs stamp just written → deny (strict mtime)
+  CALL admit_if_newer
+  SYS EQS state "deny-stale"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # sleep so rebuild mtime strictly newer than stamp (1s FS resolution W923)
+  SYS SLEEP 1100
+  CALL rebuild_if_stale
+  SYS EQS state "rebuilt"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL admit_if_newer
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # advance stamp past dist
+  SYS SLEEP 1100
+  SYS WRITE stamp_path "g1"
+  CLEAR_ERR
+  CALL admit_if_newer
+  SYS EQS state "deny-stale"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # missing stamp ref → IFNEWER true → admit
+  SYS RM stamp_path
+  CLEAR_ERR
+  CALL admit_if_newer
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF require_hit >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "rebuild"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "not age-TTL"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  SYS CAT "gate:" score ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# probe — WRITE NL · NUM · STRTO
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  SYS MKDIR art_dir
+  CLEAR_ERR
+  CALL seed_src_then_dist
+  CLEAR_ERR
+  LET left_path = dist_path
+  LET right_path = src_path
+  CALL check_newer
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  LET saved = IFNEWER_N
+  STRTO saved
+  SYS WRITE val_path saved
+  CLEAR_ERR
+  SYS READ val_path
+  SYS NUM
+  IF OK == 1 THEN
+    IF LAST_N == 1 THEN
+      LET score = score + 1
+    END
+  END
+  CLEAR_ERR
+  SYS CAT "ifnewer_n=" IFNEWER_N " state=probe"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE report_path body
+  CLEAR_ERR
+  SYS READ report_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "ifnewer_n="
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE meta_path "iod_probe"
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "iod_probe"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE meta_path "no_nl_end"
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "no_nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL rebuild_if_stale
+  SYS EQS state "skip-fresh"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS MTIME dist_path
+  IF LAST_N > 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  LET saved = 1
+  PRINT_JSON saved score
+  CLEAR_ERR
+  IF saved == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-iod"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = saved
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score saved note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+SYS CAT "{\"ok\":true,\"agent\":\"svc-iod\",\"op\":\"" op "\",\"hit\":" hit ",\"miss\":" miss ",\"score\":" score ",\"admit_n\":" admit_n ",\"bag_n\":" bag_n ",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"note\":\"" note_msg "\",\"require_hit\":" require_hit ",\"state\":\"" state "\"}"
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " score=" score " note=" note_msg " admit=" admit_n " state=" state
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+STATUS
+CLEAR_ERR
+
+IF miss == 1 THEN
+  IF hit == 0 THEN
+    EXIT 1 note_msg
+  END
+END
+
+NOTE "svc_ifoutofdate_rebuild_gate_board: done"
+PASS

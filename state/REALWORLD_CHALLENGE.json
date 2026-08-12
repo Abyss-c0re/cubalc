@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 379,
-  "program": "programs/realworld/svc_countfileline_jobq_scrub_board.cubalc",
-  "theme": "COUNTFILELINE/SETMATCHFILE disk job-queue scrub + exactness dual",
+  "iter": 380,
+  "program": "programs/realworld/svc_ifoutofdate_rebuild_gate_board.cubalc",
+  "theme": "IFOUTOFDATE/IFNEWER/IFOLDER relative mtime rebuild/promote/gc gate",
   "version": "1.15.960-usability",
   "pass": true,
-  "prior_note": "iter 378 JSONHITVAL; this iter disk jobq COUNTFILELINE/HASFILELINE exactness dual + match rewrite",
+  "prior_note": "iter 379 COUNTFILELINE jobq; this iter first realworld of 1485 IFNEWER/IFOLDER/IFOUTOFDATE (vs IFFRESH TTL)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed queue n_open=3 incl false-friend",
+      "cmd": "seed dist newer stamp admit",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "substring vs exact \u00b7 promote \u00b7 ensure 10/10",
+      "cmd": "newer/older/outofdate + rebuild 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "drop noise \u00b7 SETALL rewrite \u00b7 insert \u00b7 nopath 10/10",
+      "cmd": "miss paths \u00b7 SLEEP1 \u00b7 GC \u00b7 same-path 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "disk scrub ladder 10/10",
+      "cmd": "disk rebuild promote deny ladder 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "admit under cap + false-friend 10/10",
+      "cmd": "missing dist rebuild \u00b7 src bump \u00b7 gc 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM SYS-prefix vs bare lag 10/10",
+      "cmd": "HASFORM IFOUTOFDATE/IFNEWER/IFOLDER 10/10",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "cap admit after scrub 10/10",
+      "cmd": "miss-ref admit \u00b7 rebuild \u00b7 stamp advance 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "STRTO WRITE NL NUM",
+      "cmd": "STRTO WRITE NL NUM MTIME",
       "ok": true,
       "note": "probe"
     },
@@ -7450,12 +7450,65 @@
       "title": "WRITE omit trailing NL reconfirm on CFL plates",
       "detail": "STATUS/META/REPORT lack final newline (cat -A).",
       "repro": "cat -A META.txt"
+    },
+    {
+      "id": "W923",
+      "severity": "med",
+      "area": "host|sleep_mtime",
+      "title": "SYS SLEEP units are milliseconds; SLEEP 1 insufficient for mtime gap",
+      "detail": "FS mtime often 1s resolution. Proof 1485 and agents must SYS SLEEP 1100 between writes. SLEEP 1 is 1ms and leaves equal mtimes so IFNEWER fails.",
+      "repro": "WRITE a; SLEEP 1; WRITE b; IFNEWER b a often 0"
+    },
+    {
+      "id": "W924",
+      "severity": "med",
+      "area": "host|write",
+      "title": "SYS WRITE path multi-arg with var token parses var as form",
+      "detail": "SYS WRITE src_path \"{\\\"site\\\":\" host_s \"}\" \u2192 unknown form host_s. Must SYS CAT first then WRITE path body.",
+      "repro": "SYS WRITE p \"x\" host_s \"y\" fails"
+    },
+    {
+      "id": "W925",
+      "severity": "high",
+      "area": "lang|type_if_end",
+      "title": "Bare IFNEWER/IFOLDER/IFOUTOFDATE END inside IF LAST_N THEN steals outer END",
+      "detail": "Same class as nested type-IF END (W873/W879). Bare IFNEWER \u2026 END inside action IF LAST_N==1 THEN leaves unknown form END later. Must FN-wrap type-IF (check_newer/check_older/check_outofdate).",
+      "repro": "IF LAST_N==1 THEN IFNEWER a b \u2026 END \u2026 END \u2192 parse END as form"
+    },
+    {
+      "id": "W926",
+      "severity": "low",
+      "area": "lang|ifnewer_miss",
+      "title": "IFNEWER miss-left false; miss-right true; IFOLDER miss-left true",
+      "detail": "Missing path vs ref: IFNEWER missing ref\u2192false. Path vs missing ref\u2192true (ref treated older). IFOLDER missing\u2192true (missing is older). IFOUTOFDATE missing cache\u2192true (rebuild).",
+      "repro": "IFNEWER /no/x ref \u2192 0; IFNEWER path /no/ref \u2192 1"
+    },
+    {
+      "id": "W927",
+      "severity": "low",
+      "area": "lang|ifoutofdate",
+      "title": "IFOUTOFDATE/IFNEWER/IFOLDER work (positive; first realworld 1485)",
+      "detail": "Relative mtime rebuild/promote/gc solid with FN-wrap + SLEEP 1100. Distinct from IFFRESH age-TTL. Stickies IFOUTOFDATE_N IFNEWER_N IFOLDER_N.",
+      "repro": "CALL rebuild_if_stale; CALL admit_if_newer; CALL gc_if_older"
+    },
+    {
+      "id": "W928",
+      "severity": "low",
+      "area": "lang|ifnewer_eq",
+      "title": "Equal mtime IFNEWER is false (strict newer)",
+      "detail": "Same-second write of stamp then dist without SLEEP 1100 leaves deny-stale after rebuild. Agents must sleep before promote compare.",
+      "repro": "WRITE stamp; WRITE dist same second; IFNEWER dist stamp \u2192 0"
+    },
+    {
+      "id": "W929",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL reconfirm IOD plates",
+      "detail": "STATUS/META/REPORT lack final NL.",
+      "repro": "cat -A META.txt"
     }
   ],
   "workarounds": [
-    "Read ALL_OK/ANY_OK separately; clear ALL NEED when testing ANY-only",
-    "REQUIRE LIB \"hold_seed\" quoted",
-    "NEW instances before NEED_OBJS gate",
     "LET NEED_* then INCLUDE obj_guard/class_guard each time",
     "Read ALL_OK/ANY_OK separately when both NEED sets set",
     "REQUIRE LIB \"hold_seed\" quoted",
@@ -7546,10 +7599,24 @@
       "id": "WA918",
       "for": "W918",
       "fix": "Use full-line needles for SETMATCHFILE; avoid short substrings that hit annotations"
+    },
+    {
+      "id": "WA923",
+      "for": "W923",
+      "fix": "SYS SLEEP 1100 between mtime-sensitive writes (not SLEEP 1)"
+    },
+    {
+      "id": "WA924",
+      "for": "W924",
+      "fix": "SYS CAT \u2026 LET body; SYS WRITE path body"
+    },
+    {
+      "id": "WA925",
+      "for": "W925",
+      "fix": "FN-wrap all IFNEWER/IFOLDER/IFOUTOFDATE; CALL from action IF blocks"
     }
   ],
   "language_gaps": [
-    "IFJSONHAS live 1.15.942 (1487); KEY glue eats var key (W877); nested END frames (W879)",
     "IFNUM live 1.15.943 (1488); SYS NUM soft zero (W880); nested type-IF END (W882)",
     "IFZERO live 1.15.948 (1489); TRIES keyword traps var tries (W883); str0/undef type-strict (W885)",
     "IFBLANK live 1.15.949 (1492); ws blank num not blank (W886); FN-wrap (W888)",
@@ -7560,24 +7627,10 @@
     "IFJSONEQ live 1.15.950 (1491); order-independent (W901); var resync not disk (W903)",
     "JSONHITKEY live 1.15.959 (1499); var-key SYS JSON peel fail (W904); candidate order = arg order (W905); null/false present (W906)",
     "JSONHITVAL live 1.15.960 (1500); ok_v presence sticky breaks deny (W910); bool/null coerce (W911); no JSONHITKEY sticky share (W913)",
-    "COUNTFILELINE substring vs HASFILELINE exact (W917/W919); SET*MATCHFILE whole-line rewrite (W918); HASFORM needs SYS prefix (W916)"
+    "COUNTFILELINE substring vs HASFILELINE exact (W917/W919); SET*MATCHFILE whole-line rewrite (W918); HASFORM needs SYS prefix (W916)",
+    "IFOUTOFDATE live (1485); SLEEP ms+1s mtime (W923); WRITE multi-arg var (W924); type-IF END nest (W925); miss duals (W926)"
   ],
   "issues_faced": [
-    {
-      "iter": 363,
-      "issue": "First-try green IFFILE board. 1480 IFENV still red (W863) so deferred. FN-wrap used throughout.",
-      "resolution": "first realworld 1479; document W862\u2013W864"
-    },
-    {
-      "iter": 364,
-      "issue": "First-try green. W863 IFENV proof now PASS; FN-wrap used throughout for W853/W867.",
-      "resolution": "first realworld 1480; document W865\u2013W867"
-    },
-    {
-      "iter": 365,
-      "issue": "Removed invalid CALL and bare IFFRESH inside pass IF. Official 1482 proof still flaky on nested rebuild assert in some trees; board rebuild under STATE green. IFBIG unlinked (W868).",
-      "resolution": "first realworld 1482; document W868\u2013W870"
-    },
     {
       "iter": 366,
       "issue": "First-try green. W868 IFBIG now live via 1484; used FN-wrap throughout.",
@@ -7638,9 +7691,12 @@
     "iter378: admit deny-status dead until ok_v reset after peel presence (W910) \u2014 fixed in board",
     "iter378: JSONHITVAL first realworld green; closes W904 EQS peel for status/id values",
     "iter379: form 2/10 until HASFORM SYS-prefix (W916); bare COUNTFILELINE lag",
-    "iter379: note:JOB:open false-friend inflates open backlog (W917) \u2014 real ops trap"
+    "iter379: note:JOB:open false-friend inflates open backlog (W917) \u2014 real ops trap",
+    "iter380: bare IFNEWER inside IF LAST_N stole END (W925) \u2014 FN-wrap check_*",
+    "iter380: WRITE multi-arg host_s form error (W924); gate equal-mtime deny until SLEEP 1100",
+    "iter380: out/cubalc thrash mid-run; linked stable /tmp/cubalc_stable"
   ],
-  "commit": "79648bba",
-  "ts": "2026-08-12T04:57:19+03:00",
-  "board_commit": "79648bba"
+  "commit": "",
+  "ts": "2026-08-12T05:25:19+03:00",
+  "board_commit": ""
 }
