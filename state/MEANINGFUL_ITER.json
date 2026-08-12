@@ -1,19 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 957,
-  "version": "1.15.957-usability",
-  "item": "HASPANY/NEEDPANY + plate_guard native multi duals",
-  "item_id": "mi_haspany_plate_guard",
-  "title": "HASPANY \u00b7 NEEDPANY \u00b7 plate_guard native multi duals",
-  "commit": "a35dc101",
-  "summary": "Native plate any-of duals (HASPALL twin): HASPANY soft KEYHAVE bag, NEEDPANY fail-fast; plate_guard rewired to HASPALL/NEEDP + HASPANY/NEEDPANY (no N\u00d7 HASP soup). Proofs 1496/1497 PASS.",
+  "iter": 958,
+  "version": "1.15.958-usability",
+  "item": "REQUIRE JSONHASANY/NEEDJSONANY + soft SYS JSONHASANY",
+  "item_id": "mi_require_jsonhasany",
+  "title": "REQUIRE JSONHASANY \u00b7 NEEDJSONANY \u00b7 SYS JSONHASANY any-of dual",
+  "commit": "3d839b1a",
+  "summary": "Native any-of plate key gate (JSONHASALL twin): REQUIRE JSONHASANY|NEEDJSONANY fail-fast; soft SYS JSONHASANY; two-token REQUIRE JSON HASANY/ANY; OF bag; aliases JHASANY/MUSTJSONANY. Proofs 1498 PASS.",
   "proofs": [
-    "1496_haspany + 1496_cli_haspany PASS",
-    "1497_plate_guard_native + 1497_cli_plate_guard_native PASS",
-    "1400_plate_guard regression PASS"
+    "1498_require_jsonhasany + 1498_cli_require_jsonhasany PASS"
   ],
-  "when": "2026-08-11T23:19:31Z",
+  "when": "2026-08-12T00:30:02Z",
   "agent": "nanobot-cubalc",
-  "sha": "a35dc1018551785074c5e415851bc03c805cf74d",
-  "note": "FROM multi-plate \u00b7 bag/CSV/NL keys \u00b7 KEYHAVE/KEYMISS bags \u00b7 aliases PLATEHASANY REQUIREPANY"
+  "sha": "3d839b1a3ba3418cd4f2ea7a187d7d6dc560ed70",
+  "note": "FROM multi-key \u00b7 bag/CSV/NL keys \u00b7 JSONHASANY_HIT \u00b7 REQUIRE_JSONHASANY"
 }

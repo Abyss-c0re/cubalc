@@ -3445,6 +3445,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"REQUIRE JSUBSET", "REQUIRE JSUBSET alias of REQUIRE JSONSUBSET"},
       {"REQUIRE JSONCOVERS", "REQUIRE JSONCOVERS alias of REQUIRE JSONSUPERSET"},
       {"REQUIRE JSONHASALL", "REQUIRE JSONHASALL|JSONNEED [plate] key… — fail-fast plate keys · missing listed · soft SYS JSONHASALL"},
+      {"REQUIRE JSONHASANY", "REQUIRE JSONHASANY|NEEDJSONANY [plate] key… — fail-fast any-of keys · soft SYS JSONHASANY"},
+      {"REQUIRE NEEDJSONANY", "REQUIRE NEEDJSONANY alias of REQUIRE JSONHASANY"},
       {"REQUIRE JSONKEYS", "REQUIRE JSONKEYS alias of REQUIRE JSONHASALL"},
       {"REQUIRE JSONNEED", "REQUIRE JSONNEED alias of REQUIRE JSONHASALL"},
       {"REQUIRE JSONONLY", "REQUIRE JSONONLY|NOEXTRA|JSONSTRICT [plate] allow… — fail if extras · soft SYS JSONEXTRA"},
@@ -63385,13 +63387,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
     /* REQUIRE JSONHASALL|JSONNEED|JSONKEYS [plate] key [key…]
+     * REQUIRE JSONHASANY|NEEDJSONANY [plate] key [key…] — fail-fast any-of (HASALL twin).
      * REQUIRE JSONONLY|NOEXTRA|JSONSTRICT [plate] allow [key…]
      * REQUIRE JSONEXACT|JSONSCHEMA [plate] key [key…] — HASALL + ONLY one-shot.
-     * Soft twins: SYS JSONHASALL / JSONEXTRA / JSONEXACT. LAST=plate on success.
+     * Soft twins: SYS JSONHASALL / JSONHASANY / JSONEXTRA / JSONEXACT. LAST=plate on success.
      * Usability: full plate schema gate without multi-probe IF+FAIL glue. */
     if (kw(&L->cur,"JSONHASALL") || kw(&L->cur,"JSONNEED") || kw(&L->cur,"JSONKEYS") ||
         kw(&L->cur,"JHASALL") || kw(&L->cur,"NEEDKEYS") || kw(&L->cur,"PLATEKEYS") ||
         kw(&L->cur,"JSONONLY") || kw(&L->cur,"JONLY") || kw(&L->cur,"JSONSTRICT") ||
+        kw(&L->cur,"JSONHASANY") || kw(&L->cur,"NEEDJSONANY") || kw(&L->cur,"JHASANY") ||
+        kw(&L->cur,"HASANYJSON") || kw(&L->cur,"JSONANYKEY") || kw(&L->cur,"MUSTJSONANY") ||
+        kw(&L->cur,"REQUIREJSONANY") || kw(&L->cur,"NEEDANYJSON") || kw(&L->cur,"JSONNEEDANY") ||
         kw(&L->cur,"NOEXTRA") || kw(&L->cur,"ALLOWONLY") || kw(&L->cur,"PLATEONLY") ||
         kw(&L->cur,"JSONALLOW") || kw(&L->cur,"STRICTJSON") ||
         kw(&L->cur,"JSONEXACT") || kw(&L->cur,"JEXACT") || kw(&L->cur,"JSONSCHEMA") ||
@@ -63399,7 +63405,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         kw(&L->cur,"JSON") || kw(&L->cur,"PLATE")){
       char plate[CUBALC_HOST_STR_MAX], keys_nl[CUBALC_HOST_STR_MAX];
       char arg[CUBALC_HOST_STR_MAX], bag[CUBALC_HOST_STR_MAX];
-      int have_plate = 0, want_only = 0, want_exact = 0;
+      int have_plate = 0, want_only = 0, want_exact = 0, want_any = 0;
       size_t olen = 0;
       cubalc_host_result hr, xr;
       if (kw(&L->cur,"JSONEXACT") || kw(&L->cur,"JEXACT") || kw(&L->cur,"JSONSCHEMA") ||
@@ -63410,6 +63416,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           kw(&L->cur,"NOEXTRA") || kw(&L->cur,"ALLOWONLY") || kw(&L->cur,"PLATEONLY") ||
           kw(&L->cur,"JSONALLOW") || kw(&L->cur,"STRICTJSON")) {
         want_only = 1;
+        lex_next(L);
+      } else if (kw(&L->cur,"JSONHASANY") || kw(&L->cur,"NEEDJSONANY") || kw(&L->cur,"JHASANY") ||
+                 kw(&L->cur,"HASANYJSON") || kw(&L->cur,"JSONANYKEY") || kw(&L->cur,"MUSTJSONANY") ||
+                 kw(&L->cur,"REQUIREJSONANY") || kw(&L->cur,"NEEDANYJSON") || kw(&L->cur,"JSONNEEDANY")) {
+        want_any = 1;
         lex_next(L);
       } else if (kw(&L->cur,"JSON") || kw(&L->cur,"PLATE")) {
         lex_next(L);
@@ -63713,6 +63724,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
             kw(&L->cur,"ALLOW") || kw(&L->cur,"ALLOWED")) {
           want_only = 1;
           lex_next(L);
+        } else if (kw(&L->cur,"HASANY") || kw(&L->cur,"ANY") || kw(&L->cur,"SOME") ||
+                   kw(&L->cur,"ANYKEY") || kw(&L->cur,"NEEDANY") || kw(&L->cur,"ANYKEYS")) {
+          want_any = 1;
+          lex_next(L);
         } else if (kw(&L->cur,"HASALL") || kw(&L->cur,"NEED") || kw(&L->cur,"KEYS") ||
                    kw(&L->cur,"HAS") || kw(&L->cur,"NEEDKEYS")) {
           lex_next(L);
@@ -63781,7 +63796,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                 ? "REQUIRE JSONEXACT [plate] key… — need schema keys"
                 : (want_only
                    ? "REQUIRE JSONONLY [plate] allow… — need allow-list keys"
-                   : "REQUIRE JSONHASALL [plate] key… — need at least one key"));
+                   : (want_any
+                      ? "REQUIRE JSONHASANY [plate] key… — need at least one candidate key"
+                      : "REQUIRE JSONHASALL [plate] key… — need at least one key")));
         return -1;
       }
       if (want_exact) {
@@ -63909,7 +63926,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         bump(vm); return 1;
       }
       memset(&hr, 0, sizeof hr);
-      if (cubalc_host_json_has_keys(plate, keys_nl, 1, &hr) != 0 || hr.n == 0) {
+      /* want_any=1 → any-of (JSONHASANY); else all-of (JSONHASALL) */
+      if (cubalc_host_json_has_keys(plate, keys_nl, want_any ? 0 : 1, &hr) != 0 || hr.n == 0) {
         char msg[280];
         char miss_flat[160];
         size_t mi = 0;
@@ -63934,9 +63952,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         miss_flat[mi] = 0;
         if (!miss_flat[0])
           snprintf(miss_flat, sizeof miss_flat, "?");
-        snprintf(msg, sizeof msg,
-                 "REQUIRE JSONHASALL missing line %d: %s — soft twin SYS JSONHASALL / JSONMISS",
-                 aln, miss_flat);
+        if (want_any)
+          snprintf(msg, sizeof msg,
+                   "REQUIRE JSONHASANY none line %d: need one of %s — soft twin SYS JSONHASANY",
+                   aln, miss_flat);
+        else
+          snprintf(msg, sizeof msg,
+                   "REQUIRE JSONHASALL missing line %d: %s — soft twin SYS JSONHASALL / JSONMISS",
+                   aln, miss_flat);
         if (vm->res) vm->res->asserts_fail++;
         fail(vm, msg);
         return -1;
@@ -63945,18 +63968,26 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
       vm->last_n = 1;
       var_set_num(vm, "LAST_N", 1);
-      var_set_num(vm, "JSONHASALL_N", 1);
-      var_set_num(vm, "JSONHASALL_HIT", (long)hr.code);
-      var_set_num(vm, "REQUIRE_JSON_HIT", (long)hr.code);
+      if (want_any) {
+        var_set_num(vm, "JSONHASANY_N", 1);
+        var_set_num(vm, "JSONHASANY_HIT", (long)hr.code);
+        var_set_num(vm, "REQUIRE_JSONHASANY", 1);
+        var_set_num(vm, "REQUIRE_JSON_HIT", (long)hr.code);
+      } else {
+        var_set_num(vm, "JSONHASALL_N", 1);
+        var_set_num(vm, "JSONHASALL_HIT", (long)hr.code);
+        var_set_num(vm, "REQUIRE_JSON_HIT", (long)hr.code);
+      }
       var_set_num(vm, "OK", 1);
       if (vm->trace)
-        fprintf(vm->trace, "# require jsonhasall hit=%d ok\n", hr.code);
+        fprintf(vm->trace, "# require %s hit=%d ok\n",
+                want_any ? "jsonhasany" : "jsonhasall", hr.code);
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONONLY|JSONEXACT|JSONEQ|JSONNEQ|JSONSUBSET|JSONTYPE|PLATEFILE …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF|BETWEEN|JSONHASALL|JSONHASANY|JSONONLY|JSONEXACT|JSONEQ|JSONNEQ|JSONSUBSET|JSONTYPE|PLATEFILE …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||

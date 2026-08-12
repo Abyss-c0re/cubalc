@@ -1,0 +1,88 @@
+# REQUIRE JSONHASANY / NEEDJSONANY — fail-fast any-of plate keys
+# Soft twin: SYS JSONHASANY. Error lists candidates when none present.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" "" "version" "1"
+LET plate = LAST
+
+# success: any present
+REQUIRE JSONHASANY plate "missing" "ok"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT JSONHASANY_HIT == 1
+ASSERT REQUIRE_JSON_HIT == 1
+ASSERT REQUIRE_JSONHASANY == 1
+
+# more hits still ok
+REQUIRE JSONHASANY plate "ok" "n" "err"
+ASSERT OK == 1
+ASSERT JSONHASANY_HIT == 3
+ASSERT REQUIRE_JSON_HIT == 3
+
+# aliases
+SYS JSONOBJ "a" 1 "b" 2
+LET p2 = LAST
+REQUIRE NEEDJSONANY p2 "z" "a"
+ASSERT OK == 1
+ASSERT REQUIRE_JSON_HIT == 1
+REQUIRE JHASANY p2 "b" "nope"
+ASSERT OK == 1
+REQUIRE MUSTJSONANY p2 "a"
+ASSERT OK == 1
+
+# OF bag form
+SYS JSONOBJ "x" 1 "y" 2 "z" 3
+LET p3 = LAST
+SYS JOIN "" "miss\nx\nnada"
+LET kbag = LAST
+REQUIRE JSONHASANY p3 OF kbag
+ASSERT OK == 1
+ASSERT REQUIRE_JSON_HIT == 1
+
+# bare keys on LAST plate
+SYS JSONOBJ "p" 1 "q" 2
+REQUIRE JSONHASANY "miss" "p"
+ASSERT OK == 1
+
+# null/false still present
+SYS JSONOBJ "gone" null "flag" false "n" 0
+LET p4 = LAST
+REQUIRE JSONHASANY p4 "nope" "gone"
+ASSERT OK == 1
+ASSERT REQUIRE_JSON_HIT == 1
+
+# soft twin miss path (no fatal)
+SYS JSONOBJ "ok" true "n" 1
+LET soft = LAST
+SYS JSONHASANY soft "version" "missing"
+ASSERT LAST_N == 0
+SYS JSONHASANY soft "ok" "version"
+ASSERT LAST_N == 1
+
+# REQUIRE JSON HASANY / ANY two-token form
+SYS JSONOBJ "m" 1
+LET p5 = LAST
+REQUIRE JSON HASANY p5 "z" "m"
+ASSERT OK == 1
+REQUIRE JSON ANY p5 "m"
+ASSERT OK == 1
+
+# agent pattern: soft probe then require when ready
+SYS JSONOBJ "status" "ready" "code" 0
+LET agent = LAST
+SYS JSONHASANY agent "ready_flag" "status"
+IF LAST_N THEN
+  REQUIRE JSONHASANY agent "ready_flag" "status"
+  PASS "any-key contract gated"
+ELSE
+  FAIL "should have status"
+END
+ASSERT OK == 1
+
+# LAST kept as plate for chain
+SYS JSONOBJ "n" 7 "ok" true
+LET chain = LAST
+REQUIRE JSONHASANY chain "missing" "n"
+SYS JSONN "n" FROM LAST
+ASSERT LAST_N == 7
