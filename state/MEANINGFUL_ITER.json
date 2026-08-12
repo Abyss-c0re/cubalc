@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 966,
-  "version": "1.15.966-usability",
-  "item": "EXTRAP/KNOWNP multi-plate dual of JSONEXTRA/JSONKNOWN",
-  "item_id": "mi_extrap",
-  "title": "EXTRAP · KNOWNP bag of plate keys outside/inside allow-list from PLATE or FROM plate",
-  "commit": "367af259",
-  "summary": "Multi-plate dual of SYS JSONEXTRA/JSONKNOWN: EXTRAP|KNOWNP [FROM plate] allow… → LAST=bag · LAST_N=count · EXTRAP_N/KNOWNP_N · EXTRAP_FROM/KNOWNP_FROM. Empty allow → all plate keys extra / known empty. Proofs 1506 PASS (41 asserts).",
+  "iter": 967,
+  "version": "1.15.967-usability",
+  "item": "EXACTP/SCHEMAP multi-plate dual of JSONEXACT",
+  "item_id": "mi_exactp",
+  "title": "EXACTP \u00b7 SCHEMAP exact key-set (HASALL+ONLY) on PLATE or FROM plate",
+  "commit": "522370fe",
+  "summary": "Multi-plate dual of SYS JSONEXACT/JSONSCHEMA: EXACTP|SCHEMAP [FROM plate] key\u2026 \u2192 LAST=plate \u00b7 LAST_N 0|1 \u00b7 EXACTP_N \u00b7 EXACTP_HIT/EXTRA/MISS/LISTED \u00b7 EXACTP_FROM. Empty schema+empty plate \u2192 match. Proofs 1507 PASS (46 asserts).",
   "proofs": [
-    "1506_extrap + 1506_cli_extrap PASS"
+    "1507_exactp + 1507_cli_exactp PASS"
   ],
-  "when": "2026-08-12T13:21:29Z",
+  "when": "2026-08-12T13:55:36Z",
   "agent": "nanobot-cubalc",
-  "sha": "367af259c71dc2df464352f6c66418e9463e612f",
-  "note": "Plate-session dual of JSONEXTRA/JSONKNOWN; FROM named plate; aliases UNKNOWNKEYSP/EXTRAKEYSP/PLATEEXTRAP and ALLOWEDKEYSP/KNOWNKEYSP/PLATEKNOWNP",
-  "state_commit": "99d63eab"
+  "sha": "522370fea2f68f5ee19c7c96ad20503c6699e9c7",
+  "note": "Plate-session dual of JSONEXACT/JSONSCHEMA; FROM named plate; aliases PLATEEXACTP/KEYSEXACTP/SAMEKEYSP/PEXACT",
+  "state_commit": ""
 }
