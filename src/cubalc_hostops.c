@@ -9716,6 +9716,46 @@ int cubalc_host_json_has_keys(const char *json, const char *keys_nl, int want_al
   return 0;
 }
 
+/* Usability: SYS JSONHITKEY/JSONFIRST — first present candidate key (JSONHASANY twin that names hit). */
+int cubalc_host_json_first_key(const char *json, const char *keys_nl,
+                               cubalc_host_result *r) {
+  cubalc_host_result gr;
+  const char *p, *line;
+  long idx = 0;
+  r_clear(r);
+  r->ok = 1;
+  r->str[0] = 0;
+  r->n = 0;
+  r->code = 0;
+  if (!keys_nl || !keys_nl[0]) {
+    return 0;
+  }
+  p = keys_nl;
+  while (*p) {
+    char key[256];
+    size_t kn = 0;
+    while (*p == '\n' || *p == '\r') p++;
+    if (!*p) break;
+    line = p;
+    while (*p && *p != '\n' && *p != '\r') p++;
+    kn = (size_t)(p - line);
+    if (kn >= sizeof key) kn = sizeof key - 1;
+    memcpy(key, line, kn);
+    key[kn] = 0;
+    if (!key[0]) continue;
+    idx++;
+    memset(&gr, 0, sizeof gr);
+    /* path_get_raw: dotted/slash paths + null/false/0 still count as present */
+    if (cubalc_host_json_path_get_raw(json, key, &gr) == 0) {
+      snprintf(r->str, sizeof r->str, "%s", key);
+      r->n = 1;
+      r->code = (int)idx;
+      return 0;
+    }
+  }
+  return 0;
+}
+
 /* Usability: SYS JSONMISS/JSONPRESENT — bag of missing/present required keys. */
 int cubalc_host_json_filter_req_keys(const char *json, const char *keys_nl,
                                      int want_present, cubalc_host_result *r) {

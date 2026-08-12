@@ -622,6 +622,11 @@ int cubalc_host_json_subset_bad_keys(const char *sub, const char *super,
 /* Multi-key presence (HASPALL/NEEDP/JSONHASALL). Keys may be dotted paths. */
 int cubalc_host_json_has_keys(const char *json, const char *keys_nl, int want_all,
                               cubalc_host_result *r);
+/* first present key among candidates (order of keys_nl).
+ * r->str = key name (empty if none) · r->n = 0|1 · r->code = 1-based index of hit (0 if miss).
+ * Usability: JSONHASANY twin that names WHICH key hit without multi JSONHAS+IF. */
+int cubalc_host_json_first_key(const char *json, const char *keys_nl,
+                               cubalc_host_result *r);
 /* filter required keys into bag: want_present=0 → missing names, 1 → present.
  * r->str = newline bag · r->n = count. Soft always OK. Null/false still present.
  * Usability: after JSONHASALL fail, report WHICH keys without multi JSONHAS. */

@@ -1,0 +1,85 @@
+# JSONHITKEY / JSONFIRST — first present candidate key among any-of list
+# Soft dual of JSONHASANY that names WHICH key hit. LAST=key · LAST_N 0|1 · JSONHITKEY_N=1-based.
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" "" "version" "1"
+LET plate = LAST
+
+# first of several present (order of candidates, not plate order)
+SYS JSONHITKEY plate "missing" "ok" "n"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+ASSERT JSONHITKEY_N == 2
+ASSERT JSONHITKEY_HIT == 1
+
+# second candidate when first missing
+SYS JSONHITKEY plate "gone" "n" "ok"
+ASSERT LAST_N == 1
+SYS EQS LAST "n"
+ASSERT LAST_N == 1
+ASSERT JSONHITKEY_N == 2
+
+# miss all → empty LAST, LAST_N 0
+SYS JSONHITKEY plate "a" "b" "c"
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+ASSERT JSONHITKEY_HIT == 0
+ASSERT JSONHITKEY_N == 0
+
+# aliases
+SYS JSONFIRST plate "version" "missing"
+ASSERT LAST_N == 1
+SYS EQS LAST "version"
+ASSERT LAST_N == 1
+SYS JHITKEY plate "n"
+ASSERT LAST_N == 1
+SYS EQS LAST "n"
+ASSERT LAST_N == 1
+
+# OF bag form
+SYS JOIN "" "miss\nerr\nnada"
+LET kbag = LAST
+SYS JSONHITKEY plate OF kbag
+ASSERT LAST_N == 1
+SYS EQS LAST "err"
+ASSERT LAST_N == 1
+ASSERT JSONHITKEY_N == 2
+
+# bare keys on LAST plate
+SYS JSONOBJ "p" 1 "q" 2
+SYS JSONHITKEY "miss" "q"
+ASSERT LAST_N == 1
+SYS EQS LAST "q"
+ASSERT LAST_N == 1
+
+# null/false still present
+SYS JSONOBJ "gone" null "flag" false "n" 0
+LET p4 = LAST
+SYS JSONHITKEY p4 "nope" "gone"
+ASSERT LAST_N == 1
+SYS EQS LAST "gone"
+ASSERT LAST_N == 1
+SYS JSONHITKEY p4 "flag"
+ASSERT LAST_N == 1
+SYS EQS LAST "flag"
+ASSERT LAST_N == 1
+
+# agent pattern: pick first available status key
+SYS JSONOBJ "legacy_status" "ok" "code" 0
+LET agent = LAST
+SYS JSONHITKEY agent "status" "state" "legacy_status" "role"
+ASSERT LAST_N == 1
+SYS EQS LAST "legacy_status"
+ASSERT LAST_N == 1
+ASSERT JSONHITKEY_N == 3
+
+# empty candidate list → miss
+SYS JSONOBJ "a" 1
+SYS JSONHITKEY LAST
+ASSERT LAST_N == 0
+
+PASS "jsonhitkey ready"

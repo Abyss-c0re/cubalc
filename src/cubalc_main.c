@@ -6888,6 +6888,7 @@ if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
       {"SYS JSONSUPERSET", "host", "SYS JSONSUPERSET|JSONCOVERS a b — a ⊇ b required fields"},
       {"SYS JSONHASALL", "host", "SYS JSONHASALL|JSONNEED [plate] key… — all keys present → LAST_N 0|1"},
       {"SYS JSONHASANY", "host", "SYS JSONHASANY|JHASANY [plate] key… — any key present → LAST_N 0|1"},
+      {"SYS JSONHITKEY", "host", "SYS JSONHITKEY|JSONFIRST [plate] key… — first present candidate → LAST=key"},
       {"SYS JSONMISS", "host", "SYS JSONMISS|JSONMISSING [plate] key… — bag of missing required keys · LAST_N=count"},
       {"SYS JSONPRESENT", "host", "SYS JSONPRESENT|JSONFOUND [plate] key… — bag of present required keys · dual MISS"},
       {"SYS JSONEXTRA", "host", "SYS JSONEXTRA|JSONUNKNOWN [plate] allow… — bag of plate keys not in allow-list · LAST_N=count"},
