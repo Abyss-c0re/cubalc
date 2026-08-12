@@ -1,18 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 971,
-  "version": "1.15.971-usability",
-  "item": "IFONLYP/IFEXACTP plate allow-list and exact-schema branches",
-  "item_id": "mi_ifonlyp_ifexactp",
-  "title": "IFONLYP \u00b7 IFEXACTP plate contract branches for agents",
-  "commit": "65f423da",
-  "summary": "Plate allow-list / exact-schema IF/WHEN branches: IFONLYP|IFNOEXTRAP|IFJSONONLYP|IFSTRICTP|WHENONLYP plate allow\u2026 and IFEXACTP|IFSCHEMAP|IFJSONEXACTP|WHENEXACTP plate key\u2026 wire into cubalc_host_json_filter_plate_keys (+ has_keys for exact). Soft twins of SYS ONLYP/EXACTP. Sets IFONLYP_N/ONLYP_N/ONLYP_EXTRA and IFEXACTP_N/EXACTP_N/HIT/EXTRA/MISS/LISTED. Complements IFJSONHASALL/ANY. Proofs 1511 PASS (31 asserts + CLI WHEN dual + soft SYS FROM plate dual).",
+  "iter": 972,
+  "version": "1.15.972-usability",
+  "item": "IFMISSP/IFEXTRAP plate missing-keys and extra-keys diagnostic branches",
+  "item_id": "mi_ifmissp_ifextrap",
+  "title": "IFMISSP \u00b7 IFEXTRAP plate contract diagnostic branches for agents",
+  "commit": "PENDING",
+  "summary": "Plate missing-keys / extra-keys IF/WHEN branches: IFMISSP|IFABSENTP|IFMISSINGKEYSP|WHENMISSP and IFEXTRAP|IFUNKNOWNKEYSP|WHENEXTRAP. Soft twins complementary to IFONLYP/IFEXACTP and IFJSONHASALL/ANY. Proofs 1512 PASS (26 asserts + CLI dual).",
   "proofs": [
-    "1511_ifonlyp_ifexactp + 1511_cli_ifonlyp_ifexactp PASS"
+    "programs/proof/1512_ifmissp_ifextrap.cubalc",
+    "programs/proof/1512_cli_ifmissp_ifextrap.sh"
   ],
   "when": "2026-08-12T22:00:38Z",
   "agent": "nanobot-cubalc",
   "sha": "65f423da5523c9137d34e5d56f4e875e8e9a416b",
   "note": "Allow-list / exact schema plate branches without ONLYP/EXACTP probe + IF LAST_N glue; dual soft SYS ONLYP/EXACTP + branch forms",
-  "state_commit": "65f423da"
+  "state_commit": "65f423da",
+  "ts": "2026-08-12T22:43:18Z"
 }

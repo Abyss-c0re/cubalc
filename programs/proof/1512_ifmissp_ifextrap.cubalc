@@ -1,0 +1,114 @@
+# IFMISSP / IFEXTRAP — plate missing-key / extra-key diagnostic branches
+# Soft twins of SYS MISSP/EXTRAP as IF/WHEN contract branches for agents.
+
+HOLD_FLASH 1
+
+LET plate = "{\"ok\":1,\"n\":42,\"role\":\"agent\"}"
+LET noisy = "{\"ok\":1,\"n\":42,\"role\":\"agent\",\"noise\":9}"
+LET thin = "{\"ok\":1}"
+LET empty = "{}"
+
+# MISSP: body if any required keys missing
+IFMISSP thin "ok" "n" "role"
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+ASSERT IFMISSP_N == 1
+ASSERT MISSP_N == 1
+ASSERT IFMISSP_COUNT >= 1
+
+# full plate: nothing missing
+IFMISSP plate "ok" "n" "role"
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+ASSERT IFMISSP_N == 0
+ASSERT IFMISSP_COUNT == 0
+
+# empty plate: all required missing
+IFMISSP empty "ok" "n"
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+ASSERT IFMISSP_COUNT == 2
+
+# empty req list: nothing missing
+IFMISSP plate
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+
+# EXTRAP: body if plate has keys outside allow-list
+IFEXTRAP noisy "ok" "n" "role"
+  LET x = 1
+ELSE
+  LET x = 0
+END
+ASSERT x == 1
+ASSERT IFEXTRAP_N == 1
+ASSERT EXTRAP_N == 1
+ASSERT IFEXTRAP_COUNT == 1
+
+# clean plate: no extras
+IFEXTRAP plate "ok" "n" "role"
+  LET x = 1
+ELSE
+  LET x = 0
+END
+ASSERT x == 0
+ASSERT IFEXTRAP_N == 0
+ASSERT IFEXTRAP_COUNT == 0
+
+# thin plate still no extras (missing OK for EXTRAP)
+IFEXTRAP thin "ok" "n" "role"
+  LET x = 1
+ELSE
+  LET x = 0
+END
+ASSERT x == 0
+
+# aliases
+IFABSENTP thin "ok" "n"
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+IFUNKNOWNKEYSP noisy "ok"
+  LET x = 1
+ELSE
+  LET x = 0
+END
+ASSERT x == 1
+IFMISSINGKEYSP thin "n"
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+IFUNKNOWNKEYS noisy "ok" "n" "role"
+  LET x = 1
+ELSE
+  LET x = 0
+END
+ASSERT x == 1
+
+# discovery
+HASFORM "IFMISSP"
+ASSERT LAST_N == 1
+HASFORM "IFEXTRAP"
+ASSERT LAST_N == 1
+HASFORM "IFABSENTP"
+ASSERT LAST_N == 1
+HASFORM "IFUNKNOWNKEYSP"
+ASSERT LAST_N == 1
+
+PRINT "1512_ifmissp_ifextrap ok"
