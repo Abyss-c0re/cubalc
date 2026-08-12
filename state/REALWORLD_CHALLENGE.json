@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 378,
-  "program": "programs/realworld/svc_jsonhitval_status_admit_board.cubalc",
-  "theme": "JSONHITVAL/JSONFIRSTVAL multi-vendor status value admit",
+  "iter": 379,
+  "program": "programs/realworld/svc_countfileline_jobq_scrub_board.cubalc",
+  "theme": "COUNTFILELINE/SETMATCHFILE disk job-queue scrub + exactness dual",
   "version": "1.15.960-usability",
   "pass": true,
-  "prior_note": "iter 377 JSONHITKEY; this iter first realworld of 1500 JSONHITVAL (MI 960) \u2014 value peel closes W904 for admit",
+  "prior_note": "iter 378 JSONHITVAL; this iter disk jobq COUNTFILELINE/HASFILELINE exactness dual + match rewrite",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "intake legacy_status=ok peel",
+      "cmd": "seed queue n_open=3 incl false-friend",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "status/id order dual / miss 10/10",
+      "cmd": "substring vs exact \u00b7 promote \u00b7 ensure 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "admit/deny \u00b7 OF bag \u00b7 null/false \u00b7 empty 10/10",
+      "cmd": "drop noise \u00b7 SETALL rewrite \u00b7 insert \u00b7 nopath 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "disk one-shot value \u00b7 hitkey dual 10/10",
+      "cmd": "disk scrub ladder 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "identified+ready ladder \u00b7 bool coerce 10/10",
+      "cmd": "admit under cap + false-friend 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM JSONHITVAL/JSONFIRSTVAL/KEY",
+      "cmd": "HASFORM SYS-prefix vs bare lag 10/10",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "admit identified ready 10/10",
+      "cmd": "cap admit after scrub 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "disk STRTO WRITE NL NUM",
+      "cmd": "STRTO WRITE NL NUM",
       "ok": true,
       "note": "probe"
     },
@@ -7394,12 +7394,65 @@
       "title": "Binary run plate version lag vs VERSION file",
       "detail": "VERSION file 1.15.960-usability while run JSON may report 1.15.959-usability depending on build stamp; proofs still pass.",
       "repro": "cat VERSION; cubalc run -e \u2026 version field"
+    },
+    {
+      "id": "W916",
+      "severity": "med",
+      "area": "lang|hasform",
+      "title": "HASFORM bare COUNTFILELINE/SETMATCHFILE is 0; catalog wants SYS prefix",
+      "detail": "HASFORM \"COUNTFILELINE\" \u2192 0 while HASFORM \"SYS COUNTFILELINE\" \u2192 1. Same for HASFILELINE SETMATCHFILE ENSURELINE INSERTMATCHFILE DROP*MATCHFILE. Agents probing capability must use catalog names from cubalc forms.",
+      "repro": "HASFORM COUNTFILELINE \u2192 0; HASFORM \"SYS COUNTFILELINE\" \u2192 1"
+    },
+    {
+      "id": "W917",
+      "severity": "med",
+      "area": "host|countfileline",
+      "title": "COUNTFILELINE is substring match (false-friend note:JOB:open)",
+      "detail": "COUNTFILELINE path \"JOB:open\" counts every line *containing* needle, including note:JOB:open and not only JOB:open:*. Backlog admit inflated by annotation lines. Dual: HASFILELINE is exact whole-line.",
+      "repro": "queue with JOB:open:a + note:JOB:open \u2192 COUNTFILELINE JOB:open = 2"
+    },
+    {
+      "id": "W918",
+      "severity": "med",
+      "area": "host|setmatchfile",
+      "title": "SET*MATCHFILE substring match then whole-line rewrite",
+      "detail": "SETMATCHFILE/SETALLMATCHFILE match by substring then replace the *entire* line with value. note:JOB:open becomes JOB:held when needle is JOB:open \u2014 not in-place substring edit. Agents must use unique needles or exact lines.",
+      "repro": "SETALLMATCHFILE p JOB:open JOB:held rewrites note line wholly"
+    },
+    {
+      "id": "W919",
+      "severity": "low",
+      "area": "host|hasfileline",
+      "title": "HASFILELINE exact dual of COUNTFILELINE substring",
+      "detail": "HASFILELINE path \"JOB:open\" \u2192 0 even when COUNTFILELINE reports >0. Exact membership only. Positive for precise promote verification after SETMATCHFILE.",
+      "repro": "HASFILELINE JOB:open \u2192 0; HASFILELINE JOB:open:a \u2192 1"
+    },
+    {
+      "id": "W920",
+      "severity": "low",
+      "area": "host|fileline_soft",
+      "title": "COUNTFILELINE/HASFILELINE missing path soft 0",
+      "detail": "Missing path \u2192 LAST_N 0 without hard fail (soft miss). Empty file also 0. OK may be 0 on nopath.",
+      "repro": "COUNTFILELINE /no/such x \u2192 0"
+    },
+    {
+      "id": "W921",
+      "severity": "low",
+      "area": "host|ensureline",
+      "title": "ENSURELINE exact idempotent append",
+      "detail": "ENSURELINE appends only if exact line missing; double call keeps COUNTFILELINE needle = 1. Positive for control markers.",
+      "repro": "ENSURELINE ctrl:seed twice \u2192 count 1"
+    },
+    {
+      "id": "W922",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL reconfirm on CFL plates",
+      "detail": "STATUS/META/REPORT lack final newline (cat -A).",
+      "repro": "cat -A META.txt"
     }
   ],
   "workarounds": [
-    "CSV bags for multi FN/slot names",
-    "REQUIRE LIB \"hold_seed\" quoted",
-    "LET NEED_* then INCLUDE method_guard/field_guard each time",
     "Read ALL_OK/ANY_OK separately; clear ALL NEED when testing ANY-only",
     "REQUIRE LIB \"hold_seed\" quoted",
     "NEW instances before NEED_OBJS gate",
@@ -7478,10 +7531,24 @@
       "id": "WA912",
       "for": "W904",
       "fix": "Prefer JSONHITVAL over JSONHITKEY+EQS-branch+SYS JSON for multi-vendor value peel"
+    },
+    {
+      "id": "WA916",
+      "for": "W916",
+      "fix": "HASFORM \"SYS COUNTFILELINE\" not bare COUNTFILELINE"
+    },
+    {
+      "id": "WA917",
+      "for": "W917",
+      "fix": "Prefer unique prefixes JOB:open: id= or exact HASFILELINE after promote; purge note lines separately"
+    },
+    {
+      "id": "WA918",
+      "for": "W918",
+      "fix": "Use full-line needles for SETMATCHFILE; avoid short substrings that hit annotations"
     }
   ],
   "language_gaps": [
-    "IFEQFILE live 1.15.941 (1486); miss=diff empty=eq (W874); FN-wrap STATUS bare STRTO (W876)",
     "IFJSONHAS live 1.15.942 (1487); KEY glue eats var key (W877); nested END frames (W879)",
     "IFNUM live 1.15.943 (1488); SYS NUM soft zero (W880); nested type-IF END (W882)",
     "IFZERO live 1.15.948 (1489); TRIES keyword traps var tries (W883); str0/undef type-strict (W885)",
@@ -7492,19 +7559,10 @@
     "IFCANREAD live 1.15.950 (1490); miss soft-false (W898); no chmod dual in board (W900)",
     "IFJSONEQ live 1.15.950 (1491); order-independent (W901); var resync not disk (W903)",
     "JSONHITKEY live 1.15.959 (1499); var-key SYS JSON peel fail (W904); candidate order = arg order (W905); null/false present (W906)",
-    "JSONHITVAL live 1.15.960 (1500); ok_v presence sticky breaks deny (W910); bool/null coerce (W911); no JSONHITKEY sticky share (W913)"
+    "JSONHITVAL live 1.15.960 (1500); ok_v presence sticky breaks deny (W910); bool/null coerce (W911); no JSONHITKEY sticky share (W913)",
+    "COUNTFILELINE substring vs HASFILELINE exact (W917/W919); SET*MATCHFILE whole-line rewrite (W918); HASFORM needs SYS prefix (W916)"
   ],
   "issues_faced": [
-    {
-      "iter": 361,
-      "issue": "Chose 1466+1463 after 1476 SUMIN unknown in binary (W857). pass 9/10 until LAST_N snap before SYS EQS after LPADTO.",
-      "resolution": "first realworld 1466+1463; document W856\u2013W858"
-    },
-    {
-      "iter": 362,
-      "issue": "soft 7/10 then 11/10: CLEAR_ERR ate LAST_N after SUMIN (W859); score var name collision risk with band_rev fixed; dropped 11th host check.",
-      "resolution": "first realworld 1476+1474; document W859\u2013W861; W857 SUMIN now linked"
-    },
     {
       "iter": 363,
       "issue": "First-try green IFFILE board. 1480 IFENV still red (W863) so deferred. FN-wrap used throughout.",
@@ -7578,9 +7636,11 @@
     "iter377: thrased tree missing out/cubalc + REALWORLD state; restored Makefile/include/src/proof from HEAD; modular link rebuild; JSONHITKEY first realworld green",
     "iter377: SYS JSON var-key FROM plate empty (W904) \u2014 EQS-branch peel workaround",
     "iter378: admit deny-status dead until ok_v reset after peel presence (W910) \u2014 fixed in board",
-    "iter378: JSONHITVAL first realworld green; closes W904 EQS peel for status/id values"
+    "iter378: JSONHITVAL first realworld green; closes W904 EQS peel for status/id values",
+    "iter379: form 2/10 until HASFORM SYS-prefix (W916); bare COUNTFILELINE lag",
+    "iter379: note:JOB:open false-friend inflates open backlog (W917) \u2014 real ops trap"
   ],
-  "commit": "29ea3db0",
-  "ts": "2026-08-12T04:31:03+03:00",
-  "board_commit": "29ea3db0"
+  "commit": "",
+  "ts": "2026-08-12T04:57:19+03:00",
+  "board_commit": ""
 }
