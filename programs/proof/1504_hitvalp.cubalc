@@ -1,0 +1,92 @@
+# HITVALP / FIRSTVALP — multi-plate dual of SYS JSONHITVAL
+# first present any-of VALUE from PLATE or FROM named plate
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\",\"version\":\"1.2\",\"msg\":\"hello\"}"
+
+# first of several present (order of candidates)
+HITVALP "missing" "ok" "n"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+ASSERT HITVALP_N == 2
+ASSERT HITVALP_HIT == 1
+SYS EQS HITVALP_KEY "ok"
+ASSERT LAST_N == 1
+
+# second candidate when first missing
+HITVALP "gone" "n" "ok"
+ASSERT LAST_N == 1
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+ASSERT HITVALP_N == 2
+SYS EQS HITVALP_KEY "n"
+ASSERT LAST_N == 1
+
+# miss all → empty LAST, LAST_N 0
+HITVALP "a" "b" "c"
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+ASSERT HITVALP_HIT == 0
+ASSERT HITVALP_N == 0
+
+# aliases
+FIRSTVALP "version" "missing"
+ASSERT LAST_N == 1
+SYS EQS LAST "1.2"
+ASSERT LAST_N == 1
+WHICHVALP "n"
+ASSERT LAST_N == 1
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+LET PEER = "{\"p\":\"\",\"q\":\"two\",\"role\":\"agent\"}"
+HITVALP "p" "q" FROM PEER
+ASSERT LAST_N == 1
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+ASSERT HITVALP_FROM == 1
+SYS EQS HITVALP_KEY "p"
+ASSERT LAST_N == 1
+
+# FROM then keys
+HITVALP FROM PEER "missing" "role"
+ASSERT LAST_N == 1
+SYS EQS LAST "agent"
+ASSERT LAST_N == 1
+ASSERT HITVALP_HIT == 1
+
+# empty string / false / 0 still present (presence, not coalesce substance)
+SYS JSONOBJ "e" "" "z" 0 "f" false
+LET Z = LAST
+HITVALP "gone" "e" FROM Z
+ASSERT LAST_N == 1
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+SYS EQS HITVALP_KEY "e"
+ASSERT LAST_N == 1
+HITVALP "z" FROM Z
+ASSERT LAST_N == 1
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# PLATE unchanged by FROM peels
+SYS HAS PLATE "msg"
+ASSERT LAST_N == 1
+
+# agent pattern: first available status value
+SYS JSONOBJ "legacy_status" "ok" "code" 0
+LET agent = LAST
+HITVALP "status" "state" "legacy_status" "role" FROM agent
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+ASSERT HITVALP_N == 3
+SYS EQS HITVALP_KEY "legacy_status"
+ASSERT LAST_N == 1
+
+PASS "hitvalp ok"

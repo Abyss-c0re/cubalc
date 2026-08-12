@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 963,
-  "version": "1.15.963-usability",
-  "item": "HITKEYP/FIRSTKEYP multi-plate first present any-of KEY name",
-  "item_id": "mi_hitkeyp",
-  "title": "HITKEYP \u00b7 FIRSTKEYP \u00b7 WHICHKEYP first present any-of KEY from PLATE or FROM plate",
-  "commit": "dbd8df4e",
-  "summary": "Multi-plate dual of SYS JSONHITKEY: HITKEYP|FIRSTKEYP|WHICHKEYP [FROM plate] key\u2026 \u2192 LAST=key \u00b7 LAST_N 0|1 \u00b7 HITKEYP_N 1-based \u00b7 HITKEYP_HIT \u00b7 HITKEYP_FROM. Presence dual of COALESCEP (empty/0/false still present). Proofs 1503 PASS (30 asserts).",
+  "iter": 964,
+  "version": "1.15.964-usability",
+  "item": "HITVALP/FIRSTVALP multi-plate first present any-of VALUE",
+  "item_id": "mi_hitvalp",
+  "title": "HITVALP \u00b7 FIRSTVALP \u00b7 WHICHVALP first present any-of VALUE from PLATE or FROM plate",
+  "commit": "a72ec63a",
+  "summary": "Multi-plate dual of SYS JSONHITVAL: HITVALP|FIRSTVALP|WHICHVALP [FROM plate] key\u2026 \u2192 LAST=value \u00b7 LAST_N 0|1 \u00b7 HITVALP_N 1-based \u00b7 HITVALP_HIT \u00b7 HITVALP_KEY \u00b7 HITVALP_FROM. Presence dual of COALESCEP (empty/0/false still present). Proofs 1504 PASS (35 asserts).",
   "proofs": [
-    "1503_hitkeyp + 1503_cli_hitkeyp PASS"
+    "1504_hitvalp + 1504_cli_hitvalp PASS"
   ],
-  "when": "2026-08-12T09:41:37Z",
+  "when": "2026-08-12T14:10:00Z",
   "agent": "nanobot-cubalc",
-  "sha": "dbd8df4e1d9373c5b51bccdf78404ac176e54366",
-  "note": "Plate-session dual of JSONHITKEY; FROM named plate; aliases FIRSTKEYP/WHICHKEYP/PLATEHITKEYP/HITKEY_P/KEYHITP/FIRSTPRESENTP"
+  "sha": "a72ec63a001ba9560bf28c96cf1de0e6695915d2",
+  "note": "Plate-session dual of JSONHITVAL; FROM named plate; aliases FIRSTVALP/WHICHVALP/PLATEHITVALP/HITVAL_P/VALHITP/FIRSTPRESENTVALP"
 }
