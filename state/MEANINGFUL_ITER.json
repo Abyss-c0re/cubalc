@@ -5,13 +5,14 @@
   "item": "HITVALP/FIRSTVALP multi-plate first present any-of VALUE",
   "item_id": "mi_hitvalp",
   "title": "HITVALP \u00b7 FIRSTVALP \u00b7 WHICHVALP first present any-of VALUE from PLATE or FROM plate",
-  "commit": "a72ec63a",
+  "commit": "7972a709",
   "summary": "Multi-plate dual of SYS JSONHITVAL: HITVALP|FIRSTVALP|WHICHVALP [FROM plate] key\u2026 \u2192 LAST=value \u00b7 LAST_N 0|1 \u00b7 HITVALP_N 1-based \u00b7 HITVALP_HIT \u00b7 HITVALP_KEY \u00b7 HITVALP_FROM. Presence dual of COALESCEP (empty/0/false still present). Proofs 1504 PASS (35 asserts).",
   "proofs": [
     "1504_hitvalp + 1504_cli_hitvalp PASS"
   ],
   "when": "2026-08-12T14:10:00Z",
   "agent": "nanobot-cubalc",
-  "sha": "a72ec63a001ba9560bf28c96cf1de0e6695915d2",
-  "note": "Plate-session dual of JSONHITVAL; FROM named plate; aliases FIRSTVALP/WHICHVALP/PLATEHITVALP/HITVAL_P/VALHITP/FIRSTPRESENTVALP"
+  "sha": "7972a7099c32d179f54d18199e47d47cb3e39096",
+  "note": "Plate-session dual of JSONHITVAL; FROM named plate; aliases FIRSTVALP/WHICHVALP/PLATEHITVALP/HITVAL_P/VALHITP/FIRSTPRESENTVALP",
+  "ship_commit": "999a6e78"
 }
