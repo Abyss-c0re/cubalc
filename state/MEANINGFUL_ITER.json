@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 969,
-  "version": "1.15.969-usability",
-  "item": "REQUIRE ONLYP/EXACTP fail-fast multi-plate twins of soft ONLYP/EXACTP",
-  "item_id": "mi_require_onlyp",
-  "title": "REQUIRE ONLYP \u00b7 EXACTP hard gates for plate-session agents",
-  "commit": "3ca9c954",
-  "summary": "Fail-fast multi-plate twins of soft ONLYP/NOEXTRAP and EXACTP: REQUIRE ONLYP|NOEXTRAP|JSONONLYP|STRICTP|ALLOWONLYP|PLATEONLYP [plate] allow\u2026 and REQUIRE EXACTP|SCHEMAP|PLATEEXACTP|KEYSEXACTP|SAMEKEYSP|PEXACT [plate] key\u2026 wire into existing REQUIRE JSONONLY/JSONEXACT paths. Soft twins remain non-fatal. Proofs 1509 PASS (44 asserts + CLI hard/soft dual).",
+  "iter": 970,
+  "version": "1.15.970-usability",
+  "item": "IFJSONHASALL/IFJSONHASANY multi-key plate contract branches",
+  "item_id": "mi_ifjsonhasall",
+  "title": "IFJSONHASALL \u00b7 IFJSONHASANY multi-key plate branches for agents",
+  "commit": "5c63bc0b",
+  "summary": "Multi-key plate contract branches: IFJSONHASALL|IFJSONNEED|IFHASJSONALL plate key\u2026 and IFJSONHASANY|IFHASJSONANY plate key\u2026 wire into cubalc_host_json_has_keys (soft twins of SYS JSONHASALL/JSONHASANY). Sets IFJSONHASALL_N/IFJSONHASANY_N + JSONHASALL_N/JSONHASANY_N. Complements single-key IFJSONHAS/IFJSONMISS. Proofs 1510 PASS (19 asserts + CLI WHEN/IFHAS dual + soft SYS dual).",
   "proofs": [
-    "1509_require_onlyp + 1509_cli_require_onlyp PASS"
+    "1510_ifjsonhasall_any + 1510_cli_ifjsonhasall_any PASS"
   ],
-  "when": "2026-08-12T18:50:00Z",
+  "when": "2026-08-12T18:58:27Z",
   "agent": "nanobot-cubalc",
-  "sha": "3ca9c9549e928afc922f814ae318538a14b458c5",
-  "note": "Plate-session hard gates without ONLYP+IF LAST_N FAIL glue; dual contract soft ONLYP/EXACTP + hard REQUIRE ONLYP/EXACTP",
-  "state_commit": "3ca9c954"
+  "sha": "5c63bc0b00c057bc52c258690cdf5d2f979e7d53",
+  "note": "Multi-key plate contract branches without JSONHASALL probe + IF LAST_N glue; dual soft SYS JSONHASALL/ANY + branch forms",
+  "state_commit": "5c63bc0b"
 }

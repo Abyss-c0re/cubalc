@@ -1,0 +1,101 @@
+# IFJSONHASALL / IFJSONHASANY — multi-key plate contract branches
+# Complements soft SYS JSONHASALL/JSONHASANY + IF LAST_N glue.
+
+HOLD_FLASH 1
+
+LET plate = "{\"ok\":1,\"n\":42,\"role\":\"agent\",\"status\":\"live\"}"
+LET partial = "{\"ok\":1,\"role\":\"agent\"}"
+LET empty = "{}"
+
+# ALL present → body
+IFJSONHASALL plate "ok" "n" "role"
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 1
+ASSERT IFJSONHASALL_N == 1
+ASSERT JSONHASALL_N == 1
+
+# ALL missing one → else
+IFJSONHASALL plate "ok" "missing" "role"
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 0
+ASSERT IFJSONHASALL_N == 0
+
+# ANY present → body
+IFJSONHASANY plate "missing" "role" "ghost"
+  LET y = 1
+ELSE
+  LET y = 0
+END
+ASSERT y == 1
+ASSERT IFJSONHASANY_N == 1
+ASSERT JSONHASANY_N == 1
+
+# ANY all missing → else
+IFJSONHASANY plate "ghost" "nope"
+  LET y = 1
+ELSE
+  LET y = 0
+END
+ASSERT y == 0
+ASSERT IFJSONHASANY_N == 0
+
+# IFJSONNEED alias of ALL
+IFJSONNEED plate "ok" "status"
+  LET n = 1
+ELSE
+  LET n = 0
+END
+ASSERT n == 1
+
+# partial plate fails ALL but passes ANY
+IFJSONHASALL partial "ok" "n" "role"
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 0
+IFJSONHASANY partial "n" "role"
+  LET y = 1
+ELSE
+  LET y = 0
+END
+ASSERT y == 1
+
+# empty plate
+IFJSONHASALL empty "ok"
+  LET a = 1
+ELSE
+  LET a = 0
+END
+ASSERT a == 0
+IFJSONHASANY empty "ok"
+  LET y = 1
+ELSE
+  LET y = 0
+END
+ASSERT y == 0
+
+# ELSE branch works for ALL fail
+IFJSONHASALL plate "ok" "absent"
+  LET path = "hit"
+ELSE
+  LET path = "miss"
+END
+ASSERT path == "miss"
+
+# discovery
+HASFORM "IFJSONHASALL"
+ASSERT LAST_N == 1
+HASFORM "IFJSONHASANY"
+ASSERT LAST_N == 1
+HASFORM "IFJSONNEED"
+ASSERT LAST_N == 1
+
+PRINT "1510_ifjsonhasall_any ok"
+PASS
