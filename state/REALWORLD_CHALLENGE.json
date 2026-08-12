@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 375,
-  "program": "programs/realworld/svc_ifcan_artifact_access_board.cubalc",
-  "theme": "IFCANREAD/IFCANWRITE/IFCANEXEC artifact path access gates",
+  "iter": 376,
+  "program": "programs/realworld/svc_ifjsoneq_plate_sync_board.cubalc",
+  "theme": "IFJSONEQ/IFJSONNEQ/IFSAMEJSON plate semantic equality sync",
   "version": "1.15.950-usability",
   "pass": true,
-  "prior_note": "iter 374 IFHASFLAG; this iter first realworld of 1490 IFCANREAD (MI 951)",
+  "prior_note": "iter 375 IFCANREAD; this iter first realworld of 1491 IFJSONEQ (MI 952)",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed artifact + IFCANREAD",
+      "cmd": "key-order equal plates + IFJSONEQ",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "read/write/exec + miss soft 10/10",
+      "cmd": "order dual / neq / empty 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "miss/write-if-can/admit 10/10",
+      "cmd": "resync/skip-same/admit 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "path class ladder 10/10",
+      "cmd": "disk plates class 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "write/load ladder 10/10",
+      "cmd": "admit-drift-heal ladder 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM IFCANREAD/WRITE/EXEC",
+      "cmd": "HASFORM IFJSONEQ/IFJSONNEQ/IFSAMEJSON",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "wrote+admit miss deny 10/10",
+      "cmd": "synced admit drift deny 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "STRTO WRITE NL stickies",
+      "cmd": "disk STRTO WRITE NL",
       "ok": true,
       "note": "probe"
     },
@@ -7274,6 +7274,30 @@
       "title": "IFCANWRITE on file vs dir both true after create; no chmod surface",
       "detail": "Board cannot exercise deny-nowrite without chmod. Language has no IFCANWRITE-after-chmod dual in-agent without SYS CHMOD. Soft miss only for missing paths.",
       "repro": "would need SYS CHMOD 0 stage; IFCANWRITE \u2192 0 (not tested here)"
+    },
+    {
+      "id": "W901",
+      "severity": "low",
+      "area": "lang|ifjsoneq",
+      "title": "IFJSONEQ is order-independent JSON equality (not byte IFEQFILE)",
+      "detail": "{\"ok\":1,\"n\":2} equals {\"n\":2,\"ok\":1}. Value drift sets JSONEQ=0 IFJSONNEQ=1. Empty {} equals empty. Distinct from IFEQFILE byte identity \u2014 agents must choose semantic vs byte compare.",
+      "repro": "IFJSONEQ a b key-order swap \u2192 1; IFEQFILE same files may be 0 if bytes differ"
+    },
+    {
+      "id": "W902",
+      "severity": "low",
+      "area": "lang|ifjsoneq",
+      "title": "IFJSONEQ/IFJSONNEQ work (positive; first realworld 1491)",
+      "detail": "1491 green. Stickies IFJSONEQ_N JSONEQ IFJSONNEQ_N. IFSAMEJSON alias. resync_if_neq + admit_synced solid for plate promote. First-try green with FN-wrap.",
+      "repro": "CALL plates_eq; CALL plates_neq; CALL resync_if_neq; CALL admit_synced"
+    },
+    {
+      "id": "W903",
+      "severity": "low",
+      "area": "lang|ifjsoneq",
+      "title": "resync assigns plate vars not disk files",
+      "detail": "resync_if_neq sets right=left in memory only. Disk materialize still needs SYS WRITE after. Board peels disk READ into left/right then compares \u2014 write-back optional for agents.",
+      "repro": "CALL resync_if_neq; right var updated; replica.json file unchanged until WRITE"
     }
   ],
   "workarounds": [
@@ -7444,10 +7468,14 @@
       "id": "WA-ICA",
       "for": "W898+W899",
       "note": "FN can_read/can_write/can_exec; write_if_can on stage_dir; admit_load on art_path"
+    },
+    {
+      "id": "WA-IJE",
+      "for": "W901+W903",
+      "note": "FN plates_eq/neq; use IFJSONEQ for semantic, IFEQFILE for byte; WRITE after resync for disk"
     }
   ],
   "language_gaps": [
-    "IFENV presence-only + FN-wrap (W865/W867); 1480 green W863 closed",
     "IFBIG unlinked 1.15.937 (W868); IFFRESH miss/stale dual (W869)",
     "IFBIG live 1.15.940 (W868 closed); empty/miss size dual (W871); FN-wrap (W873)",
     "IFEQFILE live 1.15.941 (1486); miss=diff empty=eq (W874); FN-wrap STATUS bare STRTO (W876)",
@@ -7458,7 +7486,8 @@
     "IFLEN live 1.15.950 (1493); num decimal len + undef0 (W889); FN-wrap (W891)",
     "IFLINES FN block_scan miss (W892 fixed); num\u21921 field empty0 (W893); first realworld 1494",
     "IFHASFLAG live 1.15.950 (1495); IFHASARG no var peel (W895); HASFLAG dual (W896)",
-    "IFCANREAD live 1.15.950 (1490); miss soft-false (W898); no chmod dual in board (W900)"
+    "IFCANREAD live 1.15.950 (1490); miss soft-false (W898); no chmod dual in board (W900)",
+    "IFJSONEQ live 1.15.950 (1491); order-independent (W901); var resync not disk (W903)"
   ],
   "issues_faced": [
     "iter336: COUNTFILELINE ROLE= false-friends ROLE_BAK (W758)",
@@ -7635,9 +7664,14 @@
       "iter": 375,
       "issue": "First-try green. Documented miss soft dual and lack of chmod deny path in board.",
       "resolution": "first realworld 1490; document W898\u2013W900"
+    },
+    {
+      "iter": 376,
+      "issue": "First-try green. Documented key-order equality dual vs IFEQFILE and in-memory resync.",
+      "resolution": "first realworld 1491; document W901\u2013W903"
     }
   ],
-  "commit": "dee46cf3",
-  "ts": 1786493644,
-  "board_commit": "dee46cf3"
+  "commit": "pending",
+  "ts": 1786495150,
+  "board_commit": "pending"
 }
