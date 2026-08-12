@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 385,
-  "program": "programs/realworld/svc_insertmatchfile_runbook_inject_board.cubalc",
-  "theme": "INSERTMATCHFILE/BEFOREMATCHFILE disk runbook step inject + substring false-friend",
+  "iter": 386,
+  "program": "programs/realworld/svc_jsondrop_secret_scrub_board.cubalc",
+  "theme": "JSONDROP/JSONOMIT deny-list secret scrub before mesh handoff",
   "version": "1.15.961-usability",
   "pass": true,
-  "prior_note": "iter 384 JSONPLUCK handoff; this iter first focused AFTERMATCHFILE/INSERTMATCHFILE runbook inject",
+  "prior_note": "iter 385 INSERTMATCHFILE runbook; this iter JSONDROP secret scrub dual of JSONPLUCK allowlist",
   "tests": [
     {
       "name": "list",
@@ -15,49 +15,49 @@
     },
     {
       "name": "boot",
-      "cmd": "seed inject scan after build order",
+      "cmd": "peer scrub removed=2 clean disk",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "after/before inject \u00b7 order 10/10",
+      "cmd": "drop 3 \u00b7 OF bag \u00b7 JSONOMIT dual 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "miss \u00b7 false-friend \u00b7 empty/nopath 10/10",
+      "cmd": "miss \u00b7 empty \u00b7 admit clean 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "full pipeline disk 10/10",
+      "cmd": "disk peer\u2192clean.json 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "admit after inject 10/10",
+      "cmd": "admit ladder \u00b7 deny-noid 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM SYS-prefix dual 10/10",
+      "cmd": "HASFORM JSONDROP/OMIT dual 10/10",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "require scan step 10/10",
+      "cmd": "scrub+id admit 10/10",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "STRTO WRITE NL NUM order idx",
+      "cmd": "STRTO WRITE NL NUM",
       "ok": true,
       "note": "probe"
     },
@@ -7746,11 +7746,57 @@
       "title": "WRITE omit trailing NL reconfirm IMF plates",
       "detail": "STATUS/META/REPORT last lines lack final NL; runbook may keep internal NL.",
       "repro": "cat -A META.txt"
+    },
+    {
+      "id": "W960",
+      "severity": "low",
+      "area": "lang|jsondrop",
+      "title": "JSONDROP_N is removed-key count not remaining keys",
+      "detail": "After JSONDROP secret token, JSONDROP_N=2 (removed). Agents must not treat N as plate size; use JSONLEN on clean for remainder.",
+      "repro": "JSONDROP plate secret token; JSONDROP_N \u2192 2"
+    },
+    {
+      "id": "W961",
+      "severity": "low",
+      "area": "lang|jsondrop",
+      "title": "JSONDROP miss keys soft removed=0 plate unchanged",
+      "detail": "Dropping gone/nada leaves plate intact and JSONDROP_N=0. Positive soft miss.",
+      "repro": "JSONDROP plate gone; JSONDROP_N \u2192 0; id still present"
+    },
+    {
+      "id": "W962",
+      "severity": "med",
+      "area": "lang|hasform",
+      "title": "HASFORM/forms catalog lag for JSONDROP prefix (ops live)",
+      "detail": "cubalc forms JSONDROP returns n=0 human catalog empty, but SYS JSONDROP/JSONOMIT/JDROPK run. HASFORM bare/JSONDROP may still hit. Document catalog lag vs live ops.",
+      "repro": "forms JSONDROP \u2192 n=0; run JSONDROP plate secret works"
+    },
+    {
+      "id": "W963",
+      "severity": "low",
+      "area": "lang|jsondrop",
+      "title": "JSONDROP/JSONOMIT secret scrub works (positive; dual JSONPLUCK)",
+      "detail": "Deny-list scrub before handoff solid; OF bag omit list; admit when secrets empty and id present. Dual of allowlist pluck export.",
+      "repro": "CALL scrub_secrets; CALL secrets_gone; CALL admit_scrubbed"
+    },
+    {
+      "id": "W964",
+      "severity": "low",
+      "area": "lang|jsonomit",
+      "title": "JSONOMIT single-key keeps other secrets (not full scrub)",
+      "detail": "JSONOMIT plate secret removes only secret; token remains. Agents need multi-key JSONDROP for full deny-list.",
+      "repro": "JSONOMIT secret; token still present"
+    },
+    {
+      "id": "W965",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL reconfirm JDS plates",
+      "detail": "STATUS/META/REPORT last lines lack final NL.",
+      "repro": "cat -A META.txt"
     }
   ],
   "workarounds": [
-    "LET call_or=CALL_OR; LET ret_n=LAST_N immediately after TRYCALL/TRYSEND OR",
-    "Score hit via CALLED/CALL_OR; body EQS only for OR fallback strings",
     {
       "id": "WA-IFS",
       "for": "W876",
@@ -7890,10 +7936,19 @@
       "id": "WA954",
       "for": "W954",
       "fix": "Use unique full step tokens; FINDLINE-verify inject order after INSERTMATCHFILE"
+    },
+    {
+      "id": "WA960",
+      "for": "W960",
+      "fix": "Use JSONDROP_N as removed count; JSONLEN clean for remaining keys"
+    },
+    {
+      "id": "WA964",
+      "for": "W964",
+      "fix": "Multi-key JSONDROP secret token password for full scrub; not single JSONOMIT"
     }
   ],
   "language_gaps": [
-    "IFHASFLAG live 1.15.950 (1495); IFHASARG no var peel (W895); HASFLAG dual (W896)",
     "IFCANREAD live 1.15.950 (1490); miss soft-false (W898); no chmod dual in board (W900)",
     "IFJSONEQ live 1.15.950 (1491); order-independent (W901); var resync not disk (W903)",
     "JSONHITKEY live 1.15.959 (1499); var-key SYS JSON peel fail (W904); candidate order = arg order (W905); null/false present (W906)",
@@ -7904,14 +7959,10 @@
     "COUNTLINE exact bag dual COUNTFILELINE substring (W937); 0-based FINDLINE/MOVELINE/INSERTLINE (W936); SETMATCH soft miss (W938)",
     "KVFILEENSURE live first realworld; INC LAST key=N (W942); HASFORM ENSURE lag vs forms catalog (W943); ENSURE no-overwrite (W944)",
     "JSONPLUCK handoff; JSONHAS var lag (W948); miss empty slots (W949); STATUS bag clobber (W951)",
-    "INSERTMATCHFILE substring false-friend (W954); miss soft (W955); BEFOREMATCH order (W956); first AFTER realworld (W957)"
+    "INSERTMATCHFILE substring false-friend (W954); miss soft (W955); BEFOREMATCH order (W956); first AFTER realworld (W957)",
+    "JSONDROP secret scrub realworld; JSONDROP_N=removed (W960); forms catalog lag (W962); dual JSONPLUCK (W963)"
   ],
   "issues_faced": [
-    {
-      "iter": 371,
-      "issue": "First-try green. Documented num/0 not blank dual and ws blank.",
-      "resolution": "first realworld 1492; document W886\u2013W888"
-    },
     {
       "iter": 372,
       "issue": "First-try green. Documented num\u2192decimal length and undef/empty len0 duals.",
@@ -7950,9 +8001,10 @@
     "iter382: soft 8/10 until MOVELINE 0-based + INSERTLINE 0 head (W936); state plate restored from git",
     "iter383: form 9/10 until HASFORM ENSURE lag documented as expected 0 (W943)",
     "iter384: STATUS bag clobber fixed export_bag; proofs thrash restored; state plate restored after accidental delete",
-    "iter385: first-try green; step:build-extra false-friend documented W954"
+    "iter385: first-try green; step:build-extra false-friend documented W954",
+    "iter386: first-try green; forms JSONDROP prefix empty while ops live (W962)"
   ],
-  "commit": "eff4e6aa",
-  "ts": "2026-08-12T07:24:26+03:00",
-  "board_commit": "eff4e6aa"
+  "commit": "",
+  "ts": "2026-08-12T07:50:31+03:00",
+  "board_commit": ""
 }
