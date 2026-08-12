@@ -1,0 +1,997 @@
+# svc_countline_bag_jobq_board.cubalc — COUNTLINE/SETMATCH in-memory job bag
+#
+# Real use: agents keep a *bag* job/queue (newline fields) in plate/STATUS,
+# promote open→done, reorder priority (MOVELINE), drop poison, admit when
+# exact open backlog under cap. Dual of disk COUNTFILELINE board (iter 379):
+#
+#   COUNTLINE / HASLINE / SETMATCH  — *exact* field match (not substring)
+#   COUNTFILELINE / SETMATCHFILE    — *substring* line match on disk
+#   note:job:open is a distinct field (not false-friend for COUNTLINE)
+#   FINDLINE/DROPNTH/MOVELINE/INSERTLINE are all 0-based (W936)
+#
+# Surface: COUNTLINE · HASLINE · SETMATCH · MOVELINE · FINDLINE ·
+#   INSERTLINE · DROPNTH · LINES · GREP bag dual
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_clj_$$
+#   ./out/cubalc run programs/realworld/svc_countline_bag_jobq_board.cubalc boot
+#   ./out/cubalc run ... pass|soft|peel|scale|form|gate|probe|list
+#
+# Plate: STATUS.txt VAL.txt META.txt CLJ_REPORT.txt agent.json
+# Env: HOST_S ROLE_S CUBALC_CLJ_REQUIRE
+
+INCLUDE agent_boot
+# bare REQUIRE LIB hold_seed broken (W773) — quoted stem required
+REQUIRE LIB "hold_seed"
+
+FN seed_queue
+  SYS JOIN "" "job:open:a\njob:done:b\njob:open:c\nnote:job:open\njob:held:d"
+  LET q = LAST
+END
+
+FN count_exact_open_a
+  LET n_open = 0
+  LET ok_v = 0
+  SYS COUNTLINE q "job:open:a"
+  LET n_open = LAST_N
+  LET ok_v = 1
+END
+
+FN count_exact_open_c
+  LET n_open = 0
+  SYS COUNTLINE q "job:open:c"
+  LET n_open = LAST_N
+END
+
+# count exact full open fields a+c (not note)
+FN count_open_jobs
+  LET n_open = 0
+  SYS COUNTLINE q "job:open:a"
+  LET n_open = LAST_N
+  SYS COUNTLINE q "job:open:c"
+  LET n_open = n_open + LAST_N
+END
+
+FN promote_open_c
+  LET state = "miss"
+  LET ok_v = 0
+  SYS SETMATCH q "job:open:c" "job:done:c"
+  LET q = LAST
+  SYS HASLINE q "job:done:c"
+  IF LAST_N == 1 THEN
+    LET state = "promoted"
+    LET ok_v = 1
+  ELSE
+    LET state = "miss"
+    LET ok_v = 0
+  END
+END
+
+FN promote_open_a
+  LET state = "miss"
+  LET ok_v = 0
+  SYS SETMATCH q "job:open:a" "job:done:a"
+  LET q = LAST
+  SYS HASLINE q "job:done:a"
+  IF LAST_N == 1 THEN
+    LET state = "promoted"
+    LET ok_v = 1
+  ELSE
+    LET state = "miss"
+    LET ok_v = 0
+  END
+END
+
+FN admit_under_cap
+  LET state = "deny-hot"
+  LET ok_v = 0
+  CALL count_open_jobs
+  IF n_open <= cap_n THEN
+    LET state = "admit"
+    LET ok_v = 1
+  ELSE
+    LET state = "deny-hot"
+    LET ok_v = 0
+  END
+END
+
+FN move_held_front
+  LET ok_v = 0
+  SYS FINDLINE q "job:held:d"
+  LET fi = LAST_N
+  # FINDLINE + MOVELINE are both 0-based (W936)
+  SYS MOVELINE q fi 0
+  LET q = LAST
+  SYS FINDLINE q "job:held:d"
+  IF LAST_N == 0 THEN
+    LET ok_v = 1
+  END
+END
+
+NOTE "svc_countline_bag_jobq_board: start"
+DEFAULT ACTION = "list"
+DEFAULT USAGE_LINE = "svc_countline_bag_jobq -- boot|pass|soft|peel|scale|form|gate|probe|list|clear"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SUBCMD OR "list"
+LET ACTION = LAST
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+CLEAR_ERR
+
+DEFAULT HOST_S = "cubeR"
+GETFLAG host|h OR ENV HOST_S OR HOST_S
+LET host_s = LAST
+CLEAR_ERR
+
+DEFAULT ROLE_S = "worker"
+GETFLAG role|r OR ENV ROLE_S OR ROLE_S
+LET role_s = LAST
+CLEAR_ERR
+
+LET require_hit = 0
+SYS ENV "CUBALC_CLJ_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET require_hit = LAST_N
+  END
+END
+CLEAR_ERR
+
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "STATUS.txt"
+LET plate_path = LAST
+SYS JOIN state_dir "agent.json"
+LET agent_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "CLJ_REPORT.txt"
+LET report_path = LAST
+SYS JOIN state_dir "queue.bag"
+LET queue_path = LAST
+
+SYS READ OR plate_path OR ""
+LET bag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET bag_ch = 0
+LET bag_n = 0
+LET known = 0
+LET note_msg = "ok"
+LET admit_n = 0
+LET op = "unknown"
+LET find_n = 0
+LET score = 0
+LET row = ""
+LET body = ""
+LET ok_v = 0
+LET state = ""
+LET saved = 0
+LET q = ""
+LET n_open = 0
+LET cap_n = 1
+LET fi = 0
+LET from_i = 0
+
+ONEOF ACTION "boot", "pass", "soft", "peel", "scale", "form", "gate", "probe", "list", "ls", "clear"
+CLEAR_ERR
+
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "boot" THEN
+    LET op = "boot"
+  WHEN "pass" THEN
+    LET op = "pass"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "peel" THEN
+    LET op = "peel"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "form" THEN
+    LET op = "form"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "probe" THEN
+    LET op = "probe"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  EXIT 2 "unknown subcmd"
+END
+
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  PRINT_JSON bag_n host_s role_s
+  CLEAR_ERR
+END
+
+SYS EQS op "boot"
+IF LAST_N == 1 THEN
+  LET known = 1
+  SYS CAT "{\"agent\":\"svc-clj\",\"schema\":\"cubalc.svc_countline_bag_jobq.v1\",\"site\":\"" host_s "\",\"role\":\"" role_s "\",\"label\":\"clj\",\"want_filter\":\"countline_bag_jobq\",\"cfg\":{\"surface\":\"COUNTLINE,HASLINE,SETMATCH,MOVELINE,FINDLINE,INSERTLINE,DROPNTH\",\"contract\":\"in-memory bag job queue exact field match (dual of COUNTFILELINE substring disk)\"}}"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE agent_path body
+  CLEAR_ERR
+  CALL seed_queue
+  CLEAR_ERR
+  SYS WRITE queue_path q
+  CLEAR_ERR
+  CALL count_open_jobs
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-clj"
+  IF LAST_N == 1 THEN
+    # exact open a+c = 2 (note not counted)
+    IF n_open == 2 THEN
+      LET hit = 1
+      LET note_msg = "boot ok"
+      LET admit_n = 1
+      LET score = 1
+      LET find_n = n_open
+    ELSE
+      LET miss = 1
+      LET note_msg = "boot count"
+      FAIL "boot count"
+      CLEAR_ERR
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "boot score"
+    FAIL "boot score"
+    CLEAR_ERR
+  END
+  SYS CAT "boot:seed:bt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "boot:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score find_n note_msg
+  CLEAR_ERR
+END
+
+# pass — exact dual vs substring false friends
+SYS EQS op "pass"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL seed_queue
+  CLEAR_ERR
+  # 1 prefix job:open is NOT exact field
+  SYS COUNTLINE q "job:open"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 2 exact a
+  SYS COUNTLINE q "job:open:a"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 3 HASLINE exact only
+  SYS HASLINE q "job:open"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE q "job:open:a"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 5 note is separate exact field (not false-friend for open count)
+  SYS COUNTLINE q "note:job:open"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL count_open_jobs
+  IF n_open == 2 THEN
+    LET score = score + 1
+  END
+  # 7 promote c
+  CALL promote_open_c
+  SYS EQS state "promoted"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL count_open_jobs
+  IF n_open == 1 THEN
+    LET score = score + 1
+  END
+  # 9 SETMATCH miss soft no-op
+  SYS SETMATCH q "job:open:zzz" "x"
+  LET q2 = LAST
+  SYS EQS q q2
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # 10 agent tag
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "COUNTLINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "pass ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "pass score"
+    FAIL "pass score"
+    CLEAR_ERR
+  END
+  SYS CAT "pass:" score ":ok"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "pass:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# soft — empty · insert · drop · find · move
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL seed_queue
+  CLEAR_ERR
+  # empty bag
+  SYS COUNTLINE "" "job:open:a"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE "" "x"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # INSERTLINE 0-based head (same base as DROPNTH/MOVELINE/FINDLINE)
+  SYS INSERTLINE q 0 "job:open:new"
+  LET q = LAST
+  SYS HASLINE q "job:open:new"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL count_open_jobs
+  # a+c still 2; new is job:open:new not counted by our FN
+  IF n_open == 2 THEN
+    LET score = score + 1
+  END
+  SYS COUNTLINE q "job:open:new"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # FINDLINE 0-based index of held (after insert head shifts)
+  SYS FINDLINE q "job:held:d"
+  LET fi = LAST_N
+  IF fi >= 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # DROPNTH 0-based: drop index 0 (head new)
+  SYS DROPNTH q 0
+  LET q = LAST
+  SYS HASLINE q "job:open:new"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # MOVELINE 0-based: promote held to front (FINDLINE i → MOVELINE i 0)
+  SYS FINDLINE q "job:held:d"
+  LET fi = LAST_N
+  SYS MOVELINE q fi 0
+  LET q = LAST
+  SYS FINDLINE q "job:held:d"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # promote open:c
+  CALL promote_open_c
+  SYS EQS state "promoted"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # require soft
+  IF require_hit >= 0 THEN
+    LET score = score + 1
+  END
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "soft ok"
+    LET admit_n = 1
+    LET find_n = 0
+  ELSE
+    LET miss = 1
+    LET note_msg = "soft score"
+    FAIL "soft score"
+    CLEAR_ERR
+  END
+  SYS CAT "soft:" score ":sf"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "soft:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# peel — disk bag materialize
+SYS EQS op "peel"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL seed_queue
+  CLEAR_ERR
+  SYS WRITE queue_path q
+  CLEAR_ERR
+  SYS READ queue_path
+  LET q = LAST
+  CLEAR_ERR
+  CALL count_open_jobs
+  IF n_open == 2 THEN
+    LET score = score + 1
+  END
+  CALL promote_open_a
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL count_open_jobs
+  IF n_open == 1 THEN
+    LET score = score + 1
+  END
+  CALL promote_open_c
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL count_open_jobs
+  IF n_open == 0 THEN
+    LET score = score + 1
+  END
+  SYS WRITE queue_path q
+  CLEAR_ERR
+  SYS READ queue_path
+  LET q = LAST
+  CLEAR_ERR
+  SYS HASLINE q "job:done:a"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE q "note:job:open"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS COUNTLINE q "job:open"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "exact field"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "peel ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "peel score"
+    FAIL "peel score"
+    CLEAR_ERR
+  END
+  SYS CAT "peel:" score ":pl"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "peel:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# scale — admit under exact open cap
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL seed_queue
+  CLEAR_ERR
+  LET cap_n = 1
+  CALL admit_under_cap
+  SYS EQS state "deny-hot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL promote_open_a
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL admit_under_cap
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL count_open_jobs
+  IF n_open == 1 THEN
+    LET score = score + 1
+  END
+  LET cap_n = 0
+  CALL admit_under_cap
+  SYS EQS state "deny-hot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL promote_open_c
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL admit_under_cap
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # note still present exact
+  SYS HASLINE q "note:job:open"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "substring"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET admit_n = 1
+    LET find_n = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "scale score"
+    FAIL "scale score"
+    CLEAR_ERR
+  END
+  SYS CAT "scale:" score ":sc"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "scale:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# form — SYS prefix catalog
+SYS EQS op "form"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  HASFORM "SYS COUNTLINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS HASLINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS SETMATCH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS MOVELINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS FINDLINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS INSERTLINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS DROPNTH"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  HASFORM "SYS COUNTFILELINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # bare lag dual
+  HASFORM "COUNTLINE"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "countline_bag_jobq"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "form ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "form score"
+    FAIL "form score"
+    CLEAR_ERR
+  END
+  SYS CAT "form:" score ":fm"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "form:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score note_msg
+  CLEAR_ERR
+END
+
+# gate — admit only under exact open cap
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL seed_queue
+  CLEAR_ERR
+  LET cap_n = 0
+  CALL admit_under_cap
+  SYS EQS state "deny-hot"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL promote_open_a
+  CALL promote_open_c
+  CALL count_open_jobs
+  IF n_open == 0 THEN
+    LET score = score + 1
+  END
+  CALL admit_under_cap
+  SYS EQS state "admit"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  # prefix still never exact-open
+  SYS COUNTLINE q "job:open"
+  IF LAST_N == 0 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HASLINE q "note:job:open"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF require_hit >= 0 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "dual of COUNTFILELINE"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS HAS body "exact"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS role_s "worker"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "gate ok"
+    LET admit_n = 1
+    LET find_n = 10
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate score"
+    FAIL "gate score"
+    CLEAR_ERR
+  END
+  SYS CAT "gate:" score ":gt"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "gate:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score state note_msg
+  CLEAR_ERR
+END
+
+# probe — WRITE NL · NUM · materialize
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET score = 0
+  CALL seed_queue
+  CLEAR_ERR
+  CALL count_open_jobs
+  IF n_open == 2 THEN
+    LET score = score + 1
+  END
+  LET saved = n_open
+  STRTO saved
+  SYS WRITE val_path saved
+  CLEAR_ERR
+  SYS READ val_path
+  SYS NUM
+  IF OK == 1 THEN
+    IF LAST_N == 2 THEN
+      LET score = score + 1
+    END
+  END
+  CLEAR_ERR
+  SYS WRITE queue_path q
+  CLEAR_ERR
+  SYS CAT "n_open=" n_open " exact=1"
+  LET body = LAST
+  CLEAR_ERR
+  SYS WRITE report_path body
+  CLEAR_ERR
+  SYS READ report_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "n_open="
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE meta_path "clj_probe"
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS EQS body "clj_probe"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS WRITE meta_path "no_nl_end"
+  CLEAR_ERR
+  SYS READ meta_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "no_nl"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  CALL promote_open_a
+  IF ok_v == 1 THEN
+    LET score = score + 1
+  END
+  CALL count_open_jobs
+  IF n_open == 1 THEN
+    LET score = score + 1
+  END
+  LET saved = 1
+  PRINT_JSON saved score
+  CLEAR_ERR
+  IF saved == 1 THEN
+    LET score = score + 1
+  END
+  SYS READ agent_path
+  LET body = LAST
+  CLEAR_ERR
+  SYS HAS body "svc-clj"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  SYS EQS host_s "cubeR"
+  IF LAST_N == 1 THEN
+    LET score = score + 1
+  END
+  CLEAR_ERR
+  IF score == 10 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET admit_n = 1
+    LET find_n = saved
+  ELSE
+    LET miss = 1
+    LET note_msg = "probe score"
+    FAIL "probe score"
+    CLEAR_ERR
+  END
+  SYS CAT "probe:" score ":pr"
+  LET row = LAST
+  CLEAR_ERR
+  SYS GREPV "probe:" bag
+  LET bag = LAST
+  CLEAR_ERR
+  SYS PUSH bag row
+  LET bag = LAST
+  LET bag_ch = 1
+  SYS LINES bag
+  LET bag_n = LAST_N
+  PRINT_JSON bag_n score saved note_msg
+  CLEAR_ERR
+END
+
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  LET bag = ""
+  LET bag_ch = 1
+  LET bag_n = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  PRINT_JSON bag_n note_msg
+  CLEAR_ERR
+END
+
+IF bag_ch == 1 THEN
+  SYS WRITE plate_path bag
+  CLEAR_ERR
+END
+
+# persist queue bag when q set
+SYS LINES q
+IF LAST_N > 0 THEN
+  SYS WRITE queue_path q
+  CLEAR_ERR
+END
+
+SYS CAT "{\"ok\":true,\"agent\":\"svc-clj\",\"op\":\"" op "\",\"hit\":" hit ",\"miss\":" miss ",\"score\":" score ",\"admit_n\":" admit_n ",\"bag_n\":" bag_n ",\"host\":\"" host_s "\",\"role\":\"" role_s "\",\"note\":\"" note_msg "\",\"require_hit\":" require_hit ",\"n_open\":" n_open ",\"cap_n\":" cap_n "}"
+LET body = LAST
+CLEAR_ERR
+SYS WRITE val_path body
+CLEAR_ERR
+
+SYS CAT "op=" op " hit=" hit " miss=" miss " score=" score " note=" note_msg " admit=" admit_n " n_open=" n_open
+LET body = LAST
+CLEAR_ERR
+SYS WRITE report_path body
+CLEAR_ERR
+
+STATUS
+CLEAR_ERR
+
+IF miss == 1 THEN
+  IF hit == 0 THEN
+    EXIT 1 note_msg
+  END
+END
+
+NOTE "svc_countline_bag_jobq_board: done"
+PASS

@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 381,
-  "program": "programs/realworld/svc_jsoncoalesce_status_default_board.cubalc",
-  "theme": "JSONCOALESCE/JSONNVL first non-empty status peel + OR default",
+  "iter": 382,
+  "program": "programs/realworld/svc_countline_bag_jobq_board.cubalc",
+  "theme": "COUNTLINE/SETMATCH in-memory bag job queue exact dual of disk COUNTFILELINE",
   "version": "1.15.961-usability",
   "pass": true,
-  "prior_note": "iter 380 IFOUTOFDATE; this iter first realworld of 1501 JSONCOALESCE (MI 961) dual of JSONHITVAL",
+  "prior_note": "iter 381 JSONCOALESCE; this iter bag COUNTLINE exact dual of iter 379 COUNTFILELINE substring",
   "tests": [
     {
       "name": "list",
@@ -15,43 +15,43 @@
     },
     {
       "name": "boot",
-      "cmd": "blank status \u2192 legacy ok idx3",
+      "cmd": "seed exact open a+c=2",
       "ok": true,
       "note": "boot"
     },
     {
       "name": "pass",
-      "cmd": "coalesce vs hitval dual \u00b7 null skip \u00b7 id 10/10",
+      "cmd": "exact vs prefix \u00b7 promote \u00b7 SETMATCH miss 10/10",
       "ok": true,
       "note": "pass 10/10"
     },
     {
       "name": "soft",
-      "cmd": "OR default \u00b7 0/false \u00b7 OF bag \u00b7 deny-default 10/10",
+      "cmd": "insert/drop/moveline 0-based \u00b7 empty 10/10",
       "ok": true,
       "note": "soft 10/10"
     },
     {
       "name": "peel",
-      "cmd": "disk intake/peer peel dual 10/10",
+      "cmd": "disk bag materialize promote 10/10",
       "ok": true,
       "note": "peel 10/10"
     },
     {
       "name": "scale",
-      "cmd": "admit ladder \u00b7 DEFAULT form 10/10",
+      "cmd": "admit under exact open cap 10/10",
       "ok": true,
       "note": "scale 10/10"
     },
     {
       "name": "form",
-      "cmd": "HASFORM JSONCOALESCE/JSONNVL 10/10",
+      "cmd": "HASFORM SYS-prefix dual 10/10",
       "ok": true,
       "note": "form 10/10"
     },
     {
       "name": "gate",
-      "cmd": "admit usable \u00b7 deny default/status 10/10",
+      "cmd": "cap admit after promote 10/10",
       "ok": true,
       "note": "gate"
     },
@@ -7554,11 +7554,57 @@
       "title": "selftest/run plate version lag vs VERSION 1.15.961",
       "detail": "VERSION 1.15.961-usability; selftest may report 1.15.959-usability depending on binary stamp. Proofs still green.",
       "repro": "cat VERSION; cubalc selftest version field"
+    },
+    {
+      "id": "W936",
+      "severity": "med",
+      "area": "host|bag_index",
+      "title": "Bag FINDLINE/MOVELINE/DROPNTH/INSERTLINE are 0-based",
+      "detail": "FINDLINE LAST_N is 0-based field index; MOVELINE bag from to and DROPNTH/INSERTLINE use 0-based. Confusing if agents assume 1-based line numbers. Promote: FINDLINE then MOVELINE i 0.",
+      "repro": "FINDLINE bag d \u2192 3 for 4th field; MOVELINE bag 3 0 promotes d to front"
+    },
+    {
+      "id": "W937",
+      "severity": "med",
+      "area": "host|countline",
+      "title": "COUNTLINE/HASLINE/SETMATCH are exact field match (dual of COUNTFILELINE substring)",
+      "detail": "COUNTLINE bag \"job:open\" does not match job:open:a or note:job:open. Disk COUNTFILELINE is substring. Agents porting disk jobq patterns to bags must use full field tokens.",
+      "repro": "COUNTLINE job:open:a \u21921; COUNTLINE job:open \u21920; COUNTFILELINE job:open \u21923 with note"
+    },
+    {
+      "id": "W938",
+      "severity": "low",
+      "area": "host|setmatch",
+      "title": "SETMATCH miss is soft no-op (bag unchanged)",
+      "detail": "SETMATCH bag missing old \u2192 LAST=same bag LAST_N success path; HASLINE new still 0. Good for soft promote.",
+      "repro": "SETMATCH q job:open:zzz x; EQS q prev \u21921"
+    },
+    {
+      "id": "W939",
+      "severity": "low",
+      "area": "lang|hasform",
+      "title": "HASFORM bare COUNTLINE/SETMATCH is 0; need SYS prefix",
+      "detail": "Same class as W916 file ops. HASFORM \"SYS COUNTLINE\" \u21921; bare COUNTLINE \u21920.",
+      "repro": "HASFORM COUNTLINE \u21920; HASFORM \"SYS COUNTLINE\" \u21921"
+    },
+    {
+      "id": "W940",
+      "severity": "low",
+      "area": "host|bag_jobq",
+      "title": "COUNTLINE bag jobq exact promote works (positive dual of 379 disk)",
+      "detail": "In-memory exact open backlog + SETMATCH promote + MOVELINE priority + admit under cap solid. note:job:open not false-friend for exact COUNTLINE.",
+      "repro": "CALL count_open_jobs; CALL promote_open_c; CALL admit_under_cap"
+    },
+    {
+      "id": "W941",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL reconfirm CLJ plates",
+      "detail": "STATUS/META/REPORT/queue.bag last lines without final NL.",
+      "repro": "cat -A META.txt"
     }
   ],
   "workarounds": [
-    "REQUIRE LIB \"hold_seed\" quoted",
-    "Score CALLANY on CALLANY_FN/CALLED/CALLANY_N not string body EQS",
     "LET ret_n=LAST_N immediately after CALLANY before EQS/CLEAR_ERR",
     "REQUIRE LIB \"hold_seed\" quoted",
     "LET ret_n=LAST_N; LET meth=SENDANY_METHOD immediately after SENDANY",
@@ -7670,10 +7716,19 @@
       "id": "WA932",
       "for": "W932",
       "fix": "Check JSONCOALESCE_HIT==1 before treating value as plate-derived; HIT=0 means OR default"
+    },
+    {
+      "id": "WA936",
+      "for": "W936",
+      "fix": "FINDLINE \u2192 MOVELINE bag i 0 for promote; INSERTLINE bag 0 head; never assume 1-based"
+    },
+    {
+      "id": "WA937",
+      "for": "W937",
+      "fix": "Use full tokens job:open:id for bag COUNTLINE; disk COUNTFILELINE remains substring"
     }
   ],
   "language_gaps": [
-    "IFZERO live 1.15.948 (1489); TRIES keyword traps var tries (W883); str0/undef type-strict (W885)",
     "IFBLANK live 1.15.949 (1492); ws blank num not blank (W886); FN-wrap (W888)",
     "IFLEN live 1.15.950 (1493); num decimal len + undef0 (W889); FN-wrap (W891)",
     "IFLINES FN block_scan miss (W892 fixed); num\u21921 field empty0 (W893); first realworld 1494",
@@ -7684,14 +7739,10 @@
     "JSONHITVAL live 1.15.960 (1500); ok_v presence sticky breaks deny (W910); bool/null coerce (W911); no JSONHITKEY sticky share (W913)",
     "COUNTFILELINE substring vs HASFILELINE exact (W917/W919); SET*MATCHFILE whole-line rewrite (W918); HASFORM needs SYS prefix (W916)",
     "IFOUTOFDATE live (1485); SLEEP ms+1s mtime (W923); WRITE multi-arg var (W924); type-IF END nest (W925); miss duals (W926)",
-    "JSONCOALESCE live 1.15.961 (1501); skip empty/null dual HITVAL (W930); 0/false keep (W931); OR default HIT=0 (W932)"
+    "JSONCOALESCE live 1.15.961 (1501); skip empty/null dual HITVAL (W930); 0/false keep (W931); OR default HIT=0 (W932)",
+    "COUNTLINE exact bag dual COUNTFILELINE substring (W937); 0-based FINDLINE/MOVELINE/INSERTLINE (W936); SETMATCH soft miss (W938)"
   ],
   "issues_faced": [
-    {
-      "iter": 367,
-      "issue": "First draft: STATUS \"ok\" note_msg unknown form (STATUS is report-only). probe 9/10 until STRTO before WRITE VAL. Then green.",
-      "resolution": "first realworld 1486; document W874\u2013W876; STATUS bare + PASS/EXIT miss"
-    },
     {
       "iter": 368,
       "issue": "Draft: nested IFJSONHAS in FN stole END (form\u2192gate FAIL). Then IFJSONHAS plate key failed \u2014 KEY glue. Renamed jkey + sequential admit.",
@@ -7746,9 +7797,10 @@
     "iter380: bare IFNEWER inside IF LAST_N stole END (W925) \u2014 FN-wrap check_*",
     "iter380: WRITE multi-arg host_s form error (W924); gate equal-mtime deny until SLEEP 1100",
     "iter380: out/cubalc thrash mid-run; linked stable /tmp/cubalc_stable",
-    "iter381: JSONCOALESCE first realworld green first-try; HITVAL dual documents empty present pitfall"
+    "iter381: JSONCOALESCE first realworld green first-try; HITVAL dual documents empty present pitfall",
+    "iter382: soft 8/10 until MOVELINE 0-based + INSERTLINE 0 head (W936); state plate restored from git"
   ],
-  "commit": "b968c405",
-  "ts": "2026-08-12T05:43:59+03:00",
-  "board_commit": "b968c405"
+  "commit": "",
+  "ts": "2026-08-12T06:12:39+03:00",
+  "board_commit": ""
 }
