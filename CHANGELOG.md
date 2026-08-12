@@ -1,3 +1,16 @@
+## 1.15.965-usability — 2026-08-12
+
+### Feat
+- `MISSP`/`PRESENTP` multi-plate dual of `SYS JSONMISS`/`JSONPRESENT`
+- bag of missing/present required keys from `PLATE` or `FROM` named plate
+- aliases: `MISSINGKEYSP`/`ABSENTP`/`PLATEMISSP` · `FOUNDKEYSP`/`FOUNDP`/`PLATEPRESENTP`
+- LAST=bag · LAST_N=count · MISSP_N / PRESENTP_N · MISSP_FROM / PRESENTP_FROM
+- null/false/0/empty still present (presence dual of COALESCEP substance)
+- Proofs: `1505_missp.cubalc` + `1505_cli_missp.sh`
+
+### Version
+- Version: `1.15.965-usability`
+
 ## Meaningful — string content == + life engine harden — 2026-08-07
 
 ### Fix

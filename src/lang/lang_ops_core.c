@@ -2939,6 +2939,14 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"FIRSTVALP", "FIRSTVALP alias of HITVALP"},
       {"PLATEHITVALP", "PLATEHITVALP alias of HITVALP"},
       {"WHICHVALP", "WHICHVALP alias of HITVALP"},
+      {"MISSP", "MISSP|MISSINGKEYSP [FROM plate] key… — bag of missing required keys · multi-plate dual of JSONMISS"},
+      {"MISSINGKEYSP", "MISSINGKEYSP alias of MISSP"},
+      {"PLATEMISSP", "PLATEMISSP alias of MISSP"},
+      {"ABSENTP", "ABSENTP alias of MISSP"},
+      {"PRESENTP", "PRESENTP|FOUNDKEYSP [FROM plate] key… — bag of present required keys · multi-plate dual of JSONPRESENT"},
+      {"FOUNDKEYSP", "FOUNDKEYSP alias of PRESENTP"},
+      {"PLATEPRESENTP", "PLATEPRESENTP alias of PRESENTP"},
+      {"FOUNDP", "FOUNDP alias of PRESENTP"},
       {"NEEDPANY", "NEEDPANY|REQUIREPANY keys… — fail-fast if none of keys present · multi-plate"},
       {"REQUIREPANY", "REQUIREPANY alias of NEEDPANY"},
       {"KEYSP", "KEYSP [FROM plate] [path] — key bag → LAST · nest path ok · multi-plate · no JSONKEYS glue"},
@@ -46343,6 +46351,197 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# hitvalp hit=%ld idx=%d key=%s val=%s from=%d\n",
               hr.n, hr.code, hr.err, hr.str, have_from);
+    bump(vm); return 1;
+  }
+
+  /* MISSP|MISSINGP|ABSENTP [FROM plate] key...
+   * PRESENTP|FOUNDP|HAVEP [FROM plate] key...
+   * -- bag of missing/present required keys from PLATE (or FROM named plate).
+   * Multi-plate dual of SYS JSONMISS / JSONPRESENT.
+   * LAST=bag · LAST_N=count · MISSP_N / PRESENTP_N · MISSP_FROM / PRESENTP_FROM.
+   * Null/false/0/empty still present (presence dual of COALESCEP substance). */
+  if (kw(&L->cur,"MISSP") || kw(&L->cur,"MISSINGP") || kw(&L->cur,"PLATEMISSP") ||
+      kw(&L->cur,"ABSENTP") || kw(&L->cur,"MISS_P") || kw(&L->cur,"KEYMISSP") ||
+      kw(&L->cur,"MMISSP") || kw(&L->cur,"MISSINGKEYS_P") ||
+      kw(&L->cur,"MISSINGKEYSP") ||
+      kw(&L->cur,"PRESENTP") || kw(&L->cur,"FOUNDP") || kw(&L->cur,"PLATEPRESENTP") ||
+      kw(&L->cur,"HAVEP") || kw(&L->cur,"PRESENT_P") || kw(&L->cur,"KEYPRESENTP") ||
+      kw(&L->cur,"MPRESENTP") || kw(&L->cur,"PRESENTKEYS_P") || kw(&L->cur,"FOUNDKEYS_P") ||
+      kw(&L->cur,"FOUNDKEYSP")) {
+    char plate[CUBALC_HOST_STR_MAX], keys_nl[CUBALC_HOST_STR_MAX];
+    char arg[CUBALC_HOST_STR_MAX], op[32];
+    char from_name[96], from_src[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int have_from = 0, want_present = 0;
+    size_t olen = 0;
+    Var *pv;
+
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "PRESENTP") == 0 || strcmp(op, "FOUNDP") == 0 ||
+        strcmp(op, "PLATEPRESENTP") == 0 || strcmp(op, "HAVEP") == 0 ||
+        strcmp(op, "PRESENT_P") == 0 || strcmp(op, "KEYPRESENTP") == 0 ||
+        strcmp(op, "MPRESENTP") == 0 || strcmp(op, "PRESENTKEYS_P") == 0 ||
+        strcmp(op, "FOUNDKEYS_P") == 0 || strcmp(op, "FOUNDKEYSP") == 0)
+      want_present = 1;
+
+    lex_next(L);
+    plate[0] = 0; keys_nl[0] = 0;
+    from_name[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+           L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"END") || kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") ||
+           kw(&L->cur,"IF") || kw(&L->cur,"LET") || kw(&L->cur,"SYS") ||
+           kw(&L->cur,"ASSERT") || kw(&L->cur,"PRINT") || kw(&L->cur,"PASS") ||
+           kw(&L->cur,"FAIL") || kw(&L->cur,"FOR") || kw(&L->cur,"WHILE") ||
+           kw(&L->cur,"LOOP") || kw(&L->cur,"JSON") || kw(&L->cur,"SETP") ||
+           kw(&L->cur,"GETP") || kw(&L->cur,"HASP") || kw(&L->cur,"NEEDP") ||
+           kw(&L->cur,"HASPANY") || kw(&L->cur,"COALESCEP") || kw(&L->cur,"NVLP") ||
+           kw(&L->cur,"HITVALP") || kw(&L->cur,"FIRSTVALP") || kw(&L->cur,"HITKEYP") ||
+           kw(&L->cur,"MISSP") || kw(&L->cur,"PRESENTP") || kw(&L->cur,"FROM") ||
+           kw(&L->cur,"USING") || kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+           kw(&L->cur,"PLATEFROM") || kw(&L->cur,"WITH") || kw(&L->cur,"AS"))) {
+        break;
+      }
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(arg, sizeof arg, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+        break;
+      }
+      if (!arg[0]) continue;
+      if (olen > 0) {
+        if (olen + 1 >= sizeof keys_nl) break;
+        keys_nl[olen++] = '\n';
+        keys_nl[olen] = 0;
+      }
+      {
+        size_t al = strlen(arg);
+        if (olen + al + 1 >= sizeof keys_nl) break;
+        memcpy(keys_nl + olen, arg, al + 1);
+        olen += al;
+      }
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE") ||
+                       kw(&L->cur,"PLATEFROM"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_name, sizeof from_name, "%s", L->cur.text);
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_json_filter_req_keys(plate, keys_nl, want_present, &hr) != 0) {
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      if (want_present) {
+        var_set_num(vm, "PRESENTP_N", 0);
+        var_set_num(vm, "FOUNDP_N", 0);
+        var_set_num(vm, "JSONPRESENT_N", 0);
+      } else {
+        var_set_num(vm, "MISSP_N", 0);
+        var_set_num(vm, "MISSINGP_N", 0);
+        var_set_num(vm, "JSONMISS_N", 0);
+      }
+      var_set_num(vm, want_present ? "PRESENTP_FROM" : "MISSP_FROM", have_from ? 1 : 0);
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", want_present ? "PRESENTP: fail" : "MISSP: fail");
+        var_set_str(vm, "ERR", want_present ? "PRESENTP: fail" : "MISSP: fail");
+      }
+      bump(vm); return 1;
+    }
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    if (want_present) {
+      var_set_num(vm, "PRESENTP_N", hr.n);
+      var_set_num(vm, "FOUNDP_N", hr.n);
+      var_set_num(vm, "JSONPRESENT_N", hr.n);
+      var_set_num(vm, "JSONFOUND_N", hr.n);
+      var_set_num(vm, "PRESENTP_FROM", have_from ? 1 : 0);
+    } else {
+      var_set_num(vm, "MISSP_N", hr.n);
+      var_set_num(vm, "MISSINGP_N", hr.n);
+      var_set_num(vm, "JSONMISS_N", hr.n);
+      var_set_num(vm, "JSONMISSING_N", hr.n);
+      var_set_num(vm, "MISSP_FROM", have_from ? 1 : 0);
+    }
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%ld from=%d bag=%s\n",
+              want_present ? "presentp" : "missp", hr.n, have_from, hr.str);
     bump(vm); return 1;
   }
 

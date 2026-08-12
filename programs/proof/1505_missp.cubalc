@@ -1,0 +1,110 @@
+# MISSP / PRESENTP — multi-plate dual of SYS JSONMISS / JSONPRESENT
+# bag of missing/present required keys from PLATE or FROM named plate
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\",\"version\":\"1.2\",\"msg\":\"hello\"}"
+
+# all present → empty miss bag
+MISSP "ok" "n" "err"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT MISSP_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# one missing
+MISSP "ok" "missing" "n"
+ASSERT LAST_N == 1
+ASSERT MISSP_N == 1
+SYS EQS LAST "missing"
+ASSERT LAST_N == 1
+
+# several missing (order of need list)
+MISSP "gone" "ok" "nada" "n"
+ASSERT LAST_N == 2
+SYS HASLINE LAST "gone"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "nada"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 0
+
+# present dual
+PRESENTP "ok" "missing" "n"
+ASSERT LAST_N == 2
+ASSERT PRESENTP_N == 2
+SYS HASLINE LAST "ok"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "n"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "missing"
+ASSERT LAST_N == 0
+
+# aliases
+MISSINGKEYSP "ok" "zzz"
+ASSERT LAST_N == 1
+SYS EQS LAST "zzz"
+ASSERT LAST_N == 1
+FOUNDKEYSP "ok" "n"
+ASSERT LAST_N == 2
+ABSENTP "ok"
+ASSERT LAST_N == 0
+FOUNDP "ok" "zzz"
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+LET PEER = "{\"p\":\"\",\"q\":\"two\",\"role\":\"agent\"}"
+MISSP "p" "missing" "role" FROM PEER
+ASSERT LAST_N == 1
+SYS EQS LAST "missing"
+ASSERT LAST_N == 1
+ASSERT MISSP_FROM == 1
+
+PRESENTP FROM PEER "p" "gone" "role"
+ASSERT LAST_N == 2
+ASSERT PRESENTP_FROM == 1
+SYS HASLINE LAST "p"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "role"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "gone"
+ASSERT LAST_N == 0
+
+# empty/false/0 still present (presence dual)
+SYS JSONOBJ "e" "" "z" 0 "f" false
+LET Z = LAST
+MISSP "e" "z" "f" "other" FROM Z
+ASSERT LAST_N == 1
+SYS EQS LAST "other"
+ASSERT LAST_N == 1
+PRESENTP "e" "z" "f" "other" FROM Z
+ASSERT LAST_N == 3
+SYS HASLINE LAST "other"
+ASSERT LAST_N == 0
+
+# PLATE unchanged by FROM peels
+SYS HAS PLATE "msg"
+ASSERT LAST_N == 1
+
+# empty key list → empty bag
+MISSP
+ASSERT LAST_N == 0
+PRESENTP
+ASSERT LAST_N == 0
+
+# agent pattern: contract check then MISSP for message
+MISSP "ok" "version" "n" "missing_field"
+ASSERT LAST_N == 1
+SYS EQS LAST "missing_field"
+ASSERT LAST_N == 1
+IF LAST_N THEN
+  PASS "contract incomplete as expected"
+ELSE
+  FAIL "should report missing"
+END
+ASSERT OK == 1
+
+PASS "missp/presentp ok"
