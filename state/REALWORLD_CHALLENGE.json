@@ -7800,7 +7800,7 @@
     "iter381: JSONCOALESCE first realworld green first-try; HITVAL dual documents empty present pitfall",
     "iter382: soft 8/10 until MOVELINE 0-based + INSERTLINE 0 head (W936); state plate restored from git"
   ],
-  "commit": "",
+  "commit": "fcc05235",
   "ts": "2026-08-12T06:12:39+03:00",
-  "board_commit": ""
+  "board_commit": "fcc05235"
 }
