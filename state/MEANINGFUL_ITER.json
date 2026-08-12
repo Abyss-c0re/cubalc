@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 962,
-  "version": "1.15.962-usability",
-  "item": "COALESCEP/NVLP multi-plate first non-empty any-of value",
-  "item_id": "mi_coalescep",
-  "title": "COALESCEP \u00b7 NVLP \u00b7 PLATECOALESCE peel first non-empty any-of VALUE from PLATE or FROM plate",
-  "commit": "4c926db0",
-  "summary": "Multi-plate dual of SYS JSONCOALESCE: COALESCEP|NVLP|PNVL [FROM plate] key\u2026 [OR|DEFAULT def] \u2192 LAST=value \u00b7 LAST_N 0|1 \u00b7 COALESCEP_N 1-based \u00b7 COALESCEP_KEY \u00b7 COALESCEP_HIT \u00b7 COALESCEP_FROM. Skips empty/null; keeps 0/false. Proofs 1502 PASS (36 asserts).",
+  "iter": 963,
+  "version": "1.15.963-usability",
+  "item": "HITKEYP/FIRSTKEYP multi-plate first present any-of KEY name",
+  "item_id": "mi_hitkeyp",
+  "title": "HITKEYP \u00b7 FIRSTKEYP \u00b7 WHICHKEYP first present any-of KEY from PLATE or FROM plate",
+  "commit": "9d248bb5",
+  "summary": "Multi-plate dual of SYS JSONHITKEY: HITKEYP|FIRSTKEYP|WHICHKEYP [FROM plate] key\u2026 \u2192 LAST=key \u00b7 LAST_N 0|1 \u00b7 HITKEYP_N 1-based \u00b7 HITKEYP_HIT \u00b7 HITKEYP_FROM. Presence dual of COALESCEP (empty/0/false still present). Proofs 1503 PASS (30 asserts).",
   "proofs": [
-    "1502_coalescep + 1502_cli_coalescep PASS"
+    "1503_hitkeyp + 1503_cli_hitkeyp PASS"
   ],
-  "when": "2026-08-12T05:29:19Z",
+  "when": "2026-08-12T09:41:37Z",
   "agent": "nanobot-cubalc",
-  "sha": "4c926db09e3fb2084c1b3ebd8dae9d80af781795",
-  "note": "Plate-session dual of JSONCOALESCE; FROM named plate; OR/DEFAULT fallback; aliases NVLP/PNVL/PLATECOALESCE/COALESCE_P/HITCOALESCEP/FIRSTNONEMPTYP"
+  "sha": "9d248bb5d2c19ab22df7e64fc47d778160369211",
+  "note": "Plate-session dual of JSONHITKEY; FROM named plate; aliases FIRSTKEYP/WHICHKEYP/PLATEHITKEYP/HITKEY_P/KEYHITP/FIRSTPRESENTP"
 }

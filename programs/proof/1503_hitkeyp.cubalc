@@ -1,0 +1,82 @@
+# HITKEYP / FIRSTKEYP — multi-plate dual of SYS JSONHITKEY
+# first present any-of KEY name from PLATE or FROM named plate
+
+HOLD_FLASH 1
+
+LET PLATE = "{\"ok\":true,\"n\":3,\"err\":\"\",\"version\":\"1.2\",\"msg\":\"hello\"}"
+
+# first of several present (order of candidates)
+HITKEYP "missing" "ok" "n"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+ASSERT HITKEYP_N == 2
+ASSERT HITKEYP_HIT == 1
+
+# second candidate when first missing
+HITKEYP "gone" "n" "ok"
+ASSERT LAST_N == 1
+SYS EQS LAST "n"
+ASSERT LAST_N == 1
+ASSERT HITKEYP_N == 2
+
+# miss all → empty LAST, LAST_N 0
+HITKEYP "a" "b" "c"
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+ASSERT HITKEYP_HIT == 0
+ASSERT HITKEYP_N == 0
+
+# aliases
+FIRSTKEYP "version" "missing"
+ASSERT LAST_N == 1
+SYS EQS LAST "version"
+ASSERT LAST_N == 1
+WHICHKEYP "n"
+ASSERT LAST_N == 1
+SYS EQS LAST "n"
+ASSERT LAST_N == 1
+
+# multi-plate FROM
+LET PEER = "{\"p\":\"\",\"q\":\"two\",\"role\":\"agent\"}"
+HITKEYP "p" "q" FROM PEER
+ASSERT LAST_N == 1
+SYS EQS LAST "p"
+ASSERT LAST_N == 1
+ASSERT HITKEYP_FROM == 1
+
+# FROM then keys
+HITKEYP FROM PEER "missing" "role"
+ASSERT LAST_N == 1
+SYS EQS LAST "role"
+ASSERT LAST_N == 1
+ASSERT HITKEYP_HIT == 1
+
+# empty string value still present (presence, not coalesce substance)
+SYS JSONOBJ "e" "" "z" 0 "f" false
+LET Z = LAST
+HITKEYP "gone" "e" FROM Z
+ASSERT LAST_N == 1
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+HITKEYP "z" FROM Z
+ASSERT LAST_N == 1
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# PLATE unchanged by FROM peels
+SYS HAS PLATE "msg"
+ASSERT LAST_N == 1
+
+# agent pattern: name first available status key
+SYS JSONOBJ "legacy_status" "ok" "code" 0
+LET agent = LAST
+HITKEYP "status" "state" "legacy_status" "role" FROM agent
+ASSERT LAST_N == 1
+SYS EQS LAST "legacy_status"
+ASSERT LAST_N == 1
+ASSERT HITKEYP_N == 3
+
+PASS "hitkeyp ok"
