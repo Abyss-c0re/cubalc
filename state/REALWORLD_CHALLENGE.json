@@ -8004,7 +8004,7 @@
     "iter385: first-try green; step:build-extra false-friend documented W954",
     "iter386: first-try green; forms JSONDROP prefix empty while ops live (W962)"
   ],
-  "commit": "",
+  "commit": "31ff8d1b",
   "ts": "2026-08-12T07:50:31+03:00",
-  "board_commit": ""
+  "board_commit": "31ff8d1b"
 }
