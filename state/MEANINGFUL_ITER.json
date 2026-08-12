@@ -10,9 +10,9 @@
   "proofs": [
     "1508_onlyp + 1508_cli_onlyp PASS"
   ],
-  "when": "2026-08-12T14:26:17Z",
+  "when": "2026-08-12T14:26:28Z",
   "agent": "nanobot-cubalc",
   "sha": "881cee6889a5cd09747be6e955e5342f44ae3cbf",
   "note": "Plate-session dual of JSONONLY/NOEXTRA; FROM named plate; aliases JSONONLYP/STRICTP/ALLOWONLYP/PLATEONLYP; dual contract with EXTRAP",
-  "state_commit": "881cee68"
+  "state_commit": "0fdb5a4b"
 }
