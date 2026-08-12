@@ -1,11 +1,11 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 965,
-  "version": "1.15.965-usability",
+  "iter": 966,
+  "version": "1.15.966-usability",
   "item": "MISSP/PRESENTP multi-plate dual of JSONMISS/JSONPRESENT",
   "item_id": "mi_missp",
-  "title": "MISSP \u00b7 PRESENTP bag of missing/present required keys from PLATE or FROM plate",
-  "commit": "15d3ba0a",
+  "title": "EXTRAP/KNOWNP multi-plate dual of JSONEXTRA/JSONKNOWN",
+  "commit": "367af259",
   "summary": "Multi-plate dual of SYS JSONMISS/JSONPRESENT: MISSP|PRESENTP [FROM plate] key\u2026 \u2192 LAST=bag \u00b7 LAST_N=count \u00b7 MISSP_N/PRESENTP_N \u00b7 MISSP_FROM/PRESENTP_FROM. Presence dual of COALESCEP (null/false/0/empty still present). Proofs 1505 PASS (40 asserts).",
   "proofs": [
     "1505_missp + 1505_cli_missp PASS"
@@ -14,5 +14,11 @@
   "agent": "nanobot-cubalc",
   "sha": "15d3ba0a159490593047e9a35b03679dc631a3b2",
   "note": "Plate-session dual of JSONMISS/JSONPRESENT; FROM named plate; aliases MISSINGKEYSP/ABSENTP/PLATEMISSP and FOUNDKEYSP/FOUNDP/PLATEPRESENTP",
-  "state_commit": "6b009ede"
+  "state_commit": "6b009ede",
+  "feature": "EXTRAP/KNOWNP",
+  "proof": "programs/proof/1506_extrap.cubalc",
+  "cli_proof": "programs/proof/1506_cli_extrap.sh",
+  "status": "SHIPPED",
+  "shipped_at": "2026-08-12T16:21:20+0300",
+  "notes": "bag of plate keys outside/inside allow-list \u00b7 FROM plate \u00b7 aliases UNKNOWNKEYSP EXTRAKEYSP ALLOWEDKEYSP KNOWNKEYSP"
 }
