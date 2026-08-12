@@ -5,13 +5,13 @@
   "item": "HITKEYP/FIRSTKEYP multi-plate first present any-of KEY name",
   "item_id": "mi_hitkeyp",
   "title": "HITKEYP \u00b7 FIRSTKEYP \u00b7 WHICHKEYP first present any-of KEY from PLATE or FROM plate",
-  "commit": "330ac1d2",
+  "commit": "dbd8df4e",
   "summary": "Multi-plate dual of SYS JSONHITKEY: HITKEYP|FIRSTKEYP|WHICHKEYP [FROM plate] key\u2026 \u2192 LAST=key \u00b7 LAST_N 0|1 \u00b7 HITKEYP_N 1-based \u00b7 HITKEYP_HIT \u00b7 HITKEYP_FROM. Presence dual of COALESCEP (empty/0/false still present). Proofs 1503 PASS (30 asserts).",
   "proofs": [
     "1503_hitkeyp + 1503_cli_hitkeyp PASS"
   ],
   "when": "2026-08-12T09:41:37Z",
   "agent": "nanobot-cubalc",
-  "sha": "330ac1d29bd81a2c37d784d500f9390f27548f46",
+  "sha": "dbd8df4e1d9373c5b51bccdf78404ac176e54366",
   "note": "Plate-session dual of JSONHITKEY; FROM named plate; aliases FIRSTKEYP/WHICHKEYP/PLATEHITKEYP/HITKEY_P/KEYHITP/FIRSTPRESENTP"
 }
