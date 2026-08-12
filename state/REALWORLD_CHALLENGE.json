@@ -7580,7 +7580,7 @@
     "iter378: admit deny-status dead until ok_v reset after peel presence (W910) \u2014 fixed in board",
     "iter378: JSONHITVAL first realworld green; closes W904 EQS peel for status/id values"
   ],
-  "commit": "",
+  "commit": "29ea3db0",
   "ts": "2026-08-12T04:31:03+03:00",
-  "board_commit": ""
+  "board_commit": "29ea3db0"
 }
