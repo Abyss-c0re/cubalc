@@ -7852,7 +7852,7 @@
     "iter382: soft 8/10 until MOVELINE 0-based + INSERTLINE 0 head (W936); state plate restored from git",
     "iter383: form 9/10 until HASFORM ENSURE lag documented as expected 0 (W943)"
   ],
-  "commit": "",
+  "commit": "d846dfbc",
   "ts": "2026-08-12T06:36:01+03:00",
-  "board_commit": ""
+  "board_commit": "d846dfbc"
 }
