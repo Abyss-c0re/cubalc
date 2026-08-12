@@ -1,0 +1,121 @@
+# JSONCOALESCE / JSONNVL — first non-empty any-of value (soft dual of JSONHITVAL)
+# LAST=value · LAST_N 0|1 · JSONCOALESCE_N=1-based · JSONCOALESCE_KEY=name · OR/DEFAULT def
+
+HOLD_FLASH 1
+
+SYS JSONOBJ "ok" true "n" 3 "err" "" "version" "1.2" "msg" "hello"
+LET plate = LAST
+
+# first non-empty among candidates (skips empty err)
+SYS JSONCOALESCE plate "missing" "err" "msg" "n"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+ASSERT JSONCOALESCE_N == 3
+ASSERT JSONCOALESCE_HIT == 1
+SYS EQS JSONCOALESCE_KEY "msg"
+ASSERT LAST_N == 1
+
+# second candidate when first empty
+SYS JSONCOALESCE plate "err" "version"
+ASSERT LAST_N == 1
+SYS EQS LAST "1.2"
+ASSERT LAST_N == 1
+ASSERT JSONCOALESCE_N == 2
+SYS EQS JSONCOALESCE_KEY "version"
+ASSERT LAST_N == 1
+
+# all miss / empty → no default → LAST empty LAST_N 0
+SYS JSONCOALESCE plate "a" "b" "err"
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+ASSERT JSONCOALESCE_HIT == 0
+ASSERT JSONCOALESCE_N == 0
+
+# OR default when miss
+SYS JSONCOALESCE plate "a" "b" OR "fallback"
+ASSERT LAST_N == 1
+SYS EQS LAST "fallback"
+ASSERT LAST_N == 1
+ASSERT JSONCOALESCE_HIT == 0
+ASSERT JSONCOALESCE_N == 0
+SYS EMPTY JSONCOALESCE_KEY
+ASSERT LAST_N == 1
+
+# DEFAULT alias
+SYS JSONCOALESCE plate "gone" DEFAULT "dflt"
+ASSERT LAST_N == 1
+SYS EQS LAST "dflt"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JSONNVL plate "n"
+ASSERT LAST_N == 1
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS JCOALESCE plate "msg"
+ASSERT LAST_N == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# OF bag form
+SYS JOIN "" "err\nmissing\nversion"
+LET kbag = LAST
+SYS JSONCOALESCE plate OF kbag
+ASSERT LAST_N == 1
+SYS EQS LAST "1.2"
+ASSERT LAST_N == 1
+SYS EQS JSONCOALESCE_KEY "version"
+ASSERT LAST_N == 1
+
+# bare keys on LAST plate
+SYS JSONOBJ "p" "" "q" "two"
+SYS JSONCOALESCE "p" "q" OR "x"
+ASSERT LAST_N == 1
+SYS EQS LAST "two"
+ASSERT LAST_N == 1
+
+# null → empty skipped; false/0 have substance
+SYS JSONOBJ "gone" null "flag" false "z" 0 "name" "ok"
+LET p4 = LAST
+SYS JSONCOALESCE p4 "gone" "name"
+ASSERT LAST_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+SYS EQS JSONCOALESCE_KEY "name"
+ASSERT LAST_N == 1
+SYS JSONCOALESCE p4 "gone" "z"
+ASSERT LAST_N == 1
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# agent pattern: status coalesce with default
+SYS JSONOBJ "legacy_status" "" "code" 0 "role" "worker"
+LET agent = LAST
+SYS JSONCOALESCE agent "status" "state" "legacy_status" "role" OR "unknown"
+ASSERT LAST_N == 1
+SYS EQS LAST "worker"
+ASSERT LAST_N == 1
+ASSERT JSONCOALESCE_N == 4
+SYS EQS JSONCOALESCE_KEY "role"
+ASSERT LAST_N == 1
+
+# empty candidate list + default
+SYS JSONOBJ "a" 1
+SYS JSONCOALESCE LAST OR "none"
+ASSERT LAST_N == 1
+SYS EQS LAST "none"
+ASSERT LAST_N == 1
+
+# hit prefers substance over later keys
+SYS JSONOBJ "a" "first" "b" "second"
+LET splate = LAST
+SYS JSONCOALESCE splate "a" "b"
+ASSERT LAST_N == 1
+SYS EQS LAST "first"
+ASSERT LAST_N == 1
+ASSERT JSONCOALESCE_N == 1
+
+PASS "jsoncoalesce ready"

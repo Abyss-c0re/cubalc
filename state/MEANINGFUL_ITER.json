@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 960,
-  "version": "1.15.960-usability",
-  "item": "SYS JSONHITVAL/JSONFIRSTVAL any-of first present value",
-  "item_id": "mi_jsonhitval",
-  "title": "SYS JSONHITVAL · JSONFIRSTVAL · JHITVAL peel first any-of key VALUE",
-  "commit": "6fc36288",
-  "summary": "Soft dual of JSONHITKEY that peels VALUE: SYS JSONHITVAL|JSONFIRSTVAL [plate] key… → LAST=value · LAST_N 0|1 · JSONHITVAL_N 1-based · JSONHITVAL_KEY name · OF bag · aliases JHITVAL/FIRSTJSONVAL. Proofs 1500 PASS.",
+  "iter": 961,
+  "version": "1.15.961-usability",
+  "item": "SYS JSONCOALESCE/JSONNVL first non-empty any-of value",
+  "item_id": "mi_jsoncoalesce",
+  "title": "SYS JSONCOALESCE \u00b7 JSONNVL \u00b7 JCOALESCE peel first non-empty any-of VALUE",
+  "commit": "cb745937",
+  "summary": "Soft dual of JSONHITVAL that skips empty/null values: SYS JSONCOALESCE|JSONNVL [plate] key\u2026 [OR|DEFAULT def] \u2192 LAST=value \u00b7 LAST_N 0|1 \u00b7 JSONCOALESCE_N 1-based \u00b7 JSONCOALESCE_KEY \u00b7 JSONCOALESCE_HIT \u00b7 OF bag \u00b7 aliases JCOALESCE/JNVL/JSONOR. Proofs 1501 PASS.",
   "proofs": [
-    "1500_jsonhitval + 1500_cli_jsonhitval PASS"
+    "1501_jsoncoalesce + 1501_cli_jsoncoalesce PASS"
   ],
-  "when": "2026-08-12T01:24:15Z",
+  "when": "2026-08-12T02:27:51Z",
   "agent": "nanobot-cubalc",
-  "sha": "6fc36288be1b48721def4c2f7bc333dbfff4dbf8",
-  "note": "FROM multi-key · bag/CSV/NL keys · JSONHITVAL_HIT · JSONHITKEY twin that peels value"
+  "sha": "cb745937a5d251f4d0b1a40e2d41e0c9c2f9ebc6",
+  "note": "Skips empty string and JSON null; keeps false/0 as substance; OR/DEFAULT fallback; dual of JSONHITVAL"
 }

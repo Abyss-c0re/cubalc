@@ -9807,6 +9807,65 @@ int cubalc_host_json_first_val(const char *json, const char *keys_nl,
   return 0;
 }
 
+
+/* Usability: SYS JSONCOALESCE|JCOALESCE — first non-empty present candidate VALUE among any-of keys.
+ * Skips missing keys and empty-string values (null→"" skipped). Optional deflt used on total miss.
+ * r->str = value · r->n 0|1 (1=key hit, 0=default/none) · r->code = 1-based key idx (0=default/none)
+ * r->err = key name on hit (empty on default/none). Soft always OK. */
+int cubalc_host_json_coalesce(const char *json, const char *keys_nl,
+                              const char *deflt, cubalc_host_result *r) {
+  cubalc_host_result gr;
+  const char *p, *line;
+  long idx = 0;
+  r_clear(r);
+  r->ok = 1;
+  r->str[0] = 0;
+  r->err[0] = 0;
+  r->n = 0;
+  r->code = 0;
+  if (keys_nl && keys_nl[0]) {
+    p = keys_nl;
+    while (*p) {
+      char key[256];
+      size_t kn = 0;
+      while (*p == '\n' || *p == '\r') p++;
+      if (!*p) break;
+      line = p;
+      while (*p && *p != '\n' && *p != '\r') p++;
+      kn = (size_t)(p - line);
+      if (kn >= sizeof key) kn = sizeof key - 1;
+      memcpy(key, line, kn);
+      key[kn] = 0;
+      if (!key[0]) continue;
+      idx++;
+      memset(&gr, 0, sizeof gr);
+      if (cubalc_host_json_path_get_raw(json, key, &gr) != 0)
+        continue;
+      memset(&gr, 0, sizeof gr);
+      if (cubalc_host_json_path_get(json, key, &gr) != 0)
+        continue;
+      /* skip empty / blank-only values — coalesce wants substance */
+      {
+        const char *s = gr.str;
+        while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r') s++;
+        if (!*s) continue;
+      }
+      snprintf(r->str, sizeof r->str, "%s", gr.str);
+      snprintf(r->err, sizeof r->err, "%s", key);
+      r->n = 1;
+      r->code = (int)idx;
+      return 0;
+    }
+  }
+  if (deflt && deflt[0]) {
+    snprintf(r->str, sizeof r->str, "%s", deflt);
+    r->n = 0;
+    r->code = 0;
+    r->err[0] = 0;
+  }
+  return 0;
+}
+
 /* Usability: SYS JSONMISS/JSONPRESENT — bag of missing/present required keys. */
 int cubalc_host_json_filter_req_keys(const char *json, const char *keys_nl,
                                      int want_present, cubalc_host_result *r) {

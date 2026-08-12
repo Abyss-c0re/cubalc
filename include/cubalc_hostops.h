@@ -632,6 +632,11 @@ int cubalc_host_json_first_key(const char *json, const char *keys_nl,
  * Usability: JSONHITKEY twin that peels VALUE without multi JSON+IF glue. */
 int cubalc_host_json_first_val(const char *json, const char *keys_nl,
                                cubalc_host_result *r);
+
+/* Usability: SYS JSONCOALESCE — first non-empty present candidate VALUE among any-of keys.
+ * Optional default via separate arg (empty string means no default). Soft always OK. */
+int cubalc_host_json_coalesce(const char *json, const char *keys_nl,
+                              const char *deflt, cubalc_host_result *r);
 /* filter required keys into bag: want_present=0 → missing names, 1 → present.
  * r->str = newline bag · r->n = count. Soft always OK. Null/false still present.
  * Usability: after JSONHASALL fail, report WHICH keys without multi JSONHAS. */
