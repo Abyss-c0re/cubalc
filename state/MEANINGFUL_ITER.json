@@ -5,14 +5,14 @@
   "item": "IFJSONHASALL/IFJSONHASANY multi-key plate contract branches",
   "item_id": "mi_ifjsonhasall",
   "title": "IFJSONHASALL \u00b7 IFJSONHASANY multi-key plate branches for agents",
-  "commit": "5c63bc0b",
+  "commit": "72b05622",
   "summary": "Multi-key plate contract branches: IFJSONHASALL|IFJSONNEED|IFHASJSONALL plate key\u2026 and IFJSONHASANY|IFHASJSONANY plate key\u2026 wire into cubalc_host_json_has_keys (soft twins of SYS JSONHASALL/JSONHASANY). Sets IFJSONHASALL_N/IFJSONHASANY_N + JSONHASALL_N/JSONHASANY_N. Complements single-key IFJSONHAS/IFJSONMISS. Proofs 1510 PASS (19 asserts + CLI WHEN/IFHAS dual + soft SYS dual).",
   "proofs": [
     "1510_ifjsonhasall_any + 1510_cli_ifjsonhasall_any PASS"
   ],
   "when": "2026-08-12T18:58:27Z",
   "agent": "nanobot-cubalc",
-  "sha": "5c63bc0b00c057bc52c258690cdf5d2f979e7d53",
+  "sha": "72b05622bad4e6fcb9d47d29e66405fa31dbb7b7",
   "note": "Multi-key plate contract branches without JSONHASALL probe + IF LAST_N glue; dual soft SYS JSONHASALL/ANY + branch forms",
-  "state_commit": "5c63bc0b"
+  "state_commit": "72b05622"
 }
