@@ -5,13 +5,13 @@
   "item": "SYS JSONHITVAL/JSONFIRSTVAL any-of first present value",
   "item_id": "mi_jsonhitval",
   "title": "SYS JSONHITVAL · JSONFIRSTVAL · JHITVAL peel first any-of key VALUE",
-  "commit": "pending",
+  "commit": "6fc36288",
   "summary": "Soft dual of JSONHITKEY that peels VALUE: SYS JSONHITVAL|JSONFIRSTVAL [plate] key… → LAST=value · LAST_N 0|1 · JSONHITVAL_N 1-based · JSONHITVAL_KEY name · OF bag · aliases JHITVAL/FIRSTJSONVAL. Proofs 1500 PASS.",
   "proofs": [
     "1500_jsonhitval + 1500_cli_jsonhitval PASS"
   ],
   "when": "2026-08-12T01:24:15Z",
   "agent": "nanobot-cubalc",
-  "sha": "pending",
+  "sha": "6fc36288be1b48721def4c2f7bc333dbfff4dbf8",
   "note": "FROM multi-key · bag/CSV/NL keys · JSONHITVAL_HIT · JSONHITKEY twin that peels value"
 }
