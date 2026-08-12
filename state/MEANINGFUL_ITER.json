@@ -4,15 +4,15 @@
   "version": "1.15.969-usability",
   "item": "REQUIRE ONLYP/EXACTP fail-fast multi-plate twins of soft ONLYP/EXACTP",
   "item_id": "mi_require_onlyp",
-  "title": "REQUIRE ONLYP · EXACTP hard gates for plate-session agents",
-  "commit": "PENDING",
-  "summary": "Fail-fast multi-plate twins of soft ONLYP/NOEXTRAP and EXACTP: REQUIRE ONLYP|NOEXTRAP|JSONONLYP|STRICTP|ALLOWONLYP|PLATEONLYP [plate] allow… and REQUIRE EXACTP|SCHEMAP|PLATEEXACTP|KEYSEXACTP|SAMEKEYSP|PEXACT [plate] key… wire into existing REQUIRE JSONONLY/JSONEXACT paths. Soft twins remain non-fatal. Proofs 1509 PASS (44 asserts + CLI hard/soft dual).",
+  "title": "REQUIRE ONLYP \u00b7 EXACTP hard gates for plate-session agents",
+  "commit": "3ca9c954",
+  "summary": "Fail-fast multi-plate twins of soft ONLYP/NOEXTRAP and EXACTP: REQUIRE ONLYP|NOEXTRAP|JSONONLYP|STRICTP|ALLOWONLYP|PLATEONLYP [plate] allow\u2026 and REQUIRE EXACTP|SCHEMAP|PLATEEXACTP|KEYSEXACTP|SAMEKEYSP|PEXACT [plate] key\u2026 wire into existing REQUIRE JSONONLY/JSONEXACT paths. Soft twins remain non-fatal. Proofs 1509 PASS (44 asserts + CLI hard/soft dual).",
   "proofs": [
     "1509_require_onlyp + 1509_cli_require_onlyp PASS"
   ],
-  "when": "2026-08-12T18:45:00Z",
+  "when": "2026-08-12T18:50:00Z",
   "agent": "nanobot-cubalc",
-  "sha": "PENDING",
+  "sha": "3ca9c9549e928afc922f814ae318538a14b458c5",
   "note": "Plate-session hard gates without ONLYP+IF LAST_N FAIL glue; dual contract soft ONLYP/EXACTP + hard REQUIRE ONLYP/EXACTP",
-  "state_commit": "PENDING"
+  "state_commit": "3ca9c954"
 }
