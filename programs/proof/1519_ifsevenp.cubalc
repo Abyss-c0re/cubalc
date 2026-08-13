@@ -1,0 +1,96 @@
+# IFSEVENP — plate exactly-seven key diagnostic branch
+# Soft twin of plate key-count for agents (sept contract).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET six = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6}"
+LET seven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7}"
+LET eight = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8}"
+LET empty = "{}"
+
+# SEVENP: body if plate has exactly seven keys
+IFSEVENP seven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFSEVENP_N == 1
+ASSERT SEVENP_N == 1
+ASSERT IFSEVENP_LEN == 7
+ASSERT IFSEPTP_N == 1
+ASSERT IFSEVENKEYP_N == 1
+
+# aliases
+IFSEPTP seven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFSEVENKEYP seven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# six keys: not seven
+IFSEVENP six
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFSEVENP_N == 0
+ASSERT IFSEVENP_LEN == 6
+
+# eight keys: not seven
+IFSEVENP eight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFSEVENP_LEN == 8
+
+# one / empty: not seven
+IFSEVENP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFSEVENP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENSEVENP seven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENSEPTP seven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENSEVENKEYP seven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PASS
