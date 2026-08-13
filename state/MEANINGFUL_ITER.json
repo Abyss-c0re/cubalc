@@ -5,7 +5,7 @@
   "item": "IFSIXP plate exactly-six key diagnostic branch",
   "item_id": "mi_ifsixp",
   "title": "IFSIXP \u00b7 IFHEXAP plate exactly-six key contract branch for agents",
-  "commit": "PENDING",
+  "commit": "82f5fee2",
   "summary": "Plate key-count IF/WHEN branch: IFSIXP|IFHEXAP|IFSIXKEYP|WHENSIXP|WHENHEXAP|WHENSIXKEYP body if plate has exactly 6 keys; soft SIXP_N/IFSIXP_LEN diagnostics.",
   "proof": "programs/proof/1518_cli_ifsixp.sh PASS",
   "ts": "2026-08-13T03:17:46Z"
