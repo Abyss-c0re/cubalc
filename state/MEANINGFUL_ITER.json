@@ -5,7 +5,7 @@
   "item": "sys arg or",
   "item_id": "mi_sys_arg_or",
   "title": "sys arg or",
-  "commit": "PENDING",
+  "commit": "7dd30f29",
   "summary": "Host-finished MI ship after nanobot partial (sys_arg_or).",
   "proofs": [
     "programs/proof/sys_arg_or.cubalc"
