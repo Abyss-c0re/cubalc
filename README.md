@@ -162,7 +162,8 @@ CUBALC_P2P_PEER=127.0.0.1:7733 \
 ```
 
 One-shot local mesh: `./scripts/p2p_nanobot_mesh.sh`  
-Detail: [`docs/P2P_SMX.md`](docs/P2P_SMX.md).
+API exit-node discovery: `./scripts/p2p_api_exit_mesh.sh`  
+Detail: [`docs/P2P_SMX.md`](docs/P2P_SMX.md) § P2P API share.
 
 ---
 

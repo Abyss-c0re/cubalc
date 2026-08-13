@@ -1,0 +1,27 @@
+HOLD_FLASH 1
+BUDGET 24
+SHARE state_matrix_only
+
+// Unit proof: API_OK home is EXIT; NEED home discovers via SMX EXCHANGE
+GENESIS "NEXUS_COORD v1 | from=proof | type=api_exit | hold_flash=1 | api_share=1 |"
+
+CUBE a ROLE host PROTON 1
+CUBE b ROLE body PROTON 1
+PLUG a b
+
+// a = exit node
+SETBIT a 0 1
+SETBIT a 4 1
+SETBIT a 5 1
+// b = needs exit
+SETBIT b 0 1
+SETBIT b 8 1
+
+SMX EXCHANGE a b
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 2
+ASSERT SET(a) >= 3
+ASSERT SET(b) >= 2
+
+PRINT "api_exit_proof" SMX_OK SMX_TALKS SET(a) SET(b) COMPAT(a,b)
+ASSERT COMPAT(a,b) >= 1

@@ -1,0 +1,46 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// In-process mesh: peer with API becomes EXIT; peer NEED_EXIT receives EXIT bits.
+// Proves CubalC is the discovery language for nanobot API share.
+GENESIS "NEXUS_COORD v1 | from=api_share_mesh | type=api_mesh | hold_flash=1 | share=smx | proto=SMX2 | api_share=1 |"
+
+CUBE exit_home  ROLE host      PROTON 1
+CUBE need_home  ROLE body      PROTON 1
+CUBE atom       ROLE atom      PROTON 1
+CUBE algo       ROLE algocube  PROTON 1
+
+PLUG exit_home atom
+PLUG need_home atom
+PLUG atom algo
+PLUG exit_home need_home
+
+// Exit home: ALIVE + API_OK + EXIT_NODE + SIGNED_IN
+SETBIT exit_home 0 1
+SETBIT exit_home 4 1
+SETBIT exit_home 5 1
+SETBIT exit_home 6 1
+
+// Need home: ALIVE + NEED_EXIT only
+SETBIT need_home 0 1
+SETBIT need_home 8 1
+
+IMPULSE exit_home 1
+IMPULSE need_home 1
+FLOW 2
+SMX KEY
+SMX EXCHANGE exit_home need_home
+
+// After exchange, need_home matrix must absorb EXIT_NODE bit (5) from exit_home
+IMPULSE algo 1
+DECIDE algo
+
+PRINT "api_share_mesh" SMX_OK SMX_TALKS SET(exit_home) SET(need_home) DIGIT(exit_home) DIGIT(need_home) COMPAT(exit_home,need_home) UNITY
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 2
+// exit has more capability bits set
+ASSERT SET(exit_home) >= 4
+// need received at least one bit from peer talk (matrix absorb)
+ASSERT SET(need_home) >= 2
+ASSERT COMPAT(exit_home,need_home) >= 1

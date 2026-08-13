@@ -1,0 +1,107 @@
+HOLD_FLASH 1
+BUDGET 48
+SHARE state_matrix_only
+
+// P2P API share — who has working LLM becomes EXIT node.
+// Data exchange is CubalC SMX2 matrix only (no chat tokens on SMX wire).
+// Nanobot routes HTTP /peer/v1/prompt content to exit after this discovery.
+//
+// Capability bits (nanobot API-share law):
+//   bit 0  ALIVE
+//   bit 4  API_OK      — home can reach provider
+//   bit 5  EXIT_NODE   — willing to relay (implies API_OK)
+//   bit 6  SIGNED_IN
+//   bit 8  NEED_EXIT   — home lacks API; wants exit
+//
+// Env:
+//   CUBALC_API_OK=1 | CUBALC_EXIT_NODE=1 | CUBALC_NEED_EXIT=1
+//   CUBALC_P2P_SERVE / CUBALC_P2P_BIND / CUBALC_P2P_PEER  (same as nanobot_peer)
+//   CUBALC_SMX_KEY  required
+GENESIS "NEXUS_COORD v1 | from=nanobot_api_share | type=api_exit | hold_flash=1 | share=smx | proto=SMX2 | http=0 | api_share=1 |"
+
+CUBE self     ROLE host      PROTON 1
+CUBE remote   ROLE body      PROTON 1
+CUBE atom     ROLE atom      PROTON 1
+CUBE exitnode ROLE algocube  PROTON 1
+CUBE consumer ROLE braincube PROTON 1
+
+PLUG self atom
+PLUG remote atom
+PLUG atom exitnode
+PLUG atom consumer
+PLUG self remote
+
+// Always alive
+SETBIT self 0 1
+
+// Seed capability from env (no device hardcode)
+SYS ENV "CUBALC_API_OK"
+IF LAST_N > 0 THEN
+  SETBIT self 4 1
+  SETBIT self 5 1
+  SETBIT self 6 1
+  SETBIT exitnode 4 1
+  SETBIT exitnode 5 1
+END
+
+SYS ENV "CUBALC_EXIT_NODE"
+IF LAST_N > 0 THEN
+  SETBIT self 4 1
+  SETBIT self 5 1
+  SETBIT exitnode 5 1
+END
+
+SYS ENV "CUBALC_NEED_EXIT"
+IF LAST_N > 0 THEN
+  SETBIT self 8 1
+  SETBIT consumer 8 1
+END
+
+// If neither API nor need set, default host seed bits (lab present)
+SYS ENV "CUBALC_API_OK"
+LET has_api_env = LAST_N
+SYS ENV "CUBALC_NEED_EXIT"
+LET has_need_env = LAST_N
+IF has_api_env == 0 THEN
+  IF has_need_env == 0 THEN
+    SETBIT self 0 1
+    SETBIT self 3 1
+  END
+END
+
+IMPULSE self 1
+IMPULSE atom 1
+FLOW 3
+SMX KEY
+
+SYS ENV "CUBALC_P2P_SERVE"
+LET is_serve = 0
+IF LAST_N > 0 THEN
+  LET is_serve = 1
+END
+
+IF is_serve == 1 THEN
+  SYS ENV "CUBALC_P2P_BIND"
+  IF LAST_N > 0 THEN
+    SMX SERVE self remote LAST
+  ELSE
+    SMX SERVE self remote "0.0.0.0:7734"
+  END
+ELSE
+  SYS ENV "CUBALC_P2P_PEER"
+  IF LAST_N > 0 THEN
+    SMX DIAL self remote LAST
+  ELSE
+    SMX DIAL self remote "127.0.0.1:7734"
+  END
+END
+
+IMPULSE exitnode 1
+IMPULSE consumer 1
+DECIDE exitnode
+
+PRINT "api_exit_node" CUBES SMX_OK SMX_TALKS SMX_N SET(self) SET(remote) DIGIT(self) DIGIT(remote) DIGIT(exitnode) COMPAT(self,remote) UNITY
+ASSERT CUBES >= 5
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 1
+ASSERT SET(self) >= 1
