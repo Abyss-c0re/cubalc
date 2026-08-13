@@ -1,0 +1,97 @@
+# IFEMPTYP / IFNONEMPTYP — plate empty / nonempty diagnostic branches
+# Soft twins of SYS EMPTYP/NONEMPTYP as IF/WHEN contract branches for agents.
+
+HOLD_FLASH 1
+
+LET plate = "{\"ok\":1,\"n\":42}"
+LET empty = "{}"
+
+# EMPTYP: body if plate has zero keys
+IFEMPTYP empty
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+ASSERT IFEMPTYP_N == 1
+ASSERT EMPTYP_N == 1
+ASSERT IFEMPTYP_LEN == 0
+
+# nonempty plate: not empty
+IFEMPTYP plate
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 0
+ASSERT IFEMPTYP_N == 0
+ASSERT IFEMPTYP_LEN == 2
+
+# NONEMPTYP: body if plate has any keys
+IFNONEMPTYP plate
+  LET n = 1
+ELSE
+  LET n = 0
+END
+ASSERT n == 1
+ASSERT IFNONEMPTYP_N == 1
+ASSERT NONEMPTYP_N == 1
+
+# empty plate: not nonempty
+IFNONEMPTYP empty
+  LET n = 1
+ELSE
+  LET n = 0
+END
+ASSERT n == 0
+ASSERT IFNONEMPTYP_N == 0
+
+# aliases
+IFISEMPTYP empty
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+IFEMPTYPLATE empty
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+IFJSONEMPTY empty
+  LET e = 1
+ELSE
+  LET e = 0
+END
+ASSERT e == 1
+IFHASKEYSP plate
+  LET n = 1
+ELSE
+  LET n = 0
+END
+ASSERT n == 1
+IFNONEMPTYPLATE plate
+  LET n = 1
+ELSE
+  LET n = 0
+END
+ASSERT n == 1
+IFJSONNONEMPTY plate
+  LET n = 1
+ELSE
+  LET n = 0
+END
+ASSERT n == 1
+
+# discovery
+HASFORM "IFEMPTYP"
+ASSERT LAST_N == 1
+HASFORM "IFNONEMPTYP"
+ASSERT LAST_N == 1
+HASFORM "IFISEMPTYP"
+ASSERT LAST_N == 1
+HASFORM "IFHASKEYSP"
+ASSERT LAST_N == 1
+
+PRINT "1513_ifemptyp_ifnonemptyp ok"

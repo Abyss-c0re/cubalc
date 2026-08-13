@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 972,
-  "version": "1.15.972-usability",
-  "item": "IFMISSP/IFEXTRAP plate missing-keys and extra-keys diagnostic branches",
-  "item_id": "mi_ifmissp_ifextrap",
-  "title": "IFMISSP \u00b7 IFEXTRAP plate contract diagnostic branches for agents",
-  "commit": "026cf94f",
-  "summary": "Plate missing-keys / extra-keys IF/WHEN branches: IFMISSP|IFABSENTP|IFMISSINGKEYSP|WHENMISSP and IFEXTRAP|IFUNKNOWNKEYSP|WHENEXTRAP. Soft twins complementary to IFONLYP/IFEXACTP and IFJSONHASALL/ANY. Proofs 1512 PASS (26 asserts + CLI dual).",
+  "iter": 973,
+  "version": "1.15.973-usability",
+  "item": "IFEMPTYP/IFNONEMPTYP plate empty/nonempty diagnostic branches",
+  "item_id": "mi_ifemptyp_ifnonemptyp",
+  "title": "IFEMPTYP \u00b7 IFNONEMPTYP plate empty / nonempty contract branches for agents",
+  "commit": "667ef156",
+  "summary": "Plate empty/nonempty IF/WHEN branches: IFEMPTYP|IFISEMPTYP|IFEMPTYPLATE|IFJSONEMPTY|WHENEMPTYP and IFNONEMPTYP|IFHASKEYSP|IFNONEMPTYPLATE|IFJSONNONEMPTY|WHENNONEMPTYP. Soft twins of SYS EMPTYP/NONEMPTYP complementary to IFONLYP/IFEXACTP/IFMISSP/IFEXTRAP. Proofs 1513 PASS (22 asserts + CLI dual).",
   "proofs": [
-    "programs/proof/1512_ifmissp_ifextrap.cubalc",
-    "programs/proof/1512_cli_ifmissp_ifextrap.sh"
+    "programs/proof/1513_ifemptyp_ifnonemptyp.cubalc",
+    "programs/proof/1513_cli_ifemptyp_ifnonemptyp.sh"
   ],
-  "when": "2026-08-12T22:00:38Z",
+  "when": "2026-08-13T00:23:30Z",
   "agent": "nanobot-cubalc",
-  "sha": "65f423da5523c9137d34e5d56f4e875e8e9a416b",
-  "note": "Allow-list / exact schema plate branches without ONLYP/EXACTP probe + IF LAST_N glue; dual soft SYS ONLYP/EXACTP + branch forms",
-  "state_commit": "65f423da",
-  "ts": "2026-08-12T22:43:18Z"
+  "sha": "667ef15621fc9cedffdb99c08e000e0c52d7e7d0",
+  "note": "Soft EMPTYP/NONEMPTYP plate branches without probe + IF LAST_N glue; dual soft SYS + branch forms",
+  "state_commit": "667ef156",
+  "ts": "2026-08-13T00:23:30Z"
 }
