@@ -5,7 +5,7 @@
   "item": "IFQUINTP plate exactly-five key diagnostic branch",
   "item_id": "mi_ifquintp",
   "title": "IFQUINTP \u00b7 IFFIVEP plate exactly-five key contract branch for agents",
-  "commit": "3fa3e965",
+  "commit": "eee585ce",
   "summary": "Plate key-count IF/WHEN branch: IFQUINTP|IFFIVEP|IFFIVEKEYP|WHENQUINTP|WHENFIVEP|WHENFIVEKEYP body if plate has exactly 5 keys; soft QUINTP_N/IFQUINTP_LEN diagnostics.",
   "proof": "programs/proof/1517_cli_ifquintp.sh PASS",
   "ts": "2026-08-13T02:56:12Z"
