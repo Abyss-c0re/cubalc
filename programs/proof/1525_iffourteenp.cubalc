@@ -1,0 +1,122 @@
+# IFFOURTEENP — plate exactly-fourteen key diagnostic branch
+# Soft twin of plate key-count for agents (tetradeca contract).
+# Continues ladder after IFTHIRTEENP (13).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET thirteen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13}"
+LET fourteen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14}"
+LET fifteen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15}"
+LET empty = "{}"
+
+# FOURTEENP: body if plate has exactly fourteen keys
+IFFOURTEENP fourteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFFOURTEENP_N == 1
+ASSERT FOURTEENP_N == 1
+ASSERT IFFOURTEENP_LEN == 14
+ASSERT IFTETRADECAP_N == 1
+ASSERT IFFOURTEENKEYP_N == 1
+
+# aliases
+IFTETRADECAP fourteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFFOURTEENKEYP fourteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# thirteen keys: not fourteen
+IFFOURTEENP thirteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFFOURTEENP_N == 0
+ASSERT IFFOURTEENP_LEN == 13
+
+# fifteen keys: not fourteen
+IFFOURTEENP fifteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFFOURTEENP_LEN == 15
+
+# one / empty: not fourteen
+IFFOURTEENP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFFOURTEENP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENFOURTEENP fourteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTETRADECAP fourteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENFOURTEENKEYP fourteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# WHEN rejects thirteen
+WHENFOURTEENP thirteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# edge: malformed / non-object plate text
+LET bad = "not-json"
+IFFOURTEENP bad
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+LET arr = "[1,2,3,4,5,6,7,8,9,10,11,12,13,14]"
+IFFOURTEENP arr
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+PASS
