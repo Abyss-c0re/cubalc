@@ -4,19 +4,17 @@
   "version": "1.15.974-usability",
   "item": "IFONEP/IFMULTP plate single-key / multi-key diagnostic branches",
   "item_id": "mi_ifonep_ifmultp",
-  "title": "IFONEP · IFMULTP plate exactly-one / two-or-more key contract branches for agents",
-  "commit": "2b32c52f",
-  "summary": "Plate key-count IF/WHEN branches: IFONEP|IFSINGLEP|IFONEKEYP|WHENONEP and IFMULTP|IFMANYKEYSP|IFMULTIKEYP|WHENMULTP — soft body when plate has n==1 or n>=2 keys; diagnostics IFONEP_N/ONEP_N/IFMULTP_N/MULTP_N + IFONEP_LEN/IFMULTP_LEN.",
+  "title": "IFONEP \u00b7 IFMULTP plate exactly-one / two-or-more contract branches for agents",
+  "commit": "d8d5676c",
+  "summary": "Plate key-count IF/WHEN branches: IFONEP|IFSINGLEP|IFONEKEYP|WHENONEP|WHENSINGLEP|WHENONEKEYP (exactly one key) and IFMULTP|IFMANYKEYSP|IFMULTIKEYP|WHENMULTP|WHENMANYKEYSP|WHENMULTIKEYP (two or more). Soft twins complementary to IFEMPTYP/IFNONEMPTYP/IFONLYP. Proofs 1514 PASS (26 asserts + CLI dual).",
   "proofs": [
-    "programs/proof/1513_ifemptyp_ifnonemptyp.cubalc",
-    "programs/proof/1513_cli_ifemptyp_ifnonemptyp.sh"
+    "programs/proof/1514_ifonep_ifmultp.cubalc",
+    "programs/proof/1514_cli_ifonep_ifmultp.sh"
   ],
-  "when": "2026-08-13T00:23:30Z",
+  "when": "2026-08-13T01:36:37Z",
   "agent": "nanobot-cubalc",
-  "sha": "667ef15621fc9cedffdb99c08e000e0c52d7e7d0",
-  "note": "Soft EMPTYP/NONEMPTYP plate branches without probe + IF LAST_N glue; dual soft SYS + branch forms",
-  "state_commit": "667ef156",
-  "ts": "2026-08-13T00:23:30Z",
-  "updated_unix": 1786584910,
-  "proof": "programs/proof/1514_cli_ifonep_ifmultp.sh"
+  "sha": "d8d5676cedac870d5a89e58d1107e35c2c3d0d63",
+  "note": "Soft ONEP/MULTP plate branches via cubalc_host_json_len; dual soft SYS + branch forms",
+  "state_commit": "d8d5676c",
+  "ts": "2026-08-13T01:36:37Z"
 }
