@@ -1,0 +1,96 @@
+# IFTENP — plate exactly-ten key diagnostic branch
+# Soft twin of plate key-count for agents (dec contract).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET nine = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9}"
+LET ten = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10}"
+LET eleven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11}"
+LET empty = "{}"
+
+# TENP: body if plate has exactly ten keys
+IFTENP ten
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTENP_N == 1
+ASSERT TENP_N == 1
+ASSERT IFTENP_LEN == 10
+ASSERT IFDECAP_N == 1
+ASSERT IFTENKEYP_N == 1
+
+# aliases
+IFDECAP ten
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTENKEYP ten
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# nine keys: not ten
+IFTENP nine
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTENP_N == 0
+ASSERT IFTENP_LEN == 9
+
+# eleven keys: not ten
+IFTENP eleven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTENP_LEN == 11
+
+# one / empty: not ten
+IFTENP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTENP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENTENP ten
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENDECAP ten
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTENKEYP ten
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PASS

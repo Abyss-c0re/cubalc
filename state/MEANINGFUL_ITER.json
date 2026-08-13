@@ -1,15 +1,15 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1,
-  "version": "0.0.1-usability",
-  "item": "sys arg or",
-  "item_id": "mi_sys_arg_or",
-  "title": "sys arg or",
-  "commit": "68edbcbd",
-  "summary": "Host-finished MI ship after nanobot partial (sys_arg_or).",
+  "iter": 2,
+  "version": "0.0.2-usability",
+  "item": "1521 iftenp",
+  "item_id": "mi_1521_iftenp",
+  "title": "1521 iftenp",
+  "commit": "PENDING",
+  "summary": "Host-finished MI ship after nanobot partial (1521_iftenp).",
   "proofs": [
-    "programs/proof/sys_arg_or.cubalc"
+    "programs/proof/1521_iftenp.cubalc"
   ],
-  "ts": "2026-08-13T09:03:26Z",
+  "ts": "2026-08-13T09:32:24Z",
   "host_finish": true
 }
