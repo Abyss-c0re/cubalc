@@ -5,7 +5,7 @@
   "item": "IFNINEP/IFNONAP plate exactly-nine key diagnostic \u2014 gap bridge 8\u219210",
   "item_id": "mi_ifninep_ifnonap",
   "title": "IFNINEP \u00b7 IFNONAP exact-nine plate branch",
-  "commit": "PENDING",
+  "commit": "8001338f",
   "summary": "Logical progression fill N=9 gap. Proofs 1522 PASS (21 asserts + CLI). Recovered VERSION after 0.0.x thrash. Host-finish hardened.",
   "proofs": [
     "programs/proof/1522_ifninep.cubalc",
