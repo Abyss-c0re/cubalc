@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 974,
-  "version": "1.15.974-usability",
-  "item": "IFONEP/IFMULTP plate single-key / multi-key diagnostic branches",
-  "item_id": "mi_ifonep_ifmultp",
-  "title": "IFONEP \u00b7 IFMULTP plate exactly-one / two-or-more contract branches for agents",
-  "commit": "d8d5676c",
-  "summary": "Plate key-count IF/WHEN branches: IFONEP|IFSINGLEP|IFONEKEYP|WHENONEP|WHENSINGLEP|WHENONEKEYP (exactly one key) and IFMULTP|IFMANYKEYSP|IFMULTIKEYP|WHENMULTP|WHENMANYKEYSP|WHENMULTIKEYP (two or more). Soft twins complementary to IFEMPTYP/IFNONEMPTYP/IFONLYP. Proofs 1514 PASS (26 asserts + CLI dual).",
+  "iter": 975,
+  "version": "1.15.975-usability",
+  "item": "IFPAIRP/IFTRIPLEP plate exactly-two / exactly-three key diagnostic branches",
+  "item_id": "mi_ifpairp_iftriplep",
+  "title": "IFPAIRP \u00b7 IFTRIPLEP plate exactly-two / exactly-three contract branches for agents",
+  "commit": "PENDING",
+  "summary": "Plate key-count IF/WHEN branches: IFPAIRP|IFTWOP|IFTWOKEYP|WHENPAIRP|WHENTWOP|WHENTWOKEYP (exactly two keys) and IFTRIPLEP|IFTHREEP|IFTHREEKEYP|WHENTRIPLEP|WHENTHREEP|WHENTHREEKEYP (exactly three). Soft twins complementary to IFONEP/IFMULTP/IFEMPTYP. Proofs 1515 PASS (CLI dual + WHEN aliases).",
   "proofs": [
-    "programs/proof/1514_ifonep_ifmultp.cubalc",
-    "programs/proof/1514_cli_ifonep_ifmultp.sh"
+    "programs/proof/1515_ifpairp_iftriplep.cubalc",
+    "programs/proof/1515_cli_ifpairp_iftriplep.sh"
   ],
-  "when": "2026-08-13T01:36:37Z",
+  "when": "2026-08-13T02:15:25Z",
   "agent": "nanobot-cubalc",
-  "sha": "d8d5676cedac870d5a89e58d1107e35c2c3d0d63",
-  "note": "Soft ONEP/MULTP plate branches via cubalc_host_json_len; dual soft SYS + branch forms",
-  "state_commit": "d8d5676c",
-  "ts": "2026-08-13T01:36:37Z"
+  "sha": "PENDING",
+  "note": "Soft PAIRP/TRIPLEP plate branches via cubalc_host_json_len; dual soft SYS + branch forms",
+  "state_commit": "PENDING",
+  "ts": "2026-08-13T02:15:25Z"
 }

@@ -1,0 +1,139 @@
+# IFPAIRP / IFTRIPLEP — plate exactly-two / exactly-three key diagnostic branches
+# Soft twins of plate key-count for agents (pair vs triple contracts).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET pair = "{\"a\":1,\"b\":2}"
+LET three = "{\"x\":1,\"y\":2,\"z\":3}"
+LET four = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4}"
+LET empty = "{}"
+
+# PAIRP: body if plate has exactly two keys
+IFPAIRP pair
+  LET p = 1
+ELSE
+  LET p = 0
+END
+ASSERT p == 1
+ASSERT IFPAIRP_N == 1
+ASSERT PAIRP_N == 1
+ASSERT IFPAIRP_LEN == 2
+
+# one key: not pair
+IFPAIRP one
+  LET p = 1
+ELSE
+  LET p = 0
+END
+ASSERT p == 0
+ASSERT IFPAIRP_N == 0
+ASSERT IFPAIRP_LEN == 1
+
+# three keys: not pair
+IFPAIRP three
+  LET p = 1
+ELSE
+  LET p = 0
+END
+ASSERT p == 0
+ASSERT IFPAIRP_LEN == 3
+
+# empty: not pair
+IFPAIRP empty
+  LET p = 1
+ELSE
+  LET p = 0
+END
+ASSERT p == 0
+
+# TRIPLEP: body if plate has exactly three keys
+IFTRIPLEP three
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 1
+ASSERT IFTRIPLEP_N == 1
+ASSERT TRIPLEP_N == 1
+ASSERT IFTRIPLEP_LEN == 3
+
+# pair: not triple
+IFTRIPLEP pair
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 0
+ASSERT IFTRIPLEP_N == 0
+
+# four: not triple
+IFTRIPLEP four
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 0
+ASSERT IFTRIPLEP_LEN == 4
+
+# one: not triple
+IFTRIPLEP one
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 0
+
+# aliases
+IFTWOP pair
+  LET p = 1
+ELSE
+  LET p = 0
+END
+ASSERT p == 1
+IFTWOKEYP pair
+  LET p = 1
+ELSE
+  LET p = 0
+END
+ASSERT p == 1
+IFTHREEP three
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 1
+IFTHREEKEYP three
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 1
+
+# WHEN aliases
+WHENPAIRP pair
+  LET p = 1
+ELSE
+  LET p = 0
+END
+ASSERT p == 1
+WHENTRIPLEP three
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 1
+WHENTWOP three
+  LET p = 1
+ELSE
+  LET p = 0
+END
+ASSERT p == 0
+WHENTHREEP pair
+  LET t = 1
+ELSE
+  LET t = 0
+END
+ASSERT t == 0
+
+PASS
