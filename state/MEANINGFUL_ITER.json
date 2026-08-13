@@ -1,16 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 985,
-  "version": "1.15.985-usability",
-  "item": "IFFOURTEENP/IFTETRADECAP plate exactly-fourteen key diagnostic — ladder after IFTHIRTEENP",
-  "item_id": "mi_iffourteenp_iftetradecap",
-  "title": "IFFOURTEENP · IFTETRADECAP exact-fourteen plate branch",
-  "commit": "33793a93",
-  "summary": "Exact-fourteen plate key-count diagnostic dual. Aliases IFTETRADECAP/IFFOURTEENKEYP + WHEN*. Proofs 1525 PASS (21 asserts + CLI). Continues plate ladder past thirteen.",
+  "iter": 987,
+  "version": "1.15.987-usability",
+  "item": "1526 iffifteenp",
+  "item_id": "mi_1526_iffifteenp",
+  "title": "1526 iffifteenp",
+  "commit": "PENDING",
+  "summary": "Host-finished MI ship after nanobot partial (1526_iffifteenp).",
   "proofs": [
-    "programs/proof/1525_iffourteenp.cubalc",
-    "programs/proof/1525_cli_iffourteenp.sh"
+    "programs/proof/1526_iffifteenp.cubalc"
   ],
-  "ts": "2026-08-13T20:56:00Z",
-  "law": "prevention_first; confession_is_alignment; logical_progression"
+  "ts": "2026-08-13T21:18:03Z",
+  "law": "prevention_first; confession_is_alignment; logical_progression",
+  "host_finish": true
 }
