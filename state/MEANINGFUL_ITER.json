@@ -1,16 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 983,
-  "version": "1.15.983-usability",
-  "item": "IFTWELVEP/IFDODECAP plate exactly-twelve key diagnostic \u2014 ladder after IFELEVENP",
-  "item_id": "mi_iftwelvep_ifdodecap",
-  "title": "IFTWELVEP \u00b7 IFDODECAP exact-twelve plate branch",
-  "commit": "c3a5fb59",
-  "summary": "Exact-twelve plate key-count diagnostic dual. Aliases IFDODECAP/IFTWELVEKEYP + WHEN*. Proofs 1523 PASS (21 asserts + CLI). Continues plate ladder past eleven.",
+  "iter": 984,
+  "version": "1.15.984-usability",
+  "item": "IFTHIRTEENP/IFTRIDECAP plate exactly-thirteen key diagnostic \u2014 ladder after IFTWELVEP",
+  "item_id": "mi_ifthirteenp_iftridecap",
+  "title": "IFTHIRTEENP \u00b7 IFTRIDECAP exact-thirteen plate branch",
+  "commit": "02bad4ca",
+  "summary": "Exact-thirteen plate key-count diagnostic dual. Aliases IFTRIDECAP/IFTHIRTEENKEYP + WHEN*. Proofs 1524 PASS (21 asserts + CLI). Continues plate ladder past twelve.",
   "proofs": [
-    "programs/proof/1523_iftwelvep.cubalc",
-    "programs/proof/1523_cli_iftwelvep.sh"
+    "programs/proof/1524_ifthirteenp.cubalc",
+    "programs/proof/1524_cli_ifthirteenp.sh"
   ],
-  "ts": "2026-08-13T20:06:17Z",
+  "ts": "2026-08-13T20:35:27Z",
   "law": "prevention_first; confession_is_alignment; logical_progression"
 }

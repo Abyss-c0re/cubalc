@@ -1,0 +1,122 @@
+# IFTHIRTEENP — plate exactly-thirteen key diagnostic branch
+# Soft twin of plate key-count for agents (trideca contract).
+# Continues ladder after IFTWELVEP (12).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET twelve = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12}"
+LET thirteen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13}"
+LET fourteen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14}"
+LET empty = "{}"
+
+# THIRTEENP: body if plate has exactly thirteen keys
+IFTHIRTEENP thirteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTHIRTEENP_N == 1
+ASSERT THIRTEENP_N == 1
+ASSERT IFTHIRTEENP_LEN == 13
+ASSERT IFTRIDECAP_N == 1
+ASSERT IFTHIRTEENKEYP_N == 1
+
+# aliases
+IFTRIDECAP thirteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTHIRTEENKEYP thirteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# twelve keys: not thirteen
+IFTHIRTEENP twelve
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTHIRTEENP_N == 0
+ASSERT IFTHIRTEENP_LEN == 12
+
+# fourteen keys: not thirteen
+IFTHIRTEENP fourteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTHIRTEENP_LEN == 14
+
+# one / empty: not thirteen
+IFTHIRTEENP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTHIRTEENP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENTHIRTEENP thirteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTRIDECAP thirteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTHIRTEENKEYP thirteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# WHEN rejects twelve
+WHENTHIRTEENP twelve
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# edge: malformed / non-object plate text
+LET bad = "not-json"
+IFTHIRTEENP bad
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+LET arr = "[1,2,3,4,5,6,7,8,9,10,11,12,13]"
+IFTHIRTEENP arr
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+PASS
