@@ -5,11 +5,11 @@
   "item": "sys arg or",
   "item_id": "mi_sys_arg_or",
   "title": "sys arg or",
-  "commit": "7dd30f29",
+  "commit": "PENDING",
   "summary": "Host-finished MI ship after nanobot partial (sys_arg_or).",
   "proofs": [
     "programs/proof/sys_arg_or.cubalc"
   ],
-  "ts": "2026-08-13T08:02:25Z",
+  "ts": "2026-08-13T09:03:26Z",
   "host_finish": true
 }
