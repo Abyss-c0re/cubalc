@@ -1,12 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 979,
-  "version": "1.15.979-usability",
-  "item": "IFSEVENP plate exactly-seven key diagnostic branch",
-  "item_id": "mi_ifsevenp",
-  "title": "IFSEVENP \u00b7 IFSEPTP plate exactly-seven key contract branch for agents",
-  "commit": "525ef272",
-  "summary": "Plate key-count IF/WHEN branch: IFSEVENP|IFSEPTP|IFSEVENKEYP|WHENSEVENP|WHENSEPTP|WHENSEVENKEYP body if plate has exactly 7 keys; soft SEVENP_N/IFSEVENP_LEN.",
+  "iter": 980,
+  "version": "1.15.980-usability",
+  "item": "IFEIGHTP/IFOCTP plate exactly-eight key diagnostic branch",
+  "item_id": "mi_ifeightp_ifoctp",
+  "title": "IFEIGHTP \u00b7 IFOCTP plate exactly-eight key contract branch",
+  "commit": "PENDING",
+  "summary": "Plate exactly-eight key IF/WHEN diagnostic duals complementary to IFSEVENP. Proofs 1520 PASS.",
   "proof": "programs/proof/1519_cli_ifsevenp.sh PASS",
-  "updated": "2026-08-13T03:37:18Z"
+  "updated": "2026-08-13T03:37:18Z",
+  "proofs": [
+    "programs/proof/1520_ifeightp.cubalc",
+    "programs/proof/1520_cli_ifeightp.sh"
+  ],
+  "ts": "2026-08-13T06:57:28Z"
 }

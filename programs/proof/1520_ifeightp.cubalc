@@ -1,0 +1,96 @@
+# IFEIGHTP — plate exactly-eight key diagnostic branch
+# Soft twin of plate key-count for agents (oct contract).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET seven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7}"
+LET eight = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8}"
+LET nine = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9}"
+LET empty = "{}"
+
+# EIGHTP: body if plate has exactly eight keys
+IFEIGHTP eight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFEIGHTP_N == 1
+ASSERT EIGHTP_N == 1
+ASSERT IFEIGHTP_LEN == 8
+ASSERT IFOCTP_N == 1
+ASSERT IFEIGHTKEYP_N == 1
+
+# aliases
+IFOCTP eight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFEIGHTKEYP eight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# seven keys: not eight
+IFEIGHTP seven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFEIGHTP_N == 0
+ASSERT IFEIGHTP_LEN == 7
+
+# nine keys: not eight
+IFEIGHTP nine
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFEIGHTP_LEN == 9
+
+# one / empty: not eight
+IFEIGHTP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFEIGHTP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENEIGHTP eight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENOCTP eight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENEIGHTKEYP eight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PASS
