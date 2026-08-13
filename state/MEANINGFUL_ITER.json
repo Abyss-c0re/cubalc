@@ -1,12 +1,12 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 977,
-  "version": "1.15.977-usability",
-  "item": "IFQUINTP plate exactly-five key diagnostic branch",
-  "item_id": "mi_ifquintp",
-  "title": "IFQUINTP \u00b7 IFFIVEP plate exactly-five key contract branch for agents",
-  "commit": "eee585ce",
-  "summary": "Plate key-count IF/WHEN branch: IFQUINTP|IFFIVEP|IFFIVEKEYP|WHENQUINTP|WHENFIVEP|WHENFIVEKEYP body if plate has exactly 5 keys; soft QUINTP_N/IFQUINTP_LEN diagnostics.",
-  "proof": "programs/proof/1517_cli_ifquintp.sh PASS",
-  "ts": "2026-08-13T02:56:12Z"
+  "iter": 978,
+  "version": "1.15.978-usability",
+  "item": "IFSIXP plate exactly-six key diagnostic branch",
+  "item_id": "mi_ifsixp",
+  "title": "IFSIXP \u00b7 IFHEXAP plate exactly-six key contract branch for agents",
+  "commit": "PENDING",
+  "summary": "Plate key-count IF/WHEN branch: IFSIXP|IFHEXAP|IFSIXKEYP|WHENSIXP|WHENHEXAP|WHENSIXKEYP body if plate has exactly 6 keys; soft SIXP_N/IFSIXP_LEN diagnostics.",
+  "proof": "programs/proof/1518_cli_ifsixp.sh PASS",
+  "ts": "2026-08-13T03:17:46Z"
 }

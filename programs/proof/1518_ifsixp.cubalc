@@ -1,0 +1,96 @@
+# IFSIXP — plate exactly-six key diagnostic branch
+# Soft twin of plate key-count for agents (hex contract).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET five = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5}"
+LET six = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6}"
+LET seven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7}"
+LET empty = "{}"
+
+# SIXP: body if plate has exactly six keys
+IFSIXP six
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFSIXP_N == 1
+ASSERT SIXP_N == 1
+ASSERT IFSIXP_LEN == 6
+ASSERT IFHEXAP_N == 1
+ASSERT IFSIXKEYP_N == 1
+
+# aliases
+IFHEXAP six
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFSIXKEYP six
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# five keys: not six
+IFSIXP five
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFSIXP_N == 0
+ASSERT IFSIXP_LEN == 5
+
+# seven keys: not six
+IFSIXP seven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFSIXP_LEN == 7
+
+# one / empty: not six
+IFSIXP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFSIXP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENSIXP six
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENHEXAP six
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENSIXKEYP six
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PASS
