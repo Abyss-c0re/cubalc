@@ -1,0 +1,104 @@
+# IFQUADP — plate exactly-four key diagnostic branch
+# Soft twin of plate key-count for agents (quad contract).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET pair = "{\"a\":1,\"b\":2}"
+LET three = "{\"x\":1,\"y\":2,\"z\":3}"
+LET four = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4}"
+LET five = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5}"
+LET empty = "{}"
+
+# QUADP: body if plate has exactly four keys
+IFQUADP four
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFQUADP_N == 1
+ASSERT QUADP_N == 1
+ASSERT IFQUADP_LEN == 4
+ASSERT IFFOURP_N == 1
+ASSERT IFFOURKEYP_N == 1
+
+# aliases
+IFFOURP four
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFFOURKEYP four
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# three keys: not quad
+IFQUADP three
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFQUADP_N == 0
+ASSERT IFQUADP_LEN == 3
+
+# five keys: not quad
+IFQUADP five
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFQUADP_LEN == 5
+
+# pair / one / empty: not quad
+IFQUADP pair
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFQUADP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFQUADP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENQUADP four
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENFOURP five
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENFOURKEYP four
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PASS

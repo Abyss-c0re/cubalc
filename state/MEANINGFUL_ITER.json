@@ -1,20 +1,12 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 975,
-  "version": "1.15.975-usability",
-  "item": "IFPAIRP/IFTRIPLEP plate exactly-two / exactly-three key diagnostic branches",
-  "item_id": "mi_ifpairp_iftriplep",
-  "title": "IFPAIRP \u00b7 IFTRIPLEP plate exactly-two / exactly-three contract branches for agents",
-  "commit": "08c8ed38",
-  "summary": "Plate key-count IF/WHEN branches: IFPAIRP|IFTWOP|IFTWOKEYP|WHENPAIRP|WHENTWOP|WHENTWOKEYP (exactly two keys) and IFTRIPLEP|IFTHREEP|IFTHREEKEYP|WHENTRIPLEP|WHENTHREEP|WHENTHREEKEYP (exactly three). Soft twins complementary to IFONEP/IFMULTP/IFEMPTYP. Proofs 1515 PASS (CLI dual + WHEN aliases).",
-  "proofs": [
-    "programs/proof/1515_ifpairp_iftriplep.cubalc",
-    "programs/proof/1515_cli_ifpairp_iftriplep.sh"
-  ],
-  "when": "2026-08-13T02:15:25Z",
-  "agent": "nanobot-cubalc",
-  "sha": "08c8ed38ffb33d5d04c76c438b932669179d167f",
-  "note": "Soft PAIRP/TRIPLEP plate branches via cubalc_host_json_len; dual soft SYS + branch forms",
-  "state_commit": "08c8ed38",
-  "ts": "2026-08-13T02:15:25Z"
+  "iter": 976,
+  "version": "1.15.976-usability",
+  "item": "IFQUADP plate exactly-four key diagnostic branch",
+  "item_id": "mi_ifquadp",
+  "title": "IFQUADP \u00b7 IFFOURP plate exactly-four key contract branch for agents",
+  "commit": "6877694b",
+  "summary": "Plate key-count IF/WHEN branch: IFQUADP|IFFOURP|IFFOURKEYP|WHENQUADP|WHENFOURP|WHENFOURKEYP body if plate has exactly 4 keys; soft QUADP_N/IFQUADP_LEN diagnostics.",
+  "proof": "programs/proof/1516_cli_ifquadp.sh PASS",
+  "ts": "2026-08-13T02:33:43Z"
 }
