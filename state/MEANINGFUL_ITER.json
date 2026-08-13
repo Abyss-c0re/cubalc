@@ -1,15 +1,13 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 2,
-  "version": "0.0.2-usability",
-  "item": "1521 iftenp",
-  "item_id": "mi_1521_iftenp",
-  "title": "1521 iftenp",
-  "commit": "8d1cf542",
-  "summary": "Host-finished MI ship after nanobot partial (1521_iftenp).",
-  "proofs": [
-    "programs/proof/1521_iftenp.cubalc"
-  ],
-  "ts": "2026-08-13T09:32:24Z",
+  "iter": 3,
+  "version": "0.0.3-usability",
+  "item": "host finish ship",
+  "item_id": "mi_host_finish_ship",
+  "title": "host finish ship",
+  "commit": "PENDING",
+  "summary": "Host-finished MI ship after nanobot partial (host_finish_ship).",
+  "proofs": [],
+  "ts": "2026-08-13T09:41:33Z",
   "host_finish": true
 }
