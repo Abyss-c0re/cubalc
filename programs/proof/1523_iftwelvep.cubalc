@@ -1,0 +1,122 @@
+# IFTWELVEP — plate exactly-twelve key diagnostic branch
+# Soft twin of plate key-count for agents (dodeca contract).
+# Continues ladder after IFELEVENP (11).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET eleven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11}"
+LET twelve = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12}"
+LET thirteen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13}"
+LET empty = "{}"
+
+# TWELVEP: body if plate has exactly twelve keys
+IFTWELVEP twelve
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTWELVEP_N == 1
+ASSERT TWELVEP_N == 1
+ASSERT IFTWELVEP_LEN == 12
+ASSERT IFDODECAP_N == 1
+ASSERT IFTWELVEKEYP_N == 1
+
+# aliases
+IFDODECAP twelve
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWELVEKEYP twelve
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# eleven keys: not twelve
+IFTWELVEP eleven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWELVEP_N == 0
+ASSERT IFTWELVEP_LEN == 11
+
+# thirteen keys: not twelve
+IFTWELVEP thirteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWELVEP_LEN == 13
+
+# one / empty: not twelve
+IFTWELVEP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTWELVEP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENTWELVEP twelve
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENDODECAP twelve
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTWELVEKEYP twelve
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# WHEN rejects eleven
+WHENTWELVEP eleven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# edge: malformed / non-object plate text
+LET bad = "not-json"
+IFTWELVEP bad
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+LET arr = "[1,2,3,4,5,6,7,8,9,10,11,12]"
+IFTWELVEP arr
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+PASS

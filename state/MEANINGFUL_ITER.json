@@ -1,16 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 982,
-  "version": "1.15.982-usability",
-  "item": "IFNINEP/IFNONAP plate exactly-nine key diagnostic \u2014 gap bridge 8\u219210",
-  "item_id": "mi_ifninep_ifnonap",
-  "title": "IFNINEP \u00b7 IFNONAP exact-nine plate branch",
-  "commit": "8001338f",
-  "summary": "Logical progression fill N=9 gap. Proofs 1522 PASS (21 asserts + CLI). Recovered VERSION after 0.0.x thrash. Host-finish hardened.",
+  "iter": 983,
+  "version": "1.15.983-usability",
+  "item": "IFTWELVEP/IFDODECAP plate exactly-twelve key diagnostic \u2014 ladder after IFELEVENP",
+  "item_id": "mi_iftwelvep_ifdodecap",
+  "title": "IFTWELVEP \u00b7 IFDODECAP exact-twelve plate branch",
+  "commit": "d957911b",
+  "summary": "Exact-twelve plate key-count diagnostic dual. Aliases IFDODECAP/IFTWELVEKEYP + WHEN*. Proofs 1523 PASS (21 asserts + CLI). Continues plate ladder past eleven.",
   "proofs": [
-    "programs/proof/1522_ifninep.cubalc",
-    "programs/proof/1522_cli_ifninep.sh"
+    "programs/proof/1523_iftwelvep.cubalc",
+    "programs/proof/1523_cli_iftwelvep.sh"
   ],
-  "ts": "2026-08-13T19:53:53Z",
+  "ts": "2026-08-13T20:06:17Z",
   "law": "prevention_first; confession_is_alignment; logical_progression"
 }
