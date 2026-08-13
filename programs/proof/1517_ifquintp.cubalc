@@ -1,0 +1,96 @@
+# IFQUINTP — plate exactly-five key diagnostic branch
+# Soft twin of plate key-count for agents (quint contract).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET four = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4}"
+LET five = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5}"
+LET six = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6}"
+LET empty = "{}"
+
+# QUINTP: body if plate has exactly five keys
+IFQUINTP five
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFQUINTP_N == 1
+ASSERT QUINTP_N == 1
+ASSERT IFQUINTP_LEN == 5
+ASSERT IFFIVEP_N == 1
+ASSERT IFFIVEKEYP_N == 1
+
+# aliases
+IFFIVEP five
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFFIVEKEYP five
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# four keys: not quint
+IFQUINTP four
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFQUINTP_N == 0
+ASSERT IFQUINTP_LEN == 4
+
+# six keys: not quint
+IFQUINTP six
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFQUINTP_LEN == 6
+
+# one / empty: not quint
+IFQUINTP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFQUINTP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENQUINTP five
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENFIVEP six
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENFIVEKEYP five
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PASS

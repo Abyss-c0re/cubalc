@@ -3488,7 +3488,15 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"IFFOURKEYP", "IFFOURKEYP alias of IFQUADP"},
       {"WHENQUADP", "WHENQUADP alias of IFQUADP"},
       {"WHENFOURP", "WHENFOURP alias of IFQUADP"},
+      
       {"WHENFOURKEYP", "WHENFOURKEYP alias of IFQUADP"},
+      {"IFQUINTP", "IFQUINTP|IFFIVEP|IFFIVEKEYP plate [ELSE …] END — body if plate has exactly five keys"},
+      {"IFFIVEP", "IFFIVEP alias of IFQUINTP"},
+      {"IFFIVEKEYP", "IFFIVEKEYP alias of IFQUINTP"},
+      {"WHENQUINTP", "WHENQUINTP alias of IFQUINTP"},
+      {"WHENFIVEP", "WHENFIVEP alias of IFQUINTP"},
+      {"WHENFIVEKEYP", "WHENFIVEKEYP alias of IFQUINTP"},
+
       {"IFNUM", "IFNUM name … [ELSE …] END — body if var is numeric"},
       {"IFSTR", "IFSTR name … [ELSE …] END — body if var is string"},
       {"IFVARTYPE", "IFVARTYPE|IFKIND name kind … [ELSE …] END — kind num|str|undef"},
