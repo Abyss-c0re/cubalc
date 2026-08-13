@@ -5,7 +5,7 @@
   "item": "IFPAIRP/IFTRIPLEP plate exactly-two / exactly-three key diagnostic branches",
   "item_id": "mi_ifpairp_iftriplep",
   "title": "IFPAIRP \u00b7 IFTRIPLEP plate exactly-two / exactly-three contract branches for agents",
-  "commit": "PENDING",
+  "commit": "08c8ed38",
   "summary": "Plate key-count IF/WHEN branches: IFPAIRP|IFTWOP|IFTWOKEYP|WHENPAIRP|WHENTWOP|WHENTWOKEYP (exactly two keys) and IFTRIPLEP|IFTHREEP|IFTHREEKEYP|WHENTRIPLEP|WHENTHREEP|WHENTHREEKEYP (exactly three). Soft twins complementary to IFONEP/IFMULTP/IFEMPTYP. Proofs 1515 PASS (CLI dual + WHEN aliases).",
   "proofs": [
     "programs/proof/1515_ifpairp_iftriplep.cubalc",
@@ -13,8 +13,8 @@
   ],
   "when": "2026-08-13T02:15:25Z",
   "agent": "nanobot-cubalc",
-  "sha": "PENDING",
+  "sha": "08c8ed38ffb33d5d04c76c438b932669179d167f",
   "note": "Soft PAIRP/TRIPLEP plate branches via cubalc_host_json_len; dual soft SYS + branch forms",
-  "state_commit": "PENDING",
+  "state_commit": "08c8ed38",
   "ts": "2026-08-13T02:15:25Z"
 }
