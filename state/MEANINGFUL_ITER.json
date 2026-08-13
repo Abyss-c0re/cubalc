@@ -1,13 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 3,
-  "version": "0.0.3-usability",
-  "item": "host finish ship",
-  "item_id": "mi_host_finish_ship",
-  "title": "host finish ship",
-  "commit": "97fe7bc8",
-  "summary": "Host-finished MI ship after nanobot partial (host_finish_ship).",
-  "proofs": [],
-  "ts": "2026-08-13T09:41:33Z",
-  "host_finish": true
+  "iter": 982,
+  "version": "1.15.982-usability",
+  "item": "IFNINEP/IFNONAP plate exactly-nine key diagnostic \u2014 gap bridge 8\u219210",
+  "item_id": "mi_ifninep_ifnonap",
+  "title": "IFNINEP \u00b7 IFNONAP exact-nine plate branch",
+  "commit": "PENDING",
+  "summary": "Logical progression fill N=9 gap. Proofs 1522 PASS (21 asserts + CLI). Recovered VERSION after 0.0.x thrash. Host-finish hardened.",
+  "proofs": [
+    "programs/proof/1522_ifninep.cubalc",
+    "programs/proof/1522_cli_ifninep.sh"
+  ],
+  "ts": "2026-08-13T19:53:53Z",
+  "law": "prevention_first; confession_is_alignment; logical_progression"
 }

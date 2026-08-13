@@ -34,3 +34,8 @@ scripts/git_push_https.sh
 **/git_push_https.sh
 .git-credentials*
 .netrc_github*
+*.o
+
+# build artifacts
+src/lang/*.o
+*.o

@@ -1,0 +1,122 @@
+# IFNINEP — plate exactly-nine key diagnostic branch
+# Soft twin of plate key-count for agents (nona contract).
+# Bridges logical gap between IFEIGHTP (8) and IFTENP (10).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET eight = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8}"
+LET nine = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9}"
+LET ten = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10}"
+LET empty = "{}"
+
+# NINEP: body if plate has exactly nine keys
+IFNINEP nine
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFNINEP_N == 1
+ASSERT NINEP_N == 1
+ASSERT IFNINEP_LEN == 9
+ASSERT IFNONAP_N == 1
+ASSERT IFNINEKEYP_N == 1
+
+# aliases
+IFNONAP nine
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFNINEKEYP nine
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# eight keys: not nine
+IFNINEP eight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFNINEP_N == 0
+ASSERT IFNINEP_LEN == 8
+
+# ten keys: not nine
+IFNINEP ten
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFNINEP_LEN == 10
+
+# one / empty: not nine
+IFNINEP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFNINEP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENNINEP nine
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENNONAP nine
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENNINEKEYP nine
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# WHEN rejects ten
+WHENNINEP ten
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# edge: malformed / non-object plate text
+LET bad = "not-json"
+IFNINEP bad
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+LET arr = "[1,2,3,4,5,6,7,8,9]"
+IFNINEP arr
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+PASS
