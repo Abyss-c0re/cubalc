@@ -5,7 +5,7 @@
   "item": "1527 ifsixteenp",
   "item_id": "mi_1527_ifsixteenp",
   "title": "1527 ifsixteenp",
-  "commit": "387757b3",
+  "commit": "ffa8cd38",
   "summary": "IFSIXTEENP/IFHEXADECAP/IFSIXTEENKEYP + WHEN* plate exactly-sixteen key diagnostic branch (ladder after IFFIFTEENP); proof 1527.",
   "proofs": [
     "programs/proof/1527_ifsixteenp.cubalc",
