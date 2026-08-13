@@ -5,7 +5,7 @@
   "item": "IFTWELVEP/IFDODECAP plate exactly-twelve key diagnostic \u2014 ladder after IFELEVENP",
   "item_id": "mi_iftwelvep_ifdodecap",
   "title": "IFTWELVEP \u00b7 IFDODECAP exact-twelve plate branch",
-  "commit": "d957911b",
+  "commit": "c3a5fb59",
   "summary": "Exact-twelve plate key-count diagnostic dual. Aliases IFDODECAP/IFTWELVEKEYP + WHEN*. Proofs 1523 PASS (21 asserts + CLI). Continues plate ladder past eleven.",
   "proofs": [
     "programs/proof/1523_iftwelvep.cubalc",
