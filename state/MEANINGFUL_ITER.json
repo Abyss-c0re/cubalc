@@ -1,17 +1,15 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 980,
-  "version": "1.15.980-usability",
-  "item": "IFEIGHTP/IFOCTP plate exactly-eight key diagnostic branch",
-  "item_id": "mi_ifeightp_ifoctp",
-  "title": "IFEIGHTP \u00b7 IFOCTP plate exactly-eight key contract branch",
-  "commit": "e33751db",
-  "summary": "Plate exactly-eight key IF/WHEN diagnostic duals complementary to IFSEVENP. Proofs 1520 PASS.",
-  "proof": "programs/proof/1519_cli_ifsevenp.sh PASS",
-  "updated": "2026-08-13T03:37:18Z",
+  "iter": 1,
+  "version": "0.0.1-usability",
+  "item": "sys arg or",
+  "item_id": "mi_sys_arg_or",
+  "title": "sys arg or",
+  "commit": "PENDING",
+  "summary": "Host-finished MI ship after nanobot partial (sys_arg_or).",
   "proofs": [
-    "programs/proof/1520_ifeightp.cubalc",
-    "programs/proof/1520_cli_ifeightp.sh"
+    "programs/proof/sys_arg_or.cubalc"
   ],
-  "ts": "2026-08-13T06:57:28Z"
+  "ts": "2026-08-13T08:02:25Z",
+  "host_finish": true
 }
