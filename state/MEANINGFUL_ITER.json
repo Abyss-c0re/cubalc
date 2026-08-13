@@ -5,7 +5,7 @@
   "item": "IFEIGHTP/IFOCTP plate exactly-eight key diagnostic branch",
   "item_id": "mi_ifeightp_ifoctp",
   "title": "IFEIGHTP \u00b7 IFOCTP plate exactly-eight key contract branch",
-  "commit": "PENDING",
+  "commit": "e33751db",
   "summary": "Plate exactly-eight key IF/WHEN diagnostic duals complementary to IFSEVENP. Proofs 1520 PASS.",
   "proof": "programs/proof/1519_cli_ifsevenp.sh PASS",
   "updated": "2026-08-13T03:37:18Z",
