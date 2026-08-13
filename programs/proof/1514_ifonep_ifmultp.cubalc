@@ -1,0 +1,130 @@
+# IFONEP / IFMULTP — plate single-key / multi-key diagnostic branches
+# Soft twins of plate key-count: exactly-one vs two-or-more for agents.
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET multi = "{\"a\":1,\"b\":2}"
+LET empty = "{}"
+LET three = "{\"x\":1,\"y\":2,\"z\":3}"
+
+# ONEP: body if plate has exactly one key
+IFONEP one
+  LET o = 1
+ELSE
+  LET o = 0
+END
+ASSERT o == 1
+ASSERT IFONEP_N == 1
+ASSERT ONEP_N == 1
+ASSERT IFONEP_LEN == 1
+
+# multi plate: not one
+IFONEP multi
+  LET o = 1
+ELSE
+  LET o = 0
+END
+ASSERT o == 0
+ASSERT IFONEP_N == 0
+ASSERT IFONEP_LEN == 2
+
+# empty plate: not one
+IFONEP empty
+  LET o = 1
+ELSE
+  LET o = 0
+END
+ASSERT o == 0
+ASSERT IFONEP_LEN == 0
+
+# MULTP: body if plate has two or more keys
+IFMULTP multi
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+ASSERT IFMULTP_N == 1
+ASSERT MULTP_N == 1
+ASSERT IFMULTP_LEN == 2
+
+# single plate: not mult
+IFMULTP one
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+ASSERT IFMULTP_N == 0
+
+# empty: not mult
+IFMULTP empty
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+
+# three keys is mult
+IFMULTP three
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+ASSERT IFMULTP_LEN == 3
+
+# aliases
+IFSINGLEP one
+  LET o = 1
+ELSE
+  LET o = 0
+END
+ASSERT o == 1
+IFONEKEYP one
+  LET o = 1
+ELSE
+  LET o = 0
+END
+ASSERT o == 1
+IFMANYKEYSP multi
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+IFMULTIKEYP three
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+
+# WHEN aliases
+WHENONEP one
+  LET o = 1
+ELSE
+  LET o = 0
+END
+ASSERT o == 1
+WHENMULTP multi
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 1
+WHENSINGLEP multi
+  LET o = 1
+ELSE
+  LET o = 0
+END
+ASSERT o == 0
+WHENMANYKEYSP one
+  LET m = 1
+ELSE
+  LET m = 0
+END
+ASSERT m == 0
+
+PASS

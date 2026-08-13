@@ -1,12 +1,12 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 973,
-  "version": "1.15.973-usability",
-  "item": "IFEMPTYP/IFNONEMPTYP plate empty/nonempty diagnostic branches",
-  "item_id": "mi_ifemptyp_ifnonemptyp",
-  "title": "IFEMPTYP \u00b7 IFNONEMPTYP plate empty / nonempty contract branches for agents",
-  "commit": "667ef156",
-  "summary": "Plate empty/nonempty IF/WHEN branches: IFEMPTYP|IFISEMPTYP|IFEMPTYPLATE|IFJSONEMPTY|WHENEMPTYP and IFNONEMPTYP|IFHASKEYSP|IFNONEMPTYPLATE|IFJSONNONEMPTY|WHENNONEMPTYP. Soft twins of SYS EMPTYP/NONEMPTYP complementary to IFONLYP/IFEXACTP/IFMISSP/IFEXTRAP. Proofs 1513 PASS (22 asserts + CLI dual).",
+  "iter": 974,
+  "version": "1.15.974-usability",
+  "item": "IFONEP/IFMULTP plate single-key / multi-key diagnostic branches",
+  "item_id": "mi_ifonep_ifmultp",
+  "title": "IFONEP · IFMULTP plate exactly-one / two-or-more key contract branches for agents",
+  "commit": "2b32c52f",
+  "summary": "Plate key-count IF/WHEN branches: IFONEP|IFSINGLEP|IFONEKEYP|WHENONEP and IFMULTP|IFMANYKEYSP|IFMULTIKEYP|WHENMULTP — soft body when plate has n==1 or n>=2 keys; diagnostics IFONEP_N/ONEP_N/IFMULTP_N/MULTP_N + IFONEP_LEN/IFMULTP_LEN.",
   "proofs": [
     "programs/proof/1513_ifemptyp_ifnonemptyp.cubalc",
     "programs/proof/1513_cli_ifemptyp_ifnonemptyp.sh"
@@ -16,5 +16,7 @@
   "sha": "667ef15621fc9cedffdb99c08e000e0c52d7e7d0",
   "note": "Soft EMPTYP/NONEMPTYP plate branches without probe + IF LAST_N glue; dual soft SYS + branch forms",
   "state_commit": "667ef156",
-  "ts": "2026-08-13T00:23:30Z"
+  "ts": "2026-08-13T00:23:30Z",
+  "updated_unix": 1786584910,
+  "proof": "programs/proof/1514_cli_ifonep_ifmultp.sh"
 }
