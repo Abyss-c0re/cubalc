@@ -1,16 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 987,
-  "version": "1.15.987-usability",
-  "item": "1526 iffifteenp",
-  "item_id": "mi_1526_iffifteenp",
-  "title": "1526 iffifteenp",
-  "commit": "747a34e0",
-  "summary": "Host-finished MI ship after nanobot partial (1526_iffifteenp).",
+  "iter": 988,
+  "version": "1.15.988-usability",
+  "item": "1527 ifsixteenp",
+  "item_id": "mi_1527_ifsixteenp",
+  "title": "1527 ifsixteenp",
+  "commit": "387757b3",
+  "summary": "IFSIXTEENP/IFHEXADECAP/IFSIXTEENKEYP + WHEN* plate exactly-sixteen key diagnostic branch (ladder after IFFIFTEENP); proof 1527.",
   "proofs": [
-    "programs/proof/1526_iffifteenp.cubalc"
+    "programs/proof/1527_ifsixteenp.cubalc",
+    "programs/proof/1527_cli_ifsixteenp.sh"
   ],
-  "ts": "2026-08-13T21:18:03Z",
-  "law": "prevention_first; confession_is_alignment; logical_progression",
-  "host_finish": true
+  "ts": "2026-08-13T21:47:09Z",
+  "law": "prevention_first; confession_is_alignment; logical_progression"
 }

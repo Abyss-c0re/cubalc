@@ -1,0 +1,122 @@
+# IFSIXTEENP — plate exactly-sixteen key diagnostic branch
+# Soft twin of plate key-count for agents (hexadeca contract).
+# Continues ladder after IFFIFTEENP (15).
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET fifteen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15}"
+LET sixteen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16}"
+LET seventeen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17}"
+LET empty = "{}"
+
+# SIXTEENP: body if plate has exactly sixteen keys
+IFSIXTEENP sixteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFSIXTEENP_N == 1
+ASSERT SIXTEENP_N == 1
+ASSERT IFSIXTEENP_LEN == 16
+ASSERT IFHEXADECAP_N == 1
+ASSERT IFSIXTEENKEYP_N == 1
+
+# aliases
+IFHEXADECAP sixteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFSIXTEENKEYP sixteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# fifteen keys: not sixteen
+IFSIXTEENP fifteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFSIXTEENP_N == 0
+ASSERT IFSIXTEENP_LEN == 15
+
+# seventeen keys: not sixteen
+IFSIXTEENP seventeen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFSIXTEENP_LEN == 17
+
+# one / empty: not sixteen
+IFSIXTEENP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFSIXTEENP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# WHEN aliases
+WHENSIXTEENP sixteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENHEXADECAP sixteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENSIXTEENKEYP sixteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+# WHEN rejects fifteen
+WHENSIXTEENP fifteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+# edge: malformed / non-object plate text
+LET bad = "not-json"
+IFSIXTEENP bad
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+LET arr = "[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]"
+IFSIXTEENP arr
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+PASS
