@@ -5,7 +5,7 @@
   "item": "host finish ship",
   "item_id": "mi_host_finish_ship",
   "title": "host finish ship",
-  "commit": "PENDING",
+  "commit": "60eb09a2",
   "summary": "Host-finished MI ship after nanobot partial (host_finish_ship).",
   "proofs": [],
   "ts": "2026-08-15T13:50:59Z",
