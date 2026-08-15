@@ -1,8 +1,8 @@
 # BrainCube science→algocube contribution (auto, every 12m)
-# Sciences connect state matrices; algocube digit=9
-# Tick 29779492 · top pair hive_out-lattice
+# Sciences connect state matrices; algocube digit=7
+# Tick 29779504 · top pair consciousness-smx
 HOLD_FLASH 1
-GENESIS "NEXUS_COORD v1 | from=braincube_science | type=algocube_digit | digit=9 |"
+GENESIS "NEXUS_COORD v1 | from=braincube_science | type=algocube_digit | digit=7 |"
 
 CUBE sci ROLE peer PROTON 1
 CUBE peer ROLE peer PROTON 1
@@ -17,8 +17,8 @@ COMPARE sci peer
 ASSERT HAMMING == 0
 ASSERT DIGIT >= 0
 ASSERT DIGIT <= 9
-ASSERT 9 >= 0
-ASSERT 9 <= 9
+ASSERT 7 >= 0
+ASSERT 7 <= 9
 
 HARMONY hive
 ASSERT HARMONY >= 0
