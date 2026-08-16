@@ -39,3 +39,8 @@ scripts/git_push_https.sh
 # build artifacts
 src/lang/*.o
 *.o
+
+# BrainCube science auto-output — state only, not commit spam
+state/braincube_science/
+programs/proof/bc_science_latest.cubalc
+programs/proof/bc_science_d*.cubalc
