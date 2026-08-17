@@ -29358,7 +29358,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
                         : (is_only ? "IFONLYP_N"
                         : (is_exact ? "IFEXACTP_N"
                         : (is_all ? "IFJSONHASALL_N"
-                        : (is_any ? "IFJSONHASANY_N" : "IFJSONHAS_N")))))))))))))))))))))))));
+                        : (is_any ? "IFJSONHASANY_N" : "IFJSONHAS_N"))))))))))))))))))))))))));
       var_set_num(vm, "JSONHAS_N", hit);
       var_set_num(vm, "JSONHAS_HIT", hit);
       var_set_num(vm, "HASJSON_N", hit);

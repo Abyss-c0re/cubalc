@@ -1,16 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 990,
-  "version": "1.15.990-usability",
-  "item": "1528 ifelevenp",
-  "item_id": "mi_1528_ifelevenp",
-  "title": "1528 ifelevenp",
-  "commit": "51b7adb1",
-  "summary": "Host-finished MI ship after nanobot partial (1528_ifelevenp).",
+  "iter": 991,
+  "version": "1.15.991-usability",
+  "item": "IFSEVENTEENP plate exactly-seventeen keys",
+  "item_id": "mi_ifseventeenp",
+  "title": "IFSEVENTEENP/IFHEPTADECAP",
+  "commit": "PENDING",
+  "summary": "Fix lang_ops_flow ternary paren (rebuild). Ship IFSEVENTEENP proof 1529. Restart auto-dev.",
   "proofs": [
-    "programs/proof/1528_ifelevenp.cubalc"
+    "programs/proof/1529_ifseventeenp.cubalc",
+    "programs/proof/1529_cli_ifseventeenp.sh"
   ],
-  "ts": "2026-08-17T07:21:36Z",
-  "law": "prevention_first; confession_is_alignment; logical_progression",
-  "host_finish": true
+  "ts": "2026-08-17T17:33:08Z",
+  "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
+  "host_ladder_ship": true
 }

@@ -1,0 +1,91 @@
+# IFSEVENTEENP — plate exactly-seventeen key diagnostic branch
+# Continues ladder after IFSIXTEENP. Soft twin HEPTADECAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"solo\":1}"
+LET sixteen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16}"
+LET seventeen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17}"
+LET eighteen = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18}"
+LET empty = "{}"
+
+IFSEVENTEENP seventeen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFSEVENTEENP_N == 1
+ASSERT SEVENTEENP_N == 1
+ASSERT IFSEVENTEENP_LEN == 17
+ASSERT IFHEPTADECAP_N == 1
+ASSERT IFSEVENTEENKEYP_N == 1
+
+IFHEPTADECAP seventeen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFSEVENTEENKEYP seventeen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFSEVENTEENP sixteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFSEVENTEENP_N == 0
+ASSERT IFSEVENTEENP_LEN == 16
+
+IFSEVENTEENP eighteen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFSEVENTEENP_LEN == 18
+
+IFSEVENTEENP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFSEVENTEENP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENSEVENTEENP seventeen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENHEPTADECAP seventeen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENSEVENTEENKEYP seventeen
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "ifseventeenp_ok" IFSEVENTEENP_N IFSEVENTEENP_LEN
+PASS
