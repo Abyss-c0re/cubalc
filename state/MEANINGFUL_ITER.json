@@ -5,7 +5,7 @@
   "item": "IFSEVENTEENP plate exactly-seventeen keys",
   "item_id": "mi_ifseventeenp",
   "title": "IFSEVENTEENP/IFHEPTADECAP",
-  "commit": "PENDING",
+  "commit": "3b2945ff",
   "summary": "Fix lang_ops_flow ternary paren (rebuild). Ship IFSEVENTEENP proof 1529. Restart auto-dev.",
   "proofs": [
     "programs/proof/1529_ifseventeenp.cubalc",
