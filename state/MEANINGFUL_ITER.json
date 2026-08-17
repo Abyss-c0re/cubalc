@@ -5,7 +5,7 @@
   "item": "1528 ifelevenp",
   "item_id": "mi_1528_ifelevenp",
   "title": "1528 ifelevenp",
-  "commit": "PENDING",
+  "commit": "51b7adb1",
   "summary": "Host-finished MI ship after nanobot partial (1528_ifelevenp).",
   "proofs": [
     "programs/proof/1528_ifelevenp.cubalc"
