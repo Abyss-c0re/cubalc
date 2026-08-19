@@ -1,14 +1,14 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 992,
-  "version": "1.15.992-usability",
+  "iter": 993,
+  "version": "1.15.993-usability",
   "item": "host finish ship",
   "item_id": "mi_host_finish_ship",
   "title": "host finish ship",
-  "commit": "1aac694c",
+  "commit": "PENDING",
   "summary": "Host-finished MI ship after nanobot partial (host_finish_ship).",
   "proofs": [],
-  "ts": "2026-08-17T21:10:14Z",
+  "ts": "2026-08-19T17:17:39Z",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
   "host_ladder_ship": true,
   "host_finish": true

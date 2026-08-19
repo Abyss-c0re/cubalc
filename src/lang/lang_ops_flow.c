@@ -28942,6 +28942,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     int is_fifteenp = 0;
     int is_sixteenp = 0;
     int is_seventeenp = 0;
+    int is_eighteenp = 0;
     int take = 0;
     char plate[CUBALC_HOST_STR_MAX], key[192], op[32];
     char keys_nl[CUBALC_HOST_STR_MAX];
@@ -29066,6 +29067,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         strcmp(op, "IFSEVENTEENKEYP") == 0 || strcmp(op, "WHENSEVENTEENP") == 0 ||
         strcmp(op, "WHENHEPTADECAP") == 0 || strcmp(op, "WHENSEVENTEENKEYP") == 0)
       is_seventeenp = 1;
+    if (strcmp(op, "IFEIGHTEENP") == 0 || strcmp(op, "IFOCTODECAP") == 0 ||
+        strcmp(op, "IFEIGHTEENKEYP") == 0 || strcmp(op, "WHENEIGHTEENP") == 0 ||
+        strcmp(op, "WHENOCTODECAP") == 0 || strcmp(op, "WHENEIGHTEENKEYP") == 0)
+      is_eighteenp = 1;
     lex_next(L);
     /* No PLATE/JSON glue keywords — agents name vars plate/json often. */
     plate[0] = 0; key[0] = 0; keys_nl[0] = 0; olen = 0;
@@ -29098,7 +29103,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       long nv = parse_expr(vm, L);
       snprintf(key, sizeof key, "%ld", nv);
     }
-    if (!key[0] && !(is_all || is_any || is_only || is_exact || is_missp || is_extrap || is_emptyp || is_nonemptyp || is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp)) {
+    if (!key[0] && !(is_all || is_any || is_only || is_exact || is_missp || is_extrap || is_emptyp || is_nonemptyp || is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp)) {
       fail(vm, is_miss ? "IFJSONMISS needs plate key — IFJSONMISS plate \"ok\" … END"
                        : "IFJSONHAS needs plate key — IFJSONHAS plate \"ok\" … END");
       return -1;
@@ -29153,7 +29158,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (kw(&L->cur,"THEN")) { lex_next(L); skip_nl(L); }
 
     hit = 0;
-    if (is_emptyp || is_nonemptyp || is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp) {
+    if (is_emptyp || is_nonemptyp || is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp) {
       /* soft EMPTYP/NONEMPTYP/ONEP/MULTP/PAIRP/TRIPLEP/QUADP/QUINTP/SIXP/SEVENP/EIGHTP/NINEP/TENP/ELEVENP/TWELVEP/THIRTEENP/FOURTEENP/FIFTEENP: plate key-count */
       memset(&hr, 0, sizeof hr);
       if (cubalc_host_json_len(plate, &hr) != 0) {
@@ -29198,6 +29203,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         hit = (hr.n == 16) ? 1 : 0;
       else if (is_seventeenp)
         hit = (hr.n == 17) ? 1 : 0;
+      else if (is_eighteenp)
+        hit = (hr.n == 18) ? 1 : 0;
       else
         hit = (hr.n >= 2) ? 1 : 0;
     } else if (is_missp) {
@@ -29413,7 +29420,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "EMPTYP_LEN", hr.n);
         var_set_num(vm, "JSONLEN_N", hr.n);
       }
-      if (is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp) {
+      if (is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp) {
         var_set_num(vm, "IFONEP_N", is_onep ? hit : 0);
         var_set_num(vm, "ONEP_N", is_onep ? hit : 0);
         var_set_num(vm, "IFSINGLEP_N", is_onep ? hit : 0);
