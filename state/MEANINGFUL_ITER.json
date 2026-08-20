@@ -5,7 +5,7 @@
   "item": "1532 iftwentyp",
   "item_id": "mi_1532_iftwentyp",
   "title": "1532 iftwentyp",
-  "commit": "PENDING",
+  "commit": "122d64f3",
   "summary": "Host-finished MI ship after nanobot partial (1532_iftwentyp).",
   "proofs": [
     "programs/proof/1532_iftwentyp.cubalc"
