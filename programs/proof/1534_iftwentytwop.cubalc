@@ -1,0 +1,91 @@
+# IFTWENTYTWOP — plate exactly-twenty-two key diagnostic branch
+# Continues ladder after IFTWENTYONEP. Soft twin DOICOSAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET twentyone = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21}"
+LET twentytwo = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22}"
+LET twentythree = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23}"
+LET empty = "{}"
+
+IFTWENTYTWOP twentytwo
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTWENTYTWOP_N == 1
+ASSERT TWENTYTWOP_N == 1
+ASSERT IFTWENTYTWOP_LEN == 22
+ASSERT IFDOICOSAP_N == 1
+ASSERT IFTWENTYTWOKEYP_N == 1
+
+IFDOICOSAP twentytwo
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWENTYTWOKEYP twentytwo
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWENTYTWOP twentyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWENTYTWOP_N == 0
+ASSERT IFTWENTYTWOP_LEN == 21
+
+IFTWENTYTWOP twentythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWENTYTWOP_LEN == 23
+
+IFTWENTYTWOP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTWENTYTWOP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENTWENTYTWOP twentytwo
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENDOICOSAP twentytwo
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTWENTYTWOKEYP twentytwo
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "iftwentytwop_ok" IFTWENTYTWOP_N IFTWENTYTWOP_LEN
+PASS
