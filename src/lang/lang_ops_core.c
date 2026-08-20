@@ -3576,6 +3576,12 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"WHENNINETEENP", "WHENNINETEENP alias of IFNINETEENP"},
       {"WHENENNEADECAP", "WHENENNEADECAP alias of IFNINETEENP"},
       {"WHENNINETEENKEYP", "WHENNINETEENKEYP alias of IFNINETEENP"},
+      {"IFTWENTYP", "IFTWENTYP|IFICOSAP|IFTWENTYKEYP plate [ELSE …] END — body if plate has exactly twenty keys"},
+      {"IFICOSAP", "IFICOSAP alias of IFTWENTYP"},
+      {"IFTWENTYKEYP", "IFTWENTYKEYP alias of IFTWENTYP"},
+      {"WHENTWENTYP", "WHENTWENTYP alias of IFTWENTYP"},
+      {"WHENICOSAP", "WHENICOSAP alias of IFTWENTYP"},
+      {"WHENTWENTYKEYP", "WHENTWENTYKEYP alias of IFTWENTYP"},
 
       {"IFSEPTP", "IFSEPTP alias of IFSEVENP"},
       {"IFSEVENKEYP", "IFSEVENKEYP alias of IFSEVENP"},
