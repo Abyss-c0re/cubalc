@@ -29360,13 +29360,14 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
                         : (is_fifteenp ? "IFFIFTEENP_N"
                         : (is_sixteenp ? "IFSIXTEENP_N"
                         : (is_seventeenp ? "IFSEVENTEENP_N"
+                        : (is_eighteenp ? "IFEIGHTEENP_N"
                         : (is_multp ? "IFMULTP_N"
                         : (is_missp ? "IFMISSP_N"
                         : (is_extrap ? "IFEXTRAP_N"
                         : (is_only ? "IFONLYP_N"
                         : (is_exact ? "IFEXACTP_N"
                         : (is_all ? "IFJSONHASALL_N"
-                        : (is_any ? "IFJSONHASANY_N" : "IFJSONHAS_N"))))))))))))))))))))))))));
+                        : (is_any ? "IFJSONHASANY_N" : "IFJSONHAS_N"))))))))))))))))))))))))))));
       var_set_num(vm, "JSONHAS_N", hit);
       var_set_num(vm, "JSONHAS_HIT", hit);
       var_set_num(vm, "HASJSON_N", hit);
@@ -29493,6 +29494,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "SEVENTEENP_N", is_seventeenp ? hit : 0);
         var_set_num(vm, "IFHEPTADECAP_N", is_seventeenp ? hit : 0);
         var_set_num(vm, "IFSEVENTEENKEYP_N", is_seventeenp ? hit : 0);
+        var_set_num(vm, "IFEIGHTEENP_N", is_eighteenp ? hit : 0);
+        var_set_num(vm, "EIGHTEENP_N", is_eighteenp ? hit : 0);
+        var_set_num(vm, "IFOCTODECAP_N", is_eighteenp ? hit : 0);
+        var_set_num(vm, "IFEIGHTEENKEYP_N", is_eighteenp ? hit : 0);
         var_set_num(vm, "IFONEP_LEN", hr.n);
         var_set_num(vm, "IFMULTP_LEN", hr.n);
         var_set_num(vm, "IFPAIRP_LEN", hr.n);
@@ -29511,6 +29516,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "IFFIFTEENP_LEN", hr.n);
         var_set_num(vm, "IFSIXTEENP_LEN", hr.n);
         var_set_num(vm, "IFSEVENTEENP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTEENP_LEN", hr.n);
+        var_set_num(vm, "SIXTEENP_LEN", hr.n);
+        var_set_num(vm, "SEVENTEENP_LEN", hr.n);
+        var_set_num(vm, "EIGHTEENP_LEN", hr.n);
         var_set_num(vm, "ELEVENP_LEN", hr.n);
         var_set_num(vm, "TWELVEP_LEN", hr.n);
         var_set_num(vm, "THIRTEENP_LEN", hr.n);
