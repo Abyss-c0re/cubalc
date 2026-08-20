@@ -5,7 +5,7 @@
   "item": "1531 ifnineteenp",
   "item_id": "mi_1531_ifnineteenp",
   "title": "1531 ifnineteenp",
-  "commit": "PENDING",
+  "commit": "afd29450",
   "summary": "Host-finished MI ship after nanobot partial (1531_ifnineteenp).",
   "proofs": [
     "programs/proof/1531_ifnineteenp.cubalc"
