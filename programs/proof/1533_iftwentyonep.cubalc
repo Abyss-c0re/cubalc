@@ -1,0 +1,91 @@
+# IFTWENTYONEP — plate exactly-twenty-one key diagnostic branch
+# Continues ladder after IFTWENTYP. Soft twin HENICOSAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET twenty = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20}"
+LET twentyone = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21}"
+LET twentytwo = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22}"
+LET empty = "{}"
+
+IFTWENTYONEP twentyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTWENTYONEP_N == 1
+ASSERT TWENTYONEP_N == 1
+ASSERT IFTWENTYONEP_LEN == 21
+ASSERT IFHENICOSAP_N == 1
+ASSERT IFTWENTYONEKEYP_N == 1
+
+IFHENICOSAP twentyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWENTYONEKEYP twentyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWENTYONEP twenty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWENTYONEP_N == 0
+ASSERT IFTWENTYONEP_LEN == 20
+
+IFTWENTYONEP twentytwo
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWENTYONEP_LEN == 22
+
+IFTWENTYONEP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTWENTYONEP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENTWENTYONEP twentyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENHENICOSAP twentyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTWENTYONEKEYP twentyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "iftwentyonep_ok" IFTWENTYONEP_N IFTWENTYONEP_LEN
+PASS
