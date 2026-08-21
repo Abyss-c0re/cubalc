@@ -6,7 +6,7 @@
   "proof": "programs/proof/1560_iffortyeightp.cubalc",
   "asserts_fail": 0,
   "version": "1.15.1026-usability",
-  "commit": "7b1fb1a736d46670aea30adcf0cf7b4756fa677a",
+  "commit": "752bbe2a53dad08f62247339872f04e67e3552f5",
   "ts": 1787335200,
   "note": "next ladder dual past IFFORTYSEVENP \u2014 soft plate key-count branch at 48"
 }
