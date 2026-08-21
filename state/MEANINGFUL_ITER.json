@@ -5,7 +5,7 @@
   "item": "1538 iftwentysixp",
   "item_id": "mi_1538_iftwentysixp",
   "title": "1538 iftwentysixp",
-  "commit": "PENDING",
+  "commit": "dd18d30b",
   "summary": "Host-finished MI ship after nanobot partial (1538_iftwentysixp).",
   "proofs": [
     "programs/proof/1538_iftwentysixp.cubalc"
