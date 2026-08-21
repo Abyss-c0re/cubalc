@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1018,
-  "version": "1.15.1019-usability",
-  "item": "1553 iffortyonep",
-  "item_id": "mi_1553_iffortyonep",
-  "title": "1553 iffortyonep",
-  "commit": "e9944b57",
-  "summary": "IFFORTYONEP/IFHENTETRACONTAP/IFFORTYONEKEYP + WHEN* plate-41 duals; status IFFORTYONEP_N/_LEN; proof 1553 asserts_fail:0.",
+  "iter": 1019,
+  "version": "1.15.1020-usability",
+  "item": "1554 iffortytwop",
+  "item_id": "mi_1554_iffortytwop",
+  "title": "1554 iffortytwop",
+  "commit": "PENDING",
+  "summary": "IFFORTYTWOP/IFDOTETRACONTAP/IFFORTYTWOKEYP + WHEN* plate-42 duals; status IFFORTYTWOP_N/_LEN; proof 1554 asserts_fail:0.",
   "proofs": [
-    "programs/proof/1553_iffortyonep.cubalc",
-    "programs/proof/1553_cli_iffortyonep.sh"
+    "programs/proof/1554_iffortytwop.cubalc",
+    "programs/proof/1554_cli_iffortytwop.sh"
   ],
-  "ts": "2026-08-21T09:16:19Z",
+  "ts": "2026-08-21T09:29:02Z",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
   "host_ladder_ship": true
 }
