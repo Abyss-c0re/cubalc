@@ -5,7 +5,7 @@
   "item": "1550 ifthirtyeightp",
   "item_id": "mi_1550_ifthirtyeightp",
   "title": "1550 ifthirtyeightp",
-  "commit": "PENDING",
+  "commit": "a230ef01",
   "summary": "Host-finished MI ship after nanobot partial (1550_ifthirtyeightp).",
   "proofs": [
     "programs/proof/1550_ifthirtyeightp.cubalc"
