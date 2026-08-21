@@ -5,7 +5,7 @@
   "item": "1558 iffortysixp",
   "item_id": "mi_1558_iffortysixp",
   "title": "1558 iffortysixp",
-  "commit": "PENDING",
+  "commit": "a689e10c",
   "summary": "IFFORTYSIXP/IFHEXETETRACONTAP/IFFORTYSIXKEYP + WHEN* plate-46 duals after IFFORTYFIVEP.",
   "proofs": [
     "programs/proof/1558_iffortysixp.cubalc"
