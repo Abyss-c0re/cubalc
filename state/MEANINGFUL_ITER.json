@@ -1,11 +1,11 @@
 {
-  "commit": "37c27a904ff3c193e3300eb9c6590ef9ab279799",
-  "commit_short": "37c27a90",
-  "version": "1.15.1038-usability",
-  "feature": "IFSIXTYP/IFHEXECONTAP plate-60 duals",
-  "proof": "programs/proof/1572_ifsixtyp.cubalc",
+  "commit": "9f75a7890b3c04f0431a8d17b9561cba0666c96b",
+  "commit_short": "9f75a789",
+  "version": "1.15.1039-usability",
+  "feature": "IFSIXTYONEP/IFHENHEXECONTAP plate-61 duals",
+  "proof": "1573_ifsixtyonep",
   "proof_ok": true,
-  "ts": 1787348929,
-  "iter": "1572",
-  "note": "feat(lang) IFSIXTYP after IFFIFTYNINEP"
+  "ts": 1787351252,
+  "iter": 1573,
+  "note": "feat(lang) IFSIXTYONEP ladder dual past IFSIXTYP; proof 1573 PASS"
 }
