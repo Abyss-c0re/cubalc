@@ -1,4 +1,7 @@
-ITER=1023
-NOTE=IFFORTYFIVEP/IFPENTETETRACONTAP plate-45 duals
-COMMIT=4d8c3878e6f0efe8864599686101b21321f58876
-
+{
+  "iter": 1027,
+  "note": "IFFORTYNINEP/IFENNEATETRACONTAP plate-49 duals",
+  "commit": "edec0a64",
+  "version": "1.15.1027-usability",
+  "proof": "1561_iffortyninep"
+}
