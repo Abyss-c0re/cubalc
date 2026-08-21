@@ -1,20 +1,11 @@
 {
-  "iter": 1037,
-  "note": "plate-58 duals after IFFIFTYSEVENP",
-  "commit": "6a8e9ba4",
-  "version": "1.15.1037-usability",
-  "proof": "1570_iffiftyeightp.cubalc",
-  "ts": "2026-08-21T21:35:36Z",
-  "feat": "IFFIFTYEIGHTP/IFOCTOPENTECONTAP",
-  "proof_id": 1570,
-  "asserts_fail": 0,
-  "schema": "cubalc.meaningful_iter/v1",
-  "item": "1571 iffiftyninep",
-  "item_id": "mi_1571_iffiftyninep",
-  "title": "1571 iffiftyninep",
-  "summary": "Host-finished MI ship after nanobot partial (1571_iffiftyninep).",
-  "proofs": [
-    "programs/proof/1571_iffiftyninep.cubalc"
-  ],
-  "host_finish": true
+  "commit": "37c27a904ff3c193e3300eb9c6590ef9ab279799",
+  "commit_short": "37c27a90",
+  "version": "1.15.1038-usability",
+  "feature": "IFSIXTYP/IFHEXECONTAP plate-60 duals",
+  "proof": "programs/proof/1572_ifsixtyp.cubalc",
+  "proof_ok": true,
+  "ts": 1787348929,
+  "iter": "1572",
+  "note": "feat(lang) IFSIXTYP after IFFIFTYNINEP"
 }
