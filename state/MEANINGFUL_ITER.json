@@ -5,7 +5,7 @@
   "item": "1539 iftwentysevenp",
   "item_id": "mi_1539_iftwentysevenp",
   "title": "1539 iftwentysevenp",
-  "commit": "PENDING",
+  "commit": "acd2c409",
   "summary": "Host-finished MI ship after nanobot partial (1539_iftwentysevenp).",
   "proofs": [
     "programs/proof/1539_iftwentysevenp.cubalc"
