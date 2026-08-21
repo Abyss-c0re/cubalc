@@ -5,7 +5,7 @@
   "item": "1551 ifthirtyninep",
   "item_id": "mi_1551_ifthirtyninep",
   "title": "1551 ifthirtyninep",
-  "commit": "ee88153b",
+  "commit": "113ee808",
   "summary": "Host-finished MI ship after nanobot partial (1551_ifthirtyninep).",
   "proofs": [
     "programs/proof/1551_ifthirtyninep.cubalc"
