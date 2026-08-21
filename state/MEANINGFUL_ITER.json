@@ -1,16 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1010,
-  "version": "1.15.1010-usability",
-  "item": "1545 ifthirtythreep",
-  "item_id": "mi_1545_ifthirtythreep",
-  "title": "1545 ifthirtythreep",
-  "commit": "ed340dc8",
-  "summary": "Host-finished MI ship after nanobot partial (1545_ifthirtythreep).",
+  "iter": 1011,
+  "version": "1.15.1011-usability",
+  "item": "1546 ifthirtyfourp",
+  "item_id": "mi_1546_ifthirtyfourp",
+  "title": "1546 ifthirtyfourp",
+  "commit": "PENDING",
+  "summary": "Host-finished MI ship after nanobot partial (1546_ifthirtyfourp).",
   "proofs": [
-    "programs/proof/1545_ifthirtythreep.cubalc"
+    "programs/proof/1546_ifthirtyfourp.cubalc"
   ],
-  "ts": "2026-08-21T04:46:39Z",
+  "ts": "2026-08-21T05:32:48Z",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
   "host_ladder_ship": true,
   "host_finish": true
