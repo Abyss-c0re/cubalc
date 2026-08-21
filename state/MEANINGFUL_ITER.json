@@ -1,17 +1,15 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1020,
-  "version": "1.15.1021-usability",
-  "item": "1555 iffortythreep",
-  "item_id": "mi_1555_iffortythreep",
-  "title": "1555 iffortythreep",
-  "commit": "282da24e",
-  "summary": "Host-finished MI ship after nanobot partial (1555_iffortythreep).",
+  "iter": 1023,
+  "version": "1.15.1023-usability",
+  "item": "1557 iffortyfivep",
+  "item_id": "mi_1557_iffortyfivep",
+  "title": "1557 iffortyfivep",
+  "commit": "a2341f48",
+  "summary": "IFFORTYFIVEP/IFPENTETETRACONTAP/IFFORTYFIVEKEYP + WHEN* plate-45 duals after IFFORTYFOURP.",
   "proofs": [
-    "programs/proof/1555_iffortythreep.cubalc"
+    "programs/proof/1557_iffortyfivep.cubalc"
   ],
-  "ts": "2026-08-21T09:37:37Z",
-  "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "host_ladder_ship": true,
-  "host_finish": true
+  "ts": "2026-08-21T17:21:27Z",
+  "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop"
 }

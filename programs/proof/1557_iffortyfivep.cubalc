@@ -1,0 +1,91 @@
+# IFFORTYFIVEP - plate exactly-forty-five key diagnostic branch
+# Continues ladder after IFFORTYFOURP. Soft twin PENTETETRACONTAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET fortyfour = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44}"
+LET fortyfive = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45}"
+LET fortysix = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45,\"J\":46}"
+LET empty = "{}"
+
+IFFORTYFIVEP fortyfive
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFFORTYFIVEP_N == 1
+ASSERT FORTYFIVEP_N == 1
+ASSERT IFFORTYFIVEP_LEN == 45
+ASSERT IFPENTETETRACONTAP_N == 1
+ASSERT IFFORTYFIVEKEYP_N == 1
+
+IFPENTETETRACONTAP fortyfive
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFFORTYFIVEKEYP fortyfive
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFFORTYFIVEP fortyfour
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFFORTYFIVEP_N == 0
+ASSERT IFFORTYFIVEP_LEN == 44
+
+IFFORTYFIVEP fortysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFFORTYFIVEP_LEN == 46
+
+IFFORTYFIVEP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFFORTYFIVEP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENFORTYFIVEP fortyfive
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENPENTETETRACONTAP fortyfive
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENFORTYFIVEKEYP fortyfive
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "iffortyfivep_ok" IFFORTYFIVEP_N IFFORTYFIVEP_LEN
+PASS
