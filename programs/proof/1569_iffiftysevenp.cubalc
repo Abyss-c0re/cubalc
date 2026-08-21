@@ -1,0 +1,90 @@
+# IFFIFTYSEVENP - plate exactly-fifty-seven key diagnostic branch
+# Continues ladder after IFFIFTYSIXP. Soft twin HEPTEPENTECONTAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET fiftysix = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45,\"J\":46,\"K\":47,\"L\":48,\"M\":49,\"N\":50,\"O\":51,\"P\":52,\"Q\":53,\"R\":54,\"S\":55,\"T\":56}"
+LET fiftyseven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45,\"J\":46,\"K\":47,\"L\":48,\"M\":49,\"N\":50,\"O\":51,\"P\":52,\"Q\":53,\"R\":54,\"S\":55,\"T\":56,\"U\":57}"
+LET fiftyeight = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45,\"J\":46,\"K\":47,\"L\":48,\"M\":49,\"N\":50,\"O\":51,\"P\":52,\"Q\":53,\"R\":54,\"S\":55,\"T\":56,\"U\":57,\"V\":58}"
+LET empty = "{}"
+
+IFFIFTYSEVENP fiftyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFFIFTYSEVENP_N == 1
+ASSERT FIFTYSEVENP_N == 1
+ASSERT IFFIFTYSEVENP_LEN == 57
+ASSERT IFHEPTEPENTECONTAP_N == 1
+ASSERT IFFIFTYSEVENKEYP_N == 1
+
+IFHEPTEPENTECONTAP fiftyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFFIFTYSEVENKEYP fiftyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENFIFTYSEVENP fiftyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENHEPTEPENTECONTAP fiftyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENFIFTYSEVENKEYP fiftyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFFIFTYSEVENP fiftysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFFIFTYSEVENP_N == 0
+ASSERT IFFIFTYSEVENP_LEN == 56
+
+IFFIFTYSEVENP fiftyeight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFFIFTYSEVENP_LEN == 58
+
+IFFIFTYSEVENP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFFIFTYSEVENP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+SAY "iffiftysevenp_ok" IFFIFTYSEVENP_N IFFIFTYSEVENP_LEN
