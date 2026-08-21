@@ -1,0 +1,91 @@
+# IFTHIRTYSEVENP - plate exactly-thirty-seven key diagnostic branch
+# Continues ladder after IFTHIRTYSIXP. Soft twin HEPTETRIACONTAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET thirtysix = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36}"
+LET thirtyseven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37}"
+LET thirtyeight = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38}"
+LET empty = "{}"
+
+IFTHIRTYSEVENP thirtyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTHIRTYSEVENP_N == 1
+ASSERT THIRTYSEVENP_N == 1
+ASSERT IFTHIRTYSEVENP_LEN == 37
+ASSERT IFHEPTETRIACONTAP_N == 1
+ASSERT IFTHIRTYSEVENKEYP_N == 1
+
+IFHEPTETRIACONTAP thirtyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTHIRTYSEVENKEYP thirtyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTHIRTYSEVENP thirtysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTHIRTYSEVENP_N == 0
+ASSERT IFTHIRTYSEVENP_LEN == 36
+
+IFTHIRTYSEVENP thirtyeight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTHIRTYSEVENP_LEN == 38
+
+IFTHIRTYSEVENP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTHIRTYSEVENP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENTHIRTYSEVENP thirtyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENHEPTETRIACONTAP thirtyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTHIRTYSEVENKEYP thirtyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "ifthirtysevenp_ok" IFTHIRTYSEVENP_N IFTHIRTYSEVENP_LEN
+PASS
