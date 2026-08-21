@@ -5,7 +5,7 @@
   "item": "1555 iffortythreep",
   "item_id": "mi_1555_iffortythreep",
   "title": "1555 iffortythreep",
-  "commit": "PENDING",
+  "commit": "282da24e",
   "summary": "Host-finished MI ship after nanobot partial (1555_iffortythreep).",
   "proofs": [
     "programs/proof/1555_iffortythreep.cubalc"
