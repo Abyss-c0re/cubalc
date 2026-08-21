@@ -5,7 +5,7 @@
   "item": "1554 iffortytwop",
   "item_id": "mi_1554_iffortytwop",
   "title": "1554 iffortytwop",
-  "commit": "PENDING",
+  "commit": "6b61e7e4",
   "summary": "IFFORTYTWOP/IFDOTETRACONTAP/IFFORTYTWOKEYP + WHEN* plate-42 duals; status IFFORTYTWOP_N/_LEN; proof 1554 asserts_fail:0.",
   "proofs": [
     "programs/proof/1554_iffortytwop.cubalc",
