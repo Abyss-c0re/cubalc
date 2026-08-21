@@ -1,16 +1,14 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1004,
-  "version": "1.15.1004-usability",
-  "item": "1540 iftwentyeightp",
-  "item_id": "mi_1540_iftwentyeightp",
-  "title": "1540 iftwentyeightp",
-  "commit": "3769e4a6",
-  "summary": "Host-finished MI ship after nanobot partial (1540_iftwentyeightp).",
-  "proofs": [
-    "programs/proof/1540_iftwentyeightp.cubalc"
-  ],
-  "ts": "2026-08-21T01:55:06Z",
+  "iter": 1005,
+  "version": "1.15.1005-usability",
+  "item": "host finish ship",
+  "item_id": "mi_host_finish_ship",
+  "title": "host finish ship",
+  "commit": "PENDING",
+  "summary": "Host-finished MI ship after nanobot partial (host_finish_ship).",
+  "proofs": [],
+  "ts": "2026-08-21T02:17:39Z",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
   "host_ladder_ship": true,
   "host_finish": true
