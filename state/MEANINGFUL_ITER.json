@@ -1,12 +1,12 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "id": 1025,
-  "title": "IFFORTYSEVENP / IFHEPTETETRACONTAP plate-47 duals",
-  "feature": "IFFORTYSEVENP",
-  "proof": "programs/proof/1559_iffortysevenp.cubalc",
+  "id": 1026,
+  "title": "IFFORTYEIGHTP / IFOCTOTETRACONTAP plate-48 duals",
+  "feature": "IFFORTYEIGHTP",
+  "proof": "programs/proof/1560_iffortyeightp.cubalc",
   "asserts_fail": 0,
-  "version": "1.15.1025-usability",
-  "commit": "55566c55a81afdda90d6deeb6d6ba99950d0b3b1",
-  "ts": 1787334482,
-  "note": "next ladder dual past IFFORTYSIXP \u2014 soft plate key-count branch at 47"
+  "version": "1.15.1026-usability",
+  "commit": "7b1fb1a736d46670aea30adcf0cf7b4756fa677a",
+  "ts": 1787335200,
+  "note": "next ladder dual past IFFORTYSEVENP \u2014 soft plate key-count branch at 48"
 }
