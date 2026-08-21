@@ -1,0 +1,90 @@
+# IFSIXTYONEP - plate exactly-sixty-one key diagnostic branch
+# Continues ladder after IFSIXTYP. Soft twin HENHEXECONTAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET sixty = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45,\"J\":46,\"K\":47,\"L\":48,\"M\":49,\"N\":50,\"O\":51,\"P\":52,\"Q\":53,\"R\":54,\"S\":55,\"T\":56,\"U\":57,\"V\":58,\"W\":59,\"X\":60}"
+LET sixtyone = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45,\"J\":46,\"K\":47,\"L\":48,\"M\":49,\"N\":50,\"O\":51,\"P\":52,\"Q\":53,\"R\":54,\"S\":55,\"T\":56,\"U\":57,\"V\":58,\"W\":59,\"X\":60,\"Y\":61}"
+LET sixtytwo = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45,\"J\":46,\"K\":47,\"L\":48,\"M\":49,\"N\":50,\"O\":51,\"P\":52,\"Q\":53,\"R\":54,\"S\":55,\"T\":56,\"U\":57,\"V\":58,\"W\":59,\"X\":60,\"Y\":61,\"Z\":62}"
+LET empty = "{}"
+
+IFSIXTYONEP sixtyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFSIXTYONEP_N == 1
+ASSERT SIXTYONEP_N == 1
+ASSERT IFSIXTYONEP_LEN == 61
+ASSERT IFHENHEXECONTAP_N == 1
+ASSERT IFSIXTYONEKEYP_N == 1
+
+IFHENHEXECONTAP sixtyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFSIXTYONEKEYP sixtyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENSIXTYONEP sixtyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENHENHEXECONTAP sixtyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENSIXTYONEKEYP sixtyone
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFSIXTYONEP sixty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFSIXTYONEP_N == 0
+ASSERT IFSIXTYONEP_LEN == 60
+
+IFSIXTYONEP sixtytwo
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFSIXTYONEP_LEN == 62
+
+IFSIXTYONEP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFSIXTYONEP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+SAY "ifsixtyonep_ok" IFSIXTYONEP_N IFSIXTYONEP_LEN
