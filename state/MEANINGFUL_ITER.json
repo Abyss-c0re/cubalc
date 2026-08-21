@@ -1,11 +1,11 @@
 {
-  "commit": "9f75a7890b3c04f0431a8d17b9561cba0666c96b",
+  "commit": null,
   "commit_short": "9f75a789",
-  "version": "1.15.1039-usability",
-  "feature": "IFSIXTYONEP/IFHENHEXECONTAP plate-61 duals",
-  "proof": "1573_ifsixtyonep",
+  "version": "1.15.1040-usability",
+  "feature": "IFSIXTYTWOP/IFDOHEXECONTAP",
+  "proof": "1574_ifsixtytwop",
   "proof_ok": true,
-  "ts": 1787351252,
+  "ts": 1787354600,
   "iter": 1573,
-  "note": "feat(lang) IFSIXTYONEP ladder dual past IFSIXTYP; proof 1573 PASS"
+  "note": "plate exactly-62 key diagnostic duals past IFSIXTYONEP"
 }
