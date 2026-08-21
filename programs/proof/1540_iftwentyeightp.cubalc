@@ -1,0 +1,91 @@
+# IFTWENTYEIGHTP u2014 plate exactly-twenty-eight key diagnostic branch
+# Continues ladder after IFTWENTYSEVENP. Soft twin OCTOICOSAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET twentyseven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27}"
+LET twentyeight = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28}"
+LET twentynine = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29}"
+LET empty = "{}"
+
+IFTWENTYEIGHTP twentyeight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTWENTYEIGHTP_N == 1
+ASSERT TWENTYEIGHTP_N == 1
+ASSERT IFTWENTYEIGHTP_LEN == 28
+ASSERT IFOCTOICOSAP_N == 1
+ASSERT IFTWENTYEIGHTKEYP_N == 1
+
+IFOCTOICOSAP twentyeight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWENTYEIGHTKEYP twentyeight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWENTYEIGHTP twentyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWENTYEIGHTP_N == 0
+ASSERT IFTWENTYEIGHTP_LEN == 27
+
+IFTWENTYEIGHTP twentynine
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWENTYEIGHTP_LEN == 29
+
+IFTWENTYEIGHTP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTWENTYEIGHTP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENTWENTYEIGHTP twentyeight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENOCTOICOSAP twentyeight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTWENTYEIGHTKEYP twentyeight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "iftwentyeightp_ok" IFTWENTYEIGHTP_N IFTWENTYEIGHTP_LEN
+PASS
