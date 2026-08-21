@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1019,
-  "version": "1.15.1020-usability",
-  "item": "1554 iffortytwop",
-  "item_id": "mi_1554_iffortytwop",
-  "title": "1554 iffortytwop",
-  "commit": "6b61e7e4",
-  "summary": "IFFORTYTWOP/IFDOTETRACONTAP/IFFORTYTWOKEYP + WHEN* plate-42 duals; status IFFORTYTWOP_N/_LEN; proof 1554 asserts_fail:0.",
+  "iter": 1020,
+  "version": "1.15.1021-usability",
+  "item": "1555 iffortythreep",
+  "item_id": "mi_1555_iffortythreep",
+  "title": "1555 iffortythreep",
+  "commit": "PENDING",
+  "summary": "Host-finished MI ship after nanobot partial (1555_iffortythreep).",
   "proofs": [
-    "programs/proof/1554_iffortytwop.cubalc",
-    "programs/proof/1554_cli_iffortytwop.sh"
+    "programs/proof/1555_iffortythreep.cubalc"
   ],
-  "ts": "2026-08-21T09:29:02Z",
+  "ts": "2026-08-21T09:37:37Z",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "host_ladder_ship": true
+  "host_ladder_ship": true,
+  "host_finish": true
 }
