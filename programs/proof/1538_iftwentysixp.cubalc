@@ -1,0 +1,91 @@
+# IFTWENTYSIXP — plate exactly-twenty-six key diagnostic branch
+# Continues ladder after IFTWENTYFIVEP. Soft twin HEXEICOSAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET twentyfive = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25}"
+LET twentysix = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26}"
+LET twentyseven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27}"
+LET empty = "{}"
+
+IFTWENTYSIXP twentysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTWENTYSIXP_N == 1
+ASSERT TWENTYSIXP_N == 1
+ASSERT IFTWENTYSIXP_LEN == 26
+ASSERT IFHEXEICOSAP_N == 1
+ASSERT IFTWENTYSIXKEYP_N == 1
+
+IFHEXEICOSAP twentysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWENTYSIXKEYP twentysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWENTYSIXP twentyfive
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWENTYSIXP_N == 0
+ASSERT IFTWENTYSIXP_LEN == 25
+
+IFTWENTYSIXP twentyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWENTYSIXP_LEN == 27
+
+IFTWENTYSIXP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTWENTYSIXP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENTWENTYSIXP twentysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENHEXEICOSAP twentysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTWENTYSIXKEYP twentysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "iftwentysixp_ok" IFTWENTYSIXP_N IFTWENTYSIXP_LEN
+PASS
