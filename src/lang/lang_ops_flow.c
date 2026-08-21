@@ -28906,7 +28906,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
  * IFSIXTEENP|IFHEXADECAP plate — body if plate has exactly sixteen keys (soft SIXTEENP).
  * IFSEVENTEENP|IFHEPTADECAP plate — body if plate has exactly seventeen keys (soft SEVENTEENP).
  * IFEIGHTEENP|IFOCTODECAP plate — body if plate has exactly eighteen keys (soft EIGHTEENP).
-* IFNINETEENP|IFENNEADECAP plate — body if plate has exactly nineteen keys (soft NINETEENP).
+ * IFNINETEENP|IFENNEADECAP|IFNINETEENKEYP plate — body if plate has exactly nineteen keys (soft NINETEENP). /* sealed MI-1016 */
 * IFTWENTYP|IFICOSAP plate — body if plate has exactly twenty keys (soft TWENTYP).
 * IFTWENTYONEP|IFHENICOSAP plate — body if plate has exactly twenty-one keys (soft TWENTYONEP).
 * IFTWENTYTWOP|IFDOICOSAP plate — body if plate has exactly twenty-two keys (soft TWENTYTWOP).

@@ -1,5 +1,6 @@
 # IFNINETEENP — plate exactly-nineteen key diagnostic branch
 # Continues ladder after IFEIGHTEENP. Soft twin ENNEADECAP.
+# MI-1016 seal: duals IFENNEADECAP/IFNINETEENKEYP + WHEN* + *_N/*_LEN
 
 HOLD_FLASH 1
 

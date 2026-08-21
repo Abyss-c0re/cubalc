@@ -1028,3 +1028,10 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 ## Success metric
 
 After N ticks, a new user/agent can do something **new** without reading opcode soup — not “three more width duals.”
+
+## pin
+- last_meaningful: feat(lang) IFNINETEENP/IFENNEADECAP plate-19 duals + proof 1531 (MI-1016)
+- prior_HEAD: 38a37e02
+- VERSION: 1.15.1016-usability
+- proof: 1531_ifnineteenp asserts_ok=18
+- at: 2026-08-21T08:22Z
