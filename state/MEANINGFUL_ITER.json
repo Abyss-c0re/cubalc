@@ -1,15 +1,15 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1023,
-  "version": "1.15.1023-usability",
-  "item": "1557 iffortyfivep",
-  "item_id": "mi_1557_iffortyfivep",
-  "title": "1557 iffortyfivep",
-  "commit": "4d8c3878",
-  "summary": "IFFORTYFIVEP/IFPENTETETRACONTAP/IFFORTYFIVEKEYP + WHEN* plate-45 duals after IFFORTYFOURP.",
+  "iter": 1024,
+  "version": "1.15.1024-usability",
+  "item": "1558 iffortysixp",
+  "item_id": "mi_1558_iffortysixp",
+  "title": "1558 iffortysixp",
+  "commit": "PENDING",
+  "summary": "IFFORTYSIXP/IFHEXETETRACONTAP/IFFORTYSIXKEYP + WHEN* plate-46 duals after IFFORTYFIVEP.",
   "proofs": [
-    "programs/proof/1557_iffortyfivep.cubalc"
+    "programs/proof/1558_iffortysixp.cubalc"
   ],
-  "ts": "2026-08-21T17:21:27Z",
+  "ts": "2026-08-21T17:34:07Z",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop"
 }
