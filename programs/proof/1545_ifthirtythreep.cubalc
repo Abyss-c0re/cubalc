@@ -1,0 +1,91 @@
+# IFTHIRTYTHREEP - plate exactly-thirty-three key diagnostic branch
+# Continues ladder after IFTHIRTYTWOP. Soft twin TRITRIACONTAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET thirtytwo = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32}"
+LET thirtythree = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33}"
+LET thirtyfour = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34}"
+LET empty = "{}"
+
+IFTHIRTYTHREEP thirtythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTHIRTYTHREEP_N == 1
+ASSERT THIRTYTHREEP_N == 1
+ASSERT IFTHIRTYTHREEP_LEN == 33
+ASSERT IFTRITRIACONTAP_N == 1
+ASSERT IFTHIRTYTHREEKEYP_N == 1
+
+IFTRITRIACONTAP thirtythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTHIRTYTHREEKEYP thirtythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTHIRTYTHREEP thirtytwo
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTHIRTYTHREEP_N == 0
+ASSERT IFTHIRTYTHREEP_LEN == 32
+
+IFTHIRTYTHREEP thirtyfour
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTHIRTYTHREEP_LEN == 34
+
+IFTHIRTYTHREEP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTHIRTYTHREEP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENTHIRTYTHREEP thirtythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTRITRIACONTAP thirtythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTHIRTYTHREEKEYP thirtythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "ifthirtythreep_ok" IFTHIRTYTHREEP_N IFTHIRTYTHREEP_LEN
+PASS
