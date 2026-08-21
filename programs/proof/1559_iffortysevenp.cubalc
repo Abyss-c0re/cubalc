@@ -1,0 +1,91 @@
+# IFFORTYSEVENP - plate exactly-forty-seven key diagnostic branch
+# Continues ladder after IFFORTYSIXP. Soft twin HEPTETETRACONTAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET fortysix = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45,\"J\":46}"
+LET fortyseven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45,\"J\":46,\"K\":47}"
+LET fortyeight = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37,\"B\":38,\"C\":39,\"D\":40,\"E\":41,\"F\":42,\"G\":43,\"H\":44,\"I\":45,\"J\":46,\"K\":47,\"L\":48}"
+LET empty = "{}"
+
+IFFORTYSEVENP fortyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFFORTYSEVENP_N == 1
+ASSERT FORTYSEVENP_N == 1
+ASSERT IFFORTYSEVENP_LEN == 47
+ASSERT IFHEPTETETRACONTAP_N == 1
+ASSERT IFFORTYSEVENKEYP_N == 1
+
+IFHEPTETETRACONTAP fortyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFFORTYSEVENKEYP fortyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFFORTYSEVENP fortysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFFORTYSEVENP_N == 0
+ASSERT IFFORTYSEVENP_LEN == 46
+
+IFFORTYSEVENP fortyeight
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFFORTYSEVENP_LEN == 48
+
+IFFORTYSEVENP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFFORTYSEVENP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENFORTYSEVENP fortyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENHEPTETETRACONTAP fortyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENFORTYSEVENKEYP fortyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "iffortysevenp_ok" IFFORTYSEVENP_N IFFORTYSEVENP_LEN
+PASS

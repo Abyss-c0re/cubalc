@@ -1,15 +1,12 @@
 {
-  "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1024,
-  "version": "1.15.1024-usability",
-  "item": "1558 iffortysixp",
-  "item_id": "mi_1558_iffortysixp",
-  "title": "1558 iffortysixp",
-  "commit": "a689e10c",
-  "summary": "IFFORTYSIXP/IFHEXETETRACONTAP/IFFORTYSIXKEYP + WHEN* plate-46 duals after IFFORTYFIVEP.",
-  "proofs": [
-    "programs/proof/1558_iffortysixp.cubalc"
-  ],
-  "ts": "2026-08-21T17:34:07Z",
-  "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop"
+  "schema": "cubalc.meaningful_iter.v1",
+  "id": 1025,
+  "title": "IFFORTYSEVENP / IFHEPTETETRACONTAP plate-47 duals",
+  "feature": "IFFORTYSEVENP",
+  "proof": "programs/proof/1559_iffortysevenp.cubalc",
+  "asserts_fail": 0,
+  "version": "1.15.1025-usability",
+  "commit": "55566c55a81afdda90d6deeb6d6ba99950d0b3b1",
+  "ts": 1787334482,
+  "note": "next ladder dual past IFFORTYSIXP \u2014 soft plate key-count branch at 47"
 }
