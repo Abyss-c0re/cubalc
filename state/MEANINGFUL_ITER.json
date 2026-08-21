@@ -1,11 +1,11 @@
 {
-  "iter": 1035,
-  "note": "plate-57 duals after IFFIFTYSIXP",
-  "commit": "4269456fbc02463fc97a5d09ee27c2674e0937bb",
-  "version": "1.15.1035-usability",
-  "proof": "1569_iffiftysevenp.cubalc",
-  "ts": 1787344964,
-  "feat": "IFFIFTYSEVENP/IFHEPTEPENTECONTAP",
-  "proof_id": 1569,
+  "iter": 1036,
+  "note": "plate-58 duals after IFFIFTYSEVENP",
+  "commit": "PENDING",
+  "version": "1.15.1036-usability",
+  "proof": "1570_iffiftyeightp.cubalc",
+  "ts": 1787347200,
+  "feat": "IFFIFTYEIGHTP/IFOCTOPENTECONTAP",
+  "proof_id": 1570,
   "asserts_fail": 0
 }
