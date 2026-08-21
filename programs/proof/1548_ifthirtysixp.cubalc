@@ -1,0 +1,91 @@
+# IFTHIRTYSIXP - plate exactly-thirty-six key diagnostic branch
+# Continues ladder after IFTHIRTYFIVEP. Soft twin HEXETRIACONTAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET thirtyfive = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35}"
+LET thirtysix = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36}"
+LET thirtyseven = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24,\"y\":25,\"z\":26,\"0\":27,\"1\":28,\"2\":29,\"3\":30,\"4\":31,\"5\":32,\"6\":33,\"7\":34,\"8\":35,\"9\":36,\"A\":37}"
+LET empty = "{}"
+
+IFTHIRTYSIXP thirtysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTHIRTYSIXP_N == 1
+ASSERT THIRTYSIXP_N == 1
+ASSERT IFTHIRTYSIXP_LEN == 36
+ASSERT IFHEXETRIACONTAP_N == 1
+ASSERT IFTHIRTYSIXKEYP_N == 1
+
+IFHEXETRIACONTAP thirtysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTHIRTYSIXKEYP thirtysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTHIRTYSIXP thirtyfive
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTHIRTYSIXP_N == 0
+ASSERT IFTHIRTYSIXP_LEN == 35
+
+IFTHIRTYSIXP thirtyseven
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTHIRTYSIXP_LEN == 37
+
+IFTHIRTYSIXP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTHIRTYSIXP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENTHIRTYSIXP thirtysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENHEXETRIACONTAP thirtysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTHIRTYSIXKEYP thirtysix
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "ifthirtysixp_ok" IFTHIRTYSIXP_N IFTHIRTYSIXP_LEN
+PASS
