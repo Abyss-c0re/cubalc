@@ -5,7 +5,7 @@
   "item": "1542 ifthirtyp",
   "item_id": "mi_1542_ifthirtyp",
   "title": "1542 ifthirtyp",
-  "commit": "PENDING",
+  "commit": "934f12c1",
   "summary": "Host-finished MI ship after nanobot partial (1542_ifthirtyp).",
   "proofs": [
     "programs/proof/1542_ifthirtyp.cubalc"
