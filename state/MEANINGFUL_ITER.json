@@ -1,11 +1,20 @@
 {
-  "iter": 1036,
+  "iter": 1037,
   "note": "plate-58 duals after IFFIFTYSEVENP",
-  "commit": "66aa7db3a9f52a200d952f2c85f62671166d83cf",
-  "version": "1.15.1036-usability",
+  "commit": "PENDING",
+  "version": "1.15.1037-usability",
   "proof": "1570_iffiftyeightp.cubalc",
-  "ts": 1787347200,
+  "ts": "2026-08-21T21:35:36Z",
   "feat": "IFFIFTYEIGHTP/IFOCTOPENTECONTAP",
   "proof_id": 1570,
-  "asserts_fail": 0
+  "asserts_fail": 0,
+  "schema": "cubalc.meaningful_iter/v1",
+  "item": "1571 iffiftyninep",
+  "item_id": "mi_1571_iffiftyninep",
+  "title": "1571 iffiftyninep",
+  "summary": "Host-finished MI ship after nanobot partial (1571_iffiftyninep).",
+  "proofs": [
+    "programs/proof/1571_iffiftyninep.cubalc"
+  ],
+  "host_finish": true
 }
