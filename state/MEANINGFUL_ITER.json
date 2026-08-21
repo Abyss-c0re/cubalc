@@ -5,7 +5,7 @@
   "item": "1541 iftwentyninep",
   "item_id": "mi_1541_iftwentyninep",
   "title": "1541 iftwentyninep",
-  "commit": "PENDING",
+  "commit": "603dfa04",
   "summary": "Host-finished MI ship after nanobot partial (1541_iftwentyninep).",
   "proofs": [
     "programs/proof/1541_iftwentyninep.cubalc"
