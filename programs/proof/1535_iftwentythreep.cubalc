@@ -1,0 +1,91 @@
+# IFTWENTYTHREEP — plate exactly-twenty-three key diagnostic branch
+# Continues ladder after IFTWENTYTWOP. Soft twin TRICOSAP.
+
+HOLD_FLASH 1
+
+LET one = "{\"a\":1}"
+LET twentytwo = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22}"
+LET twentythree = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23}"
+LET twentyfour = "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17,\"r\":18,\"s\":19,\"t\":20,\"u\":21,\"v\":22,\"w\":23,\"x\":24}"
+LET empty = "{}"
+
+IFTWENTYTHREEP twentythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+ASSERT IFTWENTYTHREEP_N == 1
+ASSERT TWENTYTHREEP_N == 1
+ASSERT IFTWENTYTHREEP_LEN == 23
+ASSERT IFTRICOSAP_N == 1
+ASSERT IFTWENTYTHREEKEYP_N == 1
+
+IFTRICOSAP twentythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWENTYTHREEKEYP twentythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+IFTWENTYTHREEP twentytwo
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWENTYTHREEP_N == 0
+ASSERT IFTWENTYTHREEP_LEN == 22
+
+IFTWENTYTHREEP twentyfour
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+ASSERT IFTWENTYTHREEP_LEN == 24
+
+IFTWENTYTHREEP one
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+IFTWENTYTHREEP empty
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 0
+
+WHENTWENTYTHREEP twentythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTRICOSAP twentythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+WHENTWENTYTHREEKEYP twentythree
+  LET q = 1
+ELSE
+  LET q = 0
+END
+ASSERT q == 1
+
+PRINT "iftwentythreep_ok" IFTWENTYTHREEP_N IFTWENTYTHREEP_LEN
+PASS
