@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1016,
-  "version": "1.15.1017-usability",
-  "item": "1551 ifthirtyninep",
-  "item_id": "mi_1551_ifthirtyninep",
-  "title": "1551 ifthirtyninep",
+  "iter": 1018,
+  "version": "1.15.1019-usability",
+  "item": "1553 iffortyonep",
+  "item_id": "mi_1553_iffortyonep",
+  "title": "1553 iffortyonep",
   "commit": "e9944b57",
-  "summary": "Host-finished MI ship after nanobot partial (1551_ifthirtyninep).",
+  "summary": "IFFORTYONEP/IFHENTETRACONTAP/IFFORTYONEKEYP + WHEN* plate-41 duals; status IFFORTYONEP_N/_LEN; proof 1553 asserts_fail:0.",
   "proofs": [
-    "programs/proof/1551_ifthirtyninep.cubalc"
+    "programs/proof/1553_iffortyonep.cubalc",
+    "programs/proof/1553_cli_iffortyonep.sh"
   ],
-  "ts": "2026-08-21T08:41:16Z",
+  "ts": "2026-08-21T09:16:19Z",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "host_ladder_ship": true,
-  "host_finish": true
+  "host_ladder_ship": true
 }
