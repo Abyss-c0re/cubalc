@@ -1,22 +1,25 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "e8c87c6a",
-  "version": "1.15.1094-usability",
+  "commit": "PENDING",
+  "version": "1.15.1095-usability",
   "feature": "atomic_printer_lineage",
   "proof": "1624_atomic_printer_lineage",
   "proof_ok": true,
-  "ts": "2026-08-22T22:05:00Z",
+  "ts": "2026-08-22T18:47:59Z",
   "iso": "2026-08-22T22:05:00Z",
-  "iter": 1624,
+  "iter": 1625,
   "note": "Life-force multi-generation mitosis on printer spine SEND tick seed-d1-d2 gen cascade.",
   "law": "no_dual_ladder; free_energy_must_flow; impress_by_manifestation",
   "docs": "docs/LIFE_FORCE.md",
   "science": "programs/science/integration/atomic_printer_lineage.cubalc",
-  "item": "1624 atomic printer lineage",
-  "item_id": "mi_1624_atomic_printer_lineage",
-  "title": "1624 atomic printer lineage",
-  "summary": "Energy-aware multi-gen mitosis lineage depth 2 on atomic printer.",
-  "proofs": ["programs/proof/1624_atomic_printer_lineage.cubalc"],
+  "item": "1625 atomic printer colony breath",
+  "item_id": "mi_1625_atomic_printer_colony_breath",
+  "title": "1625 atomic printer colony breath",
+  "summary": "Host-finished MI ship after nanobot partial (1625_atomic_printer_colony_breath).",
+  "proofs": [
+    "programs/proof/1625_atomic_printer_colony_breath.cubalc"
+  ],
   "commit_short": "e8c87c6a",
-  "head": "e8c87c6a699ccf230c6fa8d8b20bfe82226fef39"
+  "head": "e8c87c6a699ccf230c6fa8d8b20bfe82226fef39",
+  "host_finish": true
 }
