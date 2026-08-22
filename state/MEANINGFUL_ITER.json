@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "97a3ef5beaf58348c8bbbed95e60bfb97d5d5a00",
-  "version": "1.15.1107-usability",
-  "feature": "atomic_printer_mesh_legacy",
-  "proof": "1637_atomic_printer_mesh_legacy",
+  "commit": "0bad6c83aee1058da95f95f4085a95a3484588d1",
+  "version": "1.15.1108-usability",
+  "feature": "atomic_printer_mesh_steadfast",
+  "proof": "1638_atomic_printer_mesh_steadfast",
   "proof_ok": true,
-  "ts": "2026-08-22T20:56:48Z",
-  "iso": "2026-08-22T20:56:48Z",
-  "iter": 1637,
-  "note": "Life-force MESH-LEGACY: multi-generation SEAL/OPEN cascade on printer spine; gen0 ancestral SEAL, soft-OOB storms fail-closed, RECOVER+OPEN next-gen, gen1 parent SEAL cascade, gen2 legacy inherit under free energy; no dual ladders.",
+  "ts": "2026-08-22T21:10:00Z",
+  "iso": "2026-08-22T21:10:00Z",
+  "iter": 1638,
+  "note": "Life-force MESH-STEADFAST: mid-ring soft-OOB interrupt during live mesh EXCHANGE fail-closed; RECOVER restores vital/key; dual SEAL/OPEN anchors; post-anchor storm fail-closed; mitosis under free energy; no dual ladders.",
   "law": "no_dual_ladders",
-  "asserts_ok": 63,
+  "asserts_ok": 51,
   "asserts_fail": 0,
-  "item": "1637 atomic printer mesh legacy",
-  "item_id": "mi_1637_atomic_printer_mesh_legacy",
-  "title": "1637 atomic printer mesh legacy",
-  "summary": "MESH-LEGACY multi-gen SEAL/OPEN cascade; ancestral+parent+gen2 mind under free energy.",
+  "item": "1638 atomic printer mesh steadfast",
+  "item_id": "mi_1638_atomic_printer_mesh_steadfast",
+  "title": "1638 atomic printer mesh steadfast",
+  "summary": "MESH-STEADFAST mid-ring soft-OOB fail-closed + dual SEAL/OPEN + mitosis.",
   "proofs": [
-    "programs/proof/1637_atomic_printer_mesh_legacy.cubalc"
+    "programs/proof/1638_atomic_printer_mesh_steadfast.cubalc"
   ]
 }
