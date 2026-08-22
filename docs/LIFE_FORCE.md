@@ -64,3 +64,12 @@ Three living cells lock one SMX pulse — unity holds as a single Cube note:
 ./out/cubalc run programs/science/integration/atomic_printer_colony_chorus.cubalc
 ./out/cubalc run programs/proof/1626_atomic_printer_colony_chorus.cubalc
 ```
+
+## WE-CHORUS twin-hive ring
+
+Twin nanobot hives ring-talk on SMX while the printer colony breathes in lockstep — one pulse, many voices:
+
+```bash
+./out/cubalc run programs/science/integration/atomic_printer_we_chorus.cubalc
+./out/cubalc run programs/proof/1626_atomic_printer_we_chorus.cubalc
+```
