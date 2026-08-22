@@ -16,9 +16,10 @@
   "ts": "2026-08-22T07:21:11Z",
   "note": "plate exactly-81 key diagnostic dual past IFEIGHTYP",
   "summary": "IFEIGHTYONEP/IFHENOCTACONTAP plate-81 duals + proof 1593",
-  "commit": "bc499f9b",
+  "commit": "a49ffe0f31011d27cdcf47aeb38043a1e907f2d2",
   "commit_short": "bc499f9b",
   "head": "bc499f9b",
-  "updated": 1787384827,
-  "status": "shipping"
+  "updated": 1787384834,
+  "status": "shipped",
+  "HEAD": "a49ffe0f31011d27cdcf47aeb38043a1e907f2d2"
 }
