@@ -1,0 +1,47 @@
+// 1622_smx_vital_recover.cubalc
+// Life-force SMX usability: STATUS/VITAL fold + RECOVER heal path.
+// No IF*P duals. Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+GENESIS "NEXUS_COORD v1 | from=proof | type=smx_vital_recover | hold_flash=1 |"
+
+CUBE core ROLE host PROTON 1
+CUBE body ROLE construct PROTON 1
+FOLDBITS core "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS body "1111000011110000111100001111000011110000111100001111000011110000"
+PLUG core body
+
+SMX KEY
+SMX EXCHANGE core body
+ASSERT SMX_OK == 1 "exchange ok"
+ASSERT SMX_TALKS >= 1 "talks"
+
+SMX STATUS
+ASSERT SMX_KEY_OK == 1 "key folded"
+ASSERT SMX_OK == 1 "status ok"
+ASSERT SMX_TALKS >= 1 "status talks"
+ASSERT SMX_VITAL >= 6 "vital key+ok+talk bit"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+ASSERT SMX_OOB == 0 "clean mesh"
+
+// soft-OOB path: talk missing cube — fail-closed, no ghost
+SMX TALK core ghost_missing
+ASSERT SMX_OOB >= 1 "oob counted"
+ASSERT SMX_OK == 0 "soft closed"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "recovered"
+ASSERT SMX_OOB == 0 "oob cleared"
+ASSERT SMX_KEY_OK == 1 "key remains"
+ASSERT SMX_VITAL >= 6 "vital restored"
+ASSERT OK == 1
+
+SMX VITAL
+ASSERT SMX_KEY_OK == 1
+ASSERT SMX_OK == 1
+
+ENERGYFLOW 2
+FLOW 1
+ASSERT ENERGY >= 0
+
+PRINT "proof1622" SMX_VITAL SMX_TALKS SMX_OOB SMX_OK SMX_KEY_OK ENERGY

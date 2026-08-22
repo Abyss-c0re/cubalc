@@ -569,6 +569,63 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL");
+  /* SMX STATUS|VITAL|PULSE — fold mesh vitals into vars (life-force observability).
+   * No dual ladders. Agents / NexusCore read SMX_* without probing fail paths. */
+  if (kw(&L->cur,"STATUS")||kw(&L->cur,"VITAL")||kw(&L->cur,"VITALS")||
+      kw(&L->cur,"PULSE")||kw(&L->cur,"STATS")||kw(&L->cur,"INFO")){
+    lex_next(L);
+    var_set_num(vm, "SMX_OK", vm->smx_ok ? 1 : 0);
+    var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+    var_set_num(vm, "SMX_OOB", vm->smx_oob);
+    var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+    var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+    var_set_num(vm, "SMX_TX_SEQ", (long)vm->smx.last_tx_seq);
+    var_set_num(vm, "SMX_RX_SEQ", (long)vm->smx.last_rx_seq);
+    var_set_num(vm, "SMX_VITAL",
+                (vm->smx.key_ok ? 4 : 0) + (vm->smx_ok ? 2 : 0) +
+                (vm->smx_talks > 0 ? 1 : 0));
+    var_set_num(vm, "OK", 1);
+    if (vm->smx.last_err[0])
+      var_set_str(vm, "SMX_ERR", vm->smx.last_err);
+    else
+      var_set_str(vm, "SMX_ERR", "");
+    if (vm->trace)
+      fprintf(vm->trace,
+              "# SMX STATUS ok=%d key=%d talks=%d oob=%d vital=%ld hold=%d\n",
+              vm->smx_ok, vm->smx.key_ok, vm->smx_talks, vm->smx_oob,
+              (long)((vm->smx.key_ok ? 4 : 0) + (vm->smx_ok ? 2 : 0) +
+                     (vm->smx_talks > 0 ? 1 : 0)),
+              vm->smx.hold_flash ? 1 : 0);
+    bump(vm); return 1;
+  }
+
+  /* SMX RECOVER — clear soft-fail / OOB thrash, reload key, restore life path.
+   * Mesh may continue after soft-OOB without ghost place (fail-closed gift). */
+  if (kw(&L->cur,"RECOVER")||kw(&L->cur,"HEAL")||kw(&L->cur,"RESET_SOFT")||
+      kw(&L->cur,"CLEAR_OOB")){
+    lex_next(L);
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    var_set_num(vm, "SMX_OOB", 0);
+    if (ensure_smx_key(vm) != 0){
+      /* ensure_smx_key already failed the VM when hard-missing */
+      return -1;
+    }
+    vm->smx_ok = 1;
+    var_set_num(vm, "SMX_OK", 1);
+    var_set_num(vm, "SMX_KEY_OK", 1);
+    var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+    var_set_num(vm, "SMX_VITAL", 4 + 2 + (vm->smx_talks > 0 ? 1 : 0));
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", "SMX RECOVER ok");
+    if (vm->trace)
+      fprintf(vm->trace, "# SMX RECOVER key_ok talks=%d\n", vm->smx_talks);
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER");
   return -1;
 }

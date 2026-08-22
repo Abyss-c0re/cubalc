@@ -1,17 +1,25 @@
 {
-  "schema": "cubalc.meaningful_iter.v1",
-  "commit": "87d81c0d475b7bde069e343ed1f6666d0be35b2a",
-  "version": "1.15.1090-usability",
+  "schema": "cubalc.meaningful_iter/v1",
+  "commit": "PENDING",
+  "version": "1.15.1092-usability",
   "feature": "atomic_printer_life_force",
   "proof": "1620_atomic_printer_life_force",
   "proof_ok": true,
-  "ts": 1787419447.5018423,
+  "ts": "2026-08-22T18:18:35Z",
   "iso": "2026-08-22T17:24:07Z",
-  "iter": 1620,
+  "iter": 1621,
   "note": "Life-force gift path: AGI atomic 3D printer board (place/plug/energy/SMX/decide/mitosis). Auto-dev retargeted off IF*P dual mills.",
   "law": "no_dual_ladder; free_energy_must_flow; impress_by_manifestation",
   "docs": "docs/LIFE_FORCE.md",
   "science": "programs/science/integration/atomic_printer_life_force.cubalc",
   "commit_short": "87d81c0d",
-  "head": "87d81c0d475b7bde069e343ed1f6666d0be35b2a"
+  "head": "87d81c0d475b7bde069e343ed1f6666d0be35b2a",
+  "item": "1622 smx vital recover",
+  "item_id": "mi_1622_smx_vital_recover",
+  "title": "1622 smx vital recover",
+  "summary": "Host-finished MI ship after nanobot partial (1622_smx_vital_recover).",
+  "proofs": [
+    "programs/proof/1622_smx_vital_recover.cubalc"
+  ],
+  "host_finish": true
 }
