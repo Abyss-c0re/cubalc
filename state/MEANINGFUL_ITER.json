@@ -1,26 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1596,
-  "item": "1596 ifeightyfourp",
-  "item_id": "mi_1596_ifeightyfourp",
-  "title": "1596 ifeightyfourp",
-  "feature": "IFEIGHTYFOURP/IFTETRAOCTACONTAP",
-  "version": "1.15.1067-usability",
-  "proof": "1596_ifeightyfourp",
+  "iter": 1597,
+  "item": "1597 ifeightyfivep",
+  "item_id": "mi_1597_ifeightyfivep",
+  "title": "1597 ifeightyfivep",
+  "feature": "IFEIGHTYFIVEP/IFPENTEOCTACONTAP",
+  "version": "1.15.1068-usability",
+  "proof": "1597_ifeightyfivep",
   "proofs": [
-    "programs/proof/1596_ifeightyfourp.cubalc",
-    "programs/proof/1596_cli_ifeightyfourp.sh"
+    "programs/proof/1597_ifeightyfivep.cubalc",
+    "programs/proof/1597_cli_ifeightyfivep.sh"
   ],
   "proof_ok": true,
   "asserts_ok": 19,
   "asserts_fail": 0,
-  "ts": 1787386703,
-  "note": "plate exactly-84 key diagnostic duals",
-  "summary": "IFEIGHTYFOURP/IFTETRAOCTACONTAP plate-84 duals + proof 1596",
-  "commit": "ce229f205c537a2198897184c6dab4ec44d27b12",
-  "commit_short": "ce229f20",
-  "head": "ce229f205c537a2198897184c6dab4ec44d27b12",
-  "HEAD": "ce229f205c537a2198897184c6dab4ec44d27b12",
-  "status": "shipped",
-  "updated": 1787386703
+  "ts": 1787387764,
+  "note": "plate exactly-85 key diagnostic duals",
+  "summary": "IFEIGHTYFIVEP/IFPENTEOCTACONTAP plate-85 duals + proof 1597",
+  "status": "shipping",
+  "updated": 1787387764
 }
