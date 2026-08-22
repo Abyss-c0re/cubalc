@@ -4,9 +4,9 @@
   "item": "1593 ifeightyonep",
   "item_id": "mi_1593_ifeightyonep",
   "title": "1593 ifeightyonep",
-  "feature": "IFEIGHTYONEP/IFHENOCTACONTAP",
-  "version": "1.15.1064-usability",
-  "proof": "programs/proof/1593_ifeightyonep.cubalc",
+  "feature": "IFEIGHTYTWOP/IFDOOCTACONTAP",
+  "version": "1.15.1065-usability",
+  "proof": "1594_ifeightytwop",
   "proofs": [
     "programs/proof/1593_ifeightyonep.cubalc"
   ],
@@ -18,5 +18,7 @@
   "summary": "IFEIGHTYONEP/IFHENOCTACONTAP plate-81 duals + proof 1593",
   "commit": "bc499f9b",
   "commit_short": "bc499f9b",
-  "head": "bc499f9b"
+  "head": "bc499f9b",
+  "updated": 1787384827,
+  "status": "shipping"
 }
