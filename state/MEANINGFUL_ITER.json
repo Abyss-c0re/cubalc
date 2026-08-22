@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "2fd105c3",
-  "version": "1.15.1102-usability",
-  "feature": "atomic_printer_mesh_relay",
-  "proof": "1632_atomic_printer_mesh_relay",
+  "commit": "PENDING",
+  "version": "1.15.1104-usability",
+  "feature": "atomic_printer_mesh_exchange",
+  "proof": "1634_atomic_printer_mesh_exchange",
   "proof_ok": true,
-  "ts": "2026-08-22T19:56:10Z",
-  "iso": "2026-08-22T19:56:10Z",
-  "iter": 1632,
-  "note": "Life-force MESH-RELAY: soft-OOB storm wounds fail-closed on printer spine; RECOVER restores vital/key; 3-hop SEAL/OPEN relays carry matrix mind (bed\u2192hive\u2192scrap, scrap\u2192nozzle\u2192hive, nozzle\u2192bed\u2192scrap); VITAL/STATUS ring + mitosis under free energy.",
+  "ts": "2026-08-22T20:15:34Z",
+  "iso": "2026-08-22T20:15:34Z",
+  "iter": 1634,
+  "note": "Life-force MESH-EXCHANGE: soft-OOB storm wounds fail-closed on printer spine; RECOVER restores vital/key; full 6-edge mesh EXCHANGE carries matrix mind (ring+diagonals); SEAL/OPEN anchors recovered mind; second storm after anchor still fail-closed (no thrash); fresh post-storm SEAL proves mind writeable; VITAL/STATUS + mitosis under free energy.",
   "law": "no_dual_ladders",
-  "asserts_ok": 47,
+  "asserts_ok": 56,
   "asserts_fail": 0,
-  "item": "1632 atomic printer mesh relay",
-  "item_id": "mi_1632_atomic_printer_mesh_relay",
-  "title": "1632 atomic printer mesh relay",
-  "summary": "MESH-RELAY 3-hop SEAL/OPEN spine after soft-OOB recover; mitosis continues.",
+  "item": "1634 atomic printer mesh exchange",
+  "item_id": "mi_1634_atomic_printer_mesh_exchange",
+  "title": "1634 atomic printer mesh exchange",
+  "summary": "MESH-EXCHANGE full 6-edge SEAL/OPEN spine after double soft-OOB recover; mitosis continues.",
   "proofs": [
-    "programs/proof/1632_atomic_printer_mesh_relay.cubalc"
+    "programs/proof/1634_atomic_printer_mesh_exchange.cubalc"
   ]
 }
