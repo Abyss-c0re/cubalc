@@ -1,6 +1,6 @@
 {
-  "commit": "d1a240c8",
-  "commit_short": "d1a240c8",
+  "commit": "0bbbaf0b",
+  "commit_short": "0bbbaf0b",
   "version": "1.15.1062-usability",
   "feature": "IFSEVENTYNINEP/IFENNEAHEBDOMECONTAP",
   "proof": "programs/proof/1591_ifseventyninep.cubalc",
@@ -8,7 +8,7 @@
   "ts": "2026-08-22T06:50:23Z",
   "iter": 1591,
   "note": "plate exactly-79 key diagnostic dual past IFSEVENTYEIGHTP",
-  "head": "d1a240c8",
+  "head": "0bbbaf0b",
   "asserts_ok": 18,
   "asserts_fail": 0,
   "schema": "cubalc.meaningful_iter/v1",
