@@ -1,6 +1,6 @@
 {
-  "commit": "55465b38cbb399212c855cf621d82192cf3493b1",
-  "commit_short": "55465b38",
+  "commit": "7db88765bec988997ea2f67040c15f8cc6d08b54",
+  "commit_short": "7db88765",
   "version": "1.15.1057-usability",
   "feature": "IFSEVENTYSIXP/IFHEXEHEBDOMECONTAP",
   "proof": "1588_ifseventysixp",
@@ -8,6 +8,6 @@
   "ts": 1787377557,
   "iter": 1588,
   "note": "plate exactly-76 key diagnostic dual past IFSEVENTYFIVEP",
-  "head": "55465b38cbb399212c855cf621d82192cf3493b1",
+  "head": "7db88765bec988997ea2f67040c15f8cc6d08b54",
   "asserts_ok": 18
 }
