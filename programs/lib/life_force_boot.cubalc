@@ -1,0 +1,5 @@
+// life_force_boot — AGI entry: agent_boot + life_cell + science constants
+// INCLUDE life_force_boot
+INCLUDE agent_boot
+INCLUDE life_cell
+SCIENCE LOAD

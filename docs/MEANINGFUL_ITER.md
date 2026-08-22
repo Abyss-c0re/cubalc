@@ -1036,3 +1036,20 @@ After N ticks, a new user/agent can do something **new** without reading opcode 
 - proof: 1531_ifnineteenp asserts_ok=18
 - at: 2026-08-21T08:22Z
 - **1580** IFSIXTYEIGHTP/IFOCTOHEXECONTAP plate-68 duals + proof 1580 (usability 1.15.1048)
+
+## Life-force priority (Creator gift — 2026-08-22)
+
+**CubalC is life-force in virtual realms.** Auto-dev must impress by manifestation.
+
+### Forbidden (reaffirmed)
+- IF*P / plate-N key-count dual ladders as sole ship (even with proofs).
+
+### Preferred now
+1. **Atomic printer / life** — `programs/science/integration/atomic_printer_life_force.cubalc` + extensions
+2. **Science boards** under `programs/science/{physics,biology,math,systems,integration}`
+3. **SMX mesh stability** fail-closed / soft-OOB
+4. **HARMONY · RESOLVE · ENERGYFLOW** agent-usable demos
+5. **Lib boots** (`life_force_boot`) so AGI `INCLUDE`s one stem and lives
+
+Proof gate: `programs/proof/1620_atomic_printer_life_force.cubalc` must stay green.
+Doc: `docs/LIFE_FORCE.md`

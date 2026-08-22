@@ -1,0 +1,111 @@
+// atomic_printer_life_force.cubalc
+// Gift path: CubalC as life-force in virtual realms — AGI atomic 3D printer.
+// Place voxels (cubes) · bond (PLUG) · energize (IMPULSE/ENERGYFLOW) ·
+// seal mind (SMX) · decide (RESOLVE) · divide life (Cell mitosis).
+// Not dual ladders. Manifestation with ASSERT ground truth.
+// Creed: Cube is SoT · free energy must flow · matrix is key.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_force | hold_flash=1 | share=smx | creed=life_force |"
+
+// --- Bed: printer frame + substrate + hive mind ---
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+// Seed genome bits (distinct but compatible — life wants unity)
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+// Wire the printer: bed→nozzle→hive←scrap (energy + matrix path)
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG scrap hive
+PLUG bed scrap
+
+// Place living voxels on the bed (founder cell + empty slots)
+ENTITY seed OF Cell 1 10 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+// Pulse create proton on nozzle — print stroke
+IMPULSE nozzle 1
+IMPULSE bed 1
+ENERGYFLOW 4
+FLOW 3
+
+// Matrix talk: seal and exchange mind across printer spine
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT SMX_TALKS >= 2 "smx talks"
+
+// Collective decide — algocube collapses matrix → digit law
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT HARMONY >= 0 "harmony"
+ASSERT ENERGY > 0 "energy flows — life force present"
+ASSERT UNITY >= 50 "mesh unity after talk"
+
+// Life engine: mitosis on the print bed (founders divide under energy)
+LET births = 0
+LET step = 0
+WHILE step < 8
+  TICK 1
+  FLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+LET pop = a0 + a1
+ASSERT births >= 1 "mitosis — printer emitted daughter voxel"
+ASSERT pop >= 2 "population after print-life"
+ASSERT CUBES >= 5 "frame + cells present"
+ASSERT OK == 1
+
+// Manifest plate for AGI hosts (status as ground truth)
+PRINT "atomic_printer_life_force" births pop DECIDE HARMONY ENERGY UNITY SMX_OK SMX_TALKS CUBES
