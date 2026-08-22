@@ -1,26 +1,26 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1598,
-  "item": "1598 ifeightysixp",
-  "item_id": "mi_1598_ifeightysixp",
-  "title": "1598 ifeightysixp",
-  "feature": "IFEIGHTYSIXP/IFHEXEOCTACONTAP",
-  "version": "1.15.1069-usability",
-  "proof": "1598_ifeightysixp",
+  "iter": 1599,
+  "item": "1599 ifeightysevenp",
+  "item_id": "mi_1599_ifeightysevenp",
+  "title": "1599 ifeightysevenp",
+  "feature": "IFEIGHTYSEVENP/IFHEPTEOCTACONTAP",
+  "version": "1.15.1070-usability",
+  "proof": "1599_ifeightysevenp",
   "proofs": [
-    "programs/proof/1598_ifeightysixp.cubalc",
-    "programs/proof/1598_cli_ifeightysixp.sh"
+    "programs/proof/1599_ifeightysevenp.cubalc",
+    "programs/proof/1599_cli_ifeightysevenp.sh"
   ],
   "proof_ok": true,
   "asserts_ok": 19,
   "asserts_fail": 0,
-  "ts": 1787388929,
-  "note": "plate exactly-86 key diagnostic duals",
-  "summary": "IFEIGHTYSIXP/IFHEXEOCTACONTAP plate-86 duals + proof 1598",
+  "ts": 1787389577,
+  "note": "plate exactly-87 key diagnostic duals",
+  "summary": "IFEIGHTYSEVENP/IFHEPTEOCTACONTAP plate-87 duals + proof 1599",
   "status": "shipped",
-  "updated": 1787388930,
-  "commit": "932e860b990aafefa0e7c802fb939a8b20e87ea3",
-  "commit_short": "932e860b",
-  "head": "932e860b990aafefa0e7c802fb939a8b20e87ea3",
-  "HEAD": "932e860b990aafefa0e7c802fb939a8b20e87ea3"
+  "updated": 1787389577,
+  "commit": "0b6b687d025b1bc3c20069e4be9e85a26e9ad286",
+  "commit_short": "0b6b687d",
+  "head": "0b6b687d025b1bc3c20069e4be9e85a26e9ad286",
+  "HEAD": "0b6b687d025b1bc3c20069e4be9e85a26e9ad286"
 }
