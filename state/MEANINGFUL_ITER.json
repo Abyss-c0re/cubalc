@@ -1,21 +1,23 @@
 {
-  "commit": "f0d217eb",
-  "commit_short": "7db88765",
-  "version": "1.15.1061-usability",
-  "feature": "IFSEVENTYSEVENP/IFHEPTEHEBDOMECONTAP",
-  "proof": "programs/proof/1589_ifseventysevenp.cubalc",
+  "commit": "d1a240c8",
+  "commit_short": "d1a240c8",
+  "version": "1.15.1062-usability",
+  "feature": "IFSEVENTYNINEP/IFENNEAHEBDOMECONTAP",
+  "proof": "programs/proof/1591_ifseventyninep.cubalc",
   "proof_ok": true,
-  "ts": "2026-08-22T06:37:34Z",
+  "ts": "2026-08-22T06:50:23Z",
   "iter": 1591,
-  "note": "plate exactly-77 key diagnostic dual past IFSEVENTYSIXP",
-  "head": "92fb1234",
+  "note": "plate exactly-79 key diagnostic dual past IFSEVENTYEIGHTP",
+  "head": "d1a240c8",
   "asserts_ok": 18,
   "asserts_fail": 0,
   "schema": "cubalc.meaningful_iter/v1",
-  "item": "host finish ship",
-  "item_id": "mi_host_finish_ship",
-  "title": "host finish ship",
-  "summary": "Host-finished MI ship after nanobot partial (host_finish_ship).",
-  "proofs": [],
-  "host_finish": true
+  "item": "IFSEVENTYNINEP",
+  "item_id": "mi_ifseventyninep",
+  "title": "IFSEVENTYNINEP/IFENNEAHEBDOMECONTAP",
+  "summary": "Plate exactly-79 key diagnostic dual past IFSEVENTYEIGHTP; proof 1591 PASS.",
+  "proofs": [
+    "programs/proof/1591_ifseventyninep.cubalc"
+  ],
+  "host_finish": false
 }
