@@ -1,13 +1,13 @@
 {
-  "commit": "598d344b69c7f9d84d03f7e9189948e7be1f5b2d",
-  "commit_short": "598d344b",
-  "version": "1.15.1056-usability",
-  "feature": "IFSEVENTYFIVEP/IFPENTEHEBDOMECONTAP",
-  "proof": "1587_ifseventyfivep",
+  "commit": "55465b38cbb399212c855cf621d82192cf3493b1",
+  "commit_short": "55465b38",
+  "version": "1.15.1057-usability",
+  "feature": "IFSEVENTYSIXP/IFHEXEHEBDOMECONTAP",
+  "proof": "1588_ifseventysixp",
   "proof_ok": true,
-  "ts": 1787376210,
-  "iter": 1587,
-  "note": "plate exactly-75 key diagnostic dual past IFSEVENTYFOURP",
-  "head": "598d344b69c7f9d84d03f7e9189948e7be1f5b2d",
-  "asserts_ok": 20
+  "ts": 1787377557,
+  "iter": 1588,
+  "note": "plate exactly-76 key diagnostic dual past IFSEVENTYFIVEP",
+  "head": "55465b38cbb399212c855cf621d82192cf3493b1",
+  "asserts_ok": 18
 }
