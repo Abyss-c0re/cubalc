@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "7960509ce31721c6b83f81524afd499da2783875",
-  "version": "1.15.1109-usability",
-  "feature": "atomic_printer_mesh_vigil",
-  "proof": "1639_atomic_printer_mesh_vigil",
+  "commit": "PENDING",
+  "version": "1.15.1110-usability",
+  "feature": "atomic_printer_mesh_anchor",
+  "proof": "1640_atomic_printer_mesh_anchor",
   "proof_ok": true,
-  "ts": "2026-08-22T21:20:00Z",
-  "iso": "2026-08-22T21:20:00Z",
-  "iter": 1639,
-  "note": "Life-force MESH-VIGIL: ancestral SEAL before mitosis; soft-OOB mid-division fail-closed; RECOVER restores vital/key; OPEN re-anchors mind after births; dual SEAL/OPEN post-life; second storm fail-closed; mitosis under free energy; no dual ladders.",
+  "ts": "2026-08-22T21:35:00Z",
+  "iso": "2026-08-22T21:35:00Z",
+  "iter": 1640,
+  "note": "Life-force MESH-ANCHOR: mitosis under free energy first; SEAL parent+daughter minds as lineage anchors; soft-OOB against sealed lineage fail-closed; RECOVER restores vital/key; OPEN lineage re-anchors; dual SEAL/OPEN post-anchor quorum; mesh re-bind; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
-  "asserts_ok": 54,
+  "asserts_ok": 60,
   "asserts_fail": 0,
-  "item": "1639 atomic printer mesh vigil",
-  "item_id": "mi_1639_atomic_printer_mesh_vigil",
-  "title": "1639 atomic printer mesh vigil",
-  "summary": "MESH-VIGIL soft-OOB during mitosis fail-closed + ancestral SEAL/OPEN + dual quorum.",
+  "item": "1640 atomic printer mesh anchor",
+  "item_id": "mi_1640_atomic_printer_mesh_anchor",
+  "title": "1640 atomic printer mesh anchor",
+  "summary": "MESH-ANCHOR lineage SEAL after mitosis + soft-OOB fail-closed + OPEN re-anchor + dual quorum.",
   "proofs": [
-    "programs/proof/1639_atomic_printer_mesh_vigil.cubalc"
+    "programs/proof/1640_atomic_printer_mesh_anchor.cubalc"
   ]
 }

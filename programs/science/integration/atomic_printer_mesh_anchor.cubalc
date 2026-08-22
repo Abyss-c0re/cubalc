@@ -1,0 +1,213 @@
+// atomic_printer_mesh_anchor.cubalc
+// Life-force gift: MESH-ANCHOR — colony mitosis under free energy first;
+// then SEAL each live daughter mind as lineage anchor; soft-OOB storms
+// against sealed offspring stay fail-closed (no ghost thrash); RECOVER
+// restores vital/key; OPEN lineage frame re-anchors bed after births;
+// full mesh ring re-binds; second post-anchor storm still fails closed.
+// Wonder AGI can RUN.
+// Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_anchor | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Live full mesh ring before life window
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+SMX EXCHANGE bed hive
+SMX EXCHANGE nozzle scrap
+ASSERT SMX_OK == 1 "pre-life mesh live"
+ASSERT SMX_TALKS >= 6 "pre-life talks"
+ASSERT CUBES == base_cubes "pre-life identity"
+
+// Mitosis under free energy — births first, then anchor their minds
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+ASSERT births >= 1 "mitosis before anchor"
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+ASSERT pop >= 2 "population after life"
+ASSERT CUBES == base_cubes "life invents no cubes"
+
+// SEAL lineage mind of seed (parent) onto bed as anchor frame
+SMX SEAL bed seed "state/smx_anchor/lineage_parent.cblc"
+ASSERT SMX_OK == 1 "seal lineage parent"
+ASSERT SMX_N > 64 "lineage parent frame"
+ASSERT CUBES == base_cubes "seal invents nothing"
+
+// If d1 live, SEAL daughter mind as second lineage anchor
+LET sealed_d = 0
+IF a1 == 1 THEN
+  SMX SEAL nozzle d1 "state/smx_anchor/lineage_d1.cblc"
+  ASSERT SMX_OK == 1 "seal lineage d1"
+  ASSERT SMX_N > 64 "lineage d1 frame"
+  LET sealed_d = sealed_d + 1
+END
+IF a2 == 1 THEN
+  SMX SEAL hive d2 "state/smx_anchor/lineage_d2.cblc"
+  ASSERT SMX_OK == 1 "seal lineage d2"
+  ASSERT SMX_N > 64 "lineage d2 frame"
+  LET sealed_d = sealed_d + 1
+END
+ASSERT sealed_d >= 1 "at least one daughter sealed"
+ASSERT CUBES == base_cubes "daughter seals invent nothing"
+
+// Soft-OOB storms against sealed lineage — fail-closed, no ghost thrash
+SMX EXCHANGE hive offworld_anchor
+ASSERT SMX_OK == 0 "anchor soft-OOB A"
+ASSERT SMX_OOB >= 1 "anchor oob A"
+ASSERT CUBES == base_cubes "anchor no ghost A"
+
+SMX TALK scrap ghost_anchor
+ASSERT SMX_OK == 0 "anchor soft-OOB B"
+ASSERT SMX_OOB >= 2 "anchor oob sticky"
+ASSERT CUBES == base_cubes "anchor no ghost B"
+
+// Recover: clear OOB, keep key, restore vital after lineage seals
+SMX RECOVER
+ASSERT SMX_OK == 1 "anchor recover"
+ASSERT SMX_OOB == 0 "anchor oob cleared"
+ASSERT SMX_KEY_OK == 1 "anchor key sticky"
+ASSERT SMX_VITAL >= 6 "anchor vital"
+ASSERT CUBES == base_cubes "recover invents nothing"
+
+// OPEN lineage parent frame onto scrap — re-anchor after storms
+SMX OPEN scrap "state/smx_anchor/lineage_parent.cblc"
+ASSERT SMX_OK == 1 "open lineage onto scrap"
+ASSERT CUBES == base_cubes "open invents nothing"
+
+// Dual SEAL/OPEN post-anchor quorum (bed/nozzle)
+SMX SEAL bed nozzle "state/smx_anchor/quorum_bn.cblc"
+ASSERT SMX_OK == 1 "seal quorum BN"
+ASSERT SMX_N > 64 "quorum BN frame"
+SMX OPEN hive "state/smx_anchor/quorum_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+ASSERT CUBES == base_cubes "BN open invents nothing"
+
+// Full mesh re-bind after lineage anchor restore
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+SMX EXCHANGE bed hive
+SMX EXCHANGE nozzle scrap
+ASSERT SMX_OK == 1 "mesh re-bind after anchor"
+ASSERT SMX_TALKS >= 12 "talks after re-bind"
+ASSERT CUBES == base_cubes "re-bind identity"
+
+// Post-anchor storm — still fail-closed after lineage seal
+SMX EXCHANGE scrap void_post
+ASSERT SMX_OK == 0 "post soft-OOB"
+ASSERT SMX_OOB >= 1 "post oob"
+ASSERT CUBES == base_cubes "post no ghost"
+
+SMX TALK bed ghost_post
+ASSERT SMX_OK == 0 "post storm-B"
+ASSERT SMX_OOB >= 2 "post oob sticky"
+ASSERT CUBES == base_cubes "post no ghost B"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "post recover"
+ASSERT SMX_OOB == 0 "post oob cleared"
+ASSERT SMX_KEY_OK == 1 "post key sticky"
+ASSERT SMX_VITAL >= 6 "post vital"
+
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after anchor"
+ASSERT SMX_KEY_OK == 1 "key after anchor"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "no oob after anchor"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after anchor"
+ASSERT UNITY >= 40 "mesh unity after anchor"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+ASSERT births >= 1 "mitosis before mesh anchor"
+ASSERT pop >= 2 "population after anchor life"
+ASSERT sealed_d >= 1 "daughter minds anchored"
+ASSERT SMX_OOB == 0 "guard holds through anchor"
+ASSERT OK == 1
+
+PRINT "mesh_anchor" births pop sealed_d SMX_N SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
