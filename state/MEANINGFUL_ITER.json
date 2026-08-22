@@ -14,13 +14,13 @@
   "proof_ok": true,
   "asserts_ok": 20,
   "asserts_fail": 0,
-  "ts": 1787386288,
+  "ts": 1787386289,
   "note": "plate exactly-83 key diagnostic duals",
   "summary": "IFEIGHTYTHREEP/IFTRIOCTACONTAP plate-83 duals + proof 1595",
-  "commit": "PENDING",
-  "commit_short": "PENDING",
-  "head": "PENDING",
-  "HEAD": "PENDING",
-  "status": "shipping",
-  "updated": 1787386288
+  "commit": "3eb49932",
+  "commit_short": "3eb49932",
+  "head": "3eb499323bbcf91b0fd8b124f786e6bf4dd68daa",
+  "HEAD": "3eb499323bbcf91b0fd8b124f786e6bf4dd68daa",
+  "status": "shipped",
+  "updated": 1787386289
 }
