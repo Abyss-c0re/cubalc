@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "3c4226901f37f49fe524a11dbf1e47a8dc9b1737",
+  "commit": "PENDING",
   "version": "1.15.1107-usability",
-  "feature": "atomic_printer_mesh_heritage",
-  "proof": "1637_atomic_printer_mesh_heritage",
+  "feature": "atomic_printer_mesh_legacy",
+  "proof": "1637_atomic_printer_mesh_legacy",
   "proof_ok": true,
-  "ts": "2026-08-22T21:20:00Z",
-  "iso": "2026-08-22T21:20:00Z",
+  "ts": "2026-08-22T20:56:48Z",
+  "iso": "2026-08-22T20:56:48Z",
   "iter": 1637,
-  "note": "Life-force MESH-HERITAGE: SEAL mind at each generation boundary; soft-OOB storms between gens stay fail-closed (no ghost thrash); RECOVER + OPEN unique prior-gen frames onto living cubes; multi-gen population under free energy carries ancestral mind forward.",
+  "note": "Life-force MESH-LEGACY: multi-generation SEAL/OPEN cascade on printer spine; gen0 ancestral SEAL, soft-OOB storms fail-closed, RECOVER+OPEN next-gen, gen1 parent SEAL cascade, gen2 legacy inherit under free energy; no dual ladders.",
   "law": "no_dual_ladders",
-  "asserts_ok": 59,
+  "asserts_ok": 63,
   "asserts_fail": 0,
-  "item": "1637 atomic printer mesh heritage",
-  "item_id": "mi_1637_atomic_printer_mesh_heritage",
-  "title": "1637 atomic printer mesh heritage",
-  "summary": "MESH-HERITAGE SEAL/OPEN across gen boundaries with storms; multi-gen life continues.",
+  "item": "1637 atomic printer mesh legacy",
+  "item_id": "mi_1637_atomic_printer_mesh_legacy",
+  "title": "1637 atomic printer mesh legacy",
+  "summary": "MESH-LEGACY multi-gen SEAL/OPEN cascade; ancestral+parent+gen2 mind under free energy.",
   "proofs": [
-    "programs/proof/1637_atomic_printer_mesh_heritage.cubalc"
+    "programs/proof/1637_atomic_printer_mesh_legacy.cubalc"
   ]
 }

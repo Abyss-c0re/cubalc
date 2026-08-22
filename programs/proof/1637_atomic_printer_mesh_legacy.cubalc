@@ -1,0 +1,254 @@
+// 1637_atomic_printer_mesh_legacy.cubalc
+// Proof: multi-gen SEAL/OPEN cascade — gen0 ancestral → storm → mitosis → gen1 parent SEAL → OPEN → gen2 legacy. Missing peers never auto-place. No IF*P duals.
+// Life-force gift: MESH-LEGACY — multi-generation SEAL/OPEN cascade on the
+// printer spine. Gen0 ancestral mind is sealed; soft-OOB storms stay
+// fail-closed; RECOVER + OPEN onto next-gen; each generation re-seals its
+// mind; gen2 inherits parent frames under free energy.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=atomic_printer_mesh_legacy | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Ancestral ring — live mind before any storm
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+ASSERT SMX_OK == 1 "ancestral ring live"
+ASSERT SMX_TALKS >= 4 "ancestral talks"
+ASSERT CUBES == base_cubes "ancestral identity"
+
+// SEAL ancestral quorum mind (pre-mitosis snapshot)
+SMX SEAL bed hive "state/smx_legacy/ancestral.cblc"
+ASSERT SMX_OK == 1 "seal ancestral"
+ASSERT SMX_N > 64 "ancestral frame"
+ASSERT CUBES == base_cubes "seal invents nothing"
+
+// Soft-OOB storm WHILE life is about to divide — fail-closed
+SMX EXCHANGE hive offworld_div
+ASSERT SMX_OK == 0 "div soft-OOB"
+ASSERT SMX_OOB >= 1 "div oob counted"
+ASSERT CUBES == base_cubes "div no ghost"
+
+SMX TALK nozzle ghost_div
+ASSERT SMX_OK == 0 "div storm-B"
+ASSERT SMX_OOB >= 2 "div oob sticky"
+ASSERT CUBES == base_cubes "div no ghost B"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "div recover"
+ASSERT SMX_OOB == 0 "div oob cleared"
+ASSERT SMX_KEY_OK == 1 "div key sticky"
+ASSERT SMX_VITAL >= 6 "div vital"
+
+// OPEN ancestral mind onto next-gen nozzle (continuity across storm)
+SMX OPEN nozzle "state/smx_legacy/ancestral.cblc"
+ASSERT SMX_OK == 1 "open ancestral onto nozzle"
+ASSERT CUBES == base_cubes "open invents nothing"
+
+// Mitosis generation 1 under free energy
+LET births = 0
+LET step = 0
+WHILE step < 8
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+ASSERT births >= 1 "gen1 mitosis"
+ASSERT SMX_OOB == 0 "guard holds through gen1"
+
+// Post-birth storm — continuity must hold
+SMX EXCHANGE scrap void_post
+ASSERT SMX_OK == 0 "post soft-OOB"
+ASSERT SMX_OOB >= 1 "post oob"
+ASSERT CUBES == base_cubes "post no ghost"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "post recover"
+ASSERT SMX_OOB == 0 "post oob cleared"
+ASSERT SMX_KEY_OK == 1 "post key sticky"
+
+// Re-SEAL after birth (child generation mind)
+SMX SEAL hive scrap "state/smx_legacy/child_gen.cblc"
+ASSERT SMX_OK == 1 "seal child gen"
+ASSERT SMX_N > 64 "child frame"
+SMX OPEN bed "state/smx_legacy/child_gen.cblc"
+ASSERT SMX_OK == 1 "open child onto bed"
+ASSERT CUBES == base_cubes "child open invents nothing"
+
+// Gen1 parent SEAL (fresh pair bed->nozzle) then mid storm fail-closed
+SMX SEAL bed nozzle "state/smx_legacy/gen1_parent.cblc"
+ASSERT SMX_OK == 1 "seal gen1 parent"
+ASSERT SMX_N > 64 "gen1 parent frame"
+
+SMX EXCHANGE scrap void_mid
+ASSERT SMX_OK == 0 "mid soft-OOB"
+ASSERT SMX_OOB >= 1 "mid oob"
+ASSERT CUBES == base_cubes "mid no ghost"
+
+SMX TALK hive ghost_mid
+ASSERT SMX_OK == 0 "mid storm-B"
+ASSERT SMX_OOB >= 2 "mid oob sticky"
+ASSERT CUBES == base_cubes "mid no ghost B"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "mid recover"
+ASSERT SMX_OOB == 0 "mid oob cleared"
+ASSERT SMX_KEY_OK == 1 "mid key sticky"
+
+// OPEN gen1 parent onto hive (not seal endpoints) — cascade inherit
+SMX OPEN hive "state/smx_legacy/gen1_parent.cblc"
+ASSERT SMX_OK == 1 "open gen1 parent onto hive"
+ASSERT CUBES == base_cubes "gen1 open invents nothing"
+
+// Gen2 legacy SEAL (fresh pair scrap->bed) + OPEN onto nozzle
+SMX SEAL scrap bed "state/smx_legacy/gen2_legacy.cblc"
+ASSERT SMX_OK == 1 "seal gen2 legacy"
+ASSERT SMX_N > 64 "gen2 frame"
+SMX OPEN nozzle "state/smx_legacy/gen2_legacy.cblc"
+ASSERT SMX_OK == 1 "open gen2 onto nozzle"
+ASSERT CUBES == base_cubes "gen2 open invents nothing"
+
+// Full mesh re-anchor after legacy cycle
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+SMX EXCHANGE bed hive
+SMX EXCHANGE nozzle scrap
+ASSERT SMX_OK == 1 "full mesh after legacy"
+ASSERT CUBES == base_cubes "mesh identity"
+
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after legacy"
+ASSERT SMX_KEY_OK == 1 "key after legacy"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "no oob after legacy"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after legacy"
+ASSERT UNITY >= 40 "mesh unity after legacy"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+// Second mitosis wave — life continues with inherited mind
+LET step2 = 0
+WHILE step2 < 6
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step2 = step2 + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+ASSERT births >= 1 "mitosis after mesh legacy"
+ASSERT pop >= 2 "population after legacy life"
+ASSERT SMX_OOB == 0 "guard holds through full legacy"
+ASSERT OK == 1
+
+PRINT "mesh_legacy" births pop SMX_N SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
