@@ -626,6 +626,84 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER");
+  /* SMX RING|CHORUS|WE a b c ... — multi-cube ring EXCHANGE in one form.
+   * Life-force we_chorus usability: consecutive pairs + close last↔first.
+   * Soft-OOB fail-closed on missing cubes (no ghost place). No dual ladders. */
+  if (kw(&L->cur,"RING")||kw(&L->cur,"CHORUS")||kw(&L->cur,"WE")||
+      kw(&L->cur,"WE_CHORUS")||kw(&L->cur,"MESH_RING")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int n = 0;
+    int i;
+    int ok_pairs = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "RING needs >=2 cubes",
+                  "SMX RING a b [c ...]  or  SMX CHORUS a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* consecutive bidirectional exchanges */
+    for (i = 0; i + 1 < n; i++){
+      int r1 = do_smx_talk(vm, ids[i], ids[i+1]);
+      if (r1 < 0) return -1;
+      if (r1 > 0){ soft++; continue; }
+      {
+        int r2 = do_smx_talk(vm, ids[i+1], ids[i]);
+        if (r2 < 0) return -1;
+        if (r2 > 0) soft++;
+        else ok_pairs++;
+      }
+    }
+    /* close the ring when 3+ nodes (we_chorus lock) */
+    if (n >= 3){
+      int r1 = do_smx_talk(vm, ids[n-1], ids[0]);
+      if (r1 < 0) return -1;
+      if (r1 > 0) soft++;
+      else {
+        int r2 = do_smx_talk(vm, ids[0], ids[n-1]);
+        if (r2 < 0) return -1;
+        if (r2 > 0) soft++;
+        else ok_pairs++;
+      }
+    }
+    var_set_num(vm, "SMX_RING", (long)ok_pairs);
+    var_set_num(vm, "SMX_CHORUS", (long)ok_pairs);
+    var_set_num(vm, "SMX_WE", (long)n);
+    var_set_num(vm, "SMX_NODES", (long)n);
+    var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+    var_set_num(vm, "SMX_OOB", vm->smx_oob);
+    if (ok_pairs > 0 && soft == 0){
+      vm->smx_ok = 1;
+      var_set_num(vm, "SMX_OK", 1);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "LAST", "SMX RING ok");
+    } else if (ok_pairs > 0){
+      /* partial ring: still usable, mark OK but sticky OOB visible */
+      vm->smx_ok = 1;
+      var_set_num(vm, "SMX_OK", 1);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "LAST", "SMX RING partial");
+    } else {
+      vm->smx_ok = 0;
+      var_set_num(vm, "SMX_OK", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST", "SMX RING soft-OOB");
+    }
+    if (vm->trace)
+      fprintf(vm->trace,
+              "# SMX RING nodes=%d pairs_ok=%d soft=%d talks=%d oob=%d\n",
+              n, ok_pairs, soft, vm->smx_talks, vm->smx_oob);
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE");
   return -1;
 }

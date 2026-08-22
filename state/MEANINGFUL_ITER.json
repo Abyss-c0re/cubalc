@@ -1,22 +1,23 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "2ea1d87c4a19645854493dfbabb493c9635aad65",
-  "version": "1.15.1115-usability",
+  "commit": "PENDING",
+  "version": "1.15.1116-usability",
   "feature": "atomic_printer_mesh_crucible",
   "proof": "1645_atomic_printer_mesh_crucible",
   "proof_ok": true,
-  "ts": "2026-08-23T02:00:00Z",
+  "ts": "2026-08-22T23:13:07Z",
   "iso": "2026-08-23T02:00:00Z",
-  "iter": 1645,
+  "iter": 1646,
   "note": "Life-force MESH-CRUCIBLE: mitosis under free energy first; SEAL parent mind as crucible vessel; SEAL live daughters as temper plates; soft-OOB against crucible fail-closed; RECOVER restores vital/key; OPEN crucible pours scrap; dual SEAL/OPEN rails BN+HS rebind hive; kin EXCHANGE bond among live cells; mesh re-bind; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
   "asserts_ok": 68,
   "asserts_fail": 0,
-  "item": "1645 atomic printer mesh crucible",
-  "item_id": "mi_1645_atomic_printer_mesh_crucible",
-  "title": "1645 atomic printer mesh crucible",
-  "summary": "MESH-CRUCIBLE vessel + temper plates + soft-OOB fail-closed + OPEN pour + dual BN/HS rails + kin bond.",
+  "item": "1646 atomic printer mesh we chorus",
+  "item_id": "mi_1646_atomic_printer_mesh_we_chorus",
+  "title": "1646 atomic printer mesh we chorus",
+  "summary": "Host-finished MI ship after nanobot partial (1646_atomic_printer_mesh_we_chorus).",
   "proofs": [
-    "programs/proof/1645_atomic_printer_mesh_crucible.cubalc"
-  ]
+    "programs/proof/1646_atomic_printer_mesh_we_chorus.cubalc"
+  ],
+  "host_finish": true
 }
