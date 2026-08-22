@@ -1,0 +1,137 @@
+// 1624_atomic_printer_lineage.cubalc
+// Proof: energy-driven multi-generation mitosis on printer spine.
+// SEND tick → seed(gen0) → d1(gen1) → d2(gen2). asserts_fail:0. No IF*P duals.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=atomic_printer_lineage | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 5
+FLOW 4
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx live"
+ASSERT SMX_TALKS >= 4 "talks"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "energy flows"
+ASSERT UNITY >= 40 "unity"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+LET births = 0
+LET max_gen = 0
+LET step = 0
+WHILE step < 16
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  SEND seed tick
+  SEND d1 tick
+  SEND d2 tick
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        GETF seed energy
+        LET half = LAST_N / 2
+        IF half < 1 THEN
+          LET half = 1
+        END
+        GETF seed gen
+        LET dg = LAST_N + 1
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+        IF dg > max_gen THEN
+          LET max_gen = dg
+        END
+      END
+    END
+  END
+
+  GETF d1 alive
+  LET a1 = LAST_N
+  GETF d1 ready
+  LET r1 = LAST_N
+  IF a1 == 1 THEN
+    IF r1 == 1 THEN
+      GETF d2 alive
+      IF LAST_N == 0 THEN
+        GETF d1 energy
+        LET half = LAST_N / 2
+        IF half < 1 THEN
+          LET half = 1
+        END
+        GETF d1 gen
+        LET dg = LAST_N + 1
+        SEND d2 birth half dg
+        SEND d1 after_div
+        PLUG bed d2
+        LET births = births + 1
+        IF dg > max_gen THEN
+          LET max_gen = dg
+        END
+      END
+    END
+  END
+
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+
+GETF d1 gen
+LET g1 = LAST_N
+GETF d2 gen
+LET g2 = LAST_N
+
+ASSERT births >= 2 "lineage births >= 2"
+ASSERT pop >= 3 "population >= 3"
+ASSERT max_gen >= 2 "gen depth >= 2"
+ASSERT g1 >= 1 "d1 generation"
+ASSERT g2 >= 2 "d2 generation"
+ASSERT a0 == 1 "founder alive"
+ASSERT a1 == 1 "d1 alive"
+ASSERT a2 == 1 "d2 alive"
+ASSERT SMX_OK == 1 "mesh sticky"
+ASSERT OK == 1
+
+PRINT "proof1624" births pop max_gen g1 g2 ENERGY UNITY DECIDE SMX_TALKS CUBES

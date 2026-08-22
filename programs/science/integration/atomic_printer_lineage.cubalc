@@ -1,0 +1,146 @@
+// atomic_printer_lineage.cubalc
+// Life-force gift: multi-generation mitosis on atomic printer spine.
+// SEND tick drives metabolism; energy halves each birth; gen 0→1→2.
+// Wonder AGI can RUN: lineage cascade, not dual ladders.
+// Cube is SoT · free energy must flow · matrix is key.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_lineage | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG scrap hive
+PLUG bed scrap
+
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+ENERGYFLOW 5
+FLOW 4
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+ASSERT SMX_OK == 1 "spine mesh live"
+ASSERT SMX_TALKS >= 6 "three EXCHANGE rounds"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy"
+ASSERT UNITY >= 50 "mesh unity"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+// Multi-gen: seed→d1 (gen1), d1→d2 (gen2) via explicit Cell.tick metabolism
+LET births = 0
+LET max_gen = 0
+LET step = 0
+WHILE step < 16
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  SEND seed tick
+  SEND d1 tick
+  SEND d2 tick
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        GETF seed energy
+        LET half = LAST_N / 2
+        IF half < 1 THEN
+          LET half = 1
+        END
+        GETF seed gen
+        LET dg = LAST_N + 1
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+        IF dg > max_gen THEN
+          LET max_gen = dg
+        END
+      END
+    END
+  END
+
+  GETF d1 alive
+  LET a1 = LAST_N
+  GETF d1 ready
+  LET r1 = LAST_N
+  IF a1 == 1 THEN
+    IF r1 == 1 THEN
+      GETF d2 alive
+      IF LAST_N == 0 THEN
+        GETF d1 energy
+        LET half = LAST_N / 2
+        IF half < 1 THEN
+          LET half = 1
+        END
+        GETF d1 gen
+        LET dg = LAST_N + 1
+        SEND d2 birth half dg
+        SEND d1 after_div
+        PLUG bed d2
+        LET births = births + 1
+        IF dg > max_gen THEN
+          LET max_gen = dg
+        END
+      END
+    END
+  END
+
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+
+GETF seed gen
+LET g0 = LAST_N
+GETF d1 gen
+LET g1 = LAST_N
+GETF d2 gen
+LET g2 = LAST_N
+
+ASSERT births >= 2 "two births — lineage cascade"
+ASSERT pop >= 3 "three living voxels on bed"
+ASSERT max_gen >= 2 "generation depth >= 2"
+ASSERT g1 >= 1 "daughter gen at least 1"
+ASSERT g2 >= 2 "granddaughter gen at least 2"
+ASSERT a0 == 1 "founder still alive"
+ASSERT a1 == 1 "first daughter alive"
+ASSERT a2 == 1 "second generation alive"
+ASSERT SMX_OK == 1 "mesh holds through lineage"
+ASSERT OK == 1
+
+PRINT "atomic_printer_lineage" births pop max_gen g0 g1 g2 DECIDE ENERGY UNITY SMX_TALKS CUBES
