@@ -1,23 +1,21 @@
 {
-  "commit": "e02fa896",
+  "commit": "PENDING",
   "commit_short": "7db88765",
-  "version": "1.15.1060-usability",
+  "version": "1.15.1061-usability",
   "feature": "IFSEVENTYSEVENP/IFHEPTEHEBDOMECONTAP",
   "proof": "programs/proof/1589_ifseventysevenp.cubalc",
   "proof_ok": true,
-  "ts": "2026-08-22T06:33:41Z",
-  "iter": 1590,
+  "ts": "2026-08-22T06:37:34Z",
+  "iter": 1591,
   "note": "plate exactly-77 key diagnostic dual past IFSEVENTYSIXP",
   "head": "92fb1234",
   "asserts_ok": 18,
   "asserts_fail": 0,
   "schema": "cubalc.meaningful_iter/v1",
-  "item": "1590 ifseventyeightp",
-  "item_id": "mi_1590_ifseventyeightp",
-  "title": "1590 ifseventyeightp",
-  "summary": "Host-finished MI ship after nanobot partial (1590_ifseventyeightp).",
-  "proofs": [
-    "programs/proof/1590_ifseventyeightp.cubalc"
-  ],
+  "item": "host finish ship",
+  "item_id": "mi_host_finish_ship",
+  "title": "host finish ship",
+  "summary": "Host-finished MI ship after nanobot partial (host_finish_ship).",
+  "proofs": [],
   "host_finish": true
 }

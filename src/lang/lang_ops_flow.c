@@ -28955,6 +28955,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
    * IFSEVENTYSIXP|IFHEXEHEBDOMECONTAP|IFSEVENTYSIXKEYP plate â body if plate has exactly seventy-six keys (soft SEVENTYSIXP).
    * IFSEVENTYSEVENP|IFHEPTEHEBDOMECONTAP|IFSEVENTYSEVENKEYP plate — body if plate has exactly seventy-seven keys (soft SEVENTYSEVENP).
    * IFSEVENTYEIGHTP|IFOCTOHEBDOMECONTAP|IFSEVENTYEIGHTKEYP plate — body if plate has exactly seventy-eight keys (soft SEVENTYEIGHTP).
+   * IFSEVENTYNINEP|IFENNEAHEBDOMECONTAP|IFSEVENTYNINEKEYP plate — body if plate has exactly seventy-nine keys (soft SEVENTYNINEP).
    * Complements SYS JSONHAS/JSONHASALL + IF LAST_N. Plate is JSON string/var.
    * Usability: multi-key plate contract branches without probe glue. */
   if (kw(&L->cur,"IFJSONHAS")||kw(&L->cur,"WHENJSONHAS")||kw(&L->cur,"IFHASJSON")||
@@ -29052,6 +29053,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     int is_seventysixp = 0;
     int is_seventysevenp = 0;
     int is_seventyeightp = 0;
+    int is_seventyninep = 0;
     int take = 0;
     char plate[CUBALC_HOST_STR_MAX], key[192], op[32];
     char keys_nl[CUBALC_HOST_STR_MAX];
@@ -29420,6 +29422,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         strcmp(op, "IFSEVENTYEIGHTKEYP") == 0 || strcmp(op, "WHENSEVENTYEIGHTP") == 0 ||
         strcmp(op, "WHENOCTOHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYEIGHTKEYP") == 0)
       is_seventyeightp = 1;
+    if (strcmp(op, "IFSEVENTYNINEP") == 0 || strcmp(op, "IFENNEAHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYNINEKEYP") == 0 || strcmp(op, "WHENSEVENTYNINEP") == 0 ||
+        strcmp(op, "WHENENNEAHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYNINEKEYP") == 0)
+      is_seventyninep = 1;
     lex_next(L);
     /* No PLATE/JSON glue keywords â agents name vars plate/json often. */
     plate[0] = 0; key[0] = 0; keys_nl[0] = 0; olen = 0;
@@ -29452,7 +29458,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       long nv = parse_expr(vm, L);
       snprintf(key, sizeof key, "%ld", nv);
     }
-    if (!key[0] && !(is_all || is_any || is_only || is_exact || is_missp || is_extrap || is_emptyp || is_nonemptyp || is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp || is_nineteenp || is_twentyp || is_twentyonep || is_twentytwop || is_twentythreep || is_twentyfourp || is_twentyfivep || is_twentysixp || is_twentysevenp || is_twentyeightp || is_twentyninep || is_thirtyp || is_thirtyonep || is_thirtytwop || is_thirtythreep || is_thirtyfourp || is_thirtyfivep || is_thirtysixp || is_thirtysevenp || is_thirtyeightp || is_thirtyninep || is_fortyp || is_fortyonep || is_fortytwop || is_fortythreep || is_fortyfourp || is_fortyfivep || is_fortysixp || is_fortysevenp || is_fortyeightp || is_fortyninep || is_fiftyp || is_fiftyonep || is_fiftytwop || is_fiftythreep || is_fiftyfourp || is_fiftyfivep || is_fiftysixp || is_fiftysevenp || is_fiftyeightp || is_fiftyninep || is_sixtyp || is_sixtyonep || is_sixtytwop || is_sixtythreep || is_sixtyfourp || is_sixtyfivep || is_sixtysixp || is_sixtysevenp || is_sixtyeightp || is_sixtyninep || is_seventyp || is_seventyonep || is_seventytwop || is_seventythreep || is_seventyfourp || is_seventyfivep || is_seventysixp || is_seventysevenp || is_seventyeightp)) {
+    if (!key[0] && !(is_all || is_any || is_only || is_exact || is_missp || is_extrap || is_emptyp || is_nonemptyp || is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp || is_nineteenp || is_twentyp || is_twentyonep || is_twentytwop || is_twentythreep || is_twentyfourp || is_twentyfivep || is_twentysixp || is_twentysevenp || is_twentyeightp || is_twentyninep || is_thirtyp || is_thirtyonep || is_thirtytwop || is_thirtythreep || is_thirtyfourp || is_thirtyfivep || is_thirtysixp || is_thirtysevenp || is_thirtyeightp || is_thirtyninep || is_fortyp || is_fortyonep || is_fortytwop || is_fortythreep || is_fortyfourp || is_fortyfivep || is_fortysixp || is_fortysevenp || is_fortyeightp || is_fortyninep || is_fiftyp || is_fiftyonep || is_fiftytwop || is_fiftythreep || is_fiftyfourp || is_fiftyfivep || is_fiftysixp || is_fiftysevenp || is_fiftyeightp || is_fiftyninep || is_sixtyp || is_sixtyonep || is_sixtytwop || is_sixtythreep || is_sixtyfourp || is_sixtyfivep || is_sixtysixp || is_sixtysevenp || is_sixtyeightp || is_sixtyninep || is_seventyp || is_seventyonep || is_seventytwop || is_seventythreep || is_seventyfourp || is_seventyfivep || is_seventysixp || is_seventysevenp || is_seventyeightp || is_seventyninep)) {
       fail(vm, is_miss ? "IFJSONMISS needs plate key â IFJSONMISS plate \"ok\" â¦ END"
                        : "IFJSONHAS needs plate key â IFJSONHAS plate \"ok\" â¦ END");
       return -1;
@@ -29507,7 +29513,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (kw(&L->cur,"THEN")) { lex_next(L); skip_nl(L); }
 
     hit = 0;
-    if (is_emptyp || is_nonemptyp || is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp || is_nineteenp || is_twentyp || is_twentyonep || is_twentytwop || is_twentythreep || is_twentyfourp || is_twentyfivep || is_twentysixp || is_twentysevenp || is_twentyeightp || is_twentyninep || is_thirtyp || is_thirtyonep || is_thirtytwop || is_thirtythreep || is_thirtyfourp || is_thirtyfivep || is_thirtysixp || is_thirtysevenp || is_thirtyeightp || is_thirtyninep || is_fortyp || is_fortyonep || is_fortytwop || is_fortythreep || is_fortyfourp || is_fortyfivep || is_fortysixp || is_fortysevenp || is_fortyeightp || is_fortyninep || is_fiftyp || is_fiftyonep || is_fiftytwop || is_fiftythreep || is_fiftyfourp || is_fiftyfivep || is_fiftysixp || is_fiftysevenp || is_fiftyeightp || is_fiftyninep || is_sixtyp || is_sixtyonep || is_sixtytwop || is_sixtythreep || is_sixtyfourp || is_sixtyfivep || is_sixtysixp || is_sixtysevenp || is_sixtyeightp || is_sixtyninep || is_seventyp || is_seventyonep || is_seventytwop || is_seventythreep || is_seventyfourp || is_seventyfivep || is_seventysixp || is_seventysevenp || is_seventyeightp) {
+    if (is_emptyp || is_nonemptyp || is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp || is_nineteenp || is_twentyp || is_twentyonep || is_twentytwop || is_twentythreep || is_twentyfourp || is_twentyfivep || is_twentysixp || is_twentysevenp || is_twentyeightp || is_twentyninep || is_thirtyp || is_thirtyonep || is_thirtytwop || is_thirtythreep || is_thirtyfourp || is_thirtyfivep || is_thirtysixp || is_thirtysevenp || is_thirtyeightp || is_thirtyninep || is_fortyp || is_fortyonep || is_fortytwop || is_fortythreep || is_fortyfourp || is_fortyfivep || is_fortysixp || is_fortysevenp || is_fortyeightp || is_fortyninep || is_fiftyp || is_fiftyonep || is_fiftytwop || is_fiftythreep || is_fiftyfourp || is_fiftyfivep || is_fiftysixp || is_fiftysevenp || is_fiftyeightp || is_fiftyninep || is_sixtyp || is_sixtyonep || is_sixtytwop || is_sixtythreep || is_sixtyfourp || is_sixtyfivep || is_sixtysixp || is_sixtysevenp || is_sixtyeightp || is_sixtyninep || is_seventyp || is_seventyonep || is_seventytwop || is_seventythreep || is_seventyfourp || is_seventyfivep || is_seventysixp || is_seventysevenp || is_seventyeightp || is_seventyninep) {
       /* soft EMPTYP/NONEMPTYP/ONEP/.../FORTYP/FORTYONEP/FORTYTWOP: plate key-count */
       memset(&hr, 0, sizeof hr);
       if (cubalc_host_json_len(plate, &hr) != 0) {
@@ -29674,6 +29680,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         hit = (hr.n == 77) ? 1 : 0;
       else if (is_seventyeightp)
         hit = (hr.n == 78) ? 1 : 0;
+      else if (is_seventyninep)
+        hit = (hr.n == 79) ? 1 : 0;
       else
         hit = (hr.n >= 2) ? 1 : 0;
     } else if (is_missp) {
@@ -29887,6 +29895,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
                         : (is_seventythreep ? "IFSEVENTYTHREEP_N"
                         : (is_seventyfourp ? "IFSEVENTYFOURP_N"
                         : (is_seventyeightp ? "IFSEVENTYEIGHTP_N"
+                        : (is_seventyninep ? "IFSEVENTYNINEP_N"
                         : (is_seventysevenp ? "IFSEVENTYSEVENP_N"
                         : (is_seventysixp ? "IFSEVENTYSIXP_N"
                         : (is_seventyfivep ? "IFSEVENTYFIVEP_N"
@@ -29951,7 +29960,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "EMPTYP_LEN", hr.n);
         var_set_num(vm, "JSONLEN_N", hr.n);
       }
-      if (is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp || is_nineteenp || is_twentyp || is_twentyonep || is_twentytwop || is_twentythreep || is_twentyfourp || is_twentyfivep || is_twentysixp || is_twentysevenp || is_twentyeightp || is_twentyninep || is_thirtyp || is_thirtyonep || is_thirtytwop || is_thirtythreep || is_thirtyfourp || is_thirtyfivep || is_thirtysixp || is_thirtysevenp || is_thirtyeightp || is_thirtyninep || is_fortyp || is_fortyonep || is_fortytwop || is_fortythreep || is_fortyfourp || is_fortyfivep || is_fortysixp || is_fortysevenp || is_fortyeightp || is_fortyninep || is_fiftyp || is_fiftyonep || is_fiftytwop || is_fiftythreep || is_fiftyfourp || is_fiftyfivep || is_fiftysixp || is_fiftysevenp || is_fiftyeightp || is_fiftyninep || is_sixtyp || is_sixtyonep || is_sixtytwop || is_sixtythreep || is_sixtyfourp || is_sixtyfivep || is_sixtysixp || is_sixtysevenp || is_sixtyeightp || is_sixtyninep || is_seventyp || is_seventyonep || is_seventytwop || is_seventythreep || is_seventyfourp || is_seventyfivep || is_seventysixp || is_seventysevenp || is_seventyeightp) {
+      if (is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp || is_nineteenp || is_twentyp || is_twentyonep || is_twentytwop || is_twentythreep || is_twentyfourp || is_twentyfivep || is_twentysixp || is_twentysevenp || is_twentyeightp || is_twentyninep || is_thirtyp || is_thirtyonep || is_thirtytwop || is_thirtythreep || is_thirtyfourp || is_thirtyfivep || is_thirtysixp || is_thirtysevenp || is_thirtyeightp || is_thirtyninep || is_fortyp || is_fortyonep || is_fortytwop || is_fortythreep || is_fortyfourp || is_fortyfivep || is_fortysixp || is_fortysevenp || is_fortyeightp || is_fortyninep || is_fiftyp || is_fiftyonep || is_fiftytwop || is_fiftythreep || is_fiftyfourp || is_fiftyfivep || is_fiftysixp || is_fiftysevenp || is_fiftyeightp || is_fiftyninep || is_sixtyp || is_sixtyonep || is_sixtytwop || is_sixtythreep || is_sixtyfourp || is_sixtyfivep || is_sixtysixp || is_sixtysevenp || is_sixtyeightp || is_sixtyninep || is_seventyp || is_seventyonep || is_seventytwop || is_seventythreep || is_seventyfourp || is_seventyfivep || is_seventysixp || is_seventysevenp || is_seventyeightp || is_seventyninep) {
         var_set_num(vm, "IFONEP_N", is_onep ? hit : 0);
         var_set_num(vm, "ONEP_N", is_onep ? hit : 0);
         var_set_num(vm, "IFSINGLEP_N", is_onep ? hit : 0);
