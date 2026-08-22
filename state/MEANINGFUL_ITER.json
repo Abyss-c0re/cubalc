@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "e61b5ae7",
-  "version": "1.15.1101-usability",
-  "feature": "atomic_printer_mesh_bridge",
-  "proof": "1631_atomic_printer_mesh_bridge",
+  "commit": "PENDING",
+  "version": "1.15.1102-usability",
+  "feature": "atomic_printer_mesh_relay",
+  "proof": "1632_atomic_printer_mesh_relay",
   "proof_ok": true,
-  "ts": "2026-08-22T19:43:37Z",
-  "iso": "2026-08-22T19:43:37Z",
-  "iter": 1631,
-  "note": "Life-force MESH-BRIDGE: soft-OOB storm wounds fail-closed on printer spine; RECOVER restores vital/key; dual SEAL/OPEN bridges carry matrix mind across opposite edges; VITAL/STATUS ring + mitosis under free energy.",
+  "ts": "2026-08-22T19:56:10Z",
+  "iso": "2026-08-22T19:56:10Z",
+  "iter": 1632,
+  "note": "Life-force MESH-RELAY: soft-OOB storm wounds fail-closed on printer spine; RECOVER restores vital/key; 3-hop SEAL/OPEN relays carry matrix mind (bed\u2192hive\u2192scrap, scrap\u2192nozzle\u2192hive, nozzle\u2192bed\u2192scrap); VITAL/STATUS ring + mitosis under free energy.",
   "law": "no_dual_ladders",
-  "asserts_ok": 43,
+  "asserts_ok": 47,
   "asserts_fail": 0,
-  "item": "1631 atomic printer mesh bridge",
-  "item_id": "mi_1631_atomic_printer_mesh_bridge",
-  "title": "1631 atomic printer mesh bridge",
-  "summary": "MESH-BRIDGE dual SEAL/OPEN spine bridges after soft-OOB recover; mitosis continues.",
+  "item": "1632 atomic printer mesh relay",
+  "item_id": "mi_1632_atomic_printer_mesh_relay",
+  "title": "1632 atomic printer mesh relay",
+  "summary": "MESH-RELAY 3-hop SEAL/OPEN spine after soft-OOB recover; mitosis continues.",
   "proofs": [
-    "programs/proof/1631_atomic_printer_mesh_bridge.cubalc"
+    "programs/proof/1632_atomic_printer_mesh_relay.cubalc"
   ]
 }
