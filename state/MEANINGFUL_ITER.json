@@ -1,12 +1,12 @@
 {
-  "commit": "89160fe7c2a49fd16d536edc011751b20f1d3f73",
-  "commit_short": "89160fe7",
-  "version": "1.15.1041-usability",
-  "feature": "IFSIXTYTHREEP/IFTRIHEXECONTAP",
-  "proof": "1575_ifsixtythreep",
+  "commit": "PENDING",
+  "commit_short": "PENDING",
+  "version": "1.15.1043-usability",
+  "feature": "IFSIXTYFOURP/IFTETRAHEXECONTAP",
+  "proof": "1576_ifsixtyfourp",
   "proof_ok": true,
-  "ts": 1787358066,
-  "iter": 1575,
-  "note": "plate exactly-63 key diagnostic duals past IFSIXTYTWOP",
-  "head": "89160fe7c2a49fd16d536edc011751b20f1d3f73"
+  "ts": 1787359500,
+  "iter": 1576,
+  "note": "plate exactly-64 key diagnostic duals past IFSIXTYTHREEP",
+  "head": "PENDING"
 }
