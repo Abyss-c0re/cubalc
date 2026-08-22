@@ -1,0 +1,188 @@
+// 1638_atomic_printer_mesh_steadfast.cubalc
+// Life-force gift: MESH-STEADFAST — mid-ring soft-OOB interrupts a live mesh
+// EXCHANGE; fail-closed (no ghost thrash); RECOVER restores vital/key; mesh
+// completes after wound; dual SEAL/OPEN anchors mind on two quorums; second
+// storm after anchor still fails closed; mitosis under free energy.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_steadfast | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 13 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Begin live mesh ring — first two edges
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "half-ring live"
+ASSERT SMX_TALKS >= 2 "half-ring talks"
+ASSERT CUBES == base_cubes "half-ring identity"
+
+// Mid-ring soft-OOB storm — interrupt while mesh incomplete
+SMX EXCHANGE hive offworld_mid
+ASSERT SMX_OK == 0 "mid soft-OOB"
+ASSERT SMX_OOB >= 1 "mid oob counted"
+ASSERT CUBES == base_cubes "mid no ghost"
+
+SMX TALK scrap ghost_mid
+ASSERT SMX_OK == 0 "mid storm-B"
+ASSERT SMX_OOB >= 2 "mid oob sticky"
+ASSERT CUBES == base_cubes "mid no ghost B"
+
+// Steadfast recover: clear OOB, keep key, restore vital mid-cycle
+SMX RECOVER
+ASSERT SMX_OK == 1 "mid recover"
+ASSERT SMX_OOB == 0 "mid oob cleared"
+ASSERT SMX_KEY_OK == 1 "mid key sticky"
+ASSERT SMX_VITAL >= 6 "mid vital"
+ASSERT CUBES == base_cubes "recover invents nothing"
+
+// Complete mesh after wound (remaining ring + diagonals)
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+SMX EXCHANGE bed hive
+SMX EXCHANGE nozzle scrap
+ASSERT SMX_OK == 1 "mesh complete after wound"
+ASSERT SMX_TALKS >= 6 "mesh talks after steadfast"
+ASSERT CUBES == base_cubes "mesh identity after steadfast"
+
+// Dual quorum SEAL/OPEN anchors
+SMX SEAL bed hive "state/smx_steadfast/quorum_bh.cblc"
+ASSERT SMX_OK == 1 "seal quorum BH"
+ASSERT SMX_N > 64 "quorum BH frame"
+SMX OPEN nozzle "state/smx_steadfast/quorum_bh.cblc"
+ASSERT SMX_OK == 1 "open BH onto nozzle"
+ASSERT CUBES == base_cubes "BH open invents nothing"
+
+SMX SEAL nozzle scrap "state/smx_steadfast/quorum_ns.cblc"
+ASSERT SMX_OK == 1 "seal quorum NS"
+ASSERT SMX_N > 64 "quorum NS frame"
+SMX OPEN hive "state/smx_steadfast/quorum_ns.cblc"
+ASSERT SMX_OK == 1 "open NS onto hive"
+ASSERT CUBES == base_cubes "NS open invents nothing"
+
+// Post-anchor storm — still fail-closed
+SMX EXCHANGE scrap void_post
+ASSERT SMX_OK == 0 "post soft-OOB"
+ASSERT SMX_OOB >= 1 "post oob"
+ASSERT CUBES == base_cubes "post no ghost"
+
+SMX TALK bed ghost_post
+ASSERT SMX_OK == 0 "post storm-B"
+ASSERT SMX_OOB >= 2 "post oob sticky"
+ASSERT CUBES == base_cubes "post no ghost B"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "post recover"
+ASSERT SMX_OOB == 0 "post oob cleared"
+ASSERT SMX_KEY_OK == 1 "post key sticky"
+ASSERT SMX_VITAL >= 6 "post vital"
+
+// Full mesh re-anchor after dual SEAL + post storm
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+SMX EXCHANGE bed hive
+SMX EXCHANGE nozzle scrap
+ASSERT SMX_OK == 1 "full mesh after steadfast"
+ASSERT CUBES == base_cubes "final mesh identity"
+
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after steadfast"
+ASSERT SMX_KEY_OK == 1 "key after steadfast"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "no oob after steadfast"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after steadfast"
+ASSERT UNITY >= 40 "mesh unity after steadfast"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+// Mitosis under free energy — life continues after mid-ring wound
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+ASSERT births >= 1 "mitosis after mesh steadfast"
+ASSERT pop >= 2 "population after steadfast life"
+ASSERT SMX_OOB == 0 "guard holds through mitosis"
+ASSERT OK == 1
+
+PRINT "mesh_steadfast" births pop SMX_N SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
