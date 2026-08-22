@@ -704,6 +704,105 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE");
+  /* SMX LATTICE|QUORUM|FULL_MESH a b c ... — complete pairwise EXCHANGE.
+   * Life-force mesh stability: every live pair bonds (not only ring edges).
+   * Soft-OOB on ghost nodes; SMX_QUORUM = live cube count; SMX_LATTICE = ok pairs.
+   * Majority quorum (live > n/2) marks SMX_OK. No dual ladders. */
+  if (kw(&L->cur,"LATTICE")||kw(&L->cur,"QUORUM")||kw(&L->cur,"FULL_MESH")||
+      kw(&L->cur,"MESH_FULL")||kw(&L->cur,"ALL_PAIRS")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int n = 0, i, j;
+    int ok_pairs = 0;
+    int soft = 0;
+    int live = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "LATTICE needs >=2 cubes",
+                  "SMX LATTICE a b [c ...]  or  SMX QUORUM a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live++;
+    }
+    /* complete pairwise bidirectional exchange among live nodes only;
+     * missing peers still soft-OOB once so agents see SMX_OOB history */
+    for (i = 0; i < n; i++){
+      if (!present[i]){
+        /* probe first live peer → ghost for sticky soft-OOB */
+        for (j = 0; j < n; j++){
+          if (present[j]){
+            int r = do_smx_talk(vm, ids[j], ids[i]);
+            if (r < 0) return -1;
+            if (r > 0) soft++;
+            break;
+          }
+        }
+        continue;
+      }
+      for (j = i + 1; j < n; j++){
+        if (!present[j]) continue;
+        {
+          int r1 = do_smx_talk(vm, ids[i], ids[j]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[j], ids[i]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else ok_pairs++;
+          }
+        }
+      }
+    }
+    {
+      int majority = (live * 2 > n); /* strict majority of named nodes live */
+      var_set_num(vm, "SMX_LATTICE", (long)ok_pairs);
+      var_set_num(vm, "SMX_QUORUM", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_WE", (long)live);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      if (ok_pairs > 0 && majority && soft == 0){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX LATTICE quorum ok");
+      } else if (ok_pairs > 0 && majority){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX LATTICE quorum partial");
+      } else if (ok_pairs > 0){
+        /* mesh bonded but below majority — usable spine, not full quorum */
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX LATTICE below quorum");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX LATTICE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX LATTICE nodes=%d live=%d pairs_ok=%d soft=%d talks=%d oob=%d majority=%d\n",
+                n, live, ok_pairs, soft, vm->smx_talks, vm->smx_oob, majority ? 1 : 0);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM");
   return -1;
 }

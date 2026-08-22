@@ -1,0 +1,193 @@
+// atomic_printer_mesh_lattice.cubalc
+// Life-force gift: MESH-LATTICE QUORUM — complete pairwise SMX bond among
+// live printer nodes (not only ring edges). Soft-OOB ghosts stay fail-closed.
+// Mitosis under free energy while lattice holds; RECOVER restores vital/key;
+// dual SEAL/OPEN rails rebind hive mind; second storm fail-closed.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_lattice | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Full pairwise lattice among five live nodes (C(5,2)=10 pairs)
+SMX LATTICE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "lattice quorum live"
+ASSERT SMX_LATTICE >= 10 "ten live pairs"
+ASSERT SMX_QUORUM == 5 "five live quorum"
+ASSERT SMX_LIVE == 5 "five live alias"
+ASSERT SMX_NODES == 5 "five named nodes"
+ASSERT SMX_TALKS >= 20 "bidirectional lattice talks"
+ASSERT CUBES == base_cubes "lattice invents nothing"
+
+// Alias form still pure
+SMX QUORUM bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "quorum rebind"
+ASSERT SMX_QUORUM == 5 "quorum sticky"
+ASSERT SMX_LATTICE >= 10 "lattice pairs sticky"
+
+// Mitosis under free energy while lattice holds
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  SEND seed tick
+  SEND d1 tick
+  SEND d2 tick
+  LET step = step + 1
+END
+
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = 1
+IF a1 == 1 THEN
+  LET pop = pop + 1
+END
+IF a2 == 1 THEN
+  LET pop = pop + 1
+END
+ASSERT births >= 1 "mitosis under lattice"
+ASSERT pop >= 2 "population after lattice life"
+ASSERT CUBES == base_cubes "life invents no cubes"
+
+// Soft-OOB ghost in lattice — fail-closed, no thrash place
+SMX LATTICE bed nozzle ghost_lattice hive scrap
+ASSERT SMX_OOB >= 1 "lattice soft-OOB"
+ASSERT SMX_QUORUM == 4 "four live of five named"
+ASSERT CUBES == base_cubes "no ghost from lattice"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "recover after lattice oob"
+ASSERT SMX_OOB == 0 "oob cleared"
+ASSERT SMX_KEY_OK == 1 "key sticky"
+ASSERT SMX_VITAL >= 6 "vital after recover"
+
+// Pure full mesh after recover
+SMX FULL_MESH bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "full_mesh pure"
+ASSERT SMX_LATTICE >= 10 "pairs after recover"
+ASSERT SMX_QUORUM == 5 "quorum after recover"
+ASSERT CUBES == base_cubes "full_mesh invents nothing"
+
+// Dual SEAL/OPEN rails under lattice spine
+SMX SEAL bed nozzle "state/smx_lattice/rail_bn.cblc"
+ASSERT SMX_OK == 1 "seal rail BN"
+ASSERT SMX_N > 64 "rail BN frame"
+SMX OPEN hive "state/smx_lattice/rail_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+
+SMX SEAL hive scrap "state/smx_lattice/rail_hs.cblc"
+ASSERT SMX_OK == 1 "seal rail HS"
+SMX OPEN pulse "state/smx_lattice/rail_hs.cblc"
+ASSERT SMX_OK == 1 "open HS onto pulse"
+ASSERT CUBES == base_cubes "rails invent nothing"
+
+// Final lattice lock + vitals
+SMX QUORUM bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "final quorum lock"
+ASSERT SMX_LATTICE >= 10 "final lattice"
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after lattice"
+ASSERT SMX_KEY_OK == 1 "key after lattice"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "no oob after lattice"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+// Second storm fail-closed
+SMX EXCHANGE hive offworld_storm
+ASSERT SMX_OK == 0 "storm soft-OOB"
+ASSERT SMX_OOB >= 1 "storm counted"
+ASSERT CUBES == base_cubes "storm invents nothing"
+SMX RECOVER
+ASSERT SMX_OK == 1 "recover after storm"
+ASSERT SMX_OOB == 0 "storm cleared"
+
+SMX LATTICE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "lattice after storm"
+ASSERT SMX_QUORUM == 5 "quorum holds after storm"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after lattice"
+ASSERT UNITY >= 40 "mesh unity after lattice"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+ASSERT births >= 1 "mitosis before mesh lattice"
+ASSERT pop >= 2 "population after lattice life"
+ASSERT SMX_LATTICE >= 10 "ten-pair lattice"
+ASSERT SMX_QUORUM == 5 "five-node quorum"
+ASSERT SMX_OOB == 0 "guard holds through lattice"
+ASSERT OK == 1
+
+PRINT "mesh_lattice" births pop SMX_LATTICE SMX_QUORUM SMX_NODES SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
+
+PASS
