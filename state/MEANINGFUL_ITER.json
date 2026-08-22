@@ -1,6 +1,6 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "8dfd7189",
+  "commit": "ceb9b3f4",
   "version": "1.15.1093-usability",
   "feature": "atomic_printer_mesh_heal",
   "proof": "1623_atomic_printer_mesh_heal",
@@ -19,6 +19,6 @@
   "proofs": [
     "programs/proof/1623_atomic_printer_mesh_heal.cubalc"
   ],
-  "commit_short": "8dfd7189",
-  "head": "8dfd7189229753c06ed43aac16e692b8e03fd3e0"
+  "commit_short": "ceb9b3f4",
+  "head": "ceb9b3f4eea0daeb0ee824bb35ca74fc4fb9cf46"
 }
