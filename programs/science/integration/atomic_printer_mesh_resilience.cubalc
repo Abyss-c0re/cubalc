@@ -1,0 +1,219 @@
+// atomic_printer_mesh_resilience.cubalc
+// Life-force gift: MESH-RESILIENCE — three soft-OOB storm cycles on the
+// printer spine stay fail-closed (no ghost thrash); each cycle RECOVER +
+// ring EXCHANGE + quorum SEAL/OPEN anchors mind; after the third cycle the
+// mind is still writeable and mitosis continues under free energy.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_resilience | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 12 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// ── Cycle 1: storm → recover → ring → seal quorum A ──
+SMX EXCHANGE hive offworld_c1
+ASSERT SMX_OK == 0 "c1 soft-OOB"
+ASSERT SMX_OOB >= 1 "c1 oob counted"
+ASSERT CUBES == base_cubes "c1 no ghost"
+
+SMX TALK nozzle ghost_c1
+ASSERT SMX_OK == 0 "c1 storm-B"
+ASSERT SMX_OOB >= 2 "c1 oob sticky"
+ASSERT CUBES == base_cubes "c1 no ghost B"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "c1 recover"
+ASSERT SMX_OOB == 0 "c1 oob cleared"
+ASSERT SMX_KEY_OK == 1 "c1 key sticky"
+ASSERT SMX_VITAL >= 6 "c1 vital"
+
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+ASSERT SMX_OK == 1 "c1 ring live"
+ASSERT CUBES == base_cubes "c1 ring identity"
+
+SMX SEAL bed hive "state/smx_resilience/quorum_a.cblc"
+ASSERT SMX_OK == 1 "c1 seal quorum A"
+ASSERT SMX_N > 64 "c1 quorum A frame"
+SMX OPEN scrap "state/smx_resilience/quorum_a.cblc"
+ASSERT SMX_OK == 1 "c1 open quorum A"
+ASSERT CUBES == base_cubes "c1 open invents nothing"
+
+// ── Cycle 2: deeper storm after quorum A ──
+SMX EXCHANGE scrap void_c2
+ASSERT SMX_OK == 0 "c2 soft-OOB"
+ASSERT SMX_OOB >= 1 "c2 oob counted"
+ASSERT CUBES == base_cubes "c2 no ghost"
+
+SMX EXCHANGE hive offworld_c2
+ASSERT SMX_OK == 0 "c2 storm-B"
+ASSERT SMX_OOB >= 2 "c2 oob sticky"
+ASSERT CUBES == base_cubes "c2 no ghost B"
+
+SMX TALK bed ghost_c2
+ASSERT SMX_OK == 0 "c2 storm-C"
+ASSERT SMX_OOB >= 3 "c2 storm depth"
+ASSERT CUBES == base_cubes "c2 no ghost C"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "c2 recover"
+ASSERT SMX_OOB == 0 "c2 oob cleared"
+ASSERT SMX_KEY_OK == 1 "c2 key sticky"
+ASSERT SMX_VITAL >= 6 "c2 vital"
+
+// Full 6-edge mesh after second storm
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+SMX EXCHANGE bed hive
+SMX EXCHANGE nozzle scrap
+ASSERT SMX_OK == 1 "c2 full mesh"
+ASSERT SMX_TALKS >= 12 "c2 six bidirectional"
+ASSERT CUBES == base_cubes "c2 mesh identity"
+
+SMX SEAL nozzle scrap "state/smx_resilience/quorum_b.cblc"
+ASSERT SMX_OK == 1 "c2 seal quorum B"
+ASSERT SMX_N > 64 "c2 quorum B frame"
+SMX OPEN hive "state/smx_resilience/quorum_b.cblc"
+ASSERT SMX_OK == 1 "c2 open quorum B"
+ASSERT CUBES == base_cubes "c2 open invents nothing"
+
+// ── Cycle 3: post-quorum triple storm — still fail-closed, no thrash ──
+SMX EXCHANGE hive offworld_c3
+ASSERT SMX_OK == 0 "c3 soft-OOB"
+ASSERT SMX_OOB >= 1 "c3 oob"
+ASSERT CUBES == base_cubes "c3 no ghost"
+
+SMX TALK scrap ghost_c3
+ASSERT SMX_OK == 0 "c3 storm-B"
+ASSERT SMX_OOB >= 2 "c3 oob sticky"
+ASSERT CUBES == base_cubes "c3 no ghost B"
+
+SMX EXCHANGE nozzle void_c3
+ASSERT SMX_OK == 0 "c3 storm-C"
+ASSERT SMX_OOB >= 3 "c3 storm depth"
+ASSERT CUBES == base_cubes "c3 no ghost C"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "c3 recover"
+ASSERT SMX_OOB == 0 "c3 oob cleared"
+ASSERT SMX_KEY_OK == 1 "c3 key sticky"
+ASSERT SMX_VITAL >= 6 "c3 vital after triple cycle"
+
+// Fresh SEAL after three storm cycles — mind still writeable (no thrash lock)
+SMX SEAL hive bed "state/smx_resilience/quorum_post.cblc"
+ASSERT SMX_OK == 1 "post triple-storm seal"
+ASSERT SMX_N > 64 "post frame size"
+SMX OPEN nozzle "state/smx_resilience/quorum_post.cblc"
+ASSERT SMX_OK == 1 "post open onto nozzle"
+ASSERT CUBES == base_cubes "post open invents nothing"
+
+
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after resilience"
+ASSERT SMX_KEY_OK == 1 "key after resilience"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "no oob after resilience"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+// Closing ring under free energy
+SMX EXCHANGE bed scrap
+SMX EXCHANGE hive nozzle
+ASSERT SMX_OK == 1 "closing ring"
+ASSERT CUBES == base_cubes "closing ring identity"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after resilience"
+ASSERT UNITY >= 40 "mesh unity after triple storm"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+// Mitosis under free energy — life continues after triple-storm resilience
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+ASSERT births >= 1 "mitosis after mesh resilience"
+ASSERT pop >= 2 "population after resilience life"
+ASSERT SMX_OOB == 0 "guard holds through mitosis"
+ASSERT OK == 1
+
+PRINT "mesh_resilience" births pop SMX_N SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES

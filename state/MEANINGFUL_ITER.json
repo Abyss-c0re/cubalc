@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "ceeac44a",
-  "version": "1.15.1104-usability",
-  "feature": "atomic_printer_mesh_exchange",
-  "proof": "1634_atomic_printer_mesh_exchange",
+  "commit": "PENDING",
+  "version": "1.15.1105-usability",
+  "feature": "atomic_printer_mesh_resilience",
+  "proof": "1635_atomic_printer_mesh_resilience",
   "proof_ok": true,
-  "ts": "2026-08-22T20:15:34Z",
-  "iso": "2026-08-22T20:15:34Z",
-  "iter": 1634,
-  "note": "Life-force MESH-EXCHANGE: soft-OOB storm wounds fail-closed on printer spine; RECOVER restores vital/key; full 6-edge mesh EXCHANGE carries matrix mind (ring+diagonals); SEAL/OPEN anchors recovered mind; second storm after anchor still fail-closed (no thrash); fresh post-storm SEAL proves mind writeable; VITAL/STATUS + mitosis under free energy.",
+  "ts": "2026-08-22T20:27:29Z",
+  "iso": "2026-08-22T20:27:29Z",
+  "iter": 1635,
+  "note": "Life-force MESH-RESILIENCE: three soft-OOB storm cycles on printer spine stay fail-closed (no ghost thrash); each cycle RECOVER + ring/mesh EXCHANGE + quorum SEAL/OPEN anchors mind; after third cycle mind still writeable; VITAL/STATUS + mitosis under free energy.",
   "law": "no_dual_ladders",
-  "asserts_ok": 56,
+  "asserts_ok": 69,
   "asserts_fail": 0,
-  "item": "1634 atomic printer mesh exchange",
-  "item_id": "mi_1634_atomic_printer_mesh_exchange",
-  "title": "1634 atomic printer mesh exchange",
-  "summary": "MESH-EXCHANGE full 6-edge SEAL/OPEN spine after double soft-OOB recover; mitosis continues.",
+  "item": "1635 atomic printer mesh resilience",
+  "item_id": "mi_1635_atomic_printer_mesh_resilience",
+  "title": "1635 atomic printer mesh resilience",
+  "summary": "MESH-RESILIENCE triple soft-OOB storm cycles with quorum SEAL/OPEN; mitosis continues.",
   "proofs": [
-    "programs/proof/1634_atomic_printer_mesh_exchange.cubalc"
+    "programs/proof/1635_atomic_printer_mesh_resilience.cubalc"
   ]
 }
