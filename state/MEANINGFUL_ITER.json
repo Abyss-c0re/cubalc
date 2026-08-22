@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "a0ddd77b2d457b1049d6d493fde7d71632af3f7c",
-  "version": "1.15.1110-usability",
-  "feature": "atomic_printer_mesh_anchor",
-  "proof": "1640_atomic_printer_mesh_anchor",
+  "commit": "75c4341ceef69a34eeaa87651863b6b148cca676",
+  "version": "1.15.1111-usability",
+  "feature": "atomic_printer_mesh_hearth",
+  "proof": "1641_atomic_printer_mesh_hearth",
   "proof_ok": true,
-  "ts": "2026-08-22T21:35:00Z",
-  "iso": "2026-08-22T21:35:00Z",
-  "iter": 1640,
-  "note": "Life-force MESH-ANCHOR: mitosis under free energy first; SEAL parent+daughter minds as lineage anchors; soft-OOB against sealed lineage fail-closed; RECOVER restores vital/key; OPEN lineage re-anchors; dual SEAL/OPEN post-anchor quorum; mesh re-bind; second storm fail-closed; no dual ladders.",
+  "ts": "2026-08-22T22:05:00Z",
+  "iso": "2026-08-22T22:05:00Z",
+  "iter": 1641,
+  "note": "Life-force MESH-HEARTH: mitosis under free energy first; SEAL parent mind as hearth root; SEAL each live daughter as hearth ember; soft-OOB against hearth fail-closed; RECOVER restores vital/key; OPEN hearth root re-homes scrap; dual SEAL/OPEN post-hearth quorum; mesh re-bind; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
   "asserts_ok": 60,
   "asserts_fail": 0,
-  "item": "1640 atomic printer mesh anchor",
-  "item_id": "mi_1640_atomic_printer_mesh_anchor",
-  "title": "1640 atomic printer mesh anchor",
-  "summary": "MESH-ANCHOR lineage SEAL after mitosis + soft-OOB fail-closed + OPEN re-anchor + dual quorum.",
+  "item": "1641 atomic printer mesh hearth",
+  "item_id": "mi_1641_atomic_printer_mesh_hearth",
+  "title": "1641 atomic printer mesh hearth",
+  "summary": "MESH-HEARTH parent root + daughter embers + soft-OOB fail-closed + OPEN re-home + dual quorum.",
   "proofs": [
-    "programs/proof/1640_atomic_printer_mesh_anchor.cubalc"
+    "programs/proof/1641_atomic_printer_mesh_hearth.cubalc"
   ]
 }
