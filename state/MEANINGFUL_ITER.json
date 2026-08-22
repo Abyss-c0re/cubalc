@@ -16,11 +16,10 @@
   "ts": 1787384842,
   "note": "plate exactly-82 key diagnostic duals",
   "summary": "IFEIGHTYONEP/IFHENOCTACONTAP plate-81 duals + proof 1593",
-  "commit": "a49ffe0f31011d27cdcf47aeb38043a1e907f2d2",
+  "commit": "bb3f0770",
   "commit_short": "bc499f9b",
-  "head": "bc499f9b",
+  "head": "bb3f077075d275adb5b1958044935cae193fa3bb",
   "updated": 1787384834,
   "status": "shipped",
-  "HEAD": "a49ffe0f31011d27cdcf47aeb38043a1e907f2d2",
-  "commit_pending": true
+  "HEAD": "a49ffe0f31011d27cdcf47aeb38043a1e907f2d2"
 }
