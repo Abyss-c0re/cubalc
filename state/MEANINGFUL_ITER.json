@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "75c4341ceef69a34eeaa87651863b6b148cca676",
-  "version": "1.15.1111-usability",
-  "feature": "atomic_printer_mesh_hearth",
-  "proof": "1641_atomic_printer_mesh_hearth",
+  "commit": "9129b4374feae1a143d6fa9823162f111e1ce123",
+  "version": "1.15.1112-usability",
+  "feature": "atomic_printer_mesh_sanctum",
+  "proof": "1642_atomic_printer_mesh_sanctum",
   "proof_ok": true,
-  "ts": "2026-08-22T22:05:00Z",
-  "iso": "2026-08-22T22:05:00Z",
-  "iter": 1641,
-  "note": "Life-force MESH-HEARTH: mitosis under free energy first; SEAL parent mind as hearth root; SEAL each live daughter as hearth ember; soft-OOB against hearth fail-closed; RECOVER restores vital/key; OPEN hearth root re-homes scrap; dual SEAL/OPEN post-hearth quorum; mesh re-bind; second storm fail-closed; no dual ladders.",
+  "ts": "2026-08-23T00:55:00Z",
+  "iso": "2026-08-23T00:55:00Z",
+  "iter": 1642,
+  "note": "Life-force MESH-SANCTUM: mitosis under free energy first; SEAL parent mind as sanctum vault; soft-OOB against sanctum fail-closed; RECOVER restores vital/key; OPEN vault re-homes scrap; dual SEAL/OPEN post-sanctum quorum; kin EXCHANGE bond among live daughters; mesh re-bind; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
-  "asserts_ok": 60,
+  "asserts_ok": 57,
   "asserts_fail": 0,
-  "item": "1641 atomic printer mesh hearth",
-  "item_id": "mi_1641_atomic_printer_mesh_hearth",
-  "title": "1641 atomic printer mesh hearth",
-  "summary": "MESH-HEARTH parent root + daughter embers + soft-OOB fail-closed + OPEN re-home + dual quorum.",
+  "item": "1642 atomic printer mesh sanctum",
+  "item_id": "mi_1642_atomic_printer_mesh_sanctum",
+  "title": "1642 atomic printer mesh sanctum",
+  "summary": "MESH-SANCTUM vault + kin bond + soft-OOB fail-closed + OPEN re-home + dual quorum.",
   "proofs": [
-    "programs/proof/1641_atomic_printer_mesh_hearth.cubalc"
+    "programs/proof/1642_atomic_printer_mesh_sanctum.cubalc"
   ]
 }
