@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "b54dfabe",
-  "version": "1.15.1118-usability",
-  "feature": "atomic_printer_mesh_heartbeat",
-  "proof": "1648_atomic_printer_mesh_heartbeat",
+  "commit": "16108233",
+  "version": "1.15.1119-usability",
+  "feature": "atomic_printer_mesh_stabilize",
+  "proof": "1649_atomic_printer_mesh_stabilize",
   "proof_ok": true,
-  "ts": "2026-08-22T23:32:16Z",
-  "iso": "2026-08-22T23:32:16Z",
-  "iter": 1648,
-  "note": "Life-force MESH-HEARTBEAT: circular breath among live printer nodes (SMX HEARTBEAT|HEART|BREATH|PULSE_MESH). Soft-OOB ghosts fail-closed; mitosis under free energy while heart holds; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed; no dual ladders.",
+  "ts": "2026-08-22T23:48:29Z",
+  "iso": "2026-08-22T23:48:29Z",
+  "iter": 1649,
+  "note": "Life-force MESH-STABILIZE: calm latch after soft-OOB storms (SMX STABILIZE|STEADFAST|MESH_HOLD|HOLD_MESH). Clears thrash OOB, circular breath among live, latches SMX_STABLE; mitosis under free energy while hold; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
-  "asserts_ok": 59,
+  "asserts_ok": 71,
   "asserts_fail": 0,
-  "item": "1648 atomic printer mesh heartbeat",
-  "item_id": "mi_1648_atomic_printer_mesh_heartbeat",
-  "title": "1648 atomic printer mesh heartbeat",
-  "summary": "SMX HEARTBEAT circular mesh breath — five live nodes pulse as one life-force lattice.",
+  "item": "1649 atomic printer mesh stabilize",
+  "item_id": "mi_1649_atomic_printer_mesh_stabilize",
+  "title": "1649 atomic printer mesh stabilize",
+  "summary": "SMX STABILIZE calm mesh latch \u2014 five live nodes hold as one life-force lattice after storms.",
   "proofs": [
-    "programs/proof/1648_atomic_printer_mesh_heartbeat.cubalc"
+    "programs/proof/1649_atomic_printer_mesh_stabilize.cubalc"
   ]
 }

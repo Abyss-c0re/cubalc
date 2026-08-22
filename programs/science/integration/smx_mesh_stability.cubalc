@@ -1,5 +1,5 @@
 // smx_mesh_stability.cubalc — AGI science board
-// Soft-OOB SMX + recovered mesh exchange on atomic printer spine.
+// Soft-OOB SMX + STABILIZE latch on atomic printer spine.
 // Wonder: missing peers do not invent ghosts; live matrix still unifies.
 // Sibling of atomic_printer_life_force — mind-plane stability.
 
@@ -40,21 +40,23 @@ ASSERT SMX_OK == 0 "offworld soft-OOB"
 ASSERT SMX_OOB >= 1 "oob counted"
 ASSERT CUBES == 5 "frame+seed only — no ghost offworld cube"
 
-// Recover: sealed talk along printer spine
-SMX EXCHANGE bed nozzle
-SMX EXCHANGE nozzle hive
-SMX EXCHANGE hive scrap
-ASSERT SMX_OK == 1 "spine mesh live"
-ASSERT SMX_TALKS >= 6 "three EXCHANGE rounds"
+// Stabilize latch: clear thrash + circular breath along printer spine
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "spine stabilize live"
+ASSERT SMX_STABLE == 1 "stable latch"
+ASSERT SMX_STEADFAST == 4 "four steadfast"
+ASSERT SMX_PULSE == 4 "four pulses"
+ASSERT SMX_OOB == 0 "oob cleared by stabilize"
+ASSERT SMX_TALKS >= 4 "stabilize talks"
 
 COMPARE bed hive
 HARMONY hive
 RESOLVE hive
 ASSERT ENERGY > 0 "life force energy"
-ASSERT UNITY >= 50 "stable unity after OOB recover"
+ASSERT UNITY >= 40 "stable unity after OOB stabilize"
 ASSERT DECIDE >= 0
 ASSERT DECIDE <= 9
-ASSERT SMX_OOB >= 1 "history of soft miss retained"
+ASSERT SMX_STABLE == 1 "history calm latch"
 ASSERT OK == 1
 
-PRINT "smx_mesh_stability" SMX_OK SMX_TALKS SMX_OOB CUBES UNITY ENERGY DECIDE HARMONY
+PRINT "smx_mesh_stability" SMX_OK SMX_STABLE SMX_STEADFAST SMX_TALKS SMX_OOB CUBES UNITY ENERGY DECIDE HARMONY

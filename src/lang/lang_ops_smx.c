@@ -893,6 +893,104 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH");
+  /* SMX STABILIZE|STEADFAST|MESH_HOLD|HOLD_MESH a b c ...
+   * Life-force mesh stability latch after soft-OOB storms.
+   * Clears thrash OOB, circular one-way breath among live nodes only,
+   * latches SMX_STABLE/SMX_STEADFAST, refreshes vital. Ghosts fail-closed.
+   * Free energy path stays open — no dual ladders. */
+  if (kw(&L->cur,"STABILIZE")||kw(&L->cur,"STEADFAST")||kw(&L->cur,"MESH_HOLD")||
+      kw(&L->cur,"HOLD_MESH")||kw(&L->cur,"STABILITY")||kw(&L->cur,"MESH_STABLE")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i;
+    int pulses = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "STABILIZE needs >=2 cubes",
+                  "SMX STABILIZE a b [c ...]  or  SMX STEADFAST a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* clear thrash OOB first — stability is a calm latch, not a ghost factory */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm (history without thrash place) */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* stabilize pulse: circular one-way among live only */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r = do_smx_talk(vm, ids[a], ids[b]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+        else pulses++;
+      }
+    }
+    {
+      int stable = (pulses > 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (stable ? 3 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_STABLE", (long)stable);
+      var_set_num(vm, "SMX_STEADFAST", (long)live);
+      var_set_num(vm, "SMX_HOLD_MESH", (long)stable);
+      var_set_num(vm, "SMX_PULSE", (long)pulses);
+      var_set_num(vm, "SMX_HEART", (long)pulses);
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (stable && soft == 0){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX STABILIZE ok");
+      } else if (stable){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX STABILIZE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX STABILIZE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX STABILIZE nodes=%d live=%d pulses=%d soft=%d talks=%d oob=%d stable=%d vital=%ld\n",
+                n, live, pulses, soft, vm->smx_talks, vm->smx_oob, stable, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST");
   return -1;
 }
