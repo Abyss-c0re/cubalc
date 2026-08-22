@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "1c1e26225ef5dbea6aa2491481bc6048f9bceab9",
-  "version": "1.15.1114-usability",
-  "feature": "atomic_printer_mesh_forge",
-  "proof": "1644_atomic_printer_mesh_forge",
+  "commit": "2ea1d87c4a19645854493dfbabb493c9635aad65",
+  "version": "1.15.1115-usability",
+  "feature": "atomic_printer_mesh_crucible",
+  "proof": "1645_atomic_printer_mesh_crucible",
   "proof_ok": true,
-  "ts": "2026-08-23T01:20:00Z",
-  "iso": "2026-08-23T01:20:00Z",
-  "iter": 1644,
-  "note": "Life-force MESH-FORGE: mitosis under free energy first; SEAL parent mind as forge hearth; SEAL live daughters as anvil plates; soft-OOB against forge fail-closed; RECOVER restores vital/key; OPEN forge re-homes scrap; dual SEAL/OPEN rails BN+HS rebind hive; kin EXCHANGE bond among live cells; mesh re-bind; second storm fail-closed; no dual ladders.",
+  "ts": "2026-08-23T02:00:00Z",
+  "iso": "2026-08-23T02:00:00Z",
+  "iter": 1645,
+  "note": "Life-force MESH-CRUCIBLE: mitosis under free energy first; SEAL parent mind as crucible vessel; SEAL live daughters as temper plates; soft-OOB against crucible fail-closed; RECOVER restores vital/key; OPEN crucible pours scrap; dual SEAL/OPEN rails BN+HS rebind hive; kin EXCHANGE bond among live cells; mesh re-bind; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
   "asserts_ok": 68,
   "asserts_fail": 0,
-  "item": "1644 atomic printer mesh forge",
-  "item_id": "mi_1644_atomic_printer_mesh_forge",
-  "title": "1644 atomic printer mesh forge",
-  "summary": "MESH-FORGE hearth + anvil plates + soft-OOB fail-closed + OPEN re-home + dual BN/HS rails + kin bond.",
+  "item": "1645 atomic printer mesh crucible",
+  "item_id": "mi_1645_atomic_printer_mesh_crucible",
+  "title": "1645 atomic printer mesh crucible",
+  "summary": "MESH-CRUCIBLE vessel + temper plates + soft-OOB fail-closed + OPEN pour + dual BN/HS rails + kin bond.",
   "proofs": [
-    "programs/proof/1644_atomic_printer_mesh_forge.cubalc"
+    "programs/proof/1645_atomic_printer_mesh_crucible.cubalc"
   ]
 }
