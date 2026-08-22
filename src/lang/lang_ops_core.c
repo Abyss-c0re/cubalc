@@ -39808,6 +39808,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           else if (strcmp(name,"UNITY")==0) val=(long)lround(vm->ch.unity*100.0);
           else if (strcmp(name,"SMX_OK")==0) val=(long)vm->smx_ok;
           else if (strcmp(name,"SMX_TALKS")==0) val=(long)vm->smx_talks;
+          else if (strcmp(name,"SMX_OOB")==0) val=(long)vm->smx_oob;
           else if (strcmp(name,"HTTP_CODE")==0) val=(long)vm->last_code;
           else if (strcmp(name,"CELLS")==0) val=(long)CUBALC_CELL_N;
           else if (strcmp(name,"HOLD_FLASH")==0) val=(long)vm->hold_flash;

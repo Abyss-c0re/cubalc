@@ -146,6 +146,7 @@ typedef struct {
   cubalc_smx_ctx smx;
   int smx_ok;
   int smx_talks;
+  int smx_oob;   /* soft out-of-band: missing cube talks (fail-closed, no ghost place) */
   /* Wall-clock run budget: CUBALC_RUN_TIMEOUT / cubalc run -T (0 = unlimited). */
   long run_timeout_ms;   /* requested budget ms */
   long run_deadline_ms;  /* mono ms absolute; 0 = no deadline */

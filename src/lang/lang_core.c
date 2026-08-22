@@ -1561,6 +1561,9 @@ long cubalc_lang_parse_prim(VM *vm, Lex *L){
     if (strcmp(name,"SMX_TALKS")==0){
       Var *vv=var_get(vm,"SMX_TALKS",0); return vv?vv->val:(long)vm->smx_talks;
     }
+    if (strcmp(name,"SMX_OOB")==0){
+      Var *vv=var_get(vm,"SMX_OOB",0); return vv?vv->val:(long)vm->smx_oob;
+    }
     if (strcmp(name,"SMX_N")==0){
       Var *vv=var_get(vm,"SMX_N",0); return vv?vv->val:0;
     }

@@ -1,0 +1,68 @@
+// 1621_smx_mesh_soft_oob.cubalc
+// SMX fail-closed soft-OOB + mesh_exchange stability.
+// Missing cube must NOT auto-place (ghost thrash). Board continues.
+// Live spine still EXCHANGEs; SMX_OOB counts soft misses.
+// Law: free energy / matrix unity · impress by manifestation.
+
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=smx_mesh_soft_oob | hold_flash=1 | creed=life_force |"
+
+// --- Live printer spine (known cubes only) ---
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 2
+FLOW 2
+
+SMX KEY
+// Reset OOB counter baseline (runtime may leave unset → treat as 0)
+LET oob0 = 0
+
+// Soft-OOB: talk to a cube that was never CUBE-placed
+SMX TALK bed ghost_cell
+ASSERT SMX_OK == 0 "soft-OOB must clear SMX_OK"
+ASSERT SMX_OOB >= 1 "SMX_OOB increments on missing cube"
+ASSERT CUBES == 3 "no ghost auto-place on soft-OOB TALK"
+
+// Soft-OOB EXCHANGE must not place either side missing
+SMX EXCHANGE bed missing_peer
+ASSERT SMX_OK == 0 "exchange soft-OOB clears SMX_OK"
+ASSERT SMX_OOB >= 2 "second soft-OOB counted"
+ASSERT CUBES == 3 "EXCHANGE soft-OOB must not thrash-place"
+
+// Live mesh still works after soft misses — fail-closed, not dead
+SMX EXCHANGE bed nozzle
+ASSERT SMX_OK == 1 "live exchange after soft-OOB"
+ASSERT SMX_TALKS >= 2 "bidirectional talks on live spine"
+
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "hive spine exchange"
+ASSERT SMX_TALKS >= 4 "four directed talks total"
+
+// Stability: unity rises; energy still flows; no extra cubes
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "energy still flows after soft-OOB"
+ASSERT UNITY >= 40 "mesh unity after recover"
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT CUBES == 3 "mesh identity stable — still three cubes"
+ASSERT SMX_OOB >= 2 "OOB sticky count preserved across live talks"
+ASSERT OK == 1
+
+PRINT "smx_mesh_soft_oob" SMX_OK SMX_TALKS SMX_OOB CUBES UNITY ENERGY DECIDE

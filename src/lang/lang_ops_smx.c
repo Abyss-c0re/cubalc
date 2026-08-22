@@ -67,6 +67,27 @@ static void smx_soft_fail(VM *vm, const char *why){
     fprintf(vm->trace, "# SMX soft-fail: %s\n", w);
 }
 
+
+/* Soft-OOB: missing cube on TALK/EXCHANGE — fail-closed, no ghost auto-place.
+ * Increments SMX_OOB; clears SMX_OK; program continues (mesh stability). */
+static void smx_soft_oob(VM *vm, const char *from_id, const char *to_id, const char *which){
+  char why[128];
+  vm->smx_oob++;
+  vm->smx_ok = 0;
+  var_set_num(vm, "SMX_OK", 0);
+  var_set_num(vm, "SMX_OOB", vm->smx_oob);
+  var_set_num(vm, "OK", 0);
+  snprintf(why, sizeof why, "SMX soft-OOB %s %s→%s (no ghost place)",
+           which ? which : "talk",
+           from_id ? from_id : "?",
+           to_id ? to_id : "?");
+  var_set_str(vm, "LAST", why);
+  var_set_str(vm, "ERR", why);
+  var_set_str(vm, "LAST_ERR", why);
+  if (vm->trace)
+    fprintf(vm->trace, "# %s oob=%d\n", why, vm->smx_oob);
+}
+
 /* Fatal SMX fail with line + optional agent/human hint (err is 160 bytes). */
 static void smx_fail_at(VM *vm, int line, const char *core, const char *hint){
   char msg[160];
@@ -102,17 +123,17 @@ static int ensure_smx_key(VM *vm){
   return -1;
 }
 
-/* SMX TALK a b — secure State Matrix transfer a→b */
+/* SMX TALK a b — secure State Matrix transfer a→b.
+ * Missing cubes are soft-OOB (fail-closed): no ghost auto-place, SMX_OOB++, continue. */
 static int do_smx_talk(VM *vm, const char *from_id, const char *to_id){
   ensure_world(vm);
   if (ensure_smx_key(vm) != 0) return -1;
   int ia = find_cube(vm, from_id);
   int ib = find_cube(vm, to_id);
-  if (ia < 0){ place_cube(vm, from_id, "host", 1); ia = find_cube(vm, from_id); }
-  if (ib < 0){ place_cube(vm, to_id, "body", 1); ib = find_cube(vm, to_id); }
   if (ia < 0 || ib < 0){
-    smx_fail_at(vm, 0, "TALK unknown cube", "CUBE name then SMX TALK a b");
-    return -1;
+    /* Mesh stability: do NOT invent cubes. Soft-OOB so boards recover. */
+    smx_soft_oob(vm, from_id, to_id, "TALK");
+    return 1; /* non-fatal: caller must treat >0 as soft continue */
   }
   cubalc_cube_plug(&vm->ch, ia, ib);
   int rc = cubalc_cube_talk_secure(&vm->ch, &vm->smx, ia, ib);
@@ -260,7 +281,11 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       smx_fail_at(vm, aln, "TALK needs two cubes", "SMX TALK a b"); return -1;
     }
     char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
-    if (do_smx_talk(vm, a, b) != 0) return -1;
+    {
+      int r = do_smx_talk(vm, a, b);
+      if (r < 0) return -1;
+      /* r==0 ok; r>0 soft-OOB continue */
+    }
     bump(vm); return 1;
   }
   if (kw(&L->cur,"EXCHANGE")||kw(&L->cur,"SWAP")||kw(&L->cur,"PAIR")){
@@ -274,8 +299,14 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       smx_fail_at(vm, aln, "EXCHANGE needs two cubes", "SMX EXCHANGE a b"); return -1;
     }
     char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
-    if (do_smx_talk(vm, a, b) != 0) return -1;
-    if (do_smx_talk(vm, b, a) != 0) return -1;
+    {
+      int r1 = do_smx_talk(vm, a, b);
+      if (r1 < 0) return -1;
+      if (r1 > 0){ bump(vm); return 1; } /* soft-OOB: skip reverse, keep mesh */
+      int r2 = do_smx_talk(vm, b, a);
+      if (r2 < 0) return -1;
+      /* r2>0 also soft-OOB; still continue */
+    }
     bump(vm); return 1;
   }
   if (kw(&L->cur,"SEAL")||kw(&L->cur,"EMIT")){
