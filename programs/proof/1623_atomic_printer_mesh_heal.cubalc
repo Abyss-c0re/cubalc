@@ -1,0 +1,102 @@
+// 1623_atomic_printer_mesh_heal.cubalc
+// Proof: soft-OOB → SMX RECOVER → live EXCHANGE → mitosis on printer spine.
+// No IF*P duals. Life continues after mesh wound. asserts_fail:0 required.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=atomic_printer_mesh_heal | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+
+ENTITY seed OF Cell 1 10 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+// Baseline cube count (frame + entities) before wound
+LET base_cubes = CUBES
+
+SMX KEY
+SMX TALK bed ghost_cell
+ASSERT SMX_OK == 0 "soft-OOB clears SMX_OK"
+ASSERT SMX_OOB >= 1 "OOB counted"
+ASSERT CUBES == base_cubes "no ghost auto-place on soft-OOB"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "RECOVER restores ok"
+ASSERT SMX_OOB == 0 "OOB cleared by heal"
+ASSERT SMX_KEY_OK == 1 "key sticky"
+ASSERT SMX_VITAL >= 6 "vital after heal"
+ASSERT CUBES == base_cubes "heal does not invent cubes"
+
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "spine live post-heal"
+ASSERT SMX_TALKS >= 4 "four directed talks"
+ASSERT CUBES == base_cubes "exchange keeps identity"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "energy flows"
+ASSERT UNITY >= 40 "unity after heal"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+LET births = 0
+LET step = 0
+WHILE step < 8
+  TICK 1
+  FLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+LET pop = a0 + a1
+ASSERT births >= 1 "daughter after mesh heal"
+ASSERT pop >= 2 "population >= 2"
+ASSERT SMX_OOB == 0 "heal holds through mitosis"
+ASSERT OK == 1
+
+PRINT "proof1623" births pop SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES

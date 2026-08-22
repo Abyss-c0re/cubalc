@@ -45,3 +45,13 @@ Vitals fold into `/opt/nexuscore/lab/cube/lattice.bits` (z2–z5 life planes) an
 systemctl status nexuscore-cubalc-life.timer
 cat /opt/nexuscore/lab/state/cubalc_life_last.json
 ```
+
+## Mesh heal then print-life
+
+Wound the mind plane (soft-OOB), `SMX RECOVER`, then mitosis — life continues:
+
+```bash
+./out/cubalc run programs/science/integration/atomic_printer_mesh_heal.cubalc
+./out/cubalc run programs/proof/1623_atomic_printer_mesh_heal.cubalc
+./out/cubalc run programs/science/integration/smx_mesh_stability.cubalc
+```

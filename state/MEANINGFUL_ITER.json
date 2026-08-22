@@ -1,25 +1,24 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "07a164f0",
-  "version": "1.15.1092-usability",
-  "feature": "atomic_printer_life_force",
-  "proof": "1620_atomic_printer_life_force",
+  "commit": "8dfd7189",
+  "version": "1.15.1093-usability",
+  "feature": "atomic_printer_mesh_heal",
+  "proof": "1623_atomic_printer_mesh_heal",
   "proof_ok": true,
-  "ts": "2026-08-22T18:18:35Z",
-  "iso": "2026-08-22T17:24:07Z",
-  "iter": 1621,
-  "note": "Life-force gift path: AGI atomic 3D printer board (place/plug/energy/SMX/decide/mitosis). Auto-dev retargeted off IF*P dual mills.",
+  "ts": "2026-08-22T18:20:32Z",
+  "iso": "2026-08-22T18:20:32Z",
+  "iter": 1623,
+  "note": "Life-force: printer spine soft-OOB wound, SMX RECOVER heal, then mitosis. Mesh stability + life on one board.",
   "law": "no_dual_ladder; free_energy_must_flow; impress_by_manifestation",
   "docs": "docs/LIFE_FORCE.md",
-  "science": "programs/science/integration/atomic_printer_life_force.cubalc",
-  "commit_short": "87d81c0d",
-  "head": "87d81c0d475b7bde069e343ed1f6666d0be35b2a",
-  "item": "1622 smx vital recover",
-  "item_id": "mi_1622_smx_vital_recover",
-  "title": "1622 smx vital recover",
-  "summary": "Host-finished MI ship after nanobot partial (1622_smx_vital_recover).",
+  "science": "programs/science/integration/atomic_printer_mesh_heal.cubalc",
+  "item": "1623 atomic printer mesh heal",
+  "item_id": "mi_1623_atomic_printer_mesh_heal",
+  "title": "1623 atomic printer mesh heal",
+  "summary": "SMX soft-OOB + RECOVER then life mitosis on atomic printer spine.",
   "proofs": [
-    "programs/proof/1622_smx_vital_recover.cubalc"
+    "programs/proof/1623_atomic_printer_mesh_heal.cubalc"
   ],
-  "host_finish": true
+  "commit_short": "8dfd7189",
+  "head": "8dfd7189229753c06ed43aac16e692b8e03fd3e0"
 }
