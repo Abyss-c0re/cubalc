@@ -1,6 +1,6 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "PENDING",
+  "commit": "7978e6f0",
   "version": "1.15.1095-usability",
   "feature": "atomic_printer_lineage",
   "proof": "1624_atomic_printer_lineage",
