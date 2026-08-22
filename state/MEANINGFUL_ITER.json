@@ -5,10 +5,10 @@
   "feature": "IFSEVENTYSEVENP/IFHEPTEHEBDOMECONTAP",
   "proof": "programs/proof/1589_ifseventysevenp.cubalc",
   "proof_ok": true,
-  "ts": 1787379099,
+  "ts": 1787379108,
   "iter": 1589,
   "note": "plate exactly-77 key diagnostic dual past IFSEVENTYSIXP",
-  "head": "7db88765bec988997ea2f67040c15f8cc6d08b54",
+  "head": "92fb1234",
   "asserts_ok": 18,
   "asserts_fail": 0
 }
