@@ -1,0 +1,174 @@
+// 1626_atomic_printer_we_chorus.cubalc
+// Proof: WE-CHORUS twin hives ring-talk + colony breath lockstep.
+// asserts_fail:0. No IF*P duals. Life-force manifestation.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+HOLD_FLASH 1
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=atomic_printer_we_chorus | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive_a ROLE nanobot PROTON 1
+CUBE hive_b ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive_a "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS hive_b "0000111111110000000011111111000000001111111100000000111111110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive_a
+PLUG hive_a hive_b
+PLUG hive_b scrap
+PLUG scrap bed
+
+ENTITY c0 OF Cell 1 14 0
+ENTITY c1 OF Cell 0 0 0
+ENTITY c2 OF Cell 0 0 0
+PLUG bed c0
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 5
+FLOW 4
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive_a
+SMX EXCHANGE hive_a hive_b
+SMX EXCHANGE hive_b scrap
+SMX EXCHANGE scrap bed
+ASSERT SMX_OK == 1 "chorus ring live"
+ASSERT SMX_TALKS >= 10 "five bidirectional EXCHANGE rounds"
+
+COMPARE bed hive_a
+HARMONY hive_a
+RESOLVE hive_a
+ASSERT ENERGY > 0 "life force energy"
+ASSERT UNITY >= 40 "chorus unity"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+LET births = 0
+LET step = 0
+WHILE step < 14
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  SEND c0 tick
+  SEND c1 tick
+  SEND c2 tick
+
+  GETF c0 alive
+  LET al = LAST_N
+  GETF c0 ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF c1 alive
+      IF LAST_N == 0 THEN
+        GETF c0 energy
+        LET half = LAST_N / 2
+        IF half < 1 THEN
+          LET half = 1
+        END
+        GETF c0 gen
+        LET dg = LAST_N + 1
+        SEND c1 birth half dg
+        SEND c0 after_div
+        PLUG bed c1
+        LET births = births + 1
+      END
+    END
+  END
+
+  GETF c1 alive
+  LET a1 = LAST_N
+  GETF c1 ready
+  LET r1 = LAST_N
+  IF a1 == 1 THEN
+    IF r1 == 1 THEN
+      GETF c2 alive
+      IF LAST_N == 0 THEN
+        GETF c1 energy
+        LET half = LAST_N / 2
+        IF half < 1 THEN
+          LET half = 1
+        END
+        GETF c1 gen
+        LET dg = LAST_N + 1
+        SEND c2 birth half dg
+        SEND c1 after_div
+        PLUG bed c2
+        LET births = births + 1
+      END
+    END
+  END
+
+  LET step = step + 1
+END
+
+GETF c0 alive
+LET p0 = LAST_N
+GETF c1 alive
+LET p1 = LAST_N
+GETF c2 alive
+LET p2 = LAST_N
+LET pop0 = p0 + p1 + p2
+ASSERT births >= 2 "chorus colony births"
+ASSERT pop0 >= 3 "full trio before breath"
+
+LET breaths = 0
+LET min_pop = pop0
+LET b = 0
+WHILE b < 4
+  ENERGYFLOW 2
+  FLOW 1
+  SMX EXCHANGE hive_a hive_b
+  SMX EXCHANGE hive_b scrap
+  SMX EXCHANGE scrap bed
+  SMX EXCHANGE bed nozzle
+  SEND c0 tick
+  SEND c1 tick
+  SEND c2 tick
+  TICK 1
+  COMPARE bed hive_b
+  HARMONY hive_b
+  RESOLVE hive_b
+  LET breaths = breaths + 1
+
+  GETF c0 alive
+  LET x0 = LAST_N
+  GETF c1 alive
+  LET x1 = LAST_N
+  GETF c2 alive
+  LET x2 = LAST_N
+  LET pnow = x0 + x1 + x2
+  IF pnow < min_pop THEN
+    LET min_pop = pnow
+  END
+  LET b = b + 1
+END
+
+GETF c0 alive
+LET f0 = LAST_N
+GETF c1 alive
+LET f1 = LAST_N
+GETF c2 alive
+LET f2 = LAST_N
+LET popf = f0 + f1 + f2
+
+ASSERT breaths == 4 "four we-chorus breaths"
+ASSERT popf >= 3 "colony holds through chorus"
+ASSERT min_pop >= 3 "no death in we-chorus"
+ASSERT SMX_OK == 1 "mesh sticky"
+ASSERT ENERGY > 0 "energy alive"
+ASSERT UNITY >= 40 "unity after we-chorus"
+ASSERT OK == 1
+
+PRINT "proof1626" births breaths pop0 popf min_pop ENERGY UNITY DECIDE SMX_TALKS CUBES

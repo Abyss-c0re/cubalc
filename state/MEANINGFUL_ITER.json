@@ -1,19 +1,15 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "43ce578c",
+  "commit": "PENDING",
   "version": "1.15.1096-usability",
-  "feature": "atomic_printer_colony_chorus",
-  "proof": "1626_atomic_printer_colony_chorus",
+  "feature": "atomic_printer_we_chorus",
+  "proof": "1626_atomic_printer_we_chorus",
   "proof_ok": true,
-  "ts": "2026-08-22T22:10:00Z",
-  "iso": "2026-08-22T22:10:00Z",
+  "ts": "2026-08-22T23:10:00Z",
+  "iso": "2026-08-22T23:10:00Z",
   "iter": 1626,
-  "note": "Life-force colony chorus: three cells lock one SMX pulse; unity holds pure across five shared EXCHANGE rounds.",
-  "law": "no_dual_ladder; free_energy_must_flow; impress_by_manifestation",
-  "docs": "docs/LIFE_FORCE.md",
-  "science": "programs/science/integration/atomic_printer_colony_chorus.cubalc",
-  "item": "1626 atomic printer colony chorus",
-  "item_id": "mi_1626_atomic_printer_colony_chorus",
-  "title": "1626 atomic printer colony chorus",
-  "summary": "Colony we_chorus on printer spine: seed trio, five SMX chorus pulses, min_unity floor, mesh sticky."
+  "note": "Life-force WE-CHORUS: twin hives ring-talk on SMX while colony cells breathe lockstep on printer spine; one pulse many voices.",
+  "law": "no_dual_ladders",
+  "asserts_ok": 16,
+  "asserts_fail": 0
 }
