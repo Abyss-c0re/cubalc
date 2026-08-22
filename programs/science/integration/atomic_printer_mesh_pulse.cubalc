@@ -1,0 +1,157 @@
+// atomic_printer_mesh_pulse.cubalc
+// Life-force gift: MESH-PULSE — soft-OOB wound then VITAL STATUS pulse ring on the printer spine
+// stay fail-closed (no ghost thrash); ring EXCHANGE restores mind; colony
+// cells still mitosis under free energy. Wonder AGI can RUN.
+// Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_pulse | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 12 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Pulse-wound: missing peer — fail-closed, no ghost place
+SMX EXCHANGE hive offworld_pulse
+ASSERT SMX_OK == 0 "pulse-wound soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from pulse-wound"
+
+// Storm B: second missing peer — OOB sticky, still no thrash
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "pulse-ghost soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from pulse-ghost"
+
+SMX EXCHANGE scrap void_cell
+ASSERT SMX_OK == 0 "pulse-void soft-OOB"
+ASSERT SMX_OOB >= 3 "oob C storm depth"
+ASSERT CUBES == base_cubes "no ghost pulse-void"
+
+// Pulse recover: clear OOB, keep key, restore vital
+SMX RECOVER
+ASSERT SMX_OK == 1 "mesh pulse recovered"
+ASSERT SMX_OOB == 0 "oob cleared by recover"
+ASSERT SMX_KEY_OK == 1 "key sticky through storm"
+ASSERT SMX_VITAL >= 6 "vital restored"
+ASSERT CUBES == base_cubes "recover invents nothing"
+
+// MESH-PULSE: three VITAL/STATUS beats with directed EXCHANGE
+LET pulses = 0
+SMX VITAL
+SMX STATUS
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+LET pulses = pulses + 1
+ASSERT SMX_OK == 1 "pulse beat 1"
+ASSERT SMX_TALKS >= 2 "talks beat 1"
+
+SMX VITAL
+SMX STATUS
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+LET pulses = pulses + 1
+ASSERT SMX_OK == 1 "pulse beat 2"
+ASSERT SMX_TALKS >= 4 "talks beat 2"
+
+SMX VITAL
+SMX STATUS
+SMX EXCHANGE bed hive
+SMX EXCHANGE nozzle scrap
+LET pulses = pulses + 1
+ASSERT SMX_OK == 1 "pulse beat 3"
+ASSERT SMX_TALKS >= 6 "talks beat 3"
+ASSERT pulses == 3 "three mesh pulses locked"
+ASSERT SMX_VITAL >= 6 "vital holds across pulses"
+ASSERT CUBES == base_cubes "pulse invents nothing"
+
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after pulse"
+ASSERT UNITY >= 40 "mesh unity after mesh pulse"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+// Mitosis under free energy — life continues after mesh storm
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+ASSERT births >= 1 "mitosis after mesh pulse"
+ASSERT pop >= 2 "population after pulse life"
+ASSERT SMX_OOB == 0 "guard holds through mitosis"
+ASSERT OK == 1
+
+PRINT "atomic_printer_mesh_pulse" births pop pulses SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
