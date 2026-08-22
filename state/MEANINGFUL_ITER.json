@@ -1,15 +1,17 @@
 {
   "iter": 1602,
-  "ts": 1787394000,
+  "ts": 1787395149,
   "feat": "IFNINETYP/IFENNEACONTAP plate-90 duals",
-  "proof": "programs/proof/1602_ifninetyp.cubalc",
+  "proof": "programs/proof/1603_cli_ifninetyonep.sh",
   "proof_cli": "programs/proof/1602_cli_ifninetyp.sh",
   "asserts_ok": 20,
   "asserts_fail": 0,
-  "version": "1.15.1073-usability",
+  "version": "1.15.1074-usability",
   "note": "plate exactly-90 keys diagnostic IF/WHEN duals after IFEIGHTYNINEP",
   "commit": "af6fc48fe40c4f9dc2969185682c38c446f4d24f",
   "commit_short": "af6fc48f",
-  "head": "af6fc48fe40c4f9dc2969185682c38c446f4d24f",
-  "HEAD": "af6fc48fe40c4f9dc2969185682c38c446f4d24f"
+  "head": "6481e7e70747721a8481c69b58a9af68500729f1",
+  "HEAD": "af6fc48fe40c4f9dc2969185682c38c446f4d24f",
+  "feature": "IFNINETYONEP/IFHENENNEACONTAP plate-91 duals",
+  "ok": true
 }
