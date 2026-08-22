@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "76814e1f496e5093eadd13c9de1ec0eb77aa4414",
-  "version": "1.15.1113-usability",
-  "feature": "atomic_printer_mesh_citadel",
-  "proof": "1643_atomic_printer_mesh_citadel",
+  "commit": "PENDING",
+  "version": "1.15.1114-usability",
+  "feature": "atomic_printer_mesh_forge",
+  "proof": "1644_atomic_printer_mesh_forge",
   "proof_ok": true,
-  "ts": "2026-08-23T01:05:00Z",
-  "iso": "2026-08-23T01:05:00Z",
-  "iter": 1643,
-  "note": "Life-force MESH-CITADEL: mitosis under free energy first; SEAL parent mind as citadel keep; SEAL live daughters as bastion walls; soft-OOB against citadel fail-closed; RECOVER restores vital/key; OPEN keep re-homes scrap; dual SEAL/OPEN walls BN+HS rebind hive; kin EXCHANGE bond among live cells; mesh re-bind; second storm fail-closed; no dual ladders.",
+  "ts": "2026-08-23T01:20:00Z",
+  "iso": "2026-08-23T01:20:00Z",
+  "iter": 1644,
+  "note": "Life-force MESH-FORGE: mitosis under free energy first; SEAL parent mind as forge hearth; SEAL live daughters as anvil plates; soft-OOB against forge fail-closed; RECOVER restores vital/key; OPEN forge re-homes scrap; dual SEAL/OPEN rails BN+HS rebind hive; kin EXCHANGE bond among live cells; mesh re-bind; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
   "asserts_ok": 68,
   "asserts_fail": 0,
-  "item": "1643 atomic printer mesh citadel",
-  "item_id": "mi_1643_atomic_printer_mesh_citadel",
-  "title": "1643 atomic printer mesh citadel",
-  "summary": "MESH-CITADEL keep + bastion walls + soft-OOB fail-closed + OPEN re-home + dual BN/HS quorum + kin bond.",
+  "item": "1644 atomic printer mesh forge",
+  "item_id": "mi_1644_atomic_printer_mesh_forge",
+  "title": "1644 atomic printer mesh forge",
+  "summary": "MESH-FORGE hearth + anvil plates + soft-OOB fail-closed + OPEN re-home + dual BN/HS rails + kin bond.",
   "proofs": [
-    "programs/proof/1643_atomic_printer_mesh_citadel.cubalc"
+    "programs/proof/1644_atomic_printer_mesh_forge.cubalc"
   ]
 }
