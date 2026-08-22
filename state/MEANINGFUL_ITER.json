@@ -1,26 +1,15 @@
 {
-  "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1599,
-  "item": "1599 ifeightysevenp",
-  "item_id": "mi_1599_ifeightysevenp",
-  "title": "1599 ifeightysevenp",
-  "feature": "IFEIGHTYSEVENP/IFHEPTEOCTACONTAP",
-  "version": "1.15.1070-usability",
-  "proof": "1599_ifeightysevenp",
-  "proofs": [
-    "programs/proof/1599_ifeightysevenp.cubalc",
-    "programs/proof/1599_cli_ifeightysevenp.sh"
-  ],
-  "proof_ok": true,
-  "asserts_ok": 19,
+  "iter": 1600,
+  "ts": 1787390953,
+  "feat": "IFEIGHTYEIGHTP/IFOCTOOCTACONTAP plate-88 duals",
+  "proof": "programs/proof/1600_ifeightyeightp.cubalc",
+  "proof_cli": "programs/proof/1600_cli_ifeightyeightp.sh",
+  "asserts_ok": 18,
   "asserts_fail": 0,
-  "ts": 1787389577,
-  "note": "plate exactly-87 key diagnostic duals",
-  "summary": "IFEIGHTYSEVENP/IFHEPTEOCTACONTAP plate-87 duals + proof 1599",
-  "status": "shipped",
-  "updated": 1787389577,
-  "commit": "7592da664dee7ff1e6c6dce601e1a812a53323d3",
-  "commit_short": "7592da66",
-  "head": "7592da664dee7ff1e6c6dce601e1a812a53323d3",
-  "HEAD": "7592da664dee7ff1e6c6dce601e1a812a53323d3"
+  "version": "1.15.1071-usability",
+  "note": "plate exactly-88 keys diagnostic IF/WHEN duals after IFEIGHTYSEVENP",
+  "commit": "",
+  "commit_short": "",
+  "head": "",
+  "HEAD": ""
 }
