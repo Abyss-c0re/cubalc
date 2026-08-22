@@ -1035,3 +1035,4 @@ After N ticks, a new user/agent can do something **new** without reading opcode 
 - VERSION: 1.15.1016-usability
 - proof: 1531_ifnineteenp asserts_ok=18
 - at: 2026-08-21T08:22Z
+- **1580** IFSIXTYEIGHTP/IFOCTOHEXECONTAP plate-68 duals + proof 1580 (usability 1.15.1048)
