@@ -30169,6 +30169,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "NINETEENP_N", is_nineteenp ? hit : 0);
         var_set_num(vm, "IFENNEADECAP_N", is_nineteenp ? hit : 0);
         var_set_num(vm, "IFNINETEENKEYP_N", is_nineteenp ? hit : 0);
+        var_set_num(vm, "NINETEENKEYP_N", is_nineteenp ? hit : 0);
         var_set_num(vm, "IFTWENTYP_N", is_twentyp ? hit : 0);
         var_set_num(vm, "TWENTYP_N", is_twentyp ? hit : 0);
         var_set_num(vm, "IFICOSAP_N", is_twentyp ? hit : 0);
@@ -30490,6 +30491,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "IFSEVENTEENP_LEN", hr.n);
         var_set_num(vm, "IFEIGHTEENP_LEN", hr.n);
         var_set_num(vm, "IFNINETEENP_LEN", hr.n);
+        var_set_num(vm, "IFENNEADECAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETEENKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETEENKEYP_LEN", hr.n);
         var_set_num(vm, "IFTWENTYP_LEN", hr.n);
         var_set_num(vm, "IFTWENTYONEP_LEN", hr.n);
         var_set_num(vm, "IFTWENTYTWOP_LEN", hr.n);
