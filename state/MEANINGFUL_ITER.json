@@ -12,9 +12,12 @@
   "kind": "feat(lang)",
   "meaningful": true,
   "msg": "e917fa96 feat(lang): IFHUNDREDP/IFHECTOP plate-100 duals",
-  "proof": "programs/proof/1613_ifhundredp.cubalc",
+  "proof": "1613",
   "proof_cli": "programs/proof/1613_cli_ifhundredp.sh",
   "status": "PASS",
   "ts": 1787410949,
-  "version": "1.15.1085-usability"
+  "version": "1.15.1086-usability",
+  "feat_head": "0d570789",
+  "note": "plate-100 duals after IFNINETYNINEP",
+  "updated": 1787410952
 }
