@@ -1,13 +1,14 @@
 {
   "commit": "7db88765bec988997ea2f67040c15f8cc6d08b54",
   "commit_short": "7db88765",
-  "version": "1.15.1057-usability",
-  "feature": "IFSEVENTYSIXP/IFHEXEHEBDOMECONTAP",
-  "proof": "1588_ifseventysixp",
+  "version": "1.15.1058-usability",
+  "feature": "IFSEVENTYSEVENP/IFHEPTEHEBDOMECONTAP",
+  "proof": "programs/proof/1589_ifseventysevenp.cubalc",
   "proof_ok": true,
-  "ts": 1787377557,
-  "iter": 1588,
-  "note": "plate exactly-76 key diagnostic dual past IFSEVENTYFIVEP",
+  "ts": 1787379099,
+  "iter": 1589,
+  "note": "plate exactly-77 key diagnostic dual past IFSEVENTYSIXP",
   "head": "7db88765bec988997ea2f67040c15f8cc6d08b54",
-  "asserts_ok": 18
+  "asserts_ok": 18,
+  "asserts_fail": 0
 }
