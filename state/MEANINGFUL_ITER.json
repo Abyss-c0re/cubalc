@@ -1,12 +1,12 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "PENDING",
+  "commit": "e8c87c6a",
   "version": "1.15.1094-usability",
   "feature": "atomic_printer_lineage",
   "proof": "1624_atomic_printer_lineage",
   "proof_ok": true,
-  "ts": "2026-08-22T22:00:00Z",
-  "iso": "2026-08-22T22:00:00Z",
+  "ts": "2026-08-22T22:05:00Z",
+  "iso": "2026-08-22T22:05:00Z",
   "iter": 1624,
   "note": "Life-force multi-generation mitosis on printer spine SEND tick seed-d1-d2 gen cascade.",
   "law": "no_dual_ladder; free_energy_must_flow; impress_by_manifestation",
@@ -17,6 +17,6 @@
   "title": "1624 atomic printer lineage",
   "summary": "Energy-aware multi-gen mitosis lineage depth 2 on atomic printer.",
   "proofs": ["programs/proof/1624_atomic_printer_lineage.cubalc"],
-  "commit_short": "PENDING",
-  "head": "PENDING"
+  "commit_short": "e8c87c6a",
+  "head": "e8c87c6a699ccf230c6fa8d8b20bfe82226fef39"
 }
