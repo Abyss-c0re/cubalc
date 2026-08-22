@@ -1,13 +1,15 @@
-// 1625_atomic_printer_colony_breath.cubalc
-// Proof: colony breath — seed 3 cells, 4 inhale/metabolize/recycle cycles.
-// asserts_fail:0. No IF*P duals. Life-force gift.
+// atomic_printer_colony_breath.cubalc
+// Life-force gift: colony breath on atomic printer spine.
+// Breath = ENERGYFLOW inhale + SEND tick metabolism + scrap recycle.
+// Three living cells hold pop across breath cycles; mesh sticky.
+// Wonder AGI can RUN: breath, not dual ladders.
+// Cube is SoT · free energy must flow · matrix is key.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 SCIENCE LOAD
-HOLD_FLASH 1
 
-GENESIS "NEXUS_COORD v1 | from=proof | type=atomic_printer_colony_breath | hold_flash=1 | creed=life_force |"
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_colony_breath | hold_flash=1 | share=smx | creed=life_force |"
 
 CUBE bed ROLE host PROTON 1
 CUBE nozzle ROLE construct PROTON 1
@@ -29,8 +31,8 @@ ENTITY c1 OF Cell 0 0 0
 ENTITY c2 OF Cell 0 0 0
 PLUG bed c0
 
-IMPULSE bed 1
 IMPULSE nozzle 1
+IMPULSE bed 1
 IMPULSE scrap 1
 ENERGYFLOW 6
 FLOW 4
@@ -39,17 +41,18 @@ SMX KEY
 SMX EXCHANGE bed nozzle
 SMX EXCHANGE nozzle hive
 SMX EXCHANGE hive scrap
-ASSERT SMX_OK == 1 "smx live"
-ASSERT SMX_TALKS >= 6 "talks"
+ASSERT SMX_OK == 1 "spine mesh live"
+ASSERT SMX_TALKS >= 6 "three EXCHANGE rounds"
 
 COMPARE bed hive
 HARMONY hive
 RESOLVE hive
-ASSERT ENERGY > 0 "energy flows"
-ASSERT UNITY >= 40 "unity"
+ASSERT ENERGY > 0 "life force energy"
+ASSERT UNITY >= 50 "mesh unity"
 ASSERT DECIDE >= 0
 ASSERT DECIDE <= 9
 
+// Seed colony: founder divides into c1 then c2
 LET births = 0
 LET step = 0
 WHILE step < 12
@@ -108,20 +111,24 @@ GETF c2 alive
 LET a2 = LAST_N
 LET pop0 = a0 + a1 + a2
 ASSERT births >= 2 "colony seeded"
-ASSERT pop0 >= 3 "pop before breath"
+ASSERT pop0 >= 3 "full colony before breath"
 
+// Colony breath cycles: inhale energy, metabolize, recycle via scrap mesh
 LET breaths = 0
 LET min_pop = pop0
 LET b = 0
 WHILE b < 4
+  // inhale
   ENERGYFLOW 3
   FLOW 2
   SMX EXCHANGE bed scrap
   SMX EXCHANGE scrap hive
+  // metabolize each living voxel
   SEND c0 tick
   SEND c1 tick
   SEND c2 tick
   TICK 1
+  // exhale / re-harmonize
   COMPARE bed hive
   HARMONY hive
   RESOLVE hive
@@ -148,12 +155,12 @@ GETF c2 alive
 LET f2 = LAST_N
 LET popf = f0 + f1 + f2
 
-ASSERT breaths == 4 "four breaths"
-ASSERT popf >= 3 "colony holds"
-ASSERT min_pop >= 3 "no death in breath"
-ASSERT SMX_OK == 1 "mesh sticky"
-ASSERT ENERGY > 0 "energy alive"
+ASSERT breaths == 4 "four breath cycles"
+ASSERT popf >= 3 "colony holds through breath"
+ASSERT min_pop >= 3 "no death during breath"
+ASSERT SMX_OK == 1 "mesh sticky through breath"
+ASSERT ENERGY > 0 "energy still flows"
 ASSERT UNITY >= 40 "unity after breath"
 ASSERT OK == 1
 
-PRINT "proof1625" births breaths pop0 popf min_pop ENERGY UNITY DECIDE SMX_TALKS CUBES
+PRINT "atomic_printer_colony_breath" births breaths pop0 popf min_pop DECIDE ENERGY UNITY SMX_TALKS CUBES
