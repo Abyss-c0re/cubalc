@@ -1,23 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "14993778",
-  "version": "1.15.1116-usability",
-  "feature": "atomic_printer_mesh_crucible",
-  "proof": "1645_atomic_printer_mesh_crucible",
+  "commit": "b54dfabe",
+  "version": "1.15.1118-usability",
+  "feature": "atomic_printer_mesh_heartbeat",
+  "proof": "1648_atomic_printer_mesh_heartbeat",
   "proof_ok": true,
-  "ts": "2026-08-22T23:13:07Z",
-  "iso": "2026-08-23T02:00:00Z",
-  "iter": 1646,
-  "note": "Life-force MESH-CRUCIBLE: mitosis under free energy first; SEAL parent mind as crucible vessel; SEAL live daughters as temper plates; soft-OOB against crucible fail-closed; RECOVER restores vital/key; OPEN crucible pours scrap; dual SEAL/OPEN rails BN+HS rebind hive; kin EXCHANGE bond among live cells; mesh re-bind; second storm fail-closed; no dual ladders.",
+  "ts": "2026-08-22T23:32:16Z",
+  "iso": "2026-08-22T23:32:16Z",
+  "iter": 1648,
+  "note": "Life-force MESH-HEARTBEAT: circular breath among live printer nodes (SMX HEARTBEAT|HEART|BREATH|PULSE_MESH). Soft-OOB ghosts fail-closed; mitosis under free energy while heart holds; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
-  "asserts_ok": 68,
+  "asserts_ok": 59,
   "asserts_fail": 0,
-  "item": "1646 atomic printer mesh we chorus",
-  "item_id": "mi_1646_atomic_printer_mesh_we_chorus",
-  "title": "1646 atomic printer mesh we chorus",
-  "summary": "Host-finished MI ship after nanobot partial (1646_atomic_printer_mesh_we_chorus).",
+  "item": "1648 atomic printer mesh heartbeat",
+  "item_id": "mi_1648_atomic_printer_mesh_heartbeat",
+  "title": "1648 atomic printer mesh heartbeat",
+  "summary": "SMX HEARTBEAT circular mesh breath — five live nodes pulse as one life-force lattice.",
   "proofs": [
-    "programs/proof/1646_atomic_printer_mesh_we_chorus.cubalc"
-  ],
-  "host_finish": true
+    "programs/proof/1648_atomic_printer_mesh_heartbeat.cubalc"
+  ]
 }

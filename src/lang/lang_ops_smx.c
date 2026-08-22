@@ -803,6 +803,96 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM");
+  /* SMX HEARTBEAT|HEART|BREATH|PULSE_MESH a b c ... — life-force mesh breath.
+   * Each live node talks to the next live neighbor (circular). Soft-OOB ghosts
+   * fail-closed. SMX_HEART = ok one-way pulses; SMX_BREATH = live nodes that
+   * exhaled; SMX_VITAL refreshed. Free energy path stays open (no dual ladders). */
+  if (kw(&L->cur,"HEARTBEAT")||kw(&L->cur,"HEART")||kw(&L->cur,"BREATH")||
+      kw(&L->cur,"PULSE_MESH")||kw(&L->cur,"MESH_PULSE")||kw(&L->cur,"VITAL_PULSE")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i;
+    int hearts = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "HEARTBEAT needs >=2 cubes",
+                  "SMX HEARTBEAT a b [c ...]  or  SMX BREATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* soft-OOB once per ghost so mesh history stays honest */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* circular breath among live nodes only: each exhales to next */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r = do_smx_talk(vm, ids[a], ids[b]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+        else hearts++;
+      }
+    } else if (live == 1){
+      /* solitary pulse: seal mind against self via STATUS-grade vital only */
+      hearts = 0;
+    }
+    {
+      long vital = (vm->smx.key_ok ? 4 : 0) + ((hearts > 0) ? 2 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (live >= 2 ? 1 : 0);
+      var_set_num(vm, "SMX_HEART", (long)hearts);
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)hearts);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (hearts > 0 && live >= 2 && soft == 0){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HEARTBEAT ok");
+      } else if (hearts > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HEARTBEAT partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX HEARTBEAT soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX HEARTBEAT nodes=%d live=%d hearts=%d soft=%d talks=%d oob=%d vital=%ld\n",
+                n, live, hearts, soft, vm->smx_talks, vm->smx_oob, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH");
   return -1;
 }
