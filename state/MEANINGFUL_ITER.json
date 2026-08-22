@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "9129b4374feae1a143d6fa9823162f111e1ce123",
-  "version": "1.15.1112-usability",
-  "feature": "atomic_printer_mesh_sanctum",
-  "proof": "1642_atomic_printer_mesh_sanctum",
+  "commit": "PENDING",
+  "version": "1.15.1113-usability",
+  "feature": "atomic_printer_mesh_citadel",
+  "proof": "1643_atomic_printer_mesh_citadel",
   "proof_ok": true,
-  "ts": "2026-08-23T00:55:00Z",
-  "iso": "2026-08-23T00:55:00Z",
-  "iter": 1642,
-  "note": "Life-force MESH-SANCTUM: mitosis under free energy first; SEAL parent mind as sanctum vault; soft-OOB against sanctum fail-closed; RECOVER restores vital/key; OPEN vault re-homes scrap; dual SEAL/OPEN post-sanctum quorum; kin EXCHANGE bond among live daughters; mesh re-bind; second storm fail-closed; no dual ladders.",
+  "ts": "2026-08-23T01:05:00Z",
+  "iso": "2026-08-23T01:05:00Z",
+  "iter": 1643,
+  "note": "Life-force MESH-CITADEL: mitosis under free energy first; SEAL parent mind as citadel keep; SEAL live daughters as bastion walls; soft-OOB against citadel fail-closed; RECOVER restores vital/key; OPEN keep re-homes scrap; dual SEAL/OPEN walls BN+HS rebind hive; kin EXCHANGE bond among live cells; mesh re-bind; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
-  "asserts_ok": 57,
+  "asserts_ok": 68,
   "asserts_fail": 0,
-  "item": "1642 atomic printer mesh sanctum",
-  "item_id": "mi_1642_atomic_printer_mesh_sanctum",
-  "title": "1642 atomic printer mesh sanctum",
-  "summary": "MESH-SANCTUM vault + kin bond + soft-OOB fail-closed + OPEN re-home + dual quorum.",
+  "item": "1643 atomic printer mesh citadel",
+  "item_id": "mi_1643_atomic_printer_mesh_citadel",
+  "title": "1643 atomic printer mesh citadel",
+  "summary": "MESH-CITADEL keep + bastion walls + soft-OOB fail-closed + OPEN re-home + dual BN/HS quorum + kin bond.",
   "proofs": [
-    "programs/proof/1642_atomic_printer_mesh_sanctum.cubalc"
+    "programs/proof/1643_atomic_printer_mesh_citadel.cubalc"
   ]
 }

@@ -1,0 +1,243 @@
+// 1643_atomic_printer_mesh_citadel.cubalc (proof twin)
+// Life-force gift: MESH-CITADEL — colony mitosis under free energy first;
+// SEAL parent mind as citadel keep; SEAL each live daughter as bastion wall;
+// soft-OOB storms against the citadel stay fail-closed (no ghost thrash);
+// RECOVER restores vital/key; OPEN keep re-homes scrap as shared frame;
+// dual SEAL/OPEN citadel walls (BN + HS) rebind hive quorum;
+// kin EXCHANGE among live cells; full mesh re-bind; second storm fail-closed.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_citadel | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Live full mesh ring before life window
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+SMX EXCHANGE bed hive
+SMX EXCHANGE nozzle scrap
+ASSERT SMX_OK == 1 "pre-life mesh live"
+ASSERT SMX_TALKS >= 6 "pre-life talks"
+ASSERT CUBES == base_cubes "pre-life identity"
+
+// Mitosis under free energy — births first, then raise the citadel
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+ASSERT births >= 1 "mitosis before citadel"
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+ASSERT pop >= 2 "population after life"
+ASSERT CUBES == base_cubes "life invents no cubes"
+
+// SEAL parent mind as citadel keep onto bed
+SMX SEAL bed seed "state/smx_citadel/keep_root.cblc"
+ASSERT SMX_OK == 1 "seal citadel keep"
+ASSERT SMX_N > 64 "citadel keep frame"
+ASSERT CUBES == base_cubes "seal invents nothing"
+
+// SEAL live daughters as bastion walls
+LET bastions = 0
+IF a1 == 1 THEN
+  SMX SEAL nozzle d1 "state/smx_citadel/bastion_d1.cblc"
+  ASSERT SMX_OK == 1 "seal bastion d1"
+  ASSERT SMX_N > 64 "bastion d1 frame"
+  LET bastions = bastions + 1
+END
+IF a2 == 1 THEN
+  SMX SEAL hive d2 "state/smx_citadel/bastion_d2.cblc"
+  ASSERT SMX_OK == 1 "seal bastion d2"
+  ASSERT SMX_N > 64 "bastion d2 frame"
+  LET bastions = bastions + 1
+END
+ASSERT bastions >= 1 "at least one bastion sealed"
+ASSERT CUBES == base_cubes "bastion invents nothing"
+
+// Soft-OOB storms against citadel — fail-closed, no ghost thrash
+SMX EXCHANGE hive offworld_citadel
+ASSERT SMX_OK == 0 "citadel soft-OOB A"
+ASSERT SMX_OOB >= 1 "citadel oob A"
+ASSERT CUBES == base_cubes "citadel no ghost A"
+
+SMX TALK scrap ghost_citadel
+ASSERT SMX_OK == 0 "citadel soft-OOB B"
+ASSERT SMX_OOB >= 2 "citadel oob sticky"
+ASSERT CUBES == base_cubes "citadel no ghost B"
+
+// Recover: clear OOB, keep key, restore vital after keep raise
+SMX RECOVER
+ASSERT SMX_OK == 1 "citadel recover"
+ASSERT SMX_OOB == 0 "citadel oob cleared"
+ASSERT SMX_KEY_OK == 1 "citadel key sticky"
+ASSERT SMX_VITAL >= 6 "citadel vital"
+ASSERT CUBES == base_cubes "recover invents nothing"
+
+// OPEN keep onto scrap — shared home frame after storms
+SMX OPEN scrap "state/smx_citadel/keep_root.cblc"
+ASSERT SMX_OK == 1 "open keep onto scrap"
+ASSERT CUBES == base_cubes "open invents nothing"
+
+// Dual SEAL/OPEN citadel walls — BN wall + HS wall (distinct paths)
+SMX SEAL bed nozzle "state/smx_citadel/wall_bn.cblc"
+ASSERT SMX_OK == 1 "seal wall BN"
+ASSERT SMX_N > 64 "wall BN frame"
+SMX OPEN hive "state/smx_citadel/wall_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+ASSERT CUBES == base_cubes "BN open invents nothing"
+
+SMX SEAL hive scrap "state/smx_citadel/wall_hs.cblc"
+ASSERT SMX_OK == 1 "seal wall HS"
+ASSERT SMX_N > 64 "wall HS frame"
+SMX OPEN bed "state/smx_citadel/wall_hs.cblc"
+ASSERT SMX_OK == 1 "open HS onto bed"
+ASSERT CUBES == base_cubes "HS open invents nothing"
+
+// Kin bond: live cells EXCHANGE mind across the nest
+LET kin = 0
+IF a1 == 1 THEN
+  IF a2 == 1 THEN
+    SMX EXCHANGE nozzle hive
+    ASSERT SMX_OK == 1 "kin bond daughters"
+    LET kin = kin + 1
+  ELSE
+    SMX EXCHANGE nozzle scrap
+    ASSERT SMX_OK == 1 "kin bond d1-scrap"
+    LET kin = kin + 1
+  END
+ELSE
+  IF a2 == 1 THEN
+    SMX EXCHANGE hive scrap
+    ASSERT SMX_OK == 1 "kin bond d2-scrap"
+    LET kin = kin + 1
+  END
+END
+ASSERT kin >= 1 "at least one kin bond"
+ASSERT CUBES == base_cubes "kin invents nothing"
+
+// Full mesh re-bind after citadel restore
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+SMX EXCHANGE bed hive
+SMX EXCHANGE nozzle scrap
+ASSERT SMX_OK == 1 "mesh re-bind after citadel"
+ASSERT SMX_TALKS >= 12 "talks after re-bind"
+ASSERT CUBES == base_cubes "re-bind identity"
+
+// Post-citadel storm — still fail-closed after walls raise
+SMX EXCHANGE scrap void_post
+ASSERT SMX_OK == 0 "post soft-OOB"
+ASSERT SMX_OOB >= 1 "post oob"
+ASSERT CUBES == base_cubes "post no ghost"
+
+SMX TALK bed ghost_post
+ASSERT SMX_OK == 0 "post storm-B"
+ASSERT SMX_OOB >= 2 "post oob sticky"
+ASSERT CUBES == base_cubes "post no ghost B"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "post recover"
+ASSERT SMX_OOB == 0 "post oob cleared"
+ASSERT SMX_KEY_OK == 1 "post key sticky"
+ASSERT SMX_VITAL >= 6 "post vital"
+
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after citadel"
+ASSERT SMX_KEY_OK == 1 "key after citadel"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "no oob after citadel"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after citadel"
+ASSERT UNITY >= 40 "mesh unity after citadel"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+ASSERT births >= 1 "mitosis before mesh citadel"
+ASSERT pop >= 2 "population after citadel life"
+ASSERT bastions >= 1 "citadel bastions"
+ASSERT kin >= 1 "citadel kin bond"
+ASSERT SMX_OOB == 0 "guard holds through citadel"
+ASSERT OK == 1
+
+PRINT "mesh_citadel" births pop bastions kin SMX_N SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
