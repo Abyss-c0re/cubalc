@@ -1,0 +1,153 @@
+// atomic_printer_colony_chorus.cubalc
+// Life-force gift: colony chorus — three cells lock one SMX pulse.
+// Seed → mitosis → shared EXCHANGE rounds → unity holds as one note.
+// Wonder AGI can RUN: chorus, not dual ladders.
+// Cube is SoT · free energy must flow · matrix is key.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_colony_chorus | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG scrap hive
+PLUG bed scrap
+
+ENTITY c0 OF Cell 1 14 0
+ENTITY c1 OF Cell 0 0 0
+ENTITY c2 OF Cell 0 0 0
+PLUG bed c0
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+IMPULSE scrap 1
+ENERGYFLOW 6
+FLOW 4
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+ASSERT SMX_OK == 1 "spine mesh live"
+ASSERT SMX_TALKS >= 6 "three EXCHANGE rounds"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy"
+ASSERT UNITY >= 50 "mesh unity"
+
+// Seed colony to three living cells
+LET births = 0
+LET step = 0
+WHILE step < 12
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  SEND c0 tick
+  SEND c1 tick
+  SEND c2 tick
+
+  GETF c0 alive
+  LET al = LAST_N
+  GETF c0 ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF c1 alive
+      IF LAST_N == 0 THEN
+        GETF c0 energy
+        LET half = LAST_N / 2
+        IF half < 1 THEN
+          LET half = 1
+        END
+        GETF c0 gen
+        LET dg = LAST_N + 1
+        SEND c1 birth half dg
+        SEND c0 after_div
+        PLUG bed c1
+        LET births = births + 1
+      ELSE
+        GETF c2 alive
+        IF LAST_N == 0 THEN
+          GETF c0 energy
+          LET half = LAST_N / 2
+          IF half < 1 THEN
+            LET half = 1
+          END
+          GETF c0 gen
+          LET dg = LAST_N + 1
+          SEND c2 birth half dg
+          SEND c0 after_div
+          PLUG bed c2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF c0 alive
+LET a0 = LAST_N
+GETF c1 alive
+LET a1 = LAST_N
+GETF c2 alive
+LET a2 = LAST_N
+LET pop0 = a0 + a1 + a2
+ASSERT births >= 2 "colony seeded"
+ASSERT pop0 >= 3 "full trio before chorus"
+
+// Colony chorus: shared SMX pulse locks all voxels as one note
+LET chorus = 0
+LET min_unity = 100
+LET k = 0
+WHILE k < 5
+  ENERGYFLOW 2
+  FLOW 1
+  SEND c0 tick
+  SEND c1 tick
+  SEND c2 tick
+  SMX EXCHANGE bed nozzle
+  SMX EXCHANGE nozzle hive
+  SMX EXCHANGE hive scrap
+  SMX EXCHANGE bed scrap
+  COMPARE bed hive
+  HARMONY hive
+  RESOLVE hive
+  LET chorus = chorus + 1
+  IF UNITY < min_unity THEN
+    LET min_unity = UNITY
+  END
+  LET k = k + 1
+END
+
+GETF c0 alive
+LET f0 = LAST_N
+GETF c1 alive
+LET f1 = LAST_N
+GETF c2 alive
+LET f2 = LAST_N
+LET popf = f0 + f1 + f2
+
+ASSERT chorus == 5 "five chorus pulses"
+ASSERT popf >= 3 "trio holds through chorus"
+ASSERT min_unity >= 40 "unity never drifts below floor"
+ASSERT SMX_OK == 1 "mesh sticky under chorus"
+ASSERT ENERGY > 0 "energy alive"
+ASSERT UNITY >= 40 "final unity locked"
+ASSERT OK == 1
+
+PRINT "science1626" births chorus pop0 popf min_unity ENERGY UNITY DECIDE SMX_TALKS CUBES

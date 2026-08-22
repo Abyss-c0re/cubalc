@@ -55,3 +55,12 @@ Wound the mind plane (soft-OOB), `SMX RECOVER`, then mitosis — life continues:
 ./out/cubalc run programs/proof/1623_atomic_printer_mesh_heal.cubalc
 ./out/cubalc run programs/science/integration/smx_mesh_stability.cubalc
 ```
+
+## Colony chorus (we_chorus)
+
+Three living cells lock one SMX pulse — unity holds as a single Cube note:
+
+```bash
+./out/cubalc run programs/science/integration/atomic_printer_colony_chorus.cubalc
+./out/cubalc run programs/proof/1626_atomic_printer_colony_chorus.cubalc
+```
