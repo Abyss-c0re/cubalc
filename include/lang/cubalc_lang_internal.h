@@ -38,7 +38,7 @@ typedef struct { const char *s; size_t n, i; int line; size_t tok_off; Tok cur; 
 #define CUBALC_VAR_STR_MAX 4096
 #endif
 #ifndef CUBALC_MAX_VARS
-#define CUBALC_MAX_VARS 512
+#define CUBALC_MAX_VARS 1024
 #endif
 typedef struct { char name[48]; long val; char sval[CUBALC_VAR_STR_MAX]; int is_str; } Var;
 
