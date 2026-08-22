@@ -1,6 +1,6 @@
 {
   "iter": 1600,
-  "ts": 1787390953,
+  "ts": 1787390959,
   "feat": "IFEIGHTYEIGHTP/IFOCTOOCTACONTAP plate-88 duals",
   "proof": "programs/proof/1600_ifeightyeightp.cubalc",
   "proof_cli": "programs/proof/1600_cli_ifeightyeightp.sh",
@@ -8,8 +8,8 @@
   "asserts_fail": 0,
   "version": "1.15.1071-usability",
   "note": "plate exactly-88 keys diagnostic IF/WHEN duals after IFEIGHTYSEVENP",
-  "commit": "",
-  "commit_short": "",
-  "head": "",
-  "HEAD": ""
+  "commit": "68c49eb00508172c5fce7c2c2e7a0b72d9b387fc",
+  "commit_short": "68c49eb0",
+  "head": "68c49eb00508172c5fce7c2c2e7a0b72d9b387fc",
+  "HEAD": "68c49eb00508172c5fce7c2c2e7a0b72d9b387fc"
 }
