@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "0bad6c83aee1058da95f95f4085a95a3484588d1",
-  "version": "1.15.1108-usability",
-  "feature": "atomic_printer_mesh_steadfast",
-  "proof": "1638_atomic_printer_mesh_steadfast",
+  "commit": "7960509ce31721c6b83f81524afd499da2783875",
+  "version": "1.15.1109-usability",
+  "feature": "atomic_printer_mesh_vigil",
+  "proof": "1639_atomic_printer_mesh_vigil",
   "proof_ok": true,
-  "ts": "2026-08-22T21:10:00Z",
-  "iso": "2026-08-22T21:10:00Z",
-  "iter": 1638,
-  "note": "Life-force MESH-STEADFAST: mid-ring soft-OOB interrupt during live mesh EXCHANGE fail-closed; RECOVER restores vital/key; dual SEAL/OPEN anchors; post-anchor storm fail-closed; mitosis under free energy; no dual ladders.",
+  "ts": "2026-08-22T21:20:00Z",
+  "iso": "2026-08-22T21:20:00Z",
+  "iter": 1639,
+  "note": "Life-force MESH-VIGIL: ancestral SEAL before mitosis; soft-OOB mid-division fail-closed; RECOVER restores vital/key; OPEN re-anchors mind after births; dual SEAL/OPEN post-life; second storm fail-closed; mitosis under free energy; no dual ladders.",
   "law": "no_dual_ladders",
-  "asserts_ok": 51,
+  "asserts_ok": 54,
   "asserts_fail": 0,
-  "item": "1638 atomic printer mesh steadfast",
-  "item_id": "mi_1638_atomic_printer_mesh_steadfast",
-  "title": "1638 atomic printer mesh steadfast",
-  "summary": "MESH-STEADFAST mid-ring soft-OOB fail-closed + dual SEAL/OPEN + mitosis.",
+  "item": "1639 atomic printer mesh vigil",
+  "item_id": "mi_1639_atomic_printer_mesh_vigil",
+  "title": "1639 atomic printer mesh vigil",
+  "summary": "MESH-VIGIL soft-OOB during mitosis fail-closed + ancestral SEAL/OPEN + dual quorum.",
   "proofs": [
-    "programs/proof/1638_atomic_printer_mesh_steadfast.cubalc"
+    "programs/proof/1639_atomic_printer_mesh_vigil.cubalc"
   ]
 }
