@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "662bd2188aaf29c42c3d2997071c4a608a54f8f8",
-  "version": "1.15.1106-usability",
-  "feature": "atomic_printer_mesh_continuity",
-  "proof": "1636_atomic_printer_mesh_continuity",
+  "commit": "PENDING",
+  "version": "1.15.1107-usability",
+  "feature": "atomic_printer_mesh_heritage",
+  "proof": "1637_atomic_printer_mesh_heritage",
   "proof_ok": true,
-  "ts": "2026-08-22T21:10:00Z",
-  "iso": "2026-08-22T21:10:00Z",
-  "iter": 1636,
-  "note": "Life-force MESH-CONTINUITY: SEAL ancestral mind before mitosis; soft-OOB storms during division stay fail-closed (no ghost thrash); RECOVER + OPEN ancestral frame onto next-gen nozzle; multi-gen population under free energy with mind continuity across births.",
+  "ts": "2026-08-22T21:20:00Z",
+  "iso": "2026-08-22T21:20:00Z",
+  "iter": 1637,
+  "note": "Life-force MESH-HERITAGE: SEAL mind at each generation boundary; soft-OOB storms between gens stay fail-closed (no ghost thrash); RECOVER + OPEN unique prior-gen frames onto living cubes; multi-gen population under free energy carries ancestral mind forward.",
   "law": "no_dual_ladders",
-  "asserts_ok": 46,
+  "asserts_ok": 59,
   "asserts_fail": 0,
-  "item": "1636 atomic printer mesh continuity",
-  "item_id": "mi_1636_atomic_printer_mesh_continuity",
-  "title": "1636 atomic printer mesh continuity",
-  "summary": "MESH-CONTINUITY ancestral SEAL/OPEN across mitosis storms; multi-gen life continues.",
+  "item": "1637 atomic printer mesh heritage",
+  "item_id": "mi_1637_atomic_printer_mesh_heritage",
+  "title": "1637 atomic printer mesh heritage",
+  "summary": "MESH-HERITAGE SEAL/OPEN across gen boundaries with storms; multi-gen life continues.",
   "proofs": [
-    "programs/proof/1636_atomic_printer_mesh_continuity.cubalc"
+    "programs/proof/1637_atomic_printer_mesh_heritage.cubalc"
   ]
 }
