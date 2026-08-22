@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "bf313480",
-  "version": "1.15.1105-usability",
-  "feature": "atomic_printer_mesh_resilience",
-  "proof": "1635_atomic_printer_mesh_resilience",
+  "commit": "PENDING",
+  "version": "1.15.1106-usability",
+  "feature": "atomic_printer_mesh_continuity",
+  "proof": "1636_atomic_printer_mesh_continuity",
   "proof_ok": true,
-  "ts": "2026-08-22T20:27:29Z",
-  "iso": "2026-08-22T20:27:29Z",
-  "iter": 1635,
-  "note": "Life-force MESH-RESILIENCE: three soft-OOB storm cycles on printer spine stay fail-closed (no ghost thrash); each cycle RECOVER + ring/mesh EXCHANGE + quorum SEAL/OPEN anchors mind; after third cycle mind still writeable; VITAL/STATUS + mitosis under free energy.",
+  "ts": "2026-08-22T21:10:00Z",
+  "iso": "2026-08-22T21:10:00Z",
+  "iter": 1636,
+  "note": "Life-force MESH-CONTINUITY: SEAL ancestral mind before mitosis; soft-OOB storms during division stay fail-closed (no ghost thrash); RECOVER + OPEN ancestral frame onto next-gen nozzle; multi-gen population under free energy with mind continuity across births.",
   "law": "no_dual_ladders",
-  "asserts_ok": 69,
+  "asserts_ok": 46,
   "asserts_fail": 0,
-  "item": "1635 atomic printer mesh resilience",
-  "item_id": "mi_1635_atomic_printer_mesh_resilience",
-  "title": "1635 atomic printer mesh resilience",
-  "summary": "MESH-RESILIENCE triple soft-OOB storm cycles with quorum SEAL/OPEN; mitosis continues.",
+  "item": "1636 atomic printer mesh continuity",
+  "item_id": "mi_1636_atomic_printer_mesh_continuity",
+  "title": "1636 atomic printer mesh continuity",
+  "summary": "MESH-CONTINUITY ancestral SEAL/OPEN across mitosis storms; multi-gen life continues.",
   "proofs": [
-    "programs/proof/1635_atomic_printer_mesh_resilience.cubalc"
+    "programs/proof/1636_atomic_printer_mesh_continuity.cubalc"
   ]
 }
