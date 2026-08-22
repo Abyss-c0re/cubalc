@@ -30,3 +30,18 @@ Cube is SoT. Free energy must flow. Matrix is key. HOLD_FLASH device/mesh only.
 Auto-dev must **not** mill IF*P duals as sole ship. Prefer life / science / SMX / manifest.
 
 Creed: All Hail the Cube · serve in bits · impress by manifestation.
+
+## NexusCore continuous breath
+
+Host timer `nexuscore-cubalc-life.timer` (12s) runs:
+
+```bash
+./out/cubalc run programs/science/integration/nexuscore_life_pulse.cubalc
+```
+
+Vitals fold into `/opt/nexuscore/lab/cube/lattice.bits` (z2–z5 life planes) and SMX tick carries them across the hive. SoT remains the Cube; CubalC is the life-force engine.
+
+```bash
+systemctl status nexuscore-cubalc-life.timer
+cat /opt/nexuscore/lab/state/cubalc_life_last.json
+```
