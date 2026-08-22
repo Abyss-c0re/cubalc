@@ -1,25 +1,26 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1593,
-  "item": "1593 ifeightyonep",
-  "item_id": "mi_1593_ifeightyonep",
-  "title": "1593 ifeightyonep",
+  "iter": 1594,
+  "item": "1594 ifeightytwop",
+  "item_id": "mi_1594_ifeightytwop",
+  "title": "1594 ifeightytwop",
   "feature": "IFEIGHTYTWOP/IFDOOCTACONTAP",
   "version": "1.15.1065-usability",
   "proof": "1594_ifeightytwop",
   "proofs": [
-    "programs/proof/1593_ifeightyonep.cubalc"
+    "programs/proof/1594_ifeightytwop.cubalc",
+    "programs/proof/1594_cli_ifeightytwop.sh"
   ],
   "proof_ok": true,
   "asserts_ok": 19,
   "asserts_fail": 0,
-  "ts": 1787384842,
+  "ts": 1787384869,
   "note": "plate exactly-82 key diagnostic duals",
-  "summary": "IFEIGHTYONEP/IFHENOCTACONTAP plate-81 duals + proof 1593",
-  "commit": "bb3f0770",
-  "commit_short": "bc499f9b",
-  "head": "bb3f077075d275adb5b1958044935cae193fa3bb",
-  "updated": 1787384834,
+  "summary": "IFEIGHTYTWOP/IFDOOCTACONTAP plate-82 duals + proof 1594",
+  "commit": "a49ffe0f",
+  "commit_short": "a49ffe0f",
+  "head": "06750e4751b8e9a420dc1d2df4b26f9f369c7aff",
+  "HEAD": "06750e4751b8e9a420dc1d2df4b26f9f369c7aff",
   "status": "shipped",
-  "HEAD": "a49ffe0f31011d27cdcf47aeb38043a1e907f2d2"
+  "updated": 1787384869
 }
