@@ -1,0 +1,162 @@
+// 1631_atomic_printer_mesh_bridge.cubalc
+// Proof: soft-OOB wound → SMX RECOVER → dual SEAL/OPEN bridges →
+// VITAL/STATUS ring → mitosis. Missing peers never auto-place.
+// No IF*P duals. Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=atomic_printer_mesh_bridge | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 12 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Storm wound — fail-closed soft-OOB, no ghost thrash
+SMX EXCHANGE hive offworld_bridge
+ASSERT SMX_OK == 0 "seal-wound soft-OOB clears ok"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost place on EXCHANGE OOB"
+
+SMX TALK nozzle ghost_bridge
+ASSERT SMX_OK == 0 "seal-ghost soft-OOB clears ok"
+ASSERT SMX_OOB >= 2 "oob B sticky count"
+ASSERT CUBES == base_cubes "no ghost place on TALK OOB B"
+
+SMX EXCHANGE scrap void_bridge
+ASSERT SMX_OK == 0 "seal-void soft-OOB clears ok"
+ASSERT SMX_OOB >= 3 "oob C storm depth"
+ASSERT CUBES == base_cubes "no ghost place on EXCHANGE OOB C"
+
+// Pulse heal
+SMX RECOVER
+ASSERT SMX_OK == 1 "RECOVER restores ok"
+ASSERT SMX_OOB == 0 "OOB cleared"
+ASSERT SMX_KEY_OK == 1 "key sticky"
+ASSERT SMX_VITAL >= 6 "vital restored"
+ASSERT CUBES == base_cubes "heal invents no cubes"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+// MESH-BRIDGE: pre-bridge ring + SMX SEAL/OPEN file-bus matrix gift
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "pre-bridge ring"
+ASSERT SMX_TALKS >= 2 "pre-bridge talks"
+
+SMX SEAL bed hive "state/smx_bridge/spine_bh.cblc"
+ASSERT SMX_OK == 1 "SEAL bed to hive bridge"
+ASSERT SMX_N > 64 "bridge frame A bytes"
+
+SMX OPEN scrap "state/smx_bridge/spine_bh.cblc"
+ASSERT SMX_OK == 1 "OPEN bridge A onto scrap"
+ASSERT CUBES == base_cubes "OPEN invents no cubes"
+
+SMX SEAL nozzle scrap "state/smx_bridge/spine_ns.cblc"
+ASSERT SMX_OK == 1 "SEAL nozzle to scrap bridge"
+ASSERT SMX_N > 64 "bridge frame B bytes"
+
+SMX OPEN hive "state/smx_bridge/spine_ns.cblc"
+ASSERT SMX_OK == 1 "OPEN bridge B onto hive"
+ASSERT CUBES == base_cubes "OPEN B invents nothing"
+
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after bridge"
+ASSERT SMX_KEY_OK == 1 "key after bridge"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "oob still clear"
+ASSERT SMX_HOLD == 1 "hold sticky"
+
+SMX EXCHANGE bed hive
+SMX EXCHANGE scrap bed
+ASSERT SMX_OK == 1 "post-bridge ring"
+ASSERT SMX_TALKS >= 4 "talks after bridge"
+ASSERT CUBES == base_cubes "bridge invents nothing"
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "energy flows after mesh bridge"
+ASSERT UNITY >= 40 "unity after bridge"
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+
+// Life engine — mitosis on guarded printer bed
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+ASSERT births >= 1 "daughter after mesh bridge"
+ASSERT pop >= 2 "population >= 2 after pulse"
+ASSERT SMX_OOB == 0 "guard holds through mitosis"
+ASSERT SMX_KEY_OK == 1 "key holds through life"
+ASSERT OK == 1
+
+PRINT "1631_mesh_bridge" births pop SMX_N SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES

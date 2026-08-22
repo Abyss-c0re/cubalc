@@ -1,23 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "171da8f9",
-  "version": "1.15.1100-usability",
-  "feature": "atomic_printer_mesh_stability",
-  "proof": "1628_atomic_printer_mesh_stability",
+  "commit": "e61b5ae7",
+  "version": "1.15.1101-usability",
+  "feature": "atomic_printer_mesh_bridge",
+  "proof": "1631_atomic_printer_mesh_bridge",
   "proof_ok": true,
-  "ts": "2026-08-22T19:36:47Z",
-  "iso": "2026-08-22T23:45:00Z",
-  "iter": 1629,
-  "note": "Life-force MESH-STABILITY: soft-OOB storm wounds fail-closed on printer spine; RECOVER restores vital/key; ring EXCHANGE + mitosis under free energy.",
+  "ts": "2026-08-22T19:43:37Z",
+  "iso": "2026-08-22T19:43:37Z",
+  "iter": 1631,
+  "note": "Life-force MESH-BRIDGE: soft-OOB storm wounds fail-closed on printer spine; RECOVER restores vital/key; dual SEAL/OPEN bridges carry matrix mind across opposite edges; VITAL/STATUS ring + mitosis under free energy.",
   "law": "no_dual_ladders",
-  "asserts_ok": 28,
+  "asserts_ok": 43,
   "asserts_fail": 0,
-  "item": "1630 atomic printer mesh seal",
-  "item_id": "mi_1630_atomic_printer_mesh_seal",
-  "title": "1630 atomic printer mesh seal",
-  "summary": "Host-finished MI ship after nanobot partial (1630_atomic_printer_mesh_seal).",
+  "item": "1631 atomic printer mesh bridge",
+  "item_id": "mi_1631_atomic_printer_mesh_bridge",
+  "title": "1631 atomic printer mesh bridge",
+  "summary": "MESH-BRIDGE dual SEAL/OPEN spine bridges after soft-OOB recover; mitosis continues.",
   "proofs": [
-    "programs/proof/1630_atomic_printer_mesh_seal.cubalc"
-  ],
-  "host_finish": true
+    "programs/proof/1631_atomic_printer_mesh_bridge.cubalc"
+  ]
 }
