@@ -2,13 +2,13 @@
   "HEAD": "24c857e9b7917d40ea95fbabd9f5cf7974cc17da",
   "asserts_fail": 0,
   "asserts_ok": 20,
-  "commit": "24c857e9b7917d40ea95fbabd9f5cf7974cc17da",
+  "commit": "PENDING",
   "commit_short": "24c857e9",
   "feat": "IFNINETYFOURP/IFTETRAENNEACONTAP",
   "feature": "IFNINETYFOURP/IFTETRAENNEACONTAP plate-94 duals",
   "head": "24c857e9b7917d40ea95fbabd9f5cf7974cc17da",
   "head_before": "4770dea6",
-  "iter": 1606,
+  "iter": 1607,
   "kind": "feat(lang)",
   "meaningful": true,
   "msg": "24c857e9 feat(lang): IFNINETYFOURP/IFTETRAENNEACONTAP plate-94 duals",
@@ -17,7 +17,15 @@
   "proof": "programs/proof/1606_ifninetyfourp.cubalc",
   "proof_cli": "programs/proof/1606_cli_ifninetyfourp.sh",
   "status": "shipped",
-  "title": "IFNINETYFOURP/IFTETRAENNEACONTAP plate-94 duals",
-  "ts": 1787397718,
-  "version": "1.15.1078-usability"
+  "title": "1608 ifninetyfivep",
+  "ts": "2026-08-22T12:44:05Z",
+  "version": "1.15.1080-usability",
+  "schema": "cubalc.meaningful_iter/v1",
+  "item": "1608 ifninetyfivep",
+  "item_id": "mi_1608_ifninetyfivep",
+  "summary": "Host-finished MI ship after nanobot partial (1608_ifninetyfivep).",
+  "proofs": [
+    "programs/proof/1608_ifninetyfivep.cubalc"
+  ],
+  "host_finish": true
 }
