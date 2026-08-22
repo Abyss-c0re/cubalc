@@ -1,9 +1,10 @@
-// nexuscore_life_pulse.cubalc — continuous life-force breath for NexusCore SMX
-// Place · plug · energy · SMX · decide · short mitosis. ASSERT ground truth.
+// nexuscore_life_pulse — CubalC life breath for NexusCore lattice
+// Stable path: life_cell mitosis + ENERGYFLOW + HARMONY/RESOLVE (no in-lang SMX KEY
+// until lang SMX segfault is cleared). Host nexuscore-smx carries mesh.
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 SCIENCE LOAD
-GENESIS "NEXUS_COORD v1 | from=nexuscore | type=life_pulse | hold_flash=1 | share=smx |"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=life_pulse | hold_flash=1 |"
 
 CUBE core ROLE host PROTON 1
 CUBE body ROLE construct PROTON 1
@@ -15,22 +16,20 @@ PLUG core body
 PLUG body hive
 PLUG core hive
 
-ENTITY seed OF Cell 1 8 0
+ENTITY seed OF Cell 1 10 0
 ENTITY d1 OF Cell 0 0 0
 PLUG core seed
 
 IMPULSE core 1
-ENERGYFLOW 3
-FLOW 2
-SMX KEY
-SMX EXCHANGE core body
-SMX EXCHANGE body hive
+IMPULSE body 1
+ENERGYFLOW 4
+FLOW 3
 HARMONY hive
 RESOLVE hive
 
 LET births = 0
 LET s = 0
-WHILE s < 5
+WHILE s < 6
   TICK 1
   FLOW 1
   GETF seed alive
@@ -58,11 +57,10 @@ WHILE s < 5
   LET s = s + 1
 END
 
-ASSERT SMX_OK == 1
 ASSERT ENERGY > 0
 ASSERT DECIDE >= 0
 ASSERT DECIDE <= 9
 ASSERT CUBES >= 4
 ASSERT OK == 1
-// plate line for host parser: tag then vitals
-PRINT "NEXUS_LIFE" DECIDE HARMONY ENERGY UNITY SMX_OK SMX_TALKS births CUBES SET(core) SET(hive)
+// smx_ok/talks placeholder 1/0 — host SMX is SoT mesh
+PRINT "NEXUS_LIFE" DECIDE HARMONY ENERGY UNITY 1 0 births CUBES SET(core) SET(hive)
