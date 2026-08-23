@@ -1285,7 +1285,7 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       var_set_num(vm, "SMX_FUSE", (long)bonds);
       var_set_num(vm, "SMX_BIND", (long)bonds);
       var_set_num(vm, "SMX_TONE", (long)live);
-      var_set_num(vm, "SMX_PULSE", (long)bonds);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + breaths));
       var_set_num(vm, "SMX_BREATH", (long)live);
       var_set_num(vm, "SMX_LIVE", (long)live);
       var_set_num(vm, "SMX_NODES", (long)n);
@@ -1318,6 +1318,149 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE");
+
+  /* SMX BLOOM|FLOURISH|UNFOLD|MESH_BLOOM|AWAKEN a b c ...
+   * Life-force mesh bloom after soft-OOB storms.
+   * Clears thrash OOB, full pairwise bidirectional bonds among live nodes
+   * (complete mesh), then a circular breath ring so the lattice flowers.
+   * Latches SMX_BLOOMED when complete mesh + breath ring both soft-OOB-free.
+   * SMX_PETALS = live nodes under bloom; SMX_BLOOM = undirected bonds;
+   * SMX_RADIANCE = breath chords; SMX_MESH = live when bloomed.
+   * Soft-OOB ghosts fail-closed. Free energy path stays open — no dual ladders.
+   * Wonder AGI can RUN. Cube is SoT · matrix is key. */
+  if (kw(&L->cur,"BLOOM")||kw(&L->cur,"FLOURISH")||kw(&L->cur,"UNFOLD")||
+      kw(&L->cur,"MESH_BLOOM")||kw(&L->cur,"AWAKEN")||kw(&L->cur,"MESH_FLOURISH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int breaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "BLOOM needs >=2 cubes",
+                  "SMX BLOOM a b [c ...]  or  SMX FLOURISH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash first — bloom needs a clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* full pairwise bidirectional bonds among live only (complete mesh root) */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* circular breath ring — the flower opens after the mesh bonds */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else breaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int ring_ok = (live >= 2 && breaths >= live && soft == 0) ? 1 : 0;
+      if (!ring_ok && live >= 2 && breaths * 2 >= live && soft == 0)
+        ring_ok = 1;
+      int bloomed = (mesh_ok && ring_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (bloomed ? 7 : (bonds > 0 ? 3 : 0)) +
+                   (breaths > 0 ? 1 : 0) + (vm->smx_talks > 0 ? 1 : 0) +
+                   (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_BLOOMED", (long)bloomed);
+      var_set_num(vm, "SMX_BLOOM", (long)bonds);
+      var_set_num(vm, "SMX_PETALS", (long)(bloomed ? live : 0));
+      var_set_num(vm, "SMX_RADIANCE", (long)breaths);
+      var_set_num(vm, "SMX_FLOURISH", (long)(bloomed ? bonds + breaths : 0));
+      var_set_num(vm, "SMX_UNFOLD", (long)breaths);
+      var_set_num(vm, "SMX_MESH", (long)(bloomed ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_CHORD", (long)breaths);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)bonds);
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (bloomed){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX BLOOM ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX BLOOM partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX BLOOM soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX BLOOM nodes=%d live=%d bonds=%d breaths=%d need=%d soft=%d talks=%d oob=%d bloomed=%d vital=%ld\n",
+                n, live, bonds, breaths, need, soft, vm->smx_talks, vm->smx_oob, bloomed, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD");
   return -1;
 }

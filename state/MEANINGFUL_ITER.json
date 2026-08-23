@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "fa1f746a",
-  "version": "1.15.1122-usability",
-  "feature": "atomic_printer_mesh_entangle",
-  "proof": "1652_atomic_printer_mesh_entangle",
+  "commit": "PENDING",
+  "version": "1.15.1123-usability",
+  "feature": "atomic_printer_mesh_bloom",
+  "proof": "1653_atomic_printer_mesh_bloom",
   "proof_ok": true,
-  "ts": "2026-08-23T00:16:32Z",
-  "iso": "2026-08-23T00:16:32Z",
-  "iter": 1652,
-  "note": "Life-force MESH-ENTANGLE: full pairwise complete-mesh bonds after soft-OOB storms (SMX ENTANGLE|BIND|FUSE|MESH_BIND|ENTANGLEMENT). Clears thrash OOB, every live pair sings both ways (C(n,2)), latches SMX_ENTANGLED; mitosis under free energy while mesh is entangled; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed; no dual ladders.",
+  "ts": "2026-08-23T16:50:43Z",
+  "iso": "2026-08-23T16:50:43Z",
+  "iter": 1653,
+  "note": "Life-force MESH-BLOOM: complete-mesh bonds + circular breath ring after soft-OOB storms (SMX BLOOM|FLOURISH|UNFOLD|MESH_BLOOM|AWAKEN). Clears thrash OOB, every live pair sings both ways (C(n,2)), then ring breathes so lattice flowers; latches SMX_BLOOMED; mitosis under free energy while mesh is bloomed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
-  "asserts_ok": 83,
+  "asserts_ok": 100,
   "asserts_fail": 0,
-  "item": "1652 atomic printer mesh entangle",
-  "item_id": "mi_1652_atomic_printer_mesh_entangle",
-  "title": "1652 atomic printer mesh entangle",
-  "summary": "SMX ENTANGLE full pairwise mesh bonds \u2014 five live nodes fuse as one complete life-force lattice after storms.",
+  "item": "1653 atomic printer mesh bloom",
+  "item_id": "mi_1653_atomic_printer_mesh_bloom",
+  "title": "1653 atomic printer mesh bloom",
+  "summary": "SMX BLOOM complete mesh + breath ring \u2014 five live nodes flower as one life-force lattice after storms.",
   "proofs": [
-    "programs/proof/1652_atomic_printer_mesh_entangle.cubalc"
+    "programs/proof/1653_atomic_printer_mesh_bloom.cubalc"
   ]
 }
