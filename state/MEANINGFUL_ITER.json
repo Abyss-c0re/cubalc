@@ -1,21 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "7a6be806",
-  "version": "1.15.1133-usability",
+  "commit": "PENDING",
+  "version": "1.15.1134-usability",
   "feature": "atomic_printer_mesh_tidal",
   "proof": "1663_atomic_printer_mesh_tidal",
   "proof_ok": true,
-  "ts": "2026-08-23T20:05:42Z",
+  "ts": "2026-08-23T20:50:56Z",
   "iso": "2026-08-23T20:05:42Z",
-  "iter": 1663,
+  "iter": 1664,
   "note": "Life-force MESH-TIDAL: complete marsh mesh + directed eddy ring + hub seagrass pool after soft-OOB storms (SMX TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL). Clears thrash OOB, every live pair sings both ways (C(n,2)), eddy i->i+1 ring + hub seagrasses so lattice raises tidal marsh; latches SMX_TIDALED|SMX_MARSH|SMX_SALTFLAT; mitosis under free energy while mesh is tidaled; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "smx_mesh_tidal",
-  "item_id": "mi_smx_mesh_tidal",
-  "title": "SMX TIDAL mesh life-force marsh",
-  "summary": "SMX TIDAL/MARSH/EDDY/SEAGRASS marsh mesh + eddy ring + seagrass hub; soft-OOB fail-closed; mitosis under tidaled lattice.",
+  "item": "1664 atomic printer mesh dune",
+  "item_id": "mi_1664_atomic_printer_mesh_dune",
+  "title": "1664 atomic printer mesh dune",
+  "summary": "Host-finished MI ship after nanobot partial (1664_atomic_printer_mesh_dune).",
   "proofs": [
-    "1663_atomic_printer_mesh_tidal",
-    "1620_atomic_printer_life_force"
+    "programs/proof/1664_atomic_printer_mesh_dune.cubalc"
   ],
-  "host_finish": false
+  "host_finish": true
 }
