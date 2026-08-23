@@ -1772,6 +1772,182 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE");
+  /* SMX ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE a b c ...
+   * Life-force orchard after canopy: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete mesh among live nodes, weaves
+   * mycelium skip-links (i -> i+2) for resilient cross-talk, then fruits
+   * from the hub - each live leaf receives one harvest pulse.
+   * Latches SMX_ORCHARDED when mesh+mycelium+fruit are soft-OOB-free.
+   * SMX_ROOTS = undirected mesh bonds; SMX_MYCELIA = skip-links;
+   * SMX_FRUITS = hub harvest pulses; SMX_ORCHARD = roots+mycelia+fruits.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"ORCHARD")||kw(&L->cur,"GROVE")||kw(&L->cur,"MYCELIUM")||
+      kw(&L->cur,"ROOTWEB")||kw(&L->cur,"FRUIT")||kw(&L->cur,"SYMBIOSE")||
+      kw(&L->cur,"MESH_ORCHARD")||kw(&L->cur,"RAISE_ORCHARD")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int roots = 0;
+    int mycelia = 0;
+    int fruits = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "ORCHARD needs >=2 cubes",
+                  "SMX ORCHARD a b [c ...]  or  SMX GROVE a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - orchard needs clear soil */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* rootweb - full pairwise bidirectional bonds among live (complete mesh) */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else roots++;
+          }
+        }
+      }
+    }
+    /* mycelium skip-links - each live node talks to node+2 (mod live) both ways */
+    if (live >= 3){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 2) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else mycelia++;
+        }
+      }
+    } else if (live == 2){
+      int a = live_ix[0], b = live_ix[1];
+      int r1 = do_smx_talk(vm, ids[a], ids[b]);
+      if (r1 < 0) return -1;
+      if (r1 == 0){
+        int r2 = do_smx_talk(vm, ids[b], ids[a]);
+        if (r2 < 0) return -1;
+        if (r2 == 0) mycelia++;
+        else soft++;
+      } else soft++;
+    }
+    /* fruiting bodies - hub harvest pulse to every live leaf */
+    if (live >= 1){
+      int hub = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[hub], ids[leaf]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[leaf], ids[hub]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else fruits++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int root_ok = (need > 0 && roots >= need && soft == 0) ? 1 : 0;
+      if (!root_ok && need > 0 && roots * 2 >= need && soft == 0)
+        root_ok = 1;
+      int myc_need = (live >= 3) ? live : (live == 2 ? 1 : 0);
+      int myc_ok = (myc_need == 0 || (mycelia >= myc_need && soft == 0)) ? 1 : 0;
+      if (!myc_ok && myc_need > 0 && mycelia * 2 >= myc_need && soft == 0)
+        myc_ok = 1;
+      int fruit_ok = (live >= 1 && fruits >= live && soft == 0) ? 1 : 0;
+      if (!fruit_ok && live >= 1 && fruits * 2 >= live && soft == 0)
+        fruit_ok = 1;
+      int orcharded = (root_ok && myc_ok && fruit_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (orcharded ? 10 : (roots > 0 ? 3 : 0)) +
+                   (mycelia > 0 ? 1 : 0) + (fruits > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_ORCHARDED", (long)orcharded);
+      var_set_num(vm, "SMX_ORCHARD", (long)(orcharded ? roots + mycelia + fruits : 0));
+      var_set_num(vm, "SMX_GROVE", (long)(orcharded ? 1 : 0));
+      var_set_num(vm, "SMX_ROOTS", (long)roots);
+      var_set_num(vm, "SMX_MYCELIA", (long)mycelia);
+      var_set_num(vm, "SMX_FRUITS", (long)(orcharded ? fruits : 0));
+      var_set_num(vm, "SMX_SYMBIOSE", (long)(orcharded ? roots + mycelia : 0));
+      var_set_num(vm, "SMX_MESH", (long)(orcharded ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)roots);
+      var_set_num(vm, "SMX_EXCHANGES", (long)roots);
+      var_set_num(vm, "SMX_FUSE", (long)roots);
+      var_set_num(vm, "SMX_BIND", (long)roots);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(roots + mycelia + fruits));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (orcharded){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX ORCHARD ok");
+      } else if (roots > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX ORCHARD partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX ORCHARD soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX ORCHARD nodes=%d live=%d roots=%d mycelia=%d fruits=%d need=%d soft=%d talks=%d oob=%d orcharded=%d vital=%ld\n",
+                n, live, roots, mycelia, fruits, need, soft, vm->smx_talks, vm->smx_oob, orcharded, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE");
   return -1;
 }

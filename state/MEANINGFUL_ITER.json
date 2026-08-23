@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "a785a157",
-  "version": "1.15.1125-usability",
-  "feature": "atomic_printer_mesh_canopy",
-  "proof": "1655_atomic_printer_mesh_canopy",
+  "commit": "PENDING",
+  "version": "1.15.1126-usability",
+  "feature": "atomic_printer_mesh_orchard",
+  "proof": "1656_atomic_printer_mesh_orchard",
   "proof_ok": true,
-  "ts": "2026-08-23T17:13:59Z",
-  "iso": "2026-08-23T17:13:59Z",
-  "iter": 1655,
-  "note": "Life-force MESH-CANOPY: complete-mesh bonds + hub-star ribs + leaf ring after soft-OOB storms (SMX CANOPY|CROWN|SPROUT|MESH_CANOPY|SHADE|LEAF). Clears thrash OOB, every live pair sings both ways (C(n,2)), hub ribs + ring breathe so lattice raises a canopy; latches SMX_CANOPIED|SMX_CROWN; mitosis under free energy while mesh is canopied; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed; no dual ladders.",
+  "ts": "2026-08-23T17:48:00Z",
+  "iso": "2026-08-23T17:48:00Z",
+  "iter": 1656,
+  "note": "Life-force MESH-ORCHARD: complete rootweb bonds + mycelium skip-links + hub fruit after soft-OOB storms (SMX ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MESH_ORCHARD|RAISE_ORCHARD). Clears thrash OOB, every live pair sings both ways (C(n,2)), mycelium i->i+2 cross-talk + hub harvest so lattice raises an orchard; latches SMX_ORCHARDED|SMX_GROVE; mitosis under free energy while mesh is orcharded; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
   "asserts_ok": 107,
   "asserts_fail": 0,
-  "item": "1655 atomic printer mesh canopy",
-  "item_id": "mi_1655_atomic_printer_mesh_canopy",
-  "title": "1655 atomic printer mesh canopy",
-  "summary": "SMX CANOPY complete mesh + hub-star ribs + leaf ring \u2014 five live nodes raise one life-force canopy after storms.",
+  "item": "1656 atomic printer mesh orchard",
+  "item_id": "mi_1656_atomic_printer_mesh_orchard",
+  "title": "1656 atomic printer mesh orchard",
+  "summary": "SMX ORCHARD complete rootweb + mycelium skip-links + hub fruit — five live nodes raise one life-force orchard after storms.",
   "proofs": [
-    "programs/proof/1655_atomic_printer_mesh_canopy.cubalc"
+    "programs/proof/1656_atomic_printer_mesh_orchard.cubalc"
   ]
 }
