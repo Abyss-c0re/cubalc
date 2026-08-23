@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "7a8becb6",
-  "version": "1.15.1137-usability",
-  "feature": "atomic_printer_mesh_crystal",
-  "proof": "1667_atomic_printer_mesh_crystal",
+  "commit": "PENDING",
+  "version": "1.15.1138-usability",
+  "feature": "atomic_printer_mesh_aurora",
+  "proof": "1668_atomic_printer_mesh_aurora",
   "proof_ok": true,
-  "ts": "2026-08-24T00:45:00Z",
-  "iso": "2026-08-24T00:45:00Z",
-  "iter": 1667,
-  "note": "Life-force MESH-CRYSTAL: complete facet mesh + directed prism ring + hub nucleus root after soft-OOB storms (SMX CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL). Clears thrash OOB, every live pair sings both ways (C(n,2)), prism i->i+1 ring + hub nuclei so lattice raises quartz geode; latches SMX_CRYSTALLED|SMX_PRISM|SMX_FACETS; mitosis under free energy while mesh is crystallised; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1667 atomic printer mesh crystal",
-  "item_id": "mi_1667_atomic_printer_mesh_crystal",
-  "title": "1667 atomic printer mesh crystal",
-  "summary": "SMX crystal geode facet mesh + prism ring + nucleus hub; soft-OOB fail-closed; mitosis under crystallised lattice.",
+  "ts": "2026-08-24T01:00:00Z",
+  "iso": "2026-08-24T01:00:00Z",
+  "iter": 1668,
+  "note": "Life-force MESH-AURORA: complete veil mesh + directed ribbon ring + hub corona root after soft-OOB storms (SMX AURORA|BOREALIS|VEIL|RIBBON|CORONA|ARC|MESH_AURORA|RAISE_AURORA). Clears thrash OOB, every live pair sings both ways (C(n,2)), ribbon i->i+1 ring + hub coronas so lattice raises polar aurora; latches SMX_AURORAED|SMX_RIBBON|SMX_VEILS; mitosis under free energy while mesh is auroraed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
+  "item": "1668 atomic printer mesh aurora",
+  "item_id": "mi_1668_atomic_printer_mesh_aurora",
+  "title": "1668 atomic printer mesh aurora",
+  "summary": "SMX aurora curtain veil mesh + ribbon ring + corona hub; soft-OOB fail-closed; mitosis under auroraed lattice.",
   "proofs": [
-    "programs/proof/1667_atomic_printer_mesh_crystal.cubalc"
+    "programs/proof/1668_atomic_printer_mesh_aurora.cubalc"
   ]
 }
