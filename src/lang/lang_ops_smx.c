@@ -3287,6 +3287,174 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE");
+  /* SMX OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS a b c ...
+   * Life-force oasis after dune ridge: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete wadi mesh among live nodes, weaves a
+   * directed mirage ring (i -> i+1) so desert heat pulses every wadi, then palm root
+   * anchors return so lattice raises a springwell where dune meets open sky.
+   * Latches SMX_OASISED when mesh+mirages+palms are soft-OOB-free.
+   * SMX_WADI = chain bonds; SMX_DATEPALM = root gather pulses;
+   * SMX_OASIS = wadis+mirages+palms; SMX_MIRAGE|SMX_WADIS sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"OASIS")||kw(&L->cur,"MIRAGE")||kw(&L->cur,"WADI")||
+      kw(&L->cur,"PALM")||kw(&L->cur,"DATEPALM")||kw(&L->cur,"SPRINGWELL")||
+      kw(&L->cur,"MESH_OASIS")||kw(&L->cur,"RAISE_OASIS")||
+      kw(&L->cur,"OASES")||kw(&L->cur,"WADIS")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int wadis = 0;
+    int mirages = 0;
+    int palms = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "OASIS needs >=2 cubes",
+                  "SMX OASIS a b [c ...]  or  SMX MIRAGE a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - oasis needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete oasis mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else wadis++;
+          }
+        }
+      }
+    }
+    /* mirage ring - energy pulses every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else mirages++;
+        }
+      }
+    }
+    /* palm pool - root anchors return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else palms++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && wadis >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && wadis * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int mirage_ok = (live >= 2 && mirages >= live && soft == 0) ? 1 : 0;
+      if (!mirage_ok && live >= 2 && mirages * 2 >= live && soft == 0)
+        mirage_ok = 1;
+      int palm_ok = (live >= 1 && palms >= live && soft == 0) ? 1 : 0;
+      if (!palm_ok && live >= 1 && palms * 2 >= live && soft == 0)
+        palm_ok = 1;
+      int oasised = (mesh_ok && mirage_ok && palm_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (oasised ? 11 : (wadis > 0 ? 3 : 0)) +
+                   (mirages > 0 ? 1 : 0) + (palms > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_OASISED", (long)oasised);
+      var_set_num(vm, "SMX_OASIS", (long)(oasised ? wadis + mirages + palms : 0));
+      var_set_num(vm, "SMX_MIRAGE", (long)(oasised ? 1 : 0));
+      var_set_num(vm, "SMX_WADIS", (long)(oasised ? wadis : 0));
+      var_set_num(vm, "SMX_WADI", (long)(oasised ? wadis : 0));
+      var_set_num(vm, "SMX_SPRINGWELL", (long)(oasised ? 1 : 0));
+      var_set_num(vm, "SMX_MIRAGES", (long)(oasised ? mirages : 0));
+      var_set_num(vm, "SMX_DATEPALM", (long)(oasised ? palms : 0));
+      var_set_num(vm, "SMX_PALM", (long)(oasised ? palms : 0));
+      var_set_num(vm, "SMX_PALMS", (long)(oasised ? palms : 0));
+      var_set_num(vm, "SMX_MESH", (long)(oasised ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)wadis);
+      var_set_num(vm, "SMX_EXCHANGES", (long)wadis);
+      var_set_num(vm, "SMX_FUSE", (long)wadis);
+      var_set_num(vm, "SMX_BIND", (long)wadis);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(wadis + mirages + palms));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (oasised){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX OASIS ok");
+      } else if (wadis > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX OASIS partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX OASIS soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX OASIS nodes=%d live=%d wadis=%d mirages=%d palms=%d need=%d soft=%d talks=%d oob=%d oasised=%d vital=%ld\n",
+                n, live, wadis, mirages, palms, need, soft, vm->smx_talks, vm->smx_oob, oasised, vital);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS");
   return -1;
 }

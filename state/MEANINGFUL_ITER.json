@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "9ed39bc1",
-  "version": "1.15.1134-usability",
-  "feature": "atomic_printer_mesh_tidal",
-  "proof": "1663_atomic_printer_mesh_tidal",
+  "commit": "PENDING",
+  "version": "1.15.1135-usability",
+  "feature": "atomic_printer_mesh_oasis",
+  "proof": "1665_atomic_printer_mesh_oasis",
   "proof_ok": true,
-  "ts": "2026-08-23T20:50:56Z",
-  "iso": "2026-08-23T20:05:42Z",
-  "iter": 1664,
-  "note": "Life-force MESH-TIDAL: complete marsh mesh + directed eddy ring + hub seagrass pool after soft-OOB storms (SMX TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL). Clears thrash OOB, every live pair sings both ways (C(n,2)), eddy i->i+1 ring + hub seagrasses so lattice raises tidal marsh; latches SMX_TIDALED|SMX_MARSH|SMX_SALTFLAT; mitosis under free energy while mesh is tidaled; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1664 atomic printer mesh dune",
-  "item_id": "mi_1664_atomic_printer_mesh_dune",
-  "title": "1664 atomic printer mesh dune",
-  "summary": "Host-finished MI ship after nanobot partial (1664_atomic_printer_mesh_dune).",
+  "ts": "2026-08-23T21:09:42Z",
+  "iso": "2026-08-23T21:09:42Z",
+  "iter": 1665,
+  "note": "Life-force MESH-OASIS: complete wadi mesh + directed mirage ring + hub palm root after soft-OOB storms (SMX OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS). Clears thrash OOB, every live pair sings both ways (C(n,2)), mirage i->i+1 ring + hub palms so lattice raises oasis; latches SMX_OASISED|SMX_MIRAGE|SMX_WADIS; mitosis under free energy while mesh is oasised; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
+  "item": "1665 atomic printer mesh oasis",
+  "item_id": "mi_1665_atomic_printer_mesh_oasis",
+  "title": "1665 atomic printer mesh oasis",
+  "summary": "SMX oasis wadi mesh + mirage ring + datepalm hub; soft-OOB fail-closed; mitosis under oasised lattice.",
   "proofs": [
-    "programs/proof/1664_atomic_printer_mesh_dune.cubalc"
-  ],
-  "host_finish": true
+    "programs/proof/1665_atomic_printer_mesh_oasis.cubalc"
+  ]
 }
