@@ -1948,6 +1948,173 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE");
+
+  /* SMX MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE a b c ...
+   * Life-force meadow after orchard: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete mesh among live nodes, weaves a
+   * pollinate ring (i -> i+1) so bees cross every edge, then nectar dew
+   * from the hub so each live leaf drinks one sweet pulse.
+   * Latches SMX_MEADOWED when mesh+pollen+nectar are soft-OOB-free.
+   * SMX_POLLEN = ring bonds; SMX_NECTARS = hub dew pulses;
+   * SMX_MEADOW = bonds+pollen+nectars; SMX_PASTURE|SMX_BLOOMFIELD sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"MEADOW")||kw(&L->cur,"PASTURE")||kw(&L->cur,"POLLINATE")||
+      kw(&L->cur,"NECTAR")||kw(&L->cur,"BLOOMFIELD")||kw(&L->cur,"PRAIRIE")||
+      kw(&L->cur,"MESH_MEADOW")||kw(&L->cur,"RAISE_MEADOW")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int pollen = 0;
+    int nectars = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "MEADOW needs >=2 cubes",
+                  "SMX MEADOW a b [c ...]  or  SMX PASTURE a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - meadow needs clear wind */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete mesh rootweb among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* pollinate ring - bees walk every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else pollen++;
+        }
+      }
+    }
+    /* nectar dew - hub sweetens every live leaf (incl self pulse) */
+    if (live >= 1){
+      int hub = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[hub], ids[leaf]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[leaf], ids[hub]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else nectars++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int pol_ok = (live >= 2 && pollen >= live && soft == 0) ? 1 : 0;
+      if (!pol_ok && live >= 2 && pollen * 2 >= live && soft == 0)
+        pol_ok = 1;
+      int nec_ok = (live >= 1 && nectars >= live && soft == 0) ? 1 : 0;
+      if (!nec_ok && live >= 1 && nectars * 2 >= live && soft == 0)
+        nec_ok = 1;
+      int meadowed = (mesh_ok && pol_ok && nec_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (meadowed ? 11 : (bonds > 0 ? 3 : 0)) +
+                   (pollen > 0 ? 1 : 0) + (nectars > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_MEADOWED", (long)meadowed);
+      var_set_num(vm, "SMX_MEADOW", (long)(meadowed ? bonds + pollen + nectars : 0));
+      var_set_num(vm, "SMX_PASTURE", (long)(meadowed ? 1 : 0));
+      var_set_num(vm, "SMX_BLOOMFIELD", (long)(meadowed ? 1 : 0));
+      var_set_num(vm, "SMX_POLLEN", (long)pollen);
+      var_set_num(vm, "SMX_NECTARS", (long)(meadowed ? nectars : 0));
+      var_set_num(vm, "SMX_POLLINATE", (long)(meadowed ? pollen : 0));
+      var_set_num(vm, "SMX_MESH", (long)(meadowed ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + pollen + nectars));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (meadowed){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX MEADOW ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX MEADOW partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX MEADOW soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX MEADOW nodes=%d live=%d bonds=%d pollen=%d nectars=%d need=%d soft=%d talks=%d oob=%d meadowed=%d vital=%ld\n",
+                n, live, bonds, pollen, nectars, need, soft, vm->smx_talks, vm->smx_oob, meadowed, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE");
   return -1;
 }
+

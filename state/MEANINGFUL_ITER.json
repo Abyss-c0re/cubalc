@@ -1,22 +1,22 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "3a4970cf",
-  "version": "1.15.1126-usability",
-  "feature": "atomic_printer_mesh_orchard",
-  "proof": "1656_atomic_printer_mesh_orchard",
+  "commit": "PENDING",
+  "version": "1.15.1127-usability",
+  "feature": "atomic_printer_mesh_meadow",
+  "proof": "1657_atomic_printer_mesh_meadow",
   "proof_ok": true,
-  "ts": "2026-08-23T17:48:00Z",
-  "iso": "2026-08-23T17:48:00Z",
-  "iter": 1656,
-  "note": "Life-force MESH-ORCHARD: complete rootweb bonds + mycelium skip-links + hub fruit after soft-OOB storms (SMX ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MESH_ORCHARD|RAISE_ORCHARD). Clears thrash OOB, every live pair sings both ways (C(n,2)), mycelium i->i+2 cross-talk + hub harvest so lattice raises an orchard; latches SMX_ORCHARDED|SMX_GROVE; mitosis under free energy while mesh is orcharded; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed; no dual ladders.",
+  "ts": "2026-08-23T20:56:00Z",
+  "iso": "2026-08-23T20:56:00Z",
+  "iter": 1657,
+  "note": "Life-force MESH-MEADOW: complete mesh bonds + pollinate ring + hub nectar dew after soft-OOB storms (SMX MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|MESH_MEADOW|RAISE_MEADOW). Clears thrash OOB, every live pair sings both ways (C(n,2)), pollinate ring i->i+1 + hub nectar so lattice raises a meadow; latches SMX_MEADOWED|SMX_PASTURE|SMX_BLOOMFIELD; mitosis under free energy while mesh is meadowed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed; no dual ladders.",
   "law": "no_dual_ladders",
   "asserts_ok": 107,
   "asserts_fail": 0,
-  "item": "1656 atomic printer mesh orchard",
-  "item_id": "mi_1656_atomic_printer_mesh_orchard",
-  "title": "1656 atomic printer mesh orchard",
-  "summary": "SMX ORCHARD complete rootweb + mycelium skip-links + hub fruit — five live nodes raise one life-force orchard after storms.",
+  "item": "1657 atomic printer mesh meadow",
+  "item_id": "mi_1657_atomic_printer_mesh_meadow",
+  "title": "1657 atomic printer mesh meadow",
+  "summary": "SMX MEADOW complete mesh + pollinate ring + hub nectar \u2014 five live nodes raise one life-force meadow after storms.",
   "proofs": [
-    "programs/proof/1656_atomic_printer_mesh_orchard.cubalc"
+    "programs/proof/1657_atomic_printer_mesh_meadow.cubalc"
   ]
 }
