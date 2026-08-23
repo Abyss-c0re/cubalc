@@ -1,12 +1,12 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "commit": "PENDING",
-  "version": "1.15.1127-usability",
-  "feature": "atomic_printer_mesh_meadow",
-  "proof": "1657_atomic_printer_mesh_meadow",
+  "version": "1.15.1128-usability",
+  "feature": "atomic_printer_mesh_river",
+  "proof": "1658_atomic_printer_mesh_river",
   "proof_ok": true,
-  "ts": "2026-08-23T18:00:00Z",
-  "iso": "2026-08-23T18:00:00Z",
-  "iter": 1657,
-  "note": "Life-force MESH-MEADOW: complete mesh bonds + pollinate ring + hub nectar dew after soft-OOB storms (SMX MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|MESH_MEADOW|RAISE_MEADOW). Clears thrash OOB, every live pair sings both ways (C(n,2)), pollen i->i+1 ring + hub nectar so lattice raises a meadow; latches SMX_MEADOWED|SMX_PASTURE|SMX_BLOOMFIELD; mitosis under free energy while mesh is meadowed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed."
+  "ts": "2026-08-23T18:14:55Z",
+  "iso": "2026-08-23T18:14:55Z",
+  "iter": 1658,
+  "note": "Life-force MESH-RIVER: complete bank mesh + directed current ring + hub confluence springs after soft-OOB storms (SMX RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER). Clears thrash OOB, every live pair sings both ways (C(n,2)), current i->i+1 ring + hub springs so lattice raises a river; latches SMX_RIVERED|SMX_STREAM|SMX_DELTA; mitosis under free energy while mesh is rivered; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed."
 }
