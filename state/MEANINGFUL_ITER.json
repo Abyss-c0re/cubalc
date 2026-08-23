@@ -1,12 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "2c3fffdc42bed14ba75591705d185519cb4c832e",
-  "version": "1.15.1130-usability",
+  "commit": "PENDING",
+  "version": "1.15.1131-usability",
   "feature": "atomic_printer_mesh_estuary",
   "proof": "1660_atomic_printer_mesh_estuary",
   "proof_ok": true,
-  "ts": "2026-08-23T18:47:32Z",
+  "ts": "2026-08-23T19:06:42Z",
   "iso": "2026-08-23T18:47:32Z",
-  "iter": 1660,
-  "note": "Life-force MESH-ESTUARY: complete braid mesh + directed tide ring + hub mangrove pool after soft-OOB storms (SMX ESTUARY|TIDE|BRACKISH|LAGOON|BRAID|MANGROVE|MESH_ESTUARY|RAISE_ESTUARY). Clears thrash OOB, every live pair sings both ways (C(n,2)), tide i->i+1 ring + hub mangroves so lattice raises estuary; latches SMX_ESTUARIED|SMX_TIDE|SMX_BRACKISH; mitosis under free energy while mesh is estuaried; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed."
+  "iter": 1661,
+  "note": "Life-force MESH-ESTUARY: complete braid mesh + directed tide ring + hub mangrove pool after soft-OOB storms (SMX ESTUARY|TIDE|BRACKISH|LAGOON|BRAID|MANGROVE|MESH_ESTUARY|RAISE_ESTUARY). Clears thrash OOB, every live pair sings both ways (C(n,2)), tide i->i+1 ring + hub mangroves so lattice raises estuary; latches SMX_ESTUARIED|SMX_TIDE|SMX_BRACKISH; mitosis under free energy while mesh is estuaried; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
+  "item": "host finish ship",
+  "item_id": "mi_host_finish_ship",
+  "title": "host finish ship",
+  "summary": "Host-finished MI ship after nanobot partial (host_finish_ship).",
+  "proofs": [],
+  "host_finish": true
 }
