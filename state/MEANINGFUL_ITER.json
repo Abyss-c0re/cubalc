@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "50f73f21",
-  "version": "1.15.1136-usability",
-  "feature": "atomic_printer_mesh_grotto",
-  "proof": "1666_atomic_printer_mesh_grotto",
+  "commit": "PENDING",
+  "version": "1.15.1137-usability",
+  "feature": "atomic_printer_mesh_crystal",
+  "proof": "1667_atomic_printer_mesh_crystal",
   "proof_ok": true,
-  "ts": "2026-08-23T21:30:58Z",
-  "iso": "2026-08-23T21:30:58Z",
-  "iter": 1666,
-  "note": "Life-force MESH-GROTTO: complete chamber mesh + directed drip ring + hub pillar root after soft-OOB storms (SMX GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO). Clears thrash OOB, every live pair sings both ways (C(n,2)), drip i->i+1 ring + hub pillars so lattice raises grotto; latches SMX_GROTTOED|SMX_DRIP|SMX_CHAMBERS; mitosis under free energy while mesh is grottoed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1666 atomic printer mesh grotto",
-  "item_id": "mi_1666_atomic_printer_mesh_grotto",
-  "title": "1666 atomic printer mesh grotto",
-  "summary": "SMX grotto chamber mesh + drip ring + pillar hub; soft-OOB fail-closed; mitosis under grottoed lattice.",
+  "ts": "2026-08-24T00:45:00Z",
+  "iso": "2026-08-24T00:45:00Z",
+  "iter": 1667,
+  "note": "Life-force MESH-CRYSTAL: complete facet mesh + directed prism ring + hub nucleus root after soft-OOB storms (SMX CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL). Clears thrash OOB, every live pair sings both ways (C(n,2)), prism i->i+1 ring + hub nuclei so lattice raises quartz geode; latches SMX_CRYSTALLED|SMX_PRISM|SMX_FACETS; mitosis under free energy while mesh is crystallised; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
+  "item": "1667 atomic printer mesh crystal",
+  "item_id": "mi_1667_atomic_printer_mesh_crystal",
+  "title": "1667 atomic printer mesh crystal",
+  "summary": "SMX crystal geode facet mesh + prism ring + nucleus hub; soft-OOB fail-closed; mitosis under crystallised lattice.",
   "proofs": [
-    "programs/proof/1666_atomic_printer_mesh_grotto.cubalc"
+    "programs/proof/1667_atomic_printer_mesh_crystal.cubalc"
   ]
 }
