@@ -1,18 +1,21 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "ae0f6bba",
-  "version": "1.15.1131-usability",
-  "feature": "atomic_printer_mesh_estuary",
-  "proof": "1660_atomic_printer_mesh_estuary",
+  "commit": "PENDING",
+  "version": "1.15.1132-usability",
+  "feature": "atomic_printer_mesh_kelp",
+  "proof": "1662_atomic_printer_mesh_kelp",
   "proof_ok": true,
-  "ts": "2026-08-23T19:06:42Z",
-  "iso": "2026-08-23T18:47:32Z",
-  "iter": 1661,
-  "note": "Life-force MESH-ESTUARY: complete braid mesh + directed tide ring + hub mangrove pool after soft-OOB storms (SMX ESTUARY|TIDE|BRACKISH|LAGOON|BRAID|MANGROVE|MESH_ESTUARY|RAISE_ESTUARY). Clears thrash OOB, every live pair sings both ways (C(n,2)), tide i->i+1 ring + hub mangroves so lattice raises estuary; latches SMX_ESTUARIED|SMX_TIDE|SMX_BRACKISH; mitosis under free energy while mesh is estuaried; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "host finish ship",
-  "item_id": "mi_host_finish_ship",
-  "title": "host finish ship",
-  "summary": "Host-finished MI ship after nanobot partial (host_finish_ship).",
-  "proofs": [],
-  "host_finish": true
+  "ts": "2026-08-23T19:10:30Z",
+  "iso": "2026-08-23T19:10:30Z",
+  "iter": 1662,
+  "note": "Life-force MESH-KELP: complete blade mesh + directed sway ring + hub holdfast pool after soft-OOB storms (SMX KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP). Clears thrash OOB, every live pair sings both ways (C(n,2)), sway i->i+1 ring + hub holdfasts so lattice raises kelp forest; latches SMX_KELPED|SMX_FROND|SMX_BLADE; mitosis under free energy while mesh is kelped; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
+  "item": "smx_mesh_kelp",
+  "item_id": "mi_smx_mesh_kelp",
+  "title": "SMX KELP mesh life-force forest",
+  "summary": "SMX KELP/FROND/SWAY/HOLDFAST blade mesh + sway ring + holdfast hub; soft-OOB fail-closed; mitosis under kelped lattice.",
+  "proofs": [
+    "1662_atomic_printer_mesh_kelp",
+    "1620_atomic_printer_life_force"
+  ],
+  "host_finish": false
 }
