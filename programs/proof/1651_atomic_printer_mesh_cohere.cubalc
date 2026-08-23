@@ -1,0 +1,226 @@
+// atomic_printer_mesh_cohere.cubalc
+// Life-force gift: MESH-COHERE — bidirectional matrix chord after soft-OOB storms.
+// SMX COHERE|TUNE|CHORD clears thrash, neighbor pairs sing both ways, latches SMX_COHERENT.
+// Soft-OOB ghosts stay fail-closed. Mitosis under free energy while the mesh sings;
+// RECOVER restores vital/key; dual SEAL/OPEN rails rebind hive; second storm fail-closed.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_cohere | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Storm A/B soft-OOB thrash — no ghost place
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+// Storm then COHERE latch — five live nodes sing as one chord
+SMX COHERE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "cohere live"
+ASSERT SMX_COHERENT == 1 "coherent latch on"
+ASSERT SMX_UNISON == 5 "five unison"
+ASSERT SMX_SYNC == 5 "five syncs"
+ASSERT SMX_TONE == 5 "five tones"
+ASSERT SMX_SYNC == 5 "five tunes"
+ASSERT SMX_PULSE == 5 "pulse count"
+ASSERT SMX_BREATH == 5 "five live breath"
+ASSERT SMX_OOB == 0 "oob cleared by cohere"
+ASSERT SMX_LIVE == 5 "five live"
+ASSERT SMX_NODES == 5 "five named"
+ASSERT SMX_TALKS >= 10 "talks after cohere (bidir)"
+ASSERT SMX_VITAL >= 8 "vital after cohere"
+ASSERT CUBES == base_cubes "cohere invents nothing"
+
+// Alias TUNE form still pure
+SMX HARMONIZE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "harmonize rebind"
+ASSERT SMX_COHERENT == 1 "coherent sticky"
+ASSERT SMX_SYNC == 5 "tune sticky"
+
+// Alias CHORD form
+SMX UNISON bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "unison rebind"
+ASSERT SMX_COHERENT == 1 "unison coherent"
+
+// Mitosis under free energy while the mesh sings
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  SEND seed tick
+  SEND d1 tick
+  SEND d2 tick
+  LET step = step + 1
+END
+
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = 1
+IF a1 == 1 THEN
+  LET pop = pop + 1
+END
+IF a2 == 1 THEN
+  LET pop = pop + 1
+END
+ASSERT births >= 1 "mitosis under cohere"
+ASSERT pop >= 2 "population after coherent life"
+ASSERT CUBES == base_cubes "life invents no cubes"
+
+// Soft-OOB ghost in cohere — fail-closed, no thrash place
+SMX COHERE bed nozzle ghost_coh hive scrap
+ASSERT SMX_OOB >= 1 "coh soft-OOB"
+ASSERT SMX_BREATH == 4 "four live of five named"
+ASSERT SMX_TONE == 4 "four tones among live"
+ASSERT SMX_SYNC == 4 "four syncs among live"
+ASSERT SMX_COHERENT == 0 "ghost blocks full coherence (partial ok)"
+ASSERT SMX_UNISON == 0 "unison zero when not full"
+ASSERT SMX_OK == 1 "partial still ok"
+ASSERT CUBES == base_cubes "no ghost from coh"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "recover after res oob"
+ASSERT SMX_OOB == 0 "oob cleared"
+ASSERT SMX_KEY_OK == 1 "key sticky"
+ASSERT SMX_VITAL >= 6 "vital after recover"
+
+// Pure mesh tone after recover
+SMX MESH_SYNC bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mesh_sync pure"
+ASSERT SMX_COHERENT == 1 "coherent after recover"
+ASSERT SMX_SYNC == 5 "syncs after recover"
+ASSERT SMX_UNISON == 5 "unison after recover"
+ASSERT SMX_TONE == 5 "tone after recover"
+ASSERT CUBES == base_cubes "tone invents nothing"
+
+// Dual SEAL/OPEN rails under coherent spine
+SMX SEAL bed nozzle "state/smx_coh/rail_bn.cblc"
+ASSERT SMX_OK == 1 "seal rail BN"
+ASSERT SMX_N > 64 "rail BN frame"
+SMX OPEN hive "state/smx_coh/rail_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+
+SMX SEAL hive scrap "state/smx_coh/rail_hs.cblc"
+ASSERT SMX_OK == 1 "seal rail HS"
+SMX OPEN pulse "state/smx_coh/rail_hs.cblc"
+ASSERT SMX_OK == 1 "open HS onto pulse"
+ASSERT CUBES == base_cubes "rails invent nothing"
+
+// Final cohere lock + vitals
+SMX COHERE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "final cohere lock"
+ASSERT SMX_COHERENT == 1 "final coherent"
+ASSERT SMX_SYNC == 5 "final syncs"
+ASSERT SMX_UNISON == 5 "final unison"
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after cohere"
+ASSERT SMX_KEY_OK == 1 "key after cohere"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "no oob after cohere"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+// Second storm fail-closed
+SMX EXCHANGE hive offworld_storm
+ASSERT SMX_OK == 0 "storm soft-OOB"
+ASSERT SMX_OOB >= 1 "storm counted"
+ASSERT CUBES == base_cubes "storm invents nothing"
+SMX COHERE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "cohere after storm"
+ASSERT SMX_OOB == 0 "storm cleared by cohere"
+ASSERT SMX_BREATH == 5 "coherent holds after storm"
+ASSERT SMX_COHERENT == 1 "coherent after storm"
+ASSERT SMX_SYNC == 5 "syncs after storm"
+ASSERT SMX_UNISON == 5 "unison after storm"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after cohere"
+ASSERT UNITY >= 40 "mesh unity after cohere"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+ASSERT births >= 1 "mitosis before mesh cohere"
+ASSERT pop >= 2 "population after coherent life"
+ASSERT SMX_COHERENT == 1 "coherent latch holds"
+ASSERT SMX_BREATH == 5 "five-node tone"
+ASSERT SMX_UNISON == 5 "five unison holds"
+ASSERT SMX_OOB == 0 "guard holds through cohere"
+ASSERT OK == 1
+
+PRINT "mesh_cohere" births pop SMX_COHERENT SMX_UNISON SMX_CHORD SMX_TONE SMX_SYNC SMX_PULSE SMX_BREATH SMX_NODES SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
+
+PASS
