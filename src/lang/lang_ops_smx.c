@@ -1285,7 +1285,7 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       var_set_num(vm, "SMX_FUSE", (long)bonds);
       var_set_num(vm, "SMX_BIND", (long)bonds);
       var_set_num(vm, "SMX_TONE", (long)live);
-      var_set_num(vm, "SMX_PULSE", (long)(bonds + breaths));
+      var_set_num(vm, "SMX_PULSE", (long)bonds);
       var_set_num(vm, "SMX_BREATH", (long)live);
       var_set_num(vm, "SMX_LIVE", (long)live);
       var_set_num(vm, "SMX_NODES", (long)n);
@@ -1428,7 +1428,7 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       var_set_num(vm, "SMX_BIND", (long)bonds);
       var_set_num(vm, "SMX_CHORD", (long)breaths);
       var_set_num(vm, "SMX_TONE", (long)live);
-      var_set_num(vm, "SMX_PULSE", (long)bonds);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + breaths));
       var_set_num(vm, "SMX_BREATH", (long)live);
       var_set_num(vm, "SMX_LIVE", (long)live);
       var_set_num(vm, "SMX_NODES", (long)n);
@@ -1461,6 +1461,150 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD");
+
+  /* SMX GROUND|FIRM|SETTLE|MESH_GROUND|HARDEN|FORTIFY a b c ...
+   * Life-force mesh stability after soft-OOB storms.
+   * Clears thrash OOB, full pairwise bidirectional EXCHANGE among live nodes
+   * (complete mesh_exchange), then a settle breath ring so the lattice roots.
+   * Latches SMX_GROUNDED / SMX_HARDENED when mesh+ring are soft-OOB-free.
+   * Subsequent ghost thrash increments SMX_OOB fail-closed but does not invent
+   * cubes; RE-GROUND restores latch after thrash. Soft-OOB ghosts stay fail-closed.
+   * Free energy path stays open — no dual ladders. Wonder AGI can RUN. */
+  if (kw(&L->cur,"GROUND")||kw(&L->cur,"FIRM")||kw(&L->cur,"SETTLE")||
+      kw(&L->cur,"MESH_GROUND")||kw(&L->cur,"HARDEN")||kw(&L->cur,"FORTIFY")||
+      kw(&L->cur,"MESH_HARDEN")||kw(&L->cur,"ROOT_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int breaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "GROUND needs >=2 cubes",
+                  "SMX GROUND a b [c ...]  or  SMX HARDEN a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash first — ground needs a clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* full pairwise bidirectional mesh_exchange among live only */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* settle breath ring — lattice roots into substrate */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else breaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int ring_ok = (live >= 2 && breaths >= live && soft == 0) ? 1 : 0;
+      if (!ring_ok && live >= 2 && breaths * 2 >= live && soft == 0)
+        ring_ok = 1;
+      int grounded = (mesh_ok && ring_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (grounded ? 8 : (bonds > 0 ? 3 : 0)) +
+                   (breaths > 0 ? 1 : 0) + (vm->smx_talks > 0 ? 1 : 0) +
+                   (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_GROUNDED", (long)grounded);
+      var_set_num(vm, "SMX_HARDENED", (long)grounded);
+      var_set_num(vm, "SMX_FIRM", (long)(grounded ? live : 0));
+      var_set_num(vm, "SMX_SETTLE", (long)breaths);
+      var_set_num(vm, "SMX_ROOTS", (long)(grounded ? bonds : 0));
+      var_set_num(vm, "SMX_BRACE", (long)(grounded ? bonds + breaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(grounded ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_CHORD", (long)breaths);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + breaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (grounded){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX GROUND ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX GROUND partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX GROUND soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX GROUND nodes=%d live=%d bonds=%d breaths=%d need=%d soft=%d talks=%d oob=%d grounded=%d vital=%ld\n",
+                n, live, bonds, breaths, need, soft, vm->smx_talks, vm->smx_oob, grounded, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY");
   return -1;
 }
