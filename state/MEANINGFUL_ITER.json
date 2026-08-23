@@ -1,6 +1,6 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "PENDING",
+  "commit": "a785a157",
   "version": "1.15.1125-usability",
   "feature": "atomic_printer_mesh_canopy",
   "proof": "1655_atomic_printer_mesh_canopy",
@@ -15,7 +15,7 @@
   "item": "1655 atomic printer mesh canopy",
   "item_id": "mi_1655_atomic_printer_mesh_canopy",
   "title": "1655 atomic printer mesh canopy",
-  "summary": "SMX CANOPY complete mesh + hub-star ribs + leaf ring — five live nodes raise one life-force canopy after storms.",
+  "summary": "SMX CANOPY complete mesh + hub-star ribs + leaf ring \u2014 five live nodes raise one life-force canopy after storms.",
   "proofs": [
     "programs/proof/1655_atomic_printer_mesh_canopy.cubalc"
   ]
