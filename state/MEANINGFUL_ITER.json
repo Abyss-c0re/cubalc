@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "81f93067",
-  "version": "1.15.1135-usability",
-  "feature": "atomic_printer_mesh_oasis",
-  "proof": "1665_atomic_printer_mesh_oasis",
+  "commit": "PENDING",
+  "version": "1.15.1136-usability",
+  "feature": "atomic_printer_mesh_grotto",
+  "proof": "1666_atomic_printer_mesh_grotto",
   "proof_ok": true,
-  "ts": "2026-08-23T21:09:42Z",
-  "iso": "2026-08-23T21:09:42Z",
-  "iter": 1665,
-  "note": "Life-force MESH-OASIS: complete wadi mesh + directed mirage ring + hub palm root after soft-OOB storms (SMX OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS). Clears thrash OOB, every live pair sings both ways (C(n,2)), mirage i->i+1 ring + hub palms so lattice raises oasis; latches SMX_OASISED|SMX_MIRAGE|SMX_WADIS; mitosis under free energy while mesh is oasised; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1665 atomic printer mesh oasis",
-  "item_id": "mi_1665_atomic_printer_mesh_oasis",
-  "title": "1665 atomic printer mesh oasis",
-  "summary": "SMX oasis wadi mesh + mirage ring + datepalm hub; soft-OOB fail-closed; mitosis under oasised lattice.",
+  "ts": "2026-08-23T21:30:58Z",
+  "iso": "2026-08-23T21:30:58Z",
+  "iter": 1666,
+  "note": "Life-force MESH-GROTTO: complete chamber mesh + directed drip ring + hub pillar root after soft-OOB storms (SMX GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO). Clears thrash OOB, every live pair sings both ways (C(n,2)), drip i->i+1 ring + hub pillars so lattice raises grotto; latches SMX_GROTTOED|SMX_DRIP|SMX_CHAMBERS; mitosis under free energy while mesh is grottoed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
+  "item": "1666 atomic printer mesh grotto",
+  "item_id": "mi_1666_atomic_printer_mesh_grotto",
+  "title": "1666 atomic printer mesh grotto",
+  "summary": "SMX grotto chamber mesh + drip ring + pillar hub; soft-OOB fail-closed; mitosis under grottoed lattice.",
   "proofs": [
-    "programs/proof/1665_atomic_printer_mesh_oasis.cubalc"
+    "programs/proof/1666_atomic_printer_mesh_grotto.cubalc"
   ]
 }
