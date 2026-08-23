@@ -1,12 +1,12 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "491bc814d6c832cf22577729eb52c26d23460b71",
-  "version": "1.15.1128-usability",
-  "feature": "atomic_printer_mesh_river",
-  "proof": "1658_atomic_printer_mesh_river",
+  "commit": "2c3fffdc42bed14ba75591705d185519cb4c832e",
+  "version": "1.15.1130-usability",
+  "feature": "atomic_printer_mesh_estuary",
+  "proof": "1660_atomic_printer_mesh_estuary",
   "proof_ok": true,
-  "ts": "2026-08-23T18:14:55Z",
-  "iso": "2026-08-23T18:14:55Z",
-  "iter": 1658,
-  "note": "Life-force MESH-RIVER: complete bank mesh + directed current ring + hub confluence springs after soft-OOB storms (SMX RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER). Clears thrash OOB, every live pair sings both ways (C(n,2)), current i->i+1 ring + hub springs so lattice raises a river; latches SMX_RIVERED|SMX_STREAM|SMX_DELTA; mitosis under free energy while mesh is rivered; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed."
+  "ts": "2026-08-23T18:47:32Z",
+  "iso": "2026-08-23T18:47:32Z",
+  "iter": 1660,
+  "note": "Life-force MESH-ESTUARY: complete braid mesh + directed tide ring + hub mangrove pool after soft-OOB storms (SMX ESTUARY|TIDE|BRACKISH|LAGOON|BRAID|MANGROVE|MESH_ESTUARY|RAISE_ESTUARY). Clears thrash OOB, every live pair sings both ways (C(n,2)), tide i->i+1 ring + hub mangroves so lattice raises estuary; latches SMX_ESTUARIED|SMX_TIDE|SMX_BRACKISH; mitosis under free energy while mesh is estuaried; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed."
 }
