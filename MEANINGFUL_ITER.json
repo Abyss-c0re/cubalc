@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "5309e23fc301b676afcd3ab0deb460ce4cee2458",
-  "version": "1.15.1141-usability",
-  "feature": "atomic_printer_mesh_nebula",
-  "proof": "1671_atomic_printer_mesh_nebula",
+  "commit": "3e4b44e6",
+  "version": "1.15.1144-usability",
+  "feature": "atomic_printer_mesh_comet",
+  "proof": "1674_atomic_printer_mesh_comet",
   "proof_ok": true,
-  "ts": "2026-08-24T02:00:00Z",
+  "ts": "2026-08-24T12:16:37Z",
   "iso": "2026-08-24T02:00:00Z",
-  "iter": 1671,
-  "note": "Life-force MESH-NEBULA: complete dust mesh + directed nursery ring + hub core root after soft-OOB storms (SMX NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA). Clears thrash OOB, every live pair sings both ways (C(n,2)), nursery i->i+1 ring + hub cores so lattice raises stellar nursery; latches SMX_NEBULAED|SMX_NURSERY|SMX_DUSTS; mitosis under free energy while mesh is nebulaed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1671 atomic printer mesh nebula",
-  "item_id": "mi_1671_atomic_printer_mesh_nebula",
-  "title": "1671 atomic printer mesh nebula",
-  "summary": "SMX nebula stellar dust mesh + nursery ring + core hub; soft-OOB fail-closed; mitosis under nebulaed lattice.",
+  "iter": 1674,
+  "note": "Life-force MESH-COMET: complete debris mesh + directed tail ring + hub nuclei root after soft-OOB storms (SMX COMET|METEOR|DEBRIS|TAIL|COMA|NUCLEUS_ICE|MESH_COMET|RAISE_COMET). Clears thrash OOB, every live pair sings both ways (C(n,2)), tail i->i+1 ring + hub nuclei so lattice raises comet; latches SMX_COMETED|SMX_METEOR|SMX_DEBRIS; mitosis under free energy while mesh is cometed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
+  "item": "1674 atomic printer mesh comet",
+  "item_id": "mi_1674_atomic_printer_mesh_comet",
+  "title": "1674 atomic printer mesh comet",
+  "summary": "SMX COMET mesh: debris lattice + tail ring + nuclei, soft-OOB fail-closed, mitosis under free energy.",
   "proofs": [
-    "programs/proof/1671_atomic_printer_mesh_nebula.cubalc"
-  ]
+    "programs/proof/1674_atomic_printer_mesh_comet.cubalc"
+  ],
+  "host_finish": true
 }
