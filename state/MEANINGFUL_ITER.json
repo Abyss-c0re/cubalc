@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "6c97203e",
-  "version": "1.15.1144-usability",
-  "feature": "atomic_printer_mesh_comet",
-  "proof": "1674_atomic_printer_mesh_comet",
+  "commit": "cf97b187",
+  "version": "1.15.1145-usability",
+  "feature": "atomic_printer_mesh_supernova",
+  "proof": "1675_atomic_printer_mesh_supernova",
   "proof_ok": true,
-  "ts": "2026-08-24T12:16:37Z",
+  "ts": "2026-08-24T12:32:44Z",
   "iso": "2026-08-24T02:00:00Z",
-  "iter": 1674,
-  "note": "Life-force MESH-COMET: complete debris mesh + directed tail ring + hub nuclei root after soft-OOB storms (SMX COMET|METEOR|DEBRIS|TAIL|COMA|NUCLEUS_ICE|MESH_COMET|RAISE_COMET). Clears thrash OOB, every live pair sings both ways (C(n,2)), tail i->i+1 ring + hub nuclei so lattice raises comet; latches SMX_COMETED|SMX_METEOR|SMX_DEBRIS; mitosis under free energy while mesh is cometed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1674 atomic printer mesh comet",
-  "item_id": "mi_1674_atomic_printer_mesh_comet",
-  "title": "1674 atomic printer mesh comet",
-  "summary": "SMX COMET mesh: debris lattice + tail ring + nuclei, soft-OOB fail-closed, mitosis under free energy.",
+  "iter": 1675,
+  "note": "Life-force MESH-SUPERNOVA: complete ejecta mesh + directed shockwave ring + hub remnant root after soft-OOB storms (SMX SUPERNOVA|NOVA|EJECTA|SHOCKWAVE|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA). Clears thrash OOB, every live pair sings both ways (C(n,2)), shock i->i+1 ring + hub remnants so lattice raises supernova; latches SMX_SUPERNOVAED|SMX_NOVA|SMX_EJECTA; mitosis under free energy while mesh is supernovaed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
+  "item": "1675 atomic printer mesh supernova",
+  "item_id": "mi_1675_atomic_printer_mesh_supernova",
+  "title": "1675 atomic printer mesh supernova",
+  "summary": "SMX SUPERNOVA mesh: ejecta lattice + shock ring + remnants, soft-OOB fail-closed, mitosis under free energy.",
   "proofs": [
-    "programs/proof/1674_atomic_printer_mesh_comet.cubalc"
+    "programs/proof/1675_atomic_printer_mesh_supernova.cubalc"
   ],
   "host_finish": true
 }
