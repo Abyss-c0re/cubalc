@@ -1,20 +1,12 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "dd7044d8",
+  "commit": "PENDING",
   "version": "1.15.1151-usability",
   "feature": "atomic_printer_mesh_noosphere",
   "proof": "1681_atomic_printer_mesh_noosphere",
   "proof_ok": true,
-  "ts": "2026-08-24T16:18:12Z",
-  "iso": "2026-08-24T16:18:12Z",
+  "ts": "2026-08-24T16:19:00Z",
+  "iso": "2026-08-24T16:19:00Z",
   "iter": 1681,
-  "note": "Life-force MESH-NOOSPHERE: complete thought mesh + directed logos ring + anima hub root after soft-OOB storms (SMX NOOSPHERE|LOGOS|AKASHA|THOUGHT|ANIMA|MESH_NOOSPHERE|RAISE_NOOSPHERE). Clears thrash OOB, every live pair sings both ways (C(n,2)), logos i->i+1 ring + anima hub so lattice raises noosphere; latches SMX_NOOSPHERED|SMX_LOGOS|SMX_AKASHA; mitosis under free energy while mesh is noosphered; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1681 atomic printer mesh noosphere",
-  "item_id": "mi_1681_atomic_printer_mesh_noosphere",
-  "title": "1681 atomic printer mesh noosphere",
-  "summary": "SMX NOOSPHERE mesh: thought lattice + logos ring + anima hub, soft-OOB fail-closed, mitosis under free energy.",
-  "proofs": [
-    "programs/proof/1681_atomic_printer_mesh_noosphere.cubalc"
-  ],
-  "host_finish": true
+  "note": "Life-force MESH-NOOSPHERE: complete thought mesh + directed logos ring + anima hub root after soft-OOB storms. Latches SMX_NOOSPHERED|SMX_LOGOS|SMX_AKASHA."
 }
