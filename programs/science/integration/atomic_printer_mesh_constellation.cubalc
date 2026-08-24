@@ -1,0 +1,254 @@
+// atomic_printer_mesh_constellation.cubalc
+// Life-force gift: MESH-CONSTELLATION — complete stellar mesh + directed asterism-arm ring + hub core root after soft-OOB storms.
+// SMX CONSTELLATION|ASTERISM|LINKS|ARM|STARFIELD|ANCHOR|MESH_CONSTELLATION|RAISE_CONSTELLATION clears thrash, every live pair exchanges
+// both ways (C(n,2)), then arm ring settles so lattice raises a constellation; latches SMX_CONSTELLATED|SMX_ASTERISM|SMX_LINKS.
+// Soft-OOB ghosts stay fail-closed. Mitosis under free energy while mesh is constellated;
+// RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_constellation | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Storm A/B soft-OOB thrash — no ghost place
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+// Storm then CONSTELLATION latch — five live nodes root as complete mesh + breath
+SMX CONSTELLATION bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "constellation live"
+ASSERT SMX_CONSTELLATED == 1 "constellated latch on"
+ASSERT SMX_ASTERISM == 1 "asterism latch on"
+ASSERT SMX_STARFIELD == 1 "starfield latch on"
+ASSERT SMX_EXCHANGES == 10 "ten bank exchanges"
+ASSERT SMX_BONDS == 10 "ten undirected links (C(5,2))"
+ASSERT SMX_LINKS == 10 "ten links"
+ASSERT SMX_MESH == 5 "five mesh"
+ASSERT SMX_BONDS == 10 "ten bonds"
+ASSERT SMX_ANCHORS == 5 "five anchors"
+ASSERT SMX_ARCS == 5 "arm ring sticky"
+ASSERT SMX_ARCS == 5 "five arm ring steps"
+ASSERT SMX_CONSTELLATION == 20 "constellation bonds+arcs+anchors"
+ASSERT SMX_FUSE == 10 "ten fuse"
+ASSERT SMX_BIND == 10 "ten bind"
+ASSERT SMX_TONE == 5 "five tones"
+ASSERT SMX_PULSE == 20 "pulse bonds+arcs+anchors"
+ASSERT SMX_BREATH == 5 "five live breath"
+ASSERT SMX_OOB == 0 "oob cleared by constellation"
+ASSERT SMX_LIVE == 5 "five live"
+ASSERT SMX_NODES == 5 "five named"
+ASSERT SMX_TALKS >= 40 "talks after constellation (mesh + arcs + anchors)"
+ASSERT SMX_VITAL >= 14 "vital after constellation"
+ASSERT CUBES == base_cubes "constellation invents nothing"
+
+// Alias ASTERISM form still pure
+SMX ASTERISM bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "asterism rebind"
+ASSERT SMX_CONSTELLATED == 1 "constellated sticky"
+ASSERT SMX_BONDS == 10 "bonds sticky"
+ASSERT SMX_ANCHORS == 5 "anchors sticky"
+ASSERT SMX_BONDS == 10 "bonds sticky"
+
+// Alias ARM form
+SMX GUIDESTAR bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "guidestar rebind"
+ASSERT SMX_CONSTELLATED == 1 "guidestar constellated"
+ASSERT SMX_ARCS == 5 "arcs sticky"
+
+// Mitosis under free energy while the mesh is constellated
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  SEND seed tick
+  SEND d1 tick
+  SEND d2 tick
+  LET step = step + 1
+END
+
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = 1
+IF a1 == 1 THEN
+  LET pop = pop + 1
+END
+IF a2 == 1 THEN
+  LET pop = pop + 1
+END
+ASSERT births >= 1 "mitosis under constellation"
+ASSERT pop >= 2 "population after constellated life"
+ASSERT CUBES == base_cubes "life invents no cubes"
+
+// Soft-OOB ghost in constellation — fail-closed, no thrash place
+SMX CONSTELLATION bed nozzle ghost_x hive scrap
+ASSERT SMX_OOB >= 1 "constellation soft-OOB"
+ASSERT SMX_BREATH == 4 "four live of five named"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds among live"
+ASSERT SMX_TONE == 4 "four tones among live"
+ASSERT SMX_CONSTELLATED == 0 "ghost blocks full constellation (partial ok)"
+ASSERT SMX_MESH == 0 "mesh zero when not full"
+ASSERT SMX_ANCHORS == 0 "anchors zero when not full"
+ASSERT SMX_BONDS == 6 "six bonds among live"
+ASSERT SMX_OK == 1 "partial still ok"
+ASSERT CUBES == base_cubes "no ghost from constellation"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "recover after constellation oob"
+ASSERT SMX_OOB == 0 "oob cleared"
+ASSERT SMX_KEY_OK == 1 "key sticky"
+ASSERT SMX_VITAL >= 6 "vital after recover"
+
+// Pure mesh bind after recover
+SMX MESH_CONSTELLATION bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mesh_constellation pure"
+ASSERT SMX_CONSTELLATED == 1 "constellated after recover"
+ASSERT SMX_BONDS == 10 "bonds after recover"
+ASSERT SMX_ANCHORS == 5 "anchors after recover"
+ASSERT SMX_BONDS == 10 "bonds after recover"
+ASSERT SMX_ARCS == 5 "asterism after recover"
+ASSERT SMX_ARCS == 5 "arcs after recover"
+ASSERT SMX_MESH == 5 "mesh after recover"
+ASSERT SMX_TONE == 5 "tone after recover"
+ASSERT CUBES == base_cubes "bind invents nothing"
+
+// Dual SEAL/OPEN rails under constellated orbit
+SMX SEAL bed nozzle "state/smx_constellation/rail_bn.cblc"
+ASSERT SMX_OK == 1 "seal rail BN"
+ASSERT SMX_N > 64 "rail BN frame"
+SMX OPEN hive "state/smx_constellation/rail_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+
+SMX SEAL hive scrap "state/smx_constellation/rail_hs.cblc"
+ASSERT SMX_OK == 1 "seal rail HS"
+SMX OPEN pulse "state/smx_constellation/rail_hs.cblc"
+ASSERT SMX_OK == 1 "open HS onto pulse"
+ASSERT CUBES == base_cubes "rails invent nothing"
+
+// Final constellation lock + vitals
+SMX CONSTELLATION bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "final constellation lock"
+ASSERT SMX_CONSTELLATED == 1 "final constellated"
+ASSERT SMX_BONDS == 10 "final bonds"
+ASSERT SMX_MESH == 5 "final mesh"
+ASSERT SMX_ANCHORS == 5 "final anchors"
+ASSERT SMX_BONDS == 10 "final bonds"
+ASSERT SMX_ARCS == 5 "final arcs"
+ASSERT SMX_ARCS == 5 "final asterism"
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after constellation"
+ASSERT SMX_KEY_OK == 1 "key after constellation"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "no oob after constellation"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+// Second storm fail-closed
+SMX EXCHANGE hive offworld_storm
+ASSERT SMX_OK == 0 "storm soft-OOB"
+ASSERT SMX_OOB >= 1 "storm counted"
+ASSERT CUBES == base_cubes "storm invents nothing"
+SMX RAISE_CONSTELLATION bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "anchors after storm"
+ASSERT SMX_OOB == 0 "storm cleared by constellation"
+ASSERT SMX_BREATH == 5 "constellated holds after storm"
+ASSERT SMX_CONSTELLATED == 1 "constellated after storm"
+ASSERT SMX_BONDS == 10 "bonds after storm"
+ASSERT SMX_MESH == 5 "mesh after storm"
+ASSERT SMX_ANCHORS == 5 "anchors after storm"
+ASSERT SMX_BONDS == 10 "bonds after storm"
+ASSERT SMX_ARCS == 5 "arcs after storm"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after constellation"
+ASSERT UNITY >= 40 "mesh unity after constellation"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+ASSERT births >= 1 "mitosis before mesh constellation"
+ASSERT pop >= 2 "population after constellated life"
+ASSERT SMX_CONSTELLATED == 1 "constellated latch holds"
+ASSERT SMX_BREATH == 5 "five-node tone"
+ASSERT SMX_MESH == 5 "five mesh holds"
+ASSERT SMX_ANCHORS == 5 "five anchors hold"
+ASSERT SMX_OOB == 0 "guard holds through constellation"
+ASSERT OK == 1
+
+PRINT "mesh_constellation" births pop SMX_CONSTELLATED SMX_MESH SMX_ANCHORS SMX_BONDS SMX_ARCS SMX_CONSTELLATION SMX_ARCS SMX_ASTERISM SMX_BONDS SMX_FUSE SMX_BIND SMX_TONE SMX_PULSE SMX_BREATH SMX_NODES SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
+
+PASS
