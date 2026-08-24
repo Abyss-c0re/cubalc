@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "819bd9cc3e5513eaa2475d7071823bdfe6bc256c",
-  "version": "1.15.1147-usability",
-  "feature": "atomic_printer_mesh_constellation",
-  "proof": "1677_atomic_printer_mesh_constellation",
+  "commit": "PENDING",
+  "version": "1.15.1148-usability",
+  "feature": "atomic_printer_mesh_zodiac",
+  "proof": "1678_atomic_printer_mesh_zodiac",
   "proof_ok": true,
-  "ts": "2026-08-24T16:06:00Z",
-  "iso": "2026-08-24T16:06:00Z",
-  "iter": 1677,
-  "note": "Life-force MESH-CONSTELLATION: complete link mesh + guide-arc ring + anchor hub after soft-OOB storms (SMX CONSTELLATION|ASTERISM|STARFIELD|GUIDESTAR|NAVSTAR|LODGE|MESH_CONSTELLATION|RAISE_CONSTELLATION). Clears thrash OOB, every live pair sings both ways (C(n,2)), arc i->i+1 ring + anchors so lattice raises sky map; latches SMX_CONSTELLATED|SMX_ASTERISM|SMX_STARFIELD; mitosis under free energy while mesh is constellated; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1677 atomic printer mesh constellation",
-  "item_id": "mi_1677_atomic_printer_mesh_constellation",
-  "title": "1677 atomic printer mesh constellation",
-  "summary": "SMX CONSTELLATION mesh: link lattice + guide-arc ring + anchors, soft-OOB fail-closed, mitosis under free energy.",
+  "ts": "2026-08-24T13:16:29Z",
+  "iso": "2026-08-24T13:16:29Z",
+  "iter": 1678,
+  "note": "Life-force MESH-ZODIAC: complete sign mesh + ecliptic-house ring + pole hub after soft-OOB storms (SMX ZODIAC|ECLIPTIC|HOUSE|SIGN|PATH|POLE|MESH_ZODIAC|RAISE_ZODIAC). Clears thrash OOB, every live pair sings both ways (C(n,2)), house i->i+1 ring + poles so lattice raises year-path; latches SMX_ZODIACED|SMX_ECLIPTIC|SMX_PATH; mitosis under free energy while mesh is zodiaced; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
+  "item": "1678 atomic printer mesh zodiac",
+  "item_id": "mi_1678_atomic_printer_mesh_zodiac",
+  "title": "1678 atomic printer mesh zodiac",
+  "summary": "SMX ZODIAC mesh: sign lattice + ecliptic-house ring + poles, soft-OOB fail-closed, mitosis under free energy.",
   "proofs": [
-    "programs/proof/1677_atomic_printer_mesh_constellation.cubalc"
+    "programs/proof/1678_atomic_printer_mesh_zodiac.cubalc"
   ],
   "host_finish": true
 }

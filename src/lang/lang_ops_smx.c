@@ -5510,6 +5510,180 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA|SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE|HELIOS|ORBIT|ECLIPSE|APHELION|PERIHELION|PHOTON|MESH_HELIOS|RAISE_HELIOS|NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA|PULSAR|BEACON|SPIN|MAGNETAR|JET|PULSE_STAR|MESH_PULSAR|RAISE_PULSAR|QUASAR|BLAZAR|ACCRETION|JETSTREAM|DISK|EVENTHORIZON|MESH_QUASAR|RAISE_QUASAR|COMET|METEOR|TAIL|COMA|DEBRIS|NUCLEUS_ICE|MESH_COMET|RAISE_COMET|SUPERNOVA|NOVA|SHOCKWAVE|EJECTA|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA|GALAXY|SPIRAL|ARM|CORE|HALO|BULGE|MESH_GALAXY|RAISE_GALAXY|CONSTELLATION|ASTERISM|STARFIELD|GUIDESTAR|NAVSTAR|LODGE|MESH_CONSTELLATION|RAISE_CONSTELLATION");
+  /* SMX ZODIAC|ECLIPTIC|PATH|HOUSE|SIGN|POLE|MESH_ZODIAC|RAISE_ZODIAC a b c ...
+   * Life-force year-path after constellation: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete sign mesh among live nodes, weaves a
+   * ecliptic-house ring (i -> i+1) so free energy traces the year-path, then pole hub
+   * gathers return so lattice raises a zodiac lock where houses hold the hive.
+   * Latches SMX_ZODIACED when mesh+houses+poles are soft-OOB-free.
+   * SMX_SIGNS = chain bonds; SMX_POLE hub = root gather pulses;
+   * SMX_ZODIAC sum = signs+houses+poles; SMX_ECLIPTIC|SMX_PATH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"ZODIAC")||kw(&L->cur,"ECLIPTIC")||kw(&L->cur,"PATH")||
+      kw(&L->cur,"HOUSE")||kw(&L->cur,"SIGN")||kw(&L->cur,"POLE")||
+      kw(&L->cur,"MESH_ZODIAC")||kw(&L->cur,"RAISE_ZODIAC")||
+      kw(&L->cur,"ZODIACS")||kw(&L->cur,"ECLIPTICS")||kw(&L->cur,"PATHS")||
+      kw(&L->cur,"HOUSES")||kw(&L->cur,"SIGNS")||kw(&L->cur,"SEEDZODIAC")||
+      kw(&L->cur,"LATTICE_ZODIAC")||kw(&L->cur,"YEAR_PATH")||
+      kw(&L->cur,"HOUSE_RING")||kw(&L->cur,"PULSE_ZODIAC")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int signs = 0;
+    int houses = 0;
+    int poles = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "ZODIAC needs >=2 cubes",
+                  "SMX ZODIAC a b [c ...]  or  SMX ECLIPTIC a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - zodiac needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete sign mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else signs++;
+          }
+        }
+      }
+    }
+    /* ecliptic-house ring - free energy holds every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else houses++;
+        }
+      }
+    }
+    /* pole hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else poles++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && signs >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && signs * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int house_ok = (live >= 2 && houses >= live && soft == 0) ? 1 : 0;
+      if (!house_ok && live >= 2 && houses * 2 >= live && soft == 0)
+        house_ok = 1;
+      int pole_ok = (live >= 1 && poles >= live && soft == 0) ? 1 : 0;
+      if (!pole_ok && live >= 1 && poles * 2 >= live && soft == 0)
+        pole_ok = 1;
+      int zd_ok = (mesh_ok && house_ok && pole_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (zd_ok ? 12 : (signs > 0 ? 3 : 0)) +
+                   (houses > 0 ? 1 : 0) + (poles > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_ZODIACED", (long)zd_ok);
+      var_set_num(vm, "SMX_ZODIAC", (long)(zd_ok ? signs + houses + poles : 0));
+      var_set_num(vm, "SMX_ECLIPTIC", (long)(zd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PATH", (long)(zd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SIGNS", (long)(zd_ok ? signs : 0));
+      var_set_num(vm, "SMX_SIGN", (long)(zd_ok ? signs : 0));
+      var_set_num(vm, "SMX_HOUSES", (long)(zd_ok ? houses : 0));
+      var_set_num(vm, "SMX_HOUSE", (long)(zd_ok ? houses : 0));
+      var_set_num(vm, "SMX_YEARPATH", (long)(zd_ok ? houses : 0));
+      var_set_num(vm, "SMX_POLES", (long)(zd_ok ? poles : 0));
+      var_set_num(vm, "SMX_POLE", (long)(zd_ok ? poles : 0));
+      var_set_num(vm, "SMX_AXISPOLE", (long)(zd_ok ? poles : 0));
+      var_set_num(vm, "SMX_SEEDZODIAC", (long)(zd_ok ? poles : 0));
+      var_set_num(vm, "SMX_MESH", (long)(zd_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)signs);
+      var_set_num(vm, "SMX_EXCHANGES", (long)signs);
+      var_set_num(vm, "SMX_FUSE", (long)signs);
+      var_set_num(vm, "SMX_BIND", (long)signs);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(signs + houses + poles));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (zd_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX ZODIAC ok");
+      } else if (signs > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX ZODIAC partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX ZODIAC soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX ZODIAC nodes=%d live=%d signs=%d houses=%d poles=%d need=%d soft=%d talks=%d oob=%d zodiaced=%d vital=%ld\n",
+                n, live, signs, houses, poles, need, soft, vm->smx_talks, vm->smx_oob, zd_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA|SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE|HELIOS|ORBIT|ECLIPSE|APHELION|PERIHELION|PHOTON|MESH_HELIOS|RAISE_HELIOS|NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA|PULSAR|BEACON|SPIN|MAGNETAR|JET|PULSE_STAR|MESH_PULSAR|RAISE_PULSAR|QUASAR|BLAZAR|ACCRETION|JETSTREAM|DISK|EVENTHORIZON|MESH_QUASAR|RAISE_QUASAR|COMET|METEOR|TAIL|COMA|DEBRIS|NUCLEUS_ICE|MESH_COMET|RAISE_COMET|SUPERNOVA|NOVA|SHOCKWAVE|EJECTA|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA|GALAXY|SPIRAL|ARM|CORE|HALO|BULGE|MESH_GALAXY|RAISE_GALAXY|CONSTELLATION|ASTERISM|STARFIELD|GUIDESTAR|NAVSTAR|LODGE|MESH_CONSTELLATION|RAISE_CONSTELLATION|ZODIAC|ECLIPTIC|HOUSE|SIGN|PATH|POLE|MESH_ZODIAC|RAISE_ZODIAC");
   return -1;
 }
