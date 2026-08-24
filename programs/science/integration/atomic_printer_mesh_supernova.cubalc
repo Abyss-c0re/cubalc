@@ -1,0 +1,50 @@
+// atomic_printer_mesh_supernova — science integration board
+// Life-force MESH-SUPERNOVA sibling of flagship atomic printer.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_supernova | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+PLUG bed seed
+
+IMPULSE bed 1
+ENERGYFLOW 4
+FLOW 3
+
+SMX KEY
+SMX COMET bed nozzle hive scrap pulse
+ASSERT SMX_COMETED == 1 "science supernova latch"
+ASSERT SMX_MESH == 5 "science five mesh"
+ASSERT SMX_TAILS == 5 "science tail ring"
+ASSERT SMX_NUCLEI == 5 "science nuclei hub"
+ASSERT SMX_DEBRIS == 10 "science debris mesh"
+ASSERT SMX_OOB == 0 "science clear channel"
+ASSERT SMX_OK == 1 "science supernova ok"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0
+ASSERT UNITY >= 40
+PRINT "science_mesh_supernova" SMX_COMETED SMX_COMET SMX_MESH SMX_TAILS SMX_NUCLEI SMX_DEBRIS ENERGY UNITY
+PASS
