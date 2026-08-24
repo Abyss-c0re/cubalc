@@ -1,3 +1,10 @@
+## 1.15.1139-usability — SMX SOLSTICE mesh-stability (life-force)
+
+- SMX SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE
+- Fail-closed soft-OOB: clears thrash, complete meridian mesh, axial spine ring, zenith hub
+- Latches SMX_SOLSTICED|SMX_SPINE|SMX_AXIS|SMX_MERIDIANS|SMX_ZENITH when soft-OOB-free
+- Proof 1669 atomic_printer_mesh_solstice: asserts_ok=108 fail=0; flagship 1620 green
+
 ## 1.15.965-usability — 2026-08-12
 
 ### Feat

@@ -3967,6 +3967,178 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA");
+  /* SMX SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE a b c ...
+   * Life-force polar balance after aurora curtain: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete meridian mesh among live nodes, weaves an
+   * axial spine ring (i -> i+1) so free energy holds both poles, then zenith hub
+   * gathers return so lattice raises a solstice balance where day meets night.
+   * Latches SMX_SOLSTICED when mesh+spines+zeniths are soft-OOB-free.
+   * SMX_MERIDIAN = chain bonds; SMX_ZENITH = root gather pulses;
+   * SMX_SOLSTICE = meridians+spines+zeniths; SMX_SPINE|SMX_AXIS sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"SOLSTICE")||kw(&L->cur,"EQUINOX")||kw(&L->cur,"MERIDIAN")||
+      kw(&L->cur,"SPINE")||kw(&L->cur,"ZENITH")||kw(&L->cur,"AXIS")||
+      kw(&L->cur,"MESH_SOLSTICE")||kw(&L->cur,"RAISE_SOLSTICE")||
+      kw(&L->cur,"SOLSTICES")||kw(&L->cur,"MERIDIANS")||kw(&L->cur,"SPINES")||
+      kw(&L->cur,"ZENITHS")||kw(&L->cur,"AXES")||kw(&L->cur,"SEEDSOLSTICE")||
+      kw(&L->cur,"LATTICE_SOLSTICE")||kw(&L->cur,"POLAR_BALANCE")||
+      kw(&L->cur,"DAYNIGHT")||kw(&L->cur,"TURNING")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int meridians = 0;
+    int spines = 0;
+    int zeniths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "SOLSTICE needs >=2 cubes",
+                  "SMX SOLSTICE a b [c ...]  or  SMX EQUINOX a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - solstice needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete meridian mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else meridians++;
+          }
+        }
+      }
+    }
+    /* axial spine ring - free energy holds every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else spines++;
+        }
+      }
+    }
+    /* zenith hub - seed anchors return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else zeniths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && meridians >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && meridians * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int spine_ok = (live >= 2 && spines >= live && soft == 0) ? 1 : 0;
+      if (!spine_ok && live >= 2 && spines * 2 >= live && soft == 0)
+        spine_ok = 1;
+      int zenith_ok = (live >= 1 && zeniths >= live && soft == 0) ? 1 : 0;
+      if (!zenith_ok && live >= 1 && zeniths * 2 >= live && soft == 0)
+        zenith_ok = 1;
+      int solsticed = (mesh_ok && spine_ok && zenith_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (solsticed ? 12 : (meridians > 0 ? 3 : 0)) +
+                   (spines > 0 ? 1 : 0) + (zeniths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_SOLSTICED", (long)solsticed);
+      var_set_num(vm, "SMX_SOLSTICE", (long)(solsticed ? meridians + spines + zeniths : 0));
+      var_set_num(vm, "SMX_SPINE", (long)(solsticed ? 1 : 0));
+      var_set_num(vm, "SMX_AXIS", (long)(solsticed ? 1 : 0));
+      var_set_num(vm, "SMX_MERIDIANS", (long)(solsticed ? meridians : 0));
+      var_set_num(vm, "SMX_MERIDIAN", (long)(solsticed ? meridians : 0));
+      var_set_num(vm, "SMX_EQUINOX", (long)(solsticed ? 1 : 0));
+      var_set_num(vm, "SMX_SPINES", (long)(solsticed ? spines : 0));
+      var_set_num(vm, "SMX_ZENITH", (long)(solsticed ? zeniths : 0));
+      var_set_num(vm, "SMX_ZENITHS", (long)(solsticed ? zeniths : 0));
+      var_set_num(vm, "SMX_SEEDSOLSTICE", (long)(solsticed ? zeniths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(solsticed ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)meridians);
+      var_set_num(vm, "SMX_EXCHANGES", (long)meridians);
+      var_set_num(vm, "SMX_FUSE", (long)meridians);
+      var_set_num(vm, "SMX_BIND", (long)meridians);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(meridians + spines + zeniths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (solsticed){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX SOLSTICE ok");
+      } else if (meridians > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX SOLSTICE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX SOLSTICE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX SOLSTICE nodes=%d live=%d meridians=%d spines=%d zeniths=%d need=%d soft=%d talks=%d oob=%d solsticed=%d vital=%ld\n",
+                n, live, meridians, spines, zeniths, need, soft, vm->smx_talks, vm->smx_oob, solsticed, vital);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA|SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE");
   return -1;
 }
