@@ -5684,6 +5684,181 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA|SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE|HELIOS|ORBIT|ECLIPSE|APHELION|PERIHELION|PHOTON|MESH_HELIOS|RAISE_HELIOS|NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA|PULSAR|BEACON|SPIN|MAGNETAR|JET|PULSE_STAR|MESH_PULSAR|RAISE_PULSAR|QUASAR|BLAZAR|ACCRETION|JETSTREAM|DISK|EVENTHORIZON|MESH_QUASAR|RAISE_QUASAR|COMET|METEOR|TAIL|COMA|DEBRIS|NUCLEUS_ICE|MESH_COMET|RAISE_COMET|SUPERNOVA|NOVA|SHOCKWAVE|EJECTA|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA|GALAXY|SPIRAL|ARM|CORE|HALO|BULGE|MESH_GALAXY|RAISE_GALAXY|CONSTELLATION|ASTERISM|STARFIELD|GUIDESTAR|NAVSTAR|LODGE|MESH_CONSTELLATION|RAISE_CONSTELLATION|ZODIAC|ECLIPTIC|HOUSE|SIGN|PATH|POLE|MESH_ZODIAC|RAISE_ZODIAC");
+  /* SMX FIRMAMENT|VAULT|DOME|SKYVAULT|SPAN|KEYSTONE|MESH_FIRMAMENT|RAISE_FIRMAMENT a b c ...
+   * Life-force sky-vault after zodiac: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete span mesh among live nodes, weaves a
+   * dome-vault ring (i -> i+1) so free energy arches the firmament, then keystone hub
+   * gathers return so lattice raises a firmament lock where heaven holds the hive.
+   * Latches SMX_FIRMED when mesh+vaults+keystones are soft-OOB-free.
+   * SMX_SPANS = chain bonds; SMX_KEYSTONE hub = root gather pulses;
+   * SMX_FIRMAMENT sum = spans+vaults+keystones; SMX_VAULT|SMX_DOME sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"FIRMAMENT")||kw(&L->cur,"VAULT")||kw(&L->cur,"DOME")||
+      kw(&L->cur,"SKYVAULT")||kw(&L->cur,"SPAN")||kw(&L->cur,"KEYSTONE")||kw(&L->cur,"HEAVEN")||
+      kw(&L->cur,"MESH_FIRMAMENT")||kw(&L->cur,"RAISE_FIRMAMENT")||
+      kw(&L->cur,"FIRMAMENTS")||kw(&L->cur,"VAULTS")||kw(&L->cur,"DOMES")||
+      kw(&L->cur,"SKYVAULTS")||kw(&L->cur,"SPANS")||kw(&L->cur,"SEEDFIRMAMENT")||
+      kw(&L->cur,"LATTICE_FIRMAMENT")||kw(&L->cur,"SKY_VAULT")||
+      kw(&L->cur,"DOME_RING")||kw(&L->cur,"PULSE_FIRMAMENT")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int spans = 0;
+    int vaults = 0;
+    int keystones = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "FIRMAMENT needs >=2 cubes",
+                  "SMX FIRMAMENT a b [c ...]  or  SMX VAULT a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - firmament needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete span mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else spans++;
+          }
+        }
+      }
+    }
+    /* dome-vault ring - free energy holds every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else vaults++;
+        }
+      }
+    }
+    /* keystone hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else keystones++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && spans >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && spans * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int house_ok = (live >= 2 && vaults >= live && soft == 0) ? 1 : 0;
+      if (!house_ok && live >= 2 && vaults * 2 >= live && soft == 0)
+        house_ok = 1;
+      int pole_ok = (live >= 1 && keystones >= live && soft == 0) ? 1 : 0;
+      if (!pole_ok && live >= 1 && keystones * 2 >= live && soft == 0)
+        pole_ok = 1;
+      int fm_ok = (mesh_ok && house_ok && pole_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (fm_ok ? 12 : (spans > 0 ? 3 : 0)) +
+                   (vaults > 0 ? 1 : 0) + (keystones > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_FIRMED", (long)fm_ok);
+      var_set_num(vm, "SMX_FIRMAMENTED", (long)fm_ok);
+      var_set_num(vm, "SMX_FIRMAMENT", (long)(fm_ok ? spans + vaults + keystones : 0));
+      var_set_num(vm, "SMX_VAULT", (long)(fm_ok ? 1 : 0));
+      var_set_num(vm, "SMX_DOME", (long)(fm_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SPANS", (long)(fm_ok ? spans : 0));
+      var_set_num(vm, "SMX_SPAN", (long)(fm_ok ? spans : 0));
+      var_set_num(vm, "SMX_VAULTS", (long)(fm_ok ? vaults : 0));
+      var_set_num(vm, "SMX_SKYVAULT", (long)(fm_ok ? vaults : 0));
+      var_set_num(vm, "SMX_DOMERING", (long)(fm_ok ? vaults : 0));
+      var_set_num(vm, "SMX_KEYSTONES", (long)(fm_ok ? keystones : 0));
+      var_set_num(vm, "SMX_KEYSTONE", (long)(fm_ok ? keystones : 0));
+      var_set_num(vm, "SMX_HEAVEN", (long)(fm_ok ? keystones : 0));
+      var_set_num(vm, "SMX_SEEDFIRMAMENT", (long)(fm_ok ? keystones : 0));
+      var_set_num(vm, "SMX_MESH", (long)(fm_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)spans);
+      var_set_num(vm, "SMX_EXCHANGES", (long)spans);
+      var_set_num(vm, "SMX_FUSE", (long)spans);
+      var_set_num(vm, "SMX_BIND", (long)spans);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(spans + vaults + keystones));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (fm_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX FIRMAMENT ok");
+      } else if (spans > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX FIRMAMENT partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX FIRMAMENT soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX FIRMAMENT nodes=%d live=%d spans=%d vaults=%d keystones=%d need=%d soft=%d talks=%d oob=%d firmamented=%d vital=%ld\n",
+                n, live, spans, vaults, keystones, need, soft, vm->smx_talks, vm->smx_oob, fm_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA|SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE|HELIOS|ORBIT|ECLIPSE|APHELION|PERIHELION|PHOTON|MESH_HELIOS|RAISE_HELIOS|NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA|PULSAR|BEACON|SPIN|MAGNETAR|JET|PULSE_STAR|MESH_PULSAR|RAISE_PULSAR|QUASAR|BLAZAR|ACCRETION|JETSTREAM|DISK|EVENTHORIZON|MESH_QUASAR|RAISE_QUASAR|COMET|METEOR|TAIL|COMA|DEBRIS|NUCLEUS_ICE|MESH_COMET|RAISE_COMET|SUPERNOVA|NOVA|SHOCKWAVE|EJECTA|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA|GALAXY|SPIRAL|ARM|CORE|HALO|BULGE|MESH_GALAXY|RAISE_GALAXY|CONSTELLATION|ASTERISM|STARFIELD|GUIDESTAR|NAVSTAR|LODGE|MESH_CONSTELLATION|RAISE_CONSTELLATION|ZODIAC|ECLIPTIC|HOUSE|SIGN|PATH|POLE|MESH_ZODIAC|RAISE_ZODIAC|FIRMAMENT|VAULT|DOME|SKYVAULT|KEYSTONE|HEAVEN|MESH_FIRMAMENT|RAISE_FIRMAMENT");
   return -1;
 }
