@@ -1,20 +1,5 @@
-{
-  "schema": "cubalc.meaningful_iter/v1",
-  "commit": "cf97b187",
-  "version": "1.15.1145-usability",
-  "feature": "atomic_printer_mesh_supernova",
-  "proof": "1675_atomic_printer_mesh_supernova",
-  "proof_ok": true,
-  "ts": "2026-08-24T12:32:44Z",
-  "iso": "2026-08-24T02:00:00Z",
-  "iter": 1675,
-  "note": "Life-force MESH-SUPERNOVA: complete ejecta mesh + directed shockwave ring + hub remnant root after soft-OOB storms (SMX SUPERNOVA|NOVA|EJECTA|SHOCKWAVE|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA). Clears thrash OOB, every live pair sings both ways (C(n,2)), shock i->i+1 ring + hub remnants so lattice raises supernova; latches SMX_SUPERNOVAED|SMX_NOVA|SMX_EJECTA; mitosis under free energy while mesh is supernovaed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1675 atomic printer mesh supernova",
-  "item_id": "mi_1675_atomic_printer_mesh_supernova",
-  "title": "1675 atomic printer mesh supernova",
-  "summary": "SMX SUPERNOVA mesh: ejecta lattice + shock ring + remnants, soft-OOB fail-closed, mitosis under free energy.",
-  "proofs": [
-    "programs/proof/1675_atomic_printer_mesh_supernova.cubalc"
-  ],
-  "host_finish": true
-}
+iter=1680
+feature=atomic_printer_mesh_aether
+proof=1680_atomic_printer_mesh_aether
+version=1.15.1150-usability
+proof_ok=true
