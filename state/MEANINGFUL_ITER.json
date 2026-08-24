@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "b81aa5eb178bbad6a40e72db81a6130708dd1597",
-  "version": "1.15.1148-usability",
-  "feature": "atomic_printer_mesh_zodiac",
-  "proof": "1678_atomic_printer_mesh_zodiac",
+  "commit": "218c3f1a9756d0dcc051340f5ec72a15e683ceba",
+  "version": "1.15.1149-usability",
+  "feature": "atomic_printer_mesh_firmament",
+  "proof": "1679_atomic_printer_mesh_firmament",
   "proof_ok": true,
-  "ts": "2026-08-24T13:16:29Z",
-  "iso": "2026-08-24T13:16:29Z",
-  "iter": 1678,
-  "note": "Life-force MESH-ZODIAC: complete sign mesh + ecliptic-house ring + pole hub after soft-OOB storms (SMX ZODIAC|ECLIPTIC|HOUSE|SIGN|PATH|POLE|MESH_ZODIAC|RAISE_ZODIAC). Clears thrash OOB, every live pair sings both ways (C(n,2)), house i->i+1 ring + poles so lattice raises year-path; latches SMX_ZODIACED|SMX_ECLIPTIC|SMX_PATH; mitosis under free energy while mesh is zodiaced; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1678 atomic printer mesh zodiac",
-  "item_id": "mi_1678_atomic_printer_mesh_zodiac",
-  "title": "1678 atomic printer mesh zodiac",
-  "summary": "SMX ZODIAC mesh: sign lattice + ecliptic-house ring + poles, soft-OOB fail-closed, mitosis under free energy.",
+  "ts": "2026-08-24T14:55:03Z",
+  "iso": "2026-08-24T14:55:03Z",
+  "iter": 1679,
+  "note": "Life-force MESH-FIRMAMENT: complete span mesh + vault-dome ring + keystone hub after soft-OOB storms (SMX FIRMAMENT|VAULT|DOME|SKYVAULT|SPAN|KEYSTONE|HEAVEN|MESH_FIRMAMENT|RAISE_FIRMAMENT). Clears thrash OOB, every live pair sings both ways (C(n,2)), vault i->i+1 ring + keystones so lattice raises firmament; latches SMX_FIRMED|SMX_VAULT|SMX_DOME|SMX_SPANS|SMX_KEYSTONE; mitosis under free energy while mesh is firmamented; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
+  "item": "1679 atomic printer mesh firmament",
+  "item_id": "mi_1679_atomic_printer_mesh_firmament",
+  "title": "1679 atomic printer mesh firmament",
+  "summary": "SMX FIRMAMENT mesh: span lattice + vault-dome ring + keystone hub, soft-OOB fail-closed, mitosis under free energy.",
   "proofs": [
-    "programs/proof/1678_atomic_printer_mesh_zodiac.cubalc"
+    "programs/proof/1679_atomic_printer_mesh_firmament.cubalc"
   ],
   "host_finish": true
 }
