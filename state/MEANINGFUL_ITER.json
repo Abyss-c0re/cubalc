@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "5309e23fc301b676afcd3ab0deb460ce4cee2458",
-  "version": "1.15.1141-usability",
+  "commit": "PENDING",
+  "version": "1.15.1142-usability",
   "feature": "atomic_printer_mesh_nebula",
   "proof": "1671_atomic_printer_mesh_nebula",
   "proof_ok": true,
-  "ts": "2026-08-24T02:00:00Z",
+  "ts": "2026-08-24T11:20:30Z",
   "iso": "2026-08-24T02:00:00Z",
-  "iter": 1671,
+  "iter": 1672,
   "note": "Life-force MESH-NEBULA: complete dust mesh + directed nursery ring + hub core root after soft-OOB storms (SMX NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA). Clears thrash OOB, every live pair sings both ways (C(n,2)), nursery i->i+1 ring + hub cores so lattice raises stellar nursery; latches SMX_NEBULAED|SMX_NURSERY|SMX_DUSTS; mitosis under free energy while mesh is nebulaed; RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.",
-  "item": "1671 atomic printer mesh nebula",
-  "item_id": "mi_1671_atomic_printer_mesh_nebula",
-  "title": "1671 atomic printer mesh nebula",
-  "summary": "SMX nebula stellar dust mesh + nursery ring + core hub; soft-OOB fail-closed; mitosis under nebulaed lattice.",
+  "item": "1672 atomic printer mesh pulsar",
+  "item_id": "mi_1672_atomic_printer_mesh_pulsar",
+  "title": "1672 atomic printer mesh pulsar",
+  "summary": "Host-finished MI ship after nanobot partial (1672_atomic_printer_mesh_pulsar).",
   "proofs": [
-    "programs/proof/1671_atomic_printer_mesh_nebula.cubalc"
-  ]
+    "programs/proof/1672_atomic_printer_mesh_pulsar.cubalc"
+  ],
+  "host_finish": true
 }
