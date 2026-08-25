@@ -1,1 +1,7 @@
-iter=1703 feature=OMNIVERSE sha=e67d37d49f21b99b853b968d6a86bf9a0ac6b3b3
+feature=OMNIVERSE soft-OOB fail-closed mesh stability
+iter=1703
+version=1.15.1173-usability
+proof=1703_atomic_printer_mesh_omniverse
+sha=0eb7127382a9d66bda2fac183625fbcfe5280085
+asserts_ok=110
+flagship_ok=true
