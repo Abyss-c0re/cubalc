@@ -1,17 +1,13 @@
 {
-  "schema": "cubalc.meaningful_iter.v1",
-  "commit": "87d81c0d475b7bde069e343ed1f6666d0be35b2a",
-  "version": "1.15.1090-usability",
-  "feature": "atomic_printer_life_force",
-  "proof": "1620_atomic_printer_life_force",
-  "proof_ok": true,
-  "ts": 1787419447.5018423,
-  "iso": "2026-08-22T17:24:07Z",
-  "iter": 1620,
-  "note": "Life-force gift path: AGI atomic 3D printer board (place/plug/energy/SMX/decide/mitosis). Auto-dev retargeted off IF*P dual mills.",
-  "law": "no_dual_ladder; free_energy_must_flow; impress_by_manifestation",
-  "docs": "docs/LIFE_FORCE.md",
-  "science": "programs/science/integration/atomic_printer_life_force.cubalc",
-  "commit_short": "87d81c0d",
-  "head": "87d81c0d475b7bde069e343ed1f6666d0be35b2a"
+  "meaningful_iter": 1702,
+  "version": "1.15.1172-usability",
+  "head": "032662f7",
+  "feat": "mesh_omniverse",
+  "proof": "programs/science/proof/1702_atomic_printer_mesh_resilience.cubalc",
+  "status": "PASS",
+  "iter": 1702,
+  "MEANINGFUL_ITER": 1702,
+  "feature": "SMX_RESILIENCE",
+  "commit": "7b9a7fd388be20c56381ff512da87a7394c7ded6",
+  "updated": 1787676295
 }

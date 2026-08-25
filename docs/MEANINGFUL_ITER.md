@@ -1053,3 +1053,6 @@ After N ticks, a new user/agent can do something **new** without reading opcode 
 
 Proof gate: `programs/proof/1620_atomic_printer_life_force.cubalc` must stay green.
 Doc: `docs/LIFE_FORCE.md`
+
+1702. **`SMX RESILIENCE|RS|GUARD|LIFE_ANCHOR|MESH_RESILIENCE|RAISE_RESILIENCE`** — life-force resilience mesh after autoheal: soft-OOB fail-closed complete mesh + guard ring + anchor hub. Proof 1702 PASS (exit 0, resilient latch, mitosis under free energy).
+- 1702 SMX RESILIENCE mesh life-force: guard ring + anchor hub; proof 1702 PASS
