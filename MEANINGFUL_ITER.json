@@ -1,9 +1,9 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "iter": 1711,
-  "commit": "3505ec12a2643ae8f552374ef3b98011267c20ab",
+  "commit": "e521a72d9e109f1e583c4076ff9f8c955a184180",
   "version": "1.15.1182-usability",
-  "feature": "MESH_STABILITY soft-OOB fail-closed mesh_exchange",
+  "feature": "MESH_STABILITY",
   "proof": "1711_smx_mesh_stability_soft_oob",
   "proof_ok": true,
   "asserts_ok": 39,
@@ -13,11 +13,13 @@
   "soft_oob_ok": true,
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1711,
-  "proofs": "1711_mesh_stability+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS",
-  "head": "3505ec12",
-  "pin_head": "3505ec12a2643ae8f552374ef3b98011267c20ab",
+  "proofs": "1711_mesh_stability soft-OOB fail-closed mesh_exchange PASS asserts_ok=39",
+  "head": "e521a72d",
+  "pin_head": "e521a72d9e109f1e583c4076ff9f8c955a184180",
   "feat_head": "185cce50bcaf400a85506ac5e0d3dc3b3be982eb",
   "past": "1710",
   "next": "we_autoheal",
-  "verified_at": "2026-08-25T19:31:46Z"
+  "verified_at": "2026-08-25T19:32:02Z",
+  "short": "e521a72d",
+  "unity": 1.0
 }
