@@ -1,19 +1,17 @@
 {
-  "MEANINGFUL_ITER": 1157,
-  "VERSION": "1.5.4-smx-mesh-exchange",
-  "HEAD": "02eccda51c9fc7d93f7e380062f147930283c551",
-  "SHORT": "02eccda",
+  "schema": "cubalc.meaningful_iter.v1",
+  "iter": 1157,
+  "version": "1.5.4-smx-mesh-exchange",
   "feature": "SMX mesh_exchange soft-OOB fail-closed life-force",
-  "proofs": {
-    "smx-selftest": "PASS",
-    "smx-soft-oob": "PASS",
-    "smx-mesh-exchange": "PASS",
-    "11_smx_soft_oob_mesh": "PASS",
-    "13_smx_mesh_exchange": "PASS",
-    "14_smx_life_force_mesh": "PASS"
-  },
-  "stable_exchanges": true,
-  "fail_closed": true,
-  "life_force": 0.9403,
-  "sealed_at": 1787662126
+  "proof": "programs/proof/13_smx_mesh_exchange.cubalc",
+  "proof14": "programs/proof/14_smx_life_force_mesh.cubalc",
+  "proof_pass": true,
+  "smx_soft_oob": true,
+  "smx_mesh_exchange": true,
+  "smx_selftest": true,
+  "head": "02eccda51c9fc7d93f7e380062f147930283c551",
+  "feature_head": "e6f2a46",
+  "note": "soft-OOB fail-closed mesh_exchange life-force sealed; proofs PASS; HEAD past c4ff19ef",
+  "short": "02eccda",
+  "past": "c4ff19ef"
 }
