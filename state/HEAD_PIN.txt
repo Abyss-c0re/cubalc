@@ -1,8 +1,9 @@
-HEAD=c2963778d1ecf45d6d7837769f3c381de5f11edc
-SHORT=c296377
+HEAD=e6f2a469e76b93c94957d39ff465c3e50b0e2311
+SHORT=e6f2a46
 MEANINGFUL_ITER=1156
 VERSION=1.5.4-smx-mesh-exchange
 PROOF=programs/proof/13_smx_mesh_exchange.cubalc PASS
+PROOF14=programs/proof/14_smx_life_force_mesh.cubalc PASS
 smx-soft-oob=PASS
 smx-mesh-exchange=PASS
 smx-selftest=PASS

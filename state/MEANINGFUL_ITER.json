@@ -4,13 +4,14 @@
   "version": "1.5.4-smx-mesh-exchange",
   "feature": "SMX mesh_exchange soft-OOB fail-closed life-force",
   "proof": "programs/proof/13_smx_mesh_exchange.cubalc",
+  "proof14": "programs/proof/14_smx_life_force_mesh.cubalc",
   "proof_pass": true,
   "smx_soft_oob": true,
   "smx_mesh_exchange": true,
   "smx_selftest": true,
-  "head": "c2963778d1ecf45d6d7837769f3c381de5f11edc",
+  "head": "e6f2a469e76b93c94957d39ff465c3e50b0e2311",
   "feature_head": "5892dba",
-  "note": "sealed stop-pin; proofs PASS; no further pin chase",
-  "short": "c296377",
+  "note": "soft-OOB fail-closed mesh_exchange life-force sealed; proofs PASS",
+  "short": "e6f2a46",
   "past": "9a3497ea"
 }
