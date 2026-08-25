@@ -1,9 +1,7 @@
 MEANINGFUL_ITER=1712
-feat_head=f16ebd32162557fd50b483331cf2e4d7f58560c7
-pin_head=6d47e816cd0e860ce8b2925d3e4b2748870788cc
-PROOFS=1712 asserts_ok=47 + 1711 + 1620 + 1621 + 1634 PASS
-feature=LIFE_FORCE STABILIZE soft-OOB fail-closed mesh usability
 VERSION=1.15.1183-usability
-past=1711
-next=we_autoheal
-verified_at=2026-08-25T19:45:20Z
+feat_head=cb35658af08cb2c35e5f6110c968c84135371144
+pin_head=cb35658af08cb2c35e5f6110c968c84135371144
+PROOFS=1712 asserts_ok=47 + 1620 + 1621 + 1634 PASS
+feature=SMX life-force STABILIZE soft-OOB fail-closed mesh_exchange
+verified_at=2026-08-25T19:45:25Z
