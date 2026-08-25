@@ -1,3 +1,9 @@
+## 1.15.1181-usability — 1716 SMX_MESH_BLOOM
+
+- Life-force SMX BLOOM/FLOURISH/UNFOLD: complete mesh + breath ring flowers lattice after soft-OOB storms.
+- Proof programs/science/proof/1716_atomic_printer_mesh_bloom.cubalc asserts_ok=81 fail=0.
+- Pins MEANINGFUL_ITER=1716; VERSION=1.15.1181-usability.
+
 ## 1.15.1173-usability — 1703 SMX SEER mesh life-force
 - Pure-C SMX SEER|SEER_ALIAS|VISION|ORACLEVERSE|WE_SEER|LIFE_SEER|MESH_SEER|RAISE_SEER
 - Fail-closed soft-OOB: complete C(n,2) bonds, sight ring, oracle hub; latches SMX_SEERED

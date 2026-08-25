@@ -1,0 +1,212 @@
+// atomic_printer_mesh_bloom.cubalc
+// Life-force gift: MESH-BLOOM — soft-OOB fail-closed mesh flowers under free energy.
+// After ghost storms, SMX SYNAPSE roots complete mesh (C(n,2)), STABILIZE locks,
+// then BLOOM|FLOURISH|UNFOLD opens petals+radiance without thrash; mitosis under
+// FLOW/ENERGYFLOW; rails rebind; second storm fail-closed and re-bloomed.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "BLOOM_COORD v1 | from=gift | type=atomic_printer_mesh_bloom | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Storm A/B soft-OOB thrash — no ghost place
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+// Root complete synapse mesh among five live nodes
+SMX SYNAPSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "synapse live"
+ASSERT SMX_SYNAPSE == 1 "synapse latch on"
+ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange latch on"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh latch sticky"
+ASSERT SMX_EXCHANGES == 10 "ten bank exchanges"
+ASSERT SMX_BONDS == 10 "ten undirected links (C(5,2))"
+ASSERT SMX_EXRING == 5 "five exchange ring"
+ASSERT SMX_NEXI == 5 "five nexi"
+ASSERT SMX_SYNAPSE_SUM == 20 "synapse bonds+exring+nexi"
+ASSERT SMX_OOB == 0 "oob cleared by synapse"
+ASSERT SMX_LIVE == 5 "five live"
+ASSERT SMX_NODES == 5 "five named"
+ASSERT CUBES == base_cubes "synapse invents nothing"
+
+// Harden mesh stability first
+SMX STABILIZE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "stabilize live"
+ASSERT SMX_STABLE_MESH == 1 "stable after stabilize"
+ASSERT CUBES == base_cubes "stabilize invents nothing"
+
+// Life-force BLOOM — complete mesh + breath ring flowers the lattice
+SMX BLOOM bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "bloom live"
+ASSERT SMX_BLOOMED == 1 "bloomed latch on"
+ASSERT SMX_BLOOM == 10 "ten bloom bonds (C(5,2))"
+ASSERT SMX_PETALS == 5 "five petals"
+ASSERT SMX_RADIANCE == 5 "five radiance breaths"
+ASSERT SMX_FLOURISH == 15 "flourish bonds+breaths"
+ASSERT SMX_MESH == 5 "mesh live under bloom"
+ASSERT SMX_LIVE == 5 "five live bloom"
+ASSERT SMX_OOB == 0 "oob clear after bloom"
+ASSERT CUBES == base_cubes "bloom invents nothing"
+
+// Alias FLOURISH / UNFOLD keep latches sticky
+SMX FLOURISH bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "flourish live"
+ASSERT SMX_BLOOMED == 1 "bloomed sticky flourish"
+ASSERT SMX_PETALS == 5 "petals sticky"
+ASSERT SMX_OOB == 0 "oob clear flourish"
+
+SMX UNFOLD bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "unfold live"
+ASSERT SMX_BLOOMED == 1 "bloomed sticky unfold"
+ASSERT SMX_RADIANCE >= 5 "radiance sticky"
+ASSERT SMX_UNFOLD >= 5 "unfold breaths"
+ASSERT SMX_OOB == 0 "oob clear unfold"
+
+// Re-assert mesh exchange purity under bloom
+SMX MESH_EXCHANGE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mesh_exchange rebind"
+ASSERT SMX_SYNAPSE == 1 "synapse sticky"
+ASSERT SMX_STABLE_MESH == 1 "stable sticky"
+ASSERT SMX_BONDS == 10 "bonds sticky"
+
+// Mitosis under free energy while bloom holds
+LET births = 0
+LET step = 0
+WHILE step < 8
+  GETF seed energy
+  LET e = LAST_N
+  IF e >= 4 THEN
+    LET half = e / 2
+    IF half < 1 THEN
+      LET half = 1
+    END
+    GETF seed gen
+    LET dg = LAST_N + 1
+    IF births == 0 THEN
+      SETF d1 alive 1
+      SETF d1 ready 0
+      SETF d1 energy half
+      SETF d1 gen dg
+      PLUG bed d1
+      LET births = 1
+    ELSE
+      IF births == 1 THEN
+        SETF d2 alive 1
+        SETF d2 ready 0
+        SETF d2 energy half
+        SETF d2 gen dg
+        PLUG nozzle d2
+        LET births = 2
+      END
+    END
+    GETF seed energy
+    LET left = LAST_N - half
+    IF left < 1 THEN
+      LET left = 1
+    END
+    SETF seed energy left
+    SETF seed ready 0
+  END
+  LET step = step + 1
+END
+
+ASSERT births >= 1 "mitosis under bloom free energy"
+ASSERT SMX_BLOOMED == 1 "bloom holds through mitosis"
+ASSERT SMX_SYNAPSE == 1 "synapse holds through mitosis"
+ASSERT SMX_STABLE_MESH == 1 "stable holds through mitosis"
+
+// RECOVER restores vital/key
+SMX RECOVER
+ASSERT SMX_OK == 1 "recover ok"
+ASSERT SMX_KEY_OK == 1 "key after recover"
+ASSERT SMX_VITAL >= 1 "vital after recover"
+
+// dual SEAL/OPEN rails BN+IS rebind hive
+SMX SEAL bed nozzle "state/smx_bloom/rail_bn.cblc"
+ASSERT SMX_OK == 1 "seal BN"
+ASSERT SMX_N > 64 "rail BN frame"
+SMX OPEN hive "state/smx_bloom/rail_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+SMX SEAL hive scrap "state/smx_bloom/rail_is.cblc"
+ASSERT SMX_OK == 1 "seal IS"
+SMX OPEN pulse "state/smx_bloom/rail_is.cblc"
+ASSERT SMX_OK == 1 "open IS onto pulse"
+ASSERT CUBES == base_cubes "rails invent nothing"
+
+// Re-forge + re-bloom after rails
+SMX SYNAPSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "re-synapse live"
+ASSERT SMX_SYNAPSE == 1 "re-synapse latch"
+ASSERT SMX_BONDS == 10 "re-synapse bonds"
+ASSERT SMX_OOB == 0 "oob clear after re-forge"
+
+SMX BLOOM bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "re-bloom live"
+ASSERT SMX_BLOOMED == 1 "bloomed after re-bloom"
+ASSERT SMX_PETALS == 5 "petals after re-bloom"
+ASSERT SMX_RADIANCE == 5 "radiance after re-bloom"
+ASSERT SMX_OOB == 0 "oob clear re-bloom"
+
+// Second storm fail-closed
+SMX TALK bed ghost_again
+ASSERT SMX_OK == 0 "second storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob after second storm"
+ASSERT CUBES >= base_cubes "no ghost place on second storm"
+
+// SYNAPSE + BLOOM clears thrash again
+SMX SYNAPSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "synapse after storm2"
+ASSERT SMX_SYNAPSE == 1 "synapse latch after storm2"
+ASSERT SMX_OOB == 0 "oob cleared again"
+ASSERT SMX_BONDS == 10 "bonds after storm2"
+
+SMX BLOOM bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "bloom after storm2"
+ASSERT SMX_BLOOMED == 1 "bloomed after storm2"
+ASSERT SMX_PETALS == 5 "petals after storm2"
+ASSERT SMX_LIVE == 5 "five live after storm2"
+ASSERT SMX_OOB == 0 "oob clear final"
+ASSERT CUBES >= base_cubes "no ghost after rebloom"
+
+HALT
