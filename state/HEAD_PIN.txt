@@ -1,8 +1,1 @@
-HEAD=11a1a44b4a9c0b1094192207eec0356946986d59
-SHORT=11a1a44
-MEANINGFUL_ITER=1154
-VERSION=1.5.3-break-continue
-PROOF=programs/proof/12_break_continue.cubalc PASS
-smx-selftest=PASS
-past=9152410e
-feature=BREAK/CONTINUE loop control
+38c5745
