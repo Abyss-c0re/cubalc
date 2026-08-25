@@ -1,5 +1,5 @@
-HEAD=0fe5294a86f0dbb460c0bb96aa1792eb3c1b3785
-SHORT=0fe5294a
+HEAD=e9786c33cef94ee9eba7c2aca0f615cc96f4a99f
+SHORT=e9786c33
 MEANINGFUL_ITER=1708
 VERSION=1.15.1178-usability
 PROOFS=1708_cortex+1620_flagship+1634_mesh_exchange+1621_soft_oob PASS
@@ -7,5 +7,5 @@ feature=CORTEX soft-OOB fail-closed mesh stability
 feat_head=de48cf56a5d7b0519b27532b80b5bd98ac7b685f
 past=f1bd5283
 next=we_autoheal
-verified_at=2026-08-25T18:52:06Z
+verified_at=2026-08-25T18:52:17Z
 pin_head==tip
