@@ -1,1 +1,1 @@
-1715 LIFE_FORCE_ENTANGLE soft-OOB fail-closed PASS pin=90875a25
+1715 LIFE_FORCE_ENTANGLE soft-OOB fail-closed PASS pin=46a80f3c

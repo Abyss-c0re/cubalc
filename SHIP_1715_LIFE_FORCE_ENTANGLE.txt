@@ -1,9 +1,9 @@
 MEANINGFUL_ITER=1715
 feature=LIFE_FORCE ENTANGLE soft-OOB fail-closed mesh usability
 proof=1715_smx_life_force_entangle_soft_oob
-PROOFS=1715 asserts_ok=51 + 1620 asserts_ok=12 + 1621 asserts_ok=18 + 1634 asserts_ok=56 PASS
+PROOFS=1715 asserts_ok=55 + 1620 asserts_ok=12 + 1621 asserts_ok=18 + 1634 asserts_ok=56 PASS
 VERSION=1.15.1186-usability
-pin_head=f1f81ffdedb3788b9d0ef96bf7046dbd5fbc0ae0
+pin_head=46a80f3cbfa363f8c4cbf1c5a22724be71a6341e
 past=1714
 next=we_autoheal
-verified_at=2026-08-25T20:03:15Z
+verified_at=2026-08-25T23:04:00Z
