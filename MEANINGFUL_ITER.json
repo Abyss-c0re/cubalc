@@ -1,9 +1,1 @@
-{
-  "iter": 1682,
-  "feature": "atomic_printer_mesh_pneuma",
-  "proof": "1682_atomic_printer_mesh_pneuma",
-  "version": "1.15.1152-usability",
-  "proof_ok": true,
-  "commit": "aa364e83",
-  "ts": 1787658225
-}
+{"iter":1682,"feature":"atomic_printer_mesh_pneuma","proof":"1682_atomic_printer_mesh_pneuma","version":"1.15.1152-usability","proof_ok":true,"commit":"3104e2e0"}
