@@ -1,5 +1,5 @@
-HEAD=b1669c0f27f4ce2a39ac30e26a8f1476aff91454
-SHORT=b1669c0f
+HEAD=d0c56c781f748e202e8ba4dd8b7ce0b6a6463ba7
+SHORT=d0c56c78
 MEANINGFUL_ITER=1710
 VERSION=1.15.1180-usability
 PROOFS=1710_we_autoheal+1620_flagship+1634_mesh_exchange+1621_soft_oob PASS
@@ -7,5 +7,5 @@ feature=WE_AUTOHEAL soft-OOB fail-closed mesh stability
 feat_head=2ebe6fb44612ad06ea63469a0aaa5b45fcd8f4f8
 past=d3f60f43
 next=we_autoheal
-verified_at=2026-08-25T22:21:00Z
+verified_at=2026-08-25T22:22:00Z
 pin_head==tip
