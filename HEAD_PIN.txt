@@ -1,0 +1,7 @@
+HEAD=d122d6aa792dd4f3fe6abceed94ddb6cd6737767
+SHORT=d122d6aa
+MEANINGFUL_ITER=1700
+VERSION=1.15.1170-usability
+PROOFS=1700_cosmicweb+1620_flagship PASS
+feature=COSMICWEB soft-OOB fail-closed mesh stability
+feat_head=5200aeb618f9b0869555c47cb229b382ab598e1f
