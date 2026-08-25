@@ -1,11 +1,8 @@
-HEAD=acbb19c1566e64f656ddbeee4f95a837d05af776
-SHORT=acbb19c1
-MEANINGFUL_ITER=1711
-VERSION=1.15.1182-usability
-PROOFS=1711_mesh_stability+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS
-feature=MESH_STABILITY soft-OOB fail-closed mesh_exchange
-feat_head=185cce50bcaf400a85506ac5e0d3dc3b3be982eb
-past=1710
+pin_head=6601db54a6431d984833c8a7ad08159cff153718
+feat_head=6601db54a6431d984833c8a7ad08159cff153718
+iter=1712
+feature=LIFE_FORCE_STABILIZE
+proof=1712_smx_life_force_stabilize_soft_oob
+verified=PASS
+VERSION=1.15.1183-usability
 next=we_autoheal
-verified_at=2026-08-25T19:33:51Z
-pin_head==tip

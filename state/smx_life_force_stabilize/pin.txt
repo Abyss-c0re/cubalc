@@ -1,5 +1,11 @@
-pin_head=f16ebd32162557fd50b483331cf2e4d7f58560c7
-MEANINGFUL_ITER=1712
+feat_head=6601db54a6431d984833c8a7ad08159cff153718
+iter=1712
+proof=1712_smx_life_force_stabilize_soft_oob
+verified=PASS
+asserts_ok=47
+flagship_1620=PASS
+feature=LIFE_FORCE_STABILIZE soft-OOB fail-closed STABILIZE+WE_AUTOHEAL
+next=we_autoheal
 VERSION=1.15.1183-usability
-feature=LIFE_FORCE STABILIZE soft-OOB fail-closed
-feat_head=f16ebd32162557fd50b483331cf2e4d7f58560c7
+pin_head=6601db54a6431d984833c8a7ad08159cff153718
+verified_at=2026-08-25T19:45:16Z
