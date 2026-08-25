@@ -1,7 +1,0 @@
-HEAD=90083a10fe780bbb82b7153c748da2fc0892fba0
-SHORT=90083a10
-MEANINGFUL_ITER=1702
-VERSION=1.15.1172-usability
-PROOFS=1702_resilience PASS 110/110
-feature=RESILIENCE soft-OOB fail-closed mesh stability
-feat_head=7b9a7fd3
