@@ -1,1 +1,3 @@
-1715 LIFE_FORCE_ENTANGLE soft-OOB fail-closed PASS pin=0cb1d6a0
+pin_head=45eb50e1875b6d54af7878d9f0e148191774d8fa
+iter=1715
+feature=LIFE_FORCE_ENTANGLE
