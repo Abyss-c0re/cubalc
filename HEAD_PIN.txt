@@ -1,7 +1,7 @@
-HEAD=be6036d102e112e4652b301dfef47d37f52d3a65
-SHORT=be6036d1
+HEAD=3a69cfcfde003fc31b04d4533f778a4f903ed5b5
+SHORT=3a69cfcf
 MEANINGFUL_ITER=1700
 VERSION=1.15.1170-usability
 PROOFS=1700_cosmicweb+1620_flagship PASS
 feature=COSMICWEB soft-OOB fail-closed mesh stability
-feat_head=5200aeb618f9b0869555c47cb229b382ab598e1f
+feat_head=c4fef1d3
