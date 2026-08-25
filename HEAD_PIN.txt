@@ -1,11 +1,11 @@
-HEAD=6d3d9a7f6ddfad3c7b4c2c0a743a68b87255ab73
-SHORT=6d3d9a7f
+HEAD=c76cdb9d088b840bdbe5e322af34bf6a5ee8f3f3
+SHORT=c76cdb9d
 MEANINGFUL_ITER=1717
 VERSION=1.15.1188-usability
 PROOFS=1717_mesh_ground+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=65+12+18+56
 feature=MESH_GROUND soft-OOB fail-closed life-force usability
 feat_head=9bf62f6a206fb675b3449b18397cfc84baae692f
-pin_head=6d3d9a7f6ddfad3c7b4c2c0a743a68b87255ab73
+pin_head=c76cdb9d088b840bdbe5e322af34bf6a5ee8f3f3
 past=1716
 next=we_autoheal
 verified_at=2026-08-25T20:31:51Z

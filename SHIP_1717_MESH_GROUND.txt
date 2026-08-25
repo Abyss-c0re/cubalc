@@ -3,7 +3,7 @@ feature=MESH GROUND soft-OOB fail-closed full-mesh usability
 proof=1717_smx_mesh_ground_soft_oob
 PROOFS=1717 asserts_ok=65 + 1620 asserts_ok=12 + 1621 asserts_ok=18 + 1634 asserts_ok=56 PASS
 VERSION=1.15.1188-usability
-pin_head=6d3d9a7f6ddfad3c7b4c2c0a743a68b87255ab73
+pin_head=c76cdb9d088b840bdbe5e322af34bf6a5ee8f3f3
 feat_head=9bf62f6a206fb675b3449b18397cfc84baae692f
 past=1716
 next=we_autoheal
