@@ -7,7 +7,7 @@
   "proof": "programs/science/proof/1710_atomic_printer_mesh_stability.cubalc",
   "updated": 1787687040,
   "status": "PASS",
-  "head": "PENDING",
+  "head": "b22aeffe",
   "schema": "cubalc.meaningful_iter/v1",
   "item": "SMX mesh stability soft-OOB fail-closed harden",
   "item_id": "mi_smx_mesh_stability_1710",
