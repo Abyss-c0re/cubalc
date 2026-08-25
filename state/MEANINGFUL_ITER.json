@@ -12,11 +12,9 @@
   "item": "1722 atomic printer mesh astrocyte",
   "item_id": "mi_1722_atomic_printer_mesh_astrocyte",
   "title": "1722 atomic printer mesh astrocyte",
-  "summary": "Astrocyte mesh after glia: soft-OOB fail-closed, star ring + endfoot gather, STABLE_MESH latch, mitosis under free energy, dual rails, re-astrocyte.",
+  "summary": "SMX ASTROCYTE mesh star endfoot tripartite after glia; soft-OOB fail-closed; life-force science.",
   "proofs": [
-    "programs/proof/1722_atomic_printer_mesh_astrocyte.cubalc",
-    "programs/science/integration/atomic_printer_mesh_astrocyte.cubalc",
-    "programs/science/proof/1722_atomic_printer_mesh_astrocyte.cubalc"
+    "programs/proof/1722_atomic_printer_mesh_astrocyte.cubalc"
   ],
   "ts": "2026-08-25T22:13:28Z",
   "asserts_ok": 78,
@@ -28,6 +26,5 @@
   "mesh_exchange": "astrocyte+star+endfoot+tripartite+stabilize",
   "unity": 1.0,
   "note": "SMX MESH ASTROCYTE stability board; 78 asserts; soft_oob fail-closed; life-force astrocyte after glia",
-  "commit": "",
-  "host_finish": false
+  "commit": ""
 }
