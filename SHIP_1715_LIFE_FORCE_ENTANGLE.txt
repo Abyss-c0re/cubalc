@@ -3,8 +3,7 @@ feature=LIFE_FORCE ENTANGLE soft-OOB fail-closed full-mesh usability
 proof=1715_smx_life_force_entangle_soft_oob
 PROOFS=1715 asserts_ok=51 + 1620 asserts_ok=12 + 1621 asserts_ok=18 + 1634 asserts_ok=56 PASS
 VERSION=1.15.1186-usability
+pin_head=0cb1d6a01fa49283e6e963b2d5ffbc3583f09ff4
 past=1714
 next=we_autoheal
-pin_head=3cd2f444495d5fa83b50777a981e800b1ba89278
-verified_at=2026-08-25T20:04:48Z
-pin_head=3cd2f444495d5fa83b50777a981e800b1ba89278
+verified_at=2026-08-25T20:05:08Z
