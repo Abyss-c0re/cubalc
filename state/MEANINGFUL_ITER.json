@@ -8,8 +8,8 @@
   "smx_soft_oob": true,
   "smx_mesh_exchange": true,
   "smx_selftest": true,
-  "head": "384183005095c1fd9e5b00315a0c5b9eb6a6c87f",
-  "note": "mesh_exchange seal/open + soft-OOB heal; fail-closed no key; life_force floor",
-  "short": "3841830",
+  "head": "b733333333883d5e9f63bf997cc1b4a43327abb0",
+  "note": "mesh_exchange seal/open + soft-OOB heal; fail-closed no key; life_force floor; HEAD past 9a3497ea",
+  "short": "b733333",
   "past": "9a3497ea"
 }
