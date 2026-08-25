@@ -1,7 +1,7 @@
-HEAD=5d9db215149064d780a41df78cb226ecca754af0
-SHORT=5d9db21
+HEAD=2cad9214291268e467ea07425677d386a799200d
+SHORT=2cad921
 MEANINGFUL_ITER=1154
-VERSION=1.5.3-break
+VERSION=1.5.3-break-continue
 PROOF=programs/proof/12_break_continue.cubalc PASS
 smx-selftest=PASS
 past=9152410e
