@@ -6,8 +6,8 @@ asserts_ok=39
 flagship_1620=PASS
 soft_oob_1621=PASS
 mesh_exchange_1634=PASS
-pin_head=2743da18a7a8f7c6d27cd6e420c83519b0712272
+pin_head=d00d7e4a73976bad6aa3029601eaa1d98f43ab88
 feature=MESH_STABILITY soft-OOB fail-closed mesh_exchange
 next=we_autoheal
 verified_at=2026-08-25T19:33:15Z
-pin_head==tip
+pin_head=d00d7e4a73976bad6aa3029601eaa1d98f43ab88
