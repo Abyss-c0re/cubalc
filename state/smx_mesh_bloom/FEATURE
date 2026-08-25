@@ -1,1 +1,2 @@
-MESH_BLOOM soft-OOB fail-closed life-force
+MESH_BLOOM soft-OOB fail-closed full-mesh
+SMX BLOOM → WE_AUTOHEAL → mesh_exchange → SEAL/OPEN → RAISE
