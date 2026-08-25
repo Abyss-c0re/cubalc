@@ -1,3 +1,10 @@
+## 1.15.1157-usability — SMX ATMOSPHERE mesh-stability (life-force)
+
+- SMX ATMOSPHERE|SKY|AERO|AIRWEB|AEROSPHERE|WIND|MESH_ATMOSPHERE|RAISE_ATMOSPHERE
+- Fail-closed soft-OOB: clears thrash, complete sky mesh, wind ring, sky hub
+- Latches SMX_ATMOSPHERED|SMX_SKY|SMX_AERO|SMX_WINDS|SMX_ZEPHYRS|SMX_SKIES when soft-OOB-free
+- Proof 1687_atomic_printer_mesh_atmosphere PASS (109 asserts); flagship 1620 PASS
+
 ## 1.15.1154-usability — SMX BIOSPHERE mesh-stability (life-force)
 
 - SMX BIOSPHERE|GAIA|BIOME|ECO|LIFEWEB|HABITAT|MESH_BIOSPHERE|RAISE_BIOSPHERE
