@@ -1,11 +1,1 @@
-HEAD=11e68c73f2836c7977b33c35e99b96b525d3df19
-SHORT=11e68c73
-MEANINGFUL_ITER=1712
-VERSION=1.15.1184-usability
-PROOFS=1712_life_force_stabilize+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=47+12
-feature=LIFE_FORCE STABILIZE soft-OOB fail-closed mesh usability
-feat_head=2df82e6f69fb08f61116adfa9bc1370c8865b031
-pin_head=11e68c73f2836c7977b33c35e99b96b525d3df19
-past=1711
-next=we_autoheal
-verified_at=2026-08-25T19:44:55Z
+f16ebd32162557fd50b483331cf2e4d7f58560c7
