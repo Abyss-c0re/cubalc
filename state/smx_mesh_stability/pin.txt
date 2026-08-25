@@ -1,5 +1,1 @@
-feat_head=6c6f23005d073dbbf823f46aaf61d7a3d8834ff6
-iter=1711
-proof=1711_smx_mesh_stability_soft_oob
-verified=PASS
-pin_head=87ef3301431b4731b3e30af128ce9c610a572f71
+1711 MESH_STABILITY soft-OOB fail-closed PASS pin=1cc033de
