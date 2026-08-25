@@ -1,7 +1,7 @@
-HEAD=814c747da30469c75a0f0545af5b9e5951d8745a
-SHORT=814c747d
+HEAD=77bafb1c162666849b5dc42ea6f4ea190a426a80
+SHORT=77bafb1c
 MEANINGFUL_ITER=1696
 VERSION=1.15.1165-usability
-PROOFS=1696_galactic+1620_flagship+1621_soft_oob PASS
+PROOFS=1696_galactic+1620_flagship+mesh_exchange PASS
 feature=GALACTIC soft-OOB fail-closed mesh stability
 feat_head=6598f61891e965fc8bdd5a391d527162a5ac8017
