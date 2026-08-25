@@ -1,0 +1,5 @@
+feature=LOCALBUBBLE
+MEANINGFUL_ITER=1697
+VERSION=1.15.1167-usability
+proofs=1697_localbubble+1620_flagship PASS
+asserts=109
