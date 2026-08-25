@@ -1,12 +1,1 @@
 MESH_STABILITY soft-OOB fail-closed mesh_exchange
-feature=SMX mesh stability soft-OOB fail-closed + mesh_exchange
-iter=1711
-version=1.15.1181-usability
-proof=1711_smx_mesh_stability_soft_oob
-asserts_ok=39
-asserts_fail=0
-flagship=1620 PASS
-soft_oob=1621 PASS
-mesh_exchange=1634 PASS
-next=we_autoheal
-verified=PASS
