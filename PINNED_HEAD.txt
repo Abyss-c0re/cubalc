@@ -1,3 +1,1 @@
-8e4e0d59e1cc3764390b9f53c78e3f26edff24cf
-HEAD_PIN_SHA.txt
-state/smx_mesh_stability/pin_head
+9bf8548ea352b70ff2f9a505db10ffc9f91b974c

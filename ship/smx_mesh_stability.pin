@@ -1,10 +1,1 @@
-feature=MESH STABILITY soft-OOB fail-closed mesh_exchange
-MEANINGFUL_ITER=1711
-VERSION=1.15.1181-usability
-PROOFS=1711_mesh_stability+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS
-feat_head=6c6f23005d073dbbf823f46aaf61d7a3d8834ff6
-head=8e4e0d59e1cc3764390b9f53c78e3f26edff24cf
-pin_head=8e4e0d59e1cc3764390b9f53c78e3f26edff24cf
-verified_at=2026-08-25T19:31:09Z
-past=1710
-next=we_autoheal
+1711 9bf8548e MESH_STABILITY soft-OOB fail-closed mesh_exchange
