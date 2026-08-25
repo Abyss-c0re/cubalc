@@ -3,4 +3,4 @@ VERSION=1.15.1174-usability
 feature=FORGED soft-OOB fail-closed mesh + temper ring + anvil hub
 proof=1704_atomic_printer_mesh_forged PASS
 flagship=1620 PASS
-head=d39f7ef7c9d0f6b79af81befe9ba2f6dfa2eedf9
+head=173b1f073e71132471caac9e7b9ca8c7f4c30171
