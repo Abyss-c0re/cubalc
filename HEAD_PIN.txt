@@ -1,11 +1,11 @@
-HEAD=f1bd5283b9e50ced56a06610d97d509ad6acbbd9
-SHORT=f1bd5283
-MEANINGFUL_ITER=1707
-VERSION=1.15.1177-usability
-PROOFS=1707_prophet+1620_flagship+1634_mesh_exchange+1621_soft_oob PASS
-feature=PROPHET soft-OOB fail-closed mesh stability
-feat_head=82bd62c0c864403d1b4d8d422a1e6159df5a8b06
-past=f3bbdc09
+HEAD=PENDING
+SHORT=PENDING
+MEANINGFUL_ITER=1708
+VERSION=1.15.1178-usability
+PROOFS=1708_cortex+1620_flagship+1634_mesh_exchange+1621_soft_oob PASS
+feature=CORTEX soft-OOB fail-closed mesh stability
+feat_head=0486c801abba15e35ae3a0dbdc7f81898c8e5fe6
+past=5ac6f94a
 next=we_autoheal
-verified_at=2026-08-25T18:20:46Z
+verified_at=2026-08-25T18:51:37Z
 pin_head==tip
