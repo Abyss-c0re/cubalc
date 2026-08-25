@@ -26,6 +26,6 @@
   "mesh_exchange": "dendrite+branch+spine+arbor+stabilize",
   "unity": 1.0,
   "note": "SMX MESH DENDRITE stability board; 78 asserts; flagship 1620 12/12; soft_oob fail-closed; life-force dendrite after axon",
-  "commit": "PENDING",
+  "commit": "7e8e1b2a",
   "host_finish": true
 }
