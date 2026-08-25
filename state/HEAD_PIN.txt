@@ -1,5 +1,5 @@
-HEAD=7ea7ff35c01b8fdad378187034a5f7c3c058fc6f
-SHORT=7ea7ff3
+HEAD=4c7054ddae11c519087a40f1b33f224583f10357
+SHORT=4c7054d
 MEANINGFUL_ITER=1154
 VERSION=1.5.3-break-continue
 PROOF=programs/proof/12_break_continue.cubalc PASS
