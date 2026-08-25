@@ -1,18 +1,14 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1703,
-  "commit": "312da72131190eb2839d2156ea2604af3f86f284",
-  "version": "1.15.1173-usability",
-  "feature": "OMNIVERSE soft-OOB fail-closed mesh stability",
-  "proof": "1703_atomic_printer_mesh_omniverse",
+  "iter": 1704,
+  "version": "1.15.1174-usability",
+  "feature": "FORGED soft-OOB fail-closed mesh stability (temper ring + anvil hub)",
+  "proof": "1704_atomic_printer_mesh_forged",
   "proof_ok": true,
   "asserts_ok": 110,
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
-  "MEANINGFUL_ITER": 1703,
-  "proofs": "1703_omniverse+1620_flagship PASS",
-  "head": "312da721",
-  "pin_head": "312da72131190eb2839d2156ea2604af3f86f284",
-  "feat_head": "93d73051990d050cc661497163cd20df27d8b710"
+  "MEANINGFUL_ITER": 1704,
+  "proofs": "1704_forged+1620_flagship+1634_mesh_exchange PASS"
 }

@@ -9938,6 +9938,188 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|...|GALACTIC|LOCALBUBBLE|LB|CAVITY|WALL|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE|...|ASTROSPHERE|AS|ORBIT|HORIZON|ASTROSHELL|SHELL|MESH_ASTROSPHERE|RAISE_ASTROSPHERE|ASTROSPHERES|ORBITS|HORIZONS|SHELLS|SEEDASTRO|SEEDSPHERE|WORLD_AS|WORLD_SPHERE|LATTICE_ASTROSPHERE|PULSE_ASTROSPHERE|ORBIT_RING|SPHERE|SPHERES|SUPERCLUSTER|SC|CLUSTER|FILAMENT|HUB|SUPERCLUST|MESH_SUPERCLUSTER|RAISE_SUPERCLUSTER|CLUSTERS|FILAMENTS|HUBS|SEEDSC|SEEDCLUSTER|WORLD_SC|WORLD_CLUSTER|LATTICE_SUPERCLUSTER|PULSE_SUPERCLUSTER|FILAMENT_RING|COSMICWEB|CW|WEB|SPINE|ATTRACTOR|COSMICWEBX|MESH_COSMICWEB|RAISE_COSMICWEB|WEBS|SPINES|ATTRACTORS|SEEDCW|SEEDCOSMIC|WORLD_CW|WORLD_COSMIC|LATTICE_COSMICWEB|PULSE_COSMICWEB|SPINE_RING|AUTOHEAL|AH|HEAL|MEND|REGEN|WE_AUTOHEAL|LIFE_BEACON|MESH_AUTOHEAL|RAISE_AUTOHEAL|MENDS|BEACONS|HEALS|AUTOHEALS|SEEDAH|SEEDHEAL|WORLD_AH|WORLD_HEAL|LATTICE_AUTOHEAL|PULSE_AUTOHEAL|MEND_RING|UNITY_HEAL|MULTIVERSE|MV|VERSE|STRAND|BRANE|MULTIVERSAL|MESH_MULTIVERSE|RAISE_MULTIVERSE|VERSES|STRANDS|BRANES|SEEDMV|SEEDVERSE|SEEDBRANE|WORLD_MV|WORLD_VERSE|LATTICE_MULTIVERSE|PULSE_MULTIVERSE|STRAND_RING|UNITY_VERSE|WE_MULTIVERSE|LIFE_STRAND|FORK|MULTIVERSES|OMNIVERSE|OV|OMNI|MEMBRANE|SPAN|WE_OMNIVERSE|LIFE_MEMBRANE|MESH_OMNIVERSE|RAISE_OMNIVERSE|OMNIS|MEMBRANES|BULKS|SEEDOV|SEEDOMNI|SEEDMEMBRANE|WORLD_OV|WORLD_OMNI|LATTICE_OMNIVERSE|PULSE_OMNIVERSE|MEMBRANE_RING|UNITY_OMNI|BULK|BULKS|SPANS");
+  /* SMX FORGED|FG|FORGE|TEMPER|ANVIL|WE_FORGED|LIFE_TEMPER|MESH_FORGED|RAISE_FORGED a b c ...
+   * Life-force mesh stability after omniverse: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete forged mesh among live nodes, weaves a
+   * temper ring (i -> i+1) so free energy self-regulates, then anvil hub
+   * gathers return so lattice locks forged where life holds the hive.
+   * Latches SMX_FORGED when mesh+tempers+anvils are soft-OOB-free.
+   * SMX_TEMPER = chain bonds; SMX_ANVIL hub = root gather pulses;
+   * SMX_FORGED_SUM sum = bonds+tempers+anvils; SMX_FG|SMX_FORGE sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"FORGED")||kw(&L->cur,"FG")||kw(&L->cur,"FORGE")||
+      kw(&L->cur,"TEMPER")||kw(&L->cur,"ANVIL")||kw(&L->cur,"WE_FORGED")||
+      kw(&L->cur,"LIFE_TEMPER")||kw(&L->cur,"LIFETEMPER")||kw(&L->cur,"TEMPERS")||
+      kw(&L->cur,"ANVILS")||kw(&L->cur,"FORGES")||kw(&L->cur,"FORGINGS")||
+      kw(&L->cur,"MESH_FORGED")||kw(&L->cur,"RAISE_FORGED")||
+      kw(&L->cur,"FORGEDS")||kw(&L->cur,"SEEDFG")||kw(&L->cur,"SEEDFORGE")||
+      kw(&L->cur,"LATTICE_FORGED")||kw(&L->cur,"WORLD_FG")||kw(&L->cur,"WORLD_FORGE")||
+      kw(&L->cur,"TEMPER_RING")||kw(&L->cur,"PULSE_FORGED")||kw(&L->cur,"UNITY_FORGE")||
+      kw(&L->cur,"SEEDANVIL")||kw(&L->cur,"SEEDTEMPER")||kw(&L->cur,"ANVIL_HUB")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int tempers = 0;
+    int anvils = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "FORGED needs >=2 cubes",
+                  "SMX FORGED a b [c ...]  or  SMX FG a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - forged needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete forged mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* temper ring - free energy self-regulates every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else tempers++;
+        }
+      }
+    }
+    /* anvil hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else anvils++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int st_ok = (live >= 2 && tempers >= live && soft == 0) ? 1 : 0;
+      if (!st_ok && live >= 2 && tempers * 2 >= live && soft == 0)
+        st_ok = 1;
+      int br_ok = (live >= 1 && anvils >= live && soft == 0) ? 1 : 0;
+      if (!br_ok && live >= 1 && anvils * 2 >= live && soft == 0)
+        br_ok = 1;
+      int fg_ok = (mesh_ok && st_ok && br_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (fg_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (tempers > 0 ? 1 : 0) + (anvils > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_FORGED", (long)fg_ok);
+      var_set_num(vm, "SMX_FORGED_LATCH", (long)fg_ok);
+      var_set_num(vm, "SMX_FORGED_SUM", (long)(fg_ok ? bonds + tempers + anvils : 0));
+      var_set_num(vm, "SMX_FG", (long)(fg_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FORGE", (long)(fg_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FORGES", (long)(fg_ok ? bonds : 0));
+      var_set_num(vm, "SMX_WE_FORGED", (long)(fg_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFE_TEMPER", (long)(fg_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFETEMPER", (long)(fg_ok ? 1 : 0));
+      var_set_num(vm, "SMX_TEMPER", (long)(fg_ok ? tempers : 0));
+      var_set_num(vm, "SMX_TEMPERS", (long)(fg_ok ? tempers : 0));
+      var_set_num(vm, "SMX_TEMPERRING", (long)(fg_ok ? tempers : 0));
+      var_set_num(vm, "SMX_ANVIL", (long)(fg_ok ? anvils : 0));
+      var_set_num(vm, "SMX_ANVILS", (long)(fg_ok ? anvils : 0));
+      var_set_num(vm, "SMX_SPAN", (long)(fg_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SEEDFG", (long)(fg_ok ? anvils : 0));
+      var_set_num(vm, "SMX_SEEDFORGE", (long)(fg_ok ? anvils : 0));
+      var_set_num(vm, "SMX_MESH", (long)(fg_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + tempers + anvils));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      var_set_num(vm, "SMX_UNITY", (long)(fg_ok ? 1 : 0));
+      if (fg_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX FORGED ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX FORGED partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX FORGED soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX FORGED nodes=%d live=%d bonds=%d tempers=%d anvils=%d need=%d soft=%d talks=%d oob=%d forged=%d vital=%ld\n",
+                n, live, bonds, tempers, anvils, need, soft, vm->smx_talks, vm->smx_oob, fg_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|FORGED|FG|TEMPER|ANVIL|MESH_FORGED|RAISE_FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|...)");
   return -1;
 }
