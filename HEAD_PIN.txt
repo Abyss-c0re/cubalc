@@ -1,7 +1,7 @@
-HEAD=2afef3a8b46111655127048af3747841089a6356
-SHORT=2afef3a8
+HEAD=5ebca9a746043c184de721c8b6c031d5ce5694f4
+SHORT=5ebca9a7
 MEANINGFUL_ITER=1704
 VERSION=1.15.1174-usability
 PROOFS=1704_forged+1620_flagship PASS
 feature=FORGED soft-OOB fail-closed mesh stability
-feat_head=2afef3a8
+feat_head=37d957fd

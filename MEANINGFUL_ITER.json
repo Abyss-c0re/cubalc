@@ -1,10 +1,14 @@
 {
-  "MEANINGFUL_ITER": 1704,
-  "VERSION": "1.15.1174-usability",
-  "feature": "FORGED soft-OOB fail-closed mesh stability temper+anvil",
+  "schema": "cubalc.meaningful_iter/v1",
+  "iter": 1704,
+  "version": "1.15.1174-usability",
+  "feature": "FORGED soft-OOB fail-closed mesh stability temper-ring anvil-hub",
   "proof": "1704_atomic_printer_mesh_forged",
-  "flagship": "1620_atomic_printer_life_force PASS",
   "proof_ok": true,
-  "asserts_mode": "exit0_ok_true",
-  "updated": "2026-08-25T20:08:16+03:00"
+  "asserts_ok": 110,
+  "flagship_ok": true,
+  "mesh_exchange_ok": true,
+  "smx_selftest_ok": true,
+  "MEANINGFUL_ITER": 1704,
+  "proofs": "1704_forged+1620_flagship PASS"
 }
