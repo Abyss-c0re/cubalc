@@ -1,9 +1,9 @@
 {
   "iter": 1716,
   "feature": "MESH_BLOOM",
-  "pin_head": "2d8b15c4efcc2ed43929d3382eedd1082919c9f3",
-  "tip": "2d8b15c4efcc2ed43929d3382eedd1082919c9f3",
-  "feat_head": "2830029853e961b7451d0436f50bf5852406a005",
+  "pin_head": "0e2583ec8937986f1274e4fee731d4f0a56f1ac0",
+  "tip": "0e2583ec8937986f1274e4fee731d4f0a56f1ac0",
+  "feat_head": "1ab20799c67557840bebc1ba74465dc9a5af0cdd",
   "version": "1.15.1187-usability",
   "proofs_pass": true,
   "asserts_ok": {
@@ -14,7 +14,7 @@
   },
   "next": "we_autoheal",
   "unity": 1.0,
-  "nodes": 4,
+  "nodes": 5,
   "risk": "low",
   "sealed": true
 }

@@ -1,1 +1,10 @@
-2d8b15c4efcc2ed43929d3382eedd1082919c9f3
+MEANINGFUL_ITER=1716
+feature=MESH_BLOOM
+pin_head=0e2583ec8937986f1274e4fee731d4f0a56f1ac0
+tip=0e2583ec8937986f1274e4fee731d4f0a56f1ac0
+feat_head=1ab20799c67557840bebc1ba74465dc9a5af0cdd
+proofs=PASS
+asserts_ok=63+12+18+56
+next=we_autoheal
+sealed=1
+VERSION=1.15.1187-usability
