@@ -5,5 +5,6 @@ PROOFS=1715 asserts_ok=51 + 1620 asserts_ok=12 + 1621 asserts_ok=18 + 1634 asser
 VERSION=1.15.1186-usability
 past=1714
 next=we_autoheal
-pin_head=8373a969a3188f587919a11a9384c41d359086a6
-verified_at=2026-08-25T20:03:42Z
+pin_head=8ab9f697f8658c2a988e3a2e298a45b2fa5ac218
+verified_at=2026-08-25T20:03:55Z
+pin_head==tip
