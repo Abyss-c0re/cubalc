@@ -1,0 +1,198 @@
+// atomic_printer_mesh_thalamus.cubalc
+// Life-force gift: MESH-THALAMUS — complete thalamus mesh + stability ring + gate hub root after soft-OOB storms.
+// SMX THALAMUS|PULSEGATE|STABILITY|STABLE_MESH|WE_THALAMUS|LIFE_THALAMUS|MESH_THALAMUS|RAISE_THALAMUS clears thrash, every live pair exchanges
+// both ways (C(n,2)), then stability ring settles so lattice raises thalamus; latches SMX_THALAMUS|SMX_PULSEGATE|SMX_MESH_STABLE|SMX_STABILITY.
+// Soft-OOB ghosts stay fail-closed. Mitosis under free energy while mesh is thalamus;
+// RECOVER restores vital/key; dual SEAL/OPEN rails BN+IS rebind hive; second storm fail-closed.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "THALAMUS_COORD v1 | from=gift | type=atomic_printer_mesh_thalamus | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Storm A/B soft-OOB thrash — no ghost place
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+// Storm then THALAMUS latch — five live nodes root as complete mesh + stability + gates
+SMX THALAMUS bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "thalamus live"
+ASSERT SMX_THALAMUS == 1 "thalamus latch on"
+ASSERT SMX_THALAMUS_LATCH == 1 "thalamus latch sticky"
+ASSERT SMX_PULSEGATE == 1 "pulsegate latch on"
+ASSERT SMX_GATE == 1 "mesh_stable latch on"
+ASSERT SMX_MESH_STABLE == 1 "mesh_stable latch sticky"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh latch on"
+ASSERT SMX_EXCHANGES == 10 "ten bank exchanges"
+ASSERT SMX_BONDS == 10 "ten undirected links (C(5,2))"
+ASSERT SMX_STABILITY == 5 "five stability ring"
+ASSERT SMX_MESH == 5 "five mesh"
+ASSERT SMX_BONDS == 10 "ten bonds"
+ASSERT SMX_GATES == 5 "five gates"
+ASSERT SMX_STABLES == 5 "stability ring sticky"
+ASSERT SMX_STABLES == 5 "five stability ring steps"
+ASSERT SMX_THAL_SUM == 20 "thalamus bonds+stables+gates"
+ASSERT SMX_FUSE == 10 "ten fuse"
+ASSERT SMX_BIND == 10 "ten bind"
+ASSERT SMX_TONE == 5 "five tones"
+ASSERT SMX_PULSE == 20 "pulse bonds+watches+bastions"
+ASSERT SMX_BREATH == 5 "five live breath"
+ASSERT SMX_OOB == 0 "oob cleared by thalamus"
+ASSERT SMX_LIVE == 5 "five live"
+ASSERT SMX_NODES == 5 "five named"
+ASSERT SMX_TALKS >= 40 "talks after thalamus (mesh + watch + bastions)"
+ASSERT SMX_VITAL >= 14 "vital after thalamus"
+ASSERT CUBES == base_cubes "thalamus invents nothing"
+
+// Alias STABILITY form still pure
+SMX STABILITY bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "stability rebind"
+ASSERT SMX_THALAMUS == 1 "thalamus sticky"
+ASSERT SMX_BONDS == 10 "bonds sticky"
+ASSERT SMX_GATES == 5 "gates sticky"
+ASSERT SMX_STABLES == 5 "stables sticky"
+
+// Alias STABLES form
+SMX STABLES bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "watches rebind"
+ASSERT SMX_THALAMUS == 1 "plate thalamus"
+ASSERT SMX_STABLES == 5 "stables sticky"
+
+// Mitosis under free energy while the mesh is thalamus
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      IF births == 0 THEN
+        SETF d1 alive 1
+        SETF d1 ready 0
+        SETF d1 energy half
+        SETF d1 gen dg
+        PLUG bed d1
+        LET births = 1
+      ELSE
+        IF births == 1 THEN
+          SETF d2 alive 1
+          SETF d2 ready 0
+          SETF d2 energy half
+          SETF d2 gen dg
+          PLUG nozzle d2
+          LET births = 2
+        END
+      END
+      GETF seed energy
+      LET left = LAST_N - half
+      IF left < 1 THEN
+        LET left = 1
+      END
+      SETF seed energy left
+      SETF seed ready 0
+    END
+  END
+  LET step = step + 1
+END
+
+ASSERT births >= 1 "mitosis under thalamus free energy"
+ASSERT SMX_THALAMUS == 1 "thalamus holds through mitosis"
+
+// RECOVER restores vital/key
+SMX RECOVER
+ASSERT SMX_OK == 1 "recover ok"
+ASSERT SMX_KEY_OK == 1 "key after recover"
+ASSERT SMX_VITAL >= 1 "vital after recover"
+
+// dual SEAL/OPEN rails BN+IS rebind hive
+SMX SEAL bed nozzle "state/smx_thalamus/rail_bn.cblc"
+ASSERT SMX_OK == 1 "seal BN"
+ASSERT SMX_N > 64 "rail BN frame"
+SMX OPEN hive "state/smx_thalamus/rail_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+SMX SEAL hive scrap "state/smx_thalamus/rail_is.cblc"
+ASSERT SMX_OK == 1 "seal IS"
+SMX OPEN pulse "state/smx_thalamus/rail_is.cblc"
+ASSERT SMX_OK == 1 "open IS onto pulse"
+ASSERT CUBES == base_cubes "rails invent nothing"
+
+// Re-forge after rails
+SMX THALAMUS bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "re-thalamus live"
+ASSERT SMX_THALAMUS == 1 "re-thalamus latch"
+ASSERT SMX_BONDS == 10 "re-thalamus bonds"
+ASSERT SMX_STABLES == 5 "re-thalamus watches"
+ASSERT SMX_GATES == 5 "re-thalamus bastions"
+ASSERT SMX_THAL_SUM == 20 "re-thalamus sum"
+ASSERT SMX_OOB == 0 "oob clear after re-forge"
+
+// Second storm fail-closed
+SMX TALK bed ghost_again
+ASSERT SMX_OK == 0 "second storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob after second storm"
+ASSERT CUBES >= base_cubes "no ghost place on second storm"
+
+// THALAMUS clears thrash again
+SMX THALAMUS bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "thalamus after storm2"
+ASSERT SMX_THALAMUS == 1 "thalamus latch after storm2"
+ASSERT SMX_OOB == 0 "oob cleared again"
+ASSERT SMX_BONDS == 10 "bonds after storm2"
+ASSERT SMX_STABLES == 5 "stables after storm2"
+ASSERT SMX_GATES == 5 "gates after storm2"
+
+HALT
