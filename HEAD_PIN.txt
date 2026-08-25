@@ -1,12 +1,12 @@
-HEAD=4bba71bad388e977e420b3a18820da4f9d3a554b
-SHORT=4bba71ba
+HEAD=3f46c006dbe1498406d6d8b8c0131b187899d3de
+SHORT=3f46c006
 MEANINGFUL_ITER=1715
 VERSION=1.15.1186-usability
-PROOFS=1715_life_force_entangle+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=55+12+18+56
+PROOFS=1715_life_force_entangle+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=51+12+18+56
 feature=LIFE_FORCE_ENTANGLE soft-OOB fail-closed mesh usability
-feat_head=531a827ee836616047f58c1c4eca6dda422a532f
-pin_head=4bba71bad388e977e420b3a18820da4f9d3a554b
+feat_head=3f46c006dbe1498406d6d8b8c0131b187899d3de
+pin_head=3f46c006dbe1498406d6d8b8c0131b187899d3de
 past=1714
 next=we_autoheal
-verified_at=2026-08-25T23:04:10Z
+verified_at=2026-08-25T20:03:40Z
 pin_head==tip
