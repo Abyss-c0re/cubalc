@@ -7,7 +7,7 @@
   "asserts_ok": 108,
   "flagship_ok": true,
   "smx_selftest_ok": true,
-  "commit": "PENDING",
+  "commit": "0537917c",
   "pin_head": "PENDING",
   "feature_note": "LOCALBUBBLE soft-OOB fail-closed mesh stability after INTERSTELLAR",
   "schema": "cubalc.meaningful_iter/v1",
