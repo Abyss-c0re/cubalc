@@ -1,8 +1,8 @@
 {
   "MEANINGFUL_ITER": 1157,
   "VERSION": "1.5.4-smx-mesh-exchange",
-  "HEAD": "433e7a050dc4b566e81eba2e1ed03df99b5e0800",
-  "SHORT": "433e7a0",
+  "HEAD": "8fbd766c3b4cc2ca22e2930b3f0509475f0dac28",
+  "SHORT": "8fbd766",
   "feature": "SMX mesh_exchange soft-OOB fail-closed life-force",
   "proofs": {
     "smx-selftest": "PASS",
