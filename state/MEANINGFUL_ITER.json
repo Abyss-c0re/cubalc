@@ -1,23 +1,9 @@
 {
-  "iter": 1703,
-  "feature": "atomic_printer_mesh_seer",
-  "proof": "1703_atomic_printer_mesh_seer",
-  "version": "1.15.1173-usability",
-  "proof_ok": true,
-  "asserts_ok": 100,
-  "flagship_ok": true,
-  "smx_selftest_ok": true,
-  "commit": "3996c7ca",
-  "pin_head": "3996c7ca",
-  "feature_note": "SEER soft-OOB fail-closed mesh + sight ring + oracle hub after OMNIVERSE",
-  "schema": "cubalc.meaningful_iter/v1",
-  "item": "1703 atomic printer mesh seer",
-  "item_id": "mi_1703_atomic_printer_mesh_seer",
-  "title": "1703 SMX SEER mesh",
-  "summary": "SMX SEER|VISION|ORACLEVERSE sight ring + oracle hub; soft-OOB fail-closed; proof PASS.",
-  "proofs": [
-    "programs/proof/1703_atomic_printer_mesh_seer.cubalc"
-  ],
-  "ts": "2026-08-25T16:53:42Z",
-  "host_finish": true
+  "iter": 1704,
+  "feature": "SMX_FORGED",
+  "version": "1.15.1174-usability",
+  "proof": "programs/science/proof/1704_atomic_printer_mesh_forged.cubalc",
+  "asserts_ok": 69,
+  "asserts_fail": 0,
+  "ts": 1787677075
 }

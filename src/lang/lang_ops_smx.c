@@ -9953,9 +9953,9 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
    * Clears thrash OOB, roots a complete forge mesh among live nodes, weaves an
    * temper ring (i -> i+1) so free energy hardens every edge, then anvil hub
    * gathers return so lattice locks forged where life holds the hive.
-   * Latches SMX_FORGED when mesh+strikes+anvils are soft-OOB-free.
-   * SMX_STRIKES = chain bonds; SMX_ANVIL hub = root gather pulses;
-   * SMX_FORGE_SUM sum = bonds+strikes+anvils; SMX_TEMPERED|SMX_ANVIL sticky.
+   * Latches SMX_FORGEDED when mesh+strikes+anvils are soft-OOB-free.
+   * SMX_STRIKES = temper ring; SMX_ANVILS hub = root gather pulses;
+   * SMX_FORGE_SUM = bonds+strikes+anvils; SMX_FORGED|SMX_TEMPERED|SMX_FORGED_ALIAS sticky.
    * Mitosis path stays open under free energy. No dual ladders.
    * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
   if (kw(&L->cur,"FORGED")||kw(&L->cur,"TEMPERED")||kw(&L->cur,"TEMPER")||kw(&L->cur,"ANVILVERSE")||kw(&L->cur,"ANVIL_LATCH")||kw(&L->cur,"WE_FORGED")||kw(&L->cur,"LIFE_ANVIL")||
@@ -10074,9 +10074,11 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       long vital = (vm->smx.key_ok ? 4 : 0) + (fg_ok ? 12 : (bonds > 0 ? 3 : 0)) +
                    (strikes > 0 ? 1 : 0) + (anvils > 0 ? 1 : 0) +
                    (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
-      var_set_num(vm, "SMX_FORGED", (long)fg_ok);
+      var_set_num(vm, "SMX_FORGEDED", (long)fg_ok);
       var_set_num(vm, "SMX_FORGED_LATCH", (long)fg_ok);
+      var_set_num(vm, "SMX_FORGED", (long)(fg_ok ? 1 : 0));
       var_set_num(vm, "SMX_FORGE_SUM", (long)(fg_ok ? bonds + strikes + anvils : 0));
+      var_set_num(vm, "SMX_FORGED_ALIAS", (long)(fg_ok ? 1 : 0));
       var_set_num(vm, "SMX_TEMPERED", (long)(fg_ok ? 1 : 0));
       var_set_num(vm, "SMX_ANVIL_LATCH", (long)(fg_ok ? 1 : 0));
       var_set_num(vm, "SMX_ANVILVERSE", (long)(fg_ok ? 1 : 0));
