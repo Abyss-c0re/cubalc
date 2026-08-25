@@ -7,9 +7,8 @@
   "proof_pass": true,
   "asserts_ok": 4,
   "smx_selftest": true,
-  "head": "c8a03dff4038a1b016802013bd9ac56a9f771673",
-  "short": "c8a03df",
-  "past": "9152410e",
-  "bundle": "state/cubalc-1.5.3-break-continue.bundle",
-  "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT; no git remote \u2014 shipped as bundle"
+  "head": "55af3a7ae54ef03e803195344c6c097925ab5757",
+  "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT; HEAD advanced past prior pin",
+  "short": "55af3a7",
+  "past": "9152410e"
 }
