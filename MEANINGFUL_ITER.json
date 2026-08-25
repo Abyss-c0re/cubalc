@@ -1,7 +1,7 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "iter": 1714,
-  "commit": "43c4b4d767e36282db583218fcb42f629add446d",
+  "commit": "9219302f84f0960dc36645e9a9dd7eecd0849ebb",
   "version": "1.15.1185-usability",
   "feature": "LIFE_FORCE_COHERE soft-OOB fail-closed mesh_exchange",
   "proof": "1714_smx_life_force_cohere_soft_oob",
@@ -13,11 +13,11 @@
   "soft_oob_ok": true,
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1714,
-  "proofs": "1714_life_force_cohere+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS",
-  "head": "43c4b4d767e36282db583218fcb42f629add446d",
-  "pin_head": "43c4b4d767e36282db583218fcb42f629add446d",
-  "feat_head": "c43f1ff07351c828f89e9c9571fed8fcea483f0e",
+  "proofs": "1714_life_force_cohere+1620_flagship PASS",
+  "head": "9219302f",
+  "pin_head": "9219302f84f0960dc36645e9a9dd7eecd0849ebb",
+  "feat_head": "b57bd15065f78fc0dfccceac9f997726bdfd45c7",
   "past": "1713",
   "next": "we_autoheal",
-  "verified_at": "2026-08-25T19:59:04Z"
+  "verified_at": "2026-08-25T19:59:25Z"
 }
