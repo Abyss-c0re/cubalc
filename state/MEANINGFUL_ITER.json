@@ -1,0 +1,14 @@
+{
+  "schema": "cubalc.meaningful_iter.v1",
+  "iter": 1154,
+  "version": "1.5.3-break-continue",
+  "feature": "BREAK/CONTINUE loop control",
+  "proof": "programs/proof/12_break_continue.cubalc",
+  "proof_pass": true,
+  "asserts_ok": 4,
+  "smx_selftest": true,
+  "head": "fcfad0a60db951ca3c50bb86c46f4f2e2c1101f6",
+  "short": "fcfad0a",
+  "past": "9152410e",
+  "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT"
+}
