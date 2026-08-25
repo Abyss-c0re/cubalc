@@ -1,7 +1,7 @@
-HEAD=8548046154d37a2dd4e721aa180c66b798f05f6b
-SHORT=85480461
+HEAD=6f37aab1432c684f4e0f94cd6f066b45a7ab592c
+SHORT=6f37aab1
 MEANINGFUL_ITER=1695
 VERSION=1.15.1164-usability
-PROOFS=1695_interstellar+1694_heliosphere PASS
+PROOFS=1695_interstellar+smx-selftest PASS
 feature=INTERSTELLAR soft-OOB fail-closed mesh stability
 feat_head=95216237df1017fa6c4c8e445a309845cf8f6fa7
