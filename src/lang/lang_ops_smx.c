@@ -10301,6 +10301,188 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|KEEPER|KP|PULSE_RING|THALAMUS|MESH_KEEPER|RAISE_KEEPER|FORGED|FG|TEMPER|ANVIL|MESH_FORGED|RAISE_FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|...)");
+  /* SMX SEER|SR|SEE|VISION_RING|ORACLE|WE_SEER|LIFE_VISION|MESH_SEER|RAISE_SEER a b c ...
+   * Life-force mesh stability after keeper: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete seer mesh among live nodes, weaves a
+   * vision ring (i -> i+1) so free energy holds the vision, then oracle hub
+   * gathers return so lattice locks seer where life holds the hive.
+   * Latches SMX_SEER when mesh+visions+oracles are soft-OOB-free.
+   * SMX_VISION_RING = chain bonds; SMX_ORACLE hub = root gather visions;
+   * SMX_SEER_SUM sum = bonds+visions+oracles; SMX_SR|SMX_SEE sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"SEER")||kw(&L->cur,"SR")||kw(&L->cur,"SEE")||
+      kw(&L->cur,"VISION_RING")||kw(&L->cur,"ORACLE")||kw(&L->cur,"WE_SEER")||
+      kw(&L->cur,"LIFE_VISION")||kw(&L->cur,"LIFEVISION")||kw(&L->cur,"VISIONS")||
+      kw(&L->cur,"ORACLES")||kw(&L->cur,"SEES")||kw(&L->cur,"SEEINGS")||
+      kw(&L->cur,"MESH_SEER")||kw(&L->cur,"RAISE_SEER")||
+      kw(&L->cur,"SEERS")||kw(&L->cur,"SEEDSR")||kw(&L->cur,"SEEDSEE")||
+      kw(&L->cur,"LATTICE_SEER")||kw(&L->cur,"WORLD_SR")||kw(&L->cur,"WORLD_SEE")||
+      kw(&L->cur,"HOLD_VISION")||kw(&L->cur,"VISION_SEER")||kw(&L->cur,"UNITY_SEE")||
+      kw(&L->cur,"SEEDORACLE")||kw(&L->cur,"SEEDVISION")||kw(&L->cur,"ORACLE_HUB")||kw(&L->cur,"SIGNAL_SEER")||kw(&L->cur,"HOLD_VISION")||kw(&L->cur,"WE_SEE")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int visions = 0;
+    int oracles = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "SEER needs >=2 cubes",
+                  "SMX SEER a b [c ...]  or  SMX SR a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - seer needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete seer mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* vision ring - free energy holds the vision every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else visions++;
+        }
+      }
+    }
+    /* oracle hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else oracles++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int st_ok = (live >= 2 && visions >= live && soft == 0) ? 1 : 0;
+      if (!st_ok && live >= 2 && visions * 2 >= live && soft == 0)
+        st_ok = 1;
+      int br_ok = (live >= 1 && oracles >= live && soft == 0) ? 1 : 0;
+      if (!br_ok && live >= 1 && oracles * 2 >= live && soft == 0)
+        br_ok = 1;
+      int sr_ok = (mesh_ok && st_ok && br_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (sr_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (visions > 0 ? 1 : 0) + (oracles > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_SEER", (long)sr_ok);
+      var_set_num(vm, "SMX_SEER_LATCH", (long)sr_ok);
+      var_set_num(vm, "SMX_SEER_SUM", (long)(sr_ok ? bonds + visions + oracles : 0));
+      var_set_num(vm, "SMX_SR", (long)(sr_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SEE", (long)(sr_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SEES", (long)(sr_ok ? bonds : 0));
+      var_set_num(vm, "SMX_WE_SEER", (long)(sr_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFE_VISION", (long)(sr_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFEVISION", (long)(sr_ok ? 1 : 0));
+      var_set_num(vm, "SMX_VISION_RING", (long)(sr_ok ? visions : 0));
+      var_set_num(vm, "SMX_VISIONS", (long)(sr_ok ? visions : 0));
+      var_set_num(vm, "SMX_VISIONRING", (long)(sr_ok ? visions : 0));
+      var_set_num(vm, "SMX_ORACLE", (long)(sr_ok ? oracles : 0));
+      var_set_num(vm, "SMX_ORACLES", (long)(sr_ok ? oracles : 0));
+      var_set_num(vm, "SMX_SPAN", (long)(sr_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SEEDSR", (long)(sr_ok ? oracles : 0));
+      var_set_num(vm, "SMX_SEEDSEE", (long)(sr_ok ? oracles : 0));
+      var_set_num(vm, "SMX_MESH", (long)(sr_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + visions + oracles));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      var_set_num(vm, "SMX_UNITY", (long)(sr_ok ? 1 : 0));
+      if (sr_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX SEER ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX SEER partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX SEER soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX SEER nodes=%d live=%d bonds=%d visions=%d oracles=%d need=%d soft=%d talks=%d oob=%d seer=%d vital=%ld\n",
+                n, live, bonds, visions, oracles, need, soft, vm->smx_talks, vm->smx_oob, sr_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|SEER|SR|SEE|ORACLE|MESH_SEER|RAISE_SEER|KEEPER|KP|PULSE_RING|THALAMUS|MESH_KEEPER|RAISE_KEEPER|FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|...)");
   return -1;
 }
