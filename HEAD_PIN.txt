@@ -1,7 +1,0 @@
-HEAD=35d2e1b8d40ebe4fb0d1237f08a59e6b8586bce1
-SHORT=35d2e1b8
-MEANINGFUL_ITER=1697
-VERSION=1.15.1167-usability
-PROOFS=1697_localbubble+1620_flagship PASS
-feature=LOCALBUBBLE soft-OOB fail-closed mesh stability
-feat_head=97606ff0b8b33632edbd2aa0e2dfe0630491b667
