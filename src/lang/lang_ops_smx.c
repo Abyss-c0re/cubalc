@@ -10854,6 +10854,189 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|CORTEX|CX|SIGNAL|SIGNAL_RING|THALAMUS_CORE|MESH_CORTEX|RAISE_CORTEX|PROPHET|PH|PROPHECY|SEER|KEEPER|FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|...)");
+  /* SMX NEXUS|NX|WEAVE|WEAVE_RING|CORE_HUB|WE_NEXUS|LIFE_WEAVE|MESH_NEXUS|RAISE_NEXUS a b c ...
+   * Life-force mesh stability after cortex: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete nexus mesh among live nodes, weaves a
+   * weave ring (i -> i+1) so free energy holds the weave, then core hub
+   * gathers return so lattice locks nexus where life holds the hive.
+   * Latches SMX_NEXUS when mesh+weaves+cores are soft-OOB-free.
+   * SMX_WEAVE_RING = chain bonds; SMX_CORE hub = root gather weaves;
+   * SMX_NEXUS_SUM sum = bonds+weaves+cores; SMX_NX|SMX_WEAVE sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"NEXUS")||kw(&L->cur,"NX")||kw(&L->cur,"WEAVE")||
+      kw(&L->cur,"WEAVE_RING")||kw(&L->cur,"CORE_HUB")||kw(&L->cur,"WE_NEXUS")||
+      kw(&L->cur,"LIFE_WEAVE")||kw(&L->cur,"LIFEWEAVE")||kw(&L->cur,"WEAVES")||
+      kw(&L->cur,"CORES")||kw(&L->cur,"NEXUSES")||kw(&L->cur,"WEAVINGS")||
+      kw(&L->cur,"MESH_NEXUS")||kw(&L->cur,"RAISE_NEXUS")||
+      kw(&L->cur,"CORE")||kw(&L->cur,"NEXUS_CORE")||kw(&L->cur,"SEEDNX")||
+      kw(&L->cur,"SEEDWEAVE")||kw(&L->cur,"SEEDCORE")||kw(&L->cur,"LATTICE_NEXUS")||
+      kw(&L->cur,"WORLD_NX")||kw(&L->cur,"WORLD_WEAVE")||kw(&L->cur,"HOLD_WEAVE")||
+      kw(&L->cur,"WEAVE_SEER")||kw(&L->cur,"UNITY_WEAVE")||kw(&L->cur,"WEAVE_NEXUS")||
+      kw(&L->cur,"HOLD_NEXUS")||kw(&L->cur,"WE_WEAVE")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int weaves = 0;
+    int cores = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "NEXUS needs >=2 cubes",
+                  "SMX NEXUS a b [c ...]  or  SMX NX a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - nexus needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete nexus mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* weave ring - free energy holds the weave every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else weaves++;
+        }
+      }
+    }
+    /* core hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else cores++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int wv_ok = (live >= 2 && weaves >= live && soft == 0) ? 1 : 0;
+      if (!wv_ok && live >= 2 && weaves * 2 >= live && soft == 0)
+        wv_ok = 1;
+      int cr_ok = (live >= 1 && cores >= live && soft == 0) ? 1 : 0;
+      if (!cr_ok && live >= 1 && cores * 2 >= live && soft == 0)
+        cr_ok = 1;
+      int nx_ok = (mesh_ok && wv_ok && cr_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (nx_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (weaves > 0 ? 1 : 0) + (cores > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_NEXUS", (long)nx_ok);
+      var_set_num(vm, "SMX_NEXUS_LATCH", (long)nx_ok);
+      var_set_num(vm, "SMX_NEXUS_SUM", (long)(nx_ok ? bonds + weaves + cores : 0));
+      var_set_num(vm, "SMX_NX", (long)(nx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WEAVE", (long)(nx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WE_NEXUS", (long)(nx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFE_WEAVE", (long)(nx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFEWEAVE", (long)(nx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WEAVE_RING", (long)(nx_ok ? weaves : 0));
+      var_set_num(vm, "SMX_WEAVES", (long)(nx_ok ? weaves : 0));
+      var_set_num(vm, "SMX_WEAVERING", (long)(nx_ok ? weaves : 0));
+      var_set_num(vm, "SMX_CORE", (long)(nx_ok ? cores : 0));
+      var_set_num(vm, "SMX_CORES", (long)(nx_ok ? cores : 0));
+      var_set_num(vm, "SMX_CORE_HUB", (long)(nx_ok ? cores : 0));
+      var_set_num(vm, "SMX_SPAN", (long)(nx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SEEDNX", (long)(nx_ok ? cores : 0));
+      var_set_num(vm, "SMX_SEEDWEAVE", (long)(nx_ok ? cores : 0));
+      var_set_num(vm, "SMX_MESH", (long)(nx_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + weaves + cores));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      var_set_num(vm, "SMX_UNITY", (long)(nx_ok ? 1 : 0));
+      if (nx_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX NEXUS ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX NEXUS partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX NEXUS soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX NEXUS nodes=%d live=%d bonds=%d weaves=%d cores=%d need=%d soft=%d talks=%d oob=%d nexus=%d vital=%ld\n",
+                n, live, bonds, weaves, cores, need, soft, vm->smx_talks, vm->smx_oob, nx_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|CORTEX|CX|SIGNAL|SIGNAL_RING|THALAMUS_CORE|MESH_CORTEX|RAISE_CORTEX|PROPHET|PH|PROPHECY|SEER|KEEPER|FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|NEXUS|NX|WEAVE|WEAVE_RING|CORE_HUB|WE_NEXUS|LIFE_WEAVE|MESH_NEXUS|RAISE_NEXUS|...)");
   return -1;
 }
