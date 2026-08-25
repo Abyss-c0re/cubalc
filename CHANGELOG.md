@@ -1,3 +1,8 @@
+## 1.15.1170-usability — 1700 SMX COSMICWEB mesh life-force
+- Pure-C SMX COSMICWEB|CW|WEB|SPINE|ATTRACTOR|MESH_COSMICWEB|RAISE_COSMICWEB
+- Fail-closed soft-OOB: complete C(n,2) bonds, spine ring, attractor hub; latches SMX_COSMICWEBBED
+- Proof 1700 PASS (110 asserts); flagship 1620 PASS; smx-selftest green
+
 ## 1.15.1168-usability — 1698 SMX ASTROSPHERE mesh life-force
 - Pure-C SMX ASTROSPHERE|AS|ORBIT|HORIZON|ASTROSHELL|SHELL|MESH_ASTROSPHERE|RAISE_ASTROSPHERE
 - Fail-closed soft-OOB: complete C(n,2) bonds, orbit ring, horizon hub; latches SMX_ASTROSPHERED
