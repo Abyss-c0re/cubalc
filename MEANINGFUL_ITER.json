@@ -1,7 +1,7 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "iter": 1706,
-  "commit": "b757c14d47b5d3af03ab7d1443f8b1674edd696b",
+  "commit": "1daa39fe6176187b7769d7870e16591ab254f962",
   "version": "1.15.1176-usability",
   "feature": "SEER soft-OOB fail-closed mesh stability",
   "proof": "1706_atomic_printer_mesh_seer",
@@ -13,7 +13,7 @@
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1706,
   "proofs": "1706_seer+1620_flagship+1634_mesh_exchange PASS",
-  "head": "b757c14d",
-  "pin_head": "b757c14d47b5d3af03ab7d1443f8b1674edd696b",
-  "feat_head": "bc63b467dc92f36b92718d506b569caec4a204ea"
+  "head": "1daa39fe",
+  "pin_head": "1daa39fe6176187b7769d7870e16591ab254f962",
+  "feat_head": "11f4af3c1e42e4df79245c8eca502eaffe5bff1c"
 }

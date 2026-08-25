@@ -3,5 +3,5 @@ feature=SMX SEER mesh stability
 proof=1706_atomic_printer_mesh_seer
 asserts_fail=0
 VERSION=1.15.1176-usability
-feat_head=bc63b467dc92f36b92718d506b569caec4a204ea
-head=b757c14d47b5d3af03ab7d1443f8b1674edd696b
+feat_head=11f4af3c1e42e4df79245c8eca502eaffe5bff1c
+head=1daa39fe6176187b7769d7870e16591ab254f962
