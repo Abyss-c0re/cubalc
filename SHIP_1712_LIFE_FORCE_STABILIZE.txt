@@ -1,9 +1,10 @@
+SHIP 1712 LIFE_FORCE_STABILIZE
+proof: programs/proof/1712_smx_life_force_stabilize_soft_oob.cubalc PASS asserts_ok=47
+flagship: programs/proof/1620_atomic_printer_life_force.cubalc PASS asserts_ok=12
 MEANINGFUL_ITER=1712
-feature=LIFE_FORCE STABILIZE soft-OOB fail-closed mesh usability
-proof=1712_smx_life_force_stabilize_soft_oob
-PROOFS=1712 asserts_ok=47 + 1620 asserts_ok=12 + 1621 asserts_ok=18 + 1634 asserts_ok=56 PASS
-feat_head=2df82e6f69fb08f61116adfa9bc1370c8865b031
-pin_head=a39fc55d62c59fc6860d50014f0e111a7dc40f73
-past=1711
-next=we_autoheal
-verified_at=2026-08-25T19:45:55Z
+VERSION=1.15.1183-usability
+pin_head=1a960a97f2980532862d069a14a4089f234a0d76
+feat_head=1a960a97f2980532862d069a14a4089f234a0d76
+HEAD=1a960a97f2980532862d069a14a4089f234a0d76
+past=1711 next=we_autoheal
+verified_at=2026-08-25T19:46:15Z
