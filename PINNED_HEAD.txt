@@ -1,5 +1,5 @@
-HEAD=7fc008579315e79b212f605534a7255c7b8009de
-SHORT=7fc00857
+HEAD=551e4ae9240a25bcfc212a626f0a5eef433e96a6
+SHORT=551e4ae9
 MEANINGFUL_ITER=1707
 VERSION=1.15.1177-usability
 PROOFS=1707_prophet+1620_flagship+1634_mesh_exchange+1621_soft_oob PASS
@@ -7,5 +7,5 @@ feature=PROPHET soft-OOB fail-closed mesh stability
 feat_head=82bd62c0c864403d1b4d8d422a1e6159df5a8b06
 past=f3bbdc09
 next=we_autoheal
-verified_at=2026-08-25T18:19:12Z
+verified_at=2026-08-25T18:19:40Z
 pin_head==tip
