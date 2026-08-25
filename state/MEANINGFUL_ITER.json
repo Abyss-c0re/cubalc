@@ -8,9 +8,9 @@
   "smx_soft_oob": true,
   "smx_mesh_exchange": true,
   "smx_selftest": true,
-  "head": "b34440d4c641e898d55f903f7254e5d072670e8f",
+  "head": "c1abad1a4016df31596bb097ea64104f8bc8f1fe",
   "feature_head": "5892dba",
-  "note": "mesh_exchange seal/open + soft-OOB heal; fail-closed no key; life_force floor; HEAD past 9a3497ea",
-  "short": "b34440d",
+  "note": "mesh_exchange seal/open + soft-OOB heal; fail-closed no key; life_force floor; sealed at HEAD",
+  "short": "c1abad1",
   "past": "9a3497ea"
 }
