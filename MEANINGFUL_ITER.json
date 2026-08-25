@@ -1,7 +1,7 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "iter": 1708,
-  "commit": "3b3ee40961ba3fcdfa6c5636159b1a3d83da90e5",
+  "commit": "d07737026b4f112698f6fba0d78eb753d64523bc",
   "version": "1.15.1178-usability",
   "feature": "CORTEX soft-OOB fail-closed mesh stability",
   "proof": "1708_atomic_printer_mesh_cortex",
@@ -14,8 +14,8 @@
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1708,
   "proofs": "1708_cortex+1620_flagship+1634_mesh_exchange+1621_soft_oob PASS",
-  "head": "3b3ee409",
-  "pin_head": "3b3ee40961ba3fcdfa6c5636159b1a3d83da90e5",
+  "head": "d0773702",
+  "pin_head": "d07737026b4f112698f6fba0d78eb753d64523bc",
   "feat_head": "0486c801abba15e35ae3a0dbdc7f81898c8e5fe6",
   "past": "5ac6f94a",
   "next": "we_autoheal"
