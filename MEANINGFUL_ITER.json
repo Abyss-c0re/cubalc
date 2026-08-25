@@ -7,7 +7,7 @@
   "asserts_ok": 108,
   "flagship_ok": true,
   "smx_selftest_ok": true,
-  "commit": "PENDING",
-  "pin_head": "PENDING",
+  "commit": "c3f459a7aff475f2a568abecb9d0b40251b69c70",
+  "pin_head": "c3f459a7aff475f2a568abecb9d0b40251b69c70",
   "feature_note": "LOCALGROUP soft-OOB fail-closed mesh stability after LOCALBUBBLE"
 }
