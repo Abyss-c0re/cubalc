@@ -1,20 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "iter": 1704,
-  "commit": "PENDING",
+  "commit": "37d957fda46c502f7b7320dbef8b65c877e04a54",
   "version": "1.15.1174-usability",
-  "feature": "FORGED soft-OOB fail-closed mesh temper-ring anvil-hub stability",
+  "feature": "FORGED soft-OOB fail-closed mesh stability (temper ring + anvil hub)",
   "proof": "1704_atomic_printer_mesh_forged",
   "proof_ok": true,
   "asserts_ok": 110,
   "flagship_ok": true,
-  "flagship": "1620_atomic_printer_life_force",
-  "flagship_asserts_ok": 12,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1704,
-  "proofs": "1704_forged+1620_flagship PASS",
-  "head": "PENDING",
-  "pin_head": "PENDING",
-  "feat_head": "PENDING"
+  "proofs": "1704_forged+1620_flagship+1634_mesh_exchange PASS",
+  "head": "37d957fd",
+  "pin_head": "37d957fda46c502f7b7320dbef8b65c877e04a54",
+  "feat_head": "37d957fda46c502f7b7320dbef8b65c877e04a54"
 }

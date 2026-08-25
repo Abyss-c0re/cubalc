@@ -1,1 +1,7 @@
-iter=1704 feature=FORGED version=1.15.1174-usability proof=PASS asserts=110 flagship=1620 PASS
+feature=SMX FORGED temper-ring + anvil-hub soft-OOB fail-closed
+MEANINGFUL_ITER=1704
+VERSION=1.15.1174-usability
+proof=1704_atomic_printer_mesh_forged PASS asserts=110
+flagship=1620_atomic_printer_life_force PASS asserts=12
+head=37d957fda46c502f7b7320dbef8b65c877e04a54
+feat_head=37d957fda46c502f7b7320dbef8b65c877e04a54
