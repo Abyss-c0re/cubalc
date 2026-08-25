@@ -1,10 +1,16 @@
 {
   "iter": 1703,
-  "version": "1.15.1173-usability",
   "feature": "OMNIVERSE soft-OOB fail-closed mesh stability",
   "proof": "1703_atomic_printer_mesh_omniverse",
-  "proofs": "1703_omniverse+1620_flagship PASS",
-  "head_note": "SMX OMNIVERSE|OV|OMNI membrane ring + bulk hub life-force",
+  "version": "1.15.1173-usability",
+  "proof_ok": true,
+  "asserts_ok": 110,
+  "flagship_ok": true,
+  "mesh_exchange_ok": true,
+  "smx_selftest_ok": true,
+  "commit": "93d73051990d050cc661497163cd20df27d8b710",
+  "pin_head": "93d73051990d050cc661497163cd20df27d8b710",
   "MEANINGFUL_ITER": 1703,
-  "feat": "SMX OMNIVERSE membrane+bulk life-force"
+  "proofs": "1703_omniverse+1620_flagship PASS",
+  "feat_head": "93d73051990d050cc661497163cd20df27d8b710"
 }
