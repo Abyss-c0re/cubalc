@@ -7,7 +7,7 @@
   "proof": "programs/proof/1720_atomic_printer_mesh_dendrite.cubalc",
   "updated": 1787694300,
   "status": "PASS",
-  "head": "PENDING",
+  "head": "8b385999e7c62c5363316573b1f37108e34a4cd0",
   "schema": "cubalc.meaningful_iter/v1",
   "item": "1720 atomic printer mesh dendrite",
   "item_id": "mi_1720_atomic_printer_mesh_dendrite",
@@ -28,6 +28,6 @@
   "mesh_exchange": "dendrite+branch+spine+arbor+stabilize",
   "unity": 1.0,
   "note": "SMX MESH DENDRITE stability board; 78 asserts; flagship 1620 12/12; soft_oob fail-closed; life-force dendrite after axon",
-  "commit": "PENDING",
+  "commit": "8b385999",
   "host_finish": true
 }
