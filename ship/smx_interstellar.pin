@@ -1,0 +1,6 @@
+INTERSTELLAR 1695 soft-OOB fail-closed
+feature=SMX INTERSTELLAR mesh stability
+proof=1695_atomic_printer_mesh_interstellar
+VERSION=1.15.1164-usability
+HEAD=4ca1bc5838687e064d21518423548fe02a9f2dab
+feat=95216237df1017fa6c4c8e445a309845cf8f6fa7
