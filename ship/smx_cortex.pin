@@ -7,4 +7,5 @@ VERSION=1.15.1178-usability
 next=we_autoheal
 verified=PASS
 feat_head=de48cf56a5d7b0519b27532b80b5bd98ac7b685f
-pin_head=e90bf2e20c196d5362e925113d20024304f01155
+pin_head=aa65a95254d59a67d65943cac903b0f12bc4e6d8
+past=bb314468
