@@ -1,11 +1,11 @@
+HEAD=f24fd1e51c43e18e9cc39775d7d91d0c814756b2
+SHORT=f24fd1e5
+MEANINGFUL_ITER=1711
+VERSION=1.15.1182-usability
+PROOFS=1711_mesh_stability+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS
 feature=MESH_STABILITY soft-OOB fail-closed mesh_exchange
-iter=1711
-version=1.15.1182-usability
-proof=1711_smx_mesh_stability_soft_oob+1634_mesh_exchange+1621_soft_oob+1620_flagship
-asserts_fail=0
-asserts_ok=39+56+18+12
-feat_head=6c6f23005d073dbbf823f46aaf61d7a3d8834ff6
-pin_head=87ef3301431b4731b3e30af128ce9c610a572f71
-next=we_autoheal
-verified=PASS
+feat_head=185cce50bcaf400a85506ac5e0d3dc3b3be982eb
 past=1710
+next=we_autoheal
+verified_at=2026-08-25T19:31:41Z
+pin_head==tip
