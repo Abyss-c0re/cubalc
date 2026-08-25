@@ -8,3 +8,4 @@ asserts_fail=0
 note=SMX MICROGLIA|SURVEY|PROCESS mesh+survey ring+process hub after soft-OOB; fail-closed ghosts
 unity=1.0
 version=1.15.1189-usability
+commit=e95e36a0
