@@ -1,11 +1,10 @@
-HEAD=5e5f4e53770c9f77ee0ab31bcaa65ec03ac73d53
-SHORT=5e5f4e53
-MEANINGFUL_ITER=1710
-VERSION=1.15.1180-usability
-PROOFS=1710_we_autoheal+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS
-feature=WE_AUTOHEAL soft-OOB fail-closed + mesh_exchange
-feat_head=2ebe6fb44612ad06ea63469a0aaa5b45fcd8f4f8
-past=1709
+HEAD=44393ed750484a55a14929f6d239459616873136
+SHORT=44393ed7
+MEANINGFUL_ITER=1711
+VERSION=1.15.1181-usability
+PROOFS=1711_mesh_stability+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS
+feature=MESH_STABILITY soft-OOB fail-closed + mesh_exchange
+feat_head=44393ed750484a55a14929f6d239459616873136
+past=1710
 next=we_autoheal
-verified_at=2026-08-25T19:29:43Z
-pin_head==tip
+verified_at=2026-08-25T19:30:08Z
