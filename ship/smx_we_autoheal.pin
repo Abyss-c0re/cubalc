@@ -8,6 +8,6 @@ flagship=1620 PASS
 soft_oob=1621 PASS
 mesh_exchange=1634 PASS
 feat_head=2ebe6fb44612ad06ea63469a0aaa5b45fcd8f4f8
-pin_head=933879546e85d02964645230681f13c07db77264
+pin_head=dac25c2155c191b5f4417d23ba8170bb122c3a0b
 next=we_autoheal
 verified=PASS
