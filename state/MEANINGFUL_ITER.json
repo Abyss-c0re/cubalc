@@ -7,9 +7,10 @@
   "proof_pass": true,
   "asserts_ok": 4,
   "smx_selftest": true,
-  "head": "085a7114d2fcbe1f064c5fdc9ee65e952745513c",
-  "short": "085a711",
+  "head": "7ea7ff35c01b8fdad378187034a5f7c3c058fc6f",
+  "short": "7ea7ff3",
   "past": "9152410e",
+  "tag": "MEANINGFUL_ITER-1154",
   "bundle": "state/cubalc-1.5.3-break-continue.bundle",
   "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT"
 }
