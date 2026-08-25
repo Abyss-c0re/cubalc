@@ -4,7 +4,7 @@ proof=1714_smx_life_force_cohere_soft_oob
 PROOFS=1714 asserts_ok=49 + 1620 asserts_ok=12 PASS
 VERSION=1.15.1185-usability
 feat_head=b57bd15065f78fc0dfccceac9f997726bdfd45c7
-pin_head=6de22c92aba502fa4e4d8036dd6e7b9e43a4e54e
+pin_head=79908afb60fd61ae0c777e738aecba6bce804797
 past=1713
 next=we_autoheal
 verified_at=2026-08-25T19:59:02Z
