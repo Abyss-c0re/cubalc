@@ -8,6 +8,9 @@
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
-  "commit": "c4fef1d30cc856635350c57d593744e8e4d51392",
-  "pin_head": "c4fef1d30cc856635350c57d593744e8e4d51392"
+  "commit": "2f90225970195d93eafacf55564e73a882120811",
+  "pin_head": "2f90225970195d93eafacf55564e73a882120811",
+  "MEANINGFUL_ITER": 1700,
+  "proofs": "1700_cosmicweb+1620_flagship PASS",
+  "feat_head": "d122d6aa"
 }
