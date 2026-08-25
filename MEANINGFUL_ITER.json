@@ -1,16 +1,13 @@
 {
-  "iter": 1702,
-  "feature": "MULTIVERSE soft-OOB fail-closed mesh stability",
-  "proof": "1702_atomic_printer_mesh_multiverse",
-  "version": "1.15.1172-usability",
+  "iter": 1703,
+  "feature": "OMNIVERSE soft-OOB fail-closed mesh stability",
+  "proof": "1703_atomic_printer_mesh_omniverse",
+  "version": "1.15.1173-usability",
   "proof_ok": true,
   "asserts_ok": 110,
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
-  "commit": "811231ab414337f20d201d2d38f87383ace85d41",
-  "pin_head": "ffa28c91a6e8caf9bd0eb3101ed5d1d6e1c77f64",
-  "MEANINGFUL_ITER": 1702,
-  "proofs": "1702_multiverse+1620_flagship PASS",
-  "feat_head": "811231ab414337f20d201d2d38f87383ace85d41"
+  "MEANINGFUL_ITER": 1703,
+  "proofs": "1703_omniverse+1620_flagship PASS"
 }
