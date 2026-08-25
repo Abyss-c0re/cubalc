@@ -1,11 +1,11 @@
-HEAD=8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897
-SHORT=8b86fe1a
+HEAD=e104bef783ba22881e62d339ece92fd3ca1357f7
+SHORT=e104bef7
 MEANINGFUL_ITER=1713
 VERSION=1.15.1184-usability
 PROOFS=1713_resonate+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=47+12+18+56
 feature=RESONATE soft-OOB fail-closed mesh life-force chord
 feat_head=8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897
-pin_head=8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897
+pin_head=e104bef783ba22881e62d339ece92fd3ca1357f7
 past=1712
 next=we_autoheal
-verified_at=2026-08-25T19:57:48Z
+verified_at=2026-08-25T19:58:31Z
