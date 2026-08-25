@@ -9,9 +9,10 @@
   "smx_soft_oob": true,
   "smx_mesh_exchange": true,
   "smx_selftest": true,
-  "head": "02eccda51c9fc7d93f7e380062f147930283c551",
+  "stable_exchanges": true,
+  "head": "8eca93e121e8326d7d1e664551201ad991142eb1",
   "feature_head": "e6f2a46",
-  "note": "soft-OOB fail-closed mesh_exchange life-force sealed; proofs PASS; HEAD past c4ff19ef",
-  "short": "02eccda",
+  "note": "soft-OOB fail-closed mesh_exchange life-force sealed; proofs PASS; flagship-lite 14 as 1620 spirit",
+  "short": "8eca93e",
   "past": "c4ff19ef"
 }
