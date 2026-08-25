@@ -1,0 +1,6 @@
+MEANINGFUL_ITER=1715
+feature=WE_CHORUS soft-OOB fail-closed mesh life-force ring
+proof=1715_smx_we_chorus_soft_oob
+VERSION=1.15.1186-usability
+past=1714
+next=we_autoheal
