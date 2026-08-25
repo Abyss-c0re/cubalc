@@ -1,18 +1,20 @@
 {
-  "schema": "cubalc.meaningful_iter.v1",
-  "iter": 1157,
-  "version": "1.5.4-smx-mesh-exchange",
+  "MEANINGFUL_ITER": 1157,
+  "VERSION": "1.5.4-smx-mesh-exchange",
+  "HEAD": "d470fb3ed579b9a4e8d3fee499a72e04313eab58",
+  "SHORT": "d470fb3",
   "feature": "SMX mesh_exchange soft-OOB fail-closed life-force",
-  "proof": "programs/proof/13_smx_mesh_exchange.cubalc",
-  "proof14": "programs/proof/14_smx_life_force_mesh.cubalc",
-  "proof_pass": true,
-  "smx_soft_oob": true,
-  "smx_mesh_exchange": true,
-  "smx_selftest": true,
+  "proofs": {
+    "smx-selftest": "PASS",
+    "smx-soft-oob": "PASS",
+    "smx-mesh-exchange": "PASS",
+    "11_smx_soft_oob_mesh": "PASS",
+    "13_smx_mesh_exchange": "PASS",
+    "14_smx_life_force_mesh": "PASS"
+  },
   "stable_exchanges": true,
-  "head": "98f58c10af470778731962e6b7b493acf280eee0",
+  "fail_closed": true,
+  "life_force": 0.9403,
   "feature_head": "e6f2a46",
-  "note": "soft-OOB fail-closed mesh_exchange life-force sealed; proofs PASS; flagship-lite 14 as 1620 spirit",
-  "short": "98f58c1",
-  "past": "c4ff19ef"
+  "sealed_at": 1787662162
 }
