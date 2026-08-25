@@ -1,3 +1,8 @@
+## 1.15.1162-usability — 1692 SMX THERMOSPHERE mesh life-force
+- Pure-C SMX THERMOSPHERE|THERMO|HEAT|THERMAL|EXOSPHERE|WARM|MESH_THERMOSPHERE|RAISE_THERMOSPHERE
+- Fail-closed soft-OOB: complete C(n,2) bonds, heat ring, thermal hub; latches SMX_THERMOSPHERED
+- Proof 1692 PASS; flagship 1620 PASS; smx-selftest green
+
 ## 1.15.1157-usability — SMX ATMOSPHERE mesh-stability (life-force)
 
 ## 1.15.1161-usability — 1691 SMX IONOSPHERE mesh life-force
