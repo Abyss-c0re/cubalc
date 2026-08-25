@@ -1,3 +1,10 @@
+## 1.15.1154-usability — SMX BIOSPHERE mesh-stability (life-force)
+
+- SMX BIOSPHERE|GAIA|BIOME|ECO|LIFEWEB|HABITAT|MESH_BIOSPHERE|RAISE_BIOSPHERE
+- Fail-closed soft-OOB: clears thrash, complete biome mesh, cycle ring, gaia hub
+- Latches SMX_BIOSPHERED|SMX_GAIA|SMX_ECO|SMX_BIOMES|SMX_CYCLES|SMX_GAIAE when soft-OOB-free
+- Proof 1684 atomic_printer_mesh_biosphere; flagship aegis/pneuma green
+
 ## 1.15.1139-usability — SMX SOLSTICE mesh-stability (life-force)
 
 - SMX SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE
