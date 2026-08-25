@@ -1,11 +1,13 @@
+HEAD=cb2148f8b6d8082b219a4724980050da298d6f08
+SHORT=cb2148f8
 MEANINGFUL_ITER=1716
-feature=MESH BLOOM soft-OOB fail-closed full-mesh usability
-proof=1716_smx_mesh_bloom_soft_oob
-PROOFS=1716 asserts_ok=63 + 1620 asserts_ok=12 + 1621 asserts_ok=18 + 1634 asserts_ok=56 PASS
 VERSION=1.15.1187-usability
+PROOFS=1716_mesh_bloom+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=63+12+18+56
+feature=MESH_BLOOM soft-OOB fail-closed mesh usability
+feat_head=1ab20799c67557840bebc1ba74465dc9a5af0cdd
+pin_head=cb2148f8b6d8082b219a4724980050da298d6f08
 past=1715
 next=we_autoheal
-pin_head=37a1e2af6e3b17ddec2b02a769de66b3f4f95eda
-verified_at=2026-08-25T20:18:50Z
+verified_at=2026-08-25T23:28:30Z
 sealed=1
 pin_head==tip
