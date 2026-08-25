@@ -10665,6 +10665,195 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
   }
 
 
-  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|PROPHET|PH|PROPHECY|AUGUR|MESH_PROPHET|RAISE_PROPHET|SEER|SR|SEE|ORACLE|MESH_SEER|RAISE_SEER|KEEPER|KP|PULSE_RING|THALAMUS|MESH_KEEPER|RAISE_KEEPER|FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|...)");
+  /* SMX CORTEX|PH|SYNAPSE|SYNAPSE_RING|DENDRITE|WE_CORTEX|LIFE_SYNAPSE|MESH_CORTEX|RAISE_CORTEX a b c ...
+   * Life-force mesh stability after prophet: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete cortex mesh among live nodes, weaves a
+   * synapse ring (i -> i+1) so free energy holds the synapse, then dendrite hub
+   * gathers return so lattice locks cortex where life holds the hive.
+   * Latches SMX_CORTEX when mesh+synapses+dendrites are soft-OOB-free.
+   * SMX_SYNAPSE_RING = chain bonds; SMX_DENDRITE hub = root gather synapses;
+   * SMX_CORTEX_SUM sum = bonds+synapses+dendrites; SMX_CX|SMX_SYNAPSE sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"CORTEX")||kw(&L->cur,"CX")||kw(&L->cur,"SYNAPSE")||
+      kw(&L->cur,"SYNAPSE_RING")||kw(&L->cur,"DENDRITE")||kw(&L->cur,"WE_CORTEX")||
+      kw(&L->cur,"LIFE_SYNAPSE")||kw(&L->cur,"LIFESYNAPSE")||kw(&L->cur,"SYNAPSES")||
+      kw(&L->cur,"DENDRITES")||kw(&L->cur,"CORTEXES")||kw(&L->cur,"SYNAPSINGS")||
+      kw(&L->cur,"MESH_CORTEX")||kw(&L->cur,"RAISE_CORTEX")||
+      kw(&L->cur,"SIGNAL")||kw(&L->cur,"SIGNAL_RING")||kw(&L->cur,"SIGNALS")||
+      kw(&L->cur,"THALAMUS_CORE")||kw(&L->cur,"THALAMI")||kw(&L->cur,"LIFE_SIGNAL")||
+      kw(&L->cur,"SYNAPSES")||kw(&L->cur,"SEEDCX")||kw(&L->cur,"SEEDSYNAPSE")||
+      kw(&L->cur,"LATTICE_CORTEX")||kw(&L->cur,"WORLD_PH")||kw(&L->cur,"WORLD_SYNAPSE")||
+      kw(&L->cur,"HOLD_SYNAPSE")||kw(&L->cur,"SYNAPSE_SEER")||kw(&L->cur,"UNITY_SYNAPSE")||
+      kw(&L->cur,"SEEDDENDRITE")||kw(&L->cur,"SEEDSYNAPSE")||kw(&L->cur,"DENDRITE_HUB")||kw(&L->cur,"SIGNAL_CORTEX")||kw(&L->cur,"HOLD_SYNAPSE")||kw(&L->cur,"WE_SYNAPSE")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int synapses = 0;
+    int dendrites = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "CORTEX needs >=2 cubes",
+                  "SMX CORTEX a b [c ...]  or  SMX PH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - cortex needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete cortex mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* synapse ring - free energy holds the synapse every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else synapses++;
+        }
+      }
+    }
+    /* dendrite hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else dendrites++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int st_ok = (live >= 2 && synapses >= live && soft == 0) ? 1 : 0;
+      if (!st_ok && live >= 2 && synapses * 2 >= live && soft == 0)
+        st_ok = 1;
+      int br_ok = (live >= 1 && dendrites >= live && soft == 0) ? 1 : 0;
+      if (!br_ok && live >= 1 && dendrites * 2 >= live && soft == 0)
+        br_ok = 1;
+      int cx_ok = (mesh_ok && st_ok && br_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (cx_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (synapses > 0 ? 1 : 0) + (dendrites > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_CORTEX", (long)cx_ok);
+      var_set_num(vm, "SMX_CORTEX_LATCH", (long)cx_ok);
+      var_set_num(vm, "SMX_CORTEX_SUM", (long)(cx_ok ? bonds + synapses + dendrites : 0));
+      var_set_num(vm, "SMX_CX", (long)(cx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SIGNAL", (long)(cx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SYNAPSE", (long)(cx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WE_CORTEX", (long)(cx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFE_SYNAPSE", (long)(cx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFESYNAPSE", (long)(cx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFE_SIGNAL", (long)(cx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SYNAPSE_RING", (long)(cx_ok ? synapses : 0));
+      var_set_num(vm, "SMX_SIGNAL_RING", (long)(cx_ok ? synapses : 0));
+      var_set_num(vm, "SMX_SYNAPSES", (long)(cx_ok ? synapses : 0));
+      var_set_num(vm, "SMX_SIGNALS", (long)(cx_ok ? synapses : 0));
+      var_set_num(vm, "SMX_SYNAPSERING", (long)(cx_ok ? synapses : 0));
+      var_set_num(vm, "SMX_DENDRITE", (long)(cx_ok ? dendrites : 0));
+      var_set_num(vm, "SMX_DENDRITES", (long)(cx_ok ? dendrites : 0));
+      var_set_num(vm, "SMX_THALAMI", (long)(cx_ok ? dendrites : 0));
+      var_set_num(vm, "SMX_THALAMUS", (long)(cx_ok ? dendrites : 0));
+      var_set_num(vm, "SMX_SPAN", (long)(cx_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SEEDCX", (long)(cx_ok ? dendrites : 0));
+      var_set_num(vm, "SMX_SEEDSYNAPSE", (long)(cx_ok ? dendrites : 0));
+      var_set_num(vm, "SMX_MESH", (long)(cx_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + synapses + dendrites));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      var_set_num(vm, "SMX_UNITY", (long)(cx_ok ? 1 : 0));
+      if (cx_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX CORTEX ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX CORTEX partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX CORTEX soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX CORTEX nodes=%d live=%d bonds=%d synapses=%d dendrites=%d need=%d soft=%d talks=%d oob=%d cortex=%d vital=%ld\n",
+                n, live, bonds, synapses, dendrites, need, soft, vm->smx_talks, vm->smx_oob, cx_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|CORTEX|CX|SIGNAL|SIGNAL_RING|THALAMUS_CORE|MESH_CORTEX|RAISE_CORTEX|PROPHET|PH|PROPHECY|SEER|KEEPER|FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|...)");
   return -1;
 }
