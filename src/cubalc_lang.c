@@ -44,6 +44,7 @@ typedef struct {
   char json_src[CUBALC_HOST_STR_MAX]; /* sticky JSON plate for multi-key SYS JSON */
   int last_code;
   long last_n;
+  int ctrl; /* 0=run 1=break 2=continue */
 } VM;
 
 static void fail(VM *vm, const char *msg) {
@@ -1688,6 +1689,17 @@ static int parse_form(VM *vm, Lex *L){
     if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,"decide %ld",d);
     bump(vm); return 1;
   }
+  /* loop control — usable inside LOOP / WHILE bodies */
+  if (kw(&L->cur,"BREAK")||kw(&L->cur,"STOP")){
+    lex_next(L);
+    vm->ctrl = 1;
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")){
+    lex_next(L);
+    vm->ctrl = 2;
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"VIZ")||kw(&L->cur,"SPIN")||kw(&L->cur,"SHOW")||kw(&L->cur,"HELLO")||
       kw(&L->cur,"WAIT")||kw(&L->cur,"SLEEP")){
     while (L->cur.kind!=TK_NL && L->cur.kind!=TK_EOF) lex_next(L);
@@ -1709,9 +1721,13 @@ static int parse_form(VM *vm, Lex *L){
     if (depth!=0){ fail(vm,"LOOP without END"); return -1; }
     for (long t=0;t<times && !vm->fatal;t++){
       long *it=var_slot(vm,"IT",1); if (it) *it=t;
+      vm->ctrl = 0;
       Lex body=save;
       if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      if (vm->ctrl == 1){ vm->ctrl = 0; break; }      /* BREAK */
+      if (vm->ctrl == 2){ vm->ctrl = 0; continue; }   /* CONTINUE */
     }
+    vm->ctrl = 0;
     if (kw(&L->cur,"END")) lex_next(L);
     bump(vm); return 1;
   }
@@ -1731,11 +1747,16 @@ static int parse_form(VM *vm, Lex *L){
     Lex end_tok=*L;
     long guard=0;
     while (cond && !vm->fatal && guard++<100000){
+      vm->ctrl = 0;
       Lex body=body_start;
       if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      if (vm->ctrl == 1){ vm->ctrl = 0; break; }      /* BREAK */
+      if (vm->ctrl == 2){ vm->ctrl = 0; /* CONTINUE falls to cond re-eval */ }
+      else vm->ctrl = 0;
       Lex clex=cond_start;
       cond=parse_expr(vm,&clex);
     }
+    vm->ctrl = 0;
     *L=end_tok;
     if (kw(&L->cur,"END")) lex_next(L);
     bump(vm); return 1;
@@ -1780,7 +1801,7 @@ static int parse_form(VM *vm, Lex *L){
 
 
 static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2){
-  while (!vm->fatal){
+  while (!vm->fatal && !vm->ctrl){
     skip_nl(L);
     if (L->cur.kind==TK_EOF) break;
     if (stop1 && kw(&L->cur,stop1)) break;
@@ -1788,6 +1809,7 @@ static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2
     int r=parse_form(vm,L);
     if (r<0) return -1;
     if (r==0) break;
+    if (vm->ctrl) break;
   }
   return vm->fatal ? -1 : 0;
 }

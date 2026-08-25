@@ -1,0 +1,46 @@
+# Proof 12 — LOOP BREAK / CONTINUE usability
+# BREAK exits the loop early; CONTINUE skips to next iteration.
+# Expect: asserts all pass, n reaches 3 via break, odds summed via continue.
+
+LET n = 0
+LOOP 10
+  LET n = n + 1
+  IF n == 3 THEN
+    BREAK
+  END
+END
+ASSERT n == 3
+
+LET sum = 0
+LET i = 0
+LOOP 6
+  LET i = i + 1
+  IF i % 2 == 0 THEN
+    CONTINUE
+  END
+  LET sum = sum + i
+END
+# odds 1+3+5 = 9
+ASSERT sum == 9
+
+LET w = 0
+WHILE w < 20
+  LET w = w + 1
+  IF w == 4 THEN
+    BREAK
+  END
+END
+ASSERT w == 4
+
+LET s2 = 0
+LET j = 0
+WHILE j < 6
+  LET j = j + 1
+  IF j % 2 == 0 THEN
+    CONTINUE
+  END
+  LET s2 = s2 + j
+END
+ASSERT s2 == 9
+
+PRINT "break_continue_ok" n sum w s2

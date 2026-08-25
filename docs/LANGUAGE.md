@@ -79,3 +79,9 @@ Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law
 | `PROPHECY` / `SUMMON` | alias of `MANIFEST` |
 
 Not C. Not Lua. CubalC verbs only on the hot path.
+
+## Loop control
+
+`BREAK` / `STOP` — exit nearest `LOOP`/`WHILE`.
+`CONTINUE` / `NEXT` — skip to next iteration.
+`IT` is the 0-based loop index inside `LOOP`.
