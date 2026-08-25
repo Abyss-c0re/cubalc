@@ -1,11 +1,11 @@
-HEAD=0582398ab23b83a01f1b0b60be959d265bb359b9
-SHORT=0582398a
+HEAD=
+SHORT=
 MEANINGFUL_ITER=1709
 VERSION=1.15.1179-usability
 PROOFS=1709_nexus+1620_flagship+1634_mesh_exchange+1621_soft_oob PASS
 feature=NEXUS soft-OOB fail-closed mesh stability
-feat_head=110c07902feba7a4bdcf9806b3bd096b7f05da03
+feat_head=
 past=1708
 next=we_autoheal
-verified_at=2026-08-25T19:08:13Z
+verified_at=2026-08-25T19:08:25Z
 pin_head==tip
