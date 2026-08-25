@@ -9,12 +9,11 @@
   "asserts_fail": 0,
   "flagship_ok": true,
   "mesh_exchange_ok": true,
-  "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1705,
   "proofs": "1705_keeper+1620_flagship+1634_mesh_exchange PASS",
-  "updated": "2026-08-25T20:22:05+0300",
-  "commit": "784863bdbd481c76d709c9b7196e01738ca5ec8a",
-  "head": "784863bd",
-  "pin_head": "784863bdbd481c76d709c9b7196e01738ca5ec8a",
-  "feat_head": "784863bdbd481c76d709c9b7196e01738ca5ec8a"
+  "updated": "2026-08-25T20:23:06+03:00",
+  "commit": "a857a078fcd66806eb00364e2cc6c2678e98ab8b",
+  "head": "a857a078",
+  "pin_head": "a857a078fcd66806eb00364e2cc6c2678e98ab8b",
+  "feat_head": "784863bd"
 }
