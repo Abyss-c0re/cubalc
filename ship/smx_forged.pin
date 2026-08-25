@@ -1,2 +1,5 @@
-iter=1704 feature=FORGED sha=8d08f14501887382579d14273d2951d1c1b5488e head=8d08f145 proof=PASS asserts=110
-flagship=1620 PASS asserts=12 version=1.15.1174-usability
+MEANINGFUL_ITER=1704
+VERSION=1.15.1174-usability
+feature=FORGED soft-OOB fail-closed mesh + temper ring + anvil hub
+proof=1704_atomic_printer_mesh_forged PASS
+flagship=1620 PASS
