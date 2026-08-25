@@ -1,4 +1,4 @@
-HEAD=d2e8c1819807658ca480e0ba05969df34a5b1f7c
+HEAD=a912d8d3575c5c3990aa5a4ba1280bdecf307dcd
 MEANINGFUL_ITER=1702
 feature=MULTIVERSE soft-OOB fail-closed mesh stability
 version=1.15.1172-usability
