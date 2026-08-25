@@ -7,8 +7,8 @@
   "proof_pass": true,
   "asserts_ok": 4,
   "smx_selftest": true,
-  "head": "fcfad0a60db951ca3c50bb86c46f4f2e2c1101f6",
-  "short": "fcfad0a",
-  "past": "9152410e",
-  "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT"
+  "head": "bbcd4a6cc53f986511d9d0f47d705bf1f0336740",
+  "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT; HEAD advanced past prior pin",
+  "short": "bbcd4a6",
+  "past": "9152410e"
 }
