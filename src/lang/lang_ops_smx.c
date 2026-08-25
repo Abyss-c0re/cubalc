@@ -6732,6 +6732,355 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA|SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE|HELIOS|ORBIT|ECLIPSE|APHELION|PERIHELION|PHOTON|MESH_HELIOS|RAISE_HELIOS|NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA|PULSAR|BEACON|SPIN|MAGNETAR|JET|PULSE_STAR|MESH_PULSAR|RAISE_PULSAR|QUASAR|BLAZAR|ACCRETION|JETSTREAM|DISK|EVENTHORIZON|MESH_QUASAR|RAISE_QUASAR|COMET|METEOR|TAIL|COMA|DEBRIS|NUCLEUS_ICE|MESH_COMET|RAISE_COMET|SUPERNOVA|NOVA|SHOCKWAVE|EJECTA|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA|GALAXY|SPIRAL|ARM|CORE|HALO|BULGE|MESH_GALAXY|RAISE_GALAXY|CONSTELLATION|ASTERISM|STARFIELD|GUIDESTAR|NAVSTAR|LODGE|MESH_CONSTELLATION|RAISE_CONSTELLATION|ZODIAC|ECLIPTIC|HOUSE|SIGN|PATH|POLE|MESH_ZODIAC|RAISE_ZODIAC|FIRMAMENT|VAULT|DOME|SKYVAULT|KEYSTONE|HEAVEN|MESH_FIRMAMENT|RAISE_FIRMAMENT|AETHER|QUINTESSENCE|ETHER|ESSENCE|PLENUM|AURA|MESH_AETHER|RAISE_AETHER|NOOSPHERE|LOGOS|THOUGHT|AKASHA|ANIMAE|MESH_NOOSPHERE|RAISE_NOOSPHERE|PNEUMA|PRANA|BREATHWORLD|SOULFIRE|SPIRITUS|WORLDSOUL|MESH_PNEUMA|RAISE_PNEUMA|AEGIS|SHIELD|WARD|BULWARK|PAVIS|RAMPART|MESH_AEGIS|RAISE_AEGIS|BIOSPHERE|GAIA|BIOME|ECO|LIFEWEB|HABITAT|MESH_BIOSPHERE|RAISE_BIOSPHERE");
+  /* SMX HYDROSPHERE|OCEAN|MARINE|WATERWEB|AQUASPHERE|HYDRO|MESH_HYDROSPHERE|RAISE_HYDROSPHERE a b c ...
+   * Life-force hydrosphere after biosphere: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete hydros mesh among live nodes, weaves a
+   * current ring (i -> i+1) so free energy fills the hydrosphere, then ocean hub
+   * gathers return so lattice raises a hydrosphere lock where life holds the hive.
+   * Latches SMX_HYDROSPHERED when mesh+eddies+tides are soft-OOB-free.
+   * SMX_CURRENTS = chain bonds; SMX_BASIN hub = root gather pulses;
+   * SMX_HYDROSPHERE sum = bonds+eddies+tides; SMX_OCEAN|SMX_MARINE sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"HYDROSPHERE")||kw(&L->cur,"OCEAN")||kw(&L->cur,"MARINE")||
+      kw(&L->cur,"WATERWEB")||kw(&L->cur,"AQUASPHERE")||kw(&L->cur,"HYDRO")||
+      kw(&L->cur,"MESH_HYDROSPHERE")||kw(&L->cur,"RAISE_HYDROSPHERE")||
+      kw(&L->cur,"HYDROSPHERES")||kw(&L->cur,"OCEANS")||kw(&L->cur,"MARINES")||
+      kw(&L->cur,"CURRENTS")||kw(&L->cur,"BASINS")||kw(&L->cur,"SEEDHYDRO")||
+      kw(&L->cur,"LATTICE_HYDROSPHERE")||kw(&L->cur,"WORLD_WATER")||
+      kw(&L->cur,"CURRENT_RING")||kw(&L->cur,"PULSE_HYDROSPHERE")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int eddies = 0;
+    int tides = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "HYDROSPHERE needs >=2 cubes",
+                  "SMX HYDROSPHERE a b [c ...]  or  SMX OCEAN a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - hydrosphere needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete hydros mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* current ring - free energy holds every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else eddies++;
+        }
+      }
+    }
+    /* ocean hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else tides++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int cycle_ok = (live >= 2 && eddies >= live && soft == 0) ? 1 : 0;
+      if (!cycle_ok && live >= 2 && eddies * 2 >= live && soft == 0)
+        cycle_ok = 1;
+      int gaia_ok = (live >= 1 && tides >= live && soft == 0) ? 1 : 0;
+      if (!gaia_ok && live >= 1 && tides * 2 >= live && soft == 0)
+        gaia_ok = 1;
+      int hs_ok = (mesh_ok && cycle_ok && gaia_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (hs_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (eddies > 0 ? 1 : 0) + (tides > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_HYDROSPHERED", (long)hs_ok);
+      var_set_num(vm, "SMX_HYDROSPHERED_LATCH", (long)hs_ok);
+      var_set_num(vm, "SMX_HYDROSPHERE", (long)(hs_ok ? bonds + eddies + tides : 0));
+      var_set_num(vm, "SMX_OCEAN", (long)(hs_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MARINE", (long)(hs_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CURRENTS", (long)(hs_ok ? bonds : 0));
+      var_set_num(vm, "SMX_CURRENT", (long)(hs_ok ? bonds : 0));
+      var_set_num(vm, "SMX_EDDIES", (long)(hs_ok ? eddies : 0));
+      var_set_num(vm, "SMX_EDDY", (long)(hs_ok ? eddies : 0));
+      var_set_num(vm, "SMX_EDDYRING", (long)(hs_ok ? eddies : 0));
+      var_set_num(vm, "SMX_TIDES", (long)(hs_ok ? tides : 0));
+      var_set_num(vm, "SMX_BASIN", (long)(hs_ok ? tides : 0));
+      var_set_num(vm, "SMX_BASIN", (long)(hs_ok ? tides : 0));
+      var_set_num(vm, "SMX_SEEDHYDRO", (long)(hs_ok ? tides : 0));
+      var_set_num(vm, "SMX_MESH", (long)(hs_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + eddies + tides));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (hs_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HYDROSPHERE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HYDROSPHERE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX HYDROSPHERE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX HYDROSPHERE nodes=%d live=%d bonds=%d eddies=%d tides=%d need=%d soft=%d talks=%d oob=%d hydrosphered=%d vital=%ld\n",
+                n, live, bonds, eddies, tides, need, soft, vm->smx_talks, vm->smx_oob, hs_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+  /* SMX HOMEOSTASIS|BALANCE|SETPOINT|FEEDBACK|REGULATE|EQUILIBRIUM|MESH_HOMEOSTASIS|RAISE_HOMEOSTASIS a b c ...
+   * Life-force mesh stability after biosphere: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete balance mesh among live nodes, weaves a
+   * feedback ring (i -> i+1) so free energy self-regulates, then setpoint hub
+   * gathers return so lattice locks homeostasis where life holds the hive.
+   * Latches SMX_HOMEOSTATIC when mesh+feedback+setpoints are soft-OOB-free.
+   * SMX_BALANCES = chain bonds; SMX_SETPOINT hub = root gather pulses;
+   * SMX_HOMEOSTASIS sum = bonds+feedback+setpoints; SMX_BALANCE|SMX_REGULATE sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"HOMEOSTASIS")||kw(&L->cur,"BALANCE")||kw(&L->cur,"SETPOINT")||
+      kw(&L->cur,"FEEDBACK")||kw(&L->cur,"REGULATE")||kw(&L->cur,"EQUILIBRIUM")||
+      kw(&L->cur,"MESH_HOMEOSTASIS")||kw(&L->cur,"RAISE_HOMEOSTASIS")||
+      kw(&L->cur,"HOMEOSTASES")||kw(&L->cur,"BALANCES")||kw(&L->cur,"SETPOINTS")||
+      kw(&L->cur,"FEEDBACKS")||kw(&L->cur,"REGULATES")||kw(&L->cur,"SEEDHOME")||
+      kw(&L->cur,"LATTICE_HOMEOSTASIS")||kw(&L->cur,"WORLD_BALANCE")||
+      kw(&L->cur,"FEEDBACK_RING")||kw(&L->cur,"PULSE_HOMEOSTASIS")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int feedback = 0;
+    int setpoints = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "HOMEOSTASIS needs >=2 cubes",
+                  "SMX HOMEOSTASIS a b [c ...]  or  SMX BALANCE a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - homeostasis needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete balance mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* feedback ring - free energy self-regulates every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else feedback++;
+        }
+      }
+    }
+    /* setpoint hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else setpoints++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int fb_ok = (live >= 2 && feedback >= live && soft == 0) ? 1 : 0;
+      if (!fb_ok && live >= 2 && feedback * 2 >= live && soft == 0)
+        fb_ok = 1;
+      int sp_ok = (live >= 1 && setpoints >= live && soft == 0) ? 1 : 0;
+      if (!sp_ok && live >= 1 && setpoints * 2 >= live && soft == 0)
+        sp_ok = 1;
+      int hs_ok = (mesh_ok && fb_ok && sp_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (hs_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (feedback > 0 ? 1 : 0) + (setpoints > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_HOMEOSTATIC", (long)hs_ok);
+      var_set_num(vm, "SMX_HOMEOSTATIC_LATCH", (long)hs_ok);
+      var_set_num(vm, "SMX_HOMEOSTASIS", (long)(hs_ok ? bonds + feedback + setpoints : 0));
+      var_set_num(vm, "SMX_BALANCE", (long)(hs_ok ? 1 : 0));
+      var_set_num(vm, "SMX_REGULATE", (long)(hs_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BALANCES", (long)(hs_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FEEDBACKS", (long)(hs_ok ? feedback : 0));
+      var_set_num(vm, "SMX_FEEDBACK", (long)(hs_ok ? feedback : 0));
+      var_set_num(vm, "SMX_FEEDBACKRING", (long)(hs_ok ? feedback : 0));
+      var_set_num(vm, "SMX_SETPOINTS", (long)(hs_ok ? setpoints : 0));
+      var_set_num(vm, "SMX_SETPOINT", (long)(hs_ok ? setpoints : 0));
+      var_set_num(vm, "SMX_EQUILIBRIUM", (long)(hs_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SEEDHOME", (long)(hs_ok ? setpoints : 0));
+      var_set_num(vm, "SMX_MESH", (long)(hs_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + feedback + setpoints));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (hs_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HOMEOSTASIS ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HOMEOSTASIS partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX HOMEOSTASIS soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX HOMEOSTASIS nodes=%d live=%d bonds=%d feedback=%d setpoints=%d need=%d soft=%d talks=%d oob=%d homeostatic=%d vital=%ld\n",
+                n, live, bonds, feedback, setpoints, need, soft, vm->smx_talks, vm->smx_oob, hs_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA|SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE|HELIOS|ORBIT|ECLIPSE|APHELION|PERIHELION|PHOTON|MESH_HELIOS|RAISE_HELIOS|NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA|PULSAR|BEACON|SPIN|MAGNETAR|JET|PULSE_STAR|MESH_PULSAR|RAISE_PULSAR|QUASAR|BLAZAR|ACCRETION|JETSTREAM|DISK|EVENTHORIZON|MESH_QUASAR|RAISE_QUASAR|COMET|METEOR|TAIL|COMA|DEBRIS|NUCLEUS_ICE|MESH_COMET|RAISE_COMET|SUPERNOVA|NOVA|SHOCKWAVE|EJECTA|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA|GALAXY|SPIRAL|ARM|CORE|HALO|BULGE|MESH_GALAXY|RAISE_GALAXY|CONSTELLATION|ASTERISM|STARFIELD|GUIDESTAR|NAVSTAR|LODGE|MESH_CONSTELLATION|RAISE_CONSTELLATION|ZODIAC|ECLIPTIC|HOUSE|SIGN|PATH|POLE|MESH_ZODIAC|RAISE_ZODIAC|FIRMAMENT|VAULT|DOME|SKYVAULT|KEYSTONE|HEAVEN|MESH_FIRMAMENT|RAISE_FIRMAMENT|AETHER|QUINTESSENCE|ETHER|ESSENCE|PLENUM|AURA|MESH_AETHER|RAISE_AETHER|NOOSPHERE|LOGOS|THOUGHT|AKASHA|ANIMAE|MESH_NOOSPHERE|RAISE_NOOSPHERE|PNEUMA|PRANA|BREATHWORLD|SOULFIRE|SPIRITUS|WORLDSOUL|MESH_PNEUMA|RAISE_PNEUMA|AEGIS|SHIELD|WARD|BULWARK|PAVIS|RAMPART|MESH_AEGIS|RAISE_AEGIS|BIOSPHERE|GAIA|BIOME|ECO|LIFEWEB|HABITAT|MESH_BIOSPHERE|RAISE_BIOSPHERE|HYDROSPHERE|OCEAN|MARINE|WATERWEB|AQUASPHERE|HYDRO|MESH_HYDROSPHERE|RAISE_HYDROSPHERE|HOMEOSTASIS|BALANCE|SETPOINT|FEEDBACK|REGULATE|EQUILIBRIUM|MESH_HOMEOSTASIS|RAISE_HOMEOSTASIS");
   return -1;
 }
