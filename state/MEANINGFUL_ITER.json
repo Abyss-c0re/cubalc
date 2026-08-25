@@ -1,8 +1,14 @@
 {
-  "head": "5f9dd7974c61495900fe54b7a9871a1467a30291",
-  "short": "5f9dd79",
-  "meaningful_iter": 1154,
+  "schema": "cubalc.meaningful_iter.v1",
+  "iter": 1154,
   "version": "1.5.3-break-continue",
-  "feature": "BREAK/CONTINUE",
-  "proof": "12_break_continue PASS"
+  "feature": "BREAK/CONTINUE loop control",
+  "proof": "programs/proof/12_break_continue.cubalc",
+  "proof_pass": true,
+  "asserts_ok": 4,
+  "smx_selftest": true,
+  "head": "04ffb11f1523bb6666c4f404687bad178d267018",
+  "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT; HEAD advanced past prior pin",
+  "short": "04ffb11",
+  "past": "9152410e"
 }
