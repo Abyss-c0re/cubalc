@@ -1,9 +1,9 @@
 {
   "iter": 1715,
   "feature": "LIFE_FORCE_ENTANGLE",
-  "pin_head": "1408a067bfeb264b74d58de1a17f5872b9bc0aad",
-  "tip": "1408a067bfeb264b74d58de1a17f5872b9bc0aad",
-  "feat_head": "1408a067bfeb264b74d58de1a17f5872b9bc0aad",
+  "pin_head": "7632a02a754140d67d6592262d51beb7aae7aa73",
+  "tip": "7632a02a754140d67d6592262d51beb7aae7aa73",
+  "feat_head": "7632a02a754140d67d6592262d51beb7aae7aa73",
   "version": "1.15.1186-usability",
   "proofs_pass": true,
   "asserts_ok": {
