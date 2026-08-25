@@ -1,5 +1,5 @@
-HEAD=d413d71adef86a5ec31cb3cae188714ca54831d7
-SHORT=d413d71
+HEAD=91ccaa7209a8711b6914c34c9fb9f787886e0a14
+SHORT=91ccaa7
 MEANINGFUL_ITER=1158
 VERSION=1.5.5-minmax-clamp
 PROOF=programs/proof/15_minmax_clamp.cubalc PASS
