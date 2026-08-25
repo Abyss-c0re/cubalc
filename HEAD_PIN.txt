@@ -1,7 +1,7 @@
-HEAD=173b1f073e71132471caac9e7b9ca8c7f4c30171
-SHORT=173b1f07
-MEANINGFUL_ITER=1704
-VERSION=1.15.1174-usability
-PROOFS=1704_forged+1620_flagship PASS
-feature=FORGED soft-OOB fail-closed mesh stability
-feat_head=37d957fda46c502f7b7320dbef8b65c877e04a54
+HEAD=784863bdbd481c76d709c9b7196e01738ca5ec8a
+SHORT=784863bd
+MEANINGFUL_ITER=1705
+VERSION=1.15.1175-usability
+PROOFS=1705_keeper+1620_flagship+1634_mesh_exchange PASS
+feature=KEEPER soft-OOB fail-closed mesh stability
+feat_head=784863bdbd481c76d709c9b7196e01738ca5ec8a
