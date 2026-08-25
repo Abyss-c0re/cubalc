@@ -1,5 +1,7 @@
-sha=05aeef7fef9f37e3edeee06216d85ab93959e236
-iter=1702
+HEAD=cd5d54a8b613336343271b3b50a51fb4b385bbef
+SHORT=cd5d54a8
+MEANINGFUL_ITER=1702
+VERSION=1.15.1172-usability
+PROOFS=1702_multiverse+1620_flagship PASS
 feature=MULTIVERSE soft-OOB fail-closed mesh stability
-version=1.15.1172-usability
-proof=1702_atomic_printer_mesh_multiverse
+feat_head=811231ab414337f20d201d2d38f87383ace85d41
