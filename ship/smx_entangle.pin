@@ -1,9 +1,7 @@
-iter=1715
-feature=ENTANGLE
-proof=1715_smx_life_force_entangle_soft_oob
-asserts_ok=51
-pin_head=e973b999266cd72f9a8005425d89d932ad8a4ff6
-version=1.15.1186-usability
-soft_oob=fail-closed
+MEANINGFUL_ITER=1715
+feature=LIFE_FORCE_ENTANGLE
+pin_head=1408a067bfeb264b74d58de1a17f5872b9bc0aad
+tip=1408a067bfeb264b74d58de1a17f5872b9bc0aad
+proofs=PASS
 next=we_autoheal
-verified_at=2026-08-25T20:05:37Z
+sealed=1
