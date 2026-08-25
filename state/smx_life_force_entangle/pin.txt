@@ -1,3 +1,1 @@
-pin_head=831a31b03352463b068ae48c3964cc5475b425e8
-iter=1715
-feature=LIFE_FORCE_ENTANGLE
+1715 LIFE_FORCE_ENTANGLE soft-OOB fail-closed PASS pin=c82afba1
