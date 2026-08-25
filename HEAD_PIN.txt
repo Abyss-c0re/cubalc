@@ -1,11 +1,11 @@
-HEAD=cb35658af08cb2c35e5f6110c968c84135371144
-SHORT=cb35658a
+HEAD=202756af78594e22e0b625cffe2f953ab3b7c470
+SHORT=202756af
 MEANINGFUL_ITER=1712
 VERSION=1.15.1183-usability
 PROOFS=1712_life_force_stabilize+1620_flagship+soft_oob+mesh_exchange PASS asserts_ok=47+12
 feature=LIFE_FORCE_STABILIZE soft-OOB fail-closed + mesh_exchange
 feat_head=2df82e6f69fb08f61116adfa9bc1370c8865b031
-pin_head=cb35658af08cb2c35e5f6110c968c84135371144
+pin_head=202756af78594e22e0b625cffe2f953ab3b7c470
 past=1711
 next=we_autoheal
 verified_at=2026-08-25T19:45:24Z
