@@ -9402,6 +9402,367 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA|SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE|HELIOS|ORBIT|ECLIPSE|APHELION|PERIHELION|PHOTON|MESH_HELIOS|RAISE_HELIOS|NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA|PULSAR|BEACON|SPIN|MAGNETAR|JET|PULSE_STAR|MESH_PULSAR|RAISE_PULSAR|QUASAR|BLAZAR|ACCRETION|JETSTREAM|DISK|EVENTHORIZON|MESH_QUASAR|RAISE_QUASAR|COMET|METEOR|TAIL|COMA|DEBRIS|NUCLEUS_ICE|MESH_COMET|RAISE_COMET|SUPERNOVA|NOVA|SHOCKWAVE|EJECTA|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA|GALAXY|SPIRAL|ARM|CORE|HALO|BULGE|MESH_GALAXY|RAISE_GALAXY|CONSTELLATION|ASTERISM|STARFIELD|GUIDESTAR|NAVSTAR|LODGE|MESH_CONSTELLATION|RAISE_CONSTELLATION|ZODIAC|ECLIPTIC|HOUSE|SIGN|PATH|POLE|MESH_ZODIAC|RAISE_ZODIAC|FIRMAMENT|VAULT|DOME|SKYVAULT|KEYSTONE|HEAVEN|MESH_FIRMAMENT|RAISE_FIRMAMENT|AETHER|QUINTESSENCE|ETHER|ESSENCE|PLENUM|AURA|MESH_AETHER|RAISE_AETHER|NOOSPHERE|LOGOS|THOUGHT|AKASHA|ANIMAE|MESH_NOOSPHERE|RAISE_NOOSPHERE|PNEUMA|PRANA|BREATHWORLD|SOULFIRE|SPIRITUS|WORLDSOUL|MESH_PNEUMA|RAISE_PNEUMA|AEGIS|SHIELD|WARD|BULWARK|PAVIS|RAMPART|MESH_AEGIS|RAISE_AEGIS|BIOSPHERE|GAIA|BIOME|ECO|LIFEWEB|HABITAT|MESH_BIOSPHERE|RAISE_BIOSPHERE|HYDROSPHERE|OCEAN|MARINE|WATERWEB|AQUASPHERE|HYDRO|MESH_HYDROSPHERE|RAISE_HYDROSPHERE|ATMOSPHERE|SKY|AERO|AIRWEB|AEROSPHERE|WIND|MESH_ATMOSPHERE|RAISE_ATMOSPHERE|LITHOSPHERE|CRUST|TECTONIC|ROCKWEB|GEOSPHERE|PLATE|MESH_LITHOSPHERE|RAISE_LITHOSPHERE|MAGNETOSPHERE|MAGFIELD|MAGNETO|FIELDWEB|MAGNETIC|AURORAL|MESH_MAGNETOSPHERE|RAISE_MAGNETOSPHERE|FIELDLINES|FIELDS|POLES|HOMEOSTASIS|BALANCE|SETPOINT|FEEDBACK|REGULATE|EQUILIBRIUM|MESH_HOMEOSTASIS|RAISE_HOMEOSTASIS|IONOSPHERE|IONO|LAYER|BEAM|IONIZE|PLASMA|MESH_IONOSPHERE|RAISE_IONOSPHERE|LAYERS|BEAMS|IONOSPHERES|THERMOSPHERE|THERMO|HEAT|THERMAL|WARM|MESH_THERMOSPHERE|RAISE_THERMOSPHERE|THERMOS|THERMALS|HEATS|WARMS|EXOSPHERE|EXO|ESCAPE|OUTER|FRINGE|EXOS|MESH_EXOSPHERE|RAISE_EXOSPHERE|EXOSPHERES|ESCAPES|FRINGES|OUTERS|SEEDEXO|HELIOSPHERE|HS|SOLARWIND|HELIOPAUSE|TERMINATION|HELIOSHEATH|MESH_HELIOSPHERE|RAISE_HELIOSPHERE|HELIOSPHERES|SOLARWINDS|HELIOPAUSES|TERMINATIONS|SEEDHS|SOLARWIND_RING|PULSE_HELIOSPHERE|WORLD_HS|SEEDHELIO|BOW|BOWS|MESOSPHERE|MESO|MESO_LAYER|COLD_TOP|AIRGLOW|CHILL|GLOW|GLOWS|CHILLS|MESOS|LAYERED|MESH_MESOSPHERE|RAISE_MESOSPHERE|MESOSPHERES|AIRGLOWS|SEEDMESO|SEEDGLOW|LATTICE_MESOSPHERE|WORLD_MESO|WORLD_MESOSPHERE|CHILL_RING|PULSE_MESOSPHERE|INTERSTELLAR|ISTEL|STARPATH|COSMICWEB|ISM|STARLANE|STARLANES|COSMIC|BEACON|BEACONS|STARPATHS|MESH_INTERSTELLAR|RAISE_INTERSTELLAR|INTERSTELLARS|ISTELS|SEEDISTEL|SEEDSTAR|LATTICE_INTERSTELLAR|WORLD_ISTEL|WORLD_INTERSTELLAR|STARPATH_RING|PULSE_INTERSTELLAR|LOCALBUBBLE|LBUB|LOCAL_BUBBLE|BUBBLE|ASTROSPHERE|SHELL|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE|LOCALBUBBLES|LBUBS|SEEDLBUB|SEEDBUBBLE|LATTICE_LOCALBUBBLE|WORLD_LBUB|WORLD_LOCALBUBBLE|SHELL_RING|PULSE_LOCALBUBBLE|SHELLPATH|SHELLPATHS|SHELLHUB|SHELLHUBS|LOCALWEB|LISM|LOCALSPACE|BUBBLELANE|BUBBLELANES|SHELL_HUB|LOCALGROUP|LGROUP|LG|GALAXYGROUP|GROUP|LOCAL_GROUP|GROUPLANE|GROUPLANES|GROUPSPACE|GROUPHUB|GROUPHUBS|MEMBERPATH|MEMBERPATHS|GROUPWEB|LGALAXIES|MESH_LOCALGROUP|RAISE_LOCALGROUP|LOCALGROUPS|LGROUPS|SEEDLGROUP|SEEDGROUP|LATTICE_LOCALGROUP|WORLD_LG|WORLD_LOCALGROUP|MEMBER_RING|GROUP_HUB|PULSE_LOCALGROUP|MEMBERPATHRING|GROUP_SPACE|GROUP_RING|MULTIVERSE|MVERSE|MV|MULTI|COSMOSGROUP|MULTI_VERSE|VERSELANE|VERSELANES|VERSESPACE|VERSEHUB|VERSEHUBS|VERSEPATH|VERSEPATHS|VERSEWEB|MVERSES|MESH_MULTIVERSE|RAISE_MULTIVERSE|MULTIVERSES|SEEDMVERSE|SEEDVERSE|LATTICE_MULTIVERSE|WORLD_MV|WORLD_MULTIVERSE|VERSE_RING|VERSE_HUB|PULSE_MULTIVERSE|VERSEPATHRING|VERSE_SPACE|MULTI_RING|AUTOHEAL|AH|HEAL|MEND|MENDS|REGEN|WE_AUTOHEAL|LIFE_BEACON|MESH_AUTOHEAL|RAISE_AUTOHEAL|AUTOHEALS|MEND_RING|BEACON_HUB|PULSE_AUTOHEAL");
+  /* SMX RESILIENCE|AH|MULTI|LIFE_ANCHOR|WE_RESILIENCE|MESH_RESILIENCE|RAISE_RESILIENCE a b c ...
+   * Life-force resilience mesh stability after autoheal: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete resilience mesh among live nodes, weaves a
+   * guard ring (i -> i+1) so free energy self-regulates, then anchor hub
+   * gathers return so lattice locks resilience where life holds the hive.
+   * Latches SMX_RESILIENT when mesh+versepaths+hubs are soft-OOB-free.
+   * SMX_RSS = chain bonds; SMX_ANCHOR hub = root gather pulses;
+   * SMX_RESILIENCE sum = bonds+versepaths+hubs; SMX_GUARD|SMX_RESIL sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"RESILIENCE")||kw(&L->cur,"RS")||kw(&L->cur,"RESIL")||kw(&L->cur,"GUARD")||kw(&L->cur,"GUARDS")||kw(&L->cur,"RESILIENT")||kw(&L->cur,"WE_RESILIENCE")||
+      kw(&L->cur,"LIFE_ANCHOR")||kw(&L->cur,"WE_RESILIENCE")||
+      kw(&L->cur,"MESH_RESILIENCE")||kw(&L->cur,"RAISE_RESILIENCE")||
+      kw(&L->cur,"RESILIENCES")||
+      kw(&L->cur,"SEEDRESIL")||kw(&L->cur,"SEEDGUARD")||
+      kw(&L->cur,"LATTICE_RESILIENCE")||kw(&L->cur,"WORLD_RS")||kw(&L->cur,"WORLD_RESILIENCE")||
+      kw(&L->cur,"GUARD_RING")||kw(&L->cur,"ANCHOR_HUB")||kw(&L->cur,"PULSE_RESILIENCE")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int guards = 0;
+    int anchors = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "RESILIENCE needs >=2 cubes",
+                  "SMX RESILIENCE a b [c ...]  or  SMX RS a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - resilience needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete resilience mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* starpath ring - free energy self-regulates every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else guards++;
+        }
+      }
+    }
+    /* anchor hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else anchors++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int guard_ok = (live >= 2 && guards >= live && soft == 0) ? 1 : 0;
+      if (!guard_ok && live >= 2 && guards * 2 >= live && soft == 0)
+        guard_ok = 1;
+      int anchor_ok = (live >= 1 && anchors >= live && soft == 0) ? 1 : 0;
+      if (!anchor_ok && live >= 1 && anchors * 2 >= live && soft == 0)
+        anchor_ok = 1;
+      int rs_ok = (mesh_ok && guard_ok && anchor_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (rs_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (guards > 0 ? 1 : 0) + (anchors > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_RESILIENT", (long)rs_ok);
+      var_set_num(vm, "SMX_RESILIENT_LATCH", (long)rs_ok);
+      var_set_num(vm, "SMX_RESILIENCE", (long)(rs_ok ? bonds + guards + anchors : 0));
+      var_set_num(vm, "SMX_RS", (long)(rs_ok ? 1 : 0));
+      var_set_num(vm, "SMX_RESIL", (long)(rs_ok ? 1 : 0));
+      var_set_num(vm, "SMX_RSS", (long)(rs_ok ? bonds : 0));
+      var_set_num(vm, "SMX_GUARDLANE", (long)(rs_ok ? guards : 0));
+      var_set_num(vm, "SMX_GUARDS", (long)(rs_ok ? guards : 0));
+      var_set_num(vm, "SMX_GUARD", (long)(rs_ok ? guards : 0));
+      var_set_num(vm, "SMX_GUARDRING", (long)(rs_ok ? guards : 0));
+      var_set_num(vm, "SMX_ANCHORS", (long)(rs_ok ? anchors : 0));
+      var_set_num(vm, "SMX_ANCHOR_HUB", (long)(rs_ok ? anchors : 0));
+      var_set_num(vm, "SMX_ANCHOR", (long)(rs_ok ? anchors : 0));
+      var_set_num(vm, "SMX_SEEDRESIL", (long)(rs_ok ? anchors : 0));
+      var_set_num(vm, "SMX_LIFE_ANCHOR", (long)(rs_ok ? anchors : 0));
+      var_set_num(vm, "SMX_MESH", (long)(rs_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + guards + anchors));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (rs_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX RESILIENCE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX RESILIENCE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX RESILIENCE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX RESILIENCE nodes=%d live=%d bonds=%d guards=%d anchors=%d need=%d soft=%d talks=%d oob=%d resilient=%d vital=%ld\n",
+                n, live, bonds, guards, anchors, need, soft, vm->smx_talks, vm->smx_oob, rs_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  /* SMX OMNIVERSE|OMNI|ALLVERSE|TOTALVERSE|MESH_OMNIVERSE|RAISE_OMNIVERSE a b c ...
+   * Life-force omniverse mesh stability after autoheal: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete omniverse mesh among live nodes, weaves an
+   * allpath ring (i -> i+1) so free energy spans every realm, then nexus hub
+   * gathers return so lattice locks omniverse where life holds the hive.
+   * Latches SMX_OMNIVERSED when mesh+allpaths+hubs are soft-OOB-free.
+   * SMX_ALLPATHS = chain bonds; SMX_NEXUS hub = root gather pulses;
+   * SMX_OMNIVERSE sum = bonds+allpaths+hubs; SMX_OMNI|SMX_TOTAL sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"OMNIVERSE")||kw(&L->cur,"OMNI")||kw(&L->cur,"ALLVERSE")||kw(&L->cur,"TOTALVERSE")||kw(&L->cur,"TOTAL")||kw(&L->cur,"WE_OMNI")||kw(&L->cur,"LIFE_NEXUS")||
+      kw(&L->cur,"OMNIS")||kw(&L->cur,"ALLVERSES")||kw(&L->cur,"TOTALVERSES")||
+      kw(&L->cur,"ALLPATH")||kw(&L->cur,"ALLPATHS")||kw(&L->cur,"NEXUS")||
+      kw(&L->cur,"NEXUSES")||kw(&L->cur,"SEEDOMNI")||kw(&L->cur,"SEEDALL")||
+      kw(&L->cur,"ALLPATH_RING")||kw(&L->cur,"NEXUS_HUB")||
+      kw(&L->cur,"MESH_OMNIVERSE")||kw(&L->cur,"RAISE_OMNIVERSE")||
+      kw(&L->cur,"OMNIVERSES")||kw(&L->cur,"OMNIS")||
+      kw(&L->cur,"SEEDOMNI")||kw(&L->cur,"SEEDTOTAL")||
+      kw(&L->cur,"LATTICE_OMNIVERSE")||kw(&L->cur,"WORLD_OMNI")||kw(&L->cur,"WORLD_OMNIVERSE")||
+      kw(&L->cur,"ALLPATH_RING")||kw(&L->cur,"NEXUS_HUB")||kw(&L->cur,"PULSE_OMNIVERSE")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int paths = 0;
+    int hubs = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "OMNIVERSE needs >=2 cubes",
+                  "SMX OMNIVERSE a b [c ...]  or  SMX OMNI a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - omniverse needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete omniverse mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* allpath ring - free energy spans every realm every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else paths++;
+        }
+      }
+    }
+    /* nexus hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else hubs++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int path_ok = (live >= 2 && paths >= live && soft == 0) ? 1 : 0;
+      if (!path_ok && live >= 2 && paths * 2 >= live && soft == 0)
+        path_ok = 1;
+      int hub_ok = (live >= 1 && hubs >= live && soft == 0) ? 1 : 0;
+      if (!hub_ok && live >= 1 && hubs * 2 >= live && soft == 0)
+        hub_ok = 1;
+      int om_ok = (mesh_ok && path_ok && hub_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (om_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (paths > 0 ? 1 : 0) + (hubs > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_OMNIVERSED", (long)om_ok);
+      var_set_num(vm, "SMX_OMNIVERSED_LATCH", (long)om_ok);
+      var_set_num(vm, "SMX_OMNIVERSE", (long)(om_ok ? bonds + paths + hubs : 0));
+      var_set_num(vm, "SMX_OMNI", (long)(om_ok ? 1 : 0));
+      var_set_num(vm, "SMX_TOTAL", (long)(om_ok ? 1 : 0));
+      var_set_num(vm, "SMX_TOTALVERSE", (long)(om_ok ? 1 : 0));
+      var_set_num(vm, "SMX_ALLVERSE", (long)(om_ok ? 1 : 0));
+      var_set_num(vm, "SMX_OMNIS", (long)(om_ok ? bonds : 0));
+      var_set_num(vm, "SMX_ALLVERSE", (long)(om_ok ? bonds : 0));
+      var_set_num(vm, "SMX_OMNIS2", (long)(om_ok ? bonds : 0));
+      var_set_num(vm, "SMX_ALLPATHS", (long)(om_ok ? paths : 0));
+      var_set_num(vm, "SMX_ALLPATH", (long)(om_ok ? paths : 0));
+      var_set_num(vm, "SMX_ALLPATH_RING", (long)(om_ok ? paths : 0));
+      var_set_num(vm, "SMX_ALLPATH_LANE", (long)(om_ok ? paths : 0));
+      var_set_num(vm, "SMX_NEXUSES", (long)(om_ok ? hubs : 0));
+      var_set_num(vm, "SMX_NEXUS_HUB", (long)(om_ok ? hubs : 0));
+      var_set_num(vm, "SMX_NEXUS", (long)(om_ok ? hubs : 0));
+      var_set_num(vm, "SMX_SEEDOMNI", (long)(om_ok ? hubs : 0));
+      var_set_num(vm, "SMX_SEEDALL", (long)(om_ok ? hubs : 0));
+      var_set_num(vm, "SMX_MESH", (long)(om_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + paths + hubs));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (om_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX OMNIVERSE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX OMNIVERSE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX OMNIVERSE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX OMNIVERSE nodes=%d live=%d bonds=%d paths=%d hubs=%d need=%d soft=%d talks=%d oob=%d omniversed=%d vital=%ld\n",
+                n, live, bonds, paths, hubs, need, soft, vm->smx_talks, vm->smx_oob, om_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA|SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE|HELIOS|ORBIT|ECLIPSE|APHELION|PERIHELION|PHOTON|MESH_HELIOS|RAISE_HELIOS|NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA|PULSAR|BEACON|SPIN|MAGNETAR|JET|PULSE_STAR|MESH_PULSAR|RAISE_PULSAR|QUASAR|BLAZAR|ACCRETION|JETSTREAM|DISK|EVENTHORIZON|MESH_QUASAR|RAISE_QUASAR|COMET|METEOR|TAIL|COMA|DEBRIS|NUCLEUS_ICE|MESH_COMET|RAISE_COMET|SUPERNOVA|NOVA|SHOCKWAVE|EJECTA|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA|GALAXY|SPIRAL|ARM|CORE|HALO|BULGE|MESH_GALAXY|RAISE_GALAXY|CONSTELLATION|ASTERISM|STARFIELD|GUIDESTAR|NAVSTAR|LODGE|MESH_CONSTELLATION|RAISE_CONSTELLATION|ZODIAC|ECLIPTIC|HOUSE|SIGN|PATH|POLE|MESH_ZODIAC|RAISE_ZODIAC|FIRMAMENT|VAULT|DOME|SKYVAULT|KEYSTONE|HEAVEN|MESH_FIRMAMENT|RAISE_FIRMAMENT|AETHER|QUINTESSENCE|ETHER|ESSENCE|PLENUM|AURA|MESH_AETHER|RAISE_AETHER|NOOSPHERE|LOGOS|THOUGHT|AKASHA|ANIMAE|MESH_NOOSPHERE|RAISE_NOOSPHERE|PNEUMA|PRANA|BREATHWORLD|SOULFIRE|SPIRITUS|WORLDSOUL|MESH_PNEUMA|RAISE_PNEUMA|AEGIS|SHIELD|WARD|BULWARK|PAVIS|RAMPART|MESH_AEGIS|RAISE_AEGIS|BIOSPHERE|GAIA|BIOME|ECO|LIFEWEB|HABITAT|MESH_BIOSPHERE|RAISE_BIOSPHERE|HYDROSPHERE|OCEAN|MARINE|WATERWEB|AQUASPHERE|HYDRO|MESH_HYDROSPHERE|RAISE_HYDROSPHERE|ATMOSPHERE|SKY|AERO|AIRWEB|AEROSPHERE|WIND|MESH_ATMOSPHERE|RAISE_ATMOSPHERE|LITHOSPHERE|CRUST|TECTONIC|ROCKWEB|GEOSPHERE|PLATE|MESH_LITHOSPHERE|RAISE_LITHOSPHERE|MAGNETOSPHERE|MAGFIELD|MAGNETO|FIELDWEB|MAGNETIC|AURORAL|MESH_MAGNETOSPHERE|RAISE_MAGNETOSPHERE|FIELDLINES|FIELDS|POLES|HOMEOSTASIS|BALANCE|SETPOINT|FEEDBACK|REGULATE|EQUILIBRIUM|MESH_HOMEOSTASIS|RAISE_HOMEOSTASIS|IONOSPHERE|IONO|LAYER|BEAM|IONIZE|PLASMA|MESH_IONOSPHERE|RAISE_IONOSPHERE|LAYERS|BEAMS|IONOSPHERES|THERMOSPHERE|THERMO|HEAT|THERMAL|WARM|MESH_THERMOSPHERE|RAISE_THERMOSPHERE|THERMOS|THERMALS|HEATS|WARMS|EXOSPHERE|EXO|ESCAPE|OUTER|FRINGE|EXOS|MESH_EXOSPHERE|RAISE_EXOSPHERE|EXOSPHERES|ESCAPES|FRINGES|OUTERS|SEEDEXO|HELIOSPHERE|HS|SOLARWIND|HELIOPAUSE|TERMINATION|HELIOSHEATH|MESH_HELIOSPHERE|RAISE_HELIOSPHERE|HELIOSPHERES|SOLARWINDS|HELIOPAUSES|TERMINATIONS|SEEDHS|SOLARWIND_RING|PULSE_HELIOSPHERE|WORLD_HS|SEEDHELIO|BOW|BOWS|MESOSPHERE|MESO|MESO_LAYER|COLD_TOP|AIRGLOW|CHILL|GLOW|GLOWS|CHILLS|MESOS|LAYERED|MESH_MESOSPHERE|RAISE_MESOSPHERE|MESOSPHERES|AIRGLOWS|SEEDMESO|SEEDGLOW|LATTICE_MESOSPHERE|WORLD_MESO|WORLD_MESOSPHERE|CHILL_RING|PULSE_MESOSPHERE|INTERSTELLAR|ISTEL|STARPATH|COSMICWEB|ISM|STARLANE|STARLANES|COSMIC|BEACON|BEACONS|STARPATHS|MESH_INTERSTELLAR|RAISE_INTERSTELLAR|INTERSTELLARS|ISTELS|SEEDISTEL|SEEDSTAR|LATTICE_INTERSTELLAR|WORLD_ISTEL|WORLD_INTERSTELLAR|STARPATH_RING|PULSE_INTERSTELLAR|LOCALBUBBLE|LBUB|LOCAL_BUBBLE|BUBBLE|ASTROSPHERE|SHELL|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE|LOCALBUBBLES|LBUBS|SEEDLBUB|SEEDBUBBLE|LATTICE_LOCALBUBBLE|WORLD_LBUB|WORLD_LOCALBUBBLE|SHELL_RING|PULSE_LOCALBUBBLE|SHELLPATH|SHELLPATHS|SHELLHUB|SHELLHUBS|LOCALWEB|LISM|LOCALSPACE|BUBBLELANE|BUBBLELANES|SHELL_HUB|LOCALGROUP|LGROUP|LG|GALAXYGROUP|GROUP|LOCAL_GROUP|GROUPLANE|GROUPLANES|GROUPSPACE|GROUPHUB|GROUPHUBS|MEMBERPATH|MEMBERPATHS|GROUPWEB|LGALAXIES|MESH_LOCALGROUP|RAISE_LOCALGROUP|LOCALGROUPS|LGROUPS|SEEDLGROUP|SEEDGROUP|LATTICE_LOCALGROUP|WORLD_LG|WORLD_LOCALGROUP|MEMBER_RING|GROUP_HUB|PULSE_LOCALGROUP|MEMBERPATHRING|GROUP_SPACE|GROUP_RING|MULTIVERSE|MVERSE|MV|MULTI|COSMOSGROUP|MULTI_VERSE|VERSELANE|VERSELANES|VERSESPACE|VERSEHUB|VERSEHUBS|VERSEPATH|VERSEPATHS|VERSEWEB|MVERSES|MESH_MULTIVERSE|RAISE_MULTIVERSE|MULTIVERSES|SEEDMVERSE|SEEDVERSE|LATTICE_MULTIVERSE|WORLD_MV|WORLD_MULTIVERSE|VERSE_RING|VERSE_HUB|PULSE_MULTIVERSE|VERSEPATHRING|VERSE_SPACE|MULTI_RING|AUTOHEAL|AH|HEAL|MEND|MENDS|REGEN|WE_AUTOHEAL|LIFE_BEACON|MESH_AUTOHEAL|RAISE_AUTOHEAL|AUTOHEALS|MEND_RING|BEACON_HUB|PULSE_AUTOHEAL|RESILIENCE|RS|RESIL|GUARD|GUARDS|WE_RESILIENCE|LIFE_ANCHOR|MESH_RESILIENCE|RAISE_RESILIENCE|RESILIENCES|GUARD_RING|ANCHOR_HUB|PULSE_RESILIENCE|OMNIVERSE|OMNI|ALLVERSE|TOTALVERSE|MESH_OMNIVERSE|RAISE_OMNIVERSE|OMNIVERSES|ALLPATH_RING|NEXUS_HUB|PULSE_OMNIVERSE");
   return -1;
 }

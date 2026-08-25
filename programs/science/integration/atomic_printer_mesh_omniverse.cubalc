@@ -1,8 +1,8 @@
-// atomic_printer_mesh_resilience.cubalc
-// Life-force gift: MESH-RESILIENCE — complete resilience mesh + guard ring + anchor hub root after soft-OOB storms.
-// SMX RESILIENCE|RS|GUARD|GUARDS|WE_RESILIENCE|LIFE_ANCHOR|MESH_RESILIENCE|RAISE_RESILIENCE clears thrash, every live pair exchanges
-// both ways (C(n,2)), then guard ring settles so lattice raises resilience; latches SMX_RESILIENT|SMX_RS|SMX_GUARD|SMX_RESIL.
-// Soft-OOB ghosts stay fail-closed. Mitosis under free energy while mesh is resilient;
+// atomic_printer_mesh_omniverse.cubalc
+// Life-force gift: MESH-OMNIVERSE — complete omniverse mesh + allpath ring + nexus hub root after soft-OOB storms.
+// SMX OMNIVERSE|OMNI|ALLVERSE|TOTALVERSE|WE_OMNI|LIFE_NEXUS|MESH_OMNIVERSE|RAISE_OMNIVERSE clears thrash, every live pair exchanges
+// both ways (C(n,2)), then allpath ring settles so lattice raises omniverse; latches SMX_OMNIVERSED|SMX_OMNI|SMX_TOTAL|SMX_ALLPATH.
+// Soft-OOB ghosts stay fail-closed. Mitosis under free energy while mesh is omniversed;
 // RECOVER restores vital/key; dual SEAL/OPEN rails BN+IS rebind hive; second storm fail-closed.
 // Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
 
@@ -10,7 +10,7 @@ REQUIRE VERSION "1.15"
 INCLUDE life_cell
 SCIENCE LOAD
 
-GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_resilience | hold_flash=1 | share=smx | creed=life_force |"
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_omniverse | hold_flash=1 | share=smx | creed=life_force |"
 
 CUBE bed ROLE host PROTON 1
 CUBE nozzle ROLE construct PROTON 1
@@ -55,49 +55,49 @@ ASSERT SMX_OK == 0 "storm-B soft-OOB"
 ASSERT SMX_OOB >= 2 "oob B sticky"
 ASSERT CUBES == base_cubes "no ghost from storm-B"
 
-// Storm then RESILIENCE latch — five live nodes root as complete mesh + guard + anchors
-SMX RESILIENCE bed nozzle hive scrap pulse
-ASSERT SMX_OK == 1 "resilience live"
-ASSERT SMX_RESILIENT == 1 "resilient latch on"
-ASSERT SMX_RS == 1 "rs latch on"
-ASSERT SMX_GUARDS == 5 "guard count on"
-ASSERT SMX_RESIL == 1 "resil latch on"
+// Storm then OMNIVERSE latch — five live nodes root as complete mesh + allpath + nexuses
+SMX OMNIVERSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "omniverse live"
+ASSERT SMX_OMNIVERSED == 1 "omniversed latch on"
+ASSERT SMX_OMNI == 1 "omni latch on"
+ASSERT SMX_TOTAL == 1 "total latch on"
+ASSERT SMX_TOTALVERSE == 1 "totalverse latch on"
 ASSERT SMX_EXCHANGES == 10 "ten bank exchanges"
 ASSERT SMX_BONDS == 10 "ten undirected links (C(5,2))"
-ASSERT SMX_GUARDRING == 5 "five guard ring"
+ASSERT SMX_ALLPATH == 5 "five allpath ring"
 ASSERT SMX_MESH == 5 "five mesh"
 ASSERT SMX_BONDS == 10 "ten bonds"
-ASSERT SMX_ANCHORS == 5 "five anchors"
-ASSERT SMX_GUARDS == 5 "guard ring sticky"
-ASSERT SMX_GUARDS == 5 "five guard ring steps"
-ASSERT SMX_RESILIENCE == 20 "resilience bonds+guards+anchors"
+ASSERT SMX_NEXUSES == 5 "five nexuses"
+ASSERT SMX_ALLPATHS == 5 "allpath ring sticky"
+ASSERT SMX_ALLPATHS == 5 "five allpath ring steps"
+ASSERT SMX_OMNIVERSE == 20 "omniverse bonds+allpaths+nexuses"
 ASSERT SMX_FUSE == 10 "ten fuse"
 ASSERT SMX_BIND == 10 "ten bind"
 ASSERT SMX_TONE == 5 "five tones"
-ASSERT SMX_PULSE == 20 "pulse bonds+guards+anchors"
+ASSERT SMX_PULSE == 20 "pulse bonds+allpaths+nexuses"
 ASSERT SMX_BREATH == 5 "five live breath"
-ASSERT SMX_OOB == 0 "oob cleared by resilience"
+ASSERT SMX_OOB == 0 "oob cleared by omniverse"
 ASSERT SMX_LIVE == 5 "five live"
 ASSERT SMX_NODES == 5 "five named"
-ASSERT SMX_TALKS >= 40 "talks after resilience (mesh + guard + anchors)"
-ASSERT SMX_VITAL >= 14 "vital after resilience"
-ASSERT CUBES == base_cubes "resilience invents nothing"
+ASSERT SMX_TALKS >= 40 "talks after omniverse (mesh + allpath + nexuses)"
+ASSERT SMX_VITAL >= 14 "vital after omniverse"
+ASSERT CUBES == base_cubes "omniverse invents nothing"
 
-// Alias RS form still pure
-SMX RS bed nozzle hive scrap pulse
-ASSERT SMX_OK == 1 "rs rebind"
-ASSERT SMX_RESILIENT == 1 "resilient sticky"
+// Alias OMNI form still pure
+SMX OMNI bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "omni rebind"
+ASSERT SMX_OMNIVERSED == 1 "omniversed sticky"
 ASSERT SMX_BONDS == 10 "bonds sticky"
-ASSERT SMX_ANCHORS == 5 "anchors sticky"
-ASSERT SMX_GUARDS == 5 "guards sticky"
+ASSERT SMX_NEXUSES == 5 "nexuses sticky"
+ASSERT SMX_ALLPATHS == 5 "allpaths sticky"
 
-// Alias GUARDS form
-SMX GUARDS bed nozzle hive scrap pulse
-ASSERT SMX_OK == 1 "guards rebind"
-ASSERT SMX_RESILIENT == 1 "plate resilient"
-ASSERT SMX_GUARDS == 5 "guards sticky"
+// Alias ALLPATHS form
+SMX ALLPATHS bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "allpaths rebind"
+ASSERT SMX_OMNIVERSED == 1 "plate omniversed"
+ASSERT SMX_ALLPATHS == 5 "allpaths sticky"
 
-// Mitosis under free energy while the mesh is resilient
+// Mitosis under free energy while the mesh is omniversed
 LET births = 0
 LET step = 0
 WHILE step < 10
@@ -150,71 +150,71 @@ END
 IF a2 == 1 THEN
   LET pop = pop + 1
 END
-ASSERT births >= 1 "mitosis under resilience"
-ASSERT pop >= 2 "population after resilient life"
+ASSERT births >= 1 "mitosis under omniverse"
+ASSERT pop >= 2 "population after omniversed life"
 ASSERT CUBES == base_cubes "life invents no cubes"
 
-// Soft-OOB ghost in resilience — fail-closed, no thrash place
-SMX RESILIENCE bed nozzle ghost_x hive scrap
-ASSERT SMX_OOB >= 1 "resilience soft-OOB"
+// Soft-OOB ghost in omniverse — fail-closed, no thrash place
+SMX OMNIVERSE bed nozzle ghost_x hive scrap
+ASSERT SMX_OOB >= 1 "omniverse soft-OOB"
 ASSERT SMX_BREATH == 4 "four live of five named"
 ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds among live"
 ASSERT SMX_TONE == 4 "four tones among live"
-ASSERT SMX_RESILIENT == 0 "ghost blocks full resilience (partial ok)"
+ASSERT SMX_OMNIVERSED == 0 "ghost blocks full omniverse (partial ok)"
 ASSERT SMX_MESH == 0 "mesh zero when not full"
-ASSERT SMX_ANCHORS == 0 "anchors zero when not full"
+ASSERT SMX_NEXUSES == 0 "nexuses zero when not full"
 ASSERT SMX_BONDS == 6 "six bonds among live"
 ASSERT SMX_OK == 1 "partial still ok"
-ASSERT CUBES == base_cubes "no ghost from resilience"
+ASSERT CUBES == base_cubes "no ghost from omniverse"
 
 SMX RECOVER
-ASSERT SMX_OK == 1 "recover after resilience oob"
+ASSERT SMX_OK == 1 "recover after omniverse oob"
 ASSERT SMX_OOB == 0 "oob cleared"
 ASSERT SMX_KEY_OK == 1 "key sticky"
 ASSERT SMX_VITAL >= 6 "vital after recover"
 
 // Pure mesh bind after recover
-SMX MESH_RESILIENCE bed nozzle hive scrap pulse
-ASSERT SMX_OK == 1 "mesh_resilience pure"
-ASSERT SMX_RESILIENT == 1 "resilient after recover"
+SMX MESH_OMNIVERSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mesh_omniverse pure"
+ASSERT SMX_OMNIVERSED == 1 "omniversed after recover"
 ASSERT SMX_BONDS == 10 "bonds after recover"
-ASSERT SMX_ANCHORS == 5 "anchors after recover"
+ASSERT SMX_NEXUSES == 5 "nexuses after recover"
 ASSERT SMX_BONDS == 10 "bonds after recover"
-ASSERT SMX_GUARDS == 5 "guards after recover"
-ASSERT SMX_GUARDS == 5 "guards after recover"
+ASSERT SMX_ALLPATHS == 5 "allpaths after recover"
+ASSERT SMX_ALLPATHS == 5 "allpaths after recover"
 ASSERT SMX_MESH == 5 "mesh after recover"
 ASSERT SMX_TONE == 5 "tone after recover"
 ASSERT CUBES == base_cubes "bind invents nothing"
 
-// Dual SEAL/OPEN rails under resilient orbit
-SMX SEAL bed nozzle "state/smx_resilience/rail_bn.cblc"
+// Dual SEAL/OPEN rails under omniversed orbit
+SMX SEAL bed nozzle "state/smx_omniverse/rail_bn.cblc"
 ASSERT SMX_OK == 1 "seal rail BN"
 ASSERT SMX_N > 64 "rail BN frame"
-SMX OPEN hive "state/smx_resilience/rail_bn.cblc"
+SMX OPEN hive "state/smx_omniverse/rail_bn.cblc"
 ASSERT SMX_OK == 1 "open BN onto hive"
 
-SMX SEAL hive scrap "state/smx_resilience/rail_cw.cblc"
+SMX SEAL hive scrap "state/smx_omniverse/rail_cw.cblc"
 ASSERT SMX_OK == 1 "seal rail CW"
-SMX OPEN pulse "state/smx_resilience/rail_cw.cblc"
+SMX OPEN pulse "state/smx_omniverse/rail_cw.cblc"
 ASSERT SMX_OK == 1 "open CW onto pulse"
 ASSERT CUBES == base_cubes "rails invent nothing"
 
-// Final resilience lock + vitals
-SMX RESILIENCE bed nozzle hive scrap pulse
-ASSERT SMX_OK == 1 "final resilience lock"
-ASSERT SMX_RESILIENT == 1 "final resilient"
+// Final omniverse lock + vitals
+SMX OMNIVERSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "final omniverse lock"
+ASSERT SMX_OMNIVERSED == 1 "final omniversed"
 ASSERT SMX_BONDS == 10 "final bonds"
 ASSERT SMX_MESH == 5 "final mesh"
-ASSERT SMX_ANCHORS == 5 "final anchors"
+ASSERT SMX_NEXUSES == 5 "final nexuses"
 ASSERT SMX_BONDS == 10 "final bonds"
-ASSERT SMX_GUARDS == 5 "final guards"
-ASSERT SMX_GUARDS == 5 "final guards"
+ASSERT SMX_ALLPATHS == 5 "final allpaths"
+ASSERT SMX_ALLPATHS == 5 "final allpaths"
 SMX VITAL
 SMX STATUS
-ASSERT SMX_OK == 1 "vital after resilience"
-ASSERT SMX_KEY_OK == 1 "key after resilience"
+ASSERT SMX_OK == 1 "vital after omniverse"
+ASSERT SMX_KEY_OK == 1 "key after omniverse"
 ASSERT SMX_VITAL >= 6 "vital holds"
-ASSERT SMX_OOB == 0 "no oob after resilience"
+ASSERT SMX_OOB == 0 "no oob after omniverse"
 ASSERT SMX_HOLD == 1 "hold_flash sticky"
 
 // Second storm fail-closed
@@ -222,34 +222,34 @@ SMX EXCHANGE hive offworld_storm
 ASSERT SMX_OK == 0 "storm soft-OOB"
 ASSERT SMX_OOB >= 1 "storm counted"
 ASSERT CUBES == base_cubes "storm invents nothing"
-SMX RAISE_RESILIENCE bed nozzle hive scrap pulse
-ASSERT SMX_OK == 1 "anchors after storm"
-ASSERT SMX_OOB == 0 "storm cleared by resilience"
-ASSERT SMX_BREATH == 5 "resilient holds after storm"
-ASSERT SMX_RESILIENT == 1 "resilient after storm"
+SMX RAISE_OMNIVERSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "nexuses after storm"
+ASSERT SMX_OOB == 0 "storm cleared by omniverse"
+ASSERT SMX_BREATH == 5 "omniversed holds after storm"
+ASSERT SMX_OMNIVERSED == 1 "omniversed after storm"
 ASSERT SMX_BONDS == 10 "bonds after storm"
 ASSERT SMX_MESH == 5 "mesh after storm"
-ASSERT SMX_ANCHORS == 5 "anchors after storm"
+ASSERT SMX_NEXUSES == 5 "nexuses after storm"
 ASSERT SMX_BONDS == 10 "bonds after storm"
-ASSERT SMX_GUARDS == 5 "guards after storm"
+ASSERT SMX_ALLPATHS == 5 "allpaths after storm"
 
 COMPARE bed hive
 HARMONY hive
 RESOLVE hive
-ASSERT ENERGY > 0 "life force energy after resilience"
-ASSERT UNITY >= 40 "mesh unity after resilience"
+ASSERT ENERGY > 0 "life force energy after omniverse"
+ASSERT UNITY >= 40 "mesh unity after omniverse"
 ASSERT DECIDE >= 0
 ASSERT DECIDE <= 9
 
-ASSERT births >= 1 "mitosis before mesh resilience"
-ASSERT pop >= 2 "population after resilient life"
-ASSERT SMX_RESILIENT == 1 "resilient latch holds"
+ASSERT births >= 1 "mitosis before mesh omniverse"
+ASSERT pop >= 2 "population after omniversed life"
+ASSERT SMX_OMNIVERSED == 1 "omniversed latch holds"
 ASSERT SMX_BREATH == 5 "five-node tone"
 ASSERT SMX_MESH == 5 "five mesh holds"
-ASSERT SMX_ANCHORS == 5 "five anchors hold"
-ASSERT SMX_OOB == 0 "guard holds through resilience"
+ASSERT SMX_NEXUSES == 5 "five nexuses hold"
+ASSERT SMX_OOB == 0 "guard holds through omniverse"
 ASSERT OK == 1
 
-PRINT "mesh_resilience" births pop SMX_RESILIENT SMX_MESH SMX_ANCHORS SMX_BONDS SMX_GUARDS SMX_RESILIENCE SMX_GUARD SMX_RS SMX_BONDS SMX_FUSE SMX_BIND SMX_TONE SMX_PULSE SMX_BREATH SMX_NODES SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
+PRINT "mesh_omniverse" births pop SMX_OMNIVERSED SMX_MESH SMX_NEXUSES SMX_BONDS SMX_ALLPATHS SMX_OMNIVERSE SMX_ALLPATH SMX_OMNI SMX_BONDS SMX_FUSE SMX_BIND SMX_TONE SMX_PULSE SMX_BREATH SMX_NODES SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
 
 PASS
