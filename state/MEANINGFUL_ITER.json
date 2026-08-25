@@ -1,1 +1,16 @@
-{"meaningful_iter":1156,"version":"1.5.4-smx-mesh-exchange","head":"97671cdf9d5442b84d34cbeb48b6089612d60070","feature":"smx_mesh_exchange","proofs":["smx-soft-oob","smx-mesh-exchange","smx-selftest"],"ok":true}
+{
+  "schema": "cubalc.meaningful_iter.v1",
+  "iter": 1156,
+  "version": "1.5.4-smx-mesh-exchange",
+  "feature": "SMX mesh_exchange soft-OOB fail-closed life-force",
+  "proof": "programs/proof/13_smx_mesh_exchange.cubalc",
+  "proof_pass": true,
+  "smx_soft_oob": true,
+  "smx_mesh_exchange": true,
+  "smx_selftest": true,
+  "head": "8f2bd3113706d6a9d247305dcdc5107b61fd1ac0",
+  "feature_head": "b733333",
+  "note": "mesh_exchange seal/open + soft-OOB heal; fail-closed no key; life_force floor; HEAD past 9a3497ea",
+  "short": "8f2bd31",
+  "past": "9a3497ea"
+}
