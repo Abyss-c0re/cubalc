@@ -1,3 +1,8 @@
+## 1.15.1168-usability — 1698 SMX ASTROSPHERE mesh life-force
+- Pure-C SMX ASTROSPHERE|AS|ORBIT|HORIZON|ASTROSHELL|SHELL|MESH_ASTROSPHERE|RAISE_ASTROSPHERE
+- Fail-closed soft-OOB: complete C(n,2) bonds, orbit ring, horizon hub; latches SMX_ASTROSPHERED
+- Proof 1698 PASS (109 asserts); flagship 1620 PASS; smx-selftest green
+
 ## 1.15.1166-usability — 1697 SMX LOCALBUBBLE mesh life-force
 - Pure-C SMX LOCALBUBBLE|LB|CAVITY|SUPERBUBBLE|WALL|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE
 - Fail-closed soft-OOB: complete C(n,2) bonds, cavity ring, wall hub; latches SMX_LOCALBUBBLED

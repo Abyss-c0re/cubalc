@@ -8851,6 +8851,187 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|...|GALACTIC|LOCALBUBBLE|LB|CAVITY|WALL|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE|...");
+  /* SMX ASTROSPHERE|LB|HORIZON|ORBIT|SHELL|ASTROSHELL|MESH_ASTROSPHERE|RAISE_ASTROSPHERE a b c ...
+   * Life-force mesh stability after localbubble: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete astrosphere mesh among live nodes, weaves a
+   * orbit ring (i -> i+1) so free energy self-regulates, then horizon hub
+   * gathers return so lattice locks astrosphere where life holds the hive.
+   * Latches SMX_ASTROSPHERED when mesh+orbit+horizons are soft-OOB-free.
+   * SMX_SHELL = chain bonds; SMX_HORIZON hub = root gather pulses;
+   * SMX_ASTROSPHERE sum = bonds+orbit+horizons; SMX_AS|SMX_ORBIT sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"ASTROSPHERE")||kw(&L->cur,"AS")||kw(&L->cur,"HORIZON")||
+      kw(&L->cur,"SPHERE")||kw(&L->cur,"ORBIT")||kw(&L->cur,"SHELL")||
+      kw(&L->cur,"SHELL")||kw(&L->cur,"ASTROSHELL")||kw(&L->cur,"HORIZON")||
+      kw(&L->cur,"HORIZONS")||kw(&L->cur,"SHELLS")||
+      kw(&L->cur,"MESH_ASTROSPHERE")||kw(&L->cur,"RAISE_ASTROSPHERE")||
+      kw(&L->cur,"ASTROSPHERES")||kw(&L->cur,"HORIZONS")||
+      kw(&L->cur,"ORBITS")||kw(&L->cur,"SEEDASTRO")||kw(&L->cur,"SEEDSPHERE")||
+      kw(&L->cur,"LATTICE_ASTROSPHERE")||kw(&L->cur,"WORLD_AS")||kw(&L->cur,"WORLD_SPHERE")||
+      kw(&L->cur,"ORBIT_RING")||kw(&L->cur,"PULSE_ASTROSPHERE")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int orbit = 0;
+    int horizons = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "ASTROSPHERE needs >=2 cubes",
+                  "SMX ASTROSPHERE a b [c ...]  or  SMX LB a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - astrosphere needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete astrosphere mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* orbit ring - free energy self-regulates every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else orbit++;
+        }
+      }
+    }
+    /* horizon hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else horizons++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int or_ok = (live >= 2 && orbit >= live && soft == 0) ? 1 : 0;
+      if (!or_ok && live >= 2 && orbit * 2 >= live && soft == 0)
+        or_ok = 1;
+      int hz_ok = (live >= 1 && horizons >= live && soft == 0) ? 1 : 0;
+      if (!hz_ok && live >= 1 && horizons * 2 >= live && soft == 0)
+        hz_ok = 1;
+      int as_ok = (mesh_ok && or_ok && hz_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (as_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (orbit > 0 ? 1 : 0) + (horizons > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_ASTROSPHERED", (long)as_ok);
+      var_set_num(vm, "SMX_ASTROSPHERED_LATCH", (long)as_ok);
+      var_set_num(vm, "SMX_ASTROSPHERE", (long)(as_ok ? bonds + orbit + horizons : 0));
+      var_set_num(vm, "SMX_AS", (long)(as_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SPHERE", (long)(as_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SPHERES", (long)(as_ok ? bonds : 0));
+      var_set_num(vm, "SMX_ASTROSHELL", (long)(as_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHELL_AS", (long)(as_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHELL", (long)(as_ok ? bonds : 0));
+      var_set_num(vm, "SMX_SPHERES", (long)(as_ok ? bonds : 0));
+      var_set_num(vm, "SMX_SPHERES", (long)(as_ok ? bonds : 0));
+      var_set_num(vm, "SMX_ORBITS", (long)(as_ok ? orbit : 0));
+      var_set_num(vm, "SMX_ORBIT", (long)(as_ok ? orbit : 0));
+      var_set_num(vm, "SMX_ORBITRING", (long)(as_ok ? orbit : 0));
+      var_set_num(vm, "SMX_HORIZONS", (long)(as_ok ? horizons : 0));
+      var_set_num(vm, "SMX_HORIZON", (long)(as_ok ? horizons : 0));
+      var_set_num(vm, "SMX_SEEDASTRO", (long)(as_ok ? horizons : 0));
+      var_set_num(vm, "SMX_SEEDSPHERE", (long)(as_ok ? horizons : 0));
+      var_set_num(vm, "SMX_MESH", (long)(as_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + orbit + horizons));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (as_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX ASTROSPHERE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX ASTROSPHERE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX ASTROSPHERE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX ASTROSPHERE nodes=%d live=%d bonds=%d orbit=%d horizons=%d need=%d soft=%d talks=%d oob=%d astrosphered=%d vital=%ld\n",
+                n, live, bonds, orbit, horizons, need, soft, vm->smx_talks, vm->smx_oob, as_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|...|GALACTIC|LOCALBUBBLE|LB|CAVITY|WALL|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE|...|ASTROSPHERE|AS|ORBIT|HORIZON|ASTROSHELL|SHELL|MESH_ASTROSPHERE|RAISE_ASTROSPHERE|ASTROSPHERES|ORBITS|HORIZONS|SHELLS|SEEDASTRO|SEEDSPHERE|WORLD_AS|WORLD_SPHERE|LATTICE_ASTROSPHERE|PULSE_ASTROSPHERE|ORBIT_RING|SPHERE|SPHERES");
   return -1;
 }

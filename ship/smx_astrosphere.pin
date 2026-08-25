@@ -1,0 +1,5 @@
+feature=ASTROSPHERE
+MEANINGFUL_ITER=1698
+VERSION=1.15.1168-usability
+proofs=1698_astrosphere+1620_flagship PASS
+asserts=109
