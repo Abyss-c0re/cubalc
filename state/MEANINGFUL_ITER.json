@@ -7,6 +7,6 @@
   "asserts_ok": 109,
   "flagship_ok": true,
   "smx_selftest_ok": true,
-  "commit": "2e8b624fcb223e4e05f3302127c4bcf4bf28474b",
-  "pin_head": "329de542e138222d02cd8df364cd2b8572366e75"
+  "commit": "dbd089d3c794ff5c6e6327aff83cd5f82411c63b",
+  "pin_head": "74913a85f85768e1bbcc8fe52f81aadeeb0ab758"
 }
