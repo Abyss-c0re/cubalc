@@ -1,4 +1,11 @@
-5983f7d2895eb33ae1c0947b0d454022053c25d6
-5983f7d
-1.5.5-minmax-clamp
-1158
+HEAD=0f2e0780cf122a4ceb0794fabe5b1a4ebb5d10d4
+SHORT=0f2e078
+MEANINGFUL_ITER=1158
+VERSION=1.5.5-minmax-clamp
+PROOF=programs/proof/15_minmax_clamp.cubalc PASS
+PROOF16=programs/proof/16_pow_gcd_between.cubalc PASS
+PROOF_ELIF=programs/proof/15_elif_chain.cubalc PASS
+smx-selftest=PASS
+feature=ABS MIN MAX CLAMP SIGN POW SQRT GCD LCM BETWEEN EVEN ODD + ELIF
+feature_head=85de418
+asserts_ok=62
