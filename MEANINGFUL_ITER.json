@@ -9,5 +9,8 @@
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1703,
-  "proofs": "1703_omniverse+1620_flagship PASS"
+  "proofs": "1703_omniverse+1620_flagship PASS",
+  "commit": "2049378920e40917eb6989a2844a158538753278",
+  "pin_head": "2049378920e40917eb6989a2844a158538753278",
+  "feat_head": "20493789"
 }
