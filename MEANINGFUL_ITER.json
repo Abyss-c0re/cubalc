@@ -6,12 +6,14 @@
   "asserts_ok": 81,
   "asserts_fail": 0,
   "flagship_1620_ok": 12,
-  "ts": 1787688393,
-  "head": "e3416952c5dc38a6d7a5d4254ca91f7bcf34658a",
+  "flagship_1620_asserts_ok": 12,
+  "flagship_1620_asserts_fail": 0,
+  "ts": 1787688449,
+  "head": "cb05ddbac9e9d457cec9638d7cd481194ea2ccee",
   "status": "PASS",
   "unity": 0.994,
   "soft_oob": "fail-closed",
   "mesh_exchange": "synapse+bloom+petals+radiance",
   "bin": "out/ship1708/cubalc",
-  "note": "SMX BLOOM/FLOURISH/UNFOLD life-force mesh flower; 81 asserts; soft-OOB fail-closed; mitosis under free energy"
+  "note": "SMX BLOOM/FLOURISH/UNFOLD life-force mesh flower; 81 asserts; flagship 1620 12/12; soft_oob fail-closed"
 }
