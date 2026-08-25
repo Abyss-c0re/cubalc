@@ -1,7 +1,7 @@
 MEANINGFUL_ITER=1716
 feature=MESH_BLOOM
-pin_head=256539f4af06fc7e57ad637752e7ab6ba35f664e
-tip=256539f4af06fc7e57ad637752e7ab6ba35f664e
+pin_head=38e57bad4d78dc60683829b658f02b1d09876178
+tip=38e57bad4d78dc60683829b658f02b1d09876178
 proofs=PASS
 next=we_autoheal
 sealed=1
