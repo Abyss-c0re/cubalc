@@ -1,1 +1,6 @@
-8b92d785aaf74497a63ea3d3c1fd527e80ed1149
+HEAD=268b6ef7b006b58f42f5be17780c0a63feba7dfa
+SHORT=268b6ef
+MEANINGFUL_ITER=1153
+VERSION=1153
+PROOF=programs/proof/11_smx_soft_oob_mesh.cubalc PASS
+smx-selftest=PASS
