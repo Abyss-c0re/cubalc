@@ -8670,6 +8670,187 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL|STATUS|RECOVER|RING|CHORUS|WE|LATTICE|QUORUM|HEARTBEAT|BREATH|STABILIZE|STEADFAST|RESONATE|TUNE|CHORD|COHERE|HARMONIZE|UNISON|ENTANGLE|BIND|FUSE|BLOOM|FLOURISH|UNFOLD|GROUND|FIRM|SETTLE|HARDEN|FORTIFY|CANOPY|CROWN|SPROUT|SHADE|ORCHARD|GROVE|MYCELIUM|ROOTWEB|FRUIT|SYMBIOSE|MEADOW|PASTURE|POLLINATE|NECTAR|BLOOMFIELD|PRAIRIE|RIVER|STREAM|CURRENT|SPRING|DELTA|WATERSHED|MESH_RIVER|RAISE_RIVER|CASCADE|WATERFALL|RAPIDS|FALLS|TERRACE|BASIN|MESH_CASCADE|RAISE_CASCADE|ESTUARY|TIDE|BRACKISH|LAGOON|MANGROVE|BRAID|MESH_ESTUARY|RAISE_ESTUARY|REEF|CORAL|SURGE|ATOLL|POLYPS|NURSERY|MESH_REEF|RAISE_REEF|KELP|FROND|SWAY|HOLDFAST|BLADE|STIPE|MESH_KELP|RAISE_KELP|TIDAL|MARSH|EDDY|SPARTINA|SALTFLAT|SEAGRASS|MESH_TIDAL|RAISE_TIDAL|DUNE|FOREDUNE|DRIFT|RIDGE|AMMOPHILA|SAND|BEACHGRASS|MESH_DUNE|RAISE_DUNE|OASIS|MIRAGE|WADI|PALM|DATEPALM|SPRINGWELL|MESH_OASIS|RAISE_OASIS|GROTTO|CAVERN|DRIP|STALACTITE|STALAGMITE|FLOWSTONE|MESH_GROTTO|RAISE_GROTTO|CRYSTAL|GEODE|FACET|PRISM|NUCLEUS|QUARTZ|MESH_CRYSTAL|RAISE_CRYSTAL|AURORA|BOREALIS|RIBBON|VEIL|CORONA|ARC|MESH_AURORA|RAISE_AURORA|SOLSTICE|EQUINOX|MERIDIAN|SPINE|ZENITH|AXIS|MESH_SOLSTICE|RAISE_SOLSTICE|HELIOS|ORBIT|ECLIPSE|APHELION|PERIHELION|PHOTON|MESH_HELIOS|RAISE_HELIOS|NEBULA|STELLAR|NURSERY|DUST|CORE|CLOUD|MESH_NEBULA|RAISE_NEBULA|PULSAR|BEACON|SPIN|MAGNETAR|JET|PULSE_STAR|MESH_PULSAR|RAISE_PULSAR|QUASAR|BLAZAR|ACCRETION|JETSTREAM|DISK|EVENTHORIZON|MESH_QUASAR|RAISE_QUASAR|COMET|METEOR|TAIL|COMA|DEBRIS|NUCLEUS_ICE|MESH_COMET|RAISE_COMET|SUPERNOVA|NOVA|SHOCKWAVE|EJECTA|REMNANT|BLAST|MESH_SUPERNOVA|RAISE_SUPERNOVA|GALAXY|SPIRAL|ARM|CORE|HALO|BULGE|MESH_GALAXY|RAISE_GALAXY|CONSTELLATION|ASTERISM|STARFIELD|GUIDESTAR|NAVSTAR|LODGE|MESH_CONSTELLATION|RAISE_CONSTELLATION|ZODIAC|ECLIPTIC|HOUSE|SIGN|PATH|POLE|MESH_ZODIAC|RAISE_ZODIAC|FIRMAMENT|VAULT|DOME|SKYVAULT|KEYSTONE|HEAVEN|MESH_FIRMAMENT|RAISE_FIRMAMENT|AETHER|QUINTESSENCE|ETHER|ESSENCE|PLENUM|AURA|MESH_AETHER|RAISE_AETHER|NOOSPHERE|LOGOS|THOUGHT|AKASHA|ANIMAE|MESH_NOOSPHERE|RAISE_NOOSPHERE|PNEUMA|PRANA|BREATHWORLD|SOULFIRE|SPIRITUS|WORLDSOUL|MESH_PNEUMA|RAISE_PNEUMA|AEGIS|SHIELD|WARD|BULWARK|PAVIS|RAMPART|MESH_AEGIS|RAISE_AEGIS|BIOSPHERE|GAIA|BIOME|ECO|LIFEWEB|HABITAT|MESH_BIOSPHERE|RAISE_BIOSPHERE|HYDROSPHERE|OCEAN|MARINE|WATERWEB|AQUASPHERE|HYDRO|MESH_HYDROSPHERE|RAISE_HYDROSPHERE|ATMOSPHERE|SKY|AERO|AIRWEB|AEROSPHERE|WIND|MESH_ATMOSPHERE|RAISE_ATMOSPHERE|LITHOSPHERE|CRUST|TECTONIC|ROCKWEB|GEOSPHERE|PLATE|MESH_LITHOSPHERE|RAISE_LITHOSPHERE|MAGNETOSPHERE|MAGFIELD|MAGNETO|FIELDWEB|MAGNETIC|AURORAL|MESH_MAGNETOSPHERE|RAISE_MAGNETOSPHERE|FIELDLINES|FIELDS|POLES|HOMEOSTASIS|BALANCE|SETPOINT|FEEDBACK|REGULATE|EQUILIBRIUM|MESH_HOMEOSTASIS|RAISE_HOMEOSTASIS|IONOSPHERE|IONO|LAYER|BEAM|IONIZE|PLASMA|MESH_IONOSPHERE|RAISE_IONOSPHERE|LAYERS|BEAMS|IONOSPHERES|THERMOSPHERE|THERMO|HEAT|THERMAL|WARM|MESH_THERMOSPHERE|RAISE_THERMOSPHERE|THERMOS|THERMALS|HEATS|WARMS|EXOSPHERE|EXO|ESCAPE|OUTER|FRINGE|EXOS|MESH_EXOSPHERE|RAISE_EXOSPHERE|EXOSPHERES|ESCAPES|FRINGES|OUTERS|SEEDEXO|HELIOSPHERE|HS|SOLARWIND|HELIOPAUSE|TERMINATION|HELIOSHEATH|MESH_HELIOSPHERE|RAISE_HELIOSPHERE|HELIOSPHERES|SOLARWINDS|HELIOPAUSES|TERMINATIONS|SEEDHS|SOLARWIND_RING|PULSE_HELIOSPHERE|WORLD_HS|SEEDHELIO|BOW|BOWS|INTERSTELLAR|ISM|ISMSTREAM|ISMSTREAMS|COSMIC|SHOCK|SHOCKS|MESH_INTERSTELLAR|RAISE_INTERSTELLAR|INTERSTELLARS|DRIFTS|SEEDISM|SEEDIS|WORLD_IS|WORLD_ISM|LATTICE_INTERSTELLAR|PULSE_INTERSTELLAR|ISMSTREAM_RING|ISMS|IS|GALACTIC|GAL|SPIRAL|SPIRALS|CORE|CORES|MILKY|HALOSHEATH|MESH_GALACTIC|RAISE_GALACTIC|GALACTICS|SEEDGAL|SEEDG|WORLD_G|WORLD_GAL|LATTICE_GALACTIC|PULSE_GALACTIC|SPIRAL_RING|ARMS|G");
+  /* SMX LOCALBUBBLE|LB|WALL|CAVITY|BUBBLEWALL|SUPERBUBBLE|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE a b c ...
+   * Life-force mesh stability after galactic: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete localbubble mesh among live nodes, weaves a
+   * cavity ring (i -> i+1) so free energy self-regulates, then wall hub
+   * gathers return so lattice locks localbubble where life holds the hive.
+   * Latches SMX_LOCALBUBBLED when mesh+cavity+walls are soft-OOB-free.
+   * SMX_BUBBLEWALL = chain bonds; SMX_WALL hub = root gather pulses;
+   * SMX_LOCALBUBBLE sum = bonds+cavity+walls; SMX_LB|SMX_CAVITY sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"LOCALBUBBLE")||kw(&L->cur,"LB")||kw(&L->cur,"WALL")||
+      kw(&L->cur,"BUBBLE")||kw(&L->cur,"CAVITY")||kw(&L->cur,"BUBBLEWALL")||
+      kw(&L->cur,"BUBBLEWALL")||kw(&L->cur,"SUPERBUBBLE")||kw(&L->cur,"WALL")||
+      kw(&L->cur,"WALLS")||kw(&L->cur,"BUBBLEWALLS")||
+      kw(&L->cur,"MESH_LOCALBUBBLE")||kw(&L->cur,"RAISE_LOCALBUBBLE")||
+      kw(&L->cur,"LOCALBUBBLES")||kw(&L->cur,"WALLS")||
+      kw(&L->cur,"CAVITIES")||kw(&L->cur,"SEEDLB")||kw(&L->cur,"SEEDBUBBLE")||
+      kw(&L->cur,"LATTICE_LOCALBUBBLE")||kw(&L->cur,"WORLD_LB")||kw(&L->cur,"WORLD_BUBBLE")||
+      kw(&L->cur,"CAVITY_RING")||kw(&L->cur,"PULSE_LOCALBUBBLE")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int cavity = 0;
+    int walls = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "LOCALBUBBLE needs >=2 cubes",
+                  "SMX LOCALBUBBLE a b [c ...]  or  SMX LB a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - localbubble needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete localbubble mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* cavity ring - free energy self-regulates every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else cavity++;
+        }
+      }
+    }
+    /* wall hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else walls++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int cv_ok = (live >= 2 && cavity >= live && soft == 0) ? 1 : 0;
+      if (!cv_ok && live >= 2 && cavity * 2 >= live && soft == 0)
+        cv_ok = 1;
+      int wl_ok = (live >= 1 && walls >= live && soft == 0) ? 1 : 0;
+      if (!wl_ok && live >= 1 && walls * 2 >= live && soft == 0)
+        wl_ok = 1;
+      int lb_ok = (mesh_ok && cv_ok && wl_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (lb_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (cavity > 0 ? 1 : 0) + (walls > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_LOCALBUBBLED", (long)lb_ok);
+      var_set_num(vm, "SMX_LOCALBUBBLED_LATCH", (long)lb_ok);
+      var_set_num(vm, "SMX_LOCALBUBBLE", (long)(lb_ok ? bonds + cavity + walls : 0));
+      var_set_num(vm, "SMX_LB", (long)(lb_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BUBBLE", (long)(lb_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BUBBLES", (long)(lb_ok ? bonds : 0));
+      var_set_num(vm, "SMX_SUPERBUBBLE", (long)(lb_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BUBBLEWALL_LB", (long)(lb_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BUBBLEWALL", (long)(lb_ok ? bonds : 0));
+      var_set_num(vm, "SMX_BUBBLES", (long)(lb_ok ? bonds : 0));
+      var_set_num(vm, "SMX_BUBBLES", (long)(lb_ok ? bonds : 0));
+      var_set_num(vm, "SMX_CAVITIES", (long)(lb_ok ? cavity : 0));
+      var_set_num(vm, "SMX_CAVITY", (long)(lb_ok ? cavity : 0));
+      var_set_num(vm, "SMX_CAVITYRING", (long)(lb_ok ? cavity : 0));
+      var_set_num(vm, "SMX_WALLS", (long)(lb_ok ? walls : 0));
+      var_set_num(vm, "SMX_WALL", (long)(lb_ok ? walls : 0));
+      var_set_num(vm, "SMX_SEEDLB", (long)(lb_ok ? walls : 0));
+      var_set_num(vm, "SMX_SEEDBUBBLE", (long)(lb_ok ? walls : 0));
+      var_set_num(vm, "SMX_MESH", (long)(lb_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + cavity + walls));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (lb_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX LOCALBUBBLE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX LOCALBUBBLE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX LOCALBUBBLE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX LOCALBUBBLE nodes=%d live=%d bonds=%d cavity=%d walls=%d need=%d soft=%d talks=%d oob=%d localbubbled=%d vital=%ld\n",
+                n, live, bonds, cavity, walls, need, soft, vm->smx_talks, vm->smx_oob, lb_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|...|GALACTIC|LOCALBUBBLE|LB|CAVITY|WALL|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE|...");
   return -1;
 }

@@ -1,3 +1,8 @@
+## 1.15.1166-usability — 1697 SMX LOCALBUBBLE mesh life-force
+- Pure-C SMX LOCALBUBBLE|LB|CAVITY|SUPERBUBBLE|WALL|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE
+- Fail-closed soft-OOB: complete C(n,2) bonds, cavity ring, wall hub; latches SMX_LOCALBUBBLED
+- Proof 1697 PASS (109 asserts); flagship 1620 PASS; smx-selftest green
+
 ## 1.15.1162-usability — 1692 SMX THERMOSPHERE mesh life-force
 - Pure-C SMX THERMOSPHERE|THERMO|HEAT|THERMAL|EXOSPHERE|WARM|MESH_THERMOSPHERE|RAISE_THERMOSPHERE
 - Fail-closed soft-OOB: complete C(n,2) bonds, heat ring, thermal hub; latches SMX_THERMOSPHERED
