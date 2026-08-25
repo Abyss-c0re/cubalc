@@ -11784,6 +11784,7 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       var_set_num(vm, "SMX_SURVEY", (long)(microglia_ok ? surveys : 0));
       var_set_num(vm, "SMX_SURVEYS", (long)(microglia_ok ? surveys : 0));
       var_set_num(vm, "SMX_SURVEYS_N", (long)(microglia_ok ? surveys : 0));
+      var_set_num(vm, "SMX_SURVEY_LATCH", (long)(microglia_ok ? 1 : 0));
       var_set_num(vm, "SMX_PROCESS", (long)(microglia_ok ? 1 : 0));
       var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(microglia_ok ? 1 : 0));
       var_set_num(vm, "SMX_STABLE_MESH", (long)(microglia_ok ? 1 : 0));
