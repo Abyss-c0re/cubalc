@@ -1,7 +1,7 @@
-HEAD=b8737fa0f4dd9640894fb2af1db629f0680d3109
-SHORT=b8737fa0
-MEANINGFUL_ITER=1705
-VERSION=1.15.1175-usability
-PROOFS=1705_keeper+1620_flagship+1634_mesh_exchange PASS
-feature=KEEPER soft-OOB fail-closed mesh stability
-feat_head=784863bd
+HEAD=b90e309f75e33e93a0b1dcbf55994982687de2b1
+SHORT=b90e309f
+MEANINGFUL_ITER=1706
+VERSION=1.15.1176-usability
+PROOFS=1706_seer+1620_flagship+1634_mesh_exchange PASS
+feature=SEER soft-OOB fail-closed mesh stability
+feat_head=bc63b467

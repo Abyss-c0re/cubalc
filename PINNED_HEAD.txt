@@ -1,5 +1,7 @@
+HEAD=b90e309f75e33e93a0b1dcbf55994982687de2b1
+SHORT=b90e309f
 MEANINGFUL_ITER=1706
 VERSION=1.15.1176-usability
+PROOFS=1706_seer+1620_flagship+1634_mesh_exchange PASS
 feature=SEER soft-OOB fail-closed mesh stability
-HEAD=bc63b467dc92f36b92718d506b569caec4a204ea
-proof=1706_atomic_printer_mesh_seer
+feat_head=bc63b467
