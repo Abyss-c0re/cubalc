@@ -1,7 +1,4 @@
-SMX COHERE → WE_AUTOHEAL → mesh_exchange → SEAL/OPEN → RAISE
+pin_head=aa959be93162215c424a11eb466b1fbd4a4db707
+feat_head=aa959be93162215c424a11eb466b1fbd4a4db707
 MEANINGFUL_ITER=1714
-feature=LIFE_FORCE_COHERE
-proof=1714_smx_life_force_cohere_soft_oob
-asserts_ok=49
-feat_head=b57bd15065f78fc0dfccceac9f997726bdfd45c7
-pin_head=746ff72db4d3c7a98931799a0c43329ea57fbeed
+VERSION=1.15.1185-usability
