@@ -8,6 +8,9 @@
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
+  "commit": "PENDING",
+  "pin_head": "PENDING",
   "MEANINGFUL_ITER": 1702,
-  "proofs": "1702_multiverse+1620_flagship PASS"
+  "proofs": "1702_multiverse+1620_flagship PASS",
+  "feat_head": "PENDING"
 }
