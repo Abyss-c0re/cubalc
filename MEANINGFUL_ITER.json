@@ -1,19 +1,9 @@
 {
-  "iter": 1702,
-  "MEANINGFUL_ITER": 1702,
-  "meaningful_iter": 1702,
-  "version": "1.15.1172-usability",
-  "feature": "atomic_printer_mesh_resilience",
-  "feature_note": "SMX RESILIENCE soft-OOB fail-closed mesh + guard ring + anchor hub after AUTOHEAL",
-  "proof": "programs/proof/1702_atomic_printer_mesh_resilience.cubalc",
-  "integration": "programs/science/integration/atomic_printer_mesh_resilience.cubalc",
-  "status": "PASS",
-  "commit": "7b9a7fd3",
-  "head": "90083a10",
-  "updated": 1787676349,
-  "title": "SMX RESILIENCE life-force mesh",
-  "asserts_ok": 110,
+  "iter": 1703,
+  "feature": "SMX_SEER",
+  "version": "1.15.1173-usability",
+  "proof": "programs/science/proof/1703_atomic_printer_mesh_seer.cubalc",
+  "asserts_ok": 111,
   "asserts_fail": 0,
-  "head_note": "feat 1702 SMX RESILIENCE life-force mesh after AUTOHEAL",
-  "note": "SMX RESILIENCE|RS|GUARD mesh+guard ring+anchor hub after soft-OOB; fail-closed ghosts"
+  "ts": 1787676683
 }

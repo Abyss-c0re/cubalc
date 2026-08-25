@@ -1,23 +1,9 @@
 {
-  "iter": 1698,
-  "feature": "atomic_printer_mesh_localbubble",
-  "proof": "1696_atomic_printer_mesh_localbubble",
-  "version": "1.15.1168-usability",
-  "proof_ok": true,
-  "asserts_ok": 108,
-  "flagship_ok": true,
-  "smx_selftest_ok": true,
-  "commit": "a794d13b",
-  "pin_head": "PENDING",
-  "feature_note": "LOCALBUBBLE soft-OOB fail-closed mesh stability after INTERSTELLAR",
-  "schema": "cubalc.meaningful_iter/v1",
-  "item": "1640 describe life",
-  "item_id": "mi_1640_describe_life",
-  "title": "1640 describe life",
-  "summary": "Host-finished MI ship after nanobot partial (1640_describe_life).",
-  "proofs": [
-    "programs/proof/1640_describe_life.cubalc"
-  ],
-  "ts": "2026-08-25T15:17:03Z",
-  "host_finish": true
+  "iter": 1703,
+  "feature": "SMX_SEER",
+  "version": "1.15.1173-usability",
+  "proof": "programs/science/proof/1703_atomic_printer_mesh_seer.cubalc",
+  "asserts_ok": 111,
+  "asserts_fail": 0,
+  "ts": 1787676683
 }
