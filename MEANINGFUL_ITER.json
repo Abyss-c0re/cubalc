@@ -13,7 +13,7 @@
   "soft_oob_ok": true,
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1708,
-  "proofs": "1708_cortex+1620_flagship+1621_soft_oob PASS",
+  "proofs": "1708_cortex+1620_flagship+1634_mesh_exchange+1621_soft_oob PASS",
   "head": "38bca748",
   "pin_head": "38bca74848cdc8d18ba49adaa70245c8e7fbe2c8",
   "feat_head": "de48cf56a5d7b0519b27532b80b5bd98ac7b685f",
