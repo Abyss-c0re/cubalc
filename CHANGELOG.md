@@ -1,3 +1,9 @@
+## 1.15.1190-usability — 1724 SMX_MESH_OLIGO
+
+- Life-force SMX OLIGO|OLIGODENDROCYTE|MYELINATE|MESH_OLIGO|RAISE_OLIGO: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed.
+- Proof programs/proof/1724_atomic_printer_mesh_oligo.cubalc asserts_ok=77 fail=0; unity 1.0; flagship 1620 PASS.
+- Pins MEANINGFUL_ITER=1724; VERSION=1.15.1190-usability.
+
 ## 1.15.1181-usability — 1716 SMX_MESH_BLOOM
 
 - Life-force SMX BLOOM/FLOURISH/UNFOLD: complete mesh + breath ring flowers lattice after soft-OOB storms.
