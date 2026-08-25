@@ -1,5 +1,6 @@
-MEANINGFUL_ITER=1702
-VERSION=1.15.1172-usability
-FEATURE=SMX_RESILIENCE+OMNIVERSE
-PROOF=1702_atomic_printer_mesh_resilience+omniverse
-HEAD=065c4455
+feature=SMX_RESILIENCE
+iter=1702
+version=1.15.1172-usability
+proof=programs/science/proof/1702_atomic_printer_mesh_resilience.cubalc
+smx=RESILIENCE|RS|RESIL|GUARD|GUARDS|WE_RESILIENCE|MESH_RESILIENCE|RAISE_RESILIENCE|GUARD_RING|ANCHOR_HUB
+asserts=110
