@@ -1,11 +1,10 @@
-HEAD=1cc033de6271e9963fc44c873bcfbd3e01f2e444
-SHORT=1cc033de
+feature=MESH_STABILITY soft-OOB fail-closed mesh_exchange
 MEANINGFUL_ITER=1711
 VERSION=1.15.1182-usability
 PROOFS=1711_mesh_stability+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS
-feature=MESH_STABILITY soft-OOB fail-closed mesh_exchange
-feat_head=185cce50bcaf400a85506ac5e0d3dc3b3be982eb
+feat_head=6c6f23005d073dbbf823f46aaf61d7a3d8834ff6
+head=5e6b9fd8d47acc53c28a2d9e1645df74c1b24d06
+pin_head=5e6b9fd8d47acc53c28a2d9e1645df74c1b24d06
+verified_at=2026-08-25T19:31:45Z
 past=1710
 next=we_autoheal
-verified_at=2026-08-25T19:31:42Z
-pin_head==tip
