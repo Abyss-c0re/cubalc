@@ -3,4 +3,4 @@ feature=atomic_printer_mesh_aegis
 proof=1683_atomic_printer_mesh_aegis
 version=1.15.1153-usability
 proof_ok=true
-commit=PENDING
+commit=285e032d
