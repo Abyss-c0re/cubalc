@@ -1,0 +1,8 @@
+MEANINGFUL_ITER=1713
+feature=LIFE_FORCE COHERE soft-OOB fail-closed mesh usability
+proof=1713_smx_life_force_cohere_soft_oob
+PROOFS=1713 asserts_ok=49 + 1620 asserts_ok=12 + 1621 asserts_ok=18 + 1634 asserts_ok=56 PASS
+VERSION=1.15.1184-usability
+past=1712
+next=we_autoheal
+verified_at=2026-08-25T19:57:43Z

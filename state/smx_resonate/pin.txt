@@ -1,0 +1,4 @@
+MEANINGFUL_ITER=1713
+feature=RESONATE
+proof=1713_smx_resonate_soft_oob
+asserts_ok=47

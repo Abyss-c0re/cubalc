@@ -1,0 +1,12 @@
+HEAD=PENDING
+SHORT=PENDING
+MEANINGFUL_ITER=1713
+VERSION=1.15.1184-usability
+PROOFS=1713_resonate+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=47+12+18+56
+feature=RESONATE soft-OOB fail-closed mesh life-force chord
+feat_head=PENDING
+pin_head=PENDING
+past=1712
+next=we_autoheal
+verified_at=2026-08-25T19:57:48Z
+pin_head==tip
