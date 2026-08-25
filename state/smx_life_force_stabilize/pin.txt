@@ -1,0 +1,9 @@
+feat=1712_smx_life_force_stabilize_soft_oob
+iter=1712
+proof=1712_smx_life_force_stabilize_soft_oob
+verified=PASS
+asserts_ok=47
+flagship_1620=PASS
+feature=LIFE_FORCE_STABILIZE soft-OOB fail-closed STABILIZE+WE_AUTOHEAL
+next=we_autoheal
+VERSION=1.15.1183-usability
