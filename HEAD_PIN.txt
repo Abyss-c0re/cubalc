@@ -1,5 +1,5 @@
-HEAD=b7f693112c2a9d960f3cdcf5bbdacddeddd7a169
-SHORT=b7f69311
+HEAD=ad4944f87538dde584ff40c0e725ef86e16bb000
+SHORT=ad4944f8
 MEANINGFUL_ITER=1709
 VERSION=1.15.1179-usability
 PROOFS=1709_nexus+1620_flagship+1634_mesh_exchange+1621_soft_oob+1708_cortex PASS
