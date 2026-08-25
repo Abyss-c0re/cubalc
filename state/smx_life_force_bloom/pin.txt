@@ -1,7 +1,7 @@
 MEANINGFUL_ITER=1716
 feature=LIFE_FORCE_BLOOM
-pin_head=545e3ae0965ef7de2cac3e8c72b3095eaeeeaaf7
-tip=545e3ae0965ef7de2cac3e8c72b3095eaeeeaaf7
+pin_head=c120aa3053d06334c37b903123a249c70c7e06e0
+tip=c120aa3053d06334c37b903123a249c70c7e06e0
 proofs=PASS
 next=we_autoheal
 sealed=1
