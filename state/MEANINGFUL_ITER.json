@@ -5,9 +5,9 @@
   "version": "1.15.1189-usability",
   "feature": "SMX_MESH_MICROGLIA",
   "proof": "programs/proof/1723_atomic_printer_mesh_microglia.cubalc",
-  "updated": 1787696281,
+  "updated": 1787696300,
   "status": "PASS",
-  "head": "96c4a5ed72fc94f97682b6e3db4b8798664e88e2",
+  "head": "e95e36a07471293fffb753b34dca694aeffe8bc8",
   "schema": "cubalc.meaningful_iter/v1",
   "item": "1723 atomic printer mesh microglia",
   "item_id": "mi_1723_atomic_printer_mesh_microglia",
@@ -16,7 +16,7 @@
   "proofs": [
     "programs/proof/1723_atomic_printer_mesh_microglia.cubalc"
   ],
-  "ts": "2026-08-25T22:18:01Z",
+  "ts": "2026-08-25T22:18:20Z",
   "asserts_ok": 77,
   "asserts_fail": 0,
   "soft_oob": "fail-closed",

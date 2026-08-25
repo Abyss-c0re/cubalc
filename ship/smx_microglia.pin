@@ -1,11 +1,1 @@
-feature=SMX_MICROGLIA
-iter=1723
-proof=programs/science/proof/1723_atomic_printer_mesh_microglia.cubalc
-integration=programs/science/integration/atomic_printer_mesh_microglia.cubalc
-status=PASS
-asserts_ok=78
-asserts_fail=0
-note=SMX MICROGLIA|SURVEY|PROCESS mesh+survey ring+process hub after soft-OOB; fail-closed ghosts
-unity=1.0
-version=1.15.1189-usability
-commit=e95e36a0
+SMX_MESH_MICROGLIA 1723
