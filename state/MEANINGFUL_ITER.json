@@ -7,7 +7,7 @@
   "proof": "programs/science/proof/1717_atomic_printer_mesh_lock.cubalc",
   "updated": 1787688965,
   "status": "PASS",
-  "head": "PENDING",
+  "head": "6c1f5ff575ea390bf957b3a069dfd200a0b45cae",
   "schema": "cubalc.meaningful_iter/v1",
   "item": "SMX mesh lock soft-OOB fail-closed life-force stability",
   "item_id": "mi_smx_mesh_lock_1717",
