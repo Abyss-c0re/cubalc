@@ -1,8 +1,5 @@
-MEANINGFUL_ITER=1716
 feature=MESH_BLOOM
-pin_head=1bca393ac4a70e0a8892b095ac2a5e97c37b9f2c
-tip=1bca393ac4a70e0a8892b095ac2a5e97c37b9f2c
-proofs=PASS
+iter=1716
+pin_head=37a1e2af6e3b17ddec2b02a769de66b3f4f95eda
+verified=PASS
 next=we_autoheal
-sealed=1
-VERSION=1.15.1187-usability
