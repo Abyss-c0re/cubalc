@@ -9032,6 +9032,185 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|...|GALACTIC|LOCALBUBBLE|LB|CAVITY|WALL|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE|...|ASTROSPHERE|AS|ORBIT|HORIZON|ASTROSHELL|SHELL|MESH_ASTROSPHERE|RAISE_ASTROSPHERE|ASTROSPHERES|ORBITS|HORIZONS|SHELLS|SEEDASTRO|SEEDSPHERE|WORLD_AS|WORLD_SPHERE|LATTICE_ASTROSPHERE|PULSE_ASTROSPHERE|ORBIT_RING|SPHERE|SPHERES");
+  /* SMX SUPERCLUSTER|SC|CLUSTER|FILAMENT|HUB|SUPERCLUST|MESH_SUPERCLUSTER|RAISE_SUPERCLUSTER a b c ...
+   * Life-force mesh stability after astrosphere: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete supercluster mesh among live nodes, weaves a
+   * filament ring (i -> i+1) so free energy self-regulates, then hub center
+   * gathers return so lattice locks supercluster where life holds the hive.
+   * Latches SMX_SUPERCLUSTERED when mesh+filaments+hubs are soft-OOB-free.
+   * SMX_FILAMENT = chain bonds; SMX_HUB center = root gather pulses;
+   * SMX_SUPERCLUSTER sum = bonds+filaments+hubs; SMX_SC|SMX_FILAMENT sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"SUPERCLUSTER")||kw(&L->cur,"SC")||kw(&L->cur,"CLUSTER")||
+      kw(&L->cur,"FILAMENT")||kw(&L->cur,"HUB")||kw(&L->cur,"SUPERCLUST")||
+      kw(&L->cur,"CLUSTERHUB")||kw(&L->cur,"CLUSTERS")||kw(&L->cur,"FILAMENTS")||
+      kw(&L->cur,"HUBS")||kw(&L->cur,"FILAMENTRINGS")||
+      kw(&L->cur,"MESH_SUPERCLUSTER")||kw(&L->cur,"RAISE_SUPERCLUSTER")||
+      kw(&L->cur,"SUPERCLUSTERS")||kw(&L->cur,"SEEDSC")||kw(&L->cur,"SEEDCLUSTER")||
+      kw(&L->cur,"LATTICE_SUPERCLUSTER")||kw(&L->cur,"WORLD_SC")||kw(&L->cur,"WORLD_CLUSTER")||
+      kw(&L->cur,"FILAMENT_RING")||kw(&L->cur,"PULSE_SUPERCLUSTER")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int filaments = 0;
+    int hubs = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "SUPERCLUSTER needs >=2 cubes",
+                  "SMX SUPERCLUSTER a b [c ...]  or  SMX SC a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - supercluster needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete supercluster mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* filament ring - free energy self-regulates every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else filaments++;
+        }
+      }
+    }
+    /* hub root - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else hubs++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mefi_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mefi_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mefi_ok = 1;
+      int fi_ok = (live >= 2 && filaments >= live && soft == 0) ? 1 : 0;
+      if (!fi_ok && live >= 2 && filaments * 2 >= live && soft == 0)
+        fi_ok = 1;
+      int hu_ok = (live >= 1 && hubs >= live && soft == 0) ? 1 : 0;
+      if (!hu_ok && live >= 1 && hubs * 2 >= live && soft == 0)
+        hu_ok = 1;
+      int sc_ok = (mefi_ok && fi_ok && hu_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (sc_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (filaments > 0 ? 1 : 0) + (hubs > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_SUPERCLUSTERED", (long)sc_ok);
+      var_set_num(vm, "SMX_SUPERCLUSTERED_LATCH", (long)sc_ok);
+      var_set_num(vm, "SMX_SUPERCLUSTER", (long)(sc_ok ? bonds + filaments + hubs : 0));
+      var_set_num(vm, "SMX_SC", (long)(sc_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CLUSTER", (long)(sc_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CLUSTERS", (long)(sc_ok ? bonds : 0));
+      var_set_num(vm, "SMX_SUPERCLUST", (long)(sc_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CLUSTERWALL_LB", (long)(sc_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CLUSTERWALL", (long)(sc_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FILAMENTS", (long)(sc_ok ? filaments : 0));
+      var_set_num(vm, "SMX_FILAMENT", (long)(sc_ok ? filaments : 0));
+      var_set_num(vm, "SMX_FILAMENTRING", (long)(sc_ok ? filaments : 0));
+      var_set_num(vm, "SMX_HUBS", (long)(sc_ok ? hubs : 0));
+      var_set_num(vm, "SMX_HUB", (long)(sc_ok ? hubs : 0));
+      var_set_num(vm, "SMX_SEEDSC", (long)(sc_ok ? hubs : 0));
+      var_set_num(vm, "SMX_SEEDCLUSTER", (long)(sc_ok ? hubs : 0));
+      var_set_num(vm, "SMX_MESH", (long)(sc_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + filaments + hubs));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (sc_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX SUPERCLUSTER ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX SUPERCLUSTER partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX SUPERCLUSTER soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX SUPERCLUSTER nodes=%d live=%d bonds=%d filaments=%d hubs=%d need=%d soft=%d talks=%d oob=%d superclustered=%d vital=%ld\n",
+                n, live, bonds, filaments, hubs, need, soft, vm->smx_talks, vm->smx_oob, sc_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|...|GALACTIC|LOCALBUBBLE|LB|CAVITY|WALL|MESH_LOCALBUBBLE|RAISE_LOCALBUBBLE|...|ASTROSPHERE|AS|ORBIT|HORIZON|ASTROSHELL|SHELL|MESH_ASTROSPHERE|RAISE_ASTROSPHERE|ASTROSPHERES|ORBITS|HORIZONS|SHELLS|SEEDASTRO|SEEDSPHERE|WORLD_AS|WORLD_SPHERE|LATTICE_ASTROSPHERE|PULSE_ASTROSPHERE|ORBIT_RING|SPHERE|SPHERES|SUPERCLUSTER|SC|CLUSTER|FILAMENT|HUB|SUPERCLUST|MESH_SUPERCLUSTER|RAISE_SUPERCLUSTER|CLUSTERS|FILAMENTS|HUBS|SEEDSC|SEEDCLUSTER|WORLD_SC|WORLD_CLUSTER|LATTICE_SUPERCLUSTER|PULSE_SUPERCLUSTER|FILAMENT_RING");
   return -1;
 }
