@@ -1,1 +1,7 @@
-iter=1703 feature=OMNIVERSE sha=93d73051990d050cc661497163cd20df27d8b710
+iter=1703
+feature=OMNIVERSE
+proof=1703_atomic_printer_mesh_omniverse
+version=1.15.1173-usability
+head=82436c902858a2b977f96e41b2080f43ecfb0de3
+asserts_ok=110
+flagship_ok=1
