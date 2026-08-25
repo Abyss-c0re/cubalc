@@ -8,9 +8,6 @@
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
-  "commit": "1f1e115f8191dd943788bfc5ccfb032bf405e443",
-  "pin_head": "1f1e115f8191dd943788bfc5ccfb032bf405e443",
   "MEANINGFUL_ITER": 1702,
-  "proofs": "1702_multiverse+1620_flagship PASS",
-  "feat_head": "1f1e115f8191dd943788bfc5ccfb032bf405e443"
+  "proofs": "1702_multiverse+1620_flagship PASS"
 }
