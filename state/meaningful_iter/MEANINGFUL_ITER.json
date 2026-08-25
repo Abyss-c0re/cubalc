@@ -1,9 +1,9 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "iter": 1712,
-  "commit": "b6513da54f96062a066df13e4650c97859410db1",
-  "version": "1.15.1182-usability",
-  "feature": "LIFE_FORCE_STABILIZE",
+  "commit": "6d47e816cd0e860ce8b2925d3e4b2748870788cc",
+  "version": "1.15.1183-usability",
+  "feature": "LIFE_FORCE STABILIZE soft-OOB fail-closed mesh usability",
   "proof": "1712_smx_life_force_stabilize_soft_oob",
   "proof_ok": true,
   "asserts_ok": 47,
@@ -13,14 +13,11 @@
   "soft_oob_ok": true,
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1712,
-  "proofs": "1711_mesh_stability+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS",
-  "head": "b6513da5",
-  "pin_head": "6601db54a6431d984833c8a7ad08159cff153718",
-  "feat_head": "6601db54a6431d984833c8a7ad08159cff153718",
-  "past": "1710",
+  "proofs": "1712_life_force_stabilize+1711_mesh_stability+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS",
+  "head": "6d47e816",
+  "pin_head": "6d47e816cd0e860ce8b2925d3e4b2748870788cc",
+  "feat_head": "f16ebd32162557fd50b483331cf2e4d7f58560c7",
+  "past": "1711",
   "next": "we_autoheal",
-  "verified_at": "2026-08-25T19:45:03Z",
-  "verified": "PASS",
-  "flagship_1620": "PASS",
-  "VERSION": "1.15.1183-usability"
+  "verified_at": "2026-08-25T19:45:20Z"
 }
