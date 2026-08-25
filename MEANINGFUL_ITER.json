@@ -4,7 +4,7 @@
   "MEANINGFUL_ITER": 1705,
   "VERSION": "1.15.1175-usability",
   "version": "1.15.1175-usability",
-  "feature": "KEEPER soft-OOB fail-closed mesh stability (pulse ring + thalamus hub)",
+  "feature": "KEEPER soft-OOB fail-closed mesh stability",
   "proof": "1705_atomic_printer_mesh_keeper",
   "proof_ok": true,
   "asserts_ok": 110,
@@ -12,8 +12,8 @@
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "proofs": "1705_keeper+1620_flagship+1634_mesh_exchange PASS",
-  "head": "025ec4bc8cf946874a956a86d5461ad3483489a6",
-  "pin_head": "025ec4bc8cf946874a956a86d5461ad3483489a6",
+  "commit": "a3f581803f9dd13e04cfb6eff9f18a3ead5ca1b1",
+  "head": "a3f58180",
   "feat_head": "784863bd",
-  "updated": "2026-08-25T20:23:59+03:00"
+  "updated": "2026-08-25T20:24:07+03:00"
 }
