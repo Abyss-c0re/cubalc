@@ -307,15 +307,40 @@ static int cmd_smx_soft_oob_proof(void) {
     }
   }
 
-  printf("{\"ok\":true,\"cmd\":\"smx-soft-oob\",\"proto\":2,"
-         "\"soft_repairs\":%u,\"gap_healed\":%u,\"life_force\":%.4f,"
-         "\"hold_flash\":%u,\"oob_flag\":true,\"reason\":\"%s\","
-         "\"mesh\":\"stable\"}\n",
-         pulse.soft_repairs, pulse.gap_healed, pulse.life_force,
-         (unsigned)pulse.hold_flash, pulse.reason);
-  return 0;
+  /* mesh_exchange stable path */
+  {
+    cubalc_smx_mesh_pulse mx;
+    int mx_rc = cubalc_smx_mesh_exchange(&ctx, &ch, 0, 1, &mx);
+    if (mx_rc != 0) {
+      printf("{\"ok\":false,\"error\":\"mesh_exchange\",\"rc\":%d,\"reason\":\"%s\"}\n",
+             mx_rc, mx.reason);
+      return 11;
+    }
+    if (mx.life_force < CUBALC_SMX_LIFE_FLOOR - 0.001f) {
+      printf("{\"ok\":false,\"error\":\"mesh_exchange_life\",\"lf\":%.4f}\n", mx.life_force);
+      return 12;
+    }
+    /* fail-closed mesh_exchange without key */
+    {
+      cubalc_smx_ctx bare2;
+      cubalc_smx_mesh_pulse mx2;
+      cubalc_smx_ctx_init(&bare2);
+      if (cubalc_smx_mesh_exchange(&bare2, &ch, 0, 1, &mx2) != -2) {
+        puts("{\"ok\":false,\"error\":\"mesh_exchange_expected_no_key\"}");
+        return 13;
+      }
+    }
+    printf("{\"ok\":true,\"cmd\":\"smx-soft-oob\",\"proto\":2,"
+           "\"soft_repairs\":%u,\"gap_healed\":%u,\"life_force\":%.4f,"
+           "\"hold_flash\":%u,\"oob_flag\":true,\"reason\":\"%s\","
+           "\"mesh\":\"stable\",\"mesh_exchange\":\"ok\","
+           "\"mx_life\":%.4f,\"mx_reason\":\"%s\"}\n",
+           pulse.soft_repairs, pulse.gap_healed, pulse.life_force,
+           (unsigned)pulse.hold_flash, pulse.reason,
+           mx.life_force, mx.reason);
+    return 0;
+  }
 }
-
 
 static int cmd_smx_selftest(void) {
   cubalc_smx_ctx ctx;
@@ -374,6 +399,8 @@ int main(int argc, char **argv) {
     return cmd_smx_selftest();
   if (strcmp(cmd, "smx-soft-oob") == 0 || strcmp(cmd, "soft-oob") == 0)
     return cmd_smx_soft_oob_proof();
+  if (strcmp(cmd, "smx-mesh-exchange") == 0 || strcmp(cmd, "mesh-exchange") == 0)
+    return cmd_smx_mesh_exchange_proof();
   if (strcmp(cmd, "law") == 0 || strcmp(cmd, "manifest") == 0)
     return cmd_law_manifest();
   if (strcmp(cmd, "sync") == 0 || strcmp(cmd, "hive") == 0)

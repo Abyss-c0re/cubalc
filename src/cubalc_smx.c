@@ -489,3 +489,86 @@ int cubalc_smx_seal_oob(cubalc_smx_ctx *ctx, const cubalc_atom *atom,
   return 0;
 }
 
+int cubalc_smx_mesh_exchange(cubalc_smx_ctx *ctx, cubalc_chain *ch,
+                             int from, int to, cubalc_smx_mesh_pulse *pulse) {
+  uint8_t buf[512];
+  size_t n = 0;
+  cubalc_atom received;
+  char f[CUBALC_ID_LEN], t[CUBALC_ID_LEN];
+  cubalc_cube *A, *B;
+  cubalc_smx_mesh_pulse local;
+  cubalc_smx_mesh_pulse *p = pulse ? pulse : &local;
+  int rc, soft_rc;
+  memset(p, 0, sizeof(*p));
+  if (!ctx || !ch) return -1;
+  if (!ctx->key_ok) {
+    snprintf(ctx->last_err, sizeof ctx->last_err, "mesh_exchange_fail_closed_no_key");
+    snprintf(p->reason, sizeof p->reason, "no_key");
+    p->life_force = 0.0f;
+    return -2;
+  }
+  if (from < 0 || to < 0 || from >= ch->n_cubes || to >= ch->n_cubes)
+    return -1;
+  A = &ch->cubes[from];
+  B = &ch->cubes[to];
+
+  rc = cubalc_smx_seal(ctx, &A->atom, A->id, B->id, buf, sizeof buf, &n);
+  if (rc != 0) {
+    snprintf(p->reason, sizeof p->reason, "seal_fail");
+    return rc;
+  }
+  rc = cubalc_smx_open(ctx, buf, n, &received, f, t, &B->atom.matrix);
+  if (rc != 0) {
+    /* recoverable: replay/compat → soft-OOB then recovery frame */
+    soft_rc = cubalc_smx_soft_oob(ctx, rc, ctx->last_tx_seq, B->atom.unity, p);
+    if (soft_rc != 0) {
+      if (!p->reason[0])
+        snprintf(p->reason, sizeof p->reason, "hard_fail_%d", rc);
+      return soft_rc < 0 ? soft_rc : rc;
+    }
+    /* re-seal as OOB recovery and open */
+    n = 0;
+    if (cubalc_smx_seal_oob(ctx, &A->atom, A->id, B->id, buf, sizeof buf, &n) != 0) {
+      snprintf(p->reason, sizeof p->reason, "seal_oob_fail");
+      return -8;
+    }
+    rc = cubalc_smx_open(ctx, buf, n, &received, f, t, &B->atom.matrix);
+    if (rc != 0) {
+      snprintf(p->reason, sizeof p->reason, "open_oob_fail");
+      p->life_force = cubalc_smx_life_force_tick(ctx, B->atom.unity, 1);
+      return rc;
+    }
+  } else {
+    p->life_force = cubalc_smx_life_force_tick(ctx, received.unity > 0.f ? received.unity : 1.0f, 0);
+    p->soft_repairs = ctx->soft_repairs;
+    p->hold_flash = ctx->hold_flash ? 1 : 0;
+    p->seq = ctx->last_rx_seq;
+    snprintf(p->reason, sizeof p->reason, "exchange_stable");
+  }
+
+  /* apply sealed matrix transfer under proton law */
+  if (received.proton) {
+    int i;
+    for (i = 0; i < received.matrix.n && i < CUBALC_ATOM_BITS; i++)
+      if (cubalc_matrix_get(&received.matrix, i))
+        cubalc_matrix_set(&B->atom.matrix, i, 1);
+    B->atom.alive = 1;
+  } else {
+    int i;
+    for (i = 0; i < received.matrix.n && i < CUBALC_ATOM_BITS; i++)
+      if (cubalc_matrix_get(&received.matrix, i))
+        cubalc_matrix_set(&B->atom.matrix, i, 0);
+  }
+  if (!B->atom.digit_lock)
+    B->atom.digit = (uint8_t)cubalc_algocube_digit(&B->atom.matrix);
+  B->atom.unity = cubalc_matrix_compat(&A->atom.matrix, &B->atom.matrix);
+  ctx->hold_flash = 1;
+  p->hold_flash = 1;
+  if (p->life_force < CUBALC_SMX_LIFE_FLOOR)
+    p->life_force = CUBALC_SMX_LIFE_FLOOR;
+  ctx->life_force = p->life_force;
+  if (!p->reason[0])
+    snprintf(p->reason, sizeof p->reason, "exchange_ok");
+  ctx->last_err[0] = 0;
+  return 0;
+}

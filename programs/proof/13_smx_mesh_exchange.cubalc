@@ -1,0 +1,9 @@
+# Proof 13 — SMX mesh_exchange soft-OOB fail-closed
+# Law: hold_flash sticky · fail-closed without key · life_force floor · mesh stable
+# Run: ./out/cubalc smx-mesh-exchange
+# Expect JSON ok=true life_force>=0.35 mesh=stable fail_closed=true
+CUBE kernel PROTON 1
+CUBE hive PROTON 1
+PLUG kernel hive
+# mesh_exchange seals, opens, soft-heals recoverable stress, keeps pulse
+ASSERT UNITY

@@ -89,6 +89,13 @@ int  cubalc_smx_seal_oob(cubalc_smx_ctx *ctx, const cubalc_atom *atom,
                          const char *from, const char *to,
                          uint8_t *out, size_t cap, size_t *n_out);
 
+/* mesh_exchange: seal → open with soft-OOB heal on recoverable stress.
+ * fail-closed without key; HOLD_FLASH sticky; life_force floor enforced.
+ * Returns 0 on stable exchange (possibly after soft heal).
+ */
+int  cubalc_smx_mesh_exchange(cubalc_smx_ctx *ctx, cubalc_chain *ch,
+                              int from, int to, cubalc_smx_mesh_pulse *pulse);
+
 
 #ifdef __cplusplus
 }

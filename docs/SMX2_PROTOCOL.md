@@ -14,3 +14,5 @@ See full book §14 in `CUBALC_BOOK.md`.
 | C | `cubalc_smx_seal` / `open` / `talk_secure` |
 
 Fail-closed without key. Bits only on the wire.
+
+mesh_exchange: seal/open + soft-OOB heal · `smx-mesh-exchange` proof · fail-closed no key.
