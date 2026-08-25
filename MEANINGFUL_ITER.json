@@ -3,11 +3,11 @@
   "version": "1.15.1172-usability",
   "head": "032662f7",
   "feat": "mesh_omniverse",
-  "proof": "programs/science/proof/1702_atomic_printer_mesh_resilience.cubalc",
+  "proof": "programs/proof/1702_atomic_printer_mesh_resilience.cubalc",
   "status": "PASS",
   "iter": 1702,
   "MEANINGFUL_ITER": 1702,
   "feature": "SMX_RESILIENCE",
-  "commit": "7b9a7fd388be20c56381ff512da87a7394c7ded6",
+  "commit": "a772f102",
   "updated": 1787676295
 }

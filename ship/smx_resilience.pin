@@ -1,4 +1,5 @@
-MEANINGFUL_ITER=1702
-VERSION=1.15.1172-usability
-FEATURE=SMX_RESILIENCE
-PROOF=1702_atomic_printer_mesh_resilience
+feature=SMX_RESILIENCE
+iter=1702
+version=1.15.1172-usability
+commit=a772f102
+proof=programs/proof/1702_atomic_printer_mesh_resilience.cubalc
