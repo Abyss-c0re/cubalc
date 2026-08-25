@@ -3,7 +3,7 @@ feature=LIFE_FORCE COHERE soft-OOB fail-closed mesh usability
 proof=1714_smx_life_force_cohere_soft_oob
 PROOFS=1714 asserts_ok=49 + 1620 asserts_ok=12 + 1621 asserts_ok=18 + 1634 asserts_ok=56 PASS
 VERSION=1.15.1185-usability
+pin_head=6f4661b70c60c4f4df0d9704ab6a8cd8e8656b3d
 past=1713
 next=we_autoheal
-verified_at=2026-08-25T20:00:26Z
-pin_head=bc89291f620f7405da8f86c75458f8b16567b0c9
+verified_at=2026-08-25T20:02:00Z

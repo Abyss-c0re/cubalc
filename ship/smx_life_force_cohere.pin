@@ -1,12 +1,8 @@
-HEAD=bc89291f620f7405da8f86c75458f8b16567b0c9
-SHORT=bc89291f
 MEANINGFUL_ITER=1714
 VERSION=1.15.1185-usability
 PROOFS=1714_life_force_cohere+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=49+12+18+56
 feature=LIFE_FORCE COHERE soft-OOB fail-closed mesh usability
-feat_head=b57bd15065f78fc0dfccceac9f997726bdfd45c7
-pin_head=bc89291f620f7405da8f86c75458f8b16567b0c9
 past=1713
 next=we_autoheal
-verified_at=2026-08-25T20:00:26Z
-pin_head==tip
+pin_head=6f4661b70c60c4f4df0d9704ab6a8cd8e8656b3d
+verified_at=2026-08-25T20:02:00Z
