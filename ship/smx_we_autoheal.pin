@@ -1,13 +1,11 @@
-feature=WE_AUTOHEAL soft-OOB fail-closed mesh stability
-iter=1710
-version=1.15.1179-usability
-proof=1710_smx_we_autoheal_soft_oob
-asserts_ok=35
+WE_AUTOHEAL 1710 soft-OOB fail-closed
+feature=SMX WE_AUTOHEAL mesh stability
+proof=1710_smx_we_autoheal_soft_oob+1634_mesh_exchange+1621_soft_oob+1620_flagship
 asserts_fail=0
-flagship=1620 PASS
-soft_oob=1621 PASS
-mesh_exchange=1634 PASS
-feat_head=2ebe6fb44612ad06ea63469a0aaa5b45fcd8f4f8
-pin_head=dac25c2155c191b5f4417d23ba8170bb122c3a0b
+asserts_ok=35+56+18+12
+VERSION=1.15.1180-usability
 next=we_autoheal
 verified=PASS
+feat_head=2ebe6fb44612ad06ea63469a0aaa5b45fcd8f4f8
+pin_head=c44ca42c296b40d79bbae3a6d6c0ba7185b4d306
+past=1709

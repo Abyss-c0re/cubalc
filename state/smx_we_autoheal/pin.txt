@@ -1,1 +1,1 @@
-1710 WE_AUTOHEAL soft-OOB fail-closed PASS pin=425334af
+1710 WE_AUTOHEAL soft-OOB fail-closed PASS pin=c44ca42c
