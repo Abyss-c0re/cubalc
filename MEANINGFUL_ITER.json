@@ -1,6 +1,6 @@
 {
   "iter": 1700,
-  "feature": "atomic_printer_mesh_cosmicweb",
+  "feature": "COSMICWEB soft-OOB fail-closed mesh stability",
   "proof": "1700_atomic_printer_mesh_cosmicweb",
   "version": "1.15.1170-usability",
   "proof_ok": true,
@@ -8,6 +8,9 @@
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
-  "commit": "PENDING",
-  "pin_head": "PENDING"
+  "commit": "5200aeb618f9b0869555c47cb229b382ab598e1f",
+  "pin_head": "5200aeb618f9b0869555c47cb229b382ab598e1f",
+  "MEANINGFUL_ITER": 1700,
+  "proofs": "1700_cosmicweb+1620_flagship PASS",
+  "feat_head": "5200aeb618f9b0869555c47cb229b382ab598e1f"
 }
