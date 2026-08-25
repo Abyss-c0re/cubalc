@@ -1,12 +1,18 @@
 {
-  "iter": 1695,
-  "feature": "atomic_printer_mesh_interstellar",
-  "proof": "1695_atomic_printer_mesh_interstellar",
+  "iter": 1696,
+  "feature": "GALACTIC soft-OOB fail-closed mesh stability",
+  "proof": "1696_atomic_printer_mesh_galactic",
   "version": "1.15.1164-usability",
   "proof_ok": true,
   "asserts_ok": 109,
   "flagship_ok": true,
   "smx_selftest_ok": true,
   "commit": "95216237df1017fa6c4c8e445a309845cf8f6fa7",
-  "pin_head": "432e626d44424873e658a26fd7c12f064a719f60"
+  "pin_head": "432e626d44424873e658a26fd7c12f064a719f60",
+  "MEANINGFUL_ITER": 1696,
+  "VERSION": "1.15.1165-usability",
+  "HEAD": "814c747da30469c75a0f0545af5b9e5951d8745a",
+  "SHORT": "814c747d",
+  "flagship_1620": "PASS",
+  "updated": 1787669446
 }
