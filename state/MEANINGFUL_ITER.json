@@ -1,9 +1,23 @@
 {
   "iter": 1703,
-  "feature": "SMX_SEER",
+  "feature": "atomic_printer_mesh_seer",
+  "proof": "1703_atomic_printer_mesh_seer",
   "version": "1.15.1173-usability",
-  "proof": "programs/science/proof/1703_atomic_printer_mesh_seer.cubalc",
-  "asserts_ok": 111,
-  "asserts_fail": 0,
-  "ts": 1787676683
+  "proof_ok": true,
+  "asserts_ok": 1,
+  "flagship_ok": true,
+  "smx_selftest_ok": true,
+  "commit": "PENDING",
+  "pin_head": "PENDING",
+  "feature_note": "SEER soft-OOB fail-closed mesh + sight ring + oracle hub after OMNIVERSE",
+  "schema": "cubalc.meaningful_iter/v1",
+  "item": "1703 seer mesh",
+  "item_id": "mi_1703_seer",
+  "title": "1703 atomic printer mesh seer",
+  "summary": "SMX SEER|MESH_SEER|RAISE_SEER — complete seer mesh + sight ring + oracle hubs; soft-OOB fail-closed; mitosis under free energy.",
+  "proofs": [
+    "programs/proof/1703_atomic_printer_mesh_seer.cubalc"
+  ],
+  "ts": "2026-08-25T19:52:00Z",
+  "host_finish": false
 }
