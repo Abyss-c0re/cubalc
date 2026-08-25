@@ -1,0 +1,9 @@
+# Proof 11 — SMX soft-OOB mesh stability / life-force
+# Law: hold_flash sticky · fail-closed without key · soft heal replay/compat gaps
+# Run: ./out/cubalc smx-soft-oob
+# Expect JSON ok=true life_force>=0.35 soft_repairs>=1 mesh=stable
+CUBE kernel PROTON 1
+CUBE hive PROTON 1
+PLUG kernel hive
+# mesh life-force floor enforced under stress; SOFT_OOB recovery frames keep pulse
+ASSERT UNITY

@@ -1,0 +1,384 @@
+src/cubalc_lang.c: In function ‘lex_next’:
+src/cubalc_lang.c:121:7: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+  121 |       if (k+1<sizeof b) b[k++]=L->s[L->i]; L->i++;
+      |       ^~
+src/cubalc_lang.c:121:44: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+  121 |       if (k+1<sizeof b) b[k++]=L->s[L->i]; L->i++;
+      |                                            ^
+src/cubalc_lang.c: In function ‘parse_prim’:
+src/cubalc_lang.c:796:47: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 96 [-Wformat-truncation=]
+  796 |     char name[96]; snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+      |                                               ^~
+src/cubalc_lang.c:796:20: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 96
+  796 |     char name[96]; snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+      |                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:847:58: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  847 |         if (L->cur.kind==TK_IDENT){ snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L); }
+      |                                                          ^~
+src/cubalc_lang.c:847:37: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  847 |         if (L->cur.kind==TK_IDENT){ snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L); }
+      |                                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:849:58: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  849 |         if (L->cur.kind==TK_IDENT){ snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L); }
+      |                                                          ^~
+src/cubalc_lang.c:849:37: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  849 |         if (L->cur.kind==TK_IDENT){ snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L); }
+      |                                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:824:60: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  824 |         if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                                            ^~
+src/cubalc_lang.c:824:37: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  824 |         if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c: In function ‘parse_cube_body’:
+src/cubalc_lang.c:535:36: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  535 |   char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      |                                    ^~
+src/cubalc_lang.c:535:15: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  535 |   char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      |               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:560:34: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  560 |       snprintf(role,sizeof role,"%s",L->cur.text); lex_next(L);
+      |                                  ^~
+src/cubalc_lang.c:560:7: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  560 |       snprintf(role,sizeof role,"%s",L->cur.text); lex_next(L);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:545:40: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  545 |       char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      |                                        ^~
+src/cubalc_lang.c:545:19: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  545 |       char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      |                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:514:44: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 80 [-Wformat-truncation=]
+  514 |       snprintf(vm->creed,sizeof vm->creed,"%s",L->cur.text);
+      |                                            ^~
+src/cubalc_lang.c:514:7: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 80
+  514 |       snprintf(vm->creed,sizeof vm->creed,"%s",L->cur.text);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:515:50: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 80 [-Wformat-truncation=]
+  515 |       snprintf(vm->ch.creed,sizeof vm->ch.creed,"%s",L->cur.text);
+      |                                                  ^~
+src/cubalc_lang.c:515:7: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 80
+  515 |       snprintf(vm->ch.creed,sizeof vm->ch.creed,"%s",L->cur.text);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:499:36: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+  499 |       snprintf(plate,sizeof plate,"%s",L->cur.text); lex_next(L);
+      |                                    ^~
+src/cubalc_lang.c:499:7: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+  499 |       snprintf(plate,sizeof plate,"%s",L->cur.text); lex_next(L);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:485:56: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  485 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                                        ^~
+src/cubalc_lang.c:485:33: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  485 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:478:56: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  478 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                                        ^~
+src/cubalc_lang.c:478:33: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  478 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:471:56: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  471 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                                        ^~
+src/cubalc_lang.c:471:33: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  471 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:403:58: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 256 [-Wformat-truncation=]
+  403 |     if (L->cur.kind==TK_STR){ snprintf(path,sizeof path,"%s",L->cur.text); lex_next(L); }
+      |                                                          ^~
+src/cubalc_lang.c:403:31: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 256
+  403 |     if (L->cur.kind==TK_STR){ snprintf(path,sizeof path,"%s",L->cur.text); lex_next(L); }
+      |                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:349:56: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  349 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                                        ^~
+src/cubalc_lang.c:349:33: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  349 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:286:60: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  286 |         if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                                            ^~
+src/cubalc_lang.c:286:37: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  286 |         if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:290:45: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  290 |         char id[48]; snprintf(id,sizeof id,"%s", L->cur.kind==TK_NUM?L->cur.text:L->cur.text);
+      |                                             ^~
+src/cubalc_lang.c:290:22: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  290 |         char id[48]; snprintf(id,sizeof id,"%s", L->cur.kind==TK_NUM?L->cur.text:L->cur.text);
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:297:40: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+  297 |             snprintf(role,sizeof role,"%s",L->cur.text); lex_next(L);
+      |                                        ^~
+src/cubalc_lang.c:297:13: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+  297 |             snprintf(role,sizeof role,"%s",L->cur.text); lex_next(L);
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c: In function ‘parse_form’:
+src/cubalc_lang.c:1775:50: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 146 [-Wformat-truncation=]
+ 1775 |   snprintf(vm->err,sizeof vm->err,"unknown form '%s' line %d — place a cube with [name]",
+      |                                                  ^~
+src/cubalc_lang.c:1775:3: note: ‘snprintf’ output between 52 and 8253 bytes into a destination of size 160
+ 1775 |   snprintf(vm->err,sizeof vm->err,"unknown form '%s' line %d — place a cube with [name]",
+      |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1776 |            L->cur.text, L->cur.line);
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1684:30: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1684 |       snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                              ^~
+src/cubalc_lang.c:1684:7: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1684 |       snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1674:32: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1674 |       snprintf(tid,sizeof tid,"%s",L->cur.text); lex_next(L);
+      |                                ^~
+src/cubalc_lang.c:1674:7: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1674 |       snprintf(tid,sizeof tid,"%s",L->cur.text); lex_next(L);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1660:38: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1660 |     char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      |                                      ^~
+src/cubalc_lang.c:1660:17: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1660 |     char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1662:38: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1662 |     char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      |                                      ^~
+src/cubalc_lang.c:1662:17: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1662 |     char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1623:67: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1623 |     else if (L->cur.kind==TK_STR){ snprintf(target,sizeof target,"%s",L->cur.text); lex_next(L); }
+      |                                                                   ^~
+src/cubalc_lang.c:1623:36: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1623 |     else if (L->cur.kind==TK_STR){ snprintf(target,sizeof target,"%s",L->cur.text); lex_next(L); }
+      |                                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1622:64: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1622 |     if (L->cur.kind==TK_IDENT){ snprintf(target,sizeof target,"%s",L->cur.text); lex_next(L); }
+      |                                                                ^~
+src/cubalc_lang.c:1622:33: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1622 |     if (L->cur.kind==TK_IDENT){ snprintf(target,sizeof target,"%s",L->cur.text); lex_next(L); }
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1582:34: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 16 [-Wformat-truncation=]
+ 1582 |       snprintf(mode,sizeof mode,"%s",L->cur.text);
+      |                                  ^~
+src/cubalc_lang.c:1582:7: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 16
+ 1582 |       snprintf(mode,sizeof mode,"%s",L->cur.text);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1579:34: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 16 [-Wformat-truncation=]
+ 1579 |       snprintf(mode,sizeof mode,"%s",L->cur.text);
+      |                                  ^~
+src/cubalc_lang.c:1579:7: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 16
+ 1579 |       snprintf(mode,sizeof mode,"%s",L->cur.text);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1566:56: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1566 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                                        ^~
+src/cubalc_lang.c:1566:33: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1566 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1560:56: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1560 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                                        ^~
+src/cubalc_lang.c:1560:33: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1560 |     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1548:41: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1548 |     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                                         ^~
+src/cubalc_lang.c:1548:18: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1548 |     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1539:41: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1539 |     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                                         ^~
+src/cubalc_lang.c:1539:18: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1539 |     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1519:41: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1519 |     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                                         ^~
+src/cubalc_lang.c:1519:18: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1519 |     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1475:47: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1475 |     char name[48]; snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+      |                                               ^~
+src/cubalc_lang.c:1475:20: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1475 |     char name[48]; snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+      |                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1454:58: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 256 [-Wformat-truncation=]
+ 1454 |     if (L->cur.kind==TK_STR){ snprintf(line,sizeof line,"%s",L->cur.text); o=strlen(line); lex_next(L); }
+      |                                                          ^~
+src/cubalc_lang.c:1454:31: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 256
+ 1454 |     if (L->cur.kind==TK_STR){ snprintf(line,sizeof line,"%s",L->cur.text); o=strlen(line); lex_next(L); }
+      |                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1438:41: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1438 |     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                                         ^~
+src/cubalc_lang.c:1438:18: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1438 |     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1430:38: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1430 |     char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      |                                      ^~
+src/cubalc_lang.c:1430:17: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1430 |     char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1432:38: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1432 |     char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      |                                      ^~
+src/cubalc_lang.c:1432:17: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1432 |     char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1417:41: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1417 |     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                                         ^~
+src/cubalc_lang.c:1417:18: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1417 |     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      |                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1420:100: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 48 [-Wformat-truncation=]
+ 1420 |       if (kw(&L->cur,"ROLE")){ lex_next(L); if (L->cur.kind==TK_IDENT){ snprintf(role,sizeof role,"%s",L->cur.text); lex_next(L);} }
+      |                                                                                                    ^~
+src/cubalc_lang.c:1420:73: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 48
+ 1420 |       if (kw(&L->cur,"ROLE")){ lex_next(L); if (L->cur.kind==TK_IDENT){ snprintf(role,sizeof role,"%s",L->cur.text); lex_next(L);} }
+      |                                                                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1408:65: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1408 |     else if (L->cur.kind==TK_STR){ snprintf(plate,sizeof plate,"%s",L->cur.text); lex_next(L); }
+      |                                                                 ^~
+src/cubalc_lang.c:1408:36: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1408 |     else if (L->cur.kind==TK_STR){ snprintf(plate,sizeof plate,"%s",L->cur.text); lex_next(L); }
+      |                                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1389:44: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 80 [-Wformat-truncation=]
+ 1389 |       snprintf(vm->creed,sizeof vm->creed,"%s",L->cur.text);
+      |                                            ^~
+src/cubalc_lang.c:1389:7: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 80
+ 1389 |       snprintf(vm->creed,sizeof vm->creed,"%s",L->cur.text);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1390:50: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 80 [-Wformat-truncation=]
+ 1390 |       snprintf(vm->ch.creed,sizeof vm->ch.creed,"%s",L->cur.text);
+      |                                                  ^~
+src/cubalc_lang.c:1390:7: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 80
+ 1390 |       snprintf(vm->ch.creed,sizeof vm->ch.creed,"%s",L->cur.text);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1350:41: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 64 [-Wformat-truncation=]
+ 1350 |         else snprintf(name,sizeof name,"%s", L->cur.text);
+      |                                         ^~
+src/cubalc_lang.c:1350:14: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 64
+ 1350 |         else snprintf(name,sizeof name,"%s", L->cur.text);
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1344:46: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 54 [-Wformat-truncation=]
+ 1344 |         snprintf(name,sizeof name,"CUBALC_ARG%s", L->cur.text);
+      |                                              ^~
+src/cubalc_lang.c:1344:9: note: ‘snprintf’ output between 11 and 8202 bytes into a destination of size 64
+ 1344 |         snprintf(name,sizeof name,"CUBALC_ARG%s", L->cur.text);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1298:32: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 32 [-Wformat-truncation=]
+ 1298 |         snprintf(be,sizeof be,"%s",L->cur.text); lex_next(L);
+      |                                ^~
+src/cubalc_lang.c:1298:9: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 32
+ 1298 |         snprintf(be,sizeof be,"%s",L->cur.text); lex_next(L);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1305:40: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 128 [-Wformat-truncation=]
+ 1305 |           snprintf(model,sizeof model,"%s",L->cur.text); lex_next(L);
+      |                                        ^~
+src/cubalc_lang.c:1305:11: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 128
+ 1305 |           snprintf(model,sizeof model,"%s",L->cur.text); lex_next(L);
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1310:34: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 2000 [-Wformat-truncation=]
+ 1310 |         snprintf(msg,sizeof msg,"%s",L->cur.text); lex_next(L);
+      |                                  ^~
+src/cubalc_lang.c:1310:9: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 2000
+ 1310 |         snprintf(msg,sizeof msg,"%s",L->cur.text); lex_next(L);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1231:34: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 96 [-Wformat-truncation=]
+ 1231 |         snprintf(key,sizeof key,"%s",L->cur.text); lex_next(L);
+      |                                  ^~
+src/cubalc_lang.c:1231:9: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 96
+ 1231 |         snprintf(key,sizeof key,"%s",L->cur.text); lex_next(L);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1194:65: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1194 |         if (strcmp(L->cur.text,"LAST")==0) snprintf(a,sizeof a,"%s",vm->last_str);
+      |                                                                 ^~
+src/cubalc_lang.c:1194:44: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1194 |         if (strcmp(L->cur.text,"LAST")==0) snprintf(a,sizeof a,"%s",vm->last_str);
+      |                                            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1192:54: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1192 |       if (L->cur.kind==TK_STR){ snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L); }
+      |                                                      ^~
+src/cubalc_lang.c:1192:33: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1192 |       if (L->cur.kind==TK_STR){ snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L); }
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1200:65: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1200 |         if (strcmp(L->cur.text,"LAST")==0) snprintf(b,sizeof b,"%s",vm->last_str);
+      |                                                                 ^~
+src/cubalc_lang.c:1200:44: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1200 |         if (strcmp(L->cur.text,"LAST")==0) snprintf(b,sizeof b,"%s",vm->last_str);
+      |                                            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1198:54: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1198 |       if (L->cur.kind==TK_STR){ snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L); }
+      |                                                      ^~
+src/cubalc_lang.c:1198:33: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1198 |       if (L->cur.kind==TK_STR){ snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L); }
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1167:41: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1167 |           else snprintf(bin,sizeof bin,"%s",L->cur.text);
+      |                                         ^~
+src/cubalc_lang.c:1167:16: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1167 |           else snprintf(bin,sizeof bin,"%s",L->cur.text);
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1166:80: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1166 |           if (cubalc_host_which(L->cur.text, &wh)==0) snprintf(bin,sizeof bin,"%s",wh.str);
+      |                                                                                ^~  ~~~~~~
+src/cubalc_lang.c:1166:55: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1166 |           if (cubalc_host_which(L->cur.text, &wh)==0) snprintf(bin,sizeof bin,"%s",wh.str);
+      |                                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1163:64: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1163 |         if (strchr(L->cur.text, '/')) snprintf(bin,sizeof bin,"%s",L->cur.text);
+      |                                                                ^~
+src/cubalc_lang.c:1163:39: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1163 |         if (strchr(L->cur.text, '/')) snprintf(bin,sizeof bin,"%s",L->cur.text);
+      |                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1174:46: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 256 [-Wformat-truncation=]
+ 1174 |         snprintf(abuf[ac], sizeof abuf[ac], "%s", L->cur.text);
+      |                                              ^~
+src/cubalc_lang.c:1174:9: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 256
+ 1174 |         snprintf(abuf[ac], sizeof abuf[ac], "%s", L->cur.text);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1127:125: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 8 [-Wformat-truncation=]
+ 1127 |       if (kw(&L->cur,"HTTP")){ lex_next(L); if (L->cur.kind==TK_IDENT||L->cur.kind==TK_STR){ snprintf(method,sizeof method,"%s",L->cur.text); lex_next(L);} }
+      |                                                                                                                             ^~
+src/cubalc_lang.c:1127:94: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 8
+ 1127 |       if (kw(&L->cur,"HTTP")){ lex_next(L); if (L->cur.kind==TK_IDENT||L->cur.kind==TK_STR){ snprintf(method,sizeof method,"%s",L->cur.text); lex_next(L);} }
+      |                                                                                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1130:47: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1130 |       char url[512]; snprintf(url,sizeof url,"%s",L->cur.text); lex_next(L);
+      |                                               ^~
+src/cubalc_lang.c:1130:22: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1130 |       char url[512]; snprintf(url,sizeof url,"%s",L->cur.text); lex_next(L);
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1060:71: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1060 |         if (strcmp(L->cur.text,"LAST")==0) snprintf(path,sizeof path,"%s",vm->last_str);
+      |                                                                       ^~
+src/cubalc_lang.c:1060:44: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1060 |         if (strcmp(L->cur.text,"LAST")==0) snprintf(path,sizeof path,"%s",vm->last_str);
+      |                                            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:1058:60: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+ 1058 |       if (L->cur.kind==TK_STR){ snprintf(path,sizeof path,"%s",L->cur.text); lex_next(L); }
+      |                                                            ^~
+src/cubalc_lang.c:1058:33: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+ 1058 |       if (L->cur.kind==TK_STR){ snprintf(path,sizeof path,"%s",L->cur.text); lex_next(L); }
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:932:42: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 8 [-Wformat-truncation=]
+  932 |           snprintf(method,sizeof method,"%s",L->cur.text); lex_next(L);
+      |                                          ^~
+src/cubalc_lang.c:932:11: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 8
+  932 |           snprintf(method,sizeof method,"%s",L->cur.text); lex_next(L);
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/cubalc_lang.c:936:47: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+  936 |       char url[512]; snprintf(url,sizeof url,"%s",L->cur.text); lex_next(L);
+      |                                               ^~
+src/cubalc_lang.c:936:22: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+  936 |       char url[512]; snprintf(url,sizeof url,"%s",L->cur.text); lex_next(L);
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

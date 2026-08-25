@@ -1,0 +1,829 @@
+#define _POSIX_C_SOURCE 200809L
+#include "cubalc_lang.h"
+#include "cubalc_cubechain.h"
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdio.h>
+#include <time.h>
+#include <math.h>
+
+/* ---------- CubalC is a real language: lexer · parser · evaluator ----------
+ * Syntax  : keywords + expressions over cube matrices and integers
+ * Semantics: each statement updates a live cubalc_chain (the machine)
+ * Store   : CubeChain append on successful run (optional via env)
+ */
+
+enum {
+  TK_EOF=0, TK_IDENT, TK_NUM, TK_STR, TK_NL,
+  TK_PLUS, TK_MINUS, TK_STAR, TK_SLASH,
+  TK_EQ, TK_EQEQ, TK_NE, TK_LT, TK_LE, TK_GT, TK_GE,
+  TK_LPAREN, TK_RPAREN, TK_COMMA,
+  /* keywords mapped via ident */
+};
+
+typedef struct {
+  int kind;
+  long num;
+  char text[96];
+  int line;
+} Tok;
+
+typedef struct {
+  const char *s;
+  size_t n, i;
+  int line;
+  Tok cur;
+} Lex;
+
+typedef struct {
+  char name[32];
+  long val;
+} Var;
+
+typedef struct {
+  cubalc_chain ch;
+  Var vars[64];
+  int n_vars;
+  cubalc_run_result *res;
+  FILE *trace;
+  int budget;
+  int hold_flash;
+  char creed[80];
+  int fatal;
+  char err[160];
+  const char *src_name;
+  Lex *L; /* active lexer for nested parse of stmt bodies — not used for body */
+} VM;
+
+/* ---- lexer ---- */
+static void lex_skip(Lex *L) {
+  while (L->i < L->n) {
+    char c = L->s[L->i];
+    if (c == ' ' || c == '\t' || c == '\r') { L->i++; continue; }
+    if (c == '/' && L->i + 1 < L->n && L->s[L->i+1] == '/') {
+      while (L->i < L->n && L->s[L->i] != '\n') L->i++;
+      continue;
+    }
+    break;
+  }
+}
+
+static int is_ident_start(int c) { return isalpha(c) || c=='_' || c=='-'; }
+static int is_ident(int c) { return isalnum(c) || c=='_' || c=='-' || c=='.'; }
+
+static void lex_next(Lex *L) {
+  lex_skip(L);
+  L->cur.line = L->line;
+  L->cur.text[0] = 0;
+  L->cur.num = 0;
+  if (L->i >= L->n) { L->cur.kind = TK_EOF; return; }
+  char c = L->s[L->i];
+  if (c == '\n') {
+    L->i++; L->line++;
+    L->cur.kind = TK_NL;
+    return;
+  }
+  if (c == '"') {
+    L->i++;
+    size_t k = 0;
+    while (L->i < L->n && L->s[L->i] != '"') {
+      if (k + 1 < sizeof L->cur.text) L->cur.text[k++] = L->s[L->i];
+      if (L->s[L->i] == '\n') L->line++;
+      L->i++;
+    }
+    L->cur.text[k] = 0;
+    if (L->i < L->n) L->i++;
+    L->cur.kind = TK_STR;
+    return;
+  }
+  if (isdigit((unsigned char)c) || (c=='.' && L->i+1<L->n && isdigit((unsigned char)L->s[L->i+1]))) {
+    char buf[64]; size_t k=0;
+    while (L->i < L->n && (isdigit((unsigned char)L->s[L->i]) || L->s[L->i]=='.')) {
+      if (k+1 < sizeof buf) buf[k++] = L->s[L->i];
+      L->i++;
+    }
+    buf[k]=0;
+    L->cur.num = (long)strtod(buf, NULL);
+    L->cur.kind = TK_NUM;
+    snprintf(L->cur.text, sizeof L->cur.text, "%s", buf);
+    return;
+  }
+  if (c=='+'){ L->i++; L->cur.kind=TK_PLUS; return; }
+  if (c=='-' && L->i+1<L->n && isdigit((unsigned char)L->s[L->i+1])) {
+    L->i++;
+    char buf[64]; size_t k=0; buf[k++]='-';
+    while (L->i < L->n && (isdigit((unsigned char)L->s[L->i]) || L->s[L->i]=='.')) {
+      if (k+1 < sizeof buf) buf[k++] = L->s[L->i];
+      L->i++;
+    }
+    buf[k]=0;
+    L->cur.num = (long)strtod(buf, NULL);
+    L->cur.kind = TK_NUM;
+    snprintf(L->cur.text, sizeof L->cur.text, "%s", buf);
+    return;
+  }
+  if (c=='-') {
+    L->i++; L->cur.kind=TK_MINUS; return;
+  }
+  if (c=='*'){ L->i++; L->cur.kind=TK_STAR; return; }
+  if (c=='/'){ L->i++; L->cur.kind=TK_SLASH; return; }
+  if (c=='('){ L->i++; L->cur.kind=TK_LPAREN; return; }
+  if (c==')'){ L->i++; L->cur.kind=TK_RPAREN; return; }
+  if (c==','){ L->i++; L->cur.kind=TK_COMMA; return; }
+  if (c=='='){
+    L->i++;
+    if (L->i < L->n && L->s[L->i]=='=') { L->i++; L->cur.kind=TK_EQEQ; return; }
+    L->cur.kind=TK_EQ; return;
+  }
+  if (c=='!'){
+    L->i++;
+    if (L->i < L->n && L->s[L->i]=='=') { L->i++; L->cur.kind=TK_NE; return; }
+  }
+  if (c=='<'){
+    L->i++;
+    if (L->i < L->n && L->s[L->i]=='=') { L->i++; L->cur.kind=TK_LE; return; }
+    L->cur.kind=TK_LT; return;
+  }
+  if (c=='>'){
+    L->i++;
+    if (L->i < L->n && L->s[L->i]=='=') { L->i++; L->cur.kind=TK_GE; return; }
+    L->cur.kind=TK_GT; return;
+  }
+  if (is_ident_start((unsigned char)c) || c=='-') {
+    /* allow leading - only as unary elsewhere; idents: cube-hive */
+    size_t k=0;
+    while (L->i < L->n && is_ident((unsigned char)L->s[L->i])) {
+      if (k+1 < sizeof L->cur.text) L->cur.text[k++] = L->s[L->i];
+      L->i++;
+    }
+    L->cur.text[k]=0;
+    L->cur.kind = TK_IDENT;
+    return;
+  }
+  /* unknown char — skip with ident of itself */
+  L->cur.text[0]=c; L->cur.text[1]=0;
+  L->i++;
+  L->cur.kind = TK_IDENT;
+}
+
+static void lex_init(Lex *L, const char *s, size_t n) {
+  L->s=s; L->n=n; L->i=0; L->line=1;
+  lex_next(L);
+}
+
+static void skip_nl(Lex *L) {
+  while (L->cur.kind == TK_NL) lex_next(L);
+}
+
+/* ---- vars ---- */
+static long *var_slot(VM *vm, const char *name, int create) {
+  for (int i=0;i<vm->n_vars;i++)
+    if (strcmp(vm->vars[i].name, name)==0) return &vm->vars[i].val;
+  if (!create || vm->n_vars >= 64) return NULL;
+  Var *v = &vm->vars[vm->n_vars++];
+  snprintf(v->name, sizeof v->name, "%s", name);
+  v->val = 0;
+  return &v->val;
+}
+
+static int find_cube(VM *vm, const char *id) {
+  for (int i=0;i<vm->ch.n_cubes;i++)
+    if (strcmp(vm->ch.cubes[i].id, id)==0) return i;
+  return -1;
+}
+
+static void fail(VM *vm, const char *msg) {
+  if (vm->fatal) return;
+  vm->fatal = 1;
+  snprintf(vm->err, sizeof vm->err, "%s", msg);
+  if (vm->res) {
+    vm->res->ok = 0;
+    snprintf(vm->res->err, sizeof vm->res->err, "%s", msg);
+  }
+}
+
+/* ---- expressions ---- */
+static long parse_expr(VM *vm, Lex *L); /* fwd */
+
+static long parse_primary(VM *vm, Lex *L) {
+  skip_nl(L);
+  if (L->cur.kind == TK_NUM) {
+    long v = L->cur.num;
+    lex_next(L);
+    return v;
+  }
+  if (L->cur.kind == TK_MINUS) {
+    lex_next(L);
+    return -parse_primary(vm, L);
+  }
+  if (L->cur.kind == TK_LPAREN) {
+    lex_next(L);
+    long v = parse_expr(vm, L);
+    if (L->cur.kind != TK_RPAREN) { fail(vm, "expected )"); return 0; }
+    lex_next(L);
+    return v;
+  }
+  if (L->cur.kind == TK_IDENT) {
+    char name[96];
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    /* builtins: SET ENERGY DIGIT COMPAT CUBES UNITY POPCOUNT */
+    if (strcmp(name, "SET")==0 || strcmp(name, "ENERGY")==0 ||
+        strcmp(name, "DIGIT")==0 || strcmp(name, "POPCOUNT")==0 ||
+        strcmp(name, "YAW")==0 || strcmp(name, "PITCH")==0 || strcmp(name, "ROLL")==0) {
+      if (L->cur.kind != TK_LPAREN) { fail(vm, "expected ( after builtin"); return 0; }
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT) { fail(vm, "expected cube id"); return 0; }
+      char cid[96]; snprintf(cid, sizeof cid, "%s", L->cur.text);
+      lex_next(L);
+      if (L->cur.kind != TK_RPAREN) { fail(vm, "expected )"); return 0; }
+      lex_next(L);
+      int ix = find_cube(vm, cid);
+      if (ix < 0) return 0;
+      cubalc_cube *c = &vm->ch.cubes[ix];
+      if (strcmp(name,"SET")==0 || strcmp(name,"POPCOUNT")==0)
+        return cubalc_matrix_popcount(&c->atom.matrix);
+      if (strcmp(name,"DIGIT")==0) return c->atom.digit;
+      if (strcmp(name,"ENERGY")==0) return (long)lround(c->atom.energy * 100.0); /* centi-energy */
+      if (strcmp(name,"YAW")==0) return (long)lround(c->yaw);
+      if (strcmp(name,"PITCH")==0) return (long)lround(c->pitch);
+      if (strcmp(name,"ROLL")==0) return (long)lround(c->roll);
+      return 0;
+    }
+    if (strcmp(name, "COMPAT")==0) {
+      if (L->cur.kind != TK_LPAREN) { fail(vm, "expected ("); return 0; }
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT) { fail(vm, "compat a"); return 0; }
+      char a[96]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      if (L->cur.kind != TK_COMMA) { fail(vm, "expected ,"); return 0; }
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT) { fail(vm, "compat b"); return 0; }
+      char b[96]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      if (L->cur.kind != TK_RPAREN) { fail(vm, "expected )"); return 0; }
+      lex_next(L);
+      int ia=find_cube(vm,a), ib=find_cube(vm,b);
+      if (ia<0||ib<0) return 0;
+      return (long)lround(cubalc_matrix_compat(
+        &vm->ch.cubes[ia].atom.matrix, &vm->ch.cubes[ib].atom.matrix) * 100.0);
+    }
+    if (strcmp(name, "CUBES")==0) return vm->ch.n_cubes;
+    if (strcmp(name, "UNITY")==0) return (long)lround(vm->ch.unity * 100.0);
+    if (strcmp(name, "SEQ")==0) return (long)vm->ch.seq;
+    long *slot = var_slot(vm, name, 0);
+    if (slot) return *slot;
+    /* bare cube id → SET count */
+    int ix = find_cube(vm, name);
+    if (ix >= 0) return cubalc_matrix_popcount(&vm->ch.cubes[ix].atom.matrix);
+    return 0; /* unbound → 0 (dynamic) */
+  }
+  fail(vm, "bad primary expression");
+  return 0;
+}
+
+static long parse_term(VM *vm, Lex *L) {
+  long v = parse_primary(vm, L);
+  for (;;) {
+    if (L->cur.kind == TK_STAR) { lex_next(L); v *= parse_primary(vm, L); }
+    else if (L->cur.kind == TK_SLASH) {
+      lex_next(L);
+      long d = parse_primary(vm, L);
+      v = d ? v / d : 0;
+    } else break;
+  }
+  return v;
+}
+
+static long parse_add(VM *vm, Lex *L) {
+  long v = parse_term(vm, L);
+  for (;;) {
+    if (L->cur.kind == TK_PLUS) { lex_next(L); v += parse_term(vm, L); }
+    else if (L->cur.kind == TK_MINUS) { lex_next(L); v -= parse_term(vm, L); }
+    else break;
+  }
+  return v;
+}
+
+static long parse_expr(VM *vm, Lex *L) {
+  long v = parse_add(vm, L);
+  if (L->cur.kind == TK_EQEQ) { lex_next(L); return v == parse_add(vm, L); }
+  if (L->cur.kind == TK_NE)   { lex_next(L); return v != parse_add(vm, L); }
+  if (L->cur.kind == TK_LT)   { lex_next(L); return v <  parse_add(vm, L); }
+  if (L->cur.kind == TK_LE)   { lex_next(L); return v <= parse_add(vm, L); }
+  if (L->cur.kind == TK_GT)   { lex_next(L); return v >  parse_add(vm, L); }
+  if (L->cur.kind == TK_GE)   { lex_next(L); return v >= parse_add(vm, L); }
+  return v;
+}
+
+/* recursive statement execution */
+static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2);
+
+static int kw(const Tok *t, const char *k) {
+  return t->kind == TK_IDENT && strcasecmp(t->text, k) == 0;
+}
+
+static void bump_stmt(VM *vm) {
+  if (vm->res) vm->res->stmts++;
+}
+
+static int exec_one(VM *vm, Lex *L) {
+  skip_nl(L);
+  if (L->cur.kind == TK_EOF) return 0;
+  if (kw(&L->cur, "END") || kw(&L->cur, "ELSE")) return 0;
+
+  if (kw(&L->cur, "CREED")) {
+    lex_next(L);
+    if (L->cur.kind != TK_STR) { fail(vm, "CREED needs string"); return -1; }
+    snprintf(vm->creed, sizeof vm->creed, "%s", L->cur.text);
+    snprintf(vm->ch.creed, sizeof vm->ch.creed, "%s", L->cur.text);
+    lex_next(L);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "BUDGET")) {
+    lex_next(L);
+    if (L->cur.kind != TK_NUM) { fail(vm, "BUDGET needs number"); return -1; }
+    vm->budget = (int)L->cur.num;
+    lex_next(L);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "HOLD_FLASH")) {
+    lex_next(L);
+    if (L->cur.kind != TK_NUM) { fail(vm, "HOLD_FLASH needs 0|1"); return -1; }
+    vm->hold_flash = L->cur.num ? 1 : 0;
+    vm->ch.hold_flash = (uint8_t)vm->hold_flash;
+    lex_next(L);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "SHARE")) {
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "SHARE needs ident"); return -1; }
+    lex_next(L);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "GENESIS")) {
+    lex_next(L);
+    char plate[512];
+    if (kw(&L->cur, "FROM")) {
+      lex_next(L);
+      /* FROM NEXUS_COORD [optional plate tail as idents] */
+      snprintf(plate, sizeof plate,
+        "NEXUS_COORD v1 | from=cubalc-lang | type=genesis | hold_flash=%d | unity=1.0 |",
+        vm->hold_flash);
+      if (L->cur.kind == TK_IDENT) {
+        /* consume NEXUS_COORD token if present */
+        lex_next(L);
+      }
+    } else if (L->cur.kind == TK_STR) {
+      snprintf(plate, sizeof plate, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "GENESIS FROM NEXUS_COORD | GENESIS \"plate\"");
+      return -1;
+    }
+    cubalc_matrix gen;
+    cubalc_coord_to_matrix(plate, &gen);
+    cubalc_chain_from_initial(&vm->ch, &gen, 1);
+    vm->ch.hold_flash = (uint8_t)vm->hold_flash;
+    snprintf(vm->ch.creed, sizeof vm->ch.creed, "%s",
+             vm->creed[0] ? vm->creed : CUBALC_CREED);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "OS_ASPECTS") || kw(&L->cur, "SPAWN_OS")) {
+    lex_next(L);
+    cubalc_chain_os_aspects(&vm->ch);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "CUBE")) {
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "CUBE needs id"); return -1; }
+    char id[96]; snprintf(id, sizeof id, "%s", L->cur.text); lex_next(L);
+    char role[64] = "aspect";
+    int proton = 1;
+    while (L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur, "ROLE")) {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT) { fail(vm, "ROLE needs ident"); return -1; }
+        snprintf(role, sizeof role, "%s", L->cur.text);
+        lex_next(L);
+      } else if (kw(&L->cur, "PROTON")) {
+        lex_next(L);
+        if (L->cur.kind != TK_NUM) { fail(vm, "PROTON 0|1"); return -1; }
+        proton = L->cur.num ? 1 : 0;
+        lex_next(L);
+      } else break;
+    }
+    if (vm->ch.n_cubes == 0) {
+      /* auto-genesis empty matrix if none */
+      cubalc_matrix gen;
+      cubalc_coord_to_matrix(
+        "NEXUS_COORD v1 | from=auto | type=lang | hold_flash=1 |", &gen);
+      cubalc_chain_from_initial(&vm->ch, &gen, 1);
+    }
+    float x = (float)(vm->ch.n_cubes % 5) * 0.25f;
+    float z = (float)(vm->ch.n_cubes / 5) * 0.25f;
+    if (cubalc_cube_spawn(&vm->ch, id, role, (uint8_t)proton, x, 0.f, z) < 0) {
+      fail(vm, "CUBE spawn failed (budget?)");
+      return -1;
+    }
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "PLUG")) {
+    lex_next(L);
+    if (kw(&L->cur, "RING")) {
+      lex_next(L);
+      int n = vm->ch.n_cubes;
+      for (int i = 0; i < n; i++)
+        cubalc_cube_plug(&vm->ch, i, (i + 1) % n);
+      bump_stmt(vm);
+      return 1;
+    }
+    if (L->cur.kind != TK_IDENT) { fail(vm, "PLUG a b"); return -1; }
+    char a[96]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "PLUG needs two cubes"); return -1; }
+    char b[96]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+    int ia=find_cube(vm,a), ib=find_cube(vm,b);
+    if (ia<0||ib<0) { fail(vm, "PLUG unknown cube"); return -1; }
+    cubalc_cube_plug(&vm->ch, ia, ib);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "IMPULSE")) {
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "IMPULSE id"); return -1; }
+    char id[96]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int proton = 1;
+    if (L->cur.kind == TK_NUM) { proton = L->cur.num ? 1 : 0; lex_next(L); }
+    cubalc_chain_impulse(&vm->ch, id, (uint8_t)proton);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "FLOW") || kw(&L->cur, "TICK")) {
+    int is_tick = kw(&L->cur, "TICK");
+    lex_next(L);
+    int n = is_tick ? 1 : 8;
+    if (L->cur.kind == TK_NUM) { n = (int)L->cur.num; lex_next(L); }
+    if (L->cur.kind == TK_NUM) lex_next(L); /* optional ms — ignore in lang */
+    for (int i=0;i<n;i++) cubalc_chain_flow(&vm->ch);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "VIZ")) {
+    lex_next(L);
+    char pbuf[256];
+    snprintf(pbuf, sizeof pbuf, "state/cubalc_viz_frame.json");
+    if (L->cur.kind == TK_STR) {
+      snprintf(pbuf, sizeof pbuf, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      /* bare path tokens: state / viz_frame.json (dot inside ident) */
+      size_t o = 0;
+      pbuf[0] = 0;
+      while (L->cur.kind == TK_IDENT || L->cur.kind == TK_SLASH || L->cur.kind == TK_NUM) {
+        if (L->cur.kind == TK_SLASH) {
+          if (o + 1 < sizeof pbuf) { pbuf[o++] = '/'; pbuf[o] = 0; }
+          lex_next(L);
+          continue;
+        }
+        size_t ln = strlen(L->cur.text);
+        if (o + ln < sizeof pbuf) { memcpy(pbuf + o, L->cur.text, ln); o += ln; pbuf[o] = 0; }
+        lex_next(L);
+      }
+      if (!pbuf[0]) snprintf(pbuf, sizeof pbuf, "state/cubalc_viz_frame.json");
+    }
+    cubalc_chain_write_viz(&vm->ch, pbuf);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "SPIN")) {
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "SPIN cube [dyaw [dpitch [droll]]]"); return -1; }
+    char id[96]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    float dy=10.f, dp=0.f, dr=0.f;
+    if (L->cur.kind == TK_NUM) { dy = (float)L->cur.num; lex_next(L); }
+    if (L->cur.kind == TK_NUM) { dp = (float)L->cur.num; lex_next(L); }
+    if (L->cur.kind == TK_NUM) { dr = (float)L->cur.num; lex_next(L); }
+    if (cubalc_cube_spin(&vm->ch, id, dy, dp, dr) != 0) {
+      fail(vm, "SPIN unknown cube"); return -1;
+    }
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "POSE")) {
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "POSE cube x y z [s]"); return -1; }
+    char id[96]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    float x=0,y=0,z=0,s=-1.f;
+    if (L->cur.kind != TK_NUM) { fail(vm, "POSE needs x y z"); return -1; }
+    x = (float)L->cur.num; lex_next(L);
+    if (L->cur.kind != TK_NUM) { fail(vm, "POSE needs y"); return -1; }
+    y = (float)L->cur.num; lex_next(L);
+    if (L->cur.kind != TK_NUM) { fail(vm, "POSE needs z"); return -1; }
+    z = (float)L->cur.num; lex_next(L);
+    if (L->cur.kind == TK_NUM) { s = (float)L->cur.num / 100.f; lex_next(L); }
+    if (cubalc_cube_pose(&vm->ch, id, x, y, z, s) != 0) {
+      fail(vm, "POSE unknown cube"); return -1;
+    }
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "SHOW") || kw(&L->cur, "HELLO")) {
+    /* SHOW [cube] — ASCII spinning Kernel Matrix cube (default: first / kernel) */
+    lex_next(L);
+    char id[96]; id[0]=0;
+    if (L->cur.kind == TK_IDENT && !kw(&L->cur,"END") && !kw(&L->cur,"ELSE")
+        && !kw(&L->cur,"LET") && !kw(&L->cur,"SPIN") && !kw(&L->cur,"PRINT")
+        && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"VIZ") && !kw(&L->cur,"FLOW")
+        && !kw(&L->cur,"LOOP") && !kw(&L->cur,"IF") && !kw(&L->cur,"WAIT")
+        && !kw(&L->cur,"IMPULSE") && !kw(&L->cur,"CUBE") && !kw(&L->cur,"PLUG")) {
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      /* prefer kernel-like cube */
+      for (int i=0;i<vm->ch.n_cubes;i++) {
+        if (strstr(vm->ch.cubes[i].role, "kernel") || strstr(vm->ch.cubes[i].id, "kernel")) {
+          snprintf(id, sizeof id, "%s", vm->ch.cubes[i].id); break;
+        }
+      }
+      if (!id[0] && vm->ch.n_cubes > 0)
+        snprintf(id, sizeof id, "%s", vm->ch.cubes[0].id);
+    }
+    FILE *out = vm->trace ? vm->trace : stdout;
+    if (id[0]) cubalc_cube_print_spin(&vm->ch, id, out);
+    else fprintf(out, "(SHOW: no cube)\n");
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "WAIT") || kw(&L->cur, "SLEEP")) {
+    lex_next(L);
+    long ms = 30;
+    if (L->cur.kind == TK_NUM) { ms = L->cur.num; lex_next(L); }
+    if (ms < 0) ms = 0;
+    if (ms > 10000) ms = 10000;
+    if (ms > 0) {
+      struct timespec ts = { ms / 1000, (long)(ms % 1000) * 1000000L };
+      nanosleep(&ts, NULL);
+    }
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "SETBIT")) {
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "SETBIT cube i on"); return -1; }
+    char id[96]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind != TK_NUM) { fail(vm, "SETBIT index"); return -1; }
+    int bit = (int)L->cur.num; lex_next(L);
+    int on = 1;
+    if (L->cur.kind == TK_NUM) { on = L->cur.num ? 1 : 0; lex_next(L); }
+    int ix = find_cube(vm, id);
+    if (ix < 0) { fail(vm, "SETBIT unknown cube"); return -1; }
+    cubalc_matrix_set(&vm->ch.cubes[ix].atom.matrix, bit, on);
+    vm->ch.cubes[ix].atom.digit =
+      cubalc_algocube_digit(&vm->ch.cubes[ix].atom.matrix);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "LET")) {
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "LET name"); return -1; }
+    char name[32]; snprintf(name, sizeof name, "%s", L->cur.text); lex_next(L);
+    if (L->cur.kind != TK_EQ) { fail(vm, "LET name = expr"); return -1; }
+    lex_next(L);
+    long v = parse_expr(vm, L);
+    long *slot = var_slot(vm, name, 1);
+    if (!slot) { fail(vm, "var table full"); return -1; }
+    *slot = v;
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "PRINT")) {
+    lex_next(L);
+    char line[256]; size_t o=0;
+    line[0]=0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(line, sizeof line, "%s", L->cur.text);
+      o = strlen(line);
+      lex_next(L);
+    }
+    while (L->cur.kind != TK_NL && L->cur.kind != TK_EOF &&
+           !kw(&L->cur,"END") && !kw(&L->cur,"ELSE") &&
+           !kw(&L->cur,"LET") && !kw(&L->cur,"IF") && !kw(&L->cur,"LOOP") &&
+           !kw(&L->cur,"ASSERT") && !kw(&L->cur,"PRINT") &&
+           !kw(&L->cur,"CUBE") && !kw(&L->cur,"IMPULSE") &&
+           !kw(&L->cur,"FLOW") && !kw(&L->cur,"TICK") &&
+           !kw(&L->cur,"PLUG") && !kw(&L->cur,"GENESIS") &&
+           !kw(&L->cur,"SETBIT") && !kw(&L->cur,"VIZ") && !kw(&L->cur,"POSE") &&
+           !kw(&L->cur,"OS_ASPECTS") && !kw(&L->cur,"CREED") &&
+           !kw(&L->cur,"BUDGET") && !kw(&L->cur,"HOLD_FLASH") &&
+           !kw(&L->cur,"SHARE")) {
+      /* expression */
+      long v = parse_expr(vm, L);
+      int n = snprintf(line+o, sizeof line - o, "%s%ld", o ? " " : "", v);
+      if (n > 0) o += (size_t)n;
+      if (o >= sizeof line) break;
+    }
+    if (vm->trace) fprintf(vm->trace, "%s\n", line);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "ASSERT")) {
+    lex_next(L);
+    long v = parse_expr(vm, L);
+    if (v) {
+      if (vm->res) vm->res->asserts_ok++;
+      if (vm->trace) fprintf(vm->trace, "# ASSERT ok\n");
+    } else {
+      if (vm->res) vm->res->asserts_fail++;
+      if (vm->trace) fprintf(vm->trace, "# ASSERT FAIL line %d\n", L->cur.line);
+      fail(vm, "ASSERT failed");
+      return -1;
+    }
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "LOOP")) {
+    lex_next(L);
+    long times = parse_expr(vm, L);
+    if (times < 0) times = 0;
+    if (times > 100000) times = 100000; /* safety */
+    /* snapshot body as tokens by re-reading: capture char range until matching END */
+    /* Strategy: remember source offset of body start, find END with depth, re-lex each iteration */
+    skip_nl(L);
+    /* L->i points after current token; need start of current token.
+     * We saved poorly — re-scan: walk with depth from current state by cloning. */
+    Lex save = *L;
+    int depth = 1;
+    while (L->cur.kind != TK_EOF && depth > 0) {
+      if (kw(&L->cur, "LOOP") || kw(&L->cur, "IF")) depth++;
+      else if (kw(&L->cur, "END")) {
+        depth--;
+        if (depth == 0) break;
+      }
+      lex_next(L);
+    }
+    if (depth != 0) { fail(vm, "LOOP without END"); return -1; }
+    /* body is from save to just before END; END is at L->cur */
+    size_t end_token_i = L->i; /* after END will be next */
+    (void)end_token_i;
+    /* For each iteration, restore to save and exec until END */
+    for (long t = 0; t < times && !vm->fatal; t++) {
+      long *it = var_slot(vm, "IT", 1);
+      if (it) *it = t;
+      Lex body = save;
+      if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+    }
+    /* consume END */
+    if (kw(&L->cur, "END")) lex_next(L);
+    bump_stmt(vm);
+    return 1;
+  }
+  if (kw(&L->cur, "IF")) {
+    lex_next(L);
+    long cond = parse_expr(vm, L);
+    if (!kw(&L->cur, "THEN")) { fail(vm, "IF expr THEN"); return -1; }
+    lex_next(L);
+    skip_nl(L);
+    Lex then_start = *L;
+    int depth = 1;
+    int else_line_i = -1;
+    Lex else_start;
+    memset(&else_start, 0, sizeof else_start);
+    while (L->cur.kind != TK_EOF && depth > 0) {
+      if (kw(&L->cur, "IF") || kw(&L->cur, "LOOP")) depth++;
+      else if (kw(&L->cur, "ELSE") && depth == 1) {
+        else_start = *L;
+        lex_next(&else_start); /* skip ELSE for body start */
+        skip_nl(&else_start);
+        else_line_i = 1;
+        lex_next(L);
+        continue;
+      } else if (kw(&L->cur, "END")) {
+        depth--;
+        if (depth == 0) break;
+      }
+      lex_next(L);
+    }
+    if (depth != 0) { fail(vm, "IF without END"); return -1; }
+    if (cond) {
+      Lex body = then_start;
+      if (exec_stmts_until(vm, &body, "END", "ELSE") < 0) return -1;
+    } else if (else_line_i > 0) {
+      Lex body = else_start;
+      if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+    }
+    if (kw(&L->cur, "END")) lex_next(L);
+    bump_stmt(vm);
+    return 1;
+  }
+
+  snprintf(vm->err, sizeof vm->err, "unknown statement '%s' at line %d",
+           L->cur.text, L->cur.line);
+  fail(vm, vm->err);
+  return -1;
+}
+
+static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2) {
+  while (!vm->fatal) {
+    skip_nl(L);
+    if (L->cur.kind == TK_EOF) break;
+    if (stop1 && kw(&L->cur, stop1)) break;
+    if (stop2 && kw(&L->cur, stop2)) break;
+    int r = exec_one(vm, L);
+    if (r < 0) return -1;
+    if (r == 0) break;
+  }
+  return vm->fatal ? -1 : 0;
+}
+
+static int run_source_inner(const char *src, size_t n, const char *name,
+                            cubalc_run_result *out, FILE *trace) {
+  VM vm;
+  memset(&vm, 0, sizeof vm);
+  vm.res = out;
+  vm.trace = trace;
+  vm.budget = CUBALC_BUDGET;
+  vm.hold_flash = 1;
+  vm.src_name = name ? name : "<src>";
+  snprintf(vm.creed, sizeof vm.creed, "%s", CUBALC_CREED);
+  cubalc_chain_init(&vm.ch);
+  vm.ch.hold_flash = 1;
+  snprintf(vm.ch.creed, sizeof vm.ch.creed, "%s", CUBALC_CREED);
+
+  if (out) {
+    memset(out, 0, sizeof *out);
+    out->ok = 1;
+  }
+
+  Lex L;
+  lex_init(&L, src, n);
+  if (exec_stmts_until(&vm, &L, NULL, NULL) < 0 || vm.fatal) {
+    if (out) {
+      out->ok = 0;
+      if (!out->err[0]) snprintf(out->err, sizeof out->err, "%s", vm.err);
+      out->n_cubes = vm.ch.n_cubes;
+      out->unity = vm.ch.unity;
+    }
+    return 1;
+  }
+
+  /* refresh unity */
+  cubalc_chain_tick(&vm.ch);
+
+  if (out) {
+    out->ok = (out->asserts_fail == 0);
+    out->n_cubes = vm.ch.n_cubes;
+    out->unity = vm.ch.unity;
+    if (out->ok) out->err[0] = 0;
+  }
+
+  /* publish viz if chain has cubes */
+  if (vm.ch.n_cubes > 0) {
+    const char *st = getenv("CUBALC_STATE");
+    char path[512];
+    snprintf(path, sizeof path, "%s/cubalc_viz_frame.json",
+             st && st[0] ? st : "state");
+    cubalc_chain_write_viz(&vm.ch, path);
+  }
+  return out && out->ok ? 0 : (out && !out->ok ? 1 : 0);
+}
+
+int cubalc_run_source(const char *src, size_t n, const char *name,
+                      cubalc_run_result *out, FILE *trace) {
+  if (!src) return 2;
+  return run_source_inner(src, n, name, out, trace);
+}
+
+int cubalc_run_file(const char *path, cubalc_run_result *out, FILE *trace) {
+  FILE *f = fopen(path, "rb");
+  if (!f) {
+    if (out) {
+      memset(out, 0, sizeof *out);
+      snprintf(out->err, sizeof out->err, "cannot open %s", path);
+    }
+    return 2;
+  }
+  fseek(f, 0, SEEK_END);
+  long sz = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  if (sz < 0 || sz > CUBALC_MAX_SRC) {
+    fclose(f);
+    if (out) { memset(out,0,sizeof*out); snprintf(out->err,sizeof out->err,"source too large"); }
+    return 2;
+  }
+  char *buf = (char *)malloc((size_t)sz + 1);
+  if (!buf) { fclose(f); return 2; }
+  size_t nr = fread(buf, 1, (size_t)sz, f);
+  fclose(f);
+  buf[nr] = 0;
+  int rc = cubalc_run_source(buf, nr, path, out, trace);
+  free(buf);
+  return rc;
+}

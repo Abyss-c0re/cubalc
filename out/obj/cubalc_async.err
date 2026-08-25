@@ -1,0 +1,3 @@
+src/cubalc_async.c:45:13: warning: ‘job_clear’ defined but not used [-Wunused-function]
+   45 | static void job_clear(cubalc_async_job *j) {
+      |             ^~~~~~~~~

@@ -1,0 +1,37 @@
+# Proof 10 — soft SYS JSON vs hard JSONONLY/ONLYP dual
+HOLD_FLASH 1
+GENESIS "NEXUS_COORD v1 | from=proof | type=jsononly_onlyp | hold_flash=1 |"
+
+# soft: missing key → OK=0, continue
+LET payload = "{\"digit\":7,\"role\":\"peer\",\"ok\":true}"
+LET LAST = payload
+SYS JSON "digit"
+SYS NUM
+ASSERT LAST_N == 7
+ASSERT OK == 1
+
+SYS JSON "role"
+ASSERT OK == 1
+
+SYS JSON "missing_key"
+ASSERT OK == 0
+
+# hard: ONLYP present key succeeds
+LET LAST = payload
+SYS ONLYP "digit"
+SYS NUM
+ASSERT LAST_N == 7
+ASSERT OK == 1
+
+# hard: JSONONLY present
+LET LAST = payload
+SYS JSONONLY "role"
+ASSERT OK == 1
+
+# FROM support (soft)
+SYS JSON "digit" FROM "{\"digit\":3}"
+SYS NUM
+ASSERT LAST_N == 3
+ASSERT OK == 1
+
+PRINT "proof10" LAST_N OK

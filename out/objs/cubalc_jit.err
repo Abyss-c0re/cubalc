@@ -1,0 +1,7 @@
+src/cubalc_jit.c: In function ‘cubalc_flow_manifest’:
+src/cubalc_jit.c:554:91: warning: ‘%s’ directive output may be truncated writing up to 159 bytes into a region of size 151 [-Wformat-truncation=]
+  554 |     if (out) { memset(out, 0, sizeof *out); snprintf(out->err, sizeof out->err, "compile: %s", err); }
+      |                                                                                           ^~   ~~~
+src/cubalc_jit.c:554:45: note: ‘snprintf’ output between 10 and 169 bytes into a destination of size 160
+  554 |     if (out) { memset(out, 0, sizeof *out); snprintf(out->err, sizeof out->err, "compile: %s", err); }
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

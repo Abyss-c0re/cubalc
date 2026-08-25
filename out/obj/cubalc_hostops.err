@@ -1,0 +1,9 @@
+src/cubalc_hostops.c: In function ‘cubalc_host_chat’:
+src/cubalc_hostops.c:407:25: warning: ‘%s’ directive output may be truncated writing up to 8191 bytes into a region of size 512 [-Wformat-truncation=]
+  407 |     snprintf(model, n, "%s", jr.str);
+      |                         ^~   ~~~~~~
+In function ‘resolve_local_model_id’,
+    inlined from ‘cubalc_host_chat’ at src/cubalc_hostops.c:433:5:
+src/cubalc_hostops.c:407:5: note: ‘snprintf’ output between 1 and 8192 bytes into a destination of size 512
+  407 |     snprintf(model, n, "%s", jr.str);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

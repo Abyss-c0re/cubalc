@@ -1,0 +1,21 @@
+src/cubalc_algocube.c: In function ‘cubalc_algocube_digit_range’:
+src/cubalc_algocube.c:35:3: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   35 |   if (lo < 0) lo = 0; if (hi > 9) hi = 9;
+      |   ^~
+src/cubalc_algocube.c:35:23: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   35 |   if (lo < 0) lo = 0; if (hi > 9) hi = 9;
+      |                       ^~
+src/cubalc_algocube.c: In function ‘cubalc_algocube_blueprint10’:
+src/cubalc_algocube.c:129:3: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+  129 |   if (!out) return -1; memset(out, 0, sizeof(*out)); out->n = 10;
+      |   ^~
+src/cubalc_algocube.c:129:24: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+  129 |   if (!out) return -1; memset(out, 0, sizeof(*out)); out->n = 10;
+      |                        ^~~~~~
+src/cubalc_algocube.c: In function ‘cubalc_algocube_inject’:
+src/cubalc_algocube.c:146:3: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+  146 |   if (digit < 0) digit = 0; if (digit > 9) digit = digit % 10;
+      |   ^~
+src/cubalc_algocube.c:146:29: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+  146 |   if (digit < 0) digit = 0; if (digit > 9) digit = digit % 10;
+      |                             ^~
