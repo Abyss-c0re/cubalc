@@ -1,5 +1,5 @@
-sha=e823cce00493d5cebced9f7fcc159c67b35d45da
-iter=1702
+HEAD=63e9d1506a5024ddfa6f0de61729088575f47bc5
+MEANINGFUL_ITER=1702
 feature=MULTIVERSE soft-OOB fail-closed mesh stability
 version=1.15.1172-usability
 proof=1702_atomic_printer_mesh_multiverse
