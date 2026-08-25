@@ -1,22 +1,23 @@
 {
-  "value": "1707",
-  "MEANINGFUL_ITER": 1707,
-  "iter": 1707,
-  "version": "1.15.1178-usability",
-  "feature": "SMX_CORTEX",
-  "proof": "programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc",
-  "updated": 1787682717,
+  "value": "1710",
+  "MEANINGFUL_ITER": 1710,
+  "iter": 1710,
+  "version": "1.15.1180-usability",
+  "feature": "SMX_MESH_STABILITY",
+  "proof": "programs/science/proof/1710_atomic_printer_mesh_stability.cubalc",
+  "updated": 1787687040,
   "status": "PASS",
-  "head": "c0788193",
+  "head": "PENDING",
   "schema": "cubalc.meaningful_iter/v1",
-  "item": "SMX_CORTEX soft-OOB fail-closed mesh",
-  "item_id": "mi_smx_cortex_1707",
-  "title": "SMX CORTEX mesh",
-  "summary": "CORTEX complete mesh + signal ring + hold hub; soft-OOB fail-closed; proof 1707 PASS.",
+  "item": "SMX mesh stability soft-OOB fail-closed harden",
+  "item_id": "mi_smx_mesh_stability_1710",
+  "title": "SMX MESH STABILITY",
+  "summary": "SYNAPSE mesh + STABILIZE/STEADFAST/HARDEN lock; soft-OOB fail-closed; mitosis under free energy; proof 1710 PASS asserts_ok=65.",
   "proofs": [
-    "programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc"
+    "programs/science/proof/1710_atomic_printer_mesh_stability.cubalc",
+    "programs/proof/1710_atomic_printer_mesh_stability.cubalc"
   ],
-  "ts": "2026-08-25T18:31:57Z",
-  "asserts_ok": 68,
+  "ts": "2026-08-25T22:44:00Z",
+  "asserts_ok": 65,
   "asserts_fail": 0
 }
