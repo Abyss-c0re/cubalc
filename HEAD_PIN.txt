@@ -1,0 +1,7 @@
+HEAD=6e595a03fb3fe45d0cf00a31441138a95ae27648
+SHORT=6e595a03
+MEANINGFUL_ITER=1699
+VERSION=1.15.1169-usability
+PROOFS=1699_supercluster+1620_flagship PASS
+feature=SUPERCLUSTER soft-OOB fail-closed mesh stability
+feat_head=6e595a03fb3fe45d0cf00a31441138a95ae27648

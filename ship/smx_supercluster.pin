@@ -2,5 +2,5 @@ feature=SUPERCLUSTER
 iter=1699
 proof=1699_atomic_printer_mesh_supercluster
 version=1.15.1169-usability
-proofs=1699_supercluster+1620_flagship PASS
 asserts=110
+flagship=1620 PASS
