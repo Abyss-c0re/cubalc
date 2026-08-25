@@ -814,6 +814,171 @@ static long parse_prim(VM *vm, Lex *L){
       return vm->last_n;
     }
 
+    /* numeric usability: ABS MIN MAX CLAMP SIGN POW SQRT GCD LCM BETWEEN EVEN ODD */
+    if (strcmp(name,"ABS")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long a=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        return a<0?-a:a;
+      }
+      return 0;
+    }
+    if (strcmp(name,"SIGN")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long a=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        return a>0?1:(a<0?-1:0);
+      }
+      return 0;
+    }
+    if (strcmp(name,"MIN")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long a=parse_expr(vm,L);
+        if (L->cur.kind==TK_COMMA) lex_next(L);
+        long b=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        return a<b?a:b;
+      }
+      return 0;
+    }
+    if (strcmp(name,"MAX")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long a=parse_expr(vm,L);
+        if (L->cur.kind==TK_COMMA) lex_next(L);
+        long b=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        return a>b?a:b;
+      }
+      return 0;
+    }
+    if (strcmp(name,"CLAMP")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long v=parse_expr(vm,L);
+        if (L->cur.kind==TK_COMMA) lex_next(L);
+        long lo=parse_expr(vm,L);
+        if (L->cur.kind==TK_COMMA) lex_next(L);
+        long hi=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        if (lo>hi){ long t=lo; lo=hi; hi=t; }
+        if (v<lo) return lo;
+        if (v>hi) return hi;
+        return v;
+      }
+      return 0;
+    }
+
+    /* numeric usability: POW SQRT GCD LCM BETWEEN EVEN ODD */
+    if (strcmp(name,"POW")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long base=parse_expr(vm,L);
+        if (L->cur.kind==TK_COMMA) lex_next(L);
+        long exp=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        if (exp<0) return 0;
+        if (exp>62) exp=62; /* keep long range sane */
+        long r=1;
+        for (long i=0;i<exp;i++){
+          /* soft overflow guard */
+          if (base!=0 && (r>9223372036854775807L/ (base>0?base:-base))) {
+            return base<0 && (exp&1) ? -9223372036854775807L : 9223372036854775807L;
+          }
+          r*=base;
+        }
+        return r;
+      }
+      return 0;
+    }
+    if (strcmp(name,"SQRT")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long a=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        if (a<=0) return 0;
+        /* integer isqrt via binary search */
+        long lo=1, hi=a, ans=1;
+        if (a>3037000499L) hi=3037000499L; /* hi*hi fits in signed long */
+        while (lo<=hi){
+          long mid=lo+(hi-lo)/2;
+          long sq=mid*mid;
+          if (sq==a) return mid;
+          if (sq<a){ ans=mid; lo=mid+1; }
+          else hi=mid-1;
+        }
+        return ans;
+      }
+      return 0;
+    }
+    if (strcmp(name,"GCD")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long a=parse_expr(vm,L);
+        if (L->cur.kind==TK_COMMA) lex_next(L);
+        long b=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        if (a<0) a=-a; if (b<0) b=-b;
+        while (b){ long t=a%b; a=b; b=t; }
+        return a;
+      }
+      return 0;
+    }
+    if (strcmp(name,"LCM")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long a=parse_expr(vm,L);
+        if (L->cur.kind==TK_COMMA) lex_next(L);
+        long b=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        long aa=a<0?-a:a, bb=b<0?-b:b;
+        if (aa==0 || bb==0) return 0;
+        long x=aa, y=bb;
+        while (y){ long t=x%y; x=y; y=t; }
+        /* lcm = aa/gcd*bb with overflow guard */
+        long g=x;
+        long q=aa/g;
+        if (bb!=0 && q>9223372036854775807L/bb) return 9223372036854775807L;
+        return q*bb;
+      }
+      return 0;
+    }
+    if (strcmp(name,"BETWEEN")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long v=parse_expr(vm,L);
+        if (L->cur.kind==TK_COMMA) lex_next(L);
+        long lo=parse_expr(vm,L);
+        if (L->cur.kind==TK_COMMA) lex_next(L);
+        long hi=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        if (lo>hi){ long t=lo; lo=hi; hi=t; }
+        return (v>=lo && v<=hi) ? 1 : 0;
+      }
+      return 0;
+    }
+    if (strcmp(name,"EVEN")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long a=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        return (a%2==0)?1:0;
+      }
+      return 0;
+    }
+    if (strcmp(name,"ODD")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long a=parse_expr(vm,L);
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        return (a%2!=0)?1:0;
+      }
+      return 0;
+    }
+
     if (strcmp(name,"UNITY")==0) return (long)lround(vm->ch.unity*100);
     if (strcmp(name,"SEQ")==0) return (long)vm->ch.seq;
     if (strcmp(name,"SET")==0 || strcmp(name,"POPCOUNT")==0 ||
@@ -1762,34 +1927,73 @@ static int parse_form(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   if (kw(&L->cur,"IF")){
-    lex_next(L);
-    long cond=parse_expr(vm,L);
-    if (!kw(&L->cur,"THEN")){ fail(vm,"IF expr THEN"); return -1; }
-    lex_next(L); skip_nl(L);
-    Lex then_start=*L;
-    int depth=1; int has_else=0; Lex else_start; memset(&else_start,0,sizeof else_start);
-    while (L->cur.kind!=TK_EOF && depth>0){
-      if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")) depth++;
-      else if (kw(&L->cur,"ELSE") && depth==1){
-        else_start=*L; lex_next(&else_start); skip_nl(&else_start);
-        has_else=1; lex_next(L); continue;
-      } else if (kw(&L->cur,"END")){
-        depth--; if (depth==0) break;
+    /* IF / ELIF / ELSE chain — first true arm runs */
+    typedef struct { Lex body; long cond; } IfArm;
+    IfArm arms[16];
+    int n_arms = 0;
+    int done_chain = 0;
+    while (!done_chain && !vm->fatal){
+      long cond = 1;
+      int is_else = 0;
+      if (n_arms == 0){
+        lex_next(L);
+        cond = parse_expr(vm, L);
+        if (!kw(&L->cur, "THEN")){ fail(vm, "IF expr THEN"); return -1; }
+        lex_next(L); skip_nl(L);
+      } else if (kw(&L->cur, "ELIF") || kw(&L->cur, "ELSEIF")){
+        lex_next(L);
+        cond = parse_expr(vm, L);
+        if (!kw(&L->cur, "THEN")){ fail(vm, "ELIF expr THEN"); return -1; }
+        lex_next(L); skip_nl(L);
+      } else if (kw(&L->cur, "ELSE")){
+        lex_next(L); skip_nl(L);
+        is_else = 1; cond = 1;
+      } else {
+        fail(vm, "IF chain needs ELIF/ELSE/END"); return -1;
       }
-      lex_next(L);
+      if (n_arms >= 16){ fail(vm, "IF too many ELIF arms"); return -1; }
+      arms[n_arms].body = *L;
+      arms[n_arms].cond = cond;
+      n_arms++;
+      int depth = 1;
+      while (L->cur.kind != TK_EOF && depth > 0){
+        if (kw(&L->cur, "IF") || kw(&L->cur, "LOOP") || kw(&L->cur, "WHILE")) depth++;
+        else if ((kw(&L->cur, "ELIF") || kw(&L->cur, "ELSEIF") || kw(&L->cur, "ELSE")) && depth == 1){
+          break; /* next arm */
+        } else if (kw(&L->cur, "END")){
+          depth--; if (depth == 0) break;
+        }
+        lex_next(L);
+      }
+      if (depth == 0){
+        done_chain = 1; /* on END */
+      } else if (L->cur.kind == TK_EOF){
+        fail(vm, "IF without END"); return -1;
+      } else if (is_else){
+        fail(vm, "ELSE must be last before END"); return -1;
+      }
     }
-    if (depth!=0){ fail(vm,"IF without END"); return -1; }
-    if (cond){
-      Lex body=then_start;
-      if (exec_stmts_until(vm,&body,"END","ELSE")<0) return -1;
-    } else if (has_else){
-      Lex body=else_start;
-      if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+    if (!done_chain){ fail(vm, "IF without END"); return -1; }
+    for (int a = 0; a < n_arms && !vm->fatal; a++){
+      if (!arms[a].cond) continue;
+      Lex body = arms[a].body;
+      while (!vm->fatal && !vm->ctrl){
+        skip_nl(&body);
+        if (body.cur.kind == TK_EOF) break;
+        if (kw(&body.cur, "END") || kw(&body.cur, "ELIF") ||
+            kw(&body.cur, "ELSEIF") || kw(&body.cur, "ELSE"))
+          break;
+        int r = parse_form(vm, &body);
+        if (r < 0) return -1;
+        if (r == 0) break;
+        if (vm->ctrl) break;
+      }
+      break; /* first true arm only */
     }
-    if (kw(&L->cur,"END")) lex_next(L);
+    if (kw(&L->cur, "END")) lex_next(L);
     bump(vm); return 1;
   }
-  if (kw(&L->cur,"END")||kw(&L->cur,"ELSE")||kw(&L->cur,"THEN")){
+  if (kw(&L->cur,"END")||kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")||kw(&L->cur,"THEN")){
     return 0; /* stop marker for nested bodies */
   }
 

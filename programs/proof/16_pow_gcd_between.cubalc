@@ -1,0 +1,55 @@
+# Proof 16 — POW SQRT GCD LCM BETWEEN EVEN ODD usability
+# Expect: all asserts pass; last print marks ok.
+
+ASSERT POW(2, 10) == 1024
+ASSERT POW(3, 5) == 243
+ASSERT POW(10, 0) == 1
+ASSERT POW(7, 1) == 7
+ASSERT POW(-2, 3) == -8
+ASSERT POW(-2, 4) == 16
+
+ASSERT SQRT(0) == 0
+ASSERT SQRT(1) == 1
+ASSERT SQRT(9) == 3
+ASSERT SQRT(16) == 4
+ASSERT SQRT(10) == 3
+ASSERT SQRT(100) == 10
+ASSERT SQRT(99) == 9
+
+ASSERT GCD(12, 8) == 4
+ASSERT GCD(17, 13) == 1
+ASSERT GCD(100, 25) == 25
+ASSERT GCD(-18, 24) == 6
+ASSERT GCD(0, 5) == 5
+
+ASSERT LCM(4, 6) == 12
+ASSERT LCM(3, 5) == 15
+ASSERT LCM(7, 7) == 7
+ASSERT LCM(0, 5) == 0
+
+ASSERT BETWEEN(5, 1, 10) == 1
+ASSERT BETWEEN(0, 1, 10) == 0
+ASSERT BETWEEN(10, 1, 10) == 1
+ASSERT BETWEEN(3, 10, 1) == 1
+ASSERT BETWEEN(-2, -5, -1) == 1
+
+ASSERT EVEN(4) == 1
+ASSERT EVEN(5) == 0
+ASSERT EVEN(0) == 1
+ASSERT ODD(5) == 1
+ASSERT ODD(4) == 0
+ASSERT ODD(-3) == 1
+
+LET a = POW(2, 8)
+LET b = SQRT(a)
+ASSERT b == 16
+LET g = GCD(a, 48)
+ASSERT g == 16
+LET ok = BETWEEN(g, 1, 32)
+ASSERT ok == 1
+IF EVEN(a) THEN
+  LET a = a + 1
+END
+ASSERT ODD(a) == 1
+
+PRINT "pow_gcd_between_ok" a b g ok
