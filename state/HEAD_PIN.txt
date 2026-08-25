@@ -1,5 +1,5 @@
-HEAD=8f2bd3113706d6a9d247305dcdc5107b61fd1ac0
-SHORT=8f2bd31
+HEAD=b34440d4c641e898d55f903f7254e5d072670e8f
+SHORT=b34440d
 MEANINGFUL_ITER=1156
 VERSION=1.5.4-smx-mesh-exchange
 PROOF=programs/proof/13_smx_mesh_exchange.cubalc PASS
@@ -8,4 +8,4 @@ smx-mesh-exchange=PASS
 smx-selftest=PASS
 past=9a3497ea
 feature=SMX mesh_exchange soft-OOB fail-closed life-force
-feature_head=b733333
+feature_head=5892dba
