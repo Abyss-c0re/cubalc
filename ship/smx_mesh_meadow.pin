@@ -1,0 +1,5 @@
+feature=MESH_MEADOW soft-OOB fail-closed mesh life-force pasture
+MEANINGFUL_ITER=1717
+VERSION=1.15.1188-usability
+PROOFS=1717_mesh_meadow+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=65+12+18+56
+next=we_autoheal
