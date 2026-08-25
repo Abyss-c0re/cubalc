@@ -6,9 +6,7 @@
   "proof_ok": true,
   "asserts_ok": 109,
   "flagship_ok": true,
-  "flagship": "1620_atomic_printer_life_force",
   "smx_selftest_ok": true,
-  "commit": "dbd089d3c794ff5c6e6327aff83cd5f82411c63b",
-  "pin_head": "71825ca09735522129a690eeabe3ddf8ca89fd8e",
-  "soft_oob_fail_closed": true
+  "commit": "PENDING",
+  "pin_head": "PENDING"
 }

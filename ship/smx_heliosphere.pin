@@ -1,1 +1,4 @@
 HELIOSPHERE 1694 soft-OOB fail-closed
+feature=SMX HELIOSPHERE mesh stability
+proof=1694_atomic_printer_mesh_heliosphere
+VERSION=1.15.1163-usability
