@@ -1,5 +1,10 @@
 ## 1.15.1157-usability — SMX ATMOSPHERE mesh-stability (life-force)
 
+## 1.15.1161-usability — 1691 SMX IONOSPHERE mesh life-force
+- Pure-C SMX IONOSPHERE|IONO|LAYER|BEAM|IONIZE|PLASMA|MESH_IONOSPHERE|RAISE_IONOSPHERE
+- Fail-closed soft-OOB: complete C(n,2) bonds, beam ring, layer hub; latches SMX_IONOSPHERED
+- Proof 1691 PASS (109 asserts); flagship 1620 PASS; smx-selftest green
+
 - SMX ATMOSPHERE|SKY|AERO|AIRWEB|AEROSPHERE|WIND|MESH_ATMOSPHERE|RAISE_ATMOSPHERE
 - Fail-closed soft-OOB: clears thrash, complete sky mesh, wind ring, sky hub
 - Latches SMX_ATMOSPHERED|SMX_SKY|SMX_AERO|SMX_WINDS|SMX_ZEPHYRS|SMX_SKIES when soft-OOB-free

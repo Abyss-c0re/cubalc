@@ -1,8 +1,10 @@
 {
-  "iter": 1690,
-  "feature": "atomic_printer_mesh_homeostasis",
-  "proof": "1690_atomic_printer_mesh_homeostasis",
-  "version": "1.15.1160-usability",
+  "iter": 1691,
+  "feature": "atomic_printer_mesh_ionosphere",
+  "proof": "1691_atomic_printer_mesh_ionosphere",
+  "version": "1.15.1161-usability",
   "proof_ok": true,
-  "commit": "9a550c25"
+  "asserts_ok": 109,
+  "flagship_ok": true,
+  "smx_selftest_ok": true
 }
