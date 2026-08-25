@@ -1,6 +1,7 @@
-sha=7f6e09b0
-full=7f6e09b022b6f42b225bed846562a73c1e035b08
-iter=1703
+HEAD=a692a2865a43d6e34113088aacbe458bb2721a08
+SHORT=a692a286
+MEANINGFUL_ITER=1703
+VERSION=1.15.1173-usability
+PROOFS=1703_omniverse+1620_flagship PASS
 feature=OMNIVERSE soft-OOB fail-closed mesh stability
-version=1.15.1173-usability
-proof=1703_atomic_printer_mesh_omniverse
+feat_head=a692a286
