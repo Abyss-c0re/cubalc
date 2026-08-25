@@ -1,1 +1,7 @@
-329b76e6a44ce250ccb1b5a7590792e61459271d
+HEAD=5721e6c4f9c4c42d27390c8109b1d130ddd9996d
+SHORT=5721e6c4
+MEANINGFUL_ITER=1701
+VERSION=1.15.1171-usability
+PROOFS=1701_autoheal+1620_flagship PASS
+feature=AUTOHEAL soft-OOB fail-closed mesh stability
+feat_head=c0b9642e
