@@ -1,1 +1,11 @@
-
+HEAD=7fd49a53000474aadce52b5c6f6a497e57339a87
+SHORT=7fd49a53
+MEANINGFUL_ITER=1709
+VERSION=1.15.1179-usability
+PROOFS=1709_nexus+1620_flagship+1621_soft_oob PASS
+feature=NEXUS soft-OOB fail-closed mesh stability
+feat_head=110c07902feba7a4bdcf9806b3bd096b7f05da03
+past=1708
+next=we_autoheal
+verified_at=2026-08-25T19:08:35Z
+pin_head==tip

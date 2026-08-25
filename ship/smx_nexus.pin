@@ -1,11 +1,6 @@
-NEXUS 1709 soft-OOB fail-closed
-feature=SMX NEXUS mesh stability
-proof=1709_atomic_printer_mesh_nexus+1634_mesh_exchange+1621_soft_oob+1620_flagship
-asserts_fail=0
-asserts_ok=110+56+18+12
-VERSION=1.15.1179-usability
+MEANINGFUL_ITER=1709
+HEAD=7fd49a53000474aadce52b5c6f6a497e57339a87
+feat=110c07902feba7a4bdcf9806b3bd096b7f05da03
+feature=NEXUS soft-OOB fail-closed mesh stability
+proofs=1709+1620+1621 asserts_fail:0
 next=we_autoheal
-verified=PASS
-feat_head=110c07902feba7a4bdcf9806b3bd096b7f05da03
-pin_head=
-past=1708
