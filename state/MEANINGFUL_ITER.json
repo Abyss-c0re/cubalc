@@ -1,9 +1,9 @@
 {
   "iter": 1715,
   "feature": "LIFE_FORCE_ENTANGLE",
-  "pin_head": "7632a02a754140d67d6592262d51beb7aae7aa73",
-  "tip": "7632a02a754140d67d6592262d51beb7aae7aa73",
-  "feat_head": "7632a02a754140d67d6592262d51beb7aae7aa73",
+  "pin_head": "65283ee63dbe2c713eb38efa423f00367a47f9e9",
+  "tip": "65283ee63dbe2c713eb38efa423f00367a47f9e9",
+  "feat_head": "65283ee63dbe2c713eb38efa423f00367a47f9e9",
   "version": "1.15.1186-usability",
   "proofs_pass": true,
   "asserts_ok": {
@@ -14,7 +14,7 @@
   },
   "next": "we_autoheal",
   "unity": 1.0,
-  "nodes": 4,
+  "nodes": 5,
   "risk": "low",
   "sealed": true
 }
