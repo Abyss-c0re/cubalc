@@ -1,7 +1,5 @@
-HEAD=a23df8fa57b1cf3fcb08c4c914c17e623667e56f
-SHORT=a23df8fa
-MEANINGFUL_ITER=1705
-VERSION=1.15.1175-usability
-PROOFS=1705_keeper+1620_flagship+1634_mesh_exchange PASS
-feature=KEEPER soft-OOB fail-closed mesh stability
-feat_head=784863bd
+MEANINGFUL_ITER=1706
+VERSION=1.15.1176-usability
+feature=SEER soft-OOB fail-closed mesh stability
+HEAD=bc63b467dc92f36b92718d506b569caec4a204ea
+proof=1706_atomic_printer_mesh_seer
