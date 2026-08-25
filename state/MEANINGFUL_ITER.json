@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "8749ca6f",
-  "version": "1.15.1156-usability",
+  "commit": "PENDING",
+  "version": "1.15.1158-usability",
   "feature": "atomic_printer_mesh_hydrosphere",
   "proof": "1686_atomic_printer_mesh_hydrosphere",
   "proof_ok": true,
-  "ts": "2026-08-25T12:30:00Z",
+  "ts": "2026-08-25T12:55:54Z",
   "iso": "2026-08-25T12:28:09Z",
-  "iter": 1686,
+  "iter": 1687,
   "note": "Life-force MESH-HYDROSPHERE: complete hydros mesh + current ring + ocean hub after soft-OOB storms. Latches SMX_HYDROSPHERED|SMX_OCEAN|SMX_MARINE.",
-  "item": "1686 atomic printer mesh hydrosphere",
-  "item_id": "mi_1686_atomic_printer_mesh_hydrosphere",
-  "title": "1686 atomic printer mesh hydrosphere",
-  "summary": "SMX HYDROSPHERE soft-OOB fail-closed mesh + mitosis under free energy; proof 1686 PASS.",
+  "item": "1688 atomic printer mesh lithosphere",
+  "item_id": "mi_1688_atomic_printer_mesh_lithosphere",
+  "title": "1688 atomic printer mesh lithosphere",
+  "summary": "Host-finished MI ship after nanobot partial (1688_atomic_printer_mesh_lithosphere).",
   "proofs": [
-    "programs/proof/1686_atomic_printer_mesh_hydrosphere.cubalc"
+    "programs/proof/1688_atomic_printer_mesh_lithosphere.cubalc"
   ],
   "host_finish": true
 }
