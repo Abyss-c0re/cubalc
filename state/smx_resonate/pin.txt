@@ -2,3 +2,5 @@ MEANINGFUL_ITER=1713
 feature=RESONATE
 proof=1713_smx_resonate_soft_oob
 asserts_ok=47
+feat_head=8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897
+pin_head=8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897

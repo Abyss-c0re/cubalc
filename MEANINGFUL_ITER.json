@@ -1,7 +1,7 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "iter": 1713,
-  "commit": "PENDING",
+  "commit": "8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897",
   "version": "1.15.1184-usability",
   "feature": "RESONATE soft-OOB fail-closed mesh life-force chord",
   "proof": "1713_smx_resonate_soft_oob",
@@ -14,9 +14,9 @@
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1713,
   "proofs": "1713_resonate+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS",
-  "head": "PENDING",
-  "pin_head": "PENDING",
-  "feat_head": "PENDING",
+  "head": "8b86fe1a",
+  "pin_head": "8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897",
+  "feat_head": "8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897",
   "past": "1712",
   "next": "we_autoheal",
   "verified_at": "2026-08-25T19:57:48Z"

@@ -1,11 +1,11 @@
-HEAD=6d083b7dbe603ce7c230eb58fadee94b8df2c87f
-SHORT=6d083b7d
-MEANINGFUL_ITER=1712
-VERSION=1.15.1183-usability
-PROOFS=1712_life_force_stabilize+1620_flagship+soft_oob+mesh_exchange PASS asserts_ok=47+12
-feature=LIFE_FORCE_STABILIZE soft-OOB fail-closed + mesh_exchange
-feat_head=2df82e6f69fb08f61116adfa9bc1370c8865b031
-pin_head=6d083b7dbe603ce7c230eb58fadee94b8df2c87f
-past=1711
+HEAD=8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897
+SHORT=8b86fe1a
+MEANINGFUL_ITER=1713
+VERSION=1.15.1184-usability
+PROOFS=1713_resonate+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=47+12+18+56
+feature=RESONATE soft-OOB fail-closed mesh life-force chord
+feat_head=8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897
+pin_head=8b86fe1a85fc10b7efb18fd8e51a76eb7abc2897
+past=1712
 next=we_autoheal
-verified_at=2026-08-25T19:46:27Z
+verified_at=2026-08-25T19:57:48Z
