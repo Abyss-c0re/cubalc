@@ -1,8 +1,8 @@
 {
   "iter": 1716,
   "feature": "MESH_BLOOM",
-  "pin_head": "b86ec3e3d6ec227f002441a9a247fd123d140027",
-  "tip": "b86ec3e3d6ec227f002441a9a247fd123d140027",
+  "pin_head": "72ef64b8bf10659d014f8ef5b1aa8b398307a0c6",
+  "tip": "72ef64b8bf10659d014f8ef5b1aa8b398307a0c6",
   "feat_head": "2830029853e961b7451d0436f50bf5852406a005",
   "version": "1.15.1187-usability",
   "proofs_pass": true,
