@@ -2,7 +2,7 @@
   "schema": "cubalc.visual_unity.v1",
   "ok": true,
   "united": true,
-  "seq": 52,
+  "seq": 80,
   "unity": 1.0,
   "faces": [
     "viz",
@@ -12,6 +12,6 @@
   "hold_flash": 1,
   "share": "smx",
   "iter": 1702,
-  "feature": "MULTIVERSE soft-OOB fail-closed mesh stability",
-  "version": "1.15.1172-usability"
+  "feature": "MULTIVERSE",
+  "ts": 1787674110
 }

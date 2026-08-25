@@ -1,7 +1,7 @@
-HEAD=f02cf59ef825460232b3a5ef599686f3a7997096
-SHORT=f02cf59e
+HEAD=7fc6c82d6ccd3bf0316c450bcdb0d95ba9f7d65c
+SHORT=7fc6c82d
 MEANINGFUL_ITER=1702
 VERSION=1.15.1172-usability
 PROOFS=1702_multiverse+1620_flagship PASS
 feature=MULTIVERSE soft-OOB fail-closed mesh stability
-feat_head=1f1e115f
+feat_head=811231ab
