@@ -1,5 +1,7 @@
-feature=MESH_BLOOM
-iter=1716
-pin_head=37a1e2af6e3b17ddec2b02a769de66b3f4f95eda
-verified=PASS
+MEANINGFUL_ITER=1716
+feature=LIFE_FORCE_BLOOM
+pin_head=256539f4af06fc7e57ad637752e7ab6ba35f664e
+tip=256539f4af06fc7e57ad637752e7ab6ba35f664e
+proofs=PASS
 next=we_autoheal
+sealed=1

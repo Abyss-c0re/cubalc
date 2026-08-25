@@ -3,9 +3,10 @@ feature=MESH BLOOM soft-OOB fail-closed full-mesh usability
 proof=1716_smx_mesh_bloom_soft_oob
 PROOFS=1716 asserts_ok=63 + 1620 asserts_ok=12 + 1621 asserts_ok=18 + 1634 asserts_ok=56 PASS
 VERSION=1.15.1187-usability
+pin_head=256539f4af06fc7e57ad637752e7ab6ba35f664e
+feat_head=2830029853e961b7451d0436f50bf5852406a005
 past=1715
 next=we_autoheal
-pin_head=35ba020d55d1b2ba8667510a4213de3949b5f860
-verified_at=2026-08-25T20:19:57Z
+verified_at=2026-08-25T20:20:44Z
 sealed=1
 pin_head==tip
