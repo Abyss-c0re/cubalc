@@ -1,5 +1,4 @@
-pin_head=92c9bffe23465491c725a0e7904c3bebabc6a32e
+pin_head=
+feat_head=
 MEANINGFUL_ITER=1712
 VERSION=1.15.1183-usability
-feature=LIFE_FORCE STABILIZE soft-OOB fail-closed
-feat_head=f16ebd32162557fd50b483331cf2e4d7f58560c7
