@@ -7,8 +7,9 @@
   "proof_pass": true,
   "asserts_ok": 4,
   "smx_selftest": true,
-  "head": "30b088173229999e2b3c4097159d4c87438d980e",
-  "short": "30b0881",
+  "head": "2f2741b37eedff6787d4969f9c041692f160fa1d",
+  "short": "2f2741b",
   "past": "9152410e",
+  "bundle": "state/cubalc-1.5.3-break-continue.bundle",
   "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT"
 }
