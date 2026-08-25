@@ -1,12 +1,12 @@
-HEAD=0cedde379767ca77c686cbe3b6f3137d5c5b93a8
-SHORT=0cedde37
-MEANINGFUL_ITER=1714
-VERSION=1.15.1185-usability
-PROOFS=1714_life_force_cohere+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=49+12+18+56
-feature=LIFE_FORCE_COHERE soft-OOB fail-closed mesh usability
-feat_head=0cedde379767ca77c686cbe3b6f3137d5c5b93a8
-pin_head=0cedde379767ca77c686cbe3b6f3137d5c5b93a8
-past=1713
+HEAD=db3b7b7d371ac679a2b6d3fc9f47d9f8fe5e4281
+SHORT=db3b7b7d
+MEANINGFUL_ITER=1715
+VERSION=1.15.1186-usability
+PROOFS=1715_life_force_entangle+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=51+12+18+56
+feature=LIFE_FORCE_ENTANGLE soft-OOB fail-closed mesh usability
+feat_head=db3b7b7d371ac679a2b6d3fc9f47d9f8fe5e4281
+pin_head=db3b7b7d371ac679a2b6d3fc9f47d9f8fe5e4281
+past=1714
 next=we_autoheal
-verified_at=2026-08-25T20:00:38Z
+verified_at=2026-08-25T20:02:55Z
 pin_head==tip
