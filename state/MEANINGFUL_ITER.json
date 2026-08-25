@@ -1,17 +1,17 @@
 {
   "MEANINGFUL_ITER": 1158,
   "VERSION": "1.5.5-minmax-clamp",
-  "HEAD": "56195b28dcc14615f37340057f0e27659af290df",
-  "SHORT": "56195b2",
+  "HEAD": "f93cebce4b80889c9e1faaa35629ec2d9d5e2a5e",
+  "SHORT": "f93cebc",
   "feature": "ABS MIN MAX CLAMP SIGN POW SQRT GCD LCM BETWEEN EVEN ODD + ELIF",
-  "feature_head": "85de418",
   "proofs": {
     "smx-selftest": "PASS",
     "15_minmax_clamp": "PASS",
-    "16_pow_gcd_between": "PASS",
     "15_elif_chain": "PASS",
+    "16_pow_gcd_between": "PASS",
+    "16_elif_chain": "PASS",
     "12_break_continue": "PASS"
   },
   "asserts_ok": 62,
-  "sealed_at": 1787663361
+  "sealed_at": 1787663371
 }
