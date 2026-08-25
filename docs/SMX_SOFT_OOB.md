@@ -6,4 +6,8 @@ Fail-closed without key. HOLD_FLASH sticky. Recovery frames carry SOFT_OOB flag.
 `cubalc_smx_mesh_exchange` seals A→B, opens on B, soft-heals recoverable
 replay/compat stress, then applies proton matrix transfer under life-force floor.
 
-Proof: `./out/cubalc smx-soft-oob` → ok life_force>=0.35 mesh=stable mesh_exchange=ok
+Proofs:
+- `./out/cubalc smx-soft-oob` → ok life_force>=0.35 mesh=stable mesh_exchange=ok
+- `./out/cubalc smx-mesh-exchange` → ok mesh=stable fail_closed=true
+
+MEANINGFUL_ITER 1155 · VERSION 1.5.4-smx-mesh-exchange
