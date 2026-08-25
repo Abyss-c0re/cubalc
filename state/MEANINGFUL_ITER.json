@@ -1,23 +1,22 @@
 {
   "value": "1717",
   "MEANINGFUL_ITER": 1717,
-  "iter": 1717,
-  "version": "1.15.1182-usability",
+  "iter": 1718,
+  "version": "1.15.1184-usability",
   "feature": "SMX_MESH_LOCK",
   "proof": "programs/science/proof/1717_atomic_printer_mesh_lock.cubalc",
   "updated": 1787688965,
   "status": "PASS",
   "head": "6c1f5ff575ea390bf957b3a069dfd200a0b45cae",
   "schema": "cubalc.meaningful_iter/v1",
-  "item": "SMX mesh lock soft-OOB fail-closed life-force stability",
-  "item_id": "mi_smx_mesh_lock_1717",
-  "title": "SMX MESH LOCK",
-  "summary": "SYNAPSE mesh + STABILIZE + GROUND/HARDEN clasp roots+settle; soft-OOB fail-closed; mitosis under free energy; proof 1717 PASS asserts_ok=85.",
+  "item": "1718 atomic printer mesh axon",
+  "item_id": "mi_1718_atomic_printer_mesh_axon",
+  "title": "1718 atomic printer mesh axon",
+  "summary": "Host-finished MI ship after nanobot partial (1718_atomic_printer_mesh_axon).",
   "proofs": [
-    "programs/science/proof/1717_atomic_printer_mesh_lock.cubalc",
-    "programs/proof/1717_atomic_printer_mesh_lock.cubalc"
+    "programs/proof/1718_atomic_printer_mesh_axon.cubalc"
   ],
-  "ts": "2026-08-25T20:16:05Z",
+  "ts": "2026-08-25T20:51:21Z",
   "asserts_ok": 85,
   "asserts_fail": 0,
   "flagship_1620_ok": 12,
@@ -26,5 +25,7 @@
   "soft_oob": "fail-closed",
   "mesh_exchange": "synapse+stabilize+ground+harden",
   "unity": 1.0,
-  "note": "SMX MESHLOCK stability board; 85 asserts; flagship 1620 12/12; soft_oob fail-closed"
+  "note": "SMX MESHLOCK stability board; 85 asserts; flagship 1620 12/12; soft_oob fail-closed",
+  "commit": "PENDING",
+  "host_finish": true
 }
