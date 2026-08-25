@@ -1,12 +1,12 @@
 {
-  "iter": 1694,
-  "feature": "atomic_printer_mesh_heliosphere",
-  "proof": "1694_atomic_printer_mesh_heliosphere",
-  "version": "1.15.1163-usability",
+  "iter": 1695,
+  "feature": "atomic_printer_mesh_interstellar",
+  "proof": "1695_atomic_printer_mesh_interstellar",
+  "version": "1.15.1164-usability",
   "proof_ok": true,
   "asserts_ok": 109,
   "flagship_ok": true,
   "smx_selftest_ok": true,
-  "commit": "dbd089d3c794ff5c6e6327aff83cd5f82411c63b",
-  "pin_head": "74913a85f85768e1bbcc8fe52f81aadeeb0ab758"
+  "commit": "95216237df1017fa6c4c8e445a309845cf8f6fa7",
+  "pin_head": "95216237df1017fa6c4c8e445a309845cf8f6fa7"
 }
