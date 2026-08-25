@@ -1,1 +1,7 @@
-76100edd22bd48e6c7ed3b40679544dd392d8657
+HEAD=104599d0be1786d45aaf625a4ff966fdb0580baf
+SHORT=104599d0
+MEANINGFUL_ITER=1695
+VERSION=1.15.1164-usability
+PROOFS=1695_interstellar+1620_life_force PASS
+feature=INTERSTELLAR soft-OOB fail-closed mesh stability
+feat_head=95216237df1017fa6c4c8e445a309845cf8f6fa7
