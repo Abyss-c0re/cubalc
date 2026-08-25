@@ -1,9 +1,12 @@
 {
-  "iter": 1705,
-  "feature": "SMX_KEEPER",
-  "version": "1.15.1175-usability",
-  "proof": "programs/science/proof/1705_atomic_printer_mesh_keeper.cubalc",
-  "asserts_ok": 68,
-  "asserts_fail": 0,
-  "ts": 1787677663
+  "value": "1706",
+  "MEANINGFUL_ITER": 1706,
+  "iter": 1706,
+  "version": "1.15.1176-usability",
+  "feature": "SMX_THALAMUS",
+  "proof": "programs/science/proof/1706_atomic_printer_mesh_thalamus.cubalc",
+  "updated": 1787681276,
+  "status": "PASS",
+  "head": "dfb4d2bc",
+  "commit": "dfb4d2bc"
 }

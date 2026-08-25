@@ -1,0 +1,9 @@
+feature=SMX_THALAMUS
+iter=1706
+proof=programs/science/proof/1706_atomic_printer_mesh_thalamus.cubalc
+integration=programs/science/integration/atomic_printer_mesh_thalamus.cubalc
+status=PASS
+asserts_ok=110
+asserts_fail=0
+head=dfb4d2bce54c01000a76964a9692337fa88caa65
+note=SMX THALAMUS|PULSEGATE|STABILITY|STABLE_MESH mesh+stability ring+gate hub after soft-OOB; fail-closed ghosts
