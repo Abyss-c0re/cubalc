@@ -1,7 +1,7 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "iter": 1707,
-  "commit": "62c8761db17e7ec99ba53fca6e2179f027a35d0d",
+  "commit": "7fc008579315e79b212f605534a7255c7b8009de",
   "version": "1.15.1177-usability",
   "feature": "PROPHET soft-OOB fail-closed mesh stability",
   "proof": "1707_atomic_printer_mesh_prophet",
@@ -14,9 +14,9 @@
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1707,
   "proofs": "1707_prophet+1620_flagship+1634_mesh_exchange+1621_soft_oob PASS",
-  "head": "62c8761d",
-  "pin_head": "62c8761db17e7ec99ba53fca6e2179f027a35d0d",
+  "head": "7fc00857",
+  "pin_head": "7fc008579315e79b212f605534a7255c7b8009de",
   "feat_head": "82bd62c0c864403d1b4d8d422a1e6159df5a8b06",
-  "past": "7e1f815f",
+  "past": "f3bbdc09",
   "next": "we_autoheal"
 }
