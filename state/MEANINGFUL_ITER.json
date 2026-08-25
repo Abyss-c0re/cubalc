@@ -26,6 +26,6 @@
   "mesh_exchange": "synapse+stabilize+ground+harden",
   "unity": 1.0,
   "note": "SMX MESHLOCK stability board; 85 asserts; flagship 1620 12/12; soft_oob fail-closed",
-  "commit": "PENDING",
+  "commit": "94cf6fca",
   "host_finish": true
 }
