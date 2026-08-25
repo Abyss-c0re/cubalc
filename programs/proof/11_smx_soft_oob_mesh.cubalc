@@ -5,6 +5,5 @@
 CUBE kernel PROTON 1
 CUBE hive PROTON 1
 PLUG kernel hive
-# mesh life-force floor enforced under stress; SOFT_OOB recovery frames keep pulse
-# mesh_exchange seals A→B, soft-heals recoverable stress, fail-closed without key
+# soft-OOB heals seq gaps; mesh_exchange keeps pulse; fail-closed without key
 ASSERT UNITY

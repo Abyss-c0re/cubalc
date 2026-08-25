@@ -342,6 +342,58 @@ static int cmd_smx_soft_oob_proof(void) {
   }
 }
 
+
+static int cmd_smx_mesh_exchange_proof(void) {
+  cubalc_smx_ctx ctx;
+  cubalc_smx_mesh_pulse mx, mx2;
+  cubalc_chain ch;
+  cubalc_matrix gen;
+  int rc;
+  const char *test_key =
+    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  cubalc_smx_ctx_init(&ctx);
+  if (cubalc_smx_load_key_hex(&ctx, test_key) != 0) {
+    puts("{\"ok\":false,\"error\":\"key\"}");
+    return 1;
+  }
+  cubalc_coord_to_matrix(
+    "NEXUS_COORD v1 | from=BlackCube | type=heartbeat | hold_flash=1 |", &gen);
+  cubalc_chain_from_initial(&ch, &gen, 1);
+  cubalc_chain_os_aspects(&ch);
+
+  rc = cubalc_smx_mesh_exchange(&ctx, &ch, 0, 1, &mx);
+  if (rc != 0) {
+    printf("{\"ok\":false,\"error\":\"mesh_exchange\",\"rc\":%d,\"reason\":\"%s\"}\n",
+           rc, mx.reason);
+    return 2;
+  }
+  if (mx.life_force < CUBALC_SMX_LIFE_FLOOR - 0.001f) {
+    printf("{\"ok\":false,\"error\":\"life_floor\",\"lf\":%.4f}\n", mx.life_force);
+    return 3;
+  }
+  /* second exchange may soft-heal replay; must stay alive */
+  rc = cubalc_smx_mesh_exchange(&ctx, &ch, 0, 1, &mx2);
+  if (rc != 0) {
+    printf("{\"ok\":false,\"error\":\"mesh_exchange2\",\"rc\":%d,\"reason\":\"%s\"}\n",
+           rc, mx2.reason);
+    return 4;
+  }
+  {
+    cubalc_smx_ctx bare;
+    cubalc_smx_mesh_pulse p2;
+    cubalc_smx_ctx_init(&bare);
+    if (cubalc_smx_mesh_exchange(&bare, &ch, 0, 1, &p2) != -2) {
+      puts("{\"ok\":false,\"error\":\"expected_no_key_fail_closed\"}");
+      return 5;
+    }
+  }
+  printf("{\"ok\":true,\"cmd\":\"smx-mesh-exchange\",\"proto\":2,"
+         "\"life_force\":%.4f,\"soft_repairs\":%u,\"hold_flash\":%u,"
+         "\"reason\":\"%s\",\"mesh\":\"stable\",\"fail_closed\":true}\n",
+         mx2.life_force, mx2.soft_repairs, (unsigned)mx2.hold_flash, mx2.reason);
+  return 0;
+}
+
 static int cmd_smx_selftest(void) {
   cubalc_smx_ctx ctx;
   cubalc_chain ch;

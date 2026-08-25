@@ -5,5 +5,5 @@
 CUBE kernel PROTON 1
 CUBE hive PROTON 1
 PLUG kernel hive
-# mesh_exchange seals, opens, soft-heals recoverable stress, keeps pulse
+# mesh_exchange seals A→B, soft-heals recoverable stress, keeps pulse
 ASSERT UNITY
