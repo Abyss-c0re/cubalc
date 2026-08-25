@@ -1,12 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "commit": "bbe03f34",
-  "version": "1.15.1152-usability",
+  "commit": "PENDING",
+  "version": "1.15.1154-usability",
   "feature": "atomic_printer_mesh_psyche",
   "proof": "1682_atomic_printer_mesh_psyche",
   "proof_ok": true,
-  "ts": "2026-08-25T11:43:30Z",
+  "ts": "2026-08-25T12:07:00Z",
   "iso": "2026-08-25T11:43:30Z",
-  "iter": 1682,
-  "note": "Life-force MESH-PSYCHE: complete spirit mesh + synapse ring + mneme hub after soft-OOB storms. Latches SMX_PSYCHED|SMX_SOPHIA|SMX_SOUL."
+  "iter": 1683,
+  "note": "Life-force MESH-PSYCHE: complete spirit mesh + synapse ring + mneme hub after soft-OOB storms. Latches SMX_PSYCHED|SMX_SOPHIA|SMX_SOUL.",
+  "item": "1683 atomic printer mesh aegis",
+  "item_id": "mi_1683_atomic_printer_mesh_aegis",
+  "title": "1683 atomic printer mesh aegis",
+  "summary": "Host-finished MI ship after nanobot partial (1683_atomic_printer_mesh_aegis).",
+  "proofs": [
+    "programs/proof/1683_atomic_printer_mesh_aegis.cubalc"
+  ],
+  "host_finish": true
 }
