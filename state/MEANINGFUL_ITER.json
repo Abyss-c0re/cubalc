@@ -12,8 +12,8 @@
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "proofs": "1705_keeper+1620_flagship+1634_mesh_exchange PASS",
-  "commit": "a3f581803f9dd13e04cfb6eff9f18a3ead5ca1b1",
-  "head": "a3f58180",
+  "commit": "b8737fa0f4dd9640894fb2af1db629f0680d3109",
+  "head": "b8737fa0",
   "feat_head": "784863bd",
-  "updated": "2026-08-25T20:24:07+03:00"
+  "updated": "2026-08-25T20:24:28+03:00"
 }
