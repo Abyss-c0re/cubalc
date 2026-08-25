@@ -7,7 +7,7 @@
   "asserts_ok": 108,
   "flagship_ok": true,
   "smx_selftest_ok": true,
-  "commit": "PENDING",
-  "pin_head": "PENDING",
+  "commit": "aa347390e9304622464b7b6ec38f21c2e40cfdba",
+  "pin_head": "aa347390e9304622464b7b6ec38f21c2e40cfdba",
   "feature_note": "MULTIVERSE soft-OOB fail-closed mesh stability after LOCALGROUP"
 }
