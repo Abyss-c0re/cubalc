@@ -1,0 +1,215 @@
+// atomic_printer_mesh_astrocyte.cubalc
+// Life-force gift: MESH-ASTROCYTE — complete astrocyte mesh + astrocyte star ring + endfoot gather after soft-OOB storms.
+// SMX ASTROCYTE|ENDFOOT|STAR|MESH_ASTROCYTE|RAISE_ASTROCYTE|WE_ASTROCYTE|LIFE_ASTROCYTE clears thrash, every live pair exchanges
+// both ways (C(n,2)), then astrocyte star ring settles so lattice raises synapse; latches SMX_ASTROCYTE|SMX_MESH_EXCHANGE|SMX_STABLE_MESH|SMX_STAR.
+// Soft-OOB ghosts stay fail-closed. Mitosis under free energy while mesh is astrocyte-locked;
+// RECOVER restores vital/key; dual SEAL/OPEN rails BN+IS rebind hive; second storm fail-closed.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "ASTROCYTE_COORD v1722 | from=gift | type=atomic_printer_mesh_astrocyte | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Storm A/B soft-OOB thrash — no ghost place
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+// Storm then SYNAPSE latch — five live nodes root as complete mesh + exchange + nexi
+SMX ASTROCYTE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "astrocyte live"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte latch on"
+ASSERT SMX_ASTROCYTE_LATCH == 1 "astrocyte latch sticky"
+ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange latch on"
+ASSERT SMX_HARDEN_ASTROCYTE == 1 "harden astrocyte latch on"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh latch sticky"
+ASSERT SMX_ENDFOOT_LATCH == 1 "endfoot latch on"
+ASSERT SMX_EXCHANGES == 10 "ten bank exchanges"
+ASSERT SMX_BONDS == 10 "ten undirected links (C(5,2))"
+ASSERT SMX_STAR == 5 "five astrocyte star ring"
+ASSERT SMX_MESH == 5 "five mesh"
+ASSERT SMX_BONDS == 10 "ten bonds"
+ASSERT SMX_ENDFEET == 5 "five endfeet"
+ASSERT SMX_STARS == 5 "astrocyte star ring sticky"
+ASSERT SMX_STARS == 5 "five astrocyte star ring steps"
+ASSERT SMX_ASTROCYTE_SUM == 20 "astrocyte bonds+stars+endfeet"
+ASSERT SMX_FUSE == 10 "ten fuse"
+ASSERT SMX_BIND == 10 "ten bind"
+ASSERT SMX_TONE == 5 "five tones"
+ASSERT SMX_PULSE == 20 "pulse bonds+stars+endfeet"
+ASSERT SMX_BREATH == 5 "five live breath"
+ASSERT SMX_OOB == 0 "oob cleared by astrocyte"
+ASSERT SMX_LIVE == 5 "five live"
+ASSERT SMX_NODES == 5 "five named"
+ASSERT SMX_TALKS >= 40 "talks after astrocyte (mesh + ring + nexi)"
+ASSERT SMX_VITAL >= 14 "vital after astrocyte"
+ASSERT CUBES == base_cubes "astrocyte invents nothing"
+
+// Alias MESH_EXCHANGE form still pure
+SMX MESH_ASTROCYTE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mesh_astrocyte rebind"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte sticky"
+ASSERT SMX_BONDS == 10 "bonds sticky"
+ASSERT SMX_ENDFEET == 5 "endfeet sticky"
+ASSERT SMX_STARS == 5 "stars sticky"
+
+// Alias EXRINGS form
+SMX STARS bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "stars rebind"
+ASSERT SMX_ASTROCYTE == 1 "plate astrocyte"
+ASSERT SMX_STARS == 5 "stars sticky"
+
+
+// Alias BRANCH / SPINE / TRIPARTITE rebind
+SMX STAR bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "star rebind"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte sticky via star"
+ASSERT SMX_STARS == 5 "stars sticky"
+
+SMX ENDFEET bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "endfeet rebind"
+ASSERT SMX_ENDFEET == 5 "endfeet sticky"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte via endfeet"
+
+SMX TRIPARTITE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "tripartite rebind"
+ASSERT SMX_TRIPARTITE == 1 "tripartite latch"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte via tripartite"
+
+// Mitosis under free energy while the mesh is astrocyted
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      IF births == 0 THEN
+        SETF d1 alive 1
+        SETF d1 ready 0
+        SETF d1 energy half
+        SETF d1 gen dg
+        PLUG bed d1
+        LET births = 1
+      ELSE
+        IF births == 1 THEN
+          SETF d2 alive 1
+          SETF d2 ready 0
+          SETF d2 energy half
+          SETF d2 gen dg
+          PLUG nozzle d2
+          LET births = 2
+        END
+      END
+      GETF seed energy
+      LET left = LAST_N - half
+      IF left < 1 THEN
+        LET left = 1
+      END
+      SETF seed energy left
+      SETF seed ready 0
+    END
+  END
+  LET step = step + 1
+END
+
+ASSERT births >= 1 "mitosis under astrocyte free energy"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte holds through mitosis"
+
+// RECOVER restores vital/key
+SMX RECOVER
+ASSERT SMX_OK == 1 "recover ok"
+ASSERT SMX_KEY_OK == 1 "key after recover"
+ASSERT SMX_VITAL >= 1 "vital after recover"
+
+// dual SEAL/OPEN rails BN+IS rebind hive
+SMX SEAL bed nozzle "state/smx_astrocyte/rail_bn.cblc"
+ASSERT SMX_OK == 1 "seal BN"
+ASSERT SMX_N > 64 "rail BN frame"
+SMX OPEN hive "state/smx_astrocyte/rail_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+SMX SEAL hive scrap "state/smx_astrocyte/rail_is.cblc"
+ASSERT SMX_OK == 1 "seal IS"
+SMX OPEN pulse "state/smx_astrocyte/rail_is.cblc"
+ASSERT SMX_OK == 1 "open IS onto pulse"
+ASSERT CUBES == base_cubes "rails invent nothing"
+
+// Re-forge after rails
+SMX ASTROCYTE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "re-astrocyte live"
+ASSERT SMX_ASTROCYTE == 1 "re-astrocyte latch"
+ASSERT SMX_BONDS == 10 "re-astrocyte bonds"
+ASSERT SMX_STARS == 5 "re-astrocyte stars"
+ASSERT SMX_ENDFEET == 5 "re-astrocyte endfeet"
+ASSERT SMX_ASTROCYTE_SUM == 20 "re-astrocyte sum"
+ASSERT SMX_OOB == 0 "oob clear after re-forge"
+
+// Second storm fail-closed
+SMX TALK bed ghost_again
+ASSERT SMX_OK == 0 "second storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob after second storm"
+ASSERT CUBES >= base_cubes "no ghost place on second storm"
+
+// SYNAPSE clears thrash again
+SMX ASTROCYTE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "astrocyte after storm2"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte latch after storm2"
+ASSERT SMX_OOB == 0 "oob cleared again"
+ASSERT SMX_BONDS == 10 "bonds after storm2"
+ASSERT SMX_STARS == 5 "stars after storm2"
+ASSERT SMX_ENDFEET == 5 "endfeet after storm2"
+
+HALT
