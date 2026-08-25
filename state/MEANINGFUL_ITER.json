@@ -1,20 +1,14 @@
 {
-  "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1705,
-  "version": "1.15.1175-usability",
-  "feature": "KEEPER soft-OOB fail-closed mesh stability (pulse ring + thalamus hub)",
+  "MEANINGFUL_ITER": 1705,
+  "VERSION": "1.15.1175-usability",
+  "feature": "KEEPER soft-OOB fail-closed mesh + pulse ring + thalamus hub",
   "proof": "1705_atomic_printer_mesh_keeper",
+  "flagship": "1620_atomic_printer_life_force PASS",
+  "mesh_exchange": "1634 PASS",
   "proof_ok": true,
+  "asserts_mode": "exit0_ok_true",
   "asserts_ok": 110,
   "asserts_fail": 0,
-  "flagship_ok": true,
-  "mesh_exchange_ok": true,
-  "smx_selftest_ok": true,
-  "MEANINGFUL_ITER": 1705,
-  "proofs": "1705_keeper+1620_flagship+1634_mesh_exchange PASS",
-  "updated": "2026-08-25T20:22:05+0300",
-  "commit": "784863bdbd481c76d709c9b7196e01738ca5ec8a",
-  "head": "784863bd",
-  "pin_head": "784863bdbd481c76d709c9b7196e01738ca5ec8a",
-  "feat_head": "784863bdbd481c76d709c9b7196e01738ca5ec8a"
+  "head": "PENDING",
+  "updated": "2026-08-25T20:23:49+03:00"
 }
