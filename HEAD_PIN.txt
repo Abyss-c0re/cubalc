@@ -1,10 +1,10 @@
-HEAD=PENDING
-SHORT=b59ff04b
+HEAD=c2616b5037e2b59fd9fdc548bfac1e2399c78373
+SHORT=c2616b50
 MEANINGFUL_ITER=1710
 VERSION=1.15.1179-usability
 PROOFS=1710_we_autoheal+1620_flagship PASS
 feature=WE_AUTOHEAL soft-OOB fail-closed + mesh_exchange
-feat_head=b59ff04b3421b481066401c45790106dd812fe49
+feat_head=c2616b5037e2b59fd9fdc548bfac1e2399c78373
 past=1709
 next=we_autoheal_seal
 verified_at=2026-08-25T19:21:20Z
