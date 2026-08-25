@@ -1,1 +1,1 @@
-{"ok":true,"cmd":"smx-mesh-exchange","proto":2,"life_force":0.9653,"soft_repairs":0,"hold_flash":1,"reason":"exchange_stable","mesh":"stable","fail_closed":true}
+{"ok":true,"cmd":"smx-mesh-exchange","proto":2,"life_force":0.9403,"soft_repairs":0,"stable_exchanges":2,"hold_flash":1,"reason":"exchange_stable","mesh":"stable","fail_closed":true}

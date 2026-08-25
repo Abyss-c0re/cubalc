@@ -1,0 +1,7 @@
+# Proof 14 — SMX life-force mesh floor (flagship-lite / 1620 spirit)
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+PLUG bed nozzle
+PLUG nozzle hive
+ASSERT UNITY
