@@ -1,18 +1,19 @@
 {
-  "iter": 1707,
-  "feature": "SMX_CORTEX",
-  "version": "1.15.1178-usability",
-  "proof": "programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc",
+  "iter": 1708,
+  "feature": "SMX_SYNAPSE",
+  "version": "1.15.1179-usability",
+  "proof": "programs/science/proof/1708_atomic_printer_mesh_synapse.cubalc",
   "asserts_ok": 69,
   "asserts_fail": 0,
   "flagship_1620_ok": 12,
-  "ts": 1787683100,
-  "head": "7e9b8d27805528dfcfc04e929b760acc69d13467",
+  "ts": 1787685800,
+  "head": "bb31446810a019749fd882cbe2a8d476cd6e2cd1",
   "status": "PASS",
   "unity": 1.0,
   "soft_oob": "fail-closed",
+  "mesh_exchange": "synapse+exring+nexi",
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
-  "bin": "out/ship1707/cubalc",
-  "note": "re-verified PASS: CORTEX mesh+signal+hold soft-OOB fail-closed; 69 asserts; flagship 1620 12/12"
+  "bin": "out/ship1708/cubalc",
+  "note": "SMX SYNAPSE/MESH_EXCHANGE soft-OOB fail-closed; 69 asserts; flagship 1620 12/12; soft_oob 18/18"
 }
