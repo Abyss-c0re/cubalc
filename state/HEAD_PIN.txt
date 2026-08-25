@@ -1,8 +1,10 @@
-HEAD=578a26531d417cd92d42310cfe3493c9f9c9a53c
-SHORT=578a265
-MEANINGFUL_ITER=1154
-VERSION=1.5.3-break-continue
-PROOF=programs/proof/12_break_continue.cubalc PASS
+HEAD=ac84734f2be35b4953511154292f820aa797cd9a
+SHORT=ac84734
+MEANINGFUL_ITER=1155
+VERSION=1.5.4-smx-mesh-exchange
+PROOF=programs/proof/13_smx_mesh_exchange.cubalc PASS
+smx-soft-oob=PASS
+smx-mesh-exchange=PASS
 smx-selftest=PASS
-past=9152410e
-feature=BREAK/CONTINUE loop control
+past=9a3497ea
+feature=SMX mesh_exchange soft-OOB fail-closed life-force

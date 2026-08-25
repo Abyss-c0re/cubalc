@@ -1,14 +1,15 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 1154,
-  "version": "1.5.3-break-continue",
-  "feature": "BREAK/CONTINUE loop control",
-  "proof": "programs/proof/12_break_continue.cubalc",
+  "iter": 1155,
+  "version": "1.5.4-smx-mesh-exchange",
+  "feature": "SMX mesh_exchange soft-OOB fail-closed life-force",
+  "proof": "programs/proof/13_smx_mesh_exchange.cubalc",
   "proof_pass": true,
-  "asserts_ok": 4,
+  "smx_soft_oob": true,
+  "smx_mesh_exchange": true,
   "smx_selftest": true,
-  "head": "578a26531d417cd92d42310cfe3493c9f9c9a53c",
-  "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT; HEAD advanced past prior pin",
-  "short": "578a265",
-  "past": "9152410e"
+  "head": "ac84734f2be35b4953511154292f820aa797cd9a",
+  "note": "mesh_exchange seal/open + soft-OOB heal; fail-closed no key; life_force floor; HEAD past 9a3497ea goal",
+  "short": "ac84734",
+  "past": "9a3497ea"
 }
