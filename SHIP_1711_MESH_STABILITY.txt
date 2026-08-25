@@ -1,0 +1,5 @@
+MEANINGFUL_ITER=1711
+feat_head=6c6f23005d073dbbf823f46aaf61d7a3d8834ff6
+PROOFS=1711 asserts_ok=39 + 1620 + 1621 + 1634 PASS
+feature=SMX mesh stability soft-OOB fail-closed mesh_exchange
+verified_at=2026-08-25T19:30:43Z
