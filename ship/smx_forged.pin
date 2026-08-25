@@ -1,6 +1,7 @@
 MEANINGFUL_ITER=1704
 VERSION=1.15.1174-usability
-PROOF=1704_atomic_printer_mesh_forged
-ASSERTS=110
-FLAGSHIP=1620 PASS
-FEATURE=FORGED soft-OOB fail-closed temper-ring anvil-hub
+feature=FORGED soft-OOB fail-closed mesh + temper ring + anvil hub
+proof=1704_atomic_printer_mesh_forged PASS
+flagship=1620 PASS
+HEAD=2f5c63e4bdb5fd45cbfd47da2a203eadf88fb9cc
+feat_head=37d957fd
