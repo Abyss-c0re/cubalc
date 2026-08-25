@@ -3,9 +3,16 @@
   "feature": "SMX_CORTEX",
   "version": "1.15.1178-usability",
   "proof": "programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc",
-  "asserts_ok": 68,
+  "asserts_ok": 69,
   "asserts_fail": 0,
-  "ts": 1787682717,
-  "head": "c0788193",
-  "status": "PASS"
+  "flagship_1620_ok": 12,
+  "ts": 1787683100,
+  "head": "PENDING",
+  "status": "PASS",
+  "unity": 1.0,
+  "soft_oob": "fail-closed",
+  "flagship_1620_asserts_ok": 12,
+  "flagship_1620_asserts_fail": 0,
+  "bin": "out/ship1707/cubalc",
+  "note": "re-verified PASS: CORTEX mesh+signal+hold soft-OOB fail-closed; 69 asserts; flagship 1620 12/12"
 }
