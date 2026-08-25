@@ -1,9 +1,9 @@
 {
-  "iter": 1703,
-  "feature": "SMX_SEER",
-  "version": "1.15.1173-usability",
-  "proof": "programs/science/proof/1703_atomic_printer_mesh_seer.cubalc",
-  "asserts_ok": 111,
+  "iter": 1705,
+  "feature": "SMX_KEEPER",
+  "version": "1.15.1175-usability",
+  "proof": "programs/science/proof/1705_atomic_printer_mesh_keeper.cubalc",
+  "asserts_ok": 68,
   "asserts_fail": 0,
-  "ts": 1787676683
+  "ts": 1787677663
 }

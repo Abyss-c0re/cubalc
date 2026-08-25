@@ -2,12 +2,20 @@
   "schema": "projectnexus.product_sync.v1",
   "product": "cubalc",
   "source": "/data/Workdir/voldemar/Dev/lab/prophecy_cube/cubalc",
-  "version": "1.5.0-flow",
+  "version": "1.15.1175-usability",
   "paradigm": "COP/flow",
   "synced_at": "2026-08-01T17:41:07+03:00",
   "sync_script": "scripts/sync_cubalc_product.sh",
-  "surfaces": ["algocube", "evolve", "deep_opt_6.6min", "session_guard"],
+  "surfaces": [
+    "algocube",
+    "evolve",
+    "deep_opt_6.6min",
+    "session_guard"
+  ],
   "binary": "out/cubalc",
   "bin_install": "bin/cubalc",
-  "ok": true
+  "ok": true,
+  "meaningful_iter": 1705,
+  "feature": "SMX_KEEPER",
+  "ts": 1787677663
 }
