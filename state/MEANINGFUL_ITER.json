@@ -1,7 +1,7 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "iter": 1703,
-  "commit": "3539a9f420c8cfbbbe3ca77332a05e9d3057e663",
+  "commit": "f97d22937c7ef57f99cfde2a1ad14a5bd2c5f0d1",
   "version": "1.15.1173-usability",
   "feature": "OMNIVERSE soft-OOB fail-closed mesh stability",
   "proof": "1703_atomic_printer_mesh_omniverse",
@@ -12,7 +12,7 @@
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1703,
   "proofs": "1703_omniverse+1620_flagship PASS",
-  "head": "3539a9f4",
-  "pin_head": "3539a9f420c8cfbbbe3ca77332a05e9d3057e663",
-  "feat_head": "93d73051990d050cc661497163cd20df27d8b710"
+  "head": "f97d2293",
+  "pin_head": "f97d22937c7ef57f99cfde2a1ad14a5bd2c5f0d1",
+  "feat_head": "a692a2865a43d6e34113088aacbe458bb2721a08"
 }
