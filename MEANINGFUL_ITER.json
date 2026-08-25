@@ -8,8 +8,8 @@
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
-  "commit": "e17f451eb375de807df12e512ce5965febe23d30",
-  "pin_head": "e17f451eb375de807df12e512ce5965febe23d30",
+  "commit": "a8ca8e36bdff0efb084c78f80b5fb9b55fc4ca67",
+  "pin_head": "a8ca8e36bdff0efb084c78f80b5fb9b55fc4ca67",
   "MEANINGFUL_ITER": 1701,
   "proofs": "1701_autoheal+1620_flagship PASS",
   "feat_head": "c0b9642e12c6524362f30e336e703c7829fa3aee"
