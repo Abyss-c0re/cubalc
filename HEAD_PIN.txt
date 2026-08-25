@@ -1,5 +1,5 @@
-HEAD=9bf8548ea352b70ff2f9a505db10ffc9f91b974c
-SHORT=9bf8548e
+HEAD=24edc5fd55f33fac5ceee40a96d13905e56e82c1
+SHORT=24edc5fd
 MEANINGFUL_ITER=1711
 VERSION=1.15.1182-usability
 PROOFS=1711_mesh_stability+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS

@@ -1,1 +1,1 @@
-1711 MESH_STABILITY soft-OOB fail-closed PASS pin=9bf8548e
+1711 MESH_STABILITY soft-OOB fail-closed PASS pin=24edc5fd
