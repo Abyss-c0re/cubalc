@@ -1,17 +1,12 @@
 {
   "iter": 1717,
   "feature": "MESH_GROUND",
-  "pin_head": "72088b9754d7f0bcfdc90f1d1ee0c2754c50c602",
-  "tip": "72088b9754d7f0bcfdc90f1d1ee0c2754c50c602",
+  "pin_head": "31cbf180051f7cb6de941bfc4f7b376bc2008e80",
+  "tip": "31cbf180051f7cb6de941bfc4f7b376bc2008e80",
   "feat_head": "9bf62f6a206fb675b3449b18397cfc84baae692f",
   "version": "1.15.1188-usability",
   "proofs_pass": true,
-  "asserts_ok": {
-    "1717": 65,
-    "1620": 12,
-    "1621": 18,
-    "1634": 56
-  },
+  "asserts_ok": {"1717": 65, "1620": 12, "1621": 18, "1634": 56},
   "next": "we_autoheal",
   "unity": 1.0,
   "nodes": 4,
