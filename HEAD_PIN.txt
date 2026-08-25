@@ -1,9 +1,0 @@
-HEAD=71825ca09735522129a690eeabe3ddf8ca89fd8e
-SHORT=71825ca0
-MEANINGFUL_ITER=1694
-VERSION=1.15.1163-usability
-PROOFS=1694_heliosphere+1620_life_force PASS
-feature=HELIOSPHERE soft-OOB fail-closed mesh stability
-feat_head=dbd089d3c794ff5c6e6327aff83cd5f82411c63b
-verified_by=signal_keeper
-verified_at=2026-08-25T14:03:08Z
