@@ -4,4 +4,4 @@ proof=1706_atomic_printer_mesh_seer
 asserts_fail=0
 VERSION=1.15.1176-usability
 feat_head=11f4af3c1e42e4df79245c8eca502eaffe5bff1c
-head=1daa39fe6176187b7769d7870e16591ab254f962
+head=bf548ef0f8a42a760e8cf13d9f1614017cbafbb3
