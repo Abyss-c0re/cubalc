@@ -1,13 +1,11 @@
 {
-  "meaningful_iter": 1702,
-  "version": "1.15.1172-usability",
-  "head": "032662f7",
-  "feat": "mesh_omniverse",
-  "proof": "programs/proof/1702_atomic_printer_mesh_resilience.cubalc",
-  "status": "PASS",
   "iter": 1702,
   "MEANINGFUL_ITER": 1702,
-  "feature": "SMX_RESILIENCE",
-  "commit": "a772f102",
-  "updated": 1787676295
+  "meaningful_iter": 1702,
+  "version": "1.15.1172-usability",
+  "feature": "SMX_OMNIVERSE",
+  "feature_note": "SMX OMNIVERSE soft-OOB fail-closed mesh stability after AUTOHEAL/RESILIENCE",
+  "proof": "programs/science/proof/1702_atomic_printer_mesh_omniverse.cubalc",
+  "integration": "programs/science/integration/atomic_printer_mesh_omniverse.cubalc",
+  "status": "PASS"
 }
