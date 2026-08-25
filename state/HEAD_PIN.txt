@@ -1,13 +1,7 @@
-HEAD=25f94eddaaad5ad6f86ae30ad49a347dc862bdbb
-SHORT=25f94ed
+HEAD=fbe025bd7b7514c14ad0b54d7a575e9a9a57a9a4
+SHORT=fbe025bd
 MEANINGFUL_ITER=1158
 VERSION=1.5.5-minmax-clamp
-PROOF=programs/proof/15_minmax_clamp.cubalc PASS
-PROOF_ELIF=programs/proof/15_elif_chain.cubalc PASS
-PROOF_POW=programs/proof/16_pow_gcd_between.cubalc PASS
-PROOF_ELIF16=programs/proof/16_elif_chain.cubalc PASS
-PROOF12=programs/proof/12_break_continue.cubalc PASS
-smx-selftest=PASS
+PROOFS=smx+minmax+elif+pow+break PASS
 feature=ABS MIN MAX CLAMP SIGN POW SQRT GCD LCM BETWEEN EVEN ODD + ELIF
 asserts_ok=66
-feat=85de418
