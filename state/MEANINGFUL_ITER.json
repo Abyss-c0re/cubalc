@@ -5,18 +5,20 @@
   "version": "1.15.1188-usability",
   "feature": "SMX_MESH_ASTROCYTE",
   "proof": "programs/proof/1722_atomic_printer_mesh_astrocyte.cubalc",
-  "updated": 1787696008,
+  "updated": 1787696104,
   "status": "PASS",
-  "head": "1420aef0ed705f7baf08816c4562366db3af97f9",
+  "head": "4c6ffa3ec6ba3a7a14ad8de69bf56478c6a2be9d",
   "schema": "cubalc.meaningful_iter/v1",
   "item": "1722 atomic printer mesh astrocyte",
   "item_id": "mi_1722_atomic_printer_mesh_astrocyte",
   "title": "1722 atomic printer mesh astrocyte",
-  "summary": "SMX ASTROCYTE mesh star endfoot tripartite after glia; soft-OOB fail-closed; life-force science.",
+  "summary": "Astrocyte mesh after glia: soft-OOB fail-closed, star ring + endfoot gather, STABLE_MESH latch, mitosis under free energy, dual rails, re-astrocyte. Proof 1722 asserts_ok=78.",
   "proofs": [
-    "programs/proof/1722_atomic_printer_mesh_astrocyte.cubalc"
+    "programs/proof/1722_atomic_printer_mesh_astrocyte.cubalc",
+    "programs/science/integration/atomic_printer_mesh_astrocyte.cubalc",
+    "programs/science/proof/1722_atomic_printer_mesh_astrocyte.cubalc"
   ],
-  "ts": "2026-08-25T22:13:28Z",
+  "ts": "2026-08-25T22:15:04Z",
   "asserts_ok": 78,
   "asserts_fail": 0,
   "flagship_1620_ok": 12,
@@ -26,5 +28,6 @@
   "mesh_exchange": "astrocyte+star+endfoot+tripartite+stabilize",
   "unity": 1.0,
   "note": "SMX MESH ASTROCYTE stability board; 78 asserts; soft_oob fail-closed; life-force astrocyte after glia",
-  "commit": "1420aef0"
+  "commit": "4c6ffa3e",
+  "host_finish": true
 }
