@@ -1,5 +1,5 @@
-HEAD=11704d95ca758a71a5f095cf397233926d8a9f7f
-SHORT=11704d9
+HEAD=24834a877cf2050ac300c5b1da5bf176c2afbdaf
+SHORT=24834a8
 MEANINGFUL_ITER=1156
 VERSION=1.5.4-smx-mesh-exchange
 PROOF=programs/proof/13_smx_mesh_exchange.cubalc PASS
