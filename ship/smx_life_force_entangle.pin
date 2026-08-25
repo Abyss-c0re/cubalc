@@ -1,1 +1,9 @@
-5cf81f541a48efc9ce5b12a780735b09b9dafda9
+iter=1715
+feature=LIFE_FORCE_ENTANGLE
+proof=1715_smx_life_force_entangle_soft_oob
+asserts_ok=51
+pin_head=e973b999266cd72f9a8005425d89d932ad8a4ff6
+version=1.15.1186-usability
+soft_oob=fail-closed
+next=we_autoheal
+verified_at=2026-08-25T20:05:37Z
