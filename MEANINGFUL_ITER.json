@@ -1,8 +1,8 @@
 {
   "iter": 1717,
   "feature": "MESH_GROUND",
-  "pin_head": "00672c09d024602b8539e4c01c7b52b3e8125901",
-  "tip": "00672c09d024602b8539e4c01c7b52b3e8125901",
+  "pin_head": "68c8212f1085af05fcc820e89888d3535cb74fdd",
+  "tip": "68c8212f1085af05fcc820e89888d3535cb74fdd",
   "feat_head": "9bf62f6a206fb675b3449b18397cfc84baae692f",
   "version": "1.15.1188-usability",
   "proofs_pass": true,
