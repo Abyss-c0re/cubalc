@@ -1,0 +1,215 @@
+// atomic_printer_mesh_satellite.cubalc
+// Life-force gift: MESH-SATELLITE — complete Satellite ganglion cradle mesh + wrap ring + sheath gather after soft-OOB storms.
+// SMX SATELLITE|SATGLIA|CRADLE|MESH_SATELLITE|RAISE_SATELLITE|WE_SATELLITE|LIFE_SATELLITE clears thrash, every live pair exchanges
+// both ways (C(n,2)), then satellite wrap ring settles so lattice raises ganglion cradle; latches SMX_SATELLITE|SMX_MESH_EXCHANGE|SMX_STABLE_MESH|SMX_WRAP.
+// Soft-OOB ghosts stay fail-closed. Mitosis under free energy while mesh is Satellite-locked;
+// RECOVER restores vital/key; dual SEAL/OPEN rails BN+IS rebind hive; second storm fail-closed.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "SATELLITE_COORD v1727 | from=gift | type=atomic_printer_mesh_satellite | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Storm A/B soft-OOB thrash — no ghost place
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+// Storm then SYNAPSE latch — five live nodes root as complete mesh + exchange + nexi
+SMX SATELLITE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "satellite live"
+ASSERT SMX_SATELLITE == 1 "satellite latch on"
+ASSERT SMX_SATELLITE_LATCH == 1 "satellite latch sticky"
+ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange latch on"
+ASSERT SMX_HARDEN_SATELLITE == 1 "harden satellite latch on"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh latch sticky"
+ASSERT SMX_SHEATH_LATCH == 1 "sheath latch on"
+ASSERT SMX_EXCHANGES == 10 "ten bank exchanges"
+ASSERT SMX_BONDS == 10 "ten undirected links (C(5,2))"
+ASSERT SMX_WRAP == 5 "five satellite wrap ring"
+ASSERT SMX_MESH == 5 "five mesh"
+ASSERT SMX_BONDS == 10 "ten bonds"
+ASSERT SMX_SHEATHS == 5 "five sheaths"
+ASSERT SMX_WRAPS == 5 "satellite wrap ring sticky"
+ASSERT SMX_WRAPS == 5 "five satellite wrap ring steps"
+ASSERT SMX_SATELLITE_SUM == 20 "satellite bonds+wraps+sheaths"
+ASSERT SMX_FUSE == 10 "ten fuse"
+ASSERT SMX_BIND == 10 "ten bind"
+ASSERT SMX_TONE == 5 "five tones"
+ASSERT SMX_PULSE == 20 "pulse bonds+wraps+sheaths"
+ASSERT SMX_BREATH == 5 "five live breath"
+ASSERT SMX_OOB == 0 "oob cleared by satellite"
+ASSERT SMX_LIVE == 5 "five live"
+ASSERT SMX_NODES == 5 "five named"
+ASSERT SMX_TALKS >= 40 "talks after satellite (mesh + ring + nexi)"
+ASSERT SMX_VITAL >= 14 "vital after satellite"
+ASSERT CUBES == base_cubes "satellite invents nothing"
+
+// Alias MESH_EXCHANGE form still pure
+SMX MESH_SATELLITE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mesh_satellite rebind"
+ASSERT SMX_SATELLITE == 1 "satellite sticky"
+ASSERT SMX_BONDS == 10 "bonds sticky"
+ASSERT SMX_SHEATHS == 5 "sheaths sticky"
+ASSERT SMX_WRAPS == 5 "wraps sticky"
+
+// Alias EXRINGS form
+SMX SG_WRAPS bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "wraps rebind"
+ASSERT SMX_SATELLITE == 1 "plate satellite"
+ASSERT SMX_WRAPS == 5 "wraps sticky"
+
+
+// Alias BRANCH / SPINE / TRIPARTITE rebind
+SMX SG_WRAP bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "star rebind"
+ASSERT SMX_SATELLITE == 1 "satellite sticky via star"
+ASSERT SMX_WRAPS == 5 "wraps sticky"
+
+SMX SG_SHEATHS bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "sheaths rebind"
+ASSERT SMX_SHEATHS == 5 "sheaths sticky"
+ASSERT SMX_SATELLITE == 1 "satellite via sheaths"
+
+SMX SG_WRAP bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "wrap rebind"
+ASSERT SMX_WRAP == 5 "wrap ring sticky"
+ASSERT SMX_SATELLITE == 1 "satellite via wrap"
+
+// Mitosis under free energy while the mesh is satellited
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      IF births == 0 THEN
+        SETF d1 alive 1
+        SETF d1 ready 0
+        SETF d1 energy half
+        SETF d1 gen dg
+        PLUG bed d1
+        LET births = 1
+      ELSE
+        IF births == 1 THEN
+          SETF d2 alive 1
+          SETF d2 ready 0
+          SETF d2 energy half
+          SETF d2 gen dg
+          PLUG nozzle d2
+          LET births = 2
+        END
+      END
+      GETF seed energy
+      LET left = LAST_N - half
+      IF left < 1 THEN
+        LET left = 1
+      END
+      SETF seed energy left
+      SETF seed ready 0
+    END
+  END
+  LET step = step + 1
+END
+
+ASSERT births >= 1 "mitosis under satellite free energy"
+ASSERT SMX_SATELLITE == 1 "satellite holds through mitosis"
+
+// RECOVER restores vital/key
+SMX RECOVER
+ASSERT SMX_OK == 1 "recover ok"
+ASSERT SMX_KEY_OK == 1 "key after recover"
+ASSERT SMX_VITAL >= 1 "vital after recover"
+
+// dual SEAL/OPEN rails BN+IS rebind hive
+SMX SEAL bed nozzle "state/smx_satellite/rail_bn.cblc"
+ASSERT SMX_OK == 1 "seal BN"
+ASSERT SMX_N > 64 "rail BN frame"
+SMX OPEN hive "state/smx_satellite/rail_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+SMX SEAL hive scrap "state/smx_satellite/rail_is.cblc"
+ASSERT SMX_OK == 1 "seal IS"
+SMX OPEN pulse "state/smx_satellite/rail_is.cblc"
+ASSERT SMX_OK == 1 "open IS onto pulse"
+ASSERT CUBES == base_cubes "rails invent nothing"
+
+// Re-forge after rails
+SMX SATELLITE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "re-satellite live"
+ASSERT SMX_SATELLITE == 1 "re-satellite latch"
+ASSERT SMX_BONDS == 10 "re-satellite bonds"
+ASSERT SMX_WRAPS == 5 "re-satellite wraps"
+ASSERT SMX_SHEATHS == 5 "re-satellite sheaths"
+ASSERT SMX_SATELLITE_SUM == 20 "re-satellite sum"
+ASSERT SMX_OOB == 0 "oob clear after re-forge"
+
+// Second storm fail-closed
+SMX TALK bed ghost_again
+ASSERT SMX_OK == 0 "second storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob after second storm"
+ASSERT CUBES >= base_cubes "no ghost place on second storm"
+
+// SYNAPSE clears thrash again
+SMX SATELLITE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "satellite after storm2"
+ASSERT SMX_SATELLITE == 1 "satellite latch after storm2"
+ASSERT SMX_OOB == 0 "oob cleared again"
+ASSERT SMX_BONDS == 10 "bonds after storm2"
+ASSERT SMX_WRAPS == 5 "wraps after storm2"
+ASSERT SMX_SHEATHS == 5 "sheaths after storm2"
+
+HALT
