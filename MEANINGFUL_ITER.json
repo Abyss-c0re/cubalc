@@ -7,5 +7,7 @@
   "asserts_ok": 110,
   "flagship_ok": true,
   "smx_selftest_ok": true,
-  "feature_note": "AUTOHEAL soft-OOB fail-closed mesh stability after MULTIVERSE"
+  "feature_note": "AUTOHEAL soft-OOB fail-closed mesh stability after MULTIVERSE",
+  "commit": "5f71772eeace28581a9cf58a1a925ec20ea5a906",
+  "pin_head": "5f71772eeace28581a9cf58a1a925ec20ea5a906"
 }

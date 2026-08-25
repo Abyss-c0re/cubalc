@@ -1,7 +1,7 @@
-HEAD=74913a85f85768e1bbcc8fe52f81aadeeb0ab758
-SHORT=74913a85
-MEANINGFUL_ITER=1694
-VERSION=1.15.1163-usability
-PROOFS=1694_heliosphere+1620_life_force PASS
-feature=HELIOSPHERE soft-OOB fail-closed mesh stability
-feat_head=dbd089d3c794ff5c6e6327aff83cd5f82411c63b
+HEAD=5f71772eeace28581a9cf58a1a925ec20ea5a906
+SHORT=5f71772e
+MEANINGFUL_ITER=1701
+VERSION=1.15.1171-usability
+PROOFS=1701_autoheal+1620_life_force PASS
+feature=AUTOHEAL soft-OOB fail-closed mesh stability
+feat_head=5f71772eeace28581a9cf58a1a925ec20ea5a906
