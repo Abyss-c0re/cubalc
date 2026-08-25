@@ -1,21 +1,21 @@
 {
   "MEANINGFUL_ITER": 1157,
   "VERSION": "1.5.4-smx-mesh-exchange",
-  "HEAD": "4ac459a5b65321c5cdc3608315f6a2f0d8a0287a",
-  "SHORT": "4ac459a",
+  "HEAD": "d37df138fc8f25541ab93389e44b4c72ce81f502",
+  "SHORT": "d37df13",
   "feature": "SMX mesh_exchange soft-OOB fail-closed life-force",
   "feature_head": "e6f2a46",
-  "feature_full": "e6f2a469e76b93c94957d39ff465c3e50b0e2311",
   "proofs": {
     "smx-selftest": "PASS",
     "smx-soft-oob": "PASS",
     "smx-mesh-exchange": "PASS",
     "11_smx_soft_oob_mesh": "PASS",
     "13_smx_mesh_exchange": "PASS",
-    "14_smx_life_force_mesh": "PASS"
+    "14_smx_life_force_mesh": "PASS",
+    "1620_smx_mesh_life_force": "PASS"
   },
   "stable_exchanges": true,
   "fail_closed": true,
   "life_force": 0.9403,
-  "sealed_at": 1787662195
+  "sealed_at": 1787662213
 }
