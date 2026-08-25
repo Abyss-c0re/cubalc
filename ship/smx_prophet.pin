@@ -2,7 +2,12 @@ PROPHET 1707 soft-OOB fail-closed
 feature=SMX PROPHET mesh stability
 proof=1707_atomic_printer_mesh_prophet+1634_mesh_exchange+1621_soft_oob+1620_flagship
 asserts_fail=0
+asserts_ok=110+56+18+12
 VERSION=1.15.1177-usability
+feat_head=82bd62c0c864403d1b4d8d422a1e6159df5a8b06
+head=43bc48788603edc44d44f82d43ead4af42dcc57f
+short=43bc4878
+past=f3bbdc09
 next=we_autoheal
-verified=2026-08-25T18:19:40Z
-pin_head=6f95bbe9822176fc86209492370e6273fe6673be
+verified=PASS
+pin_head==tip
