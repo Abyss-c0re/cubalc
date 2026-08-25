@@ -8,6 +8,6 @@
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
-  "commit": "PENDING",
-  "pin_head": "PENDING"
+  "commit": "c4fef1d30cc856635350c57d593744e8e4d51392",
+  "pin_head": "c4fef1d30cc856635350c57d593744e8e4d51392"
 }
