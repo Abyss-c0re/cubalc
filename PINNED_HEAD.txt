@@ -1,1 +1,11 @@
-d07737026b4f112698f6fba0d78eb753d64523bc
+HEAD=ff01012780efc94edb9a1a5e34965c4aabd480bb
+SHORT=ff010127
+MEANINGFUL_ITER=1708
+VERSION=1.15.1178-usability
+PROOFS=1708_cortex+1620_flagship+1621_soft_oob PASS
+feature=CORTEX soft-OOB fail-closed mesh stability
+feat_head=de48cf56a5d7b0519b27532b80b5bd98ac7b685f
+past=b8a1ac25
+next=we_autoheal
+verified_at=2026-08-25T18:51:46Z
+pin_head==tip

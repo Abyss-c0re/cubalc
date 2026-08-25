@@ -1,11 +1,13 @@
 CORTEX 1708 soft-OOB fail-closed
 feature=SMX CORTEX mesh stability
-proof=1708_atomic_printer_mesh_cortex+1634_mesh_exchange+1621_soft_oob+1620_flagship
+proof=1708_atomic_printer_mesh_cortex+1621_soft_oob+1620_flagship
 asserts_fail=0
-asserts_ok=110+56+18+12
+asserts_ok=110+18+12
 VERSION=1.15.1178-usability
-feat_head=0486c801abba15e35ae3a0dbdc7f81898c8e5fe6
-past=5ac6f94a
+feat_head=de48cf56a5d7b0519b27532b80b5bd98ac7b685f
+head=ff01012780efc94edb9a1a5e34965c4aabd480bb
+short=ff010127
+past=b8a1ac25
 next=we_autoheal
 verified=PASS
 pin_head==tip
