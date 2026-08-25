@@ -4,6 +4,6 @@ proof=1708_atomic_printer_mesh_cortex+1634_mesh_exchange+1621_soft_oob+1620_flag
 asserts_fail=0
 VERSION=1.15.1178-usability
 feat_head=de48cf56a5d7b0519b27532b80b5bd98ac7b685f
-pin_head=1accc132af66813949686a49762454f623fe04f6
+pin_head=dba4c476ff2447242201c00e1625d2cf865559f5
 past=bb314468
 next=we_autoheal
