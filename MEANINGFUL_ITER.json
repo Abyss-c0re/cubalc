@@ -1,8 +1,19 @@
 {
-  "iter": 1690,
-  "feature": "atomic_printer_mesh_homeostasis",
-  "proof": "1690_atomic_printer_mesh_homeostasis",
-  "version": "1.15.1160-usability",
+  "schema": "cubalc.meaningful_iter/v1",
+  "iter": 1691,
+  "feature": "atomic_printer_mesh_ionosphere",
+  "proof": "1691_atomic_printer_mesh_ionosphere",
+  "version": "1.15.1161-usability",
   "proof_ok": true,
-  "commit": "9a550c25"
+  "commit": "PENDING",
+  "ts": "2026-08-25T13:26:08Z",
+  "iso": "2026-08-25T13:26:08Z",
+  "note": "Life-force MESH-IONOSPHERE: complete layer mesh + skip ring + beam hub after soft-OOB storms. Latches SMX_IONOSPHERED|SMX_LAYER|SMX_IONIZE|SMX_LAYERS|SMX_BEAMS|SMX_SKIPS.",
+  "item": "1691 atomic printer mesh ionosphere",
+  "item_id": "mi_1691_atomic_printer_mesh_ionosphere",
+  "title": "1691 atomic printer mesh ionosphere",
+  "summary": "SMX IONOSPHERE fail-closed soft-OOB mesh life-force slice.",
+  "proofs": [
+    "programs/proof/1691_atomic_printer_mesh_ionosphere.cubalc"
+  ]
 }

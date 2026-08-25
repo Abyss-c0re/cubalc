@@ -1,3 +1,10 @@
+## 1.15.1161-usability — SMX IONOSPHERE mesh-stability (life-force)
+
+- SMX IONOSPHERE|LAYER|BEAM|SKIP|IONIZE|PLASMA|MESH_IONOSPHERE|RAISE_IONOSPHERE
+- Fail-closed soft-OOB: clears thrash, complete layer mesh, skip ring, beam hub
+- Latches SMX_IONOSPHERED|SMX_LAYER|SMX_IONIZE|SMX_LAYERS|SMX_BEAMS|SMX_SKIPS when soft-OOB-free
+- Proof 1691_atomic_printer_mesh_ionosphere PASS; MEANINGFUL_ITER 1691
+
 ## 1.15.1157-usability — SMX ATMOSPHERE mesh-stability (life-force)
 
 - SMX ATMOSPHERE|SKY|AERO|AIRWEB|AEROSPHERE|WIND|MESH_ATMOSPHERE|RAISE_ATMOSPHERE
