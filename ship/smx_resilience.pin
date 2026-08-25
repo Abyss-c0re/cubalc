@@ -1,6 +1,8 @@
-feature=SMX_RESILIENCE
-iter=1702
-version=1.15.1172-usability
-proof=programs/science/proof/1702_atomic_printer_mesh_resilience.cubalc
-smx=RESILIENCE|RS|RESIL|GUARD|GUARDS|WE_RESILIENCE|MESH_RESILIENCE|RAISE_RESILIENCE|GUARD_RING|ANCHOR_HUB
-asserts=110
+SMX_RESILIENCE=1
+PROOF=1702_atomic_printer_mesh_resilience
+ASSERTS_OK=110
+ASSERTS_FAIL=0
+FEAT=7b9a7fd3
+HEAD=90083a10
+VERSION=1.15.1172-usability
+MEANINGFUL_ITER=1702
