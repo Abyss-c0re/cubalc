@@ -9,7 +9,7 @@
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
   "commit": "811231ab414337f20d201d2d38f87383ace85d41",
-  "pin_head": "cfc1673a8cd4c7fc409e28a428288b788a4a40f6",
+  "pin_head": "ffa28c91a6e8caf9bd0eb3101ed5d1d6e1c77f64",
   "MEANINGFUL_ITER": 1702,
   "proofs": "1702_multiverse+1620_flagship PASS",
   "feat_head": "811231ab414337f20d201d2d38f87383ace85d41"
