@@ -7,7 +7,7 @@
   "proof": "programs/science/proof/1716_atomic_printer_mesh_bloom.cubalc",
   "updated": 1787688393,
   "status": "PASS",
-  "head": "PENDING",
+  "head": "cb05ddba",
   "schema": "cubalc.meaningful_iter/v1",
   "item": "SMX mesh bloom soft-OOB fail-closed life-force flower",
   "item_id": "mi_smx_mesh_bloom_1716",
