@@ -7,8 +7,8 @@
   "proof_pass": true,
   "asserts_ok": 4,
   "smx_selftest": true,
-  "head": "62eba1e8a53e49f61749150d86f9dd4140ff9486",
-  "short": "62eba1e",
+  "head": "e4450f5b7cb19a2ef9e9689e63917029e31df954",
+  "short": "e4450f5",
   "past": "9152410e",
   "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT"
 }
