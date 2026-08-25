@@ -1,7 +1,7 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "iter": 1709,
-  "commit": "0bec4d2cc87c16b2f67c5d626fda9e0c8919fffc",
+  "commit": "07a4ee9686aeca1d91962165e6560ef7ee20e52a",
   "version": "1.15.1179-usability",
   "feature": "NEXUS soft-OOB fail-closed mesh stability",
   "proof": "1709_atomic_printer_mesh_nexus",
@@ -14,8 +14,8 @@
   "smx_selftest_ok": true,
   "MEANINGFUL_ITER": 1709,
   "proofs": "1709_nexus+1620_flagship+1621_soft_oob PASS",
-  "head": "0bec4d2c",
-  "pin_head": "0bec4d2cc87c16b2f67c5d626fda9e0c8919fffc",
+  "head": "07a4ee96",
+  "pin_head": "07a4ee9686aeca1d91962165e6560ef7ee20e52a",
   "feat_head": "110c07902feba7a4bdcf9806b3bd096b7f05da03",
   "past": "1708",
   "next": "we_autoheal"
