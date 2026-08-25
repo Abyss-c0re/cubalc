@@ -1,6 +1,12 @@
+HEAD=e7c713b25282d1b2d67a5fcb6b688a63fb5be349
+SHORT=e7c713b2
 MEANINGFUL_ITER=1715
-feature=LIFE_FORCE_ENTANGLE
-pin_head=
-tip=
-proofs=PASS
+VERSION=1.15.1186-usability
+PROOFS=1715_life_force_entangle+1620_flagship+1621_soft_oob+1634_mesh_exchange PASS asserts_ok=51+12+18+56
+feature=LIFE_FORCE_ENTANGLE soft-OOB fail-closed full-mesh usability
+feat_head=e7c713b25282d1b2d67a5fcb6b688a63fb5be349
+pin_head=e7c713b25282d1b2d67a5fcb6b688a63fb5be349
+past=1714
 next=we_autoheal
+verified_at=2026-08-25T20:04:16Z
+pin_head==tip
