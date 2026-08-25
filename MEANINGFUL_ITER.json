@@ -1,12 +1,13 @@
 {
-  "iter": 1694,
-  "feature": "atomic_printer_mesh_heliosphere",
-  "proof": "1694_atomic_printer_mesh_heliosphere",
-  "version": "1.15.1163-usability",
+  "iter": 1697,
+  "feature": "atomic_printer_mesh_localgroup",
+  "proof": "1697_atomic_printer_mesh_localgroup",
+  "version": "1.15.1167-usability",
   "proof_ok": true,
-  "asserts_ok": 109,
+  "asserts_ok": 108,
   "flagship_ok": true,
   "smx_selftest_ok": true,
-  "commit": "dbd089d3c794ff5c6e6327aff83cd5f82411c63b",
-  "pin_head": "74913a85f85768e1bbcc8fe52f81aadeeb0ab758"
+  "commit": "PENDING",
+  "pin_head": "PENDING",
+  "feature_note": "LOCALGROUP soft-OOB fail-closed mesh stability after LOCALBUBBLE"
 }
