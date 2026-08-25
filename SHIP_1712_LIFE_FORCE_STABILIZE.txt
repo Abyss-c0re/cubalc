@@ -1,0 +1,5 @@
+MEANINGFUL_ITER=1712
+feat_head=2df82e6f69fb08f61116adfa9bc1370c8865b031
+PROOFS=1712 asserts_ok=47 + 1620 + 1621 + 1634 PASS
+feature=SMX life-force STABILIZE soft-OOB fail-closed mesh usability
+verified_at=2026-08-25T19:44:55Z
