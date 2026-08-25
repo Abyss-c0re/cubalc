@@ -1,16 +1,16 @@
 {
-  "iter": 1700,
-  "feature": "COSMICWEB soft-OOB fail-closed mesh stability",
-  "proof": "1700_atomic_printer_mesh_cosmicweb",
-  "version": "1.15.1170-usability",
+  "iter": 1701,
+  "feature": "AUTOHEAL soft-OOB fail-closed mesh stability",
+  "proof": "1701_atomic_printer_mesh_autoheal",
+  "version": "1.15.1171-usability",
   "proof_ok": true,
   "asserts_ok": 110,
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
-  "commit": "0e7b24750abd6280048ebf15288e831bcf1fb0db",
-  "pin_head": "0e7b24750abd6280048ebf15288e831bcf1fb0db",
-  "MEANINGFUL_ITER": 1700,
-  "proofs": "1700_cosmicweb+1620_flagship PASS",
-  "feat_head": "c4fef1d30cc856635350c57d593744e8e4d51392"
+  "commit": "c0b9642e12c6524362f30e336e703c7829fa3aee",
+  "pin_head": "c0b9642e12c6524362f30e336e703c7829fa3aee",
+  "MEANINGFUL_ITER": 1701,
+  "proofs": "1701_autoheal+1620_flagship PASS",
+  "feat_head": "c0b9642e12c6524362f30e336e703c7829fa3aee"
 }
