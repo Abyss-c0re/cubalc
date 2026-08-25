@@ -1,7 +1,0 @@
-HEAD=b3c63a8a84905266caccc83ff5c71d324a4ea2ab
-SHORT=b3c63a8a
-MEANINGFUL_ITER=1706
-VERSION=1.15.1176-usability
-PROOFS=1706_seer+1620_flagship+1634_mesh_exchange PASS
-feature=SEER soft-OOB fail-closed mesh stability
-feat_head=bc63b467
