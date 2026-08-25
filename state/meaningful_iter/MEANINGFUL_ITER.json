@@ -1,13 +1,22 @@
 {
-  "meaningful_iter": 1706,
-  "version": "1.15.1176-usability",
-  "head": "dfb4d2bc",
-  "feat": "mesh_thalamus",
-  "proof": "programs/science/proof/1706_atomic_printer_mesh_thalamus.cubalc",
+  "value": "1707",
+  "MEANINGFUL_ITER": 1707,
+  "iter": 1707,
+  "version": "1.15.1178-usability",
+  "feature": "SMX_CORTEX",
+  "proof": "programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc",
+  "updated": 1787682717,
   "status": "PASS",
-  "iter": 1706,
-  "MEANINGFUL_ITER": 1706,
-  "feature": "SMX_THALAMUS",
-  "commit": "dfb4d2bc",
-  "updated": 1787681276
+  "head": "PENDING",
+  "schema": "cubalc.meaningful_iter/v1",
+  "item": "SMX_CORTEX soft-OOB fail-closed mesh",
+  "item_id": "mi_smx_cortex_1707",
+  "title": "SMX CORTEX mesh",
+  "summary": "CORTEX complete mesh + signal ring + hold hub; soft-OOB fail-closed; proof 1707 PASS.",
+  "proofs": [
+    "programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc"
+  ],
+  "ts": 1787682717,
+  "asserts_ok": 68,
+  "asserts_fail": 0
 }

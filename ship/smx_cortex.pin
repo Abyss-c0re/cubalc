@@ -1,0 +1,8 @@
+feature=SMX_CORTEX
+iter=1707
+proof=programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc
+integration=programs/science/integration/atomic_printer_mesh_cortex.cubalc
+status=PASS
+asserts_ok=68
+asserts_fail=0
+note=SMX CORTEX|PULSEHOLD|SIGNAL|MESH_CORTEX mesh+signal ring+hold hub after soft-OOB; fail-closed ghosts; cortexed=1 bonds=10 signals=5 holds=5

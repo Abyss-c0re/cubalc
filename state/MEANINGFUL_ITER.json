@@ -1,20 +1,22 @@
 {
-  "value": "1706",
-  "MEANINGFUL_ITER": 1706,
+  "value": "1707",
+  "MEANINGFUL_ITER": 1707,
   "iter": 1707,
-  "version": "1.15.1177-usability",
-  "feature": "SMX_THALAMUS",
-  "proof": "programs/science/proof/1706_atomic_printer_mesh_thalamus.cubalc",
-  "updated": 1787681276,
+  "version": "1.15.1178-usability",
+  "feature": "SMX_CORTEX",
+  "proof": "programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc",
+  "updated": 1787682717,
   "status": "PASS",
-  "head": "dfb4d2bc",
-  "commit": "2d5b2725",
+  "head": "PENDING",
   "schema": "cubalc.meaningful_iter/v1",
-  "item": "host finish ship",
-  "item_id": "mi_host_finish_ship",
-  "title": "host finish ship",
-  "summary": "Host-finished MI ship after nanobot partial (host_finish_ship).",
-  "proofs": [],
-  "ts": "2026-08-25T18:27:02Z",
-  "host_finish": true
+  "item": "SMX_CORTEX soft-OOB fail-closed mesh",
+  "item_id": "mi_smx_cortex_1707",
+  "title": "SMX CORTEX mesh",
+  "summary": "CORTEX complete mesh + signal ring + hold hub; soft-OOB fail-closed; proof 1707 PASS.",
+  "proofs": [
+    "programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc"
+  ],
+  "ts": "2026-08-25T18:31:57Z",
+  "asserts_ok": 68,
+  "asserts_fail": 0
 }

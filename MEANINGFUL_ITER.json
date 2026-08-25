@@ -1,11 +1,11 @@
 {
-  "iter": 1706,
-  "feature": "SMX_THALAMUS",
-  "version": "1.15.1176-usability",
-  "proof": "programs/science/proof/1706_atomic_printer_mesh_thalamus.cubalc",
-  "asserts_ok": 110,
+  "iter": 1707,
+  "feature": "SMX_CORTEX",
+  "version": "1.15.1178-usability",
+  "proof": "programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc",
+  "asserts_ok": 68,
   "asserts_fail": 0,
-  "ts": 1787681276,
-  "head": "dfb4d2bc",
+  "ts": 1787682717,
+  "head": "PENDING",
   "status": "PASS"
 }
