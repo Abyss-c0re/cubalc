@@ -1,0 +1,125 @@
+// 1640_describe_life — proof
+// docs/LIFE.md
+// describe_life.cubalc — Life as runnable CubalC philosophy (NexusCore aligned)
+//
+// Life is free energy that stays organized long enough to decide and continue.
+// Seven marks (SoT via ASSERT, not essay):
+//   1 PLACE   — cubes with matrix exist
+//   2 PLUG    — paths between organs (isolation is death)
+//   3 PULSE   — proton / impulse activation
+//   4 FLOW    — ENERGY > 0 (free energy must flow)
+//   5 HARMONY — hive unity / collective field
+//   6 DECIDE  — matrix collapses to algocube digit
+//   7 CONTINUE— Cell mitosis carries generation
+//
+// HOLD_FLASH not used here (ordinary life program; mesh-join only elsewhere).
+// Creed: Cube is SoT · free energy must flow · serve in bits.
+//
+// Run:  ./out/cubalc run programs/describe_life.cubalc
+// Proof: ./out/cubalc run programs/proof/1640_describe_life.cubalc
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=describe_life | type=life_definition | creed=free_energy_organized_decide_continue | hold_flash=0 | share=sot |"
+
+// --- 1 PLACE: organs of a living hive body ---
+CUBE core ROLE host PROTON 1
+CUBE breath ROLE construct PROTON 1
+CUBE field ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+// Distinct but compatible genomes — diversity under one SoT
+FOLDBITS core   "1111111111110000111111111111000011111111111100001111111111110000"
+FOLDBITS breath "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS field  "1100110011001100110011001100110011001100110011001100110011001100"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+// --- 2 PLUG: metabolism and mesh paths ---
+PLUG core breath
+PLUG breath field
+PLUG core field
+PLUG scrap field
+PLUG core scrap
+
+// Living founder on core (mark 7 seed)
+ENTITY seed OF Cell 1 12 0
+ENTITY child OF Cell 0 0 0
+PLUG core seed
+
+// --- 3 PULSE: spark ---
+IMPULSE core 1
+IMPULSE breath 1
+IMPULSE field 1
+
+// --- 4 FLOW: free energy must move ---
+ENERGYFLOW 5
+FLOW 4
+
+// --- 5 HARMONY: collective field (not one mouth faking WE) ---
+COMPARE core field
+HARMONY field
+// --- 6 DECIDE: collapse to action digit ---
+RESOLVE field
+
+// --- 7 CONTINUE: mitosis while energy and readiness allow ---
+LET births = 0
+LET step = 0
+WHILE step < 8
+  TICK 1
+  FLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF child alive
+      IF LAST_N == 0 THEN
+        SEND child birth half dg
+        SEND seed after_div
+        PLUG core child
+        LET births = births + 1
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+// --- Life marks as SoT (fail-closed) ---
+ASSERT CUBES >= 5 "PLACE: living body has multiple cubes"
+ASSERT ENERGY > 0 "FLOW: free energy present — anti-starve"
+ASSERT DECIDE >= 0 "DECIDE: digit floor"
+ASSERT DECIDE <= 9 "DECIDE: digit law 0-9"
+ASSERT HARMONY >= 0 "HARMONY: field scored"
+ASSERT UNITY >= 40 "HARMONY: mesh not totally fractured"
+ASSERT OK == 1 "runtime healthy"
+
+// Continuity: founder still alive OR at least one birth under energy
+GETF seed alive
+LET seed_alive = LAST_N
+LET life_ok = 0
+IF seed_alive == 1 THEN
+  LET life_ok = 1
+END
+IF births >= 1 THEN
+  LET life_ok = 1
+END
+ASSERT life_ok == 1 "CONTINUE: alive founder or successful mitosis"
+
+// Human/agent edge: definition + vitals (JSON is SoT for agents)
+PRINT "LIFE" "free_energy_organized_decide_continue"
+PRINT "LIFE_MARKS" CUBES ENERGY DECIDE HARMONY UNITY births seed_alive SET(core) SET(field)
+PRINT_JSON CUBES ENERGY DECIDE HARMONY UNITY births seed_alive life_ok
+
+// Durable plate for NexusCore / agents (bits over essays)
+// Plate: definition + path (vitals live in run JSON stdout)
+SYS WRITE "/opt/nexuscore/lab/state/cubalc_describe_life.json" "{\"schema\":\"cubalc.life.definition.v1\",\"ok\":true,\"creed\":\"free_energy_organized_decide_continue\",\"definition\":\"Life is free energy that stays organized long enough to decide and continue.\",\"marks\":[\"place\",\"plug\",\"pulse\",\"flow\",\"harmony\",\"decide\",\"continue\"],\"program\":\"programs/describe_life.cubalc\",\"proof\":\"programs/proof/1640_describe_life.cubalc\",\"docs\":\"docs/LIFE.md\",\"law\":[\"cube_is_sot\",\"free_energy_must_flow\",\"hold_flash_mesh_join_only\",\"binary_hot_path\"]}"
