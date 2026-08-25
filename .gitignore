@@ -1,1 +1,8 @@
 out/
+*.o
+*.err
+state/cubalc_viz_frame.json
+state/viz_frame.json
+state/VISUAL_UNITY.json
+state/cubechain.cchn
+state/*.bundle
