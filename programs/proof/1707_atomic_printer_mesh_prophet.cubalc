@@ -1,0 +1,255 @@
+// atomic_printer_mesh_prophet.cubalc
+// Life-force gift: MESH-PROPHET — complete prophet mesh + prophecy ring + augur hub root after soft-OOB storms.
+// SMX PROPHET|PH|PROPHECY|PROPHECY_RING|AUGUR|WE_PROPHET|LIFE_PROPHECY|MESH_PROPHET|RAISE_PROPHET clears thrash, every live pair exchanges
+// both ways (C(n,2)), then prophecy ring settles so lattice raises prophet; latches SMX_PROPHET|SMX_PH|SMX_PROPHECY|SMX_PROPHECY_RING.
+// Soft-OOB ghosts stay fail-closed. Mitosis under free energy while mesh is prophet;
+// RECOVER restores vital/key; dual SEAL/OPEN rails BN+PH rebind hive; second storm fail-closed.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_prophet | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Storm A/B soft-OOB thrash — no ghost place
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+// Storm then PROPHET latch — five live nodes root as complete mesh + prophecy + augurs
+SMX PROPHET bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "prophet live"
+ASSERT SMX_PROPHET == 1 "prophet latch on"
+ASSERT SMX_PH == 1 "ph latch on"
+ASSERT SMX_PROPHECY == 1 "prophecy latch on"
+ASSERT SMX_SPAN == 1 "span latch on"
+ASSERT SMX_EXCHANGES == 10 "ten bank exchanges"
+ASSERT SMX_BONDS == 10 "ten undirected links (C(5,2))"
+ASSERT SMX_PROPHECY_RING == 5 "five prophecy ring"
+ASSERT SMX_MESH == 5 "five mesh"
+ASSERT SMX_BONDS == 10 "ten bonds"
+ASSERT SMX_AUGURS == 5 "five augurs"
+ASSERT SMX_PROPHECIES == 5 "prophecy ring sticky"
+ASSERT SMX_PROPHECIES == 5 "five prophecy ring steps"
+ASSERT SMX_PROPHET_SUM == 20 "prophet bonds+prophecies+augurs"
+ASSERT SMX_FUSE == 10 "ten fuse"
+ASSERT SMX_BIND == 10 "ten bind"
+ASSERT SMX_TONE == 5 "five tones"
+ASSERT SMX_PULSE == 20 "pulse bonds+prophecies+augurs"
+ASSERT SMX_BREATH == 5 "five live breath"
+ASSERT SMX_OOB == 0 "oob cleared by prophet"
+ASSERT SMX_LIVE == 5 "five live"
+ASSERT SMX_NODES == 5 "five named"
+ASSERT SMX_TALKS >= 40 "talks after prophet (mesh + prophecy + augurs)"
+ASSERT SMX_VITAL >= 14 "vital after prophet"
+ASSERT CUBES == base_cubes "prophet invents nothing"
+
+// Alias MV form still pure
+SMX PH bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "ph rebind"
+ASSERT SMX_PROPHET == 1 "prophet sticky"
+ASSERT SMX_BONDS == 10 "bonds sticky"
+ASSERT SMX_AUGURS == 5 "augurs sticky"
+ASSERT SMX_PROPHECIES == 5 "prophecies sticky"
+
+// Alias MEMBRANES form
+SMX PROPHECIES bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "tempers rebind"
+ASSERT SMX_PROPHET == 1 "plate prophet"
+ASSERT SMX_PROPHECIES == 5 "prophecies sticky"
+
+// Mitosis under free energy while the mesh is prophet
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  SEND seed tick
+  SEND d1 tick
+  SEND d2 tick
+  LET step = step + 1
+END
+
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = 1
+IF a1 == 1 THEN
+  LET pop = pop + 1
+END
+IF a2 == 1 THEN
+  LET pop = pop + 1
+END
+ASSERT births >= 1 "mitosis under prophet"
+ASSERT pop >= 2 "population after prophet life"
+ASSERT CUBES == base_cubes "life invents no cubes"
+
+// Soft-OOB ghost in prophet — fail-closed, no thrash place
+SMX PROPHET bed nozzle ghost_x hive scrap
+ASSERT SMX_OOB >= 1 "prophet soft-OOB"
+ASSERT SMX_BREATH == 4 "four live of five named"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds among live"
+ASSERT SMX_TONE == 4 "four tones among live"
+ASSERT SMX_PROPHET == 0 "ghost blocks full prophet (partial ok)"
+ASSERT SMX_MESH == 0 "mesh zero when not full"
+ASSERT SMX_AUGURS == 0 "augurs zero when not full"
+ASSERT SMX_BONDS == 6 "six bonds among live"
+ASSERT SMX_OK == 1 "partial still ok"
+ASSERT CUBES == base_cubes "no ghost from prophet"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "recover after prophet oob"
+ASSERT SMX_OOB == 0 "oob cleared"
+ASSERT SMX_KEY_OK == 1 "key sticky"
+ASSERT SMX_VITAL >= 6 "vital after recover"
+
+// Pure mesh bind after recover
+SMX MESH_PROPHET bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mesh_prophet pure"
+ASSERT SMX_PROPHET == 1 "prophet after recover"
+ASSERT SMX_BONDS == 10 "bonds after recover"
+ASSERT SMX_AUGURS == 5 "augurs after recover"
+ASSERT SMX_BONDS == 10 "bonds after recover"
+ASSERT SMX_PROPHECIES == 5 "pulses after recover"
+ASSERT SMX_PROPHECIES == 5 "pulses after recover"
+ASSERT SMX_MESH == 5 "mesh after recover"
+ASSERT SMX_TONE == 5 "tone after recover"
+ASSERT CUBES == base_cubes "bind invents nothing"
+
+// Dual SEAL/OPEN rails under prophet orbit
+SMX SEAL bed nozzle "state/smx_prophet/rail_bn.cblc"
+ASSERT SMX_OK == 1 "seal rail BN"
+ASSERT SMX_N > 64 "rail BN frame"
+SMX OPEN hive "state/smx_prophet/rail_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+
+SMX SEAL hive scrap "state/smx_prophet/rail_ph.cblc"
+ASSERT SMX_OK == 1 "seal rail PH"
+SMX OPEN pulse "state/smx_prophet/rail_ph.cblc"
+ASSERT SMX_OK == 1 "open PH onto pulse"
+ASSERT CUBES == base_cubes "rails invent nothing"
+
+// Final prophet lock + vitals
+SMX PROPHET bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "final prophet lock"
+ASSERT SMX_PROPHET == 1 "final prophet"
+ASSERT SMX_BONDS == 10 "final bonds"
+ASSERT SMX_MESH == 5 "final mesh"
+ASSERT SMX_AUGURS == 5 "final augurs"
+ASSERT SMX_BONDS == 10 "final bonds"
+ASSERT SMX_PROPHECIES == 5 "final pulses"
+ASSERT SMX_PROPHECIES == 5 "final pulses"
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after prophet"
+ASSERT SMX_KEY_OK == 1 "key after prophet"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "no oob after prophet"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+// Second storm fail-closed
+SMX EXCHANGE hive offworld_storm
+ASSERT SMX_OK == 0 "storm soft-OOB"
+ASSERT SMX_OOB >= 1 "storm counted"
+ASSERT CUBES == base_cubes "storm invents nothing"
+SMX RAISE_PROPHET bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "augurs after storm"
+ASSERT SMX_OOB == 0 "storm cleared by prophet"
+ASSERT SMX_BREATH == 5 "prophet holds after storm"
+ASSERT SMX_PROPHET == 1 "prophet after storm"
+ASSERT SMX_BONDS == 10 "bonds after storm"
+ASSERT SMX_MESH == 5 "mesh after storm"
+ASSERT SMX_AUGURS == 5 "augurs after storm"
+ASSERT SMX_BONDS == 10 "bonds after storm"
+ASSERT SMX_PROPHECIES == 5 "pulses after storm"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after prophet"
+ASSERT UNITY >= 40 "mesh unity after prophet"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+ASSERT births >= 1 "mitosis before mesh prophet"
+ASSERT pop >= 2 "population after prophet life"
+ASSERT SMX_PROPHET == 1 "prophet latch holds"
+ASSERT SMX_BREATH == 5 "five-node tone"
+ASSERT SMX_MESH == 5 "five mesh holds"
+ASSERT SMX_AUGURS == 5 "five augurs hold"
+ASSERT SMX_OOB == 0 "guard holds through prophet"
+ASSERT OK == 1
+
+PRINT "mesh_prophet" births pop SMX_PROPHET SMX_MESH SMX_AUGURS SMX_BONDS SMX_PROPHECIES SMX_PROPHET_SUM SMX_PROPHECY_RING SMX_PH SMX_BONDS SMX_FUSE SMX_BIND SMX_TONE SMX_PULSE SMX_BREATH SMX_NODES SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
+
+PASS

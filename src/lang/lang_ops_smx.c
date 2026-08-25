@@ -10483,6 +10483,188 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|SEER|SR|SEE|ORACLE|MESH_SEER|RAISE_SEER|KEEPER|KP|PULSE_RING|THALAMUS|MESH_KEEPER|RAISE_KEEPER|FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|...)");
+  /* SMX PROPHET|PH|PROPHECY|PROPHECY_RING|AUGUR|WE_PROPHET|LIFE_PROPHECY|MESH_PROPHET|RAISE_PROPHET a b c ...
+   * Life-force mesh stability after seer: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete prophet mesh among live nodes, weaves a
+   * prophecy ring (i -> i+1) so free energy holds the prophecy, then augur hub
+   * gathers return so lattice locks prophet where life holds the hive.
+   * Latches SMX_PROPHET when mesh+prophecies+augurs are soft-OOB-free.
+   * SMX_PROPHECY_RING = chain bonds; SMX_AUGUR hub = root gather prophecies;
+   * SMX_PROPHET_SUM sum = bonds+prophecies+augurs; SMX_PH|SMX_PROPHECY sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"PROPHET")||kw(&L->cur,"PH")||kw(&L->cur,"PROPHECY")||
+      kw(&L->cur,"PROPHECY_RING")||kw(&L->cur,"AUGUR")||kw(&L->cur,"WE_PROPHET")||
+      kw(&L->cur,"LIFE_PROPHECY")||kw(&L->cur,"LIFEPROPHECY")||kw(&L->cur,"PROPHECIES")||
+      kw(&L->cur,"AUGURS")||kw(&L->cur,"PROPHETS")||kw(&L->cur,"PROPHECYINGS")||
+      kw(&L->cur,"MESH_PROPHET")||kw(&L->cur,"RAISE_PROPHET")||
+      kw(&L->cur,"PROPHECIES")||kw(&L->cur,"SEEDPH")||kw(&L->cur,"SEEDPROPHECY")||
+      kw(&L->cur,"LATTICE_PROPHET")||kw(&L->cur,"WORLD_PH")||kw(&L->cur,"WORLD_PROPHECY")||
+      kw(&L->cur,"HOLD_PROPHECY")||kw(&L->cur,"PROPHECY_SEER")||kw(&L->cur,"UNITY_PROPHECY")||
+      kw(&L->cur,"SEEDAUGUR")||kw(&L->cur,"SEEDPROPHECY")||kw(&L->cur,"AUGUR_HUB")||kw(&L->cur,"SIGNAL_PROPHET")||kw(&L->cur,"HOLD_PROPHECY")||kw(&L->cur,"WE_PROPHECY")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int prophecies = 0;
+    int augurs = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "PROPHET needs >=2 cubes",
+                  "SMX PROPHET a b [c ...]  or  SMX PH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - prophet needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete prophet mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* prophecy ring - free energy holds the prophecy every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else prophecies++;
+        }
+      }
+    }
+    /* augur hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else augurs++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int st_ok = (live >= 2 && prophecies >= live && soft == 0) ? 1 : 0;
+      if (!st_ok && live >= 2 && prophecies * 2 >= live && soft == 0)
+        st_ok = 1;
+      int br_ok = (live >= 1 && augurs >= live && soft == 0) ? 1 : 0;
+      if (!br_ok && live >= 1 && augurs * 2 >= live && soft == 0)
+        br_ok = 1;
+      int ph_ok = (mesh_ok && st_ok && br_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (ph_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (prophecies > 0 ? 1 : 0) + (augurs > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_PROPHET", (long)ph_ok);
+      var_set_num(vm, "SMX_PROPHET_LATCH", (long)ph_ok);
+      var_set_num(vm, "SMX_PROPHET_SUM", (long)(ph_ok ? bonds + prophecies + augurs : 0));
+      var_set_num(vm, "SMX_PH", (long)(ph_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PROPHECY", (long)(ph_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WE_PROPHET", (long)(ph_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFE_PROPHECY", (long)(ph_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFEPROPHECY", (long)(ph_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PROPHECY_RING", (long)(ph_ok ? prophecies : 0));
+      var_set_num(vm, "SMX_PROPHECIES", (long)(ph_ok ? prophecies : 0));
+      var_set_num(vm, "SMX_PROPHECYRING", (long)(ph_ok ? prophecies : 0));
+      var_set_num(vm, "SMX_AUGUR", (long)(ph_ok ? augurs : 0));
+      var_set_num(vm, "SMX_AUGURS", (long)(ph_ok ? augurs : 0));
+      var_set_num(vm, "SMX_SPAN", (long)(ph_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SEEDPH", (long)(ph_ok ? augurs : 0));
+      var_set_num(vm, "SMX_SEEDPROPHECY", (long)(ph_ok ? augurs : 0));
+      var_set_num(vm, "SMX_MESH", (long)(ph_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + prophecies + augurs));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      var_set_num(vm, "SMX_UNITY", (long)(ph_ok ? 1 : 0));
+      if (ph_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX PROPHET ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX PROPHET partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX PROPHET soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX PROPHET nodes=%d live=%d bonds=%d prophecies=%d augurs=%d need=%d soft=%d talks=%d oob=%d prophet=%d vital=%ld\n",
+                n, live, bonds, prophecies, augurs, need, soft, vm->smx_talks, vm->smx_oob, ph_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+
+  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|PROPHET|PH|PROPHECY|AUGUR|MESH_PROPHET|RAISE_PROPHET|SEER|SR|SEE|ORACLE|MESH_SEER|RAISE_SEER|KEEPER|KP|PULSE_RING|THALAMUS|MESH_KEEPER|RAISE_KEEPER|FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|...)");
   return -1;
 }
