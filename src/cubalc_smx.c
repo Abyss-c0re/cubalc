@@ -127,6 +127,7 @@ void cubalc_smx_ctx_init(cubalc_smx_ctx *ctx) {
   ctx->min_compat = 0.35f;
   ctx->hold_flash = CUBALC_HOLD_FLASH;
   ctx->soft_repairs = 0;
+  ctx->stable_exchanges = 0;
   ctx->life_force = 1.0f;
   /* auto-load: env hex, then key file, then peer token file (no log of secret) */
   {
@@ -564,6 +565,12 @@ int cubalc_smx_mesh_exchange(cubalc_smx_ctx *ctx, cubalc_chain *ch,
   B->atom.unity = cubalc_matrix_compat(&A->atom.matrix, &B->atom.matrix);
   ctx->hold_flash = 1;
   p->hold_flash = 1;
+  ctx->stable_exchanges++;
+  p->stable_exchanges = ctx->stable_exchanges;
+  p->soft_repairs = ctx->soft_repairs;
+  /* successful exchange restores life-force toward unity floor+ */
+  if (p->life_force < 1.0f)
+    p->life_force = cubalc_smx_life_force_tick(ctx, B->atom.unity > 0.f ? B->atom.unity : 1.0f, 0);
   if (p->life_force < CUBALC_SMX_LIFE_FLOOR)
     p->life_force = CUBALC_SMX_LIFE_FLOOR;
   ctx->life_force = p->life_force;

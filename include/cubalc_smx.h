@@ -35,6 +35,7 @@ typedef struct cubalc_smx_ctx {
   float    min_compat;    /* default 0.35 */
   uint8_t  hold_flash;    /* sticky 1 */
   uint32_t soft_repairs;  /* cumulative soft-OOB mesh heals */
+  uint32_t stable_exchanges; /* successful mesh_exchange completions */
   float    life_force;    /* mesh vitality 0..1 */
   char     last_err[96];
 } cubalc_smx_ctx;
@@ -71,6 +72,7 @@ typedef struct cubalc_smx_mesh_pulse {
   uint32_t seq;
   uint32_t gap_healed;
   uint32_t soft_repairs;
+  uint32_t stable_exchanges;
   float    life_force;   /* 0..1 mesh vitality after heal */
   uint8_t  hold_flash;
   uint8_t  oob_active;

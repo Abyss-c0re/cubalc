@@ -387,10 +387,17 @@ static int cmd_smx_mesh_exchange_proof(void) {
       return 5;
     }
   }
+  if (mx2.stable_exchanges < 2) {
+    printf("{\"ok\":false,\"error\":\"stable_exchanges\",\"n\":%u}\n",
+           mx2.stable_exchanges);
+    return 6;
+  }
   printf("{\"ok\":true,\"cmd\":\"smx-mesh-exchange\",\"proto\":2,"
-         "\"life_force\":%.4f,\"soft_repairs\":%u,\"hold_flash\":%u,"
-         "\"reason\":\"%s\",\"mesh\":\"stable\",\"fail_closed\":true}\n",
-         mx2.life_force, mx2.soft_repairs, (unsigned)mx2.hold_flash, mx2.reason);
+         "\"life_force\":%.4f,\"soft_repairs\":%u,\"stable_exchanges\":%u,"
+         "\"hold_flash\":%u,\"reason\":\"%s\",\"mesh\":\"stable\","
+         "\"fail_closed\":true}\n",
+         mx2.life_force, mx2.soft_repairs, mx2.stable_exchanges,
+         (unsigned)mx2.hold_flash, mx2.reason);
   return 0;
 }
 

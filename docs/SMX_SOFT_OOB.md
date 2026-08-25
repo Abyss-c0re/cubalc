@@ -11,3 +11,6 @@ Proofs:
 - ./out/cubalc smx-mesh-exchange -> ok mesh=stable fail_closed=true
 
 MEANINGFUL_ITER 1156 · VERSION 1.5.4-smx-mesh-exchange
+
+stable_exchanges counts successful mesh_exchange completions (life-force restore on each).
+MEANINGFUL_ITER 1157 · VERSION 1.5.4-smx-mesh-exchange
