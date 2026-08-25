@@ -1,4 +1,4 @@
-HEAD=2ac03978b116806162a5c80cff3bffac358a9f74
+HEAD=97671cdf9d5442b84d34cbeb48b6089612d60070
 ITER=1156
 VERSION=1.5.4-smx-mesh-exchange
 FEATURE=smx-mesh-exchange-soft-oob
