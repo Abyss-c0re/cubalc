@@ -1,11 +1,16 @@
 {
-  "MEANINGFUL_ITER": 1704,
-  "VERSION": "1.15.1174-usability",
-  "feature": "FORGED soft-OOB fail-closed mesh stability temper+anvil",
-  "proof": "1704_atomic_printer_mesh_forged",
-  "flagship": "1620_atomic_printer_life_force PASS",
+  "schema": "cubalc.meaningful_iter/v1",
+  "iter": 1705,
+  "version": "1.15.1175-usability",
+  "feature": "KEEPER soft-OOB fail-closed mesh stability (pulse ring + thalamus hub)",
+  "proof": "1705_atomic_printer_mesh_keeper",
   "proof_ok": true,
-  "asserts_mode": "exit0_ok_true",
-  "head": "173b1f073e71132471caac9e7b9ca8c7f4c30171",
-  "updated": "2026-08-25T20:13:45+03:00"
+  "asserts_ok": 110,
+  "asserts_fail": 0,
+  "flagship_ok": true,
+  "mesh_exchange_ok": true,
+  "smx_selftest_ok": true,
+  "MEANINGFUL_ITER": 1705,
+  "proofs": "1705_keeper+1620_flagship+1634_mesh_exchange PASS",
+  "updated": "2026-08-25T20:21:50+03:00"
 }

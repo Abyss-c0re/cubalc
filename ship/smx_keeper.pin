@@ -1,0 +1,8 @@
+MEANINGFUL_ITER=1705
+VERSION=1.15.1175-usability
+feature=KEEPER soft-OOB fail-closed mesh + pulse ring + thalamus hub
+proof=1705_atomic_printer_mesh_keeper PASS
+flagship=1620 PASS
+mesh_exchange=1634 PASS
+smx_selftest=PASS
+asserts_ok=110

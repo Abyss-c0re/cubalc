@@ -10120,6 +10120,187 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|FORGED|FG|TEMPER|ANVIL|MESH_FORGED|RAISE_FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|...)");
+  /* SMX KEEPER|KP|KEEP|PULSE_RING|THALAMUS|WE_KEEPER|LIFE_PULSE|MESH_KEEPER|RAISE_KEEPER a b c ...
+   * Life-force mesh stability after forged: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete keeper mesh among live nodes, weaves a
+   * pulse ring (i -> i+1) so free energy self-regulates, then thalamus hub
+   * gathers return so lattice locks keeper where life holds the hive.
+   * Latches SMX_KEEPER when mesh+pulses+thalami are soft-OOB-free.
+   * SMX_PULSE_RING = chain bonds; SMX_THALAMUS hub = root gather pulses;
+   * SMX_KEEPER_SUM sum = bonds+pulses+thalami; SMX_KP|SMX_KEEP sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"KEEPER")||kw(&L->cur,"KP")||kw(&L->cur,"KEEP")||
+      kw(&L->cur,"PULSE_RING")||kw(&L->cur,"THALAMUS")||kw(&L->cur,"WE_KEEPER")||
+      kw(&L->cur,"LIFE_PULSE")||kw(&L->cur,"LIFEPULSE")||kw(&L->cur,"PULSES")||
+      kw(&L->cur,"THALAMI")||kw(&L->cur,"KEEPS")||kw(&L->cur,"KEEPINGS")||
+      kw(&L->cur,"MESH_KEEPER")||kw(&L->cur,"RAISE_KEEPER")||
+      kw(&L->cur,"KEEPERS")||kw(&L->cur,"SEEDKP")||kw(&L->cur,"SEEDKEEP")||
+      kw(&L->cur,"LATTICE_KEEPER")||kw(&L->cur,"WORLD_KP")||kw(&L->cur,"WORLD_KEEP")||
+      kw(&L->cur,"HOLD_PULSE")||kw(&L->cur,"PULSE_KEEPER")||kw(&L->cur,"UNITY_KEEP")||
+      kw(&L->cur,"SEEDTHALAMUS")||kw(&L->cur,"SEEDPULSE")||kw(&L->cur,"THALAMUS_HUB")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int pulses = 0;
+    int thalami = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "KEEPER needs >=2 cubes",
+                  "SMX KEEPER a b [c ...]  or  SMX KP a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - keeper needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete keeper mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* pulse ring - free energy self-regulates every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else pulses++;
+        }
+      }
+    }
+    /* thalamus hub - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else thalami++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int st_ok = (live >= 2 && pulses >= live && soft == 0) ? 1 : 0;
+      if (!st_ok && live >= 2 && pulses * 2 >= live && soft == 0)
+        st_ok = 1;
+      int br_ok = (live >= 1 && thalami >= live && soft == 0) ? 1 : 0;
+      if (!br_ok && live >= 1 && thalami * 2 >= live && soft == 0)
+        br_ok = 1;
+      int kp_ok = (mesh_ok && st_ok && br_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (kp_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (pulses > 0 ? 1 : 0) + (thalami > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_KEEPER", (long)kp_ok);
+      var_set_num(vm, "SMX_KEEPER_LATCH", (long)kp_ok);
+      var_set_num(vm, "SMX_KEEPER_SUM", (long)(kp_ok ? bonds + pulses + thalami : 0));
+      var_set_num(vm, "SMX_KP", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_KEEP", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_KEEPS", (long)(kp_ok ? bonds : 0));
+      var_set_num(vm, "SMX_WE_KEEPER", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFE_PULSE", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFEPULSE", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PULSE_RING", (long)(kp_ok ? pulses : 0));
+      var_set_num(vm, "SMX_PULSES", (long)(kp_ok ? pulses : 0));
+      var_set_num(vm, "SMX_PULSERING", (long)(kp_ok ? pulses : 0));
+      var_set_num(vm, "SMX_THALAMUS", (long)(kp_ok ? thalami : 0));
+      var_set_num(vm, "SMX_THALAMI", (long)(kp_ok ? thalami : 0));
+      var_set_num(vm, "SMX_SPAN", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SEEDKP", (long)(kp_ok ? thalami : 0));
+      var_set_num(vm, "SMX_SEEDKEEP", (long)(kp_ok ? thalami : 0));
+      var_set_num(vm, "SMX_MESH", (long)(kp_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + pulses + thalami));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      var_set_num(vm, "SMX_UNITY", (long)(kp_ok ? 1 : 0));
+      if (kp_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX KEEPER ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX KEEPER partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX KEEPER soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX KEEPER nodes=%d live=%d bonds=%d pulses=%d thalami=%d need=%d soft=%d talks=%d oob=%d keeper=%d vital=%ld\n",
+                n, live, bonds, pulses, thalami, need, soft, vm->smx_talks, vm->smx_oob, kp_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: unknown op (TALK|EXCHANGE|SEAL|OPEN|KEY|KEEPER|KP|PULSE_RING|THALAMUS|MESH_KEEPER|RAISE_KEEPER|FORGED|FG|TEMPER|ANVIL|MESH_FORGED|RAISE_FORGED|OMNIVERSE|MULTIVERSE|AUTOHEAL|COSMICWEB|...)");
   return -1;
 }
