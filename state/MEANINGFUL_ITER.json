@@ -1,8 +1,15 @@
 {
-  "head": "38c5745fc18d77588a273638f47e2850135087ff",
-  "short": "38c5745",
-  "meaningful_iter": 1154,
+  "schema": "cubalc.meaningful_iter.v1",
+  "iter": 1154,
   "version": "1.5.3-break-continue",
-  "feature": "BREAK/CONTINUE",
-  "proof": "12_break_continue PASS"
+  "feature": "BREAK/CONTINUE loop control",
+  "proof": "programs/proof/12_break_continue.cubalc",
+  "proof_pass": true,
+  "asserts_ok": 4,
+  "smx_selftest": true,
+  "head": "085a7114d2fcbe1f064c5fdc9ee65e952745513c",
+  "short": "085a711",
+  "past": "9152410e",
+  "bundle": "state/cubalc-1.5.3-break-continue.bundle",
+  "note": "LOOP/WHILE honor BREAK/STOP and CONTINUE/NEXT"
 }

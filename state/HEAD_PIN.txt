@@ -1,1 +1,9 @@
-38c5745
+HEAD=085a7114d2fcbe1f064c5fdc9ee65e952745513c
+SHORT=085a711
+MEANINGFUL_ITER=1154
+VERSION=1.5.3-break-continue
+PROOF=programs/proof/12_break_continue.cubalc PASS
+smx-selftest=PASS
+past=9152410e
+feature=BREAK/CONTINUE loop control
+bundle=state/cubalc-1.5.3-break-continue.bundle
