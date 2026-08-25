@@ -1,3 +1,9 @@
+## 1.15.1172-usability — 1702 SMX RESILIENCE mesh life-force
+
+- SMX RESILIENCE|RS|RESIL|GUARD|GUARDS|WE_RESILIENCE|LIFE_ANCHOR|MESH_RESILIENCE|RAISE_RESILIENCE
+- Complete mesh + guard ring + anchor hub; latches SMX_RESILIENT; soft-OOB fail-closed; mitosis under free energy
+- Proof: programs/proof/1702_atomic_printer_mesh_resilience.cubalc
+
 ## 1.15.1162-usability — 1692 SMX THERMOSPHERE mesh life-force
 - Pure-C SMX THERMOSPHERE|THERMO|HEAT|THERMAL|EXOSPHERE|WARM|MESH_THERMOSPHERE|RAISE_THERMOSPHERE
 - Fail-closed soft-OOB: complete C(n,2) bonds, heat ring, thermal hub; latches SMX_THERMOSPHERED

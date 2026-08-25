@@ -1,3 +1,5 @@
+# MEANINGFUL_ITER 1702 — SMX RESILIENCE mesh life-force
+
 # Meaningful language iteration (10-minute loop)
 
 **Goal:** extend **language usability** — features people and agents *use* — not combinatorial duals of the same field op.

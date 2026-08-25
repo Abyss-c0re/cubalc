@@ -1,1 +1,9 @@
-1702
+{
+  "value": "1702",
+  "MEANINGFUL_ITER": 1702,
+  "iter": 1702,
+  "version": "1.15.1172-usability",
+  "feature": "SMX_RESILIENCE",
+  "proof": "programs/proof/1702_atomic_printer_mesh_resilience.cubalc",
+  "updated": 1787676305
+}
