@@ -2,12 +2,12 @@
   "iter": 1697,
   "feature": "atomic_printer_mesh_localbubble",
   "proof": "1697_atomic_printer_mesh_localbubble",
-  "version": "1.15.1166-usability",
+  "version": "1.15.1167-usability",
   "proof_ok": true,
   "asserts_ok": 109,
   "flagship_ok": true,
   "mesh_exchange_ok": true,
   "smx_selftest_ok": true,
   "commit": "97606ff0b8b33632edbd2aa0e2dfe0630491b667",
-  "pin_head": "97606ff0b8b33632edbd2aa0e2dfe0630491b667"
+  "pin_head": "35d2e1b8d40ebe4fb0d1237f08a59e6b8586bce1"
 }
