@@ -7,7 +7,7 @@
   "proof": "programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc",
   "updated": 1787682717,
   "status": "PASS",
-  "head": "PENDING",
+  "head": "c0788193",
   "schema": "cubalc.meaningful_iter/v1",
   "item": "SMX_CORTEX soft-OOB fail-closed mesh",
   "item_id": "mi_smx_cortex_1707",
