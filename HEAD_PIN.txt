@@ -1,11 +1,11 @@
-HEAD=fa1653baa61b147f960d8ab9d4b047728441c1f0
-SHORT=fa1653ba
+HEAD=24113e6255a4ace8660907ab821fdce413e316f1
+SHORT=24113e62
 MEANINGFUL_ITER=1709
 VERSION=1.15.1179-usability
-PROOFS=1709_nexus+1620_flagship+1621_soft_oob PASS
+PROOFS=1709_nexus+1620_flagship+1634_mesh_exchange+1621_soft_oob+1708_cortex PASS
 feature=NEXUS soft-OOB fail-closed mesh stability
-feat_head=110c07902feba7a4bdcf9806b3bd096b7f05da03
-past=1708
+feat_head=24113e6255a4ace8660907ab821fdce413e316f1
+past=395d9ec8
 next=we_autoheal
-verified_at=2026-08-25T19:08:57Z
+verified_at=2026-08-25T19:09:08Z
 pin_head==tip
