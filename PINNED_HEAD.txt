@@ -1,0 +1,5 @@
+HEAD=9cd8d19665bf6382c33cfea4165aef3dc5d10678
+MEANINGFUL_ITER=1702
+feature=MULTIVERSE soft-OOB fail-closed mesh stability
+version=1.15.1172-usability
+proof=1702_atomic_printer_mesh_multiverse
