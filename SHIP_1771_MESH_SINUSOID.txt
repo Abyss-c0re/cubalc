@@ -1,11 +1,4 @@
-MESH_SINUSOID life-force soft-OOB mesh stability
-MEANINGFUL_ITER 1771 VERSION 1.15.1248-usability
-Sinusoid shell after capillary; fail-closed without key; sinusoid_latch when sealed and unity=1.0.
-Proofs: smx-sinusoid, mesh-stability, we-autoheal, soft-oob, flagship1620 PASS.
-feature=MESH_SINUSOID
+SHIP 1771 MESH_SINUSOID
+HEAD=d18d4dce63881846b70eb2b374967ccdfc97e887
 iter=1771
-version=1.15.1248-usability
-latch=sinusoid_latch
 status=PASS
-next=we_autoheal
-head=ee7b1d64

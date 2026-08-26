@@ -3,7 +3,7 @@ Proof PASS asserts_ok:1234 asserts_fail:0
 Flagship 1620 PASS asserts_ok:12 asserts_fail:0
 MEANINGFUL_ITER=1771
 VERSION=1.15.1248-usability
-HEAD=70c71ce1433e16fcc9e10be44c15408d44a63400
-SHORT=70c71ce1
+HEAD=d18d4dce63881846b70eb2b374967ccdfc97e887
+SHORT=d18d4dce
 feature=MESH_SINUSOID
 status=PASS
