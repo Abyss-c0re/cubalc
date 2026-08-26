@@ -1,0 +1,7 @@
+SHIP 1838 SMX_MESH_POSTERIOR_CEREBRAL_LIFE
+HEAD=95bb38384a1474dc7dae4077c1fe1b3c452aaab3
+VERSION=1.15.1317-usability
+soft_oob=1 fail_closed=1 bonds=C(4,2)=6
+proofs: 99=60/0 1838=60/0 1620=12/0 PASS
+past_32218263=true tip==pin
+c_slice=src/cubalc_smx_posterior_cerebral.c
