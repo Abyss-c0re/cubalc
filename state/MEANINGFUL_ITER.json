@@ -28,5 +28,11 @@
     "programs/proof/1795_smx_mesh_jejunal_villus_life.cubalc"
   ],
   "host_finish": false,
-  "status": "PASS"
+  "status": "PASS",
+  "sha": "8f4afffd515a6e187866b32a91f0252fd9573303",
+  "head": "8f4afffd515a6e187866b32a91f0252fd9573303",
+  "pinned_head": "8f4afffd515a6e187866b32a91f0252fd9573303",
+  "head_short": "8f4afffd",
+  "commit": "8f4afffd",
+  "tip_equals_pin": true
 }
