@@ -1,18 +1,1 @@
-{
-  "iter": 1777,
-  "feature": "MESH_OVAL",
-  "head": "bc6a87db6ca018e65ff6509298d2ce976ffee67c",
-  "short": "bc6a87db",
-  "status": "PASS",
-  "soft_oob": true,
-  "fail_closed": true,
-  "mesh_exchange": true,
-  "MEANINGFUL_ITER": 1777,
-  "meaningful_iter": 1777,
-  "HEAD": "a508df5819b32fe85c611c82a90a199f8d891657",
-  "HEAD_SHORT": "a508df58",
-  "FEATURE": "MESH_OVAL",
-  "head_short": "bc6a87db",
-  "unity": 1.0,
-  "next": "we_autoheal"
-}
+{"iter":1777,"feature":"MESH_OVAL","head":"288b386639af310e0fe8d7e0024aaa7f97ef55e7","short":"288b3866","status":"PASS","soft_oob":true,"fail_closed":true,"mesh_exchange":true}
