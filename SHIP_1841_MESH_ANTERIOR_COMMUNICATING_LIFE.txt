@@ -1,5 +1,9 @@
-SHIP 1841 SMX_MESH_ANTERIOR_COMMUNICATING_LIFE
+SHIP 1841 SMX_MESH_ACOM_LIFE (=MESH_ANTERIOR_COMMUNICATING)
+HEAD=7632e8f6414d5d62ca949e09f6b556707dec10fb
+VERSION=1.15.1320-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1841=60/0 1620=12/0 PASS
+tip==pin past_feat=true
 c_slice=src/cubalc_smx_anterior_communicating.c
-energy_path=left ACA A1 terminus → AComm bridge span → right ACA A1 terminus → circle-of-Willis anterior seal → bilateral medial hemispheric cross-feed · AComm life-force join
+feature=MESH_ACOM
+branch=ship-1841-anterior-communicating
