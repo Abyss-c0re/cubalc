@@ -1,0 +1,5 @@
+SHIP 1783 SMX MESH DUCTULE life-force cascade
+- SMX DUCTULE|CHOLANGIOLE|BILE_DUCTULE cholangiocyte interlobular bile-ductule mesh
+- soft-OOB fail-closed; SMX_DUCTULE_SUM bonds+wraps+sheaths
+- proofs: 1783 cascade PASS (38/38), life_force PASS (146/146), flagship 1620 PASS
+- extends CANALICULUS 1782 continuum; no IF*P duals
