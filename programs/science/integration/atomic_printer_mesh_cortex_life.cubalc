@@ -1,0 +1,169 @@
+// atomic_printer_mesh_cortex_life.cubalc
+// Life-force gift: MESH-CORTEX-LIFE — complete cortex mesh + signal ring + hold hub after soft-OOB storms.
+// SMX CORTEX|SIGNAL|PULSEHOLD|WE_CORTEX|LIFE_CORTEX|MESH_CORTEX|RAISE_CORTEX clears thrash, every live pair
+// exchanges both ways (C(n,2)), then signal ring settles so lattice raises cortex; latches
+// SMX_CORTEX|SMX_PULSEHOLD|SMX_STABLE_CORTEX|SMX_SIGNAL. Soft-OOB ghosts stay fail-closed.
+// Mitosis under free energy while mesh is cortex-locked. Wonder AGI can RUN.
+// Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "CORTEX_COORD v1 | from=gift | type=atomic_printer_mesh_cortex_life | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+SMX CORTEX bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "cortex live"
+ASSERT SMX_CORTEX == 1 "cortex latch on"
+ASSERT SMX_CORTEX_LATCH == 1 "cortex latch sticky"
+ASSERT SMX_CORTEXED == 1 "cortexed latch on"
+ASSERT SMX_PULSEHOLD == 1 "pulsehold latch on"
+ASSERT SMX_STABLE_CORTEX == 1 "stable_cortex latch on"
+ASSERT SMX_HOLD_LATCH == 1 "hold latch sticky"
+ASSERT SMX_EXCHANGES == 10 "ten bank exchanges"
+ASSERT SMX_BONDS == 10 "ten undirected links (C(5,2))"
+ASSERT SMX_SIGNALS == 5 "five signal ring"
+ASSERT SMX_HOLDS == 5 "five hold hubs"
+ASSERT SMX_MESH == 5 "five mesh"
+ASSERT SMX_CORTEX_SUM == 20 "cortex bonds+signals+holds"
+ASSERT SMX_PULSE == 20 "pulse bonds+signals+holds"
+ASSERT SMX_BREATH == 5 "five live breath"
+ASSERT SMX_OOB == 0 "oob cleared by cortex"
+ASSERT SMX_LIVE == 5 "five live"
+ASSERT SMX_NODES == 5 "five named"
+ASSERT SMX_TALKS >= 40 "talks after cortex"
+ASSERT SMX_VITAL >= 14 "vital after cortex"
+ASSERT CUBES == base_cubes "cortex invents nothing"
+
+SMX SIGNAL bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "signal rebind"
+ASSERT SMX_CORTEXED == 1 "cortexed sticky"
+ASSERT SMX_BONDS == 10 "bonds sticky"
+ASSERT SMX_SIGNALS == 5 "signals sticky"
+
+SMX PULSEHOLD bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "pulsehold rebind"
+ASSERT SMX_STABLE_CORTEX == 1 "stable_cortex sticky"
+ASSERT SMX_HOLDS == 5 "holds sticky"
+
+LET births = 0
+LET step = 0
+WHILE step < 8
+  TICK 1
+  FLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+
+ASSERT births >= 1 "mitosis under cortex mesh"
+ASSERT pop >= 2 "population after cortex life"
+ASSERT ENERGY > 0 "energy after cortex life"
+ASSERT SMX_CORTEXED == 1 "cortexed sticky through mitosis"
+ASSERT SMX_CORTEX == 1 "cortex sticky through mitosis"
+ASSERT SMX_PULSEHOLD == 1 "pulsehold sticky through mitosis"
+ASSERT SMX_STABLE_CORTEX == 1 "stable_cortex sticky through mitosis"
+ASSERT SMX_OOB == 0 "guard holds through mitosis"
+
+SMX EXCHANGE hive offworld_storm
+ASSERT SMX_OK == 0 "post-life soft-OOB"
+ASSERT SMX_OOB >= 1 "storm counted"
+
+SMX RAISE_CORTEX bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "raise cortex after storm"
+ASSERT SMX_OOB == 0 "storm cleared"
+ASSERT SMX_CORTEXED == 1 "cortexed after storm"
+ASSERT SMX_STABLE_CORTEX == 1 "stable_cortex after storm"
+ASSERT CUBES == base_cubes "raise invents nothing"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "energy after cortex board"
+ASSERT UNITY >= 40 "mesh unity after cortex"
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT SMX_CORTEX == 1 "cortex sticky final"
+ASSERT SMX_OOB == 0 "guard holds final"
+ASSERT OK == 1
+
+PRINT "atomic_printer_mesh_cortex_life" births pop SMX_OK SMX_CORTEXED SMX_CORTEX SMX_PULSEHOLD SMX_STABLE_CORTEX SMX_SIGNALS SMX_HOLDS SMX_CORTEX_SUM SMX_BONDS SMX_MESH SMX_TALKS SMX_OOB CUBES UNITY ENERGY DECIDE
+PASS
