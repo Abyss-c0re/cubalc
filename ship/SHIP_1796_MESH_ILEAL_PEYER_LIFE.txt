@@ -1,0 +1,6 @@
+SHIP 1796 SMX_MESH_ILEAL_PEYER_LIFE
+proof: programs/proof/1796_smx_mesh_ileal_peyer_life.cubalc
+science: programs/science/integration/smx_mesh_ileal_peyer_life.cubalc
+asserts_ok: 60 asserts_fail: 0
+flagship_1620: PASS
+sha: d36b02ca4508970b85d84a73a6aeba07c87d223e
