@@ -1,3 +1,11 @@
+
+## 1.15.1310-usability — 1831 MESH_AORTIC_ARCH_LIFE
+
+- SMX mesh stability life-force: aortic arch conduit (soft-OOB fail-closed, MESH_EXCHANGE C(4,2), STABILIZE, WE_AUTOHEAL)
+- C slice: src/cubalc_smx_aortic_arch.c
+- Proofs: programs/proof/97_smx_aortic_arch.cubalc, programs/proof/1831_smx_mesh_aortic_arch_life.cubalc (60/0 PASS)
+- Flagship 1620: PASS (12/0)
+- Energy path: ascending aorta → arch apex → brachiocephalic → LCCA → LSA
 ## 1.15.1310-usability — 1831 SMX MESH_AORTIC_ARCH life
 
 - feat(smx): MESH_AORTIC_ARCH soft-OOB fail-closed + mesh exchange C(4,2)
