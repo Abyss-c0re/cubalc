@@ -1,0 +1,4 @@
+1818 MESH_PULMONARY_VALVE
+soft-OOB fail-closed MESH_EXCHANGE C(4,2)
+proofs 82+1818 PASS; flagship 1620 PASS 12
+path: right ventricle chamber → pulmonary valve leaflets → pulmonary outflow trunk → main pulmonary artery → lung return
