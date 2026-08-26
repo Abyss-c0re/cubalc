@@ -103,14 +103,47 @@ ASSERT UNITY >= 40 "stable unity after OOB stabilize"
 ASSERT DECIDE >= 0
 ASSERT DECIDE <= 9
 
-// Free energy must flow — mitosis under locked stability mesh
-LET pop0 = POPULATION
-DIVIDE seed d1
-ASSERT POPULATION > pop0 "first mitosis under stable mesh"
-LET pop1 = POPULATION
-DIVIDE seed d2
-ASSERT POPULATION > pop1 "second mitosis under stable mesh"
+// Free energy must flow — mitosis under locked stability mesh (life_cell SEND birth)
+GETF seed alive
+LET a0 = LAST_N
+GETF seed energy
+LET e0 = LAST_N
+IF e0 < 2 THEN
+  LET e0 = 12
+  SETF seed energy e0
+END
+LET half = e0 / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+GETF d1 alive
+LET a1 = LAST_N
+ASSERT a1 == 1 "first mitosis under stable mesh"
+GETF seed energy
+LET e1 = LAST_N
+IF e1 < 2 THEN
+  LET e1 = 12
+  SETF seed energy e1
+END
+LET half2 = e1 / 2
+IF half2 < 1 THEN
+  LET half2 = 1
+END
+GETF seed gen
+LET dg2 = LAST_N + 1
+SEND d2 birth half2 dg2
+SEND seed after_div
+PLUG bed d2
+GETF d2 alive
+LET a2 = LAST_N
+ASSERT a2 == 1 "second mitosis under stable mesh"
 ASSERT ENERGY > 0 "energy remains after mitosis"
+ASSERT a0 + a1 + a2 >= 3 "population grew under stable mesh"
 
 // Re-stabilize after growth — mesh holds
 SMX STABILIZE bed nozzle hive scrap

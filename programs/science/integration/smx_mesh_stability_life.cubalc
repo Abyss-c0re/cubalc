@@ -1,0 +1,57 @@
+// smx_mesh_stability_life.cubalc — AGI science board
+// Soft-OOB SMX + SINUSOID + STABILIZE on atomic printer spine.
+// Wonder: storms never ghost-place; stable mesh feeds mitosis.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=smx_mesh_stability_life | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 10 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+LET base = CUBES
+SMX KEY
+
+SMX EXCHANGE hive offworld
+ASSERT SMX_OK == 0 "soft-OOB"
+ASSERT CUBES == base "no ghost"
+
+SMX SINUSOID bed nozzle hive scrap
+ASSERT SMX_SINUSOID == 1 "sinusoid"
+
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_STABLE == 1 "stable"
+ASSERT SMX_STEADFAST == 4 "steadfast"
+ASSERT SMX_OOB == 0 "clear"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0
+ASSERT UNITY >= 40
+ASSERT OK == 1
+
+PRINT "smx_mesh_stability_life" SMX_STABLE SMX_SINUSOID SMX_OOB UNITY ENERGY
+PASS

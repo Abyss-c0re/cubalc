@@ -2,12 +2,17 @@
   "schema": "cubalc.meaningful_iter.v1",
   "meaningful_iter": 1777,
   "version": "1.15.1255-usability",
-  "feature": "SMX_DISSE_MESH_LIFE_CASCADE",
-  "proof": "programs/proof/1777_smx_mesh_disse_life_cascade.cubalc",
+  "feature": "smx_mesh_stability_life_force",
+  "proof": "programs/proof/1777_smx_mesh_stability_life_force.cubalc",
   "proof_status": "PASS",
-  "asserts_ok": 1358,
+  "asserts_ok": 47,
   "asserts_fail": 0,
   "flagship_1620": "PASS",
   "flagship_asserts_ok": 12,
-  "notes": "space of Disse perisinusoidal mesh after SINUSOID; soft-OOB fail-closed; no IF*P duals"
+  "notes": "space of Disse perisinusoidal mesh after SINUSOID; soft-OOB fail-closed; no IF*P duals",
+  "MEANINGFUL_ITER": 1777,
+  "VERSION": "1.15.1255-usability",
+  "flagship_1620_ok": 12,
+  "ts": 1787739417,
+  "note": "SMX SINUSOID+STABILIZE mesh stability life-force soft-OOB fail-closed + mitosis"
 }
