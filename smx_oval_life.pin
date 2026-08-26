@@ -8,3 +8,5 @@ SHIP 1781 SMX mesh oval life-force + OVAL/PROGENITOR/HPC
 - no C duals; pure life-force usability
 - law: free_energy_must_flow; soft_oob fail-closed
 - version: 1.15.1259-usability MEANINGFUL_ITER=1781
+
+HEAD dce791793fed6a526be49dbf5eb9abf9536d2f78
