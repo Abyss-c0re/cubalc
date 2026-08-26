@@ -28,5 +28,7 @@
   "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+stabilize+mitosis",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
   "ts": "2026-08-26T09:35:00Z",
-  "verified_at": "2026-08-26T09:35:00Z"
+  "verified_at": "2026-08-26T09:35:00Z",
+  "head": "e2d064d1a7781af58632a07275400524f608f953",
+  "head_short": "e2d064d1"
 }

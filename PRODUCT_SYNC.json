@@ -23,5 +23,8 @@
   "MEANINGFUL_ITER": 1761,
   "VERSION": "1.15.1236-usability",
   "proof": "programs/proof/1761_smx_mesh_muller_life_cascade.cubalc",
-  "asserts_fail": 0
+  "asserts_fail": 0,
+  "flagship_1620": "PASS",
+  "next": "we_autoheal",
+  "risk": "low"
 }
