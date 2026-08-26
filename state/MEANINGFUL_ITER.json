@@ -29,10 +29,10 @@
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
-  "pin_head": "314cee08a7edbe20e63a130476fc16e6e603c37c",
-  "tip": "314cee08a7edbe20e63a130476fc16e6e603c37c",
-  "HEAD": "314cee08a7edbe20e63a130476fc16e6e603c37c",
-  "head_short": "314cee08",
+  "pin_head": "833c12f0718b24efe274d90c74d9239b511ef800",
+  "tip": "833c12f0718b24efe274d90c74d9239b511ef800",
+  "HEAD": "833c12f0718b24efe274d90c74d9239b511ef800",
+  "head_short": "833c12f0",
   "feat_head": "d9b39fc76dd37f231722946abd0fb9a559cfc267",
   "feat_subject": "feat(smx): 1833 MESH_LEFT_COMMON_CAROTID soft-OOB mesh life-force"
 }
