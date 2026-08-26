@@ -26,6 +26,8 @@
   "sealed": true,
   "soft_oob": "fail-closed",
   "prior_head": "0a0224f9",
-  "head": "c0f0980d84ea5029ac8697c815e045d130b86d24",
-  "head_short": "c0f0980d"
+  "head": "2c035d3567324d6330e8d76e7f70d93192d48b88",
+  "head_short": "2c035d35",
+  "ts": "2026-08-26T06:50:44Z",
+  "verified_at": "2026-08-26T06:50:44Z"
 }
