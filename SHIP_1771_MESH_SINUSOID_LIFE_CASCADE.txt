@@ -6,5 +6,5 @@ Proof PASS asserts_ok:1234 asserts_fail:0
 Flagship 1620 PASS asserts_ok:12 asserts_fail:0
 MEANINGFUL_ITER=1771
 VERSION=1.15.1248-usability
-HEAD=ab862ab7197a7d6236f0cbdd472b4bd97350141f
-SHORT=ab862ab7
+HEAD=03ae390e5d49c8d2204055a378777e344c963e5b
+SHORT=03ae390e
