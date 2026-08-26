@@ -4327,7 +4327,8 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       kw(&L->cur,"NEBULAS")||kw(&L->cur,"NURSERIES")||kw(&L->cur,"CLOUDS")||
       kw(&L->cur,"DUSTS")||kw(&L->cur,"CORES")||kw(&L->cur,"SEEDNEBULA")||
       kw(&L->cur,"LATTICE_NEBULA")||kw(&L->cur,"STAR_BIRTH")||
-      kw(&L->cur,"STARDUST")||kw(&L->cur,"PROTOSTAR")){
+      kw(&L->cur,"STARDUST")||kw(&L->cur,"PROTOSTAR")||
+      kw(&L->cur,"LIFE_FORCE")||kw(&L->cur,"LIFEFORCE")||kw(&L->cur,"MESH_LIFE_FORCE")){
     int aln = L->cur.line;
     char ids[16][48];
     int present[16];
@@ -4436,6 +4437,8 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
                    (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
       var_set_num(vm, "SMX_NEBULAED", (long)nebulaed);
       var_set_num(vm, "SMX_NEBULA", (long)(nebulaed ? dusts + nurseries + cores : 0));
+      var_set_num(vm, "SMX_LIFE_FORCE", (long)(nebulaed ? 1 : 0));
+      var_set_num(vm, "SMX_LIFE", (long)(nebulaed ? dusts + nurseries + cores : 0));
       var_set_num(vm, "SMX_NURSERY", (long)(nebulaed ? 1 : 0));
       var_set_num(vm, "SMX_CLOUD", (long)(nebulaed ? 1 : 0));
       var_set_num(vm, "SMX_DUSTS", (long)(nebulaed ? dusts : 0));
