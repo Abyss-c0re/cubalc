@@ -6,8 +6,8 @@
   "status": "PASS",
   "next": "we_autoheal",
   "mesh": "kupffer",
-  "head": "cde959bf2c8713eee477fabe2a818d9b38693a27",
-  "head_short": "cde959bf",
+  "head": "af3abec6674ed713c4ed865aadb12c69a59fbd32",
+  "head_short": "af3abec6",
   "proofs": [
     "1774_smx_mesh_kupffer_life_cascade",
     "1620_atomic_printer_life_force",

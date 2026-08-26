@@ -1,3 +1,7 @@
-MEANINGFUL_ITER=1774
-FEATURE=smx_kupffer_mesh_life_cascade
-PROOF=1774_smx_mesh_kupffer_life_cascade.cubalc
+MESH_KUPFFER life-force soft-OOB mesh stability
+MEANINGFUL_ITER 1774
+VERSION 1.15.1249-usability
+HEAD af3abec6674ed713c4ed865aadb12c69a59fbd32
+Kupffer resident macrophage clearance scaffold after hepatocyte plate.
+Proof 1774 PASS asserts_ok=1316; 1620 PASS; soft-OOB smoke PASS.
+next=we_autoheal
