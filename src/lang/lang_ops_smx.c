@@ -13377,6 +13377,7 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
                    (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
                    (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
       var_set_num(vm, "SMX_TANYCYTEED", (long)tanycyte_ok);
+      var_set_num(vm, "SMX_TANYCYTED", (long)tanycyte_ok);
       var_set_num(vm, "SMX_TANYCYTE_LATCH", (long)tanycyte_ok);
       var_set_num(vm, "SMX_TANYCYTE", (long)(tanycyte_ok ? 1 : 0));
       var_set_num(vm, "SMX_TANYCYTE_SUM", (long)(tanycyte_ok ? bonds + wraps + sheaths : 0));
