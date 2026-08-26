@@ -1,6 +1,6 @@
 /* cubalc_smx_thoracic_duct.c — MESH_THORACIC_DUCT SMX mesh stability life-force slice
  * Soft-OOB fail-closed + MESH_EXCHANGE C(4,2) rails (engine in cubalc_smx / lang_ops_smx).
- * Proof: programs/proof/76_smx_thoracic_duct.cubalc · 1815_smx_mesh_thoracic_duct_life.cubalc
+ * Proof: programs/proof/76_smx_thoracic_duct.cubalc · 1812_smx_mesh_thoracic_duct_life.cubalc
  * Anatomy: cisterna chyli → thoracic duct ascent → left venous angle (left IJV∩SCV)
  *           → subclavian confluence → systemic venous return.
  * Pure C. No SYS glue.
@@ -12,7 +12,7 @@ const char *cubalc_smx_thoracic_duct_feature(void) {
 }
 
 const char *cubalc_smx_thoracic_duct_ship(void) {
-  return "1815_smx_mesh_thoracic_duct_life";
+  return "1812_smx_mesh_thoracic_duct_life";
 }
 
 int cubalc_smx_thoracic_duct_soft_oob_fail_closed(void) {
