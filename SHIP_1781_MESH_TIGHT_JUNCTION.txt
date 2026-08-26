@@ -1,0 +1,7 @@
+MEANINGFUL_ITER=1781
+feature=TIGHT_JUNCTION
+version=1.15.1257-tight-junction-mesh
+proofs=1781_smoke PASS (29), 1781_cascade PASS (1522), 1620_flagship PASS (12)
+soft_oob=fail-closed
+mesh=complete+wrap-ring+sheath-hub
+latch=SMX_TIGHT_JUNCTION|SMX_ZONULA|SMX_LUMEN_SEAL|SMX_FAIL_CLOSED_LUMEN
