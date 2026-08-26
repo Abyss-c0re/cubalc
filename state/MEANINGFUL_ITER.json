@@ -46,15 +46,16 @@
     "1834": "PASS 60/0",
     "1620": "PASS 12/0"
   },
-  "pin_head": "e6b993555f8c7798d964e8a6a28c779bd248e143",
-  "tip": "e6b993555f8c7798d964e8a6a28c779bd248e143",
-  "HEAD": "e6b993555f8c7798d964e8a6a28c779bd248e143",
-  "pinned_head": "e6b993555f8c7798d964e8a6a28c779bd248e143",
-  "head": "e6b993555f8c7798d964e8a6a28c779bd248e143",
-  "sha": "e6b993555f8c7798d964e8a6a28c779bd248e143",
-  "pin": "e6b993555f8c7798d964e8a6a28c779bd248e143",
-  "pin_short": "e6b99355",
-  "short": "e6b99355",
+  "pin_head": "2b2a7d2490721b4648905bee69fef6d657cef9cc",
+  "tip": "2b2a7d2490721b4648905bee69fef6d657cef9cc",
+  "HEAD": "2b2a7d2490721b4648905bee69fef6d657cef9cc",
+  "pinned_head": "2b2a7d2490721b4648905bee69fef6d657cef9cc",
+  "head": "2b2a7d2490721b4648905bee69fef6d657cef9cc",
+  "sha": "2b2a7d2490721b4648905bee69fef6d657cef9cc",
+  "pin": "2b2a7d2490721b4648905bee69fef6d657cef9cc",
+  "pin_short": "2b2a7d24",
+  "short": "2b2a7d24",
   "tip_equals_pin": true,
-  "tip_eq_pin": true
+  "tip_eq_pin": true,
+  "life": "SMX_MESH_LEFT_VERTEBRAL_LIFE"
 }
