@@ -5,9 +5,4 @@ proof: programs/proof/1831_smx_mesh_aortic_arch_life.cubalc
 proof_alt: programs/proof/97_smx_aortic_arch.cubalc
 energy_path: ascending aorta conduit → aortic arch apex → brachiocephalic trunk origin → left common carotid origin → left subclavian origin
 asserts_ok: 60
-asserts_fail: 0
 flagship_1620: PASS (12)
-proof_status: PASS
-soft_oob: fail_closed
-mesh_bonds: 6
-cmd: smx-aortic-arch

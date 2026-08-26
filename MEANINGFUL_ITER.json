@@ -41,15 +41,7 @@
   "mesh": "aortic_arch",
   "cmd": "smx-aortic-arch",
   "soft_oob_mode": "fail_closed",
-  "feat_sha": "7164bdff5d5f00032c08ef6311e0e44346a98aba",
-  "pin_head": "c580d8ce43a02b3ed8afd447c1ba63fab608af54",
-  "tip": "c580d8ce43a02b3ed8afd447c1ba63fab608af54",
-  "HEAD": "36eaa17be48037bcea5b62b0b311dfbe627a5504",
-  "pinned_head": "36eaa17be48037bcea5b62b0b311dfbe627a5504",
-  "head": "36eaa17be48037bcea5b62b0b311dfbe627a5504",
-  "sha": "36eaa17be48037bcea5b62b0b311dfbe627a5504",
-  "pin_short": "36eaa17b",
-  "short": "36eaa17b",
-  "tip_eq_pin": true,
-  "tip_equals_pin": true
+  "feat_sha": "aba25a71518aae37407132ef11033623b86e0837",
+  "pin_head": "21abeefabe82a11f6e8cd819861923ee53f95e40",
+  "tip": "21abeefabe82a11f6e8cd819861923ee53f95e40"
 }
