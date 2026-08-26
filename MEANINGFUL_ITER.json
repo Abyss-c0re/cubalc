@@ -8,7 +8,7 @@
   "item": "tanycyte ventricle guide life cascade",
   "item_id": "mi_smx_mesh_tanycyte_life_cascade",
   "title": "tanycyte ventricle guide life cascade",
-  "summary": "SMX TANYCYTE soft-OOB fail-closed mesh after muller; mitosis free energy; proof 1762 PASS.",
+  "summary": "SMX TANYCYTE soft-OOB fail-closed mesh stability after muller; mitosis under free energy; proof 1762 asserts_fail:0.",
   "feature": "MESH_TANYCYTE_LIFE_CASCADE",
   "proofs": [
     "programs/proof/1762_smx_mesh_tanycyte_life_cascade.cubalc"
@@ -18,7 +18,6 @@
   "asserts_fail": 0,
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
-  "flagship_1620": "PASS",
   "unity": 0.88,
   "nodes": 7,
   "risk": "low",
@@ -26,12 +25,7 @@
   "past": 1761,
   "sealed": true,
   "soft_oob": "fail-closed",
-  "law": "logical_progression; free_energy_must_flow",
-  "ts": "2026-08-26T06:50:34Z",
-  "verified_at": "2026-08-26T06:50:42Z",
-  "head": "f8186db3b655986d1be6ef53a7748f38bacb71b2",
-  "head_short": "f8186db3",
-  "HEAD": "f8186db3b655986d1be6ef53a7748f38bacb71b2",
-  "HEAD_SHORT": "f8186db3",
-  "host_finish": true
+  "prior_head": "0a0224f9",
+  "head": "c0f0980d84ea5029ac8697c815e045d130b86d24",
+  "head_short": "c0f0980d"
 }
