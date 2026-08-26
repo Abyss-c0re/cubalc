@@ -6,5 +6,12 @@ Proof PASS asserts_ok:1234 asserts_fail:0
 Flagship 1620 PASS asserts_ok:12 asserts_fail:0
 MEANINGFUL_ITER=1771
 VERSION=1.15.1248-usability
-HEAD=c9de4763ef99029c3117529eefa6208cfcd5e94c
-SHORT=c9de4763
+HEAD=e56e35e1b0642d5372a6f878d4a8b48b9311f495
+SHORT=e56e35e1
+feature=MESH_SINUSOID
+iter=1771
+version=1.15.1248-usability
+latch=sinusoid_latch
+status=PASS
+unity=1.0
+stability=1.0
