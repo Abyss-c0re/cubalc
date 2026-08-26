@@ -1,0 +1,8 @@
+SHIP 1833 MESH_LEFT_SUBCLAVIAN_LIFE
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force left subclavian conduit
+c_slice: src/cubalc_smx_left_subclavian.c
+proof: programs/proof/1833_smx_mesh_left_subclavian_life.cubalc
+proof_alt: programs/proof/99_smx_left_subclavian.cubalc
+energy_path: aortic arch apex → left subclavian origin → left subclavian trunk → axillary approach → upper limb and vertebral perfusion takeoff
+asserts_ok: 60
+flagship_1620: PASS (12)

@@ -1,3 +1,11 @@
+## 1.15.1312-usability — 1833 MESH_LEFT_INTERNAL_CAROTID_LIFE
+
+- feat(smx): MESH_LEFT_INTERNAL_CAROTID life-force soft-OOB fail-closed
+- Pure-C src/cubalc_smx_left_internal_carotid.c + proofs 99/1833 (60/0 PASS)
+- Flagship 1620: PASS (12/0)
+- Energy path: left common carotid trunk → carotid bifurcation → left internal carotid origin → petrous/cavernous ascent → cranial perfusion takeoff
+- MESH_EXCHANGE C(4,2), STABILIZE, WE_AUTOHEAL
+
 ## 1.15.1311-usability — 1832 MESH_LEFT_COMMON_CAROTID_LIFE
 
 - SMX mesh stability life-force: left common carotid conduit (soft-OOB fail-closed, MESH_EXCHANGE C(4,2), STABILIZE, WE_AUTOHEAL)
