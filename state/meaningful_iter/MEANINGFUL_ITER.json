@@ -35,11 +35,11 @@
   "summary": "Tricuspid SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
   "feat_sha": "17fb46139461b1ebfefd9a703a0f5ff846c79846",
   "pin_sha": "9f38838556a2dc85e6ca3286c65167b1c976ae9d",
-  "sha": "316fa84f5d4788d95c57b1a4684d68edacbdc194",
-  "head": "316fa84f5d4788d95c57b1a4684d68edacbdc194",
-  "pinned_head": "316fa84f5d4788d95c57b1a4684d68edacbdc194",
-  "commit": "316fa84f5d4788d95c57b1a4684d68edacbdc194",
-  "pin_head": "316fa84f5d4788d95c57b1a4684d68edacbdc194",
-  "tip": "316fa84f5d4788d95c57b1a4684d68edacbdc194",
-  "head_short": "316fa84f"
+  "sha": "d8c56dd469a73f1213c6d28d99a9425c686f0763",
+  "head": "d8c56dd469a73f1213c6d28d99a9425c686f0763",
+  "pinned_head": "d8c56dd469a73f1213c6d28d99a9425c686f0763",
+  "commit": "d8c56dd469a73f1213c6d28d99a9425c686f0763",
+  "pin_head": "d8c56dd469a73f1213c6d28d99a9425c686f0763",
+  "tip": "d8c56dd469a73f1213c6d28d99a9425c686f0763",
+  "head_short": "d8c56dd4"
 }
