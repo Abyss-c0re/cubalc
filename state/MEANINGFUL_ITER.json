@@ -26,5 +26,8 @@
   "ts": "2026-08-26T06:10:21Z",
   "verified_at": "2026-08-26T06:10:21Z",
   "host_finish": true,
-  "head_note": "verified_pass_1759_wrapmodn"
+  "head_note": "verified_pass_1759_wrapmodn",
+  "head": "7dc5170b0e3f491e0733465624b63c4498d8c651",
+  "head_short": "7dc5170b",
+  "prior_head_short": "f2a684a8"
 }
