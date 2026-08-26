@@ -1,0 +1,18 @@
+MESH_ANTERIOR_CEREBRAL
+FEAT=9c9bb5030db1cfea2d64dd75ad167fbaef4d08be
+TIP=9c9bb5030db1cfea2d64dd75ad167fbaef4d08be
+VERSION=1.15.1319-usability
+MI=1840
+PROOF=PASS
+PROOF_99=PASS 60/0
+PROOF_1840=PASS 60/0
+1620=PASS 12/0
+SOFT_OOB=fail_closed
+MESH_EXCHANGE=PASS C(4,2)=6
+PROOF_FILE=programs/proof/99_smx_anterior_cerebral.cubalc
+LIFE_PROOF=programs/proof/1840_smx_mesh_anterior_cerebral_life.cubalc
+C_SLICE=src/cubalc_smx_anterior_cerebral.c
+STATUS=PASS
+NEXT=we_autoheal
+AKA=MESH_ACA
+NOTE=anterior_cerebral ACA A1 stem + AComm join; soft-OOB fail-closed; unity fuse; WE_AUTOHEAL
