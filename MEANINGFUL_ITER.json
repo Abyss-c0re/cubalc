@@ -38,12 +38,12 @@
   "branch": "ship-1828-left-ventricle",
   "sealed": true,
   "tip_eq_pin": true,
-  "pin_head": "3bc6ee48005fd4690027b491d3403762efd8356b",
-  "pin_short": "3bc6ee48",
-  "HEAD": "3bc6ee48005fd4690027b491d3403762efd8356b",
-  "tip": "3bc6ee48005fd4690027b491d3403762efd8356b",
-  "pinned_head": "3bc6ee48005fd4690027b491d3403762efd8356b",
-  "head": "3bc6ee48005fd4690027b491d3403762efd8356b",
-  "sha": "3bc6ee48005fd4690027b491d3403762efd8356b",
-  "short": "3bc6ee48"
+  "pin_head": "61a6aa747e5a1c6a5cd73805058df928ca5bb0a1",
+  "pin_short": "61a6aa74",
+  "HEAD": "61a6aa747e5a1c6a5cd73805058df928ca5bb0a1",
+  "tip": "61a6aa747e5a1c6a5cd73805058df928ca5bb0a1",
+  "pinned_head": "61a6aa747e5a1c6a5cd73805058df928ca5bb0a1",
+  "head": "61a6aa747e5a1c6a5cd73805058df928ca5bb0a1",
+  "sha": "61a6aa747e5a1c6a5cd73805058df928ca5bb0a1",
+  "short": "61a6aa74"
 }
