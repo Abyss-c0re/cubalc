@@ -29,10 +29,10 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sha": "12b5b4891bd84bcbabaaa7e7024983dbd9d5bf40",
-  "head": "12b5b4891bd84bcbabaaa7e7024983dbd9d5bf40",
-  "pinned_head": "12b5b4891bd84bcbabaaa7e7024983dbd9d5bf40",
-  "head_short": "12b5b489",
-  "commit": "12b5b4891bd84bcbabaaa7e7024983dbd9d5bf40",
+  "sha": "8dbcd8a6f021c638893a5e4a50093476e46f9b69",
+  "head": "8dbcd8a6f021c638893a5e4a50093476e46f9b69",
+  "pinned_head": "8dbcd8a6f021c638893a5e4a50093476e46f9b69",
+  "head_short": "8dbcd8a6",
+  "commit": "8dbcd8a6f021c638893a5e4a50093476e46f9b69",
   "tip_equals_pin": true
 }
