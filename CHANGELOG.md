@@ -1,3 +1,10 @@
+## 1.15.1309-usability — 1830 SMX MESH_ASCENDING_AORTA life
+
+- feat(smx): MESH_ASCENDING_AORTA soft-OOB fail-closed + mesh exchange C(4,2)
+- proof 96_smx_ascending_aorta + 1830_smx_mesh_ascending_aorta_life PASS 60/0
+- flagship 1620 PASS 12/0; pure-C src/cubalc_smx_ascending_aorta.c
+- ENERGYFLOW aortic valve leaflets → aortic root sinuses → ascending aorta conduit → arch takeoff → brachiocephalic origin
+
 ## 1.15.1306-usability — 1827 SMX MESH_MITRAL life
 
 - feat(smx): MESH_MITRAL soft-OOB fail-closed + mesh exchange C(4,2)
