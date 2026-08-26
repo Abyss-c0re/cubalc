@@ -25,8 +25,8 @@
   "proof": "programs/proof/1762_smx_mesh_tanycyte_life_cascade.cubalc",
   "asserts_fail": 0,
   "flagship_1620": "PASS",
-  "HEAD": "45c917cbd031eabf372d651729aaeac6f7215e1b",
-  "HEAD_SHORT": "45c917cb",
+  "HEAD": "89cffb69b058c9dad73080c556c75d9b8e80c2f3",
+  "HEAD_SHORT": "89cffb69",
   "next": "we_autoheal",
   "risk": "low"
 }
