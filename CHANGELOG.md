@@ -1,3 +1,7 @@
+## 1.15.1287-usability — 1809 MESH_CISTERNA_CHYLI
+- Soft-OOB fail-closed + MESH_EXCHANGE C(4,2) cisterna chyli life-force
+- Proofs 73/1809 PASS 60ok; flagship 1620 PASS 12ok
+
 ## 1.15.1287-usability — MEANINGFUL_ITER 1809 MESH_CISTERNA_CHYLI
 
 - feat(smx): MESH_CISTERNA_CHYLI SMX mesh stability life-force soft-OOB fail-closed
