@@ -1,1 +1,33 @@
-{"iter":1840,"feature":"MESH_ANTERIOR_CEREBRAL","ship":"1840_smx_mesh_anterior_cerebral_life","head":"07725a4e90fe68895093be347085ca23f63b65f3","proofs":{"99":"60/0","1840":"60/0","1620":"12/0"},"soft_oob":true,"fail_closed":true,"bonds":6}
+{
+  "iter": 1840,
+  "feature": "SMX_MESH_ANTERIOR_CEREBRAL_LIFE",
+  "ship": "1840_smx_mesh_anterior_cerebral_life",
+  "head": "87e17abfc5e1da381f52aea1c2947916130f70d1",
+  "proofs": "1840+99=60/0,1620=12/0",
+  "soft_oob": 1,
+  "fail_closed": 1,
+  "bonds": 6,
+  "pin": "87e17abfc5e1da381f52aea1c2947916130f70d1",
+  "tip": "87e17abfc5e1da381f52aea1c2947916130f70d1",
+  "pin_head": "87e17abfc5e1da381f52aea1c2947916130f70d1",
+  "HEAD": "87e17abfc5e1da381f52aea1c2947916130f70d1",
+  "pinned_head": "87e17abfc5e1da381f52aea1c2947916130f70d1",
+  "sha": "87e17abfc5e1da381f52aea1c2947916130f70d1",
+  "pin_short": "87e17abf",
+  "short": "87e17abf",
+  "tip_equals_pin": true,
+  "tip_eq_pin": true,
+  "meaningful_iter": 1840,
+  "MEANINGFUL_ITER": 1840,
+  "FEATURE": "SMX_MESH_ANTERIOR_CEREBRAL_LIFE",
+  "version": "1.15.1319-usability",
+  "status": "PASS",
+  "proof_recheck": {
+    "99": "PASS 60/0",
+    "1840": "PASS 60/0",
+    "1620": "PASS 12/0"
+  },
+  "c_slice": "src/cubalc_smx_anterior_cerebral.c",
+  "branch": "ship-1840-anterior-cerebral",
+  "mesh": "anterior_cerebral"
+}
