@@ -6,8 +6,8 @@ Proof PASS asserts_ok:1234 asserts_fail:0
 Flagship 1620 PASS asserts_ok:12 asserts_fail:0
 MEANINGFUL_ITER=1771
 VERSION=1.15.1248-usability
-HEAD=ac5e3cccaff023fcf99cd061cf4d53e6ddacea78
-SHORT=ac5e3ccc
+HEAD=6986fc7bf13bf8967fe64c30ef56b76ebbd8688f
+SHORT=6986fc7b
 feature=MESH_SINUSOID
 iter=1771
 version=1.15.1248-usability
