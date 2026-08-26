@@ -1,0 +1,7 @@
+SHIP 1758 — SMX mesh ependyma life cascade (usability)
+Proof: programs/proof/1758_smx_mesh_ependyma_life_cascade.cubalc
+Result: PASS asserts_ok=772 asserts_fail=0 unity~0.880
+Flagship 1620: PASS asserts_ok=12 asserts_fail=0
+Cascade: soft-OOB fail-closed → LIFE_FORCE → WE_AUTOHEAL → … → SCHWANN → EPENDYMA → STABILIZE → mitosis → RAISE_* re-latch
+Ependyma mesh: ventricle lining wraps+sheaths, SMX_EPENDYMA_SUM=14, stable_mesh sticky through life cascade.
+Cube is SoT. matrix is key.
