@@ -25,7 +25,7 @@
   "next": "we_autoheal",
   "host_finish": true,
   "tip_equals_pin": true,
-  "notes": "MESH_RIGHT_ATRIUM soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW SVC junction\u2192right atrium\u2192tricuspid\u2192RV\u2192pulmonary outflow; WE_AUTOHEAL; pure-C cubalc_smx_right_atrium.c",
+  "notes": "MESH_RIGHT_ATRIUM soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW SVC\u2192right atrium\u2192tricuspid\u2192RV\u2192pulmonary outflow; WE_AUTOHEAL; pure-C cubalc_smx_right_atrium.c",
   "note": "MESH_RIGHT_ATRIUM SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1815 smx mesh right atrium life",
   "item_id": "mi_1815_smx_mesh_right_atrium_life",
@@ -33,11 +33,11 @@
   "summary": "Right atrium SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
   "soft_oob": true,
   "fail_closed": true,
-  "sha": "38a41b6193227274dcd6f71dea2e4caeb733206b",
-  "head": "38a41b6193227274dcd6f71dea2e4caeb733206b",
-  "pinned_head": "38a41b6193227274dcd6f71dea2e4caeb733206b",
-  "commit": "38a41b6193227274dcd6f71dea2e4caeb733206b",
-  "pin_head": "38a41b6193227274dcd6f71dea2e4caeb733206b",
-  "tip": "38a41b6193227274dcd6f71dea2e4caeb733206b",
-  "head_short": "38a41b61"
+  "sha": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "head": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "pinned_head": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "commit": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "pin_head": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "tip": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "head_short": "38a1d2fb"
 }

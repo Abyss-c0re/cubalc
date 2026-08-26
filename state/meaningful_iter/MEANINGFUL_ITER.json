@@ -1,1 +1,44 @@
-{"iter":1777,"feature":"smx_mesh_stability_life_force","ops":["LIFE_FORCE","SINUSOID","DISSE","STABILIZE","WE_AUTOHEAL","RESILIENCE"],"version":"1.15.1255-usability","proofs":["programs/science/proof/1777_smx_mesh_stability_life_force.cubalc","programs/science/proof/1777_smx_mesh_disse_life_cascade.cubalc","programs/proof/1620_atomic_printer_life_force.cubalc"],"status":"PASS"}
+{
+  "iter": 1815,
+  "feature": "SMX_MESH_RIGHT_ATRIUM_LIFE",
+  "ops": [
+    "LIFE_FORCE",
+    "SINUSOID",
+    "DISSE",
+    "STABILIZE",
+    "WE_AUTOHEAL",
+    "RESILIENCE"
+  ],
+  "version": "1.15.1294-usability",
+  "proofs": [
+    "programs/science/proof/1777_smx_mesh_stability_life_force.cubalc",
+    "programs/science/proof/1777_smx_mesh_disse_life_cascade.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
+  ],
+  "status": "PASS",
+  "sha": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "head": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "pinned_head": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "commit": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "pin_head": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "tip": "38a1d2fb3c1add7d2d604b3009943f085e25eda7",
+  "head_short": "38a1d2fb",
+  "meaningful_iter": 1815,
+  "MEANINGFUL_ITER": 1815,
+  "VERSION": "1.15.1294-usability",
+  "FEATURE": "SMX_MESH_RIGHT_ATRIUM_LIFE",
+  "ship": "1815_smx_mesh_right_atrium_life",
+  "proof_status": "PASS",
+  "asserts_ok": 60,
+  "asserts_fail": 0,
+  "flagship_1620": "PASS",
+  "flagship_asserts_ok": 12,
+  "flagship_ok": 12,
+  "flagship_fail": 0,
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "host_finish": true,
+  "tip_equals_pin": true,
+  "soft_oob": true,
+  "fail_closed": true
+}

@@ -1,3 +1,10 @@
+## 1.15.1294-usability — 1815 SMX MESH_RIGHT_ATRIUM life
+
+- feat(smx): MESH_RIGHT_ATRIUM soft-OOB fail-closed + mesh exchange C(4,2)
+- proof 79_smx_right_atrium + 1815_smx_mesh_right_atrium_life PASS 60/0
+- flagship 1620 PASS 12/0; pure-C src/cubalc_smx_right_atrium.c
+- ENERGYFLOW SVC junction → right atrium → tricuspid → RV → pulmonary outflow
+
 ## 1.15.1289-usability — 1810 SMX MESH_VENOUS_ANGLE life
 
 - feat(smx): MESH_VENOUS_ANGLE soft-OOB fail-closed + mesh exchange C(4,2)
