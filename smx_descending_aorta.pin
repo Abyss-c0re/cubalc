@@ -1,0 +1,5 @@
+MESH_DESCENDING_AORTA
+1832_smx_mesh_descending_aorta_life
+soft_oob_fail_closed=1
+mesh_bonds_c42=6
+segment_landmarks=3
