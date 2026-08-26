@@ -28,9 +28,9 @@
   "ts": "2026-08-26T01:54:49Z",
   "verified_at": "2026-08-26T01:54:49Z",
   "host_finish": true,
-  "HEAD": "c9c05109dad6aa6fe28b78aef6e857ba7d30abd4",
-  "tip": "c9c05109dad6aa6fe28b78aef6e857ba7d30abd4",
-  "head_note": "feat_1740_exosphere_life_cascade_advances_past_aa814328",
+  "HEAD": "17b7346e41e521c74bebad5bd36b1a6f5d24b709",
+  "tip": "17b7346e41e521c74bebad5bd36b1a6f5d24b709",
+  "head_note": "verified_pass_1740_advances_past_aa814328",
   "feat_head": "c9c05109dad6aa6fe28b78aef6e857ba7d30abd4",
-  "pin_head": "c9c05109dad6aa6fe28b78aef6e857ba7d30abd4"
+  "pin_head": "17b7346e41e521c74bebad5bd36b1a6f5d24b709"
 }
