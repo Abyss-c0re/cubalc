@@ -46,14 +46,15 @@
     "1833": "PASS 60/0",
     "1620": "PASS 12/0"
   },
-  "pin_head": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
-  "tip": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
-  "HEAD": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
+  "pin_head": "66602f0f8b5411c9860f3d77ab0f60683750abf0",
+  "tip": "66602f0f8b5411c9860f3d77ab0f60683750abf0",
+  "HEAD": "66602f0f8b5411c9860f3d77ab0f60683750abf0",
   "pinned_head": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
-  "head": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
+  "head": "66602f0f8b5411c9860f3d77ab0f60683750abf0",
   "sha": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
   "pin_short": "3c35fdbc",
   "short": "3c35fdbc",
   "tip_equals_pin": true,
-  "tip_eq_pin": true
+  "tip_eq_pin": true,
+  "pin": "66602f0f8b5411c9860f3d77ab0f60683750abf0"
 }
