@@ -15,7 +15,9 @@
   "flagship_1620": "PASS",
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "DUODENAL_LUMEN continuum soft-OOB fail-closed mesh after MINOR_PAPILLA; tip==pin",
+  "notes": "DUODENAL_LUMEN brush-border absorption soft-OOB fail-closed mesh after MINOR_PAPILLA; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW; WE_AUTOHEAL; tip==pin",
   "note": "SMX DUODENAL_LUMEN life-force continuum 1792",
-  "ts": 1787756100
+  "slice": "DUODENAL_LUMEN|BRUSH_BORDER|ABSORPTIVE_MUCOSA|DUODENUM",
+  "status": "PASS",
+  "ts": 1787756114
 }
