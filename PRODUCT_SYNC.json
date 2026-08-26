@@ -9,7 +9,8 @@
   "proof_status": "PASS",
   "asserts_ok": 60,
   "flagship_1620_asserts_ok": 12,
-  "head": "a499285b6a5445993ebd20d595b1df2f4189030c",
+  "head": "3832e6fe0affda9631a546943335cb83b3cf7542",
   "VERSION": "1.15.1323-usability",
-  "MEANINGFUL_ITER": 1843
+  "MEANINGFUL_ITER": 1843,
+  "tip_equals_pin": true
 }

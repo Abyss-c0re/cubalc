@@ -16,5 +16,7 @@
   "proof": "programs/proof/1843_smx_mesh_ophthalmic_life.cubalc",
   "branch": "ship-1843-ophthalmic",
   "tip_equals_pin": true,
-  "head": "a499285b6a5445993ebd20d595b1df2f4189030c"
+  "head": "3832e6fe0affda9631a546943335cb83b3cf7542",
+  "proof_status": "PASS",
+  "ok": true
 }
