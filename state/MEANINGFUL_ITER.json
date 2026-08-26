@@ -15,7 +15,7 @@
     "programs/science/integration/atomic_printer_mesh_radial_life.cubalc"
   ],
   "proof_status": "PASS",
-  "asserts_ok": 850,
+  "asserts_ok": 955,
   "asserts_fail": 0,
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
@@ -30,10 +30,10 @@
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
   "ts": "2026-08-26T06:12:30Z",
   "verified_at": "2026-08-26T06:12:30Z",
-  "host_finish": false,
+  "host_finish": true,
   "head_note": "verified_pass_1759_radial",
   "prior_head": "7cdd2d8f",
   "prior_head_short": "7cdd2d8f",
-  "head": "47dfa4fc53afc421cbae60e3bdf1dadbdce5ab4a",
-  "head_short": "47dfa4fc"
+  "head": "59ee606f5bab44d6d9f4d43492f84673f21260e2",
+  "head_short": "59ee606f"
 }
