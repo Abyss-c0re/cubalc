@@ -1,0 +1,10 @@
+MEANINGFUL_ITER=1792
+FEATURE=SMX_MESH_DUODENAL_LUMEN_LIFE
+PROOF=programs/proof/1792_smx_mesh_duodenal_lumen_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+VERSION=1.15.1270-usability
+NOTE=duodenal lumen soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW brush-border absorption corridor; WE_AUTOHEAL
