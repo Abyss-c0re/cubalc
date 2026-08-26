@@ -1,0 +1,4 @@
+MESH_MAIN_PULMONARY_ARTERY
+soft_oob=fail_closed
+bonds=C(4,2)=6
+ship=1819_smx_mesh_main_pulmonary_artery_life

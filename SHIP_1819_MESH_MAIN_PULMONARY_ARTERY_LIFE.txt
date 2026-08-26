@@ -1,0 +1,12 @@
+MEANINGFUL_ITER=1819
+FEATURE=SMX_MESH_MAIN_PULMONARY_ARTERY_LIFE
+PROOF=programs/proof/83_smx_main_pulmonary_artery.cubalc
+PROOF_ALT=programs/proof/1819_smx_mesh_main_pulmonary_artery_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_ASSERTS_OK=12
+VERSION=1.15.1300-usability
+NOTE=MESH_MAIN_PULMONARY_ARTERY soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW pulmonary valve leaflets→pulmonary outflow trunk→main pulmonary artery→left/right branches→lung capillary return; WE_AUTOHEAL; pure-C cubalc_smx_main_pulmonary_artery.c
+C_SLICE=src/cubalc_smx_main_pulmonary_artery.c
