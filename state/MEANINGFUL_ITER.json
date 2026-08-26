@@ -1,8 +1,8 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1760,
-  "MEANINGFUL_ITER": 1759,
-  "meaningful_iter": 1759,
+  "iter": 1762,
+  "MEANINGFUL_ITER": 1762,
+  "meaningful_iter": 1762,
   "version": "1.15.1234-usability",
   "VERSION": "1.15.1234-usability",
   "item": "radial glia scaffold life cascade",
@@ -34,6 +34,6 @@
   "head_note": "verified_pass_1759_radial",
   "prior_head": "7cdd2d8f",
   "prior_head_short": "7cdd2d8f",
-  "head": "340c46c3bd93638d0ccb2e9672c8864896b9690b",
-  "head_short": "340c46c3"
+  "head": "47dfa4fc53afc421cbae60e3bdf1dadbdce5ab4a",
+  "head_short": "47dfa4fc"
 }
