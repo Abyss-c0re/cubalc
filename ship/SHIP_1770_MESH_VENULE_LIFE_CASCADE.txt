@@ -1,10 +1,1 @@
-SHIP 1770 SMX mesh VENULE return scaffold life cascade
-feat(smx): VENULE venule return scaffold after capillary
-Proof: programs/proof/1770_smx_mesh_venule_life_cascade.cubalc
-PASS: 1165/0 asserts; flagship 1620 12/0
-Verbs: VENULE|VENUGLIA|MESH_VENULE|VENU_WRAP|VENU_SHEATH|VENULE_GUIDE|RAISE_VENULE
-MEANINGFUL_ITER=1770
-VERSION=1.15.1246-usability
-SOFT_OOB=fail-closed
-AFTER=capillary
-HEAD_BASE=605e61cd
+1770 SMX VENULE return scaffold mesh life cascade after CAPILLARY; soft-OOB fail-closed; proof programs/proof/1770_smx_mesh_venule_life_cascade.cubalc PASS 1165/0; flagship 1620.

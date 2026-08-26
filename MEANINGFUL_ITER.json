@@ -1,1 +1,1 @@
-{"iter":1769,"feat":"smx_mesh_capillary_life_cascade","proof":"programs/science/proof/1769_smx_mesh_capillary_life_cascade.cubalc","asserts_ok":1124,"asserts_fail":0,"flagship":"1620"}
+{"meaningful_iter":1770,"feature":"MESH_VENULE_LIFE_CASCADE","version":"1.15.1246-usability","proof":"programs/proof/1770_smx_mesh_venule_life_cascade.cubalc","asserts_ok":1165,"asserts_fail":0,"flagship_1620":"12/0","ts":"ship1770"}

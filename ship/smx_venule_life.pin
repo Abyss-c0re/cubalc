@@ -1,10 +1,1 @@
-MEANINGFUL_ITER=1770
-FEATURE=smx_mesh_venule_life_cascade
-PROOF=programs/proof/1770_smx_mesh_venule_life_cascade.cubalc
-FLAGSHIP=programs/proof/1620_atomic_printer_life_force.cubalc
-PROOF_PASS=1165/0
-FLAGSHIP_PASS=12/0
-VERSION=1.15.1246-usability
-SOFT_OOB=fail-closed
-AFTER=capillary
-HEAD_BASE=605e61cd
+1770 VENULE PASS 1165/0 flagship 12/0
