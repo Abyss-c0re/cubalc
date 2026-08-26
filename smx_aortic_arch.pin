@@ -1,0 +1,7 @@
+feature=MESH_AORTIC_ARCH
+iter=1831
+proof=97_smx_aortic_arch.cubalc
+life=1831_smx_mesh_aortic_arch_life.cubalc
+soft_oob=1
+fail_closed=1
+bonds=6
