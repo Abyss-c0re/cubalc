@@ -3,7 +3,7 @@
   "meaningful_iter": 1777,
   "feature": "MESH_OVAL",
   "version": "1.15.1253-oval-mesh",
-  "head": "6c0cd9ad1545ab34d59cc70e09d31e47f93779f0",
+  "head": "a508df5819b32fe85c611c82a90a199f8d891657",
   "short": "6c0cd9ad",
   "latch": "oval_latch",
   "status": "PASS",
@@ -18,5 +18,8 @@
   "proof": "1777_smx_mesh_oval_life_cascade.cubalc",
   "smoke": "1777_smx_oval_soft_oob_smoke.cubalc",
   "head_short": "6c0cd9ad",
-  "MEANINGFUL_ITER": 1777
+  "MEANINGFUL_ITER": 1777,
+  "HEAD": "a508df5819b32fe85c611c82a90a199f8d891657",
+  "HEAD_SHORT": "a508df58",
+  "FEATURE": "MESH_OVAL"
 }
