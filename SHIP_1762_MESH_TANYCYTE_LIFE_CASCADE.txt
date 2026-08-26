@@ -3,4 +3,4 @@ SMX TANYCYTE|TANYCYTEGLIA|MESH_TANYCYTE|TY_WRAP|TY_SHEATH ventricle guide after 
 soft-OOB fail-closed; complete mesh + wrap ring + sheath hub
 proof 1762 PASS asserts_ok=955 fail=0; flagship 1620 PASS
 MEANINGFUL_ITER 1762 VERSION 1.15.1237-usability
-358efe5f
+e9de6520
