@@ -1,1 +1,31 @@
-{"iter":1840,"feature":"MESH_ANTERIOR_CEREBRAL","ship":"1840_smx_mesh_anterior_cerebral_life","head":"80267f1172587558131f23bc4b33aebf01ac8af9","proofs":{"99":"60/0","1840":"60/0","1620":"12/0"},"soft_oob":true,"fail_closed":true,"bonds":6}
+{
+  "meaningful_iter": 1840,
+  "feature": "SMX_MESH_ANTERIOR_CEREBRAL_LIFE",
+  "version": "1.15.1319-usability",
+  "head": "052151e13fe30dad7789203ddde23d1624d0ce15",
+  "pin": "052151e13fe30dad7789203ddde23d1624d0ce15",
+  "tip": "052151e13fe30dad7789203ddde23d1624d0ce15",
+  "pin_head": "052151e13fe30dad7789203ddde23d1624d0ce15",
+  "HEAD": "052151e13fe30dad7789203ddde23d1624d0ce15",
+  "pinned_head": "052151e13fe30dad7789203ddde23d1624d0ce15",
+  "sha": "052151e13fe30dad7789203ddde23d1624d0ce15",
+  "pin_short": "052151e1",
+  "short": "052151e1",
+  "status": "PASS",
+  "soft_oob": 1,
+  "fail_closed": 1,
+  "proofs": "1840+99=60/0,1620=12/0",
+  "tip_equals_pin": true,
+  "tip_eq_pin": true,
+  "MEANINGFUL_ITER": 1840,
+  "proof_recheck": {
+    "99": "PASS 60/0",
+    "1840": "PASS 60/0",
+    "1620": "PASS 12/0"
+  },
+  "FEATURE": "SMX_MESH_ANTERIOR_CEREBRAL_LIFE",
+  "iter": 1840,
+  "c_slice": "src/cubalc_smx_anterior_cerebral.c",
+  "branch": "ship-1840-anterior-cerebral",
+  "mesh": "anterior_cerebral"
+}
