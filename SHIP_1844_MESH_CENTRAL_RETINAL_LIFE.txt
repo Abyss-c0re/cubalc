@@ -1,0 +1,4 @@
+1844 MESH_CENTRAL_RETINAL life-force soft-OOB
+Proofs: 110_smx_central_retinal + 1844_smx_mesh_central_retinal_life
+Energy: ophthalmic artery origin → central retinal artery takeoff → optic nerve dural sheath pierce → lamina cribrosa transit → retinal free-energy arc → foveal/macular seal
+Pure-C: src/cubalc_smx_central_retinal.c

@@ -1,3 +1,9 @@
+## 1844 — MESH_CENTRAL_RETINAL life-force soft-OOB (1.15.1323-usability)
+
+- feat(smx): MESH_CENTRAL_RETINAL soft-OOB fail-closed mesh exchange life-force
+- Proofs: 110_smx_central_retinal + 1844_smx_mesh_central_retinal_life (60/0); flagship 1620 (12/0)
+- Energy: ophthalmic artery origin → central retinal artery takeoff → optic nerve dural sheath pierce → lamina cribrosa transit → retinal free-energy arc → foveal/macular seal
+
 ## 1843 — MESH_OPHTHALMIC life-force soft-OOB (1.15.1322-usability)
 
 - feat(smx): MESH_OPHTHALMIC soft-OOB fail-closed mesh exchange life-force
