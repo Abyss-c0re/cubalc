@@ -1,0 +1,10 @@
+MEANINGFUL_ITER=1795
+FEATURE=SMX_MESH_JEJUNAL_VILLUS_LIFE
+PROOF=programs/proof/1795_smx_mesh_jejunal_villus_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+VERSION=1.15.1273-usability
+NOTE=jejunal villus soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW brush-border absorptive corridor; WE_AUTOHEAL

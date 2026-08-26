@@ -1,0 +1,4 @@
+SHIP 1795 SMX_MESH_JEJUNAL_VILLUS_LIFE
+proof PASS asserts_ok=60 flagship_1620 PASS=12
+soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE + WE_AUTOHEAL
+jejunal villus enterocyte ladder brush-border absorption corridor after jejunal crypt
