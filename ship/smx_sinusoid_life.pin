@@ -1,11 +1,8 @@
 feature=MESH_SINUSOID
 iter=1771
 version=1.15.1248-usability
-latch=sinusoid_latch
 status=PASS
-unity=1.0
-stability=1.0
-head=d3e71716
-full_head=d3e717161eaf88b2418e938144703468a65629fb
+head=f9d197d8
+full_head=f9d197d83d13a502ac4482f46277883c751f215e
 proof_1771=PASS:1234
 proof_1620=PASS:12
