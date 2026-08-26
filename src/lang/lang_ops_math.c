@@ -1,5 +1,6 @@
 /* CubalC lang — lang_ops_math.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
+#include <limits.h>
 
 int cubalc_lang_ops_math(VM *vm, Lex *L){
   /* plane ops_math: L20289-22808 */
@@ -6072,5 +6073,78 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+
+  /* DIVFLOORN|TRUEFLOORN|FLOORDIVN a b — true integer floor division floor(a/b) → LAST_N.
+   * b==0 soft LAST_N=0 + sticky LAST_ERR. Toward -∞ when rem and signs differ.
+   * Twin of DIVCEILN. Usability: bucket = DIVFLOORN idx width without shell glue. */
+  if (kw(&L->cur,"DIVFLOORN") || kw(&L->cur,"TRUEFLOORN") || kw(&L->cur,"FLOORDIVN") ||
+      kw(&L->cur,"FLOOR_DIVN") || kw(&L->cur,"IDIVFLOOR") ||
+      kw(&L->cur,"BUCKETN") || kw(&L->cur,"BININDEXN")){
+    long a = 0, b = 0, out = 0;
+    int bad = 0;
+    char nbuf[32];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { a = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      a = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, "DIVFLOORN a b — unknown a"); return -1; }
+      a = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "DIVFLOORN a b — DIVFLOORN idx width");
+      return -1;
+    }
+    if (kw(&L->cur,"BY") || kw(&L->cur,"OVER") || kw(&L->cur,"INTO") ||
+        kw(&L->cur,"PER"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM) { b = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      b = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, "DIVFLOORN a b — unknown b"); return -1; }
+      b = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "DIVFLOORN a b — missing divisor");
+      return -1;
+    }
+    if (b == 0) {
+      out = 0; bad = 1;
+      var_set_str(vm, "LAST_ERR", "DIVFLOORN: divide by zero");
+      var_set_str(vm, "ERR", "DIVFLOORN: divide by zero");
+    } else if (a == LONG_MIN && b == -1) {
+      out = LONG_MAX; bad = 1;
+      var_set_str(vm, "LAST_ERR", "DIVFLOORN: overflow");
+      var_set_str(vm, "ERR", "DIVFLOORN: overflow");
+    } else {
+      long q = a / b, rem = a % b;
+      if (rem != 0 && ((a < 0) != (b < 0))) q--;
+      out = q;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "DIVFLOORN", out);
+    var_set_num(vm, "TRUEFLOORN", out);
+    var_set_num(vm, "FLOORDIVN", out);
+    var_set_num(vm, "BUCKETN", out);
+    var_set_num(vm, "DIVFLOORN_A", a);
+    var_set_num(vm, "DIVFLOORN_B", b);
+    var_set_num(vm, "DIVFLOORN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# divfloorn %ld/%ld -> %ld bad=%d\n", a, b, out, bad);
+    bump(vm); return 1;
+  }
+
   return 0;
 }

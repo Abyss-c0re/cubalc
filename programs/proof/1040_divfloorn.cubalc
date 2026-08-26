@@ -1,0 +1,78 @@
+# DIVFLOORN / TRUEFLOORN — true integer floor division for bucket/index
+
+HOLD_FLASH 1
+
+# exact positive
+DIVFLOORN 100 10
+ASSERT LAST_N == 10
+ASSERT DIVFLOORN_OK == 1
+
+# trunc toward -inf with remainder
+DIVFLOORN 100 16
+ASSERT LAST_N == 6
+ASSERT DIVFLOORN_A == 100
+ASSERT DIVFLOORN_B == 16
+
+# zero total
+DIVFLOORN 0 16
+ASSERT LAST_N == 0
+
+# negative numerator true floor (C would give -6 for -100/16)
+DIVFLOORN -100 16
+ASSERT LAST_N == -7
+
+# both negative
+DIVFLOORN -100 -16
+ASSERT LAST_N == 6
+
+# mixed: positive / negative
+DIVFLOORN 100 -16
+ASSERT LAST_N == -7
+
+# divide by zero soft
+DIVFLOORN 10 0
+ASSERT LAST_N == 0
+ASSERT DIVFLOORN_OK == 0
+LET e = LAST_ERR
+SYS LEN e
+ASSERT LAST_N > 0
+
+# aliases
+TRUEFLOORN 17 5
+ASSERT LAST_N == 3
+BUCKETN 17 5
+ASSERT LAST_N == 3
+BININDEXN 17 5
+ASSERT LAST_N == 3
+IDIVFLOOR 17 5
+ASSERT LAST_N == 3
+
+# optional BY
+DIVFLOORN 25 BY 10
+ASSERT LAST_N == 2
+
+# pipeline after GETFLAGN
+SYS ENV SET CUBALC_ARG0 "--idx=100"
+SYS ENV SET CUBALC_ARG1 "--width=16"
+SYS ENV SET CUBALC_ARGC "2"
+GETFLAGN idx OR 0
+LET idx = LAST_N
+GETFLAGN width OR 1
+LET width = LAST_N
+FLOORN width 1
+LET width = LAST_N
+DIVFLOORN idx width
+ASSERT LAST_N == 6
+
+# var subjects
+LET a = -17
+LET b = 5
+DIVFLOORN a b
+ASSERT LAST_N == -4
+
+# LAST_N decimal bucket
+DIVFLOORN 9 4
+ASSERT LAST_N == 2
+ASSERT DIVFLOORN_OK == 1
+
+PRINT "divfloorn ok"
