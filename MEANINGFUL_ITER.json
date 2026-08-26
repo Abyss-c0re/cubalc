@@ -21,7 +21,7 @@
   "asserts_fail": 0,
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
-  "unity": 0.880,
+  "unity": 0.88,
   "nodes": 7,
   "risk": "low",
   "next": "we_autoheal",
@@ -35,5 +35,7 @@
   "host_finish": true,
   "head_note": "verified_pass_1758_ependyma",
   "prior_head": "c68488eb23de6625cc1c456e5d5b74e4e039cfd9",
-  "prior_head_short": "c68488eb"
+  "prior_head_short": "c68488eb",
+  "head": "f5d3a77ea1d5076a07d73ba693af1a4f4df22dd6",
+  "head_short": "f5d3a77e"
 }
