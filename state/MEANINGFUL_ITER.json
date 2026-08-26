@@ -23,12 +23,19 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "host_finish": false,
-  "tip_equals_pin": false,
+  "host_finish": true,
+  "tip_equals_pin": true,
   "notes": "MESH_VENOUS_ANGLE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW thoracic duct ascent\u2192left venous angle (IJV\u2229SCV)\u2192subclavian confluence\u2192systemic venous return; WE_AUTOHEAL; pure-C cubalc_smx_venous_angle.c",
   "note": "MESH_VENOUS_ANGLE SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1810 smx mesh venous angle life",
   "item_id": "mi_1810_smx_mesh_venous_angle_life",
   "title": "1810 MESH_VENOUS_ANGLE soft-OOB mesh exchange life-force",
-  "summary": "Venous angle SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal, mitosis under locked rails."
+  "summary": "Venous angle SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal, mitosis under locked rails.",
+  "sha": "65781e431b424d0e6101f45118cf64a3d465ebbe",
+  "head": "65781e431b424d0e6101f45118cf64a3d465ebbe",
+  "pinned_head": "65781e431b424d0e6101f45118cf64a3d465ebbe",
+  "commit": "65781e431b424d0e6101f45118cf64a3d465ebbe",
+  "pin_head": "65781e431b424d0e6101f45118cf64a3d465ebbe",
+  "tip": "65781e431b424d0e6101f45118cf64a3d465ebbe",
+  "head_short": "65781e43"
 }
