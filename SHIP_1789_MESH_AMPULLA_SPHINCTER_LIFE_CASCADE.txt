@@ -7,5 +7,5 @@ ASSERTS_FAIL=0
 FLAGSHIP_1620=PASS
 FLAGSHIP_OK=12
 VERSION=1.15.1267-usability
-HEAD=80928da18abc5a1a0cefa0b5ad7cf069daa6d7d5
+HEAD=84fcfb2bb4076b76788ee0de4b7a81d5d47bfcde
 NOTE=ampulla-of-Vater / sphincter-of-Oddi soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW sphincter gate; WE_AUTOHEAL

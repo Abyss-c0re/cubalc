@@ -20,10 +20,11 @@
   "note": "SMX mesh ampulla sphincter life-force continuum 1789",
   "slice": "AMPULLA|SPHINCTER|VATER|ODDI|PAPILLA",
   "status": "PASS",
-  "ts": 1787755332,
-  "head": "be8f1f8f8d91d8648d5691ebad8c4023da365ace",
-  "sha": "be8f1f8f8d91d8648d5691ebad8c4023da365ace",
-  "pinned_head": "be8f1f8f8d91d8648d5691ebad8c4023da365ace",
-  "head_short": "be8f1f8f",
-  "tip_equals_pin": true
+  "ts": 1787755400,
+  "head": "84fcfb2bb4076b76788ee0de4b7a81d5d47bfcde",
+  "sha": "84fcfb2bb4076b76788ee0de4b7a81d5d47bfcde",
+  "pinned_head": "84fcfb2bb4076b76788ee0de4b7a81d5d47bfcde",
+  "head_short": "84fcfb2b",
+  "tip_equals_pin": true,
+  "tip": "84fcfb2bb4076b76788ee0de4b7a81d5d47bfcde"
 }
