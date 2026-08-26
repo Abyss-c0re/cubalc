@@ -1,0 +1,8 @@
+SHIP 1831 MESH_AORTIC_ARCH_LIFE
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force aortic arch conduit
+c_slice: src/cubalc_smx_aortic_arch.c
+proof: programs/proof/1831_smx_mesh_aortic_arch_life.cubalc
+proof_alt: programs/proof/97_smx_aortic_arch.cubalc
+energy_path: ascending aorta conduit → aortic arch apex → brachiocephalic trunk origin → left common carotid origin → left subclavian origin
+asserts_ok: 60
+flagship_1620: PASS (12)
