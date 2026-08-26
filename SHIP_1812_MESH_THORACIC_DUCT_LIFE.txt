@@ -1,0 +1,13 @@
+MESH_THORACIC_DUCT 1812 PASS
+MEANINGFUL_ITER=1812
+FEATURE=SMX_MESH_THORACIC_DUCT_LIFE
+PROOF=programs/proof/76_smx_thoracic_duct.cubalc
+PROOF_ALT=programs/proof/1812_smx_mesh_thoracic_duct_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+VERSION=1.15.1291-usability
+NOTE=MESH_THORACIC_DUCT soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW cisterna chyli→thoracic duct→left venous angle (left IJV∩SCV)→subclavian confluence→systemic venous return; WE_AUTOHEAL; pure-C cubalc_smx_thoracic_duct.c
+C_SLICE=src/cubalc_smx_thoracic_duct.c
