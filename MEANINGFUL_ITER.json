@@ -21,9 +21,9 @@
   "slice": "AMPULLA|SPHINCTER|VATER|ODDI|PAPILLA",
   "status": "PASS",
   "ts": 1787755332,
-  "head": "b5c78e35f9a9e8d49b968aa724ac214a1db728d8",
-  "sha": "b5c78e35f9a9e8d49b968aa724ac214a1db728d8",
-  "pinned_head": "b5c78e35f9a9e8d49b968aa724ac214a1db728d8",
-  "head_short": "b5c78e35",
+  "head": "be8f1f8f8d91d8648d5691ebad8c4023da365ace",
+  "sha": "be8f1f8f8d91d8648d5691ebad8c4023da365ace",
+  "pinned_head": "be8f1f8f8d91d8648d5691ebad8c4023da365ace",
+  "head_short": "be8f1f8f",
   "tip_equals_pin": true
 }
