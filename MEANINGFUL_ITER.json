@@ -29,8 +29,9 @@
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
-  "pin_head": "990d965a2797391a17c4f117965fff879d9e9859",
-  "tip": "990d965a2797391a17c4f117965fff879d9e9859",
-  "HEAD": "990d965a2797391a17c4f117965fff879d9e9859",
-  "head_short": "990d965a"
+  "pin_head": "df05dbb01e7f9514d64ec7bf1b35ef1cb1021293",
+  "tip": "df05dbb01e7f9514d64ec7bf1b35ef1cb1021293",
+  "HEAD": "df05dbb01e7f9514d64ec7bf1b35ef1cb1021293",
+  "head_short": "df05dbb0",
+  "feat_head": "a77bb6696366bb40f8685896bfc67b039c24766a"
 }
