@@ -31,10 +31,10 @@
   "status": "PASS",
   "feat_sha": "ecc7b81bf2d34296b7ab3a687d49cef292b041c7",
   "head_before": "7901bba74a88497cd91294b5ceec417860c93dab",
-  "sha": "53ea0d01043fd68f9d47e9e2c71f8dd7edb1c585",
-  "head": "53ea0d01043fd68f9d47e9e2c71f8dd7edb1c585",
-  "pinned_head": "53ea0d01043fd68f9d47e9e2c71f8dd7edb1c585",
-  "head_short": "53ea0d01",
-  "commit": "53ea0d01",
+  "sha": "b1df34a6707e50c0046a876f7029592e2d55a762",
+  "head": "b1df34a6707e50c0046a876f7029592e2d55a762",
+  "pinned_head": "b1df34a6707e50c0046a876f7029592e2d55a762",
+  "head_short": "b1df34a6",
+  "commit": "b1df34a6",
   "tip_equals_pin": true
 }
