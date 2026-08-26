@@ -1,23 +1,13 @@
 {
-  "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1765,
-  "MEANINGFUL_ITER": 1765,
   "meaningful_iter": 1765,
   "version": "1.15.1241-usability",
-  "VERSION": "1.15.1241-usability",
-  "item": "pericyte capillary guard life cascade",
-  "item_id": "mi_smx_mesh_pericyte_life_cascade",
-  "title": "pericyte capillary guard life cascade",
-  "summary": "SMX PERICYTE soft-OOB fail-closed mesh life cascade after folliculo; proof 1765 asserts_ok:1046 asserts_fail:0; flagship 1620 PASS",
+  "head": "774ced3c6b35b718714f64ae7e9026c1f5decfbf",
+  "head_short": "774ced3c",
   "feature": "SMX_PERICYTE soft-OOB fail-closed mesh life cascade",
   "proof": "programs/proof/1765_smx_mesh_pericyte_life_cascade.cubalc",
   "asserts_ok": 1046,
   "asserts_fail": 0,
   "flagship": "1620 PASS",
   "ship": "SHIP_1765_MESH_PERICYTE_LIFE_CASCADE.txt",
-  "head": "899f5d26d0bb06c5bbe212a11e2d50488d0c3978",
-  "head_short": "899f5d26",
-  "HEAD": "899f5d26d0bb06c5bbe212a11e2d50488d0c3978",
-  "HEAD_SHORT": "899f5d26",
-  "ts": 1787731671
+  "ts": 1787731672
 }
