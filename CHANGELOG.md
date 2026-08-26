@@ -7696,3 +7696,8 @@ See 1.11.6-universal.
 - feat(smx): VENULE return scaffold after CAPILLARY; soft-OOB fail-closed
 - proof 1770 PASS 1165/0; flagship 1620 PASS 12/0
 - VERSION 1.15.1246-usability
+
+## 1.15.1294-usability — 1815 MESH_RIGHT_ATRIUM
+- SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), STABILIZE, WE_AUTOHEAL
+- Proofs 79 + 1815 (60 asserts PASS); flagship 1620 PASS
+- Energy: SVC→right atrium→tricuspid→RV→pulmonary outflow
