@@ -1,1 +1,12 @@
-{"iter":1771,"version":"1.15.1248-usability","feature":"MESH_SINUSOID","latch":"sinusoid_latch","status":"PASS","unity":1.0,"head":"d3e71716","full_head":"d3e717161eaf88b2418e938144703468a65629fb","next":"we_autoheal"}
+{
+  "iter": 1771,
+  "version": "1.15.1248-usability",
+  "feature": "MESH_SINUSOID",
+  "latch": "sinusoid_latch",
+  "status": "PASS",
+  "unity": 1.0,
+  "head": "dc6e1adae68e3724c563e71c2f47a12357e7fd26",
+  "full_head": "d3e717161eaf88b2418e938144703468a65629fb",
+  "next": "we_autoheal",
+  "short": "dc6e1ada"
+}
