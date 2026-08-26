@@ -1,8 +1,8 @@
 // 74_smx_venous_angle.cubalc
 // MESH_VENOUS_ANGLE — SMX mesh stability life-force for venous angle board.
 // Soft-OOB storms fail-closed (never ghost-place); MESH_EXCHANGE roots C(4,2) mind mesh;
-// STABILIZE hardens; ENERGYFLOW + FLOW drive venous angle free-energy return
-// (thoracic duct terminus → venous angle confluence → subclavian/jugular → systemic venous return);
+// STABILIZE hardens; ENERGYFLOW + FLOW drive venous angle free-energy gate
+// (thoracic duct terminus → left venous angle → subclavian/IJV confluence → systemic venous return);
 // WE_AUTOHEAL; mitosis under locked rails; second storm re-stabilizes.
 // Wonder AGI can RUN. No dual ladders. Cube is SoT · matrix is key · free energy must flow.
 // Pure-C SMX engine; proof-only CubalC surface.
@@ -31,14 +31,14 @@ PLUG nozzle hive
 PLUG hive scrap
 PLUG scrap bed
 
-ENTITY seed OF Cell 1 14 0
+ENTITY seed OF Cell 1 16 0
 ENTITY d1 OF Cell 0 0 0
 ENTITY d2 OF Cell 0 0 0
 PLUG bed seed
 
 IMPULSE bed 1
 IMPULSE nozzle 1
-// venous angle free-energy charge: thoracic duct terminus → angle confluence → subclavian/jugular → systemic return
+// venous angle free-energy charge: thoracic duct terminus → left venous angle → subclavian return
 ENERGYFLOW 5
 FLOW 4
 
@@ -88,18 +88,18 @@ IMPULSE hive 1
 ENERGYFLOW 4
 FLOW 3
 ASSERT ENERGY >= 0 "venous angle energy non-negative"
-ASSERT CUBES == base_cubes "lymph gate invents no cubes"
+ASSERT CUBES == base_cubes "angle gate invents no cubes"
 
-// live mesh talk after venous angle pulse (lacteal → node → cisterna)
+// live mesh talk after venous angle pulse (duct terminus → angle → subclavian)
 SMX EXCHANGE bed nozzle
-ASSERT SMX_OK == 1 "live exchange after lymph pulse"
+ASSERT SMX_OK == 1 "live exchange after angle pulse"
 ASSERT SMX_OOB == 0 "no oob on live talk"
 
 SMX EXCHANGE nozzle hive
-ASSERT SMX_OK == 1 "lymph talk live"
-ASSERT SMX_OOB == 0 "no oob lymph"
+ASSERT SMX_OK == 1 "angle talk live"
+ASSERT SMX_OOB == 0 "no oob angle"
 
-// Autoheal under stable venous angle mesh (node-wall resilience)
+// Autoheal under stable venous angle mesh (angle-wall resilience)
 SMX WE_AUTOHEAL bed nozzle hive scrap
 ASSERT SMX_OK == 1 "autoheal live"
 ASSERT SMX_AUTOHEALED == 1 "autohealed latch"
@@ -181,7 +181,7 @@ ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange sticky through mitosis+storm"
 ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky through mitosis+storm"
 ASSERT SMX_AUTOHEALED == 1 "autohealed sticky through storm2"
 
-// final venous angle energy breath through systemic venous return
+// final venous angle energy breath through subclavian systemic return
 ENERGYFLOW 1
 FLOW 1
 ASSERT ENERGY > 0 "final energy flows"

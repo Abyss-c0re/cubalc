@@ -1,5 +1,5 @@
 {
-  "schema": "cubalc.meaningful_iter/v1",
+  "schema": "cubalc.meaningful_iter.v1",
   "meaningful_iter": 1810,
   "MEANINGFUL_ITER": 1810,
   "iter": 1810,
@@ -10,6 +10,10 @@
   "ship": "1810_smx_mesh_venous_angle_life",
   "proof": "programs/proof/1810_smx_mesh_venous_angle_life.cubalc",
   "science": "programs/science/integration/smx_mesh_venous_angle_life.cubalc",
+  "proofs": [
+    "programs/proof/1810_smx_mesh_venous_angle_life.cubalc",
+    "programs/proof/75_smx_venous_angle.cubalc"
+  ],
   "proof_status": "PASS",
   "asserts_ok": 60,
   "asserts_fail": 0,
@@ -18,27 +22,16 @@
   "flagship_1620_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "venous angle mesh life: soft-OOB fail-closed; MESH_EXCHANGE C(4,2); STABILIZE; WE_AUTOHEAL; free-energy mitosis under locked rails (thoracic duct terminus to venous angle to systemic return); second storm re-stabilizes",
+  "notes": "venous angle mesh life: soft-OOB fail-closed; MESH_EXCHANGE C(4,2); STABILIZE; WE_AUTOHEAL; free-energy mitosis under locked rails (thoracic duct terminus\u2192venous angle confluence\u2192subclavian/jugular\u2192systemic return); second storm re-stabilizes; pure-C cubalc_smx_venous_angle.c; no IF*P duals",
   "note": "SMX venous angle life-force for atomic printer spine",
+  "ts": "2026-08-26T17:17:16Z",
   "item": "1810 smx mesh venous angle life",
   "item_id": "mi_1810_smx_mesh_venous_angle_life",
   "title": "1810 smx mesh venous angle life",
   "summary": "Soft-OOB mesh-exchange venous angle life-force with autoheal mitosis under atomic printer spine.",
-  "proofs": [
-    "programs/proof/1810_smx_mesh_venous_angle_life.cubalc"
-  ],
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "c_slice": "src/cubalc_smx_venous_angle.c",
-  "sha": "cc86d3341ebba675390f581f9316130951abbc1a",
-  "head": "cc86d3341ebba675390f581f9316130951abbc1a",
-  "pinned_head": "cc86d3341ebba675390f581f9316130951abbc1a",
-  "commit": "cc86d3341ebba675390f581f9316130951abbc1a",
-  "pin_head": "cc86d3341ebba675390f581f9316130951abbc1a",
-  "tip": "ccbdc34796d7ed86b8b2eb253859dc44c6f9cc5b",
-  "head_short": "cc86d334",
-  "tip_equals_pin": false,
-  "head_before": "cc86d3341ebba675390f581f9316130951abbc1a"
+  "c_slice": "src/cubalc_smx_venous_angle.c"
 }

@@ -1,8 +1,7 @@
 /* cubalc_smx_venous_angle.c — MESH_VENOUS_ANGLE SMX mesh stability life-force slice
  * Soft-OOB fail-closed + MESH_EXCHANGE C(4,2) rails (engine in cubalc_smx / lang_ops_smx).
  * Proof: programs/proof/74_smx_venous_angle.cubalc · 1810_smx_mesh_venous_angle_life.cubalc
- * was: programs/proof/75_smx_venous_angle.cubalc · 1810_smx_mesh_venous_angle_life.cubalc
- * Energy path: thoracic duct terminus → venous angle confluence → subclavian/jugular → systemic return.
+ * Energy path: thoracic duct terminus → left venous angle → subclavian/IJV confluence → systemic return.
  * Pure C. No SYS glue.
  */
 #include <string.h>
