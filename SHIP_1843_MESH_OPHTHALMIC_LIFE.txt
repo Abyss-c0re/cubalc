@@ -1,0 +1,7 @@
+SHIP 1843 SMX_MESH_OPHTHALMIC_LIFE (=MESH_OPHTHALMIC)
+VERSION=1.15.1323-usability
+soft_oob=1 fail_closed=1 bonds=C(4,2)=6
+proofs: 99=60/0 1843=60/0 1620=12/0 PASS
+c_slice=src/cubalc_smx_ophthalmic.c
+feature=MESH_OPHTHALMIC
+branch=ship-1843-ophthalmic
