@@ -9,7 +9,7 @@ extern "C" {
 
 /* Public var-table ceiling (agents: STATUS/VARS/run plate vars_max). */
 #ifndef CUBALC_MAX_VARS
-#define CUBALC_MAX_VARS 1024
+#define CUBALC_MAX_VARS 1536
 #endif
 
 typedef struct cubalc_run_result {

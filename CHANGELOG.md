@@ -1,3 +1,8 @@
+## 1.15.1253-oval-mesh — MEANINGFUL_ITER 1777 OVAL
+- SMX OVAL|OVAL_CELL|HEPATIC_PROGENITOR|CANAL_OF_HERING soft-OOB fail-closed mesh stability life cascade after cholangio
+- proof 1777 asserts_ok:1414 asserts_fail:0; smoke 23/0; flagship 1620 PASS 12/0
+- CUBALC_MAX_VARS 1024→1536 for cascade var-table headroom
+
 ## 1.15.1252-cholangio-mesh — MEANINGFUL_ITER 1776 CHOLANGIO
 - SMX CHOLANGIO|CHOLANGIOCYTE|BILE_DUCT soft-OOB fail-closed mesh stability life cascade after stellate
 - proof 1776 asserts_ok:1393 asserts_fail:0; smoke 23/0; flagship 1620 PASS 12/0
