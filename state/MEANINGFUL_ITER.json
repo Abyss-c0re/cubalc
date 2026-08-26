@@ -32,13 +32,13 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "c_slice": "src/cubalc_smx_venous_angle.c",
-  "sha": "58ce7b710aec02c4ee73261a2fe15421fa89f95f",
-  "head": "58ce7b710aec02c4ee73261a2fe15421fa89f95f",
-  "pinned_head": "58ce7b710aec02c4ee73261a2fe15421fa89f95f",
-  "commit": "58ce7b710aec02c4ee73261a2fe15421fa89f95f",
-  "pin_head": "58ce7b710aec02c4ee73261a2fe15421fa89f95f",
-  "tip": "58ce7b710aec02c4ee73261a2fe15421fa89f95f",
-  "head_short": "58ce7b71",
+  "sha": "cc86d3341ebba675390f581f9316130951abbc1a",
+  "head": "cc86d3341ebba675390f581f9316130951abbc1a",
+  "pinned_head": "cc86d3341ebba675390f581f9316130951abbc1a",
+  "commit": "cc86d3341ebba675390f581f9316130951abbc1a",
+  "pin_head": "cc86d3341ebba675390f581f9316130951abbc1a",
+  "tip": "cc86d3341ebba675390f581f9316130951abbc1a",
+  "head_short": "cc86d334",
   "tip_equals_pin": true,
-  "head_before": "df273ce6"
+  "head_before": "cc86d3341ebba675390f581f9316130951abbc1a"
 }
