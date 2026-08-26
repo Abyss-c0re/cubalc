@@ -2,15 +2,15 @@
   "meaningful_iter": 1838,
   "feature": "SMX_MESH_POSTERIOR_CEREBRAL_LIFE",
   "version": "1.15.1317-usability",
-  "head": "517aa3eef17d99bc759531b19c6b7173a1a2700a",
-  "pin": "517aa3eef17d99bc759531b19c6b7173a1a2700a",
-  "tip": "517aa3eef17d99bc759531b19c6b7173a1a2700a",
-  "pin_head": "517aa3eef17d99bc759531b19c6b7173a1a2700a",
-  "HEAD": "517aa3eef17d99bc759531b19c6b7173a1a2700a",
-  "pinned_head": "517aa3eef17d99bc759531b19c6b7173a1a2700a",
-  "sha": "517aa3eef17d99bc759531b19c6b7173a1a2700a",
-  "pin_short": "517aa3ee",
-  "short": "517aa3ee",
+  "head": "3c361cf7c8994693075ca4eedefe52f1ffe9e637\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nSHIPPED_HEAD.txt\nCUBALC_HEAD_NOW.txt",
+  "pin": "3c361cf7c8994693075ca4eedefe52f1ffe9e637\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nSHIPPED_HEAD.txt\nCUBALC_HEAD_NOW.txt",
+  "tip": "3c361cf7c8994693075ca4eedefe52f1ffe9e637\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nSHIPPED_HEAD.txt\nCUBALC_HEAD_NOW.txt",
+  "pin_head": "3c361cf7c8994693075ca4eedefe52f1ffe9e637\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nSHIPPED_HEAD.txt\nCUBALC_HEAD_NOW.txt",
+  "HEAD": "3c361cf7c8994693075ca4eedefe52f1ffe9e637\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nSHIPPED_HEAD.txt\nCUBALC_HEAD_NOW.txt",
+  "pinned_head": "3c361cf7c8994693075ca4eedefe52f1ffe9e637\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nSHIPPED_HEAD.txt\nCUBALC_HEAD_NOW.txt",
+  "sha": "3c361cf7c8994693075ca4eedefe52f1ffe9e637\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nSHIPPED_HEAD.txt\nCUBALC_HEAD_NOW.txt",
+  "pin_short": "3c361cf7",
+  "short": "3c361cf7",
   "status": "PASS",
   "soft_oob": 1,
   "fail_closed": 1,
@@ -19,14 +19,14 @@
   "tip_equals_pin": true,
   "tip_eq_pin": true,
   "MEANINGFUL_ITER": 1838,
-  "proof_recheck": {
-    "99": "PASS 60/0",
-    "1838": "PASS 60/0",
-    "1620": "PASS 12/0"
-  },
   "FEATURE": "SMX_MESH_POSTERIOR_CEREBRAL_LIFE",
   "iter": 1838,
   "c_slice": "src/cubalc_smx_posterior_cerebral.c",
   "branch": "ship-1838-posterior-cerebral",
-  "mesh": "posterior_cerebral"
+  "mesh": "posterior_cerebral",
+  "proof_recheck": {
+    "99": "PASS 60/0",
+    "1838": "PASS 60/0",
+    "1620": "PASS 12/0"
+  }
 }
