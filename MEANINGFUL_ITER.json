@@ -1,14 +1,14 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1737,
-  "MEANINGFUL_ITER": 1737,
-  "meaningful_iter": 1737,
-  "version": "1.15.1209-usability",
-  "item": "1737 smx mesh homeostasis life cascade",
+  "iter": 1738,
+  "MEANINGFUL_ITER": 1738,
+  "meaningful_iter": 1738,
+  "version": "1.15.1210-usability",
+  "item": "1738 smx mesh ionosphere life cascade",
   "item_id": "mi_1737_smx_mesh_homeostasis_life_cascade",
   "title": "1737 smx mesh homeostasis life cascade",
   "summary": "SMX mesh homeostasis life cascade: soft-OOB fail-closed + LIFE_FORCE + WE_AUTOHEAL + RESILIENCE + THALAMUS + HOMEOSTASIS + STABILIZE + mitosis under free energy PASS (re-verified).",
-  "feature": "MESH_HOMEOSTASIS_LIFE_CASCADE",
+  "feature": "soft-OOB + LIFE_FORCE + WE_AUTOHEAL + RESILIENCE + THALAMUS + HOMEOSTASIS + IONOSPHERE + STABILIZE + mitosis",
   "proofs": [
     "programs/proof/1737_smx_mesh_homeostasis_life_cascade.cubalc",
     "programs/science/integration/atomic_printer_mesh_homeostasis_life.cubalc",
@@ -34,5 +34,7 @@
   "tip": "42f6bc4112944d249094df6a90f055cf73600b4f",
   "HEAD": "42f6bc4112944d249094df6a90f055cf73600b4f",
   "commit": "42f6bc4112944d249094df6a90f055cf73600b4f",
-  "short": "42f6bc41"
+  "short": "42f6bc41",
+  "proof": "programs/science/proof/1738_smx_mesh_ionosphere_life_cascade.cubalc",
+  "flagship": "programs/proof/1620_atomic_printer_life_force.cubalc"
 }
