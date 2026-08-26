@@ -1,3 +1,10 @@
+## 1.15.1303-usability — 1822 SMX MESH_RIGHT_LUNG_HILUM life
+
+- feat(smx): MESH_RIGHT_LUNG_HILUM soft-OOB fail-closed + mesh exchange C(4,2)
+- proof 87_smx_right_lung_hilum + 1822_smx_mesh_right_lung_hilum_life PASS 60/0
+- flagship 1620 PASS 12/0; pure-C src/cubalc_smx_right_lung_hilum.c
+- ENERGYFLOW right PA branch→right lung hilum gate→lobar arteries→segmental arteries→right lung capillary return
+
 ## 1.15.1302-usability — 1821 SMX MESH_RIGHT_PULMONARY_ARTERY life
 
 - feat(smx): MESH_RIGHT_PULMONARY_ARTERY soft-OOB fail-closed + mesh exchange C(4,2)
