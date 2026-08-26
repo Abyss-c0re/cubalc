@@ -1,3 +1,7 @@
+## 1.15.1252-usability — MEANINGFUL_ITER 1775 STELLATE
+- SMX STELLATE|ITO|HSC soft-OOB fail-closed mesh stability life cascade after kupffer
+- proof 1775 asserts_ok:1361 asserts_fail:0; smoke 23/0; flagship 1620 PASS 12/0
+
 ## 1.15.1248-usability — MEANINGFUL_ITER 1771 SINUSOID
 - SMX SINUSOID soft-OOB fail-closed mesh stability life cascade after capillary
 - proof 1771 asserts_ok:1234 asserts_fail:0; flagship 1620 PASS 12/0

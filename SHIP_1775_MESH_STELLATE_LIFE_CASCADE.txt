@@ -1,0 +1,14 @@
+MEANINGFUL_ITER=1775
+FEATURE=MESH_STELLATE
+SLICE=STELLATE soft-OOB mesh stability life-force after kupffer
+PROOF=1775_smx_mesh_stellate_life_cascade.cubalc
+SMOKE=1775_smx_stellate_soft_oob_smoke.cubalc
+ASSERTS_OK=1361
+ASSERTS_FAIL=0
+SMOKE_OK=23
+FLAGSHIP_1620=PASS 12/0
+VERSION=1.15.1251-usability
+STATUS=PASS
+NEXT=we_autoheal
+LATCH=stellate_latch
+MESH=stellate

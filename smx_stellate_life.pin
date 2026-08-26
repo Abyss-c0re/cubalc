@@ -1,1 +1,4 @@
-MESH_STELLATE life cascade PASS 1775 asserts_ok cascade+smoke flagship1620
+MEANINGFUL_ITER=1775
+FEATURE=smx_stellate_mesh_life_cascade
+PROOF=1775_smx_mesh_stellate_life_cascade.cubalc
+STATUS=PASS

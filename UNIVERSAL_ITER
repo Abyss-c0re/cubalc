@@ -1,18 +1,1 @@
-## UNIVERSAL_ITER plate
-
-| field | value |
-|--------|--------|
-| **iter** | 502 |
-| **digit** | **7** (urandom) |
-| **version** | `1.14.17-universal` |
-| **pass/fail** | **489 / 0** (green) |
-| **commit** | `e1378e6` → `origin/main` |
-| **ops** | `SDIV16N` / `SMOD16N` / `SMIN16N` |
-| **proof** | `programs/proof/474_sdiv16n_smin16n.cubalc` |
-
-### Delta
-Digit-7 stack imm halfword-field div/mod/min: complete uint16 field ALU after SADD16N/SSUB16N/SMUL16N; div0/mod0 → 0.
-
-**Status:** 1.14.16→1.14.17-universal; suite green 489/0; push ok.
-1705 SMX_KEEPER mesh+watch+bastion soft-OOB fail-closed
-1769 VENULE soft-OOB mesh life cascade
+1775
