@@ -33,13 +33,13 @@
   "item_id": "mi_1817_smx_mesh_right_ventricle_life",
   "title": "1817 MESH_RIGHT_VENTRICLE soft-OOB mesh exchange life-force",
   "summary": "Right ventricle SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
-  "feat_sha": "5f5e32fadaf5d224887dd6161a57457259ffc576",
-  "pin_sha": "5f5e32fadaf5d224887dd6161a57457259ffc576",
-  "sha": "5f5e32fadaf5d224887dd6161a57457259ffc576",
-  "head": "5f5e32fadaf5d224887dd6161a57457259ffc576",
-  "pinned_head": "5f5e32fadaf5d224887dd6161a57457259ffc576",
-  "commit": "5f5e32fadaf5d224887dd6161a57457259ffc576",
-  "pin_head": "5f5e32fadaf5d224887dd6161a57457259ffc576",
-  "tip": "5f5e32fadaf5d224887dd6161a57457259ffc576",
-  "head_short": "5f5e32fa"
+  "feat_sha": "6bacc4ad79ab3d2049501af0169f2588f03e1783",
+  "pin_sha": "6bacc4ad79ab3d2049501af0169f2588f03e1783",
+  "sha": "6bacc4ad79ab3d2049501af0169f2588f03e1783",
+  "head": "6bacc4ad79ab3d2049501af0169f2588f03e1783",
+  "pinned_head": "6bacc4ad79ab3d2049501af0169f2588f03e1783",
+  "commit": "6bacc4ad79ab3d2049501af0169f2588f03e1783",
+  "pin_head": "6bacc4ad79ab3d2049501af0169f2588f03e1783",
+  "tip": "6bacc4ad79ab3d2049501af0169f2588f03e1783",
+  "head_short": "6bacc4ad"
 }
