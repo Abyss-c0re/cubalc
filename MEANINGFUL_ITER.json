@@ -5,14 +5,13 @@
   "meaningful_iter": 1761,
   "version": "1.15.1236-usability",
   "VERSION": "1.15.1236-usability",
-  "item": "muller glia scaffold life cascade",
+  "item": "muller glia retinal guide life cascade",
   "item_id": "mi_smx_mesh_muller_life_cascade",
-  "title": "muller glia scaffold life cascade",
+  "title": "muller glia retinal guide life cascade",
   "summary": "SMX MULLER soft-OOB fail-closed mesh stability after bergmann; mitosis under free energy; proof 1761 asserts_fail:0.",
   "feature": "MESH_MULLER_LIFE_CASCADE",
   "proofs": [
-    "programs/proof/1761_smx_mesh_muller_life_cascade.cubalc",
-    "programs/science/integration/atomic_printer_mesh_muller_life.cubalc"
+    "programs/proof/1761_smx_mesh_muller_life_cascade.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 930,
@@ -29,11 +28,5 @@
   "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+stabilize+mitosis",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
   "ts": "2026-08-26T09:35:00Z",
-  "verified_at": "2026-08-26T09:35:00Z",
-  "host_finish": false,
-  "head_note": "verified_pass_1761_muller",
-  "prior_head": "0988c1f7",
-  "prior_head_short": "0988c1f7",
-  "head": "f4b02eb2824aa4a8da46e55f2d72ac4ce2be73fc",
-  "head_short": "f4b02eb2"
+  "verified_at": "2026-08-26T09:35:00Z"
 }
