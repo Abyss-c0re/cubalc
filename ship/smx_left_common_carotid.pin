@@ -1,0 +1,4 @@
+MESH_LEFT_COMMON_CAROTID
+1832_smx_mesh_left_common_carotid_life
+soft_oob=fail_closed
+bonds=6
