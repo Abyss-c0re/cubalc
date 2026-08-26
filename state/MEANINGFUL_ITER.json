@@ -47,15 +47,15 @@
     "1833": "PASS 60/0",
     "1620": "PASS 12/0"
   },
-  "pin_head": "bf968c582c583429f44170ae33719bf974b82143",
-  "tip": "bf968c582c583429f44170ae33719bf974b82143",
-  "HEAD": "bf968c582c583429f44170ae33719bf974b82143",
-  "pinned_head": "69414cb13a1683a37898b1c62e7e0902633995f7",
-  "head": "bf968c582c583429f44170ae33719bf974b82143",
-  "sha": "69414cb13a1683a37898b1c62e7e0902633995f7",
-  "pin_short": "69414cb1",
-  "short": "69414cb1",
+  "pin_head": "68cbfee23926c502ac4f892d90298121800af2f2",
+  "tip": "68cbfee23926c502ac4f892d90298121800af2f2",
+  "HEAD": "68cbfee23926c502ac4f892d90298121800af2f2",
+  "pinned_head": "68cbfee23926c502ac4f892d90298121800af2f2",
+  "head": "68cbfee23926c502ac4f892d90298121800af2f2",
+  "sha": "68cbfee23926c502ac4f892d90298121800af2f2",
+  "pin_short": "68cbfee2",
+  "short": "68cbfee2",
   "tip_equals_pin": true,
   "tip_eq_pin": true,
-  "pin": "bf968c582c583429f44170ae33719bf974b82143"
+  "pin": "68cbfee23926c502ac4f892d90298121800af2f2"
 }
