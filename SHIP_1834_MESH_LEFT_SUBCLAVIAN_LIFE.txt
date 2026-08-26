@@ -1,0 +1,5 @@
+SHIP 1834 MESH_LEFT_SUBCLAVIAN
+Soft-OOB fail-closed SMX mesh life-force.
+Energy: aortic arch apex → LSA origin → trunk → axillary → upper limb/vertebral.
+Proofs: 100_smx_left_subclavian.cubalc + 1834_smx_mesh_left_subclavian_life.cubalc
+Pure-C: src/cubalc_smx_left_subclavian.c

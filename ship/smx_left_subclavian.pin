@@ -1,0 +1,8 @@
+feature=MESH_LEFT_SUBCLAVIAN
+ship=1834_smx_mesh_left_subclavian_life
+proof=programs/proof/100_smx_left_subclavian.cubalc
+proof_life=programs/proof/1834_smx_mesh_left_subclavian_life.cubalc
+src=src/cubalc_smx_left_subclavian.c
+soft_oob=fail_closed
+mesh_bonds=6
+landmarks=3

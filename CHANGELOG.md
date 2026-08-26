@@ -1,3 +1,10 @@
+## 1.15.1313-usability — 1834 MESH_LEFT_SUBCLAVIAN
+
+- feat(smx): MESH_LEFT_SUBCLAVIAN soft-OOB fail-closed mesh life-force
+- Energy path: arch apex → LSA origin → trunk → axillary → upper limb/vertebral
+- Proofs: 100_smx_left_subclavian + 1834_smx_mesh_left_subclavian_life (60/0)
+- Flagship 1620 PASS 12/0
+
 ## 1833 — MESH_LEFT_COMMON_CAROTID soft-OOB mesh life-force
 
 - feat(smx): left common carotid conduit mesh soft-OOB fail-closed + MESH_EXCHANGE C(4,2)
