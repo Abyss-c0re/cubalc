@@ -29,10 +29,10 @@
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
-  "pin_head": "79a1ebbbfd41260ca801cde70d6eca5cfddcf4ea",
-  "tip": "79a1ebbbfd41260ca801cde70d6eca5cfddcf4ea",
-  "HEAD": "79a1ebbbfd41260ca801cde70d6eca5cfddcf4ea",
-  "commit": "79a1ebbbfd41260ca801cde70d6eca5cfddcf4ea",
-  "sha": "79a1ebbbfd41260ca801cde70d6eca5cfddcf4ea",
-  "short": "79a1ebbb"
+  "pin_head": "01604a38a6e961d0af2a1cfb1a1bda6ce9aa76f3",
+  "tip": "01604a38a6e961d0af2a1cfb1a1bda6ce9aa76f3",
+  "HEAD": "01604a38a6e961d0af2a1cfb1a1bda6ce9aa76f3",
+  "commit": "01604a38a6e961d0af2a1cfb1a1bda6ce9aa76f3",
+  "sha": "01604a38a6e961d0af2a1cfb1a1bda6ce9aa76f3",
+  "short": "01604a38"
 }
