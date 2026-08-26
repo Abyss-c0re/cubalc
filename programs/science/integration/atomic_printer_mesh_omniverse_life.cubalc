@@ -1,0 +1,254 @@
+// atomic_printer_mesh_omniverse_life.cubalc
+// Life-force gift: MESH-OMNIVERSE-LIFE — complete balance mesh + directed feedback ring + setpoint hub root after soft-OOB storms.
+// SMX OMNIVERSE|OMNI|BUBBLE|GALAXYGROUP|GROUP|MESH_OMNIVERSE|RAISE_OMNIVERSE clears thrash, every live pair exchanges
+// both ways (C(n,2)), then allpath ring settles so lattice raises a omniverse; latches SMX_OMNIVERSED|SMX_OMNI|SMX_TOTALVERSE|SMX_OMNIS.
+// Soft-OOB ghosts stay fail-closed. Mitosis under free energy while mesh is omniversed;
+// RECOVER restores vital/key; dual SEAL/OPEN rails BN+HS rebind hive; second storm fail-closed.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_omniverse_life | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Storm A/B soft-OOB thrash — no ghost place
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+// Storm then OMNIVERSE latch — five live nodes root as complete solar mesh + shell-hub
+SMX OMNIVERSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "omniverse live"
+ASSERT SMX_OMNIVERSED == 1 "omniversed latch on"
+ASSERT SMX_OMNI == 1 "mverse latch on"
+ASSERT SMX_TOTALVERSE == 1 "totalverse latch on"
+ASSERT SMX_EXCHANGES == 10 "ten bank exchanges"
+ASSERT SMX_BONDS == 10 "ten undirected links (C(5,2))"
+ASSERT SMX_OMNIS == 10 "ten mverses"
+ASSERT SMX_MESH == 5 "five mesh"
+ASSERT SMX_BONDS == 10 "ten bonds"
+ASSERT SMX_NEXUSES == 5 "five nexuss"
+ASSERT SMX_ALLPATHS == 5 "allpath ring sticky"
+ASSERT SMX_ALLPATHS == 5 "five allpath ring steps"
+ASSERT SMX_OMNIVERSE == 20 "omniverse bonds+allpaths+nexuss"
+ASSERT SMX_FUSE == 10 "ten fuse"
+ASSERT SMX_BIND == 10 "ten bind"
+ASSERT SMX_TONE == 5 "five tones"
+ASSERT SMX_PULSE == 20 "pulse bonds+allpaths+nexuss"
+ASSERT SMX_BREATH == 5 "five live breath"
+ASSERT SMX_OOB == 0 "oob cleared by omniverse"
+ASSERT SMX_LIVE == 5 "five live"
+ASSERT SMX_NODES == 5 "five named"
+ASSERT SMX_TALKS >= 40 "talks after omniverse (mesh + allpaths + nexuss)"
+ASSERT SMX_VITAL >= 14 "vital after omniverse"
+ASSERT CUBES == base_cubes "omniverse invents nothing"
+
+// Alias OMNI form still pure
+SMX OMNI bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mverse rebind"
+ASSERT SMX_OMNIVERSED == 1 "omniversed sticky"
+ASSERT SMX_BONDS == 10 "bonds sticky"
+ASSERT SMX_NEXUSES == 5 "nexuss sticky"
+ASSERT SMX_BONDS == 10 "bonds sticky"
+
+// Alias WINDS form
+SMX VERSEPATHS bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mverse rebind"
+ASSERT SMX_OMNIVERSED == 1 "plate omniversed"
+ASSERT SMX_ALLPATHS == 5 "allpaths sticky"
+
+// Mitosis under free energy while the mesh is omniversed
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  SEND seed tick
+  SEND d1 tick
+  SEND d2 tick
+  LET step = step + 1
+END
+
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = 1
+IF a1 == 1 THEN
+  LET pop = pop + 1
+END
+IF a2 == 1 THEN
+  LET pop = pop + 1
+END
+ASSERT births >= 1 "mitosis under omniverse"
+ASSERT pop >= 2 "population after omniversed life"
+ASSERT CUBES == base_cubes "life invents no cubes"
+
+// Soft-OOB ghost in omniverse — fail-closed, no thrash place
+SMX OMNIVERSE bed nozzle ghost_x hive scrap
+ASSERT SMX_OOB >= 1 "omniverse soft-OOB"
+ASSERT SMX_BREATH == 4 "four live of five named"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds among live"
+ASSERT SMX_TONE == 4 "four tones among live"
+ASSERT SMX_OMNIVERSED == 0 "ghost blocks full omniverse (partial ok)"
+ASSERT SMX_MESH == 0 "mesh zero when not full"
+ASSERT SMX_NEXUSES == 0 "nexuss zero when not full"
+ASSERT SMX_BONDS == 6 "six bonds among live"
+ASSERT SMX_OK == 1 "partial still ok"
+ASSERT CUBES == base_cubes "no ghost from omniverse"
+
+SMX RECOVER
+ASSERT SMX_OK == 1 "recover after omniverse oob"
+ASSERT SMX_OOB == 0 "oob cleared"
+ASSERT SMX_KEY_OK == 1 "key sticky"
+ASSERT SMX_VITAL >= 6 "vital after recover"
+
+// Pure mesh bind after recover
+SMX MESH_OMNIVERSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mesh_omniverse_life pure"
+ASSERT SMX_OMNIVERSED == 1 "omniversed after recover"
+ASSERT SMX_BONDS == 10 "bonds after recover"
+ASSERT SMX_NEXUSES == 5 "nexuss after recover"
+ASSERT SMX_BONDS == 10 "bonds after recover"
+ASSERT SMX_ALLPATHS == 5 "allpaths after recover"
+ASSERT SMX_ALLPATHS == 5 "allpaths after recover"
+ASSERT SMX_MESH == 5 "mesh after recover"
+ASSERT SMX_TONE == 5 "tone after recover"
+ASSERT CUBES == base_cubes "bind invents nothing"
+
+// Dual SEAL/OPEN rails under omniversed orbit
+SMX SEAL bed nozzle "state/smx_omniverse/rail_bn.cblc"
+ASSERT SMX_OK == 1 "seal rail BN"
+ASSERT SMX_N > 64 "rail BN frame"
+SMX OPEN hive "state/smx_omniverse/rail_bn.cblc"
+ASSERT SMX_OK == 1 "open BN onto hive"
+
+SMX SEAL hive scrap "state/smx_omniverse/rail_hs.cblc"
+ASSERT SMX_OK == 1 "seal rail HS"
+SMX OPEN pulse "state/smx_omniverse/rail_hs.cblc"
+ASSERT SMX_OK == 1 "open HS onto pulse"
+ASSERT CUBES == base_cubes "rails invent nothing"
+
+// Final omniverse lock + vitals
+SMX OMNIVERSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "final omniverse lock"
+ASSERT SMX_OMNIVERSED == 1 "final omniversed"
+ASSERT SMX_BONDS == 10 "final bonds"
+ASSERT SMX_MESH == 5 "final mesh"
+ASSERT SMX_NEXUSES == 5 "final nexuss"
+ASSERT SMX_BONDS == 10 "final bonds"
+ASSERT SMX_ALLPATHS == 5 "final allpaths"
+ASSERT SMX_ALLPATHS == 5 "final allpaths"
+SMX VITAL
+SMX STATUS
+ASSERT SMX_OK == 1 "vital after omniverse"
+ASSERT SMX_KEY_OK == 1 "key after omniverse"
+ASSERT SMX_VITAL >= 6 "vital holds"
+ASSERT SMX_OOB == 0 "no oob after omniverse"
+ASSERT SMX_HOLD == 1 "hold_flash sticky"
+
+// Second storm fail-closed
+SMX EXCHANGE hive offworld_storm
+ASSERT SMX_OK == 0 "storm soft-OOB"
+ASSERT SMX_OOB >= 1 "storm counted"
+ASSERT CUBES == base_cubes "storm invents nothing"
+SMX RAISE_OMNIVERSE bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "nexuss after storm"
+ASSERT SMX_OOB == 0 "storm cleared by omniverse"
+ASSERT SMX_BREATH == 5 "omniversed holds after storm"
+ASSERT SMX_OMNIVERSED == 1 "omniversed after storm"
+ASSERT SMX_BONDS == 10 "bonds after storm"
+ASSERT SMX_MESH == 5 "mesh after storm"
+ASSERT SMX_NEXUSES == 5 "nexuss after storm"
+ASSERT SMX_BONDS == 10 "bonds after storm"
+ASSERT SMX_ALLPATHS == 5 "allpaths after storm"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy after omniverse"
+ASSERT UNITY >= 40 "mesh unity after omniverse"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+ASSERT births >= 1 "mitosis before mesh omniverse"
+ASSERT pop >= 2 "population after omniversed life"
+ASSERT SMX_OMNIVERSED == 1 "omniversed latch holds"
+ASSERT SMX_BREATH == 5 "five-node tone"
+ASSERT SMX_MESH == 5 "five mesh holds"
+ASSERT SMX_NEXUSES == 5 "five nexuss hold"
+ASSERT SMX_OOB == 0 "guard holds through omniverse"
+ASSERT OK == 1
+
+PRINT "mesh_omniverse_life" births pop SMX_OMNIVERSED SMX_MESH SMX_NEXUSES SMX_BONDS SMX_ALLPATHS SMX_OMNIVERSE SMX_ALLPATH SMX_OMNI SMX_BONDS SMX_FUSE SMX_BIND SMX_TONE SMX_PULSE SMX_BREATH SMX_NODES SMX_VITAL SMX_TALKS SMX_OOB SMX_OK ENERGY UNITY DECIDE base_cubes CUBES
+
+PASS
