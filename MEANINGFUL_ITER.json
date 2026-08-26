@@ -29,10 +29,10 @@
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
-  "pin_head": "PENDING",
-  "tip": "PENDING",
-  "HEAD": "PENDING",
-  "head_short": "PENDING",
-  "feat_head": "PENDING",
-  "feat_subject": "feat(smx): left common carotid mesh soft-OOB life-force seal"
+  "pin_head": "d9b39fc76dd37f231722946abd0fb9a559cfc267",
+  "tip": "d9b39fc76dd37f231722946abd0fb9a559cfc267",
+  "HEAD": "d9b39fc76dd37f231722946abd0fb9a559cfc267",
+  "head_short": "d9b39fc7",
+  "feat_head": "d9b39fc76dd37f231722946abd0fb9a559cfc267",
+  "feat_subject": "feat(smx): 1833 MESH_LEFT_COMMON_CAROTID soft-OOB mesh life-force"
 }
