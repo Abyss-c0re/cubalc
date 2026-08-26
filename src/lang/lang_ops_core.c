@@ -5535,6 +5535,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"SMX EXCHANGE", "SMX EXCHANGE a b — bidirectional TALK"},
       {"SMX SERVE", "SMX SERVE local remote host:port · CUBALC_P2P_TIMEOUT"},
       {"SMX DIAL", "SMX DIAL local remote host:port · CUBALC_P2P_SOFT soft-fail"},
+      {"SMX OVAL", "SMX OVAL|PROGENITOR|HPC a b c d — canal-of-Hering bipotent progenitor mesh · soft-OOB fail-closed"},
+      {"SMX PROGENITOR", "SMX PROGENITOR alias of SMX OVAL · hepatic progenitor plate"},
       {"HARMONY", "HARMONY [target] — hive consensus + unity"},
       {"RESOLVE", "RESOLVE [target] — harmony + decide + energy"},
       {"COMPARE", "COMPARE a b — Hamming / unity"},

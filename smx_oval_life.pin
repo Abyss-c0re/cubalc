@@ -1,0 +1,10 @@
+OVAL
+SHIP 1781 SMX mesh oval life-force + OVAL/PROGENITOR/HPC
+- ops: SMX LIFE_FORCE + SINUSOID + DISSE + HEPATOCYTE + KUPFFER + STELLATE + OVAL + STABILIZE + WE_AUTOHEAL + RESILIENCE
+- proof: programs/proof/1781_smx_mesh_oval_life_force.cubalc
+- cascade: programs/science/proof/1781_smx_mesh_oval_life_cascade.cubalc
+- flagship: programs/proof/1620_atomic_printer_life_force.cubalc
+- science: soft-OOB fail-closed storms, canal-of-Hering bipotent hepatic-progenitor bed after Ito stellate, stabilize latch, mitosis under lock
+- no C duals; pure life-force usability
+- law: free_energy_must_flow; soft_oob fail-closed
+- version: 1.15.1259-usability MEANINGFUL_ITER=1781
