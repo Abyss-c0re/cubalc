@@ -5,9 +5,14 @@
   "asserts_ok": 955,
   "asserts_fail": 0,
   "flagship_1620": "PASS",
-  "VERSION": "1.15.1237-usability",
+  "VERSION": "1.15.1238-usability",
   "HEAD_note": "pin after ship",
   "ts": 1787726941,
-  "head": "8e1140c6e959c5c3db26a1da98fa35382adc2c05",
-  "head_short": "8e1140c6"
+  "head": "aa56fd1b91bca5ab8d6c2431b231b73ccae97524",
+  "head_short": "aa56fd1b",
+  "version": "1.15.1238-usability",
+  "flagship_1620_asserts_ok": 12,
+  "flagship_1620_asserts_fail": 0,
+  "proof_status": "PASS",
+  "sealed": true
 }
