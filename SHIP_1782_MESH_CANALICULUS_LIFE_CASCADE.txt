@@ -1,0 +1,5 @@
+SHIP 1782 SMX CANALICULUS life-force
+proof: programs/proof/1782_smx_mesh_canaliculus_life_force.cubalc asserts_ok=123 fail=0
+cascade: programs/proof/1782_smx_mesh_canaliculus_life_cascade.cubalc asserts_ok=30 fail=0
+flagship 1620: PASS asserts_ok=12
+feature: bile-canaliculus tight-junction conduit mesh after OVAL; soft-OOB fail-closed

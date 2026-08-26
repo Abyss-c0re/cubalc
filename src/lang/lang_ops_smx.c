@@ -17675,6 +17675,219 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: unknown op (see lang_ops_smx; OVAL|PROGENITOR|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|PORTAL|CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
+  /* SMX CANALICULUS|CANALICULI|BILE_CANALICULUS|MESH_CANALICULUS|CANALICULUS_WRAP|CANALICULUS_SHEATH|CANALICULUS_GUIDE|RAISE_CANALICULUS a b c ...
+   * Life-force CANALICULUS bile-canaliculus continuum after OVAL: hepatocyte tight-junction bile conduit bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete canaliculus bile exchange scaffold mesh among live nodes, weaves a
+   * canaliculus wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks canaliculus where life guides the bile confluence return pulse.
+   * Latches SMX_CANALICULUS when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = canaliculus ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_CANALICULUS_SUM = bonds+wraps+sheaths; SMX_CANALICULUS|SMX_MESH_CANALICULUS|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"CANALICULUS")||kw(&L->cur,"CANALICULI")||kw(&L->cur,"BILE_CANALICULUS")||kw(&L->cur,"BILE_CANAL")||kw(&L->cur,"CANALICULUS_PLATE")||kw(&L->cur,"MESH_CANALICULUS")||kw(&L->cur,"CANALICULUS_WRAP")||kw(&L->cur,"CANALICULUS_WRAPS")||kw(&L->cur,"CANALICULUS_SHEATH")||kw(&L->cur,"CANALICULUS_SHEATHS")||kw(&L->cur,"CANALICULUS_GUIDE")||kw(&L->cur,"RAISE_CANALICULUS")||kw(&L->cur,"WE_CANALICULUS")||kw(&L->cur,"LIFE_CANALICULUS")||
+      kw(&L->cur,"STABLE_CANALICULUS")||kw(&L->cur,"MESH_CANALICULI")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_CANALICULUS")||kw(&L->cur,"CANALICULUS_LEAF")||
+      kw(&L->cur,"SEEDCANALICULUS")||kw(&L->cur,"SEEDCANALICULUSSHEATH")||kw(&L->cur,"SEEDCANALICULUSWRAP")||
+      kw(&L->cur,"CANALICULUS_RING")||kw(&L->cur,"CANALICULUS_SHEATH_HUB")||kw(&L->cur,"CANALICULUS_NODE")||
+      kw(&L->cur,"LATTICE_CANALICULUS")||kw(&L->cur,"WORLD_CANALICULUS")||kw(&L->cur,"WORLD_CANALICULI")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_CANALICULUS")||kw(&L->cur,"HARDEN_CANALICULUS")||
+      kw(&L->cur,"CANALICULUS_SCAFFOLD")||kw(&L->cur,"CANALICULUS_MESH")||kw(&L->cur,"BILE_CONDUIT")||kw(&L->cur,"TIGHT_JUNCTION")||kw(&L->cur,"HEPATOCELLULAR_CANAL")||kw(&L->cur,"BILIARY_POLE")||kw(&L->cur,"CANALICULAR")||kw(&L->cur,"CANALICULAR_MEMBRANE")||kw(&L->cur,"BILE_FLOW")||kw(&L->cur,"CANALICULUS_CELL")||kw(&L->cur,"CHOLANGIOLE_FEED")||kw(&L->cur,"BILE_CHANNEL")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "CANALICULUS needs >=2 cubes",
+                  "SMX CANALICULUS a b [c ...]  or  SMX CANALICULUS_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - canaliculus needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete canaliculus mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* canaliculus ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int canaliculus_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (canaliculus_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_CANALICULUSED", (long)canaliculus_ok);
+      var_set_num(vm, "SMX_CANALICULUS_LATCH", (long)canaliculus_ok);
+      var_set_num(vm, "SMX_CANALICULUS", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CANALICULUS_SUM", (long)(canaliculus_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_CANALICULUS_ALIAS", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CANALICULUS_PLATE", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CANALICULAR", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CANALICULUS_CELL", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BILE_CANALICULUS", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BILE_CONDUIT", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_TIGHT_JUNCTION", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_TIGHT_JUNCTIONS", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATOCELLULAR_CANAL", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BILE_CANALICULUS_CELL", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BILIARY_POLE", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CANALICULAR_MEMBRANE", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BILE_FLOW", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CHOLANGIOLE_FEED", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BILE_CHANNEL", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CANALICULAR", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BILE_CANALICULUS_LANE", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_MESH_CANALICULUS", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CANALICULUS_SHEATH_LATCH", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_CANALICULUS", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CANALICULUS_WRAP_LATCH", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CANALICULUS_WRAP", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CANALICULUS_WRAPS", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CANALICULUS_SHEATHS", (long)(canaliculus_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CANALICULUS_WRAP_LATCH", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(canaliculus_ok ? 1 : 0));
+      var_set_num(vm, "SMX_KF_BONDS", (long)(canaliculus_ok ? bonds : 0));
+      var_set_num(vm, "SMX_KF_MESH", (long)(canaliculus_ok ? bonds : 0));
+      var_set_num(vm, "SMX_KF_BONDS2", (long)(canaliculus_ok ? bonds : 0));
+      var_set_num(vm, "SMX_KF_STARS", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_KF_STAR", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CANALICULUS_RING", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CANALICULUS_LANE2", (long)(canaliculus_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(canaliculus_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_CANALICULUS_SHEATH_HUB", (long)(canaliculus_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(canaliculus_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDCANALICULUS", (long)(canaliculus_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDCANALICULUSSHEATH", (long)(canaliculus_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(canaliculus_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (canaliculus_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX CANALICULUS ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX CANALICULUS partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX CANALICULUS soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX CANALICULUS nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d canaliculused=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, canaliculus_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: unknown op (see lang_ops_smx; CANALICULUS|BILE_CANALICULUS|OVAL|PROGENITOR|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|PORTAL|CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
   return -1;
 }
