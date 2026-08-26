@@ -17,8 +17,8 @@
   "flagship_1620_ok": 12,
   "notes": "major duodenal papilla board: soft-OOB fail-closed; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW/FLOW papilla free-energy release gate; WE_AUTOHEAL; mitosis under locked rails; second storm re-stabilizes; no IF*P duals",
   "note": "SMX mesh major papilla life-force for atomic printer spine",
-  "sha": "83fefc5a436f0d01ea78e9fa4155401b90423e62",
-  "head": "83fefc5a436f0d01ea78e9fa4155401b90423e62",
-  "pinned_head": "83fefc5a436f0d01ea78e9fa4155401b90423e62",
+  "sha": "ed254c7bcedc317ae77559ca859fd9857e167543",
+  "head": "ed254c7bcedc317ae77559ca859fd9857e167543",
+  "pinned_head": "ed254c7bcedc317ae77559ca859fd9857e167543",
   "ts": 1787755260
 }
