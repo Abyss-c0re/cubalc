@@ -3,8 +3,8 @@
   "iter": 1762,
   "MEANINGFUL_ITER": 1762,
   "meaningful_iter": 1762,
-  "version": "1.15.1238-usability",
-  "VERSION": "1.15.1238-usability",
+  "version": "1.15.1237-usability",
+  "VERSION": "1.15.1237-usability",
   "item": "tanycyte ventricle guide life cascade",
   "item_id": "mi_smx_mesh_tanycyte_life_cascade",
   "title": "tanycyte ventricle guide life cascade",
@@ -25,9 +25,10 @@
   "past": 1761,
   "sealed": true,
   "soft_oob": "fail-closed",
-  "prior_head": "0a0224f9",
-  "head": "7e4cbf2d4c6431642c5f47e3fd8614695e6fd88b",
-  "head_short": "7e4cbf2d",
-  "ts": "2026-08-26T06:50:44Z",
-  "verified_at": "2026-08-26T06:50:44Z"
+  "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+tanycyte+stabilize+mitosis",
+  "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
+  "ts": "2026-08-26T06:50:45Z",
+  "verified_at": "2026-08-26T06:50:45Z",
+  "head": "358efe5f8da9f411092c6c4d77bac83a0d00ccbe",
+  "head_short": "358efe5f"
 }
