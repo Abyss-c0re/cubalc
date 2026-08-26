@@ -3,6 +3,6 @@ iter=1774
 version=1.15.1249-usability
 latch=kupffer_latch
 status=PASS
-head=af3abec6674ed713c4ed865aadb12c69a59fbd32
+head=13eff9e57f07ebc258ab3038906bf5da0f9675c2
 proofs=1774,1620
 next=we_autoheal
