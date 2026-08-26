@@ -2,7 +2,7 @@
 // MESH_LEFT_VENTRICLE — SMX mesh stability life-force for left ventricle chamber board.
 // Soft-OOB storms fail-closed (never ghost-place); MESH_EXCHANGE roots C(4,2) mind mesh;
 // STABILIZE hardens; ENERGYFLOW + FLOW drive left-ventricle free-energy return
-// (mitral inflow gate → LV mid-cavity → left ventricle chamber → LV outflow tract → aortic valve approach)
+// (mitral leaflet coaptation → left ventricle inflow gate → left ventricle chamber → left ventricular apex → aortic outflow approach)
 // WE_AUTOHEAL; mitosis under locked rails; second storm re-stabilizes.
 // Wonder AGI can RUN. No dual ladders. Cube is SoT · matrix is key · free energy must flow.
 // Pure-C SMX engine; proof-only CubalC surface.
@@ -38,7 +38,7 @@ PLUG bed seed
 
 IMPULSE bed 1
 IMPULSE nozzle 1
-// left-ventricle free-energy charge: mitral inflow gate → LV mid-cavity → left ventricle chamber → LV outflow tract → aortic valve approach
+// left-ventricle free-energy charge: mitral leaflet coaptation → left ventricle inflow gate → left ventricle chamber → left ventricular apex → aortic outflow approach
 ENERGYFLOW 5
 FLOW 4
 
@@ -62,7 +62,7 @@ ASSERT SMX_OK == 0 "storm-C soft-OOB"
 ASSERT SMX_OOB >= 3 "oob C depth"
 ASSERT CUBES == base_cubes "no ghost from storm-C"
 
-// --- MESH_EXCHANGE roots complete mitral mind mesh among live printer spine ---
+// --- MESH_EXCHANGE roots complete left-ventricle mind mesh among live printer spine ---
 SMX MESH_EXCHANGE bed nozzle hive scrap
 ASSERT SMX_OK == 1 "mesh_exchange live"
 ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange latch"
@@ -72,7 +72,7 @@ ASSERT SMX_OOB == 0 "oob cleared by mesh_exchange"
 ASSERT SMX_LIVE == 4 "four live after mesh_exchange"
 ASSERT CUBES == base_cubes "mesh_exchange invents nothing"
 
-// --- STABILIZE hardens mitral left ventricle chamber / LV outflow tract seal ---
+// --- STABILIZE hardens left ventricle chamber / LV outflow tract seal ---
 SMX STABILIZE bed nozzle hive scrap
 ASSERT SMX_OK == 1 "stabilize live"
 ASSERT SMX_STABLE == 1 "stable latch"
@@ -87,10 +87,10 @@ IMPULSE nozzle 2
 IMPULSE hive 1
 ENERGYFLOW 4
 FLOW 3
-ASSERT ENERGY >= 0 "mitral energy non-negative"
-ASSERT CUBES == base_cubes "left ventricle gate invents no cubes"
+ASSERT ENERGY >= 0 "left-ventricle energy non-negative"
+ASSERT CUBES == base_cubes "left-ventricle gate invents no cubes"
 
-// live mesh talk after left ventricle pulse (left atrium → LV mid-cavity → orifice)
+// live mesh talk after left-ventricle pulse (inflow gate → chamber → apex → outflow)
 SMX EXCHANGE bed nozzle
 ASSERT SMX_OK == 1 "live exchange after confluence pulse"
 ASSERT SMX_OOB == 0 "no oob on live talk"
@@ -99,7 +99,7 @@ SMX EXCHANGE nozzle hive
 ASSERT SMX_OK == 1 "branch talk live"
 ASSERT SMX_OOB == 0 "no oob bifurcation"
 
-// Autoheal under stable left ventricle mesh (left ventricle chamber resilience)
+// Autoheal under stable left-ventricle mesh (chamber life-force resilience)
 SMX WE_AUTOHEAL bed nozzle hive scrap
 ASSERT SMX_OK == 1 "autoheal live"
 ASSERT SMX_AUTOHEALED == 1 "autohealed latch"
@@ -136,7 +136,7 @@ SEND seed after_div
 PLUG bed d1
 GETF d1 alive
 LET a1 = LAST_N
-ASSERT a1 == 1 "first mitosis under left ventricle mesh"
+ASSERT a1 == 1 "first mitosis under left-ventricle mesh"
 
 GETF seed energy
 LET e1 = LAST_N
@@ -155,9 +155,9 @@ SEND seed after_div
 PLUG bed d2
 GETF d2 alive
 LET a2 = LAST_N
-ASSERT a2 == 1 "second mitosis under left ventricle mesh"
+ASSERT a2 == 1 "second mitosis under left-ventricle mesh"
 ASSERT ENERGY > 0 "energy remains after mitosis"
-ASSERT a0 + a1 + a2 >= 3 "population grew under left ventricle mesh"
+ASSERT a0 + a1 + a2 >= 3 "population grew under left-ventricle mesh"
 
 // --- Second storm fail-closed + re-stabilize (no thrash) ---
 SMX TALK bed ghost_again
@@ -181,7 +181,7 @@ ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange sticky through mitosis+storm"
 ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky through mitosis+storm"
 ASSERT SMX_AUTOHEALED == 1 "autohealed sticky through storm2"
 
-// final left-ventricle energy breath through confluence→veins→left atrium inflow→chamber fill→aortic valve approach
+// final left-ventricle energy breath through mitral leaflet coaptation→inflow gate→chamber→apex→aortic outflow approach
 ENERGYFLOW 1
 FLOW 1
 ASSERT ENERGY > 0 "final energy flows"
