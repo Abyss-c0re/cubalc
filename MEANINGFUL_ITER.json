@@ -9,7 +9,7 @@
   "item_id": "mi_smx_mesh_folliculo_life_cascade",
   "title": "folliculo folliculostellate glia scaffold life cascade",
   "summary": "SMX FOLLICULO soft-OOB fail-closed mesh stability after pituicyte; mitosis under free energy; proof 1764 asserts_fail:0.",
-  "feature": "MESH_FOLLICULO_LIFE_CASCADE",
+  "feature": "SMX FOLLICULO mesh life cascade",
   "proofs": [
     "programs/proof/1764_smx_mesh_folliculo_life_cascade.cubalc",
     "programs/science/integration/atomic_printer_mesh_folliculo_life.cubalc"
@@ -34,6 +34,8 @@
   "head_note": "verified_pass_1764_folliculo",
   "prior_head": "b0931e01",
   "prior_head_short": "b0931e01",
-  "head": "a7de0dba65d859fae26779f2ee702619b490303f",
-  "head_short": "a7de0dba"
+  "head": "fb55d45073640c2b6406944f84f7ea347f443d4a",
+  "head_short": "a7de0dba",
+  "proof": "programs/proof/1764_smx_mesh_folliculo_life_cascade.cubalc",
+  "updated": 1787730223
 }
