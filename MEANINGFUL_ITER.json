@@ -15,15 +15,23 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "ISQRTN|SQRTN|IROOT2N floor integer square root pure-C usability; binary-search; soft-neg; GETFLAGN geometry",
-  "note": "ISQRTN pure-C floor integer square root usability form",
+  "notes": "ISQRTN|SQRTN|IROOT2N|FLOORSQRTN|INTSQRTN|ROOT2N floor integer square root \u2192 LAST_N; binary-search; soft LAST_N=0 + LAST_ERR on negative; ISQRTN_OK/ISQRTN_X; GETFLAGN pipeline; pure-C no SYS glue",
+  "note": "ISQRTN floor integer square root usability form",
   "item": "1805 isqrtn",
   "item_id": "mi_1805_isqrtn",
-  "title": "1805 isqrtn",
-  "summary": "Floor integer square root usability form without SYS glue.",
+  "title": "1805 isqrtn floor integer square root",
+  "summary": "Pure-C ISQRTN floor integer square root after GETFLAGN without shell glue.",
   "proofs": [
     "programs/proof/1802_isqrtn.cubalc"
   ],
   "host_finish": true,
-  "status": "PASS"
+  "status": "PASS",
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "sha": "2482f1c145228700337c6cba2e52de107dc05ec7",
+  "head": "2482f1c145228700337c6cba2e52de107dc05ec7",
+  "pinned_head": "2482f1c145228700337c6cba2e52de107dc05ec7",
+  "head_short": "2482f1c1",
+  "commit": "2482f1c145228700337c6cba2e52de107dc05ec7",
+  "tip_equals_pin": true
 }
