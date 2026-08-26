@@ -16,5 +16,11 @@
   "note": "DIVFLOORN usability \u2014 bucket/index floor without shell glue",
   "slice": "DIVFLOORN|TRUEFLOORN|FLOORDIVN|BUCKETN|BININDEXN|IDIVFLOOR",
   "status": "PASS",
-  "ts": 1787753483
+  "ts": 1787753498,
+  "head": "2df8aac028b6b0121b377f660c652c71fde0343f",
+  "sha": "2df8aac028b6b0121b377f660c652c71fde0343f",
+  "pinned_head": "2df8aac028b6b0121b377f660c652c71fde0343f",
+  "head_short": "2df8aac0",
+  "flagship_ok": 12,
+  "flagship_fail": 0
 }
