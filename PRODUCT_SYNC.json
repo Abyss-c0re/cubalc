@@ -17,7 +17,7 @@
   "ok": true,
   "meaningful_iter": 1762,
   "feature": "MESH_TANYCYTE_LIFE_CASCADE",
-  "ts": 1787726997,
+  "ts": 1787727006,
   "proof_status": "PASS",
   "asserts_ok": 955,
   "MEANINGFUL_ITER": 1762,
@@ -28,5 +28,7 @@
   "HEAD": "89cffb69b058c9dad73080c556c75d9b8e80c2f3",
   "HEAD_SHORT": "89cffb69",
   "next": "we_autoheal",
-  "risk": "low"
+  "risk": "low",
+  "head": "82a0b18eb3b35f4fa397972d374ef526d11c127d",
+  "head_short": "82a0b18e"
 }
