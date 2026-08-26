@@ -1,0 +1,16 @@
+MEANINGFUL_ITER=1822
+FEATURE=SMX_MESH_RIGHT_LUNG_HILUM_LIFE
+PROOF=programs/proof/87_smx_right_lung_hilum.cubalc
+PROOF_ALT=programs/proof/1822_smx_mesh_right_lung_hilum_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_ASSERTS_OK=12
+VERSION=1.15.1303-usability
+NOTE=MESH_RIGHT_LUNG_HILUM soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right PA branch→right lung hilum gate→right lung lobar arteries→segmental arteries→right lung capillary return; WE_AUTOHEAL; pure-C cubalc_smx_right_lung_hilum.c
+C_SLICE=src/cubalc_smx_right_lung_hilum.c
+SOFT_OOB=1
+FAIL_CLOSED=1
+UNITY=1.0
+NEXT=we_autoheal

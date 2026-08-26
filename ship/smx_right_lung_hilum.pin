@@ -1,0 +1,4 @@
+MESH_RIGHT_LUNG_HILUM
+soft_oob=fail_closed
+bonds=C(4,2)=6
+ship=1822
