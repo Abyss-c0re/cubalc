@@ -28,5 +28,9 @@
   "ts": "2026-08-26T02:07:58Z",
   "verified_at": "2026-08-26T02:07:58Z",
   "host_finish": true,
-  "head_note": "verified_pass_1741_advances_past_b8cfdfc4"
+  "head_note": "verified_pass_1741_feat_17dadfd0_advances_past_b8cfdfc4",
+  "pin_head": "17dadfd04a6c072fcc7fc1c2988fe93edc849097",
+  "feat_head": "17dadfd04a6c072fcc7fc1c2988fe93edc849097",
+  "HEAD": "17dadfd04a6c072fcc7fc1c2988fe93edc849097",
+  "tip": "17dadfd04a6c072fcc7fc1c2988fe93edc849097"
 }
