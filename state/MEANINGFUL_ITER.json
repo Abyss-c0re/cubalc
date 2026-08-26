@@ -29,5 +29,10 @@
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
-  "feat_subject": "feat(smx): mesh ACA life soft-OOB stability (MEANINGFUL_ITER 1840)"
+  "feat_subject": "feat(smx): mesh ACA life soft-OOB stability (MEANINGFUL_ITER 1840)",
+  "pin_head": "32b1990c69aa460f29f26e3dd79a60cdc3f3f864",
+  "tip": "32b1990c69aa460f29f26e3dd79a60cdc3f3f864",
+  "HEAD": "32b1990c69aa460f29f26e3dd79a60cdc3f3f864",
+  "head_short": "32b1990c",
+  "feat_head": "32b1990c69aa460f29f26e3dd79a60cdc3f3f864"
 }
