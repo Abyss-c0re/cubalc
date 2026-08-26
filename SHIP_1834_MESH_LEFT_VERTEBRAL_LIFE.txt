@@ -1,0 +1,8 @@
+SHIP 1834 MESH_LEFT_VERTEBRAL_LIFE
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force left vertebral conduit
+c_slice: src/cubalc_smx_left_vertebral.c
+proof: programs/proof/1834_smx_mesh_left_vertebral_life.cubalc
+proof_alt: programs/proof/99_smx_left_vertebral.cubalc
+energy_path: left subclavian origin → left vertebral takeoff → cervical transverse foramina → atlanto-occipital ascent → basilar confluence / hindbrain perfusion takeoff
+asserts_ok: 60
+flagship_1620: PASS (12)

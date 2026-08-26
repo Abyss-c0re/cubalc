@@ -1,0 +1,9 @@
+feature=MESH_LEFT_VERTEBRAL
+iter=1834
+proof=99_smx_left_vertebral.cubalc
+life=1834_smx_mesh_left_vertebral_life.cubalc
+soft_oob=1
+fail_closed=1
+c_slice=src/cubalc_smx_left_vertebral.c
+VERSION=1.15.1313-usability
+next=we_autoheal
