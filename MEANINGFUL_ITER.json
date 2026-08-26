@@ -7,9 +7,7 @@
   "asserts_fail": 0,
   "flagship_1620": "PASS 12/0",
   "version": "1.15.1248-usability",
-  "head": "5a9488101b39513ddf06ac293d50669a25982f40",
-  "short": "5a948810",
-  "base_head": "b35698d59711e961f4a5eca7380c5d577e9974bf",
-  "status": "PASS",
-  "next": "we_autoheal"
+  "head": "68358f7cba50172dc12ebd112a3a6b5bf325a2a2",
+  "short": "68358f7c",
+  "base_head": "b35698d59711e961f4a5eca7380c5d577e9974bf"
 }
