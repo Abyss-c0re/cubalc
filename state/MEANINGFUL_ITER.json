@@ -28,9 +28,10 @@
   "ts": "2026-08-26T01:54:49Z",
   "verified_at": "2026-08-26T01:54:49Z",
   "host_finish": true,
-  "HEAD": "17b7346e41e521c74bebad5bd36b1a6f5d24b709",
-  "tip": "17b7346e41e521c74bebad5bd36b1a6f5d24b709",
+  "HEAD": "4de66ccb82e0fc5027bd5afc07063c8a74cc7e16",
+  "tip": "4de66ccb82e0fc5027bd5afc07063c8a74cc7e16",
   "head_note": "verified_pass_1740_advances_past_aa814328",
   "feat_head": "c9c05109dad6aa6fe28b78aef6e857ba7d30abd4",
-  "pin_head": "17b7346e41e521c74bebad5bd36b1a6f5d24b709"
+  "pin_head": "4de66ccb82e0fc5027bd5afc07063c8a74cc7e16",
+  "push": "rejected_non_ff_no_force"
 }
