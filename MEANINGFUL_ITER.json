@@ -30,9 +30,9 @@
   "status": "PASS",
   "unity": 1.0,
   "feat_subject": "feat(smx): mesh OPHTHALMIC life soft-OOB stability (MEANINGFUL_ITER 1843)",
-  "pin_head": "PENDING",
-  "tip": "PENDING",
-  "HEAD": "PENDING",
-  "head_short": "PENDING",
-  "feat_head": "PENDING"
+  "pin_head": "fc794e4d1ec2127537efe53264272364a59aa7d8",
+  "tip": "fc794e4d1ec2127537efe53264272364a59aa7d8",
+  "HEAD": "fc794e4d1ec2127537efe53264272364a59aa7d8",
+  "head_short": "fc794e4d",
+  "feat_head": "fc794e4d1ec2127537efe53264272364a59aa7d8"
 }
