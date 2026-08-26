@@ -1,3 +1,10 @@
+## 1.15.1310-usability — 1831 SMX MESH_AORTIC_ARCH life
+
+- feat(smx): MESH_AORTIC_ARCH soft-OOB fail-closed + mesh exchange C(4,2)
+- proof 97_smx_aortic_arch + 1831_smx_mesh_aortic_arch_life PASS
+- flagship 1620 PASS; pure-C src/cubalc_smx_aortic_arch.c
+- ENERGYFLOW ascending aorta conduit → aortic arch apex → brachiocephalic trunk origin → left common carotid origin → left subclavian origin
+
 ## 1.15.1309-usability — 1830 SMX MESH_ASCENDING_AORTA life
 
 - feat(smx): MESH_ASCENDING_AORTA soft-OOB fail-closed + mesh exchange C(4,2)
