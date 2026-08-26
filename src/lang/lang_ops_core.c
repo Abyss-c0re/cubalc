@@ -4227,6 +4227,7 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"DIVFLOORN", "DIVFLOORN|IDIVN a b — floor/trunc a/b → LAST_N · twin of DIVCEILN · soft /0"},
       {"WRAPMODN", "WRAPMODN|POSMODN x m — positive mod x in [0,m) → LAST_N · ring/page index · soft m<=0"},
       {"MAPRANGEN", "MAPRANGEN|REMAPN x a b c d — map x from [a,b] into [c,d] → LAST_N · scale+offset without shell"},
+      {"MEDIAN3N", "MEDIAN3N|MID3N a b c — median of three → LAST_N · middle value without shell sort"},
       {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"REQUIRE FLAG", "REQUIRE FLAG|OPT name[,|alt] — fail if none of aliases · FLAG_HIT_NAME · LAST=value"},

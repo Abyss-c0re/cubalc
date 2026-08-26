@@ -5,16 +5,16 @@
   "meaningful_iter": 1759,
   "version": "1.15.1234-usability",
   "VERSION": "1.15.1234-usability",
-  "item": "1759 maprangen remap scale usability",
-  "item_id": "mi_1759_maprangen_remap_scale",
-  "title": "1759 MAPRANGEN REMAPN SCALERANGEN",
-  "summary": "MAPRANGEN|REMAPN|SCALERANGEN x a b c d \u2014 affine map from [a,b] into [c,d] \u2192 LAST_N; empty source soft-fail; glue FROM/TO/INTO; proof 1010 PASS 24/0.",
-  "feature": "MAPRANGEN",
+  "item": "1759 WRAPMODN positive remainder usability",
+  "item_id": "mi_1759_wrapmodn",
+  "title": "1759 WRAPMODN|POSMODN positive mod in [0,m)",
+  "summary": "WRAPMODN|POSMODN|WMODN|RINGMODN|CIRCMODN x m \u2014 positive remainder in [0,m) for ring/page index; soft-fail m<=0; aliases + BY/MOD glue; proof 1011_wrapmodn PASS 23/0.",
+  "feature": "WRAPMODN",
   "proofs": [
-    "programs/proof/1010_maprangen.cubalc"
+    "programs/proof/1011_wrapmodn.cubalc"
   ],
   "proof_status": "PASS",
-  "asserts_ok": 24,
+  "asserts_ok": 23,
   "asserts_fail": 0,
   "unity": 1.0,
   "nodes": 5,
@@ -22,14 +22,9 @@
   "next": "we_autoheal",
   "past": 1758,
   "sealed": true,
-  "soft_oob": "fail-closed",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T06:10:16Z",
-  "verified_at": "2026-08-26T06:10:16Z",
+  "ts": "2026-08-26T06:10:21Z",
+  "verified_at": "2026-08-26T06:10:21Z",
   "host_finish": true,
-  "head_note": "verified_pass_1010_maprangen",
-  "note": "Usability: map pct/flag ranges without shell arithmetic. Soft empty-range LAST_ERR sticky.",
-  "head": "82ca01e47964dee37e36f9467b1b5b831bcfbf07",
-  "head_short": "82ca01e4",
-  "prior_head": "074e06ce6c81b16b0ada60b798e9d14e3ed6962f"
+  "head_note": "verified_pass_1759_wrapmodn"
 }

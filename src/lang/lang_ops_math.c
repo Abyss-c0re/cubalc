@@ -6177,5 +6177,44 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
+
+  /* MEDIAN3N|MID3N|MED3N a b c — median of three ints (usability).
+   * LAST_N = middle value after sort; no shell sort $(( )).
+   * Optional glue: MEDIAN3N a AND b AND c · OF a , b , c.
+   * Aliases cover MIDOF3 / SELECTMIDN for scripts. */
+  if (kw(&L->cur,"MEDIAN3N") || kw(&L->cur,"MID3N") || kw(&L->cur,"MED3N") ||
+      kw(&L->cur,"MEDIANOFTREEN") || kw(&L->cur,"MIDOF3") || kw(&L->cur,"SELECTMIDN") ||
+      kw(&L->cur,"MED3") || kw(&L->cur,"MIDDLE3N") || kw(&L->cur,"MEDIAN_3N")){
+    long a,b,c,out; char nbuf[32];
+    lex_next(L);
+    a = parse_expr(vm, L);
+    if (kw(&L->cur,"AND")||kw(&L->cur,"OR")||kw(&L->cur,",")||kw(&L->cur,"WITH")||kw(&L->cur,"OF"))
+      lex_next(L);
+    b = parse_expr(vm, L);
+    if (kw(&L->cur,"AND")||kw(&L->cur,"OR")||kw(&L->cur,",")||kw(&L->cur,"WITH")||kw(&L->cur,"AND"))
+      lex_next(L);
+    c = parse_expr(vm, L);
+    /* sort three via swaps — median is middle */
+    if (a > b){ long t=a; a=b; b=t; }
+    if (b > c){ long t=b; b=c; c=t; }
+    if (a > b){ long t=a; a=b; b=t; }
+    out = b;
+    snprintf(nbuf,sizeof nbuf,"%ld",out);
+    var_set_num(vm,"LAST_N",out); vm->last_n=out;
+    var_set_num(vm,"MEDIAN3N",out); var_set_num(vm,"MID3N",out); var_set_num(vm,"MED3N",out);
+    var_set_num(vm,"MEDIAN3N_A",a); /* after sort: lo */
+    var_set_num(vm,"MEDIAN3N_B",b); /* mid */
+    var_set_num(vm,"MEDIAN3N_C",c); /* hi */
+    var_set_num(vm,"MEDIAN3N_LO",a);
+    var_set_num(vm,"MEDIAN3N_MID",b);
+    var_set_num(vm,"MEDIAN3N_HI",c);
+    var_set_num(vm,"MEDIAN3N_OK",1L); var_set_num(vm,"MID3N_OK",1L);
+    var_set_num(vm,"OK",1); var_set_str(vm,"LAST",nbuf); var_set_str(vm,"FLAG",nbuf);
+    snprintf(vm->last_str,sizeof vm->last_str,"%s",nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# median3n sorted [%ld %ld %ld] mid=%ld\n", a, b, c, out);
+    bump(vm); return 1;
+  }
+
   return 0;
 }
