@@ -1,0 +1,173 @@
+// 1778_smx_mesh_hepatocyte_life_force.cubalc
+// SMX mesh stability life-force: soft-OOB fail-closed, HEPATOCYTE parenchymal plate after DISSE,
+// STABILIZE latch, free-energy mitosis. Wonder AGI can RUN. No dual ladders.
+// Cube is SoT. matrix is key. free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=smx_mesh_hepatocyte_life_force | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 12 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Storm wounds — soft-OOB fail-closed, never ghost-place
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+SMX EXCHANGE scrap void_cell
+ASSERT SMX_OK == 0 "storm-C soft-OOB"
+ASSERT SMX_OOB >= 3 "oob C depth"
+ASSERT CUBES == base_cubes "no ghost from storm-C"
+
+// Life-force cascade roots the mesh
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT SMX_OOB == 0 "oob cleared by life_force"
+ASSERT CUBES == base_cubes "life_force invents nothing"
+
+// Space of Disse then hepatocyte plate
+SMX DISSE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "disse live"
+ASSERT SMX_DISSE == 1 "disse latch"
+ASSERT SMX_MESH_DISSE == 1 "mesh_disse"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from disse"
+ASSERT SMX_OOB == 0 "oob clear after disse"
+ASSERT CUBES == base_cubes "disse invents nothing"
+
+SMX HEPATOCYTE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "hepatocyte live"
+ASSERT SMX_HEPATOCYTE == 1 "hepatocyte latch"
+ASSERT SMX_HEPATOCYTED == 1 "hepatocyted latch"
+ASSERT SMX_MESH_HEPATOCYTE == 1 "mesh_hepatocyte"
+ASSERT SMX_HEPATIC_PLATE == 1 "hepatic_plate"
+ASSERT SMX_PARENCHYMAL == 1 "parenchymal"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from hepatocyte"
+ASSERT SMX_HEPATO_SUM > 0 "hepato sum"
+ASSERT SMX_BILE_CANALICULUS >= 4 "bile canaliculus"
+ASSERT SMX_OOB == 0 "oob clear after hepatocyte"
+ASSERT CUBES == base_cubes "hepatocyte invents nothing"
+
+// Mesh stability latch — circular breath, thrash cleared
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize live"
+ASSERT SMX_STABLE == 1 "stable latch"
+ASSERT SMX_STEADFAST == 4 "four steadfast"
+ASSERT SMX_PULSE == 4 "four pulses"
+ASSERT SMX_OOB == 0 "oob cleared by stabilize"
+ASSERT SMX_TALKS >= 4 "stabilize talks"
+ASSERT CUBES == base_cubes "stabilize invents nothing"
+
+// Autoheal + resilience under hepatocyte mesh
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "autoheal live"
+ASSERT SMX_AUTOHEALED == 1 "autohealed latch"
+
+SMX RESILIENCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "resilience live"
+ASSERT SMX_RESILIENT == 1 "resilient latch"
+
+// Decision plate under calm mesh
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy"
+ASSERT UNITY >= 40 "stable unity after OOB stabilize"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+// Free energy must flow — mitosis under locked stability mesh (life_cell SEND birth)
+GETF seed alive
+LET a0 = LAST_N
+GETF seed energy
+LET e0 = LAST_N
+IF e0 < 2 THEN
+  LET e0 = 12
+  SETF seed energy e0
+END
+LET half = e0 / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+GETF d1 alive
+LET a1 = LAST_N
+ASSERT a1 == 1 "first mitosis under hepatocyte mesh"
+GETF seed energy
+LET e1 = LAST_N
+IF e1 < 2 THEN
+  LET e1 = 12
+  SETF seed energy e1
+END
+LET half2 = e1 / 2
+IF half2 < 1 THEN
+  LET half2 = 1
+END
+GETF seed gen
+LET dg2 = LAST_N + 1
+SEND d2 birth half2 dg2
+SEND seed after_div
+PLUG bed d2
+GETF d2 alive
+LET a2 = LAST_N
+ASSERT a2 == 1 "second mitosis under hepatocyte mesh"
+ASSERT ENERGY > 0 "energy remains after mitosis"
+ASSERT a0 + a1 + a2 >= 3 "population grew under hepatocyte mesh"
+
+// Re-stabilize after growth — mesh holds
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "re-stabilize live"
+ASSERT SMX_STABLE == 1 "stable sticky"
+ASSERT SMX_STEADFAST == 4 "steadfast holds"
+ASSERT SMX_OOB == 0 "oob still clear"
+ASSERT SMX_HEPATOCYTE == 1 "hepatocyte sticky through mitosis"
+ASSERT SMX_DISSE == 1 "disse sticky through mitosis"
+ASSERT SMX_LIFE_FORCE == 1 "life_force sticky through mitosis"
+
+ASSERT OK == 1
+
+PRINT "smx_mesh_hepatocyte_life_force" POPULATION SMX_OK SMX_LIFE_FORCE SMX_DISSE SMX_HEPATOCYTE SMX_STABLE SMX_STEADFAST SMX_PULSE SMX_AUTOHEALED SMX_RESILIENT SMX_OOB CUBES UNITY ENERGY DECIDE
+PASS

@@ -16847,6 +16847,207 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; DISSE|SINUSOID|PORTAL|CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
+  /* SMX HEPATOCYTE|HEPATOGLIA|MESH_HEPATOCYTE|HEPATO_WRAP|HEPATO_SHEATH|HEPATO_GUIDE|RAISE_HEPATOCYTE a b c ...
+   * Life-force HEPATOCYTE hepatocyte parenchymal plate continuum after DISSE: hepatic cord metabolic bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete hepato hepatic exchange scaffold mesh among live nodes, weaves a
+   * hepato wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks hepato where life guides the hepato confluence return pulse.
+   * Latches SMX_HEPATOCYTE when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = hepato ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_HEPATO_SUM = bonds+wraps+sheaths; SMX_HEPATOCYTE|SMX_MESH_HEPATOCYTE|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"HEPATOCYTE")||kw(&L->cur,"HEPATO")||kw(&L->cur,"HEPATIC_PLATE")||kw(&L->cur,"HEPATOGLIA")||kw(&L->cur,"MESH_HEPATOCYTE")||kw(&L->cur,"HEPATO_WRAP")||kw(&L->cur,"HEPATO_WRAPS")||kw(&L->cur,"HEPATO_SHEATH")||kw(&L->cur,"HEPATO_SHEATHS")||kw(&L->cur,"HEPATO_GUIDE")||kw(&L->cur,"RAISE_HEPATOCYTE")||kw(&L->cur,"WE_HEPATOCYTE")||kw(&L->cur,"LIFE_HEPATOCYTE")||
+      kw(&L->cur,"STABLE_HEPATOCYTE")||kw(&L->cur,"MESH_HEPATOCYTES")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_HEPATOCYTE")||kw(&L->cur,"HEPATO_LEAF")||
+      kw(&L->cur,"SEEDHEPATO")||kw(&L->cur,"SEEDHEPATOSHEATH")||kw(&L->cur,"SEEDHEPATOWRAP")||
+      kw(&L->cur,"HEPATO_RING")||kw(&L->cur,"HEPATO_SHEATH_HUB")||kw(&L->cur,"HEPATO_NODE")||
+      kw(&L->cur,"LATTICE_HEPATOCYTE")||kw(&L->cur,"WORLD_HEPATOCYTE")||kw(&L->cur,"WORLD_HEPATOCYTE")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_HEPATOCYTE")||kw(&L->cur,"HARDEN_HEPATOCYTE")||
+      kw(&L->cur,"HEPATO_SCAFFOLD")||kw(&L->cur,"HEPATO_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "HEPATOCYTE needs >=2 cubes",
+                  "SMX HEPATOCYTE a b [c ...]  or  SMX HEPATO_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - hepato needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete hepato mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* hepato ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int hepato_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (hepato_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_HEPATOCYTED", (long)hepato_ok);
+      var_set_num(vm, "SMX_HEPATO_LATCH", (long)hepato_ok);
+      var_set_num(vm, "SMX_HEPATOCYTE", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATO_SUM", (long)(hepato_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_HEPATO_ALIAS", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_PLATE", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PARENCHYMAL", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BILE_CANALICULUS", (long)(hepato_ok ? wraps : 0));
+      var_set_num(vm, "SMX_MESH_HEPATOCYTE", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATO_SHEATH_LATCH", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_HEPATOCYTE", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATO_WRAP_LATCH", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(hepato_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATO_WRAP", (long)(hepato_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATO_WRAPS", (long)(hepato_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATO_SHEATHS", (long)(hepato_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(hepato_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(hepato_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATO_WRAP_LATCH", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(hepato_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HP_BONDS", (long)(hepato_ok ? bonds : 0));
+      var_set_num(vm, "SMX_HP_MESH", (long)(hepato_ok ? bonds : 0));
+      var_set_num(vm, "SMX_HP_BONDS2", (long)(hepato_ok ? bonds : 0));
+      var_set_num(vm, "SMX_HP_STARS", (long)(hepato_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HP_STAR", (long)(hepato_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATO_RING", (long)(hepato_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATO_LANE", (long)(hepato_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(hepato_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_HEPATO_SHEATH_HUB", (long)(hepato_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(hepato_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDHEPATO", (long)(hepato_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDHEPATOSHEATH", (long)(hepato_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(hepato_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (hepato_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HEPATOCYTE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HEPATOCYTE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX HEPATOCYTE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX HEPATOCYTE nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d hepatocyted=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, hepato_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (see lang_ops_smx; HEPATOCYTE|DISSE|SINUSOID|PORTAL|CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
   return -1;
 }

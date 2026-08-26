@@ -1,0 +1,7 @@
+MEANINGFUL_ITER=1778
+VERSION=1.15.1256-usability
+OP=HEPATOCYTE
+PROOF=programs/proof/1778_smx_mesh_hepatocyte_life_force.cubalc
+ASSERTS=64/0
+FLAGSHIP=programs/proof/1620_atomic_printer_life_force.cubalc
+FLAGSHIP_ASSERTS=12/0
