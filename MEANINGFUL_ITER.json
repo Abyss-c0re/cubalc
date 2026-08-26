@@ -1,1 +1,19 @@
-{"iter":1777,"feature":"MESH_OVAL","head":"897728b0724f3b39cfce66b37d404b96afe78cd6","short":"897728b0","status":"PASS","soft_oob":true,"fail_closed":true,"mesh_exchange":true}
+{
+  "iter": 1777,
+  "feature": "MESH_OVAL",
+  "head": "433794333a1d936e8b04be6d1853b95dccd9eab8",
+  "short": "43379433",
+  "status": "PASS",
+  "soft_oob": true,
+  "fail_closed": true,
+  "mesh_exchange": true,
+  "meaningful_iter": 1777,
+  "version": "1.15.1253-oval-mesh",
+  "head_short": "43379433",
+  "MEANINGFUL_ITER": 1777,
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "proof": "1777_smx_mesh_oval_life_cascade.cubalc",
+  "smoke": "1777_smx_oval_soft_oob_smoke.cubalc",
+  "flagship_1620": "PASS"
+}

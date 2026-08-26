@@ -14,16 +14,16 @@
   "next": "we_autoheal",
   "latch": "oval_latch",
   "notes": "SMX OVAL|OVAL_CELL|HEPATIC_PROGENITOR|CANAL_OF_HERING soft-OOB fail-closed mesh+wrap+sheath life-force after cholangio; smoke 23/0 cascade 1414/0 flagship 12/0",
-  "head": "a508df5819b32fe85c611c82a90a199f8d891657",
-  "short": "6c0cd9ad",
-  "head_short": "6c0cd9ad",
+  "head": "433794333a1d936e8b04be6d1853b95dccd9eab8",
+  "short": "43379433",
+  "head_short": "43379433",
   "MEANINGFUL_ITER": 1777,
   "proofs": {
     "1777_smoke": "PASS",
     "1777_cascade": "PASS",
     "1620_flagship": "PASS"
   },
-  "HEAD": "a508df5819b32fe85c611c82a90a199f8d891657",
-  "HEAD_SHORT": "a508df58",
+  "HEAD": "288b386639af310e0fe8d7e0024aaa7f97ef55e7",
+  "HEAD_SHORT": "288b3866",
   "FEATURE": "MESH_OVAL"
 }
