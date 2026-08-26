@@ -1,0 +1,4 @@
+SHIP 1737 MESH_HOMEOSTASIS_LIFE_CASCADE
+soft-OOB fail-closed + LIFE_FORCE + WE_AUTOHEAL + RESILIENCE + THALAMUS + HOMEOSTASIS + STABILIZE + mitosis under free energy + RAISE after storm
+proofs PASS asserts_fail:0
+flagship 1620 PASS
