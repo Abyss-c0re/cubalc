@@ -1,0 +1,16 @@
+MEANINGFUL_ITER=1823
+FEATURE=SMX_MESH_LEFT_PULMONARY_ARTERY_LIFE
+PROOF=programs/proof/88_smx_left_pulmonary_artery.cubalc
+PROOF_ALT=programs/proof/1823_smx_mesh_left_pulmonary_artery_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_ASSERTS_OK=12
+VERSION=1.15.1304-usability
+NOTE=MESH_LEFT_PULMONARY_ARTERY soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW main trunk→left PA branch→left lung hilum→segmental arteries→left lung capillary return; WE_AUTOHEAL; pure-C cubalc_smx_left_pulmonary_artery.c
+C_SLICE=src/cubalc_smx_left_pulmonary_artery.c
+SOFT_OOB=1
+FAIL_CLOSED=1
+UNITY=1.0
+NEXT=we_autoheal
