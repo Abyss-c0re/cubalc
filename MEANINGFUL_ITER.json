@@ -1,1 +1,1 @@
-{"iter":1769,"feature":"smx_mesh_venule_life_cascade","head":"c928e24c419000eceaa6019b135a403b56423e78","short":"c928e24c","version":"1.15.1246-usability","proof":"1769 asserts_ok:1154 asserts_fail:0","flagship":"1620 PASS 12/0"}
+{"iter":1769,"feature":"smx_mesh_venule_life_cascade","version":"1.15.1246-usability","head":"de27b83b923c285f73a31713afa43f56851a0501","proof":{"asserts_ok":1154,"asserts_fail":0},"flagship1620":{"asserts_ok":12,"asserts_fail":0}}
