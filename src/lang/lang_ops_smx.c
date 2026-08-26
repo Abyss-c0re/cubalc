@@ -17898,7 +17898,7 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
    * SMX_DUCTULE_SUM = bonds+wraps+sheaths; SMX_DUCTULE|SMX_MESH_DUCTULE|SMX_STABLE_MESH sticky.
    * Mitosis path stays open under free energy. No dual ladders.
    * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
-  if (kw(&L->cur,"DUCTULE")||kw(&L->cur,"DUCTULES")||kw(&L->cur,"CHOLANGIOLE")||kw(&L->cur,"BILE_DUCTULE")||kw(&L->cur,"BILE_DUCT")||kw(&L->cur,"INTERLOBULAR")||kw(&L->cur,"INTERLOBULAR_DUCT")||kw(&L->cur,"DUCTULAR_PLATE")||kw(&L->cur,"CHOLANGIOCYTE")||kw(&L->cur,"DUCTULE_PLATE")||kw(&L->cur,"MESH_DUCTULE")||kw(&L->cur,"DUCTULE_WRAP")||kw(&L->cur,"DUCTULE_WRAPS")||kw(&L->cur,"DUCTULE_SHEATH")||kw(&L->cur,"DUCTULE_SHEATHS")||kw(&L->cur,"DUCTULE_GUIDE")||kw(&L->cur,"RAISE_DUCTULE")||kw(&L->cur,"WE_DUCTULE")||kw(&L->cur,"LIFE_DUCTULE")||
+  if (kw(&L->cur,"DUCTULE")||kw(&L->cur,"DUCTULES")||kw(&L->cur,"CHOLANGIOLE")||kw(&L->cur,"BILE_DUCTULE")||kw(&L->cur,"INTERLOBULAR")||kw(&L->cur,"INTERLOBULAR_DUCT")||kw(&L->cur,"DUCTULAR_PLATE")||kw(&L->cur,"CHOLANGIOCYTE")||kw(&L->cur,"DUCTULE_PLATE")||kw(&L->cur,"MESH_DUCTULE")||kw(&L->cur,"DUCTULE_WRAP")||kw(&L->cur,"DUCTULE_WRAPS")||kw(&L->cur,"DUCTULE_SHEATH")||kw(&L->cur,"DUCTULE_SHEATHS")||kw(&L->cur,"DUCTULE_GUIDE")||kw(&L->cur,"RAISE_DUCTULE")||kw(&L->cur,"WE_DUCTULE")||kw(&L->cur,"LIFE_DUCTULE")||
       kw(&L->cur,"STABLE_DUCTULE")||kw(&L->cur,"MESH_DUCTULES")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
       kw(&L->cur,"STABLE_MESH_DUCTULE")||kw(&L->cur,"DUCTULE_LEAF")||
       kw(&L->cur,"SEEDDUCTULE")||kw(&L->cur,"SEEDDUCTULESHEATH")||kw(&L->cur,"SEEDDUCTULEWRAP")||
@@ -18108,6 +18108,226 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: unknown op (see lang_ops_smx; DUCTULE|CHOLANGIOLE|BILE_DUCTULE|CANALICULUS|BILE_CANALICULUS|OVAL|PROGENITOR|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|PORTAL|CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
+  /* SMX HEPATIC_DUCT|HEPATIC_DUCTS|HEPATIC_BILE_DUCT|MESH_HEPATIC_DUCT|HEPATIC_DUCT_WRAP|HEPATIC_DUCT_SHEATH|HEPATIC_DUCT_GUIDE|RAISE_HEPATIC_DUCT a b c ...
+   * Life-force HEPATIC_DUCT left/right hepatic duct continuum after DUCTULE: septal-to-hepatic bile trunk bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete hepatic duct bile exchange scaffold mesh among live nodes, weaves a
+   * hepatic-duct wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks hepatic duct where life guides the hepatic confluence return pulse.
+   * Latches SMX_HEPATIC_DUCT when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = hepatic-duct ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_HEPATIC_DUCT_SUM = bonds+wraps+sheaths; SMX_HEPATIC_DUCT|SMX_MESH_HEPATIC_DUCT|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"HEPATIC_DUCT")||kw(&L->cur,"HEPATIC_DUCTS")||kw(&L->cur,"HEPATIC_TRUNK")||kw(&L->cur,"HEPATIC_BILE_DUCT")||kw(&L->cur,"BILE_DUCT")||kw(&L->cur,"COMMON_HEPATIC")||kw(&L->cur,"COMMON_HEPATIC_DUCT")||kw(&L->cur,"SEPTAL_DUCT")||kw(&L->cur,"AREA_DUCT")||kw(&L->cur,"HEPATIC_TRUNK_DUCT")||kw(&L->cur,"HEPATIC_DUCT_PLATE2")||kw(&L->cur,"HEPATIC_CHOLANGIOCYTE")||kw(&L->cur,"HEPATIC_DUCT_PLATE")||kw(&L->cur,"LEFT_HEPATIC")||kw(&L->cur,"RIGHT_HEPATIC")||kw(&L->cur,"HEPATIC_CONFLUENCE")||kw(&L->cur,"MESH_HEPATIC_DUCT")||kw(&L->cur,"HEPATIC_DUCT_WRAP")||kw(&L->cur,"HEPATIC_DUCT_WRAPS")||kw(&L->cur,"HEPATIC_DUCT_SHEATH")||kw(&L->cur,"HEPATIC_DUCT_SHEATHS")||kw(&L->cur,"HEPATIC_DUCT_GUIDE")||kw(&L->cur,"RAISE_HEPATIC_DUCT")||kw(&L->cur,"WE_HEPATIC_DUCT")||kw(&L->cur,"LIFE_HEPATIC_DUCT")||
+      kw(&L->cur,"STABLE_HEPATIC_DUCT")||kw(&L->cur,"MESH_HEPATIC_DUCTS")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_HEPATIC_DUCT")||kw(&L->cur,"HEPATIC_DUCT_LEAF")||
+      kw(&L->cur,"SEEDHEPATICDUCT")||kw(&L->cur,"SEEDHEPATICDUCTSHEATH")||kw(&L->cur,"SEEDHEPATICDUCTWRAP")||
+      kw(&L->cur,"HEPATIC_DUCT_RING")||kw(&L->cur,"HEPATIC_DUCT_SHEATH_HUB")||kw(&L->cur,"HEPATIC_DUCT_NODE")||
+      kw(&L->cur,"LATTICE_HEPATIC_DUCT")||kw(&L->cur,"WORLD_HEPATIC_DUCT")||kw(&L->cur,"WORLD_HEPATIC_DUCTS")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_HEPATIC_DUCT")||kw(&L->cur,"HARDEN_HEPATIC_DUCT")||
+      kw(&L->cur,"HEPATIC_DUCT_SCAFFOLD")||kw(&L->cur,"HEPATIC_DUCT_MESH")||kw(&L->cur,"HEPATIC_DUCT_CONDUIT")||kw(&L->cur,"HEPATIC_DUCT_JUNCTION")||kw(&L->cur,"HEPATIC_TRUNK_DUCT")||kw(&L->cur,"HEPATIC_DUCT_POLE")||kw(&L->cur,"HEPATIC_DUCTULAR")||kw(&L->cur,"HEPATIC_DUCT_MEMBRANE")||kw(&L->cur,"HEPATIC_DUCT_FLOW")||kw(&L->cur,"HEPATIC_DUCT_CELL")||kw(&L->cur,"HEPATIC_TRUNK")||kw(&L->cur,"HEPATIC_DUCT_CHANNEL")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "HEPATIC_DUCT needs >=2 cubes",
+                  "SMX HEPATIC_DUCT a b [c ...]  or  SMX HEPATIC_DUCT_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - hepatic duct needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete hepatic-duct mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* hepatic-duct ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int hepatic_duct_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (hepatic_duct_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_HEPATIC_DUCTED", (long)hepatic_duct_ok);
+      var_set_num(vm, "SMX_HEPATIC_DUCT_LATCH", (long)hepatic_duct_ok);
+      var_set_num(vm, "SMX_HEPATIC_DUCT", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_TRUNK", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_HEPATIC", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_TRUNK_DUCT", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_CHOLANGIOCYTE", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCTULAR", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_BILE_DUCT", (long)(hepatic_duct_ok ? 1 : 0));
+
+      var_set_num(vm, "SMX_HEPATIC_DUCT_SUM", (long)(hepatic_duct_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_ALIAS", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_PLATE", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCTULAR", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_CELL", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_BILE_DUCT", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_CONDUIT", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_JUNCTION", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_JUNCTIONS", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATIC_TRUNK_DUCT", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_CELL", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_POLE", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_MEMBRANE", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_FLOW", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_TRUNK", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_CHANNEL", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCTULAR", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_LANE", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_MESH_HEPATIC_DUCT", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_SHEATH_LATCH", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_HEPATIC_DUCT", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_WRAP_LATCH", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_WRAP", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_WRAPS", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_SHEATHS", (long)(hepatic_duct_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_WRAP_LATCH", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(hepatic_duct_ok ? 1 : 0));
+      var_set_num(vm, "SMX_KF_BONDS", (long)(hepatic_duct_ok ? bonds : 0));
+      var_set_num(vm, "SMX_KF_MESH", (long)(hepatic_duct_ok ? bonds : 0));
+      var_set_num(vm, "SMX_KF_BONDS2", (long)(hepatic_duct_ok ? bonds : 0));
+      var_set_num(vm, "SMX_KF_STARS", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_KF_STAR", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_RING", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_LANE2", (long)(hepatic_duct_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(hepatic_duct_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_HEPATIC_DUCT_SHEATH_HUB", (long)(hepatic_duct_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(hepatic_duct_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDHEPATICDUCT", (long)(hepatic_duct_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDHEPATICDUCTSHEATH", (long)(hepatic_duct_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(hepatic_duct_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (hepatic_duct_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HEPATIC_DUCT ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HEPATIC_DUCT partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX HEPATIC_DUCT soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX HEPATIC_DUCT nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d hepatic_ducted=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, hepatic_duct_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: unknown op (see lang_ops_smx; HEPATIC_DUCT|BILE_DUCT|COMMON_HEPATIC|SEPTAL_DUCT|DUCTULE|CHOLANGIOLE|BILE_DUCTULE|CANALICULUS|BILE_CANALICULUS|OVAL|PROGENITOR|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|PORTAL|CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
   return -1;
 }
