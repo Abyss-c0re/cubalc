@@ -1,3 +1,10 @@
+## 1.15.1288-usability — 1809 SMX MESH_CISTERNA_CHYLI life
+
+- feat(smx): MESH_CISTERNA_CHYLI soft-OOB fail-closed + mesh exchange C(4,2)
+- proof 73_smx_cisterna_chyli + 1809_smx_mesh_cisterna_chyli_life PASS 60/0
+- flagship 1620 PASS 12/0; pure-C src/cubalc_smx_cisterna_chyli.c
+- ENERGYFLOW mesenteric trunks→cisterna confluence→chyle reservoir→thoracic duct origin
+
 
 ## 1.15.1282-usability — MEANINGFUL_ITER 1807 MESH_APPENDIX
 
