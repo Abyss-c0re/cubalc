@@ -4224,6 +4224,7 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"FLOORN", "FLOORN|ATLEASTN x lo — raise floor max(x,lo) → LAST_N · one-sided CLAMPN"},
       {"CAPN", "CAPN|ATMOSTN x hi — lower ceiling min(x,hi) → LAST_N · one-sided CLAMPN"},
       {"DIVCEILN", "DIVCEILN|PAGESN a b — ceil(a/b) → LAST_N · page/chunk count without shell"},
+      {"ISQRTN", "ISQRTN|SQRTN|IROOT2N x — floor integer square root → LAST_N · GETFLAGN geometry"},
       {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"REQUIRE FLAG", "REQUIRE FLAG|OPT name[,|alt] — fail if none of aliases · FLAG_HIT_NAME · LAST=value"},

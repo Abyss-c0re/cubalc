@@ -1,0 +1,8 @@
+MEANINGFUL_ITER=1805
+FEATURE=ISQRTN
+PROOF=programs/proof/1802_isqrtn.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=19
+ASSERTS_FAIL=0
+VERSION=1.15.1280-usability
+NOTE=ISQRTN|SQRTN|IROOT2N floor integer square root pure-C usability form; soft-neg LAST_N=0; GETFLAGN geometry pipeline

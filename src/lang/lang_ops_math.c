@@ -6146,5 +6146,221 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
+
+
+  /* DIVCEILN|TRUECEILN|CEILDIVN a b — true integer ceiling division ceil(a/b) → LAST_N.
+   * b==0 soft LAST_N=0 + sticky LAST_ERR. Toward +∞ when rem and signs same.
+   * Twin of DIVFLOORN. Usability: pages = DIVCEILN bytes pagesz without shell glue. */
+  if (kw(&L->cur,"DIVCEILN") || kw(&L->cur,"TRUECEILN") || kw(&L->cur,"CEILDIVN") ||
+      kw(&L->cur,"CEIL_DIVN") || kw(&L->cur,"IDIVCEIL") ||
+      kw(&L->cur,"PAGESN") || kw(&L->cur,"COVERN") || kw(&L->cur,"CHUNKCOUNTN")){
+    long a = 0, b = 0, out = 0;
+    int bad = 0;
+    char nbuf[32];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { a = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      a = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, "DIVCEILN a b — unknown a"); return -1; }
+      a = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "DIVCEILN a b — DIVCEILN bytes pagesz");
+      return -1;
+    }
+    if (kw(&L->cur,"BY") || kw(&L->cur,"OVER") || kw(&L->cur,"INTO") ||
+        kw(&L->cur,"PER"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM) { b = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      b = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, "DIVCEILN a b — unknown b"); return -1; }
+      b = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "DIVCEILN a b — missing divisor");
+      return -1;
+    }
+    if (b == 0) {
+      out = 0; bad = 1;
+      var_set_str(vm, "LAST_ERR", "DIVCEILN: divide by zero");
+      var_set_str(vm, "ERR", "DIVCEILN: divide by zero");
+    } else if (a == LONG_MIN && b == -1) {
+      out = LONG_MAX; bad = 1;
+      var_set_str(vm, "LAST_ERR", "DIVCEILN: overflow");
+      var_set_str(vm, "ERR", "DIVCEILN: overflow");
+    } else {
+      long q = a / b, rem = a % b;
+      /* ceil: bump when nonzero remainder and same-sign operands */
+      if (rem != 0 && ((a < 0) == (b < 0))) q++;
+      out = q;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "DIVCEILN", out);
+    var_set_num(vm, "TRUECEILN", out);
+    var_set_num(vm, "CEILDIVN", out);
+    var_set_num(vm, "PAGESN", out);
+    var_set_num(vm, "COVERN", out);
+    var_set_num(vm, "CHUNKCOUNTN", out);
+    var_set_num(vm, "DIVCEILN_A", a);
+    var_set_num(vm, "DIVCEILN_B", b);
+    var_set_num(vm, "DIVCEILN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# divceiln %ld/%ld -> %ld bad=%d\n", a, b, out, bad);
+    bump(vm); return 1;
+  }
+
+
+  /* SNAPN|ALIGNN|ROUNDTON|GRIDSNAPN|NEARESTN|GRIDN|QUANTIZEN x step —
+   * snap x to nearest multiple of |step| (half away from zero) → LAST_N.
+   * step==0 soft keep x + sticky LAST_ERR. Optional TO/BY before step.
+   * Usability: GETFLAGN offset then SNAPN LAST_N 64 without shell round glue. */
+  if (kw(&L->cur,"SNAPN") || kw(&L->cur,"ALIGNN") || kw(&L->cur,"ROUNDTON") ||
+      kw(&L->cur,"GRIDSNAPN") || kw(&L->cur,"NEARESTN") || kw(&L->cur,"GRIDN") ||
+      kw(&L->cur,"QUANTIZEN") || kw(&L->cur,"SNAP_TO_N") || kw(&L->cur,"ALIGN_TO_N")){
+    long x = 0, step = 0, out = 0, astep = 0;
+    int bad = 0, changed = 0;
+    char nbuf[32];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, "SNAPN x step — unknown x"); return -1; }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "SNAPN x step — SNAPN value step");
+      return -1;
+    }
+    if (kw(&L->cur,"TO") || kw(&L->cur,"BY") || kw(&L->cur,"STEP") ||
+        kw(&L->cur,"GRID") || kw(&L->cur,"OF"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM) { step = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      step = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, "SNAPN x step — unknown step"); return -1; }
+      step = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "SNAPN x step — missing step");
+      return -1;
+    }
+    astep = step < 0 ? -step : step;
+    if (astep == 0) {
+      out = x; bad = 1;
+      var_set_str(vm, "LAST_ERR", "SNAPN: step zero");
+      var_set_str(vm, "ERR", "SNAPN: step zero");
+    } else {
+      /* half away from zero: q = round(x / astep) * astep */
+      long ax = x < 0 ? -x : x;
+      long q = ax / astep;
+      long r = ax % astep;
+      if (r * 2 >= astep) q++;
+      out = q * astep;
+      if (x < 0) out = -out;
+    }
+    changed = (out != x) ? 1 : 0;
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "SNAPN", out);
+    var_set_num(vm, "ALIGNN", out);
+    var_set_num(vm, "ROUNDTON", out);
+    var_set_num(vm, "GRIDSNAPN", out);
+    var_set_num(vm, "NEARESTN", out);
+    var_set_num(vm, "GRIDN", out);
+    var_set_num(vm, "QUANTIZEN", out);
+    var_set_num(vm, "SNAPN_X", x);
+    var_set_num(vm, "SNAPN_STEP", astep);
+    var_set_num(vm, "SNAPN_CHANGED", (long)changed);
+    var_set_num(vm, "SNAPN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# snapn %ld step=%ld -> %ld bad=%d\n", x, astep, out, bad);
+    bump(vm); return 1;
+  }
+
+
+  /* ISQRTN|SQRTN|IROOT2N|FLOORSQRTN x — floor integer square root → LAST_N.
+   * x<0 soft LAST_N=0 + sticky LAST_ERR (ISQRTN_OK=0). Binary-search floor sqrt.
+   * Twin of SYS ISQRT without SYS glue. Usability: side = ISQRTN area after GETFLAGN. */
+  if (kw(&L->cur,"ISQRTN") || kw(&L->cur,"SQRTN") || kw(&L->cur,"IROOT2N") ||
+      kw(&L->cur,"FLOORSQRTN") || kw(&L->cur,"INTSQRTN") || kw(&L->cur,"ROOT2N") ||
+      kw(&L->cur,"ISQRT_N")){
+    long x = 0, out = 0;
+    int bad = 0;
+    char nbuf[32];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, "ISQRTN x — unknown x"); return -1; }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "ISQRTN x — ISQRTN area");
+      return -1;
+    }
+    if (x < 0) {
+      out = 0; bad = 1;
+      var_set_str(vm, "LAST_ERR", "ISQRTN: negative");
+      var_set_str(vm, "ERR", "ISQRTN: negative");
+    } else if (x == 0) {
+      out = 0;
+    } else {
+      /* binary search floor sqrt; hi capped so mid*mid stays in signed 64 */
+      long lo = 1, hi = x;
+      if (hi > 3037000499L) hi = 3037000499L;
+      out = 1;
+      while (lo <= hi) {
+        long mid = lo + (hi - lo) / 2;
+        unsigned long long sq = (unsigned long long)mid * (unsigned long long)mid;
+        if (sq == (unsigned long long)x) { out = mid; break; }
+        if (sq < (unsigned long long)x) { out = mid; lo = mid + 1; }
+        else hi = mid - 1;
+      }
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "ISQRTN", out);
+    var_set_num(vm, "SQRTN", out);
+    var_set_num(vm, "IROOT2N", out);
+    var_set_num(vm, "FLOORSQRTN", out);
+    var_set_num(vm, "ISQRTN_X", x);
+    var_set_num(vm, "ISQRTN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# isqrtn %ld -> %ld bad=%d\n", x, out, bad);
+    bump(vm); return 1;
+  }
+
   return 0;
 }

@@ -1,0 +1,6 @@
+SHIP 1805 ISQRTN
+feature: ISQRTN|SQRTN|IROOT2N|FLOORSQRTN floor integer square root
+impl: src/lang/lang_ops_math.c pure C binary-search
+proof: programs/proof/1802_isqrtn.cubalc PASS asserts_ok=19 asserts_fail=0
+version: 1.15.1280-usability
+notes: soft-neg LAST_ERR; GETFLAGN geometry pipeline; no SYS glue
