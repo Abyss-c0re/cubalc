@@ -1,13 +1,13 @@
 {
   "iter": 1783,
-  "feature": "smx_mesh_adherens_life_cascade",
+  "feature": "ADHERENS",
   "status": "PASS",
   "soft_oob": true,
   "fail_closed": true,
   "mesh_exchange": true,
   "meaningful_iter": 1783,
-  "version": "1.15.1259-adherens",
   "MEANINGFUL_ITER": 1783,
+  "version": "1.15.1259-adherens",
   "unity": 1.0,
   "next": "we_autoheal",
   "proof": "programs/proof/1783_smx_adherens_soft_oob_smoke.cubalc",
@@ -15,16 +15,16 @@
   "cascade": "1783_smx_mesh_adherens_life_cascade.cubalc",
   "flagship_1620": "PASS",
   "latch": "adherens_latch",
-  "notes": "ADHERENS|ZONULA_ADHERENS|CADHERIN|BELT_SEAL soft-OOB fail-closed mesh+wrap+sheath; smoke asserts_ok=30 cascade=1567 flagship 1620 PASS",
+  "notes": "ADHERENS|ZONULA_ADHERENS|CADHERIN|BELT_SEAL soft-OOB fail-closed mesh+wrap+sheath; smoke 30/0 cascade 1567/0 flagship 1620 PASS",
   "proofs": {
-    "1783_smx_adherens_soft_oob_smoke": "PASS",
-    "1783_smx_mesh_adherens_life_cascade": "PASS",
+    "1783_smoke": "PASS",
+    "1783_cascade": "PASS",
     "1620_flagship": "PASS"
   },
+  "asserts_smoke_ok": 30,
+  "asserts_cascade_ok": 1567,
   "ok": true,
-  "head": "f904608a802a534c4ceb3984a93a4b6f77cb97f2",
-  "short": "f904608a",
-  "head_short": "f904608a",
-  "smoke_ok": 30,
-  "cascade_ok": 1567
+  "head": "cc488208d76f0d2710accfce63b2347a273d81b3",
+  "short": "cc488208",
+  "head_short": "cc488208"
 }
