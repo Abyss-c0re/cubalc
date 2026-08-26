@@ -15715,14 +15715,18 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       var_set_num(vm, "SMX_MESH_HEPATOCYTE", (long)(hepatocyte_ok ? 1 : 0));
       var_set_num(vm, "SMX_STABLE_MESH", (long)(hepatocyte_ok ? 1 : 0));
       var_set_num(vm, "SMX_HEPATOCYTE_SHEATH_LATCH", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEP_SHEATH_LATCH", (long)(hepatocyte_ok ? 1 : 0));
       var_set_num(vm, "SMX_SHEATH_LATCH", (long)(hepatocyte_ok ? 1 : 0));
       var_set_num(vm, "SMX_HARDEN_HEPATOCYTE", (long)(hepatocyte_ok ? 1 : 0));
       var_set_num(vm, "SMX_WRAP_LATCH", (long)(hepatocyte_ok ? 1 : 0));
       var_set_num(vm, "SMX_HEPATOCYTE_WRAP_LATCH", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEP_WRAP_LATCH", (long)(hepatocyte_ok ? 1 : 0));
       var_set_num(vm, "SMX_WRAP", (long)(hepatocyte_ok ? wraps : 0));
       var_set_num(vm, "SMX_HEPATOCYTE_WRAP", (long)(hepatocyte_ok ? wraps : 0));
       var_set_num(vm, "SMX_HEPATOCYTE_WRAPS", (long)(hepatocyte_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEP_WRAPS", (long)(hepatocyte_ok ? wraps : 0));
       var_set_num(vm, "SMX_HEPATOCYTE_SHEATHS", (long)(hepatocyte_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_HEP_SHEATHS", (long)(hepatocyte_ok ? sheaths : 0));
       var_set_num(vm, "SMX_WRAPS", (long)(hepatocyte_ok ? wraps : 0));
       var_set_num(vm, "SMX_WRAPS_N", (long)(hepatocyte_ok ? wraps : 0));
       var_set_num(vm, "SMX_HEPATOCYTE_WRAP_LATCH", (long)(hepatocyte_ok ? 1 : 0));

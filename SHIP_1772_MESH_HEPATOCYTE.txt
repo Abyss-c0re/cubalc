@@ -1,0 +1,9 @@
+MEANINGFUL_ITER=1772
+FEATURE=MESH_HEPATOCYTE
+LATCH=hepatocyte_latch
+PROOF=programs/proof/1772_smx_mesh_hepatocyte_life_cascade.cubalc
+SMOKE=programs/proof/1772_smx_hepatocyte_soft_oob_smoke.cubalc
+STATUS=PASS
+ASSERTS_OK=1234
+UNITY_NOTE=soft-OOB fail-closed hepatocyte plate life cascade
+NEXT=we_autoheal
