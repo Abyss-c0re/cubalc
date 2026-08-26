@@ -42,6 +42,13 @@
   "cmd": "smx-ascending-aorta",
   "soft_oob_mode": "fail_closed",
   "feat_sha": "a6cc28519b81c23f5c3a80db59677403fb092532",
-  "pin_head": "8e5880e0d6a703c9c4139876f52b90b89177a084",
-  "tip": "8e5880e0d6a703c9c4139876f52b90b89177a084"
+  "pin_head": "7d921f704a3b5d07c68c9fc34760ace38c927b78",
+  "tip": "7d921f704a3b5d07c68c9fc34760ace38c927b78",
+  "HEAD": "7d921f704a3b5d07c68c9fc34760ace38c927b78",
+  "pinned_head": "7d921f704a3b5d07c68c9fc34760ace38c927b78",
+  "head": "7d921f704a3b5d07c68c9fc34760ace38c927b78",
+  "sha": "7d921f704a3b5d07c68c9fc34760ace38c927b78",
+  "pin_short": "7d921f70",
+  "short": "7d921f70",
+  "tip_eq_pin": true
 }
