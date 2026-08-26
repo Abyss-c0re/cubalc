@@ -24,7 +24,7 @@
   "item": "1793 smx mesh duodenal villus life",
   "item_id": "mi_1793_smx_mesh_duodenal_villus_life",
   "title": "1793 smx mesh duodenal villus life",
-  "commit": "PENDING",
+  "commit": "92c961c9",
   "summary": "Host-finished MI ship after nanobot partial (1793_smx_mesh_duodenal_villus_life).",
   "proofs": [
     "programs/proof/1793_smx_mesh_duodenal_villus_life.cubalc"
