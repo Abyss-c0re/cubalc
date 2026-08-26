@@ -1,6 +1,2 @@
-1766 SMX mesh endothelial life cascade
-proof 1766 PASS asserts_ok=1080 fail=0
-flagship 1620 PASS asserts_ok=12 fail=0
-MEANINGFUL_ITER=1766
-VERSION=1.15.1243-usability
-HEAD=ead6d5a08883b4f649c53c953017781b06b60d99
+SMX ENDOTHELIAL soft-OOB fail-closed mesh life cascade after pericyte; proof 1766 asserts_ok:1080 asserts_fail:0; flagship 1620 PASS 12/0.
+HEAD=b21aaaf8f4bc75d1e8f27e6fcd81d4738c3e39ae MEANINGFUL_ITER=1766 VERSION=1.15.1243-usability
