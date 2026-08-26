@@ -1,0 +1,6 @@
+SHIP 1772 SMX MESH ARTERY LIFE CASCADE
+proof: programs/proof/1772_smx_mesh_artery_life_cascade.cubalc
+result: PASS asserts_ok=1221 asserts_fail=0 unity=0.878 wall_ms~1192
+feature: SMX ARTERY after ARTERIOLE — soft-OOB fail-closed, bonds/wraps/sheaths, latches SMX_ARTERY|SMX_ARTERYED|SMX_MESH_ARTERY|SMX_ARTERY_SUM|SMX_STABLE_MESH
+bin: out/ship1772/cubalc version 1.15.1250-usability
+no dual ladders. Cube is SoT.
