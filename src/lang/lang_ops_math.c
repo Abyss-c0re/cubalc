@@ -6086,7 +6086,7 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     else out = a/b;
     snprintf(nbuf,sizeof nbuf,"%ld",out);
     var_set_num(vm,"LAST_N",out); vm->last_n=out;
-    var_set_num(vm,"DIVFLOORN",out); var_set_num(vm,"IDIVN",out); var_set_num(vm,"QUOTIENTN",out);
+    var_set_num(vm,"DIVFLOORN",out); var_set_num(vm,"IDIVN",out); var_set_num(vm,"QUOTIENTN",out); var_set_num(vm,"FLOORDIVN",out);
     var_set_num(vm,"DIVFLOORN_A",a); var_set_num(vm,"DIVFLOORN_B",b);
     var_set_num(vm,"DIVFLOORN_OK",bad?0L:1L); var_set_num(vm,"IDIVN_OK",bad?0L:1L);
     var_set_num(vm,"OK",1); var_set_str(vm,"LAST",nbuf); var_set_str(vm,"FLAG",nbuf);
@@ -6108,6 +6108,7 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     snprintf(nbuf,sizeof nbuf,"%ld",out);
     var_set_num(vm,"LAST_N",out); vm->last_n=out;
     var_set_num(vm,"WRAPMODN",out); var_set_num(vm,"POSMODN",out); var_set_num(vm,"WMODN",out);
+    var_set_num(vm,"NUMWRAP",out); var_set_num(vm,"RINGMODN",out);
     var_set_num(vm,"WRAPMODN_X",x); var_set_num(vm,"WRAPMODN_M",m);
     var_set_num(vm,"WRAPMODN_OK",bad?0L:1L); var_set_num(vm,"POSMODN_OK",bad?0L:1L);
     var_set_num(vm,"OK",1); var_set_str(vm,"LAST",nbuf); var_set_str(vm,"FLAG",nbuf);
