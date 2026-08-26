@@ -1,5 +1,5 @@
-MESH_MULLER_LIFE_CASCADE
-SMX MULLER|MULLERGLIA|MUELLER|MESH_MULLER retinal guide after bergmann
-soft-OOB fail-closed; complete mesh + wrap ring + sheath hub
-proof 1761 PASS asserts_ok=930 fail=0; flagship 1620 PASS
-MEANINGFUL_ITER 1761 VERSION 1.15.1236-usability
+SHIP 1761 MESH_MULLER_LIFE_CASCADE
+SMX Muller glia scaffold life cascade after bergmann.
+soft-OOB fail-closed; mitosis under free energy; proof 1761.
+proofs: mesh + life_force + soft_oob PASS; flagship 1620 PASS.
+MEANINGFUL_ITER=1761 VERSION=1.15.1236-usability
