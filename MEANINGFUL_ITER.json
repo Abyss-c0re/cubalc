@@ -15,5 +15,6 @@
   "c_slice": "src/cubalc_smx_ophthalmic.c",
   "proof": "programs/proof/1843_smx_mesh_ophthalmic_life.cubalc",
   "branch": "ship-1843-ophthalmic",
-  "tip_equals_pin": true
+  "tip_equals_pin": true,
+  "head": "41fb4f2f336e056ceed1507e5aec982610ec4a5d"
 }
