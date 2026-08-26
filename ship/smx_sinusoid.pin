@@ -5,4 +5,4 @@ latch=sinusoid_latch
 status=PASS
 unity=1.0
 stability=1.0
-head=1535445a
+head=01825421
