@@ -18,6 +18,7 @@
   "flagship_1620_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
+<<<<<<< HEAD
   "notes": "thoracic duct mesh life: soft-OOB fail-closed; MESH_EXCHANGE C(4,2); STABILIZE; WE_AUTOHEAL; free-energy mitosis under locked rails (cisterna chyli\u2192thoracic duct ascent\u2192venous angle return); second storm re-stabilizes; no IF*P duals",
   "note": "SMX thoracic duct life-force for atomic printer spine",
   "ts": "2026-08-26T17:02:26Z",
@@ -41,4 +42,24 @@
   "pin_head": "1883af6dd569d2f5ee53920505931918e4476c83",
   "head_short": "1883af6d",
   "tip_equals_pin": false
+=======
+  "status": "PASS",
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "host_finish": true,
+  "sha": "5a5cc3b2cf523184c31697354ca9b4c2021a4b0c",
+  "head": "5a5cc3b2cf523184c31697354ca9b4c2021a4b0c",
+  "pinned_head": "5a5cc3b2cf523184c31697354ca9b4c2021a4b0c",
+  "head_short": "5a5cc3b2",
+  "commit": "5a5cc3b2cf523184c31697354ca9b4c2021a4b0c",
+  "tip_equals_pin": true,
+  "pin_head": "5a5cc3b2cf523184c31697354ca9b4c2021a4b0c",
+  "tip": "5a5cc3b2cf523184c31697354ca9b4c2021a4b0c",
+  "notes": "MESH_APPENDIX soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW ileocecal\u2192orifice\u2192vermiform/lymphoid\u2192tip; WE_AUTOHEAL; pure-C cubalc_smx_appendix.c",
+  "note": "MESH_APPENDIX SMX mesh stability life-force soft-OOB fail-closed",
+  "item": "1807 smx mesh appendix life",
+  "item_id": "mi_1807_smx_mesh_appendix_life",
+  "title": "1807 MESH_APPENDIX soft-OOB mesh exchange life-force",
+  "summary": "Appendix SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal, mitosis under locked rails."
+>>>>>>> 04e8e03e (chore(state): pin MEANINGFUL_ITER 1807 SMX_MESH_APPENDIX_LIFE 94a21432)
 }
