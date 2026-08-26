@@ -1,4 +1,4 @@
-MEANINGFUL_ITER=1778 FEATURE=MESH_MALL STATUS=PASS
+MEANINGFUL_ITER=1778 FEATURE=MESH_MALL HEAD=17072cf3 STATUS=PASS
 SMX MALL|SPACE_OF_MALL|PERIPORTAL_NICHE soft-OOB fail-closed mesh+wrap+sheath life-force after oval.
 smoke: programs/proof/1778_smx_mall_soft_oob_smoke.cubalc PASS
 cascade: programs/proof/1778_smx_mesh_mall_life_cascade.cubalc PASS
