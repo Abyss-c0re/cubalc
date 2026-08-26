@@ -1,18 +1,20 @@
 {
-  "iter": 1775,
-  "meaningful_iter": 1775,
-  "feature": "MESH_STELLATE",
-  "version": "1.15.1251-stellate-mesh",
-  "head": "433e13d886f3aeb6d91149135128773206bcb42e",
-  "short": "433e13d8",
-  "latch": "stellate_latch",
+  "iter": 1777,
+  "meaningful_iter": 1777,
+  "feature": "MESH_OVAL",
+  "version": "1.15.1253-oval-mesh",
+  "proof": "1777_smx_mesh_oval_life_cascade.cubalc",
+  "smoke": "1777_smx_oval_soft_oob_smoke.cubalc",
+  "asserts_ok": 1414,
+  "asserts_fail": 0,
+  "flagship_1620": "PASS",
+  "smoke_ok": 23,
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "proofs": {
-    "1775_smoke": "PASS",
-    "1775_cascade": "PASS",
-    "1620_flagship": "PASS"
-  },
-  "notes": "SMX STELLATE|ITO|HSC soft-OOB fail-closed mesh+wrap+sheath life-force"
+  "latch": "oval_latch",
+  "notes": "SMX OVAL|OVAL_CELL|HEPATIC_PROGENITOR|CANAL_OF_HERING soft-OOB fail-closed mesh+wrap+sheath life-force after cholangio; smoke 23/0 cascade 1414/0 flagship 12/0",
+  "head": "54d638f8fb1d67f7a056608fea3b365ede5025ba",
+  "short": "54d638f8",
+  "head_short": "54d638f8"
 }
