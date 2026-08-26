@@ -33,5 +33,6 @@
   "item_id": "mi_1816_smx_mesh_tricuspid_life",
   "title": "1816 MESH_TRICUSPID soft-OOB mesh exchange life-force",
   "summary": "Tricuspid SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
-  "feat_sha": "0fc9b52239fb4cc288669b46aa6f53eb2a4baa38"
+  "feat_sha": "17fb46139461b1ebfefd9a703a0f5ff846c79846",
+  "pin_sha": "f60fca4e7dc2d7d5726a36288898347f69d2895d"
 }
