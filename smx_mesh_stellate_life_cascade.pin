@@ -1,4 +1,1 @@
-MEANINGFUL_ITER=1775
-FEATURE=MESH_STELLATE
-STATUS=PASS
-PROOF=1775_smx_mesh_stellate_life_cascade.cubalc
+smx_mesh_stellate_life_cascade PASS HEAD=a055297209f0a22f3082390c46ac5082f29313d3 1361/0 smoke23/0 flagship1620
