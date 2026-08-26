@@ -6,7 +6,7 @@
   "feature": "SMX_MESH_DUODENAL_LUMEN_LIFE",
   "ship": "1792_smx_mesh_duodenal_lumen_life",
   "proof": "programs/proof/1792_smx_mesh_duodenal_lumen_life.cubalc",
-  "integration": "programs/integration/smx_mesh_duodenal_lumen_life.cubalc",
+  "science": "programs/science/integration/smx_mesh_duodenal_lumen_life.cubalc",
   "version": "1.15.1270-usability",
   "VERSION": "1.15.1270-usability",
   "proof_status": "PASS",
@@ -15,9 +15,7 @@
   "flagship_1620": "PASS",
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "duodenal lumen soft-OOB fail-closed mesh life-force after MINOR_PAPILLA; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW brush-border absorption; WE_AUTOHEAL",
-  "note": "SMX mesh duodenal lumen life-force continuum 1792",
-  "slice": "DUODENAL_LUMEN|BRUSH_BORDER|ABSORPTION_CORRIDOR|LUMEN",
-  "status": "PASS",
+  "notes": "DUODENAL_LUMEN continuum soft-OOB fail-closed mesh after MINOR_PAPILLA; tip==pin",
+  "note": "SMX DUODENAL_LUMEN life-force continuum 1792",
   "ts": 1787756100
 }

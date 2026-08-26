@@ -1,0 +1,5 @@
+SHIP 1792 SMX_MESH_DUODENAL_LUMEN_LIFE
+proof: programs/proof/1792_smx_mesh_duodenal_lumen_life.cubalc PASS asserts_ok=60 fail=0
+flagship 1620: PASS (12/0)
+VERSION=1.15.1270-usability MEANINGFUL_ITER=1792
+soft-OOB · MESH_EXCHANGE C(4,2) · STABILIZE · ENERGYFLOW/FLOW · WE_AUTOHEAL · mitosis
