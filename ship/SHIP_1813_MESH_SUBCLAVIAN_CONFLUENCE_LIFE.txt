@@ -9,5 +9,6 @@ ASSERTS_FAIL=0
 FLAGSHIP_1620=PASS
 FLAGSHIP_OK=12
 VERSION=1.15.1292-usability
-NOTE=MESH_SUBCLAVIAN_CONFLUENCE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right+left venous angles→subclavian confluence→brachiocephalic veins→SVC→right atrium; WE_AUTOHEAL; pure-C cubalc_smx_subclavian_confluence.c
+NOTE=MESH_SUBCLAVIAN_CONFLUENCE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW thoracic duct+right lymph→subclavian confluence (IJV∩SCV)→brachiocephalic→SVC→right atrium; WE_AUTOHEAL; pure-C cubalc_smx_subclavian_confluence.c
 C_SLICE=src/cubalc_smx_subclavian_confluence.c
+SLICE_SHA1=81cb434ecf63713f0de22e3f6b75018b423152cb
