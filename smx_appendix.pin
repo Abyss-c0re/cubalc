@@ -1,0 +1,7 @@
+MESH_APPENDIX
+FEATURE=SMX_MESH_APPENDIX_LIFE
+PROOF=programs/proof/72_smx_appendix.cubalc
+PROOF_ALT=programs/proof/1807_smx_mesh_appendix_life.cubalc
+SOFT_OOB=fail-closed
+MESH_EXCHANGE=C(4,2)
+STATUS=SHIPPING

@@ -1,0 +1,13 @@
+MEANINGFUL_ITER=1807
+FEATURE=SMX_MESH_APPENDIX_LIFE
+PROOF=programs/proof/72_smx_appendix.cubalc
+PROOF_ALT=programs/proof/1807_smx_mesh_appendix_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+VERSION=1.15.1282-usability
+NOTE=MESH_APPENDIX soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW ileocecal→orifice→vermiform/lymphoid→tip; WE_AUTOHEAL; pure-C cubalc_smx_appendix.c
+C_SLICE=src/cubalc_smx_appendix.c
+HEAD=ffdff083d832fa9951391812a9e4b535ed25db6a
