@@ -30,10 +30,10 @@
   "host_finish": true,
   "proof": "programs/science/proof/1738_smx_mesh_ionosphere_life_cascade.cubalc",
   "flagship": "programs/proof/1620_atomic_printer_life_force.cubalc",
-  "feat_head": "fad3e7d6de41d7382b74aecaf3b80b534b1f8ab4",
-  "pin_head": "c50660415b69d7ef5399bc1992c08487804db8b2",
-  "tip": "c50660415b69d7ef5399bc1992c08487804db8b2",
-  "HEAD": "c50660415b69d7ef5399bc1992c08487804db8b2",
-  "commit": "c50660415b69d7ef5399bc1992c08487804db8b2",
-  "short": "c5066041"
+  "feat_head": "8d980b1a2c69ee7578b4cdfe48d4153666229652",
+  "pin_head": "8d980b1a2c69ee7578b4cdfe48d4153666229652",
+  "tip": "8d980b1a2c69ee7578b4cdfe48d4153666229652",
+  "HEAD": "8d980b1a2c69ee7578b4cdfe48d4153666229652",
+  "commit": "8d980b1a2c69ee7578b4cdfe48d4153666229652",
+  "short": "8d980b1a"
 }
