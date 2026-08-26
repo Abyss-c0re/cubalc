@@ -1,8 +1,8 @@
 {
   "meaningful_iter": 1765,
   "version": "1.15.1242-usability",
-  "head": "fde8df0e9d2e4a60eca056d471db32b64f7a3bcf",
-  "head_short": "fde8df0e",
+  "head": "184cb9eac7908b009ecf6b316277656c961ead0a",
+  "head_short": "184cb9ea",
   "feature": "MESH_PERICYTE_LIFE_CASCADE",
   "proof": "programs/proof/1765_smx_mesh_pericyte_life_cascade.cubalc",
   "asserts_ok": 1046,
@@ -10,8 +10,8 @@
   "flagship": "1620 PASS",
   "ship": "SHIP_1765_MESH_PERICYTE_LIFE_CASCADE.txt",
   "ts": 1787731702,
-  "HEAD": "fde8df0e9d2e4a60eca056d471db32b64f7a3bcf",
-  "HEAD_SHORT": "fde8df0e",
+  "HEAD": "184cb9eac7908b009ecf6b316277656c961ead0a",
+  "HEAD_SHORT": "184cb9ea",
   "flagship_1620": "PASS",
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
@@ -36,5 +36,6 @@
   "soft_oob": "fail-closed",
   "craft": "pericyte",
   "name": "smx_mesh_pericyte_life_cascade",
-  "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop"
+  "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
+  "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+tanycyte+pituicyte+folliculo+pericyte+stabilize+mitosis"
 }
