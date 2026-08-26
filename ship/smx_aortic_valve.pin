@@ -1,1 +1,7 @@
-MESH_AORTIC_VALVE 1829 soft-OOB fail-closed
+feature=MESH_AORTIC_VALVE
+iter=1829
+proof=95_smx_aortic_valve.cubalc
+life=1829_smx_mesh_aortic_valve_life.cubalc
+soft_oob=1
+fail_closed=1
+bonds=6
