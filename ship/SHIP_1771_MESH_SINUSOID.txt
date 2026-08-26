@@ -8,4 +8,4 @@ version=1.15.1248-usability
 latch=sinusoid_latch
 status=PASS
 next=we_autoheal
-head=cf7c48cb
+head=d6f55c30
