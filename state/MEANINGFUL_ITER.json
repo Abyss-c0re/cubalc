@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_PULMONARY_VALVE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right ventricle chamber→pulmonary valve leaflets→pulmonary outflow trunk→main pulmonary artery→lung return; WE_AUTOHEAL; pure-C cubalc_smx_pulmonary_valve.c",
+  "notes": "MESH_PULMONARY_VALVE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right ventricle chamber\u2192pulmonary valve leaflets\u2192pulmonary outflow trunk\u2192main pulmonary artery\u2192lung return; WE_AUTOHEAL; pure-C cubalc_smx_pulmonary_valve.c",
   "note": "MESH_PULMONARY_VALVE SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1818 smx mesh pulmonary valve life",
   "item_id": "mi_1818_smx_mesh_pulmonary_valve_life",
@@ -30,12 +30,12 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sha": "b96fe3596d13d07c0bac84181e54eb5a35a9023d",
-  "head": "b96fe3596d13d07c0bac84181e54eb5a35a9023d",
-  "pinned_head": "b96fe3596d13d07c0bac84181e54eb5a35a9023d",
-  "pin_head": "b96fe3596d13d07c0bac84181e54eb5a35a9023d",
-  "tip": "b96fe3596d13d07c0bac84181e54eb5a35a9023d",
+  "sha": "65fd424bfe19d94d657f24d1323947a5a5b13362",
+  "head": "65fd424bfe19d94d657f24d1323947a5a5b13362",
+  "pinned_head": "65fd424bfe19d94d657f24d1323947a5a5b13362",
+  "pin_head": "65fd424bfe19d94d657f24d1323947a5a5b13362",
+  "tip": "65fd424bfe19d94d657f24d1323947a5a5b13362",
   "feat_sha": "b96fe3596d13d07c0bac84181e54eb5a35a9023d",
   "commit": "b96fe3596d13d07c0bac84181e54eb5a35a9023d",
-  "pin_commit": "b96fe3596d13d07c0bac84181e54eb5a35a9023d"
+  "pin_commit": "65fd424bfe19d94d657f24d1323947a5a5b13362"
 }
