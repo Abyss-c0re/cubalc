@@ -20,9 +20,9 @@
   "slice": "DUODENAL_LUMEN|BRUSH_BORDER|ABSORPTIVE_MUCOSA|DUODENUM",
   "status": "PASS",
   "ts": 1787756114,
-  "head": "f55369f15c6f6503563f019fc95ed271fae0a644",
-  "sha": "f55369f15c6f6503563f019fc95ed271fae0a644",
-  "pinned_head": "f55369f15c6f6503563f019fc95ed271fae0a644",
-  "head_short": "f55369f1",
+  "head": "d2a04c45b0546c52e73b90831f1b2f1dfe97c5b8",
+  "sha": "d2a04c45b0546c52e73b90831f1b2f1dfe97c5b8",
+  "pinned_head": "d2a04c45b0546c52e73b90831f1b2f1dfe97c5b8",
+  "head_short": "d2a04c45",
   "tip_equals_pin": true
 }
