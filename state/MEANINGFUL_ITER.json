@@ -30,8 +30,8 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sha": "PENDING",
-  "head": "PENDING",
-  "pinned_head": "PENDING",
-  "head_short": "PENDING"
+  "sha": "c172511e573b3809ce4427523966bc12df41db1c",
+  "head": "c172511e573b3809ce4427523966bc12df41db1c",
+  "pinned_head": "c172511e573b3809ce4427523966bc12df41db1c",
+  "head_short": "c172511e573b"
 }
