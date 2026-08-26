@@ -5,10 +5,10 @@
   "version": "1.15.1244-usability",
   "VERSION": "1.15.1244-usability",
   "feature": "MESH_BASAL_LIFE_CASCADE",
-  "head": "4ea99a76bdd1e617c7a896cfbc4fc00e564c3926",
-  "HEAD": "4ea99a76bdd1e617c7a896cfbc4fc00e564c3926",
-  "head_short": "4ea99a76",
-  "HEAD_SHORT": "4ea99a76",
+  "head": "a4d51d27b9d21e47f921ddf4752f044a806d15f3",
+  "HEAD": "a4d51d27b9d21e47f921ddf4752f044a806d15f3",
+  "head_short": "a4d51d27",
+  "HEAD_SHORT": "a4d51d27",
   "proof": "programs/proof/1767_smx_mesh_basal_life_cascade.cubalc",
   "proofs": [
     "programs/proof/1767_smx_mesh_basal_life_cascade.cubalc"

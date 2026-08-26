@@ -1,2 +1,2 @@
 SMX BASAL soft-OOB fail-closed mesh life cascade after endothelial; proof 1767 asserts_ok:1115 asserts_fail:0; flagship 1620 PASS 12/0.
-HEAD=4ea99a76bdd1e617c7a896cfbc4fc00e564c3926 MEANINGFUL_ITER=1767 VERSION=1.15.1244-usability
+HEAD=a4d51d27b9d21e47f921ddf4752f044a806d15f3 MEANINGFUL_ITER=1767 VERSION=1.15.1244-usability
