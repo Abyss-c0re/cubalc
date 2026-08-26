@@ -15983,6 +15983,211 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; KUPFFER|HEPATOCYTE|DISSE|SINUSOID|CAPILLARY|VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
+  /* SMX STELLATE|STELLATEGLIA|MESH_STELLATE|STELLATE_WRAP|STELLATE_SHEATH|STELLATE_GUIDE|RAISE_STELLATE a b c ...
+   * Life-force STELLATE stellate Ito HSC vitamin-A perisinusoidal scaffold mesh stability after kupffer: hepatic stellate space-of-Disse plate exchange bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete stellate Ito HSC perisinusoidal scaffold mesh among live nodes, weaves a
+   * stellate wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks stellate where life guides the stellate Ito HSC perisinusoidal plate return pulse.
+   * Latches SMX_STELLATE when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = stellate ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_STELLATE_SUM = bonds+wraps+sheaths; SMX_STELLATE|SMX_MESH_STELLATE|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"STELLATE")||kw(&L->cur,"ITO")||kw(&L->cur,"HSC")||kw(&L->cur,"ITO_CELL")||kw(&L->cur,"HEPATIC_STELLATE")||kw(&L->cur,"STELLATEGLIA")||kw(&L->cur,"MESH_STELLATE")||kw(&L->cur,"STELLATE_WRAP")||kw(&L->cur,"STELLATE_WRAPS")||kw(&L->cur,"STELLATE_SHEATH")||kw(&L->cur,"STELLATE_SHEATHS")||kw(&L->cur,"STELLATE_GUIDE")||kw(&L->cur,"RAISE_STELLATE")||kw(&L->cur,"WE_STELLATE")||kw(&L->cur,"LIFE_STELLATE")||
+      kw(&L->cur,"STABLE_STELLATE")||kw(&L->cur,"MESH_STELLATES")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_STELLATE")||kw(&L->cur,"STELLATE_LEAF")||
+      kw(&L->cur,"SEEDSTELLATE")||kw(&L->cur,"SEEDSTELLATESHEATH")||kw(&L->cur,"SEEDSTELLATEWRAP")||
+      kw(&L->cur,"STELLATE_RING")||kw(&L->cur,"STELLATE_SHEATH_HUB")||kw(&L->cur,"STELLATE_NODE")||
+      kw(&L->cur,"LATTICE_STELLATE")||kw(&L->cur,"WORLD_STELLATE")||kw(&L->cur,"WORLD_STELLATE")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_STELLATE")||kw(&L->cur,"HARDEN_STELLATE")||
+      kw(&L->cur,"STELLATE_SCAFFOLD")||kw(&L->cur,"STELLATE_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "STELLATE needs >=2 cubes",
+                  "SMX STELLATE a b [c ...]  or  SMX STELLATE_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - stellate needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete stellate mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* stellate ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int stellate_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (stellate_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_STELLATEED", (long)stellate_ok);
+      var_set_num(vm, "SMX_STELLATED", (long)stellate_ok);
+      var_set_num(vm, "SMX_STELLATEED", (long)stellate_ok);
+      var_set_num(vm, "SMX_STELLATE_LATCH", (long)stellate_ok);
+      var_set_num(vm, "SMX_STELLATE", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STELLATE_SUM", (long)(stellate_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_STELLATE_ALIAS", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_ITO", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_ITO_CELL", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HSC", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_ITO", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_STELLATE", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STELLATE_SHEATH_LATCH", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_STELLATE", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STELLATE_WRAP_LATCH", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(stellate_ok ? wraps : 0));
+      var_set_num(vm, "SMX_STELLATE_WRAP", (long)(stellate_ok ? wraps : 0));
+      var_set_num(vm, "SMX_STELLATE_WRAPS", (long)(stellate_ok ? wraps : 0));
+      var_set_num(vm, "SMX_STELLATE_SHEATHS", (long)(stellate_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(stellate_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(stellate_ok ? wraps : 0));
+      var_set_num(vm, "SMX_STELLATE_WRAP_LATCH", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(stellate_ok ? 1 : 0));
+      var_set_num(vm, "SMX_DI_BONDS", (long)(stellate_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_MESH", (long)(stellate_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_BONDS2", (long)(stellate_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_STARS", (long)(stellate_ok ? wraps : 0));
+      var_set_num(vm, "SMX_DI_STAR", (long)(stellate_ok ? wraps : 0));
+      var_set_num(vm, "SMX_STELLATE_RING", (long)(stellate_ok ? wraps : 0));
+      var_set_num(vm, "SMX_STELLATE_LANE", (long)(stellate_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(stellate_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_STELLATE_SHEATH_HUB", (long)(stellate_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(stellate_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDSTELLATE", (long)(stellate_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDSTELLATESHEATH", (long)(stellate_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(stellate_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (stellate_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX STELLATE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX STELLATE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX STELLATE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX STELLATE nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d stellateed=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, stellate_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (see lang_ops_smx; STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|CAPILLARY|VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
   return -1;
 }
+

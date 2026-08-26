@@ -1,18 +1,12 @@
 {
-  "iter": 1774,
-  "feature": "MESH_KUPFFER",
-  "slice": "KUPFFER soft-OOB mesh stability life-force after hepatocyte",
-  "proof": "1774_smx_mesh_kupffer_life_cascade.cubalc",
-  "smoke": "programs/proof/1774_smx_kupffer_soft_oob_smoke.cubalc",
-  "asserts_ok": 1316,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS 12/0",
-  "version": "1.15.1250-usability",
-  "head": "c9e56967119bceb90e1607bb9b5312d62bb4eafb",
-  "short": "3f6e00f9",
-  "status": "PASS",
-  "next": "we_autoheal",
-  "head_short": "c9e56967",
-  "MEANINGFUL_ITER": 1774,
-  "mesh": "kupffer"
+  "iter": 1775,
+  "meaningful_iter": 1775,
+  "feature": "MESH_STELLATE",
+  "version": "1.15.1251-stellate-mesh",
+  "proofs": {
+    "1775_smoke": "PASS",
+    "1775_cascade": "PASS",
+    "1620_flagship": "PASS"
+  },
+  "notes": "SMX STELLATE/ITO/HSC soft-OOB fail-closed mesh+wrap ring+sheath hub life-force"
 }
