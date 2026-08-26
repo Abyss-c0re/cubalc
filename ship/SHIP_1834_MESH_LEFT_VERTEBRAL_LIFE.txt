@@ -1,10 +1,4 @@
-SHIP 1834 MESH_LEFT_VERTEBRAL_LIFE
-feature: soft-OOB fail-closed left vertebral life-force
-c_slice: src/cubalc_smx_left_vertebral.c
-proof: programs/proof/1834_smx_mesh_left_vertebral_life.cubalc
-asserts_ok: 60
-flagship_1620: PASS 12/0
-MEANINGFUL_ITER: 1834
-HEAD: b45e89d70f23277552645b1230aa7dccce01ca61
-tip_equals_pin: true
-status: PASS
+SMX_MESH_LEFT_VERTEBRAL_LIFE iter=1834
+soft-OOB fail-closed mesh stability life-force
+proofs: 99+1834 asserts_ok=60 fail=0; flagship 1620 asserts_ok=12 fail=0
+energy: left subclavian origin → left vertebral takeoff → cervical transverse foramina → atlanto-occipital ascent → basilar confluence
