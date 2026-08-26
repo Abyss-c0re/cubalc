@@ -1,3 +1,9 @@
+## 1.15.1323-usability — 1843 SMX MESH_OPHTHALMIC life-force
+
+- SMX MESH_OPHTHALMIC soft-OOB fail-closed + MESH_EXCHANGE C(4,2)
+- Energy path: ICA C6 ophthalmic segment → ophthalmic artery origin → optic canal transit → orbital apex feed → central retinal / ciliary life-force join
+- proofs: 99_smx_ophthalmic + 1843_smx_mesh_ophthalmic_life PASS 60/0; flagship 1620 PASS 12/0
+
 ## 1.15.1320-usability — 1841 SMX MESH_ANTERIOR_COMMUNICATING life-force
 
 - SMX MESH_ANTERIOR_COMMUNICATING (AComm) soft-OOB fail-closed + MESH_EXCHANGE C(4,2)
