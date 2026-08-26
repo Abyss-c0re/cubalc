@@ -6,13 +6,27 @@
   "asserts_fail": 0,
   "flagship_1620": "PASS",
   "VERSION": "1.15.1238-usability",
-  "HEAD_note": "pin after ship",
-  "ts": 1787726941,
-  "head": "aa56fd1b91bca5ab8d6c2431b231b73ccae97524",
-  "head_short": "aa56fd1b",
+  "HEAD": "f6e4d95013fb86e0e4ad236d9b67a014c71878ee",
+  "HEAD_SHORT": "f6e4d950",
+  "ts": "2026-08-26T06:49:26Z",
+  "iter": 1762,
+  "meaningful_iter": 1762,
   "version": "1.15.1238-usability",
+  "item": "tanycyte ventricle guide life cascade",
+  "item_id": "mi_smx_mesh_tanycyte_life_cascade",
+  "title": "tanycyte ventricle guide life cascade",
+  "summary": "SMX TANYCYTE soft-OOB fail-closed mesh stability after muller; mitosis under free energy; proof 1762 asserts_fail:0.",
+  "proofs": [
+    "programs/proof/1762_smx_mesh_tanycyte_life_cascade.cubalc"
+  ],
+  "proof_status": "PASS",
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
-  "proof_status": "PASS",
-  "sealed": true
+  "unity": 0.88,
+  "nodes": 7,
+  "risk": "low",
+  "next": "we_autoheal",
+  "past": 1761,
+  "sealed": true,
+  "verified_at": "2026-08-26T06:49:26Z"
 }
