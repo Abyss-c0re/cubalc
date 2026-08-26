@@ -30,9 +30,9 @@
   "status": "PASS",
   "unity": 1.0,
   "feat_subject": "feat(smx): mesh ICA life soft-OOB stability (MEANINGFUL_ITER 1842)",
-  "pin_head": "PENDING",
-  "tip": "PENDING",
-  "HEAD": "PENDING",
-  "head_short": "PENDING",
-  "feat_head": "PENDING"
+  "pin_head": "6e59f6fff2479dcfbacf5d93fdb282bf34a54d36",
+  "tip": "6e59f6fff2479dcfbacf5d93fdb282bf34a54d36",
+  "HEAD": "6e59f6fff2479dcfbacf5d93fdb282bf34a54d36",
+  "head_short": "6e59f6ff",
+  "feat_head": "6e59f6fff2479dcfbacf5d93fdb282bf34a54d36"
 }
