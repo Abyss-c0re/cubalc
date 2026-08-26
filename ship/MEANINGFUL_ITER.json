@@ -1,11 +1,11 @@
 {
-  "iter": 1775,
-  "meaningful_iter": 1775,
-  "feature": "MESH_STELLATE",
-  "version": "1.15.1251-stellate-mesh",
-  "head": "ec6a738d8d72d1c78eadd854399e25130cbb66c3",
+  "iter": 1777,
+  "meaningful_iter": 1777,
+  "feature": "MESH_OVAL",
+  "version": "1.15.1253-oval-mesh",
+  "head": "864dfb565b70091814feadabf519998211c7e589",
   "short": "ec6a738d",
-  "latch": "stellate_latch",
+  "latch": "oval_latch",
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
@@ -14,5 +14,7 @@
     "1775_cascade": "PASS",
     "1620_flagship": "PASS"
   },
-  "notes": "SMX STELLATE|ITO|HSC soft-OOB fail-closed mesh+wrap+sheath life-force"
+  "notes": "SMX STELLATE|ITO|HSC soft-OOB fail-closed mesh+wrap+sheath life-force",
+  "proof": "1777_smx_mesh_oval_life_cascade.cubalc",
+  "smoke": "1777_smx_oval_soft_oob_smoke.cubalc"
 }
