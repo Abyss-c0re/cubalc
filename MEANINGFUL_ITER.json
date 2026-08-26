@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_LEFT_COMMON_CAROTID soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW aortic arch apex\u2192left common carotid origin\u2192left common carotid trunk\u2192carotid bifurcation approach\u2192cranial perfusion takeoff; WE_AUTOHEAL; pure-C cubalc_smx_left_common_carotid.c",
+  "notes": "MESH_LEFT_COMMON_CAROTID soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW aortic arch apex→left common carotid origin→left common carotid trunk→carotid bifurcation approach→cranial perfusion takeoff; WE_AUTOHEAL; pure-C cubalc_smx_left_common_carotid.c",
   "note": "MESH_LEFT_COMMON_CAROTID SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1832 smx mesh left common carotid life",
   "item_id": "mi_1832_smx_mesh_left_common_carotid_life",
@@ -31,7 +31,7 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "c_slice": "src/cubalc_smx_left_common_carotid.c",
-  "energy_path": "aortic arch apex \u2192 left common carotid origin \u2192 left common carotid trunk \u2192 carotid bifurcation approach \u2192 cranial perfusion takeoff",
+  "energy_path": "aortic arch apex → left common carotid origin → left common carotid trunk → carotid bifurcation approach → cranial perfusion takeoff",
   "soft_oob": 1,
   "fail_closed": 1,
   "branch": "ship-1832-left-common-carotid",
@@ -42,8 +42,11 @@
   "cmd": "smx-left-common-carotid",
   "soft_oob_mode": "fail_closed",
   "feat_sha": "0bbce2c13844e213344a1bd926952726d990b53f",
+  "pin_head": "PENDING",
+  "tip": "PENDING",
   "proof_recheck": {
     "98": "PASS 60/0",
-    "1832": "PASS 60/0"
+    "1832": "PASS 60/0",
+    "1620": "PASS 12/0"
   }
 }
