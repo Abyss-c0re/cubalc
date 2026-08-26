@@ -7,15 +7,14 @@
   "item": "1738 smx mesh ionosphere life cascade",
   "item_id": "mi_1738_smx_mesh_ionosphere_life_cascade",
   "title": "1738 smx mesh ionosphere life cascade",
-  "summary": "SMX mesh ionosphere life cascade: soft-OOB fail-closed + LIFE_FORCE + WE_AUTOHEAL + RESILIENCE + THALAMUS + HOMEOSTASIS + IONOSPHERE + STABILIZE + mitosis under free energy PASS.",
+  "summary": "SMX mesh ionosphere life cascade: soft-OOB fail-closed + LIFE_FORCE + WE_AUTOHEAL + RESILIENCE + THALAMUS + HOMEOSTASIS + IONOSPHERE + STABILIZE + mitosis under free energy PASS (re-verified).",
   "feature": "MESH_IONOSPHERE_LIFE_CASCADE",
   "proofs": [
-    "programs/proof/1738_smx_mesh_ionosphere_life_cascade.cubalc",
-    "programs/science/integration/atomic_printer_mesh_ionosphere_life.cubalc",
-    "programs/science/proof/1738_smx_mesh_ionosphere_life_cascade.cubalc"
+    "programs/science/proof/1738_smx_mesh_ionosphere_life_cascade.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
   "proof_status": "PASS",
-  "asserts_ok": 0,
+  "asserts_ok": 104,
   "asserts_fail": 0,
   "unity": 0.874,
   "nodes": 7,
@@ -26,13 +25,15 @@
   "soft_oob": "fail-closed",
   "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+stabilize+mitosis",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T04:40:00Z",
-  "verified_at": "2026-08-26T04:40:00Z",
+  "ts": "2026-08-26T04:30:00Z",
+  "verified_at": "2026-08-26T04:30:00Z",
   "host_finish": true,
+  "proof": "programs/science/proof/1738_smx_mesh_ionosphere_life_cascade.cubalc",
+  "flagship": "programs/proof/1620_atomic_printer_life_force.cubalc",
   "feat_head": "fad3e7d6de41d7382b74aecaf3b80b534b1f8ab4",
-  "pin_head": "fad3e7d6de41d7382b74aecaf3b80b534b1f8ab4",
-  "tip": "fad3e7d6de41d7382b74aecaf3b80b534b1f8ab4",
-  "HEAD": "fad3e7d6de41d7382b74aecaf3b80b534b1f8ab4",
-  "commit": "fad3e7d6de41d7382b74aecaf3b80b534b1f8ab4",
-  "short": "fad3e7d6"
+  "pin_head": "c50660415b69d7ef5399bc1992c08487804db8b2",
+  "tip": "c50660415b69d7ef5399bc1992c08487804db8b2",
+  "HEAD": "c50660415b69d7ef5399bc1992c08487804db8b2",
+  "commit": "c50660415b69d7ef5399bc1992c08487804db8b2",
+  "short": "c5066041"
 }

@@ -3,5 +3,7 @@ MEANINGFUL_ITER=1738
 VERSION=1.15.1210-usability
 proofs=1738_smx_mesh_ionosphere_life_cascade+1620_atomic_printer_life_force PASS
 asserts_fail=0
+asserts_ok_1738=104
 feature=soft-OOB fail-closed + LIFE_FORCE + WE_AUTOHEAL + RESILIENCE + THALAMUS + HOMEOSTASIS + IONOSPHERE + STABILIZE + mitosis under free energy
 next=we_autoheal
+bin=out/nb1737/cubalc
