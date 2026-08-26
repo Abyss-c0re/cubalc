@@ -4,3 +4,4 @@ PROOF=programs/proof/1766_smx_mesh_endothelial_life_cascade.cubalc
 ASSERTS_OK=1080
 ASSERTS_FAIL=0
 FLAGSHIP_1620=PASS
+HEAD=935709cc24a43d866245c65b14aa9fe065b44614
