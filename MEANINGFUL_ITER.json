@@ -33,5 +33,14 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "c_slice": "src/cubalc_smx_venous_angle.c"
+  "c_slice": "src/cubalc_smx_venous_angle.c",
+  "sha": "f674e0bab6b4d64f677fcdb5ddb89e0713a5bd75",
+  "head": "f674e0bab6b4d64f677fcdb5ddb89e0713a5bd75",
+  "pinned_head": "f674e0bab6b4d64f677fcdb5ddb89e0713a5bd75",
+  "commit": "f674e0bab6b4d64f677fcdb5ddb89e0713a5bd75",
+  "pin_head": "f674e0bab6b4d64f677fcdb5ddb89e0713a5bd75",
+  "tip": "f674e0bab6b4d64f677fcdb5ddb89e0713a5bd75",
+  "head_short": "f674e0ba",
+  "tip_equals_pin": true,
+  "head_before": "517a624a"
 }
