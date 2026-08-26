@@ -12385,6 +12385,8 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       var_set_num(vm, "SMX_EP_SHEATH_LATCH", (long)(ependyma_ok ? 1 : 0));
       var_set_num(vm, "SMX_SHEATH_LATCH", (long)(ependyma_ok ? 1 : 0));
       var_set_num(vm, "SMX_HARDEN_EPENDYMA", (long)(ependyma_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(ependyma_ok ? 1 : 0));
+      var_set_num(vm, "SMX_EP_WRAP_LATCH", (long)(ependyma_ok ? 1 : 0));
       var_set_num(vm, "SMX_WRAP", (long)(ependyma_ok ? wraps : 0));
       var_set_num(vm, "SMX_EP_WRAP", (long)(ependyma_ok ? wraps : 0));
       var_set_num(vm, "SMX_EP_WRAPS", (long)(ependyma_ok ? wraps : 0));
@@ -12587,6 +12589,8 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       var_set_num(vm, "SMX_SG_SHEATH_LATCH", (long)(satellite_ok ? 1 : 0));
       var_set_num(vm, "SMX_SHEATH_LATCH", (long)(satellite_ok ? 1 : 0));
       var_set_num(vm, "SMX_HARDEN_SATELLITE", (long)(satellite_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(satellite_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SG_WRAP_LATCH", (long)(satellite_ok ? 1 : 0));
       var_set_num(vm, "SMX_WRAP", (long)(satellite_ok ? wraps : 0));
       var_set_num(vm, "SMX_SG_WRAP", (long)(satellite_ok ? wraps : 0));
       var_set_num(vm, "SMX_SG_WRAPS", (long)(satellite_ok ? wraps : 0));
