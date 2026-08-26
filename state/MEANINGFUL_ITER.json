@@ -30,9 +30,9 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "pin_head": "fe1a7433327c6f4c502ab988e6a6a30b74970ebe",
-  "pin_short": "fe1a7433",
+  "pin_head": "925b6ae96f8e28734d368a9e14667a98c495373d",
+  "pin_short": "925b6ae9",
   "feat_sha": "64a10b1ea3b88b127188c4379a77eefe0453dffa",
-  "HEAD": "fe1a7433327c6f4c502ab988e6a6a30b74970ebe",
-  "tip": "fe1a7433327c6f4c502ab988e6a6a30b74970ebe"
+  "HEAD": "925b6ae96f8e28734d368a9e14667a98c495373d",
+  "tip": "925b6ae96f8e28734d368a9e14667a98c495373d"
 }
