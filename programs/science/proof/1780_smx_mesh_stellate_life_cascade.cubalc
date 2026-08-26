@@ -1,0 +1,60 @@
+// 1780_smx_mesh_stellate_life_cascade.cubalc
+// Cascade: LIFE_FORCE -> SINUSOID -> DISSE -> HEPATOCYTE -> KUPFFER -> STELLATE -> STABILIZE -> WE_AUTOHEAL
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 48
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=smx_mesh_stellate_life_cascade | hold_flash=1 | creed=life_force |"
+
+CUBE a ROLE host PROTON 1
+CUBE b ROLE construct PROTON 1
+CUBE c ROLE nanobot PROTON 1
+CUBE d ROLE recycle PROTON 1
+
+PLUG a b
+PLUG b c
+PLUG c d
+PLUG d a
+
+IMPULSE a 1
+ENERGYFLOW 3
+FLOW 2
+
+LET base_cubes = CUBES
+SMX KEY
+
+SMX EXCHANGE a ghost_x
+ASSERT SMX_OK == 0 "cascade storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob counted"
+
+SMX LIFE_FORCE a b c d
+ASSERT SMX_LIFE_FORCE == 1 "lf"
+SMX SINUSOID a b c d
+ASSERT SMX_SINUSOID == 1 "sin"
+SMX DISSE a b c d
+ASSERT SMX_DISSE == 1 "disse"
+SMX HEPATOCYTE a b c d
+ASSERT SMX_HEPATOCYTE == 1 "hep"
+SMX KUPFFER a b c d
+ASSERT SMX_KUPFFER == 1 "kup"
+SMX STELLATE a b c d
+ASSERT SMX_STELLATE == 1 "stel"
+ASSERT SMX_MESH_STELLATE == 1 "mesh_stel"
+ASSERT SMX_ITO == 1 "ito"
+ASSERT SMX_VITAMIN_A == 1 "vitA"
+ASSERT SMX_FIBROGENIC == 1 "fibro"
+ASSERT SMX_STELLATE_SUM == 14 "sum"
+ASSERT SMX_OOB == 0 "oob clear"
+SMX STABILIZE a b c d
+ASSERT SMX_STABLE == 1 "stable"
+SMX WE_AUTOHEAL a b c d
+ASSERT SMX_AUTOHEALED == 1 "heal"
+ASSERT CUBES == base_cubes "no ghosts"
+
+ASSERT OK == 1
+PRINT "smx_mesh_stellate_life_cascade" SMX_STELLATE SMX_ITO SMX_VITAMIN_A SMX_FIBROGENIC SMX_STABLE SMX_AUTOHEALED SMX_OOB
+PASS

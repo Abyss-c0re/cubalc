@@ -1,0 +1,173 @@
+// 1780_smx_mesh_stellate_life_force.cubalc
+// SMX mesh stellate life-force: soft-OOB fail-closed, HEPATOCYTE plate + KUPFFER clearance prior,
+// STELLATE Ito hepatic-stellate vitamin-A fibrosis bed, STABILIZE latch, free-energy mitosis.
+// Wonder AGI can RUN. No dual ladders. Cube is SoT. matrix is key.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=smx_mesh_stellate_life_force | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 12 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+SMX EXCHANGE scrap void_cell
+ASSERT SMX_OK == 0 "storm-C soft-OOB"
+ASSERT SMX_OOB >= 3 "oob C depth"
+ASSERT CUBES == base_cubes "no ghost from storm-C"
+
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT SMX_OOB == 0 "oob cleared by life_force"
+ASSERT CUBES == base_cubes "life_force invents nothing"
+
+SMX SINUSOID bed nozzle hive scrap
+ASSERT SMX_OK == 1 "sinusoid live"
+ASSERT SMX_SINUSOID == 1 "sinusoid latch"
+ASSERT SMX_MESH_SINUSOID == 1 "mesh_sinusoid"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from sinusoid"
+ASSERT SMX_OOB == 0 "oob clear after sinusoid"
+ASSERT CUBES == base_cubes "sinusoid invents nothing"
+
+SMX DISSE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "disse live"
+ASSERT SMX_DISSE == 1 "disse latch"
+ASSERT SMX_MESH_DISSE == 1 "mesh_disse"
+ASSERT SMX_SPACE_OF_DISSE == 1 "space_of_disse"
+ASSERT SMX_PERISINUSOIDAL == 1 "perisinusoidal"
+ASSERT SMX_OOB == 0 "oob clear after disse"
+ASSERT CUBES == base_cubes "disse invents nothing"
+
+SMX HEPATOCYTE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "hepatocyte live"
+ASSERT SMX_HEPATOCYTE == 1 "hepatocyte latch"
+ASSERT SMX_MESH_HEPATOCYTE == 1 "mesh_hepatocyte"
+ASSERT SMX_OOB == 0 "oob clear after hepatocyte"
+ASSERT CUBES == base_cubes "hepatocyte invents nothing"
+
+SMX KUPFFER bed nozzle hive scrap
+ASSERT SMX_OK == 1 "kupffer live"
+ASSERT SMX_KUPFFER == 1 "kupffer latch"
+ASSERT SMX_MESH_KUPFFER == 1 "mesh_kupffer"
+ASSERT SMX_OOB == 0 "oob clear after kupffer"
+ASSERT CUBES == base_cubes "kupffer invents nothing"
+
+SMX STELLATE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stellate live"
+ASSERT SMX_STELLATED == 1 "stellateed latch"
+ASSERT SMX_STELLATE == 1 "stellate latch"
+ASSERT SMX_MESH_STELLATE == 1 "mesh_stellate"
+ASSERT SMX_STELLATE_PLATE == 1 "stellate_plate"
+ASSERT SMX_VITAMIN_A == 1 "vitamin_a"
+ASSERT SMX_STELLATE_CELL == 1 "stellate_cell"
+ASSERT SMX_ITO == 1 "ito"
+ASSERT SMX_HEPATIC_STELLATE == 1 "hepatic_stellate"
+ASSERT SMX_ITO_CELL == 1 "ito_cell"
+ASSERT SMX_FIBROGENIC == 1 "fibrogenic"
+ASSERT SMX_HARDEN_STELLATE == 1 "harden_stellate"
+ASSERT SMX_STELLATE_SUM == 14 "stellate_sum"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds"
+ASSERT SMX_WRAPS == 4 "four wraps"
+ASSERT SMX_SHEATHS == 4 "four sheaths"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from stellate"
+ASSERT SMX_OOB == 0 "oob clear after stellate"
+ASSERT CUBES == base_cubes "stellate invents nothing"
+
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize live"
+ASSERT SMX_STABLE == 1 "stable latch"
+ASSERT SMX_STEADFAST == 4 "four steadfast"
+ASSERT SMX_PULSE == 4 "four pulses"
+ASSERT SMX_OOB == 0 "oob cleared by stabilize"
+ASSERT SMX_TALKS >= 4 "stabilize talks"
+ASSERT CUBES == base_cubes "stabilize invents nothing"
+
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "autoheal live"
+ASSERT SMX_AUTOHEALED == 1 "autohealed latch"
+
+SMX RESILIENCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "resilience live"
+ASSERT SMX_RESILIENT == 1 "resilient latch"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy"
+ASSERT UNITY >= 40 "stable unity after OOB stabilize"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+GETF seed alive
+LET a0 = LAST_N
+GETF seed energy
+LET e0 = LAST_N
+IF e0 < 2 THEN
+  LET e0 = 12
+  SETF seed energy e0
+END
+LET half = e0 / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET g0 = LAST_N
+SEND d1 birth half (g0 + 1)
+SEND seed after_div
+PLUG bed d1
+ASSERT CUBES >= base_cubes "mitosis under stellate mesh"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+ASSERT SMX_STELLATE == 1 "stellate sticky through mitosis"
+ASSERT SMX_KUPFFER == 1 "kupffer sticky through mitosis"
+ASSERT SMX_HEPATOCYTE == 1 "hepatocyte sticky through mitosis"
+ASSERT SMX_DISSE == 1 "disse sticky through mitosis"
+ASSERT SMX_SINUSOID == 1 "sinusoid sticky through mitosis"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky"
+ASSERT SMX_OOB == 0 "oob clear through mitosis"
+
+ASSERT OK == 1
+PRINT "smx_mesh_stellate_life_force" SMX_OK SMX_LIFE_FORCE SMX_SINUSOID SMX_DISSE SMX_HEPATOCYTE SMX_KUPFFER SMX_STELLATE SMX_STELLATE_PLATE SMX_VITAMIN_A SMX_ITO SMX_FIBROGENIC SMX_STABLE SMX_AUTOHEALED SMX_RESILIENT SMX_STELLATE_SUM SMX_BONDS SMX_OOB CUBES UNITY ENERGY DECIDE
+PASS
