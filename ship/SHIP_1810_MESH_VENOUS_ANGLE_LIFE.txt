@@ -1,0 +1,12 @@
+MEANINGFUL_ITER=1810
+FEATURE=SMX_MESH_VENOUS_ANGLE_LIFE
+PROOF=programs/proof/75_smx_venous_angle.cubalc
+PROOF_ALT=programs/proof/1810_smx_mesh_venous_angle_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+VERSION=1.15.1289-usability
+NOTE=MESH_VENOUS_ANGLE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW thoracic duct→venous angle→jugular–subclavian confluence→systemic return; WE_AUTOHEAL; pure-C cubalc_smx_venous_angle.c
+C_SLICE=src/cubalc_smx_venous_angle.c
