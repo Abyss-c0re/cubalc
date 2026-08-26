@@ -31,7 +31,7 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "c_slice": "src/cubalc_smx_left_subclavian.c",
-  "energy_path": "aortic arch apex → left subclavian origin → left subclavian trunk → axillary approach → upper limb and vertebral perfusion takeoff",
+  "energy_path": "aortic arch apex \u2192 left subclavian origin \u2192 left subclavian trunk \u2192 axillary approach \u2192 upper limb and vertebral perfusion takeoff",
   "soft_oob": 1,
   "fail_closed": 1,
   "branch": "ship-1833-left-subclavian",
@@ -46,5 +46,15 @@
     "99": "PASS 60/0",
     "1833": "PASS 60/0",
     "1620": "PASS 12/0"
-  }
+  },
+  "pin_head": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
+  "tip": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
+  "HEAD": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
+  "pinned_head": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
+  "head": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
+  "sha": "3c35fdbc4de9f5625905ceb0aee480e668b6ff99",
+  "pin_short": "3c35fdbc",
+  "short": "3c35fdbc",
+  "tip_equals_pin": true,
+  "tip_eq_pin": true
 }
