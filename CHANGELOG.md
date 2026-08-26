@@ -1,3 +1,10 @@
+## 1.15.1316-usability — 1837 MESH_PCA
+
+- feat(smx): MESH_PCA soft-OOB fail-closed mesh life-force
+- Energy path: basilar bifurcation → PCA origin → ambient cistern → calcarine / Willis posterior seal
+- Proofs: 103_smx_pca + 1837_smx_mesh_pca_life (60/0)
+- Flagship 1620 PASS 12/0; pure-C src/cubalc_smx_pca.c
+
 ## 1.15.1313-usability — 1834 MESH_LEFT_SUBCLAVIAN
 
 - feat(smx): MESH_LEFT_SUBCLAVIAN soft-OOB fail-closed mesh life-force
