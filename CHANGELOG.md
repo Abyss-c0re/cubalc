@@ -1,3 +1,15 @@
+## 1.15.1292-usability — 1813 SMX mesh subclavian confluence life
+
+- SMX SUBCLAVIAN_CONFLUENCE mesh stability: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, WE_AUTOHEAL, mitosis sticky
+- proofs: programs/proof/77_smx_subclavian_confluence.cubalc + 1813_smx_mesh_subclavian_confluence_life.cubalc (60/0 PASS)
+- flagship 1620 PASS 12/0; C slice src/cubalc_smx_subclavian_confluence.c
+- ENERGYFLOW right+left venous angles → subclavian confluence → brachiocephalic → SVC → right atrium
+
+## 1.15.1291-usability — 1812 MESH_THORACIC_DUCT
+- SMX mesh stability life-force: thoracic duct soft-OOB fail-closed, MESH_EXCHANGE C(4,2), WE_AUTOHEAL
+- Proofs: 76_smx_thoracic_duct.cubalc, 1812_smx_mesh_thoracic_duct_life.cubalc (60 asserts PASS); flagship 1620 PASS
+- C slice: src/cubalc_smx_thoracic_duct.c
+
 
 ## 1.15.1291-usability — 1812 SMX mesh subclavian confluence life
 

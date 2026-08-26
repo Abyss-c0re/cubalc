@@ -1,0 +1,13 @@
+MESH_SUBCLAVIAN_CONFLUENCE 1813 PASS
+MEANINGFUL_ITER=1813
+FEATURE=SMX_MESH_SUBCLAVIAN_CONFLUENCE_LIFE
+PROOF=programs/proof/77_smx_subclavian_confluence.cubalc
+PROOF_ALT=programs/proof/1813_smx_mesh_subclavian_confluence_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+VERSION=1.15.1292-usability
+NOTE=MESH_SUBCLAVIAN_CONFLUENCE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right+left venous angles→subclavian confluence→brachiocephalic veins→SVC→right atrium; WE_AUTOHEAL; pure-C cubalc_smx_subclavian_confluence.c
+C_SLICE=src/cubalc_smx_subclavian_confluence.c
