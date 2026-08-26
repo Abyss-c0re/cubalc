@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_RIGHT_VENOUS_ANGLE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right lymph duct terminus→right venous angle (IJV+subclavian)→brachiocephalic→SVC→systemic return; WE_AUTOHEAL; pure-C cubalc_smx_right_venous_angle.c",
+  "notes": "MESH_RIGHT_VENOUS_ANGLE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right lymph duct terminus\u2192right venous angle (IJV+subclavian)\u2192brachiocephalic\u2192SVC\u2192systemic return; WE_AUTOHEAL; pure-C cubalc_smx_right_venous_angle.c",
   "note": "MESH_RIGHT_VENOUS_ANGLE SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1812 smx mesh right venous angle life",
   "item_id": "mi_1812_smx_mesh_right_venous_angle_life",
@@ -30,9 +30,9 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sha": "f3c049386cbd9b9d3039932088219943fe563452",
-  "head": "f3c049386cbd9b9d3039932088219943fe563452",
-  "pinned_head": "f3c049386cbd9b9d3039932088219943fe563452",
-  "pin_head": "f3c049386cbd9b9d3039932088219943fe563452",
+  "sha": "63c25c87f8d6647f501c26a4c1dca2ba34203d5c",
+  "head": "63c25c87f8d6647f501c26a4c1dca2ba34203d5c",
+  "pinned_head": "63c25c87f8d6647f501c26a4c1dca2ba34203d5c",
+  "pin_head": "63c25c87f8d6647f501c26a4c1dca2ba34203d5c",
   "feat_sha": "f3c049386cbd9b9d3039932088219943fe563452"
 }
