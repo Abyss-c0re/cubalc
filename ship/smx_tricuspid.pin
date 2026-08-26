@@ -1,3 +1,5 @@
 MESH_TRICUSPID
-1816_smx_mesh_tricuspid_life
-soft_oob=1 fail_closed=1 bonds=6
+1816
+soft_oob=1
+fail_closed=1
+bonds=6
