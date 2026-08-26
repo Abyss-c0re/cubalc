@@ -1,1 +1,1 @@
-tip==pin d9dbd57a 1815 MESH_RIGHT_ATRIUM
+tip==pin 6d8fb154 1815 MESH_RIGHT_ATRIUM
