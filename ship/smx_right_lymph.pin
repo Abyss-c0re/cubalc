@@ -6,4 +6,3 @@ C_SLICE=src/cubalc_smx_right_lymph.c
 SOFT_OOB=fail_closed
 MESH_BONDS=6
 ITER=1811
-MESH_RIGHT_LYMPH 1811 PASS
