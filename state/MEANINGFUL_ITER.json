@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_LEFT_ATRIUM_INFLOW soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW pulmonary venous confluence→superior/inferior pulmonary veins→left atrium inflow gate→left atrial chamber fill→mitral approach; WE_AUTOHEAL; pure-C cubalc_smx_left_atrium_inflow.c",
+  "notes": "MESH_LEFT_ATRIUM_INFLOW soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW pulmonary venous confluence\u2192superior/inferior pulmonary veins\u2192left atrium inflow gate\u2192left atrial chamber fill\u2192mitral approach; WE_AUTOHEAL; pure-C cubalc_smx_left_atrium_inflow.c",
   "note": "MESH_LEFT_ATRIUM_INFLOW SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1826 smx mesh left atrium inflow life",
   "item_id": "mi_1826_smx_mesh_left_atrium_inflow_life",
@@ -30,9 +30,9 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "pin_head": "dbaf8ec08fa3100016843906f3fcee650b87e494",
-  "pin_short": "dbaf8ec0",
   "feat_sha": "dbaf8ec08fa3100016843906f3fcee650b87e494",
-  "HEAD": "dbaf8ec08fa3100016843906f3fcee650b87e494",
-  "tip": "dbaf8ec08fa3100016843906f3fcee650b87e494"
+  "pin_head": "4c39537163ce03290a23b702892d083c89125815",
+  "pin_short": "4c395371",
+  "HEAD": "4c39537163ce03290a23b702892d083c89125815",
+  "tip": "4c39537163ce03290a23b702892d083c89125815"
 }
