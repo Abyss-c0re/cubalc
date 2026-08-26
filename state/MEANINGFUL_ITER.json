@@ -29,10 +29,10 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sha": "",
-  "head": "",
-  "pinned_head": "",
-  "head_short": "",
-  "commit": "",
-  "tip_equals_pin": false
+  "sha": "12b5b4891bd84bcbabaaa7e7024983dbd9d5bf40",
+  "head": "12b5b4891bd84bcbabaaa7e7024983dbd9d5bf40",
+  "pinned_head": "12b5b4891bd84bcbabaaa7e7024983dbd9d5bf40",
+  "head_short": "12b5b489",
+  "commit": "12b5b4891bd84bcbabaaa7e7024983dbd9d5bf40",
+  "tip_equals_pin": true
 }
