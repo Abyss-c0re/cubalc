@@ -1,13 +1,15 @@
 {
   "iter": 1777,
   "feature": "MESH_OVAL",
+  "head": "0fba32412a5ef87dbdcc63da2ee68f12dab228a5",
+  "short": "0fba3241",
   "status": "PASS",
-  "head": "3a6af76f92371d6bc8aaeb886e9d69641e6e7715",
-  "tip": "c7446a03c8ca997c6785cda1e40803fb118d867e",
+  "soft_oob": true,
+  "fail_closed": true,
+  "mesh_exchange": true,
   "meaningful_iter": 1777,
   "version": "1.15.1253-oval-mesh",
-  "short": "3a6af76f",
-  "head_short": "3a6af76f",
+  "head_short": "0fba3241",
   "MEANINGFUL_ITER": 1777,
   "unity": 1.0,
   "next": "we_autoheal",
@@ -16,5 +18,12 @@
   "flagship_1620": "PASS",
   "asserts_ok": 1414,
   "asserts_fail": 0,
-  "smoke_ok": 23
+  "smoke_ok": 23,
+  "latch": "oval_latch",
+  "notes": "SMX OVAL|OVAL_CELL|HEPATIC_PROGENITOR|CANAL_OF_HERING soft-OOB fail-closed mesh+wrap+sheath life-force after cholangio; smoke 23/0 cascade 1414/0 flagship PASS",
+  "proofs": {
+    "1777_smoke": "PASS",
+    "1777_cascade": "PASS",
+    "1620_flagship": "PASS"
+  }
 }
