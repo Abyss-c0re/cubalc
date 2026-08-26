@@ -12,9 +12,13 @@
   "asserts_ok": 21,
   "asserts_fail": 0,
   "flagship_1620": "PASS",
-  "notes": "true integer floor division toward -inf; soft /0; aliases TRUEFLOORN FLOORDIVN BUCKETN BININDEXN IDIVFLOOR; optional BY; var subjects",
-  "note": "DIVFLOORN usability — bucket/index floor without shell glue",
-  "slice": "DIVFLOORN|TRUEFLOORN|FLOORDIVN|BUCKETN|BININDEXN|IDIVFLOOR",
-  "status": "PASS",
-  "ts": 1787753483
+  "notes": "true integer floor division floor(a/b); soft /0; aliases TRUEFLOORN BUCKETN IDIVFLOOR FLOORDIVN; twin of DIVCEILN; usability bucket=DIVFLOORN idx width",
+  "note": "DIVFLOORN true floor division usability for atomic printer spine",
+  "item": "DIVFLOORN true floor division",
+  "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
+  "unity": 1.0,
+  "risk": "low",
+  "next": "we_autoheal",
+  "sealed": true,
+  "ts": 1787753400
 }

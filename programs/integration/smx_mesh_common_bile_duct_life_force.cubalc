@@ -1,6 +1,6 @@
 // 1788_smx_mesh_common_bile_duct_life_force.cubalc
-// SMX mesh hepatic_duct life-force: soft-OOB fail-closed, OVAL plate prior,
-// HEPATIC_DUCT then COMMON_BILE_DUCT|CHOLEDOCHUS extrahepatic bed, STABILIZE latch, free-energy mitosis.
+// SMX mesh common_bile_duct life-force: soft-OOB fail-closed, OVAL plate prior,
+// COMMON_BILE_DUCT hepatic-to-choledochus bile trunk bed, STABILIZE latch, free-energy mitosis.
 // Wonder AGI can RUN. No dual ladders. Cube is SoT. matrix is key.
 
 REQUIRE VERSION "1.15"
@@ -207,19 +207,13 @@ ASSERT CUBES == base_cubes "hepatic_duct invents nothing"
 
 SMX COMMON_BILE_DUCT bed nozzle hive scrap
 ASSERT SMX_OK == 1 "common_bile_duct live"
-ASSERT SMX_COMMON_BILE_DUCTED == 1 "common_bile_ducted latch"
 ASSERT SMX_COMMON_BILE_DUCT == 1 "common_bile_duct latch"
 ASSERT SMX_MESH_COMMON_BILE_DUCT == 1 "mesh_common_bile_duct"
-ASSERT SMX_COMMON_BILE_DUCT_PLATE == 1 "common_bile_duct_plate"
-ASSERT SMX_COMMON_BILE_DUCTULAR == 1 "common_bile_ductular"
-ASSERT SMX_COMMON_BILE_DUCT_CELL == 1 "common_bile_duct_cell"
-ASSERT SMX_CBD == 1 "cbd latch"
-ASSERT SMX_CHOLEDOCH == 1 "choledoch"
+ASSERT SMX_CBD == 1 "cbd alias"
 ASSERT SMX_CHOLEDOCHUS == 1 "choledochus"
+ASSERT SMX_COMMON_BILE == 1 "common_bile"
 ASSERT SMX_EXTRAHEPATIC == 1 "extrahepatic"
-ASSERT SMX_COMMON_BILE_DUCT_CHANNEL == 1 "common_bile_duct_channel"
-ASSERT SMX_COMMON_BILE_DUCT_FLOW == 1 "common_bile_duct_flow"
-ASSERT SMX_HARDEN_COMMON_BILE_DUCT == 1 "harden_common_bile_duct"
+ASSERT SMX_MESH_CBD == 1 "mesh_cbd"
 ASSERT SMX_COMMON_BILE_DUCT_SUM == 14 "common_bile_duct_sum"
 ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds cbd"
 ASSERT SMX_WRAPS == 4 "four wraps cbd"
@@ -270,7 +264,7 @@ LET g0 = LAST_N
 SEND d1 birth half (g0 + 1)
 SEND seed after_div
 PLUG bed d1
-ASSERT CUBES >= base_cubes "mitosis under common_bile_duct mesh"
+ASSERT CUBES >= base_cubes "mitosis under hepatic_duct mesh"
 GETF d1 alive
 ASSERT LAST_N == 1 "daughter alive"
 ASSERT SMX_OVAL == 1 "oval sticky through mitosis"
@@ -278,11 +272,12 @@ ASSERT SMX_CANALICULUS == 1 "canaliculus sticky through mitosis"
 ASSERT SMX_DUCTULE == 1 "ductule sticky through mitosis"
 ASSERT SMX_CHOLANGIOLE == 1 "cholangiole sticky through mitosis"
 ASSERT SMX_HEPATIC_DUCT == 1 "hepatic_duct sticky through mitosis"
+ASSERT SMX_COMMON_BILE_DUCT == 1 "common_bile_duct sticky through mitosis"
+ASSERT SMX_CBD == 1 "cbd sticky through mitosis"
+ASSERT SMX_CHOLEDOCHUS == 1 "choledochus sticky through mitosis"
+ASSERT SMX_COMMON_BILE == 1 "common_bile sticky through mitosis"
 ASSERT SMX_HEPATIC_TRUNK == 1 "hepatic_trunk sticky through mitosis"
 ASSERT SMX_COMMON_HEPATIC == 1 "common_hepatic sticky through mitosis"
-ASSERT SMX_COMMON_BILE_DUCT == 1 "common_bile_duct sticky through mitosis"
-ASSERT SMX_CHOLEDOCHUS == 1 "choledochus sticky through mitosis"
-ASSERT SMX_CBD == 1 "cbd sticky through mitosis"
 ASSERT SMX_STELLATE == 1 "stellate sticky through mitosis"
 ASSERT SMX_KUPFFER == 1 "kupffer sticky through mitosis"
 ASSERT SMX_HEPATOCYTE == 1 "hepatocyte sticky through mitosis"
@@ -292,5 +287,5 @@ ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky"
 ASSERT SMX_OOB == 0 "oob clear through mitosis"
 
 ASSERT OK == 1
-PRINT "smx_mesh_common_bile_duct_life_force" SMX_OK SMX_LIFE_FORCE SMX_SINUSOID SMX_DISSE SMX_HEPATOCYTE SMX_KUPFFER SMX_STELLATE SMX_OVAL SMX_CANALICULUS SMX_DUCTULE SMX_HEPATIC_DUCT SMX_COMMON_BILE_DUCT SMX_CBD SMX_CHOLEDOCHUS SMX_STABLE SMX_AUTOHEALED SMX_RESILIENT SMX_COMMON_BILE_DUCT_SUM SMX_BONDS SMX_OOB CUBES UNITY ENERGY DECIDE
+PRINT "smx_mesh_common_bile_duct_life_force" SMX_OK SMX_LIFE_FORCE SMX_HEPATIC_DUCT SMX_COMMON_BILE_DUCT SMX_CBD SMX_CHOLEDOCHUS SMX_COMMON_BILE SMX_STABLE SMX_AUTOHEALED SMX_RESILIENT SMX_COMMON_BILE_DUCT_SUM SMX_BONDS SMX_OOB CUBES UNITY ENERGY DECIDE
 PASS

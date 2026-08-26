@@ -18328,6 +18328,176 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  fail(vm, "SMX: unknown op (see lang_ops_smx; HEPATIC_DUCT|BILE_DUCT|COMMON_HEPATIC|SEPTAL_DUCT|DUCTULE|CHOLANGIOLE|BILE_DUCTULE|CANALICULUS|BILE_CANALICULUS|OVAL|PROGENITOR|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|PORTAL|CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
+
+  /* SMX COMMON_BILE_DUCT|CBD|CHOLEDOCHUS — extrahepatic CBD after HEPATIC_DUCT.
+   * Soft-OOB fail-closed mesh+wrap+sheath; latches SMX_COMMON_BILE_DUCT|SMX_CBD. */
+  if (kw(&L->cur,"COMMON_BILE_DUCT")||kw(&L->cur,"COMMON_BILE_DUCTS")||kw(&L->cur,"CBD")||
+      kw(&L->cur,"CBD_DUCT")||kw(&L->cur,"CHOLEDOCH")||kw(&L->cur,"CHOLEDOCHUS")||
+      kw(&L->cur,"DUCTUS_CHOLEDOCHUS")||kw(&L->cur,"COMMON_BILE")||kw(&L->cur,"EXTRAHEPATIC")||
+      kw(&L->cur,"MESH_COMMON_BILE_DUCT")||kw(&L->cur,"MESH_CBD")||kw(&L->cur,"RAISE_CBD")||
+      kw(&L->cur,"WE_CBD")||kw(&L->cur,"LIFE_CBD")||kw(&L->cur,"STABLE_CBD")||
+      kw(&L->cur,"HARDEN_CBD")||kw(&L->cur,"CBD_TRUNK")||kw(&L->cur,"CBD_CHANNEL")||kw(&L->cur,"COMMON_BILE_DUCT_PLATE")||kw(&L->cur,"CBD_PLATE")||kw(&L->cur,"COMMON_BILE_DUCTULAR")||kw(&L->cur,"HARDEN_COMMON_BILE_DUCT")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0, wraps = 0, sheaths = 0, soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "COMMON_BILE_DUCT needs >=2 cubes",
+                  "SMX COMMON_BILE_DUCT a b [c ...]  or  SMX CBD a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i], b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0) mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0) star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0) sheath_ok = 1;
+      int cbd_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (cbd_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_COMMON_BILE_DUCTED", (long)cbd_ok);
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT_LATCH", (long)cbd_ok);
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CBD", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CBD_DUCT", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CHOLEDOCH", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CHOLEDOCHUS", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_EXTRAHEPATIC", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CBD_TRUNK", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_COMMON_BILE_DUCT", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_CBD", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT_PLATE", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE_DUCTULAR", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT_CELL", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT_CHANNEL", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT_FLOW", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_COMMON_BILE_DUCT", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT_CONDUIT", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT_JUNCTION", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT_MEMBRANE", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT_POLE", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CBD_PLATE", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CBD_CHANNEL", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CBD_FLOW", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_CBD", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMON_BILE_DUCT_SUM", (long)(cbd_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_CBD_SUM", (long)(cbd_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(cbd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(cbd_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(cbd_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (cbd_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX COMMON_BILE_DUCT ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX COMMON_BILE_DUCT partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX COMMON_BILE_DUCT soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX CBD nodes=%d live=%d bonds=%d wraps=%d sheaths=%d soft=%d cbd=%d\n",
+                n, live, bonds, wraps, sheaths, soft, cbd_ok);
+    }
+    bump(vm); return 1;
+  }
+  fail(vm, "SMX: unknown op (see lang_ops_smx; COMMON_BILE_DUCT|CBD|CHOLEDOCHUS|HEPATIC_DUCT|BILE_DUCT|COMMON_HEPATIC|SEPTAL_DUCT|DUCTULE|CHOLANGIOLE|BILE_DUCTULE|CANALICULUS|BILE_CANALICULUS|OVAL|PROGENITOR|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|PORTAL|CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
   return -1;
 }

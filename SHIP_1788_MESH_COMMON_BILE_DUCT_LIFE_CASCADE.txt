@@ -1,0 +1,5 @@
+SHIP 1788 SMX MESH COMMON_BILE_DUCT life-force cascade
+- SMX COMMON_BILE_DUCT|CBD|CHOLEDOCHUS|COMMON_BILE extrahepatic CBD mesh after HEPATIC_DUCT
+- soft-OOB fail-closed; SMX_COMMON_BILE_DUCT_SUM bonds+wraps+sheaths
+- proofs: 1788 cascade + life_force; flagship 1620
+- extends HEPATIC_DUCT 1784 continuum; no IF*P duals
