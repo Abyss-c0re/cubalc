@@ -1,0 +1,296 @@
+// 1789_smx_mesh_ampulla_sphincter_life_force.cubalc
+// SMX mesh hepatic_duct life-force: soft-OOB fail-closed, OVAL plate prior,
+// HEPATIC_DUCT then AMPULLA_SPHINCTER|CHOLEDOCHUS extrahepatic bed, STABILIZE latch, free-energy mitosis.
+// Wonder AGI can RUN. No dual ladders. Cube is SoT. matrix is key.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=smx_mesh_ampulla_sphincter_life_force | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 12 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+SMX EXCHANGE scrap void_cell
+ASSERT SMX_OK == 0 "storm-C soft-OOB"
+ASSERT SMX_OOB >= 3 "oob C depth"
+ASSERT CUBES == base_cubes "no ghost from storm-C"
+
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT SMX_OOB == 0 "oob cleared by life_force"
+ASSERT CUBES == base_cubes "life_force invents nothing"
+
+SMX SINUSOID bed nozzle hive scrap
+ASSERT SMX_OK == 1 "sinusoid live"
+ASSERT SMX_SINUSOID == 1 "sinusoid latch"
+ASSERT SMX_MESH_SINUSOID == 1 "mesh_sinusoid"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from sinusoid"
+ASSERT SMX_OOB == 0 "oob clear after sinusoid"
+ASSERT CUBES == base_cubes "sinusoid invents nothing"
+
+SMX DISSE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "disse live"
+ASSERT SMX_DISSE == 1 "disse latch"
+ASSERT SMX_MESH_DISSE == 1 "mesh_disse"
+ASSERT SMX_SPACE_OF_DISSE == 1 "space_of_disse"
+ASSERT SMX_PERISINUSOIDAL == 1 "perisinusoidal"
+ASSERT SMX_OOB == 0 "oob clear after disse"
+ASSERT CUBES == base_cubes "disse invents nothing"
+
+SMX HEPATOCYTE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "hepatocyte live"
+ASSERT SMX_HEPATOCYTE == 1 "hepatocyte latch"
+ASSERT SMX_MESH_HEPATOCYTE == 1 "mesh_hepatocyte"
+ASSERT SMX_OOB == 0 "oob clear after hepatocyte"
+ASSERT CUBES == base_cubes "hepatocyte invents nothing"
+
+SMX KUPFFER bed nozzle hive scrap
+ASSERT SMX_OK == 1 "kupffer live"
+ASSERT SMX_KUPFFER == 1 "kupffer latch"
+ASSERT SMX_MESH_KUPFFER == 1 "mesh_kupffer"
+ASSERT SMX_OOB == 0 "oob clear after kupffer"
+ASSERT CUBES == base_cubes "kupffer invents nothing"
+
+SMX STELLATE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stellate live"
+ASSERT SMX_STELLATED == 1 "stellateed latch"
+ASSERT SMX_STELLATE == 1 "stellate latch"
+ASSERT SMX_MESH_STELLATE == 1 "mesh_stellate"
+ASSERT SMX_STELLATE_PLATE == 1 "stellate_plate"
+ASSERT SMX_VITAMIN_A == 1 "vitamin_a"
+ASSERT SMX_STELLATE_CELL == 1 "stellate_cell"
+ASSERT SMX_ITO == 1 "ito"
+ASSERT SMX_HEPATIC_STELLATE == 1 "hepatic_stellate"
+ASSERT SMX_ITO_CELL == 1 "ito_cell"
+ASSERT SMX_FIBROGENIC == 1 "fibrogenic"
+ASSERT SMX_HARDEN_STELLATE == 1 "harden_stellate"
+ASSERT SMX_STELLATE_SUM == 14 "stellate_sum"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds"
+ASSERT SMX_WRAPS == 4 "four wraps"
+ASSERT SMX_SHEATHS == 4 "four sheaths"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from stellate"
+ASSERT SMX_OOB == 0 "oob clear after stellate"
+ASSERT CUBES == base_cubes "stellate invents nothing"
+
+SMX OVAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "oval live"
+ASSERT SMX_OVALED == 1 "ovaled latch"
+ASSERT SMX_OVAL == 1 "oval latch"
+ASSERT SMX_MESH_OVAL == 1 "mesh_oval"
+ASSERT SMX_OVAL_PLATE == 1 "oval_plate"
+ASSERT SMX_BIPOTENT == 1 "bipotent"
+ASSERT SMX_OVAL_CELL == 1 "oval_cell"
+ASSERT SMX_PROGENITOR == 1 "progenitor"
+ASSERT SMX_HEPATIC_PROGENITOR == 1 "hepatic_progenitor"
+ASSERT SMX_PROGENITOR_CELL == 1 "progenitor_cell"
+ASSERT SMX_CHOLANGIOGENIC == 1 "cholangiogenic"
+ASSERT SMX_CANAL_OF_HERING == 1 "canal_of_hering"
+ASSERT SMX_HARDEN_OVAL == 1 "harden_oval"
+ASSERT SMX_OVAL_SUM == 14 "oval_sum"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds"
+ASSERT SMX_WRAPS == 4 "four wraps"
+ASSERT SMX_SHEATHS == 4 "four sheaths"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from oval"
+ASSERT SMX_OOB == 0 "oob clear after oval"
+ASSERT CUBES == base_cubes "oval invents nothing"
+
+SMX CANALICULUS bed nozzle hive scrap
+ASSERT SMX_OK == 1 "canaliculus live"
+ASSERT SMX_CANALICULUSED == 1 "canaliculused latch"
+ASSERT SMX_CANALICULUS == 1 "canaliculus latch"
+ASSERT SMX_MESH_CANALICULUS == 1 "mesh_canaliculus"
+ASSERT SMX_CANALICULUS_PLATE == 1 "canaliculus_plate"
+ASSERT SMX_CANALICULAR == 1 "canalicular"
+ASSERT SMX_CANALICULUS_CELL == 1 "canaliculus_cell"
+ASSERT SMX_BILE_CANALICULUS == 1 "bile_canaliculus"
+ASSERT SMX_BILE_CONDUIT == 1 "bile_conduit"
+ASSERT SMX_TIGHT_JUNCTION == 1 "tight_junction"
+ASSERT SMX_BILE_CHANNEL == 1 "bile_channel"
+ASSERT SMX_BILE_FLOW == 1 "bile_flow"
+ASSERT SMX_HARDEN_CANALICULUS == 1 "harden_canaliculus"
+ASSERT SMX_CANALICULUS_SUM == 14 "canaliculus_sum"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds"
+ASSERT SMX_WRAPS == 4 "four wraps"
+ASSERT SMX_SHEATHS == 4 "four sheaths"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from canaliculus"
+ASSERT SMX_OOB == 0 "oob clear after canaliculus"
+ASSERT CUBES == base_cubes "canaliculus invents nothing"
+
+SMX DUCTULE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "ductule live"
+ASSERT SMX_DUCTULED == 1 "ductuled latch"
+ASSERT SMX_DUCTULE == 1 "ductule latch"
+ASSERT SMX_MESH_DUCTULE == 1 "mesh_ductule"
+ASSERT SMX_DUCTULE_PLATE == 1 "ductule_plate"
+ASSERT SMX_DUCTULAR == 1 "ductular"
+ASSERT SMX_DUCTULE_CELL == 1 "ductule_cell"
+ASSERT SMX_BILE_DUCTULE == 1 "bile_ductule"
+ASSERT SMX_CHOLANGIOLE == 1 "cholangiole"
+ASSERT SMX_INTERLOBULAR == 1 "interlobular"
+ASSERT SMX_CHOLANGIOCYTE == 1 "cholangiocyte"
+ASSERT SMX_DUCTULE_CHANNEL == 1 "ductule_channel"
+ASSERT SMX_DUCTULE_FLOW == 1 "ductule_flow"
+ASSERT SMX_HARDEN_DUCTULE == 1 "harden_ductule"
+ASSERT SMX_DUCTULE_SUM == 14 "ductule_sum"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds ductule"
+ASSERT SMX_WRAPS == 4 "four wraps ductule"
+ASSERT SMX_SHEATHS == 4 "four sheaths ductule"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from ductule"
+ASSERT SMX_OOB == 0 "oob clear after ductule"
+ASSERT CUBES == base_cubes "ductule invents nothing"
+
+SMX HEPATIC_DUCT bed nozzle hive scrap
+ASSERT SMX_OK == 1 "hepatic_duct live"
+ASSERT SMX_HEPATIC_DUCTED == 1 "hepatic_ducted latch"
+ASSERT SMX_HEPATIC_DUCT == 1 "hepatic_duct latch"
+ASSERT SMX_MESH_HEPATIC_DUCT == 1 "mesh_hepatic_duct"
+ASSERT SMX_HEPATIC_DUCT_PLATE == 1 "hepatic_duct_plate"
+ASSERT SMX_HEPATIC_DUCTULAR == 1 "hepatic_ductular"
+ASSERT SMX_HEPATIC_DUCT_CELL == 1 "hepatic_duct_cell"
+ASSERT SMX_HEPATIC_BILE_DUCT == 1 "hepatic_bile_duct"
+ASSERT SMX_HEPATIC_TRUNK == 1 "hepatic_trunk"
+ASSERT SMX_COMMON_HEPATIC == 1 "common_hepatic"
+ASSERT SMX_HEPATIC_CHOLANGIOCYTE == 1 "hepatic_cholangiocyte"
+ASSERT SMX_HEPATIC_DUCT_CHANNEL == 1 "hepatic_duct_channel"
+ASSERT SMX_HEPATIC_DUCT_FLOW == 1 "hepatic_duct_flow"
+ASSERT SMX_HARDEN_HEPATIC_DUCT == 1 "harden_hepatic_duct"
+ASSERT SMX_HEPATIC_DUCT_SUM == 14 "hepatic_duct_sum"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds hepatic"
+ASSERT SMX_WRAPS == 4 "four wraps hepatic"
+ASSERT SMX_SHEATHS == 4 "four sheaths hepatic"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from hepatic_duct"
+ASSERT SMX_OOB == 0 "oob clear after hepatic_duct"
+ASSERT CUBES == base_cubes "hepatic_duct invents nothing"
+
+SMX AMPULLA_SPHINCTER bed nozzle hive scrap
+ASSERT SMX_OK == 1 "ampulla_sphincter live"
+ASSERT SMX_AMPULLA_SPHINCTERED == 1 "ampulla_sphinctered latch"
+ASSERT SMX_AMPULLA_SPHINCTER == 1 "ampulla_sphincter latch"
+ASSERT SMX_MESH_AMPULLA_SPHINCTER == 1 "mesh_ampulla_sphincter"
+ASSERT SMX_AMPULLA_SPHINCTER_PLATE == 1 "ampulla_sphincter_plate"
+ASSERT SMX_AMPULLA_SPHINCTERULAR == 1 "ampulla_sphincterular"
+ASSERT SMX_AMPULLA_SPHINCTER_CELL == 1 "ampulla_sphincter_cell"
+ASSERT SMX_CBD == 1 "cbd latch"
+ASSERT SMX_CHOLEDOCH == 1 "choledoch"
+ASSERT SMX_CHOLEDOCHUS == 1 "choledochus"
+ASSERT SMX_EXTRAHEPATIC == 1 "extrahepatic"
+ASSERT SMX_AMPULLA_SPHINCTER_CHANNEL == 1 "ampulla_sphincter_channel"
+ASSERT SMX_AMPULLA_SPHINCTER_FLOW == 1 "ampulla_sphincter_flow"
+ASSERT SMX_HARDEN_AMPULLA_SPHINCTER == 1 "harden_ampulla_sphincter"
+ASSERT SMX_AMPULLA_SPHINCTER_SUM == 14 "ampulla_sphincter_sum"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds cbd"
+ASSERT SMX_WRAPS == 4 "four wraps cbd"
+ASSERT SMX_SHEATHS == 4 "four sheaths cbd"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from ampulla_sphincter"
+ASSERT SMX_OOB == 0 "oob clear after ampulla_sphincter"
+ASSERT CUBES == base_cubes "ampulla_sphincter invents nothing"
+
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize live"
+ASSERT SMX_STABLE == 1 "stable latch"
+ASSERT SMX_STEADFAST == 4 "four steadfast"
+ASSERT SMX_PULSE == 4 "four pulses"
+ASSERT SMX_OOB == 0 "oob cleared by stabilize"
+ASSERT SMX_TALKS >= 4 "stabilize talks"
+ASSERT CUBES == base_cubes "stabilize invents nothing"
+
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "autoheal live"
+ASSERT SMX_AUTOHEALED == 1 "autohealed latch"
+
+SMX RESILIENCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "resilience live"
+ASSERT SMX_RESILIENT == 1 "resilient latch"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy"
+ASSERT UNITY >= 40 "stable unity after OOB stabilize"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+
+GETF seed alive
+LET a0 = LAST_N
+GETF seed energy
+LET e0 = LAST_N
+IF e0 < 2 THEN
+  LET e0 = 12
+  SETF seed energy e0
+END
+LET half = e0 / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET g0 = LAST_N
+SEND d1 birth half (g0 + 1)
+SEND seed after_div
+PLUG bed d1
+ASSERT CUBES >= base_cubes "mitosis under ampulla_sphincter mesh"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+ASSERT SMX_OVAL == 1 "oval sticky through mitosis"
+ASSERT SMX_CANALICULUS == 1 "canaliculus sticky through mitosis"
+ASSERT SMX_DUCTULE == 1 "ductule sticky through mitosis"
+ASSERT SMX_CHOLANGIOLE == 1 "cholangiole sticky through mitosis"
+ASSERT SMX_HEPATIC_DUCT == 1 "hepatic_duct sticky through mitosis"
+ASSERT SMX_HEPATIC_TRUNK == 1 "hepatic_trunk sticky through mitosis"
+ASSERT SMX_COMMON_HEPATIC == 1 "common_hepatic sticky through mitosis"
+ASSERT SMX_AMPULLA_SPHINCTER == 1 "ampulla_sphincter sticky through mitosis"
+ASSERT SMX_CHOLEDOCHUS == 1 "choledochus sticky through mitosis"
+ASSERT SMX_CBD == 1 "cbd sticky through mitosis"
+ASSERT SMX_STELLATE == 1 "stellate sticky through mitosis"
+ASSERT SMX_KUPFFER == 1 "kupffer sticky through mitosis"
+ASSERT SMX_HEPATOCYTE == 1 "hepatocyte sticky through mitosis"
+ASSERT SMX_DISSE == 1 "disse sticky through mitosis"
+ASSERT SMX_SINUSOID == 1 "sinusoid sticky through mitosis"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky"
+ASSERT SMX_OOB == 0 "oob clear through mitosis"
+
+ASSERT OK == 1
+PRINT "smx_mesh_ampulla_sphincter_life_force" SMX_OK SMX_LIFE_FORCE SMX_SINUSOID SMX_DISSE SMX_HEPATOCYTE SMX_KUPFFER SMX_STELLATE SMX_OVAL SMX_CANALICULUS SMX_DUCTULE SMX_HEPATIC_DUCT SMX_AMPULLA_SPHINCTER SMX_CBD SMX_CHOLEDOCHUS SMX_STABLE SMX_AUTOHEALED SMX_RESILIENT SMX_AMPULLA_SPHINCTER_SUM SMX_BONDS SMX_OOB CUBES UNITY ENERGY DECIDE
+PASS
