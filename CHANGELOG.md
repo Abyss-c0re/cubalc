@@ -1,3 +1,9 @@
+## 1.15.1318-usability — 1839 MESH_MIDDLE_CEREBRAL_LIFE
+- SMX middle cerebral conduit: soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE life-force
+- Proofs: 99_smx_middle_cerebral / 1839_smx_mesh_middle_cerebral_life (60/0) + flagship 1620 (12/0)
+- Energy path: internal carotid terminus / MCA origin → MCA M1 stem → sylvian fissure takeoff → sylvian cistern arc → rolandic / parietal convexity perfusion seal · hemispheric convexity life-force feed
+- C slice: src/cubalc_smx_middle_cerebral.c · WE_AUTOHEAL under locked rails
+
 ## 1.15.1316-usability — 1837 MESH_SUPERIOR_CEREBELLAR_LIFE
 - SMX superior cerebellar conduit: soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE life-force
 - Proofs: 99_smx_superior_cerebellar / 1837_smx_mesh_superior_cerebellar_life (60/0) + flagship 1620 (12/0)
