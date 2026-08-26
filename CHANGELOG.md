@@ -7722,3 +7722,7 @@ See 1.11.6-universal.
 ## 1.15.1245-usability — MEANINGFUL_ITER 1768 ARTERIOLE
 - SMX ARTERIOLE soft-OOB fail-closed mesh stability life cascade after basal
 - proof 1768 asserts_ok:1137 asserts_fail:0; flagship 1620 PASS 12/0
+
+## 1.15.1261-gap-junction — MEANINGFUL_ITER 1785 GAP_JUNCTION
+- SMX GAP_JUNCTION|CONNEXIN|CONNEXON|NEXUS_SEAL soft-OOB fail-closed mesh stability life cascade after desmosome
+- proof 1785 asserts_ok:1637 asserts_fail:0; smoke 29/0; flagship 1620 PASS 12/0
