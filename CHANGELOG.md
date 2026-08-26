@@ -1,3 +1,11 @@
+## 1.15.1311-usability — 1832 MESH_LEFT_COMMON_CAROTID_LIFE
+
+- SMX mesh stability life-force: left common carotid conduit (soft-OOB fail-closed, MESH_EXCHANGE C(4,2), STABILIZE, WE_AUTOHEAL)
+- C slice: src/cubalc_smx_left_common_carotid.c
+- Proofs: programs/proof/98_smx_left_common_carotid.cubalc, programs/proof/1832_smx_mesh_left_common_carotid_life.cubalc (60/0 PASS)
+- Flagship 1620: PASS (12/0)
+- Energy path: aortic arch apex → left common carotid origin → left common carotid trunk → carotid bifurcation approach → cranial perfusion takeoff
+
 
 ## 1.15.1310-usability — 1831 MESH_AORTIC_ARCH_LIFE
 
