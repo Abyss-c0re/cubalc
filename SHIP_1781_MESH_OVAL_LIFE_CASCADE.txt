@@ -1,4 +1,4 @@
-SHIP 1781 SMX MESH_OVAL life-force usability
-proof PASS 102/102 + cascade 27/27 + flagship 1620 PASS
+SHIP 1781 OVAL mesh life-force PASS 102/0 + flagship 12/0
 MEANINGFUL_ITER=1781 VERSION=1.15.1259-usability
-soft-OOB fail-closed · canal-of-Hering bipotent progenitor · sticky through mitosis
+proof=programs/proof/1781_smx_mesh_oval_life_force.cubalc
+cascade=programs/science/proof/1781_smx_mesh_oval_life_cascade.cubalc

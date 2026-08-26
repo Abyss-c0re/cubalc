@@ -2,7 +2,7 @@
   "schema": "cubalc.meaningful_iter.v1",
   "meaningful_iter": 1781,
   "version": "1.15.1259-usability",
-  "feature": "SMX_OVAL",
+  "feature": "smx_mesh_oval_life_force",
   "proof": "programs/proof/1781_smx_mesh_oval_life_force.cubalc",
   "cascade": "programs/science/proof/1781_smx_mesh_oval_life_cascade.cubalc",
   "proof_status": "PASS",
@@ -14,6 +14,6 @@
   "MEANINGFUL_ITER": 1781,
   "VERSION": "1.15.1259-usability",
   "flagship_1620_ok": 12,
-  "ts": 1787745000,
+  "ts": 1787745100,
   "note": "SMX OVAL+PROGENITOR mesh stability life-force soft-OOB fail-closed + mitosis"
 }
