@@ -1,0 +1,7 @@
+SHIP 1829 MESH_AORTIC_VALVE_LIFE
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force aortic valve leaflets
+c_slice: src/cubalc_smx_aortic_valve.c
+proof: programs/proof/1829_smx_mesh_aortic_valve_life.cubalc
+proof_alt: programs/proof/95_smx_aortic_valve.cubalc
+asserts_ok: 60 asserts_fail: 0 flagship_1620: PASS
+energy_path: left ventricle chamber → LV outflow tract → aortic valve leaflets → aortic root sinuses → ascending aorta conduit
