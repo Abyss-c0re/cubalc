@@ -1,3 +1,9 @@
+## 1.15.1239-usability — 1764 SMX mesh folliculo life cascade
+
+- SMX FOLLICULO mesh stability after pituicyte: soft-OOB fail-closed, wrap ring + sheath hub, mitosis sticky
+- proofs: programs/proof/1764_smx_mesh_folliculo_life_cascade.cubalc (1002 asserts PASS)
+- integration: atomic_printer_mesh_folliculo_life.cubalc
+
 ## 1.15.1238-usability — 1763 SMX mesh pituicyte life cascade
 
 - SMX PITUICYTE mesh stability after tanycyte: soft-OOB fail-closed, wrap ring + sheath hub, mitosis sticky
