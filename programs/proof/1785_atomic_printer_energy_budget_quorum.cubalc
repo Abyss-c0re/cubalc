@@ -1,0 +1,210 @@
+// 1785_atomic_printer_energy_budget_quorum.cubalc - proof of energy-budget quorum mitosis
+// atomic_printer_energy_budget_quorum.cubalc
+// Life-force energy-budget quorum mitosis for the atomic printer.
+// Daughter voxels emit only when: cell ready (e>=10) AND colony energy
+// reserve meets budget floor AND live quorum >= 2 shares the field.
+// Scientific delta: resource-aware colony division - AGI can RUN to see
+// starve→seed→quorum→budget-gate→mitosis wonder. No dual ladders.
+// Creed: Cube is SoT · free energy must flow · matrix is key.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 96
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_energy_budget_quorum | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+// Two founders below mitosis threshold; third slot empty for daughter
+ENTITY seed OF Cell 1 5 0
+ENTITY mate OF Cell 1 5 1
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+PLUG bed mate
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+// Colony energy budget floor for mitosis (reserve must stay above this)
+LET budget_floor = 8
+LET quorum_need = 2
+
+// Phase A: below threshold + thin reserve - no births
+GETF seed energy
+LET e_s0 = LAST_N
+GETF mate energy
+LET e_m0 = LAST_N
+LET colony0 = e_s0 + e_m0
+ASSERT e_s0 < 10 "seed below mitosis threshold"
+ASSERT e_m0 < 10 "mate below mitosis threshold"
+ASSERT colony0 < budget_floor + 10 "colony reserve not fat yet"
+
+LET births_blocked = 0
+LET step = 0
+WHILE step < 4
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  GETF seed energy
+  LET es = LAST_N
+  GETF mate energy
+  LET em = LAST_N
+  LET colony = es + em
+  GETF seed alive
+  LET a0 = LAST_N
+  GETF mate alive
+  LET a1 = LAST_N
+  LET live = a0 + a1
+  // gate: ready AND colony>=budget_floor AND live>=quorum
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      IF colony >= budget_floor THEN
+        IF live >= quorum_need THEN
+          GETF d1 alive
+          IF LAST_N == 0 THEN
+            LET half = es / 2
+            IF half < 1 THEN
+              LET half = 1
+            END
+            GETF seed gen
+            LET dg = LAST_N + 1
+            SEND d1 birth half dg
+            SEND seed after_div
+            PLUG bed d1
+            LET births_blocked = births_blocked + 1
+          END
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+ASSERT births_blocked == 0 "no mitosis before budget+quorum"
+
+// Phase B: nutrient pulse - raise both founders past threshold 10
+ENERGYFLOW 8
+FLOW 4
+IMPULSE bed 1
+SEND seed tick
+SEND seed tick
+SEND seed tick
+SEND seed tick
+SEND seed tick
+SEND seed tick
+SEND mate tick
+SEND mate tick
+SEND mate tick
+SEND mate tick
+SEND mate tick
+SEND mate tick
+
+GETF seed energy
+LET e_s1 = LAST_N
+GETF mate energy
+LET e_m1 = LAST_N
+LET colony1 = e_s1 + e_m1
+ASSERT e_s1 >= 10 "seed crossed mitosis threshold"
+ASSERT e_m1 >= 10 "mate crossed mitosis threshold"
+ASSERT colony1 >= budget_floor "colony meets energy budget floor"
+GETF seed ready
+ASSERT LAST_N == 1 "seed ready"
+GETF mate ready
+ASSERT LAST_N == 1 "mate ready"
+
+GETF seed alive
+LET a0 = LAST_N
+GETF mate alive
+LET a1 = LAST_N
+LET live1 = a0 + a1
+ASSERT live1 >= quorum_need "live quorum present"
+
+// Phase C: budget-gated quorum mitosis
+LET births = 0
+LET step = 0
+WHILE step < 14
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  GETF seed energy
+  LET es = LAST_N
+  GETF mate energy
+  LET em = LAST_N
+  LET colony = es + em
+  GETF seed alive
+  LET la = LAST_N
+  GETF mate alive
+  LET lb = LAST_N
+  GETF d1 alive
+  LET lc = LAST_N
+  LET live = la + lb + lc
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      IF colony >= budget_floor THEN
+        IF live >= quorum_need THEN
+          GETF d1 alive
+          IF LAST_N == 0 THEN
+            LET half = es / 2
+            IF half < 1 THEN
+              LET half = 1
+            END
+            GETF seed gen
+            LET dg = LAST_N + 1
+            SEND d1 birth half dg
+            SEND seed after_div
+            PLUG bed d1
+            LET births = births + 1
+          END
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF mate alive
+LET a1 = LAST_N
+GETF d1 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+
+ASSERT births >= 1 "quorum+budget mitosis emitted daughter"
+ASSERT pop >= 3 "colony grew under energy budget gate"
+ASSERT ENERGY > 0 "free energy still flows"
+ASSERT SMX_LIFE_FORCE == 1 "life_force sticky"
+ASSERT UNITY >= 0 "unity field present"
+ASSERT OK == 1
+
+PRINT "atomic_printer_energy_budget_quorum" births_blocked births pop e_s0 e_s1 colony1 ENERGY SMX_LIFE_FORCE UNITY
+PASS
