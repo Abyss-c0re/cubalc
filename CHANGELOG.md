@@ -1,3 +1,10 @@
+## 1.15.1317-usability — 1838 MESH_PCOM
+
+- feat(smx): MESH_PCOM soft-OOB fail-closed mesh life-force
+- Energy path: PCA P1 origin → PCOM takeoff → communicating arc → ICA terminus → anterior Willis seal
+- Proofs: 104_smx_pcom + 1838_smx_mesh_pcom_life (60/0)
+- Flagship 1620 PASS 12/0; pure-C src/cubalc_smx_pcom.c
+
 ## 1.15.1316-usability — 1837 MESH_PCA
 
 - feat(smx): MESH_PCA soft-OOB fail-closed mesh life-force

@@ -1,0 +1,5 @@
+SHIP 1838 MESH_PCOM life-force
+soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE + WE_AUTOHEAL + mitosis
+Energy: PCA P1 origin → PCOM takeoff → communicating arc → ICA terminus → anterior circle-of-Willis seal
+Proofs: 104_smx_pcom + 1838_smx_mesh_pcom_life (60/0); flagship 1620 (12/0)
+Pure-C: src/cubalc_smx_pcom.c
