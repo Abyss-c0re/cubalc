@@ -1,0 +1,6 @@
+MEANINGFUL_ITER=1779 FEATURE=MESH_CANALICULUS STATUS=PASS
+SMX CANALICULUS|BILE_CANAL|BILE_CANALICULUS soft-OOB fail-closed mesh+wrap+sheath life-force after mall.
+smoke: programs/proof/1779_smx_canaliculus_soft_oob_smoke.cubalc PASS asserts_ok=25
+cascade: programs/proof/1779_smx_mesh_canaliculus_life_cascade.cubalc PASS asserts_ok=1468
+flagship: programs/proof/1620_atomic_printer_life_force.cubalc PASS asserts_ok=12
+unity_smoke~0.99 cascade_ok latch=SMX_CANALICULUS|SMX_MESH_CANALICULUS|SMX_HARDEN_CANALICULUS|SMX_BILE_CANAL

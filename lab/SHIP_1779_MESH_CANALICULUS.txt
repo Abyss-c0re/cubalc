@@ -1,0 +1,10 @@
+SHIP 1779 MESH_CANALICULUS
+feature: SMX CANALICULUS bile-canalicular soft-OOB fail-closed mesh stability
+after: MESH_MALL 1778
+proofs:
+  programs/proof/1779_smx_canaliculus_soft_oob_smoke.cubalc PASS (25 asserts)
+  programs/proof/1779_smx_mesh_canaliculus_life_cascade.cubalc PASS (1468 asserts)
+  programs/proof/1620_atomic_printer_life_force.cubalc PASS
+version: 1.15.1255-canaliculus-mesh
+MEANINGFUL_ITER: 1779
+next: we_autoheal
