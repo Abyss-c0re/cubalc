@@ -1,1 +1,20 @@
-{"iter":1777,"feature":"MESH_OVAL","status":"PASS","head":"c7446a03c8ca997c6785cda1e40803fb118d867e","tip":"c7446a03c8ca997c6785cda1e40803fb118d867e"}
+{
+  "iter": 1777,
+  "feature": "MESH_OVAL",
+  "status": "PASS",
+  "head": "3a6af76f92371d6bc8aaeb886e9d69641e6e7715",
+  "tip": "c7446a03c8ca997c6785cda1e40803fb118d867e",
+  "meaningful_iter": 1777,
+  "version": "1.15.1253-oval-mesh",
+  "short": "3a6af76f",
+  "head_short": "3a6af76f",
+  "MEANINGFUL_ITER": 1777,
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "proof": "1777_smx_mesh_oval_life_cascade.cubalc",
+  "smoke": "1777_smx_oval_soft_oob_smoke.cubalc",
+  "flagship_1620": "PASS",
+  "asserts_ok": 1414,
+  "asserts_fail": 0,
+  "smoke_ok": 23
+}

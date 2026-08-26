@@ -1,19 +1,22 @@
 {
   "iter": 1777,
   "feature": "MESH_OVAL",
-  "head": "a409401b8edb86d40577d8e64be1ce59f3b6fb64",
-  "short": "a409401b",
+  "head": "3a6af76f92371d6bc8aaeb886e9d69641e6e7715",
+  "short": "3a6af76f",
   "status": "PASS",
   "soft_oob": true,
   "fail_closed": true,
   "mesh_exchange": true,
   "meaningful_iter": 1777,
   "version": "1.15.1253-oval-mesh",
-  "head_short": "a409401b",
+  "head_short": "3a6af76f",
   "MEANINGFUL_ITER": 1777,
   "unity": 1.0,
   "next": "we_autoheal",
   "proof": "1777_smx_mesh_oval_life_cascade.cubalc",
   "smoke": "1777_smx_oval_soft_oob_smoke.cubalc",
-  "flagship_1620": "PASS"
+  "flagship_1620": "PASS",
+  "asserts_ok": 1414,
+  "asserts_fail": 0,
+  "smoke_ok": 23
 }
