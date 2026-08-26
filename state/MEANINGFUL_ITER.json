@@ -28,5 +28,7 @@
   "host_finish": true,
   "head_note": "verified_pass_1759_wrapmodn",
   "prior_head": "7cdd2d8ffeb4df837707d6db5a12342d89414ee5",
-  "prior_head_short": "7cdd2d8f"
+  "prior_head_short": "7cdd2d8f",
+  "head": "fd72d2dee99c1664cef78a76d413ce428a1e3da0",
+  "head_short": "fd72d2de"
 }
