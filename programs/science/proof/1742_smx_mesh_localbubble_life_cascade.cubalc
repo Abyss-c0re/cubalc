@@ -1,0 +1,339 @@
+// 1742_smx_mesh_localbubble_life_cascade.cubalc
+// SMX mesh localbubble + life cascade: soft-OOB fail-closed then LIFE_FORCE
+// then WE_AUTOHEAL then RESILIENCE then THALAMUS stable_mesh then HOMEOSTASIS then IONOSPHERE then THERMOSPHERE then EXOSPHERE then HELIOSPHERE then LOCALBUBBLE then STABILIZE
+// then live mesh_exchange then mitosis under free energy on the locked mesh.
+// Storm wounds never ghost-place. Free energy must flow. Population grows.
+// Cube is SoT. matrix is key. wonder AGI can RUN. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 96
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=smx_mesh_localbubble_life_cascade | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+SMX EXCHANGE scrap void_cell
+ASSERT SMX_OK == 0 "storm-C soft-OOB"
+ASSERT SMX_OOB >= 3 "oob C depth"
+ASSERT CUBES == base_cubes "no ghost from storm-C"
+
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT SMX_OOB == 0 "oob cleared by life_force"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 complete-mesh bonds"
+ASSERT SMX_MESH == 4 "four mesh under life_force"
+ASSERT SMX_LIVE == 4 "four live"
+ASSERT CUBES == base_cubes "life_force invents nothing"
+
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "we_autoheal live"
+ASSERT SMX_AUTOHEALED == 1 "autohealed latch"
+ASSERT SMX_OOB == 0 "oob still clear"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds"
+ASSERT SMX_BEACONS == 4 "four beacons"
+ASSERT CUBES == base_cubes "we_autoheal invents nothing"
+
+SMX RESILIENCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "resilience live"
+ASSERT SMX_RESILIENT == 1 "resilient latch"
+ASSERT SMX_OOB == 0 "oob clear on resilience"
+ASSERT SMX_GUARDS == 4 "four guard ring bonds"
+ASSERT SMX_ANCHORS == 4 "four anchor hub pulses"
+ASSERT CUBES == base_cubes "resilience invents nothing"
+
+SMX THALAMUS bed nozzle hive scrap
+ASSERT SMX_OK == 1 "thalamus live"
+ASSERT SMX_THALAMUS == 1 "thalamus latch"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh latch"
+ASSERT SMX_OOB == 0 "oob clear on thalamus"
+ASSERT SMX_MESH == 4 "four mesh under thalamus"
+ASSERT CUBES == base_cubes "thalamus invents nothing"
+
+SMX HOMEOSTASIS bed nozzle hive scrap
+ASSERT SMX_OK == 1 "homeostasis live"
+ASSERT SMX_HOMEOSTATIC == 1 "homeostatic latch"
+ASSERT SMX_BALANCE == 1 "balance latch"
+ASSERT SMX_REGULATE == 1 "regulate latch"
+ASSERT SMX_EQUILIBRIUM == 1 "equilibrium latch"
+ASSERT SMX_OOB == 0 "oob clear on homeostasis"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 homeostasis bonds"
+ASSERT SMX_FEEDBACKS == 4 "four feedback ring"
+ASSERT SMX_SETPOINTS == 4 "four setpoint hub"
+ASSERT SMX_MESH == 4 "four mesh under homeostasis"
+ASSERT SMX_LIVE == 4 "four live under homeostasis"
+ASSERT CUBES == base_cubes "homeostasis invents nothing"
+
+SMX IONOSPHERE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "ionosphere live"
+ASSERT SMX_IONOSPHERED == 1 "ionosphered latch"
+ASSERT SMX_IONO == 1 "iono latch"
+ASSERT SMX_IONIZE == 1 "ionize latch"
+ASSERT SMX_PLASMA == 1 "plasma latch"
+ASSERT SMX_OOB == 0 "oob clear on ionosphere"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 ionosphere bonds"
+ASSERT SMX_BEAMS == 4 "four beam ring"
+ASSERT SMX_LAYERS == 4 "four layer hub"
+ASSERT SMX_MESH == 4 "four mesh under ionosphere"
+ASSERT SMX_LIVE == 4 "four live under ionosphere"
+ASSERT CUBES == base_cubes "ionosphere invents nothing"
+
+SMX THERMOSPHERE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "thermosphere live"
+ASSERT SMX_THERMOSPHERED == 1 "thermosphered latch"
+ASSERT SMX_THERMO == 1 "thermo latch"
+ASSERT SMX_WARM == 1 "warm latch"
+ASSERT SMX_HEAT == 4 "four heat ring pulses"
+ASSERT SMX_OOB == 0 "oob clear on thermosphere"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 thermosphere bonds"
+ASSERT SMX_HEATS == 4 "four heat ring"
+ASSERT SMX_THERMALS == 4 "four thermal hub"
+ASSERT SMX_MESH == 4 "four mesh under thermosphere"
+ASSERT SMX_LIVE == 4 "four live under thermosphere"
+ASSERT CUBES == base_cubes "thermosphere invents nothing"
+
+SMX EXOSPHERE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "exosphere live"
+ASSERT SMX_EXOSPHERED == 1 "exosphered latch"
+ASSERT SMX_EXO == 1 "exo latch"
+ASSERT SMX_OUTER == 1 "outer latch"
+ASSERT SMX_ESCAPE >= 4 "four escape ring pulses"
+ASSERT SMX_OOB == 0 "oob clear on exosphere"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 exosphere bonds"
+ASSERT SMX_ESCAPES == 4 "four escape ring"
+ASSERT SMX_FRINGES == 4 "four fringe hub"
+ASSERT SMX_MESH == 4 "four mesh under exosphere"
+ASSERT SMX_LIVE == 4 "four live under exosphere"
+ASSERT CUBES == base_cubes "exosphere invents nothing"
+
+SMX HELIOSPHERE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "heliosphere live"
+ASSERT SMX_HELIOSPHERED == 1 "heliosphered latch"
+ASSERT SMX_HS == 1 "hs latch"
+ASSERT SMX_HELIO == 1 "helio latch"
+ASSERT SMX_SOLAR == 1 "solar latch"
+ASSERT SMX_TERMINATION == 1 "termination latch"
+ASSERT SMX_OOB == 0 "oob clear on heliosphere"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 heliosphere bonds"
+ASSERT SMX_SOLARWINDS == 4 "four solarwind ring"
+ASSERT SMX_WINDS == 4 "four wind ring"
+ASSERT SMX_HELIOPAUSES == 4 "four heliopause hub"
+ASSERT SMX_BOWS == 4 "four bow hub"
+ASSERT SMX_MESH == 4 "four mesh under heliosphere"
+ASSERT SMX_LIVE == 4 "four live under heliosphere"
+ASSERT CUBES == base_cubes "heliosphere invents nothing"
+
+SMX LOCALBUBBLE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "localbubble live"
+ASSERT SMX_LOCALBUBBLED == 1 "localbubbled latch"
+ASSERT SMX_LBUB == 1 "lbub latch"
+ASSERT SMX_LOCALSPACE == 1 "localspace latch"
+ASSERT SMX_LISM == 1 "lism latch"
+ASSERT SMX_SHELLPATH_ON == 1 "shellpath_on latch"
+ASSERT SMX_OOB == 0 "oob clear on localbubble"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 localbubble bonds"
+ASSERT SMX_SHELLPATHS == 4 "four shellpath ring"
+ASSERT SMX_SHELLHUBS == 4 "four shellhub pulses"
+ASSERT SMX_LOCALBUBBLE == 14 "bonds+shellpaths+hubs"
+ASSERT SMX_MESH == 4 "four mesh under localbubble"
+ASSERT SMX_LIVE == 4 "four live under localbubble"
+ASSERT CUBES == base_cubes "localbubble invents nothing"
+
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+ASSERT SMX_OK == 1 "mesh_exchange live after stability"
+ASSERT SMX_TALKS >= 8 "four bidirectional exchanges"
+ASSERT CUBES == base_cubes "identity stable on mesh_exchange"
+
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize live"
+ASSERT SMX_STABLE == 1 "stable latch"
+ASSERT SMX_OOB == 0 "oob clear on board"
+ASSERT SMX_LIVE == 4 "four live on board"
+ASSERT SMX_PULSE >= 4 "conduct pulses"
+ASSERT CUBES == base_cubes "stabilize invents nothing"
+
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+
+ASSERT births >= 1 "mitosis life cascade on stable mesh"
+ASSERT pop >= 2 "population after life cascade"
+ASSERT ENERGY > 0 "energy after life cascade"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky through mitosis"
+ASSERT SMX_RESILIENT == 1 "resilient sticky through mitosis"
+ASSERT SMX_HOMEOSTATIC == 1 "homeostatic sticky through mitosis"
+ASSERT SMX_IONOSPHERED == 1 "ionosphered sticky through mitosis"
+ASSERT SMX_THERMOSPHERED == 1 "thermosphered sticky through mitosis"
+ASSERT SMX_EXOSPHERED == 1 "exosphered sticky through mitosis"
+ASSERT SMX_HELIOSPHERED == 1 "heliosphered sticky through mitosis"
+ASSERT SMX_LOCALBUBBLED == 1 "localbubbled sticky through mitosis"
+ASSERT SMX_OOB == 0 "guard holds through mitosis"
+
+SMX EXCHANGE hive offworld_storm
+ASSERT SMX_OK == 0 "post-life soft-OOB"
+ASSERT SMX_OOB >= 1 "storm counted"
+
+SMX RAISE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "raise after storm"
+ASSERT SMX_OOB == 0 "storm cleared"
+ASSERT SMX_AUTOHEALED == 1 "autohealed after storm"
+
+SMX RAISE_HOMEOSTASIS bed nozzle hive scrap
+ASSERT SMX_OK == 1 "re-homeostasis live"
+ASSERT SMX_HOMEOSTATIC == 1 "homeostatic sticky or re-latched"
+ASSERT SMX_BALANCE == 1 "balance sticky or re-latched"
+ASSERT SMX_OOB == 0 "oob clear after re-homeostasis"
+
+SMX RAISE_THERMOSPHERE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "re-thermosphere live"
+ASSERT SMX_THERMOSPHERED == 1 "thermosphered sticky or re-latched"
+ASSERT SMX_THERMO == 1 "thermo sticky or re-latched"
+ASSERT SMX_WARM == 1 "warm sticky or re-latched"
+ASSERT SMX_OOB == 0 "oob clear after re-thermosphere"
+
+SMX RAISE_EXOSPHERE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "re-exosphere live"
+ASSERT SMX_EXOSPHERED == 1 "exosphered sticky or re-latched"
+ASSERT SMX_EXO == 1 "exo sticky or re-latched"
+ASSERT SMX_OUTER == 1 "outer sticky or re-latched"
+ASSERT SMX_OOB == 0 "oob clear after re-exosphere"
+
+SMX RAISE_HELIOSPHERE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "re-heliosphere live"
+ASSERT SMX_HELIOSPHERED == 1 "heliosphered sticky or re-latched"
+ASSERT SMX_HS == 1 "hs sticky or re-latched"
+ASSERT SMX_HELIO == 1 "helio sticky or re-latched"
+ASSERT SMX_SOLAR == 1 "solar sticky or re-latched"
+ASSERT SMX_OOB == 0 "oob clear after re-heliosphere"
+
+SMX RAISE_LOCALBUBBLE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "re-localbubble live"
+ASSERT SMX_LOCALBUBBLED == 1 "localbubbled sticky or re-latched"
+ASSERT SMX_LBUB == 1 "lbub sticky or re-latched"
+ASSERT SMX_LOCALSPACE == 1 "localspace sticky or re-latched"
+ASSERT SMX_SHELLPATH_ON == 1 "shellpath_on sticky or re-latched"
+ASSERT SMX_OOB == 0 "oob clear after re-localbubble"
+
+SMX RAISE_THALAMUS bed nozzle hive scrap
+ASSERT SMX_OK == 1 "re-thalamus live"
+ASSERT SMX_THALAMUS == 1 "thalamus sticky or re-latched"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky or re-latched"
+ASSERT SMX_OOB == 0 "oob clear after re-thalamus"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "energy after mesh stability life cascade"
+ASSERT UNITY >= 40 "mesh unity after life cascade"
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT SMX_OOB == 0 "guard holds"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky"
+ASSERT SMX_RESILIENT == 1 "resilient sticky"
+ASSERT SMX_HOMEOSTATIC == 1 "homeostatic sticky"
+ASSERT SMX_IONOSPHERED == 1 "ionosphered sticky"
+ASSERT SMX_THERMOSPHERED == 1 "thermosphered sticky"
+ASSERT SMX_THERMO == 1 "thermo sticky"
+ASSERT SMX_EXOSPHERED == 1 "exosphered sticky"
+ASSERT SMX_EXO == 1 "exo sticky"
+ASSERT SMX_OUTER == 1 "outer sticky"
+ASSERT SMX_HELIOSPHERED == 1 "heliosphered sticky"
+ASSERT SMX_HS == 1 "hs sticky"
+ASSERT SMX_HELIO == 1 "helio sticky"
+ASSERT SMX_SOLAR == 1 "solar sticky"
+ASSERT SMX_LOCALBUBBLED == 1 "localbubbled sticky"
+ASSERT SMX_LBUB == 1 "lbub sticky"
+ASSERT SMX_LOCALSPACE == 1 "localspace sticky"
+ASSERT SMX_SHELLPATH_ON == 1 "shellpath_on sticky"
+ASSERT OK == 1
+
+PRINT "smx_mesh_localbubble_life_cascade" births pop SMX_OK SMX_LIFE_FORCE SMX_AUTOHEALED SMX_RESILIENT SMX_THALAMUS SMX_STABLE_MESH SMX_HOMEOSTATIC SMX_IONOSPHERED SMX_THERMOSPHERED SMX_THERMO SMX_EXOSPHERED SMX_EXO SMX_OUTER SMX_HELIOSPHERED SMX_HS SMX_HELIO SMX_LOCALBUBBLED SMX_LBUB SMX_LOCALSPACE SMX_SHELLPATHS SMX_SHELLHUBS SMX_BONDS SMX_MESH SMX_STABLE SMX_TALKS SMX_OOB CUBES UNITY ENERGY DECIDE
+PASS
