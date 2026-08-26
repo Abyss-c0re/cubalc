@@ -1,0 +1,169 @@
+// atomic_printer_mesh_astrocyte_life.cubalc
+// Life-force gift: MESH-ASTROCYTE life cascade — soft-OOB fail-closed then glia support then
+// astrocyte endfoot star mesh locks lattice; mitosis under free energy; RAISE recovers after storm.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "ASTROCYTE_COORD v1754 | from=gift | type=atomic_printer_mesh_astrocyte_life | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT SMX_OOB == 0 "oob cleared by life_force"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds"
+ASSERT CUBES == base_cubes "life_force invents nothing"
+
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "we_autoheal live"
+ASSERT SMX_AUTOHEALED == 1 "autohealed latch"
+ASSERT SMX_OOB == 0 "oob still clear"
+
+SMX GLIA bed nozzle hive scrap
+ASSERT SMX_OK == 1 "glia live"
+ASSERT SMX_GLIA == 1 "glia latch"
+ASSERT SMX_MESH_GLIA == 1 "mesh_glia latch"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh via glia"
+ASSERT SMX_OOB == 0 "oob clear on glia"
+
+SMX ASTROCYTE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "astrocyte live"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte latch"
+ASSERT SMX_ASTROCYTED == 1 "astrocyted latch"
+ASSERT SMX_MESH_ASTROCYTE == 1 "mesh_astrocyte latch"
+ASSERT SMX_ENDFOOT == 1 "endfoot latch"
+ASSERT SMX_TRIPARTITE == 1 "tripartite latch"
+ASSERT SMX_HARDEN_ASTROCYTE == 1 "harden_astrocyte"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh via astrocyte"
+ASSERT SMX_STARS == 4 "four stars"
+ASSERT SMX_ENDFEET == 4 "four endfeet"
+ASSERT SMX_ASTROCYTE_SUM == 14 "bonds+stars+endfeet"
+ASSERT SMX_BONDS == 6 "six bonds"
+ASSERT SMX_OOB == 0 "oob clear on astrocyte"
+ASSERT CUBES == base_cubes "astrocyte invents nothing"
+
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize live"
+ASSERT SMX_STABLE == 1 "stable latch"
+
+LET births = 0
+LET step = 0
+WHILE step < 10
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+
+ASSERT births >= 1 "mitosis life cascade on stable mesh"
+ASSERT pop >= 2 "population after life cascade"
+ASSERT ENERGY > 0 "energy after life cascade"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte sticky through mitosis"
+ASSERT SMX_MESH_ASTROCYTE == 1 "mesh_astrocyte sticky through mitosis"
+ASSERT SMX_ENDFOOT == 1 "endfoot sticky through mitosis"
+ASSERT SMX_TRIPARTITE == 1 "tripartite sticky through mitosis"
+ASSERT SMX_ASTROCYTE_SUM == 14 "astrocyte_sum sticky through mitosis"
+ASSERT SMX_OOB == 0 "guard holds through mitosis"
+
+SMX EXCHANGE hive offworld_storm
+ASSERT SMX_OK == 0 "post-life soft-OOB"
+ASSERT SMX_OOB >= 1 "storm counted"
+
+SMX RAISE_ASTROCYTE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "raise_astrocyte after storm"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte re-latched"
+ASSERT SMX_MESH_ASTROCYTE == 1 "mesh_astrocyte re-latched"
+ASSERT SMX_ENDFOOT == 1 "endfoot re-latched"
+ASSERT SMX_OOB == 0 "storm cleared by raise_astrocyte"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "energy after astrocyte life cascade"
+ASSERT UNITY >= 40 "mesh unity after life cascade"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky"
+ASSERT SMX_ASTROCYTE == 1 "astrocyte sticky"
+ASSERT SMX_ASTROCYTE_SUM == 14 "astrocyte_sum sticky"
+ASSERT OK == 1
+
+PRINT "atomic_printer_mesh_astrocyte_life" births pop SMX_ASTROCYTE SMX_MESH_ASTROCYTE SMX_ENDFOOT SMX_TRIPARTITE SMX_STARS SMX_ENDFEET SMX_ASTROCYTE_SUM SMX_STABLE_MESH SMX_OOB CUBES UNITY ENERGY DECIDE
+PASS

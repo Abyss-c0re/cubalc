@@ -1,0 +1,7 @@
+SHIP 1754 MESH ASTROCYTE LIFE CASCADE
+feature=MESH_ASTROCYTE_LIFE_CASCADE
+proofs_ok=616 asserts_fail=0
+flagship_1620=PASS
+science_integration=atomic_printer_mesh_astrocyte_life PASS 58/0
+soft_oob=fail-closed
+next=we_autoheal
