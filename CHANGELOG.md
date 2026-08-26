@@ -1,3 +1,10 @@
+## 1833 — MESH_LEFT_COMMON_CAROTID soft-OOB mesh life-force
+
+- feat(smx): left common carotid conduit mesh soft-OOB fail-closed + MESH_EXCHANGE C(4,2)
+- proofs: 99_smx_left_common_carotid + 1833_smx_mesh_left_common_carotid_life (60/0 PASS); flagship 1620 PASS (12)
+- pure-C: src/cubalc_smx_left_common_carotid.c; VERSION 1.15.1312-usability
+- ENERGYFLOW aortic arch apex → LCCA origin → trunk → bifurcation → cranial perfusion takeoff
+
 ## 1830 — MESH_ASCENDING_AORTA soft-OOB mesh life-force
 
 - feat(smx): ascending aorta root conduit mesh soft-OOB fail-closed + MESH_EXCHANGE C(4,2)

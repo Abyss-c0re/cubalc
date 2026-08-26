@@ -1,0 +1,5 @@
+MESH_LEFT_COMMON_CAROTID
+1833_smx_mesh_left_common_carotid_life
+soft_oob_fail_closed=1
+mesh_bonds_c42=6
+segment_landmarks=3

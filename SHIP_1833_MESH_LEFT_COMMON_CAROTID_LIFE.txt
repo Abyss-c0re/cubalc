@@ -1,0 +1,6 @@
+SHIP 1833 MESH_LEFT_COMMON_CAROTID_LIFE
+feat(smx): left common carotid conduit mesh soft-OOB life-force path
+proofs: programs/proof/99_smx_left_common_carotid.cubalc + programs/proof/1833_smx_mesh_left_common_carotid_life.cubalc
+asserts_ok=60 asserts_fail=0 flagship_1620=PASS
+VERSION=1.15.1312-usability MEANINGFUL_ITER=1833
+WE_AUTOHEAL left common carotid cranial takeoff seal green.
