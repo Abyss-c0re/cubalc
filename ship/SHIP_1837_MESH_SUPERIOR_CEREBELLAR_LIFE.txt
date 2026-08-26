@@ -13,4 +13,3 @@ life=1837_smx_mesh_superior_cerebellar_life.cubalc
 soft_oob=1
 fail_closed=1
 bonds=6
-status: PASS
