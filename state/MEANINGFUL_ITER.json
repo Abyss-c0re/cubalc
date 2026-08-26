@@ -10,18 +10,19 @@
   "MEANINGFUL_ITER": 1783,
   "unity": 1.0,
   "next": "we_autoheal",
-  "proof": "programs/proof/1783_smx_mesh_adherens_life_cascade.cubalc",
-  "smoke": "programs/proof/1783_smx_adherens_soft_oob_smoke.cubalc",
+  "proof": "programs/proof/1783_smx_adherens_soft_oob_smoke.cubalc",
+  "smoke": "1783_smx_adherens_soft_oob_smoke.cubalc",
+  "cascade": "1783_smx_mesh_adherens_life_cascade.cubalc",
   "flagship_1620": "PASS",
   "latch": "adherens_latch",
-  "notes": "ADHERENS|ZONULA_ADHERENS|CADHERIN|BELT_SEAL soft-OOB fail-closed mesh+wrap+sheath life-cascade; smoke asserts_ok=30 cascade=1567 flagship 1620 PASS",
+  "notes": "ADHERENS|ZONULA_ADHERENS|CADHERIN|BELT_SEAL soft-OOB fail-closed mesh+wrap+sheath; smoke asserts_ok=30 cascade=1567 flagship 1620 PASS",
   "proofs": {
     "1783_smx_adherens_soft_oob_smoke": "PASS",
     "1783_smx_mesh_adherens_life_cascade": "PASS",
     "1620_flagship": "PASS"
   },
-  "asserts_smoke_ok": 30,
-  "asserts_cascade_ok": 1567,
-  "asserts_flagship_ok": 12,
-  "ok": true
+  "ok": true,
+  "head": "cff11621ed9e471a53efac40606e5526c0253998",
+  "short": "cff11621",
+  "head_short": "cff11621"
 }
