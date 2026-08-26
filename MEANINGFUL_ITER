@@ -1,1 +1,36 @@
-1841
+{
+  "iter": 1841,
+  "meaningful_iter": 1841,
+  "MEANINGFUL_ITER": 1841,
+  "feature": "SMX_MESH_ANTERIOR_COMMUNICATING_LIFE",
+  "FEATURE": "SMX_MESH_ANTERIOR_COMMUNICATING_LIFE",
+  "ship": "1841_smx_mesh_anterior_communicating_life",
+  "version": "1.15.1320-usability",
+  "VERSION": "1.15.1320-usability",
+  "head": "b73e793d9f04b36f66106d3b9b1046d8d002cf77",
+  "HEAD": "b73e793d9f04b36f66106d3b9b1046d8d002cf77",
+  "pin": "b73e793d9f04b36f66106d3b9b1046d8d002cf77",
+  "tip": "b73e793d9f04b36f66106d3b9b1046d8d002cf77",
+  "pin_head": "b73e793d9f04b36f66106d3b9b1046d8d002cf77",
+  "pinned_head": "b73e793d9f04b36f66106d3b9b1046d8d002cf77",
+  "sha": "b73e793d9f04b36f66106d3b9b1046d8d002cf77",
+  "pin_short": "b73e793d",
+  "short": "b73e793d",
+  "status": "PASS",
+  "soft_oob": 1,
+  "fail_closed": 1,
+  "bonds": 6,
+  "proofs": "1841+99=60/0,1620=12/0",
+  "tip_equals_pin": true,
+  "tip_eq_pin": true,
+  "past_ecf9c40a": true,
+  "proof_recheck": {
+    "99": "PASS 60/0",
+    "1841": "PASS 60/0",
+    "1620": "PASS 12/0"
+  },
+  "c_slice": "src/cubalc_smx_anterior_communicating.c",
+  "branch": "ship-1841-anterior-communicating",
+  "mesh": "anterior_communicating",
+  "aka": "MESH_ACOMM"
+}
