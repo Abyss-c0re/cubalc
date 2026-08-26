@@ -24,14 +24,16 @@
   "risk": "low",
   "next": "we_autoheal",
   "past": 1726,
-  "sealed": false,
+  "sealed": true,
   "soft_oob": "fail-closed",
   "mesh_exchange": "nebula+dust+nursery+core+stabilize",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T00:10:00Z",
-  "feat_head": "PENDING",
-  "pin_head": "PENDING",
-  "tip": "PENDING",
-  "HEAD": "PENDING",
-  "short": "PENDING"
+  "ts": "2026-08-26T00:08:15Z",
+  "verified_at": "2026-08-26T00:08:15Z",
+  "feat_head": "4a23b38dd512a9218923235dd3bd46e291fa9a12",
+  "pin_head": "4a23b38dd512a9218923235dd3bd46e291fa9a12",
+  "tip": "4a23b38dd512a9218923235dd3bd46e291fa9a12",
+  "HEAD": "4a23b38dd512a9218923235dd3bd46e291fa9a12",
+  "short": "4a23b38d",
+  "commit": "4a23b38d"
 }
