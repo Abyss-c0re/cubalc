@@ -30,9 +30,9 @@
   "verified_at": "2026-08-26T01:21:31Z",
   "host_finish": true,
   "feat_head": "42f6bc4112944d249094df6a90f055cf73600b4f",
-  "pin_head": "602f24fdc5e1d10e6eaefe9feaf0e9c1ad2acb1b",
-  "tip": "602f24fdc5e1d10e6eaefe9feaf0e9c1ad2acb1b",
-  "HEAD": "602f24fdc5e1d10e6eaefe9feaf0e9c1ad2acb1b",
-  "commit": "602f24fdc5e1d10e6eaefe9feaf0e9c1ad2acb1b",
-  "short": "602f24fd"
+  "pin_head": "8dea3222845a7686959467a346d066ceaeac89d0",
+  "tip": "8dea3222845a7686959467a346d066ceaeac89d0",
+  "HEAD": "8dea3222845a7686959467a346d066ceaeac89d0",
+  "commit": "8dea3222845a7686959467a346d066ceaeac89d0",
+  "short": "8dea3222"
 }
