@@ -8,12 +8,12 @@
   "asserts_fail": 0,
   "flagship_1620": "PASS",
   "version": "1.15.1251-usability",
-  "head": "7b9792d848b40fcb0e06f05eeea214a4662c98fc",
-  "short": "7b9792d8",
+  "head": "9f8633f0e94f81ad8d54b97815060f6b983b340a",
+  "short": "9f8633f0",
   "status": "PASS",
   "next": "we_autoheal",
   "MEANINGFUL_ITER": 1775,
-  "head_short": "7b9792d8",
+  "head_short": "9f8633f0",
   "unity": 1.0,
   "latch": "stellate_latch"
 }
