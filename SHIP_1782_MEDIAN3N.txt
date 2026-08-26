@@ -1,0 +1,8 @@
+SHIP 1782 MEDIAN3N
+feature: MEDIAN3N|MID3N|MED3N|MIDDLE3N a b c — median of three ints → LAST_N
+impl: src/lang/lang_ops_math.c (pure C, glue OF/AND/commas, surfaces A/B/C/LO/MID/HI/OK)
+proof: programs/proof/1020_median3n.cubalc PASS asserts_ok=20
+flagship: programs/proof/1620_atomic_printer_life_force.cubalc PASS
+MEANINGFUL_ITER=1782
+VERSION=1.15.1258-median3n
+next: we_autoheal

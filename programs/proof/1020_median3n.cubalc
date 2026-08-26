@@ -1,0 +1,58 @@
+# MEDIAN3N / MID3N — median of three → LAST_N (usability science)
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+MEDIAN3N 1 2 3
+ASSERT LAST_N == 2 "sorted mid"
+ASSERT MEDIAN3N_OK == 1
+ASSERT MID3N == 2
+ASSERT MED3N == 2
+ASSERT MEDIAN3N_MID == 2
+ASSERT MEDIAN3N_LO == 1
+ASSERT MEDIAN3N_HI == 3
+ASSERT OK == 1
+
+MEDIAN3N 3 1 2
+ASSERT LAST_N == 2 "perm mid"
+
+MEDIAN3N 2 2 2
+ASSERT LAST_N == 2 "ties"
+
+MEDIAN3N 5 1 3
+ASSERT LAST_N == 3
+
+MEDIAN3N 9 0 4
+ASSERT LAST_N == 4
+
+# negatives
+LET n = 0
+LET n = n - 5
+MEDIAN3N n 0 5
+ASSERT LAST_N == 0 "neg span"
+
+LET a = 0
+LET a = a - 10
+LET b = 0
+LET b = b - 3
+LET c = 0
+LET c = c - 7
+MEDIAN3N a b c
+ASSERT LAST_N == -7 "all neg"
+
+# aliases
+MID3N 8 1 4
+ASSERT LAST_N == 4
+MED3N 10 20 15
+ASSERT LAST_N == 15
+MIDDLE3N 7 2 9
+ASSERT LAST_N == 7
+
+# glue words
+MEDIAN3N OF 4 AND 1 AND 9
+ASSERT LAST_N == 4 "glue OF/AND"
+
+MEDIAN3N 6, 2, 8
+ASSERT LAST_N == 6 "commas"
+
+PRINT "median3n" LAST_N MEDIAN3N_OK MEDIAN3N_MID
+PASS

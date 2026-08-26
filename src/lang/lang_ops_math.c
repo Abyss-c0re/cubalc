@@ -6227,5 +6227,65 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
+
+  /* MEDIAN3N|MID3N|MED3N|MIDDLE3N a b c — median of three ints → LAST_N.
+   * Optional glue: commas, AND, OF between atoms. Surfaces A/B/C + OK.
+   * Usability: robust mid pick without sort shells. */
+  if (kw(&L->cur,"MEDIAN3N") || kw(&L->cur,"MID3N") || kw(&L->cur,"MED3N") ||
+      kw(&L->cur,"MIDDLE3N") || kw(&L->cur,"MIDOF3") || kw(&L->cur,"MEDIAN_OF_3")){
+    long a = 0, b = 0, c = 0, out = 0;
+    char nbuf[32];
+    lex_next(L);
+    if (kw(&L->cur,"OF")) lex_next(L);
+    if (!cubalc_math_read_num_atom(vm, L, &a)) {
+      fail_at(vm, L, "MEDIAN3N a b c — need three numbers");
+      return -1;
+    }
+    if (L->cur.kind == TK_COMMA || kw(&L->cur,"AND") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"THEN") || kw(&L->cur,"WITH"))
+      lex_next(L);
+    if (!cubalc_math_read_num_atom(vm, L, &b)) {
+      fail_at(vm, L, "MEDIAN3N a b c — missing b");
+      return -1;
+    }
+    if (L->cur.kind == TK_COMMA || kw(&L->cur,"AND") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"THEN") || kw(&L->cur,"WITH"))
+      lex_next(L);
+    if (!cubalc_math_read_num_atom(vm, L, &c)) {
+      fail_at(vm, L, "MEDIAN3N a b c — missing c");
+      return -1;
+    }
+    /* sort three without branches on ties */
+    {
+      long x = a, y = b, z = c, t;
+      if (x > y) { t = x; x = y; y = t; }
+      if (y > z) { t = y; y = z; z = t; }
+      if (x > y) { t = x; x = y; y = t; }
+      out = y;
+      if (vm->trace)
+        fprintf(vm->trace, "# median3n sorted [%ld %ld %ld] mid=%ld\n", x, y, z, out);
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "MEDIAN3N", out);
+    var_set_num(vm, "MID3N", out);
+    var_set_num(vm, "MED3N", out);
+    var_set_num(vm, "MIDDLE3N", out);
+    var_set_num(vm, "MEDIAN3N_A", a);
+    var_set_num(vm, "MEDIAN3N_B", b);
+    var_set_num(vm, "MEDIAN3N_C", c);
+    var_set_num(vm, "MEDIAN3N_LO", (a < b ? (a < c ? a : c) : (b < c ? b : c)));
+    var_set_num(vm, "MEDIAN3N_MID", out);
+    var_set_num(vm, "MEDIAN3N_HI", (a > b ? (a > c ? a : c) : (b > c ? b : c)));
+    var_set_num(vm, "MEDIAN3N_OK", 1);
+    var_set_num(vm, "MID3N_OK", 1);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    bump(vm); return 1;
+  }
+
   return 0;
 }
