@@ -1,3 +1,8 @@
+## 1836 — SMX RIGHT_VERTEBRAL mesh life
+- feat(smx): RIGHT_VERTEBRAL conduit; soft-OOB fail-closed MESH_EXCHANGE C(4,2)
+- proof 1836/99 PASS 60/0; flagship 1620 PASS 12/0
+- VERSION 1.15.1315-usability
+
 ## 1.15.1313-usability — 1834 MESH_LEFT_VERTEBRAL_LIFE
 - SMX left vertebral conduit: soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE life-force
 - Proofs: 99_smx_left_vertebral / 1834_smx_mesh_left_vertebral_life (60/0) + flagship 1620 (12/0)
