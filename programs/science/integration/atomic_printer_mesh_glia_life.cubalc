@@ -1,0 +1,171 @@
+// atomic_printer_mesh_glia_life.cubalc
+// Life-force gift: MESH-GLIA-LIFE — complete glia mesh + glia wrap ring + cushion hub after soft-OOB storms.
+// SMX GLIA|MESH_GLIA|WRAP|WE_GLIA|LIFE_GLIA|MESH_GLIA|RAISE_GLIA clears thrash, every live pair
+// bonds both ways (C(n,2)), then glia wrap ring settles so lattice raises glia; latches
+// SMX_GLIA|SMX_MESH_GLIA|SMX_STABLE_MESH|SMX_WRAP. Soft-OOB ghosts stay fail-closed.
+// Mitosis under free energy while mesh is glia-locked. Wonder AGI can RUN.
+// Cube is SoT · free energy must flow · matrix is key · no dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "GLIA_COORD v1 | from=gift | type=atomic_printer_mesh_glia_life | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+CUBE pulse ROLE peer PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS pulse  "1010101010101010101010101010101010101010101010101010101010101010"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap pulse
+PLUG pulse bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+SMX GLIA bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "glia live"
+ASSERT SMX_GLIA == 1 "glia latch on"
+ASSERT SMX_GLIA_LATCH == 1 "glia latch sticky"
+ASSERT SMX_GLIAED == 1 "gliaed latch on"
+ASSERT SMX_MESH_GLIA == 1 "mesh_glia latch on"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh latch on"
+ASSERT SMX_CUSHION_LATCH == 1 "cushion_latch on"
+ASSERT SMX_HARDEN_GLIA == 1 "harden exchange latch on"
+ASSERT SMX_BONDS == 10 "ten bank bonds"
+ASSERT SMX_BONDS == 10 "ten undirected links (C(5,2))"
+ASSERT SMX_WRAP == 5 "five glia wrap ring"
+ASSERT SMX_CUSHIONS == 5 "five cushions hubs"
+ASSERT SMX_MESH == 5 "five mesh"
+ASSERT SMX_GLIA_SUM == 20 "glia bonds+tract+cushions"
+ASSERT SMX_PULSE == 20 "pulse bonds+tract+cushions"
+ASSERT SMX_BREATH == 5 "five live breath"
+ASSERT SMX_OOB == 0 "oob cleared by glia"
+ASSERT SMX_LIVE == 5 "five live"
+ASSERT SMX_NODES == 5 "five named"
+ASSERT SMX_TALKS >= 40 "talks after glia"
+ASSERT SMX_VITAL >= 14 "vital after glia"
+ASSERT CUBES == base_cubes "glia invents nothing"
+
+SMX MESH_GLIA bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "mesh_glia rebind"
+ASSERT SMX_GLIA == 1 "glia sticky"
+ASSERT SMX_WRAP == 5 "tract sticky"
+ASSERT SMX_CUSHIONS == 5 "cushions sticky"
+
+SMX WRAP bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "tract rebind"
+ASSERT SMX_GLIA == 1 "plate glia"
+ASSERT SMX_WRAPS == 5 "wraps sticky"
+
+LET births = 0
+LET step = 0
+WHILE step < 8
+  TICK 1
+  FLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+
+ASSERT births >= 1 "mitosis under glia mesh"
+ASSERT pop >= 2 "population after glia life"
+ASSERT ENERGY > 0 "energy after glia life"
+ASSERT SMX_GLIAED == 1 "gliaed sticky through mitosis"
+ASSERT SMX_GLIA == 1 "glia sticky through mitosis"
+ASSERT SMX_MESH_GLIA == 1 "mesh_glia sticky through mitosis"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky through mitosis"
+ASSERT SMX_OOB == 0 "guard holds through mitosis"
+
+SMX EXCHANGE hive offworld_storm
+ASSERT SMX_OK == 0 "post-life soft-OOB"
+ASSERT SMX_OOB >= 1 "storm counted"
+
+SMX RAISE_GLIA bed nozzle hive scrap pulse
+ASSERT SMX_OK == 1 "raise glia after storm"
+ASSERT SMX_OOB == 0 "storm cleared"
+ASSERT SMX_GLIAED == 1 "gliaed after storm"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh after storm"
+ASSERT CUBES == base_cubes "raise invents nothing"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "energy after glia board"
+ASSERT UNITY >= 40 "mesh unity after glia"
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT SMX_GLIA == 1 "glia sticky final"
+ASSERT SMX_MESH_GLIA == 1 "mesh_glia sticky final"
+ASSERT SMX_OOB == 0 "guard holds"
+ASSERT OK == 1
+
+PRINT "atomic_printer_mesh_glia_life" births pop SMX_OK SMX_GLIAED SMX_GLIA SMX_MESH_GLIA SMX_STABLE_MESH SMX_WRAP SMX_CUSHIONS SMX_GLIA_SUM SMX_BONDS SMX_MESH SMX_TALKS SMX_OOB CUBES UNITY ENERGY DECIDE
+PASS

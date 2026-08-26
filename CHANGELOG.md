@@ -7639,3 +7639,9 @@ See 1.11.6-universal.
 - `ADDMOD` `SUBMOD` `MULMOD` `POWMOD` · `FIB`/`FIBONACCI` · `ISPRIME`/`PRIMEP`
 - `IDIV` `IMOD` named integer div/mod
 - Proof `19_math_modular_universal.cubalc`
+
+## 1.15.1226-usability — 1753 SMX mesh glia life cascade
+
+- SMX GLIA mesh stability after dendrite: soft-OOB fail-closed, wrap ring + cushion hub, mitosis sticky
+- proofs: programs/proof/1753_smx_mesh_glia_life_cascade.cubalc (562 asserts PASS)
+- integration: atomic_printer_mesh_glia_life.cubalc PASS
