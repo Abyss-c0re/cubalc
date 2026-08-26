@@ -33,13 +33,13 @@
   "item_id": "mi_1816_smx_mesh_tricuspid_life",
   "title": "1816 MESH_TRICUSPID soft-OOB mesh exchange life-force",
   "summary": "Tricuspid SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
-  "feat_sha": "17fb46139461b1ebfefd9a703a0f5ff846c79846",
+  "feat_sha": "7721cd04e4b7f39291cf63d0e95dee4d8a0c8814",
   "pin_sha": "f60fca4e7dc2d7d5726a36288898347f69d2895d",
-  "sha": "f6578a11a05c6a0254af079d00da640bd45c3866",
-  "head": "f6578a11a05c6a0254af079d00da640bd45c3866",
-  "pinned_head": "f6578a11a05c6a0254af079d00da640bd45c3866",
-  "commit": "f6578a11a05c6a0254af079d00da640bd45c3866",
-  "pin_head": "f6578a11a05c6a0254af079d00da640bd45c3866",
-  "tip": "f6578a11a05c6a0254af079d00da640bd45c3866",
-  "head_short": "f6578a11"
+  "sha": "7721cd04e4b7f39291cf63d0e95dee4d8a0c8814",
+  "head": "7721cd04e4b7f39291cf63d0e95dee4d8a0c8814",
+  "pinned_head": "7721cd04e4b7f39291cf63d0e95dee4d8a0c8814",
+  "commit": "7721cd04e4b7f39291cf63d0e95dee4d8a0c8814",
+  "pin_head": "7721cd04e4b7f39291cf63d0e95dee4d8a0c8814",
+  "tip": "7721cd04e4b7f39291cf63d0e95dee4d8a0c8814",
+  "head_short": "7721cd04"
 }
