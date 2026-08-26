@@ -1,0 +1,6 @@
+SHIP 1815 MESH_RIGHT_ATRIUM soft-OOB mesh life-force
+feature=SMX_MESH_RIGHT_ATRIUM_LIFE
+proofs=79_smx_right_atrium.cubalc,1815_smx_mesh_right_atrium_life.cubalc
+asserts_ok=60 asserts_fail=0 flagship_1620=PASS
+energy=SVC junction→right atrium→tricuspid→RV→pulmonary outflow
+soft_oob=fail_closed mesh_exchange=C(4,2) we_autoheal=1
