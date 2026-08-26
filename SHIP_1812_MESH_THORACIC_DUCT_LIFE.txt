@@ -9,5 +9,5 @@ ASSERTS_FAIL=0
 FLAGSHIP_1620=PASS
 FLAGSHIP_OK=12
 VERSION=1.15.1291-usability
-NOTE=MESH_THORACIC_DUCT soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW cisterna chyli→thoracic duct→left venous angle (left IJV∩SCV)→subclavian confluence→systemic venous return; WE_AUTOHEAL; pure-C cubalc_smx_thoracic_duct.c
+NOTE=MESH_THORACIC_DUCT soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW cisterna chyli→thoracic duct ascent→left venous angle (left IJV∩SCV)→subclavian confluence→systemic venous return; WE_AUTOHEAL; pure-C cubalc_smx_thoracic_duct.c
 C_SLICE=src/cubalc_smx_thoracic_duct.c
