@@ -8,7 +8,7 @@
   "item": "pituicyte pituitary guide life cascade",
   "item_id": "mi_smx_mesh_pituicyte_life_cascade",
   "title": "pituicyte pituitary guide life cascade",
-  "summary": "SMX PITUICYTE soft-OOB fail-closed mesh stability after tanycyte; mitosis under free energy; proof 1763 asserts_fail:0.",
+  "summary": "SMX PITUICYTE soft-OOB fail-closed mesh stability after tanycyte; mitosis under free energy; proof 1763 asserts_ok:980 asserts_fail:0.",
   "feature": "MESH_PITUICYTE_LIFE_CASCADE",
   "proofs": [
     "programs/proof/1763_smx_mesh_pituicyte_life_cascade.cubalc"
@@ -18,7 +18,8 @@
   "asserts_fail": 0,
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
-  "unity": 0.88,
+  "flagship_1620": "PASS",
+  "unity": 0.877,
   "nodes": 7,
   "risk": "low",
   "next": "we_autoheal",
@@ -27,15 +28,13 @@
   "soft_oob": "fail-closed",
   "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+tanycyte+pituicyte+stabilize+mitosis",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T07:06:45Z",
-  "verified_at": "2026-08-26T07:06:45Z",
-  "head": "11bc2c981d2c2b4a7665eaa93f67d0ee1d733ddd",
-  "head_short": "11bc2c98",
-  "HEAD": "11bc2c981d2c2b4a7665eaa93f67d0ee1d733ddd",
-  "HEAD_SHORT": "11bc2c98",
+  "ts": "2026-08-26T07:09:09Z",
+  "verified_at": "2026-08-26T07:09:09Z",
+  "head": "d2d4634fdd2f19902a86949ad5cfab46f95017a5",
+  "head_short": "d2d4634f",
+  "HEAD": "d2d4634fdd2f19902a86949ad5cfab46f95017a5",
+  "HEAD_SHORT": "d2d4634f",
   "name": "smx_mesh_pituicyte_life_cascade",
   "proof": "programs/proof/1763_smx_mesh_pituicyte_life_cascade.cubalc",
-  "flagship_1620": "PASS",
-  "craft": "pituicyte",
-  "updated": 1787728005
+  "craft": "pituicyte"
 }

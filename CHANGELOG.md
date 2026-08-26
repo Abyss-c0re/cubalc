@@ -7680,3 +7680,7 @@ See 1.11.6-universal.
 - SMX TANYCYTE ventricle-guide mesh + life cascade soft-OOB fail-closed
 - proof 1762 PASS (955/0); flagship 1620 PASS (12/0)
 - MEANINGFUL_ITER=1762
+
+## 1.15.1240-usability — 1763 pituicyte mesh life cascade
+- SMX PITUICYTE soft-OOB fail-closed mesh stability after tanycyte
+- proof 1763 asserts_ok:980 asserts_fail:0; flagship 1620 PASS

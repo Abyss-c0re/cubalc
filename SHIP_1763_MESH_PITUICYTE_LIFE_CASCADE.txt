@@ -1,4 +1,1 @@
-1763 SMX mesh pituicyte life cascade
-proof 1763 PASS asserts_ok=980 fail=0
-flagship 1620 PASS asserts_ok=12 fail=0
-MEANINGFUL_ITER=1763
+SMX PITUICYTE soft-OOB fail-closed mesh life cascade after tanycyte; proof 1763 asserts_ok:980 asserts_fail:0; flagship 1620 PASS 12/0.
