@@ -50,12 +50,12 @@
   "tip_equals_pin": true,
   "tip_eq_pin": true,
   "pin": "19a4029391c1802ca79bfc474dbe98df12a4dbb0",
-  "head": "70509e2e98512264a528c8a7d17b5e7661828056",
-  "tip": "70509e2e98512264a528c8a7d17b5e7661828056",
-  "pin_head": "70509e2e98512264a528c8a7d17b5e7661828056",
-  "HEAD": "70509e2e98512264a528c8a7d17b5e7661828056",
-  "pinned_head": "70509e2e98512264a528c8a7d17b5e7661828056",
-  "sha": "70509e2e98512264a528c8a7d17b5e7661828056",
-  "pin_short": "70509e2e",
-  "short": "70509e2e"
+  "head": "cfd9189bed856af630f00e7125325f81c79dbfb5",
+  "tip": "cfd9189bed856af630f00e7125325f81c79dbfb5",
+  "pin_head": "cfd9189bed856af630f00e7125325f81c79dbfb5",
+  "HEAD": "cfd9189bed856af630f00e7125325f81c79dbfb5",
+  "pinned_head": "cfd9189bed856af630f00e7125325f81c79dbfb5",
+  "sha": "cfd9189bed856af630f00e7125325f81c79dbfb5",
+  "pin_short": "cfd9189b",
+  "short": "cfd9189b"
 }
