@@ -1,12 +1,1 @@
-{
-  "meaningful_iter": 1766,
-  "version": "1.15.1241-usability",
-  "feature": "SMX PERICYTE mesh life cascade",
-  "proof": "programs/proof/1766_smx_mesh_pericyte_life_cascade.cubalc",
-  "proof_pass": "1049/0",
-  "flagship": "programs/proof/1620_atomic_printer_life_force.cubalc",
-  "flagship_pass": "12/0",
-  "soft_oob": "fail-closed",
-  "after": "ng2",
-  "prior_head": "2b8be3df"
-}
+{"iter":1769,"feat":"smx_mesh_capillary_life_cascade","proof":"programs/science/proof/1769_smx_mesh_capillary_life_cascade.cubalc","asserts_ok":1124,"asserts_fail":0,"flagship":"1620"}

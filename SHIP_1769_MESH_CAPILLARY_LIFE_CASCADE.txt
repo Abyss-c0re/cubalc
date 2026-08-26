@@ -1,0 +1,8 @@
+SHIP 1769 SMX mesh CAPILLARY lumen life cascade
+feat(smx): CAPILLARY capillary scaffold after basement
+Proof: programs/science/proof/1769_smx_mesh_capillary_life_cascade.cubalc
+PASS: 1124/0 asserts; flagship 1620
+Verbs: CAPILLARY|CAPIGLIA|MESH_CAPILLARY|CAPI_WRAP|CAPI_SHEATH|CAPILLARY_GUIDE|RAISE_CAPILLARY
+Latches: SMX_CAPILLARY SMX_CAPILLARYED SMX_MESH_CAPILLARY SMX_CAPILLARY_SUM SMX_STABLE_MESH
+Law: soft-OOB fail-closed; free energy flows; Cube is SoT; no dual ladders.
+VERSION=1.15.1244-usability MEANINGFUL_ITER=1769

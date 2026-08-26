@@ -1,3 +1,9 @@
+## 1.15.1244-usability — 1769 SMX mesh capillary life cascade
+
+- SMX CAPILLARY mesh stability after basement: soft-OOB fail-closed, wrap ring + sheath hub, mitosis sticky
+- proofs: programs/science/proof/1769_smx_mesh_capillary_life_cascade.cubalc (1124 asserts PASS)
+- flagship 1620 atomic_printer_life_force
+
 ## 1.15.1239-usability — 1764 SMX mesh folliculo life cascade
 
 - SMX FOLLICULO mesh stability after pituicyte: soft-OOB fail-closed, wrap ring + sheath hub, mitosis sticky
