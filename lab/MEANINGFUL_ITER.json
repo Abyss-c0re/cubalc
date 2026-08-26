@@ -14,9 +14,9 @@
   "next": "we_autoheal",
   "latch": "cholangio_latch",
   "notes": "SMX CHOLANGIO|CHOLANGIOCYTE|BILE_DUCT soft-OOB fail-closed mesh+wrap+sheath life-force after stellate",
-  "head": "d117bef2003821718924832d8156f63cc5afe280",
-  "short": "d117bef2",
-  "head_short": "d117bef2",
+  "head": "3b8b88c10d558299afb812f501e5afa3082e99ab",
+  "short": "3b8b88c1",
+  "head_short": "3b8b88c1",
   "MEANINGFUL_ITER": 1776,
   "proofs": {
     "1776_smoke": "PASS",
