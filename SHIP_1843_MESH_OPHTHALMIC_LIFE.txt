@@ -1,0 +1,4 @@
+1843 MESH_OPHTHALMIC life-force soft-OOB
+Proofs: 109_smx_ophthalmic + 1843_smx_mesh_ophthalmic_life
+Energy: clinoid ICA crown → ophthalmic artery origin → optic canal transit → orbital apex free-energy arc → central retinal / ciliary seal
+Pure-C: src/cubalc_smx_ophthalmic.c

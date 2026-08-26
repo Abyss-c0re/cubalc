@@ -1,3 +1,10 @@
+## 1843 — MESH_OPHTHALMIC life-force soft-OOB (1.15.1322-usability)
+
+- feat(smx): MESH_OPHTHALMIC soft-OOB fail-closed mesh exchange life-force
+- Proofs: 109_smx_ophthalmic + 1843_smx_mesh_ophthalmic_life (60/0); flagship 1620 (12/0)
+- Energy: clinoid ICA crown → ophthalmic artery origin → optic canal transit → orbital apex free-energy arc → central retinal / ciliary seal
+- Pure-C: src/cubalc_smx_ophthalmic.c · pins ship/smx_ophthalmic.pin ship/smx_mesh_ophthalmic_life.pin
+
 ## 1842 — MESH_ICA life-force soft-OOB (1.15.1321-usability)
 
 - feat(smx): MESH_ICA soft-OOB fail-closed mesh exchange life-force
