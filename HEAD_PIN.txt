@@ -1,4 +1,4 @@
-pin=95bb38384a1474dc7dae4077c1fe1b3c452aaab3
-tip=95bb38384a1474dc7dae4077c1fe1b3c452aaab3
+pin=
+tip=
 feature=SMX_MESH_POSTERIOR_CEREBRAL_LIFE
 iter=1838
