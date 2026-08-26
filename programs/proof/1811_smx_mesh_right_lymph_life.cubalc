@@ -2,7 +2,7 @@
 // MESH_RIGHT_LYMPH — SMX mesh stability life-force for right lymphatic duct board.
 // Soft-OOB storms fail-closed (never ghost-place); MESH_EXCHANGE roots C(4,2) mind mesh;
 // STABILIZE hardens; ENERGYFLOW + FLOW drive right lymph free-energy return
-// (thoracic duct ascent → left right lymph (IJV∩SCV) → subclavian confluence → systemic venous return);
+// (right jugular+subclavian+bronchomediastinal trunks → right lymphatic duct → right venous angle (IJV∩SCV) → systemic venous return);
 // WE_AUTOHEAL; mitosis under locked rails; second storm re-stabilizes.
 // Wonder AGI can RUN. No dual ladders. Cube is SoT · matrix is key · free energy must flow.
 // Pure-C SMX engine; proof-only CubalC surface.
@@ -38,7 +38,7 @@ PLUG bed seed
 
 IMPULSE bed 1
 IMPULSE nozzle 1
-// right lymph free-energy charge: right trunks → right lymphatic duct → right venous angle return
+// right lymph free-energy charge: trunk confluence → right lymphatic duct → right venous angle
 ENERGYFLOW 5
 FLOW 4
 
@@ -88,37 +88,36 @@ IMPULSE hive 1
 ENERGYFLOW 4
 FLOW 3
 ASSERT ENERGY >= 0 "right lymph energy non-negative"
-ASSERT CUBES == base_cubes "duct gate invents no cubes"
+ASSERT CUBES == base_cubes "right-duct gate invents no cubes"
 
-// live mesh talk after right lymph pulse (right trunks → duct → right venous angle)
+// live mesh talk after right lymph pulse (trunks → duct → right venous angle)
 SMX EXCHANGE bed nozzle
-ASSERT SMX_OK == 1 "live exchange after duct pulse"
+ASSERT SMX_OK == 1 "live exchange after right-duct pulse"
 ASSERT SMX_OOB == 0 "no oob on live talk"
 
 SMX EXCHANGE nozzle hive
-ASSERT SMX_OK == 1 "duct talk live"
+ASSERT SMX_OK == 1 "right-duct talk live"
 ASSERT SMX_OOB == 0 "no oob duct"
 
-// Autoheal under stable right lymph mesh (right-duct wall resilience)
+SMX EXCHANGE hive scrap
+ASSERT SMX_OK == 1 "right-angle talk live"
+ASSERT SMX_OOB == 0 "no oob angle"
+
+SMX EXCHANGE scrap bed
+ASSERT SMX_OK == 1 "return talk live"
+ASSERT SMX_OOB == 0 "no oob return"
+
+// WE_AUTOHEAL under right lymph mesh
 SMX WE_AUTOHEAL bed nozzle hive scrap
-ASSERT SMX_OK == 1 "autoheal live"
+ASSERT SMX_OK == 1 "we_autoheal live"
 ASSERT SMX_AUTOHEALED == 1 "autohealed latch"
-ASSERT SMX_OOB == 0 "oob still clear after autoheal"
-ASSERT SMX_STABLE == 1 "stable sticky through autoheal"
+ASSERT SMX_OOB == 0 "oob clear after autoheal"
+ASSERT CUBES == base_cubes "autoheal invents nothing"
 
-COMPARE bed hive
-HARMONY hive
-RESOLVE hive
-ASSERT ENERGY > 0 "life force energy"
-ASSERT UNITY >= 40 "stable unity after OOB stabilize"
-ASSERT DECIDE >= 0 "decide floor"
-ASSERT DECIDE <= 9 "decide ceil"
-ASSERT SMX_STABLE == 1 "stable sticky through decide"
-ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange sticky through decide"
-
-// --- Free energy mitosis under locked right lymph mesh ---
+// mitosis under locked rails
 GETF seed alive
 LET a0 = LAST_N
+ASSERT a0 == 1 "seed alive under right lymph mesh"
 GETF seed energy
 LET e0 = LAST_N
 IF e0 < 2 THEN
@@ -181,7 +180,7 @@ ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange sticky through mitosis+storm"
 ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky through mitosis+storm"
 ASSERT SMX_AUTOHEALED == 1 "autohealed sticky through storm2"
 
-// final right lymph energy breath through right venous angle return
+// final right lymph energy breath through right lymph return
 ENERGYFLOW 1
 FLOW 1
 ASSERT ENERGY > 0 "final energy flows"

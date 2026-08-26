@@ -9,5 +9,5 @@ ASSERTS_FAIL=0
 FLAGSHIP_1620=PASS
 FLAGSHIP_OK=12
 VERSION=1.15.1290-usability
-NOTE=MESH_RIGHT_LYMPH soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right jugular+subclavian+bronchomediastinal trunks→right lymphatic duct→right venous angle (RIJV∩RSCV)→right subclavian return; WE_AUTOHEAL; pure-C cubalc_smx_right_lymph.c
+NOTE=MESH_RIGHT_LYMPH soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right trunks→right lymphatic duct→right venous angle (RIJV∩RSCV)→subclavian return; WE_AUTOHEAL; pure-C cubalc_smx_right_lymph.c
 C_SLICE=src/cubalc_smx_right_lymph.c

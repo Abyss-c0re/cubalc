@@ -1,6 +1,8 @@
 /* cubalc_smx_right_lymph.c — MESH_RIGHT_LYMPH SMX mesh stability life-force slice
  * Soft-OOB fail-closed + MESH_EXCHANGE C(4,2) rails (engine in cubalc_smx / lang_ops_smx).
  * Proof: programs/proof/75_smx_right_lymph.cubalc · 1811_smx_mesh_right_lymph_life.cubalc
+ * Anatomy: right jugular+subclavian+bronchomediastinal trunks → right lymphatic duct
+ *           → right venous angle (IJV∩SCV) → systemic venous return.
  * Pure C. No SYS glue.
  */
 #include <string.h>
