@@ -1,3 +1,10 @@
+## 1.15.1238-usability — 1763 SMX mesh pituicyte life cascade
+
+- SMX PITUICYTE mesh stability after tanycyte: soft-OOB fail-closed, wrap ring + sheath hub, mitosis sticky
+- proofs: programs/proof/1763_smx_mesh_pituicyte_life_cascade.cubalc (977 asserts PASS)
+- integration: atomic_printer_mesh_pituicyte_life.cubalc
+- flagship 1620 PASS (12/0)
+
 ## 1.15.1190-usability — 1724 SMX_MESH_OLIGO
 
 - Life-force SMX OLIGO|OLIGODENDROCYTE|MYELINATE|MESH_OLIGO|RAISE_OLIGO: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed.

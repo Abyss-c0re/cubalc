@@ -1,0 +1,7 @@
+SHIP 1763 SMX mesh Pituicyte glia life cascade
+feat(smx): Pituicyte pituitary scaffold after tanycyte
+Proof: programs/proof/1763_smx_mesh_pituicyte_life_cascade.cubalc
+Verbs: PITUICYTE|PITUGLIA|MESH_PITUICYTE|PI_WRAP|PI_SHEATH|PITUITARY_GUIDE|RAISE_PITUICYTE
+Latches: SMX_PITUICYTE SMX_PITUICYTEED SMX_MESH_PITUICYTE SMX_PITUICYTE_SUM SMX_STABLE_MESH
+Law: soft-OOB fail-closed; free energy flows; Cube is SoT; no dual ladders.
+Proof 1763 asserts_ok:977 asserts_fail:0; flagship 1620 asserts_ok:12 asserts_fail:0.
