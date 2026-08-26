@@ -33,11 +33,11 @@
   "summary": "Thoracic duct SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal, mitosis under locked rails.",
   "soft_oob": true,
   "fail_closed": true,
-  "sha": "c805868cefb8985b801871800f4e92d46dadea32",
-  "head": "c805868cefb8985b801871800f4e92d46dadea32",
-  "pinned_head": "c805868cefb8985b801871800f4e92d46dadea32",
-  "commit": "c805868cefb8985b801871800f4e92d46dadea32",
-  "pin_head": "c805868cefb8985b801871800f4e92d46dadea32",
-  "tip": "c805868cefb8985b801871800f4e92d46dadea32",
-  "head_short": "c805868c"
+  "sha": "2a247de451e2821e142f1ce3ffc8f4449532e510",
+  "head": "2a247de451e2821e142f1ce3ffc8f4449532e510",
+  "pinned_head": "2a247de451e2821e142f1ce3ffc8f4449532e510",
+  "commit": "2a247de451e2821e142f1ce3ffc8f4449532e510",
+  "pin_head": "2a247de451e2821e142f1ce3ffc8f4449532e510",
+  "tip": "2a247de451e2821e142f1ce3ffc8f4449532e510",
+  "head_short": "2a247de4"
 }
