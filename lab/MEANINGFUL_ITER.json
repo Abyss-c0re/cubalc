@@ -2,8 +2,8 @@
   "schema": "cubalc.meaningful_iter.v1",
   "iter": 1785,
   "feature": "smx_mesh_gap_junction_life_cascade",
-  "head": "c10a53a640919cc778e7d5072e979d75c94a4f0f",
-  "head_short": "c10a53a6",
+  "head": "57b825dbe60d89de1f1fc692ba9ec3ccef356fed",
+  "head_short": "57b825db",
   "version": "1.15.1261-gap-junction",
   "proofs": {
     "smoke_ok": 29,
