@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_RIGHT_ATRIUM soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW SVC junction confluence→right atrium chamber→tricuspid inflow gate→right ventricle approach→pulmonary outflow; WE_AUTOHEAL; pure-C cubalc_smx_right_atrium.c",
+  "notes": "MESH_RIGHT_ATRIUM soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW SVC junction confluence\u2192right atrium chamber\u2192tricuspid inflow gate\u2192right ventricle approach\u2192pulmonary outflow; WE_AUTOHEAL; pure-C cubalc_smx_right_atrium.c",
   "note": "MESH_RIGHT_ATRIUM SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1815 smx mesh right atrium life",
   "item_id": "mi_1815_smx_mesh_right_atrium_life",
@@ -30,9 +30,9 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sha": "9eeab688ddc873f060001a8c4364076b9f7db7df",
-  "head": "9eeab688ddc873f060001a8c4364076b9f7db7df",
-  "pinned_head": "9eeab688ddc873f060001a8c4364076b9f7db7df",
-  "pin_head": "9eeab688ddc873f060001a8c4364076b9f7db7df",
+  "sha": "e690e7a1e70e8c3c0fb716ac67d9121b87e63d58",
+  "head": "e690e7a1e70e8c3c0fb716ac67d9121b87e63d58",
+  "pinned_head": "e690e7a1e70e8c3c0fb716ac67d9121b87e63d58",
+  "pin_head": "e690e7a1e70e8c3c0fb716ac67d9121b87e63d58",
   "feat_sha": "9eeab688ddc873f060001a8c4364076b9f7db7df"
 }
