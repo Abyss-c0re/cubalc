@@ -30,10 +30,10 @@
   "verified_at": "2026-08-26T02:36:09Z",
   "host_finish": true,
   "head_note": "verified_pass_1743_feat_e9b2a2ea_pin_past_ef2e2a3d",
-  "pin_head": "6b87e33093f26d32329a8ab10a9c861b6526b972",
+  "pin_head": "2ff9140129f4feb0362441c7d067b685a55974fd",
   "feat_head": "e9b2a2ea2b88201369312f99a038ce0ca337ac28",
-  "HEAD": "6b87e33093f26d32329a8ab10a9c861b6526b972",
-  "tip": "6b87e33093f26d32329a8ab10a9c861b6526b972",
-  "short": "6b87e330",
+  "HEAD": "2ff9140129f4feb0362441c7d067b685a55974fd",
+  "tip": "2ff9140129f4feb0362441c7d067b685a55974fd",
+  "short": "2ff91401",
   "past_base": "ef2e2a3d"
 }
