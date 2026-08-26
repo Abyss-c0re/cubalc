@@ -30,7 +30,7 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sha": "PENDING",
-  "head": "PENDING",
-  "pin_head": "PENDING"
+  "sha": "72db44ee6622c62b341e5f137d1777f00194c5ed",
+  "head": "72db44ee6622c62b341e5f137d1777f00194c5ed",
+  "pin_head": "72db44ee6622c62b341e5f137d1777f00194c5ed"
 }
