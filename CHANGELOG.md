@@ -1,3 +1,10 @@
+## 1.15.1295-usability — 1816 SMX MESH_TRICUSPID life
+
+- feat(smx): MESH_TRICUSPID soft-OOB fail-closed + mesh exchange C(4,2)
+- proof 80_smx_tricuspid + 1816_smx_mesh_tricuspid_life PASS 60/0
+- flagship 1620 PASS 12/0; pure-C src/cubalc_smx_tricuspid.c
+- energy path: right atrium chamber → tricuspid annulus → leaflet coaptation → RV inflow → pulmonary outflow
+
 ## 1.15.1294-usability — 1815 SMX MESH_RIGHT_ATRIUM life
 
 - feat(smx): MESH_RIGHT_ATRIUM soft-OOB fail-closed + mesh exchange C(4,2)

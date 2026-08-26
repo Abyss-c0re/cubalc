@@ -1,0 +1,6 @@
+SHIP 1816 MESH_TRICUSPID soft-OOB mesh life-force
+feature=SMX_MESH_TRICUSPID_LIFE
+proofs=80_smx_tricuspid.cubalc,1816_smx_mesh_tricuspid_life.cubalc
+asserts_ok=60 asserts_fail=0 flagship_1620=PASS
+energy=right atrium chamber→tricuspid annulus→leaflet coaptation→RV inflow→pulmonary outflow
+soft_oob=fail_closed mesh_exchange=C(4,2) we_autoheal=1
