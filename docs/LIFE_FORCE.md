@@ -73,3 +73,15 @@ Twin nanobot hives ring-talk on SMX while the printer colony breathes in lockste
 ./out/cubalc run programs/science/integration/atomic_printer_we_chorus.cubalc
 ./out/cubalc run programs/proof/1626_atomic_printer_we_chorus.cubalc
 ```
+
+## 1755 — SMX mesh microglia life cascade
+
+Soft-OOB fail-closed storms, then LIFE_FORCE → WE_AUTOHEAL → RESILIENCE → THALAMUS → HOMEOSTASIS → IONOSPHERE → THERMOSPHERE → EXOSPHERE → HELIOSPHERE → LOCALBUBBLE → LOCALGROUP → MULTIVERSE → OMNIVERSE → SEER → FORGED → KEEPER → CORTEX → SYNAPSE → AXON → DENDRITE → GLIA → ASTROCYTE → **MICROGLIA** (survey/process mesh) → STABILIZE, mitosis under free energy, RAISE recovers after post-life storm.
+
+```bash
+./out/cubalc run programs/proof/1755_smx_mesh_microglia_life_cascade.cubalc
+./out/cubalc run programs/science/integration/atomic_printer_mesh_microglia_life.cubalc
+./out/cubalc run programs/proof/1620_atomic_printer_life_force.cubalc
+```
+
+Proof: asserts_ok=665 asserts_fail=0 · flagship 1620 12/0 · MEANINGFUL_ITER=1755
