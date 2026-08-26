@@ -1,0 +1,1 @@
+1770 SMX VENULE return scaffold mesh life cascade after CAPILLARY; soft-OOB fail-closed; proof programs/proof/1770_smx_mesh_venule_life_cascade.cubalc PASS 1165/0; flagship 1620 PASS 12/0

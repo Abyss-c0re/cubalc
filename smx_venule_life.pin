@@ -1,0 +1,8 @@
+MEANINGFUL_ITER=1770
+FEATURE=smx_mesh_venule_life_cascade
+PROOF=programs/proof/1770_smx_mesh_venule_life_cascade.cubalc
+FLAGSHIP=programs/proof/1620_atomic_printer_life_force.cubalc
+PROOF_PASS=1165/0
+FLAGSHIP_PASS=12/0
+HEAD_BASE=605e61cd
+BIN=out/ship1770/cubalc

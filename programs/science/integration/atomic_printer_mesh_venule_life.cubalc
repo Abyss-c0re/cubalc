@@ -1,0 +1,135 @@
+// atomic_printer_mesh_venule_life.cubalc
+// Life-force VENULE return scaffold after CAPILLARY: soft-OOB fail-closed.
+// Free energy must flow; mitosis on locked mesh. Cube is SoT.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_venule_life | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+
+LET base_cubes = CUBES
+SMX KEY
+
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob counted"
+ASSERT CUBES == base_cubes "no ghost"
+
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force"
+ASSERT SMX_LIFE_FORCE == 1 "lf latch"
+ASSERT SMX_OOB == 0 "oob cleared"
+
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "autoheal"
+ASSERT SMX_AUTOHEALED == 1 "healed"
+
+SMX THALAMUS bed nozzle hive scrap
+ASSERT SMX_OK == 1 "thalamus"
+ASSERT SMX_STABLE_MESH == 1 "stable"
+
+SMX CAPILLARY bed nozzle hive scrap
+ASSERT SMX_OK == 1 "capillary"
+ASSERT SMX_CAPILLARY == 1 "cap latch"
+ASSERT SMX_CAPILLARY_SUM == 14 "cap sum"
+
+SMX VENULE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "venule"
+ASSERT SMX_VENULE == 1 "ven latch"
+ASSERT SMX_VENULEED == 1 "vened"
+ASSERT SMX_MESH_VENULE == 1 "mesh ven"
+ASSERT SMX_HARDEN_VENULE == 1 "harden ven"
+ASSERT SMX_VENULE_SUM == 14 "ven sum"
+ASSERT SMX_WRAPS == 4 "wrap ring"
+ASSERT SMX_SHEATHS == 4 "sheath hub"
+ASSERT SMX_OOB == 0 "oob clear"
+ASSERT SMX_STABLE_MESH == 1 "stable after venule"
+ASSERT CUBES == base_cubes "identity"
+
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize"
+ASSERT SMX_STABLE == 1 "stable latch"
+
+LET births = 0
+LET step = 0
+WHILE step < 8
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+ASSERT births >= 1 "mitosis on venule mesh"
+ASSERT pop >= 2 "population grows"
+ASSERT SMX_VENULE == 1 "venule sticky"
+ASSERT SMX_STABLE_MESH == 1 "mesh sticky"
+ASSERT OK == 1
+
+PRINT "atomic_printer_mesh_venule_life" births pop SMX_VENULE SMX_VENULE_SUM SMX_STABLE_MESH SMX_OOB CUBES UNITY ENERGY
+PASS
