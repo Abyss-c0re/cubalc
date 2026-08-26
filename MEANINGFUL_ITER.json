@@ -5,8 +5,8 @@
   "iter": 1821,
   "version": "1.15.1302-usability",
   "VERSION": "1.15.1302-usability",
-  "feature": "SMX_MESH_RIGHT_PULMONARY_ARTERY_LIFE",
-  "FEATURE": "SMX_MESH_RIGHT_PULMONARY_ARTERY_LIFE",
+  "feature": "MESH_RIGHT_PULMONARY_ARTERY",
+  "FEATURE": "MESH_RIGHT_PULMONARY_ARTERY",
   "ship": "1821_smx_mesh_right_pulmonary_artery_life",
   "proof": "programs/proof/86_smx_right_pulmonary_artery.cubalc",
   "proofs": [
@@ -34,12 +34,12 @@
   "title": "1821 MESH_RIGHT_PULMONARY_ARTERY soft-OOB mesh exchange life-force",
   "summary": "Right pulmonary artery SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
   "feat_sha": "e175584a0cd559515a27d052c9a3208b8cdf1198",
-  "sha": "df25d8c88318b39a69d62bab33227e268e47bbfa",
-  "head": "df25d8c88318b39a69d62bab33227e268e47bbfa",
-  "pinned_head": "df25d8c88318b39a69d62bab33227e268e47bbfa",
-  "commit": "df25d8c88318b39a69d62bab33227e268e47bbfa",
-  "pin_head": "df25d8c88318b39a69d62bab33227e268e47bbfa",
-  "tip": "df25d8c88318b39a69d62bab33227e268e47bbfa",
-  "head_short": "df25d8c8",
-  "pin_sha": "df25d8c88318b39a69d62bab33227e268e47bbfa"
+  "sha": "19a4fdf2c9d5f0318026c1260ea49beab964272e",
+  "head": "19a4fdf2c9d5f0318026c1260ea49beab964272e",
+  "pinned_head": "19a4fdf2c9d5f0318026c1260ea49beab964272e",
+  "commit": "19a4fdf2c9d5f0318026c1260ea49beab964272e",
+  "pin_head": "19a4fdf2c9d5f0318026c1260ea49beab964272e",
+  "tip": "19a4fdf2c9d5f0318026c1260ea49beab964272e",
+  "head_short": "19a4fdf2",
+  "pin_sha": "19a4fdf2c9d5f0318026c1260ea49beab964272e"
 }
