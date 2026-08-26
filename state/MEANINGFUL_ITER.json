@@ -4,7 +4,7 @@
   "version": "1.15.1317-usability",
   "head": "98103843e2079c169850747d6aee60f7b7fcebb7",
   "pin": "98103843e2079c169850747d6aee60f7b7fcebb7",
-  "tip": "98103843e2079c169850747d6aee60f7b7fcebb7",
+  "tip": "93450011dbf4a0f8490c5ad8538ec175692a81e9",
   "pin_head": "98103843e2079c169850747d6aee60f7b7fcebb7",
   "HEAD": "98103843e2079c169850747d6aee60f7b7fcebb7",
   "pinned_head": "98103843e2079c169850747d6aee60f7b7fcebb7",
@@ -15,8 +15,8 @@
   "soft_oob": 1,
   "fail_closed": 1,
   "proofs": "1838+99=60/0,1620=12/0",
-  "tip_equals_pin": true,
-  "tip_eq_pin": true,
+  "tip_equals_pin": false,
+  "tip_eq_pin": false,
   "MEANINGFUL_ITER": 1838,
   "proof_recheck": {
     "99": "PASS 60/0",
@@ -27,5 +27,6 @@
   "iter": 1838,
   "c_slice": "src/cubalc_smx_posterior_cerebral.c",
   "branch": "ship-1838-posterior-cerebral",
-  "mesh": "posterior_cerebral"
+  "mesh": "posterior_cerebral",
+  "ship_commit": "93450011dbf4a0f8490c5ad8538ec175692a81e9"
 }
