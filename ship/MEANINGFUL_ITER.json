@@ -22,7 +22,9 @@
     "1620_flagship": "PASS"
   },
   "ok": true,
-  "head": "68f69baf02477d7cc91fd70c939c741d99247121",
-  "short": "68f69baf",
-  "head_short": "68f69baf"
+  "head": "f904608a802a534c4ceb3984a93a4b6f77cb97f2",
+  "short": "f904608a",
+  "head_short": "f904608a",
+  "smoke_ok": 30,
+  "cascade_ok": 1567
 }
