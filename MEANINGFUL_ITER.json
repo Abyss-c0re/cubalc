@@ -42,14 +42,19 @@
   "cmd": "smx-left-common-carotid",
   "soft_oob_mode": "fail_closed",
   "feat_sha": "78c6633f2aac972a48283cb78eec647f75a8225d8189e5cdf855c1ddbafc64d1",
-  "pin_head": "e2ec4368ef7a65fd3e8fa399b8bad183a0f786a5",
-  "tip": "e2ec4368ef7a65fd3e8fa399b8bad183a0f786a5",
-  "HEAD": "e2ec4368ef7a65fd3e8fa399b8bad183a0f786a5",
-  "pinned_head": "e2ec4368ef7a65fd3e8fa399b8bad183a0f786a5",
-  "head": "e2ec4368ef7a65fd3e8fa399b8bad183a0f786a5",
-  "sha": "e2ec4368ef7a65fd3e8fa399b8bad183a0f786a5",
-  "pin_short": "e2ec4368",
-  "short": "e2ec4368",
+  "pin_head": "e87ede4953088d3a1c722dd8ade0831ec2a4e439",
+  "tip": "e87ede4953088d3a1c722dd8ade0831ec2a4e439",
+  "HEAD": "e87ede4953088d3a1c722dd8ade0831ec2a4e439",
+  "pinned_head": "e87ede4953088d3a1c722dd8ade0831ec2a4e439",
+  "head": "e87ede4953088d3a1c722dd8ade0831ec2a4e439",
+  "sha": "e87ede4953088d3a1c722dd8ade0831ec2a4e439",
+  "pin_short": "e87ede495",
+  "short": "e87ede49",
   "tip_equals_pin": true,
-  "tip_eq_pin": true
+  "tip_eq_pin": true,
+  "proof_recheck": {
+    "98": "PASS 60/0",
+    "1832": "PASS 60/0",
+    "1620": "PASS 12/0"
+  }
 }

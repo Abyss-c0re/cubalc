@@ -1,0 +1,9 @@
+feature=MESH_LEFT_COMMON_CAROTID
+iter=1832
+proof=98_smx_left_common_carotid.cubalc
+life=1832_smx_mesh_left_common_carotid_life.cubalc
+soft_oob=1
+fail_closed=1
+c_slice=src/cubalc_smx_left_common_carotid.c
+VERSION=1.15.1311-usability
+next=we_autoheal
