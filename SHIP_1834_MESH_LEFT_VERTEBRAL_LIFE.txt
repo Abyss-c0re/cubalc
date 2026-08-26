@@ -6,3 +6,5 @@ proof_alt: programs/proof/99_smx_left_vertebral.cubalc
 energy_path: left subclavian origin → left vertebral takeoff → cervical transverse foramina → atlanto-occipital ascent → basilar confluence / hindbrain perfusion takeoff
 asserts_ok: 60
 flagship_1620: PASS (12)
+feature=MESH_LEFT_VERTEBRAL
+iter=1834
