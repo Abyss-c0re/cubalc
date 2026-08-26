@@ -1,8 +1,8 @@
 {
   "iter": 1822,
   "label": "SMX_MESH_LEFT_PULMONARY_ARTERY_LIFE",
-  "head": "771e26b315fb1aa51e3b53db9c9d1bc16b9c6371",
-  "short": "771e26b3",
+  "head": "16b8df6a6d3e9d6a933f7c0e3735288b9790ceb3",
+  "short": "16b8df6a",
   "proof": "programs/proof/1822_smx_mesh_left_pulmonary_artery_life.cubalc",
   "feature": "soft-OOB fail-closed mesh exchange + STABILIZE life-force left pulmonary artery",
   "asserts_ok": 60,
