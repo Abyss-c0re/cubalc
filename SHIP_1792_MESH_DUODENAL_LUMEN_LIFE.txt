@@ -1,0 +1,4 @@
+SHIP 1792 SMX_MESH_DUODENAL_LUMEN_LIFE
+proof PASS asserts_ok=60 flagship_1620 PASS=12
+soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE + WE_AUTOHEAL
+duodenal lumen brush-border absorption corridor after minor papilla
