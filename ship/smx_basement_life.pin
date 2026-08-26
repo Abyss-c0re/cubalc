@@ -1,0 +1,9 @@
+feature=MESH_BASEMENT_LIFE_CASCADE
+iter=1768
+proof=programs/proof/1768_smx_mesh_basement_life_cascade.cubalc
+asserts_ok=1103
+asserts_fail=0
+flagship_ok=12
+flagship_fail=0
+version=1.15.1243-usability
+ts=2026-08-26T08:24:03Z

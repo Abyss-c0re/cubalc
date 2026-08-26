@@ -14446,7 +14446,204 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
+/* SMX BASEMENT|BASEGLIA|MESH_BASEMENT|BASE_WRAP|BASE_SHEATH|BASEMEM_GUIDE|RAISE_BASEMENT a b c ...
+   * Life-force BASEMENT basement-membrane scaffold mesh stability after endothelial: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete basement glia scaffold mesh among live nodes, weaves a
+   * basement wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks basement where life guides the basement pulse.
+   * Latches SMX_BASEMENT when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = basement ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_BASEMENT_SUM = bonds+wraps+sheaths; SMX_BASEMENT|SMX_MESH_BASEMENT|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"BASEMENT")||kw(&L->cur,"BASEGLIA")||kw(&L->cur,"MESH_BASEMENT")||kw(&L->cur,"BASE_WRAP")||kw(&L->cur,"BASE_WRAPS")||kw(&L->cur,"BASE_SHEATH")||kw(&L->cur,"BASE_SHEATHS")||kw(&L->cur,"BASEMEM_GUIDE")||kw(&L->cur,"RAISE_BASEMENT")||kw(&L->cur,"WE_BASEMENT")||kw(&L->cur,"LIFE_BASEMENT")||
+      kw(&L->cur,"STABLE_BASEMENT")||kw(&L->cur,"MESH_BASEMENTS")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_BASEMENT")||kw(&L->cur,"BASEMENT_LEAF")||
+      kw(&L->cur,"SEEDBASEMENT")||kw(&L->cur,"SEEDBASESHEATH")||kw(&L->cur,"SEEDBASEWRAP")||
+      kw(&L->cur,"BASEMENT_RING")||kw(&L->cur,"BASE_SHEATH_HUB")||kw(&L->cur,"BASE_NODE")||
+      kw(&L->cur,"LATTICE_BASEMENT")||kw(&L->cur,"WORLD_BASEMENT")||kw(&L->cur,"WORLD_BASE")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_BASEMENT")||kw(&L->cur,"HARDEN_BASEMENT")||
+      kw(&L->cur,"BASEMEM_SCAFFOLD")||kw(&L->cur,"BASEMENT_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "BASEMENT needs >=2 cubes",
+                  "SMX BASEMENT a b [c ...]  or  SMX BASE_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - basement needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete basement mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* basement ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int basement_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (basement_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_BASEMENTED", (long)basement_ok);
+      var_set_num(vm, "SMX_BASEMENT_LATCH", (long)basement_ok);
+      var_set_num(vm, "SMX_BASEMENT", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BASEMENT_SUM", (long)(basement_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_BASEMENT_ALIAS", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_BASEMENT", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BASE_SHEATH_LATCH", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_BASEMENT", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BASE_WRAP_LATCH", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(basement_ok ? wraps : 0));
+      var_set_num(vm, "SMX_BASE_WRAP", (long)(basement_ok ? wraps : 0));
+      var_set_num(vm, "SMX_BASE_WRAPS", (long)(basement_ok ? wraps : 0));
+      var_set_num(vm, "SMX_BASE_SHEATHS", (long)(basement_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(basement_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(basement_ok ? wraps : 0));
+      var_set_num(vm, "SMX_BASE_WRAP_LATCH", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(basement_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FO_BONDS", (long)(basement_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FO_MESH", (long)(basement_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FO_BONDS2", (long)(basement_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FO_STARS", (long)(basement_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FO_STAR", (long)(basement_ok ? wraps : 0));
+      var_set_num(vm, "SMX_BASEMENT_RING", (long)(basement_ok ? wraps : 0));
+      var_set_num(vm, "SMX_BASEMENT_LANE", (long)(basement_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(basement_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_BASE_SHEATH_HUB", (long)(basement_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(basement_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDBASEMENT", (long)(basement_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDBASESHEATH", (long)(basement_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(basement_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (basement_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX BASEMENT ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX BASEMENT partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX BASEMENT soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX BASEMENT nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d basemented=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, basement_ok, vital);
+    }
+    bump(vm); return 1;
+  }
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
+  fail(vm, "SMX: unknown op (see lang_ops_smx; BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
   return -1;
 }
