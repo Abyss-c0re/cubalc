@@ -3,8 +3,8 @@
   "iter": 1762,
   "MEANINGFUL_ITER": 1762,
   "meaningful_iter": 1762,
-  "version": "1.15.1234-usability",
-  "VERSION": "1.15.1234-usability",
+  "version": "1.15.1238-usability",
+  "VERSION": "1.15.1238-usability",
   "item": "radial glia scaffold life cascade",
   "item_id": "mi_smx_mesh_radial_life_cascade",
   "title": "radial glia scaffold life cascade",
@@ -34,6 +34,6 @@
   "head_note": "verified_pass_1759_radial",
   "prior_head": "7cdd2d8f",
   "prior_head_short": "7cdd2d8f",
-  "head": "d83a2b62b33232182a12690d10b85752f39d6f7e",
-  "head_short": "d83a2b62"
+  "head": "323466bae4fc8bc9a74940b3f938eca8bd2577a1",
+  "head_short": "323466ba"
 }
