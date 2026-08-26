@@ -38,12 +38,12 @@
   "branch": "ship-1827-mitral",
   "sealed": true,
   "tip_eq_pin": true,
-  "pin_head": "1bb1fb110c4f6d3e570cb10d0eb620f6e1a338e0",
-  "pin_short": "1bb1fb11",
-  "HEAD": "1bb1fb110c4f6d3e570cb10d0eb620f6e1a338e0",
-  "tip": "1bb1fb110c4f6d3e570cb10d0eb620f6e1a338e0",
-  "pinned_head": "1bb1fb110c4f6d3e570cb10d0eb620f6e1a338e0",
-  "head": "1bb1fb110c4f6d3e570cb10d0eb620f6e1a338e0",
-  "sha": "1bb1fb110c4f6d3e570cb10d0eb620f6e1a338e0",
-  "short": "1bb1fb11"
+  "pin_head": "da754d13d6bd30f56e8c31d1ac1df27919c08a47",
+  "pin_short": "da754d13",
+  "HEAD": "da754d13d6bd30f56e8c31d1ac1df27919c08a47",
+  "tip": "da754d13d6bd30f56e8c31d1ac1df27919c08a47",
+  "pinned_head": "da754d13d6bd30f56e8c31d1ac1df27919c08a47",
+  "head": "da754d13d6bd30f56e8c31d1ac1df27919c08a47",
+  "sha": "da754d13d6bd30f56e8c31d1ac1df27919c08a47",
+  "short": "da754d13"
 }
