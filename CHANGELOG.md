@@ -1,3 +1,10 @@
+## 1.15.1320-usability — 1841 SMX MESH_ANTERIOR_COMMUNICATING life-force
+
+- SMX MESH_ANTERIOR_COMMUNICATING (AComm) soft-OOB fail-closed + MESH_EXCHANGE C(4,2)
+- Energy path: left ACA A1 terminus → AComm bridge span → right ACA A1 terminus → circle-of-Willis anterior seal → bilateral medial hemispheric cross-feed
+- proofs: 99_smx_anterior_communicating + 1841_smx_mesh_anterior_communicating_life PASS 60/0; flagship 1620 PASS 12/0
+- c_slice: src/cubalc_smx_anterior_communicating.c
+
 ## 1.15.1319-usability — 1840 SMX MESH_ACA life-force
 
 - SMX MESH_ACA (anterior cerebral) soft-OOB fail-closed + MESH_EXCHANGE C(4,2)
