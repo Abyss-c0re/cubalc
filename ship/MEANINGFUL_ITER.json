@@ -1,12 +1,12 @@
 {
-  "meaningful_iter": 1768,
-  "feature": "smx_mesh_arteriole_life_cascade",
-  "slice": "ARTERIOLE soft-OOB mesh stability life-force after basal",
-  "proof": "programs/proof/1768_smx_mesh_arteriole_life_cascade.cubalc",
-  "asserts_ok": 1137,
+  "meaningful_iter": 1769,
+  "feature": "smx_mesh_venule_life_cascade",
+  "slice": "VENULE soft-OOB mesh stability life-force after arteriole",
+  "proof": "programs/proof/1769_smx_mesh_venule_life_cascade.cubalc",
+  "asserts_ok": 1154,
   "asserts_fail": 0,
   "flagship_1620": "PASS 12/0",
-  "version": "1.15.1245-usability",
-  "base_head": "842c3db148511c1607f0c9fe282d5cd05dd89aba",
-  "ts": 1787734471
+  "version": "1.15.1246-usability",
+  "base_head": "756047753a9e9942ca37f8074a9cb1a83abba9d8",
+  "ts": 1787736116
 }

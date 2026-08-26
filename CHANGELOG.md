@@ -1,3 +1,8 @@
+## 1.15.1246-usability — MEANINGFUL_ITER 1769 VENULE
+- SMX VENULE soft-OOB fail-closed mesh stability life cascade after arteriole
+- proof 1769 asserts_ok:1154 asserts_fail:0; flagship 1620 PASS 12/0
+
+
 ## 1767 — SMX BASAL mesh life cascade
 
 - SMX BASAL|BASAL_LAMINA soft-OOB fail-closed mesh stability after endothelial

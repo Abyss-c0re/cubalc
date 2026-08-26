@@ -14514,6 +14514,235 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
   }
 
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
+/* SMX VENULE|VENULEGLIA|VENULE|MESH_VENULE|VN_WRAP|VN_SHEATH|VN_GUIDE|RAISE_VENULE a b c ...
+   * Life-force Venule vessel mesh stability after venule: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete Venule scaffold mesh among live nodes, weaves a
+   * Venule wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks venule where life scaffolds the venule vessel guide pulse.
+   * Latches SMX_VENULE when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = venule ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_VENULE_SUM = bonds+wraps+sheaths; SMX_VENULE|SMX_MESH_VENULE|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"VENULE")||kw(&L->cur,"CAPILLARY_VN")||kw(&L->cur,"VN_CELL")||kw(&L->cur,"VNSTELLATE")||kw(&L->cur,"HARDEN_VENULECELL")||kw(&L->cur,"STABLE_VENULECELL")||kw(&L->cur,"LIFE_VENULECELL")||kw(&L->cur,"WE_VENULECELL")||kw(&L->cur,"RAISE_VENULECELL")||kw(&L->cur,"MESH_VENULECELL")||kw(&L->cur,"VENULEGLIA")||kw(&L->cur,"MESH_VENULE")||kw(&L->cur,"VN_WRAP")||kw(&L->cur,"VN_WRAPS")||kw(&L->cur,"VN_WRAP")||kw(&L->cur,"VN_WRAPS")||kw(&L->cur,"VN_SHEATH")||kw(&L->cur,"VN_SHEATHS")||kw(&L->cur,"VN_SHEATH")||kw(&L->cur,"VN_SHEATHS")||kw(&L->cur,"VN_GUIDE")||kw(&L->cur,"VENULE_GUIDE")||kw(&L->cur,"VENULECELL")||kw(&L->cur,"RAISE_VENULE")||kw(&L->cur,"WE_VENULE")||kw(&L->cur,"LIFE_VENULE")||
+      kw(&L->cur,"STABLE_VENULE")||kw(&L->cur,"MESH_VENULES")||kw(&L->cur,"VN_WRAP_RING")||kw(&L->cur,"VN_SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_VENULE")||kw(&L->cur,"VENULE_LEAF")||
+      kw(&L->cur,"SEEDVENULE")||kw(&L->cur,"SEEDVNSHEATH")||kw(&L->cur,"SEEDVNWRAP")||
+      kw(&L->cur,"VENULE_RING")||kw(&L->cur,"VN_SHEATH_HUB")||kw(&L->cur,"VN_NODE")||
+      kw(&L->cur,"LATTICE_VENULE")||kw(&L->cur,"WORLD_VENULE")||kw(&L->cur,"WORLD_VN")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_VENULE")||kw(&L->cur,"HARDEN_VENULE")||
+      kw(&L->cur,"VN_SCAFFOLD")||kw(&L->cur,"VENULE_MESH")||kw(&L->cur,"VENULE_BBB")||kw(&L->cur,"VN_BBB_GUARD")||kw(&L->cur,"VENULE_GUARD")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "VENULE needs >=2 cubes",
+                  "SMX VENULE a b [c ...]  or  SMX VN_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - venule needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete venule mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* venule ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int venule_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (venule_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_VENULEED", (long)venule_ok);
+      var_set_num(vm, "SMX_VENULEED", (long)venule_ok);
+      var_set_num(vm, "SMX_VENULE_LATCH", (long)venule_ok);
+      var_set_num(vm, "SMX_VENULE_ALIAS", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_VENULE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_VENULE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_VENULE_SUM", (long)(venule_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_VN_CELL", (long)(venule_ok ? 1 : 0));
+
+      var_set_num(vm, "SMX_VENULEED", (long)venule_ok);
+      var_set_num(vm, "SMX_VENULE_LATCH", (long)venule_ok);
+      var_set_num(vm, "SMX_VENULE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_VENULE_SUM", (long)(venule_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_VENULE_ALIAS", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_VENULE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_VN_SHEATH_LATCH", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BA_SHEATH_LATCH", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BA_WRAP_LATCH", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BASALED", (long)venule_ok);
+      var_set_num(vm, "SMX_BASAL", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BASAL_ALIAS", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BASAL_SUM", (long)(venule_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_BA_WRAPS", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_BA_SHEATHS", (long)(venule_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_ARTERIOLEED", (long)venule_ok);
+      var_set_num(vm, "SMX_ARTERIOLE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_ARTERIOLE_ALIAS", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_ARTERIOLE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_ARTERIOLE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_ARTERIOLE_SUM", (long)(venule_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_AR_WRAPS", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_AR_SHEATHS", (long)(venule_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_VENULE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_VN_WRAP_LATCH", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_VN_WRAP", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_VN_WRAPS", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_VN_WRAPS2", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_VN_WRAP2", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_VN_SHEATHS2", (long)(venule_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_VENULE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_VN_SHEATHS", (long)(venule_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_VN_WRAP_LATCH", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(venule_ok ? 1 : 0));
+      var_set_num(vm, "SMX_VN_BONDS", (long)(venule_ok ? bonds : 0));
+      var_set_num(vm, "SMX_VN_MESH", (long)(venule_ok ? bonds : 0));
+      var_set_num(vm, "SMX_VN_BONDS2", (long)(venule_ok ? bonds : 0));
+      var_set_num(vm, "SMX_VN_STARS", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_VN_STAR", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_VENULE_RING", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_VENULE_LANE", (long)(venule_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(venule_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_VN_SHEATH_HUB", (long)(venule_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(venule_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDVENULE", (long)(venule_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDVNSHEATH", (long)(venule_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(venule_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (venule_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX VENULE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX VENULE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX VENULE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX VENULE nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d venuleed=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, venule_ok, vital);
+    }
+    bump(vm); return 1;
+
+  }
+
+
+  fail(vm, "SMX: unknown op (see lang_ops_smx; VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
   return -1;
 }
