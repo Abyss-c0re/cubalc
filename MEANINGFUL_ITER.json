@@ -35,5 +35,7 @@
   "host_finish": true,
   "head_note": "verified_pass_1756_oligo",
   "prior_head": "2527e68f7a3e12437f97157ff4dde87d4b2c4099",
-  "prior_head_short": "2527e68f"
+  "prior_head_short": "2527e68f",
+  "head": "fd7299129138b91986aa1af891ffabec88a114b5",
+  "head_short": "fd729912"
 }
