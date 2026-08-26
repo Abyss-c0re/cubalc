@@ -33,11 +33,11 @@
   "item_id": "mi_1812_smx_mesh_thoracic_duct_life",
   "title": "1812 MESH_THORACIC_DUCT soft-OOB mesh exchange life-force",
   "summary": "Thoracic duct SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal, mitosis under locked rails.",
-  "sha": "19b77b8b0631d624ec743616d2571f85dc2d14cb",
-  "head": "19b77b8b0631d624ec743616d2571f85dc2d14cb",
-  "pinned_head": "19b77b8b0631d624ec743616d2571f85dc2d14cb",
-  "head_short": "19b77b8b",
-  "commit": "19b77b8b0631d624ec743616d2571f85dc2d14cb",
-  "pin_head": "19b77b8b0631d624ec743616d2571f85dc2d14cb",
-  "tip": "19b77b8b0631d624ec743616d2571f85dc2d14cb"
+  "sha": "bf469df57f5e9d2d20172910f63a4cea6a81372d",
+  "head": "bf469df57f5e9d2d20172910f63a4cea6a81372d",
+  "pinned_head": "bf469df57f5e9d2d20172910f63a4cea6a81372d",
+  "head_short": "bf469df5",
+  "commit": "bf469df57f5e9d2d20172910f63a4cea6a81372d",
+  "pin_head": "bf469df57f5e9d2d20172910f63a4cea6a81372d",
+  "tip": "bf469df57f5e9d2d20172910f63a4cea6a81372d"
 }
