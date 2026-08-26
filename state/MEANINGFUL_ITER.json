@@ -19,7 +19,7 @@
   "flagship_fail": 0,
   "notes": "rectum board: soft-OOB fail-closed; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW/FLOW superior-rectal inflow ampulla middle/inferior rectal arcades anal-canal free-energy gate; WE_AUTOHEAL; mitosis under locked rails; second storm re-stabilizes; no IF*P duals",
   "note": "SMX mesh rectum life-force for atomic printer spine",
-  "ts": "2026-08-26T16:14:29Z",
+  "ts": "2026-08-26T16:16:04Z",
   "item": "1803 smx mesh rectum life",
   "item_id": "mi_1803_smx_mesh_rectum_life",
   "title": "1803 smx mesh rectum life",
@@ -29,9 +29,11 @@
   ],
   "status": "PASS",
   "head_before": "5a71deed",
-  "sha": "7beaa8f8dde7ba283f3377e65844bf4a43645eb0",
-  "head": "7beaa8f8dde7ba283f3377e65844bf4a43645eb0",
-  "pinned_head": "7beaa8f8dde7ba283f3377e65844bf4a43645eb0",
-  "head_short": "7beaa8f8",
-  "commit": "feat(life): rectum SMX mesh free-energy ampulla gate"
+  "sha": "d028fdde38abe5f589d9426eba31d33a4293df9b",
+  "head": "d028fdde38abe5f589d9426eba31d33a4293df9b",
+  "pinned_head": "d028fdde38abe5f589d9426eba31d33a4293df9b",
+  "head_short": "d028fdde",
+  "commit": "feat(life): rectum SMX mesh free-energy ampulla gate",
+  "tip": "43e5ec02cf28b68480ba3326d420f3bd456a9c24",
+  "tip_short": "43e5ec02"
 }
