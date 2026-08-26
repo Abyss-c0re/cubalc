@@ -1,0 +1,79 @@
+# WRAPMODN / POSMODN — positive remainder x mod m in [0, m)
+
+HOLD_FLASH 1
+
+# basic positive
+WRAPMODN 7 5
+ASSERT LAST_N == 2
+ASSERT WRAPMODN_OK == 1
+ASSERT POSMODN == 2
+
+# exact multiple
+WRAPMODN 10 5
+ASSERT LAST_N == 0
+
+# zero
+WRAPMODN 0 8
+ASSERT LAST_N == 0
+
+# negative dividend → positive residue
+LET nx -1
+WRAPMODN nx 5
+ASSERT LAST_N == 4
+LET nx -7
+WRAPMODN nx 5
+ASSERT LAST_N == 3
+LET nx -5
+WRAPMODN nx 5
+ASSERT LAST_N == 0
+
+# identity when 0 <= x < m
+WRAPMODN 3 8
+ASSERT LAST_N == 3
+
+# aliases
+POSMODN 12 10
+ASSERT LAST_N == 2
+WMODN 15 7
+ASSERT LAST_N == 1
+LET nx -3
+RINGMODN nx 4
+ASSERT LAST_N == 1
+CIRCMODN 9 4
+ASSERT LAST_N == 1
+
+# optional glue
+WRAPMODN 11 BY 4
+ASSERT LAST_N == 3
+WRAPMODN 14 MOD 6
+ASSERT LAST_N == 2
+
+# soft fail m<=0
+WRAPMODN 5 0
+ASSERT LAST_N == 0
+ASSERT WRAPMODN_OK == 0
+LET e = LAST_ERR
+SYS LEN e
+ASSERT LAST_N > 0
+
+LET badm -3
+WRAPMODN 5 badm
+ASSERT LAST_N == 0
+ASSERT WRAPMODN_OK == 0
+
+# var subjects
+LET x -8
+LET m 5
+WRAPMODN x m
+ASSERT LAST_N == 2
+
+# LAST string
+WRAPMODN 7 3
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# larger
+WRAPMODN 100 7
+ASSERT LAST_N == 2
+
+PRINT "wrapmodn ok"

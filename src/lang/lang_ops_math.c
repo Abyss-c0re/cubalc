@@ -6073,49 +6073,106 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
 
-  /* WRAPMODN|POSMODN|WMODN|NUMWRAP|RINGMODN x m — positive remainder x mod m in [0,m).
-   * C % keeps dividend sign; this always lands in [0,m) for ring/page/circular index.
-   * m<=0 soft LAST_N=0 + sticky LAST_ERR. Twin of DIVCEILN for stride remainder.
-   * Usability: WRAPMODN offset stride without shell $(( (x%m+m)%m )). */
+  /* DIVFLOORN|IDIVN — truncating integer division twin of DIVCEILN (usability). */
+  if (kw(&L->cur,"DIVFLOORN") || kw(&L->cur,"IDIVN") || kw(&L->cur,"QUOTIENTN") ||
+      kw(&L->cur,"FLOORDIVN") || kw(&L->cur,"TRUNCDIVN") || kw(&L->cur,"TRUNCIDIV") ||
+      kw(&L->cur,"IDIV_N") || kw(&L->cur,"DIV_FLOOR_N") || kw(&L->cur,"QUOTN_NUM")){
+    long a,b,out=0; int bad=0; char nbuf[32];
+    lex_next(L);
+    a = parse_expr(vm, L);
+    if (kw(&L->cur,"BY")||kw(&L->cur,"OVER")||kw(&L->cur,"INTO")||kw(&L->cur,"PER")) lex_next(L);
+    b = parse_expr(vm, L);
+    if (b==0){ out=0; bad=1; var_set_str(vm,"LAST_ERR","DIVFLOORN: divide by zero"); var_set_str(vm,"ERR","DIVFLOORN: divide by zero"); }
+    else out = a/b;
+    snprintf(nbuf,sizeof nbuf,"%ld",out);
+    var_set_num(vm,"LAST_N",out); vm->last_n=out;
+    var_set_num(vm,"DIVFLOORN",out); var_set_num(vm,"IDIVN",out); var_set_num(vm,"QUOTIENTN",out);
+    var_set_num(vm,"DIVFLOORN_A",a); var_set_num(vm,"DIVFLOORN_B",b);
+    var_set_num(vm,"DIVFLOORN_OK",bad?0L:1L); var_set_num(vm,"IDIVN_OK",bad?0L:1L);
+    var_set_num(vm,"OK",1); var_set_str(vm,"LAST",nbuf); var_set_str(vm,"FLAG",nbuf);
+    snprintf(vm->last_str,sizeof vm->last_str,"%s",nbuf);
+    bump(vm); return 1;
+  }
+
+  /* WRAPMODN|POSMODN — positive mod in [0,m) for ring/page index (usability). */
   if (kw(&L->cur,"WRAPMODN") || kw(&L->cur,"POSMODN") || kw(&L->cur,"WMODN") ||
       kw(&L->cur,"NUMWRAP") || kw(&L->cur,"WRAP_MODN") || kw(&L->cur,"POSITIVE_MODN") ||
       kw(&L->cur,"MODPOSN") || kw(&L->cur,"RINGMODN") || kw(&L->cur,"CIRCMODN")){
-    long x = 0, m = 0, out = 0;
+    long x,m,out=0; int bad=0; char nbuf[32];
+    lex_next(L);
+    x = parse_expr(vm, L);
+    if (kw(&L->cur,"BY")||kw(&L->cur,"MOD")||kw(&L->cur,"OF")||kw(&L->cur,"INTO")||kw(&L->cur,"PER")) lex_next(L);
+    m = parse_expr(vm, L);
+    if (m<=0){ out=0; bad=1; var_set_str(vm,"LAST_ERR","WRAPMODN: modulus must be > 0"); var_set_str(vm,"ERR","WRAPMODN: modulus must be > 0"); }
+    else { out = x % m; if (out < 0) out += m; }
+    snprintf(nbuf,sizeof nbuf,"%ld",out);
+    var_set_num(vm,"LAST_N",out); vm->last_n=out;
+    var_set_num(vm,"WRAPMODN",out); var_set_num(vm,"POSMODN",out); var_set_num(vm,"WMODN",out);
+    var_set_num(vm,"WRAPMODN_X",x); var_set_num(vm,"WRAPMODN_M",m);
+    var_set_num(vm,"WRAPMODN_OK",bad?0L:1L); var_set_num(vm,"POSMODN_OK",bad?0L:1L);
+    var_set_num(vm,"OK",1); var_set_str(vm,"LAST",nbuf); var_set_str(vm,"FLAG",nbuf);
+    snprintf(vm->last_str,sizeof vm->last_str,"%s",nbuf);
+    bump(vm); return 1;
+  }
+
+  /* MAPRANGEN|REMAPN|SCALERANGEN x a b c d — affine map x from [a,b] into [c,d].
+   * LAST_N = c + (x-a)*(d-c)/(b-a) with C toward-zero trunc when |b-a|>0.
+   * Empty source (a==b): soft LAST_N=c + sticky LAST_ERR; MAPRANGEN_OK=0.
+   * Optional glue: MAPRANGEN x FROM a TO b INTO c TO d.
+   * Usability: GETFLAGN pct; MAPRANGEN LAST_N 0 100 0 255 without shell $(( )). */
+  if (kw(&L->cur,"MAPRANGEN") || kw(&L->cur,"REMAPN") || kw(&L->cur,"SCALERANGEN") ||
+      kw(&L->cur,"MAPRANGE") || kw(&L->cur,"REMAP_N") || kw(&L->cur,"LINMAPN") ||
+      kw(&L->cur,"NORMMAPN") || kw(&L->cur,"TRANSFERRANGEN") || kw(&L->cur,"PROJECTN")){
+    long x = 0, a = 0, b = 0, c = 0, d = 0, out = 0;
     int bad = 0;
     char nbuf[32];
     lex_next(L);
     x = parse_expr(vm, L);
-    if (kw(&L->cur,"BY") || kw(&L->cur,"MOD") || kw(&L->cur,"OF") ||
-        kw(&L->cur,"INTO") || kw(&L->cur,"PER"))
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"IN") || kw(&L->cur,"OF"))
       lex_next(L);
-    m = parse_expr(vm, L);
-    if (m <= 0) {
-      out = 0;
+    a = parse_expr(vm, L);
+    if (kw(&L->cur,"TO") || kw(&L->cur,"THROUGH") || kw(&L->cur,"THRU") ||
+        kw(&L->cur,"DOTDOT") || kw(&L->cur,".."))
+      lex_next(L);
+    b = parse_expr(vm, L);
+    if (kw(&L->cur,"INTO") || kw(&L->cur,"TO") || kw(&L->cur,"AS") ||
+        kw(&L->cur,"OUT") || kw(&L->cur,"ONTO") || kw(&L->cur,"MAPTO"))
+      lex_next(L);
+    c = parse_expr(vm, L);
+    if (kw(&L->cur,"TO") || kw(&L->cur,"THROUGH") || kw(&L->cur,"THRU") ||
+        kw(&L->cur,"DOTDOT") || kw(&L->cur,".."))
+      lex_next(L);
+    d = parse_expr(vm, L);
+    if (a == b) {
+      out = c;
       bad = 1;
-      var_set_str(vm, "LAST_ERR", "WRAPMODN: modulus must be > 0");
-      var_set_str(vm, "ERR", "WRAPMODN: modulus must be > 0");
+      var_set_str(vm, "LAST_ERR", "MAPRANGEN: empty source range");
+      var_set_str(vm, "ERR", "MAPRANGEN: empty source range");
     } else {
-      out = x % m;
-      if (out < 0) out += m;
+      long num = (x - a) * (d - c);
+      long den = (b - a);
+      out = c + (num / den);
     }
     snprintf(nbuf, sizeof nbuf, "%ld", out);
     var_set_num(vm, "LAST_N", out);
     vm->last_n = out;
-    var_set_num(vm, "WRAPMODN", out);
-    var_set_num(vm, "POSMODN", out);
-    var_set_num(vm, "WMODN", out);
-    var_set_num(vm, "NUMWRAP", out);
-    var_set_num(vm, "RINGMODN", out);
-    var_set_num(vm, "WRAPMODN_X", x);
-    var_set_num(vm, "WRAPMODN_M", m);
-    var_set_num(vm, "WRAPMODN_OK", bad ? 0L : 1L);
-    var_set_num(vm, "POSMODN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "MAPRANGEN", out);
+    var_set_num(vm, "REMAPN", out);
+    var_set_num(vm, "SCALERANGEN", out);
+    var_set_num(vm, "MAPRANGEN_X", x);
+    var_set_num(vm, "MAPRANGEN_A", a);
+    var_set_num(vm, "MAPRANGEN_B", b);
+    var_set_num(vm, "MAPRANGEN_C", c);
+    var_set_num(vm, "MAPRANGEN_D", d);
+    var_set_num(vm, "MAPRANGEN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "REMAPN_OK", bad ? 0L : 1L);
     var_set_num(vm, "OK", 1);
     var_set_str(vm, "LAST", nbuf);
     var_set_str(vm, "FLAG", nbuf);
     snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
     if (vm->trace)
-      fprintf(vm->trace, "# wrapmodn %ld mod %ld -> %ld bad=%d\n", x, m, out, bad);
+      fprintf(vm->trace, "# maprangen %ld [%ld..%ld]->[%ld..%ld] = %ld bad=%d\n",
+              x, a, b, c, d, out, bad);
     bump(vm); return 1;
   }
 
