@@ -1,3 +1,10 @@
+## 1.15.1319-usability — 1840 SMX MESH_ACA life-force
+
+- SMX MESH_ACA (anterior cerebral) soft-OOB fail-closed + MESH_EXCHANGE C(4,2)
+- Energy path: ICA terminus → A1 → ACoA → callosal cistern → pericallosal/medial frontal seal
+- proofs: 99_smx_anterior_cerebral + 1840_smx_mesh_anterior_cerebral_life PASS 60/0; flagship 1620 PASS 12/0
+- c_slice: src/cubalc_smx_anterior_cerebral.c
+
 ## 1.15.1318-usability — 1839 MESH_MIDDLE_CEREBRAL_LIFE
 - SMX middle cerebral conduit: soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE life-force
 - Proofs: 99_smx_middle_cerebral / 1839_smx_mesh_middle_cerebral_life (60/0) + flagship 1620 (12/0)
