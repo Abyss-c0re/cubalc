@@ -18,5 +18,10 @@
   "notes": "JEJUNAL_VILLUS enterocyte ladder soft-OOB fail-closed mesh after JEJUNAL_CRYPT; tip==pin",
   "note": "SMX JEJUNAL_VILLUS life-force continuum 1795",
   "ts": 1787756700,
-  "status": "PASS"
+  "status": "PASS",
+  "head": "97bc3845f942cdfd7e6270ece10d8fd9470fe551",
+  "sha": "97bc3845f942cdfd7e6270ece10d8fd9470fe551",
+  "pinned_head": "97bc3845f942cdfd7e6270ece10d8fd9470fe551",
+  "head_short": "97bc3845",
+  "tip_equals_pin": true
 }
