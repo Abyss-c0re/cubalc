@@ -33,11 +33,11 @@
   "summary": "Right atrium SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
   "soft_oob": true,
   "fail_closed": true,
-  "sha": "c6811be52233d7847234241e89f888374722c38b",
-  "head": "c6811be52233d7847234241e89f888374722c38b",
-  "pinned_head": "c6811be52233d7847234241e89f888374722c38b",
-  "commit": "c6811be52233d7847234241e89f888374722c38b",
-  "pin_head": "c6811be52233d7847234241e89f888374722c38b",
-  "tip": "c6811be52233d7847234241e89f888374722c38b",
-  "head_short": "c6811be5"
+  "sha": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
+  "head": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
+  "pinned_head": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
+  "commit": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
+  "pin_head": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
+  "tip": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
+  "head_short": "48f62680"
 }
