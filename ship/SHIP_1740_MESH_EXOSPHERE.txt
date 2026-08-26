@@ -1,0 +1,6 @@
+1740 SMX mesh exosphere life cascade
+soft-OOB fail-closed storms never ghost-place
+LIFE_FORCE -> WE_AUTOHEAL -> RESILIENCE -> THALAMUS -> HOMEOSTASIS
+-> IONOSPHERE -> THERMOSPHERE -> EXOSPHERE -> mesh_exchange -> STABILIZE
+-> mitosis under free energy
+proofs PASS asserts_fail=0
