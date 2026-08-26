@@ -1,5 +1,6 @@
 MEANINGFUL_ITER=1775
 FEATURE=smx_stellate_mesh_life_cascade
+LIFE_FORCE=1
 PROOF=1775_smx_mesh_stellate_life_cascade.cubalc
 SMOKE=1775_smx_stellate_soft_oob_smoke.cubalc
 ASSERTS_OK=1361
@@ -7,6 +8,6 @@ ASSERTS_FAIL=0
 FLAGSHIP_1620=PASS
 STATUS=PASS
 VERSION=1.15.1251-usability
-HEAD=6323d5e844b4ee8fe5bfe80092f5d0daf0ea67bf
-SHORT=6323d5e8
+HEAD=4a84b3fdd82ff25e8843f06f697338e41d2e727e
+SHORT=4a84b3fd
 SLICE=STELLATE|ITO|HSC soft-OOB fail-closed mesh stability life-force after kupffer
