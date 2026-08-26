@@ -5,7 +5,7 @@
   "meaningful_iter": 1765,
   "version": "1.15.1242-usability",
   "VERSION": "1.15.1242-usability",
-  "item": "pericyte capillary BBB guard life cascade",
+  "item": "pericyte capillary guide life cascade",
   "item_id": "mi_smx_mesh_pericyte_life_cascade",
   "title": "pericyte capillary BBB guard life cascade",
   "summary": "SMX PERICYTE soft-OOB fail-closed mesh stability after folliculo; mitosis under free energy; proof 1765 asserts_ok:1046 asserts_fail:0.",
@@ -28,13 +28,13 @@
   "soft_oob": "fail-closed",
   "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+tanycyte+pituicyte+folliculo+pericyte+stabilize+mitosis",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T11:06:00Z",
-  "verified_at": "2026-08-26T11:06:30Z",
+  "ts": "2026-08-26T11:08:00Z",
+  "verified_at": "2026-08-26T08:07:14Z",
   "name": "smx_mesh_pericyte_life_cascade",
   "proof": "programs/proof/1765_smx_mesh_pericyte_life_cascade.cubalc",
   "craft": "pericyte",
-  "head": "a0bf257ad4e22945adfb64a0a58847cd7f62534c",
-  "HEAD": "a0bf257ad4e22945adfb64a0a58847cd7f62534c",
-  "head_short": "a0bf257a",
-  "HEAD_SHORT": "a0bf257a"
+  "head": "2592deedcb9a86cabba58b118953544ff96243f3",
+  "HEAD": "2592deedcb9a86cabba58b118953544ff96243f3",
+  "head_short": "2592deed",
+  "HEAD_SHORT": "2592deed"
 }

@@ -1,6 +1,1 @@
-feature=MESH PERICYTE soft-OOB fail-closed life-force
-MEANINGFUL_ITER=1765
-VERSION=1.15.1242-usability
-PROOFS=smx-mesh-pericyte+soft-oob+mesh-exchange+flagship1620 PASS
-past=1764
-next=we_autoheal
+SMX_PERICYTE soft-OOB fail-closed life cascade 1765
