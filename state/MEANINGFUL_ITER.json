@@ -2,9 +2,9 @@
   "iter": 1835,
   "meaningful_iter": 1835,
   "feature": "SMX_MESH_BASILAR_LIFE",
-  "pin": "7cd11854a960840d1153d492d475d3b277b1b0de",
-  "tip": "7cd11854a960840d1153d492d475d3b277b1b0de",
-  "pin_head": "7cd11854a960840d1153d492d475d3b277b1b0de",
+  "pin": "7fd35395dc8bed503a2be9a9cba28698be8ec8af",
+  "tip": "7fd35395dc8bed503a2be9a9cba28698be8ec8af",
+  "pin_head": "7fd35395dc8bed503a2be9a9cba28698be8ec8af",
   "status": "PASS",
   "soft_oob": 1,
   "fail_closed": 1
