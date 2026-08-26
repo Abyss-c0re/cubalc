@@ -15648,7 +15648,7 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
    * aorta wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
    * gathers return so lattice locks aorta where life guides the aortic trunk pulse.
    * Latches SMX_AORTA when mesh+wraps+sheaths are soft-OOB-free.
-   * SMX_WRAPS = aorta ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_WRAPS = cava ring; SMX_SHEATHS hub = root gather pulses;
    * SMX_AORTA_SUM = bonds+wraps+sheaths; SMX_AORTA|SMX_MESH_AORTA|SMX_STABLE_MESH sticky.
    * Mitosis path stays open under free energy. No dual ladders.
    * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
@@ -16050,6 +16050,205 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
 
 
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
+
+  /* SMX CAVA|CAVAGLIA|MESH_CAVA|CAVA_WRAP|CAVA_SHEATH|CAVA_GUIDE|RAISE_CAVA a b c ...
+   * Life-force CAVA cava great-return trunk scaffold mesh stability after aorta/vein: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete cava great-return trunk scaffold mesh among live nodes, weaves a
+   * cava wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks cava where life guides the great venous return pulse.
+   * Latches SMX_CAVA when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = aorta ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_CAVA_SUM = bonds+wraps+sheaths; SMX_CAVA|SMX_MESH_CAVA|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"CAVA")||kw(&L->cur,"CAVAGLIA")||kw(&L->cur,"MESH_CAVA")||kw(&L->cur,"CAVA_WRAP")||kw(&L->cur,"CAVA_WRAPS")||kw(&L->cur,"CAVA_SHEATH")||kw(&L->cur,"CAVA_SHEATHS")||kw(&L->cur,"CAVA_GUIDE")||kw(&L->cur,"RAISE_CAVA")||kw(&L->cur,"WE_CAVA")||kw(&L->cur,"LIFE_CAVA")||
+      kw(&L->cur,"STABLE_CAVA")||kw(&L->cur,"MESH_CAVAS")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_CAVA")||kw(&L->cur,"CAVA_LEAF")||
+      kw(&L->cur,"SEEDCAVA")||kw(&L->cur,"SEEDCAVASHEATH")||kw(&L->cur,"SEEDCAVAWRAP")||
+      kw(&L->cur,"CAVA_RING")||kw(&L->cur,"CAVA_SHEATH_HUB")||kw(&L->cur,"CAVA_NODE")||
+      kw(&L->cur,"LATTICE_CAVA")||kw(&L->cur,"WORLD_CAVA")||kw(&L->cur,"WORLD_CAVA")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_CAVA")||kw(&L->cur,"HARDEN_CAVA")||
+      kw(&L->cur,"CAVA_SCAFFOLD")||kw(&L->cur,"CAVA_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "CAVA needs >=2 cubes",
+                  "SMX CAVA a b [c ...]  or  SMX CAVA_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - aorta needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete aorta mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* aorta ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int cava_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (cava_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_CAVAED", (long)cava_ok);
+      var_set_num(vm, "SMX_CAVA_LATCH", (long)cava_ok);
+      var_set_num(vm, "SMX_CAVA", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CAVA_SUM", (long)(cava_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_CAVA_ALIAS", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_CAVA", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CAVA_SHEATH_LATCH", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_CAVA", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CAVA_WRAP_LATCH", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(cava_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CAVA_WRAP", (long)(cava_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CAVA_WRAPS", (long)(cava_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CAVA_SHEATHS", (long)(cava_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(cava_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(cava_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CAVA_WRAP_LATCH", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(cava_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CV_BONDS", (long)(cava_ok ? bonds : 0));
+      var_set_num(vm, "SMX_CV_MESH", (long)(cava_ok ? bonds : 0));
+      var_set_num(vm, "SMX_CV_BONDS2", (long)(cava_ok ? bonds : 0));
+      var_set_num(vm, "SMX_CV_STARS", (long)(cava_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CV_STAR", (long)(cava_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CAVA_RING", (long)(cava_ok ? wraps : 0));
+      var_set_num(vm, "SMX_CAVA_LANE", (long)(cava_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(cava_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_CAVA_SHEATH_HUB", (long)(cava_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(cava_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDCAVA", (long)(cava_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDCAVASHEATH", (long)(cava_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(cava_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (cava_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX CAVA ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX CAVA partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX CAVA soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX CAVA nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d cavaed=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, cava_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (see lang_ops_smx; CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
   return -1;
 }
