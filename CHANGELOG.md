@@ -1,3 +1,15 @@
+## 1.15.1236-usability — 1761 SMX_MESH_MULLER
+
+- Life-force SMX MULLER|MULLERGLIA|MUELLER|MESH_MULLER|RETINAL_GUIDE: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed after bergmann.
+- Proof programs/proof/1761_smx_mesh_muller_life_cascade.cubalc asserts_ok=930 fail=0; unity 0.878; flagship 1620 PASS.
+- Pins MEANINGFUL_ITER=1761; VERSION=1.15.1236-usability.
+
+## 1.15.1236-usability — 1761 SMX_MESH_MULLER
+
+- Life-force SMX MULLER|MULLERGLIA|MUELLER|MESH_MULLER|RAISE_MULLER: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed after bergmann.
+- Proof programs/proof/1761_smx_mesh_muller_life_cascade.cubalc asserts_ok=930 fail=0; unity ~0.88; flagship 1620 PASS.
+- Pins MEANINGFUL_ITER=1761; VERSION=1.15.1236-usability.
+
 ## 1.15.1190-usability — 1724 SMX_MESH_OLIGO
 
 - Life-force SMX OLIGO|OLIGODENDROCYTE|MYELINATE|MESH_OLIGO|RAISE_OLIGO: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed.

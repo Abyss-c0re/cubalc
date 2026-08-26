@@ -16,8 +16,12 @@
   "bin_install": "bin/cubalc",
   "ok": true,
   "meaningful_iter": 1755,
-  "feature": "MESH_MICROGLIA_LIFE_CASCADE",
-  "ts": 1787720802,
+  "feature": "MESH_MULLER_LIFE_CASCADE",
+  "ts": "2026-08-26T09:35:00Z",
   "proof_status": "PASS",
-  "asserts_ok": 665
+  "asserts_ok": 930,
+  "MEANINGFUL_ITER": 1761,
+  "VERSION": "1.15.1236-usability",
+  "proof": "programs/proof/1761_smx_mesh_muller_life_cascade.cubalc",
+  "asserts_fail": 0
 }
