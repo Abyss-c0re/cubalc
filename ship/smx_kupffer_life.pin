@@ -1,8 +1,4 @@
-feature=MESH_KUPFFER
-iter=1774
-version=1.15.1249-usability
-latch=kupffer_latch
-status=PASS
-head=13eff9e57f07ebc258ab3038906bf5da0f9675c2
-proofs=1774,1620
-next=we_autoheal
+MEANINGFUL_ITER=1774
+HEAD=4ce83a41b3ff70eec172fe011a743ae49c0789ed
+FEATURE=MESH_KUPFFER
+STATUS=PASS

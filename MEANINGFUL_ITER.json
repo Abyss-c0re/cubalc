@@ -1,17 +1,17 @@
 {
   "iter": 1774,
-  "MEANINGFUL_ITER": 1774,
-  "version": "1.15.1249-usability",
   "feature": "MESH_KUPFFER",
+  "slice": "KUPFFER soft-OOB mesh stability life-force after hepatocyte",
+  "proof": "1774_smx_mesh_kupffer_life_cascade.cubalc",
+  "smoke": "programs/proof/1774_smx_kupffer_soft_oob_smoke.cubalc",
+  "asserts_ok": 1316,
+  "asserts_fail": 0,
+  "flagship_1620": "PASS 12/0",
+  "version": "1.15.1250-usability",
+  "head": "4ce83a41b3ff70eec172fe011a743ae49c0789ed",
+  "short": "4ce83a41",
   "status": "PASS",
   "next": "we_autoheal",
-  "mesh": "kupffer",
-  "head": "13eff9e57f07ebc258ab3038906bf5da0f9675c2",
-  "head_short": "13eff9e5",
-  "proofs": [
-    "1774_smx_mesh_kupffer_life_cascade",
-    "1620_atomic_printer_life_force",
-    "1774_smx_kupffer_soft_oob_smoke"
-  ],
-  "asserts_ok_1774": 1316
+  "MEANINGFUL_ITER": 1774,
+  "head_short": "4ce83a41"
 }

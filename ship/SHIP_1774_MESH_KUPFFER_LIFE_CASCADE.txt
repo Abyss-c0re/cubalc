@@ -1,0 +1,11 @@
+MESH_KUPFFER life-force soft-OOB mesh stability
+MEANINGFUL_ITER 1774 VERSION 1.15.1250-usability
+HEAD 4ce83a41b3ff70eec172fe011a743ae49c0789ed
+Kupffer resident macrophage clearance scaffold after HEPATOCYTE; fail-closed without key; kupffer_latch when sealed.
+Proofs: smx-kupffer smoke 23/0, mesh-kupffer cascade 1316/0, flagship1620 12/0 PASS.
+feature=MESH_KUPFFER
+iter=1774
+version=1.15.1250-usability
+latch=kupffer_latch
+status=PASS
+next=we_autoheal
