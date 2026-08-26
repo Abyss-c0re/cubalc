@@ -8,10 +8,11 @@
   "feature": "SMX_MESH_VENOUS_ANGLE_LIFE",
   "FEATURE": "SMX_MESH_VENOUS_ANGLE_LIFE",
   "ship": "1810_smx_mesh_venous_angle_life",
-  "proof": "programs/proof/74_smx_venous_angle.cubalc",
+  "proof": "programs/proof/1810_smx_mesh_venous_angle_life.cubalc",
   "proofs": [
     "programs/proof/74_smx_venous_angle.cubalc",
-    "programs/proof/1810_smx_mesh_venous_angle_life.cubalc"
+    "programs/proof/1810_smx_mesh_venous_angle_life.cubalc",
+    "programs/proof/75_smx_venous_angle.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 60,
@@ -25,17 +26,18 @@
   "next": "we_autoheal",
   "host_finish": true,
   "tip_equals_pin": true,
-  "notes": "MESH_VENOUS_ANGLE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW thoracic duct terminus\u2192left venous angle\u2192subclavian confluence\u2192systemic venous return; WE_AUTOHEAL; pure-C cubalc_smx_venous_angle.c",
+  "notes": "MESH_VENOUS_ANGLE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW thoracic duct terminus\u2192left venous angle\u2192subclavian/IJV confluence\u2192systemic return; WE_AUTOHEAL; pure-C cubalc_smx_venous_angle.c",
   "note": "MESH_VENOUS_ANGLE SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1810 smx mesh venous angle life",
   "item_id": "mi_1810_smx_mesh_venous_angle_life",
   "title": "1810 MESH_VENOUS_ANGLE soft-OOB mesh exchange life-force",
   "summary": "Venous angle SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal, mitosis under locked rails.",
-  "sha": "71e30756a1110d471a81438e69a6fb45d6abff4a",
-  "head": "71e30756a1110d471a81438e69a6fb45d6abff4a",
-  "pinned_head": "71e30756a1110d471a81438e69a6fb45d6abff4a",
-  "commit": "71e30756a1110d471a81438e69a6fb45d6abff4a",
-  "pin_head": "71e30756a1110d471a81438e69a6fb45d6abff4a",
-  "tip": "71e30756a1110d471a81438e69a6fb45d6abff4a",
-  "head_short": "71e30756"
+  "sha": "c30c998e07723e6fcf4ec4afa26fbc4f6761f0ce",
+  "head": "c30c998e07723e6fcf4ec4afa26fbc4f6761f0ce",
+  "pinned_head": "c30c998e07723e6fcf4ec4afa26fbc4f6761f0ce",
+  "commit": "c30c998e07723e6fcf4ec4afa26fbc4f6761f0ce",
+  "pin_head": "c30c998e07723e6fcf4ec4afa26fbc4f6761f0ce",
+  "tip": "c30c998e07723e6fcf4ec4afa26fbc4f6761f0ce",
+  "head_short": "c30c998e",
+  "c_slice": "src/cubalc_smx_venous_angle.c"
 }
