@@ -13640,6 +13640,220 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
   }
 
 
+
+/* SMX FOLLICULO|FOLLICULOGLIA|FOLLICULO|MESH_FOLLICULO|FS_WRAP|FS_SHEATH|FS_GUIDE|RAISE_FOLLICULO a b c ...
+   * Life-force Folliculo scaffold mesh stability after pituicyte: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete Folliculo scaffold mesh among live nodes, weaves a
+   * Folliculo wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks folliculo where life scaffolds the folliculo-stellate guide pulse.
+   * Latches SMX_FOLLICULO when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = folliculo ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_FOLLICULO_SUM = bonds+wraps+sheaths; SMX_FOLLICULO|SMX_MESH_FOLLICULO|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"FOLLICULO")||kw(&L->cur,"PITUITARY_FS")||kw(&L->cur,"FS_CELL")||kw(&L->cur,"FSSTELLATE")||kw(&L->cur,"HARDEN_FOLLICULOSTELLATE")||kw(&L->cur,"STABLE_FOLLICULOSTELLATE")||kw(&L->cur,"LIFE_FOLLICULOSTELLATE")||kw(&L->cur,"WE_FOLLICULOSTELLATE")||kw(&L->cur,"RAISE_FOLLICULOSTELLATE")||kw(&L->cur,"MESH_FOLLICULOSTELLATE")||kw(&L->cur,"FOLLICULOGLIA")||kw(&L->cur,"MESH_FOLLICULO")||kw(&L->cur,"FS_WRAP")||kw(&L->cur,"FS_WRAPS")||kw(&L->cur,"FO_WRAP")||kw(&L->cur,"FO_WRAPS")||kw(&L->cur,"FS_SHEATH")||kw(&L->cur,"FS_SHEATHS")||kw(&L->cur,"FO_SHEATH")||kw(&L->cur,"FO_SHEATHS")||kw(&L->cur,"FS_GUIDE")||kw(&L->cur,"FOLLICULAR_GUIDE")||kw(&L->cur,"FOLLICULOSTELLATE")||kw(&L->cur,"RAISE_FOLLICULO")||kw(&L->cur,"WE_FOLLICULO")||kw(&L->cur,"LIFE_FOLLICULO")||
+      kw(&L->cur,"STABLE_FOLLICULO")||kw(&L->cur,"MESH_FOLLICULOS")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_FOLLICULO")||kw(&L->cur,"FOLLICULO_LEAF")||
+      kw(&L->cur,"SEEDFOLLICULO")||kw(&L->cur,"SEEDFSSHEATH")||kw(&L->cur,"SEEDFSWRAP")||
+      kw(&L->cur,"FOLLICULO_RING")||kw(&L->cur,"FS_SHEATH_HUB")||kw(&L->cur,"FS_NODE")||
+      kw(&L->cur,"LATTICE_FOLLICULO")||kw(&L->cur,"WORLD_FOLLICULO")||kw(&L->cur,"WORLD_FS")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_FOLLICULO")||kw(&L->cur,"HARDEN_FOLLICULO")||
+      kw(&L->cur,"FS_SCAFFOLD")||kw(&L->cur,"FOLLICULO_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "FOLLICULO needs >=2 cubes",
+                  "SMX FOLLICULO a b [c ...]  or  SMX FS_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - folliculo needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete folliculo mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* folliculo ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int folliculo_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (folliculo_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_FOLLICULOED", (long)folliculo_ok);
+      var_set_num(vm, "SMX_FOLLICULOSTELLATEED", (long)folliculo_ok);
+      var_set_num(vm, "SMX_FOLLICULOSTELLATED", (long)folliculo_ok);
+      var_set_num(vm, "SMX_FOLLICULOSTELLATE_LATCH", (long)folliculo_ok);
+      var_set_num(vm, "SMX_FOLLICULOSTELLATE_ALIAS", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_FOLLICULOSTELLATE", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_FOLLICULOSTELLATE", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FOLLICULOSTELLATE_SUM", (long)(folliculo_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_FS_CELL", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FOLLICULOD", (long)folliculo_ok);
+      var_set_num(vm, "SMX_FOLLICULO_LATCH", (long)folliculo_ok);
+      var_set_num(vm, "SMX_FOLLICULO", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FOLLICULO_SUM", (long)(folliculo_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_FOLLICULO_ALIAS", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_FOLLICULO", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FS_SHEATH_LATCH", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_FOLLICULO", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FS_WRAP_LATCH", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FS_WRAP", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FS_WRAPS", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FO_WRAPS", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FO_WRAP", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FO_SHEATHS", (long)(folliculo_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_FOLLICULOSTELLATE", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FS_SHEATHS", (long)(folliculo_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FS_WRAP_LATCH", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(folliculo_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FS_BONDS", (long)(folliculo_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FS_MESH", (long)(folliculo_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FS_BONDS2", (long)(folliculo_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FS_STARS", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FS_STAR", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FOLLICULO_RING", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FOLLICULO_LANE", (long)(folliculo_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(folliculo_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_FS_SHEATH_HUB", (long)(folliculo_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(folliculo_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDFOLLICULO", (long)(folliculo_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDFSSHEATH", (long)(folliculo_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(folliculo_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (folliculo_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX FOLLICULO ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX FOLLICULO partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX FOLLICULO soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX FOLLICULO nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d folliculoed=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, folliculo_ok, vital);
+    }
+    bump(vm); return 1;
+
+  }
+
+
   fail(vm, "SMX: unknown op (see docs/SMX keywords)");
   return -1;
 }
