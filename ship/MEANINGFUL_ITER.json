@@ -1,8 +1,8 @@
 {
   "iter": 1822,
   "label": "SMX_MESH_RIGHT_LUNG_HILUM_LIFE",
-  "head": "9e6dfe89cf7d134cbab15496eb05d86fcb141dfc",
-  "short": "9e6dfe89",
+  "head": "e526701a6239c98aecb00bd32da567f0dc99e371",
+  "short": "e526701a",
   "proof": "programs/proof/1822_smx_mesh_right_lung_hilum_life.cubalc",
   "feature": "soft-OOB fail-closed mesh exchange + STABILIZE life-force right lung hilum",
   "asserts_ok": 60,
