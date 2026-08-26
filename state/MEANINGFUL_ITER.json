@@ -1,9 +1,9 @@
 {
-  "schema": "cubalc.meaningful_iter.v1",
+  "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 1792,
   "MEANINGFUL_ITER": 1792,
-  "iter": 1792,
-  "version": "1.15.1270-usability",
+  "iter": 1793,
+  "version": "1.15.1271-usability",
   "VERSION": "1.15.1270-usability",
   "feature": "SMX_MESH_DUODENAL_LUMEN_LIFE",
   "ship": "1792_smx_mesh_duodenal_lumen_life",
@@ -17,8 +17,17 @@
   "flagship_1620_ok": 12,
   "notes": "duodenal lumen board: soft-OOB fail-closed; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW/FLOW brush-border absorption free-energy gate; WE_AUTOHEAL; mitosis under locked rails; second storm re-stabilizes; no IF*P duals",
   "note": "SMX mesh duodenal lumen life-force for atomic printer spine",
-  "ts": 1787756030,
+  "ts": "2026-08-26T14:55:55Z",
   "sha": "aa16b7c6462e0b3d18e777629a8a062c116efbd8",
   "head": "aa16b7c6462e0b3d18e777629a8a062c116efbd8",
-  "pinned_head": "aa16b7c6462e0b3d18e777629a8a062c116efbd8"
+  "pinned_head": "aa16b7c6462e0b3d18e777629a8a062c116efbd8",
+  "item": "1793 smx mesh duodenal villus life",
+  "item_id": "mi_1793_smx_mesh_duodenal_villus_life",
+  "title": "1793 smx mesh duodenal villus life",
+  "commit": "PENDING",
+  "summary": "Host-finished MI ship after nanobot partial (1793_smx_mesh_duodenal_villus_life).",
+  "proofs": [
+    "programs/proof/1793_smx_mesh_duodenal_villus_life.cubalc"
+  ],
+  "host_finish": true
 }
