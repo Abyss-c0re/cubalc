@@ -2,11 +2,12 @@
   "iter": 1834,
   "meaningful_iter": 1834,
   "feature": "SMX_MESH_LEFT_VERTEBRAL_LIFE",
-  "pin": "e4d0c00da47d11c8cf4506ff1b4320283a47f729",
-  "tip": "e4d0c00da47d11c8cf4506ff1b4320283a47f729",
-  "pin_head": "e4d0c00da47d11c8cf4506ff1b4320283a47f729",
+  "pin": "68f40936ee0c9ebc9af74eeda750efc188d5df78",
+  "tip": "68f40936ee0c9ebc9af74eeda750efc188d5df78",
+  "pin_head": "68f40936ee0c9ebc9af74eeda750efc188d5df78",
   "status": "PASS",
   "soft_oob": 1,
   "fail_closed": 1,
-  "craft": "MESH_LEFT_VERTEBRAL"
+  "craft": "MESH_LEFT_VERTEBRAL",
+  "version": "1.15.1313-usability"
 }
