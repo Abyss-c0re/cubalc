@@ -1,0 +1,10 @@
+SHIP 1772 SMX mesh ARTERY conduit scaffold life cascade
+feat(smx): ARTERY artery-membrane conduit scaffold after arteriole
+Proof: programs/proof/1772_smx_mesh_artery_life_cascade.cubalc
+       programs/science/proof/1772_smx_mesh_artery_life_cascade.cubalc
+Verbs: ARTERY|ARTERGLIA|MESH_ARTERY|ARTER_WRAP|ARTER_SHEATH|ARTERY_GUIDE|RAISE_ARTERY
+Latches: SMX_ARTERY SMX_ARTERYED SMX_MESH_ARTERY SMX_ARTERY_SUM SMX_STABLE_MESH
+Law: soft-OOB fail-closed; free energy flows; Cube is SoT; no dual ladders.
+Proof result: asserts_ok=1224 asserts_fail=0
+Flagship 1620: asserts_ok=12 asserts_fail=0
+VERSION=1.15.1250-usability MEANINGFUL_ITER=1772

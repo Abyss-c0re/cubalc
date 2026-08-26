@@ -1,1 +1,10 @@
-{"iter":1771,"feature":"SMX_ARTERIOLE","proof":"1771_smx_mesh_arteriole_life_cascade","asserts_ok":1194,"asserts_fail":0,"flagship_ok":12,"flagship_fail":0,"version":"1.15.1249-usability"}
+{
+  "iter": 1772,
+  "feature": "ARTERY",
+  "proof": "1772_smx_mesh_artery_life_cascade",
+  "asserts_ok": 1224,
+  "asserts_fail": 0,
+  "flagship_ok": 12,
+  "flagship_fail": 0,
+  "version": "1.15.1250-usability"
+}
