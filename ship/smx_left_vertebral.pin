@@ -1,9 +1,5 @@
-feature=MESH_LEFT_VERTEBRAL
-iter=1834
-proof=99_smx_left_vertebral.cubalc
-life=1834_smx_mesh_left_vertebral_life.cubalc
-soft_oob=1
-fail_closed=1
-bonds=6
-feat_sha=4e290e7fcd80f50a66222d7b1cf3f662318dffbe
-pin_head=efd983f52e29d269ce557ac280411a7fb5910a9c
+MEANINGFUL_ITER=1834
+FEATURE=SMX_MESH_LEFT_VERTEBRAL_LIFE
+HEAD=1b158068b2638cc7232e8e924a21e1163e83f641
+PIN=1b158068b2638cc7232e8e924a21e1163e83f641
+STATUS=PASS
