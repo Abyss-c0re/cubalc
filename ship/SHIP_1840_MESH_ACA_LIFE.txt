@@ -1,9 +1,8 @@
 SHIP 1840 SMX_MESH_ACA_LIFE
-HEAD=80267f1172587558131f23bc4b33aebf01ac8af9
+HEAD=0651d3c698e8ff6d24a17f5cd74e603517f0033e
 VERSION=1.15.1319-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1840=60/0 1620=12/0 PASS
 past_ecf9c40a=true tip==pin
 c_slice=src/cubalc_smx_anterior_cerebral.c
 feature=MESH_ACA
-branch=ship-1840-anterior-cerebral
