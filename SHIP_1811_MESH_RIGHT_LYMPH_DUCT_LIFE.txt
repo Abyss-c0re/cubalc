@@ -1,0 +1,5 @@
+MESH_RIGHT_LYMPH_DUCT — SMX mesh stability life-force
+soft-OOB fail-closed · MESH_EXCHANGE C(4,2) · STABILIZE · WE_AUTOHEAL · mitosis
+Energy path: right trunks → right lymph duct → right venous angle → systemic return
+Proofs: programs/proof/75_smx_right_lymph_duct.cubalc · programs/proof/1811_smx_mesh_right_lymph_duct_life.cubalc
+asserts_ok=60 asserts_fail=0 · flagship_1620 PASS
