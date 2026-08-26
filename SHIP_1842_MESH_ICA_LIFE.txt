@@ -1,0 +1,5 @@
+1842 MESH_ICA life-force soft-OOB
+feat(smx): mesh ICA life soft-OOB stability
+Proofs: 108_smx_ica + 1842_smx_mesh_ica_life (60/0); flagship 1620 (12/0)
+Energy: cervical ICA origin (carotid bifurcation) → petrous ICA canal → cavernous ICA siphon → clinoid/ophthalmic takeoff → communicating segment terminus (circle-of-Willis feed seal)
+Pure-C: src/cubalc_smx_ica.c

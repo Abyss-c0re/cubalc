@@ -1,3 +1,10 @@
+## 1842 — MESH_ICA life-force soft-OOB (1.15.1321-usability)
+
+- feat(smx): MESH_ICA soft-OOB fail-closed mesh exchange life-force
+- Proofs: 108_smx_ica + 1842_smx_mesh_ica_life (60/0); flagship 1620 (12/0)
+- Energy: cervical ICA origin (carotid bifurcation) → petrous ICA canal → cavernous ICA siphon → clinoid/ophthalmic takeoff → communicating segment terminus (circle-of-Willis feed seal)
+- Pure-C: src/cubalc_smx_ica.c · pins ship/smx_ica.pin ship/smx_mesh_ica_life.pin
+
 ## 1841 — MESH_MCA life-force soft-OOB (1.15.1320-usability)
 
 - feat(smx): MESH_MCA soft-OOB fail-closed mesh exchange life-force
