@@ -29,9 +29,9 @@
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
-  "pin_head": "2df1b250c5f4c3e7fa9194492b9db8471b168e15",
-  "tip": "2df1b250c5f4c3e7fa9194492b9db8471b168e15",
-  "HEAD": "2df1b250c5f4c3e7fa9194492b9db8471b168e15",
-  "commit": "2df1b250c5f4c3e7fa9194492b9db8471b168e15",
+  "pin_head": "024379829b7a4c8621dd6382e88b4970dbc1dc2f",
+  "tip": "024379829b7a4c8621dd6382e88b4970dbc1dc2f",
+  "HEAD": "024379829b7a4c8621dd6382e88b4970dbc1dc2f",
+  "commit": "024379829b7a4c8621dd6382e88b4970dbc1dc2f",
   "branch_takeoffs": 3
 }
