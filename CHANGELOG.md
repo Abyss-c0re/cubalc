@@ -1,3 +1,10 @@
+## 1.15.1300-usability — 1819 SMX MESH_MAIN_PULMONARY_ARTERY life
+
+- feat(smx): MESH_MAIN_PULMONARY_ARTERY soft-OOB fail-closed + mesh exchange C(4,2)
+- proof 83_smx_main_pulmonary_artery + 1819_smx_mesh_main_pulmonary_artery_life PASS 60/0
+- flagship 1620 PASS 12/0; pure-C src/cubalc_smx_main_pulmonary_artery.c
+- ENERGYFLOW pulmonary valve leaflets→outflow trunk→main PA→L/R branches→lung capillary return
+
 ## 1.15.1289-usability — 1810 SMX MESH_VENOUS_ANGLE life
 
 - feat(smx): MESH_VENOUS_ANGLE soft-OOB fail-closed + mesh exchange C(4,2)
