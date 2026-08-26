@@ -1,3 +1,9 @@
+## 1.15.1238-usability — 1762 SMX_MESH_TANYCYTE
+
+- Life-force SMX TANYCYTE|MESH_TANYCYTE|VENTRICLE_GUIDE: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed after muller.
+- Proof programs/proof/1762_smx_mesh_tanycyte_life_cascade.cubalc asserts_ok=955 fail=0; unity 0.880; flagship 1620 PASS.
+- Pins MEANINGFUL_ITER=1762; VERSION=1.15.1238-usability.
+
 ## 1.15.1236-usability — 1761 SMX_MESH_MULLER
 
 - Life-force SMX MULLER|MULLERGLIA|MUELLER|MESH_MULLER|RETINAL_GUIDE: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed after bergmann.
