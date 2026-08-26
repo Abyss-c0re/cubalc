@@ -33,8 +33,8 @@
   "name": "smx_mesh_pericyte_life_cascade",
   "proof": "programs/proof/1765_smx_mesh_pericyte_life_cascade.cubalc",
   "craft": "pericyte",
-  "head": "4a1675541a363b196721573e692c94664727071d",
-  "HEAD": "4a1675541a363b196721573e692c94664727071d",
-  "head_short": "4a167554",
-  "HEAD_SHORT": "4a167554"
+  "head": "a0bf257ad4e22945adfb64a0a58847cd7f62534c",
+  "HEAD": "a0bf257ad4e22945adfb64a0a58847cd7f62534c",
+  "head_short": "a0bf257a",
+  "HEAD_SHORT": "a0bf257a"
 }

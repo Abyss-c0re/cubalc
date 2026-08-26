@@ -1,3 +1,9 @@
+## 1.15.1242-usability — 1765 SMX_MESH_PERICYTE
+
+- Life-force SMX PERICYTE|MESH_PERICYTE|PC_WRAP|PC_SHEATH|BBB_GUARD: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed after folliculo.
+- Proof programs/proof/1765_smx_mesh_pericyte_life_cascade.cubalc asserts_ok=1046 fail=0; unity 0.880; flagship 1620 PASS 12/0.
+- Pins MEANINGFUL_ITER=1765; VERSION=1.15.1242-usability.
+
 ## 1.15.1240-usability — 1763 SMX_MESH_PITUICYTE
 
 - Life-force SMX PITUICYTE|MESH_PITUICYTE|PI_WRAP|PI_SHEATH: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed after tanycyte.
