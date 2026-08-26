@@ -1,1 +1,16 @@
-{"schema":"cubalc.visual_unity.v1","ok":true,"united":true,"seq":42,"unity":0.9171,"faces":["viz","lattice","cells_bin"],"hold_flash":1,"share":"smx"}
+{
+  "schema": "cubalc.visual_unity.v1",
+  "ok": true,
+  "united": true,
+  "seq": 42,
+  "unity": 1.0,
+  "faces": [
+    "viz",
+    "lattice",
+    "cells_bin"
+  ],
+  "hold_flash": 1,
+  "share": "smx",
+  "head": "07c07cdf146447ac351217f4403cd88ab9c0e8b3",
+  "meaningful_iter": 1833
+}
