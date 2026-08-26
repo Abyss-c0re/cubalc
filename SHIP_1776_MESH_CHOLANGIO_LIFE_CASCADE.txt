@@ -8,3 +8,5 @@ FLAGSHIP_1620=PASS
 STATUS=PASS
 VERSION=1.15.1252-cholangio-mesh
 SLICE=CHOLANGIO|CHOLANGIOCYTE|BILE_DUCT soft-OOB fail-closed mesh stability life-force after stellate
+HEAD=c6c442fc62ba7a98d0bb5beeb1b3234eb7cdec88
+SHORT=c6c442fc
