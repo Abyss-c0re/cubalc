@@ -3,7 +3,7 @@
   "meaningful_iter": 1775,
   "feature": "MESH_STELLATE",
   "version": "1.15.1251-stellate-mesh",
-  "head": "b11df0f7dada748769f92630bd1628b4520a8554",
+  "head": "266376083af962afa17f9fd2690e656b33f33e0b",
   "proofs": {
     "1775_smoke": "PASS",
     "1775_cascade": "PASS",
