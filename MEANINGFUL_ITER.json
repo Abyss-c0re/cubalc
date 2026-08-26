@@ -1,15 +1,15 @@
 {
   "iter": 1779,
   "feature": "MESH_CANALICULUS",
-  "head": "178d177c36c6eae330b611042b5ebeaec0f793d3",
-  "short": "178d177c",
+  "head": "77cfbcfbb905848850e8396ba84abc72cb879612",
+  "short": "77cfbcfb",
   "status": "PASS",
   "soft_oob": true,
   "fail_closed": true,
   "mesh_exchange": true,
   "meaningful_iter": 1779,
   "version": "1.15.1255-canaliculus-mesh",
-  "head_short": "178d177c",
+  "head_short": "77cfbcfb",
   "MEANINGFUL_ITER": 1779,
   "unity": 1.0,
   "next": "we_autoheal",
@@ -17,11 +17,10 @@
   "smoke": "1779_smx_canaliculus_soft_oob_smoke.cubalc",
   "flagship_1620": "PASS",
   "latch": "canaliculus_latch",
-  "notes": "SMX CANALICULUS|BILE_CANALICULUS|CANALICULAR|BILE_CANAL soft-OOB fail-closed mesh+wrap+sheath life-force after mall; smoke PASS cascade PASS flagship PASS",
+  "notes": "SMX CANALICULUS|BILE_CANAL soft-OOB fail-closed mesh+wrap+sheath life-force after mall; smoke PASS cascade PASS flagship PASS",
   "proofs": {
     "1779_smoke": "PASS",
     "1779_cascade": "PASS",
     "1620_flagship": "PASS"
-  },
-  "pin": "178d177c36c6eae330b611042b5ebeaec0f793d3"
+  }
 }
