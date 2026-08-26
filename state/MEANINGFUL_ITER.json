@@ -2,10 +2,18 @@
   "iter": 1834,
   "meaningful_iter": 1834,
   "feature": "SMX_MESH_LEFT_VERTEBRAL_LIFE",
-  "pin": "cc18ed13b10df615c49539cab047bddae4c08caf",
-  "tip": "cc18ed13b10df615c49539cab047bddae4c08caf",
-  "pin_head": "cc18ed13b10df615c49539cab047bddae4c08caf",
+  "pin": "bb75d15d6031e6e0d1e1f62d6e120f9f4d40c045",
+  "tip": "bb75d15d6031e6e0d1e1f62d6e120f9f4d40c045",
+  "pin_head": "bb75d15d6031e6e0d1e1f62d6e120f9f4d40c045",
   "status": "PASS",
   "soft_oob": 1,
-  "fail_closed": 1
+  "fail_closed": 1,
+  "HEAD": "bb75d15d6031e6e0d1e1f62d6e120f9f4d40c045",
+  "pinned_head": "bb75d15d6031e6e0d1e1f62d6e120f9f4d40c045",
+  "head": "bb75d15d6031e6e0d1e1f62d6e120f9f4d40c045",
+  "sha": "bb75d15d6031e6e0d1e1f62d6e120f9f4d40c045",
+  "pin_short": "bb75d15d",
+  "short": "bb75d15d",
+  "tip_equals_pin": true,
+  "tip_eq_pin": true
 }
