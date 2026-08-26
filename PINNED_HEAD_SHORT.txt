@@ -1,6 +1,1 @@
-63d40054
-HEAD_PIN.txt
-HEAD_NOW.txt
-/root/PINNED_HEAD_SHORT.txt
-/root/HEAD_NOW.txt
-/root/HEAD_PIN.txt
+c049eca9
