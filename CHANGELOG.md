@@ -1,3 +1,9 @@
+## 1763 — SMX PITUICYTE mesh life cascade (1.15.1240-usability)
+
+- SMX PITUICYTE|PI_WRAP|PI_SHEATH soft-OOB fail-closed mesh after tanycyte
+- proof 1763 PASS (980/0); flagship 1620 PASS (12/0)
+- mitosis under free energy on locked pituicyte scaffold
+
 ## 1.15.1238-usability — 1762 SMX_MESH_TANYCYTE
 
 - Life-force SMX TANYCYTE|MESH_TANYCYTE|VENTRICLE_GUIDE: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed after muller.
