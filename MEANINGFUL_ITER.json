@@ -32,5 +32,10 @@
   "head": "c8146f221b4eb362bdf7be5d8ad8fecde2116a2f",
   "head_short": "c8146f22",
   "HEAD": "201639079922db3f14c35556e48b1fa92a23ee4c",
-  "HEAD_SHORT": "20163907"
+  "HEAD_SHORT": "20163907",
+  "name": "smx_mesh_tanycyte_life_cascade",
+  "proof": "programs/proof/1762_smx_mesh_tanycyte_life_cascade.cubalc",
+  "flagship_1620": "PASS",
+  "craft": "tanycyte",
+  "updated": 1787727120
 }
