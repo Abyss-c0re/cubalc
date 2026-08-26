@@ -25,6 +25,13 @@
   "next": "we_autoheal",
   "host_finish": true,
   "tip_equals_pin": true,
+  "sha": "630b48c3872f928b0e09cb5d11a1af1ccafc886b",
+  "head": "630b48c3872f928b0e09cb5d11a1af1ccafc886b",
+  "pinned_head": "630b48c3872f928b0e09cb5d11a1af1ccafc886b",
+  "head_short": "630b48c3",
+  "commit": "630b48c3872f928b0e09cb5d11a1af1ccafc886b",
+  "pin_head": "630b48c3872f928b0e09cb5d11a1af1ccafc886b",
+  "tip": "630b48c3872f928b0e09cb5d11a1af1ccafc886b",
   "notes": "MESH_RIGHT_ATRIUM soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW SVC\u2192right atrium\u2192tricuspid\u2192RV\u2192pulmonary outflow; WE_AUTOHEAL; pure-C cubalc_smx_right_atrium.c",
   "note": "MESH_RIGHT_ATRIUM SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1815 smx mesh right atrium life",
@@ -32,12 +39,5 @@
   "title": "1815 MESH_RIGHT_ATRIUM soft-OOB mesh exchange life-force",
   "summary": "Right atrium SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
   "soft_oob": true,
-  "fail_closed": true,
-  "sha": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
-  "head": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
-  "pinned_head": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
-  "commit": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
-  "pin_head": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
-  "tip": "48f62680f53f9f89c737f801e1aabb20b1a83a45\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt\nship/smx_right_atrium.pin\nsmx_right_atrium.pin",
-  "head_short": "48f62680"
+  "fail_closed": true
 }
