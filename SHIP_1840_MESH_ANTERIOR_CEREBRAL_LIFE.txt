@@ -1,7 +1,7 @@
 SHIP 1840 SMX_MESH_ANTERIOR_CEREBRAL_LIFE
-HEAD=b87225dac53ce73678b2a0b0f549ce16e2162edb
+HEAD=b4fbca7b030886b3b6578ad2bf1edd222990e486
 VERSION=1.15.1319-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1840=60/0 1620=12/0 PASS
-past_ecf9c40a=true tip==pin
+tip==pin
 c_slice=src/cubalc_smx_anterior_cerebral.c
