@@ -1,8 +1,8 @@
 {
   "iter": 1822,
   "label": "SMX_MESH_RIGHT_LUNG_HILUM_LIFE",
-  "head": "6792c49e87262d860fc2fa2b61387ea62ee42104",
-  "short": "6792c49e",
+  "head": "08574e3f0b6af8f4ee948772e5ff41fb74e39c9e",
+  "short": "08574e3f",
   "proof": "programs/proof/1822_smx_mesh_right_lung_hilum_life.cubalc",
   "feature": "soft-OOB fail-closed mesh exchange + STABILIZE life-force right lung hilum",
   "asserts_ok": 60,
@@ -10,8 +10,7 @@
   "result": "PASS",
   "flagship_1620": "PASS",
   "version": "1.15.1303-usability",
-  "branch": "ship-1822-left-pulmonary-artery",
+  "branch": "ship-1822-right-lung-hilum",
   "sealed": true,
-  "tip_eq_pin": true,
-  "c_slice": "src/cubalc_smx_right_lung_hilum.c"
+  "tip_eq_pin": true
 }
