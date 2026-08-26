@@ -1,8 +1,8 @@
-1830 MESH_ASCENDING_AORTA soft-OOB fail-closed + MESH_EXCHANGE C(4,2) PASS asserts_ok=60 flagship_1620=12
-feature=MESH_ASCENDING_AORTA
-iter=1830
-proof=96_smx_ascending_aorta.cubalc
-life=1830_smx_mesh_ascending_aorta_life.cubalc
-soft_oob=1
-fail_closed=1
-bonds=6
+SHIP 1830 MESH_ASCENDING_AORTA_LIFE
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force ascending aorta conduit
+c_slice: src/cubalc_smx_ascending_aorta.c
+proof: programs/proof/1830_smx_mesh_ascending_aorta_life.cubalc
+proof_alt: programs/proof/96_smx_ascending_aorta.cubalc
+energy_path: aortic valve leaflets → aortic root sinuses → ascending aorta conduit → aortic arch takeoff → brachiocephalic trunk origin
+asserts_ok: 60
+flagship_1620: PASS (12)
