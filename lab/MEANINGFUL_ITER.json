@@ -1,18 +1,16 @@
 {
-  "iter": 1775,
-  "meaningful_iter": 1775,
-  "feature": "MESH_STELLATE",
-  "version": "1.15.1251-stellate-mesh",
-  "head": "ec6a738d8d72d1c78eadd854399e25130cbb66c3",
-  "short": "ec6a738d",
-  "latch": "stellate_latch",
+  "iter": 1776,
+  "meaningful_iter": 1776,
+  "feature": "MESH_CHOLANGIO",
+  "version": "1.15.1252-cholangio-mesh",
+  "proof": "1776_smx_mesh_cholangio_life_cascade.cubalc",
+  "smoke": "1776_smx_cholangio_soft_oob_smoke.cubalc",
+  "asserts_ok": 1393,
+  "asserts_fail": 0,
+  "flagship_1620": "PASS",
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "proofs": {
-    "1775_smoke": "PASS",
-    "1775_cascade": "PASS",
-    "1620_flagship": "PASS"
-  },
-  "notes": "SMX STELLATE|ITO|HSC soft-OOB fail-closed mesh+wrap+sheath life-force"
+  "latch": "cholangio_latch",
+  "notes": "SMX CHOLANGIO|CHOLANGIOCYTE|BILE_DUCT soft-OOB fail-closed mesh+wrap+sheath life-force after stellate"
 }

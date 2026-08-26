@@ -1,3 +1,7 @@
+## 1.15.1252-cholangio-mesh — MEANINGFUL_ITER 1776 CHOLANGIO
+- SMX CHOLANGIO|CHOLANGIOCYTE|BILE_DUCT soft-OOB fail-closed mesh stability life cascade after stellate
+- proof 1776 asserts_ok:1393 asserts_fail:0; smoke 23/0; flagship 1620 PASS 12/0
+
 ## 1.15.1252-usability — MEANINGFUL_ITER 1775 STELLATE
 - SMX STELLATE|ITO|HSC soft-OOB fail-closed mesh stability life cascade after kupffer
 - proof 1775 asserts_ok:1361 asserts_fail:0; smoke 23/0; flagship 1620 PASS 12/0

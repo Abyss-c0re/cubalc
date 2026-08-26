@@ -1,0 +1,10 @@
+MEANINGFUL_ITER=1776
+FEATURE=smx_cholangio_mesh_life_cascade
+PROOF=1776_smx_mesh_cholangio_life_cascade.cubalc
+SMOKE=1776_smx_cholangio_soft_oob_smoke.cubalc
+ASSERTS_OK=1393
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+STATUS=PASS
+VERSION=1.15.1252-cholangio-mesh
+SLICE=CHOLANGIO|CHOLANGIOCYTE|BILE_DUCT soft-OOB fail-closed mesh stability life-force after stellate
