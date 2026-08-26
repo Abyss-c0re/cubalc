@@ -1,0 +1,10 @@
+MEANINGFUL_ITER=1743
+feature=MESH_LOCALGROUP_LIFE_CASCADE_SOFT_OOB
+proof=1743_smx_mesh_localgroup_life_cascade
+PROOFS=1743+1620 PASS asserts_fail=0 localgrouped=1
+feat_head=e9b2a2ea2b88201369312f99a038ce0ca337ac28
+HEAD=7f073040def370c01d00d72fe743a7a515035ae9
+VERSION=1.15.1215-usability
+past=ef2e2a3d
+next=we_autoheal
+verified_at=2026-08-26T02:36:09Z

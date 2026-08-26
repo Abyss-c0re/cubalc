@@ -1,0 +1,9 @@
+feature=MESH_LOCALGROUP_LIFE_CASCADE soft-OOB fail-closed life-force
+MEANINGFUL_ITER=1743
+VERSION=1.15.1215-usability
+PROOFS=smx-localgroup+soft-oob+life-cascade+flagship1620 PASS
+unity=0.8740 localgrouped=1
+feat_head=e9b2a2ea2b88201369312f99a038ce0ca337ac28
+head=7f073040def370c01d00d72fe743a7a515035ae9
+next=we_autoheal
+verified_at=2026-08-26T02:36:09Z
