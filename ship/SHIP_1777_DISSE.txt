@@ -1,0 +1,3 @@
+SHIP 1777 DISSE
+SMX DISSE space-of-Disse perisinusoidal mesh life cascade after SINUSOID
+soft-OOB fail-closed; MEANINGFUL_ITER=1777 VERSION=1.15.1255-usability

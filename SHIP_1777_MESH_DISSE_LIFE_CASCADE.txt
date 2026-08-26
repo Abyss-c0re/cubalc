@@ -1,0 +1,7 @@
+SHIP 1777 SMX DISSE (space of Disse) mesh life cascade
+- soft-OOB fail-closed storms
+- complete mesh + wrap ring + sheath gather
+- latches SMX_DISSE SMX_DISSEED SMX_MESH_DISSE SMX_SPACE_OF_DISSE SMX_PERISINUSOIDAL
+- after SINUSOID hepatic exchange; no IF*P duals
+- proof programs/proof/1777_smx_mesh_disse_life_cascade.cubalc PASS 1358/0
+- flagship 1620 PASS 12/0
