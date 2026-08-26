@@ -15,3 +15,4 @@ Digit-7 stack imm halfword-field div/mod/min: complete uint16 field ALU after SA
 
 **Status:** 1.14.16→1.14.17-universal; suite green 489/0; push ok.
 1705 SMX_KEEPER mesh+watch+bastion soft-OOB fail-closed
+1769 VENULE soft-OOB mesh life cascade
