@@ -1,0 +1,6 @@
+SHIP 1827 MESH_MITRAL_LIFE
+feat(smx): mitral inflow leaflet mesh soft-OOB life-force path
+proofs: programs/proof/93_smx_mitral.cubalc + programs/proof/1827_smx_mesh_mitral_life.cubalc
+asserts_ok=60 asserts_fail=0 flagship_1620=PASS (12)
+VERSION=1.15.1306-usability MEANINGFUL_ITER=1827
+WE_AUTOHEAL mitral seal green.
