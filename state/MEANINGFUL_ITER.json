@@ -46,15 +46,15 @@
     "1834": "PASS 60/0",
     "1620": "PASS 12/0"
   },
-  "pin_head": "PENDING",
-  "tip": "PENDING",
-  "HEAD": "PENDING",
-  "pinned_head": "PENDING",
-  "head": "PENDING",
-  "sha": "PENDING",
-  "pin_short": "PENDING",
-  "short": "PENDING",
-  "tip_equals_pin": false,
-  "tip_eq_pin": false,
-  "pin": "PENDING"
+  "pin_head": "4e290e7fcd80f50a66222d7b1cf3f662318dffbe",
+  "tip": "4e290e7fcd80f50a66222d7b1cf3f662318dffbe",
+  "HEAD": "4e290e7fcd80f50a66222d7b1cf3f662318dffbe",
+  "pinned_head": "4e290e7fcd80f50a66222d7b1cf3f662318dffbe",
+  "head": "4e290e7fcd80f50a66222d7b1cf3f662318dffbe",
+  "sha": "4e290e7fcd80f50a66222d7b1cf3f662318dffbe",
+  "pin": "4e290e7fcd80f50a66222d7b1cf3f662318dffbe",
+  "pin_short": "4e290e7f",
+  "short": "4e290e7f",
+  "tip_equals_pin": true,
+  "tip_eq_pin": true
 }
