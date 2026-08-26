@@ -1,1 +1,1 @@
-{"schema": "cubalc.visual_unity.v1", "ok": true, "united": true, "seq": 16, "unity": 1.0, "faces": ["viz", "lattice", "cells_bin"], "hold_flash": 1, "share": "smx", "iter": 1772, "feature": "MESH_DISSE", "status": "PASS", "next": "we_autoheal", "head": "af14b6ca"}
+{"schema":"cubalc.visual_unity.v1","ok":true,"united":true,"seq":52,"unity":0.7966,"faces":["viz","lattice","cells_bin"],"hold_flash":1,"share":"smx"}
