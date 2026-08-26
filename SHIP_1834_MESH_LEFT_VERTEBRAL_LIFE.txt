@@ -5,6 +5,6 @@ proof: programs/proof/1834_smx_mesh_left_vertebral_life.cubalc
 asserts_ok: 60
 flagship_1620: PASS 12/0
 MEANINGFUL_ITER: 1834
-HEAD: f807fbcf167f17dcec3582ae2c75497897d05dcd
+HEAD: 5d9fa3f9064335fa615b6a7ff77e3c93cbead81a
 tip_equals_pin: true
 status: PASS
