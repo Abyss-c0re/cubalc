@@ -1,8 +1,7 @@
-FEATURE=MESH_VENOUS_ANGLE
-SHIP=1810_smx_mesh_venous_angle_life
+MESH_VENOUS_ANGLE
+FEATURE=SMX_MESH_VENOUS_ANGLE_LIFE
 PROOF=programs/proof/74_smx_venous_angle.cubalc
 PROOF_ALT=programs/proof/1810_smx_mesh_venous_angle_life.cubalc
-C_SLICE=src/cubalc_smx_venous_angle.c
-SOFT_OOB=fail_closed
-MESH_BONDS=6
-ITER=1810
+SOFT_OOB=fail-closed
+MESH_EXCHANGE=C(4,2)
+STATUS=SHIPPING
