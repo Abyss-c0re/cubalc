@@ -31,11 +31,11 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "c_slice": "src/cubalc_smx_left_subclavian.c",
-  "energy_path": "aortic arch apex → left subclavian origin → left subclavian trunk → axillary takeoff → upper limb / vertebral perfusion",
+  "energy_path": "aortic arch apex \u2192 left subclavian origin \u2192 left subclavian trunk \u2192 axillary takeoff \u2192 upper limb / vertebral perfusion",
   "soft_oob": 1,
   "fail_closed": 1,
   "branch": "ship-1833-left-subclavian",
-  "sealed": false,
+  "sealed": true,
   "life_force": 0.35,
   "stability": 1.0,
   "mesh": "left_subclavian",
@@ -49,5 +49,9 @@
   },
   "tip_equals_pin": false,
   "tip_eq_pin": false,
-  "pin": "a73f8cedf7f6e29330e8098f28f120c4ec8080f9"
+  "pin": "a540c905fc29dcdf3254e34aa5029b816d972f68",
+  "head": "a540c905fc29dcdf3254e34aa5029b816d972f68",
+  "tip": "a540c905fc29dcdf3254e34aa5029b816d972f68",
+  "pin_head": "a540c905fc29dcdf3254e34aa5029b816d972f68",
+  "HEAD": "a540c905fc29dcdf3254e34aa5029b816d972f68"
 }
