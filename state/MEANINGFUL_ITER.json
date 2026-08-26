@@ -28,5 +28,11 @@
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
   "ts": "2026-08-26T01:05:00Z",
   "verified_at": "2026-08-26T01:05:00Z",
-  "host_finish": true
+  "host_finish": true,
+  "feat_head": "ba5cb3ac722fc17dbbfc0ed6afde923e7ae270ab",
+  "pin_head": "ba5cb3ac722fc17dbbfc0ed6afde923e7ae270ab",
+  "tip": "ba5cb3ac722fc17dbbfc0ed6afde923e7ae270ab",
+  "HEAD": "ba5cb3ac722fc17dbbfc0ed6afde923e7ae270ab",
+  "commit": "ba5cb3ac722fc17dbbfc0ed6afde923e7ae270ab",
+  "short": "ba5cb3ac"
 }
