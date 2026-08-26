@@ -42,6 +42,6 @@
   "cmd": "smx-aortic-arch",
   "soft_oob_mode": "fail_closed",
   "feat_sha": "aba25a71518aae37407132ef11033623b86e0837",
-  "pin_head": "6124d3fe69f5dd30cd0ae5095b0a7d5bb038e1c2",
-  "tip": "6124d3fe69f5dd30cd0ae5095b0a7d5bb038e1c2"
+  "pin_head": "b5f4b47755bd36b48d2c0e3cfe65017531822de6",
+  "tip": "b5f4b47755bd36b48d2c0e3cfe65017531822de6"
 }
