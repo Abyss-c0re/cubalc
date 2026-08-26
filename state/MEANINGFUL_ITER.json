@@ -29,11 +29,11 @@
   ],
   "status": "PASS",
   "head_before": "4dd8621ec8f82d39292bae2315b7d814e2897697",
-  "sha": "de1fc92f1933423ae4c51d22bec01a88a5ddbaf7",
-  "head": "de1fc92f1933423ae4c51d22bec01a88a5ddbaf7",
-  "pinned_head": "de1fc92f1933423ae4c51d22bec01a88a5ddbaf7",
-  "head_short": "de1fc92f",
-  "commit": "de1fc92f1933423ae4c51d22bec01a88a5ddbaf7",
+  "sha": "500b48af66b2266f5c34da00c8c1a77283e185c3",
+  "head": "500b48af66b2266f5c34da00c8c1a77283e185c3",
+  "pinned_head": "500b48af66b2266f5c34da00c8c1a77283e185c3",
+  "head_short": "500b48af",
+  "commit": "500b48af66b2266f5c34da00c8c1a77283e185c3",
   "tip_equals_pin": true,
   "feat_sha": "de1fc92f1933423ae4c51d22bec01a88a5ddbaf7"
 }
