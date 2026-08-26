@@ -1,3 +1,9 @@
+## 1.15.1306-usability — 1827 SMX MESH_MITRAL life
+
+- feat(smx): MESH_MITRAL soft-OOB fail-closed + mesh exchange C(4,2)
+- proof 93_smx_mitral + 1827_smx_mesh_mitral_life PASS 60/0
+- flagship 1620 PASS 12/0; pure-C src/cubalc_smx_mitral.c
+
 ## 1.15.1289-usability — 1810 SMX MESH_VENOUS_ANGLE life
 
 - feat(smx): MESH_VENOUS_ANGLE soft-OOB fail-closed + mesh exchange C(4,2)
