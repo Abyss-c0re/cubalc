@@ -1,0 +1,6 @@
+SHIP 1760 SMX mesh Bergmann glia life cascade
+feat(smx): Bergmann cerebellar scaffold after radial
+Proof: programs/proof/1760_smx_mesh_bergmann_life_cascade.cubalc
+Verbs: BERGMANN|BERGGLIA|MESH_BERGMANN|BG_WRAP|BG_SHEATH|CEREBELLAR_GUIDE|RAISE_BERGMANN
+Latches: SMX_BERGMANN SMX_BERGMANNED SMX_MESH_BERGMANN SMX_BERGMANN_SUM SMX_STABLE_MESH
+Law: soft-OOB fail-closed; free energy flows; Cube is SoT; no dual ladders.
