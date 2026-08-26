@@ -1,13 +1,13 @@
 {
   "schema": "projectnexus.product_sync.v1",
   "product": "cubalc",
-  "version": "1.15.1255-usability",
+  "version": "1.15.1316-usability",
   "paradigm": "COP/flow",
   "ok": true,
-  "meaningful_iter": 1777,
-  "feature": "SMX_DISSE_MESH_LIFE_CASCADE",
+  "meaningful_iter": 1837,
+  "feature": "SMX_MESH_SUPERIOR_CEREBELLAR_LIFE",
   "proof_status": "PASS",
-  "asserts_ok": 1358,
+  "asserts_ok": 60,
   "flagship_1620_asserts_ok": 12,
   "head": "4664e06c69db78e4187fae450ecc3af47d8f1538"
 }
