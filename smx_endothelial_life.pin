@@ -1,6 +1,7 @@
 iter=1766
 feature=MESH_ENDOTHELIAL_LIFE_CASCADE
-head=3a8f81db40361aa9c5ff7b0be7e1e6aa0ce39acb
-head_short=3a8f81db
+head=fd50f5be5175ac310377cf83cf1e2e24ff3f7485
+head_short=fd50f5be
 proof=PASS
 flagship_1620=PASS
+asserts_ok=1080
