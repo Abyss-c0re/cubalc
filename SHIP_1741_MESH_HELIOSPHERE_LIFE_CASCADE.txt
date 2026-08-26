@@ -1,0 +1,8 @@
+SHIP 1741 MESH_HELIOSPHERE_LIFE_CASCADE
+feature: SMX mesh heliosphere life cascade soft-OOB fail-closed
+proofs: programs/proof/1741_smx_mesh_heliosphere_life_cascade.cubalc PASS
+        programs/proof/1620_atomic_printer_life_force.cubalc PASS
+version: 1.15.1213-usability
+MEANINGFUL_ITER: 1741
+past: b8cfdfc4
+ts: 2026-08-26T02:07:58Z
