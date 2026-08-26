@@ -4,7 +4,7 @@
   "source": "/data/Workdir/voldemar/Dev/lab/prophecy_cube/cubalc",
   "version": "1.15.1237-usability",
   "paradigm": "COP/flow",
-  "synced_at": "2026-08-26T09:49:22+0300",
+  "synced_at": "2026-08-26T09:49:42+0300",
   "sync_script": "scripts/sync_cubalc_product.sh",
   "surfaces": [
     "algocube",
@@ -17,7 +17,7 @@
   "ok": true,
   "meaningful_iter": 1762,
   "feature": "MESH_TANYCYTE_LIFE_CASCADE",
-  "ts": 1787726977,
+  "ts": 1787726982,
   "proof_status": "PASS",
   "asserts_ok": 955,
   "MEANINGFUL_ITER": 1762,
