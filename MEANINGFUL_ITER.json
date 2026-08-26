@@ -38,7 +38,15 @@
   "sealed": true,
   "life_force": 0.35,
   "stability": 1.0,
-  "pin_head": "7edff10520b735a7060e67ea5863ddb72d58f6a0",
-  "tip": "7edff10520b735a7060e67ea5863ddb72d58f6a0",
-  "tip_equals_pin": true
+  "mesh": "aortic_arch",
+  "cmd": "smx-aortic-arch",
+  "soft_oob_mode": "fail_closed",
+  "feat_sha": "aba25a71518aae37407132ef11033623b86e0837",
+  "pin_head": "9b7d57cf1e8a48891554608eb73d36b840e1968d",
+  "tip": "9b7d57cf1e8a48891554608eb73d36b840e1968d",
+  "proof_recheck": {
+    "97": "PASS 60/0",
+    "1831": "PASS 60/0",
+    "1620": "PASS 12/0"
+  }
 }
