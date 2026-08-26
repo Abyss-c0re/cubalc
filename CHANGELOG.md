@@ -1,3 +1,10 @@
+## 1840 — MESH_ACA life-force soft-OOB (1.15.1319-usability)
+
+- feat(smx): MESH_ACA soft-OOB fail-closed mesh exchange life-force
+- Proofs: 106_smx_aca + 1840_smx_mesh_aca_life (60/0); flagship 1620 (12/0)
+- Energy: ICA bifurcation → ACA A1 origin → callosomarginal / pericallosal takeoff → cortical free-energy arc → circle-of-Willis anterior seal
+- Pure-C: src/cubalc_smx_aca.c · pins ship/smx_aca.pin ship/smx_mesh_aca_life.pin
+
 ## 1.15.1318-usability — 1839 MESH_ACOM
 
 - feat(smx): MESH_ACOM soft-OOB fail-closed mesh life-force

@@ -1,0 +1,5 @@
+SHIP 1840 MESH_ACA life-force
+soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE + WE_AUTOHEAL + mitosis
+Energy: ICA bifurcation → ACA A1 origin → callosomarginal / pericallosal takeoff → cortical free-energy arc → circle-of-Willis anterior seal
+Proofs: 106_smx_aca + 1840_smx_mesh_aca_life (60/0); flagship 1620 (12/0)
+Pure-C: src/cubalc_smx_aca.c
