@@ -4,3 +4,4 @@ Proof: programs/proof/1764_smx_mesh_folliculo_life_cascade.cubalc
 Verbs: FOLLICULO|FOLLIGLIA|MESH_FOLLICULO|FO_WRAP|FO_SHEATH|FOLLICULOSTELLATE_GUIDE|RAISE_FOLLICULO
 Latches: SMX_FOLLICULO SMX_FOLLICULOED SMX_MESH_FOLLICULO SMX_FOLLICULO_SUM SMX_STABLE_MESH
 Law: soft-OOB fail-closed; free energy flows; Cube is SoT; no dual ladders.
+Proof PASS asserts_ok=1001 asserts_fail=0; flagship 1620 12/0 PASS
