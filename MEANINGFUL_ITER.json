@@ -42,8 +42,8 @@
   "cmd": "smx-left-common-carotid",
   "soft_oob_mode": "fail_closed",
   "feat_sha": "0bbce2c13844e213344a1bd926952726d990b53f",
-  "pin_head": "94704c3e360df2a8bf9e66ebc3e29efa1bbcdba4",
-  "tip": "94704c3e360df2a8bf9e66ebc3e29efa1bbcdba4",
+  "pin_head": "09908ca07a6a36359502a754f9925e0d41b5302a",
+  "tip": "09908ca07a6a36359502a754f9925e0d41b5302a",
   "proof_recheck": {
     "98": "PASS 60/0",
     "1832": "PASS 60/0",
