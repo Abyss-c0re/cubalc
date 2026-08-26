@@ -11,10 +11,10 @@
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "proofs": "1843+99=60/0,1620=12/0",
+  "proofs": "1843+99=60/0",
   "c_slice": "src/cubalc_smx_ophthalmic.c",
   "proof": "programs/proof/1843_smx_mesh_ophthalmic_life.cubalc",
   "branch": "ship-1843-ophthalmic",
   "tip_equals_pin": true,
-  "head": "899cd48769bfce69fe6e2bc0e0606bdf7630e5cc"
+  "head": "a991b8ed9e87fa1e513206cccb677d56dec56d1c"
 }
