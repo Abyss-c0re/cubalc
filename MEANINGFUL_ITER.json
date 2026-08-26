@@ -3,11 +3,11 @@
   "iter": 1762,
   "MEANINGFUL_ITER": 1762,
   "meaningful_iter": 1762,
-  "version": "1.15.1238-usability",
-  "VERSION": "1.15.1238-usability",
-  "item": "tanycyte ventricle guide life cascade",
+  "version": "1.15.1237-usability",
+  "VERSION": "1.15.1237-usability",
+  "item": "tanycyte glia ventricle guide life cascade",
   "item_id": "mi_smx_mesh_tanycyte_life_cascade",
-  "title": "tanycyte ventricle guide life cascade",
+  "title": "tanycyte glia ventricle guide life cascade",
   "summary": "SMX TANYCYTE soft-OOB fail-closed mesh stability after muller; mitosis under free energy; proof 1762 asserts_fail:0.",
   "feature": "MESH_TANYCYTE_LIFE_CASCADE",
   "proofs": [
@@ -28,11 +28,10 @@
   "soft_oob": "fail-closed",
   "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+tanycyte+stabilize+mitosis",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T06:50:08Z",
-  "verified_at": "2026-08-26T06:50:08Z",
-  "head": "190a224b1c12aea5af2e54393c264359ed36cda0",
-  "head_short": "190a224b",
-  "HEAD": "89cffb69b058c9dad73080c556c75d9b8e80c2f3",
-  "HEAD_SHORT": "89cffb69",
-  "host_finish": true
+  "ts": 1787727018,
+  "verified_at": "2026-08-26T06:50:18Z",
+  "head": "90bd201094292e27628d3b485a082a00ee036897",
+  "head_short": "90bd2010",
+  "HEAD": "90bd201094292e27628d3b485a082a00ee036897",
+  "HEAD_SHORT": "90bd2010"
 }

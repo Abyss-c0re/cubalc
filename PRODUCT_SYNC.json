@@ -4,7 +4,7 @@
   "source": "/data/Workdir/voldemar/Dev/lab/prophecy_cube/cubalc",
   "version": "1.15.1237-usability",
   "paradigm": "COP/flow",
-  "synced_at": "2026-08-26T09:49:42+0300",
+  "synced_at": "2026-08-26T09:50:18+0300",
   "sync_script": "scripts/sync_cubalc_product.sh",
   "surfaces": [
     "algocube",
@@ -17,7 +17,7 @@
   "ok": true,
   "meaningful_iter": 1762,
   "feature": "MESH_TANYCYTE_LIFE_CASCADE",
-  "ts": 1787727006,
+  "ts": 1787727018,
   "proof_status": "PASS",
   "asserts_ok": 955,
   "MEANINGFUL_ITER": 1762,
@@ -25,10 +25,8 @@
   "proof": "programs/proof/1762_smx_mesh_tanycyte_life_cascade.cubalc",
   "asserts_fail": 0,
   "flagship_1620": "PASS",
-  "HEAD": "89cffb69b058c9dad73080c556c75d9b8e80c2f3",
-  "HEAD_SHORT": "89cffb69",
+  "HEAD": "90bd201094292e27628d3b485a082a00ee036897",
+  "HEAD_SHORT": "90bd2010",
   "next": "we_autoheal",
-  "risk": "low",
-  "head": "7381a6339deb6ff8a71096c15f478968694da749",
-  "head_short": "7381a633"
+  "risk": "low"
 }
