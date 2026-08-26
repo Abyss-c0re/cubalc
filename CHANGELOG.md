@@ -1,3 +1,10 @@
+## 1.15.1318-usability — 1839 MESH_ACOM
+
+- feat(smx): MESH_ACOM soft-OOB fail-closed mesh life-force
+- Energy path: A1 ACA origin → ACOM takeoff → communicating bridge → contralateral A2 takeoff → anterior Willis crown seal
+- Proofs: 105_smx_acom + 1839_smx_mesh_acom_life (60/0)
+- Flagship 1620 PASS 12/0; pure-C src/cubalc_smx_acom.c
+
 ## 1.15.1317-usability — 1838 MESH_PCOM
 
 - feat(smx): MESH_PCOM soft-OOB fail-closed mesh life-force

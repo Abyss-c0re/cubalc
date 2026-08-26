@@ -1,0 +1,5 @@
+SHIP 1839 MESH_ACOM life-force
+soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE + WE_AUTOHEAL + mitosis
+Energy: A1 ACA origin → ACOM takeoff → communicating bridge → contralateral A2 takeoff → anterior circle-of-Willis crown seal
+Proofs: 105_smx_acom + 1839_smx_mesh_acom_life (60/0); flagship 1620 (12/0)
+Pure-C: src/cubalc_smx_acom.c
