@@ -1,3 +1,10 @@
+## 1841 — MESH_MCA life-force soft-OOB (1.15.1320-usability)
+
+- feat(smx): MESH_MCA soft-OOB fail-closed mesh exchange life-force
+- Proofs: 107_smx_mca + 1841_smx_mesh_mca_life (60/0); flagship 1620 (12/0)
+- Energy: ICA terminus → MCA M1 stem → M2 superior/inferior bifurcation → cortical free-energy territories → Sylvian/insular seal
+- Pure-C: src/cubalc_smx_mca.c · pins ship/smx_mca.pin ship/smx_mesh_mca_life.pin
+
 ## 1840 — MESH_ACA life-force soft-OOB (1.15.1319-usability)
 
 - feat(smx): MESH_ACA soft-OOB fail-closed mesh exchange life-force
