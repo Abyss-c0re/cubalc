@@ -1,13 +1,9 @@
 {
-  "meaningful_iter": 1770,
-  "feature": "smx_mesh_capillary_life_cascade",
-  "slice": "CAPILLARY soft-OOB mesh stability life-force after metarteriole/venule",
-  "proof": "programs/proof/1770_smx_mesh_capillary_life_cascade.cubalc",
-  "asserts_ok": 1189,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS 12/0",
-  "version": "1.15.1247-usability",
-  "head": "2fb2ebb0d4cd0071ea34d0a60f598762c0b19501",
-  "ts": 1787737600,
-  "base_head": "6323d2f1e1df6286afc881a4d50e5ea425020d5a"
+  "iter": 1771,
+  "feature": "smx_mesh_sinusoid_life_cascade",
+  "head": "PENDING",
+  "short": "PENDING",
+  "version": "1.15.1248-usability",
+  "proof": "1771 asserts_ok:1226 asserts_fail:0",
+  "flagship": "1620 PASS 12/0"
 }
