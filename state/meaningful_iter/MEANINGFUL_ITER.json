@@ -11,18 +11,17 @@
   ],
   "version": "1.15.1294-usability",
   "proofs": [
-    "programs/science/proof/1777_smx_mesh_stability_life_force.cubalc",
-    "programs/science/proof/1777_smx_mesh_disse_life_cascade.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
+    "programs/proof/79_smx_right_atrium.cubalc",
+    "programs/proof/1815_smx_mesh_right_atrium_life.cubalc"
   ],
   "status": "PASS",
-  "sha": "a7378153983cc3e97963467c4fc651bc7aa89b89",
-  "head": "a7378153983cc3e97963467c4fc651bc7aa89b89",
-  "pinned_head": "a7378153983cc3e97963467c4fc651bc7aa89b89",
-  "commit": "a7378153983cc3e97963467c4fc651bc7aa89b89",
-  "pin_head": "a7378153983cc3e97963467c4fc651bc7aa89b89",
-  "tip": "a7378153983cc3e97963467c4fc651bc7aa89b89",
-  "head_short": "a7378153",
+  "sha": "26f3209410abe7313d956737de3d946a42b4495c",
+  "head": "26f3209410abe7313d956737de3d946a42b4495c",
+  "pinned_head": "26f3209410abe7313d956737de3d946a42b4495c",
+  "commit": "26f3209410abe7313d956737de3d946a42b4495c",
+  "pin_head": "26f3209410abe7313d956737de3d946a42b4495c",
+  "tip": "26f3209410abe7313d956737de3d946a42b4495c",
+  "head_short": "26f32094",
   "meaningful_iter": 1815,
   "MEANINGFUL_ITER": 1815,
   "VERSION": "1.15.1294-usability",
@@ -40,5 +39,6 @@
   "host_finish": true,
   "tip_equals_pin": true,
   "soft_oob": true,
-  "fail_closed": true
+  "fail_closed": true,
+  "proof": "programs/proof/79_smx_right_atrium.cubalc"
 }
