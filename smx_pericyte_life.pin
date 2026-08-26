@@ -1,0 +1,9 @@
+MEANINGFUL_ITER=1766
+FEATURE=smx_mesh_pericyte_life_cascade
+PROOF=programs/proof/1766_smx_mesh_pericyte_life_cascade.cubalc
+FLAGSHIP=programs/proof/1620_atomic_printer_life_force.cubalc
+PROOF_PASS=1049/0
+FLAGSHIP_PASS=12/0
+VERSION=1.15.1241-usability
+SOFT_OOB=fail-closed
+AFTER=ng2

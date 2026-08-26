@@ -1,8 +1,9 @@
 MEANINGFUL_ITER=1764
-FEATURE=FOLLICULO
-PROOF=1764_smx_mesh_folliculo_life_cascade
-ASSERTS_OK=1001
-ASSERTS_FAIL=0
-FLAGSHIP=1620
-FLAG_OK=12
-FLAG_FAIL=0
+FEATURE=smx_mesh_folliculo_life_cascade
+PROOF=programs/proof/1764_smx_mesh_folliculo_life_cascade.cubalc
+FLAGSHIP=programs/proof/1620_atomic_printer_life_force.cubalc
+PROOF_PASS=1001/0
+FLAGSHIP_PASS=12/0
+VERSION=1.15.1239-usability
+SOFT_OOB=fail-closed
+AFTER=pituicyte

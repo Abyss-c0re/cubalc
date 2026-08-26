@@ -1,5 +1,9 @@
-SHIP FOLLICULO 1764
-proof 1001/0 PASS
-flagship 1620 12/0 PASS
-SMX FOLLICULO soft-OOB fail-closed mesh life cascade
-HEAD_PARENT=b0931e01
+SHIP 1764 SMX mesh Folliculo folliculostellate glia life cascade
+feat(smx): Folliculo FS-cell scaffold after pituicyte (soft-OOB fail-closed)
+Proof: programs/proof/1764_smx_mesh_folliculo_life_cascade.cubalc
+Flagship: programs/proof/1620_atomic_printer_life_force.cubalc
+Results: proof asserts_ok=1001 asserts_fail=0; flagship 12/0
+MEANINGFUL_ITER=1764
+VERSION=1.15.1239-usability
+Verbs: FOLLICULO|FOLLIGLIA|MESH_FOLLICULO|FO_WRAP|FO_SHEATH|FOLLICULOSTELLATE_GUIDE|RAISE_FOLLICULO
+Latches: SMX_FOLLICULO SMX_FOLLICULOED SMX_MESH_FOLLICULO SMX_FOLLICULO_SUM SMX_STABLE_MESH

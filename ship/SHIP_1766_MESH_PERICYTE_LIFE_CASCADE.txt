@@ -1,0 +1,8 @@
+SHIP 1766 SMX mesh PERICYTE perivascular glia life cascade
+feat(smx): PERICYTE perivascular scaffold after ng2
+Proof: programs/proof/1766_smx_mesh_pericyte_life_cascade.cubalc
+Verbs: PERICYTE|PERIGLIA|MESH_PERICYTE|PERI_WRAP|PERI_SHEATH|PERIVASC_GUIDE|RAISE_PERICYTE
+Latches: SMX_PERICYTE SMX_PERICYTEED SMX_MESH_PERICYTE SMX_PERICYTE_SUM SMX_STABLE_MESH
+Proof PASS: 1049/0 · Flagship 1620: 12/0
+Law: soft-OOB fail-closed; free energy flows; Cube is SoT; no dual ladders.
+VERSION=1.15.1241-usability MEANINGFUL_ITER=1766
