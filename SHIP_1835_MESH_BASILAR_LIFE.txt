@@ -14,3 +14,5 @@ soft_oob=1
 fail_closed=1
 bonds=6
 pin=304bdb8dc76a591d04c2f5b378b62621c45ed4d3
+HEAD: fd038a47db78d78aa181feb95fb90c982c831856
+tip_equals_pin: true
