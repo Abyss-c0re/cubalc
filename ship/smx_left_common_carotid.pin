@@ -1,4 +1,8 @@
-MESH_LEFT_COMMON_CAROTID
-1832_smx_mesh_left_common_carotid_life
-soft_oob=fail_closed
+feature=MESH_LEFT_COMMON_CAROTID
+iter=1832
+proof=98_smx_left_common_carotid.cubalc
+life=1832_smx_mesh_left_common_carotid_life.cubalc
+soft_oob=1
+fail_closed=1
 bonds=6
+feat_sha=78c6633f2aac972a48283cb78eec647f75a8225d8189e5cdf855c1ddbafc64d1

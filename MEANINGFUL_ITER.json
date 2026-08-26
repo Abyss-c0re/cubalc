@@ -41,12 +41,15 @@
   "mesh": "left_common_carotid",
   "cmd": "smx-left-common-carotid",
   "soft_oob_mode": "fail_closed",
-  "feat_sha": "0bbce2c13844e213344a1bd926952726d990b53f",
-  "pin_head": "09908ca07a6a36359502a754f9925e0d41b5302a",
-  "tip": "09908ca07a6a36359502a754f9925e0d41b5302a",
-  "proof_recheck": {
-    "98": "PASS 60/0",
-    "1832": "PASS 60/0",
-    "1620": "PASS 12/0"
-  }
+  "feat_sha": "78c6633f2aac972a48283cb78eec647f75a8225d8189e5cdf855c1ddbafc64d1",
+  "pin_head": "a24001dee0394befc0910610e58fbcb21c4523a3",
+  "tip": "a24001dee0394befc0910610e58fbcb21c4523a3",
+  "HEAD": "a24001dee0394befc0910610e58fbcb21c4523a3",
+  "pinned_head": "a24001dee0394befc0910610e58fbcb21c4523a3",
+  "head": "a24001dee0394befc0910610e58fbcb21c4523a3",
+  "sha": "a24001dee0394befc0910610e58fbcb21c4523a3",
+  "pin_short": "a24001de",
+  "short": "a24001de",
+  "tip_equals_pin": true,
+  "tip_eq_pin": true
 }

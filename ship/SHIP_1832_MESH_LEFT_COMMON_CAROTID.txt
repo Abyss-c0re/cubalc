@@ -1,0 +1,5 @@
+SHIP 1832 MESH_LEFT_COMMON_CAROTID_LIFE
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force left common carotid conduit
+c_slice: src/cubalc_smx_left_common_carotid.c
+proof: programs/proof/1832_smx_mesh_left_common_carotid_life.cubalc
+proof_alt: programs/proof/98_smx_left_common_carotid.cubalc
