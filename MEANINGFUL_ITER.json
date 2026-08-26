@@ -29,10 +29,10 @@
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
-  "pin_head": "PENDING",
-  "tip": "PENDING",
-  "HEAD": "PENDING",
-  "head_short": "PENDING",
-  "feat_head": "PENDING",
+  "pin_head": "f593fb20f75b5f253a406859fcd5f70727123779",
+  "tip": "f593fb20f75b5f253a406859fcd5f70727123779",
+  "HEAD": "f593fb20f75b5f253a406859fcd5f70727123779",
+  "head_short": "f593fb20",
+  "feat_head": "f593fb20f75b5f253a406859fcd5f70727123779",
   "feat_subject": "feat(smx): 1834 MESH_LEFT_SUBCLAVIAN soft-OOB mesh life-force"
 }
