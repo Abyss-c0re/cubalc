@@ -28,10 +28,10 @@
   "soft_oob": "fail-closed",
   "law": "logical_progression; free_energy_must_flow",
   "ts": "2026-08-26T06:50:34Z",
-  "verified_at": "2026-08-26T06:50:34Z",
-  "head": "43b440428919113ec7d5dca77ef54ddec5655b06",
-  "head_short": "43b44042",
-  "HEAD": "43b440428919113ec7d5dca77ef54ddec5655b06",
-  "HEAD_SHORT": "43b44042",
+  "verified_at": "2026-08-26T06:50:42Z",
+  "head": "046b5c698c079614a51df1a5155db55b2923034d",
+  "head_short": "046b5c69",
+  "HEAD": "046b5c698c079614a51df1a5155db55b2923034d",
+  "HEAD_SHORT": "046b5c69",
   "host_finish": true
 }
