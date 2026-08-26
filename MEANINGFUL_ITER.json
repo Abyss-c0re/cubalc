@@ -34,12 +34,12 @@
   "title": "1821 MESH_RIGHT_PULMONARY_ARTERY soft-OOB mesh exchange life-force",
   "summary": "Right pulmonary artery SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
   "feat_sha": "e175584a0cd559515a27d052c9a3208b8cdf1198",
-  "sha": "95e548284c6dd592d8d8feaa04386e27de395c57",
-  "head": "95e548284c6dd592d8d8feaa04386e27de395c57",
-  "pinned_head": "95e548284c6dd592d8d8feaa04386e27de395c57",
-  "commit": "95e548284c6dd592d8d8feaa04386e27de395c57",
-  "pin_head": "95e548284c6dd592d8d8feaa04386e27de395c57",
-  "tip": "95e548284c6dd592d8d8feaa04386e27de395c57",
-  "head_short": "95e54828",
-  "pin_sha": "95e548284c6dd592d8d8feaa04386e27de395c57"
+  "sha": "d47672f57598de2c3df3bf87b98ecd21cd7a2af6",
+  "head": "d47672f57598de2c3df3bf87b98ecd21cd7a2af6",
+  "pinned_head": "d47672f57598de2c3df3bf87b98ecd21cd7a2af6",
+  "commit": "d47672f57598de2c3df3bf87b98ecd21cd7a2af6",
+  "pin_head": "d47672f57598de2c3df3bf87b98ecd21cd7a2af6",
+  "tip": "d47672f57598de2c3df3bf87b98ecd21cd7a2af6",
+  "head_short": "d47672f5",
+  "pin_sha": "d47672f57598de2c3df3bf87b98ecd21cd7a2af6"
 }
