@@ -2,18 +2,10 @@
   "iter": 1835,
   "meaningful_iter": 1835,
   "feature": "SMX_MESH_BASILAR_LIFE",
-  "pin": "4a609a6bc0df59eacbf630ce9881bf086f2fa603",
-  "tip": "4a609a6bc0df59eacbf630ce9881bf086f2fa603",
-  "pin_head": "4a609a6bc0df59eacbf630ce9881bf086f2fa603",
+  "pin": "7aede0d68b1624543e7b1e1278221aeeb66dc3d0",
+  "tip": "7aede0d68b1624543e7b1e1278221aeeb66dc3d0",
+  "pin_head": "7aede0d68b1624543e7b1e1278221aeeb66dc3d0",
   "status": "PASS",
   "soft_oob": 1,
-  "fail_closed": 1,
-  "HEAD": "4a609a6bc0df59eacbf630ce9881bf086f2fa603",
-  "pinned_head": "4a609a6bc0df59eacbf630ce9881bf086f2fa603",
-  "head": "4a609a6bc0df59eacbf630ce9881bf086f2fa603",
-  "sha": "4a609a6bc0df59eacbf630ce9881bf086f2fa603",
-  "pin_short": "4a609a6b",
-  "short": "4a609a6b",
-  "tip_equals_pin": true,
-  "tip_eq_pin": true
+  "fail_closed": 1
 }
