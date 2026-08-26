@@ -1,3 +1,0 @@
-SMX_MESH_RIGHT_VERTEBRAL_LIFE companion of 1835 basilar
-soft-OOB fail-closed
-proofs 99+1835 PASS 60/0
