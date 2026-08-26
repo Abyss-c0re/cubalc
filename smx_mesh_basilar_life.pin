@@ -1,6 +1,7 @@
-MESH_BASILAR
-1835
-soft-OOB fail-closed
-MESH_EXCHANGE C(4,2)
-STABILIZE
-WE_AUTOHEAL
+feature=MESH_BASILAR
+iter=1835
+proof=99_smx_basilar.cubalc
+life=1835_smx_mesh_basilar_life.cubalc
+soft_oob=1
+fail_closed=1
+bonds=6

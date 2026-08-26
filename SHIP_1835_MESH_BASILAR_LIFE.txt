@@ -1,12 +1,15 @@
 SHIP 1835 MESH_BASILAR_LIFE
-feature: soft-OOB fail-closed basilar life-force
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force basilar conduit
 c_slice: src/cubalc_smx_basilar.c
 proof: programs/proof/1835_smx_mesh_basilar_life.cubalc
 proof_alt: programs/proof/99_smx_basilar.cubalc
-companion_c: src/cubalc_smx_right_vertebral.c
-companion_proof: programs/proof/1835_smx_mesh_right_vertebral_life.cubalc
-energy_path: left+right vertebral confluence → basilar trunk → pontine perforators → superior cerebellar takeoff → posterior cerebral bifurcation / circle-of-Willis seal
+energy_path: left vertebral ascent → right vertebral join → basilar trunk → pontine perforators → superior cerebellar / PCA takeoff · hindbrain perfusion seal
 asserts_ok: 60
-flagship_1620: PASS 12/0
-MEANINGFUL_ITER: 1835
-status: PASS
+flagship_1620: PASS (12)
+feature=MESH_BASILAR
+iter=1835
+proof=99_smx_basilar.cubalc
+life=1835_smx_mesh_basilar_life.cubalc
+soft_oob=1
+fail_closed=1
+bonds=6
