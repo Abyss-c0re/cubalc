@@ -1,3 +1,10 @@
+
+## 1.15.1282-usability — MEANINGFUL_ITER 1807 MESH_APPENDIX
+
+- feat(life): MESH_APPENDIX SMX mesh stability life-force soft-OOB fail-closed
+- proofs: 72_smx_appendix + 1807_smx_mesh_appendix_life (60 asserts PASS)
+- flagship 1620 PASS (12)
+- pure-C slice: src/cubalc_smx_appendix.c
 ## 1.15.1244-usability — 1769 SMX mesh capillary life cascade
 
 - SMX CAPILLARY mesh stability after basement: soft-OOB fail-closed, wrap ring + sheath hub, mitosis sticky
