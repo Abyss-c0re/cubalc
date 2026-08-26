@@ -2,12 +2,12 @@
   "meaningful_iter": 1766,
   "version": "1.15.1243-usability",
   "feature": "MESH_ENDOTHELIAL_LIFE_CASCADE",
-  "head": "d67ea01a6f87b28d2828e3dce02c9e947bd3642a",
+  "head": "6228ca5c93ce2155954d8216f4089fdc5525c85b",
   "proof_asserts": 1080,
   "flagship_asserts": 12,
-  "HEAD": "d67ea01a6f87b28d2828e3dce02c9e947bd3642a",
-  "head_short": "d67ea01a",
-  "HEAD_SHORT": "d67ea01a",
+  "HEAD": "6228ca5c93ce2155954d8216f4089fdc5525c85b",
+  "head_short": "6228ca5c",
+  "HEAD_SHORT": "6228ca5c",
   "iter": 1766,
   "MEANINGFUL_ITER": 1766,
   "VERSION": "1.15.1243-usability",
@@ -15,5 +15,6 @@
   "asserts_fail": 0,
   "proof_status": "PASS",
   "flagship_1620": "PASS",
-  "sealed": true
+  "sealed": true,
+  "flagship": "1620 PASS"
 }
