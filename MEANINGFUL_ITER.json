@@ -27,8 +27,10 @@
   "soft_oob": "fail-closed",
   "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+stabilize+mitosis",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T09:35:00Z",
-  "verified_at": "2026-08-26T09:35:00Z",
-  "head": "6bccb2ecbf199b2750b5ae1881f99524bcba3b5d",
-  "head_short": "6bccb2ec"
+  "ts": "2026-08-26T09:36:00Z",
+  "verified_at": "2026-08-26T09:36:00Z",
+  "head": "3aebefe5c9ed006c23072023913edc4bc1cbab0c",
+  "head_short": "3aebefe5",
+  "prior_head": "0988c1f7",
+  "prior_head_short": "0988c1f7"
 }
