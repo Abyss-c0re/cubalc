@@ -29,9 +29,15 @@
   "fail_closed": true,
   "notes": "MESH_RIGHT_PULMONARY_ARTERY soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW main PA trunk\u2192right PA branch\u2192right lung hilum\u2192segmental arteries\u2192right lung capillary return; WE_AUTOHEAL; pure-C cubalc_smx_right_pulmonary_artery.c",
   "note": "MESH_RIGHT_PULMONARY_ARTERY life-force rail sealed",
-  "head": "dfcdfff98645ca1b162f433c34b91e03d799debd\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt",
-  "pin": "dfcdfff98645ca1b162f433c34b91e03d799debd\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt",
-  "tip": "dfcdfff98645ca1b162f433c34b91e03d799debd\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nTIP_AFTER_PIN.txt",
+  "head": "83d0e661fc80d72de396a0a46e3f98318bddb64d",
+  "pin": "83d0e661fc80d72de396a0a46e3f98318bddb64d",
+  "tip": "83d0e661fc80d72de396a0a46e3f98318bddb64d",
   "life_force": 0.35,
-  "stability": 1.0
+  "stability": 1.0,
+  "sha": "83d0e661fc80d72de396a0a46e3f98318bddb64d",
+  "pinned_head": "83d0e661fc80d72de396a0a46e3f98318bddb64d",
+  "commit": "83d0e661fc80d72de396a0a46e3f98318bddb64d",
+  "pin_head": "83d0e661fc80d72de396a0a46e3f98318bddb64d",
+  "pin_sha": "83d0e661fc80d72de396a0a46e3f98318bddb64d",
+  "head_short": "83d0e661"
 }
