@@ -27,11 +27,15 @@
   "soft_oob": "fail-closed",
   "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+tanycyte+pituicyte+stabilize+mitosis",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T07:05:49Z",
-  "verified_at": "2026-08-26T07:05:49Z",
+  "ts": "2026-08-26T07:06:01Z",
+  "verified_at": "2026-08-26T07:06:05Z",
   "name": "smx_mesh_pituicyte_life_cascade",
   "proof": "programs/proof/1763_smx_mesh_pituicyte_life_cascade.cubalc",
   "flagship_1620": "PASS",
   "craft": "pituicyte",
-  "updated": 1787727949
+  "updated": 1787727965,
+  "head": "35b71eff719cd7c4bd9813ac098e77f2f5044efb",
+  "head_short": "35b71eff",
+  "HEAD": "35b71eff719cd7c4bd9813ac098e77f2f5044efb",
+  "HEAD_SHORT": "35b71eff"
 }
