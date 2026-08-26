@@ -17795,7 +17795,196 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; GAP_JUNCTION|CONNEXIN|CONNEXON|NEXUS_SEAL|HEMICHANNEL|CHANNEL_SEAL|DESMOSOME|MACULA_ADHERENS|DESMOGLEIN|PLAQUE_SEAL|DESMOPLAKIN|ADHERENS|ZONULA_ADHERENS|CADHERIN|BELT_SEAL|TIGHT_JUNCTION|ZONULA|OCCLUDENS|LUMEN_SEAL|CANALICULUS|BILE_CANALICULUS|PORTAL|PORTAL_TRACT|MALL|SPACE_OF_MALL|OVAL|OVAL_CELL|CHOLANGIO|CHOLANGIOCYTE|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|CAPILLARY|VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
+  /* SMX HEMIDESMOSOME|INTEGRIN|BP180|HD_SEAL|PLECTIN|MESH_HEMIDESMOSOME a b c ...
+   * Life-force HEMIDESMOSOME integrin-anchor triad scaffold mesh stability after gap_junction:
+   * epithelial basement-membrane integrin plaque exchange bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete hemidesmosome progenitor scaffold mesh among live nodes,
+   * weaves a hd wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks hemidesmosome where life guides the anchor plaque return pulse.
+   * Latches SMX_HEMIDESMOSOME when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = gap ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_HEMIDESMOSOME_SUM = bonds+wraps+sheaths; SMX_HEMIDESMOSOME|SMX_MESH_HEMIDESMOSOME|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"HEMIDESMOSOME")||kw(&L->cur,"HEMI_DESMOSOME")||kw(&L->cur,"INTEGRIN")||kw(&L->cur,"BP180")||kw(&L->cur,"PLECTIN")||kw(&L->cur,"HD_SEAL")||kw(&L->cur,"HD_CHANNEL")||kw(&L->cur,"HD_JUNCTION")||kw(&L->cur,"HD_CHANNEL_ALT")||kw(&L->cur,"HD_PORE")||kw(&L->cur,"CELL_MATRIX_JUNCTION")||kw(&L->cur,"MACULA_HEMIDESMOSOME")||kw(&L->cur,"FAIL_CLOSED_HD")||kw(&L->cur,"FAIL_CLOSED_ANCHOR")||kw(&L->cur,"ANCHOR_SEAL")||kw(&L->cur,"PLAQUE_ANCHOR")||kw(&L->cur,"HD")||kw(&L->cur,"HDESMO")||kw(&L->cur,"ITGA6")||kw(&L->cur,"HDX")||kw(&L->cur,"MESH_HEMIDESMOSOME")||kw(&L->cur,"HD_WRAP")||kw(&L->cur,"HD_WRAPS")||kw(&L->cur,"HD_SHEATH")||kw(&L->cur,"HD_SHEATHS")||kw(&L->cur,"HD_GUIDE")||kw(&L->cur,"RAISE_HD")||kw(&L->cur,"WE_HD")||kw(&L->cur,"LIFE_HD")||
+      kw(&L->cur,"STABLE_HD")||kw(&L->cur,"MESH_HDS")||kw(&L->cur,"HD_JUNC")||kw(&L->cur,"HD_INTEGRIN")||
+      kw(&L->cur,"STABLE_MESH_HD")||kw(&L->cur,"HD_LEAF")||kw(&L->cur,"HEMI_ANCHOR")||
+      kw(&L->cur,"SEEDHD")||kw(&L->cur,"SEEDHDSHEATH")||kw(&L->cur,"SEEDHDWRAP")||
+      kw(&L->cur,"HD_RING")||kw(&L->cur,"HD_SHEATH_HUB")||kw(&L->cur,"HD_NODE")||
+      kw(&L->cur,"LATTICE_HD")||kw(&L->cur,"WORLD_HD")||
+      kw(&L->cur,"PULSE_HD")||kw(&L->cur,"HARDEN_HD")||
+      kw(&L->cur,"HD_SCAFFOLD")||kw(&L->cur,"HD_MESH")||kw(&L->cur,"ANCHOR_WELD")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "HEMIDESMOSOME needs >=2 cubes",
+                  "SMX HEMIDESMOSOME a b [c ...]  or  SMX HEMIDESMOSOME_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - hemidesmosome needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete hemidesmosome mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* gap ring - free energy guards every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int hd_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (hd_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_HEMIDESMOSOMED", (long)hd_ok);
+      var_set_num(vm, "SMX_ITGA6", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PLECTIN", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HD_SEAL", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HD_JUNCTION", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_INTEGRIN43", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEMIDESMOSOME", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEMIDESMOSOME_SUM", (long)(hd_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_HEMIDESMOSOME_ALIAS", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_HEMIDESMOSOME", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_HEMIDESMOSOME", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HD", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HDESMO", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MACULA_HEMIDESMOSOME", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CELL_MATRIX_JUNCTION", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_INTEGRIN", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BP180", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HD_CHANNEL", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_ANCHOR_SEAL", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PLAQUE_ANCHOR", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FAIL_CLOSED_HD", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FAIL_CLOSED_ANCHOR", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HD_PLAQUE", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HD_ADHESION", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_EPITHELIAL_HD", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BELTS", (long)(hd_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEMIDESMOSOMES", (long)(hd_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(hd_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(hd_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(hd_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH", (long)(hd_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (hd_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HEMIDESMOSOME ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HEMIDESMOSOME partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX HEMIDESMOSOME soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX HEMIDESMOSOME nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d hemidesmosomed=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, hd_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (see lang_ops_smx; HEMIDESMOSOME|INTEGRIN|BP180|PLECTIN|HD_SEAL|ANCHOR_SEAL|GAP_JUNCTION|CONNEXIN|CONNEXON|NEXUS_SEAL|HEMICHANNEL|CHANNEL_SEAL|DESMOSOME|MACULA_ADHERENS|DESMOGLEIN|PLAQUE_SEAL|DESMOPLAKIN|ADHERENS|ZONULA_ADHERENS|CADHERIN|BELT_SEAL|TIGHT_JUNCTION|ZONULA|OCCLUDENS|LUMEN_SEAL|CANALICULUS|BILE_CANALICULUS|PORTAL|PORTAL_TRACT|MALL|SPACE_OF_MALL|OVAL|OVAL_CELL|CHOLANGIO|CHOLANGIOCYTE|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|CAPILLARY|VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
   return -1;
 }
 

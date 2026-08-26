@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 1785,
-  "feature": "smx_mesh_gap_junction_life_cascade",
-  "head": "57b825dbe60d89de1f1fc692ba9ec3ccef356fed",
-  "head_short": "57b825db",
-  "version": "1.15.1261-gap-junction",
+  "iter": 1786,
+  "feature": "smx_mesh_hemidesmosome_life_cascade",
+  "head": "9dd143714f6cc38ce0e81ee289577559fdc4781d",
+  "head_short": "9dd14371",
+  "version": "1.15.1262-hemidesmosome",
   "proofs": {
     "smoke_ok": 29,
     "smoke_fail": 0,
-    "cascade_ok": 1637,
+    "cascade_ok": 1674,
     "cascade_fail": 0,
     "flagship_1620": "PASS",
     "flagship_ok": 12,
     "flagship_fail": 0
   },
   "status": "PASS",
-  "slice": "GAP_JUNCTION|CONNEXIN|CONNEXON|NEXUS_SEAL|HEMICHANNEL",
-  "ts": 1787752337
+  "slice": "HEMIDESMOSOME|INTEGRIN|BP180|PLECTIN|HD_SEAL|ANCHOR_SEAL",
+  "ts": 1787752579
 }
