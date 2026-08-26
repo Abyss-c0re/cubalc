@@ -7664,3 +7664,8 @@ See 1.11.6-universal.
 - SMX GLIA mesh stability after dendrite: soft-OOB fail-closed, wrap ring + cushion hub, mitosis sticky
 - proofs: programs/proof/1753_smx_mesh_glia_life_cascade.cubalc (562 asserts PASS)
 - integration: atomic_printer_mesh_glia_life.cubalc PASS
+
+## 1770 — SMX VENULE mesh life cascade
+- feat(smx): VENULE return scaffold after CAPILLARY; soft-OOB fail-closed
+- proof 1770 PASS 1165/0; flagship 1620 PASS 12/0
+- VERSION 1.15.1246-usability
