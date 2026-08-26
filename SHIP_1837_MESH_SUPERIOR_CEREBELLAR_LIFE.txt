@@ -1,0 +1,16 @@
+SHIP 1837 MESH_SUPERIOR_CEREBELLAR_LIFE
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force superior cerebellar conduit
+c_slice: src/cubalc_smx_superior_cerebellar.c
+proof: programs/proof/1837_smx_mesh_superior_cerebellar_life.cubalc
+proof_alt: programs/proof/99_smx_superior_cerebellar.cubalc
+energy_path: basilar trunk apex → superior cerebellar takeoff → ambient cistern arc → tentorial notch → cerebellar hemispheric / vermian perfusion seal · midbrain tegmentum feed
+asserts_ok: 60
+flagship_1620: PASS (12)
+feature=MESH_SUPERIOR_CEREBELLAR
+iter=1837
+proof=99_smx_superior_cerebellar.cubalc
+life=1837_smx_mesh_superior_cerebellar_life.cubalc
+soft_oob=1
+fail_closed=1
+bonds=6
+status: PASS

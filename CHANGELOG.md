@@ -1,3 +1,13 @@
+## 1.15.1316-usability — 1837 MESH_SUPERIOR_CEREBELLAR_LIFE
+- SMX superior cerebellar conduit: soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE life-force
+- Proofs: 99_smx_superior_cerebellar / 1837_smx_mesh_superior_cerebellar_life (60/0) + flagship 1620 (12/0)
+- Energy path: basilar trunk apex → superior cerebellar takeoff → ambient cistern arc → tentorial notch → cerebellar hemispheric / vermian perfusion seal · midbrain tegmentum feed
+- C slice: src/cubalc_smx_superior_cerebellar.c · WE_AUTOHEAL under locked rails
+
+## 1.15.1315-usability — 1837 MESH_SUPERIOR_CEREBELLAR_LIFE
+- SMX soft-OOB fail-closed mesh stability + life-force superior cerebellar conduit (basilar trunk → SCA takeoff → cerebellar hemisphere / midbrain tegmentum → tentorial notch seal).
+- Proofs: 1837+99 PASS 60/0; flagship 1620 PASS 12/0.
+
 ## 1.15.1314-usability — 1835 MESH_BASILAR_LIFE
 - SMX basilar conduit: soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE life-force
 - Proofs: 99_smx_basilar / 1835_smx_mesh_basilar_life (60/0) + flagship 1620 (12/0)
