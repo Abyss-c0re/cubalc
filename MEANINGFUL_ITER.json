@@ -34,12 +34,12 @@
   "title": "1818 MESH_PULMONARY_VALVE soft-OOB mesh exchange life-force",
   "summary": "Pulmonary valve SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
   "feat_sha": "b96fe3596d13d07c0bac84181e54eb5a35a9023d",
-  "sha": "fbf749d31ad123293864e8c495aaaa38f73e6505",
-  "head": "fbf749d31ad123293864e8c495aaaa38f73e6505",
-  "pinned_head": "fbf749d31ad123293864e8c495aaaa38f73e6505",
-  "commit": "fbf749d31ad123293864e8c495aaaa38f73e6505",
-  "pin_head": "fbf749d31ad123293864e8c495aaaa38f73e6505",
-  "tip": "fbf749d31ad123293864e8c495aaaa38f73e6505",
-  "head_short": "fbf749d3",
-  "pin_sha": "fbf749d31ad123293864e8c495aaaa38f73e6505"
+  "sha": "181c5031c22716d2614ab80cb1199c28dca7d23f",
+  "head": "181c5031c22716d2614ab80cb1199c28dca7d23f",
+  "pinned_head": "181c5031c22716d2614ab80cb1199c28dca7d23f",
+  "commit": "181c5031c22716d2614ab80cb1199c28dca7d23f",
+  "pin_head": "181c5031c22716d2614ab80cb1199c28dca7d23f",
+  "tip": "181c5031c22716d2614ab80cb1199c28dca7d23f",
+  "head_short": "181c5031",
+  "pin_sha": "181c5031c22716d2614ab80cb1199c28dca7d23f"
 }
