@@ -31,11 +31,13 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "feat_sha": "dbaf8ec08fa3100016843906f3fcee650b87e494",
-  "pin_head": "ebee1c6024eeaf021860ff252a1ee8dfd7e02a4f",
-  "pin_short": "ebee1c60",
-  "HEAD": "ebee1c6024eeaf021860ff252a1ee8dfd7e02a4f",
-  "tip": "ebee1c6024eeaf021860ff252a1ee8dfd7e02a4f",
-  "pinned_head": "ebee1c6024eeaf021860ff252a1ee8dfd7e02a4f",
-  "head": "ebee1c6024eeaf021860ff252a1ee8dfd7e02a4f",
-  "sha": "ebee1c6024eeaf021860ff252a1ee8dfd7e02a4f"
+  "pin_head": "7689df45b3076ebda5030b0127275117ccfa8d0a",
+  "pin_short": "7689df45",
+  "HEAD": "7689df45b3076ebda5030b0127275117ccfa8d0a",
+  "tip": "7689df45b3076ebda5030b0127275117ccfa8d0a",
+  "pinned_head": "7689df45b3076ebda5030b0127275117ccfa8d0a",
+  "head": "7689df45b3076ebda5030b0127275117ccfa8d0a",
+  "sha": "7689df45b3076ebda5030b0127275117ccfa8d0a",
+  "tip_eq_pin": true,
+  "sealed": true
 }
