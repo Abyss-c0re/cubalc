@@ -18,7 +18,7 @@
   "asserts_fail": 0,
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
-  "unity": 0.880,
+  "unity": 0.88,
   "nodes": 7,
   "risk": "low",
   "next": "we_autoheal",
@@ -29,6 +29,6 @@
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
   "ts": "2026-08-26T06:48:07Z",
   "verified_at": "2026-08-26T06:48:07Z",
-  "head": "PENDING",
-  "head_short": "PENDING"
+  "head": "4934f97c5dd6ef731b9362703e4c8c7a03828c5f",
+  "head_short": "4934f97c"
 }
