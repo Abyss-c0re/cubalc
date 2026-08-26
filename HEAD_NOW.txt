@@ -1,1 +1,3 @@
-408610bd
+4f600c226998ebee66dc72094cd4ccaaceae70bd
+HEAD_PIN_SHA.txt
+PINNED_HEAD.txt

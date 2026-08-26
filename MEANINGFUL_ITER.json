@@ -1,17 +1,17 @@
 {
   "meaningful_iter": 1766,
   "version": "1.15.1243-usability",
-  "head": "408610bdd689c1d3ce4654c85f04c4df585d3baf",
-  "head_short": "408610bd",
+  "head": "4f600c226998ebee66dc72094cd4ccaaceae70bd",
+  "head_short": "4f600c22",
   "feature": "MESH_ENDOTHELIAL_LIFE_CASCADE",
   "proof": "programs/proof/1766_smx_mesh_endothelial_life_cascade.cubalc",
   "asserts_ok": 1080,
   "asserts_fail": 0,
   "flagship": "1620 PASS",
   "ship": "SHIP_1766_MESH_ENDOTHELIAL_LIFE_CASCADE.txt",
-  "ts": 1787732118,
-  "HEAD": "408610bdd689c1d3ce4654c85f04c4df585d3baf",
-  "HEAD_SHORT": "408610bd",
+  "ts": 1787732130,
+  "HEAD": "4f600c226998ebee66dc72094cd4ccaaceae70bd",
+  "HEAD_SHORT": "4f600c22",
   "flagship_1620": "PASS",
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
@@ -27,7 +27,7 @@
   "proofs": [
     "programs/proof/1766_smx_mesh_endothelial_life_cascade.cubalc"
   ],
-  "unity": 0.882,
+  "unity": 1.0,
   "nodes": 7,
   "risk": "low",
   "next": "we_autoheal",
@@ -37,5 +37,7 @@
   "craft": "endothelial",
   "name": "smx_mesh_endothelial_life_cascade",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+tanycyte+pituicyte+folliculo+pericyte+endothelial+stabilize+mitosis"
+  "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+satellite+radial+bergmann+muller+tanycyte+pituicyte+folliculo+pericyte+endothelial+stabilize+mitosis",
+  "proof_asserts": 1080,
+  "flagship_asserts": 12
 }
