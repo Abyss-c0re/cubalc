@@ -32,5 +32,14 @@
   "item": "1819 smx mesh main pulmonary artery life",
   "item_id": "mi_1819_smx_mesh_main_pulmonary_artery_life",
   "title": "1819 MESH_MAIN_PULMONARY_ARTERY soft-OOB mesh exchange life-force",
-  "summary": "Main pulmonary artery SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails."
+  "summary": "Main pulmonary artery SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
+  "feat_sha": "71d190f8692ff1ed04a7090edcb0a43160d487c5",
+  "sha": "71d190f8692ff1ed04a7090edcb0a43160d487c5",
+  "head": "71d190f8692ff1ed04a7090edcb0a43160d487c5",
+  "pinned_head": "71d190f8692ff1ed04a7090edcb0a43160d487c5",
+  "commit": "71d190f8692ff1ed04a7090edcb0a43160d487c5",
+  "pin_head": "71d190f8692ff1ed04a7090edcb0a43160d487c5",
+  "tip": "71d190f8692ff1ed04a7090edcb0a43160d487c5",
+  "pin_sha": "71d190f8692ff1ed04a7090edcb0a43160d487c5",
+  "head_short": "71d190f8"
 }
