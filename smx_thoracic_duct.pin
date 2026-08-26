@@ -1,0 +1,8 @@
+FEATURE=MESH_THORACIC_DUCT
+SHIP=1812_smx_mesh_thoracic_duct_life
+PROOF=programs/proof/76_smx_thoracic_duct.cubalc
+PROOF_ALT=programs/proof/1812_smx_mesh_thoracic_duct_life.cubalc
+C_SLICE=src/cubalc_smx_thoracic_duct.c
+SOFT_OOB=1
+FAIL_CLOSED=1
+BONDS=6
