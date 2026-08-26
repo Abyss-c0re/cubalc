@@ -1,7 +1,3 @@
-SHIP 1754 MESH ASTROCYTE LIFE CASCADE
-feature=MESH_ASTROCYTE_LIFE_CASCADE
-proofs_ok=616 asserts_fail=0
-flagship_1620=PASS
-science_integration=atomic_printer_mesh_astrocyte_life PASS 58/0
-soft_oob=fail-closed
-next=we_autoheal
+SHIP 1754 MESH ASTROCYTE + GLIA LIFE CASCADE
+proofs: 1753 glia 562/0 PASS, 1754 astrocyte 616/0 PASS, flagship 1620 12/0 PASS
+soft-OOB fail-closed; MEANINGFUL_ITER=1754; free energy flows
