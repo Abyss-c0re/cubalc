@@ -14076,7 +14076,7 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
    * SMX_ENDOTHELIAL_SUM = bonds+wraps+sheaths; SMX_ENDOTHELIAL|SMX_MESH_ENDOTHELIAL|SMX_STABLE_MESH sticky.
    * Mitosis path stays open under free energy. No dual ladders.
    * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
-  if (kw(&L->cur,"ENDOTHELIAL")||kw(&L->cur,"CAPILLARY_EN")||kw(&L->cur,"EN_CELL")||kw(&L->cur,"ENSTELLATE")||kw(&L->cur,"HARDEN_ENDOTHELIALCELL")||kw(&L->cur,"STABLE_ENDOTHELIALCELL")||kw(&L->cur,"LIFE_ENDOTHELIALCELL")||kw(&L->cur,"WE_ENDOTHELIALCELL")||kw(&L->cur,"RAISE_ENDOTHELIALCELL")||kw(&L->cur,"MESH_ENDOTHELIALCELL")||kw(&L->cur,"ENDOTHELIALGLIA")||kw(&L->cur,"MESH_ENDOTHELIAL")||kw(&L->cur,"EN_WRAP")||kw(&L->cur,"EN_WRAPS")||kw(&L->cur,"EN_WRAP")||kw(&L->cur,"EN_WRAPS")||kw(&L->cur,"EN_SHEATH")||kw(&L->cur,"EN_SHEATHS")||kw(&L->cur,"EN_SHEATH")||kw(&L->cur,"EN_SHEATHS")||kw(&L->cur,"EN_GUIDE")||kw(&L->cur,"VESSEL_GUIDE")||kw(&L->cur,"ENDOTHELIALCELL")||kw(&L->cur,"RAISE_ENDOTHELIAL")||kw(&L->cur,"WE_ENDOTHELIAL")||kw(&L->cur,"LIFE_ENDOTHELIAL")||
+  if (kw(&L->cur,"ENDOTHELIAL")||kw(&L->cur,"BASAL")||kw(&L->cur,"BASAL_LAMINA")||kw(&L->cur,"BASEMENT")||kw(&L->cur,"LAMINA")||kw(&L->cur,"BASEMENT_MEMBRANE")||kw(&L->cur,"RAISE_BASAL")||kw(&L->cur,"WE_BASAL")||kw(&L->cur,"LIFE_BASAL")||kw(&L->cur,"MESH_BASAL")||kw(&L->cur,"HARDEN_BASAL")||kw(&L->cur,"STABLE_BASAL")||kw(&L->cur,"BA_WRAP")||kw(&L->cur,"BA_SHEATH")||kw(&L->cur,"BA_GUIDE")||kw(&L->cur,"LAMINA_GUIDE")||kw(&L->cur,"LAMINA_GUARD")||kw(&L->cur,"CAPILLARY_EN")||kw(&L->cur,"EN_CELL")||kw(&L->cur,"ENSTELLATE")||kw(&L->cur,"HARDEN_ENDOTHELIALCELL")||kw(&L->cur,"STABLE_ENDOTHELIALCELL")||kw(&L->cur,"LIFE_ENDOTHELIALCELL")||kw(&L->cur,"WE_ENDOTHELIALCELL")||kw(&L->cur,"RAISE_ENDOTHELIALCELL")||kw(&L->cur,"MESH_ENDOTHELIALCELL")||kw(&L->cur,"ENDOTHELIALGLIA")||kw(&L->cur,"MESH_ENDOTHELIAL")||kw(&L->cur,"EN_WRAP")||kw(&L->cur,"EN_WRAPS")||kw(&L->cur,"EN_WRAP")||kw(&L->cur,"EN_WRAPS")||kw(&L->cur,"EN_SHEATH")||kw(&L->cur,"EN_SHEATHS")||kw(&L->cur,"EN_SHEATH")||kw(&L->cur,"EN_SHEATHS")||kw(&L->cur,"EN_GUIDE")||kw(&L->cur,"VESSEL_GUIDE")||kw(&L->cur,"ENDOTHELIALCELL")||kw(&L->cur,"RAISE_ENDOTHELIAL")||kw(&L->cur,"WE_ENDOTHELIAL")||kw(&L->cur,"LIFE_ENDOTHELIAL")||
       kw(&L->cur,"STABLE_ENDOTHELIAL")||kw(&L->cur,"MESH_ENDOTHELIALS")||kw(&L->cur,"EN_WRAP_RING")||kw(&L->cur,"EN_SHEATH_RING")||
       kw(&L->cur,"STABLE_MESH_ENDOTHELIAL")||kw(&L->cur,"ENDOTHELIAL_LEAF")||
       kw(&L->cur,"SEEDENDOTHELIAL")||kw(&L->cur,"SEEDENSHEATH")||kw(&L->cur,"SEEDENWRAP")||
@@ -14198,6 +14198,20 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       var_set_num(vm, "SMX_HARDEN_ENDOTHELIAL", (long)(endothelial_ok ? 1 : 0));
       var_set_num(vm, "SMX_ENDOTHELIAL_SUM", (long)(endothelial_ok ? bonds + wraps + sheaths : 0));
       var_set_num(vm, "SMX_EN_CELL", (long)(endothelial_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BASALED", (long)endothelial_ok);
+      var_set_num(vm, "SMX_BASAL_LATCH", (long)endothelial_ok);
+      var_set_num(vm, "SMX_BASAL", (long)(endothelial_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BASAL_ALIAS", (long)(endothelial_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_BASAL", (long)(endothelial_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_BASAL", (long)(endothelial_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BASAL_SUM", (long)(endothelial_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_BA_WRAPS", (long)(endothelial_ok ? wraps : 0));
+      var_set_num(vm, "SMX_BA_SHEATHS", (long)(endothelial_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_BA_WRAP", (long)(endothelial_ok ? wraps : 0));
+      var_set_num(vm, "SMX_BA_SHEATH", (long)(endothelial_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_LAMINA", (long)(endothelial_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BASEMENT", (long)(endothelial_ok ? 1 : 0));
+
       var_set_num(vm, "SMX_ENDOTHELIALED", (long)endothelial_ok);
       var_set_num(vm, "SMX_ENDOTHELIAL_LATCH", (long)endothelial_ok);
       var_set_num(vm, "SMX_ENDOTHELIAL", (long)(endothelial_ok ? 1 : 0));
@@ -14277,6 +14291,6 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
 
   }
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
+  fail(vm, "SMX: unknown op (see lang_ops_smx; BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
   return -1;
 }

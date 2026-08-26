@@ -1,3 +1,9 @@
+## 1767 — SMX BASAL mesh life cascade
+
+- SMX BASAL|BASAL_LAMINA soft-OOB fail-closed mesh stability after endothelial
+- proof 1767 asserts_ok:1115 asserts_fail:0; flagship 1620 PASS 12/0
+- MEANINGFUL_ITER=1767 VERSION=1.15.1244-usability
+
 ## 1.15.1242-usability — 1765 SMX_MESH_PERICYTE
 
 - Life-force SMX PERICYTE|MESH_PERICYTE|PC_WRAP|PC_SHEATH|BBB_GUARD: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed after folliculo.
