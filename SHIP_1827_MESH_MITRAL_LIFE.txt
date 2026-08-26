@@ -1,0 +1,7 @@
+SHIP 1827 MESH_MITRAL_LIFE
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force mitral valve orifice
+c_slice: src/cubalc_smx_mitral.c
+proof: programs/proof/1827_smx_mesh_mitral_life.cubalc
+proof_alt: programs/proof/93_smx_mitral.cubalc
+asserts_ok: 60 asserts_fail: 0 flagship_1620: PASS
+energy_path: left atrium chamber → mitral annulus → mitral valve orifice → mitral leaflet coaptation → left ventricle inflow
