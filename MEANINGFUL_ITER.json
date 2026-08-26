@@ -1,1 +1,15 @@
-{"iter":1771,"version":"1.15.1248-usability","feature":"MESH_SINUSOID","latch":"sinusoid_latch","status":"PASS","unity":1.0,"head":"0b94f1d9","full_head":"0b94f1d98a77e6b286160aa8cddf59f167e1bf84","next":"we_autoheal"}
+{
+  "schema": "cubalc.meaningful_iter.v1",
+  "iter": 1771,
+  "meaningful_iter": 1771,
+  "version": "1.15.1248-usability",
+  "feature": "MESH_SINUSOID",
+  "head": "16efa6c77a21d12c5cc35d90ada43644aa94f02e",
+  "short": "16efa6c7",
+  "status": "PASS",
+  "proof": "1771_smx_mesh_sinusoid_life_cascade",
+  "flagship": "1620_atomic_printer_life_force",
+  "asserts_ok": 1234,
+  "flagship_asserts_ok": 12,
+  "unity": 1.0
+}
