@@ -1,2 +1,2 @@
 SMX VENULE soft-OOB fail-closed mesh life cascade after arteriole; proof 1769 asserts_ok:1154 asserts_fail:0; flagship 1620 PASS 12/0.
-HEAD=bfc7bf66cb1e2bd178eb617b5411af9f6b16d28a MEANINGFUL_ITER=1769 VERSION=1.15.1246-usability
+HEAD_BASE=756047753a9e9942ca37f8074a9cb1a83abba9d8 MEANINGFUL_ITER=1769 VERSION=1.15.1246-usability HEAD=1ff2b481e06508d7e3a87f73525ceddb04579b24
