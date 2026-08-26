@@ -33,11 +33,11 @@
   "summary": "Right atrium SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
   "soft_oob": true,
   "fail_closed": true,
-  "sha": "6397c886ae4b8b4e0afc2d014c2dff50ec4c2b31",
-  "head": "6397c886ae4b8b4e0afc2d014c2dff50ec4c2b31",
-  "pinned_head": "6397c886ae4b8b4e0afc2d014c2dff50ec4c2b31",
-  "commit": "6397c886ae4b8b4e0afc2d014c2dff50ec4c2b31",
-  "pin_head": "6397c886ae4b8b4e0afc2d014c2dff50ec4c2b31",
-  "tip": "6397c886ae4b8b4e0afc2d014c2dff50ec4c2b31",
-  "head_short": "6397c886"
+  "sha": "d8bd7db7bab28075d8364693962d909ca6633e5c",
+  "head": "d8bd7db7bab28075d8364693962d909ca6633e5c",
+  "pinned_head": "d8bd7db7bab28075d8364693962d909ca6633e5c",
+  "commit": "d8bd7db7bab28075d8364693962d909ca6633e5c",
+  "pin_head": "d8bd7db7bab28075d8364693962d909ca6633e5c",
+  "tip": "d8bd7db7bab28075d8364693962d909ca6633e5c",
+  "head_short": "d8bd7db7"
 }
