@@ -14,7 +14,7 @@
     "programs/proof/1816_smx_mesh_tricuspid_life.cubalc"
   ],
   "proof_status": "PASS",
-  "asserts_ok": 60,
+  "asserts_ok": 61,
   "asserts_fail": 0,
   "flagship_1620": "PASS",
   "flagship_asserts_ok": 12,
