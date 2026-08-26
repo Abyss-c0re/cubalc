@@ -1,0 +1,6 @@
+SMX DUCTULE / BILE_DUCTULE / CHOLANGIOLE life-force mesh shipped at MEANINGFUL_ITER 1783.
+soft-OOB fail-closed; mesh+wrap ring+sheath hub; no IF*P duals.
+proof force: 146 ok / 0 fail
+proof cascade: 38 ok / 0 fail
+flagship 1620 atomic_printer_life_force: PASS
+bin: out/ductule1783/cubalc
