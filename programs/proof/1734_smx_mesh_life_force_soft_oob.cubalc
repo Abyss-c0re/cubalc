@@ -1,0 +1,148 @@
+// 1734_smx_mesh_life_force_soft_oob.cubalc
+// SMX life-force usability: soft-OOB fail-closed → NEBULA full-mesh + nursery ring
+// + LIFE_FORCE hub → WE_AUTOHEAL roots C(4,2) bonds/beacons → live mesh_exchange
+// → SEAL/OPEN → RAISE. Storm wounds never ghost-place.
+// Cube is SoT · matrix is key · free energy flows.
+
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+BUDGET 48
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=smx_mesh_life_force_soft_oob | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 2
+FLOW 2
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// Soft-OOB storms — fail-closed, no ghost place
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+SMX EXCHANGE scrap void_cell
+ASSERT SMX_OK == 0 "storm-C soft-OOB"
+ASSERT SMX_OOB >= 3 "oob C depth"
+ASSERT CUBES == base_cubes "no ghost from storm-C"
+
+// NEBULA clears thrash and weaves dust mesh + nursery ring + nebula hub
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "nebula live"
+ASSERT SMX_NEBULAED == 1 "nebulaed latch"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT SMX_NURSERY == 1 "nursery sticky"
+ASSERT SMX_OOB == 0 "oob cleared by nebula"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 complete-mesh bonds"
+ASSERT SMX_DUSTS == 6 "six dust bonds"
+ASSERT SMX_NURSERIES == 4 "four nursery ring bonds"
+ASSERT SMX_CORES == 4 "four core gather pulses"
+ASSERT SMX_NEBULA == 14 "bonds+nurseries+cores"
+ASSERT SMX_LIFE == 14 "life sum bonds+nurseries+cores"
+ASSERT SMX_MESH == 4 "four mesh under nebula"
+ASSERT SMX_LIVE == 4 "four live"
+ASSERT SMX_BREATH == 4 "four breath"
+ASSERT SMX_PULSE == 14 "pulse bonds+nurseries+cores"
+ASSERT SMX_TONE == 4 "four tones"
+ASSERT CUBES == base_cubes "nebula invents nothing"
+
+// WE_AUTOHEAL roots complete mesh after nebula
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "we_autoheal live"
+ASSERT SMX_AUTOHEALED == 1 "autohealed latch"
+ASSERT SMX_OOB == 0 "oob still clear"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 bonds"
+ASSERT SMX_MESH == 4 "four mesh"
+ASSERT SMX_BEACONS == 4 "four beacons"
+ASSERT CUBES == base_cubes "we_autoheal invents nothing"
+
+// Live mesh_exchange nursery after nebula+heal
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+SMX EXCHANGE hive scrap
+SMX EXCHANGE scrap bed
+ASSERT SMX_OK == 1 "mesh_exchange live after nebula+heal"
+ASSERT SMX_TALKS >= 8 "four bidirectional exchanges"
+ASSERT CUBES == base_cubes "identity stable on mesh_exchange"
+
+// SEAL/OPEN anchor under nebulad mesh
+SMX SEAL bed hive "state/smx_mesh_life_force/anchor_bh.cblc"
+ASSERT SMX_OK == 1 "seal anchor"
+ASSERT SMX_N > 64 "anchor frame"
+SMX OPEN scrap "state/smx_mesh_life_force/anchor_bh.cblc"
+ASSERT SMX_OK == 1 "open anchor onto scrap"
+ASSERT CUBES == base_cubes "anchor invents nothing"
+
+// Second storm fail-closed after anchor
+SMX EXCHANGE hive offworld_storm
+ASSERT SMX_OK == 0 "post-anchor soft-OOB"
+ASSERT SMX_OOB >= 1 "storm counted"
+ASSERT CUBES == base_cubes "storm invents nothing"
+
+SMX RAISE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "raise after storm"
+ASSERT SMX_OOB == 0 "storm cleared"
+ASSERT SMX_AUTOHEALED == 1 "autohealed after storm"
+ASSERT SMX_BONDS == 6 "bonds after storm"
+ASSERT SMX_MESH == 4 "mesh after raise"
+ASSERT CUBES == base_cubes "raise invents nothing"
+
+// Re-life-force after raise — sticky life-force substrate
+SMX MESH_LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "re-nebula live"
+ASSERT SMX_NEBULAED == 1 "nebulaed sticky or re-latched"
+ASSERT SMX_LIFE_FORCE == 1 "life_force sticky or re-latched"
+ASSERT SMX_NURSERY == 1 "nursery sticky or re-latched"
+ASSERT SMX_OOB == 0 "oob clear after re-nebula"
+ASSERT SMX_BONDS == 6 "bonds after re-nebula"
+ASSERT SMX_NURSERIES == 4 "nurseries after re-nebula"
+ASSERT SMX_CORES == 4 "cores after re-nebula"
+ASSERT CUBES == base_cubes "re-nebula invents nothing"
+
+// Mesh conduct stability board — stabilize pulse after nebula
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize live"
+ASSERT SMX_STABLE == 1 "stable latch"
+ASSERT SMX_OOB == 0 "oob clear on board"
+ASSERT SMX_LIVE == 4 "four live on board"
+ASSERT SMX_PULSE >= 4 "conduct pulses"
+ASSERT CUBES == base_cubes "stabilize invents nothing"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "energy after mesh nebula"
+ASSERT UNITY >= 40 "mesh unity after nebula"
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT SMX_OOB == 0 "guard holds"
+ASSERT SMX_NEBULAED == 1 "nebulaed sticky or re-latched"
+ASSERT OK == 1
+
+PRINT "smx_mesh_life_force_soft_oob" SMX_OK SMX_NEBULAED SMX_LIFE_FORCE SMX_NURSERY SMX_AUTOHEALED SMX_BONDS SMX_MESH SMX_NURSERIES SMX_CORES SMX_NEBULA SMX_STABLE SMX_TALKS SMX_OOB CUBES UNITY ENERGY DECIDE
+PASS

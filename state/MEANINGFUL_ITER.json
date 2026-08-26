@@ -1,18 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1734,
+  "iter": 1735,
   "MEANINGFUL_ITER": 1734,
   "meaningful_iter": 1734,
-  "version": "1.15.1205-usability",
-  "item": "MESH_LIFE_FORCE_NEBULA soft-OOB fail-closed life-force",
-  "item_id": "mi_mesh_life_force_nebula_1734",
-  "title": "MESH_LIFE_FORCE latch on NEBULA dust+nursery+core",
-  "summary": "Ship SMX LIFE_FORCE alias + SMX_LIFE_FORCE/SMX_LIFE latch on NEBULA mesh: soft-OOB fail-closed, dust mesh C(4,2), nursery ring, core hub, unity 1.0. Proofs PASS asserts_fail 0.",
+  "version": "1.15.1206-usability",
+  "item": "1734 smx mesh life force soft oob",
+  "item_id": "mi_1734_smx_mesh_life_force_soft_oob",
+  "title": "1734 smx mesh life force soft oob",
+  "summary": "Host-finished MI ship after nanobot partial (1734_smx_mesh_life_force_soft_oob).",
   "feature": "MESH_LIFE_FORCE_NEBULA",
   "proofs": [
-    "1734_smx_mesh_life_force_nebula_soft_oob",
-    "1733_smx_mesh_nebula_soft_oob",
-    "1620_atomic_printer_life_force"
+    "programs/proof/1734_smx_mesh_life_force_soft_oob.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 0,
@@ -26,12 +24,13 @@
   "soft_oob": "fail-closed",
   "mesh_exchange": "life_force+dust+nursery+core+stabilize",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T00:19:46Z",
+  "ts": "2026-08-26T00:20:14Z",
   "verified_at": "2026-08-26T00:19:46Z",
   "feat_head": "47bff345fedf59c75725cdc355a259aebe011287",
   "pin_head": "47bff345fedf59c75725cdc355a259aebe011287",
   "tip": "47bff345fedf59c75725cdc355a259aebe011287",
   "HEAD": "47bff345fedf59c75725cdc355a259aebe011287",
   "short": "47bff345",
-  "commit": "47bff345"
+  "commit": "PENDING",
+  "host_finish": true
 }
