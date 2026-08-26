@@ -1,8 +1,8 @@
 {
   "iter": 1777,
   "feature": "MESH_OVAL",
-  "head": "a508df5819b32fe85c611c82a90a199f8d891657",
-  "short": "a508df58",
+  "head": "4715e50575d1d5baeb3f7ed81130ef2a18bf10c1",
+  "short": "4715e505",
   "status": "PASS",
   "soft_oob": true,
   "fail_closed": true,
@@ -12,7 +12,7 @@
   "HEAD": "a508df5819b32fe85c611c82a90a199f8d891657",
   "HEAD_SHORT": "a508df58",
   "FEATURE": "MESH_OVAL",
-  "head_short": "a508df58",
+  "head_short": "4715e505",
   "unity": 1.0,
   "next": "we_autoheal"
 }
