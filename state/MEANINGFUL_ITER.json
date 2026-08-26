@@ -1,1 +1,1 @@
-{"iter":1769,"feature":"smx_mesh_venule_life_cascade","head":"12e855b5ff3470f25dd3fb7767bade102de7383e","short":"12e855b5","version":"1.15.1246-usability","proof":"1769 asserts_ok:1154 asserts_fail:0","flagship":"1620 PASS 12/0"}
+{"iter":1771,"version":"1.15.1248-usability","feature":"MESH_SINUSOID","latch":"sinusoid_latch","status":"PASS","unity":1.0,"head":"b00b62e9","next":"we_autoheal"}
