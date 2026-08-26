@@ -5,3 +5,5 @@ life=1834_smx_mesh_left_vertebral_life.cubalc
 soft_oob=1
 fail_closed=1
 bonds=6
+feat_sha=4e290e7fcd80f50a66222d7b1cf3f662318dffbe
+pin_head=efd983f52e29d269ce557ac280411a7fb5910a9c
