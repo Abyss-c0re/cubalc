@@ -1,0 +1,3 @@
+chore(ship): pin ARTERY 1772 HEAD 462b61e3 PASS 1224/0 + flagship 12/0
+MEANINGFUL_ITER=1772 VERSION=1.15.1250-usability
+proof=programs/science/proof/1772_smx_mesh_artery_life_cascade.cubalc
