@@ -6072,5 +6072,52 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+  /* WRAPMODN|POSMODN|WMODN|NUMWRAP|RINGMODN x m — positive remainder x mod m in [0,m).
+   * C % keeps dividend sign; this always lands in [0,m) for ring/page/circular index.
+   * m<=0 soft LAST_N=0 + sticky LAST_ERR. Twin of DIVCEILN for stride remainder.
+   * Usability: WRAPMODN offset stride without shell $(( (x%m+m)%m )). */
+  if (kw(&L->cur,"WRAPMODN") || kw(&L->cur,"POSMODN") || kw(&L->cur,"WMODN") ||
+      kw(&L->cur,"NUMWRAP") || kw(&L->cur,"WRAP_MODN") || kw(&L->cur,"POSITIVE_MODN") ||
+      kw(&L->cur,"MODPOSN") || kw(&L->cur,"RINGMODN") || kw(&L->cur,"CIRCMODN")){
+    long x = 0, m = 0, out = 0;
+    int bad = 0;
+    char nbuf[32];
+    lex_next(L);
+    x = parse_expr(vm, L);
+    if (kw(&L->cur,"BY") || kw(&L->cur,"MOD") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"INTO") || kw(&L->cur,"PER"))
+      lex_next(L);
+    m = parse_expr(vm, L);
+    if (m <= 0) {
+      out = 0;
+      bad = 1;
+      var_set_str(vm, "LAST_ERR", "WRAPMODN: modulus must be > 0");
+      var_set_str(vm, "ERR", "WRAPMODN: modulus must be > 0");
+    } else {
+      out = x % m;
+      if (out < 0) out += m;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "WRAPMODN", out);
+    var_set_num(vm, "POSMODN", out);
+    var_set_num(vm, "WMODN", out);
+    var_set_num(vm, "NUMWRAP", out);
+    var_set_num(vm, "RINGMODN", out);
+    var_set_num(vm, "WRAPMODN_X", x);
+    var_set_num(vm, "WRAPMODN_M", m);
+    var_set_num(vm, "WRAPMODN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "POSMODN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# wrapmodn %ld mod %ld -> %ld bad=%d\n", x, m, out, bad);
+    bump(vm); return 1;
+  }
+
   return 0;
 }
