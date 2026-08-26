@@ -1,0 +1,3 @@
+MEANINGFUL_ITER=1774
+FEATURE=smx_kupffer_mesh_life_cascade
+PROOF=1774_smx_mesh_kupffer_life_cascade.cubalc
