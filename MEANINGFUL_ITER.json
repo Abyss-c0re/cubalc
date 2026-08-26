@@ -2,8 +2,8 @@
   "schema": "cubalc.meaningful_iter.v1",
   "iter": 1785,
   "feature": "smx_mesh_gap_junction_life_cascade",
-  "head": "1a71066655f51bbfb46ddf41ef81bd77dfc6e78e",
-  "head_short": "1a710666",
+  "head": "11f7422ecac9d102814b2fe1c4fba19c1c9f313e",
+  "head_short": "11f7422e",
   "version": "1.15.1261-gap-junction",
   "proofs": {
     "smoke_ok": 29,
@@ -16,9 +16,5 @@
   },
   "status": "PASS",
   "slice": "GAP_JUNCTION|CONNEXIN|CONNEXON|NEXUS_SEAL|HEMICHANNEL",
-  "ts": 1787752280,
-  "short": "1a710666",
-  "MEANINGFUL_ITER": 1785,
-  "meaningful_iter": 1785,
-  "flagship_1620": "PASS"
+  "ts": 1787752293
 }
