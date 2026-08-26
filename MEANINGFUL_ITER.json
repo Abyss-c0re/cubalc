@@ -14,7 +14,7 @@
     "programs/proof/1816_smx_mesh_tricuspid_life.cubalc"
   ],
   "proof_status": "PASS",
-  "asserts_ok": 60,
+  "asserts_ok": 61,
   "asserts_fail": 0,
   "flagship_1620": "PASS",
   "flagship_asserts_ok": 12,
@@ -34,5 +34,12 @@
   "title": "1816 MESH_TRICUSPID soft-OOB mesh exchange life-force",
   "summary": "Tricuspid SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal under locked rails.",
   "feat_sha": "17fb46139461b1ebfefd9a703a0f5ff846c79846",
-  "pin_sha": "f60fca4e7dc2d7d5726a36288898347f69d2895d"
+  "pin_sha": "f60fca4e7dc2d7d5726a36288898347f69d2895d",
+  "sha": "ed226eb9bca2e6c44335165d09e2997afb65659f",
+  "head": "ed226eb9bca2e6c44335165d09e2997afb65659f",
+  "pinned_head": "ed226eb9bca2e6c44335165d09e2997afb65659f",
+  "commit": "ed226eb9bca2e6c44335165d09e2997afb65659f",
+  "pin_head": "ed226eb9bca2e6c44335165d09e2997afb65659f",
+  "tip": "ed226eb9bca2e6c44335165d09e2997afb65659f",
+  "head_short": "ed226eb9"
 }
