@@ -24,9 +24,12 @@
   "sealed": true,
   "soft_oob": "fail-closed",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T06:09:18Z",
-  "verified_at": "2026-08-26T06:09:18Z",
+  "ts": "2026-08-26T06:10:16Z",
+  "verified_at": "2026-08-26T06:10:16Z",
   "host_finish": true,
   "head_note": "verified_pass_1010_maprangen",
-  "note": "Usability: map pct/flag ranges without shell arithmetic. Soft empty-range LAST_ERR sticky."
+  "note": "Usability: map pct/flag ranges without shell arithmetic. Soft empty-range LAST_ERR sticky.",
+  "head": "82ca01e47964dee37e36f9467b1b5b831bcfbf07",
+  "head_short": "82ca01e4",
+  "prior_head": "074e06ce6c81b16b0ada60b798e9d14e3ed6962f"
 }
