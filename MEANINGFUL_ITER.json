@@ -8,11 +8,11 @@
   "asserts_fail": 0,
   "flagship_1620": "PASS 12/0",
   "version": "1.15.1250-usability",
-  "head": "86383b2bd02510d2bcac7f8df4c5089d914c699b",
+  "head": "8891e4840e74c9082ec4712065237d04b3da710f",
   "short": "3f6e00f9",
   "status": "PASS",
   "next": "we_autoheal",
-  "head_short": "86383b2b",
+  "head_short": "8891e484",
   "MEANINGFUL_ITER": 1774,
   "mesh": "kupffer"
 }
