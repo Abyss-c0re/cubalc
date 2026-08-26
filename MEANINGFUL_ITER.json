@@ -30,12 +30,12 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "pin_head": "6b4621f9dc505c5412e43e6de37c8efbb28a437b",
-  "tip": "6b4621f9dc505c5412e43e6de37c8efbb28a437b",
-  "HEAD": "6b4621f9dc505c5412e43e6de37c8efbb28a437b",
-  "commit": "6b4621f9dc505c5412e43e6de37c8efbb28a437b",
-  "sha": "6b4621f9dc505c5412e43e6de37c8efbb28a437b",
-  "head": "6b4621f9dc505c5412e43e6de37c8efbb28a437b",
-  "pinned_head": "6b4621f9dc505c5412e43e6de37c8efbb28a437b",
-  "short": "6b4621f9"
+  "pin_head": "ec343732e398bbd36ad6c74f7c0f3c90c11328bd",
+  "tip": "ec343732e398bbd36ad6c74f7c0f3c90c11328bd",
+  "HEAD": "ec343732e398bbd36ad6c74f7c0f3c90c11328bd",
+  "commit": "ec343732e398bbd36ad6c74f7c0f3c90c11328bd",
+  "sha": "ec343732e398bbd36ad6c74f7c0f3c90c11328bd",
+  "head": "ec343732e398bbd36ad6c74f7c0f3c90c11328bd",
+  "pinned_head": "ec343732e398bbd36ad6c74f7c0f3c90c11328bd",
+  "short": "ec343732"
 }
