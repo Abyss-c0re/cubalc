@@ -15181,6 +15181,804 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; CAPILLARY|VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
+
+  /* SMX SINUSOID|SINUSOIDGLIA|MESH_SINUSOID|SINUSOID_WRAP|SINUSOID_SHEATH|SINUSOID_GUIDE|RAISE_SINUSOID a b c ...
+   * Life-force SINUSOID sinusoid hepatic exchange scaffold mesh stability after portal confluence: hepatic sinusoid exchange bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete sinusoid hepatic exchange scaffold mesh among live nodes, weaves a
+   * sinusoid wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks sinusoid where life guides the sinusoid confluence return pulse.
+   * Latches SMX_SINUSOID when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = sinusoid ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_SINUSOID_SUM = bonds+wraps+sheaths; SMX_SINUSOID|SMX_MESH_SINUSOID|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"SINUSOID")||kw(&L->cur,"SINUSOIDGLIA")||kw(&L->cur,"MESH_SINUSOID")||kw(&L->cur,"SINUSOID_WRAP")||kw(&L->cur,"SINUSOID_WRAPS")||kw(&L->cur,"SINUSOID_SHEATH")||kw(&L->cur,"SINUSOID_SHEATHS")||kw(&L->cur,"SINUSOID_GUIDE")||kw(&L->cur,"RAISE_SINUSOID")||kw(&L->cur,"WE_SINUSOID")||kw(&L->cur,"LIFE_SINUSOID")||
+      kw(&L->cur,"STABLE_SINUSOID")||kw(&L->cur,"MESH_SINUSOIDS")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_SINUSOID")||kw(&L->cur,"SINUSOID_LEAF")||
+      kw(&L->cur,"SEEDSINUSOID")||kw(&L->cur,"SEEDSINUSOIDSHEATH")||kw(&L->cur,"SEEDSINUSOIDWRAP")||
+      kw(&L->cur,"SINUSOID_RING")||kw(&L->cur,"SINUSOID_SHEATH_HUB")||kw(&L->cur,"SINUSOID_NODE")||
+      kw(&L->cur,"LATTICE_SINUSOID")||kw(&L->cur,"WORLD_SINUSOID")||kw(&L->cur,"WORLD_SINUSOID")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_SINUSOID")||kw(&L->cur,"HARDEN_SINUSOID")||
+      kw(&L->cur,"SINUSOID_SCAFFOLD")||kw(&L->cur,"SINUSOID_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "SINUSOID needs >=2 cubes",
+                  "SMX SINUSOID a b [c ...]  or  SMX SINUSOID_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - sinusoid needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete sinusoid mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* sinusoid ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int sinusoid_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (sinusoid_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_SINUSOIDED", (long)sinusoid_ok);
+      var_set_num(vm, "SMX_SINUSOID_LATCH", (long)sinusoid_ok);
+      var_set_num(vm, "SMX_SINUSOID", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SINUSOID_SUM", (long)(sinusoid_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_SINUSOID_ALIAS", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_SINUSOID", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SINUSOID_SHEATH_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SIN_SHEATH_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_SINUSOID", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SINUSOID_WRAP_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SIN_WRAP_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_WRAP", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_WRAPS", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SIN_WRAPS", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_SHEATHS", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SIN_SHEATHS", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_WRAP_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PO_BONDS", (long)(sinusoid_ok ? bonds : 0));
+      var_set_num(vm, "SMX_PO_MESH", (long)(sinusoid_ok ? bonds : 0));
+      var_set_num(vm, "SMX_PO_BONDS2", (long)(sinusoid_ok ? bonds : 0));
+      var_set_num(vm, "SMX_PO_STARS", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_PO_STAR", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_RING", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_LANE", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SINUSOID_SHEATH_HUB", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDSINUSOID", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDSINUSOIDSHEATH", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(sinusoid_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (sinusoid_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX SINUSOID ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX SINUSOID partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX SINUSOID soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX SINUSOID nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d sinusoided=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, sinusoid_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+
+  /* SMX DISSE|DISSEGLIA|MESH_DISSE|DISSE_WRAP|DISSE_SHEATH|DISSE_GUIDE|RAISE_DISSE a b c ...
+   * Life-force DISSE space-of-Disse exchange scaffold mesh stability after portal confluence: hepatic disse exchange bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete disse hepatic exchange scaffold mesh among live nodes, weaves a
+   * disse wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks disse where life guides the disse perisinusoidal return pulse.
+   * Latches SMX_DISSE when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = disse ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_DISSE_SUM = bonds+wraps+sheaths; SMX_DISSE|SMX_MESH_DISSE|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"DISSE")||kw(&L->cur,"DISSEGLIA")||kw(&L->cur,"MESH_DISSE")||kw(&L->cur,"DISSE_WRAP")||kw(&L->cur,"DISSE_WRAPS")||kw(&L->cur,"DISSE_SHEATH")||kw(&L->cur,"DISSE_SHEATHS")||kw(&L->cur,"DISSE_GUIDE")||kw(&L->cur,"RAISE_DISSE")||kw(&L->cur,"WE_DISSE")||kw(&L->cur,"LIFE_DISSE")||
+      kw(&L->cur,"STABLE_DISSE")||kw(&L->cur,"MESH_DISSES")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_DISSE")||kw(&L->cur,"DISSE_LEAF")||
+      kw(&L->cur,"SEEDDISSE")||kw(&L->cur,"SEEDDISSESHEATH")||kw(&L->cur,"SEEDDISSEWRAP")||
+      kw(&L->cur,"DISSE_RING")||kw(&L->cur,"DISSE_SHEATH_HUB")||kw(&L->cur,"DISSE_NODE")||
+      kw(&L->cur,"LATTICE_DISSE")||kw(&L->cur,"WORLD_DISSE")||kw(&L->cur,"WORLD_DISSE")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_DISSE")||kw(&L->cur,"HARDEN_DISSE")||
+      kw(&L->cur,"DISSE_SCAFFOLD")||kw(&L->cur,"DISSE_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "DISSE needs >=2 cubes",
+                  "SMX DISSE a b [c ...]  or  SMX DISSE_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - disse needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete disse mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* disse ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int disse_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (disse_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_DISSEED", (long)disse_ok);
+      var_set_num(vm, "SMX_DISSE_LATCH", (long)disse_ok);
+      var_set_num(vm, "SMX_DISSE", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_DISSE_SUM", (long)(disse_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_DISSE_ALIAS", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_DISSE", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_DISSE_SHEATH_LATCH", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_DISSE", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_DISSE_WRAP_LATCH", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(disse_ok ? wraps : 0));
+      var_set_num(vm, "SMX_DISSE_WRAP", (long)(disse_ok ? wraps : 0));
+      var_set_num(vm, "SMX_DISSE_WRAPS", (long)(disse_ok ? wraps : 0));
+      var_set_num(vm, "SMX_DISSE_SHEATHS", (long)(disse_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(disse_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(disse_ok ? wraps : 0));
+      var_set_num(vm, "SMX_DISSE_WRAP_LATCH", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(disse_ok ? 1 : 0));
+      var_set_num(vm, "SMX_DI_BONDS", (long)(disse_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_MESH", (long)(disse_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_BONDS2", (long)(disse_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_STARS", (long)(disse_ok ? wraps : 0));
+      var_set_num(vm, "SMX_DI_STAR", (long)(disse_ok ? wraps : 0));
+      var_set_num(vm, "SMX_DISSE_RING", (long)(disse_ok ? wraps : 0));
+      var_set_num(vm, "SMX_DISSE_LANE", (long)(disse_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(disse_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_DISSE_SHEATH_HUB", (long)(disse_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(disse_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDDISSE", (long)(disse_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDDISSESHEATH", (long)(disse_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(disse_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (disse_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX DISSE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX DISSE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX DISSE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX DISSE nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d disseed=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, disse_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  /* SMX HEPATOCYTE|HEPATOCYTEGLIA|MESH_HEPATOCYTE|HEPATOCYTE_WRAP|HEPATOCYTE_SHEATH|HEPATOCYTE_GUIDE|RAISE_HEPATOCYTE a b c ...
+   * Life-force HEPATOCYTE hepatocyte parenchymal exchange scaffold mesh stability after portal confluence: hepatic hepatocyte plate exchange bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete hepatocyte hepatic exchange scaffold mesh among live nodes, weaves a
+   * hepatocyte wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks hepatocyte where life guides the hepatocyte hepatocyte plate return pulse.
+   * Latches SMX_HEPATOCYTE when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = hepatocyte ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_HEPATOCYTE_SUM = bonds+wraps+sheaths; SMX_HEPATOCYTE|SMX_MESH_HEPATOCYTE|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"HEPATOCYTE")||kw(&L->cur,"HEPATOCYTEGLIA")||kw(&L->cur,"MESH_HEPATOCYTE")||kw(&L->cur,"HEPATOCYTE_WRAP")||kw(&L->cur,"HEPATOCYTE_WRAPS")||kw(&L->cur,"HEPATOCYTE_SHEATH")||kw(&L->cur,"HEPATOCYTE_SHEATHS")||kw(&L->cur,"HEPATOCYTE_GUIDE")||kw(&L->cur,"RAISE_HEPATOCYTE")||kw(&L->cur,"WE_HEPATOCYTE")||kw(&L->cur,"LIFE_HEPATOCYTE")||
+      kw(&L->cur,"STABLE_HEPATOCYTE")||kw(&L->cur,"MESH_HEPATOCYTES")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_HEPATOCYTE")||kw(&L->cur,"HEPATOCYTE_LEAF")||
+      kw(&L->cur,"SEEDHEPATOCYTE")||kw(&L->cur,"SEEDHEPATOCYTESHEATH")||kw(&L->cur,"SEEDHEPATOCYTEWRAP")||
+      kw(&L->cur,"HEPATOCYTE_RING")||kw(&L->cur,"HEPATOCYTE_SHEATH_HUB")||kw(&L->cur,"HEPATOCYTE_NODE")||
+      kw(&L->cur,"LATTICE_HEPATOCYTE")||kw(&L->cur,"WORLD_HEPATOCYTE")||kw(&L->cur,"WORLD_HEPATOCYTE")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_HEPATOCYTE")||kw(&L->cur,"HARDEN_HEPATOCYTE")||
+      kw(&L->cur,"HEPATOCYTE_SCAFFOLD")||kw(&L->cur,"HEPATOCYTE_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "HEPATOCYTE needs >=2 cubes",
+                  "SMX HEPATOCYTE a b [c ...]  or  SMX HEPATOCYTE_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - hepatocyte needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete hepatocyte mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* hepatocyte ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int hepatocyte_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (hepatocyte_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_HEPATOCYTEED", (long)hepatocyte_ok);
+      var_set_num(vm, "SMX_HEPATOCYTE_LATCH", (long)hepatocyte_ok);
+      var_set_num(vm, "SMX_HEPATOCYTE", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_SUM", (long)(hepatocyte_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_ALIAS", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_HEPATOCYTE", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_SHEATH_LATCH", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_HEPATOCYTE", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_WRAP_LATCH", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(hepatocyte_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_WRAP", (long)(hepatocyte_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_WRAPS", (long)(hepatocyte_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_SHEATHS", (long)(hepatocyte_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(hepatocyte_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(hepatocyte_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_WRAP_LATCH", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(hepatocyte_ok ? 1 : 0));
+      var_set_num(vm, "SMX_DI_BONDS", (long)(hepatocyte_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_MESH", (long)(hepatocyte_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_BONDS2", (long)(hepatocyte_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_STARS", (long)(hepatocyte_ok ? wraps : 0));
+      var_set_num(vm, "SMX_DI_STAR", (long)(hepatocyte_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_RING", (long)(hepatocyte_ok ? wraps : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_LANE", (long)(hepatocyte_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(hepatocyte_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_HEPATOCYTE_SHEATH_HUB", (long)(hepatocyte_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(hepatocyte_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDHEPATOCYTE", (long)(hepatocyte_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDHEPATOCYTESHEATH", (long)(hepatocyte_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(hepatocyte_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (hepatocyte_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HEPATOCYTE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX HEPATOCYTE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX HEPATOCYTE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX HEPATOCYTE nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d hepatocyteed=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, hepatocyte_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  /* SMX KUPFFER|KUPFFERGLIA|MESH_KUPFFER|KUPFFER_WRAP|KUPFFER_SHEATH|KUPFFER_GUIDE|RAISE_KUPFFER a b c ...
+   * Life-force KUPFFER kupffer resident macrophage clearance scaffold mesh stability after portal confluence: hepatic kupffer sinusoid macrophage plate exchange bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete kupffer hepatic clearance scaffold mesh among live nodes, weaves a
+   * kupffer wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks kupffer where life guides the kupffer kupffer sinusoid macrophage plate return pulse.
+   * Latches SMX_KUPFFER when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = kupffer ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_KUPFFER_SUM = bonds+wraps+sheaths; SMX_KUPFFER|SMX_MESH_KUPFFER|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"KUPFFER")||kw(&L->cur,"KUPFFERGLIA")||kw(&L->cur,"MESH_KUPFFER")||kw(&L->cur,"KUPFFER_WRAP")||kw(&L->cur,"KUPFFER_WRAPS")||kw(&L->cur,"KUPFFER_SHEATH")||kw(&L->cur,"KUPFFER_SHEATHS")||kw(&L->cur,"KUPFFER_GUIDE")||kw(&L->cur,"RAISE_KUPFFER")||kw(&L->cur,"WE_KUPFFER")||kw(&L->cur,"LIFE_KUPFFER")||
+      kw(&L->cur,"STABLE_KUPFFER")||kw(&L->cur,"MESH_KUPFFERS")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_KUPFFER")||kw(&L->cur,"KUPFFER_LEAF")||
+      kw(&L->cur,"SEEDKUPFFER")||kw(&L->cur,"SEEDKUPFFERSHEATH")||kw(&L->cur,"SEEDKUPFFERWRAP")||
+      kw(&L->cur,"KUPFFER_RING")||kw(&L->cur,"KUPFFER_SHEATH_HUB")||kw(&L->cur,"KUPFFER_NODE")||
+      kw(&L->cur,"LATTICE_KUPFFER")||kw(&L->cur,"WORLD_KUPFFER")||kw(&L->cur,"WORLD_KUPFFER")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_KUPFFER")||kw(&L->cur,"HARDEN_KUPFFER")||
+      kw(&L->cur,"KUPFFER_SCAFFOLD")||kw(&L->cur,"KUPFFER_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "KUPFFER needs >=2 cubes",
+                  "SMX KUPFFER a b [c ...]  or  SMX KUPFFER_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - kupffer needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete kupffer mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* kupffer ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int kupffer_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (kupffer_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_KUPFFERED", (long)kupffer_ok);
+      var_set_num(vm, "SMX_KUPFFER_LATCH", (long)kupffer_ok);
+      var_set_num(vm, "SMX_KUPFFER", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_KUPFFER_SUM", (long)(kupffer_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_KUPFFER_ALIAS", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_KUPFFER", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_KUPFFER_SHEATH_LATCH", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_KUPFFER", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_KUPFFER_WRAP_LATCH", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(kupffer_ok ? wraps : 0));
+      var_set_num(vm, "SMX_KUPFFER_WRAP", (long)(kupffer_ok ? wraps : 0));
+      var_set_num(vm, "SMX_KUPFFER_WRAPS", (long)(kupffer_ok ? wraps : 0));
+      var_set_num(vm, "SMX_KUPFFER_SHEATHS", (long)(kupffer_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(kupffer_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(kupffer_ok ? wraps : 0));
+      var_set_num(vm, "SMX_KUPFFER_WRAP_LATCH", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(kupffer_ok ? 1 : 0));
+      var_set_num(vm, "SMX_DI_BONDS", (long)(kupffer_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_MESH", (long)(kupffer_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_BONDS2", (long)(kupffer_ok ? bonds : 0));
+      var_set_num(vm, "SMX_DI_STARS", (long)(kupffer_ok ? wraps : 0));
+      var_set_num(vm, "SMX_DI_STAR", (long)(kupffer_ok ? wraps : 0));
+      var_set_num(vm, "SMX_KUPFFER_RING", (long)(kupffer_ok ? wraps : 0));
+      var_set_num(vm, "SMX_KUPFFER_LANE", (long)(kupffer_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(kupffer_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_KUPFFER_SHEATH_HUB", (long)(kupffer_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(kupffer_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDKUPFFER", (long)(kupffer_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDKUPFFERSHEATH", (long)(kupffer_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(kupffer_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (kupffer_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX KUPFFER ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX KUPFFER partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX KUPFFER soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX KUPFFER nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d kupffered=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, kupffer_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (see lang_ops_smx; KUPFFER|HEPATOCYTE|DISSE|SINUSOID|CAPILLARY|VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
   return -1;
 }

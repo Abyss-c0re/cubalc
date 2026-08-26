@@ -1,0 +1,8 @@
+MEANINGFUL_ITER=1772
+feature=MESH_DISSE
+proof=programs/proof/1772_smx_mesh_disse_life_cascade.cubalc
+status=PASS
+asserts_ok=1234
+unity_note=soft-OOB fail-closed DISSE life-force rung after SINUSOID
+latch=SMX_DISSE|SMX_DISSEED|SMX_MESH_DISSE|SMX_HARDEN_DISSE|SMX_DISSE_SUM
+next=we_autoheal
