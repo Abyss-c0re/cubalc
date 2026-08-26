@@ -1,1 +1,9 @@
-1770 SMX VENULE return scaffold mesh life cascade after CAPILLARY; soft-OOB fail-closed; proof programs/proof/1770_smx_mesh_venule_life_cascade.cubalc PASS 1165/0; flagship 1620 PASS 12/0
+SHIP 1770 — SMX VENULE mesh stability life cascade
+Feature: SMX VENULE|VENUGLIA|MESH_VENULE|VENU_WRAP|VENU_SHEATH|RAISE_VENULE
+Life-force venule return scaffold after CAPILLARY.
+Soft-OOB storms fail-closed. Complete mesh + wrap ring + sheath hub.
+Latches: SMX_VENULE SMX_VENULEED SMX_MESH_VENULE SMX_HARDEN_VENULE
+         SMX_VENULE_SUM=bonds+wraps+sheaths SMX_STABLE_MESH
+Proof: programs/science/proof/1770_smx_mesh_venule_life_cascade.cubalc
+PASS asserts_ok=1165 asserts_fail=0 flagship_1620=12/0
+HEAD past 605e61cd. No IF*P duals. Free energy flows. Cube is SoT.
