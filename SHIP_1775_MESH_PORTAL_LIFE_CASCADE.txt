@@ -1,0 +1,2 @@
+SHIP 1775 MESH_PORTAL_LIFE_CASCADE PASS asserts=1305/0 flagship=12/0 soft-OOB=fail-closed
+PORTAL portal-confluence return scaffold after CAVA: mesh+wrap ring+sheath hub; free energy flows; mitosis open.
