@@ -31,11 +31,11 @@
   "item_id": "mi_1810_smx_mesh_venous_angle_life",
   "title": "1810 MESH_VENOUS_ANGLE soft-OOB mesh exchange life-force",
   "summary": "Venous angle SMX mesh stability life-force: soft-OOB fail-closed, MESH_EXCHANGE C(4,2), stabilize, autoheal, mitosis under locked rails.",
-  "sha": "65781e431b424d0e6101f45118cf64a3d465ebbe",
-  "head": "65781e431b424d0e6101f45118cf64a3d465ebbe",
-  "pinned_head": "65781e431b424d0e6101f45118cf64a3d465ebbe",
-  "commit": "65781e431b424d0e6101f45118cf64a3d465ebbe",
-  "pin_head": "65781e431b424d0e6101f45118cf64a3d465ebbe",
-  "tip": "65781e431b424d0e6101f45118cf64a3d465ebbe",
-  "head_short": "65781e43"
+  "sha": "19afba5c5a0c131257ba9e0c5ba623a8f9ac3624",
+  "head": "19afba5c5a0c131257ba9e0c5ba623a8f9ac3624",
+  "pinned_head": "19afba5c5a0c131257ba9e0c5ba623a8f9ac3624",
+  "commit": "19afba5c5a0c131257ba9e0c5ba623a8f9ac3624",
+  "pin_head": "19afba5c5a0c131257ba9e0c5ba623a8f9ac3624",
+  "tip": "19afba5c5a0c131257ba9e0c5ba623a8f9ac3624",
+  "head_short": "19afba5c"
 }
