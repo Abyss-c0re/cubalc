@@ -28,5 +28,7 @@
   "host_finish": true,
   "head_note": "verified_pass_1010_maprangen",
   "prior_head": "f2a684a80352a33b5c89fdf3ab9b6e67de450542",
-  "prior_head_short": "f2a684a8"
+  "prior_head_short": "f2a684a8",
+  "head": "66d5db6a9fe450a051ed9ba322ea390a4798e64c",
+  "head_short": "66d5db6a"
 }
