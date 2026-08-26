@@ -10272,6 +10272,15 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       var_set_num(vm, "SMX_BASTION_LATCH", (long)(kp_ok ? 1 : 0));
       var_set_num(vm, "SMX_SENTINEL", (long)(kp_ok ? 1 : 0));
       var_set_num(vm, "SMX_BASTION", (long)(kp_ok ? 1 : 0));
+      /* usability latches — mesh keeper life cascade lock */
+      var_set_num(vm, "SMX_MESH_KEEPER", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_KEEPER", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_KEEPER", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_LIFE_KEEPER", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WE_KEEPER", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_KEEPER_OK", (long)(kp_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WATCH_OK", (long)(kp_ok && watches > 0 ? 1 : 0));
+      var_set_num(vm, "SMX_BASTION_OK", (long)(kp_ok && bastions > 0 ? 1 : 0));
       var_set_num(vm, "SMX_KEEPS_ALT", (long)(kp_ok ? bonds : 0));
       var_set_num(vm, "SMX_KEEPS", (long)(kp_ok ? bonds : 0));
       var_set_num(vm, "SMX_KEEPS_ALT2", (long)(kp_ok ? bonds : 0));
