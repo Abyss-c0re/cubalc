@@ -5,3 +5,4 @@ proofs: 99=60/0 1843=60/0 1620=12/0 PASS
 c_slice=src/cubalc_smx_ophthalmic.c
 feature=MESH_OPHTHALMIC
 branch=ship-1843-ophthalmic
+tip==pin
