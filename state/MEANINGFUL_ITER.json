@@ -1,32 +1,15 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "iter": 1749,
+  "iter": 1748,
   "MEANINGFUL_ITER": 1748,
   "meaningful_iter": 1748,
   "version": "1.15.1221-usability",
   "item": "1748 smx mesh keeper life cascade",
   "item_id": "mi_1748_smx_mesh_keeper_life_cascade",
   "title": "1748 smx mesh keeper life cascade",
-  "summary": "Host-finished MI ship after nanobot partial (1748_smx_mesh_keeper_life_cascade).",
-  "feature": "MESH_KEEPER_LIFE_CASCADE",
-  "proofs": [
-    "programs/proof/1748_smx_mesh_keeper_life_cascade.cubalc"
-  ],
-  "proof_status": "PASS",
-  "asserts_fail": 0,
-  "unity": 0.878,
-  "nodes": 7,
-  "risk": "low",
-  "next": "we_autoheal",
-  "past": 1747,
-  "sealed": true,
-  "soft_oob": "fail-closed",
-  "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+stabilize+mitosis",
-  "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T03:35:18Z",
-  "verified_at": "2026-08-26T05:00:00Z",
-  "host_finish": true,
-  "head_note": "verified_pass_1748_mesh_keeper_life_cascade",
-  "pin_head": "PENDING",
-  "commit": "dead7e7b"
+  "summary": "SMX mesh keeper life cascade: soft-OOB fail-closed + LIFE_FORCE + WE_AUTOHEAL + RESILIENCE + THALAMUS + HOMEOSTASIS cascade usability",
+  "commit": "dead7e7b",
+  "proof": "programs/proof/1748_smx_mesh_keeper_life_cascade.cubalc",
+  "ship": "ship/SHIP_1748_MESH_KEEPER_LIFE_CASCADE.txt",
+  "status": "PASS"
 }
