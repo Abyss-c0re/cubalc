@@ -19,7 +19,7 @@
   "asserts_fail": 0,
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
-  "unity": 0.880,
+  "unity": 0.88,
   "nodes": 7,
   "risk": "low",
   "next": "we_autoheal",
@@ -33,5 +33,7 @@
   "host_finish": false,
   "head_note": "verified_pass_1760_bergmann",
   "prior_head": "ef0bf2a2",
-  "prior_head_short": "ef0bf2a2"
+  "prior_head_short": "ef0bf2a2",
+  "head": "49b1dc337a91cc96effa417dfb4fcbf2eb4c8cd2",
+  "head_short": "49b1dc33"
 }
