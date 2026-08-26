@@ -5,5 +5,5 @@ latch=sinusoid_latch
 status=PASS
 unity=1.0
 stability=1.0
-head=1b92069f
+head=b317546c
 proofs=1771,1620
