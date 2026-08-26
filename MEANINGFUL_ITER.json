@@ -1,19 +1,13 @@
 {
   "iter": 1775,
+  "meaningful_iter": 1775,
   "feature": "MESH_STELLATE",
-  "slice": "STELLATE soft-OOB mesh stability life-force after kupffer",
-  "proof": "1775_smx_mesh_stellate_life_cascade.cubalc",
-  "smoke": "programs/proof/1775_smx_stellate_soft_oob_smoke.cubalc",
-  "asserts_ok": 1361,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS",
-  "version": "1.15.1251-usability",
-  "head": "b0f0171444bffb47cd1ce1efc3f9cb6b98a913f3",
-  "short": "b0f01714",
-  "status": "PASS",
-  "next": "we_autoheal",
-  "MEANINGFUL_ITER": 1775,
-  "head_short": "b0f01714",
-  "unity": 1.0,
-  "latch": "stellate_latch"
+  "version": "1.15.1251-stellate-mesh",
+  "head": "b11df0f7dada748769f92630bd1628b4520a8554",
+  "proofs": {
+    "1775_smoke": "PASS",
+    "1775_cascade": "PASS",
+    "1620_flagship": "PASS"
+  },
+  "notes": "SMX STELLATE/ITO/HSC soft-OOB fail-closed mesh+wrap+sheath"
 }
