@@ -1,0 +1,5 @@
+ATOMIC_PRINTER_ENERGY_MITOSIS
+Life-force energy-aware mitosis threshold for atomic printer
+Founder energy < 10 stays dormant; nutrient ticks cross ready latch; mitosis grows population
+proof 1773 PASS asserts_ok=14 fail=0; flagship 1620 PASS 12/0
+MEANINGFUL_ITER 1773 VERSION 1.15.1251-usability

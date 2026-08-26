@@ -1,0 +1,153 @@
+// atomic_printer_energy_mitosis.cubalc
+// Life-force energy-aware mitosis threshold for the atomic printer.
+// Low-energy founders stay dormant; nutrient pulse crosses threshold → divide.
+// Free energy must flow. Cube is SoT. matrix is key. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_energy_mitosis | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+// Founder starts below mitosis threshold (life_cell ready needs energy >= 10)
+ENTITY seed OF Cell 1 4 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 2
+FLOW 1
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+// Phase A: starve-check — low energy must not birth
+GETF seed energy
+LET e0 = LAST_N
+ASSERT e0 < 10 "founder below mitosis threshold"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready below threshold"
+
+LET births_low = 0
+LET step = 0
+WHILE step < 3
+  GETF seed energy
+  IF LAST_N >= 10 THEN
+    GETF seed alive
+    IF LAST_N == 1 THEN
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        GETF seed energy
+        LET half = LAST_N / 2
+        IF half < 1 THEN
+          LET half = 1
+        END
+        GETF seed gen
+        LET dg = LAST_N + 1
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births_low = births_low + 1
+      END
+    END
+  END
+  LET step = step + 1
+END
+ASSERT births_low == 0 "no mitosis while starved"
+
+// Phase B: nutrient pulse — each tick nets +1 energy; drive past threshold 10
+ENERGYFLOW 6
+FLOW 3
+IMPULSE bed 1
+SEND seed tick
+SEND seed tick
+SEND seed tick
+SEND seed tick
+SEND seed tick
+SEND seed tick
+SEND seed tick
+GETF seed energy
+LET e1 = LAST_N
+ASSERT e1 >= 10 "nutrient crossed mitosis threshold"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after nutrient"
+
+LET births = 0
+LET step = 0
+WHILE step < 12
+  TICK 1
+  FLOW 1
+  ENERGYFLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      ELSE
+        GETF d2 alive
+        IF LAST_N == 0 THEN
+          SEND d2 birth half dg
+          SEND seed after_div
+          PLUG bed d2
+          LET births = births + 1
+        END
+      END
+    END
+  END
+  LET step = step + 1
+END
+
+GETF seed alive
+LET a0 = LAST_N
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET pop = a0 + a1 + a2
+
+ASSERT births >= 1 "mitosis after energy threshold"
+ASSERT pop >= 2 "population grows under free energy"
+ASSERT ENERGY > 0 "free energy still flows"
+ASSERT SMX_LIFE_FORCE == 1 "life_force sticky"
+ASSERT OK == 1
+
+PRINT "atomic_printer_energy_mitosis" births_low births pop e0 e1 ENERGY SMX_LIFE_FORCE UNITY
+PASS
