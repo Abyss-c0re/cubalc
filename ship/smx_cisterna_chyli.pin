@@ -1,0 +1,8 @@
+FEATURE=MESH_CISTERNA_CHYLI
+SHIP=1809_smx_mesh_cisterna_chyli_life
+PROOF=programs/proof/73_smx_cisterna_chyli.cubalc
+PROOF_ALT=programs/proof/1809_smx_mesh_cisterna_chyli_life.cubalc
+C_SLICE=src/cubalc_smx_cisterna_chyli.c
+SOFT_OOB=fail_closed
+MESH_BONDS=6
+ITER=1809

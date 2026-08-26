@@ -1,0 +1,12 @@
+MEANINGFUL_ITER=1809
+FEATURE=SMX_MESH_CISTERNA_CHYLI_LIFE
+PROOF=programs/proof/73_smx_cisterna_chyli.cubalc
+PROOF_ALT=programs/proof/1809_smx_mesh_cisterna_chyli_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+VERSION=1.15.1287-usability
+NOTE=MESH_CISTERNA_CHYLI soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW mesenteric trunks→cisterna confluence→chyle reservoir→thoracic duct origin; WE_AUTOHEAL; pure-C cubalc_smx_cisterna_chyli.c
+C_SLICE=src/cubalc_smx_cisterna_chyli.c
