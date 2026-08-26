@@ -1,4 +1,1 @@
-e980c55abc46fbdc9c668f9ecb747bb8437ace39
-ship/HEAD_PIN.txt
-ship/HEAD_PIN_SHA.txt
-ship/PINNED_HEAD.txt
+8a0970c6ccbfad2540e8c51b74d8f39386cbfbbf
