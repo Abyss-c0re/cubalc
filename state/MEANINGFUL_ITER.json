@@ -1,1 +1,11 @@
-{"meaningful_iter":1835,"feature":"SMX_MESH_BASILAR_LIFE","version":"1.15.1314-usability","head":"59b7f84af15179ddf6fcb501d16b2b1feecc74ca","pin":"59b7f84af15179ddf6fcb501d16b2b1feecc74ca","tip":"59b7f84af15179ddf6fcb501d16b2b1feecc74ca","pin_head":"59b7f84af15179ddf6fcb501d16b2b1feecc74ca","HEAD":"59b7f84af15179ddf6fcb501d16b2b1feecc74ca","pinned_head":"59b7f84af15179ddf6fcb501d16b2b1feecc74ca","sha":"59b7f84af15179ddf6fcb501d16b2b1feecc74ca","pin_short":"59b7f84a","short":"59b7f84a","status":"PASS","soft_oob":1,"fail_closed":1,"proofs":"1835+99=60/0,1620=12/0","past_2275a454":true,"tip_equals_pin":true,"tip_eq_pin":true,"MEANINGFUL_ITER":1835,"proof_recheck":{"99":"PASS 60/0","1835":"PASS 60/0","1620":"PASS 12/0"}}
+{
+  "iter": 1835,
+  "meaningful_iter": 1835,
+  "feature": "SMX_MESH_BASILAR_LIFE",
+  "pin": "304bdb8dc76a591d04c2f5b378b62621c45ed4d3",
+  "tip": "304bdb8dc76a591d04c2f5b378b62621c45ed4d3",
+  "pin_head": "304bdb8dc76a591d04c2f5b378b62621c45ed4d3",
+  "status": "PASS",
+  "soft_oob": 1,
+  "fail_closed": 1
+}
