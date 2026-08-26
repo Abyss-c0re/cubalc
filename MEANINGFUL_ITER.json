@@ -1,27 +1,28 @@
 {
   "iter": 1781,
   "feature": "TIGHT_JUNCTION",
-  "head": "cb31357978d4c7db7f695c2b3a612ab6dd866f3d",
-  "short": "cb313579",
   "status": "PASS",
   "soft_oob": true,
   "fail_closed": true,
   "mesh_exchange": true,
   "meaningful_iter": 1781,
   "version": "1.15.1257-tight-junction-mesh",
-  "head_short": "cb313579",
   "MEANINGFUL_ITER": 1781,
   "unity": 1.0,
   "next": "we_autoheal",
   "proof": "programs/proof/1781_smx_tight_junction_soft_oob_smoke.cubalc",
+  "cascade": "programs/proof/1781_smx_mesh_tight_junction_life_cascade.cubalc",
   "smoke": "1781_smx_tight_junction_soft_oob_smoke.cubalc",
   "flagship_1620": "PASS",
   "latch": "tight_junction_latch",
-  "notes": "SMX TIGHT_JUNCTION|ZONULA|OCCLUDENS|LUMEN_SEAL lumen-seal barrier mesh after canaliculus; soft-OOB fail-closed; proofs PASS smoke=29 cascade=1522 flagship1620=12",
+  "notes": "SMX TIGHT_JUNCTION|ZONULA|OCCLUDENS|LUMEN_SEAL mesh+wrap+sheath soft-OOB fail-closed; smoke asserts_ok=29 cascade asserts_ok=1522 flagship 1620 PASS",
   "proofs": {
     "1781_smoke": "PASS",
     "1781_cascade": "PASS",
     "1620_flagship": "PASS"
   },
-  "ok": true
+  "ok": true,
+  "head": "217a0f7c39cfd6e1f1e13bf24c36b2a619b3be11",
+  "short": "217a0f7c",
+  "head_short": "217a0f7c"
 }
