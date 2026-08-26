@@ -3,5 +3,5 @@ proof 1766 PASS asserts_ok=1080 fail=0
 flagship 1620 PASS asserts_ok=12 fail=0
 MEANINGFUL_ITER=1766
 VERSION=1.15.1243-usability
-HEAD=abc717393a4d1afc3ceb1aa25ca3c7b17e3bfe19
+HEAD=e129f2dafcf8d18d61f57e0ee8739ff1f4e1d013
 soft-OOB fail-closed; free energy flows
