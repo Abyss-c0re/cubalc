@@ -17,8 +17,8 @@
   "flagship_1620_ok": 12,
   "notes": "energy-budget quorum mitosis: ready AND colony reserve>=floor AND live quorum>=2; starve blocked; nutrient unlocks daughter; no IF*P duals",
   "note": "life-force energy-budget quorum mitosis for atomic printer",
-  "sha": "cc13bb455276746f7922b7120a4bde18cb4e47cf",
-  "head": "cc13bb455276746f7922b7120a4bde18cb4e47cf",
-  "pinned_head": "cc13bb455276746f7922b7120a4bde18cb4e47cf",
+  "sha": "2b7db36b895e9903368cfbacb942ec0affc2dec8",
+  "head": "2b7db36b895e9903368cfbacb942ec0affc2dec8",
+  "pinned_head": "2b7db36b895e9903368cfbacb942ec0affc2dec8",
   "ts": 1787750206
 }
