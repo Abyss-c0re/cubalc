@@ -36,13 +36,14 @@
   "fail_closed": 1,
   "branch": "ship-1828-left-ventricle",
   "sealed": true,
-  "pin_head": "d61f10aebcd0f2259e9b8d4ff0854d95e2f11044",
-  "HEAD": "d61f10aebcd0f2259e9b8d4ff0854d95e2f11044",
-  "tip": "d61f10aebcd0f2259e9b8d4ff0854d95e2f11044",
-  "pinned_head": "d61f10aebcd0f2259e9b8d4ff0854d95e2f11044",
-  "head": "d61f10aebcd0f2259e9b8d4ff0854d95e2f11044",
-  "sha": "d61f10aebcd0f2259e9b8d4ff0854d95e2f11044",
-  "pin_short": "d61f10ae",
-  "short": "d61f10ae",
-  "tip_eq_pin": true
+  "pin_head": "9998e347913652afa2b521ad5edcb3135a001ca9",
+  "HEAD": "9998e347913652afa2b521ad5edcb3135a001ca9",
+  "tip": "9998e347913652afa2b521ad5edcb3135a001ca9",
+  "pinned_head": "9998e347913652afa2b521ad5edcb3135a001ca9",
+  "head": "9998e347913652afa2b521ad5edcb3135a001ca9",
+  "sha": "9998e347913652afa2b521ad5edcb3135a001ca9",
+  "pin_short": "9998e347",
+  "short": "9998e347",
+  "tip_eq_pin": true,
+  "feat_sha": "7836019edac894be1cf3eac30d9875ccb27bf111"
 }
