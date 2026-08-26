@@ -1,6 +1,6 @@
 /* cubalc_smx_right_vertebral.c — MESH_RIGHT_VERTEBRAL SMX mesh stability life-force
  * Soft-OOB fail-closed + MESH_EXCHANGE C(4,2) rails (engine in cubalc_smx / lang_ops_smx).
- * Proof: programs/proof/99_smx_right_vertebral.cubalc · 1835_smx_mesh_right_vertebral_life.cubalc
+ * Proof: programs/proof/99_smx_right_vertebral.cubalc · 1836_smx_mesh_right_vertebral_life.cubalc
  * Energy path: brachiocephalic / right subclavian origin → right vertebral takeoff →
  * cervical transverse foramina → atlanto-occipital ascent → basilar confluence /
  * hindbrain perfusion takeoff.
@@ -13,7 +13,7 @@ const char *cubalc_smx_right_vertebral_feature(void) {
 }
 
 const char *cubalc_smx_right_vertebral_ship(void) {
-  return "1835_smx_mesh_right_vertebral_life";
+  return "1836_smx_mesh_right_vertebral_life";
 }
 
 int cubalc_smx_right_vertebral_soft_oob_fail_closed(void) {

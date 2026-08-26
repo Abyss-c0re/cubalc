@@ -1,0 +1,8 @@
+SHIP 1835 MESH_RIGHT_VERTEBRAL_LIFE
+feature: soft-OOB fail-closed right vertebral life-force
+c_slice: src/cubalc_smx_right_vertebral.c
+proof: programs/proof/1835_smx_mesh_right_vertebral_life.cubalc
+asserts_ok: 60
+flagship_1620: PASS 12/0
+MEANINGFUL_ITER: 1835
+status: PASS

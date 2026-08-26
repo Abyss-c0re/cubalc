@@ -1,0 +1,7 @@
+feature=MESH_RIGHT_VERTEBRAL
+iter=1835
+proof=99_smx_right_vertebral.cubalc
+life=1835_smx_mesh_right_vertebral_life.cubalc
+soft_oob=1
+fail_closed=1
+bonds=6
