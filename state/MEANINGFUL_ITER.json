@@ -31,10 +31,10 @@
   "ts": "2026-08-26T03:44:08Z",
   "verified_at": "2026-08-26T03:44:08Z",
   "host_finish": true,
-  "head_note": "verified_pass_1749_cortex_life_cascade",
-  "feat_head": "",
-  "pin_head": "",
-  "HEAD": "",
-  "tip": "",
-  "short": ""
+  "head_note": "verified_pass_1749_feat_90f66812",
+  "feat_head": "90f668128d86a7b6a627c23d0ba26963806a0824",
+  "pin_head": "90f668128d86a7b6a627c23d0ba26963806a0824",
+  "HEAD": "90f668128d86a7b6a627c23d0ba26963806a0824",
+  "tip": "90f668128d86a7b6a627c23d0ba26963806a0824",
+  "short": "90f66812"
 }
