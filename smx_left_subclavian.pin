@@ -1,0 +1,9 @@
+feature=MESH_LEFT_SUBCLAVIAN
+iter=1833
+proof=99_smx_left_subclavian.cubalc
+life=1833_smx_mesh_left_subclavian_life.cubalc
+soft_oob=1
+fail_closed=1
+c_slice=src/cubalc_smx_left_subclavian.c
+VERSION=1.15.1312-usability
+next=we_autoheal

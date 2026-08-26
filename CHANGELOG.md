@@ -1,9 +1,9 @@
-## 1.15.1312-usability — 1833 MESH_LEFT_INTERNAL_CAROTID_LIFE
+## 1.15.1312-usability — 1833 MESH_LEFT_SUBCLAVIAN_LIFE
 
-- feat(smx): MESH_LEFT_INTERNAL_CAROTID life-force soft-OOB fail-closed
-- Pure-C src/cubalc_smx_left_internal_carotid.c + proofs 99/1833 (60/0 PASS)
+- feat(smx): MESH_LEFT_SUBCLAVIAN life-force soft-OOB fail-closed
+- Pure-C src/cubalc_smx_left_subclavian.c + proofs 99/1833 (60/0 PASS)
 - Flagship 1620: PASS (12/0)
-- Energy path: left common carotid trunk → carotid bifurcation → left internal carotid origin → petrous/cavernous ascent → cranial perfusion takeoff
+- Energy path: aortic arch apex → left subclavian origin → left subclavian trunk → axillary takeoff → upper limb / vertebral perfusion
 - MESH_EXCHANGE C(4,2), STABILIZE, WE_AUTOHEAL
 
 ## 1.15.1311-usability — 1832 MESH_LEFT_COMMON_CAROTID_LIFE
