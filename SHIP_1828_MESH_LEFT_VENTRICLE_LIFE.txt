@@ -1,0 +1,7 @@
+SHIP 1828 MESH_LEFT_VENTRICLE_LIFE
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force left ventricle chamber
+c_slice: src/cubalc_smx_left_ventricle.c
+proof: programs/proof/1828_smx_mesh_left_ventricle_life.cubalc
+proof_alt: programs/proof/94_smx_left_ventricle.cubalc
+asserts_ok: 60 asserts_fail: 0 flagship_1620: PASS
+energy_path: mitral inflow gate → left ventricle chamber → LV mid-cavity → LV outflow tract → aortic valve approach
