@@ -1,0 +1,10 @@
+MEANINGFUL_ITER=1791
+FEATURE=SMX_MESH_MINOR_PAPILLA_LIFE
+PROOF=programs/proof/1791_smx_mesh_minor_papilla_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+VERSION=1.15.1269-usability
+NOTE=minor duodenal papilla soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW accessory orifice gate; WE_AUTOHEAL
