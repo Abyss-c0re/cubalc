@@ -1,1 +1,18 @@
-{"meaningful_iter":1766,"MEANINGFUL_ITER":1766,"iter":1766,"version":"1.15.1243-usability","VERSION":"1.15.1243-usability","feature":"MESH_ENDOTHELIAL_LIFE_CASCADE","head":"b2929585738facd1443f463ff55aff4397d00564","HEAD":"b2929585738facd1443f463ff55aff4397d00564","head_short":"b2929585","HEAD_SHORT":"b2929585","proof":"programs/proof/1766_smx_mesh_endothelial_life_cascade.cubalc","asserts_ok":1080,"asserts_fail":0,"flagship_1620":"PASS","sealed":true}
+{
+  "meaningful_iter": 1766,
+  "MEANINGFUL_ITER": 1766,
+  "iter": 1766,
+  "version": "1.15.1243-usability",
+  "VERSION": "1.15.1243-usability",
+  "feature": "MESH_ENDOTHELIAL_LIFE_CASCADE",
+  "head": "14b29ae669fbd7bee63b0845fef2bfe3422c12cf",
+  "HEAD": "14b29ae669fbd7bee63b0845fef2bfe3422c12cf",
+  "head_short": "14b29ae6",
+  "HEAD_SHORT": "14b29ae6",
+  "proof": "programs/proof/1766_smx_mesh_endothelial_life_cascade.cubalc",
+  "asserts_ok": 1080,
+  "asserts_fail": 0,
+  "flagship_1620": "PASS",
+  "sealed": true,
+  "proof_status": "PASS"
+}

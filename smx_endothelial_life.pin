@@ -1,1 +1,7 @@
-1766 endothelial PASS head=3919ff7a
+iter=1766
+feature=MESH_ENDOTHELIAL_LIFE_CASCADE
+head=14b29ae669fbd7bee63b0845fef2bfe3422c12cf
+head_short=14b29ae6
+proof=PASS
+flagship_1620=PASS
+asserts_ok=1080
