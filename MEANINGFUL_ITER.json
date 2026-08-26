@@ -29,10 +29,13 @@
   "status": "PASS",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sha": "8dbcd8a6f021c638893a5e4a50093476e46f9b69",
-  "head": "8dbcd8a6f021c638893a5e4a50093476e46f9b69",
-  "pinned_head": "8dbcd8a6f021c638893a5e4a50093476e46f9b69",
-  "head_short": "8dbcd8a6",
-  "commit": "8dbcd8a6f021c638893a5e4a50093476e46f9b69",
-  "tip_equals_pin": true
+  "sha": "f7a5cb4cc260cb46dd5fb86384c3a2f720ceb0d9",
+  "head": "f7a5cb4cc260cb46dd5fb86384c3a2f720ceb0d9",
+  "pinned_head": "f7a5cb4cc260cb46dd5fb86384c3a2f720ceb0d9",
+  "head_short": "f7a5cb4c",
+  "commit": "f7a5cb4cc260cb46dd5fb86384c3a2f720ceb0d9",
+  "tip_equals_pin": true,
+  "FEATURE": "SMX_MESH_ILEUM_LIFE",
+  "pin_head": "f7a5cb4cc260cb46dd5fb86384c3a2f720ceb0d9",
+  "tip": "f7a5cb4cc260cb46dd5fb86384c3a2f720ceb0d9"
 }
