@@ -1,0 +1,7 @@
+SHIP 1761 SMX mesh Muller glia life cascade
+feat(smx): Muller retinal scaffold after bergmann
+Proof: programs/proof/1761_smx_mesh_muller_life_cascade.cubalc
+Verbs: MULLER|MULLGLIA|MESH_MULLER|MU_WRAP|MU_SHEATH|RETINAL_GUIDE|RAISE_MULLER
+Latches: SMX_MULLER SMX_MULLERED SMX_MESH_MULLER SMX_MULLER_SUM SMX_STABLE_MESH
+Law: soft-OOB fail-closed; free energy flows; Cube is SoT; no dual ladders.
+Proof 1761 asserts_ok:919 asserts_fail:0; flagship 1620 asserts_ok:12 asserts_fail:0.
