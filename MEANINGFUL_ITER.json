@@ -21,10 +21,10 @@
   "slice": "COMMON_BILE_DUCT|CBD|CHOLEDOCHUS|COMMON_BILE|EXTRAHEPATIC",
   "status": "PASS",
   "ts": 1787754600,
-  "head": "4cf183f103ae5f010813725b5d6fad91723b5dc5",
-  "sha": "4cf183f103ae5f010813725b5d6fad91723b5dc5",
-  "pinned_head": "4cf183f103ae5f010813725b5d6fad91723b5dc5",
-  "head_short": "4cf183f1",
+  "head": "21c701b385bd20a4eaf819095d1433f34f82df16",
+  "sha": "21c701b385bd20a4eaf819095d1433f34f82df16",
+  "pinned_head": "21c701b385bd20a4eaf819095d1433f34f82df16",
+  "head_short": "21c701b3",
   "flagship_ok": 12,
   "flagship_fail": 0
 }
