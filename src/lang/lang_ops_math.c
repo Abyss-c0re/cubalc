@@ -1,6 +1,42 @@
 /* CubalC lang — lang_ops_math.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
 
+
+static int cubalc_math_read_num_atom(VM *vm, Lex *L, long *out) {
+  if (!out) return 0;
+  if (L->cur.kind == TK_NUM) { *out = L->cur.num; lex_next(L); return 1; }
+  if (L->cur.kind == TK_MINUS) {
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { *out = -L->cur.num; lex_next(L); return 1; }
+    return 0;
+  }
+  if (L->cur.kind == TK_PLUS) {
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { *out = L->cur.num; lex_next(L); return 1; }
+    return 0;
+  }
+  if (L->cur.kind == TK_IDENT) {
+    if (strcmp(L->cur.text, "LAST_N") == 0 || strcmp(L->cur.text, "N") == 0) {
+      *out = vm->last_n; lex_next(L); return 1;
+    }
+    if (strcmp(L->cur.text, "LAST") == 0) {
+      Var *lv = var_get(vm, "LAST", 0);
+      if (lv && !lv->is_str) *out = lv->val;
+      else if (lv && lv->is_str) *out = strtol(lv->sval, NULL, 10);
+      else *out = strtol(vm->last_str, NULL, 10);
+      lex_next(L); return 1;
+    }
+    {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && !sv->is_str) { *out = sv->val; lex_next(L); return 1; }
+      if (sv && sv->is_str) { *out = strtol(sv->sval, NULL, 10); lex_next(L); return 1; }
+    }
+    return 0;
+  }
+  if (L->cur.kind == TK_STR) { *out = strtol(L->cur.text, NULL, 10); lex_next(L); return 1; }
+  return 0;
+}
+
 int cubalc_lang_ops_math(VM *vm, Lex *L){
   /* plane ops_math: L20289-22808 */
   /* digit-2 stack number theory / div modes: SPOW SGCD SLCM SSQR SISQRT SDIVCEIL SDIVFLOOR */
@@ -6072,5 +6108,124 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+
+
+
+
+  /* DIVFLOORN|FLOORDIVN|TILECOUNT a b — integer floor division floor(a/b) → LAST_N.
+   * Twin of DIVCEILN. b==0 soft LAST_N=0 + sticky LAST_ERR.
+   * True floor toward -inf for negatives: -7/3 → -3 (not C trunc -2).
+   * Optional BY glue. Usability: tile counts / floor-div without shell. */
+  if (kw(&L->cur,"DIVFLOORN") || kw(&L->cur,"FLOORDIVN") || kw(&L->cur,"TILECOUNT") ||
+      kw(&L->cur,"FLOOR_DIVN") || kw(&L->cur,"IDIVFLOOR") ||
+      kw(&L->cur,"NTILES") || kw(&L->cur,"FLOORQUOT")){
+    long a = 0, b = 0, out = 0;
+    int bad = 0;
+    char nbuf[32];
+    lex_next(L);
+    if (!cubalc_math_read_num_atom(vm, L, &a)) {
+      fail_at(vm, L, "DIVFLOORN a b — DIVFLOORN total size");
+      return -1;
+    }
+    if (kw(&L->cur,"BY") || kw(&L->cur,"OVER") || kw(&L->cur,"INTO") ||
+        kw(&L->cur,"PER"))
+      lex_next(L);
+    if (!cubalc_math_read_num_atom(vm, L, &b)) {
+      fail_at(vm, L, "DIVFLOORN a b — missing divisor");
+      return -1;
+    }
+    if (b == 0) {
+      out = 0;
+      bad = 1;
+      var_set_str(vm, "LAST_ERR", "DIVFLOORN: divide by zero");
+      var_set_str(vm, "ERR", "DIVFLOORN: divide by zero");
+    } else {
+      /* true floor toward -inf (not C toward-zero trunc) */
+      long q = a / b;
+      long r = a % b;
+      if (r != 0 && ((a < 0) != (b < 0))) q -= 1;
+      out = q;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "DIVFLOORN", out);
+    var_set_num(vm, "FLOORDIVN", out);
+    var_set_num(vm, "TILECOUNT", out);
+    var_set_num(vm, "DIVFLOORN_A", a);
+    var_set_num(vm, "DIVFLOORN_B", b);
+    var_set_num(vm, "DIVFLOORN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# divfloorn %ld / %ld → %ld ok=%d\n", a, b, out, bad?0:1);
+    bump(vm); return 1;
+  }
+
+
+  /* SNAPN|QUANTIZEN|ROUNDTON|GRIDN x step — snap x to nearest multiple of step → LAST_N.
+   * step==0 soft: LAST_N=x, SNAPN_OK=0, sticky LAST_ERR. Ties away from 0.
+   * Optional BY glue. Usability: align offsets/sizes to cache/page without shell. */
+  if (kw(&L->cur,"SNAPN") || kw(&L->cur,"QUANTIZEN") || kw(&L->cur,"ROUNDTON") ||
+      kw(&L->cur,"GRIDN") || kw(&L->cur,"SNAP_TO") || kw(&L->cur,"QUANTIZE") ||
+      kw(&L->cur,"ROUND_TO_STEP") || kw(&L->cur,"ALIGNN")){
+    long x = 0, step = 0, out = 0;
+    int ok = 1;
+    char nbuf[32];
+    lex_next(L);
+    if (!cubalc_math_read_num_atom(vm, L, &x)) {
+      fail_at(vm, L, "SNAPN x step — SNAPN offset 64");
+      return -1;
+    }
+    if (kw(&L->cur,"BY") || kw(&L->cur,"TO") || kw(&L->cur,"STEP") ||
+        kw(&L->cur,"OF"))
+      lex_next(L);
+    if (!cubalc_math_read_num_atom(vm, L, &step)) {
+      fail_at(vm, L, "SNAPN x step — missing step");
+      return -1;
+    }
+    if (step == 0) {
+      out = x;
+      ok = 0;
+      var_set_str(vm, "LAST_ERR", "SNAPN: zero step");
+      var_set_str(vm, "ERR", "SNAPN: zero step");
+    } else {
+      long s = step < 0 ? -step : step;
+      long q, r;
+      if (x >= 0) {
+        q = x / s;
+        r = x % s;
+        if (r * 2 >= s) q += 1;
+        out = q * s;
+      } else {
+        long ax = -x;
+        q = ax / s;
+        r = ax % s;
+        if (r * 2 >= s) q += 1;
+        out = -(q * s);
+      }
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "SNAPN", out);
+    var_set_num(vm, "QUANTIZEN", out);
+    var_set_num(vm, "ROUNDTON", out);
+    var_set_num(vm, "GRIDN", out);
+    var_set_num(vm, "SNAPN_X", x);
+    var_set_num(vm, "SNAPN_STEP", step);
+    var_set_num(vm, "SNAPN_OK", ok ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# snapn %ld step %ld → %ld ok=%d\n", x, step, out, ok);
+    bump(vm); return 1;
+  }
+
   return 0;
 }

@@ -1,0 +1,6 @@
+SHIP 1780 MESH_SNAPN
+feature: SNAPN|QUANTIZEN|ROUNDTON|GRIDN x step — snap to nearest multiple (ties away from 0)
+proof: programs/proof/1041_snapn.cubalc PASS asserts_ok=23
+impl: src/lang/lang_ops_math.c (pure C, soft zero-step)
+MEANINGFUL_ITER=1780
+VERSION=1.15.1256-snapn-mesh

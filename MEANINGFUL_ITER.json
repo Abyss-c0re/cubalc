@@ -1,19 +1,19 @@
 {
-  "iter": 1779,
-  "feature": "MESH_CANALICULUS",
+  "iter": 1780,
+  "feature": "SNAPN",
   "head": "55e03cd45148e30fccf36395ac2cede2b9559b11",
   "short": "55e03cd4",
   "status": "PASS",
   "soft_oob": true,
   "fail_closed": true,
   "mesh_exchange": true,
-  "meaningful_iter": 1779,
-  "version": "1.15.1255-canaliculus-mesh",
+  "meaningful_iter": 1780,
+  "version": "1.15.1256-snapn-mesh",
   "head_short": "55e03cd4",
   "MEANINGFUL_ITER": 1779,
   "unity": 1.0,
   "next": "we_autoheal",
-  "proof": "1779_smx_mesh_canaliculus_life_cascade.cubalc",
+  "proof": "programs/proof/1041_snapn.cubalc",
   "smoke": "1779_smx_canaliculus_soft_oob_smoke.cubalc",
   "flagship_1620": "PASS",
   "latch": "canaliculus_latch",
@@ -22,5 +22,7 @@
     "1779_smoke": "PASS",
     "1779_cascade": "PASS",
     "1620_flagship": "PASS"
-  }
+  },
+  "ok": true,
+  "ts": 1787747125
 }
