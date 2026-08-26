@@ -3,4 +3,4 @@ proof 1766 PASS asserts_ok=1080 fail=0
 flagship 1620 PASS asserts_ok=12 fail=0
 MEANINGFUL_ITER=1766
 VERSION=1.15.1243-usability
-HEAD=96d8ccc265b7e3cdf5899a565f7d510cf65c9b9b
+HEAD=2af3d2d2186ee8c17e930d8b4aaa62fdfec7dda0

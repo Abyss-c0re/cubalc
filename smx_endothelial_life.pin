@@ -1,7 +1,8 @@
-MEANINGFUL_ITER=1766
-FEATURE=MESH_ENDOTHELIAL_LIFE_CASCADE
-PROOF=programs/proof/1766_smx_mesh_endothelial_life_cascade.cubalc
-ASSERTS_OK=1080
-ASSERTS_FAIL=0
-FLAGSHIP_1620=PASS
-HEAD=7bf56fa47e5c4ddab6400cbed6dcf4b7fa43edcf
+iter=1766
+feature=MESH_ENDOTHELIAL_LIFE_CASCADE
+version=1.15.1243-usability
+proof=programs/proof/1766_smx_mesh_endothelial_life_cascade.cubalc
+asserts_ok=1080
+asserts_fail=0
+flagship_1620=PASS
+soft_oob=fail-closed
