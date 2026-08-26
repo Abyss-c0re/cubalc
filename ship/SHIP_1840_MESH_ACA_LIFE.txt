@@ -1,5 +1,5 @@
 SHIP 1840 SMX_MESH_ACA_LIFE
-HEAD=1cc5c956e759ce0d451e31e6735c0dbbb2ecc9b2
+HEAD=315ec9bf9035f7246e1b968b8a98eda5fb732394
 VERSION=1.15.1319-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1840=60/0 1620=12/0 PASS
