@@ -1,1 +1,10 @@
-SHIP 1771 SMX SINUSOID mesh life-cascade soft-OOB PASS asserts_ok:1234 asserts_fail:0 flagship 1620 PASS 12/0
+SHIP 1771 SMX mesh SINUSOID life-cascade
+Feature: sinusoid vessel mesh stability after capillary
+Proof: programs/proof/1771_smx_mesh_sinusoid_life_cascade.cubalc
+Soft-OOB fail-closed; full cascade; mitosis under free energy; raise after storm.
+Proof PASS asserts_ok:1234 asserts_fail:0
+Flagship 1620 PASS asserts_ok:12 asserts_fail:0
+MEANINGFUL_ITER=1771
+VERSION=1.15.1248-usability
+HEAD=033971acabc55ef10be296e378b518d9a217009f
+SHORT=033971ac

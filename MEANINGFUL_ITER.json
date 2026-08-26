@@ -1,9 +1,1 @@
-{
-  "iter": 1771,
-  "feature": "smx_mesh_sinusoid_life_cascade",
-  "head": "PENDING",
-  "short": "PENDING",
-  "version": "1.15.1248-usability",
-  "proof": "1771 asserts_ok:1226 asserts_fail:0",
-  "flagship": "1620 PASS 12/0"
-}
+{"iter":1771,"feature":"smx_mesh_sinusoid_life_cascade","head":"033971acabc55ef10be296e378b518d9a217009f","short":"033971ac","version":"1.15.1248-usability","proof":"1771 asserts_ok:1234 asserts_fail:0","flagship":"1620 PASS 12/0"}

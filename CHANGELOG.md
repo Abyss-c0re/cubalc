@@ -1,3 +1,7 @@
+## 1.15.1248-usability — MEANINGFUL_ITER 1771 SINUSOID
+- SMX SINUSOID soft-OOB fail-closed mesh stability life cascade after capillary
+- proof 1771 asserts_ok:1234 asserts_fail:0; flagship 1620 PASS 12/0
+
 ## 1.15.1246-usability — MEANINGFUL_ITER 1769 VENULE
 - SMX VENULE soft-OOB fail-closed mesh stability life cascade after arteriole
 - proof 1769 asserts_ok:1154 asserts_fail:0; flagship 1620 PASS 12/0
