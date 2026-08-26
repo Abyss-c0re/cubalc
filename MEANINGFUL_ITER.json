@@ -38,11 +38,11 @@
   "branch": "ship-1827-mitral",
   "sealed": true,
   "tip_eq_pin": true,
-  "pin_head": "aa9a8a38047dd334273444c353775ad4f39f6a5d",
-  "pin_short": "aa9a8a38",
-  "HEAD": "aa9a8a38047dd334273444c353775ad4f39f6a5d",
-  "tip": "aa9a8a38047dd334273444c353775ad4f39f6a5d",
-  "pinned_head": "aa9a8a38047dd334273444c353775ad4f39f6a5d",
-  "head": "aa9a8a38047dd334273444c353775ad4f39f6a5d",
-  "sha": "aa9a8a38047dd334273444c353775ad4f39f6a5d"
+  "pin_head": "8fa1cb2bc4f0a1d46cd94145cbece5042734b48f",
+  "pin_short": "8fa1cb2b",
+  "HEAD": "8fa1cb2bc4f0a1d46cd94145cbece5042734b48f",
+  "tip": "8fa1cb2bc4f0a1d46cd94145cbece5042734b48f",
+  "pinned_head": "8fa1cb2bc4f0a1d46cd94145cbece5042734b48f",
+  "head": "8fa1cb2bc4f0a1d46cd94145cbece5042734b48f",
+  "sha": "8fa1cb2bc4f0a1d46cd94145cbece5042734b48f"
 }
