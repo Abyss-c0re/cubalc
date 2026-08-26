@@ -5,8 +5,8 @@
   "latch": "sinusoid_latch",
   "status": "PASS",
   "unity": 1.0,
-  "head": "dc6e1adae68e3724c563e71c2f47a12357e7fd26",
+  "head": "20def5bf93b7481374f73a4b93da62aec1f08c3c",
   "full_head": "d3e717161eaf88b2418e938144703468a65629fb",
   "next": "we_autoheal",
-  "short": "dc6e1ada"
+  "short": "20def5bf"
 }
