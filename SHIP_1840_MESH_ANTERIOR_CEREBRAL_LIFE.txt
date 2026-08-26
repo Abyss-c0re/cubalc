@@ -1,5 +1,6 @@
 SHIP 1840 SMX_MESH_ANTERIOR_CEREBRAL_LIFE
+VERSION=1.15.1320-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1840=60/0 1620=12/0 PASS
 c_slice=src/cubalc_smx_anterior_cerebral.c
-energy=ICA/ACOM→ACA A1→callosal/pericallosal→medial/paracentral seal
+energy_path=ICA terminus/ACA origin → ACA A1 stem → ACom join → callosal/pericallosal arc → medial hemispheric/paracentral seal · medial frontal life-force feed

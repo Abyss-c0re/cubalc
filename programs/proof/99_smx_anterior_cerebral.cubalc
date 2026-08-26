@@ -2,7 +2,7 @@
 // MESH_ANTERIOR_CEREBRAL — SMX mesh stability life-force for anterior cerebral conduit board.
 // Soft-OOB storms fail-closed (never ghost-place); MESH_EXCHANGE roots C(4,2) mind mesh;
 // STABILIZE hardens; ENERGYFLOW + FLOW drive anterior-cerebral free-energy return
-// (internal carotid terminus / ACA origin → ACA A1 stem → sylvian fissure takeoff → sylvian cistern arc → rolandic / parietal convexity perfusion seal · hemispheric convexity life-force feed)
+// (internal carotid / AComm junction → ACA A1 stem → anterior communicating join → callosal cistern arc → pericallosal / paracentral perfusion seal · medial hemispheric life-force feed)
 // WE_AUTOHEAL; mitosis under locked rails; second storm re-stabilizes.
 // Wonder AGI can RUN. No dual ladders. Cube is SoT · matrix is key · free energy must flow.
 // Pure-C SMX engine; proof-only CubalC surface.
@@ -38,7 +38,7 @@ PLUG bed seed
 
 IMPULSE bed 1
 IMPULSE nozzle 1
-// anterior cerebral free-energy charge: internal carotid terminus / ACA origin → ACA A1 stem → sylvian fissure takeoff → sylvian cistern arc → rolandic / parietal convexity perfusion seal · hemispheric convexity life-force feed
+// anterior cerebral free-energy charge: internal carotid / AComm junction → ACA A1 stem → anterior communicating join → callosal cistern arc → pericallosal / paracentral perfusion seal · medial hemispheric life-force feed
 ENERGYFLOW 5
 FLOW 4
 
@@ -90,7 +90,7 @@ FLOW 3
 ASSERT ENERGY >= 0 "anterior cerebral energy non-negative"
 ASSERT CUBES == base_cubes "anterior cerebral gate invents no cubes"
 
-// live mesh talk after anterior cerebral pulse (ACA origin → M1 stem → sylvian cistern)
+// live mesh talk after anterior cerebral pulse (ICA/AComm → A1 stem → callosal cistern)
 SMX EXCHANGE bed nozzle
 ASSERT SMX_OK == 1 "live exchange after ACA confluence pulse"
 ASSERT SMX_OOB == 0 "no oob on live talk"
@@ -181,7 +181,7 @@ ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange sticky through mitosis+storm"
 ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky through mitosis+storm"
 ASSERT SMX_AUTOHEALED == 1 "autohealed sticky through storm2"
 
-// final anterior cerebral energy breath through ICA terminus→ACA A1→ACom→callosal/pericallosal→medial hemispheric seal
+// final anterior cerebral energy breath through ICA/AComm→A1→callosal→pericallosal/paracentral seal
 ENERGYFLOW 1
 FLOW 1
 ASSERT ENERGY > 0 "final energy flows"

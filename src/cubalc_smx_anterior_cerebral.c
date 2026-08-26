@@ -2,7 +2,7 @@
  * Soft-OOB fail-closed + MESH_EXCHANGE C(4,2) rails (engine in cubalc_smx / lang_ops_smx).
  * Proof: programs/proof/99_smx_anterior_cerebral.cubalc · 1840_smx_mesh_anterior_cerebral_life.cubalc
  * Energy path: internal carotid terminus / ACA origin → ACA A1 stem → anterior communicating join →
- * callosal / pericallosal arc → medial frontal / paracentral perfusion seal · medial hemispheric life-force feed.
+ * callosal cistern arc → pericallosal / paracentral perfusion seal · medial hemispheric life-force feed.
  * Pure C. No SYS glue.
  */
 #include <string.h>
