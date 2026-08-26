@@ -1,11 +1,10 @@
-MESH_SINUSOID life-force soft-OOB mesh stability
-MEANINGFUL_ITER 1771 VERSION 1.15.1248-usability
-Sinusoid shell after capillary; fail-closed without key; sinusoid_latch when sealed and unity=1.0.
-Proofs: smx-sinusoid, mesh-stability, we-autoheal, soft-oob, flagship1620 PASS.
-feature=MESH_SINUSOID
-iter=1771
-version=1.15.1248-usability
-latch=sinusoid_latch
-status=PASS
-next=we_autoheal
-head=ee7b1d64
+SHIP 1771 SMX mesh SINUSOID life-cascade
+Feature: sinusoid vessel mesh stability after capillary
+Proof: programs/proof/1771_smx_mesh_sinusoid_life_cascade.cubalc
+Soft-OOB fail-closed; full cascade; mitosis under free energy; raise after storm.
+Proof PASS asserts_ok:1234 asserts_fail:0
+Flagship 1620 PASS asserts_ok:12 asserts_fail:0
+MEANINGFUL_ITER=1771
+VERSION=1.15.1248-usability
+HEAD=a42a7853ad944adefe40ccc305b0d4a41430bede
+SHORT=a42a7853

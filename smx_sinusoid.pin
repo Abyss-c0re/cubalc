@@ -1,8 +1,5 @@
-feature=MESH_SINUSOID
 iter=1771
-version=1.15.1248-usability
-latch=sinusoid_latch
-status=PASS
-unity=1.0
-stability=1.0
-head=6986fc7b
+feature=SINUSOID
+head=a42a7853ad944adefe40ccc305b0d4a41430bede
+short=a42a7853
+proof=PASS
