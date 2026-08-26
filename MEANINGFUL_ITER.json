@@ -1,14 +1,13 @@
 {
-  "schema": "cubalc.meaningful_iter.v1",
   "iter": 1771,
-  "meaningful_iter": 1771,
-  "version": "1.15.1248-usability",
-  "feature": "MESH_SINUSOID",
-  "head": "1535445abd7e16479335b610985d6a25b973b2ec",
-  "short": "1535445a",
-  "status": "PASS",
-  "proof": "1771_smx_mesh_sinusoid_life_cascade",
-  "flagship": "1620_atomic_printer_life_force",
+  "feature": "smx_mesh_sinusoid_life_cascade",
+  "slice": "SINUSOID soft-OOB mesh stability life-force after capillary",
+  "proof": "programs/proof/1771_smx_mesh_sinusoid_life_cascade.cubalc",
   "asserts_ok": 1234,
-  "unity": 1.0
+  "asserts_fail": 0,
+  "flagship_1620": "PASS 12/0",
+  "version": "1.15.1248-usability",
+  "head": "204e069234235e50dce3046c60a9f64a4ce297ee",
+  "short": "204e0692",
+  "base_head": "b35698d59711e961f4a5eca7380c5d577e9974bf"
 }
