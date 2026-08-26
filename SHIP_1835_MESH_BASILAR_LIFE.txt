@@ -8,3 +8,5 @@ asserts_ok: 60
 flagship_1620: PASS 12/0
 MEANINGFUL_ITER: 1835
 status: PASS
+HEAD: 7aede0d68b1624543e7b1e1278221aeeb66dc3d0
+tip_equals_pin: true
