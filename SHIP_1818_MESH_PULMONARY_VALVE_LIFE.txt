@@ -1,4 +1,13 @@
-1818 MESH_PULMONARY_VALVE
-soft-OOB fail-closed MESH_EXCHANGE C(4,2)
-proofs 82+1818 PASS; flagship 1620 PASS 12
-path: right ventricle chamber → pulmonary valve leaflets → pulmonary outflow trunk → main pulmonary artery → lung return
+MEANINGFUL_ITER=1818
+FEATURE=SMX_MESH_PULMONARY_VALVE_LIFE
+PROOF=programs/proof/82_smx_pulmonary_valve.cubalc
+PROOF_ALT=programs/proof/1818_smx_mesh_pulmonary_valve_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+VERSION=1.15.1299-usability
+HEAD=3071c5a3c602da1888beb0df866cc9ac7901b9f5
+NOTE=MESH_PULMONARY_VALVE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right ventricle chamber→pulmonary valve leaflets→pulmonary outflow trunk→main pulmonary artery→lung return; WE_AUTOHEAL; pure-C cubalc_smx_pulmonary_valve.c
+C_SLICE=src/cubalc_smx_pulmonary_valve.c
