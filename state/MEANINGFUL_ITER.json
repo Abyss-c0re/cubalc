@@ -30,9 +30,9 @@
   "status": "PASS",
   "unity": 1.0,
   "feat_subject": "feat(smx): mesh PCOM life soft-OOB stability (MEANINGFUL_ITER 1838)",
-  "pin_head": "fcdee61d662003a15b942584a2acbc401f03f568",
-  "tip": "fcdee61d662003a15b942584a2acbc401f03f568",
-  "HEAD": "fcdee61d662003a15b942584a2acbc401f03f568",
-  "head_short": "fcdee61d",
-  "feat_head": "fcdee61d662003a15b942584a2acbc401f03f568"
+  "pin_head": "35163750647634d9fd1a5705415832315592eff9",
+  "tip": "35163750647634d9fd1a5705415832315592eff9",
+  "HEAD": "35163750647634d9fd1a5705415832315592eff9",
+  "head_short": "35163750",
+  "feat_head": "35163750647634d9fd1a5705415832315592eff9"
 }
