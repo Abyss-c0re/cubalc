@@ -1,1 +1,8 @@
-SMX_MESH_LEFT_VERTEBRAL_LIFE PASS iter=1834 head=ef902f809bf9ee1620cd183e6291216eb05ca1a2
+SHIP 1834 MESH_LEFT_VERTEBRAL_LIFE
+feature: soft-OOB fail-closed left vertebral life-force
+c_slice: src/cubalc_smx_left_vertebral.c
+proof: programs/proof/1834_smx_mesh_left_vertebral_life.cubalc
+asserts_ok: 60
+flagship_1620: PASS
+MEANINGFUL_ITER: 1834
+HEAD: 1b06c3701e5fcf6e07a9e1ee1fe7d2b255007330
