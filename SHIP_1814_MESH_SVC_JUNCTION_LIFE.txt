@@ -1,0 +1,6 @@
+SHIP 1814 MESH_SVC_JUNCTION soft-OOB mesh life-force
+feature=SMX_MESH_SVC_JUNCTION_LIFE
+proofs=78_smx_svc_junction.cubalc,1814_smx_mesh_svc_junction_life.cubalc
+asserts_ok=60 asserts_fail=0 flagship_1620=PASS
+energy=brachiocephalic→SVC junction→right atrium→tricuspid→systemic return
+soft_oob=fail_closed mesh_exchange=C(4,2) we_autoheal=1
