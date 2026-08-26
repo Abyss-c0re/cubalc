@@ -6,5 +6,7 @@ Proof PASS asserts_ok:1234 asserts_fail:0
 Flagship 1620 PASS asserts_ok:12 asserts_fail:0
 MEANINGFUL_ITER=1771
 VERSION=1.15.1248-usability
-HEAD=033971acabc55ef10be296e378b518d9a217009f
-SHORT=033971ac
+HEAD=b2054419e228b1d479ad7774a9c1d12596437c37
+SHORT=b2054419
+smx_sinusoid_life
+smx_mesh_sinusoid_life_cascade
