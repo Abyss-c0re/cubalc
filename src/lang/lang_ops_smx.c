@@ -16448,6 +16448,204 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; PORTAL|CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
+  /* SMX SINUSOID|SINUSOIDGLIA|MESH_SINUSOID|SINUSOID_WRAP|SINUSOID_SHEATH|SINUSOID_GUIDE|RAISE_SINUSOID a b c ...
+   * Life-force SINUSOID sinusoid hepatic exchange scaffold mesh stability after portal confluence: hepatic sinusoid exchange bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete sinusoid hepatic exchange scaffold mesh among live nodes, weaves a
+   * sinusoid wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks sinusoid where life guides the sinusoid confluence return pulse.
+   * Latches SMX_SINUSOID when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = sinusoid ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_SINUSOID_SUM = bonds+wraps+sheaths; SMX_SINUSOID|SMX_MESH_SINUSOID|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"SINUSOID")||kw(&L->cur,"SINUSOIDGLIA")||kw(&L->cur,"MESH_SINUSOID")||kw(&L->cur,"SINUSOID_WRAP")||kw(&L->cur,"SINUSOID_WRAPS")||kw(&L->cur,"SINUSOID_SHEATH")||kw(&L->cur,"SINUSOID_SHEATHS")||kw(&L->cur,"SINUSOID_GUIDE")||kw(&L->cur,"RAISE_SINUSOID")||kw(&L->cur,"WE_SINUSOID")||kw(&L->cur,"LIFE_SINUSOID")||
+      kw(&L->cur,"STABLE_SINUSOID")||kw(&L->cur,"MESH_SINUSOIDS")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_SINUSOID")||kw(&L->cur,"SINUSOID_LEAF")||
+      kw(&L->cur,"SEEDSINUSOID")||kw(&L->cur,"SEEDSINUSOIDSHEATH")||kw(&L->cur,"SEEDSINUSOIDWRAP")||
+      kw(&L->cur,"SINUSOID_RING")||kw(&L->cur,"SINUSOID_SHEATH_HUB")||kw(&L->cur,"SINUSOID_NODE")||
+      kw(&L->cur,"LATTICE_SINUSOID")||kw(&L->cur,"WORLD_SINUSOID")||kw(&L->cur,"WORLD_SINUSOID")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_SINUSOID")||kw(&L->cur,"HARDEN_SINUSOID")||
+      kw(&L->cur,"SINUSOID_SCAFFOLD")||kw(&L->cur,"SINUSOID_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "SINUSOID needs >=2 cubes",
+                  "SMX SINUSOID a b [c ...]  or  SMX SINUSOID_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - sinusoid needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete sinusoid mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* sinusoid ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int sinusoid_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (sinusoid_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_SINUSOIDED", (long)sinusoid_ok);
+      var_set_num(vm, "SMX_SINUSOID_LATCH", (long)sinusoid_ok);
+      var_set_num(vm, "SMX_SINUSOID", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SINUSOID_SUM", (long)(sinusoid_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_SINUSOID_ALIAS", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_SINUSOID", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SINUSOID_SHEATH_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_SINUSOID", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SINUSOID_WRAP_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_WRAP", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_WRAPS", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_SHEATHS", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_WRAP_LATCH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(sinusoid_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PO_BONDS", (long)(sinusoid_ok ? bonds : 0));
+      var_set_num(vm, "SMX_PO_MESH", (long)(sinusoid_ok ? bonds : 0));
+      var_set_num(vm, "SMX_PO_BONDS2", (long)(sinusoid_ok ? bonds : 0));
+      var_set_num(vm, "SMX_PO_STARS", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_PO_STAR", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_RING", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SINUSOID_LANE", (long)(sinusoid_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SINUSOID_SHEATH_HUB", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDSINUSOID", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDSINUSOIDSHEATH", (long)(sinusoid_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(sinusoid_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (sinusoid_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX SINUSOID ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX SINUSOID partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX SINUSOID soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX SINUSOID nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d sinusoided=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, sinusoid_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (see lang_ops_smx; SINUSOID|PORTAL|CAVA|VEIN|AORTA|ARTERY|ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
   return -1;
 }

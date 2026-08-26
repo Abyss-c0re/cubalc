@@ -1,0 +1,6 @@
+SHIP 1776 SMX SINUSOID mesh life cascade
+- op: SMX SINUSOID|MESH_SINUSOID|RAISE_SINUSOID (hepatic exchange scaffold)
+- proof: programs/proof/1776_smx_mesh_sinusoid_life_cascade.cubalc PASS asserts_ok=1336 fail=0
+- flagship: programs/proof/1620_atomic_printer_life_force.cubalc PASS asserts_ok=12 fail=0
+- binary: out/ship1776/cubalc
+- MEANINGFUL_ITER=1776
