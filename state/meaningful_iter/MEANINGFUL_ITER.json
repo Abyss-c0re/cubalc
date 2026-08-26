@@ -1,1 +1,43 @@
-{"iter":1777,"feature":"smx_mesh_stability_life_force","ops":["LIFE_FORCE","SINUSOID","DISSE","STABILIZE","WE_AUTOHEAL","RESILIENCE"],"version":"1.15.1255-usability","proofs":["programs/science/proof/1777_smx_mesh_stability_life_force.cubalc","programs/science/proof/1777_smx_mesh_disse_life_cascade.cubalc","programs/proof/1620_atomic_printer_life_force.cubalc"],"status":"PASS"}
+{
+  "iter": 1817,
+  "feature": "SMX_MESH_RIGHT_VENTRICLE_LIFE",
+  "ops": [
+    "LIFE_FORCE",
+    "SINUSOID",
+    "DISSE",
+    "STABILIZE",
+    "WE_AUTOHEAL",
+    "RESILIENCE"
+  ],
+  "version": "1.15.1296-usability",
+  "proofs": [
+    "programs/science/proof/1777_smx_mesh_stability_life_force.cubalc",
+    "programs/science/proof/1777_smx_mesh_disse_life_cascade.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
+  ],
+  "status": "PASS",
+  "head_short": "9fe1121e",
+  "tip_equals_pin": true,
+  "feat_sha": "9fe1121e0af83eb8e9a08643e1a77e1629889904",
+  "pin_sha": "9fe1121e0af83eb8e9a08643e1a77e1629889904",
+  "sha": "9fe1121e0af83eb8e9a08643e1a77e1629889904",
+  "head": "9fe1121e0af83eb8e9a08643e1a77e1629889904",
+  "pinned_head": "9fe1121e0af83eb8e9a08643e1a77e1629889904",
+  "commit": "9fe1121e0af83eb8e9a08643e1a77e1629889904",
+  "pin_head": "9fe1121e0af83eb8e9a08643e1a77e1629889904",
+  "tip": "9fe1121e0af83eb8e9a08643e1a77e1629889904",
+  "meaningful_iter": 1817,
+  "MEANINGFUL_ITER": 1817,
+  "VERSION": "1.15.1296-usability",
+  "FEATURE": "SMX_MESH_RIGHT_VENTRICLE_LIFE",
+  "proof_status": "PASS",
+  "asserts_ok": 61,
+  "asserts_fail": 0,
+  "flagship_1620": "PASS",
+  "flagship_asserts_ok": 12,
+  "flagship_ok": 12,
+  "flagship_fail": 0,
+  "unity": 1.0,
+  "soft_oob": true,
+  "fail_closed": true
+}
