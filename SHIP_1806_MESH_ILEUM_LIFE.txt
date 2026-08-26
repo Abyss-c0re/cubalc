@@ -1,0 +1,12 @@
+MEANINGFUL_ITER=1806
+FEATURE=SMX_MESH_ILEUM_LIFE
+PROOF=programs/proof/71_smx_ileum.cubalc
+PROOF_ALT=programs/proof/1805_smx_mesh_ileum_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+VERSION=1.15.1281-usability
+NOTE=MESH_ILEUM soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW jejunal→plicae/villi→Peyer→ileocecal; WE_AUTOHEAL; pure-C cubalc_smx_ileum.c
+C_SLICE=src/cubalc_smx_ileum.c

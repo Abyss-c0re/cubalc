@@ -1,0 +1,7 @@
+MESH_ILEUM
+FEATURE=SMX_MESH_ILEUM_LIFE
+PROOF=programs/proof/71_smx_ileum.cubalc
+PROOF_ALT=programs/proof/1805_smx_mesh_ileum_life.cubalc
+SOFT_OOB=fail-closed
+MESH_EXCHANGE=C(4,2)
+STATUS=SHIPPING
