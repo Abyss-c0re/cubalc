@@ -1,6 +1,1 @@
-1766 SMX mesh endothelial life cascade
-proof 1766 PASS asserts_ok=1080 fail=0
-flagship 1620 PASS asserts_ok=12 fail=0
-MEANINGFUL_ITER=1766
-VERSION=1.15.1243-usability
-HEAD=2af3d2d2186ee8c17e930d8b4aaa62fdfec7dda0
+SHIP 1766 ENDOTHELIAL PASS asserts_ok=1080 flagship_1620=12 head=3a8f81db

@@ -1,8 +1,6 @@
 iter=1766
 feature=MESH_ENDOTHELIAL_LIFE_CASCADE
-version=1.15.1243-usability
-proof=programs/proof/1766_smx_mesh_endothelial_life_cascade.cubalc
-asserts_ok=1080
-asserts_fail=0
+head=3a8f81db40361aa9c5ff7b0be7e1e6aa0ce39acb
+head_short=3a8f81db
+proof=PASS
 flagship_1620=PASS
-soft_oob=fail-closed
