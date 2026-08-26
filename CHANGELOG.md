@@ -1,3 +1,8 @@
+## 1.15.1289-usability — 1810 MESH_VENOUS_ANGLE
+- SMX mesh stability life-force: venous angle (IJV∩SCV) soft-OOB fail-closed, MESH_EXCHANGE C(4,2), WE_AUTOHEAL
+- Proofs: 74_smx_venous_angle.cubalc, 1810_smx_mesh_venous_angle_life.cubalc (60 asserts PASS); flagship 1620 PASS
+- C slice: src/cubalc_smx_venous_angle.c
+
 ## 1.15.1288-usability — 1809 SMX MESH_CISTERNA_CHYLI life
 
 - feat(smx): MESH_CISTERNA_CHYLI soft-OOB fail-closed + mesh exchange C(4,2)
