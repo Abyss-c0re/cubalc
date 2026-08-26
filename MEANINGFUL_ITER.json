@@ -27,7 +27,7 @@
   "tip_equals_pin": true,
   "soft_oob": true,
   "fail_closed": true,
-  "notes": "MESH_PULMONARY_VALVE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right ventricle chamber→pulmonary valve leaflets→pulmonary outflow trunk→main pulmonary artery→lung return; WE_AUTOHEAL; pure-C cubalc_smx_pulmonary_valve.c",
+  "notes": "MESH_PULMONARY_VALVE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW right ventricle chamber\u2192pulmonary valve leaflets\u2192pulmonary outflow trunk\u2192main pulmonary artery\u2192lung return; WE_AUTOHEAL; pure-C cubalc_smx_pulmonary_valve.c",
   "note": "MESH_PULMONARY_VALVE SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1818 smx mesh pulmonary valve life",
   "item_id": "mi_1818_smx_mesh_pulmonary_valve_life",
@@ -41,5 +41,5 @@
   "commit": "3071c5a3c602da1888beb0df866cc9ac7901b9f5",
   "pin_head": "3071c5a3c602da1888beb0df866cc9ac7901b9f5",
   "tip": "3071c5a3c602da1888beb0df866cc9ac7901b9f5",
-  "head_short": "3071c5a3"
+  "head_short": "eb983495"
 }
