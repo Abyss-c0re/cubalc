@@ -1,3 +1,9 @@
+## 1830 — MESH_ASCENDING_AORTA soft-OOB mesh life-force
+
+- feat(smx): ascending aorta root conduit mesh soft-OOB fail-closed + MESH_EXCHANGE C(4,2)
+- proofs: 96_smx_ascending_aorta + 1830_smx_mesh_ascending_aorta_life (60/0 PASS); flagship 1620 PASS (12)
+- pure-C: src/cubalc_smx_ascending_aorta.c; VERSION 1.15.1309-usability
+
 ## 1.15.1289-usability — 1810 SMX MESH_VENOUS_ANGLE life
 
 - feat(smx): MESH_VENOUS_ANGLE soft-OOB fail-closed + mesh exchange C(4,2)

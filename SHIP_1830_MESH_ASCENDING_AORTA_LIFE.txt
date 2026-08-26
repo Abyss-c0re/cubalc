@@ -1,0 +1,6 @@
+SHIP 1830 MESH_ASCENDING_AORTA_LIFE
+feat(smx): ascending aorta root conduit mesh soft-OOB life-force path
+proofs: programs/proof/96_smx_ascending_aorta.cubalc + programs/proof/1830_smx_mesh_ascending_aorta_life.cubalc
+asserts_ok=60 asserts_fail=0 flagship_1620=PASS (12)
+VERSION=1.15.1309-usability MEANINGFUL_ITER=1830
+WE_AUTOHEAL ascending aorta seal green.
