@@ -38,7 +38,7 @@ PLUG bed seed
 
 IMPULSE bed 1
 IMPULSE nozzle 1
-// aortic-valve free-energy charge: left ventricle chamber → LV outflow tract → aortic valve leaflets → aortic root sinuses → ascending aorta outflow
+// aortic-valve free-energy charge: left ventricle chamber → LV outflow tract → aortic valve leaflets → aortic root sinuses → ascending aorta trunk
 ENERGYFLOW 5
 FLOW 4
 
@@ -62,7 +62,7 @@ ASSERT SMX_OK == 0 "storm-C soft-OOB"
 ASSERT SMX_OOB >= 3 "oob C depth"
 ASSERT CUBES == base_cubes "no ghost from storm-C"
 
-// --- MESH_EXCHANGE roots complete mitral mind mesh among live printer spine ---
+// --- MESH_EXCHANGE roots complete aortic valve mind mesh among live printer spine ---
 SMX MESH_EXCHANGE bed nozzle hive scrap
 ASSERT SMX_OK == 1 "mesh_exchange live"
 ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange latch"
