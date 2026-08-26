@@ -7,15 +7,30 @@
   "ship": "1841_smx_mesh_anterior_communicating_life",
   "version": "1.15.1320-usability",
   "VERSION": "1.15.1320-usability",
+  "head": "a13bf9c8f0d22a4e624a12d80c7f0ff1fccc0a4f",
+  "HEAD": "a13bf9c8f0d22a4e624a12d80c7f0ff1fccc0a4f",
+  "pin": "a13bf9c8f0d22a4e624a12d80c7f0ff1fccc0a4f",
+  "tip": "a13bf9c8f0d22a4e624a12d80c7f0ff1fccc0a4f",
+  "pin_head": "a13bf9c8f0d22a4e624a12d80c7f0ff1fccc0a4f",
+  "pinned_head": "a13bf9c8f0d22a4e624a12d80c7f0ff1fccc0a4f",
+  "sha": "a13bf9c8f0d22a4e624a12d80c7f0ff1fccc0a4f",
+  "pin_short": "a13bf9c8",
+  "short": "a13bf9c8",
   "status": "PASS",
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
   "proofs": "1841+99=60/0,1620=12/0",
-  "c_slice": "src/cubalc_smx_anterior_communicating.c",
+  "tip_equals_pin": true,
+  "tip_eq_pin": true,
   "proof_recheck": {
     "99": "PASS 60/0",
     "1841": "PASS 60/0",
     "1620": "PASS 12/0"
-  }
+  },
+  "c_slice": "src/cubalc_smx_anterior_communicating.c",
+  "branch": "ship-1841-anterior-communicating",
+  "mesh": "anterior_communicating",
+  "aka": "MESH_ACOM",
+  "ship_name": "1841_smx_mesh_anterior_communicating_life"
 }
