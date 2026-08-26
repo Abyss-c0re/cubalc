@@ -3,8 +3,8 @@
   "meaningful_iter": 1775,
   "feature": "MESH_STELLATE",
   "version": "1.15.1251-stellate-mesh",
-  "head": "6e84c35da6c4fb9a50bf73bae66f43e3e9bb2d8e",
-  "short": "6e84c35d",
+  "head": "d78554856ec8d8b5eeea63ecf3ad9567d2a32caa",
+  "short": "d7855485",
   "proofs": {
     "1775_smoke": "PASS",
     "1775_cascade": "PASS",
