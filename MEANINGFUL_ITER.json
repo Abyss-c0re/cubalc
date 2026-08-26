@@ -1,8 +1,8 @@
 {
   "meaningful_iter": 1765,
   "version": "1.15.1241-usability",
-  "head": "774ced3c6b35b718714f64ae7e9026c1f5decfbf",
-  "head_short": "774ced3c",
+  "head": "f1d5ebe19dc654ddb4cee13f2870bc55dd71dd2e",
+  "head_short": "f1d5ebe1",
   "feature": "SMX_PERICYTE soft-OOB fail-closed mesh life cascade",
   "proof": "programs/proof/1765_smx_mesh_pericyte_life_cascade.cubalc",
   "asserts_ok": 1046,
