@@ -1,0 +1,7 @@
+SHIP 1826 MESH_LEFT_ATRIUM_INFLOW_LIFE
+feature: soft-OOB fail-closed mesh exchange + STABILIZE life-force left atrium inflow
+c_slice: src/cubalc_smx_left_atrium_inflow.c
+proof: programs/proof/1826_smx_mesh_left_atrium_inflow_life.cubalc
+proof_alt: programs/proof/92_smx_left_atrium_inflow.cubalc
+asserts_ok: 60 asserts_fail: 0 flagship_1620: PASS
+energy_path: pulmonary venous confluence → superior/inferior pulmonary veins → left atrium inflow gate → left atrial chamber fill → mitral approach
