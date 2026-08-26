@@ -1,7 +1,1 @@
-1765 SMX mesh pericyte life cascade
-proof 1765 PASS asserts_ok=1046 fail=0
-flagship 1620 PASS asserts_ok=12 fail=0
-MEANINGFUL_ITER=1765
-VERSION=1.15.1241-usability
-HEAD=6dba1566
-soft-OOB fail-closed; free energy flows
+SMX PERICYTE soft-OOB fail-closed mesh life cascade after folliculo; proof 1765 asserts_ok:1046 asserts_fail:0; flagship 1620 PASS 12/0.
