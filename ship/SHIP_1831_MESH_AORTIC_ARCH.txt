@@ -1,0 +1,10 @@
+SHIP 1831 MESH_AORTIC_ARCH
+feature: SMX mesh stability life-force — aortic arch curvature conduit
+pure-C: src/cubalc_smx_aortic_arch.c
+proofs: programs/proof/97_smx_aortic_arch.cubalc
+        programs/proof/1831_smx_mesh_aortic_arch_life.cubalc
+science: programs/science/integration/smx_mesh_aortic_arch_life.cubalc
+contract: soft-OOB fail-closed; MESH_EXCHANGE C(4,2); STABILIZE; WE_AUTOHEAL
+energy: ascending root/sinuses → arch curvature → brachiocephalic·LCC·L-subclavian → descending → systemic readiness
+branch_takeoffs: 3
+asserts target: 60/0 + flagship 1620 12/0

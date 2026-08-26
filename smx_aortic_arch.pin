@@ -1,0 +1,5 @@
+MESH_AORTIC_ARCH
+1831_smx_mesh_aortic_arch_life
+soft_oob_fail_closed=1
+mesh_bonds_c42=6
+branch_takeoffs=3
