@@ -3,8 +3,8 @@
   "meaningful_iter": 1777,
   "feature": "MESH_OVAL",
   "version": "1.15.1253-oval-mesh",
-  "head": "864dfb565b70091814feadabf519998211c7e589",
-  "short": "ec6a738d",
+  "head": "6c0cd9ad1545ab34d59cc70e09d31e47f93779f0",
+  "short": "6c0cd9ad",
   "latch": "oval_latch",
   "status": "PASS",
   "unity": 1.0,
@@ -16,5 +16,7 @@
   },
   "notes": "SMX STELLATE|ITO|HSC soft-OOB fail-closed mesh+wrap+sheath life-force",
   "proof": "1777_smx_mesh_oval_life_cascade.cubalc",
-  "smoke": "1777_smx_oval_soft_oob_smoke.cubalc"
+  "smoke": "1777_smx_oval_soft_oob_smoke.cubalc",
+  "head_short": "6c0cd9ad",
+  "MEANINGFUL_ITER": 1777
 }
