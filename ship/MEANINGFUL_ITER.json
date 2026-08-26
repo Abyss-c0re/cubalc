@@ -1,13 +1,1 @@
-{
-  "iter": 1771,
-  "feature": "smx_mesh_sinusoid_life_cascade",
-  "slice": "SINUSOID soft-OOB mesh stability life-force after capillary",
-  "proof": "programs/proof/1771_smx_mesh_sinusoid_life_cascade.cubalc",
-  "asserts_ok": 1234,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS 12/0",
-  "version": "1.15.1248-usability",
-  "head": "a42a7853ad944adefe40ccc305b0d4a41430bede",
-  "short": "a42a7853",
-  "base_head": "b35698d59711e961f4a5eca7380c5d577e9974bf"
-}
+{"iter":1772,"feature":"MESH_HEPATOCYTE","slice":"KUPFFER soft-OOB mesh stability life-force after hepatocyte","proof":"programs/proof/1774_smx_mesh_kupffer_life_cascade.cubalc","smoke":"programs/proof/1774_smx_kupffer_soft_oob_smoke.cubalc","asserts_ok":1316,"asserts_fail":0,"flagship_1620":"PASS 12/0","version":"1.15.1250-usability","base_head":"906a10ef8a47c5ae824c0404413a2c5959957717","head":"f9f43316","head_full":"f9f43316bd38c34644e6d4c5355cd2a47d778b23","status":"PASS"}

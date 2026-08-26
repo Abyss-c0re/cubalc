@@ -1,1 +1,12 @@
-{"iter":1771,"version":"1.15.1248-usability","feature":"MESH_SINUSOID","latch":"sinusoid_latch","status":"PASS","unity":1.0,"head":"ee7b1d64","next":"we_autoheal"}
+{
+  "iter": 1774,
+  "feature": "smx_mesh_kupffer_life_cascade",
+  "slice": "KUPFFER soft-OOB mesh stability life-force after hepatocyte",
+  "proof": "programs/proof/1774_smx_mesh_kupffer_life_cascade.cubalc",
+  "smoke": "programs/proof/1774_smx_kupffer_soft_oob_smoke.cubalc",
+  "asserts_ok": 1316,
+  "asserts_fail": 0,
+  "flagship_1620": "PASS 12/0",
+  "version": "1.15.1250-usability",
+  "base_head": "906a10ef8a47c5ae824c0404413a2c5959957717"
+}
