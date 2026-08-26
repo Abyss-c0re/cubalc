@@ -29,13 +29,13 @@
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
-  "pin_head": "5c344a9a4f80a8310f8cc3c4e3c7fd789e6d43ea",
-  "tip": "5c344a9a4f80a8310f8cc3c4e3c7fd789e6d43ea",
-  "HEAD": "5c344a9a4f80a8310f8cc3c4e3c7fd789e6d43ea",
-  "commit": "5c344a9a4f80a8310f8cc3c4e3c7fd789e6d43ea",
-  "sha": "5c344a9a4f80a8310f8cc3c4e3c7fd789e6d43ea",
-  "short": "5c344a9a",
+  "pin_head": "f24cf12e14986228113097f555332a1c43d99378",
+  "tip": "f24cf12e14986228113097f555332a1c43d99378",
+  "HEAD": "f24cf12e14986228113097f555332a1c43d99378",
+  "commit": "f24cf12e14986228113097f555332a1c43d99378",
+  "sha": "f24cf12e14986228113097f555332a1c43d99378",
+  "short": "f24cf12e",
   "next": "we_autoheal",
-  "head": "5c344a9a4f80a8310f8cc3c4e3c7fd789e6d43ea",
-  "pinned_head": "5c344a9a4f80a8310f8cc3c4e3c7fd789e6d43ea"
+  "head": "f24cf12e14986228113097f555332a1c43d99378",
+  "pinned_head": "f24cf12e14986228113097f555332a1c43d99378"
 }
