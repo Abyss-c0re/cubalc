@@ -1,0 +1,5 @@
+SHIP 1791 SMX_MESH_MINOR_PAPILLA_LIFE
+proof: programs/proof/1791_smx_mesh_minor_papilla_life.cubalc PASS asserts_ok=60 fail=0
+flagship 1620: PASS (12/0)
+VERSION=1.15.1269-usability MEANINGFUL_ITER=1791
+soft-OOB · MESH_EXCHANGE C(4,2) · STABILIZE · ENERGYFLOW/FLOW · WE_AUTOHEAL · mitosis
