@@ -17,8 +17,8 @@
   "flagship_1620_ok": 12,
   "notes": "bile-duct metabolism board: soft-OOB fail-closed; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW/FLOW ductule pulse; mitosis under locked rails; second storm re-stabilizes; no IF*P duals",
   "note": "SMX mesh bile-duct metabolism life-force for atomic printer spine",
-  "sha": "59d87284903da2e651f89a2279f7402ad380696d",
-  "head": "59d87284903da2e651f89a2279f7402ad380696d",
-  "pinned_head": "59d87284903da2e651f89a2279f7402ad380696d",
+  "sha": "d7e2799e4b0c7c0ed53def3b641310b62d6fc7e5",
+  "head": "d7e2799e4b0c7c0ed53def3b641310b62d6fc7e5",
+  "pinned_head": "d7e2799e4b0c7c0ed53def3b641310b62d6fc7e5",
   "ts": 1787753227
 }
