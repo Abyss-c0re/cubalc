@@ -3,8 +3,8 @@
   "iter": 1758,
   "MEANINGFUL_ITER": 1758,
   "meaningful_iter": 1758,
-  "version": "1.15.1234-usability",
-  "VERSION": "1.15.1234-usability",
+  "version": "1.15.1233-usability",
+  "VERSION": "1.15.1233-usability",
   "item": "1758 smx mesh ependyma life cascade",
   "item_id": "mi_1758_smx_mesh_ependyma_life_cascade",
   "title": "1758 smx mesh ependyma life cascade",
@@ -17,7 +17,7 @@
     "programs/science/integration/atomic_printer_mesh_ependyma_life.cubalc"
   ],
   "proof_status": "PASS",
-  "asserts_ok": 772,
+  "asserts_ok": 762,
   "asserts_fail": 0,
   "flagship_1620_asserts_ok": 12,
   "flagship_1620_asserts_fail": 0,
@@ -30,12 +30,12 @@
   "soft_oob": "fail-closed",
   "mesh_exchange": "life_force+autoheal+resilience+thalamus+homeostasis+ionosphere+thermosphere+exosphere+heliosphere+localbubble+localgroup+multiverse+omniverse+seer+forged+keeper+cortex+synapse+axon+dendrite+glia+astrocyte+microglia+oligo+schwann+ependyma+stabilize+mitosis",
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
-  "ts": "2026-08-26T05:43:42Z",
-  "verified_at": "2026-08-26T05:43:42Z",
+  "ts": "2026-08-26T05:44:06Z",
+  "verified_at": "2026-08-26T05:44:06Z",
   "host_finish": true,
   "head_note": "verified_pass_1758_ependyma",
-  "prior_head": "c68488eb23de6625cc1c456e5d5b74e4e039cfd9",
-  "prior_head_short": "c68488eb",
-  "head": "f5d3a77ea1d5076a07d73ba693af1a4f4df22dd6",
-  "head_short": "f5d3a77e"
+  "prior_head": "b846b95b7296e2a93bc94b16e17659730cd86650",
+  "prior_head_short": "b846b95b",
+  "head": "PENDING",
+  "head_short": "PENDING"
 }

@@ -7645,3 +7645,9 @@ See 1.11.6-universal.
 - SMX GLIA mesh stability after dendrite: soft-OOB fail-closed, wrap ring + cushion hub, mitosis sticky
 - proofs: programs/proof/1753_smx_mesh_glia_life_cascade.cubalc (562 asserts PASS)
 - integration: atomic_printer_mesh_glia_life.cubalc PASS
+
+## 1758 — MESH_EPENDYMA_LIFE_CASCADE
+
+- SMX EPENDYMA ventricle-lining mesh after SCHWANN: soft-OOB fail-closed life cascade
+- proof 1758 asserts_ok=762 asserts_fail=0; flagship 1620 asserts_ok=12
+- pins MEANINGFUL_ITER=1758 VERSION=1.15.1233-usability
