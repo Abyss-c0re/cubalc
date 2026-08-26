@@ -37,8 +37,8 @@
   "pinned_head": "cc86d3341ebba675390f581f9316130951abbc1a",
   "commit": "cc86d3341ebba675390f581f9316130951abbc1a",
   "pin_head": "cc86d3341ebba675390f581f9316130951abbc1a",
-  "tip": "cc86d3341ebba675390f581f9316130951abbc1a",
+  "tip": "ccbdc34796d7ed86b8b2eb253859dc44c6f9cc5b",
   "head_short": "cc86d334",
-  "tip_equals_pin": true,
+  "tip_equals_pin": false,
   "head_before": "cc86d3341ebba675390f581f9316130951abbc1a"
 }
