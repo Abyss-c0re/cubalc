@@ -1,0 +1,7 @@
+SHIP 1783 SMX DUCTULE life-force mesh
+- SMX DUCTULE|CHOLANGIOLE|BILE_DUCTULE|MESH_DUCTULE after CANALICULUS
+- soft-OOB fail-closed; mesh+wrap+sheath latch SMX_DUCTULE
+- proof: programs/proof/1783_smx_mesh_ductule_life_cascade.cubalc PASS
+- proof: programs/proof/1783_smx_mesh_ductule_life_force.cubalc PASS
+- flagship 1620 PASS
+- MEANINGFUL_ITER=1783

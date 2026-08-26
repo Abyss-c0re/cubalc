@@ -1,8 +1,8 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "meaningful_iter": 1782,
-  "version": "1.15.1260-usability",
-  "feature": "smx_mesh_canaliculus_life_force",
+  "meaningful_iter": 1783,
+  "version": "1.15.1261-usability",
+  "feature": "SMX_DUCTULE",
   "proof": "programs/proof/1782_smx_mesh_canaliculus_life_force.cubalc",
   "proof_status": "PASS",
   "asserts_ok": 123,
@@ -19,5 +19,7 @@
   "note": "SMX CANALICULUS+TIGHT_JUNCTION mesh stability life-force soft-OOB fail-closed + mitosis",
   "sha": "c3b78609256a1bd111597053c5345ebe8d2fb5ba",
   "head": "c3b78609256a1bd111597053c5345ebe8d2fb5ba",
-  "pinned_head": "c3b78609256a1bd111597053c5345ebe8d2fb5ba"
+  "pinned_head": "c3b78609256a1bd111597053c5345ebe8d2fb5ba",
+  "iter": 1783,
+  "ship": "1783_smx_mesh_ductule_life_cascade"
 }
