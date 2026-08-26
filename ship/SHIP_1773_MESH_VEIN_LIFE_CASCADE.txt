@@ -1,0 +1,7 @@
+SHIP 1773 SMX mesh VEIN return scaffold life cascade
+feat(smx): VEIN vein-membrane return scaffold after artery
+Proof: programs/proof/1773_smx_mesh_vein_life_cascade.cubalc
+       programs/science/proof/1773_smx_mesh_vein_life_cascade.cubalc
+Verbs: VEIN|VEINGLIA|MESH_VEIN|VEIN_WRAP|VEIN_SHEATH|VEIN_GUIDE|RAISE_VEIN
+Asserts: 1236/0 flagship 12/0
+VERSION=1.15.1251-usability MEANINGFUL_ITER=1773

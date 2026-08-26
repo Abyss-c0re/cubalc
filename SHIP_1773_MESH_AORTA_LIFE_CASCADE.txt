@@ -1,0 +1,6 @@
+SHIP 1773 SMX AORTA mesh aorta trunk conduit life cascade
+proof: programs/proof/1773_smx_mesh_aorta_life_cascade.cubalc
+PASS asserts_ok=1242 asserts_fail=0
+flagship 1620 asserts_ok=12 asserts_fail=0
+MEANINGFUL_ITER=1773
+VERSION=1.15.1251-usability
