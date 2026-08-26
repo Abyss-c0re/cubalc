@@ -1,4 +1,3 @@
-SHIP 1781 SMX MESH_OVAL life-force cascade PASS
-proofs: 1781 force + cascade + 1620 flagship green
+SHIP 1781 SMX MESH OVAL life-force / cascade
+proof PASS asserts_ok=102 flagship_1620 PASS
 MEANINGFUL_ITER=1781 VERSION=1.15.1259-usability
-soft-OOB fail-closed · OVAL_SUM=14 · STABLE_MESH sticky
