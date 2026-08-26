@@ -1,1 +1,1 @@
-SHIP 1766 ENDOTHELIAL PASS asserts_ok=1080 flagship_1620=12 head=3a8f81db
+SMX ENDOTHELIAL soft-OOB fail-closed mesh life cascade after pericyte; proof 1766 asserts_ok:1080 asserts_fail:0; flagship 1620 PASS 12/0.
