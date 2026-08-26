@@ -2,22 +2,17 @@
   "schema": "projectnexus.product_sync.v1",
   "product": "cubalc",
   "source": "/data/Workdir/voldemar/Dev/lab/prophecy_cube/cubalc",
-  "version": "1.15.1229-usability",
+  "version": "1.15.1230-usability",
   "paradigm": "COP/flow",
-  "synced_at": "2026-08-26T08:06:42+0300",
+  "synced_at": "2026-08-26T08:30:18+0300",
   "sync_script": "scripts/sync_cubalc_product.sh",
-  "surfaces": [
-    "algocube",
-    "evolve",
-    "deep_opt_6.6min",
-    "session_guard"
-  ],
+  "surfaces": ["algocube","evolve","deep_opt_6.6min","session_guard"],
   "binary": "out/cubalc",
   "bin_install": "bin/cubalc",
   "ok": true,
-  "meaningful_iter": 1755,
-  "feature": "MESH_MICROGLIA_LIFE_CASCADE",
-  "ts": 1787720802,
+  "meaningful_iter": 1756,
+  "feature": "MESH_OLIGO_LIFE_CASCADE",
+  "ts": 1787722218,
   "proof_status": "PASS",
-  "asserts_ok": 665
+  "asserts_ok": 706
 }
