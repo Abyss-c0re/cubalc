@@ -2,8 +2,8 @@
   "schema": "cubalc.meaningful_iter.v1",
   "iter": 1785,
   "feature": "smx_mesh_gap_junction_life_cascade",
-  "head": "161322db800795f4cf915ed08abcd88f8a6a4290",
-  "head_short": "161322db",
+  "head": "15b2b4f38087bee967d72e1a98d5dfa6806b4e8e",
+  "head_short": "15b2b4f3",
   "version": "1.15.1261-gap-junction",
   "proofs": {
     "smoke_ok": 29,
@@ -11,10 +11,14 @@
     "cascade_ok": 1637,
     "cascade_fail": 0,
     "flagship_1620": "PASS",
-    "flagship_ok": 12,
-    "flagship_fail": 0
+    "asserts_flagship_ok": 12
   },
   "status": "PASS",
-  "slice": "GAP_JUNCTION|CONNEXIN|CONNEXON|NEXUS_SEAL|HEMICHANNEL",
-  "ts": 1787752107
+  "slice": "GAP_JUNCTION|CONNEXIN|CONNEXON|NEXUS_SEAL|HEMICHANNEL|CHANNEL_SEAL|PORE_SEAL",
+  "soft_oob": true,
+  "fail_closed": true,
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "ok": true,
+  "ts": 1787752131
 }
