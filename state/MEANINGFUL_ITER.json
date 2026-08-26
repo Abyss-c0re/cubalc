@@ -1,1 +1,17 @@
-{"iter":1772,"version":"1.15.1249-usability","feature":"MESH_HEPATOCYTE","latch":"hepatocyte_latch","status":"PASS","unity":1.0,"next":"we_autoheal","head":"0f4e29d2","head_full":"0f4e29d23d11559811b507a6f9b2ffe41ca51b97","meaningful_iter":1774,"proof":"programs/proof/1774_smx_mesh_kupffer_life_cascade.cubalc","note":"SMX KUPFFER soft-OOB mesh stability life-force after HEPATOCYTE/DISSE/SINUSOID"}
+{
+  "iter": 1774,
+  "MEANINGFUL_ITER": 1774,
+  "version": "1.15.1249-usability",
+  "feature": "MESH_KUPFFER",
+  "status": "PASS",
+  "next": "we_autoheal",
+  "mesh": "kupffer",
+  "head": "cde959bf2c8713eee477fabe2a818d9b38693a27",
+  "head_short": "cde959bf",
+  "proofs": [
+    "1774_smx_mesh_kupffer_life_cascade",
+    "1620_atomic_printer_life_force",
+    "1774_smx_kupffer_soft_oob_smoke"
+  ],
+  "asserts_ok_1774": 1316
+}
