@@ -1,3 +1,9 @@
+## 1.15.1240-usability — 1763 SMX_MESH_PITUICYTE
+
+- Life-force SMX PITUICYTE|MESH_PITUICYTE|PI_WRAP|PI_SHEATH: complete C(n,2) bonds, wrap ring, sheath hub; soft-OOB fail-closed after tanycyte.
+- Proof programs/proof/1763_smx_mesh_pituicyte_life_cascade.cubalc asserts_ok=980 fail=0; unity 0.877; flagship 1620 PASS.
+- Pins MEANINGFUL_ITER=1763; VERSION=1.15.1240-usability.
+
 ## 1763 — SMX PITUICYTE mesh life cascade (1.15.1240-usability)
 
 - SMX PITUICYTE|PI_WRAP|PI_SHEATH soft-OOB fail-closed mesh after tanycyte
