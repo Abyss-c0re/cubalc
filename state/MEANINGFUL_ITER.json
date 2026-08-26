@@ -1,15 +1,15 @@
 {
   "iter": 1779,
   "feature": "MESH_CANALICULUS",
-  "head": "",
-  "short": "",
+  "head": "073d6e76b55880323e9d441f203ed58173181b8f",
+  "short": "073d6e76",
   "status": "PASS",
   "soft_oob": true,
   "fail_closed": true,
   "mesh_exchange": true,
   "meaningful_iter": 1779,
   "version": "1.15.1255-canaliculus-mesh",
-  "head_short": "",
+  "head_short": "073d6e76",
   "MEANINGFUL_ITER": 1779,
   "unity": 1.0,
   "next": "we_autoheal",
@@ -22,5 +22,6 @@
     "1779_smoke": "PASS",
     "1779_cascade": "PASS",
     "1620_flagship": "PASS"
-  }
+  },
+  "pin": "073d6e76b55880323e9d441f203ed58173181b8f"
 }
