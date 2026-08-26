@@ -29,10 +29,10 @@
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
-  "pin_head": "523510c181e8846936aaab58244327f6d4fdb94b",
-  "tip": "523510c181e8846936aaab58244327f6d4fdb94b",
-  "HEAD": "523510c181e8846936aaab58244327f6d4fdb94b",
-  "head_short": "523510c1",
+  "pin_head": "4f642097d2efd602e37a051c62f7d3d3449b0d4a",
+  "tip": "4f642097d2efd602e37a051c62f7d3d3449b0d4a",
+  "HEAD": "4f642097d2efd602e37a051c62f7d3d3449b0d4a",
+  "head_short": "4f642097",
   "feat_head": "523510c181e8846936aaab58244327f6d4fdb94b",
   "feat_subject": "feat(smx): 1835 MESH_LEFT_VERTEBRAL soft-OOB mesh life-force"
 }
