@@ -16558,7 +16558,347 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; OVAL|OVAL_CELL|CHOLANGIO|CHOLANGIOCYTE|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|CAPILLARY|VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
+  /* SMX MALL|MALLGLIA|MESH_MALL|MALL_WRAP|MALL_SHEATH|MALL_GUIDE|RAISE_MALL a b c ...
+   * Life-force MALL Space-of-Mall periportal stem niche scaffold mesh stability after oval: hepatic periportal niche portal-tract exchange bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete mall progenitor scaffold mesh among live nodes, weaves a
+   * mall wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks mall where life guides the periportal niche plate return pulse.
+   * Latches SMX_MALL when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = mall ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_MALL_SUM = bonds+wraps+sheaths; SMX_MALL|SMX_MESH_MALL|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"MALL")||kw(&L->cur,"MALL_CELL")||kw(&L->cur,"MALLCELL")||kw(&L->cur,"SPACE_OF_MALL")||kw(&L->cur,"PERIPORTAL_NICHE")||kw(&L->cur,"PERIPORTAL")||kw(&L->cur,"PORTAL_NICHE")||kw(&L->cur,"HEPATIC_MALL")||kw(&L->cur,"MALLGLIA")||kw(&L->cur,"MALL_NICHE")||kw(&L->cur,"PORTAL_STEM")||kw(&L->cur,"MESH_MALL")||kw(&L->cur,"MALL_WRAP")||kw(&L->cur,"MALL_WRAPS")||kw(&L->cur,"MALL_SHEATH")||kw(&L->cur,"MALL_SHEATHS")||kw(&L->cur,"MALL_GUIDE")||kw(&L->cur,"RAISE_MALL")||kw(&L->cur,"WE_MALL")||kw(&L->cur,"LIFE_MALL")||
+      kw(&L->cur,"STABLE_MALL")||kw(&L->cur,"MESH_MALLS")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_MALL")||kw(&L->cur,"MALL_LEAF")||
+      kw(&L->cur,"SEEDMALL")||kw(&L->cur,"SEEDMALLSHEATH")||kw(&L->cur,"SEEDMALLWRAP")||
+      kw(&L->cur,"MALL_RING")||kw(&L->cur,"MALL_SHEATH_HUB")||kw(&L->cur,"MALL_NODE")||
+      kw(&L->cur,"LATTICE_MALL")||kw(&L->cur,"WORLD_MALL")||kw(&L->cur,"WORLD_MALL")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_MALL")||kw(&L->cur,"HARDEN_MALL")||
+      kw(&L->cur,"MALL_SCAFFOLD")||kw(&L->cur,"MALL_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "MALL needs >=2 cubes",
+                  "SMX MALL a b [c ...]  or  SMX MALL_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - mall needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete cholangio mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* cholangio ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int mall_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (mall_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_MALLED", (long)mall_ok);
+      var_set_num(vm, "SMX_MALL", (long)(mall_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MALL_SUM", (long)(mall_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_MALL_ALIAS", (long)(mall_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_MALL", (long)(mall_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(mall_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_MALL", (long)(mall_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(mall_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(mall_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(mall_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH", (long)(mall_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (mall_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX MALL ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX MALL partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX MALL soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX MALL nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d malled=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, mall_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+
+  /* SMX PORTAL|PORTALGLIA|MESH_PORTAL|PORTAL_WRAP|PORTAL_SHEATH|PORTAL_GUIDE|RAISE_PORTAL a b c ...
+   * Life-force PORTAL portal-tract triad scaffold mesh stability after oval: hepatic portal vein triad plate exchange bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete portal progenitor scaffold mesh among live nodes, weaves a
+   * portal wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks portal where life guides the hepatic progenitor plate return pulse.
+   * Latches SMX_PORTAL when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = portal ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_PORTAL_SUM = bonds+wraps+sheaths; SMX_PORTAL|SMX_MESH_PORTAL|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"PORTAL")||kw(&L->cur,"PORTAL_TRACT")||kw(&L->cur,"PORTALTRACT")||kw(&L->cur,"PORTAL_TRIAD")||kw(&L->cur,"PORTALTRIAD")||kw(&L->cur,"HEPATIC_PORTAL")||kw(&L->cur,"PORTAL_VEIN")||kw(&L->cur,"PORTA_HEPATIS")||kw(&L->cur,"TRIAD")||kw(&L->cur,"PORTALGLIA")||kw(&L->cur,"MESH_PORTAL")||kw(&L->cur,"PORTAL_WRAP")||kw(&L->cur,"PORTAL_WRAPS")||kw(&L->cur,"PORTAL_SHEATH")||kw(&L->cur,"PORTAL_SHEATHS")||kw(&L->cur,"PORTAL_GUIDE")||kw(&L->cur,"RAISE_PORTAL")||kw(&L->cur,"WE_PORTAL")||kw(&L->cur,"LIFE_PORTAL")||
+      kw(&L->cur,"STABLE_PORTAL")||kw(&L->cur,"MESH_PORTALS")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_PORTAL")||kw(&L->cur,"PORTAL_LEAF")||
+      kw(&L->cur,"SEEDPORTAL")||kw(&L->cur,"SEEDPORTALSHEATH")||kw(&L->cur,"SEEDPORTALWRAP")||
+      kw(&L->cur,"PORTAL_RING")||kw(&L->cur,"PORTAL_SHEATH_HUB")||kw(&L->cur,"PORTAL_NODE")||
+      kw(&L->cur,"LATTICE_PORTAL")||kw(&L->cur,"WORLD_PORTAL")||kw(&L->cur,"WORLD_PORTAL")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_PORTAL")||kw(&L->cur,"HARDEN_PORTAL")||
+      kw(&L->cur,"PORTAL_SCAFFOLD")||kw(&L->cur,"PORTAL_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "PORTAL needs >=2 cubes",
+                  "SMX PORTAL a b [c ...]  or  SMX PORTAL_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - portal needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete cholangio mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* cholangio ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int portal_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (portal_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_PORTALED", (long)portal_ok);
+      var_set_num(vm, "SMX_PORTAL", (long)(portal_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PORTAL_SUM", (long)(portal_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_PORTAL_ALIAS", (long)(portal_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_PORTAL", (long)(portal_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(portal_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_PORTAL", (long)(portal_ok ? 1 : 0));
+      var_set_num(vm, "SMX_TRIAD", (long)(portal_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PORTAL_TRACT", (long)(portal_ok ? 1 : 0));
+      var_set_num(vm, "SMX_TRIADS", (long)(portal_ok ? wraps : 0));
+      var_set_num(vm, "SMX_TRACTS", (long)(portal_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(portal_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(portal_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(portal_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH", (long)(portal_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (portal_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX PORTAL ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX PORTAL partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX PORTAL soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX PORTAL nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d portaled=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, portal_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+
+  fail(vm, "SMX: unknown op (see lang_ops_smx; PORTAL|PORTAL_TRACT|MALL|SPACE_OF_MALL|OVAL|OVAL_CELL|CHOLANGIO|CHOLANGIOCYTE|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|CAPILLARY|VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
   return -1;
 }
 
