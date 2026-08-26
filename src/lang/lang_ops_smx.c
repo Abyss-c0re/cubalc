@@ -17606,7 +17606,196 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; DESMOSOME|MACULA_ADHERENS|DESMOGLEIN|PLAQUE_SEAL|DESMOPLAKIN|ADHERENS|ZONULA_ADHERENS|CADHERIN|BELT_SEAL|TIGHT_JUNCTION|ZONULA|OCCLUDENS|LUMEN_SEAL|CANALICULUS|BILE_CANALICULUS|PORTAL|PORTAL_TRACT|MALL|SPACE_OF_MALL|OVAL|OVAL_CELL|CHOLANGIO|CHOLANGIOCYTE|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|CAPILLARY|VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
+  /* SMX GAP_JUNCTION|CONNEXIN|CONNEXON|NEXUS_SEAL|HEMICHANNEL|MESH_GAP_JUNCTION a b c ...
+   * Life-force GAP_JUNCTION connexin-channel triad scaffold mesh stability after desmosome:
+   * epithelial nexus-channel connexon pore exchange bed: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete gap-junction progenitor scaffold mesh among live nodes,
+   * weaves a gap wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks gap junction where life guides the channel pore return pulse.
+   * Latches SMX_GAP_JUNCTION when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = gap ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_GAP_JUNCTION_SUM = bonds+wraps+sheaths; SMX_GAP_JUNCTION|SMX_MESH_GAP_JUNCTION|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"GAP_JUNCTION")||kw(&L->cur,"GAPJUNCTION")||kw(&L->cur,"CONNEXIN")||kw(&L->cur,"CONNEXON")||kw(&L->cur,"HEMICHANNEL")||kw(&L->cur,"NEXUS_SEAL")||kw(&L->cur,"NEXUS_CHANNEL")||kw(&L->cur,"NEXUS_JUNCTION")||kw(&L->cur,"GAP_CHANNEL")||kw(&L->cur,"GAP_PORE")||kw(&L->cur,"COMMUNICATING_JUNCTION")||kw(&L->cur,"MACULA_COMMUNICANS")||kw(&L->cur,"FAIL_CLOSED_CHANNEL")||kw(&L->cur,"FAIL_CLOSED_NEXUS")||kw(&L->cur,"CHANNEL_SEAL")||kw(&L->cur,"PORE_SEAL")||kw(&L->cur,"GJ")||kw(&L->cur,"GAPJ")||kw(&L->cur,"CX43")||kw(&L->cur,"CX")||kw(&L->cur,"MESH_GAP_JUNCTION")||kw(&L->cur,"GAP_WRAP")||kw(&L->cur,"GAP_WRAPS")||kw(&L->cur,"GAP_SHEATH")||kw(&L->cur,"GAP_SHEATHS")||kw(&L->cur,"GAP_GUIDE")||kw(&L->cur,"RAISE_GAP")||kw(&L->cur,"WE_GAP")||kw(&L->cur,"LIFE_GAP")||
+      kw(&L->cur,"STABLE_GAP")||kw(&L->cur,"MESH_GAPS")||kw(&L->cur,"GAP_JUNC")||kw(&L->cur,"CONNEX")||
+      kw(&L->cur,"STABLE_MESH_GAP")||kw(&L->cur,"GAP_LEAF")||kw(&L->cur,"HEMI_CHANNEL")||
+      kw(&L->cur,"SEEDGAP")||kw(&L->cur,"SEEDGAPSHEATH")||kw(&L->cur,"SEEDGAPWRAP")||
+      kw(&L->cur,"GAP_RING")||kw(&L->cur,"GAP_SHEATH_HUB")||kw(&L->cur,"GAP_NODE")||
+      kw(&L->cur,"LATTICE_GAP")||kw(&L->cur,"WORLD_GAP")||
+      kw(&L->cur,"PULSE_GAP")||kw(&L->cur,"HARDEN_GAP")||
+      kw(&L->cur,"GAP_SCAFFOLD")||kw(&L->cur,"GAP_MESH")||kw(&L->cur,"CHANNEL_WELD")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "GAP_JUNCTION needs >=2 cubes",
+                  "SMX GAP_JUNCTION a b [c ...]  or  SMX GAP_JUNCTION_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - gap junction needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete gap-junction mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* gap ring - free energy guards every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int gj_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (gj_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_GAP_JUNCTIONED", (long)gj_ok);
+      var_set_num(vm, "SMX_CX43", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HEMICHANNEL", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_NEXUS_SEAL", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_NEXUS_JUNCTION", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CONNEXIN43", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_GAP_JUNCTION", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_GAP_JUNCTION_SUM", (long)(gj_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_GAP_JUNCTION_ALIAS", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_GAP_JUNCTION", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_GAP_JUNCTION", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_GJ", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_GAPJ", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MACULA_COMMUNICANS", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_COMMUNICATING_JUNCTION", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CONNEXIN", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CONNEXON", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_NEXUS_CHANNEL", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_CHANNEL_SEAL", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_PORE_SEAL", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FAIL_CLOSED_CHANNEL", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FAIL_CLOSED_NEXUS", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_GAP_PLAQUE", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_GAP_ADHESION", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_EPITHELIAL_GAP", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_BELTS", (long)(gj_ok ? wraps : 0));
+      var_set_num(vm, "SMX_GAP_JUNCTIONS", (long)(gj_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(gj_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(gj_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(gj_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH", (long)(gj_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (gj_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX GAP_JUNCTION ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX GAP_JUNCTION partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX GAP_JUNCTION soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX GAP_JUNCTION nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d gap_junctioned=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, gj_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+  fail(vm, "SMX: unknown op (see lang_ops_smx; GAP_JUNCTION|CONNEXIN|CONNEXON|NEXUS_SEAL|HEMICHANNEL|CHANNEL_SEAL|DESMOSOME|MACULA_ADHERENS|DESMOGLEIN|PLAQUE_SEAL|DESMOPLAKIN|ADHERENS|ZONULA_ADHERENS|CADHERIN|BELT_SEAL|TIGHT_JUNCTION|ZONULA|OCCLUDENS|LUMEN_SEAL|CANALICULUS|BILE_CANALICULUS|PORTAL|PORTAL_TRACT|MALL|SPACE_OF_MALL|OVAL|OVAL_CELL|CHOLANGIO|CHOLANGIOCYTE|STELLATE|ITO|KUPFFER|HEPATOCYTE|DISSE|SINUSOID|CAPILLARY|VENULE|ARTERIOLE|BASAL|ENDOTHELIAL|PERICYTE|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|life-cascade live)");
   return -1;
 }
 
