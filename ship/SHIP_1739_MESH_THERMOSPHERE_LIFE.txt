@@ -1,0 +1,7 @@
+SHIP 1739 MESH_THERMOSPHERE_LIFE_CASCADE
+MEANINGFUL_ITER=1739
+VERSION=1.15.1211-usability
+proofs=1739_smx_mesh_thermosphere_life_cascade+1620_atomic_printer_life_force PASS
+asserts_fail=0
+feature=soft-OOB fail-closed + LIFE_FORCE + WE_AUTOHEAL + RESILIENCE + THALAMUS + HOMEOSTASIS + IONOSPHERE + THERMOSPHERE + STABILIZE + mitosis under free energy
+next=we_autoheal
