@@ -2,9 +2,9 @@
   "schema": "cube.viz_frame.v1",
   "lang": "CubalC",
   "paradigm": "COP",
-  "seq": 42,
+  "seq": 52,
   "unity": 1.0,
-  "energy": 0.6381,
+  "energy": 0.6299,
   "n_cubes": 7,
   "budget": 40,
   "cubalc": true,
@@ -28,13 +28,13 @@
     "core_io": true,
     "one_cmd": true
   },
-  "hud": "CubalC \u00b7 united faces \u00b7 7 units \u00b7 E=0.64 \u00b7 unity=0.92 \u00b7 C3",
+  "hud": "CubalC \u00b7 united faces \u00b7 7 units \u00b7 E=0.63 \u00b7 unity=0.80 \u00b7 C3",
   "cubes": [
     {
       "x": 0.0,
       "y": 0.0,
       "z": 0.0,
-      "s": 0.163,
+      "s": 0.141,
       "yaw": 0.0,
       "pitch": 0.0,
       "roll": 0.0,
@@ -42,28 +42,28 @@
         242,
         38,
         71,
-        166
+        165
       ],
       "role": 1,
       "id": "bed",
       "label": "bed",
       "kind": "cube",
-      "digit": 0,
+      "digit": 3,
       "proton": 1,
-      "energy": 0.064,
+      "energy": 0.06,
       "plugged": 6,
       "parent": -1,
       "flowed": 1,
       "compiled": 0,
-      "set": 64,
-      "matrix16": "1111111111111111",
-      "matrix": "1111111111111111111111111111111111111111111111111111111111111111"
+      "set": 44,
+      "matrix16": "1111111111111100",
+      "matrix": "1111111111111100111111111100000011111111000000001111111100001111"
     },
     {
       "x": 0.28,
       "y": 0.0,
       "z": 0.0,
-      "s": 0.168,
+      "s": 0.155,
       "yaw": 0.0,
       "pitch": 0.0,
       "roll": 0.0,
@@ -71,22 +71,22 @@
         255,
         60,
         80,
-        175
+        170
       ],
       "role": 1,
       "id": "nozzle",
       "label": "nozzle",
       "kind": "cube",
-      "digit": 0,
+      "digit": 5,
       "proton": 1,
-      "energy": 0.158,
+      "energy": 0.111,
       "plugged": 6,
       "parent": -1,
       "flowed": 1,
       "compiled": 0,
-      "set": 64,
-      "matrix16": "1111111111111111",
-      "matrix": "1111111111111111111111111111111111111111111111111111111111111111"
+      "set": 54,
+      "matrix16": "1111111111111100",
+      "matrix": "1111111111111100111111111111000011111111111100001111111111111111"
     },
     {
       "x": 0.56,
@@ -100,57 +100,57 @@
         242,
         38,
         71,
-        232
+        251
       ],
       "role": 1,
       "id": "hive",
       "label": "hive",
       "kind": "cube",
-      "digit": 0,
-      "proton": 1,
-      "energy": 0.764,
-      "plugged": 6,
-      "parent": -1,
-      "flowed": 1,
-      "compiled": 0,
-      "set": 64,
-      "matrix16": "1111111111111111",
-      "matrix": "1111111111111111111111111111111111111111111111111111111111111111"
-    },
-    {
-      "x": 0.84,
-      "y": 0.0,
-      "z": 0.0,
-      "s": 0.208,
-      "yaw": 0.0,
-      "pitch": 0.0,
-      "roll": 0.0,
-      "rgba": [
-        242,
-        38,
-        71,
-        251
-      ],
-      "role": 1,
-      "id": "scrap",
-      "label": "scrap",
-      "kind": "cube",
-      "digit": 0,
+      "digit": 9,
       "proton": 1,
       "energy": 0.965,
       "plugged": 4,
       "parent": -1,
       "flowed": 1,
       "compiled": 0,
-      "set": 64,
+      "set": 55,
+      "matrix16": "1111111111111101",
+      "matrix": "1111111111111101111111111111000011111111111100001111111111111111"
+    },
+    {
+      "x": 0.84,
+      "y": 0.0,
+      "z": 0.0,
+      "s": 0.195,
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "roll": 0.0,
+      "rgba": [
+        242,
+        38,
+        71,
+        248
+      ],
+      "role": 1,
+      "id": "scrap",
+      "label": "scrap",
+      "kind": "cube",
+      "digit": 8,
+      "proton": 1,
+      "energy": 0.928,
+      "plugged": 2,
+      "parent": -1,
+      "flowed": 1,
+      "compiled": 0,
+      "set": 54,
       "matrix16": "1111111111111111",
-      "matrix": "1111111111111111111111111111111111111111111111111111111111111111"
+      "matrix": "1111111111111111111111111100111111111111000011111111111100001111"
     },
     {
       "x": 1.12,
       "y": 0.0,
       "z": 0.0,
-      "s": 0.208,
+      "s": 0.192,
       "yaw": 0.0,
       "pitch": 0.0,
       "roll": 0.0,
@@ -158,28 +158,28 @@
         242,
         38,
         71,
-        251
+        248
       ],
       "role": 1,
       "id": "seed",
       "label": "seed",
       "kind": "cube",
-      "digit": 0,
+      "digit": 2,
       "proton": 1,
-      "energy": 0.965,
+      "energy": 0.928,
       "plugged": 2,
       "parent": -1,
       "flowed": 1,
       "compiled": 0,
-      "set": 64,
-      "matrix16": "1111111111111111",
-      "matrix": "1111111111111111111111111111111111111111111111111111111111111111"
+      "set": 51,
+      "matrix16": "1111111111111101",
+      "matrix": "1111111111111101111111111101011011111111011001001111111100001111"
     },
     {
       "x": 0.0,
       "y": 0.0,
       "z": 0.28,
-      "s": 0.157,
+      "s": 0.151,
       "yaw": 0.0,
       "pitch": 0.0,
       "roll": 0.0,
@@ -187,28 +187,28 @@
         242,
         38,
         71,
-        233
+        227
       ],
       "role": 1,
       "id": "d1",
       "label": "d1",
       "kind": "cube",
-      "digit": 8,
+      "digit": 4,
       "proton": 1,
-      "energy": 0.775,
+      "energy": 0.709,
       "plugged": 0,
       "parent": -1,
       "flowed": 0,
       "compiled": 0,
-      "set": 26,
-      "matrix16": "1010101010001011",
-      "matrix": "1010101010001011001010000011000010001011001011001011001010001010"
+      "set": 23,
+      "matrix16": "1010100011001011",
+      "matrix": "1010100011001011001010000011000010001010000010001010001010001011"
     },
     {
       "x": 0.28,
       "y": 0.0,
       "z": 0.28,
-      "s": 0.157,
+      "s": 0.153,
       "yaw": 0.0,
       "pitch": 0.0,
       "roll": 0.0,
@@ -216,22 +216,22 @@
         242,
         38,
         71,
-        233
+        227
       ],
       "role": 1,
       "id": "d2",
       "label": "d2",
       "kind": "cube",
-      "digit": 0,
+      "digit": 1,
       "proton": 1,
-      "energy": 0.775,
+      "energy": 0.709,
       "plugged": 0,
       "parent": -1,
       "flowed": 0,
       "compiled": 0,
-      "set": 26,
-      "matrix16": "1010011010011011",
-      "matrix": "1010011010011011001010000011000011001011001001001001001001001001"
+      "set": 25,
+      "matrix16": "1010010011011011",
+      "matrix": "1010010011011011001010000011000011001011000001001001001001001001"
     }
   ],
   "edges": [
@@ -239,87 +239,73 @@
       "from": "bed",
       "to": "nozzle",
       "wire": "binary",
-      "energy": 0.111,
-      "compat": 1.0
+      "energy": 0.085,
+      "compat": 0.844
     },
     {
       "from": "bed",
       "to": "nozzle",
       "wire": "binary",
-      "energy": 0.111,
-      "compat": 1.0
+      "energy": 0.085,
+      "compat": 0.844
     },
     {
       "from": "bed",
       "to": "scrap",
       "wire": "binary",
-      "energy": 0.514,
-      "compat": 1.0
+      "energy": 0.494,
+      "compat": 0.844
     },
     {
       "from": "bed",
       "to": "scrap",
       "wire": "binary",
-      "energy": 0.514,
-      "compat": 1.0
-    },
-    {
-      "from": "bed",
-      "to": "seed",
-      "wire": "binary",
-      "energy": 0.514,
-      "compat": 1.0
+      "energy": 0.494,
+      "compat": 0.844
     },
     {
       "from": "bed",
       "to": "seed",
       "wire": "binary",
-      "energy": 0.514,
-      "compat": 1.0
+      "energy": 0.494,
+      "compat": 0.891
+    },
+    {
+      "from": "bed",
+      "to": "seed",
+      "wire": "binary",
+      "energy": 0.494,
+      "compat": 0.891
     },
     {
       "from": "nozzle",
       "to": "hive",
       "wire": "binary",
-      "energy": 0.461,
-      "compat": 1.0
+      "energy": 0.538,
+      "compat": 0.984
     },
     {
       "from": "nozzle",
       "to": "hive",
       "wire": "binary",
-      "energy": 0.461,
-      "compat": 1.0
+      "energy": 0.538,
+      "compat": 0.984
     },
     {
       "from": "nozzle",
       "to": "hive",
       "wire": "binary",
-      "energy": 0.461,
-      "compat": 1.0
+      "energy": 0.538,
+      "compat": 0.984
     },
     {
       "from": "nozzle",
       "to": "hive",
       "wire": "binary",
-      "energy": 0.461,
-      "compat": 1.0
-    },
-    {
-      "from": "hive",
-      "to": "scrap",
-      "wire": "binary",
-      "energy": 0.865,
-      "compat": 1.0
-    },
-    {
-      "from": "hive",
-      "to": "scrap",
-      "wire": "binary",
-      "energy": 0.865,
-      "compat": 1.0
+      "energy": 0.538,
+      "compat": 0.984
     }
   ],
-  "head": "07c07cdf146447ac351217f4403cd88ab9c0e8b3",
+  "head": "a73f8cedf7f6e29330e8098f28f120c4ec8080f9",
   "meaningful_iter": 1833
 }
