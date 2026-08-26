@@ -25,10 +25,10 @@
   "proof": "programs/proof/1762_smx_mesh_tanycyte_life_cascade.cubalc",
   "asserts_fail": 0,
   "flagship_1620": "PASS",
-  "HEAD": "c0f0980d84ea5029ac8697c815e045d130b86d24",
-  "HEAD_SHORT": "c0f0980d",
+  "HEAD": "fe99358c810505a0ecc916a8d285e3864443dc12",
+  "HEAD_SHORT": "fe99358c",
   "next": "we_autoheal",
   "risk": "low",
-  "head": "e9de6520db33c848b3fa836e2010218ce832dc83",
-  "head_short": "e9de6520"
+  "head": "fe99358c810505a0ecc916a8d285e3864443dc12",
+  "head_short": "fe99358c"
 }

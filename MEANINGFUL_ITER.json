@@ -29,6 +29,8 @@
   "law": "logical_progression; free_energy_must_flow; auto_dev_must_not_stop",
   "ts": "2026-08-26T06:50:45Z",
   "verified_at": "2026-08-26T06:50:45Z",
-  "head": "e9de6520db33c848b3fa836e2010218ce832dc83",
-  "head_short": "e9de6520"
+  "head": "fe99358c810505a0ecc916a8d285e3864443dc12",
+  "head_short": "fe99358c",
+  "HEAD": "fe99358c810505a0ecc916a8d285e3864443dc12",
+  "HEAD_SHORT": "fe99358c"
 }
