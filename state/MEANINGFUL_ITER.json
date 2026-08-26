@@ -42,13 +42,14 @@
   "cmd": "smx-aortic-arch",
   "soft_oob_mode": "fail_closed",
   "feat_sha": "7164bdff5d5f00032c08ef6311e0e44346a98aba",
-  "pin_head": "6b2207e6361772c7449d71c737ff9a03fcf2281f",
-  "tip": "6b2207e6361772c7449d71c737ff9a03fcf2281f",
+  "pin_head": "6776aa4056897081964a2b9ea26638201383d211",
+  "tip": "6776aa4056897081964a2b9ea26638201383d211",
   "HEAD": "6b2207e6361772c7449d71c737ff9a03fcf2281f",
   "pinned_head": "6b2207e6361772c7449d71c737ff9a03fcf2281f",
   "head": "6b2207e6361772c7449d71c737ff9a03fcf2281f",
   "sha": "6b2207e6361772c7449d71c737ff9a03fcf2281f",
   "pin_short": "6b2207e6",
   "short": "6b2207e6",
-  "tip_eq_pin": true
+  "tip_eq_pin": true,
+  "tip_equals_pin": true
 }
