@@ -7716,3 +7716,7 @@ See 1.11.6-universal.
 - feat(smx): VENULE return scaffold after CAPILLARY; soft-OOB fail-closed
 - proof 1770 PASS 1165/0; flagship 1620 PASS 12/0
 - VERSION 1.15.1246-usability
+
+## 1.15.1315-usability — 1836 MESH_BASILAR
+- feat(smx): MESH_BASILAR soft-OOB mesh life-force (vertebral confluence → basilar → PCA/Willis)
+- proofs 102/1836 PASS 60/0; flagship 1620 PASS 12/0

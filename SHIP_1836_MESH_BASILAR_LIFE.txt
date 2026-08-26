@@ -1,0 +1,5 @@
+MESH_BASILAR soft-OOB fail-closed mesh life-force
+Energy: bilateral vertebral confluence → basilar trunk → pontine perforators →
+superior cerebellar takeoff → posterior cerebral / circle-of-Willis posterior seal.
+Proofs: 102_smx_basilar.cubalc + 1836_smx_mesh_basilar_life.cubalc (60/0)
+Flagship 1620 PASS 12/0. Pure-C src/cubalc_smx_basilar.c
