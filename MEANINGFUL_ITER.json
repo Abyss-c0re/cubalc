@@ -1,1 +1,1 @@
-{"iter":1770,"feat":"smx_mesh_venule_life_cascade","proof":"programs/science/proof/1770_smx_mesh_venule_life_cascade.cubalc","asserts_ok":1165,"asserts_fail":0,"flagship":"1620","flagship_ok":12,"flagship_fail":0}
+{"iter":1771,"feature":"SMX_ARTERIOLE","proof":"1771_smx_mesh_arteriole_life_cascade","asserts_ok":1194,"asserts_fail":0,"flagship_ok":12,"flagship_fail":0,"version":"1.15.1249-usability"}

@@ -1,0 +1,10 @@
+SHIP 1771 SMX mesh ARTERIOLE pressure scaffold life cascade
+feat(smx): ARTERIOLE arteriole-membrane pressure scaffold after venule
+Proof: programs/proof/1771_smx_mesh_arteriole_life_cascade.cubalc
+       programs/science/proof/1771_smx_mesh_arteriole_life_cascade.cubalc
+Verbs: ARTERIOLE|ARTERIGLIA|MESH_ARTERIOLE|ARTERI_WRAP|ARTERI_SHEATH|ARTERIOLE_GUIDE|RAISE_ARTERIOLE
+Latches: SMX_ARTERIOLE SMX_ARTERIOLEED SMX_MESH_ARTERIOLE SMX_ARTERIOLE_SUM SMX_STABLE_MESH
+Law: soft-OOB fail-closed; free energy flows; Cube is SoT; no dual ladders.
+Proof result: asserts_ok=1194 asserts_fail=0
+Flagship 1620: asserts_ok=12 asserts_fail=0
+VERSION=1.15.1249-usability MEANINGFUL_ITER=1771

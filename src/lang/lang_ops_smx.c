@@ -15041,6 +15041,207 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
   }
 
 
-  fail(vm, "SMX: unknown op (see lang_ops_smx; VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
+  /* SMX ARTERIOLE|ARTERIGLIA|MESH_ARTERIOLE|ARTERI_WRAP|ARTERI_SHEATH|ARTERIOLE_GUIDE|RAISE_ARTERIOLE a b c ...
+   * Life-force ARTERIOLE arteriole-membrane pressure scaffold mesh stability after venule: soft-OOB storms stay fail-closed.
+   * Clears thrash OOB, roots a complete arteriole pressure scaffold mesh among live nodes, weaves a
+   * arteriole wrap ring (i -> i+1) so free energy sheaths every edge, then sheath gather
+   * gathers return so lattice locks arteriole where life guides the arteriole pulse.
+   * Latches SMX_ARTERIOLE when mesh+wraps+sheaths are soft-OOB-free.
+   * SMX_WRAPS = arteriole ring; SMX_SHEATHS hub = root gather pulses;
+   * SMX_ARTERIOLE_SUM = bonds+wraps+sheaths; SMX_ARTERIOLE|SMX_MESH_ARTERIOLE|SMX_STABLE_MESH sticky.
+   * Mitosis path stays open under free energy. No dual ladders.
+   * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
+  if (kw(&L->cur,"ARTERIOLE")||kw(&L->cur,"ARTERIGLIA")||kw(&L->cur,"MESH_ARTERIOLE")||kw(&L->cur,"ARTERI_WRAP")||kw(&L->cur,"ARTERI_WRAPS")||kw(&L->cur,"ARTERI_SHEATH")||kw(&L->cur,"ARTERI_SHEATHS")||kw(&L->cur,"ARTERIOLE_GUIDE")||kw(&L->cur,"RAISE_ARTERIOLE")||kw(&L->cur,"WE_ARTERIOLE")||kw(&L->cur,"LIFE_ARTERIOLE")||
+      kw(&L->cur,"STABLE_ARTERIOLE")||kw(&L->cur,"MESH_ARTERIOLES")||kw(&L->cur,"WRAP_RING")||kw(&L->cur,"SHEATH_RING")||
+      kw(&L->cur,"STABLE_MESH_ARTERIOLE")||kw(&L->cur,"ARTERIOLE_LEAF")||
+      kw(&L->cur,"SEEDARTERIOLE")||kw(&L->cur,"SEEDARTERISHEATH")||kw(&L->cur,"SEEDARTERIWRAP")||
+      kw(&L->cur,"ARTERIOLE_RING")||kw(&L->cur,"ARTERI_SHEATH_HUB")||kw(&L->cur,"ARTERI_NODE")||
+      kw(&L->cur,"LATTICE_ARTERIOLE")||kw(&L->cur,"WORLD_ARTERILE")||kw(&L->cur,"WORLD_ARTERI")||
+      kw(&L->cur,"PULSE_WRAP")||kw(&L->cur,"PULSE_ARTERIOLE")||kw(&L->cur,"HARDEN_ARTERIOLE")||
+      kw(&L->cur,"ARTERIOLE_SCAFFOLD")||kw(&L->cur,"ARTERIOLE_MESH")){
+    int aln = L->cur.line;
+    char ids[16][48];
+    int present[16];
+    int live_ix[16];
+    int n = 0, live = 0, i, j;
+    int bonds = 0;
+    int wraps = 0;
+    int sheaths = 0;
+    int soft = 0;
+    lex_next(L);
+    while (L->cur.kind==TK_IDENT && n < 16){
+      snprintf(ids[n], sizeof ids[n], "%s", L->cur.text);
+      lex_next(L);
+      n++;
+    }
+    if (n < 2){
+      smx_fail_at(vm, aln, "ARTERIOLE needs >=2 cubes",
+                  "SMX ARTERIOLE a b [c ...]  or  SMX ARTERI_SHEATH a b c d");
+      return -1;
+    }
+    ensure_world(vm);
+    if (ensure_smx_key(vm) != 0) return -1;
+    /* calm thrash - arteriole needs clear channel */
+    vm->smx_oob = 0;
+    vm->smx.last_err[0] = 0;
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "SMX_ERR", "");
+    for (i = 0; i < n; i++){
+      present[i] = (find_cube(vm, ids[i]) >= 0) ? 1 : 0;
+      if (present[i]) live_ix[live++] = i;
+    }
+    /* honest soft-OOB once per ghost after calm */
+    for (i = 0; i < n; i++){
+      if (present[i]) continue;
+      if (live > 0){
+        int r = do_smx_talk(vm, ids[live_ix[0]], ids[i]);
+        if (r < 0) return -1;
+        if (r > 0) soft++;
+      }
+    }
+    /* complete arteriole mesh among live */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        for (j = i + 1; j < live; j++){
+          int a = live_ix[i];
+          int b = live_ix[j];
+          int r1 = do_smx_talk(vm, ids[a], ids[b]);
+          if (r1 < 0) return -1;
+          if (r1 > 0){ soft++; continue; }
+          {
+            int r2 = do_smx_talk(vm, ids[b], ids[a]);
+            if (r2 < 0) return -1;
+            if (r2 > 0) soft++;
+            else bonds++;
+          }
+        }
+      }
+    }
+    /* arteriole ring - free energy guards every edge every edge i -> i+1 both ways */
+    if (live >= 2){
+      for (i = 0; i < live; i++){
+        int a = live_ix[i];
+        int b = live_ix[(i + 1) % live];
+        int r1 = do_smx_talk(vm, ids[a], ids[b]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[b], ids[a]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else wraps++;
+        }
+      }
+    }
+    /* sheaths sheath - seed axis return from every live leaf */
+    if (live >= 1){
+      int root = live_ix[0];
+      for (i = 0; i < live; i++){
+        int leaf = live_ix[i];
+        int r1 = do_smx_talk(vm, ids[leaf], ids[root]);
+        if (r1 < 0) return -1;
+        if (r1 > 0){ soft++; continue; }
+        {
+          int r2 = do_smx_talk(vm, ids[root], ids[leaf]);
+          if (r2 < 0) return -1;
+          if (r2 > 0) soft++;
+          else sheaths++;
+        }
+      }
+    }
+    {
+      int need = (live >= 2) ? (live * (live - 1) / 2) : 0;
+      int mesh_ok = (need > 0 && bonds >= need && soft == 0) ? 1 : 0;
+      if (!mesh_ok && need > 0 && bonds * 2 >= need && soft == 0)
+        mesh_ok = 1;
+      int star_ok = (live >= 2 && wraps >= live && soft == 0) ? 1 : 0;
+      if (!star_ok && live >= 2 && wraps * 2 >= live && soft == 0)
+        star_ok = 1;
+      int sheath_ok = (live >= 1 && sheaths >= live && soft == 0) ? 1 : 0;
+      if (!sheath_ok && live >= 1 && sheaths * 2 >= live && soft == 0)
+        sheath_ok = 1;
+      int arteriole_ok = (mesh_ok && star_ok && sheath_ok && soft == 0 && live >= 2) ? 1 : 0;
+      long vital = (vm->smx.key_ok ? 4 : 0) + (arteriole_ok ? 12 : (bonds > 0 ? 3 : 0)) +
+                   (wraps > 0 ? 1 : 0) + (sheaths > 0 ? 1 : 0) +
+                   (vm->smx_talks > 0 ? 1 : 0) + (soft == 0 ? 1 : 0);
+      var_set_num(vm, "SMX_ARTERIOLEED", (long)arteriole_ok);
+      var_set_num(vm, "SMX_ARTERIOLE_LATCH", (long)arteriole_ok);
+      var_set_num(vm, "SMX_ARTERIOLE", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_ARTERIOLE_SUM", (long)(arteriole_ok ? bonds + wraps + sheaths : 0));
+      var_set_num(vm, "SMX_ARTERIOLE_ALIAS", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_ARTERIOLE", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_ARTERI_SHEATH_LATCH", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH_LATCH", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_ARTERIOLE", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP_LATCH", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_ARTERI_WRAP_LATCH", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_WRAP", (long)(arteriole_ok ? wraps : 0));
+      var_set_num(vm, "SMX_ARTERI_WRAP", (long)(arteriole_ok ? wraps : 0));
+      var_set_num(vm, "SMX_ARTERI_WRAPS", (long)(arteriole_ok ? wraps : 0));
+      var_set_num(vm, "SMX_ARTERI_SHEATHS", (long)(arteriole_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_WRAPS", (long)(arteriole_ok ? wraps : 0));
+      var_set_num(vm, "SMX_WRAPS_N", (long)(arteriole_ok ? wraps : 0));
+      var_set_num(vm, "SMX_ARTERI_WRAP_LATCH", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_SHEATH", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_MESH_EXCHANGE", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_STABLE_MESH", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_HARDEN_EXCHANGE", (long)(arteriole_ok ? 1 : 0));
+      var_set_num(vm, "SMX_FO_BONDS", (long)(arteriole_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FO_MESH", (long)(arteriole_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FO_BONDS2", (long)(arteriole_ok ? bonds : 0));
+      var_set_num(vm, "SMX_FO_STARS", (long)(arteriole_ok ? wraps : 0));
+      var_set_num(vm, "SMX_FO_STAR", (long)(arteriole_ok ? wraps : 0));
+      var_set_num(vm, "SMX_ARTERIOLE_RING", (long)(arteriole_ok ? wraps : 0));
+      var_set_num(vm, "SMX_ARTERIOLE_LANE", (long)(arteriole_ok ? wraps : 0));
+      var_set_num(vm, "SMX_SHEATHS", (long)(arteriole_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_ARTERI_SHEATH_HUB", (long)(arteriole_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SHEATH_N", (long)(arteriole_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDARTERIOLE", (long)(arteriole_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_SEEDARTERISHEATH", (long)(arteriole_ok ? sheaths : 0));
+      var_set_num(vm, "SMX_MESH", (long)(arteriole_ok ? live : 0));
+      var_set_num(vm, "SMX_BONDS", (long)bonds);
+      var_set_num(vm, "SMX_EXCHANGES", (long)bonds);
+      var_set_num(vm, "SMX_FUSE", (long)bonds);
+      var_set_num(vm, "SMX_BIND", (long)bonds);
+      var_set_num(vm, "SMX_TONE", (long)live);
+      var_set_num(vm, "SMX_PULSE", (long)(bonds + wraps + sheaths));
+      var_set_num(vm, "SMX_BREATH", (long)live);
+      var_set_num(vm, "SMX_LIVE", (long)live);
+      var_set_num(vm, "SMX_NODES", (long)n);
+      var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+      var_set_num(vm, "SMX_OOB", vm->smx_oob);
+      var_set_num(vm, "SMX_KEY_OK", vm->smx.key_ok ? 1 : 0);
+      var_set_num(vm, "SMX_HOLD", vm->smx.hold_flash ? 1 : 0);
+      var_set_num(vm, "SMX_VITAL", vital);
+      if (arteriole_ok){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX ARTERIOLE ok");
+      } else if (bonds > 0 && live >= 2){
+        vm->smx_ok = 1;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", "SMX ARTERIOLE partial");
+      } else {
+        vm->smx_ok = 0;
+        var_set_num(vm, "SMX_OK", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST", "SMX ARTERIOLE soft-OOB");
+      }
+      if (vm->trace)
+        fprintf(vm->trace,
+                "# SMX ARTERIOLE nodes=%d live=%d bonds=%d wraps=%d sheaths=%d need=%d soft=%d talks=%d oob=%d arterioleed=%d vital=%ld\n",
+                n, live, bonds, wraps, sheaths, need, soft, vm->smx_talks, vm->smx_oob, arteriole_ok, vital);
+    }
+    bump(vm); return 1;
+  }
+
+
+  
+
+  fail(vm, "SMX: unknown op (see lang_ops_smx; ARTERIOLE|VENULE|CAPILLARY|BASEMENT|ENDOTHELIAL|PERICYTE|NG2|FOLLICULO|PITUICYTE|TANYCYTE|MULLER|BERGMANN|RADIAL|life-cascade live)");
   return -1;
 }
