@@ -1,0 +1,4 @@
+1817 MESH_RIGHT_VENTRICLE
+soft-OOB fail-closed MESH_EXCHANGE C(4,2)
+proofs 81+1817 PASS; flagship 1620 PASS 12
+path: tricuspid inflow → RV chamber → trabeculae → pulmonary valve → pulmonary outflow
