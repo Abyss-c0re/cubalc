@@ -7,29 +7,13 @@
   "ship": "1842_smx_mesh_posterior_communicating_life",
   "version": "1.15.1322-usability",
   "VERSION": "1.15.1322-usability",
-  "head": "ab98115a3c9e57f4a6bd6628a111233af2664df4",
-  "HEAD": "ab98115a3c9e57f4a6bd6628a111233af2664df4",
-  "pin": "ab98115a3c9e57f4a6bd6628a111233af2664df4",
-  "tip": "ab98115a3c9e57f4a6bd6628a111233af2664df4",
-  "pin_head": "ab98115a3c9e57f4a6bd6628a111233af2664df4",
-  "pinned_head": "ab98115a3c9e57f4a6bd6628a111233af2664df4",
-  "sha": "ab98115a3c9e57f4a6bd6628a111233af2664df4",
-  "pin_short": "ab98115a",
-  "short": "ab98115a",
   "status": "PASS",
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
   "proofs": "1842+99=60/0,1620=12/0",
-  "tip_equals_pin": true,
-  "tip_eq_pin": true,
-  "proof_recheck": {
-    "99": "PASS 60/0",
-    "1842": "PASS 60/0",
-    "1620": "PASS 12/0"
-  },
   "c_slice": "src/cubalc_smx_posterior_communicating.c",
+  "proof": "programs/proof/1842_smx_mesh_posterior_communicating_life.cubalc",
   "branch": "ship-1842-posterior-communicating",
-  "mesh": "posterior_communicating",
-  "aka": "MESH_PCOMM"
+  "tip_equals_pin": true
 }

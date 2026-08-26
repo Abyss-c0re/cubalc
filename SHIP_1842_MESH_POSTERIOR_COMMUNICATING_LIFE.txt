@@ -1,8 +1,7 @@
 SHIP 1842 SMX_MESH_PCOMM_LIFE (=MESH_POSTERIOR_COMMUNICATING)
-VERSION=1.15.1321-usability
+VERSION=1.15.1322-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1842=60/0 1620=12/0 PASS
 c_slice=src/cubalc_smx_posterior_communicating.c
 feature=MESH_PCOMM
-energy=ICA-C7→PComm-bridge→PCA-P1→Willis-posterior→thalamoperforator
 branch=ship-1842-posterior-communicating
