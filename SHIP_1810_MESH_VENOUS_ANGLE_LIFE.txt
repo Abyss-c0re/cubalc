@@ -1,0 +1,12 @@
+MEANINGFUL_ITER=1810
+FEATURE=SMX_MESH_VENOUS_ANGLE_LIFE
+PROOF=programs/proof/74_smx_venous_angle.cubalc
+PROOF_ALT=programs/proof/1810_smx_mesh_venous_angle_life.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=60
+ASSERTS_FAIL=0
+FLAGSHIP_1620=PASS
+FLAGSHIP_OK=12
+SOFT_OOB=fail-closed
+MESH_EXCHANGE=C(4,2)
+NOTES=thoracic duct terminus to venous angle confluence to subclavian/jugular systemic return; WE_AUTOHEAL; pure-C cubalc_smx_venous_angle.c
