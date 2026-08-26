@@ -38,18 +38,7 @@
   "sealed": true,
   "life_force": 0.35,
   "stability": 1.0,
-  "mesh": "aortic_arch",
-  "cmd": "smx-aortic-arch",
-  "soft_oob_mode": "fail_closed",
-  "feat_sha": "7164bdff5d5f00032c08ef6311e0e44346a98aba",
-  "pin_head": "c59b5ace16ad36bba685ca4f3d36709322dbcae6",
-  "tip": "c59b5ace16ad36bba685ca4f3d36709322dbcae6",
-  "tip_equals_pin": true,
-  "HEAD": "c59b5ace16ad36bba685ca4f3d36709322dbcae6",
-  "pinned_head": "c59b5ace16ad36bba685ca4f3d36709322dbcae6",
-  "head": "c59b5ace16ad36bba685ca4f3d36709322dbcae6",
-  "sha": "c59b5ace16ad36bba685ca4f3d36709322dbcae6",
-  "pin_short": "c59b5ace",
-  "short": "c59b5ace",
-  "tip_eq_pin": true
+  "pin_head": "f2cc82225f9cde55ed6bf479693d4df544f8b151",
+  "tip": "f2cc82225f9cde55ed6bf479693d4df544f8b151",
+  "tip_equals_pin": true
 }
