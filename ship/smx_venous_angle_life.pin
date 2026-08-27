@@ -1,0 +1,7 @@
+MESH_VENOUS_ANGLE
+FEATURE=SMX_MESH_VENOUS_ANGLE_LIFE
+PROOF=programs/proof/74_smx_venous_angle.cubalc
+PROOF_ALT=programs/proof/1810_smx_mesh_venous_angle_life.cubalc
+SOFT_OOB=fail-closed
+MESH_EXCHANGE=C(4,2)
+STATUS=SHIPPING

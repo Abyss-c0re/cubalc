@@ -1,0 +1,7 @@
+feature=MESH_CHORIOCAPILLARIS
+iter=1847
+proof=99_smx_choriocapillaris.cubalc
+life=1847_smx_mesh_choriocapillaris_life.cubalc
+soft_oob=1
+fail_closed=1
+bonds=6

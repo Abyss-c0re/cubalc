@@ -1,3 +1,7 @@
-MESH_RIGHT_VERTEBRAL
-soft-OOB fail-closed
-MESH_EXCHANGE C(4,2)
+feature=MESH_RIGHT_VERTEBRAL
+iter=1836
+proof=99_smx_right_vertebral.cubalc
+life=1836_smx_mesh_right_vertebral_life.cubalc
+soft_oob=1
+fail_closed=1
+bonds=6

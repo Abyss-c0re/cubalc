@@ -1,15 +1,2 @@
-feature=MESH_DUCTULE_LIFE_FORCE
-iter=1783
+1783 DUCTULE
 MEANINGFUL_ITER=1783
-VERSION=1.15.1261-usability
-proof=programs/proof/1783_smx_mesh_ductule_life_force.cubalc
-cascade=programs/proof/1783_smx_mesh_ductule_life_cascade.cubalc
-asserts_ok_force=146
-asserts_ok_cascade=38
-asserts_fail=0
-flagship_1620=PASS
-SMX_DUCTULE=1
-SMX_MESH_DUCTULE=1
-SMX_STABLE_MESH=1
-SMX_BILE_DUCTULE=1
-life_force=1

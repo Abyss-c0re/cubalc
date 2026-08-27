@@ -1,9 +1,1 @@
-MEANINGFUL_ITER=1845
-FEATURE=MESH_POSTERIOR_CILIARY
-SHIP=1845_smx_mesh_posterior_ciliary_life
-VERSION=1.15.1325-usability
-soft_oob=1
-fail_closed=1
-bonds=6
-c_slice=src/cubalc_smx_posterior_ciliary.c
-proof=programs/proof/1845_smx_mesh_posterior_ciliary_life.cubalc
+MESH_POSTERIOR_CILIARY
