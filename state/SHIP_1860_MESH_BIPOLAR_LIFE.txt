@@ -5,12 +5,14 @@ proofs=1860,99_smx_bipolar,1620_atomic_printer_life_force
 proof_status=PASS asserts_ok=60 asserts_fail=0
 flagship_1620=PASS asserts_ok=12 asserts_fail=0
 c_slice=src/cubalc_smx_bipolar.c
-soft_oob=1 bonds=6 cascade_ready=1 bipolar_ready=1
-head=190947aa82f699a00049ff7cb3b44b56c5adadf8
-tip=190947aa82f699a00049ff7cb3b44b56c5adadf8
-pin=190947aa82f699a00049ff7cb3b44b56c5adadf8
+soft_oob=1 fail_closed=1 bonds=6 cascade_ready=1
+unity=1.0 next=we_autoheal
+selftest=PASS
+MEANINGFUL_ITER=1860
+VERSION=1.15.1340-usability
+head=d85932785fae0ba980446cb62605f43beaafcbda
+tip=d85932785fae0ba980446cb62605f43beaafcbda
+pin=d85932785fae0ba980446cb62605f43beaafcbda
 tip_equals_pin=true
-version=1.15.1340-usability
-unity=1.0
-next=we_autoheal
 sealed=true
+MESH_BIPOLAR soft-OOB fail-closed C(4,2)=6 cascade_ready
