@@ -2,9 +2,9 @@
   "meaningful_iter": 1859,
   "feature": "MESH_PEDICLE",
   "version": "1.15.1339-usability",
-  "head": "b98149c3d491214f1898123c8165129b0002b5bc",
-  "tip": "b98149c3d491214f1898123c8165129b0002b5bc",
-  "pin": "b98149c3d491214f1898123c8165129b0002b5bc",
+  "head": "7b877b4d934ecf42c43ef706f993e559ff5ab90c",
+  "tip": "7b877b4d934ecf42c43ef706f993e559ff5ab90c",
+  "pin": "7b877b4d934ecf42c43ef706f993e559ff5ab90c",
   "tip_equals_pin": true,
   "proofs": {
     "1859": "PASS 60/0",
@@ -15,6 +15,7 @@
   "soft_oob": 1,
   "bonds": 6,
   "invaginating_ready": 1,
+  "pedicle_ready": 1,
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true
