@@ -1,6 +1,8 @@
 SHIP 1847 SMX_MESH_CHORIOCAPILLARIS_LIFE (=MESH_CHORIOCAPILLARIS)
+HEAD=f899ed5d47c8a800cd16c7dbcf969354f458e633
 VERSION=1.15.1327-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1847=60/0 1620=12/0 PASS
 c_slice=src/cubalc_smx_choriocapillaris.c
-energy_path=posterior ciliary artery feed → scleral canal pierce → choroidal arterial arcade → choriocapillaris fenestrated bed → outer retinal / RPE life-force seal · choriocapillaris mesh
+energy_path=choroidal arterial arcade → Haller/Sattler coats → fenestrated choriocapillaris bed → Bruch membrane face → RPE / photoreceptor outer-segment life-force seal · choriocapillaris mesh
+tip_equals_pin=true
