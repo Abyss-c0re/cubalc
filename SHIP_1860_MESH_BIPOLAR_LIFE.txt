@@ -6,9 +6,9 @@ proof_status=PASS asserts_ok=60 asserts_fail=0
 flagship_1620=PASS asserts_ok=12 asserts_fail=0
 c_slice=src/cubalc_smx_bipolar.c
 soft_oob=1 bonds=6 cascade_ready=1 bipolar_ready=1
-head=43dababb7d89a5000ad1c6abc19f184dfd46923d
-tip=43dababb7d89a5000ad1c6abc19f184dfd46923d
-pin=43dababb7d89a5000ad1c6abc19f184dfd46923d
+head=4bbcb0bf7b38932a571d6e310041a9d614f75677
+tip=4bbcb0bf7b38932a571d6e310041a9d614f75677
+pin=4bbcb0bf7b38932a571d6e310041a9d614f75677
 tip_equals_pin=true
 version=1.15.1340-usability
 unity=1.0

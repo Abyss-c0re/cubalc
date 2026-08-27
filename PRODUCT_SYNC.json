@@ -6,9 +6,9 @@
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "head": "b1da9f2bd3d23aab70370d2a5d941debf18e80cc",
+  "head": "adcdee58c645239b798805be79bdfec1ce3d1b27",
   "tip_equals_pin": true,
   "sealed": true,
-  "tip": "b1da9f2bd3d23aab70370d2a5d941debf18e80cc",
-  "pin": "b1da9f2bd3d23aab70370d2a5d941debf18e80cc"
+  "tip": "adcdee58c645239b798805be79bdfec1ce3d1b27",
+  "pin": "adcdee58c645239b798805be79bdfec1ce3d1b27"
 }
