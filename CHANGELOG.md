@@ -1,3 +1,19 @@
+## 1.15.1341-usability — 1861 SMX mesh ganglion life
+- SMX GANGLION|MESH_GANGLION|RAISE_GANGLION
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: outer-segment → cilium → ellipsoid → myoid → nucleus → outer fiber → spherule/pedicle triad → bipolar ON/OFF → retinal ganglion axon hillock spike-out life-force seal
+- Usability: cubalc_smx_ganglion_axon_ready() pure-C face
+- Proofs: 99_smx_ganglion + 1861_smx_mesh_ganglion_life = 60/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_ganglion.c
+
+## 1.15.1341-usability — 1861 SMX mesh ganglion life
+- SMX GANGLION|MESH_GANGLION|RAISE_GANGLION
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: outer-segment → cilium → ellipsoid → myoid → nucleus → outer fiber → spherule/pedicle triad → bipolar ON/OFF → ganglion axon hillock spike-out life-force seal
+- Usability: cubalc_smx_ganglion_axon_ready() pure-C face
+- Proofs: 99_smx_ganglion + 1861_smx_mesh_ganglion_life = 60/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_ganglion.c
+
 ## 1.15.1340-usability — 1860 SMX mesh bipolar life
 - SMX BIPOLAR|MESH_BIPOLAR|RAISE_BIPOLAR
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6

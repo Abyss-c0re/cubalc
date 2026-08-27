@@ -1,14 +1,13 @@
 {
-  "meaningful_iter": 1860,
-  "feature": "MESH_BIPOLAR",
-  "version": "1.15.1340-usability",
-  "status": "PASS",
+  "product": "CubalC",
+  "meaningful_iter": 1861,
+  "feature": "MESH_GANGLION",
+  "version": "1.15.1341-usability",
+  "c_slice": "src/cubalc_smx_ganglion.c",
+  "proofs": ["1861_smx_mesh_ganglion_life", "99_smx_ganglion", "1620_atomic_printer_life_force"],
   "soft_oob": 1,
-  "fail_closed": 1,
   "bonds": 6,
-  "head": "adcdee58c645239b798805be79bdfec1ce3d1b27",
-  "tip_equals_pin": true,
-  "sealed": true,
-  "tip": "adcdee58c645239b798805be79bdfec1ce3d1b27",
-  "pin": "adcdee58c645239b798805be79bdfec1ce3d1b27"
+  "axon_ready": 1,
+  "unity": 1.0,
+  "next": "we_autoheal"
 }

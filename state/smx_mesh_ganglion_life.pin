@@ -1,5 +1,6 @@
-MESH_GANGLION
+MESH_GANGLION_LIFE
 soft_oob=1
 bonds=6
 axon_ready=1
 iter=1861
+tip_equals_pin=true

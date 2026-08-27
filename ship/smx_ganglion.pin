@@ -2,4 +2,5 @@ MESH_GANGLION
 soft_oob=1
 bonds=6
 axon_ready=1
+head=PENDING
 iter=1861
