@@ -21,9 +21,9 @@
   "flagship_ok": 12,
   "flagship_fail": 0,
   "notes": "MESH_RPE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW Bruch seal \u2192 RPE adhesion \u2192 outer-segment phagocytosis \u2192 photoreceptor metabolic feed \u2192 macular free-energy crown; pure-C src/cubalc_smx_rpe.c",
-  "pin_head": "c0f1eeb2b3589b12e6a0a3ff51d67d3e9c56bb5d",
+  "pin_head": "4d8d8cb7a8fb2f3b58d2c371f69fbb37e3148c2e",
   "pure_c": "src/cubalc_smx_rpe.c",
   "selftest": "PASS",
-  "tip": "c0f1eeb2b3589b12e6a0a3ff51d67d3e9c56bb5d",
-  "HEAD": "c0f1eeb2b3589b12e6a0a3ff51d67d3e9c56bb5d"
+  "tip": "4d8d8cb7a8fb2f3b58d2c371f69fbb37e3148c2e",
+  "HEAD": "4d8d8cb7a8fb2f3b58d2c371f69fbb37e3148c2e"
 }
