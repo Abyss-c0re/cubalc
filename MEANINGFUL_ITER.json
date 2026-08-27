@@ -15,5 +15,6 @@
   "c_slice": "src/cubalc_smx_choroidal.c",
   "proof": "programs/proof/1846_smx_mesh_choroidal_life.cubalc",
   "branch": "ship-1846-choroidal",
-  "tip_equals_pin": true
+  "tip_equals_pin": true,
+  "head": "425d0bbe0624b02e4047951fd2b62a4822511472"
 }
