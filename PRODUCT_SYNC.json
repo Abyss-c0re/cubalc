@@ -15,6 +15,5 @@
   "ship": "1849_smx_mesh_bruch_membrane_life",
   "soft_oob": 1,
   "fail_closed": 1,
-  "bonds": 6,
-  "head": "581cf8ed54744e9c1e7ee60e9a22f5c9c9126c44"
+  "bonds": 6
 }
