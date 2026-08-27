@@ -1,26 +1,22 @@
 {
   "iter": 1850,
-  "meaningful_iter": 1850,
-  "MEANINGFUL_ITER": 1850,
   "feature": "MESH_RPE",
-  "FEATURE": "SMX_MESH_RPE_LIFE",
   "ship": "1850_smx_mesh_rpe_life",
-  "version": "1.15.1330-usability",
-  "VERSION": "1.15.1330-usability",
-  "status": "PASS",
+  "head": "f5bb0d351b0df8b029d673c54003237d828132df",
+  "head_short": "d801a03c",
+  "proofs": {
+    "99": "60/0",
+    "1850": "60/0",
+    "1620": "12/0"
+  },
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "proofs": "99=60/0,1850=60/0,1620=12/0",
   "c_slice": "src/cubalc_smx_rpe.c",
-  "proof": "programs/proof/1850_smx_mesh_rpe_life.cubalc",
-  "branch": "ship-1850-rpe",
   "tip_equals_pin": true,
-  "head": "d801a03c49e29becc23ee78fcef9723d6e2059d8",
-  "proof_status": "PASS",
-  "asserts_ok": 60,
-  "flagship_1620_asserts_ok": 12,
-  "ok": true,
-  "HEAD": "d801a03c49e29becc23ee78fcef9723d6e2059d8",
-  "head_short": "d801a03c"
+  "HEAD": "77781cb68f797ab29f20589432f50488ce4ee5f4",
+  "meaningful_iter": 1850,
+  "MEANINGFUL_ITER": 1850,
+  "status": "PASS",
+  "ok": true
 }
