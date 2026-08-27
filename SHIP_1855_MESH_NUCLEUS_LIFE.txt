@@ -1,0 +1,9 @@
+SHIP 1855 SMX_MESH_NUCLEUS_LIFE (=MESH_NUCLEUS)
+VERSION=1.15.1335-usability
+soft_oob=1 fail_closed=1 bonds=C(4,2)=6
+proofs: 99=60/0 1855=60/0 1620=12/0 PASS
+c_slice=src/cubalc_smx_nucleus.c
+energy_path=outer-segment disc stack -> connecting cilium axoneme -> transition zone -> ellipsoid -> myoid -> nucleus soma nuclear DNA transcription life-force seal · nucleus mesh
+selftest=PASS feature=MESH_NUCLEUS
+MEANINGFUL_ITER=1855
+NOTE=pure-C SMX mesh stability life-force; no SYS glue; WE_AUTOHEAL sticky

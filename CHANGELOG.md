@@ -1,3 +1,9 @@
+## 1.15.1335-usability — 1855 SMX mesh nucleus life
+- SMX NUCLEUS|MESH_NUCLEUS|RAISE_NUCLEUS
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: outer-segment disc stack → connecting cilium axoneme → transition zone → ellipsoid → myoid → nucleus soma nuclear DNA transcription life-force seal
+- Proofs: 99_smx_nucleus + 1855_smx_mesh_nucleus_life = 60/0; flagship 1620 = 12/0 PASS
+
 ## 1.15.1334-usability — 1854 SMX mesh myoid life
 - SMX MYOID|MESH_MYOID|RAISE_MYOID
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
