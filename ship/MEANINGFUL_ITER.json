@@ -1,35 +1,16 @@
 {
-  "iter": 1851,
-  "meaningful_iter": 1851,
-  "MEANINGFUL_ITER": 1851,
-  "feature": "MESH_PHOTORECEPTOR_OS",
-  "FEATURE": "MESH_PHOTORECEPTOR_OS",
-  "ship": "1851_smx_mesh_photoreceptor_os_life",
-  "version": "1.15.1331-usability",
-  "VERSION": "1.15.1331-usability",
-  "head": "69fd420f669ceb33f196139e9c0dcc024ccd49d9",
-  "HEAD": "69fd420f669ceb33f196139e9c0dcc024ccd49d9",
-  "pin": "69fd420f669ceb33f196139e9c0dcc024ccd49d9",
-  "tip": "69fd420f669ceb33f196139e9c0dcc024ccd49d9",
-  "pin_head": "69fd420f669ceb33f196139e9c0dcc024ccd49d9",
-  "pinned_head": "69fd420f669ceb33f196139e9c0dcc024ccd49d9",
-  "sha": "69fd420f669ceb33f196139e9c0dcc024ccd49d9",
-  "pin_short": "69fd420f",
-  "short": "69fd420f",
-  "status": "PASS",
+  "iter": 1852,
+  "feature": "MESH_PHOTORECEPTOR_IS",
+  "ship": "1852_smx_mesh_photoreceptor_is_life",
+  "version": "1.15.1332-usability",
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "proofs": "1851+99=60/0,1620=12/0",
-  "tip_equals_pin": true,
-  "tip_eq_pin": true,
-  "proof_recheck": {
-    "99": "PASS 60/0",
-    "1851": "PASS 60/0",
-    "1620": "PASS 12/0"
+  "proofs": {
+    "99": "60/0",
+    "1852": "60/0",
+    "1620": "12/0"
   },
-  "c_slice": "src/cubalc_smx_photoreceptor_os.c",
-  "branch": "ship-1851-photoreceptor-os",
-  "mesh": "photoreceptor_os",
-  "aka": "MESH_PHOTORECEPTOR_OS"
+  "c_slice": "src/cubalc_smx_photoreceptor_is.c",
+  "energy_path": "outer-segment disc stack -> connecting cilium -> inner-segment mitochondria -> ellipsoid/myoid ATP life-force seal \u00b7 photoreceptor_is mesh"
 }
