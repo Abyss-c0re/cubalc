@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "meaningful_iter": 1850,
-  "MEANINGFUL_ITER": 1850,
-  "iter": 1850,
-  "version": "1.15.1329-usability",
-  "VERSION": "1.15.1329-usability",
-  "feature": "SMX_MESH_BIPOLAR_LIFE",
-  "FEATURE": "SMX_MESH_BIPOLAR_LIFE",
-  "ship": "1850_smx_mesh_bipolar_life",
-  "proof": "programs/proof/116_smx_bipolar.cubalc",
+  "meaningful_iter": 1851,
+  "MEANINGFUL_ITER": 1851,
+  "iter": 1851,
+  "version": "1.15.1330-usability",
+  "VERSION": "1.15.1330-usability",
+  "feature": "SMX_MESH_GANGLION_LIFE",
+  "FEATURE": "SMX_MESH_GANGLION_LIFE",
+  "ship": "1851_smx_mesh_ganglion_life",
+  "proof": "programs/proof/117_smx_ganglion.cubalc",
   "proofs": [
-    "programs/proof/116_smx_bipolar.cubalc",
-    "programs/proof/1850_smx_mesh_bipolar_life.cubalc"
+    "programs/proof/117_smx_ganglion.cubalc",
+    "programs/proof/1851_smx_mesh_ganglion_life.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 60,
@@ -20,10 +20,10 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_BIPOLAR soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW photoreceptor ribbon contact \u2192 bipolar dendrite invagination \u2192 glutamate cascade gate \u2192 inner plexiform axon terminal \u2192 macular free-energy crown; pure-C src/cubalc_smx_bipolar.c",
-  "pin_head": "ceed0a0f6480e9a27a55b0b99df19ee5142c9851",
-  "pure_c": "src/cubalc_smx_bipolar.c",
+  "notes": "MESH_GANGLION soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW bipolar axon terminal \u2192 ganglion dendritic arbor \u2192 action-potential spike gate \u2192 optic-nerve fiber fascicle \u2192 lateral geniculate free-energy crown; pure-C src/cubalc_smx_ganglion.c",
+  "pin_head": "8d1620e50313809069ca2fc2f0c08acaf1adb59f",
+  "pure_c": "src/cubalc_smx_ganglion.c",
   "selftest": "PASS",
-  "tip": "ceed0a0f6480e9a27a55b0b99df19ee5142c9851",
-  "HEAD": "ceed0a0f6480e9a27a55b0b99df19ee5142c9851"
+  "tip": "8d1620e50313809069ca2fc2f0c08acaf1adb59f",
+  "HEAD": "8d1620e50313809069ca2fc2f0c08acaf1adb59f"
 }
