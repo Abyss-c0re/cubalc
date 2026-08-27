@@ -21,9 +21,9 @@
   "flagship_ok": 12,
   "flagship_fail": 0,
   "notes": "MESH_OPTIC_NERVE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW ganglion axon hillock \u2192 optic-nerve myelinated fascicle \u2192 chiasm decussation gate \u2192 optic tract \u2192 lateral geniculate free-energy crown; pure-C src/cubalc_smx_optic_nerve.c",
-  "pin_head": "PENDING",
+  "pin_head": "1c885c37c0609cd4ec1b93849c9c857724fa8141",
   "pure_c": "src/cubalc_smx_optic_nerve.c",
   "selftest": "PASS",
-  "tip": "PENDING",
-  "HEAD": "PENDING"
+  "tip": "1c885c37c0609cd4ec1b93849c9c857724fa8141",
+  "HEAD": "1c885c37c0609cd4ec1b93849c9c857724fa8141"
 }
