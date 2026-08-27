@@ -1,3 +1,10 @@
+## 1.15.1326-usability — 1846 SMX mesh choroidal life
+- SMX CHOROIDAL|MESH_CHOROIDAL|RAISE_CHOROIDAL
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: posterior ciliary feed → scleral canal → choroidal arcade → choriocapillaris → outer retinal / RPE seal
+- Proofs: 99_smx_choroidal + 1846_smx_mesh_choroidal_life = 60/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_choroidal.c
+
 ## 1.15.1325-usability — 1845 SMX mesh posterior ciliary life
 - SMX POSTERIOR_CILIARY|MESH_POSTERIOR_CILIARY|RAISE_POSTERIOR_CILIARY
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
