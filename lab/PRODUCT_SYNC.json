@@ -1,20 +1,13 @@
 {
-  "product": "CubalC",
-  "meaningful_iter": 1862,
   "feature": "MESH_OPTIC_NERVE",
+  "iter": 1862,
   "version": "1.15.1342-usability",
-  "c_slice": "src/cubalc_smx_optic_nerve.c",
-  "proofs": [
-    "1862_smx_mesh_optic_nerve_life",
-    "99_smx_optic_nerve",
-    "1620_atomic_printer_life_force"
-  ],
+  "head": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
+  "pin": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
+  "tip_equals_pin": true,
   "soft_oob": 1,
   "bonds": 6,
   "chiasm_ready": 1,
-  "unity": 1.0,
-  "next": "we_autoheal",
-  "head": "8d9f1889a4bf37a2a28055c4a1d040eab2b1b0fa",
-  "tip_equals_pin": true,
+  "proofs_pass": true,
   "sealed": true
 }

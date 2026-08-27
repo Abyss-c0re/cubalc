@@ -2,9 +2,9 @@
   "meaningful_iter": 1862,
   "feature": "MESH_OPTIC_NERVE",
   "version": "1.15.1342-usability",
-  "head": "8d9f1889a4bf37a2a28055c4a1d040eab2b1b0fa",
-  "tip": "8d9f1889a4bf37a2a28055c4a1d040eab2b1b0fa",
-  "pin": "8d9f1889a4bf37a2a28055c4a1d040eab2b1b0fa",
+  "head": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
+  "tip": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
+  "pin": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
   "tip_equals_pin": true,
   "proofs": {
     "1862": "PASS 60/0",
