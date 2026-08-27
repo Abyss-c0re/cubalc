@@ -5,7 +5,7 @@
   "head": "PENDING",
   "tip": "PENDING",
   "pin": "PENDING",
-  "tip_equals_pin": true,
+  "tip_equals_pin": false,
   "proofs": {
     "1859": "PASS 60/0",
     "99_smx_pedicle": "PASS 60/0",
@@ -15,7 +15,8 @@
   "soft_oob": 1,
   "bonds": 6,
   "invaginating_ready": 1,
+  "pedicle_ready": 1,
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": true
+  "sealed": false
 }

@@ -1,0 +1,9 @@
+SHIP 1859 SMX_MESH_PEDICLE_LIFE
+feature=MESH_PEDICLE
+proof=programs/proof/1859_smx_mesh_pedicle_life.cubalc
+proofs=1859,99_smx_pedicle,1620_atomic_printer_life_force
+proof_status=PASS asserts_ok=60 asserts_fail=0
+flagship_1620=PASS asserts_ok=12 asserts_fail=0
+c_slice=src/cubalc_smx_pedicle.c
+soft_oob=1 fail_closed=1 bonds=6 invaginating=1
+unity=1.0 next=we_autoheal
