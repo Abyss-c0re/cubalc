@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "meaningful_iter": 1849,
-  "MEANINGFUL_ITER": 1849,
-  "iter": 1849,
-  "version": "1.15.1328-usability",
-  "VERSION": "1.15.1328-usability",
-  "feature": "SMX_MESH_PHOTORECEPTOR_LIFE",
-  "FEATURE": "SMX_MESH_PHOTORECEPTOR_LIFE",
-  "ship": "1849_smx_mesh_photoreceptor_life",
-  "proof": "programs/proof/115_smx_photoreceptor.cubalc",
+  "meaningful_iter": 1850,
+  "MEANINGFUL_ITER": 1850,
+  "iter": 1850,
+  "version": "1.15.1329-usability",
+  "VERSION": "1.15.1329-usability",
+  "feature": "SMX_MESH_BIPOLAR_LIFE",
+  "FEATURE": "SMX_MESH_BIPOLAR_LIFE",
+  "ship": "1850_smx_mesh_bipolar_life",
+  "proof": "programs/proof/116_smx_bipolar.cubalc",
   "proofs": [
-    "programs/proof/115_smx_photoreceptor.cubalc",
-    "programs/proof/1849_smx_mesh_photoreceptor_life.cubalc"
+    "programs/proof/116_smx_bipolar.cubalc",
+    "programs/proof/1850_smx_mesh_bipolar_life.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 60,
@@ -20,10 +20,10 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_PHOTORECEPTOR soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW RPE adhesion \u2192 outer-segment disk renewal \u2192 phototransduction cascade \u2192 bipolar synaptic ribbon \u2192 macular free-energy crown; pure-C src/cubalc_smx_photoreceptor.c",
-  "pin_head": "a4f4a41ac5dc7ed312f8e25976ff066624ac1c8a",
-  "pure_c": "src/cubalc_smx_photoreceptor.c",
+  "notes": "MESH_BIPOLAR soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW photoreceptor ribbon contact \u2192 bipolar dendrite invagination \u2192 glutamate cascade gate \u2192 inner plexiform axon terminal \u2192 macular free-energy crown; pure-C src/cubalc_smx_bipolar.c",
+  "pin_head": "PENDING",
+  "pure_c": "src/cubalc_smx_bipolar.c",
   "selftest": "PASS",
-  "tip": "a4f4a41ac5dc7ed312f8e25976ff066624ac1c8a",
-  "HEAD": "a4f4a41ac5dc7ed312f8e25976ff066624ac1c8a"
+  "tip": "PENDING",
+  "HEAD": "PENDING"
 }

@@ -1,0 +1,5 @@
+SHIP 1850 MESH_BIPOLAR LIFE
+Soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE + WE_AUTOHEAL
+Energy: photoreceptor ribbon contact → bipolar dendrite invagination → glutamate cascade gate → inner plexiform axon terminal → macular free-energy crown
+Proofs: 116_smx_bipolar.cubalc + 1850_smx_mesh_bipolar_life.cubalc
+Pure-C: src/cubalc_smx_bipolar.c
