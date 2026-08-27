@@ -3,9 +3,9 @@
   "version": "1.15.1338-usability",
   "feature": "MESH_INNER_FIBER",
   "ship": "1858_smx_mesh_inner_fiber_life",
-  "head": "d7acffed16fc21d5c97ed62b3818cd28bd834aa4",
-  "tip": "d7acffed16fc21d5c97ed62b3818cd28bd834aa4",
-  "pin": "d7acffed16fc21d5c97ed62b3818cd28bd834aa4",
+  "head": "f82ef18f56b8c567b197642344a135177a45655c",
+  "tip": "f82ef18f56b8c567b197642344a135177a45655c",
+  "pin": "f82ef18f56b8c567b197642344a135177a45655c",
   "tip_equals_pin": true,
   "proofs_pass": true,
   "asserts_ok": 60,
@@ -17,5 +17,5 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "updated": 1787796488
+  "updated": 1787796503
 }
