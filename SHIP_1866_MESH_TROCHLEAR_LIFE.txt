@@ -1,12 +1,3 @@
-SHIP 1866 MESH_TROCHLEAR LIFE
-=============================
-Feature: SMX_MESH_TROCHLEAR_LIFE
-Pure-C: src/cubalc_smx_trochlear.c (selftest PASS)
-Proofs:
-  programs/proof/132_smx_trochlear.cubalc              asserts_ok=67 PASS
-  programs/proof/1866_smx_mesh_trochlear_life.cubalc   asserts_ok=67 PASS
-  programs/science/integration/atomic_printer_mesh_trochlear_life.cubalc asserts_ok=27 PASS
-Flagship: programs/proof/1620_atomic_printer_life_force.cubalc PASS
-Energy path: abducens nucleus yoke → trochlear nucleus → CN4 fascicle (decussate) → superior oblique free-energy conjugate crown
-Contract: soft-OOB fail-closed, MESH_EXCHANGE C(4,2)=6, dual WE_AUTOHEAL after second storm
-MEANINGFUL_ITER=1866 VERSION=1.15.1345-usability
+MESH_TROCHLEAR SMX soft-OOB fail-closed + dual WE_AUTOHEAL superior-oblique conjugate crown life-force
+Energy: abducens nucleus yoke → trochlear nucleus → CN4 fascicle (decussate) → superior oblique free-energy conjugate crown
+Proofs: 132/1866 asserts_ok=67; flagship 1620 PASS; pure-C src/cubalc_smx_trochlear.c
