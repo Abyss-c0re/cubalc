@@ -1,1 +1,1 @@
-{"iter":1852,"feature":"MESH_CONNECTING_CILIUM","head":"7e21523ed7855d46afa94de2b2eebad7ca22e6ef","soft_oob":1,"fail_closed":1,"bonds":6,"proofs":{"99":"60/0","1852":"60/0","1620":"12/0"},"tip_equals_pin":true}
+{"iter":1852,"feature":"MESH_CONNECTING_CILIUM","head":"ecaacdf53d0fa7bcb0bc915c2cc9f9b0566ab3a5","soft_oob":1,"fail_closed":1,"bonds":6,"proofs":{"99":"60/0","1852":"60/0","1620":"12/0"},"tip_equals_pin":true}
