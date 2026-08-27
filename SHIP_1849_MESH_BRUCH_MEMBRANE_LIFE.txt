@@ -1,9 +1,8 @@
 SHIP 1849 SMX_MESH_BRUCH_MEMBRANE_LIFE (=MESH_BRUCH_MEMBRANE)
+HEAD=50139eb479d76f1614d3e7969484c5f8d48f4939
+VERSION=1.15.1329-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1849=60/0 1620=12/0 PASS
 c_slice=src/cubalc_smx_bruch_membrane.c
-energy_path=fenestrated choriocapillaris bed → Bruch membrane pentalaminar face → RPE basal labyrinth → photoreceptor outer-segment life-force seal · bruch membrane mesh
-VERSION=1.15.1329-usability
-MEANINGFUL_ITER=1849
-FEATURE=MESH_BRUCH_MEMBRANE
-PROOF_STATUS=PASS
+energy_path=fenestrated choriocapillaris bed → Bruch membrane trilaminar face → RPE basal lamina interface → photoreceptor outer-segment life-force seal · bruch membrane mesh
+tip_equals_pin=true
