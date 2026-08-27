@@ -1,1 +1,25 @@
-{"iter":1850,"feature":"MESH_RPE","ship":"1850_smx_mesh_rpe_life","proofs":{"99":"60/0","1850":"60/0","1620":"12/0"},"soft_oob":1,"fail_closed":1,"bonds":6,"c_slice":"src/cubalc_smx_rpe.c","energy_path":"fenestrated choriocapillaris bed → Bruch membrane pentalaminar face → RPE basal labyrinth → photoreceptor outer-segment life-force seal · rpe mesh","tip_equals_pin":true}
+{
+  "iter": 1850,
+  "feature": "MESH_RPE",
+  "ship": "1850_smx_mesh_rpe_life",
+  "proofs": "99=60/0,1850=60/0,1620=12/0",
+  "soft_oob": 1,
+  "fail_closed": 1,
+  "bonds": 6,
+  "c_slice": "src/cubalc_smx_rpe.c",
+  "energy_path": "fenestrated choriocapillaris bed \u2192 Bruch membrane pentalaminar face \u2192 RPE basal labyrinth \u2192 photoreceptor outer-segment life-force seal \u00b7 rpe mesh",
+  "tip_equals_pin": true,
+  "meaningful_iter": 1850,
+  "MEANINGFUL_ITER": 1850,
+  "FEATURE": "SMX_MESH_RPE_LIFE",
+  "version": "1.15.1330-usability",
+  "VERSION": "1.15.1330-usability",
+  "status": "PASS",
+  "proof_status": "PASS",
+  "asserts_ok": 60,
+  "flagship_1620_asserts_ok": 12,
+  "proof": "programs/proof/1850_smx_mesh_rpe_life.cubalc",
+  "branch": "ship-1850-rpe",
+  "head": "eb293cd5970d0ec922cd20301a9f76f0bcdd3418",
+  "ok": true
+}

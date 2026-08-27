@@ -1,11 +1,8 @@
 SHIP 1850 SMX_MESH_RPE_LIFE (=MESH_RPE)
-HEAD=8823f3f8e8186557fd92aa94dc10717cd075951b
-VERSION=1.15.1329-usability
+HEAD=eb293cd5970d0ec922cd20301a9f76f0bcdd3418
+VERSION=1.15.1330-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1850=60/0 1620=12/0 PASS
 c_slice=src/cubalc_smx_rpe.c
-energy_path=fenestrated choriocapillaris bed → Bruch membrane pentalaminar face → RPE basal labyrinth → photoreceptor outer-segment life-force seal · rpe mesh
-selftest=PASS feature=MESH_RPE
+energy_path=fenestrated choriocapillaris bed -> Bruch membrane pentalaminar face -> RPE basal labyrinth -> photoreceptor outer-segment life-force seal · rpe mesh
 tip_equals_pin=true
-MEANINGFUL_ITER=1850
-NOTE=pure-C SMX mesh stability life-force; no SYS glue; WE_AUTOHEAL sticky
