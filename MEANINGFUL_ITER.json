@@ -20,10 +20,10 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_PHOTORECEPTOR soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW RPE adhesion → outer-segment disk renewal → phototransduction cascade → bipolar synaptic ribbon → macular free-energy crown; pure-C src/cubalc_smx_photoreceptor.c",
-  "pin_head": "PENDING",
+  "notes": "MESH_PHOTORECEPTOR soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW RPE adhesion \u2192 outer-segment disk renewal \u2192 phototransduction cascade \u2192 bipolar synaptic ribbon \u2192 macular free-energy crown; pure-C src/cubalc_smx_photoreceptor.c",
+  "pin_head": "a4f4a41ac5dc7ed312f8e25976ff066624ac1c8a",
   "pure_c": "src/cubalc_smx_photoreceptor.c",
   "selftest": "PASS",
-  "tip": "PENDING",
-  "HEAD": "PENDING"
+  "tip": "a4f4a41ac5dc7ed312f8e25976ff066624ac1c8a",
+  "HEAD": "a4f4a41ac5dc7ed312f8e25976ff066624ac1c8a"
 }
