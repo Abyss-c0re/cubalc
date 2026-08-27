@@ -1,0 +1,5 @@
+feature=MESH_CONNECTING_CILIUM
+iter=1852
+head=bbc3a5723641758466ff429a329cc5527172a1d1
+soft_oob=1
+bonds=6

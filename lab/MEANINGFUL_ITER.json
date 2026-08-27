@@ -1,8 +1,7 @@
 {
   "iter": 1852,
-  "feature": "MESH_PHOTORECEPTOR_IS",
-  "ship": "1852_smx_mesh_photoreceptor_is_life",
-  "version": "1.15.1332-usability",
+  "feature": "MESH_CONNECTING_CILIUM",
+  "ship": "1852_smx_mesh_connecting_cilium_life",
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
@@ -11,6 +10,6 @@
     "1852": "60/0",
     "1620": "12/0"
   },
-  "c_slice": "src/cubalc_smx_photoreceptor_is.c",
-  "energy_path": "outer-segment disc stack -> connecting cilium -> inner-segment mitochondria -> ellipsoid/myoid ATP life-force seal \u00b7 photoreceptor_is mesh"
+  "c_slice": "src/cubalc_smx_connecting_cilium.c",
+  "ts": 1787792641
 }
