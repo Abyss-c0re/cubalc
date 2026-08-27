@@ -1,9 +1,3 @@
-MESH_RPE
-1850
-soft-OOB fail-closed
-MESH_EXCHANGE C(4,2)
-STABILIZE
-WE_AUTOHEAL
 feature=MESH_RPE
 iter=1850
 proof=99_smx_rpe.cubalc
