@@ -2,9 +2,9 @@
   "meaningful_iter": 1861,
   "feature": "MESH_GANGLION",
   "version": "1.15.1341-usability",
-  "head": "6d4e2f49d10d6a275675bc2d49ae7ed599d1c9a3",
-  "tip": "6d4e2f49d10d6a275675bc2d49ae7ed599d1c9a3",
-  "pin": "6d4e2f49d10d6a275675bc2d49ae7ed599d1c9a3",
+  "head": "82b18dab02798fc011131dff076aca8df78febca",
+  "tip": "82b18dab02798fc011131dff076aca8df78febca",
+  "pin": "82b18dab02798fc011131dff076aca8df78febca",
   "tip_equals_pin": true,
   "proofs": {
     "1861": "PASS 60/0",
