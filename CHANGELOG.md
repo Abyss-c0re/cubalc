@@ -1,3 +1,10 @@
+## 1.15.1329-usability — MI 1849 MESH_BRUCH_MEMBRANE
+
+- SMX mesh stability / life-force: Bruch membrane pentalaminar face
+- pure C slice src/cubalc_smx_bruch_membrane.c
+- proofs 99_smx_bruch_membrane + 1849_smx_mesh_bruch_membrane_life PASS 60/0; flagship 1620 PASS 12/0
+- soft-OOB fail-closed; MESH_EXCHANGE C(4,2)=6; WE_AUTOHEAL
+
 ## 1.15.1326-usability — 1846 SMX mesh choroidal life
 - SMX CHOROIDAL|MESH_CHOROIDAL|RAISE_CHOROIDAL
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6

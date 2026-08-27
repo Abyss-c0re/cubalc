@@ -1,4 +1,6 @@
 MESH_BRUCH_MEMBRANE
-soft_oob=1
-bonds=6
-ship=1849
+1849
+soft-OOB fail-closed
+MESH_EXCHANGE C(4,2)
+STABILIZE
+WE_AUTOHEAL

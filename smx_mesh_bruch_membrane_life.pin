@@ -1,3 +1,7 @@
-MESH_BRUCH_MEMBRANE
-proof=99+1849
-life=1
+feature=MESH_BRUCH_MEMBRANE
+iter=1849
+proof=99_smx_bruch_membrane.cubalc
+life=1849_smx_mesh_bruch_membrane_life.cubalc
+soft_oob=1
+fail_closed=1
+bonds=6

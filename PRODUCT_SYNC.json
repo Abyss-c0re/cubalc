@@ -1,19 +1,19 @@
 {
   "schema": "projectnexus.product_sync.v1",
   "product": "cubalc",
-  "version": "1.15.1328-usability",
+  "version": "1.15.1329-usability",
   "paradigm": "COP/flow",
   "ok": true,
-  "meaningful_iter": 1848,
-  "feature": "ICBRTN",
+  "meaningful_iter": 1849,
+  "feature": "MESH_BRUCH_MEMBRANE",
   "proof_status": "PASS",
-  "asserts_ok": 26,
-  "flagship_1620_asserts_ok": 0,
-  "VERSION": "1.15.1328-usability",
-  "MEANINGFUL_ITER": 1848,
+  "asserts_ok": 60,
+  "flagship_1620_asserts_ok": 12,
+  "VERSION": "1.15.1329-usability",
+  "MEANINGFUL_ITER": 1849,
   "tip_equals_pin": true,
-  "ship": "1848_icbrtn",
+  "ship": "1849_smx_mesh_bruch_membrane_life",
   "soft_oob": 1,
   "fail_closed": 1,
-  "bonds": 0
+  "bonds": 6
 }
