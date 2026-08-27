@@ -14,7 +14,7 @@
   "chiasm_ready": 1,
   "unity": 1.0,
   "next": "we_autoheal",
-  "head": "",
+  "head": "9fddb05195755192addebbe31b10a3edd8db3a67",
   "tip_equals_pin": true,
   "sealed": true
 }
