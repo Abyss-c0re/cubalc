@@ -1,0 +1,7 @@
+SHIP 1846 SMX_MESH_CHOROIDAL_LIFE
+soft-OOB fail-closed · MESH_EXCHANGE C(4,2)=6 · STABILIZE · WE_AUTOHEAL
+energy: posterior ciliary feed → scleral canal → choroidal arcade → choriocapillaris → outer retinal/RPE seal
+proof 1846 PASS 60/0 · flagship 1620 PASS 12/0
+c_slice=src/cubalc_smx_choroidal.c
+proof=programs/proof/1846_smx_mesh_choroidal_life.cubalc
+VERSION=1.15.1326-usability

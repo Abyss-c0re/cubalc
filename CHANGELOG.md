@@ -5118,6 +5118,12 @@ See 1.12.220-universal.
 
 # Changelog
 
+## 1846 — SMX CHOROIDAL mesh life cascade
+- feat(smx): CHOROIDAL mesh stability life-force after POSTERIOR_CILIARY; soft-OOB fail-closed
+- proof 1846 PASS; flagship 1620 PASS; C(4,2)=6 bonds; WE_AUTOHEAL
+- c_slice src/cubalc_smx_choroidal.c · VERSION 1.15.1326-usability
+
+
 ## 1.12.220-universal — 2026-08-03
 
 ### Direction
