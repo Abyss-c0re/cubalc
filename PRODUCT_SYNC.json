@@ -10,5 +10,7 @@
   "asserts_ok": 60,
   "flagship_1620_asserts_ok": 12,
   "VERSION": "1.15.1324-usability",
-  "MEANINGFUL_ITER": 1844
+  "MEANINGFUL_ITER": 1844,
+  "head": "ecfa26ad9a1dbd968fccafbeeeccb5adf53ee206",
+  "tip_equals_pin": true
 }
