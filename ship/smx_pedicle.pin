@@ -1,1 +1,5 @@
-MESH_PEDICLE soft-OOB fail-closed C(4,2)=6 invaginating_ready
+MESH_PEDICLE
+1859
+soft_oob=1
+bonds=6
+invaginating_ready=1

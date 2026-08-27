@@ -2,10 +2,10 @@
   "meaningful_iter": 1859,
   "feature": "MESH_PEDICLE",
   "version": "1.15.1339-usability",
-  "head": "PENDING",
-  "tip": "PENDING",
-  "pin": "PENDING",
-  "tip_equals_pin": false,
+  "head": "b1f5877615c4860a4415707d75a5db8e078a9140",
+  "tip": "b1f5877615c4860a4415707d75a5db8e078a9140",
+  "pin": "b1f5877615c4860a4415707d75a5db8e078a9140",
+  "tip_equals_pin": true,
   "proofs": {
     "1859": "PASS 60/0",
     "99_smx_pedicle": "PASS 60/0",
@@ -18,5 +18,5 @@
   "pedicle_ready": 1,
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": false
+  "sealed": true
 }
