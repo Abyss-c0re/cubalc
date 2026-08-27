@@ -10,8 +10,8 @@ unity=1.0 next=we_autoheal
 selftest=PASS
 MEANINGFUL_ITER=1858
 VERSION=1.15.1338-usability
-head=b0fed8cbe1ada2311c2cc55ff88ed5c01005e400
-tip=b0fed8cbe1ada2311c2cc55ff88ed5c01005e400
-pin=b0fed8cbe1ada2311c2cc55ff88ed5c01005e400
+head=1c707343183187e30de79601b86a3cc643a1f8d2
+tip=1c707343183187e30de79601b86a3cc643a1f8d2
+pin=1c707343183187e30de79601b86a3cc643a1f8d2
 tip_equals_pin=true
 sealed=true
