@@ -21,7 +21,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_MLF dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW PPRF horizontal burst → MLF internuclear highway → oculomotor nucleus yoke → conjugate free-energy yoking crown; pure-C src/cubalc_smx_mlf.c",
+  "notes": "MESH_MLF dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW PPRF horizontal burst \u2192 MLF internuclear highway \u2192 oculomotor nucleus yoke \u2192 conjugate free-energy yoking crown; pure-C src/cubalc_smx_mlf.c",
   "pure_c": "src/cubalc_smx_mlf.c",
   "selftest": "PASS",
   "item": "1863 smx mesh mlf life",
@@ -29,10 +29,10 @@
   "title": "1863 smx mesh mlf life",
   "summary": "MESH_MLF dual-autoheal soft-OOB conjugate yoking crown life-force ship.",
   "ts": "2026-08-27T03:10:00Z",
-  "pin_head": "PENDING",
-  "tip": "PENDING",
-  "HEAD": "PENDING",
-  "commit": "PENDING",
-  "feat_commit": "PENDING",
-  "host_finish": false
+  "pin_head": "d752818f6a13b0bf14352f18a2c035bb43e43fbd",
+  "tip": "d752818f6a13b0bf14352f18a2c035bb43e43fbd",
+  "HEAD": "d752818f6a13b0bf14352f18a2c035bb43e43fbd",
+  "commit": "d752818f6a13b0bf14352f18a2c035bb43e43fbd",
+  "feat_commit": "d752818f6a13b0bf14352f18a2c035bb43e43fbd",
+  "host_finish": true
 }
