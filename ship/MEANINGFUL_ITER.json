@@ -1,15 +1,35 @@
 {
   "iter": 1852,
-  "feature": "MESH_CONNECTING_CILIUM",
-  "ship": "1852_smx_mesh_connecting_cilium_life",
+  "meaningful_iter": 1852,
+  "MEANINGFUL_ITER": 1852,
+  "feature": "MESH_PHOTORECEPTOR_IS",
+  "FEATURE": "MESH_PHOTORECEPTOR_IS",
+  "ship": "1852_smx_mesh_photoreceptor_is_life",
+  "version": "1.15.1332-usability",
+  "VERSION": "1.15.1332-usability",
+  "head": "c9c4f23032e6e39f8f1ddadc058f133b1807e116",
+  "HEAD": "c9c4f23032e6e39f8f1ddadc058f133b1807e116",
+  "pin": "c9c4f23032e6e39f8f1ddadc058f133b1807e116",
+  "tip": "c9c4f23032e6e39f8f1ddadc058f133b1807e116",
+  "pin_head": "c9c4f23032e6e39f8f1ddadc058f133b1807e116",
+  "pinned_head": "c9c4f23032e6e39f8f1ddadc058f133b1807e116",
+  "sha": "c9c4f23032e6e39f8f1ddadc058f133b1807e116",
+  "pin_short": "c9c4f230",
+  "short": "c9c4f230",
+  "status": "PASS",
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "proofs": {
-    "99": "60/0",
-    "1852": "60/0",
-    "1620": "12/0"
+  "proofs": "1852+99=60/0,1620=12/0",
+  "tip_equals_pin": true,
+  "tip_eq_pin": true,
+  "proof_recheck": {
+    "99": "PASS 60/0",
+    "1852": "PASS 60/0",
+    "1620": "PASS 12/0"
   },
-  "c_slice": "src/cubalc_smx_connecting_cilium.c",
-  "ts": 1787792641
+  "c_slice": "src/cubalc_smx_photoreceptor_is.c",
+  "branch": "ship-1852-photoreceptor-is",
+  "mesh": "photoreceptor_is",
+  "aka": "MESH_PHOTORECEPTOR_IS"
 }
