@@ -1,7 +1,7 @@
 {
   "meaningful_iter": 1857,
   "version": "1.15.1337-usability",
-  "feature": "MESH_SPHERULE",
+  "feature": "SMX_MESH_SPHERULE_LIFE",
   "ship": "1857_smx_mesh_spherule_life",
   "head": "a6552e47165707ec73ee51a65b4b6011f3ebf958",
   "tip": "a6552e47165707ec73ee51a65b4b6011f3ebf958",
@@ -20,5 +20,9 @@
   "updated": 1787796297,
   "MEANINGFUL_ITER": 1857,
   "VERSION": "1.15.1337-usability",
-  "proof_status": "PASS"
+  "proof_status": "PASS",
+  "feat": "a6552e47165707ec73ee51a65b4b6011f3ebf958",
+  "iter": 1857,
+  "FEATURE": "MESH_SPHERULE",
+  "status": "PASS"
 }
