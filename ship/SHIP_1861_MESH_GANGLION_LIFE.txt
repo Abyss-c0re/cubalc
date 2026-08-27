@@ -10,9 +10,9 @@ unity=1.0 next=we_autoheal
 selftest=PASS
 MEANINGFUL_ITER=1861
 VERSION=1.15.1341-usability
-head=9606929334d628b9308bd3d7978923606b91eafd
-tip=9606929334d628b9308bd3d7978923606b91eafd
-pin=9606929334d628b9308bd3d7978923606b91eafd
+head=e221a4b318bd6e90ca03e04cb2c3c3210083f9a6
+tip=e221a4b318bd6e90ca03e04cb2c3c3210083f9a6
+pin=e221a4b318bd6e90ca03e04cb2c3c3210083f9a6
 tip_equals_pin=true
 sealed=true
 MESH_GANGLION soft-OOB fail-closed C(4,2)=6 axon_ready
