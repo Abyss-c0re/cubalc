@@ -1,0 +1,9 @@
+MEANINGFUL_ITER=1846
+FEATURE=MESH_CHOROIDAL
+SHIP=1846_smx_mesh_choroidal_life
+VERSION=1.15.1326-usability
+soft_oob=1
+fail_closed=1
+bonds=6
+c_slice=src/cubalc_smx_choroidal.c
+proof=programs/proof/1846_smx_mesh_choroidal_life.cubalc

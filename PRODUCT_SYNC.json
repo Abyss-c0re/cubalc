@@ -15,6 +15,5 @@
   "ship": "1846_smx_mesh_choroidal_life",
   "soft_oob": 1,
   "fail_closed": 1,
-  "bonds": 6,
-  "head": "3e08488a2718659abd9448d4305dea78bf82a7fa"
+  "bonds": 6
 }
