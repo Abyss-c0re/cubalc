@@ -3,7 +3,7 @@
   "meaningful_iter": 1850,
   "MEANINGFUL_ITER": 1850,
   "feature": "MESH_RPE",
-  "FEATURE": "SMX_MESH_RPE_LIFE",
+  "FEATURE": "MESH_RPE",
   "ship": "1850_smx_mesh_rpe_life",
   "version": "1.15.1330-usability",
   "VERSION": "1.15.1330-usability",
@@ -11,10 +11,26 @@
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "proofs": "99=60/0,1850=60/0,1620=12/0",
+  "proofs": "1850+99=60/0,1620=12/0",
   "c_slice": "src/cubalc_smx_rpe.c",
   "proof": "programs/proof/1850_smx_mesh_rpe_life.cubalc",
   "branch": "ship-1850-rpe",
   "tip_equals_pin": true,
-  "head": "b2299488abfc2c536824f2ebaa6ce18f446360eb"
+  "head": "a33a03ba97299651bc604d6eaa83bd27746f9588",
+  "HEAD": "a33a03ba97299651bc604d6eaa83bd27746f9588",
+  "pin": "a33a03ba97299651bc604d6eaa83bd27746f9588",
+  "tip": "a33a03ba97299651bc604d6eaa83bd27746f9588",
+  "pin_head": "a33a03ba97299651bc604d6eaa83bd27746f9588",
+  "pinned_head": "a33a03ba97299651bc604d6eaa83bd27746f9588",
+  "sha": "a33a03ba97299651bc604d6eaa83bd27746f9588",
+  "pin_short": "a33a03ba",
+  "short": "a33a03ba",
+  "tip_eq_pin": true,
+  "proof_recheck": {
+    "99": "PASS 60/0",
+    "1850": "PASS 60/0",
+    "1620": "PASS 12/0"
+  },
+  "mesh": "rpe",
+  "aka": "MESH_RPE"
 }
