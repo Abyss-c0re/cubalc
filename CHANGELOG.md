@@ -1,3 +1,10 @@
+## 1.15.1334-usability — 1854 SMX mesh myoid life
+- SMX MYOID|MESH_MYOID|RAISE_MYOID
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: outer-segment disc stack → connecting cilium axoneme → transition zone → ellipsoid → myoid contractile ATP conduit life-force seal
+- Proofs: 99_smx_myoid + 1854_smx_mesh_myoid_life = 60/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_myoid.c
+
 ## 1.15.1330-usability — 1850 SMX mesh RPE life
 - SMX RPE|MESH_RPE|RAISE_RPE
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
