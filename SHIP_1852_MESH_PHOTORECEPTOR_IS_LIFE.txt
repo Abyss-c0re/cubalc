@@ -1,11 +1,11 @@
 SHIP 1852 SMX_MESH_PHOTORECEPTOR_IS_LIFE (=MESH_PHOTORECEPTOR_IS)
-HEAD=ef9fe1086a6acce0b3dca145eaca7cd335cd3130
+HEAD=PENDING
 VERSION=1.15.1332-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1852=60/0 1620=12/0 PASS
 c_slice=src/cubalc_smx_photoreceptor_is.c
-energy_path=outer-segment disc stack -> connecting cilium -> inner-segment mitochondria -> ellipsoid/myoid ATP life-force seal · photoreceptor_is mesh
+energy_path=outer-segment disc stack -> connecting cilium -> inner-segment ellipsoid mitochondria -> synaptic pedicle life-force seal · photoreceptor_is mesh
 selftest=PASS feature=MESH_PHOTORECEPTOR_IS
-tip_equals_pin=true
+tip_equals_pin=PENDING
 MEANINGFUL_ITER=1852
 NOTE=pure-C SMX mesh stability life-force; no SYS glue; WE_AUTOHEAL sticky
