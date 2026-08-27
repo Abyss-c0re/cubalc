@@ -1,0 +1,41 @@
+// atomic_printer_mesh_lgn_life.cubalc
+// Science board twin: MESH_LGN soft-OOB fail-closed mesh life-force.
+// Energy path: chiasm nasal-decussation gate → contralateral lgn bundle →
+// LGN relay lamina → optic radiation free-energy crown.
+// INCLUDE path for AGI wonder. Flagship-adjacent sibling of atomic_printer_life_force.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+// Delegate full assert surface to the MI proof board surface language.
+// (Runnable standalone via the 1855 proof; this board documents the science path.)
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_mesh_lgn_life | creed=life_force |"
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+ENTITY seed OF Cell 1 16 0
+PLUG bed seed
+IMPULSE bed 1
+ENERGYFLOW 5
+FLOW 4
+SMX KEY
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob counted"
+SMX MESH_EXCHANGE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "mesh_exchange live"
+ASSERT SMX_BONDS == 6 "C(4,2)"
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_STABLE == 1 "stable"
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_AUTOHEALED == 1 "autoheal"
+ENERGYFLOW 1
+FLOW 1
+ASSERT ENERGY > 0 "lgn energy flows"
+ASSERT OK == 1
+PRINT "atomic_printer_mesh_lgn_life" SMX_STABLE SMX_BONDS SMX_AUTOHEALED ENERGY
+PASS
