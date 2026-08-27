@@ -3,9 +3,9 @@
   "version": "1.15.1337-usability",
   "feature": "MESH_SPHERULE",
   "ship": "1857_smx_mesh_spherule_life",
-  "head": "d2595e767895ec88a0c211ca3ee77c282e746dd0",
-  "tip": "d2595e767895ec88a0c211ca3ee77c282e746dd0",
-  "pin": "d2595e767895ec88a0c211ca3ee77c282e746dd0",
+  "head": "40884e11c2c8b98e862173ad1c304c27957cddb0",
+  "tip": "40884e11c2c8b98e862173ad1c304c27957cddb0",
+  "pin": "40884e11c2c8b98e862173ad1c304c27957cddb0",
   "tip_equals_pin": true,
   "proofs_pass": true,
   "asserts_ok": 60,
@@ -17,5 +17,6 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "updated": 1787796325
+  "updated": 1787796330,
+  "feat": "40884e11c2c8b98e862173ad1c304c27957cddb0"
 }
