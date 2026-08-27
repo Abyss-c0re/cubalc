@@ -17,7 +17,7 @@
   "asserts_ok": 60,
   "asserts_fail": 0,
   "flagship_1620": "PASS",
-  "notes": "MESH_RPE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW Bruch membrane seal→RPE adhesion face→outer-segment phagocytosis→photoreceptor metabolic feed→macular free-energy crown; WE_AUTOHEAL; pure-C cubalc_smx_rpe.c",
+  "notes": "MESH_RPE soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW Bruch membrane seal\u2192RPE adhesion face\u2192outer-segment phagocytosis\u2192photoreceptor metabolic feed\u2192macular free-energy crown; WE_AUTOHEAL; pure-C cubalc_smx_rpe.c",
   "note": "MESH_RPE SMX mesh stability life-force soft-OOB fail-closed",
   "item": "1848 smx mesh rpe life",
   "item_id": "mi_1848_smx_mesh_rpe_life",
@@ -26,5 +26,10 @@
   "host_finish": true,
   "status": "PASS",
   "unity": 1.0,
-  "feat_subject": "feat(smx): mesh RPE life soft-OOB stability (MEANINGFUL_ITER 1848)"
+  "feat_subject": "feat(smx): mesh RPE life soft-OOB stability (MEANINGFUL_ITER 1848)",
+  "pin_head": "c1e1310869b7fdbdf2ef33f026b2840867705e49",
+  "tip": "c1e1310869b7fdbdf2ef33f026b2840867705e49",
+  "HEAD": "c1e1310869b7fdbdf2ef33f026b2840867705e49",
+  "head_short": "c1e13108",
+  "feat_head": "c1e1310869b7fdbdf2ef33f026b2840867705e49"
 }
