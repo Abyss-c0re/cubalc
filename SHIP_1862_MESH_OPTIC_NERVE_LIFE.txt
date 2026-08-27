@@ -1,0 +1,15 @@
+SHIP 1862 SMX_MESH_OPTIC_NERVE_LIFE
+feature=MESH_OPTIC_NERVE
+proof=programs/proof/1862_smx_mesh_optic_nerve_life.cubalc
+proofs=1862,99_smx_optic_nerve,1620_atomic_printer_life_force
+proof_status=PASS asserts_ok=60 asserts_fail=0
+flagship_1620=PASS asserts_ok=12 asserts_fail=0
+c_slice=src/cubalc_smx_optic_nerve.c
+soft_oob=1 fail_closed=1 bonds=6 chiasm_ready=1
+unity=1.0 next=we_autoheal
+selftest=PASS
+MEANINGFUL_ITER=1862
+VERSION=1.15.1342-usability
+tip_equals_pin=true
+sealed=true
+MESH_OPTIC_NERVE soft-OOB fail-closed C(4,2)=6 chiasm_ready

@@ -1,20 +1,20 @@
 {
   "product": "CubalC",
-  "meaningful_iter": 1861,
-  "feature": "MESH_GANGLION",
-  "version": "1.15.1341-usability",
-  "c_slice": "src/cubalc_smx_ganglion.c",
+  "meaningful_iter": 1862,
+  "feature": "MESH_OPTIC_NERVE",
+  "version": "1.15.1342-usability",
+  "c_slice": "src/cubalc_smx_optic_nerve.c",
   "proofs": [
-    "1861_smx_mesh_ganglion_life",
-    "99_smx_ganglion",
+    "1862_smx_mesh_optic_nerve_life",
+    "99_smx_optic_nerve",
     "1620_atomic_printer_life_force"
   ],
   "soft_oob": 1,
   "bonds": 6,
-  "axon_ready": 1,
+  "chiasm_ready": 1,
   "unity": 1.0,
   "next": "we_autoheal",
-  "head": "396548584609e3866756a08544283fa88be97ece",
+  "head": "PENDING",
   "tip_equals_pin": true,
   "sealed": true
 }
