@@ -16,7 +16,7 @@
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "head": "26ba05684ae3ae152077bb7b146c3f562745814c",
+  "head": "d801a03c49e29becc23ee78fcef9723d6e2059d8",
   "iter": 1850,
   "FEATURE": "SMX_MESH_RPE_LIFE",
   "status": "PASS",
@@ -24,6 +24,6 @@
   "c_slice": "src/cubalc_smx_rpe.c",
   "proof": "programs/proof/1850_smx_mesh_rpe_life.cubalc",
   "branch": "ship-1850-rpe",
-  "HEAD": "26ba05684ae3ae152077bb7b146c3f562745814c",
-  "head_short": "26ba0568"
+  "HEAD": "d801a03c49e29becc23ee78fcef9723d6e2059d8",
+  "head_short": "d801a03c"
 }

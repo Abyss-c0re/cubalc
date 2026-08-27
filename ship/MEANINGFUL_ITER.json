@@ -16,11 +16,11 @@
   "proof": "programs/proof/1850_smx_mesh_rpe_life.cubalc",
   "branch": "ship-1850-rpe",
   "tip_equals_pin": true,
-  "head": "26ba05684ae3ae152077bb7b146c3f562745814c",
+  "head": "d801a03c49e29becc23ee78fcef9723d6e2059d8",
   "proof_status": "PASS",
   "asserts_ok": 60,
   "flagship_1620_asserts_ok": 12,
   "ok": true,
-  "HEAD": "26ba05684ae3ae152077bb7b146c3f562745814c",
-  "head_short": "26ba0568"
+  "HEAD": "d801a03c49e29becc23ee78fcef9723d6e2059d8",
+  "head_short": "d801a03c"
 }
