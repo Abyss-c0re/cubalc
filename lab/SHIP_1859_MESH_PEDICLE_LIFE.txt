@@ -7,8 +7,8 @@ flagship_1620=PASS asserts_ok=12 asserts_fail=0
 c_slice=src/cubalc_smx_pedicle.c
 soft_oob=1 fail_closed=1 bonds=6 invaginating=1
 unity=1.0 next=we_autoheal
-head=8f85dbab61f111cad372ee26882dff0ce46ddd65
-tip=8f85dbab61f111cad372ee26882dff0ce46ddd65
-pin=8f85dbab61f111cad372ee26882dff0ce46ddd65
+head=82ebfa97fe50d8c95df38a4a776ec55f557da2a4
+tip=82ebfa97fe50d8c95df38a4a776ec55f557da2a4
+pin=82ebfa97fe50d8c95df38a4a776ec55f557da2a4
 tip_equals_pin=true
 sealed=true
