@@ -36,5 +36,11 @@
   "branch": "ship-1853-ellipsoid",
   "sealed": true,
   "life_force": 0.35,
-  "stability": 1.0
+  "stability": 1.0,
+  "feat": "71257051b3534f09d7537a135660e799a1da3277",
+  "head": "71257051b3534f09d7537a135660e799a1da3277",
+  "tip": "71257051b3534f09d7537a135660e799a1da3277",
+  "flagship_asserts_ok": 12,
+  "flagship_ok": 12,
+  "flagship_fail": 0
 }
