@@ -37,8 +37,16 @@
   "sealed": true,
   "life_force": 0.35,
   "stability": 1.0,
-  "feat": "582901a7d2c17b5fac16dc7371dd6d474621d124",
-  "head": "582901a7d2c17b5fac16dc7371dd6d474621d124",
-  "tip": "582901a7d2c17b5fac16dc7371dd6d474621d124",
-  "pin": "582901a7d2c17b5fac16dc7371dd6d474621d124"
+  "feat": "d9af5e21f8dc55db098dd5fb89c35160bf21eee0",
+  "head": "d9af5e21f8dc55db098dd5fb89c35160bf21eee0",
+  "tip": "d9af5e21f8dc55db098dd5fb89c35160bf21eee0",
+  "pin": "d9af5e21f8dc55db098dd5fb89c35160bf21eee0",
+  "pin_head": "d9af5e21f8dc55db098dd5fb89c35160bf21eee0",
+  "tip_equals_pin": true,
+  "smx_nucleus": "PASS",
+  "proofs_detail": {
+    "99": "60/0 PASS",
+    "1855": "60/0 PASS",
+    "1620": "12/0 PASS"
+  }
 }
