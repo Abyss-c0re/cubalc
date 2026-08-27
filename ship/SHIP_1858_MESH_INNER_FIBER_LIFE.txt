@@ -5,10 +5,13 @@ proofs=1858,99_smx_inner_fiber,1620_atomic_printer_life_force
 proof_status=PASS asserts_ok=60 asserts_fail=0
 flagship_1620=PASS
 c_slice=src/cubalc_smx_inner_fiber.c
-soft_oob=1 fail_closed=1 bonds=6 pedicle=1
+soft_oob=1 fail_closed=1 bonds=6 pedicle_ready=1
 unity=1.0 next=we_autoheal
-head=5d08335afdc6fc70b4c7c41bd10b3cdb17f99620
-tip=5d08335afdc6fc70b4c7c41bd10b3cdb17f99620
-pin=5d08335afdc6fc70b4c7c41bd10b3cdb17f99620
+selftest=PASS
+MEANINGFUL_ITER=1858
+VERSION=1.15.1338-usability
+head=65cec86fa227df0d550018f6536323233c825d65
+tip=65cec86fa227df0d550018f6536323233c825d65
+pin=65cec86fa227df0d550018f6536323233c825d65
 tip_equals_pin=true
 sealed=true
