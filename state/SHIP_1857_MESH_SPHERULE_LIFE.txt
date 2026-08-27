@@ -5,13 +5,10 @@ proofs=1857,99_smx_spherule,1620_atomic_printer_life_force
 proof_status=PASS asserts_ok=60 asserts_fail=0
 flagship_1620=PASS
 c_slice=src/cubalc_smx_spherule.c
-soft_oob=1 fail_closed=1 bonds=6 ribbon_ready=1
+soft_oob=1 fail_closed=1 bonds=6 ribbon=1
 unity=1.0 next=we_autoheal
-selftest=PASS
-MEANINGFUL_ITER=1857
-VERSION=1.15.1337-usability
-head=e3682adda6bd8e623733749fc30649d3be858c0e
-tip=e3682adda6bd8e623733749fc30649d3be858c0e
-pin=e3682adda6bd8e623733749fc30649d3be858c0e
+head=d2595e767895ec88a0c211ca3ee77c282e746dd0
+tip=d2595e767895ec88a0c211ca3ee77c282e746dd0
+pin=d2595e767895ec88a0c211ca3ee77c282e746dd0
 tip_equals_pin=true
 sealed=true
