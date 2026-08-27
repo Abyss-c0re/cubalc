@@ -1,3 +1,1 @@
-MESH_PEDICLE_LIFE
-1859_smx_mesh_pedicle_life
-PASS
+MESH_PEDICLE soft-OOB fail-closed C(4,2)=6 invaginating_ready

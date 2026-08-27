@@ -1,3 +1,9 @@
+## 1.15.1339-usability — 1859 SMX mesh pedicle life
+- SMX PEDICLE|MESH_PEDICLE|RAISE_PEDICLE
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: outer-segment → cilium → ellipsoid → myoid → nucleus → outer fiber → spherule → inner fiber → pedicle invaginating cone triad life-force seal
+- Usability: cubalc_smx_pedicle_invaginating_ready() pure-C face
+
 ## 1.15.1338-usability — 1858 SMX mesh inner fiber life
 - SMX INNER_FIBER|MESH_INNER_FIBER|RAISE_INNER_FIBER
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
