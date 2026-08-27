@@ -1,7 +1,6 @@
-MESH_GANGLION
+feature=MESH_GANGLION
+iter=1861
+head=5d274a94e6aad78d5b692b9c801a484ff6cfb27e
 soft_oob=1
 bonds=6
 axon_ready=1
-head=c818f2ced53d6ddec953ead2b56e6c22be28dd16
-iter=1861
-tip_equals_pin=true

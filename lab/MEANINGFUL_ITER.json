@@ -2,9 +2,9 @@
   "meaningful_iter": 1861,
   "feature": "MESH_GANGLION",
   "version": "1.15.1341-usability",
-  "head": "PENDING",
-  "tip": "PENDING",
-  "pin": "PENDING",
+  "head": "5d274a94e6aad78d5b692b9c801a484ff6cfb27e",
+  "tip": "5d274a94e6aad78d5b692b9c801a484ff6cfb27e",
+  "pin": "5d274a94e6aad78d5b692b9c801a484ff6cfb27e",
   "tip_equals_pin": true,
   "proofs": {
     "1861": "PASS 60/0",
@@ -14,8 +14,8 @@
   "c_slice": "src/cubalc_smx_ganglion.c",
   "soft_oob": 1,
   "bonds": 6,
-  "cascade_ready": 1,
   "axon_ready": 1,
+  "cascade_ready": 1,
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true
