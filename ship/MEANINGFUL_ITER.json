@@ -16,7 +16,7 @@
   "proof": "programs/proof/1850_smx_mesh_rpe_life.cubalc",
   "branch": "ship-1850-rpe",
   "tip_equals_pin": true,
-  "head": "18fe4d8e97d73ef127667a60e7fb418c62ba669d",
+  "head": "1c425521badbb7bb7ea986067f1e69b1f2a13619",
   "proof_status": "PASS",
   "asserts_ok": 60,
   "flagship_1620_asserts_ok": 12,
