@@ -2,3 +2,5 @@ MESH_BIPOLAR
 soft_oob=1
 bonds=6
 cascade_ready=1
+head=c8245537940b62531074cdcdc7357e629710651d
+iter=1860

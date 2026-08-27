@@ -1,3 +1,11 @@
+## 1.15.1340-usability — 1860 SMX mesh bipolar life
+- SMX BIPOLAR|MESH_BIPOLAR|RAISE_BIPOLAR
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: outer-segment → cilium → ellipsoid → myoid → nucleus → outer fiber → spherule/pedicle triad → bipolar dendrite ON/OFF cascade life-force seal
+- Usability: cubalc_smx_bipolar_cascade_ready() pure-C face
+- Proofs: 99_smx_bipolar + 1860_smx_mesh_bipolar_life = 60/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_bipolar.c
+
 ## 1.15.1339-usability — 1859 SMX mesh pedicle life
 - SMX PEDICLE|MESH_PEDICLE|RAISE_PEDICLE
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
