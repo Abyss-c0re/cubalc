@@ -1,20 +1,9 @@
 {
-  "iter": 1849,
   "meaningful_iter": 1849,
-  "MEANINGFUL_ITER": 1849,
   "feature": "MESH_BRUCH_MEMBRANE",
-  "FEATURE": "MESH_BRUCH_MEMBRANE",
   "ship": "1849_smx_mesh_bruch_membrane_life",
-  "version": "1.15.1329-usability",
-  "VERSION": "1.15.1329-usability",
-  "status": "PASS",
-  "soft_oob": 1,
-  "fail_closed": 1,
-  "bonds": 6,
   "proofs": "99=60/0,1849=60/0,1620=12/0",
-  "c_slice": "src/cubalc_smx_bruch_membrane.c",
-  "proof": "programs/proof/1849_smx_mesh_bruch_membrane_life.cubalc",
-  "branch": "ship-1849-bruch-membrane",
-  "tip_equals_pin": true,
-  "head": "50139eb479d76f1614d3e7969484c5f8d48f4939"
+  "status": "PASS",
+  "head": "f22e281a178883d34461f0d32f676f445f9756ba",
+  "tip_equals_pin": true
 }
