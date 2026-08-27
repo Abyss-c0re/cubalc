@@ -2,17 +2,15 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 1870,
   "MEANINGFUL_ITER": 1870,
-  "iter": 1870,
-  "version": "1.15.1349-usability",
+  "iter": 1871,
+  "version": "1.15.1350-usability",
   "VERSION": "1.15.1349-usability",
   "feature": "SMX_MESH_GLOSSOPHARYNGEAL_LIFE",
   "FEATURE": "SMX_MESH_GLOSSOPHARYNGEAL_LIFE",
   "ship": "1870_smx_mesh_glossopharyngeal_life",
   "proof": "programs/proof/136_smx_glossopharyngeal.cubalc",
   "proofs": [
-    "programs/proof/136_smx_glossopharyngeal.cubalc",
-    "programs/proof/1870_smx_mesh_glossopharyngeal_life.cubalc",
-    "programs/science/integration/atomic_printer_mesh_glossopharyngeal_life.cubalc"
+    "programs/proof/1871_smx_mesh_vagus_life.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 67,
@@ -24,11 +22,13 @@
   "notes": "MESH_GLOSSOPHARYNGEAL dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW nucleus ambiguus + solitary tract nucleus \u2192 CN9 jugular foramen \u2192 petrosal ganglia \u2192 pharyngeal/taste free-energy swallow-sense crown; pure-C src/cubalc_smx_glossopharyngeal.c",
   "pure_c": "src/cubalc_smx_glossopharyngeal.c",
   "selftest": "PASS",
-  "item": "1870 smx mesh glossopharyngeal life",
-  "item_id": "mi_1870_smx_mesh_glossopharyngeal_life",
-  "title": "1870 smx mesh glossopharyngeal life",
-  "summary": "MESH_GLOSSOPHARYNGEAL dual-autoheal soft-OOB pharyngeal swallow-sense crown life-force ship.",
-  "ts": "2026-08-27T23:15:15Z",
+  "item": "1871 smx mesh vagus life",
+  "item_id": "mi_1871_smx_mesh_vagus_life",
+  "title": "1871 smx mesh vagus life",
+  "summary": "Host-finished MI ship after nanobot partial (1871_smx_mesh_vagus_life).",
+  "ts": "2026-08-27T23:18:22Z",
   "pin_head": "45aff6219337c9289ae795c38fa226488c63f94d",
-  "tip": "45aff6219337c9289ae795c38fa226488c63f94d"
+  "tip": "45aff6219337c9289ae795c38fa226488c63f94d",
+  "commit": "PENDING",
+  "host_finish": true
 }
