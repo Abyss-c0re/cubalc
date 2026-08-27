@@ -5,8 +5,9 @@ proofs=1857,99_smx_spherule,1620_atomic_printer_life_force
 proof_status=PASS asserts_ok=60 asserts_fail=0
 flagship_1620=PASS
 c_slice=src/cubalc_smx_spherule.c
-soft_oob=1 fail_closed=1 bonds=6 ribbon_ready=1
+soft_oob=1 fail_closed=1 bonds=6 ribbon=1
 unity=1.0 next=we_autoheal
+<<<<<<< Updated upstream
 selftest=PASS
 MEANINGFUL_ITER=1857
 VERSION=1.15.1337-usability
@@ -15,3 +16,5 @@ tip=9afc691372843c09a44415889acbac1c95741e1f
 pin=9afc691372843c09a44415889acbac1c95741e1f
 tip_equals_pin=true
 sealed=true
+=======
+>>>>>>> Stashed changes

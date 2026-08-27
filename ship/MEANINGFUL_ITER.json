@@ -2,14 +2,20 @@
   "meaningful_iter": 1859,
   "feature": "MESH_PEDICLE",
   "version": "1.15.1339-usability",
-  "head": "82ebfa97fe50d8c95df38a4a776ec55f557da2a4",
-  "tip": "82ebfa97fe50d8c95df38a4a776ec55f557da2a4",
-  "pin": "82ebfa97fe50d8c95df38a4a776ec55f557da2a4",
+  "head": "b98149c3d491214f1898123c8165129b0002b5bc",
+  "tip": "b98149c3d491214f1898123c8165129b0002b5bc",
+  "pin": "b98149c3d491214f1898123c8165129b0002b5bc",
   "tip_equals_pin": true,
+  "proofs": {
+    "1859": "PASS 60/0",
+    "99_smx_pedicle": "PASS 60/0",
+    "1620": "PASS 12/0"
+  },
+  "c_slice": "src/cubalc_smx_pedicle.c",
   "soft_oob": 1,
   "bonds": 6,
-  "proof_status": "PASS",
-  "asserts_ok": 60,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS"
+  "invaginating_ready": 1,
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "sealed": true
 }
