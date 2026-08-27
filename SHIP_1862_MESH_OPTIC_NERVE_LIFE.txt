@@ -10,9 +10,9 @@ unity=1.0 next=we_autoheal
 selftest=PASS
 MEANINGFUL_ITER=1862
 VERSION=1.15.1342-usability
-head=154858df6b5a33f5c6548814e690f8439138cfdc
-tip=154858df6b5a33f5c6548814e690f8439138cfdc
-pin=154858df6b5a33f5c6548814e690f8439138cfdc
-tip_equals_pin=154858df6b5a33f5c6548814e690f8439138cfdc
+head=8d9f1889a4bf37a2a28055c4a1d040eab2b1b0fa
+tip=8d9f1889a4bf37a2a28055c4a1d040eab2b1b0fa
+pin=8d9f1889a4bf37a2a28055c4a1d040eab2b1b0fa
+tip_equals_pin=8d9f1889a4bf37a2a28055c4a1d040eab2b1b0fa
 sealed=true
 MESH_OPTIC_NERVE soft-OOB fail-closed C(4,2)=6 chiasm_ready
