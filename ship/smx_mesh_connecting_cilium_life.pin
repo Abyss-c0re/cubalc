@@ -1,5 +1,5 @@
-feature=MESH_CONNECTING_CILIUM
-iter=1852
-head=bbc3a5723641758466ff429a329cc5527172a1d1
+MESH_CONNECTING_CILIUM
+1852
 soft_oob=1
+fail_closed=1
 bonds=6
