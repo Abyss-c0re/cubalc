@@ -1,1 +1,6 @@
-b98149c3d491214f1898123c8165129b0002b5bc
+MESH_PEDICLE
+soft_oob=1
+bonds=6
+invaginating_ready=1
+head=52d9be5f0c5267123632a0c03d2c7ef93c904b3e
+iter=1859

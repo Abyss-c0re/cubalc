@@ -5,13 +5,14 @@ proofs=1859,99_smx_pedicle,1620_atomic_printer_life_force
 proof_status=PASS asserts_ok=60 asserts_fail=0
 flagship_1620=PASS asserts_ok=12 asserts_fail=0
 c_slice=src/cubalc_smx_pedicle.c
-soft_oob=1 fail_closed=1 bonds=6 invaginating_ready=1 pedicle_ready=1
+soft_oob=1 fail_closed=1 bonds=6 invaginating_ready=1
 unity=1.0 next=we_autoheal
 selftest=PASS
 MEANINGFUL_ITER=1859
 VERSION=1.15.1339-usability
-head=c768365b25014d27e301b59f3ff0eaaf20b67a6a
-tip=c768365b25014d27e301b59f3ff0eaaf20b67a6a
-pin=c768365b25014d27e301b59f3ff0eaaf20b67a6a
+head=52d9be5f0c5267123632a0c03d2c7ef93c904b3e
+tip=52d9be5f0c5267123632a0c03d2c7ef93c904b3e
+pin=52d9be5f0c5267123632a0c03d2c7ef93c904b3e
 tip_equals_pin=true
 sealed=true
+MESH_PEDICLE soft-OOB fail-closed C(4,2)=6 invaginating_ready

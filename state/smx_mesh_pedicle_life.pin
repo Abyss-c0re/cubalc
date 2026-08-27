@@ -1,3 +1,7 @@
-7b877b4d934ecf42c43ef706f993e559ff5ab90c
-MESH_PEDICLE
-1859
+MESH_PEDICLE_LIFE
+soft_oob=1
+bonds=6
+invaginating_ready=1
+head=52d9be5f0c5267123632a0c03d2c7ef93c904b3e
+iter=1859
+tip_equals_pin=true
