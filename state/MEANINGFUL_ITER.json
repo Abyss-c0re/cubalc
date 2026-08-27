@@ -21,9 +21,9 @@
   "flagship_ok": 12,
   "flagship_fail": 0,
   "notes": "MESH_BIPOLAR soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW photoreceptor ribbon contact \u2192 bipolar dendrite invagination \u2192 glutamate cascade gate \u2192 inner plexiform axon terminal \u2192 macular free-energy crown; pure-C src/cubalc_smx_bipolar.c",
-  "pin_head": "PENDING",
+  "pin_head": "ceed0a0f6480e9a27a55b0b99df19ee5142c9851",
   "pure_c": "src/cubalc_smx_bipolar.c",
   "selftest": "PASS",
-  "tip": "PENDING",
-  "HEAD": "PENDING"
+  "tip": "ceed0a0f6480e9a27a55b0b99df19ee5142c9851",
+  "HEAD": "ceed0a0f6480e9a27a55b0b99df19ee5142c9851"
 }
