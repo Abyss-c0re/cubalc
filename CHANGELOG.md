@@ -1,3 +1,11 @@
+## 1.15.1337-usability — 1857 SMX mesh spherule life
+- SMX SPHERULE|MESH_SPHERULE|RAISE_SPHERULE
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: outer-segment → cilium → ellipsoid → myoid → nucleus → outer fiber → spherule synaptic ribbon terminal life-force seal
+- Usability: cubalc_smx_spherule_ribbon_ready() pure-C face
+- Proofs: 99_smx_spherule + 1857_smx_mesh_spherule_life = 60/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_spherule.c
+
 ## 1.15.1335-usability — 1855 SMX mesh nucleus life
 - SMX NUCLEUS|MESH_NUCLEUS|RAISE_NUCLEUS
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6

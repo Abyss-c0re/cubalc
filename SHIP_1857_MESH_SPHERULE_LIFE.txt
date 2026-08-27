@@ -1,0 +1,12 @@
+SHIP 1857 SMX_MESH_SPHERULE_LIFE
+feature=MESH_SPHERULE
+proof=programs/proof/1857_smx_mesh_spherule_life.cubalc
+proofs=1857,99_smx_spherule,1620_atomic_printer_life_force
+proof_status=PASS asserts_ok=60 asserts_fail=0
+flagship_1620=PASS
+c_slice=src/cubalc_smx_spherule.c
+soft_oob=1 fail_closed=1 bonds=6 ribbon_ready=1
+unity=1.0 next=we_autoheal
+selftest=PASS
+MEANINGFUL_ITER=1857
+VERSION=1.15.1337-usability
