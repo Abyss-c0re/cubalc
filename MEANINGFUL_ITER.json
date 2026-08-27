@@ -21,7 +21,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_TROCHLEAR dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW abducens nucleus yoke → trochlear nucleus → CN4 fascicle (dorsal decussation) → superior oblique free-energy conjugate crown; pure-C src/cubalc_smx_trochlear.c",
+  "notes": "MESH_TROCHLEAR dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW abducens nucleus yoke \u2192 trochlear nucleus \u2192 CN4 fascicle (dorsal decussation) \u2192 superior oblique free-energy conjugate crown; pure-C src/cubalc_smx_trochlear.c",
   "pure_c": "src/cubalc_smx_trochlear.c",
   "selftest": "PASS",
   "item": "1866 smx mesh trochlear life",
@@ -29,5 +29,10 @@
   "title": "1866 smx mesh trochlear life",
   "summary": "MESH_TROCHLEAR dual-autoheal soft-OOB conjugate superior-oblique crown life-force ship.",
   "ts": "2026-08-27T06:40:00Z",
-  "host_finish": true
+  "host_finish": true,
+  "feat_commit": "a622c944098726b03aff1099263229f83f88820c",
+  "pin_head": "a622c944098726b03aff1099263229f83f88820c",
+  "tip": "a622c944098726b03aff1099263229f83f88820c",
+  "HEAD": "a622c944098726b03aff1099263229f83f88820c",
+  "commit": "a622c944098726b03aff1099263229f83f88820c"
 }
