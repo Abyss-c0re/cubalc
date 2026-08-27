@@ -38,9 +38,9 @@
   "sealed": true,
   "life_force": 0.36,
   "stability": 1.0,
-  "feat": "e6e07a969b1a6f1690d994955e814f12dab80783",
-  "head": "e6e07a969b1a6f1690d994955e814f12dab80783",
-  "tip": "e6e07a969b1a6f1690d994955e814f12dab80783",
-  "pin": "e6e07a969b1a6f1690d994955e814f12dab80783",
+  "feat": "d1e08ca4e491fb050b2af4d175f81049721c0b24",
+  "head": "d1e08ca4e491fb050b2af4d175f81049721c0b24",
+  "tip": "d1e08ca4e491fb050b2af4d175f81049721c0b24",
+  "pin": "d1e08ca4e491fb050b2af4d175f81049721c0b24",
   "tip_equals_pin": true
 }
