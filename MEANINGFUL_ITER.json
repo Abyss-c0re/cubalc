@@ -1,16 +1,1 @@
-{
-  "iter": 1852,
-  "feature": "MESH_CONNECTING_CILIUM",
-  "ship": "1852_smx_mesh_connecting_cilium_life",
-  "head": "2300e86394292847eea26bbec0161277452089c3",
-  "soft_oob": 1,
-  "fail_closed": 1,
-  "bonds": 6,
-  "proofs": {
-    "99": "60/0",
-    "1852": "60/0",
-    "1620": "12/0"
-  },
-  "c_slice": "src/cubalc_smx_connecting_cilium.c",
-  "tip_equals_pin": true
-}
+{"iter":1852,"feature":"MESH_CONNECTING_CILIUM","head":"5d75b193e28b6414df60cd1444843e7cb23e75bc","soft_oob":1,"fail_closed":1,"bonds":6,"proofs":{"99":"60/0","1852":"60/0","1620":"12/0"},"tip_equals_pin":true}
