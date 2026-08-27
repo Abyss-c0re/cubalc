@@ -2,9 +2,9 @@
   "meaningful_iter": 1861,
   "feature": "MESH_GANGLION",
   "version": "1.15.1341-usability",
-  "head": "0b449f457e6d721c8aaa54e1382eb1d69ef5fc68",
-  "tip": "0b449f457e6d721c8aaa54e1382eb1d69ef5fc68",
-  "pin": "0b449f457e6d721c8aaa54e1382eb1d69ef5fc68",
+  "head": "d67ba4d598a77c2c019b703e3967062ccefda638",
+  "tip": "d67ba4d598a77c2c019b703e3967062ccefda638",
+  "pin": "d67ba4d598a77c2c019b703e3967062ccefda638",
   "tip_equals_pin": true,
   "proofs": {
     "1861": "PASS 60/0",
@@ -15,6 +15,7 @@
   "soft_oob": 1,
   "bonds": 6,
   "axon_ready": 1,
+  "cascade_ready": 1,
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true
