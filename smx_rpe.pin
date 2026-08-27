@@ -1,0 +1,7 @@
+feature=MESH_RPE
+iter=1850
+proof=99_smx_rpe.cubalc
+life=1850_smx_mesh_rpe_life.cubalc
+soft_oob=1
+fail_closed=1
+bonds=6
