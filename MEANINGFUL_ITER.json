@@ -21,12 +21,18 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_ABDUCENS dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW oculomotor nucleus yoke → abducens nucleus → CN6 fascicle → lateral rectus free-energy conjugate crown; pure-C src/cubalc_smx_abducens.c",
+  "notes": "MESH_ABDUCENS dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW oculomotor nucleus yoke \u2192 abducens nucleus \u2192 CN6 fascicle \u2192 lateral rectus free-energy conjugate crown; pure-C src/cubalc_smx_abducens.c",
   "pure_c": "src/cubalc_smx_abducens.c",
   "selftest": "PASS",
   "item": "1865 smx mesh abducens life",
   "item_id": "mi_1865_smx_mesh_abducens_life",
   "title": "1865 smx mesh abducens life",
   "summary": "MESH_ABDUCENS dual-autoheal soft-OOB conjugate lateral-rectus crown life-force ship.",
-  "ts": "2026-08-27T05:10:00Z"
+  "ts": "2026-08-27T05:10:00Z",
+  "pin_head": "5696babd8b8194137de508f5170e027e3f873547",
+  "tip": "5696babd8b8194137de508f5170e027e3f873547",
+  "HEAD": "5696babd8b8194137de508f5170e027e3f873547",
+  "commit": "5696babd8b8194137de508f5170e027e3f873547",
+  "feat_commit": "5696babd8b8194137de508f5170e027e3f873547",
+  "host_finish": true
 }
