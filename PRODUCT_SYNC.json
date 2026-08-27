@@ -1,19 +1,19 @@
 {
   "schema": "projectnexus.product_sync.v1",
   "product": "cubalc",
-  "version": "1.15.1327-usability",
+  "version": "1.15.1328-usability",
   "paradigm": "COP/flow",
   "ok": true,
-  "meaningful_iter": 1847,
-  "feature": "MESH_CHORIOCAPILLARIS",
+  "meaningful_iter": 1848,
+  "feature": "ICBRTN",
   "proof_status": "PASS",
-  "asserts_ok": 60,
-  "flagship_1620_asserts_ok": 12,
-  "VERSION": "1.15.1327-usability",
-  "MEANINGFUL_ITER": 1847,
+  "asserts_ok": 26,
+  "flagship_1620_asserts_ok": 0,
+  "VERSION": "1.15.1328-usability",
+  "MEANINGFUL_ITER": 1848,
   "tip_equals_pin": true,
-  "ship": "1847_smx_mesh_choriocapillaris_life",
+  "ship": "1848_icbrtn",
   "soft_oob": 1,
   "fail_closed": 1,
-  "bonds": 6
+  "bonds": 0
 }
