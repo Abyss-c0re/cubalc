@@ -3,12 +3,12 @@ feature=MESH_PEDICLE
 proof=programs/proof/1859_smx_mesh_pedicle_life.cubalc
 proofs=1859,99_smx_pedicle,1620_atomic_printer_life_force
 proof_status=PASS asserts_ok=60 asserts_fail=0
-flagship_1620=PASS
+flagship_1620=PASS asserts_ok=12 asserts_fail=0
 c_slice=src/cubalc_smx_pedicle.c
 soft_oob=1 fail_closed=1 bonds=6 invaginating=1
 unity=1.0 next=we_autoheal
-head=0aff4612347196ee4d3ad28d1cacbd03b3dfba27
-tip=0aff4612347196ee4d3ad28d1cacbd03b3dfba27
-pin=0aff4612347196ee4d3ad28d1cacbd03b3dfba27
+tip=69d98f5c76abe405323eba069e4930cd429a632f
+pin=69d98f5c76abe405323eba069e4930cd429a632f
 tip_equals_pin=true
 sealed=true
+MESH_PEDICLE soft-OOB fail-closed C(4,2)=6 invaginating_ready
