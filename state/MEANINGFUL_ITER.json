@@ -2,17 +2,15 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 1856,
   "MEANINGFUL_ITER": 1856,
-  "iter": 1856,
-  "version": "1.15.1335-usability",
+  "iter": 1857,
+  "version": "1.15.1336-usability",
   "VERSION": "1.15.1335-usability",
   "feature": "SMX_MESH_V1_LIFE",
   "FEATURE": "SMX_MESH_V1_LIFE",
   "ship": "1856_smx_mesh_v1_life",
   "proof": "programs/proof/122_smx_v1.cubalc",
   "proofs": [
-    "programs/proof/1856_smx_mesh_v1_life.cubalc",
-    "programs/proof/122_smx_v1.cubalc",
-    "programs/science/integration/atomic_printer_mesh_v1_life.cubalc"
+    "programs/proof/1857_smx_mesh_v2_life.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 60,
@@ -24,13 +22,14 @@
   "notes": "MESH_V1 soft-OOB fail-closed mesh life-force; MESH_EXCHANGE C(4,2); STABILIZE; ENERGYFLOW LGN relay lamina \u2192 geniculocalcarine radiation stem \u2192 calcarine bank (upper/lower field) \u2192 striate columnar free-energy crown; pure-C src/cubalc_smx_v1.c",
   "pure_c": "src/cubalc_smx_v1.c",
   "selftest": "PASS",
-  "item": "1856 smx mesh v1 life",
-  "item_id": "mi_1856_smx_mesh_v1_life",
-  "title": "1856 smx mesh v1 life",
-  "summary": "MESH_V1 SMX mesh stability life-force: soft-OOB fail-closed + mesh exchange + mitosis under locked rails.",
-  "ts": "2026-08-27T01:16:27Z",
+  "item": "1857 smx mesh v2 life",
+  "item_id": "mi_1857_smx_mesh_v2_life",
+  "title": "1857 smx mesh v2 life",
+  "summary": "Host-finished MI ship after nanobot partial (1857_smx_mesh_v2_life).",
+  "ts": "2026-08-27T01:19:34Z",
   "pin_head": "125ed43dd2ae995a3dd04fe5abba2ac222071631",
   "tip": "125ed43dd2ae995a3dd04fe5abba2ac222071631",
   "HEAD": "125ed43dd2ae995a3dd04fe5abba2ac222071631",
-  "commit": "125ed43d"
+  "commit": "PENDING",
+  "host_finish": true
 }
