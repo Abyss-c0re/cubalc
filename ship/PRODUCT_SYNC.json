@@ -4,13 +4,17 @@
   "feature": "MESH_GANGLION",
   "version": "1.15.1341-usability",
   "c_slice": "src/cubalc_smx_ganglion.c",
-  "proofs": ["1861_smx_mesh_ganglion_life", "99_smx_ganglion", "1620_atomic_printer_life_force"],
+  "proofs": [
+    "1861_smx_mesh_ganglion_life",
+    "99_smx_ganglion",
+    "1620_atomic_printer_life_force"
+  ],
   "soft_oob": 1,
   "bonds": 6,
   "axon_ready": 1,
   "unity": 1.0,
   "next": "we_autoheal",
-  "head": "5d274a94e6aad78d5b692b9c801a484ff6cfb27e",
+  "head": "9606929334d628b9308bd3d7978923606b91eafd",
   "tip_equals_pin": true,
   "sealed": true
 }
