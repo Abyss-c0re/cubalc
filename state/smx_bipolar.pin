@@ -1,3 +1,6 @@
 MESH_BIPOLAR
-1860_smx_mesh_bipolar_life
-soft_oob=1 bonds=6 cascade_ready=1
+soft_oob=1
+bonds=6
+cascade_ready=1
+head=c25d4f1c00ba88d119784dae816f14fae580542f
+iter=1860

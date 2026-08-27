@@ -6,9 +6,9 @@
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "head": "PENDING",
-  "tip_equals_pin": false,
-  "sealed": false,
-  "tip": "PENDING",
-  "pin": "PENDING"
+  "head": "75091e187f3a92b812a03429f69e7688c33345e9",
+  "tip_equals_pin": true,
+  "sealed": true,
+  "tip": "75091e187f3a92b812a03429f69e7688c33345e9",
+  "pin": "75091e187f3a92b812a03429f69e7688c33345e9"
 }
