@@ -1,6 +1,8 @@
 SHIP 1844 SMX_MESH_CENTRAL_RETINAL_LIFE (=MESH_CENTRAL_RETINAL)
 VERSION=1.15.1324-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
-proofs: 99=60/0 1844=60/0 1620=PASS
+proofs: 99=60/0 1844=60/0 1620=12/0 PASS
 c_slice=src/cubalc_smx_central_retinal.c
-energy_path=ophthalmic artery origin → central retinal artery takeoff → optic nerve sheath transit → lamina cribrosa pierce → inner retinal life-force join · central retinal mesh seal
+feature=MESH_CENTRAL_RETINAL
+branch=ship-1844-central-retinal
+tip==pin

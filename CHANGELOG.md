@@ -1,3 +1,10 @@
+## 1.15.1324-usability — 1844 SMX mesh central retinal life
+- SMX CENTRAL_RETINAL|CRA|MESH_CENTRAL_RETINAL|RAISE_CENTRAL_RETINAL
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: ophthalmic origin → CRA takeoff → optic nerve sheath → lamina cribrosa → inner retinal seal
+- Proofs: 99_smx_central_retinal + 1844_smx_mesh_central_retinal_life = 60/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_central_retinal.c
+
 ## 1.15.1323-usability — 1843 SMX MESH_OPHTHALMIC life-force
 
 - SMX MESH_OPHTHALMIC soft-OOB fail-closed + MESH_EXCHANGE C(4,2)

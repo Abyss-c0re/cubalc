@@ -1,16 +1,14 @@
 {
   "schema": "projectnexus.product_sync.v1",
   "product": "cubalc",
-  "version": "1.15.1323-usability",
+  "version": "1.15.1324-usability",
   "paradigm": "COP/flow",
   "ok": true,
-  "meaningful_iter": 1843,
-  "feature": "SMX_MESH_OPHTHALMIC_LIFE",
+  "meaningful_iter": 1844,
+  "feature": "SMX_MESH_CENTRAL_RETINAL_LIFE",
   "proof_status": "PASS",
   "asserts_ok": 60,
   "flagship_1620_asserts_ok": 12,
-  "head": "683da49d96a7b681fac2d2cf2f51bfe0fff80e14",
-  "VERSION": "1.15.1323-usability",
-  "MEANINGFUL_ITER": 1843,
-  "tip_equals_pin": true
+  "VERSION": "1.15.1324-usability",
+  "MEANINGFUL_ITER": 1844
 }
