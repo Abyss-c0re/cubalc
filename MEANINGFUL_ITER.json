@@ -16,5 +16,5 @@
   "proof": "programs/proof/1849_smx_mesh_bruch_membrane_life.cubalc",
   "branch": "ship-1849-bruch-membrane",
   "tip_equals_pin": true,
-  "head": "14c2b87d51a764fae0bda2db6aeee01651e411b5"
+  "head": "19d0e56b6437fe9b54a51f5f2336e0e6b530c0ad\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nHEAD_NOW.txt\nCUBALC_HEAD_NOW.txt\nSHIPPED_HEAD.txt\nTIP_AFTER_PIN.txt"
 }
