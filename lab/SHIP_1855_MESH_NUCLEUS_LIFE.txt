@@ -7,8 +7,8 @@ flagship_1620=PASS
 c_slice=src/cubalc_smx_nucleus.c
 soft_oob=1 fail_closed=1 bonds=6
 unity=1.0 next=we_autoheal
-head=f3bd2d70ee12415eb8c8eb4e9c83e7f4e27ff73f
-tip=f3bd2d70ee12415eb8c8eb4e9c83e7f4e27ff73f
-pin=f3bd2d70ee12415eb8c8eb4e9c83e7f4e27ff73f
+head=adcaa0ac8bbe0cbe053c57a9f3a350878deb505b
+tip=adcaa0ac8bbe0cbe053c57a9f3a350878deb505b
+pin=adcaa0ac8bbe0cbe053c57a9f3a350878deb505b
 tip_equals_pin=true
 sealed=true
