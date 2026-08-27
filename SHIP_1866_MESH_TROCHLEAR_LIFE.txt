@@ -1,3 +1,1 @@
-MESH_TROCHLEAR SMX soft-OOB fail-closed + dual WE_AUTOHEAL superior-oblique conjugate crown life-force
-Energy: abducens nucleus yoke → trochlear nucleus → CN4 fascicle (decussate) → superior oblique free-energy conjugate crown
-Proofs: 132/1866 asserts_ok=67; flagship 1620 PASS; pure-C src/cubalc_smx_trochlear.c
+MESH_TROCHLEAR SMX soft-OOB fail-closed + dual WE_AUTOHEAL superior-oblique crown life-force
