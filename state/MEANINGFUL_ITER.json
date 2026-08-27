@@ -29,9 +29,9 @@
   "title": "1859 smx mesh v4 life",
   "summary": "MESH_V4 dual-autoheal soft-OOB stability life-force ship.",
   "ts": "2026-08-27T12:30:00Z",
-  "pin_head": "48becf2b3bbbd819e530d1f208ebcf8159eea1ce",
-  "tip": "48becf2b3bbbd819e530d1f208ebcf8159eea1ce",
-  "HEAD": "48becf2b3bbbd819e530d1f208ebcf8159eea1ce",
+  "pin_head": "bccb58c0038db5a7e0fcc80fb40903f9d08598ec",
+  "tip": "bccb58c0038db5a7e0fcc80fb40903f9d08598ec",
+  "HEAD": "bccb58c0038db5a7e0fcc80fb40903f9d08598ec",
   "commit": "48becf2b",
   "feat_commit": "48becf2b3bbbd819e530d1f208ebcf8159eea1ce",
   "host_finish": true
