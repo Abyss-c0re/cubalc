@@ -13,5 +13,6 @@
   "fail_closed": 1,
   "bonds": 6,
   "c_slice": "src/cubalc_smx_bruch_membrane.c",
+  "feat_sha": "b1d72ab2b36cfcb400b41cafda06ff08dd6ef810",
   "tip_equals_pin": true
 }
