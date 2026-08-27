@@ -10,9 +10,9 @@ unity=1.0 next=we_autoheal
 selftest=PASS
 MEANINGFUL_ITER=1859
 VERSION=1.15.1339-usability
-head=a9b0e55bf9bbddda5a7673c31c9ade9a8fffa8bc
-tip=a9b0e55bf9bbddda5a7673c31c9ade9a8fffa8bc
-pin=a9b0e55bf9bbddda5a7673c31c9ade9a8fffa8bc
+head=d74b4069ebcf53366386b7951d99e111fd3c540e
+tip=d74b4069ebcf53366386b7951d99e111fd3c540e
+pin=d74b4069ebcf53366386b7951d99e111fd3c540e
 tip_equals_pin=true
 sealed=true
 MESH_PEDICLE soft-OOB fail-closed C(4,2)=6 invaginating_ready
