@@ -1,0 +1,11 @@
+SHIP 1853 SMX_MESH_ELLIPSOID_LIFE (=MESH_ELLIPSOID)
+HEAD=PENDING
+VERSION=1.15.1333-usability
+soft_oob=1 fail_closed=1 bonds=C(4,2)=6
+proofs: 99=60/0 1853=60/0 1620=PENDING PASS
+c_slice=src/cubalc_smx_ellipsoid.c
+energy_path=outer-segment disc stack -> connecting cilium axoneme -> transition zone -> inner-segment mitochondria ellipsoid ATP densification life-force seal · ellipsoid mesh
+selftest=PASS feature=MESH_ELLIPSOID
+tip_equals_pin=PENDING
+MEANINGFUL_ITER=1853
+NOTE=pure-C SMX mesh stability life-force; no SYS glue; WE_AUTOHEAL sticky
