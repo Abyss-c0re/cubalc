@@ -16,5 +16,5 @@
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "head": "19d0e56b6437fe9b54a51f5f2336e0e6b530c0ad\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nHEAD_NOW.txt\nCUBALC_HEAD_NOW.txt\nSHIPPED_HEAD.txt\nTIP_AFTER_PIN.txt"
+  "head": "55b5f344b78ee80bbdfde9e4bef82182be96a3ff"
 }
