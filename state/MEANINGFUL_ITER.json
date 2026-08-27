@@ -1,11 +1,10 @@
 {
-<<<<<<< Updated upstream
   "meaningful_iter": 1860,
   "feature": "MESH_BIPOLAR",
   "version": "1.15.1340-usability",
-  "head": "d85932785fae0ba980446cb62605f43beaafcbda",
-  "tip": "d85932785fae0ba980446cb62605f43beaafcbda",
-  "pin": "d85932785fae0ba980446cb62605f43beaafcbda",
+  "head": "43dababb7d89a5000ad1c6abc19f184dfd46923d",
+  "tip": "43dababb7d89a5000ad1c6abc19f184dfd46923d",
+  "pin": "43dababb7d89a5000ad1c6abc19f184dfd46923d",
   "tip_equals_pin": true,
   "proofs": {
     "1860": "PASS 60/0",
@@ -20,44 +19,4 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true
-=======
-  "schema": "cubalc.meaningful_iter.v1",
-  "meaningful_iter": 1857,
-  "MEANINGFUL_ITER": 1857,
-  "iter": 1857,
-  "version": "1.15.1337-usability",
-  "VERSION": "1.15.1337-usability",
-  "feature": "SMX_MESH_INNER_FIBER_LIFE",
-  "FEATURE": "MESH_INNER_FIBER",
-  "ship": "1857_smx_mesh_inner_fiber_life",
-  "proof": "programs/proof/1857_smx_mesh_inner_fiber_life.cubalc",
-  "proofs": [
-    "programs/proof/1857_smx_mesh_inner_fiber_life.cubalc",
-    "programs/proof/99_smx_inner_fiber.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
-  ],
-  "proof_status": "PASS",
-  "asserts_ok": 60,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS",
-  "smx_inner_fiber": "PASS",
-  "notes": "MESH_INNER_FIBER photoreceptor inner fiber synaptic terminal pedicle soft-OOB fail-closed mesh life-force; C(4,2)=6; WE_AUTOHEAL; pure-C cubalc_smx_inner_fiber.c",
-  "note": "MESH_INNER_FIBER SMX mesh stability life-force soft-OOB fail-closed",
-  "item": "1857 smx mesh inner fiber life",
-  "item_id": "mi_1857_smx_mesh_inner_fiber_life",
-  "title": "1857 MESH_INNER_FIBER soft-OOB mesh exchange life-force",
-  "summary": "Photoreceptor inner fiber synaptic terminal pedicle SMX mesh stability life-force: soft-OOB fail-closed, C(4,2) mesh, stabilize, autoheal.",
-  "host_finish": true,
-  "status": "PASS",
-  "unity": 1.0,
-  "next": "we_autoheal",
-  "c_slice": "src/cubalc_smx_inner_fiber.c",
-  "soft_oob": 1,
-  "fail_closed": 1,
-  "bonds": 6,
-  "branch": "ship-1857-mesh-inner-fiber",
-  "sealed": true,
-  "life_force": 0.37,
-  "stability": 1.0
->>>>>>> Stashed changes
 }

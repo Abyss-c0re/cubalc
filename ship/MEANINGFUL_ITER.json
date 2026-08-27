@@ -1,11 +1,10 @@
 {
-<<<<<<< Updated upstream
   "meaningful_iter": 1860,
   "feature": "MESH_BIPOLAR",
   "version": "1.15.1340-usability",
-  "head": "d85932785fae0ba980446cb62605f43beaafcbda",
-  "tip": "d85932785fae0ba980446cb62605f43beaafcbda",
-  "pin": "d85932785fae0ba980446cb62605f43beaafcbda",
+  "head": "43dababb7d89a5000ad1c6abc19f184dfd46923d",
+  "tip": "43dababb7d89a5000ad1c6abc19f184dfd46923d",
+  "pin": "43dababb7d89a5000ad1c6abc19f184dfd46923d",
   "tip_equals_pin": true,
   "proofs": {
     "1860": "PASS 60/0",
@@ -20,25 +19,4 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true
-=======
-  "meaningful_iter": 1857,
-  "version": "1.15.1337-usability",
-  "feature": "MESH_SPHERULE",
-  "ship": "1857_smx_mesh_spherule_life",
-  "head": "0b7671a5bca1801b0e93b7f32ba27398c0732de6",
-  "tip": "0b7671a5bca1801b0e93b7f32ba27398c0732de6",
-  "pin": "0b7671a5bca1801b0e93b7f32ba27398c0732de6",
-  "tip_equals_pin": true,
-  "proofs_pass": true,
-  "asserts_ok": 60,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS",
-  "soft_oob": 1,
-  "bonds": 6,
-  "ribbon_ready": 1,
-  "unity": 1.0,
-  "next": "we_autoheal",
-  "sealed": true,
-  "updated": 1787796215
->>>>>>> Stashed changes
 }

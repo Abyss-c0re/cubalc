@@ -2,9 +2,9 @@
   "meaningful_iter": 1860,
   "feature": "MESH_BIPOLAR",
   "version": "1.15.1340-usability",
-  "head": "08f29006cdf56f5cd7532e05277e7093d9741462",
-  "tip": "08f29006cdf56f5cd7532e05277e7093d9741462",
-  "pin": "08f29006cdf56f5cd7532e05277e7093d9741462",
+  "head": "43dababb7d89a5000ad1c6abc19f184dfd46923d",
+  "tip": "43dababb7d89a5000ad1c6abc19f184dfd46923d",
+  "pin": "43dababb7d89a5000ad1c6abc19f184dfd46923d",
   "tip_equals_pin": true,
   "proofs": {
     "1860": "PASS 60/0",
