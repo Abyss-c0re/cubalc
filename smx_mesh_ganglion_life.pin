@@ -2,6 +2,6 @@ MESH_GANGLION_LIFE
 soft_oob=1
 bonds=6
 axon_ready=1
-head=c818f2ced53d6ddec953ead2b56e6c22be28dd16
+head=0b449f457e6d721c8aaa54e1382eb1d69ef5fc68
 iter=1861
 tip_equals_pin=true
