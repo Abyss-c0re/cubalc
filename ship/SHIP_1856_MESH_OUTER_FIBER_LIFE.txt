@@ -7,8 +7,8 @@ flagship_1620=PASS
 c_slice=src/cubalc_smx_outer_fiber.c
 soft_oob=1 fail_closed=1 bonds=6
 unity=1.0 next=we_autoheal
-head=cc2d4aeb81921966802281c11e1a4c0af4974c07
-tip=cc2d4aeb81921966802281c11e1a4c0af4974c07
-pin=cc2d4aeb81921966802281c11e1a4c0af4974c07
+head=6ef84de43da45d7b5a7f1191d5d3f8644678b2b2
+tip=6ef84de43da45d7b5a7f1191d5d3f8644678b2b2
+pin=6ef84de43da45d7b5a7f1191d5d3f8644678b2b2
 tip_equals_pin=true
 sealed=true
