@@ -29,8 +29,8 @@
   "title": "1856 smx mesh v1 life",
   "summary": "MESH_V1 SMX mesh stability life-force: soft-OOB fail-closed + mesh exchange + mitosis under locked rails.",
   "ts": "2026-08-27T01:16:27Z",
-  "pin_head": "PENDING",
-  "tip": "PENDING",
-  "HEAD": "PENDING",
-  "commit": "PENDING"
+  "pin_head": "125ed43dd2ae995a3dd04fe5abba2ac222071631",
+  "tip": "125ed43dd2ae995a3dd04fe5abba2ac222071631",
+  "HEAD": "125ed43dd2ae995a3dd04fe5abba2ac222071631",
+  "commit": "125ed43d"
 }
