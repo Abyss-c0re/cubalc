@@ -1,6 +1,1 @@
-MESH_BIPOLAR_LIFE
-soft_oob=1
-bonds=6
-cascade_ready=1
-iter=1860
-tip_equals_pin=true
+MESH_BIPOLAR life cascade sealed soft-OOB fail-closed C(4,2)=6 cascade_ready=1

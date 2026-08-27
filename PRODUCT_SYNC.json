@@ -1,14 +1,14 @@
 {
-  "meaningful_iter": 1859,
-  "feature": "MESH_PEDICLE",
-  "version": "1.15.1339-usability",
+  "meaningful_iter": 1860,
+  "feature": "MESH_BIPOLAR",
+  "version": "1.15.1340-usability",
   "status": "PASS",
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "head": "4ea871f0d7fa970a55d6b2c73a73d43c58d0bb85",
-  "tip_equals_pin": true,
-  "sealed": true,
-  "tip": "4ea871f0d7fa970a55d6b2c73a73d43c58d0bb85",
-  "pin": "4ea871f0d7fa970a55d6b2c73a73d43c58d0bb85"
+  "head": "PENDING",
+  "tip_equals_pin": false,
+  "sealed": false,
+  "tip": "PENDING",
+  "pin": "PENDING"
 }
