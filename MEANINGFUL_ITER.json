@@ -21,7 +21,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_V5 dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW LIP attentional gate → FEF intentional-saccade association → SEF plan stem → SC superior-colliculus free-energy crown; pure-C src/cubalc_smx_v5.c",
+  "notes": "MESH_V5 dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW LIP attentional gate \u2192 FEF intentional-saccade association \u2192 SEF plan stem \u2192 SC superior-colliculus free-energy crown; pure-C src/cubalc_smx_v5.c",
   "pure_c": "src/cubalc_smx_v5.c",
   "selftest": "PASS",
   "item": "1860 smx mesh v5 life",
@@ -29,10 +29,10 @@
   "title": "1860 smx mesh v5 life",
   "summary": "MESH_V5 dual-autoheal soft-OOB gaze crown life-force ship.",
   "ts": "2026-08-27T01:55:48Z",
-  "pin_head": "4388f5da33dd35e688d760128200c8c82630f9fb",
-  "tip": "4388f5da33dd35e688d760128200c8c82630f9fb",
-  "HEAD": "4388f5da33dd35e688d760128200c8c82630f9fb",
-  "commit": "4388f5da",
+  "pin_head": "f18c9d8133fe0450233d0e010231c3884a5779c5",
+  "tip": "f18c9d8133fe0450233d0e010231c3884a5779c5",
+  "HEAD": "f18c9d8133fe0450233d0e010231c3884a5779c5",
+  "commit": "f18c9d81",
   "feat_commit": "4388f5da33dd35e688d760128200c8c82630f9fb",
   "host_finish": true
 }
