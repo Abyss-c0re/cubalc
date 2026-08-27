@@ -11,7 +11,7 @@
   "flagship_1620_asserts_ok": 12,
   "VERSION": "1.15.1329-usability",
   "MEANINGFUL_ITER": 1849,
-  "tip_equals_pin": true,
+  "tip_equals_pin": false,
   "ship": "1849_smx_mesh_bruch_membrane_life",
   "soft_oob": 1,
   "fail_closed": 1,

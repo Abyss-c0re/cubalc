@@ -1,3 +1,10 @@
+## 1.15.1329-usability — 1849 SMX mesh Bruch membrane life
+- SMX BRUCH_MEMBRANE|MESH_BRUCH_MEMBRANE|RAISE_BRUCH_MEMBRANE
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: fenestrated choriocapillaris bed → Bruch membrane pentalaminar face → RPE basal labyrinth → photoreceptor outer-segment life-force seal
+- Proofs: 99_smx_bruch_membrane + 1849_smx_mesh_bruch_membrane_life = 60/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_bruch_membrane.c
+
 ## 1.15.1329-usability — MI 1849 MESH_BRUCH_MEMBRANE
 
 - SMX mesh stability / life-force: Bruch membrane pentalaminar face
