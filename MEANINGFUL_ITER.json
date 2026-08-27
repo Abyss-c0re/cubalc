@@ -1,1 +1,22 @@
-{"iter":1850,"feature":"MESH_RPE","ship":"1850_smx_mesh_rpe_life","head":"f92a8057f28cd8d429c3139947eb0c62f14b65e2","head_short":"f92a8057","proofs":{"99":"60/0","1850":"60/0","1620":"12/0"},"soft_oob":1,"fail_closed":1,"bonds":6,"c_slice":"src/cubalc_smx_rpe.c","tip_equals_pin":true}
+{
+  "iter": 1850,
+  "feature": "MESH_RPE",
+  "ship": "1850_smx_mesh_rpe_life",
+  "head": "26ba05684ae3ae152077bb7b146c3f562745814c",
+  "head_short": "26ba0568",
+  "proofs": {
+    "99": "60/0",
+    "1850": "60/0",
+    "1620": "12/0"
+  },
+  "soft_oob": 1,
+  "fail_closed": 1,
+  "bonds": 6,
+  "c_slice": "src/cubalc_smx_rpe.c",
+  "tip_equals_pin": true,
+  "HEAD": "26ba05684ae3ae152077bb7b146c3f562745814c",
+  "meaningful_iter": 1850,
+  "MEANINGFUL_ITER": 1850,
+  "status": "PASS",
+  "ok": true
+}
