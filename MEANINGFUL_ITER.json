@@ -2,7 +2,7 @@
   "iter": 1852,
   "feature": "MESH_CONNECTING_CILIUM",
   "ship": "1852_smx_mesh_connecting_cilium_life",
-  "head": "6ae2799ed7e151e1a380c7c10922772e73127084",
+  "head": "f3c887e477cd8cd802e60a320f8ebc166d677d6b",
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
