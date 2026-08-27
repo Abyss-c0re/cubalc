@@ -1,5 +1,9 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 MESH_INNER_FIBER soft-OOB fail-closed C(4,2)=6 pedicle_ready
+=======
+MESH_INNER_FIBER
+>>>>>>> Stashed changes
 =======
 MESH_INNER_FIBER
 >>>>>>> Stashed changes
