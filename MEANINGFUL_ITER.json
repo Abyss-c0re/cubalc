@@ -11,10 +11,11 @@
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "proofs": "99=60/0,1845=60/0,1620=12/0",
+  "proofs": "99=60/0,1845=60/0,1620=12/0,MCA_1839=60/0",
   "c_slice": "src/cubalc_smx_posterior_ciliary.c",
+  "mca_slice": "src/cubalc_smx_middle_cerebral.c",
   "proof": "programs/proof/1845_smx_mesh_posterior_ciliary_life.cubalc",
   "branch": "ship-1845-posterior-ciliary",
   "tip_equals_pin": true,
-  "head": "78257492c32794179794f80c7be1d47692a39736"
+  "head": "3cb3df7274db4066879cafab947fd5d65c65b22d"
 }
