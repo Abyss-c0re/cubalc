@@ -1,0 +1,5 @@
+SHIP 1849 MESH_PHOTORECEPTOR LIFE
+Soft-OOB fail-closed + MESH_EXCHANGE C(4,2) + STABILIZE + WE_AUTOHEAL
+Energy: RPE adhesion → outer-segment disk renewal → phototransduction cascade → bipolar synaptic ribbon → macular free-energy crown
+Proofs: 115_smx_photoreceptor.cubalc + 1849_smx_mesh_photoreceptor_life.cubalc
+Pure-C: src/cubalc_smx_photoreceptor.c
