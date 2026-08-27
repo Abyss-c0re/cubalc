@@ -5,12 +5,16 @@
   "paradigm": "COP/flow",
   "ok": true,
   "meaningful_iter": 1844,
-  "feature": "SMX_MESH_CENTRAL_RETINAL_LIFE",
+  "feature": "MESH_CENTRAL_RETINAL",
   "proof_status": "PASS",
   "asserts_ok": 60,
   "flagship_1620_asserts_ok": 12,
   "VERSION": "1.15.1324-usability",
   "MEANINGFUL_ITER": 1844,
   "head": "26aef61168e26fbbbd71b5617b8366fea2ad397a",
-  "tip_equals_pin": true
+  "tip_equals_pin": true,
+  "ship": "1844_smx_mesh_central_retinal_life",
+  "soft_oob": 1,
+  "fail_closed": 1,
+  "bonds": 6
 }
