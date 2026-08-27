@@ -2,7 +2,7 @@
   "iter": 1850,
   "feature": "MESH_RPE",
   "ship": "1850_smx_mesh_rpe_life",
-  "head": "d801a03c49e29becc23ee78fcef9723d6e2059d8",
+  "head": "8a9741b8184267a9814ef853c23cde038295b6ba",
   "head_short": "d801a03c",
   "proofs": {
     "99": "60/0",
@@ -14,7 +14,7 @@
   "bonds": 6,
   "c_slice": "src/cubalc_smx_rpe.c",
   "tip_equals_pin": true,
-  "HEAD": "d801a03c49e29becc23ee78fcef9723d6e2059d8",
+  "HEAD": "8a9741b8184267a9814ef853c23cde038295b6ba",
   "meaningful_iter": 1850,
   "MEANINGFUL_ITER": 1850,
   "status": "PASS",
