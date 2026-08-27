@@ -1,0 +1,14 @@
+SHIP 1848 ICBRTN
+feature: ICBRTN|CBRTN|IROOT3N|FLOORCBRTN|INTCBRTN|ROOT3N|CUBEROOTN floor integer cube root
+impl: src/lang/lang_ops_math.c pure C binary-search (signed floor)
+proof: programs/proof/1848_icbrtn.cubalc PASS asserts_ok=26 asserts_fail=0
+version: 1.15.1328-usability
+notes: twin of ISQRTN; GETFLAGN volume pipeline; soft-OK finite long; no SYS glue
+MEANINGFUL_ITER=1848
+FEATURE=ICBRTN
+PROOF=programs/proof/1848_icbrtn.cubalc
+PROOF_STATUS=PASS
+ASSERTS_OK=26
+ASSERTS_FAIL=0
+VERSION=1.15.1328-usability
+NOTE=ICBRTN floor integer cube root pure-C usability form; signed floor; GETFLAGN volume pipeline

@@ -7822,3 +7822,8 @@ See 1.11.6-universal.
 - feat(smx): VENULE return scaffold after CAPILLARY; soft-OOB fail-closed
 - proof 1770 PASS 1165/0; flagship 1620 PASS 12/0
 - VERSION 1.15.1246-usability
+
+## 1848 — ICBRTN floor integer cube root
+- feat(lang): ICBRTN|CBRTN|IROOT3N pure-C floor cube root (signed)
+- proof 1848 PASS 26/0; twin of ISQRTN volume after GETFLAGN
+- VERSION 1.15.1328-usability

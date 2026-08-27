@@ -6362,5 +6362,123 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
+
+  /* ICBRTN|CBRTN|IROOT3N|FLOORCBRTN x — floor integer cube root → LAST_N.
+   * x<0: signed floor cbrt (result negative). Soft-OK always for finite long.
+   * Twin of ISQRTN without SYS glue. Usability: edge = ICBRTN volume after GETFLAGN. */
+  if (kw(&L->cur,"ICBRTN") || kw(&L->cur,"CBRTN") || kw(&L->cur,"IROOT3N") ||
+      kw(&L->cur,"FLOORCBRTN") || kw(&L->cur,"INTCBRTN") || kw(&L->cur,"ROOT3N") ||
+      kw(&L->cur,"ICBRT_N") || kw(&L->cur,"CUBEROOTN")){
+    long x = 0, out = 0, ax = 0, sign = 1;
+    char nbuf[32];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, "ICBRTN x — unknown x"); return -1; }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "ICBRTN x — ICBRTN volume");
+      return -1;
+    }
+    if (x == 0) {
+      out = 0;
+    } else {
+      if (x < 0) { sign = -1; ax = -x; } else { sign = 1; ax = x; }
+      /* binary search floor cbrt; hi capped so mid*mid*mid stays in u64 */
+      {
+        long lo = 1, hi = ax;
+        if (hi > 2097151L) hi = 2097151L; /* 2^21-1; 2097151^3 < 2^64 */
+        out = 1;
+        while (lo <= hi) {
+          long mid = lo + (hi - lo) / 2;
+          unsigned long long m = (unsigned long long)mid;
+          unsigned long long cu = m * m * m;
+          if (cu == (unsigned long long)ax) { out = mid; break; }
+          if (cu < (unsigned long long)ax) { out = mid; lo = mid + 1; }
+          else hi = mid - 1;
+        }
+      }
+      if (sign < 0) out = -out;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "ICBRTN", out);
+    var_set_num(vm, "CBRTN", out);
+    var_set_num(vm, "IROOT3N", out);
+    var_set_num(vm, "FLOORCBRTN", out);
+    var_set_num(vm, "ICBRTN_X", x);
+    var_set_num(vm, "ICBRTN_OK", 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# icbrtn %ld -> %ld\n", x, out);
+    bump(vm); return 1;
+  }
+
+
+  /* ILOG2N|LOG2N|FLOORLOG2N x — floor log2(x) → LAST_N.
+   * BITLENN|BITLENGTHN x — bit length floor(log2(x))+1 for x>0.
+   * x<=0 soft LAST_N=0 + sticky LAST_ERR (ILOG2N_OK=0).
+   * Twin of ISQRTN / stack SILOG2 without SYS glue. Usability: bits = ILOG2N n after GETFLAGN. */
+  if (kw(&L->cur,"ILOG2N") || kw(&L->cur,"LOG2N") || kw(&L->cur,"FLOORLOG2N") ||
+      kw(&L->cur,"BITLENN") || kw(&L->cur,"BITLENGTHN") || kw(&L->cur,"ILOG2_N") ||
+      kw(&L->cur,"LOG2_N")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    long x = 0, out = 0;
+    int bad = 0;
+    int bitlen = (strcmp(op,"BITLENN")==0 || strcmp(op,"BITLENGTHN")==0);
+    char nbuf[32];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, "ILOG2N x — unknown x"); return -1; }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "ILOG2N x — ILOG2N bits");
+      return -1;
+    }
+    if (x <= 0) {
+      out = 0; bad = 1;
+      var_set_str(vm, "LAST_ERR", bitlen ? "BITLENN: non-positive" : "ILOG2N: non-positive");
+      var_set_str(vm, "ERR", bitlen ? "BITLENN: non-positive" : "ILOG2N: non-positive");
+    } else {
+      unsigned long u = (unsigned long)x;
+      int n = -1;
+      while (u) { n++; u >>= 1; }
+      out = bitlen ? (long)(n + 1) : (long)n;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "ILOG2N", bitlen ? (bad ? 0L : out - 1) : out);
+    var_set_num(vm, "LOG2N", bitlen ? (bad ? 0L : out - 1) : out);
+    var_set_num(vm, "FLOORLOG2N", bitlen ? (bad ? 0L : out - 1) : out);
+    var_set_num(vm, "BITLENN", bitlen ? out : (bad ? 0L : out + 1));
+    var_set_num(vm, "ILOG2N_X", x);
+    var_set_num(vm, "ILOG2N_OK", bad ? 0L : 1L);
+    var_set_num(vm, "BITLENN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# ilog2n %s %ld -> %ld bad=%d\n", op, x, out, bad);
+    bump(vm); return 1;
+  }
+
   return 0;
 }
