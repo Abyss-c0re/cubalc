@@ -37,13 +37,13 @@
   "sealed": true,
   "life_force": 0.35,
   "stability": 1.0,
-  "feat": "017a5fd811c91d9df6757721e81c904a64635c3a",
-  "head": "017a5fd811c91d9df6757721e81c904a64635c3a",
-  "tip": "017a5fd811c91d9df6757721e81c904a64635c3a",
+  "feat": "8b3dbbf71eddd03691523c522505f7df372a908b",
+  "head": "8b3dbbf71eddd03691523c522505f7df372a908b",
+  "tip": "8b3dbbf71eddd03691523c522505f7df372a908b",
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "HEAD": "017a5fd811c91d9df6757721e81c904a64635c3a",
-  "pin": "017a5fd811c91d9df6757721e81c904a64635c3a",
+  "HEAD": "8b3dbbf71eddd03691523c522505f7df372a908b",
+  "pin": "8b3dbbf71eddd03691523c522505f7df372a908b",
   "tip_eq_pin": true
 }
