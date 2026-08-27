@@ -1,11 +1,11 @@
 SHIP 1852 SMX_MESH_CONNECTING_CILIUM_LIFE (=MESH_CONNECTING_CILIUM)
-HEAD=d71cfa16abd7bd286bc78cbcd3ba4ee99b172a24
+HEAD=73f1abbd6622c500d41ff748cf6f072e791b965b
 VERSION=1.15.1332-usability
 soft_oob=1 fail_closed=1 bonds=C(4,2)=6
 proofs: 99=60/0 1852=60/0 1620=12/0 PASS
 c_slice=src/cubalc_smx_connecting_cilium.c
 energy_path=outer-segment disc stack -> connecting cilium axoneme -> transition zone -> inner-segment mitochondria life-force seal · connecting_cilium mesh
 selftest=PASS feature=MESH_CONNECTING_CILIUM
-tip_equals_pin=true
+tip_equals_pin=YES
 MEANINGFUL_ITER=1852
 NOTE=pure-C SMX mesh stability life-force; no SYS glue; WE_AUTOHEAL sticky
