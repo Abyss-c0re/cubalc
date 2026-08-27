@@ -1,0 +1,1 @@
+MESH_V5 SMX soft-OOB fail-closed + dual WE_AUTOHEAL gaze crown life-force
