@@ -1,1 +1,4 @@
-pending
+MESH_OUTER_FIBER
+soft_oob=1
+bonds=6
+PASS

@@ -1,0 +1,15 @@
+SHIP 1856 SMX_MESH_OUTER_FIBER_LIFE
+feature=MESH_OUTER_FIBER
+proof=programs/proof/1856_smx_mesh_outer_fiber_life.cubalc
+proofs=1856,99_smx_outer_fiber,1620_atomic_printer_life_force
+proof_status=PASS asserts_ok=60 asserts_fail=0
+flagship_1620=PASS
+c_slice=src/cubalc_smx_outer_fiber.c
+soft_oob=1 fail_closed=1 bonds=6
+unity=1.0 next=we_autoheal
+selftest=PASS
+energy_path=OS discs -> cilium -> ellipsoid -> myoid -> nucleus -> outer fiber axon hillock
+MEANINGFUL_ITER=1856
+VERSION=1.15.1336-usability
+tip_equals_pin=true
+sealed=true
