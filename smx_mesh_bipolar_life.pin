@@ -2,6 +2,6 @@ MESH_BIPOLAR_LIFE
 soft_oob=1
 bonds=6
 cascade_ready=1
-head=adcdee58c645239b798805be79bdfec1ce3d1b27
+head=b960240b0273fc7b37d68630806989a99332af83
 iter=1860
 tip_equals_pin=true
