@@ -29,10 +29,10 @@
   "title": "1862 smx mesh pprf life",
   "summary": "MESH_PPRF dual-autoheal soft-OOB conjugate crown life-force ship.",
   "ts": "2026-08-27T02:20:00Z",
-  "pin_head": "f1368d2cf730be8c74cb03c10ef80a66fce275a2",
-  "tip": "f1368d2cf730be8c74cb03c10ef80a66fce275a2",
-  "HEAD": "f1368d2cf730be8c74cb03c10ef80a66fce275a2",
-  "commit": "f1368d2cf730be8c74cb03c10ef80a66fce275a2",
+  "pin_head": "bd75364c9257b562226ae2bab9e0817ba40aeb9f",
+  "tip": "bd75364c9257b562226ae2bab9e0817ba40aeb9f",
+  "HEAD": "bd75364c9257b562226ae2bab9e0817ba40aeb9f",
+  "commit": "bd75364c9257b562226ae2bab9e0817ba40aeb9f",
   "feat_commit": "f1368d2cf730be8c74cb03c10ef80a66fce275a2",
   "host_finish": true
 }
