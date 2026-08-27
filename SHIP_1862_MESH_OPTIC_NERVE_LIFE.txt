@@ -10,9 +10,9 @@ unity=1.0 next=we_autoheal
 selftest=PASS
 MEANINGFUL_ITER=1862
 VERSION=1.15.1342-usability
-head=3ef63df11e7be8e5b1ef5689b366602207284ab7
-tip=3ef63df11e7be8e5b1ef5689b366602207284ab7
-pin=3ef63df11e7be8e5b1ef5689b366602207284ab7
+head=
+tip=
+pin=
 tip_equals_pin=true
 sealed=true
 MESH_OPTIC_NERVE soft-OOB fail-closed C(4,2)=6 chiasm_ready

@@ -1,6 +1,14 @@
 ## 1.15.1342-usability — 1862 SMX mesh optic nerve life
 - SMX OPTIC_NERVE|MESH_OPTIC_NERVE|RAISE_OPTIC_NERVE
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: outer-segment → cilium → ellipsoid → myoid → nucleus → outer fiber → spherule/pedicle triad → bipolar ON/OFF → ganglion axon hillock → optic nerve chiasm-ready life-force seal
+- Usability: cubalc_smx_optic_nerve_chiasm_ready() pure-C face
+- Proofs: 99_smx_optic_nerve + 1862_smx_mesh_optic_nerve_life = 60/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_optic_nerve.c
+
+## 1.15.1342-usability — 1862 SMX mesh optic nerve life
+- SMX OPTIC_NERVE|MESH_OPTIC_NERVE|RAISE_OPTIC_NERVE
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
 - Energy path: outer-segment → cilium → ellipsoid → myoid → nucleus → outer fiber → spherule/pedicle triad → bipolar ON/OFF → ganglion axon hillock → optic nerve bundle chiasm-ready life-force seal
 - Usability: cubalc_smx_optic_nerve_chiasm_ready() pure-C face
 - Proofs: 99_smx_optic_nerve + 1862_smx_mesh_optic_nerve_life = 60/0; flagship 1620 = 12/0 PASS
