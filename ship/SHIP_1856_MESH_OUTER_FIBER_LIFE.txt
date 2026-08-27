@@ -7,9 +7,8 @@ flagship_1620=PASS
 c_slice=src/cubalc_smx_outer_fiber.c
 soft_oob=1 fail_closed=1 bonds=6
 unity=1.0 next=we_autoheal
-selftest=PASS
-energy_path=OS discs -> cilium -> ellipsoid -> myoid -> nucleus -> outer fiber axon hillock
-MEANINGFUL_ITER=1856
-VERSION=1.15.1336-usability
+head=cc2d4aeb81921966802281c11e1a4c0af4974c07
+tip=cc2d4aeb81921966802281c11e1a4c0af4974c07
+pin=cc2d4aeb81921966802281c11e1a4c0af4974c07
 tip_equals_pin=true
 sealed=true
