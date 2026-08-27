@@ -1,0 +1,7 @@
+MEANINGFUL_ITER=1848
+FEATURE=MESH_RPE
+PROOFS=114_smx_rpe+1848_smx_mesh_rpe_life PASS 60/0
+FLAGSHIP=1620_atomic_printer_life_force PASS 12/0
+PURE_C=src/cubalc_smx_rpe.c
+ENERGY=Bruch membrane seal → RPE adhesion face → outer-segment phagocytosis → photoreceptor metabolic feed → macular free-energy crown
+SOFT_OOB=fail-closed MESH_EXCHANGE=C(4,2) WE_AUTOHEAL=1
