@@ -16,7 +16,7 @@
   "soft_oob": 1,
   "fail_closed": 1,
   "bonds": 6,
-  "head": "7f5a00ef6d543af5a312ea8c63000abcafcdc44c",
+  "head": "18fe4d8e97d73ef127667a60e7fb418c62ba669d",
   "iter": 1850,
   "FEATURE": "SMX_MESH_RPE_LIFE",
   "status": "PASS",
