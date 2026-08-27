@@ -1,0 +1,12 @@
+SHIP 1854 SMX_MESH_MYOID_LIFE (=MESH_MYOID)
+HEAD=4356311164e10a2b06b1e11c8fca3baaf707a4f4
+VERSION=1.15.1334-usability
+soft_oob=1 fail_closed=1 bonds=C(4,2)=6
+proofs: 99=60/0 1854=60/0 1620=12/0 PASS
+c_slice=src/cubalc_smx_myoid.c
+energy_path=outer-segment disc stack -> connecting cilium axoneme -> transition zone -> inner-segment mitochondria ellipsoid -> myoid contractile ATP corridor life-force seal · myoid mesh
+selftest=PASS feature=MESH_MYOID
+tip_equals_pin=YES
+MEANINGFUL_ITER=1854
+NOTE=pure-C SMX mesh stability life-force; no SYS glue; WE_AUTOHEAL sticky
+
