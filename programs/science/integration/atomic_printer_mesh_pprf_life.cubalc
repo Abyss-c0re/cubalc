@@ -1,0 +1,102 @@
+// atomic_printer_mesh_pprf_life.cubalc
+// Science board twin: MESH_PPRF soft-OOB fail-closed mesh life-force.
+// Energy path: SC gaze-commit → PPRF horizontal burst generator →
+// abducens internuclear stem → conjugate free-energy crown.
+// Dual WE_AUTOHEAL harden after second storm. INCLUDE path for AGI wonder.
+// Flagship-adjacent sibling of atomic_printer_life_force. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD pprf | from=gift | type=atomic_printer_mesh_pprf_life | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 5
+FLOW 4
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob counted"
+ASSERT CUBES == base_cubes "no ghost"
+
+SMX MESH_EXCHANGE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "mesh_exchange live"
+ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange latch"
+ASSERT SMX_BONDS == 6 "C(4,2)"
+ASSERT SMX_OOB == 0 "oob cleared"
+
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize live"
+ASSERT SMX_STABLE == 1 "stable"
+
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_AUTOHEALED == 1 "autohealed"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy"
+ASSERT UNITY >= 40 "unity floor"
+
+// mitosis under locked sc rails
+GETF seed energy
+LET e0 = LAST_N
+IF e0 < 2 THEN
+  LET e0 = 16
+  SETF seed energy e0
+END
+LET half = e0 / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+GETF d1 alive
+ASSERT LAST_N == 1 "mitosis under pprf mesh"
+
+// second storm + dual autoheal
+SMX TALK bed ghost_again
+ASSERT SMX_OK == 0 "second storm soft-OOB"
+SMX MESH_EXCHANGE bed nozzle hive scrap
+SMX STABILIZE bed nozzle hive scrap
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_AUTOHEALED == 1 "dual autoheal"
+ASSERT SMX_STABLE == 1 "stable after dual"
+ASSERT SMX_OOB == 0 "oob clear"
+ASSERT ENERGY > 0 "final energy"
+ASSERT OK == 1
+PRINT "atomic_printer_mesh_pprf_life" SMX_OK SMX_STABLE SMX_AUTOHEALED SMX_BONDS UNITY ENERGY
+PASS
