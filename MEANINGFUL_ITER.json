@@ -2,9 +2,9 @@
   "meaningful_iter": 1859,
   "feature": "MESH_PEDICLE",
   "version": "1.15.1339-usability",
-  "head": "e08bcf3ee187f086f99a3477569cff512bb3b7d2",
-  "tip": "e08bcf3ee187f086f99a3477569cff512bb3b7d2",
-  "pin": "e08bcf3ee187f086f99a3477569cff512bb3b7d2",
+  "head": "1a3d16bfaf7c7a9f264751840fd6b5835b481a8a",
+  "tip": "1a3d16bfaf7c7a9f264751840fd6b5835b481a8a",
+  "pin": "1a3d16bfaf7c7a9f264751840fd6b5835b481a8a",
   "tip_equals_pin": true,
   "proofs": {
     "1859": "PASS 60/0",

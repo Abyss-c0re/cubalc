@@ -1,14 +1,1 @@
-{
-  "meaningful_iter": 1859,
-  "feature": "MESH_PEDICLE",
-  "version": "1.15.1339-usability",
-  "status": "PASS",
-  "soft_oob": 1,
-  "fail_closed": 1,
-  "bonds": 6,
-  "head": "e08bcf3ee187f086f99a3477569cff512bb3b7d2",
-  "tip_equals_pin": true,
-  "sealed": true,
-  "tip": "e08bcf3ee187f086f99a3477569cff512bb3b7d2",
-  "pin": "e08bcf3ee187f086f99a3477569cff512bb3b7d2"
-}
+{"meaningful_iter": 1859, "feature": "MESH_PEDICLE", "version": "1.15.1339-usability", "status": "PASS", "soft_oob": 1, "fail_closed": 1, "bonds": 6, "head": "1a3d16bfaf7c7a9f264751840fd6b5835b481a8a", "tip_equals_pin": true, "sealed": true}
