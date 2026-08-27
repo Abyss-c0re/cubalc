@@ -6,17 +6,10 @@
   "tip": "8f85dbab61f111cad372ee26882dff0ce46ddd65",
   "pin": "8f85dbab61f111cad372ee26882dff0ce46ddd65",
   "tip_equals_pin": true,
-  "proofs": {
-    "1859": "PASS 60/0",
-    "99_smx_pedicle": "PASS 60/0",
-    "1620": "PASS 12/0"
-  },
-  "c_slice": "src/cubalc_smx_pedicle.c",
   "soft_oob": 1,
   "bonds": 6,
-  "invaginating_ready": 1,
-  "pedicle_ready": 1,
-  "unity": 1.0,
-  "next": "we_autoheal",
-  "sealed": true
+  "proof_status": "PASS",
+  "asserts_ok": 60,
+  "asserts_fail": 0,
+  "flagship_1620": "PASS"
 }
