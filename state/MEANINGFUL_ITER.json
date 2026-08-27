@@ -1,17 +1,16 @@
 {
-  "schema": "cubalc.meaningful_iter.v1",
+  "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 1852,
   "MEANINGFUL_ITER": 1852,
-  "iter": 1852,
-  "version": "1.15.1331-usability",
+  "iter": 1853,
+  "version": "1.15.1332-usability",
   "VERSION": "1.15.1331-usability",
   "feature": "SMX_MESH_OPTIC_NERVE_LIFE",
   "FEATURE": "SMX_MESH_OPTIC_NERVE_LIFE",
   "ship": "1852_smx_mesh_optic_nerve_life",
   "proof": "programs/proof/118_smx_optic_nerve.cubalc",
   "proofs": [
-    "programs/proof/118_smx_optic_nerve.cubalc",
-    "programs/proof/1852_smx_mesh_optic_nerve_life.cubalc"
+    "programs/proof/1853_smx_mesh_optic_chiasm_life.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 60,
@@ -25,5 +24,12 @@
   "pure_c": "src/cubalc_smx_optic_nerve.c",
   "selftest": "PASS",
   "tip": "1c885c37c0609cd4ec1b93849c9c857724fa8141",
-  "HEAD": "1c885c37c0609cd4ec1b93849c9c857724fa8141"
+  "HEAD": "1c885c37c0609cd4ec1b93849c9c857724fa8141",
+  "item": "1853 smx mesh optic chiasm life",
+  "item_id": "mi_1853_smx_mesh_optic_chiasm_life",
+  "title": "1853 smx mesh optic chiasm life",
+  "commit": "PENDING",
+  "summary": "Host-finished MI ship after nanobot partial (1853_smx_mesh_optic_chiasm_life).",
+  "ts": "2026-08-27T00:43:44Z",
+  "host_finish": true
 }
