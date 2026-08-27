@@ -7875,3 +7875,8 @@ See 1.11.6-universal.
 - feat(lang): ICBRTN|CBRTN|IROOT3N pure-C floor cube root (signed)
 - proof 1848 PASS 26/0; twin of ISQRTN volume after GETFLAGN
 - VERSION 1.15.1328-usability
+
+## 1858 — SMX INNER_FIBER mesh life cascade
+- feat(smx): INNER_FIBER pedicle conduit after SPHERULE; soft-OOB fail-closed
+- proof 1858 PASS 60/0; 99 PASS; flagship 1620 PASS 12/0
+- c_slice src/cubalc_smx_inner_fiber.c · VERSION 1.15.1338-usability
