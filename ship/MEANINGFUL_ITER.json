@@ -37,14 +37,14 @@
   "sealed": true,
   "life_force": 0.35,
   "stability": 1.0,
-  "feat": "9399fe43b72b15dc9da01fdca9cf8c430971bc36",
-  "head": "9399fe43b72b15dc9da01fdca9cf8c430971bc36",
-  "tip": "9399fe43b72b15dc9da01fdca9cf8c430971bc36",
+  "feat": "6ac711c32b7bbec0f7c51574dd2320aeac4ad477",
+  "head": "6ac711c32b7bbec0f7c51574dd2320aeac4ad477",
+  "tip": "6ac711c32b7bbec0f7c51574dd2320aeac4ad477",
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
   "HEAD": "a2fff46b836348030741cc1e35b6c5c0a15d69d7",
   "pin": "a2fff46b836348030741cc1e35b6c5c0a15d69d7",
   "tip_eq_pin": true,
-  "pin_head": "9399fe43b72b15dc9da01fdca9cf8c430971bc36"
+  "pin_head": "6ac711c32b7bbec0f7c51574dd2320aeac4ad477"
 }
