@@ -28,7 +28,7 @@
   "item": "1853 smx mesh optic chiasm life",
   "item_id": "mi_1853_smx_mesh_optic_chiasm_life",
   "title": "1853 smx mesh optic chiasm life",
-  "commit": "PENDING",
+  "commit": "e982b35f",
   "summary": "Host-finished MI ship after nanobot partial (1853_smx_mesh_optic_chiasm_life).",
   "ts": "2026-08-27T00:43:44Z",
   "host_finish": true
