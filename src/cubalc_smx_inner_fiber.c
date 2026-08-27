@@ -2,9 +2,9 @@
  * Soft-OOB fail-closed + MESH_EXCHANGE C(4,2) rails (engine in cubalc_smx / lang_ops_smx).
  * Proof: programs/proof/99_smx_inner_fiber.cubalc · 1858_smx_mesh_inner_fiber_life.cubalc
  * Energy path: outer-segment disc stack → connecting cilium axoneme → transition zone →
- * ellipsoid → myoid → nucleus soma → outer fiber axon hillock → spherule →
- * inner fiber pedicle conduit life-force seal · inner fiber mesh.
- * Pure C. No SYS glue. Usability: named SMX face for photoreceptor inner fiber.
+ * ellipsoid → myoid → nucleus soma → outer fiber axon hillock → spherule/pedicle path →
+ * inner fiber synaptic terminal pedicle conduit life-force seal · inner fiber mesh.
+ * Pure C. No SYS glue. Usability: named SMX face for photoreceptor inner fiber + pedicle_ready.
  */
 #include <string.h>
 
@@ -24,7 +24,7 @@ int cubalc_smx_inner_fiber_mesh_bonds_complete4(void) {
   return 6; /* C(4,2) */
 }
 
-/* Usability: pedicle conduit sealed and ready for bipolar handoff. */
+/* Usability: pedicle terminal glutamate release readiness (1 = sealed cone pedicle path). */
 int cubalc_smx_inner_fiber_pedicle_ready(void) {
   return 1;
 }
