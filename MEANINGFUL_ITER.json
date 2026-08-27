@@ -20,7 +20,7 @@
   "flagship_1620_asserts_ok": 12,
   "proof": "programs/proof/1850_smx_mesh_rpe_life.cubalc",
   "branch": "ship-1850-rpe",
-  "head": "63c0120ba4443405d8e4c77874a4f91b40deec25",
+  "head": "cbcfcf93c366a6c631e7de3565dcf58087f3fb3a",
   "ok": true,
-  "HEAD": "63c0120ba4443405d8e4c77874a4f91b40deec25"
+  "HEAD": "cbcfcf93c366a6c631e7de3565dcf58087f3fb3a"
 }
