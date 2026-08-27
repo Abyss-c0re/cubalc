@@ -1,1 +1,21 @@
-{"iter":1859,"feature":"MESH_PEDICLE","ship":"1859_smx_mesh_pedicle_life"}
+{
+  "meaningful_iter": 1859,
+  "feature": "MESH_PEDICLE",
+  "version": "1.15.1339-usability",
+  "head": "77070eb715a48897b4028f6c5ea9e762a31fc677",
+  "tip": "77070eb715a48897b4028f6c5ea9e762a31fc677",
+  "pin": "77070eb715a48897b4028f6c5ea9e762a31fc677",
+  "tip_equals_pin": true,
+  "proofs": {
+    "1859": "PASS 60/0",
+    "99_smx_pedicle": "PASS 60/0",
+    "1620": "PASS 12/0"
+  },
+  "c_slice": "src/cubalc_smx_pedicle.c",
+  "soft_oob": 1,
+  "bonds": 6,
+  "invaginating_ready": 1,
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "sealed": true
+}

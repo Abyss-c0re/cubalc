@@ -5,13 +5,10 @@ proofs=1859,99_smx_pedicle,1620_atomic_printer_life_force
 proof_status=PASS asserts_ok=60 asserts_fail=0
 flagship_1620=PASS
 c_slice=src/cubalc_smx_pedicle.c
-soft_oob=1 fail_closed=1 bonds=6 invaginating_ready=1
+soft_oob=1 fail_closed=1 bonds=6 invaginating=1
 unity=1.0 next=we_autoheal
-selftest=PASS
-MEANINGFUL_ITER=1859
-VERSION=1.15.1339-usability
-head=10c32ea34130cffc8a08a5f370f599db76874e8e
-tip=10c32ea34130cffc8a08a5f370f599db76874e8e
-pin=10c32ea34130cffc8a08a5f370f599db76874e8e
+head=77070eb715a48897b4028f6c5ea9e762a31fc677
+tip=77070eb715a48897b4028f6c5ea9e762a31fc677
+pin=77070eb715a48897b4028f6c5ea9e762a31fc677
 tip_equals_pin=true
 sealed=true
