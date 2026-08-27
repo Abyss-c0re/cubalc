@@ -1,3 +1,10 @@
+## 1.15.1325-usability — 1845 SMX mesh posterior ciliary life
+- SMX POSTERIOR_CILIARY|MESH_POSTERIOR_CILIARY|RAISE_POSTERIOR_CILIARY
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: ophthalmic origin → posterior ciliary takeoff → scleral canal → choroid → outer retinal seal
+- Proofs: 99_smx_posterior_ciliary + 1845_smx_mesh_posterior_ciliary_life = 60/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_posterior_ciliary.c
+
 ## 1.15.1324-usability — 1844 SMX mesh central retinal life
 - SMX CENTRAL_RETINAL|CRA|MESH_CENTRAL_RETINAL|RAISE_CENTRAL_RETINAL
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
