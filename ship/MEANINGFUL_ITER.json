@@ -1,23 +1,20 @@
 {
-  "meaningful_iter": 1862,
-  "feature": "MESH_OPTIC_NERVE",
-  "version": "1.15.1342-usability",
-  "head": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
-  "tip": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
-  "pin": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
-  "tip_equals_pin": true,
-  "proofs": {
-    "1862": "PASS 60/0",
-    "99_smx_optic_nerve": "PASS 60/0",
-    "1620": "PASS 12/0"
-  },
-  "c_slice": "src/cubalc_smx_optic_nerve.c",
+  "meaningful_iter": 1894,
+  "feature": "MESH_OPTIC_TRACT",
+  "ship": "1894_smx_mesh_optic_tract_life",
+  "version": "1.15.1373-usability",
   "soft_oob": 1,
   "bonds": 6,
-  "chiasm_ready": 1,
-  "axon_ready": 1,
-  "cascade_ready": 1,
+  "dual_autoheal": 1,
+  "geniculate_ready": 1,
+  "proofs_pass": true,
+  "flagship_1620": "PASS",
+  "c_slice": "src/cubalc_smx_optic_tract.c",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": true
+  "sealed": true,
+  "head": "98869bbe00e923e9b8ec30a90df05558100cecfd",
+  "tip": "98869bbe00e923e9b8ec30a90df05558100cecfd",
+  "pin": "98869bbe00e923e9b8ec30a90df05558100cecfd",
+  "tip_equals_pin": true
 }

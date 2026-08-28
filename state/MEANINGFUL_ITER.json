@@ -12,5 +12,9 @@
   "c_slice": "src/cubalc_smx_optic_tract.c",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": true
+  "sealed": true,
+  "head": "98869bbe00e923e9b8ec30a90df05558100cecfd",
+  "tip": "98869bbe00e923e9b8ec30a90df05558100cecfd",
+  "pin": "98869bbe00e923e9b8ec30a90df05558100cecfd",
+  "tip_equals_pin": true
 }
