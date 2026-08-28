@@ -1,0 +1,203 @@
+// 1887_smx_mesh_adrenal_life.cubalc
+// MESH_ADRENAL — SMX mesh stability life-force for adrenal plexus feed board.
+// Soft-OOB storms fail-closed (never ghost-place); MESH_EXCHANGE roots C(4,2) mind mesh;
+// STABILIZE hardens; ENERGYFLOW + FLOW drive adrenal visceral free-energy return
+// (greater splanchnic / aorticorenal feed -> bilateral suprarenal plexuses ->
+// chromaffin-zona fasciculata/suprarenal venous free-energy adrenal medullary-cortical crown)
+// WE_AUTOHEAL; mitosis under locked rails; second storm re-stabilizes.
+// Wonder AGI can RUN. No dual ladders. Cube is SoT · matrix is key · free energy must flow.
+// Pure-C SMX engine; proof-only CubalC surface.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD adrenal | from=gift | type=smx_mesh_adrenal_life | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+// adrenal visceral free-energy charge -> greater-splanchnic aorticorenal -> ganglia -> kidney crown
+ENERGYFLOW 5
+FLOW 4
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+// --- Storm wounds: soft-OOB fail-closed, never ghost-place ---
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm-A soft-OOB"
+ASSERT SMX_OOB >= 1 "oob A counted"
+ASSERT CUBES == base_cubes "no ghost from storm-A"
+
+SMX TALK nozzle ghost_peer
+ASSERT SMX_OK == 0 "storm-B soft-OOB"
+ASSERT SMX_OOB >= 2 "oob B sticky"
+ASSERT CUBES == base_cubes "no ghost from storm-B"
+
+SMX EXCHANGE scrap void_cell
+ASSERT SMX_OK == 0 "storm-C soft-OOB"
+ASSERT SMX_OOB >= 3 "oob C depth"
+ASSERT CUBES == base_cubes "no ghost from storm-C"
+
+// --- MESH_EXCHANGE roots complete adrenal mind mesh among live printer spine ---
+SMX MESH_EXCHANGE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "mesh_exchange live"
+ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange latch"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh from mesh_exchange"
+ASSERT SMX_BONDS == 6 "C(4,2)=6 undirected bonds"
+ASSERT SMX_OOB == 0 "oob cleared by mesh_exchange"
+ASSERT SMX_LIVE == 4 "four live after mesh_exchange"
+ASSERT CUBES == base_cubes "mesh_exchange invents nothing"
+
+// --- STABILIZE hardens ADRENAL visceral yoke seal ---
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize live"
+ASSERT SMX_STABLE == 1 "stable latch"
+ASSERT SMX_STEADFAST == 4 "four steadfast"
+ASSERT SMX_PULSE == 4 "four pulses"
+ASSERT SMX_OOB == 0 "oob cleared by stabilize"
+ASSERT CUBES == base_cubes "stabilize invents nothing"
+
+// --- adrenal visceral free-energy return pulse under locked rails ---
+IMPULSE bed 2
+IMPULSE nozzle 2
+IMPULSE hive 1
+ENERGYFLOW 4
+FLOW 3
+ASSERT ENERGY >= 0 "adrenal visceral energy non-negative"
+ASSERT CUBES == base_cubes "adrenal visceral gate invents no cubes"
+
+// live mesh talk after adrenal visceral pulse (greater-splanchnic aorticorenal -> ganglia -> cords -> kidney crown)
+SMX EXCHANGE bed nozzle
+ASSERT SMX_OK == 1 "live exchange after adrenal visceral pulse"
+ASSERT SMX_OOB == 0 "no oob on live talk"
+
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "branch talk live"
+ASSERT SMX_OOB == 0 "no oob bifurcation"
+
+// Autoheal under stable adrenal mesh (ADRENAL motor yoke resilience)
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "autoheal live"
+ASSERT SMX_AUTOHEALED == 1 "autohealed latch"
+ASSERT SMX_OOB == 0 "oob still clear after autoheal"
+ASSERT SMX_STABLE == 1 "stable sticky through autoheal"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force energy"
+ASSERT UNITY >= 40 "stable unity after OOB stabilize"
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT SMX_STABLE == 1 "stable sticky through decide"
+ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange sticky through decide"
+
+// --- Free energy mitosis under locked adrenal motor feed mesh ---
+GETF seed alive
+LET a0 = LAST_N
+GETF seed energy
+LET e0 = LAST_N
+IF e0 < 2 THEN
+  LET e0 = 16
+  SETF seed energy e0
+END
+LET half = e0 / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+GETF d1 alive
+LET a1 = LAST_N
+ASSERT a1 == 1 "first mitosis under adrenal mesh"
+
+GETF seed energy
+LET e1 = LAST_N
+IF e1 < 2 THEN
+  LET e1 = 16
+  SETF seed energy e1
+END
+LET half2 = e1 / 2
+IF half2 < 1 THEN
+  LET half2 = 1
+END
+GETF seed gen
+LET dg2 = LAST_N + 1
+SEND d2 birth half2 dg2
+SEND seed after_div
+PLUG bed d2
+GETF d2 alive
+LET a2 = LAST_N
+ASSERT a2 == 1 "second mitosis under adrenal mesh"
+ASSERT ENERGY > 0 "energy remains after mitosis"
+ASSERT a0 + a1 + a2 >= 3 "population grew under adrenal mesh"
+
+// --- Second storm fail-closed + re-stabilize (no thrash) ---
+SMX TALK bed ghost_again
+ASSERT SMX_OK == 0 "second storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob after second storm"
+ASSERT CUBES >= base_cubes "no ghost place on second storm"
+
+SMX MESH_EXCHANGE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "mesh_exchange after storm2"
+ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange latch after storm2"
+ASSERT SMX_OOB == 0 "oob cleared again by mesh_exchange"
+ASSERT SMX_BONDS == 6 "bonds after storm2"
+ASSERT CUBES >= base_cubes "no ghost after re-mesh"
+
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "re-stabilize live"
+ASSERT SMX_STABLE == 1 "stable sticky after storm2"
+ASSERT SMX_STEADFAST == 4 "steadfast holds after storm2"
+ASSERT SMX_OOB == 0 "oob still clear after re-stabilize"
+ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange sticky through mitosis+storm"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky through mitosis+storm"
+ASSERT SMX_AUTOHEALED == 1 "autohealed sticky through storm2"
+
+// Dual WE_AUTOHEAL harden — ADRENAL floor yoking crown resilience after second storm
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "dual autoheal live"
+ASSERT SMX_AUTOHEALED == 1 "dual autohealed latch"
+ASSERT SMX_OOB == 0 "oob clear after dual autoheal"
+ASSERT SMX_STABLE == 1 "stable sticky through dual autoheal"
+ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange sticky through dual autoheal"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh sticky through dual autoheal"
+ASSERT CUBES >= base_cubes "dual autoheal invents no ghost cubes"
+
+// final adrenal visceral energy breath through greater-splanchnic aorticorenal root -> ganglia -> pelvic lock
+ENERGYFLOW 1
+FLOW 1
+ASSERT ENERGY > 0 "final energy flows"
+ASSERT OK == 1
+
+PRINT "smx_mesh_adrenal_life" POPULATION SMX_OK SMX_MESH_EXCHANGE SMX_STABLE SMX_STABLE_MESH SMX_STEADFAST SMX_PULSE SMX_BONDS SMX_AUTOHEALED SMX_OOB CUBES UNITY ENERGY DECIDE
+PASS
